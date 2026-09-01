@@ -1,0 +1,128 @@
+# Experiment-Protokoll: <name>
+
+*Checkliste, keine Kopiervorlage: Struktur frei, aber jedes Feld kommt vor —
+notfalls als „n/a — <warum>". `protocol-check.py` prüft das.*
+
+- **Eine Frage pro Protokoll.** Wegwerf-Test ohne behaltene Zahl braucht
+  keins — auch ein Erkundungs-Notebook nicht (→ §2.D7).
+- **Ein Feld = eine Zeile.** Braucht die Begründung mehr Platz, gehört sie in
+  eine Note; hier steht der [[wikilink]].
+- **† = Berichts-Feld.** Erst fällig, wenn `Frozen before run` auf „yes" geht;
+  bis dahin leer lassen (`lib exp <name> --report` trägt sie nach).
+- **`→ §2.x`** = die Regel dieser Nummer in `docs/arbeitsstandard.md`; dort
+  stehen Begründung, Beleg und die Begriffs-Legende — hier nur, was das Feld
+  verlangt.
+
+*Feld-Labels englisch, Inhalt deutsch oder englisch. Studi-Fassung:
+`thesis-experiment-protocol.md.template` (Änderungen bewusst nachziehen).*
+
+<!-- KOPF — das wird gelesen. Zeilenbudget je Abschnitt: protocol-check.py. -->
+
+## Summary † (zuletzt schreiben)
+
+*Alltagssprache, ohne den Rest des Protokolls lesbar; jeder Fachbegriff mit
+Halbsatz-Gloss beim ersten Auftreten (Wikilink zusätzlich, nie stattdessen).*
+
+- **Question †:** <derselbe Satz wie im Intent>
+- **Did †:** <was gemacht wurde, ein Satz — für Leser ohne Vorwissen>
+- **Result †:** <Zahl(en) + run_id — keine Zahl, die unten nicht steht>
+- **Status †:** <on track | blocked by <was> | needs a decision on <was>>
+
+## Intent (vor dem Lauf)
+
+- **Question / hypothesis:** <die eine Frage — was erwarten wir?>
+- **Success / failure criterion:** <woran erkennen wir, ob es klappte?>
+- **Kill criterion:** <wobei geben wir die Richtung auf — vorab festlegen>
+- **Registered fork:** <beantwortet der Lauf je nach Vorbedingung zwei Fragen,
+  die Weiche VOR dem Lauf: Bedingung + Frage je Zweig (→ §2.A10);
+  „n/a", wenn es nur einen Ausgang gibt>
+- **Type:** <exploratory (generiert Hypothesen, nichts davon als Test
+  berichten) | confirmatory (testet eine vor dem Lauf fixierte Hypothese)>
+- **Frozen before run:** no *(auf „yes" erst nach der Instrumentenprobe)*
+- **Why this design †:** <Wahl von Modell, Datensatz, Verfahren — ein Satz>
+- **Rival explanations †:** <je Konfund: was AUSSER der Hypothese dieselbe Zahl
+  erzeugt · error direction (läuft er für oder gegen die Hypothese?) · der
+  Prüfblick als CODE in evaluate() (→ §2.D5)>
+- **Out of scope †:** <die Nachbar-Fragen, die dieser Lauf offen lässt>
+
+## Result (nach dem Lauf — nachtragen statt schweigen)
+
+- **Answer to the question:** <Zahl(en) + run_id, erzeugt von
+  `analysis/<note>.py --check`, nicht abgetippt; Langform → [[note]]>
+- **Raw output:** <ein echtes Prompt+Antwort-Paar pro Befund>
+- **Interpretation / next step:** <ein Satz; Instrument- und Sachbefund trennen>
+- **Outcome †:** <erwartet oder überraschend — Fehlschläge gehören hierher>
+- **Rival check †:** <welche Rivalen sind ausgeräumt, welche stehen noch?>
+- **Caps/drops †:** <was ausgelassen oder limitiert wurde>
+
+<!-- APPARAT — das wird nachgeschlagen, nicht gelesen. -->
+
+## Context (self-contained)
+
+- **Problem in one sentence:** <ohne Fachbegriffe — was wird herausgefunden?>
+- **Terms of this protocol:** <jedes Etikett mit Halbsatz oder Verweis auf die
+  definierende Note; „n/a — Standardvokabular", wenn nichts mehrdeutig ist>
+- **Prior threads:** <2–3 [[wikilinks]], je ein Halbsatz, warum sie herführen>
+
+## Setup
+
+- **Data / scope:** <Quelle, N, Producer-Skript; Pilot-Teilmenge zuerst>
+- **Model / tool:** <Alias aus `models.toml` — nie Endpoint/ID hartkodieren>
+- **Prompt (verbatim, je Variante):**
+
+  ```text
+  <der echte Prompt — gehört hierher, nicht nur ins Skript>
+  ```
+
+- **Model I/O:** <rein: welche Felder · raus instruiert: verlangtes Format ·
+  raus tatsächlich: was zurückkommt + welche Funktion parst>
+- **Null condition / anchors (mitlaufend):** <was in DIESEM Lauf mitläuft und
+  null zeigen muss — Anker bekannter Rate, Placebo, Swap; nicht „wurde vorher
+  validiert". Je Anker das Soll MIT Herleitung in einem Halbsatz (→ §2.C9)>
+- **Data preparation †:** <raw → prepared: welches Skript schrieb welche Datei;
+  das Experiment liest nur prepared>
+- **Meaning of the gold label †:** <was heißt die positive Klasse WIRKLICH? Am
+  gerenderten Beispiel prüfen, nicht an der Definition>
+- **Answer form + resolution †:** <wie viele unterscheidbare Zustände hat die
+  Antwort, wo liegt der erwartete Wert?>
+- **How measured †:** <Metrik oder Mechanismus: was wird verglichen, was gezählt>
+- **Validation †:** <Anker-Items, Zweitmodell oder Selbstkonsistenz, Cross-Check>
+- **Noise ceiling → threshold †:** <Wiederholungs-Streuung erheben; die Schwelle
+  kommt aus der Nullbedingung DIESES Laufs>
+- **Free knobs †:** <jeder Vorverarbeitungs-Parameter mit Wert: Schwellen,
+  Filter, Cutoffs, Fenster>
+
+## Checks (Renderprobe → Instrumentenprobe → Pilot)
+
+- **Render check (NULL Aufrufe, `--show N`):** <je Gold-Klasse EIN gerenderter
+  Prompt, wörtlich gelesen: gestapelte Negation, leer eingesetzte Felder,
+  Sätze, die die Frageform nicht entscheiden kann?>
+- **Instrument check (echte Pipeline, ~10 Aufrufe, `--probe N`):** <je
+  Gold-Klasse EIN voll gerendertes Prompt+Antwort-Paar als Code-Block, echte
+  Daten (→ §2.A11)>
+- **Yield per stage:** <erwartet vs. erhalten je Parse-Schritt (→ §2.B4)>
+- **Parser cases harvested:** <die Antwortformen der Probe als ECHTE Fälle in
+  den Parser-Test — hier existieren sie zum ersten Mal>
+- **Clarified terms:** <was war mehrdeutig und heißt jetzt was?>
+- **Changed — und in welcher Klasse:** <Instrument (Wortlaut, Antwortform,
+  Parser, Feldnamen) ist erlaubt; Hypothese, Kriterium, Kill nicht (→ §2.A5)>
+- **Pilot:** <N Items gegen Handanalyse oder Anker geprüft, vor der Skalierung>
+
+Zahlen dieser Stufe werden nie berichtet. Erst danach darf `Frozen before run`
+auf „yes"; je (Neu-)Einfrierung bleibt EIN Satz — die Begründung trägt die
+Commit-Message.
+
+## Runs (Ledger — via `runlog.py`, run_ids zitieren statt Zahlen abtippen)
+
+- <run_id> — <ein Satz: was dieser Lauf war>
+
+## Follow-up
+
+- **Notes updated:** <[[…]] — Reconcile, falls Widerspruch>
+- **Prediction for the follow-up run †:** <die erwartete Zahl HIER hinschreiben,
+  bevor der Folgelauf startet (→ §2.D6)>
+- **Next step:** <…>
+
+## Notes (Beifang: Ideen, Folge-Experimente — jetzt billig, später teuer)
+
+- <…>

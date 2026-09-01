@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "labkit"
+version = "0.1.0"
+description = "Shared lab helpers: run ledger, LLM backend, resumable batches, protocol checker"
+requires-python = ">=3.12"
+# stdlib only, on purpose: a lab helper that drags dependencies in decides the
+# environment of every experiment that imports it.
+dependencies = []
+
+[project.scripts]
+protocol-check = "labkit.protocol_check:cli"
+
+[tool.setuptools]
+packages = ["labkit"]
+
+[tool.setuptools.package-data]
+# the protocol template IS the checker's contract — shipping the checker
+# without it leaves `protocol-check` with nothing to check against.
+labkit = ["*.template"]
+
+[tool.ruff.lint]
+# Same pinned scope as the lab repos (a shifting default is a knob nobody set).
+select = ["E4", "E7", "E9", "F"]
