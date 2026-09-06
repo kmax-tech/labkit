@@ -13,11 +13,18 @@ nicht die importierte Datei.
 ## Benutzen
 
 ```bash
-pip install "labkit==0.1.0"        # aus diesem Verzeichnis: pip install ~/projects/labkit
+pip install ~/projects/labkit      # in Repos: gepinnt via requirements.txt/.lock
 ```
 
 ```python
 from labkit import runlog, llm, batch
+```
+
+Zwei **Konsolen-Kommandos** kommen mit der Installation (beide mit `--help`):
+
+```bash
+protocol-check <PROTOCOL-*.md>...   # Pflichtfelder-Check (MUST/SHOULD-Kontrakt)
+runlog [<bereich>]                  # offene Läufe: run_id, running/crashed, Skript
 ```
 
 **Version pinnen, nie `pip install -e` in einem Experiment-Repo.** Ein Lauf
@@ -26,12 +33,20 @@ abgeschlossenen Lauf ändern, ist dieser Eintrag eine Behauptung über eine
 Umgebung, die es nicht mehr gibt. Editable gehört hierher, wo die Tests sind.
 
 Repos mit flachen Alt-Imports (`import runlog`) brauchen nichts umzuschreiben —
-eine Zeile pro Modul genügt:
+ein Shim pro Modul genügt. Kanonische Form ist der Modul-Handover (nie
+`import *`: das verliert die privaten Namen, und Monkeypatching landet auf
+einer Kopie):
 
 ```python
 # lib/runlog.py
-from labkit.runlog import *  # noqa: F401,F403
+import sys
+from labkit import runlog as _mod
+sys.modules[__name__] = _mod
 ```
+
+`lib init <repo> --sync check` erkennt genau diese Form als Shim („nothing to
+sync"); ein Guard-Test im Repo (`test_shared_helpers_come_from_labkit.py`)
+schlägt an, wenn jemand eine Implementierung zurück in die Shim-Datei klebt.
 
 ## Entwickeln
 

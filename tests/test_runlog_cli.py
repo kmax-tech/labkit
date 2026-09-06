@@ -46,6 +46,16 @@ class TestCli(unittest.TestCase):
             self.assertIn("20260906-120000-probe", out)
             self.assertIn("01_measure.py", out)
 
+    def test_help_prints_usage_instead_of_reading_it_as_an_area(self):
+        """`runlog --help` once answered "--help: no open runs" — a flag read
+        as a directory name. Whoever looks for the flags must find usage."""
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            with self.assertRaises(SystemExit) as ctx:
+                runlog.main(["--help"])
+        self.assertEqual(ctx.exception.code, 0)
+        self.assertIn("usage: runlog", buf.getvalue())
+
     def test_a_finished_run_does_not_appear(self):
         with tempfile.TemporaryDirectory() as d:
             run_dir = Path(d) / "runs" / "20260906-120000-done"

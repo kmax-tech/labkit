@@ -465,7 +465,18 @@ class run:
 
 def main(argv: list[str]) -> int:
     """What is running in this area? Lists runs without a metrics.json."""
-    area = argv[0] if argv else "."
+    import argparse
+    ap = argparse.ArgumentParser(
+        prog="runlog",
+        description="List open runs (dirs with a config.json but no "
+                    "metrics.json) in an experiment area: run_id, state "
+                    "(running/crashed/unknown via the recorded pid), script, "
+                    "and the frozen config. 'Nachsehen statt nachfragen' — "
+                    "check this before starting a run in a shared repo.")
+    ap.add_argument("area", nargs="?", default=".",
+                    help="experiment area holding a runs/ dir (default: .)")
+    args = ap.parse_args(argv)
+    area = args.area
     live = active(area)
     if not live:
         print(f"{area}: no open runs")
