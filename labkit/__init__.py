@@ -27,7 +27,7 @@ and make monkeypatching land on a copy):
     sys.modules[__name__] = _mod
 """
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 # The submodules are deliberately NOT imported here: `import labkit` must stay
 # free of side effects (llm reads models.toml when it is used, not when the

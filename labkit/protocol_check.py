@@ -262,6 +262,12 @@ def collect(paths: list[str]) -> list[Path]:
 
 
 def main(argv: list[str]) -> int:
+    if argv and argv[0] in ("-h", "--help"):
+        print((__doc__ or "").strip().splitlines()[0])
+        print("usage: protocol-check [--template PATH] <PROTOCOL-*.md | dir> ...")
+        print("  --template PATH  check against this template instead of the "
+              "packaged one")
+        return 0
     tmpl_arg = None
     if argv and argv[0] == "--template":
         if len(argv) < 2:

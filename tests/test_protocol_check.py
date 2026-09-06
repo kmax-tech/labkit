@@ -372,3 +372,14 @@ class TestBegriffe(unittest.TestCase):
     def test_severity_of_ordnet_beide_template_felder_der_pflicht_zu(self):
         for label in ("Begriffe dieses Protokolls", "Geklaerte Begriffe"):
             self.assertEqual(protocol_check.severity_of(label), "must", label)
+
+
+class TestHelpFlag(unittest.TestCase):
+    def test_help_prints_usage_and_exits_zero(self):
+        """`protocol-check --help` used to read the flag as a filename and
+        answer "nicht lesbar" — whoever looks for the flags must find usage."""
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = protocol_check.main(["--help"])
+        self.assertEqual(code, 0)
+        self.assertIn("usage: protocol-check", buf.getvalue())
