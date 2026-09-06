@@ -33,7 +33,7 @@ instead).*
 
 - **Question / hypothesis:** <the one question — what do we expect?>
 - **Success / failure criterion:** <how do we recognise whether it worked?>
-- **Kill criterion:** <at what point do we abandon the direction — fixed upfront>
+- **Stop rule:** <at what point do we abandon the direction — fixed upfront>
 - **Registered fork:** <if a precondition decides which of two questions the
   run answers, register the fork BEFORE the run: condition + question per
   branch (→ §2.A10); "n/a" if there is only one outcome>
@@ -109,7 +109,7 @@ instead).*
   the parser test — this is where they exist for the first time>
 - **Clarified terms:** <what was ambiguous, and what is it called now?>
 - **Changed — and in which class:** <instrument (wording, answer form,
-  parser, field names) is allowed; hypothesis, criterion, kill are not
+  parser, field names) is allowed; hypothesis, criterion, stop rule are not
   (→ §2.A5)>
 - **Pilot:** <N items checked against hand analysis or anchors, before scaling>
 

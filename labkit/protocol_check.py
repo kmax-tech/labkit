@@ -36,7 +36,7 @@ Directories are searched recursively for PROTOCOL-*.md. Exit code 1 if any
 MUST field is missing or unfilled in any file; SHOULD fields only warn.
 
 **Two tiers, one template (2026-08-18).** MUST is the pilot minimum (question,
-success, kill, type, prompt/IO, null condition); SHOULD is what a REPORTABLE
+success, stop rule, type, prompt/IO, null condition); SHOULD is what a REPORTABLE
 run owes on top (rivals, scope, prognosis, yield, knobs, result). The
 graduation gate is mechanical: **`Frozen before run: ja` escalates every
 SHOULD field to MUST.** Claiming confirmatory status is claiming the full
@@ -88,7 +88,7 @@ MUST = [
      r"begriff|terminolog|glossar|terms of"),
     ("Question / hypothesis", r"hypothese|frage|question|hypothesis"),
     ("Success criterion", r"erfolg|success"),
-    ("Kill criterion", r"abbruch|kill"),
+    ("Stop rule", r"abbruch|kill|stop.?rule"),
     ("Type (exploratory / confirmatory)",
      r"explorativ|konfirmatorisch|explorator|confirmator"),
     ("Model I/O / prompt (verbatim)", r"modell-i/o|model i/o|prompt"),
