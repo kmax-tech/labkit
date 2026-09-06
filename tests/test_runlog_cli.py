@@ -1,0 +1,61 @@
+"""Tests for the `runlog` console command (labkit.runlog:cli).
+
+Why this is tested: the working standard's "look, don't ask" rule hands users
+this exact command. Its predecessor — `python lib/runlog.py <area>` against a
+shim — printed nothing and exited 0 (found 2026-09-06): the shim replaces
+sys.modules, so the package's __main__ block never ran. A listing command
+whose silent failure is indistinguishable from "no open runs" must prove that
+it prints.
+"""
+import contextlib
+import io
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))          # the package under test
+
+from labkit import runlog  # noqa: E402
+
+
+class TestCli(unittest.TestCase):
+
+    def _run_main(self, argv):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = runlog.main(argv)
+        return code, buf.getvalue()
+
+    def test_empty_area_says_so_instead_of_staying_silent(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out = self._run_main([d])
+            self.assertEqual(code, 0)
+            self.assertIn("no open runs", out)
+
+    def test_an_open_run_is_listed_with_id_and_state(self):
+        with tempfile.TemporaryDirectory() as d:
+            run_dir = Path(d) / "runs" / "20260906-120000-probe"
+            run_dir.mkdir(parents=True)
+            (run_dir / "config.json").write_text(json.dumps(
+                {"pid": 999_999, "script": "01_measure.py",
+                 "config": {"items": "data/prepared/x.jsonl"}}), encoding="utf-8")
+            code, out = self._run_main([d])
+            self.assertEqual(code, 0)
+            self.assertIn("20260906-120000-probe", out)
+            self.assertIn("01_measure.py", out)
+
+    def test_a_finished_run_does_not_appear(self):
+        with tempfile.TemporaryDirectory() as d:
+            run_dir = Path(d) / "runs" / "20260906-120000-done"
+            run_dir.mkdir(parents=True)
+            (run_dir / "config.json").write_text("{}", encoding="utf-8")
+            (run_dir / "metrics.json").write_text("{}", encoding="utf-8")
+            code, out = self._run_main([d])
+            self.assertEqual(code, 0)
+            self.assertNotIn("20260906-120000-done", out)
+
+
+if __name__ == "__main__":
+    unittest.main()

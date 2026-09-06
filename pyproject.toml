@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "labkit"
-version = "0.1.0"
+version = "0.2.0"
 description = "Shared lab helpers: run ledger, LLM backend, resumable batches, protocol checker"
 requires-python = ">=3.12"
 # stdlib only, on purpose: a lab helper that drags dependencies in decides the
@@ -13,6 +13,7 @@ dependencies = []
 
 [project.scripts]
 protocol-check = "labkit.protocol_check:cli"
+runlog = "labkit.runlog:cli"
 
 [tool.setuptools]
 packages = ["labkit"]

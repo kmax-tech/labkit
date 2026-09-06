@@ -433,7 +433,7 @@ def active(base_dir: str | Path) -> list[dict]:
     and write (their config.json says). `alive` distinguishes a running process
     from a crashed one by checking the recorded pid.
 
-        python runlog.py <area>
+        runlog <area>        (the installed console command)
     """
     out = []
     for d in sorted((Path(base_dir) / "runs").glob("*")):
@@ -463,8 +463,9 @@ class run:
         return False
 
 
-if __name__ == "__main__":                     # what is running in this area?
-    area = sys.argv[1] if len(sys.argv) > 1 else "."
+def main(argv: list[str]) -> int:
+    """What is running in this area? Lists runs without a metrics.json."""
+    area = argv[0] if argv else "."
     live = active(area)
     if not live:
         print(f"{area}: no open runs")
@@ -472,3 +473,13 @@ if __name__ == "__main__":                     # what is running in this area?
         state = {True: "running", False: "crashed", None: "unknown"}[r["alive"]]
         print(f"{r['run_id']}  {state:8s} pid={r.get('pid')}  {r.get('script')}")
         print(f"    {json.dumps(r.get('config', {}), ensure_ascii=False)[:160]}")
+    return 0
+
+
+def cli() -> None:
+    """Entry point for the installed `runlog` command."""
+    sys.exit(main(sys.argv[1:]))
+
+
+if __name__ == "__main__":
+    cli()
