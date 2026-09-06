@@ -72,7 +72,7 @@ class Store:
                 f"{self.lock} exists — another run is writing this output:\n"
                 f"  {self.lock.read_text(encoding='utf-8').strip()}\n"
                 f"Use a different output file, or delete the lock if that run "
-                f"is dead (`python lib/runlog.py <area>` shows which "
+                f"is dead (`.venv/bin/runlog <area>` shows which "
                 f"runs are still alive).")
         self._fh = self.path.open("a", encoding="utf-8")
         return self
