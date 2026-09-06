@@ -16,18 +16,19 @@ records its environment; if the helpers can change under a finished run, that
 record is a claim about an environment that no longer exists. Editable installs
 belong here, in this repo, where the tests are.
 
-Older repos import the modules flat (`import runlog`, via a path entry). A
-shim keeps them working while there is still only one truth — hand over the
-module object itself, never `import *` (star imports drop the private helpers
-and make monkeypatching land on a copy):
+New code imports the package directly (`from labkit import runlog`) and
+creates no shims. Shims are the documented legacy bridge for repos whose
+frozen run snapshots import the modules flat (`import runlog`, via a path
+entry) — hand over the module object itself, never `import *` (star imports
+drop the private helpers and make monkeypatching land on a copy):
 
-    # lib/runlog.py
+    # lib/runlog.py  (legacy repos only)
     import sys
     from labkit import runlog as _mod
     sys.modules[__name__] = _mod
 """
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 # The submodules are deliberately NOT imported here: `import labkit` must stay
 # free of side effects (llm reads models.toml when it is used, not when the

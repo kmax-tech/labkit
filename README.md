@@ -32,22 +32,25 @@ records its environment; if the helpers could change under a finished run,
 that record is a claim about an environment that no longer exists. Editable
 installs belong here, where the tests are.
 
-Repos with flat legacy imports (`import runlog`) need no rewrite — one shim
-per module suffices. The canonical form is the module handover (never
-`import *`: that drops the private helpers, and monkeypatching lands on a
-copy):
+**New code imports the package directly** — `from labkit import runlog` —
+and never creates shims; the scaffolder stamps repos in this style, and a
+guard test (`test_shared_helpers_come_from_labkit.py`) fires if a file ever
+shadows the package.
+
+**Shims are the documented LEGACY bridge only:** repos whose frozen run
+snapshots say `import runlog` (hundreds of files that must not be touched)
+keep a module handover per name — never `import *`, which drops private
+helpers and makes monkeypatching land on a copy:
 
 ```python
-# lib/runlog.py
+# lib/runlog.py  (legacy repos only)
 import sys
 from labkit import runlog as _mod
 sys.modules[__name__] = _mod
 ```
 
 `lib init <repo> --sync check` recognises exactly this form as a shim
-("nothing to sync"); a guard test in the repo
-(`test_shared_helpers_come_from_labkit.py`) fires if someone pastes an
-implementation back into the shim file.
+("nothing to sync").
 
 ## Language
 
