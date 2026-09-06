@@ -138,10 +138,10 @@ def _env_state(cwd: Path) -> str:
             except Exception:      # never let bookkeeping break a run
                 return f"{exe} | requirements.lock:{h} | drift:unknown"
             if drift:
-                print(f"runlog: WARNUNG — {drift} Paket(e) weichen von "
-                      f"requirements.lock ab. `pip freeze > requirements.lock`, "
-                      f"sonst beschreibt der Lock-Hash dieses Laufs eine "
-                      f"Umgebung, die es nicht gibt.", file=sys.stderr)
+                print(f"runlog: WARNING — {drift} package(s) deviate from "
+                      f"requirements.lock. `pip freeze > requirements.lock`, "
+                      f"or this run's lock hash describes an environment "
+                      f"that does not exist.", file=sys.stderr)
             return f"{exe} | requirements.lock:{h} | drift:{drift}"
     return f"{exe} | unpinned"
 
@@ -239,7 +239,7 @@ def _snapshot_script(run_dir: Path) -> str:
         return "no-script"
 
 
-_SNAPSHOT_CAP = 2 * 1024 * 1024   # eine "Quelldatei" groesser 2 MB ist Daten
+_SNAPSHOT_CAP = 2 * 1024 * 1024   # a "source file" above 2 MB is data
 
 
 def _snapshot_untracked_sources(run_dir: Path) -> list[str]:
@@ -293,9 +293,9 @@ def _snapshot_untracked_sources(run_dir: Path) -> list[str]:
         except OSError:
             continue
     if copied:
-        print(f"runlog: Einstiegsskript ist UNTRACKED — {len(copied)} Quelldatei(en) "
-              f"nach source-untracked/ kopiert. Best Practice: VOR dem Lauf committen, "
-              f"dann traegt der Diff die Provenance. ({', '.join(copied[:5])}"
+        print(f"runlog: entry script is UNTRACKED — copied {len(copied)} source "
+              f"file(s) to source-untracked/. Best practice: commit BEFORE the "
+              f"run, then the diff carries the provenance. ({', '.join(copied[:5])}"
               + (" ...)" if len(copied) > 5 else ")"))
     return copied
 
@@ -368,7 +368,7 @@ class Run:
                                  "lines": text_lines})
                 else:
                     rows.append({"path": str(p), "sha256": None, "lines": None,
-                                 "note": "registriert, aber am Laufende nicht vorhanden"})
+                                 "note": "registered, but absent at end of run"})
             (self.dir / "outputs.json").write_text(
                 json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
         (self.dir / "metrics.json").write_text(
@@ -387,7 +387,7 @@ class Run:
 
 
 def _command_of(pid: int) -> str | None:
-    """Kommandozeile eines Prozesses, oder None wenn nicht lesbar."""
+    """Command line of a process, or None if unreadable."""
     try:
         r = subprocess.run(["ps", "-o", "command=", "-p", str(pid)],
                            capture_output=True, text=True, timeout=5)
@@ -397,19 +397,19 @@ def _command_of(pid: int) -> str | None:
 
 
 def _is_alive(pid, script) -> bool | None:
-    """Laeuft DIESER Lauf noch? True / False / None (nicht entscheidbar).
+    """Is THIS run still going? True / False / None (undecidable).
 
-    Die PID allein genuegt nicht, und das ist kein theoretischer Einwand: Am
-    2026-08-15 meldete `runlog` einen Lauf vom 13. August als laufend, weil das
-    Betriebssystem die PID inzwischen an einen macOS-Dienst
-    (`RemoteManagement`) neu vergeben hatte. Wer nach dem Arbeitsstandard
-    „nachsehen statt fragen" vorgeht, bekam damit eine falsche Auskunft — und
-    haette einen laengst toten Lauf nicht neu gestartet.
+    The PID alone is not enough, and that is no theoretical concern: on
+    2026-08-15 `runlog` reported a run from August 13 as running because the
+    OS had meanwhile recycled the PID to a macOS service
+    (`RemoteManagement`). Anyone following the working standard's "look,
+    don't ask" got a wrong answer — and would not have restarted a run that
+    was long dead.
 
-    Deshalb wird zusaetzlich geprueft, ob die Kommandozeile den aufgezeichneten
-    Skriptnamen enthaelt. Laesst sich das nicht entscheiden (kein `ps`, kein
-    Skriptname), ist die Antwort **None** und nicht `True`: Ein „unbekannt" ist
-    brauchbar, ein falsches „laeuft" nicht.
+    So the command line is additionally checked for the recorded script
+    name. If that cannot be decided (no `ps`, no script name), the answer
+    is **None**, not `True`: an "unknown" is usable, a false "running" is
+    not.
     """
     if not isinstance(pid, int):
         return None
@@ -418,7 +418,7 @@ def _is_alive(pid, script) -> bool | None:
     except ProcessLookupError:
         return False
     except PermissionError:
-        pass                         # existiert, gehoert jemand anderem
+        pass                         # exists, belongs to someone else
     cmd = _command_of(pid)
     if cmd is None or not script:
         return None

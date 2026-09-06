@@ -194,7 +194,7 @@ _TRANSIENT = (TimeoutError, ConnectionError, urllib.error.URLError,
               http.client.HTTPException, subprocess.TimeoutExpired,
               BackendError)
 _RETRIES = {"n": 0}
-_BACKOFF = (10, 45, 120)   # Netz-Schluckauf, Modell-Reload, Warteschlange
+_BACKOFF = (10, 45, 120)   # network hiccup, model reload, queue
 
 
 def retries() -> int:
@@ -273,25 +273,25 @@ def complete(alias: str, prompt: str, *, system: str | None = None,
                                   keep_alive=keep_alive)
         except _TRANSIENT as exc:
             if attempt == attempts:
-                # Erschoepfte Versuche werfen IMMER BackendError, egal was das
-                # Backend geworfen hat. Sonst haengt es vom Backend ab, WELCHE
-                # Ausnahme entkommt: claude-cli wirft BackendError (ein
-                # RuntimeError), ollama wirft URLError/TimeoutError — keine
-                # RuntimeErrors. Ein Aufrufer mit "except RuntimeError" ist dann
-                # auf dem einen Backend korrekt und verliert auf dem anderen
-                # seinen ganzen Batch (2026-08-14: ein DNS-Aussetzer killte
-                # einen 145-Item-Lauf nach dem Wechsel von haiku auf den
-                # Cluster). Ein dokumentierter Typ = eine Sache zum Fangen; die
-                # urspruengliche Ausnahme bleibt via "from exc" angehaengt.
+                # Exhausted retries ALWAYS raise BackendError, no matter what
+                # the backend threw. Otherwise WHICH exception escapes depends
+                # on the backend: claude-cli throws BackendError (a
+                # RuntimeError), ollama throws URLError/TimeoutError — no
+                # RuntimeErrors. A caller with "except RuntimeError" is then
+                # correct on one backend and loses its whole batch on the
+                # other (2026-08-14: a DNS hiccup killed a 145-item run after
+                # the switch from haiku to the cluster). One documented type =
+                # one thing to catch; the original exception stays attached
+                # via "from exc".
                 if isinstance(exc, BackendError):
                     raise
                 raise BackendError(
-                    f"{alias}: {type(exc).__name__} nach {attempts} Versuchen: "
+                    f"{alias}: {type(exc).__name__} after {attempts} attempts: "
                     f"{str(exc)[:200]}") from exc
             _RETRIES["n"] += 1
-            # Backoff muss einen MODELL-LADEVORGANG überdauern, nicht nur einen
-            # Netz-Schluckauf: ein 13-GB-Modell braucht ~90 s in den VRAM, und
-            # 5/15 s Pause verpuffen alle davor (Lauf starb nach 5 von 100).
+            # The backoff must outlive a MODEL LOAD, not just a network
+            # hiccup: a 13 GB model takes ~90 s into VRAM, and 5/15 s pauses
+            # all fizzle before that (a run died after 5 of 100).
             wait = _BACKOFF[min(attempt - 1, len(_BACKOFF) - 1)]
             print(f"llm: {type(exc).__name__} on attempt {attempt}/{attempts} "
                   f"({str(exc)[:60]}) — retrying in {wait}s", file=sys.stderr)
@@ -362,21 +362,20 @@ def _complete_once(alias: str, prompt: str, *, system: str | None = None,
 
         messages = ([{"role": "system", "content": system}] if system else []) \
             + [{"role": "user", "content": prompt}]
-        # keep_alive: ohne das verdrängt ollama das Modell zwischen zwei Aufrufen
-        # (Default 5 min), und jeder Aufruf zahlt einen Reload — bei gpt-oss ~13 GB.
-        # Das hat einen Lauf nach 5 von 100 Items ins Timeout laufen lassen.
+        # keep_alive: without it ollama evicts the model between two calls
+        # (default 5 min) and every call pays a reload — ~13 GB for gpt-oss.
+        # That once drove a run into the timeout after 5 of 100 items.
         payload = {"model": spec["model"], "messages": messages,
                    "stream": False, "keep_alive": keep_alive}
-        # `num_predict` gehoert AUCH hierher. Bis 2026-08-19 setzte dieser Zweig
-        # nur `temperature` und verwarf `max_tokens` stillschweigend — der
-        # /api/generate-Zweig oben warnt seit jeher davor ("without a token
-        # budget it keeps writing until the context is full"), aber genau der
-        # Pfad, den alle Experimente nehmen, hatte die Schranke nicht. Sichtbar
-        # geworden an einem Server-Log: `n_gen = 3520` bei nominell 2048, gpt-oss
-        # bei ~19 t/s noch nicht fertig, Request nach knapp drei Minuten
-        # abgebrochen. Ein Aufrufer konnte den Deckel nicht setzen, also lief
-        # jeder schwere Prompt bis ins Timeout — und das sah aus wie ein
-        # ueberlasteter Cluster.
+        # `num_predict` belongs here TOO. Until 2026-08-19 this branch set
+        # only `temperature` and silently dropped `max_tokens` — the
+        # /api/generate branch above has always warned about this ("without a
+        # token budget it keeps writing until the context is full"), but the
+        # very path all experiments take had no cap. It surfaced in a server
+        # log: `n_gen = 3520` at a nominal 2048, gpt-oss at ~19 t/s still not
+        # done, request aborted after almost three minutes. No caller could
+        # set the cap, so every heavy prompt ran into the timeout — and that
+        # looked like an overloaded cluster.
         options: dict[str, object] = {"num_predict": max_tokens}
         if temperature is not None:
             options["temperature"] = temperature
@@ -391,19 +390,19 @@ def _complete_once(alias: str, prompt: str, *, system: str | None = None,
             body = json.loads(resp.read())
         message = body.get("message") or {}
         content = (message.get("content") or "").strip()
-        # Reasoning-Modelle legen ihre Denkspur in ein eigenes Feld. Bleibt
-        # `content` leer, waehrend `thinking` gefuellt ist, hat das Modell
-        # gedacht und nichts gesagt — eine FEHLENDE Messung, die als leerer
-        # String zurueckkaeme und im Parser wie eine Modell-Antwort aussieht.
-        # Nicht hier entscheiden (der Aufrufer kennt seine Gold-Klassen), aber
-        # sichtbar machen: stumm verlorene Items sind der teuerste Fehlertyp.
+        # Reasoning models put their thinking trace in its own field. If
+        # `content` stays empty while `thinking` is filled, the model thought
+        # and said nothing — a MISSING measurement that would come back as an
+        # empty string and look like a model answer to the parser. Do not
+        # decide here (the caller knows its gold classes), but make it
+        # visible: silently lost items are the most expensive error type.
         if not content:
             think = (message.get("thinking") or "").strip()
-            print(f"llm: {alias} lieferte LEEREN content "
+            print(f"llm: {alias} returned EMPTY content "
                   f"(done_reason={body.get('done_reason')!r}, "
                   f"eval_count={body.get('eval_count')}, "
-                  f"thinking={len(think)} Zeichen) — als unlesbar zaehlen, "
-                  f"nicht als Antwort", file=sys.stderr)
+                  f"thinking={len(think)} chars) — count as unreadable, "
+                  f"not as an answer", file=sys.stderr)
         return content
 
     if backend == "openai":
@@ -435,29 +434,30 @@ def _complete_once(alias: str, prompt: str, *, system: str | None = None,
         first = (body.get("choices") or [{}])[0]
         message = first.get("message") or {}
         content = (message.get("content") or "").strip()
-        # Reasoning-Modelle: mit serverseitigem --reasoning-parser liegt die
-        # Denkspur in einem eigenen Feld (reasoning_content; neuere vLLM:
-        # reasoning) und content ist die blanke Antwort — dieselbe Trennung,
-        # die ollama als "thinking" liefert. OHNE die Flag landet die Spur IM
-        # content; Marker-Parser ueberleben das scheinbar, aber parse_letter
-        # liest dann das erste freistehende A/B der ABWAEGUNG statt der
-        # Antwort. models.toml deklariert darum `reasoning = true`; content
-        # ohne Spur-Feld ist die Signatur eines Servers ohne Parser-Flag —
-        # sofort scheitern, kein Retry aendert eine Server-Config.
+        # Reasoning models: with a server-side --reasoning-parser the
+        # thinking trace sits in its own field (reasoning_content; newer
+        # vLLM: reasoning) and content is the bare answer — the same split
+        # ollama delivers as "thinking". WITHOUT the flag the trace lands IN
+        # content; marker parsers appear to survive that, but parse_letter
+        # then reads the first free-standing A/B of the DELIBERATION instead
+        # of the answer. models.toml therefore declares `reasoning = true`;
+        # content without a trace field is the signature of a server missing
+        # the parser flag — fail immediately, no retry changes a server
+        # config.
         reasoning = (message.get("reasoning_content")
                      or message.get("reasoning") or "").strip()
         if spec.get("reasoning") and content and not reasoning:
             raise ValueError(
-                f"{alias}: reasoning = true, aber die Antwort traegt content "
-                f"ohne reasoning_content/reasoning — der Server laeuft ohne "
-                f"--reasoning-parser und mischt die Denkspur in die Antwort. "
-                f"Server-Cmd fixen (swap-models.toml), oder reasoning = false "
-                f"setzen, falls dieses Modell wirklich keine Spur schreibt.")
+                f"{alias}: reasoning = true, but the answer carries content "
+                f"without reasoning_content/reasoning — the server runs "
+                f"without --reasoning-parser and mixes the thinking trace "
+                f"into the answer. Fix the server cmd (swap-models.toml), or "
+                f"set reasoning = false if this model truly writes no trace.")
         if not content:
-            print(f"llm: {alias} lieferte LEEREN content "
+            print(f"llm: {alias} returned EMPTY content "
                   f"(finish_reason={first.get('finish_reason')!r}, "
-                  f"reasoning={len(reasoning)} Zeichen) — als "
-                  f"unlesbar zaehlen, nicht als Antwort", file=sys.stderr)
+                  f"reasoning={len(reasoning)} chars) — count as "
+                  f"unreadable, not as an answer", file=sys.stderr)
         return content
 
     raise ValueError(f"unknown backend '{backend}' for alias '{alias}'")

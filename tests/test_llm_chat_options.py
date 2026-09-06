@@ -1,17 +1,16 @@
-"""Der Chat-Pfad muss `num_predict` senden — sonst laeuft die Generierung frei.
+"""The chat path must send `num_predict` — else generation runs free.
 
-Warum diese Datei existiert: Bis 2026-08-19 setzte `llm.complete` das
-Token-Budget NUR im `raw=True`-Zweig an `/api/generate`. Der Chat-Zweig, den
-jedes Experiment nimmt, schickte ausschliesslich `temperature` und verwarf
-`max_tokens` stumm. Folge: `gpt-oss` generierte bei nominell 2048 Tokens
-tatsaechlich 3520 und war nicht fertig (Server-Log, ~19 t/s), der Request lief
-ins Timeout, und das Fehlerbild — Timeouts, abgebrochene Laeufe — sah aus wie
-ein ueberlasteter Cluster. Eine halbe Session ging fuer die falsche Hypothese
-drauf.
+Why this file exists: until 2026-08-19 `llm.complete` set the token budget
+ONLY in the `raw=True` branch at `/api/generate`. The chat branch that every
+experiment takes sent nothing but `temperature` and silently dropped
+`max_tokens`. Consequence: `gpt-oss` generated 3520 tokens at a nominal
+2048 and was not done (server log, ~19 t/s), the request ran into the
+timeout, and the symptom — timeouts, aborted runs — looked like an
+overloaded cluster. Half a session went to the wrong hypothesis.
 
-Der Bug war unsichtbar, weil `max_tokens` einen Default hat: jeder Aufruf sah
-korrekt aus, und die Wirkung fehlte trotzdem. Genau dagegen prueft dieser Test
-die *gesendete Payload*, nicht die Signatur.
+The bug was invisible because `max_tokens` has a default: every call looked
+correct while the effect was missing. Against exactly that, this test
+checks the *payload sent*, not the signature.
 """
 import json
 import sys
@@ -61,24 +60,24 @@ class TestChatPathSendsTokenBudget(unittest.TestCase):
         self.assertIn("/api/chat", self.sent["url"])
         options = self.sent["payload"].get("options", {})
         self.assertEqual(options.get("num_predict"), 2048,
-                         "Chat-Pfad muss das Token-Budget senden — ohne das "
-                         "generiert das Modell bis der Kontext voll ist")
+                         "the chat path must send the token budget — without "
+                         "it the model generates until the context is full")
         self.assertEqual(options.get("temperature"), 0.0)
 
     def test_default_budget_is_sent_too(self):
-        """Auch ohne explizites max_tokens darf die Schranke nicht fehlen."""
+        """Even without an explicit max_tokens the cap must not be missing."""
         self.llm.complete("gpt-oss", "prompt")
         self.assertIsNotNone(
             self.sent["payload"].get("options", {}).get("num_predict"))
 
     def test_timeout_reaches_the_transport(self):
-        """Das Wartefenster ist der Knopf, der die Messung NICHT anfasst."""
+        """The wait window is the knob that does NOT touch the measurement."""
         self.llm.complete("gpt-oss", "prompt", timeout=900)
         self.assertEqual(self.sent["timeout"], 900)
 
 
 class TestEmptyContentIsReported(unittest.TestCase):
-    """Denkt das Modell und sagt nichts, darf das nicht wie eine Antwort aussehen."""
+    """If the model thinks and says nothing, it must not look like an answer."""
 
     def setUp(self):
         import io
@@ -102,9 +101,9 @@ class TestEmptyContentIsReported(unittest.TestCase):
             out = self.llm.complete("gpt-oss", "prompt")
         finally:
             sys.stderr = stderr
-        self.assertEqual(out, "", "leerer content bleibt leer — der Aufrufer "
-                                  "zaehlt ihn als unlesbar")
-        self.assertIn("LEEREN content", err.getvalue())
+        self.assertEqual(out, "", "empty content stays empty — the caller "
+                                  "counts it as unreadable")
+        self.assertIn("EMPTY content", err.getvalue())
         self.assertIn("thinking", err.getvalue())
 
 

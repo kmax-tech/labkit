@@ -64,13 +64,13 @@ class TestCheckText(unittest.TestCase):
         self.assertEqual(missing_must, [])
         self.assertEqual(missing_should, [])
 
-    def test_real_freeform_protocol_misses_begriffe_typ_and_modell_io(self):
+    def test_real_freeform_protocol_misses_terms_type_and_model_io(self):
         missing_must, _ = protocol_check.check_text(REAL_FREEFORM_PROTOCOL)
         self.assertEqual(missing_must, [
-            "Begriffe (jedes Etikett mit Halbsatz)",
-            "Typ (explorativ / konfirmatorisch)",
-            "Modell-I/O / Prompt (woertlich)",
-            "Roh-Output (ein echtes Beispiel + Modell-Output)",
+            "Terms (every label with a half-sentence gloss)",
+            "Type (exploratory / confirmatory)",
+            "Model I/O / prompt (verbatim)",
+            "Raw output (one real example + model output)",
         ])
 
     def test_explicit_na_counts_as_present(self):
@@ -95,26 +95,25 @@ class TestMain(unittest.TestCase):
             code = protocol_check.main(argv)
         return code, out.getvalue()
 
-    def test_template_hat_alle_feldnamen(self):
-        """Das Template nennt jedes Pflicht- und Soll-Feld."""
+    def test_template_names_every_field(self):
+        """The template mentions every must and should field."""
         missing_must, missing_should = protocol_check.check_text(
             TEMPLATE.read_text(encoding="utf-8"))
         self.assertEqual(missing_must, [])
         self.assertEqual(missing_should, [])
 
-    def test_template_faellt_selbst_durch(self):
-        """Erwartung UMGEDREHT am 2026-08-17 — und das ist der Punkt.
+    def test_template_itself_must_fail(self):
+        """Expectation INVERTED on 2026-08-17 — and that is the point.
 
-        Bis dahin verlangte dieser Test, dass das Template selbst durchgeht.
-        Das war die Annahme, die den eigentlichen Fehler deckte: Ein Protokoll,
-        das ununterscheidbar vom Template ist, galt als ausgefuellt. Genau so
-        kam es, dass 28 Protokolle als sauber gemeldet wurden und **keines** ein
-        echtes Modell-Ein/Ausgabe-Beispiel enthielt. Das Template besteht aus
-        Platzhaltern; es MUSS jetzt durchfallen.
+        Until then this test required the template itself to pass. That was
+        the assumption covering the actual bug: a protocol indistinguishable
+        from the template counted as filled. Exactly thus 28 protocols were
+        reported clean while **none** contained a real model input/output
+        example. The template consists of placeholders; it MUST fail now.
         """
         code, out = self._run([str(TEMPLATE)])
         self.assertEqual(code, 1)
-        self.assertIn("PLATZHALTER", out)
+        self.assertIn("PLACEHOLDER", out)
 
     def test_missing_must_exits_one(self):
         import tempfile
@@ -123,8 +122,8 @@ class TestMain(unittest.TestCase):
             p.write_text(REAL_FREEFORM_PROTOCOL, encoding="utf-8")
             code, out = self._run([d])
             self.assertEqual(code, 1)
-            self.assertIn("FEHLT (Pflicht): Typ", out)
-            self.assertIn("FEHLT (Pflicht): Modell-I/O", out)
+            self.assertIn("MISSING (must): Type", out)
+            self.assertIn("MISSING (must): Model I/O", out)
 
     def test_no_args_exits_two(self):
         code, _ = self._run([])
@@ -135,12 +134,14 @@ if __name__ == "__main__":
     unittest.main()
 
 
-# --- Platzhalter-Erkennung (2026-08-17) -------------------------------------
+# --- Placeholder detection (2026-08-17) --------------------------------------
 #
-# Der Anlass: Ueber 28 Protokolle enthielt KEINES ein echtes Modell-Ein/Ausgabe-
-# Beispiel, waehrend der Checker sie als sauber meldete — das Wort "Prompt" im
-# Template-Platzhalter reichte ihm. Die Zeilen unten sind woertlich aus
-# experiments/13-akzeptanzregel/PROTOCOL-akzeptanzregel.md (2026-08-17, vor der Reparatur).
+# The occasion: across 28 protocols NOT ONE contained a real model
+# input/output example while the checker reported them clean — the word
+# "Prompt" in the template placeholder satisfied it. The lines below are
+# verbatim from experiments/13-akzeptanzregel/PROTOCOL-akzeptanzregel.md
+# (2026-08-17, before the repair). German on purpose: grown protocols are
+# German-filled and the checker's contract is bilingual.
 
 REAL_PLACEHOLDER_BLOCK = """\
 ## Setup
@@ -153,9 +154,9 @@ REAL_PLACEHOLDER_BLOCK = """\
 """
 
 
-class TestPlatzhalter(unittest.TestCase):
+class TestPlaceholders(unittest.TestCase):
 
-    def test_findet_die_vier_echten_platzhalter(self):
+    def test_finds_the_four_real_placeholders(self):
         found = protocol_check.placeholder_fields(REAL_PLACEHOLDER_BLOCK)
         labels = [lb for _, lb in found]
         self.assertIn("Prompt (wörtlich)", labels)
@@ -163,23 +164,23 @@ class TestPlatzhalter(unittest.TestCase):
         self.assertIn("Modell / Tool", labels)
         self.assertIn("Bedeutung des Gold-Labels", labels)
 
-    def test_ausgefuelltes_feld_ist_kein_platzhalter(self):
+    def test_a_filled_field_is_no_placeholder(self):
         filled = ("- **Modell / Tool:** Alias `qwen` (qwen2.5:7b, ollama)\n"
                   "- **Prompt (wörtlich):** siehe Codeblock unten\n")
         self.assertEqual(protocol_check.placeholder_fields(filled), [])
 
-    def test_begruendetes_na_ist_kein_platzhalter(self):
-        # Die Regel erlaubt "n/a — <warum>"; der Grund muss dastehen.
+    def test_justified_na_is_no_placeholder(self):
+        # The rule allows "n/a — <why>"; the reason must be there.
         na = "- **Modell-I/O:** n/a — dieser Lauf ruft kein Modell auf.\n"
         self.assertEqual(protocol_check.placeholder_fields(na), [])
 
-    def test_platzhalter_in_pflichtfeld_ist_schwerer(self):
+    def test_placeholder_in_a_must_field_weighs_more(self):
         self.assertEqual(protocol_check.severity_of("Prompt (wörtlich)"), "must")
         self.assertEqual(protocol_check.severity_of("Modell-I/O"), "must")
         self.assertEqual(protocol_check.severity_of("Ausbeute je Stufe"), "should")
         self.assertEqual(protocol_check.severity_of("Nächster Schritt"), "other")
 
-    def test_pipeline_meldet_exit_1_bei_pflicht_platzhalter(self):
+    def test_pipeline_exits_one_on_must_placeholder(self):
         import tempfile
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "PROTOCOL-x.md"
@@ -189,28 +190,28 @@ class TestPlatzhalter(unittest.TestCase):
             with contextlib.redirect_stdout(buf):
                 rc = protocol_check.main([str(p)])
             self.assertEqual(rc, 1)
-            self.assertIn("NUR PLATZHALTER (Pflicht)", buf.getvalue())
+            self.assertIn("PLACEHOLDER ONLY (must)", buf.getvalue())
 
 
-class TestTemplateZeilen(unittest.TestCase):
+class TestTemplateLines(unittest.TestCase):
 
-    def test_woertliche_template_zeile_wird_gemeldet(self):
+    def test_verbatim_template_line_is_recognised(self):
         if not TEMPLATE.exists():
-            self.skipTest("Template nicht vorhanden")
+            self.skipTest("template absent")
         lines = protocol_check.template_lines(TEMPLATE)
-        self.assertTrue(lines, "Template liefert keine Vergleichszeilen")
-        # Eine beliebige lange Template-Zeile muss wiedererkannt werden.
+        self.assertTrue(lines, "template yields no comparison lines")
+        # Any long template line must be recognised again.
         sample = next(iter(lines))
         self.assertIn(sample.strip(), lines)
 
 
-class TestFrozenOhneBeispiel(unittest.TestCase):
-    """„Frozen before run: ja" ohne gerendertes Beispiel (2026-08-18).
+class TestFrozenWithoutExample(unittest.TestCase):
+    """"Frozen before run: yes" without a rendered example (2026-08-18).
 
-    Anlass MH: Der Ablauf gehoert geaendert — erst registrieren, dann die
-    Pipeline EINMAL fuer eine Handvoll echter Items laufen lassen, das
-    Ergebnis als Beispiel ins Protokoll, und erst dann einfrieren. Wer auf
-    einem ungeprueften Instrument einfriert, friert den Fehler mit ein.
+    Occasion (MH): the flow had to change — register first, then run the
+    pipeline ONCE over a handful of real items, put the result into the
+    protocol as the example, and only then freeze. Freezing on an unchecked
+    instrument freezes the error in.
     """
 
     def _run(self, text):
@@ -227,24 +228,24 @@ class TestFrozenOhneBeispiel(unittest.TestCase):
             "Roh-Output, Instrumentenprobe, Einordnung, Rivalen, Fehlerrichtung, "
             "Skopus, freie Knoepfe, Prognose, gold, Ausbeute, Ergebnis.\n")
 
-    def test_frozen_ja_ohne_codeblock_faellt_durch(self):
+    def test_frozen_yes_without_code_block_fails(self):
         rc, out = self._run(self.BASE + "- **Frozen before run:** ja\n")
         self.assertEqual(rc, 1)
-        self.assertIn("kein einziges", out)
+        self.assertIn("not a single", out)
 
-    def test_frozen_ja_mit_codeblock_geht_durch(self):
+    def test_frozen_yes_with_code_block_passes(self):
         rc, out = self._run(self.BASE + "- **Frozen before run:** ja\n\n```\nAnswer: Yes\n```\n")
         self.assertEqual(rc, 0)
 
-    def test_frozen_nein_ohne_codeblock_ist_kein_pflichtfehler(self):
-        # Ein vorgemerktes Protokoll darf ohne Beispiel existieren — es
-        # behauptet ja gerade NICHT, eingefroren zu sein.
+    def test_frozen_no_without_code_block_is_no_must_failure(self):
+        # A pre-registered protocol may exist without an example — it
+        # precisely does NOT claim to be frozen.
         rc, out = self._run(self.BASE + "- **Frozen before run:** nein, noch nicht\n")
-        self.assertNotIn("kein einziges", out)
+        self.assertNotIn("not a single", out)
 
 
-class TestGraduierungsTor(unittest.TestCase):
-    """Frozen: ja eskaliert Soll zu Pflicht (2026-08-18) — Pilot leicht, Bericht schwer."""
+class TestGraduationGate(unittest.TestCase):
+    """Frozen: yes escalates should to must (2026-08-18) — pilot light, report heavy."""
 
     def _run(self, text):
         import tempfile
@@ -256,30 +257,31 @@ class TestGraduierungsTor(unittest.TestCase):
                 rc = protocol_check.main([str(p)])
             return rc, buf.getvalue()
 
-    # Pilot-Minimum vorhanden, Soll-Felder fehlen komplett:
+    # Pilot minimum present, should fields absent entirely (German content
+    # on purpose — the contract is bilingual):
     PILOT = ("# x\nBegriffe, Frage, Hypothese, Erfolg, Abbruch/Kill, explorativ, Anker,\n"
              "Prompt und Modell-I/O:\n\n```\nAnswer: Yes\n```\n"
              "Roh-Output: siehe output/beispiele.md.\n"
              "Instrumentenprobe: gelaufen.\n")
 
-    def test_pilot_ohne_frozen_warnt_nur(self):
+    def test_pilot_without_frozen_only_warns(self):
         rc, out = self._run(self.PILOT)
-        self.assertEqual(rc, 0, out)           # Soll fehlt -> Warnung, kein Fehler
+        self.assertEqual(rc, 0, out)           # should missing -> warning, no failure
 
-    def test_frozen_ja_macht_soll_zur_pflicht(self):
+    def test_frozen_yes_makes_should_a_must(self):
         rc, out = self._run(self.PILOT + "\n- **Frozen before run:** ja\n")
         self.assertEqual(rc, 1)
-        self.assertIn("Pflicht ab frozen: ja", out)
+        self.assertIn("must once frozen: yes", out)
 
 
-class TestPromptUndBeispiel(unittest.TestCase):
-    """Prompt woertlich + ein echtes Beispiel mit Output sind Pflicht (2026-08-20).
+class TestPromptAndExample(unittest.TestCase):
+    """Verbatim prompt + one real example with output are musts (2026-08-20).
 
-    Das ist der Kern des Protokolls: spaeter sehen, was wirklich reinging und
-    rauskam. Zwei Verschaerfungen: ein erwaehnter Prompt ohne Code-Block ist
-    ein Pflicht-Fehler (nacherzaehlt statt festgehalten), und das neue
-    Pflichtfeld Roh-Output verlangt ein Beispiel + Modell-Output — eingebettet,
-    verlinkt oder als begruendetes n/a.
+    That is the core of the protocol: seeing later what really went in and
+    came out. Two tightenings: a mentioned prompt without a code block is a
+    must failure (paraphrased instead of recorded), and the raw-output must
+    field demands an example + model output — embedded, linked, or as a
+    justified n/a.
     """
 
     def _run(self, text):
@@ -295,45 +297,44 @@ class TestPromptUndBeispiel(unittest.TestCase):
     BASE = ("# x\nBegriffe, Frage, Erfolg, Kill, explorativ, Anker, "
             "Frozen before run: nein.\n")
 
-    def test_prompt_ohne_codeblock_ist_pflichtfehler(self):
+    def test_prompt_without_code_block_is_a_must_failure(self):
         rc, out = self._run(self.BASE + "Prompt: fragt sinngemaess nach Fallacy.\n"
                             + "Roh-Output: siehe output/beispiele.md.\n")
         self.assertEqual(rc, 1)
-        self.assertIn("keinen Code-Block", out)
+        self.assertIn("no code block", out)
 
-    def test_fehlender_roh_output_ist_pflichtfehler(self):
+    def test_missing_raw_output_is_a_must_failure(self):
         rc, out = self._run(self.BASE + "Prompt:\n\n```\nIs this fallacious?\n```\n")
         self.assertEqual(rc, 1)
-        self.assertIn("FEHLT (Pflicht): Roh-Output", out)
+        self.assertIn("MISSING (must): Raw output", out)
 
-    def test_beides_da_geht_durch(self):
+    def test_both_present_passes(self):
         rc, out = self._run(self.BASE + "Prompt:\n\n```\nIs this fallacious?\n```\n"
                             + "Roh-Output: siehe output/beispiele.md.\n")
         self.assertEqual(rc, 0, out)
 
 
-class TestPilotStampNichtGefroren(unittest.TestCase):
-    """Der Template-Kopf ERWAEHNT die Frozen-Regel — das darf den
-    FROZEN_YES-Detektor nicht ausloesen (2026-08-20: '`Frozen before run:
-    yes` macht sie zur Pflicht' im Kopftext liess jeden frischen
-    Pilot-Stempel als eingefroren erscheinen; alle Soll-Luecken wurden
-    faelschlich zur Pflicht eskaliert). Der Kopf sagt deshalb '`Frozen:
-    yes`', was kein Feld-Pattern ist."""
+class TestPilotStampNotFrozen(unittest.TestCase):
+    """The template head MENTIONS the frozen rule — that must not trip the
+    FROZEN_YES detector (2026-08-20: '`Frozen before run: yes` makes them
+    musts' in the head text made every fresh pilot stamp look frozen; all
+    should-gaps were wrongly escalated to musts). The head therefore avoids
+    the field pattern."""
 
-    def test_pilot_teil_ist_nicht_frozen(self):
+    def test_pilot_part_is_not_frozen(self):
         text = TEMPLATE.read_text(encoding="utf-8")
         pilot = text.split("<!-- report:start")[0]
         self.assertIsNone(protocol_check.FROZEN_YES.search(pilot))
         self.assertIsNotNone(protocol_check.FROZEN_NO.search(pilot))
 
 
-class TestBegriffe(unittest.TestCase):
-    """Begriffe sind Pflicht (2026-08-19).
+class TestTerms(unittest.TestCase):
+    """Terms are a must (2026-08-19).
 
-    Das Template fragt sie zweimal ab — `Begriffe dieses Protokolls` im
-    Einordnungs-Block, `Geklaerte Begriffe` nach dem Trockenlauf — der Checker
-    sah keins von beidem an. 20 der 31 Protokolle im Repo nennen keinen
-    einzigen Begriff, waehrend fuenf Definitions-Notes danebenliegen.
+    The template asks for them twice — in the context block and after the
+    dry run — and the checker looked at neither. 20 of 31 protocols in the
+    repo named not a single term while five definition notes sat next door.
+    German fixture labels on purpose: grown protocols carry them.
     """
 
     def _run(self, text):
@@ -346,30 +347,30 @@ class TestBegriffe(unittest.TestCase):
                 rc = protocol_check.main([str(p)])
             return rc, buf.getvalue()
 
-    def test_ohne_begriff_fehlt_das_pflichtfeld(self):
+    def test_without_terms_the_must_field_is_missing(self):
         missing_must, _ = protocol_check.check_text("# x\nHypothese: A schlaegt B.\n")
-        self.assertIn("Begriffe (jedes Etikett mit Halbsatz)", missing_must)
+        self.assertIn("Terms (every label with a half-sentence gloss)", missing_must)
 
-    def test_halbsatz_genuegt(self):
+    def test_a_half_sentence_suffices(self):
         text = "# x\nBegriffe: Sog = Tendenz des Bildes, Ko-Praesenz zu zeigen.\n"
         missing_must, _ = protocol_check.check_text(text)
-        self.assertNotIn("Begriffe (jedes Etikett mit Halbsatz)", missing_must)
+        self.assertNotIn("Terms (every label with a half-sentence gloss)", missing_must)
 
-    def test_glossar_und_terminologie_zaehlen_auch(self):
+    def test_glossary_and_terminology_count_too(self):
         for wort in ("Glossar: siehe notes/messung/pipeline-glossar.md",
                      "Terminologie folgt dem Standard."):
             missing_must, _ = protocol_check.check_text("# x\n" + wort + "\n")
-            self.assertNotIn("Begriffe (jedes Etikett mit Halbsatz)", missing_must,
-                             f"'{wort}' sollte das Feld erfuellen")
+            self.assertNotIn("Terms (every label with a half-sentence gloss)",
+                             missing_must, f"'{wort}' should satisfy the field")
 
-    def test_platzhalter_zaehlt_nicht_als_gefuellt(self):
-        # Das Schluesselwort steht da, gefuellt ist es nicht — genau die Luecke,
-        # die 2026-08-17 fuer das Prompt-Feld geschlossen wurde.
+    def test_placeholder_does_not_count_as_filled(self):
+        # The keyword is there, the field is not filled — exactly the gap
+        # closed for the prompt field on 2026-08-17.
         rc, out = self._run("# x\n- **Begriffe dieses Protokolls:** <jedes Etikett>\n")
         self.assertEqual(rc, 1)
-        self.assertIn("NUR PLATZHALTER (Pflicht): Begriffe", out)
+        self.assertIn("PLACEHOLDER ONLY (must): Begriffe", out)
 
-    def test_severity_of_ordnet_beide_template_felder_der_pflicht_zu(self):
+    def test_severity_of_maps_both_template_labels_to_must(self):
         for label in ("Begriffe dieses Protokolls", "Geklaerte Begriffe"):
             self.assertEqual(protocol_check.severity_of(label), "must", label)
 

@@ -1,13 +1,13 @@
-"""Tests fuer `runlog._is_alive` — die Frage „laeuft dieser Lauf noch?".
+"""Tests for `runlog._is_alive` — the question "is this run still going?".
 
-Warum das getestet gehoert: Der Arbeitsstandard sagt, was gerade laeuft, werde
-**nachgesehen und nicht erfragt**. Eine falsche Auskunft ist damit teurer als
-gar keine — sie fuehrt dazu, dass ein toter Lauf nicht neu gestartet wird.
+Why this deserves tests: the working standard says what is currently running
+gets **looked up, not asked about**. A wrong answer is therefore more
+expensive than none — it keeps a dead run from being restarted.
 
-Genau das passierte am 2026-08-15: `runlog` meldete einen Lauf vom 13. August
-als laufend, weil das Betriebssystem dessen PID an einen macOS-Dienst
-(`RemoteManagement`) neu vergeben hatte. Die Existenzpruefung per
-`os.kill(pid, 0)` kann das prinzipiell nicht bemerken.
+Exactly that happened on 2026-08-15: `runlog` reported a run from August 13
+as running because the OS had recycled its PID to a macOS service
+(`RemoteManagement`). An existence check via `os.kill(pid, 0)` cannot
+notice that in principle.
 """
 import os
 import sys
@@ -24,32 +24,32 @@ class TestIsAlive(unittest.TestCase):
 
     def test_our_own_process_counts_as_alive_for_its_own_script(self):
         cmd = _command_of(os.getpid())
-        self.assertIsNotNone(cmd, "ps nicht verfuegbar — Test waere sinnlos")
-        token = next(t for t in cmd.split() if t)          # irgendein echtes Token
+        self.assertIsNotNone(cmd, "ps unavailable — the test would be moot")
+        token = next(t for t in cmd.split() if t)          # any real token
         self.assertTrue(_is_alive(os.getpid(), token))
 
     def test_a_recycled_pid_is_not_reported_as_running(self):
-        """Der Fall vom 2026-08-15: PID lebt, ist aber ein anderer Prozess."""
+        """The 2026-08-15 case: the PID is alive but a different process."""
         self.assertFalse(_is_alive(os.getpid(), "05_refusal.py"))
 
     def test_a_dead_pid_is_false(self):
-        dead = 999_999                                     # praktisch sicher frei
+        dead = 999_999                                     # practically surely free
         try:
             os.kill(dead, 0)
         except ProcessLookupError:
             self.assertFalse(_is_alive(dead, "irgendein_skript.py"))
         except PermissionError:
-            self.skipTest("PID unerwartet belegt")
+            self.skipTest("PID unexpectedly taken")
 
     def test_unknown_is_none_not_true(self):
-        """Ohne Skriptnamen ist die Frage nicht entscheidbar — dann lieber
-        `None` als ein falsches `True`."""
+        """Without a script name the question is undecidable — better `None`
+        than a false `True`."""
         self.assertIsNone(_is_alive(os.getpid(), None))
         self.assertIsNone(_is_alive(os.getpid(), ""))
 
     def test_a_missing_pid_field_is_none(self):
         self.assertIsNone(_is_alive(None, "x.py"))
-        self.assertIsNone(_is_alive("81892", "x.py"))      # String, nicht int
+        self.assertIsNone(_is_alive("81892", "x.py"))      # string, not int
 
 
 if __name__ == "__main__":
@@ -57,11 +57,11 @@ if __name__ == "__main__":
 
 
 class TestOutputsJson(unittest.TestCase):
-    """runlog.Run.output (2026-08-18): Wer im Run-Verzeichnis steht, muss ohne
-    Quellcode-Lektuere beantworten koennen, wohin der Lauf geschrieben hat —
-    config.json friert nur die EINGABEN ein (Befund MH beim Lesen eines Runs)."""
+    """runlog.Run.output (2026-08-18): whoever stands inside the run dir must
+    be able to answer where the run wrote WITHOUT reading source code —
+    config.json freezes only the INPUTS (finding by MH while reading a run)."""
 
-    def test_registrierte_ausgabe_landet_mit_hash_in_outputs_json(self):
+    def test_registered_output_lands_in_outputs_json_with_hash(self):
         import json, tempfile
         from pathlib import Path
         with tempfile.TemporaryDirectory() as d:
@@ -75,7 +75,7 @@ class TestOutputsJson(unittest.TestCase):
             self.assertEqual(oj[0]["lines"], 2)
             self.assertEqual(len(oj[0]["sha256"]), 16)
 
-    def test_fehlende_datei_wird_benannt_statt_verschwiegen(self):
+    def test_a_missing_file_is_named_not_silenced(self):
         import json, tempfile
         from pathlib import Path
         with tempfile.TemporaryDirectory() as d:
@@ -85,14 +85,14 @@ class TestOutputsJson(unittest.TestCase):
             oj = json.loads(next((d / "runs").glob("*/outputs.json")
                                  ).read_text(encoding="utf-8"))
             self.assertIsNone(oj[0]["sha256"])
-            self.assertIn("nicht vorhanden", oj[0]["note"])
+            self.assertIn("absent", oj[0]["note"])
 
 
 class TestUntrackedSourceSnapshot(unittest.TestCase):
-    """source-untracked/ (2026-08-18, Einwand MH): Der Einzeldatei-Snapshot
-    liess Nachbarmodule ungesichert — beim ersten Lauf eines frischen Bereichs
-    ist der GANZE scripts/-Ordner untracked, in keinem Commit und keinem Diff.
-    Jetzt: Patch = getrackter Drift, source-untracked/ = was git nicht sieht."""
+    """source-untracked/ (2026-08-18, objection by MH): the single-file
+    snapshot left sibling modules unsaved — on the first run of a fresh area
+    the WHOLE scripts/ folder is untracked, in no commit and no diff.
+    Now: patch = tracked drift, source-untracked/ = what git does not see."""
 
     def _repo(self, d):
         import subprocess
@@ -101,7 +101,7 @@ class TestUntrackedSourceSnapshot(unittest.TestCase):
                     ["git", "config", "user.name", "t"]):
             subprocess.run(cmd, cwd=d, capture_output=True)
 
-    def test_untracked_nachbarn_werden_kopiert_getrackte_nicht(self):
+    def test_untracked_siblings_are_copied_tracked_ones_not(self):
         import json, subprocess, sys, tempfile
         from pathlib import Path
         with tempfile.TemporaryDirectory() as td:
@@ -123,15 +123,15 @@ class TestUntrackedSourceSnapshot(unittest.TestCase):
             run_dir = next((d / "runs").glob("*"))
             copied = sorted(p.name for p in (run_dir / "source-untracked").rglob("*.py"))
             self.assertIn("helper.py", copied)
-            self.assertIn("01_measure.py", copied)     # entry selbst auch untracked
-            self.assertNotIn("committed.py", copied)   # getrackt -> Sache des Diffs
+            self.assertIn("01_measure.py", copied)     # the entry itself is untracked too
+            self.assertNotIn("committed.py", copied)   # tracked -> the diff's business
             self.assertEqual([], [p.name for p in
                                   (run_dir / "source-untracked").rglob("*.jsonl")],
-                             "output/ darf nicht in den Quell-Snapshot")
+                             "output/ must not enter the source snapshot")
             cfg = json.loads((run_dir / "config.json").read_text(encoding="utf-8"))
             self.assertIn("helper.py", cfg["untracked_sources"])
 
-    def test_ausserhalb_eines_git_repos_faellt_nichts_um(self):
+    def test_outside_a_git_repo_nothing_falls_over(self):
         import sys, tempfile
         from pathlib import Path
         with tempfile.TemporaryDirectory() as td:
@@ -146,10 +146,10 @@ class TestUntrackedSourceSnapshot(unittest.TestCase):
                 sys.argv[0] = old_argv
 
 
-    def test_getrackter_einstieg_schnappt_nicht(self):
-        # Bereich einmal committet -> ab da gilt "vor dem Lauf committen",
-        # nicht Kopieren; ein Snapshot, der weiter feuert, wuerde Daten saugen
-        # (der erste Entwurf kopierte output/ und alte runs/ mit).
+    def test_a_tracked_entry_does_not_trigger(self):
+        # Area committed once -> from then on "commit before the run" applies,
+        # not copying; a snapshot that keeps firing would hoover up data
+        # (the first draft copied output/ and old runs/ along).
         import subprocess, sys, tempfile
         from pathlib import Path
         with tempfile.TemporaryDirectory() as td:
@@ -158,7 +158,7 @@ class TestUntrackedSourceSnapshot(unittest.TestCase):
             entry = scripts / "01_measure.py"; entry.write_text("# entry\n")
             subprocess.run(["git", "add", "-A"], cwd=d, capture_output=True)
             subprocess.run(["git", "commit", "-qm", "x"], cwd=d, capture_output=True)
-            (scripts / "spaeter.py").write_text("# neuer untracked Nachbar\n")
+            (scripts / "later.py").write_text("# new untracked sibling\n")
             old_argv = sys.argv[0]
             sys.argv[0] = str(entry)
             try:

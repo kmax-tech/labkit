@@ -84,47 +84,47 @@ from pathlib import Path
 # (2026-08-20), pre-existing protocols name their concepts in German, and
 # either language may fill a field — the checker accepts both.
 MUST = [
-    ("Begriffe (jedes Etikett mit Halbsatz)", r"begriff|terminolog|glossar|terms of"),
-    ("Frage / Hypothese", r"hypothese|frage|question|hypothesis"),
-    ("Erfolgskriterium", r"erfolg|success"),
-    ("Abbruchkriterium (Kill)", r"abbruch|kill"),
-    ("Typ (explorativ / konfirmatorisch)",
+    ("Terms (every label with a half-sentence gloss)",
+     r"begriff|terminolog|glossar|terms of"),
+    ("Question / hypothesis", r"hypothese|frage|question|hypothesis"),
+    ("Success criterion", r"erfolg|success"),
+    ("Kill criterion", r"abbruch|kill"),
+    ("Type (exploratory / confirmatory)",
      r"explorativ|konfirmatorisch|explorator|confirmator"),
-    ("Modell-I/O / Prompt (woertlich)", r"modell-i/o|model i/o|prompt"),
-    ("Nullbedingung / Anker / Kontrolle",
+    ("Model I/O / prompt (verbatim)", r"modell-i/o|model i/o|prompt"),
+    ("Null condition / anchor / control",
      r"nullbedingung|null.?condition|anker|anchor|placebo|swap|kontroll"),
     # The one thing a protocol exists for: a real example with the model's
     # actual output (embedded or linked). A metric without one is a number
     # nobody can interpret later — the mechanism shows in the single case.
-    ("Roh-Output (ein echtes Beispiel + Modell-Output)",
+    ("Raw output (one real example + model output)",
      r"roh-output|roh-beispiel|roh-antwort|i/o-beispiel|raw.?output"),
 ]
 SHOULD = [
     # Missing in all five freely written protocols of Aug 2026, and the result
     # section was systematically never written back — hence the two nudges.
     ("Frozen before run (ja/yes | nein/no)", r"frozen|eingefroren"),
-    ("Ergebnis / Ausgang (nach dem Lauf nachtragen)",
+    ("Result / outcome (write back after the run)",
      r"ergebnis|ausgang|resultat|result|outcome"),
-    ("Bedeutung des Gold-Labels", r"gold"),
-    ("Ausbeute je Stufe", r"ausbeute|yield"),
-    ("Rivalen-Erklaerungen / Konfunde", r"rival|konfund|confound"),
-    ("Fehlerrichtung je Konfund",
+    ("Meaning of the gold label", r"gold"),
+    ("Yield per stage", r"ausbeute|yield"),
+    ("Rival explanations / confounds", r"rival|konfund|confound"),
+    ("Error direction per confound",
      r"fehlerrichtung|error.?direction|richtung der hypothese|zugunsten der hypothese"),
-    ("Skopus (was NICHT gemessen wird)", r"skopus|nicht gemessen|out of scope"),
-    ("Freie Knoepfe + Sensitivitaet", r"freie[nr]? kn|free knob|sensitivit|sweep"),
-    ("Prognose fuer den Folgelauf", r"prognose|vorhersage|prediction"),
-    ("Instrumentenprobe (Trockenlauf vor dem Pilot)",
+    ("Scope (what is NOT measured)", r"skopus|nicht gemessen|out of scope"),
+    ("Free knobs + sensitivity", r"freie[nr]? kn|free knob|sensitivit|sweep"),
+    ("Prediction for the follow-up run", r"prognose|vorhersage|prediction"),
+    ("Instrument check (dry run before the pilot)",
      r"instrumentenprobe|trockenlauf|rauchtest|instrument check|dry.?run"),
-    ("Einordnung (selbsttragend)",
+    ("Context (self-contained)",
      r"einordnung|vorgeschichte|selbsttragend|self.?contained"),
 ]
 
-# „Frozen before run: ja" ohne ein einziges gerendertes Beispiel ist eine
-# eingefrorene Registrierung auf einem ungeprueften Instrument — sie friert den
-# Fehler mit ein. Am 2026-08-17 fand ein 12-Aufruf-Trockenlauf, dass der Prompt
-# nach FOLGERUNG fragte, waehrend das Gold-Label STUETZUNGSGRAD meint; ein
-# 9-Aufruf-Trockenlauf sparte 440 Aufrufe. Beide haetten in einem „frozen"
-# Protokoll ohne I/O-Beispiel nicht stattgefunden.
+# "Frozen before run: yes" without a single rendered example is a frozen
+# registration on an unchecked instrument — it freezes the error in. On
+# 2026-08-17 a 12-call dry run found the prompt asking for ENTAILMENT while
+# the gold label means DEGREE OF SUPPORT; a 9-call dry run saved 440 calls.
+# Neither would have happened in a "frozen" protocol without an I/O example.
 FROZEN_YES = re.compile(r"frozen before run[^:\n]*:\**\s*\**\s*(ja|yes)\b", re.I)
 
 # The mirror image of the graduation gate: a protocol that explicitly declares
@@ -271,7 +271,7 @@ def main(argv: list[str]) -> int:
     tmpl_arg = None
     if argv and argv[0] == "--template":
         if len(argv) < 2:
-            print("--template braucht einen Pfad")
+            print("--template needs a path")
             return 2
         tmpl_arg, argv = argv[1], argv[2:]
     if not argv:
@@ -280,7 +280,7 @@ def main(argv: list[str]) -> int:
         return 2
     files = collect(argv)
     if not files:
-        print("protocol-check: keine PROTOCOL-*.md gefunden")
+        print("protocol-check: no PROTOCOL-*.md found")
         return 2
 
     tmpl = template_lines(find_template(tmpl_arg))
@@ -289,42 +289,41 @@ def main(argv: list[str]) -> int:
         try:
             text = f.read_text(encoding="utf-8")
         except OSError as exc:
-            print(f"{f}: nicht lesbar ({exc})")
+            print(f"{f}: not readable ({exc})")
             failed = True
             continue
 
         missing_must, missing_should = check_text(text)
         frozen = bool(FROZEN_YES.search(text))
         holes = placeholder_fields(text)
-        # Graduierungs-Tor: frozen -> jede Soll-Luecke ist eine Pflicht-Luecke.
+        # Graduation gate: frozen -> every should-gap is a must-gap.
         must_holes = [(n, lb) for n, lb in holes
                       if severity_of(lb) == "must"
                       or (frozen and severity_of(lb) == "should")]
         soft_holes = [(n, lb) for n, lb in holes if (n, lb) not in must_holes]
         if frozen:
-            missing_must = missing_must + [f"{lb} (Pflicht ab frozen: ja)"
+            missing_must = missing_must + [f"{lb} (must once frozen: yes)"
                                            for lb in missing_should]
             missing_should = []
         pilot_note = ""
         if not frozen and FROZEN_NO.search(text) and missing_should:
-            pilot_note = (f"Pilot (frozen: nein) — {len(missing_should)} "
-                          f"Soll-Feld(er) erst zum Bericht faellig "
-                          f"(anhaengen: lib exp <name> --report)")
+            pilot_note = (f"pilot (frozen: no) — {len(missing_should)} "
+                          f"should-field(s) due only at report time "
+                          f"(append them: lib exp <name> --report)")
             missing_should = []
         left = sorted({s for s in (l.strip() for l in text.splitlines()) if s in tmpl})
         has_block = "```" in text
         no_block = not has_block and re.search(r"prompt", text.lower())
         frozen_without_io = bool(FROZEN_YES.search(text)) and not has_block
-        # Ein Protokoll ist eine Registrierung, kein Laborjournal. 2026-08-20
-        # war eines auf 646 Zeilen gewachsen, weil jede Neu-Einfrierung ihre
-        # Erzaehlung ANHAENGTE statt ersetzte — Praesenz wurde geprueft, Laenge
-        # nie. Die Kurzfassung desselben Protokolls (alle Felder, alle Zahlen,
-        # vier Code-Bloecke) hat 296 Zeilen; 350 laesst dafuer Luft.
-        # Gezaehlt wird nur PROSA: Code-Zaeune (gerenderte Beispiele sind
-        # Roh-Output-PFLICHT) und Tabellenzeilen (Konfund-Profile,
-        # Fehlerrichtungen) zaehlen nicht — die Rohzeilen-Zaehlung hatte
-        # drei registrierungs-dichte Protokolle als Journal geflaggt,
-        # darunter ein nie gelaufenes Voll-Intent (2026-08-25).
+        # A protocol is a registration, not a lab journal. By 2026-08-20 one
+        # had grown to 646 lines because every re-freeze APPENDED its
+        # narrative instead of replacing it — presence was checked, length
+        # never. The condensed version of that same protocol (all fields,
+        # all numbers, four code blocks) has 296 lines; 350 leaves room.
+        # Only PROSE counts: code fences (rendered examples are the raw-output
+        # MUST) and table rows (confound profiles, error directions) do not —
+        # raw-line counting had flagged three registration-dense protocols
+        # as journals, one of which never even ran (2026-08-25).
         in_fence, n_lines = False, 0
         for _l in text.splitlines():
             _s = _l.strip()
@@ -337,7 +336,7 @@ def main(argv: list[str]) -> int:
         big = oversized_sections(text)
 
         # Post-run: a measure run in the ledger makes an empty Result a MUST
-        # gap — pilot suppression does not apply (nachtragen statt schweigen).
+        # gap — pilot suppression does not apply (write back, don't go quiet).
         measured = [(n, m.group(0)) for n, l in enumerate(text.splitlines(), 1)
                     if (m := RUN_ID.search(l)) and not SETUP_RUN.search(l)]
         run_unreported = bool(measured) and (
@@ -351,55 +350,55 @@ def main(argv: list[str]) -> int:
                      or history)
         if clean:
             if pilot_note:
-                print(f"{f}: OK — Pflicht-Felder ausgefuellt; {pilot_note}")
+                print(f"{f}: OK — must fields filled; {pilot_note}")
             else:
-                print(f"{f}: OK — alle Pflicht- und Soll-Felder ausgefuellt")
+                print(f"{f}: OK — all must and should fields filled")
             continue
 
         if pilot_note:
             print(f"{f}: {pilot_note}")
         for label in missing_must:
-            print(f"{f}: FEHLT (Pflicht): {label}")
+            print(f"{f}: MISSING (must): {label}")
         for label in missing_should:
-            print(f"{f}: fehlt (Soll): {label}")
+            print(f"{f}: missing (should): {label}")
         for n, label in must_holes:
-            print(f"{f}:{n}: NUR PLATZHALTER (Pflicht): {label}")
+            print(f"{f}:{n}: PLACEHOLDER ONLY (must): {label}")
         for n, label in soft_holes:
-            print(f"{f}:{n}: nur Platzhalter: {label}")
+            print(f"{f}:{n}: placeholder only: {label}")
         if left:
-            print(f"{f}: {len(left)} Zeile(n) noch woertlicher Template-Text, z.B.:")
+            print(f"{f}: {len(left)} line(s) still verbatim template text, e.g.:")
             for s in left[:3]:
                 print(f"    {s[:88]}")
         if no_block:
-            print(f"{f}: FEHLT (Pflicht): nennt einen Prompt, enthaelt aber keinen "
-                  f"Code-Block — ein woertlicher Prompt gehoert in ``` ```, sonst "
-                  f"ist er nacherzaehlt.")
+            print(f"{f}: MISSING (must): mentions a prompt but contains no code "
+                  f"block — a verbatim prompt belongs in ``` ```, anything else "
+                  f"is a paraphrase.")
         if frozen_without_io:
-            print(f"{f}: FEHLT (Pflicht): 'Frozen before run: ja', aber kein einziges "
-                  f"gerendertes Beispiel (Code-Block). Erst Instrumentenprobe, dann "
-                  f"einfrieren — sonst friert man den Fehler mit ein.")
+            print(f"{f}: MISSING (must): 'Frozen before run: yes', but not a "
+                  f"single rendered example (code block). Instrument check "
+                  f"first, then freeze — otherwise the error freezes in.")
         if too_long:
-            print(f"{f}: {n_lines} Prosa-Zeilen (ohne Tabellen/Code) — ein Protokoll ist eine Registrierung, "
-                  f"kein Laborjournal. Erzaehlungen (Einfrier-Historie, Diagnosen) "
-                  f"gehoeren in die Commit-Messages bzw. eine Note; je Einfrierung "
-                  f"bleibt EIN Satz hier.")
+            print(f"{f}: {n_lines} prose lines (tables/code excluded) — a "
+                  f"protocol is a registration, not a lab journal. Narratives "
+                  f"(freeze history, diagnoses) belong in commit messages or a "
+                  f"note; ONE sentence per freeze stays here.")
         for lb, n, lim in big:
-            print(f"{f}: Abschnitt '{lb}': {n} Prosa-Zeilen (Budget {lim}) — ein "
-                  f"Feld ist eine Zeile; braucht eine Begruendung mehr, gehoert "
-                  f"sie in die Note und hier steht der [[wikilink]].")
+            print(f"{f}: section '{lb}': {n} prose lines (budget {lim}) — one "
+                  f"field is one line; if a justification needs more, it goes "
+                  f"into a note and the [[wikilink]] stays here.")
         if run_unreported:
-            print(f"{f}:{measured[0][0]}: FEHLT (Pflicht): Mess-Lauf im Ledger "
-                  f"({measured[0][1]}), aber Result/Raw-Output leer — Ergebnis "
-                  f"in DERSELBEN Session nachtragen (nachtragen statt schweigen).")
+            print(f"{f}:{measured[0][0]}: MISSING (must): measure run in the "
+                  f"ledger ({measured[0][1]}) but Result/Raw output empty — "
+                  f"write the result back in the SAME session.")
         for n, l in history:
-            print(f"{f}:{n}: Aenderungs-Historie im Text ({l[:60]!r}) — Docs "
-                  f"tragen den Stand, das Warum der Aenderung traegt die "
-                  f"Commit-Message (Arbeitsstandard §3).")
+            print(f"{f}:{n}: change history in the text ({l[:60]!r}) — docs "
+                  f"carry the current state, the why of the change goes in the "
+                  f"commit message (Arbeitsstandard §3).")
         if missing_must or must_holes or frozen_without_io or no_block or run_unreported:
             failed = True
-            print(f"{f}: Pflichtfelder fehlen oder sind leer — nachtragen oder als "
-                  f"'n/a — <warum>' begruenden (der Grund muss dastehen, nicht "
-                  f"nur die spitzen Klammern).")
+            print(f"{f}: must fields missing or empty — fill them in, or "
+                  f"justify as 'n/a — <why>' (the reason must be there, not "
+                  f"just the angle brackets).")
     return 1 if failed else 0
 
 

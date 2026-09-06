@@ -1,41 +1,41 @@
-# labkit — geteilte Labor-Helfer
+# labkit — shared lab helpers
 
-Die vier Bausteine, die jedes Experiment-Repo importiert, an **einer** Stelle:
-Ledger (`runlog`), LLM-Backend (`llm`), fortsetzbare Ausgabedatei (`batch`) und
-der Protokoll-Checker (`protocol_check`, installiert als `protocol-check`).
+The four building blocks every experiment repo imports, in **one** place:
+run ledger (`runlog`), LLM backend (`llm`), resumable output file (`batch`)
+and the protocol checker (`protocol_check`, installed as `protocol-check`).
 
-Vorher lagen sie als Kopie in jedem Repo — bis zu drei Fassungen pro Datei
-(`experiments/`, `resources/templates/`, `~/.claude/resources/`). Am 2026-09-01
-war `experiments/llm.py` in einem aktiven Repo 379 Zeilen hinter dem Master,
-während der Drift-Check „in sync" meldete: er verglich den Schnappschuss,
-nicht die importierte Datei.
+They used to live as copies in every repo — up to three versions per file
+(`experiments/`, `resources/templates/`, `~/.claude/resources/`). On
+2026-09-01 an active repo's `experiments/llm.py` was 379 lines behind the
+master while the drift check reported "in sync": it compared the snapshot,
+not the imported file.
 
-## Benutzen
+## Use
 
 ```bash
-pip install ~/projects/labkit      # in Repos: gepinnt via requirements.txt/.lock
+pip install ~/projects/labkit      # in repos: pinned via requirements.txt/.lock
 ```
 
 ```python
 from labkit import runlog, llm, batch
 ```
 
-Zwei **Konsolen-Kommandos** kommen mit der Installation (beide mit `--help`):
+Two **console commands** come with the installation (both answer `--help`):
 
 ```bash
-protocol-check <PROTOCOL-*.md>...   # Pflichtfelder-Check (MUST/SHOULD-Kontrakt)
-runlog [<bereich>]                  # offene Läufe: run_id, running/crashed, Skript
+protocol-check <PROTOCOL-*.md>...   # mandatory-field check (must/should contract)
+runlog [<area>]                     # open runs: run_id, running/crashed, script
 ```
 
-**Version pinnen, nie `pip install -e` in einem Experiment-Repo.** Ein Lauf
-protokolliert seine Umgebung; könnten sich die Helfer unter einem
-abgeschlossenen Lauf ändern, ist dieser Eintrag eine Behauptung über eine
-Umgebung, die es nicht mehr gibt. Editable gehört hierher, wo die Tests sind.
+**Pin the version, never `pip install -e` in an experiment repo.** A run
+records its environment; if the helpers could change under a finished run,
+that record is a claim about an environment that no longer exists. Editable
+installs belong here, where the tests are.
 
-Repos mit flachen Alt-Imports (`import runlog`) brauchen nichts umzuschreiben —
-ein Shim pro Modul genügt. Kanonische Form ist der Modul-Handover (nie
-`import *`: das verliert die privaten Namen, und Monkeypatching landet auf
-einer Kopie):
+Repos with flat legacy imports (`import runlog`) need no rewrite — one shim
+per module suffices. The canonical form is the module handover (never
+`import *`: that drops the private helpers, and monkeypatching lands on a
+copy):
 
 ```python
 # lib/runlog.py
@@ -44,26 +44,34 @@ from labkit import runlog as _mod
 sys.modules[__name__] = _mod
 ```
 
-`lib init <repo> --sync check` erkennt genau diese Form als Shim („nothing to
-sync"); ein Guard-Test im Repo (`test_shared_helpers_come_from_labkit.py`)
-schlägt an, wenn jemand eine Implementierung zurück in die Shim-Datei klebt.
+`lib init <repo> --sync check` recognises exactly this form as a shim
+("nothing to sync"); a guard test in the repo
+(`test_shared_helpers_come_from_labkit.py`) fires if someone pastes an
+implementation back into the shim file.
 
-## Entwickeln
+## Language
+
+Code, messages, docstrings and this README are English — the kit is meant
+to be handed to students as-is. The protocol checker's *contract* stays
+bilingual on purpose: its keyword patterns accept German and English field
+content, because grown protocols are German-filled.
+
+## Develop
 
 ```bash
 python3 -m unittest discover -s tests -v
 ```
 
-Änderung → Test → `version` in `pyproject.toml` erhöhen → Tag. Die
-Experiment-Repos ziehen über ihren Pin nach, jedes zu seinem Zeitpunkt; ein
-laufendes Experiment wird nie von einem Bugfix überrascht.
+Change → test → bump `version` in `pyproject.toml` → tag. The experiment
+repos catch up via their pin, each at its own time; a running experiment is
+never surprised by a bugfix.
 
-## Grenze
+## Boundary
 
-Hier wohnt nur, was **mehr als ein Repo** benutzt. Projekt-eigene Helfer
-bleiben im Projekt (`lib/`) — ein Modul wandert erst hierher, wenn es zum
-zweiten Mal gebraucht wird.
+Only what **more than one repo** uses lives here. Project-local helpers
+stay in the project (`lib/`) — a module moves here when it is needed for
+the second time.
 
-Nicht hier: Templates zum Ausfüllen (`~/.claude/resources/`, sie sollen
-divergieren) und Prosa-Referenzen wie der Style-Guide (gelesen, nicht
-importiert).
+Not here: templates meant to be filled in (`~/.claude/resources/`, they are
+supposed to diverge) and prose references like the style guide (read, not
+imported).
