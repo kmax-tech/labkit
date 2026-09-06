@@ -394,3 +394,51 @@ class TestHelpFlag(unittest.TestCase):
             code = protocol_check.main(["--help"])
         self.assertEqual(code, 0)
         self.assertIn("usage: protocol-check", buf.getvalue())
+
+
+class TestSeriesDetector(unittest.TestCase):
+    """A follow-up registration appended to the same protocol is a series
+    (2026-09-06): one file had grown to 649 lines out of three experiments,
+    each under a "... (deklariert vor dem Lauf)" heading. One question per
+    protocol — the follow-up gets its own PROTOCOL-s<N> file."""
+
+    def _run(self, text):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "PROTOCOL-x.md"
+            f.write_text(text, encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = protocol_check.main([str(f)])
+            return rc, buf.getvalue()
+
+    BASE = ("# x\nBegriffe, Frage, Erfolg, Abbruch, explorativ, Anker, "
+            "Prompt:\n\n```\nx\n```\nRoh-Output: n/a — kein Modell.\n")
+
+    def test_declared_follow_up_heading_warns(self):
+        rc, out = self._run(self.BASE +
+                            "## Lauf B — Richterwechsel (deklariert vor dem Lauf)\n")
+        self.assertIn("PROTOCOL-s<N>", out)
+        self.assertEqual(rc, 0, "warning, not a failure")
+
+    def test_plain_sections_do_not_trigger(self):
+        rc, out = self._run(self.BASE + "## Setup\n## Result\n")
+        self.assertNotIn("PROTOCOL-s<N>", out)
+
+
+class TestLedgerNotCountedAsProse(unittest.TestCase):
+    """The runs ledger is mandatory content, not prose (2026-09-06): 93 of a
+    protocol's 409 lines were its ledger — the length budget must not teach
+    people to stop documenting runs."""
+
+    def test_a_huge_ledger_does_not_flag_the_protocol(self):
+        import tempfile
+        ledger = "## Runs (Ledger)\n" + "- 2026-09-06T10-00-00_aa11 — x\n" * 400
+        text = TestSeriesDetector.BASE + ledger
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "PROTOCOL-x.md"
+            f.write_text(text, encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                protocol_check.main([str(f)])
+        self.assertNotIn("prose lines (tables/code excluded)", buf.getvalue())

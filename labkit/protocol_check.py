@@ -146,6 +146,20 @@ EMPTY_ANSWER = re.compile(
     r"[^:\n]*:\**\s*[—–-]+\s*$")
 EMPTY_RAW = re.compile(
     r"(?im)^\s*[-*]?\s*\*{0,2}(raw output|roh-output)[^:\n]*:\**\s*[—–-]+\s*$")
+# A follow-up registration appended to the SAME protocol — the pattern that
+# grew one file to 649 lines out of three experiments ("Lauf B — ...
+# (deklariert vor dem Lauf)", "Stufe 2 ..."): each such heading is a second
+# question in a one-question file. The series rule (Arbeitsstandard §4)
+# gives every follow-up its own PROTOCOL-s<N>-<slug>.md. Warning only.
+SERIES_HEAD = re.compile(
+    r"(?im)^##.*\((deklariert|registriert) vor dem( jeweils \w+)? "
+    r"(lauf|vote|pilot)|declared before the run\)?")
+
+# The runs ledger is mandatory content (one line per run_id), not prose —
+# counting it against the length budget taught people not to document runs
+# (found 2026-09-06: 93 of a protocol's 409 lines were its ledger).
+LEDGER_HEAD = re.compile(r"(?i)^##\s.*(runs|ledger|l[\u00e4a]ufe)")
+
 # Change-history prose — the doc should carry the current rule, the commit the
 # change (Arbeitsstandard §3). Warning only.
 CHANGELOG = re.compile(
@@ -324,16 +338,20 @@ def main(argv: list[str]) -> int:
         # MUST) and table rows (confound profiles, error directions) do not —
         # raw-line counting had flagged three registration-dense protocols
         # as journals, one of which never even ran (2026-08-25).
-        in_fence, n_lines = False, 0
+        in_fence, in_ledger, n_lines = False, False, 0
         for _l in text.splitlines():
             _s = _l.strip()
             if _s.startswith("```"):
                 in_fence = not in_fence
                 continue
-            if not in_fence and not _s.startswith("|"):
+            if _s.startswith("## "):
+                in_ledger = bool(LEDGER_HEAD.match(_s))
+            if not in_fence and not in_ledger and not _s.startswith("|"):
                 n_lines += 1
         too_long = n_lines > 350
         big = oversized_sections(text)
+        series = [(n, l.strip()) for n, l in enumerate(text.splitlines(), 1)
+                  if SERIES_HEAD.match(l)]
 
         # Post-run: a measure run in the ledger makes an empty Result a MUST
         # gap — pilot suppression does not apply (write back, don't go quiet).
@@ -347,7 +365,7 @@ def main(argv: list[str]) -> int:
 
         clean = not (missing_must or missing_should or holes or left or no_block
                      or frozen_without_io or too_long or big or run_unreported
-                     or history)
+                     or history or series)
         if clean:
             if pilot_note:
                 print(f"{f}: OK — must fields filled; {pilot_note}")
@@ -390,6 +408,11 @@ def main(argv: list[str]) -> int:
             print(f"{f}:{measured[0][0]}: MISSING (must): measure run in the "
                   f"ledger ({measured[0][1]}) but Result/Raw output empty — "
                   f"write the result back in the SAME session.")
+        for n, l in series:
+            print(f"{f}:{n}: follow-up registration in the same protocol "
+                  f"({l[:60]!r}) — one question per protocol: a declared "
+                  f"follow-up gets its own PROTOCOL-s<N>-<slug>.md "
+                  f"(series rule, Arbeitsstandard §4).")
         for n, l in history:
             print(f"{f}:{n}: change history in the text ({l[:60]!r}) — docs "
                   f"carry the current state, the why of the change goes in the "
