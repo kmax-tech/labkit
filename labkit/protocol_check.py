@@ -120,6 +120,21 @@ SHOULD = [
      r"einordnung|vorgeschichte|selbsttragend|self.?contained"),
 ]
 
+# Fields that are only DUE once the template stamps them (2026-09-08). The two
+# audit gates — code vs. intent before freezing (§2.A12) and the evaluation
+# against the frozen criterion before a number is reported (§2.D11) — are
+# enforced through the placeholder mechanism alone: a stamped-but-unfilled
+# field is a should-gap, and the graduation gate below turns it into a MUST
+# failure at "frozen: yes". They are deliberately NOT in SHOULD, because
+# check_text() would then fail every protocol written before the gates
+# existed — retrofitting a closed registration buys nothing.
+SHOULD_IF_PRESENT = [
+    ("Preflight audit (code vs. intent, before freezing)",
+     r"preflight|producer-audit|code.?audit"),
+    ("Analysis audit (evaluation vs. frozen criterion)",
+     r"analysis.?audit|auswertungs-audit"),
+]
+
 # "Frozen before run: yes" without a single rendered example is a frozen
 # registration on an unchecked instrument — it freezes the error in. On
 # 2026-08-17 a 12-call dry run found the prompt asking for ENTAILMENT while
@@ -251,7 +266,7 @@ def severity_of(label: str) -> str:
     for _, pat in MUST:
         if re.search(pat, low):
             return "must"
-    for _, pat in SHOULD:
+    for _, pat in SHOULD + SHOULD_IF_PRESENT:
         if re.search(pat, low):
             return "should"
     return "other"

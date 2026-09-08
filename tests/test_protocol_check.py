@@ -442,3 +442,79 @@ class TestLedgerNotCountedAsProse(unittest.TestCase):
             with contextlib.redirect_stdout(buf):
                 protocol_check.main([str(f)])
         self.assertNotIn("prose lines (tables/code excluded)", buf.getvalue())
+
+
+class TestAuditGates(unittest.TestCase):
+    """The two audit fields are due only once the template stamps them (2026-09-08).
+
+    Occasion: ten small errors in four weeks — a sign flip between BT score
+    and log-odds, r2 fitted and scored on the same anchors, a gate without a
+    positive control, a probe writing into the run's output file. Every one
+    was caught by a human objection, a crash or a test written afterwards;
+    none by the chain itself. Hence two audits (Arbeitsstandard §2.A12 code
+    vs. intent before freezing, §2.D11 evaluation vs. frozen criterion before
+    reporting) and their enforcement HERE: through the placeholder mechanism,
+    so that a protocol written before the gates existed keeps its verdict.
+    """
+
+    def _run(self, text):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "PROTOCOL-x.md"
+            p.write_text(text, encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = protocol_check.main([str(p)])
+            return rc, buf.getvalue()
+
+    # Everything a frozen protocol needs, so only the audit field decides.
+    FROZEN = ("# x\nBegriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
+              "Prompt, Roh-Output, Instrumentenprobe, Einordnung, Rivalen, "
+              "Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, Ausbeute, "
+              "Ergebnis.\n- **Frozen before run:** ja\n\n```\nAnswer: Yes\n```\n")
+
+    PREFLIGHT_PLACEHOLDER = ("- **Preflight audit:** <date · scope sha · N findings "
+                             "(blockers fixed / accepted with reason)>\n")
+    ANALYSIS_PLACEHOLDER = ("- **Analysis audit †:** <date · scope sha · N findings "
+                            "— the audit of the EVALUATION>\n")
+
+    def test_stamped_preflight_placeholder_fails_once_frozen(self):
+        rc, out = self._run(self.FROZEN + self.PREFLIGHT_PLACEHOLDER)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("Preflight audit", out)
+
+    def test_filled_preflight_passes(self):
+        rc, out = self._run(self.FROZEN + "- **Preflight audit:** 2026-09-08 · "
+                            "scope sha 3f9a1c2b7e04 · 4 Befunde (2 Blocker behoben)\n")
+        self.assertEqual(rc, 0, out)
+
+    def test_stamped_analysis_placeholder_fails_once_frozen(self):
+        rc, out = self._run(self.FROZEN + self.ANALYSIS_PLACEHOLDER)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("Analysis audit", out)
+
+    def test_filled_analysis_passes(self):
+        rc, out = self._run(self.FROZEN + "- **Analysis audit †:** 2026-09-09 · "
+                            "scope sha 8b1e6d0a4c31 · 2 Befunde (1 Blocker behoben)\n")
+        self.assertEqual(rc, 0, out)
+
+    def test_justified_na_counts(self):
+        rc, out = self._run(self.FROZEN + "- **Preflight audit:** n/a — Wegwerf-Test "
+                            "ohne berichtete Zahl\n")
+        self.assertEqual(rc, 0, out)
+
+    def test_legacy_protocol_without_the_fields_keeps_its_verdict(self):
+        """The whole point of SHOULD_IF_PRESENT: no retrofitting of closed runs."""
+        rc, out = self._run(self.FROZEN)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("Preflight audit", out)
+        self.assertNotIn("Analysis audit", out)
+
+    def test_severity_of_ranks_both_audit_labels_as_should(self):
+        self.assertEqual(protocol_check.severity_of("Preflight audit"), "should")
+        self.assertEqual(protocol_check.severity_of("Analysis audit †"), "should")
+
+    def test_template_stamps_both_fields(self):
+        text = TEMPLATE.read_text(encoding="utf-8")
+        self.assertIn("Preflight audit", text)
+        self.assertIn("Analysis audit", text)
