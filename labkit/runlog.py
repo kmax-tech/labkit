@@ -425,6 +425,12 @@ def _is_alive(pid, script) -> bool | None:
     return script in cmd
 
 
+# Public name for the same check: the endpoint lease needs it too, and PID
+# liveness must have ONE home (the recycled-PID scar above was expensive
+# enough once).
+is_alive = _is_alive
+
+
 def active(base_dir: str | Path) -> list[dict]:
     """Runs in this area that never finished: dir with config.json, no metrics.json.
 
