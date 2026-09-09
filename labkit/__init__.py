@@ -8,6 +8,8 @@ Four modules, stdlib only:
 - `endpoint_lease` one alias at a time per serving endpoint (a slot is not a
                    service); `llm.complete` takes it implicitly
 - `batch`          resumable output file (lock + resume-by-id + status)
+- `intent_check`   registered intent ids vs. the run's metrics keys
+                   (installed as the `intent-check` command)
 - `protocol_check` the checker the experiment protocol contracts with
                    (installed as the `protocol-check` command)
 
@@ -30,7 +32,7 @@ drop the private helpers and make monkeypatching land on a copy):
     sys.modules[__name__] = _mod
 """
 
-__version__ = "0.8.0"   # keep in step with pyproject.toml
+__version__ = "0.9.0"   # keep in step with pyproject.toml
 
 # The submodules are deliberately NOT imported here: `import labkit` must stay
 # free of side effects (llm reads models.toml when it is used, not when the

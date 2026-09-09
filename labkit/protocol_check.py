@@ -133,6 +133,15 @@ SHOULD_IF_PRESENT = [
      r"preflight|producer-audit|code.?audit"),
     ("Analysis audit (evaluation vs. frozen criterion)",
      r"analysis.?audit|auswertungs-audit"),
+    # The resolution check (§2.A13, 2026-09-09): the registered criterion run
+    # over synthetic extremes — perfect effect must fire, null effect must
+    # stay silent — by the REAL evaluate(), before freezing. Third repeat of
+    # the same scar (63 anchor gate, 65 compliance floor, 66 permutation
+    # floor: 8 hits on 8 draws p=0.0002, the same 8 on 4 draws p=0.0769).
+    # Pattern deliberately narrow: the template's "Answer form + resolution"
+    # field must NOT be caught by it.
+    ("Resolution check (criterion at synthetic extremes)",
+     r"resolution.?check|aufl(ö|oe)sungsprobe"),
 ]
 
 # "Frozen before run: yes" without a single rendered example is a frozen

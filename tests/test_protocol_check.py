@@ -518,3 +518,58 @@ class TestAuditGates(unittest.TestCase):
         text = TEMPLATE.read_text(encoding="utf-8")
         self.assertIn("Preflight audit", text)
         self.assertIn("Analysis audit", text)
+
+
+class TestResolutionCheckGate(unittest.TestCase):
+    """The resolution check field (§2.A13, 2026-09-09) rides the placeholder
+    mechanism exactly like the audit fields: stamped-but-unfilled fails at
+    frozen:yes, absent stays silent (no retrofitting), and the pattern must
+    NOT catch the template's own "Answer form + resolution †" field."""
+
+    def _run(self, text):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "PROTOCOL-x.md"
+            p.write_text(text, encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = protocol_check.main([str(p)])
+            return rc, buf.getvalue()
+
+    FROZEN = TestAuditGates.FROZEN
+
+    def test_stamped_placeholder_fails_once_frozen(self):
+        rc, out = self._run(self.FROZEN + "- **Resolution check (ZERO calls):** "
+                            "<perfect effect fires? null stays silent?>\n")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("Resolution check", out)
+
+    def test_filled_passes(self):
+        rc, out = self._run(self.FROZEN + "- **Resolution check:** perfect "
+                            "effect p = 0.0002 (fires), null p = 0.4791 "
+                            "(silent), 8 draws as in the run\n")
+        self.assertEqual(rc, 0, out)
+
+    def test_german_label_counts(self):
+        rc, out = self._run(self.FROZEN + "- **Auflösungsprobe:** perfekter "
+                            "Effekt feuert (p = 0,0002), Null schweigt\n")
+        self.assertEqual(rc, 0, out)
+
+    def test_absent_field_stays_silent(self):
+        rc, out = self._run(self.FROZEN)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("Resolution check", out)
+
+    def test_severity_of_resolution_check_is_should(self):
+        self.assertEqual(protocol_check.severity_of("Resolution check (ZERO "
+                                                    "calls)"), "should")
+
+    def test_answer_form_resolution_is_not_caught(self):
+        """Guard against the near-collision that would have retrofitted a MUST
+        onto every frozen protocol carrying the stamped 'Answer form +
+        resolution †' placeholder."""
+        self.assertEqual(protocol_check.severity_of("Answer form + resolution †"),
+                         "other")
+
+    def test_template_stamps_the_field(self):
+        self.assertIn("Resolution check", TEMPLATE.read_text(encoding="utf-8"))
