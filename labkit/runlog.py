@@ -143,7 +143,31 @@ def _env_state(cwd: Path) -> str:
                       f"or this run's lock hash describes an environment "
                       f"that does not exist.", file=sys.stderr)
             return f"{exe} | requirements.lock:{h} | drift:{drift}"
+    print("runlog: WARNING — no requirements.lock found; env recorded as "
+          "'unpinned'. `pip freeze > requirements.lock` to pin, or this run "
+          "cannot claim the environment it ran in.", file=sys.stderr)
     return f"{exe} | unpinned"
+
+
+def _resolve_models(config: dict) -> dict:
+    """Alias -> resolved backend spec, for every model-naming config key.
+
+    The alias is a pointer, the config must carry what it pointed to
+    (2026-09-09, logic-epistemic-pairs: 25 run configs recorded only
+    "model": "sonnet"; which weights answered was reconstructable solely by
+    checking models.toml out at the run's commit). Keys considered: "model"
+    and *_model, string values only. Best-effort: a failed resolution is
+    recorded as a string, never raised — bookkeeping must not break a run.
+    """
+    out: dict[str, object] = {}
+    for key, val in config.items():
+        if (key == "model" or key.endswith("_model")) and isinstance(val, str):
+            try:
+                from labkit import llm
+                out[val] = llm.resolve(val)
+            except Exception as e:
+                out[val] = f"unresolved: {e}"
+    return out
 
 
 def _sha256(path: Path) -> str:
@@ -324,6 +348,7 @@ class Run:
                   "git_full": _git(["rev-parse", "HEAD"], base_dir),
                   "python": sys.version.split()[0],
                   "env": _env_state(base_dir),
+                  "models_resolved": _resolve_models(self._config),
                   "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
                   "data": self._data,
                   "config": self._config}
