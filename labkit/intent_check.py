@@ -57,11 +57,34 @@ def ledger_ids(metrics: dict) -> set[str]:
     return out
 
 
-def latest_metrics(area: Path) -> Path | None:
-    """Newest runs/*/metrics.json — run dirs are timestamp-named, so the
-    lexicographic order is the temporal one."""
+def gate_metrics(area: Path) -> tuple[Path | None, int]:
+    """The metrics.json to hold the protocol against, plus how many NEWER
+    runs were skipped for lacking intent keys.
+
+    Newest-with-intent-keys, not newest: a producer or probe run writes a
+    metrics.json too, and holding the promises against THAT file reports
+    every promise as unimplemented (2026-09-09, area 71 — the check ran
+    against the producer's metrics and cried wolf). If no run reports any
+    intent key, the newest file is the honest target: the promises really
+    have no evidence yet. Run dirs are timestamp-named, so lexicographic
+    order is temporal order.
+    """
     runs = sorted(area.glob("runs/*/metrics.json"))
-    return runs[-1] if runs else None
+    skipped = 0
+    for p in reversed(runs):
+        try:
+            if ledger_ids(json.loads(p.read_text(encoding="utf-8"))):
+                return p, skipped
+        except (OSError, json.JSONDecodeError):
+            pass
+        skipped += 1
+    return (runs[-1], 0) if runs else (None, 0)
+
+
+def latest_metrics(area: Path) -> Path | None:
+    """The gate run's metrics.json (see gate_metrics). Name and signature
+    kept stable: tools outside labkit build on it (befundregister)."""
+    return gate_metrics(area)[0]
 
 
 def main(argv: list[str]) -> int:
@@ -95,12 +118,16 @@ def main(argv: list[str]) -> int:
             return 2
         mpath = metrics_arg
     else:
-        mpath = latest_metrics(protocol.parent)
+        mpath, skipped = gate_metrics(protocol.parent)
         if mpath is None:
             print(f"intent-check: {len(reg)} id(s) registered "
                   f"({', '.join(sorted(reg))}), no runs/*/metrics.json yet — "
                   f"the contract is due at report time.")
             return 0
+        if skipped:
+            print(f"intent-check: using {mpath.parent.name}/metrics.json "
+                  f"(newest with intent keys; skipped {skipped} newer "
+                  f"run(s) without any).")
 
     try:
         metrics = json.loads(mpath.read_text(encoding="utf-8"))

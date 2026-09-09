@@ -149,6 +149,28 @@ def _env_state(cwd: Path) -> str:
     return f"{exe} | unpinned"
 
 
+def _notify(title: str, body: str) -> None:
+    """Best-effort macOS notification — session-independent, never raises.
+
+    The monitor of record for an overnight run must not be tomorrow's status
+    question (2026-08-17: a run finished at night and sat unnoticed for ~9 h).
+    Opt-out with LABKIT_NOTIFY=0; anything else leaves it on.
+    """
+    if os.environ.get("LABKIT_NOTIFY") == "0" or sys.platform != "darwin":
+        return
+    try:
+        subprocess.run(
+            ["osascript", "-e",
+             'display notification "{}" with title "{}"'.format(
+                 body.replace('"', "'")[:200], title.replace('"', "'")[:60])],
+            capture_output=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+_NOTIFY_MIN_S = 120   # a pilot finishing under 2 min needs no banner
+
+
 def _resolve_models(config: dict) -> dict:
     """Alias -> resolved backend spec, for every model-naming config key.
 
@@ -329,7 +351,21 @@ def _snapshot_untracked_sources(run_dir: Path) -> list[str]:
 
 class Run:
     def __init__(self, experiment: str, config: dict, base_dir: Path,
-                 data: dict | None = None):
+                 data: dict | None = None, long: bool = False):
+        # Detach gate (scar 2026-08-13, twice in one evening): a long run
+        # started in a Claude Code foreground shell dies with the 10-min tool
+        # timeout — the kill takes the whole process group, run and lock with
+        # it. `long=True` is the script's own declaration (the --full stage
+        # sets it); the gate refuses the foreground start BEFORE any work.
+        if (long and os.environ.get("CLAUDECODE")
+                and not os.environ.get("LABKIT_DETACHED")):
+            raise SystemExit(
+                "runlog: this run declares long=True and sits in a Claude Code "
+                "foreground shell — the tool timeout would kill the process "
+                "group mid-run (2026-08-13). Start it detached:\n"
+                "  runlog start -- <the same command>\n"
+                "or, if the caller already detached it (run_in_background, "
+                "nohup+setsid), acknowledge with LABKIT_DETACHED=1.")
         self.run_id = time.strftime("%Y-%m-%dT%H-%M-%S") + "_" + uuid.uuid4().hex[:4]
         self.experiment = experiment
         self.script = Path(sys.argv[0]).name if sys.argv[0] else "<interactive>"
@@ -411,6 +447,10 @@ class Run:
                self._note]
         with ledger.open("a", encoding="utf-8") as f:
             f.write("\t".join(c.replace("\t", " ").replace("\n", " ") for c in row) + "\n")
+        dur = self._metrics.get("duration_s", 0)
+        if os.environ.get("LABKIT_NOTIFY") == "1" or dur >= _NOTIFY_MIN_S:
+            _notify(f"run finished: {self.experiment}",
+                    f"{self.run_id} · {dur}s · {len(self._metrics)} metric(s)")
 
 
 
@@ -484,9 +524,10 @@ class run:
     """Context manager: `with runlog.run("name", config={...}, data={...}) as r:`"""
 
     def __init__(self, experiment: str, config: dict,
-                 base_dir: str | Path | None = None, data: dict | None = None):
+                 base_dir: str | Path | None = None, data: dict | None = None,
+                 long: bool = False):
         base = Path(base_dir) if base_dir else Path(sys.argv[0]).resolve().parent
-        self._run = Run(experiment, config, base, data)
+        self._run = Run(experiment, config, base, data, long=long)
 
     def __enter__(self) -> Run:
         return self._run
@@ -497,8 +538,119 @@ class run:
         return False
 
 
+def _newest_output(area: Path) -> str:
+    """One line about the freshest file in <area>/output/ — the improvised
+    `tail`/`wc` poll, done once and correctly."""
+    out_dir = area / "output"
+    if not out_dir.is_dir():
+        return ""
+    files = [p for p in out_dir.iterdir() if p.is_file()]
+    if not files:
+        return ""
+    newest = max(files, key=lambda p: p.stat().st_mtime)
+    try:
+        lines = sum(1 for _ in newest.open("rb"))
+    except OSError:
+        return ""
+    age = int(time.time() - newest.stat().st_mtime)
+    return f"output: {newest.name} {lines} line(s), last write {age}s ago"
+
+
+def _print_status(area: str, live: list[dict]) -> None:
+    if not live:
+        print(f"{area}: no open runs")
+    for r in live:
+        state = {True: "running", False: "crashed", None: "unknown"}[r["alive"]]
+        print(f"{r['run_id']}  {state:8s} pid={r.get('pid')}  {r.get('script')}")
+        print(f"    {json.dumps(r.get('config', {}), ensure_ascii=False)[:160]}")
+
+
+def _finished_line(area: Path) -> str:
+    runs = sorted(area.glob("runs/*/metrics.json"))
+    if not runs:
+        return "no finished runs"
+    m = json.loads(runs[-1].read_text(encoding="utf-8"))
+    keys = ", ".join(list(m)[:6])
+    return f"last finished: {runs[-1].parent.name} ({keys})"
+
+
+def _wait(area: str, max_seconds: float | None, interval: float,
+          follow: bool, notify: bool) -> int:
+    """Block until the area has no open runs. Exit codes are the contract:
+    0 = no open runs (finished) · 2 = a run crashed · 3 = still running at
+    --max-seconds. The waiter only OBSERVES — the run owns its process group
+    and its lock, so a killed waiter is harmless (Detach-Probe, K4+K5)."""
+    t0 = time.monotonic()
+    apath = Path(area)
+    while True:
+        live = active(area)
+        if not live:
+            print(f"{area}: no open runs — {_finished_line(apath)}")
+            if notify:
+                _notify("runlog --wait", f"{area}: no open runs")
+            return 0
+        crashed = [r for r in live if r["alive"] is False]
+        if crashed:
+            for r in crashed:
+                print(f"{r['run_id']}  CRASHED  pid={r.get('pid')}  "
+                      f"{r.get('script')}  ({r['dir']}: config.json without "
+                      f"metrics.json)")
+            if notify:
+                _notify("runlog --wait", f"{area}: run crashed")
+            return 2
+        if follow:
+            stamp = time.strftime("%H:%M:%S")
+            extra = _newest_output(apath)
+            print(f"[{stamp}] {len(live)} open run(s): "
+                  + ", ".join(r["run_id"] for r in live)
+                  + (f" · {extra}" if extra else ""), flush=True)
+        if max_seconds is not None and time.monotonic() - t0 >= max_seconds:
+            extra = _newest_output(apath)
+            print(f"{area}: still running after {int(max_seconds)}s — "
+                  + ", ".join(f"{r['run_id']} pid={r.get('pid')}" for r in live)
+                  + (f" · {extra}" if extra else "")
+                  + "\nre-check: runlog " + area + " --wait")
+            return 3
+        time.sleep(interval)
+
+
+def _start(argv: list[str]) -> int:
+    """runlog start [--log FILE] -- <cmd ...>: detach a run and return.
+
+    setsid puts the run in its OWN process group and session: the shell that
+    started it — and any tool timeout that kills that shell's group — cannot
+    take the run down with it (scar 2026-08-13). LABKIT_DETACHED=1 tells the
+    `long=True` gate inside the script that the detach already happened.
+    """
+    import argparse
+    ap = argparse.ArgumentParser(
+        prog="runlog start",
+        description="Start a command detached (own session via setsid), "
+                    "output to a log file, return immediately.")
+    ap.add_argument("--log", default=None,
+                    help="log file (default: output/start-<ts>.log)")
+    ap.add_argument("cmd", nargs=argparse.REMAINDER,
+                    help="-- command and arguments")
+    args = ap.parse_args(argv)
+    cmd = args.cmd[1:] if args.cmd and args.cmd[0] == "--" else args.cmd
+    if not cmd:
+        ap.error("no command given — usage: runlog start -- <cmd ...>")
+    log = Path(args.log) if args.log else \
+        Path("output") / f"start-{time.strftime('%Y-%m-%dT%H-%M-%S')}.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    env = {**os.environ, "LABKIT_DETACHED": "1"}
+    with log.open("ab") as fh:
+        proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=fh,
+                                stderr=fh, start_new_session=True, env=env)
+    print(f"started detached: pid={proc.pid}  log={log}")
+    print("status:  runlog .        wait:  runlog . --wait")
+    return 0
+
+
 def main(argv: list[str]) -> int:
-    """What is running in this area? Lists runs without a metrics.json."""
+    """Status, wait, follow or start — the run monitor of record."""
+    if argv and argv[0] == "start":
+        return _start(argv[1:])
     import argparse
     ap = argparse.ArgumentParser(
         prog="runlog",
@@ -506,18 +658,35 @@ def main(argv: list[str]) -> int:
                     "metrics.json) in an experiment area: run_id, state "
                     "(running/crashed/unknown via the recorded pid), script, "
                     "and the frozen config. 'Nachsehen statt nachfragen' — "
-                    "check this before starting a run in a shared repo.")
+                    "check this before starting a run in a shared repo. "
+                    "`--wait` blocks until the area is idle (exit 0), a run "
+                    "crashed (exit 2) or --max-seconds passed (exit 3); "
+                    "`--follow` prints a status line per interval until idle; "
+                    "`runlog start -- <cmd>` detaches a run (own session, "
+                    "log file) and returns.")
     ap.add_argument("area", nargs="?", default=".",
                     help="experiment area holding a runs/ dir (default: .)")
+    ap.add_argument("--wait", action="store_true",
+                    help="block until no open runs; exit 0/2/3 (idle/crashed/"
+                         "still running at --max-seconds)")
+    ap.add_argument("--follow", action="store_true",
+                    help="like --wait but unbounded, one status line per "
+                         "interval (for a human terminal)")
+    ap.add_argument("--max-seconds", type=float, default=90.0,
+                    help="--wait: give up after this long (default 90 — "
+                         "safely under the shell tool's timeout)")
+    ap.add_argument("--interval", type=float, default=None,
+                    help="poll interval in s (default: 2 for --wait, "
+                         "5 for --follow)")
+    ap.add_argument("--notify", action="store_true",
+                    help="macOS notification when the wait ends")
     args = ap.parse_args(argv)
-    area = args.area
-    live = active(area)
-    if not live:
-        print(f"{area}: no open runs")
-    for r in live:
-        state = {True: "running", False: "crashed", None: "unknown"}[r["alive"]]
-        print(f"{r['run_id']}  {state:8s} pid={r.get('pid')}  {r.get('script')}")
-        print(f"    {json.dumps(r.get('config', {}), ensure_ascii=False)[:160]}")
+    if args.follow:
+        return _wait(args.area, None, args.interval or 5.0, True, args.notify)
+    if args.wait:
+        return _wait(args.area, args.max_seconds, args.interval or 2.0,
+                     False, args.notify)
+    _print_status(args.area, active(args.area))
     return 0
 
 

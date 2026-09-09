@@ -53,12 +53,18 @@ class Store:
     """
 
     def __init__(self, path: str | Path, id_key: str = "id",
-                 prov: dict | None = None):
+                 prov: dict | None = None, mode: str = "resume"):
+        if mode not in ("resume", "produce"):
+            raise ValueError(f"Store mode must be 'resume' or 'produce', "
+                             f"not {mode!r}")
         self.path = Path(path)
         self.id_key = id_key
         self.prov = dict(prov) if prov else {}
+        self.mode = mode
         self.lock = self.path.with_suffix(self.path.suffix + ".lock")
+        self._tmp = self.path.with_suffix(self.path.suffix + ".tmp")
         self._fh = None
+        self._producing = False
 
     # -- lock -------------------------------------------------------------
     def __enter__(self) -> "Store":
@@ -74,13 +80,30 @@ class Store:
                 f"Use a different output file, or delete the lock if that run "
                 f"is dead (`.venv/bin/runlog <area>` shows which "
                 f"runs are still alive).")
-        self._fh = self.path.open("a", encoding="utf-8")
+        if self.mode == "produce":
+            # A producer REPLACES its file — running it twice must yield the
+            # file of ONE run, never a concatenation (2026-08-19 producer
+            # rule; scar 2026-09-09, area 71: a second producer run appended
+            # 625+528 rows and only --verify caught it). Writes go to a temp
+            # file; the clean exit renames it over the target atomically, a
+            # crash leaves the old file untouched and the temp visible.
+            self._fh = self._tmp.open("w", encoding="utf-8")
+            self._producing = True
+        else:
+            self._fh = self.path.open("a", encoding="utf-8")
         return self
 
-    def __exit__(self, *exc) -> None:
+    def __exit__(self, exc_type, *exc) -> None:
         if self._fh is not None:
             self._fh.close()
             self._fh = None
+        if self._producing:
+            self._producing = False
+            if exc_type is None:
+                os.replace(self._tmp, self.path)
+            else:
+                print(f"batch: produce aborted — {self.path} left unchanged, "
+                      f"partial output in {self._tmp}", file=sys.stderr)
         self.lock.unlink(missing_ok=True)
 
     # -- reading ----------------------------------------------------------
@@ -89,10 +112,11 @@ class Store:
         mid-write) is reported and skipped, never silently dropped. A `_meta`
         header line (see write_dataset) is documentation, not a record —
         skipped here, so every consumer reading through this sees data only."""
-        if not self.path.exists():
+        src = self._tmp if self._producing else self.path
+        if not src.exists():
             return []
         out = []
-        lines = self.path.read_text(encoding="utf-8").splitlines()
+        lines = src.read_text(encoding="utf-8").splitlines()
         for i, line in enumerate(lines):
             if not line.strip():
                 continue
