@@ -66,7 +66,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from labkit import endpoint_lease
+try:
+    from labkit import endpoint_lease
+except ImportError:                      # vendored flat copy (student repos)
+    import endpoint_lease
 
 
 def _find_models_toml() -> Path:

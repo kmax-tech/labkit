@@ -53,7 +53,10 @@ import threading
 import time
 from pathlib import Path
 
-from labkit import runlog
+try:
+    from labkit import runlog
+except ImportError:                      # vendored flat copy (student repos)
+    import runlog
 
 _HELD: set[tuple[str, str]] = set()      # (endpoint, alias) held by this process
 _FILES: dict[tuple[str, str], Path] = {}

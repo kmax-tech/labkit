@@ -163,7 +163,10 @@ def _resolve_models(config: dict) -> dict:
     for key, val in config.items():
         if (key == "model" or key.endswith("_model")) and isinstance(val, str):
             try:
-                from labkit import llm
+                try:
+                    from labkit import llm
+                except ImportError:      # vendored flat copy (student repos)
+                    import llm
                 out[val] = llm.resolve(val)
             except Exception as e:
                 out[val] = f"unresolved: {e}"
