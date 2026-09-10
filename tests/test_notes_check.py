@@ -119,6 +119,12 @@ class TestKindContract(unittest.TestCase):
                      "Referenzkarte", "Audit"):
             self.assertTrue(notes_check.KIND.search(kind), kind)
 
+    def test_related_key_accepts_a_comma_list(self):
+        # a Werkfamilie note reads several papers at once
+        m = notes_check.RELATED_WITH_KEY.search(
+            "Related-Lesart (hahn07, hahn16, hahn20)")
+        self.assertIsNotNone(m)
+
     def test_bare_instrument_without_status_does_not_count(self):
         self.assertFalse(notes_check.KIND.search(
             "*2026-09-10 · Instrument für X · Zweck*"))

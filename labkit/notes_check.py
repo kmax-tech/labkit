@@ -48,7 +48,8 @@ KIND = re.compile(
     r"Instrument\s*[—–-]\s*(Entwurf|implementiert)"
     r"|Related-Lesart|Referenzkarte|Audit")
 IMPLEMENTED = re.compile(r"Instrument\s*[—–-]\s*implementiert")
-RELATED_WITH_KEY = re.compile(r"Related-Lesart\s*\(([\w:-]+)\)")
+RELATED_WITH_KEY = re.compile(
+    r"Related-Lesart\s*\(([\w:-]+(?:\s*,\s*[\w:-]+)*)\)")
 DATE = re.compile(r"\b\d{4}-\d{2}(?:-\d{2})?\b")
 # Code evidence for an implemented instrument: a script file, a bare function
 # call in backticks, or an experiment-area path.
