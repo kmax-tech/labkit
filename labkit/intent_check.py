@@ -160,3 +160,45 @@ def cli() -> None:
 
 if __name__ == "__main__":
     cli()
+
+
+# --- preflight half: ids against the CODE, before any run exists ----------
+#
+# main() above answers the report-time question (does the LEDGER report every
+# promise?) and needs a runs/*/metrics.json. Before the run that file does not
+# exist, so the same promise goes unchecked exactly when checking it is still
+# cheap. code_ids() answers the earlier question from the source: does the code
+# even MENTION the key it is supposed to report? An id that appears nowhere in
+# the scripts cannot report at run time — that is mechanical, not a judgement.
+
+ID_LITERAL = re.compile(r"""['"]([kswn]\d+)(_[a-z0-9_]*)?['"]""")
+
+
+def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
+    """Intent ids the area's source mentions, mapped id -> ["file:line", ...].
+
+    Reads the string literals, not the syntax: a metric key reaches
+    metrics.json as `"k1_pass"` however it is assembled, and a literal is
+    what every assembly path has in common.
+
+    `suffixed_only` keeps `"s1_hit"` and drops a bare `"s65"`. A bare id in
+    the namespace is ambiguous — area 72 names its source sessions `"s65"`,
+    `"s68"`, `"s69"` after the areas they come from, and reading those as
+    unregistered promises produced three findings and no defect (2026-09-10).
+    For "registered but absent from the code" every literal counts; for the
+    reverse direction only an unmistakable metric key does.
+    """
+    hits: dict[str, list[str]] = {}
+    for path in sorted(area.glob("scripts/*.py")) + sorted(
+            area.glob("analysis/*.py")):
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        for lineno, line in enumerate(lines, 1):
+            for m in ID_LITERAL.finditer(line):
+                if suffixed_only and not m.group(2):
+                    continue
+                hits.setdefault(m.group(1).lower(), []).append(
+                    f"{path.name}:{lineno}")
+    return hits
