@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "labkit"
-version = "0.12.0"
-description = "Shared lab helpers: run ledger, LLM backend, endpoint lease, resumable batches, protocol checker"
+version = "0.13.0"
+description = "Shared lab helpers: run ledger, LLM backend, endpoint lease, resumable batches, protocol and notes checkers"
 requires-python = ">=3.12"
 # stdlib only, on purpose: a lab helper that drags dependencies in decides the
 # environment of every experiment that imports it.
@@ -18,6 +18,7 @@ scope-sha = "labkit.scope_sha:cli"
 intent-check = "labkit.intent_check:cli"
 code-check = "labkit.code_check:cli"
 protocol-fill = "labkit.protocol_fill:cli"
+notes-check = "labkit.notes_check:cli"
 
 [tool.setuptools]
 packages = ["labkit"]
