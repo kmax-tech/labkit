@@ -149,6 +149,15 @@ class TestCheckFile(unittest.TestCase):
         self.assertEqual(len(must), 1)
         self.assertIn("no kind", must[0])
 
+    def test_implemented_with_protocol_reference_passes(self):
+        # a synthesis note over ledger runs names the protocol, not a script
+        text = ("# Instrument × Modellstärke\n\n"
+                "*2026-08-24 · Instrument — implementiert · legt zwei Läufe "
+                "übereinander (PROTOCOL-graded-route, Läufe `…54cf`).*\n")
+        must, warn = self.check("note.md", text)
+        self.assertEqual(must, [])
+        self.assertEqual(warn, [])
+
     def test_implemented_without_code_fails(self):
         must, _ = self.check("note.md", IMPLEMENTED_NO_CODE)
         self.assertEqual(len(must), 1)
