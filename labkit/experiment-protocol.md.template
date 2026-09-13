@@ -20,11 +20,11 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
 
 - **Standard:** 0.15
 
-*Field labels English; content in German or English. Student edition:
-`thesis-experiment-protocol.md.template` in `~/.claude/resources/` — the
-same contract in decoded prose, no lab shorthand (changes carried over
-deliberately). Pure counting questions take the measurement short form
-(`measurement-protocol.md.template`, packaged next to this one).*
+*Field labels English; content in German or English. Explanations,
+examples, rationale for each field: `protocol-field-guide.md`
+(`protocol-check --guide` prints the path; thesis repos:
+`templates/PROTOCOL-FIELD-GUIDE.md`). Pure counting questions take the
+measurement short form (`measurement-protocol.md.template`).*
 
 <!-- HEAD — this part gets READ. Line budget per section: protocol-check. -->
 
@@ -52,6 +52,8 @@ instead).*
   branch, [W1] per fork (→ §2.A10, §2.A1); "n/a" if there is only one outcome>
 - **Type:** <exploratory (generates hypotheses, none of it reported as a
   test) | confirmatory (tests a hypothesis fixed before the run)>
+- **Timebox:** <hard budget, e.g. 4h — then log and ask>
+- **Split touched:** <which split may be touched: train | dev | test>
 - **Preflight audit:** <date · scope sha · N findings (blockers fixed /
   accepted with reason / dismissed with reason) — the code-vs-intent audit
   that runs after the instrument check and before freezing (→ §2.A12)>

@@ -288,6 +288,11 @@ def find_template(explicit: str | None) -> Path | None:
     return here if here.exists() else None
 
 
+def find_field_guide() -> Path | None:
+    here = Path(__file__).resolve().parent / "protocol-field-guide.md"
+    return here if here.exists() else None
+
+
 def severity_of(label: str) -> str:
     """Does this placeholder sit in a MUST field, a SHOULD field, or neither?"""
     low = label.lower()
@@ -333,7 +338,12 @@ def main(argv: list[str]) -> int:
         print("usage: protocol-check [--template PATH] <PROTOCOL-*.md | dir> ...")
         print("  --template PATH  check against this template instead of the "
               "packaged one")
+        print("  --guide          print the path to the protocol field guide")
         return 0
+    if argv and argv[0] == "--guide":
+        fg = find_field_guide()
+        print(fg or "field guide not found")
+        return 0 if fg else 1
     tmpl_arg = None
     if argv and argv[0] == "--template":
         if len(argv) < 2:

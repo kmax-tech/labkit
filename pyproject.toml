@@ -26,7 +26,7 @@ packages = ["labkit"]
 [tool.setuptools.package-data]
 # the protocol template IS the checker's contract — shipping the checker
 # without it leaves `protocol-check` with nothing to check against.
-labkit = ["*.template"]
+labkit = ["*.template", "protocol-field-guide.md"]
 
 [tool.ruff.lint]
 # Same pinned scope as the lab repos (a shifting default is a knob nobody set).

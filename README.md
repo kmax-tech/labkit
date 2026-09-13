@@ -41,10 +41,10 @@ and `experiment` for everything hypothesis- or model-driven. An experiment
 protocol has **two modes**: `Frozen before run: no` is the light pilot
 (MUST fields only), `Frozen before run: yes` is the heavy report mode —
 every SHOULD field becomes mandatory. The price sits on the claim, not the
-activity: cheap tiers yield numbers that must not be reported. The
-experiment template additionally exists in a decoded **student edition**
-(`thesis-experiment-protocol.md.template`, dotfiles) — same checker
-contract, prose instead of lab shorthand.
+activity: cheap tiers yield numbers that must not be reported. Every field's explanation — examples, rationale, the four questions to
+ask a criterion — lives in `protocol-field-guide.md` (packaged alongside
+the template; `protocol-check --guide` prints the path); thesis repos get
+a copy at `templates/PROTOCOL-FIELD-GUIDE.md`.
 
 The commands are stations of **one lifecycle** — write the protocol, audit
 the code, run, hold the run against the promises:
