@@ -29,10 +29,10 @@ DIGEST_CHARS = 12  # enough to spot a mismatch, short enough for a protocol line
 AREA_GLOBS = ("scripts/*.py", "analysis/*.py")
 
 
-def area_files(area: Path) -> list[Path]:
+def area_files(area: Path, globs: tuple[str, ...] = AREA_GLOBS) -> list[Path]:
     """The area's own code, in a stable order."""
     out: list[Path] = []
-    for pat in AREA_GLOBS:
+    for pat in globs:
         out.extend(area.glob(pat))
     return out
 
@@ -65,17 +65,19 @@ def scope_sha(files: list[Path], pin: str | None) -> str:
 def main(argv: list[str]) -> int:
     if argv and argv[0] in ("-h", "--help"):
         print(__doc__.strip().splitlines()[0])
-        print("usage: scope-sha [--area DIR] [--no-pin] [FILE ...]")
-        print("  --area DIR  area whose scripts/*.py + analysis/*.py count "
-              "(default: cwd)")
-        print("  FILE ...    extra files that determine the number — the "
+        print("usage: scope-sha [--area DIR] [--globs PAT,...] [--no-pin] [FILE ...]")
+        print("  --area DIR       area directory (default: cwd)")
+        print("  --globs PAT,...  comma-separated globs for area scripts "
+              "(default: scripts/*.py,analysis/*.py)")
+        print("  FILE ...         extra files that determine the number — the "
               "repo-local lib/ files the scripts import (from the audit's "
               "`scope:` list)")
-        print("  --no-pin    do not include the labkit pin line")
+        print("  --no-pin         do not include the labkit pin line")
         return 0
 
     area = Path(".")
     use_pin = True
+    globs = AREA_GLOBS
     extra: list[Path] = []
     i = 0
     while i < len(argv):
@@ -85,6 +87,13 @@ def main(argv: list[str]) -> int:
                 print("--area needs a directory")
                 return 2
             area = Path(argv[i + 1])
+            i += 2
+            continue
+        if a == "--globs":
+            if i + 1 >= len(argv):
+                print("--globs needs a comma-separated pattern list")
+                return 2
+            globs = tuple(p.strip() for p in argv[i + 1].split(","))
             i += 2
             continue
         if a == "--no-pin":
@@ -97,15 +106,15 @@ def main(argv: list[str]) -> int:
         print(f"scope-sha: no such area: {area}")
         return 2
 
-    files = area_files(area) + extra
+    files = area_files(area, globs) + extra
     missing = [str(f) for f in files if not f.is_file()]
     if missing:
         for m in missing:
             print(f"scope-sha: missing {m}")
         return 2
     if not files:
-        print(f"scope-sha: no scope files under {area} (scripts/*.py, "
-              f"analysis/*.py) and none named")
+        print(f"scope-sha: no scope files under {area} "
+              f"({', '.join(globs)}) and none named")
         return 2
 
     pin_found = find_pin(area.resolve()) if use_pin else None
