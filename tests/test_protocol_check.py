@@ -593,16 +593,18 @@ class TestProseBudgetEscalation(unittest.TestCase):
                 rc = protocol_check.main([str(p)])
             return rc, buf.getvalue()
 
-    FROZEN_NEW = ("# x\nBegriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
+    FROZEN_NEW = ("# x\n- **Standard:** 0.15\n"
+                  "Begriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
                   "Prompt, Roh-Output, Instrumentenprobe, Einordnung, Rivalen, "
                   "Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, Ausbeute, "
-                  "Ergebnis.\n- **Frozen before run:** ja *(2026-09-15, nach Probe)*\n"
+                  "Ergebnis, Exclusions.\n- **Frozen before run:** ja\n"
                   "\n```\nAnswer: Yes\n```\n")
 
-    FROZEN_OLD = ("# x\nBegriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
+    FROZEN_OLD = ("# x\n- **Standard:** 0.13\n"
+                  "Begriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
                   "Prompt, Roh-Output, Instrumentenprobe, Einordnung, Rivalen, "
                   "Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, Ausbeute, "
-                  "Ergebnis.\n- **Frozen before run:** ja *(2026-09-09, nach Probe)*\n"
+                  "Ergebnis.\n- **Frozen before run:** ja\n"
                   "\n```\nAnswer: Yes\n```\n")
 
     def test_new_freeze_oversized_section_exits_one(self):
@@ -640,3 +642,197 @@ class TestProseBudgetEscalation(unittest.TestCase):
         rc, out = self._run(base + intent)
         self.assertEqual(rc, 0, out)
         self.assertIn("oversized", out.lower())
+
+
+class TestMeasurementType(unittest.TestCase):
+    """Measurement protocols have 7 fields, no freeze, no SHOULD (2026-09-13)."""
+
+    def _run(self, text):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "PROTOCOL-x.md"
+            p.write_text(text, encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = protocol_check.main([str(p)])
+            return rc, buf.getvalue()
+
+    FULL = ("# Measurement: test\n"
+            "- **Standard:** 0.15\n"
+            "- **Type:** measurement\n"
+            "- **Question:** How many pairs?\n"
+            "- **Data / scope:** corpus, N=100, scripts/00_prepare.py\n"
+            "- **Prior computation:** none\n"
+            "- **Method:** scripts/count_pairs.py\n"
+            "- **Exclusions / filters:** none\n"
+            "- **Result:** 42 (run_id 2026-09-13T10-00-00_ab12)\n"
+            "- **Terms:** pair = two adjacent sentences\n")
+
+    def test_full_measurement_passes(self):
+        rc, out = self._run(self.FULL)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("measurement, all fields filled", out)
+
+    def test_missing_question_exits_one(self):
+        text = self.FULL.replace("- **Question:** How many pairs?\n", "")
+        rc, out = self._run(text)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("MISSING (must): Question", out)
+
+    def test_missing_exclusions_exits_one(self):
+        text = self.FULL.replace("- **Exclusions / filters:** none\n", "")
+        rc, out = self._run(text)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("MISSING (must): Exclusions", out)
+
+    def test_experiment_should_fields_not_checked(self):
+        rc, out = self._run(self.FULL)
+        self.assertEqual(rc, 0)
+        self.assertNotIn("should", out.lower())
+        self.assertNotIn("Frozen", out)
+
+    def test_frozen_yes_not_escalated(self):
+        text = self.FULL + "- **Frozen before run:** ja\n"
+        rc, out = self._run(text)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("must once frozen", out)
+
+    def test_misdeclared_with_prompt_block_exits_one(self):
+        text = self.FULL + "\nPrompt:\n\n```\nIs this fallacious?\n```\n"
+        rc, out = self._run(text)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("MISDECLARED", out)
+
+    def test_german_type_messung_recognised(self):
+        text = self.FULL.replace("**Type:** measurement", "**Typ:** Messung")
+        rc, out = self._run(text)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("measurement", out)
+
+    def test_placeholder_in_measurement_field_exits_one(self):
+        text = self.FULL.replace("42 (run_id 2026-09-13T10-00-00_ab12)",
+                                 "<number + run_id, or \"pending\">")
+        rc, out = self._run(text)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("PLACEHOLDER ONLY (must)", out)
+
+
+class TestExperimentNewFields(unittest.TestCase):
+    """Exclusions is MUST from Standard >= 0.15; Gate/Randomness are SHOULD_IF_PRESENT."""
+
+    def _run(self, text):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "PROTOCOL-x.md"
+            p.write_text(text, encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = protocol_check.main([str(p)])
+            return rc, buf.getvalue()
+
+    BASE_V015 = ("# x\n- **Standard:** 0.15\n"
+                 "Begriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
+                 "Prompt, Roh-Output, Instrumentenprobe, Einordnung, Rivalen, "
+                 "Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, Ausbeute, "
+                 "Ergebnis.\n- **Frozen before run:** nein\n"
+                 "\n```\nAnswer: Yes\n```\n")
+
+    def test_v015_without_exclusions_exits_one(self):
+        rc, out = self._run(self.BASE_V015)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("Exclusions", out)
+
+    def test_v015_with_exclusions_passes(self):
+        text = self.BASE_V015 + "Exclusions: none.\n"
+        rc, out = self._run(text)
+        self.assertEqual(rc, 0, out)
+
+    def test_legacy_without_exclusions_passes(self):
+        legacy = self.BASE_V015.replace("- **Standard:** 0.15\n", "")
+        rc, out = self._run(legacy)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("Exclusions", out)
+
+    def test_v013_explicit_without_exclusions_passes(self):
+        legacy = self.BASE_V015.replace("0.15", "0.13")
+        rc, out = self._run(legacy)
+        self.assertEqual(rc, 0, out)
+
+    def test_template_stamps_exclusions(self):
+        text = TEMPLATE.read_text(encoding="utf-8")
+        self.assertIn("Exclusions / filters", text)
+
+    def test_template_stamps_gate_labels(self):
+        text = TEMPLATE.read_text(encoding="utf-8")
+        self.assertIn("Gate labels (expected)", text)
+
+    def test_template_stamps_randomness(self):
+        text = TEMPLATE.read_text(encoding="utf-8")
+        self.assertIn("Randomness controls", text)
+
+    def test_template_stamps_standard(self):
+        text = TEMPLATE.read_text(encoding="utf-8")
+        self.assertIn("Standard:", text)
+
+
+class TestStandardVersion(unittest.TestCase):
+    """Standard-Version field replaces per-feature cutoff dates (2026-09-13)."""
+
+    def _run(self, text):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "PROTOCOL-x.md"
+            p.write_text(text, encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = protocol_check.main([str(p)])
+            return rc, buf.getvalue()
+
+    BASE = ("# x\nBegriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
+            "Prompt, Roh-Output, Instrumentenprobe, Einordnung, Rivalen, "
+            "Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, Ausbeute, "
+            "Ergebnis, Exclusions.\n")
+
+    def test_v014_frozen_oversized_exits_one(self):
+        text = (self.BASE + "- **Standard:** 0.14\n"
+                "- **Frozen before run:** ja\n\n```\nAnswer: Yes\n```\n"
+                + "## Intent\n" + "Prose line.\n" * 35)
+        rc, out = self._run(text)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("OVERSIZED (must)", out)
+
+    def test_v013_frozen_oversized_exits_zero(self):
+        text = (self.BASE + "- **Standard:** 0.13\n"
+                "- **Frozen before run:** ja\n\n```\nAnswer: Yes\n```\n"
+                + "## Intent\n" + "Prose line.\n" * 35)
+        rc, out = self._run(text)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("oversized", out.lower())
+        self.assertNotIn("OVERSIZED (must)", out)
+
+    def test_no_standard_field_defaults_to_v013(self):
+        text = (self.BASE
+                + "- **Frozen before run:** ja\n\n```\nAnswer: Yes\n```\n"
+                + "## Intent\n" + "Prose line.\n" * 35)
+        rc, out = self._run(text)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("OVERSIZED (must)", out)
+
+    def test_standard_version_regex_reads_field(self):
+        m = protocol_check.STANDARD_VERSION.search("- **Standard:** 0.15\n")
+        self.assertIsNotNone(m)
+        self.assertEqual(m.group(1), "0.15")
+
+    def test_version_comparison_is_numeric_not_lexicographic(self):
+        """String comparison puts "0.9" above "0.15" and "0.100" below it —
+        both would misapply every versioned gate."""
+        self.assertLess(protocol_check._std("0.9"), (0, 15))
+        self.assertGreater(protocol_check._std("0.100"), (0, 15))
+        self.assertGreaterEqual(protocol_check._std("0.15"), (0, 15))
+
+    def test_v09_standard_gets_no_v015_musts(self):
+        """A pre-0.15 protocol must not be held to the 0.15 field set
+        (lexicographically "0.9" >= "0.15" was True)."""
+        must, _ = protocol_check.check_text(
+            self.BASE.lower().replace("exclusions.", ""), standard="0.9")
+        self.assertFalse([m for m in must if "Exclusions" in m], must)

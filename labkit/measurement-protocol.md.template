@@ -1,0 +1,14 @@
+# Measurement: <name>
+
+*One question, one number. Re-computation: move the old result to
+"Prior computation" before overwriting.*
+
+- **Standard:** 0.15
+- **Type:** measurement
+- **Question:** <the one question — what do we want to know?>
+- **Data / scope:** <source, N, producer script>
+- **Prior computation:** <prior result + run_id + [[link]], or "none">
+- **Method:** <script path or one sentence>
+- **Exclusions / filters:** <what was dropped and why, or "none">
+- **Result:** <number + run_id, or "pending">
+- **Terms:** <every label with a half-sentence gloss>

@@ -482,7 +482,7 @@ def _is_alive(pid, script) -> bool | None:
     if not isinstance(pid, int):
         return None
     try:
-        os.kill(pid, 0)              # Signal 0: nur Existenzpruefung
+        os.kill(pid, 0)              # signal 0: existence check only
     except ProcessLookupError:
         return False
     except PermissionError:
@@ -579,7 +579,8 @@ def _wait(area: str, max_seconds: float | None, interval: float,
     """Block until the area has no open runs. Exit codes are the contract:
     0 = no open runs (finished) · 2 = a run crashed · 3 = still running at
     --max-seconds. The waiter only OBSERVES — the run owns its process group
-    and its lock, so a killed waiter is harmless (Detach-Probe, K4+K5)."""
+    and its lock, so a killed waiter is harmless (verified in the detach
+    probe: killing the waiter left run and lock untouched)."""
     t0 = time.monotonic()
     apath = Path(area)
     while True:

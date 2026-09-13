@@ -1,6 +1,6 @@
 """labkit — the shared helpers every experiment repo imports.
 
-Four modules, stdlib only:
+Ten modules, stdlib only:
 
 - `runlog`         one run = one directory + one ledger row (id, config, env, status)
                    (installed as the `runlog` command: `runlog <area>` lists open runs)
@@ -12,6 +12,14 @@ Four modules, stdlib only:
                    (installed as the `intent-check` command)
 - `protocol_check` the checker the experiment protocol contracts with
                    (installed as the `protocol-check` command)
+- `protocol_fill`  fill one stamped placeholder field by label
+                   (installed as the `protocol-fill` command)
+- `code_check`     mechanical preflight: intent ids, schema, gate labels
+                   (installed as the `code-check` command)
+- `scope_sha`      audit stamp over the code that determines a number
+                   (installed as the `scope-sha` command)
+- `notes_check`    kind declaration gate for notes/messung
+                   (installed as the `notes-check` command)
 
     from labkit import runlog, llm, batch
 
@@ -32,7 +40,7 @@ drop the private helpers and make monkeypatching land on a copy):
     sys.modules[__name__] = _mod
 """
 
-__version__ = "0.9.0"   # keep in step with pyproject.toml
+__version__ = "0.15.1"   # keep in step with pyproject.toml
 
 # The submodules are deliberately NOT imported here: `import labkit` must stay
 # free of side effects (llm reads models.toml when it is used, not when the

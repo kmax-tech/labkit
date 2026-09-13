@@ -9,12 +9,22 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
   into a note; the [[wikilink]] stays here.
 - **† = report field.** Due only once `Frozen before run` goes to "yes";
   leave empty until then (`lib exp <name> --report` appends them).
+- **[K1]/[S1]/[W1]/[N1] = intent ids**, one per promise to the code:
+  **K** criterion conjunct · **S** stop rule · **W** registered fork ·
+  **N** null condition/gate. Each reappears as a lowercase key in the
+  reportable run's metrics.json (`k1_pass`, …); `intent-check` compares the
+  two sets (→ §2.A1a).
 - **`→ §2.x`** = the rule of that number in `docs/arbeitsstandard.md`; the
   reasoning, the evidence and the term legend live there — here only what
   the field demands.
 
+- **Standard:** 0.15
+
 *Field labels English; content in German or English. Student edition:
-`thesis-experiment-protocol.md.template` (changes carried over deliberately).*
+`thesis-experiment-protocol.md.template` in `~/.claude/resources/` — the
+same contract in decoded prose, no lab shorthand (changes carried over
+deliberately). Pure counting questions take the measurement short form
+(`measurement-protocol.md.template`, packaged next to this one).*
 
 <!-- HEAD — this part gets READ. Line budget per section: protocol-check. -->
 
@@ -88,10 +98,14 @@ instead).*
 
 - **Model I/O:** <in: which fields · out as instructed: required format ·
   out in fact: what comes back + which function parses it>
+- **Gate labels (expected) †:** <which labels the gate accepts — the declared
+  set for the mechanical check against code-extracted labels>
 - **Null condition / anchors (in the same run):** <[N1] — what runs along in THIS
   run and must show null — anchors of known rate, placebo, swap; not "was
   validated earlier". Per anchor its expected outcome WITH the derivation
   in half a sentence (→ §2.C9)>
+- **Exclusions / filters:** <what is dropped from the data or output and why;
+  which outputs get no gate label — "none" if nothing is excluded>
 - **Data preparation †:** <raw → prepared: which script wrote which file;
   the experiment reads prepared only>
 - **Meaning of the gold label †:** <what does the positive class REALLY
@@ -104,6 +118,8 @@ instead).*
   comes from the null condition of THIS run>
 - **Free knobs †:** <every preprocessing parameter with its value:
   thresholds, filters, cutoffs, windows>
+- **Randomness controls †:** <seeds, number of runs, temperature setting
+  and why — "deterministic" if no randomness>
 
 ## Checks (render check → instrument check → pilot)
 

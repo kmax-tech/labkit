@@ -1,8 +1,11 @@
 # labkit — shared lab helpers
 
-The four building blocks every experiment repo imports, in **one** place:
-run ledger (`runlog`), LLM backend (`llm`), resumable output file (`batch`)
-and the protocol checker (`protocol_check`, installed as `protocol-check`).
+Ten modules every experiment repo imports, in **one** place: run ledger
+(`runlog`), LLM backend (`llm`), endpoint lease (`endpoint_lease`),
+resumable output file (`batch`), intent-id check (`intent_check`),
+protocol checker (`protocol_check`), protocol filler (`protocol_fill`),
+mechanical preflight (`code_check`), audit stamp (`scope_sha`) and
+notes-kind gate (`notes_check`).
 
 They used to live as copies in every repo — up to three versions per file
 (`experiments/`, `resources/templates/`, `~/.claude/resources/`). On
@@ -20,12 +23,48 @@ pip install ~/projects/labkit      # in repos: pinned via requirements.txt/.lock
 from labkit import runlog, llm, batch
 ```
 
-Two **console commands** come with the installation (both answer `--help`):
+Seven **console commands** come with the installation (all answer `--help`):
 
 ```bash
 protocol-check <PROTOCOL-*.md>...   # mandatory-field check (must/should contract)
 runlog [<area>]                     # open runs: run_id, running/crashed, script
+intent-check <PROTOCOL-*.md>        # registered promise ids vs. ledger keys
+code-check <AREA>                   # mechanical preflight (schema, gate labels)
+scope-sha [--area DIR]              # audit stamp over the code that determines a number
+protocol-fill <PROTOCOL> FIELD VAL  # fill one stamped placeholder field by label
+notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
 ```
+
+labkit knows **two work types**: `measurement` for pure counting questions
+("how many X are there?" — no model, no hypothesis, 7 fields, no freeze)
+and `experiment` for everything hypothesis- or model-driven. An experiment
+protocol has **two modes**: `Frozen before run: no` is the light pilot
+(MUST fields only), `Frozen before run: yes` is the heavy report mode —
+every SHOULD field becomes mandatory. The price sits on the claim, not the
+activity: cheap tiers yield numbers that must not be reported. The
+experiment template additionally exists in a decoded **student edition**
+(`thesis-experiment-protocol.md.template`, dotfiles) — same checker
+contract, prose instead of lab shorthand.
+
+The commands are stations of **one lifecycle** — write the protocol, audit
+the code, run, hold the run against the promises:
+
+1. Write `PROTOCOL-<task>.md` from the packaged template; `protocol-check`
+   enforces its fields from the first draft on (MUST for pilots, everything
+   once `Frozen before run: yes`).
+2. Before freezing, `code-check <area>` runs the mechanical preflight —
+   registered intent ids vs. the code, schema facts, gate labels — and
+   `--bundle` packs the sources for the audit agent's judgement pass.
+3. The run goes through `runlog` (frozen config, env fingerprint, script
+   snapshot, split-leakage check); `runlog <area>` monitors it, `runlog
+   start -- <cmd>` detaches long runs.
+4. After the run, `intent-check` holds the protocol's registered promises
+   against the run's metrics; `scope-sha` stamps which code the audits saw;
+   `protocol-fill` writes results back into the protocol without touching
+   the rest.
+
+`notes-check` sits beside the lifecycle: it gates the measurement notes the
+results flow into.
 
 **Pin the version, never `pip install -e` in an experiment repo.** A run
 records its environment; if the helpers could change under a finished run,

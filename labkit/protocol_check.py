@@ -5,71 +5,58 @@ The protocol template (`experiment-protocol.md.template`) is a checklist of
 mandatory fields, not a copy-form: protocols may be structured freely, but
 every field must occur — an explicit "n/a — <why>" counts, silence does not.
 A field counts as present as soon as its concept keywords appear anywhere in
-the file; the check therefore forces protocols to at least *mention* the
-concepts that hurt when omitted (2026-08-13: "Typ" and "Modell-I/O" were
-missing from two freely written protocols; each omission caused a bad run).
+the file, so a protocol must at least *mention* the concepts that hurt when
+omitted (scar 2026-08-13: two freely written protocols omitted "Type" and
+"Model I/O"; each omission caused a bad run).
 
-**Keyword presence was not enough (2026-08-17).** A protocol that keeps the
-template's own placeholder — `**Prompt (woertlich):** <der echte Prompt ...>` —
-passed every check, because the WORD "prompt" was there. Across 28 protocols
-that meant: not one contained an actual model input/output, while the checker
-reported them clean. Three additions close that:
+The checks, each stated as its current rule (the change history lives in the
+commits, Arbeitsstandard §3):
 
-  1. **Placeholder detection.** A field whose value is a bare `<...>` is not
-     filled. Severity follows the field: MUST -> failure, SHOULD -> warning.
-  2. **Template-line detection.** Any line still identical to a line of the
-     template is instruction, not content. Needs `--template PATH` (or the
-     template sitting next to this script).
-  3. **Verbatim-block check.** A protocol that reports a prompt but contains no
-     fenced code block almost certainly paraphrases it. This is a MUST failure:
-     the verbatim prompt and one real example with the model's output are the
-     one thing a protocol exists for. Protocols that never mention a prompt
-     (no model involved) are untouched. The example itself is enforced by the
-     "Roh-Output" MUST field — a link into output/ or an "n/a — <warum>"
-     satisfies it, silence does not.
+  * **Placeholder detection.** A field whose value is a bare `<...>` is not
+    filled; severity follows the field (MUST -> failure, SHOULD -> warning).
+    Keyword presence alone once passed 28 protocols of which not one
+    contained an actual model input/output (2026-08-17).
+  * **Template-line detection.** Any line still identical to a line of the
+    template is instruction, not content. Needs `--template PATH` (or the
+    template sitting next to this script).
+  * **Verbatim-block check.** A protocol that mentions a prompt but contains
+    no fenced code block almost certainly paraphrases it — a MUST failure:
+    the verbatim prompt and one real example with the model's output are the
+    one thing a protocol exists for. Protocols that never mention a prompt
+    (no model involved) are untouched; the example itself is the "Raw
+    output" MUST field — a link into output/ or an "n/a — <why>" satisfies
+    it, silence does not.
+  * **Two tiers, one template.** MUST is the pilot minimum (question,
+    success, stop rule, type, prompt/IO, null condition); SHOULD is what a
+    REPORTABLE run owes on top (rivals, scope, prognosis, yield, knobs,
+    result). The graduation gate is mechanical: **`Frozen before run: yes`
+    escalates every SHOULD field to MUST.** Claiming confirmatory status is
+    claiming the full protocol; an unfrozen pilot's numbers stay pilot
+    numbers — "Pilot leicht, Bericht schwer" without a second template that
+    would drift (2026-08-18).
+  * **Terms are a MUST field.** The template asks for them twice — "Terms of
+    this protocol" in the opening block, "Clarified terms" after the dry run
+    — and one keyword entry covers both. What the check enforces is the
+    *moment of naming*: the definition notes existed, the declaration in the
+    protocol was the one thing nothing forced (2026-08-19). Terms sit first
+    in MUST because they precede the question they are asked in (CLAUDE.md
+    6: Begriff vor Gebrauch).
+  * **A measure run demands a written result.** A run_id in the ledger that
+    is not a prepare/probe line makes empty `Answer to the question` / `Raw
+    output` fields (or a missing Result section) a MUST failure — pilot
+    suppression does not apply, because the context that explains the
+    numbers dies with the session (2026-08-24).
+  * **Change-history prose is a warning.** The current rule belongs in the
+    text, the change and its why in the commit message (Arbeitsstandard §3).
+    Warning only — load-bearing translation tables (old names still in
+    runs.tsv) are legitimate (2026-08-24).
 
 Usage:
-    protocol-check.py PROTOCOL-foo.md [more files or directories ...]
-    protocol-check.py --template experiment-protocol.md.template <files>
+    protocol-check PROTOCOL-foo.md [more files or directories ...]
+    protocol-check --template experiment-protocol.md.template <files>
 
 Directories are searched recursively for PROTOCOL-*.md. Exit code 1 if any
 MUST field is missing or unfilled in any file; SHOULD fields only warn.
-
-**Two tiers, one template (2026-08-18).** MUST is the pilot minimum (question,
-success, stop rule, type, prompt/IO, null condition); SHOULD is what a REPORTABLE
-run owes on top (rivals, scope, prognosis, yield, knobs, result). The
-graduation gate is mechanical: **`Frozen before run: ja` escalates every
-SHOULD field to MUST.** Claiming confirmatory status is claiming the full
-protocol; a pilot that never wrote its rivals down simply stays unfrozen and
-its numbers stay pilot numbers. This keeps "Pilot leicht, Bericht schwer"
-without a second template that would drift.
-
-**Terms are a MUST field (2026-08-19).** The template asks for them twice —
-`Begriffe dieses Protokolls` in the opening block, `Geklaerte Begriffe` after
-the dry run — but the checker never looked for either. A transcript audit found
-the material is not what is missing: five definition notes, a binding core
-glossary, each read in 13-18 sessions. What was missing is the *moment of
-naming* — nothing forced a protocol to say which label it uses before the run,
-so the field the template calls for was the one field nothing enforced. One
-keyword entry covers both mentions, and severity_of() resolves the label to
-MUST, so a protocol that leaves `**Begriffe ...:** <...>` standing fails too.
-Terms sit first in MUST because they precede the question they are asked in
-(CLAUDE.md 6: Begriff vor Gebrauch).
-
-**A logged measure run without a written result (2026-08-24).** The standing
-rule ("a run is not done until the Ergebnis block is back in the PROTOCOL —
-same session") was enforced by nothing: the pilot gate suppresses the
-Ergebnis SHOULD field, so a pilot protocol with a finished measure run in its
-ledger still passed clean, and the commit hook nags only at the NEXT commit —
-by then the context that explains the numbers is gone. Now: a run_id line in
-the ledger that is not a prepare/probe line makes empty `Answer to the
-question` / `Raw output` fields (or a missing Result section) a MUST failure.
-
-**Change-history prose is a warning (2026-08-24).** Sentences like
-"seit <Datum> wieder draußen" or "hieß bis ..." turn a protocol into a
-changelog; the current rule belongs in the text, the change and its why in
-the commit message (Arbeitsstandard §3). Warning only — translation tables
-that are load-bearing (old names still in runs.tsv) are legitimate.
 
 Forward-looking: apply to new protocols, do not retrofit old ones (same policy
 as runlog).
@@ -100,6 +87,16 @@ MUST = [
     ("Raw output (one real example + model output)",
      r"roh-output|roh-beispiel|roh-antwort|i/o-beispiel|raw.?output"),
 ]
+MUST_MEASUREMENT = [
+    ("Question", r"question|frage"),
+    ("Data / scope", r"data\b|scope|daten|skopus|quelle"),
+    ("Prior computation", r"prior computation|vorherige berechnung|vorberechnung"),
+    ("Method", r"method|methode|skript"),
+    ("Exclusions / filters", r"exclusion|filter|ausschluss|ausschl[üu]sse"),
+    ("Result", r"result|ergebnis"),
+    ("Terms", r"begriff|terminolog|glossar|terms[\s:]"),
+]
+
 SHOULD = [
     # Missing in all five freely written protocols of Aug 2026, and the result
     # section was systematically never written back — hence the two nudges.
@@ -118,6 +115,11 @@ SHOULD = [
      r"instrumentenprobe|trockenlauf|rauchtest|instrument check|dry.?run"),
     ("Context (self-contained)",
      r"einordnung|vorgeschichte|selbsttragend|self.?contained"),
+]
+
+MUST_V015 = [
+    ("Exclusions / filters (what is dropped and why)",
+     r"exclusion|filter|ausschluss|ausschl[üu]sse"),
 ]
 
 # Fields that are only DUE once the template stamps them (2026-09-08). The two
@@ -142,6 +144,10 @@ SHOULD_IF_PRESENT = [
     # field must NOT be caught by it.
     ("Resolution check (criterion at synthetic extremes)",
      r"resolution.?check|aufl(ö|oe)sungsprobe"),
+    ("Gate labels (expected)",
+     r"gate.?label|gate.?etikett"),
+    ("Randomness controls",
+     r"randomness|zufall|seeds?\b.*\b(run|temperature|temp)|temperature.*(seed|run)"),
 ]
 
 # "Frozen before run: yes" without a single rendered example is a frozen
@@ -150,8 +156,19 @@ SHOULD_IF_PRESENT = [
 # the gold label means DEGREE OF SUPPORT; a 9-call dry run saved 440 calls.
 # Neither would have happened in a "frozen" protocol without an I/O example.
 FROZEN_YES = re.compile(r"frozen before run[^:\n]*:\**\s*\**\s*(ja|yes)\b", re.I)
-FREEZE_DATE = re.compile(r"frozen before run[^:\n]*:\**\s*\**\s*(?:ja|yes)\b.*?(\d{4}-\d{2}-\d{2})", re.I)
-BUDGET_MUST_SINCE = "2026-09-14"
+
+STANDARD_VERSION = re.compile(r"standard[^:\n]*:\**\s*\**\s*(\d+\.\d+)\b", re.I)
+DEFAULT_STANDARD = "0.13"
+
+
+def _std(standard: str) -> tuple[int, ...]:
+    """Standard version as a comparable tuple — string comparison would put
+    "0.9" above "0.15" and misapply every versioned gate."""
+    return tuple(int(p) for p in standard.split("."))
+
+TYPE_MEASUREMENT = re.compile(
+    r"^\s*[-*]?\s*\*{0,2}typ[e]?[^:\n]*:\*{0,2}\s*\*{0,2}\s*measurement\s*$|"
+    r"^\s*[-*]?\s*\*{0,2}typ[^:\n]*:\*{0,2}\s*\*{0,2}\s*messung\s*$", re.I | re.M)
 
 # The mirror image of the graduation gate: a protocol that explicitly declares
 # `Frozen before run: nein` is a pilot BY DECLARATION. Its missing SHOULD
@@ -274,7 +291,7 @@ def find_template(explicit: str | None) -> Path | None:
 def severity_of(label: str) -> str:
     """Does this placeholder sit in a MUST field, a SHOULD field, or neither?"""
     low = label.lower()
-    for _, pat in MUST:
+    for _, pat in MUST + MUST_V015:
         if re.search(pat, low):
             return "must"
     for _, pat in SHOULD + SHOULD_IF_PRESENT:
@@ -283,10 +300,19 @@ def severity_of(label: str) -> str:
     return "other"
 
 
-def check_text(text: str) -> tuple[list[str], list[str]]:
+def check_text(text: str, *, measurement: bool = False,
+               standard: str = DEFAULT_STANDARD,
+               ) -> tuple[list[str], list[str]]:
     """Return (missing_must, missing_should) field labels for one protocol."""
     low = text.lower()
+    if measurement:
+        missing_must = [label for label, pat in MUST_MEASUREMENT
+                        if not re.search(pat, low)]
+        return missing_must, []
     missing_must = [label for label, pat in MUST if not re.search(pat, low)]
+    if _std(standard) >= (0, 15):
+        missing_must += [label for label, pat in MUST_V015
+                         if not re.search(pat, low)]
     missing_should = [label for label, pat in SHOULD if not re.search(pat, low)]
     return missing_must, missing_should
 
@@ -333,12 +359,40 @@ def main(argv: list[str]) -> int:
             failed = True
             continue
 
-        missing_must, missing_should = check_text(text)
+        std_m = STANDARD_VERSION.search(text)
+        standard = std_m.group(1) if std_m else DEFAULT_STANDARD
+        is_measurement = bool(TYPE_MEASUREMENT.search(text))
+        missing_must, missing_should = check_text(
+            text, measurement=is_measurement, standard=standard)
+        # Mis-declaration: measurement + model prompt is a type error.
+        has_block = "```" in text
+        misdeclared = (is_measurement and has_block
+                       and re.search(r"prompt", text.lower()))
+        if misdeclared:
+            missing_must.append(
+                "MISDECLARED: protocol carries a model prompt but declares "
+                "Type: measurement — change to exploratory/confirmatory")
+
+        if is_measurement:
+            holes = placeholder_fields(text)
+            must_holes = [(n, lb) for n, lb in holes
+                          if any(re.search(pat, lb.lower())
+                                 for _, pat in MUST_MEASUREMENT)]
+            clean = not (missing_must or must_holes)
+            if clean:
+                print(f"{f}: OK — measurement, all fields filled")
+                continue
+            for label in missing_must:
+                print(f"{f}: MISSING (must): {label}")
+            for n, label in must_holes:
+                print(f"{f}:{n}: PLACEHOLDER ONLY (must): {label}")
+            failed = True
+            print(f"{f}: must fields missing or empty — fill them in, or "
+                  f"justify as 'n/a — <why>'.")
+            continue
+
         frozen = bool(FROZEN_YES.search(text))
-        freeze_date_m = FREEZE_DATE.search(text)
-        budget_must = frozen and (
-            freeze_date_m is not None
-            and freeze_date_m.group(1) >= BUDGET_MUST_SINCE)
+        budget_must = frozen and _std(standard) >= (0, 14)
         holes = placeholder_fields(text)
         # Graduation gate: frozen -> every should-gap is a must-gap.
         must_holes = [(n, lb) for n, lb in holes
@@ -356,7 +410,6 @@ def main(argv: list[str]) -> int:
                           f"(append them: lib exp <name> --report)")
             missing_should = []
         left = sorted({s for s in (l.strip() for l in text.splitlines()) if s in tmpl})
-        has_block = "```" in text
         no_block = not has_block and re.search(r"prompt", text.lower())
         frozen_without_io = bool(FROZEN_YES.search(text)) and not has_block
         # A protocol is a registration, not a lab journal. By 2026-08-20 one
