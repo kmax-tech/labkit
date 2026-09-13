@@ -165,6 +165,86 @@ class TestSchemaFacts(unittest.TestCase):
         self.assertNotIn("'must_contradict' from", facts)
 
 
+class TestGateLabels(unittest.TestCase):
+    """Gate-label extraction — facts for the agent, not findings."""
+
+    def _labels(self, scripts):
+        with AreaFixture(PROTOCOL_TWO, scripts) as a:
+            return code_check.gate_labels(a.path)
+
+    def test_string_literal_in_equality(self):
+        facts = self._labels({"03_evaluate.py": CLEAN_CODE
+                               + 'if answer == "yes": pass\n'})
+        self.assertIn("'yes'", facts)
+        self.assertIn("answer", facts)
+
+    def test_string_set_in_membership(self):
+        facts = self._labels({"03_evaluate.py": CLEAN_CODE
+                               + 'if answer in {"a", "b"}: pass\n'})
+        self.assertIn("'a'", facts)
+        self.assertIn("'b'", facts)
+        self.assertIn("answer", facts)
+
+    def test_named_constant_resolved_same_module(self):
+        code = (CLEAN_CODE
+                + 'VALID = {"yes", "no"}\n'
+                + 'if answer in VALID: pass\n')
+        facts = self._labels({"03_evaluate.py": code})
+        self.assertIn("VALID", facts)
+        self.assertIn("[Name, resolved:", facts)
+        self.assertIn("'yes'", facts)
+        self.assertIn("'no'", facts)
+
+    def test_named_constant_imported(self):
+        code = (CLEAN_CODE
+                + 'from labels import VALID_ANSWERS\n'
+                + 'if answer in VALID_ANSWERS: pass\n')
+        facts = self._labels({"03_evaluate.py": code})
+        self.assertIn("VALID_ANSWERS", facts)
+        self.assertIn("[Name, imported from labels]", facts)
+
+    def test_named_constant_unresolved(self):
+        code = CLEAN_CODE + 'if answer in MYSTERY: pass\n'
+        facts = self._labels({"03_evaluate.py": code})
+        self.assertIn("MYSTERY", facts)
+        self.assertIn("[Name, unresolved]", facts)
+
+    def test_attribute_constant(self):
+        code = CLEAN_CODE + 'if answer == LABELS.SUPPORTS: pass\n'
+        facts = self._labels({"03_evaluate.py": code})
+        self.assertIn("LABELS.SUPPORTS", facts)
+
+    def test_producer_script_not_extracted(self):
+        facts = self._labels({"00_prepare.py": 'if x == "yes": pass\n',
+                               "03_evaluate.py": CLEAN_CODE})
+        self.assertNotIn('"yes"', facts)
+
+    def test_infra_variable_filtered(self):
+        facts = self._labels({"03_evaluate.py": CLEAN_CODE
+                               + 'if mode == "dry-run": pass\n'})
+        self.assertNotIn('"dry-run"', facts)
+        self.assertIn("filtered as infrastructure", facts)
+        self.assertIn("mode", facts.split("filtered")[1])
+
+    def test_file_extension_literal_filtered(self):
+        facts = self._labels({"03_evaluate.py": CLEAN_CODE
+                               + 'if ext in {".json", ".csv"}: pass\n'})
+        self.assertNotIn('".json"', facts)
+        self.assertNotIn('".csv"', facts)
+
+    def test_get_default(self):
+        facts = self._labels({"03_evaluate.py": CLEAN_CODE
+                               + 'v = mapping.get(answer, "unknown")\n'})
+        self.assertIn("'unknown'", facts)
+
+    def test_filter_summary_count(self):
+        code = (CLEAN_CODE
+                + 'if mode == "a": pass\n'
+                + 'if mode == "b": pass\n')
+        facts = self._labels({"03_evaluate.py": code})
+        self.assertIn("2 comparison(s) filtered", facts)
+
+
 class TestBundle(unittest.TestCase):
 
     def test_bundle_carries_protocol_scripts_and_facts(self):
@@ -178,6 +258,17 @@ class TestBundle(unittest.TestCase):
         self.assertIn("Schema facts", text)
         self.assertIn("[K1] trifft", text)
         self.assertIn("k1_pass", text)
+
+    def test_bundle_includes_gate_labels(self):
+        with AreaFixture(PROTOCOL_TWO,
+                         {"03_evaluate.py": CLEAN_CODE
+                          + 'if answer == "yes": pass\n'}) as a:
+            out = a.path / "bundle.md"
+            code_check.write_bundle(a.path, a.path,
+                                     a.path / "PROTOCOL-fixture.md", out)
+            text = out.read_text(encoding="utf-8")
+        self.assertIn("Gate labels", text)
+        self.assertIn("'yes'", text)
 
 
 if __name__ == "__main__":

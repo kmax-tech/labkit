@@ -150,6 +150,8 @@ SHOULD_IF_PRESENT = [
 # the gold label means DEGREE OF SUPPORT; a 9-call dry run saved 440 calls.
 # Neither would have happened in a "frozen" protocol without an I/O example.
 FROZEN_YES = re.compile(r"frozen before run[^:\n]*:\**\s*\**\s*(ja|yes)\b", re.I)
+FREEZE_DATE = re.compile(r"frozen before run[^:\n]*:\**\s*\**\s*(?:ja|yes)\b.*?(\d{4}-\d{2}-\d{2})", re.I)
+BUDGET_MUST_SINCE = "2026-09-14"
 
 # The mirror image of the graduation gate: a protocol that explicitly declares
 # `Frozen before run: nein` is a pilot BY DECLARATION. Its missing SHOULD
@@ -199,7 +201,7 @@ CHANGELOG = re.compile(
 # instead of everything (a warning that fires on every file is background
 # noise). Needs more room? That is a note, and here stands its [[wikilink]].
 SECTION_BUDGET = [
-    ("Summary", r"summary|zusammenfassung", 14),
+    ("Summary", r"summary|zusammenfassung", 20),
     ("Context", r"context|einordnung", 20),
     ("Intent", r"intent|absicht|hypothese und kriterien|die eine frage", 30),
     ("Setup", r"setup|aufbau", 45),
@@ -333,6 +335,10 @@ def main(argv: list[str]) -> int:
 
         missing_must, missing_should = check_text(text)
         frozen = bool(FROZEN_YES.search(text))
+        freeze_date_m = FREEZE_DATE.search(text)
+        budget_must = frozen and (
+            freeze_date_m is not None
+            and freeze_date_m.group(1) >= BUDGET_MUST_SINCE)
         holes = placeholder_fields(text)
         # Graduation gate: frozen -> every should-gap is a must-gap.
         must_holes = [(n, lb) for n, lb in holes
@@ -420,14 +426,17 @@ def main(argv: list[str]) -> int:
                   f"single rendered example (code block). Instrument check "
                   f"first, then freeze — otherwise the error freezes in.")
         if too_long:
-            print(f"{f}: {n_lines} prose lines (tables/code excluded) — a "
-                  f"protocol is a registration, not a lab journal. Narratives "
-                  f"(freeze history, diagnoses) belong in commit messages or a "
-                  f"note; ONE sentence per freeze stays here.")
+            sev = "OVERSIZED (must)" if budget_must else "oversized"
+            print(f"{f}: {sev}: {n_lines} prose lines (tables/code excluded) "
+                  f"— a protocol is a registration, not a lab journal. "
+                  f"Narratives (freeze history, diagnoses) belong in commit "
+                  f"messages or a note; ONE sentence per freeze stays here.")
         for lb, n, lim in big:
-            print(f"{f}: section '{lb}': {n} prose lines (budget {lim}) — one "
-                  f"field is one line; if a justification needs more, it goes "
-                  f"into a note and the [[wikilink]] stays here.")
+            sev = "OVERSIZED (must)" if budget_must else "oversized"
+            print(f"{f}: {sev}: section '{lb}': {n} prose lines (budget "
+                  f"{lim}) — one field is one line; if a justification needs "
+                  f"more, it goes into a note and the [[wikilink]] stays "
+                  f"here.")
         if run_unreported:
             print(f"{f}:{measured[0][0]}: MISSING (must): measure run in the "
                   f"ledger ({measured[0][1]}) but Result/Raw output empty — "
@@ -441,7 +450,8 @@ def main(argv: list[str]) -> int:
             print(f"{f}:{n}: change history in the text ({l[:60]!r}) — docs "
                   f"carry the current state, the why of the change goes in the "
                   f"commit message (Arbeitsstandard §3).")
-        if missing_must or must_holes or frozen_without_io or no_block or run_unreported:
+        if (missing_must or must_holes or frozen_without_io or no_block
+                or run_unreported or (budget_must and (too_long or big))):
             failed = True
             print(f"{f}: must fields missing or empty — fill them in, or "
                   f"justify as 'n/a — <why>' (the reason must be there, not "

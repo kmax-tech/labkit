@@ -573,3 +573,70 @@ class TestResolutionCheckGate(unittest.TestCase):
 
     def test_template_stamps_the_field(self):
         self.assertIn("Resolution check", TEMPLATE.read_text(encoding="utf-8"))
+
+
+class TestProseBudgetEscalation(unittest.TestCase):
+    """Frozen protocols escalate prose budgets from warning to must (2026-09-13).
+
+    Escalation is gated by the freeze date: only protocols frozen on or after
+    BUDGET_MUST_SINCE (2026-09-14) get the MUST. Older freezes (or freezes
+    without a date) stay as warnings — zero edits to existing protocols.
+    """
+
+    def _run(self, text):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "PROTOCOL-x.md"
+            p.write_text(text, encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = protocol_check.main([str(p)])
+            return rc, buf.getvalue()
+
+    FROZEN_NEW = ("# x\nBegriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
+                  "Prompt, Roh-Output, Instrumentenprobe, Einordnung, Rivalen, "
+                  "Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, Ausbeute, "
+                  "Ergebnis.\n- **Frozen before run:** ja *(2026-09-15, nach Probe)*\n"
+                  "\n```\nAnswer: Yes\n```\n")
+
+    FROZEN_OLD = ("# x\nBegriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
+                  "Prompt, Roh-Output, Instrumentenprobe, Einordnung, Rivalen, "
+                  "Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, Ausbeute, "
+                  "Ergebnis.\n- **Frozen before run:** ja *(2026-09-09, nach Probe)*\n"
+                  "\n```\nAnswer: Yes\n```\n")
+
+    def test_new_freeze_oversized_section_exits_one(self):
+        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 35
+        rc, out = self._run(self.FROZEN_NEW + intent)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("OVERSIZED (must)", out)
+        self.assertIn("Intent", out)
+
+    def test_new_freeze_global_over_350_exits_one(self):
+        filler = "Eine Zeile Prose.\n" * 360
+        rc, out = self._run(self.FROZEN_NEW + filler)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("OVERSIZED (must)", out)
+
+    def test_old_freeze_oversized_warns_but_exits_zero(self):
+        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 35
+        rc, out = self._run(self.FROZEN_OLD + intent)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("oversized", out.lower())
+        self.assertNotIn("OVERSIZED (must)", out)
+
+    def test_no_date_frozen_oversized_warns_but_exits_zero(self):
+        frozen_no_date = TestAuditGates.FROZEN
+        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 35
+        rc, out = self._run(frozen_no_date + intent)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("oversized", out.lower())
+        self.assertNotIn("OVERSIZED (must)", out)
+
+    def test_unfrozen_oversized_section_warns_but_exits_zero(self):
+        base = ("# x\nBegriffe, Frage, Erfolg, Abbruch, explorativ, Anker, "
+                "Prompt:\n\n```\nx\n```\nRoh-Output: n/a — kein Modell.\n")
+        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 35
+        rc, out = self._run(base + intent)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("oversized", out.lower())
