@@ -894,3 +894,22 @@ class TestIntentBudgetCalibration(unittest.TestCase):
         text = "## Intent\n" + "Prose line.\n" * 36
         self.assertEqual(protocol_check.oversized_sections(text),
                          [("Intent", 36, 35)])
+
+
+class TestStampedLegendIsNotTemplateText(unittest.TestCase):
+    """The template's preamble (before the first `## `) is a stamped legend
+    that survives filling — the verbatim-template check must not flag it
+    (2026-09-14/15: every freshly stamped protocol was flagged forever)."""
+
+    def test_preamble_lines_are_excluded(self):
+        lines = protocol_check.template_lines(
+            protocol_check.find_template(None))
+        self.assertTrue(lines, "template not found")
+        self.assertFalse([s for s in lines if "A checklist, not a copy-form" in s])
+        self.assertFalse([s for s in lines if "intent ids" in s])
+
+    def test_body_instruction_lines_still_count(self):
+        lines = protocol_check.template_lines(
+            protocol_check.find_template(None))
+        # An instruction line from inside a section stays in the set.
+        self.assertTrue([s for s in lines if "Plain language" in s], lines)

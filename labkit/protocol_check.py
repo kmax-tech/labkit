@@ -281,14 +281,25 @@ def placeholder_fields(text: str) -> list[tuple[int, str]]:
 
 
 def template_lines(path: Path | None) -> set[str]:
-    """Instruction lines of the template, normalised for comparison."""
+    """Instruction lines of the template, normalised for comparison.
+
+    The preamble — everything before the first `## ` section — is the
+    stamped legend (field-id key, standard version, guide pointer). It is
+    MEANT to survive filling, so it must not count as "still verbatim
+    template text": counting it flagged every freshly stamped protocol
+    forever and taught people to delete the legend (2026-09-14/15, two
+    sessions of false positives on a correctly filled protocol).
+    """
     if path is None or not path.exists():
         return set()
     keep = set()
+    in_body = False
     for line in path.read_text(encoding="utf-8").splitlines():
         s = line.strip()
+        if s.startswith("## "):
+            in_body = True
         # Only lines long enough to be distinctive; headings are meant to recur.
-        if len(s) >= 40 and not s.startswith("#"):
+        if in_body and len(s) >= 40 and not s.startswith("#"):
             keep.add(s)
     return keep
 
