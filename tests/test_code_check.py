@@ -270,6 +270,22 @@ class TestBundle(unittest.TestCase):
         self.assertIn("Gate labels", text)
         self.assertIn("'yes'", text)
 
+    def test_bundle_opens_with_severity_legend(self):
+        """Both audit agents must grade by the SAME definitions; the
+        code-check agent reads only the bundle, so the legend (inherited
+        from Arbeitsstandard §2.A12) is stamped in — before the facts."""
+        with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
+            out = a.path / "bundle.md"
+            code_check.write_bundle(a.path, a.path,
+                                     a.path / "PROTOCOL-fixture.md", out)
+            text = out.read_text(encoding="utf-8")
+        self.assertIn("Severity legend", text)
+        for grade in ("BLOCKER:", "WARNING:", "NOTE:"):
+            self.assertIn(grade, text)
+        self.assertLess(text.index("Severity legend"),
+                        text.index("Schema facts"))
+
+
 
 if __name__ == "__main__":
     unittest.main()

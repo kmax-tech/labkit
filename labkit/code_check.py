@@ -483,6 +483,25 @@ def schema_facts(area: Path) -> str:
 
 # --- the bundle -----------------------------------------------------------
 
+# Inherited from the severity legend in Arbeitsstandard §2.A12 — the German
+# legend there is the minting site; this is its English rendering, stamped
+# into every bundle so BOTH audit agents grade findings by the same
+# definitions (the code-check agent reads only the bundle and cannot look
+# the legend up). Change it there first, then mirror it here.
+SEVERITY_LEGEND = (
+    "## Severity legend (inherited from Arbeitsstandard §2.A12)\n"
+    "\n"
+    "- BLOCKER: materially changes a reported number or the validity of\n"
+    "  the frozen criterion.\n"
+    "- WARNING: a real problem without demonstrated influence on the\n"
+    "  current number.\n"
+    "- NOTE: failure scenario only under a condition (\"if X is changed,\n"
+    "  then ...\") — not triggerable on the code as it stands.\n"
+    "\n"
+    "The grade says how close the failure scenario sits to the current\n"
+    "run; a finding WITHOUT a scenario (which reported number goes wrong,\n"
+    "with which input) exists at no grade.\n")
+
 LIB_IMPORT = re.compile(r"^\s*(?:from|import)\s+(\w+)", re.M)
 
 
@@ -504,6 +523,7 @@ def imported_lib(area: Path, repo: Path) -> list[Path]:
 
 def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
     parts = [f"# AUDIT BUNDLE · area {area.name}\n\n",
+             SEVERITY_LEGEND, "\n",
              schema_facts(area), "\n",
              gate_labels(area), "\n"]
     files = [protocol]
