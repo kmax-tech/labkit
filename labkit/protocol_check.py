@@ -160,6 +160,14 @@ FROZEN_YES = re.compile(r"frozen before run[^:\n]*:\**\s*\**\s*(ja|yes)\b", re.I
 STANDARD_VERSION = re.compile(r"standard[^:\n]*:\**\s*\**\s*(\d+\.\d+)\b", re.I)
 DEFAULT_STANDARD = "0.13"
 
+# The highest `Standard: <x.y>` these gates implement. A protocol declaring a
+# newer standard was written against gates this code does not know — checking
+# it anyway produces false findings, not fewer findings (2026-09-14: a
+# pre-0.15 checker flagged the 0.15 template's own stamped preamble as
+# "verbatim template text" all session long). Too old to judge is a hard
+# failure that says so, never a best effort.
+SUPPORTED_STANDARD = "0.15"
+
 
 def _std(standard: str) -> tuple[int, ...]:
     """Standard version as a comparable tuple — string comparison would put
@@ -210,17 +218,21 @@ CHANGELOG = re.compile(
     r"|vorher (stand|galt)|fr[üu]her hie[ßs]+|umbenannt am", re.I)
 
 # Line budget per section. The global 350 only bites once a protocol is
-# already unreadable; measured over 73 grown protocols the length sits in two
-# sections — Setup (median 42 prose lines, top quartile above 54) and Intent
-# (median 23) — and there almost entirely in prose, not in the mandatory
-# evidence: only 556 of 3344 Setup lines are code blocks. The budgets sit
-# between median and upper quartile, so they flag roughly the top third
-# instead of everything (a warning that fires on every file is background
-# noise). Needs more room? That is a note, and here stands its [[wikilink]].
+# already unreadable; the per-section budgets sit between the corpus median
+# and its upper quartile, so they flag roughly the top third instead of
+# everything (a warning that fires on every file is background noise).
+# Calibration 2026-09-15, 94 protocols with an Intent section across
+# ~/projects + ~/work: Intent median 25, Q3 38 — but confirmatory protocols
+# (n=59) sit at median 30, because the [K/S/W/N] intent ids moved mandatory
+# registrations INTO Intent; the disciplined confirmatory cluster tops out
+# at 35 prose lines, so the budget sits at that ceiling and still flags the
+# top quarter. Setup as before (median 42, top quartile above 54; only 556
+# of 3344 Setup lines are code blocks — the length is prose, not evidence).
+# Needs more room? That is a note, and here stands its [[wikilink]].
 SECTION_BUDGET = [
     ("Summary", r"summary|zusammenfassung", 20),
     ("Context", r"context|einordnung", 20),
-    ("Intent", r"intent|absicht|hypothese und kriterien|die eine frage", 30),
+    ("Intent", r"intent|absicht|hypothese und kriterien|die eine frage", 35),
     ("Setup", r"setup|aufbau", 45),
 ]
 
@@ -371,6 +383,13 @@ def main(argv: list[str]) -> int:
 
         std_m = STANDARD_VERSION.search(text)
         standard = std_m.group(1) if std_m else DEFAULT_STANDARD
+        if _std(standard) > _std(SUPPORTED_STANDARD):
+            print(f"{f}: CHECKER TOO OLD: protocol declares Standard: "
+                  f"{standard}, this checker implements up to "
+                  f"{SUPPORTED_STANDARD} — upgrade labkit. No other findings "
+                  f"on this file: they would be noise, not judgement.")
+            failed = True
+            continue
         is_measurement = bool(TYPE_MEASUREMENT.search(text))
         missing_must, missing_should = check_text(
             text, measurement=is_measurement, standard=standard)

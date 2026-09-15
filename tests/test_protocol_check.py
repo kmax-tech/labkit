@@ -608,7 +608,7 @@ class TestProseBudgetEscalation(unittest.TestCase):
                   "\n```\nAnswer: Yes\n```\n")
 
     def test_new_freeze_oversized_section_exits_one(self):
-        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 35
+        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 40
         rc, out = self._run(self.FROZEN_NEW + intent)
         self.assertEqual(rc, 1, out)
         self.assertIn("OVERSIZED (must)", out)
@@ -621,7 +621,7 @@ class TestProseBudgetEscalation(unittest.TestCase):
         self.assertIn("OVERSIZED (must)", out)
 
     def test_old_freeze_oversized_warns_but_exits_zero(self):
-        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 35
+        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 40
         rc, out = self._run(self.FROZEN_OLD + intent)
         self.assertEqual(rc, 0, out)
         self.assertIn("oversized", out.lower())
@@ -629,7 +629,7 @@ class TestProseBudgetEscalation(unittest.TestCase):
 
     def test_no_date_frozen_oversized_warns_but_exits_zero(self):
         frozen_no_date = TestAuditGates.FROZEN
-        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 35
+        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 40
         rc, out = self._run(frozen_no_date + intent)
         self.assertEqual(rc, 0, out)
         self.assertIn("oversized", out.lower())
@@ -638,7 +638,7 @@ class TestProseBudgetEscalation(unittest.TestCase):
     def test_unfrozen_oversized_section_warns_but_exits_zero(self):
         base = ("# x\nBegriffe, Frage, Erfolg, Abbruch, explorativ, Anker, "
                 "Prompt:\n\n```\nx\n```\nRoh-Output: n/a — kein Modell.\n")
-        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 35
+        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 40
         rc, out = self._run(base + intent)
         self.assertEqual(rc, 0, out)
         self.assertIn("oversized", out.lower())
@@ -796,7 +796,7 @@ class TestStandardVersion(unittest.TestCase):
     def test_v014_frozen_oversized_exits_one(self):
         text = (self.BASE + "- **Standard:** 0.14\n"
                 "- **Frozen before run:** ja\n\n```\nAnswer: Yes\n```\n"
-                + "## Intent\n" + "Prose line.\n" * 35)
+                + "## Intent\n" + "Prose line.\n" * 40)
         rc, out = self._run(text)
         self.assertEqual(rc, 1, out)
         self.assertIn("OVERSIZED (must)", out)
@@ -804,7 +804,7 @@ class TestStandardVersion(unittest.TestCase):
     def test_v013_frozen_oversized_exits_zero(self):
         text = (self.BASE + "- **Standard:** 0.13\n"
                 "- **Frozen before run:** ja\n\n```\nAnswer: Yes\n```\n"
-                + "## Intent\n" + "Prose line.\n" * 35)
+                + "## Intent\n" + "Prose line.\n" * 40)
         rc, out = self._run(text)
         self.assertEqual(rc, 0, out)
         self.assertIn("oversized", out.lower())
@@ -813,7 +813,7 @@ class TestStandardVersion(unittest.TestCase):
     def test_no_standard_field_defaults_to_v013(self):
         text = (self.BASE
                 + "- **Frozen before run:** ja\n\n```\nAnswer: Yes\n```\n"
-                + "## Intent\n" + "Prose line.\n" * 35)
+                + "## Intent\n" + "Prose line.\n" * 40)
         rc, out = self._run(text)
         self.assertEqual(rc, 0, out)
         self.assertNotIn("OVERSIZED (must)", out)
@@ -836,3 +836,61 @@ class TestStandardVersion(unittest.TestCase):
         must, _ = protocol_check.check_text(
             self.BASE.lower().replace("exclusions.", ""), standard="0.9")
         self.assertFalse([m for m in must if "Exclusions" in m], must)
+
+
+class TestCheckerTooOld(unittest.TestCase):
+    """A protocol declaring a NEWER standard than the checker implements gets
+    one hard failure and zero other findings — an old gate judging a new
+    template produces false positives, not fewer findings (2026-09-14: a
+    pre-0.15 checker flagged the 0.15 template's stamped preamble as
+    "verbatim template text" for a whole session)."""
+
+    def _run(self, text):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "PROTOCOL-x.md"
+            p.write_text(text, encoding="utf-8")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = protocol_check.main([str(p)])
+            return rc, buf.getvalue()
+
+    def test_newer_standard_fails_hard(self):
+        rc, out = self._run("# x\n- **Standard:** 0.99\n")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("CHECKER TOO OLD", out)
+
+    def test_newer_standard_produces_no_other_findings(self):
+        # An empty protocol would normally rain MISSING findings; behind the
+        # guard, none of them may appear — they would be noise.
+        rc, out = self._run("# x\n- **Standard:** 0.99\n")
+        self.assertNotIn("MISSING", out)
+        self.assertNotIn("template text", out)
+
+    def test_supported_standard_passes_the_guard(self):
+        rc, out = self._run(
+            "# x\nBegriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, "
+            "Anker, Prompt, Roh-Output, Instrumentenprobe, Einordnung, "
+            "Rivalen, Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, "
+            "Ausbeute, Ergebnis, Exclusions.\n- **Standard:** 0.15\n"
+            "\n```\nAnswer: Yes\n```\n")
+        self.assertNotIn("CHECKER TOO OLD", out)
+
+    def test_supported_constant_is_a_valid_version(self):
+        self.assertIsInstance(protocol_check._std(
+            protocol_check.SUPPORTED_STANDARD), tuple)
+
+
+class TestIntentBudgetCalibration(unittest.TestCase):
+    """Intent budget 35 (calibration 2026-09-15, n=94): the [K/S/W/N]
+    registrations moved mandatory content into Intent — the disciplined
+    confirmatory cluster tops out at 35 prose lines and must pass."""
+
+    def test_intent_35_lines_is_within_budget(self):
+        text = "## Intent\n" + "Prose line.\n" * 35
+        self.assertEqual(protocol_check.oversized_sections(text), [])
+
+    def test_intent_36_lines_is_over_budget(self):
+        text = "## Intent\n" + "Prose line.\n" * 36
+        self.assertEqual(protocol_check.oversized_sections(text),
+                         [("Intent", 36, 35)])

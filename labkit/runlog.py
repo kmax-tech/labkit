@@ -38,6 +38,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -66,7 +67,9 @@ def _parse_lock(lock: Path) -> dict[str, str | None]:
     """requirements.lock -> {package: version}. None = pinned without a version.
 
     URL pins (`name @ https://...`, e.g. spaCy models) carry no `==` version;
-    they count as pinned-any rather than as drift.
+    they count as pinned-any rather than as drift. Git pins with an explicit
+    ref are the exception: `_parse_vcs_pins` reads them and `_lock_drift`
+    compares them by commit.
     """
     out: dict[str, str | None] = {}
     for raw in lock.read_text(encoding="utf-8").splitlines():
@@ -79,6 +82,71 @@ def _parse_lock(lock: Path) -> dict[str, str | None]:
         elif " @ " in line:
             out[line.split(" @ ")[0].strip().lower().replace("_", "-")] = None
     return out
+
+
+# A VCS pin names a ref, not a version — `labkit @ git+file:///...@v0.14.0`.
+# The version comparison in `_lock_drift` cannot see it, and counting it as
+# pinned-any hid exactly the package that changes most often (2026-09-15:
+# installed labkit was two minor versions behind the lock, drift said 0 —
+# and the pinned tag did not even exist in the source repo).
+_VCS_PIN = re.compile(
+    r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._\-]*)\s*@\s*"
+    r"git\+(?P<url>[^@\s#]+)(?:@(?P<ref>[^#\s]+))?\s*(?:#.*)?$")
+_HEX_REF = re.compile(r"^[0-9a-f]{7,40}$")
+
+
+def _parse_vcs_pins(lock: Path) -> dict[str, tuple[str, str]]:
+    """Git pins that carry an explicit ref: {package: (url, ref)}."""
+    out: dict[str, tuple[str, str]] = {}
+    for raw in lock.read_text(encoding="utf-8").splitlines():
+        m = _VCS_PIN.match(raw.strip())
+        if m and m.group("ref"):
+            out[m.group("name").lower().replace("_", "-")] = (
+                m.group("url"), m.group("ref"))
+    return out
+
+
+def _resolve_ref(url: str, ref: str) -> str | None:
+    """The commit a lock ref points at — None when unknowable offline.
+
+    A hex ref is its own answer. A tag/branch on a file:// URL is resolved
+    against the local repo; an unresolvable ref returns "" — a lock that
+    names a ref which does not exist is uninstallable, and that IS drift
+    (2026-09-15: the lock pinned v0.15.0, the repo's tags stopped at
+    v0.14.0). Remote URLs are not fetched: a check that needs the network
+    would fire on every offline run, and a check that always fires is a
+    check nobody reads.
+    """
+    if _HEX_REF.match(ref.lower()):
+        return ref.lower()
+    if url.startswith("file://"):
+        # --verify: without it, rev-parse ECHOES an unknown ref back on
+        # stdout instead of failing empty.
+        return _git(["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+                    Path(url[7:])).lower()
+    return None
+
+
+def _direct_url_commit(dist) -> str | None:
+    """The commit pip recorded at install time (direct_url.json), if any."""
+    try:
+        raw = dist.read_text("direct_url.json")
+        return json.loads(raw)["vcs_info"]["commit_id"].lower() if raw else None
+    except (KeyError, AttributeError, TypeError, ValueError, OSError):
+        return None
+
+
+def _vcs_mismatch(url: str, ref: str, installed_commit: str | None) -> bool:
+    """Does the installed commit disagree with the lock's git ref?"""
+    want = _resolve_ref(url, ref)
+    if want is None:
+        return False    # remote tag/branch: unverifiable offline, pinned-any
+    if not want:
+        return True     # ref does not resolve locally: lock is uninstallable
+    if not installed_commit:
+        return True     # pinned to a commit, installed from something else
+    return not (installed_commit.startswith(want)
+                or want.startswith(installed_commit))
 
 
 # `pip freeze` omits its own bootstrapping packages, so they are never in the
@@ -95,20 +163,28 @@ def _lock_drift(lock: Path) -> int:
     "Re-freeze after every install" is a rule that gets violated SILENTLY: the
     lock falls behind, and every run keeps recording a hash that describes an
     environment which does not exist. A rule that fails without a sound has to
-    become a check.
+    become a check. Git pins are compared by commit (direct_url.json vs the
+    lock's ref), not skipped as pinned-any.
     """
     from importlib.metadata import distributions
 
     pinned = {n: v for n, v in _parse_lock(lock).items()
               if n not in _FREEZE_OMITS}
+    vcs = {n: uv for n, uv in _parse_vcs_pins(lock).items()
+           if n not in _FREEZE_OMITS}
     installed: dict[str, str] = {}
+    vcs_commit: dict[str, str | None] = {}
     for dist in distributions():
         name = (dist.metadata["Name"] or "").lower().replace("_", "-")
         if name and name not in _FREEZE_OMITS:
             installed[name] = dist.version
+            if name in vcs:
+                vcs_commit[name] = _direct_url_commit(dist)
     drift = sum(1 for n, v in installed.items()
                 if n not in pinned or (pinned[n] is not None and pinned[n] != v))
     drift += sum(1 for n in pinned if n not in installed)
+    drift += sum(1 for n, (url, ref) in vcs.items()
+                 if n in installed and _vcs_mismatch(url, ref, vcs_commit.get(n)))
     return drift
 
 

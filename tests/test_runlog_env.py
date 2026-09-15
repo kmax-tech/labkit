@@ -111,3 +111,67 @@ class EnvState(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestVcsPins(unittest.TestCase):
+    """Git pins are compared by commit, not skipped as pinned-any
+    (2026-09-15: installed labkit was two minor versions behind the lock,
+    drift said 0, and the pinned tag did not even exist)."""
+
+    def test_parse_reads_ref_and_url(self):
+        lock = write_lock(
+            "labkit @ git+file:///Users/x/labkit@v0.14.0\n"
+            "en-core-web-sm @ https://example.org/model.whl\n"
+            "numpy==2.1\n")
+        got = runlog._parse_vcs_pins(lock)
+        self.assertEqual(got, {"labkit": ("file:///Users/x/labkit", "v0.14.0")})
+
+    def test_parse_skips_git_pin_without_ref(self):
+        lock = write_lock("labkit @ git+file:///Users/x/labkit\n")
+        self.assertEqual(runlog._parse_vcs_pins(lock), {})
+
+    def test_parse_normalises_name(self):
+        lock = write_lock("Lab_Kit @ git+file:///x@abc1234\n")
+        self.assertIn("lab-kit", runlog._parse_vcs_pins(lock))
+
+    def test_hex_ref_prefix_match_is_clean(self):
+        self.assertFalse(runlog._vcs_mismatch(
+            "file:///x", "a93d4c30fe93", "a93d4c30fe939237f28f4f12604a4d8b"))
+
+    def test_hex_ref_mismatch_is_drift(self):
+        self.assertTrue(runlog._vcs_mismatch(
+            "file:///x", "a93d4c30fe93", "deadbeefdeadbeefdeadbeefdeadbeef"))
+
+    def test_installed_without_recorded_commit_is_drift(self):
+        self.assertTrue(runlog._vcs_mismatch("file:///x", "a93d4c30fe93", None))
+
+    def test_remote_tag_is_unverifiable_and_stays_pinned_any(self):
+        self.assertFalse(runlog._vcs_mismatch(
+            "https://github.com/x/y", "v1.0.0", "whatever"))
+
+    def _make_repo(self):
+        import subprocess, tempfile
+        d = tempfile.mkdtemp()
+        env_git = ["git", "-C", d, "-c", "user.email=t@t", "-c", "user.name=t"]
+        subprocess.run([*env_git, "init", "-q"], check=True)
+        (Path(d) / "f").write_text("x")
+        subprocess.run([*env_git, "add", "f"], check=True)
+        subprocess.run([*env_git, "commit", "-qm", "c"], check=True)
+        subprocess.run([*env_git, "tag", "v1.0.0"], check=True)
+        sha = subprocess.run([*env_git, "rev-parse", "HEAD"],
+                             capture_output=True, text=True).stdout.strip()
+        return d, sha
+
+    def test_local_tag_resolves_to_its_commit(self):
+        d, sha = self._make_repo()
+        self.assertEqual(runlog._resolve_ref(f"file://{d}", "v1.0.0"), sha)
+        self.assertFalse(runlog._vcs_mismatch(f"file://{d}", "v1.0.0", sha))
+        self.assertTrue(runlog._vcs_mismatch(
+            f"file://{d}", "v1.0.0", "deadbeefdeadbeefdeadbeefdeadbeef"))
+
+    def test_missing_local_tag_is_drift(self):
+        """The scar itself: a lock pinning a tag that does not exist is
+        uninstallable — that must count, whatever is installed."""
+        d, sha = self._make_repo()
+        self.assertEqual(runlog._resolve_ref(f"file://{d}", "v9.9.9"), "")
+        self.assertTrue(runlog._vcs_mismatch(f"file://{d}", "v9.9.9", sha))
