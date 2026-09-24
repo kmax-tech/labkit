@@ -16,6 +16,10 @@ rather than ignoring it. resolve() therefore reports 'controls_temperature',
 which lands in the run config — so a run is never recorded as deterministic
 when the backend never made it so.
 
+'claude-cli' runs with an empty setting-sources list: the operator's
+settings and CLAUDE.md files stay out of the call, and provenance() stamps
+CLI version + isolation flags (see _CLI_ISOLATION).
+
 models.toml:
     [endpoints]                       # URLs live ONCE, under a name; a srun
     gamma1 = "http://gammaweb07.medien.uni-weimar.de:11490"   # reallocation
@@ -57,6 +61,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import shlex
 import subprocess
 import sys
 import threading
@@ -199,7 +204,10 @@ _TRANSIENT = (TimeoutError, ConnectionError, urllib.error.URLError,
               http.client.HTTPException, subprocess.TimeoutExpired,
               BackendError)
 _RETRIES = {"n": 0}
-_BACKOFF = (10, 45, 120)   # network hiccup, model reload, queue
+_RETRIES_LOCK = threading.Lock()
+# network hiccup, model reload, queue, outage — 2026-09-24: two runs died
+# after ~3 min of DNS/SSL failures with the old (10, 45, 120) ladder.
+_BACKOFF = (10, 45, 120, 300, 300)
 
 
 def retries() -> int:
@@ -223,6 +231,25 @@ def last_endpoint() -> str:
     return getattr(_TLS, "endpoint", "")
 
 
+# `claude -p` is an agent harness, not an inference API: by default every
+# call inherits the operator's ~/.claude/settings.json AND both CLAUDE.md
+# files (user + project) into its system prompt. An empty setting-sources
+# list drops all of them while OAuth keeps working (verified CLI 2.1.267;
+# `--system-prompt` does NOT drop CLAUDE.md, an empty CLAUDE_CONFIG_DIR
+# drops the login). 2026-09-23: `language: German` in the operator's
+# settings had 45/432 English scenario prompts answered in German.
+_CLI_ISOLATION = ["--setting-sources", ""]
+
+
+def _cli_version() -> str:
+    try:
+        r = subprocess.run(["claude", "--version"], capture_output=True,
+                           text=True, timeout=30)
+        return r.stdout.strip().split()[0] if r.returncode == 0 else "unknown"
+    except (OSError, subprocess.TimeoutExpired):
+        return "unknown"
+
+
 def provenance(alias: str) -> dict:
     """Per-row provenance stamp for `batch.Store(prov=...)`.
 
@@ -231,12 +258,20 @@ def provenance(alias: str) -> dict:
     CALLABLE — Store evaluates it per append, because with a multi-endpoint
     alias the answering server differs from row to row. Add the run pointer
     yourself: `{**llm.provenance(alias), "run": run.run_id}`.
+
+    For claude-cli the stamp also carries the CLI version and the isolation
+    flags — the system prompt is the harness's own, and these two decide
+    what else went into it.
     """
     spec = resolve(alias)
     model = spec["model"]
     if spec.get("model_digest"):
         model += "@" + spec["model_digest"]
-    return {"model": model, "endpoint": last_endpoint}
+    prov = {"model": model, "endpoint": last_endpoint}
+    if spec["backend"] == "claude-cli":
+        prov["cli_version"] = _cli_version()
+        prov["cli_flags"] = shlex.join(_CLI_ISOLATION)
+    return prov
 
 
 def _pick_endpoint(spec: dict) -> str:
@@ -261,12 +296,13 @@ def _pick_endpoint(spec: dict) -> str:
 
 def complete(alias: str, prompt: str, *, system: str | None = None,
              temperature: float | None = None, timeout: int = 300,
-             attempts: int = 4, raw: bool = False,
+             attempts: int = 6, raw: bool = False,
              stop: list[str] | None = None, max_tokens: int = 512,
              keep_alive: str = "10m") -> str:
     """One text completion, retrying transport failures (see _TRANSIENT).
 
-    `attempts` counts total tries, not extra ones; backoff is 5 s, 15 s. Errors
+    `attempts` counts total tries, not extra ones; backoff follows _BACKOFF
+    (10 s … 300 s, ~13 min in all, so a short outage is survived). Errors
     that no retry can fix — an unknown alias, a temperature the backend cannot
     honour — are raised immediately. Pass attempts=1 to disable.
     """
@@ -293,7 +329,8 @@ def complete(alias: str, prompt: str, *, system: str | None = None,
                 raise BackendError(
                     f"{alias}: {type(exc).__name__} after {attempts} attempts: "
                     f"{str(exc)[:200]}") from exc
-            _RETRIES["n"] += 1
+            with _RETRIES_LOCK:
+                _RETRIES["n"] += 1
             # The backoff must outlive a MODEL LOAD, not just a network
             # hiccup: a 13 GB model takes ~90 s into VRAM, and 5/15 s pauses
             # all fizzle before that (a run died after 5 of 100).
@@ -302,6 +339,23 @@ def complete(alias: str, prompt: str, *, system: str | None = None,
                   f"({str(exc)[:60]}) — retrying in {wait}s", file=sys.stderr)
             time.sleep(wait)
     raise AssertionError("unreachable")
+
+
+def complete_many(alias: str, prompts: list[str], *, workers: int = 4,
+                  **kw) -> list[str]:
+    """complete() over many independent prompts, results in input order.
+
+    A thread pool of `workers`; each worker calls complete() with the same
+    keyword arguments, so retries and the retry counter behave as in the
+    serial case. claude-cli spawns one process per call (~300 MB), which
+    bounds `workers` by RAM, not by the API. Independent prompts only — a
+    tournament's pairs, never a conversation.
+    """
+    if workers <= 1 or len(prompts) <= 1:
+        return [complete(alias, p, **kw) for p in prompts]
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        return list(pool.map(lambda p: complete(alias, p, **kw), prompts))
 
 
 def _complete_once(alias: str, prompt: str, *, system: str | None = None,
@@ -330,7 +384,8 @@ def _complete_once(alias: str, prompt: str, *, system: str | None = None,
                 f"temperature flag — it cannot honour temperature="
                 f"{temperature}. Pass temperature=None and document the run "
                 f"as backend-default sampling, or use an ollama alias.")
-        cmd = ["claude", "-p", prompt, "--model", spec["model"]]
+        cmd = ["claude", "-p", prompt, "--model", spec["model"],
+               *_CLI_ISOLATION]
         if system:
             cmd += ["--append-system-prompt", system]
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
