@@ -18,7 +18,8 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
   reasoning, the evidence and the term legend live there — here only what
   the field demands.
 
-- **Standard:** 0.15
+- **Standard:** 0.16
+- **Protocol id:** <protocol-id>
 
 *Field labels English; content in German or English. Explanations,
 examples, rationale for each field: `protocol-field-guide.md`

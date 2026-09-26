@@ -45,7 +45,7 @@ is coined here and explained nowhere else; the per-field explanations live in
 |---------------------|-----------------------------------------------------------------------|
 | **area**            | the directory grouping protocols and their runs                       |
 | **protocol**        | the specification of one experiment (`PROTOCOL-*.md`)                 |
-| **protocol id**     | a protocol's stable, path-independent identity — *not built yet*      |
+| **protocol id**     | a protocol's stable, path-independent identity (`p-` + 16 hex)        |
 | **run**             | one execution of a protocol                                           |
 | **run metadata**    | the canonical record of a single run — *not built yet*                |
 | **run index**       | the searchable overview of runs (`runs.tsv`)                          |
@@ -61,6 +61,9 @@ index, a run's metrics, and the hand-written `## Runs` section — and a word
 that promises a complete and reliable book of record fits none of them —
 least of all the hand-written one. `intent_check.ledger_ids` survives one cycle as
 a deprecated alias of `reported_intent_ids`.
+
+Which protocol a run belongs to — identity, binding, legacy, selection —
+is specified in `docs/protocol-run-binding.md`.
 
 The hierarchy the vocabulary is meant to make visible:
 

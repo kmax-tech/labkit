@@ -63,6 +63,7 @@ as runlog).
 """
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -122,6 +123,21 @@ MUST_V015 = [
      r"exclusion|filter|ausschluss|ausschl[üu]sse"),
 ]
 
+# Due from Standard 0.16 on, for experiments AND measurements: the protocol's
+# own identity. Nothing in a run said which protocol it belonged to, so in a
+# series area (PROTOCOL-s1-* ... PROTOCOL-s13-*) every automatic pairing of
+# protocol and run was a guess. The id is what a run binds to; the path is
+# only where it was found. Contract: docs/protocol-run-binding.md.
+MUST_V016 = [
+    ("Protocol id (stamped by `lib exp`, never typed)",
+     r"protocol id|protocol_id"),
+]
+
+# The shape the stamp produces: `p-` + 16 lowercase hex (64 bit). Not derived
+# from name or path, so renaming and moving leave it intact.
+PROTOCOL_ID = re.compile(r"protocol[ _]id[^:\n]*:\**\s*\**\s*(\S+)", re.I)
+PROTOCOL_ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
+
 # Fields that are only DUE once the template stamps them (2026-09-08). The two
 # audit gates — code vs. intent before freezing (§2.A12) and the evaluation
 # against the frozen criterion before a number is reported (§2.D11) — are
@@ -166,7 +182,7 @@ DEFAULT_STANDARD = "0.13"
 # pre-0.15 checker flagged the 0.15 template's own stamped preamble as
 # "verbatim template text" all session long). Too old to judge is a hard
 # failure that says so, never a best effort.
-SUPPORTED_STANDARD = "0.15"
+SUPPORTED_STANDARD = "0.16"
 
 
 def _std(standard: str) -> tuple[int, ...]:
@@ -321,7 +337,7 @@ def find_field_guide() -> Path | None:
 def severity_of(label: str) -> str:
     """Does this placeholder sit in a MUST field, a SHOULD field, or neither?"""
     low = label.lower()
-    for _, pat in MUST + MUST_V015:
+    for _, pat in MUST + MUST_V015 + MUST_V016:
         if re.search(pat, low):
             return "must"
     for _, pat in SHOULD + SHOULD_IF_PRESENT:
@@ -335,16 +351,104 @@ def check_text(text: str, *, measurement: bool = False,
                ) -> tuple[list[str], list[str]]:
     """Return (missing_must, missing_should) field labels for one protocol."""
     low = text.lower()
+    v016 = [label for label, pat in MUST_V016 if not re.search(pat, low)] \
+        if _std(standard) >= (0, 16) else []
     if measurement:
         missing_must = [label for label, pat in MUST_MEASUREMENT
                         if not re.search(pat, low)]
-        return missing_must, []
+        return missing_must + v016, []
     missing_must = [label for label, pat in MUST if not re.search(pat, low)]
     if _std(standard) >= (0, 15):
         missing_must += [label for label, pat in MUST_V015
                          if not re.search(pat, low)]
+    missing_must += v016
     missing_should = [label for label, pat in SHOULD if not re.search(pat, low)]
     return missing_must, missing_should
+
+
+def protocol_id_of(text: str) -> str | None:
+    """The `Protocol id:` value, or None if the field is absent."""
+    m = PROTOCOL_ID.search(text)
+    return m.group(1).strip().strip("`*") if m else None
+
+
+def _repo_root(start: Path) -> Path | None:
+    base = start if start.is_dir() else start.parent
+    for parent in [base.resolve(), *base.resolve().parents]:
+        if (parent / ".git").exists():
+            return parent
+    return None
+
+
+_ID_INDEX: dict[Path, dict[str, list[Path]]] = {}
+
+
+def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
+    """Every protocol id in the repo, mapped to the files carrying it.
+
+    Uniqueness cannot be settled at the stamp alone: copying a protocol or
+    editing the line by hand makes a duplicate long after `lib exp` ran, and
+    two protocols with one id bind their runs to the same thing.
+    """
+    root = _repo_root(start)
+    if root is None:
+        return {}
+    if root not in _ID_INDEX:
+        index: dict[str, list[Path]] = {}
+        for f in sorted(root.rglob("PROTOCOL-*.md")):
+            try:
+                pid = protocol_id_of(f.read_text(encoding="utf-8"))
+            except OSError:
+                continue
+            if pid:
+                index.setdefault(pid, []).append(f)
+        _ID_INDEX[root] = index
+    return _ID_INDEX[root]
+
+
+def id_in_head(path: Path) -> str | None:
+    """The id the committed version of this file carries — None when the file
+    is new, git is absent, or the call fails. Never a proof of immutability:
+    after the next commit a changed id IS the state. It catches the edit
+    while it is still in the working tree."""
+    root = _repo_root(path)
+    if root is None:
+        return None
+    try:
+        rel = path.resolve().relative_to(root)
+        r = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=root,
+                           capture_output=True, text=True, timeout=10)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+    return protocol_id_of(r.stdout) if r.returncode == 0 else None
+
+
+def check_protocol_id(path: Path, text: str, standard: str) -> list[str]:
+    """Shape, uniqueness and working-tree divergence of the protocol id.
+
+    A missing field is not reported here — MUST_V016 already does that.
+    """
+    if _std(standard) < (0, 16):
+        return []
+    pid = protocol_id_of(text)
+    if pid is None:
+        return []
+    if not PROTOCOL_ID_SHAPE.match(pid):
+        return [f"{path}: MALFORMED protocol id {pid!r} — expected `p-` plus "
+                f"16 lowercase hex digits, stamped by `lib exp`."]
+    out = []
+    others = [q for q in repo_protocol_ids(path).get(pid, [])
+              if q.resolve() != path.resolve()]
+    if others:
+        out.append(f"{path}: DUPLICATE protocol id {pid} — also carried by "
+                   + ", ".join(str(q) for q in others)
+                   + ". An id binds runs to ONE protocol; re-stamp the copy.")
+    was = id_in_head(path)
+    if was and was != pid:
+        out.append(f"{path}: WARNING: protocol id changed against HEAD "
+                   f"({was} -> {pid}) — runs bound to the old id stop "
+                   f"resolving.")
+    return out
 
 
 def collect(paths: list[str]) -> list[Path]:
@@ -403,6 +507,12 @@ def main(argv: list[str]) -> int:
                   f"on this file: they would be noise, not judgement.")
             failed = True
             continue
+
+        for finding in check_protocol_id(f, text, standard):
+            print(finding)
+            if "WARNING" not in finding:
+                failed = True
+
         is_measurement = bool(TYPE_MEASUREMENT.search(text))
         missing_must, missing_should = check_text(
             text, measurement=is_measurement, standard=standard)
