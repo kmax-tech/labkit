@@ -27,7 +27,9 @@ Seven **console commands** come with the installation (all answer `--help`):
 
 ```bash
 protocol-check <PROTOCOL-*.md>...   # mandatory-field check (must/should contract)
-runlog [<area>]                     # open runs: run_id, running/crashed, script
+runlog [<area>]                     # open runs: run_id, state, script
+runlog migrate-index <area>         # add missing run-index columns, rows kept
+runlog reindex <area>               # append rows for completed runs it missed
 intent-check <PROTOCOL-*.md>        # registered promise ids vs. metrics keys
 code-check <AREA>                   # mechanical preflight (schema, gate labels)
 scope-sha [--area DIR]              # audit stamp over the code that determines a number
@@ -47,7 +49,7 @@ is coined here and explained nowhere else; the per-field explanations live in
 | **protocol**        | the specification of one experiment (`PROTOCOL-*.md`)                 |
 | **protocol id**     | a protocol's stable, path-independent identity (`p-` + 16 hex)        |
 | **run**             | one execution of a protocol                                           |
-| **run metadata**    | the canonical record of a single run — *not built yet*                |
+| **run metadata**    | a run's own record (`config.json` + `completion.json`)                |
 | **run index**       | the searchable overview of runs (`runs.tsv`)                          |
 | **metrics**         | what a run measured and reported (`metrics.json`)                     |
 | **documented runs** | the runs listed by hand in a protocol's `## Runs` section             |
@@ -67,10 +69,11 @@ is specified in `docs/protocol-run-binding.md`.
 
 The hierarchy the vocabulary is meant to make visible:
 
-    run metadata   canonical binding of run to protocol   (open, steps 3-5)
-    runs.tsv       run index                              (data ownership open until then)
-    metrics.json   result data
-    ## Runs        manual documentation, never a source
+    config.json      start state, and the binding of run to protocol
+    metrics.json     result data
+    completion.json  confirmed completion (note, end-of-run git state)
+    runs.tsv         run index — derived, never a source
+    ## Runs          manual documentation, never a source
 
 labkit knows **two work types**: `measurement` for pure counting questions
 ("how many X are there?" — no model, no hypothesis, 7 fields, no freeze)

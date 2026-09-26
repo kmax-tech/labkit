@@ -67,16 +67,16 @@ file stays: **run metadata** means `runs/<run_id>/config.json`.
 A run directory says for itself whether it finished. Two markers, because
 runs written before this contract cannot be changed:
 
-| `config.json` says  | complete when         | state                   |
-|---------------------|-----------------------|-------------------------|
-| no `schema_version` | `metrics.json` exists | legacy run              |
-| `schema_version: 2` | `final.json` exists   | run under this contract |
+| `config.json` says  | complete when                        | state                   |
+|---------------------|--------------------------------------|-------------------------|
+| no `schema_version` | `metrics.json` exists                | legacy run              |
+| `schema_version: 2` | `metrics.json` AND `completion.json` | run under this contract |
 
 `schema_version` is stamped into `config.json` at run START, which is what
 makes the distinction decidable: at the moment a reader has to judge a run,
-`final.json` may be exactly the file that is missing.
+`completion.json` may be exactly the file that is missing.
 
-`final.json`, written atomically (temp file in the same directory, then
+`completion.json`, written atomically (temp file in the same directory, then
 rename) so it is either absent or whole:
 
 ```json
@@ -97,35 +97,40 @@ distinguishable, which they were not before.
 Write order in `_finalize`, and the reason for it:
 
 1. `outputs.json`, `metrics.json` — the results.
-2. `final.json` — atomically.
+2. `completion.json` — atomically.
 3. the index row.
 
 That makes two failures tell themselves apart instead of looking alike:
 
-- **`metrics.json` without `final.json`** (v2): finalization broke off. The
-  numbers may be there, the run is not finished, and nothing may report it.
-- **`final.json` without an index row**: a complete run the index missed.
-  Fully reconstructible — this is what `reindex` repairs.
+- **`metrics.json` without `completion.json`** (v2): finalization broke
+  off. The numbers may be there, the run is not finished, nothing may
+  report it — `unfinalized`.
+- **`completion.json` without `metrics.json`**: a completion record over
+  results that are gone — `corrupt`. A completion marker must never cover
+  for missing results, which is why both files are required.
+- **Both, but no index row**: a complete run the index missed. Fully
+  reconstructible — this is what `reindex` repairs.
 
 ## How the tools read the markers
 
 - **`active()`** — unchanged for the first state, one state added. A
   directory is open when `config.json` exists and the run is not complete by
   its own marker. The recorded pid decides between `running` and the two
-  dead states, so each entry carries `state`: `running` · `crashed`
-  (no `metrics.json`) · `unfinalized` (v2, `metrics.json`, no `final.json`).
-  `alive` stays as it is.
+  dead states, so each entry carries `state`: `completed` · `running` ·
+  `crashed` · `unfinalized` · `corrupt`. `alive` stays as it is.
 - **`--wait`** — exit codes keep their meaning: 0 nothing open · 2 a run
-  failed · 3 still running at `--max-seconds`. `unfinalized` is a failure
-  and exits 2, with its own message: a half-finalized run must not read as a
-  clean finish just because its numbers are on disk.
+  failed · 3 still running at `--max-seconds`. `unfinalized` and `corrupt`
+  are failures and exit 2, each with its own message: a machine only needs
+  "did not finish cleanly", a human tells them apart by state and message.
 - **`reindex`** — appends rows that are missing, and only those. It never
-  rewrites an existing row: for a legacy run the `note` exists nowhere but
-  in the index, and the end-of-run git state nowhere but in the index, so a
-  rebuild would be a quiet loss. A legacy run with no row is reported, not
-  invented.
+  rewrites an existing row: for a legacy run the `note` and the end-of-run
+  git state exist nowhere but in the index, so a rebuild would be a quiet
+  loss. It refuses an unmigrated index, never appends a `run_id` the index
+  already lists, reports an existing duplicate `run_id` as an error,
+  rebuilds only completed v2 runs, and reports legacy runs and incomplete
+  runs instead of inventing rows for them.
 - **Legacy runs** keep `metrics.json` as their marker forever. Nothing is
-  backfilled into them, no `final.json` is written after the fact.
+  backfilled into them, no `completion.json` is written after the fact.
 
 ## Index migration
 
@@ -136,6 +141,13 @@ columns positionally keeps the first seven where they were.
 not match, and names the way out — that refusal stays, and now names
 `runlog migrate-index`. The migration is explicit, never automatic: a column
 that shifts by itself is the scar the check was built for.
+
+Every writer of `runs.tsv` — the finishing run's append, `migrate-index`,
+`reindex`, header creation and the duplicate scan — takes one exclusive
+`flock` on `.runs.tsv.lock` in the area. Without it an atomic migration and
+a finishing run race: the migration rewrites and renames while the run
+appends to the file it just replaced, and that row is gone without a trace.
+`flock` rather than a lock file, so a killed process leaves no stale lock.
 
 It rewrites the file atomically (temp file, then rename), keeps every
 existing row verbatim including `note`, and adds one empty field per row.
@@ -173,13 +185,11 @@ runs bound to it — never read as a source.
 
 ## State
 
-Built: identity (labkit 0.20.0), and the fail-closed refusals in
-`code-check` and `intent-check` that stand in for the binding until it
-exists.
+Built: identity (0.20.0); the binding in `config.json`, `schema_version`,
+`completion.json` and the five run states, `runlog migrate-index` and
+`runlog reindex`, the `protocol_id` column and the index lock (0.21.0);
+and the fail-closed refusals in `code-check` and `intent-check`.
 
-Specified here, not built: the binding in `config.json`, `schema_version`,
-`final.json` and the two completion markers, the `state` field in
-`active()`, `runlog migrate-index` and `runlog reindex`, the `protocol_id`
-column, and selection by id. Until `final.json` exists, `note` and the
-end-of-run git state live only in `runs.tsv`, and no rebuild of the index
-can be lossless.
+Not built: selection by id — `intent-check` still picks by area and refuses
+in a series area (step 2). That is the next step, and it is now the only
+one that needs no new data.

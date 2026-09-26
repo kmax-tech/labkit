@@ -35,6 +35,8 @@ not silent. The run-index row is written on clean exit only.
 """
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import hashlib
 import json
 import os
@@ -45,7 +47,15 @@ import time
 import uuid
 from pathlib import Path
 
-RUN_INDEX_COLS = ["run_id", "git", "script", "data", "config", "metrics", "note"]
+RUN_INDEX_COLS = ["run_id", "git", "script", "data", "config", "metrics",
+                  "note", "protocol_id"]
+
+# Bumped when a run directory's SHAPE changes, stamped into config.json at the
+# START of the run. It has to be readable before the run ends, because the
+# question it settles — is a missing completion.json a legacy run that
+# finished, or a v2 run that broke off? — is asked exactly when that file is
+# absent (2026-09-26).
+RUN_SCHEMA = 2
 SPLIT_KEYS = ("train", "dev", "test")
 
 
@@ -323,6 +333,58 @@ def _describe(paths: dict) -> dict:
     return out
 
 
+@contextlib.contextmanager
+def _index_lock(base_dir: Path, timeout: float = 30.0):
+    """Exclusive lock for every change to runs.tsv — append, migrate, reindex.
+
+    Without it an atomic migration and a finishing run race: the migration
+    reads, rewrites and renames while the run appends to the file it just
+    replaced, and the appended row is gone with no trace. flock, not a lock
+    FILE: the kernel drops it when the process dies, so a crashed run leaves
+    no stale lock for the next one to trip over. Header creation and the
+    duplicate check run inside it too — they read the same file.
+    """
+    base_dir.mkdir(parents=True, exist_ok=True)
+    fd = os.open(base_dir / ".runs.tsv.lock", os.O_CREAT | os.O_RDWR, 0o644)
+    t0 = time.monotonic()
+    try:
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError:
+                if time.monotonic() - t0 >= timeout:
+                    raise RuntimeError(
+                        f"runlog: runs.tsv locked for over {int(timeout)}s "
+                        f"({base_dir}) — another append, migration or reindex "
+                        f"is running, or one hung.")
+                time.sleep(0.05)
+        yield
+    finally:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
+
+
+def _append_row(index: Path, row: list[str]) -> None:
+    """One row onto the run index, header created if absent. Callers hold
+    the index lock — header creation reads the file too."""
+    if not index.exists():
+        index.write_text("\t".join(RUN_INDEX_COLS) + "\n", encoding="utf-8")
+    with index.open("a", encoding="utf-8") as f:
+        f.write("\t".join(c.replace("\t", " ").replace("\n", " ")
+                          for c in row) + "\n")
+
+
+def _write_atomic(path: Path, text: str) -> None:
+    """Write via temp file in the same directory + rename: the reader sees
+    the old file or the new one, never half of either."""
+    tmp = path.with_name(path.name + f".tmp{os.getpid()}")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
+
+
 def _check_run_index(base_dir: Path) -> None:
     """Refuse to run against a run index whose header doesn't match RUN_INDEX_COLS.
 
@@ -338,9 +400,10 @@ def _check_run_index(base_dir: Path) -> None:
     if found != RUN_INDEX_COLS:
         raise RuntimeError(
             f"runs.tsv columns {found} don't match this runlog "
-            f"({RUN_INDEX_COLS}). Migrate the run index — insert the missing "
-            "column in the header and an empty field in each old row — or "
-            "move runs.tsv aside; appending would shift columns silently.")
+            f"({RUN_INDEX_COLS}). Migrate the run index:\n"
+            f"  runlog migrate-index {base_dir}\n"
+            "It keeps every row verbatim and only adds the missing "
+            "field. Appending without it would shift columns silently.")
 
 
 def _snapshot_script(run_dir: Path) -> str:
@@ -425,9 +488,70 @@ def _snapshot_untracked_sources(run_dir: Path) -> list[str]:
     return copied
 
 
+PROTOCOL_ID_IN_FILE = re.compile(r"protocol[ _]id[^:\n]*:\**\s*\**\s*(\S+)", re.I)
+PROTOCOL_ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
+
+
+def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
+    """Which protocol this run belongs to: {"id": ..., "path": ...}.
+
+    The shape never varies — both fields always exist, only the values
+    change. A reader never has to tell an absent key from null from an
+    object (2026-09-26).
+
+    `id` is the binding; `path` is relative to the area, for lookup and
+    diagnosis, and may go stale. An explicit protocol must lie inside the
+    area and be one of the PROTOCOL-*.md found there, or the run would bind
+    to a file nobody checked. Omitted: one protocol binds, several are a
+    hard error (guessing is what this whole mechanism exists to stop), none
+    is unbound with a warning.
+    """
+    found = sorted(base_dir.glob("PROTOCOL-*.md"))
+    if protocol is not None:
+        path = Path(protocol)
+        if not path.is_absolute():
+            path = base_dir / path
+        path = path.resolve()
+        if path not in [f.resolve() for f in found]:
+            raise SystemExit(
+                f"runlog: protocol={protocol!r} is not one of the "
+                f"PROTOCOL-*.md in the run's area ({base_dir}):\n  "
+                + "\n  ".join(f.name for f in found or [Path("(none)")]))
+    elif len(found) == 1:
+        path = found[0].resolve()
+    elif not found:
+        print(f"runlog: WARNING — no PROTOCOL-*.md in {base_dir}; this run "
+              f"is recorded as unbound. A kept number needs a protocol "
+              f"(§2.A1).")
+        return {"id": None, "path": None}
+    else:
+        raise SystemExit(
+            f"runlog: {len(found)} protocols in {base_dir} — nothing would "
+            f"say which one this run belongs to. Name it:\n"
+            f"  runlog.run(..., protocol=PROTOCOL)\n  "
+            + "\n  ".join(f.name for f in found))
+
+    try:
+        m = PROTOCOL_ID_IN_FILE.search(path.read_text(encoding="utf-8"))
+    except OSError:
+        m = None
+    pid = m.group(1).strip().strip("`*") if m else None
+    if pid is not None and not PROTOCOL_ID_SHAPE.match(pid):
+        pid = None
+    try:
+        rel = str(path.relative_to(base_dir.resolve()))
+    except ValueError:
+        rel = str(path)
+    if pid is None:
+        print(f"runlog: WARNING — {rel} carries no usable `Protocol id:` "
+              f"(Standard 0.16); this run is recorded as unbound.")
+    return {"id": pid, "path": rel}
+
+
 class Run:
     def __init__(self, experiment: str, config: dict, base_dir: Path,
-                 data: dict | None = None, long: bool = False):
+                 data: dict | None = None, long: bool = False,
+                 protocol: str | Path | None = None):
         # Detach gate (scar 2026-08-13, twice in one evening): a long run
         # started in a Claude Code foreground shell dies with the 10-min tool
         # timeout — the kill takes the whole process group, run and lock with
@@ -448,6 +572,9 @@ class Run:
         self.base = base_dir
         _check_run_index(base_dir)                        # raises before any work
         self._data = _describe(data) if data else {}   # raises on leak, before mkdir
+        # Also before mkdir: an unresolvable protocol is a refusal, and a
+        # refusal must not leave an empty run dir behind (2026-09-26).
+        self._protocol = _protocol_binding(base_dir, protocol)
         self.dir = base_dir / "runs" / self.run_id
         self.dir.mkdir(parents=True, exist_ok=False)
         self._config = dict(config)
@@ -455,7 +582,9 @@ class Run:
         self._metrics: dict = {}
         self._note = ""
         self._t0 = time.monotonic()
-        frozen = {"experiment": experiment, "script": self.script,
+        frozen = {"schema_version": RUN_SCHEMA,
+                  "experiment": experiment, "script": self.script,
+                  "protocol": self._protocol,
                   "script_sha": _snapshot_script(self.dir),
                   "untracked_sources": _snapshot_untracked_sources(self.dir),
                   "pid": os.getpid(),          # lets `active()` tell running from crashed
@@ -513,16 +642,26 @@ class Run:
                 json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
         (self.dir / "metrics.json").write_text(
             json.dumps(self._metrics, ensure_ascii=False, indent=2), encoding="utf-8")
-        index = self.base / "runs.tsv"
-        if not index.exists():
-            index.write_text("\t".join(RUN_INDEX_COLS) + "\n", encoding="utf-8")
-        row = [self.run_id, _git_state(self.base), self.script,
+        # Order matters, and this is the reason for it: results first, then
+        # the confirmed completion, then the index. A break after metrics
+        # leaves `unfinalized` (numbers on disk, run not finished); a break
+        # after completion.json leaves a run the index missed but `reindex`
+        # can rebuild in full. Before this file the two looked the same.
+        git_end = _git_state(self.base)
+        _write_atomic(self.dir / "completion.json", json.dumps(
+            {"schema_version": RUN_SCHEMA,
+             "finished": time.strftime("%Y-%m-%dT%H:%M:%S"),
+             "git": git_end,
+             "git_full": _git(["rev-parse", "HEAD"], self.base),
+             "note": self._note},
+            ensure_ascii=False, indent=2))
+        row = [self.run_id, git_end, self.script,
                json.dumps(self._data, ensure_ascii=False, sort_keys=True),
                json.dumps(self._config, ensure_ascii=False, sort_keys=True),
                json.dumps(self._metrics, ensure_ascii=False, sort_keys=True),
-               self._note]
-        with index.open("a", encoding="utf-8") as f:
-            f.write("\t".join(c.replace("\t", " ").replace("\n", " ") for c in row) + "\n")
+               self._note, self._protocol.get("id") or ""]
+        with _index_lock(self.base):
+            _append_row(self.base / "runs.tsv", row)
         dur = self._metrics.get("duration_s", 0)
         if os.environ.get("LABKIT_NOTIFY") == "1" or dur >= _NOTIFY_MIN_S:
             _notify(f"run finished: {self.experiment}",
@@ -575,24 +714,68 @@ def _is_alive(pid, script) -> bool | None:
 is_alive = _is_alive
 
 
+def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
+    """One of: completed · running · crashed · unfinalized · corrupt.
+
+    Two completion markers, because runs written before this contract
+    cannot be changed. `schema_version` decides which one applies, and it
+    sits in config.json (written at run START) precisely because the file
+    it decides about may be the missing one:
+
+        no schema_version   legacy    complete when metrics.json exists
+        schema_version >= 2 current   complete when BOTH metrics.json and
+                                      completion.json exist
+
+    Both, not completion.json alone: a completion record must not paper
+    over results that were deleted or never landed. Hence `corrupt` —
+    completion without metrics — which is a failure like `unfinalized`,
+    not a finish.
+    """
+    has_metrics = (run_dir / "metrics.json").is_file()
+    if cfg.get("schema_version", 0) < 2:
+        return "completed" if has_metrics else (
+            "running" if alive else "crashed")
+    has_completion = (run_dir / "completion.json").is_file()
+    if has_metrics and has_completion:
+        return "completed"
+    if alive:
+        return "running"
+    if has_completion:
+        return "corrupt"
+    return "unfinalized" if has_metrics else "crashed"
+
+
+#: States that mean "this run is not a clean finish" — `--wait` exits 2 on
+#: any of them, `reindex` rebuilds none of them.
+FAILED_STATES = ("crashed", "unfinalized", "corrupt")
+
+
 def active(base_dir: str | Path) -> list[dict]:
-    """Runs in this area that never finished: dir with config.json, no metrics.json.
+    """Runs in this area that are not completed, each with its `state`.
 
     This is what makes parallel work cheap — before starting an experiment you
     LOOK instead of asking: which runs are live, and which files do they read
     and write (their config.json says). `alive` distinguishes a running process
-    from a crashed one by checking the recorded pid.
+    from a crashed one by checking the recorded pid; `state` says what the run
+    directory is (see `run_state`).
 
         runlog <area>        (the installed console command)
     """
     out = []
     for d in sorted((Path(base_dir) / "runs").glob("*")):
         cfg_file = d / "config.json"
-        if not cfg_file.is_file() or (d / "metrics.json").is_file():
+        if not cfg_file.is_file():
             continue
-        cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
+        try:
+            cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
         alive = _is_alive(cfg.get("pid"), cfg.get("script"))
-        out.append({"run_id": d.name, "dir": str(d), "alive": alive, **cfg})
+        state = run_state(d, cfg, alive)
+        if state == "completed":
+            continue
+        out.append({"run_id": d.name, "dir": str(d), "alive": alive,
+                    "state": state, **cfg})
     return out
 
 
@@ -601,9 +784,11 @@ class run:
 
     def __init__(self, experiment: str, config: dict,
                  base_dir: str | Path | None = None, data: dict | None = None,
-                 long: bool = False):
+                 long: bool = False, protocol: str | Path | None = None):
+        # `protocol` last, after `long`: no existing positional call shifts.
         base = Path(base_dir) if base_dir else Path(sys.argv[0]).resolve().parent
-        self._run = Run(experiment, config, base, data, long=long)
+        self._run = Run(experiment, config, base, data, long=long,
+                        protocol=protocol)
 
     def __enter__(self) -> Run:
         return self._run
@@ -636,18 +821,30 @@ def _print_status(area: str, live: list[dict]) -> None:
     if not live:
         print(f"{area}: no open runs")
     for r in live:
-        state = {True: "running", False: "crashed", None: "unknown"}[r["alive"]]
-        print(f"{r['run_id']}  {state:8s} pid={r.get('pid')}  {r.get('script')}")
+        state = r.get("state", "unknown")
+        print(f"{r['run_id']}  {state:12s} pid={r.get('pid')}  {r.get('script')}")
         print(f"    {json.dumps(r.get('config', {}), ensure_ascii=False)[:160]}")
 
 
 def _finished_line(area: Path) -> str:
-    runs = sorted(area.glob("runs/*/metrics.json"))
-    if not runs:
+    """The newest COMPLETED run, by its own marker — a run whose metrics
+    landed but whose finalization broke off is not a finished run."""
+    done = []
+    for d in sorted((area / "runs").glob("*")):
+        cfg_file = d / "config.json"
+        if not cfg_file.is_file():
+            continue
+        try:
+            cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if run_state(d, cfg, alive=False) == "completed":
+            done.append(d)
+    if not done:
         return "no finished runs"
-    m = json.loads(runs[-1].read_text(encoding="utf-8"))
+    m = json.loads((done[-1] / "metrics.json").read_text(encoding="utf-8"))
     keys = ", ".join(list(m)[:6])
-    return f"last finished: {runs[-1].parent.name} ({keys})"
+    return f"last finished: {done[-1].name} ({keys})"
 
 
 def _wait(area: str, max_seconds: float | None, interval: float,
@@ -666,14 +863,23 @@ def _wait(area: str, max_seconds: float | None, interval: float,
             if notify:
                 _notify("runlog --wait", f"{area}: no open runs")
             return 0
-        crashed = [r for r in live if r["alive"] is False]
-        if crashed:
-            for r in crashed:
-                print(f"{r['run_id']}  CRASHED  pid={r.get('pid')}  "
-                      f"{r.get('script')}  ({r['dir']}: config.json without "
-                      f"metrics.json)")
+        # Exit 2 covers every failed state: a machine only needs "did not
+        # finish cleanly", a human tells them apart by state and message.
+        WHY = {"crashed": "config.json without metrics.json",
+               "unfinalized": "metrics.json without completion.json — "
+                              "finalization broke off, numbers must not be "
+                              "reported",
+               "corrupt": "completion.json without metrics.json — the "
+                          "results are gone"}
+        failed = [r for r in live if r.get("state") in FAILED_STATES]
+        if failed:
+            for r in failed:
+                state = r.get("state", "?")
+                print(f"{r['run_id']}  {state.upper()}  pid={r.get('pid')}  "
+                      f"{r.get('script')}  ({r['dir']}: {WHY.get(state, '')})")
             if notify:
-                _notify("runlog --wait", f"{area}: run crashed")
+                _notify("runlog --wait",
+                        f"{area}: run {failed[0].get('state')}")
             return 2
         if follow:
             stamp = time.strftime("%H:%M:%S")
@@ -724,10 +930,121 @@ def _start(argv: list[str]) -> int:
     return 0
 
 
+def _read_index(index: Path) -> tuple[list[str], list[list[str]]]:
+    """(header, rows) of the run index. Callers hold the lock."""
+    if not index.exists():
+        return [], []
+    lines = index.read_text(encoding="utf-8").splitlines()
+    if not lines:
+        return [], []
+    return lines[0].split("\t"), [ln.split("\t") for ln in lines[1:] if ln]
+
+
+def migrate_index(base_dir: Path) -> int:
+    """Bring runs.tsv to the current columns, keeping every row verbatim.
+
+    Adds the missing field, fills nothing in: an existing row's
+    `protocol_id` stays empty until a `reindex` can prove it from a run
+    directory. Guessing it from the area would be the back-derivation this
+    whole mechanism exists to refuse.
+    """
+    index = base_dir / "runs.tsv"
+    with _index_lock(base_dir):
+        header, rows = _read_index(index)
+        if not header:
+            print(f"runlog: no runs.tsv in {base_dir} — nothing to migrate.")
+            return 0
+        if header == RUN_INDEX_COLS:
+            print(f"runlog: {index} already has the current columns.")
+            return 0
+        if header != RUN_INDEX_COLS[:len(header)]:
+            print(f"runlog: {index} columns {header} are not a prefix of "
+                  f"{RUN_INDEX_COLS} — this is not the migration you want; "
+                  f"move the file aside by hand.")
+            return 2
+        width = len(RUN_INDEX_COLS)
+        out = ["\t".join(RUN_INDEX_COLS)]
+        for row in rows:
+            out.append("\t".join(row + [""] * (width - len(row))))
+        _write_atomic(index, "\n".join(out) + "\n")
+        print(f"runlog: {index} migrated — {len(rows)} row(s) kept verbatim, "
+              f"{width - len(header)} field(s) added, none filled in.")
+        return 0
+
+
+def reindex(base_dir: Path) -> int:
+    """Append index rows for completed runs that have none. Never rewrites.
+
+    A row that exists stays untouched: for a legacy run `note` and the
+    end-of-run git state live nowhere but in the index, so rebuilding it
+    would be a quiet loss. Only v2 runs with both markers can be
+    reconstructed in full; legacy runs missing a row are reported, not
+    invented.
+    """
+    index = base_dir / "runs.tsv"
+    with _index_lock(base_dir):
+        header, rows = _read_index(index)
+        if header and header != RUN_INDEX_COLS:
+            print(f"runlog: {index} has old columns {header} — run "
+                  f"`runlog migrate-index {base_dir}` first.")
+            return 2
+        seen: dict[str, int] = {}
+        for row in rows:
+            if row:
+                seen[row[0]] = seen.get(row[0], 0) + 1
+        dupes = sorted(rid for rid, n in seen.items() if n > 1)
+        if dupes:
+            print(f"runlog: {index} lists {len(dupes)} run_id(s) more than "
+                  f"once: {', '.join(dupes[:5])} — repair by hand; a run "
+                  f"belongs in the index exactly once.")
+            return 2
+
+        added, skipped_legacy, incomplete = 0, [], []
+        for d in sorted((base_dir / "runs").glob("*")):
+            cfg_file = d / "config.json"
+            if not cfg_file.is_file() or d.name in seen:
+                continue
+            try:
+                cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if run_state(d, cfg, alive=False) != "completed":
+                incomplete.append(d.name)
+                continue
+            if cfg.get("schema_version", 0) < 2:
+                skipped_legacy.append(d.name)
+                continue
+            comp = json.loads((d / "completion.json").read_text(encoding="utf-8"))
+            metrics = json.loads((d / "metrics.json").read_text(encoding="utf-8"))
+            _append_row(index, [
+                d.name, comp.get("git", ""), cfg.get("script", ""),
+                json.dumps(cfg.get("data", {}), ensure_ascii=False, sort_keys=True),
+                json.dumps(cfg.get("config", {}), ensure_ascii=False, sort_keys=True),
+                json.dumps(metrics, ensure_ascii=False, sort_keys=True),
+                comp.get("note", ""),
+                (cfg.get("protocol") or {}).get("id") or ""])
+            added += 1
+
+    print(f"runlog: {added} row(s) appended to {index}.")
+    for name in skipped_legacy:
+        print(f"  {name}: legacy run (no schema_version) missing from the "
+              f"index — its note and end-of-run git state exist nowhere "
+              f"else; add the row by hand or leave it.")
+    for name in incomplete:
+        print(f"  {name}: not completed — nothing to index.")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     """Status, wait, follow or start — the run monitor of record."""
     if argv and argv[0] == "start":
         return _start(argv[1:])
+    if argv and argv[0] in ("migrate-index", "reindex"):
+        area = Path(argv[1]) if len(argv) > 1 else Path(".")
+        if not area.is_dir():
+            print(f"runlog: no such area: {area}")
+            return 2
+        return (migrate_index if argv[0] == "migrate-index" else reindex)(area)
     import argparse
     ap = argparse.ArgumentParser(
         prog="runlog",
@@ -740,7 +1057,10 @@ def main(argv: list[str]) -> int:
                     "crashed (exit 2) or --max-seconds passed (exit 3); "
                     "`--follow` prints a status line per interval until idle; "
                     "`runlog start -- <cmd>` detaches a run (own session, "
-                    "log file) and returns.")
+                    "log file) and returns. "
+                    "`runlog migrate-index <area>` adds missing index "
+                    "columns keeping every row; `runlog reindex <area>` "
+                    "appends rows for completed runs the index missed.")
     ap.add_argument("area", nargs="?", default=".",
                     help="experiment area holding a runs/ dir (default: .)")
     ap.add_argument("--wait", action="store_true",
