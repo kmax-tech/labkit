@@ -72,5 +72,47 @@ class TestMetricsChoice(unittest.TestCase):
             self.assertIn("no 'k1'", out)
 
 
+class TestSeriesAreaFailsClosed(unittest.TestCase):
+    """A series area (§4: PROTOCOL-s1-*, PROTOCOL-s2-*, ...) has no fact
+    tying a run to one protocol, so the automatic choice is a guess. It must
+    refuse rather than green-light the wrong pairing (2026-09-26)."""
+
+    def test_second_protocol_in_the_area_refuses_the_automatic_choice(self):
+        with tempfile.TemporaryDirectory() as d:
+            proto = _area(d, {"2026-09-09T10-00-00_gate": {"k1": True}})
+            (Path(d) / "PROTOCOL-s2-later.md").write_text(
+                "- criterion [K1] holds\n", encoding="utf-8")
+            code, out = _run_main([str(proto)])
+            self.assertEqual(code, 2, out)
+            self.assertIn("--metrics", out)
+            self.assertIn("2 protocols", out)
+            self.assertIn("PROTOCOL-s2-later.md", out)
+            self.assertNotIn("all report", out)
+
+    def test_the_listing_separates_candidate_runs_from_the_rest(self):
+        with tempfile.TemporaryDirectory() as d:
+            proto = _area(d, {
+                "2026-09-09T10-00-00_gate": {"k1": True},
+                "2026-09-09T11-00-00_producer": {"calls": 1080},
+            })
+            (Path(d) / "PROTOCOL-s2-later.md").write_text(
+                "- criterion [K1] holds\n", encoding="utf-8")
+            code, out = _run_main([str(proto)])
+            self.assertEqual(code, 2, out)
+            self.assertIn("candidate runs (intent keys reported): 1", out)
+            self.assertIn("2026-09-09T10-00-00_gate", out)
+            self.assertIn("runs without intent keys (1)", out)
+
+    def test_explicit_metrics_works_in_a_series_area(self):
+        with tempfile.TemporaryDirectory() as d:
+            proto = _area(d, {"2026-09-09T10-00-00_gate": {"k1": True}})
+            (Path(d) / "PROTOCOL-s2-later.md").write_text(
+                "- criterion [K1] holds\n", encoding="utf-8")
+            metrics = Path(d) / "runs/2026-09-09T10-00-00_gate/metrics.json"
+            code, out = _run_main([str(proto), "--metrics", str(metrics)])
+            self.assertEqual(code, 0, out)
+            self.assertIn("all report", out)
+
+
 if __name__ == "__main__":
     unittest.main()

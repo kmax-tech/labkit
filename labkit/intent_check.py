@@ -87,12 +87,28 @@ def latest_metrics(area: Path) -> Path | None:
     return gate_metrics(area)[0]
 
 
+def runs_by_intent_keys(area: Path) -> tuple[list[Path], list[Path]]:
+    """The area's run metrics, split into those reporting intent keys and
+    those reporting none — the candidates and the rest, for the operator who
+    has to name a run by hand."""
+    keyed: list[Path] = []
+    bare: list[Path] = []
+    for p in sorted(area.glob("runs/*/metrics.json")):
+        try:
+            hit = bool(ledger_ids(json.loads(p.read_text(encoding="utf-8"))))
+        except (OSError, json.JSONDecodeError):
+            hit = False
+        (keyed if hit else bare).append(p)
+    return keyed, bare
+
+
 def main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: intent-check <PROTOCOL-*.md> [--metrics FILE]")
-        print("  --metrics FILE  metrics.json to check against "
-              "(default: the newest runs/*/metrics.json beside the protocol)")
+        print("  --metrics FILE  metrics.json to check against (default: the "
+              "newest runs/*/metrics.json beside the protocol; required once "
+              "the area holds more than one protocol)")
         return 0 if argv else 2
 
     protocol = Path(argv[0])
@@ -118,6 +134,30 @@ def main(argv: list[str]) -> int:
             return 2
         mpath = metrics_arg
     else:
+        # Fail closed instead of guessing. `gate_metrics` picks by the area,
+        # not by the protocol — it cannot tell an s13 run from an s1 run,
+        # because nothing in a run says which protocol it belongs to. With
+        # one protocol in the area the guess is right by construction; with
+        # several it is a coin toss dressed as a check, so the caller names
+        # the run. The real fix is a protocol id in the run metadata; until
+        # then this flag is a seatbelt, not a proof of belonging (2026-09-26).
+        siblings = sorted(protocol.parent.glob("PROTOCOL-*.md"))
+        if len(siblings) > 1:
+            print(f"intent-check: {len(siblings)} protocols in "
+                  f"{protocol.parent} — nothing ties a run to one of them, "
+                  f"so name the run with --metrics FILE:")
+            for p in siblings:
+                here = " <- checking this one" if p.name == protocol.name else ""
+                print(f"  {p.name}{here}")
+            keyed, bare = runs_by_intent_keys(protocol.parent)
+            print(f"  candidate runs (intent keys reported): {len(keyed)}")
+            for p in keyed:
+                print(f"    {p}")
+            if bare:
+                print(f"  runs without intent keys ({len(bare)}): "
+                      f"{', '.join(p.parent.name for p in bare)}")
+            return 2
+
         mpath, skipped = gate_metrics(protocol.parent)
         if mpath is None:
             print(f"intent-check: {len(reg)} id(s) registered "
