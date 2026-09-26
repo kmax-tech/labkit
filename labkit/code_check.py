@@ -545,9 +545,17 @@ def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
 
 # --- cli ------------------------------------------------------------------
 
-def find_protocol(area: Path) -> Path | None:
-    hits = sorted(area.glob("PROTOCOL-*.md"))
-    return hits[0] if hits else None
+def find_protocols(area: Path) -> list[Path]:
+    """Every protocol in the area, lexicographic — a list, not a first hit.
+
+    The series rule (§4) gives every follow-up its own
+    `PROTOCOL-s<N>-<slug>.md`, so an area legitimately holds many. Returning
+    `sorted(...)[0]` picked one of them wordlessly, and lexicographic order
+    is not temporal order: in an area running s1..s13 the pick was always
+    s1, never the protocol just built. A green check against the wrong
+    protocol is worse than no check, so the caller must choose (2026-09-26).
+    """
+    return sorted(area.glob("PROTOCOL-*.md"))
 
 
 def find_repo(area: Path) -> Path:
@@ -560,23 +568,50 @@ def find_repo(area: Path) -> Path:
 def main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
-        print("usage: code-check <AREA> [--bundle FILE]")
+        print("usage: code-check <AREA> [--protocol FILE] [--bundle FILE]")
+        print("  --protocol FILE  the PROTOCOL-*.md to check against "
+              "(required once the area holds more than one)")
+        print("  --bundle FILE    pack sources + schema facts + gate labels "
+              "for the audit agent")
         return 0 if argv else 2
 
     area = Path(argv[0])
     bundle_to = None
-    if len(argv) >= 3 and argv[1] == "--bundle":
-        bundle_to = Path(argv[2])
-    elif len(argv) > 1:
-        print(f"code-check: unexpected argument {argv[1]!r}")
+    protocol_arg = None
+    rest = argv[1:]
+    while rest:
+        if rest[0] in ("--bundle", "--protocol") and len(rest) >= 2:
+            if rest[0] == "--bundle":
+                bundle_to = Path(rest[1])
+            else:
+                protocol_arg = Path(rest[1])
+            rest = rest[2:]
+            continue
+        print(f"code-check: unexpected argument {rest[0]!r}")
         return 2
+
     if not area.is_dir():
         print(f"code-check: no such area: {area}")
         return 2
-    protocol = find_protocol(area)
-    if protocol is None:
+
+    protocols = find_protocols(area)
+    if protocol_arg is not None:
+        if not protocol_arg.is_file():
+            print(f"code-check: no such protocol: {protocol_arg}")
+            return 2
+        protocol = protocol_arg
+    elif not protocols:
         print(f"code-check: no PROTOCOL-*.md in {area}")
         return 2
+    elif len(protocols) > 1:
+        # Fail closed, never pick: see find_protocols.
+        print(f"code-check: {len(protocols)} protocols in {area} — name one "
+              f"with --protocol FILE:")
+        for p in protocols:
+            print(f"  {p}")
+        return 2
+    else:
+        protocol = protocols[0]
 
     findings = check_intent_ids(area, protocol)
     for f in findings:

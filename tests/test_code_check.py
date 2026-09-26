@@ -286,6 +286,60 @@ class TestBundle(unittest.TestCase):
                         text.index("Schema facts"))
 
 
+class TestProtocolChoice(unittest.TestCase):
+    """The series rule (§4) puts many protocols in one area. Picking the
+    lexicographically first one wordlessly greened the check against s1
+    while s13 was the protocol just built (2026-09-26)."""
+
+    def _second(self, area: Path, name="PROTOCOL-s2-later.md"):
+        (area / name).write_text("Kriterium: [K9] haelt.\n", encoding="utf-8")
+        return area / name
+
+    def _main(self, argv):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = code_check.main([str(a) for a in argv])
+        return rc, buf.getvalue()
+
+    def test_several_protocols_refuse_instead_of_picking(self):
+        with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
+            self._second(a.path)
+            rc, out = self._main([a.path])
+        self.assertEqual(rc, 2, out)
+        self.assertIn("--protocol", out)
+        self.assertIn("PROTOCOL-s2-later.md", out)
+        self.assertIn("PROTOCOL-fixture.md", out)
+        self.assertNotIn("mechanics:", out)
+
+    def test_named_protocol_is_the_one_checked(self):
+        with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
+            second = self._second(a.path)
+            rc, out = self._main([a.path, "--protocol", second])
+        # [K9] is registered in the named protocol and in no script.
+        self.assertEqual(rc, 1, out)
+        self.assertIn("K9", out)
+
+    def test_single_protocol_still_needs_no_flag(self):
+        with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
+            rc, out = self._main([a.path])
+        self.assertEqual(rc, 0, out)
+        self.assertIn("mechanics:", out)
+
+    def test_flags_may_come_in_either_order(self):
+        with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
+            second = self._second(a.path)
+            bundle = a.path / "bundle.md"
+            rc, out = self._main([a.path, "--bundle", bundle,
+                                  "--protocol", second])
+        self.assertEqual(rc, 1, out)
+        self.assertIn("bundle:", out)
+
+    def test_missing_protocol_file_is_an_error_not_a_fallback(self):
+        with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
+            rc, out = self._main([a.path, "--protocol", a.path / "nope.md"])
+        self.assertEqual(rc, 2, out)
+        self.assertIn("no such protocol", out)
+
 
 if __name__ == "__main__":
     unittest.main()
