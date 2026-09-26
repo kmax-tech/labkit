@@ -163,14 +163,27 @@ at all.
 
 ## Selection
 
-`intent-check` and `code-check` resolve a protocol to a run like this:
+`intent-check` resolves a protocol to a run by the id and nothing else.
+`protocol.path` never selects: it may be stale, and it may be wrong.
 
-1. Runs bound to this protocol's id — newest with intent keys among them
-   (a probe run without intent keys must not shadow the gate run).
-2. No bound run and one protocol in the area: the area's newest run with
-   intent keys, as before — right by construction.
-3. No bound run and several protocols in the area: refuse, and require
-   `--metrics FILE`. Exit code 2 — "nothing to check yet" is not a pass.
+1. **Protocol with an id (0.16+).** Eligible are COMPLETED runs recording
+   this id — no others. An unbound run, a run bound elsewhere, an
+   `unfinalized` and a `corrupt` run never enter the automatic choice.
+   Among the eligible, the rule from 2026-09-09 holds unchanged: the
+   newest reporting any intent key, so a probe run does not shadow the
+   gate run.
+2. **No eligible run.** Exit code 2, with every other run in the area and
+   the reason it was left out. "Nothing to check yet" is not a pass when
+   the check was called as proof.
+3. **Protocol below 0.16.** Nothing in a run names its protocol, so the
+   old path stands: one protocol in the area is right by construction,
+   several refuse and require `--metrics FILE`. No retrofit.
+
+`--metrics FILE` names the file to read; where the run records a binding
+it is also verified. Same id passes. A different id is a hard abort —
+holding one protocol's promises against another protocol's run answers
+nothing. A legacy or unbound run is allowed as an explicit legacy choice,
+with a warning that says so.
 
 ## Index derivation
 
@@ -188,8 +201,10 @@ runs bound to it — never read as a source.
 Built: identity (0.20.0); the binding in `config.json`, `schema_version`,
 `completion.json` and the five run states, `runlog migrate-index` and
 `runlog reindex`, the `protocol_id` column and the index lock (0.21.0);
-and the fail-closed refusals in `code-check` and `intent-check`.
+selection by id in `intent-check` (0.22.0). `code-check` still resolves
+by area and refuses when several protocols are present — it runs before
+any run exists, so it has nothing to bind to.
 
-Not built: selection by id — `intent-check` still picks by area and refuses
-in a series area (step 2). That is the next step, and it is now the only
-one that needs no new data.
+Selection by id followed in 0.22.0. The binding is complete: a protocol
+has an identity, a run records it, and every check that pairs the two
+goes through the id.

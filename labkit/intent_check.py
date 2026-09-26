@@ -29,6 +29,13 @@ preflight audit (§2.A12), which works the same ids.
 
 Opt-in by presence: a protocol without ids (everything before 2026-09-09)
 exits 0 with a note. No retrofitting of closed runs.
+
+WHICH run answers is decided by the binding, not by the directory: from
+Standard 0.16 a protocol carries an id and a run records the id it belongs
+to, so only completed runs with that id take part in the automatic choice
+(`docs/protocol-run-binding.md`). `protocol.path` never selects — it goes
+stale by design. Below 0.16 nothing binds, and the check refuses to guess
+in an area with several protocols.
 """
 
 from __future__ import annotations
@@ -71,6 +78,97 @@ def ledger_ids(metrics: dict) -> set[str]:
     warnings.warn("ledger_ids() is deprecated; use reported_intent_ids()",
                   DeprecationWarning, stacklevel=2)
     return reported_intent_ids(metrics)
+
+
+try:
+    from labkit.runlog import run_state
+except ImportError:                       # vendored flat copies (student repos)
+    def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
+        """Fallback for a runlog too old to know completion markers: then
+        every run in reach is a legacy run, and metrics.json is its marker."""
+        return "completed" if (run_dir / "metrics.json").is_file() else "crashed"
+
+
+PROTOCOL_ID_IN_FILE = re.compile(r"protocol[ _]id[^:\n]*:\**\s*\**\s*(\S+)", re.I)
+PROTOCOL_ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
+
+
+def protocol_id_of(text: str) -> str | None:
+    """The protocol's own id, or None below Standard 0.16."""
+    m = PROTOCOL_ID_IN_FILE.search(text)
+    if not m:
+        return None
+    pid = m.group(1).strip().strip("`*")
+    return pid if PROTOCOL_ID_SHAPE.match(pid) else None
+
+
+def run_facts(run_dir: Path) -> dict | None:
+    """What a run directory says about itself: state and binding.
+
+    `None` for a directory with no readable config.json — not a run this
+    check can judge.
+    """
+    cfg_file = run_dir / "config.json"
+    if not cfg_file.is_file():
+        return None
+    try:
+        cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    binding = cfg.get("protocol") or {}
+    return {"dir": run_dir,
+            "metrics": run_dir / "metrics.json",
+            "state": run_state(run_dir, cfg, alive=False),
+            "schema": cfg.get("schema_version", 0),
+            "protocol_id": binding.get("id")}
+
+
+def bound_runs(area: Path, pid: str) -> tuple[list[dict], list[dict]]:
+    """(runs bound to `pid` and completed, everything else), oldest first.
+
+    Only the first list may feed an automatic choice. The second carries
+    the reason it was left out, for the operator who has to look. The
+    binding is the id and nothing else — `protocol.path` is a hint for
+    humans, never a selection criterion: it goes stale by design.
+    """
+    taken, left = [], []
+    for d in sorted((area / "runs").glob("*")):
+        facts = run_facts(d)
+        if facts is None:
+            continue
+        if facts["state"] != "completed":
+            facts["why"] = facts["state"]
+        elif facts["protocol_id"] == pid:
+            taken.append(facts)
+            continue
+        elif facts["protocol_id"]:
+            facts["why"] = f"bound to {facts['protocol_id']}"
+        elif facts["schema"] >= 2:
+            facts["why"] = "unbound (no protocol id at run time)"
+        else:
+            facts["why"] = "legacy run (no binding recorded)"
+        left.append(facts)
+    return taken, left
+
+
+def newest_with_intent_keys(cands: list[dict]) -> tuple[Path | None, int]:
+    """Among already-eligible runs: the newest reporting any intent key,
+    plus how many newer ones were skipped for reporting none.
+
+    The rule from 2026-09-09 (area 71) unchanged, only its input narrowed:
+    a producer or probe run writes a metrics.json too, and holding the
+    promises against THAT file reports every promise as unimplemented.
+    """
+    skipped = 0
+    for facts in reversed(cands):
+        try:
+            if reported_intent_ids(json.loads(
+                    facts["metrics"].read_text(encoding="utf-8"))):
+                return facts["metrics"], skipped
+        except (OSError, json.JSONDecodeError):
+            pass
+        skipped += 1
+    return (cands[-1]["metrics"], 0) if cands else (None, 0)
 
 
 def gate_metrics(area: Path) -> tuple[Path | None, int]:
@@ -122,9 +220,11 @@ def main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: intent-check <PROTOCOL-*.md> [--metrics FILE]")
-        print("  --metrics FILE  metrics.json to check against (default: the "
-              "newest runs/*/metrics.json beside the protocol; required once "
-              "the area holds more than one protocol)")
+        print("  --metrics FILE  metrics.json to check against. Default: "
+              "the newest COMPLETED run bound to this protocol's id that "
+              "reports intent keys. Below Standard 0.16 no run records a "
+              "binding; then the area must hold exactly one protocol, or "
+              "this flag is required.")
         return 0 if argv else 2
 
     protocol = Path(argv[0])
@@ -144,13 +244,67 @@ def main(argv: list[str]) -> int:
               "— §2.A1); nothing to hold the metrics against.")
         return 0
 
+    text = protocol.read_text(encoding="utf-8")
+    pid = protocol_id_of(text)
+
     if metrics_arg is not None:
         if not metrics_arg.is_file():
             print(f"intent-check: no such metrics file: {metrics_arg}")
             return 2
+        # An explicit file still has to be a file that MAY answer for this
+        # protocol. Naming one was always a seatbelt, never a proof of
+        # belonging — where the run records a binding, that proof now
+        # exists and is checked (2026-09-26).
+        facts = run_facts(metrics_arg.parent)
+        if facts and facts["schema"] >= 2 and facts["protocol_id"]:
+            if pid and facts["protocol_id"] != pid:
+                print(f"intent-check: {metrics_arg} belongs to protocol "
+                      f"{facts['protocol_id']}, this protocol is {pid} — "
+                      f"holding one protocol's promises against another "
+                      f"protocol's run answers nothing.")
+                return 2
+            if pid is None:
+                print(f"intent-check: WARNING — {metrics_arg} is bound to "
+                      f"{facts['protocol_id']}, but {protocol.name} carries "
+                      f"no `Protocol id:` (Standard 0.16) to hold it "
+                      f"against. Checking anyway, unverified.")
+        elif facts and facts["schema"] >= 2:
+            print(f"intent-check: WARNING — {metrics_arg} records no "
+                  f"binding (unbound run); nothing proves it belongs to "
+                  f"{protocol.name}. Explicit legacy choice, unverified.")
+        else:
+            print(f"intent-check: WARNING — {metrics_arg} predates run "
+                  f"bindings; nothing proves it belongs to {protocol.name}. "
+                  f"Explicit legacy choice, unverified.")
         mpath = metrics_arg
+    elif pid is not None:
+        # Standard 0.16 and up: the run says which protocol it belongs to,
+        # so the choice is a filter, not a guess. Only COMPLETED runs with
+        # this id take part — an unfinalized or corrupt run has numbers on
+        # disk and no finish, and a run bound elsewhere answers for another
+        # question entirely.
+        cands, rest = bound_runs(protocol.parent, pid)
+        if not cands:
+            print(f"intent-check: no completed run bound to {pid} "
+                  f"({protocol.name}) — nothing to hold the promises "
+                  f"against.")
+            if rest:
+                print(f"  {len(rest)} other run(s) in {protocol.parent}:")
+                for f in rest:
+                    print(f"    {f['dir'].name}: {f['why']}")
+            else:
+                print(f"  no runs in {protocol.parent} yet.")
+            print("  Name one explicitly with --metrics FILE if you know it "
+                  "belongs here.")
+            return 2
+        mpath, skipped = newest_with_intent_keys(cands)
+        if skipped:
+            print(f"intent-check: using {mpath.parent.name}/metrics.json "
+                  f"(newest bound run with intent keys; skipped {skipped} "
+                  f"newer bound run(s) without any).")
     else:
-        # Fail closed instead of guessing. `gate_metrics` picks by the area,
+        # Below Standard 0.16 nothing in a run names its protocol. Fail
+        # closed instead of guessing. `gate_metrics` picks by the area,
         # not by the protocol — it cannot tell an s13 run from an s1 run,
         # because nothing in a run says which protocol it belongs to. With
         # one protocol in the area the guess is right by construction; with
