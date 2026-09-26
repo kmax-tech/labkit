@@ -1,6 +1,6 @@
 # labkit — shared lab helpers
 
-Ten modules every experiment repo imports, in **one** place: run ledger
+Ten modules every experiment repo imports, in **one** place: run index
 (`runlog`), LLM backend (`llm`), endpoint lease (`endpoint_lease`),
 resumable output file (`batch`), intent-id check (`intent_check`),
 protocol checker (`protocol_check`), protocol filler (`protocol_fill`),
@@ -28,12 +28,46 @@ Seven **console commands** come with the installation (all answer `--help`):
 ```bash
 protocol-check <PROTOCOL-*.md>...   # mandatory-field check (must/should contract)
 runlog [<area>]                     # open runs: run_id, running/crashed, script
-intent-check <PROTOCOL-*.md>        # registered promise ids vs. ledger keys
+intent-check <PROTOCOL-*.md>        # registered promise ids vs. metrics keys
 code-check <AREA>                   # mechanical preflight (schema, gate labels)
 scope-sha [--area DIR]              # audit stamp over the code that determines a number
 protocol-fill <PROTOCOL> FIELD VAL  # fill one stamped placeholder field by label
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
 ```
+
+## Terms
+
+One word, one thing. Everything below occurs in more than one module, so it
+is coined here and explained nowhere else; the per-field explanations live in
+`protocol-field-guide.md`.
+
+| Term                | Means                                                                 |
+|---------------------|-----------------------------------------------------------------------|
+| **area**            | the directory grouping protocols and their runs                       |
+| **protocol**        | the specification of one experiment (`PROTOCOL-*.md`)                 |
+| **protocol id**     | a protocol's stable, path-independent identity — *not built yet*      |
+| **run**             | one execution of a protocol                                           |
+| **run metadata**    | the canonical record of a single run — *not built yet*                |
+| **run index**       | the searchable overview of runs (`runs.tsv`)                          |
+| **metrics**         | what a run measured and reported (`metrics.json`)                     |
+| **documented runs** | the runs listed by hand in a protocol's `## Runs` section             |
+| **intent id**       | the stable id of one checked promise (`[K1]`, `[S1]`, `[W1]`, `[N1]`) |
+| **bundle**          | a run's frozen inputs, packed for an audit agent                      |
+| **frozen**          | unchangeable past a declared point (`Frozen before run: yes`)         |
+| **scope hash**      | the hash over the input scope a run's number rests on (`scope_sha`)   |
+
+**"Ledger" is gone** (2026-09-26). It named three different things — the run
+index, a run's metrics, and the hand-written `## Runs` section — and a word
+that promises a complete and reliable book of record fits none of them —
+least of all the hand-written one. `intent_check.ledger_ids` survives one cycle as
+a deprecated alias of `reported_intent_ids`.
+
+The hierarchy the vocabulary is meant to make visible:
+
+    run metadata   canonical binding of run to protocol   (open, steps 3-5)
+    runs.tsv       run index                              (data ownership open until then)
+    metrics.json   result data
+    ## Runs        manual documentation, never a source
 
 labkit knows **two work types**: `measurement` for pure counting questions
 ("how many X are there?" — no model, no hypothesis, 7 fields, no freeze)

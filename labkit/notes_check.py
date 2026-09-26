@@ -53,7 +53,7 @@ RELATED_WITH_KEY = re.compile(
 DATE = re.compile(r"\b\d{4}-\d{2}(?:-\d{2})?\b")
 # Code evidence for an implemented instrument: a script file, a bare function
 # call in backticks, an experiment-area path, or a protocol reference (the
-# protocol names the scripts; a synthesis note over ledger runs carries only
+# protocol names the scripts; a synthesis note over documented runs carries only
 # that — found 2026-09-10, instrument-mal-modellstaerke).
 CODE = re.compile(r"[\w./-]+\.py\b|experiments/[\w-]+|`\w+\(\)?`"
                   r"|PROTOCOL-[\w-]+")

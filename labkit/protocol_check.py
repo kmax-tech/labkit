@@ -41,7 +41,7 @@ commits, Arbeitsstandard §3):
     protocol was the one thing nothing forced (2026-08-19). Terms sit first
     in MUST because they precede the question they are asked in (CLAUDE.md
     6: Begriff vor Gebrauch).
-  * **A measure run demands a written result.** A run_id in the ledger that
+  * **A measure run demands a written result.** A documented run_id that
     is not a prepare/probe line makes empty `Answer to the question` / `Raw
     output` fields (or a missing Result section) a MUST failure — pilot
     suppression does not apply, because the context that explains the
@@ -184,7 +184,7 @@ TYPE_MEASUREMENT = re.compile(
 # one trains the reader to ignore the checker. One summary line instead.
 FROZEN_NO = re.compile(r"frozen before run[^:\n]*:\**\s*\**\s*(nein|no)\b", re.I)
 
-# runlog run ids as they appear in ledgers: 2026-08-23T20-37-21_afbe. A ledger
+# runlog run ids as they appear in the run index: 2026-08-23T20-37-21_afbe. A
 # line carrying one that is NOT data preparation or a throwaway probe is a
 # measure run — from then on an empty Result is a MUST gap, pilot or not.
 RUN_ID = re.compile(r"\b\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_[0-9a-f]{2,12}\b")
@@ -206,10 +206,12 @@ SERIES_HEAD = re.compile(
     r"(?im)^##.*\((deklariert|registriert) vor dem( jeweils \w+)? "
     r"(lauf|vote|pilot)|declared before the run\)?")
 
-# The runs ledger is mandatory content (one line per run_id), not prose —
+# The documented runs are mandatory content (one line per run_id), not prose —
 # counting it against the length budget taught people not to document runs
-# (found 2026-09-06: 93 of a protocol's 409 lines were its ledger).
-LEDGER_HEAD = re.compile(r"(?i)^##\s.*(runs|ledger|l[\u00e4a]ufe)")
+# (found 2026-09-06: 93 of a protocol's 409 lines were its run list).
+# "ledger" stays in the pattern, not in the vocabulary: protocols written
+# before 2026-09-26 head the section "## Runs (ledger — ...)".
+DOCUMENTED_RUNS_HEAD = re.compile(r"(?i)^##\s.*(runs|ledger|l[\u00e4a]ufe)")
 
 # Change-history prose — the doc should carry the current rule, the commit the
 # change (Arbeitsstandard §3). Warning only.
@@ -461,22 +463,22 @@ def main(argv: list[str]) -> int:
         # MUST) and table rows (confound profiles, error directions) do not —
         # raw-line counting had flagged three registration-dense protocols
         # as journals, one of which never even ran (2026-08-25).
-        in_fence, in_ledger, n_lines = False, False, 0
+        in_fence, in_runs, n_lines = False, False, 0
         for _l in text.splitlines():
             _s = _l.strip()
             if _s.startswith("```"):
                 in_fence = not in_fence
                 continue
             if _s.startswith("## "):
-                in_ledger = bool(LEDGER_HEAD.match(_s))
-            if not in_fence and not in_ledger and not _s.startswith("|"):
+                in_runs = bool(DOCUMENTED_RUNS_HEAD.match(_s))
+            if not in_fence and not in_runs and not _s.startswith("|"):
                 n_lines += 1
         too_long = n_lines > 350
         big = oversized_sections(text)
         series = [(n, l.strip()) for n, l in enumerate(text.splitlines(), 1)
                   if SERIES_HEAD.match(l)]
 
-        # Post-run: a measure run in the ledger makes an empty Result a MUST
+        # Post-run: a documented measure run makes an empty Result a MUST
         # gap — pilot suppression does not apply (write back, don't go quiet).
         measured = [(n, m.group(0)) for n, l in enumerate(text.splitlines(), 1)
                     if (m := RUN_ID.search(l)) and not SETUP_RUN.search(l)]
@@ -532,7 +534,7 @@ def main(argv: list[str]) -> int:
                   f"here.")
         if run_unreported:
             print(f"{f}:{measured[0][0]}: MISSING (must): measure run in the "
-                  f"ledger ({measured[0][1]}) but Result/Raw output empty — "
+                  f"run list ({measured[0][1]}) but Result/Raw output empty — "
                   f"write the result back in the SAME session.")
         for n, l in series:
             print(f"{f}:{n}: follow-up registration in the same protocol "

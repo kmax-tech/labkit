@@ -148,7 +148,7 @@ Numbers of this stage are never reported. Only after it may `Frozen before
 run` go to "yes"; per (re-)freeze ONE sentence stays — the reasoning goes
 into the commit message.
 
-## Runs (ledger — via `runlog`, cite run_ids instead of retyping numbers)
+## Runs (documented runs — via `runlog`, cite run_ids instead of retyping numbers)
 
 - <run_id> — <one sentence: what this run was>
 

@@ -2,7 +2,7 @@
 
 Ten modules, stdlib only:
 
-- `runlog`         one run = one directory + one ledger row (id, config, env, status)
+- `runlog`         one run = one directory + one run-index row (id, config, env, status)
                    (installed as the `runlog` command: `runlog <area>` lists open runs)
 - `llm`            LLM backends behind one call; aliases resolved via models.toml
 - `endpoint_lease` one alias at a time per serving endpoint (a slot is not a

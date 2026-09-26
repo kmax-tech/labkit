@@ -2,7 +2,7 @@
 
 Convention (Arbeitsstandard §2/§4): every run — pilots included — goes through
 `with runlog.run(...)`. Each run gets a self-contained dir and one append-only
-ledger row; PROTOCOL-<task>.md cites run_ids instead of pasting numbers.
+run-index row; PROTOCOL-<task>.md cites run_ids instead of pasting numbers.
 
     runs/<run_id>/config.json      frozen inputs: params + git state + data
     runs/<run_id>/metrics.json     outputs you declared
@@ -11,7 +11,7 @@ ledger row; PROTOCOL-<task>.md cites run_ids instead of pasting numbers.
     runs/<run_id>/uncommitted.patch  the diff, IF the repo was dirty (tracked files only)
     runs/<run_id>/source-untracked/  untracked files next to the script, verbatim
     runs/<run_id>/<raw files>      verbatim model output etc. (save_raw)
-    runs.tsv                       ledger: run_id git script data config metrics note
+    runs.tsv                       run index: run_id git script data config metrics note
 
 Usage:
     import runlog
@@ -31,7 +31,7 @@ explain later. Recording the files is what makes "which data was that?"
 answerable six weeks on; the split keys are what make it answerable by a tool.
 
 A crashed run leaves its dir with config.json but no metrics.json — visible,
-not silent. The ledger row is written on clean exit only.
+not silent. The run-index row is written on clean exit only.
 """
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ import time
 import uuid
 from pathlib import Path
 
-LEDGER_COLS = ["run_id", "git", "script", "data", "config", "metrics", "note"]
+RUN_INDEX_COLS = ["run_id", "git", "script", "data", "config", "metrics", "note"]
 SPLIT_KEYS = ("train", "dev", "test")
 
 
@@ -193,7 +193,7 @@ def _env_state(cwd: Path) -> str:
 
     Ties a run to an *environment*, not just a Python version: a changed lock
     changes the hash, so runs from different environments stay distinguishable
-    in the ledger. Records "unpinned" when no lock exists — visible, not silent.
+    in the run index. Records "unpinned" when no lock exists — visible, not silent.
 
     `drift:n` says how far the live environment has moved away from the lock.
     Only `drift:0` makes the hash a truthful description of what ran.
@@ -323,22 +323,22 @@ def _describe(paths: dict) -> dict:
     return out
 
 
-def _check_ledger(base_dir: Path) -> None:
-    """Refuse to run against a ledger whose header doesn't match LEDGER_COLS.
+def _check_run_index(base_dir: Path) -> None:
+    """Refuse to run against a run index whose header doesn't match RUN_INDEX_COLS.
 
     Appending to an old-format runs.tsv would not error — the columns would
     just shift silently, and every row after the format change would be
     misread. Fail before the run instead, with the migration spelled out.
     """
-    ledger = base_dir / "runs.tsv"
-    if not ledger.exists():
+    index = base_dir / "runs.tsv"
+    if not index.exists():
         return
-    with ledger.open(encoding="utf-8") as f:
+    with index.open(encoding="utf-8") as f:
         found = f.readline().rstrip("\n").split("\t")
-    if found != LEDGER_COLS:
+    if found != RUN_INDEX_COLS:
         raise RuntimeError(
             f"runs.tsv columns {found} don't match this runlog "
-            f"({LEDGER_COLS}). Migrate the ledger — insert the missing "
+            f"({RUN_INDEX_COLS}). Migrate the run index — insert the missing "
             "column in the header and an empty field in each old row — or "
             "move runs.tsv aside; appending would shift columns silently.")
 
@@ -446,7 +446,7 @@ class Run:
         self.experiment = experiment
         self.script = Path(sys.argv[0]).name if sys.argv[0] else "<interactive>"
         self.base = base_dir
-        _check_ledger(base_dir)                        # raises before any work
+        _check_run_index(base_dir)                        # raises before any work
         self._data = _describe(data) if data else {}   # raises on leak, before mkdir
         self.dir = base_dir / "runs" / self.run_id
         self.dir.mkdir(parents=True, exist_ok=False)
@@ -513,15 +513,15 @@ class Run:
                 json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
         (self.dir / "metrics.json").write_text(
             json.dumps(self._metrics, ensure_ascii=False, indent=2), encoding="utf-8")
-        ledger = self.base / "runs.tsv"
-        if not ledger.exists():
-            ledger.write_text("\t".join(LEDGER_COLS) + "\n", encoding="utf-8")
+        index = self.base / "runs.tsv"
+        if not index.exists():
+            index.write_text("\t".join(RUN_INDEX_COLS) + "\n", encoding="utf-8")
         row = [self.run_id, _git_state(self.base), self.script,
                json.dumps(self._data, ensure_ascii=False, sort_keys=True),
                json.dumps(self._config, ensure_ascii=False, sort_keys=True),
                json.dumps(self._metrics, ensure_ascii=False, sort_keys=True),
                self._note]
-        with ledger.open("a", encoding="utf-8") as f:
+        with index.open("a", encoding="utf-8") as f:
             f.write("\t".join(c.replace("\t", " ").replace("\n", " ") for c in row) + "\n")
         dur = self._metrics.get("duration_s", 0)
         if os.environ.get("LABKIT_NOTIFY") == "1" or dur >= _NOTIFY_MIN_S:

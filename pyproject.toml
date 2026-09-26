@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "labkit"
-version = "0.18.0"
-description = "Shared lab helpers: run ledger, LLM backend, endpoint lease, resumable batches, protocol and notes checkers"
+version = "0.19.0"
+description = "Shared lab helpers: run index, LLM backend, endpoint lease, resumable batches, protocol and notes checkers"
 requires-python = ">=3.12"
 # stdlib only, on purpose: a lab helper that drags dependencies in decides the
 # environment of every experiment that imports it.

@@ -16,7 +16,7 @@ path to this file.
    `span-detection-encoders` and `window5-vs-full-pairs` still mean something
    in March, while `exp3`, `test2` and `final_v2` never did. The same name
    goes into the protocol's filename (`PROTOCOL-<name>.md`) and into
-   `runlog.run("<name>", …)`, so it labels every ledger row and every run
+   `runlog.run("<name>", …)`, so it labels every run-index row and every run
    folder — pick it once, and don't rename it afterwards.
 2. **One field, one line.** A slot takes a sentence, not a paragraph. If a
    justification needs more, it is a finding: write it in `notes/` (one idea

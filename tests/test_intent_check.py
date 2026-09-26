@@ -1,4 +1,4 @@
-"""Tests for intent-check — registered promises vs. ledger keys.
+"""Tests for intent-check — registered promises vs. metrics keys.
 
 Fixture material mirrors the real cases of 2026-09-08: a criterion whose
 code implements one conjunct of three (62), gate metrics written although
@@ -54,16 +54,16 @@ class TestIntentCheck(unittest.TestCase):
         self.assertEqual(intent_check.registered_ids(PROTOCOL),
                          {"k1", "k2", "k3", "s1", "w1", "n1"})
 
-    def test_ledger_ids_match_bare_and_suffixed(self):
+    def test_reported_intent_ids_match_bare_and_suffixed(self):
         self.assertEqual(
-            intent_check.ledger_ids({"k1": True, "s1_hit": 0, "w1_branch": "a",
+            intent_check.reported_intent_ids({"k1": True, "s1_hit": 0, "w1_branch": "a",
                                      "auc": 0.7, "n_channels": 24}),
             {"k1", "s1", "w1"})
 
     def test_f1_score_is_no_intent_id(self):
         """The collision that renamed forks to W: f1_score is a metric name,
         and in an F namespace it would have satisfied a branchless fork."""
-        self.assertEqual(intent_check.ledger_ids({"f1_score": 0.8, "f1": 0.8}),
+        self.assertEqual(intent_check.reported_intent_ids({"f1_score": 0.8, "f1": 0.8}),
                          set())
 
     # -- contract ---------------------------------------------------------

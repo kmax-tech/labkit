@@ -1,4 +1,4 @@
-"""intent-check — does the ledger report every promise the protocol made?
+"""intent-check — do the metrics report every promise the protocol made?
 
 The most frequent blocker class of the first audits (2026-09-08, areas
 62-65) was "registered without implementation": a fork with no branch in
@@ -15,12 +15,12 @@ lowercase key in the reportable run's metrics.json (`k1_pass`, `s1_hit`,
 `w1_branch`, `n1_pass`, or the bare id). This command checks the two sets
 against each other, in both directions:
 
-- an id with no ledger key: the promise has no implementation evidence;
-- a ledger key in the id namespace with no registration: something was
+- an id with no metrics key: the promise has no implementation evidence;
+- a metrics key in the id namespace with no registration: something was
   built that nobody registered.
 
 W (not F) for forks, deliberately: `f1`/`f1_score` is a standard metric
-name, and in the F namespace an f1_score in the ledger would have
+name, and in the F namespace an f1_score in the metrics would have
 "satisfied" a registered fork that has no branch at all.
 
 Existence, not correctness: a key `s1_hit` proves the stage reports, not
@@ -36,6 +36,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import warnings
 from pathlib import Path
 
 ID_IN_PROTOCOL = re.compile(r"\[([KSWN]\d+)\]", re.I)
@@ -47,7 +48,7 @@ def registered_ids(text: str) -> set[str]:
     return {m.group(1).lower() for m in ID_IN_PROTOCOL.finditer(text)}
 
 
-def ledger_ids(metrics: dict) -> set[str]:
+def reported_intent_ids(metrics: dict) -> set[str]:
     """Ids the metrics file reports (bare id or id_suffix keys)."""
     out = set()
     for key in metrics:
@@ -55,6 +56,21 @@ def ledger_ids(metrics: dict) -> set[str]:
         if m:
             out.add(m.group(1))
     return out
+
+
+def ledger_ids(metrics: dict) -> set[str]:
+    """Deprecated alias of `reported_intent_ids` (renamed 2026-09-26).
+
+    "Ledger" named three different things in this package — runs.tsv, a
+    run's metrics.json, and the hand-written `## Runs` section of a
+    protocol — and the discussion that fixed the vocabulary kept tripping
+    over which one was meant. The name is gone from the package; the symbol
+    stays for one cycle because it is imported from outside
+    (counterfactual-worlds/tools/befundregister.py).
+    """
+    warnings.warn("ledger_ids() is deprecated; use reported_intent_ids()",
+                  DeprecationWarning, stacklevel=2)
+    return reported_intent_ids(metrics)
 
 
 def gate_metrics(area: Path) -> tuple[Path | None, int]:
@@ -73,7 +89,7 @@ def gate_metrics(area: Path) -> tuple[Path | None, int]:
     skipped = 0
     for p in reversed(runs):
         try:
-            if ledger_ids(json.loads(p.read_text(encoding="utf-8"))):
+            if reported_intent_ids(json.loads(p.read_text(encoding="utf-8"))):
                 return p, skipped
         except (OSError, json.JSONDecodeError):
             pass
@@ -95,7 +111,7 @@ def runs_by_intent_keys(area: Path) -> tuple[list[Path], list[Path]]:
     bare: list[Path] = []
     for p in sorted(area.glob("runs/*/metrics.json")):
         try:
-            hit = bool(ledger_ids(json.loads(p.read_text(encoding="utf-8"))))
+            hit = bool(reported_intent_ids(json.loads(p.read_text(encoding="utf-8"))))
         except (OSError, json.JSONDecodeError):
             hit = False
         (keyed if hit else bare).append(p)
@@ -125,7 +141,7 @@ def main(argv: list[str]) -> int:
     reg = registered_ids(protocol.read_text(encoding="utf-8"))
     if not reg:
         print("intent-check: no intent ids registered ([K1]/[S1]/[W1]/[N1] "
-              "— §2.A1); nothing to hold the ledger against.")
+              "— §2.A1); nothing to hold the metrics against.")
         return 0
 
     if metrics_arg is not None:
@@ -174,14 +190,14 @@ def main(argv: list[str]) -> int:
     except (OSError, json.JSONDecodeError) as exc:
         print(f"intent-check: cannot read {mpath}: {exc}")
         return 2
-    led = ledger_ids(metrics)
+    led = reported_intent_ids(metrics)
 
     missing = sorted(reg - led)
     unregistered = sorted(led - reg)
     for i in missing:
         print(f"{protocol}: [{i.upper()}] registered, but {mpath.name} has no "
               f"'{i}'/'{i}_*' key — the promise has no implementation "
-              f"evidence in the ledger.")
+              f"evidence in the metrics.")
     for i in unregistered:
         print(f"{mpath}: key '{i}'/'{i}_*' is in the intent-id namespace, but "
               f"the protocol registers no [{i.upper()}] — built without a "
@@ -204,7 +220,7 @@ if __name__ == "__main__":
 
 # --- preflight half: ids against the CODE, before any run exists ----------
 #
-# main() above answers the report-time question (does the LEDGER report every
+# main() above answers the report-time question (do the METRICS report every
 # promise?) and needs a runs/*/metrics.json. Before the run that file does not
 # exist, so the same promise goes unchecked exactly when checking it is still
 # cheap. code_ids() answers the earlier question from the source: does the code

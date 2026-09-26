@@ -426,15 +426,15 @@ class TestSeriesDetector(unittest.TestCase):
         self.assertNotIn("PROTOCOL-s<N>", out)
 
 
-class TestLedgerNotCountedAsProse(unittest.TestCase):
-    """The runs ledger is mandatory content, not prose (2026-09-06): 93 of a
-    protocol's 409 lines were its ledger — the length budget must not teach
+class TestDocumentedRunsNotCountedAsProse(unittest.TestCase):
+    """The documented runs are mandatory content, not prose (2026-09-06): 93 of
+    a protocol's 409 lines were its run list — the length budget must not teach
     people to stop documenting runs."""
 
-    def test_a_huge_ledger_does_not_flag_the_protocol(self):
+    def test_a_huge_run_list_does_not_flag_the_protocol(self):
         import tempfile
-        ledger = "## Runs (Ledger)\n" + "- 2026-09-06T10-00-00_aa11 — x\n" * 400
-        text = TestSeriesDetector.BASE + ledger
+        run_list = "## Runs (Ledger)\n" + "- 2026-09-06T10-00-00_aa11 — x\n" * 400
+        text = TestSeriesDetector.BASE + run_list
         with tempfile.TemporaryDirectory() as d:
             f = Path(d) / "PROTOCOL-x.md"
             f.write_text(text, encoding="utf-8")

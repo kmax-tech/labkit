@@ -12,7 +12,7 @@ Four checks, all decidable, none of them a judgement:
 
   1. **intent ids against the code** (§2.A1a). Every registered [K1]/[S1]/
      [W1]/[N1] must appear as a key literal in the area's scripts. Report
-     time has `intent-check` for the ledger; before the run the same promise
+     time has `intent-check` for the metrics; before the run the same promise
      goes unchecked exactly when repairing it is still cheap.
   2. **schema contract** (§2.A12, preflight scope). Every field the analysis
      READS must be written somewhere — in the materialized data if it exists,
@@ -408,7 +408,7 @@ def split_stages(area: Path) -> tuple[list[Path], list[Path]]:
 def check_intent_ids(area: Path, protocol: Path) -> list[str]:
     """Registered promises against the code, before any run exists.
 
-    `intent-check` asks the same question of the ledger at report time, when
+    `intent-check` asks the same question of the metrics at report time, when
     the tokens are already spent. Here the answer is still cheap.
     """
     registered = {m.group(1).lower()
@@ -423,7 +423,7 @@ def check_intent_ids(area: Path, protocol: Path) -> list[str]:
         findings.append(
             f"BLOCKER · {protocol.name} · [{i.upper()}] is registered, but no "
             f"script mentions a '{i}'/'{i}_*' key · the run reports nothing "
-            f"for this promise and the ledger check fails after the tokens "
+            f"for this promise and the metrics check fails after the tokens "
             f"are spent · §2.A1a · implement the key or drop the id")
     for i in sorted(set(unmistakable) - registered):
         findings.append(
