@@ -40,8 +40,6 @@ drop the private helpers and make monkeypatching land on a copy):
     sys.modules[__name__] = _mod
 """
 
-__version__ = "0.22.0"   # keep in step with pyproject.toml
-
 # The submodules are deliberately NOT imported here: `import labkit` must stay
 # free of side effects (llm reads models.toml when it is used, not when the
 # package is loaded). `from labkit import runlog` works regardless.

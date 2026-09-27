@@ -144,9 +144,18 @@ content, because grown protocols are German-filled.
 python3 -m unittest discover -s tests -v
 ```
 
-Change → test → bump `version` in `pyproject.toml` → tag. The experiment
-repos catch up via their pin, each at its own time; a running experiment is
-never surprised by a bugfix.
+Change → test → bump `version` in `pyproject.toml` → commit → tag
+`v<version>`. The experiment repos catch up via their pin, each at its own
+time; a running experiment is never surprised by a bugfix.
+
+**One version, one identity, one label.** `pyproject.toml` carries the
+version, the commit carries the identity, and the tag is a label over that
+commit — checked by `tests/test_release_tags.py`, which holds every
+`vX.Y.Z` against the version its commit declares. The package states no
+`__version__`: a literal nobody read, kept in step by hand, is a second
+truth waiting to drift. A forgotten tag is not fatal either — the
+scaffolder's `labkit_pin()` falls back to the commit and prints the `git
+tag` command it wants.
 
 ## Boundary
 
