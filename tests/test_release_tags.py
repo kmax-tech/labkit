@@ -74,9 +74,17 @@ class TestReleaseTags(unittest.TestCase):
 
     def test_the_package_keeps_no_second_version_literal(self):
         """`__version__` was a copy nobody read, kept in step by a test.
-        The distribution metadata is the runtime answer; in a source tree
-        it can name a different, older install, so the package states no
-        version at all."""
+
+        Deriving it instead — `importlib.metadata.version("labkit")` — is
+        the obvious repair and the wrong one: metadata describes whatever
+        distribution the interpreter finds first on sys.path, which need
+        not be the code that was imported. Measured here on 2026-09-26: in
+        the repo the call answered 0.13.0, from a forgotten
+        `labkit.egg-info/` left by an ancient build, while the active venv
+        held 0.18.0 and the imported source was 0.22.0. Three numbers, one
+        function, and the answer depended on the working directory. A
+        literal that is wrong can be read; a derivation that is wrong is
+        believed. So the package states no version at all."""
         import labkit
         self.assertFalse(hasattr(labkit, "__version__"),
                          "a version literal is back in labkit/__init__.py — "
