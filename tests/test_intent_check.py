@@ -54,6 +54,18 @@ class TestIntentCheck(unittest.TestCase):
         self.assertEqual(intent_check.registered_ids(PROTOCOL),
                          {"k1", "k2", "k3", "s1", "w1", "n1"})
 
+    def test_blank_template_registers_no_ids(self):
+        """The template's explanatory preamble must not register intent ids.
+
+        Before the fix, [K1]/[S1]/[W1]/[N1] in the preamble text matched
+        the regex, so a fresh unfilled protocol registered four phantom ids
+        that could silently pass if a run happened to write k1/s1/w1/n1.
+        """
+        tmpl = (REPO / "labkit" / "experiment-protocol.md.template").read_text(
+            encoding="utf-8")
+        self.assertEqual(intent_check.registered_ids(tmpl), set(),
+                         "the template preamble must not contribute ids")
+
     def test_reported_intent_ids_match_bare_and_suffixed(self):
         self.assertEqual(
             intent_check.reported_intent_ids({"k1": True, "s1_hit": 0, "w1_branch": "a",

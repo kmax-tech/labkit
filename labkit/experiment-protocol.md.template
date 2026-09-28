@@ -9,7 +9,7 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
   into a note; the [[wikilink]] stays here.
 - **† = report field.** Due only once `Frozen before run` goes to "yes";
   leave empty until then (`lib exp <name> --report` appends them).
-- **[K1]/[S1]/[W1]/[N1] = intent ids**, one per promise to the code:
+- **`[K…]`/`[S…]`/`[W…]`/`[N…]` = intent ids**, one per promise to the code:
   **K** criterion conjunct · **S** stop rule · **W** registered fork ·
   **N** null condition/gate. Each reappears as a lowercase key in the
   reportable run's metrics.json (`k1_pass`, …); `intent-check` compares the
@@ -44,13 +44,13 @@ instead).*
 
 - **Question / hypothesis:** <the one question — what do we expect?>
 - **Success / failure criterion:** <how do we recognise whether it worked?
-  One id per promise to the code — [K1] per conjunct — each reappearing as
+  One id per promise to the code — one K per conjunct — each reappearing as
   a lowercase key in the reportable run's metrics.json (→ §2.A1)>
 - **Stop rule:** <at what point do we abandon the direction — fixed
-  upfront; [S1] per rule (→ §2.A1)>
+  upfront; one S per rule (→ §2.A1)>
 - **Registered fork:** <if a precondition decides which of two questions the
   run answers, register the fork BEFORE the run: condition + question per
-  branch, [W1] per fork (→ §2.A10, §2.A1); "n/a" if there is only one outcome>
+  branch, one W per fork (→ §2.A10, §2.A1); "n/a" if there is only one outcome>
 - **Type:** <exploratory (generates hypotheses, none of it reported as a
   test) | confirmatory (tests a hypothesis fixed before the run)>
 - **Timebox:** <hard budget, e.g. 4h — then log and ask>
@@ -103,7 +103,7 @@ instead).*
   out in fact: what comes back + which function parses it>
 - **Gate labels (expected) †:** <which labels the gate accepts — the declared
   set for the mechanical check against code-extracted labels>
-- **Null condition / anchors (in the same run):** <[N1] — what runs along in THIS
+- **Null condition / anchors (in the same run):** <one N per anchor — what runs along in THIS
   run and must show null — anchors of known rate, placebo, swap; not "was
   validated earlier". Per anchor its expected outcome WITH the derivation
   in half a sentence (→ §2.C9)>
