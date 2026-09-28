@@ -351,8 +351,13 @@ def check_text(text: str, *, measurement: bool = False,
                ) -> tuple[list[str], list[str]]:
     """Return (missing_must, missing_should) field labels for one protocol."""
     low = text.lower()
-    v016 = [label for label, pat in MUST_V016 if not re.search(pat, low)] \
-        if _std(standard) >= (0, 16) else []
+    # Protocol id (Standard 0.16): the old regex check (`protocol id` found
+    # anywhere in the text) was satisfiable by prose like "Protocol id will
+    # be added later". The structural test — protocol_id_of() finding a
+    # value in field syntax — is what the binding actually depends on.
+    v016 = []
+    if _std(standard) >= (0, 16) and protocol_id_of(text) is None:
+        v016 = [label for label, _ in MUST_V016]
     if measurement:
         missing_must = [label for label, pat in MUST_MEASUREMENT
                         if not re.search(pat, low)]

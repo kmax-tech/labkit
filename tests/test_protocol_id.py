@@ -67,6 +67,22 @@ class TestFieldIsDueFrom016(unittest.TestCase):
             _, out = _check([p])
         self.assertIn("MISSING (must): Protocol id", out)
 
+    def test_prose_mentioning_protocol_id_does_not_satisfy_the_field(self):
+        """'Protocol id will be added later' must not pass the must-check.
+
+        Before the fix, the regex searched for 'protocol id' anywhere in the
+        text; now the structural parser (protocol_id_of) must find a value.
+        """
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "PROTOCOL-x.md"
+            text = PILOT.format(standard="0.16", id_line="")
+            # inject prose that mentions "protocol id" without being the field
+            text = text.replace("does it hold?",
+                                "does it hold? Protocol id will be added later")
+            p.write_text(text, encoding="utf-8")
+            _, out = _check([p])
+        self.assertIn("MISSING (must): Protocol id", out)
+
     def test_older_standards_are_left_alone(self):
         with tempfile.TemporaryDirectory() as d:
             p = _protocol(d, pid=None, standard="0.15")
