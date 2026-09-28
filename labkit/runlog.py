@@ -30,8 +30,10 @@ a leak raises before the run starts, rather than inflating a score nobody can
 explain later. Recording the files is what makes "which data was that?"
 answerable six weeks on; the split keys are what make it answerable by a tool.
 
-A crashed run leaves its dir with config.json but no metrics.json — visible,
-not silent. The run-index row is written on clean exit only.
+An incomplete run leaves its dir with config.json but without the required
+completion markers — visible, not silent. The run-index row is written on
+clean exit only. States: completed · running · unknown · crashed ·
+unfinalized · corrupt.
 """
 from __future__ import annotations
 
@@ -748,7 +750,7 @@ is_alive = _is_alive
 
 
 def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
-    """One of: completed · running · crashed · unfinalized · corrupt.
+    """One of: completed · running · unknown · crashed · unfinalized · corrupt.
 
     Two completion markers, because runs written before this contract
     cannot be changed. `schema_version` decides which one applies, and it
@@ -763,23 +765,38 @@ def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
     over results that were deleted or never landed. Hence `corrupt` —
     completion without metrics — which is a failure like `unfinalized`,
     not a finish.
+
+    `alive is None` means the liveness check was undecidable (no `ps`, no
+    script name). That is `unknown`, not `crashed` — claiming a process is
+    dead when the evidence says "can't tell" is a false negative that hides
+    a running run. `endpoint_lease` already treats None as conservatively
+    alive; `run_state` now uses the same contract.
     """
     has_metrics = (run_dir / "metrics.json").is_file()
     if cfg.get("schema_version", 0) < 2:
-        return "completed" if has_metrics else (
-            "running" if alive else "crashed")
+        if has_metrics:
+            return "completed"
+        if alive is True:
+            return "running"
+        if alive is None:
+            return "unknown"
+        return "crashed"
     has_completion = (run_dir / "completion.json").is_file()
     if has_metrics and has_completion:
         return "completed"
-    if alive:
+    if alive is True:
         return "running"
+    if alive is None:
+        return "unknown"
     if has_completion:
         return "corrupt"
     return "unfinalized" if has_metrics else "crashed"
 
 
 #: States that mean "this run is not a clean finish" — `--wait` exits 2 on
-#: any of them, `reindex` rebuilds none of them.
+#: any of them, `reindex` rebuilds none of them. `unknown` is NOT in this
+#: list: it means "can't tell", and treating it as failed would hide a run
+#: that is still going.
 FAILED_STATES = ("crashed", "unfinalized", "corrupt")
 
 
@@ -1081,10 +1098,10 @@ def main(argv: list[str]) -> int:
     import argparse
     ap = argparse.ArgumentParser(
         prog="runlog",
-        description="List open runs (dirs with a config.json but no "
-                    "metrics.json) in an experiment area: run_id, state "
-                    "(running/crashed/unknown via the recorded pid), script, "
-                    "and the frozen config. 'Nachsehen statt nachfragen' — "
+        description="List open runs (not yet completed) in an experiment "
+                    "area: run_id, state (running/unknown/crashed/unfinalized"
+                    "/corrupt), script, and the frozen config. "
+                    "'Nachsehen statt nachfragen' — "
                     "check this before starting a run in a shared repo. "
                     "`--wait` blocks until the area is idle (exit 0), a run "
                     "crashed (exit 2) or --max-seconds passed (exit 3); "

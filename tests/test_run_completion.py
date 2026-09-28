@@ -7,8 +7,10 @@ and the end-of-run git state, could not be rebuilt from the directory. Since
 2026-09-26 a v2 run is complete only with BOTH metrics.json and
 completion.json, and every change to runs.tsv takes one lock.
 
-The states under test: completed · running · crashed · unfinalized ·
-corrupt. The last three are failures; `--wait` exits 2 on each.
+The states under test: completed · running · unknown · crashed ·
+unfinalized · corrupt. crashed/unfinalized/corrupt are failures; `--wait`
+exits 2 on each. `unknown` is not a failure — it means liveness is
+undecidable, and treating it as failed would hide a running run.
 """
 
 import json
@@ -53,7 +55,7 @@ def _run_dir(area: Path, name: str, *, schema: int | None = 2,
     return d
 
 
-def _state(d: Path, alive=False) -> str:
+def _state(d: Path, alive: bool | None = False) -> str:
     cfg = json.loads((d / "config.json").read_text(encoding="utf-8"))
     return runlog.run_state(d, cfg, alive)
 
@@ -81,6 +83,29 @@ class TestStates(unittest.TestCase):
             d = _run_dir(_area(t), "r1", metrics=False, completion=False)
             self.assertEqual(_state(d, alive=False), "crashed")
             self.assertEqual(_state(d, alive=True), "running")
+
+    def test_undecidable_liveness_is_unknown_not_crashed(self):
+        """alive=None means ps could not decide. Claiming crashed hides a
+        running run; unknown is the honest state."""
+        with tempfile.TemporaryDirectory() as t:
+            d = _run_dir(_area(t), "r1", metrics=False, completion=False)
+            self.assertEqual(_state(d, alive=None), "unknown")
+
+    def test_undecidable_liveness_v2_with_metrics_is_unknown(self):
+        """Same for a v2 run that has metrics but no completion."""
+        with tempfile.TemporaryDirectory() as t:
+            d = _run_dir(_area(t), "r1", completion=False)
+            self.assertEqual(_state(d, alive=None), "unknown")
+
+    def test_undecidable_liveness_legacy_is_unknown(self):
+        """Legacy runs also get unknown when liveness is undecidable."""
+        with tempfile.TemporaryDirectory() as t:
+            d = _run_dir(_area(t), "r1", schema=None, metrics=False,
+                         completion=False)
+            self.assertEqual(_state(d, alive=None), "unknown")
+
+    def test_unknown_is_not_a_failed_state(self):
+        self.assertNotIn("unknown", runlog.FAILED_STATES)
 
     def test_a_live_process_is_running_even_half_finalized(self):
         with tempfile.TemporaryDirectory() as t:
