@@ -197,6 +197,29 @@ class TestExplicitMetrics(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertIn("predates run bindings", out)
 
+    def test_incomplete_v2_run_is_rejected_even_when_named_explicitly(self):
+        """A v2 run with metrics.json but no completion.json must fail.
+
+        Before the fix, the explicit --metrics path skipped the state check,
+        so naming the file was a loophole around the completion gate.
+        """
+        d = _run(self.area, "r1", pid=A_ID, completion=False,
+                 metrics={"k1_pass": True, "k2_pass": True, "s1_hit": 0})
+        code, out = _check([self.a, "--metrics", d / "metrics.json"])
+        self.assertEqual(code, 2, out)
+        self.assertIn("not completed", out)
+
+    def test_legacy_incomplete_run_is_still_allowed(self):
+        """Legacy runs (schema < 2) predate completion markers.
+
+        metrics.json IS their completion evidence, so the explicit path must
+        still accept them — the new state gate applies only to v2.
+        """
+        d = _run(self.area, "r1", pid=None, schema=None, completion=False,
+                 metrics={"k1_pass": True, "k2_pass": True, "s1_hit": 0})
+        code, out = _check([self.a, "--metrics", d / "metrics.json"])
+        self.assertEqual(code, 0, out)
+
 
 class TestBelow016IsUnchanged(unittest.TestCase):
     """No retrofit: a protocol without an id keeps the step-2 behaviour."""

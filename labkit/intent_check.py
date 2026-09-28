@@ -256,6 +256,17 @@ def main(argv: list[str]) -> int:
         # belonging — where the run records a binding, that proof now
         # exists and is checked (2026-09-26).
         facts = run_facts(metrics_arg.parent)
+        # A v2 run that did not complete has numbers on disk and no finish —
+        # "nothing may report it" (protocol-run-binding.md). The automatic
+        # path already enforces this; the explicit path must do the same,
+        # otherwise naming the file is a loophole around completion. Legacy
+        # runs (schema < 2) predate completion markers, so they keep the old
+        # behaviour (metrics.json IS their completion evidence).
+        if facts and facts["schema"] >= 2 and facts["state"] != "completed":
+            print(f"intent-check: {metrics_arg.parent.name} is not completed "
+                  f"({facts['state']}) — an incomplete run's numbers may not "
+                  f"be reported, even when named explicitly.")
+            return 2
         if facts and facts["schema"] >= 2 and facts["protocol_id"]:
             if pid and facts["protocol_id"] != pid:
                 print(f"intent-check: {metrics_arg} belongs to protocol "
