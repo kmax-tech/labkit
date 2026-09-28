@@ -42,8 +42,9 @@ rewritten:
 ```
 
 - `id` is the binding. `path` is relative to the run's `base_dir` (the area),
-  serves lookup and diagnosis only, and may go stale; it is refreshed on the
-  next successful lookup. There is no alias register.
+  serves lookup and diagnosis only, and may go stale (protocol renamed or
+  moved). It is **not** refreshed — config.json is write-once. There is no
+  alias register.
 - The script names its protocol: `runlog.run(..., protocol=PROTOCOL)`. The
   path must lie inside `base_dir` and be one of the `PROTOCOL-*.md` found
   there.
@@ -187,14 +188,16 @@ with a warning that says so.
 
 ## Index derivation
 
-The run index (`runs.tsv`) carries `protocol_id` as a column, so a tool
-searching by protocol does not open every run directory. It stays a derived
-view: the run directory is authoritative, and where the index holds
-something the run directory does not, that is a gap to close, not a source
-to trust.
+The run index (`runs.tsv`) carries `protocol_id` as a column. Currently,
+tools that search by protocol (`intent-check`, `bound_runs`) open every
+run directory rather than reading the index; the column exists for future
+use and for human filtering. The index stays a derived view: the run
+directory is authoritative, and where the index holds something the run
+directory does not, that is a gap to close, not a source to trust.
 
-The documented runs in a protocol's `## Runs` section are checked against the
-runs bound to it — never read as a source.
+The documented runs in a protocol's `## Runs` section are **not yet
+checked** against the runs bound to it; `protocol-check` recognises the
+section and counts its lines, but does not verify the run ids.
 
 ## State
 
