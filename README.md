@@ -23,7 +23,7 @@ pip install ~/projects/labkit      # in repos: pinned via requirements.txt/.lock
 from labkit import runlog, llm, batch
 ```
 
-Seven **console commands** come with the installation (all answer `--help`):
+Eight **console commands** come with the installation (all answer `--help`):
 
 ```bash
 protocol-check <PROTOCOL-*.md>...   # mandatory-field check (must/should contract)
@@ -31,7 +31,7 @@ runlog [<area>]                     # open runs: run_id, state, script
 runlog migrate-index <area>         # add missing run-index columns, rows kept
 runlog reindex <area>               # append rows for completed runs it missed
 intent-check <PROTOCOL-*.md>        # registered promise ids vs. metrics keys
-code-check <AREA>                   # mechanical preflight (schema, gate labels)
+code-check <AREA>                   # intent-id check + audit bundle for the agent
 scope-sha [--area DIR]              # audit stamp over the code that determines a number
 protocol-fill <PROTOCOL> FIELD VAL  # fill one stamped placeholder field by label
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
@@ -92,9 +92,9 @@ the code, run, hold the run against the promises:
 1. Write `PROTOCOL-<task>.md` from the packaged template; `protocol-check`
    enforces its fields from the first draft on (MUST for pilots, everything
    once `Frozen before run: yes`).
-2. Before freezing, `code-check <area>` runs the mechanical preflight —
-   registered intent ids vs. the code, schema facts, gate labels — and
-   `--bundle` packs the sources for the audit agent's judgement pass.
+2. Before freezing, `code-check <area>` checks registered intent ids
+   against the code; `--bundle` additionally extracts schema facts and
+   gate labels into a bundle for the audit agent's judgement pass.
 3. The run goes through `runlog` (frozen config, env fingerprint, script
    snapshot, split-leakage check); `runlog <area>` monitors it, `runlog
    start -- <cmd>` detaches long runs.

@@ -8,23 +8,24 @@ analysis reads and no producer writes, a protocol still full of placeholders
 are all decidable from the source. Deciding them here leaves the model the
 one question worth its cost: does the code MEAN what the registration says.
 
-Four checks, all decidable, none of them a judgement:
+Currently one automated check; the rest are extracted as facts for the
+code-check agent (via ``--bundle``), not verified by this command:
 
-  1. **intent ids against the code** (§2.A1a). Every registered [K1]/[S1]/
-     [W1]/[N1] must appear as a key literal in the area's scripts. Report
-     time has `intent-check` for the metrics; before the run the same promise
-     goes unchecked exactly when repairing it is still cheap.
+  1. **intent ids against the code** (§2.A1a, AUTOMATED). Every registered
+     [K1]/[S1]/[W1]/[N1] must appear as a key literal in the area's scripts.
+     Report time has `intent-check` for the metrics; before the run the same
+     promise goes unchecked exactly when repairing it is still cheap.
+
+The following are extracted into the audit bundle but NOT checked by this
+command — the code-check agent judges them:
+
   2. **schema contract** (§2.A12, preflight scope). Every field the analysis
      READS must be written somewhere — in the materialized data if it exists,
-     otherwise as a write site in the producer's source. A field that is read
-     and never written is a KeyError at evaluation time, after the tokens
-     were spent.
-  3. **gate labels** (§2, "Was der Prompt verlangt, prüft das Gate — aus
-     derselben Konstante"). String comparisons in evaluation code — both
-     resolved literals and named constants — extracted as facts for the
-     code-check agent, which judges them against the protocol's prompt.
+     otherwise as a write site in the producer's source.
+  3. **gate labels** (§2). String comparisons in evaluation code — both
+     resolved literals and named constants — extracted as facts for the agent.
   4. **protocol placeholders**. Delegated to `protocol-check`, which owns the
-     template contract; code-check only reports that it ran and what it said.
+     template contract.
 
 Reads and writes are told apart with `ast`, not with a regex: `row["x"]` in
 a Load context is a read, in a Store context it is a write, and no pattern
@@ -624,9 +625,14 @@ def main(argv: list[str]) -> int:
 
     blockers = sum(1 for f in findings if f.startswith("BLOCKER"))
     warnings = sum(1 for f in findings if f.startswith("WARNING"))
-    print(f"mechanics: {blockers} blocker(s), {warnings} warning(s) "
-          f"— judgement (does the code MEAN the registration?) is the "
-          f"agent's half")
+    parts = [f"intent-ids: {blockers} blocker(s), {warnings} warning(s)"]
+    if bundle_to is not None:
+        parts.append("schema + gate labels + placeholders extracted into "
+                     "the bundle for the code-check agent")
+    else:
+        parts.append("schema, gate labels, placeholders: not checked "
+                     "(need --bundle for the code-check agent)")
+    print(" — ".join(parts))
     return 1 if findings else 0
 
 

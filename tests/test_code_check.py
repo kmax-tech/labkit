@@ -309,7 +309,7 @@ class TestProtocolChoice(unittest.TestCase):
         self.assertIn("--protocol", out)
         self.assertIn("PROTOCOL-s2-later.md", out)
         self.assertIn("PROTOCOL-fixture.md", out)
-        self.assertNotIn("mechanics:", out)
+        self.assertNotIn("intent-ids:", out)
 
     def test_named_protocol_is_the_one_checked(self):
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
@@ -323,7 +323,7 @@ class TestProtocolChoice(unittest.TestCase):
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
             rc, out = self._main([a.path])
         self.assertEqual(rc, 0, out)
-        self.assertIn("mechanics:", out)
+        self.assertIn("intent-ids:", out)
 
     def test_flags_may_come_in_either_order(self):
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
