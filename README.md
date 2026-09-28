@@ -1,11 +1,12 @@
 # labkit — shared lab helpers
 
-Ten modules every experiment repo imports, in **one** place: run index
+Twelve modules every experiment repo imports, in **one** place: run index
 (`runlog`), LLM backend (`llm`), endpoint lease (`endpoint_lease`),
 resumable output file (`batch`), intent-id check (`intent_check`),
 protocol checker (`protocol_check`), protocol filler (`protocol_fill`),
-mechanical preflight (`code_check`), audit stamp (`scope_sha`) and
-notes-kind gate (`notes_check`).
+mechanical preflight (`code_check`), audit stamp (`scope_sha`),
+notes-kind gate (`notes_check`), and the two orchestrating gates
+`preflight` (before freezing) and `finalize` (after the run).
 
 They used to live as copies in every repo — up to three versions per file
 (`experiments/`, `resources/templates/`, `~/.claude/resources/`). On
@@ -23,7 +24,7 @@ pip install ~/projects/labkit      # in repos: pinned via requirements.txt/.lock
 from labkit import runlog, llm, batch
 ```
 
-Eight **console commands** come with the installation (all answer `--help`):
+Ten **console commands** come with the installation (all answer `--help`):
 
 ```bash
 protocol-check <PROTOCOL-*.md>...   # mandatory-field check (must/should contract)
@@ -35,6 +36,8 @@ code-check <AREA>                   # intent-id check + audit bundle for the age
 scope-sha [--area DIR]              # audit stamp over the code that determines a number
 protocol-fill <PROTOCOL> FIELD VAL  # fill one stamped placeholder field by label
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
+preflight <AREA>                    # pre-freeze gate: protocol + code + scope + dirty check
+finalize <AREA>                     # post-run gate: completion + intent-check + open fields
 ```
 
 ## Terms
@@ -87,21 +90,26 @@ the template; `protocol-check --guide` prints the path); thesis repos get
 a copy at `templates/PROTOCOL-FIELD-GUIDE.md`.
 
 The commands are stations of **one lifecycle** — write the protocol, audit
-the code, run, hold the run against the promises:
+the code, run, hold the run against the promises. Two orchestrating
+commands sequence the individual checks at the two decision points:
 
 1. Write `PROTOCOL-<task>.md` from the packaged template; `protocol-check`
    enforces its fields from the first draft on (MUST for pilots, everything
    once `Frozen before run: yes`).
-2. Before freezing, `code-check <area>` checks registered intent ids
-   against the code; `--bundle` additionally extracts schema facts and
-   gate labels into a bundle for the audit agent's judgement pass.
+2. Before freezing, **`preflight <area>`** runs the pre-freeze gate:
+   `protocol-check` (mandatory fields) → `code-check` (intent ids against
+   the code) → `scope-sha` (audit stamp) → dirty-tree warning. The
+   individual commands remain available for targeted use; `code-check
+   --bundle` additionally extracts schema facts and gate labels into a
+   bundle for the audit agent's judgement pass.
 3. The run goes through `runlog` (frozen config, env fingerprint, script
    snapshot, split-leakage check); `runlog <area>` monitors it, `runlog
    start -- <cmd>` detaches long runs.
-4. After the run, `intent-check` holds the protocol's registered promises
-   against the run's metrics; `scope-sha` stamps which code the audits saw;
-   `protocol-fill` writes results back into the protocol without touching
-   the rest.
+4. After the run, **`finalize <area>`** runs the post-run gate: completion
+   check (newest bound run is `completed`) → `intent-check` (promises vs.
+   metrics) → open-fields report (placeholders still to fill). The
+   individual commands remain available; `protocol-fill` writes results
+   back into the protocol without touching the rest.
 
 `notes-check` sits beside the lifecycle: it gates the measurement notes the
 results flow into.
