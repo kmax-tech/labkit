@@ -17,6 +17,8 @@ read-only gate.
 """
 from __future__ import annotations
 
+import contextlib
+import io
 import sys
 from pathlib import Path
 
@@ -84,11 +86,14 @@ def run(area: Path, protocol: Path | None = None) -> int:
         print("  no intent ids registered — nothing to check")
     else:
         ic_args = [str(protocol)]
-        rc = intent_check_main(ic_args)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = intent_check_main(ic_args)
+        for line in buf.getvalue().splitlines():
+            print(f"  {line}")
         if rc == 0:
             pass
         elif rc == 2:
-            print("  intent-check could not run (see above)")
             blockers += 1
         else:
             blockers += 1

@@ -134,5 +134,48 @@ class TestPreflight(unittest.TestCase):
         self.assertEqual(code, 2)
 
 
+MEASUREMENT_PROTOCOL = """\
+# Measurement protocol: count things
+
+- **Standard:** 0.16
+- **Protocol id:** p-0123456789abcdef
+- **Question:** how many X are there?
+- **Data / scope:** all of them
+- **Prior computation:** none
+- **Method:** count
+- **Exclusions / filters:** none
+- **Result:** <pending>
+- **Terms of art:** none
+- **Type:** measurement
+
+```text
+prompt
+```
+"""
+
+
+class TestMeasurementProtocol(unittest.TestCase):
+
+    def test_measurement_uses_measurement_must_fields(self):
+        """A measurement protocol must not be checked against experiment
+        MUST fields (Success criterion, Stop rule, etc.)."""
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d, protocol_text=MEASUREMENT_PROTOCOL,
+                            scripts=False, git=False)
+            code, out = _run_preflight(area)
+        self.assertNotIn("MISSING (must): Success criterion", out)
+        self.assertNotIn("MISSING (must): Stop rule", out)
+
+
+class TestNoScriptsDirectory(unittest.TestCase):
+
+    def test_area_without_scripts_skips_scope_sha(self):
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d, scripts=False)
+            code, out = _run_preflight(area)
+        self.assertIn("no scripts matching", out)
+        self.assertIn("skipped", out)
+
+
 if __name__ == "__main__":
     unittest.main()

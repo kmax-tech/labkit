@@ -9,7 +9,7 @@ exit code that reflects the worst finding.
 Exit codes: 0 clean, 1 findings (at least one blocker), 2 usage error.
 
 What it runs, in order:
-  1. protocol-check   mandatory fields, placeholders, budget
+  1. protocol-check   mandatory fields, placeholders
   2. code-check       intent ids against the code
   3. scope-sha        audit stamp over the input scope
   4. dirty check      uncommitted changes (warning, not a blocker)
@@ -27,6 +27,7 @@ from labkit.code_check import check_intent_ids, find_protocols, find_repo
 from labkit.protocol_check import (
     DEFAULT_STANDARD,
     STANDARD_VERSION,
+    TYPE_MEASUREMENT,
     check_protocol_id,
     check_text,
     placeholder_fields,
@@ -78,7 +79,9 @@ def run(area: Path, protocol: Path | None = None) -> int:
 
     # -- 1. protocol-check ------------------------------------------------
     print(f"── protocol-check: {protocol.name} ──")
-    missing_must, missing_should = check_text(text, standard=standard)
+    is_measurement = bool(TYPE_MEASUREMENT.search(text))
+    missing_must, missing_should = check_text(
+        text, measurement=is_measurement, standard=standard)
     holes = placeholder_fields(text)
     must_holes = [(n, l) for n, l in holes if severity_of(l) == "must"]
     id_findings = check_protocol_id(protocol, text, standard)

@@ -1,12 +1,13 @@
 # labkit — shared lab helpers
 
-Twelve modules every experiment repo imports, in **one** place: run index
+Ten modules every experiment repo imports, in **one** place: run index
 (`runlog`), LLM backend (`llm`), endpoint lease (`endpoint_lease`),
 resumable output file (`batch`), intent-id check (`intent_check`),
 protocol checker (`protocol_check`), protocol filler (`protocol_fill`),
-mechanical preflight (`code_check`), audit stamp (`scope_sha`),
-notes-kind gate (`notes_check`), and the two orchestrating gates
-`preflight` (before freezing) and `finalize` (after the run).
+mechanical preflight (`code_check`), audit stamp (`scope_sha`) and
+notes-kind gate (`notes_check`). Two orchestrating commands —
+`preflight` (before freezing) and `finalize` (after the run) — sequence
+the checks at the two decision points.
 
 They used to live as copies in every repo — up to three versions per file
 (`experiments/`, `resources/templates/`, `~/.claude/resources/`). On
