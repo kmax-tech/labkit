@@ -289,11 +289,41 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _is_meta(row: dict) -> bool:
+    """True for the ``_meta`` header that write_dataset() puts first."""
+    return isinstance(row, dict) and "_meta" in row
+
+
+def _data_rows(path: Path) -> int:
+    """Count non-empty lines, excluding the ``_meta`` header in .jsonl files.
+
+    Uses a context manager (the old bare ``p.open()`` leaked file handles in
+    tests).
+    """
+    count = 0
+    with path.open(encoding="utf-8") as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            if path.suffix == ".jsonl":
+                try:
+                    if _is_meta(json.loads(line)):
+                        continue
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            count += 1
+    return count
+
+
 def _ids(path: Path) -> set | None:
     """Row ids of a .jsonl file, or None if they can't be read.
 
     None means "not checkable", never "no overlap" — the caller records the
-    reason so a skipped leakage check stays visible.
+    reason so a skipped leakage check stays visible.  The ``_meta`` header
+    written by write_dataset() is not a data row and is skipped — without it,
+    every standard-generated dataset would bail out on a missing "id" key and
+    the leakage check would be silently skipped for exactly the files it is
+    meant to protect.
     """
     if path.suffix != ".jsonl":
         return None
@@ -302,6 +332,8 @@ def _ids(path: Path) -> set | None:
         if not line.strip():
             continue
         row = json.loads(line)
+        if _is_meta(row):
+            continue
         if "id" not in row:
             return None
         ids.add(row["id"])
@@ -316,7 +348,7 @@ def _describe(paths: dict) -> dict:
         if not p.exists():
             raise FileNotFoundError(f"data[{key!r}] does not exist: {p}")
         out[key] = {"path": str(p), "sha256": _sha256(p)[:16],
-                    "rows": sum(1 for line in p.open(encoding="utf-8") if line.strip())}
+                    "rows": _data_rows(p)}
     known = {k: _ids(Path(p)) for k, p in paths.items() if k in SPLIT_KEYS}
     checkable = {k: v for k, v in known.items() if v is not None}
     if len(checkable) < 2:
@@ -632,7 +664,8 @@ class Run:
             rows = []
             for p in self._outputs:
                 if p.exists():
-                    text_lines = sum(1 for _ in p.open("rb"))
+                    with p.open("rb") as fh:
+                        text_lines = sum(1 for _ in fh)
                     rows.append({"path": str(p), "sha256": _sha256(p)[:16],
                                  "lines": text_lines})
                 else:
