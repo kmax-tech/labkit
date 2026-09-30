@@ -70,6 +70,40 @@ def _run_preflight(area, protocol=None):
     return code, buf.getvalue()
 
 
+class TestAreaTests(unittest.TestCase):
+    """Station 5: the area's tests run; failing = blocker, missing = warning."""
+
+    def _with_test(self, d, body) -> str:
+        """The file name carries the area's slug — that is how station 5 finds it."""
+        (Path(d) / "tests").mkdir()
+        name = f"test_{Path(d).name}.py"
+        (Path(d) / "tests" / name).write_text(body, encoding="utf-8")
+        return name
+
+    def test_missing_test_file_is_a_warning(self):
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d)
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 0)
+            self.assertIn("no tests/test_*", out)
+
+    def test_failing_area_test_is_a_blocker(self):
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d)
+            name = self._with_test(d, "def test_resolution():\n    assert False, 'TODO'\n")
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 1, out)
+            self.assertIn(f"BLOCKER: {name} failed", out)
+
+    def test_passing_area_test_is_ok(self):
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d)
+            name = self._with_test(d, "def test_resolution():\n    assert True\n")
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 0, out)
+            self.assertIn(f"ok — {name}", out)
+
+
 class TestPreflight(unittest.TestCase):
 
     def test_clean_area_exits_zero(self):

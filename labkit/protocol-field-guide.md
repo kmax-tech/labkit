@@ -224,7 +224,10 @@ run` go to "yes".
 
 - **Resolution check:** ZERO calls, real `evaluate()` on synthetic extremes —
   perfect effect → criterion fires? null effect → stays silent? Both numbers,
-  with the run's real draw structure.
+  with the run's real draw structure. Its permanent form is the stamped
+  `tests/test_<NN>_<name>.py` (two fixtures plus the parser cases from the
+  probe); `preflight` runs it, so a later change to `evaluate()` that mutes
+  the criterion cannot pass the freeze gate.
 - **Render check:** ZERO calls, `--show N` — per gold class ONE rendered
   prompt, read verbatim: stacked negation, fields inserted empty, sentences
   the question form cannot decide?

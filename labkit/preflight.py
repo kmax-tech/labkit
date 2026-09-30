@@ -13,12 +13,17 @@ What it runs, in order:
   2. code-check       intent ids against the code
   3. scope-sha        audit stamp over the input scope
   4. dirty check      uncommitted changes (warning, not a blocker)
+  5. area tests       tests/test_*<area>*.py via pytest — the resolution
+                      check and the parser cases as a permanent test
+                      (§2.A13); a failing test is a blocker, a missing
+                      file a warning
 
 What it does NOT do: commit, freeze, or change any file. It is a
 read-only gate.
 """
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -147,6 +152,31 @@ def run(area: Path, protocol: Path | None = None) -> int:
         warnings += 1
     else:
         print("  clean")
+
+    # -- 5. area tests -----------------------------------------------------
+    print("── tests ──")
+    slug = re.sub(r"^\d+-", "", area.name).replace("-", "_")
+    tests_dir = repo / "tests"
+    tests = sorted(tests_dir.glob(f"test_*{slug}*.py")) if tests_dir.is_dir() else []
+    if not tests:
+        print(f"  WARNING: no tests/test_*{slug}*.py — the resolution check has "
+              f"no permanent form (§2.A13)")
+        warnings += 1
+    else:
+        r = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+                            *map(str, tests)], cwd=repo, capture_output=True, text=True)
+        if r.returncode == 0:
+            print(f"  ok — {', '.join(t.name for t in tests)}")
+        elif "No module named pytest" in (r.stderr or ""):
+            print("  WARNING: pytest is not installed in this interpreter — tests not run")
+            warnings += 1
+        else:
+            tail = [l for l in (r.stdout or "").splitlines() if l.strip()][-6:]
+            for l in tail:
+                print(f"  {l}")
+            print(f"  BLOCKER: {', '.join(t.name for t in tests)} failed — an "
+                  f"unfilled or broken resolution check must not pass the freeze")
+            blockers += 1
 
     # -- summary -----------------------------------------------------------
     print()
