@@ -549,7 +549,7 @@ def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
 def find_protocols(area: Path) -> list[Path]:
     """Every protocol in the area, lexicographic — a list, not a first hit.
 
-    The series rule (§4) gives every follow-up its own
+    The series rule (§2.F, Regel 2) gives every follow-up its own
     `PROTOCOL-s<N>-<slug>.md`, so an area legitimately holds many. Returning
     `sorted(...)[0]` picked one of them wordlessly, and lexicographic order
     is not temporal order: in an area running s1..s13 the pick was always

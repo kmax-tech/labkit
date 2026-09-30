@@ -2,7 +2,7 @@
 """Check notes/messung/ notes for the declared kind in the meta line.
 
 Every note under notes/messung/ carries a *kind* in its italic meta line,
-right after the date (Arbeitsstandard §4, "Note-Sorten & Bindungstest"):
+right after the purpose (Arbeitsstandard §4, "Note-Sorten & Bindungstest"):
 
     Instrument — Entwurf        draft of a measurement instrument, no code yet
     Instrument — implementiert  instrument with carrying code (MUST name it)
@@ -130,7 +130,7 @@ def check_file(f: Path) -> tuple[list[str], list[str]]:
     meta = meta_paragraph(text)
     if meta is None:
         must.append(f"{f}:1: MISSING (must): no italic meta line after the "
-                    f"title (*<Datum> · <Sorte> · <Zweck> …*)")
+                    f"title (*<Zweck> · <Sorte> · … · <Datum>*)")
         return must, warn
     n, para = meta
     kind = KIND.search(para)

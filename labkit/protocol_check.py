@@ -216,7 +216,7 @@ EMPTY_RAW = re.compile(
 # A follow-up registration appended to the SAME protocol — the pattern that
 # grew one file to 649 lines out of three experiments ("Lauf B — ...
 # (deklariert vor dem Lauf)", "Stufe 2 ..."): each such heading is a second
-# question in a one-question file. The series rule (Arbeitsstandard §4)
+# question in a one-question file. The series rule (Arbeitsstandard §2.F)
 # gives every follow-up its own PROTOCOL-s<N>-<slug>.md. Warning only.
 SERIES_HEAD = re.compile(
     r"(?im)^##.*\((deklariert|registriert) vor dem( jeweils \w+)? "
@@ -655,7 +655,7 @@ def main(argv: list[str]) -> int:
             print(f"{f}:{n}: follow-up registration in the same protocol "
                   f"({l[:60]!r}) — one question per protocol: a declared "
                   f"follow-up gets its own PROTOCOL-s<N>-<slug>.md "
-                  f"(series rule, Arbeitsstandard §4).")
+                  f"(series rule, Arbeitsstandard §2.F).")
         for n, l in history:
             print(f"{f}:{n}: change history in the text ({l[:60]!r}) — docs "
                   f"carry the current state, the why of the change goes in the "
