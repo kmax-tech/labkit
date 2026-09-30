@@ -25,7 +25,8 @@ pip install ~/projects/labkit      # in repos: pinned via requirements.txt/.lock
 from labkit import runlog, llm, batch
 ```
 
-Ten **console commands** come with the installation (all answer `--help`):
+Nine **console commands** come with the installation, `runlog` with three
+sub-commands (all answer `--help`):
 
 ```bash
 protocol-check <PROTOCOL-*.md>...   # mandatory-field check (must/should contract)
@@ -47,20 +48,20 @@ One word, one thing. Everything below occurs in more than one module, so it
 is coined here and explained nowhere else; the per-field explanations live in
 `protocol-field-guide.md`.
 
-| Term                | Means                                                                 |
-|---------------------|-----------------------------------------------------------------------|
-| **area**            | the directory grouping protocols and their runs                       |
-| **protocol**        | the specification of one experiment (`PROTOCOL-*.md`)                 |
-| **protocol id**     | a protocol's stable, path-independent identity (`p-` + 16 hex)        |
-| **run**             | one execution of a protocol                                           |
-| **run metadata**    | a run's own record (`config.json` + `completion.json`)                |
-| **run index**       | the searchable overview of runs (`runs.tsv`)                          |
-| **metrics**         | what a run measured and reported (`metrics.json`)                     |
-| **documented runs** | the runs listed by hand in a protocol's `## Runs` section             |
-| **intent id**       | the stable id of one checked promise (`[K1]`, `[S1]`, `[W1]`, `[N1]`) |
+| Term                | Means                                                                                               |
+|---------------------|-----------------------------------------------------------------------------------------------------|
+| **area**            | the directory grouping protocols and their runs                                                     |
+| **protocol**        | the specification of one experiment (`PROTOCOL-*.md`)                                               |
+| **protocol id**     | a protocol's stable, path-independent identity (`p-` + 16 hex)                                      |
+| **run**             | one execution of a protocol                                                                         |
+| **run metadata**    | a run's own record (`config.json` + `completion.json`)                                              |
+| **run index**       | the searchable overview of runs (`runs.tsv`)                                                        |
+| **metrics**         | what a run measured and reported (`metrics.json`)                                                   |
+| **documented runs** | the runs listed by hand in a protocol's `## Runs` section                                           |
+| **intent id**       | the stable id of one checked promise (`[K1]`, `[S1]`, `[W1]`, `[N1]`)                               |
 | **bundle**          | the current protocol + scripts + extracted facts, packed for an audit agent (`code-check --bundle`) |
-| **frozen**          | unchangeable past a declared point (`Frozen before run: yes`)         |
-| **scope hash**      | the hash over the input scope a run's number rests on (`scope_sha`)   |
+| **frozen**          | unchangeable past a declared point (`Frozen before run: yes`)                                       |
+| **scope hash**      | the hash over the input scope a run's number rests on (`scope_sha`)                                 |
 
 **"Ledger" is gone** (2026-09-26). It named three different things — the run
 index, a run's metrics, and the hand-written `## Runs` section — and a word
