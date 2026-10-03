@@ -38,7 +38,11 @@ models.toml:
     [models.gpt-oss-vllm]
     backend = "openai"                # any OpenAI-compatible server: vLLM, sglang
     model = "openai/gpt-oss-20b"      # the SERVED model id (vllm serve <id>)
-    endpoint = "gamma2"               # api_key = "..." if the server requires one
+    endpoint = "gamma2"               # api_key_env = "MY_KEY_VAR" if the server
+                                      # requires a key: the NAME of an environment
+                                      # variable, never the key — the spec lands in
+                                      # every run config. A literal `api_key` is
+                                      # honoured but recorded verbatim there.
     reasoning = true                  # model thinks before answering: the server
                                       # must run --reasoning-parser so the trace
                                       # arrives in its own field; an answer whose
@@ -61,6 +65,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -141,9 +146,10 @@ def resolve(alias: str) -> dict:
     # the same alias would silently mix two models into one run — that is a
     # defect, and the config says so loudly instead of picking one digest.
     if spec["backend"] == "ollama":
+        auth = _auth_headers(spec)
         spec["model_digest"] = _aggregate_digests(
-            {ep: _ollama_digest(ep, spec["model"]) for ep in eps} or
-            {"": _ollama_digest("", spec["model"])})
+            {ep: _ollama_digest(ep, spec["model"], auth) for ep in eps} or
+            {"": _ollama_digest("", spec["model"], auth)})
     _FROZEN[alias] = dict(spec)
     return spec
 
@@ -176,10 +182,36 @@ def _digest_from_tags(tags: dict, model: str) -> str:
     return "unavailable"
 
 
-def _ollama_digest(endpoint: str, model: str) -> str:
+def _auth_headers(spec: dict) -> dict[str, str]:
+    """Authorization header for a served endpoint, or nothing.
+
+    `api_key_env` names the environment variable that holds the key: the
+    spec (and with it every run config) records the NAME, the key itself
+    never leaves the process. A literal `api_key` still works for servers
+    behind a VPN where the key is not a secret — but it is recorded verbatim.
+    A named variable that is not set fails loud: a run must not start
+    unauthenticated and die after the first 401, or worse, fall back to an
+    unauthenticated endpoint nobody chose.
+    """
+    env = spec.get("api_key_env")
+    if env:
+        key = os.environ.get(env)
+        if not key:
+            raise ValueError(
+                f"alias '{spec.get('alias', '?')}': api_key_env = {env!r}, but "
+                f"{env} is not set in the environment")
+        return {"Authorization": f"Bearer {key}"}
+    if spec.get("api_key"):
+        return {"Authorization": f"Bearer {spec['api_key']}"}
+    return {}
+
+
+def _ollama_digest(endpoint: str, model: str,
+                   headers: dict[str, str] | None = None) -> str:
     try:
-        with urllib.request.urlopen(f"{endpoint.rstrip('/')}/api/tags",
-                                    timeout=10) as r:
+        req = urllib.request.Request(f"{endpoint.rstrip('/')}/api/tags",
+                                     headers=headers or {})
+        with urllib.request.urlopen(req, timeout=10) as r:
             return _digest_from_tags(json.loads(r.read().decode("utf-8")), model)
     except Exception:
         return "unavailable"
@@ -422,7 +454,7 @@ def _complete_once(alias: str, prompt: str, *, system: str | None = None,
             req = urllib.request.Request(
                 _pick_endpoint(spec).rstrip("/") + "/api/generate",
                 data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"})
+                headers={"Content-Type": "application/json", **_auth_headers(spec)})
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read())["response"].strip()
 
@@ -451,7 +483,7 @@ def _complete_once(alias: str, prompt: str, *, system: str | None = None,
         req = urllib.request.Request(
             _pick_endpoint(spec).rstrip("/") + "/api/chat",
             data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"})
+            headers={"Content-Type": "application/json", **_auth_headers(spec)})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             body = json.loads(resp.read())
         message = body.get("message") or {}
@@ -489,9 +521,7 @@ def _complete_once(alias: str, prompt: str, *, system: str | None = None,
             payload["temperature"] = temperature
         if stop:
             payload["stop"] = stop
-        headers = {"Content-Type": "application/json"}
-        if spec.get("api_key"):
-            headers["Authorization"] = f"Bearer {spec['api_key']}"
+        headers = {"Content-Type": "application/json", **_auth_headers(spec)}
         req = urllib.request.Request(
             _pick_endpoint(spec).rstrip("/") + "/v1/chat/completions",
             data=json.dumps(payload).encode("utf-8"), headers=headers)

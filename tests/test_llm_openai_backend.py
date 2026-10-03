@@ -6,6 +6,7 @@ backend exists so experiments can point an alias at a vLLM server without
 touching any experiment code.
 """
 import json
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -152,3 +153,31 @@ class TestOpenAIBackend(_Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestApiKeyEnv(_Base):
+    """The key comes from the environment by NAME — the spec records the name.
+
+    A spec is copied into every run config; a literal key there is a secret
+    in git. `api_key_env` keeps the key out of the spec, and a name that is
+    not set fails before the first call rather than after the first 401.
+    """
+
+    def test_env_key_becomes_bearer_header(self):
+        self.SPEC = {**self.SPEC, "api_key_env": "LABKIT_TEST_KEY"}
+        self.llm.resolve = lambda alias: dict(self.SPEC)
+        os.environ["LABKIT_TEST_KEY"] = "sk-from-env"
+        try:
+            self.llm.complete("x", "p")
+        finally:
+            del os.environ["LABKIT_TEST_KEY"]
+        self.assertEqual(self.sent["headers"].get("Authorization"), "Bearer sk-from-env")
+        self.assertNotIn("sk-from-env", json.dumps(self.SPEC))
+
+    def test_unset_env_fails_loud_without_retry(self):
+        self.SPEC = {**self.SPEC, "api_key_env": "LABKIT_TEST_KEY_UNSET"}
+        self.llm.resolve = lambda alias: dict(self.SPEC)
+        os.environ.pop("LABKIT_TEST_KEY_UNSET", None)
+        with self.assertRaises(ValueError):
+            self.llm.complete("x", "p")
+        self.assertEqual(self.sent, {})   # nothing was sent

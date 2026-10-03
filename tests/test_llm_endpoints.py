@@ -70,7 +70,7 @@ class _Base(unittest.TestCase):
         toml_path = Path(self.tmp.name) / "models.toml"
         toml_path.write_text(TOML, encoding="utf-8")
         llm._find_models_toml = lambda: toml_path
-        llm._ollama_digest = lambda ep, model: "d34db33f4242"
+        llm._ollama_digest = lambda ep, model, headers=None: "d34db33f4242"
         llm._FROZEN.clear()
         llm._RR.clear()
         llm.time.sleep = lambda s: None
