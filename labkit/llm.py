@@ -178,7 +178,12 @@ def _digest_from_tags(tags: dict, model: str) -> str:
     want = {model, model if ":" in model else f"{model}:latest"}
     for m in tags.get("models", []):
         if m.get("name") in want or m.get("model") in want:
-            return str(m.get("digest", ""))[:12] or "unavailable"
+            # A proxy (KubeAI's ollama route) prefixes the digest with its
+            # algorithm — "sha256:f8ceb…" — where ollama itself sends bare hex.
+            # Cutting twelve characters off the prefixed form left FIVE hex
+            # digits of pin (seen 2026-10-03 against llm.srv.webis.de).
+            digest = str(m.get("digest", "")).removeprefix("sha256:")
+            return digest[:12] or "unavailable"
     return "unavailable"
 
 

@@ -38,3 +38,12 @@ class TestDigestLookup(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPrefixedDigest(unittest.TestCase):
+    """A proxy may send "sha256:<hex>"; the pin is the hex, not the prefix."""
+
+    def test_algorithm_prefix_is_not_part_of_the_pin(self):
+        from labkit import llm
+        tags = {"models": [{"name": "gemma3-4b", "digest": "sha256:f8ceb1a2b3c4d5e6f7"}]}
+        self.assertEqual(llm._digest_from_tags(tags, "gemma3-4b"), "f8ceb1a2b3c4")
