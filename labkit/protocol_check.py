@@ -133,6 +133,14 @@ MUST_V016 = [
      r"protocol id|protocol_id"),
 ]
 
+# Due from Standard 0.17 on, measurements only: the counted unit (2026-10-05).
+# The one audit question no machine answers — `.DS_Store` counted as a
+# document moved a mean by a whole document while test and --check stayed
+# green. Said once, in words, in the protocol.
+MUST_MEASUREMENT_V017 = [
+    ("Unit (what one counted thing is, and what is not)", r"\bunit\b|einheit"),
+]
+
 # The shape the stamp produces: `p-` + 16 lowercase hex (64 bit). Not derived
 # from name or path, so renaming and moving leave it intact.
 PROTOCOL_ID = re.compile(r"protocol[ _]id[^:\n]*:\**\s*\**\s*(\S+)", re.I)
@@ -192,7 +200,7 @@ DEFAULT_STANDARD = "0.13"
 # pre-0.15 checker flagged the 0.15 template's own stamped preamble as
 # "verbatim template text" all session long). Too old to judge is a hard
 # failure that says so, never a best effort.
-SUPPORTED_STANDARD = "0.16"
+SUPPORTED_STANDARD = "0.17"
 
 
 def _std(standard: str) -> tuple[int, ...]:
@@ -371,6 +379,9 @@ def check_text(text: str, *, measurement: bool = False,
     if measurement:
         missing_must = [label for label, pat in MUST_MEASUREMENT
                         if not re.search(pat, low)]
+        if _std(standard) >= (0, 17):
+            missing_must += [label for label, pat in MUST_MEASUREMENT_V017
+                             if not re.search(pat, low)]
         return missing_must + v016, []
     missing_must = [label for label, pat in MUST if not re.search(pat, low)]
     if _std(standard) >= (0, 15):

@@ -11,6 +11,12 @@ What it runs, in order:
   1. completion     the newest bound run is 'completed'
   2. intent-check   every registered promise has a metrics key (and vice versa)
   3. open fields    protocol fields still holding a placeholder
+  4. provenance     at `Cost: seconds` / the measurement short form: the
+                    run froze its source (`data=` in config.json) and every
+                    source and output file is tracked in git — the two of
+                    the three questions the agent audit kept asking that a
+                    machine can answer (§2.A12, 2026-10-05); the third, the
+                    counted unit, is the protocol's `Unit:` field
 
 What it does NOT do: fill fields, edit the protocol, or commit. It is a
 read-only gate.
@@ -19,6 +25,8 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -29,7 +37,49 @@ from labkit.intent_check import (
     protocol_id_of,
     registered_ids,
 )
+from labkit.protocol_check import TYPE_MEASUREMENT, cost_tier_of
 from labkit.protocol_fill import open_fields
+
+
+def _git_root(start: Path) -> Path | None:
+    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=start,
+                       capture_output=True, text=True)
+    return Path(r.stdout.strip()) if r.returncode == 0 else None
+
+
+def _tracked(repo: Path, path: Path) -> bool:
+    r = subprocess.run(["git", "ls-files", "--error-unmatch", str(path)], cwd=repo,
+                       capture_output=True, text=True)
+    return r.returncode == 0
+
+
+def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]]:
+    """(blockers, warnings) for a run of seconds: source frozen, files tracked."""
+    blockers: list[str] = []
+    warnings: list[str] = []
+    cfg = json.loads((run_dir / "config.json").read_text(encoding="utf-8"))
+    data = cfg.get("data") or {}
+    if not data:
+        blockers.append("source not frozen — the run carries no `data=`; pass "
+                        "data={name: path} to runlog.run so sha and rows are recorded")
+    files = [Path(v["path"]) for v in data.values() if isinstance(v, dict) and v.get("path")]
+    outputs_file = run_dir / "outputs.json"
+    if outputs_file.is_file():
+        files += [Path(o["path"]) for o in json.loads(outputs_file.read_text(encoding="utf-8"))
+                  if o.get("path")]
+    else:
+        warnings.append("no outputs.json — the run registered no output file (run.output)")
+    repo = _git_root(area)
+    if repo is None:
+        warnings.append("not a git repository — cannot tell whether source and output are committed")
+        return blockers, warnings
+    for f in files:
+        if not f.exists():
+            blockers.append(f"{f} is gone — the run's rows cannot be re-derived")
+        elif not _tracked(repo, f):
+            blockers.append(f"{f} is not tracked in git — commit the source and the "
+                            f"output rows, or the number cannot be re-derived")
+    return blockers, warnings
 
 
 def run(area: Path, protocol: Path | None = None) -> int:
@@ -57,6 +107,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
 
     text = protocol.read_text(encoding="utf-8")
     pid = protocol_id_of(text)
+    newest_dir: Path | None = None
 
     # -- 1. completion check -----------------------------------------------
     print(f"── completion: {protocol.name} ──")
@@ -77,7 +128,8 @@ def run(area: Path, protocol: Path | None = None) -> int:
                 blockers += 1
             else:
                 newest = taken[-1]
-                print(f"  {newest['dir'].name}: completed")
+                newest_dir = newest["dir"]
+                print(f"  {newest_dir.name}: completed")
 
     # -- 2. intent-check ---------------------------------------------------
     print(f"── intent-check ──")
@@ -107,6 +159,24 @@ def run(area: Path, protocol: Path | None = None) -> int:
         warnings += len(holes)
     else:
         print("  all fields filled")
+
+    # -- 4. provenance (runs of seconds) ------------------------------------
+    print("── provenance ──")
+    short = cost_tier_of(text) == "seconds" or bool(TYPE_MEASUREMENT.search(text))
+    if not short:
+        print("  n/a — not a run of seconds (the agent audit covers provenance there)")
+    elif newest_dir is None:
+        print("  no completed run to check")
+    else:
+        b, w = provenance_findings(area, newest_dir)
+        for line in b:
+            print(f"  BLOCKER: {line}")
+        for line in w:
+            print(f"  warning: {line}")
+        if not b and not w:
+            print("  source frozen in the run; source and output tracked in git")
+        blockers += len(b)
+        warnings += len(w)
 
     # -- summary -----------------------------------------------------------
     print()
