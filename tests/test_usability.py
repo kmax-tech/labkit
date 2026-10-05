@@ -18,6 +18,7 @@ from labkit import usability  # noqa: E402
 LOG = """\
 18:12:32 · read · CLAUDE.md
 18:12:40 · read · PROTOCOL
+18:12:50 · read · labkit/runlog.py (freeze gate)
 18:13:03 · unsure · short form or long form?
 18:13:30 · edit · 01_measure.py
 18:14:00 · run · 01_measure.py --show 3
@@ -42,9 +43,10 @@ class LogParser(unittest.TestCase):
     def test_counts_wall_clock_and_no_double_count(self):
         got = usability.parse_log(LOG)
         self.assertEqual(got.wall_seconds, 150)
-        self.assertEqual((got.read, got.run, got.edit, got.unsure, got.gate), (2, 2, 1, 1, 1))
+        self.assertEqual((got.read, got.run, got.edit, got.unsure, got.gate), (3, 2, 1, 1, 1))
+        self.assertEqual(got.source_reads, 1)
         self.assertEqual(got.untagged, 2)
-        self.assertEqual(got.lines, 9)
+        self.assertEqual(got.lines, 10)
         self.assertTrue(got.monotonic)
 
     def test_a_long_silence_is_reported_beside_the_span(self):

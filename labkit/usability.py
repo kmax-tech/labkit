@@ -86,6 +86,9 @@ TASKS = {
 }
 LOG_TAGS = ("read", "run", "edit", "unsure", "gate")
 LOG_LINE = re.compile(r"^(\d\d):(\d\d):(\d\d)\s*·\s*(\w+)\s*·\s*(.*)$")
+#: a `read` of these is the agent learning the contract from the wrong place
+#: — the area's README card should have sufficed (2026-10-05, four of four read on)
+SOURCE_READ = re.compile(r"labkit/\w+\.py|labkit[ /](runlog|recheck|protocol_check|llm|batch|finalize|preflight)|arbeitsstandard", re.I)
 #: The bar: one kept number in this many minutes. Set by hand (2026-10-05),
 #: not derived — the first traces decide whether it is the right one.
 TARGET_MINUTES = 5
@@ -264,11 +267,13 @@ class LogTrace:
     unsure: int
     gate: int
     untagged: int               # off-contract lines, counted, never dropped
+    source_reads: int           # `read` lines naming labkit's source or docs/arbeitsstandard.md
 
 
 def parse_log(text: str) -> LogTrace:
     counts = {t: 0 for t in LOG_TAGS}
     untagged = 0
+    source_reads = 0
     stamps: list[int] = []
     for line in text.splitlines():
         if not line.strip():
@@ -278,12 +283,14 @@ def parse_log(text: str) -> LogTrace:
             untagged += 1
             continue
         counts[m.group(4).lower()] += 1
+        if m.group(4).lower() == "read" and SOURCE_READ.search(m.group(5)):
+            source_reads += 1
         stamps.append(int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)))
     wall = (max(stamps) - min(stamps)) if len(stamps) >= 2 else None
     gaps = sum(b - a for a, b in zip(stamps, stamps[1:]) if b - a >= GAP_SECONDS)
     return LogTrace(lines=len(stamps) + untagged, wall_seconds=wall, gap_seconds=gaps,
                     monotonic=all(a <= b for a, b in zip(stamps, stamps[1:])),
-                    untagged=untagged, **counts)
+                    untagged=untagged, source_reads=source_reads, **counts)
 
 
 def latest_run(area: Path) -> Path | None:
@@ -372,6 +379,8 @@ def score(root: Path) -> int:
         if not trace.monotonic:
             rows.append(("log order", "stamps run backwards — span is unreliable"))
         rows += [(f"steps · {t}", str(getattr(trace, t))) for t in (*LOG_TAGS, "untagged")]
+        rows.append(("reads of labkit source / standard", str(trace.source_reads)
+                     + ("" if trace.source_reads == 0 else " — the card did not suffice")))
     width = max(len(k) for k, _ in rows)
     for k, v in rows:
         print(f"  {k:<{width}}  {v}")
