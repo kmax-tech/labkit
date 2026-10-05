@@ -730,7 +730,11 @@ def main(argv: list[str]) -> int:
                           f"(append them: lib exp <name> --report)")
             missing_should = []
         left = sorted({s for s in (ln.strip() for ln in text.splitlines()) if s in tmpl})
-        no_block = not has_block and re.search(r"prompt", text.lower())
+        # "mentions a prompt" means a Prompt FIELD, not the word: the stamped
+        # legend says "prompt" in every protocol, and a count protocol cut
+        # without the field was blocked for it (2026-10-05).
+        no_block = not has_block and bool(re.search(
+            r"^\s*(?:[-*]\s*)?\*{0,2}prompt\b[^\n]*:\*{0,2}\s*(?!n/a)\S", text, re.I | re.M))
         frozen_without_io = bool(FROZEN_YES.search(text)) and not has_block
         # A protocol is a registration, not a lab journal. By 2026-08-20 one
         # had grown to 646 lines because every re-freeze APPENDED its
