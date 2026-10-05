@@ -52,7 +52,8 @@ SCAFFOLDER = RES / "tools" / "arbeitsstandard-init.py"
 #: condition. Script skeletons are house masters (RES); the two protocol
 #: forms ship with labkit — the scaffolder's `master_path` reads them there.
 STAMPED = (*(RES / t for t in ("prepare-script.py.template", "measure-script.py.template",
-                               "analyze-script.py.template", "test-area.py.template")),
+                               "analyze-script.py.template", "test-area.py.template",
+                               "measure-quick-script.py.template", "test-quick.py.template")),
            *(Path(__file__).resolve().parent / t
              for t in ("experiment-protocol.md.template", "measurement-protocol.md.template")))
 AREA = "docs-per-case"
@@ -143,8 +144,9 @@ def _sidecar(root: Path, suffix: str) -> Path:
     return root.parent / f"{root.name}.{suffix}"
 
 
-def stage(root: Path, venv: Path | None) -> int:
-    """Side effects: see module docstring."""
+def stage(root: Path, venv: Path | None, quick: bool = False) -> int:
+    """Side effects: see module docstring. `quick` stamps the area with
+    `--exp … --quick` (measurement short form + lean skeleton)."""
     if root.exists() and any(root.iterdir()):
         raise SystemExit(f"usability: {root} exists and is not empty — stage into "
                          f"a fresh directory, the probe must start cold")
@@ -159,7 +161,8 @@ def stage(root: Path, venv: Path | None) -> int:
     _sh(["git", "init", "-q", "."], root)
     _sh(["git", "add", "-A"], root)
     _sh(["git", "commit", "-qm", "Scaffold: a probe lab repo for the usability trace"], root)
-    _sh([sys.executable, str(SCAFFOLDER), str(root), "--exp", AREA], root)
+    exp_flags = ["--exp", AREA, *(["--quick"] if quick else [])]
+    _sh([sys.executable, str(SCAFFOLDER), str(root), *exp_flags], root)
     areas = sorted(p.name for p in (root / "experiments").glob(f"*-{AREA}"))
     if len(areas) != 1:
         raise SystemExit(f"usability: expected one stamped area *-{AREA}, got {areas}")
@@ -173,7 +176,8 @@ def stage(root: Path, venv: Path | None) -> int:
     probe = Probe(staged=time.strftime("%Y-%m-%dT%H:%M:%S"), area=areas[0],
                   metric_key=METRIC_KEY,
                   labkit_installed=_labkit_spec(root / ".venv" / "bin" / "python"),
-                  scaffold_sha=sha, scaffold_flags=flags, target_minutes=TARGET_MINUTES)
+                  scaffold_sha=sha, scaffold_flags=[*flags, *exp_flags],
+                  target_minutes=TARGET_MINUTES)
     log = _sidecar(root, "log.md")
     log.write_text("", encoding="utf-8")
     task = (Path(__file__).resolve().parent / "usability-task.md.template").read_text(encoding="utf-8")
@@ -314,12 +318,14 @@ def main(argv: list[str]) -> int:
     s = sub.add_parser("stage", help="stamp a probe lab repo with one kept-number task")
     s.add_argument("dir")
     s.add_argument("--venv", help="link this venv instead of creating one")
+    s.add_argument("--quick", action="store_true",
+                   help="stamp the area with --quick (measurement short form, lean skeleton)")
     c = sub.add_parser("score", help="number, binding and log of a finished probe")
     c.add_argument("dir")
     args = ap.parse_args(argv)
     root = Path(args.dir).resolve()
     if args.cmd == "stage":
-        return stage(root, Path(args.venv).resolve() if args.venv else None)
+        return stage(root, Path(args.venv).resolve() if args.venv else None, quick=args.quick)
     return score(root)
 
 

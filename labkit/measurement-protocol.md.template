@@ -6,10 +6,11 @@
 - **Standard:** 0.16
 - **Protocol id:** <protocol-id>
 - **Type:** measurement
+- **Cost:** seconds
 - **Question:** <the one question — what do we want to know?>
 - **Data / scope:** <source, N, producer script>
 - **Prior computation:** <prior result + run_id + [[link]], or "none">
-- **Method:** <script path or one sentence>
+- **Method:** <scripts/01_measure.py — what it counts, in one sentence>
 - **Exclusions / filters:** <what was dropped and why, or "none">
-- **Result:** <number + run_id, or "pending">
+- **Result:** <number + run_id, or "pending" — `scripts/01_measure.py --check` holds this line to the run>
 - **Terms:** <every label with a half-sentence gloss>

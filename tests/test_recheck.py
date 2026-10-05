@@ -1,0 +1,100 @@
+"""recheck (2026-10-05): the three mechanics a `--check` needs, each at its edge —
+prefix sha, intent keys, vanished keys, rounding in the note, the run_id."""
+from __future__ import annotations
+
+import hashlib
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from labkit import recheck  # noqa: E402
+
+ROWS = [{"case": "a", "n": 4}, {"case": "b", "n": 3}]
+
+
+def evaluate(rows: list[dict]) -> dict:
+    return {"mean_n": sum(r["n"] for r in rows) / len(rows), "n_cases": len(rows)}
+
+
+class Area(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.area = Path(self._tmp.name)
+        self.out = self.area / "output" / "rows.jsonl"
+        self.out.parent.mkdir()
+        self.out.write_text("".join(json.dumps(r) + "\n" for r in ROWS), encoding="utf-8")
+        self.run = self.area / "runs" / "2026-10-05T19-00-00_ab12"
+        self.run.mkdir(parents=True)
+        self._record(evaluate(ROWS))
+        self.note = self.area / "PROTOCOL-x.md"
+        self.note.write_text("- **Result:** 3,5 über 2 Fälle, run 2026-10-05T19-00-00_ab12\n",
+                             encoding="utf-8")
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def _record(self, metrics: dict, sha: str | None = None) -> None:
+        sha = sha if sha is not None else hashlib.sha256(self.out.read_bytes()).hexdigest()[:16]
+        (self.run / "metrics.json").write_text(json.dumps({**metrics, "duration_s": 0.1}))
+        (self.run / "outputs.json").write_text(json.dumps([{"path": str(self.out), "sha256": sha}]))
+
+    def test_holds(self):
+        v = recheck.holds(self.area, self.out, evaluate, self.note)
+        self.assertEqual(v.run_id, "2026-10-05T19-00-00_ab12")
+        self.assertEqual(v.grown, [])
+        self.assertEqual(v.keys_compared, 2)
+
+    def test_prefix_sha_is_enough(self):
+        self._record(evaluate(ROWS), sha=hashlib.sha256(self.out.read_bytes()).hexdigest()[:12])
+        recheck.holds(self.area, self.out, evaluate, self.note)
+
+    def test_rows_not_the_runs_rows(self):
+        self.out.write_text(json.dumps({"case": "a", "n": 9}) + "\n", encoding="utf-8")
+        with self.assertRaises(SystemExit) as cm:
+            recheck.holds(self.area, self.out, evaluate, self.note)
+        self.assertIn("not the file", str(cm.exception))
+
+    def test_vanished_key_fails_grown_key_is_reported(self):
+        with self.assertRaises(SystemExit) as cm:
+            recheck.holds(self.area, self.out, lambda rows: {"mean_n": 3.5}, self.note)
+        self.assertIn("vanished ['n_cases']", str(cm.exception))
+        v = recheck.holds(self.area, self.out,
+                          lambda rows: {**evaluate(rows), "max_n": 4}, self.note)
+        self.assertEqual(v.grown, ["max_n"])
+
+    def test_intent_key_on_one_side_fails(self):
+        self._record({**evaluate(ROWS), "k1_pass": True})
+        with self.assertRaises(SystemExit) as cm:
+            recheck.holds(self.area, self.out, evaluate, self.note)
+        self.assertIn("k1_pass", str(cm.exception))
+
+    def test_note_missing_number_or_run(self):
+        self.note.write_text("- **Result:** 3.5, run 2026-10-05T19-00-00_ab12\n")
+        with self.assertRaises(SystemExit) as cm:
+            recheck.holds(self.area, self.out, evaluate, self.note)
+        self.assertIn("numbers not in", str(cm.exception))   # 2 (n_cases) is absent
+        self.note.write_text("- **Result:** 3.5 over 2 cases\n")
+        with self.assertRaises(SystemExit) as cm:
+            recheck.holds(self.area, self.out, evaluate, self.note)
+        self.assertIn("does not cite run", str(cm.exception))
+
+    def test_number_must_be_a_token(self):
+        self.assertFalse(recheck._present("3.5", "13.57"))
+        self.assertFalse(recheck._present("2", "run 2026-10-05"))
+        self.assertTrue(recheck._present("3.5", "mean 3,5 docs"))
+        self.assertTrue(recheck._present("-0.2", "delta −0.2"))
+        self.assertTrue(recheck._present("+0.2", "delta 0.2"))
+
+    def test_custom_number_format_for_a_rounding_note(self):
+        self._record({"ratio": 0.857142857})
+        self.note.write_text("ratio 0.86 · run 2026-10-05T19-00-00_ab12\n")
+        recheck.holds(self.area, self.out, lambda rows: {"ratio": 0.857142857}, self.note,
+                      numbers=lambda m: [f"{m['ratio']:.2f}"])
+
+
+if __name__ == "__main__":
+    unittest.main()

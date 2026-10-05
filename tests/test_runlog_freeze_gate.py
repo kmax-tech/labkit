@@ -122,6 +122,17 @@ class FreezeGate(unittest.TestCase):
         r, _ = self._start(MEASUREMENT, long=True)
         self.assertTrue((r.dir / "config.json").is_file())
 
+    def test_seconds_runs_in_a_claude_foreground_shell(self):
+        os.environ["CLAUDECODE"] = "1"
+        try:
+            r, _ = self._start(SECONDS, long=True)
+            self.assertTrue((r.dir / "config.json").is_file())
+            with self.assertRaises(SystemExit) as cm:
+                self._start(FROZEN, long=True)
+            self.assertIn("foreground", str(cm.exception))
+        finally:
+            os.environ.pop("CLAUDECODE", None)
+
     def test_tier_is_recorded_for_pilots_too(self):
         r, _ = self._start(FROZEN, long=False)
         self.assertIsNone(json.loads((r.dir / "config.json").read_text())["cost_tier"])

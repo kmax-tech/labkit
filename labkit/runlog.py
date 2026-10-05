@@ -663,12 +663,22 @@ class Run:
                     f"run under {base_dir / 'runs'} — a derived run needs a "
                     f"parent with metrics.json")
             self._derived_from = derived_from
+        # Before any work: an unresolvable protocol is a refusal, and a
+        # refusal must not leave an empty run dir behind (2026-09-26).
+        self._protocol = _protocol_binding(base_dir, protocol)
+        from labkit.protocol_check import TYPE_MEASUREMENT, cost_tier_of
+        _ptext = _protocol_text(base_dir, self._protocol)
+        self._cost_tier = cost_tier_of(_ptext) if _ptext is not None else None
+        _short = _ptext is not None and (self._cost_tier == "seconds"
+                                         or bool(TYPE_MEASUREMENT.search(_ptext)))
         # Detach gate (scar 2026-08-13, twice in one evening): a long run
         # started in a Claude Code foreground shell dies with the 10-min tool
         # timeout — the kill takes the whole process group, run and lock with
         # it. `long=True` is the script's own declaration (the --full stage
         # sets it); the gate refuses the foreground start BEFORE any work.
-        if (long and os.environ.get("CLAUDECODE")
+        # A run of seconds (`Cost: seconds`, or the measurement short form)
+        # cannot meet that timeout and runs in the foreground (2026-10-05).
+        if (long and not _short and os.environ.get("CLAUDECODE")
                 and not os.environ.get("LABKIT_DETACHED")):
             raise SystemExit(
                 "runlog: this run declares long=True and sits in a Claude Code "
@@ -683,15 +693,9 @@ class Run:
         self.base = base_dir
         _check_run_index(base_dir)                        # raises before any work
         self._data = _describe(data) if data else {}   # raises on leak, before mkdir
-        # Also before mkdir: an unresolvable protocol is a refusal, and a
-        # refusal must not leave an empty run dir behind (2026-09-26).
-        self._protocol = _protocol_binding(base_dir, protocol)
         # Freeze gate, also before mkdir: a full run on an unfrozen protocol
         # is a refusal, not a run with a warning (2026-10-05).
         self._unfrozen_ack = False
-        from labkit.protocol_check import cost_tier_of
-        _ptext = _protocol_text(base_dir, self._protocol)
-        self._cost_tier = cost_tier_of(_ptext) if _ptext is not None else None
         if long:
             findings = _freeze_findings(base_dir, self._protocol)
             if findings and os.environ.get("LABKIT_UNFROZEN"):
