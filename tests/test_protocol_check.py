@@ -913,3 +913,23 @@ class TestStampedLegendIsNotTemplateText(unittest.TestCase):
             protocol_check.find_template(None))
         # An instruction line from inside a section stays in the set.
         self.assertTrue([s for s in lines if "Plain language" in s], lines)
+
+
+class TestCostTier(unittest.TestCase):
+    """`Cost:` (2026-10-05) is due once stamped, and its value is readable."""
+
+    def test_template_stamps_cost(self):
+        text = TEMPLATE.read_text(encoding="utf-8")
+        self.assertIn("- **Cost:**", text)
+
+    def test_the_tier_is_read_from_the_field(self):
+        self.assertEqual(protocol_check.cost_tier_of("- **Cost:** seconds\n"), "seconds")
+        self.assertEqual(protocol_check.cost_tier_of("- **Cost:** Hours — x\n"), "hours")
+
+    def test_a_placeholder_or_absent_field_has_no_tier(self):
+        self.assertIsNone(protocol_check.cost_tier_of("- **Cost:** <seconds | hours>\n"))
+        self.assertIsNone(protocol_check.cost_tier_of("- **Timebox:** 2h\n"))
+
+    def test_a_stamped_placeholder_is_a_should_gap(self):
+        self.assertEqual(protocol_check.severity_of("Cost"), "should")
+

@@ -620,7 +620,22 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
 class Run:
     def __init__(self, experiment: str, config: dict, base_dir: Path,
                  data: dict | None = None, long: bool = False,
-                 protocol: str | Path | None = None):
+                 protocol: str | Path | None = None,
+                 derived_from: str | None = None):
+        # A derived run (2026-10-05): the same raw rows, evaluated again —
+        # because evaluate() gained a descriptive key, not because anything
+        # about the measurement changed. It names its parent so the record
+        # shows one measurement with two readings instead of two runs; the
+        # parent must be a completed run of this area, or this is a refusal.
+        self._derived_from = None
+        if derived_from is not None:
+            parent = base_dir / "runs" / derived_from
+            if not (parent / "metrics.json").is_file():
+                raise SystemExit(
+                    f"runlog: derived_from={derived_from!r} names no completed "
+                    f"run under {base_dir / 'runs'} — a derived run needs a "
+                    f"parent with metrics.json")
+            self._derived_from = derived_from
         # Detach gate (scar 2026-08-13, twice in one evening): a long run
         # started in a Claude Code foreground shell dies with the 10-min tool
         # timeout — the kill takes the whole process group, run and lock with
@@ -671,6 +686,7 @@ class Run:
         frozen = {"schema_version": RUN_SCHEMA,
                   "experiment": experiment, "script": self.script,
                   "protocol": self._protocol,
+                  "derived_from": self._derived_from,
                   "unfrozen_ack": self._unfrozen_ack,
                   "script_sha": _snapshot_script(self.dir),
                   "untracked_sources": _snapshot_untracked_sources(self.dir),
@@ -887,11 +903,12 @@ class run:
 
     def __init__(self, experiment: str, config: dict,
                  base_dir: str | Path | None = None, data: dict | None = None,
-                 long: bool = False, protocol: str | Path | None = None):
-        # `protocol` last, after `long`: no existing positional call shifts.
+                 long: bool = False, protocol: str | Path | None = None,
+                 derived_from: str | None = None):
+        # `protocol` and `derived_from` last: no existing positional call shifts.
         base = Path(base_dir) if base_dir else Path(sys.argv[0]).resolve().parent
         self._run = Run(experiment, config, base, data, long=long,
-                        protocol=protocol)
+                        protocol=protocol, derived_from=derived_from)
 
     def __enter__(self) -> Run:
         return self._run

@@ -54,6 +54,10 @@ instead).*
 - **Type:** <exploratory (generates hypotheses, none of it reported as a
   test) | confirmatory (tests a hypothesis fixed before the run)>
 - **Timebox:** <hard budget, e.g. 4h — then log and ask>
+- **Cost:** <seconds — deterministic, rerunnable at will | minutes — one
+  model pass | hours — expensive or irreversible. The tier sets the audit:
+  `seconds` gets ONE agent audit, after the first run, on real output;
+  `minutes`/`hours` get the preflight audit before freezing (→ §2.A12)>
 - **Split touched:** <which split may be touched: train | dev | test>
 - **Preflight audit:** <date · scope sha · N findings (blockers fixed /
   accepted with reason / dismissed with reason) — the code-vs-intent audit

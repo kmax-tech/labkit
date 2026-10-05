@@ -10,6 +10,10 @@ Exit codes: 0 clean, 1 findings (at least one blocker), 2 usage error.
 
 What it runs, in order:
   1. protocol-check   mandatory fields, placeholders
+  1b. cost tier       `Cost:` of the protocol — `seconds` makes the agent
+                      audit optional before freezing (one audit after the
+                      first run suffices, §2.A12); `minutes`/`hours` ask
+                      for it here; undeclared counts as `hours`
   2. code-check       intent ids against the code
   3. scope-sha        audit stamp over the input scope
   4. dirty check      uncommitted changes (warning, not a blocker)
@@ -35,6 +39,7 @@ from labkit.protocol_check import (
     TYPE_MEASUREMENT,
     check_protocol_id,
     check_text,
+    cost_tier_of,
     graduate,
     placeholder_fields,
 )
@@ -116,6 +121,21 @@ def run(area: Path, protocol: Path | None = None) -> int:
     if not (missing_must or must_holes or id_findings or missing_should
             or should_holes):
         print("  ok")
+
+    # -- 1b. cost tier ------------------------------------------------------
+    print("── cost tier ──")
+    tier = cost_tier_of(text)
+    if tier == "seconds":
+        print("  seconds — rerunnable at will: the agent audit is OPTIONAL before "
+              "freezing; one audit after the first run, on real output, "
+              "suffices (§2.A12)")
+    elif tier is None:
+        print("  not declared — treated as `hours`: the experiment-preflight "
+              "audit is due before freezing (§2.A12); stamp `Cost:` to say "
+              "otherwise")
+    else:
+        print(f"  {tier} — the experiment-preflight audit is due before "
+              f"freezing (§2.A12)")
 
     # -- 2. code-check (intent ids) ---------------------------------------
     print(f"── code-check: intent ids ──")

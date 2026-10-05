@@ -164,7 +164,17 @@ SHOULD_IF_PRESENT = [
      r"gate.?label|gate.?etikett"),
     ("Randomness controls",
      r"randomness|zufall|seeds?\b.*\b(run|temperature|temp)|temperature.*(seed|run)"),
+    # The cost tier (2026-10-05): seconds | minutes | hours. It decides how
+    # much audit a run gets (§2.A12); a stamped-but-unfilled tier is a gap,
+    # a protocol from before the field is not.
+    ("Cost tier (seconds / minutes / hours)",
+     r"\bcost\b|kostenstufe"),
 ]
+
+#: The three tiers of `Cost:`; anything else in the field is a placeholder
+#: or a typo, and `cost_tier_of` returns None for both.
+COST_TIERS = ("seconds", "minutes", "hours")
+COST_TIER = re.compile(r"\bcost\b[^:\n]*:\**\s*\**\s*(seconds|minutes|hours)\b", re.I)
 
 # "Frozen before run: yes" without a single rendered example is a frozen
 # registration on an unchecked instrument — it freezes the error in. On
@@ -394,6 +404,13 @@ def graduate(text: str, missing_must: list[str], missing_should: list[str],
                                        for lb in missing_should]
         missing_should = []
     return frozen, missing_must, missing_should, must_holes, soft_holes
+
+
+def cost_tier_of(text: str) -> str | None:
+    """The `Cost:` tier (`seconds` | `minutes` | `hours`), or None when the
+    field is absent or still a placeholder — a pre-0.17 protocol has none."""
+    m = COST_TIER.search(text)
+    return m.group(1).lower() if m else None
 
 
 def protocol_id_of(text: str) -> str | None:

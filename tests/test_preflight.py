@@ -238,3 +238,27 @@ class GraduationGate(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertIn("missing (should): Result", buf.getvalue())
 
+
+class TestCostTier(unittest.TestCase):
+    """The tier names how much audit the run gets; preflight says it out loud."""
+
+    def _out(self, protocol_text):
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d, protocol_text)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                preflight.run(area)
+            return buf.getvalue()
+
+    def test_seconds_makes_the_agent_audit_optional(self):
+        out = self._out(CLEAN_PROTOCOL + "- **Cost:** seconds\n")
+        self.assertIn("OPTIONAL", out)
+
+    def test_hours_asks_for_the_audit(self):
+        out = self._out(CLEAN_PROTOCOL + "- **Cost:** hours\n")
+        self.assertIn("hours — the experiment-preflight audit is due", out)
+
+    def test_an_undeclared_tier_counts_as_hours(self):
+        out = self._out(CLEAN_PROTOCOL)
+        self.assertIn("not declared — treated as `hours`", out)
+

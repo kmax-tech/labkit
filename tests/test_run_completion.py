@@ -318,3 +318,35 @@ class TestIndexLock(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDerivedRun(unittest.TestCase):
+    """A derived run re-evaluates a parent's rows and says so (2026-10-05)."""
+
+    def test_a_derived_run_records_its_parent(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = _area(d)
+            _run_dir(area, "2026-10-05T10-00-00_aaaa")
+            with runlog.run("x", {}, base_dir=area,
+                            derived_from="2026-10-05T10-00-00_aaaa") as r:
+                r.metrics(k1=True)
+            cfg = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
+            self.assertEqual(cfg["derived_from"], "2026-10-05T10-00-00_aaaa")
+
+    def test_a_parent_without_metrics_is_refused_before_mkdir(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = _area(d)
+            _run_dir(area, "2026-10-05T10-00-00_bbbb", metrics=False)
+            with self.assertRaises(SystemExit):
+                runlog.run("x", {}, base_dir=area,
+                           derived_from="2026-10-05T10-00-00_bbbb")
+            self.assertEqual(len(list((area / "runs").iterdir())), 1)
+
+    def test_an_ordinary_run_records_no_parent(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = _area(d)
+            with runlog.run("x", {}, base_dir=area) as r:
+                r.metrics(k1=True)
+            cfg = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
+            self.assertIsNone(cfg["derived_from"])
+
