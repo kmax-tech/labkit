@@ -197,8 +197,11 @@ def stage(root: Path, venv: Path | None, quick: bool = False, task: str = "count
     root.mkdir(parents=True, exist_ok=True)
     _sh([sys.executable, str(SCAFFOLDER), str(root), *flags], root)
     _sh(["git", "init", "-q", "."], root)
+    # The probe's own commits skip the pre-commit hook: a freshly stamped
+    # protocol is all placeholders by design, and the hook is the agent's
+    # gate, not the stamper's (`lib exp` sets core.hooksPath, 2026-10-05).
     _sh(["git", "add", "-A"], root)
-    _sh(["git", "commit", "-qm", "Scaffold: a probe lab repo for the usability trace"], root)
+    _sh(["git", "commit", "-q", "--no-verify", "-m", "Scaffold: a probe lab repo for the usability trace"], root)
     exp_flags = ["--exp", area_name, *(["--quick"] if quick else []),
                  *(["--model", "haiku"] if model else [])]
     _sh([sys.executable, str(SCAFFOLDER), str(root), *exp_flags], root)
@@ -220,7 +223,7 @@ def stage(root: Path, venv: Path | None, quick: bool = False, task: str = "count
     (root / "requirements.lock").write_text(
         _sh([str(root / ".venv" / "bin" / "pip"), "freeze"], root), encoding="utf-8")
     _sh(["git", "add", "-A"], root)
-    _sh(["git", "commit", "-qm", "Probe: requirements.lock from the probe venv"], root)
+    _sh(["git", "commit", "-q", "--no-verify", "-m", "Probe: requirements.lock from the probe venv"], root)
     probe = Probe(staged=time.strftime("%Y-%m-%dT%H:%M:%S"), task=task, area=areas[0],
                   metric_key=metric_key,
                   labkit_installed=_labkit_spec(root / ".venv" / "bin" / "python"),
@@ -234,7 +237,7 @@ def stage(root: Path, venv: Path | None, quick: bool = False, task: str = "count
         sheet = sheet.replace(key, val)
     (root / "TASK.md").write_text(sheet, encoding="utf-8")
     _sh(["git", "add", "-A"], root)
-    _sh(["git", "commit", "-qm", "Probe: the area, the fixture and TASK.md"], root)
+    _sh(["git", "commit", "-q", "--no-verify", "-m", "Probe: the area, the fixture and TASK.md"], root)
     _sidecar(root, "probe.json").write_text(json.dumps(asdict(probe), indent=1), encoding="utf-8")
     print(f"staged {root}\n  task:  {root / 'TASK.md'}\n  log:   {log}\n"
           f"  probe: {_sidecar(root, 'probe.json')}\n"
