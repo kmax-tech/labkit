@@ -200,7 +200,7 @@ def stage(root: Path, venv: Path | None, quick: bool = False, task: str = "count
     _sh(["git", "add", "-A"], root)
     _sh(["git", "commit", "-qm", "Scaffold: a probe lab repo for the usability trace"], root)
     exp_flags = ["--exp", area_name, *(["--quick"] if quick else []),
-                 *(["--model"] if model else [])]
+                 *(["--model", "haiku"] if model else [])]
     _sh([sys.executable, str(SCAFFOLDER), str(root), *exp_flags], root)
     areas = sorted(p.name for p in (root / "experiments").glob(f"*-{area_name}"))
     if len(areas) != 1:
@@ -215,6 +215,12 @@ def stage(root: Path, venv: Path | None, quick: bool = False, task: str = "count
         _sh([sys.executable, "-m", "venv", ".venv"], root)
         _sh([str(root / ".venv" / "bin" / "pip"), "install", "-q",
              _labkit_spec(Path(sys.executable))], root)
+    # requirements.lock from the probe venv: runlog warns "env unpinned" without
+    # it and every cold agent stopped to generate one (2026-10-05).
+    (root / "requirements.lock").write_text(
+        _sh([str(root / ".venv" / "bin" / "pip"), "freeze"], root), encoding="utf-8")
+    _sh(["git", "add", "-A"], root)
+    _sh(["git", "commit", "-qm", "Probe: requirements.lock from the probe venv"], root)
     probe = Probe(staged=time.strftime("%Y-%m-%dT%H:%M:%S"), task=task, area=areas[0],
                   metric_key=metric_key,
                   labkit_installed=_labkit_spec(root / ".venv" / "bin" / "python"),

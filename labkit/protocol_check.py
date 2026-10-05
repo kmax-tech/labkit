@@ -109,9 +109,10 @@ MUST_SECONDS = [
     ("Null condition / anchor / control",
      r"nullbedingung|null.?condition|anker|anchor|placebo|swap|kontroll"),
     ("Exclusions / filters", r"exclusion|filter|ausschluss|ausschl[üu]sse"),
-    ("Result (answer + run_id)", r"answer to the question|result|ergebnis"),
-    ("Raw output (one real example, or n/a)",
-     r"roh-output|roh-beispiel|roh-antwort|i/o-beispiel|raw.?output"),
+    # Result and Raw output are stamped in the cut but owed AFTER the run —
+    # `finalize`'s open-fields station flags their placeholders then. Before
+    # the run they cannot exist, and the pre-run commit must pass the hook
+    # (2026-10-05: an agent fell back to --no-verify).
 ]
 
 MUST_MEASUREMENT = [

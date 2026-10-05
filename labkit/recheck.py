@@ -29,8 +29,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-#: keys runlog writes into metrics.json itself — not evaluate()'s to reproduce
-LABKIT_KEYS = frozenset({"duration_s"})
+#: keys labkit writes into metrics.json itself — not evaluate()'s to
+#: reproduce: runlog's duration, llm's retry counter (the stamped evaluate()
+#: records it; a cold agent read this module to learn why --check failed)
+LABKIT_KEYS = frozenset({"duration_s", "llm_retries"})
 INTENT_KEY = re.compile(r"^[kswn]\d+_")
 
 
