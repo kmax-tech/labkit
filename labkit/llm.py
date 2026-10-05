@@ -68,6 +68,7 @@ import json
 import os
 import shlex
 import subprocess
+import tempfile
 import sys
 import threading
 import time
@@ -276,6 +277,19 @@ def last_endpoint() -> str:
 # drops the login). 2026-09-23: `language: German` in the operator's
 # settings had 45/432 English scenario prompts answered in German.
 _CLI_ISOLATION = ["--setting-sources", ""]
+#: `claude -p` runs from a neutral directory, never from the repo: the CLI
+#: is a harness and reads its cwd (project files, git state) into the
+#: conversation. A cold agent observed answers mentioning "labkit" and
+#: "Python code" for a one-word judgement when called from the repo root,
+#: 3 of 5 times, clean from /tmp (2026-10-05, not reproduced in 7 tries —
+#: a sketch, but the cwd is not part of the instrument either way).
+_CLI_CWD = tempfile.gettempdir()
+
+
+def _cli_run(cmd: list[str], timeout: float | None) -> subprocess.CompletedProcess:
+    """The one place `claude -p` is spawned: isolated flags, neutral cwd."""
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
+                          cwd=_CLI_CWD)
 
 
 def _cli_version() -> str:
@@ -425,7 +439,7 @@ def _complete_once(alias: str, prompt: str, *, system: str | None = None,
                *_CLI_ISOLATION]
         if system:
             cmd += ["--append-system-prompt", system]
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        r = _cli_run(cmd, timeout)
         if r.returncode != 0:
             detail = (r.stderr.strip() or r.stdout.strip() or
                       "no output on stderr or stdout")
