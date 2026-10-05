@@ -640,7 +640,7 @@ def _protocol_text(base_dir: Path, binding: dict) -> str | None:
 def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
     """Why a FULL run may not start on this protocol — empty means it may."""
     from labkit.protocol_check import (FROZEN_YES, TYPE_MEASUREMENT, cost_tier_of,
-                                       criterion_present, placeholder_fields)
+                                       intent_missing, placeholder_fields)
     text = _protocol_text(base_dir, binding)
     if text is None:
         return ["the run is unbound (no protocol) — a full run needs a "
@@ -653,11 +653,13 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
         # would otherwise be refused for a field the form does not have).
         return []
     if cost_tier_of(text) == "seconds":
-        if criterion_present(text):
+        missing = intent_missing(text)
+        if not missing:
             return []
-        return [f"{path.name}: `Cost: seconds`, but the success criterion is "
-                f"still empty or a placeholder — at seconds the gate is the "
-                f"written criterion, not the freeze (§2.A12)"]
+        return [f"{path.name}: `Cost: seconds`, but the registration is not written: "
+                f"{', '.join(missing)} still empty or a placeholder — at seconds the "
+                f"gate is question · criterion · stop rule · cost, not the freeze "
+                f"(§2.A1, §2.A12)"]
     out = []
     if not FROZEN_YES.search(text):
         out.append(f"{path.name}: not `Frozen before run: yes`")
@@ -734,7 +736,7 @@ class Run:
                     "protocol is not ready for one:\n  " + "\n  ".join(findings)
                     + "\nPilot it with long=False, or freeze first: `preflight "
                     "<AREA>` clean, audit stamped, `Frozen before run: yes` "
-                    "(at `Cost: seconds`: the criterion written suffices). A "
+                    "(at `Cost: seconds`: question, criterion, stop rule and cost written suffice). A "
                     "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded).")
         self.dir = base_dir / "runs" / self.run_id
         self.dir.mkdir(parents=True, exist_ok=False)

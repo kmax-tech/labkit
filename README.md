@@ -37,6 +37,7 @@ sub-commands (all answer `--help`):
 
 ```bash
 protocol-check <PROTOCOL-*.md>...   # mandatory-field check (must/should contract)
+protocol-check --contract           # budgets and the words each field is recognised by — read before writing
 runlog [<area>]                     # open runs: run_id, state, script
 runlog migrate-index <area>         # add missing run-index columns, rows kept
 runlog reindex <area>               # append rows for completed runs it missed
@@ -60,7 +61,8 @@ three agent audits. `usability` makes that measurable and repeatable:
 
 ```bash
 usability stage /tmp/probe --venv .venv   # fresh lab repo, stamped area, fixture with a known answer, TASK.md
-usability stage /tmp/probe --venv .venv --quick   # the counting path: short form + lean skeleton (lib exp --quick)
+usability stage /tmp/probe --venv .venv --quick   # the seconds cut + lean counting skeleton (lib exp --quick)
+usability stage /tmp/probe --venv .venv --task judge --quick --model   # seconds cut + full measure skeleton, a model in the loop
 #   hand TASK.md to a COLD agent (fresh context); it logs one line per step
 usability score /tmp/probe                # number == truth? bound? tier? wall-clock, steps per tag → probe.score.json
 ```

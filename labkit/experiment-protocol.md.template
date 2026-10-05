@@ -7,6 +7,11 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
   none — neither does an exploration notebook (→ §2.D7).
 - **One field = one line.** If the justification needs more room, it goes
   into a note; the [[wikilink]] stays here.
+- **The form is cut by tier** (`lib exp --quick` stamps the `seconds` cut:
+  question · criterion · stop rule · type · cost · terms · data · unit ·
+  model · prompt · null condition · exclusions · result; the full form adds
+  the rest; `--report` the † fields). One template, three cuts — a field
+  the cut left out is not owed (→ §2.A12).
 - **† = report field.** Due only once `Frozen before run` goes to "yes";
   leave empty until then (`lib exp <name> --report` appends them).
 - **`[K…]`/`[S…]`/`[W…]`/`[N…]` = intent ids**, one per promise to the code:
@@ -44,19 +49,19 @@ instead).*
 
 ## Intent (before the run)
 
-- **Question / hypothesis:** <the one question — what do we expect?>
-- **Success / failure criterion:** <how do we recognise whether it worked?
+- **Question / hypothesis:** <!-- s --> <the one question — what do we expect?>
+- **Success / failure criterion:** <!-- s --> <how do we recognise whether it worked?
   One id per promise to the code — one K per conjunct — each reappearing as
   a lowercase key in the reportable run's metrics.json (→ §2.A1)>
-- **Stop rule:** <at what point do we abandon the direction — fixed
+- **Stop rule:** <!-- s --> <at what point do we abandon the direction — fixed
   upfront; one S per rule (→ §2.A1)>
 - **Registered fork:** <if a precondition decides which of two questions the
   run answers, register the fork BEFORE the run: condition + question per
   branch, one W per fork (→ §2.A10, §2.A1); "n/a" if there is only one outcome>
-- **Type:** <exploratory (generates hypotheses, none of it reported as a
+- **Type:** <!-- s --> <exploratory (generates hypotheses, none of it reported as a
   test) | confirmatory (tests a hypothesis fixed before the run)>
 - **Timebox:** <hard budget, e.g. 4h — then log and ask>
-- **Cost:** <the price of a REPEAT, not whether a model is involved:
+- **Cost:** <!-- s --> <the price of a REPEAT, not whether a model is involved:
   seconds — rerunnable at will, incl. a handful of model calls for a minute
   and cents | minutes — a model pass you would not casually redo | hours —
   expensive or irreversible. seconds: no agent audit per run, `finalize`
@@ -75,33 +80,34 @@ instead).*
 
 ## Result (after the run — write back, don't go quiet)
 
-- **Answer to the question:** <number(s) + run_id, produced by
+- **Answer to the question:** <!-- s --> <number(s) + run_id, produced by
   `analysis/<note>.py --check`, never retyped; long form → [[note]]>
-- **Raw output:** <one real prompt+answer pair per finding>
+- **Raw output:** <!-- s --> <one real prompt+answer pair per finding>
 - **Interpretation / next step:** <one sentence; keep instrument findings
   apart from findings about the subject>
 - **Outcome †:** <expected or surprising — failures belong here>
 - **Rival check †:** <which rivals are ruled out, which still stand?>
 - **Caps/drops †:** <what was omitted or limited>
-- **Analysis audit †:** <date · scope sha · N findings — the audit of the
-  EVALUATION against the frozen criterion, before the number leaves
-  (→ §2.D11)>
+- **Analysis audit †:** <!-- s --> <date · scope sha · N findings — the audit of the
+  EVALUATION against the frozen criterion, before the number leaves; at
+  Cost seconds due at promotion or when the number steers a decision
+  (→ §2.D11, §2.A12)>
 
 <!-- APPARATUS — this part gets LOOKED UP, not read. -->
 
 ## Context (self-contained)
 
 - **Problem in one sentence:** <no technical terms — what is being found out?>
-- **Terms of this protocol:** <every label with a half-sentence or a pointer
+- **Terms of this protocol:** <!-- s --> <every label with a half-sentence or a pointer
   to the defining note; "n/a — standard vocabulary" if nothing is ambiguous>
 - **Prior threads:** <2–3 [[wikilinks]], each with half a sentence on why
   they lead here>
 
 ## Setup
 
-- **Data / scope:** <source, N, producer script; pilot subset first>
-- **Model / tool:** <alias from `models.toml` — never hardcode endpoint/ID>
-- **Prompt (verbatim, per variant):**
+- **Data / scope:** <!-- s --> <source, N, producer script; pilot subset first>
+- **Model / tool:** <!-- s --> <alias from `models.toml` — never hardcode endpoint/ID>
+- **Prompt (verbatim, per variant):** <!-- s -->
 
   ```text
   <the real prompt — it belongs here, not only in the script>
@@ -111,12 +117,14 @@ instead).*
   out in fact: what comes back + which function parses it>
 - **Gate labels (expected) †:** <which labels the gate accepts — the declared
   set for the mechanical check against code-extracted labels>
-- **Null condition / anchors (in the same run):** <one N per anchor — what runs along in THIS
+- **Null condition / anchors (in the same run):** <!-- s --> <one N per anchor — what runs along in THIS
   run and must show null — anchors of known rate, placebo, swap; not "was
   validated earlier". Per anchor its expected outcome WITH the derivation
   in half a sentence (→ §2.C9)>
-- **Exclusions / filters:** <what is dropped from the data or output and why;
+- **Exclusions / filters:** <!-- s --> <what is dropped from the data or output and why;
   which outputs get no gate label — "none" if nothing is excluded>
+- **Unit:** <!-- s --> <what one counted or judged thing is — and what is not:
+  hidden files, nested directories, empty cases, a second answer line>
 - **Data preparation †:** <raw → prepared: which script wrote which file;
   the experiment reads prepared only>
 - **Meaning of the gold label †:** <what does the positive class REALLY
@@ -160,7 +168,7 @@ into the commit message.
 
 ## Runs (documented runs — via `runlog`, cite run_ids instead of retyping numbers)
 
-- <run_id> — <one sentence: what this run was>
+- <run_id> — <one sentence: what this run was> <!-- s -->
 
 ## Follow-up
 

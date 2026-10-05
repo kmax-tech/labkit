@@ -121,7 +121,7 @@ class PreRun(unittest.TestCase):
         self.assertEqual(rc, 0)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("Cost seconds", ctx)
-        self.assertIn("criterion written", ctx)
+        self.assertIn("registration written", ctx)
         self.assertNotIn("BLOCKED", err)
 
     def test_seconds_without_criterion_is_reported_not_blocked(self):

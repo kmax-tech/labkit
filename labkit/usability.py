@@ -57,8 +57,7 @@ SCAFFOLDER = RES / "tools" / "arbeitsstandard-init.py"
 STAMPED = (*(RES / t for t in ("prepare-script.py.template", "measure-script.py.template",
                                "analyze-script.py.template", "test-area.py.template",
                                "measure-quick-script.py.template", "test-quick.py.template")),
-           *(Path(__file__).resolve().parent / t
-             for t in ("experiment-protocol.md.template", "measurement-protocol.md.template")))
+           Path(__file__).resolve().parent / "experiment-protocol.md.template")
 #: files per case — twelve cases; the truth is their mean, recounted at score time
 DOCS_PER_CASE = (4, 4, 3, 4, 4, 3, 2, 3, 4, 3, 2, 6)
 #: twelve sentences, six causal, six not — the judge task's items; the kept
@@ -179,7 +178,8 @@ def _sidecar(root: Path, suffix: str) -> Path:
     return root.parent / f"{root.name}.{suffix}"
 
 
-def stage(root: Path, venv: Path | None, quick: bool = False, task: str = "count") -> int:
+def stage(root: Path, venv: Path | None, quick: bool = False, task: str = "count",
+          model: bool = False) -> int:
     """Side effects: see module docstring. `quick` stamps the area with
     `--exp … --quick` (measurement short form + lean skeleton); `task`
     picks the fixture and the task sheet (TASKS)."""
@@ -199,7 +199,8 @@ def stage(root: Path, venv: Path | None, quick: bool = False, task: str = "count
     _sh(["git", "init", "-q", "."], root)
     _sh(["git", "add", "-A"], root)
     _sh(["git", "commit", "-qm", "Scaffold: a probe lab repo for the usability trace"], root)
-    exp_flags = ["--exp", area_name, *(["--quick"] if quick else [])]
+    exp_flags = ["--exp", area_name, *(["--quick"] if quick else []),
+                 *(["--model"] if model else [])]
     _sh([sys.executable, str(SCAFFOLDER), str(root), *exp_flags], root)
     areas = sorted(p.name for p in (root / "experiments").glob(f"*-{area_name}"))
     if len(areas) != 1:
@@ -382,6 +383,9 @@ def main(argv: list[str]) -> int:
     s.add_argument("--venv", help="link this venv instead of creating one")
     s.add_argument("--quick", action="store_true",
                    help="stamp the area with --quick (measurement short form, lean skeleton)")
+    s.add_argument("--model", action="store_true",
+                   help="with --quick: the seconds cut of the protocol plus the full "
+                        "measure skeleton (prompt, parser, probe) — a model in the loop")
     s.add_argument("--task", choices=sorted(TASKS), default="count",
                    help="which task sheet and fixture: count (deterministic) or judge (a model)")
     c = sub.add_parser("score", help="number, binding and log of a finished probe")
@@ -390,7 +394,7 @@ def main(argv: list[str]) -> int:
     root = Path(args.dir).resolve()
     if args.cmd == "stage":
         return stage(root, Path(args.venv).resolve() if args.venv else None,
-                     quick=args.quick, task=args.task)
+                     quick=args.quick, task=args.task, model=args.model)
     return score(root)
 
 

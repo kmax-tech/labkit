@@ -33,7 +33,9 @@ PLACEHOLDER = FROZEN.replace(
 NO_FIELD = "- **Protocol id:** p-0123456789abcdef\n- **Frozen before run:** yes\n"
 SECONDS = """\
 - **Protocol id:** p-0123456789abcdef
+- **Question / hypothesis:** does the register beat the trivial decider?
 - **Success / failure criterion:** [K1] accuracy above the trivial decider
+- **Stop rule:** n/a — deterministic, nothing to abandon
 - **Cost:** seconds — deterministic
 - **Preflight audit:** <date · scope sha · N findings>
 - **Frozen before run:** no
@@ -108,7 +110,7 @@ class FreezeGate(unittest.TestCase):
         area = self._area(SECONDS_NO_CRITERION)
         with self.assertRaises(SystemExit) as cm:
             runlog.Run("t", {}, area, long=True)
-        self.assertIn("success criterion", str(cm.exception))
+        self.assertIn("criterion", str(cm.exception))
         self.assertIn("Cost: seconds", str(cm.exception))
         self.assertFalse((area / "runs").exists())
 

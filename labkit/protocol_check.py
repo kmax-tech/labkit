@@ -88,6 +88,32 @@ MUST = [
     ("Raw output (one real example + model output)",
      r"roh-output|roh-beispiel|roh-antwort|i/o-beispiel|raw.?output"),
 ]
+# The `seconds` cut of the one template (2026-10-05): what a run that can be
+# repeated at will owes BEFORE its number counts — the registration (question,
+# criterion, stop rule), the instrument named (model, prompt, null
+# condition, unit) and the result cited. No freeze, no probe fields, no †
+# fields: those are owed at promotion. `lib exp --quick` stamps exactly this.
+MUST_SECONDS = [
+    ("Question / hypothesis", r"hypothese|frage|question|hypothesis"),
+    ("Success criterion", r"erfolg|success"),
+    ("Stop rule", r"abbruch|kill|stop.?rule"),
+    ("Type (exploratory / confirmatory / measurement)",
+     r"explorativ|konfirmatorisch|explorator|confirmator|measurement|messung"),
+    ("Cost tier", r"\bcost\b|kostenstufe"),
+    ("Terms (every label with a half-sentence gloss)",
+     r"begriff|terminolog|glossar|terms of"),
+    ("Data / scope", r"data\b|scope|daten|skopus|quelle"),
+    ("Unit (what one counted or judged thing is, and what is not)", r"\bunit\b|einheit"),
+    ("Model / tool (alias from models.toml, or n/a)", r"model / tool|modell|model\b"),
+    ("Prompt (verbatim, or n/a)", r"prompt"),
+    ("Null condition / anchor / control",
+     r"nullbedingung|null.?condition|anker|anchor|placebo|swap|kontroll"),
+    ("Exclusions / filters", r"exclusion|filter|ausschluss|ausschl[üu]sse"),
+    ("Result (answer + run_id)", r"answer to the question|result|ergebnis"),
+    ("Raw output (one real example, or n/a)",
+     r"roh-output|roh-beispiel|roh-antwort|i/o-beispiel|raw.?output"),
+]
+
 MUST_MEASUREMENT = [
     ("Question", r"question|frage"),
     ("Data / scope", r"data\b|scope|daten|skopus|quelle"),
@@ -360,7 +386,8 @@ def print_contract() -> None:
     groups = [("MUST (pilot and report)", MUST), ("MUST from Standard 0.15", MUST_V015),
               ("MUST from Standard 0.16", MUST_V016), ("SHOULD (MUST once frozen)", SHOULD),
               ("SHOULD if the template stamped them", SHOULD_IF_PRESENT),
-              ("MUST, measurement short form", MUST_MEASUREMENT),
+              ("MUST at Cost seconds (the quick cut; no SHOULD, nothing freezes)", MUST_SECONDS),
+              ("MUST, measurement short form (legacy, Type: measurement)", MUST_MEASUREMENT),
               ("MUST, measurement from Standard 0.17", MUST_MEASUREMENT_V017)]
     for title, fields in groups:
         print(f"\n  {title}")
@@ -406,6 +433,11 @@ def check_text(text: str, *, measurement: bool = False,
             missing_must += [label for label, pat in MUST_MEASUREMENT_V017
                              if not re.search(pat, low)]
         return missing_must + v016, []
+    if cost_tier_of(text) == "seconds":
+        # The seconds cut: its own must list, no should list — nothing
+        # graduates, because nothing freezes (§2.A12, 2026-10-05).
+        missing_must = [label for label, pat in MUST_SECONDS if not re.search(pat, low)]
+        return missing_must + v016, []
     missing_must = [label for label, pat in MUST if not re.search(pat, low)]
     if _std(standard) >= (0, 15):
         missing_must += [label for label, pat in MUST_V015
@@ -450,6 +482,32 @@ def cost_tier_of(text: str) -> str | None:
 #: A field line split into label and value — the value may be empty.
 FIELD_LINE = re.compile(r"^\s*[-*]?\s*\*{0,2}([^*<>:]{2,60}?)\*{0,2}\s*:\*{0,2}\s*(.*?)\s*$")
 SUCCESS_LABEL = re.compile(r"erfolg|success", re.I)
+
+
+INTENT_LABELS = (("question", re.compile(r"hypothese|frage|question|hypothesis", re.I)),
+                 ("criterion", re.compile(r"erfolg|success", re.I)),
+                 ("stop rule", re.compile(r"abbruch|kill|stop.?rule", re.I)),
+                 ("cost", re.compile(r"\bcost\b|kostenstufe", re.I)))
+
+
+def intent_missing(text: str) -> list[str]:
+    """The registration a run of seconds owes before its number counts:
+    question, criterion, stop rule and cost, each a written field (not a
+    placeholder). Returns what is missing — empty means the gate is open
+    (§2.A1 minimal registration; 2026-10-05 the gate asked for the
+    criterion alone)."""
+    written: set[str] = set()
+    for line in text.splitlines():
+        m = FIELD_LINE.match(line)
+        if not m:
+            continue
+        value = m.group(2)
+        if not value or value.startswith("<"):
+            continue
+        for name, pat in INTENT_LABELS:
+            if pat.search(m.group(1)):
+                written.add(name)
+    return [name for name, _ in INTENT_LABELS if name not in written]
 
 
 def criterion_present(text: str) -> bool:

@@ -161,13 +161,14 @@ def pre_run(event: dict) -> int:
         head = f"preflight {area.name}" + (f" --protocol {protocol.name}" if protocol else "")
         tiers = {protocol_check.cost_tier_of(t) for t in texts}
         if tiers == {"seconds"}:
-            if all(protocol_check.criterion_present(t) for t in texts):
+            missing = sorted({m for t in texts for m in protocol_check.intent_missing(t)})
+            if not missing:
                 notes.append(f"{head}: Cost seconds — gate not run, the rerun is "
-                             f"the probe; success criterion written (§2.A12).")
+                             f"the probe; registration written (§2.A12).")
             else:
-                notes.append(f"{head}: Cost seconds, but the success criterion is "
-                             f"still empty or a placeholder — runlog refuses a "
-                             f"full run until it is written (§2.A12).")
+                notes.append(f"{head}: Cost seconds, but {', '.join(missing)} still "
+                             f"empty or a placeholder — runlog refuses a full run "
+                             f"until the registration is written (§2.A1, §2.A12).")
             continue
         rc, out = _capture(preflight.run, area, protocol)
         frozen = any(protocol_check.FROZEN_YES.search(t) for t in texts)
