@@ -104,16 +104,21 @@ MUST_SECONDS = [
      r"begriff|terminolog|glossar|terms of"),
     ("Data / scope", r"data\b|scope|daten|skopus|quelle"),
     ("Unit (what one counted or judged thing is, and what is not)", r"\bunit\b|einheit"),
-    ("Model / tool (alias from models.toml, or n/a)", r"model / tool|modell|model\b"),
-    ("Prompt (verbatim, or n/a)", r"prompt"),
-    ("Null condition / anchor / control",
-     r"nullbedingung|null.?condition|anker|anchor|placebo|swap|kontroll"),
     ("Exclusions / filters", r"exclusion|filter|ausschluss|ausschl[üu]sse"),
     # Result and Raw output are stamped in the cut but owed AFTER the run —
     # `finalize`'s open-fields station flags their placeholders then. Before
     # the run they cannot exist, and the pre-run commit must pass the hook
     # (2026-10-05: an agent fell back to --no-verify).
 ]
+
+# Owed at seconds only when a model is in the loop — i.e. when the protocol
+# names a `Model / tool` (the `--model` cut stamps the field; a count has none).
+MUST_SECONDS_MODEL = [
+    ("Prompt (verbatim)", r"prompt"),
+    ("Null condition / anchor / control",
+     r"nullbedingung|null.?condition|anker|anchor|placebo|swap|kontroll"),
+]
+MODEL_FIELD = re.compile(r"^\s*[-*]?\s*\*{0,2}model / tool\*{0,2}\s*:\s*(.*)$", re.I | re.M)
 
 MUST_MEASUREMENT = [
     ("Question", r"question|frage"),
@@ -388,6 +393,7 @@ def print_contract() -> None:
               ("MUST from Standard 0.16", MUST_V016), ("SHOULD (MUST once frozen)", SHOULD),
               ("SHOULD if the template stamped them", SHOULD_IF_PRESENT),
               ("MUST at Cost seconds (the quick cut; no SHOULD, nothing freezes)", MUST_SECONDS),
+              ("MUST at Cost seconds when `Model / tool` is named", MUST_SECONDS_MODEL),
               ("MUST, measurement short form (legacy, Type: measurement)", MUST_MEASUREMENT),
               ("MUST, measurement from Standard 0.17", MUST_MEASUREMENT_V017)]
     for title, fields in groups:
@@ -438,6 +444,9 @@ def check_text(text: str, *, measurement: bool = False,
         # The seconds cut: its own must list, no should list — nothing
         # graduates, because nothing freezes (§2.A12, 2026-10-05).
         missing_must = [label for label, pat in MUST_SECONDS if not re.search(pat, low)]
+        model = MODEL_FIELD.search(text)
+        if model and model.group(1).strip() and not model.group(1).strip().lower().startswith("n/a"):
+            missing_must += [label for label, pat in MUST_SECONDS_MODEL if not re.search(pat, low)]
         return missing_must + v016, []
     missing_must = [label for label, pat in MUST if not re.search(pat, low)]
     if _std(standard) >= (0, 15):

@@ -17,11 +17,33 @@ TEMPLATE = Path(__file__).resolve().parents[1] / "labkit" / "experiment-protocol
 
 class Cut(unittest.TestCase):
     def test_every_must_seconds_label_is_tagged_in_the_template(self):
-        tagged = [ln.lower() for ln in TEMPLATE.read_text(encoding="utf-8").splitlines()
-                  if "<!-- s -->" in ln and ln.startswith("- **")]
+        lines = TEMPLATE.read_text(encoding="utf-8").splitlines()
+        tagged = [ln.lower() for ln in lines if "<!-- s -->" in ln and ln.startswith("- **")]
+        tagged_model = [ln.lower() for ln in lines if "<!-- sm -->" in ln and ln.startswith("- **")]
         for label, pat in protocol_check.MUST_SECONDS:
-            hits = [ln for ln in tagged if re.search(pat, ln)]
-            self.assertTrue(hits, f"{label!r} ({pat}) matches no tagged field line")
+            self.assertTrue([ln for ln in tagged if re.search(pat, ln)],
+                            f"{label!r} ({pat}) matches no `s` field line")
+        for label, pat in protocol_check.MUST_SECONDS_MODEL:
+            self.assertTrue([ln for ln in tagged_model if re.search(pat, ln)],
+                            f"{label!r} ({pat}) matches no `sm` field line")
+
+    def test_count_without_model_owes_no_prompt(self):
+        text = """- **Standard:** 0.17
+- **Protocol id:** p-0123456789abcdef
+- **Question / hypothesis:** how many?
+- **Success / failure criterion:** the mean is reported
+- **Stop rule:** n/a — deterministic
+- **Type:** measurement
+- **Cost:** seconds
+- **Terms of this protocol:** n/a
+- **Data / scope:** data/raw/cases.jsonl
+- **Unit:** one file
+- **Exclusions / filters:** hidden files
+"""
+        self.assertEqual(protocol_check.check_text(text, standard="0.17")[0], [])
+        with_model = text + "- **Model / tool:** haiku\n"
+        missing, _ = protocol_check.check_text(with_model, standard="0.17")
+        self.assertEqual(len(missing), 2)
 
     def test_seconds_protocol_is_checked_against_the_cut_only(self):
         text = """# Experiment protocol: x

@@ -9,9 +9,9 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
   into a note; the [[wikilink]] stays here.
 - **The form is cut by tier** (`lib exp --quick` stamps the `seconds` cut:
   question · criterion · stop rule · type · cost · terms · data · unit ·
-  model · prompt · null condition · exclusions · result; the full form adds
-  the rest; `--report` the † fields). One template, three cuts — a field
-  the cut left out is not owed (→ §2.A12).
+  exclusions · result; with `--model` also model · prompt · null condition;
+  the full form adds the rest; `--report` the † fields). One template, three
+  cuts — a field the cut left out is not owed (→ §2.A12).
 - **† = report field.** Due only once `Frozen before run` goes to "yes";
   leave empty until then (`lib exp <name> --report` appends them).
 - **`[K…]`/`[S…]`/`[W…]`/`[N…]` = intent ids**, one per promise to the code:
@@ -106,8 +106,8 @@ instead).*
 ## Setup
 
 - **Data / scope:** <!-- s --> <source, N, producer script; pilot subset first>
-- **Model / tool:** <!-- s --> <alias from `models.toml` — never hardcode endpoint/ID>
-- **Prompt (verbatim, per variant):** <!-- s -->
+- **Model / tool:** <!-- sm --> <alias from `models.toml` — never hardcode endpoint/ID>
+- **Prompt (verbatim, per variant):** <!-- sm -->
 
   ```text
   <the real prompt — it belongs here, not only in the script>
@@ -117,7 +117,7 @@ instead).*
   out in fact: what comes back + which function parses it>
 - **Gate labels (expected) †:** <which labels the gate accepts — the declared
   set for the mechanical check against code-extracted labels>
-- **Null condition / anchors (in the same run):** <!-- s --> <one N per anchor — what runs along in THIS
+- **Null condition / anchors (in the same run):** <!-- sm --> <one N per anchor — what runs along in THIS
   run and must show null — anchors of known rate, placebo, swap; not "was
   validated earlier". Per anchor its expected outcome WITH the derivation
   in half a sentence (→ §2.C9)>
