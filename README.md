@@ -41,7 +41,28 @@ notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
 preflight <AREA>                    # pre-freeze gate: protocol + code + scope + dirty check
 finalize <AREA>                     # post-run gate: completion + intent-check + open fields
 claude-hook pre-run|post-change     # the two Claude Code hooks a lab repo installs (stdin: event JSON)
+usability stage|score <DIR>        # probe lab repo for a cold agent; score its trace (time, steps, number)
 ```
+
+## Usability trace — what the whole chain costs for one kept number
+
+The doctrine grew by scars and every scar added a gate; nobody measured
+what the chain costs in the simplest case. On 2026-10-05 a deterministic
+seven-second run (uniagent area 01) took four days, three freezes and
+three agent audits. `usability` makes that measurable and repeatable:
+
+```bash
+usability stage /tmp/probe --venv .venv   # fresh lab repo, stamped area, fixture with a known answer, TASK.md
+#   hand TASK.md to a COLD agent (fresh context); it logs one line per step
+usability score /tmp/probe                # number == truth? bound? tier? wall-clock, steps per tag → probe.score.json
+```
+
+The fixture is twelve cases with a known number of input files each
+(mean 3.5); the truth sits next to the repo, not in it. The log contract
+is `HH:MM:SS · read|run|edit|unsure|gate · step`; `score` counts per tag,
+takes the wall-clock from the stamps, and records the labkit version, so
+two versions can be compared on the same task. Target line: one kept
+number under five minutes.
 
 ## Enforcement — four layers, two of them cannot be forgotten
 

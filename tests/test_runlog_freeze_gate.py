@@ -41,6 +41,11 @@ SECONDS = """\
 SECONDS_NO_CRITERION = SECONDS.replace(
     "[K1] accuracy above the trivial decider", "<the criterion>")
 HOURS_UNFROZEN = SECONDS.replace("seconds — deterministic", "hours — 2k calls")
+MEASUREMENT = """\
+- **Protocol id:** p-0123456789abcdef
+- **Type:** measurement
+- **Question:** how many documents per case?
+"""
 
 
 class FreezeGate(unittest.TestCase):
@@ -112,6 +117,10 @@ class FreezeGate(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             runlog.Run("t", {}, area, long=True)
         self.assertIn("Frozen before run: yes", str(cm.exception))
+
+    def test_measurement_short_form_needs_no_freeze(self):
+        r, _ = self._start(MEASUREMENT, long=True)
+        self.assertTrue((r.dir / "config.json").is_file())
 
     def test_tier_is_recorded_for_pilots_too(self):
         r, _ = self._start(FROZEN, long=False)

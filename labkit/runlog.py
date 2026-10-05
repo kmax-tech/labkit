@@ -614,13 +614,19 @@ def _protocol_text(base_dir: Path, binding: dict) -> str | None:
 
 def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
     """Why a FULL run may not start on this protocol — empty means it may."""
-    from labkit.protocol_check import (FROZEN_YES, cost_tier_of,
+    from labkit.protocol_check import (FROZEN_YES, TYPE_MEASUREMENT, cost_tier_of,
                                        criterion_present, placeholder_fields)
     text = _protocol_text(base_dir, binding)
     if text is None:
         return ["the run is unbound (no protocol) — a full run needs a "
                 "registered protocol (§2.A1)"]
     path = Path(binding["path"])
+    if TYPE_MEASUREMENT.search(text):
+        # The measurement short form (`lib exp --quick`, one counting
+        # question) has no freeze and no criterion by design — binding is
+        # the whole gate there (2026-10-05: a cold agent on a seconds task
+        # would otherwise be refused for a field the form does not have).
+        return []
     if cost_tier_of(text) == "seconds":
         if criterion_present(text):
             return []
