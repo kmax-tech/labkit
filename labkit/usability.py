@@ -236,11 +236,17 @@ def stage(root: Path, venv: Path | None, quick: bool = False, task: str = "count
     return 0
 
 
+#: a silence between two stamps this long is not work — an outage, a
+#: forgotten agent — and is reported beside the span, not hidden in it
+GAP_SECONDS = 600
+
+
 @dataclass(frozen=True)
 class LogTrace:
     """What the agent's log says: stamps and counts per tag."""
     lines: int
     wall_seconds: int | None    # max − min over the stamps; None below two
+    gap_seconds: int            # sum of silences ≥ GAP_SECONDS between stamps
     monotonic: bool             # stamps never run backwards
     read: int
     run: int
@@ -264,7 +270,8 @@ def parse_log(text: str) -> LogTrace:
         counts[m.group(4).lower()] += 1
         stamps.append(int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)))
     wall = (max(stamps) - min(stamps)) if len(stamps) >= 2 else None
-    return LogTrace(lines=len(stamps) + untagged, wall_seconds=wall,
+    gaps = sum(b - a for a, b in zip(stamps, stamps[1:]) if b - a >= GAP_SECONDS)
+    return LogTrace(lines=len(stamps) + untagged, wall_seconds=wall, gap_seconds=gaps,
                     monotonic=all(a <= b for a, b in zip(stamps, stamps[1:])),
                     untagged=untagged, **counts)
 
@@ -347,6 +354,11 @@ def score(root: Path) -> int:
         w = trace.wall_seconds
         rows.append(("wall-clock (log span)",
                      f"{w // 60}m{w % 60:02d}s" if w is not None else "n/a"))
+        if trace.gap_seconds:
+            g = trace.gap_seconds
+            net = (w - g) if w is not None else None
+            rows.append((f"silences ≥ {GAP_SECONDS // 60} min", f"{g // 60}m{g % 60:02d}s"
+                         + (f" → net {net // 60}m{net % 60:02d}s" if net is not None else "")))
         if not trace.monotonic:
             rows.append(("log order", "stamps run backwards — span is unreliable"))
         rows += [(f"steps · {t}", str(getattr(trace, t))) for t in (*LOG_TAGS, "untagged")]
@@ -354,7 +366,7 @@ def score(root: Path) -> int:
     for k, v in rows:
         print(f"  {k:<{width}}  {v}")
     over = (trace is not None and trace.wall_seconds is not None
-            and trace.wall_seconds > probe.target_minutes * 60)
+            and trace.wall_seconds - trace.gap_seconds > probe.target_minutes * 60)
     print(f"  target: one kept number under {probe.target_minutes} min"
           + (" — MISSED" if over else ""))
     print(f"→ {_sidecar(root, 'score.json')}")

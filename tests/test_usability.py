@@ -47,6 +47,12 @@ class LogParser(unittest.TestCase):
         self.assertEqual(got.lines, 9)
         self.assertTrue(got.monotonic)
 
+    def test_a_long_silence_is_reported_beside_the_span(self):
+        got = usability.parse_log("18:00:00 · read · a\n18:01:00 · run · b\n"
+                                  "18:31:00 · run · c\n18:32:00 · edit · d\n")
+        self.assertEqual(got.wall_seconds, 1920)
+        self.assertEqual(got.gap_seconds, 1800)
+
     def test_one_line_has_no_wall_clock(self):
         self.assertIsNone(usability.parse_log("18:00:00 · read · x\n").wall_seconds)
 
