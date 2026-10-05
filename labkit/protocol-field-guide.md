@@ -73,6 +73,17 @@ sentences, APPARATUS deserves precise fragments.
 
 ## Fields by section
 
+**Cost** — the price of a *repeat*, not whether a model is involved. A
+deterministic count, or a handful of model calls that finish in a minute
+for cents, is `seconds`: rerunnable at will, so no agent audit per run;
+`finalize` checks provenance, the independent audit comes when the number
+is promoted into a note or paper or steers a decision. `minutes` is a model
+pass you would not casually redo; `hours` is expensive or irreversible —
+both keep the preflight audit before freezing and the analysis audit after.
+Two cold agents declared `minutes` for sixteen calls and paid fifteen
+minutes of audit waiting for a 64-second run (2026-10-05).
+
+
 ### Summary (write last, HEAD)
 
 Write this LAST. Three lines — question, result, status — derived from the

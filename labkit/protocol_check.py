@@ -347,6 +347,29 @@ def find_template(explicit: str | None) -> Path | None:
     return here if here.exists() else None
 
 
+def print_contract() -> None:
+    """The checker's contract in one screen (2026-10-05: two cold agents
+    learnt the budgets from the pre-commit hook and the field words from
+    the checker's source, four rewrite rounds each)."""
+    print("prose-line budget per section (code blocks, table rows exempt; "
+          "a MUST once frozen from Standard 0.14):")
+    for label, _, limit in SECTION_BUDGET:
+        print(f"  {label:<9} {limit}")
+    print("\nfields and the words they are recognised by (regex over the whole "
+          "file, case-insensitive; `n/a — <why>` counts as filled):")
+    groups = [("MUST (pilot and report)", MUST), ("MUST from Standard 0.15", MUST_V015),
+              ("MUST from Standard 0.16", MUST_V016), ("SHOULD (MUST once frozen)", SHOULD),
+              ("SHOULD if the template stamped them", SHOULD_IF_PRESENT),
+              ("MUST, measurement short form", MUST_MEASUREMENT),
+              ("MUST, measurement from Standard 0.17", MUST_MEASUREMENT_V017)]
+    for title, fields in groups:
+        print(f"\n  {title}")
+        for label, pat in fields:
+            print(f"    {label:<58} {pat}")
+    print("\nfrozen: `Frozen before run: yes` graduates every SHOULD to MUST and "
+          "turns a stamped placeholder into a failure.")
+
+
 def find_field_guide() -> Path | None:
     here = Path(__file__).resolve().parent / "protocol-field-guide.md"
     return here if here.exists() else None
@@ -547,6 +570,12 @@ def main(argv: list[str]) -> int:
         print("  --template PATH  check against this template instead of the "
               "packaged one")
         print("  --guide          print the path to the protocol field guide")
+        print("  --contract       print what the checker holds a protocol to: the "
+              "prose-line budget per section and the words each field is "
+              "recognised by — read it BEFORE writing, not from the pre-commit hook")
+        return 0
+    if argv and argv[0] == "--contract":
+        print_contract()
         return 0
     if argv and argv[0] == "--guide":
         fg = find_field_guide()

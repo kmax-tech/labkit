@@ -27,7 +27,9 @@ examples, rationale for each field: `protocol-field-guide.md`
 `templates/PROTOCOL-FIELD-GUIDE.md`). Pure counting questions take the
 measurement short form (`measurement-protocol.md.template`).*
 
-<!-- HEAD — this part gets READ. Line budget per section: protocol-check. -->
+<!-- HEAD — this part gets READ. Prose-line budget per section: Summary 20 ·
+     Context 20 · Intent 35 · Setup 45 (code blocks and table rows do not
+     count; `protocol-check --contract` prints budgets and accepted field words). -->
 
 ## Summary † (write last)
 
@@ -54,10 +56,12 @@ instead).*
 - **Type:** <exploratory (generates hypotheses, none of it reported as a
   test) | confirmatory (tests a hypothesis fixed before the run)>
 - **Timebox:** <hard budget, e.g. 4h — then log and ask>
-- **Cost:** <seconds — deterministic, rerunnable at will | minutes — one
-  model pass | hours — expensive or irreversible. The tier sets the audit:
-  `seconds` gets ONE agent audit, after the first run, on real output;
-  `minutes`/`hours` get the preflight audit before freezing (→ §2.A12)>
+- **Cost:** <the price of a REPEAT, not whether a model is involved:
+  seconds — rerunnable at will, incl. a handful of model calls for a minute
+  and cents | minutes — a model pass you would not casually redo | hours —
+  expensive or irreversible. seconds: no agent audit per run, `finalize`
+  checks provenance, the audit comes at promotion; minutes/hours: preflight
+  audit before freezing, analysis audit after (→ §2.A12)>
 - **Split touched:** <which split may be touched: train | dev | test>
 - **Preflight audit:** <date · scope sha · N findings (blockers fixed /
   accepted with reason / dismissed with reason) — the code-vs-intent audit
