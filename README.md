@@ -25,7 +25,7 @@ pip install ~/projects/labkit      # in repos: pinned via requirements.txt/.lock
 from labkit import runlog, llm, batch
 ```
 
-Nine **console commands** come with the installation, `runlog` with three
+Ten **console commands** come with the installation, `runlog` with three
 sub-commands (all answer `--help`):
 
 ```bash
@@ -40,6 +40,52 @@ protocol-fill <PROTOCOL> FIELD VAL  # fill one stamped placeholder field by labe
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
 preflight <AREA>                    # pre-freeze gate: protocol + code + scope + dirty check
 finalize <AREA>                     # post-run gate: completion + intent-check + open fields
+claude-hook pre-run|post-change     # the two Claude Code hooks a lab repo installs (stdin: event JSON)
+```
+
+## Enforcement — four layers, two of them cannot be forgotten
+
+A rule the agent has to remember is the weak layer: it lives in the skill
+text and dies with a long session. The layers that do not depend on
+remembering (2026-10-05):
+
+| Layer                | Where                                                      | Holds when                                            |
+|----------------------|------------------------------------------------------------|-------------------------------------------------------|
+| code refuses         | `runlog.Run` — leak, index header, detach, **freeze gate** | always: every run passes through it                   |
+| Claude hook blocks   | `claude-hook pre-run` (PreToolUse Bash, exit 2)            | a frozen protocol's area has preflight blockers       |
+| Claude hook reports  | `claude-hook post-change` (PostToolUse Bash\|Write\|Edit)  | a protocol or messung note changed, whatever wrote it |
+| git pre-commit fails | `.githooks/pre-commit`                                     | a staged protocol misses must fields                  |
+
+**Freeze gate.** `long=True` is the script's declaration of a full run.
+`runlog` refuses it before `mkdir` unless the bound protocol says
+`Frozen before run: yes` and its `Preflight audit:` field is filled (a
+protocol that never had the field is not a gap; a stamped placeholder is).
+A long *pilot* acknowledges with `LABKIT_UNFROZEN=1`; the acknowledgement
+is written to `config.json` as `unfrozen_ack`, so the number carries it.
+
+**pre-run.** The hook sees every Bash command. One that names a `.py` file
+which opens a run (`runlog.run(`) and is not a throwaway stage (`--show`,
+`--probe`, `--eval-only`) triggers `preflight` on the script's area. Frozen
+protocol + blockers → the command is blocked and the agent reads why.
+Unfrozen (a pilot by declaration) + blockers → reported, not blocked.
+`LABKIT_PREFLIGHT=skip` in the command skips the gate, visibly.
+
+**post-change.** Matches on what changed (`git status`, untracked
+included), not on which tool wrote it — a protocol written through a
+heredoc gets the same `protocol-check` as one written with Edit. A
+per-session content hash keeps a file from being reported again after
+every later command.
+
+Install (what `arbeitsstandard-init.py` stamps into `.claude/settings.json`):
+
+```json
+{"hooks": {
+  "PreToolUse":  [{"matcher": "Bash",
+                   "hooks": [{"type": "command", "timeout": 120,
+                              "command": "\"${CLAUDE_PROJECT_DIR:-.}/.venv/bin/claude-hook\" pre-run"}]}],
+  "PostToolUse": [{"matcher": "Bash|Write|Edit",
+                   "hooks": [{"type": "command", "timeout": 30,
+                              "command": "\"${CLAUDE_PROJECT_DIR:-.}/.venv/bin/claude-hook\" post-change"}]}]}}
 ```
 
 ## Terms

@@ -138,6 +138,13 @@ class TestLongGate(unittest.TestCase):
         env.pop("LABKIT_DETACHED", None)
         env.update(extra_env)
         with tempfile.TemporaryDirectory() as d:
+            # long=True also passes the freeze gate (2026-10-05): the run
+            # needs a frozen, audited protocol, or it is refused for a
+            # different reason than the one this test is about.
+            Path(d, "PROTOCOL-gate.md").write_text(
+                "- **Protocol id:** p-0123456789abcdef\n"
+                "- **Preflight audit:** 2026-10-05 · abc · 0 findings\n"
+                "- **Frozen before run:** yes\n", encoding="utf-8")
             return subprocess.run(
                 [sys.executable, "-c", code,
                  str(Path(__file__).resolve().parents[1])],

@@ -371,6 +371,31 @@ def check_text(text: str, *, measurement: bool = False,
     return missing_must, missing_should
 
 
+def graduate(text: str, missing_must: list[str], missing_should: list[str],
+             holes: list[tuple[int, str]],
+             ) -> tuple[bool, list[str], list[str], list[tuple[int, str]],
+                        list[tuple[int, str]]]:
+    """The graduation gate, in ONE place: `Frozen before run: yes` turns
+    every should-gap and should-placeholder into a must.
+
+    Returns (frozen, missing_must, missing_should, must_holes, soft_holes).
+    Until 2026-10-05 this lived inline in main(); preflight re-derived the
+    severities without it and passed a frozen protocol with eleven should
+    gaps that protocol-check failed — two homes, one of them blind to the
+    freeze.
+    """
+    frozen = bool(FROZEN_YES.search(text))
+    must_holes = [(n, lb) for n, lb in holes
+                  if severity_of(lb) == "must"
+                  or (frozen and severity_of(lb) == "should")]
+    soft_holes = [(n, lb) for n, lb in holes if (n, lb) not in must_holes]
+    if frozen:
+        missing_must = missing_must + [f"{lb} (must once frozen: yes)"
+                                       for lb in missing_should]
+        missing_should = []
+    return frozen, missing_must, missing_should, must_holes, soft_holes
+
+
 def protocol_id_of(text: str) -> str | None:
     """The `Protocol id:` value, or None if the field is absent."""
     m = PROTOCOL_ID.search(text)
@@ -548,18 +573,10 @@ def main(argv: list[str]) -> int:
                   f"justify as 'n/a — <why>'.")
             continue
 
-        frozen = bool(FROZEN_YES.search(text))
-        budget_must = frozen and _std(standard) >= (0, 14)
         holes = placeholder_fields(text)
-        # Graduation gate: frozen -> every should-gap is a must-gap.
-        must_holes = [(n, lb) for n, lb in holes
-                      if severity_of(lb) == "must"
-                      or (frozen and severity_of(lb) == "should")]
-        soft_holes = [(n, lb) for n, lb in holes if (n, lb) not in must_holes]
-        if frozen:
-            missing_must = missing_must + [f"{lb} (must once frozen: yes)"
-                                           for lb in missing_should]
-            missing_should = []
+        frozen, missing_must, missing_should, must_holes, soft_holes = graduate(
+            text, missing_must, missing_should, holes)
+        budget_must = frozen and _std(standard) >= (0, 14)
         pilot_note = ""
         if not frozen and FROZEN_NO.search(text) and missing_should:
             pilot_note = (f"pilot (frozen: no) — {len(missing_should)} "

@@ -213,3 +213,28 @@ class TestNoScriptsDirectory(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GraduationGate(unittest.TestCase):
+    """Frozen turns should-gaps into blockers — the same rule as in
+    protocol-check, from the same function (2026-10-05)."""
+
+    def test_frozen_protocol_with_should_gaps_has_blockers(self):
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d, CLEAN_PROTOCOL.replace("** no", "** yes"))
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = preflight.run(area)
+            self.assertEqual(rc, 1)
+            self.assertIn("MISSING (must): Result / outcome (write back after the run) "
+                          "(must once frozen: yes)", buf.getvalue())
+
+    def test_unfrozen_protocol_same_gaps_are_warnings(self):
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = preflight.run(area)
+            self.assertEqual(rc, 0)
+            self.assertIn("missing (should): Result", buf.getvalue())
+

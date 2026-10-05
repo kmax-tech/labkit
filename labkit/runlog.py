@@ -582,6 +582,41 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
     return {"id": pid, "path": rel}
 
 
+# The freeze gate (2026-10-05). `long=True` is the script's declaration of a
+# full run (the measure template sets it for the no-flag stage; --probe and
+# pilots stay long=False). A full run on a protocol that is not `Frozen
+# before run: yes`, or whose `Preflight audit:` is still the template
+# placeholder, produces a number nobody registered for — and the rule that
+# forbade it lived only in the skill text, which a long session forgets.
+# Hence a refusal in the one place every run passes through, before mkdir.
+# A protocol written before the field existed carries no `Preflight audit`
+# label at all; that is not a gap (protocol_check SHOULD_IF_PRESENT), only a
+# stamped-but-unfilled one is. Escape hatch for a long PILOT: LABKIT_UNFROZEN=1
+# — the acknowledgement is recorded in config.json so the number carries it.
+PREFLIGHT_AUDIT_LABEL = re.compile(r"preflight.?audit", re.I)
+
+
+def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
+    """Why a FULL run may not start on this protocol — empty means it may."""
+    from labkit.protocol_check import FROZEN_YES, placeholder_fields
+    if binding.get("path") is None:
+        return ["the run is unbound (no protocol) — a full run needs a "
+                "registered protocol (§2.A1)"]
+    path = Path(binding["path"])
+    if not path.is_absolute():
+        path = base_dir / path
+    text = path.read_text(encoding="utf-8")
+    out = []
+    if not FROZEN_YES.search(text):
+        out.append(f"{path.name}: not `Frozen before run: yes`")
+    for n, label in placeholder_fields(text):
+        if PREFLIGHT_AUDIT_LABEL.search(label):
+            out.append(f"{path.name}:{n}: `{label}:` is still the placeholder "
+                       f"— run `preflight`, then the experiment-preflight "
+                       f"audit (§2.A12), and stamp the field")
+    return out
+
+
 class Run:
     def __init__(self, experiment: str, config: dict, base_dir: Path,
                  data: dict | None = None, long: bool = False,
@@ -609,6 +644,23 @@ class Run:
         # Also before mkdir: an unresolvable protocol is a refusal, and a
         # refusal must not leave an empty run dir behind (2026-09-26).
         self._protocol = _protocol_binding(base_dir, protocol)
+        # Freeze gate, also before mkdir: a full run on an unfrozen protocol
+        # is a refusal, not a run with a warning (2026-10-05).
+        self._unfrozen_ack = False
+        if long:
+            findings = _freeze_findings(base_dir, self._protocol)
+            if findings and os.environ.get("LABKIT_UNFROZEN"):
+                self._unfrozen_ack = True
+                print("runlog: WARNING — LABKIT_UNFROZEN=1: full run on an "
+                      "unfrozen protocol, acknowledged; recorded in config.json:\n  "
+                      + "\n  ".join(findings))
+            elif findings:
+                raise SystemExit(
+                    "runlog: this run declares long=True (a full run), but its "
+                    "protocol is not ready for one:\n  " + "\n  ".join(findings)
+                    + "\nPilot it with long=False, or freeze first: `preflight "
+                    "<AREA>` clean, audit stamped, `Frozen before run: yes`. A "
+                    "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded).")
         self.dir = base_dir / "runs" / self.run_id
         self.dir.mkdir(parents=True, exist_ok=False)
         self._config = dict(config)
@@ -619,6 +671,7 @@ class Run:
         frozen = {"schema_version": RUN_SCHEMA,
                   "experiment": experiment, "script": self.script,
                   "protocol": self._protocol,
+                  "unfrozen_ack": self._unfrozen_ack,
                   "script_sha": _snapshot_script(self.dir),
                   "untracked_sources": _snapshot_untracked_sources(self.dir),
                   "pid": os.getpid(),          # lets `active()` tell running from crashed

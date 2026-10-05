@@ -35,8 +35,8 @@ from labkit.protocol_check import (
     TYPE_MEASUREMENT,
     check_protocol_id,
     check_text,
+    graduate,
     placeholder_fields,
-    severity_of,
 )
 from labkit.scope_sha import scope_sha, find_pin, AREA_GLOBS
 
@@ -87,8 +87,10 @@ def run(area: Path, protocol: Path | None = None) -> int:
     is_measurement = bool(TYPE_MEASUREMENT.search(text))
     missing_must, missing_should = check_text(
         text, measurement=is_measurement, standard=standard)
-    holes = placeholder_fields(text)
-    must_holes = [(n, l) for n, l in holes if severity_of(l) == "must"]
+    # Same graduation gate as protocol-check (one home): frozen turns every
+    # should-gap into a blocker.
+    _, missing_must, missing_should, must_holes, should_holes = graduate(
+        text, missing_must, missing_should, placeholder_fields(text))
     id_findings = check_protocol_id(protocol, text, standard)
 
     if missing_must:
@@ -107,7 +109,6 @@ def run(area: Path, protocol: Path | None = None) -> int:
         for label in missing_should:
             print(f"  missing (should): {label}")
         warnings += len(missing_should)
-    should_holes = [(n, l) for n, l in holes if severity_of(l) == "should"]
     if should_holes:
         for n, label in should_holes:
             print(f"  {protocol.name}:{n}: placeholder (should): {label}")
