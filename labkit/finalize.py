@@ -77,8 +77,9 @@ def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]
         if not f.exists():
             blockers.append(f"{f} is gone — the run's rows cannot be re-derived")
         elif not _tracked(repo, f):
-            blockers.append(f"{f} is not tracked in git — commit the source and the "
-                            f"output rows, or the number cannot be re-derived")
+            blockers.append(f"{f} is not tracked in git — `git add` it (the output "
+                            f"rows are born after the run, so this is red once on "
+                            f"every first pass), then finalize again")
     return blockers, warnings
 
 
