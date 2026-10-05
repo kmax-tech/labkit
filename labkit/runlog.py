@@ -59,6 +59,13 @@ RUN_INDEX_COLS = ["run_id", "git", "script", "data", "config", "metrics",
 # absent (2026-09-26).
 RUN_SCHEMA = 2
 SPLIT_KEYS = ("train", "dev", "test")
+#: Roles for the leakage check beyond splits (2026-10-05, three audits in
+#: three repos): a control set — anchors, gates, placebos — must share no id
+#: with the measured set, or the gate and the measured arm hold the same
+#: data point. Matched on the first `_`/`-` segment of the data key.
+CONTROL_ROLES = ("anchor", "anchors", "gate", "gates", "placebo", "placebos",
+                 "control", "controls", "calibration")
+MEASURED_ROLES = (*SPLIT_KEYS, "items", "measured", "cases", "prepared", "pairs", "pool")
 
 
 def _git(args: list[str], cwd: Path) -> str:
@@ -351,19 +358,37 @@ def _describe(paths: dict) -> dict:
             raise FileNotFoundError(f"data[{key!r}] does not exist: {p}")
         out[key] = {"path": str(p), "sha256": _sha256(p)[:16],
                     "rows": _data_rows(p)}
+    def role(key: str) -> str:
+        return re.split(r"[_-]", key, 1)[0].lower()
+
     known = {k: _ids(Path(p)) for k, p in paths.items() if k in SPLIT_KEYS}
     checkable = {k: v for k, v in known.items() if v is not None}
-    if len(checkable) < 2:
-        out["leakage_check"] = ("skipped: need >=2 of train/dev/test as .jsonl "
-                                "with an 'id' field per row")
-        return out
-    for a, b in ((x, y) for x in checkable for y in checkable if x < y):
-        shared = checkable[a] & checkable[b]
-        if shared:
-            raise RuntimeError(
-                f"split leakage: {len(shared)} id(s) in both {a!r} and {b!r}, "
-                f"e.g. {sorted(shared)[:5]}. Fix the split before running.")
-    out["leakage_check"] = f"ok: no shared ids across {sorted(checkable)}"
+    verdicts: list[str] = []
+    if len(checkable) >= 2:
+        for a, b in ((x, y) for x in checkable for y in checkable if x < y):
+            shared = checkable[a] & checkable[b]
+            if shared:
+                raise RuntimeError(
+                    f"split leakage: {len(shared)} id(s) in both {a!r} and {b!r}, "
+                    f"e.g. {sorted(shared)[:5]}. Fix the split before running.")
+        verdicts.append(f"no shared ids across {sorted(checkable)}")
+    controls = {k: _ids(Path(p)) for k, p in paths.items() if role(k) in CONTROL_ROLES}
+    measured = {k: _ids(Path(p)) for k, p in paths.items() if role(k) in MEASURED_ROLES}
+    controls = {k: v for k, v in controls.items() if v is not None}
+    measured = {k: v for k, v in measured.items() if v is not None}
+    for c, cids in controls.items():
+        for m, mids in measured.items():
+            shared = cids & mids
+            if shared:
+                raise RuntimeError(
+                    f"control leakage: {len(shared)} id(s) in both {c!r} and {m!r}, "
+                    f"e.g. {sorted(shared)[:5]} — the gate and the measured arm hold "
+                    f"the same data point. Fix the sets before running.")
+    if controls and measured:
+        verdicts.append(f"no shared ids between {sorted(controls)} and {sorted(measured)}")
+    out["leakage_check"] = ("ok: " + "; ".join(verdicts)) if verdicts else (
+        "skipped: need >=2 of train/dev/test, or a control (anchor/gate/placebo) "
+        "and a measured set, as .jsonl with an 'id' field per row")
     return out
 
 

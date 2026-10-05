@@ -11,6 +11,11 @@ What it runs, in order:
   1. completion     the newest bound run is 'completed'
   2. intent-check   every registered promise has a metrics key (and vice versa)
   3. open fields    protocol fields still holding a placeholder
+  5. criterion n    every `k<i>_n` key in metrics.json equals some input
+                    count the run recorded (rows of a data= file, lines of
+                    an output) — a warning, not a blocker, until the false
+                    alarm rate is known (2026-10-05; the denominator class
+                    was 31 of 171 audit findings)
   4. provenance     at `Cost: seconds` / the measurement short form: the
                     run froze its source (`data=` in config.json) and every
                     source and output file is tracked in git — the two of
@@ -26,6 +31,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -51,6 +57,41 @@ def _tracked(repo: Path, path: Path) -> bool:
     r = subprocess.run(["git", "ls-files", "--error-unmatch", str(path)], cwd=repo,
                        capture_output=True, text=True)
     return r.returncode == 0
+
+
+CRITERION_N = re.compile(r"^k\d+_n$")
+
+
+def criterion_n_findings(run_dir: Path) -> list[str]:
+    """Warnings: a `k<i>_n` that matches no input count the run recorded."""
+    metrics_file = run_dir / "metrics.json"
+    if not metrics_file.is_file():
+        return []
+    metrics = json.loads(metrics_file.read_text(encoding="utf-8"))
+    ns = {k: v for k, v in metrics.items() if CRITERION_N.match(k) and isinstance(v, int)}
+    if not ns:
+        return []
+    cfg = json.loads((run_dir / "config.json").read_text(encoding="utf-8"))
+    counts: dict[str, int] = {}
+    for key, d in (cfg.get("data") or {}).items():
+        if isinstance(d, dict) and isinstance(d.get("rows"), int):
+            counts[f"data[{key}].rows"] = d["rows"]
+    outputs_file = run_dir / "outputs.json"
+    if outputs_file.is_file():
+        for o in json.loads(outputs_file.read_text(encoding="utf-8")):
+            if isinstance(o.get("lines"), int):
+                counts[f"{Path(o['path']).name} lines"] = o["lines"]
+    if not counts:
+        return [f"{', '.join(sorted(ns))} present, but the run recorded no input count "
+                f"(no data= rows, no output lines) to hold them to"]
+    out = []
+    for k, n in sorted(ns.items()):
+        if n not in counts.values():
+            out.append(f"{k} = {n} matches no recorded count "
+                       f"({', '.join(f'{a} = {b}' for a, b in sorted(counts.items()))}) — "
+                       f"a denominator that is not the input is the audits' most "
+                       f"frequent real finding")
+    return out
 
 
 def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]]:
@@ -177,6 +218,18 @@ def run(area: Path, protocol: Path | None = None) -> int:
         if not b and not w:
             print("  source frozen in the run; source and output tracked in git")
         blockers += len(b)
+        warnings += len(w)
+
+    # -- 5. criterion n ------------------------------------------------------
+    print("── criterion n ──")
+    if newest_dir is None:
+        print("  no completed run to check")
+    else:
+        w = criterion_n_findings(newest_dir)
+        for line in w:
+            print(f"  warning: {line}")
+        if not w:
+            print("  every k<i>_n equals a recorded input count (or there is none)")
         warnings += len(w)
 
     # -- summary -----------------------------------------------------------

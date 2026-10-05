@@ -8,13 +8,21 @@ analysis reads and no producer writes, a protocol still full of placeholders
 are all decidable from the source. Deciding them here leaves the model the
 one question worth its cost: does the code MEAN what the registration says.
 
-Currently one automated check; the rest are extracted as facts for the
+Three automated checks; the rest are extracted as facts for the
 code-check agent (via ``--bundle``), not verified by this command:
 
   1. **intent ids against the code** (§2.A1a, AUTOMATED). Every registered
      [K1]/[S1]/[W1]/[N1] must appear as a key literal in the area's scripts.
      Report time has `intent-check` for the metrics; before the run the same
      promise goes unchecked exactly when repairing it is still cheap.
+  1b. **parser fixtures** (AUTOMATED, 2026-10-05). Every `parse_*` function in
+     the area's scripts is exercised by a test under the repo's tests/ — five
+     audit findings in three repos were "this parser has no fixture test on
+     real raw answers", and a parser fails silently into a wrong number.
+  1c. **prompt drift** (AUTOMATED, 2026-10-05). The protocol's prompt block
+     is the `PROMPT` constant, not a transcript of it: every line of the
+     constant without a `{placeholder}` must appear in the block. The most
+     frequent provenance blocker in the audit corpus.
 
 The following are extracted into the audit bundle but NOT checked by this
 command — the code-check agent judges them:
@@ -566,6 +574,113 @@ def find_repo(area: Path) -> Path:
     return area
 
 
+PARSE_DEF = re.compile(r"^\s*def (parse_\w+)\s*\(", re.M)
+PROMPT_NAME = re.compile(r"^PROMPT(_[A-Z0-9_]+)?$")
+PROMPT_FIELD = re.compile(r"^\s*[-*]\s*\*{0,2}prompt\b", re.I)
+FENCE = re.compile(r"^\s*```")
+PLACEHOLDER_IN_PROMPT = re.compile(r"\{[^{}]*\}")
+
+
+def check_parser_fixtures(area: Path, repo: Path) -> list[str]:
+    """Every `parse_*` in the area's scripts is named in some test file."""
+    scripts = sorted((area / "scripts").glob("*.py")) if (area / "scripts").is_dir() else []
+    parsers: dict[str, Path] = {}
+    for sp in scripts:
+        for m in PARSE_DEF.finditer(sp.read_text(encoding="utf-8")):
+            parsers.setdefault(m.group(1), sp)
+    if not parsers:
+        return []
+    tests_dir = repo / "tests"
+    test_text = "\n".join(t.read_text(encoding="utf-8")
+                          for t in sorted(tests_dir.glob("test_*.py"))) if tests_dir.is_dir() else ""
+    findings = []
+    for name, sp in sorted(parsers.items()):
+        if not re.search(rf"\b{re.escape(name)}\b", test_text):
+            findings.append(
+                f"BLOCKER · {sp.name} · {name}() has no test under {tests_dir.name}/ · "
+                f"a parser fails silently into a wrong number · give it a fixture "
+                f"with real raw answers (§2.A13, 2026-10-05)")
+    return findings
+
+
+def _string_of(node: ast.AST) -> str | None:
+    """The text of a string constant, incl. implicit and `+` concatenation."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        a, b = _string_of(node.left), _string_of(node.right)
+        return a + b if a is not None and b is not None else None
+    if isinstance(node, ast.JoinedStr):
+        return None   # an f-string renders at run time; nothing to hold the block to
+    return None
+
+
+def prompt_constants(area: Path) -> dict[str, str]:
+    """`PROMPT` / `PROMPT_<VARIANT>` string constants across the area's scripts."""
+    out: dict[str, str] = {}
+    scripts = sorted((area / "scripts").glob("*.py")) if (area / "scripts").is_dir() else []
+    for sp in scripts:
+        try:
+            tree = ast.parse(sp.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+        for node in tree.body:
+            if isinstance(node, ast.Assign) and len(node.targets) == 1 \
+                    and isinstance(node.targets[0], ast.Name) \
+                    and PROMPT_NAME.match(node.targets[0].id):
+                text = _string_of(node.value)
+                if text is not None:
+                    out[node.targets[0].id] = text
+    return out
+
+
+def prompt_blocks(protocol: Path) -> list[str]:
+    """The fenced blocks that follow a `Prompt` field in the protocol."""
+    lines = protocol.read_text(encoding="utf-8").splitlines()
+    blocks: list[str] = []
+    i = 0
+    while i < len(lines):
+        if PROMPT_FIELD.match(lines[i]):
+            j = i + 1
+            while j < len(lines) and j <= i + 3 and not FENCE.match(lines[j]):
+                j += 1
+            if j < len(lines) and FENCE.match(lines[j]):
+                k = j + 1
+                while k < len(lines) and not FENCE.match(lines[k]):
+                    k += 1
+                blocks.append("\n".join(lines[j + 1:k]))
+                i = k
+        i += 1
+    return blocks
+
+
+def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
+    """The protocol's prompt block against the PROMPT constant(s).
+
+    Compared line by line: every non-empty line of the constant that carries
+    no `{placeholder}` must appear, stripped, in some prompt block. A block
+    rendered with real data passes; a transcript that drifted does not."""
+    consts = prompt_constants(area)
+    blocks = [b for b in prompt_blocks(protocol) if "<" not in b.splitlines()[0][:1]] \
+        if consts else []
+    blocks = [b for b in blocks if not b.strip().startswith("<")]
+    if not consts or not blocks:
+        return []
+    have = {ln.strip() for b in blocks for ln in b.splitlines() if ln.strip()}
+    findings = []
+    for name, text in sorted(consts.items()):
+        fixed = [ln.strip() for ln in text.splitlines()
+                 if ln.strip() and not PLACEHOLDER_IN_PROMPT.search(ln)]
+        missing = [ln for ln in fixed if ln not in have]
+        if fixed and missing:
+            findings.append(
+                f"BLOCKER · {protocol.name} · prompt block drifted from {name}: "
+                f"{len(missing)} of {len(fixed)} fixed line(s) missing, e.g. "
+                f"{missing[0][:60]!r} · paste the rendered `--show` output, not a "
+                f"transcript (§2.A4, 2026-10-05)")
+    return findings
+
+
 def main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
@@ -614,7 +729,10 @@ def main(argv: list[str]) -> int:
     else:
         protocol = protocols[0]
 
-    findings = check_intent_ids(area, protocol)
+    repo = find_repo(area)
+    findings = (check_intent_ids(area, protocol)
+                + check_parser_fixtures(area, repo)
+                + check_prompt_drift(area, protocol))
     for f in findings:
         print(f)
 
@@ -625,7 +743,8 @@ def main(argv: list[str]) -> int:
 
     blockers = sum(1 for f in findings if f.startswith("BLOCKER"))
     warnings = sum(1 for f in findings if f.startswith("WARNING"))
-    parts = [f"intent-ids: {blockers} blocker(s), {warnings} warning(s)"]
+    parts = [f"intent-ids: {blockers} blocker(s), {warnings} warning(s) "
+             f"(incl. parser fixtures, prompt drift)"]
     if bundle_to is not None:
         parts.append("schema + gate labels + placeholders extracted into "
                      "the bundle for the code-check agent")
