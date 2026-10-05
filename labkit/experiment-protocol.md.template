@@ -29,8 +29,8 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
 *Field labels English; content in German or English. Explanations,
 examples, rationale for each field: `protocol-field-guide.md`
 (`protocol-check --guide` prints the path; thesis repos:
-`templates/PROTOCOL-FIELD-GUIDE.md`). Pure counting questions take the
-measurement short form (`measurement-protocol.md.template`).*
+`templates/PROTOCOL-FIELD-GUIDE.md`). A run of seconds takes the
+seconds cut (`lib exp <name> --quick`, `--model` with a model in the loop).*
 
 <!-- HEAD — this part gets READ. Prose-line budget per section: Summary 20 ·
      Context 20 · Intent 35 · Setup 45 (code blocks and table rows do not
