@@ -2,7 +2,9 @@
 
 pre-run: a command that starts a run script in an area triggers preflight;
 frozen + blockers blocks (exit 2), unfrozen + blockers only reports,
-throwaway stages and non-run scripts pass untouched.
+throwaway stages and non-run scripts pass untouched; at `Cost: seconds`
+preflight does not run and the hook only reports whether the criterion
+is written (§2.A12).
 post-change: changed protocols and messung notes are checked whatever
 tool wrote them (git status, not the tool name), once per content.
 """
@@ -104,6 +106,38 @@ class PreRun(unittest.TestCase):
         self.assertEqual(rc, 0)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("pilot", ctx)
+
+    def test_seconds_skips_preflight_even_with_blockers(self):
+        root = _repo("yes")
+        proto = root / "experiments/01-x/PROTOCOL-x.md"
+        proto.write_text(proto.read_text(encoding="utf-8").replace(
+            "- **Type:** confirmatory", "- **Type:** confirmatory\n- **Cost:** seconds"),
+            encoding="utf-8")
+        (root / "experiments/01-x/scripts/01_measure.py").write_text(
+            'from labkit import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
+            encoding="utf-8")
+        rc, out, err = _run(claude_hooks.pre_run,
+                            _bash(root, "python experiments/01-x/scripts/01_measure.py"))
+        self.assertEqual(rc, 0)
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("Cost seconds", ctx)
+        self.assertIn("criterion written", ctx)
+        self.assertNotIn("BLOCKED", err)
+
+    def test_seconds_without_criterion_is_reported_not_blocked(self):
+        root = _repo("no")
+        proto = root / "experiments/01-x/PROTOCOL-x.md"
+        proto.write_text(proto.read_text(encoding="utf-8")
+                         .replace("[K1] p < .05", "<the criterion>")
+                         .replace("- **Type:** confirmatory",
+                                  "- **Type:** confirmatory\n- **Cost:** seconds"),
+                         encoding="utf-8")
+        rc, out, err = _run(claude_hooks.pre_run,
+                            _bash(root, "python experiments/01-x/scripts/01_measure.py"))
+        self.assertEqual(rc, 0)
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("placeholder", ctx)
+        self.assertIn("runlog refuses", ctx)
 
     def test_throwaway_stage_passes_silently(self):
         root = _repo("yes")

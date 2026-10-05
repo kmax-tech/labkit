@@ -52,7 +52,7 @@ remembering (2026-10-05):
 | Layer                | Where                                                      | Holds when                                            |
 |----------------------|------------------------------------------------------------|-------------------------------------------------------|
 | code refuses         | `runlog.Run` — leak, index header, detach, **freeze gate** | always: every run passes through it                   |
-| Claude hook blocks   | `claude-hook pre-run` (PreToolUse Bash, exit 2)            | a frozen protocol's area has preflight blockers       |
+| Claude hook blocks   | `claude-hook pre-run` (PreToolUse Bash, exit 2)            | a frozen protocol's area has preflight blockers; not at `Cost: seconds` |
 | Claude hook reports  | `claude-hook post-change` (PostToolUse Bash\|Write\|Edit)  | a protocol or messung note changed, whatever wrote it |
 | git pre-commit fails | `.githooks/pre-commit`                                     | a staged protocol misses must fields                  |
 
@@ -62,6 +62,11 @@ remembering (2026-10-05):
 protocol that never had the field is not a gap; a stamped placeholder is).
 A long *pilot* acknowledges with `LABKIT_UNFROZEN=1`; the acknowledgement
 is written to `config.json` as `unfrozen_ack`, so the number carries it.
+The gate follows the cost tier (`Cost:` in the protocol, §2.A12): at
+`seconds` a rerun costs nothing, so the gate is the **written success
+criterion**, not the freeze — an instrument change after it is a commit
+and a rerun, never a second freeze. `minutes`, `hours` and an undeclared
+tier keep the freeze. The tier is written to `config.json` as `cost_tier`.
 
 **pre-run.** The hook sees every Bash command. One that names a `.py` file
 which opens a run (`runlog.run(`) and is not a throwaway stage (`--show`,

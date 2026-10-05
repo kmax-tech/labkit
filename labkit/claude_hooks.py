@@ -25,6 +25,11 @@ pre-run
       · clean                                                   → one line
     `LABKIT_PREFLIGHT=skip` in the command string skips the gate; it is
     visible in the transcript, like `--no-verify` on a commit.
+    The gate follows the cost tier (§2.A12): at `Cost: seconds` preflight
+    does not run before a command — a rerun of seconds is the probe — and
+    the hook only says whether the success criterion is written, which is
+    what `runlog` will demand of a full run there. A `minutes`/`hours`/
+    undeclared protocol keeps the gate above.
 
 post-change
     Every file the repo now reports as changed (git status, untracked
@@ -151,11 +156,21 @@ def pre_run(event: dict) -> int:
                          f"above it — unbound runs keep no number (§2.A1).")
             continue
         protocol = protocol_named_in(script, area)
-        rc, out = _capture(preflight.run, area, protocol)
         texts = [p.read_text(encoding="utf-8")
                  for p in ([protocol] if protocol else sorted(area.glob("PROTOCOL-*.md")))]
-        frozen = any(protocol_check.FROZEN_YES.search(t) for t in texts)
         head = f"preflight {area.name}" + (f" --protocol {protocol.name}" if protocol else "")
+        tiers = {protocol_check.cost_tier_of(t) for t in texts}
+        if tiers == {"seconds"}:
+            if all(protocol_check.criterion_present(t) for t in texts):
+                notes.append(f"{head}: Cost seconds — gate not run, the rerun is "
+                             f"the probe; success criterion written (§2.A12).")
+            else:
+                notes.append(f"{head}: Cost seconds, but the success criterion is "
+                             f"still empty or a placeholder — runlog refuses a "
+                             f"full run until it is written (§2.A12).")
+            continue
+        rc, out = _capture(preflight.run, area, protocol)
+        frozen = any(protocol_check.FROZEN_YES.search(t) for t in texts)
         if rc == 1 and frozen:
             blocked.append(f"{head}: BLOCKED — the protocol is frozen and "
                            f"preflight reports blockers:\n{out}")

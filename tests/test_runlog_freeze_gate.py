@@ -4,7 +4,8 @@ A full run (`long=True`) on a protocol that is not `Frozen before run: yes`,
 or whose `Preflight audit:` field is still the placeholder, is refused
 before any run directory exists. Pilots (`long=False`) pass; a long pilot
 acknowledges with LABKIT_UNFROZEN=1 and the acknowledgement lands in
-config.json.
+config.json. At `Cost: seconds` the gate is the written success criterion,
+not the freeze (§2.A12); the tier lands in config.json as `cost_tier`.
 """
 from __future__ import annotations
 
@@ -30,6 +31,16 @@ UNFROZEN = FROZEN.replace("** yes", "** no")
 PLACEHOLDER = FROZEN.replace(
     "2026-10-05 · scope sha abc · 0 findings", "<date · scope sha · N findings>")
 NO_FIELD = "- **Protocol id:** p-0123456789abcdef\n- **Frozen before run:** yes\n"
+SECONDS = """\
+- **Protocol id:** p-0123456789abcdef
+- **Success / failure criterion:** [K1] accuracy above the trivial decider
+- **Cost:** seconds — deterministic
+- **Preflight audit:** <date · scope sha · N findings>
+- **Frozen before run:** no
+"""
+SECONDS_NO_CRITERION = SECONDS.replace(
+    "[K1] accuracy above the trivial decider", "<the criterion>")
+HOURS_UNFROZEN = SECONDS.replace("seconds — deterministic", "hours — 2k calls")
 
 
 class FreezeGate(unittest.TestCase):
@@ -81,6 +92,30 @@ class FreezeGate(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()):
                 runlog.Run("t", {}, self.tmp, long=True)
         self.assertIn("unbound", str(cm.exception))
+
+    def test_seconds_with_criterion_starts_unfrozen(self):
+        r, _ = self._start(SECONDS, long=True)
+        cfg = json.loads((r.dir / "config.json").read_text())
+        self.assertEqual(cfg["cost_tier"], "seconds")
+        self.assertFalse(cfg["unfrozen_ack"])
+
+    def test_seconds_without_criterion_is_refused(self):
+        area = self._area(SECONDS_NO_CRITERION)
+        with self.assertRaises(SystemExit) as cm:
+            runlog.Run("t", {}, area, long=True)
+        self.assertIn("success criterion", str(cm.exception))
+        self.assertIn("Cost: seconds", str(cm.exception))
+        self.assertFalse((area / "runs").exists())
+
+    def test_hours_keeps_the_freeze(self):
+        area = self._area(HOURS_UNFROZEN)
+        with self.assertRaises(SystemExit) as cm:
+            runlog.Run("t", {}, area, long=True)
+        self.assertIn("Frozen before run: yes", str(cm.exception))
+
+    def test_tier_is_recorded_for_pilots_too(self):
+        r, _ = self._start(FROZEN, long=False)
+        self.assertIsNone(json.loads((r.dir / "config.json").read_text())["cost_tier"])
 
     def test_acknowledged_long_pilot_is_recorded(self):
         os.environ["LABKIT_UNFROZEN"] = "1"

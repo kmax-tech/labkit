@@ -593,19 +593,40 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
 # label at all; that is not a gap (protocol_check SHOULD_IF_PRESENT), only a
 # stamped-but-unfilled one is. Escape hatch for a long PILOT: LABKIT_UNFROZEN=1
 # — the acknowledgement is recorded in config.json so the number carries it.
+# The gate follows the cost tier (2026-10-05, same day): at `Cost: seconds`
+# the run is rerunnable at will, so the freeze protects nothing — what a
+# full run needs there is the registered criterion, written before the
+# number (§2.A1); an instrument change after it is a commit and a rerun,
+# not a second freeze (§2.A12). `minutes`, `hours` and undeclared keep the
+# freeze. The tier lands in config.json as `cost_tier`.
 PREFLIGHT_AUDIT_LABEL = re.compile(r"preflight.?audit", re.I)
+
+
+def _protocol_text(base_dir: Path, binding: dict) -> str | None:
+    """The bound protocol's text, or None when the run is unbound."""
+    if binding.get("path") is None:
+        return None
+    path = Path(binding["path"])
+    if not path.is_absolute():
+        path = base_dir / path
+    return path.read_text(encoding="utf-8")
 
 
 def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
     """Why a FULL run may not start on this protocol — empty means it may."""
-    from labkit.protocol_check import FROZEN_YES, placeholder_fields
-    if binding.get("path") is None:
+    from labkit.protocol_check import (FROZEN_YES, cost_tier_of,
+                                       criterion_present, placeholder_fields)
+    text = _protocol_text(base_dir, binding)
+    if text is None:
         return ["the run is unbound (no protocol) — a full run needs a "
                 "registered protocol (§2.A1)"]
     path = Path(binding["path"])
-    if not path.is_absolute():
-        path = base_dir / path
-    text = path.read_text(encoding="utf-8")
+    if cost_tier_of(text) == "seconds":
+        if criterion_present(text):
+            return []
+        return [f"{path.name}: `Cost: seconds`, but the success criterion is "
+                f"still empty or a placeholder — at seconds the gate is the "
+                f"written criterion, not the freeze (§2.A12)"]
     out = []
     if not FROZEN_YES.search(text):
         out.append(f"{path.name}: not `Frozen before run: yes`")
@@ -662,6 +683,9 @@ class Run:
         # Freeze gate, also before mkdir: a full run on an unfrozen protocol
         # is a refusal, not a run with a warning (2026-10-05).
         self._unfrozen_ack = False
+        from labkit.protocol_check import cost_tier_of
+        _ptext = _protocol_text(base_dir, self._protocol)
+        self._cost_tier = cost_tier_of(_ptext) if _ptext is not None else None
         if long:
             findings = _freeze_findings(base_dir, self._protocol)
             if findings and os.environ.get("LABKIT_UNFROZEN"):
@@ -674,7 +698,8 @@ class Run:
                     "runlog: this run declares long=True (a full run), but its "
                     "protocol is not ready for one:\n  " + "\n  ".join(findings)
                     + "\nPilot it with long=False, or freeze first: `preflight "
-                    "<AREA>` clean, audit stamped, `Frozen before run: yes`. A "
+                    "<AREA>` clean, audit stamped, `Frozen before run: yes` "
+                    "(at `Cost: seconds`: the criterion written suffices). A "
                     "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded).")
         self.dir = base_dir / "runs" / self.run_id
         self.dir.mkdir(parents=True, exist_ok=False)
@@ -688,6 +713,7 @@ class Run:
                   "protocol": self._protocol,
                   "derived_from": self._derived_from,
                   "unfrozen_ack": self._unfrozen_ack,
+                  "cost_tier": self._cost_tier,
                   "script_sha": _snapshot_script(self.dir),
                   "untracked_sources": _snapshot_untracked_sources(self.dir),
                   "pid": os.getpid(),          # lets `active()` tell running from crashed

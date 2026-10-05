@@ -413,6 +413,27 @@ def cost_tier_of(text: str) -> str | None:
     return m.group(1).lower() if m else None
 
 
+#: A field line split into label and value — the value may be empty.
+FIELD_LINE = re.compile(r"^\s*[-*]?\s*\*{0,2}([^*<>:]{2,60}?)\*{0,2}\s*:\*{0,2}\s*(.*?)\s*$")
+SUCCESS_LABEL = re.compile(r"erfolg|success", re.I)
+
+
+def criterion_present(text: str) -> bool:
+    """True when the success/failure criterion is a written field: a line
+    whose label names it and whose value is neither empty nor a `<…>`
+    placeholder. At `Cost: seconds` this is what a full run needs instead
+    of the freeze (§2.A12, 2026-10-05): the criterion is registered once,
+    the instrument may change after it, the run is re-fired."""
+    for line in text.splitlines():
+        m = FIELD_LINE.match(line)
+        if not m or not SUCCESS_LABEL.search(m.group(1)):
+            continue
+        value = m.group(2)
+        if value and not value.startswith("<"):
+            return True
+    return False
+
+
 def protocol_id_of(text: str) -> str | None:
     """The `Protocol id:` value, or None if the field is absent."""
     m = PROTOCOL_ID.search(text)
