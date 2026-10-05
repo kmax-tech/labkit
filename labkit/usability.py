@@ -12,7 +12,10 @@ shows which one; this is the trace.
 
 stage
     Stamps a lab repo through the house scaffolder (`arbeitsstandard-init.py
-    --lab`, then `--exp docs-per-case`), commits it, plants a fixture with a
+    --lab`, then `--exp <area>`), commits it, plants the task's fixture —
+    `--task count` (default): twelve cases and their files, a deterministic
+    mean; `--task judge`: twelve sentences with a gold label, a model's
+    accuracy, no truth, only a range and a null condition to report — with a
     known answer (twelve cases, their input files; the answer is recounted
     from the files at score time, never written down) and TASK.md — the
     prompt a cold agent gets, from `usability-task.md.template`, with the log
@@ -56,10 +59,32 @@ STAMPED = (*(RES / t for t in ("prepare-script.py.template", "measure-script.py.
                                "measure-quick-script.py.template", "test-quick.py.template")),
            *(Path(__file__).resolve().parent / t
              for t in ("experiment-protocol.md.template", "measurement-protocol.md.template")))
-AREA = "docs-per-case"
-METRIC_KEY = "mean_docs_per_case"
 #: files per case — twelve cases; the truth is their mean, recounted at score time
 DOCS_PER_CASE = (4, 4, 3, 4, 4, 3, 2, 3, 4, 3, 2, 6)
+#: twelve sentences, six causal, six not — the judge task's items; the kept
+#: number (accuracy) is the model's, so it has no truth to recount, only a range
+CLAIMS = (
+    ("c01", "Because the road was icy, the bus arrived twenty minutes late.", "causal"),
+    ("c02", "The bus arrived twenty minutes late, and the road was icy.", "not_causal"),
+    ("c03", "Sales rose after the price was cut, so the cut drove the demand.", "causal"),
+    ("c04", "Sales rose in March; the price was cut in the same month.", "not_causal"),
+    ("c05", "The bridge collapsed due to corrosion in its main cables.", "causal"),
+    ("c06", "The bridge was inspected in May and collapsed in June.", "not_causal"),
+    ("c07", "Switching to the new compiler made the build twice as fast.", "causal"),
+    ("c08", "The build is twice as fast on the new machine with the new compiler.", "not_causal"),
+    ("c09", "Her headache went away because she drank water.", "causal"),
+    ("c10", "Her headache went away; she had also drunk some water.", "not_causal"),
+    ("c11", "The vaccine prevented the outbreak from spreading beyond the village.", "causal"),
+    ("c12", "The outbreak stayed within the village, where most people were vaccinated.", "not_causal"),
+)
+#: The tasks the harness stages: area name, metrics key, task template,
+#: deterministic truth (None when the number is a model's)
+TASKS = {
+    "count": {"area": "docs-per-case", "metric_key": "mean_docs_per_case",
+              "template": "usability-task-count.md.template", "quick_default": True},
+    "judge": {"area": "causal-claims-judge", "metric_key": "accuracy",
+              "template": "usability-task-judge.md.template", "quick_default": False},
+}
 LOG_TAGS = ("read", "run", "edit", "unsure", "gate")
 LOG_LINE = re.compile(r"^(\d\d):(\d\d):(\d\d)\s*·\s*(\w+)\s*·\s*(.*)$")
 #: The bar: one kept number in this many minutes. Set by hand (2026-10-05),
@@ -104,6 +129,7 @@ def scaffold_sha() -> str:
 class Probe:
     """What was staged — pinned so two scores can be told apart."""
     staged: str
+    task: str                 # key into TASKS
     area: str                 # the stamped area's directory name
     metric_key: str
     labkit_installed: str     # pip's name for the labkit in the probe venv
@@ -131,6 +157,15 @@ def plant_fixture(root: Path) -> float:
     return recount(root)
 
 
+def plant_claims(root: Path) -> None:
+    """The judge task's items: data/raw/claims.jsonl. Side effects: writes it."""
+    raw = root / "data" / "raw"
+    raw.mkdir(parents=True, exist_ok=True)
+    (raw / "claims.jsonl").write_text(
+        "".join(json.dumps({"id": i, "text": t, "gold": g}) + "\n" for i, t, g in CLAIMS),
+        encoding="utf-8")
+
+
 def recount(root: Path) -> float:
     """The truth, from the planted files — not from a number on disk."""
     rows = [json.loads(line) for line in
@@ -144,9 +179,12 @@ def _sidecar(root: Path, suffix: str) -> Path:
     return root.parent / f"{root.name}.{suffix}"
 
 
-def stage(root: Path, venv: Path | None, quick: bool = False) -> int:
+def stage(root: Path, venv: Path | None, quick: bool = False, task: str = "count") -> int:
     """Side effects: see module docstring. `quick` stamps the area with
-    `--exp … --quick` (measurement short form + lean skeleton)."""
+    `--exp … --quick` (measurement short form + lean skeleton); `task`
+    picks the fixture and the task sheet (TASKS)."""
+    spec = TASKS[task]
+    area_name, metric_key = spec["area"], spec["metric_key"]
     if root.exists() and any(root.iterdir()):
         raise SystemExit(f"usability: {root} exists and is not empty — stage into "
                          f"a fresh directory, the probe must start cold")
@@ -161,30 +199,33 @@ def stage(root: Path, venv: Path | None, quick: bool = False) -> int:
     _sh(["git", "init", "-q", "."], root)
     _sh(["git", "add", "-A"], root)
     _sh(["git", "commit", "-qm", "Scaffold: a probe lab repo for the usability trace"], root)
-    exp_flags = ["--exp", AREA, *(["--quick"] if quick else [])]
+    exp_flags = ["--exp", area_name, *(["--quick"] if quick else [])]
     _sh([sys.executable, str(SCAFFOLDER), str(root), *exp_flags], root)
-    areas = sorted(p.name for p in (root / "experiments").glob(f"*-{AREA}"))
+    areas = sorted(p.name for p in (root / "experiments").glob(f"*-{area_name}"))
     if len(areas) != 1:
-        raise SystemExit(f"usability: expected one stamped area *-{AREA}, got {areas}")
-    plant_fixture(root)
+        raise SystemExit(f"usability: expected one stamped area *-{area_name}, got {areas}")
+    if task == "count":
+        plant_fixture(root)
+    else:
+        plant_claims(root)
     if venv is not None:
         os.symlink(venv.resolve(), root / ".venv")
     else:
         _sh([sys.executable, "-m", "venv", ".venv"], root)
         _sh([str(root / ".venv" / "bin" / "pip"), "install", "-q",
              _labkit_spec(Path(sys.executable))], root)
-    probe = Probe(staged=time.strftime("%Y-%m-%dT%H:%M:%S"), area=areas[0],
-                  metric_key=METRIC_KEY,
+    probe = Probe(staged=time.strftime("%Y-%m-%dT%H:%M:%S"), task=task, area=areas[0],
+                  metric_key=metric_key,
                   labkit_installed=_labkit_spec(root / ".venv" / "bin" / "python"),
                   scaffold_sha=sha, scaffold_flags=[*flags, *exp_flags],
                   target_minutes=TARGET_MINUTES)
     log = _sidecar(root, "log.md")
     log.write_text("", encoding="utf-8")
-    task = (Path(__file__).resolve().parent / "usability-task.md.template").read_text(encoding="utf-8")
-    for key, val in (("<metric_key>", METRIC_KEY), ("<area>", areas[0]),
+    sheet = (Path(__file__).resolve().parent / spec["template"]).read_text(encoding="utf-8")
+    for key, val in (("<metric_key>", metric_key), ("<area>", areas[0]),
                      ("<log>", str(log)), ("<target>", str(TARGET_MINUTES))):
-        task = task.replace(key, val)
-    (root / "TASK.md").write_text(task, encoding="utf-8")
+        sheet = sheet.replace(key, val)
+    (root / "TASK.md").write_text(sheet, encoding="utf-8")
     _sh(["git", "add", "-A"], root)
     _sh(["git", "commit", "-qm", "Probe: the area, the fixture and TASK.md"], root)
     _sidecar(root, "probe.json").write_text(json.dumps(asdict(probe), indent=1), encoding="utf-8")
@@ -241,8 +282,9 @@ class Score:
     probe: Probe
     run_id: str | None
     number: float | None       # metrics[metric_key], or None when absent
-    expected: float
-    number_ok: bool
+    expected: float | None     # the recounted truth (count), None for a model's number
+    number_ok: bool            # equals the truth, or (judge) present and within [0, 1]
+    null_reported: bool | None # judge: an n<i>_* key in metrics.json
     bound_to: str | None       # config["protocol"]["path"]
     frozen: bool | None
     cost_tier: str | None
@@ -255,9 +297,10 @@ def score(root: Path) -> int:
         raise SystemExit(f"usability: {probe_file} missing — was {root} staged here?")
     probe = Probe(**json.loads(probe_file.read_text(encoding="utf-8")))
     area = root / "experiments" / probe.area
-    expected = recount(root)
+    expected = recount(root) if probe.task == "count" else None
     run = latest_run(area)
     number = bound_to = frozen = tier = None
+    null_reported = None
     if run is not None:
         config_file = run / "config.json"
         if not config_file.is_file():
@@ -269,6 +312,8 @@ def score(root: Path) -> int:
                   and not isinstance(value, bool) else None)
         bound_to = (config.get("protocol") or {}).get("path")
         tier = config.get("cost_tier")
+        if probe.task != "count":
+            null_reported = any(re.match(r"^n\d+_", k) for k in metrics)
         if bound_to:
             from labkit.protocol_check import FROZEN_YES  # lazy: labkit modules import each other
             p = Path(bound_to)
@@ -279,7 +324,9 @@ def score(root: Path) -> int:
     trace = parse_log(log.read_text(encoding="utf-8")) if log.is_file() else None
     sc = Score(probe=probe, run_id=run.name if run else None, number=number,
                expected=expected,
-               number_ok=number is not None and abs(number - expected) <= TOL,
+               number_ok=(number is not None and abs(number - expected) <= TOL) if expected is not None
+               else (number is not None and 0.0 <= number <= 1.0),
+               null_reported=null_reported,
                bound_to=bound_to, frozen=frozen, cost_tier=tier, log=trace)
     _sidecar(root, "score.json").write_text(json.dumps(asdict(sc), indent=1), encoding="utf-8")
 
@@ -287,7 +334,10 @@ def score(root: Path) -> int:
             ("scaffold sha", probe.scaffold_sha),
             ("run", sc.run_id or "none"),
             (f"number ({probe.metric_key})", "absent" if number is None else str(number)),
-            ("equals the truth", "yes" if sc.number_ok else f"NO (truth {expected})"),
+            ("equals the truth" if expected is not None else "within [0, 1]",
+             "yes" if sc.number_ok else (f"NO (truth {expected})" if expected is not None else "NO")),
+            *([("null condition reported", "yes" if null_reported else "NO")]
+              if probe.task != "count" else []),
             ("bound to", bound_to or "NOTHING"),
             ("frozen", {True: "yes", False: "no", None: "n/a"}[frozen]),
             ("cost tier", tier or "undeclared")]
@@ -320,12 +370,15 @@ def main(argv: list[str]) -> int:
     s.add_argument("--venv", help="link this venv instead of creating one")
     s.add_argument("--quick", action="store_true",
                    help="stamp the area with --quick (measurement short form, lean skeleton)")
+    s.add_argument("--task", choices=sorted(TASKS), default="count",
+                   help="which task sheet and fixture: count (deterministic) or judge (a model)")
     c = sub.add_parser("score", help="number, binding and log of a finished probe")
     c.add_argument("dir")
     args = ap.parse_args(argv)
     root = Path(args.dir).resolve()
     if args.cmd == "stage":
-        return stage(root, Path(args.venv).resolve() if args.venv else None, quick=args.quick)
+        return stage(root, Path(args.venv).resolve() if args.venv else None,
+                     quick=args.quick, task=args.task)
     return score(root)
 
 

@@ -67,7 +67,7 @@ def _probe(root: Path, metrics: dict, frozen: str = "no", tier: str = "seconds")
         {"protocol": {"path": "PROTOCOL-docs-per-case.md"}, "cost_tier": tier}),
         encoding="utf-8")
     usability._sidecar(root, "probe.json").write_text(json.dumps({
-        "staged": "2026-10-05T17:59:00", "area": "01-docs-per-case",
+        "staged": "2026-10-05T17:59:00", "task": "count", "area": "01-docs-per-case",
         "metric_key": "mean_docs_per_case", "labkit_installed": "labkit @ x",
         "scaffold_sha": "abc", "scaffold_flags": [], "target_minutes": 5}), encoding="utf-8")
     usability._sidecar(root, "log.md").write_text(LOG, encoding="utf-8")
