@@ -568,8 +568,14 @@ def find_protocols(area: Path) -> list[Path]:
 
 
 def find_repo(area: Path) -> Path:
-    for parent in [area] + list(area.parents):
+    """The repo root: the nearest parent with .git, else with CLAUDE.md or
+    tests/ (a freshly stamped tree before `git init`), else the area."""
+    parents = [area] + list(area.parents)
+    for parent in parents:
         if (parent / ".git").exists():
+            return parent
+    for parent in parents:
+        if (parent / "CLAUDE.md").is_file() or (parent / "tests").is_dir():
             return parent
     return area
 

@@ -89,11 +89,23 @@ class Provenance(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("source not frozen", out)
 
-    def test_untracked_output_is_a_blocker(self):
+    def test_untracked_source_is_a_blocker(self):
         self._run(SHORT, self._frozen(), commit=False)
         rc, out = self._finalize()
         self.assertEqual(rc, 1)
+        self.assertIn("source", out)
         self.assertIn("not tracked in git", out)
+
+    def test_untracked_output_after_the_run_is_a_warning_naming_git_add(self):
+        d = self._run(SHORT, self._frozen(), commit=True)
+        self.out.write_text('{"id": 1, "n": 5}\n', encoding="utf-8")   # rows born after the commit
+        (d / "outputs.json").write_text(json.dumps([{"path": str(self.out), "sha256": "ab"}]))
+        fresh = self.area / "output" / "fresh.jsonl"
+        fresh.write_text("{}\n", encoding="utf-8")
+        (d / "outputs.json").write_text(json.dumps([{"path": str(fresh), "sha256": "ab"}]))
+        rc, out = self._finalize()
+        self.assertEqual(rc, 0, out)
+        self.assertIn("git add", out)
 
     def test_hours_is_not_the_stations_business(self):
         self._run(HOURS, None, commit=True)

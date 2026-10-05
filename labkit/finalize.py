@@ -103,24 +103,33 @@ def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]
     if not data:
         blockers.append("source not frozen — the run carries no `data=`; pass "
                         "data={name: path} to runlog.run so sha and rows are recorded")
-    files = [Path(v["path"]) for v in data.values() if isinstance(v, dict) and v.get("path")]
+    sources = [Path(v["path"]) for v in data.values() if isinstance(v, dict) and v.get("path")]
+    outputs: list[Path] = []
     outputs_file = run_dir / "outputs.json"
     if outputs_file.is_file():
-        files += [Path(o["path"]) for o in json.loads(outputs_file.read_text(encoding="utf-8"))
-                  if o.get("path")]
+        outputs = [Path(o["path"]) for o in json.loads(outputs_file.read_text(encoding="utf-8"))
+                   if o.get("path")]
     else:
         warnings.append("no outputs.json — the run registered no output file (run.output)")
     repo = _git_root(area)
     if repo is None:
         warnings.append("not a git repository — cannot tell whether source and output are committed")
         return blockers, warnings
-    for f in files:
+    for f in sources:
         if not f.exists():
             blockers.append(f"{f} is gone — the run's rows cannot be re-derived")
         elif not _tracked(repo, f):
-            blockers.append(f"{f} is not tracked in git — `git add` it (the output "
-                            f"rows are born after the run, so this is red once on "
-                            f"every first pass), then finalize again")
+            blockers.append(f"source {f} is not tracked in git — commit it, or the number "
+                            f"cannot be re-derived")
+    # The output rows are born after the run, so on every first pass they are
+    # untracked by construction: a warning that names the command, not a
+    # blocker that sends the agent round the loop (2026-10-05, five probes).
+    for f in outputs:
+        if not f.exists():
+            blockers.append(f"{f} is gone — the run's rows cannot be re-derived")
+        elif not _tracked(repo, f):
+            warnings.append(f"output {f.name} is not yet tracked — `git add {f}` before "
+                            f"the commit that cites the number")
     return blockers, warnings
 
 
