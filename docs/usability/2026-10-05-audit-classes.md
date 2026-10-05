@@ -75,6 +75,16 @@ Kandidaten für neue Gates, nach Ertrag je Zeile Code:
 5. **Erreichbarer Boden** (F): `evaluate()` meldet den Boden neben jedem p;
    Boden > Schwelle fällt.
 
+**Entschieden und umgesetzt am selben Tag (labkit 0.34.0):** 1 bis 3 als
+Gates (Leckage in `runlog`, Parser-Fixtures und Prompt-Drift in `code-check`),
+4 in der schmalen Form als Warnung in `finalize` (nur `k<i>_n` gegen die
+aufgezeichneten Eingabezahlen, Blocker erst nach bekannter Fehlalarmrate),
+5 nicht als Gate, sondern als Spalte im Bericht für den Beförderungs-Audit.
+Begründung: Der Leckage-Schnitt ist praktisch frei von Fehlalarmen, der
+Prompt-Vergleich kostet eine Zeile, die Parser-Pflicht verlagert Kosten auf
+den Nutzer, aber Parserfehler sind still; die Bodenberechnung ist selbst
+fehleranfällig und würde öfter falsch blocken als fangen.
+
 Nicht bauen: einen Agenten je Modul. Die Befunde sitzen zwischen den Modulen
 (Nenner aus der Ausgabe statt aus der Quelle, Analyse an die falsche Datei
 gebunden); ein Modul-Prüfer sieht die Naht nicht. Parallelisieren lohnt bei
