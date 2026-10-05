@@ -65,7 +65,7 @@ def scope_sha(files: list[Path], pin: str | None) -> str:
 def main(argv: list[str]) -> int:
     if argv and argv[0] in ("-h", "--help"):
         print(__doc__.strip().splitlines()[0])
-        print("usage: scope-sha [--area DIR] [--globs PAT,...] [--no-pin] [FILE ...]")
+        print("usage: scope-sha [AREA | --area DIR] [--globs PAT,...] [--no-pin] [FILE ...]")
         print("  --area DIR       area directory (default: cwd)")
         print("  --globs PAT,...  comma-separated globs for area scripts "
               "(default: scripts/*.py,analysis/*.py)")
@@ -98,6 +98,10 @@ def main(argv: list[str]) -> int:
             continue
         if a == "--no-pin":
             use_pin = False
+            i += 1
+            continue
+        if Path(a).is_dir():   # `scope-sha <AREA>`, like every other gate (2026-10-05)
+            area = Path(a)
             i += 1
             continue
         extra.append(Path(a))

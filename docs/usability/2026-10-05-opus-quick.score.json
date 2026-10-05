@@ -1,0 +1,38 @@
+{
+ "probe": {
+  "staged": "2026-10-05T19:24:21",
+  "area": "01-docs-per-case",
+  "metric_key": "mean_docs_per_case",
+  "labkit_installed": "labkit @ git+file:///Users/max/projects/labkit@32d509289c9634ef7eaf4e41384ab4f3bf3b808b",
+  "scaffold_sha": "08fb30014834",
+  "scaffold_flags": [
+   "--lab",
+   "--name",
+   "probe-4",
+   "--lang",
+   "deutsch",
+   "--exp",
+   "docs-per-case",
+   "--quick"
+  ],
+  "target_minutes": 5
+ },
+ "run_id": "2026-10-05T19-37-12_8cac",
+ "number": 3.5,
+ "expected": 3.5,
+ "number_ok": true,
+ "bound_to": "PROTOCOL-docs-per-case.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 36,
+  "wall_seconds": 803,
+  "monotonic": true,
+  "read": 7,
+  "run": 13,
+  "edit": 10,
+  "unsure": 3,
+  "gate": 3,
+  "untagged": 0
+ }
+}

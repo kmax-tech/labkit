@@ -14,3 +14,4 @@
 - **Exclusions / filters:** <what was dropped and why, or "none">
 - **Result:** <number + run_id, or "pending" — `scripts/01_measure.py --check` holds this line to the run>
 - **Terms:** <every label with a half-sentence gloss>
+- **Analysis audit †:** <date · scope sha · findings — the one audit at Cost seconds, after the first run (§2.A12)>
