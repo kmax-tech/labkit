@@ -80,8 +80,10 @@ class _Base(unittest.TestCase):
         (llm._find_models_toml, llm._ollama_digest,
          llm.urllib.request.urlopen, llm.time.sleep,
          frozen, rr, retries) = self._saved
-        llm._FROZEN.clear(); llm._FROZEN.update(frozen)
-        llm._RR.clear(); llm._RR.update(rr)
+        llm._FROZEN.clear()
+        llm._FROZEN.update(frozen)
+        llm._RR.clear()
+        llm._RR.update(rr)
         llm._RETRIES["n"] = retries
         self.tmp.cleanup()
 
@@ -122,7 +124,8 @@ class TestDigestAggregation(unittest.TestCase):
         from labkit import llm
         got = llm._aggregate_digests({"a": "x", "b": "y"})
         self.assertTrue(got.startswith("MISMATCH:"))
-        self.assertIn("x", got); self.assertIn("y", got)
+        self.assertIn("x", got)
+        self.assertIn("y", got)
 
     def test_nothing_reachable_is_unavailable(self):
         from labkit import llm

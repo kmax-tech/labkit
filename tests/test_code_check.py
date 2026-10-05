@@ -11,6 +11,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -23,14 +24,12 @@ def _load(name):
         name, REPO / "labkit" / f"{name}.py")
     assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
-    import sys
     sys.modules[name] = mod
     spec.loader.exec_module(mod)
     return mod
 
 
 intent_check = _load("intent_check")
-import sys
 sys.modules["labkit.intent_check"] = intent_check
 code_check = _load("code_check")
 

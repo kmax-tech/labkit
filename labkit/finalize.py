@@ -174,7 +174,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
                 print(f"  {newest_dir.name}: completed")
 
     # -- 2. intent-check ---------------------------------------------------
-    print(f"── intent-check ──")
+    print("── intent-check ──")
     reg = registered_ids(text)
     if not reg:
         print("  no intent ids registered — nothing to check")

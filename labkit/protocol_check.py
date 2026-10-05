@@ -632,7 +632,7 @@ def main(argv: list[str]) -> int:
                           f"should-field(s) due only at report time "
                           f"(append them: lib exp <name> --report)")
             missing_should = []
-        left = sorted({s for s in (l.strip() for l in text.splitlines()) if s in tmpl})
+        left = sorted({s for s in (ln.strip() for ln in text.splitlines()) if s in tmpl})
         no_block = not has_block and re.search(r"prompt", text.lower())
         frozen_without_io = bool(FROZEN_YES.search(text)) and not has_block
         # A protocol is a registration, not a lab journal. By 2026-08-20 one
@@ -656,18 +656,18 @@ def main(argv: list[str]) -> int:
                 n_lines += 1
         too_long = n_lines > 350
         big = oversized_sections(text)
-        series = [(n, l.strip()) for n, l in enumerate(text.splitlines(), 1)
-                  if SERIES_HEAD.match(l)]
+        series = [(n, ln.strip()) for n, ln in enumerate(text.splitlines(), 1)
+                  if SERIES_HEAD.match(ln)]
 
         # Post-run: a documented measure run makes an empty Result a MUST
         # gap — pilot suppression does not apply (write back, don't go quiet).
-        measured = [(n, m.group(0)) for n, l in enumerate(text.splitlines(), 1)
-                    if (m := RUN_ID.search(l)) and not SETUP_RUN.search(l)]
+        measured = [(n, m.group(0)) for n, ln in enumerate(text.splitlines(), 1)
+                    if (m := RUN_ID.search(ln)) and not SETUP_RUN.search(ln)]
         run_unreported = bool(measured) and (
             bool(EMPTY_ANSWER.search(text)) or bool(EMPTY_RAW.search(text))
             or not re.search(r"ergebnis|resultat|result|outcome", text.lower()))
-        history = [(n, l.strip()) for n, l in enumerate(text.splitlines(), 1)
-                   if CHANGELOG.search(l)]
+        history = [(n, ln.strip()) for n, ln in enumerate(text.splitlines(), 1)
+                   if CHANGELOG.search(ln)]
 
         clean = not (missing_must or missing_should or holes or left or no_block
                      or frozen_without_io or too_long or big or run_unreported
@@ -717,13 +717,13 @@ def main(argv: list[str]) -> int:
             print(f"{f}:{measured[0][0]}: MISSING (must): measure run in the "
                   f"run list ({measured[0][1]}) but Result/Raw output empty — "
                   f"write the result back in the SAME session.")
-        for n, l in series:
+        for n, ln in series:
             print(f"{f}:{n}: follow-up registration in the same protocol "
-                  f"({l[:60]!r}) — one question per protocol: a declared "
+                  f"({ln[:60]!r}) — one question per protocol: a declared "
                   f"follow-up gets its own PROTOCOL-s<N>-<slug>.md "
                   f"(series rule, Arbeitsstandard §2.F).")
-        for n, l in history:
-            print(f"{f}:{n}: change history in the text ({l[:60]!r}) — docs "
+        for n, ln in history:
+            print(f"{f}:{n}: change history in the text ({ln[:60]!r}) — docs "
                   f"carry the current state, the why of the change goes in the "
                   f"commit message (Arbeitsstandard §3).")
         if (missing_must or must_holes or frozen_without_io or no_block

@@ -117,7 +117,7 @@ class TestProvenanceStamp(unittest.TestCase):
             s.append({"id": "a"})
             state["url"] = "server-B"
             s.append({"id": "b"})
-        rows = [json.loads(l) for l in self.out.read_text().splitlines()]
+        rows = [json.loads(ln) for ln in self.out.read_text().splitlines()]
         self.assertEqual(rows[0]["_prov"]["endpoint"], "server-A")
         self.assertEqual(rows[1]["_prov"]["endpoint"], "server-B")
 

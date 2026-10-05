@@ -150,7 +150,8 @@ class TestVcsPins(unittest.TestCase):
             "https://github.com/x/y", "v1.0.0", "whatever"))
 
     def _make_repo(self):
-        import subprocess, tempfile
+        import subprocess
+        import tempfile
         d = tempfile.mkdtemp()
         env_git = ["git", "-C", d, "-c", "user.email=t@t", "-c", "user.name=t"]
         subprocess.run([*env_git, "init", "-q"], check=True)

@@ -47,7 +47,7 @@ class TestScopeSha(unittest.TestCase):
     def _sha(self, argv):
         rc, out = self._run(argv)
         self.assertEqual(rc, 0, out)
-        line = [l for l in out.splitlines() if l.startswith("scope sha ")]
+        line = [ln for ln in out.splitlines() if ln.startswith("scope sha ")]
         self.assertEqual(len(line), 1, out)
         return line[0].split()[-1]
 

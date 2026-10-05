@@ -138,7 +138,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
               f"freezing (§2.A12)")
 
     # -- 2. code-check (intent ids) ---------------------------------------
-    print(f"── code-check: intent ids ──")
+    print("── code-check: intent ids ──")
     findings = check_intent_ids(area, protocol)
     for f in findings:
         print(f"  {f}")
@@ -165,11 +165,11 @@ def run(area: Path, protocol: Path | None = None) -> int:
         print(f"  no scripts matching {AREA_GLOBS} in {area} (skipped)")
 
     # -- 4. dirty check ----------------------------------------------------
-    print(f"── working tree ──")
+    print("── working tree ──")
     repo = find_repo(area)
     if _is_dirty(repo):
         print(f"  WARNING: uncommitted changes in {repo}")
-        print(f"  (not a blocker — commit or stash before the run)")
+        print("  (not a blocker — commit or stash before the run)")
         warnings += 1
     else:
         print("  clean")
@@ -192,9 +192,9 @@ def run(area: Path, protocol: Path | None = None) -> int:
             print("  WARNING: pytest is not installed in this interpreter — tests not run")
             warnings += 1
         else:
-            tail = [l for l in (r.stdout or "").splitlines() if l.strip()][-6:]
-            for l in tail:
-                print(f"  {l}")
+            tail = [ln for ln in (r.stdout or "").splitlines() if ln.strip()][-6:]
+            for ln in tail:
+                print(f"  {ln}")
             print(f"  BLOCKER: {', '.join(t.name for t in tests)} failed — an "
                   f"unfilled or broken resolution check must not pass the freeze")
             blockers += 1

@@ -148,7 +148,8 @@ class TestOpenAIBackend(_Base):
                 self.assertTrue(llm.resolve("v")["controls_temperature"])
         finally:
             llm._find_models_toml = saved_find
-            llm._FROZEN.clear(); llm._FROZEN.update(saved_frozen)
+            llm._FROZEN.clear()
+            llm._FROZEN.update(saved_frozen)
 
 
 if __name__ == "__main__":
