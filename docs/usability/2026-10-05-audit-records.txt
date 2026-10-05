@@ -1,0 +1,589 @@
+====================================================================================================
+FILE: /Users/max/projects/counterfactual-worlds/experiments/64-wirkung-oder-echo/PROTOCOL-wirkung-oder-echo.md
+--- [OTHER] line 69 ---
+- **Frozen before run:** yes *(2026-09-08, nach Producer-Audit (zwei
+  Mängel behoben), Renderprobe und Instrumentenprobe (Mischkanal-Regel
+  festgelegt, `--fan` nachgerüstet); Hypothese, Kriterium, Weggabelung
+  und Stop-Regel unberührt)*
+--- [AUDIT] line 187 ---
+- **Analysis audit †:** `experiment-preflight` MODE analysis, 2026-09-08 —
+  5 Blocker, 6 Warnungen, 6 Notizen; scope sha `58b92a317100`. Behoben:
+  unvollständige Ziehung als eigener Zustand (beide Fassungen berichtet),
+  Kipptest-Vorrat je Kontrast statt über alle sechs Welten, Kriterium als
+  PASS/FAIL an einer Stelle, eigener Zweig je registrierter Kombination,
+  „≈" aus derselben Konstante wie die Nullbedingung (p > 0,20),
+  Nullbedingung als Tor statt als Druckhinweis. Akzeptiert mit Grund
+  (nicht behoben, im Ergebnis benannt): `--check`-Abgleich fehlt,
+  Echo-Wortmenge nicht auf geteilte Lage-Wörter beschränkt, Parser ohne
+  Fixture-Test, `mwu_exact` heißt nach der falschen Testfamilie.
+  **Der Audit hat zwei berichtete Kopfzahlen gekippt** — Belege im
+  Ergebnisteil.
+--- [OTHER] line 232 ---
+- **Clarified terms:** *Ziehung* vs. *Kanal* (die Ziehung ist die Einheit,
+  der Kanal nicht) · *Echo* meint lexikalische Wiederholung, nicht
+  semantische Nähe · **Mischkanal** — eine Phrase, die zwei Kategorien
+  nennt (Probe-Fall: „more intensive irrigation **or better drainage** on
+  the treated plots" = `management` + `land`). Vorab festgelegte Regel:
+  Die Hand ordnet nach dem Mechanismus, der in der Phrase die kausale
+  Arbeit tut; ist das unentscheidbar, `other`. Die Zahl der Mischkanäle
+  wird berichtet — sie ist die Unschärfe der Messgröße selbst.
+--- [OTHER] line 243 ---
+- **Changed — and in which class:** Instrument (Slot-Formulierungen,
+  Deckel entfernt) — Hypothese, Kriterium und Stop-Regel unberührt.
+====================================================================================================
+FILE: /Users/max/projects/counterfactual-worlds/experiments/65-gesetzt-oder-verhandelbar/PROTOCOL-gesetzt-oder-verhandelbar.md
+--- [OTHER] line 63 ---
+- **Frozen before run:** yes *(2026-09-08, nach Producer-Audit,
+  Renderprobe, Preflight-Audit (3 Blocker behoben) und
+  Instrumentenprobe auf frischen Dateien; Hypothese, Kriterium,
+  Weggabelung und Stop-Regeln unberührt)*
+--- [AUDIT] line 161 ---
+- **Preflight audit:** `experiment-preflight` MODE preflight, 2026-09-08 —
+  3 Blocker, 11 Warnungen, 4 Notizen; scope sha `1cae53cd5e72`. Alle drei
+  Blocker behoben (siehe „Changed"); von den Warnungen behoben: leere
+  Eingabe bricht laut ab, Probe räumt ihre Datei ab (nie fortsetzen),
+  inhaltsbasierte Urteils-IDs, geschichtete Probe, `None`/dünn als
+  gedruckter Zustand, Provenance aus `--fan`, Auswertung unter `runlog`,
+  Richtung im Ergebnis-Label, dünne Urteile je Bedingung, Konstanten aus
+  einer Quelle, Widerspruchsschwelle als eine Konstante, `parse_numbered`
+  nach `lib/answers.py` mit sieben Tests aus echten Rohantworten.
+  **Akzeptiert mit Grund:** `--check` entfernt statt implementiert (die
+  Zahlen dieses Bereichs stehen in den Run-Metriken, nicht abgetippt im
+  Protokoll); kein Endpunkt-Riegel gegen parallele Stufen (der Betrieb ist
+  einstufig dokumentiert, ein echter Riegel gehört nach `lib`, nicht in
+  einen Bereich).
+--- [OTHER] line 206 ---
+- **Clarified terms:** *Widerspruch* meint Unverträglichkeit (können beide
+  zugleich wahr sein), nicht Irrelevanz · *Restraum* ist das, was nach der
+  Setzung noch genannt wird, nicht das, was gültig bleibt.
+--- [OTHER] line 209 ---
+- **Changed — and in which class:** alles Instrumentenklasse; Hypothese,
+  Kriterium, Weggabelung und Stop-Regeln unberührt.
+  1. **Die Positivkontrolle war falsch herum gedacht.** `total` war als
+     Generator-Tor registriert („schließt alles aus, also muss die Rate
+     fallen"). Falsch: Ein respektierender Generator müsste dort
+     *verstummen*, ein ignorierender liefert die übliche Liste, und die
+     widerspricht fast vollständig — die Rate geht also HOCH. Als Tor
+     hätte sie im interessantesten Fall „Instrument tot" gemeldet und den
+     Hauptkontrast unterdrückt. `total` ist jetzt beschreibend; das
+     Generator-Tor ist der neue Compliance-Boden `one|forbidden`
+     (dieselbe Familie als ausdrückliches Verbot statt als Weltfaktum).
+  2. **Beidseitige Richter-Anker ergänzt.** `none` prüfte nur, dass der
+     Richter Ja sagen kann. Fünf handgelabelte Paare, drei müssen
+     widersprechen, zwei müssen verträglich sein, je eines von beiden auf
+     derselben Setzung.
+  3. **Leere Ziehung als dritter Zustand.** Vorher bekam sie die Rate 0,0
+     und wäre als „kein Widerspruch" in den Mittelwert gegangen — die
+     64er-Narbe, in dem Modul, dessen Docstring sie als behoben auswies.
+  4. **Stop-Regeln (c) und (d) implementiert.** Sie standen im Protokoll
+     und hatten keinen Zweig im Code.
+====================================================================================================
+FILE: /Users/max/projects/counterfactual-worlds/experiments/66-ausschluss-statt-satz/PROTOCOL-ausschluss-statt-satz.md
+--- [OTHER] line 64 ---
+- **Frozen before run:** yes *(2026-09-09, nach Producer-Audit, drei
+  Instrumentenproben (drei Anker-Solls widerlegt), zwei Preflight-Audits
+  (4 + 4 echte Blocker behoben) und der Streuungsmessung; Frage, Kriterium,
+  Stop-Regeln und Weggabelung unberührt)*
+--- [AUDIT] line 170 ---
+- **Preflight audit:** `experiment-preflight` MODE preflight, zweimal.
+  **Erster Lauf ungültig** — ich hatte ihn gestartet, bevor das Protokoll
+  geschrieben war, er las die leere Vorlage; sein Intent-Blocker ist ein
+  Artefakt meines Ablaufs, die vier anderen waren echt und sind behoben.
+  **Zweiter Lauf, 4 Blocker + 6 Warnungen + 2 Notizen**, alle vier Blocker
+  behoben:
+  1. *Der Bereich implementierte seine eigene Manipulation nicht.* Die
+     `one`-Ausschlussaussage war noch der zusammengesetzte Setzungssatz,
+     nur umformuliert — entstanden dadurch, dass ich beim Beheben des
+     ERSTEN Audits (Paraphrasen verlieren Bedingungen) die Aussagen zurück
+     an den Originalsatz gezogen habe. Eine Reparatur hat die andere
+     zerstört. Jetzt steht eine Proposition auf **Kategorie-Ebene**
+     („keine stehende Eigenschaft des Landes"), und `assert_distinct()`
+     bricht ab, wenn sie über 55 % wortgleich mit der Setzung ist.
+  2. *`total` verlor wieder eine Bedingung* („only the fertiliser
+     differed") — `assert_pinned` konnte das nicht sehen, weil es Setzung
+     gegen Fächer prüft und nie Setzung gegen Ausschluss. Neu:
+     `assert_conditions()` prüft genau diesen Schritt.
+  3. *Der Prompt im Protokoll war von der Konstante abgedriftet.* Der Block
+     ist jetzt die gerenderte Ausgabe von `--show`, keine Abschrift.
+  4. *Intent nannte sechs Anker, der Code hatte zehn.* Angeglichen.
+  Von den Warnungen behoben: Anker-Bericht vor allen anderen Toren; jede
+  Stop-Bahn trägt Mittelwerte und n ins Ledger; die Richter-Null ist ein
+  Tor statt einer beschreibenden Zeile; Tor auf verwertbare Ziehungen je
+  Bedingung; ein Ankertext kollidierte wörtlich mit einem Fächer-Kanal
+  (Tor und gemessener Arm teilten sich einen Datenpunkt) — ersetzt und per
+  `assert_anchors_not_in_fan()` ausgeschlossen; der nahe Boden-Anker trägt
+  jetzt den Zeitindex, den seine eigene Herleitungsregel verlangt.
+  **Akzeptiert mit Grund:** `lib/elicit.py` nimmt die Endpunkt-Pacht nicht
+  (der Logprob-Pfad geht an `llm.complete` vorbei) — das ist eine
+  lib-Änderung mit Wirkung auf alle Bereiche und gehört in eine eigene
+  Runde, nicht in diese; der Betrieb bleibt solange einstufig.
+--- [OTHER] line 231 ---
+- **Clarified terms:** *nah* heißt: der Kanal nennt einen Unterschied
+  zwischen den Gruppen, aber nicht in der geschlossenen Familie — genau die
+  Klasse, die der 65er falsch zählte.
+--- [OTHER] line 234 ---
+- **Changed — and in which class:** alles Instrumentenklasse; Frage,
+  Kriterium, Stop-Regeln und Weggabelung unberührt.
+  1. **Der Setzungstext ist wörtlich angeheftet und wird geprüft**
+     (`assert_pinned`). Meine erste Fassung paraphrasierte aus dem
+     Gedächtnis und verlor dabei Bedingungen („before the season", „same
+     calibrated scale") — ich hätte gegen eine strengere Aussage geurteilt
+     als die, die im Prompt stand.
+  2. **Zehn Anker über alle drei Setzungen statt sechs auf einer**, jeder
+     mit Herleitung. Vorher hatten Richter-Null und `total` keine Kontrolle.
+  3. **Drei Anker-Solls von der Probe widerlegt und ersetzt** (siehe oben).
+     Die Lehre steht als Regel über der Liste: *nah heißt eindeutig
+     entscheidbar, dicht an der Grenze — nicht schwer entscheidbar*, und
+     *jedes Soll wird gegen den angehefteten Text hergeleitet, nie gegen
+     eine Erinnerung daran*.
+  4. **Der Compliance-Boden berichtet seine eigene Auflösung**: welches p
+     ein perfekt konformer Arm gegen diese Streuung bekäme. Der
+     Preflight-Audit hatte gezeigt, dass das Tor bei identischem Effekt
+     feuern oder reißen kann, je nach Verteilung (0,0002 bis 0,4667) — ohne
+     die Angabe ist ein gerissenes Tor nicht lesbar.
+  5. **Zwei Wege geschlossen, auf denen ein Tor bestanden hätte, ohne zu
+     prüfen:** Anker werden auf den **unkorrigierten** Urteilen ausgewertet
+     (ein Override könnte sonst genau das Tor bestehen lassen, das den
+     Richter prüft), und unbeurteilte Kanäle fallen nicht still aus Zähler
+     und Nenner, sondern blockieren das Inhaltsurteil.
+====================================================================================================
+FILE: /Users/max/projects/counterfactual-worlds/experiments/67-ein-massstab/PROTOCOL-ein-massstab.md
+--- [AUDIT] line 39 ---
+- **Preflight audit:** 2026-09-09 · scope sha 2dd0388c342b · 0 Blocker, 4
+  Warnungen, 7 Notizen: 8 behoben, 3 akzeptiert — Details: Commit + Checks.
+--- [OTHER] line 41 ---
+- **Frozen before run:** yes *(2026-09-09, nach Render-, Instrumenten-,
+  Auflösungsprobe + Preflight; Frage/Kriterium/Stops/Weichen unberührt)*
+--- [AUDIT] line 97 ---
+- **Analysis audit †:** 2026-09-09 · scope sha 7ad49a9a05be · 2 Blocker,
+  4 Warnungen, 3 Notizen — alle behoben, Auswertung neu als `b1a7` (die
+  Blocker: [S2]-Ursache „Streuung zu konzentriert" war die
+  entgegengesetzte Fehlzurechnung, gerechnet ist es Ereignis-Knappheit;
+  k2_p/k2_delta waren auf dem Stop-Pfad als null berichtet, obwohl von den
+  Daten bestimmt). `ed02` ist damit überholt; kein Wert daraus wurde
+  berichtet.
+
+<!-- Apparat — wird nachgeschlagen, nicht gelesen. -->
+--- [OTHER] line 231 ---
+- **Clarified terms:** *Massstab* (siehe Context); *Dedup je Kanaltext* ist
+  zulässig, WEIL die Aussage fest ist — derselbe Text bekommt dasselbe
+  Urteil, egal aus welcher Bedingung er stammt.
+--- [OTHER] line 234 ---
+- **Changed — and in which class:** alles Instrumentenklasse, Frage,
+  Kriterium, Stop-Regeln und Weichen unberührt: acht Preflight-Reparaturen
+  (Auslese-Wege, Provenance, Probenführung) und nach dem Lauf die zwei
+  Auswertungs-Audit-Blocker (Stop-Ursache gerechnet statt geraten;
+  beobachteter Kontrast auch auf der Stop-Bahn im Ledger) — die Tore
+  selbst blieben wörtlich.
+====================================================================================================
+FILE: /Users/max/projects/counterfactual-worlds/experiments/68-ein-massstab-b/PROTOCOL-ein-massstab-b.md
+--- [AUDIT] line 24 ---
+- **Preflight audit:** 2026-09-09 · scope sha 08c93d550c4f · 0 Blocker,
+  5 Warnungen, 6 Notizen: 10 behoben, 1 registriert statt geändert (jede
+  dünne Zeile stoppt, siehe Clarified terms) — Einzelheiten: Commit +
+  „Changed".
+--- [OTHER] line 28 ---
+- **Frozen before run:** yes *(2026-09-09, nach Renderproben,
+  Instrumentenproben (Generator 8/8, Richter 6/6 Anker), Auflösungsprobe
+  durchs echte `evaluate()` + Preflight; Registriertes unberührt)*
+--- [AUDIT] line 94 ---
+- **Analysis audit †:** 2026-09-09 · scope sha 9c0950f13ef8 · 1 Blocker,
+  4 Warnungen, 4 Notizen — alle behoben bzw. berichtet, Auswertung neu
+  als `d60f` (`7dae` überholt; keine Zahl daraus berichtet). Der Blocker:
+  Urteil instabil über Schreibvarianten, Robustheitszahl fehlte — jetzt
+  `k2_p_casefold` + `k2_casefold_flips` im Ledger. Dazu [W2] mit eigenem
+  Auflösungs-Tor, [N1]-Boden gegen den Partner-Arm, Ereignisse/Raten/
+  Grenzband als Ledger-Zahlen, MC-Seeds je Aufruf gesalzen, PASS-Fazit
+  auf den Kriteriums-Skopus gebunden.
+--- [OTHER] line 229 ---
+- **Clarified terms:** *Ereignis* = Kanal-Slot mit Widerspruchs-Urteil —
+  die Zertifizierung hängt an der EREIGNISZAHL, nicht am Ziehungs-n allein
+  (67er-Audit-Lehre). Registriert ausdrücklich: JEDE dünne Urteilszeile
+  (auch in marked-Armen) stoppt über [S3] — Strenge vor Teilbarkeit.
+--- [OTHER] line 233 ---
+- **Changed — and in which class:** alles Instrumentenklasse (die zehn
+  Preflight-Reparaturen: Auslese-Wege, Deckungszustände, Provenance);
+  Frage, Kriterium, Stop-Regeln und Weichen unberührt.
+====================================================================================================
+FILE: /Users/max/projects/counterfactual-worlds/experiments/69-ein-massstab-normform/PROTOCOL-ein-massstab-normform.md
+--- [AUDIT] line 26 ---
+- **Preflight audit:** 2026-09-09 · scope sha 3dabed61103a · zwei Runden
+  (R1: 2 Blocker/5 Warn./2 Not. — u. a. frischer Fächer statt
+  68er-Wiederauflage, [S4] per Straddle-Extrem bewiesen; R2: 2/3/3 —
+  u. a. Kollisions-Zähler wiederhergestellt, Geerbter-Fächer-Aussagen
+  bereinigt). Alle 15 behoben, 0 akzeptiert; Einzelheiten: Commit +
+  „Changed".
+--- [OTHER] line 32 ---
+- **Frozen before run:** yes *(2026-09-09, nach Renderprobe (mit
+  Fallback reproduzierbar), trio-vollständiger Instrumentenprobe (18/18),
+  Auflösungsprobe mit drei Extremen und zwei Preflight-Runden;
+  Frage/Kriterium/Stops/Weichen unberührt)*
+--- [OTHER] line 188 ---
+- **Clarified terms:** *Form-Trio einig* heißt: gleiche Seite von 0,5 —
+  nicht gleiche Masse; die Drift (0,07→0,16 in der Probe) ist erlaubt und
+  wird über das Grenzband sichtbar.
+--- [OTHER] line 191 ---
+- **Changed — and in which class:** alles Instrumentenklasse. NACH dem
+  Freeze, vor der Urteilsstufe (ein Satz je Re-Freeze, §2.A9): Lauf `5739`
+  lieferte one|plain|d4|r2 als Ein-Zeilen-Aufzählung, `parse_numbered` gab
+  EIN konkateniertes Item zurück — Parser in `lib/answers.py` um
+  Inline-Split erweitert (echter Roh-Fall als Test), Roh-Antworten
+  unangetastet neu abgeleitet → `fan_v2.jsonl` (Lauf `6459`, 64/64 voll);
+  Frage/Kriterium/Stops/Weichen unberührt. Vor dem Freeze: (1) Preflight-Blocker 1 → FRISCHER Fächer statt 68er-Fächer
+  (sonst Wiederauflage statt Test); (2) Blocker 2 → Probe trio-vollständig
+  wiederholt, Zitate aus dem File; (3) Straddle-Extrem beweist [S4];
+  (4) Trio-Drift als Ledger-Zahl (`n2_max_spread`); (5) Pacht auch im
+  Probe-Pfad; (6) normkey/FORMS EINE Prägestelle; (7) Probe druckt den
+  Prompt; (8) getrennte Zähler Anker-/Form-Lücken.
+--- [AUDIT] line 224 ---
+- **Analysis audit †:** 2026-09-09 · scope sha 87f263139de0 · 0 Blocker,
+  7 Warnungen, 4 Notizen — 4 behoben (`2a3b`: symmetrische Band-Exposition
+  in Slot-Einheiten, distinkte Normformen je Arm, ein MC-Zug je Estimand
+  auch für [N1], Kollisionszahl vor jedem Stop), 3 akzeptiert mit Grund
+  und als Lehren notiert: (a) Wiederholungs-Streuung im Concurrent-Regime
+  ist NICHT 0 (Probe↔Lauf max |Δp| ≈ 0,004) — vor dem nächsten
+  Richter-Lauf messen; (b) die Form-Anker sitzen an den Extremen, das
+  [N2]-Tor ist ~8× unempfindlicher als die grenznächsten Mess-Items —
+  Form-Anker brauchen randnahe Fälle; (c) `marked_arms_usable` heißt nur
+  „Placebo nicht gerissen", nicht „Markierung inert" (10 vs 7 Ereignisse
+  nicht ausschließbar). Der Ereignis-Boden 0,0177 behandelt 7 Ereignisse
+  als 7 Ziehungseinheiten, dahinter stehen 6 distinkte Urteile —
+  konservativ gelesen bleibt das FAIL davon unberührt.
+====================================================================================================
+FILE: /Users/max/projects/counterfactual-worlds/experiments/70-wort-oder-aussage/PROTOCOL-wort-oder-aussage.md
+--- [AUDIT] line 50 ---
+- **Preflight audit:** offen — Subagent `experiment-preflight`,
+  `MODE: preflight · AREA: experiments/70-wort-oder-aussage`.
+--- [OTHER] line 52 ---
+- **Frozen before run:** no *(erst nach Instrumentenprobe und Preflight)*
+--- [AUDIT] line 89 ---
+- **Analysis audit †:** offen — `MODE: analysis`, vor dem Berichten.
+--- [OTHER] line 217 ---
+- **Resolution check (ZERO calls, echtes `evaluate()`):** bestanden —
+
+  | Fall | b | c | p | Ausgang |
+  |---|---|---|---|---|
+  | A) perfekter Effekt (uneins entlang der Registergrenze) | 8 | 0 | 0,0039 | [K3] PASS |
+  | B) Nulleffekt (V1 = V2) | 0 | 0 | 1,0 | [S2], kein Urteil |
+  | C) symmetrisches Rauschen (V2 repariert 3, zerbricht 3) | 3 | 3 | 0,656 | [K3] FAIL |
+--- [OTHER] line 269 ---
+- **Clarified terms:** *Normform* schließt hier zusätzlich die
+  Strich-Vereinheitlichung ein (alle Unicode-Striche → ASCII-Bindestrich) —
+  eine Erweiterung der 69er-Prägestelle, deren Buchstabenteil unverändert
+  bleibt; *leer* ist ein eigener Zustand neben „nichts geparst"; *Register*
+  = die grammatische Bauart der Formulierung, vergleichend („unequal",
+  „richer") gegen neutral nominalisiert („variation", „gradient") — beide
+  mit Gruppen- und Zeitbezug, sonst wäre es eine andere Aussage. **Nicht**
+  zum Register gehört die Richtung: „welche Gruppe mehr hat" steckt in der
+  Proposition und muss erhalten bleiben — „disparity of clay favouring
+  treated fields" ist deshalb die korrekte neutrale Form, nicht ein Rest
+  Vergleich, der noch wegzuputzen wäre.
+--- [OTHER] line 280 ---
+- **Changed — and in which class:** **Instrument** (vor dem Freeze, Frage
+  und Kriterien unberührt): `MAX_TOKENS` 400 → 4096 und `TEMPERATURE` 1.0
+  in Stufe 1 — mit 400 verbrannte `gpt-oss-vllm` das ganze Budget in der
+  Denkspur und lieferte leere Antworten (die 64er-Narbe, hier zum zweiten
+  Mal getreten; 65/68/69 stehen längst auf 4096), plus ein eigener Zustand
+  `empty` mit Zähler: eine leere Antwort ist kein Parse-Ergebnis (§2.B4).
+  Zweiter Fix, ebenfalls Instrument: der **Wächter selbst** war falsch —
+  die Strich-Ersetzung stand vor dem NFKC und griff ins Leere (U+2011 wird
+  dort zu U+2010), und `GROUP_MARKERS` prüfte Vollformen statt Stämme;
+  10 von 18 echten Formen galten dadurch als Verstoß. Fehlerrichtung: frisst
+  Neuzüge und treibt [S4], also GEGEN die Hypothese — er hätte den Bereich
+  als „Paraphrasierung nicht kontrollierbar" enden lassen. Dritte Änderung,
+  **Design** (Entscheidung MH, 2026-09-09, vor dem Freeze): k = 6 wird 2
+  Register × 3. Grund aus der Probe: alle 18 Formen blieben im
+  vergleichenden Register, während die Nachschau das Kippen gerade am
+  Wechsel zur neutralen Nominalisierung sah — ohne den Faktor hätte [K2]
+  die eigene Prompt-Wahl gemessen und [W1] wäre aus einem Instrumentgrund
+  gezogen worden. Frage, Kriterien, Stops und Weichen unberührt. Vierte
+  Änderung, **Instrument**: der neutrale Prompt verbietet jetzt das
+  vorangestellte Etikett und die vergleichenden Wörter, und der Wächter
+  prüft beides — der Selftest hält Prompt und Wächter aus derselben Quelle
+  zusammen (Narbe „was der Prompt verlangt, prüft das Gate"). Ohne diese
+  Sperre hätte der Registerarm dieselben Formen gemessen wie der
+  vergleichende, bei voller Ausbeute und ohne einen einzigen Warnhinweis.
+====================================================================================================
+FILE: /Users/max/projects/counterfactual-worlds/experiments/71-vergleich-statt-urteil/PROTOCOL-vergleich-statt-urteil.md
+--- [AUDIT] line 42 ---
+- **Preflight audit:** 2026-09-09 · scope sha 0a5fc3f5e1ff · 4+7+4, alle 15
+  behoben, 0 akzeptiert; Einzelheiten im Commit und unter „Notes".
+--- [OTHER] line 44 ---
+- **Frozen before run:** yes *(2026-09-09, nach Render-, Instrumenten- und
+  Auflösungsprobe und einer Preflight-Runde; Registriertes unberührt, einzige
+  Scope-Änderung: Ausschluss der zwei Zwei-Arm-Kanäle)*
+--- [AUDIT] line 129 ---
+- **Analysis audit †:** 2026-09-09 · scope sha d49ccfee59bf · 1 Blocker, 3
+  Warnungen, 6 Notizen. Blocker (Schreibform-Konfund, ungleich über die Arme):
+  **behoben durch Zweitrate** `analysis/schreibform-robust.py`, Kriterium
+  unberührt — Δ und p ändern sich um +0,0016 bzw. −0,0024, das Urteil nicht.
+  Berichtet statt geändert: [S2] ist bei 8+8 verschiedenen Ziehungsmitteln
+  strukturell nie erreichbar (Boden ≈ 1,6·10⁻⁴), misst hier also nichts ·
+  `k1_clear_pairs_possible` = 0 (Eigenschaft des geerbten Ankersets) ·
+  Anker-Grade 10 vs. 11 (betrifft `k1_margin`, nicht Δ) · Placebo-Duplikate
+  (siehe Caps/drops). Nicht auslösbar in diesem Lauf: die [S3]-Klausel
+  „Paar ohne jede überlebende Stimme" (0 verworfen) und `k2 = False` auf der
+  Stop-Bahn (`s1_hit`/`s3_hit` beide False).
+--- [OTHER] line 227 ---
+- **Resolution check (ZERO calls, real `evaluate()` on synthetic extremes):**
+  `02_analyze.py --resolution`, fünf Fälle durch die echte `evaluate()`:
+  perfekter Effekt → PASS (p = 0,0002) · Null-Effekt mit realistischer
+  Streuung → FAIL (p = 0,3666, Boden 0,0002 — das Tor hätte feuern können) ·
+  entschiedenes Placebo → FAIL trotz perfektem Δ · verkehrter Anker → STOP
+  [S1] · fehlende Stimme → STOP [S3]; in den letzten beiden entsteht **keine
+  Kontrastzahl**. Der Auflösungsboden wird seit dem Preflight in `evaluate()`
+  mitgerechnet ([S2]) statt nur in der Probe.
+--- [OTHER] line 268 ---
+- **Clarified terms:** *Rauschboden des Turniers* — die Probe zeigt zwei
+  getrennte Regime: bei inhaltlichem Unterschied liegt |pref − 0,5| bei ~0,47–0,50
+  (der Zwang sättigt), beim Placebo bei ~0,08–0,17. Die Ordnung ist also nicht
+  beliebig. **Aber** die Placebo-Abweichung zeigt in beiden Paaren in dieselbe
+  Richtung: die großgeschriebene Schreibweise gewinnt. Das ist ein
+  systematischer Schreibform-Effekt, kein Zufall — [N1] misst ihn, und sein
+  Reißen wäre ein echter Instrumentenbefund, kein Unfall.
+--- [OTHER] line 275 ---
+- **Changed — and in which class:** Nach der Probe nichts; nach dem Preflight
+  ausschließlich Klasse *Instrument*: gradgleiches Turnier statt zufälliger
+  Auffüllung (Grade waren 8–18, der BT-Prior schrumpft gradabhängig und Δ wäre
+  ein Graphartefakt gewesen) · Knotenidentität aus dem Paarplan · `COVERED_MIN`
+  wirkt jetzt als Filter statt nur als Kommentar · Textpfad-Stimmen, dünne,
+  fremde und einseitige Paare werden gezählt · Endpunkt-Pacht am Einstieg ·
+  Antwort-Alphabet als eine Konstante mit Test · Placebo-Paare ohne Dedup
+  gegen das Turnier (Tor und Fit teilen keine Stimme) · Producer schreibt neu
+  statt anzuhängen. **Hypothese, Kriterium und Stop-Regeln unberührt**;
+  insbesondere bleibt die [N1]-Schwelle bei 0,15, obwohl die Probe ein
+  Placebo-Paar darüber zeigt — eine Latte, die wegen unbequemer Probe-Zahlen
+  wandert, ist keine Latte (§2.A5). Registriert und damit KEIN Instrument:
+  der Ausschluss der Zwei-Arm-Kanäle (siehe Data/scope).
+====================================================================================================
+FILE: /Users/max/projects/counterfactual-worlds/experiments/72-familie-ueber-sessions/PROTOCOL-familie-ueber-sessions.md
+--- [AUDIT] line 53 ---
+- **Preflight audit:** offen — Subagent `experiment-preflight`, MODE: preflight
+--- [OTHER] line 54 ---
+- **Frozen before run:** yes *(2026-09-09, nach Renderprobe, Zähler-Ankerprobe
+  (22/22), Auflösungsprobe über vier Bahnen durchs echte `evaluate()` und einer
+  Preflight-Runde (3 Blocker, 5 Warnungen, 5 Notizen, alle behoben); Frage,
+  Kriterium, Stops und Weichen registriert — die Kriteriums-Präzisierungen
+  (welches Mittel, neun Placebo-Stämme, 22 Anker) fielen VOR dem Freeze und
+  sind hier eingetragen)*
+--- [AUDIT] line 127 ---
+- **Analysis audit †:** 2026-09-09 · scope sha d81ab5c8b502 · 1 Blocker, 6
+  Warnungen, 4 Notizen — alle behoben, 0 akzeptiert. Blocker: [W3] poolte über
+  die Sessions, obwohl die registrierte Bündelung das ungewichtete Mittel ist;
+  session-weise kehrt sich das Ergebnis um → [W3] wird jetzt als **nicht
+  auflösbar** geführt. Behoben außerdem: `robust_delta_state_only` war
+  algebraisch identisch mit Δ_state und las sich als zweite Bestätigung
+  (gestrichen, die Identität wird stattdessen geprüft: `identity_state_plus_event`)
+  · p-Werte unter 1e-04 werden mit Trefferzahl berichtet statt als „0,0000" ·
+  [N1] hat jetzt seinen eigenen Auflösungsboden · je Session ein eigenes p ·
+  Frische-Wächter über `id` und alle vier Zählerfelder · `verdict_pass`/`stopped`
+  als skalare Schlüssel. **`delta_strict`, `p_k2`, `k1` und das PASS sind
+  unverändert** — vom Audit ausdrücklich nachgerechnet.
+--- [OTHER] line 226 ---
+- **Resolution check (ZERO calls, real `evaluate()` on synthetic extremes):**
+  `02_analyze.py --resolution`, vier Bahnen durch die echte `evaluate()`:
+  perfekter Effekt → PASS (p = 0,0000, Boden 0,0000) · Null-Effekt mit Streuung
+  → FAIL (p = 1,0000) · perfekt bei verschobenem Placebo → FAIL über [N1] ·
+  verfehlte Zähler-Anker → STOP [S1], **ohne Kontrastzahl**.
+--- [OTHER] line 243 ---
+- **Clarified terms:** *Familie* heißt am Maßstab **vorbestehender Unterschied
+  in einer stehenden Eigenschaft des Landes** — nicht „enthält ein Bodenwort".
+  Die Durchsicht der 544 Kanäle zeigt, dass der geerbte Zähler beides
+  verwechselt: er trifft `Deeper subsoil tillage performed only on the
+  fertilised fields` (Handlung) und verfehlt `Prior legume rotation`
+  (vorbestehend, kein Landwort). Zweite Klärung: *Nullbedingung* — ein
+  Placebo-ANTEIL an allen Kanälen ist keine, weil Anteile sich zu 1 summieren.
+--- [OTHER] line 250 ---
+- **Changed — and in which class:** ausschließlich Klasse *Instrument*, vor dem
+  Freeze: (a) `family_strict` als Träger von [K2] statt des geerbten breiten
+  Zählers, abgeleitet aus dem eingefrorenen Maßstab, geprüft an 20 aus dem
+  Maßstab abgeleiteten Ankern; der breite läuft beschreibend mit. (b) Die
+  Vorbestehens-Regel ist **zeitlich, nicht formal**: Familie ist, was einen
+  Unterschied in einer stehenden Landeigenschaft vor der Saison IMPLIZIERT,
+  gleich ob als Zustand oder als Ereignis formuliert. Die formale Fassung
+  (Vorbestehen zählt nur mit Landwort) wurde erst gebaut und dann verworfen —
+  sie hätte gezählt, dass ein Generator, der `unequal baseline nitrogen` durch
+  `prior legume rotation` ersetzt, die Setzung einhält, obwohl er denselben
+  Bodenunterschied behauptet. Das ist genau das Ausweichen, das der 66er
+  dokumentiert, und die Fehlerrichtung liefe ZUGUNSTEN der Hypothese. Die
+  θ-Eichung entscheidet es nicht — ihre Zahlen sind **Probe-Zahlen** und
+  bleiben in `analysis/theta-eichung.py`; der Spitzenrang trägt das bekannte
+  Triggerwort `Unequal`, und ein Kanal Unterschied ist kein Befund.
+  Die formale Unterscheidung fällt nicht weg, sie wird **berichtet**:
+  `family_form` trennt Zustand von Ereignis, [W3] liest den Ereignis-Anteil,
+  und `robust_delta_state_only` rechnet [K2] zusätzlich ohne den
+  Ereignis-Zweig (Preflight-Auftrag: trägt der Kontrast auch ohne die
+  landwortlosen Treffer?). (c) [N1] wird am **Rest** gemessen statt an allen Kanälen; die
+  erste Fassung zeigte 0,48/0,48/0,48 gegen 0,53/0,57/0,62 und war damit
+  derselbe Effekt im Spiegel, keine Nullbedingung. **Hypothese, Kriterium und
+  Stop-Regeln unberührt.**
+====================================================================================================
+FILE: /Users/max/projects/counterfactual-worlds/experiments/73-dosis-auf-frischem-faecher/PROTOCOL-dosis-auf-frischem-faecher.md
+--- [AUDIT] line 41 ---
+- **Preflight audit:** offen — Subagent `experiment-preflight`, MODE: preflight
+--- [OTHER] line 42 ---
+- **Frozen before run:** no
+--- [OTHER] line 104 ---
+- **Resolution check (ZERO calls, real `evaluate()` on synthetic extremes):**
+  `03_evaluate.py --resolution`, fünf Bahnen durch die echte `evaluate()`:
+  **W1 und W2 trennen sich** (blinder Fleck p₃ = 1,0000 gegen graduellen
+  Gehorsam p₃ < 1e-04) · Null-Effekt → FAIL über [K1] · schwaches Blindlabel →
+  STOP [S1] ohne Kontrastzahl · ignoriertes Verbot → [K1] bleibt lesbar,
+  [K2]/[K3] entfallen. Das ist der Kern: das Design kann die beiden Deutungen
+  des 72er-Befunds auseinanderhalten.
+--- [OTHER] line 153 ---
+- **Clarified terms:** offen
+--- [OTHER] line 154 ---
+- **Changed — and in which class:** offen
+====================================================================================================
+FILE: /Users/max/projects/counterfactual-worlds/experiments/74-rivalen-kompatibilitaet/PROTOCOL-rivalen-kompatibilitaet.md
+--- [AUDIT] line 63 ---
+- **Preflight audit:** <pending — after instrument check>
+--- [OTHER] line 64 ---
+- **Frozen before run:** no *(to "yes" only after the instrument check)*
+--- [OTHER] line 156 ---
+- **Clarified terms:** *direction match* = strengthener eliminates ≥1
+  rival AND weakener eliminates 0. A weakener that eliminates rivals
+  counts as a miss even if it eliminates fewer than the strengthener.
+--- [OTHER] line 159 ---
+- **Changed — and in which class:** (1) MAX_TOKENS_COMPAT 512→1024
+  (parameter, fixes yield). (2) parse_rivals strips markdown bold/italic
+  (parser, fixes leaked formatting). Both are instrument-class changes
+  (prompt text unchanged).
+====================================================================================================
+FILE: /Users/max/projects/fallacy-datasets/experiments/02-scenario-validation/PROTOCOL-scenario-validation.md
+--- [AUDIT] line 71 ---
+- **Preflight audit:**
+--- [OTHER] line 72 ---
+- **Frozen before run:** no
+--- [OTHER] line 191 ---
+- **Clarified terms:** *setting* = the circumstances up to but excluding
+  E; *SAME* = explicit tie, half a vote each side; *states_e* = judge flag
+  that a scenario says E happened (flag only, ~1/6 false positives on
+  clean settings); *confounder in slot 4* = C-side scenario that lets
+  something else produce E while C still holds.
+--- [OTHER] line 196 ---
+- **Changed — and in which class:** probe 2026-09-23, instrument only —
+  (1) tournament answer line "single letter", parser strips markdown, raw
+  responses stored, parse rate reported; (2) BT fit corrected (MM, Hunter
+  2004; tests), Laplace-smoothed, [N1] identical pairs implemented; (3) urn/coin → mechanism anchors [N5];
+  (4) generation: "in every situation the hypothesis holds", gradient
+  common→rare — before, 3/4 C-scenarios were confounders; (5) answer form
+  A/B/SAME (forced choice: 65 % of votes went to position B, swap
+  consistency 0.56–0.71; with SAME 0.79–1.0); (6) generated scenarios
+  stated E ("…triggering it"), so ℓ ≈ const — setting rule in the
+  generation prompt (a rewrite step lost cues and flipped the anchor
+  order); LLM judge `01b_judge_outcome.py` as flag-only gate; (7) null
+  setting "Nothing out of the ordinary was going on." appended per side in
+  all tournaments (§6 control; restores the mass the per-side softmax
+  drops) — under test with a test-retest of one row and the first AFEX
+  triplet — off: a vote carries order, not mass; (8) dossier as background
+  K in all three tournament prompts (LR = P(E | C, K) / P(E | ¬C, K)); pairs
+  run 4 in parallel (labkit 0.18.0) — with K every gate passes and the
+  first triplet orders (thin margins); (9) generation asks for what was at
+  work (mechanism), not only context — the C side had written policy
+  context (ℓ 0.0) while ¬C wrote causes; (10) v3 items: the satisfied
+  sufficient_sample line binds the neighbours to the same change, the
+  ℓ-ordering anchor is written as settings, the strong alarm states its
+  placement; generation asks how things unfold *because of* the
+  assumption (path from the intervention, not to it); (11) human curation
+  of scenarios before the tournaments (materialised as
+  `scenarios_v3_curated.jsonl`), anchors handwritten; (12) v4 items carry
+  `cq_channel` (deletion test, by hand: 3 rebutter lines, 12 undercutter);
+  [K1] is computed per channel — the K-conditioned LR is the undercutter
+  channel; (13) K out of the ℓ prompt, kept in w and G: with K in ℓ the
+  AFEX `typical` triplet inverted (vio +0.77 > unk −0.32 > sat −0.61) —
+  a ¬C story that coincides with K restates it and loses ℓ; re-run with
+  K in w/G only: vio +0.06 < sat +0.16 < unk +0.49; (14) v5 items: rebutter
+  CQs sit at `unknown` in the basis dossier — their `satisfied` lines are
+  reinforcers in K ("four districts need a common cause") and crush the
+  manipulated undercutter (w 0.12 for the tutors story); expectation: vio
+  ≥ 0.3 below sat ≈ unk — not met (sat +0.37, unk −0.33, vio +0.41): the
+  re-drawn violated row contains no tutors story at all, its ¬C side even
+  carries a C mechanism; with the named objection curated in (§12), vio
+  −0.55 < unk −0.33 < sat +0.37 — the first ordered undercutter triplet,
+  and the tutors setting tops ℓ (+1.39) with w 0.62 ([K2] as predicted);
+  (15) v6 items will carry the named objection (and the C mechanism) as
+  handwritten settings.  No change to hypothesis, success or stop criteria.
+====================================================================================================
+FILE: /Users/max/projects/fallacy-detection/config/experiments/casa/PROTOCOL-casa-repro.md
+--- [AUDIT] line 26 ---
+- **Preflight audit:** n/a — the reference is the lab run itself (§2.H2); the digest and server version below are the audit stamp of the model state
+--- [OTHER] line 27 ---
+- **Frozen before run:** no *(port proof; the criterion is identity to the lab run, not a preregistered number)*
+--- [OTHER] line 109 ---
+- **Clarified terms:** "scored items" and "all items" name the two denominators; "runtime difference" = same digest, different sampled contexts
+--- [OTHER] line 110 ---
+- **Changed — and in which class:** instrument: `casa_revision` fix (inline label, chat tail) and the new `ollama_completion` backend; criterion unchanged
+====================================================================================================
+FILE: /Users/max/projects/fallacy-detection/config/experiments/tournament/PROTOCOL-scenario-tournament.md
+--- [AUDIT] line 27 ---
+- **Preflight audit:** n/a — the port was verified against the lab run by sign (936e: +0.921 / −0.10) and by reading the rendered prompts; no scope-sha audit in this repo yet
+--- [OTHER] line 28 ---
+- **Frozen before run:** no *(pilot; thresholds move with the vote count)*
+--- [OTHER] line 138 ---
+- **Clarified terms:** "guard" = the instruction that keeps the evidence out of the generated scenario; "flag" = a scenario the guard marks instead of dropping
+--- [OTHER] line 139 ---
+- **Changed — and in which class:** instrument only (guard wording, answer instruction without the "answer A" default); question, criteria and stop rule unchanged across the three pilots
+====================================================================================================
+FILE: /Users/max/projects/paper-organization/experiments/01-blank-and-autocolor-semantics/PROTOCOL-blank-and-autocolor-semantics.md
+--- [AUDIT] line 41 ---
+- **Preflight audit:** 2026-09-12 · scope sha fb13b7e5caf3 · 13 Findings:
+  11 gefixt, 2 akzeptiert (Parser-Fixture mit Plan, `--date`-Regel).
+--- [OTHER] line 43 ---
+- **Frozen before run:** yes — 2026-09-12, nach Audit + Auflösungsprobe.
+--- [AUDIT] line 98 ---
+- **Analysis audit †:** 2026-09-12 · scope sha 06004597d655 · 0 Blocker,
+  1 Warnung, 2 Notizen — alle drei gefixt (Removal-Drop-Unterscheidung,
+  Header-Zweitkanal + `channels_silent`, c2-Refusal paper-gegated);
+  keine berichtete Zahl betroffen, Auflösungsprobe auf 9 Zeilen erweitert.
+
+<!-- APPARATUS — this part gets LOOKED UP, not read. -->
+--- [OTHER] line 168 ---
+- **Resolution check:** `scripts/02_analyze.py --resolution` (null
+  Gerätecalls, echtes `evaluate()` an synthetischen Extremen), 2026-09-12
+  nach dem Preflight-Audit: eine Zeile je registrierter Kennung — perfekt
+  → k1=[] · k2=reported · k3=accepted · k4=True · w1=refused · k6=detects;
+  Null → k2=silent · k3=refused-with-paper · k4=False · w1=silent-fallback
+  · k6=inert; s1/n1 beidseits True — PASS (8/8 Zeilen).
+--- [OTHER] line 200 ---
+- **Clarified terms:** Detection ≠ Removal (s. Terms) — genau die
+  Verwechslung, die das Verdikt von Probe 5 kippte.
+--- [OTHER] line 202 ---
+- **Changed — and in which class:** Instrument, vor dem ersten
+  Serie-2-Lauf, zwei Wellen: (1) Artefakt-Wurzel nach `runs/` dieses
+  Bereichs, Seiten-JPEGs mitarchiviert; (2) nach dem Preflight-Audit:
+  AdfState vor jedem Job archiviert, `exit.json` mit Abbruchgrund,
+  Caps-Versionierung, Summary robust gegen unlesbare Seiten — Läufe und
+  Settings-Deltas unverändert; Re-Freeze mit diesem Satz, Ledger im Commit.
+====================================================================================================
+FILE: /Users/max/projects/paper-organization/experiments/02-compression-factor-direction/PROTOCOL-compression-factor-direction.md
+--- [AUDIT] line 32 ---
+- **Preflight audit:** 2026-10-04 · scope sha c8f3c546156a · 11 Findings (2 Blocker, 6 Warnungen, 3 Notizen), alle gefixt: N1 über Tabellen-Digest statt Luma-Summe · W1 `unjudged` schlägt `honoured` · Seitenzahl Konstante statt `--sheets` · Rauschen als Spanne über drei gleich eingestellte Einzüge (neue Lane `r3-cf0-repeat`) · `ignored` nur bei allen Tabellen gleich · Run-Config trägt gesendete XMLs · Dauertest in Simplex-Struktur · `mixed-within-lane` entfernt · `--session`-Tippfehler fail-loud · Testzahl neu gezählt. Rohbericht im Scratchpad.
+--- [OTHER] line 33 ---
+- **Frozen before run:** yes — 2026-10-04, nach Instrumentenprobe, Code-Check, Preflight-Audit und Auflösungsprobe (16 Tests).
+--- [AUDIT] line 54 ---
+- **Analysis audit †:** 2026-10-04 · scope sha 35c9ee19a76b · 10 Findings (0 Blocker, 7 Warnungen, 3 Notizen); die Zahlen des Erstlaufs `2026-10-04T11-24-45_4caa` wurden vom Audit nachgerechnet und bestätigt. Gefixt: `--check` prüft nur den Ergebnisblock, hält Labels/Schwelle/Verdikt mit und scheitert leer · Gate 1 leitet `pages.json` aus den archivierten JPEGs neu ab · Gate 2 hält die Neuberechnung gegen den gebundenen Lauf · `--session` fail-loud · S1 gegen die Konstante · N1 in Tabellen- und Sampling-Konjunkt getrennt · ein Nenner (cf0-Mittel) für Rauschen und Kontrast · 0xFF-Füllbytes im Header-Walk (mit Fixture). Akzeptiert: `chroma-only` entscheidet über die Luma-Summe statt je Tabelle (nicht erreichbar, W1 landet ohnehin auf `surprising`). Danach neu ausgewertet → Lauf `2026-10-04T11-32-51_9590` (zahlengleich). Rohbericht im Scratchpad.
+<!-- APPARATUS — this part gets LOOKED UP, not read. -->
+--- [OTHER] line 110 ---
+- **Resolution check (ZERO calls):** `tests/test_02_compression_factor_direction.py::TestResolution`, Lanes in der echten Struktur (eine Seite, vier Lanes) — perfekt (Tabellen 500 vs 4000, Bytes −51 %) → `finer-at-0`/`smaller-at-11`/Verdikt 0; gespiegelt → Verdikt 11; null (Tabellen gleich, Bytes +1 % bei 2 % Rauschen) → `equal`/`within-noise`/`ignored`/kein Verdikt; widersprüchlich → kein Verdikt; Tabellen verschieden, Bytes im Rauschen → kein Verdikt; N1 verletzt → K2 und W1 `unjudged`, kein Verdikt; nur Chroma anders → `chroma-only`/`surprising`; abgewiesene oder doppelt eingezogene Lane → S1 false, alle Keys `not-judged`. Plus Header-Leser inkl. Digest-Kollisionstest. 16 Tests, bestanden 2026-10-04 nach Code-Check und Preflight-Audit.
+--- [OTHER] line 122 ---
+- **Clarified terms:** „weniger Kompression" ist über die Tabellensumme definiert, nicht über Bytes — Bytes hängen vom Papier ab, Tabellen nur von der Einstellung. Probe-Nebenbefund als Instrumentfrage: der Gerätestandard quantisiert mit Einsen, also ist `finer-at-11` strukturell unerreichbar — das Verdikt-Vokabular bleibt, die Vorhersage trägt es.
+--- [OTHER] line 123 ---
+- **Changed — and in which class:** Instrument: `scan.py` hat `--compression-factor N` (0–11, Standard: nicht gesendet) und schreibt den Wert ins Manifest — nötig, damit der Produktivpfad das Element überhaupt senden kann. Simplex statt Duplex, weil das Testblatt einseitig ist (2026-10-04) — Tabellen sind duplex-unabhängig, eine leere Rückseite würde nur den Byte-Kontrast verwässern. Hypothese, Kriterium, Stopregel unverändert.
+====================================================================================================
+FILE: /Users/max/projects/uniagent/experiments/01-konsistenz-gegen-null/PROTOCOL-konsistenz-gegen-null.md
+--- [AUDIT] line 53 ---
+- **Preflight audit:** 2026-10-05 · scope sha 5b354133c092 · zwei Durchgänge. **Erster:** 2 Blocker, 6 Warnungen, 3 Notizen — behoben: [K2]-Schwelle (Blocker), [N2]-Spur ohne Aussagekraft (Blocker), [K4] gegen aktivierte Einträge, Auflösungsprobe mit Laufstruktur und Alles-annehmen-Extrem, Fingerabdruck je Spur und Profile in `data=`, `pdftotext`-Version in der Config, n je Satz als Konstante, `hit` neu abgeleitet, NullDecider-Docstring; akzeptiert mit Grund (Instrument, nicht dieser Bereich): tote Toleranz-Beschriftung `tolerances.toml` → Laborbuch 15, `fact:`-Verweis bei Antrag+Abrechnung im selben Fall → Laborbuch 16 (kein heutiger Fall betroffen). **Zweiter** (nach den Fixes): 1 Blocker, 3 Warnungen, 3 Notizen — Blocker (Ergebnis von [K1]–[K3] durch Golden-Tests vorbestimmt) als Offenlegung im Feld `Type` behandelt, Kriterien unverändert; behoben: `n2_decisions_carry_findings` als Konstruktionsprüfung deklariert und Rollen-Erkennung als eigene [N2]-Prüfung, Spur je Bedingung persistiert, leere Spur mit eigener `RunConfig` (`build_empty_decider`), Null-Anker im Golden-Test aus dem Gold abgeleitet, Gold-Labels im Producer validiert und Gold-Verteilung je Satz als Konstante, Trichterstufen 3 und 4 aus zwei Spurfakten. Rohberichte im Scratchpad.
+--- [OTHER] line 54 ---
+- **Frozen before run:** yes — 2026-10-05, nach zwei Preflight-Audits; Kriterium vor dem Freeze geschärft (siehe „Changed“), danach unverändert. Re-Freeze 2026-10-05 nach dem Auswertungs-Audit des ersten Laufs: `evaluate()` meldet [N2] (ii) als Verdikt (`n2_roles_known`) und trennt [W1] nach Anwendbarkeit — Berichtsweg, kein Kriterium; zweiter Lauf. Dritter Freeze 2026-10-05 nach den Laborbuch-Punkten 17–20: Rolle `route`, Aggregation `coverage` als sechzehnte Bedingung `register-coverage` (deskriptiv, keine Kennung), Einträge je Rechnung (`per_document`), Trichter zählt Einträge statt Beobachtungen; Kriterien unverändert; dritter Lauf.
+--- [AUDIT] line 69 ---
+- **Analysis audit †:** 2026-10-05 · scope sha 0098f91e98b2 · auf Lauf `2026-10-05T16-56-33_ca4c`: 1 Blocker, 3 Warnungen, 4 Notizen — Blocker (registrierte [N2]-Prüfung (ii) gefallen, aber ohne Verdikt und ohne Zeile im Berichtsweg) behoben durch `n2_roles_known` und den Verdikt-Block in `02_analyze.py`; Warnungen behoben: [W1] nach Anwendbarkeit getrennt (`cases_applicable` aus dem Trichter), Verdikte werden vom Skript gedruckt, Rohzeilen an die im Lauf registrierte sha gepinnt; Notizen behoben: vakuum-Markierung der Δ-Spalte ohne Baseline-Befund, totes `EXPECTED_N` entfernt, erst prüfen dann drucken, Schlüsselmengen beidseitig verglichen. Danach Re-Freeze und zweiter Lauf `2026-10-05T17-08-26_7bcf`. Dritter Lauf `2026-10-05T17-38-47_1a55` nach den Laborbuch-Punkten 17–20 ohne neuen Audit: die Auswertung gewann zwei deskriptive Schlüssel (`accuracy_register_coverage`, `coverage_flips`), Kriterien und Verdiktlogik unverändert; die Zahlen oben stammen aus ihm. Rohberichte im Scratchpad.
+
+<!-- APPARATUS — this part gets LOOKED UP, not read. -->
+--- [OTHER] line 108 ---
+- **Resolution check (ZERO calls, real `evaluate()` on synthetic extremes):** `tests/test_01_konsistenz_gegen_null.py`, 10 passed, Struktur des Laufs (5 Fälle mit 3 `abgelehnt`, 7 mit 1; 2 Einträge, alle Spuren). Perfektes Instrument: `accuracy_register` 1,00/1,00 gegen `threshold_trivial` 0,60/0,86 → [K1]–[K4] feuern, [S1] still, Leave-one-out des tragenden Eintrags negativ. Alles ablehnen: 0,60/0,14 → [K1]–[K3] still, [S1] ausgelöst. Alles annehmen: 0,40/0,86 → [K1]/[K2] still, [K3] erfüllt, [S1] ausgelöst — das Extrem, das eine Schwelle allein aus [N1] durchgelassen hätte. Dazu: eine Ablehnung ohne Befund kippt `n2_decisions_carry_findings`; ein Dokument mit Rolle `unknown` erscheint in `n2_cases_with_unknown_role`; eine fehlende Ablationsspur kippt [K4].
+--- [OTHER] line 135 ---
+- **Clarified terms:** „Befund" heißt hier Beobachtung mit Zustand ≠ PASS und ≠ NOT_APPLICABLE — `NOT_APPLICABLE` ist kein Befund, sondern die Feststellung, dass die Prüfung nicht zutrifft.
+--- [OTHER] line 136 ---
+- **Changed — and in which class:** Setup, nicht Intent. Zwischen erster Probe (2026-10-01) und Freeze kamen Fall 18 (konstruiert, Abrechnung mit fünf Belegen) und drei Katalogeinträge (`belegdatum_nicht_nach_reiseende`, `beleg_nicht_nach_abrechnung`, `abrechnung_binnen_frist`) hinzu; `00_prepare` neu gefahren (12 Fälle, 12 Ablationsprofile), [N1]/[N2]-Erwartungen aus der neuen Gold-Verteilung nachgerechnet, Trichterzählung je Fall ergänzt. **Kriterium geschärft nach Preflight-Audit (2026-10-05), vor dem Freeze:** [K1]/[K2] messen gegen den besseren der beiden trivialen Entscheider statt nur gegen [N1] — auf dem konstruierten Satz schlägt Nichtstun die Nullbedingung mit 0,86 zu 0,14, ein Kriterium „> [N1]" war dort durch [K3] bereits impliziert. [N2] trägt jetzt die Schwelle auf der Annahme-Seite und prüft die Deckung jeder Entscheidung durch Befunde; Ablationsprofile werden aus dem aktivierten Profil erzeugt, nicht aus dem Katalog. Hypothese und Stop-Regel unverändert; [S1] folgt dem geschärften Kriterium.
