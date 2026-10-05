@@ -22,8 +22,15 @@ pip install ~/projects/labkit      # in repos: pinned via requirements.txt/.lock
 ```
 
 ```python
-from labkit import runlog, llm, batch
+from labkit import runlog, llm, batch, recheck
 ```
+
+`recheck.holds(area, out, recompute, note)` is the `--check` of an
+analysis script in one call: the output file pinned to the run's recorded
+sha prefix, `metrics.json` against the recomputation (intent keys exact,
+nothing vanished, grown keys reported as a derived run), the note holding
+every reported number as a token and the run_id. Two areas re-implemented
+it and got two of three parts wrong (2026-10-05).
 
 Ten **console commands** come with the installation, `runlog` with three
 sub-commands (all answer `--help`):
@@ -53,6 +60,7 @@ three agent audits. `usability` makes that measurable and repeatable:
 
 ```bash
 usability stage /tmp/probe --venv .venv   # fresh lab repo, stamped area, fixture with a known answer, TASK.md
+usability stage /tmp/probe --venv .venv --quick   # the counting path: short form + lean skeleton (lib exp --quick)
 #   hand TASK.md to a COLD agent (fresh context); it logs one line per step
 usability score /tmp/probe                # number == truth? bound? tier? wall-clock, steps per tag → probe.score.json
 ```
