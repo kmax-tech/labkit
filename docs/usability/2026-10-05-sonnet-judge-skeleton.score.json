@@ -1,0 +1,42 @@
+{
+ "probe": {
+  "staged": "2026-10-05T23:05:34",
+  "task": "judge",
+  "area": "01-causal-claims-judge",
+  "metric_key": "k1_accuracy",
+  "labkit_installed": "labkit @ git+file:///Users/max/projects/labkit@1a2426acf26aca22a272367a1845820ee835bbb0",
+  "scaffold_sha": "ae48e154abe4",
+  "scaffold_flags": [
+   "--lab",
+   "--name",
+   "probe-12",
+   "--lang",
+   "deutsch",
+   "--exp",
+   "causal-claims-judge",
+   "--quick",
+   "--model"
+  ],
+  "target_minutes": 5
+ },
+ "run_id": "2026-10-05T23-12-08_623a",
+ "number": 0.8333333333333334,
+ "expected": null,
+ "number_ok": true,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-causal-claims-judge.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 23,
+  "wall_seconds": 694,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 1,
+  "run": 14,
+  "edit": 5,
+  "unsure": 0,
+  "gate": 3,
+  "untagged": 0
+ }
+}

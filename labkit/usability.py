@@ -81,7 +81,7 @@ CLAIMS = (
 TASKS = {
     "count": {"area": "docs-per-case", "metric_key": "mean_docs_per_case",
               "template": "usability-task-count.md.template", "quick_default": True},
-    "judge": {"area": "causal-claims-judge", "metric_key": "accuracy",
+    "judge": {"area": "causal-claims-judge", "metric_key": "k1_accuracy",
               "template": "usability-task-judge.md.template", "quick_default": False},
 }
 LOG_TAGS = ("read", "run", "edit", "unsure", "gate")
