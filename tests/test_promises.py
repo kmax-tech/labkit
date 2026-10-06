@@ -276,6 +276,22 @@ class Chain(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("promises changed after the run", out)
 
+    def test_run_config_contradicting_a_constant(self):
+        """Durchstich 2026-10-06: the script kept MIN_F1 = 0.5 against 0.6."""
+        with contextlib.redirect_stdout(io.StringIO()):
+            run = runlog.Run("t", {"MIN_ACC": 0.5}, self.area, long=False)
+        self.complete(run, self.GOOD)
+        rc, out = self.check()
+        self.assertEqual(rc, 1)
+        self.assertIn("declares MIN_ACC = 0.7, the run used MIN_ACC = 0.5", out)
+
+    def test_run_config_agreeing_with_a_constant_is_silent(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            run = runlog.Run("t", {"MIN_ACC": 0.7}, self.area, long=False)
+        self.complete(run, self.GOOD)
+        rc, out = self.check()
+        self.assertEqual(rc, 0, out)
+
     def test_declared_key_must_be_reported_exactly(self):
         self.complete(self.start(), {"c1_debug": 1, "a1_anchor_ok": True})
         rc, out = self.check()

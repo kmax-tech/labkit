@@ -352,10 +352,33 @@ def check_block_against_run(block: "promises.PromiseBlock", mpath: Path,
         if p.key not in metrics:
             out.append(f"{mpath}: [{p.id}] declares key '{p.key}', which the "
                        f"run does not report.")
-    recorded = (read_run_config(mpath.parent) or {}).get("promises")
+    cfg = read_run_config(mpath.parent) or {}
+    recorded = cfg.get("promises")
     drift = promises.block_drift(recorded, block)
     if drift:
         out.append(f"{mpath.parent.name}: {drift}.")
+    out += constant_findings(block, cfg.get("config") or {}, mpath.parent.name)
+    return out
+
+
+def constant_findings(block: "promises.PromiseBlock", run_config: dict,
+                      run_name: str) -> list[str]:
+    """A block constant the run recorded under the same name with another value.
+
+    The script is meant to read its thresholds from the block
+    (`promises.constants`). One that keeps its own copy — `MIN_F1 = 0.5`
+    against 0.6 in the protocol — judged by a threshold nobody registered
+    (Durchstich 2026-10-06). Exact, but only as far as the script records
+    the value in its run config; a copy it never records stays invisible
+    here and is a static-evidence question.
+    """
+    out = []
+    for p in block.promises:
+        for name, value in p.constants.items():
+            if name in run_config and run_config[name] != value:
+                out.append(f"{run_name}: [{p.id}] declares {name} = {value!r}, "
+                           f"the run used {name} = {run_config[name]!r} — read "
+                           f"it with promises.constants(), not a second copy.")
     return out
 
 
