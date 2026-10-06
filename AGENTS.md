@@ -24,7 +24,7 @@ of semantics. Contract and rationale: `docs/promise-block.md`.
 |---|---|
 | `README.md` | modules, console commands, the coined terms (one word, one thing) |
 | `TODO.md` | the work order and why (German); top section "Reihenfolge" decides what is next |
-| `docs/promise-block.md` | promise kinds C/A/B, the TOML block, what the scope hash states |
+| `docs/promise-block.md` | promise kinds C/A/B, the TOML block, what the declared-scope hash states |
 | `docs/protocol-run-binding.md` | which run belongs to which protocol |
 | `docs/coding-style.md` | binding for every line of code (vendored copy — do not edit here) |
 

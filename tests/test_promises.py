@@ -162,7 +162,7 @@ class ScopeHash(unittest.TestCase):
         self.script.write_text(MEASURE, encoding="utf-8")
 
     def sha(self, *scope: str) -> str:
-        return promises.scope_sha(self.area, scope)
+        return promises.declared_scope_sha(self.area, scope)
 
     def edit(self, old: str, new: str):
         text = self.script.read_text(encoding="utf-8")
@@ -241,8 +241,8 @@ class Chain(unittest.TestCase):
         self.assertEqual(rec["block_sha"], promises.load(self.protocol).sha)
         self.assertEqual(set(rec["ids"]), {"C1", "A1"})
         self.assertEqual(rec["ids"]["C1"]["constants"], {"MIN_ACC": 0.7})
-        self.assertEqual(rec["ids"]["C1"]["scope_sha"],
-                         promises.scope_sha(self.area, ("scripts/01_measure.py:compute_score",)))
+        self.assertEqual(rec["ids"]["C1"]["declared_scope_sha"],
+                         promises.declared_scope_sha(self.area, ("scripts/01_measure.py:compute_score",)))
 
     def test_protocol_without_block_records_none(self):
         self.protocol.write_text(protocol_text("", prose="[K1] only\n"), encoding="utf-8")

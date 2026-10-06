@@ -80,7 +80,7 @@ def pin(run: Path, out: Path) -> None:
 def scopes_unchanged(run: Path, area: Path) -> None:
     """Refuse a recomputation over code the run did not use, per promise.
 
-    The run recorded a scope hash per promise (config.json `promises`);
+    The run recorded a declared-scope hash per promise (config.json `promises`);
     if a declared region changed since, recomputing with today's code
     agrees or disagrees about a different instrument. Runs without a
     promise block — and run dirs without config.json, which predate it —

@@ -464,7 +464,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[str]:
     keys = code_keys(area)
     for p in block.promises:
         try:
-            promises.scope_sha(area, p.scope)
+            promises.declared_scope_sha(area, p.scope)
         except promises.PromiseError as exc:
             out.append(f"BLOCKER · {protocol.name} · [{p.id}] declared scope: "
                        f"{exc} · runlog refuses the run · fix the scope")

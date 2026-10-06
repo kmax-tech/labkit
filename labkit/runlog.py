@@ -674,7 +674,7 @@ def _promise_snapshot(base_dir: Path, text: str | None) -> dict | None:
     Before mkdir, like every refusal here: a malformed block or a declared
     scope naming code that does not exist stops the run — a number bound
     to a promise whose scope cannot be hashed is bound to nothing
-    (`promises.scope_sha`). No block (every protocol before 2026-10) is
+    (`promises.declared_scope_sha`). No block (every protocol before 2026-10) is
     None, not an error.
     """
     from labkit import promises

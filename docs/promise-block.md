@@ -79,7 +79,11 @@ constants = { MIN_F1 = 0.70 }
 TOML, not YAML: labkit is stdlib-only, and `tomllib` is in the standard
 library.
 
-## What the scope hash states
+## What the declared-scope hash states
+
+`declared_scope_sha` hashes one promise's declared scope. It is not the
+area audit stamp `scope-sha` (README: *scope hash*), which covers a whole
+area for an audit and binds to no promise.
 
 > **The implementation region declared for this promise was byte-identical
 > in the run that produced the reported number.**
@@ -114,7 +118,7 @@ outside a declared function are not covered — read them from the block.
 | Link | Who | Refuses or reports |
 |---|---|---|
 | promise | `intent-check` | block malformed; prose and block name different ids |
-| execution | `runlog` | malformed block or dangling scope → refused before the run dir exists; otherwise `config.json` records `promises`: block digest, and per id key, constants, scope, scope hash |
+| execution | `runlog` | malformed block or dangling scope → refused before the run dir exists; otherwise `config.json` records `promises`: block digest, and per id key, constants, scope, `declared_scope_sha` |
 | report | `intent-check` | declared key not reported exactly; run recorded no block, or a different one ("the promises changed after the run") |
 | recomputation | `recheck.holds` | a declared scope changed since the run, per promise |
 

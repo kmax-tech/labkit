@@ -35,7 +35,8 @@ carry exactly one fenced ```toml block with `[[promise]]` tables:
 
 `scope` is DECLARED, not derived: the author names the implementation
 region the promise rests on (a file, or `file:function` for one top-level
-function), paths relative to the protocol's directory. The scope hash
+function), paths relative to the protocol's directory. The declared-scope
+hash (`declared_scope_sha`; not the area audit stamp `scope-sha`)
 states exactly this and no more: **the implementation region declared for
 this promise was byte-identical in the run that produced the number.** It
 does not state that this region is all the code the number depends on, and
@@ -245,7 +246,7 @@ def _function_source(path: Path, name: str) -> str:
                        f"declared scope names code that does not exist")
 
 
-def scope_sha(base: Path, scope: tuple[str, ...]) -> str:
+def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
     """Digest over the declared scope, entries resolved against `base`.
 
     A `file` entry covers the file's bytes; a `file:function` entry covers
@@ -276,9 +277,9 @@ def scope_drift(recorded: dict | None, base: Path) -> list[str]:
         return []
     out = []
     for pid, rec in sorted(recorded["ids"].items()):
-        now = scope_sha(base, tuple(rec["scope"]))
-        if now != rec["scope_sha"]:
-            out.append(f"[{pid}] {rec['scope_sha']} → {now}")
+        now = declared_scope_sha(base, tuple(rec["scope"]))
+        if now != rec["declared_scope_sha"]:
+            out.append(f"[{pid}] {rec['declared_scope_sha']} → {now}")
     return out
 
 
@@ -305,5 +306,5 @@ def snapshot(block: PromiseBlock, base: Path) -> dict:
     return {"block_sha": block.sha,
             "ids": {p.id: {"key": p.key, "constants": p.constants,
                            "scope": list(p.scope),
-                           "scope_sha": scope_sha(base, p.scope)}
+                           "declared_scope_sha": declared_scope_sha(base, p.scope)}
                     for p in block.promises}}
