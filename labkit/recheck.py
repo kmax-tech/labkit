@@ -29,7 +29,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import promises
+from labkit import promises, runlog
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
 #: reproduce: runlog's duration, llm's retry counter (the stamped evaluate()
@@ -48,14 +48,15 @@ class Verdict:
 
 
 def run_dir(area: Path, run_id: str | None = None) -> Path:
-    """The run to recheck against: `run_id`, or the newest with metrics."""
+    """The run to recheck against: `run_id`, or the newest completed run."""
     runs = area / "runs"
     if run_id is not None:
         d = runs / run_id
-        if not (d / "metrics.json").is_file():
-            raise SystemExit(f"recheck: {d} has no metrics.json — not a completed run")
+        state = runlog.completion_state(d) if d.is_dir() else "missing"
+        if state != "completed":
+            raise SystemExit(f"recheck: {d} is not a completed run ({state})")
         return d
-    done = sorted(p.parent for p in runs.glob("*/metrics.json")) if runs.is_dir() else []
+    done = runlog.completed_runs(area)
     if not done:
         raise SystemExit(f"recheck: no completed run under {runs}")
     return done[-1]

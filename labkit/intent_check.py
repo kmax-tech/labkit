@@ -82,12 +82,16 @@ def ledger_ids(metrics: dict) -> set[str]:
 
 
 try:
-    from labkit.runlog import run_state
+    from labkit.runlog import completed_runs, run_state
 except ImportError:                       # vendored flat copies (student repos)
     def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
         """Fallback for a runlog too old to know completion markers: then
         every run in reach is a legacy run, and metrics.json is its marker."""
         return "completed" if (run_dir / "metrics.json").is_file() else "crashed"
+
+    def completed_runs(area: Path) -> list[Path]:
+        """Fallback: legacy runs only, metrics.json is the marker."""
+        return sorted(p.parent for p in area.glob("runs/*/metrics.json"))
 
 
 PROTOCOL_ID_IN_FILE = re.compile(r"protocol[ _]id[^:\n]*:\**\s*\**\s*(\S+)", re.I)
@@ -184,7 +188,7 @@ def gate_metrics(area: Path) -> tuple[Path | None, int]:
     have no evidence yet. Run dirs are timestamp-named, so lexicographic
     order is temporal order.
     """
-    runs = sorted(area.glob("runs/*/metrics.json"))
+    runs = [d / "metrics.json" for d in completed_runs(area)]
     skipped = 0
     for p in reversed(runs):
         try:

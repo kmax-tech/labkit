@@ -703,11 +703,12 @@ class Run:
         self._derived_from = None
         if derived_from is not None:
             parent = base_dir / "runs" / derived_from
-            if not (parent / "metrics.json").is_file():
+            state = completion_state(parent) if parent.is_dir() else "missing"
+            if state != "completed":
                 raise SystemExit(
                     f"runlog: derived_from={derived_from!r} names no completed "
-                    f"run under {base_dir / 'runs'} — a derived run needs a "
-                    f"parent with metrics.json")
+                    f"run under {base_dir / 'runs'} ({state}) — a derived run "
+                    f"needs a finished parent")
             self._derived_from = derived_from
         # Before any work: an unresolvable protocol is a refusal, and a
         # refusal must not leave an empty run dir behind (2026-09-26).
@@ -944,6 +945,34 @@ def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
     if has_completion:
         return "corrupt"
     return "unfinalized" if has_metrics else "crashed"
+
+
+def completion_state(run_dir: Path) -> str:
+    """`run_state` of a run directory read from disk, liveness not asked.
+
+    The one question every consumer that picks or accepts a run must ask —
+    recheck, a derived run's parent, intent-check's choice, the usability
+    scorer. Asking `metrics.json` alone let an unfinalized v2 run (metrics,
+    no completion record) be rechecked as a kept number and accepted as a
+    parent (review 2026-10-06). A directory without config.json predates
+    run metadata and is read as legacy (complete when metrics.json exists);
+    an unreadable config.json raises — a damaged run must not vanish and
+    let an older one be chosen in its place.
+    """
+    cfg_file = run_dir / "config.json"
+    cfg = (json.loads(cfg_file.read_text(encoding="utf-8"))
+           if cfg_file.is_file() else {})
+    return run_state(run_dir, cfg, alive=False)
+
+
+def completed_runs(area: Path) -> list[Path]:
+    """The area's completed run directories, oldest first (run_ids start
+    with the timestamp, so name order is start order)."""
+    runs = area / "runs"
+    if not runs.is_dir():
+        return []
+    return [d for d in sorted(runs.iterdir())
+            if d.is_dir() and completion_state(d) == "completed"]
 
 
 #: States that mean "this run is not a clean finish" — `--wait` exits 2 on

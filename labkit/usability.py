@@ -48,6 +48,8 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from labkit import runlog
+
 RES = Path.home() / ".claude" / "resources"
 #: The house scaffolder — the thing under test, outside this package.
 SCAFFOLDER = RES / "tools" / "arbeitsstandard-init.py"
@@ -296,8 +298,7 @@ def parse_log(text: str) -> LogTrace:
 def latest_run(area: Path) -> Path | None:
     """The newest completed run — run_ids start with the timestamp, so
     their sort order is their start order (runlog.Run)."""
-    runs = sorted(p for p in (area / "runs").glob("*") if (p / "metrics.json").is_file()) \
-        if (area / "runs").is_dir() else []
+    runs = runlog.completed_runs(area)
     return runs[-1] if runs else None
 
 
