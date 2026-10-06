@@ -29,9 +29,9 @@ kein Ziel.
 |---|---|---|
 | 0 | Stand der Technik, Positionierung | erledigt 2026-10-06 |
 | 1a | Vertragskern, nur guaranteed (Teil von Punkt 7) | erledigt 2026-10-06, s. u. |
-| Pilot | drei Benchmark-Fälle im Labor `~/projects/labkit-paper`, Matrix vorher eingefroren | als Nächstes |
+| Pilot | drei Benchmark-Fälle im Labor `~/projects/labkit-paper`, Matrix vorher eingefroren | **erledigt 2026-10-06: `model-holds`** — Sonnet-Audit trifft A1, B10, K1 je 2/2, 0 Fehlalarme, Anker 2/2 (Lauf `2026-10-06T18-59-26_09a0`, Labor-Commit `6ac8b2e`); leichte Fälle, n = 2 — kein Beleg für echten Code |
 | 1b/3 | nur, was der Pilot verlangt: Punkt 3 (static evidence), Punkt 6 `labkit audit` mit Punkt 1, Punkt 4 | wartet auf den Pilot |
-| 2 | Benchmark voll | danach |
+| 2 | Benchmark voll — mit schwereren Fällen (echter Bereichs-Code, Fehler über Funktionen verteilt), mehr Ziehungen | **als Nächstes** (nach [B1]) |
 | 4 | Usability mit/ohne labkit (Punkt 2 erweitert) | eigene Ansage |
 | R | Rollout in einem Release: Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus), Punkt 5, `AGENTS.md` von `lib init` gestempelt (Punkt 6; im labkit-Repo gibt es sie seit `61e90df`) | eigene Aufträge |
 
@@ -74,6 +74,31 @@ mechanischer Check — die Aufgabe des Pilots.
       (Stand 2026-10-06); zöge beim nächsten Install die Brüche aus
       `CHANGELOG.md`.
 - [x] `CHANGELOG.md` mit den Brüchen seit v0.45.0 (`b355333`).
+
+**Befunde des Pilots für das Werkzeug (2026-10-06):**
+- Der Auditor arbeitet in den Kennungen des TOML-Blocks (`[C1]`, `[A1]`,
+  ihre Sätze), obwohl der code-check-Prompt nur K/S/W/N nennt — die
+  Kennungen tragen als Übergabe; den Prompt auf C/A/B ziehen (Punkt 7,
+  Schritt 3).
+- Warnungen streuen zwischen Ziehungen: ein echter, nicht eingebauter
+  Fehler (`a1 = all(...)` bei leerer Ankerdatei trivial wahr) kam in 3 von
+  16 Ziehungen, nie am Zwilling. Ein Audit-Lauf ist eine Ziehung — für
+  `promote` (Punkt 1) mehr als eine.
+- Zeilennummern in Befunden stimmen oft nicht; der Text trifft.
+- Der in jedes Labor gestempelte Schutztest prüfte `runlog._is_alive` und
+  brach mit `fc6e2fc`; Master in den dotfiles nachgezogen (`334e948`) —
+  der angekündigte Bruch trifft genau so.
+
+## Ablauf ins Paket: `run-experiment` als `docs/workflow.md`
+
+**Was:** Der Ablauf des Skills `run-experiment` (Absicht → Pilot →
+Validierung → Protokoll) zieht als englische `docs/workflow.md` ins Paket;
+der Claude-Skill wird ein dünner Verweis darauf. Heute verlangt der Skill
+noch `[K1]/[S1]/[W1]/[N1]`, kennt den Versprechens-Block nicht und liegt
+in den dotfiles, wo eine Cloud-Session oder ein anderer Agent ihn nicht
+sieht. **Beleg:** Pilot 2026-10-06 — der Skill-Ablauf musste für das neue
+Format von Hand abgewandelt werden. **Auslöser:** Rollout mit Punkt 7
+und 6. **Prüfstelle:** `docs/workflow.md` existiert.
 
 ## 1. `promote <bereich>` — der Beförderungs-Audit als Kommando
 
