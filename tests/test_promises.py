@@ -307,6 +307,27 @@ class Chain(unittest.TestCase):
         rec = {"block_sha": "abc", "ids": {}}
         self.assertIn("now carries none", promises.block_drift(rec, None) or "")
 
+    def test_finalize_blocks_a_changed_scope(self):
+        """Durchstich 2026-10-06: a scope edited after the run went through
+        finalize; only recheck saw it."""
+        from labkit import finalize
+        self.complete(self.start(), self.GOOD)
+
+        def station() -> str:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                finalize.main([str(self.area)])
+            out = buf.getvalue()
+            return out[out.index("── declared scopes ──"):out.index("── open fields")]
+
+        self.assertIn("2 declared scope(s) unchanged", station())
+        script = self.area / "scripts" / "01_measure.py"
+        script.write_text(script.read_text().replace("== r[\"gold\"]", "!= r[\"gold\"]"),
+                          encoding="utf-8")
+        out = station()
+        self.assertIn("BLOCKER: declared scope changed", out)
+        self.assertIn("[C1]", out)
+
     def test_recheck_refuses_a_changed_scope(self):
         run = self.complete(self.start(), self.GOOD)
         recheck.scopes_unchanged(run, self.area)            # unchanged: passes

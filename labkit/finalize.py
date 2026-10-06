@@ -10,6 +10,7 @@ Exit codes: 0 clean, 1 findings (at least one blocker), 2 usage error.
 What it runs, in order:
   1. completion     the newest bound run is 'completed'
   2. intent-check   every registered promise has a metrics key (and vice versa)
+  2b. scopes        every declared promise scope unchanged since the run
   3. open fields    protocol fields still holding a placeholder
   5. criterion n    every `c<i>_n` (legacy `k<i>_n`) key in metrics.json equals some input
                     count the run recorded (rows of a data= file, lines of
@@ -36,6 +37,7 @@ import sys
 from pathlib import Path
 
 from labkit import promises
+from labkit.runlog import read_run_config
 from labkit.code_check import find_protocols
 from labkit.intent_check import (
     bound_runs,
@@ -200,6 +202,27 @@ def run(area: Path, protocol: Path | None = None) -> int:
             blockers += 1
         else:
             blockers += 1
+
+    # -- 2b. declared scopes ------------------------------------------------
+    # The run recorded a hash per promise over its declared scope. A scope
+    # edited after the run means today's code is not the code that produced
+    # the number; until 2026-10-06 only recheck saw it (Durchstich).
+    print("── declared scopes ──")
+    if newest_dir is None:
+        print("  no completed run to check")
+    else:
+        recorded = (read_run_config(newest_dir) or {}).get("promises")
+        if recorded is None:
+            print("  no promise block recorded — nothing to compare")
+        else:
+            drift = promises.scope_drift(recorded, area)
+            for d in drift:
+                print(f"  BLOCKER: declared scope changed since {newest_dir.name}: "
+                      f"{d} — rerun before reporting")
+            if not drift:
+                print(f"  {len(recorded['ids'])} declared scope(s) unchanged "
+                      f"since {newest_dir.name}")
+            blockers += len(drift)
 
     # -- 3. open fields ----------------------------------------------------
     print(f"── open fields: {protocol.name} ──")
