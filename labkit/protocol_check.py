@@ -65,6 +65,7 @@ as runlog).
 import re
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 # (field label, regex over the whole file)
@@ -174,9 +175,38 @@ MUST_MEASUREMENT_V017 = [
 ]
 
 # The shape the stamp produces: `p-` + 16 lowercase hex (64 bit). Not derived
-# from name or path, so renaming and moving leave it intact.
+# from name or path, so renaming and moving leave it intact. The one home of
+# protocol identity: runlog and intent-check read it through
+# `protocol_identity`, never with a regex of their own (review 2026-10-06 —
+# three copies had already begun to treat a malformed id differently).
 PROTOCOL_ID = re.compile(r"protocol[ _]id[^:\n]*:\**\s*\**\s*(\S+)", re.I)
 PROTOCOL_ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
+
+
+@dataclass(frozen=True)
+class ProtocolIdentity:
+    """A protocol's `Protocol id:` field, read once.
+
+    `raw` is the value as written (None: field absent) — for the checker,
+    which must name a malformed value. `id` is the value only if it has the
+    stamped shape — for everything that BINDS (runlog, intent-check), where
+    a malformed id is no identity at all and the run counts as unbound.
+    """
+    raw: str | None
+
+    @property
+    def valid(self) -> bool:
+        return self.raw is not None and bool(PROTOCOL_ID_SHAPE.match(self.raw))
+
+    @property
+    def id(self) -> str | None:
+        return self.raw if self.valid else None
+
+
+def protocol_identity(text: str) -> ProtocolIdentity:
+    """Parse the `Protocol id:` field of a protocol text."""
+    m = PROTOCOL_ID.search(text)
+    return ProtocolIdentity(raw=m.group(1).strip().strip("`*") if m else None)
 
 # Fields that are only DUE once the template stamps them (2026-09-08). The two
 # audit gates — code vs. intent before freezing (§2.A12) and the evaluation
@@ -537,9 +567,12 @@ def criterion_present(text: str) -> bool:
 
 
 def protocol_id_of(text: str) -> str | None:
-    """The `Protocol id:` value, or None if the field is absent."""
-    m = PROTOCOL_ID.search(text)
-    return m.group(1).strip().strip("`*") if m else None
+    """The `Protocol id:` value AS WRITTEN, or None if the field is absent.
+
+    Unvalidated on purpose — the checker reports a malformed value. Binding
+    code wants `protocol_identity(text).id` instead.
+    """
+    return protocol_identity(text).raw
 
 
 def _repo_root(start: Path) -> Path | None:
@@ -603,7 +636,7 @@ def check_protocol_id(path: Path, text: str, standard: str) -> list[str]:
     pid = protocol_id_of(text)
     if pid is None:
         return []
-    if not PROTOCOL_ID_SHAPE.match(pid):
+    if not protocol_identity(text).valid:
         return [f"{path}: MALFORMED protocol id {pid!r} — expected `p-` plus "
                 f"16 lowercase hex digits, stamped by `lib exp`."]
     out = []

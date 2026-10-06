@@ -107,17 +107,17 @@ except ImportError:                       # vendored flat copies (student repos)
         return sorted(p.parent for p in area.glob("runs/*/metrics.json"))
 
 
-PROTOCOL_ID_IN_FILE = re.compile(r"protocol[ _]id[^:\n]*:\**\s*\**\s*(\S+)", re.I)
-PROTOCOL_ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
+try:
+    from labkit.protocol_check import protocol_identity
+except ImportError:                       # vendored flat copies (student repos)
+    from protocol_check import protocol_identity  # type: ignore
 
 
 def protocol_id_of(text: str) -> str | None:
-    """The protocol's own id, or None below Standard 0.16."""
-    m = PROTOCOL_ID_IN_FILE.search(text)
-    if not m:
-        return None
-    pid = m.group(1).strip().strip("`*")
-    return pid if PROTOCOL_ID_SHAPE.match(pid) else None
+    """The protocol's own id if it has the stamped shape, else None (below
+    Standard 0.16, or malformed — either way nothing to bind to). Parsed in
+    `protocol_check.protocol_identity`, the one home of the field."""
+    return protocol_identity(text).id
 
 
 def read_metrics(path: Path) -> dict:

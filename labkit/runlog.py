@@ -547,10 +547,6 @@ def _snapshot_untracked_sources(run_dir: Path) -> list[str]:
     return copied
 
 
-PROTOCOL_ID_IN_FILE = re.compile(r"protocol[ _]id[^:\n]*:\**\s*\**\s*(\S+)", re.I)
-PROTOCOL_ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
-
-
 def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
     """Which protocol this run belongs to: {"id": ..., "path": ...}.
 
@@ -590,20 +586,18 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
             f"  runlog.run(..., protocol=PROTOCOL)\n  "
             + "\n  ".join(f.name for f in found))
 
-    try:
-        m = PROTOCOL_ID_IN_FILE.search(path.read_text(encoding="utf-8"))
-    except OSError:
-        m = None
-    pid = m.group(1).strip().strip("`*") if m else None
-    if pid is not None and not PROTOCOL_ID_SHAPE.match(pid):
-        pid = None
+    from labkit.protocol_check import protocol_identity
+    identity = protocol_identity(path.read_text(encoding="utf-8"))
+    pid = identity.id
     try:
         rel = str(path.relative_to(base_dir.resolve()))
     except ValueError:
         rel = str(path)
     if pid is None:
-        print(f"runlog: WARNING — {rel} carries no usable `Protocol id:` "
-              f"(Standard 0.16); this run is recorded as unbound.")
+        written = (f"a malformed `Protocol id: {identity.raw}`"
+                   if identity.raw is not None else "no `Protocol id:`")
+        print(f"runlog: WARNING — {rel} carries {written} (Standard 0.16); "
+              f"this run is recorded as unbound.")
     return {"id": pid, "path": rel}
 
 
