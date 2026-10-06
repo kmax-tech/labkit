@@ -106,6 +106,22 @@ mechanischer Check — die Aufgabe des Pilots.
   Originalfall fand `experiment-preflight` (Opus, Narbentabelle). Der
   nächste Benchmark-Schritt misst genau diesen Unterschied.
 
+**Befunde aus dem Preflight-Audit von Bereich 03 (2026-10-06):**
+- **Ein Pin-Wechsel ohne Versionssprung installiert nichts.** labkit steht
+  seit vielen Commits auf `0.45.0`; `pip install -r requirements.txt` mit
+  neuem Commit-Pin meldet „erfüllt“ und lässt den alten Code im venv. Erst
+  `--force-reinstall --no-deps` zog `bd8cd29`. Abhilfe: Version je Release
+  heben (Punkt R) — oder `runlog`s Pin-Drift-Prüfung, die den installierten
+  Commit gegen die Lock vergleicht, auch beim Install-Schritt nutzen.
+- `llm` ruft `claude -p` jetzt ohne Werkzeuge auf (`--tools ""`, `bd8cd29`).
+- **Wer Audit-Berichte maschinell zählt, braucht eine Nullmessung.** Die
+  ersten Zielmuster zählten Schlüsselwörter irgendwo in einer Befundzeile
+  und trafen auch Berichte über korrekten Code (bis 7 von 17). Gilt für
+  `promote` und `labkit audit` (Punkte 1, 6), sobald sie Befunde auswerten
+  statt sie nur anzuzeigen: an die Stelle binden, Trefferquote auf stillen
+  Fällen mitmessen. Umsetzung im Labor: `lib/audit_eval.py`,
+  `lib/audit_targets.py`.
+
 ## Ablauf ins Paket: `run-experiment` als `docs/workflow.md`
 
 **Was:** Der Ablauf des Skills `run-experiment` (Absicht → Pilot →
