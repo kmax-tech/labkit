@@ -157,12 +157,19 @@ sieht das niemand.
 - Eine Stub-Zeile für `s1_*`/`k1_*` neben den TODOs im Zähl-Skelett (Sonnet,
   Probe 15) — erst, wenn das Zähl-Skelett Kennungen bekommt.
 
-## 5. Englisch als Master — die Bedingung für ein öffentliches labkit
+## 5. Nur Englisch — die Bedingung für ein öffentliches labkit
+
+**Entschieden (2026-10-06): nur Englisch, keine deutsche Fassung.** Was die
+Maschine liest, ist englisch, und die Doktrin lesen vor allem Agenten; eine
+abgeleitete deutsche Fassung wären zwei Wahrheiten, die driften (dieselbe
+Begründung wie gegen Legacy-Pfade, Leitsatz oben). Deutsch bleibt die
+Sprache der Unterhaltung und der Notizen im Faden — `AGENTS.md`: „Talk to
+the user … in German.“
 
 **Was:** Wird labkit öffentlich, muss alles, was ein Nutzer liest, englisch
-sein, und Deutsch wird eine abgeleitete Hausfassung. Das Paket selbst ist es
-fast schon: Code, Templates, Feld-Guide, Fehlermeldungen — 7 Zeilen mit
-deutschem Rest (`protocol_check.py` 6, `code_check.py` 1). Deutsch sind die
+sein. Das Paket ist es fast schon: Code, Templates, Feld-Guide,
+Fehlermeldungen; Rest sind deutsche Suchwörter in `protocol_check.py`, die
+mit Punkt 8 wegfallen, und zwei, drei Kommentare mit deutschen Zitaten. Deutsch sind die
 Doktrin und ihr Einstieg, und die liegen nicht im Paket, sondern in den
 dotfiles: `arbeitsstandard.md.template` (1600 Zeilen, 77 §-Regeln, 42
 Beleg-Absätze, 28 Zeilen mit Hauspfaden wie `~/work` oder `webis`),
@@ -177,22 +184,20 @@ externer Nutzer heute nicht lesen kann — das ist der eigentliche Blocker.
    die Belege werden in die zwei Schichten getrennt (unten: allgemeines
    Beispiel ins Paket, datierter Hausbeleg in die Evidenz-Datei des Labors),
    Hauspfade werden zu Platzhaltern (`<work>` statt `~/work`).
-2. **Einmal übersetzen, dann flippen.** Deutsch → Englisch per `labkit.llm`
-   mit gepinntem Modell, §-Block für §-Block, mit Durchsicht jedes Blocks wie
-   bei Code-Review. Danach ist Englisch die Prägestelle: Änderungen passieren
-   dort, die deutsche Fassung `standard.de.md` wird abgeleitet.
-3. **Abgeleitete Fassung mit Hash-Stempel.** Jeder §-Block der deutschen
-   Fassung trägt den Hash seines englischen Blocks; `lib sync check` meldet
-   „de: 3 Blöcke hinter en", `lib sync translate` übersetzt nur diese Blöcke
-   neu. Übersetzung ist kein Diff: geänderte Blöcke werden beim Commit
-   gelesen, der Stempel zeigt, welche.
-4. **`--lang` wählt die Fassung, nicht ein Wort.** `lib init <repo> --lang
-   en|de` stempelt `docs/arbeitsstandard.md` und den Merkzettel aus der
-   gewählten Fassung; ein Repo hat eine Sprache. Scaffolder-Texte und
-   Hook-Meldungen englisch, die 52 Zeilen.
-5. **Paket-Rest:** die 7 Zeilen, dazu die Hausbegriffe im Glossar der
-   Protokolle (`Instrumentenprobe`, `Renderprobe` → instrument check, render
-   check — der Code sagt es schon so).
+2. **Einmal übersetzen, dann ist Englisch die Prägestelle.** Deutsch →
+   Englisch per `labkit.llm` mit gepinntem Modell, §-Block für §-Block, mit
+   Durchsicht jedes Blocks wie bei Code-Review. Danach wird die deutsche
+   Vorlage in den dotfiles durch einen Verweis auf den englischen Master
+   ersetzt — keine Parallelfassung.
+3. **Scaffolder und Hausbegriffe englisch:** `CLAUDE.md.template` (235
+   Zeilen), die deutschen Schnellstart-Texte und Hook-Meldungen im
+   Scaffolder, die Hausbegriffe im Glossar der Protokolle
+   (`Instrumentenprobe`, `Renderprobe` → instrument check, render check —
+   der Code sagt es schon so).
+
+~~Abgeleitete deutsche Fassung mit Hash-Stempel je Block, `lib sync
+translate`, `lib init --lang en|de`~~ — gestrichen 2026-10-06 (nur
+Englisch).
 
 **Entschieden (2026-10-06): zwei Beleg-Schichten, und labkit lernt dazu.**
 Jede Regel hat heute zwei Absätze — den Regeltext und `*Beleg (Datum,
@@ -223,16 +228,17 @@ Standard, weil sie jede Regel mit ihrem Unfall begründen, und verraten
 zugleich, woran hier gearbeitet wird — darum zwei Schichten.
 
 **Aufwand:** Erstübersetzung ein LLM-Durchlauf plus ein Lesetag; die
-Mechanik (Umzug, Beleg-Schichten mit `lib scar`, Hash-Stempel, `sync
-translate`, `--lang`) drei bis vier Nachmittage im Scaffolder. Reihenfolge:
-1 und 2 zusammen (die Schichtung der 42 Belege ist Teil der Durchsicht
-beim Übersetzen), dann 3, dann 4 — 5 nebenbei; `lib scar` und der
+Mechanik (Umzug, Beleg-Schichten mit `lib scar`) ein bis zwei Nachmittage
+im Scaffolder. Reihenfolge: 1 und 2 zusammen (die Schichtung der 42 Belege
+ist Teil der Durchsicht beim Übersetzen), 3 nebenbei; `lib scar` und der
 `finalize`-Vorschlag kommen zuletzt, weil sie erst mit Nutzern außerhalb
 des Hauses etwas zu sammeln haben.
 
 **Auslöser:** die Entscheidung, labkit zu veröffentlichen.
-**Prüfstelle:** der erste Leser außerhalb des Hauses — vorher wird nichts
-davon gebaut, weil zwei Fassungen bis dahin nur Pflege sind.
+**Prüfstelle:** der erste Leser außerhalb des Hauses, oder eine
+Cloud-Session, die einer §-Regel folgen soll — die 53 §-Verweise in den
+Meldungen des Pakets zeigen bis dahin auf eine Datei, die nicht im Repo
+liegt.
 
 ## 6. Harness-unabhängig — Codex und andere Agenten
 
