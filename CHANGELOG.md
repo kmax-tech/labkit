@@ -43,6 +43,9 @@ Last version with the old names: **v0.45.0**.
   - `intent-check` / `finalize` report a block constant the run recorded
     under the same name with another value.
 - `finalize` holds `c<i>_n` to the recorded inputs like `k<i>_n`.
+- `llm` calls `claude -p` with `--tools ""`: a judgement runs without the
+  CLI's built-in tools, so a prompt that says "read <file>" cannot send the
+  model to its working directory instead of the inlined text.
 
 ### Added
 

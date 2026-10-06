@@ -276,7 +276,12 @@ def last_endpoint() -> str:
 # `--system-prompt` does NOT drop CLAUDE.md, an empty CLAUDE_CONFIG_DIR
 # drops the login). 2026-09-23: `language: German` in the operator's
 # settings had 45/432 English scenario prompts answered in German.
-_CLI_ISOLATION = ["--setting-sources", ""]
+# No tools either: a judgement is an inference, not an agent session. With
+# its read-only tools left on, a long prompt that says "read <file>" can send
+# the CLI off to its cwd instead of answering from the inlined text, and the
+# answer then depends on what lies there (preflight audit of labkit-paper
+# area 03, 2026-10-06). `--tools ""` disables the whole built-in set.
+_CLI_ISOLATION = ["--setting-sources", "", "--tools", ""]
 #: `claude -p` runs from a neutral directory, never from the repo: the CLI
 #: is a harness and reads its cwd (project files, git state) into the
 #: conversation. A cold agent observed answers mentioning "labkit" and
