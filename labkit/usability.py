@@ -80,9 +80,9 @@ CLAIMS = (
 #: deterministic truth (None when the number is a model's)
 TASKS = {
     "count": {"area": "docs-per-case", "metric_key": "mean_docs_per_case",
-              "template": "usability-task-count.md.template", "quick_default": True},
+              "template": "usability-task-count.md.template"},
     "judge": {"area": "causal-claims-judge", "metric_key": "k1_accuracy",
-              "template": "usability-task-judge.md.template", "quick_default": False},
+              "template": "usability-task-judge.md.template"},
 }
 LOG_TAGS = ("read", "run", "edit", "unsure", "gate")
 LOG_LINE = re.compile(r"^(\d\d):(\d\d):(\d\d)\s*·\s*(\w+)\s*·\s*(.*)$")
@@ -181,11 +181,11 @@ def _sidecar(root: Path, suffix: str) -> Path:
     return root.parent / f"{root.name}.{suffix}"
 
 
-def stage(root: Path, venv: Path | None, quick: bool = False, task: str = "count",
+def stage(root: Path, venv: Path | None, cost: str | None = None, task: str = "count",
           model: bool = False) -> int:
-    """Side effects: see module docstring. `quick` stamps the area with
-    `--exp … --quick` (measurement short form + lean skeleton); `task`
-    picks the fixture and the task sheet (TASKS)."""
+    """Side effects: see module docstring. `cost` is stamped into the
+    protocol's Cost field (`seconds` cuts the seconds form and the counting
+    skeleton); `task` picks the fixture and the task sheet (TASKS)."""
     spec = TASKS[task]
     area_name, metric_key = spec["area"], spec["metric_key"]
     if root.exists() and any(root.iterdir()):
@@ -205,7 +205,7 @@ def stage(root: Path, venv: Path | None, quick: bool = False, task: str = "count
     # gate, not the stamper's (`lib exp` sets core.hooksPath, 2026-10-05).
     _sh(["git", "add", "-A"], root)
     _sh(["git", "commit", "-q", "--no-verify", "-m", "Scaffold: a probe lab repo for the usability trace"], root)
-    exp_flags = ["--exp", area_name, *(["--quick"] if quick else []),
+    exp_flags = ["--exp", area_name, *(["--cost", cost] if cost else []),
                  *(["--model", "haiku"] if model else [])]
     _sh([sys.executable, str(SCAFFOLDER), str(root), *exp_flags], root)
     areas = sorted(p.name for p in (root / "experiments").glob(f"*-{area_name}"))
@@ -399,11 +399,12 @@ def main(argv: list[str]) -> int:
     s = sub.add_parser("stage", help="stamp a probe lab repo with one kept-number task")
     s.add_argument("dir")
     s.add_argument("--venv", help="link this venv instead of creating one")
-    s.add_argument("--quick", action="store_true",
-                   help="stamp the area with --quick (measurement short form, lean skeleton)")
+    s.add_argument("--cost", choices=("seconds", "minutes", "hours"), metavar="TIER",
+                   help="the Cost tier stamped into the protocol; seconds = the seconds cut "
+                        "and the counting skeleton")
     s.add_argument("--model", action="store_true",
-                   help="with --quick: the seconds cut of the protocol plus the full "
-                        "measure skeleton (prompt, parser, probe) — a model in the loop")
+                   help="a model in the loop: the full measure skeleton (prompt, parser, "
+                        "probe) and, at seconds, the three model fields in the cut")
     s.add_argument("--task", choices=sorted(TASKS), default="count",
                    help="which task sheet and fixture: count (deterministic) or judge (a model)")
     c = sub.add_parser("score", help="number, binding and log of a finished probe")
@@ -412,7 +413,7 @@ def main(argv: list[str]) -> int:
     root = Path(args.dir).resolve()
     if args.cmd == "stage":
         return stage(root, Path(args.venv).resolve() if args.venv else None,
-                     quick=args.quick, task=args.task, model=args.model)
+                     cost=args.cost, task=args.task, model=args.model)
     return score(root)
 
 

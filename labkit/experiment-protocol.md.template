@@ -7,7 +7,7 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
   none — neither does an exploration notebook (→ §2.D7).
 - **One field = one line.** If the justification needs more room, it goes
   into a note; the [[wikilink]] stays here.
-- **The form is cut by tier** (`lib exp --quick` stamps the `seconds` cut:
+- **The form is cut by tier** (`lib exp --cost seconds` stamps the `seconds` cut:
   question · criterion · stop rule · type · cost · terms · data · unit ·
   exclusions · result; with `--model` also model · prompt · null condition;
   the full form adds the rest; `--report` the † fields). One template, three
@@ -30,7 +30,7 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
 examples, rationale for each field: `protocol-field-guide.md`
 (`protocol-check --guide` prints the path; thesis repos:
 `templates/PROTOCOL-FIELD-GUIDE.md`). A run of seconds takes the
-seconds cut (`lib exp <name> --quick`, `--model` with a model in the loop).*
+seconds cut (`lib exp <name> --cost seconds`, `--model <alias>` with a model in the loop).*
 
 <!-- HEAD — this part gets READ. Prose-line budget per section: Summary 20 ·
      Context 20 · Intent 35 · Setup 45 (code blocks and table rows do not

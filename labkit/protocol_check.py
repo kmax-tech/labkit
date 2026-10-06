@@ -92,7 +92,7 @@ MUST = [
 # repeated at will owes BEFORE its number counts — the registration (question,
 # criterion, stop rule), the instrument named (model, prompt, null
 # condition, unit) and the result cited. No freeze, no probe fields, no †
-# fields: those are owed at promotion. `lib exp --quick` stamps exactly this.
+# fields: those are owed at promotion. `lib exp --cost seconds` stamps exactly this.
 MUST_SECONDS = [
     ("Question / hypothesis", r"hypothese|frage|question|hypothesis"),
     ("Success criterion", r"erfolg|success"),

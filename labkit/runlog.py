@@ -647,7 +647,7 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
                 "registered protocol (§2.A1)"]
     path = Path(binding["path"])
     if TYPE_MEASUREMENT.search(text):
-        # The measurement short form (`lib exp --quick`, one counting
+        # The legacy measurement short form (`Type: measurement`, one counting
         # question) has no freeze and no criterion by design — binding is
         # the whole gate there (2026-10-05: a cold agent on a seconds task
         # would otherwise be refused for a field the form does not have).
