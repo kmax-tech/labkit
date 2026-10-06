@@ -16,12 +16,14 @@ Jede Prüfung gehört einer von drei Stufen an und sagt das in ihrer Meldung:
 ausgegeben. Begründung, Stand der Technik und Paper-Rahmen:
 `~/work/projects/labkit-paper/` (Paper-Plan, `stand-der-technik-kette.md`).
 
-**Altlasten (2026-10-06):** Neues wird für das neue Format gebaut. Was
-alte Formate weiter lesen muss, wohnt getrennt — eine Funktion, später ein
-Modul `labkit/legacy.py` — und ist ein Haken, kein Zweig quer durch den
-Kern: ein Aufruf an der Stelle, wo das neue Format nicht greift, mit
-Auslaufdatum. Altlasten werden nicht ausgebaut, nur gehalten, bis sie
-rausgehen. Wir iterieren schnell; Kompatibilität ist kein Ziel.
+**Altlasten (2026-10-06): harte Änderungen statt Legacy-Pfade.** Code
+ist für das aktuelle Format gebaut, klar und modular; alte Formate liest
+er nicht mehr. Eine Formatänderung ist ein angekündigter Bruch
+(`CHANGELOG.md`, Abschnitt „Breaking“, mit der letzten Version, die das
+alte Format liest). Reproduktion läuft über den Pin: jedes Repo pinnt
+labkit auf Tag oder Commit, sein eigener Commit plus diese Version
+rechnet einen alten Lauf nach. Wir iterieren schnell; Kompatibilität ist
+kein Ziel.
 
 | Schritt | Inhalt | Stand |
 |---|---|---|
@@ -362,11 +364,16 @@ Markdown, weil ein Mensch sie schreibt und liest; ihre Prüfung erwartet
 das exakte Label aus dem Template statt beliebiger Schlüsselwörter.
 TOML, nicht YAML: stdlib-only.
 
-**Altlasten:** Der Regex-Pfad für Protokolle ohne `[protocol]`-Tabelle
-wandert in eine eigene Funktion bzw. `labkit/legacy.py` — ein Haken mit
-Auslaufdatum, nicht ausgebaut (Leitsatz oben). Im selben Zug die schon
-vorhandenen Altpfade dorthin: Altbuchstaben K/S/W/N, Läufe ohne
-`schema_version`, Protokolle unter Standard 0.16 (`choose_legacy`).
+**Bruch statt Altpfad (Leitsatz oben):** Der Regex-Kopf fällt weg, und
+im selben Release die übrigen Altpfade (rund 45 Stellen in 8 Modulen,
+Stand 2026-10-06): Altbuchstaben K/S/W/N, Läufe ohne `schema_version`,
+Protokolle unter Standard 0.16 (`choose_legacy`). Voraussetzungen: die
+Tags auf GitHub (`git push origin --tags` — die Pins zeigen heute auf
+`git+file://`, gelten also nur auf diesem Rechner); `thesis-dagidir`
+bekommt einen Pin (einziges labkit-Repo ohne). Getrennt zu entscheiden:
+die Import-Fallbacks für vendorte Kopien (`except ImportError`) — kein
+Format-Legacy, sondern die Versorgung der Studi-Repos; fallen sie weg,
+brauchen neu gestempelte Studi-Repos einen Pin statt Kopien.
 
 **Beleg:** Durchstich 2026-10-06 — ein handgeschriebenes `**Terms:**`
 fiel durch, weil das Muster `terms of` verlangt; die Protokoll-ID hatte

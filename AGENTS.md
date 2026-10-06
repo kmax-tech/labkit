@@ -55,12 +55,13 @@ does not work outside the author's machine; its tests do not need them.
 - **Language.** Code, identifiers, docstrings, docs in `docs/`, commit
   messages: English. Talk to the user, and write `TODO.md` entries, in
   German.
-- **Legacy is a hook, not a branch.** Build for the current format. What
-  must still read an old one (protocols without a promise block, the
-  letters K/S/W/N, runs without `schema_version`, the flat-copy import
-  fallbacks) stays working but lives apart — one function, later
-  `labkit/legacy.py` — called where the new format does not apply, with a
-  removal date. Do not extend legacy paths; iterate fast.
+- **Breaking changes, not legacy paths.** Build for the current format;
+  keep code clear and modular. Do not add or extend code that reads old
+  formats. A format change is an announced break (`CHANGELOG.md`,
+  "Breaking", naming the last version that reads the old format); old runs
+  are reproduced with the repo's commit and its pinned labkit version.
+  Existing legacy paths are removed in one release with the template
+  rollout (`TODO.md` item 8), not piecemeal.
 - **Order before features.** Build what `TODO.md` puts next, nothing ahead
   of it: static-evidence checks wait for the benchmark pilot to show they
   are needed. Rollout to other repos, templates and the house doctrine is a
