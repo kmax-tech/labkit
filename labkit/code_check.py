@@ -59,9 +59,11 @@ from pathlib import Path
 
 try:
     from labkit import promises
+    from labkit.repo import area_protocols, layout_root
     from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 except ImportError:  # vendored flat copies (student repos)
     import promises  # type: ignore
+    from repo import area_protocols, layout_root  # type: ignore
     from intent_check import ID_IN_PROTOCOL, code_ids, code_keys  # type: ignore
 
 
@@ -589,32 +591,6 @@ def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
 
 # --- cli ------------------------------------------------------------------
 
-def find_protocols(area: Path) -> list[Path]:
-    """Every protocol in the area, lexicographic — a list, not a first hit.
-
-    The series rule (§2.F, Regel 2) gives every follow-up its own
-    `PROTOCOL-s<N>-<slug>.md`, so an area legitimately holds many. Returning
-    `sorted(...)[0]` picked one of them wordlessly, and lexicographic order
-    is not temporal order: in an area running s1..s13 the pick was always
-    s1, never the protocol just built. A green check against the wrong
-    protocol is worse than no check, so the caller must choose (2026-09-26).
-    """
-    return sorted(area.glob("PROTOCOL-*.md"))
-
-
-def find_repo(area: Path) -> Path:
-    """The repo root: the nearest parent with .git, else with CLAUDE.md or
-    tests/ (a freshly stamped tree before `git init`), else the area."""
-    parents = [area] + list(area.parents)
-    for parent in parents:
-        if (parent / ".git").exists():
-            return parent
-    for parent in parents:
-        if (parent / "CLAUDE.md").is_file() or (parent / "tests").is_dir():
-            return parent
-    return area
-
-
 PARSE_DEF = re.compile(r"^\s*def (parse_\w+)\s*\(", re.M)
 PROMPT_NAME = re.compile(r"^PROMPT(_[A-Z0-9_]+)?$")
 PROMPT_FIELD = re.compile(r"^\s*[-*]\s*\*{0,2}prompt\b", re.I)
@@ -751,7 +727,7 @@ def main(argv: list[str]) -> int:
         print(f"code-check: no such area: {area}")
         return 2
 
-    protocols = find_protocols(area)
+    protocols = area_protocols(area)
     if protocol_arg is not None:
         if not protocol_arg.is_file():
             print(f"code-check: no such protocol: {protocol_arg}")
@@ -770,7 +746,7 @@ def main(argv: list[str]) -> int:
     else:
         protocol = protocols[0]
 
-    repo = find_repo(area)
+    repo = layout_root(area)
     findings = (check_intent_ids(area, protocol)
                 + check_parser_fixtures(area, repo)
                 + check_prompt_drift(area, protocol))
@@ -778,7 +754,7 @@ def main(argv: list[str]) -> int:
         print(f)
 
     if bundle_to is not None:
-        n = write_bundle(area, find_repo(area), protocol, bundle_to)
+        n = write_bundle(area, layout_root(area), protocol, bundle_to)
         print(f"bundle: {n} file(s) -> {bundle_to} "
               f"({bundle_to.stat().st_size // 1024} KB)")
 

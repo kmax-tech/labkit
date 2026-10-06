@@ -50,12 +50,12 @@ import io
 import json
 import os
 import re
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 from labkit import notes_check, preflight, protocol_check
+from labkit.repo import area_protocols, git_run
 
 # The template's throwaway stages: none of them opens a run, and the probe
 # is what comes BEFORE preflight, so gating it would invert the order.
@@ -93,7 +93,7 @@ def _capture(fn, *args) -> tuple[int, str]:
 def find_area(script: Path, stop: Path | None = None) -> Path | None:
     """The nearest directory above `script` holding a PROTOCOL-*.md."""
     for d in script.resolve().parents:
-        if any(d.glob("PROTOCOL-*.md")):
+        if area_protocols(d):
             return d
         if stop is not None and d == stop.resolve():
             return None
@@ -157,7 +157,7 @@ def pre_run(event: dict) -> int:
             continue
         protocol = protocol_named_in(script, area)
         texts = [p.read_text(encoding="utf-8")
-                 for p in ([protocol] if protocol else sorted(area.glob("PROTOCOL-*.md")))]
+                 for p in ([protocol] if protocol else area_protocols(area))]
         head = f"preflight {area.name}" + (f" --protocol {protocol.name}" if protocol else "")
         tiers = {protocol_check.cost_tier_of(t) for t in texts}
         if tiers == {"seconds"}:
@@ -195,8 +195,7 @@ def pre_run(event: dict) -> int:
 # ------------------------------------------------------------ post-change
 
 def _git_changed(repo: Path) -> list[Path]:
-    r = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all"],
-                       cwd=repo, capture_output=True, text=True, timeout=20)
+    r = git_run(["status", "--porcelain", "--untracked-files=all"], repo)
     if r.returncode != 0:
         raise RuntimeError(f"git status failed in {repo}: {r.stderr.strip()}")
     out = []

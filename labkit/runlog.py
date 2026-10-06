@@ -49,6 +49,7 @@ import time
 import uuid
 from pathlib import Path
 
+from labkit import repo
 from labkit.runs import (FAILED_STATES, RunConfigError, completed_runs,
                          completion_state, is_alive, read_run_config, run_state)
 
@@ -71,18 +72,21 @@ CONTROL_ROLES = ("anchor", "anchors", "gate", "gates", "placebo", "placebos",
 MEASURED_ROLES = (*SPLIT_KEYS, "items", "measured", "cases", "prepared", "pairs", "pool")
 
 
-def _git(args: list[str], cwd: Path) -> str:
-    try:
-        return subprocess.run(["git", *args], cwd=cwd,
-                              capture_output=True, text=True).stdout.strip()
-    except OSError:
+def _head(cwd: Path, short: bool = False) -> str:
+    """HEAD's commit, "" outside a repo or before the first commit (an
+    unborn HEAD is a state, not an error)."""
+    if repo.git_root(cwd) is None:
         return ""
+    r = repo.git_run(["rev-parse", *(["--short"] if short else []), "HEAD"], cwd)
+    return r.stdout.strip() if r.returncode == 0 else ""
 
 
 def _git_state(cwd: Path) -> str:
-    rev = _git(["rev-parse", "--short", "HEAD"], cwd)
-    dirty = _git(["status", "--porcelain"], cwd)
-    return f"{rev}{'+dirty' if dirty else ''}" if rev else "no-git"
+    rev = _head(cwd, short=True)
+    if not rev:
+        return "no-git"
+    dirty = repo.git(["status", "--porcelain"], cwd)
+    return f"{rev}{'+dirty' if dirty else ''}"
 
 
 def _parse_lock(lock: Path) -> dict[str, str | None]:
@@ -144,8 +148,9 @@ def _resolve_ref(url: str, ref: str) -> str | None:
     if url.startswith("file://"):
         # --verify: without it, rev-parse ECHOES an unknown ref back on
         # stdout instead of failing empty.
-        return _git(["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
-                    Path(url[7:])).lower()
+        r = repo.git_run(["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+                         Path(url[7:]))
+        return r.stdout.strip().lower() if r.returncode == 0 else ""
     return None
 
 
@@ -515,11 +520,9 @@ def _snapshot_untracked_sources(run_dir: Path) -> list[str]:
     imports remain the documented gap — commit an area before others load it.
     """
     script_dir = Path(sys.argv[0]).resolve().parent
-    try:
-        r = subprocess.run(["git", "ls-files", "--others", "--exclude-standard", "."],
-                           cwd=script_dir, capture_output=True, text=True, timeout=10)
-    except (OSError, subprocess.SubprocessError):
+    if repo.git_root(script_dir) is None:
         return []
+    r = repo.git_run(["ls-files", "--others", "--exclude-standard", "."], script_dir)
     if r.returncode != 0:
         return []
     untracked = set(r.stdout.splitlines())
@@ -564,7 +567,7 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
     hard error (guessing is what this whole mechanism exists to stop), none
     is unbound with a warning.
     """
-    found = sorted(base_dir.glob("PROTOCOL-*.md"))
+    found = repo.area_protocols(base_dir)
     if protocol is not None:
         path = Path(protocol)
         if not path.is_absolute():
@@ -774,7 +777,7 @@ class Run:
                   "untracked_sources": _snapshot_untracked_sources(self.dir),
                   "pid": os.getpid(),          # lets `active()` tell running from crashed
                   "git": _git_state(base_dir),
-                  "git_full": _git(["rev-parse", "HEAD"], base_dir),
+                  "git_full": _head(base_dir),
                   "python": sys.version.split()[0],
                   "env": _env_state(base_dir),
                   "models_resolved": _resolve_models(self._config),
@@ -784,9 +787,9 @@ class Run:
         (self.dir / "config.json").write_text(
             json.dumps(frozen, ensure_ascii=False, indent=2), encoding="utf-8")
         # A dirty tree makes the commit hash a lie: save what it doesn't cover.
-        if _git(["status", "--porcelain"], base_dir):
+        if _head(base_dir) and repo.git(["status", "--porcelain"], base_dir):
             (self.dir / "uncommitted.patch").write_text(
-                _git(["diff", "HEAD"], base_dir), encoding="utf-8")
+                repo.git(["diff", "HEAD"], base_dir) or "", encoding="utf-8")
 
     def output(self, *paths) -> None:
         """Register the files this run WRITES (2026-08-18).
@@ -838,7 +841,7 @@ class Run:
             {"schema_version": RUN_SCHEMA,
              "finished": time.strftime("%Y-%m-%dT%H:%M:%S"),
              "git": git_end,
-             "git_full": _git(["rev-parse", "HEAD"], self.base),
+             "git_full": _head(self.base),
              "note": self._note},
             ensure_ascii=False, indent=2))
         row = [self.run_id, git_end, self.script,

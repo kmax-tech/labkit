@@ -32,13 +32,12 @@ from __future__ import annotations
 import contextlib
 import io
 import json
-import subprocess
 import sys
 from pathlib import Path
 
 from labkit import promises
 from labkit.runs import read_run_config
-from labkit.code_check import find_protocols
+from labkit.repo import area_protocols, git_root, git_run
 from labkit.intent_check import (
     bound_runs,
     main as intent_check_main,
@@ -49,16 +48,9 @@ from labkit.protocol_check import TYPE_MEASUREMENT, cost_tier_of
 from labkit.protocol_fill import open_fields
 
 
-def _git_root(start: Path) -> Path | None:
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=start,
-                       capture_output=True, text=True)
-    return Path(r.stdout.strip()) if r.returncode == 0 else None
-
-
 def _tracked(repo: Path, path: Path) -> bool:
-    r = subprocess.run(["git", "ls-files", "--error-unmatch", str(path)], cwd=repo,
-                       capture_output=True, text=True)
-    return r.returncode == 0
+    """Is `path` tracked in `repo`? The exit code is the answer."""
+    return git_run(["ls-files", "--error-unmatch", str(path)], repo).returncode == 0
 
 
 CRITERION_N = promises.CRITERION_N_KEY
@@ -73,7 +65,7 @@ def criterion_n_findings(run_dir: Path) -> list[str]:
     ns = {k: v for k, v in metrics.items() if CRITERION_N.match(k) and isinstance(v, int)}
     if not ns:
         return []
-    cfg = json.loads((run_dir / "config.json").read_text(encoding="utf-8"))
+    cfg = read_run_config(run_dir) or {}
     counts: dict[str, int] = {}
     for key, d in (cfg.get("data") or {}).items():
         if isinstance(d, dict) and isinstance(d.get("rows"), int):
@@ -100,7 +92,7 @@ def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]
     """(blockers, warnings) for a run of seconds: source frozen, files tracked."""
     blockers: list[str] = []
     warnings: list[str] = []
-    cfg = json.loads((run_dir / "config.json").read_text(encoding="utf-8"))
+    cfg = read_run_config(run_dir) or {}
     data = cfg.get("data") or {}
     if not data:
         blockers.append("source not frozen — the run carries no `data=`; pass "
@@ -113,7 +105,7 @@ def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]
                    if o.get("path")]
     else:
         warnings.append("no outputs.json — the run registered no output file (run.output)")
-    repo = _git_root(area)
+    repo = git_root(area)
     if repo is None:
         warnings.append("not a git repository — cannot tell whether source and output are committed")
         return blockers, warnings
@@ -146,7 +138,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
             print(f"finalize: no such protocol: {protocol}")
             return 2
     else:
-        protocols = find_protocols(area)
+        protocols = area_protocols(area)
         if not protocols:
             print(f"finalize: no PROTOCOL-*.md in {area}")
             return 2

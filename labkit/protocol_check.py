@@ -63,10 +63,14 @@ as runlog).
 """
 
 import re
-import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+try:
+    from labkit.repo import git_root, git_run
+except ImportError:  # vendored flat copies (student repos)
+    from repo import git_root, git_run  # type: ignore
 
 # (field label, regex over the whole file)
 # Keywords match German AND English: the template's field labels are English
@@ -575,14 +579,6 @@ def protocol_id_of(text: str) -> str | None:
     return protocol_identity(text).raw
 
 
-def _repo_root(start: Path) -> Path | None:
-    base = start if start.is_dir() else start.parent
-    for parent in [base.resolve(), *base.resolve().parents]:
-        if (parent / ".git").exists():
-            return parent
-    return None
-
-
 _ID_INDEX: dict[Path, dict[str, list[Path]]] = {}
 
 
@@ -593,7 +589,7 @@ def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
     editing the line by hand makes a duplicate long after `lib exp` ran, and
     two protocols with one id bind their runs to the same thing.
     """
-    root = _repo_root(start)
+    root = git_root(start)
     if root is None:
         return {}
     if root not in _ID_INDEX:
@@ -614,15 +610,11 @@ def id_in_head(path: Path) -> str | None:
     is new, git is absent, or the call fails. Never a proof of immutability:
     after the next commit a changed id IS the state. It catches the edit
     while it is still in the working tree."""
-    root = _repo_root(path)
+    root = git_root(path)
     if root is None:
         return None
-    try:
-        rel = path.resolve().relative_to(root)
-        r = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=root,
-                           capture_output=True, text=True, timeout=10)
-    except (OSError, ValueError, subprocess.SubprocessError):
-        return None
+    rel = path.resolve().relative_to(root)
+    r = git_run(["show", f"HEAD:{rel}"], root)
     return protocol_id_of(r.stdout) if r.returncode == 0 else None
 
 

@@ -108,8 +108,10 @@ except ImportError:                       # vendored flat copies (student repos)
 
 try:
     from labkit.protocol_check import protocol_identity
+    from labkit.repo import area_protocols
 except ImportError:                       # vendored flat copies (student repos)
     from protocol_check import protocol_identity  # type: ignore
+    from repo import area_protocols  # type: ignore
 
 
 def protocol_id_of(text: str) -> str | None:
@@ -471,7 +473,7 @@ def choose_legacy(protocol: Path, reg: set[str]) -> Path | int:
     # several it is a coin toss dressed as a check, so the caller names
     # the run. The real fix is a protocol id in the run metadata; until
     # then this flag is a seatbelt, not a proof of belonging (2026-09-26).
-    siblings = sorted(protocol.parent.glob("PROTOCOL-*.md"))
+    siblings = area_protocols(protocol.parent)
     if len(siblings) > 1:
         print(f"intent-check: {len(siblings)} protocols in "
               f"{protocol.parent} — nothing ties a run to one of them, "

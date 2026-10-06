@@ -32,7 +32,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from labkit.code_check import check_intent_ids, find_protocols, find_repo
+from labkit.code_check import check_intent_ids
+from labkit.repo import area_protocols, git, layout_root
 from labkit.protocol_check import (
     DEFAULT_STANDARD,
     STANDARD_VERSION,
@@ -46,18 +47,10 @@ from labkit.protocol_check import (
 from labkit.scope_sha import scope_sha, find_pin, AREA_GLOBS
 
 
-def _git(args: list[str], cwd: Path) -> str:
-    try:
-        r = subprocess.run(
-            ["git", *args], cwd=cwd, capture_output=True, text=True, timeout=10
-        )
-    except (OSError, subprocess.SubprocessError):
-        return ""
-    return r.stdout.strip() if r.returncode == 0 else ""
-
-
 def _is_dirty(area: Path) -> bool:
-    return bool(_git(["status", "--porcelain"], area))
+    """Uncommitted changes under `area`; False outside a repo. A git that
+    fails inside a repo raises (repo.GitError) — it used to read as clean."""
+    return bool(git(["status", "--porcelain"], area))
 
 
 def run(area: Path, protocol: Path | None = None) -> int:
@@ -71,7 +64,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
             print(f"preflight: no such protocol: {protocol}")
             return 2
     else:
-        protocols = find_protocols(area)
+        protocols = area_protocols(area)
         if not protocols:
             print(f"preflight: no PROTOCOL-*.md in {area}")
             return 2
@@ -154,7 +147,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
     scripts = [p for g in AREA_GLOBS for p in sorted(area.glob(g))]
     if scripts:
         try:
-            pin_info = find_pin(find_repo(area))
+            pin_info = find_pin(layout_root(area))
             pin = pin_info[1] if pin_info else None
             sha = scope_sha(scripts, pin)
             print(f"  {sha}")
@@ -166,7 +159,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
 
     # -- 4. dirty check ----------------------------------------------------
     print("── working tree ──")
-    repo = find_repo(area)
+    repo = layout_root(area)
     if _is_dirty(repo):
         print(f"  WARNING: uncommitted changes in {repo}")
         print("  (not a blocker — commit or stash before the run)")
