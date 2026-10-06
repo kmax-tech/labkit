@@ -33,7 +33,7 @@ kein Ziel.
 | 1b/3 | nur, was der Pilot verlangt: Punkt 3 (static evidence), Punkt 6 `labkit audit` mit Punkt 1, Punkt 4 | wartet auf den Pilot |
 | 2 | Benchmark voll | danach |
 | 4 | Usability mit/ohne labkit (Punkt 2 erweitert) | eigene Ansage |
-| R | Rollout: Punkt 7 Schritte 0, 2–4, Punkt 5, `AGENTS.md` | eigene Aufträge |
+| R | Rollout in einem Release: Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus), Punkt 5, `AGENTS.md` von `lib init` gestempelt (Punkt 6; im labkit-Repo gibt es sie seit `61e90df`) | eigene Aufträge |
 
 **1a gebaut (2026-10-06):** `labkit/promises.py` ist die eine Heimat des
 Alphabets (C/A/B plus Altbuchstaben K/S/W/N in Prosa) und des
@@ -43,9 +43,10 @@ Versprechen auf und verweigert einen kaputten Block vor `mkdir`;
 `intent-check` prüft Text = Block, exakten Schlüssel und „der Lauf lief
 unter diesem Block“; `recheck` verweigert das Nachrechnen über einen
 veränderten Scope. Der Scope-Hash behauptet nur „deklarierte Region
-unverändert“ (`tests/test_promises.py`, Klasse `ScopeHash`). Altbuchstaben
-gelten unverändert weiter — die Stichtag-Regel (Punkt 7, Schritt 4) kommt
-erst mit dem Rollout.
+unverändert“ (`tests/test_promises.py`, Klasse `ScopeHash`); seit
+`01006c5` heißt er `declared_scope_sha`. Altbuchstaben gelten bis zum
+Rollout weiter und fallen dann mit Punkt 8 weg — kein Stichtag, kein Alias
+(Leitsatz „Altlasten“).
 
 **Befund aus dem Durchstich, behoben (2026-10-06):** `code-check` meldete
 einen falschen Blocker, wenn ein Skript die Schlüssel als Keyword-Argumente
@@ -55,6 +56,24 @@ guaranteed bricht ihre Zusage, also sofort behoben (Keyword-Namen in
 Aufrufen per AST, `tests/test_code_ids_keywords.py`). Bleibt als
 Köder-Paar im Benchmark: Dict-Literal und Keyword-Argument, gleiches
 Urteil.
+
+**Durchstich mit Fehlerfällen (2026-10-06):** elf eingebaute Fehler plus
+Zwilling, deterministisch, ohne Agent-Audit (Harness im Scratchpad, zieht
+mit dem Pilot ins Labor). Vier Lücken der Stufe guaranteed gefunden und
+geschlossen (`c8925a6`, `9c66178`, `6a7e4eb`, `c62c635`); K1 micro statt
+macro, K4 Duplikat, A1 Anker ohne Wirkung, B10 Konjunkt fehlt sieht kein
+mechanischer Check — die Aufgabe des Pilots.
+
+## Klein, ohne eigenen Punkt
+
+- [ ] **Push und Tags:** `git push && git push origin --tags`. Die Tags
+      fehlen auf GitHub; die Pins der Repos (`git+file://…@v0.45.0`) gelten
+      bis dahin nur auf diesem Rechner, und Reproduktion über den Pin
+      (Leitsatz „Altlasten“) setzt erreichbare Tags voraus.
+- [ ] **Pin für `thesis-dagidir`:** einziges labkit-Repo ohne Pin
+      (Stand 2026-10-06); zöge beim nächsten Install die Brüche aus
+      `CHANGELOG.md`.
+- [x] `CHANGELOG.md` mit den Brüchen seit v0.45.0 (`b355333`).
 
 ## 1. `promote <bereich>` — der Beförderungs-Audit als Kommando
 
@@ -126,6 +145,13 @@ geht — dann an echtem Code bauen.
 
 **Prüfstelle:** `code-check` selbst; bis dahin druckt er den Hinweis „Zweig
 je Kennung: nicht geprüft".
+
+**Zweiter Kandidat derselben Stufe (Durchstich 2026-10-06):** eine
+Konstante des Versprechens-Blocks, die das Skript als Literal neu setzt
+(`MIN_F1 = 0.5` statt `promises.constants(...)`). Exakt gefangen wird sie
+heute nur, wenn der Lauf den Wert in seiner Config ablegt (`c62c635`);
+das Literal im Code wäre ein Indiz. Ebenfalls erst bauen, wenn der Pilot
+es verlangt.
 
 ## 4. `--draw N` im Mess-Skelett — die Wiederholungs-Ziehung
 
@@ -311,8 +337,8 @@ H (`h1`, hits@1; außerdem in Vorregistrierungen die Hypothese).
 1. ~~**labkit:** eine Heimat für das Alphabet~~ — **erledigt 2026-10-06**
    (`bbb5d9a`): `labkit/promises.py` ist die Heimat; `intent_check`,
    `recheck`, `code_check` und `finalize` importieren von dort.
-   Kollisionstests in `tests/test_promises.py`. Altbuchstaben gelten
-   weiter ohne Stichtag — der kommt mit Schritt 4.
+   Kollisionstests in `tests/test_promises.py`. Altbuchstaben gelten bis
+   zum Rollout weiter (Schritt 4).
 2. **Template + Feld-Guide** (`experiment-protocol.md.template`,
    `protocol-field-guide.md`): Feld-Label „stop rule“ →
    „admissibility condition“, Schlüsselwörter für `protocol-check`
@@ -324,11 +350,11 @@ H (`h1`, hits@1; außerdem in Vorregistrierungen die Hypothese).
    `thesis-starter/`). Dann `lib sync pull` in die Repos.
 4. **Bestand: 14 Protokolle** (counterfactual-worlds 8, uniagent 3,
    paper-organization 2, fallacy-datasets 1). Eingefrorene Protokolle sind
-   Registrierungen; Umschreiben änderte, was registriert war. Vorschlag:
-   nicht anfassen; labkit akzeptiert die alten Buchstaben nur für
-   Protokolle mit `Frozen before run: yes` vor dem Stichtag. Das ist ein
-   Alias gegen die Hausregel „an der Quelle umbenennen“ — bewusst, weil
-   datiert und auslaufend. **Offen: Nutzer entscheidet.**
+   Registrierungen; Umschreiben änderte, was registriert war.
+   **Entschieden 2026-10-06 (Leitsatz „Altlasten“):** nicht anfassen und
+   keinen Stichtag-Alias bauen — das neue labkit liest die alten
+   Buchstaben nicht mehr; Repos mit eingefrorenen Altprotokollen bleiben
+   auf ihrem Pin, bis dort neue Arbeit beginnt, und heben ihn dann.
 
 **Entschieden 2026-10-06: als Daten** — TOML-Block statt YAML
 (stdlib-only), gebaut in 1a (`docs/promise-block.md`). Die Abwägung, wie
