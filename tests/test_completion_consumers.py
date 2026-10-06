@@ -100,8 +100,9 @@ class Edges(unittest.TestCase):
         area = Path(tempfile.mkdtemp())
         d = make_run(area, DONE, completion=True)
         (d / "config.json").write_text("{broken", encoding="utf-8")
-        with self.assertRaises(json.JSONDecodeError):
+        with self.assertRaises(runlog.RunConfigError) as cm:
             runlog.completed_runs(area)
+        self.assertIn("config.json", str(cm.exception))
 
 
 if __name__ == "__main__":

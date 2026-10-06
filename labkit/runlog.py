@@ -947,6 +947,29 @@ def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
     return "unfinalized" if has_metrics else "crashed"
 
 
+class RunConfigError(ValueError):
+    """A run directory whose config.json exists but cannot be read."""
+
+
+def read_run_config(run_dir: Path) -> dict | None:
+    """A run's metadata, None when the directory has no config.json.
+
+    Unreadable is not absent: a damaged config.json raises RunConfigError
+    naming the file. Skipping it silently made a broken newer run vanish
+    and let an older one be chosen or reported in its place (review
+    2026-10-06) — listings show it as `corrupt`, choices refuse.
+    """
+    cfg_file = run_dir / "config.json"
+    if not cfg_file.is_file():
+        return None
+    try:
+        return json.loads(cfg_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RunConfigError(
+            f"{cfg_file}: unreadable run metadata ({exc}) — the run cannot "
+            f"say what it is; repair or move it aside") from exc
+
+
 def completion_state(run_dir: Path) -> str:
     """`run_state` of a run directory read from disk, liveness not asked.
 
@@ -956,13 +979,10 @@ def completion_state(run_dir: Path) -> str:
     no completion record) be rechecked as a kept number and accepted as a
     parent (review 2026-10-06). A directory without config.json predates
     run metadata and is read as legacy (complete when metrics.json exists);
-    an unreadable config.json raises — a damaged run must not vanish and
-    let an older one be chosen in its place.
+    an unreadable config.json raises RunConfigError — a damaged run must
+    not vanish and let an older one be chosen in its place.
     """
-    cfg_file = run_dir / "config.json"
-    cfg = (json.loads(cfg_file.read_text(encoding="utf-8"))
-           if cfg_file.is_file() else {})
-    return run_state(run_dir, cfg, alive=False)
+    return run_state(run_dir, read_run_config(run_dir) or {}, alive=False)
 
 
 def completed_runs(area: Path) -> list[Path]:
@@ -995,12 +1015,13 @@ def active(base_dir: str | Path) -> list[dict]:
     """
     out = []
     for d in sorted((Path(base_dir) / "runs").glob("*")):
-        cfg_file = d / "config.json"
-        if not cfg_file.is_file():
-            continue
         try:
-            cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+            cfg = read_run_config(d)
+        except RunConfigError as exc:
+            out.append({"run_id": d.name, "dir": str(d), "alive": None,
+                        "state": "corrupt", "error": str(exc)})
+            continue
+        if cfg is None:
             continue
         alive = _is_alive(cfg.get("pid"), cfg.get("script"))
         state = run_state(d, cfg, alive)
@@ -1056,23 +1077,16 @@ def _print_status(area: str, live: list[dict]) -> None:
     for r in live:
         state = r.get("state", "unknown")
         print(f"{r['run_id']}  {state:12s} pid={r.get('pid')}  {r.get('script')}")
-        print(f"    {json.dumps(r.get('config', {}), ensure_ascii=False)[:160]}")
+        if r.get("error"):
+            print(f"    {r['error']}")
+        else:
+            print(f"    {json.dumps(r.get('config', {}), ensure_ascii=False)[:160]}")
 
 
 def _finished_line(area: Path) -> str:
     """The newest COMPLETED run, by its own marker — a run whose metrics
     landed but whose finalization broke off is not a finished run."""
-    done = []
-    for d in sorted((area / "runs").glob("*")):
-        cfg_file = d / "config.json"
-        if not cfg_file.is_file():
-            continue
-        try:
-            cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        if run_state(d, cfg, alive=False) == "completed":
-            done.append(d)
+    done = completed_runs(area)
     if not done:
         return "no finished runs"
     m = json.loads((done[-1] / "metrics.json").read_text(encoding="utf-8"))
@@ -1108,8 +1122,9 @@ def _wait(area: str, max_seconds: float | None, interval: float,
         if failed:
             for r in failed:
                 state = r.get("state", "?")
+                why = r.get("error") or f"{r['dir']}: {WHY.get(state, '')}"
                 print(f"{r['run_id']}  {state.upper()}  pid={r.get('pid')}  "
-                      f"{r.get('script')}  ({r['dir']}: {WHY.get(state, '')})")
+                      f"{r.get('script')}  ({why})")
             if notify:
                 _notify("runlog --wait",
                         f"{area}: run {failed[0].get('state')}")
@@ -1232,14 +1247,16 @@ def reindex(base_dir: Path) -> int:
                   f"belongs in the index exactly once.")
             return 2
 
-        added, skipped_legacy, incomplete = 0, [], []
+        added, skipped_legacy, incomplete, unreadable = 0, [], [], []
         for d in sorted((base_dir / "runs").glob("*")):
-            cfg_file = d / "config.json"
-            if not cfg_file.is_file() or d.name in seen:
+            if d.name in seen:
                 continue
             try:
-                cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
+                cfg = read_run_config(d)
+            except RunConfigError as exc:
+                unreadable.append(str(exc))
+                continue
+            if cfg is None:
                 continue
             if run_state(d, cfg, alive=False) != "completed":
                 incomplete.append(d.name)
@@ -1265,7 +1282,9 @@ def reindex(base_dir: Path) -> int:
               f"else; add the row by hand or leave it.")
     for name in incomplete:
         print(f"  {name}: not completed — nothing to index.")
-    return 0
+    for err in unreadable:
+        print(f"  NOT INDEXED: {err}")
+    return 2 if unreadable else 0
 
 
 def main(argv: list[str]) -> int:

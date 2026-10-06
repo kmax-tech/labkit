@@ -82,8 +82,21 @@ def ledger_ids(metrics: dict) -> set[str]:
 
 
 try:
-    from labkit.runlog import completed_runs, run_state
+    from labkit.runlog import RunConfigError, completed_runs, read_run_config, run_state
 except ImportError:                       # vendored flat copies (student repos)
+    class RunConfigError(ValueError):  # type: ignore[no-redef]
+        """Fallback: an unreadable config.json."""
+
+    def read_run_config(run_dir: Path) -> dict | None:
+        """Fallback: None when absent, RunConfigError when unreadable."""
+        cfg_file = run_dir / "config.json"
+        if not cfg_file.is_file():
+            return None
+        try:
+            return json.loads(cfg_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise RunConfigError(f"{cfg_file}: unreadable run metadata ({exc})") from exc
+
     def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
         """Fallback for a runlog too old to know completion markers: then
         every run in reach is a legacy run, and metrics.json is its marker."""
@@ -107,18 +120,35 @@ def protocol_id_of(text: str) -> str | None:
     return pid if PROTOCOL_ID_SHAPE.match(pid) else None
 
 
+def read_metrics(path: Path) -> dict:
+    """A run's metrics.json; unreadable raises ValueError naming the file.
+
+    Skipping an unreadable metrics file chose the next older run as if the
+    newer had reported no intent keys — the damage stayed invisible
+    (review 2026-10-06).
+    """
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"{path}: unreadable metrics ({exc}) — repair the "
+                         f"run or name another with --metrics") from exc
+
+
 def run_facts(run_dir: Path) -> dict | None:
     """What a run directory says about itself: state and binding.
 
-    `None` for a directory with no readable config.json — not a run this
-    check can judge.
+    `None` for a directory without config.json — not a run. An unreadable
+    config.json is a run in state `corrupt` with the reason in `why`: it
+    stays in the listing the operator reads instead of vanishing, and it is
+    never chosen (review 2026-10-06).
     """
-    cfg_file = run_dir / "config.json"
-    if not cfg_file.is_file():
-        return None
     try:
-        cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+        cfg = read_run_config(run_dir)
+    except RunConfigError as exc:
+        return {"dir": run_dir, "metrics": run_dir / "metrics.json",
+                "state": "corrupt", "schema": None, "protocol_id": None,
+                "why": str(exc)}
+    if cfg is None:
         return None
     binding = cfg.get("protocol") or {}
     return {"dir": run_dir,
@@ -142,7 +172,7 @@ def bound_runs(area: Path, pid: str) -> tuple[list[dict], list[dict]]:
         if facts is None:
             continue
         if facts["state"] != "completed":
-            facts["why"] = facts["state"]
+            facts.setdefault("why", facts["state"])
         elif facts["protocol_id"] == pid:
             taken.append(facts)
             continue
@@ -166,12 +196,8 @@ def newest_with_intent_keys(cands: list[dict]) -> tuple[Path | None, int]:
     """
     skipped = 0
     for facts in reversed(cands):
-        try:
-            if reported_intent_ids(json.loads(
-                    facts["metrics"].read_text(encoding="utf-8"))):
-                return facts["metrics"], skipped
-        except (OSError, json.JSONDecodeError):
-            pass
+        if reported_intent_ids(read_metrics(facts["metrics"])):
+            return facts["metrics"], skipped
         skipped += 1
     return (cands[-1]["metrics"], 0) if cands else (None, 0)
 
@@ -191,11 +217,8 @@ def gate_metrics(area: Path) -> tuple[Path | None, int]:
     runs = [d / "metrics.json" for d in completed_runs(area)]
     skipped = 0
     for p in reversed(runs):
-        try:
-            if reported_intent_ids(json.loads(p.read_text(encoding="utf-8"))):
-                return p, skipped
-        except (OSError, json.JSONDecodeError):
-            pass
+        if reported_intent_ids(read_metrics(p)):
+            return p, skipped
         skipped += 1
     return (runs[-1], 0) if runs else (None, 0)
 
@@ -213,15 +236,21 @@ def runs_by_intent_keys(area: Path) -> tuple[list[Path], list[Path]]:
     keyed: list[Path] = []
     bare: list[Path] = []
     for p in sorted(area.glob("runs/*/metrics.json")):
-        try:
-            hit = bool(reported_intent_ids(json.loads(p.read_text(encoding="utf-8"))))
-        except (OSError, json.JSONDecodeError):
-            hit = False
+        hit = bool(reported_intent_ids(read_metrics(p)))
         (keyed if hit else bare).append(p)
     return keyed, bare
 
 
 def main(argv: list[str]) -> int:
+    """intent-check; an unreadable run artefact ends it with a sentence."""
+    try:
+        return _main(argv)
+    except ValueError as exc:            # read_metrics / RunConfigError
+        print(f"intent-check: {exc}")
+        return 2
+
+
+def _main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: intent-check <PROTOCOL-*.md> [--metrics FILE]")
