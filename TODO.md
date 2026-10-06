@@ -31,7 +31,7 @@ kein Ziel.
 | 1a | Vertragskern, nur guaranteed (Teil von Punkt 7) | erledigt 2026-10-06, s. u. |
 | Pilot | drei Benchmark-Fälle im Labor `~/projects/labkit-paper`, Matrix vorher eingefroren | **erledigt 2026-10-06: `model-holds`** — Sonnet-Audit trifft A1, B10, K1 je 2/2, 0 Fehlalarme, Anker 2/2 (Lauf `2026-10-06T18-59-26_09a0`, Labor-Commit `6ac8b2e`); leichte Fälle, n = 2 — kein Beleg für echten Code |
 | 1b/3 | nur, was der Pilot verlangt: Punkt 3 (static evidence), Punkt 6 `labkit audit` mit Punkt 1, Punkt 4 | wartet auf den Pilot |
-| 2 | Benchmark voll — mit schwereren Fällen (echter Bereichs-Code, Fehler über Funktionen verteilt), mehr Ziehungen | **als Nächstes** (nach [B1]) |
+| 2 | Benchmark — Stufe 1 + Katalog in gefüllten Proben (`count`, `judge`) | **Stufe erledigt 2026-10-06: `generalises`** — Sonnet findet 4/5 Haus-, 4/5 Katalogfälle, 0 Fehlalarme auf 22 stillen Ziehungen; B1 (positionaler Join) 0/3 übersehen (Lauf `2026-10-06T19-22-09_d352`, Labor `fe6a434`). Als Nächstes: dieselben 34 Fälle mit `experiment-preflight` |
 | 4 | Usability mit/ohne labkit (Punkt 2 erweitert) | eigene Ansage |
 | R | Rollout in einem Release: Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus), Punkt 5, `AGENTS.md` von `lib init` gestempelt (Punkt 6; im labkit-Repo gibt es sie seit `61e90df`) | eigene Aufträge |
 
@@ -88,6 +88,23 @@ mechanischer Check — die Aufgabe des Pilots.
 - Der in jedes Labor gestempelte Schutztest prüfte `runlog._is_alive` und
   brach mit `fc6e2fc`; Master in den dotfiles nachgezogen (`334e948`) —
   der angekündigte Bruch trifft genau so.
+
+**Befunde der Benchmark-Stufe für das Werkzeug (2026-10-06):**
+- **Fehler im Haus-Template:** `measure-script.py.template:143`, Null-Band
+  `abs(null_acc - 0.5) <= 1 / max(len(null), 1)`. Registriert ist „0,5 ±
+  ein Item“ inklusiv, in Gleitkomma fällt aber ein Item darüber durch (7/12:
+  0,0833…37 > 0,0833…33), eines darunter besteht. Gefunden vom Audit in 7
+  von 22 stillen Ziehungen (WARNING), nachgerechnet. Reparatur: in
+  Item-Zählungen vergleichen statt in Anteilen. Betrifft jedes gestempelte
+  Labor mit Null-Spur.
+- **Erwartete Fallzahl als Versprechens-Konstante:** K4 (ein Fall doppelt in
+  den Daten) sah der Audit nur, weil das Protokoll „12 cases“ registrierte
+  und die Ergebniszeile 13 zeigte. Als Konstante im Block (`N = 12`) gegen
+  `c<i>_n` gehalten, wäre das eine exakte Prüfung der Stufe guaranteed —
+  `finalize` schweigt heute zu Recht, weil 13 die Eingabe *ist*.
+- **B1 (positionaler Join) übersieht der günstige Audit 0/3** — den
+  Originalfall fand `experiment-preflight` (Opus, Narbentabelle). Der
+  nächste Benchmark-Schritt misst genau diesen Unterschied.
 
 ## Ablauf ins Paket: `run-experiment` als `docs/workflow.md`
 
