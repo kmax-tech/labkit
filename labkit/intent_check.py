@@ -46,6 +46,7 @@ in an area with several protocols.
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import sys
@@ -466,19 +467,42 @@ def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
     For "registered but absent from the code" every literal counts; for the
     reverse direction only an unmistakable metric key does.
 
+    Keyword arguments count too: `r.metrics(c1_pass=acc >= MIN)` reaches
+    metrics.json as `"c1_pass"` without ever being a string literal, and
+    reading literals only reported a correct script as "no script mentions
+    'c1'" — a blocker against correct code (2026-10-06, found in the first
+    promise-block run; `k1_pass=` the same since the check existed). Only
+    keyword names in CALLS count, not assignments: a local `c1_pass = …`
+    is not yet a reported key. A file that does not parse keeps its literal
+    hits and loses only the keyword half.
     """
     hits: dict[str, list[str]] = {}
     for path in sorted(area.glob("scripts/*.py")) + sorted(
             area.glob("analysis/*.py")):
         try:
-            lines = path.read_text(encoding="utf-8").splitlines()
+            source = path.read_text(encoding="utf-8")
         except OSError:
             continue
-        for lineno, line in enumerate(lines, 1):
+        for lineno, line in enumerate(source.splitlines(), 1):
             for m in ID_LITERAL.finditer(line):
                 if suffixed_only and not m.group(2):
                     continue
                 hits.setdefault(m.group(1).lower(), []).append(
                     f"{path.name}:{lineno}")
+        for name, lineno in _keyword_names(source, path):
+            m = ID_KEY.match(name.lower())
+            if not m or (suffixed_only and "_" not in name):
+                continue
+            hits.setdefault(m.group(1), []).append(f"{path.name}:{lineno}")
     return hits
 
+
+def _keyword_names(source: str, path: Path) -> list[tuple[str, int]]:
+    """(name, line) of every keyword argument in a call; [] if unparsable."""
+    try:
+        tree = ast.parse(source, filename=str(path))
+    except SyntaxError:
+        return []
+    return [(kw.arg, kw.lineno) for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            for kw in node.keywords if kw.arg is not None]
