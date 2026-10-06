@@ -29,11 +29,13 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit import promises
+
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
 #: reproduce: runlog's duration, llm's retry counter (the stamped evaluate()
 #: records it; a cold agent read this module to learn why --check failed)
 LABKIT_KEYS = frozenset({"duration_s", "llm_retries"})
-INTENT_KEY = re.compile(r"^[kswn]\d+_")
+INTENT_KEY = promises.INTENT_KEY
 
 
 @dataclass(frozen=True)
@@ -72,6 +74,33 @@ def pin(run: Path, out: Path) -> None:
         raise SystemExit(
             f"recheck: {out.name} (sha {actual[:16]}) is not the file run {run.name} "
             f"recorded ({recorded['sha256']}) — rerun the script or name that run")
+
+
+def scopes_unchanged(run: Path, area: Path) -> None:
+    """Refuse a recomputation over code the run did not use, per promise.
+
+    The run recorded a scope hash per promise (config.json `promises`);
+    if a declared region changed since, recomputing with today's code
+    agrees or disagrees about a different instrument. Runs without a
+    promise block — and run dirs without config.json, which predate it —
+    have nothing to compare and pass.
+    """
+    cfg_file = run / "config.json"
+    if not cfg_file.is_file():
+        return
+    cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
+    recorded = cfg.get("promises")
+    if recorded is None:
+        return
+    changed = []
+    for pid, rec in sorted(recorded["ids"].items()):
+        now = promises.scope_sha(area, tuple(rec["scope"]))
+        if now != rec["scope_sha"]:
+            changed.append(f"[{pid}] {rec['scope_sha']} → {now}")
+    if changed:
+        raise SystemExit(f"recheck: declared scope changed since run {run.name}: "
+                         + "; ".join(changed)
+                         + " — rerun, or recheck from that run's commit")
 
 
 def rows_of(out: Path) -> list[dict]:
@@ -122,12 +151,13 @@ def holds(area: Path, out: Path, recompute: Callable[[list[dict]], dict], note: 
           run_id: str | None = None,
           numbers: Callable[[dict], list[str]] = plain_numbers,
           ignore: frozenset[str] = LABKIT_KEYS) -> Verdict:
-    """pin → agree → cited, for `area`'s newest run (or `run_id`).
+    """pin → scopes → agree → cited, for `area`'s newest run (or `run_id`).
 
     `numbers(metrics)` formats what the note must carry — pass your own when
     the note rounds. Raises SystemExit on the first disagreement."""
     run = run_dir(area, run_id)
     pin(run, out)
+    scopes_unchanged(run, area)
     metrics = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
     grown = agree(metrics, recompute(rows_of(out)), ignore)
     wanted = numbers({k: v for k, v in metrics.items() if k not in ignore})

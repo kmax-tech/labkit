@@ -671,6 +671,25 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
     return out
 
 
+def _promise_snapshot(base_dir: Path, text: str | None) -> dict | None:
+    """The bound protocol's promise block as the run records it, or None.
+
+    Before mkdir, like every refusal here: a malformed block or a declared
+    scope naming code that does not exist stops the run — a number bound
+    to a promise whose scope cannot be hashed is bound to nothing
+    (`promises.scope_sha`). No block (every protocol before 2026-10) is
+    None, not an error.
+    """
+    from labkit import promises
+    if text is None:
+        return None
+    try:
+        block = promises.parse_block(text)
+        return promises.snapshot(block, base_dir) if block is not None else None
+    except promises.PromiseError as exc:
+        raise SystemExit(f"runlog: promise block: {exc}") from exc
+
+
 class Run:
     def __init__(self, experiment: str, config: dict, base_dir: Path,
                  data: dict | None = None, long: bool = False,
@@ -696,6 +715,7 @@ class Run:
         from labkit.protocol_check import TYPE_MEASUREMENT, cost_tier_of
         _ptext = _protocol_text(base_dir, self._protocol)
         self._cost_tier = cost_tier_of(_ptext) if _ptext is not None else None
+        self._promises = _promise_snapshot(base_dir, _ptext)
         _short = _ptext is not None and (self._cost_tier == "seconds"
                                          or bool(TYPE_MEASUREMENT.search(_ptext)))
         # Detach gate (scar 2026-08-13, twice in one evening): a long run
@@ -751,6 +771,7 @@ class Run:
                   "derived_from": self._derived_from,
                   "unfrozen_ack": self._unfrozen_ack,
                   "cost_tier": self._cost_tier,
+                  "promises": self._promises,
                   "script_sha": _snapshot_script(self.dir),
                   "untracked_sources": _snapshot_untracked_sources(self.dir),
                   "pid": os.getpid(),          # lets `active()` tell running from crashed

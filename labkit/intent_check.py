@@ -27,6 +27,12 @@ Existence, not correctness: a key `s1_hit` proves the stage reports, not
 that it computes the right thing — the semantic half stays with the
 preflight audit (§2.A12), which works the same ids.
 
+Since 2026-10-06 the alphabet lives in `promises`: the letters C
+(criterion), A (admissibility), B (branch), and the promise block that
+makes them data. With a block, three more checks run here — text and block
+name the same ids, every declared key is reported exactly, and the run
+recorded this very block. The legacy letters above stay valid in prose.
+
 Opt-in by presence: a protocol without ids (everything before 2026-09-09)
 exits 0 with a note. No retrofitting of closed runs.
 
@@ -46,23 +52,17 @@ import sys
 import warnings
 from pathlib import Path
 
-ID_IN_PROTOCOL = re.compile(r"\[([KSWN]\d+)\]", re.I)
-ID_KEY = re.compile(r"^([kswn]\d+)(?:_.*)?$")
+try:
+    from labkit import promises
+except ImportError:                       # vendored flat copies (student repos)
+    import promises  # type: ignore
 
-
-def registered_ids(text: str) -> set[str]:
-    """Ids promised anywhere in the protocol (structure free, fields duty)."""
-    return {m.group(1).lower() for m in ID_IN_PROTOCOL.finditer(text)}
-
-
-def reported_intent_ids(metrics: dict) -> set[str]:
-    """Ids the metrics file reports (bare id or id_suffix keys)."""
-    out = set()
-    for key in metrics:
-        m = ID_KEY.match(str(key))
-        if m:
-            out.add(m.group(1))
-    return out
+# The alphabet lives in `promises`; these names stay importable from here
+# because code_check and tools outside labkit (befundregister) use them.
+ID_IN_PROTOCOL = promises.ID_IN_PROTOCOL
+ID_KEY = promises.ID_KEY
+registered_ids = promises.registered_ids
+reported_intent_ids = promises.reported_ids
 
 
 def ledger_ids(metrics: dict) -> set[str]:
@@ -238,13 +238,31 @@ def main(argv: list[str]) -> int:
     if not protocol.is_file():
         print(f"intent-check: no such protocol: {protocol}")
         return 2
-    reg = registered_ids(protocol.read_text(encoding="utf-8"))
+    text = protocol.read_text(encoding="utf-8")
+    try:
+        block = promises.parse_block(text)
+    except promises.PromiseError as exc:
+        print(f"{protocol}: promise block: {exc}")
+        return 2
+    if block is not None:
+        only_prose, only_block = promises.prose_mismatch(text, block)
+        for i in only_prose:
+            print(f"{protocol}: [{i}] appears in the text but not in the "
+                  f"promise block — a promise must be data to be checked.")
+        for i in only_block:
+            print(f"{protocol}: [{i}] is in the promise block but never "
+                  f"named in the text — say what it promises where the "
+                  f"reader looks.")
+        if only_prose or only_block:
+            return 1
+
+    reg = registered_ids(text)
     if not reg:
-        print("intent-check: no intent ids registered ([K1]/[S1]/[W1]/[N1] "
-              "— §2.A1); nothing to hold the metrics against.")
+        print("intent-check: no intent ids registered ([C1]/[A1]/[B1], "
+              "legacy [K1]/[S1]/[W1]/[N1] — §2.A1); nothing to hold the "
+              "metrics against.")
         return 0
 
-    text = protocol.read_text(encoding="utf-8")
     pid = protocol_id_of(text)
 
     if metrics_arg is not None:
@@ -309,6 +327,7 @@ def main(argv: list[str]) -> int:
                   "belongs here.")
             return 2
         mpath, skipped = newest_with_intent_keys(cands)
+        assert mpath is not None, "cands is non-empty, so a metrics file exists"
         if skipped:
             print(f"intent-check: using {mpath.parent.name}/metrics.json "
                   f"(newest bound run with intent keys; skipped {skipped} "
@@ -350,6 +369,7 @@ def main(argv: list[str]) -> int:
                   f"(newest with intent keys; skipped {skipped} newer "
                   f"run(s) without any).")
 
+    assert mpath is not None, "every branch above returns or sets mpath"
     try:
         metrics = json.loads(mpath.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -367,11 +387,48 @@ def main(argv: list[str]) -> int:
         print(f"{mpath}: key '{i}'/'{i}_*' is in the intent-id namespace, but "
               f"the protocol registers no [{i.upper()}] — built without a "
               f"registration.")
-    if missing or unregistered:
+    block_findings = (check_block_against_run(block, mpath, metrics)
+                      if block is not None else [])
+    for f in block_findings:
+        print(f)
+    if missing or unregistered or block_findings:
         return 1
     print(f"intent-check: {len(reg)} id(s) registered, all report in "
-          f"{mpath.name}.")
+          f"{mpath.name}."
+          + (f" Promise block {block.sha} is the one the run recorded."
+             if block is not None else ""))
     return 0
+
+
+def check_block_against_run(block: "promises.PromiseBlock", mpath: Path,
+                            metrics: dict) -> list[str]:
+    """Guaranteed-tier findings for a protocol WITH a promise block.
+
+    Two things the prose check cannot see: every declared key is reported
+    exactly (a `c1_pass` promise is not answered by `c1_debug`), and the
+    run recorded THIS block — same constants, same scopes, same keys. A
+    block edited after the run would otherwise hold today's thresholds
+    against yesterday's number.
+    """
+    out = []
+    for p in block.promises:
+        if p.key not in metrics:
+            out.append(f"{mpath}: [{p.id}] declares key '{p.key}', which the "
+                       f"run does not report.")
+    cfg_file = mpath.parent / "config.json"
+    recorded = None
+    if cfg_file.is_file():
+        recorded = json.loads(cfg_file.read_text(encoding="utf-8")).get("promises")
+    if recorded is None:
+        out.append(f"{mpath.parent.name}: the run recorded no promise block — "
+                   f"it ran before the block existed or outside runlog; "
+                   f"rerun so the number is bound to the promises "
+                   f"(block {block.sha}).")
+    elif recorded.get("block_sha") != block.sha:
+        out.append(f"{mpath.parent.name}: ran under promise block "
+                   f"{recorded.get('block_sha')}, the protocol now carries "
+                   f"{block.sha} — the promises changed after the run.")
+    return out
 
 
 def cli() -> None:
@@ -392,7 +449,7 @@ if __name__ == "__main__":
 # even MENTION the key it is supposed to report? An id that appears nowhere in
 # the scripts cannot report at run time — that is mechanical, not a judgement.
 
-ID_LITERAL = re.compile(r"""['"]([kswn]\d+)(_[a-z0-9_]*)?['"]""")
+ID_LITERAL = promises.ID_LITERAL
 
 
 def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
@@ -408,6 +465,7 @@ def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
     unregistered promises produced three findings and no defect (2026-09-10).
     For "registered but absent from the code" every literal counts; for the
     reverse direction only an unmistakable metric key does.
+
     """
     hits: dict[str, list[str]] = {}
     for path in sorted(area.glob("scripts/*.py")) + sorted(
@@ -423,3 +481,4 @@ def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
                 hits.setdefault(m.group(1).lower(), []).append(
                     f"{path.name}:{lineno}")
     return hits
+
