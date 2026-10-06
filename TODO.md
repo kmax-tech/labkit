@@ -123,10 +123,10 @@ externer Nutzer heute nicht lesen kann — das ist der eigentliche Blocker.
 **Plan, in Phasen:**
 
 1. **Die Doktrin zieht ins Paket.** `labkit/docs/standard.md` wird der
-   englische Master; `lib init` stempelt daraus. Die §-IDs bleiben die Anker,
-   die Beleg-Absätze bleiben als Evidenz (ein öffentlicher Leser braucht die
-   Narbe, um die Regel zu glauben), Hauspfade werden zu Platzhaltern oder
-   Beispielen (`<work>` statt `~/work`).
+   englische Master; `lib init` stempelt daraus. Die §-IDs bleiben die Anker;
+   die Belege werden in die zwei Schichten getrennt (unten: allgemeines
+   Beispiel ins Paket, datierter Hausbeleg in die Evidenz-Datei des Labors),
+   Hauspfade werden zu Platzhaltern (`<work>` statt `~/work`).
 2. **Einmal übersetzen, dann flippen.** Deutsch → Englisch per `labkit.llm`
    mit gepinntem Modell, §-Block für §-Block, mit Durchsicht jedes Blocks wie
    bei Code-Review. Danach ist Englisch die Prägestelle: Änderungen passieren
@@ -144,15 +144,41 @@ externer Nutzer heute nicht lesen kann — das ist der eigentliche Blocker.
    Protokolle (`Instrumentenprobe`, `Renderprobe` → instrument check, render
    check — der Code sagt es schon so).
 
+**Entschieden (2026-10-06): zwei Beleg-Schichten, und labkit lernt dazu.**
+Jede Regel hat heute zwei Absätze — den Regeltext und `*Beleg (Datum,
+Bereich):*` mit dem Unfall, der sie geprägt hat. Für die Veröffentlichung
+werden daraus zwei Schichten derselben Stelle:
+
+- **Allgemein (öffentlich):** je Regel ein anonymisiertes Beispiel, aus
+  unserem Beleg abgeleitet — was schiefgeht, nicht wo. Reist mit dem Paket.
+- **Haus (privat):** unsere datierten Belege mit Bereich und Zahl, als
+  eigene Datei neben dem Standard (`standard.evidence.md` je Labor, nicht im
+  Paket). Beim Stempeln rendert `lib init` beide Schichten unter die Regel,
+  die Haus-Schicht nur, wo sie existiert.
+
+Damit wird der Beleg zum **Feature für den Nutzer**: Ein fremdes Labor
+startet mit den allgemeinen Beispielen und sammelt seine eigenen Unfälle an
+derselben Stelle. Dafür ein Kommando `lib scar <§-ID> "<was passierte>"`,
+das den Absatz datiert in die Haus-Schicht schreibt — und die Gates liefern
+die Kandidaten: ein Blocker aus `code-check`, `finalize` oder einem Audit,
+der sich als echt erwies, ist ein Beleg; `finalize` fragt am Ende „als Beleg
+zu §x festhalten?". So ergänzt sich labkit selbst mit den Fehlern und
+Problemen, die es gefangen hat, je Haus, und die allgemeine Schicht wächst
+aus den Haus-Schichten, die ihre Nutzer beisteuern wollen.
+
 **Beleg:** 15 Spuren heute lasen die deutsche Doktrin ohne Befund — die
 englische Fassung braucht nicht der Agent, sondern der Mensch, der labkit
-ohne dieses Haus benutzt. Deutsch als Bonus kostet dann nur die Übersetzung
-der geänderten Blöcke.
+ohne dieses Haus benutzt. Die 42 Beleg-Absätze sind das Wertvollste am
+Standard, weil sie jede Regel mit ihrem Unfall begründen, und verraten
+zugleich, woran hier gearbeitet wird — darum zwei Schichten.
 
 **Aufwand:** Erstübersetzung ein LLM-Durchlauf plus ein Lesetag; die
-Mechanik (Umzug, Hash-Stempel, `sync translate`, `--lang`) zwei bis drei
-Nachmittage im Scaffolder. Reihenfolge: 1 und 2 zusammen, dann 3, dann 4 —
-5 nebenbei.
+Mechanik (Umzug, Beleg-Schichten mit `lib scar`, Hash-Stempel, `sync
+translate`, `--lang`) drei bis vier Nachmittage im Scaffolder. Reihenfolge:
+1 und 2 zusammen (die Schichtung der 42 Belege ist Teil der Durchsicht
+beim Übersetzen), dann 3, dann 4 — 5 nebenbei; `lib scar` und der
+`finalize`-Vorschlag kommen zuletzt, weil sie erst mit Nutzern außerhalb
+des Hauses etwas zu sammeln haben.
 
 **Auslöser:** die Entscheidung, labkit zu veröffentlichen.
 **Prüfstelle:** der erste Leser außerhalb des Hauses — vorher wird nichts
