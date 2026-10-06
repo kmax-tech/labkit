@@ -71,6 +71,10 @@ INTENT_KEY = re.compile(rf"^[{_LETTERS.lower()}]\d+_")
 #: an id as a string literal in source: `"c1_pass"`, `'s1'`
 ID_LITERAL = re.compile(rf"""['"]([{_LETTERS.lower()}]\d+)(_[a-z0-9_]*)?['"]""")
 
+#: a criterion's denominator key: `c1_n`, legacy `k1_n` — the count a
+#: criterion was computed over, held by `finalize` to the recorded inputs
+CRITERION_N_KEY = re.compile(r"^[ck]\d+_n$")
+
 _BLOCK_ID = re.compile(rf"^[{''.join(KINDS)}]\d+$")
 _FENCED_TOML = re.compile(r"^```toml[ \t]*\n(.*?)^```[ \t]*$", re.M | re.S)
 _ALLOWED_FIELDS = {"id", "key", "sentence", "scope", "constants"}

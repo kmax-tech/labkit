@@ -11,7 +11,7 @@ What it runs, in order:
   1. completion     the newest bound run is 'completed'
   2. intent-check   every registered promise has a metrics key (and vice versa)
   3. open fields    protocol fields still holding a placeholder
-  5. criterion n    every `k<i>_n` key in metrics.json equals some input
+  5. criterion n    every `c<i>_n` (legacy `k<i>_n`) key in metrics.json equals some input
                     count the run recorded (rows of a data= file, lines of
                     an output) — a warning, not a blocker, until the false
                     alarm rate is known (2026-10-05; the denominator class
@@ -36,6 +36,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from labkit import promises
 from labkit.code_check import find_protocols
 from labkit.intent_check import (
     bound_runs,
@@ -59,11 +60,11 @@ def _tracked(repo: Path, path: Path) -> bool:
     return r.returncode == 0
 
 
-CRITERION_N = re.compile(r"^k\d+_n$")
+CRITERION_N = promises.CRITERION_N_KEY
 
 
 def criterion_n_findings(run_dir: Path) -> list[str]:
-    """Warnings: a `k<i>_n` that matches no input count the run recorded."""
+    """Warnings: a `c<i>_n` (legacy `k<i>_n`) that matches no input count the run recorded."""
     metrics_file = run_dir / "metrics.json"
     if not metrics_file.is_file():
         return []
@@ -238,7 +239,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
         for line in w:
             print(f"  warning: {line}")
         if not w:
-            print("  every k<i>_n equals a recorded input count (or there is none)")
+            print("  every c<i>_n / k<i>_n equals a recorded input count (or there is none)")
         warnings += len(w)
 
     # -- summary -----------------------------------------------------------
