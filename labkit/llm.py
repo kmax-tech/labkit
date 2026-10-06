@@ -418,6 +418,9 @@ def _complete_once(alias: str, prompt: str, *, system: str | None = None,
     temperature: only the 'ollama' backend can set it. Passing a value to a
     backend that cannot honour it raises instead of silently ignoring it —
     a run must not be documented as "temperature 0" when nothing set it.
+
+    Dispatches to one adapter per backend; each adapter owns its protocol
+    (CLI flags, ollama /api/generate or /api/chat, OpenAI /v1).
     """
     spec = resolve(alias)
     # A serving endpoint is ONE model slot: a second alias against it makes
@@ -427,152 +430,185 @@ def _complete_once(alias: str, prompt: str, *, system: str | None = None,
     # remember is an intention (endpoint_lease's docstring carries the chain).
     endpoint_lease.acquire(alias, spec.get("endpoints"))
     backend = spec["backend"]
-
     if backend == "claude-cli":
-        if temperature is not None:
-            raise ValueError(
-                f"alias '{alias}' uses backend 'claude-cli', which has no "
-                f"temperature flag — it cannot honour temperature="
-                f"{temperature}. Pass temperature=None and document the run "
-                f"as backend-default sampling, or use an ollama alias.")
-        cmd = ["claude", "-p", prompt, "--model", spec["model"],
-               *_CLI_ISOLATION]
-        if system:
-            cmd += ["--append-system-prompt", system]
-        r = _cli_run(cmd, timeout)
-        if r.returncode != 0:
-            detail = (r.stderr.strip() or r.stdout.strip() or
-                      "no output on stderr or stdout")
-            raise BackendError(f"claude-cli exit {r.returncode}: {detail[:300]}")
-        return r.stdout.strip()
-
+        return _complete_claude_cli(alias, spec, prompt, system=system,
+                                    temperature=temperature, timeout=timeout)
+    if backend == "ollama" and raw:
+        return _complete_ollama_raw(spec, prompt, system=system,
+                                    temperature=temperature, timeout=timeout,
+                                    stop=stop, max_tokens=max_tokens,
+                                    keep_alive=keep_alive)
     if backend == "ollama":
-        if raw:
-            # /api/generate with raw=true sends the prompt UNTEMPLATED — the
-            # model sees exactly our text, the way a paper's own
-            # "### Instruction/### Response" scaffold assumes. Through /api/chat
-            # ollama would wrap that scaffold in the model's chat template on
-            # top, and the model answers in chat register (preambles, meta
-            # commentary). A completion needs a stop sequence, or it writes the
-            # next instruction itself.
-            if system:
-                raise ValueError("raw=True sends one untemplated prompt; fold "
-                                 "any system text into the prompt itself")
-            payload = {"model": spec["model"], "prompt": prompt,
-                       "raw": True, "stream": False, "keep_alive": keep_alive}
-            # A completion has no natural end: without a token budget it keeps
-            # writing until the context is full (a pilot stalled 12 min on one
-            # call). CASA bounds theirs at max_length=512.
-            options: dict[str, object] = {"num_predict": max_tokens}
-            if temperature is not None:
-                options["temperature"] = temperature
-            if stop:
-                options["stop"] = stop
-            if options:
-                payload["options"] = options
-            req = urllib.request.Request(
-                _pick_endpoint(spec).rstrip("/") + "/api/generate",
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json", **_auth_headers(spec)})
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return json.loads(resp.read())["response"].strip()
-
-        messages = ([{"role": "system", "content": system}] if system else []) \
-            + [{"role": "user", "content": prompt}]
-        # keep_alive: without it ollama evicts the model between two calls
-        # (default 5 min) and every call pays a reload — ~13 GB for gpt-oss.
-        # That once drove a run into the timeout after 5 of 100 items.
-        payload = {"model": spec["model"], "messages": messages,
-                   "stream": False, "keep_alive": keep_alive}
-        # `num_predict` belongs here TOO. Until 2026-08-19 this branch set
-        # only `temperature` and silently dropped `max_tokens` — the
-        # /api/generate branch above has always warned about this ("without a
-        # token budget it keeps writing until the context is full"), but the
-        # very path all experiments take had no cap. It surfaced in a server
-        # log: `n_gen = 3520` at a nominal 2048, gpt-oss at ~19 t/s still not
-        # done, request aborted after almost three minutes. No caller could
-        # set the cap, so every heavy prompt ran into the timeout — and that
-        # looked like an overloaded cluster.
-        options: dict[str, object] = {"num_predict": max_tokens}
-        if temperature is not None:
-            options["temperature"] = temperature
-        if stop:
-            options["stop"] = stop
-        payload["options"] = options
-        req = urllib.request.Request(
-            _pick_endpoint(spec).rstrip("/") + "/api/chat",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json", **_auth_headers(spec)})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            body = json.loads(resp.read())
-        message = body.get("message") or {}
-        content = (message.get("content") or "").strip()
-        # Reasoning models put their thinking trace in its own field. If
-        # `content` stays empty while `thinking` is filled, the model thought
-        # and said nothing — a MISSING measurement that would come back as an
-        # empty string and look like a model answer to the parser. Do not
-        # decide here (the caller knows its gold classes), but make it
-        # visible: silently lost items are the most expensive error type.
-        if not content:
-            think = (message.get("thinking") or "").strip()
-            print(f"llm: {alias} returned EMPTY content "
-                  f"(done_reason={body.get('done_reason')!r}, "
-                  f"eval_count={body.get('eval_count')}, "
-                  f"thinking={len(think)} chars) — count as unreadable, "
-                  f"not as an answer", file=sys.stderr)
-        return content
-
+        return _complete_ollama_chat(alias, spec, prompt, system=system,
+                                     temperature=temperature, timeout=timeout,
+                                     stop=stop, max_tokens=max_tokens,
+                                     keep_alive=keep_alive)
     if backend == "openai":
-        # Any OpenAI-compatible server: vLLM, sglang, ... Same completion
-        # semantics as the ollama chat path. `keep_alive` does not apply (the
-        # server owns model residency); `raw` has no untemplated route here.
-        # Model pinning: /v1 exposes no weights digest — the served model id
-        # plus the server launch command (revision, quantization) are the pin,
-        # both belong in the run config.
-        if raw:
-            raise ValueError("raw=True needs ollama's /api/generate — the "
-                             "OpenAI-compatible API has no untemplated path")
-        messages = ([{"role": "system", "content": system}] if system else []) \
-            + [{"role": "user", "content": prompt}]
-        payload: dict[str, object] = {"model": spec["model"], "messages": messages,
-                                      "max_tokens": max_tokens, "stream": False}
-        if temperature is not None:
-            payload["temperature"] = temperature
-        if stop:
-            payload["stop"] = stop
-        headers = {"Content-Type": "application/json", **_auth_headers(spec)}
-        req = urllib.request.Request(
-            _pick_endpoint(spec).rstrip("/") + "/v1/chat/completions",
-            data=json.dumps(payload).encode("utf-8"), headers=headers)
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            body = json.loads(resp.read())
-        first = (body.get("choices") or [{}])[0]
-        message = first.get("message") or {}
-        content = (message.get("content") or "").strip()
-        # Reasoning models: with a server-side --reasoning-parser the
-        # thinking trace sits in its own field (reasoning_content; newer
-        # vLLM: reasoning) and content is the bare answer — the same split
-        # ollama delivers as "thinking". WITHOUT the flag the trace lands IN
-        # content; marker parsers appear to survive that, but parse_letter
-        # then reads the first free-standing A/B of the DELIBERATION instead
-        # of the answer. models.toml therefore declares `reasoning = true`;
-        # content without a trace field is the signature of a server missing
-        # the parser flag — fail immediately, no retry changes a server
-        # config.
-        reasoning = (message.get("reasoning_content")
-                     or message.get("reasoning") or "").strip()
-        if spec.get("reasoning") and content and not reasoning:
-            raise ValueError(
-                f"{alias}: reasoning = true, but the answer carries content "
-                f"without reasoning_content/reasoning — the server runs "
-                f"without --reasoning-parser and mixes the thinking trace "
-                f"into the answer. Fix the server cmd (swap-models.toml), or "
-                f"set reasoning = false if this model truly writes no trace.")
-        if not content:
-            print(f"llm: {alias} returned EMPTY content "
-                  f"(finish_reason={first.get('finish_reason')!r}, "
-                  f"reasoning={len(reasoning)} chars) — count as "
-                  f"unreadable, not as an answer", file=sys.stderr)
-        return content
-
+        return _complete_openai(alias, spec, prompt, system=system,
+                                temperature=temperature, timeout=timeout,
+                                raw=raw, stop=stop, max_tokens=max_tokens)
     raise ValueError(f"unknown backend '{backend}' for alias '{alias}'")
+
+
+def _chat_messages(system: str | None, prompt: str) -> list[dict]:
+    """The chat message list: optional system turn, then the user prompt."""
+    return ([{"role": "system", "content": system}] if system else []) \
+        + [{"role": "user", "content": prompt}]
+
+
+def _post_json(spec: dict, path: str, payload: dict, timeout: int) -> dict:
+    """POST `payload` to the alias' endpoint + `path`; the decoded answer."""
+    req = urllib.request.Request(
+        _pick_endpoint(spec).rstrip("/") + path,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json", **_auth_headers(spec)})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read())
+
+
+def _complete_claude_cli(alias: str, spec: dict, prompt: str, *,
+                         system: str | None, temperature: float | None,
+                         timeout: int) -> str:
+    """`claude -p`, isolated from the operator's settings (_CLI_ISOLATION)."""
+    if temperature is not None:
+        raise ValueError(
+            f"alias '{alias}' uses backend 'claude-cli', which has no "
+            f"temperature flag — it cannot honour temperature="
+            f"{temperature}. Pass temperature=None and document the run "
+            f"as backend-default sampling, or use an ollama alias.")
+    cmd = ["claude", "-p", prompt, "--model", spec["model"], *_CLI_ISOLATION]
+    if system:
+        cmd += ["--append-system-prompt", system]
+    r = _cli_run(cmd, timeout)
+    if r.returncode != 0:
+        detail = (r.stderr.strip() or r.stdout.strip() or
+                  "no output on stderr or stdout")
+        raise BackendError(f"claude-cli exit {r.returncode}: {detail[:300]}")
+    return r.stdout.strip()
+
+
+def _complete_ollama_raw(spec: dict, prompt: str, *, system: str | None,
+                         temperature: float | None, timeout: int,
+                         stop: list[str] | None, max_tokens: int,
+                         keep_alive: str) -> str:
+    """ollama /api/generate with raw=true: the prompt goes untemplated."""
+    # /api/generate with raw=true sends the prompt UNTEMPLATED — the
+    # model sees exactly our text, the way a paper's own
+    # "### Instruction/### Response" scaffold assumes. Through /api/chat
+    # ollama would wrap that scaffold in the model's chat template on
+    # top, and the model answers in chat register (preambles, meta
+    # commentary). A completion needs a stop sequence, or it writes the
+    # next instruction itself.
+    if system:
+        raise ValueError("raw=True sends one untemplated prompt; fold "
+                         "any system text into the prompt itself")
+    payload: dict[str, object] = {"model": spec["model"], "prompt": prompt,
+                                  "raw": True, "stream": False,
+                                  "keep_alive": keep_alive}
+    # A completion has no natural end: without a token budget it keeps
+    # writing until the context is full (a pilot stalled 12 min on one
+    # call). CASA bounds theirs at max_length=512.
+    options: dict[str, object] = {"num_predict": max_tokens}
+    if temperature is not None:
+        options["temperature"] = temperature
+    if stop:
+        options["stop"] = stop
+    payload["options"] = options
+    return _post_json(spec, "/api/generate", payload, timeout)["response"].strip()
+
+
+def _complete_ollama_chat(alias: str, spec: dict, prompt: str, *,
+                          system: str | None, temperature: float | None,
+                          timeout: int, stop: list[str] | None,
+                          max_tokens: int, keep_alive: str) -> str:
+    """ollama /api/chat — the path every templated experiment takes."""
+    # keep_alive: without it ollama evicts the model between two calls
+    # (default 5 min) and every call pays a reload — ~13 GB for gpt-oss.
+    # That once drove a run into the timeout after 5 of 100 items.
+    payload: dict[str, object] = {"model": spec["model"],
+                                  "messages": _chat_messages(system, prompt),
+                                  "stream": False, "keep_alive": keep_alive}
+    # `num_predict` belongs here TOO. Until 2026-08-19 this branch set
+    # only `temperature` and silently dropped `max_tokens` — the
+    # /api/generate branch above has always warned about this ("without a
+    # token budget it keeps writing until the context is full"), but the
+    # very path all experiments take had no cap. It surfaced in a server
+    # log: `n_gen = 3520` at a nominal 2048, gpt-oss at ~19 t/s still not
+    # done, request aborted after almost three minutes. No caller could
+    # set the cap, so every heavy prompt ran into the timeout — and that
+    # looked like an overloaded cluster.
+    options: dict[str, object] = {"num_predict": max_tokens}
+    if temperature is not None:
+        options["temperature"] = temperature
+    if stop:
+        options["stop"] = stop
+    payload["options"] = options
+    body = _post_json(spec, "/api/chat", payload, timeout)
+    message = body.get("message") or {}
+    content = (message.get("content") or "").strip()
+    # Reasoning models put their thinking trace in its own field. If
+    # `content` stays empty while `thinking` is filled, the model thought
+    # and said nothing — a MISSING measurement that would come back as an
+    # empty string and look like a model answer to the parser. Do not
+    # decide here (the caller knows its gold classes), but make it
+    # visible: silently lost items are the most expensive error type.
+    if not content:
+        think = (message.get("thinking") or "").strip()
+        print(f"llm: {alias} returned EMPTY content "
+              f"(done_reason={body.get('done_reason')!r}, "
+              f"eval_count={body.get('eval_count')}, "
+              f"thinking={len(think)} chars) — count as unreadable, "
+              f"not as an answer", file=sys.stderr)
+    return content
+
+
+def _complete_openai(alias: str, spec: dict, prompt: str, *,
+                     system: str | None, temperature: float | None,
+                     timeout: int, raw: bool, stop: list[str] | None,
+                     max_tokens: int) -> str:
+    """Any OpenAI-compatible server (vLLM, sglang, …) via /v1/chat/completions."""
+    # Any OpenAI-compatible server: vLLM, sglang, ... Same completion
+    # semantics as the ollama chat path. `keep_alive` does not apply (the
+    # server owns model residency); `raw` has no untemplated route here.
+    # Model pinning: /v1 exposes no weights digest — the served model id
+    # plus the server launch command (revision, quantization) are the pin,
+    # both belong in the run config.
+    if raw:
+        raise ValueError("raw=True needs ollama's /api/generate — the "
+                         "OpenAI-compatible API has no untemplated path")
+    payload: dict[str, object] = {"model": spec["model"],
+                                  "messages": _chat_messages(system, prompt),
+                                  "max_tokens": max_tokens, "stream": False}
+    if temperature is not None:
+        payload["temperature"] = temperature
+    if stop:
+        payload["stop"] = stop
+    body = _post_json(spec, "/v1/chat/completions", payload, timeout)
+    first = (body.get("choices") or [{}])[0]
+    message = first.get("message") or {}
+    content = (message.get("content") or "").strip()
+    # Reasoning models: with a server-side --reasoning-parser the
+    # thinking trace sits in its own field (reasoning_content; newer
+    # vLLM: reasoning) and content is the bare answer — the same split
+    # ollama delivers as "thinking". WITHOUT the flag the trace lands IN
+    # content; marker parsers appear to survive that, but parse_letter
+    # then reads the first free-standing A/B of the DELIBERATION instead
+    # of the answer. models.toml therefore declares `reasoning = true`;
+    # content without a trace field is the signature of a server missing
+    # the parser flag — fail immediately, no retry changes a server
+    # config.
+    reasoning = (message.get("reasoning_content")
+                 or message.get("reasoning") or "").strip()
+    if spec.get("reasoning") and content and not reasoning:
+        raise ValueError(
+            f"{alias}: reasoning = true, but the answer carries content "
+            f"without reasoning_content/reasoning — the server runs "
+            f"without --reasoning-parser and mixes the thinking trace "
+            f"into the answer. Fix the server cmd (swap-models.toml), or "
+            f"set reasoning = false if this model truly writes no trace.")
+    if not content:
+        print(f"llm: {alias} returned EMPTY content "
+              f"(finish_reason={first.get('finish_reason')!r}, "
+              f"reasoning={len(reasoning)} chars) — count as "
+              f"unreadable, not as an answer", file=sys.stderr)
+    return content
