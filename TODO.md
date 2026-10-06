@@ -106,3 +106,54 @@ sieht das niemand.
   in `usability score`), damit sichtbar bleibt, ob es sich ändert.
 - Eine Stub-Zeile für `s1_*`/`k1_*` neben den TODOs im Zähl-Skelett (Sonnet,
   Probe 15) — erst, wenn das Zähl-Skelett Kennungen bekommt.
+
+## 5. Englisch als Master — die Bedingung für ein öffentliches labkit
+
+**Was:** Wird labkit öffentlich, muss alles, was ein Nutzer liest, englisch
+sein, und Deutsch wird eine abgeleitete Hausfassung. Das Paket selbst ist es
+fast schon: Code, Templates, Feld-Guide, Fehlermeldungen — 7 Zeilen mit
+deutschem Rest (`protocol_check.py` 6, `code_check.py` 1). Deutsch sind die
+Doktrin und ihr Einstieg, und die liegen nicht im Paket, sondern in den
+dotfiles: `arbeitsstandard.md.template` (1600 Zeilen, 77 §-Regeln, 42
+Beleg-Absätze, 28 Zeilen mit Hauspfaden wie `~/work` oder `webis`),
+`CLAUDE.md.template` (235 Zeilen) und 52 deutsche Zeilen im Scaffolder
+(Schnellstart-Texte, Hook-Meldungen). Die Gates zitieren §-IDs, die ein
+externer Nutzer heute nicht lesen kann — das ist der eigentliche Blocker.
+
+**Plan, in Phasen:**
+
+1. **Die Doktrin zieht ins Paket.** `labkit/docs/standard.md` wird der
+   englische Master; `lib init` stempelt daraus. Die §-IDs bleiben die Anker,
+   die Beleg-Absätze bleiben als Evidenz (ein öffentlicher Leser braucht die
+   Narbe, um die Regel zu glauben), Hauspfade werden zu Platzhaltern oder
+   Beispielen (`<work>` statt `~/work`).
+2. **Einmal übersetzen, dann flippen.** Deutsch → Englisch per `labkit.llm`
+   mit gepinntem Modell, §-Block für §-Block, mit Durchsicht jedes Blocks wie
+   bei Code-Review. Danach ist Englisch die Prägestelle: Änderungen passieren
+   dort, die deutsche Fassung `standard.de.md` wird abgeleitet.
+3. **Abgeleitete Fassung mit Hash-Stempel.** Jeder §-Block der deutschen
+   Fassung trägt den Hash seines englischen Blocks; `lib sync check` meldet
+   „de: 3 Blöcke hinter en", `lib sync translate` übersetzt nur diese Blöcke
+   neu. Übersetzung ist kein Diff: geänderte Blöcke werden beim Commit
+   gelesen, der Stempel zeigt, welche.
+4. **`--lang` wählt die Fassung, nicht ein Wort.** `lib init <repo> --lang
+   en|de` stempelt `docs/arbeitsstandard.md` und den Merkzettel aus der
+   gewählten Fassung; ein Repo hat eine Sprache. Scaffolder-Texte und
+   Hook-Meldungen englisch, die 52 Zeilen.
+5. **Paket-Rest:** die 7 Zeilen, dazu die Hausbegriffe im Glossar der
+   Protokolle (`Instrumentenprobe`, `Renderprobe` → instrument check, render
+   check — der Code sagt es schon so).
+
+**Beleg:** 15 Spuren heute lasen die deutsche Doktrin ohne Befund — die
+englische Fassung braucht nicht der Agent, sondern der Mensch, der labkit
+ohne dieses Haus benutzt. Deutsch als Bonus kostet dann nur die Übersetzung
+der geänderten Blöcke.
+
+**Aufwand:** Erstübersetzung ein LLM-Durchlauf plus ein Lesetag; die
+Mechanik (Umzug, Hash-Stempel, `sync translate`, `--lang`) zwei bis drei
+Nachmittage im Scaffolder. Reihenfolge: 1 und 2 zusammen, dann 3, dann 4 —
+5 nebenbei.
+
+**Auslöser:** die Entscheidung, labkit zu veröffentlichen.
+**Prüfstelle:** der erste Leser außerhalb des Hauses — vorher wird nichts
+davon gebaut, weil zwei Fassungen bis dahin nur Pflege sind.
