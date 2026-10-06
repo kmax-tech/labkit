@@ -51,6 +51,7 @@ preflight <AREA>                    # pre-freeze gate: protocol + code + scope +
 finalize <AREA>                     # post-run gate: completion + intent-check + open fields
 claude-hook pre-run|post-change     # the two Claude Code hooks a lab repo installs (stdin: event JSON)
 usability stage|score <DIR>        # probe lab repo for a cold agent; score its trace (time, steps, number)
+labkit-audit <AREA> --mode preflight|analysis   # experiment-preflight audit through any models.toml alias; exit 1 on a blocker OR a warning
 ```
 
 ## Usability trace — what the whole chain costs for one kept number

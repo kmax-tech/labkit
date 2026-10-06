@@ -133,6 +133,15 @@ sieht. **Beleg:** Pilot 2026-10-06 — der Skill-Ablauf musste für das neue
 Format von Hand abgewandelt werden. **Auslöser:** Rollout mit Punkt 7
 und 6. **Prüfstelle:** `docs/workflow.md` existiert.
 
+**`labkit-audit` gebaut (2026-10-06, Punkt 6 teilweise):** der
+experiment-preflight-Audit als Kommando über `labkit.llm`, Anweisungen im
+Paket (`experiment-preflight.agent.md`), Exit 1 auch bei einer Warnung.
+Echter Lauf auf Bereich 01 des Labors (Sonnet, 93 s) fand dieselben
+Messschwächen wie der Opus-Audit von Bereich 03. Offen: `promote` (Punkt 1)
+als dünne Hülle — `labkit-audit --mode analysis` plus Stempeln des
+Protokollfelds nach den Entscheidungen; der Claude-Agent in den dotfiles
+wird zur gestempelten Kopie der Paketdatei (Rollout).
+
 ## 1. `promote <bereich>` — der Beförderungs-Audit als Kommando
 
 **Was:** Die Regel seit 2026-10-05 (§2.A12): bei `Cost: seconds` kein

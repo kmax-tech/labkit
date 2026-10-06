@@ -14,7 +14,7 @@ is no cycle (checked 2026-10-06).
 | 1 · formats and places | `promises`, `protocol_check`, `runs`, `repo` | read-only answers: the promise alphabet and block, the protocol's fields and identity, what a run directory says about itself, where the repo, the area's protocols and git are |
 | 2 · a run and its effects | `runlog`, `batch`, `llm`, `endpoint_lease` | writing a run (binding, refusals, provenance, index), resumable output, model calls, the model-slot lease |
 | 3 · checks | `intent_check`, `code_check`, `scope_sha`, `recheck`, `notes_check` | one question each, against code, metrics or a note |
-| 4 · gates | `preflight`, `finalize`, `claude_hooks` | sequence the checks at a decision point; the hooks call the gates |
+| 4 · gates | `preflight`, `finalize`, `claude_hooks`, `audit` | sequence the checks at a decision point; the hooks call the gates; `audit` runs the agent audit through `llm` |
 | tools | `protocol_fill`, `usability` | fill a protocol field; stage and score a cold-agent probe |
 
 `runlog` (layer 2) reads layer 1 and calls `llm` only to record resolved
@@ -32,7 +32,8 @@ evidence** (warns), **agent audit** (semantic).
 | intent → promise | required protocol fields; promise block parses; prose and block name the same ids | `protocol_check`, `promises.parse_block`, `promises.prose_mismatch` | `protocol-check`, `intent-check` | guaranteed | writing the protocol |
 | promise → code | every declared key appears exactly in the code; every declared scope resolves | `code_check.promise_block_findings` | `code-check`, `preflight` | guaranteed | before the run |
 | promise → code | each intent id appears as a key; gate labels match the prompt; parser fixtures exist | `code_check` | `code-check`, `preflight` | guaranteed | before the run |
-| promise → code | code does what the promise says | audit bundle (`code-check --bundle`) for an agent | `code-check --bundle` | agent audit | before the run |
+| promise → code | code does what the promise says | `audit` (experiment-preflight instructions + the area's files + the standard, one `llm` call); or the bundle (`code-check --bundle`) for the code-check agent | `labkit-audit --mode preflight` | agent audit | before the run |
+| run → report | the evaluation means the frozen criterion | `audit` in MODE analysis | `labkit-audit --mode analysis` | agent audit | before a number leaves |
 | code → run | unfrozen full run, unbound run, dangling scope, control leakage: refused before the run dir exists | `runlog.Run` | (every run) | guaranteed | starting the run |
 | code → run | block digest, per-promise `declared_scope_sha`, constants, git state, data hashes recorded | `runlog.Run`, `promises.snapshot` | (every run) | guaranteed | starting the run |
 | run → report | run completed; declared keys reported; run recorded this block; a block constant not contradicted by the run config | `runs.completion_state`, `intent_check.check_block_against_run` | `intent-check`, `finalize` | guaranteed | after the run |

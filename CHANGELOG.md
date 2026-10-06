@@ -5,6 +5,16 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Added
+
+- `labkit-audit <AREA> --mode preflight|analysis`: the experiment-preflight
+  audit as a command through `labkit.llm` (any `models.toml` alias, default
+  `opus`), synchronous with a timeout; the instructions ship with the
+  package (`experiment-preflight.agent.md`). Exit 1 on a blocker OR a
+  warning, 2 when no audit could be made.
+
 ## 0.46.0 — 2026-10-06
 
 ### Breaking
