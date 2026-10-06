@@ -183,3 +183,35 @@ des Hauses etwas zu sammeln haben.
 **Auslöser:** die Entscheidung, labkit zu veröffentlichen.
 **Prüfstelle:** der erste Leser außerhalb des Hauses — vorher wird nichts
 davon gebaut, weil zwei Fassungen bis dahin nur Pflege sind.
+
+## 6. Harness-unabhängig — Codex und andere Agenten
+
+**Befund (2026-10-06):** Die harte Schicht von labkit ist schon
+harness-unabhängig: `runlog` (Freeze-, Leckage-, Detach-Riegel), die vier
+Gates, `recheck`, der git-Pre-Commit-Hook — alles Code und git, kein Agent im
+Spiel. Claude-spezifisch sind vier Stellen in der weichen Schicht:
+
+| Stelle | heute | für jeden Agenten |
+|---|---|---|
+| Einstiegsdatei | `CLAUDE.md` (Claude Code liest sie) | `AGENTS.md` als gestempelte Datei (Codex, Cursor, Gemini-CLI lesen sie oder eine Variante); `CLAUDE.md` wird ein Symlink darauf. Der Scaffolder stempelt beide, `lib sync` hält eine. |
+| Live-Hooks | `claude-hook pre-run/post-change` über `.claude/settings.json` (PreToolUse/PostToolUse-JSON) | bleiben als **Adapter** für Claude Code; der Riegel in `runlog` und der Pre-Commit-Hook sind die Schicht, die ohne Harness hält (§2.A8: „die Regel, die der Agent vergisst, steht im Riegel"). Ein zweiter Adapter je Harness nur, wenn er Hooks hat. |
+| Audit-Agenten | `experiment-preflight`, `code-check` als Claude-Subagenten (`~/.claude/agents/*.md`) | `labkit audit <bereich> --mode preflight\|analysis`: die Audit-Prompts ziehen ins Paket, `code-check --bundle` liefert heute schon das Bündel, der Aufruf geht über `labkit.llm` mit beliebigem Backend (claude-cli, openai, ollama), **synchron mit Zeitlimit**, Befunde als Text zurück. Das ist zugleich die Mechanik für `promote` (Punkt 1). |
+| Harness-Erkennung | `CLAUDECODE` in der Umgebung entscheidet den Detach-Riegel | generisch: `LABKIT_FOREGROUND_TIMEOUT_S` (gesetzt vom Harness-Adapter oder vom Nutzer) statt eines Harness-Namens; `CLAUDECODE` setzt ihn als Vorgabe. |
+
+Das Modell-Backend für Experimente ist bereits frei (`models.toml`:
+claude-cli, openai, ollama); ein Codex-Nutzer trägt sein Backend ein. Der
+Usability-Harness ist dateibasiert (`TASK.md`, Log, Score) und läuft mit
+jedem Agenten, der eine Shell hat — nur der Start des kalten Agenten ist
+Sache der Session.
+
+**Reihenfolge:** `AGENTS.md` zuerst (eine Stunde, kein Risiko), dann
+`labkit audit` (ein Nachmittag, bringt `promote` mit), dann die
+Harness-Erkennung. Die Claude-Hooks bleiben, wie sie sind.
+
+**Beleg:** Alle 15 Spuren heute liefen in Claude Code; kein Teil der
+Messung hängt daran außer dem Start — die Agenten lasen `CLAUDE.md`, weil es
+so heißt, nicht weil sie Claude sind.
+
+**Auslöser:** derselbe wie Punkt 5 — die Veröffentlichung — oder der erste
+Mitarbeitende, der mit Codex im Labor arbeitet. **Prüfstelle:** `lib init`
+stempelt ab dann `AGENTS.md`; bis dahin steht hier der Plan.
