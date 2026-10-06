@@ -6,6 +6,47 @@ Reihenfolge ist Priorität. Nichts hier wird vorsorglich gebaut: jeder Punkt
 wartet auf seinen Auslöser, und die Prüfstelle ist der Ort, an dem man ihn
 sieht.*
 
+## Reihenfolge (2026-10-06): die Evaluation steuert die Entwicklung
+
+Behauptung, um die gebaut wird: *labkit detects violations of explicitly
+encoded scientific intent across implementation, execution and reporting.*
+Jede Prüfung gehört einer von drei Stufen an und sagt das in ihrer Meldung:
+**guaranteed** (exakt, mechanisch) · **static evidence** (Indiz, Warnung) ·
+**agent audit** (Semantik). Ein Lint wird nie als Beweis von Semantik
+ausgegeben. Begründung, Stand der Technik und Paper-Rahmen:
+`~/work/projects/labkit-paper/` (Paper-Plan, `stand-der-technik-kette.md`).
+
+| Schritt | Inhalt | Stand |
+|---|---|---|
+| 0 | Stand der Technik, Positionierung | erledigt 2026-10-06 |
+| 1a | Vertragskern, nur guaranteed (Teil von Punkt 7) | erledigt 2026-10-06, s. u. |
+| Pilot | drei Benchmark-Fälle im Labor `~/projects/labkit-paper`, Matrix vorher eingefroren | als Nächstes |
+| 1b/3 | nur, was der Pilot verlangt: Punkt 3 (static evidence), Punkt 6 `labkit audit` mit Punkt 1, Punkt 4 | wartet auf den Pilot |
+| 2 | Benchmark voll | danach |
+| 4 | Usability mit/ohne labkit (Punkt 2 erweitert) | eigene Ansage |
+| R | Rollout: Punkt 7 Schritte 0, 2–4, Punkt 5, `AGENTS.md` | eigene Aufträge |
+
+**1a gebaut (2026-10-06):** `labkit/promises.py` ist die eine Heimat des
+Alphabets (C/A/B plus Altbuchstaben K/S/W/N in Prosa) und des
+Versprechens-Blocks (```toml mit `[[promise]]`: id, key, sentence, scope,
+constants). `runlog` zeichnet je Lauf Block-Hash und Scope-Hash je
+Versprechen auf und verweigert einen kaputten Block vor `mkdir`;
+`intent-check` prüft Text = Block, exakten Schlüssel und „der Lauf lief
+unter diesem Block“; `recheck` verweigert das Nachrechnen über einen
+veränderten Scope. Der Scope-Hash behauptet nur „deklarierte Region
+unverändert“ (`tests/test_promises.py`, Klasse `ScopeHash`). Altbuchstaben
+gelten unverändert weiter — die Stichtag-Regel (Punkt 7, Schritt 4) kommt
+erst mit dem Rollout.
+
+**Befund aus dem Durchstich, behoben (2026-10-06):** `code-check` meldete
+einen falschen Blocker, wenn ein Skript die Schlüssel als Keyword-Argumente
+übergibt (`r.metrics(c1_pass=…)`) — `code_ids` las nur String-Literale; mit
+`k1_pass=` identisch, seit es den Check gibt. Ein Fehlalarm der Stufe
+guaranteed bricht ihre Zusage, also sofort behoben (Keyword-Namen in
+Aufrufen per AST, `tests/test_code_ids_keywords.py`). Bleibt als
+Köder-Paar im Benchmark: Dict-Literal und Keyword-Argument, gleiches
+Urteil.
+
 ## 1. `promote <bereich>` — der Beförderungs-Audit als Kommando
 
 **Was:** Die Regel seit 2026-10-05 (§2.A12): bei `Cost: seconds` kein
