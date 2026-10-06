@@ -22,7 +22,8 @@ of semantics. Contract and rationale: `docs/promise-block.md`.
 
 | File | For |
 |---|---|
-| `README.md` | modules, console commands, the coined terms (one word, one thing) |
+| `docs/architecture.md` | layers, the chain from promise to number (module, command, tier), one home per question |
+| `README.md` | console commands, the coined terms (one word, one thing) |
 | `TODO.md` | the work order and why (German); top section "Reihenfolge" decides what is next |
 | `docs/promise-block.md` | promise kinds C/A/B, the TOML block, what the declared-scope hash states |
 | `docs/protocol-run-binding.md` | which run belongs to which protocol |

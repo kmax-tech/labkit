@@ -1,25 +1,7 @@
 """labkit — the shared helpers every experiment repo imports.
 
-Ten modules, stdlib only:
-
-- `runlog`         one run = one directory + one run-index row (id, config, env, status)
-                   (installed as the `runlog` command: `runlog <area>` lists open runs)
-- `llm`            LLM backends behind one call; aliases resolved via models.toml
-- `endpoint_lease` one alias at a time per serving endpoint (a slot is not a
-                   service); `llm.complete` takes it implicitly
-- `batch`          resumable output file (lock + resume-by-id + status)
-- `intent_check`   registered intent ids vs. the run's metrics keys
-                   (installed as the `intent-check` command)
-- `protocol_check` the checker the experiment protocol contracts with
-                   (installed as the `protocol-check` command)
-- `protocol_fill`  fill one stamped placeholder field by label
-                   (installed as the `protocol-fill` command)
-- `code_check`     mechanical preflight: intent ids, schema, gate labels
-                   (installed as the `code-check` command)
-- `scope_sha`      audit stamp over the code that determines a number
-                   (installed as the `scope-sha` command)
-- `notes_check`    kind declaration gate for notes/messung
-                   (installed as the `notes-check` command)
+Stdlib only. Modules, layers and the one home of each question:
+`docs/architecture.md`; console commands: README.
 
     from labkit import runlog, llm, batch
 
