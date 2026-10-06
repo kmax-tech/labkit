@@ -215,3 +215,85 @@ so heißt, nicht weil sie Claude sind.
 **Auslöser:** derselbe wie Punkt 5 — die Veröffentlichung — oder der erste
 Mitarbeitende, der mit Codex im Labor arbeitet. **Prüfstelle:** `lib init`
 stempelt ab dann `AGENTS.md`; bis dahin steht hier der Plan.
+
+## 7. Englische Kennungen: `[C]` · `[A]` · `[B]` statt `[K]` · `[S]` · `[W]` · `[N]`
+
+**Was:** Die Kennungen auf den Versprechen des Protokolls (§2.A1a) sind
+Bezeichner, die die Maschine liest — also englisch, und jede trägt den
+Fachterminus, den ein externer Leser kennt. Heute sind K (Kriterium) und
+W (Weiche) deutsch, S (stop) englisch, N doppeldeutig. Drei statt vier:
+
+| neu | steht für | Hauswort | Fachterminus | löst ab |
+|---|---|---|---|---|
+| `[C]` | criterion | Erfolgskriterium, je Teil | inference criterion; co-primary (intersection–union) | `[K]` |
+| `[A]` | admissibility | Gültigkeitsbedingung | outcome-neutral condition (Registered Reports); `INADMISSIBLE` (preregister) | `[S]` und `[N]` |
+| `[B]` | branch | Weiche | pre-specified conditional analysis; decision tree (IF-THEN) | `[W]` |
+
+Warum N in A aufgeht: Kontrollen mit Sollwert (`shuffled` < 0,05, `anchor`
+trifft 0,716) haben dieselbe Folge wie eine Stop-Regel — zeigen sie das
+Erwartete nicht, gibt es kein Urteil (§2 „Nullbedingung / Anker“). Im Fach
+sind positive controls und quality checks Beispiele für outcome-neutral
+conditions. Die Baseline ohne Sollwert ist ein comparator und gehört in den
+Text von `[C]`, nicht unter eine eigene Kennung. Die Pflicht „Kontrolle im
+selben Lauf“ (§2.C6) bleibt: `[A2]` verlangt `a2_pass`, also muss der Code
+die Kontrolle erzeugen.
+
+Buchstabenwahl gegen Kollision: `ID_KEY` (`intent_check.py:50`) liest jeden
+Schlüssel `<buchstabe><ziffer>[_…]` als Kennung. Gesperrt deshalb F (`f1`),
+P (`p1`, precision@1), R (`r1`, recall@1/ROUGE-1), Q (`q1`, Quartil),
+H (`h1`, hits@1; außerdem in Vorregistrierungen die Hypothese).
+
+**Schritte:**
+
+0. **Sofort und unabhängig:** Haus↔Fach-Tabelle im Master
+   (`arbeitsstandard.md.template`, Zeilen „Stop rule“ und „Registrierte
+   Weiche“): S ist kein *stopping rule* (das heißt im Fach: wann die
+   Datenerhebung endet; preregister nutzt das Feld genau so) und kein
+   *futility*, sondern eine outcome-neutral condition; Weiche ist
+   conditional analysis, nicht „decision rule“ (zu breit — K und S sind
+   auch Entscheidungsregeln).
+1. **labkit:** eine Heimat für das Alphabet — `ID_IN_PROTOCOL`, `ID_KEY`
+   in `intent_check.py` und die Kopie `INTENT_KEY` in `recheck.py:36`
+   (heute zwei Wahrheiten) aus einer Konstante; `code_check.py` importiert
+   schon. Tests: Kollisionsfälle (`f1_score`, `p1`, `q1` sind keine
+   Kennungen), alte Buchstaben nur nach Stichtag-Regel (Schritt 4).
+2. **Template + Feld-Guide** (`experiment-protocol.md.template`,
+   `protocol-field-guide.md`): Feld-Label „stop rule“ →
+   „admissibility condition“, Schlüsselwörter für `protocol-check`
+   nachziehen.
+3. **Doktrin im Master:** §2.A1a, Abschnitt „Nullbedingung / Anker“,
+   Haus↔Fach-Tabelle, `CLAUDE.md.template`, `measure-script.py.template`,
+   `test-area.py.template`, `arbeitsstandard-init.py`, Agent
+   `experiment-preflight`, Skill `run-experiment` (je auch die Kopie im
+   `thesis-starter/`). Dann `lib sync pull` in die Repos.
+4. **Bestand: 14 Protokolle** (counterfactual-worlds 8, uniagent 3,
+   paper-organization 2, fallacy-datasets 1). Eingefrorene Protokolle sind
+   Registrierungen; Umschreiben änderte, was registriert war. Vorschlag:
+   nicht anfassen; labkit akzeptiert die alten Buchstaben nur für
+   Protokolle mit `Frozen before run: yes` vor dem Stichtag. Das ist ein
+   Alias gegen die Hausregel „an der Quelle umbenennen“ — bewusst, weil
+   datiert und auslaufend. **Offen: Nutzer entscheidet.**
+
+**Offen, vor Schritt 1 zu entscheiden — Kennungen in Prosa oder als Daten?**
+Heute zieht `intent-check` die Kennungen per Regex aus dem Fließtext und
+sieht nur Existenz, nie den Wert; Schwellen wohnen doppelt, als Konstante im
+Skript (`MIN_YIELD`, `MARGIN`) und als Zahl im Protokolltext. preregister
+registriert Vorhersagen als YAML mit auswertbarem Vergleich
+(`comparison: "thompson - ucb < -20"`, `examples/bandit_study/prereg.yaml`);
+`prereg` (reproducible-science) bleibt bei Markdown (`PREREG.md`, Hash über
+den Text). Kandidat: das Protokoll bleibt Markdown, die Versprechen ziehen
+in einen YAML-Block im Kopf (id, Art, Schlüssel, Konstante, ein Satz) —
+das Skript liest die Konstante von dort, der Freeze-Hash deckt sie. Wenn,
+dann im selben Zug wie die Umbenennung, sonst wandern 14 Protokolle zweimal.
+
+**Beleg:** Diskussion 2026-10-06, Abgleich mit Registered-Reports-Guidelines
+und dem Code von preregister, sealedlab, prereg —
+`~/work/resources/dev-environment/vorregistrierungs-werkzeuge-vs-labkit.md`.
+Die Kennungen sind die Übergabe-Einheit zwischen Agenten (§2.A1a); ein
+externer Leser kann `[S]`, `[W]` heute keinem Fachbegriff zuordnen, und
+„stop rule“ führt ihn auf den falschen.
+
+**Auslöser:** Punkt 5 (Englisch als Master) oder das nächste neue Protokoll,
+je nachdem, was zuerst kommt — Schritt 0 sofort. **Prüfstelle:**
+`ID_IN_PROTOCOL` in `labkit/intent_check.py`; solange dort `[KSWN]`
+steht, ist der Punkt offen.
