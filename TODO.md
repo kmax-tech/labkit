@@ -293,11 +293,11 @@ H (`h1`, hits@1; außerdem in Vorregistrierungen die Hypothese).
    *futility*, sondern eine outcome-neutral condition; Weiche ist
    conditional analysis, nicht „decision rule“ (zu breit — K und S sind
    auch Entscheidungsregeln).
-1. **labkit:** eine Heimat für das Alphabet — `ID_IN_PROTOCOL`, `ID_KEY`
-   in `intent_check.py` und die Kopie `INTENT_KEY` in `recheck.py:36`
-   (heute zwei Wahrheiten) aus einer Konstante; `code_check.py` importiert
-   schon. Tests: Kollisionsfälle (`f1_score`, `p1`, `q1` sind keine
-   Kennungen), alte Buchstaben nur nach Stichtag-Regel (Schritt 4).
+1. ~~**labkit:** eine Heimat für das Alphabet~~ — **erledigt 2026-10-06**
+   (`bbb5d9a`): `labkit/promises.py` ist die Heimat; `intent_check`,
+   `recheck`, `code_check` und `finalize` importieren von dort.
+   Kollisionstests in `tests/test_promises.py`. Altbuchstaben gelten
+   weiter ohne Stichtag — der kommt mit Schritt 4.
 2. **Template + Feld-Guide** (`experiment-protocol.md.template`,
    `protocol-field-guide.md`): Feld-Label „stop rule“ →
    „admissibility condition“, Schlüsselwörter für `protocol-check`
@@ -315,7 +315,11 @@ H (`h1`, hits@1; außerdem in Vorregistrierungen die Hypothese).
    Alias gegen die Hausregel „an der Quelle umbenennen“ — bewusst, weil
    datiert und auslaufend. **Offen: Nutzer entscheidet.**
 
-**Offen, vor Schritt 1 zu entscheiden — Kennungen in Prosa oder als Daten?**
+**Entschieden 2026-10-06: als Daten** — TOML-Block statt YAML
+(stdlib-only), gebaut in 1a (`docs/promise-block.md`). Die Abwägung, wie
+sie vorher stand:
+
+**Vorher offen — Kennungen in Prosa oder als Daten?**
 Heute zieht `intent-check` die Kennungen per Regex aus dem Fließtext und
 sieht nur Existenz, nie den Wert; Schwellen wohnen doppelt, als Konstante im
 Skript (`MIN_YIELD`, `MARGIN`) und als Zahl im Protokolltext. preregister
@@ -336,5 +340,6 @@ externer Leser kann `[S]`, `[W]` heute keinem Fachbegriff zuordnen, und
 
 **Auslöser:** Punkt 5 (Englisch als Master) oder das nächste neue Protokoll,
 je nachdem, was zuerst kommt — Schritt 0 sofort. **Prüfstelle:**
-`ID_IN_PROTOCOL` in `labkit/intent_check.py`; solange dort `[KSWN]`
-steht, ist der Punkt offen.
+`labkit/promises.py` — Schritt 1 ist erledigt; offen sind Schritt 0
+und der Rollout (Schritte 2–4), bis Template und Feld-Guide `[C]/[A]/[B]`
+stempeln.
