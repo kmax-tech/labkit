@@ -523,6 +523,27 @@ def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
     hits and loses only the keyword half.
     """
     hits: dict[str, list[str]] = {}
+    for key, where in code_keys(area).items():
+        if suffixed_only and "_" not in key:
+            continue
+        m = ID_KEY.match(key)
+        assert m is not None, f"code_keys returned a non-id key {key!r}"
+        hits.setdefault(m.group(1), []).extend(where)
+    for locs in hits.values():
+        locs.sort()
+    return hits
+
+
+def code_keys(area: Path) -> dict[str, list[str]]:
+    """Full intent keys the area's source mentions, key -> ["file:line", ...].
+
+    The same scan as `code_ids` (string literals, keyword arguments in
+    calls), but keeping the whole key: a promise block declares `c1_pass`,
+    and `"c1_passed"` in the code answers the id, not the key. Preflight
+    holds the block's keys to this, before any run (Durchstich 2026-10-06:
+    a renamed key surfaced only after the run).
+    """
+    hits: dict[str, list[str]] = {}
     for path in sorted(area.glob("scripts/*.py")) + sorted(
             area.glob("analysis/*.py")):
         try:
@@ -531,15 +552,11 @@ def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
             continue
         for lineno, line in enumerate(source.splitlines(), 1):
             for m in ID_LITERAL.finditer(line):
-                if suffixed_only and not m.group(2):
-                    continue
-                hits.setdefault(m.group(1).lower(), []).append(
-                    f"{path.name}:{lineno}")
+                key = (m.group(1) + (m.group(2) or "")).lower()
+                hits.setdefault(key, []).append(f"{path.name}:{lineno}")
         for name, lineno in _keyword_names(source, path):
-            m = ID_KEY.match(name.lower())
-            if not m or (suffixed_only and "_" not in name):
-                continue
-            hits.setdefault(m.group(1), []).append(f"{path.name}:{lineno}")
+            if ID_KEY.match(name.lower()):
+                hits.setdefault(name.lower(), []).append(f"{path.name}:{lineno}")
     return hits
 
 

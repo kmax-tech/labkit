@@ -58,9 +58,11 @@ import sys
 from pathlib import Path
 
 try:
-    from labkit.intent_check import ID_IN_PROTOCOL, code_ids
+    from labkit import promises
+    from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 except ImportError:  # vendored flat copies (student repos)
-    from intent_check import ID_IN_PROTOCOL, code_ids  # type: ignore
+    import promises  # type: ignore
+    from intent_check import ID_IN_PROTOCOL, code_ids, code_keys  # type: ignore
 
 
 # --- source analysis ------------------------------------------------------
@@ -420,14 +422,13 @@ def check_intent_ids(area: Path, protocol: Path) -> list[str]:
     `intent-check` asks the same question of the metrics at report time, when
     the tokens are already spent. Here the answer is still cheap.
     """
-    registered = {m.group(1).lower()
-                  for m in ID_IN_PROTOCOL.finditer(
-                      protocol.read_text(encoding="utf-8"))}
+    text = protocol.read_text(encoding="utf-8")
+    findings = promise_block_findings(area, protocol, text)
+    registered = {m.group(1).lower() for m in ID_IN_PROTOCOL.finditer(text)}
     if not registered:
-        return []
+        return findings
     in_code = code_ids(area)
     unmistakable = code_ids(area, suffixed_only=True)
-    findings = []
     for i in sorted(registered - set(in_code)):
         findings.append(
             f"BLOCKER · {protocol.name} · [{i.upper()}] is registered, but no "
@@ -441,6 +442,40 @@ def check_intent_ids(area: Path, protocol: Path) -> list[str]:
             f"number gets reported that nobody registered · §2.A1a · register "
             f"it or rename the key")
     return findings
+
+
+def promise_block_findings(area: Path, protocol: Path, text: str) -> list[str]:
+    """The promise block against the code, before any run (guaranteed tier).
+
+    Three things a run would otherwise discover after the tokens are spent:
+    the block does not parse, a declared scope names code that is not there
+    (runlog refuses the run), a declared key appears nowhere in the code
+    (intent-check fails after the run). Exact key, not id: `"c1_passed"`
+    does not answer a promise declaring `c1_pass` (Durchstich 2026-10-06).
+    """
+    try:
+        block = promises.parse_block(text)
+    except promises.PromiseError as exc:
+        return [f"BLOCKER · {protocol.name} · promise block: {exc} · §2.A1a · "
+                f"fix the block"]
+    if block is None:
+        return []
+    out = []
+    keys = code_keys(area)
+    for p in block.promises:
+        try:
+            promises.scope_sha(area, p.scope)
+        except promises.PromiseError as exc:
+            out.append(f"BLOCKER · {protocol.name} · [{p.id}] declared scope: "
+                       f"{exc} · runlog refuses the run · fix the scope")
+        if p.key not in keys:
+            near = sorted(k for k in keys if k.startswith(p.id.lower()))
+            hint = f" (the code has {', '.join(near)})" if near else ""
+            out.append(f"BLOCKER · {protocol.name} · [{p.id}] declares key "
+                       f"'{p.key}', which no script mentions{hint} · intent-check "
+                       f"fails after the run · report the declared key or fix "
+                       f"the block")
+    return out
 
 
 def schema_facts(area: Path) -> str:
