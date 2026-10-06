@@ -29,7 +29,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import promises, runlog
+from labkit import promises, runs
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
 #: reproduce: runlog's duration, llm's retry counter (the stamped evaluate()
@@ -49,16 +49,16 @@ class Verdict:
 
 def run_dir(area: Path, run_id: str | None = None) -> Path:
     """The run to recheck against: `run_id`, or the newest completed run."""
-    runs = area / "runs"
+    runs_dir = area / "runs"
     if run_id is not None:
-        d = runs / run_id
-        state = runlog.completion_state(d) if d.is_dir() else "missing"
+        d = runs_dir / run_id
+        state = runs.completion_state(d) if d.is_dir() else "missing"
         if state != "completed":
             raise SystemExit(f"recheck: {d} is not a completed run ({state})")
         return d
-    done = runlog.completed_runs(area)
+    done = runs.completed_runs(area)
     if not done:
-        raise SystemExit(f"recheck: no completed run under {runs}")
+        raise SystemExit(f"recheck: no completed run under {runs_dir}")
     return done[-1]
 
 
@@ -86,7 +86,7 @@ def scopes_unchanged(run: Path, area: Path) -> None:
     promise block — and run dirs without config.json, which predate it —
     have nothing to compare and pass.
     """
-    recorded = (runlog.read_run_config(run) or {}).get("promises")
+    recorded = (runs.read_run_config(run) or {}).get("promises")
     changed = promises.scope_drift(recorded, area)
     if changed:
         raise SystemExit(f"recheck: declared scope changed since run {run.name}: "
@@ -102,7 +102,7 @@ def block_unchanged(run: Path, area: Path) -> None:
     nobody registered before the number (Durchstich 2026-10-06). The bound
     protocol's block must be the one the run recorded.
     """
-    cfg = runlog.read_run_config(run) or {}
+    cfg = runs.read_run_config(run) or {}
     rel = (cfg.get("protocol") or {}).get("path")
     if rel is None:
         return                              # unbound or legacy: nothing to hold

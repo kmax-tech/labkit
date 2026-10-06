@@ -66,9 +66,9 @@ import time
 from pathlib import Path
 
 try:
-    from labkit import runlog
+    from labkit import runs
 except ImportError:                      # vendored flat copy (student repos)
-    import runlog
+    import runs  # type: ignore
 
 _HELD: set[tuple[str, str]] = set()      # (endpoint, alias) held by this process
 _FILES: dict[tuple[str, str], Path] = {}
@@ -123,7 +123,7 @@ def holders(endpoint: str) -> list[dict]:
         if rec.get("pid") == os.getpid():
             out.append(rec)
             continue
-        if runlog.is_alive(rec.get("pid"), rec.get("script")) is False:
+        if runs.is_alive(rec.get("pid"), rec.get("script")) is False:
             f.unlink(missing_ok=True)
             continue
         out.append(rec)

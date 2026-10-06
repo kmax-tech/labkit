@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))          # the package under test
 
-from labkit import runlog  # noqa: E402
+from labkit import runlog, runs  # noqa: E402
 
 
 def _run_main(argv):
@@ -61,8 +61,8 @@ class TestWait(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             run_dir = Path(d) / "runs" / "2026-09-09T10-00-00_live"
             run_dir.mkdir(parents=True)
-            # own pid + our real command line -> _is_alive says True
-            me = runlog._command_of(os.getpid()) or "python"
+            # own pid + our real command line -> is_alive says True
+            me = runs._command_of(os.getpid()) or "python"
             (run_dir / "config.json").write_text(json.dumps(
                 {"pid": os.getpid(), "script": me.split()[0]}),
                 encoding="utf-8")

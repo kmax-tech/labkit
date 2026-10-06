@@ -81,7 +81,7 @@ def ledger_ids(metrics: dict) -> set[str]:
 
 
 try:
-    from labkit.runlog import RunConfigError, completed_runs, read_run_config, run_state
+    from labkit.runs import RunConfigError, completed_runs, read_run_config, run_state
 except ImportError:                       # vendored flat copies (student repos)
     class RunConfigError(ValueError):  # type: ignore[no-redef]
         """Fallback: an unreadable config.json."""
@@ -97,7 +97,7 @@ except ImportError:                       # vendored flat copies (student repos)
             raise RunConfigError(f"{cfg_file}: unreadable run metadata ({exc})") from exc
 
     def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
-        """Fallback for a runlog too old to know completion markers: then
+        """Fallback for a runs module too old to know completion markers: then
         every run in reach is a legacy run, and metrics.json is its marker."""
         return "completed" if (run_dir / "metrics.json").is_file() else "crashed"
 

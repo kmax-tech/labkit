@@ -1,4 +1,4 @@
-"""Tests for `runlog._is_alive` — the question "is this run still going?".
+"""Tests for `runs.is_alive` — the question "is this run still going?".
 
 Why this deserves tests: the working standard says what is currently running
 gets **looked up, not asked about**. A wrong answer is therefore more
@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))          # the package under test
 
 from labkit import runlog  # noqa: E402
-from labkit.runlog import _command_of, _is_alive  # noqa: E402
+from labkit.runs import _command_of, is_alive  # noqa: E402
 
 
 class TestIsAlive(unittest.TestCase):
@@ -26,30 +26,30 @@ class TestIsAlive(unittest.TestCase):
         cmd = _command_of(os.getpid())
         self.assertIsNotNone(cmd, "ps unavailable — the test would be moot")
         token = next(t for t in cmd.split() if t)          # any real token
-        self.assertTrue(_is_alive(os.getpid(), token))
+        self.assertTrue(is_alive(os.getpid(), token))
 
     def test_a_recycled_pid_is_not_reported_as_running(self):
         """The 2026-08-15 case: the PID is alive but a different process."""
-        self.assertFalse(_is_alive(os.getpid(), "05_refusal.py"))
+        self.assertFalse(is_alive(os.getpid(), "05_refusal.py"))
 
     def test_a_dead_pid_is_false(self):
         dead = 999_999                                     # practically surely free
         try:
             os.kill(dead, 0)
         except ProcessLookupError:
-            self.assertFalse(_is_alive(dead, "irgendein_skript.py"))
+            self.assertFalse(is_alive(dead, "irgendein_skript.py"))
         except PermissionError:
             self.skipTest("PID unexpectedly taken")
 
     def test_unknown_is_none_not_true(self):
         """Without a script name the question is undecidable — better `None`
         than a false `True`."""
-        self.assertIsNone(_is_alive(os.getpid(), None))
-        self.assertIsNone(_is_alive(os.getpid(), ""))
+        self.assertIsNone(is_alive(os.getpid(), None))
+        self.assertIsNone(is_alive(os.getpid(), ""))
 
     def test_a_missing_pid_field_is_none(self):
-        self.assertIsNone(_is_alive(None, "x.py"))
-        self.assertIsNone(_is_alive("81892", "x.py"))      # string, not int
+        self.assertIsNone(is_alive(None, "x.py"))
+        self.assertIsNone(is_alive("81892", "x.py"))      # string, not int
 
 
 if __name__ == "__main__":

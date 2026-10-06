@@ -37,7 +37,7 @@ import sys
 from pathlib import Path
 
 from labkit import promises
-from labkit.runlog import read_run_config
+from labkit.runs import read_run_config
 from labkit.code_check import find_protocols
 from labkit.intent_check import (
     bound_runs,

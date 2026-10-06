@@ -1,4 +1,4 @@
-"""Every consumer that picks or accepts a run asks `runlog.completion_state`.
+"""Every consumer that picks or accepts a run asks `runs.completion_state`.
 
 Review 2026-10-06: the contract says a v2 run is complete only with BOTH
 metrics.json and completion.json (docs/protocol-run-binding.md), but
@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import intent_check, recheck, runlog, usability  # noqa: E402
+from labkit import intent_check, recheck, runlog, runs, usability  # noqa: E402
 
 DONE = "2026-10-06T10-00-00_aaaa"
 UNFINALIZED = "2026-10-06T11-00-00_bbbb"
@@ -50,9 +50,9 @@ class Twin(unittest.TestCase):
         self.unfinalized = make_run(self.area, UNFINALIZED, completion=False)
 
     def test_states(self):
-        self.assertEqual(runlog.completion_state(self.done), "completed")
-        self.assertEqual(runlog.completion_state(self.unfinalized), "unfinalized")
-        self.assertEqual(runlog.completed_runs(self.area), [self.done])
+        self.assertEqual(runs.completion_state(self.done), "completed")
+        self.assertEqual(runs.completion_state(self.unfinalized), "unfinalized")
+        self.assertEqual(runs.completed_runs(self.area), [self.done])
 
     def test_recheck_picks_the_completed_run(self):
         self.assertEqual(recheck.run_dir(self.area), self.done)
@@ -87,21 +87,21 @@ class Edges(unittest.TestCase):
     def test_legacy_run_without_schema_completes_on_metrics(self):
         area = Path(tempfile.mkdtemp())
         legacy = make_run(area, DONE, completion=False, schema=None)
-        self.assertEqual(runlog.completed_runs(area), [legacy])
+        self.assertEqual(runs.completed_runs(area), [legacy])
 
     def test_run_dir_without_config_is_legacy(self):
         area = Path(tempfile.mkdtemp())
         d = area / "runs" / DONE
         d.mkdir(parents=True)
         (d / "metrics.json").write_text("{}", encoding="utf-8")
-        self.assertEqual(runlog.completion_state(d), "completed")
+        self.assertEqual(runs.completion_state(d), "completed")
 
     def test_unreadable_config_is_loud(self):
         area = Path(tempfile.mkdtemp())
         d = make_run(area, DONE, completion=True)
         (d / "config.json").write_text("{broken", encoding="utf-8")
-        with self.assertRaises(runlog.RunConfigError) as cm:
-            runlog.completed_runs(area)
+        with self.assertRaises(runs.RunConfigError) as cm:
+            runs.completed_runs(area)
         self.assertIn("config.json", str(cm.exception))
 
 

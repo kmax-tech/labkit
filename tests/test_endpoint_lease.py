@@ -100,7 +100,7 @@ class TestEndpointLease(unittest.TestCase):
     def test_undecidable_holder_counts_as_alive(self):
         """Failure direction: a wrong refusal costs a message, a wrong
         admission costs the run. A record without a script name makes liveness
-        undecidable (runlog.is_alive -> None) -> the lease is kept."""
+        undecidable (runs.is_alive -> None) -> the lease is kept."""
         self._foreign(EP, "gpt-oss-vllm", pid=1, script="")
         with self.assertRaises(SystemExit):
             el.acquire("qwen25-32b-awq", [EP])

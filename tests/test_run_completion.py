@@ -24,7 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import runlog  # noqa: E402
+from labkit import runlog, runs  # noqa: E402
 
 
 def _area(d) -> Path:
@@ -57,7 +57,7 @@ def _run_dir(area: Path, name: str, *, schema: int | None = 2,
 
 def _state(d: Path, alive: bool | None = False) -> str:
     cfg = json.loads((d / "config.json").read_text(encoding="utf-8"))
-    return runlog.run_state(d, cfg, alive)
+    return runs.run_state(d, cfg, alive)
 
 
 class TestStates(unittest.TestCase):
@@ -105,7 +105,7 @@ class TestStates(unittest.TestCase):
             self.assertEqual(_state(d, alive=None), "unknown")
 
     def test_unknown_is_not_a_failed_state(self):
-        self.assertNotIn("unknown", runlog.FAILED_STATES)
+        self.assertNotIn("unknown", runs.FAILED_STATES)
 
     def test_a_live_process_is_running_even_half_finalized(self):
         with tempfile.TemporaryDirectory() as t:
