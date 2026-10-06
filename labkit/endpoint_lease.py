@@ -39,12 +39,24 @@ it. Ambiguity resolves conservatively: a holder whose liveness cannot be
 decided counts as alive — a wrong refusal costs a message, a wrong
 admission costs the run.
 
+Writing is atomic and serialised (review 2026-10-06). A record is written
+to a temporary name and renamed into place, so a reader never sees half a
+record; check-and-write runs under an `flock` on the endpoint directory, so
+two processes on this machine cannot both pass the check. The re-read after
+writing stays for lease directories on a shared filesystem, where `flock`
+may not hold. An unreadable record is NOT deleted on sight: within
+`UNREADABLE_GRACE_S` it counts as a holder (undecidable = busy); older than
+that it is damage, removed with a message — otherwise one broken file would
+block the slot forever.
+
 Deliberate exception, like `--no-verify`: `LABKIT_NO_ENDPOINT_LEASE=1`.
 """
 
 from __future__ import annotations
 
 import atexit
+import contextlib
+import fcntl
 import json
 import os
 import re
@@ -61,6 +73,8 @@ except ImportError:                      # vendored flat copy (student repos)
 _HELD: set[tuple[str, str]] = set()      # (endpoint, alias) held by this process
 _FILES: dict[tuple[str, str], Path] = {}
 _MUTEX = threading.Lock()
+#: an unreadable record younger than this counts as a holder
+UNREADABLE_GRACE_S = 60.0
 
 
 def lease_dir() -> Path:
@@ -91,8 +105,20 @@ def holders(endpoint: str) -> list[dict]:
     for f in sorted(d.glob("*.json")):
         try:
             rec = json.loads(f.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            f.unlink(missing_ok=True)
+        except FileNotFoundError:          # released between glob and read
+            continue
+        except (OSError, json.JSONDecodeError) as exc:
+            try:
+                age = time.time() - f.stat().st_mtime
+            except FileNotFoundError:
+                continue
+            if age < UNREADABLE_GRACE_S:
+                out.append({"alias": None, "pid": None, "script": f.name,
+                            "started": "", "unreadable": str(exc)})
+            else:
+                print(f"endpoint_lease: removing unreadable lease record {f} "
+                      f"({exc}; {age:.0f}s old)", file=sys.stderr)
+                f.unlink(missing_ok=True)
             continue
         if rec.get("pid") == os.getpid():
             out.append(rec)
@@ -102,6 +128,24 @@ def holders(endpoint: str) -> list[dict]:
             continue
         out.append(rec)
     return out
+
+
+@contextlib.contextmanager
+def _locked(d: Path):
+    """Exclusive flock on the endpoint directory for check-and-write."""
+    with open(d / ".lock", "a", encoding="utf-8") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
+
+
+def _write_atomic(f: Path, rec: dict) -> None:
+    """Write `rec` so that no reader ever sees a partial file."""
+    tmp = f.with_name(f".{f.name}.tmp")
+    tmp.write_text(json.dumps(rec), encoding="utf-8")
+    os.replace(tmp, f)
 
 
 def _conflict(endpoint: str, alias: str) -> dict | None:
@@ -138,26 +182,32 @@ def acquire(alias: str, endpoints: list[str] | None) -> None:
         with _MUTEX:
             if key in _HELD:
                 continue
-            other = _conflict(endpoint, alias)
-            if other is not None:
-                _refuse(endpoint, alias, other)
             d = lease_dir() / _slug(endpoint)
             d.mkdir(parents=True, exist_ok=True)
-            rec = {"alias": alias, "pid": os.getpid(), "script": _script(),
-                   "endpoint": endpoint,
-                   "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                   "argv": " ".join(sys.argv)[:300]}
-            f = d / f"{_slug(alias)}.{os.getpid()}.json"
-            f.write_text(json.dumps(rec), encoding="utf-8")
-            # Two processes can pass the check at the same moment. Re-read
-            # after writing: whoever is not the oldest live holder yields.
-            # A check without this second look is a lock with a race in it.
-            other = _conflict(endpoint, alias)
-            if other is not None and other.get("started", "") <= rec["started"]:
-                f.unlink(missing_ok=True)
-                _refuse(endpoint, alias, other)
+            with _locked(d):
+                _lease_one(d, endpoint, alias)
             _HELD.add(key)
-            _FILES[key] = f
+            _FILES[key] = d / f"{_slug(alias)}.{os.getpid()}.json"
+
+
+def _lease_one(d: Path, endpoint: str, alias: str) -> None:
+    """Check and write one record; caller holds the directory lock."""
+    other = _conflict(endpoint, alias)
+    if other is not None:
+        _refuse(endpoint, alias, other)
+    rec = {"alias": alias, "pid": os.getpid(), "script": _script(),
+           "endpoint": endpoint,
+           "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
+           "argv": " ".join(sys.argv)[:300]}
+    f = d / f"{_slug(alias)}.{os.getpid()}.json"
+    _write_atomic(f, rec)
+    # On a shared filesystem flock may not hold, and two processes can pass
+    # the check at the same moment. Re-read after writing: whoever is not
+    # the oldest live holder yields.
+    other = _conflict(endpoint, alias)
+    if other is not None and other.get("started", "") <= rec["started"]:
+        f.unlink(missing_ok=True)
+        _refuse(endpoint, alias, other)
 
 
 def release_all() -> None:

@@ -12,11 +12,14 @@ treatment: the properties are tested, not the happy path.
 nothing about who is using the model.
 """
 
+import contextlib
+import io
 import json
 import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -129,11 +132,52 @@ class TestEndpointLease(unittest.TestCase):
         el.acquire("qwen25-32b-awq", [EP])        # deliberate exception
         self.addCleanup(lambda: os.environ.pop("LABKIT_NO_ENDPOINT_LEASE", None))
 
-    def test_corrupt_record_is_dropped(self):
+    def _broken(self, age_s: float) -> Path:
         d = Path(self.tmp.name) / el._slug(EP)
         d.mkdir(parents=True, exist_ok=True)
-        (d / "broken.json").write_text("{not json", encoding="utf-8")
-        self.assertEqual(el.holders(EP), [])
+        f = d / "broken.json"
+        f.write_text("{not json", encoding="utf-8")
+        then = time.time() - age_s
+        os.utime(f, (then, then))
+        return f
+
+    def test_fresh_unreadable_record_counts_as_busy(self):
+        """Undecidable = busy: it may be another process' lease (review
+        2026-10-06 — deleting on sight could drop a live holder)."""
+        f = self._broken(age_s=1)
+        with self.assertRaises(SystemExit):
+            el.acquire("qwen25-32b-awq", [EP])
+        self.assertTrue(f.exists())
+
+    def test_old_unreadable_record_is_removed_loudly(self):
+        f = self._broken(age_s=el.UNREADABLE_GRACE_S + 5)
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            self.assertEqual(el.holders(EP), [])
+        self.assertFalse(f.exists())
+        self.assertIn("removing unreadable lease record", err.getvalue())
+
+    def test_record_is_written_whole_and_lock_is_not_a_record(self):
+        el.acquire("qwen25-32b-awq", [EP])
+        d = Path(self.tmp.name) / el._slug(EP)
+        names = sorted(p.name for p in d.iterdir())
+        self.assertEqual(names, [".lock", f"qwen25_32b_awq.{os.getpid()}.json"])
+        json.loads((d / names[1]).read_text(encoding="utf-8"))
+
+    def test_concurrent_acquires_of_two_aliases_admit_exactly_one(self):
+        """Two processes race for one endpoint with different aliases."""
+        code = ("import os,sys,time; sys.path.insert(0, %r);"
+                "from labkit import endpoint_lease as el;"
+                "time.sleep(max(0, float(sys.argv[2]) - time.time()));"
+                "el.acquire(sys.argv[1], [%r]); time.sleep(1.5); print('ADMITTED')"
+                % (str(Path(__file__).resolve().parents[1]), EP))
+        start = time.time() + 1.0
+        procs = [subprocess.Popen([sys.executable, "-c", code, alias, str(start)],
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                  text=True, env={**os.environ})
+                 for alias in ("alias-a", "alias-b")]
+        outs = [p.communicate(timeout=30)[0] for p in procs]
+        self.assertEqual(sum("ADMITTED" in o for o in outs), 1, outs)
 
     def test_llm_complete_leases_implicitly(self):
         """The point of the design: the SCRIPT does not have to remember."""
