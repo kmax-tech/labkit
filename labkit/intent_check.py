@@ -300,110 +300,14 @@ def _main(argv: list[str]) -> int:
     pid = protocol_id_of(text)
 
     if metrics_arg is not None:
-        if not metrics_arg.is_file():
-            print(f"intent-check: no such metrics file: {metrics_arg}")
-            return 2
-        # An explicit file still has to be a file that MAY answer for this
-        # protocol. Naming one was always a seatbelt, never a proof of
-        # belonging — where the run records a binding, that proof now
-        # exists and is checked (2026-09-26).
-        facts = run_facts(metrics_arg.parent)
-        # A v2 run that did not complete has numbers on disk and no finish —
-        # "nothing may report it" (protocol-run-binding.md). The automatic
-        # path already enforces this; the explicit path must do the same,
-        # otherwise naming the file is a loophole around completion. Legacy
-        # runs (schema < 2) predate completion markers, so they keep the old
-        # behaviour (metrics.json IS their completion evidence).
-        if facts and facts["schema"] >= 2 and facts["state"] != "completed":
-            print(f"intent-check: {metrics_arg.parent.name} is not completed "
-                  f"({facts['state']}) — an incomplete run's numbers may not "
-                  f"be reported, even when named explicitly.")
-            return 2
-        if facts and facts["schema"] >= 2 and facts["protocol_id"]:
-            if pid and facts["protocol_id"] != pid:
-                print(f"intent-check: {metrics_arg} belongs to protocol "
-                      f"{facts['protocol_id']}, this protocol is {pid} — "
-                      f"holding one protocol's promises against another "
-                      f"protocol's run answers nothing.")
-                return 2
-            if pid is None:
-                print(f"intent-check: WARNING — {metrics_arg} is bound to "
-                      f"{facts['protocol_id']}, but {protocol.name} carries "
-                      f"no `Protocol id:` (Standard 0.16) to hold it "
-                      f"against. Checking anyway, unverified.")
-        elif facts and facts["schema"] >= 2:
-            print(f"intent-check: WARNING — {metrics_arg} records no "
-                  f"binding (unbound run); nothing proves it belongs to "
-                  f"{protocol.name}. Explicit legacy choice, unverified.")
-        else:
-            print(f"intent-check: WARNING — {metrics_arg} predates run "
-                  f"bindings; nothing proves it belongs to {protocol.name}. "
-                  f"Explicit legacy choice, unverified.")
-        mpath = metrics_arg
+        chosen = choose_explicit(protocol, metrics_arg, pid)
     elif pid is not None:
-        # Standard 0.16 and up: the run says which protocol it belongs to,
-        # so the choice is a filter, not a guess. Only COMPLETED runs with
-        # this id take part — an unfinalized or corrupt run has numbers on
-        # disk and no finish, and a run bound elsewhere answers for another
-        # question entirely.
-        cands, rest = bound_runs(protocol.parent, pid)
-        if not cands:
-            print(f"intent-check: no completed run bound to {pid} "
-                  f"({protocol.name}) — nothing to hold the promises "
-                  f"against.")
-            if rest:
-                print(f"  {len(rest)} other run(s) in {protocol.parent}:")
-                for f in rest:
-                    print(f"    {f['dir'].name}: {f['why']}")
-            else:
-                print(f"  no runs in {protocol.parent} yet.")
-            print("  Name one explicitly with --metrics FILE if you know it "
-                  "belongs here.")
-            return 2
-        mpath, skipped = newest_with_intent_keys(cands)
-        assert mpath is not None, "cands is non-empty, so a metrics file exists"
-        if skipped:
-            print(f"intent-check: using {mpath.parent.name}/metrics.json "
-                  f"(newest bound run with intent keys; skipped {skipped} "
-                  f"newer bound run(s) without any).")
+        chosen = choose_bound(protocol, pid)
     else:
-        # Below Standard 0.16 nothing in a run names its protocol. Fail
-        # closed instead of guessing. `gate_metrics` picks by the area,
-        # not by the protocol — it cannot tell an s13 run from an s1 run,
-        # because nothing in a run says which protocol it belongs to. With
-        # one protocol in the area the guess is right by construction; with
-        # several it is a coin toss dressed as a check, so the caller names
-        # the run. The real fix is a protocol id in the run metadata; until
-        # then this flag is a seatbelt, not a proof of belonging (2026-09-26).
-        siblings = sorted(protocol.parent.glob("PROTOCOL-*.md"))
-        if len(siblings) > 1:
-            print(f"intent-check: {len(siblings)} protocols in "
-                  f"{protocol.parent} — nothing ties a run to one of them, "
-                  f"so name the run with --metrics FILE:")
-            for p in siblings:
-                here = " <- checking this one" if p.name == protocol.name else ""
-                print(f"  {p.name}{here}")
-            keyed, bare = runs_by_intent_keys(protocol.parent)
-            print(f"  candidate runs (intent keys reported): {len(keyed)}")
-            for p in keyed:
-                print(f"    {p}")
-            if bare:
-                print(f"  runs without intent keys ({len(bare)}): "
-                      f"{', '.join(p.parent.name for p in bare)}")
-            return 2
-
-        mpath, skipped = gate_metrics(protocol.parent)
-        if mpath is None:
-            print(f"intent-check: {len(reg)} id(s) registered "
-                  f"({', '.join(sorted(reg))}), no runs/*/metrics.json yet — "
-                  f"the contract is due at report time.")
-            return 0
-        if skipped:
-            print(f"intent-check: using {mpath.parent.name}/metrics.json "
-                  f"(newest with intent keys; skipped {skipped} newer "
-                  f"run(s) without any).")
-
-    assert mpath is not None, "every branch above returns or sets mpath"
+        chosen = choose_legacy(protocol, reg)
+    if isinstance(chosen, int):
+        return chosen
+    mpath = chosen
     try:
         metrics = json.loads(mpath.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -463,6 +367,125 @@ def check_block_against_run(block: "promises.PromiseBlock", mpath: Path,
                    f"{recorded.get('block_sha')}, the protocol now carries "
                    f"{block.sha} — the promises changed after the run.")
     return out
+
+
+# --- which metrics file answers: three ways, one per standard ---------------
+#
+# Each returns the chosen metrics.json, or an int: the exit code, with the
+# reason already printed. `_main` only dispatches, then checks.
+
+def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path | int:
+    """`--metrics FILE`: the named file, if it may answer for this protocol."""
+    if not metrics_arg.is_file():
+        print(f"intent-check: no such metrics file: {metrics_arg}")
+        return 2
+    # An explicit file still has to be a file that MAY answer for this
+    # protocol. Naming one was always a seatbelt, never a proof of
+    # belonging — where the run records a binding, that proof now
+    # exists and is checked (2026-09-26).
+    facts = run_facts(metrics_arg.parent)
+    # A v2 run that did not complete has numbers on disk and no finish —
+    # "nothing may report it" (protocol-run-binding.md). The automatic
+    # path already enforces this; the explicit path must do the same,
+    # otherwise naming the file is a loophole around completion. Legacy
+    # runs (schema < 2) predate completion markers, so they keep the old
+    # behaviour (metrics.json IS their completion evidence).
+    if facts and facts["schema"] >= 2 and facts["state"] != "completed":
+        print(f"intent-check: {metrics_arg.parent.name} is not completed "
+              f"({facts['state']}) — an incomplete run's numbers may not "
+              f"be reported, even when named explicitly.")
+        return 2
+    if facts and facts["schema"] >= 2 and facts["protocol_id"]:
+        if pid and facts["protocol_id"] != pid:
+            print(f"intent-check: {metrics_arg} belongs to protocol "
+                  f"{facts['protocol_id']}, this protocol is {pid} — "
+                  f"holding one protocol's promises against another "
+                  f"protocol's run answers nothing.")
+            return 2
+        if pid is None:
+            print(f"intent-check: WARNING — {metrics_arg} is bound to "
+                  f"{facts['protocol_id']}, but {protocol.name} carries "
+                  f"no `Protocol id:` (Standard 0.16) to hold it "
+                  f"against. Checking anyway, unverified.")
+    elif facts and facts["schema"] >= 2:
+        print(f"intent-check: WARNING — {metrics_arg} records no "
+              f"binding (unbound run); nothing proves it belongs to "
+              f"{protocol.name}. Explicit legacy choice, unverified.")
+    else:
+        print(f"intent-check: WARNING — {metrics_arg} predates run "
+              f"bindings; nothing proves it belongs to {protocol.name}. "
+              f"Explicit legacy choice, unverified.")
+    return metrics_arg
+
+
+def choose_bound(protocol: Path, pid: str) -> Path | int:
+    """Standard 0.16+: the newest completed run bound to `pid`."""
+    # Standard 0.16 and up: the run says which protocol it belongs to,
+    # so the choice is a filter, not a guess. Only COMPLETED runs with
+    # this id take part — an unfinalized or corrupt run has numbers on
+    # disk and no finish, and a run bound elsewhere answers for another
+    # question entirely.
+    cands, rest = bound_runs(protocol.parent, pid)
+    if not cands:
+        print(f"intent-check: no completed run bound to {pid} "
+              f"({protocol.name}) — nothing to hold the promises "
+              f"against.")
+        if rest:
+            print(f"  {len(rest)} other run(s) in {protocol.parent}:")
+            for f in rest:
+                print(f"    {f['dir'].name}: {f['why']}")
+        else:
+            print(f"  no runs in {protocol.parent} yet.")
+        print("  Name one explicitly with --metrics FILE if you know it "
+              "belongs here.")
+        return 2
+    mpath, skipped = newest_with_intent_keys(cands)
+    assert mpath is not None, "cands is non-empty, so a metrics file exists"
+    if skipped:
+        print(f"intent-check: using {mpath.parent.name}/metrics.json "
+              f"(newest bound run with intent keys; skipped {skipped} "
+              f"newer bound run(s) without any).")
+    return mpath
+
+
+def choose_legacy(protocol: Path, reg: set[str]) -> Path | int:
+    """Below Standard 0.16: by area, only where one protocol makes it safe."""
+    # Below Standard 0.16 nothing in a run names its protocol. Fail
+    # closed instead of guessing. `gate_metrics` picks by the area,
+    # not by the protocol — it cannot tell an s13 run from an s1 run,
+    # because nothing in a run says which protocol it belongs to. With
+    # one protocol in the area the guess is right by construction; with
+    # several it is a coin toss dressed as a check, so the caller names
+    # the run. The real fix is a protocol id in the run metadata; until
+    # then this flag is a seatbelt, not a proof of belonging (2026-09-26).
+    siblings = sorted(protocol.parent.glob("PROTOCOL-*.md"))
+    if len(siblings) > 1:
+        print(f"intent-check: {len(siblings)} protocols in "
+              f"{protocol.parent} — nothing ties a run to one of them, "
+              f"so name the run with --metrics FILE:")
+        for p in siblings:
+            here = " <- checking this one" if p.name == protocol.name else ""
+            print(f"  {p.name}{here}")
+        keyed, bare = runs_by_intent_keys(protocol.parent)
+        print(f"  candidate runs (intent keys reported): {len(keyed)}")
+        for p in keyed:
+            print(f"    {p}")
+        if bare:
+            print(f"  runs without intent keys ({len(bare)}): "
+                  f"{', '.join(p.parent.name for p in bare)}")
+        return 2
+
+    mpath, skipped = gate_metrics(protocol.parent)
+    if mpath is None:
+        print(f"intent-check: {len(reg)} id(s) registered "
+              f"({', '.join(sorted(reg))}), no runs/*/metrics.json yet — "
+              f"the contract is due at report time.")
+        return 0
+    if skipped:
+        print(f"intent-check: using {mpath.parent.name}/metrics.json "
+              f"(newest with intent keys; skipped {skipped} newer "
+              f"run(s) without any).")
+    return mpath
 
 
 def cli() -> None:
