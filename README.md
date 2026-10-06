@@ -255,6 +255,10 @@ Only what **more than one repo** uses lives here. Project-local helpers
 stay in the project (`lib/`) — a module moves here when it is needed for
 the second time.
 
-Not here: templates meant to be filled in (`~/.claude/resources/`, they are
-supposed to diverge) and prose references like the style guide (read, not
-imported).
+Not here: templates meant to be filled in (`~/.claude/resources/*.template`,
+they are supposed to diverge) and prose references that are read, not
+imported — the two style guides, `coding-style.md` (every line of code) and
+`writing-style-guide.md` (prose and LaTeX). Their masters live in
+`~/.claude/resources/`; every lab repo carries a stamped copy under `docs/`
+(`docs/coding-style.md`, `docs/writing-style-guide.md`), kept in step by
+`lib sync`.
