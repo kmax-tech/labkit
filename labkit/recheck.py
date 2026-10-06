@@ -86,22 +86,31 @@ def scopes_unchanged(run: Path, area: Path) -> None:
     promise block — and run dirs without config.json, which predate it —
     have nothing to compare and pass.
     """
-    cfg_file = run / "config.json"
-    if not cfg_file.is_file():
-        return
-    cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
-    recorded = cfg.get("promises")
-    if recorded is None:
-        return
-    changed = []
-    for pid, rec in sorted(recorded["ids"].items()):
-        now = promises.scope_sha(area, tuple(rec["scope"]))
-        if now != rec["scope_sha"]:
-            changed.append(f"[{pid}] {rec['scope_sha']} → {now}")
+    recorded = (runlog.read_run_config(run) or {}).get("promises")
+    changed = promises.scope_drift(recorded, area)
     if changed:
         raise SystemExit(f"recheck: declared scope changed since run {run.name}: "
                          + "; ".join(changed)
                          + " — rerun, or recheck from that run's commit")
+
+
+def block_unchanged(run: Path, area: Path) -> None:
+    """Refuse to hold a note whose promises changed after the run.
+
+    A lowered threshold can leave the verdict unchanged by chance — the
+    recomputation then agrees and the note looks held, against promises
+    nobody registered before the number (Durchstich 2026-10-06). The bound
+    protocol's block must be the one the run recorded.
+    """
+    cfg = runlog.read_run_config(run) or {}
+    rel = (cfg.get("protocol") or {}).get("path")
+    if rel is None:
+        return                              # unbound or legacy: nothing to hold
+    protocol = Path(rel) if Path(rel).is_absolute() else area / rel
+    block = promises.parse_block(protocol.read_text(encoding="utf-8"))
+    drift = promises.block_drift(cfg.get("promises"), block)
+    if drift:
+        raise SystemExit(f"recheck: run {run.name} {drift}")
 
 
 def rows_of(out: Path) -> list[dict]:
@@ -152,13 +161,14 @@ def holds(area: Path, out: Path, recompute: Callable[[list[dict]], dict], note: 
           run_id: str | None = None,
           numbers: Callable[[dict], list[str]] = plain_numbers,
           ignore: frozenset[str] = LABKIT_KEYS) -> Verdict:
-    """pin → scopes → agree → cited, for `area`'s newest run (or `run_id`).
+    """pin → scopes → block → agree → cited, for `area`'s newest run (or `run_id`).
 
     `numbers(metrics)` formats what the note must carry — pass your own when
     the note rounds. Raises SystemExit on the first disagreement."""
     run = run_dir(area, run_id)
     pin(run, out)
     scopes_unchanged(run, area)
+    block_unchanged(run, area)
     metrics = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
     grown = agree(metrics, recompute(rows_of(out)), ignore)
     wanted = numbers({k: v for k, v in metrics.items() if k not in ignore})

@@ -268,6 +268,38 @@ def scope_sha(base: Path, scope: tuple[str, ...]) -> str:
     return h.hexdigest()[:DIGEST_CHARS]
 
 
+def scope_drift(recorded: dict | None, base: Path) -> list[str]:
+    """`[C1] old → new` for every promise whose declared scope changed since
+    the run. `recorded` is the run's config.json `promises` (None: the run
+    predates the block — nothing to compare)."""
+    if recorded is None:
+        return []
+    out = []
+    for pid, rec in sorted(recorded["ids"].items()):
+        now = scope_sha(base, tuple(rec["scope"]))
+        if now != rec["scope_sha"]:
+            out.append(f"[{pid}] {rec['scope_sha']} → {now}")
+    return out
+
+
+def block_drift(recorded: dict | None, block: PromiseBlock | None) -> str | None:
+    """Why the protocol's promise block (`block`, as parsed now) is not the
+    one the run recorded, or None when it is (or neither side has one)."""
+    if recorded is None:
+        return (None if block is None else
+                f"the run recorded no promise block — it ran before the block "
+                f"existed or outside runlog; rerun so the number is bound to "
+                f"the promises (block {block.sha})")
+    if block is None:
+        return (f"the run ran under promise block {recorded['block_sha']}, the "
+                f"protocol now carries none — the promises were removed after "
+                f"the run")
+    if block.sha != recorded["block_sha"]:
+        return (f"ran under promise block {recorded['block_sha']}, the protocol "
+                f"now carries {block.sha} — the promises changed after the run")
+    return None
+
+
 def snapshot(block: PromiseBlock, base: Path) -> dict:
     """What a run records about its promises (config.json `promises`)."""
     return {"block_sha": block.sha,

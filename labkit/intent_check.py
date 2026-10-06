@@ -352,19 +352,10 @@ def check_block_against_run(block: "promises.PromiseBlock", mpath: Path,
         if p.key not in metrics:
             out.append(f"{mpath}: [{p.id}] declares key '{p.key}', which the "
                        f"run does not report.")
-    cfg_file = mpath.parent / "config.json"
-    recorded = None
-    if cfg_file.is_file():
-        recorded = json.loads(cfg_file.read_text(encoding="utf-8")).get("promises")
-    if recorded is None:
-        out.append(f"{mpath.parent.name}: the run recorded no promise block — "
-                   f"it ran before the block existed or outside runlog; "
-                   f"rerun so the number is bound to the promises "
-                   f"(block {block.sha}).")
-    elif recorded.get("block_sha") != block.sha:
-        out.append(f"{mpath.parent.name}: ran under promise block "
-                   f"{recorded.get('block_sha')}, the protocol now carries "
-                   f"{block.sha} — the promises changed after the run.")
+    recorded = (read_run_config(mpath.parent) or {}).get("promises")
+    drift = promises.block_drift(recorded, block)
+    if drift:
+        out.append(f"{mpath.parent.name}: {drift}.")
     return out
 
 

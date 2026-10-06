@@ -290,6 +290,23 @@ class Chain(unittest.TestCase):
         self.assertIn("[B1] appears in the text but not in the promise block", out)
         self.assertIn("[A1] is in the promise block but never named", out)
 
+    def test_recheck_refuses_a_changed_block(self):
+        """Durchstich 2026-10-06: the threshold lowered after the run left
+        the verdict unchanged, and recheck held the note anyway."""
+        run = self.complete(self.start(), self.GOOD)
+        recheck.block_unchanged(run, self.area)             # unchanged: passes
+        self.protocol.write_text(protocol_text(block(C1.replace("0.7", "0.5"), A1)),
+                                 encoding="utf-8")
+        with self.assertRaises(SystemExit) as cm:
+            recheck.block_unchanged(run, self.area)
+        self.assertIn("promises changed after the run", str(cm.exception))
+
+    def test_drift_helpers_without_a_block(self):
+        self.assertEqual(promises.scope_drift(None, self.area), [])
+        self.assertIsNone(promises.block_drift(None, None))
+        rec = {"block_sha": "abc", "ids": {}}
+        self.assertIn("now carries none", promises.block_drift(rec, None) or "")
+
     def test_recheck_refuses_a_changed_scope(self):
         run = self.complete(self.start(), self.GOOD)
         recheck.scopes_unchanged(run, self.area)            # unchanged: passes
