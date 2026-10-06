@@ -55,9 +55,12 @@ does not work outside the author's machine; its tests do not need them.
 - **Language.** Code, identifiers, docstrings, docs in `docs/`, commit
   messages: English. Talk to the user, and write `TODO.md` entries, in
   German.
-- **Backward compatibility.** Protocols without a promise block, the legacy
-  letters K/S/W/N, and the flat-copy import fallbacks (`except ImportError`
-  for vendored student repos) keep working.
+- **Legacy is a hook, not a branch.** Build for the current format. What
+  must still read an old one (protocols without a promise block, the
+  letters K/S/W/N, runs without `schema_version`, the flat-copy import
+  fallbacks) stays working but lives apart — one function, later
+  `labkit/legacy.py` — called where the new format does not apply, with a
+  removal date. Do not extend legacy paths; iterate fast.
 - **Order before features.** Build what `TODO.md` puts next, nothing ahead
   of it: static-evidence checks wait for the benchmark pilot to show they
   are needed. Rollout to other repos, templates and the house doctrine is a

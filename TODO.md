@@ -16,6 +16,13 @@ Jede Prüfung gehört einer von drei Stufen an und sagt das in ihrer Meldung:
 ausgegeben. Begründung, Stand der Technik und Paper-Rahmen:
 `~/work/projects/labkit-paper/` (Paper-Plan, `stand-der-technik-kette.md`).
 
+**Altlasten (2026-10-06):** Neues wird für das neue Format gebaut. Was
+alte Formate weiter lesen muss, wohnt getrennt — eine Funktion, später ein
+Modul `labkit/legacy.py` — und ist ein Haken, kein Zweig quer durch den
+Kern: ein Aufruf an der Stelle, wo das neue Format nicht greift, mit
+Auslaufdatum. Altlasten werden nicht ausgebaut, nur gehalten, bis sie
+rausgehen. Wir iterieren schnell; Kompatibilität ist kein Ziel.
+
 | Schritt | Inhalt | Stand |
 |---|---|---|
 | 0 | Stand der Technik, Positionierung | erledigt 2026-10-06 |
@@ -343,3 +350,30 @@ je nachdem, was zuerst kommt — Schritt 0 sofort. **Prüfstelle:**
 `labkit/promises.py` — Schritt 1 ist erledigt; offen sind Schritt 0
 und der Rollout (Schritte 2–4), bis Template und Feld-Guide `[C]/[A]/[B]`
 stempeln.
+
+## 8. Kopffelder als Daten: `[protocol]` im TOML-Block
+
+**Was:** Die Felder, die eine Maschine liest — `Standard`, `Protocol id`,
+`Type`, `Cost`, `Frozen before run`, `Preflight audit` — ziehen als
+Tabelle `[protocol]` in denselben TOML-Block wie die Versprechen; ein
+Parser (`tomllib`), exakte Werte, keine Schlüsselwort-Regex. Die
+Prosafelder (Frage, Begriffe, Einheit, Ausschlüsse, Konfunde) bleiben
+Markdown, weil ein Mensch sie schreibt und liest; ihre Prüfung erwartet
+das exakte Label aus dem Template statt beliebiger Schlüsselwörter.
+TOML, nicht YAML: stdlib-only.
+
+**Altlasten:** Der Regex-Pfad für Protokolle ohne `[protocol]`-Tabelle
+wandert in eine eigene Funktion bzw. `labkit/legacy.py` — ein Haken mit
+Auslaufdatum, nicht ausgebaut (Leitsatz oben). Im selben Zug die schon
+vorhandenen Altpfade dorthin: Altbuchstaben K/S/W/N, Läufe ohne
+`schema_version`, Protokolle unter Standard 0.16 (`choose_legacy`).
+
+**Beleg:** Durchstich 2026-10-06 — ein handgeschriebenes `**Terms:**`
+fiel durch, weil das Muster `terms of` verlangt; die Protokoll-ID hatte
+drei eigene Regex-Kopien, die schon verschieden reagierten (Review
+2026-10-06, behoben in `598f566`).
+
+**Auslöser:** der Rollout von Punkt 7 (Template und Feld-Guide auf
+`[C]/[A]/[B]`) — das Template ändert sich dann nur einmal.
+**Prüfstelle:** `labkit/experiment-protocol.md.template`; solange der Kopf
+dort Prosa-Felder stempelt, ist der Punkt offen.
