@@ -11,6 +11,12 @@ requires-python = ">=3.12"
 # environment of every experiment that imports it.
 dependencies = []
 
+# Development only, never pulled into an experiment: `pip install -e '.[dev]'`.
+# Named so a fresh environment (a cloud session, CI) runs the same suite as
+# the local one instead of whichever interpreter happens to carry pytest.
+[project.optional-dependencies]
+dev = ["pytest"]
+
 [project.scripts]
 protocol-check = "labkit.protocol_check:cli"
 runlog = "labkit.runlog:cli"
