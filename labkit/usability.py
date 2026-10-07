@@ -54,7 +54,7 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from labkit import agent_transcript, protocol_reading, runs
+from labkit import agent_transcript, code_navigation, protocol_reading, runs
 
 RES = Path.home() / ".claude" / "resources"
 #: The house scaffolder — the thing under test, outside this package.
@@ -640,6 +640,53 @@ def terms(root: Path) -> int:
     return 0
 
 
+def nav(repo: Path, questions: Path, out: Path) -> int:
+    """Write `<out>.nav-prompt.md` for a cold agent in `repo`."""
+    qs = code_navigation.load_questions(questions)
+    for q in qs:
+        for t in q.truth:
+            code_navigation.symbol_span(repo, t)  # a stale truth refuses now
+    answer = out.with_name(out.name + ".nav-answer.json")
+    prompt = out.with_name(out.name + ".nav-prompt.md")
+    prompt.write_text(code_navigation.prompt(repo, qs, str(answer)), encoding="utf-8")
+    print(f"navigation prompt → {prompt}\nthe agent writes → {answer}")
+    return 0
+
+
+def nav_score(repo: Path, questions: Path, out: Path, transcript: Path | None) -> int:
+    """Hold the answers to the truth; `<out>.nav.json`."""
+    qs = code_navigation.load_questions(questions)
+    answer = out.with_name(out.name + ".nav-answer.json")
+    if not answer.is_file():
+        raise SystemExit(f"usability: {answer} missing — has the agent answered?")
+    try:
+        got = code_navigation.score(answer.read_text(encoding="utf-8"), qs, repo)
+    except (ValueError, code_navigation.NavigationError) as exc:
+        raise SystemExit(f"usability: {exc}") from exc
+    eff = code_navigation.effort(transcript, repo) if transcript else None
+    out.with_name(out.name + ".nav.json").write_text(
+        json.dumps(
+            {"found": [asdict(f) for f in got], "effort": asdict(eff) if eff else None},
+            indent=1,
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    for f in got:
+        mark = "found" if f.found else "file only" if f.file_right else "missed"
+        print(f"  {mark:9} {f.id}: {f.answer} (truth {f.truth})")
+    print(
+        f"  {sum(f.found for f in got)}/{len(got)} found"
+        + (
+            f" · {eff.seconds}s · {eff.calls} calls {eff.by_tool} · "
+            f"{len(eff.files_opened)} files opened"
+            if eff
+            else ""
+        )
+    )
+    return 0
+
+
 def read_score(root: Path, transcript: Path | None) -> int:
     """Hold the reader's answer to the run's number; `<dir>.reader.json`."""
     _, truth = _bound_protocol(root)
@@ -909,7 +956,33 @@ def main(argv: list[str]) -> int:
         "terms", help="the reader's unclear terms against the Summary and Terms"
     )
     te.add_argument("dir")
+    nv = sub.add_parser(
+        "nav", help="write the prompt for a cold agent finding its way in a repo"
+    )
+    nv.add_argument("repo")
+    nv.add_argument("--questions", required=True, help="TOML: questions and truth")
+    nv.add_argument(
+        "--out", required=True, help="prefix of the prompt and answer files"
+    )
+    ns = sub.add_parser("nav-score", help="hold the navigation answers to the truth")
+    ns.add_argument("repo")
+    ns.add_argument("--questions", required=True)
+    ns.add_argument("--out", required=True)
+    ns.add_argument("--transcript", help="the agent's transcript: its effort")
     args = ap.parse_args(argv)
+    if args.cmd == "nav":
+        return nav(
+            Path(args.repo).resolve(),
+            Path(args.questions).resolve(),
+            Path(args.out).resolve(),
+        )
+    if args.cmd == "nav-score":
+        return nav_score(
+            Path(args.repo).resolve(),
+            Path(args.questions).resolve(),
+            Path(args.out).resolve(),
+            Path(args.transcript).resolve() if args.transcript else None,
+        )
     if args.cmd == "glance":
         return glance(Path(args.dir).resolve())
     if args.cmd == "glance-score":

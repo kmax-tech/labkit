@@ -5,6 +5,19 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.61.0 — 2026-10-07
+
+### Added
+
+- **`usability nav` / `nav-score`** (`labkit/code_navigation.py`) — how
+  fast a newcomer finds their way in a repo's code. A cold agent gets
+  questions that describe a behaviour, never a name, and answers each with
+  `path:line`; the truth is a function, class or module-level name in a
+  TOML question file, resolved from the source with `ast` (a truth that no
+  longer exists refuses to score). Effort comes from the agent's
+  transcript: calls by tool, files opened, seconds. Built to measure before
+  a navigation rule enters the coding style.
+
 ## 0.60.1 — 2026-10-07
 
 ### Changed
