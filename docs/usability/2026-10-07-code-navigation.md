@@ -56,3 +56,56 @@ Consequences:
    on the same two repos.
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round1/`.
+
+## Round 2 (2026-10-07): questions in a person's words, along the flow
+
+The same two repos, four new cold agents, five questions each with no
+identifier in them ("the model claims a document says something it does
+not say — where is that caught?", "follow one application from start to
+finish: where are its steps run in order?").
+
+| repo | found (truth as registered) | found (two truths widened, see below) | seconds | tool calls |
+|---|---|---|---|---|
+| uniagent, agent 1 | 4/5 | 5/5 | 89 | 10 |
+| uniagent, agent 2 | 4/5 | 5/5 | 54 | 10 |
+| labkit, agent 1 | 4/5 | 5/5 | 45 | 9 |
+| labkit, agent 2 | 4/5 | 5/5 | 63 | 11 |
+
+**Two truths were widened after the answers were read**, both because the
+answers were right and the registered truth too narrow: uniagent's "which
+tests are switched on" — both agents answered `rulebase/register.py:
+load_profile`, whose docstring reads "Load the profile that says which
+checks a run activates"; labkit's "instruction text of the empty form left
+in a filled record" — both answered inside `protocol_check.main`, where
+the comparison is done (`template_lines` only builds the set). Large truth
+spans (`runlog.Run`, 217 lines; `FrameworkClassifier`, 247) are lenient.
+
+How they searched (every command read):
+
+- Again no agent opened a README, a code map or `docs/architecture.md`.
+- They built the map themselves: a file listing, then `grep -n "^def
+  \|^class "` over the packages whose names fit (`deciding/`, `model/`,
+  `running/`, `rulebase/`; `scope_sha.py`, `runs.py`), then searches for
+  synonyms of the question's words ("verbatim", "hallucin", "ground",
+  "stale", "audited", "instruction", "placeholder"), then the first lines
+  of the hits.
+- What a name did not say, a first docstring line or an error kind did:
+  `load_profile`'s docstring, the error kind `quote_rejected`.
+- The one thing found only by reading a long body is the one without a
+  name of its own: the leftover-template check inside a 250-line `main`.
+
+Consequences, written into the coding style as CS-015 Make the code
+findable by name (dotfiles `coding-style.md`):
+
+1. The names and the first docstring lines are the map an agent reads;
+   logic someone will look for gets its own function named for what it
+   does, its first docstring line carries the word a person would search.
+2. Package, file, error-kind and constant names that say what they mean
+   are search hits.
+3. A README code map is not what agents use; it may still orient a person,
+   who was not measured here.
+4. The probe saturates: both repos at 20/20 with comparable effort. To
+   separate repos or rule changes it needs harder questions (several hops
+   along the flow) or a weaker reader.
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round2/`.
