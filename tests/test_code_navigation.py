@@ -229,5 +229,49 @@ class NavAuditFixes(unittest.TestCase):
         self.assertEqual(e.files_opened, ["pkg/mod.py"])
 
 
+class Choices(unittest.TestCase):
+    TOML = (
+        '[[choice]]\nid = "c1"\nquestion = "Can warnings alone exit 1?"\n'
+        'choices = ["yes", "no"]\ntruth = ["no"]\n'
+        '[[choice]]\nid = "c2"\nquestion = "Which stations need a run?"\n'
+        'choices = ["a", "b", "c"]\ntruth = ["a", "c"]\n'
+    )
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.path = Path(self.tmp.name) / "q.toml"
+        self.path.write_text(self.TOML)
+        self.choices = cn.load_choices(self.path)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_exactly_the_right_set_is_right(self):
+        got = cn.score_choices('{"c1": ["no"], "c2": ["c", "a"]}', self.choices)
+        self.assertEqual(got, {"c1": True, "c2": True})
+
+    def test_a_subset_or_superset_is_wrong(self):
+        got = cn.score_choices('{"c1": ["yes"], "c2": ["a"]}', self.choices)
+        self.assertEqual(got, {"c1": False, "c2": False})
+
+    def test_an_answer_outside_the_choices_is_refused(self):
+        with self.assertRaises(ValueError):
+            cn.score_choices('{"c1": ["maybe"], "c2": []}', self.choices)
+        with self.assertRaises(ValueError):
+            cn.score_choices('{"c1": "no", "c2": []}', self.choices)
+
+    def test_a_truth_outside_the_choices_refuses_at_load(self):
+        self.path.write_text(
+            '[[choice]]\nid = "c"\nquestion = "q"\nchoices = ["yes", "no"]\ntruth = ["perhaps"]\n'
+        )
+        with self.assertRaises(cn.NavigationError):
+            cn.load_choices(self.path)
+
+    def test_the_prompt_lists_the_choices(self):
+        p = cn.nav_prompt(Path("/r"), [], "/tmp/a.json", (), tuple(self.choices))
+        self.assertIn("'yes', 'no'", p)
+        self.assertNotIn("truth", p)
+
+
 if __name__ == "__main__":
     unittest.main()

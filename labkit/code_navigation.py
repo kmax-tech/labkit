@@ -68,8 +68,57 @@ def load_questions(path: Path) -> list[Question]:
         if not q["truth"]:
             raise NavigationError(f"{path.name}: question {q['id']} has no truth")
         out.append(Question(q["id"], q["question"], tuple(q["truth"])))
-    if not out:
-        raise NavigationError(f"{path.name}: no [[question]] entries")
+    return out
+
+
+@dataclass(frozen=True)
+class Choice:
+    """A question about how the code behaves, answered from a fixed set of
+    choices — the control flow understood, not a place found."""
+
+    id: str
+    question: str
+    choices: tuple[str, ...]
+    truth: frozenset[str]  # the choices that are right, all of them
+
+
+def load_choices(path: Path) -> list[Choice]:
+    """The `[[choice]]` questions of a TOML file (none is fine). Raises
+    NavigationError when a truth is not among the choices."""
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    out = []
+    for c in data.get("choice", []):
+        missing = [k for k in ("id", "question", "choices", "truth") if k not in c]
+        if missing:
+            raise NavigationError(f"{path.name}: a choice lacks {missing}")
+        stray = set(c["truth"]) - set(c["choices"])
+        if not c["truth"] or stray:
+            raise NavigationError(
+                f"{path.name}: choice {c['id']}: truth {sorted(stray) or '[]'} "
+                f"is not a non-empty subset of its choices"
+            )
+        out.append(
+            Choice(c["id"], c["question"], tuple(c["choices"]), frozenset(c["truth"]))
+        )
+    return out
+
+
+def score_choices(answer_text: str, choices: list[Choice]) -> dict[str, bool]:
+    """Per choice question, whether the answer picked exactly the right
+    choices. Raises ValueError when an answer is missing, not a list, or
+    names something that is not one of the choices."""
+    data = load_answer(answer_text, [c.id for c in choices], "navigation")
+    out = {}
+    for c in choices:
+        picked = data[c.id]
+        if not isinstance(picked, list) or not all(isinstance(x, str) for x in picked):
+            raise ValueError(f"navigation answer: {c.id} must be a list of choices")
+        stray = set(picked) - set(c.choices)
+        if stray:
+            raise ValueError(
+                f"navigation answer: {c.id} names {sorted(stray)}, not among its choices"
+            )
+        out[c.id] = frozenset(picked) == c.truth
     return out
 
 
@@ -119,21 +168,28 @@ def nav_prompt(
     questions: list[Question],
     answer_path: str,
     flows: tuple[Flow, ...] = (),
+    choices: tuple[Choice, ...] = (),
 ) -> str:
     """The prompt for a cold agent finding its way in `repo`."""
-    asks = "\n".join(f'- "{q.id}": {q.question}' for q in questions)
+    asks = "\n".join(f'- "{q.id}" ("path:line"): {q.question}' for q in questions)
     if flows:
         asks += "\n" + "\n".join(
             f'- "{f.id}" (a list of short strings, one per step, in order): {f.question}'
             for f in flows
         )
+    if choices:
+        asks += "\n" + "\n".join(
+            f'- "{c.id}" (a list of every choice that is right, from: '
+            f"{', '.join(repr(x) for x in c.choices)}): {c.question}"
+            for c in choices
+        )
     return (
-        f"You are new to the code repository at {repo}. Find where the code "
-        "does each of the things below. Look around the repository as you "
-        "normally would — read, search, list — but change nothing and run "
-        "nothing that writes or runs the code.\n\n"
-        "Answer with one JSON object: for each key below, the place as "
-        '"path:line" (path relative to the repository root, the line where '
+        f"You are new to the code repository at {repo}. Answer the questions "
+        "below about where the code does things and how it behaves. Look "
+        "around the repository as you normally would — read, search, list — "
+        "but change nothing and run nothing that writes or runs the code.\n\n"
+        "Answer with one JSON object with one key per question below. A place "
+        'is "path:line" (path relative to the repository root, the line where '
         "the code doing it starts), or null if you could not find it.\n"
         f"{asks}\n\n"
         f"{answer_contract(answer_path)}\n"

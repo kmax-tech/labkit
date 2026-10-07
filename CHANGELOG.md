@@ -5,6 +5,19 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.65.0 — 2026-10-07
+
+### Added
+
+- **`usability nav`: behaviour questions** (`[[choice]]`). A question about
+  how the code behaves — what still runs when a step fails, which step a
+  later one depends on, which condition yields which exit code — answered
+  by picking from a fixed set of choices and scored by exact set match;
+  a truth outside its choices refuses at load, an answer outside them at
+  scoring. Built to test whether an orchestrator that reads as named steps
+  is understood better, not only found faster. A question file may now
+  hold only flows or choices.
+
 ## 0.64.1 — 2026-10-07
 
 ### Changed

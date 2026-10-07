@@ -707,8 +707,12 @@ def cmd_nav(repo: Path, questions: Path, out: Path) -> int:
     answer = out.with_name(out.name + ".nav-answer.json")
     prompt = out.with_name(out.name + ".nav-prompt.md")
     flows = tuple(code_navigation.load_flows(questions))
+    choices = tuple(code_navigation.load_choices(questions))
+    if not (qs or flows or choices):
+        raise SystemExit(f"usability: {questions} holds no question")
     prompt.write_text(
-        code_navigation.nav_prompt(repo, qs, str(answer), flows), encoding="utf-8"
+        code_navigation.nav_prompt(repo, qs, str(answer), flows, choices),
+        encoding="utf-8",
     )
     print(f"navigation prompt → {prompt}\nthe agent writes → {answer}")
     return 0
@@ -733,6 +737,9 @@ def cmd_nav_score(
         flows = code_navigation.score_flows(
             answer.read_text(encoding="utf-8"), code_navigation.load_flows(questions)
         )
+        choices = code_navigation.score_choices(
+            answer.read_text(encoding="utf-8"), code_navigation.load_choices(questions)
+        )
     except ValueError as exc:
         raise SystemExit(f"usability: {exc}") from exc
     out.with_name(out.name + ".nav.json").write_text(
@@ -740,6 +747,7 @@ def cmd_nav_score(
             {
                 "found": [asdict(f) for f in got],
                 "flows": flows,
+                "choices": choices,
                 "effort": asdict(eff) if eff else None,
             },
             indent=1,
@@ -752,6 +760,10 @@ def cmd_nav_score(
         print(f"  {mark:9} {f.id}: {f.answer} (truth {f.truth})")
     for fid, (n, of) in flows.items():
         print(f"  flow {fid}: {n}/{of} steps named in order")
+    for cid, right in choices.items():
+        print(f"  {'right' if right else 'WRONG':9} {cid}")
+    if choices:
+        print(f"  {sum(choices.values())}/{len(choices)} behaviour questions right")
     print(
         f"  {sum(f.found for f in got)}/{len(got)} found"
         + (
