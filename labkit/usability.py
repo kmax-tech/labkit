@@ -58,6 +58,7 @@ import argparse
 import hashlib
 import json
 import os
+import random
 import re
 import subprocess
 import sys
@@ -698,16 +699,24 @@ def cmd_terms(root: Path) -> int:
     return 0
 
 
-def cmd_nav(repo: Path, questions: Path, out: Path) -> int:
-    """Write `<out>.nav-prompt.md` for a cold agent in `repo`."""
+def cmd_nav(repo: Path, questions: Path, out: Path, shuffle: int | None = None) -> int:
+    """Write `<out>.nav-prompt.md` for a cold agent in `repo`; with `shuffle`
+    the questions come in an order drawn from that seed, so agents compared
+    across two versions do not all meet them in one order."""
     qs = code_navigation.load_questions(questions)
     for q in qs:
         for t in q.truth:
             code_navigation.symbol_span(repo, t)  # a stale truth refuses now
     answer = out.with_name(out.name + ".nav-answer.json")
     prompt = out.with_name(out.name + ".nav-prompt.md")
-    flows = tuple(code_navigation.load_flows(questions))
-    choices = tuple(code_navigation.load_choices(questions))
+    flows_list = code_navigation.load_flows(questions)
+    choices_list = code_navigation.load_choices(questions)
+    if shuffle is not None:
+        rng = random.Random(shuffle)
+        rng.shuffle(qs)
+        rng.shuffle(flows_list)
+        rng.shuffle(choices_list)
+    flows, choices = tuple(flows_list), tuple(choices_list)
     if not (qs or flows or choices):
         raise SystemExit(f"usability: {questions} holds no question")
     prompt.write_text(
@@ -747,7 +756,7 @@ def cmd_nav_score(
             {
                 "found": [asdict(f) for f in got],
                 "flows": flows,
-                "choices": choices,
+                "choices": {k: asdict(v) for k, v in choices.items()},
                 "effort": asdict(eff) if eff else None,
             },
             indent=1,
@@ -760,10 +769,17 @@ def cmd_nav_score(
         print(f"  {mark:9} {f.id}: {f.answer} (truth {f.truth})")
     for fid, (n, of) in flows.items():
         print(f"  flow {fid}: {n}/{of} steps named in order")
-    for cid, right in choices.items():
-        print(f"  {'right' if right else 'WRONG':9} {cid}")
+    for cid, cs in choices.items():
+        extra = (f" missed {list(cs.missed)}" if cs.missed else "") + (
+            f" invented {list(cs.invented)}" if cs.invented else ""
+        )
+        print(f"  {'right' if cs.right else 'WRONG':9} {cid}{extra}")
     if choices:
-        print(f"  {sum(choices.values())}/{len(choices)} behaviour questions right")
+        print(
+            f"  {sum(cs.right for cs in choices.values())}/{len(choices)} behaviour "
+            f"questions right · {sum(len(cs.missed) for cs in choices.values())} "
+            f"missed · {sum(len(cs.invented) for cs in choices.values())} invented"
+        )
     print(
         f"  {sum(f.found for f in got)}/{len(got)} found"
         + (
@@ -1040,6 +1056,7 @@ def main(argv: list[str]) -> int:
     nv.add_argument(
         "--out", required=True, help="prefix of the prompt and answer files"
     )
+    nv.add_argument("--shuffle", type=int, help="seed: draw the question order from it")
     ns = sub.add_parser("nav-score", help="hold the navigation answers to the truth")
     ns.add_argument("repo")
     ns.add_argument("--questions", required=True)
@@ -1051,6 +1068,7 @@ def main(argv: list[str]) -> int:
             Path(args.repo).resolve(),
             Path(args.questions).resolve(),
             Path(args.out).resolve(),
+            args.shuffle,
         )
     if args.cmd == "nav-score":
         return cmd_nav_score(

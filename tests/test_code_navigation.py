@@ -248,11 +248,15 @@ class Choices(unittest.TestCase):
 
     def test_exactly_the_right_set_is_right(self):
         got = cn.score_choices('{"c1": ["no"], "c2": ["c", "a"]}', self.choices)
-        self.assertEqual(got, {"c1": True, "c2": True})
+        self.assertEqual({k: v.right for k, v in got.items()}, {"c1": True, "c2": True})
 
     def test_a_subset_or_superset_is_wrong(self):
-        got = cn.score_choices('{"c1": ["yes"], "c2": ["a"]}', self.choices)
-        self.assertEqual(got, {"c1": False, "c2": False})
+        got = cn.score_choices('{"c1": ["yes"], "c2": ["a", "b"]}', self.choices)
+        self.assertEqual(
+            {k: v.right for k, v in got.items()}, {"c1": False, "c2": False}
+        )
+        self.assertEqual((got["c2"].missed, got["c2"].invented), (("c",), ("b",)))
+        self.assertEqual((got["c1"].missed, got["c1"].invented), (("no",), ("yes",)))
 
     def test_an_answer_outside_the_choices_is_refused(self):
         with self.assertRaises(ValueError):

@@ -5,6 +5,17 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.65.1 — 2026-10-07
+
+### Added
+
+- Behaviour answers are scored beyond right/wrong: the right choices an
+  answer **missed** and the ones it **invented** (a dependency or a path
+  the code does not have).
+- `usability nav --shuffle SEED` draws the question order from a seed, so
+  agents compared across two versions of the code do not all meet the
+  questions in one order.
+
 ## 0.65.0 — 2026-10-07
 
 ### Added

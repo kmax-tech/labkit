@@ -103,10 +103,20 @@ def load_choices(path: Path) -> list[Choice]:
     return out
 
 
-def score_choices(answer_text: str, choices: list[Choice]) -> dict[str, bool]:
-    """Per choice question, whether the answer picked exactly the right
-    choices. Raises ValueError when an answer is missing, not a list, or
-    names something that is not one of the choices."""
+@dataclass(frozen=True)
+class ChoiceScore:
+    """One behaviour answer held to its truth."""
+
+    right: bool  # exactly the right choices
+    missed: tuple[str, ...]  # right choices the answer left out
+    invented: tuple[str, ...]  # choices the answer picked that are not right
+
+
+def score_choices(answer_text: str, choices: list[Choice]) -> dict[str, ChoiceScore]:
+    """Per behaviour question: right or not, and which choices were missed
+    or invented (a dependency or a path the code does not have). Raises
+    ValueError when an answer is missing, not a list, or names something
+    that is not one of the choices."""
     data = load_answer(answer_text, [c.id for c in choices], "navigation")
     out = {}
     for c in choices:
@@ -118,7 +128,12 @@ def score_choices(answer_text: str, choices: list[Choice]) -> dict[str, bool]:
             raise ValueError(
                 f"navigation answer: {c.id} names {sorted(stray)}, not among its choices"
             )
-        out[c.id] = frozenset(picked) == c.truth
+        got = frozenset(picked)
+        out[c.id] = ChoiceScore(
+            got == c.truth,
+            tuple(x for x in c.choices if x in c.truth - got),
+            tuple(x for x in c.choices if x in got - c.truth),
+        )
     return out
 
 
