@@ -63,9 +63,9 @@ seven-second run (uniagent area 01) took four days, three freezes and
 three agent audits. `usability` makes that measurable and repeatable:
 
 ```bash
-usability stage /tmp/probe --venv .venv   # fresh lab repo, stamped area, fixture with a known answer, TASK.md
-usability stage /tmp/probe --venv .venv --cost seconds   # the seconds cut + counting skeleton (lib exp --cost seconds)
-usability stage /tmp/probe --venv .venv --task judge --cost seconds --model   # seconds cut + measure skeleton, a model in the loop
+usability stage /tmp/probe --venv .venv   # fresh lab repo, area stamped as the route does (seconds cut + counting skeleton), fixture, TASK.md
+usability stage /tmp/probe --venv .venv --task judge   # seconds cut + measure skeleton, a model in the loop (--model is the judge default)
+usability stage /tmp/probe --venv .venv --cost unset   # the full form; the agent declares the tier
 #   hand TASK.md to a COLD agent (fresh context); it logs one line per step
 usability score /tmp/probe                # number == truth? bound? tier? wall-clock, steps per tag → probe.score.json
 ```

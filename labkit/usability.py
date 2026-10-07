@@ -105,8 +105,7 @@ CLAIMS = (
         "not_causal",
     ),
 )
-#: The tasks the harness stages: area name, metrics key, task template,
-#: deterministic truth (None when the number is a model's)
+#: The tasks the harness stages: area name, metrics key, task template.
 TASKS = {
     "count": {
         "area": "docs-per-case",
@@ -118,6 +117,15 @@ TASKS = {
         "metric_key": "c1_accuracy",
         "template": "usability-task-judge.md.template",
     },
+}
+#: (cost tier, model in the loop) per task: what the house route stamps for
+#: it (`lib exp --cost seconds`, plus `--model` with a model in the loop).
+#: Staged without them, the count got the full form and the model skeleton
+#: and every agent spent its time deleting it (probe 2026-10-07) — a cost
+#: of the staging, not of the route.
+TASK_STAMP: dict[str, tuple[str, bool]] = {
+    "count": ("seconds", False),
+    "judge": ("seconds", True),
 }
 LOG_TAGS = ("read", "run", "edit", "unsure", "gate")
 LOG_LINE = re.compile(r"^(\d\d):(\d\d):(\d\d)\s*·\s*(\w+)\s*·\s*(.*)$")
@@ -237,6 +245,15 @@ def recount(root: Path) -> float:
     return sum(counts) / len(counts)
 
 
+def stamp_flags(task: str, cost: str | None, model: bool) -> tuple[str | None, bool]:
+    """(cost tier or None, model) the scaffolder gets: the task's route stamp
+    (TASK_STAMP) unless `cost` names a tier; "unset" stamps none."""
+    default_cost, default_model = TASK_STAMP[task]
+    if cost is None:
+        cost = default_cost
+    return (None if cost == "unset" else cost), (model or default_model)
+
+
 def _sidecar(root: Path, suffix: str) -> Path:
     return root.parent / f"{root.name}.{suffix}"
 
@@ -248,10 +265,11 @@ def stage(
     task: str = "count",
     model: bool = False,
 ) -> int:
-    """Side effects: see module docstring. `cost` is stamped into the
-    protocol's `cost` (`seconds` cuts the seconds form and the counting
-    skeleton); `task` picks the fixture and the task sheet (TASKS)."""
+    """Side effects: see module docstring. `task` picks the fixture, the task
+    sheet and the default stamp (TASKS); `cost` overrides the stamped tier
+    ("unset" leaves it to the agent), `model` adds the model skeleton."""
     spec = TASKS[task]
+    cost, model = stamp_flags(task, cost, model)
     area_name, metric_key = spec["area"], spec["metric_key"]
     if root.exists() and any(root.iterdir()):
         raise SystemExit(
@@ -595,16 +613,17 @@ def main(argv: list[str]) -> int:
     s.add_argument("--venv", help="link this venv instead of creating one")
     s.add_argument(
         "--cost",
-        choices=("seconds", "minutes", "hours"),
+        choices=("seconds", "minutes", "hours", "unset"),
         metavar="TIER",
-        help="the Cost tier stamped into the protocol; seconds = the seconds cut "
-        "and the counting skeleton",
+        help="the cost tier stamped into the protocol (default: the task's, "
+        "seconds); unset = the agent declares it, the full form is stamped",
     )
     s.add_argument(
         "--model",
         action="store_true",
         help="a model in the loop: the full measure skeleton (prompt, parser, "
-        "probe) and, at seconds, the three model fields in the cut",
+        "probe) and, at seconds, the three model fields in the cut "
+        "(default for --task judge)",
     )
     s.add_argument(
         "--task",

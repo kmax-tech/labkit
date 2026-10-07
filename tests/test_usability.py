@@ -143,5 +143,24 @@ class ScoreVerdict(unittest.TestCase):
         self.assertFalse(sc["number_ok"])
 
 
+class StampFlags(unittest.TestCase):
+    """The probe stamps each task as the house route does (probe 2026-10-07:
+    staged without --cost the count got the model skeleton)."""
+
+    def test_count_gets_the_seconds_cut_without_a_model(self):
+        self.assertEqual(
+            usability.stamp_flags("count", None, False), ("seconds", False)
+        )
+
+    def test_judge_gets_the_seconds_cut_with_a_model(self):
+        self.assertEqual(usability.stamp_flags("judge", None, False), ("seconds", True))
+
+    def test_an_explicit_tier_wins_and_unset_stamps_none(self):
+        self.assertEqual(
+            usability.stamp_flags("count", "hours", False), ("hours", False)
+        )
+        self.assertEqual(usability.stamp_flags("count", "unset", False), (None, False))
+
+
 if __name__ == "__main__":
     unittest.main()
