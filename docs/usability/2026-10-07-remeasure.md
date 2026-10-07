@@ -94,3 +94,10 @@ they are where the remaining minute goes.
 - Judge: `00_prepare.py` must be written to copy twelve clean rows, and the
   stamped parser test fails until `PARSER_CASES` is filled by hand on a
   track without a probe (3 of 3).
+
+Acted on (2026-10-07): the contract opens with the seconds cut and the
+`protocol-fill` command, the template names `protocol-fill` (`ea741a7`); the
+lab `CLAUDE.md` template points a seconds reader to its one section, the
+prepare skeleton copies clean id/text/gold rows by default, the area test
+carries the canonical answer forms and owes probe cases only above seconds
+(house templates, dotfiles working tree). Not yet re-measured.
