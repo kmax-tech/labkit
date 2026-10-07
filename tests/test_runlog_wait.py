@@ -158,8 +158,8 @@ class TestLongGate(unittest.TestCase):
             # needs a frozen, audited protocol, or it is refused for a
             # different reason than the one this test is about.
             Path(d, "PROTOCOL-gate.md").write_text(
-                head(frozen=True,
-                     preflight_audit="2026-10-05 · abc · 0 findings"),
+                head(frozen=True,   # an explicit decision passes the stamp check
+                     preflight_audit="n/a — detach-gate test, no code to audit"),
                 encoding="utf-8")
             return subprocess.run(
                 [sys.executable, "-c", code,

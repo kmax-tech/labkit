@@ -86,11 +86,13 @@ remembering (2026-10-05):
 | code refuses         | `runlog.Run` — leak, index header, detach, **freeze gate** | always: every run passes through it                   |
 | Claude hook blocks   | `claude-hook pre-run` (PreToolUse Bash, exit 2)            | a frozen protocol's area has preflight blockers; not at `cost = "seconds"` |
 | Claude hook reports  | `claude-hook post-change` (PostToolUse Bash\|Write\|Edit)  | a protocol or messung note changed, whatever wrote it |
-| git pre-commit fails | `.githooks/pre-commit`                                     | a staged protocol misses must fields                  |
+| git pre-commit fails | `.githooks/pre-commit`                                     | a staged protocol misses must fields; a written-back answer fails `finalize --if-reported` |
 
 **Freeze gate.** `long=True` is the script's declaration of a full run.
 `runlog` refuses it before `mkdir` unless the bound protocol's head says
-`frozen = true` and its `preflight_audit` is filled.
+`frozen = true` and its `preflight_audit` names the `scope sha` the code
+has now (or says `n/a — <reason>`): a hand-written line is checked, not
+trusted.
 A long *pilot* acknowledges with `LABKIT_UNFROZEN=1`; the acknowledgement
 is written to `config.json` as `unfrozen_ack`, so the number carries it.
 The gate follows the cost tier (`cost` in the protocol head, §2.A14): at

@@ -21,7 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import runlog  # noqa: E402
+from labkit import runlog, scope_sha  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 AUDIT = "2026-10-05 · scope sha abc · 0 findings"
@@ -63,10 +63,43 @@ class FreezeGate(unittest.TestCase):
             r = runlog.Run("t", {}, area, long=long)
         return r, buf.getvalue()
 
+    def _audited(self) -> str:
+        """A frozen protocol whose audit line carries the area's real stamp."""
+        (self.tmp / "scripts").mkdir(exist_ok=True)
+        (self.tmp / "scripts" / "m.py").write_text("x = 1\n")
+        sha = scope_sha.area_stamp(self.tmp)[0]
+        return head(cost="hours", frozen=True,
+                    preflight_audit=f"2026-10-07 · scope sha {sha} · 0 findings")
+
     def test_full_run_on_frozen_protocol_starts(self):
-        r, _ = self._start(FROZEN, long=True)
+        r, _ = self._start(self._audited(), long=True)
         self.assertTrue((r.dir / "config.json").is_file())
         self.assertFalse(json.loads((r.dir / "config.json").read_text())["unfrozen_ack"])
+
+    def test_an_audit_line_of_other_code_is_refused(self):
+        """Twin of the start above: the code changed after the audit, so the
+        line's stamp no longer covers it (review 2026-10-07: a hand-written
+        line was never checked against anything)."""
+        text = self._audited()
+        (self.tmp / "scripts" / "m.py").write_text("x = 2\n")
+        area = self._area(text)
+        with self.assertRaises(SystemExit) as cm:
+            with contextlib.redirect_stdout(io.StringIO()):
+                runlog.Run("t", {}, area, long=True)
+        self.assertIn("changed after the audit", str(cm.exception))
+        self.assertFalse((area / "runs").exists())
+
+    def test_an_audit_line_without_a_stamp_is_refused(self):
+        area = self._area(FROZEN)            # "scope sha abc" is no stamp
+        with self.assertRaises(SystemExit) as cm:
+            with contextlib.redirect_stdout(io.StringIO()):
+                runlog.Run("t", {}, area, long=True)
+        self.assertIn("names no `scope sha", str(cm.exception))
+
+    def test_an_explicit_na_audit_passes(self):
+        text = head(cost="hours", frozen=True, preflight_audit="n/a — decided with the supervisor")
+        r, _ = self._start(text, long=True)
+        self.assertTrue((r.dir / "config.json").is_file())
 
     def test_full_run_on_an_unstamped_id_is_refused_before_mkdir(self):
         """Twin of the frozen start above: same protocol, id not stamped — the

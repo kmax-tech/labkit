@@ -192,3 +192,48 @@ class TestFinalize(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCommitGate(unittest.TestCase):
+    """`finalize --if-reported`: the pre-commit gate — a number written back
+    into "Answer to the question" does not enter the history unchecked, and
+    it must cite the run the checks hold (review 2026-10-07)."""
+
+    RUN = "2026-10-07T10-00-00_ab12"
+
+    def _area(self, d: str, answer: str) -> Path:
+        area = Path(d)
+        (area / "PROTOCOL-x.md").write_text(
+            CLEAN_PROTOCOL + f"- **Answer to the question:** {answer}\n")
+        _run(area, self.RUN, metrics=CLEAN_METRICS)
+        return area
+
+    def _gate(self, area: Path) -> tuple[int, str]:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = finalize.main(["--if-reported", str(area / "PROTOCOL-x.md")])
+        return code, buf.getvalue()
+
+    def test_an_unreported_protocol_is_skipped(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out = self._gate(self._area(d, "<number + run_id>"))
+        self.assertEqual((code, out), (0, ""))
+
+    def test_a_reported_protocol_is_finalized(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out = self._gate(self._area(d, f"AUC 0.91 ({self.RUN})"))
+        self.assertEqual(code, 0, out)
+        self.assertIn("its answer cites a run", out)
+
+    def test_citing_another_run_than_the_one_that_answers_blocks(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out = self._gate(self._area(d, "AUC 0.91 (2026-10-01T09-00-00_ffff)"))
+        self.assertEqual(code, 1, out)
+        self.assertIn("but the run that answers is", out)
+
+    def test_a_blocker_fails_the_gate(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = self._area(d, f"AUC 0.91 ({self.RUN})")
+            (area / "runs" / self.RUN / "metrics.json").write_text(json.dumps({"c1_pass": True}))
+            code, out = self._gate(area)
+        self.assertEqual(code, 1, out)

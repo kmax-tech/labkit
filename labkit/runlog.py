@@ -50,6 +50,7 @@ import uuid
 from pathlib import Path
 
 from labkit import protocol_block, repo
+from labkit.scope_sha import audit_stamp_drift
 from labkit.runs import (FAILED_STATES, RunConfigError, completed_runs,
                          completion_state, is_alive, read_run_config, run_state)
 
@@ -676,6 +677,10 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
     if not head.preflight_audit:
         out.append(f"{path.name}: `preflight_audit` is empty — run `preflight`, "
                    f"then the experiment-preflight audit (§2.A12), and stamp it")
+    else:
+        drift = audit_stamp_drift(base_dir, head.preflight_audit)
+        if drift:
+            out.append(f"{path.name}: preflight_audit: {drift}")
     return out
 
 

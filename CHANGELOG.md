@@ -5,6 +5,28 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.50.0 — 2026-10-07
+
+### Breaking
+
+Last version with the old behaviour: **v0.49.1**.
+
+- **A full run checks its audit line.** At minutes/hours `preflight_audit`
+  must name the `scope sha` the area's code has now (`labkit-audit` and
+  `scope-sha` print it), or say `n/a — <reason>`; a line without a stamp,
+  or with the stamp of code that changed since, refuses the run. The line
+  was written by hand and never checked — an invented or stale audit looked
+  like a real one. `protocol-check` warns on the same drift (after the run
+  analysis scripts change legitimately). `scope_sha` moved to layer 1.
+
+### Added
+
+- `finalize --if-reported PROTOCOL...` — the commit gate: every protocol
+  whose "Answer to the question" cites a run goes through finalize; the
+  house pre-commit hook calls it. `finalize` also blocks when the answer
+  cites another run than the one the checks hold. Nothing showed whether
+  finalize ever ran before a number entered the history.
+
 ## 0.49.1 — 2026-10-07
 
 ### Changed

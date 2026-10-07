@@ -47,6 +47,7 @@ from labkit.intent_check import (
     newest_with_intent_keys,
     registered_ids,
 )
+from labkit.protocol_check import RUN_ID, fields
 from labkit.protocol_fill import open_fields
 
 
@@ -193,6 +194,12 @@ def run(area: Path, protocol: Path | None = None) -> int:
                 newest_dir = mpath.parent
                 note = f" (skipped {skipped} newer bound run(s) without intent keys)" if skipped else ""
                 print(f"  {newest_dir.name}: completed{note}")
+                cited = cited_runs(text)
+                if cited and newest_dir.name not in cited:
+                    print(f"  BLOCKER: \"Answer to the question\" cites {', '.join(cited)}, "
+                          f"but the run that answers is {newest_dir.name} — cite the run "
+                          f"the checks hold, or rerun")
+                    blockers += 1
 
     # -- 2. intent-check ---------------------------------------------------
     print("── intent-check ──")
@@ -285,11 +292,44 @@ def run(area: Path, protocol: Path | None = None) -> int:
     return 0
 
 
+def cited_runs(text: str) -> list[str]:
+    """The run ids the protocol's "Answer to the question" cites — a number
+    written back. Empty while the field is a placeholder or cites none."""
+    for f in fields(text):
+        if f.name == "answer to the question" and not f.placeholder:
+            return sorted(set(RUN_ID.findall(f.value)))
+    return []
+
+
+def if_reported(protocols: list[Path]) -> int:
+    """`finalize` for every protocol whose answer cites a run — the commit
+    gate: a number written back does not enter the history unchecked
+    (review 2026-10-07: nothing showed whether finalize ever ran). Returns
+    the worst exit code; protocols without a cited run are skipped."""
+    worst = 0
+    for protocol in protocols:
+        try:
+            text = protocol.read_text(encoding="utf-8")
+        except OSError as exc:
+            print(f"finalize: {protocol}: {exc}")
+            worst = max(worst, 2)
+            continue
+        if not cited_runs(text):
+            continue
+        print(f"═══ finalize {protocol} (its answer cites a run) ═══")
+        worst = max(worst, run(protocol.parent, protocol))
+    return worst
+
+
 def main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: finalize <AREA> [--protocol PROTOCOL-*.md]")
+        print("       finalize --if-reported PROTOCOL-*.md ...   (the commit gate: only "
+              "protocols whose answer cites a run)")
         return 0 if argv else 2
+    if argv[0] == "--if-reported":
+        return if_reported([Path(a) for a in argv[1:]])
 
     area = Path(argv[0])
     protocol = None

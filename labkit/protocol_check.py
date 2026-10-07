@@ -47,6 +47,7 @@ from pathlib import Path
 
 from labkit import promises, protocol_block
 from labkit.repo import git_root, git_run
+from labkit.scope_sha import audit_stamp_drift
 
 
 @dataclass(frozen=True)
@@ -611,6 +612,10 @@ def main(argv: list[str]) -> int:
             print(f"{f}: HEAD (must): {report.head_error}")
             failed = True
             continue
+        if report.frozen and report.head.cost != "seconds" and report.head.preflight_audit:
+            drift = audit_stamp_drift(f.parent, report.head.preflight_audit)
+            if drift:   # a warning: after the run, analysis scripts change legitimately
+                print(f"{f}: WARNING: preflight_audit: {drift}")
         for finding in check_protocol_id(f, report.head):
             print(finding)
             if "WARNING" not in finding:
