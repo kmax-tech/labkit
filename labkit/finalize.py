@@ -39,6 +39,7 @@ import contextlib
 import io
 import json
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit import promises, protocol_block
@@ -157,167 +158,190 @@ def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]
     return blockers, warnings
 
 
-def run(area: Path, protocol: Path | None = None) -> int:
-    """Run all finalize checks. Returns 0 (clean) or 1 (findings)."""
-    # Every blocker as one line, repeated in the summary: inside a commit
-    # hook the sections run to 20 lines and the one blocker drowned in the
-    # middle (usability probe 2026-10-07).
-    blocked: list[str] = []
-    warnings = 0
+@dataclass
+class Gate:
+    """What the stations found: every blocker as one line, repeated in the
+    summary — inside a commit hook the sections run to 20 lines and the one
+    blocker drowned in the middle (usability probe 2026-10-07)."""
 
-    # -- resolve protocol -------------------------------------------------
+    blocked: list[str] = field(default_factory=list)
+    warnings: int = 0
+
+    def block(self, msg: str) -> None:
+        print(f"  BLOCKER: {msg}")
+        self.blocked.append(msg)
+
+
+def choose_protocol(area: Path, protocol: Path | None) -> Path | None:
+    """The protocol finalize holds the area to: the named one, else the
+    area's only one. Prints why and returns None when there is none, or
+    several and none is named — finalize refuses to guess."""
     if protocol is not None:
         if not protocol.is_file():
             print(f"finalize: no such protocol: {protocol}")
-            return 2
-    else:
-        protocols = area_protocols(area)
-        if not protocols:
-            print(f"finalize: no PROTOCOL-*.md in {area}")
-            return 2
-        if len(protocols) > 1:
-            print(
-                f"finalize: {len(protocols)} protocols in {area} — name "
-                f"one with --protocol FILE:"
-            )
-            for p in protocols:
-                print(f"  {p}")
-            return 2
-        protocol = protocols[0]
+            return None
+        return protocol
+    protocols = area_protocols(area)
+    if not protocols:
+        print(f"finalize: no PROTOCOL-*.md in {area}")
+        return None
+    if len(protocols) > 1:
+        print(
+            f"finalize: {len(protocols)} protocols in {area} — name one with --protocol FILE:"
+        )
+        for p in protocols:
+            print(f"  {p}")
+        return None
+    return protocols[0]
 
-    text = protocol.read_text(encoding="utf-8")
-    try:
-        head = protocol_block.head(text)
-    except protocol_block.BlockError as exc:
-        print(f"finalize: {protocol.name}: {exc}")
-        return 2
-    pid = head.id
-    newest_dir: Path | None = None
 
-    # -- 1. completion check -----------------------------------------------
-    print(f"── completion: {protocol.name} ──")
+def answering_run(gate: Gate, area: Path, pid: str | None) -> Path | None:
+    """The run every station holds the protocol to: the newest completed run
+    bound to it that reports intent keys. ONE choice for every station:
+    intent-check skips newer runs without intent keys (a probe), so checking
+    scopes or provenance on the newest run judged the probe while the
+    numbers came from the measurement (review 2026-10-07)."""
     if pid is None:
         print("  no stamped protocol id ([protocol] id) — no run is bound to it")
-        blocked.append("no stamped protocol id")
-    else:
-        runs_dir = area / "runs"
-        if not runs_dir.is_dir():
-            print(f"  no runs/ directory in {area}")
-            blocked.append(f"no runs/ directory in {area}")
-        else:
-            taken, rest = bound_runs(area, pid)
-            if not taken:
-                print(f"  no completed run bound to {pid}")
-                if rest:
-                    for f in rest:
-                        print(f"    {f['dir'].name}: {f['why']}")
-                blocked.append(f"no completed run bound to {pid}")
-            else:
-                # ONE choice for every station: intent-check skips newer
-                # runs without intent keys (a probe), so checking scopes or
-                # provenance on taken[-1] judged the probe while the
-                # numbers came from the measurement (review 2026-10-07).
-                mpath, skipped = newest_with_intent_keys(taken)
-                assert mpath is not None, "taken is non-empty"
-                blocking = newer_unreadable(mpath.parent, rest)
-                if blocking:
-                    print(f"  BLOCKER: {blocking}")
-                    blocked.append(blocking)
-                newest_dir = mpath.parent
-                note = (
-                    f" (skipped {skipped} newer bound run(s) without intent keys)"
-                    if skipped
-                    else ""
-                )
-                print(f"  {newest_dir.name}: completed{note}")
-                cited = cited_runs(text)
-                if cited and newest_dir.name not in cited:
-                    msg = (
-                        f'"Answer to the question" cites {", ".join(cited)}, '
-                        f"but the run that answers is {newest_dir.name} — cite the run "
-                        f"the checks hold, or rerun"
-                    )
-                    print(f"  BLOCKER: {msg}")
-                    blocked.append(msg)
+        gate.blocked.append("no stamped protocol id")
+        return None
+    if not (area / "runs").is_dir():
+        print(f"  no runs/ directory in {area}")
+        gate.blocked.append(f"no runs/ directory in {area}")
+        return None
+    taken, rest = bound_runs(area, pid)
+    if not taken:
+        print(f"  no completed run bound to {pid}")
+        for f in rest:
+            print(f"    {f['dir'].name}: {f['why']}")
+        gate.blocked.append(f"no completed run bound to {pid}")
+        return None
+    mpath, skipped = newest_with_intent_keys(taken)
+    assert mpath is not None, "taken is non-empty"
+    blocking = newer_unreadable(mpath.parent, rest)
+    if blocking:
+        gate.block(blocking)
+    note = (
+        f" (skipped {skipped} newer bound run(s) without intent keys)"
+        if skipped
+        else ""
+    )
+    print(f"  {mpath.parent.name}: completed{note}")
+    return mpath.parent
 
-    # -- 2. intent-check ---------------------------------------------------
-    print("── intent-check ──")
-    reg = registered_ids(text)
-    if not reg:
-        print("  no intent ids registered — nothing to check")
-    else:
-        ic_args = [str(protocol)] + (
-            ["--metrics", str(newest_dir / "metrics.json")]
-            if newest_dir is not None
-            else []
+
+def cited_run_mismatch(text: str, run_dir: Path) -> str | None:
+    """A blocker when the protocol's answer cites runs and not the one the
+    checks hold; None when it cites that run or none."""
+    cited = cited_runs(text)
+    if cited and run_dir.name not in cited:
+        return (
+            f'"Answer to the question" cites {", ".join(cited)}, '
+            f"but the run that answers is {run_dir.name} — cite the run "
+            f"the checks hold, or rerun"
         )
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            rc = intent_check_main(ic_args)
-        for line in buf.getvalue().splitlines():
-            print(f"  {line}")
-        if rc != 0:
-            blocked.append("intent-check failed (see its lines above)")
+    return None
 
-    # -- 2b. declared scopes ------------------------------------------------
-    # The run recorded a hash per promise over its declared scope. A scope
-    # edited after the run means today's code is not the code that produced
-    # the number; until 2026-10-06 only recheck saw it (Durchstich).
+
+def check_completion(
+    gate: Gate, area: Path, protocol: Path, text: str, pid: str | None
+) -> Path | None:
+    print(f"── completion: {protocol.name} ──")
+    run_dir = answering_run(gate, area, pid)
+    if run_dir is not None:
+        mismatch = cited_run_mismatch(text, run_dir)
+        if mismatch:
+            gate.block(mismatch)
+    return run_dir
+
+
+def check_intent_ids(
+    gate: Gate, protocol: Path, text: str, run_dir: Path | None
+) -> None:
+    print("── intent-check ──")
+    if not registered_ids(text):
+        print("  no intent ids registered — nothing to check")
+        return
+    args = [str(protocol)] + (
+        ["--metrics", str(run_dir / "metrics.json")] if run_dir is not None else []
+    )
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = intent_check_main(args)
+    for line in buf.getvalue().splitlines():
+        print(f"  {line}")
+    if rc != 0:
+        gate.blocked.append("intent-check failed (see its lines above)")
+
+
+def check_declared_scopes(gate: Gate, area: Path, run_dir: Path | None) -> None:
+    """A promise's declared scope edited after the run: today's code is not
+    the code that produced the number; until 2026-10-06 only recheck saw it
+    (Durchstich)."""
     print("── declared scopes ──")
-    if newest_dir is None:
+    if run_dir is None:
         print("  no completed run to check")
-    else:
-        recorded = (read_run_config(newest_dir) or {}).get("promises")
-        if recorded is None:
-            print("  no promise block recorded — nothing to compare")
-        else:
-            drift = promises.scope_drift(recorded, area)
-            for d in drift:
-                msg = (
-                    f"declared scope changed since {newest_dir.name}: "
-                    f"{d} — rerun before reporting"
-                )
-                print(f"  BLOCKER: {msg}")
-                blocked.append(msg)
-            if not drift:
-                print(
-                    f"  {len(recorded['ids'])} declared scope(s) unchanged "
-                    f"since {newest_dir.name}"
-                )
+        return
+    recorded = (read_run_config(run_dir) or {}).get("promises")
+    if recorded is None:
+        print("  no promise block recorded — nothing to compare")
+        return
+    drift = promises.scope_drift(recorded, area)
+    for d in drift:
+        gate.block(
+            f"declared scope changed since {run_dir.name}: {d} — rerun before reporting"
+        )
+    if not drift:
+        print(
+            f"  {len(recorded['ids'])} declared scope(s) unchanged since {run_dir.name}"
+        )
 
-    # -- 3. open fields ----------------------------------------------------
+
+def check_open_fields(
+    gate: Gate, protocol: Path, text: str, head: protocol_block.Head
+) -> None:
     print(f"── open fields: {protocol.name} ──")
     holes = open_holes(text, head)
-    if holes:
-        for lineno, label in holes:
-            print(f"  {protocol.name}:{lineno}: {label}")
-        warnings += len(holes)
-    else:
+    for lineno, label in holes:
+        print(f"  {protocol.name}:{lineno}: {label}")
+    gate.warnings += len(holes)
+    if not holes:
         print("  all fields filled")
 
-    # -- 4. provenance (runs of seconds) ------------------------------------
-    print("── provenance ──")
-    short = head.cost == "seconds"
-    if not short:
-        print("  n/a — not a run of seconds (the agent audit covers provenance there)")
-    elif newest_dir is None:
-        print("  no completed run to check")
-    else:
-        b, w = provenance_findings(area, newest_dir)
-        for line in b:
-            print(f"  BLOCKER: {line}")
-        for line in w:
-            print(f"  warning: {line}")
-        if not b and not w:
-            print("  source frozen in the run; source and output tracked in git")
-        blocked += b
-        warnings += len(w)
 
-    # -- 4b. area tests ----------------------------------------------------
-    # The resolution check runs again before a number leaves: a later edit
-    # of evaluate() that mutes the criterion is caught here too — on every
-    # tier, seconds included, where preflight is not owed (2026-10-07). A
-    # missing test is no finding here; preflight owes it at the freeze.
+def provenance_owed(head: protocol_block.Head) -> bool:
+    """Whether finalize checks provenance (source frozen in the run, source
+    and output tracked in git): only for runs of seconds — above that tier
+    the agent audit covers provenance."""
+    return head.cost == "seconds"
+
+
+def check_provenance(
+    gate: Gate, area: Path, head: protocol_block.Head, run_dir: Path | None
+) -> None:
+    print("── provenance ──")
+    if not provenance_owed(head):
+        print("  n/a — not a run of seconds (the agent audit covers provenance there)")
+        return
+    if run_dir is None:
+        print("  no completed run to check")
+        return
+    b, w = provenance_findings(area, run_dir)
+    for line in b:
+        print(f"  BLOCKER: {line}")
+    for line in w:
+        print(f"  warning: {line}")
+    if not b and not w:
+        print("  source frozen in the run; source and output tracked in git")
+    gate.blocked += b
+    gate.warnings += len(w)
+
+
+def check_area_tests(gate: Gate, area: Path) -> None:
+    """The resolution check runs again before a number leaves: a later edit
+    of evaluate() that mutes the criterion is caught here too — on every
+    tier, seconds included, where preflight is not owed (2026-10-07). A
+    missing test is no finding here; preflight owes it at the freeze."""
     print("── area tests ──")
     tests = area_tests(area, git_root(area) or area)
     if tests.state == "none":
@@ -326,44 +350,67 @@ def run(area: Path, protocol: Path | None = None) -> int:
         print(f"  ok — {', '.join(t.name for t in tests.files)}")
     elif tests.state == "no-pytest":
         print("  warning: pytest is not installed in this interpreter — tests not run")
-        warnings += 1
+        gate.warnings += 1
     else:
         for ln in tests.tail:
             print(f"  {ln}")
-        msg = f"{', '.join(t.name for t in tests.files)} failed — evaluate() no longer holds its resolution check"
-        print(f"  BLOCKER: {msg}")
-        blocked.append(msg)
-
-    # -- 5. criterion n ------------------------------------------------------
-    print("── criterion n ──")
-    if newest_dir is None:
-        print("  no completed run to check")
-    else:
-        w = criterion_n_input_mismatches(newest_dir)
-        for line in w:
-            print(f"  warning: {line}")
-        if not w:
-            print("  every c<i>_n equals a recorded input count (or there is none)")
-        warnings += len(w)
-
-    # -- summary -----------------------------------------------------------
-    print()
-    if blocked:
-        print(
-            f"finalize: {len(blocked)} blocker(s), {warnings} warning(s) "
-            f"— fix the blockers before reporting:"
+        gate.block(
+            f"{', '.join(t.name for t in tests.files)} failed — evaluate() no longer holds its resolution check"
         )
-        for msg in blocked:
+
+
+def check_criterion_n(gate: Gate, run_dir: Path | None) -> None:
+    print("── criterion n ──")
+    if run_dir is None:
+        print("  no completed run to check")
+        return
+    w = criterion_n_input_mismatches(run_dir)
+    for line in w:
+        print(f"  warning: {line}")
+    if not w:
+        print("  every c<i>_n equals a recorded input count (or there is none)")
+    gate.warnings += len(w)
+
+
+def report(gate: Gate) -> int:
+    print()
+    if gate.blocked:
+        print(
+            f"finalize: {len(gate.blocked)} blocker(s), {gate.warnings} warning(s) — fix the blockers before reporting:"
+        )
+        for msg in gate.blocked:
             print(f"  - {msg}")
         return 1
-    if warnings:
+    if gate.warnings:
         print(
-            f"finalize: 0 blockers, {warnings} warning(s) — review "
-            f"the open fields before reporting."
+            f"finalize: 0 blockers, {gate.warnings} warning(s) — review the open fields before reporting."
         )
         return 0
     print("finalize: all clear.")
     return 0
+
+
+def run(area: Path, protocol: Path | None = None) -> int:
+    """Run all finalize checks, one station after another. Returns 0 (clean),
+    1 (findings) or 2 (no protocol to hold the area to)."""
+    chosen = choose_protocol(area, protocol)
+    if chosen is None:
+        return 2
+    text = chosen.read_text(encoding="utf-8")
+    try:
+        head = protocol_block.head(text)
+    except protocol_block.BlockError as exc:
+        print(f"finalize: {chosen.name}: {exc}")
+        return 2
+    gate = Gate()
+    run_dir = check_completion(gate, area, chosen, text, head.id)
+    check_intent_ids(gate, chosen, text, run_dir)
+    check_declared_scopes(gate, area, run_dir)
+    check_open_fields(gate, chosen, text, head)
+    check_provenance(gate, area, head, run_dir)
+    check_area_tests(gate, area)
+    check_criterion_n(gate, run_dir)
+    return report(gate)
 
 
 def cited_runs(text: str) -> list[str]:

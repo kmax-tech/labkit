@@ -5,6 +5,21 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.63.2 — 2026-10-07
+
+### Changed
+
+- `finalize.run` reads as its seven stations, one call each
+  (`check_completion` … `check_criterion_n`), over a `Gate` that collects
+  blockers and warnings; the decisions inside got names and tests of their
+  own — `choose_protocol`, `answering_run`, `cited_run_mismatch`,
+  `provenance_owed`. Output and exit codes are unchanged, checked line by
+  line on six real uniagent areas. Why: CS-006 One function, one thing —
+  and keep I/O at the edges (210 lines of stations separated by section
+  comments, the data each station depends on hidden in shared variables),
+  not findability — code-navigation round 5 found the inline version
+  followed without a miss.
+
 ## 0.63.1 — 2026-10-07
 
 ### Changed
