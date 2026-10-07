@@ -192,13 +192,13 @@ class TestMeasurementProtocol(unittest.TestCase):
 
     def test_measurement_uses_measurement_must_fields(self):
         """A measurement protocol must not be checked against experiment
-        MUST fields (Success criterion, Stop rule, etc.)."""
+        MUST fields (Success criterion, Admissibility condition, etc.)."""
         with tempfile.TemporaryDirectory() as d:
             area, _ = _area(d, protocol_text=MEASUREMENT_PROTOCOL,
                             scripts=False, git=False)
             code, out = _run_preflight(area)
         self.assertNotIn("MISSING (must): Success criterion", out)
-        self.assertNotIn("MISSING (must): Stop rule", out)
+        self.assertNotIn("MISSING (must): Admissibility condition", out)
 
 
 class TestNoScriptsDirectory(unittest.TestCase):

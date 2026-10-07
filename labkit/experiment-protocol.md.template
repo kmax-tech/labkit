@@ -8,17 +8,22 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
 - **One field = one line.** If the justification needs more room, it goes
   into a note; the [[wikilink]] stays here.
 - **The form is cut by tier** (`lib exp --cost seconds` stamps the `seconds` cut:
-  question · criterion · stop rule · type · cost · terms · data · unit ·
+  question · criterion · admissibility · type · cost · terms · data · unit ·
   exclusions · result; with `--model` also model · prompt · null condition;
   the full form adds the rest; `--report` the † fields). One template, three
   cuts — a field the cut left out is not owed (→ §2.A12).
 - **† = report field.** Due only once `Frozen before run` goes to "yes";
   leave empty until then (`lib exp <name> --report` appends them).
-- **`[K…]`/`[S…]`/`[W…]`/`[N…]` = intent ids**, one per promise to the code:
-  **K** criterion conjunct · **S** stop rule · **W** registered fork ·
-  **N** null condition/gate. Each reappears as a lowercase key in the
-  reportable run's metrics.json (`k1_pass`, …); `intent-check` compares the
-  two sets (→ §2.A1a).
+- **`[C…]`/`[A…]`/`[B…]` = intent ids**, one per promise to the code:
+  **C** criterion — which value of which metric supports the hypothesis,
+  one per conjunct · **A** admissibility — an outcome-neutral check that
+  must pass in the same run before any C verdict is issued (yield,
+  coverage, control, anchor) · **B** branch — what a result licenses next.
+  C judges, A releases the judgement, B says what follows. Each id
+  reappears as a lowercase key in the reportable run's metrics.json
+  (`c1_pass`, `a1_pass`, `b1_branch`); `intent-check` compares the two sets
+  (→ §2.A1a). To bind constants and code too, write the same promises as a
+  `[[promise]]` TOML block (labkit `docs/promise-block.md`).
 - **`→ §2.x`** = the rule of that number in `docs/arbeitsstandard.md`; the
   reasoning, the evidence and the term legend live there — here only what
   the field demands.
@@ -51,13 +56,16 @@ instead).*
 
 - **Question / hypothesis:** <!-- s --> <the one question — what do we expect?>
 - **Success / failure criterion:** <!-- s --> <how do we recognise whether it worked?
-  One id per promise to the code — one K per conjunct — each reappearing as
-  a lowercase key in the reportable run's metrics.json (→ §2.A1)>
-- **Stop rule:** <!-- s --> <at what point do we abandon the direction — fixed
-  upfront; one S per rule (→ §2.A1)>
-- **Registered fork:** <if a precondition decides which of two questions the
-  run answers, register the fork BEFORE the run: condition + question per
-  branch, one W per fork (→ §2.A10, §2.A1); "n/a" if there is only one outcome>
+  One C per conjunct, each reappearing as a lowercase key in the reportable
+  run's metrics.json (→ §2.A1, §2.A1a)>
+- **Admissibility condition:** <!-- s --> <what must hold in the same run before
+  any verdict is issued — yield, coverage, a control showing its expected
+  value; one A per condition; if one fails, there is no C verdict, only the
+  finding that the instrument failed (→ §2.A1a)>
+- **Registered branch:** <if a result decides the conclusion or the next
+  analysis, register it BEFORE the run: condition + what each branch
+  licenses, one B per branch point (→ §2.A10, §2.A1a); "n/a" if there is
+  only one outcome>
 - **Type:** <!-- s --> <exploratory (generates hypotheses, none of it reported as a
   test) | confirmatory (tests a hypothesis fixed before the run)>
 - **Timebox:** <hard budget, e.g. 4h — then log and ask>
@@ -117,7 +125,7 @@ instead).*
   out in fact: what comes back + which function parses it>
 - **Gate labels (expected) †:** <which labels the gate accepts — the declared
   set for the mechanical check against code-extracted labels>
-- **Null condition / anchors (in the same run):** <!-- sm --> <one N per anchor — what runs along in THIS
+- **Null condition / anchors (in the same run):** <!-- sm --> <one A per anchor — what runs along in THIS
   run and must show null — anchors of known rate, placebo, swap; not "was
   validated earlier". Per anchor its expected outcome WITH the derivation
   in half a sentence (→ §2.C9)>
@@ -158,7 +166,7 @@ instead).*
   the parser test — this is where they exist for the first time>
 - **Clarified terms:** <what was ambiguous, and what is it called now?>
 - **Changed — and in which class:** <instrument (wording, answer form,
-  parser, field names) is allowed; hypothesis, criterion, stop rule are not
+  parser, field names) is allowed; hypothesis, criterion, admissibility condition are not
   (→ §2.A5)>
 - **Pilot:** <N items checked against hand analysis or anchors, before scaling>
 

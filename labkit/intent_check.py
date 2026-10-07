@@ -9,21 +9,21 @@ this late; a set comparison catches it mechanically.
 
 The contract (Arbeitsstandard §2.A1a): every registration that promises the
 code something — a verdict, a branch, an abort, a control — carries an id
-in the protocol text (`[K1]` criterion conjunct, `[S1]` stop rule, `[W1]`
-registered fork, `[N1]` null condition / gate), and every id reappears as a
-lowercase key in the reportable run's metrics.json (`k1_pass`, `s1_hit`,
-`w1_branch`, `n1_pass`, or the bare id). This command checks the two sets
+in the protocol text (`[C1]` criterion, `[A1]` admissibility condition,
+`[B1]` registered branch; the alphabet is `promises`), and every id
+reappears as a lowercase key in the reportable run's metrics.json
+(`c1_pass`, `a1_pass`, `b1_branch`, or the bare id). This command checks the two sets
 against each other, in both directions:
 
 - an id with no metrics key: the promise has no implementation evidence;
 - a metrics key in the id namespace with no registration: something was
   built that nobody registered.
 
-W (not F) for forks, deliberately: `f1`/`f1_score` is a standard metric
-name, and in the F namespace an f1_score in the metrics would have
-"satisfied" a registered fork that has no branch at all.
+Letters that are metric names (F, P, R, Q, H) are never ids: in the F
+namespace an `f1_score` in the metrics would "satisfy" a registered promise
+that has no implementation at all.
 
-Existence, not correctness: a key `s1_hit` proves the stage reports, not
+Existence, not correctness: a key `a1_pass` proves the stage reports, not
 that it computes the right thing — the semantic half stays with the
 preflight audit (§2.A12), which works the same ids.
 

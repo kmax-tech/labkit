@@ -5,7 +5,17 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
-## Unreleased
+## 0.47.0 — 2026-10-07
+
+### Changed
+
+- **Template and field guide speak C/A/B** (TODO 7): the protocol template
+  stamps `[C]` criterion, `[A]` admissibility condition, `[B]` registered
+  branch, with keys `c1_pass`, `a1_pass`, `b1_branch`. The field "Stop rule"
+  is now "Admissibility condition", "Registered fork" is "Registered
+  branch"; null conditions and anchors carry `[A]` ids. `protocol-check`
+  accepts the new label; the old labels (`stop rule`, `kill`, `Abbruch`) and
+  the letters K/S/W/N are still read and go with the legacy release (TODO 8).
 
 ### Added
 

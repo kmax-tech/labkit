@@ -351,15 +351,20 @@ class TestTerms(unittest.TestCase):
         missing_must, _ = protocol_check.check_text("# x\nHypothese: A schlaegt B.\n")
         self.assertIn("Terms (every label with a half-sentence gloss)", missing_must)
 
-    def test_stop_rule_vocabulary_satisfies_the_field(self):
-        """The field label moved from "Kill criterion" to "Stop rule"; old
-        protocols keep passing via kill/Abbruch, new ones via stop rule."""
+    def test_admissibility_vocabulary_satisfies_the_field(self):
+        """The field is "Admissibility condition" (TODO 7); its earlier labels
+        "Stop rule", "Kill" and "Abbruch" still pass until the legacy
+        release (TODO 8)."""
         base = ("# x\nTerms: n/a. Question: A>B. Success: AUC. Type: exploratory. "
                 "Anchor: swap. Prompt + raw output: n/a — no model.\n")
-        for wording in ("Stop rule: LR stays at 1.", "Kill: LR stays at 1.",
+        missing_must, _ = protocol_check.check_text(base)
+        self.assertIn("Admissibility condition", "".join(missing_must))
+        for wording in ("Admissibility condition: [A1] yield >= 90%.",
+                        "Zulassungsbedingung: [A1] Ausbeute >= 90 %.",
+                        "Stop rule: LR stays at 1.", "Kill: LR stays at 1.",
                         "Abbruchkriterium: LR bleibt bei 1."):
             missing_must, _ = protocol_check.check_text(base + wording)
-            self.assertNotIn("Stop rule", "".join(missing_must), wording)
+            self.assertNotIn("Admissibility condition", "".join(missing_must), wording)
 
     def test_a_half_sentence_suffices(self):
         text = "# x\nBegriffe: Sog = Tendenz des Bildes, Ko-Praesenz zu zeigen.\n"

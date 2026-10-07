@@ -40,7 +40,7 @@ path to this file.
    run` to `yes` — that is, the moment you want to report the number. Until
    then, leave them as `TODO` rather than padding them.
 
-## Intent IDs [K/S/W/N]
+## Intent IDs [C/A/B]
 
 Small machine-readable anchors — they exist so a tool can later verify that
 what the protocol promised actually shows up in the code and in the run's
@@ -49,10 +49,14 @@ lowercase key in the run's metrics:
 
 | id | means | example in the field | key in metrics |
 |---|---|---|---|
-| `[K1]` | criterion conjunct 1 | `[K1] accuracy >= 0.80` | `r.metrics(k1_pass=True)` |
-| `[S1]` | stop rule 1 | `[S1] stop if parse failure > 10%` | `s1_hit` |
-| `[W1]` | registered fork 1 | `[W1] if < 50 usable cases, report coverage only` | `w1_branch` |
-| `[N1]` | null condition 1 | `[N1] shuffled labels must show no effect` | `n1_pass` |
+| `[C1]` | criterion 1 — which value of which metric supports the hypothesis | `[C1] accuracy >= 0.80` | `r.metrics(c1_pass=True)` |
+| `[A1]` | admissibility condition 1 — an outcome-neutral check that must pass before any C verdict | `[A1] parse failures <= 10%` · `[A2] shuffled labels show no effect` | `a1_pass`, `a2_pass` |
+| `[B1]` | registered branch 1 — what a result licenses next | `[B1] if < 50 usable cases, report coverage only` | `b1_branch` |
+
+The separation rule: **C judges, A releases the judgement, B says what
+follows from it.** Does the condition depend on whether the hypothesis
+holds? Then it is C; otherwise A. A baseline without a target value is no
+promise — it belongs in the text of the C it serves.
 
 `intent-check PROTOCOL-<name>.md` compares the two sets: a promised id with
 no key means the promise was never built; a key with no registered id means
@@ -109,20 +113,23 @@ no question numbers.
   single-item criterion. (3) Does the scale have a floor/ceiling, and is the
   expected effect bigger than the run-to-run noise? Differences below the
   noise are not interpretable. (4) Could the run answer two *different*
-  questions depending on a precondition? Then fix that fork beforehand.
-  Using intent ids: one [K1], [K2] … per conjunct, [W1] per fork.
-- **Stop rule:** the result at which you abandon this direction, fixed
-  beforehand — e.g. "if the model is at chance on the hand-checked sanity
-  examples, this approach dies here". A stop rule turns a bad outcome into a
-  finding instead of weeks of tweaking; without one, hope decides when to
-  stop. It complements the Timebox: the Timebox stops you on time, the stop
-  rule on results. Result-based, not time-based — a deadline belongs in
-  Timebox. Intent id: [S1] per rule.
+  questions depending on a precondition? Then register that branch beforehand.
+  Using intent ids: one [C1], [C2] … per conjunct, [B1] per branch point.
+- **Admissibility condition:** what must hold in the same run before any
+  verdict is issued, fixed beforehand — e.g. "at most 10% unparsed answers",
+  "the model is above chance on the hand-checked sanity examples", "the
+  shuffled control shows no effect". If one fails, there is no C verdict,
+  only the finding that the instrument failed — a bad outcome becomes a
+  finding instead of weeks of tweaking. It complements the Timebox: the
+  Timebox stops you on time, an admissibility condition on results.
+  Result-based, not time-based — a deadline belongs in Timebox. Intent id:
+  [A1] per condition.
 - **Timebox:** a hard time budget, independent of results — e.g. "4 hours,
   then log a blocker and ask". NOT a result-based condition with a
-  deadline — "if the pipeline doesn't run by tomorrow" is a stop rule that
-  happens to have a clock, not a timebox. The distinction matters: a stop
-  rule fires when you see a bad result and saves you from tweaking; a timebox
+  deadline — "if the pipeline doesn't run by tomorrow" is a result
+  condition that happens to have a clock, not a timebox. The distinction
+  matters: an admissibility condition fires when you see a bad result and
+  saves you from tweaking; a timebox
   fires when you've been stuck without any result and saves you from silent
   stuckness.
 - **Split touched:** which split may be touched — train | dev | test.
@@ -131,9 +138,9 @@ no question numbers.
   must say `dev`. The moment a `test` run decides something — a threshold, a
   variant, a checkpoint — the result is tuned, not held out, and must be
   reported that way.
-- **Registered fork:** if a precondition decides which of two questions the
-  run answers, register the fork BEFORE the run: condition + question per
-  branch, [W1] per fork. "n/a" if there is only one outcome.
+- **Registered branch:** if a result decides the conclusion or the next
+  analysis, register it BEFORE the run: condition + what each branch
+  licenses, [B1] per branch point. "n/a" if there is only one outcome.
 - **Type:** *exploratory* — generates hypotheses, iterate freely, but nothing
   from it may be reported as a test. *confirmatory* — tests a hypothesis
   fixed BEFORE the run, on data that influenced no choice.
@@ -206,7 +213,7 @@ scattered in output files nobody can interpret.
 - **Null condition / anchors (in the same run):** what runs along in THIS run
   and must show null — anchors of known rate, placebo, swap; not "was
   validated earlier". Per anchor its expected outcome WITH the derivation in
-  half a sentence. Intent id: [N1] per null condition.
+  half a sentence. Intent id: [A1] per control (an admissibility condition).
 - **Exclusions / filters:** what is dropped from the data or output and why;
   which outputs get no gate label — "none" if nothing is excluded. Silent
   drops are the classic error: a filter that quietly loses the hard cases
@@ -249,7 +256,8 @@ run` go to "yes".
   the parser test.
 - **Clarified terms:** what was ambiguous, and what is it called now?
 - **Changed — and in which class:** instrument changes (wording, answer form,
-  parser, field names) are allowed; hypothesis, criterion, stop rule are not.
+  parser, field names) are allowed; hypothesis, criterion, admissibility
+  condition are not.
 - **Pilot:** N items checked against hand analysis or anchors, before scaling.
 
 ### Runs (APPARATUS)
@@ -295,10 +303,10 @@ Delete this section if everything was prompted.
 |--------------------|---|
 | Intent ids         | §2.A1a |
 | Success criterion  | §2.A1 |
-| Stop rule          | §2.A1 |
+| Admissibility      | §2.A1a |
 | Timebox            | — |
 | Split touched      | — |
-| Registered fork    | §2.A10 |
+| Registered branch  | §2.A10 |
 | Preflight audit    | §2.A12 |
 | Instrument check   | §2.A11 |
 | Resolution check   | §2.A13 |

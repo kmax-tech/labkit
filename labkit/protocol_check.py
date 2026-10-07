@@ -27,7 +27,7 @@ commits, Arbeitsstandard §3):
     output" MUST field — a link into output/ or an "n/a — <why>" satisfies
     it, silence does not.
   * **Two tiers, one template.** MUST is the pilot minimum (question,
-    success, stop rule, type, prompt/IO, null condition); SHOULD is what a
+    success, admissibility, type, prompt/IO, null condition); SHOULD is what a
     REPORTABLE run owes on top (rivals, scope, prognosis, yield, knobs,
     result). The graduation gate is mechanical: **`Frozen before run: yes`
     escalates every SHOULD field to MUST.** Claiming confirmatory status is
@@ -72,6 +72,12 @@ try:
 except ImportError:  # vendored flat copies (student repos)
     from repo import git_root, git_run  # type: ignore
 
+# The admissibility field (TODO 7): the outcome-neutral conditions that must
+# hold before any criterion verdict is issued — ids [A1]…. `abbruch`, `kill`
+# and `stop rule` are its earlier labels; they go with the other legacy
+# paths in one release (TODO 8).
+ADMISSIBILITY = r"admissib|zulassung|abbruch|kill|stop.?rule"
+
 # (field label, regex over the whole file)
 # Keywords match German AND English: the template's field labels are English
 # (2026-08-20), pre-existing protocols name their concepts in German, and
@@ -81,7 +87,7 @@ MUST = [
      r"begriff|terminolog|glossar|terms of"),
     ("Question / hypothesis", r"hypothese|frage|question|hypothesis"),
     ("Success criterion", r"erfolg|success"),
-    ("Stop rule", r"abbruch|kill|stop.?rule"),
+    ("Admissibility condition", ADMISSIBILITY),
     ("Type (exploratory / confirmatory)",
      r"explorativ|konfirmatorisch|explorator|confirmator"),
     ("Model I/O / prompt (verbatim)", r"modell-i/o|model i/o|prompt"),
@@ -95,13 +101,13 @@ MUST = [
 ]
 # The `seconds` cut of the one template (2026-10-05): what a run that can be
 # repeated at will owes BEFORE its number counts — the registration (question,
-# criterion, stop rule), the instrument named (model, prompt, null
+# criterion, admissibility condition), the instrument named (model, prompt, null
 # condition, unit) and the result cited. No freeze, no probe fields, no †
 # fields: those are owed at promotion. `lib exp --cost seconds` stamps exactly this.
 MUST_SECONDS = [
     ("Question / hypothesis", r"hypothese|frage|question|hypothesis"),
     ("Success criterion", r"erfolg|success"),
-    ("Stop rule", r"abbruch|kill|stop.?rule"),
+    ("Admissibility condition", ADMISSIBILITY),
     ("Type (exploratory / confirmatory / measurement)",
      r"explorativ|konfirmatorisch|explorator|confirmator|measurement|messung"),
     ("Cost tier", r"\bcost\b|kostenstufe"),
@@ -530,13 +536,13 @@ SUCCESS_LABEL = re.compile(r"erfolg|success", re.I)
 
 INTENT_LABELS = (("question", re.compile(r"hypothese|frage|question|hypothesis", re.I)),
                  ("criterion", re.compile(r"erfolg|success", re.I)),
-                 ("stop rule", re.compile(r"abbruch|kill|stop.?rule", re.I)),
+                 ("admissibility condition", re.compile(ADMISSIBILITY, re.I)),
                  ("cost", re.compile(r"\bcost\b|kostenstufe", re.I)))
 
 
 def intent_missing(text: str) -> list[str]:
     """The registration a run of seconds owes before its number counts:
-    question, criterion, stop rule and cost, each a written field (not a
+    question, criterion, admissibility condition and cost, each a written field (not a
     placeholder). Returns what is missing — empty means the gate is open
     (§2.A1 minimal registration; 2026-10-05 the gate asked for the
     criterion alone)."""

@@ -1,6 +1,6 @@
 """The seconds cut (2026-10-05): one template, tagged `<!-- s -->`; the
 checker's MUST_SECONDS names exactly the tagged fields; the registration
-gate asks for question, criterion, stop rule and cost."""
+gate asks for question, criterion, admissibility condition and cost."""
 from __future__ import annotations
 
 import re
@@ -81,8 +81,8 @@ class Registration(unittest.TestCase):
 
     def test_placeholder_counts_as_missing(self):
         text = ("- **Question / hypothesis:** q\n- **Success / failure criterion:** c\n"
-                "- **Stop rule:** <at what point…>\n- **Cost:** seconds\n")
-        self.assertEqual(protocol_check.intent_missing(text), ["stop rule"])
+                "- **Admissibility condition:** <what must hold…>\n- **Cost:** seconds\n")
+        self.assertEqual(protocol_check.intent_missing(text), ["admissibility condition"])
 
 
 if __name__ == "__main__":

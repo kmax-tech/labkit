@@ -142,7 +142,7 @@ is coined here and explained nowhere else; the per-field explanations live in
 | **run index**       | the searchable overview of runs (`runs.tsv`)                                                        |
 | **metrics**         | what a run measured and reported (`metrics.json`)                                                   |
 | **documented runs** | the runs listed by hand in a protocol's `## Runs` section                                           |
-| **intent id**       | the stable id of one checked promise (`[K1]`, `[S1]`, `[W1]`, `[N1]`)                               |
+| **intent id**       | the stable id of one checked promise (`[C1]`, `[A1]`, `[B1]`; kinds in `docs/promise-block.md`)   |
 | **bundle**          | the current protocol + scripts + extracted facts, packed for an audit agent (`code-check --bundle`) |
 | **frozen**          | unchangeable past a declared point (`Frozen before run: yes`)                                       |
 | **scope hash**      | the hash over the input scope a run's number rests on (`scope_sha`)                                 |

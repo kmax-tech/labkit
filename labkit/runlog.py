@@ -658,7 +658,7 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
             return []
         return [f"{path.name}: `Cost: seconds`, but the registration is not written: "
                 f"{', '.join(missing)} still empty or a placeholder — at seconds the "
-                f"gate is question · criterion · stop rule · cost, not the freeze "
+                f"gate is question · criterion · admissibility condition · cost, not the freeze "
                 f"(§2.A1, §2.A14)"]
     out = []
     if not FROZEN_YES.search(text):
@@ -757,7 +757,7 @@ class Run:
                     "protocol is not ready for one:\n  " + "\n  ".join(findings)
                     + "\nPilot it with long=False, or freeze first: `preflight "
                     "<AREA>` clean, audit stamped, `Frozen before run: yes` "
-                    "(at `Cost: seconds`: question, criterion, stop rule and cost written suffice). A "
+                    "(at `Cost: seconds`: question, criterion, admissibility condition and cost written suffice). A "
                     "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded).")
         self.dir = base_dir / "runs" / self.run_id
         self.dir.mkdir(parents=True, exist_ok=False)
