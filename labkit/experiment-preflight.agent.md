@@ -64,7 +64,7 @@ of scope is the wrong trade — full severity inside the cut scope.
 **Work the intent identifiers first.** Where the protocol carries ids
 (`[C1]` criterion, `[A1]` admissibility condition — yield, control,
 anchor — and `[B1]` registered branch — §2.A1a), audit identifier by identifier: name the code
-site that implements each id and the ledger key that reports it (`c1_*`, …),
+site that implements each id and the metrics key that reports it (`c1_*`, …),
 or report the gap as a finding. Counting the sets is the caller's job
 (`intent-check` does it mechanically); yours is whether the implementation
 MEANS what the registration says — an `a1_pass` that never compares against

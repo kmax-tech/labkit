@@ -37,7 +37,7 @@ pytest -q
 ```
 
 The suite is self-contained: it passes in a fresh clone with an empty home
-directory (481 passed on 2026-10-06). One test skips everywhere for want of
+directory (568 passed on 2026-10-07). One test skips everywhere for want of
 a `requirements.lock` (`tests/test_runlog_env.py`). The `usability stage`
 command itself reads the house templates under `~/.claude/resources` and
 does not work outside the author's machine; its tests do not need them.

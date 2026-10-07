@@ -14,17 +14,17 @@ What it runs, in order:
   2. intent-check   every registered promise has a metrics key (and vice versa)
   2b. scopes        every declared promise scope unchanged since the run
   3. open fields    protocol fields still holding a placeholder
-  5. criterion n    every `c<i>_n` key in metrics.json equals some input
-                    count the run recorded (rows of a data= file, lines of
-                    an output) — a warning, not a blocker, until the false
-                    alarm rate is known (2026-10-05; the denominator class
-                    was 31 of 171 audit findings)
   4. provenance     at `cost = "seconds"`: the
                     run froze its source (`data=` in config.json) and every
                     source and output file is tracked in git — the two of
                     the three questions the agent audit kept asking that a
                     machine can answer (§2.A14, 2026-10-05); the third, the
-                    counted unit, is the protocol's `Unit:` field
+                    counted unit, is the protocol's `Unit` field
+  5. criterion n    every `c<i>_n` key in metrics.json equals some input
+                    count the run recorded (rows of a data= file, lines of
+                    an output) — a warning, not a blocker, until the false
+                    alarm rate is known (2026-10-05; the denominator class
+                    was 31 of 171 audit findings)
 
 What it does NOT do: fill fields, edit the protocol, or commit. It is a
 read-only gate.
@@ -43,6 +43,7 @@ from labkit.repo import area_protocols, git_root, git_run
 from labkit.intent_check import (
     bound_runs,
     main as intent_check_main,
+    newer_unreadable,
     newest_with_intent_keys,
     registered_ids,
 )
@@ -185,6 +186,10 @@ def run(area: Path, protocol: Path | None = None) -> int:
                 # numbers came from the measurement (review 2026-10-07).
                 mpath, skipped = newest_with_intent_keys(taken)
                 assert mpath is not None, "taken is non-empty"
+                blocking = newer_unreadable(mpath.parent, rest)
+                if blocking:
+                    print(f"  BLOCKER: {blocking}")
+                    blockers += 1
                 newest_dir = mpath.parent
                 note = f" (skipped {skipped} newer bound run(s) without intent keys)" if skipped else ""
                 print(f"  {newest_dir.name}: completed{note}")

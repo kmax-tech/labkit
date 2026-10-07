@@ -29,7 +29,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import promises, runs
+from labkit import promises, protocol_block, runs
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
 #: reproduce: runlog's duration, llm's retry counter (the stamped evaluate()
@@ -50,13 +50,16 @@ class Verdict:
 def run_dir(area: Path, run_id: str | None = None) -> Path:
     """The run to recheck against: `run_id`, or the newest completed run."""
     runs_dir = area / "runs"
-    if run_id is not None:
-        d = runs_dir / run_id
-        state = runs.completion_state(d) if d.is_dir() else "missing"
-        if state != "completed":
-            raise SystemExit(f"recheck: {d} is not a completed run ({state})")
-        return d
-    done = runs.completed_runs(area)
+    try:
+        if run_id is not None:
+            d = runs_dir / run_id
+            state = runs.completion_state(d) if d.is_dir() else "missing"
+            if state != "completed":
+                raise SystemExit(f"recheck: {d} is not a completed run ({state})")
+            return d
+        done = runs.completed_runs(area)
+    except runs.RunConfigError as exc:
+        raise SystemExit(f"recheck: {exc}") from exc
     if not done:
         raise SystemExit(f"recheck: no completed run under {runs_dir}")
     return done[-1]
@@ -103,11 +106,14 @@ def block_unchanged(run: Path, area: Path) -> None:
     protocol's block must be the one the run recorded.
     """
     cfg = runs.read_run_config(run) or {}
-    rel = (cfg.get("protocol") or {}).get("path")
-    if rel is None:
+    pid = (cfg.get("protocol") or {}).get("id")
+    if pid is None:
         return                              # unbound: nothing to hold
-    protocol = Path(rel) if Path(rel).is_absolute() else area / rel
-    block = promises.parse_block(protocol.read_text(encoding="utf-8"))
+    try:
+        protocol = protocol_block.find_by_id(area, pid)   # by id; the path goes stale
+        block = promises.parse_block(protocol.read_text(encoding="utf-8"))
+    except (protocol_block.BlockError, promises.PromiseError) as exc:
+        raise SystemExit(f"recheck: run {run.name}: {exc}") from exc
     drift = promises.block_drift(cfg.get("promises"), block)
     if drift:
         raise SystemExit(f"recheck: run {run.name} {drift}")

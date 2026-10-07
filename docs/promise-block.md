@@ -127,8 +127,8 @@ outside a declared function are not covered — read them from the block.
 | Link | Who | Refuses or reports |
 |---|---|---|
 | promise | `intent-check` | block malformed; prose and block name different ids |
-| execution | `runlog` | malformed block or dangling scope → refused before the run dir exists; otherwise `config.json` records `promises`: the digest of the `[[promise]]` tables (canonical JSON — the head can change without moving it), and per id key, constants, scope, `declared_scope_sha` |
-| report | `intent-check` | declared key not reported exactly; run recorded no block, or a different one ("the promises changed after the run") |
+| execution | `runlog` | malformed block or dangling scope → refused before the run dir exists; otherwise `config.json` records `promises`: the digest of the promises as read (normalized JSON — neither the head nor the spelling of a table moves it) and its format, and per id key, constants, scope, `declared_scope_sha` |
+| report | `intent-check` | declared key not reported exactly; run recorded no block, or a different one ("the promises changed after the run"); a run from labkit 0.46/0.47 is told apart by its digest format, not reported as changed |
 | recomputation | `recheck.holds` | a declared scope changed since the run, per promise |
 
-A protocol without a block behaves as before.
+A protocol without `[[promise]]` tables has no promise checks; its head is still read.

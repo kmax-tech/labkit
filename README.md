@@ -33,7 +33,7 @@ nothing vanished, grown keys reported as a derived run), the note holding
 every reported number as a token and the run_id. Two areas re-implemented
 it and got two of three parts wrong (2026-10-05).
 
-Ten **console commands** come with the installation, `runlog` with three
+Twelve **console commands** come with the installation, `runlog` with three
 sub-commands (all answer `--help`):
 
 ```bash
@@ -222,9 +222,8 @@ sys.modules[__name__] = _mod
 ## Language
 
 Code, messages, docstrings and this README are English — the kit is meant
-to be handed to students as-is. The protocol checker's *contract* stays
-bilingual on purpose: its keyword patterns accept German and English field
-content, because grown protocols are German-filled.
+to be handed to students as-is. Field labels are English and held exactly
+(`protocol_check.FIELDS`); field content may be German or English.
 
 ## Develop
 

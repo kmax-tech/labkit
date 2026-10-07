@@ -5,6 +5,48 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.49.0 — 2026-10-07
+
+### Breaking
+
+Last version with the old behaviour: **v0.48.1**.
+
+- **Stricter fields.** A placeholder is `<…>` (opened and closed), `TODO`,
+  a bare `n/a — <why>` or an empty label without a code block; `TODO`
+  used to count as filled. Every † field is owed: Intent/Setup ones at
+  freeze, Summary/Result ones once frozen and a run is documented (new
+  level `report`, Analysis audit included). `Data / scope`, `Unit` and
+  `Model / tool` are musts in the full form. `frozen = true` at cost
+  seconds is a must finding.
+- **A full run on an unstamped protocol id is refused** before the run dir
+  exists.
+- **The promise digest** is over the promises as read (normalized) and
+  recorded with its format; a run from 0.46/0.47 is reported as such, not as
+  "the promises changed".
+- **One audit stamp**: `scope_sha.area_stamp` (scripts, imported `lib/`,
+  extra files, pin; paths relative to the repo root) feeds `scope-sha`,
+  `preflight` and `labkit-audit`. Stamps from earlier versions differ.
+- **Vendored flat copies are gone**: the `except ImportError` fallbacks for
+  student repos had stopped working (modules they needed were never
+  copied) and are removed. A student repo pins labkit or stays on its copy.
+
+### Fixed
+
+- A newer run with an unreadable `config.json` is no longer passed over
+  silently: `intent-check` and `finalize` refuse the older choice.
+- A deleted or unparsable declared scope, a renamed protocol (recheck now
+  finds it by id), a non-table `[[promise]]` entry, an unreadable head in
+  `usability score` and a broken parent in `derived_from` end in a
+  sentence, not a traceback.
+- `LABKIT_UNFROZEN`, `LABKIT_DETACHED` and `LABKIT_NO_ENDPOINT_LEASE` act on
+  `1` only; `0` used to count as set.
+- A ```toml example inside a prompt's code block is no second head; fences
+  nest by marker length.
+- runlog freezes a directory source (digest over visible files, rows =
+  files); `repo.layout_root(".")` climbs.
+- `protocol-check` no longer reports comment lines or open placeholders as
+  left-over template text.
+
 ## 0.48.1 — 2026-10-07
 
 ### Fixed (audit of 0.48.0)

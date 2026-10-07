@@ -80,6 +80,9 @@ CRITERION_N_KEY = re.compile(r"^c\d+_n$")
 _BLOCK_ID = re.compile(rf"^[{''.join(KINDS)}]\d+$")
 _ALLOWED_FIELDS = {"id", "key", "sentence", "scope", "constants"}
 
+#: what `block_sha` is a digest of — recorded with it, so a run from an
+#: earlier format is told apart instead of reported as changed promises
+DIGEST_FORMAT = "promises-normalized-json"
 #: same width as the area audit stamp (`scope_sha.DIGEST_CHARS`)
 DIGEST_CHARS = 12
 
@@ -161,6 +164,9 @@ def parse_block(text: str) -> PromiseBlock | None:
     seen: set[str] = set()
     for n, e in enumerate(entries, 1):
         where = f"[[promise]] #{n}"
+        if not isinstance(e, dict):
+            raise PromiseError(f"{where}: {e!r} is not a table — each promise is a "
+                               f"[[promise]] table with id, key, sentence, scope")
         unknown = set(e) - _ALLOWED_FIELDS
         if unknown:
             raise PromiseError(f"{where}: unknown field(s) {sorted(unknown)}; "
@@ -200,7 +206,11 @@ def parse_block(text: str) -> PromiseBlock | None:
         out.append(Promise(id=pid, kind=KINDS[pid[0]], key=key,
                            sentence=sentence.strip(), scope=tuple(scope),
                            constants=dict(constants)))
-    canonical = json.dumps(entries, sort_keys=True, ensure_ascii=False)
+    # over the promises as read, not as spelled: a stripped sentence, a
+    # sorted scope and a missing `constants` mean the same promise
+    canonical = json.dumps([{"id": q.id, "key": q.key, "sentence": q.sentence,
+                             "scope": sorted(q.scope), "constants": q.constants}
+                            for q in out], sort_keys=True, ensure_ascii=False)
     return PromiseBlock(promises=tuple(out), sha=_digest(canonical.encode("utf-8")))
 
 
@@ -237,8 +247,12 @@ def constants(protocol: Path, promise_id: str) -> dict[str, int | float | str | 
 
 def _function_source(path: Path, name: str) -> str:
     """Source text of the top-level function or class `name` in `path`."""
-    source = path.read_text(encoding="utf-8")
-    tree = ast.parse(source, filename=str(path))
+    try:
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(path))
+    except (OSError, UnicodeDecodeError, SyntaxError) as exc:
+        raise PromiseError(f"{path}: cannot read {name!r} from it ({exc.__class__.__name__}: "
+                           f"{exc}) — the declared scope must be parseable code") from exc
     for node in tree.body:
         if (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
                 and node.name == name):
@@ -265,8 +279,11 @@ def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
         path = base / file_part
         if not path.is_file():
             raise PromiseError(f"scope entry {entry!r}: no such file {path}")
-        content = (_function_source(path, func).encode("utf-8") if func
-                   else path.read_bytes())
+        try:
+            content = (_function_source(path, func).encode("utf-8") if func
+                       else path.read_bytes())
+        except OSError as exc:
+            raise PromiseError(f"scope entry {entry!r}: {exc}") from exc
         h.update(entry.encode("utf-8") + b"\n")
         h.update(hashlib.sha256(content).hexdigest().encode() + b"\n")
     return h.hexdigest()[:DIGEST_CHARS]
@@ -280,7 +297,12 @@ def scope_drift(recorded: dict | None, base: Path) -> list[str]:
         return []
     out = []
     for pid, rec in sorted(recorded["ids"].items()):
-        now = declared_scope_sha(base, tuple(rec["scope"]))
+        try:
+            now = declared_scope_sha(base, tuple(rec["scope"]))
+        except PromiseError as exc:
+            # gone or unparsable is a change, not a crash (review 2026-10-07)
+            out.append(f"[{pid}] {rec['declared_scope_sha']} → unreadable now ({exc})")
+            continue
         if now != rec["declared_scope_sha"]:
             out.append(f"[{pid}] {rec['declared_scope_sha']} → {now}")
     return out
@@ -298,6 +320,9 @@ def block_drift(recorded: dict | None, block: PromiseBlock | None) -> str | None
         return (f"the run ran under promise block {recorded['block_sha']}, the "
                 f"protocol now carries none — the promises were removed after "
                 f"the run")
+    if recorded.get("digest") != DIGEST_FORMAT:
+        return ("the run recorded its promises with labkit 0.46/0.47 (digest over "
+                "the block text, not comparable) — compare with labkit 0.47 or rerun")
     if block.sha != recorded["block_sha"]:
         return (f"ran under promise block {recorded['block_sha']}, the protocol "
                 f"now carries {block.sha} — the promises changed after the run")
@@ -306,7 +331,7 @@ def block_drift(recorded: dict | None, block: PromiseBlock | None) -> str | None
 
 def snapshot(block: PromiseBlock, base: Path) -> dict:
     """What a run records about its promises (config.json `promises`)."""
-    return {"block_sha": block.sha,
+    return {"block_sha": block.sha, "digest": DIGEST_FORMAT,
             "ids": {p.id: {"key": p.key, "constants": p.constants,
                            "scope": list(p.scope),
                            "declared_scope_sha": declared_scope_sha(base, p.scope)}

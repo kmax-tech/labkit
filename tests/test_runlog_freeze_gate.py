@@ -5,7 +5,7 @@ or whose `preflight_audit` is still empty, is refused before any run
 directory exists. Pilots (`long=False`) pass; a long pilot acknowledges
 with LABKIT_UNFROZEN=1 and the acknowledgement lands in config.json. At
 `cost = "seconds"` the gate is the written registration (question,
-criterion, admissibility condition), not the freeze (§2.A12); the tier
+criterion, admissibility condition), not the freeze (§2.A14); the tier
 lands in config.json as `cost_tier`.
 """
 from __future__ import annotations

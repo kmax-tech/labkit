@@ -2,7 +2,7 @@
 
 The most frequent blocker class of the first audits (2026-09-08, areas
 62-65) was "registered without implementation": a fork with no branch in
-the code, a stop rule printed but never compared to its threshold, a
+the code, an admissibility condition printed but never compared to its threshold, a
 three-conjunct criterion implemented as one conjunct, gate metrics written
 next to the content numbers the gate was meant to suppress. Reading catches
 this late; a set comparison catches it mechanically.
@@ -50,10 +50,8 @@ import json
 import sys
 from pathlib import Path
 
-try:
-    from labkit import promises
-except ImportError:                       # vendored flat copies (student repos)
-    import promises  # type: ignore
+from labkit import promises, protocol_block
+from labkit.runs import RunConfigError, read_run_config, run_state
 
 # The alphabet lives in `promises`; these names stay importable from here
 # because code_check and tools outside labkit (befundregister) use them.
@@ -63,12 +61,6 @@ registered_ids = promises.registered_ids
 reported_intent_ids = promises.reported_ids
 
 
-try:
-    from labkit import protocol_block
-    from labkit.runs import RunConfigError, read_run_config, run_state
-except ImportError:                       # vendored flat copies (student repos)
-    import protocol_block  # type: ignore
-    from runs import RunConfigError, read_run_config, run_state  # type: ignore
 
 
 def protocol_id_of(text: str) -> str | None:
@@ -305,7 +297,7 @@ def constant_findings(block: "promises.PromiseBlock", run_config: dict,
     return out
 
 
-# --- which metrics file answers: three ways, one per standard ---------------
+# --- which metrics file answers: named explicitly, or chosen by binding -----
 #
 # Each returns the chosen metrics.json, or an int: the exit code, with the
 # reason already printed. `_main` only dispatches, then checks.
@@ -369,11 +361,29 @@ def choose_bound(protocol: Path, pid: str) -> Path | int:
         return 2
     mpath, skipped = newest_with_intent_keys(cands)
     assert mpath is not None, "cands is non-empty, so a metrics file exists"
+    blocking = newer_unreadable(mpath.parent, rest)
+    if blocking:
+        print(f"intent-check: {blocking}")
+        return 2
     if skipped:
         print(f"intent-check: using {mpath.parent.name}/metrics.json "
               f"(newest bound run with intent keys; skipped {skipped} "
               f"newer bound run(s) without any).")
     return mpath
+
+
+def newer_unreadable(chosen: Path, rest: list[dict]) -> str | None:
+    """Why the choice must not stand: a run NEWER than the chosen one whose
+    config.json cannot be read. Its binding is unknowable, so it may be the
+    run that answers — choosing an older one past it is what
+    `runs.read_run_config` says must not happen (review 2026-10-07)."""
+    bad = [f for f in rest if f["state"] == "corrupt" and f["protocol_id"] is None
+           and f["dir"].name > chosen.name]
+    if not bad:
+        return None
+    return (f"{len(bad)} newer run(s) cannot say which protocol they belong to — "
+            + "; ".join(f["why"] for f in bad)
+            + f". Repair or move them aside before {chosen.name} may answer.")
 
 
 def cli() -> None:

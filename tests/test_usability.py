@@ -73,7 +73,7 @@ def _probe(root: Path, metrics: dict, frozen: bool = False, tier: str = "seconds
         head(cost=tier, frozen=frozen), encoding="utf-8")
     (run / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
     (run / "config.json").write_text(json.dumps(
-        {"schema_version": 2, "protocol": {"path": "PROTOCOL-docs-per-case.md"},
+        {"schema_version": 2, "protocol": {"id": "p-0123456789abcdef", "path": "PROTOCOL-docs-per-case.md"},
          "cost_tier": tier}), encoding="utf-8")
     (run / "completion.json").write_text("{}", encoding="utf-8")
     usability._sidecar(root, "probe.json").write_text(json.dumps({

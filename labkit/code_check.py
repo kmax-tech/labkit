@@ -714,7 +714,7 @@ def main(argv: list[str]) -> int:
         print(f"code-check: no PROTOCOL-*.md in {area}")
         return 2
     elif len(protocols) > 1:
-        # Fail closed, never pick: see find_protocols.
+        # Fail closed, never pick: see repo.area_protocols.
         print(f"code-check: {len(protocols)} protocols in {area} — name one "
               f"with --protocol FILE:")
         for p in protocols:

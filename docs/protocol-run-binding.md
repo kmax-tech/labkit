@@ -52,14 +52,15 @@ rewritten:
   there.
 - Omitted: exactly one protocol in the area binds to it, several are a hard
   error, none is `unbound` plus a warning.
-- A protocol without an id (standard below 0.16) yields `"id": null` with
-  the path filled — unbound, with a hint where to look.
+- A protocol whose id is not yet stamped yields `"id": null` with the path
+  filled — unbound, with a hint where to look; a full run (`long=True`) on
+  it is refused. A protocol without a readable head refuses the run.
 - The key always has the same shape. Missing protocol, missing id and found
   protocol differ in their VALUES, never in whether the key or the fields
   exist: no reader has to tell absent from null from object.
 
-`protocol` is the last parameter of `runlog.run(...)`, after `long`, so no
-existing positional call shifts.
+`protocol` follows `long` in `runlog.run(...)`, and `derived_from` follows
+`protocol`, so no existing positional call shifts.
 
 The file is named `config.json` and carries the provenance too. Renaming it
 would break every reader of every finished run, so the term moves and the
@@ -117,8 +118,9 @@ That makes two failures tell themselves apart instead of looking alike:
 - **`active()`** — unchanged for the first state, one state added. A
   directory is open when `config.json` exists and the run is not complete by
   its own marker. The recorded pid decides between `running` and the two
-  dead states, so each entry carries `state`: `completed` · `running` ·
-  `crashed` · `unfinalized` · `corrupt` · `legacy`. `alive` stays as it is.
+  dead states, so each entry carries `state`: `running` · `unknown` ·
+  `crashed` · `unfinalized` · `corrupt`. `completed` and `legacy` runs are
+  not open and are not listed. `alive` stays as it is.
 - **`--wait`** — exit codes keep their meaning: 0 nothing open · 2 a run
   failed · 3 still running at `--max-seconds`. `unfinalized` and `corrupt`
   are failures and exit 2, each with its own message: a machine only needs

@@ -77,10 +77,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-try:
-    from labkit import endpoint_lease
-except ImportError:                      # vendored flat copy (student repos)
-    import endpoint_lease
+from labkit import endpoint_lease
 
 
 def _find_models_toml() -> Path:
@@ -430,7 +427,7 @@ def _complete_once(alias: str, prompt: str, *, system: str | None = None,
     spec = resolve(alias)
     # A serving endpoint is ONE model slot: a second alias against it makes
     # both stages swap the model back and forth, and the timeouts come back as
-    # empty answers that a stop rule counts as a parser finding. The lease sits
+    # empty answers that an admissibility condition counts as a parser finding. The lease sits
     # HERE and not in the calling script on purpose — a rule a script has to
     # remember is an intention (endpoint_lease's docstring carries the chain).
     endpoint_lease.acquire(alias, spec.get("endpoints"))

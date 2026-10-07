@@ -33,7 +33,7 @@ answerable six weeks on; the split keys are what make it answerable by a tool.
 An incomplete run leaves its dir with config.json but without the required
 completion markers — visible, not silent. The run-index row is written on
 clean exit only. States: completed · running · unknown · crashed ·
-unfinalized · corrupt.
+unfinalized · corrupt · legacy (written before labkit 0.21).
 """
 from __future__ import annotations
 
@@ -288,10 +288,7 @@ def _resolve_models(config: dict) -> dict:
     for key, val in config.items():
         if (key == "model" or key.endswith("_model")) and isinstance(val, str):
             try:
-                try:
-                    from labkit import llm
-                except ImportError:      # vendored flat copy (student repos)
-                    import llm
+                from labkit import llm
                 out[val] = llm.resolve(val)
             except Exception as e:
                 out[val] = f"unresolved: {e}"
@@ -714,11 +711,15 @@ class Run:
         self._derived_from = None
         if derived_from is not None:
             parent = base_dir / "runs" / derived_from
-            state = completion_state(parent) if parent.is_dir() else "missing"
+            try:
+                state = completion_state(parent) if parent.is_dir() else "missing"
+            except RunConfigError as exc:
+                raise SystemExit(f"runlog: derived_from={derived_from!r}: {exc}") from exc
             if state != "completed":
+                hint = " (read it with labkit 0.47)" if state == "legacy" else ""
                 raise SystemExit(
                     f"runlog: derived_from={derived_from!r} names no completed "
-                    f"run under {base_dir / 'runs'} ({state}) — a derived run "
+                    f"run under {base_dir / 'runs'} ({state}){hint} — a derived run "
                     f"needs a finished parent")
             self._derived_from = derived_from
         # Before any work: an unresolvable protocol is a refusal, and a
@@ -736,7 +737,7 @@ class Run:
         # A run of seconds (`cost = "seconds"`) cannot meet that timeout and
         # runs in the foreground (2026-10-05).
         if (long and not _short and os.environ.get("CLAUDECODE")
-                and not os.environ.get("LABKIT_DETACHED")):
+                and os.environ.get("LABKIT_DETACHED") != "1"):
             raise SystemExit(
                 "runlog: this run declares long=True and sits in a Claude Code "
                 "foreground shell — the tool timeout would kill the process "
@@ -755,7 +756,7 @@ class Run:
         self._unfrozen_ack = False
         if long:
             findings = _freeze_findings(base_dir, self._protocol)
-            if findings and os.environ.get("LABKIT_UNFROZEN"):
+            if findings and os.environ.get("LABKIT_UNFROZEN") == "1":   # "0" is no acknowledgement
                 self._unfrozen_ack = True
                 print("runlog: WARNING — LABKIT_UNFROZEN=1: full run on an "
                       "unfrozen protocol, acknowledged; recorded in config.json:\n  "
@@ -864,25 +865,6 @@ class Run:
         if os.environ.get("LABKIT_NOTIFY") == "1" or dur >= _NOTIFY_MIN_S:
             _notify(f"run finished: {self.experiment}",
                     f"{self.run_id} · {dur}s · {len(self._metrics)} metric(s)")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def active(base_dir: str | Path) -> list[dict]:

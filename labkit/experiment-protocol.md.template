@@ -11,7 +11,7 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
   head · question · criterion · admissibility · terms · data · unit ·
   exclusions · result; with `--model` also model · prompt · null condition;
   the full form adds the rest; `--report` the † fields). One template, three
-  cuts — a field the cut left out is not owed (→ §2.A12).
+  cuts — a field the cut left out is not owed (→ §2.A14).
 - **† = report field.** Due once `frozen = true` in the head — those in
   Summary and Result once a run is written back as well; leave the
   placeholder until then (`lib exp <name> --report` appends them).
@@ -57,7 +57,7 @@ seconds cut (`lib exp <name> --cost seconds`, `--model <alias>` with a model in 
 
 <!-- HEAD — this part gets READ. Prose-line budget per section: Summary 20 ·
      Context 20 · Intent 35 · Setup 45 (code blocks and table rows do not
-     count; `protocol-check --contract` prints budgets and accepted field words). -->
+     count; `protocol-check --contract` prints the head, the labels and the budgets). -->
 
 ## Summary † (write last)
 
@@ -104,8 +104,8 @@ instead).*
 - **Caps/drops †:** <what was omitted or limited>
 - **Analysis audit †:** <!-- s --> <date · scope sha · N findings — the audit of the
   EVALUATION against the frozen criterion, before the number leaves; at
-  Cost seconds due at promotion or when the number steers a decision
-  (→ §2.D11, §2.A12)>
+  cost seconds due at promotion or when the number steers a decision
+  (→ §2.D11, §2.A14)>
 
 <!-- APPARATUS — this part gets LOOKED UP, not read. -->
 

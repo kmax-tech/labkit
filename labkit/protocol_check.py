@@ -147,6 +147,7 @@ class FieldLine:
     label: str                      # the label as written
     value: str                      # the value with its continuation lines, cut markers removed
     block: bool = False             # a code fence follows the label (a verbatim prompt)
+    last: int = 0                   # 1-based last line of the value
 
     @property
     def placeholder(self) -> bool:
@@ -168,12 +169,17 @@ def fields(text: str) -> list[FieldLine]:
     extremes):** <…>`); it is read whole."""
     out: list[FieldLine] = []
     lines = text.splitlines()
-    fence = False
+    fence: str | None = None            # the open fence's marker; nested fences are body
     for i, line in enumerate(lines):
-        if line.strip().startswith("```"):
-            fence = not fence
+        if fence is not None:
+            if protocol_block.closes(line, fence):
+                fence = None
             continue
-        if fence or "**" not in line:
+        opened = protocol_block.FENCE.match(line)
+        if opened:
+            fence = opened.group(2)
+            continue
+        if "**" not in line:
             continue
         joined, nxt = line, i + 1
         if re.match(r"^\s*(?:[-*]\s+)?\*\*", line) and ":**" not in line and i + 1 < len(lines):
@@ -194,7 +200,7 @@ def fields(text: str) -> list[FieldLine]:
         label = " ".join(m.group("label").split())
         after = next((ln.strip() for ln in lines[nxt:] if ln.strip()), "")
         out.append(FieldLine(line=i + 1, name=field_name(label), label=label, value=value,
-                             block=after.startswith("```")))
+                             block=after.startswith("```"), last=nxt))
     return out
 
 
@@ -398,7 +404,7 @@ def unreported(text: str) -> list[str]:
 # A follow-up registration appended to the SAME protocol — the pattern that
 # grew one file to 649 lines out of three experiments ("Lauf B — ...
 # (deklariert vor dem Lauf)", "Stufe 2 ..."): each such heading is a second
-# question in a one-question file. The series rule (Arbeitsstandard §2.F)
+# question in a one-question file. The series rule (Arbeitsstandard §2.F5)
 # gives every follow-up its own PROTOCOL-s<N>-<slug>.md. Warning only.
 SERIES_HEAD = re.compile(
     r"(?im)^##.*\((deklariert|registriert) vor dem( jeweils \w+)? "
@@ -530,9 +536,8 @@ def print_contract() -> None:
 
 
 def code_blocks(text: str) -> int:
-    """Fenced blocks other than the TOML head block — the rendered examples."""
-    fences = re.findall(r"^\s*```(\w*)", text, re.M)
-    return len(fences) // 2 - fences.count("toml")
+    """Top-level fenced blocks other than the TOML head — the rendered examples."""
+    return sum(1 for info, _ in protocol_block.fenced_blocks(text) if info != "toml")
 
 
 def collect(paths: list[str]) -> list[Path]:
@@ -553,7 +558,7 @@ def main(argv: list[str]) -> int:
               "packaged one")
         print("  --guide          print the path to the protocol field guide")
         print("  --contract       print what the checker holds a protocol to: the "
-              "prose-line budget per section and the words each field is "
+              "prose-line budget per section and the exact label of each field "
               "recognised by — read it BEFORE writing, not from the pre-commit hook")
         return 0
     if argv and argv[0] == "--contract":
@@ -608,7 +613,13 @@ def main(argv: list[str]) -> int:
                           f"should-field(s) due only at report time "
                           f"(append them: lib exp <name> --report)")
             missing_should = []
-        left = sorted({s for s in (ln.strip() for ln in text.splitlines()) if s in tmpl})
+        # A placeholder is reported as one already, and a comment can never
+        # be "filled" — neither is left-over template text (review 2026-10-07:
+        # a correctly filled seconds protocol was never clean).
+        in_placeholder = {n for f in fields(text) if f.placeholder
+                          for n in range(f.line, f.last + 1)}
+        left = sorted({s for n, s in enumerate((ln.strip() for ln in text.splitlines()), 1)
+                       if s in tmpl and not s.startswith("<!--") and n not in in_placeholder})
         # "mentions a prompt" means a Prompt FIELD, not the word: the stamped
         # legend says "prompt" in every protocol, and a count protocol cut
         # without the field was blocked for it (2026-10-05).
@@ -699,7 +710,7 @@ def main(argv: list[str]) -> int:
             print(f"{f}:{n}: follow-up registration in the same protocol "
                   f"({ln[:60]!r}) — one question per protocol: a declared "
                   f"follow-up gets its own PROTOCOL-s<N>-<slug>.md "
-                  f"(series rule, Arbeitsstandard §2.F).")
+                  f"(series rule, Arbeitsstandard §2.F5).")
         for n, ln in history:
             print(f"{f}:{n}: change history in the text ({ln[:60]!r}) — docs "
                   f"carry the current state, the why of the change goes in the "

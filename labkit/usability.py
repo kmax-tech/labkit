@@ -186,7 +186,7 @@ def _sidecar(root: Path, suffix: str) -> Path:
 def stage(root: Path, venv: Path | None, cost: str | None = None, task: str = "count",
           model: bool = False) -> int:
     """Side effects: see module docstring. `cost` is stamped into the
-    protocol's Cost field (`seconds` cuts the seconds form and the counting
+    protocol's `cost` (`seconds` cuts the seconds form and the counting
     skeleton); `task` picks the fixture and the task sheet (TASKS)."""
     spec = TASKS[task]
     area_name, metric_key = spec["area"], spec["metric_key"]
@@ -309,7 +309,7 @@ class Score:
     number: float | None       # metrics[metric_key], or None when absent
     expected: float | None     # the recounted truth (count), None for a model's number
     number_ok: bool            # equals the truth, or (judge) present and within [0, 1]
-    null_reported: bool | None # judge: an n<i>_* key in metrics.json
+    null_reported: bool | None # judge: an a<i>_* key (admissibility, the null lane) in metrics.json
     bound_to: str | None       # config["protocol"]["path"]
     frozen: bool | None
     cost_tier: str | None
@@ -335,7 +335,9 @@ def score(root: Path) -> int:
         value = metrics.get(probe.metric_key)
         number = (float(value) if isinstance(value, (int, float))
                   and not isinstance(value, bool) else None)
-        bound_to = (config.get("protocol") or {}).get("path")
+        binding = config.get("protocol") or {}
+        # bound means the run recorded an id; a path alone is a hint that goes stale
+        bound_to = binding.get("path") if binding.get("id") else None
         tier = config.get("cost_tier")
         if probe.task != "count":
             null_reported = any(re.match(r"^a\d+_", k) for k in metrics)
@@ -343,8 +345,12 @@ def score(root: Path) -> int:
             from labkit import protocol_block  # lazy: labkit modules import each other
             p = Path(bound_to)
             p = p if p.is_absolute() else area / p
-            frozen = (protocol_block.head(p.read_text(encoding="utf-8")).frozen
-                      if p.is_file() else None)
+            try:
+                frozen = (protocol_block.head(p.read_text(encoding="utf-8")).frozen
+                          if p.is_file() else None)
+            except protocol_block.BlockError as exc:
+                print(f"  protocol head unreadable — {exc}")
+                frozen = None
     log = _sidecar(root, "log.md")
     trace = parse_log(log.read_text(encoding="utf-8")) if log.is_file() else None
     sc = Score(probe=probe, run_id=run.name if run else None, number=number,
