@@ -10,7 +10,7 @@ restate them from memory.
 ## Read, in this order
 
 1. `<AREA>/PROTOCOL-*.md` — the registration. Question, success criterion,
-   stop rule, registered fork, null condition, free knobs, prompt verbatim.
+   admissibility condition, registered branch, null condition, free knobs, prompt verbatim.
    This is the ground truth you audit the code against.
 2. `<AREA>/scripts/*.py` and `<AREA>/analysis/*.py` — completely, not skimmed.
 3. The repo-local `lib/` modules those files import (`from lib import …`,
@@ -26,7 +26,7 @@ do not guess between areas.
 ## Precondition — refuse an empty registration
 
 First thing after reading the protocol: check the Intent MUST fields
-(question/hypothesis, success criterion, stop rule). If they still hold
+(question/hypothesis, success criterion, admissibility condition). If they still hold
 template placeholders (`<...>`), do not audit. Return the single line
 
 ```
@@ -62,12 +62,12 @@ ONLY to extract which fields and keys they consume. Cutting depth instead
 of scope is the wrong trade — full severity inside the cut scope.
 
 **Work the intent identifiers first.** Where the protocol carries ids
-(`[K1]` criterion conjunct, `[S1]` stop rule, `[W1]` registered fork, `[N1]`
-null condition/gate — §2.A1a), audit identifier by identifier: name the code
-site that implements each id and the ledger key that reports it (`k1_*`, …),
+(`[C1]` criterion, `[A1]` admissibility condition — yield, control,
+anchor — and `[B1]` registered branch — §2.A1a), audit identifier by identifier: name the code
+site that implements each id and the ledger key that reports it (`c1_*`, …),
 or report the gap as a finding. Counting the sets is the caller's job
 (`intent-check` does it mechanically); yours is whether the implementation
-MEANS what the registration says — an `s1_hit` that never compares against
+MEANS what the registration says — an `a1_pass` that never compares against
 its registered threshold is a finding, not compliance.
 
 Work the scar table of §2.A12 row by row, filtered by its *Audit* column:
@@ -120,7 +120,7 @@ lack of an exact figure — and never present an estimate as measured.
 ## Out of scope — do not report, do not do
 
 - Style, naming, type annotations, refactoring, test coverage in the abstract.
-- Touching hypothesis, success criterion or stop rule.
+- Touching hypothesis, success criterion or admissibility condition.
 - Editing anything: you have no write tools, and that is the design — the
   human decides and repairs.
 - Model calls: this audit costs no money and produces no data.
