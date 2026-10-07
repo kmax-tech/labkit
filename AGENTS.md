@@ -40,7 +40,10 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 The editor's type checker reads the same `.venv` (`[tool.pyright]` in
 `pyproject.toml`).
 Before a commit: `.venv/bin/ruff check . && .venv/bin/ruff format --check . &&
-.venv/bin/pyright` — all three clean (docs/coding-style.md CS-008 Run the linter and the type checker).
+.venv/bin/pyright` — all three clean (docs/coding-style.md CS-008 Run the linter and the type checker),
+and the suite green. The versioned hook `.githooks/pre-commit` runs all four
+and refuses the commit otherwise; turn it on once per clone with
+`git config core.hooksPath .githooks`.
 
 The suite is self-contained: it passes in a fresh clone with an empty home
 directory. One test skips everywhere for want of
