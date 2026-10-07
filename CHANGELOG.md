@@ -5,6 +5,17 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.58.1 — 2026-10-07
+
+### Added
+
+- **`llm.last_thinking()`** — the reasoning trace of this thread's most
+  recent completion (ollama `thinking`, OpenAI-style `reasoning_content` /
+  `reasoning`), "" when the backend returns none; reset before every
+  attempt, so a call never shows a previous call's trace. labkit read the
+  field and dropped it; uniagent could not explain a false classifier answer
+  afterwards because only the answer was kept.
+
 ## 0.58.0 — 2026-10-07
 
 ### Changed

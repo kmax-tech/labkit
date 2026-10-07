@@ -284,6 +284,17 @@ def last_endpoint() -> str:
     return getattr(_TLS, "endpoint", "")
 
 
+def last_thinking() -> str:
+    """The reasoning trace of this thread's most recent completion — what a
+    reasoning model wrote before its answer (ollama `thinking`, OpenAI-style
+    `reasoning_content`/`reasoning`); "" when the backend returns none. Read
+    it right after `complete` returns, like `last_endpoint`: the answer alone
+    says what the model decided, the trace says why (uniagent 2026-10-07: a
+    false framework `yes` could not be explained because only the answer was
+    kept)."""
+    return getattr(_TLS, "thinking", "")
+
+
 # `claude -p` is an agent harness, not an inference API: by default every
 # call inherits the operator's ~/.claude/settings.json AND both CLAUDE.md
 # files (user + project) into its system prompt. An empty setting-sources
@@ -388,6 +399,7 @@ def complete(
     honour — are raised immediately. Pass attempts=1 to disable.
     """
     for attempt in range(1, attempts + 1):
+        _TLS.thinking = ""  # never a previous call's trace
         try:
             return _complete_once(
                 alias,
@@ -651,6 +663,7 @@ def _complete_ollama_chat(
     body = _post_json(spec, "/api/chat", payload, timeout)
     message = body.get("message") or {}
     content = (message.get("content") or "").strip()
+    _TLS.thinking = (message.get("thinking") or "").strip()
     # Reasoning models put their thinking trace in its own field. If
     # `content` stays empty while `thinking` is filled, the model thought
     # and said nothing — a MISSING measurement that would come back as an
@@ -721,6 +734,7 @@ def _complete_openai(
     reasoning = (
         message.get("reasoning_content") or message.get("reasoning") or ""
     ).strip()
+    _TLS.thinking = reasoning
     if spec.get("reasoning") and content and not reasoning:
         raise ValueError(
             f"{alias}: reasoning = true, but the answer carries content "
