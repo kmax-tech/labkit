@@ -132,7 +132,8 @@ instead).*
 - **Gate labels (expected) †:** <which labels the gate accepts — the declared
   set for the mechanical check against code-extracted labels>
 - **Null condition / anchors (in the same run):** <!-- sm --> <one A per anchor — what runs along in THIS
-  run and must show null — anchors of known rate, placebo, swap; not "was
+  run and must show null — anchors of known rate, placebo (safest: one whose
+  true answer is the same for every item), swap; not "was
   validated earlier". Per anchor its expected outcome WITH the derivation
   in half a sentence (→ §2.C9)>
 - **Exclusions / filters:** <!-- s --> <what is dropped from the data or output and why;

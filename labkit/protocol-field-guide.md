@@ -230,6 +230,11 @@ scattered in output files nobody can interpret.
   and must show null — anchors of known rate, placebo, swap; not "was
   validated earlier". Per anchor its expected outcome WITH the derivation in
   half a sentence. Intent id: [A1] per control (an admissibility condition).
+  A placebo question is safest when its true answer is the same for every
+  item ("Is this text written in English?"): the expected accuracy is the
+  gold share of the class that answer maps to, derived before any call. A
+  placebo whose answer varies per item (numbers, length) can track the gold
+  label and fail its band (usability probe 2026-10-07).
 - **Exclusions / filters:** what is dropped from the data or output and why;
   which outputs get no gate label — "none" if nothing is excluded. Silent
   drops are the classic error: a filter that quietly loses the hard cases
