@@ -109,3 +109,66 @@ findable by name (dotfiles `coding-style.md`):
    along the flow) or a weaker reader.
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round2/`.
+
+## Round 3 (2026-10-07): questions across several hops, a weaker reader
+
+Five harder questions per repo — each answer is reached only by following
+the flow ("the model has said some order lines are contract goods: where
+are their amounts added up into the figure a fixed check later decides
+on?"); two Haiku and two Sonnet agents per repo. Truths registered before
+the run, none widened.
+
+| repo | Sonnet (2 agents) | Haiku (2 agents) | Sonnet calls | Haiku calls |
+|---|---|---|---|---|
+| uniagent | 10/10 | 9/10 | 9, 11 | 21, 23 |
+| labkit | 10/10 | 5/10 | 9, 11 | 22, 25 |
+
+The probe separates now — not by the strong reader, by the weak one, and
+it separates the repos.
+
+Where Haiku missed in labkit (every miss read in the transcript and the
+code):
+
+- **Two settings blocks** (h4: "every experiment record carries a small
+  block of settings at its end — where is the list it must contain?"):
+  both answered the run's `config.json` fields in `runlog.py` instead of
+  the protocol head's `HEAD_FIELDS`. The question said "record", which
+  fits both; labkit has two blocks of settings, one per protocol and one
+  per run, and their names (`head`, `config`) do not say which belongs to
+  what. Partly a flaw of the question, partly the finding.
+- **Two fingerprints** (h3: helper files imported by an experiment): one
+  agent answered `promises.declared_scope_sha` — the digest over a
+  promise's declared files — instead of `scope_sha.imported_lib`. Two
+  mechanisms hash code, in two modules, with the same word "scope".
+- **Two checks against what the run recorded** (h2: a promised constant
+  compared with the value the run used): one agent answered `finalize`'s
+  check that a criterion's n matches a recorded input count, instead of
+  `intent_check.constant_findings`.
+- **Logic without a name of its own** (h5: which Python runs the area's
+  tests): one agent never opened `preflight.py` and answered
+  `pyproject.toml`; the choice of interpreter is four lines inside
+  `area_tests`, with no function or constant that names it.
+- In uniagent the one Haiku miss is defensible: `extract.MARKERS`, the
+  table `classify_document` decides by.
+
+**Maps:** only the two Haiku agents in labkit opened a map — `README.md`,
+`docs/architecture.md`, `CLAUDE.md` — when lost; it did not lead them to
+the answer. No Sonnet agent in three rounds, and no Haiku agent in
+uniagent, opened one.
+
+Consequences for CS-015 Make the code findable by name (dotfiles
+`coding-style.md`, sharpened):
+
+1. Two mechanisms that do similar things need names that say how they
+   differ — the misses cluster where labkit has two of a kind.
+2. Logic someone will look for gets its own name — confirmed a third time
+   (the interpreter choice inside `area_tests`).
+3. A map is what a struggling reader turns to; it does not rescue names
+   that do not separate.
+
+For labkit this is a work list, not yet done: the protocol head vs the run
+config, the area stamp (`scope_sha`) vs the declared-scope digest
+(`promises.declared_scope_sha`), the criterion-n check vs the constant
+check, the interpreter choice in `area_tests`.
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round3/`.
