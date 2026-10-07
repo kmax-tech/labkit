@@ -486,7 +486,7 @@ fiel durch, weil das Muster `terms of` verlangt; die Protokoll-ID hatte
 drei eigene Regex-Kopien, die schon verschieden reagierten (Review
 2026-10-06, behoben in `598f566`).
 
-**Erledigt 2026-10-07 (0.48.0):** Kopf als `[protocol]`-Tabelle (`labkit/protocol_block.py`), Prosafelder über exakte Labels (`protocol_check.FIELDS`, ein Test bindet sie an die Vorlage), Altpfade entfernt — dazu `runlog migrate-index` und die Messungs-Kurzform. Offen: die Import-Fallbacks für vendorte Kopien (getrennt zu entscheiden; die Studi-Kopie fehlt schon seit 0.46 `repo`/`runs`/`promises`, jetzt auch `protocol_block`), Tags auf GitHub, Pin für `thesis-dagidir`.
+**Erledigt 2026-10-07 (0.48.0):** Kopf als `[protocol]`-Tabelle (`labkit/protocol_block.py`), Prosafelder über exakte Labels (`protocol_check.FIELDS`, ein Test bindet sie an die Vorlage), Altpfade entfernt — dazu `runlog migrate-index` und die Messungs-Kurzform. Die Import-Fallbacks für vendorte Kopien sind in 0.49 entfernt; entschieden 2026-10-07: Studi-Repos pinnen labkit von GitHub wie die Labore (`--thesis` schreibt `requirements.txt`, dotfiles `6b92c03`). Offen: Tags auf GitHub (Voraussetzung für jeden Studi-Pin), Pin für `thesis-dagidir`.
 
 **Auslöser (war):** der Rollout von Punkt 7 (Template und Feld-Guide auf
 `[C]/[A]/[B]`) — das Template ändert sich dann nur einmal.
