@@ -172,3 +172,40 @@ config, the area stamp (`scope_sha`) vs the declared-scope digest
 check, the interpreter choice in `area_tests`.
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round3/`.
+
+## Round 4 (2026-10-07): labkit after the renames (0.62.0), the weaker reader again
+
+labkit 0.62.0 gave the four places of round 3's misses names that tell two
+of a kind apart (`PROTOCOL_HEAD_KEYS`, `imported_repo_helpers`,
+`promised_constant_mismatches` vs `criterion_n_input_mismatches`) and the
+interpreter choice a function of its own (`area_test_python`), with first
+docstring lines that say what each is not. Then round 3's labkit questions
+again, Haiku only, in two versions: the **same** wording, and a
+**reworded** one without the words the new names now carry ("promised",
+"helper", "settings", "Python installation"), so that a gain cannot come
+from a question that names the answer.
+
+| labkit, Haiku | found | calls | maps opened |
+|---|---|---|---|
+| round 3, before the renames (2 agents) | 5/10 | 22, 25 | README, architecture, CLAUDE.md |
+| round 4, same questions (2 agents) | 10/10 | 32, 19 | none |
+| round 4, reworded questions (2 agents) | 10/10 | 21, 16 | none |
+
+- **The weaker reader found every place, in both wordings,** and no agent
+  turned to a map. labkit now reads like uniagent did for Haiku in round 3
+  (9/10).
+- **What this shows and what not:** the questions sit exactly on the
+  places that were changed — the round shows that the change fixes what
+  was missed, not that labkit as a whole is now easier to navigate. The
+  reworded h4 is also clearer than round 3's ("written plan" instead of
+  the ambiguous "record"), so part of that one gain is the question's.
+  Two to four agents per cell; one agent needed 32 calls for 5/5 — the
+  variance between agents is as large as the effect on effort, so only the
+  found count is read.
+
+Consequence: CS-015 Make the code findable by name holds up in the one
+test that can falsify it — rename what a weak reader confused, and the
+weak reader stops confusing it. A fresh question set on untouched parts of
+both repos would show how far it generalizes.
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round4/`.
