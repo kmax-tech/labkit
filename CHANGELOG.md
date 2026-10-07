@@ -5,9 +5,56 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
-## Unreleased
+## 0.53.0 — 2026-10-07
 
-### Changed
+What six rounds of cold-agent probes (`docs/usability/2026-10-07-remeasure.md`)
+and one reader's feedback on a frozen protocol turned up.
+
+### Changed — may block where 0.52.0 passed
+
+- **The prompt drift check runs on stamped areas.** `PROMPT` constants are
+  computed statically (names, `+`, f-strings, `str.join` over a constant);
+  the skeleton's `PROMPT = "..." + ANSWER_LINE` used to be unreadable, so the
+  check never ran on a stamped area. Every fenced block under the Prompt
+  field counts (one block per variant is a written form). A prompt it
+  cannot compute is a WARNING, never a silent pass.
+
+### Added
+
+- `protocol-fill PROTOCOL --prompts` writes the Prompt block from the area
+  scripts' `PROMPT` / `PROMPT_<VARIANT>` constants.
+- `protocol-check` names stamped list placeholders left behind (`- <run_id>
+  — <…>`, `- <…>`) and warns on a field that references another area
+  without a link ("wie Bereich 07").
+- `code-check`, `finalize`, `preflight` and `runlog reindex` take an area
+  by its bare name as `lib exp` prints it (`01-<name>` or `<name>`).
+- `usability score --transcript F` and `usability trace F`: what a probe
+  agent did, measured from its session transcript (`agent_transcript`);
+  `usability stage` stamps each task as the house route does and writes
+  `<dir>.prompt.md` (the repo's CLAUDE.md first, as a session loads it).
+- The auditor agent's MODE analysis adds `READ` lines on the protocol's
+  readability; they enter no verdict.
+- Field guide rule 8 (write for the reader who opens only this file) and a
+  legend line in the template; the template names `protocol-fill` and the
+  safest placebo for a null lane.
+
+### Fixed
+
+- `runlog`'s lock check reads an editable install's freeze line (`-e
+  git+…#egg=labkit`) and compares it with the checkout's HEAD; a lock
+  written by `pip freeze` no longer reports drift against itself.
+- At `cost = "seconds"` only the cut's fields count as open placeholders,
+  and fields written after the run only once a run is documented.
+- `finalize` and `protocol-check` repeat their blockers in the last lines.
+- `protocol-fill` reads fields through `protocol_check.fields` (one parser;
+  `protocol_fill.open_fields` is gone — use
+  `protocol_check.placeholder_fields`).
+- "no such area" names the directory a relative path resolved against.
+- `--contract` opens with the seconds cut and marks its lists as the full
+  form.
+
+
+### Changed (rule references)
 
 - **Rule references are AS-/CS- code + name.** Messages, the shipped
   protocol template, the field guide and the auditor agent cite rules of the
