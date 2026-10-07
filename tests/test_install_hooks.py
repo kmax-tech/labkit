@@ -47,7 +47,7 @@ class Install(unittest.TestCase):
         hook = repo / ".githooks" / "pre-commit"
         hook.write_text("#!/bin/sh\n# installed by labkit-hooks 0.40.0 — reinstall\n")
         gaps = install_hooks.check(repo)
-        self.assertTrue(any("is from 0.40.0" in g for g in gaps), gaps)
+        self.assertTrue(any("is from labkit 0.40.0" in g for g in gaps), gaps)
         install_hooks.install(repo)
         self.assertEqual(install_hooks.check(repo), [])
 

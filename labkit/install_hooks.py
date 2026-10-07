@@ -160,8 +160,9 @@ def check(repo: Path) -> list[str]:
     elif hook.read_text(encoding="utf-8") != pre_commit():
         first = next((ln for ln in hook.read_text(encoding="utf-8").splitlines()
                       if ln.startswith(MARK)), "")
-        was = first.removeprefix(MARK).split("—")[0].strip() or "not labkit-hooks"
-        out.append(f".githooks/pre-commit is from {was}, this labkit is {labkit_version()}")
+        was = first.removeprefix(MARK).split("—")[0].strip()
+        out.append(f".githooks/pre-commit is from labkit {was}, this labkit is {labkit_version()}"
+                   if was else ".githooks/pre-commit was not written by labkit-hooks")
     r = git_run(["config", "--get", "core.hooksPath"], repo)
     if r.stdout.strip() != ".githooks":
         out.append("git core.hooksPath is not .githooks — the pre-commit hook never runs")
