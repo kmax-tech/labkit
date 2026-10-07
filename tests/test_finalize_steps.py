@@ -18,9 +18,9 @@ class Steps(unittest.TestCase):
     def test_a_cited_run_that_is_not_the_answering_one_blocks(self):
         run = Path("/x/runs/2026-10-07T10-00-00_aa11")
         text = "- **Answer to the question:** 0.91 (2026-10-07T09-00-00_bb22)\n"
-        self.assertIn(
-            "2026-10-07T09-00-00_bb22", finalize.cited_run_mismatch(text, run)
-        )
+        mismatch = finalize.cited_run_mismatch(text, run)
+        assert mismatch is not None
+        self.assertIn("2026-10-07T09-00-00_bb22", mismatch)
 
     def test_citing_the_answering_run_or_none_passes(self):
         run = Path("/x/runs/2026-10-07T10-00-00_aa11")
