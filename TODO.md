@@ -206,7 +206,12 @@ Lesezugriffe auf Quelltext oder Standard. Zwei Fehlalarme gefunden und
 behoben (`3e93af3`: Lock-Drift bei editierbarer Installation,
 Platzhalter außerhalb des Sekunden-Schnitts). Offen vor dem Rollout: der
 Scaffolder stempelt ohne `--cost` das Modell-Skelett auch für eine
-Zählung (Haus-Vorlage, eigener Auftrag).
+Zählung (Haus-Vorlage, eigener Auftrag). — Nachtrag: der Stempel kam aus
+der Probe (ohne `--cost` gestempelt), nicht aus dem Weg; Runde 2 mit dem
+Stempel des Wegs: 6 von 6 richtig, Median count 0m56s, judge 2m04s, 0
+Gate-Zeilen, ein Rest-Fehlalarm behoben (`6dacdc3`). Offen und nicht
+labkit: Repo-`CLAUDE.md` (239 Zeilen) für die Sekunden-Spur, siehe
+Abschnitt „Still open“ der Auswertung.
 
 ## 3. `code-check`: jede registrierte Kennung braucht einen Zweig, nicht nur einen Schlüssel
 

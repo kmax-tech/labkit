@@ -49,16 +49,48 @@ labkit source or the standard.
    time sink; it buried count-3's blocker). Now only the cut's fields count;
    `finalize` on the six probes: all clear.
 
+## Round 2: the route's stamp, after the fixes
+
+The first round staged without `--cost`, although the README stages with
+it; the count got the full form and the model skeleton. Fixed in the
+harness (`d48ea40`: each task is stamped as the house route stamps it),
+together with the two false alarms, a blocker recap in the last lines
+(`ee4a043`), one field parser for `protocol-fill` (`20fbf52`) and the
+placebo advice in the template and the measure skeleton (`d493968`).
+Six new cold Sonnet agents at labkit `d48ea40`, scaffold flags `--cost
+seconds` (+ `--model haiku` for judge). Scores:
+`2026-10-07-sonnet-v2-{count,judge}-{1,2,3}.score.json`.
+
+| run | number | truth / range | bound | wall-clock | gate / unsure lines | reads of source / standard |
+|---|---|---|---|---|---|---|
+| count-1 | 3.5 | equals truth | yes | 0m53s | 0 / 0 | 0 |
+| count-2 | 3.5 | equals truth | yes | 0m56s | 0 / 0 | 0 |
+| count-3 | 3.5 | equals truth | yes | 1m03s | 0 / 0 | 0 |
+| judge-1 | 0.833 | in [0, 1], null 0.5 | yes | 2m04s | 0 / 0 | 0 |
+| judge-2 | 1.0 | in [0, 1], null 0.5 | yes | 1m57s | 0 / 0 | 0 |
+| judge-3 | 0.833 | in [0, 1], null 0.5 | yes | 2m04s | 0 / 0 | 0 |
+
+Median wall-clock: count 0m56s (round 1: 1m16s), judge 2m04s (2m23s).
+Every count agent filled the 97-line counting skeleton instead of
+replacing a model script. All three judge agents chose the constant-answer
+placebo the skeleton now names; every null lane landed at 0.5 and [C1]
+passed. Not one gate line in six runs.
+
+One false alarm left, fixed after the round (`6dacdc3`): before the first
+run, the fields written after it (Answer, Raw output) were listed as open
+placeholders; four of six agents read them in the commit hook as errors.
+
 ## Still open
 
-- The stamped area is the full form and the model skeleton when `lib exp`
-  gets no `--cost`; every count agent read about 400 lines of model
-  scaffolding and replaced `01_measure.py`. The scaffolder lives in the
-  house templates, not here.
-- With the full form stamped, `protocol-check` still names 2 or 3 lines of
-  verbatim template prose at seconds.
-- The null lane is the one place where agents had to think, and one in
-  three got it wrong. A constant-answer placebo on balanced gold (judge-3:
-  "Is the sentence written in English?") lands at chance by construction.
-- Fixed in the follow-up: `protocol_fill.open_fields` parsed placeholders a second time (one home);
-  it mis-read a label as `extremes)`.
+Named by four or more of the six round-2 agents. None is a labkit error;
+they are where the remaining minute goes.
+
+- The repo `CLAUDE.md` (239 lines, house template) is read whole for a
+  20-line seconds track (6 of 6).
+- `protocol-check --contract` names the fields the seconds cut owes only in
+  its last line (5 of 6).
+- Multi-line `<…>` placeholders were filled by regex; no agent found
+  `protocol-fill` (4 of 6).
+- Judge: `00_prepare.py` must be written to copy twelve clean rows, and the
+  stamped parser test fails until `PARSER_CASES` is filled by hand on a
+  track without a probe (3 of 3).
