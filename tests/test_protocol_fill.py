@@ -97,10 +97,16 @@ TEMPLATE = (
     .with_name("experiment-protocol.md.template")
     .read_text(encoding="utf-8")
 )
+# The shape the stamped measure skeleton builds its prompts in — an
+# f-string answer line joined from ANSWERS (re-measure 2026-10-07: a plain
+# literal in this test hid that the skeleton's prompts were unreadable).
 SCRIPT = (
+    'ANSWERS = {"Yes": "causal", "No": "not_causal"}\n'
+    "ANSWER_LINE = f\"Answer with a single word, {' or '.join(ANSWERS)}.\"\n"
     'PROMPT = ("Does this text make a causal claim?\\n\\n"\n'
-    '          "Text: {text}\\n\\nAnswer:")\n'
-    'PROMPT_NULL = "Is this text written in English?\\n\\nText: {text}"\n'
+    '          "Text: {text}\\n\\n" + ANSWER_LINE + "\\n\\nAnswer:")\n'
+    'PROMPT_NULL = ("Is this text written in English?\\n\\n"\n'
+    '               "Text: {text}\\n\\n" + ANSWER_LINE + "\\n\\nAnswer:")\n'
 )
 
 
@@ -128,6 +134,7 @@ class Prompts(unittest.TestCase):
             text = protocol.read_text()
         self.assertIn("  ── PROMPT ──\n  Does this text make a causal claim?", text)
         self.assertIn("── PROMPT_NULL ──", text)
+        self.assertIn("  Answer with a single word, Yes or No.", text)
         self.assertNotIn("<the real prompt", text)
 
     def test_a_changed_constant_drifts_again(self):

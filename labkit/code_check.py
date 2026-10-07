@@ -728,59 +728,137 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[str]:
     return findings
 
 
-def _string_of(node: ast.AST) -> str | None:
-    """The text of a string constant, incl. implicit and `+` concatenation."""
+_Value = str | tuple[str, ...]
+
+
+def _value_of(node: ast.AST, env: dict[str, _Value]) -> _Value | None:
+    """A module-level constant as the script would compute it, or None.
+
+    Read statically, never executed: string literals, names of earlier
+    constants, `+`, f-strings over those, `"sep".join(<constant>)`, and the
+    keys of a dict or the items of a list/tuple of strings. The stamped
+    skeleton builds `PROMPT = "..." + ANSWER_LINE` with
+    `ANSWER_LINE = f"... {' or '.join(ANSWERS)}."`; reading literals only
+    made every stamped prompt unreadable, so the drift check never ran
+    (re-measure 2026-10-07, three of three judge agents)."""
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return node.value
+    if isinstance(node, ast.Name):
+        return env.get(node.id)
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
-        a, b = _string_of(node.left), _string_of(node.right)
-        return a + b if a is not None and b is not None else None
+        a, b = _value_of(node.left, env), _value_of(node.right, env)
+        return a + b if isinstance(a, str) and isinstance(b, str) else None
     if isinstance(node, ast.JoinedStr):
-        return None  # an f-string renders at run time; nothing to hold the block to
+        parts = []
+        for v in node.values:
+            if isinstance(v, ast.FormattedValue):
+                if v.conversion != -1 or v.format_spec is not None:
+                    return None
+                v = v.value
+            part = _value_of(v, env)
+            if not isinstance(part, str):
+                return None
+            parts.append(part)
+        return "".join(parts)
+    if isinstance(node, (ast.Dict, ast.List, ast.Tuple)):
+        items = node.keys if isinstance(node, ast.Dict) else node.elts
+        out = []
+        for item in items:
+            if item is None:
+                return None
+            v = _value_of(item, env)
+            if not isinstance(v, str):
+                return None
+            out.append(v)
+        return tuple(out)
+    if (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "join"
+        and len(node.args) == 1
+        and not node.keywords
+    ):
+        sep, seq = _value_of(node.func.value, env), _value_of(node.args[0], env)
+        if isinstance(sep, str) and isinstance(seq, tuple):
+            return sep.join(seq)
     return None
 
 
+def _script_prompts(source: str) -> tuple[dict[str, str], list[str]]:
+    """(readable PROMPT constants, names of unreadable ones) of one script."""
+    env: dict[str, _Value] = {}
+    found: dict[str, str] = {}
+    unreadable: list[str] = []
+    for node in ast.parse(source).body:
+        if not (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+        ):
+            continue
+        name = node.targets[0].id
+        value = _value_of(node.value, env)
+        if value is not None:
+            env[name] = value
+        if PROMPT_NAME.match(name):
+            if isinstance(value, str):
+                found[name] = value
+            else:
+                unreadable.append(name)
+    return found, unreadable
+
+
 def prompt_constants(area: Path) -> dict[str, str]:
-    """`PROMPT` / `PROMPT_<VARIANT>` string constants across the area's scripts."""
+    """`PROMPT` / `PROMPT_<VARIANT>` string constants across the area's
+    scripts, as the scripts compute them (`_value_of`)."""
+    return _prompts(area)[0]
+
+
+def _prompts(area: Path) -> tuple[dict[str, str], list[str]]:
     out: dict[str, str] = {}
+    unreadable: list[str] = []
     scripts = (
         sorted((area / "scripts").glob("*.py")) if (area / "scripts").is_dir() else []
     )
     for sp in scripts:
         try:
-            tree = ast.parse(sp.read_text(encoding="utf-8"))
+            found, bad = _script_prompts(sp.read_text(encoding="utf-8"))
         except SyntaxError:
             continue
-        for node in tree.body:
-            if (
-                isinstance(node, ast.Assign)
-                and len(node.targets) == 1
-                and isinstance(node.targets[0], ast.Name)
-                and PROMPT_NAME.match(node.targets[0].id)
-            ):
-                text = _string_of(node.value)
-                if text is not None:
-                    out[node.targets[0].id] = text
-    return out
+        out.update(found)
+        unreadable += [f"{sp.name}:{n}" for n in bad]
+    return out, unreadable
+
+
+_NEXT_FIELD = re.compile(r"^(\s*)[-*]\s+\*\*|^#")
 
 
 def prompt_blocks(protocol: Path) -> list[str]:
-    """The fenced blocks that follow a `Prompt` field in the protocol."""
+    """Every fenced block under a `Prompt` field, up to the next field or
+    heading — one block per variant is a written form, and reading only the
+    first made a null prompt in a second block look missing (re-measure
+    2026-10-07: five false blockers in twelve protocols once the check ran)."""
     lines = protocol.read_text(encoding="utf-8").splitlines()
     blocks: list[str] = []
     i = 0
     while i < len(lines):
-        if PROMPT_FIELD.match(lines[i]):
-            j = i + 1
-            while j < len(lines) and j <= i + 3 and not FENCE.match(lines[j]):
-                j += 1
-            if j < len(lines) and FENCE.match(lines[j]):
+        if not PROMPT_FIELD.match(lines[i]):
+            i += 1
+            continue
+        indent = len(lines[i]) - len(lines[i].lstrip())
+        j = i + 1
+        while j < len(lines):
+            nxt = _NEXT_FIELD.match(lines[j])
+            if nxt and (lines[j].startswith("#") or len(nxt.group(1)) <= indent):
+                break
+            if FENCE.match(lines[j]):
                 k = j + 1
                 while k < len(lines) and not FENCE.match(lines[k]):
                     k += 1
                 blocks.append("\n".join(lines[j + 1 : k]))
-                i = k
-        i += 1
+                j = k
+            j += 1
+        i = j
     return blocks
 
 
@@ -790,7 +868,14 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
     Compared line by line: every non-empty line of the constant that carries
     no `{placeholder}` must appear, stripped, in some prompt block. A block
     rendered with real data passes; a transcript that drifted does not."""
-    consts = prompt_constants(area)
+    consts, unreadable = _prompts(area)
+    # A prompt this reader cannot compute is unchecked — said aloud, never a
+    # silent pass (re-measure 2026-10-07: the stamped skeleton's were).
+    warnings = [
+        f"WARNING · {name} is not statically readable (a call or a format "
+        f"spec this check does not compute) · prompt drift unchecked for it"
+        for name in unreadable
+    ]
     blocks = (
         [b for b in prompt_blocks(protocol) if "<" not in b.splitlines()[0][:1]]
         if consts
@@ -798,7 +883,7 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
     )
     blocks = [b for b in blocks if not b.strip().startswith("<")]
     if not consts or not blocks:
-        return []
+        return warnings
     have = {ln.strip() for b in blocks for ln in b.splitlines() if ln.strip()}
     findings = []
     for name, text in sorted(consts.items()):
@@ -815,7 +900,7 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
                 f"{missing[0][:60]!r} · paste the rendered `--show` output, not a "
                 f"transcript (AS-007 Renderprobe vor der Instrumentenprobe, 2026-10-05)"
             )
-    return findings
+    return warnings + findings
 
 
 def main(argv: list[str]) -> int:
