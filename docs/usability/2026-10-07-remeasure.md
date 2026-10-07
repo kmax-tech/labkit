@@ -101,3 +101,39 @@ lab `CLAUDE.md` template points a seconds reader to its one section, the
 prepare skeleton copies clean id/text/gold rows by default, the area test
 carries the canonical answer forms and owes probe cases only above seconds
 (house templates, dotfiles working tree). Not yet re-measured.
+
+## Measured from the transcripts
+
+`usability score <dir> --transcript <agent.jsonl>` (`8c9bbf4`) reads the
+agent's session transcript beside its log. All twelve runs, log span vs
+transcript (first to last record), tool time vs the rest (the model
+thinking and writing):
+
+| run | log | transcript | in tools | rest | calls | files opened | source reads log / transcript |
+|---|---|---|---|---|---|---|---|
+| r1 count-1 | 1:16 | 1:47 | 25 s | 82 s | 17 | 7 | 0 / 0 |
+| r1 count-2 | 1:11 | 1:39 | 27 s | 72 s | 14 | 11 | 0 / 0 |
+| r1 count-3 | 2:27 | 3:04 | 53 s | 131 s | 25 | 15 | 0 / 2 |
+| r1 judge-1 | 2:23 | 2:52 | 68 s | 104 s | 20 | 12 | 0 / 0 |
+| r1 judge-2 | 2:14 | 2:41 | 66 s | 95 s | 17 | 15 | 0 / 0 |
+| r1 judge-3 | 2:35 | 3:03 | 67 s | 116 s | 22 | 19 | 0 / 0 |
+| r2 count-1 | 0:53 | 1:17 | 23 s | 54 s | 13 | 7 | 0 / 0 |
+| r2 count-2 | 0:56 | 1:25 | 22 s | 63 s | 15 | 10 | 0 / 0 |
+| r2 count-3 | 1:03 | 1:26 | 20 s | 66 s | 15 | 12 | 0 / 0 |
+| r2 judge-1 | 2:04 | 2:38 | 65 s | 93 s | 19 | 14 | 0 / 0 |
+| r2 judge-2 | 1:57 | 2:24 | 100 s | 44 s | 17 | 15 | 0 / 0 |
+| r2 judge-3 | 2:04 | 2:38 | 73 s | 85 s | 16 | 11 | 0 / 0 |
+
+- The log misses 24 to 37 s per run: reading TASK.md before the first
+  line and writing the report after the last. The medians move from
+  0:56 / 2:04 (log, round 2) to 1:25 / 2:38 (transcript).
+- Most of the wall-clock is the model, not the tools: 54 to 82 s of a
+  count run is outside any tool call. Fewer files to read shortens that
+  part too; the tools take 20 to 27 s.
+- The log hid one source read: r1 count-3 called
+  `inspect.signature(runlog.run)` and `inspect.signature(recheck.holds)`
+  in a Python one-liner to learn the API (round 1, model skeleton
+  replaced by hand). Round 2: none.
+- r1 judge-3's "code-check refuses a relative area path" was a call from
+  inside the area with the repo-relative path; the message now names the
+  working directory it resolved against.
