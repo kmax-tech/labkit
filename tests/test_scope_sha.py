@@ -229,8 +229,38 @@ class TestImportForms(unittest.TestCase):
         ):
             self.assertEqual(self.names(source), full, source)
 
-    def test_a_package_brings_all_its_files(self):
-        self.assertEqual(self.names("import pkg\n"), ["pkg/__init__.py", "pkg/core.py"])
+    def test_a_package_brings_what_python_loads(self):
+        """`import pkg` runs pkg/__init__.py only; pkg/core.py comes with
+        `import pkg.core` (2026-10-07: taking the whole package charged an
+        area with a sibling module it never imported)."""
+        self.assertEqual(self.names("import pkg\n"), ["pkg/__init__.py"])
+        self.assertEqual(
+            self.names("import pkg.core\n"), ["pkg/__init__.py", "pkg/core.py"]
+        )
+        self.assertEqual(
+            self.names("from pkg import core\n"), ["pkg/__init__.py", "pkg/core.py"]
+        )
+
+    def test_a_sibling_module_is_not_charged(self):
+        (self.repo / "lib" / "pkg" / "other.py").write_text("O = 1\n")
+        self.assertNotIn("pkg/other.py", self.names("from pkg.core import C\n"))
+
+    def test_src_is_a_root_as_lib_is(self):
+        """uniagent computes every registered key in src/measure: with lib/
+        alone neither the stamp nor the key search saw it (2026-10-07)."""
+        from labkit import scope_sha as packaged
+
+        src = self.repo / "src" / "measure"
+        src.mkdir(parents=True)
+        (src / "__init__.py").write_text("")
+        (src / "comparison.py").write_text("K = 1\n")
+        (src / "positions.py").write_text("P = 1\n")
+        (self.area / "scripts" / "m.py").write_text("from measure import comparison\n")
+        got = [
+            f.relative_to(self.repo).as_posix()
+            for f in packaged.imported_lib(self.area, self.repo)
+        ]
+        self.assertEqual(got, ["src/measure/__init__.py", "src/measure/comparison.py"])
 
     def test_a_stdlib_import_is_not_lib(self):
         self.assertEqual(self.names("import json\n"), [])

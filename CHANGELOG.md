@@ -5,6 +5,28 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.54.0 — 2026-10-07
+
+### Breaking
+
+Last version with the old behaviour: **v0.53.1**.
+
+- **`src/` is a repo-local root beside `lib/`, and imports resolve to the
+  module, not the package.** The audit stamp and the key search follow
+  `import a.b`, `from a import b` and `from a.b import c` to the module and
+  the `__init__.py` files on the way — no longer every file of a package.
+  A repo whose measured code lives in `src/` (uniagent) gets a stamp that
+  finally covers it; any repo importing from a package gets a narrower,
+  exact one. Either way an existing `preflight_audit` stamp reads as
+  changed: restamp after looking, or re-audit.
+
+### Fixed
+
+- **`code-check` finds registered keys in imported repo code.** It read
+  only the area's scripts, so a key written in `src/measure/comparison.py`
+  made four promises "absent" — blockers against correct code, found on
+  the first real upgrade (uniagent 0.45 → 0.53).
+
 ## 0.53.1 — 2026-10-07
 
 ### Fixed

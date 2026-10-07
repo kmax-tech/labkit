@@ -208,3 +208,26 @@ class TestIntentCheck(unittest.TestCase):
         rc, out = self._run(["--help"])
         self.assertEqual(rc, 0)
         self.assertIn("usage: intent-check", out)
+
+
+class KeysInImportedCode(unittest.TestCase):
+    """A registered key written in imported repo code is found (uniagent,
+    2026-10-07: every key lives in src/measure/comparison.py, and code-check
+    called four promises absent)."""
+
+    def test_a_key_in_src_counts_for_the_area(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            (repo / "tests").mkdir()
+            area = repo / "experiments" / "01-x"
+            (area / "scripts").mkdir(parents=True)
+            (area / "scripts" / "m.py").write_text("from measure import comparison\n")
+            (repo / "src" / "measure").mkdir(parents=True)
+            (repo / "src" / "measure" / "__init__.py").write_text("")
+            (repo / "src" / "measure" / "comparison.py").write_text(
+                'def evaluate(rows):\n    return {"c1_pass": True}\n'
+            )
+            keys = intent_check.code_keys(area)
+        self.assertEqual(keys["c1_pass"], ["src/measure/comparison.py:2"])

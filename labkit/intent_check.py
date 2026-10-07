@@ -52,6 +52,8 @@ from pathlib import Path
 
 from labkit import promises, protocol_block
 from labkit.runs import RunConfigError, read_run_config, run_state
+from labkit.repo import layout_root
+from labkit.scope_sha import imported_lib
 
 # The alphabet lives in `promises`; these names stay importable from here
 # because code_check and tools outside labkit (befundregister) use them.
@@ -509,7 +511,12 @@ def code_keys(area: Path) -> dict[str, list[str]]:
     a renamed key surfaced only after the run).
     """
     hits: dict[str, list[str]] = {}
-    for path in sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py")):
+    # The imported repo-local code counts as the area's: uniagent writes
+    # every registered key in src/measure/comparison.py, and reading the
+    # area's scripts alone made four promises "absent" (2026-10-07).
+    root = layout_root(area)
+    own = sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py"))
+    for path in own + imported_lib(area, root):
         try:
             source = path.read_text(encoding="utf-8")
         except OSError:
@@ -517,11 +524,23 @@ def code_keys(area: Path) -> dict[str, list[str]]:
         for lineno, line in enumerate(source.splitlines(), 1):
             for m in ID_LITERAL.finditer(line):
                 key = (m.group(1) + (m.group(2) or "")).lower()
-                hits.setdefault(key, []).append(f"{path.name}:{lineno}")
+                hits.setdefault(key, []).append(f"{_where(path, area, root)}:{lineno}")
         for name, lineno in _keyword_names(source, path):
             if ID_KEY.match(name.lower()):
-                hits.setdefault(name.lower(), []).append(f"{path.name}:{lineno}")
+                hits.setdefault(name.lower(), []).append(
+                    f"{_where(path, area, root)}:{lineno}"
+                )
     return hits
+
+
+def _where(path: Path, area: Path, root: Path) -> str:
+    """An area file by its name, an imported one by its repo path."""
+    if path.parent.parent == area:
+        return path.name
+    try:
+        return str(path.resolve().relative_to(root.resolve()))
+    except ValueError:
+        return str(path)
 
 
 def _keyword_names(source: str, path: Path) -> list[tuple[str, int]]:
