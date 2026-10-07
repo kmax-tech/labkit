@@ -54,7 +54,7 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from labkit import agent_transcript, runs
+from labkit import agent_transcript, protocol_reading, runs
 
 RES = Path.home() / ".claude" / "resources"
 #: The house scaffolder — the thing under test, outside this package.
@@ -501,6 +501,7 @@ class Score:
     frozen: bool | None
     cost_tier: str | None
     log: LogTrace | None
+    form: protocol_reading.Form | None = None  # how the bound protocol reads
     transcript: agent_transcript.TranscriptTrace | None = (
         None  # measured, not self-reported
     )
@@ -535,6 +536,75 @@ def archive(root: Path, transcript: Path, dest: Path) -> list[Path]:
     return list(payload)
 
 
+def _bound_protocol(root: Path) -> tuple[Path, float | None]:
+    """The protocol the probe's latest run is bound to, and its number."""
+    probe = Probe(
+        **json.loads(_sidecar(root, "probe.json").read_text(encoding="utf-8"))
+    )
+    area = root / "experiments" / probe.area
+    run = latest_run(area)
+    if run is None:
+        raise SystemExit(f"usability: {area} has no completed run — nothing to read")
+    config = json.loads((run / "config.json").read_text(encoding="utf-8"))
+    bound = (config.get("protocol") or {}).get("path")
+    if not bound:
+        raise SystemExit(f"usability: run {run.name} is bound to no protocol")
+    path = Path(bound) if Path(bound).is_absolute() else area / bound
+    value = json.loads((run / "metrics.json").read_text(encoding="utf-8")).get(
+        probe.metric_key
+    )
+    number = (
+        float(value)
+        if isinstance(value, (int, float)) and not isinstance(value, bool)
+        else None
+    )
+    return path, number
+
+
+def reader(root: Path) -> int:
+    """Write `<dir>.reader-prompt.md`: the bound protocol for a cold reader."""
+    protocol, _ = _bound_protocol(root)
+    answer = _sidecar(root, "reader-answer.json")
+    prompt = _sidecar(root, "reader-prompt.md")
+    prompt.write_text(
+        protocol_reading.reader_prompt(
+            protocol.read_text(encoding="utf-8"), str(answer)
+        ),
+        encoding="utf-8",
+    )
+    print(f"reader prompt → {prompt}\nthe reader writes → {answer}")
+    return 0
+
+
+def read_score(root: Path, transcript: Path | None) -> int:
+    """Hold the reader's answer to the run's number; `<dir>.reader.json`."""
+    _, number = _bound_protocol(root)
+    answer = _sidecar(root, "reader-answer.json")
+    if not answer.is_file():
+        raise SystemExit(f"usability: {answer} missing — has the reader answered?")
+    try:
+        got = protocol_reading.score_answer(answer.read_text(encoding="utf-8"), number)
+    except ValueError as exc:
+        raise SystemExit(f"usability: {exc}") from exc
+    seconds = None
+    if transcript is not None:
+        _, first, last = agent_transcript.read_calls(transcript)
+        seconds = round(last - first)
+    out = {**asdict(got), "truth": number, "reader_seconds": seconds}
+    _sidecar(root, "reader.json").write_text(
+        json.dumps(out, indent=1, ensure_ascii=False), encoding="utf-8"
+    )
+    print(
+        f"  number {got.number_read} vs run {number}: "
+        f"{'ok' if got.number_ok else 'WRONG' if got.number_ok is False else 'n/a'} · "
+        f"effort {got.effort} · unclear {len(got.unclear)}"
+        + (f" · {seconds}s" if seconds is not None else "")
+    )
+    for u in got.unclear:
+        print(f"    unclear: {u}")
+    return 0 if got.number_ok is not False else 1
+
+
 def score(root: Path, transcript: Path | None = None) -> int:
     probe_file = _sidecar(root, "probe.json")
     if not probe_file.is_file():
@@ -544,6 +614,7 @@ def score(root: Path, transcript: Path | None = None) -> int:
     expected = recount(root) if probe.task == "count" else None
     run = latest_run(area)
     number = bound_to = frozen = tier = None
+    form: protocol_reading.Form | None = None
     null_reported = None
     if run is not None:
         config_file = run / "config.json"  # a completed run always has one
@@ -566,6 +637,8 @@ def score(root: Path, transcript: Path | None = None) -> int:
 
             p = Path(bound_to)
             p = p if p.is_absolute() else area / p
+            if p.is_file():
+                form = protocol_reading.form(p.read_text(encoding="utf-8"))
             try:
                 frozen = (
                     protocol_block.head(p.read_text(encoding="utf-8")).frozen
@@ -598,6 +671,7 @@ def score(root: Path, transcript: Path | None = None) -> int:
         frozen=frozen,
         cost_tier=tier,
         log=trace,
+        form=form,
         transcript=measured,
     )
     _sidecar(root, "score.json").write_text(
@@ -658,6 +732,18 @@ def score(root: Path, transcript: Path | None = None) -> int:
                 + ("" if trace.source_reads == 0 else " — the card did not suffice"),
             )
         )
+    if form is not None:
+        rows += [
+            ("protocol · lines", str(form.lines)),
+            (
+                "protocol · prose before the first field",
+                str(form.prose_before_first_field),
+            ),
+            ("protocol · · chains (> 2 items)", str(form.chains)),
+            ("protocol · longest field (chars)", str(form.longest_field)),
+            ("protocol · codes in the Summary", str(form.summary_codes)),
+            ("protocol · answer as a table", "yes" if form.answer_has_table else "no"),
+        ]
     if measured is not None:
         w, tool = measured.wall_seconds, measured.tool_seconds
         rows += [
@@ -739,7 +825,23 @@ def main(argv: list[str]) -> int:
     )
     tr = sub.add_parser("trace", help="the timeline of one agent transcript")
     tr.add_argument("transcript")
+    rd = sub.add_parser(
+        "reader", help="write the cold-reader prompt for the probe's protocol"
+    )
+    rd.add_argument("dir")
+    rs = sub.add_parser(
+        "read-score", help="hold the reader's answer to the run's number"
+    )
+    rs.add_argument("dir")
+    rs.add_argument("--transcript", help="the reader's transcript: its reading time")
     args = ap.parse_args(argv)
+    if args.cmd == "reader":
+        return reader(Path(args.dir).resolve())
+    if args.cmd == "read-score":
+        return read_score(
+            Path(args.dir).resolve(),
+            Path(args.transcript).resolve() if args.transcript else None,
+        )
     if args.cmd == "trace":
         try:
             lines = agent_transcript.timeline(Path(args.transcript))
