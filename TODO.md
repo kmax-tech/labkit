@@ -394,7 +394,9 @@ H (`h1`, hits@1; außerdem in Vorregistrierungen die Hypothese).
 
 **Schritte:**
 
-0. **Sofort und unabhängig:** Haus↔Fach-Tabelle im Master
+0. ~~**Sofort und unabhängig:** Haus↔Fach-Tabelle im Master~~ — **erledigt
+   2026-10-07** (dotfiles `98119fc`).
+   Haus↔Fach-Tabelle im Master
    (`arbeitsstandard.md.template`, Zeilen „Stop rule“ und „Registrierte
    Weiche“): S ist kein *stopping rule* (das heißt im Fach: wann die
    Datenerhebung endet; preregister nutzt das Feld genau so) und kein
@@ -406,11 +408,16 @@ H (`h1`, hits@1; außerdem in Vorregistrierungen die Hypothese).
    `recheck`, `code_check` und `finalize` importieren von dort.
    Kollisionstests in `tests/test_promises.py`. Altbuchstaben gelten bis
    zum Rollout weiter (Schritt 4).
-2. **Template + Feld-Guide** (`experiment-protocol.md.template`,
+2. ~~**Template + Feld-Guide**~~ — **erledigt 2026-10-07** (0.47.0,
+   `7dfce48`); `protocol-check` liest die alten Labels bis Punkt 8.
+   (`experiment-protocol.md.template`,
    `protocol-field-guide.md`): Feld-Label „stop rule“ →
    „admissibility condition“, Schlüsselwörter für `protocol-check`
    nachziehen.
-3. **Doktrin im Master:** §2.A1a, Abschnitt „Nullbedingung / Anker“,
+3. **Doktrin im Master** — **erledigt 2026-10-07** bis auf `lib sync pull`
+   in die Repos (dotfiles `51b9060`, `b6d54e2`; labkit `218bb68`). Das
+   Mess-Skelett hält jetzt das C-Urteil zurück, wenn ein A fällt.
+   §2.A1a, Abschnitt „Nullbedingung / Anker“,
    Haus↔Fach-Tabelle, `CLAUDE.md.template`, `measure-script.py.template`,
    `test-area.py.template`, `arbeitsstandard-init.py`, Agent
    `experiment-preflight`, Skill `run-experiment` (je auch die Kopie im
@@ -448,9 +455,9 @@ externer Leser kann `[S]`, `[W]` heute keinem Fachbegriff zuordnen, und
 
 **Auslöser:** Punkt 5 (Englisch als Master) oder das nächste neue Protokoll,
 je nachdem, was zuerst kommt — Schritt 0 sofort. **Prüfstelle:**
-`labkit/promises.py` — Schritt 1 ist erledigt; offen sind Schritt 0
-und der Rollout (Schritte 2–4), bis Template und Feld-Guide `[C]/[A]/[B]`
-stempeln.
+`labkit/promises.py` — Schritte 0–3 sind erledigt; offen ist der Rollout
+in die Repos (`lib sync pull`, Pins auf v0.47.0) — Schritt 4 bleibt beim
+Entscheid „nicht anfassen“.
 
 ## 8. Kopffelder als Daten: `[protocol]` im TOML-Block
 
