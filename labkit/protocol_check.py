@@ -275,6 +275,29 @@ def _model_named(found: dict[str, list[FieldLine]]) -> bool:
     return False
 
 
+def _in_cut(f: Field, model: bool) -> bool:
+    """Is `f` part of the seconds cut — "s" always, "sm" with a model named?"""
+    return f.seconds == "s" or (f.seconds == "sm" and model)
+
+
+def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
+    """(line, label) of every placeholder still to fill.
+
+    At `cost = "seconds"` only the cut's fields count: the rest of the full
+    form is not owed there, and listing it buried the one real blocker
+    under 10 to 20 warnings in every correct seconds protocol (usability
+    probe 2026-10-07, 6 of 6 runs)."""
+    lines = fields(text)
+    if head.cost == "seconds":
+        found: dict[str, list[FieldLine]] = {}
+        for f in lines:
+            found.setdefault(f.name, []).append(f)
+        model = _model_named(found)
+        cut = {f.label.casefold() for f in FIELDS if _in_cut(f, model)}
+        lines = [f for f in lines if f.name in cut]
+    return [(f.line, f.label) for f in lines if f.placeholder]
+
+
 def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]]:
     """(must, should) fields this protocol owes, by its cut, freeze and runs.
 
@@ -288,10 +311,7 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     if head.cost == "seconds":
         model = _model_named(found)
         must = [
-            f
-            for f in FIELDS
-            if f.level in ("must", "should")
-            and (f.seconds == "s" or (f.seconds == "sm" and model))
+            f for f in FIELDS if f.level in ("must", "should") and _in_cut(f, model)
         ]
         return must, []
     must = [f for f in FIELDS if f.level == "must"]
@@ -331,10 +351,10 @@ def check_fields(text: str) -> FieldReport:
         )
     must_names = {f.label.casefold() for f in must}
     must_holes, soft_holes = [], []
-    for f in fields(text):
-        if not f.placeholder:
-            continue
-        (must_holes if f.name in must_names else soft_holes).append((f.line, f.label))
+    for line, label in open_holes(text, head):
+        (must_holes if field_name(label) in must_names else soft_holes).append(
+            (line, label)
+        )
     return FieldReport(head, None, missing_must, missing_should, must_holes, soft_holes)
 
 

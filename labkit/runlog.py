@@ -136,7 +136,10 @@ def _parse_lock(lock: Path) -> dict[str, str | None]:
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
-        if "==" in line:
+        editable = _EDITABLE_PIN.match(line)
+        if editable:
+            out[editable.group("name").lower().replace("_", "-")] = None
+        elif "==" in line:
             name, _, ver = line.partition("==")
             out[name.strip().lower().replace("_", "-")] = ver.strip()
         elif " @ " in line:
@@ -153,6 +156,14 @@ _VCS_PIN = re.compile(
     r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._\-]*)\s*@\s*"
     r"git\+(?P<url>[^@\s#]+)(?:@(?P<ref>[^#\s]+))?\s*(?:#.*)?$"
 )
+# An editable install freezes as `-e git+<url>@<commit>#egg=<name>`: pip
+# reads the commit from the source checkout. Unread, it counted as "installed
+# but not in the lock" — a lock written by `pip freeze` seconds earlier in the
+# same venv reported drift on every run (usability probe 2026-10-07, 6 of 6).
+_EDITABLE_PIN = re.compile(
+    r"^-e\s+git\+(?P<url>[^@\s#]+)@(?P<ref>[^#\s]+)"
+    r"#egg=(?P<name>[A-Za-z0-9][A-Za-z0-9._\-]*)\s*$"
+)
 _HEX_REF = re.compile(r"^[0-9a-f]{7,40}$")
 
 
@@ -160,7 +171,7 @@ def _parse_vcs_pins(lock: Path) -> dict[str, tuple[str, str]]:
     """Git pins that carry an explicit ref: {package: (url, ref)}."""
     out: dict[str, tuple[str, str]] = {}
     for raw in lock.read_text(encoding="utf-8").splitlines():
-        m = _VCS_PIN.match(raw.strip())
+        m = _VCS_PIN.match(raw.strip()) or _EDITABLE_PIN.match(raw.strip())
         if m and m.group("ref"):
             out[m.group("name").lower().replace("_", "-")] = (
                 m.group("url"),
@@ -193,12 +204,41 @@ def _resolve_ref(url: str, ref: str) -> str | None:
 
 
 def _direct_url_commit(dist) -> str | None:
-    """The commit pip recorded at install time (direct_url.json), if any."""
+    """The commit the installed code stands at, if knowable.
+
+    A VCS install: the commit pip recorded (direct_url.json). An editable
+    install from a local checkout: that checkout's HEAD now — its code is the
+    working tree, so the install-time commit says nothing. Uncommitted edits
+    in that checkout are not seen.
+    """
     try:
         raw = dist.read_text("direct_url.json")
-        return json.loads(raw)["vcs_info"]["commit_id"].lower() if raw else None
-    except (KeyError, AttributeError, TypeError, ValueError, OSError):
+        info = json.loads(raw) if raw else None
+    except (AttributeError, TypeError, ValueError, OSError):
         return None
+    if not isinstance(info, dict):
+        return None
+    vcs = info.get("vcs_info")
+    if isinstance(vcs, dict) and isinstance(vcs.get("commit_id"), str):
+        return vcs["commit_id"].lower()
+    url = info.get("url")
+    editable = isinstance(info.get("dir_info"), dict) and info["dir_info"].get(
+        "editable"
+    )
+    if editable and isinstance(url, str) and url.startswith("file://"):
+        return _checkout_head(Path(url.removeprefix("file://")))
+    return None
+
+
+def _checkout_head(path: Path) -> str | None:
+    """HEAD of the git checkout at `path`; None when it is none."""
+    proc = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.stdout.strip().lower() if proc.returncode == 0 else None
 
 
 def _vcs_mismatch(url: str, ref: str, installed_commit: str | None) -> bool:

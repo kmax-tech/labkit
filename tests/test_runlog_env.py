@@ -130,6 +130,23 @@ class TestVcsPins(unittest.TestCase):
         got = runlog._parse_vcs_pins(lock)
         self.assertEqual(got, {"labkit": ("file:///Users/x/labkit", "v0.14.0")})
 
+    def test_parse_reads_an_editable_freeze_line(self):
+        """`pip freeze` writes an editable install this way; the lock it wrote
+        must not report drift against itself (probe 2026-10-07)."""
+        lock = write_lock("-e git+https://github.com/x/labkit.git@fd4cd60#egg=labkit\n")
+        self.assertEqual(
+            runlog._parse_vcs_pins(lock),
+            {"labkit": ("https://github.com/x/labkit.git", "fd4cd60")},
+        )
+        self.assertEqual(runlog._parse_lock(lock), {"labkit": None})
+
+    def test_editable_install_is_compared_by_its_checkout_head(self):
+        head = runlog._checkout_head(REPO)
+        assert head is not None
+        url = "https://github.com/x/labkit.git"
+        self.assertFalse(runlog._vcs_mismatch(url, head[:12], head))
+        self.assertTrue(runlog._vcs_mismatch(url, "deadbeef0000", head))
+
     def test_parse_skips_git_pin_without_ref(self):
         lock = write_lock("labkit @ git+file:///Users/x/labkit\n")
         self.assertEqual(runlog._parse_vcs_pins(lock), {})

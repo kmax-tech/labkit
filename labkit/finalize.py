@@ -48,8 +48,7 @@ from labkit.intent_check import (
     newest_with_intent_keys,
     registered_ids,
 )
-from labkit.protocol_check import RUN_ID, fields
-from labkit.protocol_fill import open_fields
+from labkit.protocol_check import RUN_ID, fields, open_holes
 
 
 def _tracked(repo: Path, path: Path) -> bool:
@@ -277,7 +276,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
 
     # -- 3. open fields ----------------------------------------------------
     print(f"── open fields: {protocol.name} ──")
-    holes = open_fields(text)
+    holes = open_holes(text, head)
     if holes:
         for lineno, label in holes:
             print(f"  {protocol.name}:{lineno}: {label}")

@@ -190,5 +190,28 @@ class Fields(unittest.TestCase):
         self.assertIn("no [protocol] table", report.head_error or "")
 
 
+class OpenHolesFollowTheCut(unittest.TestCase):
+    """At seconds a placeholder outside the cut is not owed, so it is not
+    listed; inside the cut it is (usability probe 2026-10-07)."""
+
+    BODY = "- **Unit:** <one file>\n- **Free knobs:** <which>\n"
+
+    def labels(self, cost: str) -> list[str]:
+        text = head(cost=cost) + self.BODY
+        block = protocol_check.protocol_block.head(text)
+        return [lbl for _, lbl in protocol_check.open_holes(text, block)]
+
+    def test_seconds_lists_only_the_cut(self):
+        self.assertEqual(self.labels("seconds"), ["Unit"])
+
+    def test_the_full_form_lists_every_placeholder(self):
+        self.assertEqual(self.labels("minutes"), ["Unit", "Free knobs"])
+
+    def test_protocol_check_stays_quiet_about_fields_not_owed(self):
+        report = protocol_check.check_fields(head(cost="seconds") + self.BODY)
+        self.assertEqual([lbl for _, lbl in report.must_holes], ["Unit"])
+        self.assertEqual(report.soft_holes, [])
+
+
 if __name__ == "__main__":
     unittest.main()
