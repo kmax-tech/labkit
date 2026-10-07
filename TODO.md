@@ -66,6 +66,17 @@ mechanischer Check — die Aufgabe des Pilots.
 
 ## Klein, ohne eigenen Punkt
 
+- **Studi-Läufe ohne `requirements.lock`** (2026-10-07): `runlog` notiert die
+  Umgebung eines Laufs über die Lock-Datei; der Starter legt keine an, also
+  startet jeder Studi-Lauf mit „env unpinned" und die labkit-Version ist nur
+  über den git-Verlauf von `requirements.txt` belegt. Vorschlag: die
+  Installationsanleitung des Starters um `.venv/bin/pip freeze >
+  requirements.lock` (mitcommitten) ergänzen. Stand: `docs/student-repos.md`.
+- **labkit auf PyPI?** (2026-10-07, Entscheidung offen): stdlib-only, also
+  problemlos veröffentlichbar; Studis bräuchten dann weder Repo-Zugriff noch
+  Token (`labkit==0.49.1`). Dafür ein öffentliches Release. Solange nicht:
+  GitHub-Repo für Studis lesbar halten, Tags pushen.
+
 - [ ] **Push und Tags:** `git push && git push origin --tags`. Die Tags
       fehlen auf GitHub; die Pins der Repos (`git+file://…@v0.45.0`) gelten
       bis dahin nur auf diesem Rechner, und Reproduktion über den Pin

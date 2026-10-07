@@ -27,6 +27,7 @@ of semantics. Contract and rationale: `docs/promise-block.md`.
 | `TODO.md` | the work order and why (German); top section "Reihenfolge" decides what is next |
 | `docs/promise-block.md` | promise kinds C/A/B, the TOML block, what the declared-scope hash states |
 | `docs/protocol-run-binding.md` | which run belongs to which protocol |
+| `docs/student-repos.md` | how a student thesis repo gets labkit (pinned from GitHub) and moves to a newer one |
 | `docs/coding-style.md` | binding for every line of code (vendored copy — do not edit here) |
 
 ## Setup and tests
