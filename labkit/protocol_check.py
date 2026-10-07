@@ -286,8 +286,14 @@ def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
     At `cost = "seconds"` only the cut's fields count: the rest of the full
     form is not owed there, and listing it buried the one real blocker
     under 10 to 20 warnings in every correct seconds protocol (usability
-    probe 2026-10-07, 6 of 6 runs)."""
+    probe 2026-10-07, 6 of 6 runs). Fields written after the run count only
+    once a measure run is documented — before it they cannot be filled, and
+    every second agent read them as errors in the commit hook (re-measure
+    2026-10-07)."""
     lines = fields(text)
+    if not measure_runs(text):
+        after = {f.label.casefold() for f in FIELDS if f.level == "after"}
+        lines = [f for f in lines if f.name not in after]
     if head.cost == "seconds":
         found: dict[str, list[FieldLine]] = {}
         for f in lines:
