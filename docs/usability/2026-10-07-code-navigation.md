@@ -297,3 +297,56 @@ Consequences:
    what it is for (rebuild the run index from the run folders).
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round6/`.
+
+## Round 7 (2026-10-07): is the control flow understood better when the orchestrator reads as named steps?
+
+The thesis (the user's): code is understood through its control and data
+flow; the entry point should show that flow as a table of contents, the
+functions below it how each station works. Tested on `finalize`, whose two
+versions exist side by side: `ac97187` (one 210-line `run`, stations inline,
+shared mutable `newest_dir`/`blocked`) and `30762d3` (0.63.2, `run` as seven
+named station calls over a `Gate`, each station's inputs in its signature).
+Behaviour identical, checked line by line on six real areas.
+
+Instrument (0.65.0/0.65.1): ten behaviour questions with fixed choices,
+scored by exact set, with the right choices **missed** and the wrong ones
+**invented** counted apart — which stations run when no run is bound, which
+examine the run the completion station chose, which can block, whether
+warnings alone change the exit code, which situations end finalize before
+any station and with which code, what an hours-tier protocol does with
+provenance, what still runs after failing tests, whether a later station
+can change the examined run, what a failing intent-check does.
+
+Design against chance: both versions exported clean (`git archive`, without
+`CHANGELOG.md` and `docs/usability/`, which name the refactor) under
+neutral names assigned by seed 20261007 (`repo-a` = new, `repo-b` = old,
+recorded before the run); three Haiku agents per version; each agent got
+the questions in its own seeded order (`--shuffle`).
+
+| version (blind) | right | missed | invented | seconds | calls | tokens |
+|---|---|---|---|---|---|---|
+| new, named stations (3 agents) | 30/30 | 0 | 0 | 87, 69, 77 | 13, 7, 11 | 50k, 49k, 53k |
+| old, inline (3 agents) | 30/30 | 0 | 0 | 75, 69, 79 | 7, 7, 10 | 49k, 45k, 50k |
+
+- **No difference.** Every agent answered every behaviour question right in
+  both versions, missed nothing and invented no dependency; effort overlaps.
+- **Why, from the transcripts:** in both versions every agent read
+  `finalize.py` whole (one file, about 400 lines) and answered from it. At
+  that size the inline version's numbered section comments carry the flow
+  as well as named calls do — the same finding as round 5, now for
+  understanding, not only finding.
+- **What this does not test:** a flow that spans files and packages, where
+  a reader cannot hold the whole in one read; a reader with a budget (a few
+  reads, as a person skimming); a person.
+
+Consequences:
+
+1. The candidate rule ("the entry point exposes the workflow; data from
+   earlier stages passes through parameters and return values") is **not
+   supported by a measured difference** at this size, and is not added to
+   the coding style on that ground. The refactor stands on CS-006 One
+   function, one thing — and keep I/O at the edges (each decision testable alone), as before.
+2. The thesis is not refuted either: the test case is small enough to read
+   whole. A fair test needs a flow across files, or a reading budget.
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round7/`.
