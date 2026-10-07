@@ -7,7 +7,7 @@ three-conjunct criterion implemented as one conjunct, gate metrics written
 next to the content numbers the gate was meant to suppress. Reading catches
 this late; a set comparison catches it mechanically.
 
-The contract (Arbeitsstandard §2.A1): every registration that promises the
+The contract (Arbeitsstandard §2.A1a): every registration that promises the
 code something — a verdict, a branch, an abort, a control — carries an id
 in the protocol text (`[K1]` criterion conjunct, `[S1]` stop rule, `[W1]`
 registered fork, `[N1]` null condition / gate), and every id reappears as a

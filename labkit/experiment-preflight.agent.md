@@ -36,7 +36,7 @@ refused: protocol not filled — the audit reads the FILLED protocol (§2.A12)
 and stop. An audit of the empty template criticises an intent nobody wrote
 (2026-09-08: eight minutes of audit, the top finding void).
 
-## Cost tier — how many audits this area gets (§2.A12, 2026-10-05)
+## Cost tier — how many audits this area gets (§2.A14)
 
 Read `Cost:` in the protocol first. `seconds` (deterministic, rerunnable
 at will) means you are the ONE audit of this area: the caller invokes you

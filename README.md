@@ -95,7 +95,7 @@ remembering (2026-10-05):
 protocol that never had the field is not a gap; a stamped placeholder is).
 A long *pilot* acknowledges with `LABKIT_UNFROZEN=1`; the acknowledgement
 is written to `config.json` as `unfrozen_ack`, so the number carries it.
-The gate follows the cost tier (`Cost:` in the protocol, §2.A12): at
+The gate follows the cost tier (`Cost:` in the protocol, §2.A14): at
 `seconds` a rerun costs nothing, so the gate is the **written success
 criterion**, not the freeze — an instrument change after it is a commit
 and a rerun, never a second freeze. `minutes`, `hours` and an undeclared

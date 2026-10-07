@@ -239,7 +239,7 @@ SHOULD_IF_PRESENT = [
     ("Randomness controls",
      r"randomness|zufall|seeds?\b.*\b(run|temperature|temp)|temperature.*(seed|run)"),
     # The cost tier (2026-10-05): seconds | minutes | hours. It decides how
-    # much audit a run gets (§2.A12); a stamped-but-unfilled tier is a gap,
+    # much audit a run gets (§2.A14); a stamped-but-unfilled tier is a gap,
     # a protocol from before the field is not.
     ("Cost tier (seconds / minutes / hours)",
      r"\bcost\b|kostenstufe"),
@@ -476,7 +476,7 @@ def check_text(text: str, *, measurement: bool = False,
         return missing_must + v016, []
     if cost_tier_of(text) == "seconds":
         # The seconds cut: its own must list, no should list — nothing
-        # graduates, because nothing freezes (§2.A12, 2026-10-05).
+        # graduates, because nothing freezes (§2.A14, 2026-10-05).
         missing_must = [label for label, pat in MUST_SECONDS if not re.search(pat, low)]
         model = MODEL_FIELD.search(text)
         if model and model.group(1).strip() and not model.group(1).strip().lower().startswith("n/a"):
@@ -558,7 +558,7 @@ def criterion_present(text: str) -> bool:
     """True when the success/failure criterion is a written field: a line
     whose label names it and whose value is neither empty nor a `<…>`
     placeholder. At `Cost: seconds` this is what a full run needs instead
-    of the freeze (§2.A12, 2026-10-05): the criterion is registered once,
+    of the freeze (§2.A14, 2026-10-05): the criterion is registered once,
     the instrument may change after it, the run is re-fired."""
     for line in text.splitlines():
         m = FIELD_LINE.match(line)

@@ -21,7 +21,7 @@ What it runs, in order:
                     run froze its source (`data=` in config.json) and every
                     source and output file is tracked in git — the two of
                     the three questions the agent audit kept asking that a
-                    machine can answer (§2.A12, 2026-10-05); the third, the
+                    machine can answer (§2.A14, 2026-10-05); the third, the
                     counted unit, is the protocol's `Unit:` field
 
 What it does NOT do: fill fields, edit the protocol, or commit. It is a

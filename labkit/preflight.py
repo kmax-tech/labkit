@@ -12,7 +12,7 @@ What it runs, in order:
   1. protocol-check   mandatory fields, placeholders
   1b. cost tier       `Cost:` of the protocol — `seconds` makes the agent
                       audit optional before freezing (one audit after the
-                      first run suffices, §2.A12); `minutes`/`hours` ask
+                      first run suffices, §2.A14); `minutes`/`hours` ask
                       for it here; undeclared counts as `hours`
   2. code-check       intent ids against the code
   3. scope-sha        audit stamp over the input scope
@@ -121,7 +121,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
     if tier == "seconds":
         print("  seconds — rerunnable at will: the agent audit is OPTIONAL before "
               "freezing; one audit after the first run, on real output, "
-              "suffices (§2.A12)")
+              "suffices (§2.A14)")
     elif tier is None:
         print("  not declared — treated as `hours`: the experiment-preflight "
               "audit is due before freezing (§2.A12); stamp `Cost:` to say "

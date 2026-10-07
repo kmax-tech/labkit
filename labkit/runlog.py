@@ -622,7 +622,7 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
 # the run is rerunnable at will, so the freeze protects nothing — what a
 # full run needs there is the registered criterion, written before the
 # number (§2.A1); an instrument change after it is a commit and a rerun,
-# not a second freeze (§2.A12). `minutes`, `hours` and undeclared keep the
+# not a second freeze (§2.A14). `minutes`, `hours` and undeclared keep the
 # freeze. The tier lands in config.json as `cost_tier`.
 PREFLIGHT_AUDIT_LABEL = re.compile(r"preflight.?audit", re.I)
 
@@ -659,7 +659,7 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
         return [f"{path.name}: `Cost: seconds`, but the registration is not written: "
                 f"{', '.join(missing)} still empty or a placeholder — at seconds the "
                 f"gate is question · criterion · stop rule · cost, not the freeze "
-                f"(§2.A1, §2.A12)"]
+                f"(§2.A1, §2.A14)"]
     out = []
     if not FROZEN_YES.search(text):
         out.append(f"{path.name}: not `Frozen before run: yes`")

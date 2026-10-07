@@ -1,4 +1,4 @@
-"""Stamp WHICH code an audit looked at — the scope hash of §2.A12 / §2.D11.
+"""Stamp WHICH code an audit looked at — the stamp of §2.A16 (preflight and analysis audit).
 
 The audit fields in a protocol claim "this code was audited". A stamp that
 covers less than the code determining the number is worse than none: it makes
@@ -8,7 +8,7 @@ reported number — the measure scripts, the analysis scripts, the repo-local
 labkit pin.
 
 Why a command and not a shell one-liner: the one-liner in the first draft of
-§2.A12 was
+§2.A16 was
     { cat "$S"; xargs -a "$S" shasum -a 256; ...; } | shasum -a 256
 which on macOS hashed NO file content at all — BSD xargs has no `-a`, and
 under zsh's noclobber the `>` that built the list was refused too. It printed
