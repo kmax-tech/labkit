@@ -7,20 +7,11 @@
 ```toml
 [protocol]
 standard = "0.18"
-id = "<protocol-id>"        # stamped by `lib exp`, never typed
+id = "<protocol-id>"
 type = "<exploratory | confirmatory>"
-# exploratory: generates hypotheses, none of it reported as a test;
-# confirmatory: tests a hypothesis fixed before the run
 cost = "<seconds | minutes | hours>"
-# the price of a REPEAT, not whether a model is involved — seconds:
-# rerunnable at will, incl. a handful of model calls for a minute and cents;
-# minutes: a model pass you would not casually redo; hours: expensive or
-# irreversible (→ AS-017 Die Zahl der Audits folgt der Kostenstufe)
-frozen = false              # true only after the instrument check
+frozen = false
 preflight_audit = ""
-# date · scope sha · N findings (blockers fixed / accepted with reason /
-# dismissed with reason) — the code-vs-intent audit after the instrument
-# check, before freezing (→ AS-015 Preflight-Audit vor dem Einfrieren)
 ```
 
 ## Summary † (write last)
@@ -65,7 +56,7 @@ preflight_audit = ""
 - **Outcome †:** <expected or surprising — failures belong here>
 - **Rival check †:** <which rivals are ruled out, which still stand?>
 - **Caps/drops †:** <what was omitted or limited>
-- **Analysis audit †:** <!-- s --> <date · scope sha · N findings — the audit of the
+- **Analysis audit †:** <date · scope sha · N findings — the audit of the
   EVALUATION against the frozen criterion, before the number leaves; at
   cost seconds due at promotion or when the number steers a decision
   (→ AS-050 Auswertungs-Audit vor dem Berichten, AS-017 Die Zahl der Audits folgt der Kostenstufe)>
@@ -75,8 +66,10 @@ preflight_audit = ""
 ## Context (self-contained)
 
 - **Problem in one sentence:** <no technical terms — what is being found out?>
-- **Terms of this protocol:** <!-- s --> <every label with a half-sentence or a pointer
-  to the defining note; "n/a — standard vocabulary" if nothing is ambiguous>
+- **Terms of this protocol:** <!-- s --> <every name you coin, with a half-sentence a
+  newcomer understands — constants (e.g. a margin), lanes or arms, item and
+  case ids, the model alias, the files a reader meets; "n/a — standard
+  vocabulary" only if the protocol coins nothing>
 - **Prior threads:** <2–3 [[wikilinks]], each with half a sentence on why
   they lead here>
 

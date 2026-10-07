@@ -250,13 +250,20 @@ scattered in output files nobody can interpret.
 - **Rival check †:** which rivals are ruled out, which still stand?
 - **Caps/drops †:** what was omitted or limited.
 - **Analysis audit †:** date · scope sha · N findings — the audit of the
-  EVALUATION against the frozen criterion, before the number leaves.
+  EVALUATION against the frozen criterion, before the number leaves. Not
+  stamped at `cost = "seconds"`: there the audit comes when the number is
+  promoted or steers a decision, and the field is added then — an open
+  placeholder was what readers stumbled over (2026-10-07).
 
 ### Context (APPARATUS)
 
 - **Problem in one sentence:** no technical terms — what is being found out?
-- **Terms of this protocol:** every label with a half-sentence or a pointer
-  to the defining note; "n/a — standard vocabulary" if nothing is ambiguous.
+- **Terms of this protocol:** every name you coin, with a half-sentence a
+  newcomer understands — constants (a margin), lanes or arms, item and case
+  ids, the model alias, the files a reader meets — or a pointer to the
+  defining note. "n/a — standard vocabulary" only if the protocol coins
+  nothing. Cold readers of the 2026-10-07 probes could not place exactly
+  these: `MARGIN`, "lane", `c08`, the alias.
 - **Prior threads:** 2–3 [[wikilinks]], each with half a sentence on why
   they lead here.
 

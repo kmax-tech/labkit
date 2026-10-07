@@ -129,7 +129,7 @@ FIELDS = (
     Field("Rival check", "report"),
     Field("Caps/drops", "report"),
     # "fällig mit dem Zurückschreiben der Zahl" (AS-050 Auswertungs-Audit vor dem Berichten)
-    Field("Analysis audit", "report", "s"),
+    Field("Analysis audit", "report"),
 )
 
 #: a bold field label opening a line: `- **Label (gloss) †:** value`

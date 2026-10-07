@@ -5,6 +5,21 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.58.0 — 2026-10-07
+
+### Changed
+
+- **Less form in front of a reader.** The stamped toml head carries keys
+  only — what each key means is in the field guide. `Analysis audit †` is
+  no longer stamped at `cost = "seconds"`: there the audit comes when the
+  number is promoted or steers a decision, and the field is added then.
+- **Terms of this protocol asks for the writer's own coinages**: constants,
+  lanes or arms, item and case ids, the model alias.
+
+Cold readers of round 7 (`docs/usability/2026-10-07-protocol-reading.md`)
+could place the writers' results; most of what they could not place came
+from the stamped form, the rest from unglossed coinages.
+
 ## 0.57.0 — 2026-10-07
 
 ### Changed
