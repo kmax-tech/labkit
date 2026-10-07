@@ -250,3 +250,50 @@ Consequences:
 3. Not added to the coding style.
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round5/`.
+
+## Round 6 (2026-10-07): fresh questions on parts nobody asked about or changed
+
+How far does CS-015 Make the code findable by name carry beyond the places
+it was built from? Five new questions per repo, in a person's words, on
+code that no earlier round asked about and no rename touched
+(uniagent: the month arithmetic of a deadline, whether a check applies to
+a case, the trace format check, the sum of amounts, the comparison's
+figures; labkit: runs still in progress, rebuilding the run list, a number
+quoted in a note, a prompt read from a script without running it, two
+writers of the run list at once). Haiku, two agents per repo.
+
+| repo, Haiku | found | found as registered, strict paths | calls |
+|---|---|---|---|
+| uniagent | 10/10 | 8/10 | 15, 20 |
+| labkit | 9/10 | 4/10 | 22, 31 |
+
+Two scoring changes, both made after reading the answers and both
+disclosed:
+
+- **A truth widened:** "where is decided whether a check applies to an
+  application?" — both uniagent agents answered `trigger.unmet_conditions`
+  ("an empty list means the check applies"), not the registered
+  `trigger_matches`, which decides one condition. Their answer is the
+  better one.
+- **Path tails accepted (0.63.1):** one labkit agent found all five places
+  and wrote every path without the package folder (`runlog.py:1051`); a
+  tail now counts when it names exactly one file in the repo.
+
+The one real miss: "the list of all runs got lost — where can it be
+rebuilt from the run folders?" One agent answered `runs.completed_runs`
+(lists the completed run folders) instead of `runlog.reindex`, whose
+first docstring line is "Append index rows for completed runs that have
+none" — neither "rebuild" nor "list of runs" in it. A second instance of
+round 3's finding: a first docstring line without the word a person
+searches for, next to a neighbour that has it.
+
+Consequences:
+
+1. On untouched code the weaker reader finds 19 of 20 places: the two
+   repos follow CS-015 well enough already; the gaps are single first
+   docstring lines and near neighbours (`trigger_matches` /
+   `unmet_conditions`, `reindex` / `completed_runs`).
+2. Work list for labkit: `runlog.reindex`'s first docstring line names
+   what it is for (rebuild the run index from the run folders).
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round6/`.

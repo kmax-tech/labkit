@@ -1277,7 +1277,8 @@ def _read_index(index: Path) -> tuple[list[str], list[list[str]]]:
 
 
 def reindex(base_dir: Path) -> int:
-    """Append index rows for completed runs that have none. Never rewrites.
+    """Rebuild the run index (runs.tsv) from the run folders: append a row for
+    every completed run that has none. Never rewrites.
 
     A row that exists stays untouched. Only runs with both completion
     markers are indexed; a run without `schema_version` is reported — it is
