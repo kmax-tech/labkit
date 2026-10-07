@@ -649,10 +649,12 @@ def print_contract() -> None:
     print(
         "\nfields, by their exact template label (`- **<label>:** <value>`; a "
         "parenthesised gloss and † may follow the label; `n/a — <the reason>` "
-        "counts as filled, `<…>`, `TODO`, an empty label and a bare `n/a — <why>` do not):"
+        "counts as filled, `<…>`, `TODO`, an empty label and a bare `n/a — <why>` do not)."
+        ' The lists below are the FULL form (cost = "minutes" | "hours"); at '
+        'cost = "seconds" only the first line of this output counts:'
     )
     for level, title in (
-        ("must", "MUST (every pilot)"),
+        ("must", "MUST (every pilot of the full form)"),
         ("should", "SHOULD (MUST once frozen = true)"),
         ("after", "after the run (owed once a measure run is documented)"),
         ("report", "report (owed once frozen = true and a measure run is documented)"),
