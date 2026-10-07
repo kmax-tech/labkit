@@ -116,5 +116,26 @@ class Flows(unittest.TestCase):
             self.assertEqual(cn.symbol_span(Path(d), "m.py:L10-L20"), ("m.py", 10, 20))
 
 
+class Tails(unittest.TestCase):
+    def test_a_unique_tail_names_the_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            (repo / "pkg").mkdir()
+            (repo / "pkg/mod.py").write_text(SOURCE)
+            qs = [cn.Question("m", "q", ("pkg/mod.py:majority",))]
+            got = cn.score('{"m": "mod.py:7"}', qs, repo)
+            self.assertTrue(got[0].found)
+
+    def test_an_ambiguous_tail_does_not_count(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            for sub in ("pkg", "other"):
+                (repo / sub).mkdir()
+                (repo / sub / "mod.py").write_text(SOURCE)
+            qs = [cn.Question("m", "q", ("pkg/mod.py:majority",))]
+            got = cn.score('{"m": "mod.py:7"}', qs, repo)
+            self.assertFalse(got[0].file_right)
+
+
 if __name__ == "__main__":
     unittest.main()

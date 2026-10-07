@@ -5,6 +5,16 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.63.1 — 2026-10-07
+
+### Changed
+
+- `usability nav-score` counts an answer whose path names a file by its
+  tail alone (`runlog.py` for `labkit/runlog.py`) when that tail names
+  exactly one file in the repo; an ambiguous tail does not count. Round 6:
+  one agent found all five places and dropped the package folder from
+  every path, scoring 0/5.
+
 ## 0.63.0 — 2026-10-07
 
 ### Added

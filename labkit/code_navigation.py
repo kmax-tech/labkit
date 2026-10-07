@@ -161,6 +161,8 @@ def score(answer_text: str, questions: list[Question], repo: Path) -> list[Found
         raw = data[q.id]
         m = _PLACE.match(str(raw)) if raw else None
         path, line = (m.group(1), int(m.group(2))) if m else (None, None)
+        if path is not None:
+            path = _full_path(repo, path, [p for p, _, _ in spans])
         file_right = any(path == p for p, _, _ in spans)
         found = any(
             path == p and line is not None and a <= line <= b for p, a, b in spans
@@ -175,6 +177,25 @@ def score(answer_text: str, questions: list[Question], repo: Path) -> list[Found
             )
         )
     return out
+
+
+def _full_path(repo: Path, path: str, truths: list[str]) -> str:
+    """The answer's path, or the truth path it names by its tail alone
+    (`runlog.py` for `labkit/runlog.py`) when that tail names exactly one
+    file in the repo — a reader who drops the package folder still found
+    the file; an ambiguous tail stays as written and does not count."""
+    if path in truths:
+        return path
+    for truth in truths:
+        if truth.endswith("/" + path):
+            same_tail = [
+                f
+                for f in repo.rglob(Path(path).name)
+                if ".venv" not in f.parts and f.as_posix().endswith("/" + path)
+            ]
+            if len(same_tail) == 1:
+                return truth
+    return path
 
 
 @dataclass(frozen=True)
