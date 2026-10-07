@@ -33,7 +33,7 @@ nothing vanished, grown keys reported as a derived run), the note holding
 every reported number as a token and the run_id. Two areas re-implemented
 it and got two of three parts wrong (2026-10-05).
 
-Twelve **console commands** come with the installation, `runlog` with three
+Thirteen **console commands** come with the installation, `runlog` with three
 sub-commands (all answer `--help`):
 
 ```bash
@@ -48,7 +48,9 @@ protocol-fill <PROTOCOL> FIELD VAL  # fill one stamped placeholder field by labe
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
 preflight <AREA>                    # pre-freeze gate: protocol + code + scope + dirty check
 finalize <AREA>                     # post-run gate: completion + intent-check + open fields
-claude-hook pre-run|post-change     # the two Claude Code hooks a lab repo installs (stdin: event JSON)
+finalize --if-reported <PROTOCOL>.. # the commit gate: finalize every protocol whose answer cites a run
+claude-hook pre-run|post-change|stop  # the Claude Code hooks a lab repo installs (stdin: event JSON)
+labkit-hooks install|check [REPO]   # install this labkit's hooks (pre-commit, core.hooksPath, claude-hook); rerun after a pin raise
 usability stage|score <DIR>        # probe lab repo for a cold agent; score its trace (time, steps, number)
 labkit-audit <AREA> --mode preflight|analysis   # experiment-preflight audit through any models.toml alias; exit 1 on a blocker OR a warning
 ```
@@ -86,7 +88,11 @@ remembering (2026-10-05):
 | code refuses         | `runlog.Run` — leak, index header, detach, **freeze gate** | always: every run passes through it                   |
 | Claude hook blocks   | `claude-hook pre-run` (PreToolUse Bash, exit 2)            | a frozen protocol's area has preflight blockers; not at `cost = "seconds"` |
 | Claude hook reports  | `claude-hook post-change` (PostToolUse Bash\|Write\|Edit)  | a protocol or messung note changed, whatever wrote it |
+| Claude hook sends back | `claude-hook stop` (Stop, exit 2)                        | a protocol changed in this session cites a run and `finalize` has blockers — once per stop |
 | git pre-commit fails | `.githooks/pre-commit`                                     | a staged protocol misses must fields; a written-back answer fails `finalize --if-reported` |
+
+All of them are installed by `labkit-hooks install` from the pinned labkit, and
+`preflight` warns when they are missing or from another labkit version.
 
 **Freeze gate.** `long=True` is the script's declaration of a full run.
 `runlog` refuses it before `mkdir` unless the bound protocol's head says

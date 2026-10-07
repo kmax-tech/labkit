@@ -15,7 +15,7 @@ is no cycle (checked 2026-10-06).
 | 2 · a run and its effects | `runlog`, `batch`, `llm`, `endpoint_lease` | writing a run (binding, refusals, provenance, index), resumable output, model calls, the model-slot lease |
 | 3 · checks | `intent_check`, `code_check`, `recheck`, `notes_check` | one question each, against code, metrics or a note |
 | 4 · gates | `preflight`, `finalize`, `claude_hooks`, `audit` | sequence the checks at a decision point; the hooks call the gates; `audit` runs the agent audit through `llm` |
-| tools | `protocol_fill`, `usability` | fill a protocol field; stage and score a cold-agent probe |
+| tools | `protocol_fill`, `usability`, `install_hooks` | fill a protocol field; stage and score a cold-agent probe; install the hooks |
 
 `runlog` (layer 2) reads layer 1 and calls `llm` only to record resolved
 models; `endpoint_lease` asks `runs.is_alive`, not the writer.

@@ -5,6 +5,21 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.51.0 — 2026-10-07
+
+### Added
+
+- `labkit-hooks install|check`: the hooks come with the pinned labkit —
+  `.githooks/pre-commit` (protocol-check, finalize --if-reported, guard
+  test), `git core.hooksPath` (a manual step per clone before, so the hook
+  silently did nothing) and the claude-hook entries in
+  `.claude/settings.json` (foreign hooks and keys kept). Each hook names the
+  labkit version that wrote it; rerun `install` after a pin raise.
+  `preflight` warns when hooks are missing or from another version.
+- `claude-hook stop`: before the agent ends its turn, every protocol
+  changed in the session whose answer cites a run goes through `finalize`;
+  blockers send the agent back (exit 2), once per stop.
+
 ## 0.50.0 — 2026-10-07
 
 ### Breaking

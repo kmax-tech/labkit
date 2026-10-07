@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "labkit"
-version = "0.50.0"
+version = "0.51.0"
 description = "Shared lab helpers: run index, LLM backend, endpoint lease, resumable batches, protocol and notes checkers"
 requires-python = ">=3.12"
 # stdlib only, on purpose: a lab helper that drags dependencies in decides the
@@ -30,6 +30,7 @@ finalize = "labkit.finalize:cli"
 claude-hook = "labkit.claude_hooks:cli"
 usability = "labkit.usability:cli"
 labkit-audit = "labkit.audit:cli"
+labkit-hooks = "labkit.install_hooks:cli"
 
 [tool.setuptools]
 packages = ["labkit"]

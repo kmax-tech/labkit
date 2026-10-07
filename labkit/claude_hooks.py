@@ -1,7 +1,8 @@
-"""claude-hook — the two Claude Code hooks a lab repo installs.
+"""claude-hook — the three Claude Code hooks a lab repo installs.
 
     claude-hook pre-run       PreToolUse  (matcher: Bash)
     claude-hook post-change   PostToolUse (matcher: Bash|Write|Edit)
+    claude-hook stop          Stop
 
 Both read the hook's JSON event on stdin and answer the way Claude Code
 expects: `pre-run` blocks with exit 2 (the stderr text goes back to the
@@ -39,7 +40,16 @@ post-change
     already checked at this content from being reported after every later
     command.
 
-Exit codes: pre-run 0 or 2 (block); post-change 0; usage errors and
+stop
+    Before the agent ends its turn: every changed PROTOCOL-*.md (git status)
+    whose "Answer to the question" cites a run goes through `finalize
+    --if-reported`. Blockers → exit 2, and the findings go back to the agent,
+    which keeps working — the number it just wrote back is checked in the
+    session that still knows why it is there, not at the next commit
+    (2026-10-07). Once per stop: when the agent was already sent back by
+    this hook (`stop_hook_active`), it may stop; the commit gate still holds.
+
+Exit codes: pre-run 0 or 2 (block); stop 0 or 2 (keep working); post-change 0; usage errors and
 unexpected failures 1, loud on stderr, never swallowed.
 """
 from __future__ import annotations
@@ -54,7 +64,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from labkit import notes_check, preflight, protocol_block, protocol_check
+from labkit import finalize, notes_check, preflight, protocol_block, protocol_check
 from labkit.repo import area_protocols, git_run
 
 # The template's throwaway stages: none of them opens a run, and the probe
@@ -291,18 +301,40 @@ def post_change(event: dict) -> int:
     return 0
 
 
+def stop(event: dict) -> int:
+    if event.get("stop_hook_active"):
+        return 0                          # sent back once already; no loop
+    project = os.environ.get("CLAUDE_PROJECT_DIR")
+    repo = Path(project) if project else Path(event.get("cwd") or os.getcwd())
+    if not (repo / ".git").exists():
+        return 0
+    protocols = [c.resolve() for c in _git_changed(repo)
+                 if c.is_file() and wants_check(c) == "protocol"]
+    if not protocols:
+        return 0
+    rc, out = _capture(finalize.main, ["--if-reported", *map(str, protocols)])
+    if rc == 0:
+        return 0
+    print("finalize reports blockers for a number written back in this session — "
+          "fix them before you stop (a commit would be refused the same way):\n"
+          + out, file=sys.stderr)
+    return 2
+
+
 # -------------------------------------------------------------------- cli
 
 def main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
-        print("usage: claude-hook pre-run | post-change   (hook event JSON on stdin)")
+        print("usage: claude-hook pre-run | post-change | stop   (hook event JSON on stdin)")
         return 0 if argv else 1
     event = _read_event()
     if argv[0] == "pre-run":
         return pre_run(event)
     if argv[0] == "post-change":
         return post_change(event)
+    if argv[0] == "stop":
+        return stop(event)
     print(f"claude-hook: unknown event {argv[0]!r}", file=sys.stderr)
     return 1
 

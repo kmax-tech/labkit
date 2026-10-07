@@ -214,3 +214,51 @@ class PostChange(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Stop(unittest.TestCase):
+    """`claude-hook stop`: a number written back in this session goes through
+    finalize before the agent ends its turn (2026-10-07)."""
+
+    RUN = "2026-10-07T10-00-00_ab12"
+
+    def setUp(self):
+        os.environ.pop("CLAUDE_PROJECT_DIR", None)
+        from protocol_fixture import PID
+        self.root = _repo(False)
+        self.area = self.root / "experiments" / "01-x"
+        d = self.area / "runs" / self.RUN
+        d.mkdir(parents=True)
+        (d / "config.json").write_text(json.dumps(
+            {"schema_version": 2, "protocol": {"id": PID, "path": "PROTOCOL-x.md"}}))
+        (d / "metrics.json").write_text(json.dumps({"c1_pass": True, "a1_pass": True, "a2_pass": True}))
+        (d / "completion.json").write_text(json.dumps({"schema_version": 2}))
+
+    def _answer(self, run_id: str) -> None:
+        p = self.area / "PROTOCOL-x.md"
+        p.write_text(p.read_text() + f"- **Answer to the question:** p = .01 ({run_id})\n")
+
+    def _stop(self, active: bool = False) -> tuple[int, str, str]:
+        return _run(claude_hooks.stop, {"session_id": "s1", "cwd": str(self.root),
+                                        "stop_hook_active": active})
+
+    def test_a_blocker_sends_the_agent_back(self):
+        self._answer("2026-10-01T09-00-00_ffff")
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 2)
+        self.assertIn("but the run that answers is", err)
+
+    def test_a_correct_answer_lets_it_stop(self):
+        """Twin of the case above: the answer cites the run that answers."""
+        self._answer(self.RUN)
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 0, err)
+
+    def test_sent_back_once_already_no_loop(self):
+        self._answer("2026-10-01T09-00-00_ffff")
+        rc, _, _ = self._stop(active=True)
+        self.assertEqual(rc, 0)
+
+    def test_nothing_written_back_is_silent(self):
+        rc, out, err = self._stop()
+        self.assertEqual((rc, out, err), (0, "", ""))

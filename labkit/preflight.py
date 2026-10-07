@@ -33,7 +33,8 @@ import sys
 from pathlib import Path
 
 from labkit.code_check import check_intent_ids
-from labkit.repo import area_protocols, git, layout_root
+from labkit import install_hooks
+from labkit.repo import area_protocols, git, git_root, layout_root
 from labkit.protocol_check import check_fields, check_protocol_id
 from labkit.scope_sha import AREA_GLOBS, area_stamp
 
@@ -149,6 +150,23 @@ def run(area: Path, protocol: Path | None = None) -> int:
         warnings += 1
     else:
         print("  clean")
+
+    # -- 4b. hooks -----------------------------------------------------------
+    # The gates that do not depend on the agent remembering: a repo without
+    # them (or with an older labkit's) runs on good intentions only.
+    print("── hooks ──")
+    git_repo = git_root(area)
+    if git_repo is None:
+        print("  n/a — not a git repo")
+    else:
+        gaps = install_hooks.check(git_repo)
+        for g in gaps:
+            print(f"  WARNING: {g}")
+        if gaps:
+            print("  fix with  .venv/bin/labkit-hooks install")
+            warnings += 1
+        else:
+            print("  installed (this labkit's pre-commit, core.hooksPath, claude-hook)")
 
     # -- 5. area tests -----------------------------------------------------
     print("── tests ──")
