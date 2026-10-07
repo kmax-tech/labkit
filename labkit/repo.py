@@ -26,13 +26,35 @@ class GitError(RuntimeError):
     """git could not be run, or failed inside a repository."""
 
 
+def area_path(arg: str) -> Path:
+    """The area a command argument names: a directory as given, else the
+    bare name as `lib exp` prints it — `01-<name>` or `<name>` — under
+    `experiments/` of the working directory or of its repository. Returns
+    the argument unchanged when nothing (or more than one area) matches, so
+    the caller's "no such area" still speaks (2026-10-07: two agents passed
+    `01-docs-per-case` to code-check and were refused)."""
+    given = Path(arg)
+    if given.is_dir() or given.is_absolute() or "/" in arg:
+        return given
+    hits: set[Path] = set()
+    for base in {Path.cwd(), git_root(Path.cwd()) or Path.cwd()}:
+        exp = base / "experiments"
+        if (exp / arg).is_dir():
+            hits.add((exp / arg).resolve())
+        hits.update(p.resolve() for p in exp.glob(f"[0-9]*-{arg}") if p.is_dir())
+    return hits.pop() if len(hits) == 1 else given
+
+
 def no_such_area(area: Path) -> str:
     """The sentence for an area path that is not a directory. A relative
     path resolves against the working directory, so the sentence names it
     (2026-10-07: an agent called code-check from inside the area with the
     repo-relative path and tried four spellings)."""
     where = "" if area.is_absolute() else f" (relative to {Path.cwd()})"
-    return f"no such area: {area}{where}"
+    return (
+        f"no such area: {area}{where} — give the area's path or its name "
+        f"as `lib exp` printed it (01-<name>)"
+    )
 
 
 def area_protocols(area: Path) -> list[Path]:

@@ -35,7 +35,14 @@ from pathlib import Path
 
 from labkit.code_check import check_intent_ids
 from labkit import install_hooks
-from labkit.repo import area_protocols, git, git_root, layout_root, no_such_area
+from labkit.repo import (
+    area_path,
+    area_protocols,
+    git,
+    git_root,
+    layout_root,
+    no_such_area,
+)
 from labkit.protocol_check import check_fields, check_protocol_id
 from labkit.scope_sha import AREA_GLOBS, area_stamp
 
@@ -241,7 +248,7 @@ def main(argv: list[str]) -> int:
         print("usage: preflight <AREA> [--protocol PROTOCOL-*.md]")
         return 0 if argv else 2
 
-    area = Path(argv[0])
+    area = area_path(argv[0])
     protocol = None
     rest = argv[1:]
     while rest:

@@ -1358,7 +1358,7 @@ def main(argv: list[str]) -> int:
     if argv and argv[0] == "start":
         return _start(argv[1:])
     if argv and argv[0] == "reindex":
-        area = Path(argv[1]) if len(argv) > 1 else Path(".")
+        area = repo.area_path(argv[1]) if len(argv) > 1 else Path(".")
         if not area.is_dir():
             print(f"runlog: {repo.no_such_area(area)}")
             return 2

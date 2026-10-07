@@ -59,7 +59,7 @@ from pathlib import Path
 
 from labkit import promises
 from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
-from labkit.repo import area_protocols, layout_root, no_such_area
+from labkit.repo import area_path, area_protocols, layout_root, no_such_area
 from labkit.scope_sha import imported_lib
 
 
@@ -917,7 +917,7 @@ def main(argv: list[str]) -> int:
         )
         return 0 if argv else 2
 
-    area = Path(argv[0])
+    area = area_path(argv[0])
     bundle_to = None
     protocol_arg = None
     rest = argv[1:]

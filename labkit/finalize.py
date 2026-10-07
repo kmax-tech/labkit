@@ -40,7 +40,7 @@ from pathlib import Path
 
 from labkit import promises, protocol_block
 from labkit.runs import read_run_config
-from labkit.repo import area_protocols, git_root, git_run, no_such_area
+from labkit.repo import area_path, area_protocols, git_root, git_run, no_such_area
 from labkit.intent_check import (
     bound_runs,
     main as intent_check_main,
@@ -380,7 +380,7 @@ def main(argv: list[str]) -> int:
     if argv[0] == "--if-reported":
         return if_reported([Path(a) for a in argv[1:]])
 
-    area = Path(argv[0])
+    area = area_path(argv[0])
     protocol = None
     rest = argv[1:]
     while rest:
