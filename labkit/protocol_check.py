@@ -877,19 +877,22 @@ def main(argv: list[str]) -> int:
                 f"carry the current state, the why of the change goes in the "
                 f"commit message (Arbeitsstandard §3)."
             )
-        if (
-            missing_must
-            or must_holes
-            or frozen_without_io
-            or no_block
-            or run_unreported
-            or (frozen and (too_long or big))
-        ):
+        # The must findings again, last: in a commit hook they sat among
+        # 20 warning lines and were missed (usability probe 2026-10-07).
+        musts = (
+            list(missing_must)
+            + [f"{label} (line {n}, placeholder)" for n, label in must_holes]
+            + (["a prompt code block"] if no_block else [])
+            + (["a rendered example (frozen)"] if frozen_without_io else [])
+            + (["Result / Raw output for the measured run"] if run_unreported else [])
+            + (["a shorter protocol (frozen)"] if frozen and (too_long or big) else [])
+        )
+        if musts:
             failed = True
             print(
                 f"{f}: must fields missing or empty — fill them in, or "
                 f"justify as 'n/a — <why>' (the reason must be there, not "
-                f"just the angle brackets)."
+                f"just the angle brackets): {'; '.join(musts)}"
             )
     return 1 if failed else 0
 

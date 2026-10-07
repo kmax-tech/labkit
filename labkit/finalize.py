@@ -153,7 +153,10 @@ def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]
 
 def run(area: Path, protocol: Path | None = None) -> int:
     """Run all finalize checks. Returns 0 (clean) or 1 (findings)."""
-    blockers = 0
+    # Every blocker as one line, repeated in the summary: inside a commit
+    # hook the sections run to 20 lines and the one blocker drowned in the
+    # middle (usability probe 2026-10-07).
+    blocked: list[str] = []
     warnings = 0
 
     # -- resolve protocol -------------------------------------------------
@@ -189,12 +192,12 @@ def run(area: Path, protocol: Path | None = None) -> int:
     print(f"── completion: {protocol.name} ──")
     if pid is None:
         print("  no stamped protocol id ([protocol] id) — no run is bound to it")
-        blockers += 1
+        blocked.append("no stamped protocol id")
     else:
         runs_dir = area / "runs"
         if not runs_dir.is_dir():
             print(f"  no runs/ directory in {area}")
-            blockers += 1
+            blocked.append(f"no runs/ directory in {area}")
         else:
             taken, rest = bound_runs(area, pid)
             if not taken:
@@ -202,7 +205,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
                 if rest:
                     for f in rest:
                         print(f"    {f['dir'].name}: {f['why']}")
-                blockers += 1
+                blocked.append(f"no completed run bound to {pid}")
             else:
                 # ONE choice for every station: intent-check skips newer
                 # runs without intent keys (a probe), so checking scopes or
@@ -213,7 +216,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
                 blocking = newer_unreadable(mpath.parent, rest)
                 if blocking:
                     print(f"  BLOCKER: {blocking}")
-                    blockers += 1
+                    blocked.append(blocking)
                 newest_dir = mpath.parent
                 note = (
                     f" (skipped {skipped} newer bound run(s) without intent keys)"
@@ -223,12 +226,13 @@ def run(area: Path, protocol: Path | None = None) -> int:
                 print(f"  {newest_dir.name}: completed{note}")
                 cited = cited_runs(text)
                 if cited and newest_dir.name not in cited:
-                    print(
-                        f'  BLOCKER: "Answer to the question" cites {", ".join(cited)}, '
+                    msg = (
+                        f'"Answer to the question" cites {", ".join(cited)}, '
                         f"but the run that answers is {newest_dir.name} — cite the run "
                         f"the checks hold, or rerun"
                     )
-                    blockers += 1
+                    print(f"  BLOCKER: {msg}")
+                    blocked.append(msg)
 
     # -- 2. intent-check ---------------------------------------------------
     print("── intent-check ──")
@@ -247,7 +251,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
         for line in buf.getvalue().splitlines():
             print(f"  {line}")
         if rc != 0:
-            blockers += 1
+            blocked.append("intent-check failed (see its lines above)")
 
     # -- 2b. declared scopes ------------------------------------------------
     # The run recorded a hash per promise over its declared scope. A scope
@@ -263,16 +267,17 @@ def run(area: Path, protocol: Path | None = None) -> int:
         else:
             drift = promises.scope_drift(recorded, area)
             for d in drift:
-                print(
-                    f"  BLOCKER: declared scope changed since {newest_dir.name}: "
+                msg = (
+                    f"declared scope changed since {newest_dir.name}: "
                     f"{d} — rerun before reporting"
                 )
+                print(f"  BLOCKER: {msg}")
+                blocked.append(msg)
             if not drift:
                 print(
                     f"  {len(recorded['ids'])} declared scope(s) unchanged "
                     f"since {newest_dir.name}"
                 )
-            blockers += len(drift)
 
     # -- 3. open fields ----------------------------------------------------
     print(f"── open fields: {protocol.name} ──")
@@ -299,7 +304,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
             print(f"  warning: {line}")
         if not b and not w:
             print("  source frozen in the run; source and output tracked in git")
-        blockers += len(b)
+        blocked += b
         warnings += len(w)
 
     # -- 5. criterion n ------------------------------------------------------
@@ -316,11 +321,13 @@ def run(area: Path, protocol: Path | None = None) -> int:
 
     # -- summary -----------------------------------------------------------
     print()
-    if blockers:
+    if blocked:
         print(
-            f"finalize: {blockers} blocker(s), {warnings} warning(s) "
-            f"— fix the blockers before reporting."
+            f"finalize: {len(blocked)} blocker(s), {warnings} warning(s) "
+            f"— fix the blockers before reporting:"
         )
+        for msg in blocked:
+            print(f"  - {msg}")
         return 1
     if warnings:
         print(

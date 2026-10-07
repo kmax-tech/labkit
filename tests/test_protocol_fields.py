@@ -1,7 +1,10 @@
 """FIELDS is the checker's contract, the template the author's: they must name
 the same fields, or the checker holds a protocol to a label it never saw."""
 
+import contextlib
+import io
 import re
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -206,6 +209,16 @@ class OpenHolesFollowTheCut(unittest.TestCase):
 
     def test_the_full_form_lists_every_placeholder(self):
         self.assertEqual(self.labels("minutes"), ["Unit", "Free knobs"])
+
+    def test_the_last_line_names_the_must_finding(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "PROTOCOL-x.md"
+            f.write_text(head(cost="seconds") + self.BODY)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = protocol_check.main([str(f)])
+        self.assertEqual(rc, 1)
+        self.assertIn("Unit (line", buf.getvalue().rstrip().splitlines()[-1])
 
     def test_protocol_check_stays_quiet_about_fields_not_owed(self):
         report = protocol_check.check_fields(head(cost="seconds") + self.BODY)

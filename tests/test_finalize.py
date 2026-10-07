@@ -122,6 +122,16 @@ class TestFinalize(unittest.TestCase):
         self.assertIn("no completed run bound to", out)
         self.assertIn("blocker", out)
 
+    def test_the_summary_repeats_each_blocker_last(self):
+        """Inside a commit hook the blocker sat among 20 lines (probe 2026-10-07)."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
+            code, out = _run_finalize(area)
+        self.assertEqual(code, 1, out)
+        recap = out.split("fix the blockers before reporting:")[1]
+        self.assertIn("  - no runs/ directory", recap)
+
     def test_no_runs_dir_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
