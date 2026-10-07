@@ -98,5 +98,79 @@ class Install(unittest.TestCase):
         self.assertEqual(len(s["hooks"]["PreToolUse"]), 1)
 
 
+class RepoOwnSteps(unittest.TestCase):
+    """A repo's own pre-commit steps survive an install (uniagent, 2026-10-07:
+    a replay test of its runs lived in the hook and would have been erased)."""
+
+    def test_a_foreign_hook_is_kept_beside_not_erased(self):
+        repo = git_repo()
+        hook = repo / ".githooks" / "pre-commit"
+        hook.parent.mkdir()
+        hook.write_text("#!/bin/sh\npytest tests/test_replay_runs.py\n")
+        done = install_hooks.install(repo)
+        kept = repo / ".githooks" / "pre-commit.before-labkit"
+        self.assertIn("test_replay_runs", kept.read_text())
+        self.assertTrue(any("pre-commit.local" in d for d in done), done)
+
+    def test_a_second_foreign_hook_refuses_instead_of_overwriting(self):
+        repo = git_repo()
+        hook = repo / ".githooks" / "pre-commit"
+        hook.parent.mkdir()
+        hook.write_text("#!/bin/sh\necho one\n")
+        install_hooks.install(repo)
+        hook.write_text("#!/bin/sh\necho two\n")
+        with self.assertRaises(SystemExit):
+            install_hooks.install(repo)
+
+    def test_the_local_hook_runs_and_its_failure_blocks_the_commit(self):
+        repo = git_repo()
+        install_hooks.install(repo)
+        local = repo / ".githooks" / "pre-commit.local"
+        local.write_text("#!/bin/sh\necho local-ran\nexit 1\n")
+        local.chmod(0o755)
+        (repo / "f.txt").write_text("x")
+        subprocess.run(["git", "-C", str(repo), "add", "f.txt"], check=True)
+        r = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@t",
+                "commit",
+                "-q",
+                "-m",
+                "x",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=repo,
+        )
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("local-ran", r.stdout + r.stderr)
+        local.write_text("#!/bin/sh\nexit 0\n")
+        r = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@t",
+                "commit",
+                "-q",
+                "-m",
+                "x",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=repo,
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -5,6 +5,17 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.53.1 — 2026-10-07
+
+### Fixed
+
+- **`labkit-hooks install` no longer erases a repo's own hook.** A
+  `.githooks/pre-commit` that labkit-hooks did not write is kept as
+  `pre-commit.before-labkit` (a second one refuses), and the versioned hook
+  runs the repo's own `.githooks/pre-commit.local` when it is executable —
+  the repo owns that file, labkit-hooks never writes it. Found on the first
+  real upgrade (uniagent): its hook ran a replay test of runs 07/08.
+
 ## 0.53.0 — 2026-10-07
 
 What six rounds of cold-agent probes (`docs/usability/2026-10-07-remeasure.md`)

@@ -10,7 +10,9 @@ existing repos never got a newer one).
 
     .githooks/pre-commit     protocol-check on staged protocols; finalize
                              --if-reported on a written-back answer; the
-                             shim guard test where a repo has it
+                             shim guard test where a repo has it; then the
+                             repo's own .githooks/pre-commit.local, if any
+                             (the repo owns it, labkit-hooks never writes it)
     git core.hooksPath       set to .githooks (it used to be a manual step
                              per clone, and the hook silently did nothing)
     .claude/settings.json    claude-hook pre-run · post-change · stop
@@ -82,6 +84,13 @@ if [ -f tests/test_shared_helpers_come_from_labkit.py ] && [ -x .venv/bin/python
     }}
 fi
 
+# 4. The repo's own checks: .githooks/pre-commit.local belongs to the repo
+#    and is never written by labkit-hooks (uniagent, 2026-10-07: a replay
+#    test of its runs lived in the hook and an install would have erased it).
+if [ -x .githooks/pre-commit.local ]; then
+    .githooks/pre-commit.local || fail=1
+fi
+
 exit $fail
 """
 
@@ -140,6 +149,21 @@ def install(repo: Path) -> list[str]:
     hook = repo / ".githooks" / "pre-commit"
     hook.parent.mkdir(exist_ok=True)
     text = pre_commit()
+    if hook.is_file() and MARK not in hook.read_text(encoding="utf-8"):
+        # A hook labkit did not write may carry the repo's own checks:
+        # kept beside, never erased in silence.
+        kept = hook.with_name("pre-commit.before-labkit")
+        if kept.exists():
+            raise SystemExit(
+                f"labkit-hooks: {hook} was not written by labkit-hooks and "
+                f"{kept.name} exists already — move the repo's own steps to "
+                f".githooks/pre-commit.local, remove {kept.name}, run install again"
+            )
+        hook.rename(kept)
+        done.append(
+            f"kept the previous hook as {kept.relative_to(repo)} — move its "
+            f"repo-specific steps to .githooks/pre-commit.local (executable)"
+        )
     if not hook.is_file() or hook.read_text(encoding="utf-8") != text:
         hook.write_text(text, encoding="utf-8")
         done.append(f"wrote {hook.relative_to(repo)}")
