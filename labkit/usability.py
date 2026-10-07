@@ -1,7 +1,8 @@
 """usability — stage a probe lab repo for a cold agent, then score the trace.
 
     usability stage <dir> [--venv PATH]     a fresh lab repo with one kept-number task
-    usability score <dir>                   number · binding · log → one table, one JSON
+    usability score <dir> [--transcript F]  number · binding · log (· transcript) → one table, one JSON
+    usability trace <transcript>            the agent's timeline, one line per tool call
 
 Why this exists (2026-10-05): the doctrine grew by scars, every scar added
 a gate, and nobody measured what the whole chain costs for the simplest
@@ -34,6 +35,8 @@ score
     wall-clock (first to last stamp; the agent's time outside the log is
     not seen), counts per tag and whether the kept number equals the truth.
     Writes `<dir>.score.json`. Exit 0 when the number is right and bound.
+    `--transcript` adds what the agent's session transcript shows — the
+    log is self-report, the transcript a measurement (agent_transcript).
 """
 
 from __future__ import annotations
@@ -49,7 +52,7 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from labkit import runs
+from labkit import agent_transcript, runs
 
 RES = Path.home() / ".claude" / "resources"
 #: The house scaffolder — the thing under test, outside this package.
@@ -471,9 +474,12 @@ class Score:
     frozen: bool | None
     cost_tier: str | None
     log: LogTrace | None
+    transcript: agent_transcript.TranscriptTrace | None = (
+        None  # measured, not self-reported
+    )
 
 
-def score(root: Path) -> int:
+def score(root: Path, transcript: Path | None = None) -> int:
     probe_file = _sidecar(root, "probe.json")
     if not probe_file.is_file():
         raise SystemExit(f"usability: {probe_file} missing — was {root} staged here?")
@@ -515,6 +521,14 @@ def score(root: Path) -> int:
                 frozen = None
     log = _sidecar(root, "log.md")
     trace = parse_log(log.read_text(encoding="utf-8")) if log.is_file() else None
+    try:
+        measured = (
+            agent_transcript.trace(transcript, root, SOURCE_READ)
+            if transcript is not None
+            else None
+        )
+    except (agent_transcript.TranscriptError, OSError) as exc:
+        raise SystemExit(f"usability: transcript: {exc}") from exc
     sc = Score(
         probe=probe,
         run_id=run.name if run else None,
@@ -528,6 +542,7 @@ def score(root: Path) -> int:
         frozen=frozen,
         cost_tier=tier,
         log=trace,
+        transcript=measured,
     )
     _sidecar(root, "score.json").write_text(
         json.dumps(asdict(sc), indent=1), encoding="utf-8"
@@ -587,6 +602,29 @@ def score(root: Path) -> int:
                 + ("" if trace.source_reads == 0 else " — the card did not suffice"),
             )
         )
+    if measured is not None:
+        w, tool = measured.wall_seconds, measured.tool_seconds
+        rows += [
+            ("transcript · wall-clock", f"{w // 60}m{w % 60:02d}s"),
+            ("transcript · in tools / thinking", f"{tool}s / {w - tool}s"),
+            ("transcript · tool calls", str(measured.calls)),
+            (
+                "transcript · labkit commands",
+                ", ".join(f"{k} ×{v}" for k, v in sorted(measured.commands.items()))
+                or "none",
+            ),
+            ("transcript · gate refusals", str(measured.refusals)),
+            ("transcript · files opened", str(len(measured.files_read))),
+            (
+                "transcript · source / standard reads",
+                str(len(measured.source_reads))
+                + (
+                    " — " + "; ".join(measured.source_reads[:3])
+                    if measured.source_reads
+                    else ""
+                ),
+            ),
+        ]
     width = max(len(k) for k, _ in rows)
     for k, v in rows:
         print(f"  {k:<{width}}  {v}")
@@ -633,7 +671,21 @@ def main(argv: list[str]) -> int:
     )
     c = sub.add_parser("score", help="number, binding and log of a finished probe")
     c.add_argument("dir")
+    c.add_argument(
+        "--transcript",
+        help="the agent's session transcript (JSONL): wall-clock, tool calls, "
+        "files and refusals measured instead of self-reported",
+    )
+    tr = sub.add_parser("trace", help="the timeline of one agent transcript")
+    tr.add_argument("transcript")
     args = ap.parse_args(argv)
+    if args.cmd == "trace":
+        try:
+            lines = agent_transcript.timeline(Path(args.transcript))
+        except (agent_transcript.TranscriptError, OSError) as exc:
+            raise SystemExit(f"usability: transcript: {exc}") from exc
+        print("\n".join(lines))
+        return 0
     root = Path(args.dir).resolve()
     if args.cmd == "stage":
         return stage(
@@ -643,7 +695,7 @@ def main(argv: list[str]) -> int:
             task=args.task,
             model=args.model,
         )
-    return score(root)
+    return score(root, Path(args.transcript).resolve() if args.transcript else None)
 
 
 def cli() -> None:
