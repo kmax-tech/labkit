@@ -311,6 +311,9 @@ def stage(
             ],
             root,
         )
+    # The hooks, as a real setup installs them (`labkit-hooks install`, labkit
+    # 0.51): pre-commit with finalize, core.hooksPath, the claude-hook entries.
+    _sh([str(root / ".venv" / "bin" / "labkit-hooks"), "install"], root)
     # requirements.lock from the probe venv: runlog warns "env unpinned" without
     # it and every cold agent stopped to generate one (2026-10-05).
     (root / "requirements.lock").write_text(
@@ -324,7 +327,7 @@ def stage(
             "-q",
             "--no-verify",
             "-m",
-            "Probe: requirements.lock from the probe venv",
+            "Probe: requirements.lock and the hooks of the probe venv",
         ],
         root,
     )
