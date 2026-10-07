@@ -179,3 +179,37 @@ result too.
 Remaining time is the model's own (62 to 86 s outside tools) — reading and
 writing — and the prompt block, the one protocol part `protocol-fill`
 cannot fill.
+
+## Round 4: the seconds track first, protocol-fill --prompts
+
+Lab `CLAUDE.md` template with the seconds track at the top and an end
+marker (dotfiles `787bf3d`), `protocol-fill --prompts` (labkit `0c76c41`).
+Scaffold sha `04184d1fed8b`. Scores:
+`2026-10-07-sonnet-v4-{count,judge}-{1,2,3}.score.json`.
+
+| run | number | right / bound | transcript | in tools | rest | calls | files opened |
+|---|---|---|---|---|---|---|---|
+| count-1 | 3.5 | yes / yes | 1:10 | 13 s | 57 s | 14 | 11 |
+| count-2 | 3.5 | yes / yes | 1:16 | 12 s | 64 s | 14 | 8 |
+| count-3 | 3.5 | yes / yes | 1:12 | 14 s | 58 s | 14 | 7 |
+| judge-1 | 0.75 | yes / yes | 2:30 | 54 s | 96 s | 20 | 11 |
+| judge-2 | 0.833 | yes / yes | 2:35 | 54 s | 101 s | 23 | 9 |
+| judge-3 | 0.917 | yes / yes | 2:16 | 53 s | 83 s | 17 | 6 |
+
+Median by transcript: count 1:12 (round 3: 1:21), judge 2:30 (2:18).
+
+- The end marker does not stop a full read: every agent ran `wc -l` and
+  `cat CLAUDE.md`, and saw the marker only in the output. In a real
+  session the file is loaded into context, not read by a tool; the probe
+  makes the agent fetch it, so this cost is partly the probe's.
+- **A defect of the check, found by the probe.** `protocol-fill --prompts`
+  refused on all three judge areas: the skeleton builds
+  `PROMPT = "..." + ANSWER_LINE` with an f-string answer line, and
+  `code_check.prompt_constants` read literals only. The same reader feeds
+  the prompt drift check, which therefore never ran on a stamped area —
+  silently. One agent grepped the venv for the refusal message (the one
+  source read of the round). Fixed in `1e4e8cc`: constants are computed
+  statically, an uncomputable one warns, and every block under the Prompt
+  field counts. Run on the twelve earlier judge protocols, the
+  first-block-only reading gave five false blockers (a null prompt in a
+  second block); with all blocks, none — and a mutated null prompt blocks.

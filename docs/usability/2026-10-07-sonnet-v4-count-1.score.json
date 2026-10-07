@@ -1,0 +1,69 @@
+{
+ "probe": {
+  "staged": "2026-10-07T17:43:04",
+  "task": "count",
+  "area": "01-docs-per-case",
+  "metric_key": "mean_docs_per_case",
+  "labkit_installed": "-e git+https://github.com/kmax-tech/labkit.git@0c76c41fc66419443ed6c7ca8ce2ded4576da902#egg=labkit",
+  "scaffold_sha": "04184d1fed8b",
+  "scaffold_flags": [
+   "--lab",
+   "--name",
+   "count-1",
+   "--lang",
+   "deutsch",
+   "--exp",
+   "docs-per-case",
+   "--cost",
+   "seconds"
+  ],
+  "target_minutes": 5
+ },
+ "run_id": "2026-10-07T17-44-08_5ee5",
+ "number": 3.5,
+ "expected": 3.5,
+ "number_ok": true,
+ "null_reported": null,
+ "bound_to": "PROTOCOL-docs-per-case.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 16,
+  "wall_seconds": 49,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 3,
+  "run": 8,
+  "edit": 5,
+  "unsure": 0,
+  "gate": 0,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "transcript": {
+  "wall_seconds": 70,
+  "tool_seconds": 13,
+  "calls": 14,
+  "commands": {
+   "protocol-check": 1,
+   "protocol-fill": 3,
+   "code-check": 1,
+   "finalize": 2
+  },
+  "refusals": 0,
+  "files_read": [
+   "TASK.md",
+   "CLAUDE.md",
+   "README.md",
+   "PROTOCOL-docs-per-case.md",
+   "scripts/*",
+   "../../data/raw/cases.jsonl",
+   "tests/test_01_docs_per_case.py",
+   "data/raw/cases.jsonl",
+   ");",
+   "done",
+   "../count-1.log.md"
+  ],
+  "source_reads": []
+ }
+}
