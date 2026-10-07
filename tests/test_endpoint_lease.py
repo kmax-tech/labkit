@@ -34,12 +34,15 @@ EP2 = "http://gammaweb09.medien.uni-weimar.de:11490"
 class TestEndpointLease(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
+        self._prev_lease_dir = os.environ.get("LABKIT_LEASE_DIR", "")
         os.environ["LABKIT_LEASE_DIR"] = self.tmp.name
         os.environ.pop("LABKIT_NO_ENDPOINT_LEASE", None)
         el.release_all()
         self.addCleanup(self.tmp.cleanup)
         self.addCleanup(el.release_all)
-        self.addCleanup(lambda: os.environ.pop("LABKIT_LEASE_DIR", None))
+        # restore, never pop: the suite-wide isolation (conftest) must outlive
+        # this test, or every later test leases into ~/.labkit again
+        self.addCleanup(os.environ.__setitem__, "LABKIT_LEASE_DIR", self._prev_lease_dir)
 
     def _foreign(self, endpoint, alias, pid, script="01_measure.py",
                  started="2026-09-08T17:00:00"):
