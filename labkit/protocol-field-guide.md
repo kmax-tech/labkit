@@ -18,10 +18,13 @@ path to this file.
    goes into the protocol's filename (`PROTOCOL-<name>.md`) and into
    `runlog.run("<name>", …)`, so it labels every run-index row and every run
    folder — pick it once, and don't rename it afterwards.
-2. **One field, one line.** A slot takes a sentence, not a paragraph. If a
-   justification needs more, it is a finding: write it in `notes/` (one idea
-   per file) and leave the [[wikilink]] here. A protocol is a registration —
-   what you fixed, ran and got — not a lab journal of how you got there.
+2. **One field, one statement.** A slot takes one statement, not a
+   paragraph. More than two items (metrics, arms, cases) go as a list or a
+   small table indented under the label — never as a `·` chain in one line.
+   If a justification needs more, it is a finding: write it in `notes/` (one
+   idea per file) and leave the [[wikilink]] here. A protocol is a
+   registration — what you fixed, ran and got — not a lab journal of how you
+   got there.
 3. **Show it, don't describe it.** "A suitable prompt" and "the whole
    tokenized post" are descriptions. Paste the actual prompt, the actual
    rendered input, the actual command.
@@ -63,6 +66,23 @@ path to this file.
      referenced, not retold, in the others.
    - **Tense follows the time of the text:** the registered design in the
      present, what was done in the past, the next step as an intention.
+
+## The form: cuts, languages, rule references
+
+- **One template, three cuts.** `lib exp --cost seconds` stamps the
+  `seconds` cut: head, question, criterion, admissibility, terms, data,
+  unit, exclusions, result — with `--model` also model, prompt and null
+  condition. The full form adds the rest; `lib exp <name> --report` appends
+  the † fields. A field the cut left out is not owed.
+- **Labels English, values in the protocol's language.** The labels are
+  read by `protocol-check`, so they stay exactly as stamped; what you write
+  after them — status words included — is German or English, one per
+  protocol.
+- **`→ AS-nnn <name>`** points to the rule in `docs/arbeitsstandard.md`:
+  the reasoning and the evidence live there, here only what the field
+  demands.
+- **Budgets.** The HEAD (Summary, Context, Intent, Setup) is read and has a
+  prose-line budget per section; `protocol-check --contract` prints it.
 
 ## Intent IDs [C/A/B]
 
@@ -138,16 +158,21 @@ minutes of audit waiting for a 64-second run (2026-10-05).
 
 ### Summary (write last, HEAD)
 
-Write this LAST. Three lines — question, result, status — derived from the
-detail below and containing no fact that isn't already there: a summary
-carrying its own numbers becomes a second truth and drifts. Whoever reads
-this has read nothing else yet, so rule 1 matters most here: no "see below",
-no question numbers.
+Write this LAST, answer first. Whoever reads this has read nothing else
+yet: the Summary is the protocol for a person, everything below is the
+evidence for a check. It derives from the detail below and carries no fact
+that isn't already there — a summary with its own numbers becomes a second
+truth and drifts.
 
-- **Question †:** the same sentence as in the Intent.
+- **Result †:** the answer in at most three plain sentences — the result,
+  not the procedure ("The model arm missed the criterion on one wrongly
+  rejected case", not "Both arms were run on 46 cases"). A limit stands in
+  the sentence it limits. No intent ids, metric keys or run_ids: they are in
+  Result below; a technical term gets a half-sentence gloss.
+- **Question †:** the question of the Intent, in plain words.
 - **Did †:** what was done, one sentence — for a reader with no context.
-- **Result †:** number(s) + run_id — no number that is absent below.
-- **Status †:** on track | blocked by _what_ | needs a decision on _what_.
+- **Status †:** on track | blocked by _what_ | needs a decision on _what_ —
+  in the protocol's language.
 
 ### Intent (before the run, HEAD)
 
@@ -203,8 +228,21 @@ Write this back into the protocol as soon as the run finishes — a protocol
 that ends before the result is only a plan, and the results then live
 scattered in output files nobody can interpret.
 
-- **Answer to the question:** number(s) + run_id, produced by
-  `analysis/<note>.py --check`, never retyped; long form → [[note]].
+- **Answer to the question:** per registered id its verdict, and the
+  run_id; the numbers as a small table indented under the label, one row
+  per arm or condition (not a chain `c1_pass True · c2_pass False · …`),
+  produced by `analysis/<note>.py --check`, never retyped; long form →
+  [[note]]. Example:
+
+  ```text
+  - **Answer to the question:** nein — [C2] verfehlt, [C1] [C3] [A1] [A2]
+    erfüllt; Lauf `2026-10-07T14-11-17_5b06`.
+
+    | Arm | richtig (21 Organisatoren-Fälle) | neue Fehlablehnungen |
+    |---|---|---|
+    | deterministisch | 18 | 0 |
+    | Modell | 21 | 1 |
+  ```
 - **Raw output:** one real prompt+answer pair per finding.
 - **Interpretation / next step:** one sentence; keep instrument findings
   apart from findings about the subject.

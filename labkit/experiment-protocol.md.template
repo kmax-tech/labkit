@@ -1,38 +1,8 @@
 # Experiment protocol: <name>
 
-*A checklist, not a copy-form: structure is free, but every field occurs —
-if need be as "n/a — <why>". `protocol-check` enforces this.*
-
-- **One question per protocol.** A throwaway test with no kept number needs
-  none — neither does an exploration notebook (→ AS-046 Notebooks).
-- **One field = one line.** If the justification needs more room, it goes
-  into a note; the [[wikilink]] stays here. Fill by label, multi-line
-  placeholders included: `protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.
-- **Written for a reader who opens only this file.** A reference to another
-  area is a link plus the sentence that matters, never "as in area 07"
-  alone; one spelling per case id; every coined term glossed on first use.
-- **The form is cut by tier** (`lib exp --cost seconds` stamps the `seconds` cut:
-  head · question · criterion · admissibility · terms · data · unit ·
-  exclusions · result; with `--model` also model · prompt · null condition;
-  the full form adds the rest; `--report` the † fields). One template, three
-  cuts — a field the cut left out is not owed (→ AS-017 Die Zahl der Audits folgt der Kostenstufe).
-- **† = report field.** Due once `frozen = true` in the head — those in
-  Summary and Result once a run is written back as well; leave the
-  placeholder until then (`lib exp <name> --report` appends them).
-- **`[C…]`/`[A…]`/`[B…]` = intent ids**, one per promise to the code:
-  **C** criterion — which value of which metric supports the hypothesis,
-  one per conjunct · **A** admissibility — an outcome-neutral check that
-  must pass in the same run before any C verdict is issued (yield,
-  coverage, control, anchor) · **B** branch — what a result licenses next.
-  C judges, A releases the judgement, B says what follows. Each id
-  reappears as a lowercase key in the reportable run's metrics.json
-  (`c1_pass`, `a1_pass`, `b1_branch`); `intent-check` compares the two sets
-  (→ AS-004 Kennungen machen den Intent adressierbar). To bind constants and code too, add the same promises as
-  `[[promise]]` tables to the ```toml block below (labkit
-  `docs/promise-block.md`).
-- **`→ AS-nnn <name>`** = the rule with that id in `docs/arbeitsstandard.md`; the
-  reasoning, the evidence and the term legend live there — here only what
-  the field demands.
+*How to fill each field, the cuts by tier and the intent ids [C/A/B]:
+`protocol-field-guide.md` (`protocol-check --guide`). Fill by label:
+`protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.*
 
 ```toml
 [protocol]
@@ -53,25 +23,13 @@ preflight_audit = ""
 # check, before freezing (→ AS-015 Preflight-Audit vor dem Einfrieren)
 ```
 
-*Field labels English; content in German or English. Explanations,
-examples, rationale for each field: `protocol-field-guide.md`
-(`protocol-check --guide` prints the path; thesis repos:
-`templates/PROTOCOL-FIELD-GUIDE.md`). A run of seconds takes the
-seconds cut (`lib exp <name> --cost seconds`, `--model <alias>` with a model in the loop).*
-
-<!-- HEAD — this part gets READ. Prose-line budget per section: Summary 20 ·
-     Context 20 · Intent 35 · Setup 45 (code blocks and table rows do not
-     count; `protocol-check --contract` prints the head, the labels and the budgets). -->
-
 ## Summary † (write last)
 
-*Plain language, readable without the rest of the protocol; every technical
-term gets a half-sentence gloss on first use (wikilink in addition, never
-instead).*
-
-- **Question †:** <the same sentence as in the Intent>
+- **Result †:** <the answer in at most three plain sentences — the result,
+  not the procedure; a limit stands in the sentence it limits; no ids, keys
+  or run_ids here, they are in Result below>
+- **Question †:** <the question of the Intent, in plain words>
 - **Did †:** <what was done, one sentence — for a reader with no context>
-- **Result †:** <number(s) + run_id — no number that is absent below>
 - **Status †:** <on track | blocked by <what> | needs a decision on <what>>
 
 ## Intent (before the run)
@@ -98,8 +56,9 @@ instead).*
 
 ## Result (after the run — write back, don't go quiet)
 
-- **Answer to the question:** <!-- s --> <number(s) + run_id, produced by
-  `analysis/<note>.py --check`, never retyped; long form → [[note]]>
+- **Answer to the question:** <!-- s --> <per registered id its verdict, and the
+  run_id; numbers as a small table below the label (one row per arm or
+  condition), produced by `analysis/<note>.py --check`, never retyped>
 - **Raw output:** <!-- s --> <one real prompt+answer pair per finding>
 - **Interpretation / next step:** <one sentence; keep instrument findings
   apart from findings about the subject>
@@ -180,10 +139,6 @@ instead).*
   parser, field names) is allowed; hypothesis, criterion, admissibility condition are not
   (→ AS-008 Instrumentenprobe vor dem Einfrieren)>
 - **Pilot:** <N items checked against hand analysis or anchors, before scaling>
-
-Numbers of this stage are never reported. Only after it may `frozen` go to
-`true`; per (re-)freeze ONE sentence stays — the reasoning goes into the
-commit message.
 
 ## Runs (documented runs — via `runlog`, cite run_ids instead of retyping numbers)
 

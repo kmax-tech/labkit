@@ -801,7 +801,7 @@ class TestStampedLegendIsNotTemplateText(unittest.TestCase):
     def test_body_instruction_lines_still_count(self):
         lines = protocol_check.template_lines(protocol_check.find_template(None))
         # An instruction line from inside a section stays in the set.
-        self.assertTrue([s for s in lines if "Plain language" in s], lines)
+        self.assertTrue([s for s in lines if "error direction" in s], lines)
 
 
 class TestCostTier(unittest.TestCase):

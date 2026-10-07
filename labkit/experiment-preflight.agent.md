@@ -102,6 +102,10 @@ what stops a reader who opens only this file (2026-10-07: a sound, audited
 protocol read "far too dense"). Report at most seven `READ` lines, the
 worst first; they carry no failure scenario and do not enter the verdict:
 
+- a Summary that does not open with the result — the procedure first, or
+  intent ids, metric keys and run_ids in the lines meant for a person;
+- a field carrying more than two items as a `·` chain instead of a list or
+  a small table;
 - a coined term or abbreviation used before it is glossed (or listed under
   Terms of this protocol);
 - one case, file or term spelled two ways;

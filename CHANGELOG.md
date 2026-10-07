@@ -5,6 +5,28 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.57.0 — 2026-10-07
+
+### Changed
+
+- **Protocols open with the answer for a person.** The stamped protocol
+  starts with a three-line pointer and the toml head; the legend (cuts,
+  † fields, intent ids, rule references, budgets) moved into
+  `protocol-field-guide.md`. The Summary lists **Result** first: at most
+  three plain sentences, result not procedure, the limit inside the
+  sentence, no ids, keys or run_ids. "One field, one line" became "one
+  field, one statement": more than two items as a list or a small table
+  under the label; the Answer field gives the verdict per id, the run_id
+  and the numbers as a table. Labels are unchanged; existing protocols
+  stay valid.
+- The auditor's MODE analysis adds two `READ` points: a Summary that does
+  not open with the result (or carries ids and keys), and a `·` chain of
+  more than two items.
+
+From a reader's assessment of uniagent's protocols ("strong in content,
+read like audit papers for the system"): about 65 lines of form came
+before the first sentence for a person.
+
 ## 0.56.0 — 2026-10-07
 
 ### Changed — may block where 0.55.0 passed
