@@ -26,6 +26,15 @@ class GitError(RuntimeError):
     """git could not be run, or failed inside a repository."""
 
 
+def no_such_area(area: Path) -> str:
+    """The sentence for an area path that is not a directory. A relative
+    path resolves against the working directory, so the sentence names it
+    (2026-10-07: an agent called code-check from inside the area with the
+    repo-relative path and tried four spellings)."""
+    where = "" if area.is_absolute() else f" (relative to {Path.cwd()})"
+    return f"no such area: {area}{where}"
+
+
 def area_protocols(area: Path) -> list[Path]:
     """Every protocol in the area (`PROTOCOL-*.md` directly in it),
     lexicographic — a list, not a first hit.

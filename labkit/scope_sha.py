@@ -32,7 +32,7 @@ import re
 import sys
 from pathlib import Path
 
-from labkit.repo import layout_root
+from labkit.repo import layout_root, no_such_area
 
 DIGEST_CHARS = 12  # enough to spot a mismatch, short enough for a protocol line
 AREA_GLOBS = ("scripts/*.py", "analysis/*.py")
@@ -247,7 +247,7 @@ def main(argv: list[str]) -> int:
         extra.append(Path(a))
         i += 1
     if not area.is_dir():
-        print(f"scope-sha: no such area: {area}")
+        print(f"scope-sha: {no_such_area(area)}")
         return 2
 
     try:

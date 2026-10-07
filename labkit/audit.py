@@ -35,7 +35,7 @@ import time
 from pathlib import Path
 
 from labkit import llm
-from labkit.repo import area_protocols, layout_root
+from labkit.repo import area_protocols, layout_root, no_such_area
 from labkit.scope_sha import area_stamp, imported_lib
 
 AGENT = Path(__file__).with_name("experiment-preflight.agent.md")
@@ -70,7 +70,7 @@ def instructions() -> str:
 def gather(area: Path, protocol: Path | None) -> tuple[Path, list[Path], Path]:
     """(protocol, code files, standard) the agent reads; refuses what is missing."""
     if not area.is_dir():
-        raise AuditError(f"no such area: {area}")
+        raise AuditError(no_such_area(area))
     protocols = area_protocols(area)
     if protocol is not None:
         chosen = protocol

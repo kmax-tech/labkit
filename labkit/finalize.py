@@ -40,7 +40,7 @@ from pathlib import Path
 
 from labkit import promises, protocol_block
 from labkit.runs import read_run_config
-from labkit.repo import area_protocols, git_root, git_run
+from labkit.repo import area_protocols, git_root, git_run, no_such_area
 from labkit.intent_check import (
     bound_runs,
     main as intent_check_main,
@@ -392,7 +392,7 @@ def main(argv: list[str]) -> int:
         return 2
 
     if not area.is_dir():
-        print(f"finalize: no such area: {area}")
+        print(f"finalize: {no_such_area(area)}")
         return 2
 
     return run(area, protocol)

@@ -59,7 +59,7 @@ from pathlib import Path
 
 from labkit import promises
 from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
-from labkit.repo import area_protocols, layout_root
+from labkit.repo import area_protocols, layout_root, no_such_area
 from labkit.scope_sha import imported_lib
 
 
@@ -848,7 +848,7 @@ def main(argv: list[str]) -> int:
         return 2
 
     if not area.is_dir():
-        print(f"code-check: no such area: {area}")
+        print(f"code-check: {no_such_area(area)}")
         return 2
 
     protocols = area_protocols(area)

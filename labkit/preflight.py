@@ -35,7 +35,7 @@ from pathlib import Path
 
 from labkit.code_check import check_intent_ids
 from labkit import install_hooks
-from labkit.repo import area_protocols, git, git_root, layout_root
+from labkit.repo import area_protocols, git, git_root, layout_root, no_such_area
 from labkit.protocol_check import check_fields, check_protocol_id
 from labkit.scope_sha import AREA_GLOBS, area_stamp
 
@@ -253,7 +253,7 @@ def main(argv: list[str]) -> int:
         return 2
 
     if not area.is_dir():
-        print(f"preflight: no such area: {area}")
+        print(f"preflight: {no_such_area(area)}")
         return 2
 
     return run(area, protocol)
