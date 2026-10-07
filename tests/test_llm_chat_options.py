@@ -52,7 +52,7 @@ class TestChatPathSendsTokenBudget(unittest.TestCase):
         llm.urllib.request.urlopen = fake_urlopen
 
     def tearDown(self):
-        self.llm.resolve = self._resolve
+        setattr(self.llm, "resolve", self._resolve)
         self.llm.urllib.request.urlopen = self._urlopen
 
     def test_num_predict_is_sent(self):
@@ -91,7 +91,7 @@ class TestEmptyContentIsReported(unittest.TestCase):
              "done_reason": "length", "eval_count": 2048})
 
     def tearDown(self):
-        self.llm.resolve = self._resolve
+        setattr(self.llm, "resolve", self._resolve)
         self.llm.urllib.request.urlopen = self._urlopen
 
     def test_empty_content_returns_empty_and_warns(self):

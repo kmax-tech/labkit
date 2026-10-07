@@ -16,39 +16,39 @@ from labkit import finalize  # noqa: E402
 class CriterionN(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
-        self.run = Path(self._tmp.name) / "runs" / "r1"
-        self.run.mkdir(parents=True)
-        (self.run / "config.json").write_text(json.dumps(
+        self.run_dir = Path(self._tmp.name) / "runs" / "r1"
+        self.run_dir.mkdir(parents=True)
+        (self.run_dir / "config.json").write_text(json.dumps(
             {"data": {"items": {"path": "/x/items.jsonl", "rows": 12, "sha256": "ab"}}}))
-        (self.run / "outputs.json").write_text(json.dumps(
+        (self.run_dir / "outputs.json").write_text(json.dumps(
             [{"path": "/x/out.jsonl", "sha256": "cd", "lines": 12}]))
 
     def tearDown(self):
         self._tmp.cleanup()
 
     def _metrics(self, m: dict) -> None:
-        (self.run / "metrics.json").write_text(json.dumps(m))
+        (self.run_dir / "metrics.json").write_text(json.dumps(m))
 
     def test_matching_n_is_silent(self):
         self._metrics({"c1_pass": True, "c1_n": 12})
-        self.assertEqual(finalize.criterion_n_findings(self.run), [])
+        self.assertEqual(finalize.criterion_n_findings(self.run_dir), [])
 
     def test_shrunk_denominator_warns(self):
         # 2026-10-06 review: c1_n = 7 against 12 recorded rows went unwarned
         # while the check knew only the old letter
         self._metrics({"c1_pass": True, "c1_n": 7})
-        w = finalize.criterion_n_findings(self.run)
+        w = finalize.criterion_n_findings(self.run_dir)
         self.assertEqual(len(w), 1)
         self.assertIn("c1_n = 7", w[0])
         self.assertIn("rows = 12", w[0])
 
     def test_admissibility_n_is_not_a_criterion_denominator(self):
         self._metrics({"a1_ok": True, "a1_n": 3})
-        self.assertEqual(finalize.criterion_n_findings(self.run), [])
+        self.assertEqual(finalize.criterion_n_findings(self.run_dir), [])
 
     def test_no_n_keys_nothing_to_say(self):
         self._metrics({"c1_pass": True})
-        self.assertEqual(finalize.criterion_n_findings(self.run), [])
+        self.assertEqual(finalize.criterion_n_findings(self.run_dir), [])
 
 
 if __name__ == "__main__":

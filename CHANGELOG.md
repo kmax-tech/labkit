@@ -5,6 +5,30 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.49.1 — 2026-10-07
+
+### Changed
+
+- A promise scope given as an absolute path is refused: scopes are relative
+  to the protocol's directory (`../../lib/x.py` stays allowed).
+
+### Added
+
+- `code-check` warns (static evidence) when a declared scope sets a promise
+  constant itself as a literal — `MIN_MEAN = 1.4` against 1.5 in the block —
+  instead of reading `promises.constants()`.
+
+### Fixed
+
+- Field labels in numbered lists (`1. **Unit:**`) are read; fields inside a
+  multi-line HTML comment are not.
+- `usability score` on an unreadable run, `intent-check --metrics` on a legacy
+  run and a numeric `standard` end in a sentence that says what to do.
+- `protocol-check` scans the repo's protocol ids once per invocation.
+- The type checker reads the repo's own `.venv` (`[tool.pyright]`); the 19
+  errors it then showed are fixed — two test classes overwrote
+  `TestCase.run` with a path.
+
 ## 0.49.0 — 2026-10-07
 
 ### Breaking
@@ -87,8 +111,8 @@ index stays on its pin until new work starts there.
   "Answer to the question", "Raw output" and "Analysis audit" are owed after
   the run (the run-unreported check), no longer before it. Removed:
   `check_text`, `graduate`, `severity_of`, `cost_tier_of`, `FROZEN_YES`,
-  `TYPE_MEASUREMENT`, `protocol_identity`, `protocol_id_of`,
-  `criterion_present`; new: `check_fields`, `fields`, `owed`.
+  `TYPE_MEASUREMENT`, `protocol_identity`, `protocol_check.protocol_id_of`
+  (`intent_check.protocol_id_of` stays, reading the head), `criterion_present`; new: `check_fields`, `fields`, `owed`.
 - **The promise digest covers the `[[promise]]` tables only** (canonical
   JSON), not the block text: freezing or stamping the audit line in the
   head must not read as a changed promise. Runs recorded under 0.46/0.47

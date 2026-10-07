@@ -196,6 +196,11 @@ def parse_block(text: str) -> PromiseBlock | None:
                 or not all(isinstance(s, str) and s.strip() for s in scope)):
             raise PromiseError(f"{where}: `scope` must be a non-empty list of "
                                f"'file' or 'file:function' strings")
+        absolute = [s for s in scope if Path(s.partition(":")[0]).is_absolute()]
+        if absolute:
+            raise PromiseError(f"{where}: scope {absolute} is absolute — scopes are "
+                               f"relative to the protocol's directory, so the "
+                               f"declaration travels with the repo")
         constants = e.get("constants", {})
         if not isinstance(constants, dict):
             raise PromiseError(f"{where}: `constants` must be a table")

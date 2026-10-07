@@ -298,7 +298,10 @@ def parse_log(text: str) -> LogTrace:
 def latest_run(area: Path) -> Path | None:
     """The newest completed run — run_ids start with the timestamp, so
     their sort order is their start order (runlog.Run)."""
-    done = runs.completed_runs(area)
+    try:
+        done = runs.completed_runs(area)
+    except runs.RunConfigError as exc:
+        raise SystemExit(f"usability: {exc}") from exc
     return done[-1] if done else None
 
 
@@ -327,9 +330,7 @@ def score(root: Path) -> int:
     number = bound_to = frozen = tier = None
     null_reported = None
     if run is not None:
-        config_file = run / "config.json"
-        if not config_file.is_file():
-            raise SystemExit(f"usability: {run} has metrics.json but no config.json")
+        config_file = run / "config.json"   # a completed run always has one
         metrics = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
         config = json.loads(config_file.read_text(encoding="utf-8"))
         value = metrics.get(probe.metric_key)

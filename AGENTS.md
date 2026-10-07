@@ -32,9 +32,12 @@ of semantics. Contract and rationale: `docs/promise-block.md`.
 ## Setup and tests
 
 ```bash
-pip install -e '.[dev]'
-pytest -q
+python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
+.venv/bin/pytest -q
 ```
+
+The editor's type checker reads the same `.venv` (`[tool.pyright]` in
+`pyproject.toml`).
 
 The suite is self-contained: it passes in a fresh clone with an empty home
 directory (568 passed on 2026-10-07). One test skips everywhere for want of

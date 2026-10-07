@@ -27,12 +27,12 @@ class Area(unittest.TestCase):
         self.out = self.area / "output" / "rows.jsonl"
         self.out.parent.mkdir()
         self.out.write_text("".join(json.dumps(r) + "\n" for r in ROWS), encoding="utf-8")
-        self.run = self.area / "runs" / "2026-10-05T19-00-00_ab12"
-        self.run.mkdir(parents=True)
+        self.run_dir = self.area / "runs" / "2026-10-05T19-00-00_ab12"
+        self.run_dir.mkdir(parents=True)
         # a current run: schema_version 2 plus a completion record — metrics
         # alone (a legacy run) is never completed since labkit 0.48
-        (self.run / "config.json").write_text(json.dumps({"schema_version": 2}))
-        (self.run / "completion.json").write_text(json.dumps({"status": "completed"}))
+        (self.run_dir / "config.json").write_text(json.dumps({"schema_version": 2}))
+        (self.run_dir / "completion.json").write_text(json.dumps({"status": "completed"}))
         self._record(evaluate(ROWS))
         self.note = self.area / "PROTOCOL-x.md"
         self.note.write_text("- **Result:** 3,5 über 2 Fälle, run 2026-10-05T19-00-00_ab12\n",
@@ -43,8 +43,8 @@ class Area(unittest.TestCase):
 
     def _record(self, metrics: dict, sha: str | None = None) -> None:
         sha = sha if sha is not None else hashlib.sha256(self.out.read_bytes()).hexdigest()[:16]
-        (self.run / "metrics.json").write_text(json.dumps({**metrics, "duration_s": 0.1}))
-        (self.run / "outputs.json").write_text(json.dumps([{"path": str(self.out), "sha256": sha}]))
+        (self.run_dir / "metrics.json").write_text(json.dumps({**metrics, "duration_s": 0.1}))
+        (self.run_dir / "outputs.json").write_text(json.dumps([{"path": str(self.out), "sha256": sha}]))
 
     def test_holds(self):
         v = recheck.holds(self.area, self.out, evaluate, self.note)

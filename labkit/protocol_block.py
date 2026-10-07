@@ -41,7 +41,8 @@ ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
 
 FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})\s*([\w+-]*)")
 _TOP_LEVEL = {"protocol", "promise"}
-_HEAD_FIELDS = ("standard", "id", "type", "cost", "frozen", "preflight_audit")
+#: the keys of the [protocol] table, in the template's order
+HEAD_FIELDS = ("standard", "id", "type", "cost", "frozen", "preflight_audit")
 
 
 class BlockError(ValueError):
@@ -143,20 +144,22 @@ def head(text: str) -> Head:
     value has the wrong type or is outside its choices."""
     data = load(text)
     if "protocol" not in data:
-        raise BlockError("no [protocol] table — the head (standard, id, type, cost, "
-                         "frozen, preflight_audit) lives in the ```toml block; "
-                         "protocols with a prose head are read by labkit 0.47")
+        raise BlockError(f"no [protocol] table — the head ({', '.join(HEAD_FIELDS)}) "
+                         f"lives in the ```toml block; protocols with a prose head "
+                         f"are read by labkit 0.47")
     table = data["protocol"]
     if not isinstance(table, dict):
         raise BlockError("`protocol` must be a table: [protocol]")
-    unknown = set(table) - set(_HEAD_FIELDS)
+    unknown = set(table) - set(HEAD_FIELDS)
     if unknown:
         raise BlockError(f"[protocol]: unknown field(s) {sorted(unknown)}; "
-                         f"allowed: {', '.join(_HEAD_FIELDS)}")
-    missing = [f for f in _HEAD_FIELDS if f not in table]
+                         f"allowed: {', '.join(HEAD_FIELDS)}")
+    missing = [f for f in HEAD_FIELDS if f not in table]
     if missing:
         raise BlockError(f"[protocol]: missing {', '.join(missing)}")
     standard = table["standard"]
+    if not isinstance(standard, str):
+        raise BlockError(f"[protocol] standard = {standard!r} — a string, \"{STANDARD}\"")
     if standard != STANDARD:
         raise BlockError(f"[protocol] standard = {standard!r}, this labkit reads "
                          f"{STANDARD!r} — use the labkit release the protocol was "

@@ -466,6 +466,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[str]:
         except promises.PromiseError as exc:
             out.append(f"BLOCKER · {protocol.name} · [{p.id}] declared scope: "
                        f"{exc} · runlog refuses the run · fix the scope")
+        out += constant_copies(area, protocol, p)
         if p.key not in keys:
             near = sorted(k for k in keys if k.startswith(p.id.lower()))
             hint = f" (the code has {', '.join(near)})" if near else ""
@@ -473,6 +474,56 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[str]:
                        f"'{p.key}', which no script mentions{hint} · intent-check "
                        f"fails after the run · report the declared key or fix "
                        f"the block")
+    return out
+
+
+def _literal(node: ast.expr) -> object:
+    """The value of a literal (`0.7`, `-3`, `"x"`); a `_NOT_LITERAL` otherwise."""
+    try:
+        return ast.literal_eval(node)
+    except (ValueError, SyntaxError, TypeError):
+        return _NOT_LITERAL
+
+
+_NOT_LITERAL = object()
+
+
+def constant_copies(area: Path, protocol: Path, p: "promises.Promise") -> list[str]:
+    """A declared constant the scope's code sets itself, as a literal
+    (static evidence — a warning, never a blocker).
+
+    The script is meant to read its thresholds from the block
+    (`promises.constants`); a literal copy judges by a value nobody
+    registered as soon as the two drift, and intent-check sees it only if
+    the run records the value (Durchstich 2026-10-07). A copy under another
+    name, or a threshold written inline (`mean >= 1.5`), stays invisible
+    here — that is the agent audit's question.
+    """
+    if not p.constants:
+        return []
+    out = []
+    for path in sorted({area / entry.partition(":")[0] for entry in p.scope}):
+        if path.suffix != ".py" or not path.is_file():
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            targets = (node.targets if isinstance(node, ast.Assign)
+                       else [node.target] if isinstance(node, ast.AnnAssign) and node.value
+                       else [])
+            for target in targets:
+                if not (isinstance(target, ast.Name) and target.id in p.constants):
+                    continue
+                assert isinstance(node, (ast.Assign, ast.AnnAssign)) and node.value is not None
+                value = _literal(node.value)
+                if value is _NOT_LITERAL:
+                    continue
+                declared = p.constants[target.id]
+                same = "the same value" if value == declared else f"the block says {declared!r}"
+                out.append(f"WARNING · {protocol.name} · [{p.id}] "
+                           f"{path.relative_to(area).as_posix()}:{node.lineno} sets "
+                           f"{target.id} = {value!r} itself ({same}) · a copy judges by "
+                           f"an unregistered value once they drift · read it with "
+                           f"promises.constants(PROTOCOL, \"{p.id}\")[\"{target.id}\"]")
     return out
 
 

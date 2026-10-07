@@ -131,7 +131,8 @@ FIELDS = (
 )
 
 #: a bold field label opening a line: `- **Label (gloss) †:** value`
-_FIELD_OPEN = re.compile(r"^\s*(?:[-*]\s+)?\*\*(?P<label>[^*]+?)(?::\*\*|\*\*\s*:)(?P<value>.*)$")
+_BULLET = r"^\s*(?:[-*]\s+|\d+[.)]\s+)?"           # `- `, `* `, `1. `, `1) ` or none
+_FIELD_OPEN = re.compile(_BULLET + r"\*\*(?P<label>[^*]+?)(?::\*\*|\*\*\s*:)(?P<value>.*)$")
 _MARKER = re.compile(r"<!--.*?-->")
 
 
@@ -170,7 +171,14 @@ def fields(text: str) -> list[FieldLine]:
     out: list[FieldLine] = []
     lines = text.splitlines()
     fence: str | None = None            # the open fence's marker; nested fences are body
+    comment = False                     # inside a multi-line <!-- … --> — not prose
     for i, line in enumerate(lines):
+        if comment:
+            comment = "-->" not in line
+            continue
+        if line.strip().startswith("<!--") and "-->" not in line:
+            comment = True
+            continue
         if fence is not None:
             if protocol_block.closes(line, fence):
                 fence = None
@@ -182,7 +190,7 @@ def fields(text: str) -> list[FieldLine]:
         if "**" not in line:
             continue
         joined, nxt = line, i + 1
-        if re.match(r"^\s*(?:[-*]\s+)?\*\*", line) and ":**" not in line and i + 1 < len(lines):
+        if re.match(_BULLET + r"\*\*", line) and ":**" not in line and i + 1 < len(lines):
             joined, nxt = line + " " + lines[i + 1].strip(), i + 2
         m = _FIELD_OPEN.match(joined)
         if not m:
@@ -193,7 +201,8 @@ def fields(text: str) -> list[FieldLine]:
         # the seconds gate refuse a written registration, review 2026-10-07).
         parts = [m.group("value")]
         while nxt < len(lines) and lines[nxt].startswith((" ", "\t")) and lines[nxt].strip() \
-                and not lines[nxt].strip().startswith(("```", "- ", "* ")):
+                and not lines[nxt].strip().startswith(("```", "- ", "* ")) \
+                and not re.match(r"\d+[.)]\s", lines[nxt].strip()):
             parts.append(lines[nxt].strip())
             nxt += 1
         value = _MARKER.sub("", " ".join(parts)).strip()
@@ -510,7 +519,7 @@ def print_contract() -> None:
     learnt the budgets from the pre-commit hook and the field words from
     the checker's source, four rewrite rounds each)."""
     print("head: the ```toml block's [protocol] table — "
-          + ", ".join(("standard", "id", "type", "cost", "frozen", "preflight_audit"))
+          + ", ".join(protocol_block.HEAD_FIELDS)
           + f"; standard = {protocol_block.STANDARD!r}, type one of "
           + ", ".join(protocol_block.TYPES) + ", cost one of "
           + ", ".join(protocol_block.COST_TIERS) + ".")
@@ -551,6 +560,7 @@ def collect(paths: list[str]) -> list[Path]:
 
 
 def main(argv: list[str]) -> int:
+    _ID_INDEX.clear()                   # one scan per invocation; never a stale one
     if argv and argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: protocol-check [--template PATH] <PROTOCOL-*.md | dir> ...")

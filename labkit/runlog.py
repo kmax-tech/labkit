@@ -320,7 +320,7 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def _is_meta(row: dict) -> bool:
+def _is_meta(row: object) -> bool:
     """True for the ``_meta`` header that write_dataset() puts first."""
     return isinstance(row, dict) and "_meta" in row
 

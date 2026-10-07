@@ -115,7 +115,7 @@ def area_stamp(area: Path, extra: list[Path] | tuple[Path, ...] = (),
 
 def main(argv: list[str]) -> int:
     if argv and argv[0] in ("-h", "--help"):
-        print(__doc__.strip().splitlines()[0])
+        print((__doc__ or "").strip().splitlines()[0])
         print("usage: scope-sha [AREA | --area DIR] [--globs PAT,...] [--no-pin] [FILE ...]")
         print("  --area DIR       area directory (default: cwd)")
         print("  --globs PAT,...  comma-separated globs for area scripts "

@@ -25,6 +25,7 @@ class TestIsAlive(unittest.TestCase):
     def test_our_own_process_counts_as_alive_for_its_own_script(self):
         cmd = _command_of(os.getpid())
         self.assertIsNotNone(cmd, "ps unavailable — the test would be moot")
+        assert cmd is not None
         token = next(t for t in cmd.split() if t)          # any real token
         self.assertTrue(is_alive(os.getpid(), token))
 
