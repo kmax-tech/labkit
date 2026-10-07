@@ -48,3 +48,36 @@ Levers for the next round, one at a time:
 3. the writer glosses its own coined terms in `Terms of this protocol`
    (constants such as `MARGIN`, the lanes) — an instruction, measured by
    the reader's unclear list.
+
+## Round 8: the three levers together (labkit 0.58.0)
+
+Same set-up as round 7; the toml head without comments, no `Analysis
+audit †` at seconds, and `Terms of this protocol` (template and the
+seconds track of the lab CLAUDE.md) asking for every coined name.
+
+| probe | round 7 → 8: lines | form terms unclear | writer terms unclear | effort | writing time |
+|---|---|---|---|---|---|
+| count-1 | 52 → 40 | 9 → 7 | 0 → 0 | 2 → 2 | 97 → 122 s |
+| count-2 | 55 → 40 | 7 → 9 | 0 → 0 | 3 → 2 | 88 → 91 s |
+| judge-1 | 75 → 70 | 7 → 4 | 3 → 3 | 3 → 3 | 128 → 144 s |
+| judge-2 | 78 → 68 | 11 → 4 | 5 → 6 | 4 → 3 | 122 → 147 s |
+
+"Form" and "writer" now by a keyword list over the reader's unclear
+terms (head keys, the pointer line, rule ids, commands vs the rest). n = 2
+per task: one term or one effort point is noise.
+
+- Less form helps: the judge readers' form terms halve; what stays is the
+  head's own keys (`standard`, `frozen`, `preflight_audit`, `cost`) and the
+  pointer line's command names.
+- The Terms instruction shows no effect: `MARGIN`, "lane", the model alias
+  stay unglossed; the writers write a little longer.
+- A cost of 0.57: with the legend gone the protocol shows no `[C1]`
+  example; one writer wrote `c1:` and searched the standard for the form.
+- Every reader got the number right — the measure no longer separates.
+
+How understanding is measured, and its limits: the number is held to the
+run mechanically; question, result, limits and next step are free text
+and not scored; unclear terms and effort are the reader's self-report;
+reading time comes from the transcript. The reader is a language model,
+which knows terms a human newcomer does not — the measure shows what
+disturbs, less how much it disturbs a person.
