@@ -57,14 +57,10 @@ import re
 import sys
 from pathlib import Path
 
-try:
-    from labkit import promises
-    from labkit.repo import area_protocols, layout_root
-    from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
-except ImportError:  # vendored flat copies (student repos)
-    import promises  # type: ignore
-    from repo import area_protocols, layout_root  # type: ignore
-    from intent_check import ID_IN_PROTOCOL, code_ids, code_keys  # type: ignore
+from labkit import promises
+from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
+from labkit.repo import area_protocols, layout_root
+from labkit.scope_sha import imported_lib
 
 
 # --- source analysis ------------------------------------------------------
@@ -547,25 +543,6 @@ SEVERITY_LEGEND = (
     "The grade says how close the failure scenario sits to the current\n"
     "run; a finding WITHOUT a scenario (which reported number goes wrong,\n"
     "with which input) exists at no grade.\n")
-
-LIB_IMPORT = re.compile(r"^\s*(?:from|import)\s+(\w+)", re.M)
-
-
-def imported_lib(area: Path, repo: Path) -> list[Path]:
-    """Repo-local lib modules the area's code imports (§2.A12 scope)."""
-    libdir = repo / "lib"
-    if not libdir.is_dir():
-        return []
-    names = set()
-    for p in sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py")):
-        try:
-            text = p.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        names |= {m.group(1) for m in LIB_IMPORT.finditer(text)}
-    return [libdir / f"{n}.py" for n in sorted(names)
-            if (libdir / f"{n}.py").is_file()]
-
 
 def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
     parts = [f"# AUDIT BUNDLE · area {area.name}\n\n",

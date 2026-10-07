@@ -43,7 +43,8 @@ class Layout(unittest.TestCase):
         (plain / "tests").mkdir()
         area = plain / "experiments" / "01"
         area.mkdir(parents=True)
-        self.assertEqual(repo.layout_root(area), plain)   # stamped tree, no git
+        self.assertEqual(repo.layout_root(area), plain.resolve())   # stamped tree, no git
+        self.assertEqual(repo.layout_root(Path(".")), repo.layout_root(Path.cwd()))  # "." climbs too
         r = make_repo()
         (r / "a").mkdir()
         self.assertEqual(repo.git_root(r / "a"), r.resolve())

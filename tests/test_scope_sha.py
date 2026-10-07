@@ -114,3 +114,62 @@ class TestScopeSha(unittest.TestCase):
         rc, out = self._run(["--help"])
         self.assertEqual(rc, 0)
         self.assertIn("usage: scope-sha", out)
+
+
+class TestOneStampEverywhere(unittest.TestCase):
+    """Review 2026-10-07: scope-sha, preflight and labkit-audit gave four
+    different stamps for one unchanged area — the path spelling, the working
+    directory and whether lib/ and the pin counted all differed. One home
+    now: `area_stamp`."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.repo = Path(self.tmp.name) / "lab"
+        (self.repo / "tests").mkdir(parents=True)          # layout root without git
+        self.area = self.repo / "experiments" / "01-x"
+        (self.area / "scripts").mkdir(parents=True)
+        (self.area / "scripts" / "01_measure.py").write_text("import anchors\nx = 1\n")
+        (self.repo / "lib").mkdir()
+        (self.repo / "lib" / "anchors.py").write_text("A = 1\n")
+        (self.repo / "requirements.txt").write_text("labkit @ git+file:///l@v0.48.1\n")
+
+    def test_spelling_and_cwd_do_not_move_the_stamp(self):
+        import os
+        from labkit import scope_sha as packaged
+        absolute = packaged.area_stamp(self.area)[0]
+        cwd = os.getcwd()
+        try:
+            os.chdir(self.repo)
+            relative = packaged.area_stamp(Path("experiments/01-x"))[0]
+            os.chdir(self.area)
+            here = packaged.area_stamp(Path("."))[0]
+        finally:
+            os.chdir(cwd)
+        self.assertEqual(absolute, relative)
+        self.assertEqual(absolute, here)
+
+    def test_imported_lib_and_pin_are_in_scope(self):
+        from labkit import scope_sha as packaged
+        _, files, pin = packaged.area_stamp(self.area)
+        self.assertIn("anchors.py", [f.name for f in files])
+        self.assertIsNotNone(pin)
+        before = packaged.area_stamp(self.area)[0]
+        (self.repo / "lib" / "anchors.py").write_text("A = 2\n")
+        self.assertNotEqual(before, packaged.area_stamp(self.area)[0])
+
+    def test_audit_preflight_and_cli_agree(self):
+        from labkit import audit, preflight
+        from labkit import scope_sha as packaged
+        sha = packaged.area_stamp(self.area)[0]
+        self.assertIn(f"scope sha {sha}", audit.stamp_facts(self.area, (0, 0, 0)))
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            packaged.main(["--area", str(self.area)])
+        self.assertIn(f"scope sha {sha}", buf.getvalue())
+        from protocol_fixture import head
+        (self.area / "PROTOCOL-x.md").write_text("# x\n" + head())
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            preflight.run(self.area)
+        self.assertIn(f"  {sha}", buf.getvalue())

@@ -15,15 +15,23 @@ under zsh's noclobber the `>` that built the list was refused too. It printed
 a stable-looking 12-hex stamp while a changed anchor file left it untouched
 (2026-09-08). A stamp that cannot go wrong quietly has to be tested code.
 
-The hash covers each file's PATH and its content digest, plus the pin line, so
-adding, removing, renaming or editing a scope file all change the stamp.
+The hash covers each file's PATH — relative to the repo root, so the working
+directory and the spelling of the area do not move it — and its content
+digest, plus the pin line: adding, removing, renaming or editing a scope file
+all change the stamp. `area_stamp` is the one home of the scope: `scope-sha`,
+`preflight` and `labkit-audit` all call it, so the stamp an audit prints is the
+stamp a later check recomputes (review 2026-10-07: four tools and spellings
+gave four different stamps for one unchanged area).
 """
 
 from __future__ import annotations
 
 import hashlib
+import re
 import sys
 from pathlib import Path
+
+from labkit.repo import layout_root
 
 DIGEST_CHARS = 12  # enough to spot a mismatch, short enough for a protocol line
 AREA_GLOBS = ("scripts/*.py", "analysis/*.py")
@@ -35,6 +43,22 @@ def area_files(area: Path, globs: tuple[str, ...] = AREA_GLOBS) -> list[Path]:
     for pat in globs:
         out.extend(area.glob(pat))
     return out
+
+
+#: an import line; the module name is checked against the repo's lib/
+LIB_IMPORT = re.compile(r"^\s*(?:from|import)\s+(\w+)", re.M)
+
+
+def imported_lib(area: Path, repo: Path) -> list[Path]:
+    """Repo-local lib modules the area's code imports — shared anchors and
+    thresholds live there, so they determine the number (§2.A16)."""
+    libdir = repo / "lib"
+    if not libdir.is_dir():
+        return []
+    names = set()
+    for p in area_files(area):
+        names |= {m.group(1) for m in LIB_IMPORT.finditer(p.read_text(encoding="utf-8"))}
+    return [libdir / f"{n}.py" for n in sorted(names) if (libdir / f"{n}.py").is_file()]
 
 
 def find_pin(start: Path, name: str = "labkit==") -> tuple[str, str] | None:
@@ -51,15 +75,42 @@ def find_pin(start: Path, name: str = "labkit==") -> tuple[str, str] | None:
     return None
 
 
-def scope_sha(files: list[Path], pin: str | None) -> str:
-    """Digest over (path, content digest) per file plus the pin line."""
+def _key(f: Path, root: Path) -> str:
+    """The path as hashed: relative to the repo root, `/`-separated; a file
+    outside the root keeps its absolute path."""
+    f = f.resolve()
+    try:
+        return f.relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return f.as_posix()
+
+
+def scope_sha(files: list[Path], pin: str | None, root: Path) -> str:
+    """Digest over (repo-relative path, content digest) per file plus the pin line."""
     h = hashlib.sha256()
-    for f in sorted({str(f) for f in files}):
-        h.update(f.encode("utf-8") + b"\n")
+    for key, f in sorted({_key(f, root): f for f in files}.items()):
+        h.update(key.encode("utf-8") + b"\n")
         h.update(hashlib.sha256(Path(f).read_bytes()).hexdigest().encode() + b"\n")
     if pin:
         h.update(pin.encode("utf-8") + b"\n")
     return h.hexdigest()[:DIGEST_CHARS]
+
+
+def area_stamp(area: Path, extra: list[Path] | tuple[Path, ...] = (),
+               globs: tuple[str, ...] = AREA_GLOBS, use_pin: bool = True,
+               ) -> tuple[str, list[Path], tuple[str, str] | None]:
+    """(sha, files, pin) of an area: its scripts, the repo-local lib modules
+    they import, `extra` files, and the labkit pin. Raises FileNotFoundError
+    naming a missing file, ValueError when there is nothing to stamp."""
+    root = layout_root(area)
+    files = area_files(area, globs) + imported_lib(area, root) + list(extra)
+    missing = [str(f) for f in files if not f.is_file()]
+    if missing:
+        raise FileNotFoundError(f"scope file(s) missing: {', '.join(missing)}")
+    if not files:
+        raise ValueError(f"no scope files under {area} ({', '.join(globs)}) and none named")
+    pin = find_pin(area.resolve()) if use_pin else None
+    return scope_sha(files, pin[1] if pin else None, root), files, pin
 
 
 def main(argv: list[str]) -> int:
@@ -69,9 +120,8 @@ def main(argv: list[str]) -> int:
         print("  --area DIR       area directory (default: cwd)")
         print("  --globs PAT,...  comma-separated globs for area scripts "
               "(default: scripts/*.py,analysis/*.py)")
-        print("  FILE ...         extra files that determine the number — the "
-              "repo-local lib/ files the scripts import (from the audit's "
-              "`scope:` list)")
+        print("  FILE ...         extra files that determine the number; the "
+              "repo-local lib/ modules the scripts import are included already")
         print("  --no-pin         do not include the labkit pin line")
         return 0
 
@@ -110,22 +160,14 @@ def main(argv: list[str]) -> int:
         print(f"scope-sha: no such area: {area}")
         return 2
 
-    files = area_files(area, globs) + extra
-    missing = [str(f) for f in files if not f.is_file()]
-    if missing:
-        for m in missing:
-            print(f"scope-sha: missing {m}")
+    try:
+        sha, files, pin_found = area_stamp(area, extra, globs, use_pin)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"scope-sha: {exc}")
         return 2
-    if not files:
-        print(f"scope-sha: no scope files under {area} "
-              f"({', '.join(globs)}) and none named")
-        return 2
-
-    pin_found = find_pin(area.resolve()) if use_pin else None
-    sha = scope_sha(files, pin_found[1] if pin_found else None)
-
-    for f in sorted({str(f) for f in files}):
-        print(f)
+    root = layout_root(area)
+    for key in sorted({_key(f, root) for f in files}):
+        print(key)
     if pin_found:
         print(f"{pin_found[1]}   ({pin_found[0]})")
     elif use_pin:

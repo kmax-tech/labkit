@@ -34,9 +34,8 @@ import time
 from pathlib import Path
 
 from labkit import llm
-from labkit.code_check import imported_lib
 from labkit.repo import area_protocols, layout_root
-from labkit.scope_sha import scope_sha
+from labkit.scope_sha import area_stamp, imported_lib
 
 AGENT = Path(__file__).with_name("experiment-preflight.agent.md")
 DEFAULT_MODEL = "opus"            # the agent's model; any alias of models.toml works
@@ -116,9 +115,10 @@ def parse(text: str) -> dict:
             "findings": findings}
 
 
-def stamp_facts(code: list[Path], verdict: tuple[int, int, int]) -> str:
-    """The facts of the protocol's audit field — the human adds the decisions."""
-    sha = scope_sha(code, None)
+def stamp_facts(area: Path, verdict: tuple[int, int, int]) -> str:
+    """The facts of the protocol's audit field — the human adds the decisions.
+    The sha is `scope_sha.area_stamp`, the same a later `scope-sha` recomputes."""
+    sha, _, _ = area_stamp(area)
     b, w, n = verdict
     return (f"{time.strftime('%Y-%m-%d')} · scope sha {sha} · {b + w + n} findings "
             f"({b} blockers, {w} warnings, {n} notes — decide each: fixed / accepted / dismissed)")
@@ -147,7 +147,7 @@ def main(argv: list[str]) -> int:
     if args.out:
         args.out.write_text(report, encoding="utf-8")
     b, w, _ = result["verdict"]
-    print(f"\nstamp: {stamp_facts(code, result['verdict'])}", file=sys.stderr)
+    print(f"\nstamp: {stamp_facts(args.area, result['verdict'])}", file=sys.stderr)
     return 1 if b or w else 0
 
 

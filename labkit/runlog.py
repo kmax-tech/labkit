@@ -298,8 +298,25 @@ def _resolve_models(config: dict) -> dict:
     return out
 
 
+def _visible_files(directory: Path) -> list[Path]:
+    """Every regular file below `directory` that no hidden path component
+    hides — `.DS_Store` once moved a mean by a whole document (2026-10-05)."""
+    return sorted(p for p in directory.rglob("*")
+                  if p.is_file() and not any(part.startswith(".")
+                                             for part in p.relative_to(directory).parts))
+
+
 def _sha256(path: Path) -> str:
+    """Content digest of a file; of a directory, over each visible file's
+    relative path and content — so adding, removing, renaming or editing a
+    file below it moves it (a directory source used to be unfreezable, and
+    `finalize` then refused every run of the stamped count skeleton)."""
     h = hashlib.sha256()
+    if path.is_dir():
+        for f in _visible_files(path):
+            h.update(f.relative_to(path).as_posix().encode("utf-8") + b"\n")
+            h.update(_sha256(f).encode() + b"\n")
+        return h.hexdigest()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
@@ -312,11 +329,14 @@ def _is_meta(row: dict) -> bool:
 
 
 def _data_rows(path: Path) -> int:
-    """Count non-empty lines, excluding the ``_meta`` header in .jsonl files.
+    """Count non-empty lines, excluding the ``_meta`` header in .jsonl files;
+    for a directory, its visible files.
 
     Uses a context manager (the old bare ``p.open()`` leaked file handles in
     tests).
     """
+    if path.is_dir():
+        return len(_visible_files(path))
     count = 0
     with path.open(encoding="utf-8") as fh:
         for line in fh:

@@ -35,7 +35,7 @@ from pathlib import Path
 from labkit.code_check import check_intent_ids
 from labkit.repo import area_protocols, git, layout_root
 from labkit.protocol_check import check_fields, check_protocol_id
-from labkit.scope_sha import scope_sha, find_pin, AREA_GLOBS
+from labkit.scope_sha import AREA_GLOBS, area_stamp
 
 
 def _is_dirty(area: Path) -> bool:
@@ -134,17 +134,10 @@ def run(area: Path, protocol: Path | None = None) -> int:
 
     # -- 3. scope-sha ------------------------------------------------------
     print("── scope-sha ──")
-    scripts = [p for g in AREA_GLOBS for p in sorted(area.glob(g))]
-    if scripts:
-        try:
-            pin_info = find_pin(layout_root(area))
-            pin = pin_info[1] if pin_info else None
-            sha = scope_sha(scripts, pin)
-            print(f"  {sha}")
-        except Exception as e:
-            print(f"  ERROR: {e}")
-            blockers += 1
-    else:
+    try:
+        sha, _, _ = area_stamp(area)
+        print(f"  {sha}")
+    except ValueError:
         print(f"  no scripts matching {AREA_GLOBS} in {area} (skipped)")
 
     # -- 4. dirty check ----------------------------------------------------

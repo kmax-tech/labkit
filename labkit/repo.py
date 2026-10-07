@@ -56,7 +56,7 @@ def layout_root(path: Path) -> Path:
     root = git_root(path)
     if root is not None:
         return root
-    base = path if path.is_dir() else path.parent
+    base = (path if path.is_dir() else path.parent).resolve()   # "." has no parents
     for parent in [base, *base.parents]:
         if (parent / "CLAUDE.md").is_file() or (parent / "tests").is_dir():
             return parent
