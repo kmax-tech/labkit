@@ -483,6 +483,13 @@ SETUP_RUN = re.compile(r"prepare|probe|wegwerf|trockenlauf|dry.?run", re.I)
 #: multi-line values start on the next line (the 25er protocol writes them
 #: that way; the first version false-alarmed).
 RESULT_FIELDS = tuple(f.label.casefold() for f in FIELDS if f.level == "after")
+
+
+def _label(name: str) -> str:
+    """The template label of a casefolded field name."""
+    return next(f.label for f in FIELDS if f.label.casefold() == name)
+
+
 _DASHES = re.compile(r"^[—–-]+$")
 
 
@@ -830,7 +837,7 @@ def main(argv: list[str]) -> int:
         # Post-run: a documented measure run makes an empty Result a MUST
         # gap — pilot suppression does not apply (write back, don't go quiet).
         measured = measure_runs(text)
-        run_unreported = bool(measured) and bool(unreported(text))
+        run_unreported = unreported(text) if measured else []
         history = [
             (n, ln.strip())
             for n, ln in enumerate(text.splitlines(), 1)
@@ -908,8 +915,9 @@ def main(argv: list[str]) -> int:
         if run_unreported:
             print(
                 f"{f}:{measured[0][0]}: MISSING (must): measure run in the "
-                f"run list ({measured[0][1]}) but Result/Raw output empty — "
-                f"write the result back in the SAME session."
+                f"run list ({measured[0][1]}) but "
+                f"{', '.join(_label(n) for n in run_unreported)} empty — write "
+                f"the result back in the SAME session."
             )
         for n, ln in series:
             print(
@@ -937,7 +945,7 @@ def main(argv: list[str]) -> int:
             + [f"{label} (line {n}, placeholder)" for n, label in must_holes]
             + (["a prompt code block"] if no_block else [])
             + (["a rendered example (frozen)"] if frozen_without_io else [])
-            + (["Result / Raw output for the measured run"] if run_unreported else [])
+            + [f"{_label(n)} (a measure run exists)" for n in run_unreported]
             + (["a shorter protocol (frozen)"] if frozen and (too_long or big) else [])
         )
         if musts:

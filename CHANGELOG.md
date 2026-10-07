@@ -5,29 +5,19 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
-## 0.58.1 — 2026-10-07
-
-### Added
-
-- **`llm.last_thinking()`** — the reasoning trace of this thread's most
-  recent completion (ollama `thinking`, OpenAI-style `reasoning_content` /
-  `reasoning`), "" when the backend returns none; reset before every
-  attempt, so a call never shows a previous call's trace. labkit read the
-  field and dropped it; uniagent could not explain a false classifier answer
-  afterwards because only the answer was kept.
-
 ## 0.59.0 — 2026-10-07
 
 ### Breaking
 
-Last version with the old behaviour: **v0.58.0**.
+Last version with the old behaviour: **v0.58.1**.
 
 - **A protocol with a documented run owes a Summary for a person:**
   `Result` (at most two plain sentences carrying the question, no ids, keys
   or run_ids), `Limits` and `Next step` — on every tier, seconds included
   (they are in the seconds cut). `Status` is gone; `Next step` moved from
   Follow-up into the Summary (protocols that have it in Follow-up keep it
-  valid). A protocol with a run but no `Limits` fails protocol-check.
+  valid). A protocol with a run but no `Limits` fails protocol-check, and
+  the message names the missing field instead of "Result/Raw output".
 - **The stamped protocol opens with the Summary;** the pointer to the
   field guide and the toml head stand at the end under `## Head`.
   protocol-check reads the head anywhere; the Head section counts neither
@@ -41,6 +31,17 @@ Last version with the old behaviour: **v0.58.0**.
   answers checkable questions — the number, whether the criterion held,
   whether admissibility held — that `read-score` holds to the run
   (`protocol_reading.Truth`), plus what it understood after ten lines.
+
+## 0.58.1 — 2026-10-07
+
+### Added
+
+- **`llm.last_thinking()`** — the reasoning trace of this thread's most
+  recent completion (ollama `thinking`, OpenAI-style `reasoning_content` /
+  `reasoning`), "" when the backend returns none; reset before every
+  attempt, so a call never shows a previous call's trace. labkit read the
+  field and dropped it; uniagent could not explain a false classifier answer
+  afterwards because only the answer was kept.
 
 ## 0.58.0 — 2026-10-07
 
