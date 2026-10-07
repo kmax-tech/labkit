@@ -5,6 +5,33 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.62.0 — 2026-10-07
+
+### Breaking
+
+Last version with the old names: **v0.61.0**. Run records and protocols do
+not change (the recorded key `declared_scope_sha` stays); only Python
+names do.
+
+- `protocol_block.HEAD_FIELDS` is `PROTOCOL_HEAD_KEYS` — the settings at
+  the end of every protocol, told apart from the run's `config.json`.
+- `scope_sha.imported_lib` is `imported_repo_helpers` — the helper files
+  the area's scripts import, told apart from one promise's declared-scope
+  digest (`promises.declared_scope_sha`, whose docstring now says so).
+- `intent_check.constant_findings` is `promised_constant_mismatches`;
+  `finalize.criterion_n_findings` is `criterion_n_input_mismatches` — two
+  checks against what a run recorded, named for what they compare.
+
+### Added
+
+- `preflight.area_test_python` — the interpreter that runs an area's tests
+  has a name of its own (was four lines inside `area_tests`).
+
+Why: in code-navigation round 3 a weaker reader (Haiku) found 5 of 10 in
+labkit against 9 of 10 in uniagent; every labkit miss sat at one of these
+pairs or at the unnamed interpreter choice (CS-015 Make the code findable
+by name; `docs/usability/2026-10-07-code-navigation.md`).
+
 ## 0.61.0 — 2026-10-07
 
 ### Added

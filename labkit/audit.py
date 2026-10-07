@@ -36,7 +36,7 @@ from pathlib import Path
 
 from labkit import llm
 from labkit.repo import area_protocols, layout_root, no_such_area
-from labkit.scope_sha import area_stamp, imported_lib
+from labkit.scope_sha import area_stamp, imported_repo_helpers
 
 AGENT = Path(__file__).with_name("experiment-preflight.agent.md")
 DEFAULT_MODEL = "opus"  # the agent's model; any alias of models.toml works
@@ -87,7 +87,7 @@ def gather(area: Path, protocol: Path | None) -> tuple[Path, list[Path], Path]:
     code = sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py"))
     if not code:
         raise AuditError(f"{area}: no scripts/*.py or analysis/*.py — nothing to audit")
-    code += imported_lib(area, repo)
+    code += imported_repo_helpers(area, repo)
     standard = repo / "docs" / "arbeitsstandard.md"
     if not standard.is_file():
         raise AuditError(

@@ -216,7 +216,7 @@ class TestImportForms(unittest.TestCase):
         (self.area / "scripts" / "m.py").write_text(source)
         return [
             f.relative_to(self.repo / "lib").as_posix()
-            for f in packaged.imported_lib(self.area, self.repo)
+            for f in packaged.imported_repo_helpers(self.area, self.repo)
         ]
 
     def test_every_allowed_form_reaches_the_module_and_its_imports(self):
@@ -258,7 +258,7 @@ class TestImportForms(unittest.TestCase):
         (self.area / "scripts" / "m.py").write_text("from measure import comparison\n")
         got = [
             f.relative_to(self.repo).as_posix()
-            for f in packaged.imported_lib(self.area, self.repo)
+            for f in packaged.imported_repo_helpers(self.area, self.repo)
         ]
         self.assertEqual(got, ["src/measure/__init__.py", "src/measure/comparison.py"])
 

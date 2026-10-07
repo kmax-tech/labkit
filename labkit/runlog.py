@@ -927,6 +927,8 @@ class Run:
         self._metrics: dict = {}
         self._note = ""
         self._t0 = time.monotonic()
+        # The run's config.json record — what this run was, written once at
+        # start. Not the protocol's settings head (protocol_block.PROTOCOL_HEAD_KEYS).
         frozen = {
             "schema_version": RUN_SCHEMA,
             "experiment": experiment,

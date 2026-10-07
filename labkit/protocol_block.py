@@ -41,8 +41,10 @@ ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
 
 FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})\s*([\w+-]*)")
 _TOP_LEVEL = {"protocol", "promise"}
-#: the keys of the [protocol] table, in the template's order
-HEAD_FIELDS = ("standard", "id", "type", "cost", "frozen", "preflight_audit")
+#: the settings every protocol carries in its ```toml head (the block at the
+#: end of the protocol), in the template's order — not the run's config.json,
+#: which runlog writes per run
+PROTOCOL_HEAD_KEYS = ("standard", "id", "type", "cost", "frozen", "preflight_audit")
 
 
 class BlockError(ValueError):
@@ -158,20 +160,20 @@ def head(text: str) -> Head:
     data = load(text)
     if "protocol" not in data:
         raise BlockError(
-            f"no [protocol] table — the head ({', '.join(HEAD_FIELDS)}) "
+            f"no [protocol] table — the head ({', '.join(PROTOCOL_HEAD_KEYS)}) "
             f"lives in the ```toml block; protocols with a prose head "
             f"are read by labkit 0.47"
         )
     table = data["protocol"]
     if not isinstance(table, dict):
         raise BlockError("`protocol` must be a table: [protocol]")
-    unknown = set(table) - set(HEAD_FIELDS)
+    unknown = set(table) - set(PROTOCOL_HEAD_KEYS)
     if unknown:
         raise BlockError(
             f"[protocol]: unknown field(s) {sorted(unknown)}; "
-            f"allowed: {', '.join(HEAD_FIELDS)}"
+            f"allowed: {', '.join(PROTOCOL_HEAD_KEYS)}"
         )
-    missing = [f for f in HEAD_FIELDS if f not in table]
+    missing = [f for f in PROTOCOL_HEAD_KEYS if f not in table]
     if missing:
         raise BlockError(f"[protocol]: missing {', '.join(missing)}")
     standard = table["standard"]

@@ -122,8 +122,9 @@ def _lib_files(name: str, libdir: Path) -> list[Path]:
     return found
 
 
-def imported_lib(area: Path, repo: Path) -> list[Path]:
-    """Repo-local files (under LOCAL_ROOTS) the area's code reaches by
+def imported_repo_helpers(area: Path, repo: Path) -> list[Path]:
+    """The helper files elsewhere in the repo that the area's scripts import —
+    repo-local files (under LOCAL_ROOTS) the area's code reaches by
     import, transitively —
     shared anchors and thresholds live there, so they determine the number
     (AS-019 Der Stempel deckt alles ab). Review 2026-10-07: `from lib import scoring` and `import
@@ -188,7 +189,7 @@ def area_stamp(
     they import, `extra` files, and the labkit pin. Raises FileNotFoundError
     naming a missing file, ValueError when there is nothing to stamp."""
     root = layout_root(area)
-    files = area_files(area, globs) + imported_lib(area, root) + list(extra)
+    files = area_files(area, globs) + imported_repo_helpers(area, root) + list(extra)
     missing = [str(f) for f in files if not f.is_file()]
     if missing:
         raise FileNotFoundError(f"scope file(s) missing: {', '.join(missing)}")

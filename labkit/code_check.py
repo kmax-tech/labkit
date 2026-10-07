@@ -60,7 +60,7 @@ from pathlib import Path
 from labkit import promises
 from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 from labkit.repo import area_path, area_protocols, layout_root, no_such_area
-from labkit.scope_sha import imported_lib
+from labkit.scope_sha import imported_repo_helpers
 
 
 # --- source analysis ------------------------------------------------------
@@ -674,7 +674,7 @@ def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
     ]
     files = [protocol]
     files += sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py"))
-    files += imported_lib(area, repo)
+    files += imported_repo_helpers(area, repo)
     for f in files:
         try:
             body = f.read_text(encoding="utf-8")

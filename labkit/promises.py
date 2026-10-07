@@ -310,7 +310,9 @@ def _function_source(path: Path, name: str) -> str:
 
 
 def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
-    """Digest over the declared scope, entries resolved against `base`.
+    """Digest over ONE promise's declared scope, entries resolved against `base`
+    — not the area's audit stamp over its scripts and imported helpers
+    (`scope_sha.area_stamp`, `scope_sha.imported_repo_helpers`).
 
     A `file` entry covers the file's bytes; a `file:function` entry covers
     only that function's source, decorators included, so an edit to a

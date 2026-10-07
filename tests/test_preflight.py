@@ -280,5 +280,20 @@ class TestCostTier(unittest.TestCase):
         self.assertIn("not filled — treated as `hours`", out)
 
 
+class AreaTestPython(unittest.TestCase):
+    """The interpreter for an area's tests has a name of its own (CS-015)."""
+
+    def test_the_repo_venv_wins(self):
+        with tempfile.TemporaryDirectory() as d:
+            own = Path(d) / ".venv" / "bin" / "python"
+            own.parent.mkdir(parents=True)
+            own.write_text("")
+            self.assertEqual(preflight.area_test_python(Path(d)), str(own))
+
+    def test_without_a_venv_the_running_python(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(preflight.area_test_python(Path(d)), sys.executable)
+
+
 if __name__ == "__main__":
     unittest.main()

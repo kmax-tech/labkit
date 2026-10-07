@@ -40,24 +40,24 @@ class CriterionN(unittest.TestCase):
 
     def test_matching_n_is_silent(self):
         self._metrics({"c1_pass": True, "c1_n": 12})
-        self.assertEqual(finalize.criterion_n_findings(self.run_dir), [])
+        self.assertEqual(finalize.criterion_n_input_mismatches(self.run_dir), [])
 
     def test_shrunk_denominator_warns(self):
         # 2026-10-06 review: c1_n = 7 against 12 recorded rows went unwarned
         # while the check knew only the old letter
         self._metrics({"c1_pass": True, "c1_n": 7})
-        w = finalize.criterion_n_findings(self.run_dir)
+        w = finalize.criterion_n_input_mismatches(self.run_dir)
         self.assertEqual(len(w), 1)
         self.assertIn("c1_n = 7", w[0])
         self.assertIn("rows = 12", w[0])
 
     def test_admissibility_n_is_not_a_criterion_denominator(self):
         self._metrics({"a1_ok": True, "a1_n": 3})
-        self.assertEqual(finalize.criterion_n_findings(self.run_dir), [])
+        self.assertEqual(finalize.criterion_n_input_mismatches(self.run_dir), [])
 
     def test_no_n_keys_nothing_to_say(self):
         self._metrics({"c1_pass": True})
-        self.assertEqual(finalize.criterion_n_findings(self.run_dir), [])
+        self.assertEqual(finalize.criterion_n_input_mismatches(self.run_dir), [])
 
 
 if __name__ == "__main__":

@@ -62,6 +62,15 @@ class AreaTests:
     tail: list[str]  # the last lines of a failing run
 
 
+def area_test_python(repo: Path) -> str:
+    """The Python installation that runs an area's tests: the repo's own
+    `.venv`, else the one running labkit. The repo's, not the caller's — the
+    tests import the repo's dependencies, and a gate run from another venv
+    failed them on a missing package (uniagent, 2026-10-07)."""
+    own = repo / ".venv" / "bin" / "python"
+    return str(own) if own.is_file() else sys.executable
+
+
 def area_tests(area: Path, repo: Path) -> AreaTests:
     """Run the area's tests (`tests/test_*<slug>*.py`) — the resolution
     check and the parser cases in their permanent form. One home for
@@ -83,13 +92,9 @@ def area_tests(area: Path, repo: Path) -> AreaTests:
     )
     if not files:
         return AreaTests(pattern, [], "none", [])
-    # The repo's interpreter, not the caller's: the tests import the repo's
-    # dependencies, and a gate run from another venv failed them on a
-    # missing package (uniagent, 2026-10-07).
-    own = repo / ".venv" / "bin" / "python"
     r = subprocess.run(
         [
-            str(own) if own.is_file() else sys.executable,
+            area_test_python(repo),
             "-m",
             "pytest",
             "-q",

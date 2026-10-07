@@ -53,7 +53,7 @@ from pathlib import Path
 from labkit import promises, protocol_block
 from labkit.runs import RunConfigError, read_run_config, run_state
 from labkit.repo import layout_root
-from labkit.scope_sha import imported_lib
+from labkit.scope_sha import imported_repo_helpers
 
 # The alphabet lives in `promises`; these names stay importable from here
 # because code_check and tools outside labkit (befundregister) use them.
@@ -305,14 +305,17 @@ def check_block_against_run(
     drift = promises.block_drift(recorded, block)
     if drift:
         out.append(f"{mpath.parent.name}: {drift}.")
-    out += constant_findings(block, cfg.get("config") or {}, mpath.parent.name)
+    out += promised_constant_mismatches(
+        block, cfg.get("config") or {}, mpath.parent.name
+    )
     return out
 
 
-def constant_findings(
+def promised_constant_mismatches(
     block: "promises.PromiseBlock", run_config: dict, run_name: str
 ) -> list[str]:
-    """A block constant the run recorded under the same name with another value.
+    """The constants the protocol promised (a margin, a threshold) whose value
+    differs from the one the run recorded under the same name.
 
     The script is meant to read its thresholds from the block
     (`promises.constants`). One that keeps its own copy — `MIN_F1 = 0.5`
@@ -516,7 +519,7 @@ def code_keys(area: Path) -> dict[str, list[str]]:
     # area's scripts alone made four promises "absent" (2026-10-07).
     root = layout_root(area)
     own = sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py"))
-    for path in own + imported_lib(area, root):
+    for path in own + imported_repo_helpers(area, root):
         try:
             source = path.read_text(encoding="utf-8")
         except OSError:

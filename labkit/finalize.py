@@ -63,8 +63,10 @@ def _tracked(repo: Path, path: Path) -> bool:
 CRITERION_N = promises.CRITERION_N_KEY
 
 
-def criterion_n_findings(run_dir: Path) -> list[str]:
-    """Warnings: a `c<i>_n` that matches no input count the run recorded."""
+def criterion_n_input_mismatches(run_dir: Path) -> list[str]:
+    """Warnings: a criterion's denominator (`c<i>_n` in metrics.json) that
+    matches no input count the run recorded — the size of what was counted,
+    not a promised constant (that is `intent_check.promised_constant_mismatches`)."""
     metrics_file = run_dir / "metrics.json"
     if not metrics_file.is_file():
         return []
@@ -337,7 +339,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
     if newest_dir is None:
         print("  no completed run to check")
     else:
-        w = criterion_n_findings(newest_dir)
+        w = criterion_n_input_mismatches(newest_dir)
         for line in w:
             print(f"  warning: {line}")
         if not w:

@@ -660,7 +660,7 @@ def print_contract() -> None:
     )
     print(
         "head: the ```toml block's [protocol] table — "
-        + ", ".join(protocol_block.HEAD_FIELDS)
+        + ", ".join(protocol_block.PROTOCOL_HEAD_KEYS)
         + f"; standard = {protocol_block.STANDARD!r}, type one of "
         + ", ".join(protocol_block.TYPES)
         + ", cost one of "
