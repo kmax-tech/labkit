@@ -186,6 +186,28 @@ class Glance(unittest.TestCase):
 
 
 class Terms(unittest.TestCase):
+    def test_the_defining_entry_wins_over_a_mention(self):
+        glossary = (
+            "Grundbegriffe (Fall, Anker …): [Begriffe](b.md). *Anker* — der Arm,\n"
+            "der immer gleich entscheidet. *Ziehung* — ein Lauf mit Zufall.\n"
+            "- **Anker** — der deterministische Arm im selben Lauf: er muss\n"
+            "  jedes Mal gleich entscheiden.\n"
+        )
+        self.assertEqual(
+            pr.entry_for("Anker (anchor)", glossary),
+            "*Anker* — der Arm,",
+        )
+        self.assertEqual(
+            pr.entry_for("Ziehung", glossary), "*Ziehung* — ein Lauf mit Zufall."
+        )
+
+    def test_a_bullet_keeps_its_continuation_lines(self):
+        glossary = "- **Profil** — eine Datei in `register/profiles/`, die\n  festlegt, was geprüft wird.\n"
+        self.assertEqual(
+            pr.entry_for("Profil", glossary),
+            "- **Profil** — eine Datei in `register/profiles/`, die festlegt, was geprüft wird.",
+        )
+
     def test_ids_match_as_patterns(self):
         self.assertEqual(
             pr.normalize_term("`beschaffungsantrag-09`"), "beschaffungsantrag-nn"
@@ -220,6 +242,20 @@ class Terms(unittest.TestCase):
             (Path(d) / "glossary.md").unlink()
             with self.assertRaises(FileNotFoundError):
                 pr.glossary_text(SUMMARY_FIRST, str(proto))
+
+
+class EntryLabels(unittest.TestCase):
+    def test_a_shorter_label_inside_the_term_does_not_win(self):
+        glossary = (
+            "- **Position** — eine Zeile einer Bestellung.\n"
+            "- **Fall** — ein Vorgang.\n"
+            "- **Positions-Zuordner** — das Modell ordnet Positionen zu.\n"
+        )
+        self.assertEqual(
+            pr.entry_for("Positions-Zuordner", glossary),
+            "- **Positions-Zuordner** — das Modell ordnet Positionen zu.",
+        )
+        self.assertIsNone(pr.entry_for("unstable/fallback", glossary))
 
 
 if __name__ == "__main__":

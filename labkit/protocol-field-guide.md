@@ -167,9 +167,12 @@ nothing else yet; everything below it is the evidence for a check. It
 derives from the detail below and carries no fact that isn't there.
 
 - **Result:** what was found, in at most two plain sentences that carry the
-  question with them — "The class descriptions kept the cable set out of
-  the framework class in all five cases", not "Both arms were run on 46
-  cases". No intent ids, metric keys or run_ids (they are in Result below);
+  question with them and say whether the bar set before the run was met —
+  "The class descriptions kept the cable set out of the framework class in
+  all five cases, as required", not "Both arms were run on 46 cases". A
+  reader who stops after the Summary must know the verdict (round 10: four
+  readers of the first ten lines got the number and the limit but not
+  whether the criterion held). No intent ids, metric keys or run_ids (they are in Result below);
   a technical term gets a half-sentence gloss.
 - **Limits:** how far it holds, one sentence — the sample, a single run,
   what was not tested.

@@ -3,9 +3,10 @@
 ## Summary (after the run, for a person)
 
 - **Result:** <!-- s --> <what was found, in at most two plain sentences that
-  carry the question with them ("The class descriptions kept the cable set
-  out of the framework class in all five cases") — the result, not the
-  procedure; no intent ids, metric keys or run_ids, they are below>
+  carry the question with them and say whether the bar set before the run
+  was met ("The class descriptions kept the cable set out of the framework
+  class in all five cases, as required") — the result, not the procedure;
+  no intent ids, metric keys or run_ids, they are below>
 - **Limits:** <!-- s --> <how far it holds, one sentence — the sample, a
   single run, what was not tested>
 - **Next step:** <!-- s --> <what follows — a decision, the next experiment,

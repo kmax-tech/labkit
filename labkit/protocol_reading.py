@@ -444,11 +444,40 @@ def terms_judge_prompt(pairs: list[tuple[str, str]], answer_path: str) -> str:
     )
 
 
-def entry_for(term: str, glossary: str) -> str | None:
-    """The glossary line that mentions the term (pattern-matched), or None."""
-    vs = _variants(term)
+_LABEL = re.compile(r"^(?:- )?\*{1,2}([^*]+)\*{1,2}")
+_INLINE_ENTRY = re.compile(r"(?=(?<![*\w])\*[^*\s][^*]*\*\s+(?:—|=|\())")
+
+
+def _entries(glossary: str) -> list[str]:
+    """Glossary text as entries: a bullet with its continuation lines, and
+    inside a long line every `*term* — …` segment (a Terms field is one
+    line that defines several terms)."""
+    bullets: list[str] = []
     for line in glossary.splitlines():
-        n = normalize_term(line)
-        if any(v in n for v in vs):
-            return line.strip()
+        if line.startswith("- ") or not bullets or not line.startswith("  "):
+            bullets.append(line.strip())
+        else:
+            bullets[-1] += " " + line.strip()
+    out: list[str] = []
+    for b in bullets:
+        out.extend(seg.strip() for seg in _INLINE_ENTRY.split(b) if seg.strip())
+    return out
+
+
+def entry_for(term: str, glossary: str) -> str | None:
+    """The glossary entry that defines the term — the one whose label (the
+    bold or italic words it opens with) names it — else the first entry that
+    mentions it, else None. Ids match as patterns."""
+    vs = _variants(term)
+    entries = _entries(glossary)
+    labelled = [(e, m.group(1)) for e in entries if (m := _LABEL.match(e))]
+    for e, label in labelled:  # the label names the term exactly
+        if set(vs) & set(_variants(label)):
+            return e
+    for e, label in labelled:  # the term is part of a longer label
+        if any(v in normalize_term(label) for v in vs):
+            return e
+    for e in entries:
+        if any(v in normalize_term(e) for v in vs):
+            return e
     return None

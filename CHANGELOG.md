@@ -5,6 +5,24 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.60.1 — 2026-10-07
+
+### Changed
+
+- The Summary's Result says whether the bar set before the run was met:
+  four readers of the first ten lines took the number and the limit away
+  from the 0.59 probes but not the verdict (the uniagent Summaries, which
+  said it, were read right).
+
+### Fixed
+
+- `protocol_reading.entry_for` returned the first line that mentioned a
+  term — often a protocol's pointer to the glossary — so the explanation
+  judge saw no definition. It now splits the glossary into entries (a
+  bullet with its continuation, each `*term* — …` inside a Terms line) and
+  takes the one whose label names the term; a shorter label inside the
+  term ("Position" in "Positions-Zuordner") no longer wins.
+
 ## 0.60.0 — 2026-10-07
 
 ### Added
