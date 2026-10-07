@@ -1,33 +1,25 @@
 # Experiment protocol: <name>
 
-*How to fill each field, the cuts by tier and the intent ids [C/A/B]:
-`protocol-field-guide.md` (`protocol-check --guide`). Fill by label:
-`protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.*
+## Summary (after the run, for a person)
 
-```toml
-[protocol]
-standard = "0.18"
-id = "<protocol-id>"
-type = "<exploratory | confirmatory>"
-cost = "<seconds | minutes | hours>"
-frozen = false
-preflight_audit = ""
-```
-
-## Summary † (write last)
-
-- **Result †:** <the answer in at most three plain sentences — the result,
-  not the procedure; a limit stands in the sentence it limits; no ids, keys
-  or run_ids here, they are in Result below>
-- **Question †:** <the question of the Intent, in plain words>
+- **Result:** <!-- s --> <what was found, in at most two plain sentences that
+  carry the question with them ("The class descriptions kept the cable set
+  out of the framework class in all five cases") — the result, not the
+  procedure; no intent ids, metric keys or run_ids, they are below>
+- **Limits:** <!-- s --> <how far it holds, one sentence — the sample, a
+  single run, what was not tested>
+- **Next step:** <!-- s --> <what follows — a decision, the next experiment,
+  or "none">
+- **Question †:** <the question of the Intent in plain words — only where
+  Result does not carry it>
 - **Did †:** <what was done, one sentence — for a reader with no context>
-- **Status †:** <on track | blocked by <what> | needs a decision on <what>>
 
 ## Intent (before the run)
 
 - **Question / hypothesis:** <!-- s --> <the one question — what do we expect?>
 - **Success / failure criterion:** <!-- s --> <how do we recognise whether it worked?
-  One C per conjunct, each reappearing as a lowercase key in the reportable
+  One id per conjunct, written `[C…]` with its number in the brackets
+  (C1 → the key `c1_pass`), each reappearing as a lowercase key in the reportable
   run's metrics.json (→ AS-003 Kein Lauf ohne Intent-Absatz, AS-004 Kennungen machen den Intent adressierbar)>
 - **Admissibility condition:** <!-- s --> <what must hold in the same run before
   any verdict is issued — yield, coverage, a control showing its expected
@@ -142,8 +134,24 @@ preflight_audit = ""
 - **Notes updated:** <[[…]] — reconcile on contradiction>
 - **Prediction for the follow-up run †:** <write the expected number HERE,
   before the follow-up starts (→ AS-045 Die Prognose steht vor dem Folgelauf)>
-- **Next step:** <…>
 
 ## Notes (by-catch: ideas, follow-up experiments — cheap now, expensive later)
 
 - <…>
+
+## Head (read by the checks)
+<!-- s -->
+
+*How to fill each field, the cuts by tier and the intent ids:
+`protocol-field-guide.md` (`protocol-check --guide`); fill by label with
+`protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.*
+
+```toml
+[protocol]
+standard = "0.18"
+id = "<protocol-id>"
+type = "<exploratory | confirmatory>"
+cost = "<seconds | minutes | hours>"
+frozen = false
+preflight_audit = ""
+```

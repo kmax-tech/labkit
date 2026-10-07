@@ -336,9 +336,8 @@ class TestPlaceholders(unittest.TestCase):
             [lb for _, lb in report.must_holes],
             ["Prompt (verbatim, per variant)", "Model I/O"],
         )
-        self.assertEqual(
-            [lb for _, lb in report.soft_holes], ["Yield per stage", "Next step"]
-        )
+        # Next step is written after the run (Summary): no hole before one.
+        self.assertEqual([lb for _, lb in report.soft_holes], ["Yield per stage"])
 
     def test_pipeline_exits_one_on_must_placeholder(self):
         rc, out = run_main(
@@ -477,7 +476,11 @@ class TestPromptAndExample(unittest.TestCase):
 
     def test_written_raw_output_after_a_measure_run_passes(self):
         text = (
-            pilot() + "\n## Result\n\n- **Answer to the question:** AUC 0.91 "
+            pilot()
+            + "\n## Summary\n\n- **Result:** The classifier separates the two classes"
+            " well on the held-out set.\n- **Limits:** One run on one split.\n"
+            "- **Next step:** none\n"
+            + "\n## Result\n\n- **Answer to the question:** AUC 0.91 "
             "(2026-09-06T10-00-00_aa11)\n- **Raw output:** see output/examples.md\n"
             "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
         )
@@ -796,7 +799,10 @@ class TestStampedLegendIsNotTemplateText(unittest.TestCase):
         lines = protocol_check.template_lines(protocol_check.find_template(None))
         self.assertTrue(lines, "template not found")
         self.assertFalse([s for s in lines if "A checklist, not a copy-form" in s])
-        self.assertFalse([s for s in lines if "intent ids" in s])
+        # The Head section (pointer and toml block) stays by design, like the preamble.
+        self.assertFalse(
+            [s for s in lines if "the cuts by tier and the intent ids" in s]
+        )
 
     def test_body_instruction_lines_still_count(self):
         lines = protocol_check.template_lines(protocol_check.find_template(None))

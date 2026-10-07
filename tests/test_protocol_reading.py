@@ -41,31 +41,60 @@ class Form(unittest.TestCase):
 
 class Reader(unittest.TestCase):
     ANSWER = {
+        "first_lines": "a count",
         "question": "q",
         "result": "r",
         "number": "0,8333",
+        "criterion_held": True,
+        "admissible": True,
         "holds": "h",
         "next": None,
         "unclear": ["LLM-Arm"],
         "effort": 3,
     }
+    TRUTH = pr.Truth(number=0.8333333, criterion_held=True, admissible=True)
 
-    def test_the_number_is_held_to_the_run(self):
-        s = pr.score_answer(json.dumps(self.ANSWER), 0.8333333)
-        self.assertTrue(s.number_ok)
+    def test_every_checkable_answer_is_held_to_the_run(self):
+        s = pr.score_answer(json.dumps(self.ANSWER), self.TRUTH)
+        self.assertEqual((s.correct, s.checkable), (3, 3))
         self.assertEqual((s.unclear, s.effort), (["LLM-Arm"], 3))
 
-    def test_a_wrong_number_is_named(self):
-        s = pr.score_answer(json.dumps({**self.ANSWER, "number": "0.75"}), 0.8333)
-        self.assertIs(s.number_ok, False)
+    def test_a_wrong_verdict_counts_against(self):
+        s = pr.score_answer(
+            json.dumps({**self.ANSWER, "criterion_held": False}), self.TRUTH
+        )
+        self.assertIs(s.criterion_ok, False)
+        self.assertEqual((s.correct, s.checkable), (2, 3))
+
+    def test_what_the_run_does_not_say_is_not_scored(self):
+        truth = pr.Truth(number=3.5, criterion_held=None, admissible=None)
+        s = pr.score_answer(json.dumps({**self.ANSWER, "number": "3.5"}), truth)
+        self.assertEqual((s.correct, s.checkable), (1, 1))
+
+    def test_the_whole_criterion_wins_over_its_conjuncts(self):
+        t = pr.truth_from_metrics(
+            {
+                "c1_pass": True,
+                "c2_pass": False,
+                "criterion_pass": False,
+                "a1_pass": True,
+            },
+            None,
+        )
+        self.assertEqual((t.criterion_held, t.admissible), (False, True))
+        t = pr.truth_from_metrics(
+            {"c1_pass": True, "a1_pass": True, "a2_pass": False}, None
+        )
+        self.assertEqual((t.criterion_held, t.admissible), (True, False))
 
     def test_an_answer_without_the_keys_is_refused(self):
         with self.assertRaises(ValueError):
-            pr.score_answer('{"question": "q"}', 1.0)
+            pr.score_answer('{"question": "q"}', self.TRUTH)
 
     def test_the_prompt_carries_the_protocol_and_every_question(self):
         prompt = pr.reader_prompt(CLEAR, "/tmp/a.json")
         self.assertIn("missed the criterion", prompt)
+        self.assertIn("new student", prompt)
         for key, _ in pr.READER_QUESTIONS:
             self.assertIn(f'"{key}"', prompt)
 

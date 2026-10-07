@@ -82,6 +82,10 @@ def form(text: str) -> Form:
 
 READER_QUESTIONS = (
     (
+        "first_lines",
+        "After the first 10 lines only: what had you understood? One sentence, or null.",
+    ),
+    (
         "question",
         "What did this experiment want to find out? One sentence, your words.",
     ),
@@ -90,23 +94,34 @@ READER_QUESTIONS = (
         "number",
         "The one number the result rests on, as written (digits only), or null.",
     ),
+    (
+        "criterion_held",
+        "Did the success criterion registered before the run hold — true, false, or null if the protocol does not say?",
+    ),
+    (
+        "admissible",
+        "Did every admissibility condition (the checks that must pass before any verdict) hold — true, false, or null?",
+    ),
     ("holds", "How far does the result hold — what limits it? One sentence."),
     ("next", "What happens next, according to the protocol? One sentence, or null."),
     (
         "unclear",
-        "Every term, abbreviation or code you could not place — a list, [] if none.",
+        "Every term, abbreviation, code or file name a newcomer would have to look up — a list, [] if none.",
     ),
     ("effort", "How hard was this protocol to read, 1 (easy) to 5 (very hard)?"),
 )
 
 
 def reader_prompt(protocol_text: str, answer_path: str) -> str:
-    """The prompt for a cold reader: the protocol, the questions, the file."""
+    """The prompt for a cold reader: the protocol, the questions, the file.
+    The reader is a newcomer, not a colleague — a colleague's patience hid
+    jargon in rounds 7 and 8 (2026-10-07)."""
     asks = "\n".join(f'- "{k}": {q}' for k, q in READER_QUESTIONS)
     return (
-        "You are a colleague who has never seen this project. Below is one "
-        "experiment protocol — read it as you would to learn what was found, "
-        "and nothing else: no files, no tools except writing your answer.\n\n"
+        "You are a new student who knows basic statistics, but not this "
+        "lab, its tools or its words. Below is one experiment protocol — read "
+        "it to learn what was found, and nothing else: no files, no tools "
+        "except writing your answer. Answer only from the protocol.\n\n"
         "Answer with one JSON object with exactly these keys:\n"
         f"{asks}\n\n"
         f"Write the JSON to {answer_path} (a single Bash `cat > … <<'EOF'`), "
@@ -118,21 +133,56 @@ def reader_prompt(protocol_text: str, answer_path: str) -> str:
 
 
 @dataclass(frozen=True)
+class Truth:
+    """What the run says, to hold a reader's answers to; None: it does not say."""
+
+    number: float | None
+    criterion_held: bool | None
+    admissible: bool | None
+
+
+def truth_from_metrics(metrics: dict, number_key: str | None) -> Truth:
+    """`criterion_pass` when the run reports the whole criterion, else all
+    `c<i>_pass`; every `a<i>_pass` for admissibility; the number under
+    `number_key`."""
+
+    def flags(prefix: str) -> list[bool]:
+        return [
+            v
+            for k, v in metrics.items()
+            if re.fullmatch(rf"{prefix}\d+_pass", k) and isinstance(v, bool)
+        ]
+
+    crit = metrics.get("criterion_pass")
+    if not isinstance(crit, bool):
+        cs = flags("c")
+        crit = all(cs) if cs else None
+    adm = flags("a")
+    value = metrics.get(number_key) if number_key else None
+    number = (
+        float(value)
+        if isinstance(value, (int, float)) and not isinstance(value, bool)
+        else None
+    )
+    return Truth(number, crit, all(adm) if adm else None)
+
+
+@dataclass(frozen=True)
 class ReaderScore:
-    number_ok: (
-        bool | None
-    )  # the reader's number equals the run's; None when the run has none
+    number_ok: bool | None  # None: the run has no number to hold it to
     number_read: float | None
+    criterion_ok: bool | None = None
+    admissible_ok: bool | None = None
+    correct: int = 0  # checkable answers right
+    checkable: int = 0  # answers the run could decide
     unclear: list[str] = field(default_factory=list)
     effort: int | None = None
     answers: dict = field(default_factory=dict)
 
 
-def score_answer(
-    answer_text: str, truth: float | None, tol: float = 0.006
-) -> ReaderScore:
-    """Hold the reader's answer to the run's number. Raises ValueError with
-    a sentence when the answer is not the asked-for JSON."""
+def score_answer(answer_text: str, truth: Truth, tol: float = 0.006) -> ReaderScore:
+    """Hold the reader's answer to the run. Raises ValueError with a sentence
+    when the answer is not the asked-for JSON."""
     try:
         data = json.loads(answer_text)
     except json.JSONDecodeError as exc:
@@ -145,11 +195,30 @@ def score_answer(
         read = float(str(raw).replace(",", ".")) if raw is not None else None
     except ValueError:
         read = None
-    ok = None if truth is None else (read is not None and abs(read - truth) <= tol)
+    number_ok = (
+        None
+        if truth.number is None
+        else (read is not None and abs(read - truth.number) <= tol)
+    )
+
+    def same(said: object, real: bool | None) -> bool | None:
+        return None if real is None else (said is real)
+
+    crit = same(data["criterion_held"], truth.criterion_held)
+    adm = same(data["admissible"], truth.admissible)
+    checks = [c for c in (number_ok, crit, adm) if c is not None]
     effort = data["effort"] if isinstance(data["effort"], int) else None
     unclear = (
         [str(u) for u in data["unclear"]] if isinstance(data["unclear"], list) else []
     )
     return ReaderScore(
-        number_ok=ok, number_read=read, unclear=unclear, effort=effort, answers=data
+        number_ok=number_ok,
+        number_read=read,
+        criterion_ok=crit,
+        admissible_ok=adm,
+        correct=sum(checks),
+        checkable=len(checks),
+        unclear=unclear,
+        effort=effort,
+        answers=data,
     )

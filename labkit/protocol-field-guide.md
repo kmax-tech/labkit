@@ -121,10 +121,11 @@ sentences, APPARATUS deserves precise fragments.
 
 ## Fields by section
 
-### The head (the ```toml block)
+### The head (the ```toml block, at the end)
 
 The fields a machine reads are data, not prose: the `[protocol]` table of
-the protocol's one ```toml block. `protocol-check` reads them with a TOML
+the protocol's one ```toml block, stamped at the end under `## Head` so a
+person meets the Summary first. `protocol-check` reads them with a TOML
 parser — exact keys, typed values; a typo is an error that names the field.
 The same block may hold the `[[promise]]` tables (labkit
 `docs/promise-block.md`).
@@ -156,23 +157,26 @@ Two cold agents declared `minutes` for sixteen calls and paid fifteen
 minutes of audit waiting for a 64-second run (2026-10-05).
 
 
-### Summary (write last, HEAD)
+### Summary (after the run, for a person)
 
-Write this LAST, answer first. Whoever reads this has read nothing else
-yet: the Summary is the protocol for a person, everything below is the
-evidence for a check. It derives from the detail below and carries no fact
-that isn't already there — a summary with its own numbers becomes a second
-truth and drifts.
+Two texts for a person, at two times: before the run a reader reads the
+**Intent** (question, expectation, criterion); after the run the
+**Summary**, which opens the protocol. Write the Summary once the result is
+written back — on every tier, seconds included. Whoever reads it has read
+nothing else yet; everything below it is the evidence for a check. It
+derives from the detail below and carries no fact that isn't there.
 
-- **Result †:** the answer in at most three plain sentences — the result,
-  not the procedure ("The model arm missed the criterion on one wrongly
-  rejected case", not "Both arms were run on 46 cases"). A limit stands in
-  the sentence it limits. No intent ids, metric keys or run_ids: they are in
-  Result below; a technical term gets a half-sentence gloss.
-- **Question †:** the question of the Intent, in plain words.
+- **Result:** what was found, in at most two plain sentences that carry the
+  question with them — "The class descriptions kept the cable set out of
+  the framework class in all five cases", not "Both arms were run on 46
+  cases". No intent ids, metric keys or run_ids (they are in Result below);
+  a technical term gets a half-sentence gloss.
+- **Limits:** how far it holds, one sentence — the sample, a single run,
+  what was not tested.
+- **Next step:** what follows — a decision, the next experiment, or "none".
+- **Question †:** the Intent's question in plain words — only where Result
+  does not carry it.
 - **Did †:** what was done, one sentence — for a reader with no context.
-- **Status †:** on track | blocked by _what_ | needs a decision on _what_ —
-  in the protocol's language.
 
 ### Intent (before the run, HEAD)
 
@@ -357,7 +361,8 @@ Via `runlog` — cite run_ids instead of retyping numbers. One entry per run.
 - **Prediction for the follow-up run †:** write the expected number HERE,
   before the follow-up starts — it makes the follow-up a test instead of a
   story told afterwards.
-- **Next step.**
+
+The next step lives in the Summary (one home).
 
 ### Notes (APPARATUS)
 

@@ -121,10 +121,12 @@ FIELDS = (
     # Written after the run: before it they cannot exist.
     Field("Answer to the question", "after", "s"),
     Field("Raw output", "after", "s"),
+    # The Summary for a person, written after the run (2026-10-07)
+    Field("Result", "after", "s"),
+    Field("Limits", "after", "s"),
+    Field("Next step", "after", "s"),
     Field("Question", "report"),
     Field("Did", "report"),
-    Field("Result", "report"),
-    Field("Status", "report"),
     Field("Outcome", "report"),
     Field("Rival check", "report"),
     Field("Caps/drops", "report"),
@@ -595,6 +597,7 @@ def template_lines(path: Path | None) -> set[str]:
         return set()
     keep = set()
     in_body = False
+    in_head = False  # `## Head`: the pointer and the toml block stay by design
     for line in path.read_text(encoding="utf-8").splitlines():
         # The written protocol carries no cut markers; compared with them,
         # the stamped Runs line `- <run_id> — <…> <!-- s -->` never matched
@@ -602,6 +605,9 @@ def template_lines(path: Path | None) -> set[str]:
         s = _MARKER.sub("", line).strip()
         if s.startswith("## "):
             in_body = True
+            in_head = s.startswith("## Head")
+        if in_head:
+            continue
         # Only lines long enough to be distinctive; headings are meant to recur.
         if in_body and len(s) >= 40 and not s.startswith("#"):
             keep.add(s)

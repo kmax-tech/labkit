@@ -536,8 +536,8 @@ def archive(root: Path, transcript: Path, dest: Path) -> list[Path]:
     return list(payload)
 
 
-def _bound_protocol(root: Path) -> tuple[Path, float | None]:
-    """The protocol the probe's latest run is bound to, and its number."""
+def _bound_protocol(root: Path) -> tuple[Path, protocol_reading.Truth]:
+    """The protocol the probe's latest run is bound to, and what the run says."""
     probe = Probe(
         **json.loads(_sidecar(root, "probe.json").read_text(encoding="utf-8"))
     )
@@ -550,15 +550,8 @@ def _bound_protocol(root: Path) -> tuple[Path, float | None]:
     if not bound:
         raise SystemExit(f"usability: run {run.name} is bound to no protocol")
     path = Path(bound) if Path(bound).is_absolute() else area / bound
-    value = json.loads((run / "metrics.json").read_text(encoding="utf-8")).get(
-        probe.metric_key
-    )
-    number = (
-        float(value)
-        if isinstance(value, (int, float)) and not isinstance(value, bool)
-        else None
-    )
-    return path, number
+    metrics = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
+    return path, protocol_reading.truth_from_metrics(metrics, probe.metric_key)
 
 
 def reader(root: Path) -> int:
@@ -578,31 +571,32 @@ def reader(root: Path) -> int:
 
 def read_score(root: Path, transcript: Path | None) -> int:
     """Hold the reader's answer to the run's number; `<dir>.reader.json`."""
-    _, number = _bound_protocol(root)
+    _, truth = _bound_protocol(root)
     answer = _sidecar(root, "reader-answer.json")
     if not answer.is_file():
         raise SystemExit(f"usability: {answer} missing — has the reader answered?")
     try:
-        got = protocol_reading.score_answer(answer.read_text(encoding="utf-8"), number)
+        got = protocol_reading.score_answer(answer.read_text(encoding="utf-8"), truth)
     except ValueError as exc:
         raise SystemExit(f"usability: {exc}") from exc
     seconds = None
     if transcript is not None:
         _, first, last = agent_transcript.read_calls(transcript)
         seconds = round(last - first)
-    out = {**asdict(got), "truth": number, "reader_seconds": seconds}
+    out = {**asdict(got), "truth": asdict(truth), "reader_seconds": seconds}
     _sidecar(root, "reader.json").write_text(
         json.dumps(out, indent=1, ensure_ascii=False), encoding="utf-8"
     )
     print(
-        f"  number {got.number_read} vs run {number}: "
-        f"{'ok' if got.number_ok else 'WRONG' if got.number_ok is False else 'n/a'} · "
+        f"  {got.correct}/{got.checkable} checkable answers right (number "
+        f"{got.number_ok}, criterion {got.criterion_ok}, admissibility "
+        f"{got.admissible_ok}) · "
         f"effort {got.effort} · unclear {len(got.unclear)}"
         + (f" · {seconds}s" if seconds is not None else "")
     )
     for u in got.unclear:
         print(f"    unclear: {u}")
-    return 0 if got.number_ok is not False else 1
+    return 0 if got.correct == got.checkable else 1
 
 
 def score(root: Path, transcript: Path | None = None) -> int:

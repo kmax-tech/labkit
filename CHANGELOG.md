@@ -16,6 +16,32 @@ pins (`requirements.txt` / `requirements.lock`).
   field and dropped it; uniagent could not explain a false classifier answer
   afterwards because only the answer was kept.
 
+## 0.59.0 — 2026-10-07
+
+### Breaking
+
+Last version with the old behaviour: **v0.58.0**.
+
+- **A protocol with a documented run owes a Summary for a person:**
+  `Result` (at most two plain sentences carrying the question, no ids, keys
+  or run_ids), `Limits` and `Next step` — on every tier, seconds included
+  (they are in the seconds cut). `Status` is gone; `Next step` moved from
+  Follow-up into the Summary (protocols that have it in Follow-up keep it
+  valid). A protocol with a run but no `Limits` fails protocol-check.
+- **The stamped protocol opens with the Summary;** the pointer to the
+  field guide and the toml head stand at the end under `## Head`.
+  protocol-check reads the head anywhere; the Head section counts neither
+  as template text nor as form before the first field.
+
+### Changed
+
+- The criterion's placeholder shows how an id is written (`[C…]` with its
+  number, C1 → `c1_pass`); a writer missed it in round 8.
+- The cold reader (`usability reader`) is a newcomer, not a colleague, and
+  answers checkable questions — the number, whether the criterion held,
+  whether admissibility held — that `read-score` holds to the run
+  (`protocol_reading.Truth`), plus what it understood after ten lines.
+
 ## 0.58.0 — 2026-10-07
 
 ### Changed
