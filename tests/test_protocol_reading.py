@@ -57,12 +57,12 @@ class Reader(unittest.TestCase):
     TRUTH = pr.Truth(number=0.8333333, criterion_held=True, admissible=True)
 
     def test_every_checkable_answer_is_held_to_the_run(self):
-        s = pr.score_answer(json.dumps(self.ANSWER), self.TRUTH)
+        s = pr.score_reader_answer(json.dumps(self.ANSWER), self.TRUTH)
         self.assertEqual((s.correct, s.checkable), (3, 3))
         self.assertEqual((s.unclear, s.effort), (["LLM-Arm"], 3))
 
     def test_a_wrong_verdict_counts_against(self):
-        s = pr.score_answer(
+        s = pr.score_reader_answer(
             json.dumps({**self.ANSWER, "criterion_held": False}), self.TRUTH
         )
         self.assertIs(s.criterion_ok, False)
@@ -70,7 +70,7 @@ class Reader(unittest.TestCase):
 
     def test_what_the_run_does_not_say_is_not_scored(self):
         truth = pr.Truth(number=3.5, criterion_held=None, admissible=None)
-        s = pr.score_answer(json.dumps({**self.ANSWER, "number": "3.5"}), truth)
+        s = pr.score_reader_answer(json.dumps({**self.ANSWER, "number": "3.5"}), truth)
         self.assertEqual((s.correct, s.checkable), (1, 1))
 
     def test_the_whole_criterion_wins_over_its_conjuncts(self):
@@ -91,7 +91,7 @@ class Reader(unittest.TestCase):
 
     def test_an_answer_without_the_keys_is_refused(self):
         with self.assertRaises(ValueError):
-            pr.score_answer('{"question": "q"}', self.TRUTH)
+            pr.score_reader_answer('{"question": "q"}', self.TRUTH)
 
     def test_the_prompt_carries_the_protocol_and_every_question(self):
         prompt = pr.reader_prompt(CLEAR, "/tmp/a.json")
@@ -165,7 +165,7 @@ class Glance(unittest.TestCase):
             "what_follows": None,
             "unclear": [],
         }
-        s = pr.score_glance(json.dumps(answer), truth)
+        s = pr.score_glance_answer(json.dumps(answer), truth)
         self.assertEqual((s.number_ok, s.criterion_ok), (False, False))
         self.assertEqual(s.answered, ("question", "how_sure"))
 
@@ -180,7 +180,7 @@ class Glance(unittest.TestCase):
             "what_follows": "w",
             "unclear": ["lane"],
         }
-        s = pr.score_glance(json.dumps(answer), truth)
+        s = pr.score_glance_answer(json.dumps(answer), truth)
         self.assertEqual((s.number_ok, s.criterion_ok), (True, True))
         self.assertEqual(len(s.answered), 4)
 
@@ -256,6 +256,50 @@ class EntryLabels(unittest.TestCase):
             "- **Positions-Zuordner** — das Modell ordnet Positionen zu.",
         )
         self.assertIsNone(pr.entry_for("unstable/fallback", glossary))
+
+
+class AuditFixes(unittest.TestCase):
+    """Findings of the 2026-10-07 code audit, each pinned."""
+
+    TEXT = (
+        "## Summary\n\n- **Result:** The CI was wide, as the paragraph says.\n\n"
+        "## Context\n\n- **Terms of this protocol:** *CI* — confidence interval;"
+        " *N* = sample size; see [g](g.md#calibration).\n"
+    )
+
+    def test_short_abbreviations_count(self):
+        hits = pr.terms_coverage(self.TEXT, ["CI", "N"])
+        self.assertEqual(
+            [(h.in_summary, h.in_terms) for h in hits], [(True, True), (False, True)]
+        )
+
+    def test_part_of_a_word_is_no_occurrence(self):
+        self.assertEqual(pr.terms_coverage(self.TEXT, ["RAG"])[0].in_summary, False)
+
+    def test_a_link_with_an_anchor_is_read(self):
+        with tempfile.TemporaryDirectory() as d:
+            proto = Path(d) / "PROTOCOL-x.md"
+            proto.write_text(self.TEXT)
+            (Path(d) / "g.md").write_text(
+                "- **Calibration** — how far scores match rates.\n"
+            )
+            self.assertTrue(
+                pr.terms_coverage(self.TEXT, ["calibration"], str(proto))[0].in_terms
+            )
+
+    def test_a_verdict_as_a_string_is_refused(self):
+        answer = {**Reader.ANSWER, "criterion_held": "true"}
+        with self.assertRaises(ValueError):
+            pr.score_reader_answer(json.dumps(answer), Reader.TRUTH)
+
+    def test_a_pass_flag_that_is_not_a_bool_is_refused(self):
+        with self.assertRaises(ValueError):
+            pr.truth_from_metrics({"c1_pass": True, "c2_pass": None}, None)
+
+    def test_a_named_number_that_is_missing_is_refused(self):
+        with self.assertRaises(ValueError):
+            pr.truth_from_metrics({"c1_pass": True}, "accuracy")
+        self.assertEqual(pr.truth_from_metrics({"acc": 0.5}, "acc").number, 0.5)
 
 
 if __name__ == "__main__":

@@ -1,29 +1,49 @@
-"""protocol_reading — how well a person can read a protocol, measured two ways.
+"""protocol_reading — how well a person can read a protocol, measured four ways.
 
 The checks hold a protocol to its registration; nothing measured whether a
 person can read it. A reader's assessment of uniagent's protocols
 (2026-10-07): strong in content, but about 65 lines of form before the
 first sentence for a person, ids and keys in the summary, results as
-`key value · key value · …` chains. Two measurements, both cheap:
+`key value · key value · …` chains. Four measurements, all cheap:
 
 - **form** (mechanical, static evidence — never proof of readability):
   prose lines before the first field, `·` chains of more than two items,
   the longest field, intent ids / metric keys / run_ids inside the Summary,
   whether the answer carries a table;
 - **reader** (an agent that sees only the protocol): `reader_prompt` asks
-  for the question, the result with its number, how far it holds and what
-  comes next, as JSON; `score_answer` holds the number to the run's and
-  keeps the terms the reader could not place. Time comes from the reader's
-  transcript (agent_transcript).
+  what was found, its number, whether the criterion and the admissibility
+  conditions held, how far it holds, what comes next and what it could not
+  place; `score_reader_answer` holds the checkable answers to the run;
+- **glance** (an agent that sees only the first lines of the file):
+  `glance`, `glance_prompt`, `score_glance_answer` — what a reader who
+  stops early takes away, and mechanically which Summary fields those
+  lines hold;
+- **terms**: the reader's unclear terms against two layers — the Summary
+  must be plain itself, elsewhere a term may be explained in Terms or a
+  glossary it links (`terms_coverage`, occurrence = static evidence;
+  `terms_judge_prompt` asks a reader whether `entry_for`'s entry explains it).
+
+Reading time comes from the reader's transcript (agent_transcript); what
+every probe shares (the newcomer, the answer's shape) is in `cold_reader`.
 """
 
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from labkit.cold_reader import (
+    NEWCOMER,
+    answer_contract,
+    asked_keys,
+    load_answer,
+    number_matches,
+    read_number,
+    read_unclear,
+    read_verdict,
+    verdict_matches,
+)
 from labkit.protocol_check import fields
 
 #: what a reader of the Summary should not have to decode
@@ -54,6 +74,7 @@ def _section(text: str, name: str) -> str:
 
 
 def form(text: str) -> Form:
+    """The mechanical readability facts of one protocol (static evidence)."""
     lines = text.splitlines()
     found = fields(text)
     first = found[0].line if found else len(lines) + 1
@@ -114,19 +135,14 @@ READER_QUESTIONS = (
 
 
 def reader_prompt(protocol_text: str, answer_path: str) -> str:
-    """The prompt for a cold reader: the protocol, the questions, the file.
-    The reader is a newcomer, not a colleague — a colleague's patience hid
-    jargon in rounds 7 and 8 (2026-10-07)."""
-    asks = "\n".join(f'- "{k}": {q}' for k, q in READER_QUESTIONS)
+    """The prompt for a cold reader: the protocol, the questions, the file."""
     return (
-        "You are a new student who knows basic statistics, but not this "
-        "lab, its tools or its words. Below is one experiment protocol — read "
-        "it to learn what was found, and nothing else: no files, no tools "
-        "except writing your answer. Answer only from the protocol.\n\n"
+        f"{NEWCOMER} Below is one experiment protocol — read it to learn what "
+        "was found, and nothing else: no files, no tools except writing your "
+        "answer. Answer only from the protocol.\n\n"
         "Answer with one JSON object with exactly these keys:\n"
-        f"{asks}\n\n"
-        f"Write the JSON to {answer_path} (a single Bash `cat > … <<'EOF'`), "
-        "then reply with the same JSON.\n\n"
+        f"{asked_keys(READER_QUESTIONS)}\n\n"
+        f"{answer_contract(answer_path)}\n\n"
         "----- PROTOCOL -----\n"
         f"{protocol_text}\n"
         "----- END -----\n"
@@ -142,34 +158,50 @@ class Truth:
     admissible: bool | None
 
 
-def truth_from_metrics(metrics: dict, number_key: str | None) -> Truth:
-    """`criterion_pass` when the run reports the whole criterion, else all
-    `c<i>_pass`; every `a<i>_pass` for admissibility; the number under
-    `number_key`."""
+_PASS_KEY = re.compile(r"([ca])\d+_pass")
 
-    def flags(prefix: str) -> list[bool]:
-        return [
-            v
-            for k, v in metrics.items()
-            if re.fullmatch(rf"{prefix}\d+_pass", k) and isinstance(v, bool)
-        ]
 
+def metric_number(metrics: dict[str, object], key: str) -> float | None:
+    """The metric under `key` as a number; None when it is absent or not a
+    number (a bool is not a number here)."""
+    value = metrics.get(key)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
+def truth_from_metrics(metrics: dict[str, object], number_key: str | None) -> Truth:
+    """What the run says, to hold a reader to: whether the criterion held
+    (`criterion_pass` when the run reports it, else every `c<i>_pass`),
+    whether every admissibility condition held (`a<i>_pass`), and the number
+    under `number_key`. Raises ValueError when a pass flag is not true/false
+    or the named number is missing — a verdict from a subset of the
+    conjuncts, or a probe whose number key has a typo, would score nothing
+    and look clean."""
+    flags: dict[str, list[bool]] = {"c": [], "a": []}
+    for key, value in metrics.items():
+        m = _PASS_KEY.fullmatch(key)
+        if m:
+            if not isinstance(value, bool):
+                raise ValueError(f"metrics: {key} is {value!r}, not true/false")
+            flags[m.group(1)].append(value)
     crit = metrics.get("criterion_pass")
-    if not isinstance(crit, bool):
-        cs = flags("c")
-        crit = all(cs) if cs else None
-    adm = flags("a")
-    value = metrics.get(number_key) if number_key else None
-    number = (
-        float(value)
-        if isinstance(value, (int, float)) and not isinstance(value, bool)
-        else None
-    )
-    return Truth(number, crit, all(adm) if adm else None)
+    if crit is not None and not isinstance(crit, bool):
+        raise ValueError(f"metrics: criterion_pass is {crit!r}, not true/false")
+    if crit is None:
+        crit = all(flags["c"]) if flags["c"] else None
+    number = None
+    if number_key is not None:
+        number = metric_number(metrics, number_key)
+        if number is None:
+            raise ValueError(f"metrics: no number under {number_key!r}")
+    return Truth(number, crit, all(flags["a"]) if flags["a"] else None)
 
 
 @dataclass(frozen=True)
 class ReaderScore:
+    """The full reader's answer held to the run."""
+
     number_ok: bool | None  # None: the run has no number to hold it to
     number_read: float | None
     criterion_ok: bool | None = None
@@ -178,49 +210,34 @@ class ReaderScore:
     checkable: int = 0  # answers the run could decide
     unclear: list[str] = field(default_factory=list)
     effort: int | None = None
-    answers: dict = field(default_factory=dict)
+    answers: dict[str, object] = field(default_factory=dict)
 
 
-def score_answer(answer_text: str, truth: Truth, tol: float = 0.006) -> ReaderScore:
-    """Hold the reader's answer to the run. Raises ValueError with a sentence
-    when the answer is not the asked-for JSON."""
-    try:
-        data = json.loads(answer_text)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"reader answer is not JSON: {exc.msg}") from exc
-    missing = [k for k, _ in READER_QUESTIONS if k not in data]
-    if missing:
-        raise ValueError(f"reader answer lacks {missing}")
-    raw = data["number"]
-    try:
-        read = float(str(raw).replace(",", ".")) if raw is not None else None
-    except ValueError:
-        read = None
-    number_ok = (
-        None
-        if truth.number is None
-        else (read is not None and abs(read - truth.number) <= tol)
+def score_reader_answer(
+    answer_text: str, truth: Truth, tol: float = 0.006
+) -> ReaderScore:
+    """Hold the full reader's answer to the run. Raises ValueError with a
+    sentence when the answer is not the asked-for JSON."""
+    what = "reader"
+    data = load_answer(answer_text, [k for k, _ in READER_QUESTIONS], what)
+    number_ok = number_matches(data["number"], truth.number, tol)
+    crit = verdict_matches(
+        read_verdict(data, "criterion_held", what), truth.criterion_held
     )
-
-    def same(said: object, real: bool | None) -> bool | None:
-        return None if real is None else (said is real)
-
-    crit = same(data["criterion_held"], truth.criterion_held)
-    adm = same(data["admissible"], truth.admissible)
+    adm = verdict_matches(read_verdict(data, "admissible", what), truth.admissible)
     checks = [c for c in (number_ok, crit, adm) if c is not None]
-    effort = data["effort"] if isinstance(data["effort"], int) else None
-    unclear = (
-        [str(u) for u in data["unclear"]] if isinstance(data["unclear"], list) else []
-    )
+    effort = data["effort"]
     return ReaderScore(
         number_ok=number_ok,
-        number_read=read,
+        number_read=read_number(data["number"]),
         criterion_ok=crit,
         admissible_ok=adm,
         correct=sum(checks),
         checkable=len(checks),
-        unclear=unclear,
-        effort=effort,
+        unclear=read_unclear(data, what),
+        effort=effort
+        if isinstance(effort, int) and not isinstance(effort, bool)
+        else None,
         answers=data,
     )
 
@@ -238,6 +255,8 @@ def score_answer(answer_text: str, truth: Truth, tol: float = 0.006) -> ReaderSc
 
 GLANCE_LINES = 10
 SUMMARY_FIELDS = ("result", "limits", "next step")
+#: the glance questions a reader answers in words — "answered" counts these
+GLANCE_CONTENT_KEYS = ("question", "result", "how_sure", "what_follows")
 
 GLANCE_QUESTIONS = (
     (
@@ -292,17 +311,14 @@ def glance(text: str, lines: int = GLANCE_LINES) -> Glance:
 
 def glance_prompt(excerpt: str, answer_path: str) -> str:
     """The prompt for a reader who sees only the first lines."""
-    asks = "\n".join(f'- "{k}": {q}' for k, q in GLANCE_QUESTIONS)
     return (
-        "You are a new student who knows basic statistics, but not this "
-        "lab, its tools or its words. Below are the FIRST LINES of an "
-        "experiment protocol, nothing more — a reader who stops here. Answer "
-        "only from these lines; where they do not say, answer null. No files, "
-        "no tools except writing your answer.\n\n"
+        f"{NEWCOMER} Below are the FIRST LINES of an experiment protocol, "
+        "nothing more — a reader who stops here. Answer only from these lines; "
+        "where they do not say, answer null. No files, no tools except "
+        "writing your answer.\n\n"
         "Answer with one JSON object with exactly these keys:\n"
-        f"{asks}\n\n"
-        f"Write the JSON to {answer_path} (a single Bash `cat > … <<'EOF'`), "
-        "then reply with the same JSON.\n\n"
+        f"{asked_keys(GLANCE_QUESTIONS)}\n\n"
+        f"{answer_contract(answer_path)}\n\n"
         "----- FIRST LINES -----\n"
         f"{excerpt}\n"
         "----- (the protocol continues; you stopped here) -----\n"
@@ -311,47 +327,30 @@ def glance_prompt(excerpt: str, answer_path: str) -> str:
 
 @dataclass(frozen=True)
 class GlanceScore:
+    """The glance reader's answer held to the run."""
+
     number_ok: bool | None  # None: the run has no number
     criterion_ok: bool | None  # None: the run reports no criterion
-    answered: tuple[
-        str, ...
-    ]  # of question/result/how_sure/what_follows, those not null
+    answered: tuple[str, ...]  # of GLANCE_CONTENT_KEYS, those not null
     unclear: list[str]
 
 
-def score_glance(answer_text: str, truth: Truth, tol: float = 0.006) -> GlanceScore:
+def score_glance_answer(
+    answer_text: str, truth: Truth, tol: float = 0.006
+) -> GlanceScore:
     """Hold the glance answer to the run. A null where the run has a value
     counts as not taken away, the same as a wrong one. Raises ValueError
     when the answer is not the asked-for JSON."""
-    try:
-        data = json.loads(answer_text)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"glance answer is not JSON: {exc.msg}") from exc
-    missing = [k for k, _ in GLANCE_QUESTIONS if k not in data]
-    if missing:
-        raise ValueError(f"glance answer lacks {missing}")
-    raw = data["number"]
-    try:
-        read = float(str(raw).replace(",", ".")) if raw is not None else None
-    except ValueError:
-        read = None
-    number_ok = (
-        None
-        if truth.number is None
-        else (read is not None and abs(read - truth.number) <= tol)
+    what = "glance"
+    data = load_answer(answer_text, [k for k, _ in GLANCE_QUESTIONS], what)
+    return GlanceScore(
+        number_ok=number_matches(data["number"], truth.number, tol),
+        criterion_ok=verdict_matches(
+            read_verdict(data, "criterion_held", what), truth.criterion_held
+        ),
+        answered=tuple(k for k in GLANCE_CONTENT_KEYS if data[k]),
+        unclear=read_unclear(data, what),
     )
-    crit = (
-        None
-        if truth.criterion_held is None
-        else data["criterion_held"] is truth.criterion_held
-    )
-    answered = tuple(
-        k for k in ("question", "result", "how_sure", "what_follows") if data[k]
-    )
-    unclear = (
-        [str(u) for u in data["unclear"]] if isinstance(data["unclear"], list) else []
-    )
-    return GlanceScore(number_ok, crit, answered, unclear)
 
 
 # --- terms: is an unclear term explained where the reader would look? -------
@@ -364,7 +363,7 @@ def score_glance(answer_text: str, truth: Truth, tol: float = 0.006) -> GlanceSc
 # Ids are matched as patterns: digit runs become NN, so an entry
 # `beschaffungsantrag-NN` covers `beschaffungsantrag-09`.
 
-_LINK = re.compile(r"\]\(([^)\s]+\.md)\)")
+_LINK = re.compile(r"\]\(([^)\s#]+\.md)(?:#[^)\s]*)?\)")
 _DIGITS = re.compile(r"\d+")
 _SPLIT = re.compile(r"\s*(?:/|\(|\)|,|;)\s*")
 
@@ -376,12 +375,20 @@ def normalize_term(term: str) -> str:
 
 
 def _variants(term: str) -> list[str]:
-    """The term and the parts a reader lists it by ("A / B (C)")."""
+    """The term and the parts a reader lists it by ("A / B (C)"), normalized;
+    short abbreviations (CI, N) included."""
     parts = [term, *_SPLIT.split(term)]
-    return [n for n in (normalize_term(p) for p in parts) if len(n) >= 3]
+    return [n for n in (normalize_term(p) for p in parts) if n]
 
 
-def _section_text(text: str, name: str) -> str:
+def _occurs(variant: str, text: str) -> bool:
+    """Whether a normalized term occurs in normalized text as a word of its
+    own — "rag" does not occur in "paragraph"."""
+    return re.search(rf"(?<!\w){re.escape(variant)}(?!\w)", text) is not None
+
+
+def _normalized_section(text: str, name: str) -> str:
+    """The section's text, normalized like a term (`normalize_term`)."""
     return normalize_term(_section(text, name))
 
 
@@ -404,6 +411,8 @@ def glossary_text(text: str, protocol_path: str | None) -> str:
 
 @dataclass(frozen=True)
 class TermHit:
+    """Where one unclear term occurs."""
+
     term: str
     in_summary: bool  # the Summary uses it: Terms does not count there
     in_terms: bool  # it occurs in Terms or a linked glossary (static evidence)
@@ -412,7 +421,10 @@ class TermHit:
 def terms_coverage(
     text: str, unclear: list[str], protocol_path: str | None = None
 ) -> list[TermHit]:
-    summary = _section_text(text, "Summary")
+    """Which of the reader's unclear terms occur in the Summary, and which in
+    Terms or a glossary it links — occurrence as a word of its own, static
+    evidence that an explanation is there, not proof."""
+    summary = _normalized_section(text, "Summary")
     glossary = normalize_term(glossary_text(text, protocol_path))
     hits = []
     for term in unclear:
@@ -420,8 +432,8 @@ def terms_coverage(
         hits.append(
             TermHit(
                 term,
-                in_summary=any(v in summary for v in vs),
-                in_terms=any(v in glossary for v in vs),
+                in_summary=any(_occurs(v, summary) for v in vs),
+                in_terms=any(_occurs(v, glossary) for v in vs),
             )
         )
     return hits
@@ -432,14 +444,13 @@ def terms_judge_prompt(pairs: list[tuple[str, str]], answer_path: str) -> str:
     occurrence check cannot see)."""
     body = "\n\n".join(f"TERM: {t}\nENTRY: {e}" for t, e in pairs)
     return (
-        "You are a new student who knows basic statistics, but not this lab. "
-        "For each term below you get the entry a protocol gives for it. Does "
-        "the entry let you understand the term — what it is, in plain words? "
-        "A mere mention, a code, or a pointer elsewhere is not an explanation.\n\n"
+        f"{NEWCOMER} For each term below you get the entry a protocol gives "
+        "for it. Does the entry let you understand the term — what it is, in "
+        "plain words? A mere mention, a code, or a pointer elsewhere is not an "
+        "explanation.\n\n"
         "Answer with one JSON object mapping each term exactly as given to "
-        "true (explained) or false (not explained).\n"
-        f"Write the JSON to {answer_path} (a single Bash `cat > … <<'EOF'`), "
-        "then reply with the same JSON. No files, no other tools.\n\n"
+        "true (explained) or false (not explained). No files, no other "
+        f"tools.\n{answer_contract(answer_path)}\n\n"
         f"{body}\n"
     )
 
@@ -475,9 +486,9 @@ def entry_for(term: str, glossary: str) -> str | None:
         if set(vs) & set(_variants(label)):
             return e
     for e, label in labelled:  # the term is part of a longer label
-        if any(v in normalize_term(label) for v in vs):
+        if any(_occurs(v, normalize_term(label)) for v in vs):
             return e
     for e in entries:
-        if any(v in normalize_term(e) for v in vs):
+        if any(_occurs(v, normalize_term(e)) for v in vs):
             return e
     return None

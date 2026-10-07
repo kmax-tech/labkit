@@ -10,8 +10,8 @@ each with `path:line`. Two measures:
   that is the truth — a function, a class or a module-level name, resolved
   from the source with `ast`, so a truth that no longer exists refuses to
   score instead of scoring wrong;
-- **effort** (from the agent's transcript, `agent_transcript`): tool calls,
-  files opened, searches, seconds.
+- **effort** (from the agent's transcript, `agent_transcript`): tool calls
+  by tool, files read, seconds.
 
 Questions and truth live in a TOML file:
 
@@ -35,13 +35,13 @@ its registered steps the answer names in the right order:
 from __future__ import annotations
 
 import ast
-import json
 import re
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit import agent_transcript
+from labkit.cold_reader import answer_contract, load_answer
 
 
 class NavigationError(ValueError):
@@ -50,6 +50,8 @@ class NavigationError(ValueError):
 
 @dataclass(frozen=True)
 class Question:
+    """A "where does the code do X?" question and the places that answer it."""
+
     id: str
     question: str
     truth: tuple[str, ...]  # "path:symbol", path relative to the repo
@@ -81,7 +83,13 @@ def symbol_span(repo: Path, truth: str) -> tuple[str, int, int]:
         raise NavigationError(f"truth {truth}: no file {source}")
     lines = re.fullmatch(r"L(\d+)-L(\d+)", symbol)
     if lines:
-        return path, int(lines.group(1)), int(lines.group(2))
+        first, last = int(lines.group(1)), int(lines.group(2))
+        length = len(source.read_text(encoding="utf-8").splitlines())
+        if not 1 <= first <= last <= length:
+            raise NavigationError(
+                f"truth {truth}: not a range inside {path} ({length} lines)"
+            )
+        return path, first, last
     if not symbol:
         return path, 1, len(source.read_text(encoding="utf-8").splitlines())
     nodes: list[ast.stmt] = ast.parse(source.read_text(encoding="utf-8")).body
@@ -106,13 +114,13 @@ def _names(node: ast.stmt) -> set[str]:
     return set()
 
 
-def prompt(
+def nav_prompt(
     repo: Path,
     questions: list[Question],
     answer_path: str,
     flows: tuple[Flow, ...] = (),
 ) -> str:
-    """The prompt for a cold agent in `repo`."""
+    """The prompt for a cold agent finding its way in `repo`."""
     asks = "\n".join(f'- "{q.id}": {q.question}' for q in questions)
     if flows:
         asks += "\n" + "\n".join(
@@ -128,8 +136,7 @@ def prompt(
         '"path:line" (path relative to the repository root, the line where '
         "the code doing it starts), or null if you could not find it.\n"
         f"{asks}\n\n"
-        f"Write the JSON to {answer_path} (a single Bash `cat > … <<'EOF'`), "
-        "then reply with the same JSON.\n"
+        f"{answer_contract(answer_path)}\n"
     )
 
 
@@ -138,6 +145,8 @@ _PLACE = re.compile(r"^\s*`?(?:\./)?([^\s:`]+):(\d+)")
 
 @dataclass(frozen=True)
 class Found:
+    """One navigation answer held to its truth."""
+
     id: str
     answer: str | None
     file_right: bool
@@ -145,21 +154,20 @@ class Found:
     truth: str  # the truth spans, "path:first-last"
 
 
-def score(answer_text: str, questions: list[Question], repo: Path) -> list[Found]:
+def score_nav_answer(
+    answer_text: str, questions: list[Question], repo: Path
+) -> list[Found]:
     """Hold each answer to its truth. Raises ValueError when the answer is
     not the asked-for JSON, NavigationError when a truth no longer exists."""
-    try:
-        data = json.loads(answer_text)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"navigation answer is not JSON: {exc.msg}") from exc
-    missing = [q.id for q in questions if q.id not in data]
-    if missing:
-        raise ValueError(f"navigation answer lacks {missing}")
+    data = load_answer(answer_text, [q.id for q in questions], "navigation")
     out = []
     for q in questions:
         spans = [symbol_span(repo, t) for t in q.truth]
         raw = data[q.id]
-        m = _PLACE.match(str(raw)) if raw else None
+        if raw is not None and not isinstance(raw, str):
+            raise ValueError(f'navigation answer: {q.id} must be "path:line" or null')
+        place = raw.removeprefix(str(repo) + "/") if raw else ""
+        m = _PLACE.match(place) if place else None
         path, line = (m.group(1), int(m.group(2))) if m else (None, None)
         if path is not None:
             path = _full_path(repo, path, [p for p, _, _ in spans])
@@ -200,6 +208,8 @@ def _full_path(repo: Path, path: str, truths: list[str]) -> str:
 
 @dataclass(frozen=True)
 class Flow:
+    """A question for an entry point's steps in order, with a pattern per step."""
+
     id: str
     question: str
     steps: tuple[tuple[str, str], ...]  # (name, regex a mention of the step matches)
@@ -213,13 +223,21 @@ def load_flows(path: Path) -> list[Flow]:
         missing = [k for k in ("id", "question", "steps") if k not in f]
         if missing:
             raise NavigationError(f"{path.name}: a flow lacks {missing}")
+        for name, pattern in f["steps"]:
+            try:
+                re.compile(pattern)
+            except re.error as exc:
+                raise NavigationError(
+                    f"{path.name}: flow {f['id']}, step {name!r}: bad pattern ({exc})"
+                ) from exc
         out.append(Flow(f["id"], f["question"], tuple((n, r) for n, r in f["steps"])))
     return out
 
 
 def flow_in_order(answer: list[str], flow: Flow) -> int:
     """How many registered steps the answer names in the registered order —
-    the longest run of steps whose first mentions rise through the answer."""
+    the longest run of steps whose first mentions do not fall back through
+    the answer (two steps named in one item both count)."""
     first: list[int] = []
     for _, pattern in flow.steps:
         hit = next(
@@ -228,19 +246,36 @@ def flow_in_order(answer: list[str], flow: Flow) -> int:
         )
         if hit is not None:
             first.append(hit)
-    best: list[int] = []  # longest strictly increasing subsequence of `first`
+    best: list[int] = []  # longest non-decreasing subsequence of `first`
     for x in first:
-        i = next((k for k, v in enumerate(best) if v >= x), len(best))
+        i = next((k for k, v in enumerate(best) if v > x), len(best))
         best[i : i + 1] = [x]
     return len(best)
 
 
+def score_flows(answer_text: str, flows: list[Flow]) -> dict[str, tuple[int, int]]:
+    """Per flow question, (steps named in order, steps registered). Raises
+    ValueError when a flow is unanswered or not a list of strings."""
+    data = load_answer(answer_text, [f.id for f in flows], "navigation")
+    out = {}
+    for f in flows:
+        steps = data[f.id]
+        if not isinstance(steps, list) or not all(isinstance(s, str) for s in steps):
+            raise ValueError(f"navigation answer: {f.id} must be a list of strings")
+        out[f.id] = (flow_in_order(steps, f), len(f.steps))
+    return out
+
+
 @dataclass(frozen=True)
 class Effort:
+    """What the agent did to find its answers."""
+
     seconds: int
     calls: int
     by_tool: dict[str, int] = field(default_factory=dict)
-    files_opened: list[str] = field(default_factory=list)  # Read calls, no repeats
+    files_opened: list[str] = field(
+        default_factory=list
+    )  # files read by Read or a shell command, no repeats
 
 
 def effort(transcript: Path, repo: Path) -> Effort:

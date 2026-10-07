@@ -66,7 +66,7 @@ class Navigation(unittest.TestCase):
             cn.symbol_span(self.repo, "pkg/other.py:majority")
 
     def test_a_right_answer_is_found(self):
-        got = cn.score(
+        got = cn.score_nav_answer(
             json.dumps({"majority": "pkg/mod.py:7", "check": "`./pkg/mod.py:12`"}),
             self.questions,
             self.repo,
@@ -76,7 +76,7 @@ class Navigation(unittest.TestCase):
         )
 
     def test_the_right_file_at_the_wrong_line_is_not_found(self):
-        got = cn.score(
+        got = cn.score_nav_answer(
             json.dumps({"majority": "pkg/mod.py:12", "check": None}),
             self.questions,
             self.repo,
@@ -87,10 +87,12 @@ class Navigation(unittest.TestCase):
 
     def test_an_answer_without_every_key_is_refused(self):
         with self.assertRaises(ValueError):
-            cn.score('{"majority": "pkg/mod.py:7"}', self.questions, self.repo)
+            cn.score_nav_answer(
+                '{"majority": "pkg/mod.py:7"}', self.questions, self.repo
+            )
 
     def test_the_prompt_names_every_question_and_no_truth(self):
-        p = cn.prompt(self.repo, self.questions, "/tmp/a.json")
+        p = cn.nav_prompt(self.repo, self.questions, "/tmp/a.json")
         self.assertIn('"majority"', p)
         self.assertNotIn("Checker.check", p)
 
@@ -123,7 +125,7 @@ class Tails(unittest.TestCase):
             (repo / "pkg").mkdir()
             (repo / "pkg/mod.py").write_text(SOURCE)
             qs = [cn.Question("m", "q", ("pkg/mod.py:majority",))]
-            got = cn.score('{"m": "mod.py:7"}', qs, repo)
+            got = cn.score_nav_answer('{"m": "mod.py:7"}', qs, repo)
             self.assertTrue(got[0].found)
 
     def test_an_ambiguous_tail_does_not_count(self):
@@ -133,8 +135,98 @@ class Tails(unittest.TestCase):
                 (repo / sub).mkdir()
                 (repo / sub / "mod.py").write_text(SOURCE)
             qs = [cn.Question("m", "q", ("pkg/mod.py:majority",))]
-            got = cn.score('{"m": "mod.py:7"}', qs, repo)
+            got = cn.score_nav_answer('{"m": "mod.py:7"}', qs, repo)
             self.assertFalse(got[0].file_right)
+
+
+class NavAuditFixes(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self.tmp.name)
+        (self.repo / "pkg").mkdir()
+        (self.repo / "pkg/mod.py").write_text(SOURCE)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_an_absolute_path_inside_the_repo_counts(self):
+        qs = [cn.Question("m", "q", ("pkg/mod.py:majority",))]
+        got = cn.score_nav_answer(
+            json.dumps({"m": f"{self.repo}/pkg/mod.py:7"}), qs, self.repo
+        )
+        self.assertTrue(got[0].found)
+
+    def test_a_range_outside_the_file_refuses(self):
+        with self.assertRaises(cn.NavigationError):
+            cn.symbol_span(self.repo, "pkg/mod.py:L20-L5")
+        with self.assertRaises(cn.NavigationError):
+            cn.symbol_span(self.repo, "pkg/mod.py:L1-L9999")
+
+    def test_a_flow_answer_that_is_not_a_list_is_refused(self):
+        flow = cn.Flow("s", "q", (("a", "alpha"),))
+        with self.assertRaises(ValueError):
+            cn.score_flows('{"s": "alpha beta"}', [flow])
+        with self.assertRaises(ValueError):
+            cn.score_flows("{}", [flow])
+
+    def test_two_steps_in_one_item_both_count(self):
+        flow = cn.Flow("s", "q", (("a", "alpha"), ("b", "beta"), ("c", "gamma")))
+        self.assertEqual(cn.flow_in_order(["alpha and beta", "gamma"], flow), 3)
+
+    def test_a_bad_step_pattern_refuses_at_load(self):
+        (self.repo / "q.toml").write_text(
+            '[[flow]]\nid = "s"\nquestion = "q"\nsteps = [["a", "("]]\n'
+        )
+        with self.assertRaises(cn.NavigationError):
+            cn.load_flows(self.repo / "q.toml")
+
+    def test_effort_counts_calls_files_and_seconds(self):
+        t = self.repo / "t.jsonl"
+        rows = [
+            {
+                "timestamp": "2026-10-07T10:00:00Z",
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "1",
+                            "name": "Read",
+                            "input": {"file_path": f"{self.repo}/pkg/mod.py"},
+                        }
+                    ]
+                },
+            },
+            {
+                "timestamp": "2026-10-07T10:00:05Z",
+                "type": "user",
+                "message": {
+                    "content": [
+                        {"type": "tool_result", "tool_use_id": "1", "content": "x"}
+                    ]
+                },
+            },
+            {
+                "timestamp": "2026-10-07T10:00:09Z",
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "2",
+                            "name": "Bash",
+                            "input": {"command": f"grep -n def {self.repo}/pkg/mod.py"},
+                        }
+                    ]
+                },
+            },
+        ]
+        t.write_text("\n".join(json.dumps(r) for r in rows))
+        e = cn.effort(t, self.repo)
+        self.assertEqual(
+            (e.seconds, e.calls, e.by_tool), (9, 2, {"Read": 1, "Bash": 1})
+        )
+        self.assertEqual(e.files_opened, ["pkg/mod.py"])
 
 
 if __name__ == "__main__":

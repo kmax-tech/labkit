@@ -487,6 +487,20 @@ class TestPromptAndExample(unittest.TestCase):
         rc, out = run_main(text)
         self.assertEqual(rc, 0, out)
 
+    def test_a_summary_without_limits_after_a_measure_run_fails(self):
+        # The twin above passes; the same protocol without Limits must not.
+        text = (
+            pilot()
+            + "\n## Summary\n\n- **Result:** The classifier separates the two classes"
+            " well on the held-out set.\n- **Next step:** none\n"
+            + "\n## Result\n\n- **Answer to the question:** AUC 0.91 "
+            "(2026-09-06T10-00-00_aa11)\n- **Raw output:** see output/examples.md\n"
+            "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
+        )
+        rc, out = run_main(text)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("Limits", out)
+
 
 class TestPilotStampNotFrozen(unittest.TestCase):
     """The template's legend MENTIONS the frozen rule — that must not make a

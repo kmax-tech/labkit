@@ -5,6 +5,51 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.64.0 — 2026-10-07
+
+Worked off a code audit of everything changed since 0.58.1 (two fresh
+reviewers, correctness and structure; every finding checked in the code).
+
+### Breaking
+
+Last version with the old names: **v0.63.2**. Python names only; no file
+format changes.
+
+- `protocol_reading.score_answer` is `score_reader_answer`, `score_glance`
+  is `score_glance_answer`; `code_navigation.score` is `score_nav_answer`,
+  `prompt` is `nav_prompt`; the usability handlers are `cmd_reader`,
+  `cmd_read_score`, `cmd_glance`, `cmd_glance_score`, `cmd_terms`,
+  `cmd_nav`, `cmd_nav_score` (the console commands are unchanged).
+- `finalize.check_intent_ids` is `check_intent_keys_in_metrics` — it was a
+  second function of the same name as `code_check.check_intent_ids`, doing
+  something else.
+- The scorers refuse instead of scoring wrong: a yes/no given as a string
+  ("true"), a pass flag in metrics.json that is not true/false, a named
+  number missing from metrics.json, a place that is not "path:line", a
+  flow answer that is not a list of strings, a line-range truth outside
+  its file, a flow step pattern that does not compile (refused at load,
+  before the agent runs).
+
+### Fixed
+
+- Terms coverage matches a term as a word of its own ("RAG" no longer
+  occurs in "paragraph") and keeps short abbreviations (CI, N), which were
+  dropped; a Terms link with an anchor (`g.md#x`) is read. Today's
+  measurements were rechecked: none changed.
+- `nav-score` finds an absolute path inside the repo; two flow steps named
+  in one answer item both count.
+- `finalize`: every blocker and warning goes through `Gate.block` /
+  `Gate.warn` — blockers of the completion station and open fields now
+  print with the same `BLOCKER:` / `warning:` prefix as the others.
+
+### Changed
+
+- New module `labkit/cold_reader.py`: what every cold-reader probe shares
+  (the newcomer persona, the answer hand-off, loading and reading the
+  answer) — it was copied three and four times.
+- Module docstrings of `protocol_reading` and `usability` name everything
+  they hold; docstrings for the finalize stations and the new dataclasses.
+
 ## 0.63.2 — 2026-10-07
 
 ### Changed

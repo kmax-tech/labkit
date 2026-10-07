@@ -4,6 +4,17 @@
     usability score <dir> [--transcript F]  number · binding · log (· transcript) → one table, one JSON
     usability trace <transcript>            the agent's timeline, one line per tool call
 
+Reading a protocol (protocol_reading), each a prompt for a cold reader and
+its score against the run:
+
+    usability reader <dir> / read-score <dir>     the whole protocol
+    usability glance <dir> / glance-score <dir>   only its first ten lines
+    usability terms <dir>                         the reader's unclear terms vs Summary and Terms
+
+Finding one's way in code (code_navigation):
+
+    usability nav <repo> --questions Q --out P / nav-score ...   "where does the code do X?"
+
 Why this exists (2026-10-05): the doctrine grew by scars, every scar added
 a gate, and nobody measured what the whole chain costs for the simplest
 case — one deterministic number, kept. uniagent area 01 needed four days,
@@ -551,10 +562,13 @@ def _bound_protocol(root: Path) -> tuple[Path, protocol_reading.Truth]:
         raise SystemExit(f"usability: run {run.name} is bound to no protocol")
     path = Path(bound) if Path(bound).is_absolute() else area / bound
     metrics = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
-    return path, protocol_reading.truth_from_metrics(metrics, probe.metric_key)
+    try:
+        return path, protocol_reading.truth_from_metrics(metrics, probe.metric_key)
+    except ValueError as exc:
+        raise SystemExit(f"usability: run {run.name}: {exc}") from exc
 
 
-def reader(root: Path) -> int:
+def cmd_reader(root: Path) -> int:
     """Write `<dir>.reader-prompt.md`: the bound protocol for a cold reader."""
     protocol, _ = _bound_protocol(root)
     answer = _sidecar(root, "reader-answer.json")
@@ -569,7 +583,7 @@ def reader(root: Path) -> int:
     return 0
 
 
-def glance(root: Path) -> int:
+def cmd_glance(root: Path) -> int:
     """Write `<dir>.glance-prompt.md`: only the first lines of the bound protocol."""
     protocol, _ = _bound_protocol(root)
     g = protocol_reading.glance(protocol.read_text(encoding="utf-8"))
@@ -586,7 +600,7 @@ def glance(root: Path) -> int:
     return 0
 
 
-def glance_score(root: Path) -> int:
+def cmd_glance_score(root: Path) -> int:
     """Hold the glance answer to the run; `<dir>.glance.json`."""
     protocol, truth = _bound_protocol(root)
     text = protocol.read_text(encoding="utf-8")
@@ -595,7 +609,9 @@ def glance_score(root: Path) -> int:
     if not answer.is_file():
         raise SystemExit(f"usability: {answer} missing — has the reader answered?")
     try:
-        got = protocol_reading.score_glance(answer.read_text(encoding="utf-8"), truth)
+        got = protocol_reading.score_glance_answer(
+            answer.read_text(encoding="utf-8"), truth
+        )
     except ValueError as exc:
         raise SystemExit(f"usability: {exc}") from exc
     hits = protocol_reading.terms_coverage(text, got.unclear, str(protocol))
@@ -613,14 +629,15 @@ def glance_score(root: Path) -> int:
     print(
         f"  first {g.lines} lines, {g.chars} chars · Summary fields inside: "
         f"{', '.join(g.summary_fields) or 'none'} · number {got.number_ok}, "
-        f"criterion {got.criterion_ok} · answered {len(got.answered)}/4 · "
+        f"criterion {got.criterion_ok} · answered {len(got.answered)}/"
+        f"{len(protocol_reading.GLANCE_CONTENT_KEYS)} · "
         f"unclear {len(got.unclear)}, of them in the Summary "
         f"{sum(h.in_summary for h in hits)}"
     )
     return 0 if got.number_ok is not False and got.criterion_ok is not False else 1
 
 
-def terms(root: Path) -> int:
+def cmd_terms(root: Path) -> int:
     """The full reader's unclear terms against the Summary and Terms."""
     protocol, _ = _bound_protocol(root)
     answer = _sidecar(root, "reader-answer.json")
@@ -640,7 +657,7 @@ def terms(root: Path) -> int:
     return 0
 
 
-def nav(repo: Path, questions: Path, out: Path) -> int:
+def cmd_nav(repo: Path, questions: Path, out: Path) -> int:
     """Write `<out>.nav-prompt.md` for a cold agent in `repo`."""
     qs = code_navigation.load_questions(questions)
     for q in qs:
@@ -650,28 +667,33 @@ def nav(repo: Path, questions: Path, out: Path) -> int:
     prompt = out.with_name(out.name + ".nav-prompt.md")
     flows = tuple(code_navigation.load_flows(questions))
     prompt.write_text(
-        code_navigation.prompt(repo, qs, str(answer), flows), encoding="utf-8"
+        code_navigation.nav_prompt(repo, qs, str(answer), flows), encoding="utf-8"
     )
     print(f"navigation prompt → {prompt}\nthe agent writes → {answer}")
     return 0
 
 
-def nav_score(repo: Path, questions: Path, out: Path, transcript: Path | None) -> int:
+def cmd_nav_score(
+    repo: Path, questions: Path, out: Path, transcript: Path | None
+) -> int:
     """Hold the answers to the truth; `<out>.nav.json`."""
     qs = code_navigation.load_questions(questions)
     answer = out.with_name(out.name + ".nav-answer.json")
     if not answer.is_file():
         raise SystemExit(f"usability: {answer} missing — has the agent answered?")
     try:
-        got = code_navigation.score(answer.read_text(encoding="utf-8"), qs, repo)
+        got = code_navigation.score_nav_answer(
+            answer.read_text(encoding="utf-8"), qs, repo
+        )
     except (ValueError, code_navigation.NavigationError) as exc:
         raise SystemExit(f"usability: {exc}") from exc
     eff = code_navigation.effort(transcript, repo) if transcript else None
-    answers = json.loads(answer.read_text(encoding="utf-8"))
-    flows = {
-        f.id: (code_navigation.flow_in_order(answers.get(f.id) or [], f), len(f.steps))
-        for f in code_navigation.load_flows(questions)
-    }
+    try:
+        flows = code_navigation.score_flows(
+            answer.read_text(encoding="utf-8"), code_navigation.load_flows(questions)
+        )
+    except ValueError as exc:
+        raise SystemExit(f"usability: {exc}") from exc
     out.with_name(out.name + ".nav.json").write_text(
         json.dumps(
             {
@@ -701,14 +723,16 @@ def nav_score(repo: Path, questions: Path, out: Path, transcript: Path | None) -
     return 0
 
 
-def read_score(root: Path, transcript: Path | None) -> int:
+def cmd_read_score(root: Path, transcript: Path | None) -> int:
     """Hold the reader's answer to the run's number; `<dir>.reader.json`."""
     _, truth = _bound_protocol(root)
     answer = _sidecar(root, "reader-answer.json")
     if not answer.is_file():
         raise SystemExit(f"usability: {answer} missing — has the reader answered?")
     try:
-        got = protocol_reading.score_answer(answer.read_text(encoding="utf-8"), truth)
+        got = protocol_reading.score_reader_answer(
+            answer.read_text(encoding="utf-8"), truth
+        )
     except ValueError as exc:
         raise SystemExit(f"usability: {exc}") from exc
     seconds = None
@@ -746,12 +770,7 @@ def score(root: Path, transcript: Path | None = None) -> int:
         config_file = run / "config.json"  # a completed run always has one
         metrics = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
         config = json.loads(config_file.read_text(encoding="utf-8"))
-        value = metrics.get(probe.metric_key)
-        number = (
-            float(value)
-            if isinstance(value, (int, float)) and not isinstance(value, bool)
-            else None
-        )
+        number = protocol_reading.metric_number(metrics, probe.metric_key)
         binding = config.get("protocol") or {}
         # bound means the run recorded an id; a path alone is a hint that goes stale
         bound_to = binding.get("path") if binding.get("id") else None
@@ -985,28 +1004,28 @@ def main(argv: list[str]) -> int:
     ns.add_argument("--transcript", help="the agent's transcript: its effort")
     args = ap.parse_args(argv)
     if args.cmd == "nav":
-        return nav(
+        return cmd_nav(
             Path(args.repo).resolve(),
             Path(args.questions).resolve(),
             Path(args.out).resolve(),
         )
     if args.cmd == "nav-score":
-        return nav_score(
+        return cmd_nav_score(
             Path(args.repo).resolve(),
             Path(args.questions).resolve(),
             Path(args.out).resolve(),
             Path(args.transcript).resolve() if args.transcript else None,
         )
     if args.cmd == "glance":
-        return glance(Path(args.dir).resolve())
+        return cmd_glance(Path(args.dir).resolve())
     if args.cmd == "glance-score":
-        return glance_score(Path(args.dir).resolve())
+        return cmd_glance_score(Path(args.dir).resolve())
     if args.cmd == "terms":
-        return terms(Path(args.dir).resolve())
+        return cmd_terms(Path(args.dir).resolve())
     if args.cmd == "reader":
-        return reader(Path(args.dir).resolve())
+        return cmd_reader(Path(args.dir).resolve())
     if args.cmd == "read-score":
-        return read_score(
+        return cmd_read_score(
             Path(args.dir).resolve(),
             Path(args.transcript).resolve() if args.transcript else None,
         )

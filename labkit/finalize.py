@@ -168,8 +168,14 @@ class Gate:
     warnings: int = 0
 
     def block(self, msg: str) -> None:
+        """Print a blocker and keep it for the summary."""
         print(f"  BLOCKER: {msg}")
         self.blocked.append(msg)
+
+    def warn(self, msg: str) -> None:
+        """Print a warning and count it for the summary."""
+        print(f"  warning: {msg}")
+        self.warnings += 1
 
 
 def choose_protocol(area: Path, protocol: Path | None) -> Path | None:
@@ -202,19 +208,16 @@ def answering_run(gate: Gate, area: Path, pid: str | None) -> Path | None:
     scopes or provenance on the newest run judged the probe while the
     numbers came from the measurement (review 2026-10-07)."""
     if pid is None:
-        print("  no stamped protocol id ([protocol] id) — no run is bound to it")
-        gate.blocked.append("no stamped protocol id")
+        gate.block("no stamped protocol id ([protocol] id) — no run is bound to it")
         return None
     if not (area / "runs").is_dir():
-        print(f"  no runs/ directory in {area}")
-        gate.blocked.append(f"no runs/ directory in {area}")
+        gate.block(f"no runs/ directory in {area}")
         return None
     taken, rest = bound_runs(area, pid)
     if not taken:
-        print(f"  no completed run bound to {pid}")
+        gate.block(f"no completed run bound to {pid}")
         for f in rest:
             print(f"    {f['dir'].name}: {f['why']}")
-        gate.blocked.append(f"no completed run bound to {pid}")
         return None
     mpath, skipped = newest_with_intent_keys(taken)
     assert mpath is not None, "taken is non-empty"
@@ -246,6 +249,8 @@ def cited_run_mismatch(text: str, run_dir: Path) -> str | None:
 def check_completion(
     gate: Gate, area: Path, protocol: Path, text: str, pid: str | None
 ) -> Path | None:
+    """Station 1: the run every later station holds the protocol to — chosen,
+    shown, and held to the run the answer cites. Returns it, or None."""
     print(f"── completion: {protocol.name} ──")
     run_dir = answering_run(gate, area, pid)
     if run_dir is not None:
@@ -255,9 +260,12 @@ def check_completion(
     return run_dir
 
 
-def check_intent_ids(
+def check_intent_keys_in_metrics(
     gate: Gate, protocol: Path, text: str, run_dir: Path | None
 ) -> None:
+    """Station 2: every registered intent id reports as a key of the answering
+    run's metrics.json (intent-check). Not code_check.check_intent_ids, which
+    holds the promises to the code before any run."""
     print("── intent-check ──")
     if not registered_ids(text):
         print("  no intent ids registered — nothing to check")
@@ -271,11 +279,11 @@ def check_intent_ids(
     for line in buf.getvalue().splitlines():
         print(f"  {line}")
     if rc != 0:
-        gate.blocked.append("intent-check failed (see its lines above)")
+        gate.block("intent-check failed (see its lines above)")
 
 
 def check_declared_scopes(gate: Gate, area: Path, run_dir: Path | None) -> None:
-    """A promise's declared scope edited after the run: today's code is not
+    """Station 3: a promise's declared scope edited after the run: today's code is not
     the code that produced the number; until 2026-10-06 only recheck saw it
     (Durchstich)."""
     print("── declared scopes ──")
@@ -300,11 +308,11 @@ def check_declared_scopes(gate: Gate, area: Path, run_dir: Path | None) -> None:
 def check_open_fields(
     gate: Gate, protocol: Path, text: str, head: protocol_block.Head
 ) -> None:
+    """Station 4: fields of the protocol still empty or a placeholder."""
     print(f"── open fields: {protocol.name} ──")
     holes = open_holes(text, head)
     for lineno, label in holes:
-        print(f"  {protocol.name}:{lineno}: {label}")
-    gate.warnings += len(holes)
+        gate.warn(f"{protocol.name}:{lineno}: {label}")
     if not holes:
         print("  all fields filled")
 
@@ -319,6 +327,8 @@ def provenance_owed(head: protocol_block.Head) -> bool:
 def check_provenance(
     gate: Gate, area: Path, head: protocol_block.Head, run_dir: Path | None
 ) -> None:
+    """Station 5: source frozen in the run, source and output tracked in git —
+    where it is owed (`provenance_owed`)."""
     print("── provenance ──")
     if not provenance_owed(head):
         print("  n/a — not a run of seconds (the agent audit covers provenance there)")
@@ -328,17 +338,15 @@ def check_provenance(
         return
     b, w = provenance_findings(area, run_dir)
     for line in b:
-        print(f"  BLOCKER: {line}")
+        gate.block(line)
     for line in w:
-        print(f"  warning: {line}")
+        gate.warn(line)
     if not b and not w:
         print("  source frozen in the run; source and output tracked in git")
-    gate.blocked += b
-    gate.warnings += len(w)
 
 
 def check_area_tests(gate: Gate, area: Path) -> None:
-    """The resolution check runs again before a number leaves: a later edit
+    """Station 6: the area's own tests. The resolution check runs again before a number leaves: a later edit
     of evaluate() that mutes the criterion is caught here too — on every
     tier, seconds included, where preflight is not owed (2026-10-07). A
     missing test is no finding here; preflight owes it at the freeze."""
@@ -349,8 +357,7 @@ def check_area_tests(gate: Gate, area: Path) -> None:
     elif tests.state == "ok":
         print(f"  ok — {', '.join(t.name for t in tests.files)}")
     elif tests.state == "no-pytest":
-        print("  warning: pytest is not installed in this interpreter — tests not run")
-        gate.warnings += 1
+        gate.warn("pytest is not installed in this interpreter — tests not run")
     else:
         for ln in tests.tail:
             print(f"  {ln}")
@@ -360,19 +367,21 @@ def check_area_tests(gate: Gate, area: Path) -> None:
 
 
 def check_criterion_n(gate: Gate, run_dir: Path | None) -> None:
+    """Station 7: a criterion's denominator that matches no recorded input count."""
     print("── criterion n ──")
     if run_dir is None:
         print("  no completed run to check")
         return
     w = criterion_n_input_mismatches(run_dir)
     for line in w:
-        print(f"  warning: {line}")
+        gate.warn(line)
     if not w:
         print("  every c<i>_n equals a recorded input count (or there is none)")
-    gate.warnings += len(w)
 
 
 def report(gate: Gate) -> int:
+    """The summary: every blocker once more, then the exit code (0 clean, 1
+    findings)."""
     print()
     if gate.blocked:
         print(
@@ -404,7 +413,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
         return 2
     gate = Gate()
     run_dir = check_completion(gate, area, chosen, text, head.id)
-    check_intent_ids(gate, chosen, text, run_dir)
+    check_intent_keys_in_metrics(gate, chosen, text, run_dir)
     check_declared_scopes(gate, area, run_dir)
     check_open_fields(gate, chosen, text, head)
     check_provenance(gate, area, head, run_dir)
