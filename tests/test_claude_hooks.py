@@ -4,7 +4,7 @@ pre-run: a command that starts a run script in an area triggers preflight;
 frozen + blockers blocks (exit 2), unfrozen + blockers only reports,
 throwaway stages and non-run scripts pass untouched; at `cost = "seconds"`
 preflight does not run and the hook only reports whether the criterion
-is written (§2.A12).
+is written (AS-015 Preflight-Audit vor dem Einfrieren).
 post-change: changed protocols and messung notes are checked whatever
 tool wrote them (git status, not the tool name), once per content.
 """

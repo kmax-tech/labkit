@@ -40,7 +40,7 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 The editor's type checker reads the same `.venv` (`[tool.pyright]` in
 `pyproject.toml`).
 Before a commit: `.venv/bin/ruff check . && .venv/bin/ruff format --check . &&
-.venv/bin/pyright` — all three clean (docs/coding-style.md §8).
+.venv/bin/pyright` — all three clean (docs/coding-style.md CS-008 Run the linter and the type checker).
 
 The suite is self-contained: it passes in a fresh clone with an empty home
 directory. One test skips everywhere for want of
@@ -80,5 +80,5 @@ does not work outside the author's machine; its tests do not need them.
 
 The research thread (literature, paper plan, benchmark case list) and the
 house doctrine (`arbeitsstandard`) live on the author's machine. Where a
-docstring cites `§2.A12` or a dated incident, that is the doctrine; the
+docstring cites `AS-015 Preflight-Audit vor dem Einfrieren` or a dated incident, that is the doctrine; the
 code's own docstring states the rule it enforces.

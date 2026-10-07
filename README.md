@@ -101,7 +101,7 @@ has now (or says `n/a — <reason>`): a hand-written line is checked, not
 trusted.
 A long *pilot* acknowledges with `LABKIT_UNFROZEN=1`; the acknowledgement
 is written to `config.json` as `unfrozen_ack`, so the number carries it.
-The gate follows the cost tier (`cost` in the protocol head, §2.A14): at
+The gate follows the cost tier (`cost` in the protocol head, AS-017 Die Zahl der Audits folgt der Kostenstufe): at
 `seconds` a rerun costs nothing, so the gate is the **written success
 criterion**, not the freeze — an instrument change after it is a commit
 and a rerun, never a second freeze. `minutes`, `hours` and an unfilled

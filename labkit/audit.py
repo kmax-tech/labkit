@@ -3,7 +3,7 @@
     labkit-audit <AREA> --mode preflight|analysis [--protocol FILE] [--model ALIAS]
                  [--timeout S] [--out FILE]
 
-The agent audit of §2.A12 (preflight, before freezing) and §2.D11
+The agent audit of AS-015 Preflight-Audit vor dem Einfrieren (preflight, before freezing) and AS-050 Auswertungs-Audit vor dem Berichten
 (analysis, before a number leaves) as a command instead of a Claude
 subagent: the instructions ship with the package
 (`experiment-preflight.agent.md`), the files the agent is told to read are
@@ -22,7 +22,7 @@ Exit codes are the contract:
     2  no audit: a missing file, an unreadable report, a backend failure
 
 The report is printed (and written to --out); deciding the findings and
-stamping the protocol field stays with the human (§2.A12). The command
+stamping the protocol field stays with the human (AS-015 Preflight-Audit vor dem Einfrieren). The command
 prints the stamp's facts — date, scope sha, counts — to copy from.
 """
 

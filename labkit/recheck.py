@@ -13,12 +13,12 @@ cold agents got two of them wrong on the first try (2026-10-05):
    (`c1_…`, `a1_…`, `b1_…`) present on both sides or neither,
    nothing the run reported vanishes (runlog's own keys excepted), every
    shared value identical. Keys the recomputation gained are a derived
-   run, reported, not a failure (§2.D2).
+   run, reported, not a failure (AS-041 Zahlen erzeugen).
 3. **cited** — the note carries every reported number (decimal comma and
    U+2212 minus normalised first) and the run_id.
 
 Any disagreement is a SystemExit with a sentence; the verdict names what
-was compared. Rules: docs/arbeitsstandard.md §2.D2, §2.D4.
+was compared. Rules: docs/arbeitsstandard.md AS-041 Zahlen erzeugen, AS-043 Runs über `runlog`.
 """
 
 from __future__ import annotations

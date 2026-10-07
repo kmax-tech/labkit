@@ -36,7 +36,7 @@ def repo_with(standard: bool = True, protocols: int = 1) -> Path:
     if standard:
         (repo / "docs").mkdir()
         (repo / "docs" / "arbeitsstandard.md").write_text(
-            "§2.A12 scar table\n", encoding="utf-8"
+            "AS-015 Preflight-Audit vor dem Einfrieren scar table\n", encoding="utf-8"
         )
     return area
 
@@ -59,9 +59,9 @@ def run(area: Path, answer: str, *extra: str) -> tuple[int, str, str, list[str]]
 
 
 CLEAN = "verdict: 0 blockers, 0 warnings, 2 notes\nscope:\nscripts/01_measure.py"
-WARN = "WARNING · a.py:1 · x · y · §2.A12 · z\nverdict: 0 blockers, 1 warnings, 0 notes"
+WARN = "WARNING · a.py:1 · x · y · AS-015 Preflight-Audit vor dem Einfrieren · z\nverdict: 0 blockers, 1 warnings, 0 notes"
 BLOCK = (
-    "BLOCKER · a.py:1 · x · y · §2.A12 · z\nverdict: 1 blockers, 0 warnings, 0 notes"
+    "BLOCKER · a.py:1 · x · y · AS-015 Preflight-Audit vor dem Einfrieren · z\nverdict: 1 blockers, 0 warnings, 0 notes"
 )
 
 

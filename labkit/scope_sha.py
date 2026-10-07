@@ -1,4 +1,4 @@
-"""Stamp WHICH code an audit looked at — the stamp of §2.A16 (preflight and analysis audit).
+"""Stamp WHICH code an audit looked at — the stamp of AS-019 Der Stempel deckt alles ab (preflight and analysis audit).
 
 The audit fields in a protocol claim "this code was audited". A stamp that
 covers less than the code determining the number is worse than none: it makes
@@ -8,7 +8,7 @@ reported number — the measure scripts, the analysis scripts, the repo-local
 labkit pin.
 
 Why a command and not a shell one-liner: the one-liner in the first draft of
-§2.A16 was
+AS-019 Der Stempel deckt alles ab was
     { cat "$S"; xargs -a "$S" shasum -a 256; ...; } | shasum -a 256
 which on macOS hashed NO file content at all — BSD xargs has no `-a`, and
 under zsh's noclobber the `>` that built the list was refused too. It printed
@@ -88,7 +88,7 @@ def _lib_files(name: str, libdir: Path) -> list[Path]:
 def imported_lib(area: Path, repo: Path) -> list[Path]:
     """Repo-local lib files the area's code reaches by import, transitively —
     shared anchors and thresholds live there, so they determine the number
-    (§2.A16). Review 2026-10-07: `from lib import scoring` and `import
+    (AS-019 Der Stempel deckt alles ab). Review 2026-10-07: `from lib import scoring` and `import
     lib.scoring` were read as a module `lib`, and a lib module's own imports
     were not followed; lib/scoring.py changed while the stamp stayed put."""
     libdir = repo / "lib"

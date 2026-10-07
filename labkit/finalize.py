@@ -18,7 +18,7 @@ What it runs, in order:
                     run froze its source (`data=` in config.json) and every
                     source and output file is tracked in git — the two of
                     the three questions the agent audit kept asking that a
-                    machine can answer (§2.A14, 2026-10-05); the third, the
+                    machine can answer (AS-017 Die Zahl der Audits folgt der Kostenstufe, 2026-10-05); the third, the
                     counted unit, is the protocol's `Unit` field
   5. criterion n    every `c<i>_n` key in metrics.json equals some input
                     count the run recorded (rows of a data= file, lines of

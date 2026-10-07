@@ -26,7 +26,7 @@ pre-run
       · clean                                                   → one line
     `LABKIT_PREFLIGHT=skip` in the command string skips the gate; it is
     visible in the transcript, like `--no-verify` on a commit.
-    The gate follows the cost tier (§2.A14): at `cost = "seconds"` preflight
+    The gate follows the cost tier (AS-017 Die Zahl der Audits folgt der Kostenstufe): at `cost = "seconds"` preflight
     does not run before a command — a rerun of seconds is the probe — and
     the hook only says whether the success criterion is written, which is
     what `runlog` will demand of a full run there. A `minutes`/`hours`/
@@ -176,7 +176,7 @@ def pre_run(event: dict) -> int:
         if area is None:
             notes.append(
                 f"{script.name}: opens a run, but no PROTOCOL-*.md "
-                f"above it — unbound runs keep no number (§2.A1)."
+                f"above it — unbound runs keep no number (AS-003 Kein Lauf ohne Intent-Absatz)."
             )
             continue
         protocol = protocol_named_in(script, area)
@@ -200,13 +200,13 @@ def pre_run(event: dict) -> int:
             if not missing:
                 notes.append(
                     f"{head}: cost seconds — gate not run, the rerun is "
-                    f"the probe; registration written (§2.A14)."
+                    f"the probe; registration written (AS-017 Die Zahl der Audits folgt der Kostenstufe)."
                 )
             else:
                 notes.append(
                     f"{head}: cost seconds, but {', '.join(missing)} still "
                     f"empty or a placeholder — runlog refuses a full run "
-                    f"until the registration is written (§2.A1, §2.A14)."
+                    f"until the registration is written (AS-003 Kein Lauf ohne Intent-Absatz, AS-017 Die Zahl der Audits folgt der Kostenstufe)."
                 )
             continue
         rc, out = _capture(preflight.run, area, protocol)

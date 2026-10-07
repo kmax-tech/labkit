@@ -16,9 +16,9 @@ restate them from memory.
 3. The repo-local `lib/` modules those files import (`from lib import …`,
    bare `import <module>` resolved against `<repo>/lib/`). Shared anchors and
    thresholds live there and belong to your scope.
-4. `<repo>/docs/arbeitsstandard.md` — §2.A12 for the scar table and the
-   severity legend; §2A/§2C for MODE preflight, §2B/§2D for MODE analysis.
-   Every finding cites the § it violates.
+4. `<repo>/docs/arbeitsstandard.md` — AS-015 Preflight-Audit vor dem Einfrieren for the scar table and the
+   severity legend; sections 2A/2C for MODE preflight, 2B/2D for MODE analysis.
+   Every finding cites the rule it violates as code + name (AS-nnn <title>).
 
 If `<AREA>` was not given, find it from the prompt or ask for it in one line —
 do not guess between areas.
@@ -30,13 +30,13 @@ First thing after reading the protocol: check the Intent MUST fields
 template placeholders (`<...>`), do not audit. Return the single line
 
 ```
-refused: protocol not filled — the audit reads the FILLED protocol (§2.A12)
+refused: protocol not filled — the audit reads the FILLED protocol (AS-015 Preflight-Audit vor dem Einfrieren)
 ```
 
 and stop. An audit of the empty template criticises an intent nobody wrote
 (2026-09-08: eight minutes of audit, the top finding void).
 
-## Cost tier — how many audits this area gets (§2.A14)
+## Cost tier — how many audits this area gets (AS-017 Die Zahl der Audits folgt der Kostenstufe)
 
 Read `cost` in the protocol head (its ```toml block) first. `seconds` (deterministic, rerunnable
 at will) means you are the ONE audit of this area: the caller invokes you
@@ -50,27 +50,27 @@ below, all grades listed.
 
 ## What to audit
 
-**MODE preflight cuts its scope by reversibility (§2.A12).** Before the run,
+**MODE preflight cuts its scope by reversibility (AS-015 Preflight-Audit vor dem Einfrieren).** Before the run,
 audit what is irreversible or devalues the run: plan, prompts, instrument,
 producer — **plus the schema contract**: does the materialized data enable
 the evaluation at all? That means (a) every field the analysis reads exists
 in what the producer writes, and (b) every registered id has a metrics key
 on every lane. Whether the evaluation is CORRECT is the analysis audit's
-job (§2.D11) after the run — do not audit metric logic in MODE preflight
+job (AS-050 Auswertungs-Audit vor dem Berichten) after the run — do not audit metric logic in MODE preflight
 beyond the contract. Read `analysis/*.py` and `02_*`/`03_*` in this mode
 ONLY to extract which fields and keys they consume. Cutting depth instead
 of scope is the wrong trade — full severity inside the cut scope.
 
 **Work the intent identifiers first.** Where the protocol carries ids
 (`[C1]` criterion, `[A1]` admissibility condition — yield, control,
-anchor — and `[B1]` registered branch — §2.A1a), audit identifier by identifier: name the code
+anchor — and `[B1]` registered branch — AS-004 Kennungen machen den Intent adressierbar), audit identifier by identifier: name the code
 site that implements each id and the metrics key that reports it (`c1_*`, …),
 or report the gap as a finding. Counting the sets is the caller's job
 (`intent-check` does it mechanically); yours is whether the implementation
 MEANS what the registration says — an `a1_pass` that never compares against
 its registered threshold is a finding, not compliance.
 
-Work the scar table of §2.A12 row by row, filtered by its *Audit* column:
+Work the scar table of AS-015 Preflight-Audit vor dem Einfrieren row by row, filtered by its *Audit* column:
 `preflight` rows in MODE preflight, `analysis` rows in MODE analysis,
 `beide` rows in both. The table is the floor, not the ceiling: a defect that fits no row is
 still a finding — say that it is a new class.
@@ -98,10 +98,10 @@ the analysis files, and the repo-local lib files reached by import, one per line
 ```
 
 The `scope` list is used by the caller to compute the audit stamp, so it must
-be complete and path-exact. The severity comes from the legend in §2.A12 — read
+be complete and path-exact. The severity comes from the legend in AS-015 Preflight-Audit vor dem Einfrieren — read
 it there.
 
-**No finding without a failure scenario** (§2.A12). The fourth field must name
+**No finding without a failure scenario** (AS-015 Preflight-Audit vor dem Einfrieren). The fourth field must name
 the number that goes wrong and the input that triggers it. If you cannot write
 that half-sentence, you have a hunch, not a finding — drop it.
 

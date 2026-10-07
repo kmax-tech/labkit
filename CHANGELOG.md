@@ -5,6 +5,18 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Changed
+
+- **Rule references are AS-/CS- code + name.** Messages, the shipped
+  protocol template, the field guide and the auditor agent cite rules of the
+  Arbeitsstandard as `AS-015 Preflight-Audit vor dem Einfrieren` instead of
+  `§2.A12` (the ledger is `~/.claude/resources/rule-registry.tsv`; every old
+  §-id stays resolvable as an alias in the register). A finding line's rule
+  field reads `AS-nnn <title>`; `labkit-audit` never parsed that field, so
+  nothing breaks. Dated records in `docs/usability/` keep their §-ids.
+
 ## 0.52.0 — 2026-10-07
 
 ### Breaking

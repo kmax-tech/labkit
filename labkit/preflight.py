@@ -12,14 +12,14 @@ What it runs, in order:
   1. protocol-check   mandatory fields, placeholders
   1b. cost tier       `cost` in the protocol head — `seconds` makes the agent
                       audit optional before freezing (one audit after the
-                      first run suffices, §2.A14); `minutes`/`hours` ask
+                      first run suffices, AS-017 Die Zahl der Audits folgt der Kostenstufe); `minutes`/`hours` ask
                       for it here; an unfilled cost counts as `hours`
   2. code-check       intent ids against the code
   3. scope-sha        audit stamp over the input scope
   4. dirty check      uncommitted changes (warning, not a blocker)
   5. area tests       tests/test_*<area>*.py via pytest — the resolution
                       check and the parser cases as a permanent test
-                      (§2.A13); a failing test is a blocker, a missing
+                      (AS-016 Auflösungsprobe vor dem Einfrieren); a failing test is a blocker, a missing
                       file a warning
 
 What it does NOT do: commit, freeze, or change any file. It is a
@@ -117,17 +117,17 @@ def run(area: Path, protocol: Path | None = None) -> int:
         print(
             "  seconds — rerunnable at will: the agent audit is OPTIONAL before "
             "freezing; one audit after the first run, on real output, "
-            "suffices (§2.A14)"
+            "suffices (AS-017 Die Zahl der Audits folgt der Kostenstufe)"
         )
     elif tier is None:
         print(
             "  not filled — treated as `hours`: the experiment-preflight "
-            "audit is due before freezing (§2.A12); set `cost` in the head "
+            "audit is due before freezing (AS-015 Preflight-Audit vor dem Einfrieren); set `cost` in the head "
             "to say otherwise"
         )
     else:
         print(
-            f"  {tier} — the experiment-preflight audit is due before freezing (§2.A12)"
+            f"  {tier} — the experiment-preflight audit is due before freezing (AS-015 Preflight-Audit vor dem Einfrieren)"
         )
 
     # -- 2. code-check (intent ids) ---------------------------------------
@@ -185,7 +185,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
     if not tests:
         print(
             f"  WARNING: no tests/test_*{slug}*.py — the resolution check has "
-            f"no permanent form (§2.A13)"
+            f"no permanent form (AS-016 Auflösungsprobe vor dem Einfrieren)"
         )
         warnings += 1
     else:

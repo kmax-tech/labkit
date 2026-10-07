@@ -7,7 +7,7 @@ three-conjunct criterion implemented as one conjunct, gate metrics written
 next to the content numbers the gate was meant to suppress. Reading catches
 this late; a set comparison catches it mechanically.
 
-The contract (Arbeitsstandard §2.A1a): every registration that promises the
+The contract (Arbeitsstandard AS-004 Kennungen machen den Intent adressierbar): every registration that promises the
 code something — a verdict, a branch, an abort, a control — carries an id
 in the protocol text (`[C1]` criterion, `[A1]` admissibility condition,
 `[B1]` registered branch; the alphabet is `promises`), and every id
@@ -25,7 +25,7 @@ that has no implementation at all.
 
 Existence, not correctness: a key `a1_pass` proves the stage reports, not
 that it computes the right thing — the semantic half stays with the
-preflight audit (§2.A12), which works the same ids.
+preflight audit (AS-015 Preflight-Audit vor dem Einfrieren), which works the same ids.
 
 Since 2026-10-06 the alphabet lives in `promises`: the letters C
 (criterion), A (admissibility), B (branch), and the promise block that
@@ -223,7 +223,7 @@ def _main(argv: list[str]) -> int:
     if not reg:
         print(
             "intent-check: no intent ids registered ([C1]/[A1]/[B1] — "
-            "§2.A1a); nothing to hold the metrics against."
+            "AS-004 Kennungen machen den Intent adressierbar); nothing to hold the metrics against."
         )
         return 0
 

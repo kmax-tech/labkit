@@ -20,7 +20,7 @@ output file are joined on it — a partial output stays a valid output.
 
 Deliberately NOT here: retries (they belong at the call that fails, see
 `llm.complete`) and yield counting (what "complete" means is domain-specific —
-count it in the experiment and report it, Arbeitsstandard §2).
+count it in the experiment and report it, AS-023 Kein stiller Verlust).
 """
 
 from __future__ import annotations

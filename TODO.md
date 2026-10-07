@@ -155,7 +155,7 @@ wird zur gestempelten Kopie der Paketdatei (Rollout).
 
 ## 1. `promote <bereich>` — der Beförderungs-Audit als Kommando
 
-**Was:** Die Regel seit 2026-10-05 (§2.A12): bei `Cost: seconds` kein
+**Was:** Die Regel seit 2026-10-05 (AS-015 Preflight-Audit vor dem Einfrieren): bei `Cost: seconds` kein
 Agent-Audit je Lauf; der unabhängige Audit kommt, wenn die Zahl in eine Note
 oder ein Paper geht oder eine Entscheidung steuert. Dafür gibt es die Regel,
 aber kein Werkzeug. `promote <bereich>` startet den Agenten
@@ -187,7 +187,7 @@ Ursache kein Fehler des Agenten war (von Hand aus dem Bericht gezählt, Ziel
 0) · `reads of labkit source / standard` = 0 (gezählt aus den `read`-Zeilen
 des Logs, seit v0.44.0 in der Score-Tabelle). Erst damit steht der Stand auf
 Daten; danach `lib sync pull` in counterfactual-worlds, fallacy-datasets,
-fallacy-detection, paper-organization (eigener Auftrag, §7.4: Kern und
+fallacy-detection, paper-organization (eigener Auftrag, AS-098: Kern und
 Rollout trennen).
 
 **Beleg:** Zählung 4m20s, 6m01s, 9m58s auf drei Ständen — die Streuung
@@ -330,7 +330,7 @@ werden daraus zwei Schichten derselben Stelle:
 
 Damit wird der Beleg zum **Feature für den Nutzer**: Ein fremdes Labor
 startet mit den allgemeinen Beispielen und sammelt seine eigenen Unfälle an
-derselben Stelle. Dafür ein Kommando `lib scar <§-ID> "<was passierte>"`,
+derselben Stelle. Dafür ein Kommando `lib scar <AS-nnn> "<was passierte>"`,
 das den Absatz datiert in die Haus-Schicht schreibt — und die Gates liefern
 die Kandidaten: ein Blocker aus `code-check`, `finalize` oder einem Audit,
 der sich als echt erwies, ist ein Beleg; `finalize` fragt am Ende „als Beleg
@@ -367,7 +367,7 @@ Spiel. Claude-spezifisch sind vier Stellen in der weichen Schicht:
 | Stelle | heute | für jeden Agenten |
 |---|---|---|
 | Einstiegsdatei | `CLAUDE.md` (Claude Code liest sie) | `AGENTS.md` als gestempelte Datei (Codex, Cursor, Gemini-CLI lesen sie oder eine Variante); `CLAUDE.md` wird ein Symlink darauf. Der Scaffolder stempelt beide, `lib sync` hält eine. |
-| Live-Hooks | `claude-hook pre-run/post-change` über `.claude/settings.json` (PreToolUse/PostToolUse-JSON) | bleiben als **Adapter** für Claude Code; der Riegel in `runlog` und der Pre-Commit-Hook sind die Schicht, die ohne Harness hält (§2.A8: „die Regel, die der Agent vergisst, steht im Riegel"). Ein zweiter Adapter je Harness nur, wenn er Hooks hat. |
+| Live-Hooks | `claude-hook pre-run/post-change` über `.claude/settings.json` (PreToolUse/PostToolUse-JSON) | bleiben als **Adapter** für Claude Code; der Riegel in `runlog` und der Pre-Commit-Hook sind die Schicht, die ohne Harness hält (AS-011 Pflichtfeld-Check: „die Regel, die der Agent vergisst, steht im Riegel"). Ein zweiter Adapter je Harness nur, wenn er Hooks hat. |
 | Audit-Agenten | `experiment-preflight`, `code-check` als Claude-Subagenten (`~/.claude/agents/*.md`) | `labkit audit <bereich> --mode preflight\|analysis`: die Audit-Prompts ziehen ins Paket, `code-check --bundle` liefert heute schon das Bündel, der Aufruf geht über `labkit.llm` mit beliebigem Backend (claude-cli, openai, ollama), **synchron mit Zeitlimit**, Befunde als Text zurück. Das ist zugleich die Mechanik für `promote` (Punkt 1). |
 | Harness-Erkennung | `CLAUDECODE` in der Umgebung entscheidet den Detach-Riegel | generisch: `LABKIT_FOREGROUND_TIMEOUT_S` (gesetzt vom Harness-Adapter oder vom Nutzer) statt eines Harness-Namens; `CLAUDECODE` setzt ihn als Vorgabe. |
 
@@ -391,7 +391,7 @@ stempelt ab dann `AGENTS.md`; bis dahin steht hier der Plan.
 
 ## 7. Englische Kennungen: `[C]` · `[A]` · `[B]` statt `[K]` · `[S]` · `[W]` · `[N]`
 
-**Was:** Die Kennungen auf den Versprechen des Protokolls (§2.A1a) sind
+**Was:** Die Kennungen auf den Versprechen des Protokolls (AS-004 Kennungen machen den Intent adressierbar) sind
 Bezeichner, die die Maschine liest — also englisch, und jede trägt den
 Fachterminus, den ein externer Leser kennt. Heute sind K (Kriterium) und
 W (Weiche) deutsch, S (stop) englisch, N doppeldeutig. Drei statt vier:
@@ -404,11 +404,11 @@ W (Weiche) deutsch, S (stop) englisch, N doppeldeutig. Drei statt vier:
 
 Warum N in A aufgeht: Kontrollen mit Sollwert (`shuffled` < 0,05, `anchor`
 trifft 0,716) haben dieselbe Folge wie eine Stop-Regel — zeigen sie das
-Erwartete nicht, gibt es kein Urteil (§2 „Nullbedingung / Anker“). Im Fach
+Erwartete nicht, gibt es kein Urteil (AS-034 Nullbedingung im selben Lauf). Im Fach
 sind positive controls und quality checks Beispiele für outcome-neutral
 conditions. Die Baseline ohne Sollwert ist ein comparator und gehört in den
 Text von `[C]`, nicht unter eine eigene Kennung. Die Pflicht „Kontrolle im
-selben Lauf“ (§2.C6) bleibt: `[A2]` verlangt `a2_pass`, also muss der Code
+selben Lauf“ (AS-034 Nullbedingung im selben Lauf) bleibt: `[A2]` verlangt `a2_pass`, also muss der Code
 die Kontrolle erzeugen.
 
 Buchstabenwahl gegen Kollision: `ID_KEY` (`intent_check.py:50`) liest jeden
@@ -441,7 +441,7 @@ H (`h1`, hits@1; außerdem in Vorregistrierungen die Hypothese).
 3. **Doktrin im Master** — **erledigt 2026-10-07** bis auf `lib sync pull`
    in die Repos (dotfiles `51b9060`, `b6d54e2`; labkit `218bb68`). Das
    Mess-Skelett hält jetzt das C-Urteil zurück, wenn ein A fällt.
-   §2.A1a, Abschnitt „Nullbedingung / Anker“,
+   AS-004 Kennungen machen den Intent adressierbar, Abschnitt „Nullbedingung / Anker“,
    Haus↔Fach-Tabelle, `CLAUDE.md.template`, `measure-script.py.template`,
    `test-area.py.template`, `arbeitsstandard-init.py`, Agent
    `experiment-preflight`, Skill `run-experiment` (je auch die Kopie im
@@ -473,7 +473,7 @@ dann im selben Zug wie die Umbenennung, sonst wandern 14 Protokolle zweimal.
 **Beleg:** Diskussion 2026-10-06, Abgleich mit Registered-Reports-Guidelines
 und dem Code von preregister, sealedlab, prereg —
 `~/work/resources/dev-environment/vorregistrierungs-werkzeuge-vs-labkit.md`.
-Die Kennungen sind die Übergabe-Einheit zwischen Agenten (§2.A1a); ein
+Die Kennungen sind die Übergabe-Einheit zwischen Agenten (AS-004 Kennungen machen den Intent adressierbar); ein
 externer Leser kann `[S]`, `[W]` heute keinem Fachbegriff zuordnen, und
 „stop rule“ führt ihn auf den falschen.
 

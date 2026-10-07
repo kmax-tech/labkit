@@ -15,7 +15,7 @@ dependencies = []
 # Named so a fresh environment (a cloud session, CI) runs the same suite as
 # the local one instead of whichever interpreter happens to carry pytest.
 [project.optional-dependencies]
-# the coding style's three tools: test, lint, type-check (docs/coding-style.md §8)
+# the coding style's three tools: test, lint, type-check (docs/coding-style.md CS-008 Run the linter and the type checker)
 dev = ["pytest", "ruff", "pyright"]
 
 [project.scripts]

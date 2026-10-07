@@ -1,6 +1,6 @@
 """Tests for notes_check.py against real messung-note heads.
 
-The checker turns the note-kind convention (Arbeitsstandard §4, 2026-09-10)
+The checker turns the note-kind convention (AS-082 In `notes/messung/` trägt jede Note ihre Sorte, 2026-09-10)
 into a pass/fail decision, so it gets the parser treatment: tested with real
 raw text. The heads below are verbatim from the 2026-09-10 inventory of the
 two lab repos (counterfactual-worlds, fallacy-datasets), frozen here so the

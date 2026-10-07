@@ -1,7 +1,7 @@
 """Tests for protocol-check.py against real protocol material.
 
 The checker turns freely written protocols into a pass/fail decision, so it
-gets the parser treatment (Arbeitsstandard §2): tested with real raw text.
+gets the parser treatment (AS-023 Kein stiller Verlust): tested with real raw text.
 The frozen excerpt below is verbatim from experiments/_archiv/17-bruchstufe-nli/PROTOCOL-bruchstufe-nli.md
 (2026-08-11), one of the five freely written protocols that omitted exactly
 "Typ" and "Modell-I/O" — the two fields whose omission caused bad runs on
@@ -136,7 +136,7 @@ def run_main(text: str) -> tuple[int, str]:
 
 
 class TestFrozenNeedsTheAudit(unittest.TestCase):
-    """`frozen = true` means audited first (§2.A12): the old checker failed a
+    """`frozen = true` means audited first (AS-015 Preflight-Audit vor dem Einfrieren): the old checker failed a
     frozen protocol whose audit field was still a placeholder."""
 
     def test_frozen_without_audit_line_fails(self):
@@ -606,7 +606,7 @@ class TestAuditFields(unittest.TestCase):
     a sign flip between BT score and log-odds, r2 fitted and scored on the
     same anchors, a gate without a positive control, a probe writing into the
     run's output file; none caught by the chain itself. Hence two audits
-    (Arbeitsstandard §2.A12 code vs. intent before freezing, §2.D11
+    (Arbeitsstandard AS-015 Preflight-Audit vor dem Einfrieren code vs. intent before freezing, AS-050 Auswertungs-Audit vor dem Berichten
     evaluation vs. frozen criterion before reporting). The preflight audit is
     now a head value (`preflight_audit`), the analysis audit a field written
     after the run."""
@@ -641,7 +641,7 @@ class TestAuditFields(unittest.TestCase):
 
 
 class TestResolutionCheckGate(unittest.TestCase):
-    """The resolution check field (§2.A13, 2026-09-09) is a should: owed as a
+    """The resolution check field (AS-016 Auflösungsprobe vor dem Einfrieren, 2026-09-09) is a should: owed as a
     must once frozen; the template's own "Answer form + resolution †" field
     must NOT stand in for it."""
 

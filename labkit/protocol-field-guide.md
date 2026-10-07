@@ -322,17 +322,17 @@ Delete this section if everything was prompted.
 
 | Field              | § |
 |--------------------|---|
-| Intent ids         | §2.A1a |
-| Success criterion  | §2.A1 |
-| Admissibility      | §2.A1a |
+| Intent ids         | AS-004 Kennungen machen den Intent adressierbar |
+| Success criterion  | AS-003 Kein Lauf ohne Intent-Absatz |
+| Admissibility      | AS-004 Kennungen machen den Intent adressierbar |
 | Timebox            | — |
 | Split touched      | — |
-| Registered branch  | §2.A10 |
-| Preflight audit    | §2.A12 |
-| Instrument check   | §2.A11 |
-| Resolution check   | §2.A13 |
-| Yield per stage    | §2.B4 |
-| Rival explanations | §2.D5 |
-| Analysis audit     | §2.D11 |
-| Null condition     | §2.C9 |
-| Prediction         | §2.D6 |
+| Registered branch  | AS-013 Registrierte Weiche |
+| Preflight audit    | AS-015 Preflight-Audit vor dem Einfrieren |
+| Instrument check   | AS-014 Je Gold-Klasse ein voll gerendertes Beispiel-Paar |
+| Resolution check   | AS-016 Auflösungsprobe vor dem Einfrieren |
+| Yield per stage    | AS-023 Kein stiller Verlust |
+| Rival explanations | AS-044 Der Prüfblick auf einen Konfund ist Code |
+| Analysis audit     | AS-050 Auswertungs-Audit vor dem Berichten |
+| Null condition     | AS-037 Jeder Anker trägt sein Soll mit Herleitung |
+| Prediction         | AS-045 Die Prognose steht vor dem Folgelauf |
