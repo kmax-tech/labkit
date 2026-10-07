@@ -209,3 +209,44 @@ weak reader stops confusing it. A fresh question set on untouched parts of
 both repos would show how far it generalizes.
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round4/`.
+
+## Round 5 (2026-10-07): does an entry point need to read as named steps?
+
+Candidate rule, proposed from outside the measurements: "an entry point
+reads as a sequence of named steps; a consequential decision inside it
+becomes a function of its own". Test case: `finalize.run` (labkit
+`ac97187`), 210 lines in which seven stations and their decisions stand
+inline, each station opened by a numbered section comment
+(`# -- 1. completion check --`) and a printed header (`── completion ──`).
+Plan: measure, refactor `run` into named steps, measure again.
+
+Questions (Haiku, two agents): five decisions that have no name of their
+own — which of several bound runs the checks hold the protocol to, whether
+the cited run is the examined one, for which runs provenance is checked,
+what happens with two protocols and none named, where an edited promise
+scope is noticed — truths as line ranges of that commit; and one flow
+question, the seven stations in order (scored mechanically, 0.63.0).
+
+| `finalize.run` as it is | decisions found | stations named in order | calls | files opened |
+|---|---|---|---|---|
+| Haiku, agent 1 | 5/5 | 7/7 | 13 | 3 |
+| Haiku, agent 2 | 5/5 | 7/7 | 13 | 4 |
+
+Both agents went to `finalize.py` by its name, read it once, end to end,
+and answered from it; the section comments and printed headers gave every
+station and decision a findable label.
+
+Consequences:
+
+1. The candidate rule is **not supported**: a long entry point in one
+   file, its stations labelled by numbered section comments, is followed
+   perfectly by the weakest reader we use. The refactor was drafted but
+   not applied — there is nothing the measure could show it improve.
+2. What CS-015 Make the code findable by name already says holds: a name
+   is what a reader searches for. Inside one file a section comment is
+   such a name; across files only a function, file or constant name is
+   found. The interpreter choice of round 3 was missed because it sat in
+   another module with no label at all, not because it was inline.
+3. Not added to the coding style.
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round5/`.
