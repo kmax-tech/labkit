@@ -569,6 +569,77 @@ def reader(root: Path) -> int:
     return 0
 
 
+def glance(root: Path) -> int:
+    """Write `<dir>.glance-prompt.md`: only the first lines of the bound protocol."""
+    protocol, _ = _bound_protocol(root)
+    g = protocol_reading.glance(protocol.read_text(encoding="utf-8"))
+    answer = _sidecar(root, "glance-answer.json")
+    prompt = _sidecar(root, "glance-prompt.md")
+    prompt.write_text(
+        protocol_reading.glance_prompt(g.excerpt, str(answer)), encoding="utf-8"
+    )
+    print(
+        f"glance prompt → {prompt} ({g.lines} lines, {g.chars} chars; Summary "
+        f"fields inside: {', '.join(g.summary_fields) or 'none'})\n"
+        f"the reader writes → {answer}"
+    )
+    return 0
+
+
+def glance_score(root: Path) -> int:
+    """Hold the glance answer to the run; `<dir>.glance.json`."""
+    protocol, truth = _bound_protocol(root)
+    text = protocol.read_text(encoding="utf-8")
+    g = protocol_reading.glance(text)
+    answer = _sidecar(root, "glance-answer.json")
+    if not answer.is_file():
+        raise SystemExit(f"usability: {answer} missing — has the reader answered?")
+    try:
+        got = protocol_reading.score_glance(answer.read_text(encoding="utf-8"), truth)
+    except ValueError as exc:
+        raise SystemExit(f"usability: {exc}") from exc
+    hits = protocol_reading.terms_coverage(text, got.unclear, str(protocol))
+    out = {
+        **asdict(got),
+        "lines": g.lines,
+        "chars": g.chars,
+        "summary_fields": list(g.summary_fields),
+        "terms": [asdict(h) for h in hits],
+        "truth": asdict(truth),
+    }
+    _sidecar(root, "glance.json").write_text(
+        json.dumps(out, indent=1, ensure_ascii=False), encoding="utf-8"
+    )
+    print(
+        f"  first {g.lines} lines, {g.chars} chars · Summary fields inside: "
+        f"{', '.join(g.summary_fields) or 'none'} · number {got.number_ok}, "
+        f"criterion {got.criterion_ok} · answered {len(got.answered)}/4 · "
+        f"unclear {len(got.unclear)}, of them in the Summary "
+        f"{sum(h.in_summary for h in hits)}"
+    )
+    return 0 if got.number_ok is not False and got.criterion_ok is not False else 1
+
+
+def terms(root: Path) -> int:
+    """The full reader's unclear terms against the Summary and Terms."""
+    protocol, _ = _bound_protocol(root)
+    answer = _sidecar(root, "reader-answer.json")
+    if not answer.is_file():
+        raise SystemExit(f"usability: {answer} missing — has the reader answered?")
+    unclear = json.loads(answer.read_text(encoding="utf-8")).get("unclear") or []
+    hits = protocol_reading.terms_coverage(
+        protocol.read_text(encoding="utf-8"), unclear, str(protocol)
+    )
+    for h in hits:
+        where = "Summary" if h.in_summary else "Terms" if h.in_terms else "nowhere"
+        print(f"  {where:8} {h.term}")
+    print(
+        f"  {len(hits)} unclear · in the Summary {sum(h.in_summary for h in hits)} "
+        f"· in Terms (occurs, static evidence) {sum(h.in_terms for h in hits)}"
+    )
+    return 0
+
+
 def read_score(root: Path, transcript: Path | None) -> int:
     """Hold the reader's answer to the run's number; `<dir>.reader.json`."""
     _, truth = _bound_protocol(root)
@@ -828,7 +899,23 @@ def main(argv: list[str]) -> int:
     )
     rs.add_argument("dir")
     rs.add_argument("--transcript", help="the reader's transcript: its reading time")
+    gl = sub.add_parser(
+        "glance", help="write the prompt for a reader who sees only the first lines"
+    )
+    gl.add_argument("dir")
+    gs = sub.add_parser("glance-score", help="hold the glance answer to the run")
+    gs.add_argument("dir")
+    te = sub.add_parser(
+        "terms", help="the reader's unclear terms against the Summary and Terms"
+    )
+    te.add_argument("dir")
     args = ap.parse_args(argv)
+    if args.cmd == "glance":
+        return glance(Path(args.dir).resolve())
+    if args.cmd == "glance-score":
+        return glance_score(Path(args.dir).resolve())
+    if args.cmd == "terms":
+        return terms(Path(args.dir).resolve())
     if args.cmd == "reader":
         return reader(Path(args.dir).resolve())
     if args.cmd == "read-score":

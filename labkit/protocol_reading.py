@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from labkit.protocol_check import fields
 
@@ -222,3 +223,232 @@ def score_answer(answer_text: str, truth: Truth, tol: float = 0.006) -> ReaderSc
         effort=effort,
         answers=data,
     )
+
+
+# --- the glance: what a reader takes away before stopping -------------------
+#
+# A reader who saw the whole protocol cannot report what it knew at line ten
+# (round 9: a reader claimed the result from lines that held the legend).
+# The glance reader gets only the first lines of the file, as they are: when
+# the head or form text uses them up, that is the finding. Lines are unfair
+# between writers — one field per long line holds three times the text of a
+# wrapped one — so the excerpt's characters are reported beside it, and
+# which Summary fields it holds is checked mechanically (guaranteed: the
+# field parser, no judgement).
+
+GLANCE_LINES = 10
+SUMMARY_FIELDS = ("result", "limits", "next step")
+
+GLANCE_QUESTIONS = (
+    (
+        "question",
+        "What was investigated? One sentence, or null if these lines do not say.",
+    ),
+    ("result", "What came out? One sentence, or null."),
+    (
+        "number",
+        "The one number the result rests on, as written (digits only), or null.",
+    ),
+    (
+        "criterion_held",
+        "Did the success criterion hold — true, false, or null if these lines do not say?",
+    ),
+    ("how_sure", "How sure or how limited is the result? One sentence, or null."),
+    (
+        "what_follows",
+        "What follows from it — a decision or a next step? One sentence, or null.",
+    ),
+    (
+        "unclear",
+        "Every term, abbreviation, code or file name a newcomer would have to look up — a list, [] if none.",
+    ),
+)
+
+
+@dataclass(frozen=True)
+class Glance:
+    """The first lines of a protocol and which Summary fields they hold."""
+
+    excerpt: str
+    lines: int
+    chars: int
+    summary_fields: tuple[
+        str, ...
+    ]  # of SUMMARY_FIELDS, those whose label is in the excerpt
+
+
+def glance(text: str, lines: int = GLANCE_LINES) -> Glance:
+    """The first `lines` lines of the file as they are, and which of the
+    Summary's fields begin inside them."""
+    head = text.splitlines()[:lines]
+    inside = tuple(
+        name
+        for name in SUMMARY_FIELDS
+        if any(f.name == name and f.line <= lines for f in fields(text))
+    )
+    excerpt = "\n".join(head)
+    return Glance(excerpt, len(head), len(excerpt), inside)
+
+
+def glance_prompt(excerpt: str, answer_path: str) -> str:
+    """The prompt for a reader who sees only the first lines."""
+    asks = "\n".join(f'- "{k}": {q}' for k, q in GLANCE_QUESTIONS)
+    return (
+        "You are a new student who knows basic statistics, but not this "
+        "lab, its tools or its words. Below are the FIRST LINES of an "
+        "experiment protocol, nothing more — a reader who stops here. Answer "
+        "only from these lines; where they do not say, answer null. No files, "
+        "no tools except writing your answer.\n\n"
+        "Answer with one JSON object with exactly these keys:\n"
+        f"{asks}\n\n"
+        f"Write the JSON to {answer_path} (a single Bash `cat > … <<'EOF'`), "
+        "then reply with the same JSON.\n\n"
+        "----- FIRST LINES -----\n"
+        f"{excerpt}\n"
+        "----- (the protocol continues; you stopped here) -----\n"
+    )
+
+
+@dataclass(frozen=True)
+class GlanceScore:
+    number_ok: bool | None  # None: the run has no number
+    criterion_ok: bool | None  # None: the run reports no criterion
+    answered: tuple[
+        str, ...
+    ]  # of question/result/how_sure/what_follows, those not null
+    unclear: list[str]
+
+
+def score_glance(answer_text: str, truth: Truth, tol: float = 0.006) -> GlanceScore:
+    """Hold the glance answer to the run. A null where the run has a value
+    counts as not taken away, the same as a wrong one. Raises ValueError
+    when the answer is not the asked-for JSON."""
+    try:
+        data = json.loads(answer_text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"glance answer is not JSON: {exc.msg}") from exc
+    missing = [k for k, _ in GLANCE_QUESTIONS if k not in data]
+    if missing:
+        raise ValueError(f"glance answer lacks {missing}")
+    raw = data["number"]
+    try:
+        read = float(str(raw).replace(",", ".")) if raw is not None else None
+    except ValueError:
+        read = None
+    number_ok = (
+        None
+        if truth.number is None
+        else (read is not None and abs(read - truth.number) <= tol)
+    )
+    crit = (
+        None
+        if truth.criterion_held is None
+        else data["criterion_held"] is truth.criterion_held
+    )
+    answered = tuple(
+        k for k in ("question", "result", "how_sure", "what_follows") if data[k]
+    )
+    unclear = (
+        [str(u) for u in data["unclear"]] if isinstance(data["unclear"], list) else []
+    )
+    return GlanceScore(number_ok, crit, answered, unclear)
+
+
+# --- terms: is an unclear term explained where the reader would look? -------
+#
+# Two layers (2026-10-07): a term in the Summary must be plain there — the
+# Terms field cannot rescue it; a term in the technical part may be
+# explained in Terms or in a glossary note it links. Whether a term OCCURS
+# there is checked here — static evidence, never proof of an explanation;
+# whether the entry explains it is a reader's judgement (`terms_judge_prompt`).
+# Ids are matched as patterns: digit runs become NN, so an entry
+# `beschaffungsantrag-NN` covers `beschaffungsantrag-09`.
+
+_LINK = re.compile(r"\]\(([^)\s]+\.md)\)")
+_DIGITS = re.compile(r"\d+")
+_SPLIT = re.compile(r"\s*(?:/|\(|\)|,|;)\s*")
+
+
+def normalize_term(term: str) -> str:
+    """Casefolded, quotes and backticks gone, digit runs as `nn`."""
+    t = term.strip().strip("`'\"“”„").casefold()
+    return _DIGITS.sub("nn", t.replace("`", ""))
+
+
+def _variants(term: str) -> list[str]:
+    """The term and the parts a reader lists it by ("A / B (C)")."""
+    parts = [term, *_SPLIT.split(term)]
+    return [n for n in (normalize_term(p) for p in parts) if len(n) >= 3]
+
+
+def _section_text(text: str, name: str) -> str:
+    return normalize_term(_section(text, name))
+
+
+def glossary_text(text: str, protocol_path: str | None) -> str:
+    """The Terms field's value plus every note it links (read relative to the
+    protocol). Raises FileNotFoundError naming a linked note that is gone."""
+    terms = next((f for f in fields(text) if f.name.startswith("terms")), None)
+    if terms is None:
+        return ""
+    out = [terms.value]
+    if protocol_path is not None:
+        base = Path(protocol_path).parent
+        for target in _LINK.findall(terms.value):
+            note = (base / target).resolve()
+            if not note.is_file():
+                raise FileNotFoundError(f"Terms links {target}, which is not at {note}")
+            out.append(note.read_text(encoding="utf-8"))
+    return "\n".join(out)
+
+
+@dataclass(frozen=True)
+class TermHit:
+    term: str
+    in_summary: bool  # the Summary uses it: Terms does not count there
+    in_terms: bool  # it occurs in Terms or a linked glossary (static evidence)
+
+
+def terms_coverage(
+    text: str, unclear: list[str], protocol_path: str | None = None
+) -> list[TermHit]:
+    summary = _section_text(text, "Summary")
+    glossary = normalize_term(glossary_text(text, protocol_path))
+    hits = []
+    for term in unclear:
+        vs = _variants(term)
+        hits.append(
+            TermHit(
+                term,
+                in_summary=any(v in summary for v in vs),
+                in_terms=any(v in glossary for v in vs),
+            )
+        )
+    return hits
+
+
+def terms_judge_prompt(pairs: list[tuple[str, str]], answer_path: str) -> str:
+    """Ask a reader whether each entry explains its term (the semantics the
+    occurrence check cannot see)."""
+    body = "\n\n".join(f"TERM: {t}\nENTRY: {e}" for t, e in pairs)
+    return (
+        "You are a new student who knows basic statistics, but not this lab. "
+        "For each term below you get the entry a protocol gives for it. Does "
+        "the entry let you understand the term — what it is, in plain words? "
+        "A mere mention, a code, or a pointer elsewhere is not an explanation.\n\n"
+        "Answer with one JSON object mapping each term exactly as given to "
+        "true (explained) or false (not explained).\n"
+        f"Write the JSON to {answer_path} (a single Bash `cat > … <<'EOF'`), "
+        "then reply with the same JSON. No files, no other tools.\n\n"
+        f"{body}\n"
+    )
+
+
+def entry_for(term: str, glossary: str) -> str | None:
+    """The glossary line that mentions the term (pattern-matched), or None."""
+    vs = _variants(term)
+    for line in glossary.splitlines():
+        n = normalize_term(line)
+        if any(v in n for v in vs):
+            return line.strip()
+    return None

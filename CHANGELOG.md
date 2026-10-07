@@ -5,6 +5,23 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.60.0 — 2026-10-07
+
+### Added
+
+- **`usability glance` / `glance-score`** — a reader who sees only the first
+  ten lines of the file, as they are (head or form text using them up is
+  the finding). `protocol_reading.glance` reports the excerpt's characters
+  beside its lines (one field per long line holds more than a wrapped one)
+  and, mechanically, which Summary fields begin inside it. Round 9 showed
+  that asking a whole-protocol reader what it knew at line ten is
+  self-report.
+- **`usability terms`** — the reader's unclear terms against two layers: a
+  term in the Summary must be plain there; a term elsewhere may occur in
+  Terms or in a glossary note Terms links. Occurrence is static evidence;
+  `terms_judge_prompt` asks a reader whether the entry explains the term.
+  Ids match as patterns (digit runs → NN).
+
 ## 0.59.0 — 2026-10-07
 
 ### Breaking
