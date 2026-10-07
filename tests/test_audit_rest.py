@@ -106,5 +106,23 @@ class Usability(unittest.TestCase):
             self.assertIn("unreadable run metadata", str(cm.exception))
 
 
+class ReadLines(unittest.TestCase):
+    """The analysis audit's READ lines (protocol readability) are printed
+    with the report but are no findings and enter no verdict."""
+
+    def test_read_lines_are_not_findings(self):
+        from labkit import audit
+
+        report = (
+            "WARNING · scripts/m.py:3 · x · y · new class · z\n"
+            "READ · PROTOCOL-x.md:70 · beschaffung-09 and beschaffungsantrag-09 · one spelling\n"
+            "verdict: 0 blockers, 1 warnings, 0 notes\n"
+            "scope:\nscripts/m.py\n"
+        )
+        parsed = audit.parse(report)
+        self.assertEqual([g for g, _ in parsed["findings"]], ["WARNING"])
+        self.assertEqual(parsed["verdict"], (0, 1, 0))
+
+
 if __name__ == "__main__":
     unittest.main()
