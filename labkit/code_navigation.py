@@ -19,6 +19,17 @@ Questions and truth live in a TOML file:
     id = "majority"
     question = "When a model step asks the same question several times, ..."
     truth = ["src/agent/model/call.py:majority"]   # any of them counts
+
+A truth names a symbol, or — for logic that has no name of its own — a line
+range, `path:L120-L135`; a range is only as good as the commit it was read
+on, so a question file with ranges belongs to that commit. A flow question
+asks for the steps of an entry point in order and is scored by how many of
+its registered steps the answer names in the right order:
+
+    [[flow]]
+    id = "finalize_steps"
+    question = "List, in order, the checks ..."
+    steps = [["completion", "complet"], ["intent ids", "intent|promis"]]
 """
 
 from __future__ import annotations
@@ -68,6 +79,9 @@ def symbol_span(repo: Path, truth: str) -> tuple[str, int, int]:
     source = repo / path
     if not source.is_file():
         raise NavigationError(f"truth {truth}: no file {source}")
+    lines = re.fullmatch(r"L(\d+)-L(\d+)", symbol)
+    if lines:
+        return path, int(lines.group(1)), int(lines.group(2))
     if not symbol:
         return path, 1, len(source.read_text(encoding="utf-8").splitlines())
     nodes: list[ast.stmt] = ast.parse(source.read_text(encoding="utf-8")).body
@@ -92,9 +106,19 @@ def _names(node: ast.stmt) -> set[str]:
     return set()
 
 
-def prompt(repo: Path, questions: list[Question], answer_path: str) -> str:
+def prompt(
+    repo: Path,
+    questions: list[Question],
+    answer_path: str,
+    flows: tuple[Flow, ...] = (),
+) -> str:
     """The prompt for a cold agent in `repo`."""
     asks = "\n".join(f'- "{q.id}": {q.question}' for q in questions)
+    if flows:
+        asks += "\n" + "\n".join(
+            f'- "{f.id}" (a list of short strings, one per step, in order): {f.question}'
+            for f in flows
+        )
     return (
         f"You are new to the code repository at {repo}. Find where the code "
         "does each of the things below. Look around the repository as you "
@@ -151,6 +175,43 @@ def score(answer_text: str, questions: list[Question], repo: Path) -> list[Found
             )
         )
     return out
+
+
+@dataclass(frozen=True)
+class Flow:
+    id: str
+    question: str
+    steps: tuple[tuple[str, str], ...]  # (name, regex a mention of the step matches)
+
+
+def load_flows(path: Path) -> list[Flow]:
+    """The flow questions of a TOML file (none is fine)."""
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    out = []
+    for f in data.get("flow", []):
+        missing = [k for k in ("id", "question", "steps") if k not in f]
+        if missing:
+            raise NavigationError(f"{path.name}: a flow lacks {missing}")
+        out.append(Flow(f["id"], f["question"], tuple((n, r) for n, r in f["steps"])))
+    return out
+
+
+def flow_in_order(answer: list[str], flow: Flow) -> int:
+    """How many registered steps the answer names in the registered order —
+    the longest run of steps whose first mentions rise through the answer."""
+    first: list[int] = []
+    for _, pattern in flow.steps:
+        hit = next(
+            (i for i, item in enumerate(answer) if re.search(pattern, item, re.I)),
+            None,
+        )
+        if hit is not None:
+            first.append(hit)
+    best: list[int] = []  # longest strictly increasing subsequence of `first`
+    for x in first:
+        i = next((k for k, v in enumerate(best) if v >= x), len(best))
+        best[i : i + 1] = [x]
+    return len(best)
 
 
 @dataclass(frozen=True)

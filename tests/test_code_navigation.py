@@ -95,5 +95,26 @@ class Navigation(unittest.TestCase):
         self.assertNotIn("Checker.check", p)
 
 
+class Flows(unittest.TestCase):
+    FLOW = cn.Flow(
+        "steps",
+        "List the checks in order.",
+        (("completion", "complet"), ("intent", "intent"), ("tests", "test")),
+    )
+
+    def test_steps_named_in_order_count(self):
+        answer = ["is the run completed?", "intent ids reported", "area tests pass"]
+        self.assertEqual(cn.flow_in_order(answer, self.FLOW), 3)
+
+    def test_a_step_out_of_order_does_not_count(self):
+        answer = ["area tests pass", "is the run completed?", "intent ids"]
+        self.assertEqual(cn.flow_in_order(answer, self.FLOW), 2)
+
+    def test_a_line_range_is_a_truth(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "m.py").write_text("x = 1\n" * 30)
+            self.assertEqual(cn.symbol_span(Path(d), "m.py:L10-L20"), ("m.py", 10, 20))
+
+
 if __name__ == "__main__":
     unittest.main()

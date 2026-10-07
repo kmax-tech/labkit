@@ -648,7 +648,10 @@ def nav(repo: Path, questions: Path, out: Path) -> int:
             code_navigation.symbol_span(repo, t)  # a stale truth refuses now
     answer = out.with_name(out.name + ".nav-answer.json")
     prompt = out.with_name(out.name + ".nav-prompt.md")
-    prompt.write_text(code_navigation.prompt(repo, qs, str(answer)), encoding="utf-8")
+    flows = tuple(code_navigation.load_flows(questions))
+    prompt.write_text(
+        code_navigation.prompt(repo, qs, str(answer), flows), encoding="utf-8"
+    )
     print(f"navigation prompt → {prompt}\nthe agent writes → {answer}")
     return 0
 
@@ -664,9 +667,18 @@ def nav_score(repo: Path, questions: Path, out: Path, transcript: Path | None) -
     except (ValueError, code_navigation.NavigationError) as exc:
         raise SystemExit(f"usability: {exc}") from exc
     eff = code_navigation.effort(transcript, repo) if transcript else None
+    answers = json.loads(answer.read_text(encoding="utf-8"))
+    flows = {
+        f.id: (code_navigation.flow_in_order(answers.get(f.id) or [], f), len(f.steps))
+        for f in code_navigation.load_flows(questions)
+    }
     out.with_name(out.name + ".nav.json").write_text(
         json.dumps(
-            {"found": [asdict(f) for f in got], "effort": asdict(eff) if eff else None},
+            {
+                "found": [asdict(f) for f in got],
+                "flows": flows,
+                "effort": asdict(eff) if eff else None,
+            },
             indent=1,
             ensure_ascii=False,
         ),
@@ -675,6 +687,8 @@ def nav_score(repo: Path, questions: Path, out: Path, transcript: Path | None) -
     for f in got:
         mark = "found" if f.found else "file only" if f.file_right else "missed"
         print(f"  {mark:9} {f.id}: {f.answer} (truth {f.truth})")
+    for fid, (n, of) in flows.items():
+        print(f"  flow {fid}: {n}/{of} steps named in order")
     print(
         f"  {sum(f.found for f in got)}/{len(got)} found"
         + (

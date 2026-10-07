@@ -5,6 +5,17 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.63.0 — 2026-10-07
+
+### Added
+
+- **`usability nav`: line ranges and flow questions.** A truth may be a
+  line range (`path:L120-L135`) for logic that has no name of its own — a
+  range holds for the commit it was read on. A `[[flow]]` question asks for
+  an entry point's steps in order and is scored by how many registered
+  steps the answer names in the registered order. Built to test whether an
+  entry point that reads as a sequence of named steps is easier to follow.
+
 ## 0.62.0 — 2026-10-07
 
 ### Breaking
