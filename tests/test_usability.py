@@ -112,6 +112,39 @@ def _probe(
     usability._sidecar(root, "log.md").write_text(LOG, encoding="utf-8")
 
 
+class LoadProbeRun(unittest.TestCase):
+    """One loader for the probe and its latest run (score and the reading probes)."""
+
+    def test_a_bound_run_names_its_protocol(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "probe"
+            root.mkdir()
+            _probe(root, {"mean_docs_per_case": 3.5}, tier="minutes")
+            pr = usability.load_probe_run(root)
+            self.assertTrue(pr.bound)
+            self.assertEqual(pr.protocol, pr.area / "PROTOCOL-docs-per-case.md")
+            self.assertEqual(pr.protocol_as_recorded, "PROTOCOL-docs-per-case.md")
+            self.assertEqual(pr.cost_tier, "minutes")
+
+    def test_a_path_without_an_id_is_not_bound(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "probe"
+            root.mkdir()
+            _probe(root, {"mean_docs_per_case": 3.5})
+            cfg = next(root.glob("experiments/*/runs/*/config.json"))
+            data = json.loads(cfg.read_text())
+            del data["protocol"]["id"]
+            cfg.write_text(json.dumps(data))
+            pr = usability.load_probe_run(root)
+            self.assertFalse(pr.bound)
+            self.assertIsNotNone(pr.protocol)
+
+    def test_an_unstaged_dir_refuses(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(SystemExit):
+                usability.load_probe_run(Path(tmp) / "nothing")
+
+
 class ScoreVerdict(unittest.TestCase):
     def _score(self, metrics: dict) -> tuple[int, dict]:
         with tempfile.TemporaryDirectory() as tmp:

@@ -5,6 +5,17 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.64.1 — 2026-10-07
+
+### Changed
+
+- `usability.load_probe_run` reads a staged probe and its latest run once
+  (`ProbeRun`: probe, run, config, metrics, the protocol it names, whether
+  it is bound by id, the cost tier); `score` and the reading probes use it
+  instead of each reading probe.json, config.json and metrics.json
+  themselves (the last open finding of the 0.64.0 audit). Scores of the
+  round-9 probes recomputed: identical.
+
 ## 0.64.0 — 2026-10-07
 
 Worked off a code audit of everything changed since 0.58.1 (two fresh

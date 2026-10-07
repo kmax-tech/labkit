@@ -547,25 +547,66 @@ def archive(root: Path, transcript: Path, dest: Path) -> list[Path]:
     return list(payload)
 
 
-def _bound_protocol(root: Path) -> tuple[Path, protocol_reading.Truth]:
-    """The protocol the probe's latest run is bound to, and what the run says."""
-    probe = Probe(
-        **json.loads(_sidecar(root, "probe.json").read_text(encoding="utf-8"))
-    )
+@dataclass(frozen=True)
+class ProbeRun:
+    """A staged probe and its latest completed run, read once — one home for
+    what `score` and the reading probes both need."""
+
+    probe: Probe
+    area: Path
+    run: Path | None  # None: no completed run yet
+    config: dict[str, object]
+    metrics: dict[str, object]
+    protocol: Path | None  # the protocol the run names, resolved; None: none named
+    protocol_as_recorded: str | None  # the path as config.json holds it
+    bound: bool  # the run recorded the protocol's id — a path alone goes stale
+    cost_tier: str | None
+
+
+def load_probe_run(root: Path) -> ProbeRun:
+    """Read `<dir>.probe.json` and the probe area's latest completed run.
+    Raises SystemExit when the probe was not staged here."""
+    probe_file = _sidecar(root, "probe.json")
+    if not probe_file.is_file():
+        raise SystemExit(f"usability: {probe_file} missing — was {root} staged here?")
+    probe = Probe(**json.loads(probe_file.read_text(encoding="utf-8")))
     area = root / "experiments" / probe.area
     run = latest_run(area)
     if run is None:
-        raise SystemExit(f"usability: {area} has no completed run — nothing to read")
+        return ProbeRun(probe, area, None, {}, {}, None, None, False, None)
     config = json.loads((run / "config.json").read_text(encoding="utf-8"))
-    bound = (config.get("protocol") or {}).get("path")
-    if not bound:
-        raise SystemExit(f"usability: run {run.name} is bound to no protocol")
-    path = Path(bound) if Path(bound).is_absolute() else area / bound
     metrics = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
+    binding = config.get("protocol") or {}
+    named = binding.get("path")
+    protocol = None
+    if named:
+        protocol = Path(named) if Path(named).is_absolute() else area / named
+    tier = config.get("cost_tier")
+    return ProbeRun(
+        probe,
+        area,
+        run,
+        config,
+        metrics,
+        protocol,
+        str(named) if named else None,
+        bool(binding.get("id")),
+        str(tier) if tier is not None else None,
+    )
+
+
+def _bound_protocol(root: Path) -> tuple[Path, protocol_reading.Truth]:
+    """The protocol the probe's latest run names, and what the run says."""
+    pr = load_probe_run(root)
+    if pr.run is None:
+        raise SystemExit(f"usability: {pr.area} has no completed run — nothing to read")
+    if pr.protocol is None:
+        raise SystemExit(f"usability: run {pr.run.name} is bound to no protocol")
     try:
-        return path, protocol_reading.truth_from_metrics(metrics, probe.metric_key)
+        truth = protocol_reading.truth_from_metrics(pr.metrics, pr.probe.metric_key)
     except ValueError as exc:
-        raise SystemExit(f"usability: run {run.name}: {exc}") from exc
+        raise SystemExit(f"usability: run {pr.run.name}: {exc}") from exc
+    return pr.protocol, truth
 
 
 def cmd_reader(root: Path) -> int:
@@ -756,32 +797,22 @@ def cmd_read_score(root: Path, transcript: Path | None) -> int:
 
 
 def score(root: Path, transcript: Path | None = None) -> int:
-    probe_file = _sidecar(root, "probe.json")
-    if not probe_file.is_file():
-        raise SystemExit(f"usability: {probe_file} missing — was {root} staged here?")
-    probe = Probe(**json.loads(probe_file.read_text(encoding="utf-8")))
-    area = root / "experiments" / probe.area
+    pr = load_probe_run(root)
+    probe, run, metrics = pr.probe, pr.run, pr.metrics
     expected = recount(root) if probe.task == "count" else None
-    run = latest_run(area)
     number = bound_to = frozen = tier = None
     form: protocol_reading.Form | None = None
     null_reported = None
     if run is not None:
-        config_file = run / "config.json"  # a completed run always has one
-        metrics = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
-        config = json.loads(config_file.read_text(encoding="utf-8"))
         number = protocol_reading.metric_number(metrics, probe.metric_key)
-        binding = config.get("protocol") or {}
-        # bound means the run recorded an id; a path alone is a hint that goes stale
-        bound_to = binding.get("path") if binding.get("id") else None
-        tier = config.get("cost_tier")
+        bound_to = pr.protocol_as_recorded if pr.bound else None
+        tier = pr.cost_tier
         if probe.task != "count":
             null_reported = any(re.match(r"^a\d+_", k) for k in metrics)
-        if bound_to:
+        if pr.bound and pr.protocol is not None:
             from labkit import protocol_block  # lazy: labkit modules import each other
 
-            p = Path(bound_to)
-            p = p if p.is_absolute() else area / p
+            p = pr.protocol
             if p.is_file():
                 form = protocol_reading.form(p.read_text(encoding="utf-8"))
             try:
