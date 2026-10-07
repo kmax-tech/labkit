@@ -609,7 +609,26 @@ def find_field_guide() -> Path | None:
 def print_contract() -> None:
     """The checker's contract in one screen (2026-10-05: two cold agents
     learnt the budgets from the pre-commit hook and the field words from
-    the checker's source, four rewrite rounds each)."""
+    the checker's source, four rewrite rounds each). The seconds cut and the
+    fill command come first: last, five of six agents found them only after
+    reading the whole list, and none found protocol-fill (2026-10-07)."""
+    print(
+        'at cost = "seconds" (nothing freezes, no SHOULD) the protocol owes: '
+        + ", ".join(
+            f.label
+            for f in FIELDS
+            if f.seconds == "s" and f.level in ("must", "should")
+        )
+        + "; with a model named in `Model / tool` also "
+        + ", ".join(f.label for f in FIELDS if f.seconds == "sm")
+        + "; after the run: "
+        + ", ".join(f.label for f in FIELDS if f.seconds == "s" and f.level == "after")
+        + "."
+    )
+    print(
+        "fill a field by its label, multi-line placeholders included: "
+        'protocol-fill PROTOCOL-x.md "<label>" "<value>"  (--list: what is open)\n'
+    )
     print(
         "head: the ```toml block's [protocol] table — "
         + ", ".join(protocol_block.HEAD_FIELDS)
@@ -640,16 +659,6 @@ def print_contract() -> None:
         for f in FIELDS:
             if f.level == level:
                 print(f"    {f.label}")
-    print(
-        '\n  at cost = "seconds" (nothing freezes, no SHOULD): '
-        + ", ".join(
-            f.label
-            for f in FIELDS
-            if f.seconds == "s" and f.level in ("must", "should")
-        )
-        + "; the `--model` cut (a model named in `Model / tool`) also "
-        + ", ".join(f.label for f in FIELDS if f.seconds == "sm")
-    )
 
 
 def code_blocks(text: str) -> int:

@@ -6,7 +6,8 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
 - **One question per protocol.** A throwaway test with no kept number needs
   none — neither does an exploration notebook (→ §2.D7).
 - **One field = one line.** If the justification needs more room, it goes
-  into a note; the [[wikilink]] stays here.
+  into a note; the [[wikilink]] stays here. Fill by label, multi-line
+  placeholders included: `protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.
 - **The form is cut by tier** (`lib exp --cost seconds` stamps the `seconds` cut:
   head · question · criterion · admissibility · terms · data · unit ·
   exclusions · result; with `--model` also model · prompt · null condition;
