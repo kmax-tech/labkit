@@ -131,3 +131,25 @@ class TestProvenanceStamp(unittest.TestCase):
             s.append({"id": "a", "_prov": {"run": "older"}})
         row = json.loads(self.out.read_text().splitlines()[0])
         self.assertEqual(row["_prov"], {"run": "older"})
+
+
+class DamagedFile(unittest.TestCase):
+    """Only a torn LAST line is an interrupted write (review 2026-10-07: a
+    broken line mid-file was skipped and the rows after it kept)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.out = Path(self.tmp.name) / "out.jsonl"
+
+    def test_a_broken_line_mid_file_raises_with_its_line(self):
+        self.out.write_text('{"id": "a"}\n{broken}\n{"id": "b"}\n', encoding="utf-8")
+        with self.assertRaises(ValueError) as cm:
+            batch.Store(self.out).records()
+        self.assertIn("out.jsonl:2", str(cm.exception))
+
+    def test_resume_cuts_a_torn_tail_before_appending(self):
+        self.out.write_text('{"id": "a"}\n{"id": "b"', encoding="utf-8")   # killed mid-write
+        with batch.Store(self.out) as s:
+            s.append({"id": "b"})
+        self.assertEqual([r["id"] for r in batch.Store(self.out).records()], ["a", "b"])

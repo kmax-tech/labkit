@@ -26,6 +26,7 @@ gave four different stamps for one unchanged area).
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import re
 import sys
@@ -45,20 +46,61 @@ def area_files(area: Path, globs: tuple[str, ...] = AREA_GLOBS) -> list[Path]:
     return out
 
 
-#: an import line; the module name is checked against the repo's lib/
-LIB_IMPORT = re.compile(r"^\s*(?:from|import)\s+(\w+)", re.M)
+def _lib_names(path: Path, libdir: Path) -> set[str]:
+    """Top-level lib module names `path` imports, read from its syntax tree:
+    `import x`, `import lib.x`, `from lib import x`, `from lib.x import y`,
+    `from x import y`, and relative imports inside lib/. Raises ValueError
+    naming the file when it does not parse — a stamp over code it cannot
+    read would be a guess."""
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (SyntaxError, UnicodeDecodeError) as exc:
+        raise ValueError(f"{path}: cannot read its imports ({exc})") from exc
+    inside_lib = libdir in path.parents
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                parts = alias.name.split(".")
+                names.add(parts[1] if parts[0] == "lib" and len(parts) > 1 else parts[0])
+        elif isinstance(node, ast.ImportFrom):
+            parts = (node.module or "").split(".") if node.module else []
+            if node.level and inside_lib:              # from . import x / from .x import y
+                names |= {parts[0]} if parts else {a.name for a in node.names}
+            elif parts and parts[0] == "lib":          # from lib import x / from lib.x import y
+                names |= {parts[1]} if len(parts) > 1 else {a.name for a in node.names}
+            elif parts:
+                names.add(parts[0])
+    return names
+
+
+def _lib_files(name: str, libdir: Path) -> list[Path]:
+    """The files of lib module `name`: `x.py`, or every .py of package `x/`."""
+    if (libdir / f"{name}.py").is_file():
+        return [libdir / f"{name}.py"]
+    if (libdir / name / "__init__.py").is_file():
+        return sorted((libdir / name).rglob("*.py"))
+    return []
 
 
 def imported_lib(area: Path, repo: Path) -> list[Path]:
-    """Repo-local lib modules the area's code imports — shared anchors and
-    thresholds live there, so they determine the number (§2.A16)."""
+    """Repo-local lib files the area's code reaches by import, transitively —
+    shared anchors and thresholds live there, so they determine the number
+    (§2.A16). Review 2026-10-07: `from lib import scoring` and `import
+    lib.scoring` were read as a module `lib`, and a lib module's own imports
+    were not followed; lib/scoring.py changed while the stamp stayed put."""
     libdir = repo / "lib"
     if not libdir.is_dir():
         return []
-    names = set()
-    for p in area_files(area):
-        names |= {m.group(1) for m in LIB_IMPORT.finditer(p.read_text(encoding="utf-8"))}
-    return [libdir / f"{n}.py" for n in sorted(names) if (libdir / f"{n}.py").is_file()]
+    seen: set[Path] = set()
+    todo = list(area_files(area))
+    while todo:
+        for name in _lib_names(todo.pop(), libdir):
+            for f in _lib_files(name, libdir):
+                if f not in seen:
+                    seen.add(f)
+                    todo.append(f)
+    return sorted(seen)
 
 
 def find_pin(start: Path, name: str = "labkit==") -> tuple[str, str] | None:

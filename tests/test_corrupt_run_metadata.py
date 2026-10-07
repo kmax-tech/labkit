@@ -93,3 +93,30 @@ class BrokenMetrics(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Shape(unittest.TestCase):
+    """Valid JSON of the wrong shape is unreadable metadata too (review
+    2026-10-07: `[]` read as a run, and a list failed later as an
+    AttributeError far from the file)."""
+
+    def test_wrong_shapes_raise_naming_the_problem(self):
+        from labkit import runs
+        for content, fragment in (("[]", "a JSON list"),
+                                  ('{"schema_version": "2"}', "schema_version"),
+                                  ('{"protocol": "PROTOCOL-x.md"}', "protocol ="),
+                                  ('{"protocol": {"id": 7}}', "protocol.id")):
+            with tempfile.TemporaryDirectory() as d:
+                (Path(d) / "config.json").write_text(content)
+                with self.assertRaises(runs.RunConfigError) as cm:
+                    runs.read_run_config(Path(d))
+                self.assertIn(fragment, str(cm.exception), content)
+
+    def test_the_current_shape_reads(self):
+        from labkit import runs
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "config.json").write_text(
+                '{"schema_version": 2, "protocol": {"id": null, "path": null}}')
+            cfg = runs.read_run_config(Path(d))
+            assert cfg is not None
+            self.assertEqual(cfg["schema_version"], 2)

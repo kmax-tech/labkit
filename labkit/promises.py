@@ -261,9 +261,11 @@ def _function_source(path: Path, name: str) -> str:
     for node in tree.body:
         if (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
                 and node.name == name):
-            segment = ast.get_source_segment(source, node)
-            assert segment is not None, f"{path}:{name} has no source segment"
-            return segment
+            # decorators included: `@cache` → `@retry` can change what the
+            # function does, so it must move the stamp (review 2026-10-07)
+            first = min([d.lineno for d in node.decorator_list] + [node.lineno])
+            assert node.end_lineno is not None, f"{path}:{name} has no end line"
+            return "\n".join(source.splitlines()[first - 1:node.end_lineno])
     raise PromiseError(f"{path}: no top-level function or class {name!r} — the "
                        f"declared scope names code that does not exist")
 
@@ -272,7 +274,7 @@ def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
     """Digest over the declared scope, entries resolved against `base`.
 
     A `file` entry covers the file's bytes; a `file:function` entry covers
-    only that function's source (decorators excluded), so an edit to a
+    only that function's source, decorators included, so an edit to a
     neighbouring function leaves the stamp alone. Each entry contributes
     its own spelling plus its content digest, so adding, dropping or
     renaming an entry changes the stamp too. A missing file or function is

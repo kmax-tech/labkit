@@ -368,3 +368,15 @@ class Chain(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Decorators(unittest.TestCase):
+    def test_a_changed_decorator_moves_the_declared_scope(self):
+        """Review 2026-10-07: decorators were excluded, so `@cache` → `@retry`
+        left the stamp alone while the behaviour changed."""
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            (base / "m.py").write_text("@cache\ndef evaluate(r):\n    return r\n")
+            before = promises.declared_scope_sha(base, ("m.py:evaluate",))
+            (base / "m.py").write_text("@retry\ndef evaluate(r):\n    return r\n")
+            self.assertNotEqual(before, promises.declared_scope_sha(base, ("m.py:evaluate",)))

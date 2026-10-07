@@ -112,7 +112,42 @@ def parse(text: str) -> dict:
     findings = [(f.group(1), line.strip()) for line in body.splitlines()
                 if (f := FINDING.match(line))]
     return {"verdict": (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)),
-            "findings": findings}
+            "findings": findings, "scope": scope_list((text or "")[m.end():])}
+
+
+def scope_list(tail: str) -> list[str]:
+    """The auditor's closing `scope:` list — the files it says determine the
+    number, one per line (also accepted on the `scope:` line itself)."""
+    lines = tail.splitlines()
+    for i, line in enumerate(lines):
+        if line.strip().startswith("scope:"):
+            first = line.strip().removeprefix("scope:").strip()
+            rest = [ln.strip().lstrip("-*• ").strip("`") for ln in lines[i + 1:]]
+            return [s for s in ([first.strip("`")] if first else []) + rest
+                    if s and not s.startswith("```")]
+    return []
+
+
+def scope_mismatch(area: Path, listed: list[str]) -> list[str]:
+    """Where the auditor's scope and the stamp disagree. The stamp is what a
+    later check recomputes, so a file the auditor read as part of the number
+    but the stamp misses can change unnoticed (review 2026-10-07: the list
+    was asked for and then dropped)."""
+    root = layout_root(area)
+    _, files, _ = area_stamp(area)
+    stamped = {f.resolve().relative_to(root.resolve()).as_posix()
+               for f in files if f.resolve().is_relative_to(root.resolve())}
+    named = set()
+    for s in listed:
+        q = Path(s)
+        q = q if q.is_absolute() else root / q
+        named.add(q.resolve().relative_to(root.resolve()).as_posix()
+                  if q.resolve().is_relative_to(root.resolve()) else s)
+    out = [f"the auditor read {n} as part of the number, the stamp does not cover it"
+           for n in sorted(named - stamped)]
+    out += [f"the stamp covers {s}, the auditor did not list it as read"
+            for s in sorted(stamped - named)]
+    return out
 
 
 def stamp_facts(area: Path, verdict: tuple[int, int, int]) -> str:
@@ -148,6 +183,8 @@ def main(argv: list[str]) -> int:
         args.out.write_text(report, encoding="utf-8")
     b, w, _ = result["verdict"]
     print(f"\nstamp: {stamp_facts(args.area, result['verdict'])}", file=sys.stderr)
+    for gap in scope_mismatch(args.area, result["scope"]):
+        print(f"scope WARNING: {gap}", file=sys.stderr)
     return 1 if b or w else 0
 
 

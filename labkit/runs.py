@@ -104,11 +104,35 @@ def read_run_config(run_dir: Path) -> dict | None:
     if not cfg_file.is_file():
         return None
     try:
-        return json.loads(cfg_file.read_text(encoding="utf-8"))
+        cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise RunConfigError(
             f"{cfg_file}: unreadable run metadata ({exc}) — the run cannot "
             f"say what it is; repair or move it aside") from exc
+    problem = _shape_problem(cfg)
+    if problem:
+        raise RunConfigError(f"{cfg_file}: unreadable run metadata ({problem}) — repair "
+                             f"or move it aside")
+    return cfg
+
+
+def _shape_problem(cfg: object) -> str | None:
+    """The minimal shape every reader relies on, checked in one place:
+    valid JSON that is a list, or a binding that is a string, used to fail
+    later as an AttributeError far from the file (review 2026-10-07)."""
+    if not isinstance(cfg, dict):
+        return f"a JSON {type(cfg).__name__}, not an object"
+    sv = cfg.get("schema_version")
+    if sv is not None and (not isinstance(sv, int) or isinstance(sv, bool)):
+        return f"schema_version = {sv!r}, not an integer"
+    binding = cfg.get("protocol")
+    if binding is not None:
+        if not isinstance(binding, dict):
+            return f"protocol = {binding!r}, not an object"
+        for key in ("id", "path"):
+            if binding.get(key) is not None and not isinstance(binding[key], str):
+                return f"protocol.{key} = {binding[key]!r}, not a string"
+    return None
 
 
 def completion_state(run_dir: Path) -> str:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "labkit"
-version = "0.51.0"
+version = "0.52.0"
 description = "Shared lab helpers: run index, LLM backend, endpoint lease, resumable batches, protocol and notes checkers"
 requires-python = ">=3.12"
 # stdlib only, on purpose: a lab helper that drags dependencies in decides the
@@ -15,7 +15,8 @@ dependencies = []
 # Named so a fresh environment (a cloud session, CI) runs the same suite as
 # the local one instead of whichever interpreter happens to carry pytest.
 [project.optional-dependencies]
-dev = ["pytest"]
+# the coding style's three tools: test, lint, type-check (docs/coding-style.md §8)
+dev = ["pytest", "ruff", "pyright"]
 
 [project.scripts]
 protocol-check = "labkit.protocol_check:cli"
@@ -39,6 +40,11 @@ packages = ["labkit"]
 # the protocol template IS the checker's contract — shipping the checker
 # without it leaves `protocol-check` with nothing to check against.
 labkit = ["*.template", "protocol-field-guide.md", "*.agent.md"]
+
+[tool.ruff]
+# a one-off extraction script kept as the evidence of a usability record —
+# frozen as it ran, not maintained code
+extend-exclude = ["docs/usability/*.py"]
 
 [tool.ruff.lint]
 # Same pinned scope as the lab repos (a shifting default is a knob nobody set).

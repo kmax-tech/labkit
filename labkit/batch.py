@@ -32,6 +32,30 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 
+def _parse(text: str, path: Path) -> tuple[list[dict], int | None]:
+    """(objects, line number of a torn last line or None). Only the LAST
+    non-empty line may be unparseable — a process killed mid-write leaves
+    exactly that. Any earlier one is a damaged file, and resuming over it
+    would treat it as done: raises ValueError with file and line (review
+    2026-10-07: a broken line mid-file was skipped and the rows after it
+    kept)."""
+    lines = text.splitlines()
+    last = max((i for i, ln in enumerate(lines) if ln.strip()), default=-1)
+    out, torn = [], None
+    for i, line in enumerate(lines):
+        if not line.strip():
+            continue
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError as exc:
+            if i != last:
+                raise ValueError(f"{path}:{i + 1}: unparseable line before the end of the "
+                                 f"file ({exc.msg}) — not an interrupted write; repair "
+                                 f"or regenerate the file") from exc
+            torn = i + 1
+    return out, torn
+
+
 class Store:
     """Append-only JSONL output with a lock, resume-by-id and a status view.
 
@@ -90,8 +114,23 @@ class Store:
             self._fh = self._tmp.open("w", encoding="utf-8")
             self._producing = True
         else:
+            self._drop_torn_tail()
             self._fh = self.path.open("a", encoding="utf-8")
         return self
+
+    def _drop_torn_tail(self) -> None:
+        """Before appending: cut a torn last line, said out loud — appending
+        after it would leave it mid-file (or glue the next record onto it)."""
+        if not self.path.exists():
+            return
+        text = self.path.read_text(encoding="utf-8")
+        _, torn = _parse(text, self.path)
+        if torn is None:
+            return
+        kept = text.splitlines()[:torn - 1]
+        self.path.write_text("".join(ln + "\n" for ln in kept), encoding="utf-8")
+        print(f"batch: cut the torn last line {torn} of {self.path} (interrupted "
+              f"write) — its item will be redone", file=sys.stderr)
 
     def __exit__(self, exc_type, *exc) -> None:
         if self._fh is not None:
@@ -109,28 +148,18 @@ class Store:
     # -- reading ----------------------------------------------------------
     def records(self) -> list[dict]:
         """Everything written so far. A truncated final line (a process killed
-        mid-write) is reported and skipped, never silently dropped. A `_meta`
+        mid-write) is reported and skipped, never silently dropped; an
+        unparseable line anywhere else raises. A `_meta`
         header line (see write_dataset) is documentation, not a record —
         skipped here, so every consumer reading through this sees data only."""
         src = self._tmp if self._producing else self.path
         if not src.exists():
             return []
-        out = []
-        lines = src.read_text(encoding="utf-8").splitlines()
-        for i, line in enumerate(lines):
-            if not line.strip():
-                continue
-            try:
-                obj = json.loads(line)
-                if isinstance(obj, dict) and "_meta" in obj:
-                    continue
-                out.append(obj)
-            except json.JSONDecodeError:
-                where = "last" if i == len(lines) - 1 else f"line {i + 1}"
-                print(f"batch: skipping unparseable {where} line of {self.path} "
-                      f"(interrupted write?) — it will be redone",
-                      file=sys.stderr)
-        return out
+        objs, torn = _parse(src.read_text(encoding="utf-8"), src)
+        if torn is not None:
+            print(f"batch: skipping the torn last line {torn} of {src} "
+                  f"(interrupted write) — it will be redone", file=sys.stderr)
+        return [o for o in objs if not (isinstance(o, dict) and "_meta" in o)]
 
     def done_ids(self) -> set:
         return {r[self.id_key] for r in self.records() if self.id_key in r}

@@ -116,7 +116,7 @@ promise rests on; the hash makes that statement checkable. A call-closure
 warning may help with declaring; it does not replace it.
 
 Details: a `file:function` entry hashes the function's source segment
-(decorators excluded), so edits to neighbouring functions leave the stamp
+(decorators included), so edits to neighbouring functions leave the stamp
 alone; each entry contributes its spelling and its content digest, so
 adding, dropping or renaming an entry changes the stamp; a missing file or
 function is an error, never an empty digest. Module-level constants

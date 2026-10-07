@@ -5,6 +5,40 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.52.0 — 2026-10-07
+
+### Breaking
+
+Last version with the old behaviour: **v0.51.0**.
+
+- **The audit stamp follows every import form, transitively.** `from lib
+  import x`, `import lib.x`, `from lib.x import y`, relative imports inside
+  `lib/` and packages are resolved from the syntax tree, and a lib module's
+  own imports are followed; `from lib import scoring` used to be read as a
+  module `lib`, so lib/scoring.py could change under an unchanged stamp.
+  Stamps of areas importing that way move. Code that does not parse refuses
+  the stamp instead of a guess.
+- **A function scope includes its decorators**: `@cache` → `@retry` moves
+  `declared_scope_sha`. Runs recorded with a decorated scope function show
+  that scope as changed.
+- **batch** raises on an unparseable line anywhere but the last (file and
+  line named); a torn last line is cut before a resume appends.
+- **Run metadata is checked for shape** in `read_run_config`: not an
+  object, a non-integer `schema_version` or a malformed `protocol` binding is
+  a `RunConfigError`, not a later AttributeError.
+
+### Added
+
+- `labkit-audit` holds the auditor's `scope:` list against the stamp and
+  warns on every file only one side names.
+- The `dev` extra carries the coding style's tools: `pytest`, `ruff`,
+  `pyright`; a one-off usability script is excluded from ruff.
+
+### Fixed
+
+- The suite writes no lease into `~/.labkit` (`tests/conftest.py`), and the
+  `ps` integration test skips where `ps` is missing.
+
 ## 0.51.0 — 2026-10-07
 
 ### Added
