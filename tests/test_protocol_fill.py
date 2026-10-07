@@ -7,12 +7,13 @@ ambiguity and silent overwrites, and leave every other byte alone.
 """
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit import protocol_check, protocol_fill  # noqa: E402
+from labkit import code_check, protocol_check, protocol_fill  # noqa: E402
 
 SAMPLE = """# Experiment protocol: x
 
@@ -89,6 +90,66 @@ class TestFill(unittest.TestCase):
         self.assertIn("Question †", labels)
         self.assertIn("Meaning of the gold label †", labels)
         self.assertNotIn("Model / tool", labels)
+
+
+TEMPLATE = (
+    Path(protocol_fill.__file__)
+    .with_name("experiment-protocol.md.template")
+    .read_text(encoding="utf-8")
+)
+SCRIPT = (
+    'PROMPT = ("Does this text make a causal claim?\\n\\n"\n'
+    '          "Text: {text}\\n\\nAnswer:")\n'
+    'PROMPT_NULL = "Is this text written in English?\\n\\nText: {text}"\n'
+)
+
+
+class Prompts(unittest.TestCase):
+    """The Prompt block written from the scripts' constants holds against
+    code-check's drift check (re-measure 2026-10-07: three agents patched
+    it by a Python snippet)."""
+
+    def area(self, d: str) -> Path:
+        area = Path(d)
+        (area / "scripts").mkdir()
+        (area / "scripts" / "01_measure.py").write_text(SCRIPT)
+        protocol = area / "PROTOCOL-x.md"
+        protocol.write_text(TEMPLATE)
+        return protocol
+
+    def test_the_block_passes_the_drift_check(self):
+        with tempfile.TemporaryDirectory() as d:
+            protocol = self.area(d)
+            consts = code_check.prompt_constants(protocol.parent)
+            protocol.write_text(protocol_fill.fill_prompts(TEMPLATE, consts))
+            self.assertEqual(
+                code_check.check_prompt_drift(protocol.parent, protocol), []
+            )
+            text = protocol.read_text()
+        self.assertIn("  ── PROMPT ──\n  Does this text make a causal claim?", text)
+        self.assertIn("── PROMPT_NULL ──", text)
+        self.assertNotIn("<the real prompt", text)
+
+    def test_a_changed_constant_drifts_again(self):
+        with tempfile.TemporaryDirectory() as d:
+            protocol = self.area(d)
+            consts = code_check.prompt_constants(protocol.parent)
+            protocol.write_text(protocol_fill.fill_prompts(TEMPLATE, consts))
+            (protocol.parent / "scripts" / "01_measure.py").write_text(
+                SCRIPT.replace("causal claim", "claim of cause")
+            )
+            drift = code_check.check_prompt_drift(protocol.parent, protocol)
+        self.assertTrue(drift and "drifted from PROMPT" in drift[0], drift)
+
+    def test_filling_twice_replaces_not_appends(self):
+        consts = {"PROMPT": "Q?"}
+        once = protocol_fill.fill_prompts(TEMPLATE, consts)
+        self.assertEqual(protocol_fill.fill_prompts(once, consts), once)
+
+    def test_no_constant_is_a_sentence(self):
+        with self.assertRaises(ValueError) as cm:
+            protocol_fill.fill_prompts(TEMPLATE, {})
+        self.assertIn("no PROMPT constant", str(cm.exception))
 
 
 if __name__ == "__main__":

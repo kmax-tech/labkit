@@ -10,6 +10,7 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md --list
     protocol-fill PROTOCOL-x.md "Meaning of the gold label" "positive = ..."
     protocol-fill PROTOCOL-x.md --line 27 Question "does Y move X?"
+    protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
 
 A field that is already filled is refused without --force — overwriting an
 answer silently is how two truths happen. Labels are matched with the †
@@ -23,6 +24,7 @@ import re
 import sys
 from pathlib import Path
 
+from labkit.code_check import prompt_constants
 from labkit.protocol_check import field_name, fields, placeholder_fields
 
 # Bullet and indentation of a label line, kept when the line is rewritten.
@@ -77,6 +79,58 @@ def fill(
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 
 
+_FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})")
+
+
+def fill_prompts(text: str, constants: dict[str, str]) -> str:
+    """Return the protocol text with the Prompt field's code block written
+    from the scripts' `PROMPT` / `PROMPT_<VARIANT>` constants, `PROMPT`
+    first, each under a `── NAME ──` line when there are several.
+
+    The block is what `code-check` holds the script to (prompt drift); three
+    of three cold agents wrote it by a Python snippet because the label fill
+    could not reach a code block (re-measure 2026-10-07). Replaces the block
+    that follows the label (within three lines), or inserts one."""
+    if not constants:
+        raise ValueError(
+            "no PROMPT constant readable in the area's scripts (an f-string "
+            "renders at run time and cannot be copied) — write the block by hand"
+        )
+    hits = [f for f in fields(text) if f.name == "prompt"]
+    if len(hits) != 1:
+        where = ", ".join(str(f.line) for f in hits) or "none"
+        raise ValueError(f"expected one Prompt field, found {where}")
+    (f,) = hits
+    lines = text.splitlines()
+    names = sorted(constants, key=lambda n: (n != "PROMPT", n))
+    body: list[str] = []
+    for name in names:
+        if len(names) > 1:
+            body.append(f"── {name} ──")
+        body += constants[name].splitlines()
+    start = end = f.last  # 0-based index just after the field's value
+    for j in range(f.last, min(f.last + 3, len(lines))):
+        m = _FENCE.match(lines[j])
+        if m:
+            k = next(
+                (
+                    k
+                    for k in range(j + 1, len(lines))
+                    if lines[k].strip().startswith(m.group(2))
+                ),
+                None,
+            )
+            if k is None:
+                raise ValueError(f"line {j + 1}: the Prompt block never closes")
+            start, end = j, k + 1
+            break
+    block = ["  ```text", *[f"  {ln}" if ln else "" for ln in body], "  ```"]
+    if start == end:  # no block yet: a blank line, then the block
+        block = ["", *block]
+    lines[start:end] = block
+    return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
+
+
 def main(argv: list[str]) -> int:
     import argparse
 
@@ -91,6 +145,11 @@ def main(argv: list[str]) -> int:
     ap.add_argument("value", nargs="*", help="the field's new value")
     ap.add_argument(
         "--list", action="store_true", help="list open placeholder fields and exit"
+    )
+    ap.add_argument(
+        "--prompts",
+        action="store_true",
+        help="write the Prompt block from the area scripts' PROMPT constants",
     )
     ap.add_argument(
         "--line",
@@ -112,6 +171,15 @@ def main(argv: list[str]) -> int:
             print("no placeholder fields left")
         for n, label in holes:
             print(f"{n:4d}  {label}")
+        return 0
+    if args.prompts:
+        try:
+            new = fill_prompts(text, prompt_constants(args.protocol.resolve().parent))
+        except ValueError as exc:
+            print(f"protocol-fill: {exc}")
+            return 1
+        args.protocol.write_text(new, encoding="utf-8")
+        print("filled: Prompt (from the scripts' PROMPT constants)")
         return 0
     if not args.field or not args.value:
         ap.error("need FIELD and VALUE (or --list)")

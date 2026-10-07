@@ -125,7 +125,7 @@ instead).*
 - **Prompt (verbatim, per variant):** <!-- sm -->
 
   ```text
-  <the real prompt — it belongs here, not only in the script>
+  <the real prompt — `protocol-fill PROTOCOL-<name>.md --prompts` writes it from the script's PROMPT constants>
   ```
 
 - **Model I/O:** <in: which fields · out as instructed: required format ·
