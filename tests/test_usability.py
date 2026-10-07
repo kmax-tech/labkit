@@ -180,5 +180,46 @@ class AgentPrompt(unittest.TestCase):
                 usability.agent_prompt(Path(d))
 
 
+class Archive(unittest.TestCase):
+    """A probe is kept for debugging: transcript, timeline, score — and a
+    second archive of other bytes under the same name is refused."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        base = Path(self.tmp.name)
+        self.root = base / "count-1"
+        self.root.mkdir()
+        (base / "count-1.score.json").write_text('{"number": 3.5}')
+        self.transcript = base / "agent.jsonl"
+        self.transcript.write_text(
+            json.dumps(
+                {"type": "user", "timestamp": "2026-10-07T14:00:00Z", "message": {}}
+            )
+            + "\n"
+        )
+        self.dest = base / "traces"
+
+    def test_three_files_and_a_rerun_changes_nothing(self):
+        import gzip
+
+        written = usability.archive(self.root, self.transcript, self.dest)
+        self.assertEqual(
+            sorted(p.name for p in written),
+            ["count-1.jsonl.gz", "count-1.score.json", "count-1.timeline.txt"],
+        )
+        self.assertEqual(
+            gzip.decompress((self.dest / "count-1.jsonl.gz").read_bytes()),
+            self.transcript.read_bytes(),
+        )
+        usability.archive(self.root, self.transcript, self.dest)  # same bytes: fine
+
+    def test_other_bytes_under_the_same_name_are_refused(self):
+        usability.archive(self.root, self.transcript, self.dest)
+        (self.root.parent / "count-1.score.json").write_text('{"number": 4.0}')
+        with self.assertRaises(SystemExit):
+            usability.archive(self.root, self.transcript, self.dest)
+
+
 if __name__ == "__main__":
     unittest.main()

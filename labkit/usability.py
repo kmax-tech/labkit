@@ -506,6 +506,35 @@ class Score:
     )
 
 
+def archive(root: Path, transcript: Path, dest: Path) -> list[Path]:
+    """Keep a probe for later debugging: the transcript (gzip, mtime 0 so
+    the bytes depend on the content only), its timeline and the score, as
+    `<dest>/<probe>.jsonl.gz`, `.timeline.txt`, `.score.json`. Claude Code
+    deletes transcripts after `cleanupPeriodDays` (30 by default), and a
+    transcript is what showed an agent's source reads and detours on
+    2026-10-07. A file already there with other bytes is refused, never
+    overwritten."""
+    import gzip
+
+    dest.mkdir(parents=True, exist_ok=True)
+    payload = {
+        dest / f"{root.name}.jsonl.gz": gzip.compress(transcript.read_bytes(), mtime=0),
+        dest / f"{root.name}.timeline.txt": (
+            "\n".join(agent_transcript.timeline(transcript)) + "\n"
+        ).encode("utf-8"),
+        dest / f"{root.name}.score.json": _sidecar(root, "score.json").read_bytes(),
+    }
+    clash = [p for p, b in payload.items() if p.exists() and p.read_bytes() != b]
+    if clash:
+        raise SystemExit(
+            f"usability: archive refuses to overwrite {', '.join(map(str, clash))} — "
+            f"another probe of the same name? archive into another directory"
+        )
+    for path, body in payload.items():
+        path.write_bytes(body)
+    return list(payload)
+
+
 def score(root: Path, transcript: Path | None = None) -> int:
     probe_file = _sidecar(root, "probe.json")
     if not probe_file.is_file():
@@ -703,6 +732,11 @@ def main(argv: list[str]) -> int:
         help="the agent's session transcript (JSONL): wall-clock, tool calls, "
         "files and refusals measured instead of self-reported",
     )
+    c.add_argument(
+        "--archive",
+        metavar="DIR",
+        help="with --transcript: keep transcript (gzip), timeline and score in DIR",
+    )
     tr = sub.add_parser("trace", help="the timeline of one agent transcript")
     tr.add_argument("transcript")
     args = ap.parse_args(argv)
@@ -722,7 +756,14 @@ def main(argv: list[str]) -> int:
             task=args.task,
             model=args.model,
         )
-    return score(root, Path(args.transcript).resolve() if args.transcript else None)
+    if args.archive and not args.transcript:
+        ap.error("--archive needs --transcript")
+    transcript = Path(args.transcript).resolve() if args.transcript else None
+    rc = score(root, transcript)
+    if args.archive and transcript is not None:
+        for path in archive(root, transcript, Path(args.archive)):
+            print(f"  archived {path}")
+    return rc
 
 
 def cli() -> None:
