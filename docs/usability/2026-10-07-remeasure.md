@@ -60,5 +60,5 @@ labkit source or the standard.
 - The null lane is the one place where agents had to think, and one in
   three got it wrong. A constant-answer placebo on balanced gold (judge-3:
   "Is the sentence written in English?") lands at chance by construction.
-- `protocol_fill.open_fields` parses placeholders a second time (one home);
+- Fixed in the follow-up: `protocol_fill.open_fields` parsed placeholders a second time (one home);
   it mis-read a label as `extremes)`.

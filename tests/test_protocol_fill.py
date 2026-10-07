@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit import protocol_fill  # noqa: E402
+from labkit import protocol_check, protocol_fill  # noqa: E402
 
 SAMPLE = """# Experiment protocol: x
 
@@ -74,8 +74,18 @@ class TestFill(unittest.TestCase):
         self.assertIn("- **Result †:** x", out)
         self.assertIn("<second stamp>", out)
 
+    def test_a_wrapped_label_is_read_whole(self):
+        """The stamped `Resolution check` label wraps; the old parser listed
+        it as `extremes)` (usability probe 2026-10-07)."""
+        text = "- **Resolution check (ZERO calls,\n  extremes):** <both numbers>\n"
+        out = protocol_fill.fill(text, "Resolution check", "fires 1.0, silent 0.0")
+        self.assertEqual(
+            out,
+            "- **Resolution check (ZERO calls, extremes):** fires 1.0, silent 0.0\n",
+        )
+
     def test_open_fields_lists_placeholders_only(self):
-        labels = [lbl for _, lbl in protocol_fill.open_fields(SAMPLE)]
+        labels = [lbl for _, lbl in protocol_check.placeholder_fields(SAMPLE)]
         self.assertIn("Question †", labels)
         self.assertIn("Meaning of the gold label †", labels)
         self.assertNotIn("Model / tool", labels)

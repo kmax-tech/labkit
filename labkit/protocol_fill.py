@@ -23,31 +23,10 @@ import re
 import sys
 from pathlib import Path
 
-# Same shape protocol_check.PLACEHOLDER parses, split into groups we keep:
-# prefix (bullet + emphasis), label, separator (colon + emphasis), value.
-FIELD_LINE = re.compile(
-    r"^(\s*[-*]?\s*\*{0,2})([^*<>:]{2,60}?)"
-    r"(\*{0,2}\s*:\*{0,2}\s*)(.*)$"
-)
+from labkit.protocol_check import field_name, fields, placeholder_fields
 
-
-def _norm(label: str) -> str:
-    return label.replace("†", "").strip().lower()
-
-
-def _placeholder_span(lines: list[str], i: int, value: str) -> int | None:
-    """End index (inclusive) of the placeholder starting at line i, or None
-    if the value is not a placeholder. `<...>` on one line ends at i; an
-    unclosed `<...` runs until the first line containing `>`."""
-    v = value.strip()
-    if not v.startswith("<"):
-        return None
-    if ">" in v:
-        return i if v.endswith(">") else None
-    for j in range(i + 1, len(lines)):
-        if ">" in lines[j]:
-            return j
-    return None
+# Bullet and indentation of a label line, kept when the line is rewritten.
+_LEAD = re.compile(r"^\s*(?:[-*]\s+|\d+[.)]\s+)?")
 
 
 def fill(
@@ -55,18 +34,22 @@ def fill(
 ) -> str:
     """Return the protocol text with `field`'s placeholder replaced by `value`.
 
+    Fields are read by `protocol_check.fields` — the one parser of labels
+    and placeholders; a second one here mis-read a wrapped label as
+    `extremes)` (usability probe 2026-10-07). The label line and its
+    continuation lines become one line; everything else stays byte-identical.
+
     Raises ValueError with a human-readable reason (unknown label, ambiguous
     label, already filled without force) — the CLI prints it verbatim.
     """
-    lines = text.splitlines()
-    hits: list[tuple[int, re.Match]] = []
-    for i, line in enumerate(lines):
-        m = FIELD_LINE.match(line)
-        if m and _norm(m.group(2)) == _norm(field):
-            if line_no is None or i + 1 == line_no:
-                hits.append((i, m))
+    want = field_name(field)
+    hits = [
+        f
+        for f in fields(text)
+        if f.name == want and (line_no is None or f.line == line_no)
+    ]
     if not hits:
-        labels = sorted({lbl for _, lbl in open_fields(text)})
+        labels = sorted({lbl for _, lbl in placeholder_fields(text)})
         raise ValueError(
             f"no field labelled {field!r}"
             + (f" at line {line_no}" if line_no else "")
@@ -77,33 +60,21 @@ def fill(
             )
         )
     if len(hits) > 1:
-        where = ", ".join(str(i + 1) for i, _ in hits)
+        where = ", ".join(str(f.line) for f in hits)
         raise ValueError(
             f"label {field!r} matches lines {where} — disambiguate with --line <n>."
         )
-    i, m = hits[0]
-    end = _placeholder_span(lines, i, m.group(4))
-    if end is None:
-        if not force:
-            raise ValueError(
-                f"line {i + 1} ({m.group(2).strip()!r}) is already filled: "
-                f"{m.group(4).strip()[:80]!r}. Overwrite with --force."
-            )
-        end = i
-    new_line = m.group(1) + m.group(2) + m.group(3) + value
-    lines[i : end + 1] = [new_line]
-    return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
-
-
-def open_fields(text: str) -> list[tuple[int, str]]:
-    """(line number, label) of every field whose value is still a placeholder."""
+    (f,) = hits
+    if not f.placeholder and not force:
+        raise ValueError(
+            f"line {f.line} ({f.label!r}) is already filled: "
+            f"{f.value[:80]!r}. Overwrite with --force."
+        )
     lines = text.splitlines()
-    out = []
-    for i, line in enumerate(lines):
-        m = FIELD_LINE.match(line)
-        if m and _placeholder_span(lines, i, m.group(4)) is not None:
-            out.append((i + 1, m.group(2).strip()))
-    return out
+    lead = _LEAD.match(lines[f.line - 1])
+    assert lead is not None, "the pattern matches the empty prefix"
+    lines[f.line - 1 : f.last] = [f"{lead.group(0)}**{f.label}:** {value}"]
+    return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 
 
 def main(argv: list[str]) -> int:
@@ -136,10 +107,10 @@ def main(argv: list[str]) -> int:
         return 2
     text = args.protocol.read_text(encoding="utf-8")
     if args.list:
-        fields = open_fields(text)
-        if not fields:
+        holes = placeholder_fields(text)
+        if not holes:
             print("no placeholder fields left")
-        for n, label in fields:
+        for n, label in holes:
             print(f"{n:4d}  {label}")
         return 0
     if not args.field or not args.value:
