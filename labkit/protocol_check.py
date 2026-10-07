@@ -627,7 +627,8 @@ def print_contract() -> None:
     )
     print(
         "fill a field by its label, multi-line placeholders included: "
-        'protocol-fill PROTOCOL-x.md "<label>" "<value>"  (--list: what is open)\n'
+        'protocol-fill PROTOCOL-x.md "<label>" "<value>"; what is still open: '
+        "protocol-fill PROTOCOL-x.md --list\n"
     )
     print(
         "head: the ```toml block's [protocol] table — "
