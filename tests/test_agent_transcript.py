@@ -143,6 +143,16 @@ class Refusals(unittest.TestCase):
         self.assertIn(":17:", str(cm.exception))
 
 
+class Gzipped(unittest.TestCase):
+    def test_an_archived_transcript_reads_like_the_original(self):
+        import gzip
+
+        plain = transcript(CALLS)
+        packed = plain.with_suffix(".jsonl.gz")
+        packed.write_bytes(gzip.compress(plain.read_bytes(), mtime=0))
+        self.assertEqual(at.timeline(packed), at.timeline(plain))
+
+
 class Timeline(unittest.TestCase):
     def test_bookkeeping_and_heredoc_bodies_are_cut(self):
         lines = at.timeline(transcript(CALLS))

@@ -3,6 +3,7 @@
     claude-hook pre-run       PreToolUse  (matcher: Bash)
     claude-hook post-change   PostToolUse (matcher: Bash|Write|Edit)
     claude-hook stop          Stop
+    claude-hook sessions [--run RUN_ID]   the session log: which session, which transcript, which runs
 
 Both read the hook's JSON event on stdin and answer the way Claude Code
 expects: `pre-run` blocks with exit 2 (the stderr text goes back to the
@@ -49,6 +50,15 @@ stop
     (2026-10-07). Once per stop: when the agent was already sent back by
     this hook (`stop_hook_active`), it may stop; the commit gate still holds.
 
+session log
+    Every stop also appends one line to the repo's `.git/labkit-sessions.jsonl`
+    (inside .git: local, never committed): the session id, the transcript
+    path, the time, and the runs whose run_id dates from after this
+    session's previous stop (or its first transcript record). `claude-hook
+    sessions --run RUN_ID` finds the session — and so the transcript — a run
+    came from: what the agent read and decided before it, for debugging
+    (2026-10-07; Claude Code deletes transcripts after `cleanupPeriodDays`).
+
 Exit codes: pre-run 0 or 2 (block); stop 0 or 2 (keep working); post-change 0; usage errors and
 unexpected failures 1, loud on stderr, never swallowed.
 """
@@ -63,6 +73,7 @@ import os
 import re
 import sys
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 from labkit import finalize, notes_check, preflight, protocol_block, protocol_check
@@ -334,13 +345,127 @@ def post_change(event: dict) -> int:
     return 0
 
 
+RUN_DIR_TIME = re.compile(r"^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})_[0-9a-f]+$")
+
+
+def session_log(repo: Path) -> Path | None:
+    """`.git/labkit-sessions.jsonl` of the repo (the common git dir, so a
+    worktree logs into its main repo); None outside git."""
+    r = git_run(["rev-parse", "--git-common-dir"], repo)
+    if r.returncode != 0:
+        return None
+    common = Path(r.stdout.strip())
+    return (common if common.is_absolute() else repo / common) / "labkit-sessions.jsonl"
+
+
+def read_sessions(log: Path) -> list[dict]:
+    """The log's records; a line that is not JSON names its number."""
+    out = []
+    for n, line in enumerate(log.read_text(encoding="utf-8").splitlines(), 1):
+        if line.strip():
+            try:
+                out.append(json.loads(line))
+            except json.JSONDecodeError as exc:
+                raise SystemExit(f"{log}:{n}: not JSON — {exc.msg}") from exc
+    return out
+
+
+def _run_started(run_dir: Path) -> datetime | None:
+    m = RUN_DIR_TIME.match(run_dir.name)
+    if not m:
+        return None
+    return datetime.fromisoformat(
+        f"{m.group(1)}T{m.group(2)}:{m.group(3)}:{m.group(4)}"
+    )
+
+
+def _transcript_start(transcript: str | None) -> datetime | None:
+    """The first record's timestamp, in local time (run_ids are local)."""
+    if not transcript or not Path(transcript).is_file():
+        return None
+    with open(transcript, encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                stamp = json.loads(line).get("timestamp")
+                if isinstance(stamp, str):
+                    utc = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+                    return utc.astimezone().replace(tzinfo=None)
+                return None
+    return None
+
+
+def record_session(repo: Path, event: dict, now: datetime | None = None) -> dict | None:
+    """Append this stop to the session log; returns the record (None without
+    a session id or outside git)."""
+    session = event.get("session_id")
+    log = session_log(repo)
+    if not session or log is None:
+        return None
+    now = now or datetime.now()
+    earlier = (
+        [r for r in read_sessions(log) if r.get("session") == session]
+        if log.is_file()
+        else []
+    )
+    since = (
+        datetime.fromisoformat(earlier[-1]["stopped"])
+        if earlier
+        else _transcript_start(event.get("transcript_path"))
+    )
+    runs = sorted(
+        str(d.relative_to(repo))
+        # where areas live (experiments/<area>, or flat at the root) — not a
+        # walk through .venv and data on every stop
+        for d in [*repo.glob("experiments/*/runs/*"), *repo.glob("*/runs/*")]
+        if d.is_dir()
+        and (started := _run_started(d)) is not None
+        and (since is None or started >= since.replace(microsecond=0))
+        and started <= now
+    )
+    record = {
+        "session": session,
+        "transcript": event.get("transcript_path"),
+        "stopped": now.isoformat(timespec="seconds"),
+        "runs": runs,
+    }
+    with log.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return record
+
+
+def sessions(argv: list[str]) -> int:
+    """Print the session log, or the session(s) a run came from."""
+    run = argv[argv.index("--run") + 1] if "--run" in argv else None
+    repo = Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+    log = session_log(repo)
+    if log is None or not log.is_file():
+        print(
+            f"claude-hook: no session log in {repo} — no session has stopped here yet"
+        )
+        return 1
+    hits = [
+        r
+        for r in read_sessions(log)
+        if run is None or any(Path(x).name == run for x in r.get("runs", []))
+    ]
+    for r in hits:
+        print(
+            f"{r['stopped']}  {r['session']}  {r.get('transcript')}  runs: {', '.join(r.get('runs') or []) or '—'}"
+        )
+    if run is not None and not hits:
+        print(f"claude-hook: no logged session made run {run}")
+        return 1
+    return 0
+
+
 def stop(event: dict) -> int:
-    if event.get("stop_hook_active"):
-        return 0  # sent back once already; no loop
     project = os.environ.get("CLAUDE_PROJECT_DIR")
     repo = Path(project) if project else Path(event.get("cwd") or os.getcwd())
     if not (repo / ".git").exists():
         return 0
+    record_session(repo, event)
+    if event.get("stop_hook_active"):
+        return 0  # sent back once already; no loop
     protocols = [
         c.resolve()
         for c in _git_changed(repo)
@@ -366,9 +491,12 @@ def main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print(
-            "usage: claude-hook pre-run | post-change | stop   (hook event JSON on stdin)"
+            "usage: claude-hook pre-run | post-change | stop   (hook event JSON on stdin)\n"
+            "       claude-hook sessions [--run RUN_ID]"
         )
         return 0 if argv else 1
+    if argv[0] == "sessions":
+        return sessions(argv[1:])
     event = _read_event()
     if argv[0] == "pre-run":
         return pre_run(event)

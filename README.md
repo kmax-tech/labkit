@@ -50,6 +50,7 @@ preflight <AREA>                    # pre-freeze gate: protocol + code + scope +
 finalize <AREA>                     # post-run gate: completion + intent-check + open fields
 finalize --if-reported <PROTOCOL>.. # the commit gate: finalize every protocol whose answer cites a run
 claude-hook pre-run|post-change|stop  # the Claude Code hooks a lab repo installs (stdin: event JSON)
+claude-hook sessions [--run RUN_ID]  # the session log the stop hook keeps (.git/labkit-sessions.jsonl): session, transcript, runs
 labkit-hooks install|check [REPO]   # install this labkit's hooks (pre-commit, core.hooksPath, claude-hook); rerun after a pin raise
 usability stage|score <DIR>        # probe lab repo for a cold agent; score its trace (time, steps, number)
 labkit-audit <AREA> --mode preflight|analysis   # experiment-preflight audit through any models.toml alias; exit 1 on a blocker OR a warning
@@ -70,6 +71,7 @@ usability stage /tmp/probe --venv .venv --cost unset   # the full form; the agen
 usability score /tmp/probe                # number == truth? bound? tier? wall-clock, steps per tag → probe.score.json
 usability score /tmp/probe --transcript agent.jsonl   # plus measured: wall-clock, tool time, labkit commands, refusals, files and source reads
 usability trace agent.jsonl              # the agent's timeline: elapsed, duration, command (bookkeeping cut), REFUSED
+usability score /tmp/probe --transcript agent.jsonl --archive DIR   # keep transcript (gzip), timeline and score
 ```
 
 The fixture is twelve cases with a known number of input files each

@@ -5,6 +5,20 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.55.0 — 2026-10-07
+
+### Added
+
+- **A session log, for debugging what an agent did before a run.** Every
+  `claude-hook stop` appends one line to the repo's
+  `.git/labkit-sessions.jsonl` (inside .git: local, never committed):
+  session id, transcript path, time, and the runs made since that
+  session's previous stop. `claude-hook sessions --run RUN_ID` finds the
+  session — and so the transcript — a run came from.
+- `usability score --archive DIR` keeps a probe's transcript (gzip),
+  timeline and score; `usability trace` reads a `.jsonl.gz` as well.
+  Claude Code deletes transcripts after `cleanupPeriodDays` (30 by default).
+
 ## 0.54.0 — 2026-10-07
 
 ### Breaking

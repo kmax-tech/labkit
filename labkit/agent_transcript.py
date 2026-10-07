@@ -29,6 +29,7 @@ Two tiers, as everywhere in labkit:
 
 from __future__ import annotations
 
+import gzip
 import json
 import re
 import shlex
@@ -111,7 +112,12 @@ def read_calls(path: Path) -> tuple[list[Call], float, float]:
     order: list[str] = []
     results: dict[str, tuple[float, str]] = {}
     stamps: list[float] = []
-    for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+    raw = (
+        gzip.decompress(path.read_bytes()).decode("utf-8")
+        if path.suffix == ".gz"
+        else path.read_text(encoding="utf-8")
+    )
+    for n, line in enumerate(raw.splitlines(), 1):
         if not line.strip():
             continue
         try:

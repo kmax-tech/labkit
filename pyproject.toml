@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "labkit"
-version = "0.54.0"
+version = "0.55.0"
 description = "Shared lab helpers: run index, LLM backend, endpoint lease, resumable batches, protocol and notes checkers"
 requires-python = ">=3.12"
 # stdlib only, on purpose: a lab helper that drags dependencies in decides the
