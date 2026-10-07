@@ -218,6 +218,38 @@ class TestFinalize(unittest.TestCase):
         self.assertIn("no stamped protocol id", out)
 
 
+class AreaTestsBeforeReporting(unittest.TestCase):
+    """finalize runs the area's tests on every tier: a later edit of
+    evaluate() that mutes the criterion is caught before a number leaves
+    (2026-10-07); no test is no finding here."""
+
+    def area(self, d: str, test_body: str | None) -> Path:
+        area = Path(d)
+        (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
+        _run(area, "r1", metrics={"c1_pass": True})
+        if test_body is not None:
+            (area / "tests").mkdir()
+            (area / "tests" / f"test_{area.name}.py").write_text(test_body)
+        return area
+
+    def test_a_failing_area_test_blocks(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out = _run_finalize(self.area(d, "def test_r():\n    assert False\n"))
+        self.assertEqual(code, 1, out)
+        self.assertIn("evaluate() no longer holds its resolution check", out)
+
+    def test_a_passing_area_test_is_quiet(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out = _run_finalize(self.area(d, "def test_r():\n    assert True\n"))
+        self.assertIn("── area tests ──\n  ok — ", out)
+        self.assertNotIn("resolution check", out)
+
+    def test_no_area_test_is_no_finding(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out = _run_finalize(self.area(d, None))
+        self.assertIn("── area tests ──\n  none", out)
+
+
 if __name__ == "__main__":
     unittest.main()
 

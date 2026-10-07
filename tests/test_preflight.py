@@ -91,7 +91,19 @@ class TestAreaTests(unittest.TestCase):
             area, _ = _area(d)
             code, out = _run_preflight(area)
             self.assertEqual(code, 0)
-            self.assertIn("no tests/test_*", out)
+            self.assertIn("WARNING: no tests/test_", out)
+
+    def test_missing_test_file_blocks_once_frozen(self):
+        """frozen = true owes every gap; a missing resolution test is one
+        (2026-10-07: it only warned, a protocol froze without any test)."""
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(
+                d, _protocol(frozen=True, preflight_audit="2026-10-07 · scope sha 0")
+            )
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 1, out)
+            self.assertIn("BLOCKER: no tests/test_", out)
+            self.assertIn("frozen = true owes it", out)
 
     def test_failing_area_test_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as d:
@@ -110,6 +122,29 @@ class TestAreaTests(unittest.TestCase):
             code, out = _run_preflight(area)
             self.assertEqual(code, 0, out)
             self.assertIn(f"ok — {name}", out)
+
+
+class TestAreaTestNames(unittest.TestCase):
+    """An area runs its own stamped test, not one whose name extends its own
+    (uniagent 2026-10-07: area 08 ran area 09's test)."""
+
+    def test_a_longer_name_is_not_this_areas_test(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            (repo / "tests").mkdir()
+            for name in (
+                "test_08_profile.py",
+                "test_08_profile_parser.py",
+                "test_09_profile_after.py",
+            ):
+                (repo / "tests" / name).write_text("def test_x():\n    assert True\n")
+            area = repo / "experiments" / "08-profile"
+            area.mkdir(parents=True)
+            found = preflight.area_tests(area, repo)
+        self.assertEqual(
+            [f.name for f in found.files],
+            ["test_08_profile.py", "test_08_profile_parser.py"],
+        )
 
 
 class TestPreflight(unittest.TestCase):

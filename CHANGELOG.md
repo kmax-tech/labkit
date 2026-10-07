@@ -5,6 +5,28 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.56.0 — 2026-10-07
+
+### Changed — may block where 0.55.0 passed
+
+- **A frozen protocol owes its area test.** `preflight` turns a missing
+  `tests/test_<NN>_<name>.py` from a warning into a blocker once
+  `frozen = true` — the permanent resolution check (AS-016) is a gap like
+  any other at the freeze.
+- **`finalize` runs the area's tests, on every tier.** A failing test is a
+  blocker before a number is reported; a missing one is no finding there.
+  At `cost = "seconds"`, where preflight is not owed, this is the only
+  place they run.
+
+### Fixed
+
+- Area tests are found by the stamped name (`test_<NN>_<name>.py`, split
+  files `test_<NN>_<name>_*.py`), no longer by `test_*<name>*.py`: area 08
+  of uniagent ran area 09's test, whose name extends its own.
+- Area tests run with the repo's interpreter (`.venv/bin/python`), not the
+  caller's: a gate started from another venv failed them on a missing
+  package.
+
 ## 0.55.0 — 2026-10-07
 
 ### Added

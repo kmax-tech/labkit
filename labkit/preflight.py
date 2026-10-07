@@ -20,7 +20,7 @@ What it runs, in order:
   5. area tests       tests/test_*<area>*.py via pytest — the resolution
                       check and the parser cases as a permanent test
                       (AS-016 Auflösungsprobe vor dem Einfrieren); a failing test is a blocker, a missing
-                      file a warning
+                      file a warning — a blocker once frozen = true
 
 What it does NOT do: commit, freeze, or change any file. It is a
 read-only gate.
@@ -29,6 +29,7 @@ read-only gate.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 import subprocess
 import sys
 from pathlib import Path
@@ -51,6 +52,61 @@ def _is_dirty(area: Path) -> bool:
     """Uncommitted changes under `area`; False outside a repo. A git that
     fails inside a repo raises (repo.GitError) — it used to read as clean."""
     return bool(git(["status", "--porcelain"], area))
+
+
+@dataclass(frozen=True)
+class AreaTests:
+    pattern: str  # what was looked for, for the message
+    files: list[Path]
+    state: str  # "none" | "ok" | "failed" | "no-pytest"
+    tail: list[str]  # the last lines of a failing run
+
+
+def area_tests(area: Path, repo: Path) -> AreaTests:
+    """Run the area's tests (`tests/test_*<slug>*.py`) — the resolution
+    check and the parser cases in their permanent form. One home for
+    preflight (before the freeze) and finalize (before a number is
+    reported)."""
+    # The name the scaffolder stamps: test_<NN>_<name>.py (or test_<name>.py
+    # for an unnumbered area), split files as test_<NN>_<name>_<part>.py.
+    # A bare *<name>* glob ran area 09's test for area 08, whose name is a
+    # prefix of 09's (uniagent, 2026-10-07).
+    m = re.match(r"^(\d+)-(.+)$", area.name)
+    nn, name = (m.group(1), m.group(2)) if m else (None, area.name)
+    stem = (f"test_{nn}_" if nn else "test_") + name.replace("-", "_")
+    pattern = f"tests/{stem}.py"
+    tests_dir = repo / "tests"
+    files = (
+        sorted({*tests_dir.glob(f"{stem}.py"), *tests_dir.glob(f"{stem}_*.py")})
+        if tests_dir.is_dir()
+        else []
+    )
+    if not files:
+        return AreaTests(pattern, [], "none", [])
+    # The repo's interpreter, not the caller's: the tests import the repo's
+    # dependencies, and a gate run from another venv failed them on a
+    # missing package (uniagent, 2026-10-07).
+    own = repo / ".venv" / "bin" / "python"
+    r = subprocess.run(
+        [
+            str(own) if own.is_file() else sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            *map(str, files),
+        ],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+    )
+    if r.returncode == 0:
+        return AreaTests(pattern, files, "ok", [])
+    if "No module named pytest" in (r.stderr or ""):
+        return AreaTests(pattern, files, "no-pytest", [])
+    tail = [ln for ln in (r.stdout or "").splitlines() if ln.strip()][-6:]
+    return AreaTests(pattern, files, "failed", tail)
 
 
 def run(area: Path, protocol: Path | None = None) -> int:
@@ -186,46 +242,35 @@ def run(area: Path, protocol: Path | None = None) -> int:
 
     # -- 5. area tests -----------------------------------------------------
     print("── tests ──")
-    slug = re.sub(r"^\d+-", "", area.name).replace("-", "_")
-    tests_dir = repo / "tests"
-    tests = sorted(tests_dir.glob(f"test_*{slug}*.py")) if tests_dir.is_dir() else []
-    if not tests:
+    tests = area_tests(area, repo)
+    frozen = report.head is not None and report.head.frozen
+    if not tests.files:
+        # Frozen means every gap is owed (protocol-check's graduation); a
+        # missing permanent resolution check is such a gap (2026-10-07: it
+        # only warned, and a protocol could freeze without any test).
+        grade = "BLOCKER" if frozen else "WARNING"
         print(
-            f"  WARNING: no tests/test_*{slug}*.py — the resolution check has "
-            f"no permanent form (AS-016 Auflösungsprobe vor dem Einfrieren)"
+            f"  {grade}: no {tests.pattern} — the resolution check has no "
+            f"permanent form (AS-016 Auflösungsprobe vor dem Einfrieren)"
+            + (" and frozen = true owes it" if frozen else "")
         )
+        if frozen:
+            blockers += 1
+        else:
+            warnings += 1
+    elif tests.state == "ok":
+        print(f"  ok — {', '.join(f.name for f in tests.files)}")
+    elif tests.state == "no-pytest":
+        print("  WARNING: pytest is not installed in this interpreter — tests not run")
         warnings += 1
     else:
-        r = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "pytest",
-                "-q",
-                "-p",
-                "no:cacheprovider",
-                *map(str, tests),
-            ],
-            cwd=repo,
-            capture_output=True,
-            text=True,
+        for ln in tests.tail:
+            print(f"  {ln}")
+        print(
+            f"  BLOCKER: {', '.join(f.name for f in tests.files)} failed — an "
+            f"unfilled or broken resolution check must not pass the freeze"
         )
-        if r.returncode == 0:
-            print(f"  ok — {', '.join(t.name for t in tests)}")
-        elif "No module named pytest" in (r.stderr or ""):
-            print(
-                "  WARNING: pytest is not installed in this interpreter — tests not run"
-            )
-            warnings += 1
-        else:
-            tail = [ln for ln in (r.stdout or "").splitlines() if ln.strip()][-6:]
-            for ln in tail:
-                print(f"  {ln}")
-            print(
-                f"  BLOCKER: {', '.join(t.name for t in tests)} failed — an "
-                f"unfilled or broken resolution check must not pass the freeze"
-            )
-            blockers += 1
+        blockers += 1
 
     # -- summary -----------------------------------------------------------
     print()

@@ -20,6 +20,9 @@ What it runs, in order:
                     the three questions the agent audit kept asking that a
                     machine can answer (AS-017 Die Zahl der Audits folgt der Kostenstufe, 2026-10-05); the third, the
                     counted unit, is the protocol's `Unit` field
+  4b. area tests    tests/test_<NN>_<name>.py via the repo's interpreter, on
+                    every tier: a failing test is a blocker (evaluate() lost
+                    its resolution check), a missing one no finding here
   5. criterion n    every `c<i>_n` key in metrics.json equals some input
                     count the run recorded (rows of a data= file, lines of
                     an output) — a warning, not a blocker, until the false
@@ -48,6 +51,7 @@ from labkit.intent_check import (
     newest_with_intent_keys,
     registered_ids,
 )
+from labkit.preflight import area_tests
 from labkit.protocol_check import RUN_ID, fields, open_holes
 
 
@@ -306,6 +310,27 @@ def run(area: Path, protocol: Path | None = None) -> int:
             print("  source frozen in the run; source and output tracked in git")
         blocked += b
         warnings += len(w)
+
+    # -- 4b. area tests ----------------------------------------------------
+    # The resolution check runs again before a number leaves: a later edit
+    # of evaluate() that mutes the criterion is caught here too — on every
+    # tier, seconds included, where preflight is not owed (2026-10-07). A
+    # missing test is no finding here; preflight owes it at the freeze.
+    print("── area tests ──")
+    tests = area_tests(area, git_root(area) or area)
+    if tests.state == "none":
+        print(f"  none ({tests.pattern})")
+    elif tests.state == "ok":
+        print(f"  ok — {', '.join(t.name for t in tests.files)}")
+    elif tests.state == "no-pytest":
+        print("  warning: pytest is not installed in this interpreter — tests not run")
+        warnings += 1
+    else:
+        for ln in tests.tail:
+            print(f"  {ln}")
+        msg = f"{', '.join(t.name for t in tests.files)} failed — evaluate() no longer holds its resolution check"
+        print(f"  BLOCKER: {msg}")
+        blocked.append(msg)
 
     # -- 5. criterion n ------------------------------------------------------
     print("── criterion n ──")
