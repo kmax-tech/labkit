@@ -153,3 +153,74 @@ Consequences:
    prompt with the first ten lines), not a question to one that saw all.
 3. For uniagent the lever is a glossary of the domain words in Terms, not
    more form work.
+
+## Round 10 (2026-10-07): a reader of the first ten lines, terms by layer
+
+Instruments new in labkit 0.60 (`16f18ae`), applied to round 9's twelve
+protocols without new writers:
+
+- **glance** — a reader that gets only the first ten lines of the file, as
+  they are, and answers what was investigated, what came out (with the
+  number and whether the criterion held), how sure it is, what follows,
+  and what it could not place. Which Summary fields begin in those lines
+  is checked mechanically; the excerpt's characters are reported beside
+  its lines, because one field per long line holds more text than a
+  wrapped one.
+- **terms** — every term the full reader of round 9 could not place, held
+  to two layers: inside the Summary it must be plain there; elsewhere it
+  may occur in Terms or in a glossary note Terms links (occurrence:
+  static evidence). A second reader judges whether the entry explains the
+  term (uniagent 08 and 09 only, after the glossary note
+  `notes/theorie/begriffe.md` was written and linked from every Terms
+  field).
+
+| protocol | chars in 10 lines | Summary fields in 10 lines | glance: number right | glance: criterion right | glance: of question/result/how sure/what follows answered |
+|---|---|---|---|---|---|
+| count-1, count-2 (0.59) | 322, 324 | all three | yes | no (null) | 3/4 |
+| judge-1, judge-2 (0.59) | 492, 484 | all three | yes | no (null) | 3/4 |
+| round 8, four protocols | 297–303 | none | no | no | 0/4 (one: 1/4) |
+| uniagent 08, 09 before | 513, 560 | none | — | no | 0/4 |
+| uniagent 08, 09 after | 1012, 1109 | all three | — | yes | 4/4 |
+
+- **The first ten lines decide it.** With the head on top no reader took
+  anything away — not the question, not the result. With the Summary on
+  top every reader had question, result and limit; with uniagent's
+  rewritten Summary also the verdict and the next step.
+- **A gap in the 0.59 Summary:** the four probe Summaries gave the number
+  but never said whether the bar set before the run was met, and all four
+  readers answered `null`. uniagent's Summaries said it ("missed the
+  criterion") and were read right. Fixed in 0.60.1: Result says whether
+  the bar was met. "Next step: none" reads as no next step (`null`) —
+  correct, not a gap.
+- **Characters, not only lines:** uniagent's ten lines hold about twice
+  the text of the probes'. The comparison within a protocol (before vs
+  after) is fair; across writers it favours long lines.
+- **Terms in the Summary:** of the glance readers' unclear terms in the
+  0.59 probes, 4–5 of 7–8 stand in the Summary — "agent audit",
+  "deterministic count", "placebo question", the alias "Haiku". These are
+  the writer's words in the one place Terms cannot rescue.
+- **Glossary coverage (uniagent, full reader of round 9):** the terms the
+  reader could not place now occur in Terms or the glossary for 24 of 29
+  (area 08) and 16 of 23 (area 09). Judged as explained: 12 of 24 and 12
+  of 16. Not explained, or not covered: the lab's process words (scope
+  sha, preflight and analysis audit, labkit, the dev split, `predict.py`,
+  the model alias, Kassel), raw ids and run ids, and the intent ids as
+  conjunct lists ("C1–C5") — those name things the glossary does not, or
+  only by mention.
+- **A measurement error of mine, caught before it counted:** the first
+  judge saw, for most terms, the protocol's pointer line to the glossary
+  instead of the definition (`entry_for` took the first mention) and said
+  "not explained" — 4 of 16 and 7 of 24. Fixed in 0.60.1; the first
+  judgement stays in the archive under `terms-judge/v1-wrong-entries/`.
+
+Consequences:
+
+1. The Summary carries the protocol for a reader who stops early — that is
+   now measured, not argued. It must carry the verdict (0.60.1).
+2. The next readability lever is the Summary's own words: the glance
+   reader's unclear terms there are the writer's, and only the writer can
+   fix them.
+3. uniagent's glossary covers the domain; the lab's process words (audits,
+   scope sha, split, alias) are the gap.
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/round10/`.
