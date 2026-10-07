@@ -8,6 +8,7 @@ intent key, fall back to the newest overall when none does (the honest
 binding, the choice runs among the completed runs bound to the protocol's
 id (`test_intent_check_binding.py`).
 """
+
 import contextlib
 import io
 import json
@@ -16,7 +17,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))          # the package under test
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
 from labkit import intent_check  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
@@ -28,13 +29,30 @@ def _run(area: Path, rid: str, metrics: dict) -> Path:
     """A completed run bound to PID; returns its metrics.json."""
     rd = area / "runs" / rid
     rd.mkdir(parents=True)
-    (rd / "config.json").write_text(json.dumps(
-        {"script": "01_measure.py", "pid": 1, "schema_version": 2,
-         "protocol": {"id": PID, "path": "PROTOCOL-x.md"}}), encoding="utf-8")
+    (rd / "config.json").write_text(
+        json.dumps(
+            {
+                "script": "01_measure.py",
+                "pid": 1,
+                "schema_version": 2,
+                "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
+            }
+        ),
+        encoding="utf-8",
+    )
     (rd / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
-    (rd / "completion.json").write_text(json.dumps(
-        {"schema_version": 2, "finished": "x", "git": "g", "git_full": "g",
-         "note": ""}), encoding="utf-8")
+    (rd / "completion.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "finished": "x",
+                "git": "g",
+                "git_full": "g",
+                "note": "",
+            }
+        ),
+        encoding="utf-8",
+    )
     return rd / "metrics.json"
 
 
@@ -56,13 +74,15 @@ def _run_main(argv):
 
 
 class TestMetricsChoice(unittest.TestCase):
-
     def test_newer_producer_metrics_do_not_shadow_the_gate_run(self):
         with tempfile.TemporaryDirectory() as d:
-            proto = _area(d, {
-                "2026-09-09T10-00-00_gate": {"c1": True},
-                "2026-09-09T11-00-00_producer": {"calls": 1080},
-            })
+            proto = _area(
+                d,
+                {
+                    "2026-09-09T10-00-00_gate": {"c1": True},
+                    "2026-09-09T11-00-00_producer": {"calls": 1080},
+                },
+            )
             code, out = _run_main([str(proto)])
             self.assertEqual(code, 0, out)
             self.assertIn("all report", out)
@@ -70,20 +90,26 @@ class TestMetricsChoice(unittest.TestCase):
 
     def test_no_run_with_keys_falls_back_to_newest_and_reports_missing(self):
         with tempfile.TemporaryDirectory() as d:
-            proto = _area(d, {
-                "2026-09-09T10-00-00_a": {"calls": 5},
-                "2026-09-09T11-00-00_b": {"calls": 9},
-            })
+            proto = _area(
+                d,
+                {
+                    "2026-09-09T10-00-00_a": {"calls": 5},
+                    "2026-09-09T11-00-00_b": {"calls": 9},
+                },
+            )
             code, out = _run_main([str(proto)])
             self.assertEqual(code, 1)
             self.assertIn("no 'c1'", out)
 
     def test_explicit_metrics_argument_still_wins(self):
         with tempfile.TemporaryDirectory() as d:
-            proto = _area(d, {
-                "2026-09-09T10-00-00_gate": {"c1": True},
-                "2026-09-09T11-00-00_other": {"calls": 1},
-            })
+            proto = _area(
+                d,
+                {
+                    "2026-09-09T10-00-00_gate": {"c1": True},
+                    "2026-09-09T11-00-00_other": {"calls": 1},
+                },
+            )
             # the newest-with-keys rule would pick _gate and pass
             other = Path(d) / "runs/2026-09-09T11-00-00_other/metrics.json"
             code, out = _run_main([str(proto), "--metrics", str(other)])
@@ -100,7 +126,8 @@ class TestSeriesArea(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             proto = _area(d, {"2026-09-09T10-00-00_gate": {"c1": True}})
             (Path(d) / "PROTOCOL-s2-later.md").write_text(
-                head(id="p-bbbbbbbbbbbbbbbb") + CRITERION, encoding="utf-8")
+                head(id="p-bbbbbbbbbbbbbbbb") + CRITERION, encoding="utf-8"
+            )
             metrics = Path(d) / "runs/2026-09-09T10-00-00_gate/metrics.json"
             code, out = _run_main([str(proto), "--metrics", str(metrics)])
             self.assertEqual(code, 0, out)
@@ -110,7 +137,8 @@ class TestSeriesArea(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             proto = _area(d, {"2026-09-09T10-00-00_gate": {"c1": True}})
             (Path(d) / "PROTOCOL-s2-later.md").write_text(
-                head(id="p-bbbbbbbbbbbbbbbb") + CRITERION, encoding="utf-8")
+                head(id="p-bbbbbbbbbbbbbbbb") + CRITERION, encoding="utf-8"
+            )
             code, out = _run_main([str(proto)])
             self.assertEqual(code, 0, out)
             self.assertIn("all report", out)

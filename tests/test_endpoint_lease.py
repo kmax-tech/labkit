@@ -25,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import endpoint_lease as el          # noqa: E402
+from labkit import endpoint_lease as el  # noqa: E402
 
 EP = "http://gammaweb07.medien.uni-weimar.de:11726"
 EP2 = "http://gammaweb09.medien.uni-weimar.de:11490"
@@ -42,15 +42,29 @@ class TestEndpointLease(unittest.TestCase):
         self.addCleanup(el.release_all)
         # restore, never pop: the suite-wide isolation (conftest) must outlive
         # this test, or every later test leases into ~/.labkit again
-        self.addCleanup(os.environ.__setitem__, "LABKIT_LEASE_DIR", self._prev_lease_dir)
+        self.addCleanup(
+            os.environ.__setitem__, "LABKIT_LEASE_DIR", self._prev_lease_dir
+        )
 
-    def _foreign(self, endpoint, alias, pid, script="01_measure.py",
-                 started="2026-09-08T17:00:00"):
+    def _foreign(
+        self,
+        endpoint,
+        alias,
+        pid,
+        script="01_measure.py",
+        started="2026-09-08T17:00:00",
+    ):
         """A lease record of ANOTHER process, written by hand."""
         d = Path(self.tmp.name) / el._slug(endpoint)
         d.mkdir(parents=True, exist_ok=True)
-        rec = {"alias": alias, "pid": pid, "script": script,
-               "endpoint": endpoint, "started": started, "argv": script}
+        rec = {
+            "alias": alias,
+            "pid": pid,
+            "script": script,
+            "endpoint": endpoint,
+            "started": started,
+            "argv": script,
+        }
         (d / f"{alias}.{pid}.json").write_text(json.dumps(rec), encoding="utf-8")
         return rec
 
@@ -85,13 +99,13 @@ class TestEndpointLease(unittest.TestCase):
         """Sharing an alias costs throughput, never a swap — pilot next to resume."""
         pid, script = self._live_other_process()
         self._foreign(EP, "gpt-oss-vllm", pid=pid, script=script)
-        el.acquire("gpt-oss-vllm", [EP])          # must not raise
+        el.acquire("gpt-oss-vllm", [EP])  # must not raise
         self.assertTrue(any(h["pid"] == os.getpid() for h in el.holders(EP)))
 
     def test_other_endpoint_is_untouched(self):
         pid, script = self._live_other_process()
         self._foreign(EP, "gpt-oss-vllm", pid=pid, script=script)
-        el.acquire("qwen", [EP2])                 # different slot, no conflict
+        el.acquire("qwen", [EP2])  # different slot, no conflict
         self.assertEqual([h["alias"] for h in el.holders(EP2)], ["qwen"])
 
     def test_dead_holder_does_not_block_forever(self):
@@ -119,20 +133,20 @@ class TestEndpointLease(unittest.TestCase):
         self.assertEqual(len(el.holders(EP2)), 1)
 
     def test_no_endpoints_leases_nothing(self):
-        el.acquire("haiku", None)                 # claude-cli has no endpoint
+        el.acquire("haiku", None)  # claude-cli has no endpoint
         self.assertEqual(el.holders(EP), [])
 
     def test_release_frees_the_slot(self):
         el.acquire("gpt-oss-vllm", [EP])
         el.release_all()
         self.assertEqual(el.holders(EP), [])
-        el.acquire("qwen25-32b-awq", [EP])        # must not raise
+        el.acquire("qwen25-32b-awq", [EP])  # must not raise
 
     def test_opt_out_env(self):
         pid, script = self._live_other_process()
         self._foreign(EP, "gpt-oss-vllm", pid=pid, script=script)
         os.environ["LABKIT_NO_ENDPOINT_LEASE"] = "1"
-        el.acquire("qwen25-32b-awq", [EP])        # deliberate exception
+        el.acquire("qwen25-32b-awq", [EP])  # deliberate exception
         self.addCleanup(lambda: os.environ.pop("LABKIT_NO_ENDPOINT_LEASE", None))
 
     def _broken(self, age_s: float) -> Path:
@@ -169,28 +183,41 @@ class TestEndpointLease(unittest.TestCase):
 
     def test_concurrent_acquires_of_two_aliases_admit_exactly_one(self):
         """Two processes race for one endpoint with different aliases."""
-        code = ("import os,sys,time; sys.path.insert(0, %r);"
-                "from labkit import endpoint_lease as el;"
-                "time.sleep(max(0, float(sys.argv[2]) - time.time()));"
-                "el.acquire(sys.argv[1], [%r]); time.sleep(1.5); print('ADMITTED')"
-                % (str(Path(__file__).resolve().parents[1]), EP))
+        code = (
+            "import os,sys,time; sys.path.insert(0, %r);"
+            "from labkit import endpoint_lease as el;"
+            "time.sleep(max(0, float(sys.argv[2]) - time.time()));"
+            "el.acquire(sys.argv[1], [%r]); time.sleep(1.5); print('ADMITTED')"
+            % (str(Path(__file__).resolve().parents[1]), EP)
+        )
         start = time.time() + 1.0
-        procs = [subprocess.Popen([sys.executable, "-c", code, alias, str(start)],
-                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                  text=True, env={**os.environ})
-                 for alias in ("alias-a", "alias-b")]
+        procs = [
+            subprocess.Popen(
+                [sys.executable, "-c", code, alias, str(start)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env={**os.environ},
+            )
+            for alias in ("alias-a", "alias-b")
+        ]
         outs = [p.communicate(timeout=30)[0] for p in procs]
         self.assertEqual(sum("ADMITTED" in o for o in outs), 1, outs)
 
     def test_llm_complete_leases_implicitly(self):
         """The point of the design: the SCRIPT does not have to remember."""
         from labkit import llm
+
         pid, script = self._live_other_process()
         self._foreign(EP, "other-alias", pid=pid, script=script)
-        llm._FROZEN["probe-alias"] = {"alias": "probe-alias", "backend": "openai",
-                                      "model": "m", "endpoint": EP,
-                                      "endpoints": [EP],
-                                      "controls_temperature": True}
+        llm._FROZEN["probe-alias"] = {
+            "alias": "probe-alias",
+            "backend": "openai",
+            "model": "m",
+            "endpoint": EP,
+            "endpoints": [EP],
+            "controls_temperature": True,
+        }
         self.addCleanup(lambda: llm._FROZEN.pop("probe-alias", None))
         with self.assertRaises(SystemExit):
             llm.complete("probe-alias", "hi", attempts=1)

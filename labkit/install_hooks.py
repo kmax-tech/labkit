@@ -17,6 +17,7 @@ existing repos never got a newer one).
 
 Each hook names the labkit version that wrote it; `check` compares.
 """
+
 from __future__ import annotations
 
 import json
@@ -86,9 +87,12 @@ exit $fail
 
 
 def _hook(name: str, timeout: int, message: str) -> dict:
-    return {"type": "command",
-            "command": f'"${{CLAUDE_PROJECT_DIR:-.}}/.venv/bin/claude-hook" {name}',
-            "timeout": timeout, "statusMessage": f"claude-hook {name}: {message}"}
+    return {
+        "type": "command",
+        "command": f'"${{CLAUDE_PROJECT_DIR:-.}}/.venv/bin/claude-hook" {name}',
+        "timeout": timeout,
+        "statusMessage": f"claude-hook {name}: {message}",
+    }
 
 
 #: event -> (matcher or None, hook)
@@ -125,7 +129,9 @@ def _settings(repo: Path) -> tuple[Path, dict]:
     try:
         return path, json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise SystemExit(f"labkit-hooks: {path} is not valid JSON ({exc}) — repair it first")
+        raise SystemExit(
+            f"labkit-hooks: {path} is not valid JSON ({exc}) — repair it first"
+        )
 
 
 def install(repo: Path) -> list[str]:
@@ -140,14 +146,18 @@ def install(repo: Path) -> list[str]:
     hook.chmod(hook.stat().st_mode | 0o755)
     r = git_run(["config", "core.hooksPath", ".githooks"], repo)
     if r.returncode != 0:
-        raise SystemExit(f"labkit-hooks: git config failed in {repo}: {r.stderr.strip()}")
+        raise SystemExit(
+            f"labkit-hooks: git config failed in {repo}: {r.stderr.strip()}"
+        )
     done.append("git core.hooksPath = .githooks")
     path, current = _settings(repo)
     wanted = merged_settings(current)
     if wanted != current:
         path.parent.mkdir(exist_ok=True)
         path.write_text(json.dumps(wanted, indent=2) + "\n", encoding="utf-8")
-        done.append(f"wrote {path.relative_to(repo)} (claude-hook pre-run · post-change · stop)")
+        done.append(
+            f"wrote {path.relative_to(repo)} (claude-hook pre-run · post-change · stop)"
+        )
     return done
 
 
@@ -158,14 +168,25 @@ def check(repo: Path) -> list[str]:
     if not hook.is_file():
         out.append(".githooks/pre-commit is missing")
     elif hook.read_text(encoding="utf-8") != pre_commit():
-        first = next((ln for ln in hook.read_text(encoding="utf-8").splitlines()
-                      if ln.startswith(MARK)), "")
+        first = next(
+            (
+                ln
+                for ln in hook.read_text(encoding="utf-8").splitlines()
+                if ln.startswith(MARK)
+            ),
+            "",
+        )
         was = first.removeprefix(MARK).split("—")[0].strip()
-        out.append(f".githooks/pre-commit is from labkit {was}, this labkit is {labkit_version()}"
-                   if was else ".githooks/pre-commit was not written by labkit-hooks")
+        out.append(
+            f".githooks/pre-commit is from labkit {was}, this labkit is {labkit_version()}"
+            if was
+            else ".githooks/pre-commit was not written by labkit-hooks"
+        )
     r = git_run(["config", "--get", "core.hooksPath"], repo)
     if r.stdout.strip() != ".githooks":
-        out.append("git core.hooksPath is not .githooks — the pre-commit hook never runs")
+        out.append(
+            "git core.hooksPath is not .githooks — the pre-commit hook never runs"
+        )
     _, current = _settings(repo)
     if merged_settings(current) != current:
         out.append(".claude/settings.json lacks this labkit's claude-hook entries")

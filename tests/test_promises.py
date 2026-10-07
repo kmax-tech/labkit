@@ -12,6 +12,7 @@ to `filter_items` — the test pins that limit down, so nobody mistakes the
 stamp for "all the code the number depends on". Declaring `filter_items`
 makes the edit visible; that is the whole claim.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -28,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit import intent_check, promises, recheck, runlog  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
-MEASURE = '''\
+MEASURE = """\
 def filter_items(rows):
     return [r for r in rows if r["answer"] is not None]
 
@@ -40,26 +41,26 @@ def compute_score(rows):
 
 def unrelated():
     return 1
-'''
+"""
 
 
 def block(*entries: str) -> str:
     return "```toml\n" + "\n".join(entries) + "```\n"
 
 
-C1 = '''[[promise]]
+C1 = """[[promise]]
 id = "C1"
 key = "c1_pass"
 sentence = "accuracy >= MIN_ACC"
 scope = ["scripts/01_measure.py:compute_score"]
 constants = { MIN_ACC = 0.7 }
-'''
-A1 = '''[[promise]]
+"""
+A1 = """[[promise]]
 id = "A1"
 key = "a1_anchor_ok"
 sentence = "the anchor items come out at 1.0, else no verdict"
 scope = ["scripts/01_measure.py"]
-'''
+"""
 
 
 def parsed(text: str) -> promises.PromiseBlock:
@@ -69,7 +70,9 @@ def parsed(text: str) -> promises.PromiseBlock:
     return b
 
 
-def protocol_text(*entries: str, prose: str = "Criterion [C1]; admissibility [A1].\n") -> str:
+def protocol_text(
+    *entries: str, prose: str = "Criterion [C1]; admissibility [A1].\n"
+) -> str:
     """A protocol whose one ```toml block holds the head and `entries`."""
     return head(promises="\n".join(entries)) + "\n" + prose
 
@@ -79,10 +82,14 @@ class Parse(unittest.TestCase):
         self.assertIsNone(promises.parse_block("criterion [K1] only in prose\n"))
 
     def test_block_without_promise_tables_declares_none(self):
-        self.assertIsNone(promises.parse_block('```toml\n[protocol]\nstandard = "0.18"\n```\n'))
+        self.assertIsNone(
+            promises.parse_block('```toml\n[protocol]\nstandard = "0.18"\n```\n')
+        )
 
     def test_unknown_top_level_table(self):
-        self.assertRejects("```toml\n[tool]\nx = 1\n```\n", "only [protocol] and [[promise]]")
+        self.assertRejects(
+            "```toml\n[tool]\nx = 1\n```\n", "only [protocol] and [[promise]]"
+        )
 
     def test_entries_kinds_constants(self):
         b = parsed(protocol_text(C1, A1))
@@ -103,8 +110,13 @@ class Parse(unittest.TestCase):
         """Freezing or stamping the audit edits the head, not a promise:
         a run must not read that as "promises changed after the run"."""
         a = parsed(protocol_text(C1))
-        b = parsed(head(frozen=True, preflight_audit="2026-10-07 · ab12 · 0 findings",
-                        promises=C1))
+        b = parsed(
+            head(
+                frozen=True,
+                preflight_audit="2026-10-07 · ab12 · 0 findings",
+                promises=C1,
+            )
+        )
         self.assertEqual(a.sha, b.sha)
 
     def assertRejects(self, text: str, fragment: str):
@@ -119,27 +131,36 @@ class Parse(unittest.TestCase):
         self.assertRejects(block('[[promise]]\nid = "C1\n'), "not valid TOML")
 
     def test_earlier_letter_in_block(self):
-        self.assertRejects(block(C1.replace('"C1"', '"K1"')), "is not C<n>, A<n> or B<n>")
+        self.assertRejects(
+            block(C1.replace('"C1"', '"K1"')), "is not C<n>, A<n> or B<n>"
+        )
 
     def test_key_outside_namespace(self):
-        self.assertRejects(block(C1.replace('"c1_pass"', '"c2_pass"')),
-                           "outside the id's namespace")
-        self.assertRejects(block(C1.replace('"c1_pass"', '"c10_pass"')),
-                           "outside the id's namespace")
+        self.assertRejects(
+            block(C1.replace('"c1_pass"', '"c2_pass"')), "outside the id's namespace"
+        )
+        self.assertRejects(
+            block(C1.replace('"c1_pass"', '"c10_pass"')), "outside the id's namespace"
+        )
 
     def test_duplicate_id(self):
         self.assertRejects(block(C1, C1), "duplicate id")
 
     def test_missing_and_empty_fields(self):
-        self.assertRejects(block(C1.replace('sentence = "accuracy >= MIN_ACC"\n', "")),
-                           "missing `sentence`")
-        self.assertRejects(block(C1.replace('["scripts/01_measure.py:compute_score"]', "[]")),
-                           "non-empty list")
+        self.assertRejects(
+            block(C1.replace('sentence = "accuracy >= MIN_ACC"\n', "")),
+            "missing `sentence`",
+        )
+        self.assertRejects(
+            block(C1.replace('["scripts/01_measure.py:compute_score"]', "[]")),
+            "non-empty list",
+        )
 
     def test_non_scalar_constant_and_unknown_field(self):
-        self.assertRejects(block(C1.replace("MIN_ACC = 0.7", "MIN_ACC = [0.7]")),
-                           "only scalars")
-        self.assertRejects(block(C1 + 'threshold = 0.7\n'), "unknown field")
+        self.assertRejects(
+            block(C1.replace("MIN_ACC = 0.7", "MIN_ACC = [0.7]")), "only scalars"
+        )
+        self.assertRejects(block(C1 + "threshold = 0.7\n"), "unknown field")
 
 
 class Alphabet(unittest.TestCase):
@@ -158,7 +179,9 @@ class Alphabet(unittest.TestCase):
 
     def test_prose_mismatch_both_directions(self):
         b = parsed(block(C1))
-        self.assertEqual(promises.prose_mismatch("[C1] and [A2] and [K1]", b), (["A2"], []))
+        self.assertEqual(
+            promises.prose_mismatch("[C1] and [A2] and [K1]", b), (["A2"], [])
+        )
         self.assertEqual(promises.prose_mismatch("only [K1]", b), ([], ["C1"]))
 
 
@@ -187,7 +210,10 @@ class ScopeHash(unittest.TestCase):
         self.assertEqual(before, self.sha("scripts/01_measure.py:compute_score"))
 
     def test_declared_helper_sees_the_edit(self):
-        scope = ("scripts/01_measure.py:compute_score", "scripts/01_measure.py:filter_items")
+        scope = (
+            "scripts/01_measure.py:compute_score",
+            "scripts/01_measure.py:filter_items",
+        )
         before = self.sha(*scope)
         self.edit(*self.FILTER_EDIT)
         self.assertNotEqual(before, self.sha(*scope))
@@ -203,9 +229,12 @@ class ScopeHash(unittest.TestCase):
         self.assertNotEqual(before, self.sha("scripts/01_measure.py"))
 
     def test_scope_spelling_is_part_of_the_stamp(self):
-        self.assertNotEqual(self.sha("scripts/01_measure.py:compute_score"),
-                            self.sha("scripts/01_measure.py:compute_score",
-                                     "scripts/01_measure.py:unrelated"))
+        self.assertNotEqual(
+            self.sha("scripts/01_measure.py:compute_score"),
+            self.sha(
+                "scripts/01_measure.py:compute_score", "scripts/01_measure.py:unrelated"
+            ),
+        )
 
     def test_missing_function_or_file_is_an_error(self):
         with self.assertRaises(promises.PromiseError):
@@ -233,8 +262,17 @@ class Chain(unittest.TestCase):
     def complete(self, run: runlog.Run, metrics: dict) -> Path:
         (run.dir / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
         (run.dir / "completion.json").write_text(
-            json.dumps({"schema_version": 2, "finished": "x", "git": "g",
-                        "git_full": "g", "note": ""}), encoding="utf-8")
+            json.dumps(
+                {
+                    "schema_version": 2,
+                    "finished": "x",
+                    "git": "g",
+                    "git_full": "g",
+                    "note": "",
+                }
+            ),
+            encoding="utf-8",
+        )
         return run.dir
 
     def check(self) -> tuple[int, str]:
@@ -251,17 +289,24 @@ class Chain(unittest.TestCase):
         self.assertEqual(rec["block_sha"], promises.load(self.protocol).sha)
         self.assertEqual(set(rec["ids"]), {"C1", "A1"})
         self.assertEqual(rec["ids"]["C1"]["constants"], {"MIN_ACC": 0.7})
-        self.assertEqual(rec["ids"]["C1"]["declared_scope_sha"],
-                         promises.declared_scope_sha(self.area, ("scripts/01_measure.py:compute_score",)))
+        self.assertEqual(
+            rec["ids"]["C1"]["declared_scope_sha"],
+            promises.declared_scope_sha(
+                self.area, ("scripts/01_measure.py:compute_score",)
+            ),
+        )
 
     def test_protocol_without_block_records_none(self):
-        self.protocol.write_text(protocol_text(prose="no promise here\n"), encoding="utf-8")
+        self.protocol.write_text(
+            protocol_text(prose="no promise here\n"), encoding="utf-8"
+        )
         run = self.start()
         self.assertIsNone(json.loads((run.dir / "config.json").read_text())["promises"])
 
     def test_dangling_scope_is_refused_before_mkdir(self):
-        self.protocol.write_text(protocol_text(
-            C1.replace("compute_score", "gone"), A1), encoding="utf-8")
+        self.protocol.write_text(
+            protocol_text(C1.replace("compute_score", "gone"), A1), encoding="utf-8"
+        )
         with self.assertRaises(SystemExit) as cm:
             self.start()
         self.assertIn("promise block", str(cm.exception))
@@ -280,8 +325,9 @@ class Chain(unittest.TestCase):
 
     def test_block_changed_after_the_run(self):
         self.complete(self.start(), self.GOOD)
-        self.protocol.write_text(protocol_text(C1.replace("0.7", "0.6"), A1),
-                                 encoding="utf-8")
+        self.protocol.write_text(
+            protocol_text(C1.replace("0.7", "0.6"), A1), encoding="utf-8"
+        )
         rc, out = self.check()
         self.assertEqual(rc, 1)
         self.assertIn("promises changed after the run", out)
@@ -309,8 +355,9 @@ class Chain(unittest.TestCase):
         self.assertIn("declares key 'c1_pass'", out)
 
     def test_prose_and_block_must_name_the_same_ids(self):
-        self.protocol.write_text(protocol_text(C1, A1, prose="only [C1] and [B1]\n"),
-                                 encoding="utf-8")
+        self.protocol.write_text(
+            protocol_text(C1, A1, prose="only [C1] and [B1]\n"), encoding="utf-8"
+        )
         rc, out = self.check()
         self.assertEqual(rc, 1)
         self.assertIn("[B1] appears in the text but not in the promise block", out)
@@ -320,9 +367,10 @@ class Chain(unittest.TestCase):
         """Durchstich 2026-10-06: the threshold lowered after the run left
         the verdict unchanged, and recheck held the note anyway."""
         run = self.complete(self.start(), self.GOOD)
-        recheck.block_unchanged(run, self.area)             # unchanged: passes
-        self.protocol.write_text(protocol_text(C1.replace("0.7", "0.5"), A1),
-                                 encoding="utf-8")
+        recheck.block_unchanged(run, self.area)  # unchanged: passes
+        self.protocol.write_text(
+            protocol_text(C1.replace("0.7", "0.5"), A1), encoding="utf-8"
+        )
         with self.assertRaises(SystemExit) as cm:
             recheck.block_unchanged(run, self.area)
         self.assertIn("promises changed after the run", str(cm.exception))
@@ -337,6 +385,7 @@ class Chain(unittest.TestCase):
         """Durchstich 2026-10-06: a scope edited after the run went through
         finalize; only recheck saw it."""
         from labkit import finalize
+
         self.complete(self.start(), self.GOOD)
 
         def station() -> str:
@@ -344,22 +393,24 @@ class Chain(unittest.TestCase):
             with contextlib.redirect_stdout(buf):
                 finalize.main([str(self.area)])
             out = buf.getvalue()
-            return out[out.index("── declared scopes ──"):out.index("── open fields")]
+            return out[out.index("── declared scopes ──") : out.index("── open fields")]
 
         self.assertIn("2 declared scope(s) unchanged", station())
         script = self.area / "scripts" / "01_measure.py"
-        script.write_text(script.read_text().replace("== r[\"gold\"]", "!= r[\"gold\"]"),
-                          encoding="utf-8")
+        script.write_text(
+            script.read_text().replace('== r["gold"]', '!= r["gold"]'), encoding="utf-8"
+        )
         out = station()
         self.assertIn("BLOCKER: declared scope changed", out)
         self.assertIn("[C1]", out)
 
     def test_recheck_refuses_a_changed_scope(self):
         run = self.complete(self.start(), self.GOOD)
-        recheck.scopes_unchanged(run, self.area)            # unchanged: passes
+        recheck.scopes_unchanged(run, self.area)  # unchanged: passes
         script = self.area / "scripts" / "01_measure.py"
-        script.write_text(script.read_text().replace("== r[\"gold\"]", "!= r[\"gold\"]"),
-                          encoding="utf-8")
+        script.write_text(
+            script.read_text().replace('== r["gold"]', '!= r["gold"]'), encoding="utf-8"
+        )
         with self.assertRaises(SystemExit) as cm:
             recheck.scopes_unchanged(run, self.area)
         self.assertIn("[C1]", str(cm.exception))
@@ -379,4 +430,6 @@ class Decorators(unittest.TestCase):
             (base / "m.py").write_text("@cache\ndef evaluate(r):\n    return r\n")
             before = promises.declared_scope_sha(base, ("m.py:evaluate",))
             (base / "m.py").write_text("@retry\ndef evaluate(r):\n    return r\n")
-            self.assertNotEqual(before, promises.declared_scope_sha(base, ("m.py:evaluate",)))
+            self.assertNotEqual(
+                before, promises.declared_scope_sha(base, ("m.py:evaluate",))
+            )

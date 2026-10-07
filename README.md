@@ -221,6 +221,7 @@ helpers and makes monkeypatching land on a copy:
 # lib/runlog.py  (legacy repos only)
 import sys
 from labkit import runlog as _mod
+
 sys.modules[__name__] = _mod
 ```
 

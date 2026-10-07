@@ -156,8 +156,10 @@ class TestResultAfterARun(unittest.TestCase):
     RUN = "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
 
     def test_placeholder_answer_after_a_run_fails(self):
-        text = (pilot() + "\n- **Answer to the question:** <number + run_id>\n"
-                "- **Raw output:** see output/examples.md\n" + self.RUN)
+        text = (
+            pilot() + "\n- **Answer to the question:** <number + run_id>\n"
+            "- **Raw output:** see output/examples.md\n" + self.RUN
+        )
         rc, out = run_main(text)
         self.assertEqual(rc, 1)
         self.assertIn("measure run in the run list", out)
@@ -178,14 +180,17 @@ class TestFixtures(unittest.TestCase):
 
 class TestCheckFields(unittest.TestCase):
     def test_template_names_every_field(self):
-        names = {f.name for f in protocol_check.fields(TEMPLATE.read_text(encoding="utf-8"))}
+        names = {
+            f.name for f in protocol_check.fields(TEMPLATE.read_text(encoding="utf-8"))
+        }
         for f in protocol_check.FIELDS:
             self.assertIn(f.label.casefold(), names, f.label)
 
     def test_template_owes_only_its_head(self):
         report = protocol_check.check_fields(TEMPLATE.read_text(encoding="utf-8"))
-        self.assertEqual(report.missing_must,
-                         ["[protocol] id", "[protocol] type", "[protocol] cost"])
+        self.assertEqual(
+            report.missing_must, ["[protocol] id", "[protocol] type", "[protocol] cost"]
+        )
         self.assertEqual(report.missing_should, [])
 
     def test_real_freeform_protocol_has_no_head(self):
@@ -202,8 +207,9 @@ class TestCheckFields(unittest.TestCase):
         self.assertIn("Model I/O", report.missing_must)
 
     def test_explicit_na_counts_as_present(self):
-        text = head() + "".join(f"- **{label}:** n/a — no model in this run\n"
-                                for label in MUST)
+        text = head() + "".join(
+            f"- **{label}:** n/a — no model in this run\n" for label in MUST
+        )
         report = protocol_check.check_fields(text)
         self.assertEqual(report.missing_must, [])
         self.assertEqual(report.must_holes, [])
@@ -221,7 +227,9 @@ class TestCheckFields(unittest.TestCase):
     def test_a_keyword_in_prose_does_not_satisfy_a_field(self):
         """A word anywhere used to satisfy a field (`prompt` in a sentence
         covered Model I/O). Only the label line counts."""
-        text = head() + "We ask the model a prompt about terms, model I/O and anchors.\n"
+        text = (
+            head() + "We ask the model a prompt about terms, model I/O and anchors.\n"
+        )
         self.assertEqual(protocol_check.check_fields(text).missing_must, MUST)
 
     def test_after_fields_are_not_owed_before_the_run(self):
@@ -296,7 +304,6 @@ REAL_PLACEHOLDER_BLOCK = """\
 
 
 class TestPlaceholders(unittest.TestCase):
-
     def test_finds_the_four_real_placeholders(self):
         found = protocol_check.placeholder_fields(REAL_PLACEHOLDER_BLOCK)
         labels = [lb for _, lb in found]
@@ -306,8 +313,10 @@ class TestPlaceholders(unittest.TestCase):
         self.assertIn("Bedeutung des Gold-Labels", labels)
 
     def test_a_filled_field_is_no_placeholder(self):
-        filled = ("- **Modell / Tool:** Alias `qwen` (qwen2.5:7b, ollama)\n"
-                  "- **Prompt (wörtlich):** siehe Codeblock unten\n")
+        filled = (
+            "- **Modell / Tool:** Alias `qwen` (qwen2.5:7b, ollama)\n"
+            "- **Prompt (wörtlich):** siehe Codeblock unten\n"
+        )
         self.assertEqual(protocol_check.placeholder_fields(filled), [])
 
     def test_justified_na_is_no_placeholder(self):
@@ -316,18 +325,25 @@ class TestPlaceholders(unittest.TestCase):
         self.assertEqual(protocol_check.placeholder_fields(na), [])
 
     def test_placeholder_in_a_must_field_weighs_more(self):
-        text = (head() + "- **Prompt (verbatim, per variant):** <the real prompt>\n"
-                "- **Model I/O:** <in · out>\n"
-                "- **Yield per stage:** <expected vs. obtained>\n"
-                "- **Next step:** <…>\n")
+        text = (
+            head() + "- **Prompt (verbatim, per variant):** <the real prompt>\n"
+            "- **Model I/O:** <in · out>\n"
+            "- **Yield per stage:** <expected vs. obtained>\n"
+            "- **Next step:** <…>\n"
+        )
         report = protocol_check.check_fields(text)
-        self.assertEqual([lb for _, lb in report.must_holes],
-                         ["Prompt (verbatim, per variant)", "Model I/O"])
-        self.assertEqual([lb for _, lb in report.soft_holes],
-                         ["Yield per stage", "Next step"])
+        self.assertEqual(
+            [lb for _, lb in report.must_holes],
+            ["Prompt (verbatim, per variant)", "Model I/O"],
+        )
+        self.assertEqual(
+            [lb for _, lb in report.soft_holes], ["Yield per stage", "Next step"]
+        )
 
     def test_pipeline_exits_one_on_must_placeholder(self):
-        rc, out = run_main(pilot().replace("[C1] AUC > 0.6", "<how do we recognise it?>"))
+        rc, out = run_main(
+            pilot().replace("[C1] AUC > 0.6", "<how do we recognise it?>")
+        )
         self.assertEqual(rc, 1)
         self.assertIn("PLACEHOLDER ONLY (must): Success / failure criterion", out)
 
@@ -340,7 +356,6 @@ class TestPlaceholders(unittest.TestCase):
 
 
 class TestTemplateLines(unittest.TestCase):
-
     def test_verbatim_template_line_is_recognised(self):
         if not TEMPLATE.exists():
             self.skipTest("template absent")
@@ -360,8 +375,10 @@ class TestFrozenWithoutExample(unittest.TestCase):
     instrument freezes the error in.
     """
 
-    NO_EXAMPLE = ("- **Prompt:** see block\n\n  ```text\n  Is this fallacious?\n  ```\n",
-                  "- **Prompt:** n/a — no model\n")
+    NO_EXAMPLE = (
+        "- **Prompt:** see block\n\n  ```text\n  Is this fallacious?\n  ```\n",
+        "- **Prompt:** n/a — no model\n",
+    )
 
     def test_frozen_without_code_block_fails(self):
         rc, out = run_main(frozen().replace(*self.NO_EXAMPLE))
@@ -374,7 +391,9 @@ class TestFrozenWithoutExample(unittest.TestCase):
 
     def test_the_head_block_is_no_example(self):
         """The ```toml head is a fenced block too; it must not count."""
-        self.assertEqual(protocol_check.code_blocks(frozen().replace(*self.NO_EXAMPLE)), 0)
+        self.assertEqual(
+            protocol_check.code_blocks(frozen().replace(*self.NO_EXAMPLE)), 0
+        )
         self.assertEqual(protocol_check.code_blocks(frozen()), 1)
 
     def test_unfrozen_without_code_block_is_no_must_failure(self):
@@ -389,7 +408,7 @@ class TestGraduationGate(unittest.TestCase):
 
     def test_pilot_without_frozen_only_warns(self):
         rc, out = run_main(pilot())
-        self.assertEqual(rc, 0, out)           # should missing -> note, no failure
+        self.assertEqual(rc, 0, out)  # should missing -> note, no failure
         self.assertIn(f"{len(SHOULD)} should-field(s) due only at report time", out)
 
     def test_frozen_makes_should_a_must(self):
@@ -416,7 +435,8 @@ class TestPromptAndExample(unittest.TestCase):
 
     PARAPHRASE = pilot().replace(
         "- **Prompt:** see block\n\n  ```text\n  Is this fallacious?\n  ```\n",
-        "- **Prompt:** asks, in effect, for a fallacy\n")
+        "- **Prompt:** asks, in effect, for a fallacy\n",
+    )
 
     def test_prompt_without_code_block_is_a_must_failure(self):
         rc, out = run_main(self.PARAPHRASE)
@@ -426,8 +446,9 @@ class TestPromptAndExample(unittest.TestCase):
     def test_prompt_na_needs_no_code_block(self):
         """`- **Prompt:** n/a — no model` is no prompt to paraphrase; the old
         regex let `\\*{0,2}` backtrack past the n/a and flagged it."""
-        rc, out = run_main(self.PARAPHRASE.replace("asks, in effect, for a fallacy",
-                                                   "n/a — no model"))
+        rc, out = run_main(
+            self.PARAPHRASE.replace("asks, in effect, for a fallacy", "n/a — no model")
+        )
         self.assertNotIn("no code block", out)
         self.assertEqual(rc, 0, out)
 
@@ -437,23 +458,29 @@ class TestPromptAndExample(unittest.TestCase):
         self.assertNotIn("Raw output", out)
 
     def test_empty_raw_output_after_a_measure_run_is_a_must_failure(self):
-        text = (pilot() + "\n## Result\n\n- **Raw output:** —\n"
-                "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n")
+        text = (
+            pilot() + "\n## Result\n\n- **Raw output:** —\n"
+            "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
+        )
         rc, out = run_main(text)
         self.assertEqual(rc, 1)
         self.assertIn("measure run in the run list", out)
 
     def test_a_probe_run_owes_no_result(self):
-        text = (pilot() + "\n## Result\n\n- **Raw output:** —\n"
-                "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — probe, 10 calls\n")
+        text = (
+            pilot() + "\n## Result\n\n- **Raw output:** —\n"
+            "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — probe, 10 calls\n"
+        )
         rc, out = run_main(text)
         self.assertNotIn("measure run in the run list", out)
         self.assertEqual(rc, 0, out)
 
     def test_written_raw_output_after_a_measure_run_passes(self):
-        text = (pilot() + "\n## Result\n\n- **Answer to the question:** AUC 0.91 "
-                "(2026-09-06T10-00-00_aa11)\n- **Raw output:** see output/examples.md\n"
-                "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n")
+        text = (
+            pilot() + "\n## Result\n\n- **Answer to the question:** AUC 0.91 "
+            "(2026-09-06T10-00-00_aa11)\n- **Raw output:** see output/examples.md\n"
+            "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
+        )
         rc, out = run_main(text)
         self.assertEqual(rc, 0, out)
 
@@ -493,31 +520,40 @@ class TestTerms(unittest.TestCase):
         """The field is "Admissibility condition" (TODO 7); its earlier labels
         "Stop rule", "Kill", "Abbruch" no longer pass (TODO 8)."""
         adm = "- **Admissibility condition:** [A1] yield >= 90%\n"
-        for wording in ("- **Stop rule:** LR stays at 1.\n", "- **Kill:** LR stays at 1.\n",
-                        "- **Abbruchkriterium:** LR bleibt bei 1.\n",
-                        "- **Zulassungsbedingung:** [A1] Ausbeute >= 90 %.\n"):
+        for wording in (
+            "- **Stop rule:** LR stays at 1.\n",
+            "- **Kill:** LR stays at 1.\n",
+            "- **Abbruchkriterium:** LR bleibt bei 1.\n",
+            "- **Zulassungsbedingung:** [A1] Ausbeute >= 90 %.\n",
+        ):
             with self.subTest(wording):
                 report = protocol_check.check_fields(pilot().replace(adm, wording))
                 self.assertEqual(report.missing_must, ["Admissibility condition"])
 
     def test_a_half_sentence_suffices(self):
-        text = pilot().replace(self.TERMS, "- **Terms of this protocol:** Sog = Tendenz "
-                               "des Bildes, Ko-Praesenz zu zeigen.\n")
+        text = pilot().replace(
+            self.TERMS,
+            "- **Terms of this protocol:** Sog = Tendenz "
+            "des Bildes, Ko-Praesenz zu zeigen.\n",
+        )
         rc, out = run_main(text)
         self.assertEqual(rc, 0, out)
 
     def test_placeholder_does_not_count_as_filled(self):
         # The label is there, the field is not filled — exactly the gap
         # closed for the prompt field on 2026-08-17.
-        rc, out = run_main(pilot().replace(self.TERMS,
-                                           "- **Terms of this protocol:** <every label>\n"))
+        rc, out = run_main(
+            pilot().replace(self.TERMS, "- **Terms of this protocol:** <every label>\n")
+        )
         self.assertEqual(rc, 1)
         self.assertIn("PLACEHOLDER ONLY (must): Terms of this protocol", out)
 
     def test_clarified_terms_is_not_the_must_field(self):
         """The Checks section's "Clarified terms" is a different field: its
         placeholder is a soft hole, and it does not stand in for the must."""
-        text = pilot().replace(self.TERMS, "- **Clarified terms:** <what was ambiguous>\n")
+        text = pilot().replace(
+            self.TERMS, "- **Clarified terms:** <what was ambiguous>\n"
+        )
         report = protocol_check.check_fields(text)
         self.assertEqual(report.missing_must, ["Terms of this protocol"])
         self.assertEqual([lb for _, lb in report.soft_holes], ["Clarified terms"])
@@ -541,7 +577,9 @@ class TestSeriesDetector(unittest.TestCase):
     protocol — the follow-up gets its own PROTOCOL-s<N> file."""
 
     def test_declared_follow_up_heading_warns(self):
-        rc, out = run_main(pilot() + "## Lauf B — Richterwechsel (deklariert vor dem Lauf)\n")
+        rc, out = run_main(
+            pilot() + "## Lauf B — Richterwechsel (deklariert vor dem Lauf)\n"
+        )
         self.assertIn("PROTOCOL-s<N>", out)
         self.assertEqual(rc, 0, "warning, not a failure")
 
@@ -556,7 +594,9 @@ class TestDocumentedRunsNotCountedAsProse(unittest.TestCase):
     people to stop documenting runs."""
 
     def test_a_huge_run_list_does_not_flag_the_protocol(self):
-        run_list = "## Runs (documented runs)\n" + "- 2026-09-06T10-00-00_aa11 — x\n" * 400
+        run_list = (
+            "## Runs (documented runs)\n" + "- 2026-09-06T10-00-00_aa11 — x\n" * 400
+        )
         _, out = run_main(pilot() + run_list)
         self.assertNotIn("prose lines (tables/code excluded)", out)
 
@@ -574,23 +614,29 @@ class TestAuditFields(unittest.TestCase):
     def test_template_stamps_both(self):
         text = TEMPLATE.read_text(encoding="utf-8")
         self.assertEqual(protocol_block.head(text).preflight_audit, "")
-        self.assertIn("Analysis audit", {f.label.split(" †")[0]
-                                         for f in protocol_check.fields(text)})
+        self.assertIn(
+            "Analysis audit",
+            {f.label.split(" †")[0] for f in protocol_check.fields(text)},
+        )
 
     def test_the_preflight_audit_is_read_from_the_head(self):
         line = "2026-09-08 · scope sha 3f9a1c2b7e04 · 4 findings (2 blockers fixed)"
-        self.assertEqual(protocol_block.head(head(preflight_audit=line)).preflight_audit,
-                         line)
+        self.assertEqual(
+            protocol_block.head(head(preflight_audit=line)).preflight_audit, line
+        )
 
     def test_an_analysis_placeholder_is_not_owed_before_the_run(self):
-        rc, out = run_main(frozen() + "- **Analysis audit †:** <date · scope sha · "
-                           "N findings>\n")
+        rc, out = run_main(
+            frozen() + "- **Analysis audit †:** <date · scope sha · N findings>\n"
+        )
         self.assertEqual(rc, 0, out)
         self.assertIn("placeholder only: Analysis audit", out)
 
     def test_filled_analysis_passes(self):
-        rc, out = run_main(frozen() + "- **Analysis audit †:** 2026-09-09 · scope sha "
-                           "8b1e6d0a4c31 · 2 findings (1 blocker fixed)\n")
+        rc, out = run_main(
+            frozen() + "- **Analysis audit †:** 2026-09-09 · scope sha "
+            "8b1e6d0a4c31 · 2 findings (1 blocker fixed)\n"
+        )
         self.assertEqual(rc, 0, out)
 
 
@@ -602,16 +648,24 @@ class TestResolutionCheckGate(unittest.TestCase):
     RESOLUTION = "- **Resolution check:** perfect effect fires, null stays silent\n"
 
     def test_stamped_placeholder_fails_once_frozen(self):
-        rc, out = run_main(frozen().replace(
-            self.RESOLUTION, "- **Resolution check (ZERO calls):** "
-                             "<perfect effect fires? null stays silent?>\n"))
+        rc, out = run_main(
+            frozen().replace(
+                self.RESOLUTION,
+                "- **Resolution check (ZERO calls):** "
+                "<perfect effect fires? null stays silent?>\n",
+            )
+        )
         self.assertEqual(rc, 1, out)
         self.assertIn("PLACEHOLDER ONLY (must): Resolution check", out)
 
     def test_filled_passes(self):
-        rc, out = run_main(frozen().replace(
-            self.RESOLUTION, "- **Resolution check:** perfect effect p = 0.0002 (fires), "
-                             "null p = 0.4791 (silent), 8 draws as in the run\n"))
+        rc, out = run_main(
+            frozen().replace(
+                self.RESOLUTION,
+                "- **Resolution check:** perfect effect p = 0.0002 (fires), "
+                "null p = 0.4791 (silent), 8 draws as in the run\n",
+            )
+        )
         self.assertEqual(rc, 0, out)
 
     def test_absent_field_is_a_must_gap_once_frozen(self):
@@ -620,16 +674,20 @@ class TestResolutionCheckGate(unittest.TestCase):
         self.assertIn("MISSING (must): Resolution check", out)
 
     def test_german_label_does_not_count(self):
-        rc, out = run_main(frozen().replace(
-            self.RESOLUTION, "- **Auflösungsprobe:** perfekter Effekt feuert\n"))
+        rc, out = run_main(
+            frozen().replace(
+                self.RESOLUTION, "- **Auflösungsprobe:** perfekter Effekt feuert\n"
+            )
+        )
         self.assertEqual(rc, 1, out)
         self.assertIn("MISSING (must): Resolution check", out)
 
     def test_answer_form_resolution_is_not_caught(self):
         """Guard against the near-collision: 'Answer form + resolution †' is
         its own report field, never the resolution check."""
-        text = frozen().replace(self.RESOLUTION, "- **Answer form + resolution †:** "
-                                "<how many states>\n")
+        text = frozen().replace(
+            self.RESOLUTION, "- **Answer form + resolution †:** <how many states>\n"
+        )
         report = protocol_check.check_fields(text)
         self.assertEqual(report.missing_must, ["Resolution check"])
         self.assertIn("Answer form + resolution †", [lb for _, lb in report.must_holes])
@@ -677,7 +735,9 @@ class TestHeadValues(unittest.TestCase):
         preamble as "verbatim template text" for a whole session)."""
         for std in ("0.99", "0.17", "0.15"):
             with self.subTest(std):
-                rc, out = run_main(pilot().replace('standard = "0.18"', f'standard = "{std}"'))
+                rc, out = run_main(
+                    pilot().replace('standard = "0.18"', f'standard = "{std}"')
+                )
                 self.assertEqual(rc, 1, out)
                 self.assertIn(f"HEAD (must): [protocol] standard = '{std}'", out)
                 self.assertNotIn("MISSING", out)
@@ -724,8 +784,7 @@ class TestIntentBudgetCalibration(unittest.TestCase):
 
     def test_intent_36_lines_is_over_budget(self):
         text = "## Intent\n" + "Prose line.\n" * 36
-        self.assertEqual(protocol_check.oversized_sections(text),
-                         [("Intent", 36, 35)])
+        self.assertEqual(protocol_check.oversized_sections(text), [("Intent", 36, 35)])
 
 
 class TestStampedLegendIsNotTemplateText(unittest.TestCase):
@@ -734,15 +793,13 @@ class TestStampedLegendIsNotTemplateText(unittest.TestCase):
     (2026-09-14/15: every freshly stamped protocol was flagged forever)."""
 
     def test_preamble_lines_are_excluded(self):
-        lines = protocol_check.template_lines(
-            protocol_check.find_template(None))
+        lines = protocol_check.template_lines(protocol_check.find_template(None))
         self.assertTrue(lines, "template not found")
         self.assertFalse([s for s in lines if "A checklist, not a copy-form" in s])
         self.assertFalse([s for s in lines if "intent ids" in s])
 
     def test_body_instruction_lines_still_count(self):
-        lines = protocol_check.template_lines(
-            protocol_check.find_template(None))
+        lines = protocol_check.template_lines(protocol_check.find_template(None))
         # An instruction line from inside a section stays in the set.
         self.assertTrue([s for s in lines if "Plain language" in s], lines)
 
@@ -751,7 +808,9 @@ class TestCostTier(unittest.TestCase):
     """The cost tier (2026-10-05) is a head value: `cost` in [protocol]."""
 
     def test_template_stamps_cost_as_placeholder(self):
-        self.assertIsNone(protocol_block.head(TEMPLATE.read_text(encoding="utf-8")).cost)
+        self.assertIsNone(
+            protocol_block.head(TEMPLATE.read_text(encoding="utf-8")).cost
+        )
 
     def test_the_tier_is_read_from_the_head(self):
         for tier in protocol_block.COST_TIERS:
@@ -759,7 +818,9 @@ class TestCostTier(unittest.TestCase):
 
     def test_a_typo_is_a_loud_error(self):
         """`Cost: second` used to read as undeclared and so as `hours`."""
-        with self.assertRaisesRegex(protocol_block.BlockError, r"\[protocol\] cost = 'second'"):
+        with self.assertRaisesRegex(
+            protocol_block.BlockError, r"\[protocol\] cost = 'second'"
+        ):
             protocol_block.head(head(cost="second"))
 
     def test_a_placeholder_is_a_must_gap(self):
@@ -768,7 +829,9 @@ class TestCostTier(unittest.TestCase):
 
     def test_a_prose_cost_line_is_not_the_tier(self):
         text = pilot(cost="<seconds | minutes | hours>") + "- **Cost:** seconds\n"
-        self.assertEqual(protocol_check.check_fields(text).missing_must, ["[protocol] cost"])
+        self.assertEqual(
+            protocol_check.check_fields(text).missing_must, ["[protocol] cost"]
+        )
 
 
 if __name__ == "__main__":

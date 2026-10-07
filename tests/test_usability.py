@@ -1,6 +1,7 @@
 """usability (2026-10-05): the fixture has the answer it claims, the log
 parser counts what the contract names and nothing twice, and the score
 is an identity on the named key of the bound run."""
+
 from __future__ import annotations
 
 import contextlib
@@ -44,15 +45,19 @@ class LogParser(unittest.TestCase):
     def test_counts_wall_clock_and_no_double_count(self):
         got = usability.parse_log(LOG)
         self.assertEqual(got.wall_seconds, 150)
-        self.assertEqual((got.read, got.run, got.edit, got.unsure, got.gate), (3, 2, 1, 1, 1))
+        self.assertEqual(
+            (got.read, got.run, got.edit, got.unsure, got.gate), (3, 2, 1, 1, 1)
+        )
         self.assertEqual(got.source_reads, 1)
         self.assertEqual(got.untagged, 2)
         self.assertEqual(got.lines, 10)
         self.assertTrue(got.monotonic)
 
     def test_a_long_silence_is_reported_beside_the_span(self):
-        got = usability.parse_log("18:00:00 · read · a\n18:01:00 · run · b\n"
-                                  "18:31:00 · run · c\n18:32:00 · edit · d\n")
+        got = usability.parse_log(
+            "18:00:00 · read · a\n18:01:00 · run · b\n"
+            "18:31:00 · run · c\n18:32:00 · edit · d\n"
+        )
         self.assertEqual(got.wall_seconds, 1920)
         self.assertEqual(got.gap_seconds, 1800)
 
@@ -65,21 +70,45 @@ class LogParser(unittest.TestCase):
         self.assertEqual(got.wall_seconds, 3600)
 
 
-def _probe(root: Path, metrics: dict, frozen: bool = False, tier: str = "seconds") -> None:
+def _probe(
+    root: Path, metrics: dict, frozen: bool = False, tier: str = "seconds"
+) -> None:
     area = root / "experiments" / "01-docs-per-case"
     run = area / "runs" / "2026-10-05T18-00-00_ab12"
     run.mkdir(parents=True)
     (area / "PROTOCOL-docs-per-case.md").write_text(
-        head(cost=tier, frozen=frozen), encoding="utf-8")
+        head(cost=tier, frozen=frozen), encoding="utf-8"
+    )
     (run / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
-    (run / "config.json").write_text(json.dumps(
-        {"schema_version": 2, "protocol": {"id": "p-0123456789abcdef", "path": "PROTOCOL-docs-per-case.md"},
-         "cost_tier": tier}), encoding="utf-8")
+    (run / "config.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "protocol": {
+                    "id": "p-0123456789abcdef",
+                    "path": "PROTOCOL-docs-per-case.md",
+                },
+                "cost_tier": tier,
+            }
+        ),
+        encoding="utf-8",
+    )
     (run / "completion.json").write_text("{}", encoding="utf-8")
-    usability._sidecar(root, "probe.json").write_text(json.dumps({
-        "staged": "2026-10-05T17:59:00", "task": "count", "area": "01-docs-per-case",
-        "metric_key": "mean_docs_per_case", "labkit_installed": "labkit @ x",
-        "scaffold_sha": "abc", "scaffold_flags": [], "target_minutes": 5}), encoding="utf-8")
+    usability._sidecar(root, "probe.json").write_text(
+        json.dumps(
+            {
+                "staged": "2026-10-05T17:59:00",
+                "task": "count",
+                "area": "01-docs-per-case",
+                "metric_key": "mean_docs_per_case",
+                "labkit_installed": "labkit @ x",
+                "scaffold_sha": "abc",
+                "scaffold_flags": [],
+                "target_minutes": 5,
+            }
+        ),
+        encoding="utf-8",
+    )
     usability._sidecar(root, "log.md").write_text(LOG, encoding="utf-8")
 
 

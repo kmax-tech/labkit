@@ -61,6 +61,7 @@ pointing at the other endpoint name.
 For specialized calls (logprobs, raw payloads): use resolve(alias) for
 endpoint/model and do your own HTTP — never a literal URL in the experiment.
 """
+
 from __future__ import annotations
 
 import http.client
@@ -81,16 +82,21 @@ from labkit import endpoint_lease
 
 
 def _find_models_toml() -> Path:
-    seeds = [Path(sys.argv[0]).resolve().parent if sys.argv[0] else Path.cwd(), Path.cwd()]
+    seeds = [
+        Path(sys.argv[0]).resolve().parent if sys.argv[0] else Path.cwd(),
+        Path.cwd(),
+    ]
     for seed in seeds:
         for d in [seed, *seed.parents]:
             p = d / "models.toml"
             if p.exists():
                 return p
-    raise FileNotFoundError("models.toml not found (searched upward from script dir and cwd)")
+    raise FileNotFoundError(
+        "models.toml not found (searched upward from script dir and cwd)"
+    )
 
 
-_FROZEN: dict[str, dict] = {}      # alias -> spec, fixed at first use per process
+_FROZEN: dict[str, dict] = {}  # alias -> spec, fixed at first use per process
 
 
 def resolve(alias: str) -> dict:
@@ -118,8 +124,9 @@ def resolve(alias: str) -> dict:
     # for direct-HTTP callers). Frozen with the rest of the spec: an edit to
     # models.toml never reaches a running process.
     table = cfg.get("endpoints", {})
-    raw_eps = spec.pop("endpoints", None) or \
-        ([spec["endpoint"]] if spec.get("endpoint") else [])
+    raw_eps = spec.pop("endpoints", None) or (
+        [spec["endpoint"]] if spec.get("endpoint") else []
+    )
     eps = []
     for e in raw_eps:
         if "://" in e:
@@ -128,8 +135,10 @@ def resolve(alias: str) -> dict:
             eps.append(table[e])
         else:
             known = ", ".join(table) or "none defined"
-            raise KeyError(f"endpoint name '{e}' for alias '{alias}' not in "
-                           f"[endpoints] (known: {known})")
+            raise KeyError(
+                f"endpoint name '{e}' for alias '{alias}' not in "
+                f"[endpoints] (known: {known})"
+            )
     if eps:
         spec["endpoints"] = eps
         spec["endpoint"] = eps[0]
@@ -146,8 +155,9 @@ def resolve(alias: str) -> dict:
     if spec["backend"] == "ollama":
         auth = _auth_headers(spec)
         spec["model_digest"] = _aggregate_digests(
-            {ep: _ollama_digest(ep, spec["model"], auth) for ep in eps} or
-            {"": _ollama_digest("", spec["model"], auth)})
+            {ep: _ollama_digest(ep, spec["model"], auth) for ep in eps}
+            or {"": _ollama_digest("", spec["model"], auth)}
+        )
     _FROZEN[alias] = dict(spec)
     return spec
 
@@ -202,18 +212,21 @@ def _auth_headers(spec: dict) -> dict[str, str]:
         if not key:
             raise ValueError(
                 f"alias '{spec.get('alias', '?')}': api_key_env = {env!r}, but "
-                f"{env} is not set in the environment")
+                f"{env} is not set in the environment"
+            )
         return {"Authorization": f"Bearer {key}"}
     if spec.get("api_key"):
         return {"Authorization": f"Bearer {spec['api_key']}"}
     return {}
 
 
-def _ollama_digest(endpoint: str, model: str,
-                   headers: dict[str, str] | None = None) -> str:
+def _ollama_digest(
+    endpoint: str, model: str, headers: dict[str, str] | None = None
+) -> str:
     try:
-        req = urllib.request.Request(f"{endpoint.rstrip('/')}/api/tags",
-                                     headers=headers or {})
+        req = urllib.request.Request(
+            f"{endpoint.rstrip('/')}/api/tags", headers=headers or {}
+        )
         with urllib.request.urlopen(req, timeout=10) as r:
             return _digest_from_tags(json.loads(r.read().decode("utf-8")), model)
     except Exception:
@@ -235,9 +248,14 @@ class BackendError(RuntimeError):
     """
 
 
-_TRANSIENT = (TimeoutError, ConnectionError, urllib.error.URLError,
-              http.client.HTTPException, subprocess.TimeoutExpired,
-              BackendError)
+_TRANSIENT = (
+    TimeoutError,
+    ConnectionError,
+    urllib.error.URLError,
+    http.client.HTTPException,
+    subprocess.TimeoutExpired,
+    BackendError,
+)
 _RETRIES = {"n": 0}
 _RETRIES_LOCK = threading.Lock()
 # network hiccup, model reload, queue, outage — 2026-09-24: two runs died
@@ -290,14 +308,16 @@ _CLI_CWD = tempfile.gettempdir()
 
 def _cli_run(cmd: list[str], timeout: float | None) -> subprocess.CompletedProcess:
     """The one place `claude -p` is spawned: isolated flags, neutral cwd."""
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
-                          cwd=_CLI_CWD)
+    return subprocess.run(
+        cmd, capture_output=True, text=True, timeout=timeout, cwd=_CLI_CWD
+    )
 
 
 def _cli_version() -> str:
     try:
-        r = subprocess.run(["claude", "--version"], capture_output=True,
-                           text=True, timeout=30)
+        r = subprocess.run(
+            ["claude", "--version"], capture_output=True, text=True, timeout=30
+        )
         return r.stdout.strip().split()[0] if r.returncode == 0 else "unknown"
     except (OSError, subprocess.TimeoutExpired):
         return "unknown"
@@ -347,11 +367,19 @@ def _pick_endpoint(spec: dict) -> str:
     return url
 
 
-def complete(alias: str, prompt: str, *, system: str | None = None,
-             temperature: float | None = None, timeout: int = 300,
-             attempts: int = 6, raw: bool = False,
-             stop: list[str] | None = None, max_tokens: int = 512,
-             keep_alive: str = "10m") -> str:
+def complete(
+    alias: str,
+    prompt: str,
+    *,
+    system: str | None = None,
+    temperature: float | None = None,
+    timeout: int = 300,
+    attempts: int = 6,
+    raw: bool = False,
+    stop: list[str] | None = None,
+    max_tokens: int = 512,
+    keep_alive: str = "10m",
+) -> str:
     """One text completion, retrying transport failures (see _TRANSIENT).
 
     `attempts` counts total tries, not extra ones; backoff follows _BACKOFF
@@ -361,10 +389,17 @@ def complete(alias: str, prompt: str, *, system: str | None = None,
     """
     for attempt in range(1, attempts + 1):
         try:
-            return _complete_once(alias, prompt, system=system,
-                                  temperature=temperature, timeout=timeout,
-                                  raw=raw, stop=stop, max_tokens=max_tokens,
-                                  keep_alive=keep_alive)
+            return _complete_once(
+                alias,
+                prompt,
+                system=system,
+                temperature=temperature,
+                timeout=timeout,
+                raw=raw,
+                stop=stop,
+                max_tokens=max_tokens,
+                keep_alive=keep_alive,
+            )
         except _TRANSIENT as exc:
             if attempt == attempts:
                 # Exhausted retries ALWAYS raise BackendError, no matter what
@@ -381,21 +416,26 @@ def complete(alias: str, prompt: str, *, system: str | None = None,
                     raise
                 raise BackendError(
                     f"{alias}: {type(exc).__name__} after {attempts} attempts: "
-                    f"{str(exc)[:200]}") from exc
+                    f"{str(exc)[:200]}"
+                ) from exc
             with _RETRIES_LOCK:
                 _RETRIES["n"] += 1
             # The backoff must outlive a MODEL LOAD, not just a network
             # hiccup: a 13 GB model takes ~90 s into VRAM, and 5/15 s pauses
             # all fizzle before that (a run died after 5 of 100).
             wait = _BACKOFF[min(attempt - 1, len(_BACKOFF) - 1)]
-            print(f"llm: {type(exc).__name__} on attempt {attempt}/{attempts} "
-                  f"({str(exc)[:60]}) — retrying in {wait}s", file=sys.stderr)
+            print(
+                f"llm: {type(exc).__name__} on attempt {attempt}/{attempts} "
+                f"({str(exc)[:60]}) — retrying in {wait}s",
+                file=sys.stderr,
+            )
             time.sleep(wait)
     raise AssertionError("unreachable")
 
 
-def complete_many(alias: str, prompts: list[str], *, workers: int = 4,
-                  **kw) -> list[str]:
+def complete_many(
+    alias: str, prompts: list[str], *, workers: int = 4, **kw
+) -> list[str]:
     """complete() over many independent prompts, results in input order.
 
     A thread pool of `workers`; each worker calls complete() with the same
@@ -407,14 +447,23 @@ def complete_many(alias: str, prompts: list[str], *, workers: int = 4,
     if workers <= 1 or len(prompts) <= 1:
         return [complete(alias, p, **kw) for p in prompts]
     from concurrent.futures import ThreadPoolExecutor
+
     with ThreadPoolExecutor(max_workers=workers) as pool:
         return list(pool.map(lambda p: complete(alias, p, **kw), prompts))
 
 
-def _complete_once(alias: str, prompt: str, *, system: str | None = None,
-                   temperature: float | None = None, timeout: int = 300,
-                   raw: bool = False, stop: list[str] | None = None,
-                   max_tokens: int = 512, keep_alive: str = "10m") -> str:
+def _complete_once(
+    alias: str,
+    prompt: str,
+    *,
+    system: str | None = None,
+    temperature: float | None = None,
+    timeout: int = 300,
+    raw: bool = False,
+    stop: list[str] | None = None,
+    max_tokens: int = 512,
+    keep_alive: str = "10m",
+) -> str:
     """One text completion via the alias' backend. Returns the answer text.
 
     temperature: only the 'ollama' backend can set it. Passing a value to a
@@ -433,29 +482,52 @@ def _complete_once(alias: str, prompt: str, *, system: str | None = None,
     endpoint_lease.acquire(alias, spec.get("endpoints"))
     backend = spec["backend"]
     if backend == "claude-cli":
-        return _complete_claude_cli(alias, spec, prompt, system=system,
-                                    temperature=temperature, timeout=timeout)
+        return _complete_claude_cli(
+            alias, spec, prompt, system=system, temperature=temperature, timeout=timeout
+        )
     if backend == "ollama" and raw:
-        return _complete_ollama_raw(spec, prompt, system=system,
-                                    temperature=temperature, timeout=timeout,
-                                    stop=stop, max_tokens=max_tokens,
-                                    keep_alive=keep_alive)
+        return _complete_ollama_raw(
+            spec,
+            prompt,
+            system=system,
+            temperature=temperature,
+            timeout=timeout,
+            stop=stop,
+            max_tokens=max_tokens,
+            keep_alive=keep_alive,
+        )
     if backend == "ollama":
-        return _complete_ollama_chat(alias, spec, prompt, system=system,
-                                     temperature=temperature, timeout=timeout,
-                                     stop=stop, max_tokens=max_tokens,
-                                     keep_alive=keep_alive)
+        return _complete_ollama_chat(
+            alias,
+            spec,
+            prompt,
+            system=system,
+            temperature=temperature,
+            timeout=timeout,
+            stop=stop,
+            max_tokens=max_tokens,
+            keep_alive=keep_alive,
+        )
     if backend == "openai":
-        return _complete_openai(alias, spec, prompt, system=system,
-                                temperature=temperature, timeout=timeout,
-                                raw=raw, stop=stop, max_tokens=max_tokens)
+        return _complete_openai(
+            alias,
+            spec,
+            prompt,
+            system=system,
+            temperature=temperature,
+            timeout=timeout,
+            raw=raw,
+            stop=stop,
+            max_tokens=max_tokens,
+        )
     raise ValueError(f"unknown backend '{backend}' for alias '{alias}'")
 
 
 def _chat_messages(system: str | None, prompt: str) -> list[dict]:
     """The chat message list: optional system turn, then the user prompt."""
-    return ([{"role": "system", "content": system}] if system else []) \
-        + [{"role": "user", "content": prompt}]
+    return ([{"role": "system", "content": system}] if system else []) + [
+        {"role": "user", "content": prompt}
+    ]
 
 
 def _post_json(spec: dict, path: str, payload: dict, timeout: int) -> dict:
@@ -463,36 +535,50 @@ def _post_json(spec: dict, path: str, payload: dict, timeout: int) -> dict:
     req = urllib.request.Request(
         _pick_endpoint(spec).rstrip("/") + path,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", **_auth_headers(spec)})
+        headers={"Content-Type": "application/json", **_auth_headers(spec)},
+    )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read())
 
 
-def _complete_claude_cli(alias: str, spec: dict, prompt: str, *,
-                         system: str | None, temperature: float | None,
-                         timeout: int) -> str:
+def _complete_claude_cli(
+    alias: str,
+    spec: dict,
+    prompt: str,
+    *,
+    system: str | None,
+    temperature: float | None,
+    timeout: int,
+) -> str:
     """`claude -p`, isolated from the operator's settings (_CLI_ISOLATION)."""
     if temperature is not None:
         raise ValueError(
             f"alias '{alias}' uses backend 'claude-cli', which has no "
             f"temperature flag — it cannot honour temperature="
             f"{temperature}. Pass temperature=None and document the run "
-            f"as backend-default sampling, or use an ollama alias.")
+            f"as backend-default sampling, or use an ollama alias."
+        )
     cmd = ["claude", "-p", prompt, "--model", spec["model"], *_CLI_ISOLATION]
     if system:
         cmd += ["--append-system-prompt", system]
     r = _cli_run(cmd, timeout)
     if r.returncode != 0:
-        detail = (r.stderr.strip() or r.stdout.strip() or
-                  "no output on stderr or stdout")
+        detail = r.stderr.strip() or r.stdout.strip() or "no output on stderr or stdout"
         raise BackendError(f"claude-cli exit {r.returncode}: {detail[:300]}")
     return r.stdout.strip()
 
 
-def _complete_ollama_raw(spec: dict, prompt: str, *, system: str | None,
-                         temperature: float | None, timeout: int,
-                         stop: list[str] | None, max_tokens: int,
-                         keep_alive: str) -> str:
+def _complete_ollama_raw(
+    spec: dict,
+    prompt: str,
+    *,
+    system: str | None,
+    temperature: float | None,
+    timeout: int,
+    stop: list[str] | None,
+    max_tokens: int,
+    keep_alive: str,
+) -> str:
     """ollama /api/generate with raw=true: the prompt goes untemplated."""
     # /api/generate with raw=true sends the prompt UNTEMPLATED — the
     # model sees exactly our text, the way a paper's own
@@ -502,11 +588,17 @@ def _complete_ollama_raw(spec: dict, prompt: str, *, system: str | None,
     # commentary). A completion needs a stop sequence, or it writes the
     # next instruction itself.
     if system:
-        raise ValueError("raw=True sends one untemplated prompt; fold "
-                         "any system text into the prompt itself")
-    payload: dict[str, object] = {"model": spec["model"], "prompt": prompt,
-                                  "raw": True, "stream": False,
-                                  "keep_alive": keep_alive}
+        raise ValueError(
+            "raw=True sends one untemplated prompt; fold "
+            "any system text into the prompt itself"
+        )
+    payload: dict[str, object] = {
+        "model": spec["model"],
+        "prompt": prompt,
+        "raw": True,
+        "stream": False,
+        "keep_alive": keep_alive,
+    }
     # A completion has no natural end: without a token budget it keeps
     # writing until the context is full (a pilot stalled 12 min on one
     # call). CASA bounds theirs at max_length=512.
@@ -519,17 +611,28 @@ def _complete_ollama_raw(spec: dict, prompt: str, *, system: str | None,
     return _post_json(spec, "/api/generate", payload, timeout)["response"].strip()
 
 
-def _complete_ollama_chat(alias: str, spec: dict, prompt: str, *,
-                          system: str | None, temperature: float | None,
-                          timeout: int, stop: list[str] | None,
-                          max_tokens: int, keep_alive: str) -> str:
+def _complete_ollama_chat(
+    alias: str,
+    spec: dict,
+    prompt: str,
+    *,
+    system: str | None,
+    temperature: float | None,
+    timeout: int,
+    stop: list[str] | None,
+    max_tokens: int,
+    keep_alive: str,
+) -> str:
     """ollama /api/chat — the path every templated experiment takes."""
     # keep_alive: without it ollama evicts the model between two calls
     # (default 5 min) and every call pays a reload — ~13 GB for gpt-oss.
     # That once drove a run into the timeout after 5 of 100 items.
-    payload: dict[str, object] = {"model": spec["model"],
-                                  "messages": _chat_messages(system, prompt),
-                                  "stream": False, "keep_alive": keep_alive}
+    payload: dict[str, object] = {
+        "model": spec["model"],
+        "messages": _chat_messages(system, prompt),
+        "stream": False,
+        "keep_alive": keep_alive,
+    }
     # `num_predict` belongs here TOO. Until 2026-08-19 this branch set
     # only `temperature` and silently dropped `max_tokens` — the
     # /api/generate branch above has always warned about this ("without a
@@ -556,18 +659,29 @@ def _complete_ollama_chat(alias: str, spec: dict, prompt: str, *,
     # visible: silently lost items are the most expensive error type.
     if not content:
         think = (message.get("thinking") or "").strip()
-        print(f"llm: {alias} returned EMPTY content "
-              f"(done_reason={body.get('done_reason')!r}, "
-              f"eval_count={body.get('eval_count')}, "
-              f"thinking={len(think)} chars) — count as unreadable, "
-              f"not as an answer", file=sys.stderr)
+        print(
+            f"llm: {alias} returned EMPTY content "
+            f"(done_reason={body.get('done_reason')!r}, "
+            f"eval_count={body.get('eval_count')}, "
+            f"thinking={len(think)} chars) — count as unreadable, "
+            f"not as an answer",
+            file=sys.stderr,
+        )
     return content
 
 
-def _complete_openai(alias: str, spec: dict, prompt: str, *,
-                     system: str | None, temperature: float | None,
-                     timeout: int, raw: bool, stop: list[str] | None,
-                     max_tokens: int) -> str:
+def _complete_openai(
+    alias: str,
+    spec: dict,
+    prompt: str,
+    *,
+    system: str | None,
+    temperature: float | None,
+    timeout: int,
+    raw: bool,
+    stop: list[str] | None,
+    max_tokens: int,
+) -> str:
     """Any OpenAI-compatible server (vLLM, sglang, …) via /v1/chat/completions."""
     # Any OpenAI-compatible server: vLLM, sglang, ... Same completion
     # semantics as the ollama chat path. `keep_alive` does not apply (the
@@ -576,11 +690,16 @@ def _complete_openai(alias: str, spec: dict, prompt: str, *,
     # plus the server launch command (revision, quantization) are the pin,
     # both belong in the run config.
     if raw:
-        raise ValueError("raw=True needs ollama's /api/generate — the "
-                         "OpenAI-compatible API has no untemplated path")
-    payload: dict[str, object] = {"model": spec["model"],
-                                  "messages": _chat_messages(system, prompt),
-                                  "max_tokens": max_tokens, "stream": False}
+        raise ValueError(
+            "raw=True needs ollama's /api/generate — the "
+            "OpenAI-compatible API has no untemplated path"
+        )
+    payload: dict[str, object] = {
+        "model": spec["model"],
+        "messages": _chat_messages(system, prompt),
+        "max_tokens": max_tokens,
+        "stream": False,
+    }
     if temperature is not None:
         payload["temperature"] = temperature
     if stop:
@@ -599,18 +718,23 @@ def _complete_openai(alias: str, spec: dict, prompt: str, *,
     # content without a trace field is the signature of a server missing
     # the parser flag — fail immediately, no retry changes a server
     # config.
-    reasoning = (message.get("reasoning_content")
-                 or message.get("reasoning") or "").strip()
+    reasoning = (
+        message.get("reasoning_content") or message.get("reasoning") or ""
+    ).strip()
     if spec.get("reasoning") and content and not reasoning:
         raise ValueError(
             f"{alias}: reasoning = true, but the answer carries content "
             f"without reasoning_content/reasoning — the server runs "
             f"without --reasoning-parser and mixes the thinking trace "
             f"into the answer. Fix the server cmd (swap-models.toml), or "
-            f"set reasoning = false if this model truly writes no trace.")
+            f"set reasoning = false if this model truly writes no trace."
+        )
     if not content:
-        print(f"llm: {alias} returned EMPTY content "
-              f"(finish_reason={first.get('finish_reason')!r}, "
-              f"reasoning={len(reasoning)} chars) — count as "
-              f"unreadable, not as an answer", file=sys.stderr)
+        print(
+            f"llm: {alias} returned EMPTY content "
+            f"(finish_reason={first.get('finish_reason')!r}, "
+            f"reasoning={len(reasoning)} chars) — count as "
+            f"unreadable, not as an answer",
+            file=sys.stderr,
+        )
     return content

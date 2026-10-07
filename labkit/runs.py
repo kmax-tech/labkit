@@ -19,8 +19,12 @@ from pathlib import Path
 def _command_of(pid: int) -> str | None:
     """Command line of a process, or None if unreadable."""
     try:
-        r = subprocess.run(["ps", "-o", "command=", "-p", str(pid)],
-                           capture_output=True, text=True, timeout=5)
+        r = subprocess.run(
+            ["ps", "-o", "command=", "-p", str(pid)],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
     except (OSError, subprocess.SubprocessError):
         return None
     return r.stdout.strip() or None
@@ -44,11 +48,11 @@ def is_alive(pid, script) -> bool | None:
     if not isinstance(pid, int):
         return None
     try:
-        os.kill(pid, 0)              # signal 0: existence check only
+        os.kill(pid, 0)  # signal 0: existence check only
     except ProcessLookupError:
         return False
     except PermissionError:
-        pass                         # exists, belongs to someone else
+        pass  # exists, belongs to someone else
     cmd = _command_of(pid)
     if cmd is None or not script:
         return None
@@ -108,11 +112,13 @@ def read_run_config(run_dir: Path) -> dict | None:
     except (OSError, json.JSONDecodeError) as exc:
         raise RunConfigError(
             f"{cfg_file}: unreadable run metadata ({exc}) — the run cannot "
-            f"say what it is; repair or move it aside") from exc
+            f"say what it is; repair or move it aside"
+        ) from exc
     problem = _shape_problem(cfg)
     if problem:
-        raise RunConfigError(f"{cfg_file}: unreadable run metadata ({problem}) — repair "
-                             f"or move it aside")
+        raise RunConfigError(
+            f"{cfg_file}: unreadable run metadata ({problem}) — repair or move it aside"
+        )
     return cfg
 
 
@@ -156,8 +162,11 @@ def completed_runs(area: Path) -> list[Path]:
     runs = area / "runs"
     if not runs.is_dir():
         return []
-    return [d for d in sorted(runs.iterdir())
-            if d.is_dir() and completion_state(d) == "completed"]
+    return [
+        d
+        for d in sorted(runs.iterdir())
+        if d.is_dir() and completion_state(d) == "completed"
+    ]
 
 
 #: States that mean "this run is not a clean finish" — `--wait` exits 2 on

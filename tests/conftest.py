@@ -5,6 +5,7 @@ it wrote into the real ~/.labkit/leases, and failed with PermissionError
 where home is read-only (review 2026-10-07). Tests that need their own
 lease directory still set LABKIT_LEASE_DIR themselves.
 """
+
 import os
 import tempfile
 

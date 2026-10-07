@@ -1,6 +1,7 @@
 """A directory as a run's data source is frozen like a file (review 2026-10-07:
 it could not be, so the stamped count skeleton passed no `data=` for a
 directory and `finalize` refused every such run as "source not frozen")."""
+
 import tempfile
 import unittest
 from pathlib import Path

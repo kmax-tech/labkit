@@ -1,6 +1,7 @@
 """finalize station 4 (2026-10-05): at cost = "seconds" the run must have frozen
 its source and every source/output file must be tracked in git; elsewhere
 the station is n/a."""
+
 from __future__ import annotations
 
 import contextlib
@@ -52,15 +53,30 @@ class Provenance(unittest.TestCase):
         (self.area / "PROTOCOL-x.md").write_text(protocol, encoding="utf-8")
         d = self.area / "runs" / "2026-10-05T19-00-00_ab12"
         d.mkdir(parents=True)
-        cfg = {"script": "01_measure.py", "pid": 1, "schema_version": 2,
-               "protocol": {"id": PID, "path": "PROTOCOL-x.md"}, "data": data or {}}
+        cfg = {
+            "script": "01_measure.py",
+            "pid": 1,
+            "schema_version": 2,
+            "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
+            "data": data or {},
+        }
         (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
         (d / "metrics.json").write_text(json.dumps({"mean": 3.5}), encoding="utf-8")
-        (d / "completion.json").write_text(json.dumps(
-            {"schema_version": 2, "finished": "x", "git": "g", "git_full": "g", "note": ""}),
-            encoding="utf-8")
-        (d / "outputs.json").write_text(json.dumps([{"path": str(self.out), "sha256": "ab"}]),
-                                        encoding="utf-8")
+        (d / "completion.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 2,
+                    "finished": "x",
+                    "git": "g",
+                    "git_full": "g",
+                    "note": "",
+                }
+            ),
+            encoding="utf-8",
+        )
+        (d / "outputs.json").write_text(
+            json.dumps([{"path": str(self.out), "sha256": "ab"}]), encoding="utf-8"
+        )
         if commit:
             _git(self.repo, "add", "-A")
             _git(self.repo, "commit", "-qm", "x")
@@ -96,11 +112,17 @@ class Provenance(unittest.TestCase):
 
     def test_untracked_output_after_the_run_is_a_warning_naming_git_add(self):
         d = self._run(SHORT, self._frozen(), commit=True)
-        self.out.write_text('{"id": 1, "n": 5}\n', encoding="utf-8")   # rows born after the commit
-        (d / "outputs.json").write_text(json.dumps([{"path": str(self.out), "sha256": "ab"}]))
+        self.out.write_text(
+            '{"id": 1, "n": 5}\n', encoding="utf-8"
+        )  # rows born after the commit
+        (d / "outputs.json").write_text(
+            json.dumps([{"path": str(self.out), "sha256": "ab"}])
+        )
         fresh = self.area / "output" / "fresh.jsonl"
         fresh.write_text("{}\n", encoding="utf-8")
-        (d / "outputs.json").write_text(json.dumps([{"path": str(fresh), "sha256": "ab"}]))
+        (d / "outputs.json").write_text(
+            json.dumps([{"path": str(fresh), "sha256": "ab"}])
+        )
         rc, out = self._finalize()
         self.assertEqual(rc, 0, out)
         self.assertIn("git add", out)

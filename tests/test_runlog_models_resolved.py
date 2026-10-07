@@ -9,6 +9,7 @@ the pinned commit). Same silent class as the env fingerprint.
 
 Run:  .venv/bin/python -m unittest discover -s tests -v
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -40,20 +41,23 @@ class ResolveModels(unittest.TestCase):
         spec = {"alias": "sonnet", "model": "claude-sonnet-5", "backend": "cli"}
         with mock.patch("labkit.llm.resolve", return_value=spec) as res:
             got = runlog._resolve_models(
-                {"model": "sonnet", "judge_model": "sonnet", "n": 5})
+                {"model": "sonnet", "judge_model": "sonnet", "n": 5}
+            )
         self.assertEqual(got, {"sonnet": spec})
-        self.assertEqual(res.call_count, 2)   # both keys, deduped by alias key
+        self.assertEqual(res.call_count, 2)  # both keys, deduped by alias key
 
     def test_non_model_keys_and_non_strings_skipped(self):
         with mock.patch("labkit.llm.resolve") as res:
             got = runlog._resolve_models(
-                {"n": 5, "temperature": 0.0, "model": 7, "modelling": "x"})
+                {"n": 5, "temperature": 0.0, "model": 7, "modelling": "x"}
+            )
         self.assertEqual(got, {})
         res.assert_not_called()
 
     def test_failure_recorded_not_raised(self):
-        with mock.patch("labkit.llm.resolve",
-                        side_effect=KeyError("alias 'x' not in models.toml")):
+        with mock.patch(
+            "labkit.llm.resolve", side_effect=KeyError("alias 'x' not in models.toml")
+        ):
             got = runlog._resolve_models({"model": "x"})
         self.assertIn("unresolved:", got["x"])
         self.assertIn("models.toml", got["x"])
@@ -62,6 +66,7 @@ class ResolveModels(unittest.TestCase):
 class UnpinnedWarning(unittest.TestCase):
     def test_unpinned_env_warns_on_stderr(self):
         import tempfile
+
         lockless = Path(tempfile.mkdtemp())
         err = io.StringIO()
         with redirect_stderr(err):

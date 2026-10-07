@@ -56,20 +56,22 @@ def layout_root(path: Path) -> Path:
     root = git_root(path)
     if root is not None:
         return root
-    base = (path if path.is_dir() else path.parent).resolve()   # "." has no parents
+    base = (path if path.is_dir() else path.parent).resolve()  # "." has no parents
     for parent in [base, *base.parents]:
         if (parent / "CLAUDE.md").is_file() or (parent / "tests").is_dir():
             return parent
     return base
 
 
-def git_run(args: list[str], cwd: Path,
-            timeout: float = GIT_TIMEOUT_S) -> subprocess.CompletedProcess[str]:
+def git_run(
+    args: list[str], cwd: Path, timeout: float = GIT_TIMEOUT_S
+) -> subprocess.CompletedProcess[str]:
     """Run git; the caller reads the exit code. Raises GitError only when
     git itself cannot run (missing binary, timeout)."""
     try:
-        return subprocess.run(["git", *args], cwd=cwd, capture_output=True,
-                              text=True, timeout=timeout)
+        return subprocess.run(
+            ["git", *args], cwd=cwd, capture_output=True, text=True, timeout=timeout
+        )
     except (OSError, subprocess.SubprocessError) as exc:
         raise GitError(f"git {' '.join(args)} in {cwd}: {exc}") from exc
 
@@ -84,6 +86,8 @@ def git(args: list[str], cwd: Path, timeout: float = GIT_TIMEOUT_S) -> str | Non
         return None
     r = git_run(args, cwd, timeout)
     if r.returncode != 0:
-        raise GitError(f"git {' '.join(args)} in {cwd} failed "
-                       f"(exit {r.returncode}): {r.stderr.strip()}")
+        raise GitError(
+            f"git {' '.join(args)} in {cwd} failed "
+            f"(exit {r.returncode}): {r.stderr.strip()}"
+        )
     return r.stdout.strip()

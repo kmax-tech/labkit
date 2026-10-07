@@ -1,5 +1,6 @@
 """The budgets the template's HEAD comment names are the checker's
 (2026-10-05): two homes for one number must agree, or the comment lies."""
+
 from __future__ import annotations
 
 import re
@@ -11,7 +12,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import protocol_check  # noqa: E402
 
-TEMPLATE = Path(__file__).resolve().parents[1] / "labkit" / "experiment-protocol.md.template"
+TEMPLATE = (
+    Path(__file__).resolve().parents[1] / "labkit" / "experiment-protocol.md.template"
+)
 
 
 class HeadBudgets(unittest.TestCase):

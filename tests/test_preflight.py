@@ -53,16 +53,16 @@ def _area(d, protocol_text=CLEAN_PROTOCOL, scripts=True, git=True):
         (area / "scripts").mkdir(exist_ok=True)
         (area / "scripts" / "01_measure.py").write_text(
             'metrics = {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n',
-            encoding="utf-8")
+            encoding="utf-8",
+        )
     if git:
         subprocess.run(["git", "init", "-q", "."], cwd=d, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "t@t"], cwd=d,
-                       capture_output=True)
-        subprocess.run(["git", "config", "user.name", "t"], cwd=d,
-                       capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "t@t"], cwd=d, capture_output=True
+        )
+        subprocess.run(["git", "config", "user.name", "t"], cwd=d, capture_output=True)
         subprocess.run(["git", "add", "-A"], cwd=d, capture_output=True)
-        subprocess.run(["git", "commit", "-qm", "init"], cwd=d,
-                       capture_output=True)
+        subprocess.run(["git", "commit", "-qm", "init"], cwd=d, capture_output=True)
     return area, p
 
 
@@ -96,7 +96,9 @@ class TestAreaTests(unittest.TestCase):
     def test_failing_area_test_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as d:
             area, _ = _area(d)
-            name = self._with_test(d, "def test_resolution():\n    assert False, 'TODO'\n")
+            name = self._with_test(
+                d, "def test_resolution():\n    assert False, 'TODO'\n"
+            )
             code, out = _run_preflight(area)
             self.assertEqual(code, 1, out)
             self.assertIn(f"BLOCKER: {name} failed", out)
@@ -111,7 +113,6 @@ class TestAreaTests(unittest.TestCase):
 
 
 class TestPreflight(unittest.TestCase):
-
     def test_clean_area_exits_zero(self):
         with tempfile.TemporaryDirectory() as d:
             area, _ = _area(d)
@@ -129,9 +130,9 @@ class TestPreflight(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area, _ = _area(d, git=False)
             (area / "PROTOCOL-y.md").write_text(
-                CLEAN_PROTOCOL.replace("p-0123456789abcdef",
-                                       "p-fedcba9876543210"),
-                encoding="utf-8")
+                CLEAN_PROTOCOL.replace("p-0123456789abcdef", "p-fedcba9876543210"),
+                encoding="utf-8",
+            )
             code, out = _run_preflight(area)
         self.assertEqual(code, 2, out)
         self.assertIn("2 protocols", out)
@@ -155,9 +156,11 @@ class TestPreflight(unittest.TestCase):
         """A protocol with the head as prose lines (Standard 0.16/0.17) is
         read by labkit 0.47; here it is a blocker naming the [protocol]
         table, not a protocol checked against guessed fields (TODO 8)."""
-        prose = ("# Experiment protocol: x\n\n- **Standard:** 0.16\n"
-                 "- **Protocol id:** p-0123456789abcdef\n- **Frozen before run:** no\n"
-                 + BODY)
+        prose = (
+            "# Experiment protocol: x\n\n- **Standard:** 0.16\n"
+            "- **Protocol id:** p-0123456789abcdef\n- **Frozen before run:** no\n"
+            + BODY
+        )
         with tempfile.TemporaryDirectory() as d:
             area, _ = _area(d, protocol_text=prose)
             code, out = _run_preflight(area)
@@ -187,7 +190,6 @@ class TestPreflight(unittest.TestCase):
 
 
 class TestNoScriptsDirectory(unittest.TestCase):
-
     def test_area_without_scripts_skips_scope_sha(self):
         with tempfile.TemporaryDirectory() as d:
             area, _ = _area(d, scripts=False)

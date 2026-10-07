@@ -52,12 +52,13 @@ class BlockError(ValueError):
 @dataclass(frozen=True)
 class Head:
     """The `[protocol]` table. None marks a field still holding its placeholder."""
+
     standard: str
     id: str | None
     type: str | None
     cost: str | None
     frozen: bool
-    preflight_audit: str            # "" until the audit is decided
+    preflight_audit: str  # "" until the audit is decided
 
     @property
     def placeholders(self) -> list[str]:
@@ -103,8 +104,10 @@ def block_text(text: str) -> str | None:
     Raises BlockError when there are two: a protocol has exactly one."""
     blocks = [body for info, body in fenced_blocks(text) if info == "toml"]
     if len(blocks) > 1:
-        raise BlockError(f"{len(blocks)} ```toml blocks — a protocol has exactly "
-                         f"one, holding [protocol] and its [[promise]] tables")
+        raise BlockError(
+            f"{len(blocks)} ```toml blocks — a protocol has exactly "
+            f"one, holding [protocol] and its [[promise]] tables"
+        )
     return blocks[0] if blocks else None
 
 
@@ -116,17 +119,25 @@ def load(text: str) -> dict:
     try:
         data = tomllib.loads(raw)
     except tomllib.TOMLDecodeError as exc:
-        raise BlockError(f"the protocol's ```toml block is not valid TOML: {exc}") from exc
+        raise BlockError(
+            f"the protocol's ```toml block is not valid TOML: {exc}"
+        ) from exc
     extra = set(data) - _TOP_LEVEL
     if extra:
-        raise BlockError(f"top-level keys {sorted(extra)} in the ```toml block — "
-                         f"only [protocol] and [[promise]] belong there")
+        raise BlockError(
+            f"top-level keys {sorted(extra)} in the ```toml block — "
+            f"only [protocol] and [[promise]] belong there"
+        )
     return data
 
 
 def _placeholder(value: object) -> bool:
     """The template's `"<…>"`; a value merely starting with `<` is content."""
-    return isinstance(value, str) and value.strip().startswith("<") and value.strip().endswith(">")
+    return (
+        isinstance(value, str)
+        and value.strip().startswith("<")
+        and value.strip().endswith(">")
+    )
 
 
 def _choice(table: dict, field: str, allowed: tuple[str, ...]) -> str | None:
@@ -134,7 +145,9 @@ def _choice(table: dict, field: str, allowed: tuple[str, ...]) -> str | None:
     if _placeholder(value):
         return None
     if value not in allowed:
-        raise BlockError(f"[protocol] {field} = {value!r} — one of {', '.join(allowed)}")
+        raise BlockError(
+            f"[protocol] {field} = {value!r} — one of {', '.join(allowed)}"
+        )
     return value
 
 
@@ -144,34 +157,42 @@ def head(text: str) -> Head:
     value has the wrong type or is outside its choices."""
     data = load(text)
     if "protocol" not in data:
-        raise BlockError(f"no [protocol] table — the head ({', '.join(HEAD_FIELDS)}) "
-                         f"lives in the ```toml block; protocols with a prose head "
-                         f"are read by labkit 0.47")
+        raise BlockError(
+            f"no [protocol] table — the head ({', '.join(HEAD_FIELDS)}) "
+            f"lives in the ```toml block; protocols with a prose head "
+            f"are read by labkit 0.47"
+        )
     table = data["protocol"]
     if not isinstance(table, dict):
         raise BlockError("`protocol` must be a table: [protocol]")
     unknown = set(table) - set(HEAD_FIELDS)
     if unknown:
-        raise BlockError(f"[protocol]: unknown field(s) {sorted(unknown)}; "
-                         f"allowed: {', '.join(HEAD_FIELDS)}")
+        raise BlockError(
+            f"[protocol]: unknown field(s) {sorted(unknown)}; "
+            f"allowed: {', '.join(HEAD_FIELDS)}"
+        )
     missing = [f for f in HEAD_FIELDS if f not in table]
     if missing:
         raise BlockError(f"[protocol]: missing {', '.join(missing)}")
     standard = table["standard"]
     if not isinstance(standard, str):
-        raise BlockError(f"[protocol] standard = {standard!r} — a string, \"{STANDARD}\"")
+        raise BlockError(f'[protocol] standard = {standard!r} — a string, "{STANDARD}"')
     if standard != STANDARD:
-        raise BlockError(f"[protocol] standard = {standard!r}, this labkit reads "
-                         f"{STANDARD!r} — use the labkit release the protocol was "
-                         f"written for, or update the protocol")
+        raise BlockError(
+            f"[protocol] standard = {standard!r}, this labkit reads "
+            f"{STANDARD!r} — use the labkit release the protocol was "
+            f"written for, or update the protocol"
+        )
     pid = table["id"]
     if not isinstance(pid, str):
         raise BlockError(f"[protocol] id = {pid!r} — a string")
     if _placeholder(pid):
         pid = None
     elif not ID_SHAPE.match(pid):
-        raise BlockError(f"[protocol] id = {pid!r} — expected `p-` plus 16 lowercase "
-                         f"hex digits, stamped by `lib exp`")
+        raise BlockError(
+            f"[protocol] id = {pid!r} — expected `p-` plus 16 lowercase "
+            f"hex digits, stamped by `lib exp`"
+        )
     frozen = table["frozen"]
     if not isinstance(frozen, bool):
         raise BlockError(f"[protocol] frozen = {frozen!r} — true or false")
@@ -180,16 +201,22 @@ def head(text: str) -> Head:
         raise BlockError(f"[protocol] preflight_audit = {audit!r} — a string")
     if _placeholder(audit):
         audit = ""
-    return Head(standard=standard, id=pid, type=_choice(table, "type", TYPES),
-                cost=_choice(table, "cost", COST_TIERS), frozen=frozen,
-                preflight_audit=audit.strip())
+    return Head(
+        standard=standard,
+        id=pid,
+        type=_choice(table, "type", TYPES),
+        cost=_choice(table, "cost", COST_TIERS),
+        frozen=frozen,
+        preflight_audit=audit.strip(),
+    )
 
 
 def find_by_id(area: Path, pid: str) -> Path:
     """The one protocol in `area` whose head carries `pid` — the binding a
     run recorded. A run's recorded path goes stale by design (renaming keeps
     the id); raises BlockError when no protocol or several carry it."""
-    from labkit.repo import area_protocols     # layer 1 both; imported late, no cycle
+    from labkit.repo import area_protocols  # layer 1 both; imported late, no cycle
+
     hits = []
     for p in area_protocols(area):
         try:
@@ -198,7 +225,12 @@ def find_by_id(area: Path, pid: str) -> Path:
         except BlockError:
             continue
     if len(hits) != 1:
-        raise BlockError(f"{len(hits)} protocol(s) in {area} carry id {pid}"
-                         + (": " + ", ".join(h.name for h in hits) if hits else
-                            " — renamed, moved or re-stamped since the run?"))
+        raise BlockError(
+            f"{len(hits)} protocol(s) in {area} carry id {pid}"
+            + (
+                ": " + ", ".join(h.name for h in hits)
+                if hits
+                else " — renamed, moved or re-stamped since the run?"
+            )
+        )
     return hits[0]

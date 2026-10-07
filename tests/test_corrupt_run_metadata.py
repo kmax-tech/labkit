@@ -5,6 +5,7 @@ runs, from `reindex` and from intent-check's listing, and an unreadable
 metrics.json made intent-check fall back to the next older run as if the
 newer had reported nothing. A damaged newer run let an older one stand in.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -27,13 +28,30 @@ NEW = "2026-10-06T11-00-00_bbbb"
 def make_run(area: Path, name: str) -> Path:
     d = area / "runs" / name
     d.mkdir(parents=True)
-    (d / "config.json").write_text(json.dumps(
-        {"schema_version": 2, "script": "01_measure.py", "pid": 1,
-         "protocol": {"id": PID, "path": "PROTOCOL-x.md"}}), encoding="utf-8")
+    (d / "config.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "script": "01_measure.py",
+                "pid": 1,
+                "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
+            }
+        ),
+        encoding="utf-8",
+    )
     (d / "metrics.json").write_text(json.dumps({"c1_pass": True}), encoding="utf-8")
-    (d / "completion.json").write_text(json.dumps(
-        {"schema_version": 2, "finished": "x", "git": "g", "git_full": "g", "note": ""}),
-        encoding="utf-8")
+    (d / "completion.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "finished": "x",
+                "git": "g",
+                "git_full": "g",
+                "note": "",
+            }
+        ),
+        encoding="utf-8",
+    )
     return d
 
 
@@ -102,10 +120,13 @@ class Shape(unittest.TestCase):
 
     def test_wrong_shapes_raise_naming_the_problem(self):
         from labkit import runs
-        for content, fragment in (("[]", "a JSON list"),
-                                  ('{"schema_version": "2"}', "schema_version"),
-                                  ('{"protocol": "PROTOCOL-x.md"}', "protocol ="),
-                                  ('{"protocol": {"id": 7}}', "protocol.id")):
+
+        for content, fragment in (
+            ("[]", "a JSON list"),
+            ('{"schema_version": "2"}', "schema_version"),
+            ('{"protocol": "PROTOCOL-x.md"}', "protocol ="),
+            ('{"protocol": {"id": 7}}', "protocol.id"),
+        ):
             with tempfile.TemporaryDirectory() as d:
                 (Path(d) / "config.json").write_text(content)
                 with self.assertRaises(runs.RunConfigError) as cm:
@@ -114,9 +135,11 @@ class Shape(unittest.TestCase):
 
     def test_the_current_shape_reads(self):
         from labkit import runs
+
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / "config.json").write_text(
-                '{"schema_version": 2, "protocol": {"id": null, "path": null}}')
+                '{"schema_version": 2, "protocol": {"id": null, "path": null}}'
+            )
             cfg = runs.read_run_config(Path(d))
             assert cfg is not None
             self.assertEqual(cfg["schema_version"], 2)

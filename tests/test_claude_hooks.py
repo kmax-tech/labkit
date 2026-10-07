@@ -8,6 +8,7 @@ is written (§2.A12).
 post-change: changed protocols and messung notes are checked whatever
 tool wrote them (git status, not the tool name), once per content.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -46,9 +47,11 @@ def _protocol(frozen: bool, cost: str = "minutes") -> str:
     return "# Experiment protocol: x\n\n" + head(frozen=frozen, cost=cost) + "\n" + BODY
 
 
-RUN_SCRIPT = ('from labkit import runlog\n'
-              'with runlog.run("t", {}, protocol="PROTOCOL-x.md") as r:\n'
-              '    metrics = {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n')
+RUN_SCRIPT = (
+    "from labkit import runlog\n"
+    'with runlog.run("t", {}, protocol="PROTOCOL-x.md") as r:\n'
+    '    metrics = {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n'
+)
 
 
 def _git(cwd, *args):
@@ -78,8 +81,12 @@ def _run(fn, event: dict) -> tuple[int, str, str]:
 
 
 def _bash(root: Path, command: str) -> dict:
-    return {"session_id": "s1", "cwd": str(root), "tool_name": "Bash",
-            "tool_input": {"command": command}}
+    return {
+        "session_id": "s1",
+        "cwd": str(root),
+        "tool_name": "Bash",
+        "tool_input": {"command": command},
+    }
 
 
 class PreRun(unittest.TestCase):
@@ -87,13 +94,16 @@ class PreRun(unittest.TestCase):
         os.environ.pop("CLAUDE_PROJECT_DIR", None)
 
     def test_frozen_with_blockers_blocks(self):
-        root = _repo(True)      # frozen, but no tests/ -> only a warning;
+        root = _repo(True)  # frozen, but no tests/ -> only a warning;
         # a missing intent id in the script is the blocker:
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
             'from labkit import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
-            encoding="utf-8")
-        rc, out, err = _run(claude_hooks.pre_run,
-                            _bash(root, "python experiments/01-x/scripts/01_measure.py"))
+            encoding="utf-8",
+        )
+        rc, out, err = _run(
+            claude_hooks.pre_run,
+            _bash(root, "python experiments/01-x/scripts/01_measure.py"),
+        )
         self.assertEqual(rc, 2)
         self.assertIn("BLOCKED", err)
         self.assertIn("preflight", err)
@@ -102,9 +112,12 @@ class PreRun(unittest.TestCase):
         root = _repo(False)
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
             'from labkit import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
-            encoding="utf-8")
-        rc, out, err = _run(claude_hooks.pre_run,
-                            _bash(root, "python experiments/01-x/scripts/01_measure.py"))
+            encoding="utf-8",
+        )
+        rc, out, err = _run(
+            claude_hooks.pre_run,
+            _bash(root, "python experiments/01-x/scripts/01_measure.py"),
+        )
         self.assertEqual(rc, 0)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("pilot", ctx)
@@ -113,9 +126,12 @@ class PreRun(unittest.TestCase):
         root = _repo(True, cost="seconds")
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
             'from labkit import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
-            encoding="utf-8")
-        rc, out, err = _run(claude_hooks.pre_run,
-                            _bash(root, "python experiments/01-x/scripts/01_measure.py"))
+            encoding="utf-8",
+        )
+        rc, out, err = _run(
+            claude_hooks.pre_run,
+            _bash(root, "python experiments/01-x/scripts/01_measure.py"),
+        )
         self.assertEqual(rc, 0)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("cost seconds", ctx)
@@ -125,10 +141,16 @@ class PreRun(unittest.TestCase):
     def test_seconds_without_criterion_is_reported_not_blocked(self):
         root = _repo(False, cost="seconds")
         proto = root / "experiments/01-x/PROTOCOL-x.md"
-        proto.write_text(proto.read_text(encoding="utf-8")
-                         .replace("[C1] p < .05", "<the criterion>"), encoding="utf-8")
-        rc, out, err = _run(claude_hooks.pre_run,
-                            _bash(root, "python experiments/01-x/scripts/01_measure.py"))
+        proto.write_text(
+            proto.read_text(encoding="utf-8").replace(
+                "[C1] p < .05", "<the criterion>"
+            ),
+            encoding="utf-8",
+        )
+        rc, out, err = _run(
+            claude_hooks.pre_run,
+            _bash(root, "python experiments/01-x/scripts/01_measure.py"),
+        )
         self.assertEqual(rc, 0)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("placeholder", ctx)
@@ -137,20 +159,29 @@ class PreRun(unittest.TestCase):
     def test_throwaway_stage_passes_silently(self):
         root = _repo(True)
         for flag in ("--probe 3", "--show 2", "--eval-only"):
-            rc, out, err = _run(claude_hooks.pre_run, _bash(
-                root, f"python experiments/01-x/scripts/01_measure.py {flag}"))
+            rc, out, err = _run(
+                claude_hooks.pre_run,
+                _bash(root, f"python experiments/01-x/scripts/01_measure.py {flag}"),
+            )
             self.assertEqual((rc, out, err), (0, "", ""), flag)
 
     def test_script_without_run_passes_silently(self):
         root = _repo(True, script="print('analysis only')\n")
-        rc, out, err = _run(claude_hooks.pre_run,
-                            _bash(root, "python experiments/01-x/scripts/01_measure.py"))
+        rc, out, err = _run(
+            claude_hooks.pre_run,
+            _bash(root, "python experiments/01-x/scripts/01_measure.py"),
+        )
         self.assertEqual((rc, out, err), (0, "", ""))
 
     def test_skip_token_is_reported_not_blocked(self):
         root = _repo(True)
-        rc, out, err = _run(claude_hooks.pre_run, _bash(
-            root, "LABKIT_PREFLIGHT=skip python experiments/01-x/scripts/01_measure.py"))
+        rc, out, err = _run(
+            claude_hooks.pre_run,
+            _bash(
+                root,
+                "LABKIT_PREFLIGHT=skip python experiments/01-x/scripts/01_measure.py",
+            ),
+        )
         self.assertEqual(rc, 0)
         self.assertIn("skipped", out)
 
@@ -161,7 +192,9 @@ class PreRun(unittest.TestCase):
         ev = _bash(root / "experiments/01-x", "python scripts/01_measure.py")
         rc, out, err = _run(claude_hooks.pre_run, ev)
         self.assertEqual(rc, 0, err)
-        self.assertIn("preflight 01-x", json.loads(out)["hookSpecificOutput"]["additionalContext"])
+        self.assertIn(
+            "preflight 01-x", json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        )
 
 
 class PostChange(unittest.TestCase):
@@ -175,11 +208,18 @@ class PostChange(unittest.TestCase):
 
     def test_protocol_written_by_heredoc_is_checked(self):
         p = self.root / "experiments/01-x/PROTOCOL-x.md"
-        p.write_text(_protocol(False).replace(
-            "- **Null condition / anchors (in the same run):** [A2] shuffled labels "
-            "stay at chance\n", ""), encoding="utf-8")
-        rc, out, err = _run(claude_hooks.post_change,
-                            _bash(self.root, "cat > PROTOCOL-x.md <<EOF ... EOF"))
+        p.write_text(
+            _protocol(False).replace(
+                "- **Null condition / anchors (in the same run):** [A2] shuffled labels "
+                "stay at chance\n",
+                "",
+            ),
+            encoding="utf-8",
+        )
+        rc, out, err = _run(
+            claude_hooks.post_change,
+            _bash(self.root, "cat > PROTOCOL-x.md <<EOF ... EOF"),
+        )
         self.assertEqual(rc, 0)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("PROTOCOL-x.md", ctx)
@@ -198,7 +238,9 @@ class PostChange(unittest.TestCase):
     def test_messung_note_is_checked_but_index_is_not(self):
         note = self.root / "notes/messung/2026-10-05-x.md"
         note.write_text("# x\n\nno kind line\n", encoding="utf-8")
-        (self.root / "notes/messung/00-index.md").write_text("# index\n", encoding="utf-8")
+        (self.root / "notes/messung/00-index.md").write_text(
+            "# index\n", encoding="utf-8"
+        )
         ev = _bash(self.root, "ls")
         ev["session_id"] = "s-" + os.urandom(4).hex()
         rc, out, _ = _run(claude_hooks.post_change, ev)
@@ -225,22 +267,32 @@ class Stop(unittest.TestCase):
     def setUp(self):
         os.environ.pop("CLAUDE_PROJECT_DIR", None)
         from protocol_fixture import PID
+
         self.root = _repo(False)
         self.area = self.root / "experiments" / "01-x"
         d = self.area / "runs" / self.RUN
         d.mkdir(parents=True)
-        (d / "config.json").write_text(json.dumps(
-            {"schema_version": 2, "protocol": {"id": PID, "path": "PROTOCOL-x.md"}}))
-        (d / "metrics.json").write_text(json.dumps({"c1_pass": True, "a1_pass": True, "a2_pass": True}))
+        (d / "config.json").write_text(
+            json.dumps(
+                {"schema_version": 2, "protocol": {"id": PID, "path": "PROTOCOL-x.md"}}
+            )
+        )
+        (d / "metrics.json").write_text(
+            json.dumps({"c1_pass": True, "a1_pass": True, "a2_pass": True})
+        )
         (d / "completion.json").write_text(json.dumps({"schema_version": 2}))
 
     def _answer(self, run_id: str) -> None:
         p = self.area / "PROTOCOL-x.md"
-        p.write_text(p.read_text() + f"- **Answer to the question:** p = .01 ({run_id})\n")
+        p.write_text(
+            p.read_text() + f"- **Answer to the question:** p = .01 ({run_id})\n"
+        )
 
     def _stop(self, active: bool = False) -> tuple[int, str, str]:
-        return _run(claude_hooks.stop, {"session_id": "s1", "cwd": str(self.root),
-                                        "stop_hook_active": active})
+        return _run(
+            claude_hooks.stop,
+            {"session_id": "s1", "cwd": str(self.root), "stop_hook_active": active},
+        )
 
     def test_a_blocker_sends_the_agent_back(self):
         self._answer("2026-10-01T09-00-00_ffff")

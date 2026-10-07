@@ -33,30 +33,44 @@ prompt
 
 
 def _protocol(**head_fields) -> str:
-    return "# Experiment protocol: x\n\n" + head(frozen=True, **head_fields) + "\n" + BODY
+    return (
+        "# Experiment protocol: x\n\n" + head(frozen=True, **head_fields) + "\n" + BODY
+    )
 
 
 CLEAN_PROTOCOL = _protocol()
 CLEAN_METRICS = {"c1_pass": True, "a1_pass": True, "a2_pass": True}
 
 PROTOCOL_WITH_HOLES = CLEAN_PROTOCOL.replace(
-    "- **Outcome:** 0.03",
-    "- **Outcome:** <result here>")
+    "- **Outcome:** 0.03", "- **Outcome:** <result here>"
+)
 
 
 def _run(area, name, *, pid=PID, metrics=None, completion=True):
     d = area / "runs" / name
     d.mkdir(parents=True, exist_ok=True)
-    cfg = {"script": "01_measure.py", "pid": 1, "schema_version": 2,
-           "protocol": {"id": pid, "path": "PROTOCOL-x.md"}}
+    cfg = {
+        "script": "01_measure.py",
+        "pid": 1,
+        "schema_version": 2,
+        "protocol": {"id": pid, "path": "PROTOCOL-x.md"},
+    }
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
     if metrics is not None:
         (d / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
     if completion:
         (d / "completion.json").write_text(
-            json.dumps({"schema_version": 2, "finished": "x",
-                        "git": "g", "git_full": "g", "note": ""}),
-            encoding="utf-8")
+            json.dumps(
+                {
+                    "schema_version": 2,
+                    "finished": "x",
+                    "git": "g",
+                    "git_full": "g",
+                    "note": "",
+                }
+            ),
+            encoding="utf-8",
+        )
     return d
 
 
@@ -80,17 +94,15 @@ class TestOneRunForEveryStation(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-            _run(area, "2026-10-07T10-00-00_meas",
-                 metrics={**CLEAN_METRICS, "c1_n": 7})
+            _run(area, "2026-10-07T10-00-00_meas", metrics={**CLEAN_METRICS, "c1_n": 7})
             _run(area, "2026-10-07T11-00-00_prob", metrics={"rows_seen": 2})
             code, out = _run_finalize(area)
         self.assertIn("2026-10-07T10-00-00_meas: completed (skipped 1 newer", out)
-        self.assertIn("c1_n", out)                       # the warning names the measurement's key
+        self.assertIn("c1_n", out)  # the warning names the measurement's key
         self.assertNotIn("2026-10-07T11-00-00_prob: completed", out)
 
 
 class TestFinalize(unittest.TestCase):
-
     def test_clean_area_exits_zero(self):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
@@ -156,7 +168,11 @@ class TestFinalize(unittest.TestCase):
         self.assertEqual(code, 2)
 
     def test_no_intent_ids_skips_check(self):
-        proto = CLEAN_PROTOCOL.replace("[C1] ", "").replace("[A1] ", "").replace("[A2] ", "")
+        proto = (
+            CLEAN_PROTOCOL.replace("[C1] ", "")
+            .replace("[A1] ", "")
+            .replace("[A2] ", "")
+        )
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(proto)
@@ -168,8 +184,10 @@ class TestFinalize(unittest.TestCase):
     def test_unreadable_head_exits_two(self):
         """A prose head (Standard 0.16/0.17) is read by labkit 0.47; here it
         is a usage error naming the [protocol] table (TODO 8)."""
-        prose = ("# Experiment protocol: x\n\n- **Standard:** 0.16\n"
-                 f"- **Protocol id:** {PID}\n- **Frozen before run:** yes\n" + BODY)
+        prose = (
+            "# Experiment protocol: x\n\n- **Standard:** 0.16\n"
+            f"- **Protocol id:** {PID}\n- **Frozen before run:** yes\n" + BODY
+        )
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(prose)
@@ -204,7 +222,8 @@ class TestCommitGate(unittest.TestCase):
     def _area(self, d: str, answer: str) -> Path:
         area = Path(d)
         (area / "PROTOCOL-x.md").write_text(
-            CLEAN_PROTOCOL + f"- **Answer to the question:** {answer}\n")
+            CLEAN_PROTOCOL + f"- **Answer to the question:** {answer}\n"
+        )
         _run(area, self.RUN, metrics=CLEAN_METRICS)
         return area
 
@@ -234,6 +253,8 @@ class TestCommitGate(unittest.TestCase):
     def test_a_blocker_fails_the_gate(self):
         with tempfile.TemporaryDirectory() as d:
             area = self._area(d, f"AUC 0.91 ({self.RUN})")
-            (area / "runs" / self.RUN / "metrics.json").write_text(json.dumps({"c1_pass": True}))
+            (area / "runs" / self.RUN / "metrics.json").write_text(
+                json.dumps({"c1_pass": True})
+            )
             code, out = self._gate(area)
         self.assertEqual(code, 1, out)

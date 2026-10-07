@@ -22,6 +22,7 @@ Deliberately NOT here: retries (they belong at the call that fails, see
 `llm.complete`) and yield counting (what "complete" means is domain-specific —
 count it in the experiment and report it, Arbeitsstandard §2).
 """
+
 from __future__ import annotations
 
 import json
@@ -49,9 +50,11 @@ def _parse(text: str, path: Path) -> tuple[list[dict], int | None]:
             out.append(json.loads(line))
         except json.JSONDecodeError as exc:
             if i != last:
-                raise ValueError(f"{path}:{i + 1}: unparseable line before the end of the "
-                                 f"file ({exc.msg}) — not an interrupted write; repair "
-                                 f"or regenerate the file") from exc
+                raise ValueError(
+                    f"{path}:{i + 1}: unparseable line before the end of the "
+                    f"file ({exc.msg}) — not an interrupted write; repair "
+                    f"or regenerate the file"
+                ) from exc
             torn = i + 1
     return out, torn
 
@@ -76,11 +79,15 @@ class Store:
     An explicit `_prov` already present in a record is never overwritten.
     """
 
-    def __init__(self, path: str | Path, id_key: str = "id",
-                 prov: dict | None = None, mode: str = "resume"):
+    def __init__(
+        self,
+        path: str | Path,
+        id_key: str = "id",
+        prov: dict | None = None,
+        mode: str = "resume",
+    ):
         if mode not in ("resume", "produce"):
-            raise ValueError(f"Store mode must be 'resume' or 'produce', "
-                             f"not {mode!r}")
+            raise ValueError(f"Store mode must be 'resume' or 'produce', not {mode!r}")
         self.path = Path(path)
         self.id_key = id_key
         self.prov = dict(prov) if prov else {}
@@ -95,15 +102,18 @@ class Store:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         try:
             with self.lock.open("x", encoding="utf-8") as f:
-                f.write(f"pid {os.getpid()} · {time.strftime('%Y-%m-%dT%H:%M:%S')} · "
-                        f"{' '.join(sys.argv)}\n")
+                f.write(
+                    f"pid {os.getpid()} · {time.strftime('%Y-%m-%dT%H:%M:%S')} · "
+                    f"{' '.join(sys.argv)}\n"
+                )
         except FileExistsError:
             raise SystemExit(
                 f"{self.lock} exists — another run is writing this output:\n"
                 f"  {self.lock.read_text(encoding='utf-8').strip()}\n"
                 f"Use a different output file, or delete the lock if that run "
                 f"is dead (`.venv/bin/runlog <area>` shows which "
-                f"runs are still alive).")
+                f"runs are still alive)."
+            )
         if self.mode == "produce":
             # A producer REPLACES its file — running it twice must yield the
             # file of ONE run, never a concatenation (2026-08-19 producer
@@ -127,10 +137,13 @@ class Store:
         _, torn = _parse(text, self.path)
         if torn is None:
             return
-        kept = text.splitlines()[:torn - 1]
+        kept = text.splitlines()[: torn - 1]
         self.path.write_text("".join(ln + "\n" for ln in kept), encoding="utf-8")
-        print(f"batch: cut the torn last line {torn} of {self.path} (interrupted "
-              f"write) — its item will be redone", file=sys.stderr)
+        print(
+            f"batch: cut the torn last line {torn} of {self.path} (interrupted "
+            f"write) — its item will be redone",
+            file=sys.stderr,
+        )
 
     def __exit__(self, exc_type, *exc) -> None:
         if self._fh is not None:
@@ -141,8 +154,11 @@ class Store:
             if exc_type is None:
                 os.replace(self._tmp, self.path)
             else:
-                print(f"batch: produce aborted — {self.path} left unchanged, "
-                      f"partial output in {self._tmp}", file=sys.stderr)
+                print(
+                    f"batch: produce aborted — {self.path} left unchanged, "
+                    f"partial output in {self._tmp}",
+                    file=sys.stderr,
+                )
         self.lock.unlink(missing_ok=True)
 
     # -- reading ----------------------------------------------------------
@@ -157,8 +173,11 @@ class Store:
             return []
         objs, torn = _parse(src.read_text(encoding="utf-8"), src)
         if torn is not None:
-            print(f"batch: skipping the torn last line {torn} of {src} "
-                  f"(interrupted write) — it will be redone", file=sys.stderr)
+            print(
+                f"batch: skipping the torn last line {torn} of {src} "
+                f"(interrupted write) — it will be redone",
+                file=sys.stderr,
+            )
         return [o for o in objs if not (isinstance(o, dict) and "_meta" in o)]
 
     def done_ids(self) -> set:
@@ -177,9 +196,10 @@ class Store:
         if self._fh is None:
             raise RuntimeError("Store.append outside the `with` block")
         if self.prov and "_prov" not in record:
-            record = {**record,
-                      "_prov": {k: (v() if callable(v) else v)
-                                for k, v in self.prov.items()}}
+            record = {
+                **record,
+                "_prov": {k: (v() if callable(v) else v) for k, v in self.prov.items()},
+            }
         self._fh.write(json.dumps(record, ensure_ascii=False) + "\n")
         self._fh.flush()
 
@@ -196,15 +216,16 @@ class Store:
             info["missing"] = len(missing)
             info["missing_ids"] = missing[:10]
             stray = sorted(done_ids - set(want))
-            if stray:                     # output holds ids the input never had
+            if stray:  # output holds ids the input never had
                 info["stray"] = stray[:10]
         if self.lock.exists():
             info["locked_by"] = self.lock.read_text(encoding="utf-8").strip()
         return info
 
 
-def write_dataset(path: Path, rows: list[dict], *, about: str,
-                  fields: dict[str, str], producer: str) -> None:
+def write_dataset(
+    path: Path, rows: list[dict], *, about: str, fields: dict[str, str], producer: str
+) -> None:
     """Write a prepared dataset that explains itself: first line is a `_meta`
     header (about, field legend, producer), then one record per line.
 
@@ -217,9 +238,13 @@ def write_dataset(path: Path, rows: list[dict], *, about: str,
     for i, r in enumerate(rows):
         extra, missing = set(r) - fields.keys(), fields.keys() - set(r)
         if extra or missing:
-            raise ValueError(f"row {i} does not match the field legend "
-                             f"(extra: {sorted(extra)}, missing: {sorted(missing)})")
+            raise ValueError(
+                f"row {i} does not match the field legend "
+                f"(extra: {sorted(extra)}, missing: {sorted(missing)})"
+            )
     meta = {"_meta": {"about": about, "fields": fields, "producer": producer}}
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("".join(json.dumps(x, ensure_ascii=False) + "\n"
-                            for x in [meta, *rows]), encoding="utf-8")
+    path.write_text(
+        "".join(json.dumps(x, ensure_ascii=False) + "\n" for x in [meta, *rows]),
+        encoding="utf-8",
+    )

@@ -8,6 +8,7 @@ invariance), so which server answered must be observable per call — these
 tests pin the resolution rules AND the actually-requested URLs, in the spirit
 of test_llm_chat_options.py: test what is sent, and where.
 """
+
 import json
 import sys
 import tempfile
@@ -15,7 +16,7 @@ import unittest
 import urllib.error
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))          # the package under test
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
 
 class _FakeResponse:
@@ -62,10 +63,17 @@ endpoint = "nosuch"
 class _Base(unittest.TestCase):
     def setUp(self):
         from labkit import llm
+
         self.llm = llm
-        self._saved = (llm._find_models_toml, llm._ollama_digest,
-                       llm.urllib.request.urlopen, llm.time.sleep,
-                       dict(llm._FROZEN), dict(llm._RR), llm._RETRIES["n"])
+        self._saved = (
+            llm._find_models_toml,
+            llm._ollama_digest,
+            llm.urllib.request.urlopen,
+            llm.time.sleep,
+            dict(llm._FROZEN),
+            dict(llm._RR),
+            llm._RETRIES["n"],
+        )
         self.tmp = tempfile.TemporaryDirectory()
         toml_path = Path(self.tmp.name) / "models.toml"
         toml_path.write_text(TOML, encoding="utf-8")
@@ -77,9 +85,15 @@ class _Base(unittest.TestCase):
 
     def tearDown(self):
         llm = self.llm
-        (llm._find_models_toml, llm._ollama_digest,
-         llm.urllib.request.urlopen, llm.time.sleep,
-         frozen, rr, retries) = self._saved
+        (
+            llm._find_models_toml,
+            llm._ollama_digest,
+            llm.urllib.request.urlopen,
+            llm.time.sleep,
+            frozen,
+            rr,
+            retries,
+        ) = self._saved
         llm._FROZEN.clear()
         llm._FROZEN.update(frozen)
         llm._RR.clear()
@@ -96,8 +110,9 @@ class TestResolveEndpoints(_Base):
 
     def test_endpoint_list_resolves_and_first_is_legacy_endpoint(self):
         spec = self.llm.resolve("both")
-        self.assertEqual(spec["endpoints"],
-                         ["http://a.invalid:1111", "http://b.invalid:2222"])
+        self.assertEqual(
+            spec["endpoints"], ["http://a.invalid:1111", "http://b.invalid:2222"]
+        )
         self.assertEqual(spec["endpoint"], "http://a.invalid:1111")
 
     def test_literal_url_passes_through(self):
@@ -114,14 +129,17 @@ class TestResolveEndpoints(_Base):
 class TestDigestAggregation(unittest.TestCase):
     def test_agreement_yields_the_digest(self):
         from labkit import llm
+
         self.assertEqual(llm._aggregate_digests({"a": "x", "b": "x"}), "x")
 
     def test_unreachable_endpoints_do_not_hide_the_reachable_one(self):
         from labkit import llm
+
         self.assertEqual(llm._aggregate_digests({"a": "x", "b": "unavailable"}), "x")
 
     def test_disagreement_is_loud(self):
         from labkit import llm
+
         got = llm._aggregate_digests({"a": "x", "b": "y"})
         self.assertTrue(got.startswith("MISMATCH:"))
         self.assertIn("x", got)
@@ -129,6 +147,7 @@ class TestDigestAggregation(unittest.TestCase):
 
     def test_nothing_reachable_is_unavailable(self):
         from labkit import llm
+
         self.assertEqual(llm._aggregate_digests({"a": "unavailable"}), "unavailable")
 
 
@@ -152,18 +171,20 @@ class TestRoundRobinAndFailover(_Base):
         urls = self._urls_of_calls([ok, ok, ok])
         for _ in range(3):
             self.llm.complete("both", "p", attempts=1)
-        self.assertEqual([u.split("/api")[0] for u in urls],
-                         ["http://a.invalid:1111", "http://b.invalid:2222",
-                          "http://a.invalid:1111"])
+        self.assertEqual(
+            [u.split("/api")[0] for u in urls],
+            ["http://a.invalid:1111", "http://b.invalid:2222", "http://a.invalid:1111"],
+        )
 
     def test_failover_retries_on_the_other_endpoint(self):
         ok = {"message": {"content": "x"}}
-        urls = self._urls_of_calls(
-            [urllib.error.URLError("down"), ok])
+        urls = self._urls_of_calls([urllib.error.URLError("down"), ok])
         out = self.llm.complete("both", "p", attempts=2)
         self.assertEqual(out, "x")
-        self.assertEqual([u.split("/api")[0] for u in urls],
-                         ["http://a.invalid:1111", "http://b.invalid:2222"])
+        self.assertEqual(
+            [u.split("/api")[0] for u in urls],
+            ["http://a.invalid:1111", "http://b.invalid:2222"],
+        )
 
     def test_last_endpoint_names_the_server_that_answered(self):
         ok = {"message": {"content": "x"}}
@@ -178,8 +199,10 @@ class TestRoundRobinAndFailover(_Base):
         urls = self._urls_of_calls([ok, ok])
         self.llm.complete("one", "p", attempts=1)
         self.llm.complete("one", "p", attempts=1)
-        self.assertEqual([u.split("/api")[0] for u in urls],
-                         ["http://a.invalid:1111", "http://a.invalid:1111"])
+        self.assertEqual(
+            [u.split("/api")[0] for u in urls],
+            ["http://a.invalid:1111", "http://a.invalid:1111"],
+        )
 
 
 class TestProvenanceBuilder(_Base):

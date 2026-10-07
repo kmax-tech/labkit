@@ -9,6 +9,7 @@ The decisive fixture is a twin pair: the same report written as a dict
 literal and as keyword arguments must get the same verdict. A local
 assignment `c1_pass = ...` is not a reported key and must stay invisible.
 """
+
 from __future__ import annotations
 
 import sys

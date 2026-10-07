@@ -27,8 +27,10 @@ from protocol_fixture import head  # noqa: E402
 A_ID = "p-aaaaaaaaaaaaaaaa"
 B_ID = "p-bbbbbbbbbbbbbbbb"
 #: Both protocols promise exactly this — only the binding can separate them.
-SAME_IDS = ("- **Success / failure criterion:** [C1] holds and [C2] holds\n"
-            "- **Admissibility condition:** [A1] yield above 90%\n")
+SAME_IDS = (
+    "- **Success / failure criterion:** [C1] holds and [C2] holds\n"
+    "- **Admissibility condition:** [A1] yield above 90%\n"
+)
 #: Every promise of SAME_IDS reported.
 FULL = {"c1_pass": True, "c2_pass": True, "a1_pass": True}
 
@@ -40,9 +42,16 @@ def _protocol(area: Path, name: str, pid: str | None, body=SAME_IDS) -> Path:
     return p
 
 
-def _run(area: Path, name: str, *, pid: str | None, metrics: dict,
-         schema: int | None = 2, completion=True,
-         with_metrics=True) -> Path:
+def _run(
+    area: Path,
+    name: str,
+    *,
+    pid: str | None,
+    metrics: dict,
+    schema: int | None = 2,
+    completion=True,
+    with_metrics=True,
+) -> Path:
     d = area / "runs" / name
     d.mkdir(parents=True)
     cfg: dict = {"script": "01_measure.py", "pid": 1}
@@ -54,8 +63,17 @@ def _run(area: Path, name: str, *, pid: str | None, metrics: dict,
         (d / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
     if completion:
         (d / "completion.json").write_text(
-            json.dumps({"schema_version": 2, "finished": "x", "git": "g",
-                        "git_full": "g", "note": ""}), encoding="utf-8")
+            json.dumps(
+                {
+                    "schema_version": 2,
+                    "finished": "x",
+                    "git": "g",
+                    "git_full": "g",
+                    "note": "",
+                }
+            ),
+            encoding="utf-8",
+        )
     return d
 
 
@@ -67,7 +85,6 @@ def _check(argv):
 
 
 class TestTwoProtocolsSameIntentIds(unittest.TestCase):
-
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.area = Path(self.tmp.name)
@@ -80,10 +97,13 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
     def test_each_protocol_reads_its_own_run(self):
         """A's run satisfies all promises, B's is missing c2. Same ids in
         both protocols, so only the binding can produce both verdicts."""
-        _run(self.area, "2026-01-01T00-00-00_aaaa", pid=A_ID,
-             metrics=FULL)
-        _run(self.area, "2026-01-01T00-00-01_bbbb", pid=B_ID,
-             metrics={"c1_pass": True, "a1_pass": True})
+        _run(self.area, "2026-01-01T00-00-00_aaaa", pid=A_ID, metrics=FULL)
+        _run(
+            self.area,
+            "2026-01-01T00-00-01_bbbb",
+            pid=B_ID,
+            metrics={"c1_pass": True, "a1_pass": True},
+        )
 
         code_a, out_a = _check([self.a])
         self.assertEqual(code_a, 0, out_a)
@@ -96,27 +116,37 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
     def test_a_newer_run_of_the_other_protocol_does_not_shadow(self):
         """Recency must not beat the binding: B's run is newer and would win
         under the old area-wide rule."""
-        _run(self.area, "2026-01-01T00-00-00_aaaa", pid=A_ID,
-             metrics=FULL)
-        _run(self.area, "2026-01-01T09-00-00_bbbb", pid=B_ID,
-             metrics={"nothing": 1, "c1_pass": True})
+        _run(self.area, "2026-01-01T00-00-00_aaaa", pid=A_ID, metrics=FULL)
+        _run(
+            self.area,
+            "2026-01-01T09-00-00_bbbb",
+            pid=B_ID,
+            metrics={"nothing": 1, "c1_pass": True},
+        )
         # B's run reports neither c2 nor a1, so picking it would fail the
         # check — exit 0 is itself the proof that A's run was used.
         code, out = _check([self.a])
         self.assertEqual(code, 0, out)
         cands, _ = intent_check.bound_runs(self.area, A_ID)
-        self.assertEqual([c["dir"].name for c in cands],
-                         ["2026-01-01T00-00-00_aaaa"])
+        self.assertEqual([c["dir"].name for c in cands], ["2026-01-01T00-00-00_aaaa"])
 
     def test_no_bound_run_exits_2_and_says_why_each_was_left_out(self):
-        _run(self.area, "2026-01-01T00-00-00_bbbb", pid=B_ID,
-             metrics=FULL)
-        _run(self.area, "2026-01-01T00-00-01_unfi", pid=A_ID,
-             metrics={"c1_pass": True}, completion=False)
-        _run(self.area, "2026-01-01T00-00-02_corr", pid=A_ID,
-             metrics={}, with_metrics=False)
-        _run(self.area, "2026-01-01T00-00-03_unbd", pid=None,
-             metrics={"c1_pass": True})
+        _run(self.area, "2026-01-01T00-00-00_bbbb", pid=B_ID, metrics=FULL)
+        _run(
+            self.area,
+            "2026-01-01T00-00-01_unfi",
+            pid=A_ID,
+            metrics={"c1_pass": True},
+            completion=False,
+        )
+        _run(
+            self.area,
+            "2026-01-01T00-00-02_corr",
+            pid=A_ID,
+            metrics={},
+            with_metrics=False,
+        )
+        _run(self.area, "2026-01-01T00-00-03_unbd", pid=None, metrics={"c1_pass": True})
         code, out = _check([self.a])
         self.assertEqual(code, 2, out)
         self.assertIn(f"no completed run bound to {A_ID}", out)
@@ -128,29 +158,30 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
     def test_unfinalized_and_corrupt_never_enter_the_choice(self):
         """Both carry this protocol's id and full metrics — only their
         state keeps them out."""
-        _run(self.area, "2026-01-01T00-00-01_unfi", pid=A_ID,
-             metrics=FULL,
-             completion=False)
+        _run(
+            self.area,
+            "2026-01-01T00-00-01_unfi",
+            pid=A_ID,
+            metrics=FULL,
+            completion=False,
+        )
         code, out = _check([self.a])
         self.assertEqual(code, 2, out)
         self.assertIn("unfinalized", out)
 
     def test_probe_run_does_not_shadow_the_gate_run_among_bound_runs(self):
         """The 2026-09-09 rule, now inside the bound set."""
-        _run(self.area, "2026-01-01T00-00-00_gate", pid=A_ID,
-             metrics=FULL)
-        _run(self.area, "2026-01-01T00-00-01_prob", pid=A_ID,
-             metrics={"calls": 12})
+        _run(self.area, "2026-01-01T00-00-00_gate", pid=A_ID, metrics=FULL)
+        _run(self.area, "2026-01-01T00-00-01_prob", pid=A_ID, metrics={"calls": 12})
         code, out = _check([self.a])
         self.assertEqual(code, 0, out)
         self.assertIn("skipped 1 newer bound run(s)", out)
 
     def test_path_is_never_the_criterion(self):
         """protocol.path may be stale or plain wrong; the id decides."""
-        d = _run(self.area, "2026-01-01T00-00-00_aaaa", pid=A_ID,
-                 metrics=FULL)
+        d = _run(self.area, "2026-01-01T00-00-00_aaaa", pid=A_ID, metrics=FULL)
         cfg = json.loads((d / "config.json").read_text(encoding="utf-8"))
-        cfg["protocol"]["path"] = "PROTOCOL-s2-b.md"        # points at B
+        cfg["protocol"]["path"] = "PROTOCOL-s2-b.md"  # points at B
         (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
         code, out = _check([self.a])
         self.assertEqual(code, 0, out)
@@ -159,7 +190,6 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
 
 
 class TestExplicitMetrics(unittest.TestCase):
-
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.area = Path(self.tmp.name)
@@ -169,22 +199,19 @@ class TestExplicitMetrics(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_same_id_is_allowed(self):
-        d = _run(self.area, "r1", pid=A_ID,
-                 metrics=FULL)
+        d = _run(self.area, "r1", pid=A_ID, metrics=FULL)
         code, out = _check([self.a, "--metrics", d / "metrics.json"])
         self.assertEqual(code, 0, out)
         self.assertNotIn("WARNING", out)
 
     def test_another_id_is_a_hard_abort(self):
-        d = _run(self.area, "r1", pid=B_ID,
-                 metrics=FULL)
+        d = _run(self.area, "r1", pid=B_ID, metrics=FULL)
         code, out = _check([self.a, "--metrics", d / "metrics.json"])
         self.assertEqual(code, 2, out)
         self.assertIn(f"belongs to protocol {B_ID}", out)
 
     def test_unbound_v2_run_is_allowed_with_a_warning(self):
-        d = _run(self.area, "r1", pid=None,
-                 metrics=FULL)
+        d = _run(self.area, "r1", pid=None, metrics=FULL)
         code, out = _check([self.a, "--metrics", d / "metrics.json"])
         self.assertEqual(code, 0, out)
         self.assertIn("WARNING", out)
@@ -193,8 +220,7 @@ class TestExplicitMetrics(unittest.TestCase):
     def test_legacy_run_is_rejected(self):
         """A run without `schema_version >= 2` is read with labkit 0.47;
         here it is never completed, so naming it explicitly is no loophole."""
-        d = _run(self.area, "r1", pid=None, schema=None, completion=False,
-                 metrics=FULL)
+        d = _run(self.area, "r1", pid=None, schema=None, completion=False, metrics=FULL)
         code, out = _check([self.a, "--metrics", d / "metrics.json"])
         self.assertEqual(code, 2, out)
         self.assertIn("not completed (legacy)", out)
@@ -205,8 +231,7 @@ class TestExplicitMetrics(unittest.TestCase):
         Before the fix, the explicit --metrics path skipped the state check,
         so naming the file was a loophole around the completion gate.
         """
-        d = _run(self.area, "r1", pid=A_ID, completion=False,
-                 metrics=FULL)
+        d = _run(self.area, "r1", pid=A_ID, completion=False, metrics=FULL)
         code, out = _check([self.a, "--metrics", d / "metrics.json"])
         self.assertEqual(code, 2, out)
         self.assertIn("not completed", out)
@@ -239,9 +264,10 @@ class TestUnstampedAndProseHead(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             area = Path(t)
             proto = area / "PROTOCOL-old.md"
-            proto.write_text("- **Standard:** 0.16\n"
-                             f"- **Protocol id:** {A_ID}\n" + SAME_IDS,
-                             encoding="utf-8")
+            proto.write_text(
+                f"- **Standard:** 0.16\n- **Protocol id:** {A_ID}\n" + SAME_IDS,
+                encoding="utf-8",
+            )
             _run(area, "2026-01-01T00-00-00_aaaa", pid=A_ID, metrics=FULL)
             code, out = _check([proto])
         self.assertEqual(code, 2, out)

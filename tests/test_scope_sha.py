@@ -16,7 +16,9 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-spec = importlib.util.spec_from_file_location("scope_sha", REPO / "labkit" / "scope_sha.py")
+spec = importlib.util.spec_from_file_location(
+    "scope_sha", REPO / "labkit" / "scope_sha.py"
+)
 assert spec is not None and spec.loader is not None
 scope_sha = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(scope_sha)
@@ -35,7 +37,8 @@ class TestScopeSha(unittest.TestCase):
         self.anchor = self.lib / "bt.py"
         self.anchor.write_text("ANCHORS = [-3.4]\n")
         (Path(self.tmp.name) / "requirements.lock").write_text(
-            "numpy==2.0.0\nlabkit @ git+file:///l@abc123\n")
+            "numpy==2.0.0\nlabkit @ git+file:///l@abc123\n"
+        )
         self.addCleanup(self.tmp.cleanup)
 
     def _run(self, argv):
@@ -61,11 +64,15 @@ class TestScopeSha(unittest.TestCase):
         """The failure of the shell version: an edited anchor left it untouched."""
         before = self._sha(["--area", str(self.area), str(self.anchor)])
         self.anchor.write_text("ANCHORS = [-3.9]\n")
-        self.assertNotEqual(before, self._sha(["--area", str(self.area), str(self.anchor)]))
+        self.assertNotEqual(
+            before, self._sha(["--area", str(self.area), str(self.anchor)])
+        )
 
     def test_extra_file_moves_the_stamp(self):
         before = self._sha(["--area", str(self.area)])
-        self.assertNotEqual(before, self._sha(["--area", str(self.area), str(self.anchor)]))
+        self.assertNotEqual(
+            before, self._sha(["--area", str(self.area), str(self.anchor)])
+        )
 
     def test_argument_order_does_not_matter(self):
         second = self.lib / "stats.py"
@@ -87,8 +94,11 @@ class TestScopeSha(unittest.TestCase):
     def test_pin_is_part_of_the_stamp(self):
         before = self._sha(["--area", str(self.area), str(self.anchor)])
         (Path(self.tmp.name) / "requirements.lock").write_text(
-            "numpy==2.0.0\nlabkit @ git+file:///l@def456\n")
-        self.assertNotEqual(before, self._sha(["--area", str(self.area), str(self.anchor)]))
+            "numpy==2.0.0\nlabkit @ git+file:///l@def456\n"
+        )
+        self.assertNotEqual(
+            before, self._sha(["--area", str(self.area), str(self.anchor)])
+        )
 
     def test_pin_line_and_files_are_listed(self):
         rc, out = self._run(["--area", str(self.area), str(self.anchor)])
@@ -126,7 +136,7 @@ class TestOneStampEverywhere(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.repo = Path(self.tmp.name) / "lab"
-        (self.repo / "tests").mkdir(parents=True)          # layout root without git
+        (self.repo / "tests").mkdir(parents=True)  # layout root without git
         self.area = self.repo / "experiments" / "01-x"
         (self.area / "scripts").mkdir(parents=True)
         (self.area / "scripts" / "01_measure.py").write_text("import anchors\nx = 1\n")
@@ -137,6 +147,7 @@ class TestOneStampEverywhere(unittest.TestCase):
     def test_spelling_and_cwd_do_not_move_the_stamp(self):
         import os
         from labkit import scope_sha as packaged
+
         absolute = packaged.area_stamp(self.area)[0]
         cwd = os.getcwd()
         try:
@@ -151,6 +162,7 @@ class TestOneStampEverywhere(unittest.TestCase):
 
     def test_imported_lib_and_pin_are_in_scope(self):
         from labkit import scope_sha as packaged
+
         _, files, pin = packaged.area_stamp(self.area)
         self.assertIn("anchors.py", [f.name for f in files])
         self.assertIsNotNone(pin)
@@ -161,6 +173,7 @@ class TestOneStampEverywhere(unittest.TestCase):
     def test_audit_preflight_and_cli_agree(self):
         from labkit import audit, preflight
         from labkit import scope_sha as packaged
+
         sha = packaged.area_stamp(self.area)[0]
         self.assertIn(f"scope sha {sha}", audit.stamp_facts(self.area, (0, 0, 0)))
         buf = io.StringIO()
@@ -168,6 +181,7 @@ class TestOneStampEverywhere(unittest.TestCase):
             packaged.main(["--area", str(self.area)])
         self.assertIn(f"scope sha {sha}", buf.getvalue())
         from protocol_fixture import head
+
         (self.area / "PROTOCOL-x.md").write_text("# x\n" + head())
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
@@ -198,14 +212,21 @@ class TestImportForms(unittest.TestCase):
 
     def names(self, source: str) -> list[str]:
         from labkit import scope_sha as packaged
+
         (self.area / "scripts" / "m.py").write_text(source)
-        return [f.relative_to(self.repo / "lib").as_posix()
-                for f in packaged.imported_lib(self.area, self.repo)]
+        return [
+            f.relative_to(self.repo / "lib").as_posix()
+            for f in packaged.imported_lib(self.area, self.repo)
+        ]
 
     def test_every_allowed_form_reaches_the_module_and_its_imports(self):
         full = ["anchors.py", "helper.py", "scoring.py"]
-        for source in ("from lib import scoring\n", "import lib.scoring\n",
-                       "from lib.scoring import X\n", "import scoring\n"):
+        for source in (
+            "from lib import scoring\n",
+            "import lib.scoring\n",
+            "from lib.scoring import X\n",
+            "import scoring\n",
+        ):
             self.assertEqual(self.names(source), full, source)
 
     def test_a_package_brings_all_its_files(self):
@@ -216,6 +237,7 @@ class TestImportForms(unittest.TestCase):
 
     def test_a_change_two_imports_deep_moves_the_stamp(self):
         from labkit import scope_sha as packaged
+
         (self.area / "scripts" / "m.py").write_text("from lib import scoring\n")
         before = packaged.area_stamp(self.area)[0]
         (self.repo / "lib" / "helper.py").write_text("H = 2\n")
@@ -223,18 +245,29 @@ class TestImportForms(unittest.TestCase):
 
     def test_unparsable_code_is_refused_not_guessed(self):
         from labkit import scope_sha as packaged
+
         (self.area / "scripts" / "m.py").write_text("def broken(:\n")
         with self.assertRaises(ValueError):
             packaged.area_stamp(self.area)
 
     def test_the_auditors_scope_is_held_to_the_stamp(self):
         from labkit import audit
+
         (self.area / "scripts" / "m.py").write_text("import scoring\n")
-        report = ("verdict: 0 blockers, 0 warnings, 0 notes\nscope:\n"
-                  "experiments/01/scripts/m.py\nlib/scoring.py\nlib/other.py\n")
+        report = (
+            "verdict: 0 blockers, 0 warnings, 0 notes\nscope:\n"
+            "experiments/01/scripts/m.py\nlib/scoring.py\nlib/other.py\n"
+        )
         listed = audit.parse(report)["scope"]
-        self.assertEqual(listed, ["experiments/01/scripts/m.py", "lib/scoring.py", "lib/other.py"])
+        self.assertEqual(
+            listed, ["experiments/01/scripts/m.py", "lib/scoring.py", "lib/other.py"]
+        )
         gaps = audit.scope_mismatch(self.area, listed)
-        self.assertIn("the auditor read lib/other.py as part of the number, the stamp "
-                      "does not cover it", gaps)
-        self.assertTrue(any("lib/helper.py, the auditor did not list it" in g for g in gaps))
+        self.assertIn(
+            "the auditor read lib/other.py as part of the number, the stamp "
+            "does not cover it",
+            gaps,
+        )
+        self.assertTrue(
+            any("lib/helper.py, the auditor did not list it" in g for g in gaps)
+        )

@@ -70,6 +70,7 @@ class Field:
     owed by their level, not by the cut. The template's † marks exactly the
     should and report fields it stamps with `--report` (a test holds this).
     """
+
     label: str
     level: str
     seconds: str = ""
@@ -132,8 +133,10 @@ FIELDS = (
 )
 
 #: a bold field label opening a line: `- **Label (gloss) †:** value`
-_BULLET = r"^\s*(?:[-*]\s+|\d+[.)]\s+)?"           # `- `, `* `, `1. `, `1) ` or none
-_FIELD_OPEN = re.compile(_BULLET + r"\*\*(?P<label>[^*]+?)(?::\*\*|\*\*\s*:)(?P<value>.*)$")
+_BULLET = r"^\s*(?:[-*]\s+|\d+[.)]\s+)?"  # `- `, `* `, `1. `, `1) ` or none
+_FIELD_OPEN = re.compile(
+    _BULLET + r"\*\*(?P<label>[^*]+?)(?::\*\*|\*\*\s*:)(?P<value>.*)$"
+)
 _MARKER = re.compile(r"<!--.*?-->")
 
 
@@ -144,12 +147,14 @@ def field_name(label: str) -> str:
 
 @dataclass(frozen=True)
 class FieldLine:
-    line: int                       # 1-based line of the label
-    name: str                       # field_name() of the label
-    label: str                      # the label as written
-    value: str                      # the value with its continuation lines, cut markers removed
-    block: bool = False             # content below the label: a code fence or deeper-indented lines
-    last: int = 0                   # 1-based last line of the value
+    line: int  # 1-based line of the label
+    name: str  # field_name() of the label
+    label: str  # the label as written
+    value: str  # the value with its continuation lines, cut markers removed
+    block: bool = (
+        False  # content below the label: a code fence or deeper-indented lines
+    )
+    last: int = 0  # 1-based last line of the value
 
     @property
     def placeholder(self) -> bool:
@@ -161,8 +166,11 @@ class FieldLine:
         v = self.value
         if not v:
             return not self.block
-        return (v.startswith("TODO") or "<why>" in v
-                or (v.startswith("<") and v.endswith(">")))
+        return (
+            v.startswith("TODO")
+            or "<why>" in v
+            or (v.startswith("<") and v.endswith(">"))
+        )
 
 
 def fields(text: str) -> list[FieldLine]:
@@ -171,8 +179,8 @@ def fields(text: str) -> list[FieldLine]:
     extremes):** <…>`); it is read whole."""
     out: list[FieldLine] = []
     lines = text.splitlines()
-    fence: str | None = None            # the open fence's marker; nested fences are body
-    comment = False                     # inside a multi-line <!-- … --> — not prose
+    fence: str | None = None  # the open fence's marker; nested fences are body
+    comment = False  # inside a multi-line <!-- … --> — not prose
     for i, line in enumerate(lines):
         if comment:
             comment = "-->" not in line
@@ -191,7 +199,11 @@ def fields(text: str) -> list[FieldLine]:
         if "**" not in line:
             continue
         joined, nxt = line, i + 1
-        if re.match(_BULLET + r"\*\*", line) and ":**" not in line and i + 1 < len(lines):
+        if (
+            re.match(_BULLET + r"\*\*", line)
+            and ":**" not in line
+            and i + 1 < len(lines)
+        ):
             joined, nxt = line + " " + lines[i + 1].strip(), i + 2
         m = _FIELD_OPEN.match(joined)
         if not m:
@@ -201,19 +213,32 @@ def fields(text: str) -> list[FieldLine]:
         # protocol writes them that way; reading the first line only made
         # the seconds gate refuse a written registration, review 2026-10-07).
         parts = [m.group("value")]
-        while nxt < len(lines) and lines[nxt].startswith((" ", "\t")) and lines[nxt].strip() \
-                and not lines[nxt].strip().startswith(("```", "- ", "* ")) \
-                and not re.match(r"\d+[.)]\s", lines[nxt].strip()):
+        while (
+            nxt < len(lines)
+            and lines[nxt].startswith((" ", "\t"))
+            and lines[nxt].strip()
+            and not lines[nxt].strip().startswith(("```", "- ", "* "))
+            and not re.match(r"\d+[.)]\s", lines[nxt].strip())
+        ):
             parts.append(lines[nxt].strip())
             nxt += 1
         value = _MARKER.sub("", " ".join(parts)).strip()
         label = " ".join(m.group("label").split())
         below = next((ln for ln in lines[nxt:] if ln.strip()), "")
         indent = len(line) - len(line.lstrip())
-        deeper = len(below) - len(below.lstrip()) > indent and not below.lstrip().startswith("#")
-        out.append(FieldLine(line=i + 1, name=field_name(label), label=label, value=value,
-                             block=below.lstrip().startswith(("```", "~~~")) or deeper,
-                             last=nxt))
+        deeper = len(below) - len(
+            below.lstrip()
+        ) > indent and not below.lstrip().startswith("#")
+        out.append(
+            FieldLine(
+                line=i + 1,
+                name=field_name(label),
+                label=label,
+                value=value,
+                block=below.lstrip().startswith(("```", "~~~")) or deeper,
+                last=nxt,
+            )
+        )
     return out
 
 
@@ -226,6 +251,7 @@ def placeholder_fields(text: str) -> list[tuple[int, str]]:
 class FieldReport:
     """What one protocol owes and lacks. `head_error` set means the head
     could not be read — every other list is then empty."""
+
     head: protocol_block.Head | None
     head_error: str | None
     missing_must: list[str]
@@ -261,8 +287,12 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
         found.setdefault(f.name, []).append(f)
     if head.cost == "seconds":
         model = _model_named(found)
-        must = [f for f in FIELDS if f.level in ("must", "should")
-                and (f.seconds == "s" or (f.seconds == "sm" and model))]
+        must = [
+            f
+            for f in FIELDS
+            if f.level in ("must", "should")
+            and (f.seconds == "s" or (f.seconds == "sm" and model))
+        ]
         return must, []
     must = [f for f in FIELDS if f.level == "must"]
     should = [f for f in FIELDS if f.level == "should"]
@@ -285,14 +315,20 @@ def check_fields(text: str) -> FieldReport:
     missing_must += [f"[protocol] {name}" for name in head.placeholders]
     earlier = promises.earlier_ids(text)
     if earlier:
-        missing_must.append(f"intent ids {', '.join(earlier)}: {promises.EARLIER_IDS_HELP}")
+        missing_must.append(
+            f"intent ids {', '.join(earlier)}: {promises.EARLIER_IDS_HELP}"
+        )
     # Frozen means audited first (§2.A12); at seconds nothing freezes, so a
     # frozen flag there would claim a freeze no gate held (review 2026-10-07).
     if head.frozen and head.cost == "seconds":
-        missing_must.append('[protocol] frozen = true at cost = "seconds" — nothing '
-                            'freezes there; set frozen = false or choose minutes/hours')
+        missing_must.append(
+            '[protocol] frozen = true at cost = "seconds" — nothing '
+            "freezes there; set frozen = false or choose minutes/hours"
+        )
     elif head.frozen and not head.preflight_audit:
-        missing_must.append("[protocol] preflight_audit (frozen = true without the audit line)")
+        missing_must.append(
+            "[protocol] preflight_audit (frozen = true without the audit line)"
+        )
     must_names = {f.label.casefold() for f in must}
     must_holes, soft_holes = [], []
     for f in fields(text):
@@ -308,9 +344,15 @@ def intent_missing(text: str) -> list[str]:
     placeholder) and the cost declared. Returns what is missing — empty
     means the gate is open (§2.A1)."""
     written = {f.name for f in fields(text) if f.value and not f.placeholder}
-    missing = [label for label in ("Question / hypothesis", "Success / failure criterion",
-                                   "Admissibility condition")
-               if label.casefold() not in written]
+    missing = [
+        label
+        for label in (
+            "Question / hypothesis",
+            "Success / failure criterion",
+            "Admissibility condition",
+        )
+        if label.casefold() not in written
+    ]
     try:
         cost = protocol_block.head(text).cost
     except protocol_block.BlockError:
@@ -371,17 +413,24 @@ def check_protocol_id(path: Path, head: protocol_block.Head) -> list[str]:
     if head.id is None:
         return []
     out = []
-    others = [q for q in repo_protocol_ids(path).get(head.id, [])
-              if q.resolve() != path.resolve()]
+    others = [
+        q
+        for q in repo_protocol_ids(path).get(head.id, [])
+        if q.resolve() != path.resolve()
+    ]
     if others:
-        out.append(f"{path}: DUPLICATE protocol id {head.id} — also carried by "
-                   + ", ".join(str(q) for q in others)
-                   + ". An id binds runs to ONE protocol; re-stamp the copy.")
+        out.append(
+            f"{path}: DUPLICATE protocol id {head.id} — also carried by "
+            + ", ".join(str(q) for q in others)
+            + ". An id binds runs to ONE protocol; re-stamp the copy."
+        )
     was = id_in_head(path)
     if was and was != head.id:
-        out.append(f"{path}: WARNING: protocol id changed against HEAD "
-                   f"({was} -> {head.id}) — runs bound to the old id stop "
-                   f"resolving.")
+        out.append(
+            f"{path}: WARNING: protocol id changed against HEAD "
+            f"({was} -> {head.id}) — runs bound to the old id stop "
+            f"resolving."
+        )
     return out
 
 
@@ -401,17 +450,23 @@ _DASHES = re.compile(r"^[—–-]+$")
 def measure_runs(text: str) -> list[tuple[int, str]]:
     """(line, run_id) of every documented run that is not data preparation
     or a throwaway probe — from the first one on, the result is due."""
-    return [(n, m.group(0)) for n, ln in enumerate(text.splitlines(), 1)
-            if (m := RUN_ID.search(ln)) and not SETUP_RUN.search(ln)]
+    return [
+        (n, m.group(0))
+        for n, ln in enumerate(text.splitlines(), 1)
+        if (m := RUN_ID.search(ln)) and not SETUP_RUN.search(ln)
+    ]
 
 
 def unreported(text: str) -> list[str]:
     """The result fields still missing, a placeholder or only dashes."""
     found = {f.name: f for f in fields(text)}
-    return [name for name in RESULT_FIELDS
-            if name not in found or found[name].placeholder
-            or _DASHES.match(found[name].value)]
-
+    return [
+        name
+        for name in RESULT_FIELDS
+        if name not in found
+        or found[name].placeholder
+        or _DASHES.match(found[name].value)
+    ]
 
 
 # A follow-up registration appended to the SAME protocol — the pattern that
@@ -421,7 +476,8 @@ def unreported(text: str) -> list[str]:
 # gives every follow-up its own PROTOCOL-s<N>-<slug>.md. Warning only.
 SERIES_HEAD = re.compile(
     r"(?im)^##.*\((deklariert|registriert) vor dem( jeweils \w+)? "
-    r"(lauf|vote|pilot)|declared before the run\)?")
+    r"(lauf|vote|pilot)|declared before the run\)?"
+)
 
 # The documented runs are mandatory content (one line per run_id), not prose —
 # counting it against the length budget taught people not to document runs
@@ -434,7 +490,9 @@ DOCUMENTED_RUNS_HEAD = re.compile(r"(?i)^##\s.*(runs|ledger|l[\u00e4a]ufe)")
 # change (Arbeitsstandard §3). Warning only.
 CHANGELOG = re.compile(
     r"seit 20\d\d-\d\d|wieder drau[ßs]+en|wieder drin\b|hie[ßs]+ bis"
-    r"|vorher (stand|galt)|fr[üu]her hie[ßs]+|umbenannt am", re.I)
+    r"|vorher (stand|galt)|fr[üu]her hie[ßs]+|umbenannt am",
+    re.I,
+)
 
 # Line budget per section. The global 350 only bites once a protocol is
 # already unreadable; the per-section budgets sit between the corpus median
@@ -473,13 +531,17 @@ def oversized_sections(text: str) -> list[tuple[str, int, int]]:
             continue
         if stripped.startswith("## "):
             head = stripped[3:].lower()
-            cur = next((lb for lb, pat, _ in SECTION_BUDGET
-                        if re.search(pat, head)), None)
+            cur = next(
+                (lb for lb, pat, _ in SECTION_BUDGET if re.search(pat, head)), None
+            )
             continue
         if cur:
             counts[cur] = counts.get(cur, 0) + 1
-    return [(lb, counts[lb], lim) for lb, _, lim in SECTION_BUDGET
-            if counts.get(lb, 0) > lim]
+    return [
+        (lb, counts[lb], lim)
+        for lb, _, lim in SECTION_BUDGET
+        if counts.get(lb, 0) > lim
+    ]
 
 
 def template_lines(path: Path | None) -> set[str]:
@@ -522,30 +584,46 @@ def print_contract() -> None:
     """The checker's contract in one screen (2026-10-05: two cold agents
     learnt the budgets from the pre-commit hook and the field words from
     the checker's source, four rewrite rounds each)."""
-    print("head: the ```toml block's [protocol] table — "
-          + ", ".join(protocol_block.HEAD_FIELDS)
-          + f"; standard = {protocol_block.STANDARD!r}, type one of "
-          + ", ".join(protocol_block.TYPES) + ", cost one of "
-          + ", ".join(protocol_block.COST_TIERS) + ".")
-    print("\nprose-line budget per section (code blocks, table rows exempt; "
-          "a MUST once frozen):")
+    print(
+        "head: the ```toml block's [protocol] table — "
+        + ", ".join(protocol_block.HEAD_FIELDS)
+        + f"; standard = {protocol_block.STANDARD!r}, type one of "
+        + ", ".join(protocol_block.TYPES)
+        + ", cost one of "
+        + ", ".join(protocol_block.COST_TIERS)
+        + "."
+    )
+    print(
+        "\nprose-line budget per section (code blocks, table rows exempt; "
+        "a MUST once frozen):"
+    )
     for label, _, limit in SECTION_BUDGET:
         print(f"  {label:<9} {limit}")
-    print("\nfields, by their exact template label (`- **<label>:** <value>`; a "
-          "parenthesised gloss and † may follow the label; `n/a — <the reason>` "
-          "counts as filled, `<…>`, `TODO`, an empty label and a bare `n/a — <why>` do not):")
-    for level, title in (("must", "MUST (every pilot)"),
-                         ("should", "SHOULD (MUST once frozen = true)"),
-                         ("after", "after the run (owed once a measure run is documented)"),
-                         ("report", "report (owed once frozen = true and a measure run is documented)")):
+    print(
+        "\nfields, by their exact template label (`- **<label>:** <value>`; a "
+        "parenthesised gloss and † may follow the label; `n/a — <the reason>` "
+        "counts as filled, `<…>`, `TODO`, an empty label and a bare `n/a — <why>` do not):"
+    )
+    for level, title in (
+        ("must", "MUST (every pilot)"),
+        ("should", "SHOULD (MUST once frozen = true)"),
+        ("after", "after the run (owed once a measure run is documented)"),
+        ("report", "report (owed once frozen = true and a measure run is documented)"),
+    ):
         print(f"\n  {title}")
         for f in FIELDS:
             if f.level == level:
                 print(f"    {f.label}")
-    print("\n  at cost = \"seconds\" (nothing freezes, no SHOULD): "
-          + ", ".join(f.label for f in FIELDS if f.seconds == "s" and f.level in ("must", "should"))
-          + "; the `--model` cut (a model named in `Model / tool`) also "
-          + ", ".join(f.label for f in FIELDS if f.seconds == "sm"))
+    print(
+        '\n  at cost = "seconds" (nothing freezes, no SHOULD): '
+        + ", ".join(
+            f.label
+            for f in FIELDS
+            if f.seconds == "s" and f.level in ("must", "should")
+        )
+        + "; the `--model` cut (a model named in `Model / tool`) also "
+        + ", ".join(f.label for f in FIELDS if f.seconds == "sm")
+    )
 
 
 def code_blocks(text: str) -> int:
@@ -564,16 +642,19 @@ def collect(paths: list[str]) -> list[Path]:
 
 
 def main(argv: list[str]) -> int:
-    _ID_INDEX.clear()                   # one scan per invocation; never a stale one
+    _ID_INDEX.clear()  # one scan per invocation; never a stale one
     if argv and argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: protocol-check [--template PATH] <PROTOCOL-*.md | dir> ...")
-        print("  --template PATH  check against this template instead of the "
-              "packaged one")
+        print(
+            "  --template PATH  check against this template instead of the packaged one"
+        )
         print("  --guide          print the path to the protocol field guide")
-        print("  --contract       print what the checker holds a protocol to: the "
-              "prose-line budget per section and the exact label of each field "
-              "recognised by — read it BEFORE writing, not from the pre-commit hook")
+        print(
+            "  --contract       print what the checker holds a protocol to: the "
+            "prose-line budget per section and the exact label of each field "
+            "recognised by — read it BEFORE writing, not from the pre-commit hook"
+        )
         return 0
     if argv and argv[0] == "--contract":
         print_contract()
@@ -612,9 +693,13 @@ def main(argv: list[str]) -> int:
             print(f"{f}: HEAD (must): {report.head_error}")
             failed = True
             continue
-        if report.frozen and report.head.cost != "seconds" and report.head.preflight_audit:
+        if (
+            report.frozen
+            and report.head.cost != "seconds"
+            and report.head.preflight_audit
+        ):
             drift = audit_stamp_drift(f.parent, report.head.preflight_audit)
-            if drift:   # a warning: after the run, analysis scripts change legitimately
+            if drift:  # a warning: after the run, analysis scripts change legitimately
                 print(f"{f}: WARNING: preflight_audit: {drift}")
         for finding in check_protocol_id(f, report.head):
             print(finding)
@@ -627,23 +712,32 @@ def main(argv: list[str]) -> int:
         examples = code_blocks(text)
         pilot_note = ""
         if not frozen and missing_should:
-            pilot_note = (f"pilot (frozen = false) — {len(missing_should)} "
-                          f"should-field(s) due only at report time "
-                          f"(append them: lib exp <name> --report)")
+            pilot_note = (
+                f"pilot (frozen = false) — {len(missing_should)} "
+                f"should-field(s) due only at report time "
+                f"(append them: lib exp <name> --report)"
+            )
             missing_should = []
         # A placeholder is reported as one already, and a comment can never
         # be "filled" — neither is left-over template text (review 2026-10-07:
         # a correctly filled seconds protocol was never clean).
-        in_placeholder = {n for f in fields(text) if f.placeholder
-                          for n in range(f.line, f.last + 1)}
-        left = sorted({s for n, s in enumerate((ln.strip() for ln in text.splitlines()), 1)
-                       if s in tmpl and not s.startswith("<!--") and n not in in_placeholder})
+        in_placeholder = {
+            n for f in fields(text) if f.placeholder for n in range(f.line, f.last + 1)
+        }
+        left = sorted(
+            {
+                s
+                for n, s in enumerate((ln.strip() for ln in text.splitlines()), 1)
+                if s in tmpl and not s.startswith("<!--") and n not in in_placeholder
+            }
+        )
         # "mentions a prompt" means a Prompt FIELD, not the word: the stamped
         # legend says "prompt" in every protocol, and a count protocol cut
         # without the field was blocked for it (2026-10-05).
         no_block = not examples and any(
             f.name == "prompt" and not f.value.lower().startswith("n/a")
-            for f in fields(text))
+            for f in fields(text)
+        )
         frozen_without_io = frozen and not examples
         # A protocol is a registration, not a lab journal. By 2026-08-20 one
         # had grown to 646 lines because every re-freeze APPENDED its
@@ -666,19 +760,35 @@ def main(argv: list[str]) -> int:
                 n_lines += 1
         too_long = n_lines > 350
         big = oversized_sections(text)
-        series = [(n, ln.strip()) for n, ln in enumerate(text.splitlines(), 1)
-                  if SERIES_HEAD.match(ln)]
+        series = [
+            (n, ln.strip())
+            for n, ln in enumerate(text.splitlines(), 1)
+            if SERIES_HEAD.match(ln)
+        ]
 
         # Post-run: a documented measure run makes an empty Result a MUST
         # gap — pilot suppression does not apply (write back, don't go quiet).
         measured = measure_runs(text)
         run_unreported = bool(measured) and bool(unreported(text))
-        history = [(n, ln.strip()) for n, ln in enumerate(text.splitlines(), 1)
-                   if CHANGELOG.search(ln)]
+        history = [
+            (n, ln.strip())
+            for n, ln in enumerate(text.splitlines(), 1)
+            if CHANGELOG.search(ln)
+        ]
 
-        clean = not (missing_must or missing_should or holes or left or no_block
-                     or frozen_without_io or too_long or big or run_unreported
-                     or history or series)
+        clean = not (
+            missing_must
+            or missing_should
+            or holes
+            or left
+            or no_block
+            or frozen_without_io
+            or too_long
+            or big
+            or run_unreported
+            or history
+            or series
+        )
         if clean:
             if pilot_note:
                 print(f"{f}: OK — must fields filled; {pilot_note}")
@@ -701,44 +811,66 @@ def main(argv: list[str]) -> int:
             for s in left[:3]:
                 print(f"    {s[:88]}")
         if no_block:
-            print(f"{f}: MISSING (must): mentions a prompt but contains no code "
-                  f"block — a verbatim prompt belongs in ``` ```, anything else "
-                  f"is a paraphrase.")
+            print(
+                f"{f}: MISSING (must): mentions a prompt but contains no code "
+                f"block — a verbatim prompt belongs in ``` ```, anything else "
+                f"is a paraphrase."
+            )
         if frozen_without_io:
-            print(f"{f}: MISSING (must): `frozen = true`, but not a "
-                  f"single rendered example (code block). Instrument check "
-                  f"first, then freeze — otherwise the error freezes in.")
+            print(
+                f"{f}: MISSING (must): `frozen = true`, but not a "
+                f"single rendered example (code block). Instrument check "
+                f"first, then freeze — otherwise the error freezes in."
+            )
         if too_long:
             sev = "OVERSIZED (must)" if frozen else "oversized"
-            print(f"{f}: {sev}: {n_lines} prose lines (tables/code excluded) "
-                  f"— a protocol is a registration, not a lab journal. "
-                  f"Narratives (freeze history, diagnoses) belong in commit "
-                  f"messages or a note; ONE sentence per freeze stays here.")
+            print(
+                f"{f}: {sev}: {n_lines} prose lines (tables/code excluded) "
+                f"— a protocol is a registration, not a lab journal. "
+                f"Narratives (freeze history, diagnoses) belong in commit "
+                f"messages or a note; ONE sentence per freeze stays here."
+            )
         for lb, n, lim in big:
             sev = "OVERSIZED (must)" if frozen else "oversized"
-            print(f"{f}: {sev}: section '{lb}': {n} prose lines (budget "
-                  f"{lim}) — one field is one line; if a justification needs "
-                  f"more, it goes into a note and the [[wikilink]] stays "
-                  f"here.")
+            print(
+                f"{f}: {sev}: section '{lb}': {n} prose lines (budget "
+                f"{lim}) — one field is one line; if a justification needs "
+                f"more, it goes into a note and the [[wikilink]] stays "
+                f"here."
+            )
         if run_unreported:
-            print(f"{f}:{measured[0][0]}: MISSING (must): measure run in the "
-                  f"run list ({measured[0][1]}) but Result/Raw output empty — "
-                  f"write the result back in the SAME session.")
+            print(
+                f"{f}:{measured[0][0]}: MISSING (must): measure run in the "
+                f"run list ({measured[0][1]}) but Result/Raw output empty — "
+                f"write the result back in the SAME session."
+            )
         for n, ln in series:
-            print(f"{f}:{n}: follow-up registration in the same protocol "
-                  f"({ln[:60]!r}) — one question per protocol: a declared "
-                  f"follow-up gets its own PROTOCOL-s<N>-<slug>.md "
-                  f"(series rule, Arbeitsstandard §2.F5).")
+            print(
+                f"{f}:{n}: follow-up registration in the same protocol "
+                f"({ln[:60]!r}) — one question per protocol: a declared "
+                f"follow-up gets its own PROTOCOL-s<N>-<slug>.md "
+                f"(series rule, Arbeitsstandard §2.F5)."
+            )
         for n, ln in history:
-            print(f"{f}:{n}: change history in the text ({ln[:60]!r}) — docs "
-                  f"carry the current state, the why of the change goes in the "
-                  f"commit message (Arbeitsstandard §3).")
-        if (missing_must or must_holes or frozen_without_io or no_block
-                or run_unreported or (frozen and (too_long or big))):
+            print(
+                f"{f}:{n}: change history in the text ({ln[:60]!r}) — docs "
+                f"carry the current state, the why of the change goes in the "
+                f"commit message (Arbeitsstandard §3)."
+            )
+        if (
+            missing_must
+            or must_holes
+            or frozen_without_io
+            or no_block
+            or run_unreported
+            or (frozen and (too_long or big))
+        ):
             failed = True
-            print(f"{f}: must fields missing or empty — fill them in, or "
-                  f"justify as 'n/a — <why>' (the reason must be there, not "
-                  f"just the angle brackets).")
+            print(
+                f"{f}: must fields missing or empty — fill them in, or "
+                f"justify as 'n/a — <why>' (the reason must be there, not "
+                f"just the angle brackets)."
+            )
     return 1 if failed else 0
 
 

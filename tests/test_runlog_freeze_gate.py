@@ -8,6 +8,7 @@ with LABKIT_UNFROZEN=1 and the acknowledgement lands in config.json. At
 criterion, admissibility condition), not the freeze (§2.A14); the tier
 lands in config.json as `cost_tier`.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -27,8 +28,9 @@ from protocol_fixture import head  # noqa: E402
 AUDIT = "2026-10-05 · scope sha abc · 0 findings"
 FROZEN = head(cost="hours", frozen=True, preflight_audit=AUDIT)
 UNFROZEN = head(cost="hours", frozen=False, preflight_audit=AUDIT)
-PLACEHOLDER = head(cost="hours", frozen=True,
-                   preflight_audit="<date · scope sha · N findings>")
+PLACEHOLDER = head(
+    cost="hours", frozen=True, preflight_audit="<date · scope sha · N findings>"
+)
 NO_FIELD = FROZEN.replace(f'preflight_audit = "{AUDIT}"\n', "")
 REGISTRATION = """
 - **Question / hypothesis:** does the register beat the trivial decider?
@@ -37,7 +39,8 @@ REGISTRATION = """
 """
 SECONDS = head(cost="seconds") + REGISTRATION
 SECONDS_NO_CRITERION = SECONDS.replace(
-    "[C1] accuracy above the trivial decider", "<the criterion>")
+    "[C1] accuracy above the trivial decider", "<the criterion>"
+)
 HOURS_UNFROZEN = head(cost="hours") + REGISTRATION
 PROSE_HEAD = """\
 - **Protocol id:** p-0123456789abcdef
@@ -68,13 +71,18 @@ class FreezeGate(unittest.TestCase):
         (self.tmp / "scripts").mkdir(exist_ok=True)
         (self.tmp / "scripts" / "m.py").write_text("x = 1\n")
         sha = scope_sha.area_stamp(self.tmp)[0]
-        return head(cost="hours", frozen=True,
-                    preflight_audit=f"2026-10-07 · scope sha {sha} · 0 findings")
+        return head(
+            cost="hours",
+            frozen=True,
+            preflight_audit=f"2026-10-07 · scope sha {sha} · 0 findings",
+        )
 
     def test_full_run_on_frozen_protocol_starts(self):
         r, _ = self._start(self._audited(), long=True)
         self.assertTrue((r.dir / "config.json").is_file())
-        self.assertFalse(json.loads((r.dir / "config.json").read_text())["unfrozen_ack"])
+        self.assertFalse(
+            json.loads((r.dir / "config.json").read_text())["unfrozen_ack"]
+        )
 
     def test_an_audit_line_of_other_code_is_refused(self):
         """Twin of the start above: the code changed after the audit, so the
@@ -90,22 +98,28 @@ class FreezeGate(unittest.TestCase):
         self.assertFalse((area / "runs").exists())
 
     def test_an_audit_line_without_a_stamp_is_refused(self):
-        area = self._area(FROZEN)            # "scope sha abc" is no stamp
+        area = self._area(FROZEN)  # "scope sha abc" is no stamp
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
                 runlog.Run("t", {}, area, long=True)
         self.assertIn("names no `scope sha", str(cm.exception))
 
     def test_an_explicit_na_audit_passes(self):
-        text = head(cost="hours", frozen=True, preflight_audit="n/a — decided with the supervisor")
+        text = head(
+            cost="hours",
+            frozen=True,
+            preflight_audit="n/a — decided with the supervisor",
+        )
         r, _ = self._start(text, long=True)
         self.assertTrue((r.dir / "config.json").is_file())
 
     def test_full_run_on_an_unstamped_id_is_refused_before_mkdir(self):
         """Twin of the frozen start above: same protocol, id not stamped — the
         number would be bound to nothing (review 2026-10-07), at every tier."""
-        for text in (head(id="<protocol-id>", cost="hours", frozen=True, preflight_audit=AUDIT),
-                     head(id="<protocol-id>", cost="seconds") + REGISTRATION):
+        for text in (
+            head(id="<protocol-id>", cost="hours", frozen=True, preflight_audit=AUDIT),
+            head(id="<protocol-id>", cost="seconds") + REGISTRATION,
+        ):
             area = self._area(text)
             with self.assertRaises(SystemExit) as cm:
                 with contextlib.redirect_stdout(io.StringIO()):
@@ -188,7 +202,9 @@ class FreezeGate(unittest.TestCase):
 
     def test_tier_is_recorded_for_pilots_too(self):
         r, _ = self._start(FROZEN, long=False)
-        self.assertEqual(json.loads((r.dir / "config.json").read_text())["cost_tier"], "hours")
+        self.assertEqual(
+            json.loads((r.dir / "config.json").read_text())["cost_tier"], "hours"
+        )
 
     def test_unfilled_tier_is_recorded_as_none_and_keeps_the_freeze(self):
         text = head(cost="<seconds | minutes | hours>")

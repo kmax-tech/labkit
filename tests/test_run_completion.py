@@ -35,13 +35,25 @@ def _area(d) -> Path:
     return area
 
 
-def _run_dir(area: Path, name: str, *, schema: int | None = 2,
-             metrics=True,
-             completion=True, pid=1, protocol_id=None) -> Path:
+def _run_dir(
+    area: Path,
+    name: str,
+    *,
+    schema: int | None = 2,
+    metrics=True,
+    completion=True,
+    pid=1,
+    protocol_id=None,
+) -> Path:
     d = area / "runs" / name
     d.mkdir(parents=True)
-    cfg = {"experiment": "x", "script": "01_measure.py", "pid": pid,
-           "data": {}, "config": {}}
+    cfg = {
+        "experiment": "x",
+        "script": "01_measure.py",
+        "pid": pid,
+        "data": {},
+        "config": {},
+    }
     if schema is not None:
         cfg["schema_version"] = schema
     if protocol_id is not None:
@@ -50,10 +62,18 @@ def _run_dir(area: Path, name: str, *, schema: int | None = 2,
     if metrics:
         (d / "metrics.json").write_text('{"c1_pass": true}', encoding="utf-8")
     if completion:
-        (d / "completion.json").write_text(json.dumps(
-            {"schema_version": 2, "finished": "2026-09-26T21:00:00",
-             "git": "abc1234", "git_full": "abc1234def", "note": "a note"}),
-            encoding="utf-8")
+        (d / "completion.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 2,
+                    "finished": "2026-09-26T21:00:00",
+                    "git": "abc1234",
+                    "git_full": "abc1234def",
+                    "note": "a note",
+                }
+            ),
+            encoding="utf-8",
+        )
     return d
 
 
@@ -63,7 +83,6 @@ def _state(d: Path, alive: bool | None = False) -> str:
 
 
 class TestStates(unittest.TestCase):
-
     def test_both_markers_is_completed(self):
         with tempfile.TemporaryDirectory() as t:
             d = _run_dir(_area(t), "r1")
@@ -112,8 +131,11 @@ class TestStates(unittest.TestCase):
         `schema_version` >= 2 is `legacy` whatever its files or liveness say."""
         with tempfile.TemporaryDirectory() as t:
             area = _area(t)
-            cases = {"r1": {}, "r2": {"completion": False},
-                     "r3": {"metrics": False, "completion": False}}
+            cases = {
+                "r1": {},
+                "r2": {"completion": False},
+                "r3": {"metrics": False, "completion": False},
+            }
             for name, kwargs in cases.items():
                 d = _run_dir(area, name, schema=None, **kwargs)
                 for alive in (False, True, None):
@@ -124,7 +146,6 @@ class TestStates(unittest.TestCase):
 
 
 class TestActive(unittest.TestCase):
-
     def test_completed_runs_are_not_listed_and_states_are_carried(self):
         with tempfile.TemporaryDirectory() as t:
             area = _area(t)
@@ -133,24 +154,29 @@ class TestActive(unittest.TestCase):
             _run_dir(area, "2026-01-01T00-00-02_cccc", metrics=False)
             live = runlog.active(area)
         self.assertEqual([r["run_id"][-4:] for r in live], ["bbbb", "cccc"])
-        self.assertEqual([r["state"] for r in live],
-                         ["unfinalized", "corrupt"])
+        self.assertEqual([r["state"] for r in live], ["unfinalized", "corrupt"])
 
     def test_wait_exits_2_on_every_failed_state(self):
-        for kwargs, expected in (({"completion": False}, "UNFINALIZED"),
-                                 ({"metrics": False}, "CORRUPT"),
-                                 ({"metrics": False, "completion": False},
-                                  "CRASHED")):
+        for kwargs, expected in (
+            ({"completion": False}, "UNFINALIZED"),
+            ({"metrics": False}, "CORRUPT"),
+            ({"metrics": False, "completion": False}, "CRASHED"),
+        ):
             with self.subTest(**kwargs), tempfile.TemporaryDirectory() as t:
                 area = _area(t)
                 _run_dir(area, "r1", **kwargs)
                 r = subprocess.run(
-                    [sys.executable, "-c",
-                     "import sys; sys.path.insert(0, %r);"
-                     "from labkit import runlog;"
-                     "sys.exit(runlog.main([%r, '--wait', '--max-seconds', '0']))"
-                     % (str(Path(runlog.__file__).parents[2]), str(area))],
-                    capture_output=True, text=True)
+                    [
+                        sys.executable,
+                        "-c",
+                        "import sys; sys.path.insert(0, %r);"
+                        "from labkit import runlog;"
+                        "sys.exit(runlog.main([%r, '--wait', '--max-seconds', '0']))"
+                        % (str(Path(runlog.__file__).parents[2]), str(area)),
+                    ],
+                    capture_output=True,
+                    text=True,
+                )
                 self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
                 self.assertIn(expected, r.stdout)
 
@@ -163,7 +189,6 @@ class TestActive(unittest.TestCase):
 
 
 class TestReindex(unittest.TestCase):
-
     def test_a_completed_v2_run_is_rebuilt_in_full(self):
         with tempfile.TemporaryDirectory() as t:
             area = _area(t)
@@ -173,7 +198,7 @@ class TestReindex(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         row = dict(zip(runlog.RUN_INDEX_COLS, rows[0]))
         self.assertEqual(row["run_id"], "r1")
-        self.assertEqual(row["git"], "abc1234")          # END state
+        self.assertEqual(row["git"], "abc1234")  # END state
         self.assertEqual(row["note"], "a note")
         self.assertEqual(row["protocol_id"], "p-0123456789abcdef")
 
@@ -182,9 +207,11 @@ class TestReindex(unittest.TestCase):
             area = _area(t)
             _run_dir(area, "r1")
             (area / "runs.tsv").write_text(
-                "\t".join(runlog.RUN_INDEX_COLS) + "\n"
+                "\t".join(runlog.RUN_INDEX_COLS)
+                + "\n"
                 + "r1\tOLD\ts.py\t{}\t{}\t{}\thand-written\t\n",
-                encoding="utf-8")
+                encoding="utf-8",
+            )
             runlog.reindex(area)
             _, rows = runlog._read_index(area / "runs.tsv")
         self.assertEqual(len(rows), 1)
@@ -211,16 +238,19 @@ class TestReindex(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             area = _area(t)
             (area / "runs.tsv").write_text(
-                "\t".join(runlog.RUN_INDEX_COLS) + "\n"
-                + "r1\ta\ts\t{}\t{}\t{}\tn\t\n" * 2, encoding="utf-8")
+                "\t".join(runlog.RUN_INDEX_COLS)
+                + "\n"
+                + "r1\ta\ts\t{}\t{}\t{}\tn\t\n" * 2,
+                encoding="utf-8",
+            )
             self.assertEqual(runlog.reindex(area), 2)
 
     def test_an_unmigrated_index_is_refused(self):
         with tempfile.TemporaryDirectory() as t:
             area = _area(t)
             (area / "runs.tsv").write_text(
-                "run_id\tgit\tscript\tdata\tconfig\tmetrics\tnote\n",
-                encoding="utf-8")
+                "run_id\tgit\tscript\tdata\tconfig\tmetrics\tnote\n", encoding="utf-8"
+            )
             self.assertEqual(runlog.reindex(area), 2)
 
 
@@ -228,12 +258,14 @@ def _append_many(area_str, n):
     """Child process: n index rows, each taking the lock."""
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from labkit import runlog as rl
+
     area = Path(area_str)
     for i in range(n):
         with rl._index_lock(area):
-            rl._append_row(area / "runs.tsv",
-                           [f"{os.getpid()}-{i}", "g", "s", "{}", "{}",
-                            "{}", "n", ""])
+            rl._append_row(
+                area / "runs.tsv",
+                [f"{os.getpid()}-{i}", "g", "s", "{}", "{}", "{}", "n", ""],
+            )
 
 
 class TestIndexLock(unittest.TestCase):
@@ -244,8 +276,9 @@ class TestIndexLock(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             area = _area(t)
             ctx = multiprocessing.get_context("spawn")
-            procs = [ctx.Process(target=_append_many, args=(str(area), 20))
-                     for _ in range(4)]
+            procs = [
+                ctx.Process(target=_append_many, args=(str(area), 20)) for _ in range(4)
+            ]
             for p in procs:
                 p.start()
             for p in procs:
@@ -266,8 +299,9 @@ class TestDerivedRun(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = _area(d)
             _run_dir(area, "2026-10-05T10-00-00_aaaa")
-            with runlog.run("x", {}, base_dir=area,
-                            derived_from="2026-10-05T10-00-00_aaaa") as r:
+            with runlog.run(
+                "x", {}, base_dir=area, derived_from="2026-10-05T10-00-00_aaaa"
+            ) as r:
                 r.metrics(c1_pass=True)
             cfg = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
             self.assertEqual(cfg["derived_from"], "2026-10-05T10-00-00_aaaa")
@@ -277,8 +311,9 @@ class TestDerivedRun(unittest.TestCase):
             area = _area(d)
             _run_dir(area, "2026-10-05T10-00-00_bbbb", metrics=False)
             with self.assertRaises(SystemExit):
-                runlog.run("x", {}, base_dir=area,
-                           derived_from="2026-10-05T10-00-00_bbbb")
+                runlog.run(
+                    "x", {}, base_dir=area, derived_from="2026-10-05T10-00-00_bbbb"
+                )
             self.assertEqual(len(list((area / "runs").iterdir())), 1)
 
     def test_an_ordinary_run_records_no_parent(self):
@@ -288,4 +323,3 @@ class TestDerivedRun(unittest.TestCase):
                 r.metrics(c1_pass=True)
             cfg = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
             self.assertIsNone(cfg["derived_from"])
-

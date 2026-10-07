@@ -6,6 +6,7 @@ None, causing the leakage check to be silently skipped for exactly the
 standard-generated files it is meant to protect. _describe()'s row count also
 included the _meta line.
 """
+
 from __future__ import annotations
 
 import unittest
@@ -39,20 +40,26 @@ class TestIdsSkipsMeta(unittest.TestCase):
 
     def test_standard_dataset_returns_ids(self):
         path = self.dir / "train.jsonl"
-        write_dataset(path,
-                      [{"id": "a", "x": 1}, {"id": "b", "x": 2}],
-                      about="test", fields={"id": "id", "x": "feature"},
-                      producer="test")
+        write_dataset(
+            path,
+            [{"id": "a", "x": 1}, {"id": "b", "x": 2}],
+            about="test",
+            fields={"id": "id", "x": "feature"},
+            producer="test",
+        )
         ids = _ids(path)
         self.assertIsNotNone(ids, "_ids should not bail on _meta header")
         self.assertEqual(ids, {"a", "b"})
 
     def test_data_rows_excludes_meta(self):
         path = self.dir / "train.jsonl"
-        write_dataset(path,
-                      [{"id": "a", "x": 1}, {"id": "b", "x": 2}],
-                      about="test", fields={"id": "id", "x": "feature"},
-                      producer="test")
+        write_dataset(
+            path,
+            [{"id": "a", "x": 1}, {"id": "b", "x": 2}],
+            about="test",
+            fields={"id": "id", "x": "feature"},
+            producer="test",
+        )
         self.assertEqual(_data_rows(path), 2)
 
 
@@ -70,12 +77,20 @@ class TestLeakageWithMeta(unittest.TestCase):
         fields = {"id": "id", "text": "text"}
         train = self.dir / "train.jsonl"
         test = self.dir / "test.jsonl"
-        write_dataset(train,
-                      [{"id": "shared", "text": "a"}, {"id": "only-train", "text": "b"}],
-                      about="train", fields=fields, producer="test")
-        write_dataset(test,
-                      [{"id": "shared", "text": "c"}, {"id": "only-test", "text": "d"}],
-                      about="test", fields=fields, producer="test")
+        write_dataset(
+            train,
+            [{"id": "shared", "text": "a"}, {"id": "only-train", "text": "b"}],
+            about="train",
+            fields=fields,
+            producer="test",
+        )
+        write_dataset(
+            test,
+            [{"id": "shared", "text": "c"}, {"id": "only-test", "text": "d"}],
+            about="test",
+            fields=fields,
+            producer="test",
+        )
         with self.assertRaises(RuntimeError, msg="leakage must be caught"):
             _describe({"train": str(train), "test": str(test)})
 
@@ -83,12 +98,16 @@ class TestLeakageWithMeta(unittest.TestCase):
         fields = {"id": "id", "text": "text"}
         train = self.dir / "train.jsonl"
         dev = self.dir / "dev.jsonl"
-        write_dataset(train,
-                      [{"id": "a", "text": "x"}],
-                      about="train", fields=fields, producer="test")
-        write_dataset(dev,
-                      [{"id": "b", "text": "y"}],
-                      about="dev", fields=fields, producer="test")
+        write_dataset(
+            train,
+            [{"id": "a", "text": "x"}],
+            about="train",
+            fields=fields,
+            producer="test",
+        )
+        write_dataset(
+            dev, [{"id": "b", "text": "y"}], about="dev", fields=fields, producer="test"
+        )
         result = _describe({"train": str(train), "dev": str(dev)})
         self.assertIn("leakage_check", result)
         self.assertIn("ok", result["leakage_check"])

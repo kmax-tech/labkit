@@ -12,6 +12,7 @@ The fixture is a twin pair in one area: an older completed run and a NEWER
 unfinalized one with the same metrics. Picking by metrics.json chooses the
 newer; picking by the contract chooses the older.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -31,7 +32,9 @@ DONE = "2026-10-06T10-00-00_aaaa"
 UNFINALIZED = "2026-10-06T11-00-00_bbbb"
 
 
-def make_run(area: Path, name: str, *, completion: bool, schema: int | None = 2) -> Path:
+def make_run(
+    area: Path, name: str, *, completion: bool, schema: int | None = 2
+) -> Path:
     d = area / "runs" / name
     d.mkdir(parents=True)
     cfg: dict = {"script": "01_measure.py", "pid": 1}
@@ -40,8 +43,9 @@ def make_run(area: Path, name: str, *, completion: bool, schema: int | None = 2)
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
     (d / "metrics.json").write_text(json.dumps({"c1_pass": True}), encoding="utf-8")
     if completion:
-        (d / "completion.json").write_text(json.dumps({"schema_version": 2}),
-                                           encoding="utf-8")
+        (d / "completion.json").write_text(
+            json.dumps({"schema_version": 2}), encoding="utf-8"
+        )
     return d
 
 
@@ -73,8 +77,9 @@ class Twin(unittest.TestCase):
                 runlog.Run("t", {}, self.area, derived_from=UNFINALIZED)
             self.assertIn("unfinalized", str(cm.exception))
             run = runlog.Run("t", {}, self.area, derived_from=DONE)
-        self.assertEqual(json.loads((run.dir / "config.json").read_text())["derived_from"],
-                         DONE)
+        self.assertEqual(
+            json.loads((run.dir / "config.json").read_text())["derived_from"], DONE
+        )
 
     def test_usability_scorer_picks_the_completed_run(self):
         self.assertEqual(usability.latest_run(self.area), self.done)

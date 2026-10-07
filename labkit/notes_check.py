@@ -46,17 +46,19 @@ from pathlib import Path
 # the notes are German and the tokens are greppable prose, not identifiers.
 KIND = re.compile(
     r"Instrument\s*[—–-]\s*(Entwurf|implementiert)"
-    r"|Related-Lesart|Referenzkarte|Audit")
+    r"|Related-Lesart|Referenzkarte|Audit"
+)
 IMPLEMENTED = re.compile(r"Instrument\s*[—–-]\s*implementiert")
-RELATED_WITH_KEY = re.compile(
-    r"Related-Lesart\s*\(([\w:-]+(?:\s*,\s*[\w:-]+)*)\)")
+RELATED_WITH_KEY = re.compile(r"Related-Lesart\s*\(([\w:-]+(?:\s*,\s*[\w:-]+)*)\)")
 DATE = re.compile(r"\b\d{4}-\d{2}(?:-\d{2})?\b")
 # Code evidence for an implemented instrument: a script file, a bare function
 # call in backticks, an experiment-area path, or a protocol reference (the
 # protocol names the scripts; a synthesis note over documented runs carries only
 # that — found 2026-09-10, instrument-mal-modellstaerke).
-CODE = re.compile(r"[\w./-]+\.py\b|experiments/[\w-]+|`\w+\(\)?`"
-                  r"|PROTOCOL-[\w-]+")
+CODE = re.compile(
+    r"[\w./-]+\.py\b|experiments/[\w-]+|`\w+\(\)?`"
+    r"|PROTOCOL-[\w-]+"
+)
 PY_FILE = re.compile(r"[\w./-]+\.py\b")
 
 
@@ -116,8 +118,9 @@ def collect(paths: list[str]) -> list[Path]:
     for p in map(Path, paths):
         if p.is_dir():
             base = p if p.name == "messung" else p / "notes" / "messung"
-            files.extend(f for f in sorted(base.glob("*.md"))
-                         if not f.name.startswith("00-"))
+            files.extend(
+                f for f in sorted(base.glob("*.md")) if not f.name.startswith("00-")
+            )
         else:
             files.append(p)
     return files
@@ -129,37 +132,50 @@ def check_file(f: Path) -> tuple[list[str], list[str]]:
     text = f.read_text(encoding="utf-8")
     meta = meta_paragraph(text)
     if meta is None:
-        must.append(f"{f}:1: MISSING (must): no italic meta line after the "
-                    f"title (*<Zweck> · <Sorte> · … · <Datum>*)")
+        must.append(
+            f"{f}:1: MISSING (must): no italic meta line after the "
+            f"title (*<Zweck> · <Sorte> · … · <Datum>*)"
+        )
         return must, warn
     n, para = meta
     kind = KIND.search(para)
     if not kind:
-        must.append(f"{f}:{n}: MISSING (must): no kind in the meta line "
-                    f"(Instrument — Entwurf|implementiert · Related-Lesart "
-                    f"· Referenzkarte · Audit)")
+        must.append(
+            f"{f}:{n}: MISSING (must): no kind in the meta line "
+            f"(Instrument — Entwurf|implementiert · Related-Lesart "
+            f"· Referenzkarte · Audit)"
+        )
     if not DATE.search(para):
         warn.append(f"{f}:{n}: warning: no date in the meta line")
     if IMPLEMENTED.search(para):
         if not CODE.search(text):
-            must.append(f"{f}:{n}: MISSING (must): declared 'Instrument — "
-                        f"implementiert' but names no script, function, or "
-                        f"experiments/ path")
+            must.append(
+                f"{f}:{n}: MISSING (must): declared 'Instrument — "
+                f"implementiert' but names no script, function, or "
+                f"experiments/ path"
+            )
         else:
             rotten = unresolved_scripts(text, repo_root(f.resolve()))
-            if rotten and len(rotten) == len(set(
-                    m.group(0).lstrip("./") for m in PY_FILE.finditer(text))):
-                warn.append(f"{f}:{n}: warning: none of the named scripts "
-                            f"resolve in the repo ({', '.join(rotten[:3])}"
-                            f"{' …' if len(rotten) > 3 else ''}) — code "
-                            f"paths may have rotted")
+            if rotten and len(rotten) == len(
+                set(m.group(0).lstrip("./") for m in PY_FILE.finditer(text))
+            ):
+                warn.append(
+                    f"{f}:{n}: warning: none of the named scripts "
+                    f"resolve in the repo ({', '.join(rotten[:3])}"
+                    f"{' …' if len(rotten) > 3 else ''}) — code "
+                    f"paths may have rotted"
+                )
     if f.name.startswith("related-"):
         if kind and "Related-Lesart" not in kind.group(0):
-            warn.append(f"{f}:{n}: warning: filename says related-* but the "
-                        f"declared kind is {kind.group(0)!r}")
+            warn.append(
+                f"{f}:{n}: warning: filename says related-* but the "
+                f"declared kind is {kind.group(0)!r}"
+            )
         elif "Related-Lesart" in para and not RELATED_WITH_KEY.search(para):
-            warn.append(f"{f}:{n}: warning: Related-Lesart without a citekey "
-                        f"— write 'Related-Lesart (<citekey>)'")
+            warn.append(
+                f"{f}:{n}: warning: Related-Lesart without a citekey "
+                f"— write 'Related-Lesart (<citekey>)'"
+            )
     return must, warn
 
 

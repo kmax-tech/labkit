@@ -1,5 +1,6 @@
 """finalize station 5 (2026-10-05): a c<i>_n that matches no recorded input
 count is a warning, never a blocker."""
+
 from __future__ import annotations
 
 import json
@@ -18,10 +19,18 @@ class CriterionN(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.run_dir = Path(self._tmp.name) / "runs" / "r1"
         self.run_dir.mkdir(parents=True)
-        (self.run_dir / "config.json").write_text(json.dumps(
-            {"data": {"items": {"path": "/x/items.jsonl", "rows": 12, "sha256": "ab"}}}))
-        (self.run_dir / "outputs.json").write_text(json.dumps(
-            [{"path": "/x/out.jsonl", "sha256": "cd", "lines": 12}]))
+        (self.run_dir / "config.json").write_text(
+            json.dumps(
+                {
+                    "data": {
+                        "items": {"path": "/x/items.jsonl", "rows": 12, "sha256": "ab"}
+                    }
+                }
+            )
+        )
+        (self.run_dir / "outputs.json").write_text(
+            json.dumps([{"path": "/x/out.jsonl", "sha256": "cd", "lines": 12}])
+        )
 
     def tearDown(self):
         self._tmp.cleanup()

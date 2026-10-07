@@ -12,6 +12,7 @@ non-zero and the warning worthless).
 
 Run:  .venv/bin/python -m unittest discover -s tests -v
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -49,8 +50,9 @@ class ParseLock(unittest.TestCase):
 
     def test_url_pin_has_no_version(self):
         """spaCy models come as `name @ https://...` — pinned, but versionless."""
-        got = runlog._parse_lock(write_lock(
-            "en_core_web_md @ https://example.invalid/en_core_web_md.whl\n"))
+        got = runlog._parse_lock(
+            write_lock("en_core_web_md @ https://example.invalid/en_core_web_md.whl\n")
+        )
         self.assertEqual(got, {"en-core-web-md": None})
 
     def test_normalises_underscores_and_case(self):
@@ -73,8 +75,7 @@ class LockDrift(unittest.TestCase):
         """Some pip versions DO freeze setuptools. Filtering it only out of the
         installed set would report it as "pinned but missing" forever."""
         lock = write_lock("setuptools==80.0\npip==26.0\n")
-        self.assertEqual(runlog._lock_drift(lock),
-                         runlog._lock_drift(write_lock("")))
+        self.assertEqual(runlog._lock_drift(lock), runlog._lock_drift(write_lock("")))
 
     def test_real_lock_is_clean(self):
         """The repo's own lock must match the venv — that is the whole point."""
@@ -82,9 +83,11 @@ class LockDrift(unittest.TestCase):
         if not lock.exists():
             self.skipTest("no requirements.lock")
         self.assertEqual(
-            runlog._lock_drift(lock), 0,
+            runlog._lock_drift(lock),
+            0,
             "requirements.lock weicht von der Umgebung ab — "
-            "`.venv/bin/pip freeze > requirements.lock`")
+            "`.venv/bin/pip freeze > requirements.lock`",
+        )
 
     def test_empty_lock_counts_every_installed_package(self):
         drift = runlog._lock_drift(write_lock(""))
@@ -122,7 +125,8 @@ class TestVcsPins(unittest.TestCase):
         lock = write_lock(
             "labkit @ git+file:///Users/x/labkit@v0.14.0\n"
             "en-core-web-sm @ https://example.org/model.whl\n"
-            "numpy==2.1\n")
+            "numpy==2.1\n"
+        )
         got = runlog._parse_vcs_pins(lock)
         self.assertEqual(got, {"labkit": ("file:///Users/x/labkit", "v0.14.0")})
 
@@ -135,23 +139,31 @@ class TestVcsPins(unittest.TestCase):
         self.assertIn("lab-kit", runlog._parse_vcs_pins(lock))
 
     def test_hex_ref_prefix_match_is_clean(self):
-        self.assertFalse(runlog._vcs_mismatch(
-            "file:///x", "a93d4c30fe93", "a93d4c30fe939237f28f4f12604a4d8b"))
+        self.assertFalse(
+            runlog._vcs_mismatch(
+                "file:///x", "a93d4c30fe93", "a93d4c30fe939237f28f4f12604a4d8b"
+            )
+        )
 
     def test_hex_ref_mismatch_is_drift(self):
-        self.assertTrue(runlog._vcs_mismatch(
-            "file:///x", "a93d4c30fe93", "deadbeefdeadbeefdeadbeefdeadbeef"))
+        self.assertTrue(
+            runlog._vcs_mismatch(
+                "file:///x", "a93d4c30fe93", "deadbeefdeadbeefdeadbeefdeadbeef"
+            )
+        )
 
     def test_installed_without_recorded_commit_is_drift(self):
         self.assertTrue(runlog._vcs_mismatch("file:///x", "a93d4c30fe93", None))
 
     def test_remote_tag_is_unverifiable_and_stays_pinned_any(self):
-        self.assertFalse(runlog._vcs_mismatch(
-            "https://github.com/x/y", "v1.0.0", "whatever"))
+        self.assertFalse(
+            runlog._vcs_mismatch("https://github.com/x/y", "v1.0.0", "whatever")
+        )
 
     def _make_repo(self):
         import subprocess
         import tempfile
+
         d = tempfile.mkdtemp()
         env_git = ["git", "-C", d, "-c", "user.email=t@t", "-c", "user.name=t"]
         subprocess.run([*env_git, "init", "-q"], check=True)
@@ -159,16 +171,20 @@ class TestVcsPins(unittest.TestCase):
         subprocess.run([*env_git, "add", "f"], check=True)
         subprocess.run([*env_git, "commit", "-qm", "c"], check=True)
         subprocess.run([*env_git, "tag", "v1.0.0"], check=True)
-        sha = subprocess.run([*env_git, "rev-parse", "HEAD"],
-                             capture_output=True, text=True).stdout.strip()
+        sha = subprocess.run(
+            [*env_git, "rev-parse", "HEAD"], capture_output=True, text=True
+        ).stdout.strip()
         return d, sha
 
     def test_local_tag_resolves_to_its_commit(self):
         d, sha = self._make_repo()
         self.assertEqual(runlog._resolve_ref(f"file://{d}", "v1.0.0"), sha)
         self.assertFalse(runlog._vcs_mismatch(f"file://{d}", "v1.0.0", sha))
-        self.assertTrue(runlog._vcs_mismatch(
-            f"file://{d}", "v1.0.0", "deadbeefdeadbeefdeadbeefdeadbeef"))
+        self.assertTrue(
+            runlog._vcs_mismatch(
+                f"file://{d}", "v1.0.0", "deadbeefdeadbeefdeadbeefdeadbeef"
+            )
+        )
 
     def test_missing_local_tag_is_drift(self):
         """The scar itself: a lock pinning a tag that does not exist is

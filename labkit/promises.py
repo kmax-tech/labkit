@@ -93,18 +93,18 @@ class PromiseError(ValueError):
 
 @dataclass(frozen=True)
 class Promise:
-    id: str                         # "C1"
-    kind: str                       # "criterion" | "admissibility" | "branch"
-    key: str                        # metrics key that reports it
-    sentence: str                   # the promise in one sentence
-    scope: tuple[str, ...]          # declared implementation region
+    id: str  # "C1"
+    kind: str  # "criterion" | "admissibility" | "branch"
+    key: str  # metrics key that reports it
+    sentence: str  # the promise in one sentence
+    scope: tuple[str, ...]  # declared implementation region
     constants: dict[str, int | float | str | bool]
 
 
 @dataclass(frozen=True)
 class PromiseBlock:
     promises: tuple[Promise, ...]
-    sha: str                        # digest of the [[promise]] tables (canonical JSON), not the head
+    sha: str  # digest of the [[promise]] tables (canonical JSON), not the head
 
     def by_id(self) -> dict[str, Promise]:
         return {p.id: p for p in self.promises}
@@ -122,9 +122,11 @@ def earlier_ids(text: str) -> list[str]:
     return sorted(set(EARLIER_ID.findall(text)))
 
 
-EARLIER_IDS_HELP = ("the letters K/S/W/N are not read since labkit 0.48 — "
-                    "re-register the promises as [C]/[A]/[B] by the separation "
-                    "rule (docs/promise-block.md), or check this protocol with labkit 0.47")
+EARLIER_IDS_HELP = (
+    "the letters K/S/W/N are not read since labkit 0.48 — "
+    "re-register the promises as [C]/[A]/[B] by the separation "
+    "rule (docs/promise-block.md), or check this protocol with labkit 0.47"
+)
 
 
 def reported_ids(metrics: dict) -> set[str]:
@@ -165,64 +167,94 @@ def parse_block(text: str) -> PromiseBlock | None:
     for n, e in enumerate(entries, 1):
         where = f"[[promise]] #{n}"
         if not isinstance(e, dict):
-            raise PromiseError(f"{where}: {e!r} is not a table — each promise is a "
-                               f"[[promise]] table with id, key, sentence, scope")
+            raise PromiseError(
+                f"{where}: {e!r} is not a table — each promise is a "
+                f"[[promise]] table with id, key, sentence, scope"
+            )
         unknown = set(e) - _ALLOWED_FIELDS
         if unknown:
-            raise PromiseError(f"{where}: unknown field(s) {sorted(unknown)}; "
-                               f"allowed: {sorted(_ALLOWED_FIELDS)}")
+            raise PromiseError(
+                f"{where}: unknown field(s) {sorted(unknown)}; "
+                f"allowed: {sorted(_ALLOWED_FIELDS)}"
+            )
         for field in ("id", "key", "sentence", "scope"):
             if field not in e:
                 raise PromiseError(f"{where}: missing `{field}`")
         pid = e["id"]
         if not isinstance(pid, str) or not _BLOCK_ID.match(pid):
-            raise PromiseError(
-                f"{where}: id {pid!r} is not C<n>, A<n> or B<n>")
+            raise PromiseError(f"{where}: id {pid!r} is not C<n>, A<n> or B<n>")
         where = f"[[promise]] {pid}"
         if pid in seen:
             raise PromiseError(f"{where}: duplicate id")
         seen.add(pid)
         key = e["key"]
-        if not isinstance(key, str) or (key != pid.lower()
-                                         and not key.startswith(pid.lower() + "_")):
-            raise PromiseError(f"{where}: key {key!r} is outside the id's "
-                               f"namespace — expected '{pid.lower()}' or "
-                               f"'{pid.lower()}_<suffix>'")
+        if not isinstance(key, str) or (
+            key != pid.lower() and not key.startswith(pid.lower() + "_")
+        ):
+            raise PromiseError(
+                f"{where}: key {key!r} is outside the id's "
+                f"namespace — expected '{pid.lower()}' or "
+                f"'{pid.lower()}_<suffix>'"
+            )
         sentence = e["sentence"]
         if not isinstance(sentence, str) or not sentence.strip():
             raise PromiseError(f"{where}: `sentence` is empty")
         scope = e["scope"]
-        if (not isinstance(scope, list) or not scope
-                or not all(isinstance(s, str) and s.strip() for s in scope)):
-            raise PromiseError(f"{where}: `scope` must be a non-empty list of "
-                               f"'file' or 'file:function' strings")
+        if (
+            not isinstance(scope, list)
+            or not scope
+            or not all(isinstance(s, str) and s.strip() for s in scope)
+        ):
+            raise PromiseError(
+                f"{where}: `scope` must be a non-empty list of "
+                f"'file' or 'file:function' strings"
+            )
         absolute = [s for s in scope if Path(s.partition(":")[0]).is_absolute()]
         if absolute:
-            raise PromiseError(f"{where}: scope {absolute} is absolute — scopes are "
-                               f"relative to the protocol's directory, so the "
-                               f"declaration travels with the repo")
+            raise PromiseError(
+                f"{where}: scope {absolute} is absolute — scopes are "
+                f"relative to the protocol's directory, so the "
+                f"declaration travels with the repo"
+            )
         constants = e.get("constants", {})
         if not isinstance(constants, dict):
             raise PromiseError(f"{where}: `constants` must be a table")
         for name, value in constants.items():
             if not isinstance(value, (int, float, str, bool)):
-                raise PromiseError(f"{where}: constant {name} is "
-                                   f"{type(value).__name__} — only scalars")
-        out.append(Promise(id=pid, kind=KINDS[pid[0]], key=key,
-                           sentence=sentence.strip(), scope=tuple(scope),
-                           constants=dict(constants)))
+                raise PromiseError(
+                    f"{where}: constant {name} is {type(value).__name__} — only scalars"
+                )
+        out.append(
+            Promise(
+                id=pid,
+                kind=KINDS[pid[0]],
+                key=key,
+                sentence=sentence.strip(),
+                scope=tuple(scope),
+                constants=dict(constants),
+            )
+        )
     # over the promises as read, not as spelled: a stripped sentence, a
     # sorted scope and a missing `constants` mean the same promise
-    canonical = json.dumps([{"id": q.id, "key": q.key, "sentence": q.sentence,
-                             "scope": sorted(q.scope), "constants": q.constants}
-                            for q in out], sort_keys=True, ensure_ascii=False)
+    canonical = json.dumps(
+        [
+            {
+                "id": q.id,
+                "key": q.key,
+                "sentence": q.sentence,
+                "scope": sorted(q.scope),
+                "constants": q.constants,
+            }
+            for q in out
+        ],
+        sort_keys=True,
+        ensure_ascii=False,
+    )
     return PromiseBlock(promises=tuple(out), sha=_digest(canonical.encode("utf-8")))
 
 
 def prose_mismatch(text: str, block: PromiseBlock) -> tuple[list[str], list[str]]:
-    """(new-letter ids in prose but not in the block, block ids not in prose).
-
-    """
+    """(new-letter ids in prose but not in the block, block ids not in prose)."""
     prose = {i.upper() for i in registered_ids(text)}
     ids = {p.id for p in block.promises}
     return sorted(prose - ids), sorted(ids - prose)
@@ -245,8 +277,9 @@ def constants(protocol: Path, promise_id: str) -> dict[str, int | float | str | 
     """The constants one promise declares, read from the protocol."""
     by_id = load(protocol).by_id()
     if promise_id not in by_id:
-        raise PromiseError(f"{protocol}: no promise {promise_id!r}; "
-                           f"declared: {sorted(by_id)}")
+        raise PromiseError(
+            f"{protocol}: no promise {promise_id!r}; declared: {sorted(by_id)}"
+        )
     return dict(by_id[promise_id].constants)
 
 
@@ -256,18 +289,24 @@ def _function_source(path: Path, name: str) -> str:
         source = path.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(path))
     except (OSError, UnicodeDecodeError, SyntaxError) as exc:
-        raise PromiseError(f"{path}: cannot read {name!r} from it ({exc.__class__.__name__}: "
-                           f"{exc}) — the declared scope must be parseable code") from exc
+        raise PromiseError(
+            f"{path}: cannot read {name!r} from it ({exc.__class__.__name__}: "
+            f"{exc}) — the declared scope must be parseable code"
+        ) from exc
     for node in tree.body:
-        if (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
-                and node.name == name):
+        if (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            and node.name == name
+        ):
             # decorators included: `@cache` → `@retry` can change what the
             # function does, so it must move the stamp (review 2026-10-07)
             first = min([d.lineno for d in node.decorator_list] + [node.lineno])
             assert node.end_lineno is not None, f"{path}:{name} has no end line"
-            return "\n".join(source.splitlines()[first - 1:node.end_lineno])
-    raise PromiseError(f"{path}: no top-level function or class {name!r} — the "
-                       f"declared scope names code that does not exist")
+            return "\n".join(source.splitlines()[first - 1 : node.end_lineno])
+    raise PromiseError(
+        f"{path}: no top-level function or class {name!r} — the "
+        f"declared scope names code that does not exist"
+    )
 
 
 def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
@@ -287,8 +326,11 @@ def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
         if not path.is_file():
             raise PromiseError(f"scope entry {entry!r}: no such file {path}")
         try:
-            content = (_function_source(path, func).encode("utf-8") if func
-                       else path.read_bytes())
+            content = (
+                _function_source(path, func).encode("utf-8")
+                if func
+                else path.read_bytes()
+            )
         except OSError as exc:
             raise PromiseError(f"scope entry {entry!r}: {exc}") from exc
         h.update(entry.encode("utf-8") + b"\n")
@@ -319,27 +361,44 @@ def block_drift(recorded: dict | None, block: PromiseBlock | None) -> str | None
     """Why the protocol's promise block (`block`, as parsed now) is not the
     one the run recorded, or None when it is (or neither side has one)."""
     if recorded is None:
-        return (None if block is None else
-                f"the run recorded no promise block — it ran before the block "
-                f"existed or outside runlog; rerun so the number is bound to "
-                f"the promises (block {block.sha})")
+        return (
+            None
+            if block is None
+            else f"the run recorded no promise block — it ran before the block "
+            f"existed or outside runlog; rerun so the number is bound to "
+            f"the promises (block {block.sha})"
+        )
     if block is None:
-        return (f"the run ran under promise block {recorded['block_sha']}, the "
-                f"protocol now carries none — the promises were removed after "
-                f"the run")
+        return (
+            f"the run ran under promise block {recorded['block_sha']}, the "
+            f"protocol now carries none — the promises were removed after "
+            f"the run"
+        )
     if recorded.get("digest") != DIGEST_FORMAT:
-        return ("the run recorded its promises with labkit 0.46/0.47 (digest over "
-                "the block text, not comparable) — compare with labkit 0.47 or rerun")
+        return (
+            "the run recorded its promises with labkit 0.46/0.47 (digest over "
+            "the block text, not comparable) — compare with labkit 0.47 or rerun"
+        )
     if block.sha != recorded["block_sha"]:
-        return (f"ran under promise block {recorded['block_sha']}, the protocol "
-                f"now carries {block.sha} — the promises changed after the run")
+        return (
+            f"ran under promise block {recorded['block_sha']}, the protocol "
+            f"now carries {block.sha} — the promises changed after the run"
+        )
     return None
 
 
 def snapshot(block: PromiseBlock, base: Path) -> dict:
     """What a run records about its promises (config.json `promises`)."""
-    return {"block_sha": block.sha, "digest": DIGEST_FORMAT,
-            "ids": {p.id: {"key": p.key, "constants": p.constants,
-                           "scope": list(p.scope),
-                           "declared_scope_sha": declared_scope_sha(base, p.scope)}
-                    for p in block.promises}}
+    return {
+        "block_sha": block.sha,
+        "digest": DIGEST_FORMAT,
+        "ids": {
+            p.id: {
+                "key": p.key,
+                "constants": p.constants,
+                "scope": list(p.scope),
+                "declared_scope_sha": declared_scope_sha(base, p.scope),
+            }
+            for p in block.promises
+        },
+    }

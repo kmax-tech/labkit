@@ -61,8 +61,6 @@ registered_ids = promises.registered_ids
 reported_intent_ids = promises.reported_ids
 
 
-
-
 def protocol_id_of(text: str) -> str | None:
     """The stamped id of the protocol's head, None while it is unstamped.
     A missing or malformed head raises protocol_block.BlockError."""
@@ -79,8 +77,10 @@ def read_metrics(path: Path) -> dict:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"{path}: unreadable metrics ({exc}) — repair the "
-                         f"run or name another with --metrics") from exc
+        raise ValueError(
+            f"{path}: unreadable metrics ({exc}) — repair the "
+            f"run or name another with --metrics"
+        ) from exc
 
 
 def run_facts(run_dir: Path) -> dict | None:
@@ -94,16 +94,22 @@ def run_facts(run_dir: Path) -> dict | None:
     try:
         cfg = read_run_config(run_dir)
     except RunConfigError as exc:
-        return {"dir": run_dir, "metrics": run_dir / "metrics.json",
-                "state": "corrupt", "protocol_id": None,
-                "why": str(exc)}
+        return {
+            "dir": run_dir,
+            "metrics": run_dir / "metrics.json",
+            "state": "corrupt",
+            "protocol_id": None,
+            "why": str(exc),
+        }
     if cfg is None:
         return None
     binding = cfg.get("protocol") or {}
-    return {"dir": run_dir,
-            "metrics": run_dir / "metrics.json",
-            "state": run_state(run_dir, cfg, alive=False),
-            "protocol_id": binding.get("id")}
+    return {
+        "dir": run_dir,
+        "metrics": run_dir / "metrics.json",
+        "state": run_state(run_dir, cfg, alive=False),
+        "protocol_id": binding.get("id"),
+    }
 
 
 def bound_runs(area: Path, pid: str) -> tuple[list[dict], list[dict]]:
@@ -152,7 +158,7 @@ def main(argv: list[str]) -> int:
     """intent-check; an unreadable run artefact ends it with a sentence."""
     try:
         return _main(argv)
-    except ValueError as exc:            # read_metrics / RunConfigError
+    except ValueError as exc:  # read_metrics / RunConfigError
         print(f"intent-check: {exc}")
         return 2
 
@@ -161,10 +167,12 @@ def _main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: intent-check <PROTOCOL-*.md> [--metrics FILE]")
-        print("  --metrics FILE  metrics.json to check against. Default: "
-              "the newest COMPLETED run bound to this protocol's id that "
-              "reports intent keys; required while the protocol's id is "
-              "unstamped.")
+        print(
+            "  --metrics FILE  metrics.json to check against. Default: "
+            "the newest COMPLETED run bound to this protocol's id that "
+            "reports intent keys; required while the protocol's id is "
+            "unstamped."
+        )
         return 0 if argv else 2
 
     protocol = Path(argv[0])
@@ -192,23 +200,31 @@ def _main(argv: list[str]) -> int:
     if block is not None:
         only_prose, only_block = promises.prose_mismatch(text, block)
         for i in only_prose:
-            print(f"{protocol}: [{i}] appears in the text but not in the "
-                  f"promise block — a promise must be data to be checked.")
+            print(
+                f"{protocol}: [{i}] appears in the text but not in the "
+                f"promise block — a promise must be data to be checked."
+            )
         for i in only_block:
-            print(f"{protocol}: [{i}] is in the promise block but never "
-                  f"named in the text — say what it promises where the "
-                  f"reader looks.")
+            print(
+                f"{protocol}: [{i}] is in the promise block but never "
+                f"named in the text — say what it promises where the "
+                f"reader looks."
+            )
         if only_prose or only_block:
             return 1
 
     earlier = promises.earlier_ids(text)
     if earlier:
-        print(f"{protocol}: intent ids {', '.join(earlier)} — {promises.EARLIER_IDS_HELP}")
+        print(
+            f"{protocol}: intent ids {', '.join(earlier)} — {promises.EARLIER_IDS_HELP}"
+        )
         return 2
     reg = registered_ids(text)
     if not reg:
-        print("intent-check: no intent ids registered ([C1]/[A1]/[B1] — "
-              "§2.A1a); nothing to hold the metrics against.")
+        print(
+            "intent-check: no intent ids registered ([C1]/[A1]/[B1] — "
+            "§2.A1a); nothing to hold the metrics against."
+        )
         return 0
 
     if metrics_arg is not None:
@@ -216,8 +232,10 @@ def _main(argv: list[str]) -> int:
     elif pid is not None:
         chosen = choose_bound(protocol, pid)
     else:
-        print(f"intent-check: {protocol.name} has no stamped id ([protocol] "
-              f"id) — no run is bound to it; name the run with --metrics FILE.")
+        print(
+            f"intent-check: {protocol.name} has no stamped id ([protocol] "
+            f"id) — no run is bound to it; name the run with --metrics FILE."
+        )
         return 2
     if isinstance(chosen, int):
         return chosen
@@ -232,28 +250,39 @@ def _main(argv: list[str]) -> int:
     missing = sorted(reg - led)
     unregistered = sorted(led - reg)
     for i in missing:
-        print(f"{protocol}: [{i.upper()}] registered, but {mpath.name} has no "
-              f"'{i}'/'{i}_*' key — the promise has no implementation "
-              f"evidence in the metrics.")
+        print(
+            f"{protocol}: [{i.upper()}] registered, but {mpath.name} has no "
+            f"'{i}'/'{i}_*' key — the promise has no implementation "
+            f"evidence in the metrics."
+        )
     for i in unregistered:
-        print(f"{mpath}: key '{i}'/'{i}_*' is in the intent-id namespace, but "
-              f"the protocol registers no [{i.upper()}] — built without a "
-              f"registration.")
-    block_findings = (check_block_against_run(block, mpath, metrics)
-                      if block is not None else [])
+        print(
+            f"{mpath}: key '{i}'/'{i}_*' is in the intent-id namespace, but "
+            f"the protocol registers no [{i.upper()}] — built without a "
+            f"registration."
+        )
+    block_findings = (
+        check_block_against_run(block, mpath, metrics) if block is not None else []
+    )
     for f in block_findings:
         print(f)
     if missing or unregistered or block_findings:
         return 1
-    print(f"intent-check: {len(reg)} id(s) registered, all report in "
-          f"{mpath.name}."
-          + (f" Promise block {block.sha} is the one the run recorded."
-             if block is not None else ""))
+    print(
+        f"intent-check: {len(reg)} id(s) registered, all report in "
+        f"{mpath.name}."
+        + (
+            f" Promise block {block.sha} is the one the run recorded."
+            if block is not None
+            else ""
+        )
+    )
     return 0
 
 
-def check_block_against_run(block: "promises.PromiseBlock", mpath: Path,
-                            metrics: dict) -> list[str]:
+def check_block_against_run(
+    block: "promises.PromiseBlock", mpath: Path, metrics: dict
+) -> list[str]:
     """Guaranteed-tier findings for a protocol WITH a promise block.
 
     Two things the prose check cannot see: every declared key is reported
@@ -265,8 +294,10 @@ def check_block_against_run(block: "promises.PromiseBlock", mpath: Path,
     out = []
     for p in block.promises:
         if p.key not in metrics:
-            out.append(f"{mpath}: [{p.id}] declares key '{p.key}', which the "
-                       f"run does not report.")
+            out.append(
+                f"{mpath}: [{p.id}] declares key '{p.key}', which the "
+                f"run does not report."
+            )
     cfg = read_run_config(mpath.parent) or {}
     recorded = cfg.get("promises")
     drift = promises.block_drift(recorded, block)
@@ -276,8 +307,9 @@ def check_block_against_run(block: "promises.PromiseBlock", mpath: Path,
     return out
 
 
-def constant_findings(block: "promises.PromiseBlock", run_config: dict,
-                      run_name: str) -> list[str]:
+def constant_findings(
+    block: "promises.PromiseBlock", run_config: dict, run_name: str
+) -> list[str]:
     """A block constant the run recorded under the same name with another value.
 
     The script is meant to read its thresholds from the block
@@ -291,9 +323,11 @@ def constant_findings(block: "promises.PromiseBlock", run_config: dict,
     for p in block.promises:
         for name, value in p.constants.items():
             if name in run_config and run_config[name] != value:
-                out.append(f"{run_name}: [{p.id}] declares {name} = {value!r}, "
-                           f"the run used {name} = {run_config[name]!r} — read "
-                           f"it with promises.constants(), not a second copy.")
+                out.append(
+                    f"{run_name}: [{p.id}] declares {name} = {value!r}, "
+                    f"the run used {name} = {run_config[name]!r} — read "
+                    f"it with promises.constants(), not a second copy."
+                )
     return out
 
 
@@ -301,6 +335,7 @@ def constant_findings(block: "promises.PromiseBlock", run_config: dict,
 #
 # Each returns the chosen metrics.json, or an int: the exit code, with the
 # reason already printed. `_main` only dispatches, then checks.
+
 
 def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path | int:
     """`--metrics FILE`: the named file, if it may answer for this protocol."""
@@ -317,26 +352,37 @@ def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path 
     # must not be a loophole around completion.
     if facts is None or facts["state"] != "completed":
         state = facts["state"] if facts else "no config.json"
-        why = ("written before labkit 0.21 — read it with labkit 0.47" if state == "legacy"
-               else "an incomplete run's numbers may not be reported, even when "
-                    "named explicitly")
-        print(f"intent-check: {metrics_arg.parent.name} is not completed ({state}) — {why}.")
+        why = (
+            "written before labkit 0.21 — read it with labkit 0.47"
+            if state == "legacy"
+            else "an incomplete run's numbers may not be reported, even when "
+            "named explicitly"
+        )
+        print(
+            f"intent-check: {metrics_arg.parent.name} is not completed ({state}) — {why}."
+        )
         return 2
     if facts["protocol_id"]:
         if pid and facts["protocol_id"] != pid:
-            print(f"intent-check: {metrics_arg} belongs to protocol "
-                  f"{facts['protocol_id']}, this protocol is {pid} — "
-                  f"holding one protocol's promises against another "
-                  f"protocol's run answers nothing.")
+            print(
+                f"intent-check: {metrics_arg} belongs to protocol "
+                f"{facts['protocol_id']}, this protocol is {pid} — "
+                f"holding one protocol's promises against another "
+                f"protocol's run answers nothing."
+            )
             return 2
         if pid is None:
-            print(f"intent-check: WARNING — {metrics_arg} is bound to "
-                  f"{facts['protocol_id']}, but {protocol.name} carries no "
-                  f"stamped id to hold it against. Checking anyway, unverified.")
+            print(
+                f"intent-check: WARNING — {metrics_arg} is bound to "
+                f"{facts['protocol_id']}, but {protocol.name} carries no "
+                f"stamped id to hold it against. Checking anyway, unverified."
+            )
     else:
-        print(f"intent-check: WARNING — {metrics_arg} records no binding "
-              f"(unbound run); nothing proves it belongs to {protocol.name}. "
-              f"Checking anyway, unverified.")
+        print(
+            f"intent-check: WARNING — {metrics_arg} records no binding "
+            f"(unbound run); nothing proves it belongs to {protocol.name}. "
+            f"Checking anyway, unverified."
+        )
     return metrics_arg
 
 
@@ -348,17 +394,18 @@ def choose_bound(protocol: Path, pid: str) -> Path | int:
     # question entirely.
     cands, rest = bound_runs(protocol.parent, pid)
     if not cands:
-        print(f"intent-check: no completed run bound to {pid} "
-              f"({protocol.name}) — nothing to hold the promises "
-              f"against.")
+        print(
+            f"intent-check: no completed run bound to {pid} "
+            f"({protocol.name}) — nothing to hold the promises "
+            f"against."
+        )
         if rest:
             print(f"  {len(rest)} other run(s) in {protocol.parent}:")
             for f in rest:
                 print(f"    {f['dir'].name}: {f['why']}")
         else:
             print(f"  no runs in {protocol.parent} yet.")
-        print("  Name one explicitly with --metrics FILE if you know it "
-              "belongs here.")
+        print("  Name one explicitly with --metrics FILE if you know it belongs here.")
         return 2
     mpath, skipped = newest_with_intent_keys(cands)
     assert mpath is not None, "cands is non-empty, so a metrics file exists"
@@ -367,9 +414,11 @@ def choose_bound(protocol: Path, pid: str) -> Path | int:
         print(f"intent-check: {blocking}")
         return 2
     if skipped:
-        print(f"intent-check: using {mpath.parent.name}/metrics.json "
-              f"(newest bound run with intent keys; skipped {skipped} "
-              f"newer bound run(s) without any).")
+        print(
+            f"intent-check: using {mpath.parent.name}/metrics.json "
+            f"(newest bound run with intent keys; skipped {skipped} "
+            f"newer bound run(s) without any)."
+        )
     return mpath
 
 
@@ -378,13 +427,20 @@ def newer_unreadable(chosen: Path, rest: list[dict]) -> str | None:
     config.json cannot be read. Its binding is unknowable, so it may be the
     run that answers — choosing an older one past it is what
     `runs.read_run_config` says must not happen (review 2026-10-07)."""
-    bad = [f for f in rest if f["state"] == "corrupt" and f["protocol_id"] is None
-           and f["dir"].name > chosen.name]
+    bad = [
+        f
+        for f in rest
+        if f["state"] == "corrupt"
+        and f["protocol_id"] is None
+        and f["dir"].name > chosen.name
+    ]
     if not bad:
         return None
-    return (f"{len(bad)} newer run(s) cannot say which protocol they belong to — "
-            + "; ".join(f["why"] for f in bad)
-            + f". Repair or move them aside before {chosen.name} may answer.")
+    return (
+        f"{len(bad)} newer run(s) cannot say which protocol they belong to — "
+        + "; ".join(f["why"] for f in bad)
+        + f". Repair or move them aside before {chosen.name} may answer."
+    )
 
 
 def cli() -> None:
@@ -453,8 +509,7 @@ def code_keys(area: Path) -> dict[str, list[str]]:
     a renamed key surfaced only after the run).
     """
     hits: dict[str, list[str]] = {}
-    for path in sorted(area.glob("scripts/*.py")) + sorted(
-            area.glob("analysis/*.py")):
+    for path in sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py")):
         try:
             source = path.read_text(encoding="utf-8")
         except OSError:
@@ -475,6 +530,10 @@ def _keyword_names(source: str, path: Path) -> list[tuple[str, int]]:
         tree = ast.parse(source, filename=str(path))
     except SyntaxError:
         return []
-    return [(kw.arg, kw.lineno) for node in ast.walk(tree)
-            if isinstance(node, ast.Call)
-            for kw in node.keywords if kw.arg is not None]
+    return [
+        (kw.arg, kw.lineno)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        for kw in node.keywords
+        if kw.arg is not None
+    ]

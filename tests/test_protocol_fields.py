@@ -1,5 +1,6 @@
 """FIELDS is the checker's contract, the template the author's: they must name
 the same fields, or the checker holds a protocol to a label it never saw."""
+
 import re
 import unittest
 from pathlib import Path
@@ -7,8 +8,11 @@ from pathlib import Path
 from labkit import protocol_check
 from protocol_fixture import head
 
-TEMPLATE = Path(protocol_check.__file__).with_name("experiment-protocol.md.template").read_text(
-    encoding="utf-8")
+TEMPLATE = (
+    Path(protocol_check.__file__)
+    .with_name("experiment-protocol.md.template")
+    .read_text(encoding="utf-8")
+)
 
 
 def template_fields() -> dict[str, str]:
@@ -60,20 +64,26 @@ class Placeholders(unittest.TestCase):
         return f
 
     def test_content_starting_with_a_bracket_is_content(self):
-        self.assertFalse(self.one("- **Admissibility condition:** <10% unparsed [A1]\n").placeholder)
+        self.assertFalse(
+            self.one("- **Admissibility condition:** <10% unparsed [A1]\n").placeholder
+        )
 
     def test_unfilled_forms_are_placeholders(self):
-        for line in ("- **Unit:** <what one counted thing is>\n",
-                     "- **Unit:** TODO\n",
-                     "- **Unit:** n/a — <why>\n",
-                     "- **Unit:**\n"):
+        for line in (
+            "- **Unit:** <what one counted thing is>\n",
+            "- **Unit:** TODO\n",
+            "- **Unit:** n/a — <why>\n",
+            "- **Unit:**\n",
+        ):
             self.assertTrue(self.one(line).placeholder, line)
 
     def test_indented_content_below_a_bare_label_is_its_value(self):
         """Twin pair (found migrating the thesis example, 2026-10-07):
         sub-bullets or an indented paragraph below count as the value; the
         next field at the same depth does not."""
-        sub = protocol_check.fields("- **Model I/O:**\n  - *In:* topic + text\n- **Unit:** u\n")
+        sub = protocol_check.fields(
+            "- **Model I/O:**\n  - *In:* topic + text\n- **Unit:** u\n"
+        )
         self.assertFalse(sub[0].placeholder)
         para = protocol_check.fields("- **Prompt:**\n\n  `prompts/v1.txt` — minimal\n")
         self.assertFalse(para[0].placeholder)
@@ -88,7 +98,9 @@ class Placeholders(unittest.TestCase):
 class Fields(unittest.TestCase):
     def test_a_word_elsewhere_does_not_fill_a_field(self):
         # the keyword check let "prompt" in any sentence cover Model I/O
-        text = head() + "We will write a prompt later.\n- **Question / hypothesis:** q\n"
+        text = (
+            head() + "We will write a prompt later.\n- **Question / hypothesis:** q\n"
+        )
         missing = protocol_check.check_fields(text).missing_must
         self.assertIn("Model I/O", missing)
         self.assertIn("Prompt", missing)
@@ -107,11 +119,17 @@ class Fields(unittest.TestCase):
     def test_a_value_on_the_next_line_is_written(self):
         """Twin of the seconds gate: written below the label passes, a
         multi-line placeholder stays a placeholder (review 2026-10-07)."""
-        written = (head(cost="seconds") + "- **Question / hypothesis:**\n  Does X beat Y?\n"
-                   "- **Success / failure criterion:** [C1] x\n- **Admissibility condition:** [A1] y\n")
+        written = (
+            head(cost="seconds") + "- **Question / hypothesis:**\n  Does X beat Y?\n"
+            "- **Success / failure criterion:** [C1] x\n- **Admissibility condition:** [A1] y\n"
+        )
         self.assertEqual(protocol_check.intent_missing(written), [])
-        unwritten = written.replace("  Does X beat Y?", "  <the one question —\n  what do we expect?>")
-        self.assertEqual(protocol_check.intent_missing(unwritten), ["Question / hypothesis"])
+        unwritten = written.replace(
+            "  Does X beat Y?", "  <the one question —\n  what do we expect?>"
+        )
+        self.assertEqual(
+            protocol_check.intent_missing(unwritten), ["Question / hypothesis"]
+        )
 
     def test_fields_inside_code_blocks_are_not_fields(self):
         text = "```text\n- **Question / hypothesis:** inside a prompt\n```\n"
@@ -142,15 +160,24 @@ class Fields(unittest.TestCase):
     def test_report_fields_fall_due_with_a_documented_run_once_frozen(self):
         run = "\n## Runs\n\n- 2026-10-07T10-00-00_ab12 — the full run\n"
         frozen = head(frozen=True, preflight_audit="x")
-        self.assertNotIn("Analysis audit", protocol_check.check_fields(frozen).missing_must)
-        self.assertIn("Analysis audit", protocol_check.check_fields(frozen + run).missing_must)
-        self.assertNotIn("Analysis audit",
-                         protocol_check.check_fields(head() + run).missing_must)       # pilot
-        self.assertNotIn("Analysis audit",
-                         protocol_check.check_fields(head(cost="seconds") + run).missing_must)
+        self.assertNotIn(
+            "Analysis audit", protocol_check.check_fields(frozen).missing_must
+        )
+        self.assertIn(
+            "Analysis audit", protocol_check.check_fields(frozen + run).missing_must
+        )
+        self.assertNotIn(
+            "Analysis audit", protocol_check.check_fields(head() + run).missing_must
+        )  # pilot
+        self.assertNotIn(
+            "Analysis audit",
+            protocol_check.check_fields(head(cost="seconds") + run).missing_must,
+        )
 
     def test_none_names_no_model(self):
-        text = head(cost="seconds") + "- **Model / tool:** none — a deterministic count\n"
+        text = (
+            head(cost="seconds") + "- **Model / tool:** none — a deterministic count\n"
+        )
         self.assertNotIn("Prompt", protocol_check.check_fields(text).missing_must)
 
     def test_a_head_placeholder_is_a_must_gap(self):

@@ -1,5 +1,6 @@
 """claude-cli backend (2026-10-05): the subprocess runs from a neutral
 directory, not from the repo the experiment lives in."""
+
 from __future__ import annotations
 
 import subprocess
@@ -37,10 +38,15 @@ class CliIsolation(unittest.TestCase):
             seen["cmd"] = cmd
             return subprocess.CompletedProcess(cmd, 0, stdout="Yes\n", stderr="")
 
-        with mock.patch.object(llm, "resolve", lambda alias: {
-                "backend": "claude-cli", "model": "m", "alias": alias}), \
-             mock.patch.object(llm.endpoint_lease, "acquire", lambda *a, **k: None), \
-             mock.patch.object(llm.subprocess, "run", fake_run):
+        with (
+            mock.patch.object(
+                llm,
+                "resolve",
+                lambda alias: {"backend": "claude-cli", "model": "m", "alias": alias},
+            ),
+            mock.patch.object(llm.endpoint_lease, "acquire", lambda *a, **k: None),
+            mock.patch.object(llm.subprocess, "run", fake_run),
+        ):
             llm._complete_once("x", "prompt")
         cmd = seen["cmd"]
         self.assertEqual(cmd[cmd.index("--setting-sources") + 1], "")

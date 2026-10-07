@@ -1,5 +1,6 @@
 """runlog data= leakage beyond splits (2026-10-05): a control set (anchor,
 gate, placebo) sharing an id with the measured set is a refusal."""
+
 from __future__ import annotations
 
 import json
@@ -14,7 +15,9 @@ from labkit import runlog  # noqa: E402
 
 
 def _jsonl(path: Path, ids: list[str]) -> Path:
-    path.write_text("".join(json.dumps({"id": i, "x": 1}) + "\n" for i in ids), encoding="utf-8")
+    path.write_text(
+        "".join(json.dumps({"id": i, "x": 1}) + "\n" for i in ids), encoding="utf-8"
+    )
     return path
 
 
@@ -44,7 +47,9 @@ class ControlLeakage(unittest.TestCase):
     def test_two_controls_may_overlap(self):
         gate = _jsonl(self.d / "gate.jsonl", ["a"])
         anchor = _jsonl(self.d / "anchor.jsonl", ["a"])
-        runlog._describe({"gate": gate, "anchor": anchor})   # no measured set: nothing to leak into
+        runlog._describe(
+            {"gate": gate, "anchor": anchor}
+        )  # no measured set: nothing to leak into
 
     def test_split_leakage_still_refused(self):
         train = _jsonl(self.d / "train.jsonl", ["a"])

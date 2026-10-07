@@ -1,13 +1,14 @@
 """Tests for batch.Store — the resume logic decides WHICH items get scored,
 so a silent break here changes a reported number without changing any metric.
 """
+
 import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))          # the package under test
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 from labkit import batch  # noqa: E402
 
 RECORDS = [{"id": f"item-{i}", "text": f"t{i}"} for i in range(5)]
@@ -20,16 +21,18 @@ class TestStore(unittest.TestCase):
 
     def test_pending_is_everything_when_empty(self):
         with batch.Store(self.out) as s:
-            self.assertEqual([r["id"] for r in s.pending(RECORDS)],
-                             [r["id"] for r in RECORDS])
+            self.assertEqual(
+                [r["id"] for r in s.pending(RECORDS)], [r["id"] for r in RECORDS]
+            )
 
     def test_pending_skips_written_ids_and_keeps_input_order(self):
         with batch.Store(self.out) as s:
             s.append({"id": "item-1", "ps": 0.5})
             s.append({"id": "item-3", "ps": 0.1})
         with batch.Store(self.out) as s:
-            self.assertEqual([r["id"] for r in s.pending(RECORDS)],
-                             ["item-0", "item-2", "item-4"])
+            self.assertEqual(
+                [r["id"] for r in s.pending(RECORDS)], ["item-0", "item-2", "item-4"]
+            )
 
     def test_append_flushes_each_record(self):
         with batch.Store(self.out) as s:
@@ -51,7 +54,7 @@ class TestStore(unittest.TestCase):
     def test_lock_is_released_after_the_block(self):
         with batch.Store(self.out):
             pass
-        with batch.Store(self.out):      # would raise if the lock survived
+        with batch.Store(self.out):  # would raise if the lock survived
             pass
 
     def test_lock_is_released_when_the_block_raises(self):
@@ -84,8 +87,9 @@ class TestStore(unittest.TestCase):
     def test_records_roundtrip_keeps_unicode(self):
         with batch.Store(self.out) as s:
             s.append({"id": "item-0", "text": "Prämisse — „obwohl“"})
-        self.assertEqual(json.loads(self.out.read_text())["text"],
-                         "Prämisse — „obwohl“")
+        self.assertEqual(
+            json.loads(self.out.read_text())["text"], "Prämisse — „obwohl“"
+        )
 
 
 if __name__ == "__main__":
@@ -99,6 +103,7 @@ class TestProvenanceStamp(unittest.TestCase):
 
     def setUp(self):
         import tempfile
+
         self.tmp = tempfile.TemporaryDirectory()
         self.out = Path(self.tmp.name) / "out.jsonl"
 
@@ -149,7 +154,9 @@ class DamagedFile(unittest.TestCase):
         self.assertIn("out.jsonl:2", str(cm.exception))
 
     def test_resume_cuts_a_torn_tail_before_appending(self):
-        self.out.write_text('{"id": "a"}\n{"id": "b"', encoding="utf-8")   # killed mid-write
+        self.out.write_text(
+            '{"id": "a"}\n{"id": "b"', encoding="utf-8"
+        )  # killed mid-write
         with batch.Store(self.out) as s:
             s.append({"id": "b"})
         self.assertEqual([r["id"] for r in batch.Store(self.out).records()], ["a", "b"])

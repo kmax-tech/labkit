@@ -52,6 +52,7 @@ stop
 Exit codes: pre-run 0 or 2 (block); stop 0 or 2 (keep working); post-change 0; usage errors and
 unexpected failures 1, loud on stderr, never swallowed.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -86,9 +87,17 @@ def _read_event() -> dict:
 
 def _context(event_name: str, text: str) -> None:
     """Hand text back to the agent as additionalContext."""
-    print(json.dumps({"hookSpecificOutput": {
-        "hookEventName": event_name, "additionalContext": text}},
-        ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": event_name,
+                    "additionalContext": text,
+                }
+            },
+            ensure_ascii=False,
+        )
+    )
 
 
 def _capture(fn, *args) -> tuple[int, str]:
@@ -99,6 +108,7 @@ def _capture(fn, *args) -> tuple[int, str]:
 
 
 # ---------------------------------------------------------------- pre-run
+
 
 def find_area(script: Path, stop: Path | None = None) -> Path | None:
     """The nearest directory above `script` holding a PROTOCOL-*.md."""
@@ -132,8 +142,7 @@ def protocol_named_in(script: Path, area: Path) -> Path | None:
     """The single PROTOCOL-*.md the script names, if it names exactly one
     and it exists in the area — the series case where preflight would
     otherwise refuse to pick."""
-    names = sorted(set(PROTOCOL_IN_SCRIPT.findall(
-        script.read_text(encoding="utf-8"))))
+    names = sorted(set(PROTOCOL_IN_SCRIPT.findall(script.read_text(encoding="utf-8"))))
     if len(names) != 1:
         return None
     p = area / names[0]
@@ -151,8 +160,11 @@ def pre_run(event: dict) -> int:
     if not scripts:
         return 0
     if SKIP_TOKEN in command:
-        _context("PreToolUse", f"claude-hook pre-run: {SKIP_TOKEN} — preflight "
-                 f"gate skipped on request; the transcript carries it.")
+        _context(
+            "PreToolUse",
+            f"claude-hook pre-run: {SKIP_TOKEN} — preflight "
+            f"gate skipped on request; the transcript carries it.",
+        )
         return 0
 
     project = os.environ.get("CLAUDE_PROJECT_DIR")
@@ -162,13 +174,19 @@ def pre_run(event: dict) -> int:
     for script in scripts:
         area = find_area(script, stop)
         if area is None:
-            notes.append(f"{script.name}: opens a run, but no PROTOCOL-*.md "
-                         f"above it — unbound runs keep no number (§2.A1).")
+            notes.append(
+                f"{script.name}: opens a run, but no PROTOCOL-*.md "
+                f"above it — unbound runs keep no number (§2.A1)."
+            )
             continue
         protocol = protocol_named_in(script, area)
-        texts = [p.read_text(encoding="utf-8")
-                 for p in ([protocol] if protocol else area_protocols(area))]
-        head = f"preflight {area.name}" + (f" --protocol {protocol.name}" if protocol else "")
+        texts = [
+            p.read_text(encoding="utf-8")
+            for p in ([protocol] if protocol else area_protocols(area))
+        ]
+        head = f"preflight {area.name}" + (
+            f" --protocol {protocol.name}" if protocol else ""
+        )
         try:
             heads = [protocol_block.head(t) for t in texts]
         except protocol_block.BlockError as exc:
@@ -176,23 +194,33 @@ def pre_run(event: dict) -> int:
             continue
         tiers = {h.cost for h in heads}
         if tiers == {"seconds"}:
-            missing = sorted({m for t in texts for m in protocol_check.intent_missing(t)})
+            missing = sorted(
+                {m for t in texts for m in protocol_check.intent_missing(t)}
+            )
             if not missing:
-                notes.append(f"{head}: cost seconds — gate not run, the rerun is "
-                             f"the probe; registration written (§2.A14).")
+                notes.append(
+                    f"{head}: cost seconds — gate not run, the rerun is "
+                    f"the probe; registration written (§2.A14)."
+                )
             else:
-                notes.append(f"{head}: cost seconds, but {', '.join(missing)} still "
-                             f"empty or a placeholder — runlog refuses a full run "
-                             f"until the registration is written (§2.A1, §2.A14).")
+                notes.append(
+                    f"{head}: cost seconds, but {', '.join(missing)} still "
+                    f"empty or a placeholder — runlog refuses a full run "
+                    f"until the registration is written (§2.A1, §2.A14)."
+                )
             continue
         rc, out = _capture(preflight.run, area, protocol)
         frozen = any(h.frozen for h in heads)
         if rc == 1 and frozen:
-            blocked.append(f"{head}: BLOCKED — the protocol is frozen and "
-                           f"preflight reports blockers:\n{out}")
+            blocked.append(
+                f"{head}: BLOCKED — the protocol is frozen and "
+                f"preflight reports blockers:\n{out}"
+            )
         elif rc == 1:
-            notes.append(f"{head}: blockers, protocol not frozen (pilot) — "
-                         f"the full run will not start until they are fixed:\n{out}")
+            notes.append(
+                f"{head}: blockers, protocol not frozen (pilot) — "
+                f"the full run will not start until they are fixed:\n{out}"
+            )
         elif rc == 2:
             notes.append(f"{head}: could not run preflight:\n{out}")
         else:
@@ -208,6 +236,7 @@ def pre_run(event: dict) -> int:
 
 
 # ------------------------------------------------------------ post-change
+
 
 def _git_changed(repo: Path) -> list[Path]:
     r = git_run(["status", "--porcelain", "--untracked-files=all"], repo)
@@ -229,9 +258,13 @@ def wants_check(path: Path) -> str | None:
     if PROTOCOL_NAME.match(path.name):
         return "protocol"
     parts = path.as_posix().split("/")
-    if ("notes" in parts and "messung" in parts
-            and parts.index("messung") == parts.index("notes") + 1
-            and path.suffix == ".md" and not path.name.startswith("00-")):
+    if (
+        "notes" in parts
+        and "messung" in parts
+        and parts.index("messung") == parts.index("notes") + 1
+        and path.suffix == ".md"
+        and not path.name.startswith("00-")
+    ):
         return "note"
     return None
 
@@ -303,30 +336,38 @@ def post_change(event: dict) -> int:
 
 def stop(event: dict) -> int:
     if event.get("stop_hook_active"):
-        return 0                          # sent back once already; no loop
+        return 0  # sent back once already; no loop
     project = os.environ.get("CLAUDE_PROJECT_DIR")
     repo = Path(project) if project else Path(event.get("cwd") or os.getcwd())
     if not (repo / ".git").exists():
         return 0
-    protocols = [c.resolve() for c in _git_changed(repo)
-                 if c.is_file() and wants_check(c) == "protocol"]
+    protocols = [
+        c.resolve()
+        for c in _git_changed(repo)
+        if c.is_file() and wants_check(c) == "protocol"
+    ]
     if not protocols:
         return 0
     rc, out = _capture(finalize.main, ["--if-reported", *map(str, protocols)])
     if rc == 0:
         return 0
-    print("finalize reports blockers for a number written back in this session — "
-          "fix them before you stop (a commit would be refused the same way):\n"
-          + out, file=sys.stderr)
+    print(
+        "finalize reports blockers for a number written back in this session — "
+        "fix them before you stop (a commit would be refused the same way):\n" + out,
+        file=sys.stderr,
+    )
     return 2
 
 
 # -------------------------------------------------------------------- cli
 
+
 def main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
-        print("usage: claude-hook pre-run | post-change | stop   (hook event JSON on stdin)")
+        print(
+            "usage: claude-hook pre-run | post-change | stop   (hook event JSON on stdin)"
+        )
         return 0 if argv else 1
     event = _read_event()
     if argv[0] == "pre-run":

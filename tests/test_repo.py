@@ -5,6 +5,7 @@ Before 2026-10-06 two private `_git` helpers turned every git failure into
 None, a failure inside one is loud, and an exit code that IS the answer
 goes through git_run.
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -24,8 +25,11 @@ def make_repo(commit: bool = True) -> Path:
     if commit:
         (d / "f.txt").write_text("x")
         subprocess.run(["git", "add", "-A"], cwd=d, check=True)
-        subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
-                        "commit", "-qm", "x"], cwd=d, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "x"],
+            cwd=d,
+            check=True,
+        )
     return d
 
 
@@ -34,8 +38,10 @@ class Layout(unittest.TestCase):
         area = Path(tempfile.mkdtemp())
         for n in ("PROTOCOL-s10-b.md", "PROTOCOL-s1-a.md", "notes.md"):
             (area / n).write_text("")
-        self.assertEqual([p.name for p in repo.area_protocols(area)],
-                         ["PROTOCOL-s1-a.md", "PROTOCOL-s10-b.md"])
+        self.assertEqual(
+            [p.name for p in repo.area_protocols(area)],
+            ["PROTOCOL-s1-a.md", "PROTOCOL-s10-b.md"],
+        )
 
     def test_roots(self):
         plain = Path(tempfile.mkdtemp())
@@ -43,8 +49,12 @@ class Layout(unittest.TestCase):
         (plain / "tests").mkdir()
         area = plain / "experiments" / "01"
         area.mkdir(parents=True)
-        self.assertEqual(repo.layout_root(area), plain.resolve())   # stamped tree, no git
-        self.assertEqual(repo.layout_root(Path(".")), repo.layout_root(Path.cwd()))  # "." climbs too
+        self.assertEqual(
+            repo.layout_root(area), plain.resolve()
+        )  # stamped tree, no git
+        self.assertEqual(
+            repo.layout_root(Path(".")), repo.layout_root(Path.cwd())
+        )  # "." climbs too
         r = make_repo()
         (r / "a").mkdir()
         self.assertEqual(repo.git_root(r / "a"), r.resolve())
@@ -62,8 +72,12 @@ class Git(unittest.TestCase):
 
     def test_exit_code_as_answer(self):
         r = make_repo()
-        self.assertEqual(repo.git_run(["ls-files", "--error-unmatch", "f.txt"], r).returncode, 0)
-        self.assertNotEqual(repo.git_run(["ls-files", "--error-unmatch", "nope"], r).returncode, 0)
+        self.assertEqual(
+            repo.git_run(["ls-files", "--error-unmatch", "f.txt"], r).returncode, 0
+        )
+        self.assertNotEqual(
+            repo.git_run(["ls-files", "--error-unmatch", "nope"], r).returncode, 0
+        )
 
     def test_clean_and_dirty(self):
         r = make_repo()

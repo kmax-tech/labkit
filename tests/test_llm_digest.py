@@ -5,23 +5,31 @@ three months. For ollama backends `resolve` pulls the digest from /api/tags
 into the run config. The resolution is a pure function and is tested here
 against a real /api/tags payload excerpt (gammaweb, 2026-08-18).
 """
+
 import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))          # the package under test
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 from labkit import llm  # noqa: E402
 
-TAGS = {"models": [
-    {"name": "llama2:7b-chat", "model": "llama2:7b-chat",
-     "digest": "78e26419b4469263f75331927a00a0284ef6544c1975b826b15abdaef17bb962"},
-    {"name": "gpt-oss:latest", "model": "gpt-oss:latest",
-     "digest": "aa4295ac10c3b5e3b8b1d5c1c9f3f0a2ffffffffffffffffffffffffffffffff"},
-]}
+TAGS = {
+    "models": [
+        {
+            "name": "llama2:7b-chat",
+            "model": "llama2:7b-chat",
+            "digest": "78e26419b4469263f75331927a00a0284ef6544c1975b826b15abdaef17bb962",
+        },
+        {
+            "name": "gpt-oss:latest",
+            "model": "gpt-oss:latest",
+            "digest": "aa4295ac10c3b5e3b8b1d5c1c9f3f0a2ffffffffffffffffffffffffffffffff",
+        },
+    ]
+}
 
 
 class TestDigestLookup(unittest.TestCase):
-
     def test_exakter_name(self):
         self.assertEqual(llm._digest_from_tags(TAGS, "llama2:7b-chat"), "78e26419b446")
 
@@ -45,5 +53,8 @@ class TestPrefixedDigest(unittest.TestCase):
 
     def test_algorithm_prefix_is_not_part_of_the_pin(self):
         from labkit import llm
-        tags = {"models": [{"name": "gemma3-4b", "digest": "sha256:f8ceb1a2b3c4d5e6f7"}]}
+
+        tags = {
+            "models": [{"name": "gemma3-4b", "digest": "sha256:f8ceb1a2b3c4d5e6f7"}]
+        }
         self.assertEqual(llm._digest_from_tags(tags, "gemma3-4b"), "f8ceb1a2b3c4")

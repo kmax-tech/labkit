@@ -65,6 +65,7 @@ from labkit.scope_sha import imported_lib
 
 # --- source analysis ------------------------------------------------------
 
+
 class _FieldVisitor(ast.NodeVisitor):
     """Reads, writes, and which names this file builds as dicts itself.
 
@@ -94,7 +95,8 @@ class _FieldVisitor(ast.NodeVisitor):
         builds = isinstance(val, (ast.Dict, ast.DictComp)) or (
             isinstance(val, ast.Call)
             and isinstance(val.func, ast.Name)
-            and val.func.id in self.BUILDERS)
+            and val.func.id in self.BUILDERS
+        )
         if builds:
             for target in node.targets:
                 name = self._name_of(target)
@@ -107,8 +109,7 @@ class _FieldVisitor(ast.NodeVisitor):
         if isinstance(key, ast.Constant) and isinstance(key.value, str):
             holder = self._name_of(node.value)
             if isinstance(node.ctx, ast.Load):
-                self.reads.setdefault(
-                    key.value, (self._site(node.lineno), holder))
+                self.reads.setdefault(key.value, (self._site(node.lineno), holder))
             else:  # Store / Del — the field is being produced here
                 self.writes.add(key.value)
                 if holder:
@@ -129,7 +130,8 @@ class _FieldVisitor(ast.NodeVisitor):
                 if func.attr == "get":
                     self.reads.setdefault(
                         first.value,
-                        (self._site(node.lineno), self._name_of(func.value)))
+                        (self._site(node.lineno), self._name_of(func.value)),
+                    )
                 elif func.attr in ("setdefault", "pop"):
                     self.writes.add(first.value)
         for kw in node.keywords:  # dict(alpha=1) / Row(alpha=1) build fields
@@ -188,8 +190,12 @@ def data_keys(area: Path) -> tuple[set[str], list[str]]:
     """
     keys: set[str] = set()
     seen: list[str] = []
-    for pattern in ("data/**/*.jsonl", "data/**/*.json",
-                    "output/**/*.jsonl", "output/**/*.json"):
+    for pattern in (
+        "data/**/*.jsonl",
+        "data/**/*.json",
+        "output/**/*.jsonl",
+        "output/**/*.json",
+    ):
         for f in sorted(area.glob(pattern)):
             before = len(keys)
             try:
@@ -214,17 +220,33 @@ CONSUMER = re.compile(r"^(0[23]_|analysis)")
 
 # --- gate-label extraction ------------------------------------------------
 
-INFRA_VARS = frozenset({
-    "mode", "ext", "suffix", "key", "status", "encoding", "sep",
-    "format", "lang", "language", "scheme", "protocol", "method",
-    "dtype", "compression", "engine", "__name__",
-})
+INFRA_VARS = frozenset(
+    {
+        "mode",
+        "ext",
+        "suffix",
+        "key",
+        "status",
+        "encoding",
+        "sep",
+        "format",
+        "lang",
+        "language",
+        "scheme",
+        "protocol",
+        "method",
+        "dtype",
+        "compression",
+        "engine",
+        "__name__",
+    }
+)
 
 _NOISE_LITERAL = re.compile(
-    r"^(\.[a-z]{1,6}"       # file extensions: .json, .csv, .jsonl
-    r"|--?"                  # CLI flags: -v, --dry-run
-    r"|.*/"                  # paths: data/prepared/x
-    r"|https?:)"             # URLs
+    r"^(\.[a-z]{1,6}"  # file extensions: .json, .csv, .jsonl
+    r"|--?"  # CLI flags: -v, --dry-run
+    r"|.*/"  # paths: data/prepared/x
+    r"|https?:)"  # URLs
 )
 
 
@@ -259,7 +281,7 @@ class _ComparisonVisitor(ast.NodeVisitor):
                     if vals is not None:
                         self._const_defs[target.id] = (node.lineno, vals)
             elif isinstance(node, ast.ImportFrom) and node.module:
-                for alias in (node.names or []):
+                for alias in node.names or []:
                     name = alias.asname or alias.name
                     self._imports[name] = node.module
 
@@ -323,14 +345,18 @@ class _ComparisonVisitor(ast.NodeVisitor):
             if isinstance(op, (ast.Eq, ast.NotEq)):
                 op_str = "==" if isinstance(op, ast.Eq) else "!="
                 left_var = self._var_name(node.left) or "?"
-                if isinstance(comparator, ast.Constant) and isinstance(comparator.value, str):
+                if isinstance(comparator, ast.Constant) and isinstance(
+                    comparator.value, str
+                ):
                     self._add_literal(node.lineno, left_var, op_str, comparator.value)
                 else:
                     label = self._node_label(comparator)
                     if label:
                         self._add(node.lineno, left_var, op_str, self._resolve(label))
                 right_var = self._var_name(comparator) or "?"
-                if isinstance(node.left, ast.Constant) and isinstance(node.left.value, str):
+                if isinstance(node.left, ast.Constant) and isinstance(
+                    node.left.value, str
+                ):
                     self._add_literal(node.lineno, right_var, op_str, node.left.value)
 
             elif isinstance(op, (ast.In, ast.NotIn)):
@@ -355,8 +381,11 @@ class _ComparisonVisitor(ast.NodeVisitor):
 
     def visit_Call(self, node: ast.Call) -> None:
         func = node.func
-        if (isinstance(func, ast.Attribute) and func.attr == "get"
-                and len(node.args) >= 2):
+        if (
+            isinstance(func, ast.Attribute)
+            and func.attr == "get"
+            and len(node.args) >= 2
+        ):
             default = node.args[1]
             if isinstance(default, ast.Constant) and isinstance(default.value, str):
                 holder = self._var_name(func.value) or "?"
@@ -387,11 +416,14 @@ def gate_labels(area: Path) -> str:
             all_entries.append((c.name, lineno, var, op, value_desc))
         all_filtered.extend(v._filtered)
 
-    lines = ["## Gate labels (mechanically extracted — judge them against "
-             "the prompt)", ""]
+    lines = [
+        "## Gate labels (mechanically extracted — judge them against the prompt)",
+        "",
+    ]
     if all_entries:
-        lines.append("Comparisons in evaluation code "
-                      "(variable · operator · value · source):")
+        lines.append(
+            "Comparisons in evaluation code (variable · operator · value · source):"
+        )
         for fname, lineno, var, op, value_desc in all_entries:
             lines.append(f"  {fname}:{lineno}  {var} {op} {value_desc}")
     else:
@@ -399,8 +431,10 @@ def gate_labels(area: Path) -> str:
 
     if all_filtered:
         vars_summary = ", ".join(sorted(set(all_filtered)))
-        lines.append(f"\n({len(all_filtered)} comparison(s) filtered as "
-                     f"infrastructure: {vars_summary})")
+        lines.append(
+            f"\n({len(all_filtered)} comparison(s) filtered as "
+            f"infrastructure: {vars_summary})"
+        )
     lines.append("")
     return "\n".join(lines) + "\n"
 
@@ -432,13 +466,15 @@ def check_intent_ids(area: Path, protocol: Path) -> list[str]:
             f"BLOCKER · {protocol.name} · [{i.upper()}] is registered, but no "
             f"script mentions a '{i}'/'{i}_*' key · the run reports nothing "
             f"for this promise and the metrics check fails after the tokens "
-            f"are spent · §2.A1a · implement the key or drop the id")
+            f"are spent · §2.A1a · implement the key or drop the id"
+        )
     for i in sorted(set(unmistakable) - registered):
         findings.append(
             f"WARNING · {unmistakable[i][0]} · key '{i}_*' is in the intent-id "
             f"namespace, but the protocol registers no [{i.upper()}] · a "
             f"number gets reported that nobody registered · §2.A1a · register "
-            f"it or rename the key")
+            f"it or rename the key"
+        )
     return findings
 
 
@@ -454,8 +490,9 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[str]:
     try:
         block = promises.parse_block(text)
     except promises.PromiseError as exc:
-        return [f"BLOCKER · {protocol.name} · promise block: {exc} · §2.A1a · "
-                f"fix the block"]
+        return [
+            f"BLOCKER · {protocol.name} · promise block: {exc} · §2.A1a · fix the block"
+        ]
     if block is None:
         return []
     out = []
@@ -464,16 +501,20 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[str]:
         try:
             promises.declared_scope_sha(area, p.scope)
         except promises.PromiseError as exc:
-            out.append(f"BLOCKER · {protocol.name} · [{p.id}] declared scope: "
-                       f"{exc} · runlog refuses the run · fix the scope")
+            out.append(
+                f"BLOCKER · {protocol.name} · [{p.id}] declared scope: "
+                f"{exc} · runlog refuses the run · fix the scope"
+            )
         out += constant_copies(area, protocol, p)
         if p.key not in keys:
             near = sorted(k for k in keys if k.startswith(p.id.lower()))
             hint = f" (the code has {', '.join(near)})" if near else ""
-            out.append(f"BLOCKER · {protocol.name} · [{p.id}] declares key "
-                       f"'{p.key}', which no script mentions{hint} · intent-check "
-                       f"fails after the run · report the declared key or fix "
-                       f"the block")
+            out.append(
+                f"BLOCKER · {protocol.name} · [{p.id}] declares key "
+                f"'{p.key}', which no script mentions{hint} · intent-check "
+                f"fails after the run · report the declared key or fix "
+                f"the block"
+            )
     return out
 
 
@@ -507,23 +548,36 @@ def constant_copies(area: Path, protocol: Path, p: "promises.Promise") -> list[s
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
-            targets = (node.targets if isinstance(node, ast.Assign)
-                       else [node.target] if isinstance(node, ast.AnnAssign) and node.value
-                       else [])
+            targets = (
+                node.targets
+                if isinstance(node, ast.Assign)
+                else [node.target]
+                if isinstance(node, ast.AnnAssign) and node.value
+                else []
+            )
             for target in targets:
                 if not (isinstance(target, ast.Name) and target.id in p.constants):
                     continue
-                assert isinstance(node, (ast.Assign, ast.AnnAssign)) and node.value is not None
+                assert (
+                    isinstance(node, (ast.Assign, ast.AnnAssign))
+                    and node.value is not None
+                )
                 value = _literal(node.value)
                 if value is _NOT_LITERAL:
                     continue
                 declared = p.constants[target.id]
-                same = "the same value" if value == declared else f"the block says {declared!r}"
-                out.append(f"WARNING · {protocol.name} · [{p.id}] "
-                           f"{path.relative_to(area).as_posix()}:{node.lineno} sets "
-                           f"{target.id} = {value!r} itself ({same}) · a copy judges by "
-                           f"an unregistered value once they drift · read it with "
-                           f"promises.constants(PROTOCOL, \"{p.id}\")[\"{target.id}\"]")
+                same = (
+                    "the same value"
+                    if value == declared
+                    else f"the block says {declared!r}"
+                )
+                out.append(
+                    f"WARNING · {protocol.name} · [{p.id}] "
+                    f"{path.relative_to(area).as_posix()}:{node.lineno} sets "
+                    f"{target.id} = {value!r} itself ({same}) · a copy judges by "
+                    f"an unregistered value once they drift · read it with "
+                    f'promises.constants(PROTOCOL, "{p.id}")["{target.id}"]'
+                )
     return out
 
 
@@ -545,32 +599,43 @@ def schema_facts(area: Path) -> str:
     """
     producers, consumers = split_stages(area)
     known, files = data_keys(area)
-    lines = ["## Schema facts (mechanically extracted — judge them, they are "
-             "not findings)", ""]
-    lines.append(f"Data keys present in the area's own JSON(L) rows "
-                 f"({', '.join(files) if files else 'no data materialized yet'}):")
+    lines = [
+        "## Schema facts (mechanically extracted — judge them, they are not findings)",
+        "",
+    ]
+    lines.append(
+        f"Data keys present in the area's own JSON(L) rows "
+        f"({', '.join(files) if files else 'no data materialized yet'}):"
+    )
     lines.append("  " + (", ".join(sorted(known)) if known else "—"))
     lines.append("")
-    lines.append("Fields read by the analysis stage, with the variable read "
-                 "from — a name absent from the list above is either staged "
-                 "by an earlier step, read from another area, or a defect:")
+    lines.append(
+        "Fields read by the analysis stage, with the variable read "
+        "from — a name absent from the list above is either staged "
+        "by an earlier step, read from another area, or a defect:"
+    )
     for c in consumers:
         v = scan(c)
         if v is None:
             lines.append(f"  {c.name}: DOES NOT PARSE")
             continue
         unexplained = sorted(
-            f for f, (_, holder) in v.reads.items()
-            if f not in known and f not in v.writes
-            and FIELDISH.match(f) and holder and holder not in v.built)
+            f
+            for f, (_, holder) in v.reads.items()
+            if f not in known
+            and f not in v.writes
+            and FIELDISH.match(f)
+            and holder
+            and holder not in v.built
+        )
         if unexplained:
             for f in unexplained:
                 site, holder = v.reads[f]
-                lines.append(f"  {site}: '{f}' from `{holder}` — not in the "
-                             f"area's data")
+                lines.append(
+                    f"  {site}: '{f}' from `{holder}` — not in the area's data"
+                )
         else:
-            lines.append(f"  {c.name}: every read field is present in the "
-                         f"area's data")
+            lines.append(f"  {c.name}: every read field is present in the area's data")
     return "\n".join(lines) + "\n"
 
 
@@ -588,18 +653,25 @@ SEVERITY_LEGEND = (
     "  the frozen criterion.\n"
     "- WARNING: a real problem without demonstrated influence on the\n"
     "  current number.\n"
-    "- NOTE: failure scenario only under a condition (\"if X is changed,\n"
-    "  then ...\") — not triggerable on the code as it stands.\n"
+    '- NOTE: failure scenario only under a condition ("if X is changed,\n'
+    '  then ...") — not triggerable on the code as it stands.\n'
     "\n"
     "The grade says how close the failure scenario sits to the current\n"
     "run; a finding WITHOUT a scenario (which reported number goes wrong,\n"
-    "with which input) exists at no grade.\n")
+    "with which input) exists at no grade.\n"
+)
+
 
 def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
-    parts = [f"# AUDIT BUNDLE · area {area.name}\n\n",
-             SEVERITY_LEGEND, "\n",
-             schema_facts(area), "\n",
-             gate_labels(area), "\n"]
+    parts = [
+        f"# AUDIT BUNDLE · area {area.name}\n\n",
+        SEVERITY_LEGEND,
+        "\n",
+        schema_facts(area),
+        "\n",
+        gate_labels(area),
+        "\n",
+    ]
     files = [protocol]
     files += sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py"))
     files += imported_lib(area, repo)
@@ -628,7 +700,9 @@ PLACEHOLDER_IN_PROMPT = re.compile(r"\{[^{}]*\}")
 
 def check_parser_fixtures(area: Path, repo: Path) -> list[str]:
     """Every `parse_*` in the area's scripts is named in some test file."""
-    scripts = sorted((area / "scripts").glob("*.py")) if (area / "scripts").is_dir() else []
+    scripts = (
+        sorted((area / "scripts").glob("*.py")) if (area / "scripts").is_dir() else []
+    )
     parsers: dict[str, Path] = {}
     for sp in scripts:
         for m in PARSE_DEF.finditer(sp.read_text(encoding="utf-8")):
@@ -636,15 +710,21 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[str]:
     if not parsers:
         return []
     tests_dir = repo / "tests"
-    test_text = "\n".join(t.read_text(encoding="utf-8")
-                          for t in sorted(tests_dir.glob("test_*.py"))) if tests_dir.is_dir() else ""
+    test_text = (
+        "\n".join(
+            t.read_text(encoding="utf-8") for t in sorted(tests_dir.glob("test_*.py"))
+        )
+        if tests_dir.is_dir()
+        else ""
+    )
     findings = []
     for name, sp in sorted(parsers.items()):
         if not re.search(rf"\b{re.escape(name)}\b", test_text):
             findings.append(
                 f"BLOCKER · {sp.name} · {name}() has no test under {tests_dir.name}/ · "
                 f"a parser fails silently into a wrong number · give it a fixture "
-                f"with real raw answers (§2.A13, 2026-10-05)")
+                f"with real raw answers (§2.A13, 2026-10-05)"
+            )
     return findings
 
 
@@ -656,23 +736,28 @@ def _string_of(node: ast.AST) -> str | None:
         a, b = _string_of(node.left), _string_of(node.right)
         return a + b if a is not None and b is not None else None
     if isinstance(node, ast.JoinedStr):
-        return None   # an f-string renders at run time; nothing to hold the block to
+        return None  # an f-string renders at run time; nothing to hold the block to
     return None
 
 
 def prompt_constants(area: Path) -> dict[str, str]:
     """`PROMPT` / `PROMPT_<VARIANT>` string constants across the area's scripts."""
     out: dict[str, str] = {}
-    scripts = sorted((area / "scripts").glob("*.py")) if (area / "scripts").is_dir() else []
+    scripts = (
+        sorted((area / "scripts").glob("*.py")) if (area / "scripts").is_dir() else []
+    )
     for sp in scripts:
         try:
             tree = ast.parse(sp.read_text(encoding="utf-8"))
         except SyntaxError:
             continue
         for node in tree.body:
-            if isinstance(node, ast.Assign) and len(node.targets) == 1 \
-                    and isinstance(node.targets[0], ast.Name) \
-                    and PROMPT_NAME.match(node.targets[0].id):
+            if (
+                isinstance(node, ast.Assign)
+                and len(node.targets) == 1
+                and isinstance(node.targets[0], ast.Name)
+                and PROMPT_NAME.match(node.targets[0].id)
+            ):
                 text = _string_of(node.value)
                 if text is not None:
                     out[node.targets[0].id] = text
@@ -693,7 +778,7 @@ def prompt_blocks(protocol: Path) -> list[str]:
                 k = j + 1
                 while k < len(lines) and not FENCE.match(lines[k]):
                     k += 1
-                blocks.append("\n".join(lines[j + 1:k]))
+                blocks.append("\n".join(lines[j + 1 : k]))
                 i = k
         i += 1
     return blocks
@@ -706,23 +791,30 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
     no `{placeholder}` must appear, stripped, in some prompt block. A block
     rendered with real data passes; a transcript that drifted does not."""
     consts = prompt_constants(area)
-    blocks = [b for b in prompt_blocks(protocol) if "<" not in b.splitlines()[0][:1]] \
-        if consts else []
+    blocks = (
+        [b for b in prompt_blocks(protocol) if "<" not in b.splitlines()[0][:1]]
+        if consts
+        else []
+    )
     blocks = [b for b in blocks if not b.strip().startswith("<")]
     if not consts or not blocks:
         return []
     have = {ln.strip() for b in blocks for ln in b.splitlines() if ln.strip()}
     findings = []
     for name, text in sorted(consts.items()):
-        fixed = [ln.strip() for ln in text.splitlines()
-                 if ln.strip() and not PLACEHOLDER_IN_PROMPT.search(ln)]
+        fixed = [
+            ln.strip()
+            for ln in text.splitlines()
+            if ln.strip() and not PLACEHOLDER_IN_PROMPT.search(ln)
+        ]
         missing = [ln for ln in fixed if ln not in have]
         if fixed and missing:
             findings.append(
                 f"BLOCKER · {protocol.name} · prompt block drifted from {name}: "
                 f"{len(missing)} of {len(fixed)} fixed line(s) missing, e.g. "
                 f"{missing[0][:60]!r} · paste the rendered `--show` output, not a "
-                f"transcript (§2.A4, 2026-10-05)")
+                f"transcript (§2.A4, 2026-10-05)"
+            )
     return findings
 
 
@@ -730,10 +822,14 @@ def main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: code-check <AREA> [--protocol FILE] [--bundle FILE]")
-        print("  --protocol FILE  the PROTOCOL-*.md to check against "
-              "(required once the area holds more than one)")
-        print("  --bundle FILE    pack sources + schema facts + gate labels "
-              "for the audit agent")
+        print(
+            "  --protocol FILE  the PROTOCOL-*.md to check against "
+            "(required once the area holds more than one)"
+        )
+        print(
+            "  --bundle FILE    pack sources + schema facts + gate labels "
+            "for the audit agent"
+        )
         return 0 if argv else 2
 
     area = Path(argv[0])
@@ -766,8 +862,10 @@ def main(argv: list[str]) -> int:
         return 2
     elif len(protocols) > 1:
         # Fail closed, never pick: see repo.area_protocols.
-        print(f"code-check: {len(protocols)} protocols in {area} — name one "
-              f"with --protocol FILE:")
+        print(
+            f"code-check: {len(protocols)} protocols in {area} — name one "
+            f"with --protocol FILE:"
+        )
         for p in protocols:
             print(f"  {p}")
         return 2
@@ -775,27 +873,37 @@ def main(argv: list[str]) -> int:
         protocol = protocols[0]
 
     repo = layout_root(area)
-    findings = (check_intent_ids(area, protocol)
-                + check_parser_fixtures(area, repo)
-                + check_prompt_drift(area, protocol))
+    findings = (
+        check_intent_ids(area, protocol)
+        + check_parser_fixtures(area, repo)
+        + check_prompt_drift(area, protocol)
+    )
     for f in findings:
         print(f)
 
     if bundle_to is not None:
         n = write_bundle(area, layout_root(area), protocol, bundle_to)
-        print(f"bundle: {n} file(s) -> {bundle_to} "
-              f"({bundle_to.stat().st_size // 1024} KB)")
+        print(
+            f"bundle: {n} file(s) -> {bundle_to} "
+            f"({bundle_to.stat().st_size // 1024} KB)"
+        )
 
     blockers = sum(1 for f in findings if f.startswith("BLOCKER"))
     warnings = sum(1 for f in findings if f.startswith("WARNING"))
-    parts = [f"intent-ids: {blockers} blocker(s), {warnings} warning(s) "
-             f"(incl. parser fixtures, prompt drift)"]
+    parts = [
+        f"intent-ids: {blockers} blocker(s), {warnings} warning(s) "
+        f"(incl. parser fixtures, prompt drift)"
+    ]
     if bundle_to is not None:
-        parts.append("schema + gate labels + placeholders extracted into "
-                     "the bundle for the code-check agent")
+        parts.append(
+            "schema + gate labels + placeholders extracted into "
+            "the bundle for the code-check agent"
+        )
     else:
-        parts.append("schema, gate labels, placeholders: not checked "
-                     "(need --bundle for the code-check agent)")
+        parts.append(
+            "schema, gate labels, placeholders: not checked "
+            "(need --bundle for the code-check agent)"
+        )
     print(" — ".join(parts))
     return 1 if findings else 0
 

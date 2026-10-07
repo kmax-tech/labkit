@@ -62,12 +62,14 @@ def _lib_names(path: Path, libdir: Path) -> set[str]:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 parts = alias.name.split(".")
-                names.add(parts[1] if parts[0] == "lib" and len(parts) > 1 else parts[0])
+                names.add(
+                    parts[1] if parts[0] == "lib" and len(parts) > 1 else parts[0]
+                )
         elif isinstance(node, ast.ImportFrom):
             parts = (node.module or "").split(".") if node.module else []
-            if node.level and inside_lib:              # from . import x / from .x import y
+            if node.level and inside_lib:  # from . import x / from .x import y
                 names |= {parts[0]} if parts else {a.name for a in node.names}
-            elif parts and parts[0] == "lib":          # from lib import x / from lib.x import y
+            elif parts and parts[0] == "lib":  # from lib import x / from lib.x import y
                 names |= {parts[1]} if len(parts) > 1 else {a.name for a in node.names}
             elif parts:
                 names.add(parts[0])
@@ -138,9 +140,12 @@ def scope_sha(files: list[Path], pin: str | None, root: Path) -> str:
     return h.hexdigest()[:DIGEST_CHARS]
 
 
-def area_stamp(area: Path, extra: list[Path] | tuple[Path, ...] = (),
-               globs: tuple[str, ...] = AREA_GLOBS, use_pin: bool = True,
-               ) -> tuple[str, list[Path], tuple[str, str] | None]:
+def area_stamp(
+    area: Path,
+    extra: list[Path] | tuple[Path, ...] = (),
+    globs: tuple[str, ...] = AREA_GLOBS,
+    use_pin: bool = True,
+) -> tuple[str, list[Path], tuple[str, str] | None]:
     """(sha, files, pin) of an area: its scripts, the repo-local lib modules
     they import, `extra` files, and the labkit pin. Raises FileNotFoundError
     naming a missing file, ValueError when there is nothing to stamp."""
@@ -150,7 +155,9 @@ def area_stamp(area: Path, extra: list[Path] | tuple[Path, ...] = (),
     if missing:
         raise FileNotFoundError(f"scope file(s) missing: {', '.join(missing)}")
     if not files:
-        raise ValueError(f"no scope files under {area} ({', '.join(globs)}) and none named")
+        raise ValueError(
+            f"no scope files under {area} ({', '.join(globs)}) and none named"
+        )
     pin = find_pin(area.resolve()) if use_pin else None
     return scope_sha(files, pin[1] if pin else None, root), files, pin
 
@@ -173,28 +180,38 @@ def audit_stamp_drift(area: Path, audit_line: str) -> str | None:
         return None
     m = AUDIT_SHA.search(line)
     if not m:
-        return ("the audit line names no `scope sha <12 hex>` — copy the stamp "
-                "`labkit-audit` or `scope-sha` printed for the audited code")
+        return (
+            "the audit line names no `scope sha <12 hex>` — copy the stamp "
+            "`labkit-audit` or `scope-sha` printed for the audited code"
+        )
     try:
         now = area_stamp(area)[0]
     except (FileNotFoundError, ValueError) as exc:
         return f"the area cannot be stamped now ({exc})"
     if m.group(1) != now:
-        return (f"the audit saw scope sha {m.group(1)}, the code now stamps {now} — "
-                f"it changed after the audit: re-audit, or restamp once the change "
-                f"is decided")
+        return (
+            f"the audit saw scope sha {m.group(1)}, the code now stamps {now} — "
+            f"it changed after the audit: re-audit, or restamp once the change "
+            f"is decided"
+        )
     return None
 
 
 def main(argv: list[str]) -> int:
     if argv and argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
-        print("usage: scope-sha [AREA | --area DIR] [--globs PAT,...] [--no-pin] [FILE ...]")
+        print(
+            "usage: scope-sha [AREA | --area DIR] [--globs PAT,...] [--no-pin] [FILE ...]"
+        )
         print("  --area DIR       area directory (default: cwd)")
-        print("  --globs PAT,...  comma-separated globs for area scripts "
-              "(default: scripts/*.py,analysis/*.py)")
-        print("  FILE ...         extra files that determine the number; the "
-              "repo-local lib/ modules the scripts import are included already")
+        print(
+            "  --globs PAT,...  comma-separated globs for area scripts "
+            "(default: scripts/*.py,analysis/*.py)"
+        )
+        print(
+            "  FILE ...         extra files that determine the number; the "
+            "repo-local lib/ modules the scripts import are included already"
+        )
         print("  --no-pin         do not include the labkit pin line")
         return 0
 
@@ -223,7 +240,7 @@ def main(argv: list[str]) -> int:
             use_pin = False
             i += 1
             continue
-        if Path(a).is_dir():   # `scope-sha <AREA>`, like every other gate (2026-10-05)
+        if Path(a).is_dir():  # `scope-sha <AREA>`, like every other gate (2026-10-05)
             area = Path(a)
             i += 1
             continue

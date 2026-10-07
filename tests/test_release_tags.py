@@ -33,8 +33,9 @@ RELEASE_TAG = re.compile(r"^v(\d+\.\d+\.\d+)$")
 
 
 def _git(*args: str) -> str:
-    return subprocess.run(["git", *args], cwd=REPO, capture_output=True,
-                          text=True, timeout=20).stdout
+    return subprocess.run(
+        ["git", *args], cwd=REPO, capture_output=True, text=True, timeout=20
+    ).stdout
 
 
 def _declared_version(ref: str) -> str | None:
@@ -48,7 +49,6 @@ def _declared_version(ref: str) -> str | None:
 
 
 class TestReleaseTags(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         if not (REPO / ".git").exists():
@@ -57,8 +57,9 @@ class TestReleaseTags(unittest.TestCase):
 
     def test_there_are_release_tags_to_check(self):
         """Guard against the check quietly passing on an empty list."""
-        self.assertTrue(self.tags, "no vX.Y.Z tags found — is this a clone "
-                                   "without tags?")
+        self.assertTrue(
+            self.tags, "no vX.Y.Z tags found — is this a clone without tags?"
+        )
 
     def test_every_tag_names_the_version_its_commit_declares(self):
         for tag in self.tags:
@@ -69,8 +70,10 @@ class TestReleaseTags(unittest.TestCase):
                 if declared is None:
                     self.skipTest(f"{tag} predates pyproject.toml")
                 self.assertEqual(
-                    declared, m.group(1),
-                    f"{tag} points at a commit declaring {declared}")
+                    declared,
+                    m.group(1),
+                    f"{tag} points at a commit declaring {declared}",
+                )
 
     def test_the_package_keeps_no_second_version_literal(self):
         """`__version__` was a copy nobody read, kept in step by a test.
@@ -86,15 +89,17 @@ class TestReleaseTags(unittest.TestCase):
         literal that is wrong can be read; a derivation that is wrong is
         believed. So the package states no version at all."""
         import labkit
-        self.assertFalse(hasattr(labkit, "__version__"),
-                         "a version literal is back in labkit/__init__.py — "
-                         "pyproject.toml is the version, the commit is the "
-                         "identity")
+
+        self.assertFalse(
+            hasattr(labkit, "__version__"),
+            "a version literal is back in labkit/__init__.py — "
+            "pyproject.toml is the version, the commit is the "
+            "identity",
+        )
 
     def test_the_current_version_is_a_release_number(self):
         with (REPO / "pyproject.toml").open("rb") as f:
-            self.assertRegex(tomllib.load(f)["project"]["version"],
-                             r"^\d+\.\d+\.\d+$")
+            self.assertRegex(tomllib.load(f)["project"]["version"], r"^\d+\.\d+\.\d+$")
 
 
 if __name__ == "__main__":

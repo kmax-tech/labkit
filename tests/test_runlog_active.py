@@ -9,12 +9,13 @@ as running because the OS had recycled its PID to a macOS service
 (`RemoteManagement`). An existence check via `os.kill(pid, 0)` cannot
 notice that in principle.
 """
+
 import os
 import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))          # the package under test
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
 from labkit import runlog  # noqa: E402
 from labkit.runs import _command_of, is_alive  # noqa: E402
@@ -26,12 +27,13 @@ PS = _command_of(os.getpid()) is not None
 
 
 class TestIsAlive(unittest.TestCase):
-
-    @unittest.skipUnless(PS, "ps unavailable here — the integration has nothing to read")
+    @unittest.skipUnless(
+        PS, "ps unavailable here — the integration has nothing to read"
+    )
     def test_our_own_process_counts_as_alive_for_its_own_script(self):
         cmd = _command_of(os.getpid())
         assert cmd is not None
-        token = next(t for t in cmd.split() if t)          # any real token
+        token = next(t for t in cmd.split() if t)  # any real token
         self.assertTrue(is_alive(os.getpid(), token))
 
     def test_a_recycled_pid_is_not_reported_as_running(self):
@@ -39,7 +41,7 @@ class TestIsAlive(unittest.TestCase):
         self.assertFalse(is_alive(os.getpid(), "05_refusal.py"))
 
     def test_a_dead_pid_is_false(self):
-        dead = 999_999                                     # practically surely free
+        dead = 999_999  # practically surely free
         try:
             os.kill(dead, 0)
         except ProcessLookupError:
@@ -55,7 +57,7 @@ class TestIsAlive(unittest.TestCase):
 
     def test_a_missing_pid_field_is_none(self):
         self.assertIsNone(is_alive(None, "x.py"))
-        self.assertIsNone(is_alive("81892", "x.py"))      # string, not int
+        self.assertIsNone(is_alive("81892", "x.py"))  # string, not int
 
 
 if __name__ == "__main__":
@@ -71,6 +73,7 @@ class TestOutputsJson(unittest.TestCase):
         import json
         import tempfile
         from pathlib import Path
+
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             out = d / "output" / "x.jsonl"
@@ -78,8 +81,9 @@ class TestOutputsJson(unittest.TestCase):
             with runlog.run("t", config={}, base_dir=d) as r:
                 out.write_text("a\nb\n", encoding="utf-8")
                 r.output(out)
-            oj = json.loads(next((d / "runs").glob("*/outputs.json")
-                                 ).read_text(encoding="utf-8"))
+            oj = json.loads(
+                next((d / "runs").glob("*/outputs.json")).read_text(encoding="utf-8")
+            )
             self.assertEqual(oj[0]["lines"], 2)
             self.assertEqual(len(oj[0]["sha256"]), 16)
 
@@ -87,12 +91,14 @@ class TestOutputsJson(unittest.TestCase):
         import json
         import tempfile
         from pathlib import Path
+
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             with runlog.run("t", config={}, base_dir=d) as r:
                 r.output(d / "output" / "nie-geschrieben.jsonl")
-            oj = json.loads(next((d / "runs").glob("*/outputs.json")
-                                 ).read_text(encoding="utf-8"))
+            oj = json.loads(
+                next((d / "runs").glob("*/outputs.json")).read_text(encoding="utf-8")
+            )
             self.assertIsNone(oj[0]["sha256"])
             self.assertIn("absent", oj[0]["note"])
 
@@ -105,9 +111,12 @@ class TestUntrackedSourceSnapshot(unittest.TestCase):
 
     def _repo(self, d):
         import subprocess
-        for cmd in (["git", "init", "-q"],
-                    ["git", "config", "user.email", "t@t"],
-                    ["git", "config", "user.name", "t"]):
+
+        for cmd in (
+            ["git", "init", "-q"],
+            ["git", "config", "user.email", "t@t"],
+            ["git", "config", "user.name", "t"],
+        ):
             subprocess.run(cmd, cwd=d, capture_output=True)
 
     def test_untracked_siblings_are_copied_tracked_ones_not(self):
@@ -116,6 +125,7 @@ class TestUntrackedSourceSnapshot(unittest.TestCase):
         import sys
         import tempfile
         from pathlib import Path
+
         with tempfile.TemporaryDirectory() as td:
             d = Path(td)
             self._repo(d)
@@ -128,7 +138,9 @@ class TestUntrackedSourceSnapshot(unittest.TestCase):
             tracked.write_text("# tracked\n")
             (scripts / "output").mkdir()
             (scripts / "output" / "x.jsonl").write_text("{}\n")
-            subprocess.run(["git", "add", "scripts/committed.py"], cwd=d, capture_output=True)
+            subprocess.run(
+                ["git", "add", "scripts/committed.py"], cwd=d, capture_output=True
+            )
             subprocess.run(["git", "commit", "-qm", "x"], cwd=d, capture_output=True)
             old_argv = sys.argv[0]
             sys.argv[0] = str(entry)
@@ -138,13 +150,17 @@ class TestUntrackedSourceSnapshot(unittest.TestCase):
             finally:
                 sys.argv[0] = old_argv
             run_dir = next((d / "runs").glob("*"))
-            copied = sorted(p.name for p in (run_dir / "source-untracked").rglob("*.py"))
+            copied = sorted(
+                p.name for p in (run_dir / "source-untracked").rglob("*.py")
+            )
             self.assertIn("helper.py", copied)
-            self.assertIn("01_measure.py", copied)     # the entry itself is untracked too
-            self.assertNotIn("committed.py", copied)   # tracked -> the diff's business
-            self.assertEqual([], [p.name for p in
-                                  (run_dir / "source-untracked").rglob("*.jsonl")],
-                             "output/ must not enter the source snapshot")
+            self.assertIn("01_measure.py", copied)  # the entry itself is untracked too
+            self.assertNotIn("committed.py", copied)  # tracked -> the diff's business
+            self.assertEqual(
+                [],
+                [p.name for p in (run_dir / "source-untracked").rglob("*.jsonl")],
+                "output/ must not enter the source snapshot",
+            )
             cfg = json.loads((run_dir / "config.json").read_text(encoding="utf-8"))
             self.assertIn("helper.py", cfg["untracked_sources"])
 
@@ -152,6 +168,7 @@ class TestUntrackedSourceSnapshot(unittest.TestCase):
         import sys
         import tempfile
         from pathlib import Path
+
         with tempfile.TemporaryDirectory() as td:
             d = Path(td)
             entry = d / "x.py"
@@ -164,7 +181,6 @@ class TestUntrackedSourceSnapshot(unittest.TestCase):
             finally:
                 sys.argv[0] = old_argv
 
-
     def test_a_tracked_entry_does_not_trigger(self):
         # Area committed once -> from then on "commit before the run" applies,
         # not copying; a snapshot that keeps firing would hoover up data
@@ -173,6 +189,7 @@ class TestUntrackedSourceSnapshot(unittest.TestCase):
         import sys
         import tempfile
         from pathlib import Path
+
         with tempfile.TemporaryDirectory() as td:
             d = Path(td)
             self._repo(d)

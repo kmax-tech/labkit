@@ -6,6 +6,7 @@ and unbound run). Since the head is data (TODO 8) the id is `[protocol] id`,
 read once by `protocol_block.head`: a malformed id is a BlockError naming
 the field for every consumer, a placeholder reads as None (unbound).
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -65,16 +66,21 @@ class Identity(unittest.TestCase):
 
     def test_runlog_warns_on_an_unstamped_id(self):
         area = Path(tempfile.mkdtemp())
-        (area / "PROTOCOL-x.md").write_text(READABLE["placeholder"][0], encoding="utf-8")
+        (area / "PROTOCOL-x.md").write_text(
+            READABLE["placeholder"][0], encoding="utf-8"
+        )
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             runlog._protocol_binding(area, None)
         self.assertIn("carries no stamped id", buf.getvalue())
 
     def test_no_second_reader_left(self):
-        for mod, name in ((intent_check, "PROTOCOL_ID_IN_FILE"), (runlog, "PROTOCOL_ID_IN_FILE"),
-                          (protocol_check, "protocol_identity"),
-                          (protocol_check, "protocol_id_of")):
+        for mod, name in (
+            (intent_check, "PROTOCOL_ID_IN_FILE"),
+            (runlog, "PROTOCOL_ID_IN_FILE"),
+            (protocol_check, "protocol_identity"),
+            (protocol_check, "protocol_id_of"),
+        ):
             with self.subTest(f"{mod.__name__}.{name}"):
                 self.assertFalse(hasattr(mod, name))
 

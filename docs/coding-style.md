@@ -40,7 +40,7 @@ for row in rows:
 
 # Good — a bad row stops you now, while you can still see why
 for row in rows:
-    items.append(parse(row))     # raises on malformed input
+    items.append(parse(row))  # raises on malformed input
 ```
 
 - No bare `except:` and no `except Exception: pass`. Catch only the specific
@@ -105,6 +105,7 @@ between you and a **parser bug that looks exactly like a model error**.
 ```python
 def test_parse_answer_rejects_ambiguous_output() -> None:
     assert parse_answer("pro, or maybe con") == "?"
+
 
 def test_average_score_macro_weights_classes_equally() -> None:
     stats = {"a": ClassStats(score=1.0, n=1), "b": ClassStats(score=0.0, n=99)}
@@ -305,14 +306,17 @@ path. Those are the branches that otherwise only ever execute in production:
 ```python
 def do_GET(self) -> None:
     if self.path.endswith("/NextDocument"):
-        if not cls.hiccuped:          # real devices return busy mid-job
+        if not cls.hiccuped:  # real devices return busy mid-job
             cls.hiccuped = True
             return self._send(503)
         ...
 
+
 def do_POST(self) -> None:
     # Deliberately wrong host, as some firmwares really do send.
-    return self._send(201, b"", extra={"Location": "http://192.0.2.99/eSCL/ScanJobs/x1"})
+    return self._send(
+        201, b"", extra={"Location": "http://192.0.2.99/eSCL/ScanJobs/x1"}
+    )
 ```
 
 - Keep the fake beside the tests, in the same language, with no new dependency
@@ -342,7 +346,7 @@ def deliver(pdf: bytes, target: Path) -> Path:
     TMPDIR.mkdir(exist_ok=True)
     staged = TMPDIR / f".{target.name}.{os.getpid()}{random.randrange(1 << 20):05x}"
     staged.write_bytes(pdf)
-    os.replace(staged, target)   # rename is atomic; a write is not
+    os.replace(staged, target)  # rename is atomic; a write is not
     return target
 ```
 

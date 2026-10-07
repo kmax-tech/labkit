@@ -7,6 +7,7 @@ sys.modules, so the package's __main__ block never ran. A listing command
 whose silent failure is indistinguishable from "no open runs" must prove that
 it prints.
 """
+
 import contextlib
 import io
 import json
@@ -15,13 +16,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))          # the package under test
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
 from labkit import runlog  # noqa: E402
 
 
 class TestCli(unittest.TestCase):
-
     def _run_main(self, argv):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
@@ -38,9 +38,17 @@ class TestCli(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             run_dir = Path(d) / "runs" / "20260906-120000-probe"
             run_dir.mkdir(parents=True)
-            (run_dir / "config.json").write_text(json.dumps(
-                {"schema_version": 2, "pid": 999_999, "script": "01_measure.py",
-                 "config": {"items": "data/prepared/x.jsonl"}}), encoding="utf-8")
+            (run_dir / "config.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 2,
+                        "pid": 999_999,
+                        "script": "01_measure.py",
+                        "config": {"items": "data/prepared/x.jsonl"},
+                    }
+                ),
+                encoding="utf-8",
+            )
             code, out = self._run_main([d])
             self.assertEqual(code, 0)
             self.assertIn("20260906-120000-probe", out)
@@ -60,8 +68,9 @@ class TestCli(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             run_dir = Path(d) / "runs" / "20260906-120000-done"
             run_dir.mkdir(parents=True)
-            (run_dir / "config.json").write_text('{"schema_version": 2}',
-                                                 encoding="utf-8")
+            (run_dir / "config.json").write_text(
+                '{"schema_version": 2}', encoding="utf-8"
+            )
             (run_dir / "metrics.json").write_text("{}", encoding="utf-8")
             (run_dir / "completion.json").write_text("{}", encoding="utf-8")
             code, out = self._run_main([d])

@@ -29,6 +29,7 @@ What it runs, in order:
 What it does NOT do: fill fields, edit the protocol, or commit. It is a
 read-only gate.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -65,7 +66,9 @@ def criterion_n_findings(run_dir: Path) -> list[str]:
     if not metrics_file.is_file():
         return []
     metrics = json.loads(metrics_file.read_text(encoding="utf-8"))
-    ns = {k: v for k, v in metrics.items() if CRITERION_N.match(k) and isinstance(v, int)}
+    ns = {
+        k: v for k, v in metrics.items() if CRITERION_N.match(k) and isinstance(v, int)
+    }
     if not ns:
         return []
     cfg = read_run_config(run_dir) or {}
@@ -79,15 +82,19 @@ def criterion_n_findings(run_dir: Path) -> list[str]:
             if isinstance(o.get("lines"), int):
                 counts[f"{Path(o['path']).name} lines"] = o["lines"]
     if not counts:
-        return [f"{', '.join(sorted(ns))} present, but the run recorded no input count "
-                f"(no data= rows, no output lines) to hold them to"]
+        return [
+            f"{', '.join(sorted(ns))} present, but the run recorded no input count "
+            f"(no data= rows, no output lines) to hold them to"
+        ]
     out = []
     for k, n in sorted(ns.items()):
         if n not in counts.values():
-            out.append(f"{k} = {n} matches no recorded count "
-                       f"({', '.join(f'{a} = {b}' for a, b in sorted(counts.items()))}) — "
-                       f"a denominator that is not the input is the audits' most "
-                       f"frequent real finding")
+            out.append(
+                f"{k} = {n} matches no recorded count "
+                f"({', '.join(f'{a} = {b}' for a, b in sorted(counts.items()))}) — "
+                f"a denominator that is not the input is the audits' most "
+                f"frequent real finding"
+            )
     return out
 
 
@@ -98,26 +105,39 @@ def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]
     cfg = read_run_config(run_dir) or {}
     data = cfg.get("data") or {}
     if not data:
-        blockers.append("source not frozen — the run carries no `data=`; pass "
-                        "data={name: path} to runlog.run so sha and rows are recorded")
-    sources = [Path(v["path"]) for v in data.values() if isinstance(v, dict) and v.get("path")]
+        blockers.append(
+            "source not frozen — the run carries no `data=`; pass "
+            "data={name: path} to runlog.run so sha and rows are recorded"
+        )
+    sources = [
+        Path(v["path"]) for v in data.values() if isinstance(v, dict) and v.get("path")
+    ]
     outputs: list[Path] = []
     outputs_file = run_dir / "outputs.json"
     if outputs_file.is_file():
-        outputs = [Path(o["path"]) for o in json.loads(outputs_file.read_text(encoding="utf-8"))
-                   if o.get("path")]
+        outputs = [
+            Path(o["path"])
+            for o in json.loads(outputs_file.read_text(encoding="utf-8"))
+            if o.get("path")
+        ]
     else:
-        warnings.append("no outputs.json — the run registered no output file (run.output)")
+        warnings.append(
+            "no outputs.json — the run registered no output file (run.output)"
+        )
     repo = git_root(area)
     if repo is None:
-        warnings.append("not a git repository — cannot tell whether source and output are committed")
+        warnings.append(
+            "not a git repository — cannot tell whether source and output are committed"
+        )
         return blockers, warnings
     for f in sources:
         if not f.exists():
             blockers.append(f"{f} is gone — the run's rows cannot be re-derived")
         elif not _tracked(repo, f):
-            blockers.append(f"source {f} is not tracked in git — commit it, or the number "
-                            f"cannot be re-derived")
+            blockers.append(
+                f"source {f} is not tracked in git — commit it, or the number "
+                f"cannot be re-derived"
+            )
     # The output rows are born after the run, so on every first pass they are
     # untracked by construction: a warning that names the command, not a
     # blocker that sends the agent round the loop (2026-10-05, five probes).
@@ -125,8 +145,10 @@ def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]
         if not f.exists():
             blockers.append(f"{f} is gone — the run's rows cannot be re-derived")
         elif not _tracked(repo, f):
-            warnings.append(f"output {f.name} is not yet tracked — `git add {f}` before "
-                            f"the commit that cites the number")
+            warnings.append(
+                f"output {f.name} is not yet tracked — `git add {f}` before "
+                f"the commit that cites the number"
+            )
     return blockers, warnings
 
 
@@ -146,8 +168,10 @@ def run(area: Path, protocol: Path | None = None) -> int:
             print(f"finalize: no PROTOCOL-*.md in {area}")
             return 2
         if len(protocols) > 1:
-            print(f"finalize: {len(protocols)} protocols in {area} — name "
-                  f"one with --protocol FILE:")
+            print(
+                f"finalize: {len(protocols)} protocols in {area} — name "
+                f"one with --protocol FILE:"
+            )
             for p in protocols:
                 print(f"  {p}")
             return 2
@@ -192,13 +216,19 @@ def run(area: Path, protocol: Path | None = None) -> int:
                     print(f"  BLOCKER: {blocking}")
                     blockers += 1
                 newest_dir = mpath.parent
-                note = f" (skipped {skipped} newer bound run(s) without intent keys)" if skipped else ""
+                note = (
+                    f" (skipped {skipped} newer bound run(s) without intent keys)"
+                    if skipped
+                    else ""
+                )
                 print(f"  {newest_dir.name}: completed{note}")
                 cited = cited_runs(text)
                 if cited and newest_dir.name not in cited:
-                    print(f"  BLOCKER: \"Answer to the question\" cites {', '.join(cited)}, "
-                          f"but the run that answers is {newest_dir.name} — cite the run "
-                          f"the checks hold, or rerun")
+                    print(
+                        f'  BLOCKER: "Answer to the question" cites {", ".join(cited)}, '
+                        f"but the run that answers is {newest_dir.name} — cite the run "
+                        f"the checks hold, or rerun"
+                    )
                     blockers += 1
 
     # -- 2. intent-check ---------------------------------------------------
@@ -207,8 +237,11 @@ def run(area: Path, protocol: Path | None = None) -> int:
     if not reg:
         print("  no intent ids registered — nothing to check")
     else:
-        ic_args = [str(protocol)] + (["--metrics", str(newest_dir / "metrics.json")]
-                                     if newest_dir is not None else [])
+        ic_args = [str(protocol)] + (
+            ["--metrics", str(newest_dir / "metrics.json")]
+            if newest_dir is not None
+            else []
+        )
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             rc = intent_check_main(ic_args)
@@ -231,11 +264,15 @@ def run(area: Path, protocol: Path | None = None) -> int:
         else:
             drift = promises.scope_drift(recorded, area)
             for d in drift:
-                print(f"  BLOCKER: declared scope changed since {newest_dir.name}: "
-                      f"{d} — rerun before reporting")
+                print(
+                    f"  BLOCKER: declared scope changed since {newest_dir.name}: "
+                    f"{d} — rerun before reporting"
+                )
             if not drift:
-                print(f"  {len(recorded['ids'])} declared scope(s) unchanged "
-                      f"since {newest_dir.name}")
+                print(
+                    f"  {len(recorded['ids'])} declared scope(s) unchanged "
+                    f"since {newest_dir.name}"
+                )
             blockers += len(drift)
 
     # -- 3. open fields ----------------------------------------------------
@@ -281,12 +318,16 @@ def run(area: Path, protocol: Path | None = None) -> int:
     # -- summary -----------------------------------------------------------
     print()
     if blockers:
-        print(f"finalize: {blockers} blocker(s), {warnings} warning(s) "
-              f"— fix the blockers before reporting.")
+        print(
+            f"finalize: {blockers} blocker(s), {warnings} warning(s) "
+            f"— fix the blockers before reporting."
+        )
         return 1
     if warnings:
-        print(f"finalize: 0 blockers, {warnings} warning(s) — review "
-              f"the open fields before reporting.")
+        print(
+            f"finalize: 0 blockers, {warnings} warning(s) — review "
+            f"the open fields before reporting."
+        )
         return 0
     print("finalize: all clear.")
     return 0
@@ -325,8 +366,10 @@ def main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: finalize <AREA> [--protocol PROTOCOL-*.md]")
-        print("       finalize --if-reported PROTOCOL-*.md ...   (the commit gate: only "
-              "protocols whose answer cites a run)")
+        print(
+            "       finalize --if-reported PROTOCOL-*.md ...   (the commit gate: only "
+            "protocols whose answer cites a run)"
+        )
         return 0 if argv else 2
     if argv[0] == "--if-reported":
         return if_reported([Path(a) for a in argv[1:]])

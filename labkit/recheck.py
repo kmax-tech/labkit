@@ -20,6 +20,7 @@ cold agents got two of them wrong on the first try (2026-10-05):
 Any disagreement is a SystemExit with a sentence; the verdict names what
 was compared. Rules: docs/arbeitsstandard.md §2.D2, §2.D4.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -43,8 +44,8 @@ class Verdict:
     run_id: str
     out: Path
     keys_compared: int
-    grown: list[str]        # keys the recomputation has and the run did not
-    numbers: list[str]      # what the note was held to
+    grown: list[str]  # keys the recomputation has and the run did not
+    numbers: list[str]  # what the note was held to
 
 
 def run_dir(area: Path, run_id: str | None = None) -> Path:
@@ -68,16 +69,23 @@ def run_dir(area: Path, run_id: str | None = None) -> Path:
 def pin(run: Path, out: Path) -> None:
     """Refuse rows the chosen run did not write."""
     outputs = json.loads((run / "outputs.json").read_text(encoding="utf-8"))
-    recorded = next((o for o in outputs if Path(o["path"]).resolve() == out.resolve()), None)
+    recorded = next(
+        (o for o in outputs if Path(o["path"]).resolve() == out.resolve()), None
+    )
     if recorded is None:
-        raise SystemExit(f"recheck: run {run.name} did not register {out.name} as an output")
+        raise SystemExit(
+            f"recheck: run {run.name} did not register {out.name} as an output"
+        )
     if not out.is_file():
-        raise SystemExit(f"recheck: {out} is gone — the run's rows are not here to recompute from")
+        raise SystemExit(
+            f"recheck: {out} is gone — the run's rows are not here to recompute from"
+        )
     actual = hashlib.sha256(out.read_bytes()).hexdigest()
     if not recorded["sha256"] or not actual.startswith(recorded["sha256"]):
         raise SystemExit(
             f"recheck: {out.name} (sha {actual[:16]}) is not the file run {run.name} "
-            f"recorded ({recorded['sha256']}) — rerun the script or name that run")
+            f"recorded ({recorded['sha256']}) — rerun the script or name that run"
+        )
 
 
 def scopes_unchanged(run: Path, area: Path) -> None:
@@ -92,9 +100,11 @@ def scopes_unchanged(run: Path, area: Path) -> None:
     recorded = (runs.read_run_config(run) or {}).get("promises")
     changed = promises.scope_drift(recorded, area)
     if changed:
-        raise SystemExit(f"recheck: declared scope changed since run {run.name}: "
-                         + "; ".join(changed)
-                         + " — rerun, or recheck from that run's commit")
+        raise SystemExit(
+            f"recheck: declared scope changed since run {run.name}: "
+            + "; ".join(changed)
+            + " — rerun, or recheck from that run's commit"
+        )
 
 
 def block_unchanged(run: Path, area: Path) -> None:
@@ -108,9 +118,9 @@ def block_unchanged(run: Path, area: Path) -> None:
     cfg = runs.read_run_config(run) or {}
     pid = (cfg.get("protocol") or {}).get("id")
     if pid is None:
-        return                              # unbound: nothing to hold
+        return  # unbound: nothing to hold
     try:
-        protocol = protocol_block.find_by_id(area, pid)   # by id; the path goes stale
+        protocol = protocol_block.find_by_id(area, pid)  # by id; the path goes stale
         block = promises.parse_block(protocol.read_text(encoding="utf-8"))
     except (protocol_block.BlockError, promises.PromiseError) as exc:
         raise SystemExit(f"recheck: run {run.name}: {exc}") from exc
@@ -121,29 +131,43 @@ def block_unchanged(run: Path, area: Path) -> None:
 
 def rows_of(out: Path) -> list[dict]:
     """One JSON object per line; a leading `_meta` header line is skipped."""
-    rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()
-            if line.strip()]
+    rows = [
+        json.loads(line)
+        for line in out.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
     return [r for r in rows if "_meta" not in r]
 
 
-def agree(metrics: dict, recomputed: dict, ignore: frozenset[str] = LABKIT_KEYS) -> list[str]:
+def agree(
+    metrics: dict, recomputed: dict, ignore: frozenset[str] = LABKIT_KEYS
+) -> list[str]:
     """metrics.json against the recomputation; returns the keys that grew."""
     intent = {k for k in set(metrics) | set(recomputed) if INTENT_KEY.match(k)}
     one_sided = sorted(k for k in intent if (k in metrics) != (k in recomputed))
     vanished = sorted(set(metrics) - set(recomputed) - ignore)
     if one_sided or vanished:
-        raise SystemExit(f"recheck: metrics.json and the recomputation disagree — "
-                         f"intent keys on one side only {one_sided}, vanished {vanished}")
-    differing = sorted(k for k in recomputed if k in metrics and recomputed[k] != metrics[k])
+        raise SystemExit(
+            f"recheck: metrics.json and the recomputation disagree — "
+            f"intent keys on one side only {one_sided}, vanished {vanished}"
+        )
+    differing = sorted(
+        k for k in recomputed if k in metrics and recomputed[k] != metrics[k]
+    )
     if differing:
-        raise SystemExit(f"recheck: recomputation differs from metrics.json in {differing}")
+        raise SystemExit(
+            f"recheck: recomputation differs from metrics.json in {differing}"
+        )
     return sorted(set(recomputed) - set(metrics))
 
 
 def plain_numbers(metrics: dict) -> list[str]:
     """Default: every top-level number, written the way Python prints it."""
-    return [str(v) for v in metrics.values()
-            if isinstance(v, (int, float)) and not isinstance(v, bool)]
+    return [
+        str(v)
+        for v in metrics.values()
+        if isinstance(v, (int, float)) and not isinstance(v, bool)
+    ]
 
 
 def _present(number: str, text: str) -> bool:
@@ -163,10 +187,15 @@ def cited(note: Path, numbers: list[str], run_id: str) -> None:
         raise SystemExit(f"recheck: {note.name} does not cite run {run_id}")
 
 
-def holds(area: Path, out: Path, recompute: Callable[[list[dict]], dict], note: Path,
-          run_id: str | None = None,
-          numbers: Callable[[dict], list[str]] = plain_numbers,
-          ignore: frozenset[str] = LABKIT_KEYS) -> Verdict:
+def holds(
+    area: Path,
+    out: Path,
+    recompute: Callable[[list[dict]], dict],
+    note: Path,
+    run_id: str | None = None,
+    numbers: Callable[[dict], list[str]] = plain_numbers,
+    ignore: frozenset[str] = LABKIT_KEYS,
+) -> Verdict:
     """pin → scopes → block → agree → cited, for `area`'s newest run (or `run_id`).
 
     `numbers(metrics)` formats what the note must carry — pass your own when
@@ -179,5 +208,10 @@ def holds(area: Path, out: Path, recompute: Callable[[list[dict]], dict], note: 
     grown = agree(metrics, recompute(rows_of(out)), ignore)
     wanted = numbers({k: v for k, v in metrics.items() if k not in ignore})
     cited(note, wanted, run.name)
-    return Verdict(run_id=run.name, out=out, grown=grown, numbers=wanted,
-                   keys_compared=len(set(metrics) - ignore))
+    return Verdict(
+        run_id=run.name,
+        out=out,
+        grown=grown,
+        numbers=wanted,
+        keys_compared=len(set(metrics) - ignore),
+    )

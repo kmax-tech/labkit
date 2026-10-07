@@ -35,6 +35,7 @@ completion markers — visible, not silent. The run-index row is written on
 clean exit only. States: completed · running · unknown · crashed ·
 unfinalized · corrupt · legacy (written before labkit 0.21).
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -51,11 +52,26 @@ from pathlib import Path
 
 from labkit import protocol_block, repo
 from labkit.scope_sha import audit_stamp_drift
-from labkit.runs import (FAILED_STATES, RunConfigError, completed_runs,
-                         completion_state, is_alive, read_run_config, run_state)
+from labkit.runs import (
+    FAILED_STATES,
+    RunConfigError,
+    completed_runs,
+    completion_state,
+    is_alive,
+    read_run_config,
+    run_state,
+)
 
-RUN_INDEX_COLS = ["run_id", "git", "script", "data", "config", "metrics",
-                  "note", "protocol_id"]
+RUN_INDEX_COLS = [
+    "run_id",
+    "git",
+    "script",
+    "data",
+    "config",
+    "metrics",
+    "note",
+    "protocol_id",
+]
 
 # Bumped when a run directory's SHAPE changes, stamped into config.json at the
 # START of the run. It has to be readable before the run ends, because the
@@ -68,9 +84,26 @@ SPLIT_KEYS = ("train", "dev", "test")
 #: three repos): a control set — anchors, gates, placebos — must share no id
 #: with the measured set, or the gate and the measured arm hold the same
 #: data point. Matched on the first `_`/`-` segment of the data key.
-CONTROL_ROLES = ("anchor", "anchors", "gate", "gates", "placebo", "placebos",
-                 "control", "controls", "calibration")
-MEASURED_ROLES = (*SPLIT_KEYS, "items", "measured", "cases", "prepared", "pairs", "pool")
+CONTROL_ROLES = (
+    "anchor",
+    "anchors",
+    "gate",
+    "gates",
+    "placebo",
+    "placebos",
+    "control",
+    "controls",
+    "calibration",
+)
+MEASURED_ROLES = (
+    *SPLIT_KEYS,
+    "items",
+    "measured",
+    "cases",
+    "prepared",
+    "pairs",
+    "pool",
+)
 
 
 def _head(cwd: Path, short: bool = False) -> str:
@@ -118,7 +151,8 @@ def _parse_lock(lock: Path) -> dict[str, str | None]:
 # and the pinned tag did not even exist in the source repo).
 _VCS_PIN = re.compile(
     r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._\-]*)\s*@\s*"
-    r"git\+(?P<url>[^@\s#]+)(?:@(?P<ref>[^#\s]+))?\s*(?:#.*)?$")
+    r"git\+(?P<url>[^@\s#]+)(?:@(?P<ref>[^#\s]+))?\s*(?:#.*)?$"
+)
 _HEX_REF = re.compile(r"^[0-9a-f]{7,40}$")
 
 
@@ -129,7 +163,9 @@ def _parse_vcs_pins(lock: Path) -> dict[str, tuple[str, str]]:
         m = _VCS_PIN.match(raw.strip())
         if m and m.group("ref"):
             out[m.group("name").lower().replace("_", "-")] = (
-                m.group("url"), m.group("ref"))
+                m.group("url"),
+                m.group("ref"),
+            )
     return out
 
 
@@ -149,8 +185,9 @@ def _resolve_ref(url: str, ref: str) -> str | None:
     if url.startswith("file://"):
         # --verify: without it, rev-parse ECHOES an unknown ref back on
         # stdout instead of failing empty.
-        r = repo.git_run(["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
-                         Path(url[7:]))
+        r = repo.git_run(
+            ["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], Path(url[7:])
+        )
         return r.stdout.strip().lower() if r.returncode == 0 else ""
     return None
 
@@ -168,13 +205,12 @@ def _vcs_mismatch(url: str, ref: str, installed_commit: str | None) -> bool:
     """Does the installed commit disagree with the lock's git ref?"""
     want = _resolve_ref(url, ref)
     if want is None:
-        return False    # remote tag/branch: unverifiable offline, pinned-any
+        return False  # remote tag/branch: unverifiable offline, pinned-any
     if not want:
-        return True     # ref does not resolve locally: lock is uninstallable
+        return True  # ref does not resolve locally: lock is uninstallable
     if not installed_commit:
-        return True     # pinned to a commit, installed from something else
-    return not (installed_commit.startswith(want)
-                or want.startswith(installed_commit))
+        return True  # pinned to a commit, installed from something else
+    return not (installed_commit.startswith(want) or want.startswith(installed_commit))
 
 
 # `pip freeze` omits its own bootstrapping packages, so they are never in the
@@ -196,10 +232,8 @@ def _lock_drift(lock: Path) -> int:
     """
     from importlib.metadata import distributions
 
-    pinned = {n: v for n, v in _parse_lock(lock).items()
-              if n not in _FREEZE_OMITS}
-    vcs = {n: uv for n, uv in _parse_vcs_pins(lock).items()
-           if n not in _FREEZE_OMITS}
+    pinned = {n: v for n, v in _parse_lock(lock).items() if n not in _FREEZE_OMITS}
+    vcs = {n: uv for n, uv in _parse_vcs_pins(lock).items() if n not in _FREEZE_OMITS}
     installed: dict[str, str] = {}
     vcs_commit: dict[str, str | None] = {}
     for dist in distributions():
@@ -208,11 +242,17 @@ def _lock_drift(lock: Path) -> int:
             installed[name] = dist.version
             if name in vcs:
                 vcs_commit[name] = _direct_url_commit(dist)
-    drift = sum(1 for n, v in installed.items()
-                if n not in pinned or (pinned[n] is not None and pinned[n] != v))
+    drift = sum(
+        1
+        for n, v in installed.items()
+        if n not in pinned or (pinned[n] is not None and pinned[n] != v)
+    )
     drift += sum(1 for n in pinned if n not in installed)
-    drift += sum(1 for n, (url, ref) in vcs.items()
-                 if n in installed and _vcs_mismatch(url, ref, vcs_commit.get(n)))
+    drift += sum(
+        1
+        for n, (url, ref) in vcs.items()
+        if n in installed and _vcs_mismatch(url, ref, vcs_commit.get(n))
+    )
     return drift
 
 
@@ -239,17 +279,23 @@ def _env_state(cwd: Path) -> str:
             h = hashlib.sha256(lock.read_bytes()).hexdigest()[:12]
             try:
                 drift = _lock_drift(lock)
-            except Exception:      # never let bookkeeping break a run
+            except Exception:  # never let bookkeeping break a run
                 return f"{exe} | requirements.lock:{h} | drift:unknown"
             if drift:
-                print(f"runlog: WARNING — {drift} package(s) deviate from "
-                      f"requirements.lock. `pip freeze > requirements.lock`, "
-                      f"or this run's lock hash describes an environment "
-                      f"that does not exist.", file=sys.stderr)
+                print(
+                    f"runlog: WARNING — {drift} package(s) deviate from "
+                    f"requirements.lock. `pip freeze > requirements.lock`, "
+                    f"or this run's lock hash describes an environment "
+                    f"that does not exist.",
+                    file=sys.stderr,
+                )
             return f"{exe} | requirements.lock:{h} | drift:{drift}"
-    print("runlog: WARNING — no requirements.lock found; env recorded as "
-          "'unpinned'. `pip freeze > requirements.lock` to pin, or this run "
-          "cannot claim the environment it ran in.", file=sys.stderr)
+    print(
+        "runlog: WARNING — no requirements.lock found; env recorded as "
+        "'unpinned'. `pip freeze > requirements.lock` to pin, or this run "
+        "cannot claim the environment it ran in.",
+        file=sys.stderr,
+    )
     return f"{exe} | unpinned"
 
 
@@ -264,15 +310,21 @@ def _notify(title: str, body: str) -> None:
         return
     try:
         subprocess.run(
-            ["osascript", "-e",
-             'display notification "{}" with title "{}"'.format(
-                 body.replace('"', "'")[:200], title.replace('"', "'")[:60])],
-            capture_output=True, timeout=5)
+            [
+                "osascript",
+                "-e",
+                'display notification "{}" with title "{}"'.format(
+                    body.replace('"', "'")[:200], title.replace('"', "'")[:60]
+                ),
+            ],
+            capture_output=True,
+            timeout=5,
+        )
     except (OSError, subprocess.SubprocessError):
         pass
 
 
-_NOTIFY_MIN_S = 120   # a pilot finishing under 2 min needs no banner
+_NOTIFY_MIN_S = 120  # a pilot finishing under 2 min needs no banner
 
 
 def _resolve_models(config: dict) -> dict:
@@ -290,6 +342,7 @@ def _resolve_models(config: dict) -> dict:
         if (key == "model" or key.endswith("_model")) and isinstance(val, str):
             try:
                 from labkit import llm
+
                 out[val] = llm.resolve(val)
             except Exception as e:
                 out[val] = f"unresolved: {e}"
@@ -299,9 +352,12 @@ def _resolve_models(config: dict) -> dict:
 def _visible_files(directory: Path) -> list[Path]:
     """Every regular file below `directory` that no hidden path component
     hides — `.DS_Store` once moved a mean by a whole document (2026-10-05)."""
-    return sorted(p for p in directory.rglob("*")
-                  if p.is_file() and not any(part.startswith(".")
-                                             for part in p.relative_to(directory).parts))
+    return sorted(
+        p
+        for p in directory.rglob("*")
+        if p.is_file()
+        and not any(part.startswith(".") for part in p.relative_to(directory).parts)
+    )
 
 
 def _sha256(path: Path) -> str:
@@ -382,8 +438,8 @@ def _describe(paths: dict) -> dict:
         p = Path(p)
         if not p.exists():
             raise FileNotFoundError(f"data[{key!r}] does not exist: {p}")
-        out[key] = {"path": str(p), "sha256": _sha256(p)[:16],
-                    "rows": _data_rows(p)}
+        out[key] = {"path": str(p), "sha256": _sha256(p)[:16], "rows": _data_rows(p)}
+
     def role(key: str) -> str:
         return re.split(r"[_-]", key, 1)[0].lower()
 
@@ -396,7 +452,8 @@ def _describe(paths: dict) -> dict:
             if shared:
                 raise RuntimeError(
                     f"split leakage: {len(shared)} id(s) in both {a!r} and {b!r}, "
-                    f"e.g. {sorted(shared)[:5]}. Fix the split before running.")
+                    f"e.g. {sorted(shared)[:5]}. Fix the split before running."
+                )
         verdicts.append(f"no shared ids across {sorted(checkable)}")
     controls = {k: _ids(Path(p)) for k, p in paths.items() if role(k) in CONTROL_ROLES}
     measured = {k: _ids(Path(p)) for k, p in paths.items() if role(k) in MEASURED_ROLES}
@@ -409,12 +466,20 @@ def _describe(paths: dict) -> dict:
                 raise RuntimeError(
                     f"control leakage: {len(shared)} id(s) in both {c!r} and {m!r}, "
                     f"e.g. {sorted(shared)[:5]} — the gate and the measured arm hold "
-                    f"the same data point. Fix the sets before running.")
+                    f"the same data point. Fix the sets before running."
+                )
     if controls and measured:
-        verdicts.append(f"no shared ids between {sorted(controls)} and {sorted(measured)}")
-    out["leakage_check"] = ("ok: " + "; ".join(verdicts)) if verdicts else (
-        "skipped: need >=2 of train/dev/test, or a control (anchor/gate/placebo) "
-        "and a measured set, as .jsonl with an 'id' field per row")
+        verdicts.append(
+            f"no shared ids between {sorted(controls)} and {sorted(measured)}"
+        )
+    out["leakage_check"] = (
+        ("ok: " + "; ".join(verdicts))
+        if verdicts
+        else (
+            "skipped: need >=2 of train/dev/test, or a control (anchor/gate/placebo) "
+            "and a measured set, as .jsonl with an 'id' field per row"
+        )
+    )
     return out
 
 
@@ -441,7 +506,8 @@ def _index_lock(base_dir: Path, timeout: float = 30.0):
                     raise RuntimeError(
                         f"runlog: runs.tsv locked for over {int(timeout)}s "
                         f"({base_dir}) — another append or reindex "
-                        f"is running, or one hung.")
+                        f"is running, or one hung."
+                    )
                 time.sleep(0.05)
         yield
     finally:
@@ -457,8 +523,7 @@ def _append_row(index: Path, row: list[str]) -> None:
     if not index.exists():
         index.write_text("\t".join(RUN_INDEX_COLS) + "\n", encoding="utf-8")
     with index.open("a", encoding="utf-8") as f:
-        f.write("\t".join(c.replace("\t", " ").replace("\n", " ")
-                          for c in row) + "\n")
+        f.write("\t".join(c.replace("\t", " ").replace("\n", " ") for c in row) + "\n")
 
 
 def _write_atomic(path: Path, text: str) -> None:
@@ -487,7 +552,8 @@ def _check_run_index(base_dir: Path) -> None:
             f"({RUN_INDEX_COLS}) — an index written by labkit before 0.21. "
             "Migrate it with labkit 0.47 (`runlog migrate-index <area>`, which "
             "keeps every row verbatim), then come back; appending without it "
-            "would shift columns silently.")
+            "would shift columns silently."
+        )
 
 
 def _snapshot_script(run_dir: Path) -> str:
@@ -511,7 +577,7 @@ def _snapshot_script(run_dir: Path) -> str:
         return "no-script"
 
 
-_SNAPSHOT_CAP = 2 * 1024 * 1024   # a "source file" above 2 MB is data
+_SNAPSHOT_CAP = 2 * 1024 * 1024  # a "source file" above 2 MB is data
 
 
 def _snapshot_untracked_sources(run_dir: Path) -> list[str]:
@@ -563,10 +629,12 @@ def _snapshot_untracked_sources(run_dir: Path) -> list[str]:
         except OSError:
             continue
     if copied:
-        print(f"runlog: entry script is UNTRACKED — copied {len(copied)} source "
-              f"file(s) to source-untracked/. Best practice: commit BEFORE the "
-              f"run, then the diff carries the provenance. ({', '.join(copied[:5])}"
-              + (" ...)" if len(copied) > 5 else ")"))
+        print(
+            f"runlog: entry script is UNTRACKED — copied {len(copied)} source "
+            f"file(s) to source-untracked/. Best practice: commit BEFORE the "
+            f"run, then the diff carries the provenance. ({', '.join(copied[:5])}"
+            + (" ...)" if len(copied) > 5 else ")")
+        )
     return copied
 
 
@@ -594,20 +662,24 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
             raise SystemExit(
                 f"runlog: protocol={protocol!r} is not one of the "
                 f"PROTOCOL-*.md in the run's area ({base_dir}):\n  "
-                + "\n  ".join(f.name for f in found or [Path("(none)")]))
+                + "\n  ".join(f.name for f in found or [Path("(none)")])
+            )
     elif len(found) == 1:
         path = found[0].resolve()
     elif not found:
-        print(f"runlog: WARNING — no PROTOCOL-*.md in {base_dir}; this run "
-              f"is recorded as unbound. A kept number needs a protocol "
-              f"(§2.A1).")
+        print(
+            f"runlog: WARNING — no PROTOCOL-*.md in {base_dir}; this run "
+            f"is recorded as unbound. A kept number needs a protocol "
+            f"(§2.A1)."
+        )
         return {"id": None, "path": None}
     else:
         raise SystemExit(
             f"runlog: {len(found)} protocols in {base_dir} — nothing would "
             f"say which one this run belongs to. Name it:\n"
             f"  runlog.run(..., protocol=PROTOCOL)\n  "
-            + "\n  ".join(f.name for f in found))
+            + "\n  ".join(f.name for f in found)
+        )
 
     try:
         rel = str(path.relative_to(base_dir.resolve()))
@@ -618,8 +690,10 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
     except protocol_block.BlockError as exc:
         raise SystemExit(f"runlog: {rel}: {exc}") from exc
     if pid is None:
-        print(f"runlog: WARNING — {rel} carries no stamped id (`id` in its "
-              f"[protocol] table); this run is recorded as unbound.")
+        print(
+            f"runlog: WARNING — {rel} carries no stamped id (`id` in its "
+            f"[protocol] table); this run is recorded as unbound."
+        )
     return {"id": pid, "path": rel}
 
 
@@ -652,31 +726,40 @@ def _protocol_text(base_dir: Path, binding: dict) -> str | None:
 def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
     """Why a FULL run may not start on this protocol — empty means it may."""
     from labkit.protocol_check import intent_missing
+
     text = _protocol_text(base_dir, binding)
     if text is None:
-        return ["the run is unbound (no protocol) — a full run needs a "
-                "registered protocol (§2.A1)"]
+        return [
+            "the run is unbound (no protocol) — a full run needs a "
+            "registered protocol (§2.A1)"
+        ]
     path = Path(binding["path"])
     if binding.get("id") is None:
         # a full run's number must be bound; an unstamped id binds nothing,
         # and finalize would only say so after the number exists (review 2026-10-07)
-        return [f"{path.name}: the [protocol] id is not stamped — a full run "
-                f"needs a bound protocol (`lib exp` stamps it)"]
-    head = protocol_block.head(text)          # read once at binding; valid here
+        return [
+            f"{path.name}: the [protocol] id is not stamped — a full run "
+            f"needs a bound protocol (`lib exp` stamps it)"
+        ]
+    head = protocol_block.head(text)  # read once at binding; valid here
     if head.cost == "seconds":
         missing = intent_missing(text)
         if not missing:
             return []
-        return [f"{path.name}: `cost = \"seconds\"`, but the registration is not "
-                f"written: {', '.join(missing)} still empty or a placeholder — at "
-                f"seconds the gate is question · criterion · admissibility "
-                f"condition, not the freeze (§2.A1, §2.A14)"]
+        return [
+            f'{path.name}: `cost = "seconds"`, but the registration is not '
+            f"written: {', '.join(missing)} still empty or a placeholder — at "
+            f"seconds the gate is question · criterion · admissibility "
+            f"condition, not the freeze (§2.A1, §2.A14)"
+        ]
     out = []
     if not head.frozen:
         out.append(f"{path.name}: not `frozen = true`")
     if not head.preflight_audit:
-        out.append(f"{path.name}: `preflight_audit` is empty — run `preflight`, "
-                   f"then the experiment-preflight audit (§2.A12), and stamp it")
+        out.append(
+            f"{path.name}: `preflight_audit` is empty — run `preflight`, "
+            f"then the experiment-preflight audit (§2.A12), and stamp it"
+        )
     else:
         drift = audit_stamp_drift(base_dir, head.preflight_audit)
         if drift:
@@ -694,6 +777,7 @@ def _promise_snapshot(base_dir: Path, text: str | None) -> dict | None:
     error.
     """
     from labkit import promises
+
     if text is None:
         return None
     try:
@@ -704,10 +788,16 @@ def _promise_snapshot(base_dir: Path, text: str | None) -> dict | None:
 
 
 class Run:
-    def __init__(self, experiment: str, config: dict, base_dir: Path,
-                 data: dict | None = None, long: bool = False,
-                 protocol: str | Path | None = None,
-                 derived_from: str | None = None):
+    def __init__(
+        self,
+        experiment: str,
+        config: dict,
+        base_dir: Path,
+        data: dict | None = None,
+        long: bool = False,
+        protocol: str | Path | None = None,
+        derived_from: str | None = None,
+    ):
         # A derived run (2026-10-05): the same raw rows, evaluated again —
         # because evaluate() gained a descriptive key, not because anything
         # about the measurement changed. It names its parent so the record
@@ -719,19 +809,24 @@ class Run:
             try:
                 state = completion_state(parent) if parent.is_dir() else "missing"
             except RunConfigError as exc:
-                raise SystemExit(f"runlog: derived_from={derived_from!r}: {exc}") from exc
+                raise SystemExit(
+                    f"runlog: derived_from={derived_from!r}: {exc}"
+                ) from exc
             if state != "completed":
                 hint = " (read it with labkit 0.47)" if state == "legacy" else ""
                 raise SystemExit(
                     f"runlog: derived_from={derived_from!r} names no completed "
                     f"run under {base_dir / 'runs'} ({state}){hint} — a derived run "
-                    f"needs a finished parent")
+                    f"needs a finished parent"
+                )
             self._derived_from = derived_from
         # Before any work: an unresolvable protocol is a refusal, and a
         # refusal must not leave an empty run dir behind (2026-09-26).
         self._protocol = _protocol_binding(base_dir, protocol)
         _ptext = _protocol_text(base_dir, self._protocol)
-        self._cost_tier = protocol_block.head(_ptext).cost if _ptext is not None else None
+        self._cost_tier = (
+            protocol_block.head(_ptext).cost if _ptext is not None else None
+        )
         self._promises = _promise_snapshot(base_dir, _ptext)
         _short = self._cost_tier == "seconds"
         # Detach gate (scar 2026-08-13, twice in one evening): a long run
@@ -741,39 +836,50 @@ class Run:
         # sets it); the gate refuses the foreground start BEFORE any work.
         # A run of seconds (`cost = "seconds"`) cannot meet that timeout and
         # runs in the foreground (2026-10-05).
-        if (long and not _short and os.environ.get("CLAUDECODE")
-                and os.environ.get("LABKIT_DETACHED") != "1"):
+        if (
+            long
+            and not _short
+            and os.environ.get("CLAUDECODE")
+            and os.environ.get("LABKIT_DETACHED") != "1"
+        ):
             raise SystemExit(
                 "runlog: this run declares long=True and sits in a Claude Code "
                 "foreground shell — the tool timeout would kill the process "
                 "group mid-run (2026-08-13). Start it detached:\n"
                 "  runlog start -- <the same command>\n"
                 "or, if the caller already detached it (run_in_background, "
-                "nohup+setsid), acknowledge with LABKIT_DETACHED=1.")
+                "nohup+setsid), acknowledge with LABKIT_DETACHED=1."
+            )
         self.run_id = time.strftime("%Y-%m-%dT%H-%M-%S") + "_" + uuid.uuid4().hex[:4]
         self.experiment = experiment
         self.script = Path(sys.argv[0]).name if sys.argv[0] else "<interactive>"
         self.base = base_dir
-        _check_run_index(base_dir)                        # raises before any work
-        self._data = _describe(data) if data else {}   # raises on leak, before mkdir
+        _check_run_index(base_dir)  # raises before any work
+        self._data = _describe(data) if data else {}  # raises on leak, before mkdir
         # Freeze gate, also before mkdir: a full run on an unfrozen protocol
         # is a refusal, not a run with a warning (2026-10-05).
         self._unfrozen_ack = False
         if long:
             findings = _freeze_findings(base_dir, self._protocol)
-            if findings and os.environ.get("LABKIT_UNFROZEN") == "1":   # "0" is no acknowledgement
+            if (
+                findings and os.environ.get("LABKIT_UNFROZEN") == "1"
+            ):  # "0" is no acknowledgement
                 self._unfrozen_ack = True
-                print("runlog: WARNING — LABKIT_UNFROZEN=1: full run on an "
-                      "unfrozen protocol, acknowledged; recorded in config.json:\n  "
-                      + "\n  ".join(findings))
+                print(
+                    "runlog: WARNING — LABKIT_UNFROZEN=1: full run on an "
+                    "unfrozen protocol, acknowledged; recorded in config.json:\n  "
+                    + "\n  ".join(findings)
+                )
             elif findings:
                 raise SystemExit(
                     "runlog: this run declares long=True (a full run), but its "
-                    "protocol is not ready for one:\n  " + "\n  ".join(findings)
+                    "protocol is not ready for one:\n  "
+                    + "\n  ".join(findings)
                     + "\nPilot it with long=False, or freeze first: `preflight "
                     "<AREA>` clean, audit stamped, `frozen = true` "
-                    "(at cost = \"seconds\": question, criterion and admissibility condition written suffice). A "
-                    "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded).")
+                    '(at cost = "seconds": question, criterion and admissibility condition written suffice). A '
+                    "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded)."
+                )
         self.dir = base_dir / "runs" / self.run_id
         self.dir.mkdir(parents=True, exist_ok=False)
         self._config = dict(config)
@@ -781,30 +887,35 @@ class Run:
         self._metrics: dict = {}
         self._note = ""
         self._t0 = time.monotonic()
-        frozen = {"schema_version": RUN_SCHEMA,
-                  "experiment": experiment, "script": self.script,
-                  "protocol": self._protocol,
-                  "derived_from": self._derived_from,
-                  "unfrozen_ack": self._unfrozen_ack,
-                  "cost_tier": self._cost_tier,
-                  "promises": self._promises,
-                  "script_sha": _snapshot_script(self.dir),
-                  "untracked_sources": _snapshot_untracked_sources(self.dir),
-                  "pid": os.getpid(),          # lets `active()` tell running from crashed
-                  "git": _git_state(base_dir),
-                  "git_full": _head(base_dir),
-                  "python": sys.version.split()[0],
-                  "env": _env_state(base_dir),
-                  "models_resolved": _resolve_models(self._config),
-                  "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                  "data": self._data,
-                  "config": self._config}
+        frozen = {
+            "schema_version": RUN_SCHEMA,
+            "experiment": experiment,
+            "script": self.script,
+            "protocol": self._protocol,
+            "derived_from": self._derived_from,
+            "unfrozen_ack": self._unfrozen_ack,
+            "cost_tier": self._cost_tier,
+            "promises": self._promises,
+            "script_sha": _snapshot_script(self.dir),
+            "untracked_sources": _snapshot_untracked_sources(self.dir),
+            "pid": os.getpid(),  # lets `active()` tell running from crashed
+            "git": _git_state(base_dir),
+            "git_full": _head(base_dir),
+            "python": sys.version.split()[0],
+            "env": _env_state(base_dir),
+            "models_resolved": _resolve_models(self._config),
+            "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "data": self._data,
+            "config": self._config,
+        }
         (self.dir / "config.json").write_text(
-            json.dumps(frozen, ensure_ascii=False, indent=2), encoding="utf-8")
+            json.dumps(frozen, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
         # A dirty tree makes the commit hash a lie: save what it doesn't cover.
         if _head(base_dir) and repo.git(["status", "--porcelain"], base_dir):
             (self.dir / "uncommitted.patch").write_text(
-                repo.git(["diff", "HEAD"], base_dir) or "", encoding="utf-8")
+                repo.git(["diff", "HEAD"], base_dir) or "", encoding="utf-8"
+            )
 
     def output(self, *paths) -> None:
         """Register the files this run WRITES (2026-08-18).
@@ -837,39 +948,62 @@ class Run:
                 if p.exists():
                     with p.open("rb") as fh:
                         text_lines = sum(1 for _ in fh)
-                    rows.append({"path": str(p), "sha256": _sha256(p)[:16],
-                                 "lines": text_lines})
+                    rows.append(
+                        {"path": str(p), "sha256": _sha256(p)[:16], "lines": text_lines}
+                    )
                 else:
-                    rows.append({"path": str(p), "sha256": None, "lines": None,
-                                 "note": "registered, but absent at end of run"})
+                    rows.append(
+                        {
+                            "path": str(p),
+                            "sha256": None,
+                            "lines": None,
+                            "note": "registered, but absent at end of run",
+                        }
+                    )
             (self.dir / "outputs.json").write_text(
-                json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+                json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
         (self.dir / "metrics.json").write_text(
-            json.dumps(self._metrics, ensure_ascii=False, indent=2), encoding="utf-8")
+            json.dumps(self._metrics, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
         # Order matters, and this is the reason for it: results first, then
         # the confirmed completion, then the index. A break after metrics
         # leaves `unfinalized` (numbers on disk, run not finished); a break
         # after completion.json leaves a run the index missed but `reindex`
         # can rebuild in full. Before this file the two looked the same.
         git_end = _git_state(self.base)
-        _write_atomic(self.dir / "completion.json", json.dumps(
-            {"schema_version": RUN_SCHEMA,
-             "finished": time.strftime("%Y-%m-%dT%H:%M:%S"),
-             "git": git_end,
-             "git_full": _head(self.base),
-             "note": self._note},
-            ensure_ascii=False, indent=2))
-        row = [self.run_id, git_end, self.script,
-               json.dumps(self._data, ensure_ascii=False, sort_keys=True),
-               json.dumps(self._config, ensure_ascii=False, sort_keys=True),
-               json.dumps(self._metrics, ensure_ascii=False, sort_keys=True),
-               self._note, self._protocol.get("id") or ""]
+        _write_atomic(
+            self.dir / "completion.json",
+            json.dumps(
+                {
+                    "schema_version": RUN_SCHEMA,
+                    "finished": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                    "git": git_end,
+                    "git_full": _head(self.base),
+                    "note": self._note,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+        )
+        row = [
+            self.run_id,
+            git_end,
+            self.script,
+            json.dumps(self._data, ensure_ascii=False, sort_keys=True),
+            json.dumps(self._config, ensure_ascii=False, sort_keys=True),
+            json.dumps(self._metrics, ensure_ascii=False, sort_keys=True),
+            self._note,
+            self._protocol.get("id") or "",
+        ]
         with _index_lock(self.base):
             _append_row(self.base / "runs.tsv", row)
         dur = self._metrics.get("duration_s", 0)
         if os.environ.get("LABKIT_NOTIFY") == "1" or dur >= _NOTIFY_MIN_S:
-            _notify(f"run finished: {self.experiment}",
-                    f"{self.run_id} · {dur}s · {len(self._metrics)} metric(s)")
+            _notify(
+                f"run finished: {self.experiment}",
+                f"{self.run_id} · {dur}s · {len(self._metrics)} metric(s)",
+            )
 
 
 def active(base_dir: str | Path) -> list[dict]:
@@ -888,38 +1022,59 @@ def active(base_dir: str | Path) -> list[dict]:
         try:
             cfg = read_run_config(d)
         except RunConfigError as exc:
-            out.append({"run_id": d.name, "dir": str(d), "alive": None,
-                        "state": "corrupt", "error": str(exc)})
+            out.append(
+                {
+                    "run_id": d.name,
+                    "dir": str(d),
+                    "alive": None,
+                    "state": "corrupt",
+                    "error": str(exc),
+                }
+            )
             continue
         if cfg is None:
             continue
         alive = is_alive(cfg.get("pid"), cfg.get("script"))
         state = run_state(d, cfg, alive)
-        if state in ("completed", "legacy"):     # legacy: ended long ago, not open
+        if state in ("completed", "legacy"):  # legacy: ended long ago, not open
             continue
-        out.append({"run_id": d.name, "dir": str(d), "alive": alive,
-                    "state": state, **cfg})
+        out.append(
+            {"run_id": d.name, "dir": str(d), "alive": alive, "state": state, **cfg}
+        )
     return out
 
 
 class run:
     """Context manager: `with runlog.run("name", config={...}, data={...}) as r:`"""
 
-    def __init__(self, experiment: str, config: dict,
-                 base_dir: str | Path | None = None, data: dict | None = None,
-                 long: bool = False, protocol: str | Path | None = None,
-                 derived_from: str | None = None):
+    def __init__(
+        self,
+        experiment: str,
+        config: dict,
+        base_dir: str | Path | None = None,
+        data: dict | None = None,
+        long: bool = False,
+        protocol: str | Path | None = None,
+        derived_from: str | None = None,
+    ):
         # `protocol` and `derived_from` last: no existing positional call shifts.
         base = Path(base_dir) if base_dir else Path(sys.argv[0]).resolve().parent
-        self._run = Run(experiment, config, base, data, long=long,
-                        protocol=protocol, derived_from=derived_from)
+        self._run = Run(
+            experiment,
+            config,
+            base,
+            data,
+            long=long,
+            protocol=protocol,
+            derived_from=derived_from,
+        )
 
     def __enter__(self) -> Run:
         return self._run
 
     def __exit__(self, exc_type, _exc, _tb) -> bool:
         if exc_type is None:
-            self._run._finalize()   # crash -> dir stays without metrics.json (visible)
+            self._run._finalize()  # crash -> dir stays without metrics.json (visible)
         return False
 
 
@@ -964,8 +1119,9 @@ def _finished_line(area: Path) -> str:
     return f"last finished: {done[-1].name} ({keys})"
 
 
-def _wait(area: str, max_seconds: float | None, interval: float,
-          follow: bool, notify: bool) -> int:
+def _wait(
+    area: str, max_seconds: float | None, interval: float, follow: bool, notify: bool
+) -> int:
     """Block until the area has no open runs. Exit codes are the contract:
     0 = no open runs (finished) · 2 = a run crashed · 3 = still running at
     --max-seconds. The waiter only OBSERVES — the run owns its process group
@@ -982,35 +1138,44 @@ def _wait(area: str, max_seconds: float | None, interval: float,
             return 0
         # Exit 2 covers every failed state: a machine only needs "did not
         # finish cleanly", a human tells them apart by state and message.
-        WHY = {"crashed": "config.json without metrics.json",
-               "unfinalized": "metrics.json without completion.json — "
-                              "finalization broke off, numbers must not be "
-                              "reported",
-               "corrupt": "completion.json without metrics.json — the "
-                          "results are gone"}
+        WHY = {
+            "crashed": "config.json without metrics.json",
+            "unfinalized": "metrics.json without completion.json — "
+            "finalization broke off, numbers must not be "
+            "reported",
+            "corrupt": "completion.json without metrics.json — the results are gone",
+        }
         failed = [r for r in live if r.get("state") in FAILED_STATES]
         if failed:
             for r in failed:
                 state = r.get("state", "?")
                 why = r.get("error") or f"{r['dir']}: {WHY.get(state, '')}"
-                print(f"{r['run_id']}  {state.upper()}  pid={r.get('pid')}  "
-                      f"{r.get('script')}  ({why})")
+                print(
+                    f"{r['run_id']}  {state.upper()}  pid={r.get('pid')}  "
+                    f"{r.get('script')}  ({why})"
+                )
             if notify:
-                _notify("runlog --wait",
-                        f"{area}: run {failed[0].get('state')}")
+                _notify("runlog --wait", f"{area}: run {failed[0].get('state')}")
             return 2
         if follow:
             stamp = time.strftime("%H:%M:%S")
             extra = _newest_output(apath)
-            print(f"[{stamp}] {len(live)} open run(s): "
-                  + ", ".join(r["run_id"] for r in live)
-                  + (f" · {extra}" if extra else ""), flush=True)
+            print(
+                f"[{stamp}] {len(live)} open run(s): "
+                + ", ".join(r["run_id"] for r in live)
+                + (f" · {extra}" if extra else ""),
+                flush=True,
+            )
         if max_seconds is not None and time.monotonic() - t0 >= max_seconds:
             extra = _newest_output(apath)
-            print(f"{area}: still running after {int(max_seconds)}s — "
-                  + ", ".join(f"{r['run_id']} pid={r.get('pid')}" for r in live)
-                  + (f" · {extra}" if extra else "")
-                  + "\nre-check: runlog " + area + " --wait")
+            print(
+                f"{area}: still running after {int(max_seconds)}s — "
+                + ", ".join(f"{r['run_id']} pid={r.get('pid')}" for r in live)
+                + (f" · {extra}" if extra else "")
+                + "\nre-check: runlog "
+                + area
+                + " --wait"
+            )
             return 3
         time.sleep(interval)
 
@@ -1024,25 +1189,36 @@ def _start(argv: list[str]) -> int:
     `long=True` gate inside the script that the detach already happened.
     """
     import argparse
+
     ap = argparse.ArgumentParser(
         prog="runlog start",
         description="Start a command detached (own session via setsid), "
-                    "output to a log file, return immediately.")
-    ap.add_argument("--log", default=None,
-                    help="log file (default: output/start-<ts>.log)")
-    ap.add_argument("cmd", nargs=argparse.REMAINDER,
-                    help="-- command and arguments")
+        "output to a log file, return immediately.",
+    )
+    ap.add_argument(
+        "--log", default=None, help="log file (default: output/start-<ts>.log)"
+    )
+    ap.add_argument("cmd", nargs=argparse.REMAINDER, help="-- command and arguments")
     args = ap.parse_args(argv)
     cmd = args.cmd[1:] if args.cmd and args.cmd[0] == "--" else args.cmd
     if not cmd:
         ap.error("no command given — usage: runlog start -- <cmd ...>")
-    log = Path(args.log) if args.log else \
-        Path("output") / f"start-{time.strftime('%Y-%m-%dT%H-%M-%S')}.log"
+    log = (
+        Path(args.log)
+        if args.log
+        else Path("output") / f"start-{time.strftime('%Y-%m-%dT%H-%M-%S')}.log"
+    )
     log.parent.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "LABKIT_DETACHED": "1"}
     with log.open("ab") as fh:
-        proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=fh,
-                                stderr=fh, start_new_session=True, env=env)
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=fh,
+            stderr=fh,
+            start_new_session=True,
+            env=env,
+        )
     print(f"started detached: pid={proc.pid}  log={log}")
     print("status:  runlog .        wait:  runlog . --wait")
     return 0
@@ -1069,8 +1245,10 @@ def reindex(base_dir: Path) -> int:
     with _index_lock(base_dir):
         header, rows = _read_index(index)
         if header and header != RUN_INDEX_COLS:
-            print(f"runlog: {index} has old columns {header} — migrate it "
-                  f"with labkit 0.47 (`runlog migrate-index`) first.")
+            print(
+                f"runlog: {index} has old columns {header} — migrate it "
+                f"with labkit 0.47 (`runlog migrate-index`) first."
+            )
             return 2
         seen: dict[str, int] = {}
         for row in rows:
@@ -1078,9 +1256,11 @@ def reindex(base_dir: Path) -> int:
                 seen[row[0]] = seen.get(row[0], 0) + 1
         dupes = sorted(rid for rid, n in seen.items() if n > 1)
         if dupes:
-            print(f"runlog: {index} lists {len(dupes)} run_id(s) more than "
-                  f"once: {', '.join(dupes[:5])} — repair by hand; a run "
-                  f"belongs in the index exactly once.")
+            print(
+                f"runlog: {index} lists {len(dupes)} run_id(s) more than "
+                f"once: {', '.join(dupes[:5])} — repair by hand; a run "
+                f"belongs in the index exactly once."
+            )
             return 2
 
         added, skipped_legacy, incomplete, unreadable = 0, [], [], []
@@ -1103,19 +1283,29 @@ def reindex(base_dir: Path) -> int:
                 continue
             comp = json.loads((d / "completion.json").read_text(encoding="utf-8"))
             metrics = json.loads((d / "metrics.json").read_text(encoding="utf-8"))
-            _append_row(index, [
-                d.name, comp.get("git", ""), cfg.get("script", ""),
-                json.dumps(cfg.get("data", {}), ensure_ascii=False, sort_keys=True),
-                json.dumps(cfg.get("config", {}), ensure_ascii=False, sort_keys=True),
-                json.dumps(metrics, ensure_ascii=False, sort_keys=True),
-                comp.get("note", ""),
-                (cfg.get("protocol") or {}).get("id") or ""])
+            _append_row(
+                index,
+                [
+                    d.name,
+                    comp.get("git", ""),
+                    cfg.get("script", ""),
+                    json.dumps(cfg.get("data", {}), ensure_ascii=False, sort_keys=True),
+                    json.dumps(
+                        cfg.get("config", {}), ensure_ascii=False, sort_keys=True
+                    ),
+                    json.dumps(metrics, ensure_ascii=False, sort_keys=True),
+                    comp.get("note", ""),
+                    (cfg.get("protocol") or {}).get("id") or "",
+                ],
+            )
             added += 1
 
     print(f"runlog: {added} row(s) appended to {index}.")
     for name in skipped_legacy:
-        print(f"  {name}: run without schema_version (labkit before 0.21) — "
-              f"not indexed; read it with labkit 0.47.")
+        print(
+            f"  {name}: run without schema_version (labkit before 0.21) — "
+            f"not indexed; read it with labkit 0.47."
+        )
     for name in incomplete:
         print(f"  {name}: not completed — nothing to index.")
     for err in unreadable:
@@ -1134,42 +1324,63 @@ def main(argv: list[str]) -> int:
             return 2
         return reindex(area)
     import argparse
+
     ap = argparse.ArgumentParser(
         prog="runlog",
         description="List open runs (not yet completed) in an experiment "
-                    "area: run_id, state (running/unknown/crashed/unfinalized"
-                    "/corrupt), script, and the frozen config. "
-                    "'Nachsehen statt nachfragen' — "
-                    "check this before starting a run in a shared repo. "
-                    "`--wait` blocks until the area is idle (exit 0), a run "
-                    "crashed (exit 2) or --max-seconds passed (exit 3); "
-                    "`--follow` prints a status line per interval until idle; "
-                    "`runlog start -- <cmd>` detaches a run (own session, "
-                    "log file) and returns. "
-                    "`runlog reindex <area>` appends rows for completed "
-                    "runs the index missed.")
-    ap.add_argument("area", nargs="?", default=".",
-                    help="experiment area holding a runs/ dir (default: .)")
-    ap.add_argument("--wait", action="store_true",
-                    help="block until no open runs; exit 0/2/3 (idle/crashed/"
-                         "still running at --max-seconds)")
-    ap.add_argument("--follow", action="store_true",
-                    help="like --wait but unbounded, one status line per "
-                         "interval (for a human terminal)")
-    ap.add_argument("--max-seconds", type=float, default=90.0,
-                    help="--wait: give up after this long (default 90 — "
-                         "safely under the shell tool's timeout)")
-    ap.add_argument("--interval", type=float, default=None,
-                    help="poll interval in s (default: 2 for --wait, "
-                         "5 for --follow)")
-    ap.add_argument("--notify", action="store_true",
-                    help="macOS notification when the wait ends")
+        "area: run_id, state (running/unknown/crashed/unfinalized"
+        "/corrupt), script, and the frozen config. "
+        "'Nachsehen statt nachfragen' — "
+        "check this before starting a run in a shared repo. "
+        "`--wait` blocks until the area is idle (exit 0), a run "
+        "crashed (exit 2) or --max-seconds passed (exit 3); "
+        "`--follow` prints a status line per interval until idle; "
+        "`runlog start -- <cmd>` detaches a run (own session, "
+        "log file) and returns. "
+        "`runlog reindex <area>` appends rows for completed "
+        "runs the index missed.",
+    )
+    ap.add_argument(
+        "area",
+        nargs="?",
+        default=".",
+        help="experiment area holding a runs/ dir (default: .)",
+    )
+    ap.add_argument(
+        "--wait",
+        action="store_true",
+        help="block until no open runs; exit 0/2/3 (idle/crashed/"
+        "still running at --max-seconds)",
+    )
+    ap.add_argument(
+        "--follow",
+        action="store_true",
+        help="like --wait but unbounded, one status line per "
+        "interval (for a human terminal)",
+    )
+    ap.add_argument(
+        "--max-seconds",
+        type=float,
+        default=90.0,
+        help="--wait: give up after this long (default 90 — "
+        "safely under the shell tool's timeout)",
+    )
+    ap.add_argument(
+        "--interval",
+        type=float,
+        default=None,
+        help="poll interval in s (default: 2 for --wait, 5 for --follow)",
+    )
+    ap.add_argument(
+        "--notify", action="store_true", help="macOS notification when the wait ends"
+    )
     args = ap.parse_args(argv)
     if args.follow:
         return _wait(args.area, None, args.interval or 5.0, True, args.notify)
     if args.wait:
-        return _wait(args.area, args.max_seconds, args.interval or 2.0,
-                     False, args.notify)
+        return _wait(
+            args.area, args.max_seconds, args.interval or 2.0, False, args.notify
+        )
     _print_status(args.area, active(args.area))
     return 0
 

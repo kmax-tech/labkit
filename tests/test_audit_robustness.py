@@ -1,5 +1,6 @@
 """Robustness found by the audit of 0.48.0 (review 2026-10-07): each case used
 to end in a traceback, a silent pass, or a statement that was not true."""
+
 import contextlib
 import io
 import json
@@ -8,16 +9,23 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import intent_check, promises, protocol_block, protocol_check, recheck, runlog
+from labkit import (
+    intent_check,
+    promises,
+    protocol_block,
+    protocol_check,
+    recheck,
+    runlog,
+)
 from protocol_fixture import PID, head
 
-C1 = '''[[promise]]
+C1 = """[[promise]]
 id = "C1"
 key = "c1_pass"
 sentence = "accuracy >= MIN_ACC"
 scope = ["scripts/m.py:evaluate"]
 constants = { MIN_ACC = 0.7 }
-'''
+"""
 
 
 def area_with_run(tmp: Path) -> tuple[Path, Path]:
@@ -51,7 +59,7 @@ class RecheckByIdentity(unittest.TestCase):
             tmp = Path(d)
             protocol, run = area_with_run(tmp)
             protocol.rename(tmp / "PROTOCOL-renamed.md")
-            recheck.block_unchanged(run, tmp)        # no FileNotFoundError, no refusal
+            recheck.block_unchanged(run, tmp)  # no FileNotFoundError, no refusal
 
     def test_no_protocol_with_the_id_is_a_sentence(self):
         with tempfile.TemporaryDirectory() as d:
@@ -78,7 +86,7 @@ class PromiseBlockShape(unittest.TestCase):
 
     def test_a_run_from_the_earlier_digest_is_told_apart(self):
         block = promises.parse_block(head(promises=C1))
-        old = {"block_sha": "0123abcd0123", "ids": {}}          # no "digest": labkit 0.46/0.47
+        old = {"block_sha": "0123abcd0123", "ids": {}}  # no "digest": labkit 0.46/0.47
         msg = promises.block_drift(old, block) or ""
         self.assertIn("labkit 0.46/0.47", msg)
         self.assertNotIn("promises changed", msg)

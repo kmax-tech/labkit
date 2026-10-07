@@ -12,12 +12,13 @@ The bug was invisible because `max_tokens` has a default: every call looked
 correct while the effect was missing. Against exactly that, this test
 checks the *payload sent*, not the signature.
 """
+
 import json
 import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))          # the package under test
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
 
 class _FakeResponse:
@@ -37,11 +38,15 @@ class _FakeResponse:
 class TestChatPathSendsTokenBudget(unittest.TestCase):
     def setUp(self):
         from labkit import llm
+
         self.llm = llm
         self.sent = {}
         self._resolve, self._urlopen = llm.resolve, llm.urllib.request.urlopen
-        llm.resolve = lambda alias: {"backend": "ollama", "model": "gpt-oss:latest",
-                                     "endpoint": "http://example.invalid:11490"}
+        llm.resolve = lambda alias: {
+            "backend": "ollama",
+            "model": "gpt-oss:latest",
+            "endpoint": "http://example.invalid:11490",
+        }
 
         def fake_urlopen(req, timeout=None):
             self.sent["url"] = req.full_url
@@ -59,16 +64,18 @@ class TestChatPathSendsTokenBudget(unittest.TestCase):
         self.llm.complete("gpt-oss", "prompt", max_tokens=2048, temperature=0.0)
         self.assertIn("/api/chat", self.sent["url"])
         options = self.sent["payload"].get("options", {})
-        self.assertEqual(options.get("num_predict"), 2048,
-                         "the chat path must send the token budget — without "
-                         "it the model generates until the context is full")
+        self.assertEqual(
+            options.get("num_predict"),
+            2048,
+            "the chat path must send the token budget — without "
+            "it the model generates until the context is full",
+        )
         self.assertEqual(options.get("temperature"), 0.0)
 
     def test_default_budget_is_sent_too(self):
         """Even without an explicit max_tokens the cap must not be missing."""
         self.llm.complete("gpt-oss", "prompt")
-        self.assertIsNotNone(
-            self.sent["payload"].get("options", {}).get("num_predict"))
+        self.assertIsNotNone(self.sent["payload"].get("options", {}).get("num_predict"))
 
     def test_timeout_reaches_the_transport(self):
         """The wait window is the knob that does NOT touch the measurement."""
@@ -82,13 +89,21 @@ class TestEmptyContentIsReported(unittest.TestCase):
     def setUp(self):
         import io
         from labkit import llm
+
         self.llm, self.io = llm, io
         self._resolve, self._urlopen = llm.resolve, llm.urllib.request.urlopen
-        llm.resolve = lambda alias: {"backend": "ollama", "model": "gpt-oss:latest",
-                                     "endpoint": "http://example.invalid:11490"}
+        llm.resolve = lambda alias: {
+            "backend": "ollama",
+            "model": "gpt-oss:latest",
+            "endpoint": "http://example.invalid:11490",
+        }
         llm.urllib.request.urlopen = lambda req, timeout=None: _FakeResponse(
-            {"message": {"content": "", "thinking": "The user says: ..."},
-             "done_reason": "length", "eval_count": 2048})
+            {
+                "message": {"content": "", "thinking": "The user says: ..."},
+                "done_reason": "length",
+                "eval_count": 2048,
+            }
+        )
 
     def tearDown(self):
         setattr(self.llm, "resolve", self._resolve)
@@ -101,8 +116,9 @@ class TestEmptyContentIsReported(unittest.TestCase):
             out = self.llm.complete("gpt-oss", "prompt")
         finally:
             sys.stderr = stderr
-        self.assertEqual(out, "", "empty content stays empty — the caller "
-                                  "counts it as unreadable")
+        self.assertEqual(
+            out, "", "empty content stays empty — the caller counts it as unreadable"
+        )
         self.assertIn("EMPTY content", err.getvalue())
         self.assertIn("thinking", err.getvalue())
 

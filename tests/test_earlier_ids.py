@@ -2,6 +2,7 @@
 a protocol with [K1] passed intent-check with "no intent ids registered" and
 exit 0 — every promise unchecked, and the house CLAUDE template still asked
 for those letters)."""
+
 import contextlib
 import io
 import tempfile
@@ -11,7 +12,10 @@ from pathlib import Path
 from labkit import intent_check, promises, protocol_check
 from protocol_fixture import head
 
-TEXT = head() + "- **Success / failure criterion:** [K1] accuracy >= 0.8; [S1] stop on errors\n"
+TEXT = (
+    head()
+    + "- **Success / failure criterion:** [K1] accuracy >= 0.8; [S1] stop on errors\n"
+)
 
 
 class EarlierIds(unittest.TestCase):
@@ -21,7 +25,9 @@ class EarlierIds(unittest.TestCase):
 
     def test_protocol_check_makes_them_a_must_finding(self):
         missing = protocol_check.check_fields(TEXT).missing_must
-        self.assertTrue(any("K1, S1" in m and "labkit 0.47" in m for m in missing), missing)
+        self.assertTrue(
+            any("K1, S1" in m and "labkit 0.47" in m for m in missing), missing
+        )
 
     def test_intent_check_refuses_instead_of_passing(self):
         with tempfile.TemporaryDirectory() as d:

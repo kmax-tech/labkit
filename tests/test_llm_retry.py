@@ -11,21 +11,23 @@ expensive kind, because it stays invisible when testing on one backend.
 The fix lives in `llm.py`, not in a rule: exhausted retries wrap the
 exception in `BackendError` and attach the original via `__cause__`.
 """
+
 import sys
 import tempfile
 import unittest
 import urllib.error
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))          # the package under test
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
 
 class TestExhaustedRetriesRaiseBackendError(unittest.TestCase):
     def setUp(self):
         from labkit import llm
+
         self.llm = llm
         self._once, self._sleep = llm._complete_once, llm.time.sleep
-        llm.time.sleep = lambda _s: None          # skip the backoff
+        llm.time.sleep = lambda _s: None  # skip the backoff
 
     def tearDown(self):
         self.llm._complete_once, self.llm.time.sleep = self._once, self._sleep
@@ -38,10 +40,16 @@ class TestExhaustedRetriesRaiseBackendError(unittest.TestCase):
         self._fail_with(urllib.error.URLError("nodename nor servname provided"))
         with self.assertRaises(self.llm.BackendError) as ctx:
             self.llm.complete("gpt-oss", "anything", attempts=2)
-        self.assertIsInstance(ctx.exception, RuntimeError,
-                              "'except RuntimeError' in the caller must catch")
-        self.assertIsInstance(ctx.exception.__cause__, urllib.error.URLError,
-                              "the original exception stays attached")
+        self.assertIsInstance(
+            ctx.exception,
+            RuntimeError,
+            "'except RuntimeError' in the caller must catch",
+        )
+        self.assertIsInstance(
+            ctx.exception.__cause__,
+            urllib.error.URLError,
+            "the original exception stays attached",
+        )
 
     def test_timeout_becomes_backenderror(self):
         self._fail_with(TimeoutError("read timed out"))
@@ -75,8 +83,11 @@ class TestExhaustedRetriesRaiseBackendError(unittest.TestCase):
         self._fail_with(urllib.error.URLError("gone"))
         with self.assertRaises(self.llm.BackendError):
             self.llm.complete("gpt-oss", "anything", attempts=3)
-        self.assertEqual(self.llm.retries() - before, 2,
-                         "two retries before the third, final attempt")
+        self.assertEqual(
+            self.llm.retries() - before,
+            2,
+            "two retries before the third, final attempt",
+        )
 
 
 if __name__ == "__main__":

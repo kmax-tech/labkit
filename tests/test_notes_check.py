@@ -103,36 +103,41 @@ class TestMetaParagraph(unittest.TestCase):
         self.assertIn("Instrument — implementiert", para)
 
     def test_no_meta_line(self):
-        self.assertIsNone(
-            notes_check.meta_paragraph("# Titel\n\nNur Fließtext.\n"))
+        self.assertIsNone(notes_check.meta_paragraph("# Titel\n\nNur Fließtext.\n"))
 
 
 class TestKindContract(unittest.TestCase):
     def test_dash_variants_all_match(self):
         for dash in ("—", "–", "-"):
-            for variant in (f"Instrument {dash} Entwurf",
-                            f"Instrument{dash}Entwurf"):
+            for variant in (f"Instrument {dash} Entwurf", f"Instrument{dash}Entwurf"):
                 self.assertTrue(notes_check.KIND.search(variant), variant)
 
     def test_all_kinds_match(self):
-        for kind in ("Instrument — implementiert", "Related-Lesart (gordon07)",
-                     "Referenzkarte", "Audit"):
+        for kind in (
+            "Instrument — implementiert",
+            "Related-Lesart (gordon07)",
+            "Referenzkarte",
+            "Audit",
+        ):
             self.assertTrue(notes_check.KIND.search(kind), kind)
 
     def test_related_key_accepts_a_comma_list(self):
         # a Werkfamilie note reads several papers at once
         m = notes_check.RELATED_WITH_KEY.search(
-            "Related-Lesart (hahn07, hahn16, hahn20)")
+            "Related-Lesart (hahn07, hahn16, hahn20)"
+        )
         self.assertIsNotNone(m)
 
     def test_bare_instrument_without_status_does_not_count(self):
-        self.assertFalse(notes_check.KIND.search(
-            "*2026-09-10 · Instrument für X · Zweck*"))
+        self.assertFalse(
+            notes_check.KIND.search("*2026-09-10 · Instrument für X · Zweck*")
+        )
 
 
 class TestCheckFile(unittest.TestCase):
     def check(self, name: str, text: str):
         import tempfile
+
         with tempfile.TemporaryDirectory() as d:
             f = Path(d) / name
             f.write_text(text, encoding="utf-8")
@@ -151,9 +156,11 @@ class TestCheckFile(unittest.TestCase):
 
     def test_implemented_with_protocol_reference_passes(self):
         # a synthesis note over documented runs names the protocol, not a script
-        text = ("# Instrument × Modellstärke\n\n"
-                "*2026-08-24 · Instrument — implementiert · legt zwei Läufe "
-                "übereinander (PROTOCOL-graded-route, Läufe `…54cf`).*\n")
+        text = (
+            "# Instrument × Modellstärke\n\n"
+            "*2026-08-24 · Instrument — implementiert · legt zwei Läufe "
+            "übereinander (PROTOCOL-graded-route, Läufe `…54cf`).*\n"
+        )
         must, warn = self.check("note.md", text)
         self.assertEqual(must, [])
         self.assertEqual(warn, [])
@@ -164,8 +171,7 @@ class TestCheckFile(unittest.TestCase):
         self.assertIn("names no script", must[0])
 
     def test_related_without_citekey_warns(self):
-        must, warn = self.check("related-eichel23-plausibilitaet.md",
-                                RELATED_NO_KEY)
+        must, warn = self.check("related-eichel23-plausibilitaet.md", RELATED_NO_KEY)
         self.assertEqual(must, [])
         self.assertEqual(len(warn), 1)
         self.assertIn("citekey", warn[0])
@@ -179,6 +185,7 @@ class TestCheckFile(unittest.TestCase):
 class TestMain(unittest.TestCase):
     def test_exit_1_on_must_failure(self):
         import tempfile
+
         with tempfile.TemporaryDirectory() as d:
             base = Path(d) / "notes" / "messung"
             base.mkdir(parents=True)
@@ -194,6 +201,7 @@ class TestMain(unittest.TestCase):
 
     def test_exit_0_when_clean(self):
         import tempfile
+
         with tempfile.TemporaryDirectory() as d:
             base = Path(d) / "notes" / "messung"
             base.mkdir(parents=True)

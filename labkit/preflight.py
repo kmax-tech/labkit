@@ -25,6 +25,7 @@ What it runs, in order:
 What it does NOT do: commit, freeze, or change any file. It is a
 read-only gate.
 """
+
 from __future__ import annotations
 
 import re
@@ -61,8 +62,10 @@ def run(area: Path, protocol: Path | None = None) -> int:
             print(f"preflight: no PROTOCOL-*.md in {area}")
             return 2
         if len(protocols) > 1:
-            print(f"preflight: {len(protocols)} protocols in {area} — name "
-                  f"one with --protocol FILE:")
+            print(
+                f"preflight: {len(protocols)} protocols in {area} — name "
+                f"one with --protocol FILE:"
+            )
             for p in protocols:
                 print(f"  {p}")
             return 2
@@ -102,24 +105,30 @@ def run(area: Path, protocol: Path | None = None) -> int:
         for n, label in should_holes:
             print(f"  {protocol.name}:{n}: placeholder (should): {label}")
         warnings += len(should_holes)
-    if not (missing_must or must_holes or id_findings or missing_should
-            or should_holes):
+    if not (
+        missing_must or must_holes or id_findings or missing_should or should_holes
+    ):
         print("  ok")
 
     # -- 1b. cost tier ------------------------------------------------------
     print("── cost tier ──")
     tier = report.head.cost
     if tier == "seconds":
-        print("  seconds — rerunnable at will: the agent audit is OPTIONAL before "
-              "freezing; one audit after the first run, on real output, "
-              "suffices (§2.A14)")
+        print(
+            "  seconds — rerunnable at will: the agent audit is OPTIONAL before "
+            "freezing; one audit after the first run, on real output, "
+            "suffices (§2.A14)"
+        )
     elif tier is None:
-        print("  not filled — treated as `hours`: the experiment-preflight "
-              "audit is due before freezing (§2.A12); set `cost` in the head "
-              "to say otherwise")
+        print(
+            "  not filled — treated as `hours`: the experiment-preflight "
+            "audit is due before freezing (§2.A12); set `cost` in the head "
+            "to say otherwise"
+        )
     else:
-        print(f"  {tier} — the experiment-preflight audit is due before "
-              f"freezing (§2.A12)")
+        print(
+            f"  {tier} — the experiment-preflight audit is due before freezing (§2.A12)"
+        )
 
     # -- 2. code-check (intent ids) ---------------------------------------
     print("── code-check: intent ids ──")
@@ -174,34 +183,53 @@ def run(area: Path, protocol: Path | None = None) -> int:
     tests_dir = repo / "tests"
     tests = sorted(tests_dir.glob(f"test_*{slug}*.py")) if tests_dir.is_dir() else []
     if not tests:
-        print(f"  WARNING: no tests/test_*{slug}*.py — the resolution check has "
-              f"no permanent form (§2.A13)")
+        print(
+            f"  WARNING: no tests/test_*{slug}*.py — the resolution check has "
+            f"no permanent form (§2.A13)"
+        )
         warnings += 1
     else:
-        r = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
-                            *map(str, tests)], cwd=repo, capture_output=True, text=True)
+        r = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                *map(str, tests),
+            ],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+        )
         if r.returncode == 0:
             print(f"  ok — {', '.join(t.name for t in tests)}")
         elif "No module named pytest" in (r.stderr or ""):
-            print("  WARNING: pytest is not installed in this interpreter — tests not run")
+            print(
+                "  WARNING: pytest is not installed in this interpreter — tests not run"
+            )
             warnings += 1
         else:
             tail = [ln for ln in (r.stdout or "").splitlines() if ln.strip()][-6:]
             for ln in tail:
                 print(f"  {ln}")
-            print(f"  BLOCKER: {', '.join(t.name for t in tests)} failed — an "
-                  f"unfilled or broken resolution check must not pass the freeze")
+            print(
+                f"  BLOCKER: {', '.join(t.name for t in tests)} failed — an "
+                f"unfilled or broken resolution check must not pass the freeze"
+            )
             blockers += 1
 
     # -- summary -----------------------------------------------------------
     print()
     if blockers:
-        print(f"preflight: {blockers} blocker(s), {warnings} warning(s) "
-              f"— fix the blockers before freezing.")
+        print(
+            f"preflight: {blockers} blocker(s), {warnings} warning(s) "
+            f"— fix the blockers before freezing."
+        )
         return 1
     if warnings:
-        print(f"preflight: 0 blockers, {warnings} warning(s) — review "
-              f"before freezing.")
+        print(f"preflight: 0 blockers, {warnings} warning(s) — review before freezing.")
         return 0
     print("preflight: all clear.")
     return 0

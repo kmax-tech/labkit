@@ -61,7 +61,6 @@ def _check(paths):
 
 
 class TestFieldIsDue(unittest.TestCase):
-
     def test_unstamped_id_is_a_must_gap(self):
         with tempfile.TemporaryDirectory() as d:
             p = _protocol(d, pid="<protocol-id>")
@@ -73,9 +72,12 @@ class TestFieldIsDue(unittest.TestCase):
         """'Protocol id will be added later' must not pass the must-check:
         the id is read from the head table, never from the prose."""
         with tempfile.TemporaryDirectory() as d:
-            p = _protocol(d, pid="<protocol-id>",
-                          extra="- **Protocol id:** p-0123456789abcdef\n"
-                                "Protocol id will be added later.\n")
+            p = _protocol(
+                d,
+                pid="<protocol-id>",
+                extra="- **Protocol id:** p-0123456789abcdef\n"
+                "Protocol id will be added later.\n",
+            )
             _, out = _check([p])
         self.assertIn("MISSING (must): [protocol] id", out)
 
@@ -84,8 +86,10 @@ class TestFieldIsDue(unittest.TestCase):
         only; here the protocol fails on its missing head."""
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "PROTOCOL-x.md"
-            p.write_text("# x\n- **Standard:** 0.17\n- **Protocol id:** " + PID + "\n",
-                         encoding="utf-8")
+            p.write_text(
+                "# x\n- **Standard:** 0.17\n- **Protocol id:** " + PID + "\n",
+                encoding="utf-8",
+            )
             code, out = _check([p])
         self.assertIn("HEAD (must): no [protocol] table", out)
         self.assertEqual(code, 1)
@@ -99,10 +103,8 @@ class TestFieldIsDue(unittest.TestCase):
 
 
 class TestShape(unittest.TestCase):
-
     def test_wrong_shape_is_reported(self):
-        for bad in ("p-NOTHEX", "p-0123", "0123456789abcdef",
-                    "p-0123456789ABCDEF"):
+        for bad in ("p-NOTHEX", "p-0123", "0123456789abcdef", "p-0123456789ABCDEF"):
             with self.subTest(bad=bad), tempfile.TemporaryDirectory() as d:
                 p = _protocol(d, pid=bad)
                 code, out = _check([p])
@@ -135,8 +137,7 @@ class TestUniqueness(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / ".git").mkdir()
             _protocol(d, pid="p-1111111111111111", name="PROTOCOL-s1-a.md")
-            second = _protocol(d, pid="p-2222222222222222",
-                               name="PROTOCOL-s2-b.md")
+            second = _protocol(d, pid="p-2222222222222222", name="PROTOCOL-s2-b.md")
             _, out = _check([second])
         self.assertNotIn("DUPLICATE", out)
 
@@ -159,8 +160,12 @@ class TestDivergenceAgainstHead(unittest.TestCase):
             run("git", "add", "-A")
             run("git", "commit", "-qm", "init")
             before, _ = _check([p])
-            p.write_text(p.read_text(encoding="utf-8").replace(
-                "p-1111111111111111", "p-2222222222222222"), encoding="utf-8")
+            p.write_text(
+                p.read_text(encoding="utf-8").replace(
+                    "p-1111111111111111", "p-2222222222222222"
+                ),
+                encoding="utf-8",
+            )
             after, out = _check([p])
         self.assertIn("WARNING: protocol id changed against HEAD", out)
         self.assertIn("p-1111111111111111 -> p-2222222222222222", out)

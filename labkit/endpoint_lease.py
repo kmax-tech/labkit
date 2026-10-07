@@ -67,7 +67,7 @@ from pathlib import Path
 
 from labkit import runs
 
-_HELD: set[tuple[str, str]] = set()      # (endpoint, alias) held by this process
+_HELD: set[tuple[str, str]] = set()  # (endpoint, alias) held by this process
 _FILES: dict[tuple[str, str], Path] = {}
 _MUTEX = threading.Lock()
 #: an unreadable record younger than this counts as a holder
@@ -102,7 +102,7 @@ def holders(endpoint: str) -> list[dict]:
     for f in sorted(d.glob("*.json")):
         try:
             rec = json.loads(f.read_text(encoding="utf-8"))
-        except FileNotFoundError:          # released between glob and read
+        except FileNotFoundError:  # released between glob and read
             continue
         except (OSError, json.JSONDecodeError) as exc:
             try:
@@ -110,11 +110,21 @@ def holders(endpoint: str) -> list[dict]:
             except FileNotFoundError:
                 continue
             if age < UNREADABLE_GRACE_S:
-                out.append({"alias": None, "pid": None, "script": f.name,
-                            "started": "", "unreadable": str(exc)})
+                out.append(
+                    {
+                        "alias": None,
+                        "pid": None,
+                        "script": f.name,
+                        "started": "",
+                        "unreadable": str(exc),
+                    }
+                )
             else:
-                print(f"endpoint_lease: removing unreadable lease record {f} "
-                      f"({exc}; {age:.0f}s old)", file=sys.stderr)
+                print(
+                    f"endpoint_lease: removing unreadable lease record {f} "
+                    f"({exc}; {age:.0f}s old)",
+                    file=sys.stderr,
+                )
                 f.unlink(missing_ok=True)
             continue
         if rec.get("pid") == os.getpid():
@@ -147,8 +157,11 @@ def _write_atomic(f: Path, rec: dict) -> None:
 
 def _conflict(endpoint: str, alias: str) -> dict | None:
     """The oldest live holder of a DIFFERENT alias, or None."""
-    others = [h for h in holders(endpoint)
-              if h.get("alias") != alias and h.get("pid") != os.getpid()]
+    others = [
+        h
+        for h in holders(endpoint)
+        if h.get("alias") != alias and h.get("pid") != os.getpid()
+    ]
     return min(others, key=lambda h: h.get("started", "")) if others else None
 
 
@@ -162,7 +175,8 @@ def _refuse(endpoint: str, alias: str, other: dict) -> None:
         f"swap the model back and forth (~5 min each), the timeouts come back "
         f"as empty answers, and an admissibility condition counts them as a parser finding.\n"
         f"  Let that stage finish, use the same alias, or — if you really mean "
-        f"to share the slot — set LABKIT_NO_ENDPOINT_LEASE=1.")
+        f"to share the slot — set LABKIT_NO_ENDPOINT_LEASE=1."
+    )
 
 
 def acquire(alias: str, endpoints: list[str] | None) -> None:
@@ -192,10 +206,14 @@ def _lease_one(d: Path, endpoint: str, alias: str) -> None:
     other = _conflict(endpoint, alias)
     if other is not None:
         _refuse(endpoint, alias, other)
-    rec = {"alias": alias, "pid": os.getpid(), "script": _script(),
-           "endpoint": endpoint,
-           "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
-           "argv": " ".join(sys.argv)[:300]}
+    rec = {
+        "alias": alias,
+        "pid": os.getpid(),
+        "script": _script(),
+        "endpoint": endpoint,
+        "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "argv": " ".join(sys.argv)[:300],
+    }
     f = d / f"{_slug(alias)}.{os.getpid()}.json"
     _write_atomic(f, rec)
     # On a shared filesystem flock may not hold, and two processes can pass
