@@ -1,0 +1,41 @@
+{
+ "probe": {
+  "staged": "2026-10-07T16:33:05",
+  "task": "count",
+  "area": "01-docs-per-case",
+  "metric_key": "mean_docs_per_case",
+  "labkit_installed": "-e git+https://github.com/kmax-tech/labkit.git@fd4cd60040ceb5597d64cf1f26fee3216d0d32a1#egg=labkit",
+  "scaffold_sha": "46ac023ab356",
+  "scaffold_flags": [
+   "--lab",
+   "--name",
+   "count-3",
+   "--lang",
+   "deutsch",
+   "--exp",
+   "docs-per-case"
+  ],
+  "target_minutes": 5
+ },
+ "run_id": "2026-10-07T16-35-30_4803",
+ "number": 3.5,
+ "expected": 3.5,
+ "number_ok": true,
+ "null_reported": null,
+ "bound_to": "PROTOCOL-docs-per-case.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 23,
+  "wall_seconds": 147,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 4,
+  "run": 12,
+  "edit": 5,
+  "unsure": 0,
+  "gate": 2,
+  "untagged": 0,
+  "source_reads": 0
+ }
+}

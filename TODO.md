@@ -200,6 +200,14 @@ Templates oder Gates.
 **Prüfstelle:** der Commit, der labkit oder einen Stempel ändert — seine
 Nachricht nennt die drei Läufe oder sagt, warum nicht.
 
+**Stand 2026-10-07 (labkit 0.52, `docs/usability/2026-10-07-remeasure.md`):**
+6 von 6 Zahlen richtig und gebunden, Median count 1m16s, judge 2m23s, 0
+Lesezugriffe auf Quelltext oder Standard. Zwei Fehlalarme gefunden und
+behoben (`3e93af3`: Lock-Drift bei editierbarer Installation,
+Platzhalter außerhalb des Sekunden-Schnitts). Offen vor dem Rollout: der
+Scaffolder stempelt ohne `--cost` das Modell-Skelett auch für eine
+Zählung (Haus-Vorlage, eigener Auftrag).
+
 ## 3. `code-check`: jede registrierte Kennung braucht einen Zweig, nicht nur einen Schlüssel
 
 **Was:** Eine Kennung ist ein Versprechen des Protokolls an den Code: `[N1]`
