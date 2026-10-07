@@ -19,13 +19,15 @@ stage
     accuracy, no truth, only a range and a null condition to report — with a
     known answer (twelve cases, their input files; the answer is recounted
     from the files at score time, never written down) and TASK.md — the
-    prompt a cold agent gets, from `usability-task.md.template`, with the log
-    contract and the metrics key the number must land under. A venv with
+    task sheet, from `usability-task-<task>.md.template`, with the log
+    contract and the metrics key the number must land under — and
+    `<dir>.prompt.md`, the prompt a cold agent gets: the repo's CLAUDE.md
+    as a session loads it, then the pointer to TASK.md. A venv with
     labkit is created unless `--venv` links an existing one. What was
     measured is pinned in `<dir>.probe.json`: the labkit the probe venv
     holds, a sha over the scaffolder and the templates it stamps, the flags.
-    Side effects: a git repo with two commits, a venv or a symlink, two
-    sidecar files next to <dir>.
+    Side effects: a git repo with three commits, a venv or a symlink, three
+    sidecar files next to <dir> (probe.json, log.md, prompt.md).
 
 score
     Reads the latest run of the stamped area — the number under the named
@@ -257,6 +259,29 @@ def stamp_flags(task: str, cost: str | None, model: bool) -> tuple[str | None, b
     return (None if cost == "unset" else cost), (model or default_model)
 
 
+def agent_prompt(root: Path) -> str:
+    """The prompt a cold agent gets: the repo's CLAUDE.md first, the way a
+    Claude Code session started in the repo loads it into context, then the
+    pointer to TASK.md. Handed only a pointer, every agent fetched CLAUDE.md
+    with `cat` and read all of it before any section marker could steer
+    it — a cost of the probe, not of a real session (re-measure 2026-10-07,
+    rounds 1 to 4)."""
+    claude = root / "CLAUDE.md"
+    if not claude.is_file():
+        raise SystemExit(f"usability: {claude} missing — the scaffolder stamps it")
+    return (
+        f"Contents of {claude} (project instructions, loaded the way a "
+        f"session in this repository loads them):\n\n"
+        f"{claude.read_text(encoding='utf-8')}\n"
+        f"---\n\n"
+        f"Your working directory is {root} — a lab repository. Read TASK.md "
+        f"there and do exactly what it says; it names the log file you keep. "
+        f"Every shell command must first `cd` into that directory (your shell "
+        f"does not start there). Work only inside it; do not touch sibling "
+        f"directories. When done, give the report TASK.md asks for.\n"
+    )
+
+
 def _sidecar(root: Path, suffix: str) -> Path:
     return root.parent / f"{root.name}.{suffix}"
 
@@ -390,11 +415,13 @@ def stage(
     _sidecar(root, "probe.json").write_text(
         json.dumps(asdict(probe), indent=1), encoding="utf-8"
     )
+    prompt = _sidecar(root, "prompt.md")
+    prompt.write_text(agent_prompt(root), encoding="utf-8")
     print(
-        f"staged {root}\n  task:  {root / 'TASK.md'}\n  log:   {log}\n"
-        f"  probe: {_sidecar(root, 'probe.json')}\n"
-        f"next: hand TASK.md to a cold agent (fresh context, no history), "
-        f"then `usability score {root}`"
+        f"staged {root}\n  task:   {root / 'TASK.md'}\n  log:    {log}\n"
+        f"  probe:  {_sidecar(root, 'probe.json')}\n  prompt: {prompt}\n"
+        f"next: hand the prompt file's text to a cold agent (fresh context, no "
+        f"history), then `usability score {root} --transcript <its transcript>`"
     )
     return 0
 

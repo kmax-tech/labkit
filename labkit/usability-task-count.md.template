@@ -12,8 +12,9 @@ the way this repo keeps numbers, so it can be cited later: the run's
 `metrics.json` carries it under the key `<metric_key>`. The area
 `experiments/<area>/` is already stamped for it.
 
-Follow the repo's own rules (`CLAUDE.md`, `docs/arbeitsstandard.md`):
-read what you need, no more.
+Follow the repo's own rules: `CLAUDE.md` is in your context already (as a
+session loads it), `docs/arbeitsstandard.md` holds the long form — read what
+you need, no more.
 
 **The log** matters as much as the number. Append to `<log>` ONE line
 BEFORE each step (`touch` it first; append with `>>`):

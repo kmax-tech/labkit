@@ -162,5 +162,23 @@ class StampFlags(unittest.TestCase):
         self.assertEqual(usability.stamp_flags("count", "unset", False), (None, False))
 
 
+class AgentPrompt(unittest.TestCase):
+    """The agent gets CLAUDE.md the way a session loads it, not a pointer it
+    must `cat` (re-measure 2026-10-07: every agent read all of it by tool)."""
+
+    def test_claude_md_comes_first_then_the_task_pointer(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "CLAUDE.md").write_text("# CLAUDE.md — probe\n\nrule one\n")
+            prompt = usability.agent_prompt(root)
+        self.assertTrue(prompt.startswith(f"Contents of {root / 'CLAUDE.md'}"))
+        self.assertLess(prompt.index("rule one"), prompt.index("Read TASK.md"))
+
+    def test_a_repo_without_claude_md_is_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(SystemExit):
+                usability.agent_prompt(Path(d))
+
+
 if __name__ == "__main__":
     unittest.main()
