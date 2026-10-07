@@ -639,6 +639,11 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
         return ["the run is unbound (no protocol) — a full run needs a "
                 "registered protocol (§2.A1)"]
     path = Path(binding["path"])
+    if binding.get("id") is None:
+        # a full run's number must be bound; an unstamped id binds nothing,
+        # and finalize would only say so after the number exists (review 2026-10-07)
+        return [f"{path.name}: the [protocol] id is not stamped — a full run "
+                f"needs a bound protocol (`lib exp` stamps it)"]
     head = protocol_block.head(text)          # read once at binding; valid here
     if head.cost == "seconds":
         missing = intent_missing(text)

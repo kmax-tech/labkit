@@ -41,6 +41,9 @@ PILOT = """# Experiment protocol: x
 
 - **Null condition / anchors:** [A2] shuffled labels
 - **Exclusions / filters:** none
+- **Data / scope:** data/x.jsonl, 12 items
+- **Model / tool:** n/a — deterministic
+- **Unit:** one item
 """
 
 

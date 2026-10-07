@@ -32,6 +32,9 @@ BODY = """\
 
 - **Null condition / anchors (in the same run):** [A2] shuffled labels stay at chance
 - **Exclusions / filters:** none
+- **Data / scope:** data/x.jsonl, 12 items
+- **Model / tool:** n/a — deterministic
+- **Unit:** one item
 """
 
 

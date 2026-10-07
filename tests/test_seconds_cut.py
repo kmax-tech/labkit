@@ -65,8 +65,10 @@ class Cut(unittest.TestCase):
         gap = text.replace("- **Unit:** one sentence, judged once\n", "")
         self.assertEqual(protocol_check.check_fields(gap).missing_must, ["Unit"])
 
-    def test_frozen_does_not_graduate_the_seconds_cut(self):
-        """Nothing freezes at seconds (§2.A14): `frozen = true` owes no should."""
+    def test_frozen_at_seconds_is_refused_not_graduated(self):
+        """Nothing freezes at seconds (§2.A14): `frozen = true` there owes no
+        should field, but claims a freeze no gate held — one must finding
+        (review 2026-10-07: it used to pass silently)."""
         text = head(cost="seconds", frozen=True) + """
 - **Question / hypothesis:** q
 - **Success / failure criterion:** c
@@ -77,7 +79,9 @@ class Cut(unittest.TestCase):
 - **Exclusions / filters:** none
 """
         report = protocol_check.check_fields(text)
-        self.assertEqual(report.missing_must, [])
+        self.assertEqual(len(report.missing_must), 1, report.missing_must)
+        self.assertIn('frozen = true at cost = "seconds"', report.missing_must[0])
+        self.assertEqual(report.missing_should, [])
         self.assertEqual(report.missing_should, [])
 
 

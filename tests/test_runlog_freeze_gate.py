@@ -68,6 +68,18 @@ class FreezeGate(unittest.TestCase):
         self.assertTrue((r.dir / "config.json").is_file())
         self.assertFalse(json.loads((r.dir / "config.json").read_text())["unfrozen_ack"])
 
+    def test_full_run_on_an_unstamped_id_is_refused_before_mkdir(self):
+        """Twin of the frozen start above: same protocol, id not stamped — the
+        number would be bound to nothing (review 2026-10-07), at every tier."""
+        for text in (head(id="<protocol-id>", cost="hours", frozen=True, preflight_audit=AUDIT),
+                     head(id="<protocol-id>", cost="seconds") + REGISTRATION):
+            area = self._area(text)
+            with self.assertRaises(SystemExit) as cm:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    runlog.Run("t", {}, area, long=True)
+            self.assertIn("id is not stamped", str(cm.exception))
+            self.assertFalse((area / "runs").exists())
+
     def test_full_run_on_unfrozen_protocol_is_refused_before_mkdir(self):
         area = self._area(UNFROZEN)
         with self.assertRaises(SystemExit) as cm:

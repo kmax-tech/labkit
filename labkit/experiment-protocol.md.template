@@ -12,8 +12,9 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
   exclusions · result; with `--model` also model · prompt · null condition;
   the full form adds the rest; `--report` the † fields). One template, three
   cuts — a field the cut left out is not owed (→ §2.A12).
-- **† = report field.** Due only once `frozen = true` in the head;
-  leave empty until then (`lib exp <name> --report` appends them).
+- **† = report field.** Due once `frozen = true` in the head — those in
+  Summary and Result once a run is written back as well; leave the
+  placeholder until then (`lib exp <name> --report` appends them).
 - **`[C…]`/`[A…]`/`[B…]` = intent ids**, one per promise to the code:
   **C** criterion — which value of which metric supports the hypothesis,
   one per conjunct · **A** admissibility — an outcome-neutral check that

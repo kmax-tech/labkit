@@ -40,6 +40,40 @@ class Contract(unittest.TestCase):
         self.assertEqual(report.head.placeholders, ["type", "cost"])
 
 
+class Daggers(unittest.TestCase):
+    def test_dagger_marks_exactly_the_report_grade_fields(self):
+        """† in the template = should or report in FIELDS, and every report
+        field carries †: the legend and the checker say the same thing
+        (review 2026-10-07: 14 † fields were never checked)."""
+        daggered = {f.name for f in protocol_check.fields(TEMPLATE) if "†" in f.label}
+        levels = {f.label.casefold(): f.level for f in protocol_check.FIELDS}
+        for name in daggered:
+            self.assertIn(levels.get(name), ("should", "report"), name)
+        for label, level in levels.items():
+            if level == "report":
+                self.assertIn(label, daggered, label)
+
+
+class Placeholders(unittest.TestCase):
+    def one(self, line: str):
+        (f,) = protocol_check.fields(line)
+        return f
+
+    def test_content_starting_with_a_bracket_is_content(self):
+        self.assertFalse(self.one("- **Admissibility condition:** <10% unparsed [A1]\n").placeholder)
+
+    def test_unfilled_forms_are_placeholders(self):
+        for line in ("- **Unit:** <what one counted thing is>\n",
+                     "- **Unit:** TODO\n",
+                     "- **Unit:** n/a — <why>\n",
+                     "- **Unit:**\n"):
+            self.assertTrue(self.one(line).placeholder, line)
+
+    def test_a_label_with_a_code_block_below_is_filled(self):
+        f = self.one("- **Prompt (verbatim):**\n\n  ```text\n  Is it?\n  ```\n")
+        self.assertFalse(f.placeholder)
+
+
 class Fields(unittest.TestCase):
     def test_a_word_elsewhere_does_not_fill_a_field(self):
         # the keyword check let "prompt" in any sentence cover Model I/O
@@ -93,6 +127,20 @@ class Fields(unittest.TestCase):
         self.assertEqual(report.missing_should, [])
         with_model = head(cost="seconds") + "- **Model / tool:** haiku\n"
         self.assertIn("Prompt", protocol_check.check_fields(with_model).missing_must)
+
+    def test_report_fields_fall_due_with_a_documented_run_once_frozen(self):
+        run = "\n## Runs\n\n- 2026-10-07T10-00-00_ab12 — the full run\n"
+        frozen = head(frozen=True, preflight_audit="x")
+        self.assertNotIn("Analysis audit", protocol_check.check_fields(frozen).missing_must)
+        self.assertIn("Analysis audit", protocol_check.check_fields(frozen + run).missing_must)
+        self.assertNotIn("Analysis audit",
+                         protocol_check.check_fields(head() + run).missing_must)       # pilot
+        self.assertNotIn("Analysis audit",
+                         protocol_check.check_fields(head(cost="seconds") + run).missing_must)
+
+    def test_none_names_no_model(self):
+        text = head(cost="seconds") + "- **Model / tool:** none — a deterministic count\n"
+        self.assertNotIn("Prompt", protocol_check.check_fields(text).missing_must)
 
     def test_a_head_placeholder_is_a_must_gap(self):
         report = protocol_check.check_fields(head(cost="<seconds | minutes | hours>"))

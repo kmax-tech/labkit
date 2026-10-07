@@ -85,6 +85,9 @@ PILOT_FIELDS = """\
 
 - **Null condition / anchors:** [A2] shuffled labels at chance
 - **Exclusions / filters:** none
+- **Data / scope:** data/prepared/claims.jsonl, 50 items
+- **Model / tool:** haiku
+- **Unit:** one claim
 """
 
 # Every should field, filled: a frozen protocol owes them as musts.
@@ -100,6 +103,12 @@ REPORT_FIELDS = """\
 - **Resolution check:** perfect effect fires, null stays silent
 - **Gate labels:** yes, no
 - **Randomness controls:** deterministic
+- **Why this design:** the judge is the instrument under test
+- **Data preparation:** scripts/00_prepare.py writes data/prepared/claims.jsonl
+- **Answer form + resolution:** yes/no, two states
+- **How measured:** AUC over the judge's yes-probability
+- **Validation:** anchors of known label
+- **Noise ceiling → threshold:** spread 0.02 over three draws
 """
 
 
@@ -618,12 +627,12 @@ class TestResolutionCheckGate(unittest.TestCase):
 
     def test_answer_form_resolution_is_not_caught(self):
         """Guard against the near-collision: 'Answer form + resolution †' is
-        neither the resolution check nor owed."""
+        its own report field, never the resolution check."""
         text = frozen().replace(self.RESOLUTION, "- **Answer form + resolution †:** "
                                 "<how many states>\n")
         report = protocol_check.check_fields(text)
         self.assertEqual(report.missing_must, ["Resolution check"])
-        self.assertEqual([lb for _, lb in report.soft_holes], ["Answer form + resolution †"])
+        self.assertIn("Answer form + resolution †", [lb for _, lb in report.must_holes])
 
     def test_template_stamps_the_field(self):
         self.assertIn("Resolution check", TEMPLATE.read_text(encoding="utf-8"))

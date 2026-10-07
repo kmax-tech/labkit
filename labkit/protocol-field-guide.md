@@ -30,15 +30,18 @@ path to this file.
    result in the other that was perfectly sound.
 5. **Every number carries its run_id.** A number you cannot trace is a number
    you cannot defend.
-6. **Unknown stays unknown.** Write `TODO — not recorded` rather than what it
-   probably was. The gaps are information: they show which results are already
+6. **Unknown stays unknown.** Write `unknown — not recorded` rather than what
+   it probably was. The gaps are information: they show which results are already
    defensible and which only exist in your memory.
 7. **Pilot light, report heavy.** For a quick pilot you owe only the core:
    the question, how you'll recognize it worked, the type, the rendered
    prompt / model I/O, and what came out. Fields marked **†** are
    report-grade: they become mandatory the moment you set `frozen = true`
-   in the head — that is, the moment you want to report the number. Until
-   then, leave them as `TODO` rather than padding them.
+   in the head — that is, the moment you want to report the number; those
+   in Summary and Result once the run is written back as well. Until then,
+   leave the `<…>` placeholder rather than padding them. `TODO`, an empty
+   label and a bare `n/a — <why>` count as unfilled; `n/a — <the reason>`
+   counts as filled.
 
 ## Intent IDs [C/A/B]
 

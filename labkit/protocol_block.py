@@ -90,7 +90,8 @@ def load(text: str) -> dict:
 
 
 def _placeholder(value: object) -> bool:
-    return isinstance(value, str) and value.strip().startswith("<")
+    """The template's `"<…>"`; a value merely starting with `<` is content."""
+    return isinstance(value, str) and value.strip().startswith("<") and value.strip().endswith(">")
 
 
 def _choice(table: dict, field: str, allowed: tuple[str, ...]) -> str | None:

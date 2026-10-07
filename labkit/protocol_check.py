@@ -55,53 +55,79 @@ class Field:
 
     `label` is the template's label without `†` and without the
     parenthesised gloss (`Prompt (verbatim, per variant)` → `Prompt`).
-    `level`: must — owed by every pilot; should — owed by a reportable run,
-    a must once `frozen = true`; after — owed once a measure run is
-    documented (the run-unreported check), never before. `seconds`: owed in
-    the seconds cut — "s" always, "sm" when a `Model / tool` is named.
+    `level` says when the field is owed:
+
+        must    by every pilot
+        should  by a reportable run: a must once `frozen = true`
+        after   once a measure run is documented (the result written back)
+        report  once frozen AND a measure run is documented (the summary and
+                the report half of the result; at seconds never — the audit
+                comes at promotion there)
+
+    `seconds`: owed in the seconds cut — "s" always, "sm" when a `Model /
+    tool` is named; after/report fields carry the template's marker but are
+    owed by their level, not by the cut. The template's † marks exactly the
+    should and report fields it stamps with `--report` (a test holds this).
     """
     label: str
     level: str
     seconds: str = ""
 
 
+LEVELS = ("must", "should", "after", "report")
+
 # The one home of what a protocol owes, by the template's exact labels — a
-# test holds every label to the template and the seconds cut to its
-# `<!-- s -->` markers. Keyword search over the whole file is gone: a word
-# anywhere satisfied a field (`prompt` in a sentence covered "Model I/O"),
-# and a narrow word failed a filled one (`**Terms:**` against `terms of`).
+# test holds every label to the template, the seconds cut to its
+# `<!-- s -->` markers and the † marks to the should/report levels. Keyword
+# search over the whole file is gone: a word anywhere satisfied a field
+# (`prompt` in a sentence covered "Model I/O"), and a narrow word failed a
+# filled one (`**Terms:**` against `terms of`).
 FIELDS = (
     # Terms first: they precede the question they are asked in (§5.5).
     Field("Terms of this protocol", "must", "s"),
     Field("Question / hypothesis", "must", "s"),
     Field("Success / failure criterion", "must", "s"),
     Field("Admissibility condition", "must", "s"),
+    Field("Data / scope", "must", "s"),
+    Field("Model / tool", "must", "sm"),
     Field("Model I/O", "must"),
     Field("Prompt", "must", "sm"),
     Field("Null condition / anchors", "must", "sm"),
     Field("Exclusions / filters", "must", "s"),
-    Field("Data / scope", "other", "s"),
-    Field("Unit", "other", "s"),
-    Field("Model / tool", "other", "sm"),
+    Field("Unit", "must", "s"),
     # A reportable run owes these on top (2026-08-18, "pilot light, report
     # heavy"): missing in all five freely written protocols of Aug 2026.
     Field("Problem in one sentence", "should"),
-    Field("Meaning of the gold label", "should"),
-    Field("Yield per stage", "should"),
+    Field("Why this design", "should"),
     Field("Rival explanations", "should"),
     Field("Out of scope", "should"),
+    Field("Gate labels", "should"),
+    Field("Data preparation", "should"),
+    Field("Meaning of the gold label", "should"),
+    Field("Answer form + resolution", "should"),
+    Field("How measured", "should"),
+    Field("Validation", "should"),
+    Field("Noise ceiling → threshold", "should"),
     Field("Free knobs", "should"),
-    Field("Prediction for the follow-up run", "should"),
+    Field("Randomness controls", "should"),
     Field("Instrument check", "should"),
+    Field("Yield per stage", "should"),
     # The resolution check (§2.A13): the criterion over synthetic extremes
     # by the REAL evaluate(), before freezing.
     Field("Resolution check", "should"),
-    Field("Gate labels", "should"),
-    Field("Randomness controls", "should"),
+    Field("Prediction for the follow-up run", "should"),
     # Written after the run: before it they cannot exist.
     Field("Answer to the question", "after", "s"),
     Field("Raw output", "after", "s"),
-    Field("Analysis audit", "after", "s"),
+    Field("Question", "report"),
+    Field("Did", "report"),
+    Field("Result", "report"),
+    Field("Status", "report"),
+    Field("Outcome", "report"),
+    Field("Rival check", "report"),
+    Field("Caps/drops", "report"),
+    # "fällig mit dem Zurückschreiben der Zahl" (§2.D11)
+    Field("Analysis audit", "report", "s"),
 )
 
 #: a bold field label opening a line: `- **Label (gloss) †:** value`
@@ -120,10 +146,20 @@ class FieldLine:
     name: str                       # field_name() of the label
     label: str                      # the label as written
     value: str                      # the value with its continuation lines, cut markers removed
+    block: bool = False             # a code fence follows the label (a verbatim prompt)
 
     @property
     def placeholder(self) -> bool:
-        return self.value.startswith("<")
+        """Not yet filled: the template's `<…>`, an `n/a — <why>` left as
+        stamped, `TODO`, or a bare label with neither text nor a code block
+        below. A value that merely starts with `<` (`<10% unparsed`) is
+        content (review 2026-10-07: it read as a placeholder, while `TODO`
+        read as filled and let a freeze through)."""
+        v = self.value
+        if not v:
+            return not self.block
+        return (v.startswith("TODO") or "<why>" in v
+                or (v.startswith("<") and v.endswith(">")))
 
 
 def fields(text: str) -> list[FieldLine]:
@@ -156,7 +192,9 @@ def fields(text: str) -> list[FieldLine]:
             nxt += 1
         value = _MARKER.sub("", " ".join(parts)).strip()
         label = " ".join(m.group("label").split())
-        out.append(FieldLine(line=i + 1, name=field_name(label), label=label, value=value))
+        after = next((ln.strip() for ln in lines[nxt:] if ln.strip()), "")
+        out.append(FieldLine(line=i + 1, name=field_name(label), label=label, value=value,
+                             block=after.startswith("```")))
     return out
 
 
@@ -181,32 +219,38 @@ class FieldReport:
         return bool(self.head and self.head.frozen)
 
 
+#: a `Model / tool` value that names no model
+_NO_MODEL = re.compile(r"^(n/a|none|no model|—|–|-)", re.I)
+
+
 def _model_named(found: dict[str, list[FieldLine]]) -> bool:
     for f in found.get("model / tool", []):
-        if f.value and not f.placeholder and not f.value.lower().startswith("n/a"):
+        if f.value and not f.placeholder and not _NO_MODEL.match(f.value):
             return True
     return False
 
 
 def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]]:
-    """(must, should) fields this protocol owes, by its cut and freeze.
+    """(must, should) fields this protocol owes, by its cut, freeze and runs.
 
     The seconds cut owes its marked fields and nothing graduates — nothing
     freezes (§2.A14). The full form owes every must; `frozen = true` turns
-    every should into a must (the graduation gate, in ONE place)."""
+    every should into a must (the graduation gate, in ONE place), and once a
+    measure run is documented a frozen protocol owes its report fields too."""
     found: dict[str, list[FieldLine]] = {}
     for f in fields(text):
         found.setdefault(f.name, []).append(f)
     if head.cost == "seconds":
         model = _model_named(found)
-        must = [f for f in FIELDS if f.level != "after"
+        must = [f for f in FIELDS if f.level in ("must", "should")
                 and (f.seconds == "s" or (f.seconds == "sm" and model))]
         return must, []
     must = [f for f in FIELDS if f.level == "must"]
     should = [f for f in FIELDS if f.level == "should"]
-    if head.frozen:
-        return must + should, []
-    return must, should
+    if not head.frozen:
+        return must, should
+    report = [f for f in FIELDS if f.level == "report"] if measure_runs(text) else []
+    return must + should + report, []
 
 
 def check_fields(text: str) -> FieldReport:
@@ -223,8 +267,12 @@ def check_fields(text: str) -> FieldReport:
     earlier = promises.earlier_ids(text)
     if earlier:
         missing_must.append(f"intent ids {', '.join(earlier)}: {promises.EARLIER_IDS_HELP}")
-    # Frozen means audited first (§2.A12); at seconds nothing freezes.
-    if head.frozen and head.cost != "seconds" and not head.preflight_audit:
+    # Frozen means audited first (§2.A12); at seconds nothing freezes, so a
+    # frozen flag there would claim a freeze no gate held (review 2026-10-07).
+    if head.frozen and head.cost == "seconds":
+        missing_must.append('[protocol] frozen = true at cost = "seconds" — nothing '
+                            'freezes there; set frozen = false or choose minutes/hours')
+    elif head.frozen and not head.preflight_audit:
         missing_must.append("[protocol] preflight_audit (frozen = true without the audit line)")
     must_names = {f.label.casefold() for f in must}
     must_holes, soft_holes = [], []
@@ -327,8 +375,15 @@ SETUP_RUN = re.compile(r"prepare|probe|wegwerf|trockenlauf|dry.?run", re.I)
 #: nothing but dashes. A bare "Label:" at end of line is NOT empty —
 #: multi-line values start on the next line (the 25er protocol writes them
 #: that way; the first version false-alarmed).
-RESULT_FIELDS = ("answer to the question", "raw output")
+RESULT_FIELDS = tuple(f.label.casefold() for f in FIELDS if f.level == "after")
 _DASHES = re.compile(r"^[—–-]+$")
+
+
+def measure_runs(text: str) -> list[tuple[int, str]]:
+    """(line, run_id) of every documented run that is not data preparation
+    or a throwaway probe — from the first one on, the result is due."""
+    return [(n, m.group(0)) for n, ln in enumerate(text.splitlines(), 1)
+            if (m := RUN_ID.search(ln)) and not SETUP_RUN.search(ln)]
 
 
 def unreported(text: str) -> list[str]:
@@ -337,6 +392,9 @@ def unreported(text: str) -> list[str]:
     return [name for name in RESULT_FIELDS
             if name not in found or found[name].placeholder
             or _DASHES.match(found[name].value)]
+
+
+
 # A follow-up registration appended to the SAME protocol — the pattern that
 # grew one file to 649 lines out of three experiments ("Lauf B — ...
 # (deklariert vor dem Lauf)", "Stufe 2 ..."): each such heading is a second
@@ -455,18 +513,19 @@ def print_contract() -> None:
     for label, _, limit in SECTION_BUDGET:
         print(f"  {label:<9} {limit}")
     print("\nfields, by their exact template label (`- **<label>:** <value>`; a "
-          "parenthesised gloss and † may follow the label; `n/a — <why>` counts "
-          "as filled):")
+          "parenthesised gloss and † may follow the label; `n/a — <the reason>` "
+          "counts as filled, `<…>`, `TODO`, an empty label and a bare `n/a — <why>` do not):")
     for level, title in (("must", "MUST (every pilot)"),
                          ("should", "SHOULD (MUST once frozen = true)"),
-                         ("after", "after the run (owed once a measure run is documented)")):
+                         ("after", "after the run (owed once a measure run is documented)"),
+                         ("report", "report (owed once frozen = true and a measure run is documented)")):
         print(f"\n  {title}")
         for f in FIELDS:
             if f.level == level:
                 print(f"    {f.label}")
     print("\n  at cost = \"seconds\" (nothing freezes, no SHOULD): "
-          + ", ".join(f.label for f in FIELDS if f.seconds == "s" and f.level != "after")
-          + "; with a `Model / tool` also "
+          + ", ".join(f.label for f in FIELDS if f.seconds == "s" and f.level in ("must", "should"))
+          + "; the `--model` cut (a model named in `Model / tool`) also "
           + ", ".join(f.label for f in FIELDS if f.seconds == "sm"))
 
 
@@ -583,8 +642,7 @@ def main(argv: list[str]) -> int:
 
         # Post-run: a documented measure run makes an empty Result a MUST
         # gap — pilot suppression does not apply (write back, don't go quiet).
-        measured = [(n, m.group(0)) for n, ln in enumerate(text.splitlines(), 1)
-                    if (m := RUN_ID.search(ln)) and not SETUP_RUN.search(ln)]
+        measured = measure_runs(text)
         run_unreported = bool(measured) and bool(unreported(text))
         history = [(n, ln.strip()) for n, ln in enumerate(text.splitlines(), 1)
                    if CHANGELOG.search(ln)]
