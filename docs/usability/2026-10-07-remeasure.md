@@ -213,3 +213,31 @@ Median by transcript: count 1:12 (round 3: 1:21), judge 2:30 (2:18).
   field counts. Run on the twelve earlier judge protocols, the
   first-block-only reading gave five false blockers (a null prompt in a
   second block); with all blocks, none — and a mutated null prompt blocks.
+
+## Rounds 5 and 6: the drift fix, then CLAUDE.md as a session loads it
+
+Round 5 (three judge agents on `1e4e8cc`): all three wrote the Prompt block
+with `protocol-fill --prompts`; transcript 2:04, 2:06, 2:13; the drift
+check runs on their protocols and holds.
+
+Round 6 (`f255f7c`, `1fceec4`): `usability stage` writes
+`<dir>.prompt.md` — the repo's `CLAUDE.md` first, as a session started in
+the repo loads it, then the pointer to TASK.md — and that text is the
+agent's prompt. n = 2 per task (four agents; the prompt carries 250 lines
+of `CLAUDE.md` per agent). Scores: `2026-10-07-sonnet-v5-*`, `-v6-*`.
+
+| run | number | right / bound | transcript | in tools | rest | files opened | CLAUDE.md fetched |
+|---|---|---|---|---|---|---|---|
+| count-1 | 3.5 | yes / yes | 1:13 | 13 s | 60 s | 10 | no |
+| count-2 | 3.5 | yes / yes | 1:08 | 10 s | 58 s | 8 | no |
+| judge-1 | 0.833 | yes / yes | 1:51 | 45 s | 66 s | 15 | no |
+| judge-2 | 0.833 | yes / yes | 1:54 | 47 s | 67 s | 14 | no |
+
+No agent fetched `CLAUDE.md`; judge drops from 2:30 (round 4) to about
+1:52. A change to `protocol-check` (stamped list placeholders, a warning)
+landed while judge-2 ran; it touches no step of this task.
+
+What the agents still name: the stamped TODOs in the scripts (read whole
+to find them), the protocol head's `type` (no fill command, `sed`), the
+write-back of Answer and Runs by hand, and `code-check 01-<name>` refusing
+the bare area name.

@@ -1,0 +1,76 @@
+{
+ "probe": {
+  "staged": "2026-10-07T17:48:26",
+  "task": "judge",
+  "area": "01-causal-claims-judge",
+  "metric_key": "c1_accuracy",
+  "labkit_installed": "-e git+https://github.com/kmax-tech/labkit.git@411821e0def244cc2b3b0bd7f71113bd5e4aff21#egg=labkit",
+  "scaffold_sha": "04184d1fed8b",
+  "scaffold_flags": [
+   "--lab",
+   "--name",
+   "judge-3",
+   "--lang",
+   "deutsch",
+   "--exp",
+   "causal-claims-judge",
+   "--cost",
+   "seconds",
+   "--model",
+   "haiku"
+  ],
+  "target_minutes": 5
+ },
+ "run_id": "2026-10-07T17-49-38_ae84",
+ "number": 0.8333333333333334,
+ "expected": null,
+ "number_ok": true,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-causal-claims-judge.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 15,
+  "wall_seconds": 107,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 4,
+  "run": 8,
+  "edit": 3,
+  "unsure": 0,
+  "gate": 0,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "transcript": {
+  "wall_seconds": 133,
+  "tool_seconds": 54,
+  "calls": 17,
+  "commands": {
+   "protocol-check": 1,
+   "code-check": 1,
+   "finalize": 2
+  },
+  "refusals": 0,
+  "files_read": [
+   "TASK.md",
+   "CLAUDE.md",
+   "README.md",
+   "PROTOCOL-*.md",
+   "scripts/*",
+   "../../models.toml",
+   "scripts/01_measure.py",
+   "scripts/00_prepare.py",
+   "scripts/02_analyze.py",
+   "../../data/raw/claims.jsonl",
+   "data/raw/claims.jsonl",
+   "tests/test_01*",
+   "tests/test_01_causal_claims_judge.py",
+   ");",
+   "set",
+   "pipefail",
+   "s/^- <run_id> \u2014 <one sentence: what this run was>/- 2026-10-07T17-49-38_ae84 \u2014 the one run: 12 items x 2 lanes, haiku, foreground./"
+  ],
+  "source_reads": []
+ }
+}
