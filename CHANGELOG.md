@@ -5,6 +5,23 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.48.1 — 2026-10-07
+
+### Fixed (audit of 0.48.0)
+
+- `finalize` judged a different run than its own intent-check: intent-check
+  skips newer runs without intent keys (a probe), the other stations took
+  the newest bound run. One choice now feeds every station — scope drift,
+  provenance and the `c1_n` check ran on the probe and said all clear.
+- Ids in the letters K/S/W/N passed `intent-check` as "no intent ids
+  registered" with exit 0, every promise unchecked. They are now refused:
+  a MUST finding in `protocol-check`, exit 2 in `intent-check` — detected,
+  never read.
+- A field value written on the line below its label (`- **Question /
+  hypothesis:**` + indented text) read as unwritten, so the seconds gate
+  refused a written registration. Field values now include their
+  continuation lines.
+
 ## 0.48.0 — 2026-10-07
 
 ### Breaking

@@ -209,6 +209,10 @@ def _main(argv: list[str]) -> int:
         if only_prose or only_block:
             return 1
 
+    earlier = promises.earlier_ids(text)
+    if earlier:
+        print(f"{protocol}: intent ids {', '.join(earlier)} — {promises.EARLIER_IDS_HELP}")
+        return 2
     reg = registered_ids(text)
     if not reg:
         print("intent-check: no intent ids registered ([C1]/[A1]/[B1] — "

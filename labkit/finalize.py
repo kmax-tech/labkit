@@ -8,7 +8,9 @@ the protocol.
 Exit codes: 0 clean, 1 findings (at least one blocker), 2 usage error.
 
 What it runs, in order:
-  1. completion     the newest bound run is 'completed'
+  1. completion     the run that answers — the newest completed bound run
+                    reporting intent keys, the same choice as intent-check —
+                    and every later station checks THAT run
   2. intent-check   every registered promise has a metrics key (and vice versa)
   2b. scopes        every declared promise scope unchanged since the run
   3. open fields    protocol fields still holding a placeholder
@@ -41,6 +43,7 @@ from labkit.repo import area_protocols, git_root, git_run
 from labkit.intent_check import (
     bound_runs,
     main as intent_check_main,
+    newest_with_intent_keys,
     registered_ids,
 )
 from labkit.protocol_fill import open_fields
@@ -176,9 +179,15 @@ def run(area: Path, protocol: Path | None = None) -> int:
                         print(f"    {f['dir'].name}: {f['why']}")
                 blockers += 1
             else:
-                newest = taken[-1]
-                newest_dir = newest["dir"]
-                print(f"  {newest_dir.name}: completed")
+                # ONE choice for every station: intent-check skips newer
+                # runs without intent keys (a probe), so checking scopes or
+                # provenance on taken[-1] judged the probe while the
+                # numbers came from the measurement (review 2026-10-07).
+                mpath, skipped = newest_with_intent_keys(taken)
+                assert mpath is not None, "taken is non-empty"
+                newest_dir = mpath.parent
+                note = f" (skipped {skipped} newer bound run(s) without intent keys)" if skipped else ""
+                print(f"  {newest_dir.name}: completed{note}")
 
     # -- 2. intent-check ---------------------------------------------------
     print("── intent-check ──")
@@ -186,17 +195,14 @@ def run(area: Path, protocol: Path | None = None) -> int:
     if not reg:
         print("  no intent ids registered — nothing to check")
     else:
-        ic_args = [str(protocol)]
+        ic_args = [str(protocol)] + (["--metrics", str(newest_dir / "metrics.json")]
+                                     if newest_dir is not None else [])
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             rc = intent_check_main(ic_args)
         for line in buf.getvalue().splitlines():
             print(f"  {line}")
-        if rc == 0:
-            pass
-        elif rc == 2:
-            blockers += 1
-        else:
+        if rc != 0:
             blockers += 1
 
     # -- 2b. declared scopes ------------------------------------------------

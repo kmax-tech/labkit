@@ -45,7 +45,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import protocol_block
+from labkit import promises, protocol_block
 from labkit.repo import git_root, git_run
 
 
@@ -119,7 +119,7 @@ class FieldLine:
     line: int                       # 1-based line of the label
     name: str                       # field_name() of the label
     label: str                      # the label as written
-    value: str                      # first-line value, cut markers removed
+    value: str                      # the value with its continuation lines, cut markers removed
 
     @property
     def placeholder(self) -> bool:
@@ -139,14 +139,23 @@ def fields(text: str) -> list[FieldLine]:
             continue
         if fence or "**" not in line:
             continue
-        joined = line
+        joined, nxt = line, i + 1
         if re.match(r"^\s*(?:[-*]\s+)?\*\*", line) and ":**" not in line and i + 1 < len(lines):
-            joined = line + " " + lines[i + 1].strip()
+            joined, nxt = line + " " + lines[i + 1].strip(), i + 2
         m = _FIELD_OPEN.match(joined)
         if not m:
             continue
+        # The value runs on over indented continuation lines: a bare
+        # `- **Label:**` with the text below is written, not empty (the 25er
+        # protocol writes them that way; reading the first line only made
+        # the seconds gate refuse a written registration, review 2026-10-07).
+        parts = [m.group("value")]
+        while nxt < len(lines) and lines[nxt].startswith((" ", "\t")) and lines[nxt].strip() \
+                and not lines[nxt].strip().startswith(("```", "- ", "* ")):
+            parts.append(lines[nxt].strip())
+            nxt += 1
+        value = _MARKER.sub("", " ".join(parts)).strip()
         label = " ".join(m.group("label").split())
-        value = _MARKER.sub("", m.group("value")).strip()
         out.append(FieldLine(line=i + 1, name=field_name(label), label=label, value=value))
     return out
 
@@ -211,6 +220,9 @@ def check_fields(text: str) -> FieldReport:
     missing_must = [f.label for f in must if f.label.casefold() not in present]
     missing_should = [f.label for f in should if f.label.casefold() not in present]
     missing_must += [f"[protocol] {name}" for name in head.placeholders]
+    earlier = promises.earlier_ids(text)
+    if earlier:
+        missing_must.append(f"intent ids {', '.join(earlier)}: {promises.EARLIER_IDS_HELP}")
     # Frozen means audited first (§2.A12); at seconds nothing freezes.
     if head.frozen and head.cost != "seconds" and not head.preflight_audit:
         missing_must.append("[protocol] preflight_audit (frozen = true without the audit line)")

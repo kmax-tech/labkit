@@ -70,6 +70,25 @@ def _run_finalize(area, protocol=None):
     return code, buf.getvalue()
 
 
+class TestOneRunForEveryStation(unittest.TestCase):
+    """A probe run after the measurement must not become the run finalize
+    judges: intent-check skips it (no intent keys), so the other stations
+    must too (review 2026-10-07: scope drift and the c1_n check ran on the
+    probe and finalize said all clear)."""
+
+    def test_stations_check_the_run_intent_check_chose(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
+            _run(area, "2026-10-07T10-00-00_meas",
+                 metrics={**CLEAN_METRICS, "c1_n": 7})
+            _run(area, "2026-10-07T11-00-00_prob", metrics={"rows_seen": 2})
+            code, out = _run_finalize(area)
+        self.assertIn("2026-10-07T10-00-00_meas: completed (skipped 1 newer", out)
+        self.assertIn("c1_n", out)                       # the warning names the measurement's key
+        self.assertNotIn("2026-10-07T11-00-00_prob: completed", out)
+
+
 class TestFinalize(unittest.TestCase):
 
     def test_clean_area_exits_zero(self):

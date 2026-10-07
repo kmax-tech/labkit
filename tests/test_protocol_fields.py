@@ -59,6 +59,15 @@ class Fields(unittest.TestCase):
         self.assertEqual(f.name, "resolution check")
         self.assertTrue(f.placeholder)
 
+    def test_a_value_on_the_next_line_is_written(self):
+        """Twin of the seconds gate: written below the label passes, a
+        multi-line placeholder stays a placeholder (review 2026-10-07)."""
+        written = (head(cost="seconds") + "- **Question / hypothesis:**\n  Does X beat Y?\n"
+                   "- **Success / failure criterion:** [C1] x\n- **Admissibility condition:** [A1] y\n")
+        self.assertEqual(protocol_check.intent_missing(written), [])
+        unwritten = written.replace("  Does X beat Y?", "  <the one question —\n  what do we expect?>")
+        self.assertEqual(protocol_check.intent_missing(unwritten), ["Question / hypothesis"])
+
     def test_fields_inside_code_blocks_are_not_fields(self):
         text = "```text\n- **Question / hypothesis:** inside a prompt\n```\n"
         self.assertEqual(protocol_check.fields(text), [])

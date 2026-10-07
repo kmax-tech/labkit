@@ -63,6 +63,9 @@ KINDS = {"C": "criterion", "A": "admissibility", "B": "branch"}
 _LETTERS = "".join(KINDS)
 #: an id anywhere in protocol prose: `[C1]`, `[k2]`
 ID_IN_PROTOCOL = re.compile(rf"\[([{_LETTERS}]\d+)\]", re.I)
+#: an id in the letters labkit 0.47 read — detected, never read: a protocol
+#: carrying them would otherwise pass every id check with nothing checked
+EARLIER_ID = re.compile(r"\[([KSWN]\d+)\]")
 #: a metrics key in the id namespace: bare `c1` or `c1_<suffix>`
 ID_KEY = re.compile(rf"^([{_LETTERS.lower()}]\d+)(?:_.*)?$")
 #: a metrics key that is unmistakably an intent key (suffix required)
@@ -107,6 +110,18 @@ class PromiseBlock:
 def registered_ids(text: str) -> set[str]:
     """Ids promised anywhere in the protocol prose, lowercased."""
     return {m.group(1).lower() for m in ID_IN_PROTOCOL.finditer(text)}
+
+
+def earlier_ids(text: str) -> list[str]:
+    """Ids in the earlier letters K/S/W/N, as written — each one a promise
+    no check reads. Callers refuse them; nothing translates them (the
+    letters do not map one-to-one onto C/A/B)."""
+    return sorted(set(EARLIER_ID.findall(text)))
+
+
+EARLIER_IDS_HELP = ("the letters K/S/W/N are not read since labkit 0.48 — "
+                    "re-register the promises as [C]/[A]/[B] by the separation "
+                    "rule (docs/promise-block.md), or check this protocol with labkit 0.47")
 
 
 def reported_ids(metrics: dict) -> set[str]:
