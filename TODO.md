@@ -486,7 +486,9 @@ fiel durch, weil das Muster `terms of` verlangt; die Protokoll-ID hatte
 drei eigene Regex-Kopien, die schon verschieden reagierten (Review
 2026-10-06, behoben in `598f566`).
 
-**Auslöser:** der Rollout von Punkt 7 (Template und Feld-Guide auf
+**Erledigt 2026-10-07 (0.48.0):** Kopf als `[protocol]`-Tabelle (`labkit/protocol_block.py`), Prosafelder über exakte Labels (`protocol_check.FIELDS`, ein Test bindet sie an die Vorlage), Altpfade entfernt — dazu `runlog migrate-index` und die Messungs-Kurzform. Offen: die Import-Fallbacks für vendorte Kopien (getrennt zu entscheiden; die Studi-Kopie fehlt schon seit 0.46 `repo`/`runs`/`promises`, jetzt auch `protocol_block`), Tags auf GitHub, Pin für `thesis-dagidir`.
+
+**Auslöser (war):** der Rollout von Punkt 7 (Template und Feld-Guide auf
 `[C]/[A]/[B]`) — das Template ändert sich dann nur einmal.
 **Prüfstelle:** `labkit/experiment-protocol.md.template`; solange der Kopf
 dort Prosa-Felder stempelt, ist der Punkt offen.

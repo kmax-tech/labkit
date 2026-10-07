@@ -38,9 +38,8 @@ sub-commands (all answer `--help`):
 
 ```bash
 protocol-check <PROTOCOL-*.md>...   # mandatory-field check (must/should contract)
-protocol-check --contract           # budgets and the words each field is recognised by — read before writing
+protocol-check --contract           # the head, the fields by exact label, the budgets — read before writing
 runlog [<area>]                     # open runs: run_id, state, script
-runlog migrate-index <area>         # add missing run-index columns, rows kept
 runlog reindex <area>               # append rows for completed runs it missed
 intent-check <PROTOCOL-*.md>        # registered promise ids vs. metrics keys
 code-check <AREA>                   # intent-id check + audit bundle for the agent
@@ -85,21 +84,20 @@ remembering (2026-10-05):
 | Layer                | Where                                                      | Holds when                                            |
 |----------------------|------------------------------------------------------------|-------------------------------------------------------|
 | code refuses         | `runlog.Run` — leak, index header, detach, **freeze gate** | always: every run passes through it                   |
-| Claude hook blocks   | `claude-hook pre-run` (PreToolUse Bash, exit 2)            | a frozen protocol's area has preflight blockers; not at `Cost: seconds` |
+| Claude hook blocks   | `claude-hook pre-run` (PreToolUse Bash, exit 2)            | a frozen protocol's area has preflight blockers; not at `cost = "seconds"` |
 | Claude hook reports  | `claude-hook post-change` (PostToolUse Bash\|Write\|Edit)  | a protocol or messung note changed, whatever wrote it |
 | git pre-commit fails | `.githooks/pre-commit`                                     | a staged protocol misses must fields                  |
 
 **Freeze gate.** `long=True` is the script's declaration of a full run.
-`runlog` refuses it before `mkdir` unless the bound protocol says
-`Frozen before run: yes` and its `Preflight audit:` field is filled (a
-protocol that never had the field is not a gap; a stamped placeholder is).
+`runlog` refuses it before `mkdir` unless the bound protocol's head says
+`frozen = true` and its `preflight_audit` is filled.
 A long *pilot* acknowledges with `LABKIT_UNFROZEN=1`; the acknowledgement
 is written to `config.json` as `unfrozen_ack`, so the number carries it.
-The gate follows the cost tier (`Cost:` in the protocol, §2.A14): at
+The gate follows the cost tier (`cost` in the protocol head, §2.A14): at
 `seconds` a rerun costs nothing, so the gate is the **written success
 criterion**, not the freeze — an instrument change after it is a commit
-and a rerun, never a second freeze. `minutes`, `hours` and an undeclared
-tier keep the freeze. The tier is written to `config.json` as `cost_tier`.
+and a rerun, never a second freeze. `minutes`, `hours` and an unfilled
+cost keep the freeze. The tier is written to `config.json` as `cost_tier`.
 
 **pre-run.** The hook sees every Bash command. One that names a `.py` file
 which opens a run (`runlog.run(`) and is not a throwaway stage (`--show`,
@@ -144,16 +142,13 @@ is coined here and explained nowhere else; the per-field explanations live in
 | **documented runs** | the runs listed by hand in a protocol's `## Runs` section                                           |
 | **intent id**       | the stable id of one checked promise (`[C1]`, `[A1]`, `[B1]`; kinds in `docs/promise-block.md`)   |
 | **bundle**          | the current protocol + scripts + extracted facts, packed for an audit agent (`code-check --bundle`) |
-| **frozen**          | unchangeable past a declared point (`Frozen before run: yes`)                                       |
+| **frozen**          | unchangeable past a declared point (`frozen = true` in the protocol head)                         |
 | **scope hash**      | the hash over the input scope a run's number rests on (`scope_sha`)                                 |
 
-**"Ledger" is gone** (2026-09-26). It named three different things — the run
-index, a run's metrics, and the hand-written `## Runs` section — and a word
-that promises a complete and reliable book of record fits none of them —
-least of all the hand-written one. `intent_check.ledger_ids` survives one cycle as
-a deprecated alias of `reported_intent_ids`.
+**"Ledger" is not used:** it named three different things — the run
+index, a run's metrics, and the hand-written `## Runs` section.
 
-Which protocol a run belongs to — identity, binding, legacy, selection —
+Which protocol a run belongs to — identity, binding, selection —
 is specified in `docs/protocol-run-binding.md`.
 
 The hierarchy the vocabulary is meant to make visible:
@@ -164,11 +159,10 @@ The hierarchy the vocabulary is meant to make visible:
     runs.tsv         run index — derived, never a source
     ## Runs          manual documentation, never a source
 
-labkit knows **two work types**: `measurement` for pure counting questions
-("how many X are there?" — no model, no hypothesis, 7 fields, no freeze)
-and `experiment` for everything hypothesis- or model-driven. An experiment
-protocol has **two modes**: `Frozen before run: no` is the light pilot
-(MUST fields only), `Frozen before run: yes` is the heavy report mode —
+A protocol has **one template, cut by cost**: `cost = "seconds"` (a count,
+or a handful of model calls — rerunnable at will) owes a short cut and never
+freezes; `minutes` and `hours` have **two modes**: `frozen = false` is the
+light pilot (MUST fields only), `frozen = true` the heavy report mode —
 every SHOULD field becomes mandatory. The price sits on the claim, not the
 activity: cheap tiers yield numbers that must not be reported. Every field's explanation — examples, rationale, the four questions to
 ask a criterion — lives in `protocol-field-guide.md` (packaged alongside
@@ -181,7 +175,7 @@ commands sequence the individual checks at the two decision points:
 
 1. Write `PROTOCOL-<task>.md` from the packaged template; `protocol-check`
    enforces its fields from the first draft on (MUST for pilots, everything
-   once `Frozen before run: yes`).
+   once `frozen = true`).
 2. Before freezing, **`preflight <area>`** runs the pre-freeze gate:
    `protocol-check` (mandatory fields) → `code-check` (intent ids against
    the code) → `scope-sha` (audit stamp) → dirty-tree warning. The

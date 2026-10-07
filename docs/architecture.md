@@ -11,7 +11,7 @@ is no cycle (checked 2026-10-06).
 
 | Layer | Modules | Holds |
 |---|---|---|
-| 1 · formats and places | `promises`, `protocol_check`, `runs`, `repo` | read-only answers: the promise alphabet and block, the protocol's fields and identity, what a run directory says about itself, where the repo, the area's protocols and git are |
+| 1 · formats and places | `protocol_block`, `promises`, `protocol_check`, `runs`, `repo` | read-only answers: the protocol's TOML block and its head, the promise alphabet and tables, the protocol's prose fields by label, what a run directory says about itself, where the repo, the area's protocols and git are |
 | 2 · a run and its effects | `runlog`, `batch`, `llm`, `endpoint_lease` | writing a run (binding, refusals, provenance, index), resumable output, model calls, the model-slot lease |
 | 3 · checks | `intent_check`, `code_check`, `scope_sha`, `recheck`, `notes_check` | one question each, against code, metrics or a note |
 | 4 · gates | `preflight`, `finalize`, `claude_hooks`, `audit` | sequence the checks at a decision point; the hooks call the gates; `audit` runs the agent audit through `llm` |
@@ -29,7 +29,7 @@ evidence** (warns), **agent audit** (semantic).
 
 | Link | Checked | Where | Command | Tier | When |
 |---|---|---|---|---|---|
-| intent → promise | required protocol fields; promise block parses; prose and block name the same ids | `protocol_check`, `promises.parse_block`, `promises.prose_mismatch` | `protocol-check`, `intent-check` | guaranteed | writing the protocol |
+| intent → promise | head parses and is typed; required fields by exact label; promise tables parse; prose and block name the same ids | `protocol_block.head`, `protocol_check.check_fields`, `promises.parse_block`, `promises.prose_mismatch` | `protocol-check`, `intent-check` | guaranteed | writing the protocol |
 | promise → code | every declared key appears exactly in the code; every declared scope resolves | `code_check.promise_block_findings` | `code-check`, `preflight` | guaranteed | before the run |
 | promise → code | each intent id appears as a key; gate labels match the prompt; parser fixtures exist | `code_check` | `code-check`, `preflight` | guaranteed | before the run |
 | promise → code | code does what the promise says | `audit` (experiment-preflight instructions + the area's files + the standard, one `llm` call); or the bundle (`code-check --bundle`) for the code-check agent | `labkit-audit --mode preflight` | agent audit | before the run |
@@ -48,7 +48,8 @@ evidence** (warns), **agent audit** (semantic).
 | Is this an intent id / key? | `promises.ID_IN_PROTOCOL`, `promises.ID_KEY` |
 | What does the promise block say? | `promises.parse_block`, `promises.load`, `promises.constants` |
 | Which code does a promise rest on, and did it change? | `promises.declared_scope_sha`, `promises.scope_drift` |
-| What is the protocol's id? | `protocol_check.protocol_identity` |
+| What does the protocol's head say (id, type, cost, frozen, audit)? | `protocol_block.head` |
+| Which prose fields does a protocol owe, and which are filled? | `protocol_check.FIELDS`, `protocol_check.check_fields` |
 | Which protocols does an area hold? | `repo.area_protocols` |
 | Where is the repo? | `repo.git_root` (git), `repo.layout_root` (git, else stamped tree) |
 | Run git | `repo.git` (output, loud on failure), `repo.git_run` (exit code is the answer) |
@@ -56,7 +57,7 @@ evidence** (warns), **agent audit** (semantic).
 | What does a run's metadata say? | `runs.read_run_config` |
 | Is the recording process alive? | `runs.is_alive` |
 | Which protocol does a new run bind to? | `runlog._protocol_binding` |
-| Which run answers for a protocol? | `intent_check.choose_explicit` / `choose_bound` / `choose_legacy` |
+| Which run answers for a protocol? | `intent_check.choose_explicit` / `choose_bound` |
 | Which code did an audit see? | `scope_sha` (area stamp, not per promise) |
 
 A second answer to any of these questions is drift: move the caller to the

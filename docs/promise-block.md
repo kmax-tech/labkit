@@ -38,14 +38,14 @@ Reports); yes → C. A comparator without a target value (a baseline the
 traces are read against) is no promise; it belongs in the text of the C it
 serves.
 
-**Legacy letters.** `K` (criterion), `S` (stop rule), `W` (fork) and `N`
-(null condition) stay valid in prose and metrics keys. They do not map
+**Earlier letters.** `K` (criterion), `S` (stop rule), `W` (fork) and `N`
+(null condition) are not read since labkit 0.48. They did not map
 one-to-one onto C/A/B: tested against 16 earlier protocols, the separation
 rule assigned six ids differently from their letter — anchor and
 completeness checks filed as criteria are A, a stop rule that selects the
-next study is B, and an S/N pair describing one check becomes one A. So
-migration is classification by the rule, never search-and-replace; frozen
-protocols are registrations and are not rewritten.
+next study is B, and an S/N pair describing one check becomes one A. Frozen
+protocols are registrations and are not rewritten; they are read with
+labkit 0.47.
 
 **Not a kind:** a descriptive quantity reported in every branch, without a
 criterion. It is a report line, not a promise — until a second case shows
@@ -56,10 +56,19 @@ R (`r1`), Q (`q1`), H (`h1`).
 
 ## The block
 
-One fenced TOML block per protocol, `[[promise]]` tables only, new letters
-only:
+The protocol's one fenced TOML block holds the head (`[protocol]`, see
+`labkit/protocol_block.py` and `docs/protocol-run-binding.md`) and the
+`[[promise]]` tables:
 
 ```toml
+[protocol]
+standard = "0.18"
+id = "p-9e2341c0390948dc"
+type = "confirmatory"
+cost = "minutes"
+frozen = true
+preflight_audit = "2026-10-07 · scope sha 3f9a1c2b7e04 · 2 findings (2 fixed)"
+
 [[promise]]
 id = "C1"
 key = "c1_pass"
@@ -118,7 +127,7 @@ outside a declared function are not covered — read them from the block.
 | Link | Who | Refuses or reports |
 |---|---|---|
 | promise | `intent-check` | block malformed; prose and block name different ids |
-| execution | `runlog` | malformed block or dangling scope → refused before the run dir exists; otherwise `config.json` records `promises`: block digest, and per id key, constants, scope, `declared_scope_sha` |
+| execution | `runlog` | malformed block or dangling scope → refused before the run dir exists; otherwise `config.json` records `promises`: the digest of the `[[promise]]` tables (canonical JSON — the head can change without moving it), and per id key, constants, scope, `declared_scope_sha` |
 | report | `intent-check` | declared key not reported exactly; run recorded no block, or a different one ("the promises changed after the run") |
 | recomputation | `recheck.holds` | a declared scope changed since the run, per promise |
 

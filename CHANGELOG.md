@@ -5,6 +5,45 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.48.0 — 2026-10-07
+
+### Breaking
+
+Last version that reads the old formats: **v0.47.0**. A repo with frozen
+protocols in the old head, runs without `schema_version` or an old run
+index stays on its pin until new work starts there.
+
+- **The protocol head is data** (TODO 8). `Standard`, `Protocol id`, `Type`,
+  `Cost`, `Frozen before run` and `Preflight audit` moved from prose lines
+  into the `[protocol]` table of the protocol's one ```toml block (Standard
+  0.18), read by the new `labkit.protocol_block` — `tomllib`, exact keys,
+  typed values. A typo is an error naming the field: `Cost: second` used to
+  read as undeclared and so as `hours`. A protocol without the table is
+  refused by every command.
+- **Prose fields by exact template label.** `protocol-check` holds each
+  field by its label (`protocol_check.FIELDS`), not by keywords searched in
+  the whole file: a word anywhere satisfied a field (`prompt` in a sentence
+  covered "Model I/O"), a narrow word failed a filled one (`**Terms:**`). A
+  test binds `FIELDS` to the template and the seconds cut to its markers.
+  "Answer to the question", "Raw output" and "Analysis audit" are owed after
+  the run (the run-unreported check), no longer before it. Removed:
+  `check_text`, `graduate`, `severity_of`, `cost_tier_of`, `FROZEN_YES`,
+  `TYPE_MEASUREMENT`, `protocol_identity`, `protocol_id_of`,
+  `criterion_present`; new: `check_fields`, `fields`, `owed`.
+- **The promise digest covers the `[[promise]]` tables only** (canonical
+  JSON), not the block text: freezing or stamping the audit line in the
+  head must not read as a changed promise. Runs recorded under 0.46/0.47
+  carry the old digest; `recheck` against them reports a changed block.
+- **Legacy paths removed:** the intent letters K/S/W/N (only C/A/B are
+  ids); protocols below Standard 0.16 and the area-based run choice
+  (`choose_legacy`, `gate_metrics`, `latest_metrics`, `runs_by_intent_keys`);
+  runs without `schema_version` (state `legacy`, never `completed`);
+  `runlog migrate-index`; the measurement short form (`Type: measurement`
+  — the seconds cut replaced it); the old admissibility words (`stop
+  rule`, `kill`, `Abbruch`); `intent_check.ledger_ids`.
+- An unstamped protocol id binds nothing: `intent-check` needs `--metrics`,
+  `finalize` reports a blocker.
+
 ## 0.47.0 — 2026-10-07
 
 ### Changed

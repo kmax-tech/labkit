@@ -6,19 +6,21 @@ coined in the README and not repeated here.
 
 ## Identity
 
-A protocol carries its own id in a header field, beside the standard version:
+A protocol carries its own id in the `[protocol]` table of its ```toml
+block (the head, `labkit/protocol_block.py`):
 
-```markdown
-- **Standard:** 0.16
-- **Protocol id:** p-9e2341c0390948dc
+```toml
+[protocol]
+standard = "0.18"
+id = "p-9e2341c0390948dc"
 ```
 
 - **Shape:** `p-` plus 16 lowercase hex digits (64 bit).
 - **Origin:** stamped by `lib exp <name>` at creation, never typed. Not
   derived from name or path, so renaming a protocol or moving an area leaves
   the identity intact.
-- **Due:** from `Standard: 0.16` on, for experiment and measurement
-  protocols alike. Older protocols keep their standard and need no id.
+- **Due:** in every protocol. A protocol with a prose head (Standard
+  0.16/0.17) is read with labkit 0.47.
 - **Unique:** in practice, not by proof. 64 bit make a collision a
   non-event; the stamp additionally scans the repository, and
   `protocol-check` reports the same id in two files as an error — the real
@@ -65,13 +67,11 @@ file stays: **run metadata** means `runs/<run_id>/config.json`.
 
 ## Run completion
 
-A run directory says for itself whether it finished. Two markers, because
-runs written before this contract cannot be changed:
-
-| `config.json` says  | complete when                        | state                   |
-|---------------------|--------------------------------------|-------------------------|
-| no `schema_version` | `metrics.json` exists                | legacy run              |
-| `schema_version: 2` | `metrics.json` AND `completion.json` | run under this contract |
+A run directory says for itself whether it finished: complete when
+`metrics.json` AND `completion.json` exist. A run whose `config.json`
+carries no `schema_version` was written before labkit 0.21 (when
+`metrics.json` alone marked a finish); its state is `legacy`, it is never
+`completed` here, and it is read with labkit 0.47.
 
 `schema_version` is stamped into `config.json` at run START, which is what
 makes the distinction decidable: at the moment a reader has to judge a run,
@@ -118,44 +118,29 @@ That makes two failures tell themselves apart instead of looking alike:
   directory is open when `config.json` exists and the run is not complete by
   its own marker. The recorded pid decides between `running` and the two
   dead states, so each entry carries `state`: `completed` · `running` ·
-  `crashed` · `unfinalized` · `corrupt`. `alive` stays as it is.
+  `crashed` · `unfinalized` · `corrupt` · `legacy`. `alive` stays as it is.
 - **`--wait`** — exit codes keep their meaning: 0 nothing open · 2 a run
   failed · 3 still running at `--max-seconds`. `unfinalized` and `corrupt`
   are failures and exit 2, each with its own message: a machine only needs
   "did not finish cleanly", a human tells them apart by state and message.
 - **`reindex`** — appends rows that are missing, and only those. It never
-  rewrites an existing row: for a legacy run the `note` and the end-of-run
-  git state exist nowhere but in the index, so a rebuild would be a quiet
-  loss. It refuses an unmigrated index, never appends a `run_id` the index
-  already lists, reports an existing duplicate `run_id` as an error,
-  rebuilds only completed v2 runs, and reports legacy runs and incomplete
-  runs instead of inventing rows for them.
-- **Legacy runs** keep `metrics.json` as their marker forever. Nothing is
-  backfilled into them, no `completion.json` is written after the fact.
+  rewrites an existing row, refuses an index with other columns, never
+  appends a `run_id` the index already lists, reports an existing duplicate
+  `run_id` as an error, indexes only completed runs, and reports legacy and
+  incomplete runs instead of inventing rows for them.
 
-## Index migration
+## Index columns
 
-`runs.tsv` gains `protocol_id` as the LAST column, so a reader that counts
-columns positionally keeps the first seven where they were.
+`runs.tsv` carries `protocol_id` as the LAST column. `_check_run_index`
+refuses to append to an index whose header does not match — appending would
+shift columns silently. An index from before labkit 0.21 is migrated with
+labkit 0.47 (`runlog migrate-index`).
 
-`_check_run_index` already refuses to append to an index whose header does
-not match, and names the way out — that refusal stays, and now names
-`runlog migrate-index`. The migration is explicit, never automatic: a column
-that shifts by itself is the scar the check was built for.
+Every writer of `runs.tsv` — the finishing run's append, `reindex`, header
+creation and the duplicate scan — takes one exclusive `flock` on
+`.runs.tsv.lock` in the area, so a killed process leaves no stale lock.
 
-Every writer of `runs.tsv` — the finishing run's append, `migrate-index`,
-`reindex`, header creation and the duplicate scan — takes one exclusive
-`flock` on `.runs.tsv.lock` in the area. Without it an atomic migration and
-a finishing run race: the migration rewrites and renames while the run
-appends to the file it just replaced, and that row is gone without a trace.
-`flock` rather than a lock file, so a killed process leaves no stale lock.
-
-It rewrites the file atomically (temp file, then rename), keeps every
-existing row verbatim including `note`, and adds one empty field per row.
-It fills nothing in: an existing row's `protocol_id` stays empty until a
-`reindex` can prove it from a run directory.
-
-## Legacy
+## Unbound runs
 
 A run without a `protocol` key is `unbound`. Nothing is derived for it — not
 from the area, not from the documented runs, not from timestamps. Unbound
@@ -167,7 +152,7 @@ at all.
 `intent-check` resolves a protocol to a run by the id and nothing else.
 `protocol.path` never selects: it may be stale, and it may be wrong.
 
-1. **Protocol with an id (0.16+).** Eligible are COMPLETED runs recording
+1. **Protocol with a stamped id.** Eligible are COMPLETED runs recording
    this id — no others. An unbound run, a run bound elsewhere, an
    `unfinalized` and a `corrupt` run never enter the automatic choice.
    Among the eligible, the rule from 2026-09-09 holds unchanged: the
@@ -176,15 +161,14 @@ at all.
 2. **No eligible run.** Exit code 2, with every other run in the area and
    the reason it was left out. "Nothing to check yet" is not a pass when
    the check was called as proof.
-3. **Protocol below 0.16.** Nothing in a run names its protocol, so the
-   old path stands: one protocol in the area is right by construction,
-   several refuse and require `--metrics FILE`. No retrofit.
+3. **Id not yet stamped.** No run is bound to it: exit 2, the run is
+   named with `--metrics FILE`.
 
 `--metrics FILE` names the file to read; where the run records a binding
 it is also verified. Same id passes. A different id is a hard abort —
 holding one protocol's promises against another protocol's run answers
-nothing. A legacy or unbound run is allowed as an explicit legacy choice,
-with a warning that says so.
+nothing. An unbound run is allowed as an explicit choice, with a warning
+that says so; a run that is not completed (legacy included) never.
 
 ## Index derivation
 
@@ -202,9 +186,9 @@ section and counts its lines, but does not verify the run ids.
 ## State
 
 Built: identity (0.20.0); the binding in `config.json`, `schema_version`,
-`completion.json` and the five run states, `runlog migrate-index` and
-`runlog reindex`, the `protocol_id` column and the index lock (0.21.0);
-selection by id in `intent-check` (0.22.0). `code-check` still resolves
+`completion.json`, `runlog reindex`, the `protocol_id` column and the index
+lock (0.21.0); selection by id in `intent-check` (0.22.0); the id in the
+TOML head, legacy paths removed (0.48.0). `code-check` still resolves
 by area and refuses when several protocols are present — it runs before
 any run exists, so it has nothing to bind to.
 
