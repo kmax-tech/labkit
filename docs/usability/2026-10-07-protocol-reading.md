@@ -81,3 +81,75 @@ and not scored; unclear terms and effort are the reader's self-report;
 reading time comes from the transcript. The reader is a language model,
 which knows terms a human newcomer does not — the measure shows what
 disturbs, less how much it disturbs a person.
+
+## Round 9 (2026-10-07): the Summary for a person, a stricter reader
+
+Changes under test (labkit 0.59.0, `66c3f55`): every protocol with a run
+opens with a Summary of three lines — Result (two plain sentences carrying
+the question, no ids), Limits, Next step — on the seconds cut too; the toml
+head and the pointer stand at the end under `## Head`. The reader prompt
+changed with it: a newcomer who knows basic statistics, not this lab;
+three answers held to the run (the number, whether the criterion held,
+whether every admissibility condition held), plus what it understood
+after the first ten lines.
+
+Writers: four cold Sonnet agents, seconds track, as in round 8. Readers:
+one cold Sonnet agent per protocol — the four new protocols, the four of
+round 8 (head on top) re-read with the new prompt, and uniagent's areas 08
+and 09 before and after an editorial rewrite of their Summary (same
+content, head at the end, legend out). A qualitative pilot: one reader per
+protocol, two writers per task — it shows directions, it proves no rule.
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/round9/`.
+
+| protocol | lines | form lines before the first field | checkable answers right | effort 1–5 | unclear terms | result stated after ten lines |
+|---|---|---|---|---|---|---|
+| count-1 (0.59) | 50 | 0 | 3/3 | 2 | 22 | yes |
+| count-2 (0.59) | 50 | 0 | 3/3 | 3 | 17 | yes |
+| judge-1 (0.59) | 73 | 0 | 3/3 | 3 | 22 | yes |
+| judge-2 (0.59) | 73 | 0 | 3/3 | 3 | 19 | yes |
+| count-1 (round 8) | 40 | 3 | 3/3 | 3 | 15 | no |
+| count-2 (round 8) | 40 | 3 | 1/1 | 2 | 18 | no |
+| judge-1 (round 8) | 70 | 3 | 3/3 | 3 | 14 | no |
+| judge-2 (round 8) | 68 | 3 | 3/3 | 3 | 21 | no |
+| uniagent 08 before | 160 | 37 | 2/2 | 5 | 27 | no |
+| uniagent 09 before | 176 | 39 | 2/2 | 5 | 27 | yes (claimed) |
+| uniagent 08 after | 116 | 0 | 2/2 | 5 | 29 | yes |
+| uniagent 09 after | 130 | 0 | 2/2 | 5 | 23 | yes |
+
+"Checkable" counts what the run decides: round 8's count-2 registered no
+criterion, uniagent's number is not scored (several arms, no single number
+the result rests on). Writer time by log span: 1:09, 2:15, 2:28, 2:26.
+
+- **Every checkable answer is right, in every version.** The stricter
+  reader does not separate the versions on comprehension either; at these
+  sizes a careful reader extracts the verdict from any of them.
+- **The Summary moves the answer to the top.** Every reader of a 0.59
+  protocol and of the rewritten uniagent protocols stated the result from
+  the first ten lines; the readers of round 8 saw the head and the pointer
+  there. One exception counts against the measure itself: uniagent 09's
+  reader "before" claims the result after ten lines, where the old file
+  shows the legend — a reader that has seen the whole text cannot report
+  what it knew at line ten. That answer is self-report, not measurement.
+- **Effort does not follow the form.** Moving the head and dropping the
+  legend cut uniagent's protocols by 44 and 46 lines and left effort at 5
+  and the unclear terms at 23–29: what a newcomer cannot place is the
+  domain — arms, areas, case ids, rule and profile names, the gold
+  version — not the form. The new probe protocols are longer than round 8's
+  (50 vs 40) because the Summary is now written at seconds too.
+- **Writers fill the new fields without being told twice.** All four wrote
+  Result, Limits and Next step in plain words with no ids; three wrote
+  "Next step: none", correct for a one-off count or judge.
+- What the writers report as time sinks is the fill, not the reading:
+  12–14 separate `protocol-fill` calls, `type` not settable by
+  `protocol-fill`, the Runs line still a placeholder, `evaluate()` having
+  to return `c<i>_pass` learnt from the script's docstring.
+
+Consequences:
+
+1. Comprehension is saturated at this protocol size; the next measure of
+   readability is the newcomer's vocabulary — the unclear terms that are
+   the writer's coinages, held to the protocol's Terms field.
+2. "After ten lines" needs a reader that sees only ten lines (a second
+   prompt with the first ten lines), not a question to one that saw all.
+3. For uniagent the lever is a glossary of the domain words in Terms, not
+   more form work.
