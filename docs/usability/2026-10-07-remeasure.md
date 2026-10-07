@@ -137,3 +137,45 @@ thinking and writing):
 - r1 judge-3's "code-check refuses a relative area path" was a call from
   inside the area with the repo-relative path; the message now names the
   working directory it resolved against.
+
+## Round 3: house templates after the four time sinks
+
+Templates as committed in dotfiles `b099122` (the lab `CLAUDE.md` points a
+seconds reader to its section and names `protocol-fill`; the prepare
+skeleton copies clean rows; the area test carries the canonical answer
+forms), labkit `dd82f3e` (`--contract` opens with the seconds cut and
+`protocol-fill`). Scaffold sha `452851b23832`. Scores, now with the
+transcript: `2026-10-07-sonnet-v3-{count,judge}-{1,2,3}.score.json`.
+
+| run | number | right / bound | log | transcript | in tools | rest | calls | files opened | source reads |
+|---|---|---|---|---|---|---|---|---|---|
+| count-1 | 3.5 | yes / yes | 0:52 | 1:16 | 14 s | 62 s | 14 | 7 | 0 |
+| count-2 | 3.5 | yes / yes | 0:53 | 1:21 | 17 s | 64 s | 16 | 9 | 0 |
+| count-3 | 3.5 | yes / yes | 1:03 | 1:25 | 18 s | 67 s | 16 | 10 | 0 |
+| judge-1 | 0.833 | yes / yes | 1:57 | 2:23 | 57 s | 86 s | 17 | 7 | 0 |
+| judge-2 | 0.667 | yes / yes | 1:49 | 2:13 | 54 s | 79 s | 16 | 13 | 0 |
+| judge-3 | 0.917 | yes / yes | 1:53 | 2:18 | 59 s | 79 s | 17 | 14 | 0 |
+
+Median by transcript: count 1:21 (round 2: 1:25), judge 2:18 (2:38).
+Every null lane at 0.5. judge-2's own prompt let haiku call five of six
+non-causal sentences causal: 0.667 against a threshold of 0.75, [C1]
+failed and was written back as failed — the chain held on a negative
+result too.
+
+- Five of six agents filled the protocol with `protocol-fill` (round 2:
+  none). The transcript counts only calls in command position; agents
+  that wrapped it in a shell function or variable are undercounted.
+- Six of six still read the whole lab `CLAUDE.md` (246 lines): the pointer
+  at its top says where to read, but not where the section ends.
+- The two "refusals" the transcript flags (count-1, judge-1) are
+  `protocol-check` must-field verdicts on a protocol not yet filled — no
+  gate stopped work; the heuristic counts verdicts, not only blocks.
+- "finalize printed twice" (two agents): the commit hook runs
+  `finalize --if-reported`, then the agent ran it again in the same call.
+- Fixed after the round (`41f09f7`): `--contract` wrote `(--list: what is
+  open)` after the `protocol-fill` line; one agent read it as a
+  `protocol-check` flag.
+
+Remaining time is the model's own (62 to 86 s outside tools) — reading and
+writing — and the prompt block, the one protocol part `protocol-fill`
+cannot fill.

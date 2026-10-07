@@ -212,6 +212,10 @@ Stempel des Wegs: 6 von 6 richtig, Median count 0m56s, judge 2m04s, 0
 Gate-Zeilen, ein Rest-Fehlalarm behoben (`6dacdc3`). Offen und nicht
 labkit: Repo-`CLAUDE.md` (239 Zeilen) für die Sekunden-Spur, siehe
 Abschnitt „Still open“ der Auswertung.
+Runde 3 (Vorlagen nachgezogen, Messung mit Transkript): 6 von 6 richtig
+und gebunden, Median count 1:21, judge 2:18 (gemessen, nicht geloggt), 0
+Quelltext-Zugriffe, fünf von sechs füllen mit `protocol-fill`. Damit steht
+der Stand auf Daten; als Nächstes der Rollout (eigener Auftrag).
 
 ## 3. `code-check`: jede registrierte Kennung braucht einen Zweig, nicht nur einen Schlüssel
 
