@@ -147,14 +147,14 @@ class FieldLine:
     name: str                       # field_name() of the label
     label: str                      # the label as written
     value: str                      # the value with its continuation lines, cut markers removed
-    block: bool = False             # a code fence follows the label (a verbatim prompt)
+    block: bool = False             # content below the label: a code fence or deeper-indented lines
     last: int = 0                   # 1-based last line of the value
 
     @property
     def placeholder(self) -> bool:
         """Not yet filled: the template's `<…>`, an `n/a — <why>` left as
-        stamped, `TODO`, or a bare label with neither text nor a code block
-        below. A value that merely starts with `<` (`<10% unparsed`) is
+        stamped, `TODO`, or a bare label with nothing below it (a code block,
+        sub-bullets or an indented paragraph count as its value). A value that merely starts with `<` (`<10% unparsed`) is
         content (review 2026-10-07: it read as a placeholder, while `TODO`
         read as filled and let a freeze through)."""
         v = self.value
@@ -207,9 +207,12 @@ def fields(text: str) -> list[FieldLine]:
             nxt += 1
         value = _MARKER.sub("", " ".join(parts)).strip()
         label = " ".join(m.group("label").split())
-        after = next((ln.strip() for ln in lines[nxt:] if ln.strip()), "")
+        below = next((ln for ln in lines[nxt:] if ln.strip()), "")
+        indent = len(line) - len(line.lstrip())
+        deeper = len(below) - len(below.lstrip()) > indent and not below.lstrip().startswith("#")
         out.append(FieldLine(line=i + 1, name=field_name(label), label=label, value=value,
-                             block=after.startswith("```"), last=nxt))
+                             block=below.lstrip().startswith(("```", "~~~")) or deeper,
+                             last=nxt))
     return out
 
 

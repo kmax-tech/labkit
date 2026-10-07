@@ -22,6 +22,8 @@ pins (`requirements.txt` / `requirements.lock`).
 
 - Field labels in numbered lists (`1. **Unit:**`) are read; fields inside a
   multi-line HTML comment are not.
+- A bare label with sub-bullets or an indented paragraph below it is filled,
+  not a placeholder (found migrating the thesis starter's example).
 - `usability score` on an unreadable run, `intent-check --metrics` on a legacy
   run and a numeric `standard` end in a sentence that says what to do.
 - `protocol-check` scans the repo's protocol ids once per invocation.

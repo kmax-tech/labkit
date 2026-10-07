@@ -69,6 +69,17 @@ class Placeholders(unittest.TestCase):
                      "- **Unit:**\n"):
             self.assertTrue(self.one(line).placeholder, line)
 
+    def test_indented_content_below_a_bare_label_is_its_value(self):
+        """Twin pair (found migrating the thesis example, 2026-10-07):
+        sub-bullets or an indented paragraph below count as the value; the
+        next field at the same depth does not."""
+        sub = protocol_check.fields("- **Model I/O:**\n  - *In:* topic + text\n- **Unit:** u\n")
+        self.assertFalse(sub[0].placeholder)
+        para = protocol_check.fields("- **Prompt:**\n\n  `prompts/v1.txt` — minimal\n")
+        self.assertFalse(para[0].placeholder)
+        bare = protocol_check.fields("- **Model I/O:**\n- **Unit:** u\n")
+        self.assertTrue(bare[0].placeholder)
+
     def test_a_label_with_a_code_block_below_is_filled(self):
         f = self.one("- **Prompt (verbatim):**\n\n  ```text\n  Is it?\n  ```\n")
         self.assertFalse(f.placeholder)
