@@ -1,10 +1,10 @@
-"""One reading of `Protocol id:` for every consumer (review 2026-10-06).
+"""One reading of the protocol id for every consumer (review 2026-10-06).
 
 runlog, intent-check and protocol-check each carried their own regex; they
 already disagreed on a malformed id (raw value for a message, None, warning
-and unbound run). Now `protocol_check.protocol_identity` reads the field
-once: `raw` for the checker that must name a malformed value, `id` for
-everything that binds.
+and unbound run). Since the head is data (TODO 8) the id is `[protocol] id`,
+read once by `protocol_block.head`: a malformed id is a BlockError naming
+the field for every consumer, a placeholder reads as None (unbound).
 """
 from __future__ import annotations
 
@@ -17,50 +17,66 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import intent_check, protocol_check, runlog  # noqa: E402
+from labkit import intent_check, protocol_block, protocol_check, runlog  # noqa: E402
+from protocol_fixture import PID, head  # noqa: E402
 
-GOOD = "p-0123456789abcdef"
-CASES = {
-    "absent": ("- **Standard:** 0.15\n", None, None),
-    "good": (f"- **Protocol id:** {GOOD}\n", GOOD, GOOD),
-    "backticked": (f"- **Protocol id:** `{GOOD}`\n", GOOD, GOOD),
-    "malformed": ("- **Protocol id:** p-XYZ\n", "p-XYZ", None),
+# name -> (protocol text, id every consumer reads)
+READABLE = {
+    "good": (head(), PID),
+    "placeholder": (head(id="<protocol-id>"), None),
+}
+# name -> protocol text every consumer must reject loudly
+REJECTED = {
+    "no block": "# x\n- **Protocol id:** p-0123456789abcdef\n",
+    "malformed": head(id="p-XYZ"),
 }
 
 
-class Identity(unittest.TestCase):
-    def test_raw_and_id(self):
-        for name, (text, raw, pid) in CASES.items():
-            with self.subTest(name):
-                ident = protocol_check.protocol_identity(text)
-                self.assertEqual(ident.raw, raw)
-                self.assertEqual(ident.id, pid)
-                self.assertEqual(ident.valid, pid is not None)
+def _bind(text: str) -> dict:
+    area = Path(tempfile.mkdtemp())
+    (area / "PROTOCOL-x.md").write_text(text, encoding="utf-8")
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        return runlog._protocol_binding(area, None)
 
-    def test_consumers_agree(self):
-        for name, (text, raw, pid) in CASES.items():
+
+class Identity(unittest.TestCase):
+    def test_consumers_agree_on_a_readable_head(self):
+        for name, (text, pid) in READABLE.items():
             with self.subTest(name):
-                self.assertEqual(protocol_check.protocol_id_of(text), raw)
+                self.assertEqual(protocol_block.head(text).id, pid)
                 self.assertEqual(intent_check.protocol_id_of(text), pid)
-                area = Path(tempfile.mkdtemp())
-                (area / "PROTOCOL-x.md").write_text(text, encoding="utf-8")
-                buf = io.StringIO()
-                with contextlib.redirect_stdout(buf):
-                    binding = runlog._protocol_binding(area, None)
-                self.assertEqual(binding["id"], pid)
+                self.assertEqual(_bind(text)["id"], pid)
+
+    def test_consumers_agree_on_rejecting(self):
+        for name, text in REJECTED.items():
+            with self.subTest(name):
+                with self.assertRaises(protocol_block.BlockError):
+                    protocol_block.head(text)
+                with self.assertRaises(protocol_block.BlockError):
+                    intent_check.protocol_id_of(text)
+                with self.assertRaises(SystemExit):
+                    _bind(text)
 
     def test_runlog_names_a_malformed_id(self):
+        with self.assertRaises(SystemExit) as ctx:
+            _bind(REJECTED["malformed"])
+        self.assertIn("[protocol] id = 'p-XYZ'", str(ctx.exception))
+
+    def test_runlog_warns_on_an_unstamped_id(self):
         area = Path(tempfile.mkdtemp())
-        (area / "PROTOCOL-x.md").write_text(CASES["malformed"][0], encoding="utf-8")
+        (area / "PROTOCOL-x.md").write_text(READABLE["placeholder"][0], encoding="utf-8")
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             runlog._protocol_binding(area, None)
-        self.assertIn("malformed `Protocol id: p-XYZ`", buf.getvalue())
+        self.assertIn("carries no stamped id", buf.getvalue())
 
-    def test_no_second_regex_left(self):
-        for mod in (intent_check, runlog):
-            with self.subTest(mod.__name__):
-                self.assertFalse(hasattr(mod, "PROTOCOL_ID_IN_FILE"))
+    def test_no_second_reader_left(self):
+        for mod, name in ((intent_check, "PROTOCOL_ID_IN_FILE"), (runlog, "PROTOCOL_ID_IN_FILE"),
+                          (protocol_check, "protocol_identity"),
+                          (protocol_check, "protocol_id_of")):
+            with self.subTest(f"{mod.__name__}.{name}"):
+                self.assertFalse(hasattr(mod, name))
 
 
 if __name__ == "__main__":

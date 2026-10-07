@@ -14,6 +14,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from protocol_fixture import PID, head
+
 REPO = Path(__file__).resolve().parent.parent
 spec = importlib.util.spec_from_file_location(
     "intent_check", REPO / "labkit" / "intent_check.py")
@@ -21,12 +23,12 @@ assert spec is not None and spec.loader is not None
 intent_check = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(intent_check)
 
-PROTOCOL = """# 66 — x
-- **Success / failure criterion:** [K1] null holds (p > 0,20) AND
-  [K2] opened > bare (p < 0,05) AND [K3] both cells agree
-- **Stop rule:** [S1] > 2 of 96 rounds unparsed -> parser is the finding
-- **Registered fork:** [W1] on "mixed", report closed - echo
-- **Null condition:** [N1] placebo in the same run
+PROTOCOL = head() + """# 66 — x
+- **Success / failure criterion:** [C1] null holds (p > 0,20) AND
+  [C2] opened > bare (p < 0,05) AND [C3] both cells agree
+- **Admissibility condition:** [A1] at most 2 of 96 rounds unparsed AND
+  [A2] placebo in the same run shows its expected value
+- **Registered branch:** [B1] on "mixed", report closed - echo
 """
 
 
@@ -38,9 +40,17 @@ class TestIntentCheck(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
 
     def _metrics(self, data, run="2026-09-09T10-00-00_ab12"):
+        """A completed run bound to PID, reporting `data`."""
         d = self.area / "runs" / run
         d.mkdir(parents=True, exist_ok=True)
+        (d / "config.json").write_text(json.dumps(
+            {"script": "01_measure.py", "pid": 1, "schema_version": 2,
+             "protocol": {"id": PID, "path": "PROTOCOL-x.md"}}),
+            encoding="utf-8")
         (d / "metrics.json").write_text(json.dumps(data), encoding="utf-8")
+        (d / "completion.json").write_text(json.dumps(
+            {"schema_version": 2, "finished": "x", "git": "g",
+             "git_full": "g", "note": ""}), encoding="utf-8")
         return d / "metrics.json"
 
     def _run(self, argv):
@@ -52,14 +62,14 @@ class TestIntentCheck(unittest.TestCase):
     # -- extraction -------------------------------------------------------
     def test_ids_found_anywhere_in_free_structure(self):
         self.assertEqual(intent_check.registered_ids(PROTOCOL),
-                         {"k1", "k2", "k3", "s1", "w1", "n1"})
+                         {"c1", "c2", "c3", "a1", "a2", "b1"})
 
     def test_blank_template_registers_no_ids(self):
         """The template's explanatory preamble must not register intent ids.
 
-        Before the fix, [K1]/[S1]/[W1]/[N1] in the preamble text matched
-        the regex, so a fresh unfilled protocol registered four phantom ids
-        that could silently pass if a run happened to write k1/s1/w1/n1.
+        Before the fix, the example ids in the preamble text matched the
+        regex, so a fresh unfilled protocol registered phantom ids that
+        could silently pass if a run happened to write keys like them.
         """
         tmpl = (REPO / "labkit" / "experiment-protocol.md.template").read_text(
             encoding="utf-8")
@@ -68,9 +78,10 @@ class TestIntentCheck(unittest.TestCase):
 
     def test_reported_intent_ids_match_bare_and_suffixed(self):
         self.assertEqual(
-            intent_check.reported_intent_ids({"k1": True, "s1_hit": 0, "w1_branch": "a",
-                                     "auc": 0.7, "n_channels": 24}),
-            {"k1", "s1", "w1"})
+            intent_check.reported_intent_ids({"c1": True, "a1_pass": True,
+                                              "b1_branch": "a", "auc": 0.7,
+                                              "n_channels": 24}),
+            {"c1", "a1", "b1"})
 
     def test_f1_score_is_no_intent_id(self):
         """The collision that renamed forks to W: f1_score is a metric name,
@@ -81,58 +92,62 @@ class TestIntentCheck(unittest.TestCase):
     # -- contract ---------------------------------------------------------
     def test_all_reported_passes(self):
         self.proto.write_text(PROTOCOL, encoding="utf-8")
-        self._metrics({"k1_pass": True, "k2_pass": False, "k3_pass": True,
-                       "s1_hit": 0, "w1_branch": "none", "n1_pass": True})
+        self._metrics({"c1_pass": True, "c2_pass": False, "c3_pass": True,
+                       "a1_pass": True, "a2_pass": True, "b1_branch": "none"})
         rc, out = self._run([str(self.proto)])
         self.assertEqual(rc, 0, out)
 
     def test_missing_conjunct_fails(self):
         """The 62 case: criterion_met implemented as one conjunct of three."""
         self.proto.write_text(PROTOCOL, encoding="utf-8")
-        self._metrics({"k2_pass": True, "s1_hit": 0, "w1_branch": "none",
-                       "n1_pass": True})
+        self._metrics({"c2_pass": True, "a1_pass": True, "a2_pass": True,
+                       "b1_branch": "none"})
         rc, out = self._run([str(self.proto)])
         self.assertEqual(rc, 1)
-        self.assertIn("[K1]", out)
-        self.assertIn("[K3]", out)
-        self.assertNotIn("[K2]", out)
+        self.assertIn("[C1]", out)
+        self.assertIn("[C3]", out)
+        self.assertNotIn("[C2]", out)
 
     def test_unregistered_key_fails(self):
-        self.proto.write_text("# x\n[K1] only.\n", encoding="utf-8")
-        self._metrics({"k1": True, "w1_branch": "taken"})
+        self.proto.write_text(head() + "# x\n[C1] only.\n", encoding="utf-8")
+        self._metrics({"c1": True, "b1_branch": "taken"})
         rc, out = self._run([str(self.proto)])
         self.assertEqual(rc, 1)
-        self.assertIn("[W1]", out)
+        self.assertIn("[B1]", out)
         self.assertIn("without a registration", out)
 
     def test_newest_run_wins(self):
-        self.proto.write_text("# x\n[K1].\n", encoding="utf-8")
+        self.proto.write_text(head() + "# x\n[C1].\n", encoding="utf-8")
         self._metrics({}, run="2026-09-09T09-00-00_old1")
-        self._metrics({"k1": 1}, run="2026-09-09T11-00-00_new2")
+        self._metrics({"c1": 1}, run="2026-09-09T11-00-00_new2")
         rc, out = self._run([str(self.proto)])
         self.assertEqual(rc, 0, out)
 
     def test_explicit_metrics_flag(self):
-        self.proto.write_text("# x\n[K1].\n", encoding="utf-8")
+        self.proto.write_text(head() + "# x\n[C1].\n", encoding="utf-8")
         old = self._metrics({}, run="2026-09-09T09-00-00_old1")
-        self._metrics({"k1": 1}, run="2026-09-09T11-00-00_new2")
+        self._metrics({"c1": 1}, run="2026-09-09T11-00-00_new2")
         rc, out = self._run([str(self.proto), "--metrics", str(old)])
         self.assertEqual(rc, 1)
 
     # -- opt-in by presence ----------------------------------------------
     def test_no_ids_is_no_failure(self):
-        """Everything written before the ids existed keeps its verdict."""
-        self.proto.write_text("# old protocol, no ids\n", encoding="utf-8")
+        """A protocol that promises nothing passes with a note."""
+        self.proto.write_text(head() + "# protocol, no ids\n", encoding="utf-8")
         self._metrics({"criterion_pass": False})
         rc, out = self._run([str(self.proto)])
         self.assertEqual(rc, 0)
         self.assertIn("no intent ids", out)
 
-    def test_ids_but_no_run_yet_is_no_failure(self):
+    def test_ids_but_no_run_yet_exits_two(self):
+        """With a bound protocol, no completed run means nothing to hold the
+        promises against — exit 2, not a silent pass (the old "due at
+        report time" exit 0 belonged to the directory choice)."""
         self.proto.write_text(PROTOCOL, encoding="utf-8")
         rc, out = self._run([str(self.proto)])
-        self.assertEqual(rc, 0)
-        self.assertIn("due at report time", out)
+        self.assertEqual(rc, 2, out)
+        self.assertIn(f"no completed run bound to {PID}", out)
+        self.assertIn("no runs in", out)
 
     # -- usage ------------------------------------------------------------
     def test_missing_protocol_exits_two(self):
@@ -140,10 +155,11 @@ class TestIntentCheck(unittest.TestCase):
         self.assertEqual(rc, 2)
 
     def test_missing_explicit_metrics_exits_two(self):
-        self.proto.write_text("[K1]", encoding="utf-8")
+        self.proto.write_text(head() + "[C1]", encoding="utf-8")
         rc, out = self._run([str(self.proto), "--metrics",
                              str(self.area / "gone.json")])
         self.assertEqual(rc, 2)
+        self.assertIn("no such metrics file", out)
 
     def test_help_exits_zero(self):
         rc, out = self._run(["--help"])

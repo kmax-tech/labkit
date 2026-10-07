@@ -29,6 +29,10 @@ class Area(unittest.TestCase):
         self.out.write_text("".join(json.dumps(r) + "\n" for r in ROWS), encoding="utf-8")
         self.run = self.area / "runs" / "2026-10-05T19-00-00_ab12"
         self.run.mkdir(parents=True)
+        # a current run: schema_version 2 plus a completion record — metrics
+        # alone (a legacy run) is never completed since labkit 0.48
+        (self.run / "config.json").write_text(json.dumps({"schema_version": 2}))
+        (self.run / "completion.json").write_text(json.dumps({"status": "completed"}))
         self._record(evaluate(ROWS))
         self.note = self.area / "PROTOCOL-x.md"
         self.note.write_text("- **Result:** 3,5 über 2 Fälle, run 2026-10-05T19-00-00_ab12\n",
@@ -67,10 +71,10 @@ class Area(unittest.TestCase):
         self.assertEqual(v.grown, ["max_n"])
 
     def test_intent_key_on_one_side_fails(self):
-        self._record({**evaluate(ROWS), "k1_pass": True})
+        self._record({**evaluate(ROWS), "c1_pass": True})
         with self.assertRaises(SystemExit) as cm:
             recheck.holds(self.area, self.out, evaluate, self.note)
-        self.assertIn("k1_pass", str(cm.exception))
+        self.assertIn("c1_pass", str(cm.exception))
 
     def test_note_missing_number_or_run(self):
         self.note.write_text("- **Result:** 3.5, run 2026-10-05T19-00-00_ab12\n")

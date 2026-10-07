@@ -10,7 +10,7 @@ cold agents got two of them wrong on the first try (2026-10-05):
    (runlog keeps a 16-hex sha256 prefix; the comparison is `startswith`,
    not equality — a full digest never matches a prefix).
 2. **agree** — `recompute(rows)` equals `metrics.json`: intent keys
-   (`k1_…`, `s1_…`, `w1_…`, `n1_…`) present on both sides or neither,
+   (`c1_…`, `a1_…`, `b1_…`) present on both sides or neither,
    nothing the run reported vanishes (runlog's own keys excepted), every
    shared value identical. Keys the recomputation gained are a derived
    run, reported, not a failure (§2.D2).
@@ -105,7 +105,7 @@ def block_unchanged(run: Path, area: Path) -> None:
     cfg = runs.read_run_config(run) or {}
     rel = (cfg.get("protocol") or {}).get("path")
     if rel is None:
-        return                              # unbound or legacy: nothing to hold
+        return                              # unbound: nothing to hold
     protocol = Path(rel) if Path(rel).is_absolute() else area / rel
     block = promises.parse_block(protocol.read_text(encoding="utf-8"))
     drift = promises.block_drift(cfg.get("promises"), block)

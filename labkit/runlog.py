@@ -49,7 +49,7 @@ import time
 import uuid
 from pathlib import Path
 
-from labkit import repo
+from labkit import protocol_block, repo
 from labkit.runs import (FAILED_STATES, RunConfigError, completed_runs,
                          completion_state, is_alive, read_run_config, run_state)
 
@@ -58,9 +58,9 @@ RUN_INDEX_COLS = ["run_id", "git", "script", "data", "config", "metrics",
 
 # Bumped when a run directory's SHAPE changes, stamped into config.json at the
 # START of the run. It has to be readable before the run ends, because the
-# question it settles — is a missing completion.json a legacy run that
-# finished, or a v2 run that broke off? — is asked exactly when that file is
-# absent (2026-09-26).
+# question it settles — did a run without completion.json break off? — is
+# asked exactly when that file is absent (2026-09-26). A run without it was
+# written before schema 2 and is read by labkit 0.47 only.
 RUN_SCHEMA = 2
 SPLIT_KEYS = ("train", "dev", "test")
 #: Roles for the leakage check beyond splits (2026-10-05, three audits in
@@ -402,11 +402,10 @@ def _describe(paths: dict) -> dict:
 
 @contextlib.contextmanager
 def _index_lock(base_dir: Path, timeout: float = 30.0):
-    """Exclusive lock for every change to runs.tsv — append, migrate, reindex.
+    """Exclusive lock for every change to runs.tsv — append, reindex.
 
-    Without it an atomic migration and a finishing run race: the migration
-    reads, rewrites and renames while the run appends to the file it just
-    replaced, and the appended row is gone with no trace. flock, not a lock
+    Without it a reindex and a finishing run race: one appends while the
+    other reads, and a row lands twice or not at all. flock, not a lock
     FILE: the kernel drops it when the process dies, so a crashed run leaves
     no stale lock for the next one to trip over. Header creation and the
     duplicate check run inside it too — they read the same file.
@@ -423,7 +422,7 @@ def _index_lock(base_dir: Path, timeout: float = 30.0):
                 if time.monotonic() - t0 >= timeout:
                     raise RuntimeError(
                         f"runlog: runs.tsv locked for over {int(timeout)}s "
-                        f"({base_dir}) — another append, migration or reindex "
+                        f"({base_dir}) — another append or reindex "
                         f"is running, or one hung.")
                 time.sleep(0.05)
         yield
@@ -467,10 +466,10 @@ def _check_run_index(base_dir: Path) -> None:
     if found != RUN_INDEX_COLS:
         raise RuntimeError(
             f"runs.tsv columns {found} don't match this runlog "
-            f"({RUN_INDEX_COLS}). Migrate the run index:\n"
-            f"  runlog migrate-index {base_dir}\n"
-            "It keeps every row verbatim and only adds the missing "
-            "field. Appending without it would shift columns silently.")
+            f"({RUN_INDEX_COLS}) — an index written by labkit before 0.21. "
+            "Migrate it with labkit 0.47 (`runlog migrate-index <area>`, which "
+            "keeps every row verbatim), then come back; appending without it "
+            "would shift columns silently.")
 
 
 def _snapshot_script(run_dir: Path) -> str:
@@ -592,39 +591,34 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
             f"  runlog.run(..., protocol=PROTOCOL)\n  "
             + "\n  ".join(f.name for f in found))
 
-    from labkit.protocol_check import protocol_identity
-    identity = protocol_identity(path.read_text(encoding="utf-8"))
-    pid = identity.id
     try:
         rel = str(path.relative_to(base_dir.resolve()))
     except ValueError:
         rel = str(path)
+    try:
+        pid = protocol_block.head(path.read_text(encoding="utf-8")).id
+    except protocol_block.BlockError as exc:
+        raise SystemExit(f"runlog: {rel}: {exc}") from exc
     if pid is None:
-        written = (f"a malformed `Protocol id: {identity.raw}`"
-                   if identity.raw is not None else "no `Protocol id:`")
-        print(f"runlog: WARNING — {rel} carries {written} (Standard 0.16); "
-              f"this run is recorded as unbound.")
+        print(f"runlog: WARNING — {rel} carries no stamped id (`id` in its "
+              f"[protocol] table); this run is recorded as unbound.")
     return {"id": pid, "path": rel}
 
 
 # The freeze gate (2026-10-05). `long=True` is the script's declaration of a
 # full run (the measure template sets it for the no-flag stage; --probe and
-# pilots stay long=False). A full run on a protocol that is not `Frozen
-# before run: yes`, or whose `Preflight audit:` is still the template
-# placeholder, produces a number nobody registered for — and the rule that
-# forbade it lived only in the skill text, which a long session forgets.
-# Hence a refusal in the one place every run passes through, before mkdir.
-# A protocol written before the field existed carries no `Preflight audit`
-# label at all; that is not a gap (protocol_check SHOULD_IF_PRESENT), only a
-# stamped-but-unfilled one is. Escape hatch for a long PILOT: LABKIT_UNFROZEN=1
-# — the acknowledgement is recorded in config.json so the number carries it.
-# The gate follows the cost tier (2026-10-05, same day): at `Cost: seconds`
+# pilots stay long=False). A full run on a protocol that is not `frozen =
+# true`, or whose `preflight_audit` is still empty, produces a number nobody
+# registered for — and the rule that forbade it lived only in the skill
+# text, which a long session forgets. Hence a refusal in the one place every
+# run passes through, before mkdir. Escape hatch for a long PILOT:
+# LABKIT_UNFROZEN=1 — the acknowledgement is recorded in config.json so the
+# number carries it. The gate follows the cost tier: at `cost = "seconds"`
 # the run is rerunnable at will, so the freeze protects nothing — what a
-# full run needs there is the registered criterion, written before the
-# number (§2.A1); an instrument change after it is a commit and a rerun,
-# not a second freeze (§2.A14). `minutes`, `hours` and undeclared keep the
+# full run needs there is the registration, written before the number
+# (§2.A1); an instrument change after it is a commit and a rerun, not a
+# second freeze (§2.A14). `minutes`, `hours` and an unfilled cost keep the
 # freeze. The tier lands in config.json as `cost_tier`.
-PREFLIGHT_AUDIT_LABEL = re.compile(r"preflight.?audit", re.I)
 
 
 def _protocol_text(base_dir: Path, binding: dict) -> str | None:
@@ -639,35 +633,27 @@ def _protocol_text(base_dir: Path, binding: dict) -> str | None:
 
 def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
     """Why a FULL run may not start on this protocol — empty means it may."""
-    from labkit.protocol_check import (FROZEN_YES, TYPE_MEASUREMENT, cost_tier_of,
-                                       intent_missing, placeholder_fields)
+    from labkit.protocol_check import intent_missing
     text = _protocol_text(base_dir, binding)
     if text is None:
         return ["the run is unbound (no protocol) — a full run needs a "
                 "registered protocol (§2.A1)"]
     path = Path(binding["path"])
-    if TYPE_MEASUREMENT.search(text):
-        # The legacy measurement short form (`Type: measurement`, one counting
-        # question) has no freeze and no criterion by design — binding is
-        # the whole gate there (2026-10-05: a cold agent on a seconds task
-        # would otherwise be refused for a field the form does not have).
-        return []
-    if cost_tier_of(text) == "seconds":
+    head = protocol_block.head(text)          # read once at binding; valid here
+    if head.cost == "seconds":
         missing = intent_missing(text)
         if not missing:
             return []
-        return [f"{path.name}: `Cost: seconds`, but the registration is not written: "
-                f"{', '.join(missing)} still empty or a placeholder — at seconds the "
-                f"gate is question · criterion · admissibility condition · cost, not the freeze "
-                f"(§2.A1, §2.A14)"]
+        return [f"{path.name}: `cost = \"seconds\"`, but the registration is not "
+                f"written: {', '.join(missing)} still empty or a placeholder — at "
+                f"seconds the gate is question · criterion · admissibility "
+                f"condition, not the freeze (§2.A1, §2.A14)"]
     out = []
-    if not FROZEN_YES.search(text):
-        out.append(f"{path.name}: not `Frozen before run: yes`")
-    for n, label in placeholder_fields(text):
-        if PREFLIGHT_AUDIT_LABEL.search(label):
-            out.append(f"{path.name}:{n}: `{label}:` is still the placeholder "
-                       f"— run `preflight`, then the experiment-preflight "
-                       f"audit (§2.A12), and stamp the field")
+    if not head.frozen:
+        out.append(f"{path.name}: not `frozen = true`")
+    if not head.preflight_audit:
+        out.append(f"{path.name}: `preflight_audit` is empty — run `preflight`, "
+                   f"then the experiment-preflight audit (§2.A12), and stamp it")
     return out
 
 
@@ -677,8 +663,8 @@ def _promise_snapshot(base_dir: Path, text: str | None) -> dict | None:
     Before mkdir, like every refusal here: a malformed block or a declared
     scope naming code that does not exist stops the run — a number bound
     to a promise whose scope cannot be hashed is bound to nothing
-    (`promises.declared_scope_sha`). No block (every protocol before 2026-10) is
-    None, not an error.
+    (`promises.declared_scope_sha`). No [[promise]] tables is None, not an
+    error.
     """
     from labkit import promises
     if text is None:
@@ -713,19 +699,17 @@ class Run:
         # Before any work: an unresolvable protocol is a refusal, and a
         # refusal must not leave an empty run dir behind (2026-09-26).
         self._protocol = _protocol_binding(base_dir, protocol)
-        from labkit.protocol_check import TYPE_MEASUREMENT, cost_tier_of
         _ptext = _protocol_text(base_dir, self._protocol)
-        self._cost_tier = cost_tier_of(_ptext) if _ptext is not None else None
+        self._cost_tier = protocol_block.head(_ptext).cost if _ptext is not None else None
         self._promises = _promise_snapshot(base_dir, _ptext)
-        _short = _ptext is not None and (self._cost_tier == "seconds"
-                                         or bool(TYPE_MEASUREMENT.search(_ptext)))
+        _short = self._cost_tier == "seconds"
         # Detach gate (scar 2026-08-13, twice in one evening): a long run
         # started in a Claude Code foreground shell dies with the 10-min tool
         # timeout — the kill takes the whole process group, run and lock with
         # it. `long=True` is the script's own declaration (the --full stage
         # sets it); the gate refuses the foreground start BEFORE any work.
-        # A run of seconds (`Cost: seconds`, or the measurement short form)
-        # cannot meet that timeout and runs in the foreground (2026-10-05).
+        # A run of seconds (`cost = "seconds"`) cannot meet that timeout and
+        # runs in the foreground (2026-10-05).
         if (long and not _short and os.environ.get("CLAUDECODE")
                 and not os.environ.get("LABKIT_DETACHED")):
             raise SystemExit(
@@ -756,8 +740,8 @@ class Run:
                     "runlog: this run declares long=True (a full run), but its "
                     "protocol is not ready for one:\n  " + "\n  ".join(findings)
                     + "\nPilot it with long=False, or freeze first: `preflight "
-                    "<AREA>` clean, audit stamped, `Frozen before run: yes` "
-                    "(at `Cost: seconds`: question, criterion, admissibility condition and cost written suffice). A "
+                    "<AREA>` clean, audit stamped, `frozen = true` "
+                    "(at cost = \"seconds\": question, criterion and admissibility condition written suffice). A "
                     "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded).")
         self.dir = base_dir / "runs" / self.run_id
         self.dir.mkdir(parents=True, exist_ok=False)
@@ -899,7 +883,7 @@ def active(base_dir: str | Path) -> list[dict]:
             continue
         alive = is_alive(cfg.get("pid"), cfg.get("script"))
         state = run_state(d, cfg, alive)
-        if state == "completed":
+        if state in ("completed", "legacy"):     # legacy: ended long ago, not open
             continue
         out.append({"run_id": d.name, "dir": str(d), "alive": alive,
                     "state": state, **cfg})
@@ -1062,53 +1046,19 @@ def _read_index(index: Path) -> tuple[list[str], list[list[str]]]:
     return lines[0].split("\t"), [ln.split("\t") for ln in lines[1:] if ln]
 
 
-def migrate_index(base_dir: Path) -> int:
-    """Bring runs.tsv to the current columns, keeping every row verbatim.
-
-    Adds the missing field, fills nothing in: an existing row's
-    `protocol_id` stays empty until a `reindex` can prove it from a run
-    directory. Guessing it from the area would be the back-derivation this
-    whole mechanism exists to refuse.
-    """
-    index = base_dir / "runs.tsv"
-    with _index_lock(base_dir):
-        header, rows = _read_index(index)
-        if not header:
-            print(f"runlog: no runs.tsv in {base_dir} — nothing to migrate.")
-            return 0
-        if header == RUN_INDEX_COLS:
-            print(f"runlog: {index} already has the current columns.")
-            return 0
-        if header != RUN_INDEX_COLS[:len(header)]:
-            print(f"runlog: {index} columns {header} are not a prefix of "
-                  f"{RUN_INDEX_COLS} — this is not the migration you want; "
-                  f"move the file aside by hand.")
-            return 2
-        width = len(RUN_INDEX_COLS)
-        out = ["\t".join(RUN_INDEX_COLS)]
-        for row in rows:
-            out.append("\t".join(row + [""] * (width - len(row))))
-        _write_atomic(index, "\n".join(out) + "\n")
-        print(f"runlog: {index} migrated — {len(rows)} row(s) kept verbatim, "
-              f"{width - len(header)} field(s) added, none filled in.")
-        return 0
-
-
 def reindex(base_dir: Path) -> int:
     """Append index rows for completed runs that have none. Never rewrites.
 
-    A row that exists stays untouched: for a legacy run `note` and the
-    end-of-run git state live nowhere but in the index, so rebuilding it
-    would be a quiet loss. Only v2 runs with both markers can be
-    reconstructed in full; legacy runs missing a row are reported, not
-    invented.
+    A row that exists stays untouched. Only runs with both completion
+    markers are indexed; a run without `schema_version` is reported — it is
+    read with labkit 0.47.
     """
     index = base_dir / "runs.tsv"
     with _index_lock(base_dir):
         header, rows = _read_index(index)
         if header and header != RUN_INDEX_COLS:
-            print(f"runlog: {index} has old columns {header} — run "
-                  f"`runlog migrate-index {base_dir}` first.")
+            print(f"runlog: {index} has old columns {header} — migrate it "
+                  f"with labkit 0.47 (`runlog migrate-index`) first.")
             return 2
         seen: dict[str, int] = {}
         for row in rows:
@@ -1132,11 +1082,12 @@ def reindex(base_dir: Path) -> int:
                 continue
             if cfg is None:
                 continue
-            if run_state(d, cfg, alive=False) != "completed":
-                incomplete.append(d.name)
-                continue
-            if cfg.get("schema_version", 0) < 2:
+            state = run_state(d, cfg, alive=False)
+            if state == "legacy":
                 skipped_legacy.append(d.name)
+                continue
+            if state != "completed":
+                incomplete.append(d.name)
                 continue
             comp = json.loads((d / "completion.json").read_text(encoding="utf-8"))
             metrics = json.loads((d / "metrics.json").read_text(encoding="utf-8"))
@@ -1151,9 +1102,8 @@ def reindex(base_dir: Path) -> int:
 
     print(f"runlog: {added} row(s) appended to {index}.")
     for name in skipped_legacy:
-        print(f"  {name}: legacy run (no schema_version) missing from the "
-              f"index — its note and end-of-run git state exist nowhere "
-              f"else; add the row by hand or leave it.")
+        print(f"  {name}: run without schema_version (labkit before 0.21) — "
+              f"not indexed; read it with labkit 0.47.")
     for name in incomplete:
         print(f"  {name}: not completed — nothing to index.")
     for err in unreadable:
@@ -1165,12 +1115,12 @@ def main(argv: list[str]) -> int:
     """Status, wait, follow or start — the run monitor of record."""
     if argv and argv[0] == "start":
         return _start(argv[1:])
-    if argv and argv[0] in ("migrate-index", "reindex"):
+    if argv and argv[0] == "reindex":
         area = Path(argv[1]) if len(argv) > 1 else Path(".")
         if not area.is_dir():
             print(f"runlog: no such area: {area}")
             return 2
-        return (migrate_index if argv[0] == "migrate-index" else reindex)(area)
+        return reindex(area)
     import argparse
     ap = argparse.ArgumentParser(
         prog="runlog",
@@ -1184,9 +1134,8 @@ def main(argv: list[str]) -> int:
                     "`--follow` prints a status line per interval until idle; "
                     "`runlog start -- <cmd>` detaches a run (own session, "
                     "log file) and returns. "
-                    "`runlog migrate-index <area>` adds missing index "
-                    "columns keeping every row; `runlog reindex <area>` "
-                    "appends rows for completed runs the index missed.")
+                    "`runlog reindex <area>` appends rows for completed "
+                    "runs the index missed.")
     ap.add_argument("area", nargs="?", default=".",
                     help="experiment area holding a runs/ dir (default: .)")
     ap.add_argument("--wait", action="store_true",

@@ -14,17 +14,17 @@ text (`[C1]`) and a key in the run's metrics (`c1_pass`).
     B  branch         binds a pre-specified condition on the results to the
                       conclusion or follow-up analysis it licenses
 
-The legacy letters K (criterion), S (stop rule), W (fork) and N (null
-condition) stay readable in prose; they do not map one-to-one onto C/A/B
-(see the thread note `versprechen-kategorien-c-a-b`), so nothing here
-translates them. The promise block takes only the new letters.
+The earlier letters K, S, W and N are not read (labkit 0.48 broke with
+them; protocols that carry them are read with labkit 0.47). They do not map
+one-to-one onto C/A/B, so nothing translates them.
 
 Letters chosen against collision with metric names: F (`f1`), P (`p1`),
 R (`r1`), Q (`q1`), H (`h1`) are standard metric or hypothesis names and
 are never ids.
 
-**The promise block** — promises as data instead of prose. A protocol may
-carry exactly one fenced ```toml block with `[[promise]]` tables:
+**The promise block** — promises as data instead of prose. The protocol's
+one fenced ```toml block (`protocol_block.py`; its `[protocol]` table is the
+head) may carry `[[promise]]` tables:
 
     [[promise]]
     id = "C1"
@@ -51,18 +51,16 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import json
 import re
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit import protocol_block
+
 #: the letters of the promise block, and what each one is
 KINDS = {"C": "criterion", "A": "admissibility", "B": "branch"}
-#: pre-2026-10 letters, still recognised in prose and metrics keys
-LEGACY_KINDS = {"K": "criterion", "S": "stop rule", "W": "fork",
-                "N": "null condition"}
-
-_LETTERS = "".join(KINDS) + "".join(LEGACY_KINDS)
+_LETTERS = "".join(KINDS)
 #: an id anywhere in protocol prose: `[C1]`, `[k2]`
 ID_IN_PROTOCOL = re.compile(rf"\[([{_LETTERS}]\d+)\]", re.I)
 #: a metrics key in the id namespace: bare `c1` or `c1_<suffix>`
@@ -72,12 +70,11 @@ INTENT_KEY = re.compile(rf"^[{_LETTERS.lower()}]\d+_")
 #: an id as a string literal in source: `"c1_pass"`, `'s1'`
 ID_LITERAL = re.compile(rf"""['"]([{_LETTERS.lower()}]\d+)(_[a-z0-9_]*)?['"]""")
 
-#: a criterion's denominator key: `c1_n`, legacy `k1_n` — the count a
-#: criterion was computed over, held by `finalize` to the recorded inputs
-CRITERION_N_KEY = re.compile(r"^[ck]\d+_n$")
+#: a criterion's denominator key: `c1_n` — the count a criterion was
+#: computed over, held by `finalize` to the recorded inputs
+CRITERION_N_KEY = re.compile(r"^c\d+_n$")
 
 _BLOCK_ID = re.compile(rf"^[{''.join(KINDS)}]\d+$")
-_FENCED_TOML = re.compile(r"^```toml[ \t]*\n(.*?)^```[ \t]*$", re.M | re.S)
 _ALLOWED_FIELDS = {"id", "key", "sentence", "scope", "constants"}
 
 #: same width as the area audit stamp (`scope_sha.DIGEST_CHARS`)
@@ -101,7 +98,7 @@ class Promise:
 @dataclass(frozen=True)
 class PromiseBlock:
     promises: tuple[Promise, ...]
-    sha: str                        # digest of the block text as written
+    sha: str                        # digest of the [[promise]] tables (canonical JSON), not the head
 
     def by_id(self) -> dict[str, Promise]:
         return {p.id: p for p in self.promises}
@@ -127,28 +124,20 @@ def _digest(data: bytes) -> str:
 
 
 def parse_block(text: str) -> PromiseBlock | None:
-    """The protocol's promise block, or None if it has none.
+    """The protocol's promises, or None if its block declares none.
 
-    Raises PromiseError on anything malformed: two blocks, invalid TOML,
-    an unknown field, a legacy or unknown letter, a key outside its id's
-    namespace, a duplicate id, an empty scope, a non-scalar constant.
+    Raises PromiseError on anything malformed: invalid TOML, an unknown
+    field, an unknown letter, a key outside its id's namespace, a duplicate
+    id, an empty scope, a non-scalar constant. The digest covers the
+    promises only, not the head: freezing or stamping the audit line must
+    not read as a changed promise.
     """
-    blocks = [m.group(1) for m in _FENCED_TOML.finditer(text)
-              if re.search(r"^\[\[promise\]\]", m.group(1), re.M)]
-    if not blocks:
-        return None
-    if len(blocks) > 1:
-        raise PromiseError(f"{len(blocks)} ```toml blocks with [[promise]] — "
-                           f"a protocol has exactly one promise block")
-    raw = blocks[0]
     try:
-        data = tomllib.loads(raw)
-    except tomllib.TOMLDecodeError as exc:
-        raise PromiseError(f"promise block is not valid TOML: {exc}") from exc
-    extra = set(data) - {"promise"}
-    if extra:
-        raise PromiseError(f"promise block has top-level keys {sorted(extra)} "
-                           f"— only [[promise]] tables belong there")
+        data = protocol_block.load(text)
+    except protocol_block.BlockError as exc:
+        raise PromiseError(str(exc)) from exc
+    if "promise" not in data:
+        return None
     entries = data["promise"]
     if not isinstance(entries, list):
         raise PromiseError("`promise` must be an array of tables: [[promise]]")
@@ -167,8 +156,7 @@ def parse_block(text: str) -> PromiseBlock | None:
         pid = e["id"]
         if not isinstance(pid, str) or not _BLOCK_ID.match(pid):
             raise PromiseError(
-                f"{where}: id {pid!r} is not C<n>, A<n> or B<n> — the block "
-                f"takes only the new letters (legacy K/S/W/N stay in prose)")
+                f"{where}: id {pid!r} is not C<n>, A<n> or B<n>")
         where = f"[[promise]] {pid}"
         if pid in seen:
             raise PromiseError(f"{where}: duplicate id")
@@ -197,15 +185,15 @@ def parse_block(text: str) -> PromiseBlock | None:
         out.append(Promise(id=pid, kind=KINDS[pid[0]], key=key,
                            sentence=sentence.strip(), scope=tuple(scope),
                            constants=dict(constants)))
-    return PromiseBlock(promises=tuple(out), sha=_digest(raw.encode("utf-8")))
+    canonical = json.dumps(entries, sort_keys=True, ensure_ascii=False)
+    return PromiseBlock(promises=tuple(out), sha=_digest(canonical.encode("utf-8")))
 
 
 def prose_mismatch(text: str, block: PromiseBlock) -> tuple[list[str], list[str]]:
     """(new-letter ids in prose but not in the block, block ids not in prose).
 
-    Legacy letters are not compared: they have no place in the block.
     """
-    prose = {i.upper() for i in registered_ids(text) if i[0].upper() in KINDS}
+    prose = {i.upper() for i in registered_ids(text)}
     ids = {p.id for p in block.promises}
     return sorted(prose - ids), sorted(ids - prose)
 
@@ -219,7 +207,7 @@ def load(protocol: Path) -> PromiseBlock:
     """
     block = parse_block(protocol.read_text(encoding="utf-8"))
     if block is None:
-        raise PromiseError(f"{protocol}: no promise block (```toml with [[promise]])")
+        raise PromiseError(f"{protocol}: no [[promise]] tables in its ```toml block")
     return block
 
 

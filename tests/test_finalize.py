@@ -16,29 +16,28 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import finalize  # noqa: E402
+from protocol_fixture import PID, head  # noqa: E402
 
-PID = "p-0123456789abcdef"
-
-CLEAN_PROTOCOL = """\
-# Experiment protocol: x
-
-- **Standard:** 0.16
-- **Protocol id:** {pid}
+BODY = """\
 - **Question / hypothesis:** does it hold?
-- **Success / failure criterion:** [K1] p < .05
-- **Stop rule:** [S1] abort above 20% errors
-- **Type:** confirmatory
-- **Terms:** none
-- **Model I/O / prompt:** see below
-- **Null condition:** [N1] shuffled labels
+- **Success / failure criterion:** [C1] p < .05
+- **Admissibility condition:** [A1] parse yield above 80%
+- **Null condition / anchors (in the same run):** [A2] shuffled labels stay at chance
 - **Raw output:** one real example
-- **Frozen before run:** yes
 - **Outcome:** 0.03
 
 ```text
 prompt
 ```
-""".format(pid=PID)
+"""
+
+
+def _protocol(**head_fields) -> str:
+    return "# Experiment protocol: x\n\n" + head(frozen=True, **head_fields) + "\n" + BODY
+
+
+CLEAN_PROTOCOL = _protocol()
+CLEAN_METRICS = {"c1_pass": True, "a1_pass": True, "a2_pass": True}
 
 PROTOCOL_WITH_HOLES = CLEAN_PROTOCOL.replace(
     "- **Outcome:** 0.03",
@@ -77,8 +76,7 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-            _run(area, "r1", metrics={"k1_pass": True, "s1_hit": 0,
-                                      "n1_pass": True})
+            _run(area, "r1", metrics=CLEAN_METRICS)
             code, out = _run_finalize(area)
         self.assertEqual(code, 0, out)
         self.assertIn("all clear", out)
@@ -87,7 +85,7 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-            _run(area, "r1", metrics={"k1_pass": True}, completion=False)
+            _run(area, "r1", metrics={"c1_pass": True}, completion=False)
             code, out = _run_finalize(area)
         self.assertEqual(code, 1, out)
         self.assertIn("no completed run bound to", out)
@@ -105,17 +103,16 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-            _run(area, "r1", metrics={"k1_pass": True, "s1_hit": 0})
+            _run(area, "r1", metrics={"c1_pass": True, "a1_pass": True})
             code, out = _run_finalize(area)
         self.assertEqual(code, 1, out)
-        self.assertIn("[N1] registered", out)
+        self.assertIn("[A2] registered", out)
 
     def test_open_fields_are_warnings(self):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(PROTOCOL_WITH_HOLES)
-            _run(area, "r1", metrics={"k1_pass": True, "s1_hit": 0,
-                                      "n1_pass": True})
+            _run(area, "r1", metrics=CLEAN_METRICS)
             code, out = _run_finalize(area)
         self.assertEqual(code, 0, out)
         self.assertIn("Outcome", out)
@@ -140,7 +137,7 @@ class TestFinalize(unittest.TestCase):
         self.assertEqual(code, 2)
 
     def test_no_intent_ids_skips_check(self):
-        proto = CLEAN_PROTOCOL.replace("[K1] ", "").replace("[S1] ", "").replace("[N1] ", "")
+        proto = CLEAN_PROTOCOL.replace("[C1] ", "").replace("[A1] ", "").replace("[A2] ", "")
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(proto)
@@ -148,6 +145,30 @@ class TestFinalize(unittest.TestCase):
             code, out = _run_finalize(area)
         self.assertEqual(code, 0, out)
         self.assertIn("no intent ids registered", out)
+
+    def test_unreadable_head_exits_two(self):
+        """A prose head (Standard 0.16/0.17) is read by labkit 0.47; here it
+        is a usage error naming the [protocol] table (TODO 8)."""
+        prose = ("# Experiment protocol: x\n\n- **Standard:** 0.16\n"
+                 f"- **Protocol id:** {PID}\n- **Frozen before run:** yes\n" + BODY)
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(prose)
+            _run(area, "r1", metrics=CLEAN_METRICS)
+            code, out = _run_finalize(area)
+        self.assertEqual(code, 2, out)
+        self.assertIn("no [protocol] table", out)
+
+    def test_unstamped_id_is_a_blocker(self):
+        """No stamped id binds no run: a number cannot be traced to this
+        protocol, so finalize blocks instead of skipping the completion check."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(_protocol(id="<protocol-id>"))
+            _run(area, "r1", metrics=CLEAN_METRICS)
+            code, out = _run_finalize(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn("no stamped protocol id", out)
 
 
 if __name__ == "__main__":

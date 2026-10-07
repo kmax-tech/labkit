@@ -63,22 +63,23 @@ class AreaFixture:
         self.tmp.cleanup()
 
 
-PROTOCOL_TWO = "Kriterium: [K1] trifft und [K2] haelt.\nAbbruch: [S1] bei p>.05."
-CLEAN_CODE = 'm = {"k1_pass": True, "k2_pass": False, "s1_hit": 0}\n'
+PROTOCOL_TWO = ("- **Success / failure criterion:** [C1] trifft und [C2] haelt.\n"
+                "- **Admissibility condition:** [A1] Ausbeute > 90%.\n")
+CLEAN_CODE = 'm = {"c1_pass": True, "c2_pass": False, "a1_pass": True}\n'
 
 
 class TestIntentIdsAgainstCode(unittest.TestCase):
 
     def test_registered_id_absent_from_code_is_a_blocker(self):
-        """[K2] promised, never mentioned — the run reports nothing for it."""
+        """[C2] promised, never mentioned — the run reports nothing for it."""
         with AreaFixture(PROTOCOL_TWO,
-                         {"03_evaluate.py": 'm = {"k1_pass": 1, "s1_hit": 0}\n'}
+                         {"03_evaluate.py": 'm = {"c1_pass": 1, "a1_pass": 1}\n'}
                          ) as a:
             rc, out = a.run()
         self.assertEqual(rc, 1)
-        self.assertIn("[K2] is registered", out)
+        self.assertIn("[C2] is registered", out)
         self.assertIn("BLOCKER", out)
-        self.assertNotIn("[K1] is registered", out)
+        self.assertNotIn("[C1] is registered", out)
 
     def test_all_ids_present_is_silent(self):
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
@@ -90,24 +91,25 @@ class TestIntentIdsAgainstCode(unittest.TestCase):
         """A number gets reported that no registration promised."""
         with AreaFixture(PROTOCOL_TWO,
                          {"03_evaluate.py": CLEAN_CODE
-                          + 'm["s9_hit"] = 3\n'}) as a:
+                          + 'm["a9_pass"] = 3\n'}) as a:
             rc, out = a.run()
         self.assertEqual(rc, 1)
-        self.assertIn("[S9]", out)
+        self.assertIn("[A9]", out)
         self.assertIn("WARNING", out)
 
     def test_bare_id_string_is_not_an_unregistered_promise(self):
         """The 72er scar: source sessions named after the areas they come from.
 
         `"s65"` without a suffix is a name, not a metric key. Reading it as a
-        promise produced three findings and no defect.
+        promise produced three findings and no defect. The S letter is gone;
+        the same bare form in today's namespace is `"a65"`.
         """
         with AreaFixture(PROTOCOL_TWO,
-                         {"00_prepare.py": 'SESSIONS = ["s65", "s68", "s69"]\n',
+                         {"00_prepare.py": 'SESSIONS = ["a65", "a68", "a69"]\n',
                           "03_evaluate.py": CLEAN_CODE}) as a:
             rc, out = a.run()
         self.assertEqual(rc, 0, out)
-        self.assertNotIn("S65", out)
+        self.assertNotIn("A65", out)
 
     def test_protocol_without_ids_is_not_audited(self):
         with AreaFixture("Kein Intent-Kennzeichen hier.",
@@ -255,8 +257,8 @@ class TestBundle(unittest.TestCase):
             text = out.read_text(encoding="utf-8")
         self.assertEqual(n, 2)
         self.assertIn("Schema facts", text)
-        self.assertIn("[K1] trifft", text)
-        self.assertIn("k1_pass", text)
+        self.assertIn("[C1] trifft", text)
+        self.assertIn("c1_pass", text)
 
     def test_bundle_includes_gate_labels(self):
         with AreaFixture(PROTOCOL_TWO,
@@ -291,7 +293,8 @@ class TestProtocolChoice(unittest.TestCase):
     while s13 was the protocol just built (2026-09-26)."""
 
     def _second(self, area: Path, name="PROTOCOL-s2-later.md"):
-        (area / name).write_text("Kriterium: [K9] haelt.\n", encoding="utf-8")
+        (area / name).write_text("- **Success / failure criterion:** [C9] haelt.\n",
+                                encoding="utf-8")
         return area / name
 
     def _main(self, argv):
@@ -314,9 +317,9 @@ class TestProtocolChoice(unittest.TestCase):
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
             second = self._second(a.path)
             rc, out = self._main([a.path, "--protocol", second])
-        # [K9] is registered in the named protocol and in no script.
+        # [C9] is registered in the named protocol and in no script.
         self.assertEqual(rc, 1, out)
-        self.assertIn("K9", out)
+        self.assertIn("C9", out)
 
     def test_single_protocol_still_needs_no_flag(self):
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:

@@ -12,7 +12,7 @@ Three automated checks; the rest are extracted as facts for the
 code-check agent (via ``--bundle``), not verified by this command:
 
   1. **intent ids against the code** (§2.A1a, AUTOMATED). Every registered
-     [K1]/[S1]/[W1]/[N1] must appear as a key literal in the area's scripts.
+     [C1]/[A1]/[B1] must appear as a key literal in the area's scripts.
      Report time has `intent-check` for the metrics; before the run the same
      promise goes unchecked exactly when repairing it is still cheap.
   1b. **parser fixtures** (AUTOMATED, 2026-10-05). Every `parse_*` function in

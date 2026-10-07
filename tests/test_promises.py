@@ -26,8 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import intent_check, promises, recheck, runlog  # noqa: E402
-
-PID = "p-0123456789abcdef"
+from protocol_fixture import head  # noqa: E402
 
 MEASURE = '''\
 def filter_items(rows):
@@ -70,20 +69,23 @@ def parsed(text: str) -> promises.PromiseBlock:
     return b
 
 
-def protocol_text(body: str, prose: str = "Criterion [C1]; admissibility [A1].\n") -> str:
-    return (f"- **Protocol id:** {PID}\n- **Frozen before run:** no\n\n"
-            f"{prose}\n{body}")
+def protocol_text(*entries: str, prose: str = "Criterion [C1]; admissibility [A1].\n") -> str:
+    """A protocol whose one ```toml block holds the head and `entries`."""
+    return head(promises="\n".join(entries)) + "\n" + prose
 
 
 class Parse(unittest.TestCase):
     def test_no_block_is_none(self):
         self.assertIsNone(promises.parse_block("criterion [K1] only in prose\n"))
 
-    def test_toml_block_without_promise_is_not_a_promise_block(self):
-        self.assertIsNone(promises.parse_block("```toml\n[tool]\nx = 1\n```\n"))
+    def test_block_without_promise_tables_declares_none(self):
+        self.assertIsNone(promises.parse_block('```toml\n[protocol]\nstandard = "0.18"\n```\n'))
+
+    def test_unknown_top_level_table(self):
+        self.assertRejects("```toml\n[tool]\nx = 1\n```\n", "only [protocol] and [[promise]]")
 
     def test_entries_kinds_constants(self):
-        b = parsed(protocol_text(block(C1, A1)))
+        b = parsed(protocol_text(C1, A1))
         self.assertEqual([p.id for p in b.promises], ["C1", "A1"])
         self.assertEqual(b.by_id()["C1"].kind, "criterion")
         self.assertEqual(b.by_id()["A1"].kind, "admissibility")
@@ -91,11 +93,19 @@ class Parse(unittest.TestCase):
         self.assertEqual(b.by_id()["A1"].constants, {})
 
     def test_digest_follows_the_block_not_the_prose(self):
-        a = parsed(protocol_text(block(C1)))
-        b = parsed(protocol_text(block(C1), prose="other prose [C1]\n"))
-        c = parsed(protocol_text(block(C1.replace("0.7", "0.8"))))
+        a = parsed(protocol_text(C1))
+        b = parsed(protocol_text(C1, prose="other prose [C1]\n"))
+        c = parsed(protocol_text(C1.replace("0.7", "0.8")))
         self.assertEqual(a.sha, b.sha)
         self.assertNotEqual(a.sha, c.sha)
+
+    def test_digest_ignores_the_head(self):
+        """Freezing or stamping the audit edits the head, not a promise:
+        a run must not read that as "promises changed after the run"."""
+        a = parsed(protocol_text(C1))
+        b = parsed(head(frozen=True, preflight_audit="2026-10-07 · ab12 · 0 findings",
+                        promises=C1))
+        self.assertEqual(a.sha, b.sha)
 
     def assertRejects(self, text: str, fragment: str):
         with self.assertRaises(promises.PromiseError) as cm:
@@ -103,13 +113,13 @@ class Parse(unittest.TestCase):
         self.assertIn(fragment, str(cm.exception))
 
     def test_two_blocks(self):
-        self.assertRejects(block(C1) + block(A1), "exactly one promise block")
+        self.assertRejects(block(C1) + block(A1), "exactly one")
 
     def test_invalid_toml(self):
         self.assertRejects(block('[[promise]]\nid = "C1\n'), "not valid TOML")
 
-    def test_legacy_letter_in_block(self):
-        self.assertRejects(block(C1.replace('"C1"', '"K1"')), "only the new letters")
+    def test_earlier_letter_in_block(self):
+        self.assertRejects(block(C1.replace('"C1"', '"K1"')), "is not C<n>, A<n> or B<n>")
 
     def test_key_outside_namespace(self):
         self.assertRejects(block(C1.replace('"c1_pass"', '"c2_pass"')),
@@ -137,16 +147,16 @@ class Alphabet(unittest.TestCase):
         metrics = {"f1_score": 1, "p1": 1, "q1": 1, "r1_recall": 1, "h1": 1}
         self.assertEqual(promises.reported_ids(metrics), set())
 
-    def test_new_and_legacy_keys_are_ids(self):
+    def test_only_c_a_b_keys_are_ids(self):
         metrics = {"c1_pass": 1, "a2": 1, "b1_branch": "x", "k1_pass": 1, "n1": 1}
-        self.assertEqual(promises.reported_ids(metrics), {"c1", "a2", "b1", "k1", "n1"})
+        self.assertEqual(promises.reported_ids(metrics), {"c1", "a2", "b1"})
 
     def test_one_alphabet_everywhere(self):
         self.assertIs(intent_check.ID_KEY, promises.ID_KEY)
         self.assertIs(intent_check.ID_IN_PROTOCOL, promises.ID_IN_PROTOCOL)
         self.assertIs(recheck.INTENT_KEY, promises.INTENT_KEY)
 
-    def test_prose_mismatch_both_directions_legacy_ignored(self):
+    def test_prose_mismatch_both_directions(self):
         b = parsed(block(C1))
         self.assertEqual(promises.prose_mismatch("[C1] and [A2] and [K1]", b), (["A2"], []))
         self.assertEqual(promises.prose_mismatch("only [K1]", b), ([], ["C1"]))
@@ -212,7 +222,7 @@ class Chain(unittest.TestCase):
         (self.area / "scripts").mkdir()
         (self.area / "scripts" / "01_measure.py").write_text(MEASURE, encoding="utf-8")
         self.protocol = self.area / "PROTOCOL-x.md"
-        self.protocol.write_text(protocol_text(block(C1, A1)), encoding="utf-8")
+        self.protocol.write_text(protocol_text(C1, A1), encoding="utf-8")
         os.environ.pop("LABKIT_UNFROZEN", None)
         os.environ.pop("CLAUDECODE", None)
 
@@ -245,13 +255,13 @@ class Chain(unittest.TestCase):
                          promises.declared_scope_sha(self.area, ("scripts/01_measure.py:compute_score",)))
 
     def test_protocol_without_block_records_none(self):
-        self.protocol.write_text(protocol_text("", prose="[K1] only\n"), encoding="utf-8")
+        self.protocol.write_text(protocol_text(prose="no promise here\n"), encoding="utf-8")
         run = self.start()
         self.assertIsNone(json.loads((run.dir / "config.json").read_text())["promises"])
 
     def test_dangling_scope_is_refused_before_mkdir(self):
-        self.protocol.write_text(protocol_text(block(
-            C1.replace("compute_score", "gone"), A1)), encoding="utf-8")
+        self.protocol.write_text(protocol_text(
+            C1.replace("compute_score", "gone"), A1), encoding="utf-8")
         with self.assertRaises(SystemExit) as cm:
             self.start()
         self.assertIn("promise block", str(cm.exception))
@@ -270,7 +280,7 @@ class Chain(unittest.TestCase):
 
     def test_block_changed_after_the_run(self):
         self.complete(self.start(), self.GOOD)
-        self.protocol.write_text(protocol_text(block(C1.replace("0.7", "0.6"), A1)),
+        self.protocol.write_text(protocol_text(C1.replace("0.7", "0.6"), A1),
                                  encoding="utf-8")
         rc, out = self.check()
         self.assertEqual(rc, 1)
@@ -299,7 +309,7 @@ class Chain(unittest.TestCase):
         self.assertIn("declares key 'c1_pass'", out)
 
     def test_prose_and_block_must_name_the_same_ids(self):
-        self.protocol.write_text(protocol_text(block(C1, A1), prose="only [C1] and [B1]\n"),
+        self.protocol.write_text(protocol_text(C1, A1, prose="only [C1] and [B1]\n"),
                                  encoding="utf-8")
         rc, out = self.check()
         self.assertEqual(rc, 1)
@@ -311,7 +321,7 @@ class Chain(unittest.TestCase):
         the verdict unchanged, and recheck held the note anyway."""
         run = self.complete(self.start(), self.GOOD)
         recheck.block_unchanged(run, self.area)             # unchanged: passes
-        self.protocol.write_text(protocol_text(block(C1.replace("0.7", "0.5"), A1)),
+        self.protocol.write_text(protocol_text(C1.replace("0.7", "0.5"), A1),
                                  encoding="utf-8")
         with self.assertRaises(SystemExit) as cm:
             recheck.block_unchanged(run, self.area)

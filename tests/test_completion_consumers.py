@@ -4,7 +4,9 @@ Review 2026-10-06: the contract says a v2 run is complete only with BOTH
 metrics.json and completion.json (docs/protocol-run-binding.md), but
 recheck, a derived run's parent check, intent-check's legacy choice and
 the usability scorer looked at metrics.json alone — an unfinalized run
-could be rechecked as a kept number and accepted as a parent.
+could be rechecked as a kept number and accepted as a parent. (The
+legacy choice is gone since labkit 0.48: intent-check binds by protocol id,
+and an unstamped protocol names its run with `--metrics`.)
 
 The fixture is a twin pair in one area: an older completed run and a NEWER
 unfinalized one with the same metrics. Picking by metrics.json chooses the
@@ -23,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import intent_check, recheck, runlog, runs, usability  # noqa: E402
+from labkit import recheck, runlog, runs, usability  # noqa: E402
 
 DONE = "2026-10-06T10-00-00_aaaa"
 UNFINALIZED = "2026-10-06T11-00-00_bbbb"
@@ -36,7 +38,7 @@ def make_run(area: Path, name: str, *, completion: bool, schema: int | None = 2)
     if schema is not None:
         cfg["schema_version"] = schema
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
-    (d / "metrics.json").write_text(json.dumps({"k1_pass": True}), encoding="utf-8")
+    (d / "metrics.json").write_text(json.dumps({"c1_pass": True}), encoding="utf-8")
     if completion:
         (d / "completion.json").write_text(json.dumps({"schema_version": 2}),
                                            encoding="utf-8")
@@ -74,27 +76,28 @@ class Twin(unittest.TestCase):
         self.assertEqual(json.loads((run.dir / "config.json").read_text())["derived_from"],
                          DONE)
 
-    def test_intent_check_legacy_choice_picks_the_completed_run(self):
-        path, skipped = intent_check.gate_metrics(self.area)
-        self.assertEqual(path, self.done / "metrics.json")
-        self.assertEqual(skipped, 0)
-
     def test_usability_scorer_picks_the_completed_run(self):
         self.assertEqual(usability.latest_run(self.area), self.done)
 
 
 class Edges(unittest.TestCase):
-    def test_legacy_run_without_schema_completes_on_metrics(self):
+    def test_legacy_run_without_schema_is_never_completed(self):
+        """labkit 0.48: metrics.json alone no longer marks a finish; a run
+        without `schema_version` is read with labkit 0.47."""
         area = Path(tempfile.mkdtemp())
-        legacy = make_run(area, DONE, completion=False, schema=None)
-        self.assertEqual(runs.completed_runs(area), [legacy])
+        legacy = make_run(area, DONE, completion=True, schema=None)
+        self.assertEqual(runs.completion_state(legacy), "legacy")
+        self.assertEqual(runs.completed_runs(area), [])
+        with self.assertRaises(SystemExit) as cm:
+            recheck.run_dir(area, DONE)
+        self.assertIn("legacy", str(cm.exception))
 
     def test_run_dir_without_config_is_legacy(self):
         area = Path(tempfile.mkdtemp())
         d = area / "runs" / DONE
         d.mkdir(parents=True)
         (d / "metrics.json").write_text("{}", encoding="utf-8")
-        self.assertEqual(runs.completion_state(d), "completed")
+        self.assertEqual(runs.completion_state(d), "legacy")
 
     def test_unreadable_config_is_loud(self):
         area = Path(tempfile.mkdtemp())

@@ -21,9 +21,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.code_check import check_intent_ids  # noqa: E402
 from labkit.intent_check import code_ids  # noqa: E402
 
-PROTOCOL = "Criterion [C1]; admissibility [A1]; legacy [K1].\n"
-LITERAL = 'r.metrics(**{"c1_pass": ok, "a1_anchor_ok": a, "k1_pass": ok})\n'
-KEYWORD = "r.metrics(c1_pass=ok,\n          a1_anchor_ok=a, k1_pass=ok)\n"
+PROTOCOL = "Criterion [C1]; admissibility [A1].\n"
+LITERAL = 'r.metrics(**{"c1_pass": ok, "a1_anchor_ok": a})\n'
+KEYWORD = "r.metrics(c1_pass=ok,\n          a1_anchor_ok=a)\n"
 
 
 def area_with(script: str) -> tuple[Path, Path]:
@@ -49,15 +49,15 @@ class KeywordKeys(unittest.TestCase):
         self.assertEqual(hits["a1"], ["01_measure.py:2"])
 
     def test_assignment_is_not_a_reported_key(self):
-        area, protocol = area_with("c1_pass = ok\nr.metrics(**{'a1_anchor_ok': a, 'k1_pass': ok})\n")
+        area, protocol = area_with("c1_pass = ok\nr.metrics(**{'a1_anchor_ok': a})\n")
         findings = check_intent_ids(area, protocol)
         self.assertEqual(len(findings), 1)
         self.assertIn("[C1] is registered, but no script mentions", findings[0])
 
     def test_suffixed_only_drops_a_bare_keyword(self):
-        area, _ = area_with("f(s65=1, c1_pass=2)\n")
+        area, _ = area_with("f(a65=1, c1_pass=2)\n")
         self.assertEqual(set(code_ids(area, suffixed_only=True)), {"c1"})
-        self.assertEqual(set(code_ids(area)), {"s65", "c1"})
+        self.assertEqual(set(code_ids(area)), {"a65", "c1"})
 
     def test_unparsable_file_keeps_its_literal_hits(self):
         area, _ = area_with('x = {"c1_pass": 1}\nr.metrics(a1_ok=1\n')

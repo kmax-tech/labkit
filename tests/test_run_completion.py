@@ -8,9 +8,11 @@ and the end-of-run git state, could not be rebuilt from the directory. Since
 completion.json, and every change to runs.tsv takes one lock.
 
 The states under test: completed · running · unknown · crashed ·
-unfinalized · corrupt. crashed/unfinalized/corrupt are failures; `--wait`
-exits 2 on each. `unknown` is not a failure — it means liveness is
-undecidable, and treating it as failed would hide a running run.
+unfinalized · corrupt · legacy. crashed/unfinalized/corrupt are failures;
+`--wait` exits 2 on each. `unknown` is not a failure — it means liveness is
+undecidable, and treating it as failed would hide a running run. `legacy`
+(no `schema_version` >= 2) is never completed since labkit 0.48; such a run
+is read with labkit 0.47.
 """
 
 import json
@@ -46,7 +48,7 @@ def _run_dir(area: Path, name: str, *, schema: int | None = 2,
         cfg["protocol"] = {"id": protocol_id, "path": "PROTOCOL-x.md"}
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
     if metrics:
-        (d / "metrics.json").write_text('{"k1": true}', encoding="utf-8")
+        (d / "metrics.json").write_text('{"c1_pass": true}', encoding="utf-8")
     if completion:
         (d / "completion.json").write_text(json.dumps(
             {"schema_version": 2, "finished": "2026-09-26T21:00:00",
@@ -97,13 +99,6 @@ class TestStates(unittest.TestCase):
             d = _run_dir(_area(t), "r1", completion=False)
             self.assertEqual(_state(d, alive=None), "unknown")
 
-    def test_undecidable_liveness_legacy_is_unknown(self):
-        """Legacy runs also get unknown when liveness is undecidable."""
-        with tempfile.TemporaryDirectory() as t:
-            d = _run_dir(_area(t), "r1", schema=None, metrics=False,
-                         completion=False)
-            self.assertEqual(_state(d, alive=None), "unknown")
-
     def test_unknown_is_not_a_failed_state(self):
         self.assertNotIn("unknown", runs.FAILED_STATES)
 
@@ -112,14 +107,20 @@ class TestStates(unittest.TestCase):
             d = _run_dir(_area(t), "r1", completion=False)
             self.assertEqual(_state(d, alive=True), "running")
 
-    def test_legacy_runs_keep_metrics_as_their_marker(self):
+    def test_a_run_without_schema_version_is_legacy_never_completed(self):
+        """labkit 0.48 dropped the metrics-only marker: a run without
+        `schema_version` >= 2 is `legacy` whatever its files or liveness say."""
         with tempfile.TemporaryDirectory() as t:
             area = _area(t)
-            done = _run_dir(area, "r1", schema=None, completion=False)
-            open_ = _run_dir(area, "r2", schema=None, metrics=False,
-                             completion=False)
-            self.assertEqual(_state(done), "completed")
-            self.assertEqual(_state(open_), "crashed")
+            cases = {"r1": {}, "r2": {"completion": False},
+                     "r3": {"metrics": False, "completion": False}}
+            for name, kwargs in cases.items():
+                d = _run_dir(area, name, schema=None, **kwargs)
+                for alive in (False, True, None):
+                    with self.subTest(run=name, alive=alive):
+                        self.assertEqual(_state(d, alive=alive), "legacy")
+            d = _run_dir(area, "r4", schema=1)
+            self.assertEqual(_state(d), "legacy")
 
 
 class TestActive(unittest.TestCase):
@@ -159,45 +160,6 @@ class TestActive(unittest.TestCase):
             _run_dir(area, "2026-01-01T00-00-00_aaaa")
             _run_dir(area, "2026-01-01T00-00-09_zzzz", completion=False)
             self.assertIn("aaaa", runlog._finished_line(area))
-
-
-class TestMigrateIndex(unittest.TestCase):
-
-    OLD = ["run_id", "git", "script", "data", "config", "metrics", "note"]
-
-    def _index(self, area: Path, rows):
-        (area / "runs.tsv").write_text(
-            "\t".join(self.OLD) + "\n"
-            + "".join("\t".join(r) + "\n" for r in rows), encoding="utf-8")
-
-    def test_rows_survive_verbatim_and_the_field_stays_empty(self):
-        with tempfile.TemporaryDirectory() as t:
-            area = _area(t)
-            self._index(area, [["r1", "abc", "s.py", "{}", "{}", "{}",
-                                "a note with spaces"]])
-            self.assertEqual(runlog.migrate_index(area), 0)
-            header, rows = runlog._read_index(area / "runs.tsv")
-        self.assertEqual(header, runlog.RUN_INDEX_COLS)
-        self.assertEqual(rows[0][:7],
-                         ["r1", "abc", "s.py", "{}", "{}", "{}",
-                          "a note with spaces"])
-        self.assertEqual(rows[0][7], "")
-
-    def test_migrating_twice_is_a_no_op(self):
-        with tempfile.TemporaryDirectory() as t:
-            area = _area(t)
-            self._index(area, [["r1", "abc", "s.py", "{}", "{}", "{}", "n"]])
-            runlog.migrate_index(area)
-            before = (area / "runs.tsv").read_text(encoding="utf-8")
-            self.assertEqual(runlog.migrate_index(area), 0)
-            self.assertEqual((area / "runs.tsv").read_text(encoding="utf-8"),
-                             before)
-
-    def test_an_unrelated_header_is_refused(self):
-        with tempfile.TemporaryDirectory() as t:
-            area = _area(t)
-            (area / "runs.tsv").write_text("a\tb\n", encoding="utf-8")
-            self.assertEqual(runlog.migrate_index(area), 2)
 
 
 class TestReindex(unittest.TestCase):
@@ -275,9 +237,8 @@ def _append_many(area_str, n):
 
 
 class TestIndexLock(unittest.TestCase):
-    """A migration rewrites runs.tsv through a rename. Without one lock for
-    every writer, a row appended to the file being replaced disappears with
-    no trace."""
+    """Every change to runs.tsv takes one lock: concurrent appends, each
+    reading the header and appending, lose no row."""
 
     def test_concurrent_appends_lose_no_row(self):
         with tempfile.TemporaryDirectory() as t:
@@ -293,28 +254,6 @@ class TestIndexLock(unittest.TestCase):
         self.assertEqual(len(rows), 80)
         self.assertEqual(len({r[0] for r in rows}), 80)
 
-    def test_migration_and_append_do_not_race(self):
-        with tempfile.TemporaryDirectory() as t:
-            area = _area(t)
-            (area / "runs.tsv").write_text(
-                "\t".join(TestMigrateIndex.OLD) + "\n"
-                + "".join(f"old{i}\tg\ts\t{{}}\t{{}}\t{{}}\tkeep{i}\n"
-                          for i in range(5)), encoding="utf-8")
-            ctx = multiprocessing.get_context("spawn")
-            writer = ctx.Process(target=_append_many, args=(str(area), 30))
-            writer.start()
-            runlog.migrate_index(area)
-            writer.join(60)
-            header, rows = runlog._read_index(area / "runs.tsv")
-        # every original row survives, with its note
-        kept = [r for r in rows if r[0].startswith("old")]
-        self.assertEqual(len(kept), 5)
-        self.assertEqual([r[6] for r in kept], [f"keep{i}" for i in range(5)])
-        # and no appended row was dropped by the rewrite
-        self.assertEqual(len([r for r in rows if not r[0].startswith("old")]),
-                         30)
-        self.assertEqual(header, runlog.RUN_INDEX_COLS)
-
 
 if __name__ == "__main__":
     unittest.main()
@@ -329,7 +268,7 @@ class TestDerivedRun(unittest.TestCase):
             _run_dir(area, "2026-10-05T10-00-00_aaaa")
             with runlog.run("x", {}, base_dir=area,
                             derived_from="2026-10-05T10-00-00_aaaa") as r:
-                r.metrics(k1=True)
+                r.metrics(c1_pass=True)
             cfg = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
             self.assertEqual(cfg["derived_from"], "2026-10-05T10-00-00_aaaa")
 
@@ -346,7 +285,7 @@ class TestDerivedRun(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = _area(d)
             with runlog.run("x", {}, base_dir=area) as r:
-                r.metrics(k1=True)
+                r.metrics(c1_pass=True)
             cfg = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
             self.assertIsNone(cfg["derived_from"])
 

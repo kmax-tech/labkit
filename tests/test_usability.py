@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import usability  # noqa: E402
+from protocol_fixture import head  # noqa: E402
 
 LOG = """\
 18:12:32 · read · CLAUDE.md
@@ -64,16 +65,17 @@ class LogParser(unittest.TestCase):
         self.assertEqual(got.wall_seconds, 3600)
 
 
-def _probe(root: Path, metrics: dict, frozen: str = "no", tier: str = "seconds") -> None:
+def _probe(root: Path, metrics: dict, frozen: bool = False, tier: str = "seconds") -> None:
     area = root / "experiments" / "01-docs-per-case"
     run = area / "runs" / "2026-10-05T18-00-00_ab12"
     run.mkdir(parents=True)
     (area / "PROTOCOL-docs-per-case.md").write_text(
-        f"- **Cost:** {tier}\n- **Frozen before run:** {frozen}\n", encoding="utf-8")
+        head(cost=tier, frozen=frozen), encoding="utf-8")
     (run / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
     (run / "config.json").write_text(json.dumps(
-        {"protocol": {"path": "PROTOCOL-docs-per-case.md"}, "cost_tier": tier}),
-        encoding="utf-8")
+        {"schema_version": 2, "protocol": {"path": "PROTOCOL-docs-per-case.md"},
+         "cost_tier": tier}), encoding="utf-8")
+    (run / "completion.json").write_text("{}", encoding="utf-8")
     usability._sidecar(root, "probe.json").write_text(json.dumps({
         "staged": "2026-10-05T17:59:00", "task": "count", "area": "01-docs-per-case",
         "metric_key": "mean_docs_per_case", "labkit_installed": "labkit @ x",

@@ -36,8 +36,8 @@ path to this file.
 7. **Pilot light, report heavy.** For a quick pilot you owe only the core:
    the question, how you'll recognize it worked, the type, the rendered
    prompt / model I/O, and what came out. Fields marked **†** are
-   report-grade: they become mandatory the moment you set `Frozen before
-   run` to `yes` — that is, the moment you want to report the number. Until
+   report-grade: they become mandatory the moment you set `frozen = true`
+   in the head — that is, the moment you want to report the number. Until
    then, leave them as `TODO` rather than padding them.
 
 ## Intent IDs [C/A/B]
@@ -77,7 +77,31 @@ sentences, APPARATUS deserves precise fragments.
 
 ## Fields by section
 
-**Cost** — the price of a *repeat*, not whether a model is involved. A
+### The head (the ```toml block)
+
+The fields a machine reads are data, not prose: the `[protocol]` table of
+the protocol's one ```toml block. `protocol-check` reads them with a TOML
+parser — exact keys, typed values; a typo is an error that names the field.
+The same block may hold the `[[promise]]` tables (labkit
+`docs/promise-block.md`).
+
+- **standard** — `"0.18"`; stamped, never edited.
+- **id** — `p-` plus 16 hex digits, stamped by `lib exp`, never typed: the
+  run binds to it, so renaming or moving the file keeps the binding.
+- **type** — `"exploratory"` generates hypotheses, iterate freely, but
+  nothing from it may be reported as a test. `"confirmatory"` tests a
+  hypothesis fixed BEFORE the run, on data that influenced no choice.
+- **cost** — see below.
+- **frozen** — `true` means hypothesis, prompts/rules, metrics, baselines
+  and decision rule were all fixed beforehand; only `true` plus `test` gives
+  you a held-out number. Goes from `false` to `true` only after the
+  instrument check; per (re-)freeze ONE sentence stays in the prose — the
+  reasoning goes into the commit message.
+- **preflight_audit** — date · scope sha · N findings (blockers fixed /
+  accepted with reason / dismissed with reason): the code-vs-intent audit
+  after the instrument check and before freezing. Empty until then.
+
+**cost** — the price of a *repeat*, not whether a model is involved. A
 deterministic count, or a handful of model calls that finish in a minute
 for cents, is `seconds`: rerunnable at will, so no agent audit per run;
 `finalize` checks provenance, the independent audit comes when the number
@@ -141,17 +165,6 @@ no question numbers.
 - **Registered branch:** if a result decides the conclusion or the next
   analysis, register it BEFORE the run: condition + what each branch
   licenses, [B1] per branch point. "n/a" if there is only one outcome.
-- **Type:** *exploratory* — generates hypotheses, iterate freely, but nothing
-  from it may be reported as a test. *confirmatory* — tests a hypothesis
-  fixed BEFORE the run, on data that influenced no choice.
-- **Preflight audit:** date · scope sha · N findings (blockers fixed /
-  accepted with reason / dismissed with reason) — the code-vs-intent audit
-  that runs after the instrument check and before freezing.
-- **Frozen before run:** "yes" means hypothesis, prompts/rules, metrics,
-  baselines and decision rule were all fixed beforehand; only "yes" plus
-  `test` gives you a held-out number. Goes from "no" to "yes" only after
-  the instrument check; per (re-)freeze ONE sentence stays — the reasoning
-  goes into the commit message.
 - **Why this design †:** choice of model, dataset, method — one sentence.
 - **Rival explanations †:** per confound: what OTHER than the hypothesis
   produces the same number · error direction (does it push for or against
@@ -237,8 +250,8 @@ scattered in output files nobody can interpret.
 
 ### Checks (APPARATUS)
 
-Numbers from this stage are never reported. Only after it may `Frozen before
-run` go to "yes".
+Numbers from this stage are never reported. Only after it may `frozen` go
+to `true`.
 
 - **Resolution check:** ZERO calls, real `evaluate()` on synthetic extremes —
   perfect effect → criterion fires? null effect → stays silent? Both numbers,

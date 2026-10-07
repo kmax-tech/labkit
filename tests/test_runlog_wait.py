@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))          # the package under test
 
 from labkit import runlog, runs  # noqa: E402
+from protocol_fixture import head  # noqa: E402
 
 
 def _run_main(argv):
@@ -38,19 +39,33 @@ class TestWait(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             done = Path(d) / "runs" / "2026-09-09T10-00-00_done"
             done.mkdir(parents=True)
-            (done / "config.json").write_text("{}", encoding="utf-8")
-            (done / "metrics.json").write_text('{"k1": true}', encoding="utf-8")
+            (done / "config.json").write_text('{"schema_version": 2}',
+                                              encoding="utf-8")
+            (done / "metrics.json").write_text('{"c1_pass": true}', encoding="utf-8")
+            (done / "completion.json").write_text("{}", encoding="utf-8")
             code, out = _run_main([d, "--wait", "--max-seconds", "1"])
             self.assertEqual(code, 0)
             self.assertIn("no open runs", out)
             self.assertIn("2026-09-09T10-00-00_done", out)
+
+    def test_a_legacy_run_does_not_keep_the_area_open(self):
+        """A run without schema_version ended long ago; counting it as open
+        made --wait loop until --max-seconds (found porting 0.48)."""
+        with tempfile.TemporaryDirectory() as d:
+            old = Path(d) / "runs" / "2026-08-01T10-00-00_old"
+            old.mkdir(parents=True)
+            (old / "config.json").write_text("{}", encoding="utf-8")
+            (old / "metrics.json").write_text("{}", encoding="utf-8")
+            code, out = _run_main([d, "--wait", "--max-seconds", "1"])
+            self.assertEqual(code, 0, out)
 
     def test_crashed_run_exits_2_and_is_named(self):
         with tempfile.TemporaryDirectory() as d:
             run_dir = Path(d) / "runs" / "2026-09-09T10-00-00_dead"
             run_dir.mkdir(parents=True)
             (run_dir / "config.json").write_text(json.dumps(
-                {"pid": 999_999_99, "script": "01_measure.py"}),
+                {"schema_version": 2, "pid": 999_999_99,
+                 "script": "01_measure.py"}),
                 encoding="utf-8")
             code, out = _run_main([d, "--wait", "--max-seconds", "1"])
             self.assertEqual(code, 2)
@@ -64,7 +79,8 @@ class TestWait(unittest.TestCase):
             # own pid + our real command line -> is_alive says True
             me = runs._command_of(os.getpid()) or "python"
             (run_dir / "config.json").write_text(json.dumps(
-                {"pid": os.getpid(), "script": me.split()[0]}),
+                {"schema_version": 2, "pid": os.getpid(),
+                 "script": me.split()[0]}),
                 encoding="utf-8")
             t0 = time.monotonic()
             code, out = _run_main([d, "--wait", "--max-seconds", "0.3",
@@ -142,9 +158,9 @@ class TestLongGate(unittest.TestCase):
             # needs a frozen, audited protocol, or it is refused for a
             # different reason than the one this test is about.
             Path(d, "PROTOCOL-gate.md").write_text(
-                "- **Protocol id:** p-0123456789abcdef\n"
-                "- **Preflight audit:** 2026-10-05 · abc · 0 findings\n"
-                "- **Frozen before run:** yes\n", encoding="utf-8")
+                head(frozen=True,
+                     preflight_audit="2026-10-05 · abc · 0 findings"),
+                encoding="utf-8")
             return subprocess.run(
                 [sys.executable, "-c", code,
                  str(Path(__file__).resolve().parents[1])],

@@ -8,11 +8,17 @@ The frozen excerpt below is verbatim from experiments/_archiv/17-bruchstufe-nli/
 2026-08-13. It names no term either, which is why it also fails the Begriffe
 field added on 2026-08-19. The excerpt is frozen here so the test keeps working
 after the live protocol gets fixed.
+
+Since TODO 8 the head is the ```toml block's [protocol] table and the prose
+fields are held by their exact template label (`FIELDS`); keyword matching
+anywhere in the text is gone on purpose.
 """
 
 import contextlib
 import importlib.util
 import io
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -20,10 +26,17 @@ REPO = Path(__file__).resolve().parent.parent
 CHECKER = REPO / "labkit" / "protocol_check.py"
 TEMPLATE = REPO / "labkit" / "experiment-protocol.md.template"
 
+sys.path.insert(0, str(REPO))
+from labkit import protocol_block  # noqa: E402
+from protocol_fixture import head  # noqa: E402
+
 spec = importlib.util.spec_from_file_location("protocol_check", CHECKER)
 assert spec is not None and spec.loader is not None
 protocol_check = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(protocol_check)
+
+MUST = [f.label for f in protocol_check.FIELDS if f.level == "must"]
+SHOULD = [f.label for f in protocol_check.FIELDS if f.level == "should"]
 
 # Verbatim from experiments/_archiv/17-bruchstufe-nli/PROTOCOL-bruchstufe-nli.md: intro + the real
 # section headers. Carries Frage, Hypothese, Anker, Kontrollen, Erfolgs-/
@@ -56,36 +69,158 @@ Instrument nichts.**
 ## Umfang
 """
 
+# Every must field of a pilot, filled — with one rendered example, so the
+# verbatim-block check is satisfied.
+PILOT_FIELDS = """\
+- **Terms of this protocol:** n/a — standard vocabulary
+- **Question / hypothesis:** does A beat B?
+- **Success / failure criterion:** [C1] AUC > 0.6
+- **Admissibility condition:** [A1] yield >= 90%
+- **Model I/O:** in: claim · out: yes/no, parsed by parse()
+- **Prompt:** see block
 
-class TestCheckText(unittest.TestCase):
-    def test_template_passes_all_fields(self):
-        missing_must, missing_should = protocol_check.check_text(
-            TEMPLATE.read_text(encoding="utf-8"))
-        self.assertEqual(missing_must, [])
-        self.assertEqual(missing_should, [])
+  ```text
+  Is this fallacious?
+  ```
 
-    def test_real_freeform_protocol_misses_terms_type_and_model_io(self):
-        missing_must, _ = protocol_check.check_text(REAL_FREEFORM_PROTOCOL)
-        self.assertEqual(missing_must, [
-            "Terms (every label with a half-sentence gloss)",
-            "Type (exploratory / confirmatory)",
-            "Model I/O / prompt (verbatim)",
-            "Raw output (one real example + model output)",
-        ])
+- **Null condition / anchors:** [A2] shuffled labels at chance
+- **Exclusions / filters:** none
+"""
+
+# Every should field, filled: a frozen protocol owes them as musts.
+REPORT_FIELDS = """\
+- **Problem in one sentence:** does the judge see fallacies?
+- **Meaning of the gold label:** positive = annotated fallacy
+- **Yield per stage:** 50 in, 50 parsed
+- **Rival explanations:** length bias — checked in evaluate()
+- **Out of scope:** other judges
+- **Free knobs:** none
+- **Prediction for the follow-up run:** AUC 0.65
+- **Instrument check:** 10 calls, see block
+- **Resolution check:** perfect effect fires, null stays silent
+- **Gate labels:** yes, no
+- **Randomness controls:** deterministic
+"""
+
+
+def pilot(**head_kw) -> str:
+    return "# x\n\n" + head(**head_kw) + "\n" + PILOT_FIELDS
+
+
+AUDIT_LINE = "2026-10-07 · scope sha 3f9a1c2b7e04 · 0 findings"
+
+
+def frozen(**head_kw) -> str:
+    head_kw.setdefault("preflight_audit", AUDIT_LINE)
+    return pilot(frozen=True, **head_kw) + REPORT_FIELDS
+
+
+def run_main(text: str) -> tuple[int, str]:
+    """protocol_check.main over `text` written to a PROTOCOL-x.md."""
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "PROTOCOL-x.md"
+        p.write_text(text, encoding="utf-8")
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = protocol_check.main([str(p)])
+        return rc, buf.getvalue()
+
+
+class TestFrozenNeedsTheAudit(unittest.TestCase):
+    """`frozen = true` means audited first (§2.A12): the old checker failed a
+    frozen protocol whose audit field was still a placeholder."""
+
+    def test_frozen_without_audit_line_fails(self):
+        rc, out = run_main(frozen(preflight_audit=""))
+        self.assertEqual(rc, 1)
+        self.assertIn("[protocol] preflight_audit", out)
+
+    def test_seconds_needs_no_audit_line(self):
+        report = protocol_check.check_fields(head(cost="seconds", frozen=True))
+        self.assertFalse(any("preflight_audit" in m for m in report.missing_must))
+
+
+class TestResultAfterARun(unittest.TestCase):
+    """A documented measure run makes the result due — a placeholder counts
+    as empty, not only a dash."""
+
+    RUN = "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
+
+    def test_placeholder_answer_after_a_run_fails(self):
+        text = (pilot() + "\n- **Answer to the question:** <number + run_id>\n"
+                "- **Raw output:** see output/examples.md\n" + self.RUN)
+        rc, out = run_main(text)
+        self.assertEqual(rc, 1)
+        self.assertIn("measure run in the run list", out)
+
+
+class TestFixtures(unittest.TestCase):
+    """The shared fixtures are what they claim: a clean pilot, a clean freeze."""
+
+    def test_pilot_passes(self):
+        rc, out = run_main(pilot())
+        self.assertEqual(rc, 0, out)
+
+    def test_frozen_passes(self):
+        rc, out = run_main(frozen())
+        self.assertEqual(rc, 0, out)
+        self.assertIn("all must and should fields filled", out)
+
+
+class TestCheckFields(unittest.TestCase):
+    def test_template_names_every_field(self):
+        names = {f.name for f in protocol_check.fields(TEMPLATE.read_text(encoding="utf-8"))}
+        for f in protocol_check.FIELDS:
+            self.assertIn(f.label.casefold(), names, f.label)
+
+    def test_template_owes_only_its_head(self):
+        report = protocol_check.check_fields(TEMPLATE.read_text(encoding="utf-8"))
+        self.assertEqual(report.missing_must,
+                         ["[protocol] id", "[protocol] type", "[protocol] cost"])
+        self.assertEqual(report.missing_should, [])
+
+    def test_real_freeform_protocol_has_no_head(self):
+        report = protocol_check.check_fields(REAL_FREEFORM_PROTOCOL)
+        self.assertIsNone(report.head)
+        self.assertIn("no [protocol] table", report.head_error)
+
+    def test_real_freeform_protocol_misses_every_must_field(self):
+        """With a head, its bold labels (H1, Flip-Test) are no template field:
+        it misses all of them, Terms and Model I/O among them."""
+        report = protocol_check.check_fields(head() + REAL_FREEFORM_PROTOCOL)
+        self.assertEqual(report.missing_must, MUST)
+        self.assertIn("Terms of this protocol", report.missing_must)
+        self.assertIn("Model I/O", report.missing_must)
 
     def test_explicit_na_counts_as_present(self):
-        text = (REAL_FREEFORM_PROTOCOL
-                + "\nBegriffe: Bruchstufe = wie stark der Seed die Praemisse bricht."
-                + "\nTyp: explorativ."
-                + "\nModell-I/O: n/a — kein LLM in diesem Lauf."
-                + "\nRoh-Output: n/a — kein LLM in diesem Lauf.\n")
-        missing_must, _ = protocol_check.check_text(text)
-        self.assertEqual(missing_must, [])
+        text = head() + "".join(f"- **{label}:** n/a — no model in this run\n"
+                                for label in MUST)
+        report = protocol_check.check_fields(text)
+        self.assertEqual(report.missing_must, [])
+        self.assertEqual(report.must_holes, [])
 
-    def test_empty_text_misses_everything(self):
-        missing_must, missing_should = protocol_check.check_text("")
-        self.assertEqual(len(missing_must), len(protocol_check.MUST))
-        self.assertEqual(len(missing_should), len(protocol_check.SHOULD))
+    def test_head_alone_misses_everything(self):
+        report = protocol_check.check_fields(head())
+        self.assertEqual(report.missing_must, MUST)
+        self.assertEqual(report.missing_should, SHOULD)
+
+    def test_empty_text_is_a_head_error(self):
+        report = protocol_check.check_fields("")
+        self.assertIsNotNone(report.head_error)
+        self.assertEqual(report.missing_must, [])
+
+    def test_a_keyword_in_prose_does_not_satisfy_a_field(self):
+        """A word anywhere used to satisfy a field (`prompt` in a sentence
+        covered Model I/O). Only the label line counts."""
+        text = head() + "We ask the model a prompt about terms, model I/O and anchors.\n"
+        self.assertEqual(protocol_check.check_fields(text).missing_must, MUST)
+
+    def test_after_fields_are_not_owed_before_the_run(self):
+        """Answer, Raw output and Analysis audit cannot exist before the run."""
+        report = protocol_check.check_fields(frozen())
+        for label in ("Answer to the question", "Raw output", "Analysis audit"):
+            self.assertNotIn(label, report.missing_must)
+            self.assertNotIn(label, report.missing_should)
 
 
 class TestMain(unittest.TestCase):
@@ -94,13 +229,6 @@ class TestMain(unittest.TestCase):
         with contextlib.redirect_stdout(out):
             code = protocol_check.main(argv)
         return code, out.getvalue()
-
-    def test_template_names_every_field(self):
-        """The template mentions every must and should field."""
-        missing_must, missing_should = protocol_check.check_text(
-            TEMPLATE.read_text(encoding="utf-8"))
-        self.assertEqual(missing_must, [])
-        self.assertEqual(missing_should, [])
 
     def test_template_itself_must_fail(self):
         """Expectation INVERTED on 2026-08-17 — and that is the point.
@@ -116,22 +244,26 @@ class TestMain(unittest.TestCase):
         self.assertIn("PLACEHOLDER", out)
 
     def test_missing_must_exits_one(self):
-        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "PROTOCOL-frozen-real.md"
+            p.write_text(head() + REAL_FREEFORM_PROTOCOL, encoding="utf-8")
+            code, out = self._run([d])
+            self.assertEqual(code, 1)
+            self.assertIn("MISSING (must): Terms of this protocol", out)
+            self.assertIn("MISSING (must): Model I/O", out)
+
+    def test_a_protocol_without_head_exits_one(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "PROTOCOL-frozen-real.md"
             p.write_text(REAL_FREEFORM_PROTOCOL, encoding="utf-8")
             code, out = self._run([d])
             self.assertEqual(code, 1)
-            self.assertIn("MISSING (must): Type", out)
-            self.assertIn("MISSING (must): Model I/O", out)
+            self.assertIn("HEAD (must): no [protocol] table", out)
+            self.assertNotIn("MISSING", out)
 
     def test_no_args_exits_two(self):
         code, _ = self._run([])
         self.assertEqual(code, 2)
-
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 # --- Placeholder detection (2026-08-17) --------------------------------------
@@ -140,8 +272,8 @@ if __name__ == "__main__":
 # input/output example while the checker reported them clean — the word
 # "Prompt" in the template placeholder satisfied it. The lines below are
 # verbatim from experiments/13-akzeptanzregel/PROTOCOL-akzeptanzregel.md
-# (2026-08-17, before the repair). German on purpose: grown protocols are
-# German-filled and the checker's contract is bilingual.
+# (2026-08-17, before the repair). German labels: placeholder detection reads
+# any bold label; which ones are owed is the template's (English) list.
 
 REAL_PLACEHOLDER_BLOCK = """\
 ## Setup
@@ -175,22 +307,27 @@ class TestPlaceholders(unittest.TestCase):
         self.assertEqual(protocol_check.placeholder_fields(na), [])
 
     def test_placeholder_in_a_must_field_weighs_more(self):
-        self.assertEqual(protocol_check.severity_of("Prompt (wörtlich)"), "must")
-        self.assertEqual(protocol_check.severity_of("Modell-I/O"), "must")
-        self.assertEqual(protocol_check.severity_of("Ausbeute je Stufe"), "should")
-        self.assertEqual(protocol_check.severity_of("Nächster Schritt"), "other")
+        text = (head() + "- **Prompt (verbatim, per variant):** <the real prompt>\n"
+                "- **Model I/O:** <in · out>\n"
+                "- **Yield per stage:** <expected vs. obtained>\n"
+                "- **Next step:** <…>\n")
+        report = protocol_check.check_fields(text)
+        self.assertEqual([lb for _, lb in report.must_holes],
+                         ["Prompt (verbatim, per variant)", "Model I/O"])
+        self.assertEqual([lb for _, lb in report.soft_holes],
+                         ["Yield per stage", "Next step"])
 
     def test_pipeline_exits_one_on_must_placeholder(self):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "PROTOCOL-x.md"
-            p.write_text("# x\nHypothese, Erfolg, Abbruch, explorativ, Anker.\n"
-                         + REAL_PLACEHOLDER_BLOCK, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(p)])
-            self.assertEqual(rc, 1)
-            self.assertIn("PLACEHOLDER ONLY (must)", buf.getvalue())
+        rc, out = run_main(pilot().replace("[C1] AUC > 0.6", "<how do we recognise it?>"))
+        self.assertEqual(rc, 1)
+        self.assertIn("PLACEHOLDER ONLY (must): Success / failure criterion", out)
+
+    def test_a_german_label_is_not_the_field(self):
+        """Exact template labels only: `Modell-I/O` filled leaves `Model I/O` missing."""
+        text = pilot().replace("- **Model I/O:**", "- **Modell-I/O:**")
+        rc, out = run_main(text)
+        self.assertEqual(rc, 1)
+        self.assertIn("MISSING (must): Model I/O", out)
 
 
 class TestTemplateLines(unittest.TestCase):
@@ -206,7 +343,7 @@ class TestTemplateLines(unittest.TestCase):
 
 
 class TestFrozenWithoutExample(unittest.TestCase):
-    """"Frozen before run: yes" without a rendered example (2026-08-18).
+    """`frozen = true` without a rendered example (2026-08-18).
 
     Occasion (MH): the flow had to change — register first, then run the
     pipeline ONCE over a handful of real items, put the result into the
@@ -214,118 +351,118 @@ class TestFrozenWithoutExample(unittest.TestCase):
     instrument freezes the error in.
     """
 
-    def _run(self, text):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "PROTOCOL-x.md"
-            p.write_text(text, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(p)])
-            return rc, buf.getvalue()
+    NO_EXAMPLE = ("- **Prompt:** see block\n\n  ```text\n  Is this fallacious?\n  ```\n",
+                  "- **Prompt:** n/a — no model\n")
 
-    BASE = ("# x\nBegriffe, Hypothese, Erfolg, Abbruch, explorativ, Anker, Prompt, "
-            "Roh-Output, Instrumentenprobe, Einordnung, Rivalen, Fehlerrichtung, "
-            "Skopus, freie Knoepfe, Prognose, gold, Ausbeute, Ergebnis.\n")
-
-    def test_frozen_yes_without_code_block_fails(self):
-        rc, out = self._run(self.BASE + "- **Frozen before run:** ja\n")
+    def test_frozen_without_code_block_fails(self):
+        rc, out = run_main(frozen().replace(*self.NO_EXAMPLE))
         self.assertEqual(rc, 1)
         self.assertIn("not a single", out)
 
-    def test_frozen_yes_with_code_block_passes(self):
-        rc, out = self._run(self.BASE + "- **Frozen before run:** ja\n\n```\nAnswer: Yes\n```\n")
-        self.assertEqual(rc, 0)
+    def test_frozen_with_code_block_passes(self):
+        rc, out = run_main(frozen())
+        self.assertEqual(rc, 0, out)
 
-    def test_frozen_no_without_code_block_is_no_must_failure(self):
+    def test_the_head_block_is_no_example(self):
+        """The ```toml head is a fenced block too; it must not count."""
+        self.assertEqual(protocol_check.code_blocks(frozen().replace(*self.NO_EXAMPLE)), 0)
+        self.assertEqual(protocol_check.code_blocks(frozen()), 1)
+
+    def test_unfrozen_without_code_block_is_no_must_failure(self):
         # A pre-registered protocol may exist without an example — it
         # precisely does NOT claim to be frozen.
-        rc, out = self._run(self.BASE + "- **Frozen before run:** nein, noch nicht\n")
+        _, out = run_main(pilot().replace(*self.NO_EXAMPLE))
         self.assertNotIn("not a single", out)
 
 
 class TestGraduationGate(unittest.TestCase):
-    """Frozen: yes escalates should to must (2026-08-18) — pilot light, report heavy."""
-
-    def _run(self, text):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "PROTOCOL-x.md"
-            p.write_text(text, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(p)])
-            return rc, buf.getvalue()
-
-    # Pilot minimum present, should fields absent entirely (German content
-    # on purpose — the contract is bilingual):
-    PILOT = ("# x\nBegriffe, Frage, Hypothese, Erfolg, Abbruch/Kill, explorativ, Anker,\n"
-             "Prompt und Modell-I/O:\n\n```\nAnswer: Yes\n```\n"
-             "Roh-Output: siehe output/beispiele.md.\n"
-             "Instrumentenprobe: gelaufen.\n")
+    """`frozen = true` escalates should to must (2026-08-18) — pilot light, report heavy."""
 
     def test_pilot_without_frozen_only_warns(self):
-        rc, out = self._run(self.PILOT)
-        self.assertEqual(rc, 0, out)           # should missing -> warning, no failure
+        rc, out = run_main(pilot())
+        self.assertEqual(rc, 0, out)           # should missing -> note, no failure
+        self.assertIn(f"{len(SHOULD)} should-field(s) due only at report time", out)
 
-    def test_frozen_yes_makes_should_a_must(self):
-        rc, out = self._run(self.PILOT + "\n- **Frozen before run:** ja\n")
+    def test_frozen_makes_should_a_must(self):
+        rc, out = run_main(pilot(frozen=True))
         self.assertEqual(rc, 1)
-        self.assertIn("must once frozen: yes", out)
+        for label in SHOULD:
+            self.assertIn(f"MISSING (must): {label}", out)
+
+    def test_the_graduation_lives_in_owed(self):
+        h = protocol_block.head(pilot(frozen=True))
+        must, should = protocol_check.owed(pilot(frozen=True), h)
+        self.assertEqual([f.label for f in must], MUST + SHOULD)
+        self.assertEqual(should, [])
 
 
 class TestPromptAndExample(unittest.TestCase):
-    """Verbatim prompt + one real example with output are musts (2026-08-20).
+    """Verbatim prompt + one real example are musts (2026-08-20).
 
     That is the core of the protocol: seeing later what really went in and
-    came out. Two tightenings: a mentioned prompt without a code block is a
-    must failure (paraphrased instead of recorded), and the raw-output must
-    field demands an example + model output — embedded, linked, or as a
-    justified n/a.
+    came out. A Prompt field without a code block is a must failure
+    (paraphrased instead of recorded). Raw output is written after the run:
+    owed once a measure run is documented, never before (TODO 8).
     """
 
-    def _run(self, text):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "PROTOCOL-x.md"
-            p.write_text(text, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(p)])
-            return rc, buf.getvalue()
-
-    BASE = ("# x\nBegriffe, Frage, Erfolg, Kill, explorativ, Anker, "
-            "Frozen before run: nein.\n")
+    PARAPHRASE = pilot().replace(
+        "- **Prompt:** see block\n\n  ```text\n  Is this fallacious?\n  ```\n",
+        "- **Prompt:** asks, in effect, for a fallacy\n")
 
     def test_prompt_without_code_block_is_a_must_failure(self):
-        rc, out = self._run(self.BASE + "Prompt: fragt sinngemaess nach Fallacy.\n"
-                            + "Roh-Output: siehe output/beispiele.md.\n")
+        rc, out = run_main(self.PARAPHRASE)
         self.assertEqual(rc, 1)
         self.assertIn("no code block", out)
 
-    def test_missing_raw_output_is_a_must_failure(self):
-        rc, out = self._run(self.BASE + "Prompt:\n\n```\nIs this fallacious?\n```\n")
-        self.assertEqual(rc, 1)
-        self.assertIn("MISSING (must): Raw output", out)
+    def test_prompt_na_needs_no_code_block(self):
+        """`- **Prompt:** n/a — no model` is no prompt to paraphrase; the old
+        regex let `\\*{0,2}` backtrack past the n/a and flagged it."""
+        rc, out = run_main(self.PARAPHRASE.replace("asks, in effect, for a fallacy",
+                                                   "n/a — no model"))
+        self.assertNotIn("no code block", out)
+        self.assertEqual(rc, 0, out)
 
-    def test_both_present_passes(self):
-        rc, out = self._run(self.BASE + "Prompt:\n\n```\nIs this fallacious?\n```\n"
-                            + "Roh-Output: siehe output/beispiele.md.\n")
+    def test_raw_output_is_not_owed_before_the_run(self):
+        rc, out = run_main(pilot())
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("Raw output", out)
+
+    def test_empty_raw_output_after_a_measure_run_is_a_must_failure(self):
+        text = (pilot() + "\n## Result\n\n- **Raw output:** —\n"
+                "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n")
+        rc, out = run_main(text)
+        self.assertEqual(rc, 1)
+        self.assertIn("measure run in the run list", out)
+
+    def test_a_probe_run_owes_no_result(self):
+        text = (pilot() + "\n## Result\n\n- **Raw output:** —\n"
+                "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — probe, 10 calls\n")
+        rc, out = run_main(text)
+        self.assertNotIn("measure run in the run list", out)
+        self.assertEqual(rc, 0, out)
+
+    def test_written_raw_output_after_a_measure_run_passes(self):
+        text = (pilot() + "\n## Result\n\n- **Answer to the question:** AUC 0.91 "
+                "(2026-09-06T10-00-00_aa11)\n- **Raw output:** see output/examples.md\n"
+                "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n")
+        rc, out = run_main(text)
         self.assertEqual(rc, 0, out)
 
 
 class TestPilotStampNotFrozen(unittest.TestCase):
-    """The template head MENTIONS the frozen rule — that must not trip the
-    FROZEN_YES detector (2026-08-20: '`Frozen before run: yes` makes them
+    """The template's legend MENTIONS the frozen rule — that must not make a
+    fresh stamp look frozen (2026-08-20: '`Frozen before run: yes` makes them
     musts' in the head text made every fresh pilot stamp look frozen; all
-    should-gaps were wrongly escalated to musts). The head therefore avoids
-    the field pattern."""
+    should-gaps were wrongly escalated to musts). Frozen is now one typed
+    value in the head."""
 
-    def test_pilot_part_is_not_frozen(self):
-        text = TEMPLATE.read_text(encoding="utf-8")
-        pilot = text.split("<!-- report:start")[0]
-        self.assertIsNone(protocol_check.FROZEN_YES.search(pilot))
-        self.assertIsNotNone(protocol_check.FROZEN_NO.search(pilot))
+    def test_template_head_is_not_frozen(self):
+        h = protocol_block.head(TEMPLATE.read_text(encoding="utf-8"))
+        self.assertIs(h.frozen, False)
+
+    def test_prose_saying_frozen_does_not_freeze(self):
+        report = protocol_check.check_fields(pilot() + "- **Frozen before run:** yes\n")
+        self.assertFalse(report.frozen)
 
 
 class TestTerms(unittest.TestCase):
@@ -334,60 +471,47 @@ class TestTerms(unittest.TestCase):
     The template asks for them twice — in the context block and after the
     dry run — and the checker looked at neither. 20 of 31 protocols in the
     repo named not a single term while five definition notes sat next door.
-    German fixture labels on purpose: grown protocols carry them.
     """
 
-    def _run(self, text):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "PROTOCOL-x.md"
-            p.write_text(text, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(p)])
-            return rc, buf.getvalue()
+    TERMS = "- **Terms of this protocol:** n/a — standard vocabulary\n"
 
     def test_without_terms_the_must_field_is_missing(self):
-        missing_must, _ = protocol_check.check_text("# x\nHypothese: A schlaegt B.\n")
-        self.assertIn("Terms (every label with a half-sentence gloss)", missing_must)
+        rc, out = run_main(pilot().replace(self.TERMS, ""))
+        self.assertEqual(rc, 1)
+        self.assertIn("MISSING (must): Terms of this protocol", out)
 
-    def test_admissibility_vocabulary_satisfies_the_field(self):
+    def test_only_the_admissibility_label_satisfies_the_field(self):
         """The field is "Admissibility condition" (TODO 7); its earlier labels
-        "Stop rule", "Kill" and "Abbruch" still pass until the legacy
-        release (TODO 8)."""
-        base = ("# x\nTerms: n/a. Question: A>B. Success: AUC. Type: exploratory. "
-                "Anchor: swap. Prompt + raw output: n/a — no model.\n")
-        missing_must, _ = protocol_check.check_text(base)
-        self.assertIn("Admissibility condition", "".join(missing_must))
-        for wording in ("Admissibility condition: [A1] yield >= 90%.",
-                        "Zulassungsbedingung: [A1] Ausbeute >= 90 %.",
-                        "Stop rule: LR stays at 1.", "Kill: LR stays at 1.",
-                        "Abbruchkriterium: LR bleibt bei 1."):
-            missing_must, _ = protocol_check.check_text(base + wording)
-            self.assertNotIn("Admissibility condition", "".join(missing_must), wording)
+        "Stop rule", "Kill", "Abbruch" no longer pass (TODO 8)."""
+        adm = "- **Admissibility condition:** [A1] yield >= 90%\n"
+        for wording in ("- **Stop rule:** LR stays at 1.\n", "- **Kill:** LR stays at 1.\n",
+                        "- **Abbruchkriterium:** LR bleibt bei 1.\n",
+                        "- **Zulassungsbedingung:** [A1] Ausbeute >= 90 %.\n"):
+            with self.subTest(wording):
+                report = protocol_check.check_fields(pilot().replace(adm, wording))
+                self.assertEqual(report.missing_must, ["Admissibility condition"])
 
     def test_a_half_sentence_suffices(self):
-        text = "# x\nBegriffe: Sog = Tendenz des Bildes, Ko-Praesenz zu zeigen.\n"
-        missing_must, _ = protocol_check.check_text(text)
-        self.assertNotIn("Terms (every label with a half-sentence gloss)", missing_must)
-
-    def test_glossary_and_terminology_count_too(self):
-        for wort in ("Glossar: siehe notes/messung/pipeline-glossar.md",
-                     "Terminologie folgt dem Standard."):
-            missing_must, _ = protocol_check.check_text("# x\n" + wort + "\n")
-            self.assertNotIn("Terms (every label with a half-sentence gloss)",
-                             missing_must, f"'{wort}' should satisfy the field")
+        text = pilot().replace(self.TERMS, "- **Terms of this protocol:** Sog = Tendenz "
+                               "des Bildes, Ko-Praesenz zu zeigen.\n")
+        rc, out = run_main(text)
+        self.assertEqual(rc, 0, out)
 
     def test_placeholder_does_not_count_as_filled(self):
-        # The keyword is there, the field is not filled — exactly the gap
+        # The label is there, the field is not filled — exactly the gap
         # closed for the prompt field on 2026-08-17.
-        rc, out = self._run("# x\n- **Begriffe dieses Protokolls:** <jedes Etikett>\n")
+        rc, out = run_main(pilot().replace(self.TERMS,
+                                           "- **Terms of this protocol:** <every label>\n"))
         self.assertEqual(rc, 1)
-        self.assertIn("PLACEHOLDER ONLY (must): Begriffe", out)
+        self.assertIn("PLACEHOLDER ONLY (must): Terms of this protocol", out)
 
-    def test_severity_of_maps_both_template_labels_to_must(self):
-        for label in ("Begriffe dieses Protokolls", "Geklaerte Begriffe"):
-            self.assertEqual(protocol_check.severity_of(label), "must", label)
+    def test_clarified_terms_is_not_the_must_field(self):
+        """The Checks section's "Clarified terms" is a different field: its
+        placeholder is a soft hole, and it does not stand in for the must."""
+        text = pilot().replace(self.TERMS, "- **Clarified terms:** <what was ambiguous>\n")
+        report = protocol_check.check_fields(text)
+        self.assertEqual(report.missing_must, ["Terms of this protocol"])
+        self.assertEqual([lb for _, lb in report.soft_holes], ["Clarified terms"])
 
 
 class TestHelpFlag(unittest.TestCase):
@@ -407,27 +531,13 @@ class TestSeriesDetector(unittest.TestCase):
     each under a "... (deklariert vor dem Lauf)" heading. One question per
     protocol — the follow-up gets its own PROTOCOL-s<N> file."""
 
-    def _run(self, text):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            f = Path(d) / "PROTOCOL-x.md"
-            f.write_text(text, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(f)])
-            return rc, buf.getvalue()
-
-    BASE = ("# x\nBegriffe, Frage, Erfolg, Abbruch, explorativ, Anker, "
-            "Prompt:\n\n```\nx\n```\nRoh-Output: n/a — kein Modell.\n")
-
     def test_declared_follow_up_heading_warns(self):
-        rc, out = self._run(self.BASE +
-                            "## Lauf B — Richterwechsel (deklariert vor dem Lauf)\n")
+        rc, out = run_main(pilot() + "## Lauf B — Richterwechsel (deklariert vor dem Lauf)\n")
         self.assertIn("PROTOCOL-s<N>", out)
         self.assertEqual(rc, 0, "warning, not a failure")
 
     def test_plain_sections_do_not_trigger(self):
-        rc, out = self._run(self.BASE + "## Setup\n## Result\n")
+        rc, out = run_main(pilot() + "## Setup\n## Result\n")
         self.assertNotIn("PROTOCOL-s<N>", out)
 
 
@@ -437,457 +547,165 @@ class TestDocumentedRunsNotCountedAsProse(unittest.TestCase):
     people to stop documenting runs."""
 
     def test_a_huge_run_list_does_not_flag_the_protocol(self):
-        import tempfile
-        run_list = "## Runs (Ledger)\n" + "- 2026-09-06T10-00-00_aa11 — x\n" * 400
-        text = TestSeriesDetector.BASE + run_list
-        with tempfile.TemporaryDirectory() as d:
-            f = Path(d) / "PROTOCOL-x.md"
-            f.write_text(text, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                protocol_check.main([str(f)])
-        self.assertNotIn("prose lines (tables/code excluded)", buf.getvalue())
+        run_list = "## Runs (documented runs)\n" + "- 2026-09-06T10-00-00_aa11 — x\n" * 400
+        _, out = run_main(pilot() + run_list)
+        self.assertNotIn("prose lines (tables/code excluded)", out)
 
 
-class TestAuditGates(unittest.TestCase):
-    """The two audit fields are due only once the template stamps them (2026-09-08).
+class TestAuditFields(unittest.TestCase):
+    """The two audits (2026-09-08). Occasion: ten small errors in four weeks —
+    a sign flip between BT score and log-odds, r2 fitted and scored on the
+    same anchors, a gate without a positive control, a probe writing into the
+    run's output file; none caught by the chain itself. Hence two audits
+    (Arbeitsstandard §2.A12 code vs. intent before freezing, §2.D11
+    evaluation vs. frozen criterion before reporting). The preflight audit is
+    now a head value (`preflight_audit`), the analysis audit a field written
+    after the run."""
 
-    Occasion: ten small errors in four weeks — a sign flip between BT score
-    and log-odds, r2 fitted and scored on the same anchors, a gate without a
-    positive control, a probe writing into the run's output file. Every one
-    was caught by a human objection, a crash or a test written afterwards;
-    none by the chain itself. Hence two audits (Arbeitsstandard §2.A12 code
-    vs. intent before freezing, §2.D11 evaluation vs. frozen criterion before
-    reporting) and their enforcement HERE: through the placeholder mechanism,
-    so that a protocol written before the gates existed keeps its verdict.
-    """
+    def test_template_stamps_both(self):
+        text = TEMPLATE.read_text(encoding="utf-8")
+        self.assertEqual(protocol_block.head(text).preflight_audit, "")
+        self.assertIn("Analysis audit", {f.label.split(" †")[0]
+                                         for f in protocol_check.fields(text)})
 
-    def _run(self, text):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "PROTOCOL-x.md"
-            p.write_text(text, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(p)])
-            return rc, buf.getvalue()
+    def test_the_preflight_audit_is_read_from_the_head(self):
+        line = "2026-09-08 · scope sha 3f9a1c2b7e04 · 4 findings (2 blockers fixed)"
+        self.assertEqual(protocol_block.head(head(preflight_audit=line)).preflight_audit,
+                         line)
 
-    # Everything a frozen protocol needs, so only the audit field decides.
-    FROZEN = ("# x\nBegriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
-              "Prompt, Roh-Output, Instrumentenprobe, Einordnung, Rivalen, "
-              "Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, Ausbeute, "
-              "Ergebnis.\n- **Frozen before run:** ja\n\n```\nAnswer: Yes\n```\n")
-
-    PREFLIGHT_PLACEHOLDER = ("- **Preflight audit:** <date · scope sha · N findings "
-                             "(blockers fixed / accepted with reason)>\n")
-    ANALYSIS_PLACEHOLDER = ("- **Analysis audit †:** <date · scope sha · N findings "
-                            "— the audit of the EVALUATION>\n")
-
-    def test_stamped_preflight_placeholder_fails_once_frozen(self):
-        rc, out = self._run(self.FROZEN + self.PREFLIGHT_PLACEHOLDER)
-        self.assertEqual(rc, 1, out)
-        self.assertIn("Preflight audit", out)
-
-    def test_filled_preflight_passes(self):
-        rc, out = self._run(self.FROZEN + "- **Preflight audit:** 2026-09-08 · "
-                            "scope sha 3f9a1c2b7e04 · 4 Befunde (2 Blocker behoben)\n")
+    def test_an_analysis_placeholder_is_not_owed_before_the_run(self):
+        rc, out = run_main(frozen() + "- **Analysis audit †:** <date · scope sha · "
+                           "N findings>\n")
         self.assertEqual(rc, 0, out)
-
-    def test_stamped_analysis_placeholder_fails_once_frozen(self):
-        rc, out = self._run(self.FROZEN + self.ANALYSIS_PLACEHOLDER)
-        self.assertEqual(rc, 1, out)
-        self.assertIn("Analysis audit", out)
+        self.assertIn("placeholder only: Analysis audit", out)
 
     def test_filled_analysis_passes(self):
-        rc, out = self._run(self.FROZEN + "- **Analysis audit †:** 2026-09-09 · "
-                            "scope sha 8b1e6d0a4c31 · 2 Befunde (1 Blocker behoben)\n")
+        rc, out = run_main(frozen() + "- **Analysis audit †:** 2026-09-09 · scope sha "
+                           "8b1e6d0a4c31 · 2 findings (1 blocker fixed)\n")
         self.assertEqual(rc, 0, out)
-
-    def test_justified_na_counts(self):
-        rc, out = self._run(self.FROZEN + "- **Preflight audit:** n/a — Wegwerf-Test "
-                            "ohne berichtete Zahl\n")
-        self.assertEqual(rc, 0, out)
-
-    def test_legacy_protocol_without_the_fields_keeps_its_verdict(self):
-        """The whole point of SHOULD_IF_PRESENT: no retrofitting of closed runs."""
-        rc, out = self._run(self.FROZEN)
-        self.assertEqual(rc, 0, out)
-        self.assertNotIn("Preflight audit", out)
-        self.assertNotIn("Analysis audit", out)
-
-    def test_severity_of_ranks_both_audit_labels_as_should(self):
-        self.assertEqual(protocol_check.severity_of("Preflight audit"), "should")
-        self.assertEqual(protocol_check.severity_of("Analysis audit †"), "should")
-
-    def test_template_stamps_both_fields(self):
-        text = TEMPLATE.read_text(encoding="utf-8")
-        self.assertIn("Preflight audit", text)
-        self.assertIn("Analysis audit", text)
 
 
 class TestResolutionCheckGate(unittest.TestCase):
-    """The resolution check field (§2.A13, 2026-09-09) rides the placeholder
-    mechanism exactly like the audit fields: stamped-but-unfilled fails at
-    frozen:yes, absent stays silent (no retrofitting), and the pattern must
-    NOT catch the template's own "Answer form + resolution †" field."""
+    """The resolution check field (§2.A13, 2026-09-09) is a should: owed as a
+    must once frozen; the template's own "Answer form + resolution †" field
+    must NOT stand in for it."""
 
-    def _run(self, text):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "PROTOCOL-x.md"
-            p.write_text(text, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(p)])
-            return rc, buf.getvalue()
-
-    FROZEN = TestAuditGates.FROZEN
+    RESOLUTION = "- **Resolution check:** perfect effect fires, null stays silent\n"
 
     def test_stamped_placeholder_fails_once_frozen(self):
-        rc, out = self._run(self.FROZEN + "- **Resolution check (ZERO calls):** "
-                            "<perfect effect fires? null stays silent?>\n")
+        rc, out = run_main(frozen().replace(
+            self.RESOLUTION, "- **Resolution check (ZERO calls):** "
+                             "<perfect effect fires? null stays silent?>\n"))
         self.assertEqual(rc, 1, out)
-        self.assertIn("Resolution check", out)
+        self.assertIn("PLACEHOLDER ONLY (must): Resolution check", out)
 
     def test_filled_passes(self):
-        rc, out = self._run(self.FROZEN + "- **Resolution check:** perfect "
-                            "effect p = 0.0002 (fires), null p = 0.4791 "
-                            "(silent), 8 draws as in the run\n")
+        rc, out = run_main(frozen().replace(
+            self.RESOLUTION, "- **Resolution check:** perfect effect p = 0.0002 (fires), "
+                             "null p = 0.4791 (silent), 8 draws as in the run\n"))
         self.assertEqual(rc, 0, out)
 
-    def test_german_label_counts(self):
-        rc, out = self._run(self.FROZEN + "- **Auflösungsprobe:** perfekter "
-                            "Effekt feuert (p = 0,0002), Null schweigt\n")
-        self.assertEqual(rc, 0, out)
+    def test_absent_field_is_a_must_gap_once_frozen(self):
+        rc, out = run_main(frozen().replace(self.RESOLUTION, ""))
+        self.assertEqual(rc, 1, out)
+        self.assertIn("MISSING (must): Resolution check", out)
 
-    def test_absent_field_stays_silent(self):
-        rc, out = self._run(self.FROZEN)
-        self.assertEqual(rc, 0, out)
-        self.assertNotIn("Resolution check", out)
-
-    def test_severity_of_resolution_check_is_should(self):
-        self.assertEqual(protocol_check.severity_of("Resolution check (ZERO "
-                                                    "calls)"), "should")
+    def test_german_label_does_not_count(self):
+        rc, out = run_main(frozen().replace(
+            self.RESOLUTION, "- **Auflösungsprobe:** perfekter Effekt feuert\n"))
+        self.assertEqual(rc, 1, out)
+        self.assertIn("MISSING (must): Resolution check", out)
 
     def test_answer_form_resolution_is_not_caught(self):
-        """Guard against the near-collision that would have retrofitted a MUST
-        onto every frozen protocol carrying the stamped 'Answer form +
-        resolution †' placeholder."""
-        self.assertEqual(protocol_check.severity_of("Answer form + resolution †"),
-                         "other")
+        """Guard against the near-collision: 'Answer form + resolution †' is
+        neither the resolution check nor owed."""
+        text = frozen().replace(self.RESOLUTION, "- **Answer form + resolution †:** "
+                                "<how many states>\n")
+        report = protocol_check.check_fields(text)
+        self.assertEqual(report.missing_must, ["Resolution check"])
+        self.assertEqual([lb for _, lb in report.soft_holes], ["Answer form + resolution †"])
 
     def test_template_stamps_the_field(self):
         self.assertIn("Resolution check", TEMPLATE.read_text(encoding="utf-8"))
 
 
 class TestProseBudgetEscalation(unittest.TestCase):
-    """Frozen protocols escalate prose budgets from warning to must (2026-09-13).
+    """A frozen protocol escalates prose budgets from warning to must (2026-09-13)."""
 
-    Escalation is gated by the freeze date: only protocols frozen on or after
-    BUDGET_MUST_SINCE (2026-09-14) get the MUST. Older freezes (or freezes
-    without a date) stay as warnings — zero edits to existing protocols.
-    """
+    INTENT = "## Intent\n" + "Eine Zeile Prose.\n" * 40
 
-    def _run(self, text):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "PROTOCOL-x.md"
-            p.write_text(text, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(p)])
-            return rc, buf.getvalue()
-
-    FROZEN_NEW = ("# x\n- **Standard:** 0.15\n"
-                  "Begriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
-                  "Prompt, Roh-Output, Instrumentenprobe, Einordnung, Rivalen, "
-                  "Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, Ausbeute, "
-                  "Ergebnis, Exclusions.\n- **Frozen before run:** ja\n"
-                  "\n```\nAnswer: Yes\n```\n")
-
-    FROZEN_OLD = ("# x\n- **Standard:** 0.13\n"
-                  "Begriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
-                  "Prompt, Roh-Output, Instrumentenprobe, Einordnung, Rivalen, "
-                  "Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, Ausbeute, "
-                  "Ergebnis.\n- **Frozen before run:** ja\n"
-                  "\n```\nAnswer: Yes\n```\n")
-
-    def test_new_freeze_oversized_section_exits_one(self):
-        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 40
-        rc, out = self._run(self.FROZEN_NEW + intent)
+    def test_frozen_oversized_section_exits_one(self):
+        rc, out = run_main(frozen() + self.INTENT)
         self.assertEqual(rc, 1, out)
         self.assertIn("OVERSIZED (must)", out)
         self.assertIn("Intent", out)
 
-    def test_new_freeze_global_over_350_exits_one(self):
-        filler = "Eine Zeile Prose.\n" * 360
-        rc, out = self._run(self.FROZEN_NEW + filler)
+    def test_frozen_global_over_350_exits_one(self):
+        rc, out = run_main(frozen() + "Eine Zeile Prose.\n" * 360)
         self.assertEqual(rc, 1, out)
         self.assertIn("OVERSIZED (must)", out)
 
-    def test_old_freeze_oversized_warns_but_exits_zero(self):
-        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 40
-        rc, out = self._run(self.FROZEN_OLD + intent)
-        self.assertEqual(rc, 0, out)
-        self.assertIn("oversized", out.lower())
-        self.assertNotIn("OVERSIZED (must)", out)
-
-    def test_no_date_frozen_oversized_warns_but_exits_zero(self):
-        frozen_no_date = TestAuditGates.FROZEN
-        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 40
-        rc, out = self._run(frozen_no_date + intent)
-        self.assertEqual(rc, 0, out)
-        self.assertIn("oversized", out.lower())
-        self.assertNotIn("OVERSIZED (must)", out)
-
     def test_unfrozen_oversized_section_warns_but_exits_zero(self):
-        base = ("# x\nBegriffe, Frage, Erfolg, Abbruch, explorativ, Anker, "
-                "Prompt:\n\n```\nx\n```\nRoh-Output: n/a — kein Modell.\n")
-        intent = "## Intent\n" + "Eine Zeile Prose.\n" * 40
-        rc, out = self._run(base + intent)
+        rc, out = run_main(pilot() + self.INTENT)
         self.assertEqual(rc, 0, out)
-        self.assertIn("oversized", out.lower())
+        self.assertIn("oversized", out)
+        self.assertNotIn("OVERSIZED (must)", out)
 
 
-class TestMeasurementType(unittest.TestCase):
-    """Measurement protocols have 7 fields, no freeze, no SHOULD (2026-09-13)."""
+class TestHeadValues(unittest.TestCase):
+    """The head is typed data; a value outside its choices is one loud MUST
+    failure naming the field, never a silent "not found" (TODO 8)."""
 
-    def _run(self, text):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "PROTOCOL-x.md"
-            p.write_text(text, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(p)])
-            return rc, buf.getvalue()
+    def test_the_measurement_short_form_is_rejected(self):
+        rc, out = run_main(pilot(type="measurement"))
+        self.assertEqual(rc, 1)
+        self.assertIn("HEAD (must): [protocol] type = 'measurement'", out)
 
-    FULL = ("# Measurement: test\n"
-            "- **Standard:** 0.15\n"
-            "- **Type:** measurement\n"
-            "- **Question:** How many pairs?\n"
-            "- **Data / scope:** corpus, N=100, scripts/00_prepare.py\n"
-            "- **Prior computation:** none\n"
-            "- **Method:** scripts/count_pairs.py\n"
-            "- **Exclusions / filters:** none\n"
-            "- **Result:** 42 (run_id 2026-09-13T10-00-00_ab12)\n"
-            "- **Terms:** pair = two adjacent sentences\n")
+    def test_another_standard_is_rejected(self):
+        """A newer or older standard gets one hard failure and zero other
+        findings — a gate judging another template produces false positives
+        (2026-09-14: a pre-0.15 checker flagged the 0.15 template's stamped
+        preamble as "verbatim template text" for a whole session)."""
+        for std in ("0.99", "0.17", "0.15"):
+            with self.subTest(std):
+                rc, out = run_main(pilot().replace('standard = "0.18"', f'standard = "{std}"'))
+                self.assertEqual(rc, 1, out)
+                self.assertIn(f"HEAD (must): [protocol] standard = '{std}'", out)
+                self.assertNotIn("MISSING", out)
+                self.assertNotIn("template text", out)
 
-    def test_full_measurement_passes(self):
-        rc, out = self._run(self.FULL)
-        self.assertEqual(rc, 0, out)
-        self.assertIn("measurement, all fields filled", out)
+    def test_template_stamps_the_supported_standard(self):
+        h = protocol_block.head(TEMPLATE.read_text(encoding="utf-8"))
+        self.assertEqual(h.standard, protocol_block.STANDARD)
 
-    def test_missing_question_exits_one(self):
-        text = self.FULL.replace("- **Question:** How many pairs?\n", "")
-        rc, out = self._run(text)
+
+class TestExclusions(unittest.TestCase):
+    """Exclusions is a must; Gate labels and Randomness controls are stamped
+    should fields."""
+
+    EXCL = "- **Exclusions / filters:** none\n"
+
+    def test_without_exclusions_exits_one(self):
+        rc, out = run_main(pilot().replace(self.EXCL, ""))
         self.assertEqual(rc, 1, out)
-        self.assertIn("MISSING (must): Question", out)
+        self.assertIn("MISSING (must): Exclusions / filters", out)
 
-    def test_missing_exclusions_exits_one(self):
-        text = self.FULL.replace("- **Exclusions / filters:** none\n", "")
-        rc, out = self._run(text)
-        self.assertEqual(rc, 1, out)
-        self.assertIn("MISSING (must): Exclusions", out)
-
-    def test_experiment_should_fields_not_checked(self):
-        rc, out = self._run(self.FULL)
-        self.assertEqual(rc, 0)
-        self.assertNotIn("should", out.lower())
-        self.assertNotIn("Frozen", out)
-
-    def test_frozen_yes_not_escalated(self):
-        text = self.FULL + "- **Frozen before run:** ja\n"
-        rc, out = self._run(text)
-        self.assertEqual(rc, 0, out)
-        self.assertNotIn("must once frozen", out)
-
-    def test_misdeclared_with_prompt_block_exits_one(self):
-        text = self.FULL + "\nPrompt:\n\n```\nIs this fallacious?\n```\n"
-        rc, out = self._run(text)
-        self.assertEqual(rc, 1, out)
-        self.assertIn("MISDECLARED", out)
-
-    def test_german_type_messung_recognised(self):
-        text = self.FULL.replace("**Type:** measurement", "**Typ:** Messung")
-        rc, out = self._run(text)
-        self.assertEqual(rc, 0, out)
-        self.assertIn("measurement", out)
-
-    def test_placeholder_in_measurement_field_exits_one(self):
-        text = self.FULL.replace("42 (run_id 2026-09-13T10-00-00_ab12)",
-                                 "<number + run_id, or \"pending\">")
-        rc, out = self._run(text)
-        self.assertEqual(rc, 1, out)
-        self.assertIn("PLACEHOLDER ONLY (must)", out)
-
-
-class TestExperimentNewFields(unittest.TestCase):
-    """Exclusions is MUST from Standard >= 0.15; Gate/Randomness are SHOULD_IF_PRESENT."""
-
-    def _run(self, text):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "PROTOCOL-x.md"
-            p.write_text(text, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(p)])
-            return rc, buf.getvalue()
-
-    BASE_V015 = ("# x\n- **Standard:** 0.15\n"
-                 "Begriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
-                 "Prompt, Roh-Output, Instrumentenprobe, Einordnung, Rivalen, "
-                 "Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, Ausbeute, "
-                 "Ergebnis.\n- **Frozen before run:** nein\n"
-                 "\n```\nAnswer: Yes\n```\n")
-
-    def test_v015_without_exclusions_exits_one(self):
-        rc, out = self._run(self.BASE_V015)
-        self.assertEqual(rc, 1, out)
-        self.assertIn("Exclusions", out)
-
-    def test_v015_with_exclusions_passes(self):
-        text = self.BASE_V015 + "Exclusions: none.\n"
-        rc, out = self._run(text)
-        self.assertEqual(rc, 0, out)
-
-    def test_legacy_without_exclusions_passes(self):
-        legacy = self.BASE_V015.replace("- **Standard:** 0.15\n", "")
-        rc, out = self._run(legacy)
-        self.assertEqual(rc, 0, out)
-        self.assertNotIn("Exclusions", out)
-
-    def test_v013_explicit_without_exclusions_passes(self):
-        legacy = self.BASE_V015.replace("0.15", "0.13")
-        rc, out = self._run(legacy)
+    def test_with_exclusions_passes(self):
+        rc, out = run_main(pilot())
         self.assertEqual(rc, 0, out)
 
     def test_template_stamps_exclusions(self):
-        text = TEMPLATE.read_text(encoding="utf-8")
-        self.assertIn("Exclusions / filters", text)
+        self.assertIn("Exclusions / filters", TEMPLATE.read_text(encoding="utf-8"))
 
     def test_template_stamps_gate_labels(self):
-        text = TEMPLATE.read_text(encoding="utf-8")
-        self.assertIn("Gate labels (expected)", text)
+        self.assertIn("Gate labels (expected)", TEMPLATE.read_text(encoding="utf-8"))
 
     def test_template_stamps_randomness(self):
-        text = TEMPLATE.read_text(encoding="utf-8")
-        self.assertIn("Randomness controls", text)
-
-    def test_template_stamps_standard(self):
-        text = TEMPLATE.read_text(encoding="utf-8")
-        self.assertIn("Standard:", text)
-
-
-class TestStandardVersion(unittest.TestCase):
-    """Standard-Version field replaces per-feature cutoff dates (2026-09-13)."""
-
-    def _run(self, text):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "PROTOCOL-x.md"
-            p.write_text(text, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(p)])
-            return rc, buf.getvalue()
-
-    BASE = ("# x\nBegriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, Anker, "
-            "Prompt, Roh-Output, Instrumentenprobe, Einordnung, Rivalen, "
-            "Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, Ausbeute, "
-            "Ergebnis, Exclusions.\n")
-
-    def test_v014_frozen_oversized_exits_one(self):
-        text = (self.BASE + "- **Standard:** 0.14\n"
-                "- **Frozen before run:** ja\n\n```\nAnswer: Yes\n```\n"
-                + "## Intent\n" + "Prose line.\n" * 40)
-        rc, out = self._run(text)
-        self.assertEqual(rc, 1, out)
-        self.assertIn("OVERSIZED (must)", out)
-
-    def test_v013_frozen_oversized_exits_zero(self):
-        text = (self.BASE + "- **Standard:** 0.13\n"
-                "- **Frozen before run:** ja\n\n```\nAnswer: Yes\n```\n"
-                + "## Intent\n" + "Prose line.\n" * 40)
-        rc, out = self._run(text)
-        self.assertEqual(rc, 0, out)
-        self.assertIn("oversized", out.lower())
-        self.assertNotIn("OVERSIZED (must)", out)
-
-    def test_no_standard_field_defaults_to_v013(self):
-        text = (self.BASE
-                + "- **Frozen before run:** ja\n\n```\nAnswer: Yes\n```\n"
-                + "## Intent\n" + "Prose line.\n" * 40)
-        rc, out = self._run(text)
-        self.assertEqual(rc, 0, out)
-        self.assertNotIn("OVERSIZED (must)", out)
-
-    def test_standard_version_regex_reads_field(self):
-        m = protocol_check.STANDARD_VERSION.search("- **Standard:** 0.15\n")
-        self.assertIsNotNone(m)
-        self.assertEqual(m.group(1), "0.15")
-
-    def test_version_comparison_is_numeric_not_lexicographic(self):
-        """String comparison puts "0.9" above "0.15" and "0.100" below it —
-        both would misapply every versioned gate."""
-        self.assertLess(protocol_check._std("0.9"), (0, 15))
-        self.assertGreater(protocol_check._std("0.100"), (0, 15))
-        self.assertGreaterEqual(protocol_check._std("0.15"), (0, 15))
-
-    def test_v09_standard_gets_no_v015_musts(self):
-        """A pre-0.15 protocol must not be held to the 0.15 field set
-        (lexicographically "0.9" >= "0.15" was True)."""
-        must, _ = protocol_check.check_text(
-            self.BASE.lower().replace("exclusions.", ""), standard="0.9")
-        self.assertFalse([m for m in must if "Exclusions" in m], must)
-
-
-class TestCheckerTooOld(unittest.TestCase):
-    """A protocol declaring a NEWER standard than the checker implements gets
-    one hard failure and zero other findings — an old gate judging a new
-    template produces false positives, not fewer findings (2026-09-14: a
-    pre-0.15 checker flagged the 0.15 template's stamped preamble as
-    "verbatim template text" for a whole session)."""
-
-    def _run(self, text):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "PROTOCOL-x.md"
-            p.write_text(text, encoding="utf-8")
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(p)])
-            return rc, buf.getvalue()
-
-    def test_newer_standard_fails_hard(self):
-        rc, out = self._run("# x\n- **Standard:** 0.99\n")
-        self.assertEqual(rc, 1, out)
-        self.assertIn("CHECKER TOO OLD", out)
-
-    def test_newer_standard_produces_no_other_findings(self):
-        # An empty protocol would normally rain MISSING findings; behind the
-        # guard, none of them may appear — they would be noise.
-        rc, out = self._run("# x\n- **Standard:** 0.99\n")
-        self.assertNotIn("MISSING", out)
-        self.assertNotIn("template text", out)
-
-    def test_supported_standard_passes_the_guard(self):
-        rc, out = self._run(
-            "# x\nBegriffe, Hypothese, Erfolg, Abbruch, konfirmatorisch, "
-            "Anker, Prompt, Roh-Output, Instrumentenprobe, Einordnung, "
-            "Rivalen, Fehlerrichtung, Skopus, freie Knoepfe, Prognose, gold, "
-            "Ausbeute, Ergebnis, Exclusions.\n- **Standard:** 0.15\n"
-            "\n```\nAnswer: Yes\n```\n")
-        self.assertNotIn("CHECKER TOO OLD", out)
-
-    def test_supported_constant_is_a_valid_version(self):
-        self.assertIsInstance(protocol_check._std(
-            protocol_check.SUPPORTED_STANDARD), tuple)
+        self.assertIn("Randomness controls", TEMPLATE.read_text(encoding="utf-8"))
 
 
 class TestIntentBudgetCalibration(unittest.TestCase):
-    """Intent budget 35 (calibration 2026-09-15, n=94): the [K/S/W/N]
+    """Intent budget 35 (calibration 2026-09-15, n=94): the intent-id
     registrations moved mandatory content into Intent — the disciplined
     confirmatory cluster tops out at 35 prose lines and must pass."""
 
@@ -921,20 +739,28 @@ class TestStampedLegendIsNotTemplateText(unittest.TestCase):
 
 
 class TestCostTier(unittest.TestCase):
-    """`Cost:` (2026-10-05) is due once stamped, and its value is readable."""
+    """The cost tier (2026-10-05) is a head value: `cost` in [protocol]."""
 
-    def test_template_stamps_cost(self):
-        text = TEMPLATE.read_text(encoding="utf-8")
-        self.assertIn("- **Cost:**", text)
+    def test_template_stamps_cost_as_placeholder(self):
+        self.assertIsNone(protocol_block.head(TEMPLATE.read_text(encoding="utf-8")).cost)
 
-    def test_the_tier_is_read_from_the_field(self):
-        self.assertEqual(protocol_check.cost_tier_of("- **Cost:** seconds\n"), "seconds")
-        self.assertEqual(protocol_check.cost_tier_of("- **Cost:** Hours — x\n"), "hours")
+    def test_the_tier_is_read_from_the_head(self):
+        for tier in protocol_block.COST_TIERS:
+            self.assertEqual(protocol_block.head(head(cost=tier)).cost, tier)
 
-    def test_a_placeholder_or_absent_field_has_no_tier(self):
-        self.assertIsNone(protocol_check.cost_tier_of("- **Cost:** <seconds | hours>\n"))
-        self.assertIsNone(protocol_check.cost_tier_of("- **Timebox:** 2h\n"))
+    def test_a_typo_is_a_loud_error(self):
+        """`Cost: second` used to read as undeclared and so as `hours`."""
+        with self.assertRaisesRegex(protocol_block.BlockError, r"\[protocol\] cost = 'second'"):
+            protocol_block.head(head(cost="second"))
 
-    def test_a_stamped_placeholder_is_a_should_gap(self):
-        self.assertEqual(protocol_check.severity_of("Cost"), "should")
+    def test_a_placeholder_is_a_must_gap(self):
+        report = protocol_check.check_fields(pilot(cost="<seconds | minutes | hours>"))
+        self.assertEqual(report.missing_must, ["[protocol] cost"])
 
+    def test_a_prose_cost_line_is_not_the_tier(self):
+        text = pilot(cost="<seconds | minutes | hours>") + "- **Cost:** seconds\n"
+        self.assertEqual(protocol_check.check_fields(text).missing_must, ["[protocol] cost"])
+
+
+if __name__ == "__main__":
+    unittest.main()

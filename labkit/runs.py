@@ -56,37 +56,26 @@ def is_alive(pid, script) -> bool | None:
 
 
 def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
-    """One of: completed · running · unknown · crashed · unfinalized · corrupt.
+    """One of: completed · running · unknown · crashed · unfinalized · corrupt · legacy.
 
-    Two completion markers, because runs written before this contract
-    cannot be changed. `schema_version` decides which one applies, and it
-    sits in config.json (written at run START) precisely because the file
-    it decides about may be the missing one:
+    Complete when BOTH metrics.json and completion.json exist. Both, not
+    completion.json alone: a completion record must not paper over results
+    that were deleted or never landed. Hence `corrupt` — completion without
+    metrics — which is a failure like `unfinalized`, not a finish.
 
-        no schema_version   legacy    complete when metrics.json exists
-        schema_version >= 2 current   complete when BOTH metrics.json and
-                                      completion.json exist
-
-    Both, not completion.json alone: a completion record must not paper
-    over results that were deleted or never landed. Hence `corrupt` —
-    completion without metrics — which is a failure like `unfinalized`,
-    not a finish.
+    `legacy`: config.json carries no `schema_version` >= 2 (written before
+    labkit 0.21, when metrics.json alone marked a finish). Such a run is
+    read with labkit 0.47; here it is never `completed`.
 
     `alive is None` means the liveness check was undecidable (no `ps`, no
     script name). That is `unknown`, not `crashed` — claiming a process is
     dead when the evidence says "can't tell" is a false negative that hides
     a running run. `endpoint_lease` already treats None as conservatively
-    alive; `run_state` now uses the same contract.
+    alive; `run_state` uses the same contract.
     """
-    has_metrics = (run_dir / "metrics.json").is_file()
     if cfg.get("schema_version", 0) < 2:
-        if has_metrics:
-            return "completed"
-        if alive is True:
-            return "running"
-        if alive is None:
-            return "unknown"
-        return "crashed"
+        return "legacy"
+    has_metrics = (run_dir / "metrics.json").is_file()
     has_completion = (run_dir / "completion.json").is_file()
     if has_metrics and has_completion:
         return "completed"
@@ -130,8 +119,8 @@ def completion_state(run_dir: Path) -> str:
     scorer. Asking `metrics.json` alone let an unfinalized v2 run (metrics,
     no completion record) be rechecked as a kept number and accepted as a
     parent (review 2026-10-06). A directory without config.json predates
-    run metadata and is read as legacy (complete when metrics.json exists);
-    an unreadable config.json raises RunConfigError — a damaged run must
+    run metadata and is `legacy`; an unreadable config.json raises
+    RunConfigError — a damaged run must
     not vanish and let an older one be chosen in its place.
     """
     return run_state(run_dir, read_run_config(run_dir) or {}, alive=False)

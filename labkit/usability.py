@@ -83,7 +83,7 @@ CLAIMS = (
 TASKS = {
     "count": {"area": "docs-per-case", "metric_key": "mean_docs_per_case",
               "template": "usability-task-count.md.template"},
-    "judge": {"area": "causal-claims-judge", "metric_key": "k1_accuracy",
+    "judge": {"area": "causal-claims-judge", "metric_key": "c1_accuracy",
               "template": "usability-task-judge.md.template"},
 }
 LOG_TAGS = ("read", "run", "edit", "unsure", "gate")
@@ -338,12 +338,12 @@ def score(root: Path) -> int:
         bound_to = (config.get("protocol") or {}).get("path")
         tier = config.get("cost_tier")
         if probe.task != "count":
-            null_reported = any(re.match(r"^n\d+_", k) for k in metrics)
+            null_reported = any(re.match(r"^a\d+_", k) for k in metrics)
         if bound_to:
-            from labkit.protocol_check import FROZEN_YES  # lazy: labkit modules import each other
+            from labkit import protocol_block  # lazy: labkit modules import each other
             p = Path(bound_to)
             p = p if p.is_absolute() else area / p
-            frozen = (bool(FROZEN_YES.search(p.read_text(encoding="utf-8")))
+            frozen = (protocol_block.head(p.read_text(encoding="utf-8")).frozen
                       if p.is_file() else None)
     log = _sidecar(root, "log.md")
     trace = parse_log(log.read_text(encoding="utf-8")) if log.is_file() else None

@@ -38,14 +38,14 @@ and stop. An audit of the empty template criticises an intent nobody wrote
 
 ## Cost tier — how many audits this area gets (§2.A14)
 
-Read `Cost:` in the protocol first. `seconds` (deterministic, rerunnable
+Read `cost` in the protocol head (its ```toml block) first. `seconds` (deterministic, rerunnable
 at will) means you are the ONE audit of this area: the caller invokes you
 in MODE `analysis` after the first run, and you cover the `preflight` rows of
 the scar table in the same pass — instrument, data path, operation, now
 against real output. Report BLOCKER and WARNING lines only; NOTE-grade
 findings go into one closing line `notes: K (not listed — cost tier
 seconds)`, because on a cheap run every listed note costs a fix cycle and
-a re-run. `minutes`, `hours` or no `Cost:` field: both modes as described
+a re-run. `minutes`, `hours` or an unfilled `cost`: both modes as described
 below, all grades listed.
 
 ## What to audit

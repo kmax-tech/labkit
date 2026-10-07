@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "labkit"
-version = "0.47.0"
+version = "0.48.0"
 description = "Shared lab helpers: run index, LLM backend, endpoint lease, resumable batches, protocol and notes checkers"
 requires-python = ">=3.12"
 # stdlib only, on purpose: a lab helper that drags dependencies in decides the
@@ -42,3 +42,7 @@ labkit = ["*.template", "protocol-field-guide.md", "*.agent.md"]
 [tool.ruff.lint]
 # Same pinned scope as the lab repos (a shifting default is a knob nobody set).
 select = ["E4", "E7", "E9", "F"]
+
+[tool.pyright]
+# tests import their shared fixture module (tests/protocol_fixture.py) by name
+extraPaths = ["tests"]

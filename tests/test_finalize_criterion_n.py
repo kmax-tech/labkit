@@ -1,4 +1,4 @@
-"""finalize station 5 (2026-10-05): a k<i>_n that matches no recorded input
+"""finalize station 5 (2026-10-05): a c<i>_n that matches no recorded input
 count is a warning, never a blocker."""
 from __future__ import annotations
 
@@ -30,32 +30,24 @@ class CriterionN(unittest.TestCase):
         (self.run / "metrics.json").write_text(json.dumps(m))
 
     def test_matching_n_is_silent(self):
-        self._metrics({"k1_pass": True, "k1_n": 12})
+        self._metrics({"c1_pass": True, "c1_n": 12})
         self.assertEqual(finalize.criterion_n_findings(self.run), [])
 
     def test_shrunk_denominator_warns(self):
-        self._metrics({"k1_pass": True, "k1_n": 11})
-        w = finalize.criterion_n_findings(self.run)
-        self.assertEqual(len(w), 1)
-        self.assertIn("k1_n = 11", w[0])
-        self.assertIn("rows = 12", w[0])
-
-    def test_new_letter_is_held_like_the_legacy_one(self):
-        # 2026-10-06 review: the check knew only k<i>_n; c1_n = 7 against
-        # 12 recorded rows went unwarned after the switch to C/A/B
-        self._metrics({"c1_pass": True, "c1_n": 12})
-        self.assertEqual(finalize.criterion_n_findings(self.run), [])
+        # 2026-10-06 review: c1_n = 7 against 12 recorded rows went unwarned
+        # while the check knew only the old letter
         self._metrics({"c1_pass": True, "c1_n": 7})
         w = finalize.criterion_n_findings(self.run)
         self.assertEqual(len(w), 1)
         self.assertIn("c1_n = 7", w[0])
+        self.assertIn("rows = 12", w[0])
 
     def test_admissibility_n_is_not_a_criterion_denominator(self):
         self._metrics({"a1_ok": True, "a1_n": 3})
         self.assertEqual(finalize.criterion_n_findings(self.run), [])
 
     def test_no_n_keys_nothing_to_say(self):
-        self._metrics({"k1_pass": True})
+        self._metrics({"c1_pass": True})
         self.assertEqual(finalize.criterion_n_findings(self.run), [])
 
 

@@ -1,4 +1,4 @@
-"""finalize station 4 (2026-10-05): at Cost seconds the run must have frozen
+"""finalize station 4 (2026-10-05): at cost = "seconds" the run must have frozen
 its source and every source/output file must be tracked in git; elsewhere
 the station is n/a."""
 from __future__ import annotations
@@ -15,16 +15,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import finalize  # noqa: E402
+from protocol_fixture import PID, head  # noqa: E402
 
-PID = "p-0123456789abcdef"
-SHORT = f"""# Measurement: x
-- **Protocol id:** {PID}
-- **Type:** measurement
-- **Cost:** seconds
-- **Question:** how many?
-- **Result:** 3.5, run r1
+BODY = """
+- **Question / hypothesis:** how many documents per case?
+- **Answer to the question:** 3.5, run r1
 """
-HOURS = SHORT.replace("- **Type:** measurement\n", "").replace("seconds", "hours")
+SHORT = "# Experiment protocol: x\n\n" + head(cost="seconds") + BODY
+HOURS = "# Experiment protocol: x\n\n" + head(cost="hours", frozen=True) + BODY
 
 
 def _git(cwd, *args):

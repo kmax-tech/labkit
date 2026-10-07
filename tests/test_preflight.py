@@ -16,27 +16,30 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import preflight  # noqa: E402
+from protocol_fixture import head  # noqa: E402
 
-CLEAN_PROTOCOL = """\
-# Experiment protocol: x
-
-- **Standard:** 0.16
-- **Protocol id:** p-0123456789abcdef
+BODY = """\
+- **Terms of this protocol:** n/a — standard vocabulary
 - **Question / hypothesis:** does it hold?
-- **Success / failure criterion:** [K1] p < .05
-- **Stop rule:** [S1] abort above 20% errors
-- **Type:** confirmatory
-- **Terms of art:** none
-- **Model I/O / prompt:** see below
-- **Null condition:** [N1] shuffled labels
-- **Raw output:** one real example
-- **Exclusions / filters:** none
-- **Frozen before run:** no
+- **Success / failure criterion:** [C1] p < .05
+- **Admissibility condition:** [A1] parse yield above 80%
+- **Model I/O:** in: text · out: a label, parsed by parse()
+- **Prompt (verbatim, per variant):**
 
-```text
-prompt
-```
+  ```text
+  prompt
+  ```
+
+- **Null condition / anchors (in the same run):** [A2] shuffled labels stay at chance
+- **Exclusions / filters:** none
 """
+
+
+def _protocol(**head_fields) -> str:
+    return "# Experiment protocol: x\n\n" + head(**head_fields) + "\n" + BODY
+
+
+CLEAN_PROTOCOL = _protocol()
 
 
 def _area(d, protocol_text=CLEAN_PROTOCOL, scripts=True, git=True):
@@ -46,7 +49,7 @@ def _area(d, protocol_text=CLEAN_PROTOCOL, scripts=True, git=True):
     if scripts:
         (area / "scripts").mkdir(exist_ok=True)
         (area / "scripts" / "01_measure.py").write_text(
-            'metrics = {"k1_pass": True, "s1_hit": 0, "n1_pass": True}\n',
+            'metrics = {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n',
             encoding="utf-8")
     if git:
         subprocess.run(["git", "init", "-q", "."], cwd=d, capture_output=True)
@@ -137,14 +140,26 @@ class TestPreflight(unittest.TestCase):
         self.assertEqual(code, 0, out)
 
     def test_protocol_blocker_makes_exit_one(self):
-        broken = CLEAN_PROTOCOL.replace(
-            "- **Protocol id:** p-0123456789abcdef", "")
+        unstamped = _protocol(id="<protocol-id>")
         with tempfile.TemporaryDirectory() as d:
-            area, _ = _area(d, protocol_text=broken)
+            area, _ = _area(d, protocol_text=unstamped)
             code, out = _run_preflight(area)
         self.assertEqual(code, 1, out)
-        self.assertIn("MISSING (must): Protocol id", out)
+        self.assertIn("MISSING (must): [protocol] id", out)
         self.assertIn("blocker", out)
+
+    def test_prose_head_is_rejected_loudly(self):
+        """A protocol with the head as prose lines (Standard 0.16/0.17) is
+        read by labkit 0.47; here it is a blocker naming the [protocol]
+        table, not a protocol checked against guessed fields (TODO 8)."""
+        prose = ("# Experiment protocol: x\n\n- **Standard:** 0.16\n"
+                 "- **Protocol id:** p-0123456789abcdef\n- **Frozen before run:** no\n"
+                 + BODY)
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d, protocol_text=prose)
+            code, out = _run_preflight(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn("HEAD (must): no [protocol] table", out)
 
     def test_dirty_tree_is_a_warning_not_a_blocker(self):
         with tempfile.TemporaryDirectory() as d:
@@ -168,39 +183,6 @@ class TestPreflight(unittest.TestCase):
         self.assertEqual(code, 2)
 
 
-MEASUREMENT_PROTOCOL = """\
-# Measurement protocol: count things
-
-- **Standard:** 0.16
-- **Protocol id:** p-0123456789abcdef
-- **Question:** how many X are there?
-- **Data / scope:** all of them
-- **Prior computation:** none
-- **Method:** count
-- **Exclusions / filters:** none
-- **Result:** <pending>
-- **Terms of art:** none
-- **Type:** measurement
-
-```text
-prompt
-```
-"""
-
-
-class TestMeasurementProtocol(unittest.TestCase):
-
-    def test_measurement_uses_measurement_must_fields(self):
-        """A measurement protocol must not be checked against experiment
-        MUST fields (Success criterion, Admissibility condition, etc.)."""
-        with tempfile.TemporaryDirectory() as d:
-            area, _ = _area(d, protocol_text=MEASUREMENT_PROTOCOL,
-                            scripts=False, git=False)
-            code, out = _run_preflight(area)
-        self.assertNotIn("MISSING (must): Success criterion", out)
-        self.assertNotIn("MISSING (must): Admissibility condition", out)
-
-
 class TestNoScriptsDirectory(unittest.TestCase):
 
     def test_area_without_scripts_skips_scope_sha(self):
@@ -211,23 +193,18 @@ class TestNoScriptsDirectory(unittest.TestCase):
         self.assertIn("skipped", out)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class GraduationGate(unittest.TestCase):
     """Frozen turns should-gaps into blockers — the same rule as in
     protocol-check, from the same function (2026-10-05)."""
 
     def test_frozen_protocol_with_should_gaps_has_blockers(self):
         with tempfile.TemporaryDirectory() as d:
-            area, _ = _area(d, CLEAN_PROTOCOL.replace("** no", "** yes"))
+            area, _ = _area(d, _protocol(frozen=True))
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 rc = preflight.run(area)
             self.assertEqual(rc, 1)
-            self.assertIn("MISSING (must): Result / outcome (write back after the run) "
-                          "(must once frozen: yes)", buf.getvalue())
+            self.assertIn("MISSING (must): Problem in one sentence", buf.getvalue())
 
     def test_unfrozen_protocol_same_gaps_are_warnings(self):
         with tempfile.TemporaryDirectory() as d:
@@ -236,7 +213,7 @@ class GraduationGate(unittest.TestCase):
             with contextlib.redirect_stdout(buf):
                 rc = preflight.run(area)
             self.assertEqual(rc, 0)
-            self.assertIn("missing (should): Result", buf.getvalue())
+            self.assertIn("missing (should): Problem in one sentence", buf.getvalue())
 
 
 class TestCostTier(unittest.TestCase):
@@ -251,14 +228,17 @@ class TestCostTier(unittest.TestCase):
             return buf.getvalue()
 
     def test_seconds_makes_the_agent_audit_optional(self):
-        out = self._out(CLEAN_PROTOCOL + "- **Cost:** seconds\n")
+        out = self._out(_protocol(cost="seconds"))
         self.assertIn("OPTIONAL", out)
 
     def test_hours_asks_for_the_audit(self):
-        out = self._out(CLEAN_PROTOCOL + "- **Cost:** hours\n")
+        out = self._out(_protocol(cost="hours"))
         self.assertIn("hours — the experiment-preflight audit is due", out)
 
-    def test_an_undeclared_tier_counts_as_hours(self):
-        out = self._out(CLEAN_PROTOCOL)
-        self.assertIn("not declared — treated as `hours`", out)
+    def test_an_unfilled_tier_counts_as_hours(self):
+        out = self._out(_protocol(cost="<seconds | minutes | hours>"))
+        self.assertIn("not filled — treated as `hours`", out)
 
+
+if __name__ == "__main__":
+    unittest.main()

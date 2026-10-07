@@ -2,7 +2,7 @@
 
 pre-run: a command that starts a run script in an area triggers preflight;
 frozen + blockers blocks (exit 2), unfrozen + blockers only reports,
-throwaway stages and non-run scripts pass untouched; at `Cost: seconds`
+throwaway stages and non-run scripts pass untouched; at `cost = "seconds"`
 preflight does not run and the hook only reports whether the criterion
 is written (§2.A12).
 post-change: changed protocols and messung notes are checked whatever
@@ -23,41 +23,43 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import claude_hooks  # noqa: E402
+from protocol_fixture import head  # noqa: E402
 
-PROTOCOL = """\
-# Experiment protocol: x
-
-- **Standard:** 0.16
-- **Protocol id:** p-0123456789abcdef
+BODY = """\
+- **Terms of this protocol:** n/a — standard vocabulary
 - **Question / hypothesis:** does it hold?
-- **Success / failure criterion:** [K1] p < .05
-- **Stop rule:** [S1] abort above 20% errors
-- **Type:** confirmatory
-- **Terms of art:** none
-- **Model I/O / prompt:** see below
-- **Null condition:** [N1] shuffled labels
-- **Raw output:** one real example
-- **Exclusions / filters:** none
-- **Frozen before run:** {frozen}
+- **Success / failure criterion:** [C1] p < .05
+- **Admissibility condition:** [A1] parse yield above 80%
+- **Model I/O:** in: text · out: a label, parsed by parse()
+- **Prompt (verbatim, per variant):**
 
-```text
-prompt
-```
+  ```text
+  prompt
+  ```
+
+- **Null condition / anchors (in the same run):** [A2] shuffled labels stay at chance
+- **Exclusions / filters:** none
 """
+
+
+def _protocol(frozen: bool, cost: str = "minutes") -> str:
+    return "# Experiment protocol: x\n\n" + head(frozen=frozen, cost=cost) + "\n" + BODY
+
+
 RUN_SCRIPT = ('from labkit import runlog\n'
               'with runlog.run("t", {}, protocol="PROTOCOL-x.md") as r:\n'
-              '    metrics = {"k1_pass": True, "s1_hit": 0, "n1_pass": True}\n')
+              '    metrics = {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n')
 
 
 def _git(cwd, *args):
     subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True)
 
 
-def _repo(frozen: str, script: str = RUN_SCRIPT) -> Path:
+def _repo(frozen: bool, script: str = RUN_SCRIPT, cost: str = "minutes") -> Path:
     root = Path(tempfile.mkdtemp())
     area = root / "experiments" / "01-x"
     (area / "scripts").mkdir(parents=True)
-    (area / "PROTOCOL-x.md").write_text(PROTOCOL.format(frozen=frozen), encoding="utf-8")
+    (area / "PROTOCOL-x.md").write_text(_protocol(frozen, cost), encoding="utf-8")
     (area / "scripts" / "01_measure.py").write_text(script, encoding="utf-8")
     (root / "notes" / "messung").mkdir(parents=True)
     _git(root, "init", "-q", ".")
@@ -85,7 +87,7 @@ class PreRun(unittest.TestCase):
         os.environ.pop("CLAUDE_PROJECT_DIR", None)
 
     def test_frozen_with_blockers_blocks(self):
-        root = _repo("yes")      # frozen, but no tests/ -> only a warning;
+        root = _repo(True)      # frozen, but no tests/ -> only a warning;
         # a missing intent id in the script is the blocker:
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
             'from labkit import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
@@ -97,7 +99,7 @@ class PreRun(unittest.TestCase):
         self.assertIn("preflight", err)
 
     def test_unfrozen_with_blockers_only_reports(self):
-        root = _repo("no")
+        root = _repo(False)
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
             'from labkit import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
             encoding="utf-8")
@@ -108,11 +110,7 @@ class PreRun(unittest.TestCase):
         self.assertIn("pilot", ctx)
 
     def test_seconds_skips_preflight_even_with_blockers(self):
-        root = _repo("yes")
-        proto = root / "experiments/01-x/PROTOCOL-x.md"
-        proto.write_text(proto.read_text(encoding="utf-8").replace(
-            "- **Type:** confirmatory", "- **Type:** confirmatory\n- **Cost:** seconds"),
-            encoding="utf-8")
+        root = _repo(True, cost="seconds")
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
             'from labkit import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
             encoding="utf-8")
@@ -120,18 +118,15 @@ class PreRun(unittest.TestCase):
                             _bash(root, "python experiments/01-x/scripts/01_measure.py"))
         self.assertEqual(rc, 0)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("Cost seconds", ctx)
+        self.assertIn("cost seconds", ctx)
         self.assertIn("registration written", ctx)
         self.assertNotIn("BLOCKED", err)
 
     def test_seconds_without_criterion_is_reported_not_blocked(self):
-        root = _repo("no")
+        root = _repo(False, cost="seconds")
         proto = root / "experiments/01-x/PROTOCOL-x.md"
         proto.write_text(proto.read_text(encoding="utf-8")
-                         .replace("[K1] p < .05", "<the criterion>")
-                         .replace("- **Type:** confirmatory",
-                                  "- **Type:** confirmatory\n- **Cost:** seconds"),
-                         encoding="utf-8")
+                         .replace("[C1] p < .05", "<the criterion>"), encoding="utf-8")
         rc, out, err = _run(claude_hooks.pre_run,
                             _bash(root, "python experiments/01-x/scripts/01_measure.py"))
         self.assertEqual(rc, 0)
@@ -140,20 +135,20 @@ class PreRun(unittest.TestCase):
         self.assertIn("runlog refuses", ctx)
 
     def test_throwaway_stage_passes_silently(self):
-        root = _repo("yes")
+        root = _repo(True)
         for flag in ("--probe 3", "--show 2", "--eval-only"):
             rc, out, err = _run(claude_hooks.pre_run, _bash(
                 root, f"python experiments/01-x/scripts/01_measure.py {flag}"))
             self.assertEqual((rc, out, err), (0, "", ""), flag)
 
     def test_script_without_run_passes_silently(self):
-        root = _repo("yes", script="print('analysis only')\n")
+        root = _repo(True, script="print('analysis only')\n")
         rc, out, err = _run(claude_hooks.pre_run,
                             _bash(root, "python experiments/01-x/scripts/01_measure.py"))
         self.assertEqual((rc, out, err), (0, "", ""))
 
     def test_skip_token_is_reported_not_blocked(self):
-        root = _repo("yes")
+        root = _repo(True)
         rc, out, err = _run(claude_hooks.pre_run, _bash(
             root, "LABKIT_PREFLIGHT=skip python experiments/01-x/scripts/01_measure.py"))
         self.assertEqual(rc, 0)
@@ -162,7 +157,7 @@ class PreRun(unittest.TestCase):
     def test_relative_to_cwd_inside_area(self):
         # unfrozen: the fixture's should-gaps stay warnings (graduation
         # gate), so this test sees only the path resolution
-        root = _repo("no")
+        root = _repo(False)
         ev = _bash(root / "experiments/01-x", "python scripts/01_measure.py")
         rc, out, err = _run(claude_hooks.pre_run, ev)
         self.assertEqual(rc, 0, err)
@@ -172,7 +167,7 @@ class PreRun(unittest.TestCase):
 class PostChange(unittest.TestCase):
     def setUp(self):
         os.environ.pop("CLAUDE_PROJECT_DIR", None)
-        self.root = _repo("no")
+        self.root = _repo(False)
         os.environ["CLAUDE_PROJECT_DIR"] = str(self.root)
 
     def tearDown(self):
@@ -180,18 +175,19 @@ class PostChange(unittest.TestCase):
 
     def test_protocol_written_by_heredoc_is_checked(self):
         p = self.root / "experiments/01-x/PROTOCOL-x.md"
-        p.write_text(PROTOCOL.format(frozen="no").replace(
-            "- **Null condition:** [N1] shuffled labels\n", ""), encoding="utf-8")
+        p.write_text(_protocol(False).replace(
+            "- **Null condition / anchors (in the same run):** [A2] shuffled labels "
+            "stay at chance\n", ""), encoding="utf-8")
         rc, out, err = _run(claude_hooks.post_change,
                             _bash(self.root, "cat > PROTOCOL-x.md <<EOF ... EOF"))
         self.assertEqual(rc, 0)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("PROTOCOL-x.md", ctx)
-        self.assertIn("MISSING", ctx)
+        self.assertIn("MISSING (must): Null condition / anchors", ctx)
 
     def test_same_content_is_reported_once_per_session(self):
         p = self.root / "experiments/01-x/PROTOCOL-x.md"
-        p.write_text(PROTOCOL.format(frozen="no") + "\nmore\n", encoding="utf-8")
+        p.write_text(_protocol(False) + "\nmore\n", encoding="utf-8")
         ev = _bash(self.root, "ls")
         ev["session_id"] = "s-" + os.urandom(4).hex()
         rc, out1, _ = _run(claude_hooks.post_change, ev)

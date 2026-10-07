@@ -20,12 +20,12 @@ pre-run
     (`runlog.run(` / `runlog.Run(`) and is not one of the throwaway stages
     (`--show`, `--probe`, `--eval-only`). For that script's area (the
     nearest directory above it with a PROTOCOL-*.md) `preflight` runs:
-      · protocol frozen (`Frozen before run: yes`) + blockers  → exit 2, blocked
+      · protocol frozen (`frozen = true`) + blockers           → exit 2, blocked
       · protocol unfrozen (a pilot by declaration) + blockers  → context only
       · clean                                                   → one line
     `LABKIT_PREFLIGHT=skip` in the command string skips the gate; it is
     visible in the transcript, like `--no-verify` on a commit.
-    The gate follows the cost tier (§2.A14): at `Cost: seconds` preflight
+    The gate follows the cost tier (§2.A14): at `cost = "seconds"` preflight
     does not run before a command — a rerun of seconds is the probe — and
     the hook only says whether the success criterion is written, which is
     what `runlog` will demand of a full run there. A `minutes`/`hours`/
@@ -54,7 +54,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from labkit import notes_check, preflight, protocol_check
+from labkit import notes_check, preflight, protocol_block, protocol_check
 from labkit.repo import area_protocols, git_run
 
 # The template's throwaway stages: none of them opens a run, and the probe
@@ -159,19 +159,24 @@ def pre_run(event: dict) -> int:
         texts = [p.read_text(encoding="utf-8")
                  for p in ([protocol] if protocol else area_protocols(area))]
         head = f"preflight {area.name}" + (f" --protocol {protocol.name}" if protocol else "")
-        tiers = {protocol_check.cost_tier_of(t) for t in texts}
+        try:
+            heads = [protocol_block.head(t) for t in texts]
+        except protocol_block.BlockError as exc:
+            notes.append(f"{head}: protocol head unreadable — {exc}")
+            continue
+        tiers = {h.cost for h in heads}
         if tiers == {"seconds"}:
             missing = sorted({m for t in texts for m in protocol_check.intent_missing(t)})
             if not missing:
-                notes.append(f"{head}: Cost seconds — gate not run, the rerun is "
+                notes.append(f"{head}: cost seconds — gate not run, the rerun is "
                              f"the probe; registration written (§2.A14).")
             else:
-                notes.append(f"{head}: Cost seconds, but {', '.join(missing)} still "
+                notes.append(f"{head}: cost seconds, but {', '.join(missing)} still "
                              f"empty or a placeholder — runlog refuses a full run "
                              f"until the registration is written (§2.A1, §2.A14).")
             continue
         rc, out = _capture(preflight.run, area, protocol)
-        frozen = any(protocol_check.FROZEN_YES.search(t) for t in texts)
+        frozen = any(h.frozen for h in heads)
         if rc == 1 and frozen:
             blocked.append(f"{head}: BLOCKED — the protocol is frozen and "
                            f"preflight reports blockers:\n{out}")

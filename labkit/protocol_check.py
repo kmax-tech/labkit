@@ -1,55 +1,34 @@
 #!/usr/bin/env python3
-"""Check experiment protocols for mandatory fields (structure-free).
+"""Check experiment protocols: the head as data, the prose fields by label.
 
-The protocol template (`experiment-protocol.md.template`) is a checklist of
-mandatory fields, not a copy-form: protocols may be structured freely, but
-every field must occur — an explicit "n/a — <why>" counts, silence does not.
-A field counts as present as soon as its concept keywords appear anywhere in
-the file, so a protocol must at least *mention* the concepts that hurt when
-omitted (scar 2026-08-13: two freely written protocols omitted "Type" and
-"Model I/O"; each omission caused a bad run).
+The head — standard, id, type, cost, frozen, preflight audit — is the
+`[protocol]` table of the protocol's ```toml block, read by
+`protocol_block` (typed, exact; a malformed head is one MUST failure that
+names the field). The prose fields a human writes are held by their exact
+template label (`FIELDS`): a field is present when a line `- **<label>:**`
+carries it, filled when its value is not a `<…>` placeholder; an explicit
+"n/a — <why>" counts, silence does not (scar 2026-08-13: two freely written
+protocols omitted "Type" and "Model I/O"; each omission caused a bad run).
 
 The checks, each stated as its current rule (the change history lives in the
 commits, Arbeitsstandard §3):
 
-  * **Placeholder detection.** A field whose value is a bare `<...>` is not
-    filled; severity follows the field (MUST -> failure, SHOULD -> warning).
-    Keyword presence alone once passed 28 protocols of which not one
-    contained an actual model input/output (2026-08-17).
+  * **Two tiers, one template.** MUST is the pilot minimum; SHOULD is what
+    a REPORTABLE run owes on top. `frozen = true` escalates every SHOULD
+    field to MUST: an unfrozen pilot's numbers stay pilot numbers — "Pilot
+    leicht, Bericht schwer" without a second template that would drift
+    (2026-08-18). `cost = "seconds"` owes its own marked cut and nothing
+    graduates, because nothing freezes (§2.A14).
   * **Template-line detection.** Any line still identical to a line of the
-    template is instruction, not content. Needs `--template PATH` (or the
-    template sitting next to this script).
-  * **Verbatim-block check.** A protocol that mentions a prompt but contains
-    no fenced code block almost certainly paraphrases it — a MUST failure:
-    the verbatim prompt and one real example with the model's output are the
-    one thing a protocol exists for. Protocols that never mention a prompt
-    (no model involved) are untouched; the example itself is the "Raw
-    output" MUST field — a link into output/ or an "n/a — <why>" satisfies
-    it, silence does not.
-  * **Two tiers, one template.** MUST is the pilot minimum (question,
-    success, admissibility, type, prompt/IO, null condition); SHOULD is what a
-    REPORTABLE run owes on top (rivals, scope, prognosis, yield, knobs,
-    result). The graduation gate is mechanical: **`Frozen before run: yes`
-    escalates every SHOULD field to MUST.** Claiming confirmatory status is
-    claiming the full protocol; an unfrozen pilot's numbers stay pilot
-    numbers — "Pilot leicht, Bericht schwer" without a second template that
-    would drift (2026-08-18).
-  * **Terms are a MUST field.** The template asks for them twice — "Terms of
-    this protocol" in the opening block, "Clarified terms" after the dry run
-    — and one keyword entry covers both. What the check enforces is the
-    *moment of naming*: the definition notes existed, the declaration in the
-    protocol was the one thing nothing forced (2026-08-19). Terms sit first
-    in MUST because they precede the question they are asked in (CLAUDE.md
-    6: Begriff vor Gebrauch).
+    template is instruction, not content.
+  * **Verbatim-block check.** A protocol with a Prompt field but no fenced
+    example block paraphrases its prompt — a MUST failure; so is `frozen =
+    true` without a single rendered example.
   * **A measure run demands a written result.** A documented run_id that
     is not a prepare/probe line makes empty `Answer to the question` / `Raw
-    output` fields (or a missing Result section) a MUST failure — pilot
-    suppression does not apply, because the context that explains the
-    numbers dies with the session (2026-08-24).
-  * **Change-history prose is a warning.** The current rule belongs in the
-    text, the change and its why in the commit message (Arbeitsstandard §3).
-    Warning only — load-bearing translation tables (old names still in
-    runs.tsv) are legitimate (2026-08-24).
+    output` fields a MUST failure — the context that explains the numbers
+    dies with the session (2026-08-24).
+  * **Change-history prose is a warning** (Arbeitsstandard §3).
 
 Usage:
     protocol-check PROTOCOL-foo.md [more files or directories ...]
@@ -58,8 +37,7 @@ Usage:
 Directories are searched recursively for PROTOCOL-*.md. Exit code 1 if any
 MUST field is missing or unfilled in any file; SHOULD fields only warn.
 
-Forward-looking: apply to new protocols, do not retrofit old ones (same policy
-as runlog).
+Protocols with a prose head (Standard 0.16/0.17) are read by labkit 0.47.
 """
 
 import re
@@ -67,242 +45,286 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-try:
-    from labkit.repo import git_root, git_run
-except ImportError:  # vendored flat copies (student repos)
-    from repo import git_root, git_run  # type: ignore
-
-# The admissibility field (TODO 7): the outcome-neutral conditions that must
-# hold before any criterion verdict is issued — ids [A1]…. `abbruch`, `kill`
-# and `stop rule` are its earlier labels; they go with the other legacy
-# paths in one release (TODO 8).
-ADMISSIBILITY = r"admissib|zulassung|abbruch|kill|stop.?rule"
-
-# (field label, regex over the whole file)
-# Keywords match German AND English: the template's field labels are English
-# (2026-08-20), pre-existing protocols name their concepts in German, and
-# either language may fill a field — the checker accepts both.
-MUST = [
-    ("Terms (every label with a half-sentence gloss)",
-     r"begriff|terminolog|glossar|terms of"),
-    ("Question / hypothesis", r"hypothese|frage|question|hypothesis"),
-    ("Success criterion", r"erfolg|success"),
-    ("Admissibility condition", ADMISSIBILITY),
-    ("Type (exploratory / confirmatory)",
-     r"explorativ|konfirmatorisch|explorator|confirmator"),
-    ("Model I/O / prompt (verbatim)", r"modell-i/o|model i/o|prompt"),
-    ("Null condition / anchor / control",
-     r"nullbedingung|null.?condition|anker|anchor|placebo|swap|kontroll"),
-    # The one thing a protocol exists for: a real example with the model's
-    # actual output (embedded or linked). A metric without one is a number
-    # nobody can interpret later — the mechanism shows in the single case.
-    ("Raw output (one real example + model output)",
-     r"roh-output|roh-beispiel|roh-antwort|i/o-beispiel|raw.?output"),
-]
-# The `seconds` cut of the one template (2026-10-05): what a run that can be
-# repeated at will owes BEFORE its number counts — the registration (question,
-# criterion, admissibility condition), the instrument named (model, prompt, null
-# condition, unit) and the result cited. No freeze, no probe fields, no †
-# fields: those are owed at promotion. `lib exp --cost seconds` stamps exactly this.
-MUST_SECONDS = [
-    ("Question / hypothesis", r"hypothese|frage|question|hypothesis"),
-    ("Success criterion", r"erfolg|success"),
-    ("Admissibility condition", ADMISSIBILITY),
-    ("Type (exploratory / confirmatory / measurement)",
-     r"explorativ|konfirmatorisch|explorator|confirmator|measurement|messung"),
-    ("Cost tier", r"\bcost\b|kostenstufe"),
-    ("Terms (every label with a half-sentence gloss)",
-     r"begriff|terminolog|glossar|terms of"),
-    ("Data / scope", r"data\b|scope|daten|skopus|quelle"),
-    ("Unit (what one counted or judged thing is, and what is not)", r"\bunit\b|einheit"),
-    ("Exclusions / filters", r"exclusion|filter|ausschluss|ausschl[üu]sse"),
-    # Result and Raw output are stamped in the cut but owed AFTER the run —
-    # `finalize`'s open-fields station flags their placeholders then. Before
-    # the run they cannot exist, and the pre-run commit must pass the hook
-    # (2026-10-05: an agent fell back to --no-verify).
-]
-
-# Owed at seconds only when a model is in the loop — i.e. when the protocol
-# names a `Model / tool` (the `--model` cut stamps the field; a count has none).
-MUST_SECONDS_MODEL = [
-    ("Prompt (verbatim)", r"prompt"),
-    ("Null condition / anchor / control",
-     r"nullbedingung|null.?condition|anker|anchor|placebo|swap|kontroll"),
-]
-MODEL_FIELD = re.compile(r"^\s*[-*]?\s*\*{0,2}model / tool\*{0,2}\s*:\s*(.*)$", re.I | re.M)
-
-MUST_MEASUREMENT = [
-    ("Question", r"question|frage"),
-    ("Data / scope", r"data\b|scope|daten|skopus|quelle"),
-    ("Prior computation", r"prior computation|vorherige berechnung|vorberechnung"),
-    ("Method", r"method|methode|skript"),
-    ("Exclusions / filters", r"exclusion|filter|ausschluss|ausschl[üu]sse"),
-    ("Result", r"result|ergebnis"),
-    ("Terms", r"begriff|terminolog|glossar|terms[\s:]"),
-]
-
-SHOULD = [
-    # Missing in all five freely written protocols of Aug 2026, and the result
-    # section was systematically never written back — hence the two nudges.
-    ("Frozen before run (ja/yes | nein/no)", r"frozen|eingefroren"),
-    ("Result / outcome (write back after the run)",
-     r"ergebnis|ausgang|resultat|result|outcome"),
-    ("Meaning of the gold label", r"gold"),
-    ("Yield per stage", r"ausbeute|yield"),
-    ("Rival explanations / confounds", r"rival|konfund|confound"),
-    ("Error direction per confound",
-     r"fehlerrichtung|error.?direction|richtung der hypothese|zugunsten der hypothese"),
-    ("Scope (what is NOT measured)", r"skopus|nicht gemessen|out of scope"),
-    ("Free knobs + sensitivity", r"freie[nr]? kn|free knob|sensitivit|sweep"),
-    ("Prediction for the follow-up run", r"prognose|vorhersage|prediction"),
-    ("Instrument check (dry run before the pilot)",
-     r"instrumentenprobe|trockenlauf|rauchtest|instrument check|dry.?run"),
-    ("Context (self-contained)",
-     r"einordnung|vorgeschichte|selbsttragend|self.?contained"),
-]
-
-MUST_V015 = [
-    ("Exclusions / filters (what is dropped and why)",
-     r"exclusion|filter|ausschluss|ausschl[üu]sse"),
-]
-
-# Due from Standard 0.16 on, for experiments AND measurements: the protocol's
-# own identity. Nothing in a run said which protocol it belonged to, so in a
-# series area (PROTOCOL-s1-* ... PROTOCOL-s13-*) every automatic pairing of
-# protocol and run was a guess. The id is what a run binds to; the path is
-# only where it was found. Contract: docs/protocol-run-binding.md.
-MUST_V016 = [
-    ("Protocol id (stamped by `lib exp`, never typed)",
-     r"protocol id|protocol_id"),
-]
-
-# Due from Standard 0.17 on, measurements only: the counted unit (2026-10-05).
-# The one audit question no machine answers — `.DS_Store` counted as a
-# document moved a mean by a whole document while test and --check stayed
-# green. Said once, in words, in the protocol.
-MUST_MEASUREMENT_V017 = [
-    ("Unit (what one counted thing is, and what is not)", r"\bunit\b|einheit"),
-]
-
-# The shape the stamp produces: `p-` + 16 lowercase hex (64 bit). Not derived
-# from name or path, so renaming and moving leave it intact. The one home of
-# protocol identity: runlog and intent-check read it through
-# `protocol_identity`, never with a regex of their own (review 2026-10-06 —
-# three copies had already begun to treat a malformed id differently).
-PROTOCOL_ID = re.compile(r"protocol[ _]id[^:\n]*:\**\s*\**\s*(\S+)", re.I)
-PROTOCOL_ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
+from labkit import protocol_block
+from labkit.repo import git_root, git_run
 
 
 @dataclass(frozen=True)
-class ProtocolIdentity:
-    """A protocol's `Protocol id:` field, read once.
+class Field:
+    """One prose field of the template, held by its exact label.
 
-    `raw` is the value as written (None: field absent) — for the checker,
-    which must name a malformed value. `id` is the value only if it has the
-    stamped shape — for everything that BINDS (runlog, intent-check), where
-    a malformed id is no identity at all and the run counts as unbound.
+    `label` is the template's label without `†` and without the
+    parenthesised gloss (`Prompt (verbatim, per variant)` → `Prompt`).
+    `level`: must — owed by every pilot; should — owed by a reportable run,
+    a must once `frozen = true`; after — owed once a measure run is
+    documented (the run-unreported check), never before. `seconds`: owed in
+    the seconds cut — "s" always, "sm" when a `Model / tool` is named.
     """
-    raw: str | None
+    label: str
+    level: str
+    seconds: str = ""
+
+
+# The one home of what a protocol owes, by the template's exact labels — a
+# test holds every label to the template and the seconds cut to its
+# `<!-- s -->` markers. Keyword search over the whole file is gone: a word
+# anywhere satisfied a field (`prompt` in a sentence covered "Model I/O"),
+# and a narrow word failed a filled one (`**Terms:**` against `terms of`).
+FIELDS = (
+    # Terms first: they precede the question they are asked in (§5.5).
+    Field("Terms of this protocol", "must", "s"),
+    Field("Question / hypothesis", "must", "s"),
+    Field("Success / failure criterion", "must", "s"),
+    Field("Admissibility condition", "must", "s"),
+    Field("Model I/O", "must"),
+    Field("Prompt", "must", "sm"),
+    Field("Null condition / anchors", "must", "sm"),
+    Field("Exclusions / filters", "must", "s"),
+    Field("Data / scope", "other", "s"),
+    Field("Unit", "other", "s"),
+    Field("Model / tool", "other", "sm"),
+    # A reportable run owes these on top (2026-08-18, "pilot light, report
+    # heavy"): missing in all five freely written protocols of Aug 2026.
+    Field("Problem in one sentence", "should"),
+    Field("Meaning of the gold label", "should"),
+    Field("Yield per stage", "should"),
+    Field("Rival explanations", "should"),
+    Field("Out of scope", "should"),
+    Field("Free knobs", "should"),
+    Field("Prediction for the follow-up run", "should"),
+    Field("Instrument check", "should"),
+    # The resolution check (§2.A13): the criterion over synthetic extremes
+    # by the REAL evaluate(), before freezing.
+    Field("Resolution check", "should"),
+    Field("Gate labels", "should"),
+    Field("Randomness controls", "should"),
+    # Written after the run: before it they cannot exist.
+    Field("Answer to the question", "after", "s"),
+    Field("Raw output", "after", "s"),
+    Field("Analysis audit", "after", "s"),
+)
+
+#: a bold field label opening a line: `- **Label (gloss) †:** value`
+_FIELD_OPEN = re.compile(r"^\s*(?:[-*]\s+)?\*\*(?P<label>[^*]+?)(?::\*\*|\*\*\s*:)(?P<value>.*)$")
+_MARKER = re.compile(r"<!--.*?-->")
+
+
+def field_name(label: str) -> str:
+    """`Prompt (verbatim, per variant)` → `prompt`; `Free knobs †` → `free knobs`."""
+    return label.split("(")[0].replace("†", "").strip().casefold()
+
+
+@dataclass(frozen=True)
+class FieldLine:
+    line: int                       # 1-based line of the label
+    name: str                       # field_name() of the label
+    label: str                      # the label as written
+    value: str                      # first-line value, cut markers removed
 
     @property
-    def valid(self) -> bool:
-        return self.raw is not None and bool(PROTOCOL_ID_SHAPE.match(self.raw))
+    def placeholder(self) -> bool:
+        return self.value.startswith("<")
+
+
+def fields(text: str) -> list[FieldLine]:
+    """Every bold field label in the prose, outside code fences. A label may
+    wrap onto the next line (`- **Resolution check (ZERO calls, …\n
+    extremes):** <…>`); it is read whole."""
+    out: list[FieldLine] = []
+    lines = text.splitlines()
+    fence = False
+    for i, line in enumerate(lines):
+        if line.strip().startswith("```"):
+            fence = not fence
+            continue
+        if fence or "**" not in line:
+            continue
+        joined = line
+        if re.match(r"^\s*(?:[-*]\s+)?\*\*", line) and ":**" not in line and i + 1 < len(lines):
+            joined = line + " " + lines[i + 1].strip()
+        m = _FIELD_OPEN.match(joined)
+        if not m:
+            continue
+        label = " ".join(m.group("label").split())
+        value = _MARKER.sub("", m.group("value")).strip()
+        out.append(FieldLine(line=i + 1, name=field_name(label), label=label, value=value))
+    return out
+
+
+def placeholder_fields(text: str) -> list[tuple[int, str]]:
+    """(line number, label) for every field whose value is still a placeholder."""
+    return [(f.line, f.label) for f in fields(text) if f.placeholder]
+
+
+@dataclass(frozen=True)
+class FieldReport:
+    """What one protocol owes and lacks. `head_error` set means the head
+    could not be read — every other list is then empty."""
+    head: protocol_block.Head | None
+    head_error: str | None
+    missing_must: list[str]
+    missing_should: list[str]
+    must_holes: list[tuple[int, str]]
+    soft_holes: list[tuple[int, str]]
 
     @property
-    def id(self) -> str | None:
-        return self.raw if self.valid else None
+    def frozen(self) -> bool:
+        return bool(self.head and self.head.frozen)
 
 
-def protocol_identity(text: str) -> ProtocolIdentity:
-    """Parse the `Protocol id:` field of a protocol text."""
-    m = PROTOCOL_ID.search(text)
-    return ProtocolIdentity(raw=m.group(1).strip().strip("`*") if m else None)
-
-# Fields that are only DUE once the template stamps them (2026-09-08). The two
-# audit gates — code vs. intent before freezing (§2.A12) and the evaluation
-# against the frozen criterion before a number is reported (§2.D11) — are
-# enforced through the placeholder mechanism alone: a stamped-but-unfilled
-# field is a should-gap, and the graduation gate below turns it into a MUST
-# failure at "frozen: yes". They are deliberately NOT in SHOULD, because
-# check_text() would then fail every protocol written before the gates
-# existed — retrofitting a closed registration buys nothing.
-SHOULD_IF_PRESENT = [
-    ("Preflight audit (code vs. intent, before freezing)",
-     r"preflight|producer-audit|code.?audit"),
-    ("Analysis audit (evaluation vs. frozen criterion)",
-     r"analysis.?audit|auswertungs-audit"),
-    # The resolution check (§2.A13, 2026-09-09): the registered criterion run
-    # over synthetic extremes — perfect effect must fire, null effect must
-    # stay silent — by the REAL evaluate(), before freezing. Third repeat of
-    # the same scar (63 anchor gate, 65 compliance floor, 66 permutation
-    # floor: 8 hits on 8 draws p=0.0002, the same 8 on 4 draws p=0.0769).
-    # Pattern deliberately narrow: the template's "Answer form + resolution"
-    # field must NOT be caught by it.
-    ("Resolution check (criterion at synthetic extremes)",
-     r"resolution.?check|aufl(ö|oe)sungsprobe"),
-    ("Gate labels (expected)",
-     r"gate.?label|gate.?etikett"),
-    ("Randomness controls",
-     r"randomness|zufall|seeds?\b.*\b(run|temperature|temp)|temperature.*(seed|run)"),
-    # The cost tier (2026-10-05): seconds | minutes | hours. It decides how
-    # much audit a run gets (§2.A14); a stamped-but-unfilled tier is a gap,
-    # a protocol from before the field is not.
-    ("Cost tier (seconds / minutes / hours)",
-     r"\bcost\b|kostenstufe"),
-]
-
-#: The three tiers of `Cost:`; anything else in the field is a placeholder
-#: or a typo, and `cost_tier_of` returns None for both.
-COST_TIERS = ("seconds", "minutes", "hours")
-COST_TIER = re.compile(r"\bcost\b[^:\n]*:\**\s*\**\s*(seconds|minutes|hours)\b", re.I)
-
-# "Frozen before run: yes" without a single rendered example is a frozen
-# registration on an unchecked instrument — it freezes the error in. On
-# 2026-08-17 a 12-call dry run found the prompt asking for ENTAILMENT while
-# the gold label means DEGREE OF SUPPORT; a 9-call dry run saved 440 calls.
-# Neither would have happened in a "frozen" protocol without an I/O example.
-FROZEN_YES = re.compile(r"frozen before run[^:\n]*:\**\s*\**\s*(ja|yes)\b", re.I)
-
-STANDARD_VERSION = re.compile(r"standard[^:\n]*:\**\s*\**\s*(\d+\.\d+)\b", re.I)
-DEFAULT_STANDARD = "0.13"
-
-# The highest `Standard: <x.y>` these gates implement. A protocol declaring a
-# newer standard was written against gates this code does not know — checking
-# it anyway produces false findings, not fewer findings (2026-09-14: a
-# pre-0.15 checker flagged the 0.15 template's own stamped preamble as
-# "verbatim template text" all session long). Too old to judge is a hard
-# failure that says so, never a best effort.
-SUPPORTED_STANDARD = "0.17"
+def _model_named(found: dict[str, list[FieldLine]]) -> bool:
+    for f in found.get("model / tool", []):
+        if f.value and not f.placeholder and not f.value.lower().startswith("n/a"):
+            return True
+    return False
 
 
-def _std(standard: str) -> tuple[int, ...]:
-    """Standard version as a comparable tuple — string comparison would put
-    "0.9" above "0.15" and misapply every versioned gate."""
-    return tuple(int(p) for p in standard.split("."))
+def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]]:
+    """(must, should) fields this protocol owes, by its cut and freeze.
 
-TYPE_MEASUREMENT = re.compile(
-    r"^\s*[-*]?\s*\*{0,2}typ[e]?[^:\n]*:\*{0,2}\s*\*{0,2}\s*measurement\s*$|"
-    r"^\s*[-*]?\s*\*{0,2}typ[^:\n]*:\*{0,2}\s*\*{0,2}\s*messung\s*$", re.I | re.M)
+    The seconds cut owes its marked fields and nothing graduates — nothing
+    freezes (§2.A14). The full form owes every must; `frozen = true` turns
+    every should into a must (the graduation gate, in ONE place)."""
+    found: dict[str, list[FieldLine]] = {}
+    for f in fields(text):
+        found.setdefault(f.name, []).append(f)
+    if head.cost == "seconds":
+        model = _model_named(found)
+        must = [f for f in FIELDS if f.level != "after"
+                and (f.seconds == "s" or (f.seconds == "sm" and model))]
+        return must, []
+    must = [f for f in FIELDS if f.level == "must"]
+    should = [f for f in FIELDS if f.level == "should"]
+    if head.frozen:
+        return must + should, []
+    return must, should
 
-# The mirror image of the graduation gate: a protocol that explicitly declares
-# `Frozen before run: nein` is a pilot BY DECLARATION. Its missing SHOULD
-# fields are not gaps but fields that are not yet due — listing them one by
-# one trains the reader to ignore the checker. One summary line instead.
-FROZEN_NO = re.compile(r"frozen before run[^:\n]*:\**\s*\**\s*(nein|no)\b", re.I)
+
+def check_fields(text: str) -> FieldReport:
+    """The field findings of one protocol: head, missing fields, placeholders."""
+    try:
+        head = protocol_block.head(text)
+    except protocol_block.BlockError as exc:
+        return FieldReport(None, str(exc), [], [], [], [])
+    must, should = owed(text, head)
+    present = {f.name for f in fields(text)}
+    missing_must = [f.label for f in must if f.label.casefold() not in present]
+    missing_should = [f.label for f in should if f.label.casefold() not in present]
+    missing_must += [f"[protocol] {name}" for name in head.placeholders]
+    # Frozen means audited first (§2.A12); at seconds nothing freezes.
+    if head.frozen and head.cost != "seconds" and not head.preflight_audit:
+        missing_must.append("[protocol] preflight_audit (frozen = true without the audit line)")
+    must_names = {f.label.casefold() for f in must}
+    must_holes, soft_holes = [], []
+    for f in fields(text):
+        if not f.placeholder:
+            continue
+        (must_holes if f.name in must_names else soft_holes).append((f.line, f.label))
+    return FieldReport(head, None, missing_must, missing_should, must_holes, soft_holes)
+
+
+def intent_missing(text: str) -> list[str]:
+    """The registration a run of seconds owes before its number counts:
+    question, criterion and admissibility condition written (not a
+    placeholder) and the cost declared. Returns what is missing — empty
+    means the gate is open (§2.A1)."""
+    written = {f.name for f in fields(text) if f.value and not f.placeholder}
+    missing = [label for label in ("Question / hypothesis", "Success / failure criterion",
+                                   "Admissibility condition")
+               if label.casefold() not in written]
+    try:
+        cost = protocol_block.head(text).cost
+    except protocol_block.BlockError:
+        cost = None
+    return missing + ([] if cost else ["[protocol] cost"])
+
+
+_ID_INDEX: dict[Path, dict[str, list[Path]]] = {}
+
+
+def _id_of(text: str) -> str | None:
+    """The head's id, None when the head is missing, malformed or unstamped."""
+    try:
+        return protocol_block.head(text).id
+    except protocol_block.BlockError:
+        return None
+
+
+def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
+    """Every protocol id in the repo, mapped to the files carrying it.
+
+    Uniqueness cannot be settled at the stamp alone: copying a protocol or
+    editing the id by hand makes a duplicate long after `lib exp` ran, and
+    two protocols with one id bind their runs to the same thing.
+    """
+    root = git_root(start)
+    if root is None:
+        return {}
+    if root not in _ID_INDEX:
+        index: dict[str, list[Path]] = {}
+        for f in sorted(root.rglob("PROTOCOL-*.md")):
+            try:
+                pid = _id_of(f.read_text(encoding="utf-8"))
+            except OSError:
+                continue
+            if pid:
+                index.setdefault(pid, []).append(f)
+        _ID_INDEX[root] = index
+    return _ID_INDEX[root]
+
+
+def id_in_head(path: Path) -> str | None:
+    """The id the committed version of this file carries — None when the file
+    is new, git is absent, or the call fails. Never a proof of immutability:
+    after the next commit a changed id IS the state. It catches the edit
+    while it is still in the working tree."""
+    root = git_root(path)
+    if root is None:
+        return None
+    rel = path.resolve().relative_to(root)
+    r = git_run(["show", f"HEAD:{rel}"], root)
+    return _id_of(r.stdout) if r.returncode == 0 else None
+
+
+def check_protocol_id(path: Path, head: protocol_block.Head) -> list[str]:
+    """Uniqueness and working-tree divergence of the protocol id; its shape
+    is the head parser's job, an unstamped id a must placeholder."""
+    if head.id is None:
+        return []
+    out = []
+    others = [q for q in repo_protocol_ids(path).get(head.id, [])
+              if q.resolve() != path.resolve()]
+    if others:
+        out.append(f"{path}: DUPLICATE protocol id {head.id} — also carried by "
+                   + ", ".join(str(q) for q in others)
+                   + ". An id binds runs to ONE protocol; re-stamp the copy.")
+    was = id_in_head(path)
+    if was and was != head.id:
+        out.append(f"{path}: WARNING: protocol id changed against HEAD "
+                   f"({was} -> {head.id}) — runs bound to the old id stop "
+                   f"resolving.")
+    return out
+
 
 # runlog run ids as they appear in the run index: 2026-08-23T20-37-21_afbe. A
 # line carrying one that is NOT data preparation or a throwaway probe is a
 # measure run — from then on an empty Result is a MUST gap, pilot or not.
 RUN_ID = re.compile(r"\b\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_[0-9a-f]{2,12}\b")
 SETUP_RUN = re.compile(r"prepare|probe|wegwerf|trockenlauf|dry.?run", re.I)
-# A labelled Result field whose value is nothing but (em-)dashes. A bare
-# "Label:" at end of line is NOT empty — multi-line values start on the next
-# line (the 25er protocol writes them that way; first version false-alarmed).
-EMPTY_ANSWER = re.compile(
-    r"(?im)^\s*[-*]?\s*\*{0,2}(answer to the question|antwort auf die frage)"
-    r"[^:\n]*:\**\s*[—–-]+\s*$")
-EMPTY_RAW = re.compile(
-    r"(?im)^\s*[-*]?\s*\*{0,2}(raw output|roh-output)[^:\n]*:\**\s*[—–-]+\s*$")
+#: the fields a documented measure run makes due; empty is a placeholder or
+#: nothing but dashes. A bare "Label:" at end of line is NOT empty —
+#: multi-line values start on the next line (the 25er protocol writes them
+#: that way; the first version false-alarmed).
+RESULT_FIELDS = ("answer to the question", "raw output")
+_DASHES = re.compile(r"^[—–-]+$")
+
+
+def unreported(text: str) -> list[str]:
+    """The result fields still missing, a placeholder or only dashes."""
+    found = {f.name: f for f in fields(text)}
+    return [name for name in RESULT_FIELDS
+            if name not in found or found[name].placeholder
+            or _DASHES.match(found[name].value)]
 # A follow-up registration appended to the SAME protocol — the pattern that
 # grew one file to 649 lines out of three experiments ("Lauf B — ...
 # (deklariert vor dem Lauf)", "Stufe 2 ..."): each such heading is a second
@@ -331,7 +353,7 @@ CHANGELOG = re.compile(
 # everything (a warning that fires on every file is background noise).
 # Calibration 2026-09-15, 94 protocols with an Intent section across
 # ~/projects + ~/work: Intent median 25, Q3 38 — but confirmatory protocols
-# (n=59) sit at median 30, because the [K/S/W/N] intent ids moved mandatory
+# (n=59) sit at median 30, because the intent ids moved mandatory
 # registrations INTO Intent; the disciplined confirmatory cluster tops out
 # at 35 prose lines, so the budget sits at that ceiling and still flags the
 # top quarter. Setup as before (median 42, top quartile above 54; only 556
@@ -371,23 +393,6 @@ def oversized_sections(text: str) -> list[tuple[str, int, int]]:
             if counts.get(lb, 0) > lim]
 
 
-# `- **Feld:** <noch nicht ausgefuellt>` — a label followed by a bare
-# placeholder. `<offen ...>` and `<TODO ...>` count too: they are honest, but
-# they are still not a filled field, and the point of the check is to make the
-# gap visible rather than to reward the wording.
-PLACEHOLDER = re.compile(r"^\s*[-*]?\s*\*{0,2}([^*<>:]{2,60}?)\*{0,2}\s*:\*{0,2}\s*<[^>]*>?\s*$")
-
-
-def placeholder_fields(text: str) -> list[tuple[int, str]]:
-    """(line number, label) for every field whose value is still a placeholder."""
-    out = []
-    for n, line in enumerate(text.splitlines(), 1):
-        m = PLACEHOLDER.match(line)
-        if m:
-            out.append((n, m.group(1).strip()))
-    return out
-
-
 def template_lines(path: Path | None) -> set[str]:
     """Instruction lines of the template, normalised for comparison.
 
@@ -419,237 +424,44 @@ def find_template(explicit: str | None) -> Path | None:
     return here if here.exists() else None
 
 
-def print_contract() -> None:
-    """The checker's contract in one screen (2026-10-05: two cold agents
-    learnt the budgets from the pre-commit hook and the field words from
-    the checker's source, four rewrite rounds each)."""
-    print("prose-line budget per section (code blocks, table rows exempt; "
-          "a MUST once frozen from Standard 0.14):")
-    for label, _, limit in SECTION_BUDGET:
-        print(f"  {label:<9} {limit}")
-    print("\nfields and the words they are recognised by (regex over the whole "
-          "file, case-insensitive; `n/a — <why>` counts as filled):")
-    groups = [("MUST (pilot and report)", MUST), ("MUST from Standard 0.15", MUST_V015),
-              ("MUST from Standard 0.16", MUST_V016), ("SHOULD (MUST once frozen)", SHOULD),
-              ("SHOULD if the template stamped them", SHOULD_IF_PRESENT),
-              ("MUST at Cost seconds (the quick cut; no SHOULD, nothing freezes)", MUST_SECONDS),
-              ("MUST at Cost seconds when `Model / tool` is named", MUST_SECONDS_MODEL),
-              ("MUST, measurement short form (legacy, Type: measurement)", MUST_MEASUREMENT),
-              ("MUST, measurement from Standard 0.17", MUST_MEASUREMENT_V017)]
-    for title, fields in groups:
-        print(f"\n  {title}")
-        for label, pat in fields:
-            print(f"    {label:<58} {pat}")
-    print("\nfrozen: `Frozen before run: yes` graduates every SHOULD to MUST and "
-          "turns a stamped placeholder into a failure.")
-
-
 def find_field_guide() -> Path | None:
     here = Path(__file__).resolve().parent / "protocol-field-guide.md"
     return here if here.exists() else None
 
 
-def severity_of(label: str) -> str:
-    """Does this placeholder sit in a MUST field, a SHOULD field, or neither?"""
-    low = label.lower()
-    for _, pat in MUST + MUST_V015 + MUST_V016:
-        if re.search(pat, low):
-            return "must"
-    for _, pat in SHOULD + SHOULD_IF_PRESENT:
-        if re.search(pat, low):
-            return "should"
-    return "other"
+def print_contract() -> None:
+    """The checker's contract in one screen (2026-10-05: two cold agents
+    learnt the budgets from the pre-commit hook and the field words from
+    the checker's source, four rewrite rounds each)."""
+    print("head: the ```toml block's [protocol] table — "
+          + ", ".join(("standard", "id", "type", "cost", "frozen", "preflight_audit"))
+          + f"; standard = {protocol_block.STANDARD!r}, type one of "
+          + ", ".join(protocol_block.TYPES) + ", cost one of "
+          + ", ".join(protocol_block.COST_TIERS) + ".")
+    print("\nprose-line budget per section (code blocks, table rows exempt; "
+          "a MUST once frozen):")
+    for label, _, limit in SECTION_BUDGET:
+        print(f"  {label:<9} {limit}")
+    print("\nfields, by their exact template label (`- **<label>:** <value>`; a "
+          "parenthesised gloss and † may follow the label; `n/a — <why>` counts "
+          "as filled):")
+    for level, title in (("must", "MUST (every pilot)"),
+                         ("should", "SHOULD (MUST once frozen = true)"),
+                         ("after", "after the run (owed once a measure run is documented)")):
+        print(f"\n  {title}")
+        for f in FIELDS:
+            if f.level == level:
+                print(f"    {f.label}")
+    print("\n  at cost = \"seconds\" (nothing freezes, no SHOULD): "
+          + ", ".join(f.label for f in FIELDS if f.seconds == "s" and f.level != "after")
+          + "; with a `Model / tool` also "
+          + ", ".join(f.label for f in FIELDS if f.seconds == "sm"))
 
 
-def check_text(text: str, *, measurement: bool = False,
-               standard: str = DEFAULT_STANDARD,
-               ) -> tuple[list[str], list[str]]:
-    """Return (missing_must, missing_should) field labels for one protocol."""
-    low = text.lower()
-    # Protocol id (Standard 0.16): the old regex check (`protocol id` found
-    # anywhere in the text) was satisfiable by prose like "Protocol id will
-    # be added later". The structural test — protocol_id_of() finding a
-    # value in field syntax — is what the binding actually depends on.
-    v016 = []
-    if _std(standard) >= (0, 16) and protocol_id_of(text) is None:
-        v016 = [label for label, _ in MUST_V016]
-    if measurement:
-        missing_must = [label for label, pat in MUST_MEASUREMENT
-                        if not re.search(pat, low)]
-        if _std(standard) >= (0, 17):
-            missing_must += [label for label, pat in MUST_MEASUREMENT_V017
-                             if not re.search(pat, low)]
-        return missing_must + v016, []
-    if cost_tier_of(text) == "seconds":
-        # The seconds cut: its own must list, no should list — nothing
-        # graduates, because nothing freezes (§2.A14, 2026-10-05).
-        missing_must = [label for label, pat in MUST_SECONDS if not re.search(pat, low)]
-        model = MODEL_FIELD.search(text)
-        if model and model.group(1).strip() and not model.group(1).strip().lower().startswith("n/a"):
-            missing_must += [label for label, pat in MUST_SECONDS_MODEL if not re.search(pat, low)]
-        return missing_must + v016, []
-    missing_must = [label for label, pat in MUST if not re.search(pat, low)]
-    if _std(standard) >= (0, 15):
-        missing_must += [label for label, pat in MUST_V015
-                         if not re.search(pat, low)]
-    missing_must += v016
-    missing_should = [label for label, pat in SHOULD if not re.search(pat, low)]
-    return missing_must, missing_should
-
-
-def graduate(text: str, missing_must: list[str], missing_should: list[str],
-             holes: list[tuple[int, str]],
-             ) -> tuple[bool, list[str], list[str], list[tuple[int, str]],
-                        list[tuple[int, str]]]:
-    """The graduation gate, in ONE place: `Frozen before run: yes` turns
-    every should-gap and should-placeholder into a must.
-
-    Returns (frozen, missing_must, missing_should, must_holes, soft_holes).
-    Until 2026-10-05 this lived inline in main(); preflight re-derived the
-    severities without it and passed a frozen protocol with eleven should
-    gaps that protocol-check failed — two homes, one of them blind to the
-    freeze.
-    """
-    frozen = bool(FROZEN_YES.search(text))
-    must_holes = [(n, lb) for n, lb in holes
-                  if severity_of(lb) == "must"
-                  or (frozen and severity_of(lb) == "should")]
-    soft_holes = [(n, lb) for n, lb in holes if (n, lb) not in must_holes]
-    if frozen:
-        missing_must = missing_must + [f"{lb} (must once frozen: yes)"
-                                       for lb in missing_should]
-        missing_should = []
-    return frozen, missing_must, missing_should, must_holes, soft_holes
-
-
-def cost_tier_of(text: str) -> str | None:
-    """The `Cost:` tier (`seconds` | `minutes` | `hours`), or None when the
-    field is absent or still a placeholder — a pre-0.17 protocol has none."""
-    m = COST_TIER.search(text)
-    return m.group(1).lower() if m else None
-
-
-#: A field line split into label and value — the value may be empty.
-FIELD_LINE = re.compile(r"^\s*[-*]?\s*\*{0,2}([^*<>:]{2,60}?)\*{0,2}\s*:\*{0,2}\s*(.*?)\s*$")
-SUCCESS_LABEL = re.compile(r"erfolg|success", re.I)
-
-
-INTENT_LABELS = (("question", re.compile(r"hypothese|frage|question|hypothesis", re.I)),
-                 ("criterion", re.compile(r"erfolg|success", re.I)),
-                 ("admissibility condition", re.compile(ADMISSIBILITY, re.I)),
-                 ("cost", re.compile(r"\bcost\b|kostenstufe", re.I)))
-
-
-def intent_missing(text: str) -> list[str]:
-    """The registration a run of seconds owes before its number counts:
-    question, criterion, admissibility condition and cost, each a written field (not a
-    placeholder). Returns what is missing — empty means the gate is open
-    (§2.A1 minimal registration; 2026-10-05 the gate asked for the
-    criterion alone)."""
-    written: set[str] = set()
-    for line in text.splitlines():
-        m = FIELD_LINE.match(line)
-        if not m:
-            continue
-        value = m.group(2)
-        if not value or value.startswith("<"):
-            continue
-        for name, pat in INTENT_LABELS:
-            if pat.search(m.group(1)):
-                written.add(name)
-    return [name for name, _ in INTENT_LABELS if name not in written]
-
-
-def criterion_present(text: str) -> bool:
-    """True when the success/failure criterion is a written field: a line
-    whose label names it and whose value is neither empty nor a `<…>`
-    placeholder. At `Cost: seconds` this is what a full run needs instead
-    of the freeze (§2.A14, 2026-10-05): the criterion is registered once,
-    the instrument may change after it, the run is re-fired."""
-    for line in text.splitlines():
-        m = FIELD_LINE.match(line)
-        if not m or not SUCCESS_LABEL.search(m.group(1)):
-            continue
-        value = m.group(2)
-        if value and not value.startswith("<"):
-            return True
-    return False
-
-
-def protocol_id_of(text: str) -> str | None:
-    """The `Protocol id:` value AS WRITTEN, or None if the field is absent.
-
-    Unvalidated on purpose — the checker reports a malformed value. Binding
-    code wants `protocol_identity(text).id` instead.
-    """
-    return protocol_identity(text).raw
-
-
-_ID_INDEX: dict[Path, dict[str, list[Path]]] = {}
-
-
-def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
-    """Every protocol id in the repo, mapped to the files carrying it.
-
-    Uniqueness cannot be settled at the stamp alone: copying a protocol or
-    editing the line by hand makes a duplicate long after `lib exp` ran, and
-    two protocols with one id bind their runs to the same thing.
-    """
-    root = git_root(start)
-    if root is None:
-        return {}
-    if root not in _ID_INDEX:
-        index: dict[str, list[Path]] = {}
-        for f in sorted(root.rglob("PROTOCOL-*.md")):
-            try:
-                pid = protocol_id_of(f.read_text(encoding="utf-8"))
-            except OSError:
-                continue
-            if pid:
-                index.setdefault(pid, []).append(f)
-        _ID_INDEX[root] = index
-    return _ID_INDEX[root]
-
-
-def id_in_head(path: Path) -> str | None:
-    """The id the committed version of this file carries — None when the file
-    is new, git is absent, or the call fails. Never a proof of immutability:
-    after the next commit a changed id IS the state. It catches the edit
-    while it is still in the working tree."""
-    root = git_root(path)
-    if root is None:
-        return None
-    rel = path.resolve().relative_to(root)
-    r = git_run(["show", f"HEAD:{rel}"], root)
-    return protocol_id_of(r.stdout) if r.returncode == 0 else None
-
-
-def check_protocol_id(path: Path, text: str, standard: str) -> list[str]:
-    """Shape, uniqueness and working-tree divergence of the protocol id.
-
-    A missing field is not reported here — MUST_V016 already does that.
-    """
-    if _std(standard) < (0, 16):
-        return []
-    pid = protocol_id_of(text)
-    if pid is None:
-        return []
-    if not protocol_identity(text).valid:
-        return [f"{path}: MALFORMED protocol id {pid!r} — expected `p-` plus "
-                f"16 lowercase hex digits, stamped by `lib exp`."]
-    out = []
-    others = [q for q in repo_protocol_ids(path).get(pid, [])
-              if q.resolve() != path.resolve()]
-    if others:
-        out.append(f"{path}: DUPLICATE protocol id {pid} — also carried by "
-                   + ", ".join(str(q) for q in others)
-                   + ". An id binds runs to ONE protocol; re-stamp the copy.")
-    was = id_in_head(path)
-    if was and was != pid:
-        out.append(f"{path}: WARNING: protocol id changed against HEAD "
-                   f"({was} -> {pid}) — runs bound to the old id stop "
-                   f"resolving.")
-    return out
+def code_blocks(text: str) -> int:
+    """Fenced blocks other than the TOML head block — the rendered examples."""
+    fences = re.findall(r"^\s*```(\w*)", text, re.M)
+    return len(fences) // 2 - fences.count("toml")
 
 
 def collect(paths: list[str]) -> list[Path]:
@@ -705,58 +517,23 @@ def main(argv: list[str]) -> int:
             failed = True
             continue
 
-        std_m = STANDARD_VERSION.search(text)
-        standard = std_m.group(1) if std_m else DEFAULT_STANDARD
-        if _std(standard) > _std(SUPPORTED_STANDARD):
-            print(f"{f}: CHECKER TOO OLD: protocol declares Standard: "
-                  f"{standard}, this checker implements up to "
-                  f"{SUPPORTED_STANDARD} — upgrade labkit. No other findings "
-                  f"on this file: they would be noise, not judgement.")
+        report = check_fields(text)
+        if report.head is None:
+            print(f"{f}: HEAD (must): {report.head_error}")
             failed = True
             continue
-
-        for finding in check_protocol_id(f, text, standard):
+        for finding in check_protocol_id(f, report.head):
             print(finding)
             if "WARNING" not in finding:
                 failed = True
-
-        is_measurement = bool(TYPE_MEASUREMENT.search(text))
-        missing_must, missing_should = check_text(
-            text, measurement=is_measurement, standard=standard)
-        # Mis-declaration: measurement + model prompt is a type error.
-        has_block = "```" in text
-        misdeclared = (is_measurement and has_block
-                       and re.search(r"prompt", text.lower()))
-        if misdeclared:
-            missing_must.append(
-                "MISDECLARED: protocol carries a model prompt but declares "
-                "Type: measurement — change to exploratory/confirmatory")
-
-        if is_measurement:
-            holes = placeholder_fields(text)
-            must_holes = [(n, lb) for n, lb in holes
-                          if any(re.search(pat, lb.lower())
-                                 for _, pat in MUST_MEASUREMENT)]
-            clean = not (missing_must or must_holes)
-            if clean:
-                print(f"{f}: OK — measurement, all fields filled")
-                continue
-            for label in missing_must:
-                print(f"{f}: MISSING (must): {label}")
-            for n, label in must_holes:
-                print(f"{f}:{n}: PLACEHOLDER ONLY (must): {label}")
-            failed = True
-            print(f"{f}: must fields missing or empty — fill them in, or "
-                  f"justify as 'n/a — <why>'.")
-            continue
-
-        holes = placeholder_fields(text)
-        frozen, missing_must, missing_should, must_holes, soft_holes = graduate(
-            text, missing_must, missing_should, holes)
-        budget_must = frozen and _std(standard) >= (0, 14)
+        frozen = report.frozen
+        missing_must, missing_should = report.missing_must, report.missing_should
+        must_holes, soft_holes = report.must_holes, report.soft_holes
+        holes = must_holes + soft_holes
+        examples = code_blocks(text)
         pilot_note = ""
-        if not frozen and FROZEN_NO.search(text) and missing_should:
-            pilot_note = (f"pilot (frozen: no) — {len(missing_should)} "
+        if not frozen and missing_should:
+            pilot_note = (f"pilot (frozen = false) — {len(missing_should)} "
                           f"should-field(s) due only at report time "
                           f"(append them: lib exp <name> --report)")
             missing_should = []
@@ -764,9 +541,10 @@ def main(argv: list[str]) -> int:
         # "mentions a prompt" means a Prompt FIELD, not the word: the stamped
         # legend says "prompt" in every protocol, and a count protocol cut
         # without the field was blocked for it (2026-10-05).
-        no_block = not has_block and bool(re.search(
-            r"^\s*(?:[-*]\s*)?\*{0,2}prompt\b[^\n]*:\*{0,2}\s*(?!n/a)\S", text, re.I | re.M))
-        frozen_without_io = bool(FROZEN_YES.search(text)) and not has_block
+        no_block = not examples and any(
+            f.name == "prompt" and not f.value.lower().startswith("n/a")
+            for f in fields(text))
+        frozen_without_io = frozen and not examples
         # A protocol is a registration, not a lab journal. By 2026-08-20 one
         # had grown to 646 lines because every re-freeze APPENDED its
         # narrative instead of replacing it — presence was checked, length
@@ -795,9 +573,7 @@ def main(argv: list[str]) -> int:
         # gap — pilot suppression does not apply (write back, don't go quiet).
         measured = [(n, m.group(0)) for n, ln in enumerate(text.splitlines(), 1)
                     if (m := RUN_ID.search(ln)) and not SETUP_RUN.search(ln)]
-        run_unreported = bool(measured) and (
-            bool(EMPTY_ANSWER.search(text)) or bool(EMPTY_RAW.search(text))
-            or not re.search(r"ergebnis|resultat|result|outcome", text.lower()))
+        run_unreported = bool(measured) and bool(unreported(text))
         history = [(n, ln.strip()) for n, ln in enumerate(text.splitlines(), 1)
                    if CHANGELOG.search(ln)]
 
@@ -830,17 +606,17 @@ def main(argv: list[str]) -> int:
                   f"block — a verbatim prompt belongs in ``` ```, anything else "
                   f"is a paraphrase.")
         if frozen_without_io:
-            print(f"{f}: MISSING (must): 'Frozen before run: yes', but not a "
+            print(f"{f}: MISSING (must): `frozen = true`, but not a "
                   f"single rendered example (code block). Instrument check "
                   f"first, then freeze — otherwise the error freezes in.")
         if too_long:
-            sev = "OVERSIZED (must)" if budget_must else "oversized"
+            sev = "OVERSIZED (must)" if frozen else "oversized"
             print(f"{f}: {sev}: {n_lines} prose lines (tables/code excluded) "
                   f"— a protocol is a registration, not a lab journal. "
                   f"Narratives (freeze history, diagnoses) belong in commit "
                   f"messages or a note; ONE sentence per freeze stays here.")
         for lb, n, lim in big:
-            sev = "OVERSIZED (must)" if budget_must else "oversized"
+            sev = "OVERSIZED (must)" if frozen else "oversized"
             print(f"{f}: {sev}: section '{lb}': {n} prose lines (budget "
                   f"{lim}) — one field is one line; if a justification needs "
                   f"more, it goes into a note and the [[wikilink]] stays "
@@ -859,7 +635,7 @@ def main(argv: list[str]) -> int:
                   f"carry the current state, the why of the change goes in the "
                   f"commit message (Arbeitsstandard §3).")
         if (missing_must or must_holes or frozen_without_io or no_block
-                or run_unreported or (budget_must and (too_long or big))):
+                or run_unreported or (frozen and (too_long or big))):
             failed = True
             print(f"{f}: must fields missing or empty — fill them in, or "
                   f"justify as 'n/a — <why>' (the reason must be there, not "

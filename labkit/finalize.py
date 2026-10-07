@@ -12,12 +12,12 @@ What it runs, in order:
   2. intent-check   every registered promise has a metrics key (and vice versa)
   2b. scopes        every declared promise scope unchanged since the run
   3. open fields    protocol fields still holding a placeholder
-  5. criterion n    every `c<i>_n` (legacy `k<i>_n`) key in metrics.json equals some input
+  5. criterion n    every `c<i>_n` key in metrics.json equals some input
                     count the run recorded (rows of a data= file, lines of
                     an output) — a warning, not a blocker, until the false
                     alarm rate is known (2026-10-05; the denominator class
                     was 31 of 171 audit findings)
-  4. provenance     at `Cost: seconds` / the measurement short form: the
+  4. provenance     at `cost = "seconds"`: the
                     run froze its source (`data=` in config.json) and every
                     source and output file is tracked in git — the two of
                     the three questions the agent audit kept asking that a
@@ -35,16 +35,14 @@ import json
 import sys
 from pathlib import Path
 
-from labkit import promises
+from labkit import promises, protocol_block
 from labkit.runs import read_run_config
 from labkit.repo import area_protocols, git_root, git_run
 from labkit.intent_check import (
     bound_runs,
     main as intent_check_main,
-    protocol_id_of,
     registered_ids,
 )
-from labkit.protocol_check import TYPE_MEASUREMENT, cost_tier_of
 from labkit.protocol_fill import open_fields
 
 
@@ -57,7 +55,7 @@ CRITERION_N = promises.CRITERION_N_KEY
 
 
 def criterion_n_findings(run_dir: Path) -> list[str]:
-    """Warnings: a `c<i>_n` (legacy `k<i>_n`) that matches no input count the run recorded."""
+    """Warnings: a `c<i>_n` that matches no input count the run recorded."""
     metrics_file = run_dir / "metrics.json"
     if not metrics_file.is_file():
         return []
@@ -151,13 +149,19 @@ def run(area: Path, protocol: Path | None = None) -> int:
         protocol = protocols[0]
 
     text = protocol.read_text(encoding="utf-8")
-    pid = protocol_id_of(text)
+    try:
+        head = protocol_block.head(text)
+    except protocol_block.BlockError as exc:
+        print(f"finalize: {protocol.name}: {exc}")
+        return 2
+    pid = head.id
     newest_dir: Path | None = None
 
     # -- 1. completion check -----------------------------------------------
     print(f"── completion: {protocol.name} ──")
     if pid is None:
-        print("  no protocol id — completion check skipped (below Standard 0.16)")
+        print("  no stamped protocol id ([protocol] id) — no run is bound to it")
+        blockers += 1
     else:
         runs_dir = area / "runs"
         if not runs_dir.is_dir():
@@ -228,7 +232,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
 
     # -- 4. provenance (runs of seconds) ------------------------------------
     print("── provenance ──")
-    short = cost_tier_of(text) == "seconds" or bool(TYPE_MEASUREMENT.search(text))
+    short = head.cost == "seconds"
     if not short:
         print("  n/a — not a run of seconds (the agent audit covers provenance there)")
     elif newest_dir is None:
@@ -253,7 +257,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
         for line in w:
             print(f"  warning: {line}")
         if not w:
-            print("  every c<i>_n / k<i>_n equals a recorded input count (or there is none)")
+            print("  every c<i>_n equals a recorded input count (or there is none)")
         warnings += len(w)
 
     # -- summary -----------------------------------------------------------

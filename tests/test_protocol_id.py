@@ -1,4 +1,4 @@
-"""Tests for the protocol id — identity a run can bind to (Standard 0.16).
+"""Tests for the protocol id — identity a run can bind to (`[protocol] id`).
 
 Why this exists: nothing in a run said which protocol it belonged to, so in
 a series area (`PROTOCOL-s1-*` ... `PROTOCOL-s13-*`) every automatic pairing
@@ -6,8 +6,8 @@ of protocol and run was a guess, and `code-check` silently checked s1 while
 s13 was the protocol just built (2026-09-26). The id is what a run binds to;
 the path only says where it was found.
 
-The gates tested here: the field is due from 0.16 on, the value has one
-shape, an id occurs once per repository, and an edit against HEAD is worth a
+The gates tested here: the field is due (a placeholder is a must gap), the
+value has one shape, an id occurs once per repository, and an edit against HEAD is worth a
 warning — never a proof, because after the commit the new id IS the state.
 """
 
@@ -22,33 +22,31 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import protocol_check  # noqa: E402
+from protocol_fixture import PID, head  # noqa: E402
 
+# Every must field of a pilot filled, so the id alone decides the verdict.
 PILOT = """# Experiment protocol: x
 
-- **Standard:** {standard}
-{id_line}
+{head}
+- **Terms of this protocol:** n/a — standard vocabulary
 - **Question / hypothesis:** does it hold?
-- **Success / failure criterion:** [K1] p < .05
-- **Stop rule:** [S1] abort above 20% errors
-- **Type:** confirmatory
-- **Terms:** none
-- **Model I/O / prompt:** see below
-- **Null condition:** [N1] shuffled labels
-- **Raw output:** one real example
-- **Frozen before run:** no
+- **Success / failure criterion:** [C1] p < .05
+- **Admissibility condition:** [A1] fewer than 20% errors
+- **Model I/O:** in: claim · out: yes/no, parsed by parse()
+- **Prompt:** see block
 
-```text
-prompt
-```
+  ```text
+  prompt
+  ```
+
+- **Null condition / anchors:** [A2] shuffled labels
+- **Exclusions / filters:** none
 """
 
 
-def _protocol(dirpath, pid: str | None = "p-0123456789abcdef",
-              standard="0.16", name="PROTOCOL-x.md"):
-    id_line = f"- **Protocol id:** {pid}" if pid is not None else ""
+def _protocol(dirpath, pid: str = PID, name="PROTOCOL-x.md", extra: str = ""):
     p = Path(dirpath) / name
-    p.write_text(PILOT.format(standard=standard, id_line=id_line),
-                 encoding="utf-8")
+    p.write_text(PILOT.format(head=head(id=pid)) + extra, encoding="utf-8")
     return p
 
 
@@ -59,60 +57,61 @@ def _check(paths):
     return code, buf.getvalue()
 
 
-class TestFieldIsDueFrom016(unittest.TestCase):
+class TestFieldIsDue(unittest.TestCase):
 
-    def test_missing_id_is_a_must_gap_at_016(self):
+    def test_unstamped_id_is_a_must_gap(self):
         with tempfile.TemporaryDirectory() as d:
-            p = _protocol(d, pid=None)
-            _, out = _check([p])
-        self.assertIn("MISSING (must): Protocol id", out)
+            p = _protocol(d, pid="<protocol-id>")
+            code, out = _check([p])
+        self.assertIn("MISSING (must): [protocol] id", out)
+        self.assertEqual(code, 1)
 
     def test_prose_mentioning_protocol_id_does_not_satisfy_the_field(self):
-        """'Protocol id will be added later' must not pass the must-check.
+        """'Protocol id will be added later' must not pass the must-check:
+        the id is read from the head table, never from the prose."""
+        with tempfile.TemporaryDirectory() as d:
+            p = _protocol(d, pid="<protocol-id>",
+                          extra="- **Protocol id:** p-0123456789abcdef\n"
+                                "Protocol id will be added later.\n")
+            _, out = _check([p])
+        self.assertIn("MISSING (must): [protocol] id", out)
 
-        Before the fix, the regex searched for 'protocol id' anywhere in the
-        text; now the structural parser (protocol_id_of) must find a value.
-        """
+    def test_a_prose_head_is_rejected(self):
+        """The id as a prose line (Standard 0.16/0.17) is read by labkit 0.47
+        only; here the protocol fails on its missing head."""
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "PROTOCOL-x.md"
-            text = PILOT.format(standard="0.16", id_line="")
-            # inject prose that mentions "protocol id" without being the field
-            text = text.replace("does it hold?",
-                                "does it hold? Protocol id will be added later")
-            p.write_text(text, encoding="utf-8")
-            _, out = _check([p])
-        self.assertIn("MISSING (must): Protocol id", out)
-
-    def test_older_standards_are_left_alone(self):
-        with tempfile.TemporaryDirectory() as d:
-            p = _protocol(d, pid=None, standard="0.15")
-            _, out = _check([p])
-        self.assertNotIn("Protocol id", out)
+            p.write_text("# x\n- **Standard:** 0.17\n- **Protocol id:** " + PID + "\n",
+                         encoding="utf-8")
+            code, out = _check([p])
+        self.assertIn("HEAD (must): no [protocol] table", out)
+        self.assertEqual(code, 1)
 
     def test_a_stamped_protocol_reports_nothing_about_its_id(self):
         with tempfile.TemporaryDirectory() as d:
             p = _protocol(d)
-            _, out = _check([p])
-        self.assertNotIn("Protocol id", out)
-        self.assertNotIn("MALFORMED", out)
+            code, out = _check([p])
+        self.assertNotIn("[protocol] id", out)
+        self.assertEqual(code, 0, out)
 
 
 class TestShape(unittest.TestCase):
 
     def test_wrong_shape_is_reported(self):
         for bad in ("p-NOTHEX", "p-0123", "0123456789abcdef",
-                    "p-0123456789ABCDEF", "<protocol-id>"):
+                    "p-0123456789ABCDEF"):
             with self.subTest(bad=bad), tempfile.TemporaryDirectory() as d:
                 p = _protocol(d, pid=bad)
                 code, out = _check([p])
-                self.assertIn("MALFORMED protocol id", out)
+                self.assertIn(f"HEAD (must): [protocol] id = '{bad}'", out)
                 self.assertEqual(code, 1)
 
     def test_sixteen_lowercase_hex_pass(self):
         with tempfile.TemporaryDirectory() as d:
             p = _protocol(d, pid="p-9e2341c0390948dc")
-            _, out = _check([p])
-        self.assertNotIn("MALFORMED", out)
+            code, out = _check([p])
+        self.assertNotIn("HEAD", out)
+        self.assertEqual(code, 0, out)
 
 
 class TestUniqueness(unittest.TestCase):

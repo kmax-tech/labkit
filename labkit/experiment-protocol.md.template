@@ -8,11 +8,11 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
 - **One field = one line.** If the justification needs more room, it goes
   into a note; the [[wikilink]] stays here.
 - **The form is cut by tier** (`lib exp --cost seconds` stamps the `seconds` cut:
-  question · criterion · admissibility · type · cost · terms · data · unit ·
+  head · question · criterion · admissibility · terms · data · unit ·
   exclusions · result; with `--model` also model · prompt · null condition;
   the full form adds the rest; `--report` the † fields). One template, three
   cuts — a field the cut left out is not owed (→ §2.A12).
-- **† = report field.** Due only once `Frozen before run` goes to "yes";
+- **† = report field.** Due only once `frozen = true` in the head;
   leave empty until then (`lib exp <name> --report` appends them).
 - **`[C…]`/`[A…]`/`[B…]` = intent ids**, one per promise to the code:
   **C** criterion — which value of which metric supports the hypothesis,
@@ -22,14 +22,31 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
   C judges, A releases the judgement, B says what follows. Each id
   reappears as a lowercase key in the reportable run's metrics.json
   (`c1_pass`, `a1_pass`, `b1_branch`); `intent-check` compares the two sets
-  (→ §2.A1a). To bind constants and code too, write the same promises as a
-  `[[promise]]` TOML block (labkit `docs/promise-block.md`).
+  (→ §2.A1a). To bind constants and code too, add the same promises as
+  `[[promise]]` tables to the ```toml block below (labkit
+  `docs/promise-block.md`).
 - **`→ §2.x`** = the rule of that number in `docs/arbeitsstandard.md`; the
   reasoning, the evidence and the term legend live there — here only what
   the field demands.
 
-- **Standard:** 0.16
-- **Protocol id:** <protocol-id>
+```toml
+[protocol]
+standard = "0.18"
+id = "<protocol-id>"        # stamped by `lib exp`, never typed
+type = "<exploratory | confirmatory>"
+# exploratory: generates hypotheses, none of it reported as a test;
+# confirmatory: tests a hypothesis fixed before the run
+cost = "<seconds | minutes | hours>"
+# the price of a REPEAT, not whether a model is involved — seconds:
+# rerunnable at will, incl. a handful of model calls for a minute and cents;
+# minutes: a model pass you would not casually redo; hours: expensive or
+# irreversible (→ §2.A14)
+frozen = false              # true only after the instrument check
+preflight_audit = ""
+# date · scope sha · N findings (blockers fixed / accepted with reason /
+# dismissed with reason) — the code-vs-intent audit after the instrument
+# check, before freezing (→ §2.A12)
+```
 
 *Field labels English; content in German or English. Explanations,
 examples, rationale for each field: `protocol-field-guide.md`
@@ -66,20 +83,8 @@ instead).*
   analysis, register it BEFORE the run: condition + what each branch
   licenses, one B per branch point (→ §2.A10, §2.A1a); "n/a" if there is
   only one outcome>
-- **Type:** <!-- s --> <exploratory (generates hypotheses, none of it reported as a
-  test) | confirmatory (tests a hypothesis fixed before the run)>
 - **Timebox:** <hard budget, e.g. 4h — then log and ask>
-- **Cost:** <!-- s --> <the price of a REPEAT, not whether a model is involved:
-  seconds — rerunnable at will, incl. a handful of model calls for a minute
-  and cents | minutes — a model pass you would not casually redo | hours —
-  expensive or irreversible. seconds: no agent audit per run, `finalize`
-  checks provenance, the audit comes at promotion; minutes/hours: preflight
-  audit before freezing, analysis audit after (→ §2.A12)>
 - **Split touched:** <which split may be touched: train | dev | test>
-- **Preflight audit:** <date · scope sha · N findings (blockers fixed /
-  accepted with reason / dismissed with reason) — the code-vs-intent audit
-  that runs after the instrument check and before freezing (→ §2.A12)>
-- **Frozen before run:** no *(to "yes" only after the instrument check)*
 - **Why this design †:** <choice of model, dataset, method — one sentence>
 - **Rival explanations †:** <per confound: what OTHER than the hypothesis
   produces the same number · error direction (does it push for or against
@@ -170,9 +175,9 @@ instead).*
   (→ §2.A5)>
 - **Pilot:** <N items checked against hand analysis or anchors, before scaling>
 
-Numbers of this stage are never reported. Only after it may `Frozen before
-run` go to "yes"; per (re-)freeze ONE sentence stays — the reasoning goes
-into the commit message.
+Numbers of this stage are never reported. Only after it may `frozen` go to
+`true`; per (re-)freeze ONE sentence stays — the reasoning goes into the
+commit message.
 
 ## Runs (documented runs — via `runlog`, cite run_ids instead of retyping numbers)
 

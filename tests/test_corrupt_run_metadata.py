@@ -18,8 +18,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import intent_check, runlog  # noqa: E402
+from protocol_fixture import PID, head  # noqa: E402
 
-PID = "p-0123456789abcdef"
 OLD = "2026-10-06T10-00-00_aaaa"
 NEW = "2026-10-06T11-00-00_bbbb"
 
@@ -30,7 +30,7 @@ def make_run(area: Path, name: str) -> Path:
     (d / "config.json").write_text(json.dumps(
         {"schema_version": 2, "script": "01_measure.py", "pid": 1,
          "protocol": {"id": PID, "path": "PROTOCOL-x.md"}}), encoding="utf-8")
-    (d / "metrics.json").write_text(json.dumps({"k1_pass": True}), encoding="utf-8")
+    (d / "metrics.json").write_text(json.dumps({"c1_pass": True}), encoding="utf-8")
     (d / "completion.json").write_text(json.dumps(
         {"schema_version": 2, "finished": "x", "git": "g", "git_full": "g", "note": ""}),
         encoding="utf-8")
@@ -82,8 +82,7 @@ class BrokenMetrics(unittest.TestCase):
         broken = make_run(self.area, NEW)
         (broken / "metrics.json").write_text("{broken", encoding="utf-8")
         self.protocol = self.area / "PROTOCOL-x.md"
-        self.protocol.write_text(f"- **Protocol id:** {PID}\n[K1] holds\n",
-                                 encoding="utf-8")
+        self.protocol.write_text(head() + "[C1] holds\n", encoding="utf-8")
 
     def test_newer_unreadable_metrics_is_not_skipped_for_the_older(self):
         rc, out = quiet(intent_check.main, [str(self.protocol)])

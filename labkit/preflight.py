@@ -1,6 +1,6 @@
 """preflight — the gate before freezing a protocol.
 
-Sequences the checks that must pass before `Frozen before run: yes`.
+Sequences the checks that must pass before `frozen = true`.
 Each check prints its own output; preflight adds a summary line and an
 exit code that reflects the worst finding.
 
@@ -10,10 +10,10 @@ Exit codes: 0 clean, 1 findings (at least one blocker), 2 usage error.
 
 What it runs, in order:
   1. protocol-check   mandatory fields, placeholders
-  1b. cost tier       `Cost:` of the protocol — `seconds` makes the agent
+  1b. cost tier       `cost` in the protocol head — `seconds` makes the agent
                       audit optional before freezing (one audit after the
                       first run suffices, §2.A14); `minutes`/`hours` ask
-                      for it here; undeclared counts as `hours`
+                      for it here; an unfilled cost counts as `hours`
   2. code-check       intent ids against the code
   3. scope-sha        audit stamp over the input scope
   4. dirty check      uncommitted changes (warning, not a blocker)
@@ -34,16 +34,7 @@ from pathlib import Path
 
 from labkit.code_check import check_intent_ids
 from labkit.repo import area_protocols, git, layout_root
-from labkit.protocol_check import (
-    DEFAULT_STANDARD,
-    STANDARD_VERSION,
-    TYPE_MEASUREMENT,
-    check_protocol_id,
-    check_text,
-    cost_tier_of,
-    graduate,
-    placeholder_fields,
-)
+from labkit.protocol_check import check_fields, check_protocol_id
 from labkit.scope_sha import scope_sha, find_pin, AREA_GLOBS
 
 
@@ -77,19 +68,18 @@ def run(area: Path, protocol: Path | None = None) -> int:
         protocol = protocols[0]
 
     text = protocol.read_text(encoding="utf-8")
-    std_m = STANDARD_VERSION.search(text)
-    standard = std_m.group(1) if std_m else DEFAULT_STANDARD
 
     # -- 1. protocol-check ------------------------------------------------
     print(f"── protocol-check: {protocol.name} ──")
-    is_measurement = bool(TYPE_MEASUREMENT.search(text))
-    missing_must, missing_should = check_text(
-        text, measurement=is_measurement, standard=standard)
-    # Same graduation gate as protocol-check (one home): frozen turns every
-    # should-gap into a blocker.
-    _, missing_must, missing_should, must_holes, should_holes = graduate(
-        text, missing_must, missing_should, placeholder_fields(text))
-    id_findings = check_protocol_id(protocol, text, standard)
+    # The same field report as protocol-check (one home): the head, the
+    # owed fields by cut, and the graduation at frozen = true.
+    report = check_fields(text)
+    if report.head is None:
+        print(f"  HEAD (must): {report.head_error}")
+        return 1
+    missing_must, missing_should = report.missing_must, report.missing_should
+    must_holes, should_holes = report.must_holes, report.soft_holes
+    id_findings = check_protocol_id(protocol, report.head)
 
     if missing_must:
         for label in missing_must:
@@ -117,15 +107,15 @@ def run(area: Path, protocol: Path | None = None) -> int:
 
     # -- 1b. cost tier ------------------------------------------------------
     print("── cost tier ──")
-    tier = cost_tier_of(text)
+    tier = report.head.cost
     if tier == "seconds":
         print("  seconds — rerunnable at will: the agent audit is OPTIONAL before "
               "freezing; one audit after the first run, on real output, "
               "suffices (§2.A14)")
     elif tier is None:
-        print("  not declared — treated as `hours`: the experiment-preflight "
-              "audit is due before freezing (§2.A12); stamp `Cost:` to say "
-              "otherwise")
+        print("  not filled — treated as `hours`: the experiment-preflight "
+              "audit is due before freezing (§2.A12); set `cost` in the head "
+              "to say otherwise")
     else:
         print(f"  {tier} — the experiment-preflight audit is due before "
               f"freezing (§2.A12)")
