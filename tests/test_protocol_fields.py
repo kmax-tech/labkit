@@ -243,5 +243,59 @@ class OpenHolesFollowTheCut(unittest.TestCase):
         self.assertEqual(report.soft_holes, [])
 
 
+class StampedLeftovers(unittest.TestCase):
+    """A frozen, reported protocol kept `- <run_id> — <…>` under Runs and
+    `- <…>` under Notes, and protocol-check said nothing (uniagent area 08,
+    2026-10-07): the template line carries a cut marker, the written one
+    does not, and `- <…>` has no label for a field check to see."""
+
+    def leftovers(self, body: str) -> str:
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "PROTOCOL-x.md"
+            f.write_text(head(cost="minutes") + body)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                protocol_check.main([str(f)])
+        return buf.getvalue()
+
+    def test_the_stamped_runs_line_and_a_bare_item_are_named(self):
+        out = self.leftovers(
+            "## Runs\n\n- <run_id> — <one sentence: what this run was>\n\n"
+            "## Notes\n\n- <…>\n"
+        )
+        self.assertIn("- <run_id> — <one sentence: what this run was>", out)
+        self.assertIn("- <…>", out)
+
+    def test_a_written_runs_line_is_silent(self):
+        out = self.leftovers(
+            "## Runs\n\n- 2026-10-07T14-11-17_5b06 — the decisive run\n"
+        )
+        self.assertNotIn("verbatim template text", out)
+
+
+class BareReferences(unittest.TestCase):
+    """A field that only names another area warns; with a link it is silent."""
+
+    def out(self, value: str) -> str:
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "PROTOCOL-x.md"
+            f.write_text(head(cost="minutes") + f"- **Free knobs †:** {value}\n")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                protocol_check.main([str(f)])
+        return buf.getvalue()
+
+    def test_a_bare_reference_warns(self):
+        self.assertIn(
+            "reference without a link: Free knobs", self.out("wie Bereich 07.")
+        )
+
+    def test_a_linked_reference_is_silent(self):
+        out = self.out(
+            "[Bereich 07](../07-x/PROTOCOL-x.md#setup): threshold 0.6, window 5"
+        )
+        self.assertNotIn("reference without a link", out)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -8,6 +8,9 @@ if need be as "n/a — <why>". `protocol-check` enforces this.*
 - **One field = one line.** If the justification needs more room, it goes
   into a note; the [[wikilink]] stays here. Fill by label, multi-line
   placeholders included: `protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.
+- **Written for a reader who opens only this file.** A reference to another
+  area is a link plus the sentence that matters, never "as in area 07"
+  alone; one spelling per case id; every coined term glossed on first use.
 - **The form is cut by tier** (`lib exp --cost seconds` stamps the `seconds` cut:
   head · question · criterion · admissibility · terms · data · unit ·
   exclusions · result; with `--model` also model · prompt · null condition;

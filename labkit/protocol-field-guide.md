@@ -5,7 +5,7 @@ rationale for each field. The template is the checklist you fill; this
 document is the reference you read. `protocol-check --guide` prints the
 path to this file.
 
-## How to fill the protocol (seven rules)
+## How to fill the protocol (eight rules)
 
 1. **Name it.** The file, the flag, the number, the split — never a nickname.
    "The new variant", "see question 1", "the usual threshold" work only for
@@ -42,6 +42,27 @@ path to this file.
    leave the `<…>` placeholder rather than padding them. `TODO`, an empty
    label and a bare `n/a — <why>` count as unfilled; `n/a — <the reason>`
    counts as filled.
+8. **Write for the reader who opens only this file.** A protocol is read
+   by a person, months later, without the session that wrote it
+   (2026-10-07: a frozen, audited protocol was sound and still read "far too
+   dense" — bare cross-references, two spellings of one case, every field
+   retelling the result).
+   - **A reference carries a link and the sentence that matters.** Not
+     "as in area 07" but `[area 07](../07-<name>/PROTOCOL-<name>.md#setup):
+     majority of three answers, accept/reject per case` — the reader gets
+     the gist here and the detail one click away.
+   - **One spelling per thing.** Case ids, file names and terms as they are
+     in the data; a short form is defined once (Terms of this protocol).
+   - **Every coined term or abbreviation is glossed on first use**, or
+     listed under Terms of this protocol.
+   - **One job per field.** Summary: what was decided. Answer to the
+     question: which registered ids passed, with the run_id. Raw output: the
+     concrete output that carried the result. Interpretation: what the
+     mechanism means and what follows. Outcome: one sentence. The audit
+     field: what the audit found. A finding stated in one of them is
+     referenced, not retold, in the others.
+   - **Tense follows the time of the text:** the registered design in the
+     present, what was done in the past, the next step as an intention.
 
 ## Intent IDs [C/A/B]
 

@@ -138,6 +138,17 @@ _FIELD_OPEN = re.compile(
     _BULLET + r"\*\*(?P<label>[^*]+?)(?::\*\*|\*\*\s*:)(?P<value>.*)$"
 )
 _MARKER = re.compile(r"<!--.*?-->")
+#: A list item that is nothing but stamped placeholders — `- <…>`,
+#: `- <run_id> — <one sentence: …>`: no label, so no field sees it.
+#: A field that points at another area by name only — "wie Bereich 07",
+#: "as in area 07" — with no link: the reader has to go and find it, and
+#: the one sentence that matters is not here (uniagent area 08, 2026-10-07:
+#: five report fields read "wie Bereich 07" and nothing else).
+BARE_REFERENCE = re.compile(
+    r"\b(?:wie|siehe|vgl\.|as in|same as|see)\s+(?:in\s+)?(?:Bereich|area)\s+\d+",
+    re.I,
+)
+_STAMPED_ITEM = re.compile(r"[-*]\s+(<[^<>]*>[\s—–-]*)+")
 
 
 def field_name(label: str) -> str:
@@ -585,7 +596,10 @@ def template_lines(path: Path | None) -> set[str]:
     keep = set()
     in_body = False
     for line in path.read_text(encoding="utf-8").splitlines():
-        s = line.strip()
+        # The written protocol carries no cut markers; compared with them,
+        # the stamped Runs line `- <run_id> — <…> <!-- s -->` never matched
+        # its leftover (uniagent area 08, 2026-10-07: frozen and reported).
+        s = _MARKER.sub("", line).strip()
         if s.startswith("## "):
             in_body = True
         # Only lines long enough to be distinctive; headings are meant to recur.
@@ -767,7 +781,9 @@ def main(argv: list[str]) -> int:
             {
                 s
                 for n, s in enumerate((ln.strip() for ln in text.splitlines()), 1)
-                if s in tmpl and not s.startswith("<!--") and n not in in_placeholder
+                if (s in tmpl or _STAMPED_ITEM.fullmatch(s))
+                and not s.startswith("<!--")
+                and n not in in_placeholder
             }
         )
         # "mentions a prompt" means a Prompt FIELD, not the word: the stamped
@@ -815,8 +831,14 @@ def main(argv: list[str]) -> int:
             if CHANGELOG.search(ln)
         ]
 
+        bare_refs = [
+            (fl.line, fl.label)
+            for fl in fields(text)
+            if BARE_REFERENCE.search(fl.value) and "](" not in fl.value
+        ]
         clean = not (
-            missing_must
+            bare_refs
+            or missing_must
             or missing_should
             or holes
             or left
@@ -889,6 +911,12 @@ def main(argv: list[str]) -> int:
                 f"({ln[:60]!r}) — one question per protocol: a declared "
                 f"follow-up gets its own PROTOCOL-s<N>-<slug>.md "
                 f"(series rule, Arbeitsstandard AS-061 Subexperiment-Serien tragen ihre Nummer im Namen)."
+            )
+        for n, label in bare_refs:
+            print(
+                f"{f}:{n}: reference without a link: {label} — give the link "
+                f"([area NN](../NN-<name>/PROTOCOL-<name>.md)) and the sentence "
+                f"that matters here"
             )
         for n, ln in history:
             print(
