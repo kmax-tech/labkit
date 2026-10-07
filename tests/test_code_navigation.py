@@ -277,5 +277,22 @@ class Choices(unittest.TestCase):
         self.assertNotIn("truth", p)
 
 
+class Human(unittest.TestCase):
+    C = cn.Choice("c", "Which stations?", ("a", "b", "c"), frozenset({"a", "c"}))
+
+    def test_numbers_become_choices(self):
+        self.assertEqual(cn.parse_picks("1, 3", self.C), ("a", "c"))
+        with self.assertRaises(ValueError):
+            cn.parse_picks("4", self.C)
+
+    def test_a_session_times_each_answer_and_asks_again_on_a_typo(self):
+        typed = iter(["7", "", "1,3", "2"])
+        ticks = iter([0.0, 12.5])
+        got = cn.human_session(
+            [self.C], lambda _: next(typed), lambda: next(ticks), True
+        )
+        self.assertEqual(got, [cn.HumanAnswer("c", ("a", "c"), 12.5, 2)])
+
+
 if __name__ == "__main__":
     unittest.main()

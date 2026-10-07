@@ -37,6 +37,7 @@ from __future__ import annotations
 import ast
 import re
 import tomllib
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -134,6 +135,67 @@ def score_choices(answer_text: str, choices: list[Choice]) -> dict[str, ChoiceSc
             tuple(x for x in c.choices if x in c.truth - got),
             tuple(x for x in c.choices if x in got - c.truth),
         )
+    return out
+
+
+@dataclass(frozen=True)
+class HumanAnswer:
+    """One behaviour question as a person answered it at the keyboard."""
+
+    id: str
+    picked: tuple[str, ...]
+    seconds: float  # from showing the question to the accepted answer
+    help_questions: int  # questions the person asked an assistant meanwhile
+
+
+def parse_picks(text: str, choice: Choice) -> tuple[str, ...]:
+    """The choices a person typed as numbers ("1,3" or "2"). Raises
+    ValueError with a sentence when a number is not one of the choices."""
+    picks = []
+    for part in text.replace(" ", "").split(","):
+        if not part.isdigit() or not 1 <= int(part) <= len(choice.choices):
+            raise ValueError(
+                f"{part!r} is not a number between 1 and {len(choice.choices)}"
+            )
+        picks.append(choice.choices[int(part) - 1])
+    return tuple(dict.fromkeys(picks))
+
+
+def human_session(
+    choices: list[Choice],
+    ask: Callable[[str], str],
+    clock: Callable[[], float],
+    count_help: bool,
+) -> list[HumanAnswer]:
+    """Put each question to a person, one at a time, and time it. `ask`
+    shows a text and returns what the person typed; a mistyped answer is
+    asked again (the time runs on). With `count_help` the person also says
+    how many questions they asked an assistant for it."""
+    out = []
+    for n, c in enumerate(choices, 1):
+        listing = "\n".join(f"  {i}. {x}" for i, x in enumerate(c.choices, 1))
+        start = clock()
+        while True:
+            typed = ask(
+                f"\nQuestion {n} of {len(choices)}: {c.question}\n{listing}\n"
+                "Your answer (numbers, comma-separated if several): "
+            )
+            try:
+                picked = parse_picks(typed, c)
+                break
+            except ValueError as exc:
+                ask(f"  {exc} — press Enter and answer again ")
+        seconds = clock() - start
+        helped = 0
+        if count_help:
+            while True:
+                typed = ask(
+                    "  How many questions did you ask the assistant for this one? "
+                )
+                if typed.strip().isdigit():
+                    helped = int(typed.strip())
+                    break
+        out.append(HumanAnswer(c.id, picked, round(seconds, 1), helped))
     return out
 
 

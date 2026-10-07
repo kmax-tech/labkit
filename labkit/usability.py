@@ -792,6 +792,46 @@ def cmd_nav_score(
     return 0
 
 
+def cmd_human(
+    repo: Path, questions: Path, ids: list[str], out: Path, count_help: bool
+) -> int:
+    """A person answers behaviour questions about `repo` at the keyboard;
+    time per question, the answers and the score go to `<out>.human.json`.
+    The verdict is shown only at the end, so it cannot steer later answers."""
+    by_id = {c.id: c for c in code_navigation.load_choices(questions)}
+    unknown = [i for i in ids if i not in by_id]
+    if unknown:
+        raise SystemExit(f"usability: no choice question {unknown} in {questions}")
+    chosen = [by_id[i] for i in ids]
+    print(
+        f"Open {repo} in your editor. Answer from the code; nothing is scored until the end."
+    )
+    answers = code_navigation.human_session(chosen, input, time.monotonic, count_help)
+    scored = code_navigation.score_choices(
+        json.dumps({a.id: list(a.picked) for a in answers}), chosen
+    )
+    record = [{**asdict(a), **asdict(scored[a.id])} for a in answers]
+    out.with_name(out.name + ".human.json").write_text(
+        json.dumps(
+            {"repo": str(repo), "answers": record}, indent=1, ensure_ascii=False
+        ),
+        encoding="utf-8",
+    )
+    print()
+    for r in record:
+        print(f"  {'right' if r['right'] else 'WRONG':6} {r['id']} · {r['seconds']} s")
+    print(
+        f"  {sum(r['right'] for r in record)}/{len(record)} right · "
+        f"{round(sum(r['seconds'] for r in record))} s"
+        + (
+            f" · {sum(r['help_questions'] for r in record)} questions asked"
+            if count_help
+            else ""
+        )
+    )
+    return 0
+
+
 def cmd_read_score(root: Path, transcript: Path | None) -> int:
     """Hold the reader's answer to the run's number; `<dir>.reader.json`."""
     _, truth = _bound_protocol(root)
@@ -1062,7 +1102,29 @@ def main(argv: list[str]) -> int:
     ns.add_argument("--questions", required=True)
     ns.add_argument("--out", required=True)
     ns.add_argument("--transcript", help="the agent's transcript: its effort")
+    hu = sub.add_parser(
+        "human", help="a person answers behaviour questions at the keyboard, timed"
+    )
+    hu.add_argument("repo")
+    hu.add_argument("--questions", required=True, help="TOML with [[choice]] questions")
+    hu.add_argument(
+        "--ids", required=True, help="the question ids to ask, comma-separated"
+    )
+    hu.add_argument("--out", required=True, help="prefix of the record file")
+    hu.add_argument(
+        "--count-help",
+        action="store_true",
+        help="ask after each answer how many questions went to an assistant",
+    )
     args = ap.parse_args(argv)
+    if args.cmd == "human":
+        return cmd_human(
+            Path(args.repo).resolve(),
+            Path(args.questions).resolve(),
+            args.ids.split(","),
+            Path(args.out).resolve(),
+            args.count_help,
+        )
     if args.cmd == "nav":
         return cmd_nav(
             Path(args.repo).resolve(),

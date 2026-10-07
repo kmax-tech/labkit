@@ -5,6 +5,17 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.66.0 — 2026-10-08
+
+### Added
+
+- **`usability human`** — a person answers behaviour questions about a
+  repo at the keyboard: one question at a time with numbered choices, the
+  time per question, optionally how many questions went to an assistant
+  meanwhile (`--count-help`); the verdict (right, missed, invented) only at
+  the end, written to `<out>.human.json`. The logic (`human_session`,
+  `parse_picks`) takes its input and clock as arguments and is tested.
+
 ## 0.65.1 — 2026-10-07
 
 ### Added
