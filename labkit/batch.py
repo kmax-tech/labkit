@@ -85,7 +85,7 @@ class Store:
         id_key: str = "id",
         prov: dict | None = None,
         mode: str = "resume",
-    ):
+    ) -> None:
         if mode not in ("resume", "produce"):
             raise ValueError(f"Store mode must be 'resume' or 'produce', not {mode!r}")
         self.path = Path(path)
@@ -145,7 +145,7 @@ class Store:
             file=sys.stderr,
         )
 
-    def __exit__(self, exc_type, *exc) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None, *exc: object) -> None:
         if self._fh is not None:
             self._fh.close()
             self._fh = None

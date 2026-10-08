@@ -41,6 +41,7 @@ from __future__ import annotations
 import contextlib
 import fcntl
 import hashlib
+import importlib.metadata
 import json
 import os
 import re
@@ -49,6 +50,8 @@ import sys
 import time
 import uuid
 from pathlib import Path
+from types import TracebackType
+from collections.abc import Iterator
 
 from labkit import protocol_block, repo
 from labkit.scope_sha import audit_stamp_drift
@@ -204,7 +207,7 @@ def _resolve_ref(url: str, ref: str) -> str | None:
     return None
 
 
-def _direct_url_commit(dist) -> str | None:
+def _direct_url_commit(dist: importlib.metadata.Distribution) -> str | None:
     """The commit the installed code stands at, if knowable.
 
     A VCS install: the commit pip recorded (direct_url.json). An editable
@@ -525,7 +528,7 @@ def _describe(paths: dict) -> dict:
 
 
 @contextlib.contextmanager
-def _index_lock(base_dir: Path, timeout: float = 30.0):
+def _index_lock(base_dir: Path, timeout: float = 30.0) -> Iterator[None]:
     """Exclusive lock for every change to runs.tsv — append, reindex.
 
     Without it a reindex and a finishing run race: one appends while the
@@ -838,7 +841,7 @@ class Run:
         long: bool = False,
         protocol: str | Path | None = None,
         derived_from: str | None = None,
-    ):
+    ) -> None:
         # A derived run (2026-10-05): the same raw rows, evaluated again —
         # because evaluate() gained a descriptive key, not because anything
         # about the measurement changed. It names its parent so the record
@@ -960,7 +963,7 @@ class Run:
                 repo.git(["diff", "HEAD"], base_dir) or "", encoding="utf-8"
             )
 
-    def output(self, *paths) -> None:
+    def output(self, *paths: str | Path) -> None:
         """Register the files this run WRITES (2026-08-18).
 
         config.json freezes the inputs, but where a run wrote its data lived
@@ -977,7 +980,7 @@ class Run:
         p.write_text(content, encoding="utf-8")
         return p
 
-    def metrics(self, **kv) -> None:
+    def metrics(self, **kv: object) -> None:
         self._metrics.update(kv)
 
     def note(self, text: str) -> None:
@@ -1099,7 +1102,7 @@ class run:
         long: bool = False,
         protocol: str | Path | None = None,
         derived_from: str | None = None,
-    ):
+    ) -> None:
         # `protocol` and `derived_from` last: no existing positional call shifts.
         base = Path(base_dir) if base_dir else Path(sys.argv[0]).resolve().parent
         self._run = Run(
@@ -1115,7 +1118,12 @@ class run:
     def __enter__(self) -> Run:
         return self._run
 
-    def __exit__(self, exc_type, _exc, _tb) -> bool:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        _exc: BaseException | None,
+        _tb: TracebackType | None,
+    ) -> bool:
         if exc_type is None:
             self._run._finalize()  # crash -> dir stays without metrics.json (visible)
         return False

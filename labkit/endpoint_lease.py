@@ -64,6 +64,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from collections.abc import Iterator
 
 from labkit import runs
 
@@ -138,7 +139,7 @@ def holders(endpoint: str) -> list[dict]:
 
 
 @contextlib.contextmanager
-def _locked(d: Path):
+def _locked(d: Path) -> Iterator[None]:
     """Exclusive flock on the endpoint directory for check-and-write."""
     with open(d / ".lock", "a", encoding="utf-8") as fh:
         fcntl.flock(fh, fcntl.LOCK_EX)

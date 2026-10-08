@@ -77,6 +77,7 @@ import tomllib
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 from labkit import endpoint_lease
 
@@ -446,7 +447,7 @@ def complete(
 
 
 def complete_many(
-    alias: str, prompts: list[str], *, workers: int = 4, **kw
+    alias: str, prompts: list[str], *, workers: int = 4, **kw: Any
 ) -> list[str]:
     """complete() over many independent prompts, results in input order.
 

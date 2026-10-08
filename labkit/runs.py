@@ -30,7 +30,7 @@ def _command_of(pid: int) -> str | None:
     return r.stdout.strip() or None
 
 
-def is_alive(pid, script) -> bool | None:
+def is_alive(pid: object, script: object) -> bool | None:
     """Is THIS run still going? True / False / None (undecidable).
 
     The PID alone is not enough, and that is no theoretical concern: on
@@ -54,8 +54,8 @@ def is_alive(pid, script) -> bool | None:
     except PermissionError:
         pass  # exists, belongs to someone else
     cmd = _command_of(pid)
-    if cmd is None or not script:
-        return None
+    if cmd is None or not isinstance(script, str) or not script:
+        return None  # a script name that is not text cannot be matched — undecidable
     return script in cmd
 
 

@@ -74,6 +74,7 @@ import re
 import sys
 import tempfile
 from datetime import datetime
+from collections.abc import Callable
 from pathlib import Path
 
 from labkit import finalize, notes_check, preflight, protocol_block, protocol_check
@@ -111,7 +112,7 @@ def _context(event_name: str, text: str) -> None:
     )
 
 
-def _capture(fn, *args) -> tuple[int, str]:
+def _capture(fn: Callable[..., int], *args: object) -> tuple[int, str]:
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
         rc = fn(*args)
