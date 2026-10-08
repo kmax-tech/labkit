@@ -185,7 +185,7 @@ class TestOneStampEverywhere(unittest.TestCase):
         (self.area / "PROTOCOL-x.md").write_text("# x\n" + head())
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            preflight.run(self.area)
+            preflight.preflight_area(self.area)
         self.assertIn(f"  {sha}", buf.getvalue())
 
 

@@ -114,7 +114,7 @@ def unresolved_scripts(text: str, root: Path | None) -> list[str]:
     return missing
 
 
-def collect(paths: list[str]) -> list[Path]:
+def collect_notes(paths: list[str]) -> list[Path]:
     """The measurement notes the arguments name: notes under `notes/messung/` of a repo or directory, or the files given."""
     files: list[Path] = []
     for p in map(Path, paths):
@@ -187,7 +187,7 @@ def main(argv: list[str]) -> int:
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: notes-check <repo-root | notes-dir | note.md> ...")
         return 0 if argv else 2
-    files = collect(argv)
+    files = collect_notes(argv)
     if not files:
         print("notes-check: no notes/messung/*.md found")
         return 2

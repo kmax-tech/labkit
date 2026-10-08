@@ -702,7 +702,7 @@ def code_blocks(text: str) -> int:
     return sum(1 for info, _ in protocol_block.fenced_blocks(text) if info != "toml")
 
 
-def collect(paths: list[str]) -> list[Path]:
+def collect_protocols(paths: list[str]) -> list[Path]:
     """The protocol files the arguments name: every `PROTOCOL-*.md` under a directory, or the files given."""
     files: list[Path] = []
     for p in map(Path, paths):
@@ -746,7 +746,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: protocol-check [--template PATH] <PROTOCOL-*.md | dir> ...")
         return 2
-    files = collect(argv)
+    files = collect_protocols(argv)
     if not files:
         print("protocol-check: no PROTOCOL-*.md found")
         return 2

@@ -5,6 +5,36 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.68.0 — 2026-10-08
+
+### Breaking
+
+Last version with the old names: **v0.67.1**. Python names only.
+
+- One public name, one thing: `preflight.run` is `preflight_area` (beside
+  `finalize_area`; `runlog.run` stays the run writer experiments call),
+  `protocol_block.load` is `parse_toml_block` (`promises.load` stays the
+  script API), `notes_check.collect` / `protocol_check.collect` are
+  `collect_notes` / `collect_protocols`.
+
+### Added
+
+- `tests/test_architecture.py` holds the code to the map: it reads the
+  layer table of `docs/architecture.md`, fails when a module is missing
+  from it or imports upward, and when a public name other than `main` /
+  `cli` stands in two modules. The table now lists `cold_reader`,
+  `protocol_reading` and `code_navigation` as tools and `install_hooks` as
+  a gate (preflight checks the hooks are there).
+
+### Changed
+
+- ruff: every signature annotated (`ANN`, tests exempt), every public
+  module, class and function documented (`D1xx`), complexity capped
+  (`C901`, 19 functions carry a visible baseline marker); pyright strict
+  for `cold_reader`, `code_navigation`, `protocol_reading`.
+  `runs.is_alive` answers None for a script name that is not text instead
+  of crashing.
+
 ## 0.67.1 — 2026-10-08
 
 ### Fixed

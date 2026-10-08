@@ -6,16 +6,18 @@ coined in the README; the promise block in `docs/promise-block.md`.
 
 ## Layers
 
-Imports point downward only; no module imports a layer above it, and there
-is no cycle (checked 2026-10-06).
+Imports point downward only; no module imports a layer above it, and no
+layer imports a tool; tools may import any layer. Every module stands in
+the table exactly once. `tests/test_architecture.py` reads this table and
+holds the imports to it — a new module or an upward import fails the suite.
 
 | Layer | Modules | Holds |
 |---|---|---|
 | 1 · formats and places | `protocol_block`, `promises`, `protocol_check`, `runs`, `repo`, `scope_sha` | read-only answers: the protocol's TOML block and its head, the promise alphabet and tables, the protocol's prose fields by label, what a run directory says about itself, where the repo, the area's protocols and git are |
 | 2 · a run and its effects | `runlog`, `batch`, `llm`, `endpoint_lease` | writing a run (binding, refusals, provenance, index), resumable output, model calls, the model-slot lease |
 | 3 · checks | `intent_check`, `code_check`, `recheck`, `notes_check` | one question each, against code, metrics or a note |
-| 4 · gates | `preflight`, `finalize`, `claude_hooks`, `audit` | sequence the checks at a decision point; the hooks call the gates; `audit` runs the agent audit through `llm` |
-| tools | `protocol_fill`, `usability`, `agent_transcript`, `install_hooks` | fill a protocol field; stage and score a cold-agent probe; read what an agent did from its session transcript; install the hooks |
+| 4 · gates | `preflight`, `finalize`, `claude_hooks`, `audit`, `install_hooks` | sequence the checks at a decision point; the hooks call the gates; `audit` runs the agent audit through `llm`; `install_hooks` installs the git hooks the gates run in (preflight checks they are there) |
+| tools | `protocol_fill`, `usability`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` | fill a protocol field; stage and score a cold-agent probe; read what an agent did from its session transcript; what every cold-reader probe shares; how a person reads a protocol; how a newcomer finds their way in code |
 
 `runlog` (layer 2) reads layer 1 and calls `llm` only to record resolved
 models; `endpoint_lease` asks `runs.is_alive`, not the writer.

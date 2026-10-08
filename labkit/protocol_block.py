@@ -114,7 +114,7 @@ def block_text(text: str) -> str | None:
     return blocks[0] if blocks else None
 
 
-def load(text: str) -> dict:
+def parse_toml_block(text: str) -> dict:
     """The parsed TOML block; an empty dict when the protocol has none."""
     raw = block_text(text)
     if raw is None:
@@ -158,7 +158,7 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
     """The protocol's head. Raises BlockError when the block or the
     `[protocol]` table is missing, a field is missing or unknown, or a
     value has the wrong type or is outside its choices."""
-    data = load(text)
+    data = parse_toml_block(text)
     if "protocol" not in data:
         raise BlockError(
             f"no [protocol] table — the head ({', '.join(PROTOCOL_HEAD_KEYS)}) "

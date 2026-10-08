@@ -222,7 +222,7 @@ def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
                     f"until the registration is written (AS-003 Kein Lauf ohne Intent-Absatz, AS-017 Die Zahl der Audits folgt der Kostenstufe)."
                 )
             continue
-        rc, out = _capture(preflight.run, area, protocol)
+        rc, out = _capture(preflight.preflight_area, area, protocol)
         frozen = any(h.frozen for h in heads)
         if rc == 1 and frozen:
             blocked.append(

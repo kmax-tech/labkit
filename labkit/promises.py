@@ -158,7 +158,7 @@ def parse_block(text: str) -> PromiseBlock | None:  # noqa: C901 complexity base
     not read as a changed promise.
     """
     try:
-        data = protocol_block.load(text)
+        data = protocol_block.parse_toml_block(text)
     except protocol_block.BlockError as exc:
         raise PromiseError(str(exc)) from exc
     if "promise" not in data:

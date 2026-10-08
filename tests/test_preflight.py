@@ -242,7 +242,7 @@ class GraduationGate(unittest.TestCase):
             area, _ = _area(d, _protocol(frozen=True))
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                rc = preflight.run(area)
+                rc = preflight.preflight_area(area)
             self.assertEqual(rc, 1)
             self.assertIn("MISSING (must): Problem in one sentence", buf.getvalue())
 
@@ -251,7 +251,7 @@ class GraduationGate(unittest.TestCase):
             area, _ = _area(d)
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                rc = preflight.run(area)
+                rc = preflight.preflight_area(area)
             self.assertEqual(rc, 0)
             self.assertIn("missing (should): Problem in one sentence", buf.getvalue())
 
@@ -264,7 +264,7 @@ class TestCostTier(unittest.TestCase):
             area, _ = _area(d, protocol_text)
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                preflight.run(area)
+                preflight.preflight_area(area)
             return buf.getvalue()
 
     def test_seconds_makes_the_agent_audit_optional(self):
