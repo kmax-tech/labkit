@@ -44,9 +44,12 @@ Versprechen auf und verweigert einen kaputten Block vor `mkdir`;
 unter diesem Block“; `recheck` verweigert das Nachrechnen über einen
 veränderten Scope. Der Scope-Hash behauptet nur „deklarierte Region
 unverändert“ (`tests/test_promises.py`, Klasse `ScopeHash`); seit
-`01006c5` heißt er `declared_scope_sha`. Altbuchstaben gelten bis zum
-Rollout weiter und fallen dann mit Punkt 8 weg — kein Stichtag, kein Alias
-(Leitsatz „Altlasten“).
+`01006c5` heißt er `declared_scope_sha`. Altbuchstaben K/S/W/N sind seit
+0.48.0 (`8ea59e9`) entfernt — nur noch erkannt und verweigert, kein
+Stichtag, kein Alias (Leitsatz „Altlasten“). Seit 0.71.0 (`fd78941`)
+verlangt `frozen = true` den Block, und `runlog` verweigert vor `mkdir`
+einen Lauf, dessen Config eine registrierte Konstante nicht oder anders
+trägt (Name = Config-Schlüssel, `promises.all_constants`).
 
 **Befund aus dem Durchstich, behoben (2026-10-06):** `code-check` meldete
 einen falschen Blocker, wenn ein Skript die Schlüssel als Keyword-Argumente
@@ -70,8 +73,9 @@ mechanischer Check — die Aufgabe des Pilots.
       Runde 13 („Protokolle, measure und runs mit Configs — wo anfangen"):
       die Werte des antwortenden Laufs in einer Tabelle, je Zeile Heimat
       und Stufe; Vollständigkeit des Records behauptet die Ansicht nicht
-      (das hält der Bereichstest des Config-Objekts). Offen: der Rollout
-      der Promise-Konstanten mit Config-gleichen Namen (Punkt 8).
+      (das hält der Bereichstest des Config-Objekts). Die Promise-Konstanten
+      mit Config-gleichen Namen kamen mit 0.71.0 (`fd78941`): `runlog`
+      verweigert vor `mkdir`, was nicht wie registriert in der Config steht.
 - **Studi-Läufe ohne `requirements.lock`** (2026-10-07): `runlog` notiert die
   Umgebung eines Laufs über die Lock-Datei; der Starter legt keine an, also
   startet jeder Studi-Lauf mit „env unpinned" und die labkit-Version ist nur
@@ -440,10 +444,10 @@ H (`h1`, hits@1; außerdem in Vorregistrierungen die Hypothese).
 1. ~~**labkit:** eine Heimat für das Alphabet~~ — **erledigt 2026-10-06**
    (`bbb5d9a`): `labkit/promises.py` ist die Heimat; `intent_check`,
    `recheck`, `code_check` und `finalize` importieren von dort.
-   Kollisionstests in `tests/test_promises.py`. Altbuchstaben gelten bis
-   zum Rollout weiter (Schritt 4).
+   Kollisionstests in `tests/test_promises.py`. Altbuchstaben seit 0.48.0
+   entfernt.
 2. ~~**Template + Feld-Guide**~~ — **erledigt 2026-10-07** (0.47.0,
-   `7dfce48`); `protocol-check` liest die alten Labels bis Punkt 8.
+   `7dfce48`); die alten Labels liest `protocol-check` seit 0.48.0 nicht mehr.
    (`experiment-protocol.md.template`,
    `protocol-field-guide.md`): Feld-Label „stop rule“ →
    „admissibility condition“, Schlüsselwörter für `protocol-check`
@@ -504,9 +508,9 @@ Markdown, weil ein Mensch sie schreibt und liest; ihre Prüfung erwartet
 das exakte Label aus dem Template statt beliebiger Schlüsselwörter.
 TOML, nicht YAML: stdlib-only.
 
-**Bruch statt Altpfad (Leitsatz oben):** Der Regex-Kopf fällt weg, und
-im selben Release die übrigen Altpfade (rund 45 Stellen in 8 Modulen,
-Stand 2026-10-06): Altbuchstaben K/S/W/N, Läufe ohne `schema_version`,
+**Bruch statt Altpfad (Leitsatz oben) — erledigt 2026-10-07 mit 0.48.0:**
+Der Regex-Kopf fiel weg, und im selben Release die übrigen Altpfade (rund
+45 Stellen in 8 Modulen, Stand 2026-10-06): Altbuchstaben K/S/W/N, Läufe ohne `schema_version`,
 Protokolle unter Standard 0.16 (`choose_legacy`). Voraussetzungen: die
 Tags auf GitHub (`git push origin --tags` — die Pins zeigen heute auf
 `git+file://`, gelten also nur auf diesem Rechner); `thesis-dagidir`

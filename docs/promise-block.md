@@ -72,9 +72,9 @@ preflight_audit = "2026-10-07 · scope sha 3f9a1c2b7e04 · 2 findings (2 fixed)"
 [[promise]]
 id = "C1"
 key = "c1_pass"
-sentence = "macro-F1 of the judge >= MIN_F1 on the test split"
+sentence = "macro-F1 of the judge >= min_f1 on the test split"
 scope = ["scripts/01_measure.py:evaluate", "scripts/01_measure.py:filter_items"]
-constants = { MIN_F1 = 0.70 }
+constants = { min_f1 = 0.70 }
 ```
 
 | Field | Rule |
@@ -83,10 +83,32 @@ constants = { MIN_F1 = 0.70 }
 | `key` | the metrics key reporting it: the id itself or `<id>_<suffix>` |
 | `sentence` | the promise in one sentence |
 | `scope` | non-empty list of `file` or `file:function` (top-level function or class), relative to the protocol's directory |
-| `constants` | scalars the code reads from here — `promises.constants(PROTOCOL, "C1")` — instead of a second copy in the script |
+| `constants` | scalars the code reads from here instead of a second copy in the script — `promises.all_constants(promises.load(PROTOCOL))` into the script's config object; a name is lowercase snake_case and stands in exactly one promise (0.71.0) |
 
 TOML, not YAML: labkit is stdlib-only, and `tomllib` is in the standard
 library.
+
+## Constants: the name is the mapping
+
+A registered constant is named like the config key it is recorded under
+(`min_f1`, `margin`, `max_empty` — `^[a-z][a-z0-9_]*$`), and it stands in
+exactly one `[[promise]]` table; `parse_block` refuses `MIN_F1` and a name
+declared twice. The name is the whole mapping between protocol and run
+record: no second table says which key answers which constant, and a
+heuristic ("sounds alike") would be evidence, not a check. The script
+builds its config from the block — `MeasureConfig(model=MODEL,
+**promises.all_constants(promises.load(PROTOCOL)))` — and records that
+object whole; `runlog` refuses, before the run directory exists, a config
+that lacks a registered constant or carries it with another value
+(type-strict: `True` is not `1`, `1` is not `1.0`). The guarantee behind
+the record is therefore: *a run under a block recorded every registered
+constant unchanged*. Whether `evaluate_rows` uses the value right is the
+agent audit's question, not a mechanical one. A frozen protocol owes the
+block (`promises.block_owed`): frozen = true without tables is a MUST
+failure in `protocol-check`, a blocker in `preflight` and `finalize`, and
+no run starts under it. Mechanically guaranteed is the one home of a
+*name*; that two differently named constants mean the same threshold no
+parser can see.
 
 ## What the declared-scope hash states
 
@@ -127,7 +149,7 @@ outside a declared function are not covered — read them from the block.
 | Link | Who | Refuses or reports |
 |---|---|---|
 | promise | `intent-check` | block malformed; prose and block name different ids |
-| execution | `runlog` | malformed block or dangling scope → refused before the run dir exists; otherwise `config.json` records `promises`: the digest of the promises as read (normalized JSON — neither the head nor the spelling of a table moves it) and its format, and per id key, constants, scope, `declared_scope_sha` |
+| execution | `runlog` | malformed block, dangling scope, frozen without tables, or a config missing or contradicting a registered constant → refused before the run dir exists; otherwise `config.json` records `promises`: the digest of the promises as read (normalized JSON — neither the head nor the spelling of a table moves it) and its format, and per id key, constants, scope, `declared_scope_sha` |
 | report | `intent-check` | declared key not reported exactly; run recorded no block, or a different one ("the promises changed after the run"); a run from labkit 0.46/0.47 is told apart by its digest format, not reported as changed |
 | recomputation | `recheck.holds` | a declared scope changed since the run, per promise |
 
