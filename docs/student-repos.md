@@ -37,7 +37,11 @@ experiment.
 The student or the supervisor (a commit in the student's repo) can do it.
 A breaking release names in `CHANGELOG.md` the last version that reads the
 old formats; a repo with frozen protocols in an old format stays on its pin
-until new work starts there.
+until new work starts there. Since 0.71.0 `frozen = true` owes the
+`[[promise]]` tables and a run records every registered constant
+unchanged; an area frozen under 0.70.0 or earlier is checked and
+reproduced with that version — its tables are not added afterwards, that
+would be a new registration.
 
 ## What it rests on
 
