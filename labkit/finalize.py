@@ -47,7 +47,13 @@ from pathlib import Path
 
 from labkit import promises, protocol_block
 from labkit.runs import bound_answering_run, read_metrics, read_outputs, read_run_config
-from labkit.repo import area_path, area_protocols, git_root, git_run, no_such_area
+from labkit.repo import (
+    area_path,
+    choose_protocol,
+    git_root,
+    git_run,
+    no_such_area,
+)
 from labkit.intent_check import main as intent_check_main, registered_ids
 from labkit.preflight import area_tests
 from labkit.protocol_check import RUN_ID, fields, open_holes
@@ -169,29 +175,6 @@ class Findings:
         """Print a warning and count it for the summary."""
         print(f"  warning: {msg}")
         self.warnings += 1
-
-
-def choose_protocol(area: Path, protocol: Path | None) -> Path | None:
-    """The protocol finalize holds the area to: the named one, else the
-    area's only one. Prints why and returns None when there is none, or
-    several and none is named — finalize refuses to guess."""
-    if protocol is not None:
-        if not protocol.is_file():
-            print(f"finalize: no such protocol: {protocol}")
-            return None
-        return protocol
-    protocols = area_protocols(area)
-    if not protocols:
-        print(f"finalize: no PROTOCOL-*.md in {area}")
-        return None
-    if len(protocols) > 1:
-        print(
-            f"finalize: {len(protocols)} protocols in {area} — name one with --protocol FILE:"
-        )
-        for p in protocols:
-            print(f"  {p}")
-        return None
-    return protocols[0]
 
 
 def answering_run(findings: Findings, area: Path, pid: str | None) -> Path | None:
@@ -420,7 +403,7 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
     every blocker again. Warnings alone end with 0.
     """
     # 0. protocol and settings — the only early end
-    chosen = choose_protocol(area, protocol)
+    chosen = choose_protocol(area, protocol, "finalize")
     if chosen is None:
         return 2
     text = chosen.read_text(encoding="utf-8")

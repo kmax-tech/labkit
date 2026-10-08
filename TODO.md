@@ -66,6 +66,12 @@ mechanischer Check — die Aufgabe des Pilots.
 
 ## Klein, ohne eigenen Punkt
 
+- [x] **`labkit-params <area>` gebaut (2026-10-08, 0.70.0):** Auslöser
+      Runde 13 („Protokolle, measure und runs mit Configs — wo anfangen"):
+      die Werte des antwortenden Laufs in einer Tabelle, je Zeile Heimat
+      und Stufe; Vollständigkeit des Records behauptet die Ansicht nicht
+      (das hält der Bereichstest des Config-Objekts). Offen: der Rollout
+      der Promise-Konstanten mit Config-gleichen Namen (Punkt 8).
 - **Studi-Läufe ohne `requirements.lock`** (2026-10-07): `runlog` notiert die
   Umgebung eines Laufs über die Lock-Datei; der Starter legt keine an, also
   startet jeder Studi-Lauf mit „env unpinned" und die labkit-Version ist nur

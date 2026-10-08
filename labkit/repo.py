@@ -122,3 +122,26 @@ def git(args: list[str], cwd: Path, timeout: float = GIT_TIMEOUT_S) -> str | Non
             f"(exit {r.returncode}): {r.stderr.strip()}"
         )
     return r.stdout.strip()
+
+
+def choose_protocol(area: Path, protocol: Path | None, tool: str) -> Path | None:
+    """The protocol a command holds the area to: the named one, else the
+    area's only one. Prints why (prefixed with `tool`) and returns None when
+    there is none, or several and none is named — a gate never guesses."""
+    if protocol is not None:
+        if not protocol.is_file():
+            print(f"{tool}: no such protocol: {protocol}")
+            return None
+        return protocol
+    protocols = area_protocols(area)
+    if not protocols:
+        print(f"{tool}: no PROTOCOL-*.md in {area}")
+        return None
+    if len(protocols) > 1:
+        print(
+            f"{tool}: {len(protocols)} protocols in {area} — name one with --protocol FILE:"
+        )
+        for p in protocols:
+            print(f"  {p}")
+        return None
+    return protocols[0]

@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import finalize
+from labkit import finalize, repo
 
 
 class Steps(unittest.TestCase):
@@ -26,9 +26,9 @@ class Steps(unittest.TestCase):
             area = Path(d)
             (area / "PROTOCOL-a.md").write_text("x")
             (area / "PROTOCOL-b.md").write_text("x")
-            self.assertIsNone(finalize.choose_protocol(area, None))
+            self.assertIsNone(repo.choose_protocol(area, None, "finalize"))
             self.assertEqual(
-                finalize.choose_protocol(area, area / "PROTOCOL-a.md"),
+                repo.choose_protocol(area, area / "PROTOCOL-a.md", "finalize"),
                 area / "PROTOCOL-a.md",
             )
 

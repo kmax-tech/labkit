@@ -33,7 +33,7 @@ nothing vanished, grown keys reported as a derived run), the note holding
 every reported number as a token and the run_id. Two areas re-implemented
 it and got two of three parts wrong (2026-10-05).
 
-Thirteen **console commands** come with the installation, `runlog` with three
+Fourteen **console commands** come with the installation, `runlog` with three
 sub-commands (all answer `--help`):
 
 ```bash
@@ -54,6 +54,7 @@ claude-hook sessions [--run RUN_ID]  # the session log the stop hook keeps (.git
 labkit-hooks install|check [REPO]   # install this labkit's hooks (pre-commit, core.hooksPath, claude-hook); rerun after a pin raise
 usability stage|score <DIR>        # probe lab repo for a cold agent; score its trace (time, steps, number)
 labkit-audit <AREA> --mode preflight|analysis   # experiment-preflight audit through any models.toml alias; exit 1 on a blocker OR a warning
+labkit-params <AREA> [--run ID]     # the values the answering run ran with: home, meaning, tier (guaranteed / static evidence)
 ```
 
 ## Usability trace — what the whole chain costs for one kept number

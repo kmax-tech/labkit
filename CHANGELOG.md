@@ -17,6 +17,21 @@ pins (`requirements.txt` / `requirements.lock`).
   loud on a missing ancestor or a loop). Last version resolving on derived
   runs: 0.69.1.
 
+### Added
+
+- **`labkit-params <AREA> [--run ID] [--protocol FILE]`** — the values the
+  answering run ran with, one table: the protocol's registered constants
+  against the record (equal / different / missing), every recorded config
+  key, the model that answered (from the `models_resolved` of the run that
+  recorded it, walking `derived_from`), and UPPER_CASE module constants
+  the record does not carry. Each row names its home and its tier; the
+  view claims nothing about the record's completeness (round 13: "where
+  to start" between protocol, script and runs).
+- `intent_check.constant_records` (states equal / different / missing);
+  `promised_constant_mismatches` reads `different` from it, unchanged.
+- `repo.choose_protocol(area, protocol, tool)` — finalize's choice of the
+  area's protocol, now shared.
+
 ### Changed
 
 - **One choice of the run that answers**: `runs.bound_answering_run(area,

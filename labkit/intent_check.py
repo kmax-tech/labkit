@@ -47,6 +47,7 @@ from __future__ import annotations
 
 import ast
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from labkit import promises, protocol_block
@@ -229,8 +230,49 @@ def check_block_against_run(
     return out
 
 
+@dataclass(frozen=True)
+class ConstantRecord:
+    """One registered constant held against the run's record.
+
+    Attributes:
+        promise_id: The promise that declares it ("C1").
+        name: The constant's name — the record's key of the same name.
+        promised: The value the protocol registers.
+        recorded: The value the run recorded under that name, None if none.
+        state: "equal", "different" or "missing" — certain; whether
+            "missing" is a fault is evidence (the script may hold a copy
+            the record never saw).
+    """
+
+    promise_id: str
+    name: str
+    promised: object
+    recorded: object | None
+    state: str
+
+
+def constant_records(
+    block: promises.PromiseBlock, run_config: dict
+) -> list[ConstantRecord]:
+    """Every registered constant with its state against the record — the one
+    reading for the blocker (`promised_constant_mismatches`: different only)
+    and the view (`labkit-params`: all three states)."""
+    out = []
+    for p in block.promises:
+        for name, value in p.constants.items():
+            if name not in run_config:
+                out.append(ConstantRecord(p.id, name, value, None, "missing"))
+            elif run_config[name] != value:
+                out.append(
+                    ConstantRecord(p.id, name, value, run_config[name], "different")
+                )
+            else:
+                out.append(ConstantRecord(p.id, name, value, run_config[name], "equal"))
+    return out
+
+
 def promised_constant_mismatches(
-    block: "promises.PromiseBlock", run_config: dict, run_name: str
+    block: promises.PromiseBlock, run_config: dict, run_name: str
 ) -> list[str]:
     """The constants the protocol promised (a margin, a threshold) whose value
     differs from the one the run recorded under the same name.
@@ -240,18 +282,16 @@ def promised_constant_mismatches(
     against 0.6 in the protocol — judged by a threshold nobody registered
     (Durchstich 2026-10-06). Exact, but only as far as the script records
     the value in its run config; a copy it never records stays invisible
-    here and is a static-evidence question.
+    here and is a static-evidence question (`labkit-params` shows it as
+    `missing`; it is no blocker here on purpose).
     """
-    out = []
-    for p in block.promises:
-        for name, value in p.constants.items():
-            if name in run_config and run_config[name] != value:
-                out.append(
-                    f"{run_name}: [{p.id}] declares {name} = {value!r}, "
-                    f"the run used {name} = {run_config[name]!r} — read "
-                    f"it with promises.constants(), not a second copy."
-                )
-    return out
+    return [
+        f"{run_name}: [{r.promise_id}] declares {r.name} = {r.promised!r}, "
+        f"the run used {r.name} = {r.recorded!r} — read "
+        f"it with promises.constants(), not a second copy."
+        for r in constant_records(block, run_config)
+        if r.state == "different"
+    ]
 
 
 # --- which metrics file answers: named explicitly, or chosen by binding -----
