@@ -5,6 +5,22 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.68.2 — 2026-10-08
+
+### Changed
+
+Found by the new `code-clarity` agent (dotfiles) on finalize:
+
+- The module docstring numbers the steps like `finalize_area`, 0 to 7,
+  flat (it still said "2b" and "4b").
+- One word, one thing: the measurement run is `measurement_run` in every
+  station, not `run_dir` beside it; the collector of blockers and warnings
+  is `Findings`, not `Gate` (the gate is the whole command).
+- The provenance step says "n/a — protocol cost is not 'seconds'" instead
+  of "not a run of seconds", which used "run" for the protocol's cost tier
+  three lines from the measurement run. The only output change; exit codes
+  unchanged on five areas.
+
 ## 0.68.1 — 2026-10-08
 
 ### Changed

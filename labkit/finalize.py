@@ -7,30 +7,33 @@ the protocol.
 
 Exit codes: 0 clean, 1 findings (at least one blocker), 2 usage error.
 
-What it runs, in order:
-  1. completion     the run that answers — the newest completed bound run
-                    reporting intent keys, the same choice as intent-check —
-                    and every later station checks THAT run
+What it runs, in order (the same numbers as `finalize_area`, which shows
+each step's condition):
+  0. protocol       the named PROTOCOL-*.md or the area's only one, and its
+                    settings block — the only early end (exit 2)
+  1. completion     the measurement run that answers — the newest completed
+                    bound run reporting intent keys, the same choice as
+                    intent-check — and every later step checks THAT run
   2. intent-check   every registered promise has a metrics key (and vice versa)
-  2b. scopes        every declared promise scope unchanged since the run
-  3. open fields    protocol fields still holding a placeholder
-  4. provenance     at `cost = "seconds"`: the
-                    run froze its source (`data=` in config.json) and every
-                    source and output file is tracked in git — the two of
-                    the three questions the agent audit kept asking that a
-                    machine can answer (AS-017 Die Zahl der Audits folgt der Kostenstufe, 2026-10-05); the third, the
-                    counted unit, is the protocol's `Unit` field
-  4b. area tests    tests/test_<NN>_<name>.py via the repo's interpreter, on
+  3. declared scopes  every declared promise scope unchanged since the run
+  4. open fields    protocol fields still holding a placeholder
+  5. provenance     at protocol `cost = "seconds"`: the run froze its source
+                    (`data=` in config.json) and every source and output file
+                    is tracked in git — the two of the three questions the
+                    agent audit kept asking that a machine can answer (AS-017
+                    Die Zahl der Audits folgt der Kostenstufe, 2026-10-05);
+                    the third, the counted unit, is the protocol's `Unit` field
+  6. area tests     tests/test_<NN>_<name>.py via the repo's interpreter, on
                     every tier: a failing test is a blocker (evaluate() lost
                     its resolution check), a missing one no finding here
-  5. criterion n    every `c<i>_n` key in metrics.json equals some input
+  7. criterion n    every `c<i>_n` key in metrics.json equals some input
                     count the run recorded (rows of a data= file, lines of
                     an output) — a warning, not a blocker, until the false
                     alarm rate is known (2026-10-05; the denominator class
                     was 31 of 171 audit findings)
 
 What it does NOT do: fill fields, edit the protocol, or commit. It is a
-read-only gate.
+read-only findings.
 """
 
 from __future__ import annotations
@@ -63,11 +66,11 @@ def _tracked(repo: Path, path: Path) -> bool:
 CRITERION_N = promises.CRITERION_N_KEY
 
 
-def criterion_n_input_mismatches(run_dir: Path) -> list[str]:  # noqa: C901 complexity baseline 2026-10-08
+def criterion_n_input_mismatches(measurement_run: Path) -> list[str]:  # noqa: C901 complexity baseline 2026-10-08
     """Warnings: a criterion's denominator (`c<i>_n` in metrics.json) that
     matches no input count the run recorded — the size of what was counted,
     not a promised constant (that is `intent_check.promised_constant_mismatches`)."""
-    metrics_file = run_dir / "metrics.json"
+    metrics_file = measurement_run / "metrics.json"
     if not metrics_file.is_file():
         return []
     metrics = read_metrics(metrics_file)
@@ -78,12 +81,12 @@ def criterion_n_input_mismatches(run_dir: Path) -> list[str]:  # noqa: C901 comp
     }
     if not ns:
         return []
-    cfg = read_run_config(run_dir) or {}
+    cfg = read_run_config(measurement_run) or {}
     counts: dict[str, int] = {}
     for key, d in (cfg.get("data") or {}).items():
         if isinstance(d, dict) and isinstance(d.get("rows"), int):
             counts[f"data[{key}].rows"] = d["rows"]
-    for o in read_outputs(run_dir) or []:
+    for o in read_outputs(measurement_run) or []:
         if o.lines is not None:
             counts[f"{o.path.name} lines"] = o.lines
     if not counts:
@@ -103,11 +106,13 @@ def criterion_n_input_mismatches(run_dir: Path) -> list[str]:  # noqa: C901 comp
     return out
 
 
-def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]]:
+def provenance_findings(
+    area: Path, measurement_run: Path
+) -> tuple[list[str], list[str]]:
     """(blockers, warnings) for a run of seconds: source frozen, files tracked."""
     blockers: list[str] = []
     warnings: list[str] = []
-    cfg = read_run_config(run_dir) or {}
+    cfg = read_run_config(measurement_run) or {}
     data = cfg.get("data") or {}
     if not data:
         blockers.append(
@@ -117,7 +122,7 @@ def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]
     sources = [
         Path(v["path"]) for v in data.values() if isinstance(v, dict) and v.get("path")
     ]
-    registered = read_outputs(run_dir)
+    registered = read_outputs(measurement_run)
     outputs: list[Path] = [o.path for o in registered or []]
     if registered is None:
         warnings.append(
@@ -152,7 +157,7 @@ def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]
 
 
 @dataclass
-class Gate:
+class Findings:
     """What the stations found: every blocker as one line, repeated in the
     summary — inside a commit hook the sections run to 20 lines and the one
     blocker drowned in the middle (usability probe 2026-10-07)."""
@@ -194,21 +199,21 @@ def choose_protocol(area: Path, protocol: Path | None) -> Path | None:
     return protocols[0]
 
 
-def answering_run(gate: Gate, area: Path, pid: str | None) -> Path | None:
+def answering_run(findings: Findings, area: Path, pid: str | None) -> Path | None:
     """The run every station holds the protocol to: the newest completed run
     bound to it that reports intent keys. ONE choice for every station:
     intent-check skips newer runs without intent keys (a probe), so checking
     scopes or provenance on the newest run judged the probe while the
     numbers came from the measurement (review 2026-10-07)."""
     if pid is None:
-        gate.block("no stamped protocol id ([protocol] id) — no run is bound to it")
+        findings.block("no stamped protocol id ([protocol] id) — no run is bound to it")
         return None
     if not (area / "runs").is_dir():
-        gate.block(f"no runs/ directory in {area}")
+        findings.block(f"no runs/ directory in {area}")
         return None
     taken, rest = bound_runs(area, pid)
     if not taken:
-        gate.block(f"no completed run bound to {pid}")
+        findings.block(f"no completed run bound to {pid}")
         for f in rest:
             print(f"    {f['dir'].name}: {f['why']}")
         return None
@@ -216,7 +221,7 @@ def answering_run(gate: Gate, area: Path, pid: str | None) -> Path | None:
     assert mpath is not None, "taken is non-empty"
     blocking = newer_unreadable(mpath.parent, rest)
     if blocking:
-        gate.block(blocking)
+        findings.block(blocking)
     note = (
         f" (skipped {skipped} newer bound run(s) without intent keys)"
         if skipped
@@ -226,32 +231,34 @@ def answering_run(gate: Gate, area: Path, pid: str | None) -> Path | None:
     return mpath.parent
 
 
-def cited_run_mismatch(text: str, run_dir: Path) -> str | None:
+def cited_run_mismatch(text: str, measurement_run: Path) -> str | None:
     """A blocker when the protocol's answer cites runs and not the one the
     checks hold; None when it cites that run or none."""
     cited = cited_runs(text)
-    if cited and run_dir.name not in cited:
+    if cited and measurement_run.name not in cited:
         return (
             f'"Answer to the question" cites {", ".join(cited)}, '
-            f"but the run that answers is {run_dir.name} — cite the run "
+            f"but the run that answers is {measurement_run.name} — cite the run "
             f"the checks hold, or rerun"
         )
     return None
 
 
-def check_completion(gate: Gate, area: Path, text: str, pid: str | None) -> Path | None:
+def check_completion(
+    findings: Findings, area: Path, text: str, pid: str | None
+) -> Path | None:
     """Station 1: the run every later station holds the protocol to — chosen,
     shown, and held to the run the answer cites. Returns it, or None."""
-    run_dir = answering_run(gate, area, pid)
-    if run_dir is not None:
-        mismatch = cited_run_mismatch(text, run_dir)
+    measurement_run = answering_run(findings, area, pid)
+    if measurement_run is not None:
+        mismatch = cited_run_mismatch(text, measurement_run)
         if mismatch:
-            gate.block(mismatch)
-    return run_dir
+            findings.block(mismatch)
+    return measurement_run
 
 
 def check_intent_keys_in_metrics(
-    gate: Gate, protocol: Path, text: str, run_dir: Path | None
+    findings: Findings, protocol: Path, text: str, measurement_run: Path | None
 ) -> None:
     """Station 2: every registered intent id reports as a key of the answering
     run's metrics.json (intent-check). Not code_check.check_intent_ids, which
@@ -260,7 +267,9 @@ def check_intent_keys_in_metrics(
         print("  no intent ids registered — nothing to check")
         return
     args = [str(protocol)] + (
-        ["--metrics", str(run_dir / "metrics.json")] if run_dir is not None else []
+        ["--metrics", str(measurement_run / "metrics.json")]
+        if measurement_run is not None
+        else []
     )
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
@@ -268,52 +277,54 @@ def check_intent_keys_in_metrics(
     for line in buf.getvalue().splitlines():
         print(f"  {line}")
     if rc != 0:
-        gate.block("intent-check failed (see its lines above)")
+        findings.block("intent-check failed (see its lines above)")
 
 
-def check_declared_scopes(gate: Gate, area: Path, run_dir: Path) -> None:
+def check_declared_scopes(
+    findings: Findings, area: Path, measurement_run: Path
+) -> None:
     """Station 3: a promise's declared scope edited after the run: today's code is not
     the code that produced the number; until 2026-10-06 only recheck saw it
     (Durchstich)."""
-    recorded = (read_run_config(run_dir) or {}).get("promises")
+    recorded = (read_run_config(measurement_run) or {}).get("promises")
     if recorded is None:
         print("  no promise block recorded — nothing to compare")
         return
     drift = promises.scope_drift(recorded, area)
     for d in drift:
-        gate.block(
-            f"declared scope changed since {run_dir.name}: {d} — rerun before reporting"
+        findings.block(
+            f"declared scope changed since {measurement_run.name}: {d} — rerun before reporting"
         )
     if not drift:
         print(
-            f"  {len(recorded['ids'])} declared scope(s) unchanged since {run_dir.name}"
+            f"  {len(recorded['ids'])} declared scope(s) unchanged since {measurement_run.name}"
         )
 
 
 def check_open_fields(
-    gate: Gate, protocol: Path, text: str, head: protocol_block.Head
+    findings: Findings, protocol: Path, text: str, head: protocol_block.Head
 ) -> None:
     """Station 4: fields of the protocol still empty or a placeholder."""
     holes = open_holes(text, head)
     for lineno, label in holes:
-        gate.warn(f"{protocol.name}:{lineno}: {label}")
+        findings.warn(f"{protocol.name}:{lineno}: {label}")
     if not holes:
         print("  all fields filled")
 
 
-def check_provenance(gate: Gate, area: Path, run_dir: Path) -> None:
+def check_provenance(findings: Findings, area: Path, measurement_run: Path) -> None:
     """Station 5: the run's source frozen in the run, source and output
     tracked in git."""
-    b, w = provenance_findings(area, run_dir)
+    b, w = provenance_findings(area, measurement_run)
     for line in b:
-        gate.block(line)
+        findings.block(line)
     for line in w:
-        gate.warn(line)
+        findings.warn(line)
     if not b and not w:
         print("  source frozen in the run; source and output tracked in git")
 
 
-def check_area_tests(gate: Gate, area: Path) -> None:
+def check_area_tests(findings: Findings, area: Path) -> None:
     """Station 6: the area's own tests. The resolution check runs again before a number leaves: a later edit
     of evaluate() that mutes the criterion is caught here too — on every
     tier, seconds included, where preflight is not owed (2026-10-07). A
@@ -324,38 +335,38 @@ def check_area_tests(gate: Gate, area: Path) -> None:
     elif tests.state == "ok":
         print(f"  ok — {', '.join(t.name for t in tests.files)}")
     elif tests.state == "no-pytest":
-        gate.warn("pytest is not installed in this interpreter — tests not run")
+        findings.warn("pytest is not installed in this interpreter — tests not run")
     else:
         for ln in tests.tail:
             print(f"  {ln}")
-        gate.block(
+        findings.block(
             f"{', '.join(t.name for t in tests.files)} failed — evaluate() no longer holds its resolution check"
         )
 
 
-def check_criterion_n(gate: Gate, run_dir: Path) -> None:
+def check_criterion_n(findings: Findings, measurement_run: Path) -> None:
     """Station 7: a criterion's denominator that matches no recorded input count."""
-    w = criterion_n_input_mismatches(run_dir)
+    w = criterion_n_input_mismatches(measurement_run)
     for line in w:
-        gate.warn(line)
+        findings.warn(line)
     if not w:
         print("  every c<i>_n equals a recorded input count (or there is none)")
 
 
-def report(gate: Gate) -> int:
+def report(findings: Findings) -> int:
     """The summary: every blocker once more, then the exit code (0 clean, 1
     findings)."""
     print()
-    if gate.blocked:
+    if findings.blocked:
         print(
-            f"finalize: {len(gate.blocked)} blocker(s), {gate.warnings} warning(s) — fix the blockers before reporting:"
+            f"finalize: {len(findings.blocked)} blocker(s), {findings.warnings} warning(s) — fix the blockers before reporting:"
         )
-        for msg in gate.blocked:
+        for msg in findings.blocked:
             print(f"  - {msg}")
         return 1
-    if gate.warnings:
+    if findings.warnings:
         print(
-            f"finalize: 0 blockers, {gate.warnings} warning(s) — review the open fields before reporting."
+            f"finalize: 0 blockers, {findings.warnings} warning(s) — review the open fields before reporting."
         )
         return 0
     print("finalize: all clear.")
@@ -406,48 +417,50 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
     except protocol_block.BlockError as exc:
         print(f"finalize: {chosen.name}: {exc}")
         return 2
-    gate = Gate()
+    findings = Findings()
 
     # 1. completion — the run every later step examines
     header(f"completion: {chosen.name}")
-    measurement_run = check_completion(gate, area, text, head.id)
+    measurement_run = check_completion(findings, area, text, head.id)
 
     # 2. intent-check — always
     header("intent-check")
-    check_intent_keys_in_metrics(gate, chosen, text, measurement_run)
+    check_intent_keys_in_metrics(findings, chosen, text, measurement_run)
 
     # 3. declared scopes — only with a run
     header("declared scopes")
     if measurement_run is None:
         print(NO_RUN)
     else:
-        check_declared_scopes(gate, area, measurement_run)
+        check_declared_scopes(findings, area, measurement_run)
 
     # 4. open fields — always
     header(f"open fields: {chosen.name}")
-    check_open_fields(gate, chosen, text, head)
+    check_open_fields(findings, chosen, text, head)
 
     # 5. provenance — only for cost = seconds, and only with a run
     header("provenance")
     if head.cost != "seconds":
-        print("  n/a — not a run of seconds (the agent audit covers provenance there)")
+        print(
+            "  n/a — protocol cost is not 'seconds' (the agent audit covers provenance there)"
+        )
     elif measurement_run is None:
         print(NO_RUN)
     else:
-        check_provenance(gate, area, measurement_run)
+        check_provenance(findings, area, measurement_run)
 
     # 6. area tests — always
     header("area tests")
-    check_area_tests(gate, area)
+    check_area_tests(findings, area)
 
     # 7. criterion n — only with a run
     header("criterion n")
     if measurement_run is None:
         print(NO_RUN)
     else:
-        check_criterion_n(gate, measurement_run)
+        check_criterion_n(findings, measurement_run)
 
-    return report(gate)  # 1 if any step found a blocker, else 0
+    return report(findings)  # 1 if any step found a blocker, else 0
 
 
 def cited_runs(text: str) -> list[str]:
