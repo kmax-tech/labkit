@@ -493,3 +493,84 @@ an agent other than the author. Its `MODE: questions` backs the skill
 person, answers only after they answered.
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/clarity-agent/`.
+
+## Round 11 (2026-10-08): reconstructing an experiment months later — agents and the person
+
+A different chain from the rounds before: not labkit's code but a lab's
+experiment, protocol → script → run → number, as someone returning to it
+would need it. Real case: uniagent areas 08 and 09. Eight questions, every
+truth checked in the files — which of the four runs called the model, was
+its code committed, where "no new false rejection" is decided, which file
+holds the cases and gold, how the kept run is started, which run of 08
+area 09 holds itself to, where it refuses otherwise, where the submission
+branch is computed. Two Haiku agents; then the person (the lab's author,
+who wrote these areas with agents a day earlier), timed, with a fresh
+assistant in the repo allowed.
+
+| reader | right | seconds | calls / files | questions to the assistant |
+|---|---|---|---|---|
+| Haiku, agent 1 | 8/8 | 163 | 28 / 12 | — |
+| Haiku, agent 2 | 8/8 | 133 | 26 / 11 | — |
+| the person | 1/8 | 414 | — | 2 |
+
+The agents' effort is the highest of any round (earlier 7–25 calls): no
+agent opened the area's README; both listed the tree with `find`, opened
+all four run folders' config, metrics and completion, read the area
+script and both measure modules whole. Everything was found, nothing was
+in one place.
+
+The person's misses, each read against the repo:
+
+- **Which run called the model** (r1): picked the newest. `config.json`
+  says `derived_from: null` for the one that did; `runs.tsv` and `runlog
+  <area>` (which lists only live runs) show no such thing.
+- **Was the code committed** (r2): picked yes, while noting "ich sehe
+  uncommitted patch". The run says `git: 22215c2+dirty` and holds a
+  7.8 KB `uncommitted.patch`; nothing says in plain words "this run's
+  code was not committed".
+- **Where c2 is decided** (r3h, 158 s, one assistant question): picked
+  the submission branch. The chain is area `evaluate_rows` → `positions.
+  evaluate` → `comparison.evaluate_rows` (217 lines, the condition in an
+  inner helper, `c2_pass` set at line 572) — four functions named
+  `evaluate`/`evaluate_rows` in three modules. The person, after the
+  assistant laid the chain out: "das ist extrem kompliziert mit dem
+  Verstehen, was passiert". The assistant's own route worked in three
+  greps: the metrics key as a string leads to the one place that sets it.
+- **Which file holds the cases** (r4): picked the hand labels. The
+  protocol's Data field names the file; the person went to the script,
+  where it is `ITEMS`, next to `LABELS` and `AREA_06_ROWS`, and the file
+  lives under area 05.
+- **How the kept run is started** (r5): picked `--derive`. The script head
+  lists six invocations; the kept one says "full run (Cost hours: `runlog
+  start -- …`)". No run records the command it was started with.
+- **Where 09 refuses** (r7h): picked `main`, which calls the function
+  that raises — a near miss.
+- **The submission branch** (r8h): found `SUBMISSION = {True: …}` in
+  `positions.py`, then picked `comparison.evaluate_rows`.
+- The area README is the stamped template, placeholders unfilled, and its
+  contract text says "the formula stands once, in scripts/01_measure.py"
+  — not true for this area, whose formula is in `src/measure/`.
+
+The person's words: "das meine genaue measure.py hat geholfen, aber manche
+Referenzen etc. sind zu verwirrend".
+
+Consequences (a case, n = 1; the agents' effort says the same):
+
+1. **What a run is must stand in one listing**: model run or derived from
+   which, code committed or not, the command that started it. Today it is
+   spread over `config.json` keys (`derived_from`, `git …+dirty`) and a
+   patch file, and the command is not recorded at all. A labkit change.
+2. **The registered keys lead to one function by grep**, and the area
+   says where: the script head (and the README) names the file and
+   function that sets the metrics keys. Delegation chains that reuse one
+   name (`evaluate_rows` → `evaluate` → `evaluate_rows`) are what "one
+   word, one thing" forbids, across modules too. A coding-style rule and
+   a uniagent change.
+3. **The stamped README must not say what is not so**: a template text
+   that asserts where the formula is, left unfilled, misleads more than no
+   README. Template rollout.
+4. The data an area measures on is named in the protocol (Data / scope);
+   the person did not look there. The script's constant should carry the
+   word a person searches (`CASES_WITH_GOLD`, not `ITEMS`).
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round11-reconstruct/`.
