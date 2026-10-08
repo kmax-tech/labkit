@@ -166,8 +166,8 @@ written back — on every tier, seconds included. Whoever reads it has read
 nothing else yet; everything below it is the evidence for a check. It
 derives from the detail below and carries no fact that isn't there.
 
-- **Result:** what was found, in at most two plain sentences that carry the
-  question with them and say whether the bar set before the run was met —
+- **Result:** the answer to the Question line above it, in at most two
+  plain sentences that say whether the bar set before the run was met —
   "The class descriptions kept the cable set out of the framework class in
   all five cases, as required", not "Both arms were run on 46 cases". A
   reader who stops after the Summary must know the verdict (round 10: four
@@ -177,7 +177,12 @@ derives from the detail below and carries no fact that isn't there.
 - **Limits:** how far it holds, one sentence — the sample, a single run,
   what was not tested.
 - **Next step:** what follows — a decision, the next experiment, or "none".
-- **Question †:** the Intent's question in plain words — only where Result
+- **Question †:** the first line of the Summary: the Intent's question in
+  plain words, so the Result is read as its answer (round 15, 2026-10-08:
+  a person restated the question and did not read the Result as the
+  answer). Authority stays with Intent → Question / hypothesis; this line
+  is its readable projection — one home means one source of truth, not
+  that a sentence may appear once. Formerly: only where Result
   does not carry it.
 - **Did †:** what was done, one sentence — for a reader with no context.
 
@@ -369,6 +374,11 @@ to `true`.
 - **Parser cases harvested:** the probe's answer forms as REAL cases into
   the parser test.
 - **Clarified terms:** what was ambiguous, and what is it called now?
+- **Deviations after freeze:** "none", or what was changed after
+  `frozen = true`. The registered plan (Intent) is not rewritten; a
+  deviation stands here, in the Result block, and — where it touches the
+  verdict — in Summary → Limits. Not to be confused with "Changed", which
+  records instrument changes BEFORE the freeze.
 - **Changed — and in which class:** instrument changes (wording, answer form,
   parser, field names) are allowed; hypothesis, criterion, admissibility
   condition are not.

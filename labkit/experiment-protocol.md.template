@@ -2,19 +2,21 @@
 
 ## Summary (after the run, for a person)
 
-- **Result:** <!-- s --> <what was found, in at most two plain sentences that
-  carry the question with them and say whether the bar set before the run
-  was met ("The class descriptions kept the cable set out of the framework
-  class in all five cases, as required") — or that no verdict was possible
-  because an admissibility condition failed, and what was still read
-  descriptively; the result, not the procedure; no intent ids, metric keys
-  or run_ids, they are below>
+- **Question †:** <the Intent's question in plain words, first — the Result
+  below is its answer (a person reading only the Summary did not recognise
+  the Result as the answer, 2026-10-08)>
+- **Result:** <!-- s --> <the answer to the question above, in at most two
+  plain sentences: whether the bar set before the run was met ("Yes — the
+  class descriptions kept the cable set out of the framework class in all
+  five cases, as required") — or that no verdict was possible because an
+  admissibility condition failed, and what was still read descriptively;
+  the result, not the procedure; no intent ids, metric keys or run_ids,
+  they are below>
 - **Limits:** <!-- s --> <how far it holds, one sentence — the sample, a
-  single run, what was not tested>
+  single run, what was not tested; a deviation after the freeze that
+  touches the verdict is named here too>
 - **Next step:** <!-- s --> <what follows — a decision, the next experiment,
   or "none">
-- **Question †:** <the question of the Intent in plain words — only where
-  Result does not carry it>
 - **Did †:** <what was done, one sentence — for a reader with no context>
 
 ## Intent (before the run)
@@ -55,6 +57,10 @@
 - **Answer to the question:** <!-- s --> <per registered id its verdict, and the
   run_id; numbers as a small table below the label (one row per arm or
   condition), produced by `analysis/<note>.py --check`, never retyped>
+- **Deviations after freeze:** <"none", or what was changed after
+  `frozen = true` — the registered plan is the Intent above and is not
+  rewritten; a deviation that touches the verdict is named in Summary →
+  Limits as well>
 - **Raw output:** <!-- s --> <one real prompt+answer pair per finding>
 - **Interpretation / next step:** <one sentence; keep instrument findings
   apart from findings about the subject>
@@ -135,7 +141,9 @@
 - **Clarified terms:** <what was ambiguous, and what is it called now?>
 - **Changed — and in which class:** <instrument (wording, answer form,
   parser, field names) is allowed; hypothesis, criterion, admissibility condition are not
-  (→ AS-008 Instrumentenprobe vor dem Einfrieren)>
+  — changes BEFORE the freeze, from the render and instrument checks
+  (→ AS-008 Instrumentenprobe vor dem Einfrieren); what moved after the freeze is
+  "Deviations after freeze" under Result>
 - **Pilot:** <N items checked against hand analysis or anchors, before scaling>
 
 ## Runs (documented runs — via `runlog`, cite run_ids instead of retyping numbers)

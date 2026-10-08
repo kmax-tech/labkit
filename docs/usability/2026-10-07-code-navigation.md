@@ -821,4 +821,15 @@ Consequences:
    registered sentence; how to interpret the votes belongs in the
    protocol (rival explanations), not in the branch value.
 
+5. **The Summary names the question first, the Result is its answer.**
+   p1 was missed because the Result sentence was not read as the answer
+   to a question that stood four lines below it as an optional field.
+   The template now opens the Summary with `Question †`, the Result
+   placeholder says "the answer to the question above"; authority stays
+   with the Intent's question — one home means one source of truth, not
+   that a sentence may appear once (review 2026-10-08). "Changed" keeps
+   its meaning (instrument changes before the freeze); what moves after
+   the freeze gets its own line, `Deviations after freeze`, in the Result
+   block — the registered plan is not rewritten.
+
 Archive: labkit-paper `data/raw/agent-traces/2026-10-08/navigation-round15-human-area17/`.
