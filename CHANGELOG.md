@@ -5,6 +5,17 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.72.2 — 2026-10-08
+
+### Added
+
+- `finalize` warns when the answering run called a model (`llm_retries`
+  recorded or `model_calls` > 0) and no run in its lineage recorded
+  `models_resolved` — the alias was not under `model`/`*_model`
+  (`finalize.model_provenance_gap`). `labkit-params` marks a resolved
+  model spec recorded under another key (`judge`) as static evidence:
+  recorded, not provenance labkit holds. Neither reads the old key.
+
 ## 0.72.1 — 2026-10-08
 
 ### Added

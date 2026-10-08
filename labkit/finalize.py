@@ -47,7 +47,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit import promises, protocol_block
-from labkit.runs import bound_answering_run, read_metrics, read_outputs, read_run_config
+from labkit.runs import (
+    bound_answering_run,
+    model_provenance_run,
+    read_metrics,
+    read_outputs,
+    read_run_config,
+)
 from labkit.repo import (
     area_path,
     choose_protocol,
@@ -256,6 +262,35 @@ def answering_run_field_mismatch(
     )
 
 
+def model_provenance_gap(measurement_run: Path) -> str | None:
+    """Why the run's model cannot be named from its record, or None: its
+    metrics show model calls (`llm_retries` recorded, or `model_calls` > 0)
+    while no run in its lineage recorded `models_resolved` — the alias was
+    not under `model`/`*_model`, the keys runlog resolves (uniagent areas
+    14–17 recorded it as `judge`; round 15, 2026-10-08). Static evidence:
+    a run without those keys may still have called a model."""
+    try:
+        metrics = read_metrics(measurement_run / "metrics.json")
+    except (OSError, ValueError):
+        return None
+    calls = metrics.get("model_calls")
+    called = "llm_retries" in metrics or (isinstance(calls, int) and calls > 0)
+    if not called:
+        return None
+    try:
+        if model_provenance_run(measurement_run) is not None:
+            return None
+    except ValueError as exc:
+        return (
+            f"model provenance: the lineage of {measurement_run.name} is broken — {exc}"
+        )
+    return (
+        f"{measurement_run.name} called a model, but no run in its lineage recorded "
+        f"models_resolved — record the alias under `model` (runlog resolves it); "
+        f"a spec under another key is not provenance labkit can hold"
+    )
+
+
 def check_completion(
     findings: Findings, area: Path, text: str, pid: str | None
 ) -> Path | None:
@@ -269,6 +304,9 @@ def check_completion(
         field = answering_run_field_mismatch(text, measurement_run)
         if field is not None:
             (findings.block if field[0] == "block" else findings.warn)(field[1])
+        gap = model_provenance_gap(measurement_run)
+        if gap:
+            findings.warn(gap)
     return measurement_run
 
 

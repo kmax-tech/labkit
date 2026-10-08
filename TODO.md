@@ -69,6 +69,31 @@ mechanischer Check — die Aufgabe des Pilots.
 
 ## Klein, ohne eigenen Punkt
 
+- **Stand 2026-10-08, was labkit noch schuldet** (nach Standard 0.19,
+  `labkit-params`, Runde 14/15):
+  1. [x] **Modell-Provenienz, die labkit nicht sieht** — die Hotel-Bereiche
+     14–17 zeichnen das aufgelöste Modell unter `config.judge` auf,
+     `runlog` kennt nur `model`/`*_model`, `labkit-params` meldet „not
+     recorded“. `finalize` warnt, wenn der antwortende Lauf Modellaufrufe
+     hatte (`llm_retries`/`model_calls` in metrics) und kein Lauf seiner
+     Herkunft `models_resolved` trägt; `labkit-params` zeigt ein Dict mit
+     `alias`/`model`/`endpoint` unter fremdem Schlüssel als Indiz-Zeile.
+     Beides static evidence, kein Legacy-Lesen (0.72.2).
+  2. [ ] **`code-check`: jeder registrierte Schlüssel wird gelesen, nicht
+     nur geschrieben** (Punkt 3 unten) — Bereich 17 als Zwilling.
+  3. [ ] **Nachmessung `count`/`judge` mit n = 3** (Punkt 2 unten); die
+     Navigationsaufgabe ist gemessen (Runde 14).
+  4. [ ] **Standard 0.20** als ein Sprung — Kandidaten oben; Voraussetzung:
+     eine Schreibprobe und Runde 16 (andere Person).
+  5. [ ] `promote` (Punkt 1), `--draw N` (Punkt 4), Englisch (Punkt 5),
+     harness-unabhängig (Punkt 6) — je bei ihrem Auslöser.
+  6. [ ] Thesis-Starter-Beispielprotokoll in der gestempelten Form (mit
+     `[[promise]]`-Tabellen).
+  Nicht nötig, geprüft: Schichten und eine Heimat je Frage
+  (`tests/test_architecture.py`, `docs/architecture.md`), Hook mit vier
+  Prüfungen, Vorlagen auf Stand 0.19. Die eigentliche Schuld liegt außerhalb
+  des Codes: Runde 16 mit einer anderen Person — jede Vorlagenänderung von
+  heute beruht auf n = 1.
 - [ ] **Kandidaten für Protokoll-Standard 0.20** (gesammelt 2026-10-08,
       Runde 15 und Review): `Result` → `Answer` umbenennen und `Question`
       als Pflichtfeld der Summary; `Answering run` als geschuldetes Feld

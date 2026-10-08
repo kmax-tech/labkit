@@ -1,5 +1,6 @@
 """finalize's named decisions, each testable alone (CS-006 One function, one thing)."""
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -53,6 +54,41 @@ class AnsweringRunField(unittest.TestCase):
         self.assertIsNone(
             finalize.answering_run_field_mismatch("- **Result:** x\n", self.RUN)
         )
+
+
+class ModelProvenanceGap(unittest.TestCase):
+    def _run(self, d: str, metrics: dict, models_resolved: dict) -> Path:
+        run = Path(d) / "runs" / "2026-10-08T10-00-00_aaaa"
+        run.mkdir(parents=True)
+        (run / "config.json").write_text(
+            json.dumps(
+                {"schema_version": 2, "models_resolved": models_resolved, "config": {}}
+            ),
+            encoding="utf-8",
+        )
+        (run / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
+        return run
+
+    def test_a_model_run_without_models_resolved_is_named(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = self._run(d, {"c1_pass": True, "llm_retries": 0}, {})
+            gap = finalize.model_provenance_gap(run) or ""
+            self.assertIn(
+                "called a model, but no run in its lineage recorded models_resolved",
+                gap,
+            )
+
+    def test_a_model_run_with_models_resolved_is_quiet(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = self._run(
+                d, {"c1_pass": True, "model_calls": 3}, {"m": {"model": "A"}}
+            )
+            self.assertIsNone(finalize.model_provenance_gap(run))
+
+    def test_a_run_without_model_calls_is_quiet(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = self._run(d, {"c1_pass": True, "n_rows": 4}, {})
+            self.assertIsNone(finalize.model_provenance_gap(run))
 
 
 class ReadmePlaceholders(unittest.TestCase):

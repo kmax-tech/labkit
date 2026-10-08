@@ -83,19 +83,43 @@ def _shown(value: object, width: int = 38) -> str:
     return text if len(text) <= width else text[: width - 1] + "…"
 
 
+def _looks_like_model_spec(value: object) -> bool:
+    """A dict shaped like `llm.resolve`'s spec (alias/model/endpoint) — a
+    resolved model recorded under a key runlog does not read."""
+    return (
+        isinstance(value, dict)
+        and "model" in value
+        and ("alias" in value or "endpoint" in value)
+    )
+
+
 def recorded_rows(run_config: dict, run_name: str) -> list[ParamRow]:
-    """Every key the run recorded under `config`: certain, and nothing more."""
-    return [
-        ParamRow(
-            name=key,
-            value=_shown(value),
-            home=f"{run_name}/config.json: config.{key}",
-            meaning="recorded parameter of this run",
-            in_run=_shown(value),
-            tier=GUARANTEED,
+    """Every key the run recorded under `config`: certain, and nothing more.
+    A resolved model spec under a key other than `model`/`*_model` is
+    marked: the run recorded it, but it is not provenance labkit holds
+    (runlog resolves `model` keys into `models_resolved`; uniagent 14–17
+    recorded `judge`)."""
+    rows = []
+    for key, value in sorted(run_config.items()):
+        spec = _looks_like_model_spec(value) and not (
+            key == "model" or key.endswith("_model")
         )
-        for key, value in sorted(run_config.items())
-    ]
+        rows.append(
+            ParamRow(
+                name=key,
+                value=_shown(value),
+                home=f"{run_name}/config.json: config.{key}",
+                meaning=(
+                    "looks like a resolved model spec under a key runlog does not read "
+                    "(`model`, `*_model`) — recorded, not provenance labkit holds"
+                    if spec
+                    else "recorded parameter of this run"
+                ),
+                in_run=_shown(value),
+                tier=EVIDENCE if spec else GUARANTEED,
+            )
+        )
+    return rows
 
 
 def constant_rows(

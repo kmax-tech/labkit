@@ -108,6 +108,24 @@ class Table(unittest.TestCase):
                 "MODEL", rows
             )  # recorded as `model`: not an unrecorded constant
 
+    def test_a_model_spec_under_a_foreign_key_is_evidence(self) -> None:
+        """uniagent 14–17 recorded the resolved model as `judge`: the run has
+        it, labkit does not hold it — the row says so instead of "recorded"."""
+        with tempfile.TemporaryDirectory() as d:
+            area = _area(d)
+            run = _run(
+                area,
+                "2026-10-01T10-00-00_aaaa",
+                {
+                    "min_acc": 0.7,
+                    "judge": {"alias": "m", "model": "A", "endpoint": "http://a"},
+                },
+            )
+            rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
+            self.assertEqual(rows["judge"].tier, params.EVIDENCE)
+            self.assertIn("runlog does not read", rows["judge"].meaning)
+            self.assertIn("not recorded in models_resolved", rows["model"].meaning)
+
     def test_an_unrecorded_module_constant_is_evidence_not_proof(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             area = _area(d, SCRIPT + "SOME_CONSTANT = 3\n")
