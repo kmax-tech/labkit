@@ -130,7 +130,7 @@ parser — exact keys, typed values; a typo is an error that names the field.
 The same block may hold the `[[promise]]` tables (labkit
 `docs/promise-block.md`).
 
-- **standard** — `"0.18"`; stamped, never edited.
+- **standard** — `"0.19"`; stamped, never edited. Standard 0.19 (labkit 0.72): a frozen protocol and every full run — at `cost = "seconds"` every run — owe the `[[promise]]` tables; a run records every registered constant unchanged.
 - **id** — `p-` plus 16 hex digits, stamped by `lib exp`, never typed: the
   run binds to it, so renaming or moving the file keeps the binding.
 - **type** — `"exploratory"` generates hypotheses, iterate freely, but

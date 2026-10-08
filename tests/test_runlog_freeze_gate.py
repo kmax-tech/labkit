@@ -23,11 +23,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import runlog, scope_sha  # noqa: E402
-from protocol_fixture import head, scope_file  # noqa: E402
+from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 AUDIT = "2026-10-05 · scope sha abc · 0 findings"
 FROZEN = head(cost="hours", frozen=True, preflight_audit=AUDIT)
-UNFROZEN = head(cost="hours", frozen=False, preflight_audit=AUDIT)
+UNFROZEN = head(
+    cost="hours", frozen=False, preflight_audit=AUDIT, promises=DEFAULT_BLOCK
+)
 PLACEHOLDER = head(
     cost="hours", frozen=True, preflight_audit="<date · scope sha · N findings>"
 )
@@ -41,7 +43,7 @@ SECONDS = head(cost="seconds") + REGISTRATION
 SECONDS_NO_CRITERION = SECONDS.replace(
     "[C1] accuracy above the trivial decider", "<the criterion>"
 )
-HOURS_UNFROZEN = head(cost="hours") + REGISTRATION
+HOURS_UNFROZEN = head(cost="hours", promises=DEFAULT_BLOCK) + REGISTRATION
 PROSE_HEAD = """\
 - **Protocol id:** p-0123456789abcdef
 - **Type:** measurement
@@ -209,7 +211,7 @@ class FreezeGate(unittest.TestCase):
         )
 
     def test_unfilled_tier_is_recorded_as_none_and_keeps_the_freeze(self):
-        text = head(cost="<seconds | minutes | hours>")
+        text = head(cost="<seconds | minutes | hours>", promises=DEFAULT_BLOCK)
         r, _ = self._start(text, long=False)
         self.assertIsNone(json.loads((r.dir / "config.json").read_text())["cost_tier"])
         with self.assertRaises(SystemExit) as cm:

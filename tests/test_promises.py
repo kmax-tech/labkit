@@ -514,10 +514,16 @@ class Constants(unittest.TestCase):
         )
         self.assertEqual(promises.constant_records(block, {})[0].state, "missing")
 
-    def test_block_owed_only_when_frozen_without_tables(self):
-        self.assertIsNone(promises.block_owed(False, None))
-        self.assertIsNone(promises.block_owed(True, parsed(protocol_text(C1))))
+    def test_block_owed_when_frozen_or_a_full_run_without_tables(self):
+        self.assertIsNone(promises.block_owed(None, frozen=False, full_run=False))
+        self.assertIsNone(
+            promises.block_owed(parsed(protocol_text(C1)), frozen=True, full_run=True)
+        )
         self.assertIn(
-            "frozen = true, but the protocol declares no [[promise]]",
-            promises.block_owed(True, None) or "",
+            "frozen = true, but",
+            promises.block_owed(None, frozen=True, full_run=False) or "",
+        )
+        self.assertIn(
+            "a full run is held to the registration, but",
+            promises.block_owed(None, frozen=False, full_run=True) or "",
         )

@@ -371,10 +371,15 @@ def check_fields(text: str) -> FieldReport:
         missing_must.append(
             "[protocol] preflight_audit (frozen = true without the audit line)"
         )
-    if head.frozen:
-        # a frozen registration is data: the block is owed (promises.block_owed)
+    if head.frozen or head.cost == "seconds":
+        # the block is owed (promises.block_owed): frozen, or at seconds, where
+        # every run is the full run and the seconds cut IS the registration
         try:
-            block_gap = promises.block_owed(True, promises.parse_block(text))
+            block_gap = promises.block_owed(
+                promises.parse_block(text),
+                frozen=head.frozen,
+                full_run=head.cost == "seconds",
+            )
         except promises.PromiseError as exc:
             block_gap = f"[[promise]] block: {exc}"
         if block_gap:

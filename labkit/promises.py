@@ -316,18 +316,22 @@ def all_constants(block: PromiseBlock) -> dict[str, int | float | str | bool]:
     return out
 
 
-def block_owed(frozen: bool, block: PromiseBlock | None) -> str | None:
-    """Why a protocol owes a promise block, or None: `frozen = true` without
-    a [[promise]] table — a frozen registration is data, not prose (0.71.0;
-    the one home of the rule for protocol-check, preflight, runlog and
-    finalize)."""
-    if frozen and block is None:
-        return (
-            "frozen = true, but the protocol declares no [[promise]] table — a "
-            "frozen registration is data, not prose (standard 0.19, labkit 0.72: "
-            "a run under it cannot start; `lib exp` stamps the tables)"
-        )
-    return None
+def block_owed(
+    block: PromiseBlock | None, *, frozen: bool, full_run: bool
+) -> str | None:
+    """Why a protocol owes a promise block, or None — the one home of the
+    rule (standard 0.19) for protocol-check, preflight, runlog and finalize:
+    a frozen protocol, and every full run (`long=True`; at cost = seconds
+    every run), is held to a registration that is data, not prose. A pilot
+    (`long=False`) on an unfrozen protocol owes nothing yet."""
+    if block is not None or not (frozen or full_run):
+        return None
+    because = "frozen = true" if frozen else "a full run is held to the registration"
+    return (
+        f"{because}, but the protocol declares no [[promise]] table — the "
+        f"registration a run is held to is data, not prose (standard 0.19: "
+        f"no run starts under it; `lib exp` stamps the tables)"
+    )
 
 
 @dataclass(frozen=True)

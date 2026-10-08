@@ -1,7 +1,7 @@
-"""The registration's contract (0.71.0): a frozen protocol carries its
-promises as data, and a run under a block records every registered constant
-unchanged — refused by runlog before mkdir, a MUST finding in protocol-check,
-a blocker in finalize.
+"""The registration's contract (standard 0.19): a frozen protocol and every
+full run carry the promises as data, and a run under a block records every
+registered constant unchanged — refused by runlog before mkdir, a MUST
+finding in protocol-check, a blocker in finalize.
 
     .venv/bin/python -m pytest tests/test_registration_contract.py
 """
@@ -41,9 +41,9 @@ def _area(d: str, text: str) -> Path:
     return area
 
 
-def _start(area: Path, config: dict) -> runlog.Run:
+def _start(area: Path, config: dict, long: bool = False) -> runlog.Run:
     with contextlib.redirect_stdout(io.StringIO()):
-        return runlog.Run("t", config, area, long=False)
+        return runlog.Run("t", config, area, long=long)
 
 
 class RunlogRefusesBeforeMkdir(unittest.TestCase):
@@ -91,16 +91,25 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
             with self.assertRaises(SystemExit) as cm:
                 _start(area, {})
             self.assertIn(
-                "frozen = true, but the protocol declares no [[promise]]",
-                str(cm.exception),
+                "frozen = true, but the protocol declares no", str(cm.exception)
             )
             self.assertFalse((area / "runs").exists())
 
-    def test_unfrozen_without_a_block_still_runs(self) -> None:
+    def test_an_unfrozen_pilot_without_a_block_still_runs(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             area = _area(d, head(frozen=False) + BODY)
             r = _start(area, {})
             self.assertTrue((r.dir / "config.json").is_file())
+
+    def test_a_full_run_at_seconds_without_a_block_is_refused(self) -> None:
+        """At cost = seconds nothing freezes, but every run is the full run:
+        the registration it is held to is data (standard 0.19)."""
+        with tempfile.TemporaryDirectory() as d:
+            area = _area(d, head(cost="seconds", promises=None) + BODY)
+            with self.assertRaises(SystemExit) as cm:
+                _start(area, {}, long=True)
+            self.assertIn("a full run is held to the registration", str(cm.exception))
+            self.assertFalse((area / "runs").exists())
 
 
 class ProtocolCheckOwesTheBlock(unittest.TestCase):
@@ -117,6 +126,13 @@ class ProtocolCheckOwesTheBlock(unittest.TestCase):
         report = protocol_check.check_fields(head(frozen=True, preflight_audit=AUDIT))
         self.assertFalse(
             any("[[promise]]" in m for m in report.missing_must), report.missing_must
+        )
+
+    def test_seconds_without_a_block_is_a_must_finding(self) -> None:
+        report = protocol_check.check_fields(head(cost="seconds", promises=None))
+        self.assertTrue(
+            any("declares no [[promise]]" in m for m in report.missing_must),
+            report.missing_must,
         )
 
     def test_a_malformed_block_is_named(self) -> None:
@@ -149,29 +165,26 @@ class FinalizeBlocksAnUnrecordedBlock(unittest.TestCase):
         (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
         return d
 
-    def test_frozen_run_without_a_recorded_block_is_a_blocker(self) -> None:
-        with tempfile.TemporaryDirectory() as d:
-            area = _area(d, head(frozen=True, preflight_audit=AUDIT) + BODY)
-            run = self._run(area, None)
-            findings = finalize.Findings()
-            with contextlib.redirect_stdout(io.StringIO()):
-                finalize.check_declared_scopes(findings, area, run, frozen=True)
-            self.assertTrue(
-                any(
-                    "recorded no promise block" in b and "0.70.0" in b
-                    for b in findings.blocked
-                ),
-                findings.blocked,
-            )
-
-    def test_unfrozen_run_without_a_block_is_a_line_not_a_blocker(self) -> None:
-        with tempfile.TemporaryDirectory() as d:
-            area = _area(d, head(frozen=False) + BODY)
-            run = self._run(area, None)
-            findings = finalize.Findings()
-            with contextlib.redirect_stdout(io.StringIO()):
-                finalize.check_declared_scopes(findings, area, run, frozen=False)
-            self.assertEqual(findings.blocked, [])
+    def test_an_answering_run_without_a_recorded_block_is_a_blocker(self) -> None:
+        """Frozen or not: the run that answers is a full run, and a full run
+        is held to a registration that is data."""
+        for text in (
+            head(frozen=True, preflight_audit=AUDIT) + BODY,
+            head(frozen=False) + BODY,
+        ):
+            with tempfile.TemporaryDirectory() as d:
+                area = _area(d, text)
+                run = self._run(area, None)
+                findings = finalize.Findings()
+                with contextlib.redirect_stdout(io.StringIO()):
+                    finalize.check_declared_scopes(findings, area, run)
+                self.assertTrue(
+                    any(
+                        "recorded no promise block" in b and "0.70.0" in b
+                        for b in findings.blocked
+                    ),
+                    findings.blocked,
+                )
 
 
 if __name__ == "__main__":

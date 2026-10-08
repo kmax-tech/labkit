@@ -103,10 +103,14 @@ that lacks a registered constant or carries it with another value
 (type-strict: `True` is not `1`, `1` is not `1.0`). The guarantee behind
 the record is therefore: *a run under a block recorded every registered
 constant unchanged*. Whether `evaluate_rows` uses the value right is the
-agent audit's question, not a mechanical one. A frozen protocol owes the
-block (`promises.block_owed`): frozen = true without tables is a MUST
-failure in `protocol-check`, a blocker in `preflight` and `finalize`, and
-no run starts under it. Mechanically guaranteed is the one home of a
+agent audit's question, not a mechanical one. A frozen protocol, and
+every full run — at `cost = "seconds"` every run — owes the block
+(`promises.block_owed`, standard 0.19): without tables, `protocol-check`
+reports a MUST failure (frozen or seconds), `preflight` and `finalize`
+block, and no full run starts under it; only an unfrozen pilot
+(`long=False`) runs without one. The seconds cut IS the registration — in
+prose and in tables, so the machine chain (block digest, scope hashes,
+constants) holds for every reportable run, not only for frozen ones. Mechanically guaranteed is the one home of a
 *name*; that two differently named constants mean the same threshold no
 parser can see.
 

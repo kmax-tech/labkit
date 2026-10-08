@@ -840,15 +840,20 @@ def _registration_refusal(
     head: "protocol_block.Head | None",
     block: "promises.PromiseBlock | None",
     config: dict,
+    long: bool,
 ) -> str | None:
     """The registration's contract, before any gate that can be acknowledged
-    and before mkdir (0.71.0): a frozen protocol carries its promises as
-    data (`promises.block_owed`), and a run under a block records every
-    registered constant unchanged — otherwise the number is held to a
-    threshold nobody registered (Durchstich 2026-10-06). None when it holds."""
+    and before mkdir (standard 0.19): a frozen protocol and every full run
+    carry the promises as data (`promises.block_owed`), and a run under a
+    block records every registered constant unchanged — otherwise the
+    number is held to a threshold nobody registered (Durchstich
+    2026-10-06). None when it holds, or when the run is unbound (the
+    freeze gate refuses an unbound full run on its own)."""
     path = (binding or {}).get("path")
     name = Path(path).name if isinstance(path, str) and path else "(unbound)"
-    owed = promises.block_owed(bool(head is not None and head.frozen), block)
+    if head is None:
+        return None
+    owed = promises.block_owed(block, frozen=head.frozen, full_run=long)
     if owed:
         return f"{name}: {owed}"
     if block is not None:
@@ -922,7 +927,9 @@ class Run:
         _block, self._promises = _promise_snapshot(base_dir, _ptext)
         # Frozen now: what the registration check holds is what config.json records.
         self._config = dict(config)
-        refusal = _registration_refusal(self._protocol, _phead, _block, self._config)
+        refusal = _registration_refusal(
+            self._protocol, _phead, _block, self._config, long
+        )
         if refusal:
             raise SystemExit(f"runlog: {refusal}")
         _short = self._cost_tier == "seconds"

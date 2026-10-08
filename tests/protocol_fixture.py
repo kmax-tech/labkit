@@ -56,10 +56,10 @@ def head(
     promises: str | None = "",
 ) -> str:
     """The fenced TOML block; `promises` is appended inside it verbatim. A
-    frozen head without an explicit block carries `DEFAULT_BLOCK`; `None`
-    means no block even when frozen (the mutant of 0.71's rule)."""
-    if promises == "" and frozen:
-        promises = DEFAULT_BLOCK
+    frozen or seconds head without an explicit block carries `DEFAULT_BLOCK`;
+    `None` means no block even then (the mutant of standard 0.19's rule)."""
+    if promises == "" and (frozen or cost == "seconds"):
+        promises = DEFAULT_BLOCK  # frozen, or at seconds every run is the full run
     promises = promises or ""
     lines = [
         "```toml",

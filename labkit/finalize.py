@@ -255,24 +255,22 @@ def check_intent_keys_in_metrics(
 
 
 def check_declared_scopes(
-    findings: Findings, area: Path, measurement_run: Path, frozen: bool
+    findings: Findings, area: Path, measurement_run: Path
 ) -> None:
     """Station 3: a promise's declared scope edited after the run: today's code is not
     the code that produced the number; until 2026-10-06 only recheck saw it
-    (Durchstich). A frozen protocol whose run recorded no block is a
-    blocker since 0.71.0 (`promises.block_owed`): the run came from a labkit
-    that let it pass, or the block was added after the run."""
+    (Durchstich). An answering run that recorded no block is a blocker
+    (standard 0.19, `promises.block_owed`: every reportable run is held to
+    a registration that is data) — it came from a labkit that let it pass,
+    or the block was added after the run."""
     recorded = (read_run_config(measurement_run) or {}).get("promises")
     if recorded is None:
-        owed = promises.block_owed(frozen, None)
-        if owed:
-            findings.block(
-                f"{measurement_run.name} recorded no promise block: {owed} — a run "
-                f"under labkit 0.70.0 or earlier is checked and reproduced with "
-                f"its pinned version; a block added after the run is a new registration"
-            )
-        else:
-            print("  no promise block recorded — nothing to compare")
+        owed = promises.block_owed(None, frozen=False, full_run=True)
+        findings.block(
+            f"{measurement_run.name} recorded no promise block: {owed} — a run "
+            f"under labkit 0.70.0 or earlier is checked and reproduced with "
+            f"its pinned version; a block added after the run is a new registration"
+        )
         return
     drift = promises.scope_drift(recorded, area)
     for d in drift:
@@ -495,7 +493,7 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
     if measurement_run is None:
         print(NO_RUN)
     else:
-        check_declared_scopes(findings, area, measurement_run, head.frozen)
+        check_declared_scopes(findings, area, measurement_run)
 
     # 4. open fields — always
     header(f"open fields: {chosen.name}")

@@ -23,8 +23,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import claude_hooks  # noqa: E402
-from protocol_fixture import head  # noqa: E402
+from labkit import claude_hooks, promises  # noqa: E402
+from protocol_fixture import DEFAULT_BLOCK, head  # noqa: E402
 
 BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary
@@ -44,7 +44,13 @@ BODY = """\
 
 
 def _protocol(frozen: bool, cost: str = "minutes") -> str:
-    return "# Experiment protocol: x\n\n" + head(frozen=frozen, cost=cost) + "\n" + BODY
+    # every area here answers from a full run, so it carries the tables (0.19)
+    return (
+        "# Experiment protocol: x\n\n"
+        + head(frozen=frozen, cost=cost, promises=DEFAULT_BLOCK)
+        + "\n"
+        + BODY
+    )
 
 
 RUN_SCRIPT = (
@@ -272,9 +278,15 @@ class Stop(unittest.TestCase):
         self.area = self.root / "experiments" / "01-x"
         d = self.area / "runs" / self.RUN
         d.mkdir(parents=True)
+        block = promises.parse_block((self.area / "PROTOCOL-x.md").read_text())
+        assert block is not None
         (d / "config.json").write_text(
             json.dumps(
-                {"schema_version": 2, "protocol": {"id": PID, "path": "PROTOCOL-x.md"}}
+                {
+                    "schema_version": 2,
+                    "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
+                    "promises": promises.snapshot(block, self.area),
+                }
             )
         )
         (d / "metrics.json").write_text(

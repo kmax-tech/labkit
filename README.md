@@ -174,7 +174,7 @@ The hierarchy the vocabulary is meant to make visible:
 
 A protocol has **one template, cut by cost**: `cost = "seconds"` (a count,
 or a handful of model calls — rerunnable at will) owes a short cut and never
-freezes; `minutes` and `hours` have **two modes**: `frozen = false` is the
+freezes — but the `[[promise]]` tables like every full run (standard 0.19); `minutes` and `hours` have **two modes**: `frozen = false` is the
 light pilot (MUST fields only), `frozen = true` the heavy report mode —
 every SHOULD field becomes mandatory. The price sits on the claim, not the
 activity: cheap tiers yield numbers that must not be reported. Every field's explanation — examples, rationale, the four questions to

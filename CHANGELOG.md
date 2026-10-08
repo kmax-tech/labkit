@@ -9,17 +9,26 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
-**Protocol standard 0.19: this labkit reads standard 0.19 only.** Last
-version reading 0.18: 0.71.0. The one change of the standard is the rule
-of 0.71 — `frozen = true` owes the `[[promise]]` tables and a run records
-every registered constant unchanged. A protocol stamped under 0.18 is a
-registration under the earlier contract: it stays unchanged and is
-checked, run and reproduced with the repo's commit and labkit ≤ 0.71.0; a
-repo may raise its pin regardless, since the hooks check only staged
-protocols — only an edit to an old protocol at the new pin is refused
-(`[protocol] standard = "0.18", this labkit reads "0.19"`). Two
-standards in one labkit would be a legacy path; `standard` is stamped
-and never edited.
+**Protocol standard 0.19: this labkit reads standard 0.19 only.** What
+the standard changes: **every reportable run is held to a registration
+that is data** — a frozen protocol and every full run (`long=True`; at
+`cost = "seconds"` every run) owe the `[[promise]]` tables, and a run
+records every registered constant unchanged. Only an unfrozen pilot
+(`long=False`) runs without tables; `finalize` blocks an answering run
+that recorded none. The seconds cut is a registration in prose AND in
+tables, so the machine chain (block digest, scope hashes, constants)
+holds for every run a number is reported from.
+
+Versions, two statements kept apart: the last version that *reads*
+`standard = "0.18"` is 0.71.0; the last version that *runs the 0.18
+contract* is **0.70.0** — 0.71.0 enforced the new rule on 0.18 protocols
+and is a transitional release, not one to reproduce an old registration
+with. A protocol stamped under 0.18 stays unchanged and is checked, run
+and reproduced with the repo's commit and labkit ≤ 0.70.0. A repo may
+raise its pin regardless, since the hooks check only staged protocols —
+only an edit to an old protocol at the new pin is refused (`[protocol]
+standard = "0.18", this labkit reads "0.19"`). Two standards in one
+labkit would be a legacy path; `standard` is stamped and never edited.
 
 ## 0.71.0 — 2026-10-08
 
