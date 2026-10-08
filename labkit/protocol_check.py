@@ -371,6 +371,14 @@ def check_fields(text: str) -> FieldReport:
         missing_must.append(
             "[protocol] preflight_audit (frozen = true without the audit line)"
         )
+    if head.frozen:
+        # a frozen registration is data: the block is owed (promises.block_owed)
+        try:
+            block_gap = promises.block_owed(True, promises.parse_block(text))
+        except promises.PromiseError as exc:
+            block_gap = f"[[promise]] block: {exc}"
+        if block_gap:
+            missing_must.append(block_gap)
     must_names = {f.label.casefold() for f in must}
     must_holes, soft_holes = [], []
     for line, label in open_holes(text, head):

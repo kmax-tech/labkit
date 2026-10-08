@@ -15,8 +15,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import finalize  # noqa: E402
-from protocol_fixture import PID, head  # noqa: E402
+from labkit import finalize, promises  # noqa: E402
+from protocol_fixture import PID, head, scope_file  # noqa: E402
 
 BODY = """\
 - **Question / hypothesis:** does it hold?
@@ -49,11 +49,16 @@ PROTOCOL_WITH_HOLES = CLEAN_PROTOCOL.replace(
 def _run(area, name, *, pid=PID, metrics=None, completion=True):
     d = area / "runs" / name
     d.mkdir(parents=True, exist_ok=True)
+    # a run under a frozen protocol recorded its block (0.71): the snapshot
+    # of the area's protocol, whose scopes name the fixture's script
+    scope_file(area)
+    block = promises.parse_block((area / "PROTOCOL-x.md").read_text(encoding="utf-8"))
     cfg = {
         "script": "01_measure.py",
         "pid": 1,
         "schema_version": 2,
         "protocol": {"id": pid, "path": "PROTOCOL-x.md"},
+        "promises": promises.snapshot(block, area) if block is not None else None,
     }
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
     if metrics is not None:

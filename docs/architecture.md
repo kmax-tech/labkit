@@ -63,7 +63,8 @@ evidence** (warns), **agent audit** (semantic).
 | Which run answers for a protocol? | `runs.bound_answering_run` (the choice; `intent_check.choose_explicit` takes a named run) |
 | Which run recorded the model that answered these rows? | `runs.model_provenance_run` (walks `derived_from`; a derived run records none) |
 | Which protocol does a command hold an area to? | `repo.choose_protocol` (the named one, else the only one; never a guess) |
-| How does a registered constant stand against the record? | `intent_check.constant_records` (equal / different / missing); the blocker reads `different`, `labkit-params` shows all three |
+| How does a registered constant stand against the record? | `promises.constant_records` (equal / different / missing, type-strict); runlog refuses before mkdir, intent-check/finalize block, `labkit-params` shows all three |
+| Does a frozen protocol owe a promise block? | `promises.block_owed` — protocol-check (MUST), preflight and finalize (blocker), runlog (refusal before mkdir) |
 | Which code did an audit see, and is it still that code? | `scope_sha.area_stamp`, `scope_sha.audit_stamp_drift` (area stamp, not per promise) |
 
 A second answer to any of these questions is drift: move the caller to the

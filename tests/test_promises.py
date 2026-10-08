@@ -51,9 +51,9 @@ def block(*entries: str) -> str:
 C1 = """[[promise]]
 id = "C1"
 key = "c1_pass"
-sentence = "accuracy >= MIN_ACC"
+sentence = "accuracy >= min_acc"
 scope = ["scripts/01_measure.py:compute_score"]
-constants = { MIN_ACC = 0.7 }
+constants = { min_acc = 0.7 }
 """
 A1 = """[[promise]]
 id = "A1"
@@ -96,7 +96,7 @@ class Parse(unittest.TestCase):
         self.assertEqual([p.id for p in b.promises], ["C1", "A1"])
         self.assertEqual(b.by_id()["C1"].kind, "criterion")
         self.assertEqual(b.by_id()["A1"].kind, "admissibility")
-        self.assertEqual(b.by_id()["C1"].constants, {"MIN_ACC": 0.7})
+        self.assertEqual(b.by_id()["C1"].constants, {"min_acc": 0.7})
         self.assertEqual(b.by_id()["A1"].constants, {})
 
     def test_digest_follows_the_block_not_the_prose(self):
@@ -148,7 +148,7 @@ class Parse(unittest.TestCase):
 
     def test_missing_and_empty_fields(self):
         self.assertRejects(
-            block(C1.replace('sentence = "accuracy >= MIN_ACC"\n', "")),
+            block(C1.replace('sentence = "accuracy >= min_acc"\n', "")),
             "missing `sentence`",
         )
         self.assertRejects(
@@ -158,7 +158,7 @@ class Parse(unittest.TestCase):
 
     def test_non_scalar_constant_and_unknown_field(self):
         self.assertRejects(
-            block(C1.replace("MIN_ACC = 0.7", "MIN_ACC = [0.7]")), "only scalars"
+            block(C1.replace("min_acc = 0.7", "min_acc = [0.7]")), "only scalars"
         )
         self.assertRejects(block(C1 + "threshold = 0.7\n"), "unknown field")
 
@@ -257,7 +257,7 @@ class Chain(unittest.TestCase):
 
     def start(self) -> runlog.Run:
         with contextlib.redirect_stdout(io.StringIO()):
-            return runlog.Run("t", {}, self.area, long=False)
+            return runlog.Run("t", {"min_acc": 0.7}, self.area, long=False)
 
     def complete(self, run: runlog.Run, metrics: dict) -> Path:
         (run.dir / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
@@ -288,7 +288,7 @@ class Chain(unittest.TestCase):
         rec = json.loads((run.dir / "config.json").read_text())["promises"]
         self.assertEqual(rec["block_sha"], promises.load(self.protocol).sha)
         self.assertEqual(set(rec["ids"]), {"C1", "A1"})
-        self.assertEqual(rec["ids"]["C1"]["constants"], {"MIN_ACC": 0.7})
+        self.assertEqual(rec["ids"]["C1"]["constants"], {"min_acc": 0.7})
         self.assertEqual(
             rec["ids"]["C1"]["declared_scope_sha"],
             promises.declared_scope_sha(
@@ -313,7 +313,7 @@ class Chain(unittest.TestCase):
         self.assertFalse((self.area / "runs").exists())
 
     def test_constants_are_read_from_the_protocol(self):
-        self.assertEqual(promises.constants(self.protocol, "C1"), {"MIN_ACC": 0.7})
+        self.assertEqual(promises.constants(self.protocol, "C1"), {"min_acc": 0.7})
         with self.assertRaises(promises.PromiseError):
             promises.constants(self.protocol, "C9")
 
@@ -332,18 +332,45 @@ class Chain(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("promises changed after the run", out)
 
-    def test_run_config_contradicting_a_constant(self):
-        """Durchstich 2026-10-06: the script kept MIN_F1 = 0.5 against 0.6."""
-        with contextlib.redirect_stdout(io.StringIO()):
-            run = runlog.Run("t", {"MIN_ACC": 0.5}, self.area, long=False)
+    def test_run_config_contradicting_a_constant_is_refused_before_mkdir(self):
+        """Durchstich 2026-10-06: the script kept min_f1 = 0.5 against 0.6.
+        Since 0.71 the run never starts; the record can only carry the
+        registered value."""
+        with self.assertRaises(SystemExit) as cm:
+            with contextlib.redirect_stdout(io.StringIO()):
+                runlog.Run("t", {"min_acc": 0.5}, self.area, long=False)
+        self.assertIn(
+            "min_acc = 0.7 is registered, the config says 0.5", str(cm.exception)
+        )
+        self.assertFalse((self.area / "runs").exists())
+
+    def test_a_record_contradicting_a_constant_is_still_a_finding(self):
+        """An old or hand-edited record (runlog 0.70 let it through): intent-check names it."""
+        run = self.start()
+        cfg_path = run.dir / "config.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        cfg["config"]["min_acc"] = 0.5
+        cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
         self.complete(run, self.GOOD)
         rc, out = self.check()
         self.assertEqual(rc, 1)
-        self.assertIn("declares MIN_ACC = 0.7, the run used MIN_ACC = 0.5", out)
+        self.assertIn("declares min_acc = 0.7, the run used min_acc = 0.5", out)
+
+    def test_a_record_lacking_a_constant_is_a_finding(self):
+        run = self.start()
+        cfg_path = run.dir / "config.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        del cfg["config"]["min_acc"]
+        cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+        self.complete(run, self.GOOD)
+        rc, out = self.check()
+        self.assertEqual(rc, 1)
+        self.assertIn("recorded no constant of that name", out)
+        self.assertIn("0.70.0", out)
 
     def test_run_config_agreeing_with_a_constant_is_silent(self):
         with contextlib.redirect_stdout(io.StringIO()):
-            run = runlog.Run("t", {"MIN_ACC": 0.7}, self.area, long=False)
+            run = runlog.Run("t", {"min_acc": 0.7}, self.area, long=False)
         self.complete(run, self.GOOD)
         rc, out = self.check()
         self.assertEqual(rc, 0, out)
@@ -433,3 +460,64 @@ class Decorators(unittest.TestCase):
             self.assertNotEqual(
                 before, promises.declared_scope_sha(base, ("m.py:evaluate",))
             )
+
+
+class Constants(unittest.TestCase):
+    """A constant is named like its config key, has one home, and is held
+    type-strictly (0.71.0)."""
+
+    def assertRejects(self, text: str, fragment: str):
+        with self.assertRaises(promises.PromiseError) as cm:
+            promises.parse_block(text)
+        self.assertIn(fragment, str(cm.exception))
+
+    def test_uppercase_name_is_refused(self):
+        self.assertRejects(
+            protocol_text(C1.replace("min_acc = 0.7", "MIN_ACC = 0.7")),
+            "constant 'MIN_ACC' — a constant is named like the config key",
+        )
+
+    def test_a_name_in_two_promises_is_refused(self):
+        a1 = A1.replace(
+            'scope = ["scripts/01_measure.py"]',
+            'scope = ["scripts/01_measure.py"]\nconstants = { min_acc = 0.7 }',
+        )
+        self.assertRejects(
+            protocol_text(C1, a1), "constant min_acc already stands in [[promise]] C1"
+        )
+
+    def test_a_name_twice_in_one_table_is_toml_s_refusal(self):
+        twice = C1.replace(
+            "constants = { min_acc = 0.7 }",
+            "constants = { min_acc = 0.7, min_acc = 0.8 }",
+        )
+        self.assertRejects(protocol_text(twice), "not valid TOML")
+
+    def test_all_constants_unites_the_promises(self):
+        a1 = A1.replace(
+            'scope = ["scripts/01_measure.py"]',
+            'scope = ["scripts/01_measure.py"]\nconstants = { max_empty = 2 }',
+        )
+        self.assertEqual(
+            promises.all_constants(parsed(protocol_text(C1, a1))),
+            {"min_acc": 0.7, "max_empty": 2},
+        )
+
+    def test_constant_records_are_type_strict(self):
+        block = parsed(protocol_text(C1.replace("min_acc = 0.7", "min_acc = 1")))
+        states = {
+            repr(v): promises.constant_records(block, {"min_acc": v})[0].state
+            for v in (1, 1.0, True)
+        }
+        self.assertEqual(
+            states, {"1": "equal", "1.0": "different", "True": "different"}
+        )
+        self.assertEqual(promises.constant_records(block, {})[0].state, "missing")
+
+    def test_block_owed_only_when_frozen_without_tables(self):
+        self.assertIsNone(promises.block_owed(False, None))
+        self.assertIsNone(promises.block_owed(True, parsed(protocol_text(C1))))
+        self.assertIn(
+            "frozen = true, but the protocol declares no [[promise]]",
+            promises.block_owed(True, None) or "",
+        )

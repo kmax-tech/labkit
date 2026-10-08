@@ -29,9 +29,9 @@ head) may carry `[[promise]]` tables:
     [[promise]]
     id = "C1"
     key = "c1_pass"
-    sentence = "macro-F1 of the judge >= MIN_F1 on the test split"
+    sentence = "macro-F1 of the judge >= min_f1 on the test split"
     scope = ["scripts/01_measure.py:evaluate", "lib/text.py"]
-    constants = { MIN_F1 = 0.70 }
+    constants = { min_f1 = 0.70 }
 
 `scope` is DECLARED, not derived: the author names the implementation
 region the promise rests on (a file, or `file:function` for one top-level
@@ -60,6 +60,11 @@ from labkit import protocol_block
 
 #: the letters of the promise block, and what each one is
 KINDS = {"C": "criterion", "A": "admissibility", "B": "branch"}
+#: A constant is named like the config key it is recorded under — lowercase
+#: snake_case, so the name IS the mapping between protocol and run record
+#: (2026-10-08: `min_f1` in the block against `min_f1` in the record would
+#: need a second table nobody checks).
+CONSTANT_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 _LETTERS = "".join(KINDS)
 #: an id anywhere in protocol prose: `[C1]`, `[k2]`
 ID_IN_PROTOCOL = re.compile(rf"\[([{_LETTERS}]\d+)\]", re.I)
@@ -169,6 +174,7 @@ def parse_block(text: str) -> PromiseBlock | None:  # noqa: C901 complexity base
 
     out: list[Promise] = []
     seen: set[str] = set()
+    constant_home: dict[str, str] = {}  # constant name -> the promise that declares it
     for n, e in enumerate(entries, 1):
         where = f"[[promise]] #{n}"
         if not isinstance(e, dict):
@@ -229,6 +235,18 @@ def parse_block(text: str) -> PromiseBlock | None:  # noqa: C901 complexity base
                 raise PromiseError(
                     f"{where}: constant {name} is {type(value).__name__} — only scalars"
                 )
+            if not CONSTANT_NAME.match(name):
+                raise PromiseError(
+                    f"{where}: constant {name!r} — a constant is named like the "
+                    f"config key it is recorded under: lowercase snake_case "
+                    f"(`margin`, `max_empty`)"
+                )
+            if name in constant_home:
+                raise PromiseError(
+                    f"{where}: constant {name} already stands in [[promise]] "
+                    f"{constant_home[name]} — a constant has one home"
+                )
+            constant_home[name] = pid
         out.append(
             Promise(
                 id=pid,
@@ -268,7 +286,7 @@ def prose_mismatch(text: str, block: PromiseBlock) -> tuple[list[str], list[str]
 def load(protocol: Path) -> PromiseBlock:
     """The promise block of `protocol`; raises if it has none.
 
-    For scripts: `promises.load(PROTOCOL).by_id()["C1"].constants["MIN_F1"]`
+    For scripts: `promises.load(PROTOCOL).by_id()["C1"].constants["min_f1"]`
     reads the threshold from the frozen protocol instead of a second copy
     in the code.
     """
@@ -286,6 +304,69 @@ def constants(protocol: Path, promise_id: str) -> dict[str, int | float | str | 
             f"{protocol}: no promise {promise_id!r}; declared: {sorted(by_id)}"
         )
     return dict(by_id[promise_id].constants)
+
+
+def all_constants(block: PromiseBlock) -> dict[str, int | float | str | bool]:
+    """Every constant the block declares, as one dict — collision-free by the
+    parser's guarantee (a name stands in one promise). What a script passes
+    to its config object: `MeasureConfig(model=MODEL, **all_constants(load(PROTOCOL)))`."""
+    out: dict[str, int | float | str | bool] = {}
+    for p in block.promises:
+        out.update(p.constants)
+    return out
+
+
+def block_owed(frozen: bool, block: PromiseBlock | None) -> str | None:
+    """Why a protocol owes a promise block, or None: `frozen = true` without
+    a [[promise]] table — a frozen registration is data, not prose (0.71.0;
+    the one home of the rule for protocol-check, preflight, runlog and
+    finalize)."""
+    if frozen and block is None:
+        return (
+            "frozen = true, but the protocol declares no [[promise]] table — a "
+            "frozen registration is data, not prose (labkit 0.71: a run under "
+            "it cannot start; `lib exp` stamps the tables)"
+        )
+    return None
+
+
+@dataclass(frozen=True)
+class ConstantRecord:
+    """One registered constant held against a run's config.
+
+    Attributes:
+        promise_id: The promise that declares it ("C1").
+        name: The constant's name — the config key of the same name.
+        promised: The value the protocol registers.
+        recorded: The value the run's config carries under that name, None if none.
+        state: "equal", "different" or "missing". Equal is type-strict:
+            `True` is not `1`, `1` is not `1.0` — a threshold's type is part
+            of what was registered.
+    """
+
+    promise_id: str
+    name: str
+    promised: object
+    recorded: object | None
+    state: str
+
+
+def constant_records(block: PromiseBlock, run_config: dict) -> list[ConstantRecord]:
+    """Every registered constant with its state against `run_config` — the one
+    reading for runlog's refusal (before mkdir), intent-check's blocker and
+    the `labkit-params` view."""
+    out = []
+    for p in block.promises:
+        for name, value in p.constants.items():
+            if name not in run_config:
+                out.append(ConstantRecord(p.id, name, value, None, "missing"))
+                continue
+            got = run_config[name]
+            same = type(got) is type(value) and got == value
+            out.append(
+                ConstantRecord(p.id, name, value, got, "equal" if same else "different")
+            )
+    return out
 
 
 def _function_source(path: Path, name: str) -> str:

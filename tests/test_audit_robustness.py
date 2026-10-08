@@ -22,9 +22,9 @@ from protocol_fixture import PID, head
 C1 = """[[promise]]
 id = "C1"
 key = "c1_pass"
-sentence = "accuracy >= MIN_ACC"
+sentence = "accuracy >= min_acc"
 scope = ["scripts/m.py:evaluate"]
-constants = { MIN_ACC = 0.7 }
+constants = { min_acc = 0.7 }
 """
 
 
@@ -35,7 +35,7 @@ def area_with_run(tmp: Path) -> tuple[Path, Path]:
     protocol = tmp / "PROTOCOL-x.md"
     protocol.write_text(head(promises=C1) + "\nCriterion [C1].\n")
     with contextlib.redirect_stdout(io.StringIO()):
-        with runlog.run("t", {}, base_dir=tmp) as r:
+        with runlog.run("t", {"min_acc": 0.7}, base_dir=tmp) as r:
             r.metrics(c1_pass=True)
     return protocol, r.dir
 
@@ -78,7 +78,7 @@ class PromiseBlockShape(unittest.TestCase):
         self.assertIn("[[promise]] #1", str(cm.exception))
 
     def test_digest_follows_the_promise_not_its_spelling(self):
-        plain = C1.replace("constants = { MIN_ACC = 0.7 }\n", "")
+        plain = C1.replace("constants = { min_acc = 0.7 }\n", "")
         a = promises.parse_block(head(promises=plain))
         b = promises.parse_block(head(promises=plain + "constants = {}\n"))
         assert a is not None and b is not None

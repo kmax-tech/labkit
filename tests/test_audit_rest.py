@@ -12,9 +12,9 @@ from protocol_fixture import head
 C1 = """[[promise]]
 id = "C1"
 key = "c1_pass"
-sentence = "mean >= MIN_MEAN"
+sentence = "mean >= min_mean"
 scope = ["scripts/m.py:evaluate"]
-constants = { MIN_MEAN = 1.5 }
+constants = { min_mean = 1.5 }
 """
 
 
@@ -73,10 +73,10 @@ class ConstantCopies(unittest.TestCase):
 
     def test_a_literal_copy_warns_and_names_the_way_out(self):
         (f,) = self.findings(
-            "MIN_MEAN = 1.4\n\ndef evaluate(r):\n    return r >= MIN_MEAN\n"
+            "min_mean = 1.4\n\ndef evaluate(r):\n    return r >= min_mean\n"
         )
         self.assertTrue(f.startswith("WARNING"), f)
-        self.assertIn("MIN_MEAN = 1.4", f)
+        self.assertIn("min_mean = 1.4", f)
         self.assertIn("the block says 1.5", f)
         self.assertIn("promises.constants", f)
 
@@ -84,13 +84,13 @@ class ConstantCopies(unittest.TestCase):
         self.assertEqual(
             self.findings(
                 "from labkit import promises\n"
-                "MIN_MEAN = promises.constants(PROTOCOL, 'C1')['MIN_MEAN']\n"
+                "min_mean = promises.constants(PROTOCOL, 'C1')['min_mean']\n"
             ),
             [],
         )
 
     def test_an_equal_copy_still_warns(self):
-        (f,) = self.findings("MIN_MEAN = 1.5\n")
+        (f,) = self.findings("min_mean = 1.5\n")
         self.assertIn("the same value", f)
 
 

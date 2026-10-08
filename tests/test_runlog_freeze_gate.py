@@ -23,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import runlog, scope_sha  # noqa: E402
-from protocol_fixture import head  # noqa: E402
+from protocol_fixture import head, scope_file  # noqa: E402
 
 AUDIT = "2026-10-05 · scope sha abc · 0 findings"
 FROZEN = head(cost="hours", frozen=True, preflight_audit=AUDIT)
@@ -57,6 +57,7 @@ class FreezeGate(unittest.TestCase):
 
     def _area(self, text: str) -> Path:
         (self.tmp / "PROTOCOL-x.md").write_text(text, encoding="utf-8")
+        scope_file(self.tmp)  # the frozen fixture's block names it
         return self.tmp
 
     def _start(self, text: str, long: bool):
@@ -70,6 +71,7 @@ class FreezeGate(unittest.TestCase):
         """A frozen protocol whose audit line carries the area's real stamp."""
         (self.tmp / "scripts").mkdir(exist_ok=True)
         (self.tmp / "scripts" / "m.py").write_text("x = 1\n")
+        scope_file(self.tmp)  # part of the stamped code, written before the stamp
         sha = scope_sha.area_stamp(self.tmp)[0]
         return head(
             cost="hours",

@@ -20,11 +20,11 @@ from labkit import params
 C1 = """[[promise]]
 id = "C1"
 key = "c1_pass"
-sentence = "accuracy >= MIN_ACC"
+sentence = "accuracy >= min_acc"
 scope = ["scripts/01_measure.py"]
-constants = { MIN_ACC = 0.7 }
+constants = { min_acc = 0.7 }
 """
-SCRIPT = "MIN_ACC = 0.7\nMODEL = 'm'\n\n\ndef evaluate_rows(rows):\n    return {}\n"
+SCRIPT = "min_acc = 0.7\nMODEL = 'm'\n\n\ndef evaluate_rows(rows):\n    return {}\n"
 
 
 def _area(tmp: str, script: str = SCRIPT) -> Path:
@@ -95,13 +95,13 @@ class Table(unittest.TestCase):
             run = _run(
                 area,
                 "2026-10-01T10-00-00_aaaa",
-                {"MIN_ACC": 0.7, "model": "m"},
+                {"min_acc": 0.7, "model": "m"},
                 models_resolved=MODEL_A,
             )
             rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
             self.assertEqual({r.tier for r in rows.values()}, {params.GUARANTEED})
-            self.assertEqual(rows["MIN_ACC"].in_run, "0.7")
-            self.assertEqual(rows["MIN_ACC"].home, "PROTOCOL-x.md [C1] constants")
+            self.assertEqual(rows["min_acc"].in_run, "0.7")
+            self.assertEqual(rows["min_acc"].home, "PROTOCOL-x.md [C1] constants")
             self.assertEqual(rows["model m"].value, "m → A @ http://a")
             self.assertEqual(rows["model m"].in_run, "recorded")
             self.assertNotIn(
@@ -114,7 +114,7 @@ class Table(unittest.TestCase):
             run = _run(
                 area,
                 "2026-10-01T10-00-00_aaaa",
-                {"MIN_ACC": 0.7},
+                {"min_acc": 0.7},
                 models_resolved=MODEL_A,
             )
             rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
@@ -136,11 +136,11 @@ class Table(unittest.TestCase):
             )
             rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
             self.assertEqual(
-                rows["MIN_ACC"].in_run,
-                "— (not recorded; scripts/01_measure.py:1 holds MIN_ACC = 0.7)",
+                rows["min_acc"].in_run,
+                "— (not recorded; scripts/01_measure.py:1 holds min_acc = 0.7)",
             )
-            self.assertIn("absent", rows["MIN_ACC"].tier)
-            self.assertIn(params.EVIDENCE, rows["MIN_ACC"].tier)
+            self.assertIn("absent", rows["min_acc"].tier)
+            self.assertIn(params.EVIDENCE, rows["min_acc"].tier)
 
     def test_a_differing_constant_is_marked(self) -> None:
         with tempfile.TemporaryDirectory() as d:
@@ -148,12 +148,12 @@ class Table(unittest.TestCase):
             run = _run(
                 area,
                 "2026-10-01T10-00-00_aaaa",
-                {"MIN_ACC": 0.5},
+                {"min_acc": 0.5},
                 models_resolved=MODEL_A,
             )
             rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
-            self.assertEqual(rows["MIN_ACC"].in_run, "0.5  ≠ DIFFERS")
-            self.assertEqual(rows["MIN_ACC"].tier, params.GUARANTEED)
+            self.assertEqual(rows["min_acc"].in_run, "0.5  ≠ DIFFERS")
+            self.assertEqual(rows["min_acc"].tier, params.GUARANTEED)
 
     def test_a_derived_run_names_the_ancestor_that_recorded_the_model(self) -> None:
         with tempfile.TemporaryDirectory() as d:
@@ -161,19 +161,19 @@ class Table(unittest.TestCase):
             parent = _run(
                 area,
                 "2026-10-01T10-00-00_aaaa",
-                {"MIN_ACC": 0.7},
+                {"min_acc": 0.7},
                 models_resolved=MODEL_A,
             )
             _run(
                 area,
                 "2026-10-02T10-00-00_bbbb",
-                {"MIN_ACC": 0.7},
+                {"min_acc": 0.7},
                 derived_from=parent.name,
             )
             child = _run(
                 area,
                 "2026-10-03T10-00-00_cccc",
-                {"MIN_ACC": 0.7},
+                {"min_acc": 0.7},
                 derived_from="2026-10-02T10-00-00_bbbb",
             )
             rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", child))
@@ -186,11 +186,11 @@ class Table(unittest.TestCase):
     def test_a_lineage_without_any_model_record_says_so(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             area = _area(d)
-            parent = _run(area, "2026-10-01T10-00-00_aaaa", {"MIN_ACC": 0.7})
+            parent = _run(area, "2026-10-01T10-00-00_aaaa", {"min_acc": 0.7})
             child = _run(
                 area,
                 "2026-10-02T10-00-00_bbbb",
-                {"MIN_ACC": 0.7},
+                {"min_acc": 0.7},
                 derived_from=parent.name,
             )
             rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", child))
@@ -218,7 +218,7 @@ class CommandLine(unittest.TestCase):
             _run(
                 area,
                 "2026-10-01T10-00-00_aaaa",
-                {"MIN_ACC": 0.7},
+                {"min_acc": 0.7},
                 models_resolved=MODEL_A,
             )
             code, out = _main([str(area)])
@@ -227,7 +227,7 @@ class CommandLine(unittest.TestCase):
             self.assertIn("PROTOCOL-x.md", first)
             self.assertIn("run 2026-10-01T10-00-00_aaaa", first)
             self.assertIn(f"answers for {PID}", first)
-            self.assertIn("MIN_ACC", out)
+            self.assertIn("min_acc", out)
 
     def test_a_named_run_is_read_as_named(self) -> None:
         with tempfile.TemporaryDirectory() as d:
@@ -235,13 +235,13 @@ class CommandLine(unittest.TestCase):
             old = _run(
                 area,
                 "2026-10-01T10-00-00_aaaa",
-                {"MIN_ACC": 0.7},
+                {"min_acc": 0.7},
                 models_resolved=MODEL_A,
             )
             _run(
                 area,
                 "2026-10-02T10-00-00_bbbb",
-                {"MIN_ACC": 0.7},
+                {"min_acc": 0.7},
                 models_resolved=MODEL_A,
             )
             code, out = _main([str(area), "--run", old.name])
@@ -251,7 +251,7 @@ class CommandLine(unittest.TestCase):
     def test_no_bound_run_is_a_refusal(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             area = _area(d)
-            _run(area, "2026-10-01T10-00-00_aaaa", {"MIN_ACC": 0.7}, pid="p-other")
+            _run(area, "2026-10-01T10-00-00_aaaa", {"min_acc": 0.7}, pid="p-other")
             code, out = _main([str(area)])
             self.assertEqual(code, 2)
             self.assertIn("no completed run bound to", out)

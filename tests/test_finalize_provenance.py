@@ -15,8 +15,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import finalize  # noqa: E402
-from protocol_fixture import PID, head  # noqa: E402
+from labkit import finalize, promises  # noqa: E402
+from protocol_fixture import PID, head, scope_file  # noqa: E402
 
 BODY = """
 - **Question / hypothesis:** how many documents per case?
@@ -28,6 +28,16 @@ HOURS = "# Experiment protocol: x\n\n" + head(cost="hours", frozen=True) + BODY
 
 def _git(cwd, *args):
     subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True)
+
+
+def _snapshot(area: Path, protocol: str) -> dict | None:
+    """What a run records of the protocol's block — the fixture's scopes name
+    the script `scope_file` writes; None for a protocol without tables."""
+    block = promises.parse_block(protocol)
+    if block is None:
+        return None
+    scope_file(area)
+    return promises.snapshot(block, area)
 
 
 class Provenance(unittest.TestCase):
@@ -59,6 +69,8 @@ class Provenance(unittest.TestCase):
             "schema_version": 2,
             "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
             "data": data or {},
+            # a frozen protocol's run recorded its block (0.71)
+            "promises": _snapshot(self.area, protocol),
         }
         (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
         (d / "metrics.json").write_text(json.dumps({"mean": 3.5}), encoding="utf-8")

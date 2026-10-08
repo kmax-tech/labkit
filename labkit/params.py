@@ -41,7 +41,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit import promises, protocol_block
-from labkit.intent_check import constant_records, protocol_id_of
+from labkit.intent_check import protocol_id_of
 from labkit.repo import area_path, choose_protocol, no_such_area
 from labkit.runs import (
     bound_answering_run,
@@ -109,7 +109,7 @@ def constant_rows(
     only as evidence, and the strongest evidence is a literal of the same
     name in the script (`copies`: name -> (value, line))."""
     rows = []
-    for rec in constant_records(block, run_config):
+    for rec in promises.constant_records(block, run_config):
         if rec.state == "missing":
             copy = copies.get(rec.name)
             held = (
@@ -196,8 +196,10 @@ def model_rows(run_dir: Path) -> list[ParamRow]:
 
 
 def script_literals(area: Path) -> dict[str, tuple[object, int]]:
-    """UPPER_CASE names assigned a literal at module level of
-    scripts/01_measure.py: name -> (value, line). Empty without the script."""
+    """Names assigned a literal at module level of scripts/01_measure.py:
+    name -> (value, line). Empty without the script. A registered constant's
+    copy is looked up here under its own name; the evidence rows take the
+    UPPER_CASE ones."""
     script = area / MEASURE_SCRIPT
     if not script.is_file():
         return {}
@@ -206,11 +208,7 @@ def script_literals(area: Path) -> dict[str, tuple[object, int]]:
         if not (isinstance(node, ast.Assign) and len(node.targets) == 1):
             continue
         target, value = node.targets[0], node.value
-        if (
-            isinstance(target, ast.Name)
-            and target.id.isupper()
-            and isinstance(value, ast.Constant)
-        ):
+        if isinstance(target, ast.Name) and isinstance(value, ast.Constant):
             out[target.id] = (value.value, node.lineno)
     return out
 
@@ -231,7 +229,8 @@ def script_constant_rows(
             tier=EVIDENCE,
         )
         for name, (value, line) in literals.items()
-        if name not in run_config
+        if name.isupper()
+        and name not in run_config
         and name.lower() not in run_config
         and name not in registered
     ]

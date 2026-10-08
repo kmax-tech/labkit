@@ -28,7 +28,7 @@ PROTOCOL = """Criterion [C1], admissibility [A1].
 [[promise]]
 id = "C1"
 key = "c1_pass"
-sentence = "macro-F1 >= MIN_F1"
+sentence = "macro-F1 >= min_f1"
 scope = ["scripts/01_measure.py:evaluate"]
 
 [[promise]]

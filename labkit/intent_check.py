@@ -47,7 +47,6 @@ from __future__ import annotations
 
 import ast
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 from labkit import promises, protocol_block
@@ -230,68 +229,38 @@ def check_block_against_run(
     return out
 
 
-@dataclass(frozen=True)
-class ConstantRecord:
-    """One registered constant held against the run's record.
-
-    Attributes:
-        promise_id: The promise that declares it ("C1").
-        name: The constant's name — the record's key of the same name.
-        promised: The value the protocol registers.
-        recorded: The value the run recorded under that name, None if none.
-        state: "equal", "different" or "missing" — certain; whether
-            "missing" is a fault is evidence (the script may hold a copy
-            the record never saw).
-    """
-
-    promise_id: str
-    name: str
-    promised: object
-    recorded: object | None
-    state: str
-
-
-def constant_records(
-    block: promises.PromiseBlock, run_config: dict
-) -> list[ConstantRecord]:
-    """Every registered constant with its state against the record — the one
-    reading for the blocker (`promised_constant_mismatches`: different only)
-    and the view (`labkit-params`: all three states)."""
-    out = []
-    for p in block.promises:
-        for name, value in p.constants.items():
-            if name not in run_config:
-                out.append(ConstantRecord(p.id, name, value, None, "missing"))
-            elif run_config[name] != value:
-                out.append(
-                    ConstantRecord(p.id, name, value, run_config[name], "different")
-                )
-            else:
-                out.append(ConstantRecord(p.id, name, value, run_config[name], "equal"))
-    return out
-
-
 def promised_constant_mismatches(
     block: promises.PromiseBlock, run_config: dict, run_name: str
 ) -> list[str]:
     """The constants the protocol promised (a margin, a threshold) whose value
-    differs from the one the run recorded under the same name.
+    differs from the one the run recorded under the same name, or is absent.
 
     The script is meant to read its thresholds from the block
-    (`promises.constants`). One that keeps its own copy — `MIN_F1 = 0.5`
+    (`promises.constants`). One that keeps its own copy — `min_f1 = 0.5`
     against 0.6 in the protocol — judged by a threshold nobody registered
     (Durchstich 2026-10-06). Exact, but only as far as the script records
     the value in its run config; a copy it never records stays invisible
-    here and is a static-evidence question (`labkit-params` shows it as
-    `missing`; it is no blocker here on purpose).
+    here (0.70.0). Since 0.71.0 a missing constant is a finding too: runlog
+    refuses such a run before mkdir, so a record without it is an old run
+    or a hand-written one.
     """
-    return [
-        f"{run_name}: [{r.promise_id}] declares {r.name} = {r.promised!r}, "
-        f"the run used {r.name} = {r.recorded!r} — read "
-        f"it with promises.constants(), not a second copy."
-        for r in constant_records(block, run_config)
-        if r.state == "different"
-    ]
+    out = []
+    for r in promises.constant_records(block, run_config):
+        if r.state == "different":
+            out.append(
+                f"{run_name}: [{r.promise_id}] declares {r.name} = {r.promised!r}, "
+                f"the run used {r.name} = {r.recorded!r} — read "
+                f"it with promises.all_constants(), not a second copy."
+            )
+        elif r.state == "missing":
+            out.append(
+                f"{run_name}: [{r.promise_id}] declares {r.name} = {r.promised!r}, "
+                f"the run recorded no constant of that name — a run under "
+                f"labkit 0.71 or later cannot start without it; an older run is "
+                f"checked and reproduced with its pinned version (0.70.0 was the "
+                f"last that let it pass)."
+            )
+    return out
 
 
 # --- which metrics file answers: named explicitly, or chosen by binding -----

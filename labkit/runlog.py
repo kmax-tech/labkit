@@ -53,7 +53,7 @@ from pathlib import Path
 from types import TracebackType
 from collections.abc import Iterator
 
-from labkit import protocol_block, repo
+from labkit import promises, protocol_block, repo
 from labkit.scope_sha import audit_stamp_drift
 from labkit.runs import (
     FAILED_STATES,
@@ -813,24 +813,69 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
     return out
 
 
-def _promise_snapshot(base_dir: Path, text: str | None) -> dict | None:
-    """The bound protocol's promise block as the run records it, or None.
+def _promise_snapshot(
+    base_dir: Path, text: str | None
+) -> tuple["promises.PromiseBlock | None", dict | None]:
+    """The bound protocol's promise block, parsed once, and the snapshot the
+    run records of it — (None, None) without tables.
 
     Before mkdir, like every refusal here: a malformed block or a declared
     scope naming code that does not exist stops the run — a number bound
     to a promise whose scope cannot be hashed is bound to nothing
-    (`promises.declared_scope_sha`). No [[promise]] tables is None, not an
-    error.
+    (`promises.declared_scope_sha`).
     """
-    from labkit import promises
-
     if text is None:
-        return None
+        return None, None
     try:
         block = promises.parse_block(text)
-        return promises.snapshot(block, base_dir) if block is not None else None
+        if block is None:
+            return None, None
+        return block, promises.snapshot(block, base_dir)
     except promises.PromiseError as exc:
         raise SystemExit(f"runlog: promise block: {exc}") from exc
+
+
+def _registration_refusal(
+    binding: dict | None,
+    head: "protocol_block.Head | None",
+    block: "promises.PromiseBlock | None",
+    config: dict,
+) -> str | None:
+    """The registration's contract, before any gate that can be acknowledged
+    and before mkdir (0.71.0): a frozen protocol carries its promises as
+    data (`promises.block_owed`), and a run under a block records every
+    registered constant unchanged — otherwise the number is held to a
+    threshold nobody registered (Durchstich 2026-10-06). None when it holds."""
+    path = (binding or {}).get("path")
+    name = Path(path).name if isinstance(path, str) and path else "(unbound)"
+    owed = promises.block_owed(bool(head is not None and head.frozen), block)
+    if owed:
+        return f"{name}: {owed}"
+    if block is not None:
+        refusal = _constants_refusal(block, config)
+        if refusal:
+            return f"{name}: {refusal}"
+    return None
+
+
+def _constants_refusal(block: "promises.PromiseBlock", config: dict) -> str | None:
+    """Why this config may not run under `block`: a registered constant the
+    config lacks or carries with another value (type-strict). The guarantee
+    behind the record: a run under a block recorded every registered
+    constant unchanged (0.71.0)."""
+    broken = [r for r in promises.constant_records(block, config) if r.state != "equal"]
+    if not broken:
+        return None
+    lines = [
+        f"[{r.promise_id}] {r.name} = {r.promised!r} is registered, the config "
+        + ("carries no such key" if r.state == "missing" else f"says {r.recorded!r}")
+        for r in broken
+    ]
+    return (
+        "the registered constants are not in this run's config as registered:\n  "
+        + "\n  ".join(lines)
+        + "\n  read them with promises.all_constants(), not a second copy"
+    )
 
 
 class Run:
@@ -872,10 +917,14 @@ class Run:
         # refusal must not leave an empty run dir behind (2026-09-26).
         self._protocol = _protocol_binding(base_dir, protocol)
         _ptext = _protocol_text(base_dir, self._protocol)
-        self._cost_tier = (
-            protocol_block.head(_ptext).cost if _ptext is not None else None
-        )
-        self._promises = _promise_snapshot(base_dir, _ptext)
+        _phead = protocol_block.head(_ptext) if _ptext is not None else None
+        self._cost_tier = _phead.cost if _phead is not None else None
+        _block, self._promises = _promise_snapshot(base_dir, _ptext)
+        # Frozen now: what the registration check holds is what config.json records.
+        self._config = dict(config)
+        refusal = _registration_refusal(self._protocol, _phead, _block, self._config)
+        if refusal:
+            raise SystemExit(f"runlog: {refusal}")
         _short = self._cost_tier == "seconds"
         # Detach gate (scar 2026-08-13, twice in one evening): a long run
         # started in a Claude Code foreground shell dies with the 10-min tool
@@ -930,7 +979,6 @@ class Run:
                 )
         self.dir = base_dir / "runs" / self.run_id
         self.dir.mkdir(parents=True, exist_ok=False)
-        self._config = dict(config)
         self._outputs: list[Path] = []
         self._metrics: dict = {}
         self._note = ""

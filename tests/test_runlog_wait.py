@@ -24,7 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
 from labkit import runlog, runs  # noqa: E402
-from protocol_fixture import head  # noqa: E402
+from protocol_fixture import head, scope_file  # noqa: E402
 
 
 def _run_main(argv):
@@ -183,6 +183,7 @@ class TestLongGate(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            scope_file(Path(d))  # the frozen fixture's block names it
             return subprocess.run(
                 [sys.executable, "-c", code, str(Path(__file__).resolve().parents[1])],
                 cwd=d,

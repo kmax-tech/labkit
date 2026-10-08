@@ -6,7 +6,44 @@ One home for the shape, so a fixture states only what it varies:
 
 from __future__ import annotations
 
+from pathlib import Path
+
 PID = "p-0123456789abcdef"
+
+#: The tables a frozen fixture carries unless it says otherwise — the stamp's
+#: shape (0.71.0: frozen = true owes a promise block); the scope is the
+#: script `scope_file` writes.
+DEFAULT_BLOCK = """\
+[[promise]]
+id = "C1"
+key = "c1_pass"
+sentence = "the criterion holds"
+scope = ["scripts/01_measure.py"]
+
+[[promise]]
+id = "A1"
+key = "a1_pass"
+sentence = "the yield suffices"
+scope = ["scripts/01_measure.py"]
+
+[[promise]]
+id = "A2"
+key = "a2_pass"
+sentence = "the null lane sits at chance"
+scope = ["scripts/01_measure.py"]
+"""
+
+
+def scope_file(area: Path) -> Path:
+    """The script the default block's scopes name, written if absent."""
+    script = area / "scripts" / "01_measure.py"
+    if not script.is_file():
+        script.parent.mkdir(parents=True, exist_ok=True)
+        script.write_text(
+            'def evaluate_rows(rows):\n    return {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n',
+            encoding="utf-8",
+        )
+    return script
 
 
 def head(
@@ -16,9 +53,14 @@ def head(
     cost: str = "minutes",
     frozen: bool = False,
     preflight_audit: str = "",
-    promises: str = "",
+    promises: str | None = "",
 ) -> str:
-    """The fenced TOML block; `promises` is appended inside it verbatim."""
+    """The fenced TOML block; `promises` is appended inside it verbatim. A
+    frozen head without an explicit block carries `DEFAULT_BLOCK`; `None`
+    means no block even when frozen (the mutant of 0.71's rule)."""
+    if promises == "" and frozen:
+        promises = DEFAULT_BLOCK
+    promises = promises or ""
     lines = [
         "```toml",
         "[protocol]",

@@ -5,6 +5,31 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.71.0 — 2026-10-08
+
+### Breaking
+
+**Frozen protocols require promises, and every promised constant must be
+present and equal in the run config.** Last permissive version: 0.70.0.
+
+- `frozen = true` without a `[[promise]]` table is a MUST failure in
+  `protocol-check`, a blocker in `preflight` and `finalize`, and `runlog`
+  refuses every run bound to such a protocol before `mkdir` — not
+  acknowledgeable (`promises.block_owed`, the one home of the rule).
+- `runlog.run(config=...)` under a block refuses the run before `mkdir`
+  when a registered constant is missing from `config` or carries another
+  value — type-strict (`True` is not `1`, `1` is not `1.0`). The record
+  therefore guarantees: every registered constant, unchanged. Whether the
+  formula uses it right stays the agent audit's question.
+- A constant is named like the config key it is recorded under —
+  `^[a-z][a-z0-9_]*$` — and stands in exactly one promise;
+  `promises.parse_block` refuses `MIN_F1` and a name declared twice.
+  `promises.all_constants(block)` is what a script passes to its config
+  object. `constant_records` moved from `intent_check` to `promises`.
+- `intent-check`/`finalize`: a registered constant absent from the record
+  is a finding (it was invisible); the message names the last permissive
+  version for old runs.
+
 ## 0.70.0 — 2026-10-08
 
 ### Breaking
