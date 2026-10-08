@@ -12,6 +12,7 @@ scored as wrong (CS-001 Fail loud).
 from __future__ import annotations
 
 import json
+from typing import cast
 
 #: who every reader is — a newcomer, not a colleague: a colleague's patience
 #: hid jargon in protocol-reading rounds 7 and 8 (2026-10-07)
@@ -47,7 +48,7 @@ def load_answer(text: str, keys: list[str], what: str) -> dict[str, object]:
     missing = [k for k in keys if k not in data]
     if missing:
         raise ValueError(f"{what} answer lacks {missing}")
-    return data
+    return cast(dict[str, object], data)  # an object, its keys strings: JSON says so
 
 
 def read_number(raw: object) -> float | None:
@@ -93,4 +94,4 @@ def read_unclear(data: dict[str, object], what: str) -> list[str]:
     value = data["unclear"]
     if not isinstance(value, list):
         raise ValueError(f"{what} answer: unclear must be a list, not {value!r}")
-    return [str(u) for u in value]
+    return [str(u) for u in cast(list[object], value)]

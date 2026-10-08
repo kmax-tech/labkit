@@ -37,6 +37,7 @@ from __future__ import annotations
 import ast
 import re
 import tomllib
+from typing import cast
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -61,7 +62,7 @@ class Question:
 def load_questions(path: Path) -> list[Question]:
     """The questions of a TOML file. Raises NavigationError naming the entry."""
     data = tomllib.loads(path.read_text(encoding="utf-8"))
-    out = []
+    out: list[Question] = []
     for n, q in enumerate(data.get("question", []), 1):
         missing = [k for k in ("id", "question", "truth") if k not in q]
         if missing:
@@ -87,7 +88,7 @@ def load_choices(path: Path) -> list[Choice]:
     """The `[[choice]]` questions of a TOML file (none is fine). Raises
     NavigationError when a truth is not among the choices."""
     data = tomllib.loads(path.read_text(encoding="utf-8"))
-    out = []
+    out: list[Choice] = []
     for c in data.get("choice", []):
         missing = [k for k in ("id", "question", "choices", "truth") if k not in c]
         if missing:
@@ -119,17 +120,20 @@ def score_choices(answer_text: str, choices: list[Choice]) -> dict[str, ChoiceSc
     ValueError when an answer is missing, not a list, or names something
     that is not one of the choices."""
     data = load_answer(answer_text, [c.id for c in choices], "navigation")
-    out = {}
+    out: dict[str, ChoiceScore] = {}
     for c in choices:
         picked = data[c.id]
-        if not isinstance(picked, list) or not all(isinstance(x, str) for x in picked):
+        if not isinstance(picked, list) or not all(
+            isinstance(x, str) for x in cast(list[object], picked)
+        ):
             raise ValueError(f"navigation answer: {c.id} must be a list of choices")
-        stray = set(picked) - set(c.choices)
+        names = cast(list[str], picked)  # checked just above: a list of strings
+        stray = set(names) - set(c.choices)
         if stray:
             raise ValueError(
                 f"navigation answer: {c.id} names {sorted(stray)}, not among its choices"
             )
-        got = frozenset(picked)
+        got = frozenset(names)
         out[c.id] = ChoiceScore(
             got == c.truth,
             tuple(x for x in c.choices if x in c.truth - got),
@@ -151,7 +155,7 @@ class HumanAnswer:
 def parse_picks(text: str, choice: Choice) -> tuple[str, ...]:
     """The choices a person typed as numbers ("1,3" or "2"). Raises
     ValueError with a sentence when a number is not one of the choices."""
-    picks = []
+    picks: list[str] = []
     for part in text.replace(" ", "").split(","):
         if not part.isdigit() or not 1 <= int(part) <= len(choice.choices):
             raise ValueError(
@@ -171,7 +175,7 @@ def human_session(
     shows a text and returns what the person typed; a mistyped answer is
     asked again (the time runs on). With `count_help` the person also says
     how many questions they asked an assistant for it."""
-    out = []
+    out: list[HumanAnswer] = []
     for n, c in enumerate(choices, 1):
         listing = "\n".join(f"  {i}. {x}" for i, x in enumerate(c.choices, 1))
         start = clock()
@@ -293,7 +297,7 @@ def score_nav_answer(
     """Hold each answer to its truth. Raises ValueError when the answer is
     not the asked-for JSON, NavigationError when a truth no longer exists."""
     data = load_answer(answer_text, [q.id for q in questions], "navigation")
-    out = []
+    out: list[Found] = []
     for q in questions:
         spans = [symbol_span(repo, t) for t in q.truth]
         raw = data[q.id]
@@ -351,7 +355,7 @@ class Flow:
 def load_flows(path: Path) -> list[Flow]:
     """The flow questions of a TOML file (none is fine)."""
     data = tomllib.loads(path.read_text(encoding="utf-8"))
-    out = []
+    out: list[Flow] = []
     for f in data.get("flow", []):
         missing = [k for k in ("id", "question", "steps") if k not in f]
         if missing:
@@ -390,12 +394,15 @@ def score_flows(answer_text: str, flows: list[Flow]) -> dict[str, tuple[int, int
     """Per flow question, (steps named in order, steps registered). Raises
     ValueError when a flow is unanswered or not a list of strings."""
     data = load_answer(answer_text, [f.id for f in flows], "navigation")
-    out = {}
+    out: dict[str, tuple[int, int]] = {}
     for f in flows:
         steps = data[f.id]
-        if not isinstance(steps, list) or not all(isinstance(s, str) for s in steps):
+        if not isinstance(steps, list) or not all(
+            isinstance(s, str) for s in cast(list[object], steps)
+        ):
             raise ValueError(f"navigation answer: {f.id} must be a list of strings")
-        out[f.id] = (flow_in_order(steps, f), len(f.steps))
+        named = cast(list[str], steps)  # checked just above: a list of strings
+        out[f.id] = (flow_in_order(named, f), len(f.steps))
     return out
 
 
@@ -405,9 +412,9 @@ class Effort:
 
     seconds: int
     calls: int
-    by_tool: dict[str, int] = field(default_factory=dict)
+    by_tool: dict[str, int] = field(default_factory=dict[str, int])
     files_opened: list[str] = field(
-        default_factory=list
+        default_factory=list[str]
     )  # files read by Read or a shell command, no repeats
 
 

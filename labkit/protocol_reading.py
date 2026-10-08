@@ -208,9 +208,9 @@ class ReaderScore:
     admissible_ok: bool | None = None
     correct: int = 0  # checkable answers right
     checkable: int = 0  # answers the run could decide
-    unclear: list[str] = field(default_factory=list)
+    unclear: list[str] = field(default_factory=list[str])
     effort: int | None = None
-    answers: dict[str, object] = field(default_factory=dict)
+    answers: dict[str, object] = field(default_factory=dict[str, object])
 
 
 def score_reader_answer(
@@ -426,7 +426,7 @@ def terms_coverage(
     evidence that an explanation is there, not proof."""
     summary = _normalized_section(text, "Summary")
     glossary = normalize_term(glossary_text(text, protocol_path))
-    hits = []
+    hits: list[TermHit] = []
     for term in unclear:
         vs = _variants(term)
         hits.append(

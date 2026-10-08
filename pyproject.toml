@@ -63,6 +63,8 @@ select = ["E4", "E7", "E9", "F", "ANN0", "ANN2", "D100", "D101", "D102", "D103",
 "tests/*" = ["ANN", "D"]
 
 [tool.pyright]
+# strict where the code is new (2026-10-08); widen module by module
+strict = ["labkit/cold_reader.py", "labkit/code_navigation.py", "labkit/protocol_reading.py"]
 # the repo's own venv (`python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'`):
 # without it the editor resolved `labkit` to an old copy installed in some
 # other project's venv and flagged every new name as unknown
