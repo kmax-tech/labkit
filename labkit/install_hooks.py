@@ -33,6 +33,7 @@ MARK = "# installed by labkit-hooks"
 
 
 def labkit_version() -> str:
+    """The installed labkit's version, or "unknown" outside an installed package."""
     try:
         return version("labkit")
     except PackageNotFoundError:
@@ -218,6 +219,7 @@ def check(repo: Path) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
+    """Command line of `labkit-hooks`: install or check a repo's git hooks."""
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: labkit-hooks install [REPO] | check [REPO]")

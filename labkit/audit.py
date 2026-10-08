@@ -200,6 +200,7 @@ def stamp_facts(area: Path, verdict: tuple[int, int, int]) -> str:
 
 
 def main(argv: list[str]) -> int:
+    """Command line of `labkit-audit`: audit one area in one mode."""
     ap = argparse.ArgumentParser(
         prog="labkit-audit", description=(__doc__ or "").splitlines()[0]
     )

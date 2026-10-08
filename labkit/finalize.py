@@ -489,6 +489,7 @@ def if_reported(protocols: list[Path]) -> int:
 
 
 def main(argv: list[str]) -> int:
+    """Command line of `finalize`: check one area, or every protocol whose answer cites a run (`--if-reported`)."""
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: finalize <AREA> [--protocol PROTOCOL-*.md]")
@@ -519,6 +520,7 @@ def main(argv: list[str]) -> int:
 
 
 def cli() -> None:
+    """Console entry point of `finalize`."""
     sys.exit(main(sys.argv[1:]))
 
 

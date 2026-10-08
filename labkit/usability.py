@@ -461,6 +461,7 @@ class LogTrace:
 
 
 def parse_log(text: str) -> LogTrace:
+    """Read an agent's step log (`HH:MM:SS · tag · text` per line) into counts and wall-clock."""
     counts = {t: 0 for t in LOG_TAGS}
     untagged = 0
     source_reads = 0
@@ -501,6 +502,8 @@ def latest_run(area: Path) -> Path | None:
 
 @dataclass(frozen=True)
 class Score:
+    """What a probe's score found: the number, its binding, the log and the transcript."""
+
     probe: Probe
     run_id: str | None
     number: float | None  # metrics[metric_key], or None when absent
@@ -865,6 +868,7 @@ def cmd_read_score(root: Path, transcript: Path | None) -> int:
 
 
 def score(root: Path, transcript: Path | None = None) -> int:
+    """Score a staged probe: its latest run's number against the truth, the binding, the log; write `<dir>.score.json`."""
     pr = load_probe_run(root)
     probe, run, metrics = pr.probe, pr.run, pr.metrics
     expected = recount(root) if probe.task == "count" else None
@@ -1028,6 +1032,7 @@ def score(root: Path, transcript: Path | None = None) -> int:
 
 
 def main(argv: list[str]) -> int:
+    """Command line of `usability`: stage probes and score what cold agents and readers did."""
     ap = argparse.ArgumentParser(
         prog="usability", description=(__doc__ or "").split("\n\n")[0]
     )
@@ -1179,6 +1184,7 @@ def main(argv: list[str]) -> int:
 
 
 def cli() -> None:
+    """Console entry point of `usability`."""
     sys.exit(main(sys.argv[1:]))
 
 

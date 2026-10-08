@@ -93,6 +93,7 @@ def meta_paragraph(text: str) -> tuple[int, str] | None:
 
 
 def repo_root(path: Path) -> Path | None:
+    """The nearest directory above `path` that holds a `.git`, or None."""
     for parent in [path, *path.parents]:
         if (parent / ".git").exists():
             return parent
@@ -114,6 +115,7 @@ def unresolved_scripts(text: str, root: Path | None) -> list[str]:
 
 
 def collect(paths: list[str]) -> list[Path]:
+    """The measurement notes the arguments name: notes under `notes/messung/` of a repo or directory, or the files given."""
     files: list[Path] = []
     for p in map(Path, paths):
         if p.is_dir():
@@ -180,6 +182,7 @@ def check_file(f: Path) -> tuple[list[str], list[str]]:
 
 
 def main(argv: list[str]) -> int:
+    """Command line of `notes-check`: check the measurement notes named in argv."""
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: notes-check <repo-root | notes-dir | note.md> ...")

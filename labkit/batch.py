@@ -181,6 +181,7 @@ class Store:
         return [o for o in objs if not (isinstance(o, dict) and "_meta" in o)]
 
     def done_ids(self) -> set:
+        """The ids of the records already in the output file."""
         return {r[self.id_key] for r in self.records() if self.id_key in r}
 
     def pending(self, records: Iterable[dict]) -> Iterator[dict]:

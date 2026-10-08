@@ -56,6 +56,8 @@ def _is_dirty(area: Path) -> bool:
 
 @dataclass(frozen=True)
 class AreaTests:
+    """What running an area's own tests found."""
+
     pattern: str  # what was looked for, for the message
     files: list[Path]
     state: str  # "none" | "ok" | "failed" | "no-pytest"
@@ -293,6 +295,7 @@ def run(area: Path, protocol: Path | None = None) -> int:
 
 
 def main(argv: list[str]) -> int:
+    """Command line of `preflight`: the mechanical gate before an area is frozen."""
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: preflight <AREA> [--protocol PROTOCOL-*.md]")
@@ -317,6 +320,7 @@ def main(argv: list[str]) -> int:
 
 
 def cli() -> None:
+    """Console entry point of `preflight`."""
     sys.exit(main(sys.argv[1:]))
 
 

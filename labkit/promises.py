@@ -93,6 +93,8 @@ class PromiseError(ValueError):
 
 @dataclass(frozen=True)
 class Promise:
+    """One promise of a protocol to the code: its id, the metrics key that reports it, its sentence, scope and constants."""
+
     id: str  # "C1"
     kind: str  # "criterion" | "admissibility" | "branch"
     key: str  # metrics key that reports it
@@ -103,10 +105,13 @@ class Promise:
 
 @dataclass(frozen=True)
 class PromiseBlock:
+    """A protocol's `[[promise]]` tables, parsed, with their digest."""
+
     promises: tuple[Promise, ...]
     sha: str  # digest of the [[promise]] tables (canonical JSON), not the head
 
     def by_id(self) -> dict[str, Promise]:
+        """The promises keyed by their id."""
         return {p.id: p for p in self.promises}
 
 

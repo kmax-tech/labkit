@@ -663,6 +663,7 @@ SEVERITY_LEGEND = (
 
 
 def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
+    """Write the audit bundle for the code-check agent: schema facts, gate labels, intent ids, protocol and code in one file."""
     parts = [
         f"# AUDIT BUNDLE · area {area.name}\n\n",
         SEVERITY_LEGEND,
@@ -904,6 +905,7 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
+    """Command line of `code-check`: check an area's code against its protocol, optionally write the bundle."""
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: code-check <AREA> [--protocol FILE] [--bundle FILE]")
@@ -994,6 +996,7 @@ def main(argv: list[str]) -> int:
 
 
 def cli() -> None:
+    """Console entry point of `code-check`."""
     sys.exit(main(sys.argv[1:]))
 
 

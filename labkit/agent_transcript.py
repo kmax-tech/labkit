@@ -66,6 +66,8 @@ class TranscriptError(ValueError):
 
 @dataclass(frozen=True)
 class Call:
+    """One tool call of the agent and its result."""
+
     at: float  # seconds since the epoch, the tool_use record's timestamp
     tool: str  # Bash, Read, Edit, Write, ...
     text: str  # the shell command, or the file path for file tools

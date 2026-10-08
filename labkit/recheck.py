@@ -41,6 +41,8 @@ INTENT_KEY = promises.INTENT_KEY
 
 @dataclass(frozen=True)
 class Verdict:
+    """What a recheck held: the run, the keys compared, what grew, the numbers the note was held to."""
+
     run_id: str
     out: Path
     keys_compared: int
@@ -179,6 +181,7 @@ def _present(number: str, text: str) -> bool:
 
 
 def cited(note: Path, numbers: list[str], run_id: str) -> None:
+    """Refuse unless the note contains every reported number and cites the run."""
     text = note.read_text(encoding="utf-8").replace("−", "-").replace(",", ".")
     missing = sorted({n for n in numbers if not _present(n, text)})
     if missing:

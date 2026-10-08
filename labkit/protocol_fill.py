@@ -132,6 +132,7 @@ def fill_prompts(text: str, constants: dict[str, str]) -> str:
 
 
 def main(argv: list[str]) -> int:
+    """Command line of `protocol-fill`: fill one placeholder field by its label, or the Prompt block from the script."""
     import argparse
 
     ap = argparse.ArgumentParser(

@@ -160,6 +160,8 @@ def field_name(label: str) -> str:
 
 @dataclass(frozen=True)
 class FieldLine:
+    """One labelled field of a protocol: where it is, what it says."""
+
     line: int  # 1-based line of the label
     name: str  # field_name() of the label
     label: str  # the label as written
@@ -274,6 +276,7 @@ class FieldReport:
 
     @property
     def frozen(self) -> bool:
+        """Whether the protocol's head says it is frozen."""
         return bool(self.head and self.head.frozen)
 
 
@@ -622,6 +625,7 @@ def template_lines(path: Path | None) -> set[str]:
 
 
 def find_template(explicit: str | None) -> Path | None:
+    """The protocol template to check against: the one named, else the packaged one."""
     if explicit:
         return Path(explicit)
     here = Path(__file__).resolve().parent / "experiment-protocol.md.template"
@@ -629,6 +633,7 @@ def find_template(explicit: str | None) -> Path | None:
 
 
 def find_field_guide() -> Path | None:
+    """The packaged protocol field guide, or None outside the package."""
     here = Path(__file__).resolve().parent / "protocol-field-guide.md"
     return here if here.exists() else None
 
@@ -698,6 +703,7 @@ def code_blocks(text: str) -> int:
 
 
 def collect(paths: list[str]) -> list[Path]:
+    """The protocol files the arguments name: every `PROTOCOL-*.md` under a directory, or the files given."""
     files: list[Path] = []
     for p in map(Path, paths):
         if p.is_dir():
@@ -708,6 +714,7 @@ def collect(paths: list[str]) -> list[Path]:
 
 
 def main(argv: list[str]) -> int:
+    """Command line of `protocol-check`: check protocols against the template and their own head."""
     _ID_INDEX.clear()  # one scan per invocation; never a stale one
     if argv and argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])

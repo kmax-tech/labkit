@@ -48,13 +48,16 @@ extend-exclude = ["docs/usability/*.py"]
 
 [tool.ruff.lint]
 # Same pinned scope as the lab repos (a shifting default is a knob nobody set).
-select = ["E4", "E7", "E9", "F", "ANN0", "ANN2"]
+select = ["E4", "E7", "E9", "F", "ANN0", "ANN2", "D100", "D101", "D102", "D103", "D104", "D419"]
 # ANN: every signature annotated (CS-007 Type hints and docstrings) — ANN401
 # (no `Any`) left out: forwarding `**kw` to a typed function needs it.
+# D1xx: every public module, class and function has a docstring — its first
+# line is the map a reader searches (CS-015 Make the code findable by name); the
+# rest of pydocstyle is a different docstring style than the house's and stays off.
 
 [tool.ruff.lint.per-file-ignores]
 # unittest methods: `def test_…(self)` says what it is; `-> None` on each adds nothing
-"tests/*" = ["ANN"]
+"tests/*" = ["ANN", "D"]
 
 [tool.pyright]
 # the repo's own venv (`python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'`):

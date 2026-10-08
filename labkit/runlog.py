@@ -832,6 +832,8 @@ def _promise_snapshot(base_dir: Path, text: str | None) -> dict | None:
 
 
 class Run:
+    """One measure run: its directory, its frozen config, the outputs it registers and the metrics it reports."""
+
     def __init__(
         self,
         experiment: str,
@@ -976,14 +978,17 @@ class Run:
         self._outputs.extend(Path(p) for p in paths)
 
     def save_raw(self, name: str, content: str) -> Path:
+        """Write a raw text artefact into the run's directory and return its path."""
         p = self.dir / name
         p.write_text(content, encoding="utf-8")
         return p
 
     def metrics(self, **kv: object) -> None:
+        """Add numbers to the run's metrics.json (written when the run finishes)."""
         self._metrics.update(kv)
 
     def note(self, text: str) -> None:
+        """Set the run's one-line note for the run index."""
         self._note = text
 
     def _finalize(self) -> None:

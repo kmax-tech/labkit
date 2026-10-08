@@ -162,6 +162,7 @@ def protocol_named_in(script: Path, area: Path) -> Path | None:
 
 
 def pre_run(event: dict) -> int:
+    """PreToolUse hook on Bash: a full measure run gets its area's preflight first; blockers refuse the command (exit 2)."""
     if event.get("tool_name", "Bash") != "Bash":
         return 0
     command = (event.get("tool_input") or {}).get("command") or ""
@@ -300,6 +301,7 @@ def _sha(path: Path) -> str:
 
 
 def post_change(event: dict) -> int:
+    """PostToolUse hook: a protocol or a measurement note just written gets its checker; the findings go back as context."""
     project = os.environ.get("CLAUDE_PROJECT_DIR")
     repo = Path(project) if project else Path(event.get("cwd") or os.getcwd())
     candidates: list[Path] = []
@@ -460,6 +462,7 @@ def sessions(argv: list[str]) -> int:
 
 
 def stop(event: dict) -> int:
+    """Stop hook: a number written back in this session gets finalize; blockers send the agent back once (exit 2)."""
     project = os.environ.get("CLAUDE_PROJECT_DIR")
     repo = Path(project) if project else Path(event.get("cwd") or os.getcwd())
     if not (repo / ".git").exists():
@@ -489,6 +492,7 @@ def stop(event: dict) -> int:
 
 
 def main(argv: list[str]) -> int:
+    """Command line of `claude-hook`: dispatch the hook named in argv, the event JSON on stdin."""
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print(
@@ -510,6 +514,7 @@ def main(argv: list[str]) -> int:
 
 
 def cli() -> None:
+    """Console entry point of `claude-hook`."""
     sys.exit(main(sys.argv[1:]))
 
 

@@ -237,6 +237,7 @@ def audit_stamp_drift(area: Path, audit_line: str) -> str | None:
 
 
 def main(argv: list[str]) -> int:
+    """Command line of `scope-sha`: the stamp over an area's code for an audit line."""
     if argv and argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print(

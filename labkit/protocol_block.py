@@ -64,6 +64,7 @@ class Head:
 
     @property
     def placeholders(self) -> list[str]:
+        """The head fields still holding a template placeholder."""
         return [f for f in ("id", "type", "cost") if getattr(self, f) is None]
 
 
