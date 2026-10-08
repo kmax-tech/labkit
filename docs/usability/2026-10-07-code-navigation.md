@@ -606,3 +606,47 @@ questions, same seeds' shuffles.
   and the area another session is running today; a separate task.
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round12-after/`.
+
+## Round 13 (2026-10-08): the person on area 12, after the treatment
+
+Area 12 got the round-11 treatment (data under `data/` as symlinks, named
+constants, the script head saying where each key is set) but not a filled
+README; `runlog <area>` now lists the finished runs. The same eight question
+types as round 11, answered by the same person at the keyboard with a fresh
+assistant, timed. Second pass for the person: practice and the assistant
+confound the comparison.
+
+| | right | seconds | questions to the assistant |
+|---|---|---|---|
+| round 11, area 08, before | 1/8 | 414 | 2 |
+| round 13, area 12, after | 7/8 | 817 | 10 |
+
+- **Right where it was wrong**: which runs were fresh (`runlog` lists it),
+  whether the code was committed, which file holds the cases (now a link
+  under the area's own `data/`), how the run is started, which run of 09
+  is the anchor. Each took 54–155 s and at least one assistant question —
+  found, not fast.
+- **The one miss is the same miss**: "where is c2 decided" — picked
+  `positions.evaluate`, the middle of the chain `evaluate_rows` →
+  `evaluate` → `evaluate_rows` that was not renamed (173 s, the longest).
+- The person's words: "es gibt Protokolle, measure und auch runs mit ihren
+  configs — teilweise verwirrend, wo man anfangen soll"; and on
+  `src/measure/positions.py:evaluate` ("[C4] [C5] [A4] of p"): "das klingt
+  nach einem bestimmten Protokoll, ist aber hier im allgemeinen Code".
+
+Consequences:
+
+1. What was changed is found; the gain in right answers cannot be
+   separated from practice and ten assistant questions (n = 1, second
+   pass). Time went up, not down: an area still has no entry point that
+   says where to start — the protocol, the script and the runs each tell
+   part. The area README is that entry point; area 12's was the stamp.
+2. The chain of three functions sharing one name across modules cost the
+   only miss, twice now. Its rename stays the next uniagent task.
+3. **Protocol ids in shared code** (uniagent): `src/measure/positions.py`
+   sets `c4_pass`, `c5_…`, `a4_…` and names them in docstrings — the ids
+   of one protocol, in a module seven areas share. Shared code should
+   name the thing (`binding_case_rejected`), and each area map it to its
+   own id. A design question for the lab, not a labkit change.
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round13-human-area12/`.
