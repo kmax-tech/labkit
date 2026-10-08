@@ -87,10 +87,9 @@ mechanischer Check — die Aufgabe des Pilots.
   Token (`labkit==0.49.1`). Dafür ein öffentliches Release. Solange nicht:
   GitHub-Repo für Studis lesbar halten, Tags pushen.
 
-- [ ] **Push und Tags:** `git push && git push origin --tags`. Die Tags
-      fehlen auf GitHub; die Pins der Repos (`git+file://…@v0.45.0`) gelten
-      bis dahin nur auf diesem Rechner, und Reproduktion über den Pin
-      (Leitsatz „Altlasten“) setzt erreichbare Tags voraus.
+- [x] **Push und Tags** — erledigt 2026-10-08: v0.58.1 … v0.72.0 auf
+      GitHub (`kmax-tech/labkit`), `v0.63.2` auf dem grünen Stand `30762d3`.
+      uniagent hat kein Remote (Push dort offen).
 - [ ] **Pin für `thesis-dagidir`:** einziges labkit-Repo ohne Pin
       (Stand 2026-10-06); zöge beim nächsten Install die Brüche aus
       `CHANGELOG.md`.
