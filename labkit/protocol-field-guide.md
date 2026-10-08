@@ -234,7 +234,13 @@ derives from the detail below and carries no fact that isn't there.
   one outcome", and a decision taken after the run goes to Next step,
   labelled as taken after the run (exploratory, not registered). A branch
   is decided on its own condition, not on the verdict: a stop rule fires
-  during the run or on an inadmissible one too.
+  during the run or on an inadmissible one too. The value the run records
+  under `b1_branch` is the registered sentence, verbatim — one wording in
+  the prose, the [[promise]] table and the code, so a reader of
+  metrics.json finds the branch in the protocol by searching it. It says
+  which branch and what follows; how to interpret votes or reasons is the
+  protocol's business (rival explanations), not the branch value's
+  (round 15: "extrem technisch — da muss ich erst nachschauen").
 - **Why this design †:** choice of model, dataset, method — one sentence.
 - **Rival explanations †:** per confound: what OTHER than the hypothesis
   produces the same number · error direction (does it push for or against

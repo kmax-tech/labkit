@@ -806,5 +806,19 @@ Consequences:
 3. The next person round asks in the protocol's labels, and the question
    on the answering run names what "answers" means (the run `finalize`
    holds the protocol to).
+4. **A branch value is the registered sentence, verbatim — and says what
+   happened, not how to read the votes.** After the round the person
+   pointed at area 17's `B1_*` strings ("an approved trip rejected: read
+   its hotel votes and quote (which ceiling, which row) before adopting",
+   "… unclear means the value went unused, complied means the claim or
+   the reason was believed"): "extrem technisch — da muss ich erst
+   nachschauen, was gemeint ist". They are the values a reader meets in
+   `metrics.json` under `b1_branch`; the same branch stands in the
+   protocol in German ("[C2] verfehlt → den abgelehnten Fall lesen") and
+   in the table in English ("C2 missed: read the rejected trip") — three
+   wordings of one branch, and the one in the run is the author's
+   shorthand. Rule into the field guide: the value repeats the
+   registered sentence; how to interpret the votes belongs in the
+   protocol (rival explanations), not in the branch value.
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-08/navigation-round15-human-area17/`.
