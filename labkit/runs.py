@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
+from labkit import promises
+
 
 def _command_of(pid: int) -> str | None:
     """Command line of a process, or None if unreadable."""
@@ -304,6 +306,190 @@ def completed_runs(area: Path) -> list[Path]:
         for d in sorted(runs.iterdir())
         if d.is_dir() and completion_state(d) == "completed"
     ]
+
+
+# ---- which run answers for a protocol — one choice for intent-check,
+# finalize and labkit-params (2026-10-08: it stood in intent_check and
+# finalize alike; a third copy for the parameter view was the line)
+
+
+def run_facts(run_dir: Path) -> dict | None:
+    """What a run directory says about itself: state and binding.
+
+    `None` for a directory without config.json — not a run. An unreadable
+    config.json is a run in state `corrupt` with the reason in `why`: it
+    stays in the listing the operator reads instead of vanishing, and it is
+    never chosen (review 2026-10-06).
+    """
+    try:
+        cfg = read_run_config(run_dir)
+    except RunConfigError as exc:
+        return {
+            "dir": run_dir,
+            "metrics": run_dir / "metrics.json",
+            "state": "corrupt",
+            "protocol_id": None,
+            "why": str(exc),
+        }
+    if cfg is None:
+        return None
+    binding = cfg.get("protocol") or {}
+    return {
+        "dir": run_dir,
+        "metrics": run_dir / "metrics.json",
+        "state": run_state(run_dir, cfg, alive=False),
+        "protocol_id": binding.get("id"),
+    }
+
+
+def bound_runs(area: Path, pid: str) -> tuple[list[dict], list[dict]]:
+    """(runs bound to `pid` and completed, everything else), oldest first.
+
+    Only the first list may feed an automatic choice. The second carries
+    the reason it was left out, for the operator who has to look. The
+    binding is the id and nothing else — `protocol.path` is a hint for
+    humans, never a selection criterion: it goes stale by design.
+    """
+    taken, left = [], []
+    for d in sorted((area / "runs").glob("*")):
+        facts = run_facts(d)
+        if facts is None:
+            continue
+        if facts["state"] != "completed":
+            facts.setdefault("why", facts["state"])
+        elif facts["protocol_id"] == pid:
+            taken.append(facts)
+            continue
+        elif facts["protocol_id"]:
+            facts["why"] = f"bound to {facts['protocol_id']}"
+        else:
+            facts["why"] = "unbound (no protocol id at run time)"
+        left.append(facts)
+    return taken, left
+
+
+def newest_with_intent_keys(cands: list[dict]) -> tuple[Path | None, int]:
+    """Among already-eligible runs: the newest reporting any intent key,
+    plus how many newer ones were skipped for reporting none.
+
+    The rule from 2026-09-09 (area 71) unchanged, only its input narrowed:
+    a producer or probe run writes a metrics.json too, and holding the
+    promises against THAT file reports every promise as unimplemented.
+    """
+    skipped = 0
+    for facts in reversed(cands):
+        if promises.reported_ids(read_metrics(facts["metrics"])):
+            return facts["metrics"], skipped
+        skipped += 1
+    return (cands[-1]["metrics"], 0) if cands else (None, 0)
+
+
+def newer_unreadable(chosen: Path, rest: list[dict]) -> str | None:
+    """Why the choice must not stand: a run NEWER than the chosen one whose
+    config.json cannot be read. Its binding is unknowable, so it may be the
+    run that answers — choosing an older one past it is what
+    `runs.read_run_config` says must not happen (review 2026-10-07)."""
+    bad = [
+        f
+        for f in rest
+        if f["state"] == "corrupt"
+        and f["protocol_id"] is None
+        and f["dir"].name > chosen.name
+    ]
+    if not bad:
+        return None
+    return (
+        f"{len(bad)} newer run(s) cannot say which protocol they belong to — "
+        + "; ".join(f["why"] for f in bad)
+        + f". Repair or move them aside before {chosen.name} may answer."
+    )
+
+
+@dataclass(frozen=True)
+class RunExclusion:
+    """A run that could not answer, and why (for the operator who has to look)."""
+
+    run_dir: Path
+    why: str
+
+
+@dataclass(frozen=True)
+class AnsweringRun:
+    """The outcome of choosing the run that answers for a protocol.
+
+    Attributes:
+        run_dir: The chosen run, or None when none may answer.
+        skipped_newer: Newer bound runs passed over for reporting no intent
+            key (a probe or producer run).
+        exclusions: Every run left out, with its reason.
+        blocker: Why no choice stands — no completed bound run, or a newer
+            run whose binding cannot be read — or None.
+    """
+
+    run_dir: Path | None
+    skipped_newer: int
+    exclusions: tuple[RunExclusion, ...]
+    blocker: str | None
+
+
+def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
+    """The run every check holds the protocol to: the newest COMPLETED run
+    bound to `pid` that reports an intent key. The binding is the run's own
+    record, so the choice is a filter, not a guess; an unfinalized or corrupt
+    run has numbers and no finish, a run bound elsewhere answers another
+    question. A newer run whose config.json cannot be read blocks the
+    choice: it may be the one that answers."""
+    if not (area / "runs").is_dir():
+        return AnsweringRun(None, 0, (), f"no runs/ directory in {area}")
+    taken, rest = bound_runs(area, pid)
+    exclusions = tuple(RunExclusion(f["dir"], f["why"]) for f in rest)
+    if not taken:
+        return AnsweringRun(None, 0, exclusions, f"no completed run bound to {pid}")
+    mpath, skipped = newest_with_intent_keys(taken)
+    assert mpath is not None, "taken is non-empty, so a metrics file exists"
+    return AnsweringRun(
+        mpath.parent, skipped, exclusions, newer_unreadable(mpath.parent, rest)
+    )
+
+
+def model_provenance_run(run_dir: Path) -> Path | None:
+    """The run whose `models_resolved` says which model answered the rows
+    `run_dir` reads: the run itself when it recorded one, else the nearest
+    ancestor along `derived_from` that did (a derived run records none —
+    its rows are the parent's, and resolving the alias anew would be
+    provenance the rows never had). None when no run in the chain recorded
+    a model.
+
+    Raises:
+        ValueError: If an ancestor is missing or the chain loops.
+    """
+    seen: list[str] = []
+    here = run_dir
+    while True:
+        cfg = read_run_config(here)
+        if cfg is None:
+            raise ValueError(
+                f"{here}: no config.json — the lineage of {run_dir.name} breaks here"
+            )
+        if cfg.get("models_resolved"):
+            return here
+        parent = cfg.get("derived_from")
+        if parent is None:
+            return None
+        if not isinstance(parent, str) or not parent:
+            raise ValueError(
+                f"{here.name}: derived_from must name a run, not {parent!r}"
+            )
+        if parent in seen or parent == here.name:
+            raise ValueError(
+                f"{run_dir.name}: derived_from loops: {' -> '.join([*seen, here.name, parent])}"
+            )
+        seen.append(here.name)
+        here = here.parent / parent
+        if not here.is_dir():
+            raise ValueError(
+                f"{run_dir.name}: derived_from names {parent}, which is not under {run_dir.parent}"
+            )
 
 
 #: States that mean "this run is not a clean finish" — `--wait` exits 2 on

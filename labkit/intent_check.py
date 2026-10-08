@@ -52,10 +52,10 @@ from pathlib import Path
 from labkit import promises, protocol_block
 from labkit.runs import (
     MetricsError,
-    RunConfigError,
+    bound_answering_run,
     read_metrics,
     read_run_config,
-    run_state,
+    run_facts,
 )
 from labkit.repo import layout_root
 from labkit.scope_sha import imported_repo_helpers
@@ -72,77 +72,6 @@ def protocol_id_of(text: str) -> str | None:
     """The stamped id of the protocol's head, None while it is unstamped.
     A missing or malformed head raises protocol_block.BlockError."""
     return protocol_block.head(text).id
-
-
-def run_facts(run_dir: Path) -> dict | None:
-    """What a run directory says about itself: state and binding.
-
-    `None` for a directory without config.json — not a run. An unreadable
-    config.json is a run in state `corrupt` with the reason in `why`: it
-    stays in the listing the operator reads instead of vanishing, and it is
-    never chosen (review 2026-10-06).
-    """
-    try:
-        cfg = read_run_config(run_dir)
-    except RunConfigError as exc:
-        return {
-            "dir": run_dir,
-            "metrics": run_dir / "metrics.json",
-            "state": "corrupt",
-            "protocol_id": None,
-            "why": str(exc),
-        }
-    if cfg is None:
-        return None
-    binding = cfg.get("protocol") or {}
-    return {
-        "dir": run_dir,
-        "metrics": run_dir / "metrics.json",
-        "state": run_state(run_dir, cfg, alive=False),
-        "protocol_id": binding.get("id"),
-    }
-
-
-def bound_runs(area: Path, pid: str) -> tuple[list[dict], list[dict]]:
-    """(runs bound to `pid` and completed, everything else), oldest first.
-
-    Only the first list may feed an automatic choice. The second carries
-    the reason it was left out, for the operator who has to look. The
-    binding is the id and nothing else — `protocol.path` is a hint for
-    humans, never a selection criterion: it goes stale by design.
-    """
-    taken, left = [], []
-    for d in sorted((area / "runs").glob("*")):
-        facts = run_facts(d)
-        if facts is None:
-            continue
-        if facts["state"] != "completed":
-            facts.setdefault("why", facts["state"])
-        elif facts["protocol_id"] == pid:
-            taken.append(facts)
-            continue
-        elif facts["protocol_id"]:
-            facts["why"] = f"bound to {facts['protocol_id']}"
-        else:
-            facts["why"] = "unbound (no protocol id at run time)"
-        left.append(facts)
-    return taken, left
-
-
-def newest_with_intent_keys(cands: list[dict]) -> tuple[Path | None, int]:
-    """Among already-eligible runs: the newest reporting any intent key,
-    plus how many newer ones were skipped for reporting none.
-
-    The rule from 2026-09-09 (area 71) unchanged, only its input narrowed:
-    a producer or probe run writes a metrics.json too, and holding the
-    promises against THAT file reports every promise as unimplemented.
-    """
-    skipped = 0
-    for facts in reversed(cands):
-        if reported_intent_ids(read_metrics(facts["metrics"])):
-            return facts["metrics"], skipped
-        skipped += 1
-    return (cands[-1]["metrics"], 0) if cands else (None, 0)
 
 
 def main(argv: list[str]) -> int:
@@ -381,60 +310,33 @@ def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path 
 
 
 def choose_bound(protocol: Path, pid: str) -> Path | int:
-    """The newest completed run bound to `pid`."""
-    # The run says which protocol it belongs to, so the choice is a filter, not a guess. Only COMPLETED runs with
-    # this id take part — an unfinalized or corrupt run has numbers on
-    # disk and no finish, and a run bound elsewhere answers for another
-    # question entirely.
-    cands, rest = bound_runs(protocol.parent, pid)
-    if not cands:
+    """The newest completed run bound to `pid` — `runs.bound_answering_run`,
+    its outcome told the operator; 2 when no choice stands."""
+    choice = bound_answering_run(protocol.parent, pid)
+    if choice.run_dir is None:
         print(
             f"intent-check: no completed run bound to {pid} "
             f"({protocol.name}) — nothing to hold the promises "
             f"against."
         )
-        if rest:
-            print(f"  {len(rest)} other run(s) in {protocol.parent}:")
-            for f in rest:
-                print(f"    {f['dir'].name}: {f['why']}")
+        if choice.exclusions:
+            print(f"  {len(choice.exclusions)} other run(s) in {protocol.parent}:")
+            for x in choice.exclusions:
+                print(f"    {x.run_dir.name}: {x.why}")
         else:
             print(f"  no runs in {protocol.parent} yet.")
         print("  Name one explicitly with --metrics FILE if you know it belongs here.")
         return 2
-    mpath, skipped = newest_with_intent_keys(cands)
-    assert mpath is not None, "cands is non-empty, so a metrics file exists"
-    blocking = newer_unreadable(mpath.parent, rest)
-    if blocking:
-        print(f"intent-check: {blocking}")
+    if choice.blocker:
+        print(f"intent-check: {choice.blocker}")
         return 2
-    if skipped:
+    if choice.skipped_newer:
         print(
-            f"intent-check: using {mpath.parent.name}/metrics.json "
-            f"(newest bound run with intent keys; skipped {skipped} "
+            f"intent-check: using {choice.run_dir.name}/metrics.json "
+            f"(newest bound run with intent keys; skipped {choice.skipped_newer} "
             f"newer bound run(s) without any)."
         )
-    return mpath
-
-
-def newer_unreadable(chosen: Path, rest: list[dict]) -> str | None:
-    """Why the choice must not stand: a run NEWER than the chosen one whose
-    config.json cannot be read. Its binding is unknowable, so it may be the
-    run that answers — choosing an older one past it is what
-    `runs.read_run_config` says must not happen (review 2026-10-07)."""
-    bad = [
-        f
-        for f in rest
-        if f["state"] == "corrupt"
-        and f["protocol_id"] is None
-        and f["dir"].name > chosen.name
-    ]
-    if not bad:
-        return None
-    return (
-        f"{len(bad)} newer run(s) cannot say which protocol they belong to — "
-        + "; ".join(f["why"] for f in bad)
-        + f". Repair or move them aside before {chosen.name} may answer."
-    )
+    return choice.run_dir / "metrics.json"
 
 
 def cli() -> None:

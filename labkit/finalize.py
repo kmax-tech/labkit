@@ -46,15 +46,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit import promises, protocol_block
-from labkit.runs import read_metrics, read_outputs, read_run_config
+from labkit.runs import bound_answering_run, read_metrics, read_outputs, read_run_config
 from labkit.repo import area_path, area_protocols, git_root, git_run, no_such_area
-from labkit.intent_check import (
-    bound_runs,
-    main as intent_check_main,
-    newer_unreadable,
-    newest_with_intent_keys,
-    registered_ids,
-)
+from labkit.intent_check import main as intent_check_main, registered_ids
 from labkit.preflight import area_tests
 from labkit.protocol_check import RUN_ID, fields, open_holes
 
@@ -201,35 +195,30 @@ def choose_protocol(area: Path, protocol: Path | None) -> Path | None:
 
 
 def answering_run(findings: Findings, area: Path, pid: str | None) -> Path | None:
-    """The run every station holds the protocol to: the newest completed run
-    bound to it that reports intent keys. ONE choice for every station:
-    intent-check skips newer runs without intent keys (a probe), so checking
-    scopes or provenance on the newest run judged the probe while the
-    numbers came from the measurement (review 2026-10-07)."""
+    """The run every station holds the protocol to — `runs.bound_answering_run`,
+    ONE choice for every station: intent-check skips newer runs without
+    intent keys (a probe), so checking scopes or provenance on the newest
+    run judged the probe while the numbers came from the measurement
+    (review 2026-10-07). A blocker here is the finding; the exclusions are
+    printed for the operator."""
     if pid is None:
         findings.block("no stamped protocol id ([protocol] id) — no run is bound to it")
         return None
-    if not (area / "runs").is_dir():
-        findings.block(f"no runs/ directory in {area}")
+    choice = bound_answering_run(area, pid)
+    if choice.run_dir is None:
+        findings.block(choice.blocker or f"no completed run bound to {pid}")
+        for x in choice.exclusions:
+            print(f"    {x.run_dir.name}: {x.why}")
         return None
-    taken, rest = bound_runs(area, pid)
-    if not taken:
-        findings.block(f"no completed run bound to {pid}")
-        for f in rest:
-            print(f"    {f['dir'].name}: {f['why']}")
-        return None
-    mpath, skipped = newest_with_intent_keys(taken)
-    assert mpath is not None, "taken is non-empty"
-    blocking = newer_unreadable(mpath.parent, rest)
-    if blocking:
-        findings.block(blocking)
+    if choice.blocker:
+        findings.block(choice.blocker)
     note = (
-        f" (skipped {skipped} newer bound run(s) without intent keys)"
-        if skipped
+        f" (skipped {choice.skipped_newer} newer bound run(s) without intent keys)"
+        if choice.skipped_newer
         else ""
     )
-    print(f"  {mpath.parent.name}: completed{note}")
-    return mpath.parent
+    print(f"  {choice.run_dir.name}: completed{note}")
+    return choice.run_dir
 
 
 def cited_run_mismatch(text: str, measurement_run: Path) -> str | None:

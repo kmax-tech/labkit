@@ -60,7 +60,8 @@ evidence** (warns), **agent audit** (semantic).
 | What does a run's metadata say? | `runs.read_run_config` |
 | Is the recording process alive? | `runs.is_alive` |
 | Which protocol does a new run bind to? | `runlog._protocol_binding` |
-| Which run answers for a protocol? | `intent_check.choose_explicit` / `choose_bound` |
+| Which run answers for a protocol? | `runs.bound_answering_run` (the choice; `intent_check.choose_explicit` takes a named run) |
+| Which run recorded the model that answered these rows? | `runs.model_provenance_run` (walks `derived_from`; a derived run records none) |
 | Which code did an audit see, and is it still that code? | `scope_sha.area_stamp`, `scope_sha.audit_stamp_drift` (area stamp, not per promise) |
 
 A second answer to any of these questions is drift: move the caller to the

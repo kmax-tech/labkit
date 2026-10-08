@@ -953,7 +953,14 @@ class Run:
             "git_full": _head(base_dir),
             "python": sys.version.split()[0],
             "env": _env_state(base_dir),
-            "models_resolved": _resolve_models(self._config),
+            # A derived run re-reads the parent's rows; its model is the one that
+            # answered THEN. Resolving the alias now, under today's models.toml,
+            # would record a provenance the rows never had — so a derived run
+            # records none, and `runs.model_provenance_run` walks derived_from
+            # to the run that did (2026-10-08).
+            "models_resolved": {}
+            if self._derived_from
+            else _resolve_models(self._config),
             "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "command": list(sys.argv),  # how to start this run again
             "data": self._data,

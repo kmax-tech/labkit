@@ -5,6 +5,26 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.70.0 — 2026-10-08
+
+### Breaking
+
+- **A derived run records no model resolution.** `runlog.run(...,
+  derived_from=...)` leaves `models_resolved` empty: its rows are the
+  parent's, and resolving the alias under today's `models.toml` recorded a
+  provenance the rows never had. `runs.model_provenance_run(run_dir)` walks
+  `derived_from` to the run that recorded the model (None when none did,
+  loud on a missing ancestor or a loop). Last version resolving on derived
+  runs: 0.69.1.
+
+### Changed
+
+- **One choice of the run that answers**: `runs.bound_answering_run(area,
+  pid)` → `AnsweringRun(run_dir, skipped_newer, exclusions, blocker)`;
+  `intent-check` and `finalize` present its outcome instead of choosing
+  twice (`run_facts`, `bound_runs`, `newest_with_intent_keys`,
+  `newer_unreadable` moved from `intent_check` to `runs`).
+
 ## 0.69.1 — 2026-10-08
 
 ### Added

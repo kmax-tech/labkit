@@ -23,6 +23,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -327,6 +328,26 @@ class TestDerivedRun(unittest.TestCase):
                     "x", {}, base_dir=area, derived_from="2026-10-05T10-00-00_bbbb"
                 )
             self.assertEqual(len(list((area / "runs").iterdir())), 1)
+
+    def test_a_derived_run_records_no_model_resolution(self):
+        """The rows are the parent's; resolving the alias under today's
+        models.toml would be provenance the rows never had — the record
+        stays empty and `runs.model_provenance_run` walks to the parent."""
+        with tempfile.TemporaryDirectory() as d:
+            area = _area(d)
+            parent = _run_dir(area, "2026-10-05T10-00-00_aaaa")
+            cfg = json.loads((parent / "config.json").read_text(encoding="utf-8"))
+            cfg["models_resolved"] = {"m": {"alias": "m", "model": "A"}}
+            (parent / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+            with mock.patch("labkit.llm.resolve", return_value={"model": "B"}) as res:
+                with runlog.run(
+                    "x", {"model": "m"}, base_dir=area, derived_from=parent.name
+                ) as r:
+                    r.metrics(c1_pass=True)
+            res.assert_not_called()
+            child = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
+            self.assertEqual(child["models_resolved"], {})
+            self.assertEqual(runs.model_provenance_run(r.dir), parent)
 
     def test_an_ordinary_run_records_no_parent(self):
         with tempfile.TemporaryDirectory() as d:
