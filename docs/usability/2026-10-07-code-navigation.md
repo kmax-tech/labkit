@@ -574,3 +574,35 @@ Consequences (a case, n = 1; the agents' effort says the same):
    word a person searches (`CASES_WITH_GOLD`, not `ITEMS`).
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round11-reconstruct/`.
+
+## Round 12 (2026-10-08): after the changes of round 11 — agents only
+
+What changed since round 11: labkit 0.69 records a run's command and
+`runlog <area>` lists the finished runs with what each is; uniagent's
+position areas keep their data under `data/` as symlinks with constants
+named for what they hold, the script heads of 08 and 09 say where each
+registered key is set, README 08 is filled; CS-016 The experiment area
+reconstructs itself in the coding style. The person cannot be measured
+again on questions they have seen; two fresh Haiku agents, same eight
+questions, same seeds' shuffles.
+
+| reader | right | calls / files | opened the README | used `runlog` |
+|---|---|---|---|---|
+| before (round 11), agents 1–2 | 8/8, 8/8 | 28/12, 26/11 | no, no | no, no |
+| after, agents 3–4 | 7/8, 8/8 | 27/10, 39/14 | yes, yes | no, yes |
+
+- **No gain in agent effort**, and one miss (agent 3 answered "python
+  scripts/01_measure.py" for the kept run, not `runlog start -- …`). The
+  agents now open the README, which has content; the one that ran
+  `runlog` still read every run folder as well. An agent reads
+  exhaustively whatever the area says — effort does not fall when the
+  facts move into one place, because it was never the agent's problem.
+- The changes were made for the person (round 11: 1/8). Whether they
+  help a person is untested: the author knows these questions now. A
+  fair test is the same question types on area 12 (which got the same
+  treatment) with the author, or area 08 with someone else from the lab.
+- Not done: the chain `evaluate_rows` → `evaluate` → `evaluate_rows`
+  across `src/measure/` stays — renaming it touches every area's script
+  and the area another session is running today; a separate task.
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round12-after/`.
