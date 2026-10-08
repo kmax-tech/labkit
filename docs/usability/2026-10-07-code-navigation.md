@@ -649,4 +649,18 @@ Consequences:
    name the thing (`binding_case_rejected`), and each area map it to its
    own id. A design question for the lab, not a labkit change.
 
+Done the same day (uniagent `fef1b59`, areas 05–10, 12, 13; 15 left to
+the session rewriting it): the shared modules return
+`LaneComparison` / `ClassifierAgainstLabels` / `BindingCase` and hold no
+id; each area's `evaluate_rows` sets every registered key beside the
+protocol conjunct it decides (`# [C2] no new false rejection on either
+subset`), the verdict is `verdict(criteria, admissibility)`; the chain
+`evaluate_rows → evaluate → evaluate_rows` (consequence 2) is gone with it
+(`report` reads rows and calls the area's `evaluate_rows`). Six derived
+runs prove the renaming changed no value. The static check no longer
+warns areas 10 and 13 of ids they never registered. CS-016 The experiment
+area reconstructs itself now says so (dotfiles `9951b2f`). Not measured
+yet: whether a person finds "where is [C2] decided" faster — the next
+human round, on an area the person has not reconstructed.
+
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round13-human-area12/`.
