@@ -64,7 +64,7 @@ class TestCli(unittest.TestCase):
         self.assertEqual(ctx.exception.code, 0)
         self.assertIn("usage: runlog", buf.getvalue())
 
-    def test_a_finished_run_does_not_appear(self):
+    def test_a_finished_run_is_listed_as_finished_not_open(self):
         with tempfile.TemporaryDirectory() as d:
             run_dir = Path(d) / "runs" / "20260906-120000-done"
             run_dir.mkdir(parents=True)
@@ -75,7 +75,10 @@ class TestCli(unittest.TestCase):
             (run_dir / "completion.json").write_text("{}", encoding="utf-8")
             code, out = self._run_main([d])
             self.assertEqual(code, 0)
-            self.assertNotIn("20260906-120000-done", out)
+            open_part, _, finished_part = out.partition("finished runs")
+            self.assertNotIn("20260906-120000-done", open_part)
+            self.assertIn("20260906-120000-done", finished_part)
+            self.assertIn("not recorded", finished_part)
 
 
 if __name__ == "__main__":

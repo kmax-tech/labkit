@@ -195,7 +195,7 @@ commands sequence the individual checks at the two decision points:
    --bundle` additionally extracts schema facts and gate labels into a
    bundle for the audit agent's judgement pass.
 3. The run goes through `runlog` (frozen config, env fingerprint, script
-   snapshot, split-leakage check); `runlog <area>` monitors it, `runlog
+   snapshot, split-leakage check); `runlog <area>` monitors it and lists the finished runs (what each is, committed or not, its command), `runlog
    start -- <cmd>` detaches long runs.
 4. After the run, **`finalize <area>`** runs the post-run gate: completion
    check (newest bound run is `completed`) → `intent-check` (promises vs.

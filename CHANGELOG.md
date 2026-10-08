@@ -5,6 +5,20 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.69.0 — 2026-10-08
+
+### Added
+
+- **A run records the command that started it** (`command` in
+  config.json, `sys.argv`), and **`runlog <area>` lists the finished runs**
+  after the open ones: one line per run — a fresh run of the script or
+  derived from which run (its rows re-evaluated), the commit and whether
+  there were uncommitted changes (and how large the patch is), and the
+  command — the facts a person returning to an area collected from
+  config.json keys and a patch file and got wrong (code-navigation
+  round 11: 1 of 8). `runs.run_summary` is the one reader of those facts.
+  Runs from before 0.69 show "(not recorded)" for the command.
+
 ## 0.68.2 — 2026-10-08
 
 ### Changed

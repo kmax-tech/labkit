@@ -65,6 +65,7 @@ from labkit.runs import (
     read_metrics,
     read_run_config,
     run_state,
+    run_summary,
 )
 
 RUN_INDEX_COLS = [
@@ -954,6 +955,7 @@ class Run:
             "env": _env_state(base_dir),
             "models_resolved": _resolve_models(self._config),
             "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "command": list(sys.argv),  # how to start this run again
             "data": self._data,
             "config": self._config,
         }
@@ -1163,6 +1165,47 @@ def _print_status(area: str, live: list[dict]) -> None:
             print(f"    {r['error']}")
         else:
             print(f"    {json.dumps(r.get('config', {}), ensure_ascii=False)[:160]}")
+
+
+def _print_finished(area: Path) -> None:
+    """One line per finished run: what it is, whether its code was committed,
+    how it was started — `runlog <area>` after the open runs."""
+    runs_dir = Path(area) / "runs"
+    if not runs_dir.is_dir():
+        return
+    done = []
+    for d in sorted(runs_dir.glob("*")):
+        if not (d / "config.json").is_file():
+            continue
+        try:
+            s = run_summary(d)
+        except RunConfigError as exc:
+            print(f"  {d.name}  corrupt — {exc}")
+            continue
+        if s.state == "completed":
+            done.append(s)
+    if not done:
+        return
+    print(f"finished runs ({len(done)}, oldest first):")
+    for s in done:
+        kind = (
+            f"derived from {s.derived_from} (its rows re-evaluated)"
+            if s.derived_from
+            else "fresh run of the script"
+            + (f" (models: {', '.join(s.models)})" if s.models else "")
+        )
+        commit = s.git.removesuffix("+dirty")
+        if s.uncommitted_bytes:
+            code = (
+                f"code {commit} + uncommitted changes "
+                f"({s.uncommitted_bytes} B in uncommitted.patch)"
+            )
+        elif s.git.endswith("+dirty"):
+            code = f"code {commit}, tracked files committed (untracked files present)"
+        else:
+            code = f"code {commit}, committed"
+        print(f"  {s.run_id}  {kind} · {code}")
+        print(f"      started as: {s.command or '(not recorded — labkit before 0.69)'}")
 
 
 def _finished_line(area: Path) -> str:
@@ -1385,9 +1428,11 @@ def main(argv: list[str]) -> int:
 
     ap = argparse.ArgumentParser(
         prog="runlog",
-        description="List open runs (not yet completed) in an experiment "
-        "area: run_id, state (running/unknown/crashed/unfinalized"
-        "/corrupt), script, and the frozen config. "
+        description="List an experiment area's runs: the open ones (not yet "
+        "completed) with state (running/unknown/crashed/unfinalized/corrupt), "
+        "script and frozen config; then the finished ones — what each is "
+        "(a run, or derived from which), whether its code was committed, "
+        "and the command that started it. "
         "'Nachsehen statt nachfragen' — "
         "check this before starting a run in a shared repo. "
         "`--wait` blocks until the area is idle (exit 0), a run "
@@ -1440,6 +1485,7 @@ def main(argv: list[str]) -> int:
             args.area, args.max_seconds, args.interval or 2.0, False, args.notify
         )
     _print_status(args.area, active(args.area))
+    _print_finished(Path(args.area))
     return 0
 
 

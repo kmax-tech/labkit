@@ -252,6 +252,47 @@ def completion_state(run_dir: Path) -> str:
     return run_state(run_dir, read_run_config(run_dir) or {}, alive=False)
 
 
+@dataclass(frozen=True)
+class RunSummary:
+    """What a run is, for someone who returns to the area months later —
+    the facts a reader otherwise collects from config.json keys and the
+    patch file (a person with an assistant got 1 of 8 such questions right,
+    code-navigation round 11, 2026-10-08)."""
+
+    run_id: str
+    state: str  # completion_state: completed | unfinalized | corrupt | …
+    derived_from: str | None  # the run whose rows this one re-evaluated
+    models: tuple[str, ...]  # model aliases the run resolved; () when none
+    git: str  # the commit, "+dirty" when the tree was not clean
+    uncommitted_bytes: int  # size of uncommitted.patch; 0 when the tree was clean
+    command: str | None  # the command line that started it; None: not recorded
+
+
+def run_summary(run_dir: Path) -> RunSummary:
+    """Read one run folder into a RunSummary. Raises RunConfigError when its
+    config.json is unreadable, ValueError when the folder has none."""
+    cfg = read_run_config(run_dir)
+    if cfg is None:
+        raise ValueError(f"{run_dir}: no config.json — not a run folder")
+    models = cfg.get("models_resolved")
+    aliases = tuple(sorted(models)) if isinstance(models, dict) else ()
+    patch = run_dir / "uncommitted.patch"
+    argv = cfg.get("command")
+    command = (
+        " ".join(str(a) for a in argv) if isinstance(argv, list) and argv else None
+    )
+    derived = cfg.get("derived_from")
+    return RunSummary(
+        run_id=run_dir.name,
+        state=completion_state(run_dir),
+        derived_from=str(derived) if derived else None,
+        models=aliases,
+        git=str(cfg.get("git") or "?"),
+        uncommitted_bytes=patch.stat().st_size if patch.is_file() else 0,
+        command=command,
+    )
+
+
 def completed_runs(area: Path) -> list[Path]:
     """The area's completed run directories, oldest first (run_ids start
     with the timestamp, so name order is start order)."""
