@@ -31,6 +31,13 @@ pins (`requirements.txt` / `requirements.lock`).
   `promised_constant_mismatches` reads `different` from it, unchanged.
 - `repo.choose_protocol(area, protocol, tool)` — finalize's choice of the
   area's protocol, now shared.
+- `finalize` step 4 warns when the area's README has no
+  `<!-- labkit:route -->` block, or the block does not name the protocol,
+  `runlog`, `labkit-params`, `scripts/01_measure.py:evaluate_rows` and
+  `config.json`, or the script defines no `evaluate_rows`
+  (`finalize.readme_route`). The README points; it copies no question,
+  answer, run id or threshold — a hand-written formula pointer went stale
+  within a day (area 08, 2026-10-08). The stamp writes the block.
 
 ### Changed
 

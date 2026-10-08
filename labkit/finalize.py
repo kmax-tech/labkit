@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import ast
 import re
 import sys
 from dataclasses import dataclass, field
@@ -274,7 +275,9 @@ def check_declared_scopes(
         )
 
 
-_PLACEHOLDER = re.compile(r"<[^<>]{3,}>")  # the stamp's blanks may wrap lines
+# the stamp's blanks may wrap lines; an HTML comment (`<!-- labkit:route -->`)
+# is a marker, not a blank
+_PLACEHOLDER = re.compile(r"<(?!!--)[^<>]{3,}>")
 
 
 def readme_placeholders(area: Path) -> list[str]:
@@ -292,17 +295,72 @@ def readme_placeholders(area: Path) -> list[str]:
     return out
 
 
+ROUTE_START = "<!-- labkit:route -->"
+ROUTE_END = "<!-- /labkit:route -->"
+#: What the README's route must point to: the stations a reader takes after
+#: the protocol — which run (`runlog`), which values (`labkit-params`), where
+#: the ids are decided, the proof (CS-016 The experiment area reconstructs
+#: itself). The README points; it copies no question, answer, run id or
+#: threshold — each has its one home, and a copy went stale within a day
+#: (area 08, 2026-10-08).
+ROUTE_STATIONS = (
+    "runlog",
+    "labkit-params",
+    "scripts/01_measure.py:evaluate_rows",
+    "config.json",
+)
+
+
+def readme_route(area: Path, protocol_name: str) -> list[str]:
+    """Why the README's route block cannot lead a reader: no block between
+    the markers, the protocol or a station not named, or
+    `scripts/01_measure.py` without an `evaluate_rows`. No README: nothing.
+    The block is checked, never written — finalize reads only; the stamp
+    writes it."""
+    readme = area / "README.md"
+    if not readme.is_file():
+        return []
+    text = readme.read_text(encoding="utf-8")
+    start, end = text.find(ROUTE_START), text.find(ROUTE_END)
+    if start < 0 or end < start:
+        return [
+            f"README.md: no {ROUTE_START} … {ROUTE_END} block — the route "
+            f"(protocol · runlog · labkit-params · evaluate_rows · config.json) "
+            f"is what a reader opens first"
+        ]
+    block = text[start:end]
+    out = []
+    if protocol_name not in block:
+        out.append(f"README.md route: does not name {protocol_name}")
+    for station in ROUTE_STATIONS:
+        if station not in block:
+            out.append(f"README.md route: does not name {station}")
+    script = area / "scripts" / "01_measure.py"
+    if not script.is_file():
+        out.append("README.md route: scripts/01_measure.py does not exist")
+    elif not any(
+        isinstance(n, ast.FunctionDef) and n.name == "evaluate_rows"
+        for n in ast.parse(script.read_text(encoding="utf-8")).body
+    ):
+        out.append("README.md route: scripts/01_measure.py defines no evaluate_rows")
+    return out
+
+
 def check_open_fields(
     findings: Findings, protocol: Path, text: str, head: protocol_block.Head
 ) -> None:
-    """Station 4: fields of the protocol still empty or a placeholder."""
+    """Station 4: fields of the protocol still empty or a placeholder, and
+    the README's route block (CS-016)."""
     holes = open_holes(text, head)
     for lineno, label in holes:
         findings.warn(f"{protocol.name}:{lineno}: {label}")
     stale = readme_placeholders(protocol.parent)
     for line in stale:
         findings.warn(f"{line} — a stamped placeholder, fill or delete the line")
-    if not holes and not stale:
+    route = readme_route(protocol.parent, protocol.name)
+    for line in route:
+        findings.warn(line)
+    if not holes and not stale and not route:
         print("  all fields filled")
 
 

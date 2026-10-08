@@ -52,5 +52,67 @@ class ReadmePlaceholders(unittest.TestCase):
             self.assertEqual(finalize.readme_placeholders(Path(d)), [])
 
 
+ROUTE = (
+    "<!-- labkit:route -->\n**Nachvollziehen.**\n"
+    "- Vertrag und berichtete Antwort: `PROTOCOL-a.md`\n"
+    "- Läufe und Herkunft: `runlog .`\n"
+    "- Wirksame Werte: `labkit-params .`\n"
+    "- Entscheidung der Kennungen: `scripts/01_measure.py:evaluate_rows`\n"
+    "- Unveränderlicher Beleg: `config.json` des gewählten Laufs unter `runs/`\n"
+    "<!-- /labkit:route -->\n"
+)
+
+
+class ReadmeRoute(unittest.TestCase):
+    def _area(
+        self,
+        d: str,
+        readme: str,
+        script: str = "def evaluate_rows(rows):\n    return {}\n",
+    ) -> Path:
+        area = Path(d)
+        (area / "README.md").write_text(readme, encoding="utf-8")
+        (area / "scripts").mkdir()
+        (area / "scripts" / "01_measure.py").write_text(script, encoding="utf-8")
+        return area
+
+    def test_the_stamped_route_is_quiet(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = self._area(d, "# x\n\n" + ROUTE)
+            self.assertEqual(finalize.readme_route(area, "PROTOCOL-a.md"), [])
+            # the markers are HTML comments, not stamped blanks
+            self.assertEqual(finalize.readme_placeholders(area), [])
+
+    def test_no_block_is_one_warning(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = self._area(d, "# x\n\nDie Zahlen entstehen in comparison.py.\n")
+            got = finalize.readme_route(area, "PROTOCOL-a.md")
+            self.assertEqual(len(got), 1)
+            self.assertIn("no <!-- labkit:route -->", got[0])
+
+    def test_a_missing_station_or_wrong_protocol_is_named(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = self._area(d, ROUTE.replace("`labkit-params .`", "`params`"))
+            self.assertEqual(
+                finalize.readme_route(area, "PROTOCOL-b.md"),
+                [
+                    "README.md route: does not name PROTOCOL-b.md",
+                    "README.md route: does not name labkit-params",
+                ],
+            )
+
+    def test_a_script_without_evaluate_rows_is_named(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = self._area(d, ROUTE, script="def evaluate(rows):\n    return {}\n")
+            self.assertEqual(
+                finalize.readme_route(area, "PROTOCOL-a.md"),
+                ["README.md route: scripts/01_measure.py defines no evaluate_rows"],
+            )
+
+    def test_no_readme_is_nothing(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(finalize.readme_route(Path(d), "PROTOCOL-a.md"), [])
+
+
 if __name__ == "__main__":
     unittest.main()
