@@ -33,5 +33,24 @@ class Steps(unittest.TestCase):
             )
 
 
+class ReadmePlaceholders(unittest.TestCase):
+    def test_a_stamped_blank_is_named_and_a_filled_readme_is_quiet(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "README.md").write_text(
+                "# x\n\n**Die eine Frage.** <ein Satz — dieselbe Frage wie im\n"
+                "PROTOCOL-Intent; braucht sie ein und, sind es zwei>\n\nok <3\n"
+            )
+            got = finalize.readme_placeholders(area)
+            self.assertEqual(len(got), 1)
+            self.assertIn("README.md:3", got[0])  # a blank that wraps lines
+            (area / "README.md").write_text("# x\n\n**Die eine Frage.** Zählt es?\n")
+            self.assertEqual(finalize.readme_placeholders(area), [])
+
+    def test_no_readme_is_nothing(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(finalize.readme_placeholders(Path(d)), [])
+
+
 if __name__ == "__main__":
     unittest.main()

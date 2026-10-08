@@ -5,6 +5,14 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.69.1 — 2026-10-08
+
+### Added
+
+- `finalize` step 4 warns on stamped `<…>` placeholders left in the area's
+  README (`finalize.readme_placeholders`): a README that still carries the
+  stamp's blanks tells a reader nothing and looks as if it did (round 11).
+
 ## 0.69.0 — 2026-10-08
 
 ### Added

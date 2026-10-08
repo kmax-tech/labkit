@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -301,6 +302,24 @@ def check_declared_scopes(
         )
 
 
+_PLACEHOLDER = re.compile(r"<[^<>]{3,}>")  # the stamp's blanks may wrap lines
+
+
+def readme_placeholders(area: Path) -> list[str]:
+    """Lines of the area's README.md still holding a stamped `<…>` placeholder.
+    A README that still carries the stamp's blanks tells a reader nothing and
+    looks as if it did (code-navigation round 11). No README: nothing."""
+    readme = area / "README.md"
+    if not readme.is_file():
+        return []
+    text = readme.read_text(encoding="utf-8")
+    out = []
+    for m in _PLACEHOLDER.finditer(text):
+        line = text.count("\n", 0, m.start()) + 1
+        out.append(f"README.md:{line}: {' '.join(m.group(0).split())[:70]}")
+    return out
+
+
 def check_open_fields(
     findings: Findings, protocol: Path, text: str, head: protocol_block.Head
 ) -> None:
@@ -308,7 +327,10 @@ def check_open_fields(
     holes = open_holes(text, head)
     for lineno, label in holes:
         findings.warn(f"{protocol.name}:{lineno}: {label}")
-    if not holes:
+    stale = readme_placeholders(protocol.parent)
+    for line in stale:
+        findings.warn(f"{line} — a stamped placeholder, fill or delete the line")
+    if not holes and not stale:
         print("  all fields filled")
 
 
@@ -399,7 +421,8 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
        then skip.
     2. intent-check — always; with a measurement run it reads its metrics.
     3. declared scopes — only with a run.
-    4. open fields — always; warnings only.
+    4. open fields — always; warnings only: protocol placeholders and
+       stamped `<…>` placeholders left in the area's README.
     5. provenance — only for cost = seconds, and only with a run.
     6. area tests — always.
     7. criterion n — only with a run; warnings only.
