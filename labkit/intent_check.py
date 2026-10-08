@@ -46,12 +46,17 @@ run is named with --metrics.
 from __future__ import annotations
 
 import ast
-import json
 import sys
 from pathlib import Path
 
 from labkit import promises, protocol_block
-from labkit.runs import RunConfigError, read_run_config, run_state
+from labkit.runs import (
+    MetricsError,
+    RunConfigError,
+    read_metrics,
+    read_run_config,
+    run_state,
+)
 from labkit.repo import layout_root
 from labkit.scope_sha import imported_repo_helpers
 
@@ -67,22 +72,6 @@ def protocol_id_of(text: str) -> str | None:
     """The stamped id of the protocol's head, None while it is unstamped.
     A missing or malformed head raises protocol_block.BlockError."""
     return protocol_block.head(text).id
-
-
-def read_metrics(path: Path) -> dict:
-    """A run's metrics.json; unreadable raises ValueError naming the file.
-
-    Skipping an unreadable metrics file chose the next older run as if the
-    newer had reported no intent keys — the damage stayed invisible
-    (review 2026-10-06).
-    """
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(
-            f"{path}: unreadable metrics ({exc}) — repair the "
-            f"run or name another with --metrics"
-        ) from exc
 
 
 def run_facts(run_dir: Path) -> dict | None:
@@ -243,9 +232,9 @@ def _main(argv: list[str]) -> int:
         return chosen
     mpath = chosen
     try:
-        metrics = json.loads(mpath.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        print(f"intent-check: cannot read {mpath}: {exc}")
+        metrics = read_metrics(mpath)
+    except MetricsError as exc:
+        print(f"intent-check: {exc}")
         return 2
     led = reported_intent_ids(metrics)
 

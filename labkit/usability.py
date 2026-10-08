@@ -576,7 +576,7 @@ def load_probe_run(root: Path) -> ProbeRun:
     if run is None:
         return ProbeRun(probe, area, None, {}, {}, None, None, False, None)
     config = json.loads((run / "config.json").read_text(encoding="utf-8"))
-    metrics = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
+    metrics = runs.read_metrics(run / "metrics.json")
     binding = config.get("protocol") or {}
     named = binding.get("path")
     protocol = None

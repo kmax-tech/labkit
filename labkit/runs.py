@@ -122,6 +122,29 @@ def read_run_config(run_dir: Path) -> dict | None:
     return cfg
 
 
+class MetricsError(ValueError):
+    """A run's metrics.json that cannot be read as a JSON object."""
+
+
+def read_metrics(path: Path) -> dict[str, object]:
+    """A run's metrics.json as a JSON object. Raises MetricsError naming the
+    file when it is unreadable, not JSON, or not an object — a list such as
+    `["c1_pass"]` read as metrics once satisfied the guaranteed intent check
+    (review 2026-10-08). Skipping an unreadable file chose the next older run
+    as if the newer had reported no intent keys (review 2026-10-06)."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise MetricsError(
+            f"{path}: unreadable metrics ({exc}) — repair the run or name another"
+        ) from exc
+    if not isinstance(data, dict):
+        raise MetricsError(
+            f"{path}: metrics must be a JSON object, not {type(data).__name__}"
+        )
+    return data
+
+
 def _shape_problem(cfg: object) -> str | None:
     """The minimal shape every reader relies on, checked in one place:
     valid JSON that is a list, or a binding that is a string, used to fail

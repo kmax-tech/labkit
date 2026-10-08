@@ -5,6 +5,20 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.67.1 — 2026-10-08
+
+### Fixed
+
+- **A metrics.json that is not a JSON object could pass the guaranteed
+  intent check:** `["c1_pass"]` read as metrics reported `c1`. One loader,
+  `runs.read_metrics`, refuses anything but an object with a sentence
+  naming the file (`MetricsError`); intent-check, finalize, recheck, runlog
+  and usability all read metrics through it (intent-check's own copy and
+  its second, direct read are gone).
+- `criterion_n_input_mismatches` no longer takes `true` for a count of 1.
+- The test fixture for a dead run no longer uses pid 1, which lives in
+  many containers; it takes the pid of a process that has ended.
+
 ## 0.67.0 — 2026-10-08
 
 ### Breaking

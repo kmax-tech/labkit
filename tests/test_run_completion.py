@@ -29,6 +29,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit import runlog, runs  # noqa: E402
 
 
+def _dead_pid() -> int:
+    """A pid that belonged to a process which has ended — pid 1 lives in
+    many containers, so a fixture that means "dead" cannot use it
+    (review 2026-10-08)."""
+    proc = subprocess.Popen(["true"])
+    proc.wait()
+    return proc.pid
+
+
+DEAD_PID = _dead_pid()
+
+
 def _area(d) -> Path:
     area = Path(d)
     (area / "runs").mkdir(parents=True, exist_ok=True)
@@ -42,7 +54,7 @@ def _run_dir(
     schema: int | None = 2,
     metrics=True,
     completion=True,
-    pid=1,
+    pid=DEAD_PID,
     protocol_id=None,
 ) -> Path:
     d = area / "runs" / name

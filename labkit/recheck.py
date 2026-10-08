@@ -204,7 +204,7 @@ def holds(
     pin(run, out)
     scopes_unchanged(run, area)
     block_unchanged(run, area)
-    metrics = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
+    metrics = runs.read_metrics(run / "metrics.json")
     grown = agree(metrics, recompute(rows_of(out)), ignore)
     wanted = numbers({k: v for k, v in metrics.items() if k not in ignore})
     cited(note, wanted, run.name)

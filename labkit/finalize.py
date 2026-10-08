@@ -43,7 +43,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit import promises, protocol_block
-from labkit.runs import read_run_config
+from labkit.runs import read_metrics, read_run_config
 from labkit.repo import area_path, area_protocols, git_root, git_run, no_such_area
 from labkit.intent_check import (
     bound_runs,
@@ -71,9 +71,11 @@ def criterion_n_input_mismatches(run_dir: Path) -> list[str]:
     metrics_file = run_dir / "metrics.json"
     if not metrics_file.is_file():
         return []
-    metrics = json.loads(metrics_file.read_text(encoding="utf-8"))
+    metrics = read_metrics(metrics_file)
     ns = {
-        k: v for k, v in metrics.items() if CRITERION_N.match(k) and isinstance(v, int)
+        k: v
+        for k, v in metrics.items()
+        if CRITERION_N.match(k) and isinstance(v, int) and not isinstance(v, bool)
     }
     if not ns:
         return []

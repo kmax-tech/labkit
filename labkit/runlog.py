@@ -58,6 +58,7 @@ from labkit.runs import (
     completed_runs,
     completion_state,
     is_alive,
+    read_metrics,
     read_run_config,
     run_state,
 )
@@ -1156,7 +1157,7 @@ def _finished_line(area: Path) -> str:
     done = completed_runs(area)
     if not done:
         return "no finished runs"
-    m = json.loads((done[-1] / "metrics.json").read_text(encoding="utf-8"))
+    m = read_metrics(done[-1] / "metrics.json")
     keys = ", ".join(list(m)[:6])
     return f"last finished: {done[-1].name} ({keys})"
 
@@ -1325,7 +1326,7 @@ def reindex(base_dir: Path) -> int:
                 incomplete.append(d.name)
                 continue
             comp = json.loads((d / "completion.json").read_text(encoding="utf-8"))
-            metrics = json.loads((d / "metrics.json").read_text(encoding="utf-8"))
+            metrics = read_metrics(d / "metrics.json")
             _append_row(
                 index,
                 [
