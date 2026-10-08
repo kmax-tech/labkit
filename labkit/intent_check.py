@@ -503,9 +503,13 @@ def code_keys(area: Path) -> dict[str, list[str]]:
     a renamed key surfaced only after the run).
     """
     hits: dict[str, list[str]] = {}
-    # The imported repo-local code counts as the area's: uniagent writes
-    # every registered key in src/measure/comparison.py, and reading the
-    # area's scripts alone made four promises "absent" (2026-10-07).
+    # The imported repo-local code counts as the area's: a shared helper
+    # under src/ or lib/ may write a registered key, and reading the area's
+    # scripts alone made four promises "absent" (2026-10-07). The house rule
+    # (CS-016 The experiment area reconstructs itself) now wants every id
+    # literal in the area script, because an id in shared code is counted
+    # for every importing area; the scan stays transitive so a repo that
+    # has not moved yet is checked, not waved through.
     root = layout_root(area)
     own = sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py"))
     for path in own + imported_repo_helpers(area, root):
