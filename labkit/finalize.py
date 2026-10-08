@@ -218,6 +218,44 @@ def cited_run_mismatch(text: str, measurement_run: Path) -> str | None:
     return None
 
 
+ANSWERING_RUN_LABEL = "answering run"
+
+
+def answering_run_field(text: str) -> str | None:
+    """The value of the protocol's `Answering run` field, None when the
+    protocol has no such line (protocols before 0.72.1)."""
+    for f in fields(text):
+        if f.name == ANSWERING_RUN_LABEL:
+            return f.value.strip()
+    return None
+
+
+def answering_run_field_mismatch(
+    text: str, measurement_run: Path
+) -> tuple[str, str] | None:
+    """("block" | "warn", message): the `Answering run` line names another
+    run than the one the checks hold (block), or is still "none yet"
+    (warn: write it with protocol-fill). None when it names that run or
+    the protocol has no such line. The field is a readable projection of
+    `runs.bound_answering_run`, never a second binding — so it is held to
+    the choice, not consulted for it."""
+    value = answering_run_field(text)
+    if value is None or measurement_run.name in value:
+        return None
+    if value.startswith("none yet") or value.startswith("<"):
+        return (
+            "warn",
+            f'"Answering run" not written yet — protocol-fill it with '
+            f"{measurement_run.name} once this finalize is clean",
+        )
+    return (
+        "block",
+        f'"Answering run" names {value.split()[0]}, but the run that answers is '
+        f"{measurement_run.name} — the field is a projection of the binding; "
+        f"protocol-fill it with the run the checks hold",
+    )
+
+
 def check_completion(
     findings: Findings, area: Path, text: str, pid: str | None
 ) -> Path | None:
@@ -228,6 +266,9 @@ def check_completion(
         mismatch = cited_run_mismatch(text, measurement_run)
         if mismatch:
             findings.block(mismatch)
+        field = answering_run_field_mismatch(text, measurement_run)
+        if field is not None:
+            (findings.block if field[0] == "block" else findings.warn)(field[1])
     return measurement_run
 
 

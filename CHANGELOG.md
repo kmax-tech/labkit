@@ -5,6 +5,20 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.72.1 — 2026-10-08
+
+### Added
+
+- **`Answering run` field** in the protocol's Result block: one run_id a
+  person reads instead of deriving it from the answer line (round 15: the
+  fresh run was named, not the derived one that answers). A projection of
+  `runs.bound_answering_run`, never a second binding: `finalize` refuses
+  the line when it names another run, warns while it still says "none
+  yet"; `protocol-fill` writes it. Protocols without the line are unaffected.
+- Template: the Summary opens with `Question †`, the Result is its answer;
+  `Deviations after freeze` beside the pre-freeze `Changed`; the head's
+  legend points to `protocol-check --contract` for what a tier owes.
+
 ## 0.72.0 — 2026-10-08
 
 ### Breaking

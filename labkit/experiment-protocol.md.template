@@ -57,6 +57,10 @@
 - **Answer to the question:** <!-- s --> <per registered id its verdict, and the
   run_id; numbers as a small table below the label (one row per arm or
   condition), produced by `analysis/<note>.py --check`, never retyped>
+- **Answering run:** none yet — the run `finalize` holds this protocol to,
+  written by `protocol-fill PROTOCOL-<name>.md "Answering run" <run_id>`
+  after `finalize`; `finalize` refuses any other run_id here (a readable
+  projection of `runs.bound_answering_run`, never a second binding)
 - **Deviations after freeze:** <"none", or what was changed after
   `frozen = true` — the registered plan is the Intent above and is not
   rewritten; a deviation that touches the verdict is named in Summary →
@@ -164,8 +168,10 @@
 <!-- s -->
 
 *How to fill each field, the cuts by tier and the intent ids:
-`protocol-field-guide.md` (`protocol-check --guide`); fill by label with
-`protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.*
+`protocol-field-guide.md` (`protocol-check --guide`); which fields this
+protocol's `cost` owes, and which fall due after a documented run:
+`protocol-check --contract` — the one list, never retyped here; fill by
+label with `protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.*
 
 ```toml
 [protocol]

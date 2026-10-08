@@ -832,4 +832,17 @@ Consequences:
    the freeze gets its own line, `Deviations after freeze`, in the Result
    block — the registered plan is not rewritten.
 
+6. **`Answering run` as a field** — one id a person reads instead of
+   deriving it from the answer line; a projection of
+   `runs.bound_answering_run`, written by `protocol-fill`, refused by
+   `finalize` when it names another run (p2 named the fresh run, not the
+   derived one).
+
+Registered for round 16 (another person from the lab, an area they have
+not seen, before the questions are shown): the person (1) names question
+and answer from the Summary, (2) names exactly the answering run, (3)
+finds from [C…]/[A…]/[B…] to the deciding code and the constant's home,
+(4) tells a pre-freeze instrument change ("Changed") from a post-freeze
+deviation. Time and assistant questions as in round 15.
+
 Archive: labkit-paper `data/raw/agent-traces/2026-10-08/navigation-round15-human-area17/`.

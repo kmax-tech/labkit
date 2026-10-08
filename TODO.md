@@ -69,6 +69,16 @@ mechanischer Check — die Aufgabe des Pilots.
 
 ## Klein, ohne eigenen Punkt
 
+- [ ] **Kandidaten für Protokoll-Standard 0.20** (gesammelt 2026-10-08,
+      Runde 15 und Review): `Result` → `Answer` umbenennen und `Question`
+      als Pflichtfeld der Summary; `Answering run` als geschuldetes Feld
+      (heute ungeprüfte Zeile, von `finalize` gehalten, wenn geschrieben);
+      Weichenwerte als Daten in der Tabelle (`values = [...]` an `[B…]`),
+      dann hält `finalize` `b1_branch` exakt daran — vorher ist jede
+      Prüfung nur Indiz; Vorlage entschlacken (Frage je Feld, Rest im
+      Field Guide), danach eine Schreibprobe. Alles zusammen in einem
+      Sprung, weil jede Label- oder Stufenänderung die eingefrorenen
+      0.19-Protokolle (uniagent 16, 17) vom `protocol-check` trennt.
 - [x] **`labkit-params <area>` gebaut (2026-10-08, 0.70.0):** Auslöser
       Runde 13 („Protokolle, measure und runs mit Configs — wo anfangen"):
       die Werte des antwortenden Laufs in einer Tabelle, je Zeile Heimat

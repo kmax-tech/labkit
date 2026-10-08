@@ -33,6 +33,28 @@ class Steps(unittest.TestCase):
             )
 
 
+class AnsweringRunField(unittest.TestCase):
+    RUN = Path("/x/runs/2026-10-07T10-00-00_aa11")
+
+    def test_the_field_naming_the_chosen_run_is_quiet(self):
+        text = "- **Answering run:** `2026-10-07T10-00-00_aa11`\n"
+        self.assertIsNone(finalize.answering_run_field_mismatch(text, self.RUN))
+
+    def test_another_run_in_the_field_is_a_blocker(self):
+        text = "- **Answering run:** `2026-10-01T09-00-00_ffff`\n"
+        kind, msg = finalize.answering_run_field_mismatch(text, self.RUN) or ("", "")
+        self.assertEqual(kind, "block")
+        self.assertIn("2026-10-07T10-00-00_aa11", msg)
+
+    def test_none_yet_is_a_warning_and_no_field_is_nothing(self):
+        text = "- **Answering run:** none yet — written by protocol-fill\n"
+        kind, _ = finalize.answering_run_field_mismatch(text, self.RUN) or ("", "")
+        self.assertEqual(kind, "warn")
+        self.assertIsNone(
+            finalize.answering_run_field_mismatch("- **Result:** x\n", self.RUN)
+        )
+
+
 class ReadmePlaceholders(unittest.TestCase):
     def test_a_stamped_blank_is_named_and_a_filled_readme_is_quiet(self):
         with tempfile.TemporaryDirectory() as d:

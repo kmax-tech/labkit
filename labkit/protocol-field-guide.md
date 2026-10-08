@@ -374,6 +374,14 @@ to `true`.
 - **Parser cases harvested:** the probe's answer forms as REAL cases into
   the parser test.
 - **Clarified terms:** what was ambiguous, and what is it called now?
+- **Answering run:** the run `finalize` holds the protocol to — its
+  run_id, written with `protocol-fill` after a clean `finalize`, read by
+  a person who wants one id, not a list. It is a projection of
+  `runs.bound_answering_run` (the one choice intent-check, finalize and
+  labkit-params share), never a second binding: `finalize` refuses the
+  line when it names another run, and only warns while it still says
+  "none yet" (round 15, 2026-10-08: a person named the fresh run, not the
+  derived one that answers).
 - **Deviations after freeze:** "none", or what was changed after
   `frozen = true`. The registered plan (Intent) is not rewritten; a
   deviation stands here, in the Result block, and — where it touches the
