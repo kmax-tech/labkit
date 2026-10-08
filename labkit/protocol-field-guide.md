@@ -199,7 +199,11 @@ derives from the detail below and carries no fact that isn't there.
   expected effect bigger than the run-to-run noise? Differences below the
   noise are not interpretable. (4) Could the run answer two *different*
   questions depending on a precondition? Then register that branch beforehand.
-  Using intent ids: one [C1], [C2] … per conjunct, [B1] per branch point. Where a number stands, the sentence names its constant from the
+  Using intent ids: one [C1], [C2] … per conjunct, [B1] per branch point. Cases the criterion singles out are named by their
+  class ("every case over its ceiling"), and `data/prepared/case_classes.toml`
+  says which cases that is and from which facts — not a list of ids with a
+  prose reason in the script (uniagent 17: "33 in Wien, 140 € > ARV 117" as a
+  docstring; round 15, 2026-10-08). Where a number stands, the sentence names its constant from the
   [[promise]] table ("in at least `min_draws` = 2 of 3 draws"): the one
   word that links the prose (German or English), the table and the
   script's name; without it a person found no way from the sentence to
