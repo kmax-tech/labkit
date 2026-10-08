@@ -155,4 +155,31 @@ type = "<exploratory | confirmatory>"
 cost = "<seconds | minutes | hours>"
 frozen = false
 preflight_audit = ""
+
+# The promises as data (labkit 0.71): one table per id — the key the run
+# reports, the sentence (the same as the Intent field), the code region, and
+# the constants the script reads with promises.all_constants(). A constant is
+# named like the config key (lowercase) and stands in exactly one table;
+# `frozen = true` owes these tables, and no run starts whose config lacks a
+# constant or carries another value.
+[[promise]]
+id = "C1"
+key = "c1_pass"
+sentence = "<the criterion in one sentence: registered accuracy >= null accuracy + margin>"
+scope = ["scripts/01_measure.py"]
+constants = { margin = 0.25 }
+
+[[promise]]
+id = "A1"
+key = "a1_pass"
+sentence = "<the yield condition: at most max_empty empty or unreadable answers on the registered lane>"
+scope = ["scripts/01_measure.py"]
+constants = { max_empty = 2 }
+
+[[promise]]
+id = "A2"
+key = "a2_pass"
+sentence = "<the null condition: the null lane sits at chance, within null_band_items items>"
+scope = ["scripts/01_measure.py"]
+constants = { null_band_items = 1 }
 ```

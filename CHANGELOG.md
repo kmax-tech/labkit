@@ -29,6 +29,20 @@ present and equal in the run config.** Last permissive version: 0.70.0.
 - `intent-check`/`finalize`: a registered constant absent from the record
   is a finding (it was invisible); the message names the last permissive
   version for old runs.
+- The protocol template stamps the tables (`[C1]` margin, `[A1]`
+  max_empty, `[A2]` null_band_items, scope `scripts/01_measure.py`); the
+  measure template builds its `MeasureConfig` from them
+  (`promises.all_constants(promises.load(PROTOCOL))`), the stamped test
+  holds every registered constant to a field. A `--quick` stamp keeps the
+  tables without constants.
+
+### Rollout
+
+Only forward: an existing frozen protocol is a registration — adding
+tables to it is a new registration, not a migration. Repos with frozen
+protocols without tables (uniagent 01–14) stay on their pin (0.70.0) and
+raise it when a new area starts there; `finalize` would otherwise block
+their frozen areas.
 
 ## 0.70.0 — 2026-10-08
 
