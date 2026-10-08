@@ -116,7 +116,7 @@ def area_tests(area: Path, repo: Path) -> AreaTests:
     return AreaTests(pattern, files, "failed", tail)
 
 
-def run(area: Path, protocol: Path | None = None) -> int:
+def run(area: Path, protocol: Path | None = None) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Run all preflight checks. Returns 0 (clean) or 1 (findings)."""
     blockers = 0
     warnings = 0

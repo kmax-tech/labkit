@@ -161,7 +161,7 @@ def protocol_named_in(script: Path, area: Path) -> Path | None:
     return p if p.is_file() else None
 
 
-def pre_run(event: dict) -> int:
+def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """PreToolUse hook on Bash: a full measure run gets its area's preflight first; blockers refuse the command (exit 2)."""
     if event.get("tool_name", "Bash") != "Bash":
         return 0
@@ -300,7 +300,7 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def post_change(event: dict) -> int:
+def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """PostToolUse hook: a protocol or a measurement note just written gets its checker; the findings go back as context."""
     project = os.environ.get("CLAUDE_PROJECT_DIR")
     repo = Path(project) if project else Path(event.get("cwd") or os.getcwd())

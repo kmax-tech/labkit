@@ -867,7 +867,7 @@ def cmd_read_score(root: Path, transcript: Path | None) -> int:
     return 0 if got.correct == got.checkable else 1
 
 
-def score(root: Path, transcript: Path | None = None) -> int:
+def score(root: Path, transcript: Path | None = None) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Score a staged probe: its latest run's number against the truth, the binding, the log; write `<dir>.score.json`."""
     pr = load_probe_run(root)
     probe, run, metrics = pr.probe, pr.run, pr.metrics
@@ -1031,7 +1031,7 @@ def score(root: Path, transcript: Path | None = None) -> int:
     return 0 if sc.number_ok and bound_to else 1
 
 
-def main(argv: list[str]) -> int:
+def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Command line of `usability`: stage probes and score what cold agents and readers did."""
     ap = argparse.ArgumentParser(
         prog="usability", description=(__doc__ or "").split("\n\n")[0]

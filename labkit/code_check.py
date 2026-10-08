@@ -340,7 +340,7 @@ class _ComparisonVisitor(ast.NodeVisitor):
             return f"{name} [Name, imported from {self._imports[base]}]"
         return f"{name} [Name, unresolved]"
 
-    def visit_Compare(self, node: ast.Compare) -> None:
+    def visit_Compare(self, node: ast.Compare) -> None:  # noqa: C901 complexity baseline 2026-10-08
         for op, comparator in zip(node.ops, node.comparators):
             if isinstance(op, (ast.Eq, ast.NotEq)):
                 op_str = "==" if isinstance(op, ast.Eq) else "!="
@@ -732,7 +732,7 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[str]:
 _Value = str | tuple[str, ...]
 
 
-def _value_of(node: ast.AST, env: dict[str, _Value]) -> _Value | None:
+def _value_of(node: ast.AST, env: dict[str, _Value]) -> _Value | None:  # noqa: C901 complexity baseline 2026-10-08
     """A module-level constant as the script would compute it, or None.
 
     Read statically, never executed: string literals, names of earlier
@@ -904,7 +904,7 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
     return warnings + findings
 
 
-def main(argv: list[str]) -> int:
+def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Command line of `code-check`: check an area's code against its protocol, optionally write the bundle."""
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])

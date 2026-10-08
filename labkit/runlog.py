@@ -475,7 +475,7 @@ def _ids(path: Path) -> set | None:
     return ids
 
 
-def _describe(paths: dict) -> dict:
+def _describe(paths: dict) -> dict:  # noqa: C901 complexity baseline 2026-10-08
     """path + sha256 + rows per split, and the leakage verdict across splits."""
     out: dict = {}
     for key, p in paths.items():
@@ -1290,7 +1290,7 @@ def _read_index(index: Path) -> tuple[list[str], list[list[str]]]:
     return lines[0].split("\t"), [ln.split("\t") for ln in lines[1:] if ln]
 
 
-def reindex(base_dir: Path) -> int:
+def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Rebuild the run index (runs.tsv) from the run folders: append a row for
     every completed run that has none. Never rewrites.
 

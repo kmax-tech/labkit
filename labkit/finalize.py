@@ -64,7 +64,7 @@ def _tracked(repo: Path, path: Path) -> bool:
 CRITERION_N = promises.CRITERION_N_KEY
 
 
-def criterion_n_input_mismatches(run_dir: Path) -> list[str]:
+def criterion_n_input_mismatches(run_dir: Path) -> list[str]:  # noqa: C901 complexity baseline 2026-10-08
     """Warnings: a criterion's denominator (`c<i>_n` in metrics.json) that
     matches no input count the run recorded — the size of what was counted,
     not a promised constant (that is `intent_check.promised_constant_mismatches`)."""

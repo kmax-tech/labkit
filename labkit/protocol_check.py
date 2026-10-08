@@ -188,7 +188,7 @@ class FieldLine:
         )
 
 
-def fields(text: str) -> list[FieldLine]:
+def fields(text: str) -> list[FieldLine]:  # noqa: C901 complexity baseline 2026-10-08
     """Every bold field label in the prose, outside code fences. A label may
     wrap onto the next line (`- **Resolution check (ZERO calls, …\n
     extremes):** <…>`); it is read whole."""
@@ -713,7 +713,7 @@ def collect(paths: list[str]) -> list[Path]:
     return files
 
 
-def main(argv: list[str]) -> int:
+def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Command line of `protocol-check`: check protocols against the template and their own head."""
     _ID_INDEX.clear()  # one scan per invocation; never a stale one
     if argv and argv[0] in ("-h", "--help"):

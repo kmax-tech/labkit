@@ -53,7 +53,7 @@ def area_files(area: Path, globs: tuple[str, ...] = AREA_GLOBS) -> list[Path]:
 LOCAL_ROOTS = ("lib", "src")
 
 
-def _lib_names(path: Path, libdir: Path) -> set[str]:
+def _lib_names(path: Path, libdir: Path) -> set[str]:  # noqa: C901 complexity baseline 2026-10-08
     """Dotted module paths under `libdir` that `path` may import, read from
     its syntax tree: `import a.b`, `from a.b import c` (c may be a module),
     `from a import b`, the root's own name as a prefix (`from lib import x`)
@@ -236,7 +236,7 @@ def audit_stamp_drift(area: Path, audit_line: str) -> str | None:
     return None
 
 
-def main(argv: list[str]) -> int:
+def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Command line of `scope-sha`: the stamp over an area's code for an audit line."""
     if argv and argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])

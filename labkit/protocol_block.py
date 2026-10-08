@@ -154,7 +154,7 @@ def _choice(table: dict, field: str, allowed: tuple[str, ...]) -> str | None:
     return value
 
 
-def head(text: str) -> Head:
+def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
     """The protocol's head. Raises BlockError when the block or the
     `[protocol]` table is missing, a field is missing or unknown, or a
     value has the wrong type or is outside its choices."""

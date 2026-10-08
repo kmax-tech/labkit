@@ -148,7 +148,7 @@ def _digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()[:DIGEST_CHARS]
 
 
-def parse_block(text: str) -> PromiseBlock | None:
+def parse_block(text: str) -> PromiseBlock | None:  # noqa: C901 complexity baseline 2026-10-08
     """The protocol's promises, or None if its block declares none.
 
     Raises PromiseError on anything malformed: invalid TOML, an unknown

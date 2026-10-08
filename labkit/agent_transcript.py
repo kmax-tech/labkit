@@ -108,7 +108,7 @@ def _text(content: object) -> str:
     return ""
 
 
-def read_calls(path: Path) -> tuple[list[Call], float, float]:
+def read_calls(path: Path) -> tuple[list[Call], float, float]:  # noqa: C901 complexity baseline 2026-10-08
     """(calls in order, first stamp, last stamp) of one transcript."""
     uses: dict[str, tuple[float, str, str]] = {}
     order: list[str] = []

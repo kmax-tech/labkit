@@ -154,7 +154,7 @@ def main(argv: list[str]) -> int:
         return 2
 
 
-def _main(argv: list[str]) -> int:
+def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: intent-check <PROTOCOL-*.md> [--metrics FILE]")
