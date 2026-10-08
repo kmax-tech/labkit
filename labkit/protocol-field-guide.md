@@ -194,7 +194,11 @@ derives from the detail below and carries no fact that isn't there.
   expected effect bigger than the run-to-run noise? Differences below the
   noise are not interpretable. (4) Could the run answer two *different*
   questions depending on a precondition? Then register that branch beforehand.
-  Using intent ids: one [C1], [C2] … per conjunct, [B1] per branch point.
+  Using intent ids: one [C1], [C2] … per conjunct, [B1] per branch point. Where a number stands, the sentence names its constant from the
+  [[promise]] table ("in at least `min_draws` = 2 of 3 draws"): the one
+  word that links the prose (German or English), the table and the
+  script's name; without it a person found no way from the sentence to
+  the threshold (round 15, 2026-10-08).
 - **Admissibility condition:** what must hold in the same run before any
   verdict is issued, fixed beforehand — e.g. "at most 10% unparsed answers",
   "the model is above chance on the hand-checked sanity examples", "the

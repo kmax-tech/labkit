@@ -23,7 +23,11 @@
 - **Success / failure criterion:** <!-- s --> <how do we recognise whether it worked?
   One id per conjunct, written `[C…]` with its number in the brackets
   (C1 → the key `c1_pass`), each reappearing as a lowercase key in the reportable
-  run's metrics.json (→ AS-003 Kein Lauf ohne Intent-Absatz, AS-004 Kennungen machen den Intent adressierbar)>
+  run's metrics.json; where a number stands, name its constant from the
+  [[promise]] table ("in at least `min_draws` = 2 of 3 draws") — the one
+  word that links this sentence, the table and the script (a person
+  reading German prose and English code found no link, round 15)
+  (→ AS-003 Kein Lauf ohne Intent-Absatz, AS-004 Kennungen machen den Intent adressierbar)>
 - **Admissibility condition:** <!-- s --> <what must hold in the same run before
   any verdict is issued — yield, coverage, a control showing its expected
   value; one A per condition, each with WHY its failure makes the measurement

@@ -732,3 +732,79 @@ Consequences:
    reader, not an instrument for the code's clarity.
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round14-haiku-n3/`.
+
+## Round 15 (2026-10-08): the person reads an area they did not build — uniagent 17, protocol and code
+
+The fair test rounds 11–13 owed: a person, an area they neither wrote nor
+reconstructed before (uniagent 17 `hotel-grenzen-hierarchie`, built by
+another session the same day, protocol standard 0.19 with the promise
+tables, `labkit-params` available), eight questions — four on the
+protocol (question and answer, which run answers and why not the first,
+the limit, the next step), four on the code (where [C1] is decided and
+its threshold's home; what a failed admissibility condition does to the
+verdict and to [B1]; which model answered and where that is recorded — a
+trap, the area records it under `config.judge`, not `model`; which
+`b1_branch` a failed [C2] yields). Truths registered at 20:07:32, before
+the answers; a small script asked one question at a time, timed, and
+counted assistant questions. Scoring by hand against the registered
+truths: `labkit-paper/…/navigation-round15-human-area17/score.md`.
+
+| | right | partial | miss | seconds | help questions |
+|---|---|---|---|---|---|
+| protocol (4) | 2 | 1 | 1 | 199 | 1 |
+| code (4) | 3 | 1 | 0 | 241 | 3 |
+| total | 5 | 2 | 1 | 440 | 4 |
+
+Against round 13 (the person on their own area 12, after the treatment:
+7/8, 817 s, 10 help questions): half the time, less than half the help,
+on an area never seen. The code questions were the easier half for the
+person this time — every "where" was found, including the trap (the
+model under `config.judge` in the fresh run's `config.json`, which
+`labkit-params` reports as "not recorded along lineage"). What was
+missed or partial:
+
+- **p1**: the question was restated, the answer sentence not given — the
+  Summary's Result was not read as the answer. (Scored as a miss by the
+  registered rule; the person had answered the same way in the chat
+  before the script ran.)
+- **p2**: the fresh run `c471` and why `54cf` had no verdict ([A3] fell)
+  — right; that the *answering* run is the derived `99f3` was not said.
+  The protocol's answer line names both; `runlog` and `labkit-params`
+  name `99f3` in their first line.
+- **c1**: the decision site and the counting behind it were found across
+  two files; the threshold's value and home (protocol `[C1] constants`,
+  `min_draws = 2`) were not named — "min draws ist verwirrend". The
+  German prose of the criterion says "in mindestens 2 von 3 Ziehungen"
+  and never names `min_draws`; the link prose → constant → script
+  (`MIN_DRAWS`) is visible only to a reader who opens the TOML tables.
+
+What the person said during the round (recorded as remarks):
+
+- **German and English mixed is a problem.** The protocol's prose is
+  German ("Zulassungsbedingung"), the promise tables and the code are
+  English (`ADMISSIBILITY`, "admissibility condition"); a question in the
+  protocol's German word does not grep in the code, and the English key
+  does not appear in the German sentence.
+- **"Ask in the terms the protocol uses."** The questions used house
+  words (Zulassungsbedingung, Weiche); the person wanted the field label.
+- **Field meanings** are not always clear from the field alone; "better
+  than this morning".
+
+Consequences:
+
+1. **The criterion's prose names its constant where the number stands**
+   ("in mindestens `min_draws` = 2 von 3 Ziehungen"): the one word that
+   links the German sentence, the English table and the script's name.
+   Into the template's Success-criterion placeholder and the field guide
+   (this commit). Not a mechanical check — a candidate for one: the
+   prose of a promise mentions every constant of its table.
+2. **One term per thing across the languages**: the field label, the
+   promise `sentence` and the code share the English key word; the German
+   prose carries it in parentheses once. The glossary note already does
+   this for the house words; the protocol template's placeholders now
+   say so.
+3. The next person round asks in the protocol's labels, and the question
+   on the answering run names what "answers" means (the run `finalize`
+   holds the protocol to).
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-08/navigation-round15-human-area17/`.
