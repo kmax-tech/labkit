@@ -1,4 +1,4 @@
-<!-- vendored: coding-style.md @ b0ec3b57236c (master: ~/.claude/resources) — edit the master, then `lib sync pull` -->
+<!-- vendored: coding-style.md @ d85b2505fe4f (master: ~/.claude/resources) — edit the master, then `lib sync pull` -->
 # Code style
 
 Much of this code produces numbers that end up in a paper or a thesis. So the
@@ -487,7 +487,11 @@ did not say how they differ, or logic with no name of its own.
   run's config), two code fingerprints (the area stamp, the declared-scope
   digest) and two checks against what a run recorded; a weaker reader
   took the wrong one of each pair. "head" and "config", "scope" and
-  "scope" do not tell a newcomer which is which. Name the members of such a
+  "scope" do not tell a newcomer which is which. The size of the effect,
+  measured with n = 5 weak readers per stand (round 14, 2026-10-08): the
+  renames lift the weak reader's mean from 2.8 to 4.2 of 5 — a single run
+  does not tell the stands apart (before {2, 3, 4}, after {3, 3, 5}), and a
+  pair stays confusable where the question itself fits both members. Name the members of such a
   pair in parallel, so the name shows what they share and where they part:
   `promised_constant_mismatches`, `criterion_n_input_mismatches`. A first
   docstring line may name the counterpart ("not the run's config.json") —
