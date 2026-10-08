@@ -5,6 +5,22 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.66.1 — 2026-10-08
+
+### Changed
+
+- `finalize.run` shows the whole flow and every condition that decides
+  whether a step runs: its docstring is a flat-numbered plan (0 to 7, each
+  with its condition, and that a blocker never stops a step), and the body
+  carries the `if`s — skip without a run, provenance only for seconds, the
+  only early end at step 0. The stations print no header and check no
+  `None` any more; a station that needs a run takes `run_dir: Path`. Why:
+  a person answering behaviour questions (code-navigation round 8) missed
+  exactly the conditions that sat one level down, in both earlier
+  versions; sub-numbers like "2b" confused. Output and exit codes
+  unchanged — compared on seven real areas and on two areas without a run
+  (cost seconds and hours).
+
 ## 0.66.0 — 2026-10-08
 
 ### Added

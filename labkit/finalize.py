@@ -246,12 +246,9 @@ def cited_run_mismatch(text: str, run_dir: Path) -> str | None:
     return None
 
 
-def check_completion(
-    gate: Gate, area: Path, protocol: Path, text: str, pid: str | None
-) -> Path | None:
+def check_completion(gate: Gate, area: Path, text: str, pid: str | None) -> Path | None:
     """Station 1: the run every later station holds the protocol to — chosen,
     shown, and held to the run the answer cites. Returns it, or None."""
-    print(f"── completion: {protocol.name} ──")
     run_dir = answering_run(gate, area, pid)
     if run_dir is not None:
         mismatch = cited_run_mismatch(text, run_dir)
@@ -266,7 +263,6 @@ def check_intent_keys_in_metrics(
     """Station 2: every registered intent id reports as a key of the answering
     run's metrics.json (intent-check). Not code_check.check_intent_ids, which
     holds the promises to the code before any run."""
-    print("── intent-check ──")
     if not registered_ids(text):
         print("  no intent ids registered — nothing to check")
         return
@@ -282,14 +278,10 @@ def check_intent_keys_in_metrics(
         gate.block("intent-check failed (see its lines above)")
 
 
-def check_declared_scopes(gate: Gate, area: Path, run_dir: Path | None) -> None:
+def check_declared_scopes(gate: Gate, area: Path, run_dir: Path) -> None:
     """Station 3: a promise's declared scope edited after the run: today's code is not
     the code that produced the number; until 2026-10-06 only recheck saw it
     (Durchstich)."""
-    print("── declared scopes ──")
-    if run_dir is None:
-        print("  no completed run to check")
-        return
     recorded = (read_run_config(run_dir) or {}).get("promises")
     if recorded is None:
         print("  no promise block recorded — nothing to compare")
@@ -309,7 +301,6 @@ def check_open_fields(
     gate: Gate, protocol: Path, text: str, head: protocol_block.Head
 ) -> None:
     """Station 4: fields of the protocol still empty or a placeholder."""
-    print(f"── open fields: {protocol.name} ──")
     holes = open_holes(text, head)
     for lineno, label in holes:
         gate.warn(f"{protocol.name}:{lineno}: {label}")
@@ -324,18 +315,9 @@ def provenance_owed(head: protocol_block.Head) -> bool:
     return head.cost == "seconds"
 
 
-def check_provenance(
-    gate: Gate, area: Path, head: protocol_block.Head, run_dir: Path | None
-) -> None:
-    """Station 5: source frozen in the run, source and output tracked in git —
-    where it is owed (`provenance_owed`)."""
-    print("── provenance ──")
-    if not provenance_owed(head):
-        print("  n/a — not a run of seconds (the agent audit covers provenance there)")
-        return
-    if run_dir is None:
-        print("  no completed run to check")
-        return
+def check_provenance(gate: Gate, area: Path, run_dir: Path) -> None:
+    """Station 5: the run's source frozen in the run, source and output
+    tracked in git."""
     b, w = provenance_findings(area, run_dir)
     for line in b:
         gate.block(line)
@@ -350,7 +332,6 @@ def check_area_tests(gate: Gate, area: Path) -> None:
     of evaluate() that mutes the criterion is caught here too — on every
     tier, seconds included, where preflight is not owed (2026-10-07). A
     missing test is no finding here; preflight owes it at the freeze."""
-    print("── area tests ──")
     tests = area_tests(area, git_root(area) or area)
     if tests.state == "none":
         print(f"  none ({tests.pattern})")
@@ -366,12 +347,8 @@ def check_area_tests(gate: Gate, area: Path) -> None:
         )
 
 
-def check_criterion_n(gate: Gate, run_dir: Path | None) -> None:
+def check_criterion_n(gate: Gate, run_dir: Path) -> None:
     """Station 7: a criterion's denominator that matches no recorded input count."""
-    print("── criterion n ──")
-    if run_dir is None:
-        print("  no completed run to check")
-        return
     w = criterion_n_input_mismatches(run_dir)
     for line in w:
         gate.warn(line)
@@ -399,9 +376,37 @@ def report(gate: Gate) -> int:
     return 0
 
 
+NO_RUN = "  no completed run to check"
+
+
+def header(title: str) -> None:
+    """Print a station's header line."""
+    print(f"── {title} ──")
+
+
 def run(area: Path, protocol: Path | None = None) -> int:
-    """Run all finalize checks, one station after another. Returns 0 (clean),
-    1 (findings) or 2 (no protocol to hold the area to)."""
+    """Run finalize on an area. Returns 0 (clean or warnings only),
+    1 (a blocker) or 2 (no protocol to hold the area to).
+
+    The flow — every condition that decides whether a step runs is in this
+    function; one level down is how a step works, not whether it runs:
+
+    0. Choose the protocol and read its settings block. Ends at once with 2
+       when the named file is missing, the folder holds several protocols
+       and none is named, or the settings block cannot be read.
+    1. completion — choose the run the later steps examine (`run_dir`);
+       none bound is a blocker, and steps 3, 5 and 7 then skip.
+    2. intent-check — always; with a run it reads that run's metrics.
+    3. declared scopes — only with a run.
+    4. open fields — always; warnings only.
+    5. provenance — only for cost = seconds, and only with a run.
+    6. area tests — always.
+    7. criterion n — only with a run; warnings only.
+
+    A blocker never stops a step: all of them run, then the summary lists
+    every blocker again. Warnings alone end with 0.
+    """
+    # 0. protocol and settings — the only early end
     chosen = choose_protocol(area, protocol)
     if chosen is None:
         return 2
@@ -412,13 +417,46 @@ def run(area: Path, protocol: Path | None = None) -> int:
         print(f"finalize: {chosen.name}: {exc}")
         return 2
     gate = Gate()
-    run_dir = check_completion(gate, area, chosen, text, head.id)
+
+    # 1. completion — the run every later step examines
+    header(f"completion: {chosen.name}")
+    run_dir = check_completion(gate, area, text, head.id)
+
+    # 2. intent-check — always
+    header("intent-check")
     check_intent_keys_in_metrics(gate, chosen, text, run_dir)
-    check_declared_scopes(gate, area, run_dir)
+
+    # 3. declared scopes — only with a run
+    header("declared scopes")
+    if run_dir is None:
+        print(NO_RUN)
+    else:
+        check_declared_scopes(gate, area, run_dir)
+
+    # 4. open fields — always
+    header(f"open fields: {chosen.name}")
     check_open_fields(gate, chosen, text, head)
-    check_provenance(gate, area, head, run_dir)
+
+    # 5. provenance — only for cost = seconds, and only with a run
+    header("provenance")
+    if not provenance_owed(head):
+        print("  n/a — not a run of seconds (the agent audit covers provenance there)")
+    elif run_dir is None:
+        print(NO_RUN)
+    else:
+        check_provenance(gate, area, run_dir)
+
+    # 6. area tests — always
+    header("area tests")
     check_area_tests(gate, area)
-    check_criterion_n(gate, run_dir)
+
+    # 7. criterion n — only with a run
+    header("criterion n")
+    if run_dir is None:
+        print(NO_RUN)
+    else:
+        check_criterion_n(gate, run_dir)
+
     return report(gate)
 
 
