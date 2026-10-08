@@ -5,7 +5,7 @@ holds the fields a machine reads — the head — and its optional
 `[[promise]]` tables hold the promises (`promises.py`):
 
     [protocol]
-    standard = "0.18"
+    standard = "0.19"
     id = "p-0123456789abcdef"       # stamped by `lib exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
     cost = "seconds"                # seconds | minutes | hours
@@ -32,7 +32,7 @@ from pathlib import Path
 
 #: the head format this labkit reads; a protocol of another standard is
 #: read with the labkit release it was written for
-STANDARD = "0.18"
+STANDARD = "0.19"
 TYPES = ("exploratory", "confirmatory")
 COST_TIERS = ("seconds", "minutes", "hours")
 #: `p-` plus 16 lowercase hex: not derived from name or path, so renaming

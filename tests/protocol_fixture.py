@@ -64,7 +64,7 @@ def head(
     lines = [
         "```toml",
         "[protocol]",
-        'standard = "0.18"',
+        'standard = "0.19"',
         f'id = "{id}"',
         f'type = "{type}"',
         f'cost = "{cost}"',

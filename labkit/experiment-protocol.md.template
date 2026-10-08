@@ -149,7 +149,7 @@
 
 ```toml
 [protocol]
-standard = "0.18"
+standard = "0.19"
 id = "<protocol-id>"
 type = "<exploratory | confirmatory>"
 cost = "<seconds | minutes | hours>"

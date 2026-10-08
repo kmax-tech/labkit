@@ -62,7 +62,7 @@ The protocol's one fenced TOML block holds the head (`[protocol]`, see
 
 ```toml
 [protocol]
-standard = "0.18"
+standard = "0.19"
 id = "p-9e2341c0390948dc"
 type = "confirmatory"
 cost = "minutes"

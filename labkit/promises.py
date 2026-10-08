@@ -324,8 +324,8 @@ def block_owed(frozen: bool, block: PromiseBlock | None) -> str | None:
     if frozen and block is None:
         return (
             "frozen = true, but the protocol declares no [[promise]] table — a "
-            "frozen registration is data, not prose (labkit 0.71: a run under "
-            "it cannot start; `lib exp` stamps the tables)"
+            "frozen registration is data, not prose (standard 0.19, labkit 0.72: "
+            "a run under it cannot start; `lib exp` stamps the tables)"
         )
     return None
 

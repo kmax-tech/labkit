@@ -5,6 +5,22 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.72.0 — 2026-10-08
+
+### Breaking
+
+**Protocol standard 0.19: this labkit reads standard 0.19 only.** Last
+version reading 0.18: 0.71.0. The one change of the standard is the rule
+of 0.71 — `frozen = true` owes the `[[promise]]` tables and a run records
+every registered constant unchanged. A protocol stamped under 0.18 is a
+registration under the earlier contract: it stays unchanged and is
+checked, run and reproduced with the repo's commit and labkit ≤ 0.71.0; a
+repo may raise its pin regardless, since the hooks check only staged
+protocols — only an edit to an old protocol at the new pin is refused
+(`[protocol] standard = "0.18", this labkit reads "0.19"`). Two
+standards in one labkit would be a legacy path; `standard` is stamped
+and never edited.
+
 ## 0.71.0 — 2026-10-08
 
 ### Breaking

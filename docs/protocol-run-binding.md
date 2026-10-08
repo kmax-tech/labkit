@@ -11,7 +11,7 @@ block (the head, `labkit/protocol_block.py`):
 
 ```toml
 [protocol]
-standard = "0.18"
+standard = "0.19"
 id = "p-9e2341c0390948dc"
 ```
 
