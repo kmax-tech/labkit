@@ -448,3 +448,48 @@ earlier finding "a decision gets its own name" (round 3) has a limit for a
 person — a one-line condition behind a negated name hides more than it
 names; and one word for one thing applies to function names as much as
 to concepts.
+
+## Round 10 (2026-10-08): measuring the code-clarity agent before trusting it
+
+A reviewer agent for agent-written code (`code-clarity`, dotfiles
+`agents/code-clarity.md`): it reads one change and reports where the person
+reviewing it would lose the thread — rules drawn from rounds 3, 8 and 9
+(conditions one level down, one word for two things, a condition behind a
+negated helper, two of a kind not told apart, sub-numbers, state a step
+needs not in its signature, a copy of logic). Static evidence: it reports,
+never blocks. Before it becomes routine: does it find planted defects, and
+does it stay quiet on code without them?
+
+- **Fresh case** (the one that counts — its names appear nowhere in the
+  agent's rules): a small `shop/ship.py` written twice. The seeded version
+  plants four defects — every skip condition inside the steps, "batch" for
+  the function, the class and the day's orders, `if not needs_customs(…)`,
+  a "Step 2b". The clean version lifts the conditions into the entry point,
+  names apart, numbers flat.
+- **Known case** (in-sample: the rules quote it): finalize's refactor
+  ac97187→30762d3 (its end state has the three defects of round 9) and the
+  fix 3a85427→d542e6c.
+
+Sonnet, as the agent definition says; two agents per toy version, one per
+finalize version.
+
+| case | planted defects found | reports on code without them |
+|---|---|---|
+| toy, seeded (2 agents) | 4/4 and 4/4 | — (plus uneven check names, results passed through shared state, vague first docstring lines — all real) |
+| toy, clean (2 agents) | — | 1 each, the same, and right: `write_label` raises `KeyError` on a delivered order without a street, so "a problem never stops the next step" is false — a bug planted by accident |
+| finalize, seeded (in-sample) | 3/3 | — (plus "2b"/"4b" left in the module docstring, `Gate` for a collector while the gate is the whole command — both true of today's code) |
+| finalize after the fix | — | 4, all true: `run_dir` beside `measurement_run`, "not a run of seconds" using "run" for the cost tier, `preflight.run` (renamed in 0.68.0, after that state), a first docstring line starting with "Run" |
+
+- Every planted defect was found, in the fresh case too, by both agents.
+- No report on the clean versions was invented; each pointed at something
+  real. Two agents per version is too few for a false-alarm rate; what
+  shows is that "verdict: 0 findings" is not forced (the agent may say it)
+  and that its reports could all be checked in the code.
+- What it found on today's code was fixed in 0.68.2.
+
+Consequence: the agent is fit for routine use as static evidence, run by
+an agent other than the author. Its `MODE: questions` backs the skill
+`code-quiz` (dotfiles): on request, three behaviour questions for the
+person, answers only after they answered.
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/clarity-agent/`.
