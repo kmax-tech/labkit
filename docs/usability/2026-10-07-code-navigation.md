@@ -664,3 +664,71 @@ yet: whether a person finds "where is [C2] decided" faster — the next
 human round, on an area the person has not reconstructed.
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round13-human-area12/`.
+
+## Round 14 (2026-10-08): is the weak reader a reliable instrument? Haiku, n = 3 per stand
+
+Rounds 3 and 4 said the renames of 0.62.0 took Haiku from 5/10 to 10/10
+— two agents per stand. Whether the weak reader *reliably* separates
+stands was never shown; this round registers the test before running it.
+Same five labkit questions as round 3 (`navigation-round3/labkit.toml`
+for the stand before the renames, `navigation-round4/same.toml` for the
+stand after — same wording, truths resolved per stand), order shuffled per
+run (seeds 141–143, 149), three cold Haiku agents per stand, one Sonnet
+per stand as the control. Two criteria fixed beforehand: (1) every Haiku
+run on the stand after lies above every run on the stand before
+(min(after) > max(before)); (2) Sonnet ≥ 9/10 over both stands (it does
+not see the difference, which is why it cannot be the instrument). One
+difference to earlier rounds: the agents read their task from a file
+(one `Read` more per run); effort is comparable within this round only.
+
+| stand | reader | found | seconds | calls |
+|---|---|---|---|---|
+| before (54a45ab) | Haiku 1 | 2/5 | 87 | 15 |
+| before | Haiku 2 | 3/5 | 111 | 17 |
+| before | Haiku 3 | 4/5 | 175 | 40 |
+| after (5345607, 0.62.0) | Haiku 1 | 5/5 | 90 | 23 |
+| after | Haiku 2 | 3/5 | 94 | 22 |
+| after | Haiku 3 | 3/5 | 105 | 27 |
+| before | Sonnet | 5/5 | 32 | 10 |
+| after | Sonnet | 4/5 | 35 | 9 |
+
+Criterion 1 **fails**: before {2, 3, 4}, after {3, 3, 5} — the
+distributions overlap; a single Haiku run does not tell the stands apart.
+With rounds 3 and 4 added (five runs per stand): before 2, 3, 2, 3, 4
+(mean 2.8), after 5, 5, 5, 3, 3 (mean 4.2). The direction holds on the
+mean; the 5/10 → 10/10 of rounds 3–4 was the upper edge of both
+distributions meeting. Criterion 2 holds in substance: Sonnet 5/5 and 4/5,
+the one miss is `preflight.py:64` against a truth span starting at 65 —
+the line before the function, counted as a miss by the registered rule.
+
+Where Haiku still missed on the renamed stand (every answer read):
+
+- **h4, the protocol head's field list** (two of three): `runlog.py:932`
+  (the run's config block) and `promises.py:81` — the same two-of-a-kind
+  confusion as in round 3, with `PROTOCOL_HEAD_KEYS` now named. The
+  question says "experiment record … settings at its end", which fits
+  the run's config.json as well; the name fixes what the question leaves
+  open only for a reader who searches for the new word.
+- **h2, a promised constant against the run's value** (one):
+  `promises.py:357` (`constants()`, the reader of the block) instead of
+  `promised_constant_mismatches` — the function that *reads* the constant
+  was taken for the one that *compares* it.
+- **h3, the imported helpers** (one): `scope_sha.py:53` — the module's
+  other hash, the area stamp.
+
+Consequences:
+
+1. **The weak reader is an instrument only in aggregate.** One Haiku run
+   per stand says nothing (a 2/5 and a 5/5 both occur on both stands);
+   three runs give a mean that moves with the stand, with a spread of ±1
+   per run. CS-015 keeps its measured claim, now with the right size:
+   names that separate two of a kind raise the weak reader's mean from
+   2.8 to 4.2 of 5 (n = 5 per stand), not from 5/10 to 10/10.
+2. **Two of a kind stay confusable when the question itself fits both.**
+   h4's wording ("record", "settings") names the run's record as well as
+   the protocol's head. A name can separate only what the reader searches
+   for; the measurement needs questions whose words sit on neither name.
+3. **Sonnet saturates**, as in every round: it is the proxy for an agent
+   reader, not an instrument for the code's clarity.
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round14-haiku-n3/`.
