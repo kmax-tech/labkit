@@ -308,13 +308,6 @@ def check_open_fields(
         print("  all fields filled")
 
 
-def provenance_owed(head: protocol_block.Head) -> bool:
-    """Whether finalize checks provenance (source frozen in the run, source
-    and output tracked in git): only for runs of seconds — above that tier
-    the agent audit covers provenance."""
-    return head.cost == "seconds"
-
-
 def check_provenance(gate: Gate, area: Path, run_dir: Path) -> None:
     """Station 5: the run's source frozen in the run, source and output
     tracked in git."""
@@ -384,19 +377,23 @@ def header(title: str) -> None:
     print(f"── {title} ──")
 
 
-def run(area: Path, protocol: Path | None = None) -> int:
+def finalize_area(area: Path, protocol: Path | None = None) -> int:
     """Run finalize on an area. Returns 0 (clean or warnings only),
     1 (a blocker) or 2 (no protocol to hold the area to).
 
     The flow — every condition that decides whether a step runs is in this
-    function; one level down is how a step works, not whether it runs:
+    function; one level down is how a step works, not whether it runs. A
+    measurement run is one execution of the experiment's script, a folder
+    under `runs/` bound to this protocol — not this function, and not the
+    protocol itself.
 
     0. Choose the protocol and read its settings block. Ends at once with 2
        when the named file is missing, the folder holds several protocols
        and none is named, or the settings block cannot be read.
-    1. completion — choose the run the later steps examine (`run_dir`);
-       none bound is a blocker, and steps 3, 5 and 7 then skip.
-    2. intent-check — always; with a run it reads that run's metrics.
+    1. completion — choose the measurement run the later steps examine
+       (`measurement_run`); none bound is a blocker, and steps 3, 5 and 7
+       then skip.
+    2. intent-check — always; with a measurement run it reads its metrics.
     3. declared scopes — only with a run.
     4. open fields — always; warnings only.
     5. provenance — only for cost = seconds, and only with a run.
@@ -420,18 +417,18 @@ def run(area: Path, protocol: Path | None = None) -> int:
 
     # 1. completion — the run every later step examines
     header(f"completion: {chosen.name}")
-    run_dir = check_completion(gate, area, text, head.id)
+    measurement_run = check_completion(gate, area, text, head.id)
 
     # 2. intent-check — always
     header("intent-check")
-    check_intent_keys_in_metrics(gate, chosen, text, run_dir)
+    check_intent_keys_in_metrics(gate, chosen, text, measurement_run)
 
     # 3. declared scopes — only with a run
     header("declared scopes")
-    if run_dir is None:
+    if measurement_run is None:
         print(NO_RUN)
     else:
-        check_declared_scopes(gate, area, run_dir)
+        check_declared_scopes(gate, area, measurement_run)
 
     # 4. open fields — always
     header(f"open fields: {chosen.name}")
@@ -439,12 +436,12 @@ def run(area: Path, protocol: Path | None = None) -> int:
 
     # 5. provenance — only for cost = seconds, and only with a run
     header("provenance")
-    if not provenance_owed(head):
+    if head.cost != "seconds":
         print("  n/a — not a run of seconds (the agent audit covers provenance there)")
-    elif run_dir is None:
+    elif measurement_run is None:
         print(NO_RUN)
     else:
-        check_provenance(gate, area, run_dir)
+        check_provenance(gate, area, measurement_run)
 
     # 6. area tests — always
     header("area tests")
@@ -452,12 +449,12 @@ def run(area: Path, protocol: Path | None = None) -> int:
 
     # 7. criterion n — only with a run
     header("criterion n")
-    if run_dir is None:
+    if measurement_run is None:
         print(NO_RUN)
     else:
-        check_criterion_n(gate, run_dir)
+        check_criterion_n(gate, measurement_run)
 
-    return report(gate)
+    return report(gate)  # 1 if any step found a blocker, else 0
 
 
 def cited_runs(text: str) -> list[str]:
@@ -485,7 +482,7 @@ def if_reported(protocols: list[Path]) -> int:
         if not cited_runs(text):
             continue
         print(f"═══ finalize {protocol} (its answer cites a run) ═══")
-        worst = max(worst, run(protocol.parent, protocol))
+        worst = max(worst, finalize_area(protocol.parent, protocol))
     return worst
 
 
@@ -516,7 +513,7 @@ def main(argv: list[str]) -> int:
         print(f"finalize: {no_such_area(area)}")
         return 2
 
-    return run(area, protocol)
+    return finalize_area(area, protocol)
 
 
 def cli() -> None:

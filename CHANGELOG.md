@@ -5,6 +5,26 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.67.0 — 2026-10-08
+
+### Breaking
+
+Last version with the old names: **v0.66.1**. Python names only.
+
+- `finalize.run` is `finalize_area`; its `run_dir` is `measurement_run`,
+  and its plan says once what a measurement run is. A person reading the
+  function took "no run" for "the protocol is missing": the function, the
+  experiment's run and the variable all said "run".
+- `finalize.provenance_owed` is gone: the condition stands where it
+  decides, `if head.cost != "seconds"`. Behind a negated helper name the
+  same person read that provenance is checked for cost = hours.
+
+### Changed
+
+- The last line of `finalize_area` says what `report` returns (1 if any
+  step found a blocker, else 0). Output and exit codes unchanged on six
+  areas, two without a run.
+
 ## 0.66.1 — 2026-10-08
 
 ### Changed

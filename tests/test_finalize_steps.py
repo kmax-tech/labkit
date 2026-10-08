@@ -4,17 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import finalize, protocol_block
-from protocol_fixture import head
+from labkit import finalize
 
 
 class Steps(unittest.TestCase):
-    def test_provenance_is_owed_only_for_runs_of_seconds(self):
-        seconds = protocol_block.head(head(cost="seconds"))
-        hours = protocol_block.head(head(cost="hours"))
-        self.assertTrue(finalize.provenance_owed(seconds))
-        self.assertFalse(finalize.provenance_owed(hours))
-
     def test_a_cited_run_that_is_not_the_answering_one_blocks(self):
         run = Path("/x/runs/2026-10-07T10-00-00_aa11")
         text = "- **Answer to the question:** 0.91 (2026-10-07T09-00-00_bb22)\n"

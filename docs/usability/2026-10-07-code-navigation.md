@@ -420,3 +420,31 @@ and lifts their skip conditions and early exits into `run`, tested by
 people from the lab (crossed order, reworded b9), not by agents.
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round8-human/`.
+
+## Round 9 (2026-10-08): the person reads the third version
+
+The third version of `run` (0.66.1: the flow plan in its docstring, every
+skip condition and early end visible in its body, flat numbers 0–7) read
+by the same person, `run` only, against three questions — what happens
+without a run, what provenance does at cost = hours, whether step 7 runs
+after failing tests and with which exit code. Not timed; the person had
+seen round 8's questions, so this is a reading, not a measurement.
+
+- **No run:** read as "the protocol is not found" (step 0, exit 2). The
+  function was called `run`, the experiment's execution is a "run", the
+  variable `run_dir` — one word for three things.
+- **cost = hours:** read as "provenance is checked". The condition was
+  `if not provenance_owed(head):`, a negated helper name; the comment
+  saying "only for cost = seconds" did not carry it.
+- **Failing tests:** step 7 still runs if a run exists, then the report —
+  right; the exit code was not stated (`return report(gate)` does not say
+  it).
+
+Changed in 0.67.0: `run` is `finalize_area`, `run_dir` is
+`measurement_run` and the plan defines a measurement run; the provenance
+condition stands literally (`if head.cost != "seconds":`); the last line
+says what the report returns. Consequence for the coding style: the
+earlier finding "a decision gets its own name" (round 3) has a limit for a
+person — a one-line condition behind a negated name hides more than it
+names; and one word for one thing applies to function names as much as
+to concepts.
