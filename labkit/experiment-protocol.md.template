@@ -5,8 +5,10 @@
 - **Result:** <!-- s --> <what was found, in at most two plain sentences that
   carry the question with them and say whether the bar set before the run
   was met ("The class descriptions kept the cable set out of the framework
-  class in all five cases, as required") — the result, not the procedure;
-  no intent ids, metric keys or run_ids, they are below>
+  class in all five cases, as required") — or that no verdict was possible
+  because an admissibility condition failed, and what was still read
+  descriptively; the result, not the procedure; no intent ids, metric keys
+  or run_ids, they are below>
 - **Limits:** <!-- s --> <how far it holds, one sentence — the sample, a
   single run, what was not tested>
 - **Next step:** <!-- s --> <what follows — a decision, the next experiment,
@@ -24,12 +26,18 @@
   run's metrics.json (→ AS-003 Kein Lauf ohne Intent-Absatz, AS-004 Kennungen machen den Intent adressierbar)>
 - **Admissibility condition:** <!-- s --> <what must hold in the same run before
   any verdict is issued — yield, coverage, a control showing its expected
-  value; one A per condition; if one fails, there is no C verdict, only the
-  finding that the instrument failed (→ AS-004 Kennungen machen den Intent adressierbar)>
+  value; one A per condition, each with WHY its failure makes the measurement
+  uninterpretable (not merely less likely to succeed — a threshold the
+  hypothesis needs is a C, never an A); if one fails, there is no C verdict,
+  only the finding that the instrument failed; what is still read
+  descriptively is labelled so (→ AS-004 Kennungen machen den Intent adressierbar)>
 - **Registered branch:** <if a result decides the conclusion or the next
   analysis, register it BEFORE the run: condition + what each branch
-  licenses, one B per branch point (→ AS-013 Registrierte Weiche, AS-004 Kennungen machen den Intent adressierbar); "n/a" if there is
-  only one outcome>
+  licenses, one B per branch point — ask "and if [C…] fails, what then?";
+  a stop rule may fire during the run or on an inadmissible one, so a B is
+  decided on its own condition, not on the verdict (→ AS-013 Registrierte Weiche, AS-004 Kennungen machen den Intent adressierbar);
+  "n/a — only one outcome" when you have no answer yet: a decision taken
+  after the run goes to Next step, labelled as taken after the run>
 - **Timebox:** <hard budget, e.g. 4h — then log and ask>
 - **Split touched:** <which split may be touched: train | dev | test>
 - **Why this design †:** <choice of model, dataset, method — one sentence>

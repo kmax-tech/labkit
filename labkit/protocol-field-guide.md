@@ -203,7 +203,12 @@ derives from the detail below and carries no fact that isn't there.
   finding instead of weeks of tweaking. It complements the Timebox: the
   Timebox stops you on time, an admissibility condition on results.
   Result-based, not time-based — a deadline belongs in Timebox. Intent id:
-  [A1] per condition.
+  [A1] per condition. Each condition says WHY its failure makes the
+  measurement uninterpretable: an A is about the instrument (yield,
+  anchor, control), never about the hypothesis — a threshold the
+  hypothesis needs is a C; as an A it would turn a clean negative result
+  into "no verdict" (review 2026-10-08). A failed A does not void the
+  data: descriptive readings may follow, labelled as such.
 - **Timebox:** a hard time budget, independent of results — e.g. "4 hours,
   then log a blocker and ask". NOT a result-based condition with a
   deadline — "if the pipeline doesn't run by tomorrow" is a result
@@ -220,7 +225,12 @@ derives from the detail below and carries no fact that isn't there.
   reported that way.
 - **Registered branch:** if a result decides the conclusion or the next
   analysis, register it BEFORE the run: condition + what each branch
-  licenses, [B1] per branch point. "n/a" if there is only one outcome.
+  licenses, [B1] per branch point. The test: "and if [C…] fails — what
+  then?" An answer you have now is a branch; no answer yet is "n/a — only
+  one outcome", and a decision taken after the run goes to Next step,
+  labelled as taken after the run (exploratory, not registered). A branch
+  is decided on its own condition, not on the verdict: a stop rule fires
+  during the run or on an inadmissible one too.
 - **Why this design †:** choice of model, dataset, method — one sentence.
 - **Rival explanations †:** per confound: what OTHER than the hypothesis
   produces the same number · error direction (does it push for or against

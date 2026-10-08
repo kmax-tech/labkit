@@ -38,6 +38,18 @@ Reports); yes → C. A comparator without a target value (a baseline the
 traces are read against) is no promise; it belongs in the text of the C it
 serves.
 
+Two refinements (review 2026-10-08). An A names *why* its failure makes the
+measurement uninterpretable — the instrument's yield, an anchor, a control
+at its expected value — never a value the hypothesis needs: that threshold
+is a C, and filed as an A it would turn a clean negative result into "no
+verdict". A failed A withholds the verdict, not the data: descriptive
+readings may follow, labelled as such. A B is decided on its own
+condition, not on the verdict: a stop rule fires during the run or on an
+inadmissible one too (`verdict()` sets the C keys to None, never the B).
+"n/a — only one outcome" is the honest B when the answer to "and if [C…]
+fails?" is not known before the run; a decision taken afterwards is
+reported as taken afterwards.
+
 **Earlier letters.** `K` (criterion), `S` (stop rule), `W` (fork) and `N`
 (null condition) are not read since labkit 0.48. They did not map
 one-to-one onto C/A/B: tested against 16 earlier protocols, the separation
