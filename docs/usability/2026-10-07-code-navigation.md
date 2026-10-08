@@ -350,3 +350,73 @@ Consequences:
    whole. A fair test needs a flow across files, or a reading budget.
 
 Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round7/`.
+
+## Round 8 (2026-10-08): a person, with a fresh assistant
+
+Round 7's behaviour questions, answered by a person (the lab's author) at
+the keyboard with `usability human` (0.66.0): one question at a time,
+timed, the verdict only at the end. Each version got one of two matched
+sets of five questions (two multi-select, three single-choice each), so no
+question was answered twice; the order of versions was drawn by seed
+20261008 (`repo-b` first). The person read the code in VS Code and could ask
+a fresh Claude Code session started inside that version anything,
+including how the code behaves; the number of such questions was recorded.
+The assignment was revealed only after both passes. n = 1: a case, not a
+measurement.
+
+| pass | version | right | seconds | questions to the assistant |
+|---|---|---|---|---|
+| 1 (b1, b3, b6, b7, b9) | old, stations inline in one 210-line `run` | 2/5 | 292 | 2 |
+| 2 (b2, b4, b5, b8, b10) | new, `run` as named station calls | 2/5 | 306 | 0 |
+
+Agents on the same code and questions (round 7): 30/30 per version.
+
+Where the answers went wrong — mostly too few, rarely invented:
+
+- b1 (old): which stations report "no completed run to check" — 1 of 3
+  named; b2 (new): which stations examine the chosen run — 1 of 4 named.
+- b5 (new): which situations end finalize before any station — only "the
+  settings block cannot be read", which stands in `run`; the two that sit
+  inside `choose_protocol` were missed.
+- b8 (new): after the area tests fail, "none" — the criterion-n station
+  still runs; nothing in `run` says that a blocker does not stop the
+  stations after it.
+- b3 (old): "open fields" invented as able to block, "provenance" missed.
+- The two questions answered with the assistant's help were right.
+
+The person's own words (recorded as given):
+
+- pass 1: "4 und 5 extrem schwer zu beantworten und 5 war nicht klar, was
+  es meint" (b7, b9); "Kommentare, die den Orchestrator erklären, waren
+  hilfreich, d. h. wo welche Stage ausgeführt wird; nur die Nummerierung
+  mit a, b und dann wieder hoch zur nächsten Zahl war verwirrend".
+- pass 2: "das File war kürzer, besser zu navigieren, aber ich hatte
+  teilweise Probleme, nach den Modulen zu schauen, da sie importiert werden
+  und dann bei bestimmter Stufe mit gecalled werden".
+
+Consequences:
+
+1. **Agent readers are no proxy for a person on flow questions.** 30/30
+   against 4/10 on the same code; an agent reads the file whole in
+   seconds, a person spends a minute per question and jumps. Every agent
+   result in this document on understanding (rounds 5, 7) says nothing
+   about people.
+2. **A table of contents of named steps is not enough; the conditions
+   are what was missed.** In both versions the person lost the answer
+   where a condition sat one level down — the skip when no run is bound
+   inside each station, the early exits inside `choose_protocol`, the fact
+   that a blocker does not stop later stations. The candidate rule stands,
+   sharpened by the person: the entry point shows the order of the steps
+   **and** the conditions under which a step is skipped or the operation
+   ends; one level down is how a step works, not whether it runs.
+3. **Section comments that name the stage help; sub-numbers (2b, 4b)
+   confuse.** A sequence is numbered flat.
+4. One question (b9, "can a later station change which run the later
+   ones examine?") was unclear to the person — an instrument flaw to
+   reword before the next person.
+
+Next, if wanted: a third version of `run` that keeps the named stations
+and lifts their skip conditions and early exits into `run`, tested by
+people from the lab (crossed order, reworded b9), not by agents.
+
+Archive: labkit-paper `data/raw/agent-traces/2026-10-07/navigation-round8-human/`.
