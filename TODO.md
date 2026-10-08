@@ -187,6 +187,8 @@ dieses Kommando.
 
 ## 2. Nachmessung mit n = 3 je Stand, dann Rollout
 
+**Stand 2026-10-08, Navigationsaufgabe gemessen (Runde 14):** Haiku drei Läufe je Stand vor/nach den Umbenennungen von 0.62.0 — {2, 3, 4} gegen {3, 3, 5} von 5; ein Lauf trennt die Stände nicht, das Mittel über n = 5 (2,8 → 4,2) schon. Für `count`/`judge` offen.
+
 **Was:** Je Aufgabe (`count`, `judge`) drei kalte Läufe auf dem aktuellen
 labkit, Median der Wandzeit, und drei Bedingungen, die `usability score`
 prüft: `equals the truth` (count: der gehaltene Mittelwert ist 3,5,
