@@ -13,7 +13,9 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 
 def _command_of(pid: int) -> str | None:
@@ -122,8 +124,81 @@ def read_run_config(run_dir: Path) -> dict | None:
     return cfg
 
 
-class MetricsError(ValueError):
+class ArtefactError(ValueError):
+    """A run's artefact (metrics.json, outputs.json, completion.json) that is
+    unreadable or not the shape its writer gives it."""
+
+
+class MetricsError(ArtefactError):
     """A run's metrics.json that cannot be read as a JSON object."""
+
+
+def _json_of(path: Path, what: str) -> object:
+    """The JSON in a run artefact. Raises ArtefactError naming the file and
+    what it holds ("metrics", "outputs", "completion")."""
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ArtefactError(
+            f"{path}: unreadable {what} ({exc}) — repair the run or move it aside"
+        ) from exc
+
+
+@dataclass(frozen=True)
+class OutputEntry:
+    """One file a run registered as its output (`run.output`)."""
+
+    path: Path
+    sha256: str | None  # the content's first 16 hex digits; None: absent at the end
+    lines: int | None  # lines of a text file; None: absent or not text
+    note: str = ""
+
+
+def read_outputs(run_dir: Path) -> list[OutputEntry] | None:
+    """The outputs a run registered, from its outputs.json; None when the run
+    registered none (no file). Raises ArtefactError when an entry is not the
+    shape `runlog` writes — a path as text, sha256 text or null, lines an
+    integer or null."""
+    path = run_dir / "outputs.json"
+    if not path.is_file():
+        return None
+    data = _json_of(path, "outputs")
+    if not isinstance(data, list):
+        raise ArtefactError(
+            f"{path}: must be a list of entries, not {type(data).__name__}"
+        )
+    out: list[OutputEntry] = []
+    for n, entry in enumerate(cast(list[object], data), 1):
+        if not isinstance(entry, dict):
+            raise ArtefactError(f"{path}: entry {n} is not an object")
+        e = cast(dict[str, object], entry)
+        p, sha, lines, note = (
+            e.get("path"),
+            e.get("sha256"),
+            e.get("lines"),
+            e.get("note", ""),
+        )
+        if not isinstance(p, str) or not p:
+            raise ArtefactError(f"{path}: entry {n} has no path")
+        if sha is not None and not isinstance(sha, str):
+            raise ArtefactError(f"{path}: entry {n}: sha256 is {sha!r}")
+        if lines is not None and (
+            isinstance(lines, bool) or not isinstance(lines, int)
+        ):
+            raise ArtefactError(f"{path}: entry {n}: lines is {lines!r}")
+        out.append(OutputEntry(Path(p), sha, lines, str(note)))
+    return out
+
+
+def read_completion(run_dir: Path) -> dict[str, object]:
+    """A run's completion.json as a JSON object. Raises ArtefactError when it
+    is missing, unreadable or not an object — the caller asks a completed
+    run, whose marker this is (`completion_state` decides that, by markers)."""
+    path = run_dir / "completion.json"
+    data = _json_of(path, "completion")
+    if not isinstance(data, dict):
+        raise ArtefactError(f"{path}: must be a JSON object, not {type(data).__name__}")
+    return cast(dict[str, object], data)
 
 
 def read_metrics(path: Path) -> dict[str, object]:
@@ -133,16 +208,14 @@ def read_metrics(path: Path) -> dict[str, object]:
     (review 2026-10-08). Skipping an unreadable file chose the next older run
     as if the newer had reported no intent keys (review 2026-10-06)."""
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise MetricsError(
-            f"{path}: unreadable metrics ({exc}) — repair the run or name another"
-        ) from exc
+        data = _json_of(path, "metrics")
+    except ArtefactError as exc:
+        raise MetricsError(str(exc)) from exc
     if not isinstance(data, dict):
         raise MetricsError(
             f"{path}: metrics must be a JSON object, not {type(data).__name__}"
         )
-    return data
+    return cast(dict[str, object], data)
 
 
 def _shape_problem(cfg: object) -> str | None:

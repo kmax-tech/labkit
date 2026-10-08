@@ -5,6 +5,18 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.68.1 — 2026-10-08
+
+### Changed
+
+- Every run artefact has one loader in `runs.py`, each refusing a wrong
+  shape with a sentence naming the file (`ArtefactError`): `read_metrics`
+  (an object), `read_outputs` (typed `OutputEntry` rows as `runlog` writes
+  them, None when the run registered none), `read_completion` (an object).
+  finalize, recheck and runlog read through them instead of parsing the
+  JSON in place; `completion_state` still decides a run's state by its
+  markers. finalize output unchanged on four real areas.
+
 ## 0.68.0 — 2026-10-08
 
 ### Breaking

@@ -37,13 +37,12 @@ from __future__ import annotations
 
 import contextlib
 import io
-import json
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit import promises, protocol_block
-from labkit.runs import read_metrics, read_run_config
+from labkit.runs import read_metrics, read_outputs, read_run_config
 from labkit.repo import area_path, area_protocols, git_root, git_run, no_such_area
 from labkit.intent_check import (
     bound_runs,
@@ -84,11 +83,9 @@ def criterion_n_input_mismatches(run_dir: Path) -> list[str]:  # noqa: C901 comp
     for key, d in (cfg.get("data") or {}).items():
         if isinstance(d, dict) and isinstance(d.get("rows"), int):
             counts[f"data[{key}].rows"] = d["rows"]
-    outputs_file = run_dir / "outputs.json"
-    if outputs_file.is_file():
-        for o in json.loads(outputs_file.read_text(encoding="utf-8")):
-            if isinstance(o.get("lines"), int):
-                counts[f"{Path(o['path']).name} lines"] = o["lines"]
+    for o in read_outputs(run_dir) or []:
+        if o.lines is not None:
+            counts[f"{o.path.name} lines"] = o.lines
     if not counts:
         return [
             f"{', '.join(sorted(ns))} present, but the run recorded no input count "
@@ -120,15 +117,9 @@ def provenance_findings(area: Path, run_dir: Path) -> tuple[list[str], list[str]
     sources = [
         Path(v["path"]) for v in data.values() if isinstance(v, dict) and v.get("path")
     ]
-    outputs: list[Path] = []
-    outputs_file = run_dir / "outputs.json"
-    if outputs_file.is_file():
-        outputs = [
-            Path(o["path"])
-            for o in json.loads(outputs_file.read_text(encoding="utf-8"))
-            if o.get("path")
-        ]
-    else:
+    registered = read_outputs(run_dir)
+    outputs: list[Path] = [o.path for o in registered or []]
+    if registered is None:
         warnings.append(
             "no outputs.json — the run registered no output file (run.output)"
         )

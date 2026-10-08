@@ -61,6 +61,7 @@ from labkit.runs import (
     completed_runs,
     completion_state,
     is_alive,
+    read_completion,
     read_metrics,
     read_run_config,
     run_state,
@@ -1338,20 +1339,20 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
             if state != "completed":
                 incomplete.append(d.name)
                 continue
-            comp = json.loads((d / "completion.json").read_text(encoding="utf-8"))
+            comp = read_completion(d)
             metrics = read_metrics(d / "metrics.json")
             _append_row(
                 index,
                 [
                     d.name,
-                    comp.get("git", ""),
+                    str(comp.get("git", "")),
                     cfg.get("script", ""),
                     json.dumps(cfg.get("data", {}), ensure_ascii=False, sort_keys=True),
                     json.dumps(
                         cfg.get("config", {}), ensure_ascii=False, sort_keys=True
                     ),
                     json.dumps(metrics, ensure_ascii=False, sort_keys=True),
-                    comp.get("note", ""),
+                    str(comp.get("note", "")),
                     (cfg.get("protocol") or {}).get("id") or "",
                 ],
             )

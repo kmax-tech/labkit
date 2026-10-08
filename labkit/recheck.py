@@ -70,10 +70,8 @@ def run_dir(area: Path, run_id: str | None = None) -> Path:
 
 def pin(run: Path, out: Path) -> None:
     """Refuse rows the chosen run did not write."""
-    outputs = json.loads((run / "outputs.json").read_text(encoding="utf-8"))
-    recorded = next(
-        (o for o in outputs if Path(o["path"]).resolve() == out.resolve()), None
-    )
+    outputs = runs.read_outputs(run) or []
+    recorded = next((o for o in outputs if o.path.resolve() == out.resolve()), None)
     if recorded is None:
         raise SystemExit(
             f"recheck: run {run.name} did not register {out.name} as an output"
@@ -83,10 +81,10 @@ def pin(run: Path, out: Path) -> None:
             f"recheck: {out} is gone — the run's rows are not here to recompute from"
         )
     actual = hashlib.sha256(out.read_bytes()).hexdigest()
-    if not recorded["sha256"] or not actual.startswith(recorded["sha256"]):
+    if not recorded.sha256 or not actual.startswith(recorded.sha256):
         raise SystemExit(
             f"recheck: {out.name} (sha {actual[:16]}) is not the file run {run.name} "
-            f"recorded ({recorded['sha256']}) — rerun the script or name that run"
+            f"recorded ({recorded.sha256}) — rerun the script or name that run"
         )
 
 

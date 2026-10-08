@@ -45,5 +45,54 @@ class CriterionNIsNoBool(unittest.TestCase):
             self.assertTrue(finalize.criterion_n_input_mismatches(run))
 
 
+class ReadOutputsAndCompletion(unittest.TestCase):
+    def test_outputs_as_runlog_writes_them_are_read(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = Path(d)
+            (run / "outputs.json").write_text(
+                json.dumps(
+                    [
+                        {"path": "/x/out.jsonl", "sha256": "ab12", "lines": 12},
+                        {
+                            "path": "/x/gone.txt",
+                            "sha256": None,
+                            "lines": None,
+                            "note": "absent",
+                        },
+                    ]
+                )
+            )
+            got = runs.read_outputs(run)
+            assert got is not None
+            self.assertEqual(
+                [(o.path.name, o.lines) for o in got],
+                [("out.jsonl", 12), ("gone.txt", None)],
+            )
+
+    def test_no_outputs_file_is_none(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertIsNone(runs.read_outputs(Path(d)))
+
+    def test_outputs_of_the_wrong_shape_are_refused(self):
+        for content in (
+            '{"path": "x"}',
+            '[{"lines": 3}]',
+            '[{"path": "x", "lines": true}]',
+            "[1]",
+        ):
+            with tempfile.TemporaryDirectory() as d, self.subTest(content=content):
+                (Path(d) / "outputs.json").write_text(content)
+                with self.assertRaises(runs.ArtefactError):
+                    runs.read_outputs(Path(d))
+
+    def test_completion_must_be_an_object(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "completion.json").write_text('{"git": "abc"}')
+            self.assertEqual(runs.read_completion(Path(d))["git"], "abc")
+            (Path(d) / "completion.json").write_text('["abc"]')
+            with self.assertRaises(runs.ArtefactError):
+                runs.read_completion(Path(d))
+
+
 if __name__ == "__main__":
     unittest.main()
