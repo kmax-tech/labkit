@@ -801,7 +801,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             pilot_note = (
                 f"pilot (frozen = false) — {len(missing_should)} "
                 f"should-field(s) due only at report time "
-                f"(append them: lib exp <name> --report)"
+                f"({', '.join(missing_should)}; append them: lib exp <name> --report)"
             )
             missing_should = []
         # A placeholder is reported as one already, and a comment can never
@@ -894,8 +894,8 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             print(f"{f}: {pilot_note}")
         for label in missing_must:
             print(f"{f}: MISSING (must): {label}")
-        for label in missing_should:
-            print(f"{f}: missing (should): {label}")
+        # no `missing (should)` lines: unfrozen they are named in the pilot
+        # note above, frozen or at seconds `owed()` makes them MUST (2026-10-09)
         for n, label in must_holes:
             print(f"{f}:{n}: PLACEHOLDER ONLY (must): {label}")
         for n, label in soft_holes:

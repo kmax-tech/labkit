@@ -33,7 +33,8 @@ answerable six weeks on; the split keys are what make it answerable by a tool.
 An incomplete run leaves its dir with config.json but without the required
 completion markers — visible, not silent. The run-index row is written on
 clean exit only. States: completed · running · unknown · crashed ·
-unfinalized · corrupt · legacy (written before labkit 0.21).
+unfinalized · corrupt · unreadable (config.json damaged) · legacy (written
+before labkit 0.21).
 """
 
 from __future__ import annotations
@@ -45,6 +46,7 @@ import importlib.metadata
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -985,13 +987,41 @@ class Run:
                     "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded)."
                 )
         self.dir = base_dir / "runs" / self.run_id
-        self.dir.mkdir(parents=True, exist_ok=False)
         self._outputs: list[Path] = []
         self._metrics: dict = {}
         self._note = ""
         self._t0 = time.monotonic()
-        # The run's config.json record — what this run was, written once at
-        # start. Not the protocol's settings head (protocol_block.PROTOCOL_HEAD_KEYS).
+        # Everything that can fail on its own (git, the environment, the
+        # model alias) is read BEFORE the directory exists: a failure after
+        # mkdir left a directory without config.json, which the listings
+        # read as `legacy` — "written before labkit 0.21" (2026-10-09).
+        git_state, git_full = _git_state(base_dir), _head(base_dir)
+        env = _env_state(base_dir)
+        # A derived run re-reads the parent's rows; its model is the one that
+        # answered THEN. Resolving the alias now, under today's models.toml,
+        # would record a provenance the rows never had — so a derived run
+        # records none, and `runs.model_provenance_run` walks derived_from
+        # to the run that did (2026-10-08).
+        models = {} if self._derived_from else _resolve_models(self._config)
+        self.dir.mkdir(parents=True, exist_ok=False)
+        try:
+            self._write_record(experiment, git_state, git_full, env, models, base_dir)
+        except BaseException:
+            shutil.rmtree(self.dir, ignore_errors=True)  # no half-made run
+            raise
+
+    def _write_record(
+        self,
+        experiment: str,
+        git_state: str,
+        git_full: str,
+        env: str,
+        models: dict,
+        base_dir: Path,
+    ) -> None:
+        """config.json — what this run was, written once at start — plus the
+        script snapshot and the dirty-tree patch. Not the protocol's settings
+        head (protocol_block.PROTOCOL_HEAD_KEYS)."""
         frozen = {
             "schema_version": RUN_SCHEMA,
             "experiment": experiment,
@@ -1004,18 +1034,11 @@ class Run:
             "script_sha": _snapshot_script(self.dir),
             "untracked_sources": _snapshot_untracked_sources(self.dir),
             "pid": os.getpid(),  # lets `active()` tell running from crashed
-            "git": _git_state(base_dir),
-            "git_full": _head(base_dir),
+            "git": git_state,
+            "git_full": git_full,
             "python": sys.version.split()[0],
-            "env": _env_state(base_dir),
-            # A derived run re-reads the parent's rows; its model is the one that
-            # answered THEN. Resolving the alias now, under today's models.toml,
-            # would record a provenance the rows never had — so a derived run
-            # records none, and `runs.model_provenance_run` walks derived_from
-            # to the run that did (2026-10-08).
-            "models_resolved": {}
-            if self._derived_from
-            else _resolve_models(self._config),
+            "env": env,
+            "models_resolved": models,
             "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "command": list(sys.argv),  # how to start this run again
             "data": self._data,
@@ -1162,7 +1185,7 @@ def active(base_dir: str | Path) -> list[dict]:
                     "run_id": d.name,
                     "dir": str(d),
                     "alive": None,
-                    "state": "corrupt",
+                    "state": "unreadable",
                     "error": str(exc),
                 }
             )
@@ -1261,7 +1284,7 @@ def _print_finished(area: Path) -> None:
         try:
             s = run_summary(d)
         except RunConfigError as exc:
-            print(f"  {d.name}  corrupt — {exc}")
+            print(f"  {d.name}  unreadable — {exc}")
             continue
         if s.state == "completed":
             done.append(s)
@@ -1325,6 +1348,7 @@ def _wait(
             "finalization broke off, numbers must not be "
             "reported",
             "corrupt": "completion.json without metrics.json — the results are gone",
+            "unreadable": "config.json cannot be read — the run's record is damaged",
         }
         failed = [r for r in live if r.get("state") in FAILED_STATES]
         if failed:

@@ -14,7 +14,9 @@ alias the lab's `models.toml` names. `claude -p` runs without tools, so the
 inlined text is all the auditor sees. Synchronous, with a timeout: on
 expiry the command fails, it never waits on in the background.
 
-Exit codes are the contract:
+Exit codes are the contract (the auditor's LAST verdict line decides — it
+may correct itself below a finding; a disagreement between finding lines
+and verdict is printed as a NOTE, 2026-10-09):
     0  no blocker and no warning
     1  findings to decide — a blocker OR a warning (labkit-paper benchmark,
        2026-10-06: the table-led audit found the positional-join fault only
@@ -301,6 +303,17 @@ def main(argv: list[str]) -> int:
     print(f"\nstamp: {stamp_facts(args.area, result['verdict'])}", file=sys.stderr)
     for gap in scope_mismatch(args.area, result["scope"]):
         print(f"scope WARNING: {gap}", file=sys.stderr)
+    listed = sum(grade in ("BLOCKER", "WARNING") for grade, _ in result["findings"])
+    if listed and not (b or w):
+        # The verdict line decides — an auditor may correct itself below a
+        # finding ("Correction: no finding"). The disagreement is said, so a
+        # reader of exit 0 sees the lines were there (2026-10-09).
+        print(
+            f"verdict NOTE: the verdict line counts 0 blockers and 0 warnings, the "
+            f"report lists {listed} BLOCKER/WARNING line(s) above it — read them; the "
+            f"verdict line decides",
+            file=sys.stderr,
+        )
     return 1 if b or w else 0
 
 

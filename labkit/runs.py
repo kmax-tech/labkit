@@ -64,7 +64,12 @@ def is_alive(pid: object, script: object) -> bool | None:
 
 
 def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
-    """One of: completed · running · unknown · crashed · unfinalized · corrupt · legacy.
+    """One of: completed · running · unknown · crashed · unfinalized · corrupt · legacy
+    (a run whose config.json cannot be read is `unreadable` — `run_facts`,
+    `runlog.active`; this function never sees one, it takes a parsed cfg).
+
+    metrics.json without completion.json is decided by liveness: alive →
+    running, unknowable → unknown, dead → unfinalized.
 
     Complete when BOTH metrics.json and completion.json exist. Both, not
     completion.json alone: a completion record must not paper over results
@@ -334,9 +339,13 @@ def run_facts(run_dir: Path) -> dict | None:
     """What a run directory says about itself: state and binding.
 
     `None` for a directory without config.json — not a run. An unreadable
-    config.json is a run in state `corrupt` with the reason in `why`: it
+    config.json is a run in state `unreadable` with the reason in `why`: it
     stays in the listing the operator reads instead of vanishing, and it is
-    never chosen (review 2026-10-06).
+    never chosen (review 2026-10-06). Not `corrupt` — that word is
+    completion.json without metrics.json (0.74.0).
+
+    Liveness is not asked here (`alive=False`): a run still finalizing in
+    another process reads as `unfinalized`; `runlog.active` asks.
     """
     try:
         cfg = read_run_config(run_dir)
@@ -344,7 +353,7 @@ def run_facts(run_dir: Path) -> dict | None:
         return {
             "dir": run_dir,
             "metrics": run_dir / "metrics.json",
-            "state": "corrupt",
+            "state": "unreadable",
             "protocol_id": None,
             "why": str(exc),
         }
@@ -385,20 +394,23 @@ def bound_runs(area: Path, pid: str) -> tuple[list[dict], list[dict]]:
     return taken, left
 
 
-def newest_with_intent_keys(cands: list[dict]) -> tuple[Path | None, int]:
-    """Among already-eligible runs: the newest reporting any intent key,
-    plus how many newer ones were skipped for reporting none.
+def newest_with_intent_keys(cands: list[dict]) -> tuple[Path | None, int, bool]:
+    """Among already-eligible runs: (metrics path, newer runs skipped for
+    reporting no intent key, whether the chosen one reports any).
 
     The rule from 2026-09-09 (area 71) unchanged, only its input narrowed:
     a producer or probe run writes a metrics.json too, and holding the
     promises against THAT file reports every promise as unimplemented.
+    When NO candidate reports an intent key, the newest is returned with
+    skipped = 0 and reports_intent_keys = False — the caller says so,
+    instead of a probe run passing as the answer (2026-10-09).
     """
     skipped = 0
     for facts in reversed(cands):
         if promises.reported_ids(read_metrics(facts["metrics"])):
-            return facts["metrics"], skipped
+            return facts["metrics"], skipped, True
         skipped += 1
-    return (cands[-1]["metrics"], 0) if cands else (None, 0)
+    return (cands[-1]["metrics"], 0, False) if cands else (None, 0, False)
 
 
 def newer_unreadable(chosen: Path, rest: list[dict]) -> str | None:
@@ -407,11 +419,7 @@ def newer_unreadable(chosen: Path, rest: list[dict]) -> str | None:
     run that answers — choosing an older one past it is what
     `runs.read_run_config` says must not happen (review 2026-10-07)."""
     bad = [
-        f
-        for f in rest
-        if f["state"] == "corrupt"
-        and f["protocol_id"] is None
-        and f["dir"].name > chosen.name
+        f for f in rest if f["state"] == "unreadable" and f["dir"].name > chosen.name
     ]
     if not bad:
         return None
@@ -435,9 +443,13 @@ class AnsweringRun:
     """The outcome of choosing the run that answers for a protocol.
 
     Attributes:
-        run_dir: The chosen run, or None when none may answer.
+        run_dir: The chosen run; None whenever `blocker` is set, so a caller
+            that reads only run_dir cannot take a run that must not answer.
         skipped_newer: Newer bound runs passed over for reporting no intent
             key (a probe or producer run).
+        reports_intent_keys: False when no bound run reports an intent key
+            and the newest was taken anyway — a probe or producer run, not
+            an answer; the caller names it.
         exclusions: Every run left out, with its reason.
         blocker: Why no choice stands — no completed bound run, or a newer
             run whose binding cannot be read — or None.
@@ -447,6 +459,7 @@ class AnsweringRun:
     skipped_newer: int
     exclusions: tuple[RunExclusion, ...]
     blocker: str | None
+    reports_intent_keys: bool = True
 
 
 def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
@@ -454,19 +467,26 @@ def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
     bound to `pid` that reports an intent key. The binding is the run's own
     record, so the choice is a filter, not a guess; an unfinalized or corrupt
     run has numbers and no finish, a run bound elsewhere answers another
-    question. A newer run whose config.json cannot be read blocks the
-    choice: it may be the one that answers."""
+    question. A newer run whose config.json cannot be read (`unreadable`)
+    blocks the choice: it may be the one that answers — then run_dir is
+    None and `blocker` says why."""
     if not (area / "runs").is_dir():
-        return AnsweringRun(None, 0, (), f"no runs/ directory in {area}")
+        return AnsweringRun(
+            None,
+            0,
+            (),
+            f"no completed run bound to {pid} — no runs/ directory in {area}",
+        )
     taken, rest = bound_runs(area, pid)
     exclusions = tuple(RunExclusion(f["dir"], f["why"]) for f in rest)
     if not taken:
         return AnsweringRun(None, 0, exclusions, f"no completed run bound to {pid}")
-    mpath, skipped = newest_with_intent_keys(taken)
+    mpath, skipped, has_keys = newest_with_intent_keys(taken)
     assert mpath is not None, "taken is non-empty, so a metrics file exists"
-    return AnsweringRun(
-        mpath.parent, skipped, exclusions, newer_unreadable(mpath.parent, rest)
-    )
+    blocker = newer_unreadable(mpath.parent, rest)
+    if blocker:
+        return AnsweringRun(None, skipped, exclusions, blocker, has_keys)
+    return AnsweringRun(mpath.parent, skipped, exclusions, None, has_keys)
 
 
 def model_provenance_run(run_dir: Path) -> Path | None:
@@ -513,4 +533,4 @@ def model_provenance_run(run_dir: Path) -> Path | None:
 #: any of them, `reindex` rebuilds none of them. `unknown` is NOT in this
 #: list: it means "can't tell", and treating it as failed would hide a run
 #: that is still going.
-FAILED_STATES = ("crashed", "unfinalized", "corrupt")
+FAILED_STATES = ("crashed", "unfinalized", "corrupt", "unreadable")

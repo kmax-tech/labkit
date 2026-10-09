@@ -115,8 +115,20 @@ class AnsweringRun(unittest.TestCase):
         _run(self.area, "2026-10-01T10-00-00_aaaa")
         _run(self.area, "2026-10-02T10-00-00_bbbb", config_text="{not json")
         choice = runs.bound_answering_run(self.area, PID)
-        self.assertIsNotNone(choice.run_dir)
+        self.assertIsNone(choice.run_dir)  # blocked: no run_dir to take by mistake
         self.assertIn("cannot say which protocol", choice.blocker or "")
+
+    def test_no_bound_run_with_intent_keys_is_named_not_passed_as_an_answer(
+        self,
+    ) -> None:
+        """Mutant: every bound run is a probe — the newest is returned, but
+        the choice says it reports no intent key (2026-10-09)."""
+        _run(self.area, "2026-10-01T10-00-00_aaaa", metrics={"n_rows": 3})
+        newest = _run(self.area, "2026-10-02T10-00-00_bbbb", metrics={"n_rows": 4})
+        choice = runs.bound_answering_run(self.area, PID)
+        self.assertEqual(choice.run_dir, newest)
+        self.assertFalse(choice.reports_intent_keys)
+        self.assertEqual(choice.skipped_newer, 0)
 
     def test_no_runs_directory(self) -> None:
         choice = runs.bound_answering_run(self.area / "nowhere", PID)

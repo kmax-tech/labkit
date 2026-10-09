@@ -69,10 +69,10 @@ class BrokenConfig(unittest.TestCase):
         self.broken = make_run(self.area, NEW)
         (self.broken / "config.json").write_text("{broken", encoding="utf-8")
 
-    def test_open_runs_list_it_as_corrupt_with_the_reason(self):
+    def test_open_runs_list_it_as_unreadable_with_the_reason(self):
         live = runlog.active(self.area)
         self.assertEqual([r["run_id"] for r in live], [NEW])
-        self.assertEqual(live[0]["state"], "corrupt")
+        self.assertEqual(live[0]["state"], "unreadable")
         self.assertIn("config.json", live[0]["error"])
 
     def test_wait_exits_failed(self):
@@ -89,7 +89,7 @@ class BrokenConfig(unittest.TestCase):
     def test_intent_check_lists_it_and_never_chooses_it(self):
         taken, left = runs.bound_runs(self.area, PID)
         self.assertEqual([f["dir"].name for f in taken], [OLD])
-        self.assertEqual(left[0]["state"], "corrupt")
+        self.assertEqual(left[0]["state"], "unreadable")
         self.assertIn("unreadable run metadata", left[0]["why"])
 
 

@@ -323,10 +323,12 @@ def choose_bound(protocol: Path, pid: str) -> Path | int:
     its outcome told the operator; 2 when no choice stands."""
     choice = bound_answering_run(protocol.parent, pid)
     if choice.run_dir is None:
+        # blocker: no completed bound run, or a newer run whose binding
+        # cannot be read — either way nothing may answer (run_dir is None
+        # whenever blocker is set, 0.74.0)
         print(
-            f"intent-check: no completed run bound to {pid} "
-            f"({protocol.name}) — nothing to hold the promises "
-            f"against."
+            f"intent-check: {choice.blocker} ({protocol.name}) — nothing to hold "
+            f"the promises against."
         )
         if choice.exclusions:
             print(f"  {len(choice.exclusions)} other run(s) in {protocol.parent}:")
@@ -336,9 +338,12 @@ def choose_bound(protocol: Path, pid: str) -> Path | int:
             print(f"  no runs in {protocol.parent} yet.")
         print("  Name one explicitly with --metrics FILE if you know it belongs here.")
         return 2
-    if choice.blocker:
-        print(f"intent-check: {choice.blocker}")
-        return 2
+    if not choice.reports_intent_keys:
+        print(
+            f"intent-check: {choice.run_dir.name} is the newest bound run, and no "
+            f"bound run reports an intent key — a probe or producer run, not an "
+            f"answer; every promise below will read as unimplemented."
+        )
     if choice.skipped_newer:
         print(
             f"intent-check: using {choice.run_dir.name}/metrics.json "

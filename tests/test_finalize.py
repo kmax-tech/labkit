@@ -135,7 +135,7 @@ class TestFinalize(unittest.TestCase):
             code, out = _run_finalize(area)
         self.assertEqual(code, 1, out)
         recap = out.split("fix the blockers before reporting:")[1]
-        self.assertIn("  - no runs/ directory", recap)
+        self.assertIn("  - no completed run bound to", recap)
 
     def test_no_runs_dir_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as d:

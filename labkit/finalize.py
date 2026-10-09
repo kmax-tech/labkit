@@ -185,7 +185,9 @@ class Findings:
         self.warnings += 1
 
 
-def answering_run(findings: Findings, area: Path, pid: str | None) -> Path | None:
+def answering_run(
+    findings: Findings, area: Path, pid: str | None, ids_registered: bool
+) -> Path | None:
     """The run every station holds the protocol to — `runs.bound_answering_run`,
     ONE choice for every station: intent-check skips newer runs without
     intent keys (a probe), so checking scopes or provenance on the newest
@@ -201,8 +203,11 @@ def answering_run(findings: Findings, area: Path, pid: str | None) -> Path | Non
         for x in choice.exclusions:
             print(f"    {x.run_dir.name}: {x.why}")
         return None
-    if choice.blocker:
-        findings.block(choice.blocker)
+    if ids_registered and not choice.reports_intent_keys:
+        findings.block(
+            f"{choice.run_dir.name}: no bound run reports an intent key — the "
+            f"newest is a probe or producer run, not an answer"
+        )
     note = (
         f" (skipped {choice.skipped_newer} newer bound run(s) without intent keys)"
         if choice.skipped_newer
@@ -383,7 +388,7 @@ def check_completion(
 ) -> Path | None:
     """Station 1: the run every later station holds the protocol to — chosen,
     shown, and held to the run the answer cites. Returns it, or None."""
-    measurement_run = answering_run(findings, area, pid)
+    measurement_run = answering_run(findings, area, pid, bool(registered_ids(text)))
     if measurement_run is not None:
         mismatch = cited_run_mismatch(text, measurement_run)
         if mismatch:

@@ -5,6 +5,39 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.74.0 — 2026-10-09
+
+Four cold readers over the package (code-clarity, one per layer, 38
+findings): what a newcomer gets wrong. This release fixes what was
+behaviour, 0.74.1 the names, 0.74.2 the entry points and docstrings.
+
+### Breaking
+
+- **Run state `unreadable`.** A run whose config.json cannot be read was
+  listed as `corrupt` — the word for completion.json without
+  metrics.json. It is now `unreadable` (`runs.run_facts`,
+  `runlog.active`, `runlog` listings, `FAILED_STATES`); a reader of the
+  state no longer has two meanings for one word. Last version with the
+  shared word: 0.73.1.
+
+### Changed
+
+- **`AnsweringRun.run_dir` is None whenever `blocker` is set.** A newer
+  run with an unreadable binding returned the older run's directory next
+  to the blocker; a caller reading only `run_dir` took a run the function
+  forbade. `reports_intent_keys` (new) is False when no bound run reports
+  an intent key and the newest was taken anyway: `finalize` blocks (a
+  probe or producer run is not an answer — only when the protocol
+  registers ids), `intent-check` says so.
+- **A run directory exists only with its config.json.** Git, environment
+  and model alias are read before mkdir; a failure while writing the
+  record removes the directory. Before, the leftover read as `legacy`.
+- **`protocol-check` names the should-fields** a pilot still owes in its
+  pilot note; the `missing (should)` loop that never printed is gone.
+- **`labkit-audit`** prints a NOTE when the report lists BLOCKER/WARNING
+  lines while the verdict line sums to zero; the verdict line still
+  decides (an auditor may correct itself).
+
 ## 0.73.1 — 2026-10-09
 
 ### Added
