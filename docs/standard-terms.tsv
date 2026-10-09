@@ -36,4 +36,12 @@ lebende Verweise	current references	as opposed to historical run snapshots	fixed
 Antwortform	answer form		fixed	
 prägen	coin	for terms: coin / coined, never stamp	fixed	stamp is reserved for Stempel (scope sha)
 Code-Bereich	code region		fixed	area is reserved for Bereich
-Stufe	stage	in a pipeline; a registered judgement level stays tier	fixed	tier is reserved for Kostenstufe and AS-009
+Stufe	stage	only for a step of a data pipeline; a cost tier, a severity level or a registered judgement level is tier/level, never stage	fixed	tier is reserved for Kostenstufe and AS-009
+Frageform	question form		fixed	not answer form (Antwortform)
+Behauptung	claim		fixed	fixed by AS-001's name
+Soll	target	the expected value of an anchor or null condition	fixed	AS-037 says target
+Streuung	spread		fixed	the scar table says Spread unknown
+Laborbuch	lab notebook		fixed	
+Vorab-Registrierung	preregistration	one word, no hyphen	fixed	
+stanzen	generate from the template	never stamp	fixed	stamp is reserved for Stempel
+Eigenprägung	own coinage		fixed	home is reserved for Prägestelle
