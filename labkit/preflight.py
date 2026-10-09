@@ -199,6 +199,10 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
         print(
             f"  {tier} — the experiment-preflight audit is due before freezing (AS-015 Preflight-Audit vor dem Einfrieren)"
         )
+    print(
+        "  a newcomer's reading is due while the prose can still change: "
+        "`labkit-audit <AREA> --mode clarity` (static evidence, never blocks)"
+    )
 
     # -- 2. code-check (intent ids) ---------------------------------------
     print("── code-check: intent ids ──")

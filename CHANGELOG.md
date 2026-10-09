@@ -5,6 +5,23 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.73.0 — 2026-10-09
+
+### Added
+
+- **`labkit-audit --mode clarity` — a newcomer's reading of an area.** The
+  code-clarity agent's area mode ships with the package
+  (`code-clarity.agent.md`): README, protocol and `scripts/01_measure.py`
+  read in the order a person opens them, findings only where that reader
+  would get the behaviour wrong (template residue, a term before its
+  definition, a docstring that omits a conjunct, a case id without its
+  kind, two languages with no shared word), each with its line and the
+  smallest fix; `verdict: N findings (M would be answered wrong)`. Exit 1
+  on findings, 0 on none, 2 on no reading. Static evidence: it stamps
+  nothing and never blocks; `preflight` names it as due before freezing.
+  Measured first on uniagent area 18 (10 findings, 6 wrong readings; the
+  README's template residue on top).
+
 ## 0.72.3 — 2026-10-09
 
 ### Added

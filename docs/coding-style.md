@@ -1,4 +1,4 @@
-<!-- vendored: coding-style.md @ d85b2505fe4f (master: ~/.claude/resources) — edit the master, then `lib sync pull` -->
+<!-- vendored: coding-style.md @ 9e8571a54ba4 (master: ~/.claude/resources) — edit the master, then `lib sync pull` -->
 # Code style
 
 Much of this code produces numbers that end up in a paper or a thesis. So the
@@ -622,6 +622,14 @@ numbers) was read right.
 - **One word for one thing on the flow's path** — the function, its
   objects and its variables do not share a name (CS-015 Make the code
   findable by name).
+- **The deciding function's docstring names every promise it decides,
+  by id, and what comes back when an admissibility condition fails.**
+  "THE experiment: the gap cases rejected by the uncovered rule, no
+  approved case rejected — admissibility first" left [C3] out and said
+  nothing about the `None` verdicts; a reader who trusted it answered
+  from an incomplete formula (uniagent area 18, 2026-10-09). The first
+  sentence is the list: `[C1] …; [C2] …; [C3] …; before that [A1]–[A3],
+  and when one fails every C key and the branch are None`.
 
 Agents are no proxy for a person on these questions: in every round the
 agents scored higher than the author on the author's own code. So the

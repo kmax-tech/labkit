@@ -1,7 +1,7 @@
-"""labkit-audit — the experiment-preflight audit, through any llm backend.
+"""labkit-audit — the agent audits of an area, through any llm backend.
 
-    labkit-audit <AREA> --mode preflight|analysis [--protocol FILE] [--model ALIAS]
-                 [--timeout S] [--out FILE]
+    labkit-audit <AREA> --mode preflight|analysis|clarity [--protocol FILE]
+                 [--model ALIAS] [--timeout S] [--out FILE]
 
 The agent audit of AS-015 Preflight-Audit vor dem Einfrieren (preflight, before freezing) and AS-050 Auswertungs-Audit vor dem Berichten
 (analysis, before a number leaves) as a command instead of a Claude
@@ -24,6 +24,14 @@ Exit codes are the contract:
 The report is printed (and written to --out); deciding the findings and
 stamping the protocol field stays with the human (AS-015 Preflight-Audit vor dem Einfrieren). The command
 prints the stamp's facts — date, scope sha, counts — to copy from.
+
+Mode `clarity` is the other reader (2026-10-09): the code-clarity agent's
+area mode (`code-clarity.agent.md`) reads README, protocol and the measure
+script the way a newcomer opens them and reports what that reader would
+get wrong — template residue, a term before its definition, a docstring
+that omits a conjunct. Static evidence: exit 1 means findings to read, it
+stamps nothing and it is no proof the area is clear. Before freezing, while
+the prose can still change.
 """
 
 from __future__ import annotations
@@ -39,15 +47,21 @@ from labkit.repo import area_protocols, layout_root, no_such_area
 from labkit.scope_sha import area_stamp, imported_repo_helpers
 
 AGENT = Path(__file__).with_name("experiment-preflight.agent.md")
+CLARITY_AGENT = Path(__file__).with_name("code-clarity.agent.md")
 DEFAULT_MODEL = "opus"  # the agent's model; any alias of models.toml works
 DEFAULT_TIMEOUT_S = 900  # one call reads the standard (~100 kB) plus the area
-MODES = ("preflight", "analysis")
+MODES = ("preflight", "analysis", "clarity")
+CLARITY = "clarity"
 
 FINDING = re.compile(r"^[\s>*`-]*\**(BLOCKER|WARNING|NOTE)\**\s*·", re.M)
 VERDICT = re.compile(
     r"verdict:\s*(\d+)\s*blockers?(?:\(s\))?,\s*(\d+)\s*warnings?(?:\(s\))?"
     r"(?:,\s*(\d+)\s*notes?(?:\(s\))?)?",
     re.I,
+)
+CLARITY_FINDING = re.compile(r"^[\s>*`-]*RULE\s*(\d+)\**\s*·", re.M)
+CLARITY_VERDICT = re.compile(
+    r"verdict:\s*(\d+)\s*findings?(?:\s*\((\d+)\s*would be answered wrong\))?", re.I
 )
 INLINE_NOTE = (
     "The files you are told to read are inlined below instead of read with "
@@ -60,10 +74,12 @@ class AuditError(RuntimeError):
     """No audit could be made — the cause is in the message."""
 
 
-def instructions() -> str:
-    """The agent's instructions as shipped, without the provenance comment."""
+def instructions(mode: str = "preflight") -> str:
+    """The agent's instructions as shipped, without the provenance comment —
+    the preflight agent for preflight and analysis, the clarity agent for clarity."""
+    agent = CLARITY_AGENT if mode == CLARITY else AGENT
     return re.sub(
-        r"^<!--.*?-->\n", "", AGENT.read_text(encoding="utf-8"), count=1, flags=re.S
+        r"^<!--.*?-->\n", "", agent.read_text(encoding="utf-8"), count=1, flags=re.S
     )
 
 
@@ -97,10 +113,25 @@ def gather(area: Path, protocol: Path | None) -> tuple[Path, list[Path], Path]:
     return chosen, code, standard
 
 
+def gather_clarity(area: Path, protocol: Path | None) -> tuple[Path, list[Path]]:
+    """(protocol, [README, the measure script]) the clarity reader gets — its
+    reading scope and nothing else: no lib modules, no standard."""
+    chosen, _code, _standard = gather(area, protocol)
+    readme = area / "README.md"
+    script = area / "scripts" / "01_measure.py"
+    missing = [p.name for p in (readme, script) if not p.is_file()]
+    if missing:
+        raise AuditError(
+            f"{area}: no {', '.join(missing)} — the clarity reading starts there"
+        )
+    return chosen, [readme, script]
+
+
 def render(
-    mode: str, area: Path, protocol: Path, code: list[Path], standard: Path
+    mode: str, area: Path, protocol: Path, code: list[Path], standard: Path | None
 ) -> str:
-    """The one prompt: instructions, MODE line, then every file verbatim."""
+    """The one prompt: instructions, MODE line, then every file verbatim.
+    Clarity: README and script around the protocol, no standard."""
     repo = layout_root(area)
 
     def rel(p: Path) -> str:
@@ -109,14 +140,39 @@ def render(
         except ValueError:
             return str(p)
 
+    order = (
+        [code[0], protocol, *code[1:]]
+        if mode == CLARITY
+        else [protocol, *code, *([standard] if standard else [])]
+    )
     files = "".join(
-        f"===== FILE: {rel(p)} =====\n{p.read_text(encoding='utf-8')}\n"
-        for p in [protocol, *code, standard]
+        f"===== FILE: {rel(p)} =====\n{p.read_text(encoding='utf-8')}\n" for p in order
     )
     return (
-        f"{instructions()}\n\nMODE: {mode} · AREA: {rel(area)}\n\n"
+        f"{instructions(mode)}\n\nMODE: {mode} · AREA: {rel(area)}\n\n"
         f"{INLINE_NOTE}\n\n{files}"
     )
+
+
+def parse_clarity(text: str) -> dict:
+    """{"findings": N, "wrong": M, "lines": [(rule, line)]} from the LAST
+    `verdict: N findings (M would be answered wrong)` line. Raises AuditError
+    when no verdict line is readable."""
+    matches = list(CLARITY_VERDICT.finditer(text or ""))
+    if not matches:
+        raise AuditError("the report has no readable `verdict:` line — not a reading")
+    m = matches[-1]
+    body = (text or "")[: m.start()]
+    lines = [
+        (int(f.group(1)), line.strip())
+        for line in body.splitlines()
+        if (f := CLARITY_FINDING.match(line))
+    ]
+    return {
+        "findings": int(m.group(1)),
+        "wrong": int(m.group(2) or 0),
+        "lines": lines,
+    }
 
 
 def parse(text: str) -> dict:
@@ -222,6 +278,8 @@ def main(argv: list[str]) -> int:
     )
     ap.add_argument("--out", type=Path, help="also write the report here")
     args = ap.parse_args(argv)
+    if args.mode == CLARITY:
+        return _clarity(args)
     try:
         protocol, code, standard = gather(args.area, args.protocol)
         prompt = render(args.mode, args.area, protocol, code, standard)
@@ -243,6 +301,35 @@ def main(argv: list[str]) -> int:
     for gap in scope_mismatch(args.area, result["scope"]):
         print(f"scope WARNING: {gap}", file=sys.stderr)
     return 1 if b or w else 0
+
+
+def _clarity(args: argparse.Namespace) -> int:
+    """The clarity reading: README, protocol, measure script → findings to
+    read. Exit 1 on any finding, 0 on none, 2 on no reading; no stamp, no
+    scope — static evidence, not a gate."""
+    try:
+        protocol, files = gather_clarity(args.area, args.protocol)
+        prompt = render(CLARITY, args.area, protocol, files, None)
+        print(
+            f"labkit-audit: clarity · {protocol.name} · README + {files[1].name} · "
+            f"{args.model} · {len(prompt) // 1000} kB",
+            file=sys.stderr,
+        )
+        report = llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=4096)
+        result = parse_clarity(report)
+    except (AuditError, llm.BackendError) as exc:
+        print(f"labkit-audit: {exc}", file=sys.stderr)
+        return 2
+    print(report)
+    if args.out:
+        args.out.write_text(report, encoding="utf-8")
+    n, m = result["findings"], result["wrong"]
+    print(
+        f"\nclarity: {n} finding(s), {m} would be answered wrong — a reading, "
+        f"not a gate; fix what a newcomer would get wrong before freezing",
+        file=sys.stderr,
+    )
+    return 1 if n else 0
 
 
 def cli() -> None:
