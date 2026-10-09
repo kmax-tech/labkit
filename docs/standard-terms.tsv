@@ -1,0 +1,28 @@
+de	en	kind	note
+Lauf	run	fixed	
+Bereich	area	coinage	define in the standard: one experiment directory under experiments/
+Versprechen	promise	coinage	define in the standard: one row of the protocol's promise block (C/A/B)
+Einfrieren	freeze	fixed	verb freeze / freezing; frozen for the state
+Instrumentenprobe	instrument check	fixed	
+Renderprobe	render check	fixed	
+Auflösungsprobe	resolution check	fixed	the protocol field is already "Resolution check"
+Kaltleser	cold reader	fixed	
+Kaltleser-Prüfung	cold-reader review	fixed	
+Narbentabelle	scar table	coinage	define in the standard: error classes the audit checks, each with the rule that forbids it
+Anker	anchor	fixed	
+Nullbedingung	null condition	fixed	
+Konfund	confound	fixed	
+Kostenstufe	cost tier	fixed	
+Mess-Note	measurement note	fixed	
+Kriterium	criterion	fixed	
+Zulassungsbedingung	admissibility condition	fixed	
+Registrierte Weiche	registered branch	fixed	also "Weiche" alone
+Riegel	gate	fixed	
+Stempel	stamp	fixed	
+Preflight-Audit	preflight audit	fixed	
+Auswertungs-Audit	analysis audit	fixed	
+Beförderung	promotion	fixed	
+Freie Knöpfe	free knobs	coinage	define in the standard: settings the author could have chosen otherwise (researcher degrees of freedom)
+Ausbeute	yield	fixed	
+Gold-Label	gold label	fixed	
+Protokoll	protocol	fixed	
