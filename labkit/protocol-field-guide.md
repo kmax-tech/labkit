@@ -188,6 +188,22 @@ derives from the detail below and carries no fact that isn't there.
 
 ### Intent (before the run, HEAD)
 
+- **Terms of this protocol:** the first field of the Intent, because the
+  question uses the words. One line per house word, three parts — *everyday
+  word · house term · code word*: "gap case (a case only an uncovered rule
+  can reject) · Lückenfall · `GAP_CASES`". The everyday word is what a
+  newcomer reads, the house term what the lab says, the code word what the
+  script and the metrics carry — one line holds the three languages together
+  (German prose, English tables, code), which is where four cold readers
+  lost the thread (rounds 15–16, areas 18 and 19, 2026-10-09). Arms, lanes
+  and draws, case classes and their id form, every registered constant, the
+  model alias, the files a reader meets. Before coining: `lib term
+  <candidate>` (the subject's word), the repo's `notes/theorie/begriffe.md`
+  (the lab's), the lab standard's vocabulary table (the method's) — a word
+  found there is inherited, not re-coined (AS-084 Doppelprägungs-Check).
+  "n/a — standard vocabulary" only if the protocol coins nothing. Until
+  2026-10-09 this field sat under Context, after Result; protocols written
+  before keep it there, the checker reads the field by label.
 - **Question / hypothesis:** the one question — what do you expect? Even
   "just try it" has a question behind it; if you can't state it, ask BEFORE
   you build.
@@ -294,12 +310,6 @@ scattered in output files nobody can interpret.
 ### Context (APPARATUS)
 
 - **Problem in one sentence:** no technical terms — what is being found out?
-- **Terms of this protocol:** every name you coin, with a half-sentence a
-  newcomer understands — constants (a margin), lanes or arms, item and case
-  ids, the model alias, the files a reader meets — or a pointer to the
-  defining note. "n/a — standard vocabulary" only if the protocol coins
-  nothing. Cold readers of the 2026-10-07 probes could not place exactly
-  these: `MARGIN`, "lane", `c08`, the alias.
 - **Prior threads:** 2–3 [[wikilinks]], each with half a sentence on why
   they lead here.
 

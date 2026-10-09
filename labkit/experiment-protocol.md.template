@@ -21,6 +21,16 @@
 
 ## Intent (before the run)
 
+- **Terms of this protocol:** <!-- s --> <BEFORE the question, because the
+  question uses them: every house word this protocol coins or leans on, one
+  line each, three parts — *everyday word · house term · code word* —
+  "gap case (a case only an uncovered rule can reject) · Lückenfall ·
+  `GAP_CASES`"; arms, lanes and draws, case classes and their ids, constants,
+  the model alias, the files a reader meets. Look up before coining (`lib
+  term`, the repo's `notes/theorie/begriffe.md`, the lab standard's
+  vocabulary); "n/a — standard vocabulary" only if nothing is coined. Four
+  cold readers (2026-10-09) met every term 60–90 lines before its definition
+  when this field sat under Context>
 - **Question / hypothesis:** <!-- s --> <the one question — what do we expect?>
 - **Success / failure criterion:** <!-- s --> <how do we recognise whether it worked?
   One id per conjunct, written `[C…]` with its number in the brackets
@@ -85,10 +95,6 @@
 ## Context (self-contained)
 
 - **Problem in one sentence:** <no technical terms — what is being found out?>
-- **Terms of this protocol:** <!-- s --> <every name you coin, with a half-sentence a
-  newcomer understands — constants (e.g. a margin), lanes or arms, item and
-  case ids, the model alias, the files a reader meets; "n/a — standard
-  vocabulary" only if the protocol coins nothing>
 - **Prior threads:** <2–3 [[wikilinks]], each with half a sentence on why
   they lead here>
 

@@ -143,8 +143,10 @@ Install (what `arbeitsstandard-init.py` stamps into `.claude/settings.json`):
 
 ## Terms
 
-One word, one thing. Everything below occurs in more than one module, so it
-is coined here; the promise kinds and the block are specified in
+One word, one thing. This table is the home of the **tool's** words (the
+method's live in the lab standard's vocabulary table, a lab's own in its
+`notes/theorie/begriffe.md`, a protocol's in its Terms field). Everything
+below occurs in more than one module, so it is coined here; the promise kinds and the block are specified in
 `docs/promise-block.md`, which run answers in `docs/protocol-run-binding.md`,
 and the per-field explanations live in `protocol-field-guide.md`.
 

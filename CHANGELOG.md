@@ -5,6 +5,19 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.74.4 — 2026-10-09
+
+### Changed — Terms before the question
+
+- **The Terms field is the first field of the Intent**, in three parts per
+  word — *everyday word · house term · code word*. Four cold readers met
+  every house term 60–90 lines before its definition while the field sat
+  under Context, after Result. Template and field guide; the checker reads
+  the field by label, so protocols written before keep theirs where it is
+  (no standard bump). The README names the home of each kind of word:
+  tool (this README), method (the lab standard), lab (`notes/theorie/
+  begriffe.md`), protocol (Terms).
+
 ## 0.74.3 — 2026-10-09
 
 ### Fixed
