@@ -1,0 +1,45 @@
+{
+  // Cmd+Shift+P → "Tasks: Run Task" → labkit: … — each delegates to the
+  // justfile (one home for the commands); needs `just` (brew install just).
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "labkit: call tree",
+      "type": "shell",
+      "command": "just calltree ${input:command} ${input:args}",
+      "problemMatcher": []
+    },
+    {
+      "label": "labkit: timeline",
+      "type": "shell",
+      "command": "just timeline ${input:module} ${input:args}",
+      "problemMatcher": []
+    },
+    {
+      "label": "labkit: check (commit gate)",
+      "type": "shell",
+      "command": "just check",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "command",
+      "type": "promptString",
+      "description": "console command (see [project.scripts] in pyproject.toml)",
+      "default": "protocol-check"
+    },
+    {
+      "id": "module",
+      "type": "promptString",
+      "description": "labkit module file name, without .py",
+      "default": "protocol_check"
+    },
+    {
+      "id": "args",
+      "type": "promptString",
+      "description": "arguments for the command",
+      "default": "--contract"
+    }
+  ]
+}

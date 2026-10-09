@@ -5,5 +5,7 @@
   // "debug-test" configuration in launch.json, which stops at the failure
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
-  "python.testing.pytestArgs": ["tests"]
+  "python.testing.pytestArgs": ["tests"],
+  // while paused, each variable's value stands at the end of its line
+  "debug.inlineValues": "on"
 }
