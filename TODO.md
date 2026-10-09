@@ -89,6 +89,18 @@ mechanischer Check — die Aufgabe des Pilots.
      harness-unabhängig (Punkt 6) — je bei ihrem Auslöser.
   6. [ ] Thesis-Starter-Beispielprotokoll in der gestempelten Form (mit
      `[[promise]]`-Tabellen).
+  7. [ ] **Stand eines Bereichs als eine Zeile aus Fakten** (Kaltleser
+     2026-10-09 auf drei Repos: „aktueller Stand 4/10", der Leser
+     rekonstruierte ihn aus Dateinamen und Git): Registrierung geschrieben ·
+     Probe gelaufen · eingefroren · Läufe (antwortender Lauf) · Tests ·
+     Antwort zitiert — alles Tatsachen, die `protocol_check`, `runs` und
+     `area_tests` schon lesen. Projektion, keine zweite Wahrheit; Heimat
+     wohl `runlog <area>` (eine Kopfzeile) oder `labkit-status`. Nicht
+     bauen, bevor Runde 16 zeigt, dass die Zeile gelesen wird.
+  8. [ ] **`labkit-params`: eine Skript-Kopie `MIN_F1` zu `min_f1` nennen**
+     (Kaltleser 2026-10-09): die Indiz-Zeilen sehen nur Großbuchstaben, die
+     Konstanten sind klein — die Kopie steht als eigene Zeile, die
+     registrierte sagt nur „not recorded". Lookup auch unter `name.upper()`.
   Nicht nötig, geprüft: Schichten und eine Heimat je Frage
   (`tests/test_architecture.py`, `docs/architecture.md`), Hook mit vier
   Prüfungen, Vorlagen auf Stand 0.19. Die eigentliche Schuld liegt außerhalb
