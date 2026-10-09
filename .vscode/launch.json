@@ -5,11 +5,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      // used by the Testing view's "Debug Test" button as well
+      // ONLY for the Testing view's "Debug Test" button, which supplies the
+      // test to run; started with F5 it has nothing to run, so it is hidden
+      // from the Run and Debug dropdown
       "name": "Test: debug (stop at failure)",
       "type": "debugpy",
       "request": "launch",
       "purpose": ["debug-test"],
+      "presentation": { "hidden": true },
       "console": "integratedTerminal",
       "env": { "LABKIT_TEST_RAISE": "1" },
       "justMyCode": true
