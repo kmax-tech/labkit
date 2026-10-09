@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from dataclasses import dataclass
 import time
 from pathlib import Path
 from typing import Iterable, Iterator
@@ -57,6 +58,38 @@ def _parse(text: str, path: Path) -> tuple[list[dict], int | None]:
                 ) from exc
             torn = i + 1
     return out, torn
+
+
+@dataclass(frozen=True)
+class RowRuns:
+    """Which runs wrote a JSONL file's rows, read from their `_prov.run`.
+
+    Attributes:
+        runs: run_id -> number of rows that carry it.
+        unstamped: rows without a `_prov.run` — written outside a run, or
+            by a Store without `prov`.
+    """
+
+    runs: dict[str, int]
+    unstamped: int
+
+
+def row_runs(path: Path) -> RowRuns:
+    """The runs a JSONL output's rows came from (`_prov.run` per row). A torn
+    last line is ignored like everywhere here; a damaged line before it
+    raises (`_parse`). The one reading runlog uses to name what a resumed
+    file continues, and finalize to hold the rows to the run."""
+    rows, _torn = _parse(path.read_text(encoding="utf-8"), path)
+    runs: dict[str, int] = {}
+    unstamped = 0
+    for r in rows:
+        prov = r.get("_prov") if isinstance(r, dict) else None
+        run_id = prov.get("run") if isinstance(prov, dict) else None
+        if isinstance(run_id, str) and run_id:
+            runs[run_id] = runs.get(run_id, 0) + 1
+        else:
+            unstamped += 1
+    return RowRuns(runs, unstamped)
 
 
 class Store:

@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
@@ -154,6 +154,10 @@ class OutputEntry:
     sha256: str | None  # the content's first 16 hex digits; None: absent at the end
     lines: int | None  # lines of a text file; None: absent or not text
     note: str = ""
+    rows_from: dict[str, int] = field(
+        default_factory=dict
+    )  # run_id -> rows (JSONL, 0.72.3)
+    continues: tuple[str, ...] = ()  # runs whose rows this file already held
 
 
 def read_outputs(run_dir: Path) -> list[OutputEntry] | None:
@@ -188,7 +192,20 @@ def read_outputs(run_dir: Path) -> list[OutputEntry] | None:
             isinstance(lines, bool) or not isinstance(lines, int)
         ):
             raise ArtefactError(f"{path}: entry {n}: lines is {lines!r}")
-        out.append(OutputEntry(Path(p), sha, lines, str(note)))
+        rows_from = e.get("rows_from", {})
+        cont = e.get("continues", [])
+        if not isinstance(rows_from, dict) or not isinstance(cont, list):
+            raise ArtefactError(f"{path}: entry {n}: rows_from/continues malformed")
+        out.append(
+            OutputEntry(
+                Path(p),
+                sha,
+                lines,
+                str(note),
+                {str(k): int(v) for k, v in cast(dict[str, object], rows_from).items()},  # type: ignore[arg-type]
+                tuple(str(c) for c in cast(list[object], cont)),
+            )
+        )
     return out
 
 

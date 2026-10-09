@@ -197,3 +197,14 @@ any run exists, so it has nothing to bind to.
 Selection by id followed in 0.22.0. The binding is complete: a protocol
 has an identity, a run records it, and every check that pairs the two
 goes through the id.
+
+## A resumed file (0.72.3)
+
+Resume is the same command again; `batch.Store` skips the ids already in
+the file. The second start is a run of its own, so its record names what
+it took over: each JSONL output in `outputs.json` carries `rows_from`
+(run_id → rows, from the rows' `_prov.run`) and `continues` (the runs
+whose rows the file already held); `completion.json` carries `continues`
+too. `finalize` holds the rows to the run — its own, the ones it
+continues, or its derived_from lineage; anything else is a file of two
+measurements and a blocker.

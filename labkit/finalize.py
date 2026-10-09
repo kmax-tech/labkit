@@ -46,7 +46,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from labkit import promises, protocol_block
+from labkit import batch, promises, protocol_block
 from labkit.runs import (
     bound_answering_run,
     model_provenance_run,
@@ -291,6 +291,52 @@ def model_provenance_gap(measurement_run: Path) -> str | None:
     )
 
 
+def row_provenance_findings(measurement_run: Path) -> tuple[list[str], list[str]]:
+    """(blockers, notes): every JSONL output of the run is held to the runs
+    its rows name (`_prov.run`): rows may come from this run, from the runs
+    it continues (a resumed file, named in outputs.json), or — for a
+    derived run — from its derived_from lineage. Rows from any other run
+    are a blocker: a file of two measurements. Rows without `_prov` are a
+    note (a Store without `prov`), not proof of anything (2026-10-09)."""
+    blockers, notes = [], []
+    cfg = read_run_config(measurement_run) or {}
+    allowed = {measurement_run.name}
+    parent = cfg.get("derived_from")
+    seen = 0
+    while isinstance(parent, str) and parent and parent not in allowed and seen < 50:
+        allowed.add(parent)
+        pcfg = read_run_config(measurement_run.parent / parent) or {}
+        parent = pcfg.get("derived_from")
+        seen += 1
+    for entry in read_outputs(measurement_run) or []:
+        if entry.path.suffix != ".jsonl" or not entry.path.is_file():
+            continue
+        try:
+            rr = batch.row_runs(entry.path)
+        except ValueError as exc:
+            blockers.append(f"{entry.path.name}: {exc}")
+            continue
+        ok = allowed | set(entry.continues)
+        foreign = sorted(r for r in rr.runs if r not in ok)
+        if foreign:
+            blockers.append(
+                f"{entry.path.name}: {sum(rr.runs[r] for r in foreign)} row(s) from "
+                f"{', '.join(foreign)} — a run this run neither is, continues nor "
+                f"derives from; a file of two measurements"
+            )
+        if entry.continues:
+            notes.append(
+                f"{entry.path.name}: continues {', '.join(entry.continues)} "
+                f"({', '.join(f'{r}: {n}' for r, n in sorted(rr.runs.items()))} rows)"
+            )
+        if rr.unstamped:
+            notes.append(
+                f"{entry.path.name}: {rr.unstamped} row(s) without _prov — written "
+                f"outside a run or by a Store without prov; their run is unknown"
+            )
+    return blockers, notes
+
+
 def check_completion(
     findings: Findings, area: Path, text: str, pid: str | None
 ) -> Path | None:
@@ -307,6 +353,11 @@ def check_completion(
         gap = model_provenance_gap(measurement_run)
         if gap:
             findings.warn(gap)
+        blockers, notes = row_provenance_findings(measurement_run)
+        for b in blockers:
+            findings.block(b)
+        for n in notes:
+            print(f"  {n}")
     return measurement_run
 
 

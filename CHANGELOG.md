@@ -5,6 +5,21 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.72.3 — 2026-10-09
+
+### Added
+
+- **A resumed output file names the run it continues.** `batch.row_runs`
+  reads which runs wrote a JSONL file's rows (`_prov.run` per row);
+  runlog records per output `rows_from` (run_id → rows) and `continues`
+  (the runs whose rows the file already held), and `completion.json`
+  carries `continues` — "this run continues that one" stands in the
+  record, not only in the rows. `finalize` holds every JSONL output to
+  the run: rows may come from the run itself, from the runs it continues,
+  or — for a derived run — from its derived_from lineage; rows from any
+  other run are a blocker (a file of two measurements), rows without
+  `_prov` a note. Additive keys; older records read as before.
+
 ## 0.72.2 — 2026-10-08
 
 ### Added

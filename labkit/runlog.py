@@ -53,7 +53,7 @@ from pathlib import Path
 from types import TracebackType
 from collections.abc import Iterator
 
-from labkit import promises, protocol_block, repo
+from labkit import batch, promises, protocol_block, repo
 from labkit.scope_sha import audit_stamp_drift
 from labkit.runs import (
     FAILED_STATES,
@@ -1058,15 +1058,33 @@ class Run:
 
     def _finalize(self) -> None:
         self._metrics.setdefault("duration_s", round(time.monotonic() - self._t0, 1))
+        continues: set[str] = set()
         if self._outputs:
             rows = []
             for p in self._outputs:
                 if p.exists():
                     with p.open("rb") as fh:
                         text_lines = sum(1 for _ in fh)
-                    rows.append(
-                        {"path": str(p), "sha256": _sha256(p)[:16], "lines": text_lines}
-                    )
+                    entry: dict = {
+                        "path": str(p),
+                        "sha256": _sha256(p)[:16],
+                        "lines": text_lines,
+                    }
+                    # A resumed file holds rows of the run that broke off:
+                    # name it, so "this run continues that one" is in the
+                    # record, not only in the rows' _prov (2026-10-09).
+                    if p.suffix == ".jsonl":
+                        try:
+                            rr = batch.row_runs(p)
+                        except ValueError as exc:
+                            entry["note"] = f"rows unreadable: {exc}"
+                        else:
+                            entry["rows_from"] = dict(sorted(rr.runs.items()))
+                            entry["continues"] = sorted(
+                                r for r in rr.runs if r != self.run_id
+                            )
+                            continues.update(entry["continues"])
+                    rows.append(entry)
                 else:
                     rows.append(
                         {
@@ -1097,6 +1115,7 @@ class Run:
                     "git": git_end,
                     "git_full": _head(self.base),
                     "note": self._note,
+                    "continues": sorted(continues),
                 },
                 ensure_ascii=False,
                 indent=2,
