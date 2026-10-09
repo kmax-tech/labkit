@@ -312,8 +312,10 @@ scattered in output files nobody can interpret.
   that appears in one class and never in the other is a free rule — the model
   can read the label off it without doing the task.
 - **Model / tool:** alias from `models.toml` — never hardcode endpoint/ID.
-  Two arms compared (a profile each)? Name them here, one line per arm,
-  in this form — `Arm \`before\`: register/profiles/x.toml @ 1d4c79af596a,
+  Two arms compared (a profile each)? Name them here, one line per arm —
+  by the one thing that differs where you can (`with-gas-classes`), and
+  where the house keeps `before`/`after`, this line is where a reader
+  learns which profile each is — in this form — `Arm \`before\`: register/profiles/x.toml @ 1d4c79af596a,
   model=gpt-oss-20b-leguin` — and put the diff between the two profiles
   verbatim under Prompt. A reader of the protocol then knows what the arms
   are without opening the register; `finalize` holds every line to the

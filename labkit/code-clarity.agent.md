@@ -79,6 +79,13 @@ Each rule names where it was observed.
     the reason in a docstring ("33 in Wien, 140 € > ARV 117"), a branch
     value written as the author's shorthand instead of the registered
     sentence. (Area 17.)
+16. **An ordinal where a name belongs.** "Variante B", "Mutant 36",
+    "Arm 2" say where a thing stands in a list, not what it is; a reader
+    needs the key for every line. Arms, variants, mutants and case
+    classes are named by the one thing that differs (`with-gas-classes`,
+    not `after`); where a convention keeps `before`/`after`, their first
+    use says which profile each is. (2026-10-09, "Mutanten für Variante
+    B".)
 
 ## Report
 
