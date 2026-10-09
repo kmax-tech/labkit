@@ -33,7 +33,8 @@ kein Ziel.
 | 1b/3 | nur, was der Pilot verlangt: Punkt 3 (static evidence), Punkt 6 `labkit audit` mit Punkt 1, Punkt 4 | wartet auf den Pilot |
 | 2 | Benchmark — Stufe 1 + Katalog in gefüllten Proben (`count`, `judge`) | **Stufe erledigt 2026-10-06: `generalises`** — Sonnet findet 4/5 Haus-, 4/5 Katalogfälle, 0 Fehlalarme auf 22 stillen Ziehungen; B1 (positionaler Join) 0/3 übersehen (Lauf `2026-10-06T19-22-09_d352`, Labor `fe6a434`). Zweiter Auditor erledigt: `experiment-preflight` (Opus, Narbentabelle) findet B1 3/3, 5/5 + 5/5, 0 Fehlalarme (Labor `03`, Lauf `2026-10-06T19-56-51_8a20`) — **für `labkit audit` und `promote`: experiment-preflight, und WARNINGs sind Befunde zum Entscheiden**, denn B1 kommt nur als WARNING |
 | 4 | Usability mit/ohne labkit (Punkt 2 erweitert) | eigene Ansage |
-| R | Rollout in einem Release: Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus), Punkt 5, `AGENTS.md` von `lib init` gestempelt (Punkt 6; im labkit-Repo gibt es sie seit `61e90df`) | eigene Aufträge |
+| D | Doktrin und Gerüstbauer ins Paket (Punkt 5; `AGENTS.md`-Vorlage aus Punkt 6 inbegriffen) | **jetzt** — Auslöser 2026-10-09: verwirrt den Autor selbst |
+| R | Rollout in einem Release: die Pins der Labor- und Thesis-Repos heben, Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus) | eigene Aufträge |
 
 **1a gebaut (2026-10-06):** `labkit/promises.py` ist die eine Heimat des
 Alphabets (C/A/B plus Altbuchstaben K/S/W/N in Prosa) und des
@@ -85,8 +86,8 @@ mechanischer Check — die Aufgabe des Pilots.
      Navigationsaufgabe ist gemessen (Runde 14).
   4. [ ] **Standard 0.20** als ein Sprung — Kandidaten oben; Voraussetzung:
      eine Schreibprobe und Runde 16 (andere Person).
-  5. [ ] `promote` (Punkt 1), `--draw N` (Punkt 4), Englisch (Punkt 5),
-     harness-unabhängig (Punkt 6) — je bei ihrem Auslöser.
+  5. [ ] `promote` (Punkt 1), `--draw N` (Punkt 4), harness-unabhängig
+     (Punkt 6) — je bei ihrem Auslöser; Englisch (Punkt 5) jetzt, Zeile D.
   6. [ ] Thesis-Starter-Beispielprotokoll in der gestempelten Form (mit
      `[[promise]]`-Tabellen).
   7. [ ] **Stand eines Bereichs als eine Zeile aus Fakten** (Kaltleser
@@ -350,89 +351,166 @@ sieht das niemand.
   in `usability score`), damit sichtbar bleibt, ob es sich ändert.
 - Eine Stub-Zeile für `s1_*`/`k1_*` neben den TODOs im Zähl-Skelett (Sonnet,
   Probe 15) — erst, wenn das Zähl-Skelett Kennungen bekommt.
+- Allgemeine Beispiele je Regel im Paketstandard und `lib scar <AS-nnn>`
+  (datierter Beleg in die Haus-Schicht, Kandidaten aus echten Blockern) —
+  aus Punkt 5 herausgenommen am 2026-10-09; erst, wenn ein Labor außerhalb
+  des Hauses Belege sammelt.
 
-## 5. Nur Englisch — die Bedingung für ein öffentliches labkit
+## 5. Doktrin und Gerüstbauer ins Paket — nur Englisch
 
 **Entschieden (2026-10-06): nur Englisch, keine deutsche Fassung.** Was die
 Maschine liest, ist englisch, und die Doktrin lesen vor allem Agenten; eine
-abgeleitete deutsche Fassung wären zwei Wahrheiten, die driften (dieselbe
-Begründung wie gegen Legacy-Pfade, Leitsatz oben). Deutsch bleibt die
-Sprache der Unterhaltung und der Notizen im Faden — `AGENTS.md`: „Talk to
-the user … in German.“
+abgeleitete deutsche Fassung wären zwei Wahrheiten, die driften. Deutsch
+bleibt die Sprache der Unterhaltung und der Notizen im Faden.
 
-**Was:** Wird labkit öffentlich, muss alles, was ein Nutzer liest, englisch
-sein. Das Paket ist es fast schon: Code, Templates, Feld-Guide,
-Fehlermeldungen; Rest sind deutsche Suchwörter in `protocol_check.py`, die
-mit Punkt 8 wegfallen, und zwei, drei Kommentare mit deutschen Zitaten. Deutsch sind die
-Doktrin und ihr Einstieg, und die liegen nicht im Paket, sondern in den
-dotfiles: `arbeitsstandard.md.template` (1600 Zeilen, 77 §-Regeln, 42
-Beleg-Absätze, 28 Zeilen mit Hauspfaden wie `~/work` oder `webis`),
-`CLAUDE.md.template` (235 Zeilen) und 52 deutsche Zeilen im Scaffolder
-(Schnellstart-Texte, Hook-Meldungen). Die Gates zitieren §-IDs, die ein
-externer Nutzer heute nicht lesen kann — das ist der eigentliche Blocker.
+**Entschieden (2026-10-09): jetzt, nicht erst bei der Veröffentlichung.**
+Regeln, Vorlagen und Werkzeuge liegen an vier Orten (`docs/architecture.md`,
+„Where what lives“), und das verwirrt schon den Autor. Zuordnungsregel: was
+ein fremdes Labor braucht, liegt in labkit; was nur dieses Haus betrifft, in
+den dotfiles. Daraus:
 
-**Plan, in Phasen:**
+- **Doktrin teilen.** Labor-, Schreib- und Notationsregeln ziehen englisch ins
+  Paket; die Haus-Kapitel (Wissensseite, `~/work`, Paper-Port) bleiben deutsch
+  in den dotfiles.
+- **Vom Gerüstbauer zieht der Labor-Teil um** (Repo, Bereich, Thesis); der
+  Faden-Teil (`~/work`, accessio) bleibt.
+- **Coding-Style bleibt in den dotfiles** (er gilt für jeden Code); labkit
+  behält die gestempelte Kopie.
+- **Labor-Repos bekommen einen Verweis statt einer Kopie:** der Standard reist
+  mit dem Pin. Der größte Teil von `sync` entfällt, statt portiert zu werden.
 
-1. **Die Doktrin zieht ins Paket.** `labkit/docs/standard.md` wird der
-   englische Master; `lib init` stempelt daraus. Die §-IDs bleiben die Anker;
-   die Belege werden in die zwei Schichten getrennt (unten: allgemeines
-   Beispiel ins Paket, datierter Hausbeleg in die Evidenz-Datei des Labors),
-   Hauspfade werden zu Platzhaltern (`<work>` statt `~/work`).
-2. **Einmal übersetzen, dann ist Englisch die Prägestelle.** Deutsch →
-   Englisch per `labkit.llm` mit gepinntem Modell, §-Block für §-Block, mit
-   Durchsicht jedes Blocks wie bei Code-Review. Danach wird die deutsche
-   Vorlage in den dotfiles durch einen Verweis auf den englischen Master
-   ersetzt — keine Parallelfassung.
-3. **Scaffolder und Hausbegriffe englisch:** `CLAUDE.md.template` (235
-   Zeilen), die deutschen Schnellstart-Texte und Hook-Meldungen im
-   Scaffolder, die Hausbegriffe im Glossar der Protokolle
-   (`Instrumentenprobe`, `Renderprobe` → instrument check, render check —
-   der Code sagt es schon so).
+**Befund (2026-10-09):** 26 AS-Kennungen im Paket, 9 davon in
+Laufzeitmeldungen (`preflight`, `code_check`, `runlog`, `claude_hooks`,
+`protocol_check`); ihr Text liegt nicht im Repo, und ob es sie gibt, prüft
+nur `check_refs` in den dotfiles. `labkit-audit` liest den Standard aus der
+Kopie des Labors (`audit.py`), `usability stage` Vorlagen und Gerüstbauer aus
+`~/.claude/resources` (`usability.py`). Die Vorlage hat 1513 Zeilen und 102
+Regeln, die Belege liegen schon getrennt (`arbeitsstandard.evidence.md`), etwa
+27 datierte Fragmente stehen noch im Regeltext.
 
-~~Abgeleitete deutsche Fassung mit Hash-Stempel je Block, `lib sync
-translate`, `lib init --lang en|de`~~ — gestrichen 2026-10-06 (nur
-Englisch).
+**Grundsätze:**
 
-**Entschieden (2026-10-06): zwei Beleg-Schichten, und labkit lernt dazu.**
-Jede Regel hat heute zwei Absätze — den Regeltext und `*Beleg (Datum,
-Bereich):*` mit dem Unfall, der sie geprägt hat. Für die Veröffentlichung
-werden daraus zwei Schichten derselben Stelle:
+- **labkit vergibt alle AS-Nummern.** `labkit/docs/rules.tsv` führt alle
+  Kennungen, Hausregeln mit Status `house` und ohne Titel. Neue Hausregeln
+  heißen in den dotfiles `HS-nnn`; bestehende Haus-AS behalten ihre Nummer.
+- **Nichts wird gelöscht.** Im dotfiles-Register bekommen umgezogene Zeilen
+  den Status `moved:labkit` (`check_ledger`: „retire it, never delete“).
+- **Eine Heimat für den Parser:** `labkit/rules.py`. Die dotfiles rufen ihn als
+  Kommando aus dem labkit-venv auf und behalten keine Kopie.
 
-- **Allgemein (öffentlich):** je Regel ein anonymisiertes Beispiel, aus
-  unserem Beleg abgeleitet — was schiefgeht, nicht wo. Reist mit dem Paket.
-- **Haus (privat):** unsere datierten Belege mit Bereich und Zahl, als
-  eigene Datei neben dem Standard (`standard.evidence.md` je Labor, nicht im
-  Paket). Beim Stempeln rendert `lib init` beide Schichten unter die Regel,
-  die Haus-Schicht nur, wo sie existiert.
+### Phase 1 — Standard schneiden, übersetzen, prüfbar machen (0.77.0, Breaking)
 
-Damit wird der Beleg zum **Feature für den Nutzer**: Ein fremdes Labor
-startet mit den allgemeinen Beispielen und sammelt seine eigenen Unfälle an
-derselben Stelle. Dafür ein Kommando `lib scar <AS-nnn> "<was passierte>"`,
-das den Absatz datiert in die Haus-Schicht schreibt — und die Gates liefern
-die Kandidaten: ein Blocker aus `code-check`, `finalize` oder einem Audit,
-der sich als echt erwies, ist ein Beleg; `finalize` fragt am Ende „als Beleg
-zu §x festhalten?". So ergänzt sich labkit selbst mit den Fehlern und
-Problemen, die es gefangen hat, je Haus, und die allgemeine Schicht wächst
-aus den Haus-Schichten, die ihre Nutzer beisteuern wollen.
+labkit- und dotfiles-Teil landen am selben Tag, sonst werden die
+dotfiles-Hooks rot.
 
-**Beleg:** 15 Spuren heute lasen die deutsche Doktrin ohne Befund — die
-englische Fassung braucht nicht der Agent, sondern der Mensch, der labkit
-ohne dieses Haus benutzt. Die 42 Beleg-Absätze sind das Wertvollste am
-Standard, weil sie jede Regel mit ihrem Unfall begründen, und verraten
-zugleich, woran hier gearbeitet wird — darum zwei Schichten.
+1. **Schnitt**, als Liste im Commit. Ins Paket: Vorspann (Kennungsregeln, ohne
+   Hauspfade), Kapitel 1, 2 A–G, 3, 5 ohne Haus-Glossar, 6, 7, aus Kapitel 4
+   AS-079 und AS-082 samt `experiment-note.md.template`. Im Haus: Kapitel 4
+   Wissensseite (AS-078, AS-080, AS-081), 2H Paper-Port, Haus↔Fach-Tabelle,
+   webis-Cluster, Geltung.
+2. **Inline-Belege raus** in die private Evidenz-Datei. Die Narbentabelle zu
+   AS-015 bleibt als Tabelle von Fehlerklassen ohne Datum, der Audit braucht
+   sie.
+3. **Übersetzen:** Einmal-Skript außerhalb des Pakets, je Regelblock ein
+   `labkit.llm`-Aufruf mit gepinntem Modell, Rohausgabe aufbewahrt; danach
+   Durchsicht Block für Block durch den Autor (etwa ein Lesetag).
+4. **labkit:**
+   - `labkit/docs/standard.md` und `labkit/docs/rules.tsv` (Spalten
+     `id alias title status`, Titel englisch, `alias` behält die §-Kennungen),
+     in `package-data`.
+   - `labkit/rules.py` (Schicht 1): `RULE_HEAD_RE`, `check_registry`,
+     `check_ledger`, `check_refs` aus `arbeitsstandard-init.py`, erweitert auf
+     die Präfixe `AS`, `CS`, `HS` und die Status `active`, `house`, `retired`,
+     `moved:*`. Vertrag:
+     ```
+     python -m labkit.rules check
+     python -m labkit.rules check --standard PATH --registry PATH --prefix HS --prefix AS
+     python -m labkit.rules ledger BEFORE AFTER
+     python -m labkit.rules refs --status active PATH…
+     python -m labkit.rules show AS-015
+     ```
+     `show` auf eine Hausregel sagt laut „house rule; text is not distributed“.
+   - `tests/test_rules.py`: Köpfe = Register; jede AS-Kennung in den lebenden
+     Dateien (`labkit/`, `README.md`, `AGENTS.md`, `docs/*.md`; nicht
+     `CHANGELOG.md` und `docs/usability/`, das sind historische Belege)
+     existiert, ist aktiv und trägt ihren Namen; Zwilling: korrekter Verweis
+     passiert. CS-Verweise nur auf Form (CS-Register liegt in den dotfiles).
+   - Alle Meldungen und Docstrings mit den englischen Namen; fehlende Namen
+     ergänzen (`preflight.py`, `finalize.py`).
+   - `audit.py` liest den Paketstandard; `experiment-preflight.agent.md` zeigt
+     auf dessen Abschnitte. `code_check.SEVERITY_LEGEND` (Handkopie) wird aus
+     `standard.md` geschnitten — erst ein Test, der die Gleichheit zeigt.
+   - Weitere Leser: `recheck.py`, `protocol-field-guide.md`,
+     `usability-task-*.md.template`, Fixtures in `tests/test_audit*.py`, die
+     Lese-Metrik in `usability.py` und `tests/test_agent_transcript.py` (zählt
+     „arbeitsstandard“; ohne Anpassung fällt sie still auf 0).
+   - `CHANGELOG.md` Breaking: Regelnamen englisch, audit liest den
+     Paketstandard; letzte Version, die `docs/arbeitsstandard.md` liest: 0.76.0.
+   - `docs/architecture.md`: „Where what lives“, „Known gap“, Schicht `rules`.
+5. **dotfiles:**
+   - `arbeitsstandard.md.template` schrumpft auf die Haus-Kapitel (deutsch),
+     Kopfzeile „Labor-Regeln: labkit `docs/standard.md`“.
+   - Register: umgezogene Zeilen `moved:labkit`.
+   - pre-commit ruft nur noch `~/projects/labkit/.venv/bin/python -m
+     labkit.rules` (`check` Haus, `ledger` gegen HEAD, `refs` über die
+     gestagten Dateien); `--register`, `--refs` und die Parserfunktionen
+     fliegen aus `arbeitsstandard-init.py`. Fehlt das venv, bricht der Hook laut
+     ab und nennt das Setup-Kommando.
+   - Leser der alten Namen nachziehen: `~/.claude/CLAUDE.md`,
+     `CLAUDE.md.template`, Skills `run-experiment` und `research-repo-init`
+     (widerspricht heute `docs/student-repos.md`), Agents `experiment-preflight`
+     und `code-check`, `~/work/CLAUDE.md`.
+   - **Schutz für alte Pins:** `--sync pull` von `docs/arbeitsstandard.md`
+     verweigert laut, wenn das Repo labkit unter 0.77 pinnt („erst den Pin
+     heben — Rollout“); sonst bekäme ein alter Audit still einen Standard ohne
+     Narbentabelle.
 
-**Aufwand:** Erstübersetzung ein LLM-Durchlauf plus ein Lesetag; die
-Mechanik (Umzug, Beleg-Schichten mit `lib scar`) ein bis zwei Nachmittage
-im Scaffolder. Reihenfolge: 1 und 2 zusammen (die Schichtung der 42 Belege
-ist Teil der Durchsicht beim Übersetzen), 3 nebenbei; `lib scar` und der
-`finalize`-Vorschlag kommen zuletzt, weil sie erst mit Nutzern außerhalb
-des Hauses etwas zu sammeln haben.
+### Phase 2 — Labor-Teil des Gerüstbauers ins Paket (0.78.0)
 
-**Auslöser:** die Entscheidung, labkit zu veröffentlichen.
-**Prüfstelle:** der erste Leser außerhalb des Hauses, oder eine
-Cloud-Session, die einer §-Regel folgen soll — die 53 §-Verweise in den
-Meldungen des Pakets zeigen bis dahin auf eine Datei, die nicht im Repo
-liegt.
+- `labkit/scaffold.py` (Schicht tools), Console script `labkit-init` mit
+  `lab`, `exp`, `thesis`. Portiert: `scaffold_repo`, `--exp`, `--thesis`.
+  Nicht portiert: `sync`, `--thread`, `refs`, `upsert_labs`, der
+  accessio-Import, die Shim-Erkennung.
+- Vorlagen nach `labkit/templates/`: Skript-Vorlagen (prepare, measure,
+  analyze, explore, test-area, quick), `test-shared-helpers`, `models.toml`,
+  `pyrightconfig`, `vscode-*`, eine englische `AGENTS.md`-Vorlage (erfüllt
+  Punkt 6), `thesis-starter/` ohne `material/` (fremde PDFs) und ohne die
+  Skill-Kopie — die legt der dotfiles-Wrapper dazu.
+- Pin: `importlib.metadata.version("labkit")` → GitHub-Tag `v<version>`;
+  `git+file://` fällt weg. `--labkit-ref REF` ausdrücklich für Entwicklung und
+  Tests. Bis der Tag gepusht ist, ist der Pin nicht installierbar: Phase 2
+  endet „ready to tag“, die Installations-Abnahme folgt nach Tag und Push.
+- Deutsche Texte (etwa 230 Zeilen) englisch, Hauspfade raus.
+- Tests: nur die Klassen zu init, exp, thesis aus `test_arbeitsstandard_init.py`.
+- `usability.py`: `STAMPED`/`SCAFFOLDER` aus dem Paket; `usability stage`
+  läuft dann ohne `~/.claude`.
+- Lebende Leser: `README.md` (Hook-Installation, Sync-/Shim-Absatz),
+  `docs/student-repos.md` (`labkit-init thesis`); `package-data` für
+  `docs/*.md`, `docs/*.tsv`, verschachteltes `templates/` erweitern.
+- dotfiles am selben Tag: `IN_LABKIT`/`master_path` und der Test, der den
+  labkit-Checkout liest, brechen beim Umzug; der Labor-Teil fliegt aus dem
+  Gerüstbauer, `lib init/exp` rufen `labkit-init`. Faden-Teil und Stempeln des
+  Coding-Style bleiben.
+
+**Prüfstelle:**
+- Hook grün, einmal zusätzlich `HOME=$(mktemp -d) .venv/bin/pytest -q`.
+- Wheel: exakte Dateiliste; verboten sind `~/work`, `/Users/max`, `webis`,
+  `~/.claude/resources`. Installiert in ein leeres venv laufen dort
+  `python -m labkit.rules check`, `show AS-015` und `labkit-init lab
+  --labkit-ref …`.
+- Register: jede AS-Kennung genau einmal aktiv — labkit oder Haus, nie beides
+  (liest die dotfiles nur, wenn vorhanden; sonst lauter Skip).
+- Alter Pin: Wegwerf-Klon auf `v0.76.0`, `lib sync pull` → laute
+  Verweigerung.
+- Ende-zu-Ende ohne `~/.claude`: `labkit-init lab`, `labkit-init exp`,
+  `preflight`, `labkit-audit --mode preflight`.
+- Vorher/nachher `lib init --lab` in zwei Temp-Ordner, `diff -r`; die
+  erwarteten Unterschiede stehen vorab als Liste im Commit.
+- dotfiles: `python -m labkit.rules check|ledger|refs` grün über Hausdokument
+  und Register.
+
+**Nicht hier (Zeile R):** Pins der 9 Labor- und 10 Thesis-Repos heben; Push
+und Tags.
 
 ## 6. Harness-unabhängig — Codex und andere Agenten
 
@@ -462,9 +540,10 @@ Harness-Erkennung. Die Claude-Hooks bleiben, wie sie sind.
 Messung hängt daran außer dem Start — die Agenten lasen `CLAUDE.md`, weil es
 so heißt, nicht weil sie Claude sind.
 
-**Auslöser:** derselbe wie Punkt 5 — die Veröffentlichung — oder der erste
-Mitarbeitende, der mit Codex im Labor arbeitet. **Prüfstelle:** `lib init`
-stempelt ab dann `AGENTS.md`; bis dahin steht hier der Plan.
+**Auslöser:** die `AGENTS.md`-Vorlage kommt mit Punkt 5, Phase 2
+(2026-10-09); `labkit audit` und die Harness-Erkennung bei der
+Veröffentlichung oder dem ersten Mitarbeitenden, der mit Codex im Labor
+arbeitet. **Prüfstelle:** `labkit-init lab` stempelt `AGENTS.md`.
 
 ## 7. Englische Kennungen: `[C]` · `[A]` · `[B]` statt `[K]` · `[S]` · `[W]` · `[N]`
 
