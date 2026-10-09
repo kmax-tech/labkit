@@ -403,17 +403,29 @@ Regeln, die Belege liegen schon getrennt (`arbeitsstandard.evidence.md`), etwa
 labkit- und dotfiles-Teil landen am selben Tag, sonst werden die
 dotfiles-Hooks rot.
 
-1. **Schnitt**, als Liste im Commit. Ins Paket: Vorspann (Kennungsregeln, ohne
-   Hauspfade), Kapitel 1, 2 A–G, 3, 5 ohne Haus-Glossar, 6, 7, aus Kapitel 4
-   AS-079 und AS-082 samt `experiment-note.md.template`. Im Haus: Kapitel 4
-   Wissensseite (AS-078, AS-080, AS-081), 2H Paper-Port, Haus↔Fach-Tabelle,
-   webis-Cluster, Geltung.
+1. **Schnitt** (erledigt 2026-10-09): `docs/standard-cut.tsv`, alle 102
+   Kennungen mit genau einer Seite — 95 `package`, 7 `house` (AS-002, AS-070,
+   AS-073, AS-078, AS-080, AS-081, AS-099). Geprüft: erkannte Köpfe =
+   Register, package ∩ house = ∅, package ∪ house = alle. AS-071/072 sind aus
+   2H herausgelöst; AS-049 wird harness-neutral (überwachte
+   Hintergrundausführung), AS-074/076 auf research record bzw. documented
+   limitation verallgemeinert, die Schreibregeln (AS-089, 093, 094, 100, 101)
+   gelten für Berichte, Protokolle und Agentenantworten, nicht für private
+   Notizen. Ohne Kennung bleiben im Haus: Haus-Glossar, webis-Cluster,
+   Geltung. Die Datei entfällt, sobald `rules.tsv` die Seite als Status trägt.
 2. **Inline-Belege raus** in die private Evidenz-Datei. Die Narbentabelle zu
    AS-015 bleibt als Tabelle von Fehlerklassen ohne Datum, der Audit braucht
    sie.
 3. **Übersetzen:** Einmal-Skript außerhalb des Pakets, je Regelblock ein
-   `labkit.llm`-Aufruf mit gepinntem Modell, Rohausgabe aufbewahrt; danach
-   Durchsicht Block für Block durch den Autor (etwa ein Lesetag).
+   Sonnet-Aufruf über `labkit.llm`, Rohausgabe aufbewahrt. Ein fester
+   Übersetzungsvertrag je Aufruf: normative Stärke erhalten (must / should /
+   may nicht angleichen); Kennungen, Aliase, Code, Pfade und Fachbegriffe
+   unverändert; nichts ergänzen oder verbessern; feste Terminologieliste;
+   Kapitelüberschrift und unmittelbarer Kontext mitgesendet; Ausgabe nur als
+   vollständiger Regelblock. Danach ein Opus-Konsistenzreview des
+   zusammengesetzten Standards (ausgelassene Einschränkungen, wechselnde
+   Begriffe, Widersprüche zwischen Regeln) und die Durchsicht Block für Block
+   durch den Autor (etwa ein Lesetag).
 4. **labkit:**
    - `labkit/docs/standard.md` und `labkit/docs/rules.tsv` (Spalten
      `id alias title status`, Titel englisch, `alias` behält die §-Kennungen),
