@@ -2,10 +2,13 @@
 
 The audit fields in a protocol claim "this code was audited". A stamp that
 covers less than the code determining the number is worse than none: it makes
-a stale audit look current. So the scope is everything whose content moves a
-reported number — the measure scripts, the analysis scripts, the repo-local
-`lib/` files they import (shared anchors and thresholds live there), and the
-labkit pin.
+a stale audit look current. The scope covers exactly: `scripts/*.py` and
+`analysis/*.py` of the area, the repo-local `lib/` and `src/` modules they
+import (shared anchors and thresholds live there), and the `labkit==` pin
+line when one is found. NOT covered: data files, prompt files, models.toml,
+the protocol — an unchanged stamp says the CODE is the same, not the
+inputs. Sibling: `promises.declared_scope_sha` is the same idea per
+promise, over its declared scope.
 
 Why a command and not a shell one-liner: the one-liner in the first draft of
 AS-019 Der Stempel deckt alles ab was

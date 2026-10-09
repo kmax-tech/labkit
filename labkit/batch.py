@@ -95,6 +95,11 @@ def row_runs(path: Path) -> RowRuns:
 class Store:
     """Append-only JSONL output with a lock, resume-by-id and a status view.
 
+    `mode="resume"` (default): appends, `pending()` skips the ids already
+    in the file — the same command again continues. `mode="produce"`:
+    writes a `.tmp` file, replaces the target on a clean exit, and never
+    resumes (`pending()` yields every record).
+
     `prov`: per-row provenance stamp. Provenance normally lives in the join
     row -> file -> runs.tsv -> config.json; copy, filter or merge the file and
     the join dies — the file goes silent about what produced it (that is how

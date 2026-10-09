@@ -75,7 +75,10 @@ def protocol_id_of(text: str) -> str | None:
 
 
 def main(argv: list[str]) -> int:
-    """intent-check; an unreadable run artefact ends it with a sentence."""
+    """intent-check: every registered promise id reports as a key of the
+    answering run's metrics.json. Exit 0 all keys present, 1 findings (a key
+    missing or extra), 2 no check (no bound run, unreadable artefact, no
+    stamped id). `finalize` treats 1 and 2 alike as a blocker."""
     try:
         return _main(argv)
     except ValueError as exc:  # read_metrics / RunConfigError

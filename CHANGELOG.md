@@ -5,6 +5,30 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.74.2 — 2026-10-09
+
+### Changed — entry points and docstrings (part 3 of the cold reading)
+
+- README: the Terms table now defines promise, criterion, admissibility,
+  branch, binding, answering run, derived run, scope hash vs stamp, and
+  freezing; "five layers; the first and the last cannot be forgotten";
+  `runlog`, `preflight`, `usability`, `labkit-audit` lines say what they
+  list or are not (`labkit-audit --mode preflight` is the agent audit, not
+  the `preflight` gate).
+- architecture: six links, one row per check, each row named by what it
+  checks; `intent-check` placed at both stages it runs.
+- runlog: the file list carries outputs.json and completion.json; the
+  index refers to `RUN_INDEX_COLS`; `_prov` / `continues` / `derived_from`
+  contrasted in one table; `Run.__init__` lists its ten refusals in order
+  with their exception types; `_finalize` says output problems are notes
+  and `completed` vouches for the record, not the outputs.
+- batch.Store names its two modes; finalize names station 1's checks with
+  their grades and station 5 as "frozen source and tracked files", the
+  summary line says "review the warnings above"; preflight's stations are
+  numbered 1–7 flat, the printed-never-counted lines marked, the early end
+  on an unparseable head named; scope_sha says exactly what the stamp
+  covers and what not; intent-check's exit codes 0/1/2 documented.
+
 ## 0.74.1 — 2026-10-09
 
 ### Changed — names (part 2 of the cold reading)

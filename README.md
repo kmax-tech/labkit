@@ -5,8 +5,9 @@ run (`runlog`), reading one (`runs`), the promise block (`promises`), the
 protocol checker (`protocol_check`), the checks (`intent_check`,
 `code_check`, `recheck`, `scope_sha`, `notes_check`), model calls (`llm`,
 `endpoint_lease`), resumable output (`batch`) and repo layout (`repo`).
-Two orchestrating commands — `preflight` (before freezing) and `finalize`
-(after the run) — sequence the checks at the two decision points. Layers,
+Two orchestrating commands — `preflight` (before a full run, and before
+freezing a protocol that freezes) and `finalize` (after the run, before a
+number is reported) — sequence the checks at the two decision points. Layers,
 the chain from promise to number, and the one home of each recurring
 question: `docs/architecture.md`.
 
@@ -39,21 +40,21 @@ sub-commands (all answer `--help`):
 ```bash
 protocol-check <PROTOCOL-*.md>...   # mandatory-field check (must/should contract)
 protocol-check --contract           # the head, the fields by exact label, the budgets — read before writing
-runlog [<area>]                     # open runs: run_id, state, script
+runlog [<area>]                     # the area's runs: open ones with state and pid, then the finished ones (what each is, committed or not, its command)
 runlog reindex <area>               # append rows for completed runs it missed
 intent-check <PROTOCOL-*.md>        # registered promise ids vs. metrics keys
 code-check <AREA>                   # intent-id check + audit bundle for the agent
 scope-sha [--area DIR]              # audit stamp over the code that determines a number
 protocol-fill <PROTOCOL> FIELD VAL  # fill one stamped placeholder field by label
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
-preflight <AREA>                    # pre-freeze gate: protocol + code + scope + dirty check
+preflight <AREA>                    # the mechanical pre-freeze gate: protocol + code + scope + dirty check + area tests (not the agent audit)
 finalize <AREA>                     # post-run gate: completion + intent-check + open fields
 finalize --if-reported <PROTOCOL>.. # the commit gate: finalize every protocol whose answer cites a run
 claude-hook pre-run|post-change|stop  # the Claude Code hooks a lab repo installs (stdin: event JSON)
 claude-hook sessions [--run RUN_ID]  # the session log the stop hook keeps (.git/labkit-sessions.jsonl): session, transcript, runs
 labkit-hooks install|check [REPO]   # install this labkit's hooks (pre-commit, core.hooksPath, claude-hook); rerun after a pin raise
-usability stage|score <DIR>        # probe lab repo for a cold agent; score its trace (time, steps, number)
-labkit-audit <AREA> --mode preflight|analysis   # experiment-preflight audit through any models.toml alias; exit 1 on a blocker OR a warning
+usability stage|score|trace <DIR>  # cold-agent probe: stage a probe lab repo, score the agent's trace (time, steps, number), read a trace
+labkit-audit <AREA> --mode preflight|analysis   # the AGENT audit (experiment-preflight) through any models.toml alias — not the `preflight` gate; exit 1 on a blocker OR a warning
 labkit-audit <AREA> --mode clarity              # a newcomer's reading of README, protocol and measure script (code-clarity); exit 1 on findings, never a gate
 labkit-params <AREA> [--run ID]     # the values the answering run ran with: home, meaning, tier (guaranteed / static evidence)
 ```
@@ -83,11 +84,13 @@ takes the wall-clock from the stamps, and records the labkit version, so
 two versions can be compared on the same task. Target line: one kept
 number under five minutes.
 
-## Enforcement — four layers, two of them cannot be forgotten
+## Enforcement — five layers; the first and the last cannot be forgotten
 
 A rule the agent has to remember is the weak layer: it lives in the skill
 text and dies with a long session. The layers that do not depend on
-remembering (2026-10-05):
+remembering (2026-10-05) — `runlog.Run` holds because every run passes
+through it, the git pre-commit hook because every commit does; the three
+Claude hooks hold only in a Claude Code session:
 
 | Layer                | Where                                                      | Holds when                                            |
 |----------------------|------------------------------------------------------------|-------------------------------------------------------|
@@ -141,8 +144,9 @@ Install (what `arbeitsstandard-init.py` stamps into `.claude/settings.json`):
 ## Terms
 
 One word, one thing. Everything below occurs in more than one module, so it
-is coined here and explained nowhere else; the per-field explanations live in
-`protocol-field-guide.md`.
+is coined here; the promise kinds and the block are specified in
+`docs/promise-block.md`, which run answers in `docs/protocol-run-binding.md`,
+and the per-field explanations live in `protocol-field-guide.md`.
 
 | Term                | Means                                                                                               |
 |---------------------|-----------------------------------------------------------------------------------------------------|
@@ -156,8 +160,16 @@ is coined here and explained nowhere else; the per-field explanations live in
 | **documented runs** | the runs listed by hand in a protocol's `## Runs` section                                           |
 | **intent id**       | the stable id of one checked promise (`[C1]`, `[A1]`, `[B1]`; kinds in `docs/promise-block.md`)   |
 | **bundle**          | the current protocol + scripts + extracted facts, packed for an audit agent (`code-check --bundle`) |
-| **frozen**          | unchangeable past a declared point (`frozen = true` in the protocol head)                         |
-| **scope hash**      | the hash over the input scope a run's number rests on (`scope_sha`)                                 |
+| **frozen**          | unchangeable past a declared point (`frozen = true` in the protocol head); *freezing* is setting it, after `preflight` and the audits |
+| **promise**         | one checked commitment of the protocol: an intent id with a metrics key, a sentence, a scope and constants (`[[promise]]` table) |
+| **criterion**       | the promises of kind C — success or failure, decided after the run                                 |
+| **admissibility**   | the promises of kind A — what must hold before a criterion may be read; one fails, every C key is None |
+| **branch**          | a promise of kind B — the registered sentence per outcome (`b1_branch`)                            |
+| **binding**         | a run's record of the protocol id it ran under (`config.json`); the choice of a run is a filter on it |
+| **answering run**   | the newest completed run bound to the protocol that reports an intent key — the one every check holds the protocol to (`runs.bound_answering_run`) |
+| **derived run**     | a run that re-evaluates another run's rows (`derived_from`); it makes no model call and records no model |
+| **scope hash**      | per promise: the hash over its declared scope (`declared_scope_sha`), recorded by the run, held by `finalize` |
+| **stamp**           | per area: the hash over every file that determines a number (`scope-sha`), written into an audit field, held by `runlog` at the start of a full run |
 
 **"Ledger" is not used:** it named three different things — the run
 index, a run's metrics, and the hand-written `## Runs` section.

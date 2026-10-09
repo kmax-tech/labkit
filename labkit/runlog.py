@@ -4,14 +4,34 @@ Convention (AS-043 Runs über `runlog`, AS-079 Self-contained Experiment-Bereich
 `with runlog.run(...)`. Each run gets a self-contained dir and one append-only
 run-index row; PROTOCOL-<task>.md cites run_ids instead of pasting numbers.
 
-    runs/<run_id>/config.json      frozen inputs: params + git state + data
-    runs/<run_id>/metrics.json     outputs you declared
+    runs/<run_id>/config.json      the record at start: config, data, git state,
+                                   env, models resolved, the binding (protocol id)
+    runs/<run_id>/metrics.json     the numbers reported via r.metrics()
+    runs/<run_id>/outputs.json     the files registered via r.output(), as the
+                                   run left them (sha, lines, rows_from, continues)
+    runs/<run_id>/completion.json  confirmed completion: finish time, end git
+                                   state, note, the runs this one continues
     runs/<run_id>/script-source.py  the script AS IT RAN (untracked or dirty
                                    code is in no commit and in no diff)
     runs/<run_id>/uncommitted.patch  the diff, IF the repo was dirty (tracked files only)
     runs/<run_id>/source-untracked/  untracked files next to the script, verbatim
     runs/<run_id>/<raw files>      verbatim model output etc. (save_raw)
-    runs.tsv                       run index: run_id git script data config metrics note
+    runs.tsv                       run index, one row per completed run
+                                   (columns: RUN_INDEX_COLS) — derived, never a source
+
+Three ways a run depends on another run's rows — not one:
+
+    _prov          per row; the SCRIPT sets it (`batch.Store(prov=...)`), it
+                   names the run and model that wrote the row; read by
+                   `batch.row_runs`, held by `finalize`
+    continues      per run; runlog RECORDS it at finalize from the rows a
+                   registered .jsonl output already held (outputs.json per
+                   file, completion.json as the union) — a resumed file;
+                   the earlier run need not be completed; carries no model
+    derived_from   per run; the SCRIPT declares it (`runlog.run(...,
+                   derived_from=ID)`), config.json holds it; the parent must
+                   be completed; the run makes no model call and records no
+                   model — `runs.model_provenance_run` walks this key alone
 
 Usage:
     import runlog
@@ -30,8 +50,10 @@ a leak raises before the run starts, rather than inflating a score nobody can
 explain later. Recording the files is what makes "which data was that?"
 answerable six weeks on; the split keys are what make it answerable by a tool.
 
-An incomplete run leaves its dir with config.json but without the required
-completion markers — visible, not silent. The run-index row is written on
+A run directory exists only with its config.json (0.74.0: everything that
+can fail is read before mkdir, a failure while writing the record removes
+the directory). An incomplete run leaves its dir with config.json but
+without the required completion markers — visible, not silent. The run-index row is written on
 clean exit only. States: completed · running · unknown · crashed ·
 unfinalized · corrupt · unreadable (config.json damaged) · legacy (written
 before labkit 0.21).
@@ -886,7 +908,23 @@ def _constants_refusal(block: "promises.PromiseTables", config: dict) -> str | N
 
 
 class Run:
-    """One measure run: its directory, its frozen config, the outputs it registers and the metrics it reports."""
+    """One measure run: its directory, its frozen config, the outputs it
+    registers and the metrics it reports.
+
+    `__init__` refuses, in this order, BEFORE the directory exists:
+
+        1. derived_from names no completed run       → SystemExit
+        2. protocol binding unresolvable             → SystemExit
+        3. frozen (or seconds) without promise tables → SystemExit
+        4. a registered constant missing/different   → SystemExit
+        5. detach gate (long run under Claude Code)  → SystemExit
+        6. run index header unknown                  → RuntimeError
+        7. data split leakage                        → RuntimeError
+        8. freeze gate (unfrozen full run, stale stamp) → SystemExit
+        9. git / env / model alias read              → their own errors
+       10. mkdir, then the record; a failure here removes the dir
+
+    `class run` is the context manager around this; every check is here."""
 
     def __init__(
         self,
@@ -1080,6 +1118,11 @@ class Run:
         self._note = text
 
     def _finalize(self) -> None:
+        """outputs.json, metrics.json, completion.json, the index row — in that
+        order (a break after metrics leaves `unfinalized`). An output problem
+        (file absent at the end, a damaged row) is a NOTE in outputs.json and
+        does not stop completion: `completed` vouches for the run's record,
+        not for its outputs — `finalize` reads outputs.json and holds them."""
         self._metrics.setdefault("duration_s", round(time.monotonic() - self._t0, 1))
         continues: set[str] = set()
         if self._outputs:
@@ -1203,7 +1246,10 @@ def active(base_dir: str | Path) -> list[dict]:
 
 
 class run:
-    """Context manager: `with runlog.run("name", config={...}, data={...}) as r:`"""
+    """Context manager: `with runlog.run("name", config={...}, data={...}) as r:`
+    — every refusal and every record is `Run.__init__` (see its docstring);
+    `__exit__` finalizes on a clean exit, a crash leaves the dir without
+    metrics.json (visible)."""
 
     def __init__(
         self,

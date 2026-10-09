@@ -6,18 +6,25 @@ exit code that reflects the worst finding.
 
     preflight <AREA> [--protocol PROTOCOL-*.md]
 
-Exit codes: 0 clean, 1 findings (at least one blocker), 2 usage error.
+Exit codes: 0 no blocker (warnings may stand), 1 at least one blocker,
+2 usage error. One early end: a protocol head that does not parse ends
+station 1 with exit 1 and nothing after it runs.
 
 What it runs, in order:
-  1. protocol-check   mandatory fields, placeholders
-  1b. cost tier       `cost` in the protocol head — `seconds` makes the agent
+  1. protocol-check   mandatory fields, placeholders; an unparseable head
+                      ends here
+  2. cost tier        `cost` in the protocol head — `seconds` makes the agent
                       audit optional before freezing (one audit after the
                       first run suffices, AS-017 Die Zahl der Audits folgt der Kostenstufe); `minutes`/`hours` ask
-                      for it here; an unfilled cost counts as `hours`
-  2. code-check       intent ids against the code
-  3. scope-sha        audit stamp over the input scope
-  4. dirty check      uncommitted changes (warning, not a blocker)
-  5. area tests       tests/test_*<area>*.py via pytest — the resolution
+                      for it here; an unfilled cost counts as `hours`.
+                      Printed, never counted — "audit due" is a reminder,
+                      not a blocker; so is the cold-reader line (AS-102)
+  3. code-check       intent ids against the code; a line starting with
+                      `BLOCKER` is a blocker, any other a warning
+  4. scope-sha        audit stamp over the input scope
+  5. working tree     uncommitted changes (warning, not a blocker)
+  6. hooks            the installed labkit hooks match this labkit (warning)
+  7. area tests       tests/test_<NN>_<name>.py via pytest — the resolution
                       check and the parser cases as a permanent test
                       (AS-016 Auflösungsprobe vor dem Einfrieren); a failing test is a blocker, a missing
                       file a warning — a blocker once frozen = true
@@ -180,7 +187,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
     ):
         print("  ok")
 
-    # -- 1b. cost tier ------------------------------------------------------
+    # -- 2. cost tier (printed, never counted) ------------------------------
     print("── cost tier ──")
     tier = report.head.cost
     if tier == "seconds":
@@ -205,7 +212,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
         "evidence, never blocks"
     )
 
-    # -- 2. code-check (intent ids) ---------------------------------------
+    # -- 3. code-check (intent ids) ---------------------------------------
     print("── code-check: intent ids ──")
     findings = check_intent_ids(area, protocol)
     for f in findings:
@@ -217,7 +224,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
     if not findings:
         print("  ok")
 
-    # -- 3. scope-sha ------------------------------------------------------
+    # -- 4. scope-sha ------------------------------------------------------
     print("── scope-sha ──")
     try:
         sha, _, _ = area_stamp(area)
@@ -225,7 +232,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
     except ValueError:
         print(f"  no scripts matching {AREA_GLOBS} in {area} (skipped)")
 
-    # -- 4. dirty check ----------------------------------------------------
+    # -- 5. working tree ---------------------------------------------------
     print("── working tree ──")
     repo = layout_root(area)
     if _is_dirty(repo):
@@ -235,7 +242,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
     else:
         print("  clean")
 
-    # -- 4b. hooks -----------------------------------------------------------
+    # -- 6. hooks ----------------------------------------------------------
     # The gates that do not depend on the agent remembering: a repo without
     # them (or with an older labkit's) runs on good intentions only.
     print("── hooks ──")
@@ -252,7 +259,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
         else:
             print("  installed (this labkit's pre-commit, core.hooksPath, claude-hook)")
 
-    # -- 5. area tests -----------------------------------------------------
+    # -- 7. area tests -----------------------------------------------------
     print("── tests ──")
     tests = area_tests(area, repo)
     frozen = report.head is not None and report.head.frozen

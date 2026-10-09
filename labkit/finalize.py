@@ -11,13 +11,19 @@ What it runs, in order (the same numbers as `finalize_area`, which shows
 each step's condition):
   0. protocol       the named PROTOCOL-*.md or the area's only one, and its
                     settings block — the only early end (exit 2)
-  1. completion     the measurement run that answers — the newest completed
-                    bound run reporting intent keys, the same choice as
-                    intent-check — and every later step checks THAT run
-  2. intent-check   every registered promise has a metrics key (and vice versa)
+  1. answering run  the run that answers — the newest completed bound run
+                    reporting an intent key, the same choice as intent-check
+                    — and every later step checks THAT run. Then its record:
+                    the run the answer cites is this one (blocker), the
+                    `Answering run` field names it (blocker/warning), its
+                    JSONL rows come from this run, the runs it continues or
+                    its derived_from lineage (blocker), a model record stands
+                    in its lineage (warning), the arm lines match (warning)
+  2. intent-check   every registered promise has a metrics key (and vice
+                    versa); skipped when the protocol registers no id
   3. declared scopes  every declared promise scope unchanged since the run
   4. open fields    protocol fields still holding a placeholder
-  5. provenance     at protocol `cost = "seconds"`: the run froze its source
+  5. frozen source  at protocol `cost = "seconds"` only: the run froze its source
                     (`data=` in config.json) and every source and output file
                     is tracked in git — the two of the three questions the
                     agent audit kept asking that a machine can answer (AS-017
@@ -32,8 +38,13 @@ each step's condition):
                     alarm rate is known (2026-10-05; the denominator class
                     was 31 of 171 audit findings)
 
+Three grades, decided where each finding is made and summed at the end:
+`Findings.block` (exit 1), `Findings.warn` (counted, exit 0), a plain
+print (a note, uncounted). "0 blockers, N warnings" sums the warnings of
+every station, not the open fields alone.
+
 What it does NOT do: fill fields, edit the protocol, or commit. It is a
-read-only findings.
+read-only gate that reports findings.
 """
 
 from __future__ import annotations
@@ -605,7 +616,7 @@ def report(findings: Findings) -> int:
         return 1
     if findings.warnings:
         print(
-            f"finalize: 0 blockers, {findings.warnings} warning(s) — review the open fields before reporting."
+            f"finalize: 0 blockers, {findings.warnings} warning(s) — review the warnings above before reporting."
         )
         return 0
     print("finalize: all clear.")
@@ -679,7 +690,7 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
     check_open_fields(findings, chosen, text, head)
 
     # 5. provenance — only for cost = seconds, and only with a run
-    header("provenance")
+    header("frozen source and tracked files")
     if head.cost != "seconds":
         print(
             "  n/a — protocol cost is not 'seconds' (the agent audit covers provenance there)"
