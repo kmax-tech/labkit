@@ -412,7 +412,11 @@ dotfiles-Hooks rot.
    limitation verallgemeinert, die Schreibregeln (AS-089, 093, 094, 100, 101)
    gelten für Berichte, Protokolle und Agentenantworten, nicht für private
    Notizen. Ohne Kennung bleiben im Haus: Haus-Glossar, webis-Cluster,
-   Geltung. Die Datei entfällt, sobald `rules.tsv` die Seite als Status trägt.
+   Geltung. Die Haus↔Fach-Tabelle kommt ins Paket (2026-10-09) als „Labkit
+   terms and established terminology“ — sie kennzeichnet die Prägungen
+   maßgeblich; das leere Kern-Glossar ist ein Gerüstbaustein und zieht in
+   Phase 2 nach `labkit/templates/`. Blockmanifest: `docs/standard-blocks.tsv`
+   (jede Quellzeile in genau einem Block, Seite, Zielposition). Die Datei entfällt, sobald `rules.tsv` die Seite als Status trägt.
 2. **Inline-Belege raus** in die private Evidenz-Datei. Die Narbentabelle zu
    AS-015 bleibt als Tabelle von Fehlerklassen ohne Datum, der Audit braucht
    sie.

@@ -1,0 +1,144 @@
+block	lines_at_a28df38	sha256_12	kind	side	rule_ids	flags	target
+B001	1-2	a4f3d5f95388	heading	package		adapt	1
+B002	3-10	d28785db36b4	prose	house			
+B003	11-16	6914b4a56fb2	prose	package		adapt,house-refs	2
+B004	17-40	0857bed29be9	prose	house			
+B005	41-64	0f2f3a192ecf	prose	package		adapt,house-refs	3
+B006	65-66	f52d711103d5	separator	package			4
+B007	67-160	43d204b1c207	generated	generated			
+B008	161-162	f52d711103d5	separator	package			5
+B009	163-163	b6b0c9f0af5a	heading	package			6
+B010	164-170	89c6152fd95c	prose	package			7
+B011	171-181	484dc6bf9aa9	rule	package	AS-001		8
+B012	182-192	367b5e479e62	rule	house	AS-002		
+B013	193-194	71cb3f8bf368	heading	package			9
+B014	195-238	771c35006bec	prose	package			10
+B015	239-243	a0dbe2e7fa51	prose	package			11
+B016	244-255	e1a3ff555484	prose	house			
+B017	256-257	8c5dd00c12a1	heading	package			12
+B018	258-263	271ba45f95f6	rule	package	AS-003	house-refs	13
+B019	264-302	d0ca47c10104	rule	package	AS-004		14
+B020	303-305	436c3662a688	rule	package	AS-005		15
+B021	306-309	8e90b2a31957	rule	package	AS-006		16
+B022	310-321	2e0f6845655e	rule	package	AS-007		17
+B023	322-346	bcf1b4c44629	rule	package	AS-008		18
+B024	347-354	06360450a169	rule	package	AS-009		19
+B025	355-359	7a9ca954acf3	rule	package	AS-010		20
+B026	360-389	0effe8a050e7	rule	package	AS-011		21
+B027	390-395	f911f856b67f	rule	package	AS-012		22
+B028	396-401	25217c4dd424	rule	package	AS-013		23
+B029	402-407	4a1c08e0bf09	rule	package	AS-014		24
+B030	408-488	60884e09f285	rule	package	AS-015		25
+B031	489-504	6be15bbd78c8	rule	package	AS-016		26
+B032	505-522	cb8cf7d5e4fc	rule	package	AS-102		27
+B033	523-559	5a98c82d87e7	rule	package	AS-017		28
+B034	560-598	4c998725cd2e	rule	package	AS-018		29
+B035	599-617	050707efaead	rule	package	AS-019		30
+B036	618-619	1aa69933c125	heading	package			31
+B037	620-632	3af39c3c91d0	rule	package	AS-020		32
+B038	633-642	4e086ccbb435	rule	package	AS-021		33
+B039	643-659	dee3e7ca3211	rule	package	AS-022		34
+B040	660-666	3b9766968658	rule	package	AS-023		35
+B041	667-669	d46c9167edbd	rule	package	AS-024		36
+B042	670-679	e50522d07531	rule	package	AS-025		37
+B043	680-685	5cf7908ca43c	rule	package	AS-026		38
+B044	686-687	38f83557a477	heading	package			39
+B045	688-699	0537de2c1fd3	rule	package	AS-027	house-refs	40
+B046	700-721	28dc69cf88d8	rule	package	AS-028		41
+B047	722-735	f31e64d1d7ff	rule	package	AS-029		42
+B048	736-757	457b3b0f69bb	rule	package	AS-030		43
+B049	758-768	cd55c01f45c4	rule	package	AS-031	house-refs	44
+B050	769-777	b981897e49f5	rule	package	AS-032		45
+B051	778-785	14520f92b204	rule	package	AS-033		46
+B052	786-794	cb745ead4b49	rule	package	AS-034		47
+B053	795-800	241cb94dccd9	rule	package	AS-035		48
+B054	801-804	c5de1829cf1c	rule	package	AS-036		49
+B055	805-809	a7d843722cf9	rule	package	AS-037		50
+B056	810-818	a6126e4e6008	rule	package	AS-038		51
+B057	819-826	27fe1817df99	rule	package	AS-039		52
+B058	827-828	58e1fe247e57	heading	package			53
+B059	829-838	b3d051502a25	rule	package	AS-040		54
+B060	839-859	c1096329866a	rule	package	AS-041		55
+B061	860-864	e378262e29bc	rule	package	AS-042		56
+B062	865-889	e93c76d0a3e3	rule	package	AS-043		57
+B063	890-895	fe32fe4e3029	rule	package	AS-044		58
+B064	896-900	08e42bc2fbf4	rule	package	AS-045		59
+B065	901-915	5de5837e9bde	rule	package	AS-046	house-refs	60
+B066	916-923	dbe4aaea753d	rule	package	AS-047		61
+B067	924-928	d155defb3fd4	rule	package	AS-048		62
+B068	929-934	3152d4d57ac9	rule	package	AS-049		63
+B069	935-953	647e7d8d1fb0	rule	package	AS-050		64
+B070	954-955	35b42722da52	heading	package			65
+B071	956-959	2403e49ce323	prose	package			66
+B072	960-966	4d7191222b22	rule	package	AS-051		67
+B073	967-972	c36e4eefbc8f	rule	package	AS-052		68
+B074	973-981	f16fe191b3d2	rule	package	AS-053		69
+B075	982-985	1166516dd12e	rule	package	AS-054		70
+B076	986-991	817dc1097007	rule	package	AS-055		71
+B077	992-996	5dc9b7c9d346	rule	package	AS-056		72
+B078	997-1001	b4cb734d6bab	prose	package			73
+B079	1002-1003	6d1866c3e365	heading	package			74
+B080	1004-1007	6fcbea621722	prose	package			75
+B081	1008-1013	f7d5d0c6d8d9	rule	package	AS-057		76
+B082	1014-1018	b827c9af7545	rule	package	AS-058		77
+B083	1019-1031	3e85ebf94e10	rule	package	AS-059		78
+B084	1032-1036	c5e82a801e21	rule	package	AS-060		79
+B085	1037-1042	8916225a2b95	rule	package	AS-061		80
+B086	1043-1050	503a2ddff2b5	rule	package	AS-062		81
+B087	1051-1059	3429e8971ddd	rule	package	AS-063	house-refs	82
+B088	1060-1082	4346a25c6bf0	rule	package	AS-064		83
+B089	1083-1086	8e220b91951e	rule	package	AS-065		84
+B090	1087-1088	11a3b8a6c372	heading	package			85
+B091	1089-1098	7274c9608f92	prose	package			86
+B092	1099-1101	73e356f0daaa	rule	package	AS-066		87
+B093	1102-1115	030eb9080846	rule	package	AS-067	house-refs	88
+B094	1116-1120	8ba18f6fec5e	rule	package	AS-068		89
+B095	1121-1125	cf2497dfc4fd	rule	package	AS-069		90
+B096	1126-1127	8151292f421e	heading	package			91
+B097	1128-1133	239197a29992	prose	house			
+B098	1134-1141	a81ad2a5944d	rule	house	AS-070		
+B099	1142-1152	f4db3b1bb846	rule	package	AS-071		92
+B100	1153-1158	4126bc688eb6	rule	package	AS-072		93
+B101	1159-1163	3d2cd07c8a9e	rule	house	AS-073		
+B102	1164-1164	7cedbe885823	heading	package			94
+B103	1165-1166	9253db2d6b22	rule	package	AS-074		95
+B104	1167-1174	81716a4a61ef	rule	package	AS-075		96
+B105	1175-1177	6be81f5900ca	rule	package	AS-076		97
+B106	1178-1186	75786bf58c35	rule	package	AS-077		98
+B107	1187-1188	a9d44503e1c7	heading	package			99
+B108	1189-1198	5096b893dafc	prose	house			
+B109	1199-1199	c08f009483ab	rule	house	AS-078		
+B110	1200-1201	e7b5d68b12fb	rule	package	AS-079		100
+B111	1202-1202	af76959e00d9	heading	house			
+B112	1203-1214	efb4a00bb956	prose	house			
+B113	1215-1255	72e7675e267a	rule	house	AS-080		
+B114	1256-1274	0314315bba09	rule	house	AS-081		
+B115	1275-1306	1bc71009c1dd	rule	package	AS-082		101
+B116	1307-1308	911e8ce5d3a2	heading	package			102
+B117	1309-1317	58729df8ed49	prose	package			103
+B118	1318-1324	1dc58dddb226	rule	package	AS-083		104
+B119	1325-1347	1c93a947d8f4	rule	package	AS-084	house-refs	105
+B120	1348-1351	4aada6235391	rule	package	AS-085		106
+B121	1352-1361	cea94c7f692d	rule	package	AS-086		107
+B122	1362-1364	7e566102208a	rule	package	AS-087		108
+B123	1365-1371	2c29d0f93b54	rule	package	AS-088	house-refs	109
+B124	1372-1380	e1d9ed9b5729	prose	package			110
+B125	1381-1382	73ec45a55f49	heading	package		adapt	111
+B126	1383-1407	5edd6517cc3e	prose	package			112
+B127	1408-1408	b2e02181b1d2	heading	house		phase2-template	
+B128	1409-1413	bfe4ca33813f	prose	house			
+B129	1414-1414	c19c4250ca64	heading	package			113
+B130	1415-1416	f2e57bba66df	rule	package	AS-089		114
+B131	1417-1419	b8fa3bafbd59	rule	package	AS-090		115
+B132	1420-1425	2df1c80e40d6	rule	package	AS-091		116
+B133	1426-1433	f8e70b32b717	rule	package	AS-092		117
+B134	1434-1437	f8230b302848	rule	package	AS-093		118
+B135	1438-1441	d1be00e1dcec	rule	package	AS-094		119
+B136	1442-1462	28f0a4a34c1b	rule	house	AS-099		
+B137	1463-1476	ec381da77286	rule	package	AS-100		120
+B138	1477-1485	6be59534d9a2	rule	package	AS-101		121
+B139	1486-1486	5148029ebd1d	heading	package			122
+B140	1487-1488	2d2f3fbefd38	rule	package	AS-095		123
+B141	1489-1491	05e9c1e7ba1a	rule	package	AS-096		124
+B142	1492-1495	9a35fc7efb7b	rule	package	AS-097		125
+B143	1496-1503	6048196e4dd8	rule	package	AS-098		126
