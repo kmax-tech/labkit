@@ -1,0 +1,9 @@
+{
+  // the repo's own environment (AGENTS.md "Setup and tests")
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  // Testing view (beaker icon): run / debug single tests; debug uses the
+  // "debug-test" configuration in launch.json, which stops at the failure
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": ["tests"]
+}

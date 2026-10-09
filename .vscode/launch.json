@@ -1,0 +1,71 @@
+{
+  // Debug configurations: Run and Debug view (Cmd+Shift+D), pick one, F5.
+  // LABKIT_TEST_RAISE=1 makes a failing test stop the debugger at the failure
+  // (tests/conftest.py) — tick "Uncaught Exceptions" in the Breakpoints panel.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // used by the Testing view's "Debug Test" button as well
+      "name": "Test: debug (stop at failure)",
+      "type": "debugpy",
+      "request": "launch",
+      "purpose": ["debug-test"],
+      "console": "integratedTerminal",
+      "env": { "LABKIT_TEST_RAISE": "1" },
+      "justMyCode": true
+    },
+    {
+      "name": "Test: this file",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-q", "${file}"],
+      "console": "integratedTerminal",
+      "env": { "LABKIT_TEST_RAISE": "1" }
+    },
+    {
+      "name": "Test: by name (-k)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-q", "tests", "-k", "${input:testName}"],
+      "console": "integratedTerminal",
+      "env": { "LABKIT_TEST_RAISE": "1" }
+    },
+    {
+      // a console command from its entry point; arguments asked for at start
+      "name": "Command: labkit module",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "${input:command}",
+      "args": "${command:pickArgs}",
+      "console": "integratedTerminal"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "testName",
+      "type": "promptString",
+      "description": "pytest -k expression (test or class name)"
+    },
+    {
+      "id": "command",
+      "type": "pickString",
+      "description": "labkit command module (see [project.scripts] in pyproject.toml)",
+      "options": [
+        "labkit.audit",
+        "labkit.calltree",
+        "labkit.code_check",
+        "labkit.finalize",
+        "labkit.intent_check",
+        "labkit.notes_check",
+        "labkit.params",
+        "labkit.preflight",
+        "labkit.protocol_check",
+        "labkit.protocol_fill",
+        "labkit.runlog",
+        "labkit.scope_sha"
+      ]
+    }
+  ]
+}
