@@ -31,9 +31,10 @@ debug module *args:
 calltree command *args:
     {{venv}}/labkit-calltree {{command}} -- {{args}}
 
-# runs the module FILE, not -m: with -m, --include_files keeps nothing (viztracer 1.1.1)
+# runs the module FILE, not -m: with -m, --include_files keeps nothing (viztracer 1.1.1);
+# the leading - opens the timeline even when the command exits non-zero
 
 # the run as a timeline in the browser: just timeline protocol_check --contract
 timeline module *args:
-    {{venv}}/viztracer -q --include_files ./labkit -o /tmp/labkit-timeline.json -- labkit/{{module}}.py {{args}}
+    -{{venv}}/viztracer --quiet --include_files ./labkit -o /tmp/labkit-timeline.json -- labkit/{{module}}.py {{args}}
     {{venv}}/vizviewer /tmp/labkit-timeline.json
