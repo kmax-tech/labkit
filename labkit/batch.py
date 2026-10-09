@@ -14,6 +14,10 @@ killed a scoring run at 49 of 96 items; only the resume made it a non-event).
             store.append(score(rec))                # one line, flushed
     print(store.status(records))
 
+Before a run counts as complete, balance the file against its input — each
+item on exactly one row, every row from the current prompt — and let a gap
+stop the run (`Store.ledger`, `Ledger.require_complete`).
+
 Resuming is re-running the same command: ids in the output file are skipped.
 Records are matched by `id_key` (default "id"), so the input file and the
 output file are joined on it — a partial output stays a valid output.
@@ -31,7 +35,10 @@ import sys
 from dataclasses import dataclass
 import time
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Mapping
+
+# A row without the expected field differs from every expected value, None included.
+_ABSENT = object()
 
 
 def _parse(text: str, path: Path) -> tuple[list[dict], int | None]:
@@ -99,6 +106,90 @@ def _duplicate_ids(rows: list[dict], id_key: str) -> list:
         if id_key in r:
             seen[r[id_key]] = seen.get(r[id_key], 0) + 1
     return [i for i, n in seen.items() if n > 1]
+
+
+@dataclass(frozen=True)
+class Ledger:
+    """The balance of an output file against its input: every input item on
+    exactly one row, no row without an input item, every row made from the
+    current input. Guaranteed tier — exact, by id, no judgement about what
+    a row says (that stays the experiment's, AS-023 Kein stiller Verlust).
+
+    Attributes:
+        path: the output file balanced.
+        items: input records.
+        rows: output rows read (the `_meta` header and a torn last line
+            are not rows).
+        missing: input ids without a row, in input order.
+        duplicate: ids on more than one row — a set count alone would let
+            a missing item and a doubled one cancel out (2026-10-09,
+            fallacy-dataset-generation, area 01).
+        stray: row ids the input does not have.
+        unidentified: rows without the id field.
+        stale: field -> ids whose row carries another value than the
+            current input expects for it (an older prompt, an edited item).
+    """
+
+    path: Path
+    items: int
+    rows: int
+    missing: list
+    duplicate: list
+    stray: list
+    unidentified: int
+    stale: dict[str, list]
+
+    @property
+    def ok(self) -> bool:
+        """True only when no gap of any kind is listed."""
+        return not (
+            self.missing
+            or self.duplicate
+            or self.stray
+            or self.unidentified
+            or any(self.stale.values())
+        )
+
+    def counts(self) -> dict[str, int]:
+        """The balance as numbers for `run.metrics(**ledger.counts())`."""
+        out = {
+            "n_items": self.items,
+            "n_rows": self.rows,
+            "n_missing": len(self.missing),
+            "n_duplicate": len(self.duplicate),
+            "n_stray": len(self.stray),
+            "n_unidentified": self.unidentified,
+        }
+        for field, ids in self.stale.items():
+            out[f"n_stale_{field}"] = len(ids)
+        return out
+
+    def require_complete(self) -> None:
+        """Raise SystemExit naming every gap, unless the balance holds.
+        Called inside `with runlog.run(...)`, the raise keeps the run from
+        completing: no completion.json, no runs.tsv row."""
+        if self.ok:
+            return
+        parts = [
+            f"{name} {len(ids)} (e.g. {ids[:5]})"
+            for name, ids in (
+                ("missing", self.missing),
+                ("duplicate", self.duplicate),
+                ("stray", self.stray),
+            )
+            if ids
+        ]
+        if self.unidentified:
+            parts.append(f"rows without an id {self.unidentified}")
+        parts += [
+            f"stale {field} {len(ids)} (e.g. {ids[:5]})"
+            for field, ids in self.stale.items()
+            if ids
+        ]
+        raise SystemExit(
+            f"{self.path}: the output does not balance its {self.items} input "
+            f"items — {'; '.join(parts)}. The run is NOT complete."
+        )
 
 
 class Store:
@@ -275,6 +366,56 @@ class Store:
         if self.lock.exists():
             info["locked_by"] = self.lock.read_text(encoding="utf-8").strip()
         return info
+
+    def ledger(
+        self,
+        records: Iterable[dict],
+        expect: Mapping[str, object] | None = None,
+    ) -> Ledger:
+        """Balance the output against the input `records` (see Ledger).
+
+        `expect`: field -> the value every row must carry in it. A value is
+        either a constant (a prompt hash) or a function of the row's input
+        record, joined by id (`lambda rec: item_sha(rec)`). Only rows whose
+        id is in the input are checked; a row without the field is stale.
+
+            ledger = store.ledger(records, expect={"prompt_sha": PROMPT_SHA})
+            run.metrics(**ledger.counts())
+            ledger.require_complete()
+        """
+        records = list(records)
+        doubled = _duplicate_ids(records, self.id_key)
+        if doubled:
+            raise ValueError(
+                f"ledger: the input itself carries ids twice ({doubled[:5]}) — "
+                f"a balance by id needs unique input ids"
+            )
+        by_id = {r[self.id_key]: r for r in records}
+        rows = self.records()
+        row_ids = {r[self.id_key] for r in rows if self.id_key in r}
+        stale: dict[str, list] = {}
+        for field, want in (expect or {}).items():
+            stale[field] = [
+                r[self.id_key]
+                for r in rows
+                if r.get(self.id_key) in by_id
+                and r.get(field, _ABSENT)
+                != (want(by_id[r[self.id_key]]) if callable(want) else want)
+            ]
+        return Ledger(
+            path=self.path,
+            items=len(records),
+            rows=len(rows),
+            missing=[r[self.id_key] for r in records if r[self.id_key] not in row_ids],
+            duplicate=_duplicate_ids(rows, self.id_key),
+            stray=[
+                i
+                for i in dict.fromkeys(r[self.id_key] for r in rows if self.id_key in r)
+                if i not in by_id
+            ],
+            unidentified=sum(1 for r in rows if self.id_key not in r),
+            stale=stale,
+        )
 
 
 def write_dataset(

@@ -106,6 +106,21 @@ mechanischer Check — die Aufgabe des Pilots.
   Prüfungen, Vorlagen auf Stand 0.19. Die eigentliche Schuld liegt außerhalb
   des Codes: Runde 16 mit einer anderen Person — jede Vorlagenänderung von
   heute beruht auf n = 1.
+- [x] **Bilanz eines Item-Laufs: `batch.Store.ledger` (2026-10-09, 0.76.0).**
+      Auslöser: fallacy-dataset-generation, Bereich 01
+      (`scripts/00_seed_proposals.py`, `lib/seed_review.audit_proposals`,
+      Commit `8971386`) baute die Bilanz von Hand, weil `status` sie nicht
+      hielt — Dubletten waren unsichtbar (behoben in 0.75.1) und nichts
+      hielt den Lauf auf. Jetzt: jedes Eingabe-Item genau eine Zeile, keine
+      fremde, keine ohne id, je Feld der erwartete Wert (`expect`, Konstante
+      oder Funktion des Eingabe-Records); `require_complete()` im
+      `with runlog.run(...)`-Block verhindert `completion.json` und die
+      `runs.tsv`-Zeile. Stufe guaranteed. Was als gültige Antwort zählt
+      (`problem`, `n_invalid`), bleibt im Experiment.
+  - [ ] **Rollout (eigener Auftrag, anderes Repo):** Pin in
+        fallacy-dataset-generation heben, `audit()` dort auf
+        `store.ledger(..., expect={"prompt_sha": …, "input_sha": …})`
+        umstellen, `audit_proposals` behält nur `unparsed`/`invalid`.
 - [ ] **Kandidaten für Protokoll-Standard 0.20** (gesammelt 2026-10-08,
       Runde 15 und Review): `Result` → `Answer` umbenennen und `Question`
       als Pflichtfeld der Summary; `Answering run` als geschuldetes Feld

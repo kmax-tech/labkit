@@ -60,6 +60,7 @@ evidence** (warns), **agent audit** (semantic).
 | Run git | `repo.git` (output, loud on failure), `repo.git_run` (exit code is the answer) |
 | Is this run finished? Which runs are? | `runs.completion_state`, `runs.completed_runs` |
 | What does a run's metadata say? | `runs.read_run_config` |
+| Does an output file account for its input, item by item? | `batch.Store.ledger` (missing, duplicate, stray, stale per expected field); `require_complete()` inside the run keeps it from completing |
 | Which runs wrote a JSONL file's rows? | `batch.row_runs` (per-row `_prov.run`); runlog names the runs a resumed file continues, finalize holds every row to the run |
 | Is the recording process alive? | `runs.is_alive` |
 | Which protocol does a new run bind to? | `runlog._protocol_binding` |

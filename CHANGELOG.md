@@ -5,6 +5,22 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.76.0 — 2026-10-09
+
+### Added — `batch.Store.ledger`: the balance of an item-by-item run
+
+- **Every input item on exactly one row, or the run does not complete.**
+  `store.ledger(records, expect={...})` returns a `Ledger`: missing,
+  duplicate, stray ids, rows without an id, and per expected field the
+  rows that carry another value (`expect` takes a constant — a prompt
+  hash — or a function of the row's input record — an item hash).
+  `ledger.counts()` goes into `run.metrics`; `ledger.require_complete()`
+  raises SystemExit naming every gap, and raised inside
+  `with runlog.run(...)` it keeps the run from writing completion.json and
+  its runs.tsv row. Guaranteed tier: exact, by id. Whether a row's answer
+  is valid stays the experiment's. Before, scripts hand-rolled this
+  (fallacy-dataset-generation, area 01) because `status` only reported.
+
 ## 0.75.1 — 2026-10-09
 
 ### Fixed — `batch.Store.status` names duplicate ids
