@@ -21,16 +21,11 @@
 
 ## Intent (before the run)
 
-- **Terms of this protocol:** <!-- s --> <BEFORE the question, because the
-  question uses them: every house word this protocol coins or leans on, one
-  line each, three parts — *everyday word · house term · code word* —
-  "gap case (a case only an uncovered rule can reject) · Lückenfall ·
-  `GAP_CASES`"; arms, lanes and draws, case classes and their ids, constants,
-  the model alias, the files a reader meets. Look up before coining (`lib
-  term`, the repo's `notes/theorie/begriffe.md`, the lab standard's
-  vocabulary); "n/a — standard vocabulary" only if nothing is coined. Four
-  cold readers (2026-10-09) met every term 60–90 lines before its definition
-  when this field sat under Context>
+- **Terms of this protocol:** <!-- s --> <first, because the question uses
+  them: one line per house word — *everyday word · house term · code word*
+  ("gap case (a case only an uncovered rule can reject) · Lückenfall ·
+  `GAP_CASES`"); look up before coining (`lib term`, `notes/theorie/begriffe.md`);
+  "n/a — standard vocabulary" only if nothing is coined>
 - **Question / hypothesis:** <!-- s --> <the one question — what do we expect?>
 - **Success / failure criterion:** <!-- s --> <how do we recognise whether it worked?
   One id per conjunct, written `[C…]` with its number in the brackets
