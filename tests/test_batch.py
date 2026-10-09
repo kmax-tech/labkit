@@ -77,6 +77,16 @@ class TestStore(unittest.TestCase):
         self.assertEqual(st["done"], 2)
         self.assertEqual(st["missing"], 4)
         self.assertEqual(st["stray"], ["not-in-input"])
+        self.assertNotIn("duplicate", st)
+
+    def test_status_names_a_duplicate_that_a_missing_item_would_hide(self):
+        # 4 rows for 4 ids would look whole; item-3 is missing, item-0 doubled
+        with batch.Store(self.out) as s:
+            for i in (0, 0, 1, 2):
+                s.append({"id": f"item-{i}"})
+            st = s.status(RECORDS[:4])
+        self.assertEqual(st["missing_ids"], ["item-3"])
+        self.assertEqual(st["duplicate"], ["item-0"])
 
     def test_custom_id_key(self):
         recs = [{"uid": "a"}, {"uid": "b"}]

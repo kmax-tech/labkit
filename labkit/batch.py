@@ -92,6 +92,15 @@ def row_runs(path: Path) -> RowRuns:
     return RowRuns(runs, unstamped)
 
 
+def _duplicate_ids(rows: list[dict], id_key: str) -> list:
+    """The ids that stand on more than one row, in order of first sight."""
+    seen: dict = {}
+    for r in rows:
+        if id_key in r:
+            seen[r[id_key]] = seen.get(r[id_key], 0) + 1
+    return [i for i, n in seen.items() if n > 1]
+
+
 class Store:
     """Append-only JSONL output with a lock, resume-by-id and a status view.
 
@@ -244,10 +253,16 @@ class Store:
 
     # -- status -----------------------------------------------------------
     def status(self, records: Iterable[dict] | None = None) -> dict:
-        """done / missing / stray by id, plus who holds the lock. No model load."""
+        """done / missing / stray / duplicate by id, plus who holds the lock.
+        No model load. `done` counts distinct ids; an id on two lines is
+        named under `duplicate` — a counted set alone would let a missing
+        item and a doubled one cancel out (2026-10-09)."""
         done = self.records()
         done_ids = {r[self.id_key] for r in done if self.id_key in r}
         info: dict = {"path": str(self.path), "done": len(done_ids)}
+        duplicate = _duplicate_ids(done, self.id_key)
+        if duplicate:
+            info["duplicate"] = duplicate[:10]
         if records is not None:
             want = [r[self.id_key] for r in records]
             missing = [i for i in want if i not in done_ids]

@@ -5,6 +5,17 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.75.1 — 2026-10-09
+
+### Fixed — `batch.Store.status` names duplicate ids
+
+- **A doubled row no longer hides a missing one.** `status` counted the
+  output's ids as a set, so a file with one item missing and another on
+  two lines looked whole. It now lists ids on more than one row under
+  `duplicate` (absent when there are none). Found in
+  fallacy-dataset-generation, area 01, whose script had hand-rolled the
+  balance for exactly this case.
+
 ## 0.75.0 — 2026-10-09
 
 ### Added — `labkit-calltree`
