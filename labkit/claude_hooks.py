@@ -208,7 +208,11 @@ def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
         tiers = {h.cost for h in heads}
         if tiers == {"seconds"}:
             missing = sorted(
-                {m for t in texts for m in protocol_check.intent_missing(t)}
+                {
+                    m
+                    for t in texts
+                    for m in protocol_check.seconds_registration_missing(t)
+                }
             )
             if not missing:
                 notes.append(

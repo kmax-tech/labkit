@@ -107,7 +107,7 @@ class Registration(unittest.TestCase):
         text = (
             head(cost="seconds") + self.QUESTION + "- **Admissibility condition:** a\n"
         )
-        self.assertEqual(protocol_check.intent_missing(text), [])
+        self.assertEqual(protocol_check.seconds_registration_missing(text), [])
 
     def test_placeholder_counts_as_missing(self):
         text = (
@@ -116,13 +116,15 @@ class Registration(unittest.TestCase):
             + "- **Admissibility condition:** <what must hold…>\n"
         )
         self.assertEqual(
-            protocol_check.intent_missing(text), ["Admissibility condition"]
+            protocol_check.seconds_registration_missing(text),
+            ["Admissibility condition"],
         )
 
     def test_the_old_stop_rule_label_does_not_register(self):
         text = head(cost="seconds") + self.QUESTION + "- **Stop rule:** s\n"
         self.assertEqual(
-            protocol_check.intent_missing(text), ["Admissibility condition"]
+            protocol_check.seconds_registration_missing(text),
+            ["Admissibility condition"],
         )
 
     def test_cost_is_read_from_the_head(self):
@@ -131,7 +133,9 @@ class Registration(unittest.TestCase):
             + self.QUESTION
             + "- **Admissibility condition:** a\n- **Cost:** seconds\n"
         )
-        self.assertEqual(protocol_check.intent_missing(text), ["[protocol] cost"])
+        self.assertEqual(
+            protocol_check.seconds_registration_missing(text), ["[protocol] cost"]
+        )
 
 
 if __name__ == "__main__":

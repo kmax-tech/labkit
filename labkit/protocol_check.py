@@ -371,19 +371,19 @@ def check_fields(text: str) -> FieldReport:
         missing_must.append(
             "[protocol] preflight_audit (frozen = true without the audit line)"
         )
-    if head.frozen or head.cost == "seconds":
-        # the block is owed (promises.block_owed): frozen, or at seconds, where
-        # every run is the full run and the seconds cut IS the registration
-        try:
-            block_gap = promises.block_owed(
-                promises.parse_block(text),
-                frozen=head.frozen,
-                full_run=head.cost == "seconds",
-            )
-        except promises.PromiseError as exc:
-            block_gap = f"[[promise]] block: {exc}"
-        if block_gap:
-            missing_must.append(block_gap)
+    # Whether the tables are owed is decided in ONE place,
+    # promises.promise_tables_owed: frozen, or at seconds (every run there is
+    # the full run). No condition repeated here (cold reading 2026-10-09).
+    try:
+        tables_gap = promises.promise_tables_owed(
+            promises.parse_block(text),
+            frozen=head.frozen,
+            full_run=head.cost == "seconds",
+        )
+    except promises.PromiseError as exc:
+        tables_gap = f"[[promise]] tables: {exc}"
+    if tables_gap:
+        missing_must.append(tables_gap)
     must_names = {f.label.casefold() for f in must}
     must_holes, soft_holes = [], []
     for line, label in open_holes(text, head):
@@ -393,7 +393,7 @@ def check_fields(text: str) -> FieldReport:
     return FieldReport(head, None, missing_must, missing_should, must_holes, soft_holes)
 
 
-def intent_missing(text: str) -> list[str]:
+def seconds_registration_missing(text: str) -> list[str]:
     """The registration a run of seconds owes before its number counts:
     question, criterion and admissibility condition written (not a
     placeholder) and the cost declared. Returns what is missing — empty
@@ -449,8 +449,9 @@ def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
     return _ID_INDEX[root]
 
 
-def id_in_head(path: Path) -> str | None:
-    """The id the committed version of this file carries — None when the file
+def id_in_git_head(path: Path) -> str | None:
+    """The id the version committed in git HEAD carries (`git show HEAD:…`),
+    not the protocol's [protocol] head — None when the file
     is new, git is absent, or the call fails. Never a proof of immutability:
     after the next commit a changed id IS the state. It catches the edit
     while it is still in the working tree."""
@@ -479,7 +480,7 @@ def check_protocol_id(path: Path, head: protocol_block.Head) -> list[str]:
             + ", ".join(str(q) for q in others)
             + ". An id binds runs to ONE protocol; re-stamp the copy."
         )
-    was = id_in_head(path)
+    was = id_in_git_head(path)
     if was and was != head.id:
         out.append(
             f"{path}: WARNING: protocol id changed against HEAD "

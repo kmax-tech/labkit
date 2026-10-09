@@ -109,7 +109,7 @@ class Promise:
 
 
 @dataclass(frozen=True)
-class PromiseBlock:
+class PromiseTables:
     """A protocol's `[[promise]]` tables, parsed, with their digest."""
 
     promises: tuple[Promise, ...]
@@ -120,8 +120,10 @@ class PromiseBlock:
         return {p.id: p for p in self.promises}
 
 
-def registered_ids(text: str) -> set[str]:
-    """Ids promised anywhere in the protocol prose, lowercased."""
+def ids_in_prose(text: str) -> set[str]:
+    """Ids written anywhere in the protocol prose (`[C1]`), lowercased — the
+    prose side; the data side is the [[promise]] tables (`PromiseTables`).
+    `reported_ids` is the metrics side."""
     return {m.group(1).lower() for m in ID_IN_PROTOCOL.finditer(text)}
 
 
@@ -153,7 +155,7 @@ def _digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()[:DIGEST_CHARS]
 
 
-def parse_block(text: str) -> PromiseBlock | None:  # noqa: C901 complexity baseline 2026-10-08
+def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity baseline 2026-10-08
     """The protocol's promises, or None if its block declares none.
 
     Raises PromiseError on anything malformed: invalid TOML, an unknown
@@ -273,17 +275,17 @@ def parse_block(text: str) -> PromiseBlock | None:  # noqa: C901 complexity base
         sort_keys=True,
         ensure_ascii=False,
     )
-    return PromiseBlock(promises=tuple(out), sha=_digest(canonical.encode("utf-8")))
+    return PromiseTables(promises=tuple(out), sha=_digest(canonical.encode("utf-8")))
 
 
-def prose_mismatch(text: str, block: PromiseBlock) -> tuple[list[str], list[str]]:
+def prose_mismatch(text: str, block: PromiseTables) -> tuple[list[str], list[str]]:
     """(new-letter ids in prose but not in the block, block ids not in prose)."""
-    prose = {i.upper() for i in registered_ids(text)}
+    prose = {i.upper() for i in ids_in_prose(text)}
     ids = {p.id for p in block.promises}
     return sorted(prose - ids), sorted(ids - prose)
 
 
-def load(protocol: Path) -> PromiseBlock:
+def load(protocol: Path) -> PromiseTables:
     """The promise block of `protocol`; raises if it has none.
 
     For scripts: `promises.load(PROTOCOL).by_id()["C1"].constants["min_f1"]`
@@ -306,7 +308,7 @@ def constants(protocol: Path, promise_id: str) -> dict[str, int | float | str | 
     return dict(by_id[promise_id].constants)
 
 
-def all_constants(block: PromiseBlock) -> dict[str, int | float | str | bool]:
+def all_constants(block: PromiseTables) -> dict[str, int | float | str | bool]:
     """Every constant the block declares, as one dict — collision-free by the
     parser's guarantee (a name stands in one promise). What a script passes
     to its config object: `MeasureConfig(model=MODEL, **all_constants(load(PROTOCOL)))`."""
@@ -316,14 +318,20 @@ def all_constants(block: PromiseBlock) -> dict[str, int | float | str | bool]:
     return out
 
 
-def block_owed(
-    block: PromiseBlock | None, *, frozen: bool, full_run: bool
+def promise_tables_owed(
+    block: PromiseTables | None, *, frozen: bool, full_run: bool
 ) -> str | None:
-    """Why a protocol owes a promise block, or None — the one home of the
-    rule (standard 0.19) for protocol-check, preflight, runlog and finalize:
-    a frozen protocol, and every full run (`long=True`; at cost = seconds
-    every run), is held to a registration that is data, not prose. A pilot
-    (`long=False`) on an unfrozen protocol owes nothing yet."""
+    """Why a protocol owes its [[promise]] tables, or None — the one home of
+    the rule (standard 0.19) for protocol-check, preflight, runlog and
+    finalize. The table:
+
+        frozen = true            → owed
+        full_run (runlog long=True; at cost = seconds every run) → owed
+        otherwise (an unfrozen pilot) → not owed
+
+    "Block" elsewhere (`protocol_block.block_text`, `parse_toml_block`)
+    means the whole ```toml block, [protocol] head included; this function
+    and `PromiseTables` mean the [[promise]] tables alone."""
     if block is not None or not (frozen or full_run):
         return None
     because = "frozen = true" if frozen else "a full run is held to the registration"
@@ -355,7 +363,7 @@ class ConstantRecord:
     state: str
 
 
-def constant_records(block: PromiseBlock, run_config: dict) -> list[ConstantRecord]:
+def constant_records(block: PromiseTables, run_config: dict) -> list[ConstantRecord]:
     """Every registered constant with its state against `run_config` — the one
     reading for runlog's refusal (before mkdir), intent-check's blocker and
     the `labkit-params` view."""
@@ -449,7 +457,7 @@ def scope_drift(recorded: dict | None, base: Path) -> list[str]:
     return out
 
 
-def block_drift(recorded: dict | None, block: PromiseBlock | None) -> str | None:
+def block_drift(recorded: dict | None, block: PromiseTables | None) -> str | None:
     """Why the protocol's promise block (`block`, as parsed now) is not the
     one the run recorded, or None when it is (or neither side has one)."""
     if recorded is None:
@@ -479,7 +487,7 @@ def block_drift(recorded: dict | None, block: PromiseBlock | None) -> str | None
     return None
 
 
-def snapshot(block: PromiseBlock, base: Path) -> dict:
+def snapshot(block: PromiseTables, base: Path) -> dict:
     """What a run records about its promises (config.json `promises`)."""
     return {
         "block_sha": block.sha,

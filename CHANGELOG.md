@@ -5,6 +5,24 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.74.1 — 2026-10-09
+
+### Changed — names (part 2 of the cold reading)
+
+One word, one thing. Every reader in the package, its tests and docs
+renamed with it; no alias kept.
+
+| was | is | because |
+|---|---|---|
+| `protocol_check.id_in_head` | `id_in_git_head` | it reads git HEAD, not the protocol head |
+| `promises.PromiseBlock` | `PromiseTables` | "block" is also the whole ```toml block |
+| `promises.block_owed` | `promise_tables_owed` | same; the docstring now holds the owed table |
+| `promises.registered_ids` | `ids_in_prose` | "registered" is also the data side |
+| `protocol_check.intent_missing` | `seconds_registration_missing` | "intent" is also the promise ids |
+
+`protocol_check` no longer repeats the owed condition around the call;
+`finalize` no longer shadows `dataclasses.field` with a local.
+
 ## 0.74.0 — 2026-10-09
 
 Four cold readers over the package (code-clarity, one per layer, 38
@@ -145,7 +163,7 @@ present and equal in the run config.** Last permissive version: 0.70.0.
 - `frozen = true` without a `[[promise]]` table is a MUST failure in
   `protocol-check`, a blocker in `preflight` and `finalize`, and `runlog`
   refuses every run bound to such a protocol before `mkdir` — not
-  acknowledgeable (`promises.block_owed`, the one home of the rule).
+  acknowledgeable (`promises.promise_tables_owed`, the one home of the rule).
 - `runlog.run(config=...)` under a block refuses the run before `mkdir`
   when a registered constant is missing from `config` or carries another
   value — type-strict (`True` is not `1`, `1` is not `1.0`). The record

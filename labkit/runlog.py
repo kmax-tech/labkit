@@ -773,7 +773,7 @@ def _protocol_text(base_dir: Path, binding: dict) -> str | None:
 
 def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
     """Why a FULL run may not start on this protocol — empty means it may."""
-    from labkit.protocol_check import intent_missing
+    from labkit.protocol_check import seconds_registration_missing
 
     text = _protocol_text(base_dir, binding)
     if text is None:
@@ -791,7 +791,7 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
         ]
     head = protocol_block.head(text)  # read once at binding; valid here
     if head.cost == "seconds":
-        missing = intent_missing(text)
+        missing = seconds_registration_missing(text)
         if not missing:
             return []
         return [
@@ -817,7 +817,7 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
 
 def _promise_snapshot(
     base_dir: Path, text: str | None
-) -> tuple["promises.PromiseBlock | None", dict | None]:
+) -> tuple["promises.PromiseTables | None", dict | None]:
     """The bound protocol's promise block, parsed once, and the snapshot the
     run records of it — (None, None) without tables.
 
@@ -840,13 +840,13 @@ def _promise_snapshot(
 def _registration_refusal(
     binding: dict | None,
     head: "protocol_block.Head | None",
-    block: "promises.PromiseBlock | None",
+    block: "promises.PromiseTables | None",
     config: dict,
     long: bool,
 ) -> str | None:
     """The registration's contract, before any gate that can be acknowledged
     and before mkdir (standard 0.19): a frozen protocol and every full run
-    carry the promises as data (`promises.block_owed`), and a run under a
+    carry the promises as data (`promises.promise_tables_owed`), and a run under a
     block records every registered constant unchanged — otherwise the
     number is held to a threshold nobody registered (Durchstich
     2026-10-06). None when it holds, or when the run is unbound (the
@@ -855,7 +855,7 @@ def _registration_refusal(
     name = Path(path).name if isinstance(path, str) and path else "(unbound)"
     if head is None:
         return None
-    owed = promises.block_owed(block, frozen=head.frozen, full_run=long)
+    owed = promises.promise_tables_owed(block, frozen=head.frozen, full_run=long)
     if owed:
         return f"{name}: {owed}"
     if block is not None:
@@ -865,7 +865,7 @@ def _registration_refusal(
     return None
 
 
-def _constants_refusal(block: "promises.PromiseBlock", config: dict) -> str | None:
+def _constants_refusal(block: "promises.PromiseTables", config: dict) -> str | None:
     """Why this config may not run under `block`: a registered constant the
     config lacks or carries with another value (type-strict). The guarantee
     behind the record: a run under a block recorded every registered

@@ -63,7 +63,7 @@ scope = ["scripts/01_measure.py"]
 """
 
 
-def parsed(text: str) -> promises.PromiseBlock:
+def parsed(text: str) -> promises.PromiseTables:
     """parse_block for a text that must carry a block."""
     b = promises.parse_block(text)
     assert b is not None, "fixture has no promise block"
@@ -515,15 +515,19 @@ class Constants(unittest.TestCase):
         self.assertEqual(promises.constant_records(block, {})[0].state, "missing")
 
     def test_block_owed_when_frozen_or_a_full_run_without_tables(self):
-        self.assertIsNone(promises.block_owed(None, frozen=False, full_run=False))
         self.assertIsNone(
-            promises.block_owed(parsed(protocol_text(C1)), frozen=True, full_run=True)
+            promises.promise_tables_owed(None, frozen=False, full_run=False)
+        )
+        self.assertIsNone(
+            promises.promise_tables_owed(
+                parsed(protocol_text(C1)), frozen=True, full_run=True
+            )
         )
         self.assertIn(
             "frozen = true, but",
-            promises.block_owed(None, frozen=True, full_run=False) or "",
+            promises.promise_tables_owed(None, frozen=True, full_run=False) or "",
         )
         self.assertIn(
             "a full run is held to the registration, but",
-            promises.block_owed(None, frozen=False, full_run=True) or "",
+            promises.promise_tables_owed(None, frozen=False, full_run=True) or "",
         )

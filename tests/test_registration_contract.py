@@ -145,7 +145,8 @@ class ProtocolCheckOwesTheBlock(unittest.TestCase):
         )
         self.assertTrue(
             any(
-                "[[promise]] block" in m and "MIN_ACC" in m for m in report.missing_must
+                "[[promise]] tables" in m and "MIN_ACC" in m
+                for m in report.missing_must
             )
         )
 

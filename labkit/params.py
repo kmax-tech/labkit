@@ -123,7 +123,7 @@ def recorded_rows(run_config: dict, run_name: str) -> list[ParamRow]:
 
 
 def constant_rows(
-    block: promises.PromiseBlock,
+    block: promises.PromiseTables,
     run_config: dict,
     protocol_name: str,
     copies: dict[str, tuple[object, int]],

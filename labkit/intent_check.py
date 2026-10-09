@@ -64,7 +64,7 @@ from labkit.scope_sha import imported_repo_helpers
 # because code_check and tools outside labkit (befundregister) use them.
 ID_IN_PROTOCOL = promises.ID_IN_PROTOCOL
 ID_KEY = promises.ID_KEY
-registered_ids = promises.registered_ids
+ids_in_prose = promises.ids_in_prose
 reported_intent_ids = promises.reported_ids
 
 
@@ -139,7 +139,7 @@ def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             f"{protocol}: intent ids {', '.join(earlier)} — {promises.EARLIER_IDS_HELP}"
         )
         return 2
-    reg = registered_ids(text)
+    reg = ids_in_prose(text)
     if not reg:
         print(
             "intent-check: no intent ids registered ([C1]/[A1]/[B1] — "
@@ -201,7 +201,7 @@ def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
 
 
 def check_block_against_run(
-    block: "promises.PromiseBlock", mpath: Path, metrics: dict
+    block: "promises.PromiseTables", mpath: Path, metrics: dict
 ) -> list[str]:
     """Guaranteed-tier findings for a protocol WITH a promise block.
 
@@ -230,7 +230,7 @@ def check_block_against_run(
 
 
 def promised_constant_mismatches(
-    block: promises.PromiseBlock, run_config: dict, run_name: str
+    block: promises.PromiseTables, run_config: dict, run_name: str
 ) -> list[str]:
     """The constants the protocol promised (a margin, a threshold) whose value
     differs from the one the run recorded under the same name, or is absent.

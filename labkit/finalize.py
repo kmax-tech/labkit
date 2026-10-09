@@ -62,7 +62,7 @@ from labkit.repo import (
     git_run,
     no_such_area,
 )
-from labkit.intent_check import main as intent_check_main, registered_ids
+from labkit.intent_check import main as intent_check_main, ids_in_prose
 from labkit.preflight import area_tests
 from labkit.protocol_check import RUN_ID, fields, open_holes
 
@@ -388,14 +388,15 @@ def check_completion(
 ) -> Path | None:
     """Station 1: the run every later station holds the protocol to — chosen,
     shown, and held to the run the answer cites. Returns it, or None."""
-    measurement_run = answering_run(findings, area, pid, bool(registered_ids(text)))
+    measurement_run = answering_run(findings, area, pid, bool(ids_in_prose(text)))
     if measurement_run is not None:
         mismatch = cited_run_mismatch(text, measurement_run)
         if mismatch:
             findings.block(mismatch)
-        field = answering_run_field_mismatch(text, measurement_run)
-        if field is not None:
-            (findings.block if field[0] == "block" else findings.warn)(field[1])
+        graded = answering_run_field_mismatch(text, measurement_run)  # (grade, message)
+        if graded is not None:
+            grade, message = graded
+            (findings.block if grade == "block" else findings.warn)(message)
         gap = model_provenance_gap(measurement_run)
         if gap:
             findings.warn(gap)
@@ -415,7 +416,7 @@ def check_intent_keys_in_metrics(
     """Station 2: every registered intent id reports as a key of the answering
     run's metrics.json (intent-check). Not code_check.check_intent_ids, which
     holds the promises to the code before any run."""
-    if not registered_ids(text):
+    if not ids_in_prose(text):
         print("  no intent ids registered — nothing to check")
         return
     args = [str(protocol)] + (
@@ -438,12 +439,12 @@ def check_declared_scopes(
     """Station 3: a promise's declared scope edited after the run: today's code is not
     the code that produced the number; until 2026-10-06 only recheck saw it
     (Durchstich). An answering run that recorded no block is a blocker
-    (standard 0.19, `promises.block_owed`: every reportable run is held to
+    (standard 0.19, `promises.promise_tables_owed`: every reportable run is held to
     a registration that is data) — it came from a labkit that let it pass,
     or the block was added after the run."""
     recorded = (read_run_config(measurement_run) or {}).get("promises")
     if recorded is None:
-        owed = promises.block_owed(None, frozen=False, full_run=True)
+        owed = promises.promise_tables_owed(None, frozen=False, full_run=True)
         findings.block(
             f"{measurement_run.name} recorded no promise block: {owed} — a run "
             f"under labkit 0.70.0 or earlier is checked and reproduced with "

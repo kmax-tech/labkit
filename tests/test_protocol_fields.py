@@ -126,12 +126,13 @@ class Fields(unittest.TestCase):
             head(cost="seconds") + "- **Question / hypothesis:**\n  Does X beat Y?\n"
             "- **Success / failure criterion:** [C1] x\n- **Admissibility condition:** [A1] y\n"
         )
-        self.assertEqual(protocol_check.intent_missing(written), [])
+        self.assertEqual(protocol_check.seconds_registration_missing(written), [])
         unwritten = written.replace(
             "  Does X beat Y?", "  <the one question —\n  what do we expect?>"
         )
         self.assertEqual(
-            protocol_check.intent_missing(unwritten), ["Question / hypothesis"]
+            protocol_check.seconds_registration_missing(unwritten),
+            ["Question / hypothesis"],
         )
 
     def test_fields_inside_code_blocks_are_not_fields(self):

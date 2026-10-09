@@ -82,7 +82,7 @@ class TestIntentCheck(unittest.TestCase):
     # -- extraction -------------------------------------------------------
     def test_ids_found_anywhere_in_free_structure(self):
         self.assertEqual(
-            intent_check.registered_ids(PROTOCOL), {"c1", "c2", "c3", "a1", "a2", "b1"}
+            intent_check.ids_in_prose(PROTOCOL), {"c1", "c2", "c3", "a1", "a2", "b1"}
         )
 
     def test_blank_template_registers_no_ids(self):
@@ -96,7 +96,7 @@ class TestIntentCheck(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertEqual(
-            intent_check.registered_ids(tmpl),
+            intent_check.ids_in_prose(tmpl),
             set(),
             "the template preamble must not contribute ids",
         )
