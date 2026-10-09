@@ -53,12 +53,20 @@ edited text, and git history would keep them forever.
 Of the final blocks, 87 come from round 2 and 37 from the repairs. The six
 low findings that remain are terminology drift: "stage" for a level that
 is not a pipeline step, "mandatory field" next to "required field", and
-"Check" for the instrument check. They go to the human review.
+"Check" for the instrument check. The human review resolved all six.
+
+## Human review
+
+On 2026-10-09, all 124 German/English block pairs were read in order. The
+review corrected the six remaining terminology findings and translation
+problems that were individually faithful but unclear or unidiomatic in the
+assembled standard. It did not rewrite blocks marked `adapt` or `house-refs`.
+The fixed rendering of *stanzen* was relaxed from "generate from the template"
+to the context-dependent "generate or create"; `stamp` remains reserved for
+the scope-sha stamp.
 
 ## Still to do before this is the package standard
 
-- **Block-by-block human review** of German against English. This is the
-  acceptance step; the review and repair rounds above only prepared it.
 - **Rewrite flagged blocks.** Blocks flagged `adapt` in
   `docs/standard-blocks.tsv` (front matter, the id rules, the coinage table)
   and `house-refs` (house paths and labs) get rewritten for the package. That

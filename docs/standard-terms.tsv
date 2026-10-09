@@ -43,5 +43,5 @@ Soll	target	the expected value of an anchor or null condition	fixed	AS-037 says 
 Streuung	spread		fixed	the scar table says Spread unknown
 Laborbuch	lab notebook		fixed	
 Vorab-Registrierung	preregistration	one word, no hyphen	fixed	
-stanzen	generate from the template	never stamp	fixed	stamp is reserved for Stempel
+stanzen	generate or create	choose by context; never stamp	fixed	stamp is reserved for Stempel
 Eigenprägung	own coinage		fixed	home is reserved for Prägestelle
