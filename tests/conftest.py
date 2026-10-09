@@ -4,12 +4,22 @@
 it wrote into the real ~/.labkit/leases, and failed with PermissionError
 where home is read-only (review 2026-10-07). Tests that need their own
 lease directory still set LABKIT_LEASE_DIR themselves.
+
+Git's own variables are dropped for the same reason: inside a git hook (the
+pre-commit hook runs this suite) git exports GIT_DIR, GIT_INDEX_FILE and
+friends, and every `git init` / `git config` / `git commit` a test aims at its
+temporary repo then lands in the real one. Run from a worktree on 2026-10-09,
+the suite set `core.bare = true` and a local user `t <t@t>` in labkit's own
+.git/config, tagged a test commit `v1.0.0` and committed onto the worktree's
+HEAD (`tests/test_git_env_isolation.py`).
 """
 
 import os
 import tempfile
 
 os.environ["LABKIT_LEASE_DIR"] = tempfile.mkdtemp(prefix="labkit-test-leases-")
+for _name in [n for n in os.environ if n.startswith("GIT_")]:
+    del os.environ[_name]
 
 
 # A debugger stops where a test fails, not inside pytest's report: with
