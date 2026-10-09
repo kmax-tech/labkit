@@ -15,8 +15,11 @@ dependencies = []
 # Named so a fresh environment (a cloud session, CI) runs the same suite as
 # the local one instead of whichever interpreter happens to carry pytest.
 [project.optional-dependencies]
-# the coding style's three tools: test, lint, type-check (docs/coding-style.md CS-008 Run the linter and the type checker)
-dev = ["pytest", "ruff", "pyright"]
+# the coding style's three tools: test, lint, type-check (docs/coding-style.md CS-008 Run the linter and the type checker);
+# viztracer for reading a run as a timeline (`just timeline audit ARGS`; the filter holds only when the
+# module FILE is run — with `-m` or a console script `--include_files` keeps nothing, viztracer 1.1.1),
+# the step past `labkit-calltree` when the order and duration of calls matter
+dev = ["pytest", "ruff", "pyright", "viztracer"]
 
 [project.scripts]
 protocol-check = "labkit.protocol_check:cli"
