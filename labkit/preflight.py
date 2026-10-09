@@ -89,6 +89,10 @@ def area_tests(area: Path, repo: Path) -> AreaTests:
     # for an unnumbered area), split files as test_<NN>_<name>_<part>.py.
     # A bare *<name>* glob ran area 09's test for area 08, whose name is a
     # prefix of 09's (uniagent, 2026-10-07).
+    # `preflight .` passes a relative path whose .name is "" — resolved first,
+    # or the pattern read `tests/test_.py` and the area's test was "none"
+    # (fallacy-dataset-generation, 2026-10-09)
+    area = area.resolve()
     m = re.match(r"^(\d+)-(.+)$", area.name)
     nn, name = (m.group(1), m.group(2)) if m else (None, area.name)
     stem = (f"test_{nn}_" if nn else "test_") + name.replace("-", "_")

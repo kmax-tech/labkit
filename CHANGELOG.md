@@ -5,6 +5,16 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.74.3 — 2026-10-09
+
+### Fixed
+
+- **`preflight .` / `finalize .` find the area's test.** A relative area
+  path has no `.name`; the test pattern read `tests/test_.py` and the
+  area's own test counted as absent ("no tests/test_.py — the resolution
+  check has no permanent form"). `area_tests` resolves the path first.
+  Found on a thesis repo, 2026-10-09.
+
 ## 0.74.2 — 2026-10-09
 
 ### Changed — entry points and docstrings (part 3 of the cold reading)
