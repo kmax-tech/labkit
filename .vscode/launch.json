@@ -1,5 +1,7 @@
 {
   // Debug configurations: Run and Debug view (Cmd+Shift+D), pick one, F5.
+  // Each names the repo's .venv itself: the interpreter VS Code remembers for
+  // the folder may be another one (it ran ~/work/.venv, without pytest).
   // LABKIT_TEST_RAISE=1 makes a failing test stop the debugger at the failure
   // (tests/conftest.py) — tick "Uncaught Exceptions" in the Breakpoints panel.
   "version": "0.2.0",
@@ -10,6 +12,7 @@
       // from the Run and Debug dropdown
       "name": "Test: debug (stop at failure)",
       "type": "debugpy",
+      "python": "${workspaceFolder}/.venv/bin/python",
       "request": "launch",
       "purpose": ["debug-test"],
       "presentation": { "hidden": true },
@@ -18,8 +21,9 @@
       "justMyCode": true
     },
     {
-      "name": "Test: this file",
+      "name": "Test: the open test file (tests/test_*.py)",
       "type": "debugpy",
+      "python": "${workspaceFolder}/.venv/bin/python",
       "request": "launch",
       "module": "pytest",
       "args": ["-q", "${file}"],
@@ -29,6 +33,7 @@
     {
       "name": "Test: by name (-k)",
       "type": "debugpy",
+      "python": "${workspaceFolder}/.venv/bin/python",
       "request": "launch",
       "module": "pytest",
       "args": ["-q", "tests", "-k", "${input:testName}"],
@@ -39,6 +44,7 @@
       // a console command from its entry point; arguments asked for at start
       "name": "Command: labkit module",
       "type": "debugpy",
+      "python": "${workspaceFolder}/.venv/bin/python",
       "request": "launch",
       "module": "${input:command}",
       "args": "${command:pickArgs}",
