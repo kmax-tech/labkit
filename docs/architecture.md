@@ -73,3 +73,31 @@ evidence** (warns), **agent audit** (semantic).
 
 A second answer to any of these questions is drift: move the caller to the
 home, never copy the logic.
+
+## Where what lives
+
+labkit is one of four places that hold the lab's rules, tools and copies.
+The split grew by history, not by a principle; this table states it as it
+is, so a reader can find a file before it moves. The rule for every move:
+**what a lab outside this house needs to work with labkit lives in labkit;
+what concerns only this house stays in the author's dotfiles.**
+
+| Place | Holds | Master or copy |
+|---|---|---|
+| labkit (this repo) | the code and its gates; the protocol template and its field guide (`labkit/experiment-protocol.md.template`, `labkit/protocol-field-guide.md`); the audit agents' instructions (`labkit/*.agent.md`) | master |
+| labkit (this repo) | `docs/coding-style.md` | copy, stamped with the master's hash; edit the master, then `lib sync pull` |
+| author's dotfiles (`~/.claude/resources/`) | the lab standard (`arbeitsstandard.md.template`, German), its dated evidence (`arbeitsstandard.evidence.md`), the rule register (`rule-registry.tsv`: id → name → status), the coding style, the script templates (`measure-script`, `prepare-script`, `test-area`, …), the scaffolder (`tools/arbeitsstandard-init.py`), the thesis starter | master |
+| a lab repo | `docs/arbeitsstandard.md`, `docs/coding-style.md`, `CLAUDE.md`, the scripts stamped from the templates; labkit itself as a pinned package | copies, stamped by the scaffolder |
+| author's global `~/.claude/CLAUDE.md` | one-line reflexes that point at rule ids | master (house only) |
+
+**Known gap.** Gate messages and docstrings name rule ids (`AS-004
+Kennungen machen den Intent adressierbar`); the rule text behind the id
+lives in the dotfiles, not here. A reader without the author's machine
+reads the id and its name, never the rule. Closing it — the standard and
+the register move into the package, in English, house evidence stays
+private — is `TODO.md` item 5.
+
+**Not yet decided.** Whether the scaffolder and the script templates move
+into labkit too: they are what a foreign lab needs to start, but moving them
+touches every existing lab repo, so it belongs to the rollout (`TODO.md`,
+row R of the order).
