@@ -97,6 +97,22 @@ class Clarity(unittest.TestCase):
         self.assertIn("no README.md", err)
         self.assertEqual(sent, [])
 
+    def test_an_unknown_alias_is_no_reading_not_a_traceback(self) -> None:
+        area = area_with()
+        err = io.StringIO()
+        with (
+            mock.patch.object(
+                audit.llm,
+                "complete",
+                mock.Mock(side_effect=KeyError("model alias 'x' not in models.toml")),
+            ),
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(err),
+        ):
+            rc = audit.main([str(area), "--mode", "clarity", "--model", "x"])
+        self.assertEqual(rc, 2)
+        self.assertIn("model alias 'x' not in models.toml", err.getvalue())
+
     def test_a_report_without_verdict_is_no_reading(self) -> None:
         rc, _, err, _ = run(area_with(), "looks fine")
         self.assertEqual(rc, 2)
