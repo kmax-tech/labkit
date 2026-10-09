@@ -96,6 +96,10 @@
 
 - **Data / scope:** <!-- s --> <source, N, producer script; pilot subset first>
 - **Model / tool:** <!-- sm --> <alias from `models.toml` — never hardcode endpoint/ID>
+  <two arms (profiles) compared? one line each, held by finalize against the run:
+  Arm `before`: register/profiles/<x>.toml @ <fingerprint>, model=<alias>
+  Arm `after`: register/profiles/<y>.toml @ <fingerprint>, model=<alias> — and
+  the diff between the two profiles verbatim under Prompt>
 - **Prompt (verbatim, per variant):** <!-- sm -->
 
   ```text

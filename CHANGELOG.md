@@ -5,6 +5,21 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.73.1 — 2026-10-09
+
+### Added
+
+- **Arm lines in `Model / tool`, held by finalize.** A protocol that
+  compares two profiles names them — `Arm \`before\`: register/profiles/x.toml
+  @ <fingerprint>, model=<alias>` — and `finalize` warns when the profile
+  file is missing, or the fingerprint or alias is not in the answering
+  run's config.json (the profile changed after the stamp, or the run did
+  not record it). Optional: no arm line, nothing checked. Template and
+  field guide say the form; the diff between the profiles goes verbatim
+  under Prompt. Asked 2026-10-09: "what are before and after?" — the
+  answer sat 60 lines below the criterion and the fingerprint only in
+  the run.
+
 ## 0.73.0 — 2026-10-09
 
 ### Added

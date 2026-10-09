@@ -312,6 +312,16 @@ scattered in output files nobody can interpret.
   that appears in one class and never in the other is a free rule — the model
   can read the label off it without doing the task.
 - **Model / tool:** alias from `models.toml` — never hardcode endpoint/ID.
+  Two arms compared (a profile each)? Name them here, one line per arm,
+  in this form — `Arm \`before\`: register/profiles/x.toml @ 1d4c79af596a,
+  model=gpt-oss-20b-leguin` — and put the diff between the two profiles
+  verbatim under Prompt. A reader of the protocol then knows what the arms
+  are without opening the register; `finalize` holds every line to the
+  answering run (profile exists, fingerprint and alias recorded) and warns
+  when the profile changed after the stamp. The profile is the instrument
+  (model alias, temperature, repeats, rule texts, switches), versioned in
+  the register and shared across areas; the run's config.json records what
+  was resolved; the protocol names which are compared (2026-10-09).
 - **Prompt (verbatim, per variant):** paste the actual prompt here. It
   belongs in the protocol, not only in the script.
 - **Model I/O:**

@@ -41,6 +41,7 @@ from __future__ import annotations
 import contextlib
 import io
 import ast
+import json
 import re
 import sys
 from dataclasses import dataclass, field
@@ -337,6 +338,46 @@ def row_provenance_findings(measurement_run: Path) -> tuple[list[str], list[str]
     return blockers, notes
 
 
+ARM_LINE = re.compile(
+    r"[Aa]rm\s+`?(?P<arm>[\w-]+)`?\s*[:=]\s*`?(?P<profile>[\w./-]+\.toml)`?"
+    r"\s*@\s*`?(?P<sha>[0-9a-f]{8,64})`?(?:\s*,\s*model\s*=\s*`?(?P<model>[\w.:@-]+)`?)?"
+)
+
+
+def arm_findings(text: str, area: Path, measurement_run: Path) -> list[str]:
+    """Warnings: every arm the protocol names as `Arm `x`: <profile>.toml @
+    <fingerprint>, model=<alias>` is held to the answering run — the profile
+    file exists in the repo, and fingerprint and alias stand somewhere in
+    the run's config.json. The line is what a reader of the protocol gets
+    instead of opening the register (2026-10-09: "what are before and
+    after?" was answered 60 lines below the criterion, and the fingerprint
+    nowhere but in the run). No arm line: nothing claimed, nothing checked."""
+    out: list[str] = []
+    cfg = read_run_config(measurement_run)
+    if cfg is None:
+        return out
+    recorded = json.dumps(cfg, ensure_ascii=False)
+    root = git_root(area) or area
+    for m in ARM_LINE.finditer(text):
+        arm, profile, sha, model = m.group("arm", "profile", "sha", "model")
+        if not (root / profile).is_file():
+            out.append(
+                f"arm `{arm}`: the protocol names {profile}, no such file under {root}"
+            )
+        if sha not in recorded:
+            out.append(
+                f"arm `{arm}`: the protocol names fingerprint {sha}, the answering run "
+                f"recorded no such value — the profile changed after the stamp, or "
+                f"the run did not record its fingerprints"
+            )
+        if model and model not in recorded:
+            out.append(
+                f"arm `{arm}`: the protocol names model={model}, the answering run "
+                f"recorded no such alias"
+            )
+    return out
+
+
 def check_completion(
     findings: Findings, area: Path, text: str, pid: str | None
 ) -> Path | None:
@@ -358,6 +399,8 @@ def check_completion(
             findings.block(b)
         for n in notes:
             print(f"  {n}")
+        for w in arm_findings(text, area, measurement_run):
+            findings.warn(w)
     return measurement_run
 
 
