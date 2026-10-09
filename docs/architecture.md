@@ -17,7 +17,7 @@ holds the imports to it — a new module or an upward import fails the suite.
 | 2 · a run and its effects | `runlog`, `batch`, `llm`, `endpoint_lease` | writing a run (binding, refusals, provenance, index), resumable output, model calls, the model-slot lease |
 | 3 · checks | `intent_check`, `code_check`, `recheck`, `notes_check` | one question each, against code, metrics or a note |
 | 4 · gates | `preflight`, `finalize`, `claude_hooks`, `audit`, `install_hooks` | sequence the checks at a decision point; the hooks call the gates; `audit` runs the agent audit through `llm`; `install_hooks` installs the git hooks the gates run in (preflight checks they are there) |
-| tools | `protocol_fill`, `usability`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation`, `params` | fill a protocol field; stage and score a cold-agent probe; read what an agent did from its session transcript; what every cold-reader probe shares; how a person reads a protocol; how a newcomer finds their way in code |
+| tools | `protocol_fill`, `usability`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation`, `params`, `calltree` | fill a protocol field; stage and score a cold-agent probe; read what an agent did from its session transcript; what every cold-reader probe shares; how a person reads a protocol; how a newcomer finds their way in code; what one run of a command actually called |
 
 `runlog` (layer 2) reads layer 1 and calls `llm` only to record resolved
 models; `endpoint_lease` asks `runs.is_alive`, not the writer.

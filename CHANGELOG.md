@@ -5,6 +5,19 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.75.0 — 2026-10-09
+
+### Added — `labkit-calltree`
+
+- **The call tree of one real run, cut to the command's package.**
+  `labkit-calltree labkit-audit -- <args>` (or `module:function`) runs the
+  command under a profiler and prints, per call path, `module.qualname
+  path:line ×N` — only functions of the target's top-level package; one
+  called through the stdlib hangs under the nearest package function. The
+  editor's call hierarchy says what code could call; this says what one
+  run did, from the entry point down. Stdlib `trace --trackcalls` gave a
+  flat edge list across every module. A reading aid, not a check: no tier.
+
 ## 0.74.4 — 2026-10-09
 
 ### Changed — Terms before the question

@@ -34,7 +34,7 @@ nothing vanished, grown keys reported as a derived run), the note holding
 every reported number as a token and the run_id. Two areas re-implemented
 it and got two of three parts wrong (2026-10-05).
 
-Fourteen **console commands** come with the installation, `runlog` with three
+Fifteen **console commands** come with the installation, `runlog` with three
 sub-commands (all answer `--help`):
 
 ```bash
@@ -57,6 +57,7 @@ usability stage|score|trace <DIR>  # cold-agent probe: stage a probe lab repo, s
 labkit-audit <AREA> --mode preflight|analysis   # the AGENT audit (experiment-preflight) through any models.toml alias — not the `preflight` gate; exit 1 on a blocker OR a warning
 labkit-audit <AREA> --mode clarity              # a newcomer's reading of README, protocol and measure script (code-clarity); exit 1 on findings, never a gate
 labkit-params <AREA> [--run ID]     # the values the answering run ran with: home, meaning, tier (guaranteed / static evidence)
+labkit-calltree <COMMAND> [-- ARGS]  # what one run of a command called, cut to its package: path:line per call path (reading aid, not a check)
 ```
 
 ## Usability trace — what the whole chain costs for one kept number
