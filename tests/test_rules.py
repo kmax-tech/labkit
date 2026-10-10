@@ -230,6 +230,14 @@ class Refs(unittest.TestCase):
     def test_a_prefix_the_ledger_does_not_keep_is_left_alone(self) -> None:
         self.assertEqual(rules.check_refs("f", "CS-008 Run the linter", ROWS), [])
 
+    def test_a_marked_legacy_example_passes(self) -> None:
+        self.assertEqual(
+            rules.check_refs(
+                "f", "order §2.A2 before §2.A10  (rule-ref: legacy-example)", ROWS
+            ),
+            [],
+        )
+
     def test_old_ids_only_inside_the_alias_mark(self) -> None:
         self.assertEqual(rules.check_refs("f", "the rule *(was §1.A)* says", ROWS), [])
         self.assertEqual(

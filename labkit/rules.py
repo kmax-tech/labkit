@@ -53,6 +53,9 @@ CODE_RE = re.compile(r"\b((?:AS|CS|HS)-\d{3})\b")
 LEGACY_ID_RE = re.compile(r"§\d+\.[A-Z]?\d+[a-z]?|§\d+\.[A-Z]\b")
 ALIAS_IN_TEXT_RE = re.compile(r"\((?:was|war) §[^)]+\)")
 CLAUSE_CUT_RE = re.compile(r"[:,;—]| – | \(")
+LEGACY_EXAMPLE_MARK = (
+    "rule-ref: legacy-example"  # a line that shows an old §-id as an example
+)
 
 
 class RuleRow(NamedTuple):
@@ -278,7 +281,9 @@ def _line_refs(
         r.id.split("-")[0] for r in rows
     }  # a prefix this ledger does not keep is checked elsewhere
     problems = []
-    for m in LEGACY_ID_RE.finditer(ALIAS_IN_TEXT_RE.sub("", line)):
+    for m in LEGACY_ID_RE.finditer(
+        "" if LEGACY_EXAMPLE_MARK in line else ALIAS_IN_TEXT_RE.sub("", line)
+    ):
         row = by_alias.get(m.group())
         problems.append(
             f"{where}: old id {m.group()}"
