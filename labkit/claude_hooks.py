@@ -83,7 +83,16 @@ from labkit.repo import area_protocols, git_run
 # The template's throwaway stages: none of them opens a run, and the probe
 # is what comes BEFORE preflight, so gating it would invert the order.
 THROWAWAY_FLAGS = re.compile(r"(^|\s)--(show|probe|eval-only)\b")
-PY_TOKEN = re.compile(r"[\w./~-]+\.py\b")
+PY_TOKEN = re.compile(r"[\w./~-]+\.py")
+# A .py file is RUN when an interpreter precedes it (`python`, `python3.12`,
+# `.venv/bin/python`, flags between allowed), when it starts a command
+# segment (`./x.py`, after `;`, `&&`, `|`, `(`, `runlog start --`, `nohup`,
+# `time`), never when it is merely named (`sed -n 1,5p lib/x.py`, a path in
+# a heredoc): uniagent 2026-10-10, 85 of 272 hook lines in one session said
+# "opens a run" about a lib module someone was reading.
+INTERPRETER = re.compile(r"(?:^|/)python[\d.]*$")
+SEGMENT_START = {";", "&&", "||", "|", "(", "--", "nohup", "time", "exec"}
+STRIP = "\"'`();"  # around a token: quotes, parentheses, a trailing ;
 OPENS_RUN = re.compile(r"runlog\.(run|Run)\(")
 PROTOCOL_IN_SCRIPT = re.compile(r"PROTOCOL-[\w.-]+\.md")
 SKIP_TOKEN = "LABKIT_PREFLIGHT=skip"
@@ -132,10 +141,36 @@ def find_area(script: Path, stop: Path | None = None) -> Path | None:
     return None
 
 
+def executed_py(command: str) -> list[str]:
+    """The .py paths the command RUNS, in order: preceded by an interpreter
+    (flags in between allowed) or starting a command segment, or `./x.py`.
+    A .py path that is only named — read, edited, written in a heredoc — is
+    not among them."""
+    tokens = command.split()
+    out: list[str] = []
+    for i, raw in enumerate(tokens):
+        tok = raw.strip(STRIP)
+        if not PY_TOKEN.fullmatch(tok):
+            continue
+        j = i - 1
+        while j >= 0 and tokens[j].startswith("-") and tokens[j] not in SEGMENT_START:
+            j -= 1  # interpreter flags: python -u x.py
+        before = tokens[j].strip(STRIP) if j >= 0 else None
+        runs = (
+            tok.startswith("./")
+            or before is None
+            or before in SEGMENT_START
+            or INTERPRETER.search(before) is not None
+        )
+        if runs and (j == i - 1 or (before is not None and INTERPRETER.search(before))):
+            out.append(tok)
+    return out
+
+
 def run_scripts(command: str, cwd: Path) -> list[Path]:
-    """The .py files in the command that open a run — resolved and existing."""
+    """The .py files the command runs that open a run — resolved and existing."""
     out = []
-    for tok in PY_TOKEN.findall(command):
+    for tok in executed_py(command):
         p = Path(os.path.expanduser(tok))
         if not p.is_absolute():
             p = cwd / p

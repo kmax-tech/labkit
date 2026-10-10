@@ -179,6 +179,52 @@ class PreRun(unittest.TestCase):
         )
         self.assertEqual((rc, out, err), (0, "", ""))
 
+    def test_a_script_merely_named_is_silent(self):
+        # uniagent 2026-10-10: 85 of 272 hook lines in one session said a lib
+        # module "opens a run" because a command READ it — sed, cat, a path
+        # inside a heredoc. Only a run of the file is a run.
+        root = _repo(True)
+        (root / "lib").mkdir(exist_ok=True)
+        (root / "lib" / "opens.py").write_text(RUN_SCRIPT, encoding="utf-8")
+        for cmd in (
+            "sed -n 1,5p lib/opens.py",
+            "cat lib/opens.py | head",
+            "grep -n runlog lib/opens.py experiments/01-x/scripts/01_measure.py",
+            ".venv/bin/python - <<'EOF'\nfrom pathlib import Path\n"
+            'p = Path("lib/opens.py")\nprint(p.read_text())\nEOF',
+            "ls -l lib/opens.py",
+        ):
+            rc, out, err = _run(claude_hooks.pre_run, _bash(root, cmd))
+            self.assertEqual((rc, out, err), (0, "", ""), cmd)
+        # the twin: running the same file is seen
+        rc, out, _ = _run(claude_hooks.pre_run, _bash(root, "python lib/opens.py"))
+        self.assertEqual(rc, 0)
+        self.assertIn("opens a run, but no PROTOCOL", out)
+
+    def test_executed_py_names_runs_not_mentions(self):
+        runs = {
+            "python x.py": ["x.py"],
+            "python3.12 -u x.py --n 3": ["x.py"],
+            ".venv/bin/python scripts/01_measure.py": ["scripts/01_measure.py"],
+            "./x.py": ["./x.py"],
+            "cd a && python x.py; python y.py": ["x.py", "y.py"],
+            "runlog start -- .venv/bin/python x.py": ["x.py"],
+            "nohup x.py &": ["x.py"],
+            "LABKIT_UNFROZEN=1 python x.py": ["x.py"],
+        }
+        for cmd, want in runs.items():
+            self.assertEqual(claude_hooks.executed_py(cmd), want, cmd)
+        for cmd in (
+            "sed -n 1,5p x.py",
+            "cat x.py",
+            "ls -l x.py",
+            "git add x.py",
+            'p = Path("x.py")',
+            "python -c 'import x'",
+            "pytest tests/test_x.py -q",
+        ):
+            self.assertEqual(claude_hooks.executed_py(cmd), [], cmd)
+
     def test_skip_token_is_reported_not_blocked(self):
         root = _repo(True)
         rc, out, err = _run(

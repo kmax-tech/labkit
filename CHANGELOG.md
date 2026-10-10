@@ -31,6 +31,15 @@ pins (`requirements.txt` / `requirements.lock`).
 - `labkit/templates/models.toml.template` stamps the alias `opus` the
   command calls by default (`claude-cli`, `claude-opus-5-5`).
 
+### Fixed
+
+- **`claude-hook pre-run` fires only on a file the command RUNS.** It
+  matched every `.py` path in the command and read it for `runlog.run(`;
+  in uniagent 85 of 272 hook lines in one session said a lib module
+  "opens a run" because someone was reading it with `sed`, `cat` or a path
+  in a heredoc. `claude_hooks.executed_py` now wants an interpreter before
+  the file (flags allowed), a command-segment start, or `./x.py`.
+
 ## 0.78.0 — 2026-10-10
 
 ### Added — `labkit-init`: a lab repo and its areas from labkit's own templates
