@@ -85,14 +85,14 @@ what concerns only this house stays in the author's dotfiles.**
 
 | Place | Holds | Master or copy |
 |---|---|---|
-| labkit (this repo) | the code and its gates; the lab standard (`labkit/docs/standard.md`, English) and its ledger (`labkit/docs/rules.tsv`: id → name → status, every `AS` number); the protocol template and its field guide (`labkit/experiment-protocol.md.template`, `labkit/protocol-field-guide.md`); the audit agents' instructions (`labkit/*.agent.md`) | master |
+| labkit (this repo) | the code and its gates; the lab standard (`labkit/docs/standard.md`, English) and its ledger (`labkit/docs/rules.tsv`: id → name → status, every `AS` number); the protocol template and its field guide (`labkit/experiment-protocol.md.template`, `labkit/protocol-field-guide.md`); `labkit-init` and the templates it stamps (`labkit/templates/`: script skeletons, area tests, `AGENTS.md`, `models.toml`, editor settings); the audit agents' instructions (`labkit/*.agent.md`) | master |
 | labkit (this repo) | `docs/coding-style.md` | copy, stamped with the master's hash; edit the master, then `lib sync pull` |
-| author's dotfiles (`~/.claude/resources/`) | the house standard (`arbeitsstandard.md.template`, German — cut down to the house chapters, `TODO.md` item 5), the dated evidence behind every rule (`arbeitsstandard.evidence.md`), the house ledger (`rule-registry.tsv`: `CS` and `HS` ids, `AS` rows marked `moved:labkit`), the coding style, the script templates (`measure-script`, `prepare-script`, `test-area`, …), the scaffolder (`tools/arbeitsstandard-init.py`), the thesis starter | master |
+| author's dotfiles (`~/.claude/resources/`) | the house standard (`arbeitsstandard.md.template`, German — cut down to the house chapters, `TODO.md` item 5), the dated evidence behind every rule (`arbeitsstandard.evidence.md`), the house ledger (`rule-registry.tsv`: `CS` and `HS` ids, `AS` rows marked `moved:labkit`), the coding style, the house scaffolder (`tools/arbeitsstandard-init.py`: house files, the thread in `~/work`, sync; its lab part hands over to `labkit-init`), the note seeds, the thesis starter | master |
 | a lab repo | labkit as a pinned package, which brings the standard; `docs/coding-style.md`, `CLAUDE.md`, the scripts stamped from the templates (a repo pinned below 0.77 still carries its `docs/arbeitsstandard.md` copy) | copies, stamped by the scaffolder |
 | author's global `~/.claude/CLAUDE.md` | one-line reflexes that point at rule ids | master (house only) |
 
-**What is still in the dotfiles.** The scaffolder and the script templates
-a foreign lab needs to start a repo; their lab part moves into labkit as
-`labkit-init` (`TODO.md` item 5, phase 2). Gate messages and docstrings cite
-rules by id and English name, and `tests/test_rules.py` holds every such
-reference to the ledger.
+**What is still in the dotfiles.** The thesis starter, which carries house
+material (lecture links, run snapshots with the author's paths); whether it
+is cleaned for labkit or stays house is open (`TODO.md` item 5). Gate
+messages and docstrings cite rules by id and English name, and
+`tests/test_rules.py` holds every such reference to the ledger.
