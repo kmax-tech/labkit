@@ -290,6 +290,8 @@ def _line_refs(
     )
     for m in CODE_RE.finditer(scan):
         row = by_id.get(m.group(1))
+        if row is not None and row.status.startswith("moved:"):
+            continue  # the ledger it moved to checks it
         if row is None and m.group(1).split("-")[0] in held:
             problems.append(f"{where}: {m.group(1)} is not in the ledger")
         elif row is not None and row.status not in allowed:
@@ -314,7 +316,8 @@ def check_refs(
     Head lines, fenced code and a generated register are skipped (check_registry
     holds the heads), so a standard is checked like any other file. A house rule
     has no name to cite; with "house" in ALLOWED a bare house id passes. Ids of a
-    prefix the ledger does not keep (CS in labkit's) are left to their own ledger.
+    prefix the ledger does not keep (CS in labkit's), and ids the ledger marks
+    `moved:<where>`, are left to the ledger that holds them now.
     """
     problems, register, fence = [], False, False
     for n, line in enumerate(text.splitlines(), start=1):

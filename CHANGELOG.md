@@ -28,8 +28,9 @@ pins (`requirements.txt` / `requirements.lock`).
   grows), `check_refs` (every reference exists and names its rule).
   `python -m labkit.rules check | ledger | refs | show`; a house rule's
   number is listed with status `house`, and `show` says its text is not
-  distributed. `tests/test_rules.py` holds every living reference in labkit
-  to the ledger.
+  distributed; a row marked `moved:<where>` is left to the ledger it moved
+  to. `tests/test_rules.py` holds every living reference in labkit to the
+  ledger.
 
 ## 0.76.0 — 2026-10-09
 

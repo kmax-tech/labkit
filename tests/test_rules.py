@@ -218,6 +218,15 @@ class Refs(unittest.TestCase):
             len(rules.check_refs("f", 'msg = "see AS-003 for why"', ROWS)), 1
         )
 
+    def test_a_moved_id_is_left_to_the_ledger_it_moved_to(self) -> None:
+        rows = [*ROWS, RuleRow("AS-004", "", "Alter Name", "moved:labkit")]
+        self.assertEqual(rules.check_refs("f", "AS-004 New English name", rows), [])
+        # twin: the same id while active here is held to its name
+        active = [*ROWS, RuleRow("AS-004", "", "Alter Name", "active")]
+        self.assertEqual(
+            len(rules.check_refs("f", "AS-004 New English name", active)), 1
+        )
+
     def test_a_prefix_the_ledger_does_not_keep_is_left_alone(self) -> None:
         self.assertEqual(rules.check_refs("f", "CS-008 Run the linter", ROWS), [])
 
