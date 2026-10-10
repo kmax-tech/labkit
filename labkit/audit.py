@@ -150,7 +150,12 @@ def run_rows(area: Path, protocol: Path) -> list[tuple[str, str]]:
         path = path if path.is_absolute() else repo / path
         if not path.is_file():
             raise AuditError(f"{run_dir.name} registered {entry.path}, which is gone")
-        out.append(rows_excerpt(path, str(entry.path)))
+        name = (
+            path.resolve().relative_to(repo.resolve()).as_posix()
+            if path.resolve().is_relative_to(repo.resolve())
+            else str(entry.path)
+        )
+        out.append(rows_excerpt(path, name))
     metrics = run_dir / "metrics.json"
     if metrics.is_file():
         out.append(
