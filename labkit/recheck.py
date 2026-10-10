@@ -18,7 +18,7 @@ cold agents got two of them wrong on the first try (2026-10-05):
    U+2212 minus normalised first) and the run_id.
 
 Any disagreement is a SystemExit with a sentence; the verdict names what
-was compared. Rules: docs/arbeitsstandard.md AS-041 Generate numbers, don't retype them, AS-043 Runs go through `runlog` go through `runlog`.
+was compared. Rules: docs/arbeitsstandard.md AS-041 Generate numbers, don't retype them, AS-043 Runs go through `runlog`.
 """
 
 from __future__ import annotations

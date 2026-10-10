@@ -1,6 +1,6 @@
 """runlog — minimal per-experiment run tracking (stdlib-only, no service).
 
-Convention (AS-043 Runs go through `runlog` go through `runlog`, AS-079 Self-contained experiment areas experiment areas): every run — pilots included — goes through
+Convention (AS-043 Runs go through `runlog`, AS-079 Self-contained experiment areas): every run — pilots included — goes through
 `with runlog.run(...)`. Each run gets a self-contained dir and one append-only
 run-index row; PROTOCOL-<task>.md cites run_ids instead of pasting numbers.
 

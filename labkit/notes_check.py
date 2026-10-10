@@ -2,7 +2,7 @@
 """Check notes/messung/ notes for the declared kind in the meta line.
 
 Every note under notes/messung/ carries a *kind* in its italic meta line,
-right after the purpose (AS-082 In `notes/messung/` `notes/messung/`):
+right after the purpose (AS-082 In `notes/messung/`):
 
     Instrument — Entwurf        draft of a measurement instrument, no code yet
     Instrument — implementiert  instrument with carrying code (MUST name it)

@@ -11,7 +11,7 @@ carries it, filled when its value is not a `<…>` placeholder; an explicit
 protocols omitted "Type" and "Model I/O"; each omission caused a bad run).
 
 The checks, each stated as its current rule (the change history lives in the
-commits, AS-075 Docs carry the state, commits the change carry the state, commits the change):
+commits, AS-075 Docs carry the state, commits the change):
 
   * **Two tiers, one template.** MUST is the pilot minimum; SHOULD is what
     a REPORTABLE run owes on top. `frozen = true` escalates every SHOULD
@@ -28,7 +28,7 @@ commits, AS-075 Docs carry the state, commits the change carry the state, commit
     is not a prepare/probe line makes empty `Answer to the question` / `Raw
     output` fields a MUST failure — the context that explains the numbers
     dies with the session (2026-08-24).
-  * **Change-history prose is a warning** (AS-075 Docs carry the state, commits the change carry the state, commits the change).
+  * **Change-history prose is a warning** (AS-075 Docs carry the state, commits the change).
 
 Usage:
     protocol-check PROTOCOL-foo.md [more files or directories ...]
@@ -550,7 +550,7 @@ SERIES_HEAD = re.compile(
 DOCUMENTED_RUNS_HEAD = re.compile(r"(?i)^##\s.*(runs|ledger|l[\u00e4a]ufe)")
 
 # Change-history prose — the doc should carry the current rule, the commit the
-# change (AS-075 Docs carry the state, commits the change carry the state, commits the change). Warning only.
+# change (AS-075 Docs carry the state, commits the change). Warning only.
 CHANGELOG = re.compile(
     r"seit 20\d\d-\d\d|wieder drau[ßs]+en|wieder drin\b|hie[ßs]+ bis"
     r"|vorher (stand|galt)|fr[üu]her hie[ßs]+|umbenannt am",
@@ -957,7 +957,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             print(
                 f"{f}:{n}: change history in the text ({ln[:60]!r}) — docs "
                 f"carry the current state, the why of the change goes in the "
-                f"commit message (AS-075 Docs carry the state, commits the change carry the state, commits the change)."
+                f"commit message (AS-075 Docs carry the state, commits the change)."
             )
         # The must findings again, last: in a commit hook they sat among
         # 20 warning lines and were missed (usability probe 2026-10-07).
