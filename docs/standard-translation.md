@@ -65,11 +65,23 @@ The fixed rendering of *stanzen* was relaxed from "generate from the template"
 to the context-dependent "generate or create"; `stamp` remains reserved for
 the scope-sha stamp.
 
-## Still to do before this is the package standard
+## Adapted for the package
 
-- **Rewrite flagged blocks.** Blocks flagged `adapt` in
-  `docs/standard-blocks.tsv` (front matter, the id rules, the coinage table)
-  and `house-refs` (house paths and labs) get rewritten for the package. That
-  is a separate, reviewed edit, not part of the translation.
-- **Define the coinages** — area, promise, scar table, free knobs — where the
-  coinage table marks them.
+After the review, the blocks flagged `adapt` and `house-refs` were rewritten
+for a lab outside this house (2026-10-10). That is an edit, not a
+translation, and it has its own commit.
+
+- **Front matter:** what the standard is, and how a lab refers to it through
+  its pin instead of copying it. Evidence is kept by each lab. The
+  identifiers sit in `rules.tsv`, labkit assigns the numbers, and house
+  numbers are listed but not distributed.
+- **House paths and labs dropped:** the webis cluster, the course-notes
+  search, the ML notation path, and examples named after house labs.
+- **References to house rules** (AS-078, AS-099) are replaced by their plain
+  statement.
+- **The coinage table** becomes "Labkit terms and established terminology",
+  with rows defining area, promise and scar table (free knobs already had
+  one), and the glossary of chapter 2 defines area.
+
+Still open: `lib exp` in AS-003 and AS-046 names the house scaffolder, until
+`labkit-init exp` replaces it (TODO item 5, phase 2).

@@ -1,21 +1,35 @@
-<!-- DRAFT — machine translation of the German lab standard, reviewed block by block by a human (TODO item 5, phase 1). Not yet the package standard: blocks flagged `adapt` and `house-refs` in docs/standard-blocks.tsv are still to be rewritten. How it was made: docs/standard-translation.md. -->
+<!-- DRAFT until labkit 0.77.0: translated from the German lab standard, reviewed block by block, adapted for the package (docs/standard-translation.md). -->
 
-# Working standard — Detailed rulebook (<PROJECT_NAME>)
+# The labkit lab standard
 
-**Evidence lives alongside.** If a rule comes from a concrete failure, the case is in `~/.claude/resources/arbeitsstandard.evidence.md` under the same id. The rule text says what applies, and in a half-sentence why; the evidence file says where it went wrong. Anyone who doubts a rule or wants to change it reads there first.
+These are the rules an experiment area is held to — before a run, during it,
+and before a number leaves the lab. labkit's checks enforce what can be
+checked mechanically and cite the rule they enforce by identifier and name;
+the rest is for the author, the audits and the reviewer. A lab refers to this
+standard through its pinned labkit version instead of copying it:
+`python -m labkit.rules show AS-015` prints one rule. A lab's own rules live in
+its repository (`docs/`); they add to these rules and never override them.
 
-**Identifiers.** Every rule carries an identifier `AS-nnn` (coding-style: `CS-nnn`)
-and a name; the ledger is `rule-registry.tsv` next to this file. The following applies:
+**Evidence lives alongside.** If a rule comes from a concrete failure, a lab
+keeps the case in its own evidence file under the same identifier; this
+standard ships the rule text only. The rule text says what applies, and in a
+half-sentence why; the evidence says where it went wrong. Anyone who doubts a
+rule or wants to change it reads the evidence first.
+
+**Identifiers.** Every rule carries an identifier `AS-nnn` and a name; the
+ledger is `rules.tsv` next to this file, and labkit assigns every `AS` number.
+Some numbers belong to rules of the lab that wrote this standard and are not
+distributed: the ledger lists them as `house`, and `python -m labkit.rules show`
+says so. The following applies:
 
 1. Every identifier is assigned exactly once.
 2. An identifier is never reused; a new rule gets the highest number ever
-   assigned + 1 (`arbeitsstandard-init.py --new-rule "<title>"`),
-   even if one has been dropped in between.
+   assigned + 1, even if one has been dropped in between.
 3. An identifier never changes — not when renaming, not when moving.
    A deleted rule stays in the ledger as `retired`, a moved one as
    `moved:<where>`.
 4. Every old §-identifier remains resolvable as an alias: in the rule head
-   (`*(was §2.A12)*`), in the register and in the ledger.
+   (`*(was §2.A12)*`) and in the ledger.
 5. Identifier and name fit together: a reference gives the title or its
    start (at least two words or the first clause).
 6. Current references are identifier + name: `AS-015 Preflight audit before
@@ -24,11 +38,8 @@ and a name; the ledger is `rule-registry.tsv` next to this file. The following a
    archives and frozen protocols keep their §-identifiers.
 8. New §-identifiers are no longer created.
 
-`arbeitsstandard-init.py --register check` checks 1–4 against the ledger, `--refs
-check <paths>` checks 5, 6 and 8 against the references; the dotfiles'
-pre-commit hook calls both.
-
----
+`python -m labkit.rules check` holds 1–4 against the ledger;
+`python -m labkit.rules refs <paths>` holds 5, 6 and 8 at the references.
 
 ---
 
@@ -56,6 +67,8 @@ pre-commit hook calls both.
   registered branches (AS-004 Identifiers make the intent addressable).
 - **Render check** — only look at finished prompts, zero model calls (`--show`).
 - **Instrument check** — ~10 real calls through the real pipeline (`--probe`).
+- **Area** — one experiment directory under `experiments/`: protocol, scripts,
+  data references, runs; the unit every labkit check works on.
 - **Pilot** — small run, checkable by hand, before scaling up.
 - **Freezing (frozen)** — fixing hypothesis and criteria in writing; from then on
   the run counts as a test, before that it is exploration.
@@ -105,11 +118,11 @@ evidence file under the same ID (top of this document).*
 - **AS-004 · Identifiers make the intent addressable.** *(was §2.A1a)* Every promise to
   the code carries an identifier in the protocol text, depending on its kind:
 
-  | Identifier | Kind              | what it fixes                                                                                                                                          |
-  |------------|-------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-  | `[C1]`…    | Criterion         | which value of which metric supports the hypothesis                                                                                                    |
-  | `[A1]`…    | Admissibility     | whether a C verdict may be issued at all: an outcome-neutral check in the same run (control, anchor, yield, coverage, resolution)                       |
-  | `[B1]`…    | Branch            | what follows from a result: which conclusion or which follow-up analysis                                                                               |
+  | Identifier | Kind          | what it fixes                                                                                                                     |
+  |------------|---------------|-----------------------------------------------------------------------------------------------------------------------------------|
+  | `[C1]`…    | Criterion     | which value of which metric supports the hypothesis                                                                               |
+  | `[A1]`…    | Admissibility | whether a C verdict may be issued at all: an outcome-neutral check in the same run (control, anchor, yield, coverage, resolution) |
+  | `[B1]`…    | Branch        | what follows from a result: which conclusion or which follow-up analysis                                                          |
 
   The separation rule: **C judges, A permits the verdict, B says what
   follows from it.** If a condition depends on the outcome of the hypothesis,
@@ -225,7 +238,7 @@ evidence file under the same ID (top of this document).*
   lands as `cost_tier` in `config.json`.
 
 - **AS-012 · Protocol is content.** *(was §2.A9)* A protocol carries decisions with reasons —
-  no review drafts, no repetition of house rules, no address to a person.
+  no review drafts, no repetition of this standard's rules, no address to a person.
   Open points are either decided (the rationale
   stays) or attached to the instrument check as a checkpoint; the
   review itself happens in conversation, not in the document.
@@ -299,22 +312,22 @@ evidence file under the same ID (top of this document).*
   analysis audit (AS-050 Analysis audit before reporting), `beide` = in both; the same values as the
   mode of the agent `experiment-preflight`:
 
-  | Class                        | what goes wrong                                                                                                                                                                                                  | Audit     | Rule                                                                                                                              |
-  |------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------|
-  | Criterion ≠ code             | Threshold, direction or cell comparison in the script deviates from the registered criterion                                                                                                                     | preflight | AS-003 No run without an intent paragraph, AS-009 Verdict only at the registered tier                                             |
-  | Prompt↔gate defined twice    | the same rule typed in the prompt text and in the validator instead of rendered from one constant (or held by a test)                                                                                            | preflight | AS-038 What the prompt demands                                                                                                    |
-  | Null condition only on paper | registered, not generated in the code or not in the same run                                                                                                                                                     | preflight | AS-034 Null condition in the same run                                                                                             |
-  | Branch not implemented       | registered fork without a branch in the code                                                                                                                                                                     | preflight | AS-013 Registered branch                                                                                                          |
-  | Sign/direction               | the metric assumes concordance where the question form is anticorrelated                                                                                                                                         | analysis  | —                                                                                                                                 |
-  | In-sample fit quality        | Fit and evaluation on the same points (r² without leave-one-out)                                                                                                                                                 | analysis  | —                                                                                                                                 |
-  | Gate without anchor/resolution | Instrument gate without positive control; criterion with uncomputed resolution (AS-016 Resolution check before freezing); anchor without near cases (AS-039 Anchors include the near cases)                    | beide     | —                                                                                                                                 |
-  | One output file = one run    | Instrument check or debug writes into the run's file                                                                                                                                                             | preflight | AS-057 One area per idea                                                                                                          |
-  | Parser without fixture test  | Model-output parser without a test with a real raw answer; drops uncounted; empty answer not a state of its own                                                                                                 | beide     | AS-023 No silent loss, AS-030 Reasoning models                                                                                    |
-  | Spread unknown               | n = 1 draw, unseeded, temperature implicit — a difference without a noise floor                                                                                                                                  | beide     | AS-036 Validate                                                                                                                   |
-  | Shared constant              | Anchor or threshold lives in `lib/` and is shared by several areas; whoever changes it changes other areas' numbers                                                                                              | beide     | —                                                                                                                                 |
-  | Index/assignment             | Join by position instead of id — two stages build their order independently                                                                                                                                     | beide     | —                                                                                                                                 |
-  | Provenance incomplete        | `prompt_sha`/config does not cover everything that determines the prompt or the number                                                                                                                           | beide     | AS-043 Runs go through `runlog`                                                                                                   |
-  | Operations                   | Alias not from `models.toml`, lock/resume missing, retries uncounted; a second alias in parallel is locked by the endpoint lease (AS-028 An endpoint is a model slot, not a service) — check whether the area bypasses it | preflight | AS-027 Model discipline, AS-028 An endpoint is a model slot, not a service, AS-049 Long runs go through the harness's background mechanism |
+  | Class                          | what goes wrong                                                                                                                                                                                                           | Audit     | Rule                                                                                                                                       |
+  |--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|--------------------------------------------------------------------------------------------------------------------------------------------|
+  | Criterion ≠ code               | Threshold, direction or cell comparison in the script deviates from the registered criterion                                                                                                                              | preflight | AS-003 No run without an intent paragraph, AS-009 Verdict only at the registered tier                                                      |
+  | Prompt↔gate defined twice      | the same rule typed in the prompt text and in the validator instead of rendered from one constant (or held by a test)                                                                                                     | preflight | AS-038 What the prompt demands                                                                                                             |
+  | Null condition only on paper   | registered, not generated in the code or not in the same run                                                                                                                                                              | preflight | AS-034 Null condition in the same run                                                                                                      |
+  | Branch not implemented         | registered fork without a branch in the code                                                                                                                                                                              | preflight | AS-013 Registered branch                                                                                                                   |
+  | Sign/direction                 | the metric assumes concordance where the question form is anticorrelated                                                                                                                                                  | analysis  | —                                                                                                                                          |
+  | In-sample fit quality          | Fit and evaluation on the same points (r² without leave-one-out)                                                                                                                                                          | analysis  | —                                                                                                                                          |
+  | Gate without anchor/resolution | Instrument gate without positive control; criterion with uncomputed resolution (AS-016 Resolution check before freezing); anchor without near cases (AS-039 Anchors include the near cases)                               | beide     | —                                                                                                                                          |
+  | One output file = one run      | Instrument check or debug writes into the run's file                                                                                                                                                                      | preflight | AS-057 One area per idea                                                                                                                   |
+  | Parser without fixture test    | Model-output parser without a test with a real raw answer; drops uncounted; empty answer not a state of its own                                                                                                           | beide     | AS-023 No silent loss, AS-030 Reasoning models                                                                                             |
+  | Spread unknown                 | n = 1 draw, unseeded, temperature implicit — a difference without a noise floor                                                                                                                                           | beide     | AS-036 Validate                                                                                                                            |
+  | Shared constant                | Anchor or threshold lives in `lib/` and is shared by several areas; whoever changes it changes other areas' numbers                                                                                                       | beide     | —                                                                                                                                          |
+  | Index/assignment               | Join by position instead of id — two stages build their order independently                                                                                                                                               | beide     | —                                                                                                                                          |
+  | Provenance incomplete          | `prompt_sha`/config does not cover everything that determines the prompt or the number                                                                                                                                    | beide     | AS-043 Runs go through `runlog`                                                                                                            |
+  | Operations                     | Alias not from `models.toml`, lock/resume missing, retries uncounted; a second alias in parallel is locked by the endpoint lease (AS-028 An endpoint is a model slot, not a service) — check whether the area bypasses it | preflight | AS-027 Model discipline, AS-028 An endpoint is a model slot, not a service, AS-049 Long runs go through the harness's background mechanism |
 
   **Refine by count, not by deadline:** the protocol lines carry
   findings/accepted/dismissed and are greppable
@@ -361,10 +374,10 @@ evidence file under the same ID (top of this document).*
   calls, money, annotation time. A run of seconds can be repeated at any time
   and does not need this protection.
 
-  | Tier               | before the run                                                                                                                                              | after the run                                                                                                                                                                                                                                                                                                               |
-  |--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+  | Tier               | before the run                                                                                                                                             | after the run                                                                                                                                                                                                                                                                                                   |
+  |--------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
   | `seconds`          | `code-check` (AS-018 Routine check after every implementation); no agent audit, `preflight_audit` stays empty; the first run replaces the instrument check | **one** audit in `analysis` mode, which also covers the `preflight` rows of the scar table; it comes at the promotion of the number or immediately if it steers a decision (a branch `[B]`, a lab notebook item) — until then the number is *sketch*; blockers and warnings are reported, notes only as a count |
-  | `minutes`, `hours` | `code-check`, then preflight audit (AS-015 Preflight audit before freezing)                                                                                 | Analysis audit (AS-050 Analysis audit before reporting), before a number is reported                                                                                                                                                                                                                                        |
+  | `minutes`, `hours` | `code-check`, then preflight audit (AS-015 Preflight audit before freezing)                                                                                | Analysis audit (AS-050 Analysis audit before reporting), before a number is reported                                                                                                                                                                                                                            |
 
   **At `seconds`, the criterion freezes once, the instrument never.** The
   criterion is fixed before the number exists and does not move afterwards. The
@@ -514,7 +527,7 @@ evidence file under the same ID (top of this document).*
   freezing, and a missing
   `requirements.lock` triggers a loud warning instead of silently noting "unpinned".
   The `models.toml` template ships with `haiku` (claude-cli, headless-safe);
-  Ollama models run via the webis cluster. Special calls (logprobs) obtain
+  Ollama models run on the lab's own servers. Special calls (logprobs) obtain
   endpoint and model via `resolve()`, never as a literal.
 
 - **AS-028 · An endpoint is a model slot, not a service.** *(was §2.C1a)* At the swap proxy,
@@ -577,8 +590,7 @@ evidence file under the same ID (top of this document).*
   and subtracting them goes wrong as soon as the levels sit at a boundary
   — and you cannot tell from the difference. The **answer form is a
   free knob** and must be justified before the run: How many distinguishable
-  states does the answer have, and where does the expected value lie within them? Rule of thumb
-  (from the note *messverfahren-prognose*, counterfactual-worlds): *relative
+  states does the answer have, and where does the expected value lie within them? Rule of thumb: *relative
   beats absolute, categorical beats graded, anchored beats
   free-floating.* The **forced answer** (stalemate default, "only the
   letter") is also such a knob: check the effect of each wording variant
@@ -827,8 +839,7 @@ AS-061–AS-065 govern how a growing area stays readable.
   evidence layer; the summary stands on its own, without anyone having to open every protocol.
   When a research line concludes (or flips), the overview moves as a
   consolidation note to `notes/`: finding first, numbers with
-  run_id references, named open interpretations (model: note
-  *weltpaar-bauarten*, counterfactual-worlds).
+  run_id references, named open interpretations.
 
 - **AS-064 · The pilot is resumable too.** *(was §2.F8)* The pilot may be rough
   (`--limit`, little analysis, quick decision), but it does not forgo
@@ -870,7 +881,7 @@ The **analysis is the experiment** and stays in the script: criteria (success as
   profile fingerprint covers named files), **verbatim in the protocol**
   (the field *Prompt* shows what the model saw). The home is the script
   — or a file that the profile names and the fingerprint covers
-  (uniagent `register/prompts/*.md`, `register/rule-texts/*.toml`: a
+  (for example `register/prompts/*.md`, `register/rule-texts/*.toml`: a
   rule-text swap there is a diff of two files, not a diff in
   Python strings). If a second area needs the same wording, it is
   shared, not copied (`lib/prompts.py` or the same file); then "identical" is verifiable instead of asserted (`tests/test_prompts.py`).
@@ -926,13 +937,13 @@ The **analysis is the experiment** and stays in the script: criteria (success as
 directly after the purpose (schema above; a restriction blockquote *before* the
 meta line remains allowed — the findings register reads exactly that one):
 
-| Kind                         | Meaning                                                      | Rule                                                                                                                                                  |
-|------------------------------|--------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `Instrument — Entwurf`       | Named measurement procedure, no load-bearing code yet        | Dossier: stays the **same** note until implementation                                                                                                 |
-| `Instrument — implementiert` | Procedure with load-bearing code                             | MUST name script/function/area path                                                                                                                   |
-| `Related-Lesart (<citekey>)` | Lab reading of a paper: what it means for *our measurement*  | name the cite-key; **should-rule (no check):** no summary duplicate — the library note is canonical; project-neutral takeaway → its `# Notes:` part   |
-| `Referenzkarte`              | Glossary, register, terminology, source map                  | —                                                                                                                                                     |
-| `Audit`                      | Design/preflight audit as a note                             | —                                                                                                                                                     |
+| Kind                         | Meaning                                                     | Rule                                                                                                                                                |
+|------------------------------|-------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Instrument — Entwurf`       | Named measurement procedure, no load-bearing code yet       | Dossier: stays the **same** note until implementation                                                                                               |
+| `Instrument — implementiert` | Procedure with load-bearing code                            | MUST name script/function/area path                                                                                                                 |
+| `Related-Lesart (<citekey>)` | Lab reading of a paper: what it means for *our measurement* | name the cite-key; **should-rule (no check):** no summary duplicate — the library note is canonical; project-neutral takeaway → its `# Notes:` part |
+| `Referenzkarte`              | Glossary, register, terminology, source map                 | —                                                                                                                                                   |
+| `Audit`                      | Design/preflight audit as a note                            | —                                                                                                                                                   |
 
 - **Kind is declared, never derived from code mentions** — a
   reference card may name dozens of scripts, a draft may
@@ -951,17 +962,15 @@ meta line remains allowed — the findings register reads exactly that one):
   after the kind in the purpose slot, but do not replace it.
 - The axis *sketch vs. settled* (chapter 1, claim status) is independent of this
   and may additionally appear in the meta line; `superseded → [[…]]`
-  marks an outdated note together with its successor (AS-099 The thesis may repeat; state and reasoning may not).
+  marks an outdated note together with its successor.
 
 ## 5. Notation standard
 
 **The glossary is the single source of truth for terms — project-wide, not
 per experiment.** Every experiment area, every script, every note uses
-*the same* terms; anyone who needs a new one enters it **here** instead of
-introducing it locally. Otherwise the areas drift apart in their terminology and
+*the same* terms; anyone who needs a new one enters it in the lab's glossary (`notes/theorie/begriffe.md`, see AS-084) instead of introducing it locally. Otherwise the areas drift apart in their terminology and
 results become incomparable — the same logic as with `models.toml`
-(backends in one place) or the run index (`runs.tsv`). Code and prompts in
-English, notes in <language>; an ambiguous term is pinned in a
+(backends in one place) or the run index (`runs.tsv`). Code and prompts in English, notes in the lab's working language; an ambiguous term is pinned in a
 definition note.
 
 - **AS-083 · The name carries what it denotes (2026-08-20).** *(was §5.1)* `--distance-cell`,
@@ -970,22 +979,18 @@ definition note.
   workshop term appears in a second area, it is pinned in the glossary —
   area-local terms are covered by the protocol's required field "Begriffe".
 
-- **AS-084 · Double-coinage check — first the field, then the house, then the existing stock.** *(was §5.2)* Before any new coinage, two searches. (1) *Field stock:* What does the lecture call it?
-  `lib term <candidate>` searches the Webis lecture notes (282 units,
-  13 courses — ML, NLP, IR, statistics, databases) for coined terms
-  and their slide wording; if there is one there, it is used,
+- **AS-084 · Double-coinage check — first the field, then the lab, then the existing stock.** *(was §5.2)* Before any new coinage, two searches. (1) *Field stock:* What does the field call it — in the course material and
+  literature the lab works with (a lab may keep a searchable index of it)? If
+  there is a term, it is used,
   even if one's own sounds catchier: shared vocabulary is worth more
-  than a better individual name. (2) *House stock:*
-  `grep -ri <candidate + synonyms> notes/`; if a house term exists, it is
-  inherited, never coined twice (on two days "Arm" emerged next to `-Weg`,
-  "Gate" next to `Anker-Tor`, "Headroom" next to `Spielraum` — three
-  rollbacks). **Four homes, one per kind of term:** *Method* (criterion, admissibility condition, registered branch, arm, draw) →
+  than a better individual name. (2) *Lab stock:*
+  `grep -ri <candidate + synonyms> notes/`; if a lab term exists, it is inherited, never coined twice. **Four homes, one per kind of term:** *Method* (criterion, admissibility condition, registered branch, arm, draw) →
   the vocabulary table of this standard; *Tool* (answering run, derived
   run, stamp) → labkit README "Terms"; *Lab* (rival, gap case,
   coverage per case) → `notes/theorie/begriffe.md` of the repo, per line
-  everyday word · house term · code word; *a protocol* → its field
+  everyday word · lab term · code word; *a protocol* → its field
   "Terms of this protocol", first field of the intent. Look up in this
-  order: field (`lib term`), method, tool, lab; what is found
+  order: field, method, tool, lab; what is found
   is inherited. If neither of the two searches finds anything, the coinage is free
   and belongs in the core glossary. And if the same word already means two things
   (typically: a technical term and a colloquial usage), *one* of them is renamed and the convention recorded here — not "the context will make it clear".
@@ -1004,42 +1009,46 @@ definition note.
 
 - **AS-087 · Term before use.** *(was §5.5)* A term is defined before an experiment uses it in a prompt, field name or file name.
 
-- **AS-088 · Look up field notation, don't invent it.** *(was §5.6)* For ML/NLP/IR there is a
-  ready-made core vocabulary on one page:
-  `~/work/resources/webis/webis-ml-notation.md` (modeling O/γ/α/X/y,
-  feature vector and feature space, running indices n/p/k/d, the layers of the
-  ML stack). When writing about ML, look there first — the terms
-  are already laid out and do not need to be searched for. What is missing: `lib term`.
+- **AS-088 · Look up field notation, don't invent it.** *(was §5.6)* For ML/NLP/IR, a lab keeps — or adopts — a ready-made core vocabulary on one
+  page (modeling O/γ/α/X/y, feature vector and feature space, running indices
+  n/p/k/d, the layers of the ML stack). When writing about ML, look there first
+  — the terms are already laid out and do not need to be searched for. What it
+  lacks is searched as in AS-084 Double-coinage check.
 
 How a coinage appears in prose — everyday word first, the coinage at most once in parentheses, English coinages only in code and config keys — is governed by AS-092 Term layering.
 
-If the project grows, a dedicated **terminology note** (`notes/…`) that maps the project terms against the literature (term ↔ standard term ↔ source ↔ status) is worthwhile instead of the table below. Then only the pointer to it remains here.
+If the project grows, a dedicated **terminology note** (`notes/…`) that maps the project's own terms against the literature (term ↔ standard term ↔ source ↔ status) is worthwhile — what the table below does for labkit's terms.
 
-### House ↔ Field: Own Coinages and Their Standard Term
+### Labkit terms and established terminology
 
-*Purpose (AS-085 Mark your own coinages as such): never present own coinages as standard — the paper uses the technical term, and the coinage remains explanatory prose. Coinages without a row here are
-either standard (gold label, confound, pilot, self-consistency, run index) or
-not yet assigned — in that case, enter them here before using them in the paper.*
+*Purpose (AS-085 Mark your own coinages as such): never present a labkit
+coinage as established — a paper uses the established term, and the coinage
+remains explanatory prose. Terms without a row here are established (gold
+label, confound, pilot, self-consistency, run index). Four coinages are
+labkit's own and defined here: area, promise, scar table, free knobs.*
 
-| House term                          | Technical term                                                         | Source / note                                                                          |
-|-------------------------------------|------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
-| Intent · freeze (frozen)            | preregistration; study protocol                                        | Nosek et al. 2018 (PNAS)                                                               |
-| Render check · instrument check     | instrument pretest (survey methodology)                                | Dev language as secondary term: dry run / smoke test                                   |
-| Null condition · anchor             | negative / positive control; calibration items — as identifier `[A]`   | Laboratory standard; Registered Reports: outcome-neutral condition                     |
-| Resolution anchor                   | no fixed term; closest: known intermediate-intensity item              | Psychophysics: probe near the difference threshold; NOT discriminant validity          |
-| Free knobs                          | researcher degrees of freedom                                          | Simmons et al. 2011                                                                    |
-| Sweep obligation (AS-032 Free knobs) | sensitivity analysis; multiverse analysis                             | Steegen et al. 2016                                                                    |
-| Yield                               | yield; attrition                                                       | CONSORT flow logic                                                                     |
-| Legend (`_meta`)                    | codebook / data dictionary                                             | Social research / data engineering                                                     |
-| Polarity symmetry                   | framing/valence effect; prompt polarity sensitivity                    | NOT positional bias — that is the swap control                                         |
-| Anchor gate                         | validation gate; sanity checks                                         | Software QA / ML eval                                                                  |
-| Producer                            | build step / pipeline stage                                            | Data engineering                                                                       |
-| Registered branch (`[B]`)           | pre-specified conditional analysis; decision tree (IF-THEN)            | Prereg templates; NOT "decision rule" — C and A also decide                            |
-| Admissibility condition (`[A]`)     | outcome-neutral condition; quality check                               | Registered Reports; NOT stopping rule (= when data collection ends) and NOT futility   |
-| Throwaway test                      | no fixed term; closest: exploratory scratch run                        | —                                                                                      |
-| Judge instance                      | judge configuration                                                    | LLM-as-judge literature                                                                |
-| Two-user rule                       | rule of three                                                          | Fowler 1999; Metz: "duplication is cheaper than the wrong abstraction"                 |
-| Home                                | single source of truth                                                 | —                                                                                      |
+| Labkit term                          | Established term                                                     | Source / note                                                                                                                                        |
+|--------------------------------------|----------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Area                                 | no fixed term; closest: study folder                                 | one directory under `experiments/`: protocol, scripts, data references, runs — the unit every labkit check works on                                  |
+| Promise                              | preregistered hypothesis or analysis-plan item                       | one row of the protocol's promise block — a criterion `[C]`, an admissibility condition `[A]` or a registered branch `[B]` — that the code must keep |
+| Scar table                           | taxonomy of known failure modes; checklist                           | the error classes of AS-015 the audit checks, each an error that has happened before, with the rule that forbids it                                  |
+| Intent · freeze (frozen)             | preregistration; study protocol                                      | Nosek et al. 2018 (PNAS)                                                                                                                             |
+| Render check · instrument check      | instrument pretest (survey methodology)                              | Dev language as secondary term: dry run / smoke test                                                                                                 |
+| Null condition · anchor              | negative / positive control; calibration items — as identifier `[A]` | Laboratory standard; Registered Reports: outcome-neutral condition                                                                                   |
+| Resolution anchor                    | no fixed term; closest: known intermediate-intensity item            | Psychophysics: probe near the difference threshold; NOT discriminant validity                                                                        |
+| Free knobs                           | researcher degrees of freedom                                        | Simmons et al. 2011                                                                                                                                  |
+| Sweep obligation (AS-032 Free knobs) | sensitivity analysis; multiverse analysis                            | Steegen et al. 2016                                                                                                                                  |
+| Yield                                | yield; attrition                                                     | CONSORT flow logic                                                                                                                                   |
+| Legend (`_meta`)                     | codebook / data dictionary                                           | Social research / data engineering                                                                                                                   |
+| Polarity symmetry                    | framing/valence effect; prompt polarity sensitivity                  | NOT positional bias — that is the swap control                                                                                                       |
+| Anchor gate                          | validation gate; sanity checks                                       | Software QA / ML eval                                                                                                                                |
+| Producer                             | build step / pipeline stage                                          | Data engineering                                                                                                                                     |
+| Registered branch (`[B]`)            | pre-specified conditional analysis; decision tree (IF-THEN)          | Prereg templates; NOT "decision rule" — C and A also decide                                                                                          |
+| Admissibility condition (`[A]`)      | outcome-neutral condition; quality check                             | Registered Reports; NOT stopping rule (= when data collection ends) and NOT futility                                                                 |
+| Throwaway test                       | no fixed term; closest: exploratory scratch run                      | —                                                                                                                                                    |
+| Judge instance                       | judge configuration                                                  | LLM-as-judge literature                                                                                                                              |
+| Two-user rule                        | rule of three                                                        | Fowler 1999; Metz: "duplication is cheaper than the wrong abstraction"                                                                               |
+| Home                                 | single source of truth                                               | —                                                                                                                                                    |
 
 ## 6. Clarity
 
@@ -1078,7 +1087,7 @@ not yet assigned — in that case, enter them here before using them in the pape
 
 - **AS-100 · Answer before reasoning (2026-10-07).** A note answers one
   question; the purpose in the meta line names it. If it cannot be named in one
-  sentence, the note is split (AS-078 One idea per note). The first paragraph
+  sentence, the note is split: one idea per note. The first paragraph
   after the meta line is the answer in at most three sentences — result, not
   procedure ("None of the examined systems binds …", not "We first
   looked at …"); reasoning, evidence and limits follow. In the sentence:
@@ -1097,8 +1106,7 @@ not yet assigned — in that case, enter them here before using them in the pape
   paragraphs, prose is better. Symbols (●, ◐, ○) are explained directly
   before the table; evidence for individual cells goes in an evidence table or
   under `## Sources`, not hidden in the prose. The same table is
-  maintained in exactly one place (AS-099 The thesis may repeat; state and
-  reasoning may not).
+  maintained in exactly one place.
 
 ## 7. Parsimony: Core Problem First
 

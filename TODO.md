@@ -501,7 +501,8 @@ dotfiles-Hooks rot.
 - `usability.py`: `STAMPED`/`SCAFFOLDER` aus dem Paket; `usability stage`
   läuft dann ohne `~/.claude`.
 - Lebende Leser: `README.md` (Hook-Installation, Sync-/Shim-Absatz),
-  `docs/student-repos.md` (`labkit-init thesis`); `package-data` für
+  `docs/student-repos.md` (`labkit-init thesis`), `labkit/docs/standard.md`
+  (`lib exp` in AS-003 und AS-046 → `labkit-init exp`); `package-data` für
   `docs/*.md`, `docs/*.tsv`, verschachteltes `templates/` erweitern.
 - dotfiles am selben Tag: `IN_LABKIT`/`master_path` und der Test, der den
   labkit-Checkout liest, brechen beim Umzug; der Labor-Teil fliegt aus dem
