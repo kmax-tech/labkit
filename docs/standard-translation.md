@@ -77,11 +77,12 @@ translation, and it has its own commit.
   numbers are listed but not distributed.
 - **House paths and labs dropped:** the webis cluster, the course-notes
   search, the ML notation path, and examples named after house labs.
-- **References to house rules** (AS-078, AS-099) are replaced by their plain
+- **References to rules that stay in the house** are replaced by their plain
   statement.
 - **The coinage table** becomes "Labkit terms and established terminology",
   with rows defining area, promise and scar table (free knobs already had
   one), and the glossary of chapter 2 defines area.
 
-Still open: `lib exp` in AS-003 and AS-046 names the house scaffolder, until
+Still open: `lib exp` in AS-003 No run without an intent paragraph and
+AS-046 Notebooks: explore yes, report never names the house scaffolder, until
 `labkit-init exp` replaces it (TODO item 5, phase 2).

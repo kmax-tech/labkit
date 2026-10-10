@@ -1,6 +1,6 @@
 """runlog — minimal per-experiment run tracking (stdlib-only, no service).
 
-Convention (AS-043 Runs über `runlog`, AS-079 Self-contained Experiment-Bereiche): every run — pilots included — goes through
+Convention (AS-043 Runs go through `runlog` go through `runlog`, AS-079 Self-contained experiment areas experiment areas): every run — pilots included — goes through
 `with runlog.run(...)`. Each run gets a self-contained dir and one append-only
 run-index row; PROTOCOL-<task>.md cites run_ids instead of pasting numbers.
 
@@ -740,7 +740,7 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
         print(
             f"runlog: WARNING — no PROTOCOL-*.md in {base_dir}; this run "
             f"is recorded as unbound. A kept number needs a protocol "
-            f"(AS-003 Kein Lauf ohne Intent-Absatz)."
+            f"(AS-003 No run without an intent paragraph)."
         )
         return {"id": None, "path": None}
     else:
@@ -778,8 +778,8 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
 # number carries it. The gate follows the cost tier: at `cost = "seconds"`
 # the run is rerunnable at will, so the freeze protects nothing — what a
 # full run needs there is the registration, written before the number
-# (AS-003 Kein Lauf ohne Intent-Absatz); an instrument change after it is a commit and a rerun, not a
-# second freeze (AS-017 Die Zahl der Audits folgt der Kostenstufe). `minutes`, `hours` and an unfilled cost keep the
+# (AS-003 No run without an intent paragraph); an instrument change after it is a commit and a rerun, not a
+# second freeze (AS-017 The number of audits follows the cost tier). `minutes`, `hours` and an unfilled cost keep the
 # freeze. The tier lands in config.json as `cost_tier`.
 
 
@@ -801,7 +801,7 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
     if text is None:
         return [
             "the run is unbound (no protocol) — a full run needs a "
-            "registered protocol (AS-003 Kein Lauf ohne Intent-Absatz)"
+            "registered protocol (AS-003 No run without an intent paragraph)"
         ]
     path = Path(binding["path"])
     if binding.get("id") is None:
@@ -820,7 +820,7 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
             f'{path.name}: `cost = "seconds"`, but the registration is not '
             f"written: {', '.join(missing)} still empty or a placeholder — at "
             f"seconds the gate is question · criterion · admissibility "
-            f"condition, not the freeze (AS-003 Kein Lauf ohne Intent-Absatz, AS-017 Die Zahl der Audits folgt der Kostenstufe)"
+            f"condition, not the freeze (AS-003 No run without an intent paragraph, AS-017 The number of audits follows the cost tier)"
         ]
     out = []
     if not head.frozen:
@@ -828,7 +828,7 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
     if not head.preflight_audit:
         out.append(
             f"{path.name}: `preflight_audit` is empty — run `preflight`, "
-            f"then the experiment-preflight audit (AS-015 Preflight-Audit vor dem Einfrieren), and stamp it"
+            f"then the experiment-preflight audit (AS-015 Preflight audit before freezing), and stamp it"
         )
     else:
         drift = audit_stamp_drift(base_dir, head.preflight_audit)

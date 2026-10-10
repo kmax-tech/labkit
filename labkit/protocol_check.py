@@ -11,14 +11,14 @@ carries it, filled when its value is not a `<…>` placeholder; an explicit
 protocols omitted "Type" and "Model I/O"; each omission caused a bad run).
 
 The checks, each stated as its current rule (the change history lives in the
-commits, AS-075 Docs tragen den Stand):
+commits, AS-075 Docs carry the state, commits the change carry the state, commits the change):
 
   * **Two tiers, one template.** MUST is the pilot minimum; SHOULD is what
     a REPORTABLE run owes on top. `frozen = true` escalates every SHOULD
     field to MUST: an unfrozen pilot's numbers stay pilot numbers — "Pilot
     leicht, Bericht schwer" without a second template that would drift
     (2026-08-18). `cost = "seconds"` owes its own marked cut and nothing
-    graduates, because nothing freezes (AS-017 Die Zahl der Audits folgt der Kostenstufe).
+    graduates, because nothing freezes (AS-017 The number of audits follows the cost tier).
   * **Template-line detection.** Any line still identical to a line of the
     template is instruction, not content.
   * **Verbatim-block check.** A protocol with a Prompt field but no fenced
@@ -28,7 +28,7 @@ commits, AS-075 Docs tragen den Stand):
     is not a prepare/probe line makes empty `Answer to the question` / `Raw
     output` fields a MUST failure — the context that explains the numbers
     dies with the session (2026-08-24).
-  * **Change-history prose is a warning** (AS-075 Docs tragen den Stand).
+  * **Change-history prose is a warning** (AS-075 Docs carry the state, commits the change carry the state, commits the change).
 
 Usage:
     protocol-check PROTOCOL-foo.md [more files or directories ...]
@@ -85,7 +85,7 @@ LEVELS = ("must", "should", "after", "report")
 # (`prompt` in a sentence covered "Model I/O"), and a narrow word failed a
 # filled one (`**Terms:**` against `terms of`).
 FIELDS = (
-    # Terms first: they precede the question they are asked in (AS-087 Begriff vor Gebrauch).
+    # Terms first: they precede the question they are asked in (AS-087 Term before use).
     Field("Terms of this protocol", "must", "s"),
     Field("Question / hypothesis", "must", "s"),
     Field("Success / failure criterion", "must", "s"),
@@ -114,7 +114,7 @@ FIELDS = (
     Field("Randomness controls", "should"),
     Field("Instrument check", "should"),
     Field("Yield per stage", "should"),
-    # The resolution check (AS-016 Auflösungsprobe vor dem Einfrieren): the criterion over synthetic extremes
+    # The resolution check (AS-016 Resolution check before freezing): the criterion over synthetic extremes
     # by the REAL evaluate(), before freezing.
     Field("Resolution check", "should"),
     Field("Prediction for the follow-up run", "should"),
@@ -130,7 +130,7 @@ FIELDS = (
     Field("Outcome", "report"),
     Field("Rival check", "report"),
     Field("Caps/drops", "report"),
-    # "fällig mit dem Zurückschreiben der Zahl" (AS-050 Auswertungs-Audit vor dem Berichten)
+    # "fällig mit dem Zurückschreiben der Zahl" (AS-050 Analysis audit before reporting)
     Field("Analysis audit", "report"),
 )
 
@@ -324,7 +324,7 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     """(must, should) fields this protocol owes, by its cut, freeze and runs.
 
     The seconds cut owes its marked fields and nothing graduates — nothing
-    freezes (AS-017 Die Zahl der Audits folgt der Kostenstufe). The full form owes every must; `frozen = true` turns
+    freezes (AS-017 The number of audits follows the cost tier). The full form owes every must; `frozen = true` turns
     every should into a must (the graduation gate, in ONE place), and once a
     measure run is documented a frozen protocol owes its report fields too."""
     found: dict[str, list[FieldLine]] = {}
@@ -360,7 +360,7 @@ def check_fields(text: str) -> FieldReport:
         missing_must.append(
             f"intent ids {', '.join(earlier)}: {promises.EARLIER_IDS_HELP}"
         )
-    # Frozen means audited first (AS-015 Preflight-Audit vor dem Einfrieren); at seconds nothing freezes, so a
+    # Frozen means audited first (AS-015 Preflight audit before freezing); at seconds nothing freezes, so a
     # frozen flag there would claim a freeze no gate held (review 2026-10-07).
     if head.frozen and head.cost == "seconds":
         missing_must.append(
@@ -397,7 +397,7 @@ def seconds_registration_missing(text: str) -> list[str]:
     """The registration a run of seconds owes before its number counts:
     question, criterion and admissibility condition written (not a
     placeholder) and the cost declared. Returns what is missing — empty
-    means the gate is open (AS-003 Kein Lauf ohne Intent-Absatz)."""
+    means the gate is open (AS-003 No run without an intent paragraph)."""
     written = {f.name for f in fields(text) if f.value and not f.placeholder}
     missing = [
         label
@@ -535,7 +535,7 @@ def unreported(text: str) -> list[str]:
 # A follow-up registration appended to the SAME protocol — the pattern that
 # grew one file to 649 lines out of three experiments ("Lauf B — ...
 # (deklariert vor dem Lauf)", "Stufe 2 ..."): each such heading is a second
-# question in a one-question file. The series rule (Arbeitsstandard AS-061 Subexperiment-Serien tragen ihre Nummer im Namen)
+# question in a one-question file. The series rule (Arbeitsstandard AS-061 Sub-experiment series carry their number in the name)
 # gives every follow-up its own PROTOCOL-s<N>-<slug>.md. Warning only.
 SERIES_HEAD = re.compile(
     r"(?im)^##.*\((deklariert|registriert) vor dem( jeweils \w+)? "
@@ -550,7 +550,7 @@ SERIES_HEAD = re.compile(
 DOCUMENTED_RUNS_HEAD = re.compile(r"(?i)^##\s.*(runs|ledger|l[\u00e4a]ufe)")
 
 # Change-history prose — the doc should carry the current rule, the commit the
-# change (AS-075 Docs tragen den Stand). Warning only.
+# change (AS-075 Docs carry the state, commits the change carry the state, commits the change). Warning only.
 CHANGELOG = re.compile(
     r"seit 20\d\d-\d\d|wieder drau[ßs]+en|wieder drin\b|hie[ßs]+ bis"
     r"|vorher (stand|galt)|fr[üu]her hie[ßs]+|umbenannt am",
@@ -945,7 +945,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
                 f"{f}:{n}: follow-up registration in the same protocol "
                 f"({ln[:60]!r}) — one question per protocol: a declared "
                 f"follow-up gets its own PROTOCOL-s<N>-<slug>.md "
-                f"(series rule, Arbeitsstandard AS-061 Subexperiment-Serien tragen ihre Nummer im Namen)."
+                f"(series rule, Arbeitsstandard AS-061 Sub-experiment series carry their number in the name)."
             )
         for n, label in bare_refs:
             print(
@@ -957,7 +957,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             print(
                 f"{f}:{n}: change history in the text ({ln[:60]!r}) — docs "
                 f"carry the current state, the why of the change goes in the "
-                f"commit message (AS-075 Docs tragen den Stand)."
+                f"commit message (AS-075 Docs carry the state, commits the change carry the state, commits the change)."
             )
         # The must findings again, last: in a commit hook they sat among
         # 20 warning lines and were missed (usability probe 2026-10-07).

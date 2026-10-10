@@ -13,7 +13,7 @@ holds the imports to it — a new module or an upward import fails the suite.
 
 | Layer | Modules | Holds |
 |---|---|---|
-| 1 · formats and places | `protocol_block`, `promises`, `protocol_check`, `runs`, `repo`, `scope_sha` | read-only answers: the protocol's TOML block and its head, the promise alphabet and tables, the protocol's prose fields by label, what a run directory says about itself, where the repo, the area's protocols and git are |
+| 1 · formats and places | `protocol_block`, `promises`, `protocol_check`, `runs`, `repo`, `scope_sha`, `rules` | read-only answers: the protocol's TOML block and its head, the promise alphabet and tables, the protocol's prose fields by label, what a run directory says about itself, where the repo, the area's protocols and git are, the standard's rules and every reference to them |
 | 2 · a run and its effects | `runlog`, `batch`, `llm`, `endpoint_lease` | writing a run (binding, refusals, provenance, index), resumable output, model calls, the model-slot lease |
 | 3 · checks | `intent_check`, `code_check`, `recheck`, `notes_check` | one question each, against code, metrics or a note |
 | 4 · gates | `preflight`, `finalize`, `claude_hooks`, `audit`, `install_hooks` | sequence the checks at a decision point; the hooks call the gates; `audit` runs the agent audit through `llm`; `install_hooks` installs the git hooks the gates run in (preflight checks they are there) |
@@ -70,6 +70,7 @@ evidence** (warns), **agent audit** (semantic).
 | How does a registered constant stand against the record? | `promises.constant_records` (equal / different / missing, type-strict); runlog refuses before mkdir, intent-check/finalize block, `labkit-params` shows all three |
 | Does a frozen protocol owe a promise block? | `promises.promise_tables_owed` — protocol-check (MUST), preflight and finalize (blocker), runlog (refusal before mkdir) |
 | Which code did an audit see, and is it still that code? | `scope_sha.area_stamp`, `scope_sha.audit_stamp_drift` (area stamp, not per promise) |
+| Which rules exist, what do they say, and does a reference name one? | `rules.load_registry`, `rules.rule_heads`, `rules.check_registry`, `rules.check_ledger`, `rules.check_refs`, `rules.rule_text` (`docs/standard.md`, `docs/rules.tsv`) |
 
 A second answer to any of these questions is drift: move the caller to the
 home, never copy the logic.
@@ -90,8 +91,7 @@ what concerns only this house stays in the author's dotfiles.**
 | a lab repo | `docs/arbeitsstandard.md`, `docs/coding-style.md`, `CLAUDE.md`, the scripts stamped from the templates; labkit itself as a pinned package | copies, stamped by the scaffolder |
 | author's global `~/.claude/CLAUDE.md` | one-line reflexes that point at rule ids | master (house only) |
 
-**Known gap.** Gate messages and docstrings name rule ids (`AS-004
-Kennungen machen den Intent adressierbar`); the rule text behind the id
+**Known gap.** Gate messages and docstrings name rule ids (`AS-004 Identifiers make the intent addressable`); the rule text behind the id
 lives in the dotfiles, not here. A reader without the author's machine
 reads the id and its name, never the rule. Closing it — the standard and
 the register move into the package, in English, house evidence stays

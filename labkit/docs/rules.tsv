@@ -1,0 +1,103 @@
+id	alias	title	status
+AS-001	§1.A	A negative finding is a claim	active
+AS-002	§1.B		house
+AS-003	§2.A1	No run without an intent paragraph	active
+AS-004	§2.A1a	Identifiers make the intent addressable	active
+AS-005	§2.A2	Pilot before scaling	active
+AS-006	§2.A3	Does the gold label measure what you are measuring?	active
+AS-007	§2.A4	Render check before the instrument check	active
+AS-008	§2.A5	Instrument check before freezing	active
+AS-009	§2.A6	Verdict only at the registered tier	active
+AS-010	§2.A7	Commit before the run	active
+AS-011	§2.A8	Required-field check	active
+AS-012	§2.A9	Protocol is content	active
+AS-013	§2.A10	Registered branch when the run can answer two questions	active
+AS-014	§2.A11	One fully rendered example pair per gold class	active
+AS-015	§2.A12	Preflight audit before freezing	active
+AS-016	§2.A13	Resolution check before freezing	active
+AS-017	§2.A14	The number of audits follows the cost tier	active
+AS-018	§2.A15	Routine check after every implementation	active
+AS-019	§2.A16	The stamp covers everything that determines the number	active
+AS-020	§2.B1	Materialize transformations	active
+AS-021	§2.B2	No dataset without a producer	active
+AS-022	§2.B3	Datasets explain themselves	active
+AS-023	§2.B4	No silent loss	active
+AS-024	§2.B5	Reproducible	active
+AS-025	§2.B6	Two-user rule: the computation is shared, not the verdict	active
+AS-026	§2.B7	A reused component brings its bugs with it	active
+AS-027	§2.C1	Model discipline	active
+AS-028	§2.C1a	An endpoint is a model slot, not a service	active
+AS-029	§2.C1b	A harness is not an inference API: its context is isolated and stamped	active
+AS-030	§2.C2	Reasoning models: the token budget goes to thinking first	active
+AS-031	§2.C3	Whoever wants a difference asks for the difference	active
+AS-032	§2.C4	Free knobs: vary them and report the curve	active
+AS-033	§2.C5	A parameter that is accepted and discarded is the most expensive bug	active
+AS-034	§2.C6	Null condition in the same run	active
+AS-035	§2.C7	Thresholds belong to the run, not to the measure	active
+AS-036	§2.C8	Validate, don't trust a single run	active
+AS-037	§2.C9	Every anchor carries its target and rationale	active
+AS-038	§2.C10	What the prompt demands, the gate checks — from the same constant	active
+AS-039	§2.C11	Anchors include the near cases	active
+AS-040	§2.D1	Check the output, not just the numbers	active
+AS-041	§2.D2	Generate numbers, don't retype them	active
+AS-042	§2.D3	Log the outcome — failures too	active
+AS-043	§2.D4	Runs go through `runlog`	active
+AS-044	§2.D5	The check on a confound is code, not a paragraph	active
+AS-045	§2.D6	The forecast comes before the follow-up run	active
+AS-046	§2.D7	Notebooks: explore yes, report never	active
+AS-047	§2.D8	A partial run is not a random sample — no anchor catches that	active
+AS-048	§2.D9	An intermediate number is not a result	active
+AS-049	§2.D10	Long runs go through the harness's background mechanism	active
+AS-050	§2.D11	Analysis audit before reporting	active
+AS-051	§2.E1	Judge instance, not model name	active
+AS-052	§2.E2	Instance gate before registered use	active
+AS-053	§2.E3	Resolution anchor	active
+AS-054	§2.E4	Self-consistency requirement for logprob readings	active
+AS-055	§2.E5	Check polarity symmetry	active
+AS-056	§2.E6	Recompute thresholds unrounded	active
+AS-057	§2.F1	One area per idea	active
+AS-058	§2.F2	`data/prepared/` is read-only after writing	active
+AS-059	§2.F3	Use shared helpers, don't modify them within a run	active
+AS-060	§2.F4	Look it up instead of asking	active
+AS-061	§2.F5	Sub-experiment series carry their number in the name	active
+AS-062	§2.F6	Reorganizing existing material is allowed — as a package	active
+AS-063	§2.F7	A research line has one entry point	active
+AS-064	§2.F8	The pilot is resumable too	active
+AS-065	§2.F9	No worktree per experiment	active
+AS-066	§2.G1	Extract only for the second user	active
+AS-067	§2.G2	A prompt has one home, which the run freezes	active
+AS-068	§2.G3	New areas start from the template-generated skeleton	active
+AS-069	§2.G4	No LLM cache	active
+AS-070	§2.H1		house
+AS-071	§2.H2	The proof is the item-wise diff, not a tolerance band	active
+AS-072	§2.H3	Identifiers travel in English	active
+AS-073	§2.H4		house
+AS-074	§3.1	Note and commit carry the why; reconcile	active
+AS-075	§3.2	Docs carry the state, commits the change	active
+AS-076	§3.3	Restriction convention	active
+AS-077	§3.4	Own commits, others' state stays with the user	active
+AS-078	§4.1		house
+AS-079	§4.2	Self-contained experiment areas	active
+AS-080	§4.3		house
+AS-081	§4.4		house
+AS-082	§4.5	In `notes/messung/`, every note carries its kind in the meta line	active
+AS-083	§5.1	The name carries what it denotes	active
+AS-084	§5.2	Double-coinage check — first the field, then the lab, then the existing stock	active
+AS-085	§5.3	Mark your own coinages as such	active
+AS-086	§5.4	Values rule (codes are names too)	active
+AS-087	§5.5	Term before use	active
+AS-088	§5.6	Look up field notation, don't invent it	active
+AS-089	§6.1	Tight prose	active
+AS-090	§6.2	Protocols are self-contained	active
+AS-091	§6.3	Script docstrings are reference, not explanation	active
+AS-092	§6.4	Term layering	active
+AS-093	§6.5	Detail budget follows relevance, not analysis effort	active
+AS-094	§6.6	Series as list or table, never as a prose chain	active
+AS-095	§7.1	Core problem first	active
+AS-096	§7.2	"Do I really need this?"	active
+AS-097	§7.3	Existing work first	active
+AS-098	§7.4	Separate core and rollout	active
+AS-099			house
+AS-100		Answer before reasoning	active
+AS-101		Comparison tables	active
+AS-102		Cold reader before freezing	active

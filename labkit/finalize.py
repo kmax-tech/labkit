@@ -26,8 +26,7 @@ each step's condition):
   5. frozen source  at protocol `cost = "seconds"` only: the run froze its source
                     (`data=` in config.json) and every source and output file
                     is tracked in git — the two of the three questions the
-                    agent audit kept asking that a machine can answer (AS-017
-                    Die Zahl der Audits folgt der Kostenstufe, 2026-10-05);
+                    agent audit kept asking that a machine can answer (AS-017 The number of audits follows the cost tier, 2026-10-05);
                     the third, the counted unit, is the protocol's `Unit` field
   6. area tests     tests/test_<NN>_<name>.py via the repo's interpreter, on
                     every tier: a failing test is a blocker (evaluate() lost

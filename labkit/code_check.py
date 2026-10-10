@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """code-check — the mechanical half of the preflight, before the model looks.
 
-The preflight audit (Arbeitsstandard AS-015 Preflight-Audit vor dem Einfrieren) used to do three jobs in one
+The preflight audit (Arbeitsstandard AS-015 Preflight audit before freezing) used to do three jobs in one
 pass: mechanics, compliance, judgement. The mechanics are the cheap half and
 they do not need a model — an id that no script mentions, a field the
 analysis reads and no producer writes, a protocol still full of placeholders
@@ -11,7 +11,7 @@ one question worth its cost: does the code MEAN what the registration says.
 Three automated checks; the rest are extracted as facts for the
 code-check agent (via ``--bundle``), not verified by this command:
 
-  1. **intent ids against the code** (AS-004 Kennungen machen den Intent adressierbar, AUTOMATED). Every registered
+  1. **intent ids against the code** (AS-004 Identifiers make the intent addressable, AUTOMATED). Every registered
      [C1]/[A1]/[B1] must appear as a key literal in the area's scripts.
      Report time has `intent-check` for the metrics; before the run the same
      promise goes unchecked exactly when repairing it is still cheap.
@@ -27,10 +27,10 @@ code-check agent (via ``--bundle``), not verified by this command:
 The following are extracted into the audit bundle but NOT checked by this
 command — the code-check agent judges them:
 
-  2. **schema contract** (AS-015 Preflight-Audit vor dem Einfrieren, preflight scope). Every field the analysis
+  2. **schema contract** (AS-015 Preflight audit before freezing, preflight scope). Every field the analysis
      READS must be written somewhere — in the materialized data if it exists,
      otherwise as a write site in the producer's source.
-  3. **gate labels** (AS-038 Was der Prompt verlangt). String comparisons in evaluation code — both
+  3. **gate labels** (AS-038 What the prompt demands). String comparisons in evaluation code — both
      resolved literals and named constants — extracted as facts for the agent.
   4. **protocol placeholders**. Delegated to `protocol-check`, which owns the
      template contract.
@@ -396,8 +396,7 @@ class _ComparisonVisitor(ast.NodeVisitor):
 def gate_labels(area: Path) -> str:
     """String comparisons in evaluation code — facts, not findings.
 
-    The prompt↔gate scar (AS-038 Was der Prompt verlangt, prüft das Gate —
-    aus derselben Konstante) was the most frequent error class (4× in one
+    The prompt↔gate scar (AS-038 What the prompt demands) was the most frequent error class (4× in one
     area). The mechanics extract what the gate compares against; the agent
     judges whether it matches the prompt.
     """
@@ -466,13 +465,13 @@ def check_intent_ids(area: Path, protocol: Path) -> list[str]:
             f"BLOCKER · {protocol.name} · [{i.upper()}] is registered, but no "
             f"script mentions a '{i}'/'{i}_*' key · the run reports nothing "
             f"for this promise and the metrics check fails after the tokens "
-            f"are spent · AS-004 Kennungen machen den Intent adressierbar · implement the key or drop the id"
+            f"are spent · AS-004 Identifiers make the intent addressable · implement the key or drop the id"
         )
     for i in sorted(set(unmistakable) - registered):
         findings.append(
             f"WARNING · {unmistakable[i][0]} · key '{i}_*' is in the intent-id "
             f"namespace, but the protocol registers no [{i.upper()}] · a "
-            f"number gets reported that nobody registered · AS-004 Kennungen machen den Intent adressierbar · register "
+            f"number gets reported that nobody registered · AS-004 Identifiers make the intent addressable · register "
             f"it or rename the key"
         )
     return findings
@@ -491,7 +490,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[str]:
         block = promises.parse_block(text)
     except promises.PromiseError as exc:
         return [
-            f"BLOCKER · {protocol.name} · promise block: {exc} · AS-004 Kennungen machen den Intent adressierbar · fix the block"
+            f"BLOCKER · {protocol.name} · promise block: {exc} · AS-004 Identifiers make the intent addressable · fix the block"
         ]
     if block is None:
         return []
@@ -641,13 +640,13 @@ def schema_facts(area: Path) -> str:
 
 # --- the bundle -----------------------------------------------------------
 
-# Inherited from the severity legend in Arbeitsstandard AS-015 Preflight-Audit vor dem Einfrieren — the German
+# Inherited from the severity legend in Arbeitsstandard AS-015 Preflight audit before freezing — the German
 # legend there is the minting site; this is its English rendering, stamped
 # into every bundle so BOTH audit agents grade findings by the same
 # definitions (the code-check agent reads only the bundle and cannot look
 # the legend up). Change it there first, then mirror it here.
 SEVERITY_LEGEND = (
-    "## Severity legend (inherited from Arbeitsstandard AS-015 Preflight-Audit vor dem Einfrieren)\n"
+    "## Severity legend (inherited from Arbeitsstandard AS-015 Preflight audit before freezing)\n"
     "\n"
     "- BLOCKER: materially changes a reported number or the validity of\n"
     "  the frozen criterion.\n"
@@ -724,7 +723,7 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[str]:
             findings.append(
                 f"BLOCKER · {sp.name} · {name}() has no test under {tests_dir.name}/ · "
                 f"a parser fails silently into a wrong number · give it a fixture "
-                f"with real raw answers (AS-016 Auflösungsprobe vor dem Einfrieren, 2026-10-05)"
+                f"with real raw answers (AS-016 Resolution check before freezing, 2026-10-05)"
             )
     return findings
 
@@ -899,7 +898,7 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
                 f"BLOCKER · {protocol.name} · prompt block drifted from {name}: "
                 f"{len(missing)} of {len(fixed)} fixed line(s) missing, e.g. "
                 f"{missing[0][:60]!r} · paste the rendered `--show` output, not a "
-                f"transcript (AS-007 Renderprobe vor der Instrumentenprobe, 2026-10-05)"
+                f"transcript (AS-007 Render check before the instrument check, 2026-10-05)"
             )
     return warnings + findings
 

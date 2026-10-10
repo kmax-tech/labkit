@@ -85,5 +85,5 @@ does not work outside the author's machine; its tests do not need them.
 
 The research thread (literature, paper plan, benchmark case list) and the
 house doctrine (`arbeitsstandard`) live on the author's machine. Where a
-docstring cites `AS-015 Preflight-Audit vor dem Einfrieren` or a dated incident, that is the doctrine; the
+docstring cites `AS-015 Preflight audit before freezing` or a dated incident, that is the doctrine; the
 code's own docstring states the rule it enforces.

@@ -787,8 +787,10 @@ Related, but so far supported only one judge deep (caveat, not a rule): The vote
 ### 2F · Test several ideas in parallel (lightweight)
 
 Goal is **fast evaluation before scaling**, i.e. as little ceremony
-as possible. AS-057–AS-060 cover the only truly shared resources;
-AS-061–AS-065 govern how a growing area stays readable.
+as possible. The rules from AS-057 One area per idea to AS-060 Look it up
+instead of asking cover the only truly shared resources; those from
+AS-061 Sub-experiment series carry their number to AS-065 No worktree per
+experiment govern how a growing area stays readable.
 
 - **AS-057 · One area per idea** *(was §2.F1)*, self-contained; never share outputs. An
   `--out` file belongs to exactly ONE run: the script places `<out>.lock`
@@ -968,7 +970,7 @@ meta line remains allowed — the findings register reads exactly that one):
 
 **The glossary is the single source of truth for terms — project-wide, not
 per experiment.** Every experiment area, every script, every note uses
-*the same* terms; anyone who needs a new one enters it in the lab's glossary (`notes/theorie/begriffe.md`, see AS-084) instead of introducing it locally. Otherwise the areas drift apart in their terminology and
+*the same* terms; anyone who needs a new one enters it in the lab's glossary (`notes/theorie/begriffe.md`, see AS-084 Double-coinage check) instead of introducing it locally. Otherwise the areas drift apart in their terminology and
 results become incomparable — the same logic as with `models.toml`
 (backends in one place) or the run index (`runs.tsv`). Code and prompts in English, notes in the lab's working language; an ambiguous term is pinned in a
 definition note.
@@ -1027,28 +1029,28 @@ remains explanatory prose. Terms without a row here are established (gold
 label, confound, pilot, self-consistency, run index). Four coinages are
 labkit's own and defined here: area, promise, scar table, free knobs.*
 
-| Labkit term                          | Established term                                                     | Source / note                                                                                                                                        |
-|--------------------------------------|----------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Area                                 | no fixed term; closest: study folder                                 | one directory under `experiments/`: protocol, scripts, data references, runs — the unit every labkit check works on                                  |
-| Promise                              | preregistered hypothesis or analysis-plan item                       | one row of the protocol's promise block — a criterion `[C]`, an admissibility condition `[A]` or a registered branch `[B]` — that the code must keep |
-| Scar table                           | taxonomy of known failure modes; checklist                           | the error classes of AS-015 the audit checks, each an error that has happened before, with the rule that forbids it                                  |
-| Intent · freeze (frozen)             | preregistration; study protocol                                      | Nosek et al. 2018 (PNAS)                                                                                                                             |
-| Render check · instrument check      | instrument pretest (survey methodology)                              | Dev language as secondary term: dry run / smoke test                                                                                                 |
-| Null condition · anchor              | negative / positive control; calibration items — as identifier `[A]` | Laboratory standard; Registered Reports: outcome-neutral condition                                                                                   |
-| Resolution anchor                    | no fixed term; closest: known intermediate-intensity item            | Psychophysics: probe near the difference threshold; NOT discriminant validity                                                                        |
-| Free knobs                           | researcher degrees of freedom                                        | Simmons et al. 2011                                                                                                                                  |
-| Sweep obligation (AS-032 Free knobs) | sensitivity analysis; multiverse analysis                            | Steegen et al. 2016                                                                                                                                  |
-| Yield                                | yield; attrition                                                     | CONSORT flow logic                                                                                                                                   |
-| Legend (`_meta`)                     | codebook / data dictionary                                           | Social research / data engineering                                                                                                                   |
-| Polarity symmetry                    | framing/valence effect; prompt polarity sensitivity                  | NOT positional bias — that is the swap control                                                                                                       |
-| Anchor gate                          | validation gate; sanity checks                                       | Software QA / ML eval                                                                                                                                |
-| Producer                             | build step / pipeline stage                                          | Data engineering                                                                                                                                     |
-| Registered branch (`[B]`)            | pre-specified conditional analysis; decision tree (IF-THEN)          | Prereg templates; NOT "decision rule" — C and A also decide                                                                                          |
-| Admissibility condition (`[A]`)      | outcome-neutral condition; quality check                             | Registered Reports; NOT stopping rule (= when data collection ends) and NOT futility                                                                 |
-| Throwaway test                       | no fixed term; closest: exploratory scratch run                      | —                                                                                                                                                    |
-| Judge instance                       | judge configuration                                                  | LLM-as-judge literature                                                                                                                              |
-| Two-user rule                        | rule of three                                                        | Fowler 1999; Metz: "duplication is cheaper than the wrong abstraction"                                                                               |
-| Home                                 | single source of truth                                               | —                                                                                                                                                    |
+| Labkit term                          | Established term                                                     | Source / note                                                                                                                                            |
+|--------------------------------------|----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Area                                 | no fixed term; closest: study folder                                 | one directory under `experiments/`: protocol, scripts, data references, runs — the unit every labkit check works on                                      |
+| Promise                              | preregistered hypothesis or analysis-plan item                       | one row of the protocol's promise block — a criterion `[C]`, an admissibility condition `[A]` or a registered branch `[B]` — that the code must keep     |
+| Scar table                           | taxonomy of known failure modes; checklist                           | the error classes of AS-015 Preflight audit before freezing that the audit checks, each an error that has happened before, with the rule that forbids it |
+| Intent · freeze (frozen)             | preregistration; study protocol                                      | Nosek et al. 2018 (PNAS)                                                                                                                                 |
+| Render check · instrument check      | instrument pretest (survey methodology)                              | Dev language as secondary term: dry run / smoke test                                                                                                     |
+| Null condition · anchor              | negative / positive control; calibration items — as identifier `[A]` | Laboratory standard; Registered Reports: outcome-neutral condition                                                                                       |
+| Resolution anchor                    | no fixed term; closest: known intermediate-intensity item            | Psychophysics: probe near the difference threshold; NOT discriminant validity                                                                            |
+| Free knobs                           | researcher degrees of freedom                                        | Simmons et al. 2011                                                                                                                                      |
+| Sweep obligation (AS-032 Free knobs) | sensitivity analysis; multiverse analysis                            | Steegen et al. 2016                                                                                                                                      |
+| Yield                                | yield; attrition                                                     | CONSORT flow logic                                                                                                                                       |
+| Legend (`_meta`)                     | codebook / data dictionary                                           | Social research / data engineering                                                                                                                       |
+| Polarity symmetry                    | framing/valence effect; prompt polarity sensitivity                  | NOT positional bias — that is the swap control                                                                                                           |
+| Anchor gate                          | validation gate; sanity checks                                       | Software QA / ML eval                                                                                                                                    |
+| Producer                             | build step / pipeline stage                                          | Data engineering                                                                                                                                         |
+| Registered branch (`[B]`)            | pre-specified conditional analysis; decision tree (IF-THEN)          | Prereg templates; NOT "decision rule" — C and A also decide                                                                                              |
+| Admissibility condition (`[A]`)      | outcome-neutral condition; quality check                             | Registered Reports; NOT stopping rule (= when data collection ends) and NOT futility                                                                     |
+| Throwaway test                       | no fixed term; closest: exploratory scratch run                      | —                                                                                                                                                        |
+| Judge instance                       | judge configuration                                                  | LLM-as-judge literature                                                                                                                                  |
+| Two-user rule                        | rule of three                                                        | Fowler 1999; Metz: "duplication is cheaper than the wrong abstraction"                                                                                   |
+| Home                                 | single source of truth                                               | —                                                                                                                                                        |
 
 ## 6. Clarity
 

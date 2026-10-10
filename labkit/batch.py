@@ -24,7 +24,7 @@ output file are joined on it — a partial output stays a valid output.
 
 Deliberately NOT here: retries (they belong at the call that fails, see
 `llm.complete`) and yield counting (what "complete" means is domain-specific —
-count it in the experiment and report it, AS-023 Kein stiller Verlust).
+count it in the experiment and report it, AS-023 No silent loss).
 """
 
 from __future__ import annotations
@@ -113,7 +113,7 @@ class Ledger:
     """The balance of an output file against its input: every input item on
     exactly one row, no row without an input item, every row made from the
     current input. Guaranteed tier — exact, by id, no judgement about what
-    a row says (that stays the experiment's, AS-023 Kein stiller Verlust).
+    a row says (that stays the experiment's, AS-023 No silent loss).
 
     Attributes:
         path: the output file balanced.

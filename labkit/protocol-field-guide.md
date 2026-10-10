@@ -200,7 +200,7 @@ derives from the detail below and carries no fact that isn't there.
   model alias, the files a reader meets. Before coining: `lib term
   <candidate>` (the subject's word), the repo's `notes/theorie/begriffe.md`
   (the lab's), the lab standard's vocabulary table (the method's) — a word
-  found there is inherited, not re-coined (AS-084 Doppelprägungs-Check).
+  found there is inherited, not re-coined (AS-084 Double-coinage check).
   "n/a — standard vocabulary" only if the protocol coins nothing. Until
   2026-10-09 this field sat under Context, after Result; protocols written
   before keep it there, the checker reads the field by label.
@@ -460,17 +460,17 @@ Delete this section if everything was prompted.
 
 | Field              | § |
 |--------------------|---|
-| Intent ids         | AS-004 Kennungen machen den Intent adressierbar |
-| Success criterion  | AS-003 Kein Lauf ohne Intent-Absatz |
-| Admissibility      | AS-004 Kennungen machen den Intent adressierbar |
+| Intent ids         | AS-004 Identifiers make the intent addressable |
+| Success criterion  | AS-003 No run without an intent paragraph |
+| Admissibility      | AS-004 Identifiers make the intent addressable |
 | Timebox            | — |
 | Split touched      | — |
-| Registered branch  | AS-013 Registrierte Weiche |
-| Preflight audit    | AS-015 Preflight-Audit vor dem Einfrieren |
-| Instrument check   | AS-014 Je Gold-Klasse ein voll gerendertes Beispiel-Paar |
-| Resolution check   | AS-016 Auflösungsprobe vor dem Einfrieren |
-| Yield per stage    | AS-023 Kein stiller Verlust |
-| Rival explanations | AS-044 Der Prüfblick auf einen Konfund ist Code |
-| Analysis audit     | AS-050 Auswertungs-Audit vor dem Berichten |
-| Null condition     | AS-037 Jeder Anker trägt sein Soll mit Herleitung |
-| Prediction         | AS-045 Die Prognose steht vor dem Folgelauf |
+| Registered branch  | AS-013 Registered branch when the run can answer two questions |
+| Preflight audit    | AS-015 Preflight audit before freezing |
+| Instrument check   | AS-014 One fully rendered example pair per gold class |
+| Resolution check   | AS-016 Resolution check before freezing |
+| Yield per stage    | AS-023 No silent loss |
+| Rival explanations | AS-044 The check on a confound is code |
+| Analysis audit     | AS-050 Analysis audit before reporting |
+| Null condition     | AS-037 Every anchor carries its target and rationale |
+| Prediction         | AS-045 The forecast comes before the follow-up run |
