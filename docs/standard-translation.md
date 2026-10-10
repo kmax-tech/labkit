@@ -83,6 +83,6 @@ translation, and it has its own commit.
   with rows defining area, promise and scar table (free knobs already had
   one), and the glossary of chapter 2 defines area.
 
-Still open: `lib exp` in AS-003 No run without an intent paragraph and
-AS-046 Notebooks: explore yes, report never names the house scaffolder, until
-`labkit-init exp` replaces it (TODO item 5, phase 2).
+`lib exp` in AS-003 No run without an intent paragraph and
+AS-046 Notebooks: explore yes, report never became `labkit-init exp` with
+labkit's own scaffold (0.78.0).

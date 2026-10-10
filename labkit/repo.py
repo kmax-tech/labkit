@@ -28,7 +28,7 @@ class GitError(RuntimeError):
 
 def area_path(arg: str) -> Path:
     """The area a command argument names: a directory as given, else the
-    bare name as `lib exp` prints it — `01-<name>` or `<name>` — under
+    bare name as `labkit-init exp` prints it — `01-<name>` or `<name>` — under
     `experiments/` of the working directory or of its repository. Returns
     the argument unchanged when nothing (or more than one area) matches, so
     the caller's "no such area" still speaks (2026-10-07: two agents passed
@@ -53,7 +53,7 @@ def no_such_area(area: Path) -> str:
     where = "" if area.is_absolute() else f" (relative to {Path.cwd()})"
     return (
         f"no such area: {area}{where} — give the area's path or its name "
-        f"as `lib exp` printed it (01-<name>)"
+        f"as `labkit-init exp` printed it (01-<name>)"
     )
 
 

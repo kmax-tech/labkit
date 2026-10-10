@@ -338,7 +338,7 @@ def promise_tables_owed(
     return (
         f"{because}, but the protocol declares no [[promise]] table — the "
         f"registration a run is held to is data, not prose (standard 0.19: "
-        f"no run starts under it; `lib exp` stamps the tables)"
+        f"no run starts under it; `labkit-init exp` stamps the tables)"
     )
 
 

@@ -6,7 +6,7 @@ holds the fields a machine reads — the head — and its optional
 
     [protocol]
     standard = "0.19"
-    id = "p-0123456789abcdef"       # stamped by `lib exp`, never typed
+    id = "p-0123456789abcdef"       # stamped by `labkit-init exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
     cost = "seconds"                # seconds | minutes | hours
     frozen = false
@@ -194,7 +194,7 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
     elif not ID_SHAPE.match(pid):
         raise BlockError(
             f"[protocol] id = {pid!r} — expected `p-` plus 16 lowercase "
-            f"hex digits, stamped by `lib exp`"
+            f"hex digits, stamped by `labkit-init exp`"
         )
     frozen = table["frozen"]
     if not isinstance(frozen, bool):

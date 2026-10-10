@@ -430,7 +430,7 @@ def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
     """Every protocol id in the repo, mapped to the files carrying it.
 
     Uniqueness cannot be settled at the stamp alone: copying a protocol or
-    editing the id by hand makes a duplicate long after `lib exp` ran, and
+    editing the id by hand makes a duplicate long after `labkit-init exp` ran, and
     two protocols with one id bind their runs to the same thing.
     """
     root = git_root(start)
@@ -802,7 +802,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             pilot_note = (
                 f"pilot (frozen = false) — {len(missing_should)} "
                 f"should-field(s) due only at report time "
-                f"({', '.join(missing_should)}; append them: lib exp <name> --report)"
+                f"({', '.join(missing_should)}; append them: labkit-init exp <name> --report)"
             )
             missing_should = []
         # A placeholder is reported as one already, and a comment can never

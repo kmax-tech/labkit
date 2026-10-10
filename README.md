@@ -34,10 +34,12 @@ nothing vanished, grown keys reported as a derived run), the note holding
 every reported number as a token and the run_id. Two areas re-implemented
 it and got two of three parts wrong (2026-10-05).
 
-Fifteen **console commands** come with the installation, `runlog` with three
+Sixteen **console commands** come with the installation, `runlog` with three
 sub-commands (all answer `--help`):
 
 ```bash
+labkit-init lab [DIR]               # lay out a lab repo: AGENTS.md, pinned requirements.txt, models.toml, experiments/, data/, notes/
+labkit-init exp <NAME> [--cost T] [--model [ALIAS]] [--report] [--explore]  # stamp an area: protocol, script skeletons, README, its test
 protocol-check <PROTOCOL-*.md>...   # mandatory-field check (must/should contract)
 protocol-check --contract           # the head, the fields by exact label, the budgets — read before writing
 runlog [<area>]                     # the area's runs: open ones with state and pid, then the finished ones (what each is, committed or not, its command)
@@ -130,7 +132,7 @@ heredoc gets the same `protocol-check` as one written with Edit. A
 per-session content hash keeps a file from being reported again after
 every later command.
 
-Install (what `arbeitsstandard-init.py` stamps into `.claude/settings.json`):
+Install (what `labkit-hooks install` writes into `.claude/settings.json`):
 
 ```json
 {"hooks": {
@@ -229,7 +231,7 @@ that record is a claim about an environment that no longer exists. Editable
 installs belong here, where the tests are.
 
 **New code imports the package directly** — `from labkit import runlog` —
-and never creates shims; the scaffolder stamps repos in this style, and a
+and never creates shims; `labkit-init lab` stamps repos in this style, and a
 guard test (`test_shared_helpers_come_from_labkit.py`) fires if a file ever
 shadows the package.
 
@@ -246,8 +248,6 @@ from labkit import runlog as _mod
 sys.modules[__name__] = _mod
 ```
 
-`lib init <repo> --sync check` recognises exactly this form as a shim
-("nothing to sync").
 
 ## Language
 
@@ -270,9 +270,9 @@ version, the commit carries the identity, and the tag is a label over that
 commit — checked by `tests/test_release_tags.py`, which holds every
 `vX.Y.Z` against the version its commit declares. The package states no
 `__version__`: a literal nobody read, kept in step by hand, is a second
-truth waiting to drift. A forgotten tag is not fatal either — the
-scaffolder's `labkit_pin()` falls back to the commit and prints the `git
-tag` command it wants.
+truth waiting to drift. `labkit-init lab` pins the release tag of the
+installed version on GitHub; until that tag is pushed the pin does not
+install, and `--labkit-ref <commit>` pins a pushed commit instead.
 
 ## Boundary
 
@@ -280,9 +280,10 @@ Only what **more than one repo** uses lives here. Project-local helpers
 stay in the project (`lib/`) — a module moves here when it is needed for
 the second time.
 
-Not here: templates meant to be filled in (`~/.claude/resources/*.template`,
-they are supposed to diverge) and prose references that are read, not
-imported — the two style guides, `coding-style.md` (every line of code) and
+The templates `labkit-init` stamps ship here (`labkit/templates/`): a lab
+gets them once and fills them in, so they are meant to diverge there and are
+never synced. Not here: prose references of the author's house — the two
+style guides, `coding-style.md` (every line of code) and
 `writing-style-guide.md` (prose and LaTeX). Their masters live in
 `~/.claude/resources/`; every lab repo carries a stamped copy under `docs/`
 (`docs/coding-style.md`, `docs/writing-style-guide.md`), kept in step by

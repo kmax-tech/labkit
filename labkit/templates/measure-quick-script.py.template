@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""<name>: one question, one number — kept through runlog, rechecked from its rows.
+
+    ../../.venv/bin/python scripts/01_measure.py            # count, keep, print the number + run_id
+    ../../.venv/bin/python scripts/01_measure.py --check    # recompute from the kept rows; hold metrics.json and the protocol to it
+
+cost = "seconds" (the protocol head says so) — no freeze, no audit before the run,
+the run itself is the instrument check; the one analysis audit comes when
+the number is promoted or steers a decision (AS-017 The number of audits follows the cost tier). The number is produced here, never
+retyped (AS-041 Generate numbers, don't retype them): the protocol's Result line cites it with the run_id, and
+`--check` holds that line to the run.
+
+Fill the three TODOs: expected_ids(), rows(), evaluate(). Everything else
+stays — `visible()` is the one reader of a directory, the denominator is the
+source's id list, a missing item is a refusal.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+from labkit import recheck, runlog
+
+AREA = Path(__file__).resolve().parent.parent
+REPO = AREA.parent.parent
+PROTOCOL = AREA / "PROTOCOL-<name>.md"
+SOURCE = REPO / "data" / "TODO"                 # what is counted — a file or a directory
+OUT = AREA / "output" / "<name>.jsonl"          # one row per item, written by this script
+COUNT_FIELD = "TODO_count"                      # the per-item number in each row
+METRIC_KEY = "TODO_mean"                        # the kept number's key in metrics.json; the test reads both names from here
+
+
+def visible(directory: Path) -> list[Path]:
+    """The files that count: regular files, no hidden entries, no nested
+    directories. `.DS_Store` once moved a mean by a whole document while
+    test and --check stayed green (2026-10-05) — say in the protocol's
+    `Unit:` field what one counted thing is, and keep this the only reader."""
+    return sorted(p for p in directory.iterdir() if p.is_file() and not p.name.startswith("."))
+
+
+def expected_ids() -> list[str]:
+    """TODO: the ids the number is over, read from SOURCE — the denominator
+    comes from the source, never from the rows that happened to be produced."""
+    raise NotImplementedError("expected_ids(): the ids SOURCE lists")
+
+
+def rows(ids: list[str]) -> list[dict]:
+    """TODO: one row per id — the raw material of the number. A missing or
+    empty item is a refusal, not a skipped row."""
+    raise NotImplementedError("rows(): one dict per id, fail loud on a missing one")
+
+
+def evaluate(items: list[dict], ids: list[str]) -> dict:
+    """TODO: the number(s) from the rows, over the ids SOURCE lists, plus one
+    key per intent id the protocol registers (`c1_pass`, `a1_pass`) —
+    intent-check and finalize hold the ids to these keys. Every key lands in
+    metrics.json, and `--check` demands each verbatim in the protocol's
+    "Answer to the question" line — keep the dict to what that line carries."""
+    if not ids:
+        raise ValueError("evaluate(): SOURCE lists no ids — refusing a number over nothing")
+    if len(items) != len(ids):
+        raise ValueError(f"evaluate(): {len(items)} rows for {len(ids)} ids — a silent loss")
+    raise NotImplementedError("evaluate(): compute the number(s) from items")
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
+    ap.add_argument("--check", action="store_true",
+                    help="recompute from OUT and hold metrics.json and the protocol to it")
+    args = ap.parse_args()
+    ids = expected_ids()
+    if args.check:
+        v = recheck.holds(area=AREA, out=OUT, recompute=lambda rs: evaluate(rs, ids),
+                          note=PROTOCOL)
+        print(f"check: run {v.run_id} — {v.keys_compared} keys identical, "
+              f"{PROTOCOL.name} carries them and the run_id"
+              + (f"; grown since the run: {v.grown}" if v.grown else ""))
+        return
+    items = rows(ids)
+    OUT.parent.mkdir(exist_ok=True)
+    OUT.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in items),
+                   encoding="utf-8")
+    # data= freezes the source (sha, rows) in the run; `finalize` refuses a
+    # run of seconds without it, and one whose source or OUT is not in git.
+    with runlog.run("<name>", config={"source": str(SOURCE.relative_to(REPO))},
+                    base_dir=AREA, data={"source": SOURCE},
+                    long=True, protocol=PROTOCOL.name) as run:
+        run.output(OUT)
+        metrics = evaluate(items, ids)
+        run.metrics(**metrics)
+        print(json.dumps(metrics, indent=1))
+        print(f"run: {run.run_id}  → cite it in {PROTOCOL.name}, field \"Answer to the question\"")
+
+
+if __name__ == "__main__":
+    main()

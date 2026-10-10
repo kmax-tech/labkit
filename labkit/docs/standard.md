@@ -110,7 +110,7 @@ evidence file under the same ID (top of this document).*
 - **AS-003 · No run without an intent paragraph:** *(was §2.A1)* before every experiment, 5 lines — hypothesis,
   success criterion, admissibility condition — as `PROTOCOL-<task>.md` next to the
   script, if need be in the docstring. Intent first, then code.
-  `lib exp <name>` generates it from the template; the template lives with its checker in the
+  `labkit-init exp <name>` generates it from the template; the template lives with its checker in the
   labkit package.
 
 - **AS-004 · Identifiers make the intent addressable.** *(was §2.A1a)* Every promise to
@@ -692,10 +692,10 @@ evidence file under the same ID (top of this document).*
   and under `experiments/<NN>/explore/`. The throwaway-test boundary from
   AS-043 Runs go through `runlog` applies: as soon as a number is kept, cited or becomes a basis for decision,
   the code moves to `scripts/` + runlog — nothing is reported from a notebook.
-  The entry point before the area: `lib exp <name> --explore` creates
+  The entry point before the area: `labkit-init exp <name> --explore` creates
   `experiments/explore/<name>.py` (cells: question · items · render · check ·
   real `evaluate()` · verdict; helpers via import, never as a copy); the later
-  `lib exp <name>` moves the file into the area. Reason: protocol-check,
+  `labkit-init exp <name>` moves the file into the area. Reason: protocol-check,
   runlog, commit-before-run and the layering rule rely on diffable
   plain text with a fixed
   execution order; a kernel with cell state cannot

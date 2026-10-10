@@ -69,10 +69,10 @@ path to this file.
 
 ## The form: cuts, languages, rule references
 
-- **One template, three cuts.** `lib exp --cost seconds` stamps the
+- **One template, three cuts.** `labkit-init exp --cost seconds` stamps the
   `seconds` cut: head, question, criterion, admissibility, terms, data,
   unit, exclusions, result — with `--model` also model, prompt and null
-  condition. The full form adds the rest; `lib exp <name> --report` appends
+  condition. The full form adds the rest; `labkit-init exp <name> --report` appends
   the † fields. A field the cut left out is not owed.
 - **Labels English, values in the protocol's language.** The labels are
   read by `protocol-check`, so they stay exactly as stamped; what you write
@@ -131,7 +131,7 @@ The same block may hold the `[[promise]]` tables (labkit
 `docs/promise-block.md`).
 
 - **standard** — `"0.19"`; stamped, never edited. Standard 0.19 (labkit 0.72): a frozen protocol and every full run — at `cost = "seconds"` every run — owe the `[[promise]]` tables; a run records every registered constant unchanged.
-- **id** — `p-` plus 16 hex digits, stamped by `lib exp`, never typed: the
+- **id** — `p-` plus 16 hex digits, stamped by `labkit-init exp`, never typed: the
   run binds to it, so renaming or moving the file keeps the binding.
 - **type** — `"exploratory"` generates hypotheses, iterate freely, but
   nothing from it may be reported as a test. `"confirmatory"` tests a

@@ -501,6 +501,15 @@ dotfiles-Hooks rot.
 
 ### Phase 2 — Labor-Teil des Gerüstbauers ins Paket (0.78.0)
 
+**Stand 2026-10-10:** `labkit-init lab` und `labkit-init exp` gebaut
+(0.78.0), Vorlagen in `labkit/templates/`, `usability stage` ohne
+`~/.claude`. Die `AGENTS.md`-Vorlage ist eine knappe englische Fassung der
+beiden Spuren, keine Übersetzung der 258 Zeilen `CLAUDE.md.template` — der
+Merkzettel und die Übergaben bleiben Haus. **Offen:** der Thesis-Starter —
+er trägt Webis-Vorlesungslinks, eingefrorene Lauf-Snapshots mit Autor-Pfaden
+und eine Skill-Kopie; im Wheel bräche er den Hausmarker-Test. Entscheidung
+ausstehend (bleibt Haus oder wird bereinigt).
+
 - `labkit/scaffold.py` (Schicht tools), Console script `labkit-init` mit
   `lab`, `exp`, `thesis`. Portiert: `scaffold_repo`, `--exp`, `--thesis`.
   Nicht portiert: `sync`, `--thread`, `refs`, `upsert_labs`, der

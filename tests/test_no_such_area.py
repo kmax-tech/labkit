@@ -37,7 +37,7 @@ class NoSuchArea(unittest.TestCase):
 
 
 class BareName(unittest.TestCase):
-    """`01-<name>` and `<name>`, as `lib exp` prints them, find the area
+    """`01-<name>` and `<name>`, as `labkit-init exp` prints them, find the area
     (2026-10-07: two agents were refused for `01-docs-per-case`)."""
 
     def resolve(self, arg: str) -> Path:

@@ -5,6 +5,33 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.78.0 — 2026-10-10
+
+### Added — `labkit-init`: a lab repo and its areas from labkit's own templates
+
+- **`labkit-init lab [DIR]`** lays out a lab repo: `AGENTS.md` (with
+  `CLAUDE.md` pointing at it), `requirements.txt` pinning this labkit at its
+  release tag on GitHub (`--labkit-ref` for a pushed commit), `models.toml`,
+  editor and type-checker settings, `experiments/`, `data/raw` →
+  `data/prepared`, `lib/`, `notes/{theorie,messung,results}`, and the guard
+  test that the shared helpers resolve to the package. The lab standard is
+  not copied; it comes with the pin.
+- **`labkit-init exp <NAME>`** stamps an area — protocol (pilot part,
+  `--report` for the † fields, `--cost seconds` for the seconds cut), script
+  skeletons, README, the area's test — and `--explore` the entry before an
+  area exists. Ported from the house scaffolder; its `sync`, thread and
+  legacy-copy detection stay out.
+- The templates ship in `labkit/templates/`; none names a house path.
+
+### Changed
+
+- **`usability stage`** stamps its probe repo with `labkit.scaffold`, not
+  the house scaffolder under `~/.claude/resources`: the probe runs without
+  the author's machine, and the stamped condition is labkit's own (English
+  `AGENTS.md`, no copy of the standard). `scaffold_sha` hashes the scaffold
+  and its templates.
+- Messages and docs name `labkit-init exp` where they said `lib exp`.
+
 ## 0.77.0 — 2026-10-10
 
 ### Breaking — the lab standard ships with labkit, in English

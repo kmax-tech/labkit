@@ -809,7 +809,7 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
         # and finalize would only say so after the number exists (review 2026-10-07)
         return [
             f"{path.name}: the [protocol] id is not stamped — a full run "
-            f"needs a bound protocol (`lib exp` stamps it)"
+            f"needs a bound protocol (`labkit-init exp` stamps it)"
         ]
     head = protocol_block.head(text)  # read once at binding; valid here
     if head.cost == "seconds":

@@ -1,0 +1,21 @@
+# models.toml — single place for LLM backends (read by labkit.llm).
+# Experiments call llm.complete("<alias>", ...) / llm.resolve("<alias>") —
+# NEVER a literal endpoint or model id in experiment code. Cluster address
+# changed? Edit the [endpoints] table, every experiment follows.
+
+[endpoints]
+# gamma1 = "http://<host>:<port>"          # one srun session, one line
+# gamma2 = "http://<host2>:<port2>"        # a second session: add it here
+
+[models.haiku]
+backend = "claude-cli"            # `claude -p` subprocess: CLI auth, headless-safe
+model = "claude-haiku-4-5-20251001"
+
+# [models.<alias>]
+# backend = "ollama"              # a lab server
+# model = "<model:tag>"
+# endpoint = "gamma1"             # a name from [endpoints] or a literal URL
+# endpoints = ["gamma1","gamma2"] # same model on both servers: round-robin +
+#                                 # failover; llm.last_endpoint() says per call
+#                                 # which server answered (two servers are two
+#                                 # instrument instances — record it per row)

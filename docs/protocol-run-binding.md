@@ -16,7 +16,7 @@ id = "p-9e2341c0390948dc"
 ```
 
 - **Shape:** `p-` plus 16 lowercase hex digits (64 bit).
-- **Origin:** stamped by `lib exp <name>` at creation, never typed. Not
+- **Origin:** stamped by `labkit-init exp <name>` at creation, never typed. Not
   derived from name or path, so renaming a protocol or moving an area leaves
   the identity intact.
 - **Due:** in every protocol. A protocol with a prose head (Standard

@@ -23,8 +23,8 @@ costs more than the error it prevents is a rule to cut, but only a trace
 shows which one; this is the trace.
 
 stage
-    Stamps a lab repo through the house scaffolder (`arbeitsstandard-init.py
-    --lab`, then `--exp <area>`), commits it, plants the task's fixture —
+    Stamps a lab repo with labkit's own scaffold (`labkit-init lab`, then
+    `labkit-init exp <area>`), commits it, plants the task's fixture —
     `--task count` (default): twelve cases and their files, a deterministic
     mean; `--task judge`: twelve sentences with a gold label, a model's
     accuracy, no truth, only a range and a null condition to report — with a
@@ -55,6 +55,7 @@ score
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import json
 import os
@@ -66,18 +67,17 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from labkit import agent_transcript, code_navigation, protocol_reading, runs
+from labkit import agent_transcript, code_navigation, protocol_reading, runs, scaffold
 
-RES = Path.home() / ".claude" / "resources"
-#: The house scaffolder — the thing under test, outside this package.
-SCAFFOLDER = RES / "tools" / "arbeitsstandard-init.py"
-#: What the scaffolder stamps into an area; their sha pins the measured
-#: condition. Script skeletons are house masters (RES); the two protocol
-#: forms ship with labkit — the scaffolder's `master_path` reads them there.
+#: What the scaffold stamps into a repo and an area; their sha pins the measured
+#: condition. All of it ships with labkit — the probe needs no house machinery.
 STAMPED = (
+    Path(scaffold.__file__).resolve(),
+    scaffold.PROTOCOL_TEMPLATE,
     *(
-        RES / t
+        scaffold.TEMPLATES / t
         for t in (
+            "AGENTS.md.template",
             "prepare-script.py.template",
             "measure-script.py.template",
             "analyze-script.py.template",
@@ -86,7 +86,6 @@ STAMPED = (
             "test-quick.py.template",
         )
     ),
-    Path(__file__).resolve().parent / "experiment-protocol.md.template",
 )
 #: files per case — twelve cases; the truth is their mean, recounted at score time
 DOCS_PER_CASE = (4, 4, 3, 4, 4, 3, 2, 3, 4, 3, 2, 6)
@@ -136,7 +135,7 @@ TASKS = {
     },
 }
 #: (cost tier, model in the loop) per task: what the house route stamps for
-#: it (`lib exp --cost seconds`, plus `--model` with a model in the loop).
+#: it (`labkit-init exp --cost seconds`, plus `--model` with a model in the loop).
 #: Staged without them, the count got the full form and the model skeleton
 #: and every agent spent its time deleting it (probe 2026-10-07) — a cost
 #: of the staging, not of the route.
@@ -187,9 +186,9 @@ def _labkit_spec(python: Path) -> str:
 
 
 def scaffold_sha() -> str:
-    """sha256 (12 hex) over the scaffolder and the templates it stamps."""
+    """sha256 (12 hex) over the scaffold and the templates it stamps."""
     h = hashlib.sha256()
-    for p in (SCAFFOLDER, *STAMPED):
+    for p in STAMPED:
         if not p.is_file():
             raise SystemExit(f"usability: stamped master missing: {p}")
         h.update(p.name.encode())
@@ -317,18 +316,15 @@ def stage(
             f"usability: {root} exists and is not empty — stage into "
             f"a fresh directory, the probe must start cold"
         )
-    if not SCAFFOLDER.is_file():
-        raise SystemExit(f"usability: scaffolder not found: {SCAFFOLDER}")
     if venv is not None and not (venv / "bin" / "python").is_file():
         raise SystemExit(f"usability: --venv {venv} has no bin/python")
     sha = scaffold_sha()
-    flags = ["--lab", "--name", root.name, "--lang", "deutsch"]
     root.mkdir(parents=True, exist_ok=True)
-    _sh([sys.executable, str(SCAFFOLDER), str(root), *flags], root)
+    scaffold.stamp_lab(root, root.name)
     _sh(["git", "init", "-q", "."], root)
     # The probe's own commits skip the pre-commit hook: a freshly stamped
     # protocol is all placeholders by design, and the hook is the agent's
-    # gate, not the stamper's (`lib exp` sets core.hooksPath, 2026-10-05).
+    # gate, not the stamper's (`labkit-init exp` sets core.hooksPath, 2026-10-05).
     _sh(["git", "add", "-A"], root)
     _sh(
         [
@@ -341,13 +337,12 @@ def stage(
         ],
         root,
     )
-    exp_flags = [
-        "--exp",
-        area_name,
-        *(["--cost", cost] if cost else []),
-        *(["--model", "haiku"] if model else []),
-    ]
-    _sh([sys.executable, str(SCAFFOLDER), str(root), *exp_flags], root)
+    with contextlib.redirect_stdout(
+        sys.stderr
+    ):  # the stamp's log is for the operator, not the probe
+        scaffold.stamp_area(
+            root, area_name, cost=cost, model="haiku" if model else False
+        )
     areas = sorted(p.name for p in (root / "experiments").glob(f"*-{area_name}"))
     if len(areas) != 1:
         raise SystemExit(
@@ -397,7 +392,13 @@ def stage(
         metric_key=metric_key,
         labkit_installed=_labkit_spec(root / ".venv" / "bin" / "python"),
         scaffold_sha=sha,
-        scaffold_flags=[*flags, *exp_flags],
+        scaffold_flags=[
+            "lab",
+            "exp",
+            area_name,
+            *(["--cost", cost] if cost else []),
+            *(["--model", "haiku"] if model else []),
+        ],
         target_minutes=TARGET_MINUTES,
     )
     log = _sidecar(root, "log.md")
