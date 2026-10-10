@@ -345,6 +345,16 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
+- **Präfixe der Regelkennungen englisch** (2026-10-10): `AS` (Arbeitsstandard),
+  `HS` (Hausstandard) und `CS` sind Abkürzungen deutscher bzw. gemischter
+  Namen; im englischen Standard erklärt sich `AS` nicht mehr. Kandidaten:
+  `LS` (lab standard) statt `AS`, `HR` (house rule) statt `HS`. Haken: eine
+  Kennung ändert sich nie (Kennungsregel 3) — ein Präfixwechsel braucht das
+  alte Präfix als Alias in `rules.tsv`, `check_refs` muss beide lesen, und
+  eingefrorene Protokolle und Lauf-Snapshots behalten das alte. Bis dahin:
+  das Präfix beim ersten Vorkommen ausschreiben (README, Kopf von
+  `standard.md`). Auslöser: die Veröffentlichung oder der erste fremde Leser,
+  der fragt.
 - Die Vertragskarte im Bereichs-README hält die Agenten nicht vom Lesen des
   Standards ab (vier von vier lasen ihn trotzdem). Kein Werkzeugproblem;
   nicht weiter optimieren — aber zählen (`reads of labkit source / standard`
