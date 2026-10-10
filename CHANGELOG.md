@@ -39,6 +39,13 @@ pins (`requirements.txt` / `requirements.lock`).
   "opens a run" because someone was reading it with `sed`, `cat` or a path
   in a heredoc. `claude_hooks.executed_py` now wants an interpreter before
   the file (flags allowed), a command-segment start, or `./x.py`.
+- **`labkit-hooks` replaces every hook an earlier labkit wrote, under any
+  event.** A jq one-liner running `protocol-check` on each PROTOCOL write
+  (an install before `claude-hook post-change`) survived three installs in
+  uniagent and doubled every report; `check` saw nothing because it looked
+  for missing entries only. A hook command naming `claude-hook`,
+  `protocol-check` or `notes-check` is labkit's: `check` names it with its
+  event, `install` drops it (`install_hooks.stale_entries`).
 
 ## 0.78.0 — 2026-10-10
 

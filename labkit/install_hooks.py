@@ -113,21 +113,51 @@ CLAUDE_HOOKS = {
 }
 
 
+#: a hook command that calls one of these was written by a labkit install —
+#: this version's or an earlier one (uniagent 2026-10-10: a jq one-liner
+#: running `protocol-check` on every PROTOCOL write survived three installs
+#: and doubled every report beside `claude-hook post-change`)
+LABKIT_COMMANDS = ("claude-hook", "protocol-check", "notes-check")
+
+
 def _ours(entry: dict) -> bool:
-    return any("claude-hook" in h.get("command", "") for h in entry.get("hooks", []))
+    return any(
+        cmd in h.get("command", "")
+        for h in entry.get("hooks", [])
+        for cmd in LABKIT_COMMANDS
+    )
+
+
+def stale_entries(current: dict) -> list[str]:
+    """Every hook in `current` a labkit install wrote that is not this
+    version's — one line per hook: event and the command's first 70 chars."""
+    wanted = {json.dumps(hook, sort_keys=True) for _, hook in CLAUDE_HOOKS.values()}
+    out = []
+    for event, entries in (current.get("hooks") or {}).items():
+        for entry in entries:
+            if not _ours(entry):
+                continue
+            for h in entry.get("hooks", []):
+                if json.dumps(h, sort_keys=True) not in wanted:
+                    out.append(f"{event}: {h.get('command', '')[:70]}")
+    return out
 
 
 def merged_settings(current: dict) -> dict:
-    """`current` with labkit's hooks replaced by this version's; every other
+    """`current` with labkit's hooks — this version's and any earlier
+    install's (`LABKIT_COMMANDS`) — replaced by this version's; every other
     key and every foreign hook kept."""
     out = dict(current)
-    hooks = dict(out.get("hooks") or {})
+    hooks = {
+        event: [e for e in entries if not _ours(e)]
+        for event, entries in (out.get("hooks") or {}).items()
+    }
+    hooks = {event: entries for event, entries in hooks.items() if entries}
     for event, (matcher, hook) in CLAUDE_HOOKS.items():
-        kept = [e for e in hooks.get(event, []) if not _ours(e)]
         entry: dict = {"hooks": [hook]}
         if matcher:
             entry = {"matcher": matcher, **entry}
-        hooks[event] = kept + [entry]
+        hooks[event] = hooks.get(event, []) + [entry]
     out["hooks"] = hooks
     return out
 
@@ -213,7 +243,10 @@ def check(repo: Path) -> list[str]:
             "git core.hooksPath is not .githooks — the pre-commit hook never runs"
         )
     _, current = _settings(repo)
-    if merged_settings(current) != current:
+    stale = stale_entries(current)
+    for line in stale:
+        out.append(f".claude/settings.json: a hook from an earlier labkit — {line}")
+    if not stale and merged_settings(current) != current:
         out.append(".claude/settings.json lacks this labkit's claude-hook entries")
     return out
 

@@ -74,6 +74,48 @@ class Install(unittest.TestCase):
         )
         self.assertTrue(any("never runs" in g for g in install_hooks.check(repo)))
 
+    def test_a_leftover_protocol_check_hook_is_named_and_replaced(self):
+        # uniagent 2026-10-10: a jq one-liner from an earlier labkit ran
+        # protocol-check on every PROTOCOL write beside post-change — every
+        # report twice, and `check` said the settings were fine
+        repo = git_repo()
+        (repo / ".claude").mkdir()
+        jq = (
+            "f=$(jq -r '.tool_input.file_path // empty'); case \"${f##*/}\" in "
+            'PROTOCOL-*.md) "${CLAUDE_PROJECT_DIR:-.}/.venv/bin/protocol-check" "$f";; esac'
+        )
+        old = {
+            "hooks": {
+                "PostToolUse": [
+                    {
+                        "matcher": "Write|Edit",
+                        "hooks": [{"type": "command", "command": jq}],
+                    }
+                ],
+                "UserPromptSubmit": [
+                    {"hooks": [{"type": "command", "command": "notes-check notes/"}]}
+                ],
+            }
+        }
+        (repo / ".claude" / "settings.json").write_text(json.dumps(old))
+        report = install_hooks.check(repo)
+        self.assertTrue(
+            any(
+                "a hook from an earlier labkit — PostToolUse: f=$(jq" in r
+                for r in report
+            ),
+            report,
+        )
+        self.assertTrue(any("UserPromptSubmit: notes-check" in r for r in report))
+        install_hooks.install(repo)
+        s = json.loads((repo / ".claude" / "settings.json").read_text())
+        commands = [
+            h["command"] for es in s["hooks"].values() for e in es for h in e["hooks"]
+        ]
+        self.assertFalse(any("jq" in c or "notes-check notes/" in c for c in commands))
+        self.assertNotIn("UserPromptSubmit", s["hooks"])
+        self.assertEqual(install_hooks.stale_entries(s), [])
+
     def test_an_old_claude_hook_entry_is_replaced_not_doubled(self):
         repo = git_repo()
         (repo / ".claude").mkdir()
