@@ -11,7 +11,7 @@ edited text, and git history would keep them forever.
 | What | Value |
 |---|---|
 | Rule inventory (`docs/standard-cut.tsv`) | dotfiles blob `0888ec5` of `arbeitsstandard.md.template`, 102 ids, 95 package / 7 house |
-| Translated text (`docs/standard-blocks.tsv`) | dotfiles blob `a28df38`, the same file after dotfiles `4405df7` moved the dated incidents into the evidence file |
+| Translated text | dotfiles blob `a28df38`, the same file after dotfiles `4405df7` moved the dated incidents into the evidence file; the block manifest (`docs/standard-blocks.tsv`: every source line in exactly one block, its side, its target position) was removed once `rules.tsv` carried the side as status — last at labkit `223e2fa` |
 | Blocks | 143 in all: 126 package (124 translated, 2 separators copied), 16 house, 1 generated register |
 | Fixed terms | `docs/standard-terms.tsv` at labkit `4b8011b` (46 terms) |
 

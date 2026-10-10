@@ -433,8 +433,10 @@ dotfiles-Hooks rot.
    Geltung. Die Haus↔Fach-Tabelle kommt ins Paket (2026-10-09) als „Labkit
    terms and established terminology“ — sie kennzeichnet die Prägungen
    maßgeblich; das leere Kern-Glossar ist ein Gerüstbaustein und zieht in
-   Phase 2 nach `labkit/templates/`. Blockmanifest: `docs/standard-blocks.tsv`
-   (jede Quellzeile in genau einem Block, Seite, Zielposition). Die Datei entfällt, sobald `rules.tsv` die Seite als Status trägt.
+   Phase 2 nach `labkit/templates/`. Das Blockmanifest
+   `docs/standard-blocks.tsv` (jede Quellzeile in genau einem Block, Seite,
+   Zielposition) ist entfallen, seit `rules.tsv` die Seite als Status trägt
+   (2026-10-10; letzter Stand labkit `223e2fa`).
 2. **Inline-Belege raus** in die private Evidenz-Datei. Die Narbentabelle zu
    AS-015 bleibt als Tabelle von Fehlerklassen ohne Datum, der Audit braucht
    sie.
