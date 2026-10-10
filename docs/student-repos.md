@@ -6,11 +6,12 @@ copied into them.
 
 ## Getting labkit
 
-`arbeitsstandard-init.py --thesis` stamps the repo with a `requirements.txt`
-that pins labkit on GitHub at its release tag:
+`labkit-init lab <DIR>` (since 0.78.0) lays the repo out and writes a
+`requirements.txt` that pins labkit on GitHub at the release tag of the
+installed version:
 
 ```
-labkit @ git+https://github.com/kmax-tech/labkit.git@v0.49.1
+labkit @ git+https://github.com/kmax-tech/labkit.git@v<version>
 ```
 
 The student installs it once:
@@ -21,8 +22,14 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 The commands (`protocol-check`, `intent-check`, `scope-sha`, `runlog`, …)
 then live in `.venv/bin/`; scripts import `from labkit import llm, runlog`.
-A new repo gets the tag that is current when it is stamped (a commit, with
-a warning, when that version is not tagged yet).
+The lab standard comes with the pin (`python -m labkit.rules show AS-nnn`),
+nothing is copied. Until the tag is pushed the pin does not install;
+`--labkit-ref <commit>` pins a pushed commit instead.
+
+The author's house keeps a separate thesis starter
+(`arbeitsstandard-init.py --thesis` in the dotfiles) that adds house
+material around the same pin; whether it moves into labkit is open
+(`TODO.md` item 5).
 
 ## Moving to a newer version
 
