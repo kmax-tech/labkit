@@ -1,5 +1,3 @@
-<!-- DRAFT until labkit 0.77.0: translated from the German lab standard, reviewed block by block, adapted for the package (docs/standard-translation.md). -->
-
 # The labkit lab standard
 
 These are the rules an experiment area is held to — before a run, during it,

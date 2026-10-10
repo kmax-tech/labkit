@@ -85,19 +85,14 @@ what concerns only this house stays in the author's dotfiles.**
 
 | Place | Holds | Master or copy |
 |---|---|---|
-| labkit (this repo) | the code and its gates; the protocol template and its field guide (`labkit/experiment-protocol.md.template`, `labkit/protocol-field-guide.md`); the audit agents' instructions (`labkit/*.agent.md`) | master |
+| labkit (this repo) | the code and its gates; the lab standard (`labkit/docs/standard.md`, English) and its ledger (`labkit/docs/rules.tsv`: id → name → status, every `AS` number); the protocol template and its field guide (`labkit/experiment-protocol.md.template`, `labkit/protocol-field-guide.md`); the audit agents' instructions (`labkit/*.agent.md`) | master |
 | labkit (this repo) | `docs/coding-style.md` | copy, stamped with the master's hash; edit the master, then `lib sync pull` |
-| author's dotfiles (`~/.claude/resources/`) | the lab standard (`arbeitsstandard.md.template`, German), its dated evidence (`arbeitsstandard.evidence.md`), the rule register (`rule-registry.tsv`: id → name → status), the coding style, the script templates (`measure-script`, `prepare-script`, `test-area`, …), the scaffolder (`tools/arbeitsstandard-init.py`), the thesis starter | master |
-| a lab repo | `docs/arbeitsstandard.md`, `docs/coding-style.md`, `CLAUDE.md`, the scripts stamped from the templates; labkit itself as a pinned package | copies, stamped by the scaffolder |
+| author's dotfiles (`~/.claude/resources/`) | the house standard (`arbeitsstandard.md.template`, German — cut down to the house chapters, `TODO.md` item 5), the dated evidence behind every rule (`arbeitsstandard.evidence.md`), the house ledger (`rule-registry.tsv`: `CS` and `HS` ids, `AS` rows marked `moved:labkit`), the coding style, the script templates (`measure-script`, `prepare-script`, `test-area`, …), the scaffolder (`tools/arbeitsstandard-init.py`), the thesis starter | master |
+| a lab repo | labkit as a pinned package, which brings the standard; `docs/coding-style.md`, `CLAUDE.md`, the scripts stamped from the templates (a repo pinned below 0.77 still carries its `docs/arbeitsstandard.md` copy) | copies, stamped by the scaffolder |
 | author's global `~/.claude/CLAUDE.md` | one-line reflexes that point at rule ids | master (house only) |
 
-**Known gap.** Gate messages and docstrings name rule ids (`AS-004 Identifiers make the intent addressable`); the rule text behind the id
-lives in the dotfiles, not here. A reader without the author's machine
-reads the id and its name, never the rule. Closing it — the standard and
-the register move into the package, in English, house evidence stays
-private — is `TODO.md` item 5.
-
-**Not yet decided.** Whether the scaffolder and the script templates move
-into labkit too: they are what a foreign lab needs to start, but moving them
-touches every existing lab repo, so it belongs to the rollout (`TODO.md`,
-row R of the order).
+**What is still in the dotfiles.** The scaffolder and the script templates
+a foreign lab needs to start a repo; their lab part moves into labkit as
+`labkit-init` (`TODO.md` item 5, phase 2). Gate messages and docstrings cite
+rules by id and English name, and `tests/test_rules.py` holds every such
+reference to the ledger.

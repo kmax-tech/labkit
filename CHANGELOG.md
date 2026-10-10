@@ -5,6 +5,32 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.77.0 — 2026-10-10
+
+### Breaking — the lab standard ships with labkit, in English
+
+- **`labkit/docs/standard.md` is the lab standard; `labkit/docs/rules.tsv`
+  its ledger.** Both are package data. The German standard was translated
+  block by block, reviewed and adapted for labs outside the author's house
+  (`docs/standard-translation.md`). A lab refers to the standard through its
+  pin, never a copy.
+- **`labkit-audit` reads the packaged standard**, not the repo's
+  `docs/arbeitsstandard.md`; the code-check bundle quotes the severity
+  legend from it. Last version that reads `docs/arbeitsstandard.md`: 0.76.0.
+- **Rule names in messages and docstrings are English** (`AS-015 Preflight
+  audit before freezing`, was `AS-015 Preflight-Audit vor dem Einfrieren`);
+  ids are unchanged. Last version with the German names: 0.76.0.
+
+### Added — `labkit.rules`
+
+- **The one home of the rule ledger, the head parser and three checks**:
+  `check_registry` (heads against ledger), `check_ledger` (the ledger only
+  grows), `check_refs` (every reference exists and names its rule).
+  `python -m labkit.rules check | ledger | refs | show`; a house rule's
+  number is listed with status `house`, and `show` says its text is not
+  distributed. `tests/test_rules.py` holds every living reference in labkit
+  to the ledger.
+
 ## 0.76.0 — 2026-10-09
 
 ### Added — `batch.Store.ledger`: the balance of an item-by-item run
