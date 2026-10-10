@@ -27,8 +27,6 @@ def _area() -> Path:
     (area / "scripts").mkdir(parents=True)
     (area / "scripts" / "01_measure.py").write_text("x = 1\n", encoding="utf-8")
     (area / "PROTOCOL-x.md").write_text(PROTOCOL, encoding="utf-8")
-    (repo / "docs").mkdir()
-    (repo / "docs" / "arbeitsstandard.md").write_text("scar table\n", encoding="utf-8")
     return area
 
 

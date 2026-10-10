@@ -57,7 +57,7 @@ import re
 import sys
 from pathlib import Path
 
-from labkit import promises
+from labkit import promises, rules
 from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 from labkit.repo import area_path, area_protocols, layout_root, no_such_area
 from labkit.scope_sha import imported_repo_helpers
@@ -640,32 +640,23 @@ def schema_facts(area: Path) -> str:
 
 # --- the bundle -----------------------------------------------------------
 
-# Inherited from the severity legend in Arbeitsstandard AS-015 Preflight audit before freezing — the German
-# legend there is the minting site; this is its English rendering, stamped
-# into every bundle so BOTH audit agents grade findings by the same
-# definitions (the code-check agent reads only the bundle and cannot look
-# the legend up). Change it there first, then mirror it here.
-SEVERITY_LEGEND = (
-    "## Severity legend (inherited from Arbeitsstandard AS-015 Preflight audit before freezing)\n"
-    "\n"
-    "- BLOCKER: materially changes a reported number or the validity of\n"
-    "  the frozen criterion.\n"
-    "- WARNING: a real problem without demonstrated influence on the\n"
-    "  current number.\n"
-    '- NOTE: failure scenario only under a condition ("if X is changed,\n'
-    '  then ...") — not triggerable on the code as it stands.\n'
-    "\n"
-    "The grade says how close the failure scenario sits to the current\n"
-    "run; a finding WITHOUT a scenario (which reported number goes wrong,\n"
-    "with which input) exists at no grade.\n"
-)
+
+def severity_legend() -> str:
+    """The severity legend of AS-015 Preflight audit before freezing, quoted from the
+    lab standard for the bundle: the code-check agent reads only the bundle and
+    cannot look the legend up, and both audit agents must grade by the same words."""
+    return (
+        "## Severity legend (AS-015 Preflight audit before freezing, labkit standard)\n\n"
+        + rules.paragraph("AS-015", "**Severity levels**")
+        + "\n"
+    )
 
 
 def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
     """Write the audit bundle for the code-check agent: schema facts, gate labels, intent ids, protocol and code in one file."""
     parts = [
         f"# AUDIT BUNDLE · area {area.name}\n\n",
-        SEVERITY_LEGEND,
+        severity_legend(),
         "\n",
         schema_facts(area),
         "\n",

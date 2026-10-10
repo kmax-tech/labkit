@@ -149,7 +149,8 @@ LOG_LINE = re.compile(r"^(\d\d):(\d\d):(\d\d)\s*·\s*(\w+)\s*·\s*(.*)$")
 #: a `read` of these is the agent learning the contract from the wrong place
 #: — the area's README card should have sufficed (2026-10-05, four of four read on)
 SOURCE_READ = re.compile(
-    r"labkit/\w+\.py|labkit[ /](runlog|recheck|protocol_check|llm|batch|finalize|preflight)|arbeitsstandard",
+    r"labkit/\w+\.py|labkit[ /](runlog|recheck|protocol_check|llm|batch|finalize|preflight)"
+    r"|labkit/docs/standard|labkit\.rules|arbeitsstandard",  # the standard: packaged since 0.77, a lab copy before
     re.I,
 )
 #: The bar: one kept number in this many minutes. Set by hand (2026-10-05),
@@ -457,7 +458,7 @@ class LogTrace:
     unsure: int
     gate: int
     untagged: int  # off-contract lines, counted, never dropped
-    source_reads: int  # `read` lines naming labkit's source or docs/arbeitsstandard.md
+    source_reads: int  # `read` lines naming labkit's source or the lab standard
 
 
 def parse_log(text: str) -> LogTrace:

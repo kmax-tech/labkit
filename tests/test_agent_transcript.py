@@ -11,7 +11,7 @@ from pathlib import Path
 from labkit import agent_transcript as at
 
 ROOT = Path("/probe/count-1")
-SOURCE = re.compile(r"labkit/\w+\.py|arbeitsstandard", re.I)
+SOURCE = re.compile(r"labkit/\w+\.py|labkit/docs/standard|arbeitsstandard", re.I)
 HOOK_TEXT = 'echo "pre-commit: must fields missing (see above)"\n'
 
 

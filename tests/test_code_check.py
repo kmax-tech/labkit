@@ -31,6 +31,7 @@ def _load(name):
 intent_check = _load("intent_check")
 sys.modules["labkit.intent_check"] = intent_check
 code_check = _load("code_check")
+rules = code_check.rules  # the module the bundle quotes from
 
 
 class AreaFixture:
@@ -287,14 +288,17 @@ class TestBundle(unittest.TestCase):
 
     def test_bundle_opens_with_severity_legend(self):
         """Both audit agents must grade by the SAME definitions; the
-        code-check agent reads only the bundle, so the legend (inherited
-        from Arbeitsstandard AS-015 Preflight-Audit vor dem Einfrieren) is stamped in — before the facts."""
+        code-check agent reads only the bundle, so the legend of AS-015 Preflight
+        audit before freezing is quoted from the lab standard — before the facts."""
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
             out = a.path / "bundle.md"
             code_check.write_bundle(a.path, a.path, a.path / "PROTOCOL-fixture.md", out)
             text = out.read_text(encoding="utf-8")
         self.assertIn("Severity legend", text)
-        for grade in ("BLOCKER:", "WARNING:", "NOTE:"):
+        self.assertIn(
+            rules.paragraph("AS-015", "**Severity levels**"), text
+        )  # verbatim, not a copy
+        for grade in ("**BLOCKER**", "**WARNING**", "**NOTE**"):
             self.assertIn(grade, text)
         self.assertLess(text.index("Severity legend"), text.index("Schema facts"))
 

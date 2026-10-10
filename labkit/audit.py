@@ -8,8 +8,8 @@ The agent audit of AS-015 Preflight audit before freezing (preflight, before fre
 subagent: the instructions ship with the package
 (`experiment-preflight.agent.md`), the files the agent is told to read are
 gathered here and inlined — the area's protocol, `scripts/*.py`,
-`analysis/*.py`, the repo-local `lib/` modules they import, and the repo's
-`docs/arbeitsstandard.md` — and one call goes through `labkit.llm` to the
+`analysis/*.py`, the repo-local `lib/` modules they import, and the lab
+standard that ships with labkit (`labkit/docs/standard.md`) — and one call goes through `labkit.llm` to the
 alias the lab's `models.toml` names. `claude -p` runs without tools, so the
 inlined text is all the auditor sees. Synchronous, with a timeout: on
 expiry the command fails, it never waits on in the background.
@@ -44,7 +44,7 @@ import sys
 import time
 from pathlib import Path
 
-from labkit import llm
+from labkit import llm, rules
 from labkit.repo import area_protocols, layout_root, no_such_area
 from labkit.scope_sha import area_stamp, imported_repo_helpers
 
@@ -106,11 +106,11 @@ def gather(area: Path, protocol: Path | None) -> tuple[Path, list[Path], Path]:
     if not code:
         raise AuditError(f"{area}: no scripts/*.py or analysis/*.py — nothing to audit")
     code += imported_repo_helpers(area, repo)
-    standard = repo / "docs" / "arbeitsstandard.md"
+    standard = rules.STANDARD
     if not standard.is_file():
         raise AuditError(
-            f"{standard} is missing — the audit reads the repo's standard "
-            f"(scar table, severity legend); stamp it with `lib init`"
+            f"{standard} is missing — labkit was installed without its standard "
+            f"(scar table, severity legend); reinstall labkit"
         )
     return chosen, code, standard
 
@@ -137,6 +137,8 @@ def render(
     repo = layout_root(area)
 
     def rel(p: Path) -> str:
+        if p == rules.STANDARD:
+            return "labkit/docs/standard.md"  # the shipped standard, wherever labkit is installed
         try:
             return str(p.resolve().relative_to(repo.resolve()))
         except ValueError:

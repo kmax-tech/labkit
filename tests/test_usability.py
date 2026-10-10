@@ -256,3 +256,17 @@ class Archive(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SourceReadsCountTheStandard(unittest.TestCase):
+    """A read of the packaged standard counts like a read of labkit's source;
+    a read of the area's own files does not (the metric: did the README card suffice?)."""
+
+    def test_the_packaged_standard_and_a_rules_lookup_count(self) -> None:
+        log = (
+            "18:00:00 · read · labkit/docs/standard.md (AS-015)\n"
+            "18:00:10 · run · python -m labkit.rules show AS-015\n"
+            "18:00:20 · read · python -m labkit.rules show AS-017\n"
+            "18:00:30 · read · experiments/01-x/README.md\n"
+        )
+        self.assertEqual(usability.parse_log(log).source_reads, 2)

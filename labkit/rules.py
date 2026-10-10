@@ -284,8 +284,10 @@ def _line_refs(
             f"{where}: old id {m.group()}"
             + (f" → {row.id} {row.title}" if row else " (no such rule)")
         )
-    # an id inside inline code is a command argument or an example, not a citation
-    scan = re.sub(r"`[^`]*`", lambda c: " " * len(c.group()), line)
+    # an id inside inline code or a bare string literal ("AS-015") is an argument, not a citation
+    scan = re.sub(
+        r"`[^`]*`|([\"'])(?:AS|CS|HS)-\d{3}\1", lambda c: " " * len(c.group()), line
+    )
     for m in CODE_RE.finditer(scan):
         row = by_id.get(m.group(1))
         if row is None and m.group(1).split("-")[0] in held:
@@ -358,6 +360,22 @@ def rule_text(
     ):
         z += 1
     return "\n".join(lines[a:z]).rstrip() + "\n"
+
+
+def paragraph(rule_id: str, lead: str, doc: str | None = None) -> str:
+    """The paragraph of RULE_ID's block that begins with LEAD, unindented and unwrapped.
+
+    For text another tool hands on verbatim — the severity legend of
+    AS-015 Preflight audit before freezing goes into every code-check bundle —
+    so it is quoted from the standard, not copied by hand. Raises when LEAD
+    is not found: a renamed paragraph must not leave a bundle without it.
+    """
+    block = rule_text(rule_id, doc)
+    for para in re.split(r"\n\s*\n", block):
+        text = " ".join(para.split())
+        if text.startswith(lead):
+            return text
+    raise LookupError(f"{rule_id}: no paragraph begins with {lead!r}")
 
 
 def main(argv: list[str]) -> int:

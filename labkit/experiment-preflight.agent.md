@@ -17,7 +17,8 @@ restate them from memory.
 3. The repo-local `lib/` modules those files import (`from lib import …`,
    bare `import <module>` resolved against `<repo>/lib/`). Shared anchors and
    thresholds live there and belong to your scope.
-4. `<repo>/docs/arbeitsstandard.md` — AS-015 Preflight audit before freezing for the scar table and the
+4. The lab standard that ships with labkit, `labkit/docs/standard.md`
+   (`python -m labkit.rules show AS-nnn` prints one rule) — AS-015 Preflight audit before freezing for the scar table and the
    severity legend; sections 2A/2C for MODE preflight, 2B/2D for MODE analysis.
    Every finding cites the rule it violates as code + name (AS-nnn <title>).
 

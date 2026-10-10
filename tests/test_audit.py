@@ -23,7 +23,7 @@ PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"
 SCRIPT = "import scoring\nfrom labkit import runlog\nprint(scoring.X)\n"
 
 
-def repo_with(standard: bool = True, protocols: int = 1) -> Path:
+def repo_with(protocols: int = 1) -> Path:
     repo = Path(tempfile.mkdtemp())
     (repo / ".git").mkdir()
     area = repo / "experiments" / "01-x"
@@ -33,11 +33,6 @@ def repo_with(standard: bool = True, protocols: int = 1) -> Path:
         (area / f"PROTOCOL-x{i}.md").write_text(PROTOCOL, encoding="utf-8")
     (repo / "lib").mkdir()
     (repo / "lib" / "scoring.py").write_text("X = 0.7\n", encoding="utf-8")
-    if standard:
-        (repo / "docs").mkdir()
-        (repo / "docs" / "arbeitsstandard.md").write_text(
-            "AS-015 Preflight-Audit vor dem Einfrieren scar table\n", encoding="utf-8"
-        )
     return area
 
 
@@ -59,8 +54,8 @@ def run(area: Path, answer: str, *extra: str) -> tuple[int, str, str, list[str]]
 
 
 CLEAN = "verdict: 0 blockers, 0 warnings, 2 notes\nscope:\nscripts/01_measure.py"
-WARN = "WARNING · a.py:1 · x · y · AS-015 Preflight-Audit vor dem Einfrieren · z\nverdict: 0 blockers, 1 warnings, 0 notes"
-BLOCK = "BLOCKER · a.py:1 · x · y · AS-015 Preflight-Audit vor dem Einfrieren · z\nverdict: 1 blockers, 0 warnings, 0 notes"
+WARN = "WARNING · a.py:1 · x · y · AS-015 Preflight audit before freezing · z\nverdict: 0 blockers, 1 warnings, 0 notes"
+BLOCK = "BLOCKER · a.py:1 · x · y · AS-015 Preflight audit before freezing · z\nverdict: 1 blockers, 0 warnings, 0 notes"
 
 
 class Audit(unittest.TestCase):
@@ -73,10 +68,13 @@ class Audit(unittest.TestCase):
             "experiments/01-x/PROTOCOL-x0.md",
             "experiments/01-x/scripts/01_measure.py",
             "lib/scoring.py",
-            "docs/arbeitsstandard.md",
+            "labkit/docs/standard.md",
         ):
             self.assertIn(f"===== FILE: {path} =====", prompt)
         self.assertIn("Experiment preflight audit", prompt)  # the shipped instructions
+        self.assertIn(
+            "AS-015 · Preflight audit before freezing", prompt
+        )  # the shipped standard, its text
 
     def test_a_warning_is_a_finding_to_decide(self):
         self.assertEqual(run(repo_with(), WARN)[0], 1)
@@ -95,9 +93,12 @@ class Audit(unittest.TestCase):
         self.assertIn("verdict", err)
 
     def test_missing_standard_and_ambiguous_protocol_refuse(self):
-        rc, _, err, sent = run(repo_with(standard=False), CLEAN)
+        with mock.patch.object(
+            audit.rules, "STANDARD", Path("/nonexistent/standard.md")
+        ):
+            rc, _, err, sent = run(repo_with(), CLEAN)
         self.assertEqual((rc, sent), (2, []))
-        self.assertIn("arbeitsstandard.md is missing", err)
+        self.assertIn("installed without its standard", err)
         rc, _, err, sent = run(repo_with(protocols=2), CLEAN)
         self.assertEqual((rc, sent), (2, []))
         self.assertIn("--protocol", err)

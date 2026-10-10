@@ -211,6 +211,13 @@ class Refs(unittest.TestCase):
             rules.check_refs("f", "run `labkit.rules show AS-003`\n" + DOC, ROWS), []
         )
 
+    def test_an_id_as_a_string_literal_is_an_argument(self) -> None:
+        self.assertEqual(rules.check_refs("f", 'rule_text("AS-003")', ROWS), [])
+        # twin: a citation inside a longer string still needs its name
+        self.assertEqual(
+            len(rules.check_refs("f", 'msg = "see AS-003 for why"', ROWS)), 1
+        )
+
     def test_a_prefix_the_ledger_does_not_keep_is_left_alone(self) -> None:
         self.assertEqual(rules.check_refs("f", "CS-008 Run the linter", ROWS), [])
 

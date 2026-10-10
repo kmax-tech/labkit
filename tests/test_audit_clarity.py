@@ -40,8 +40,6 @@ def area_with(readme: bool = True) -> Path:
         (area / "README.md").write_text(README, encoding="utf-8")
     (repo / "lib").mkdir()
     (repo / "lib" / "scoring.py").write_text("X = 0.7\n", encoding="utf-8")
-    (repo / "docs").mkdir()
-    (repo / "docs" / "arbeitsstandard.md").write_text("scar table\n", encoding="utf-8")
     return area
 
 
@@ -82,7 +80,7 @@ class Clarity(unittest.TestCase):
                 "experiments/01-x/PROTOCOL-x.md",
                 "experiments/01-x/scripts/01_measure.py",
             ],
-        )  # the reading order; no lib/scoring.py, no docs/arbeitsstandard.md
+        )  # the reading order; no lib/scoring.py, no standard
 
     def test_a_finding_is_exit_1_and_counted(self) -> None:
         rc, out, err, _ = run(area_with(), ONE)
