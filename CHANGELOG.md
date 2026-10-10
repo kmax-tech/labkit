@@ -5,6 +5,32 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.79.0 — 2026-10-10
+
+### Breaking — `labkit-audit` is the one runner of the experiment-preflight audit
+
+- **The Claude subagent copy of the instructions is gone.** AS-015 named two
+  ways, the subagent `experiment-preflight` and the command; the standard
+  now names the command only. The subagent read on its own (uniagent,
+  50 audits: median 295k fresh tokens and 33 tool calls each, the standard
+  read 88 times) and its copy drifted from the shipped text once
+  (2026-10-07). Last version whose standard names the subagent: 0.78.0.
+- **The auditor gets the rules its instructions cite, not the whole
+  standard.** `audit.cited_rules` reads the `AS-nnn` ids from
+  `experiment-preflight.agent.md` (AS-015 Preflight audit before freezing
+  with the scar table and the severity legend, AS-017 The number of audits
+  follows the cost tier, AS-004 Identifiers make the intent addressable,
+  AS-050 Analysis audit before reporting) and inlines their blocks — about
+  18 kB instead of 117 kB. A finding no rule names is "new class".
+- **MODE analysis inlines the answering run's rows.** The instructions told
+  the auditor to read the first 50 and last 20 output rows; the command
+  never gave them (an auditor without tools read code alone). Now every
+  output the run registered comes as `===== ROWS <path> … =====` with
+  numbered rows (a row over 2000 chars cut and marked), plus the run's
+  `metrics.json`; a protocol without an id or a run says so in one line.
+- `labkit/templates/models.toml.template` stamps the alias `opus` the
+  command calls by default (`claude-cli`, `claude-opus-5-5`).
+
 ## 0.78.0 — 2026-10-10
 
 ### Added — `labkit-init`: a lab repo and its areas from labkit's own templates

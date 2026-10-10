@@ -256,15 +256,15 @@ evidence file under the same ID (top of this document).*
 - **AS-015 · Preflight audit before freezing.** *(was §2.A12)* Between the instrument check
   and `frozen = true`, an *independent* reader reads protocol and code
   against each other. It does not check style but the error classes of the
-  scar table below, and it **reports instead of repairing**. Two ways,
-  the same instructions:
-
-  - the subagent `experiment-preflight` with `MODE: preflight · AREA:
-    <area>` — reads on its own, read-only, without model calls;
-  - the command `labkit-audit <area> --mode preflight` (labkit) — puts
-    protocol, scripts, imported `lib/` modules and this standard into
-    one model call via `models.toml`; exit 1 on a blocker **or**
-    a warning, exit 2 if no audit could be completed.
+  scar table below, and it **reports instead of repairing**. The reader is
+  the command `labkit-audit <area> --mode preflight` (labkit): it puts the
+  protocol, the scripts, the imported `lib/` modules and the rules its
+  instructions cite (this one with the scar table among them) into one
+  model call via `models.toml`; exit 1 on a blocker **or** a warning, exit 2
+  if no audit could be completed. The instructions ship with labkit
+  (`experiment-preflight.agent.md`); a copy run as a harness subagent is not
+  a second way — it drifted from the shipped text once and read this whole
+  standard twice per audit.
 
   Every finding is decided (fixed / accepted with reason /
   dismissed), the raw report stays in the scratchpad (AS-012 Protocol is content), and the result
@@ -307,8 +307,8 @@ evidence file under the same ID (top of this document).*
 
   **The error classes** — each a scar, with the rule that forbids it.
   Column *Audit*: `preflight` = before the run (AS-015 Preflight audit before freezing), `analysis` =
-  analysis audit (AS-050 Analysis audit before reporting), `beide` = in both; the same values as the
-  mode of the agent `experiment-preflight`:
+  analysis audit (AS-050 Analysis audit before reporting), `beide` = in both; the same values as
+  `labkit-audit --mode`:
 
   | Class                          | what goes wrong                                                                                                                                                                                                           | Audit     | Rule                                                                                                                                       |
   |--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|--------------------------------------------------------------------------------------------------------------------------------------------|

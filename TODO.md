@@ -118,6 +118,20 @@ mechanischer Check — die Aufgabe des Pilots.
       `with runlog.run(...)`-Block verhindert `completion.json` und die
       `runs.tsv`-Zeile. Stufe guaranteed. Was als gültige Antwort zählt
       (`problem`, `n_invalid`), bleibt im Experiment.
+- [x] **Ein Läufer für den Preflight-Audit: `labkit-audit` (2026-10-10,
+      0.79.0).** Auslöser: uniagent, 50 Audits als Claude-Subagent, je im
+      Median 295 k frische Tokens und 33 Tool-Calls, der 1539-Zeilen-Standard
+      88-mal gelesen; die Hauskopie `~/.claude/agents/experiment-preflight.md`
+      war 2026-10-07 schon einmal vom Paket abgedriftet. Jetzt: die Hauskopie
+      ist gelöscht, AS-015 nennt nur das Kommando, der Prompt trägt nur die
+      zitierten Regeln (AS-015, AS-017, AS-004, AS-050, ~18 kB statt 117 kB),
+      im Modus `analysis` die ersten 50 und letzten 20 Zeilen jeder
+      registrierten Output-Datei plus `metrics.json`. **Offen, nicht
+      gemessen:** ob der eine Aufruf mit Opus dieselben Treffer liefert wie
+      der Subagent (Pilot 2026-10-06 verglich Anweisungen, Läufer war der
+      Subagent). Prüfstelle: die drei Benchmark-Fälle in
+      `~/projects/labkit-paper`, Auftrag auf Ansage. Punkt 6, Zeile
+      „Audit-Agenten": erledigt.
   - [ ] **Rollout (eigener Auftrag, anderes Repo):** Pin in
         fallacy-dataset-generation heben, `audit()` dort auf
         `store.ledger(..., expect={"prompt_sha": …, "input_sha": …})`
