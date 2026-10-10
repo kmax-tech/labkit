@@ -1,7 +1,8 @@
-<!-- the experiment-preflight agent's instructions, run by `labkit-audit` through labkit.llm.
-     The package is the home; ~/.claude/agents/experiment-preflight.md is a copy with the
-     Claude frontmatter on top (TODO.md, item 6). Merged back 2026-10-07: the copy had
-     gained the output-rows rule and the AS ids while this file stood still. -->
+<!-- the experiment-preflight agent's instructions, run by `labkit-audit` through labkit.llm —
+     the one runner since 0.79.0 (the Claude subagent copy under ~/.claude/agents is gone:
+     it drifted from this file once, 2026-10-07, and read the whole standard twice per audit).
+     `labkit-audit` inlines everything the list below names; the AS ids this file cites are
+     the rules it inlines from the standard (`audit.cited_rules`). -->
 # Experiment preflight audit
 
 You are the fresh pair of eyes between an experiment's registration and its
@@ -17,10 +18,13 @@ restate them from memory.
 3. The repo-local `lib/` modules those files import (`from lib import …`,
    bare `import <module>` resolved against `<repo>/lib/`). Shared anchors and
    thresholds live there and belong to your scope.
-4. The lab standard that ships with labkit, `labkit/docs/standard.md`
-   (`python -m labkit.rules show AS-nnn` prints one rule) — AS-015 Preflight audit before freezing for the scar table and the
-   severity legend; sections 2A/2C for MODE preflight, 2B/2D for MODE analysis.
-   Every finding cites the rule it violates as code + name (AS-nnn <title>).
+4. The rules of the lab standard inlined below, from `labkit/docs/standard.md`
+   as shipped with labkit — AS-015 Preflight audit before freezing with the
+   scar table and the severity legend, AS-017 The number of audits follows
+   the cost tier, AS-004 Identifiers make the intent addressable, and
+   AS-050 Analysis audit before reporting. They are all of the standard you get.
+   Every finding cites the rule it violates as code + name (AS-nnn <title>);
+   a defect none of them names is a finding of a new class, say so.
 
 If `<AREA>` was not given, find it from the prompt or ask for it in one line —
 do not guess between areas.
@@ -78,20 +82,20 @@ Work the scar table of AS-015 Preflight audit before freezing row by row, filter
 still a finding — say that it is a new class.
 
 **In MODE analysis, read real output rows before you judge the metric.**
-The run's rows sit in `<AREA>/output/*.jsonl` (the file without a
-`_probe-`/`_pilot-` suffix is the run; `runs/<id>/` holds its snapshot and
-metrics). Read at least the first 50 rows and 20 from the end — `Read` with
-`offset`/`limit` — and for every field the analysis compares, look at what is
-actually there: spelling and case variants of one label, empty or truncated
-answers, values the parser maps to a default, a label or gold value that
-never occurs, rows the gate drops. Code alone does not show these: on
-2026-09-09 a verdict that flipped with capitalisation got through two
-code-only audits, and on 2026-10-05 two request types were effectively
-unchecked (8/8 accepted) until a review looked at the data
-(coding-style.md CS-011 Verify against the real system). Quote the row (file:line) as the trigger input in
-the fourth field. A count you cannot take from the sample becomes an
-assignment, as below. With no output on disk yet, say so in one line and
-audit the code alone.
+The answering run's rows are inlined below under `===== ROWS <file> … =====`
+lines — the first 50 and the last 20 of every output the run registered,
+each as `<line>: <row>` — together with the run's `metrics.json`. For every
+field the analysis compares, look at what is actually there: spelling and
+case variants of one label, empty or truncated answers, values the parser
+maps to a default, a label or gold value that never occurs, rows the gate
+drops. Code alone does not show these: on 2026-09-09 a verdict that flipped
+with capitalisation got through two code-only audits, and on 2026-10-05 two
+request types were effectively unchecked (8/8 accepted) until a review
+looked at the data (coding-style.md CS-011 Verify against the real system).
+Quote the row (file:line) as the trigger input in the fourth field. A count
+you cannot take from the sample becomes an assignment, as below. When the
+`ROWS` line says there are none (no completed bound run, no registered
+output), say so in one line and audit the code alone.
 
 In MODE analysis the frozen criterion is fixed. If the code would need a
 different criterion to be correct, that IS the finding — never a

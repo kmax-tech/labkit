@@ -4,15 +4,25 @@
                  [--model ALIAS] [--timeout S] [--out FILE]
 
 The agent audit of AS-015 Preflight audit before freezing (preflight, before freezing) and AS-050 Analysis audit before reporting
-(analysis, before a number leaves) as a command instead of a Claude
-subagent: the instructions ship with the package
-(`experiment-preflight.agent.md`), the files the agent is told to read are
-gathered here and inlined — the area's protocol, `scripts/*.py`,
-`analysis/*.py`, the repo-local `lib/` modules they import, and the lab
-standard that ships with labkit (`labkit/docs/standard.md`) — and one call goes through `labkit.llm` to the
-alias the lab's `models.toml` names. `claude -p` runs without tools, so the
-inlined text is all the auditor sees. Synchronous, with a timeout: on
-expiry the command fails, it never waits on in the background.
+(analysis, before a number leaves) as one command — the only runner since
+0.79.0; the Claude subagent copy of the instructions is gone. The
+instructions ship with the package (`experiment-preflight.agent.md`); the
+files they tell the auditor to read are gathered here and inlined — the
+area's protocol, `scripts/*.py`, `analysis/*.py`, the repo-local `lib/`
+modules they import, and from the lab standard that ships with labkit
+exactly the rules the instructions cite (`cited_rules`):
+AS-015 Preflight audit before freezing (the scar table, the severity legend),
+AS-017 The number of audits follows the cost tier,
+AS-004 Identifiers make the intent addressable,
+AS-050 Analysis audit before reporting
+— not the whole standard, which cost ~30k tokens per read and was read twice
+per audit in uniagent, 2026-10-10. In MODE analysis the answering run's rows come too:
+the first 50 and the last 20 lines of every output it registered, numbered,
+and its `metrics.json` — the auditor has no tools, so what it is told to
+look at must be on the page. One call goes through `labkit.llm` to the alias
+the lab's `models.toml` names (`opus` by default, stamped as `claude-cli`).
+Synchronous, with a timeout: on expiry the command fails, it never waits on
+in the background.
 
 Exit codes are the contract (the auditor's LAST verdict line decides — it
 may correct itself below a finding; a disagreement between finding lines
@@ -44,16 +54,23 @@ import sys
 import time
 from pathlib import Path
 
-from labkit import llm, rules
+from labkit import llm, protocol_block, rules
 from labkit.repo import area_protocols, layout_root, no_such_area
+from labkit.runs import bound_answering_run, read_outputs
 from labkit.scope_sha import area_stamp, imported_repo_helpers
 
 AGENT = Path(__file__).with_name("experiment-preflight.agent.md")
 CLARITY_AGENT = Path(__file__).with_name("code-clarity.agent.md")
 DEFAULT_MODEL = "opus"  # the agent's model; any alias of models.toml works
-DEFAULT_TIMEOUT_S = 900  # one call reads the standard (~100 kB) plus the area
+DEFAULT_TIMEOUT_S = 900  # one call reads the area, the cited rules, the rows
 MODES = ("preflight", "analysis", "clarity")
 CLARITY = "clarity"
+ANALYSIS = "analysis"
+STANDARD_LABEL = (
+    "labkit/docs/standard.md"  # the shipped standard, wherever labkit is installed
+)
+ROWS_HEAD, ROWS_TAIL = 50, 20  # what the instructions tell the auditor to read
+ROW_WIDTH = 2000  # a longer row (a trace) is cut, marked, never dropped
 
 FINDING = re.compile(r"^[\s>*`-]*\**(BLOCKER|WARNING|NOTE)\**\s*·", re.M)
 VERDICT = re.compile(
@@ -67,8 +84,10 @@ CLARITY_VERDICT = re.compile(
 )
 INLINE_NOTE = (
     "The files you are told to read are inlined below instead of read with "
-    "tools; each starts with a `===== FILE: <path> =====` line. Nothing else "
-    "is in scope."
+    "tools; each starts with a `===== FILE: <path> =====` line, the rules of "
+    "the standard under one such line, and in MODE analysis the answering "
+    "run's output rows under `===== ROWS <path> … =====` lines, each row as "
+    "`<line>: <row>`. Nothing else is in scope."
 )
 
 
@@ -83,6 +102,86 @@ def instructions(mode: str = "preflight") -> str:
     return re.sub(
         r"^<!--.*?-->\n", "", agent.read_text(encoding="utf-8"), count=1, flags=re.S
     )
+
+
+def cited_rules(mode: str = "preflight") -> list[str]:
+    """The `AS-nnn` ids the instructions for MODE cite, in order of first
+    mention — the part of the standard the auditor gets to read."""
+    seen: list[str] = []
+    for m in rules.CODE_RE.finditer(instructions(mode)):
+        if m.group(1).startswith("AS-") and m.group(1) not in seen:
+            seen.append(m.group(1))
+    return seen
+
+
+def standard_excerpt(mode: str = "preflight") -> tuple[str, str]:
+    """(label, text): the cited rules' blocks from the shipped standard, each
+    from its head to the next. An id the ledger does not know, or whose text
+    does not ship, raises — a missing rule must not pass as an audit without it."""
+    ids = cited_rules(mode)
+    text = "\n".join(rules.rule_text(rid) for rid in ids)
+    return f"{STANDARD_LABEL} ({', '.join(ids)} — the rules this audit cites)", text
+
+
+def run_rows(area: Path, protocol: Path) -> list[tuple[str, str]]:
+    """What MODE analysis is told to read of the answering run: `(label,
+    text)` per piece — the first ROWS_HEAD and last ROWS_TAIL lines of every
+    output the run registered, numbered as `<n>: <row>`, and its
+    metrics.json. One `(label, note)` pair says why there is nothing: no
+    protocol id, no completed bound run, no registered output."""
+    repo = layout_root(area)
+    try:
+        pid = protocol_block.head(protocol.read_text(encoding="utf-8")).id
+    except protocol_block.BlockError as exc:
+        raise AuditError(f"{protocol.name}: head unreadable — {exc}") from exc
+    if pid is None:
+        return [("ROWS", "no rows: the protocol id is still a placeholder")]
+    choice = bound_answering_run(area, pid)
+    if choice.run_dir is None:
+        return [("ROWS", f"no rows: {choice.blocker or 'no completed bound run'}")]
+    run_dir = choice.run_dir
+    registered = read_outputs(run_dir)
+    out: list[tuple[str, str]] = []
+    rel_run = run_dir.resolve().relative_to(repo.resolve()).as_posix()
+    if not registered:
+        out.append((f"ROWS {rel_run}", "no rows: the run registered no output file"))
+    for entry in registered or []:
+        path = Path(entry.path)
+        path = path if path.is_absolute() else repo / path
+        if not path.is_file():
+            raise AuditError(f"{run_dir.name} registered {entry.path}, which is gone")
+        out.append(rows_excerpt(path, str(entry.path)))
+    metrics = run_dir / "metrics.json"
+    if metrics.is_file():
+        out.append(
+            (f"FILE: {rel_run}/metrics.json", metrics.read_text(encoding="utf-8"))
+        )
+    return out
+
+
+def rows_excerpt(path: Path, name: str) -> tuple[str, str]:
+    """`(label, text)` of one output file: its first ROWS_HEAD and last
+    ROWS_TAIL lines as `<line>: <row>`, a gap marked by its size, a row
+    longer than ROW_WIDTH cut and marked — never silently dropped."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    n = len(lines)
+    shown = (
+        range(n)
+        if n <= ROWS_HEAD + ROWS_TAIL
+        else [*range(ROWS_HEAD), *range(n - ROWS_TAIL, n)]
+    )
+    body: list[str] = []
+    last = -1
+    for i in shown:
+        if i != last + 1:
+            body.append(f"… {i - last - 1} line(s) not shown …")
+        row = lines[i]
+        if len(row) > ROW_WIDTH:
+            row = row[:ROW_WIDTH] + f" … [{len(lines[i]) - ROW_WIDTH} more chars]"
+        body.append(f"{i + 1}: {row}")
+        last = i
+    label = f"ROWS {name} ({n} line(s); the first {ROWS_HEAD} and last {ROWS_TAIL} are shown)"
+    return label, "\n".join(body)
 
 
 def gather(area: Path, protocol: Path | None) -> tuple[Path, list[Path], Path]:
@@ -132,29 +231,34 @@ def gather_clarity(area: Path, protocol: Path | None) -> tuple[Path, list[Path]]
 def render(
     mode: str, area: Path, protocol: Path, code: list[Path], standard: Path | None
 ) -> str:
-    """The one prompt: instructions, MODE line, then every file verbatim.
-    Clarity: README and script around the protocol, no standard."""
+    """The one prompt: instructions, MODE line, then every piece verbatim
+    under a `===== <label> =====` line — the files, the cited rules of the
+    standard (when `standard` is given), in MODE analysis the answering run's
+    rows. Clarity: README and script around the protocol, no standard."""
     repo = layout_root(area)
 
     def rel(p: Path) -> str:
-        if p == rules.STANDARD:
-            return "labkit/docs/standard.md"  # the shipped standard, wherever labkit is installed
         try:
             return str(p.resolve().relative_to(repo.resolve()))
         except ValueError:
             return str(p)
 
-    order = (
-        [code[0], protocol, *code[1:]]
-        if mode == CLARITY
-        else [protocol, *code, *([standard] if standard else [])]
-    )
-    files = "".join(
-        f"===== FILE: {rel(p)} =====\n{p.read_text(encoding='utf-8')}\n" for p in order
-    )
+    def file(p: Path) -> tuple[str, str]:
+        return f"FILE: {rel(p)}", p.read_text(encoding="utf-8")
+
+    if mode == CLARITY:
+        pieces = [file(p) for p in (code[0], protocol, *code[1:])]
+    else:
+        pieces = [file(p) for p in (protocol, *code)]
+        if standard is not None:
+            label, text = standard_excerpt(mode)
+            pieces.append((f"FILE: {label}", text))
+        if mode == ANALYSIS:
+            pieces += run_rows(area, protocol)
+    body = "".join(f"===== {label} =====\n{text}\n" for label, text in pieces)
     return (
         f"{instructions(mode)}\n\nMODE: {mode} · AREA: {rel(area)}\n\n"
-        f"{INLINE_NOTE}\n\n{files}"
+        f"{INLINE_NOTE}\n\n{body}"
     )
 
 
