@@ -284,7 +284,9 @@ The templates `labkit-init` stamps ship here (`labkit/templates/`): a lab
 gets them once and fills them in, so they are meant to diverge there and are
 never synced. Not here: prose references of the author's house — the two
 style guides, `coding-style.md` (every line of code) and
-`writing-style-guide.md` (prose and LaTeX). Their masters live in
-`~/.claude/resources/`; every lab repo carries a stamped copy under `docs/`
-(`docs/coding-style.md`, `docs/writing-style-guide.md`), kept in step by
-`lib sync`.
+`writing-style-guide.md` (prose and LaTeX). Their masters live in the
+author's dotfiles (`~/.claude/resources/`); a lab repo of that house carries
+a stamped copy under `docs/` (`docs/coding-style.md`,
+`docs/writing-style-guide.md`), kept in step by the house scaffolder's
+`lib sync` — a house tool, not a labkit command. The lab standard is not a
+copy: it ships in the package (`labkit/docs/standard.md`).
