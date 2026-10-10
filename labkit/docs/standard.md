@@ -50,7 +50,7 @@ says so. The following applies:
 - **A claim requires evidence:** support interpretation with data — or mark it as
   speculation (clearly: we do not know) + an idea of how to substantiate it.
 
-### AS-001 · A negative finding is a claim (2026-09-24) *(was §1.A)*
+### AS-001 · A negative finding is a claim *(was §1.A)*
 
 "Does not occur" is not an observation but a statement about the search tool. It holds only once it has been shown that the tool **could have found** the case — using a positive example that it does find.
 
@@ -272,7 +272,7 @@ evidence file under the same ID (top of this document).*
   (AS-019 The stamp covers everything that determines the number):
 
   ```toml
-  preflight_audit = "2026-09-08 · scope sha 3f9a1c2b7e04 (scripts 4 · analysis 1 · lib/bt.py lib/stats.py · labkit==0.7.2) · 4 Befunde (2 Blocker behoben, 1 Warnung akzeptiert: <reason>, 1 verworfen: <reason>)"
+  preflight_audit = "2026-09-08 · scope sha 3f9a1c2b7e04 (scripts 4 · analysis 1 · lib/bt.py lib/stats.py · labkit==0.7.2) · 4 findings (2 blockers fixed, 1 warning accepted: <reason>, 1 dismissed: <reason>)"
   ```
 
   **The line is checked, not believed.** `runlog` refuses a full run
@@ -348,7 +348,7 @@ evidence file under the same ID (top of this document).*
   check); `preflight` runs it as the fifth check, and if left blank it fails —
   a later change to `evaluate()` that silently disables the criterion thus cannot pass the freeze.
 
-- **AS-102 · Cold reader before freezing (2026-10-09).** Whoever has built an area
+- **AS-102 · Cold reader before freezing.** Whoever has built an area
   can no longer read it like someone opening it for the first time — and that is exactly how the person who later checks the number encounters it. What this reader misses
   sits where the words don't fit together — a term before its definition, a case number without
   a kind, German prose and English code with no word in common, a
@@ -732,8 +732,8 @@ evidence file under the same ID (top of this document).*
   report field (†), due when the number is written back —
 
   ```
-  - **Analysis audit †:** 2026-09-09 · scope sha 8b1e6d0a4c31 · 2 Befunde
-    (1 Blocker behoben: r² jetzt leave-one-anchor-out, 1 verworfen: <reason>)
+  - **Analysis audit †:** 2026-09-09 · scope sha 8b1e6d0a4c31 · 2 findings
+    (1 blocker fixed: r² now leave-one-anchor-out, 1 dismissed: <reason>)
   ```
 
   With `cost = "seconds"` this is the **one** audit of the
@@ -973,7 +973,7 @@ results become incomparable — the same logic as with `models.toml`
 (backends in one place) or the run index (`runs.tsv`). Code and prompts in English, notes in the lab's working language; an ambiguous term is pinned in a
 definition note.
 
-- **AS-083 · The name carries what it denotes (2026-08-20).** *(was §5.1)* `--distance-cell`,
+- **AS-083 · The name carries what it denotes.** *(was §5.1)* `--distance-cell`,
   not `--cell`; `support_shift`, not `tau`. A symbol (Δ, q_u) is
   a secondary name alongside the plain-language one, never the only name. If a
   workshop term appears in a second area, it is pinned in the glossary —
@@ -1085,7 +1085,7 @@ labkit's own and defined here: area, promise, scar table, free knobs.*
   or small table, not as a prose chain with "·" separators; in terminal Markdown
   the chain is unreadable.
 
-- **AS-100 · Answer before reasoning (2026-10-07).** A note answers one
+- **AS-100 · Answer before reasoning.** A note answers one
   question; the purpose in the meta line names it. If it cannot be named in one
   sentence, the note is split: one idea per note. The first paragraph
   after the meta line is the answer in at most three sentences — result, not
@@ -1100,7 +1100,7 @@ labkit's own and defined here: area, promise, scar table, free knobs.*
   decision ("Decision of 2026-10-06: …, because …"), not as a narrative
   (AS-075 Docs carry the state, commits the change).
 
-- **AS-101 · Comparison tables (2026-10-07).** A table compares several
+- **AS-101 · Comparison tables.** A table compares several
   objects by the same criteria: one row per object, columns at the same level
   of abstraction, cells carry findings, not mini-essays — if a cell needs
   paragraphs, prose is better. Symbols (●, ◐, ○) are explained directly
