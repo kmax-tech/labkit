@@ -28,6 +28,7 @@ of semantics. Contract and rationale: `docs/promise-block.md`.
 | `docs/promise-block.md` | promise kinds C/A/B, the TOML block, what the declared-scope hash states |
 | `docs/protocol-run-binding.md` | which run belongs to which protocol |
 | `docs/student-repos.md` | how a student thesis repo gets labkit (pinned from GitHub) and moves to a newer one |
+| `labkit/docs/standard.md`, `labkit/docs/rules.tsv` | the lab standard every gate cites (`AS-nnn Name`) and its ledger; `python -m labkit.rules show AS-nnn` prints one rule, `labkit/rules.py` checks heads, ledger and every reference |
 | `docs/coding-style.md` | binding for every line of code (vendored copy — do not edit here) |
 
 ## Setup and tests
@@ -83,7 +84,10 @@ does not work outside the author's machine; its tests do not need them.
 
 ## Not in this repo
 
-The research thread (literature, paper plan, benchmark case list) and the
-house doctrine (`arbeitsstandard`) live on the author's machine. Where a
-docstring cites `AS-015 Preflight audit before freezing` or a dated incident, that is the doctrine; the
-code's own docstring states the rule it enforces.
+The research thread (literature, paper plan, benchmark case list), the
+author's house rules (the German `arbeitsstandard`, seven rules on notes and
+the thread) and the dated incidents behind every rule live on the author's
+machine. The lab standard itself ships here (`labkit/docs/standard.md`, since
+0.77.0). Where a docstring cites `AS-015 Preflight audit before freezing`,
+that is a rule of this standard; where it cites a dated incident, that is
+the evidence; the code's own docstring states the rule it enforces.
