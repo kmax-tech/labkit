@@ -400,6 +400,14 @@ Regeln, die Belege liegen schon getrennt (`arbeitsstandard.evidence.md`), etwa
 
 ### Phase 1 — Standard schneiden, übersetzen, prüfbar machen (0.77.0, Breaking)
 
+**Erledigt 2026-10-10** (labkit `a32dc51`…`1584579`, Version 0.77.0, noch
+nicht getaggt; dotfiles `4405df7`, `7f271bc`). Abweichungen vom Plan: das
+Schnitt-Inventar `docs/standard-cut.tsv` bleibt als Beleg des Schnitts
+(der Übersetzungsbericht zitiert es), die Seite trägt jetzt `rules.tsv` als
+Status; `check_refs` liest eine Kennung in Inline-Code oder als nacktes
+String-Literal als Argument, nicht als Zitat, und überlässt `moved:*`-Zeilen
+dem Ledger, in das sie umgezogen sind.
+
 labkit- und dotfiles-Teil landen am selben Tag, sonst werden die
 dotfiles-Hooks rot.
 
