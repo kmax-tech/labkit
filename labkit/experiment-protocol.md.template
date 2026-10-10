@@ -24,7 +24,8 @@
 - **Terms of this protocol:** <!-- s --> <first, because the question uses
   them: one line per house word — *everyday word · house term · code word*
   ("gap case (a case only an uncovered rule can reject) · Lückenfall ·
-  `GAP_CASES`"); look up before coining (`lib term`, `notes/theorie/begriffe.md`);
+  `GAP_CASES`"); look up before coining (the field's established term, then
+  `notes/theorie/begriffe.md`, then the lab standard's vocabulary table);
   "n/a — standard vocabulary" only if nothing is coined>
 - **Question / hypothesis:** <!-- s --> <the one question — what do we expect?>
 - **Success / failure criterion:** <!-- s --> <how do we recognise whether it worked?

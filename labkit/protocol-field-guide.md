@@ -197,9 +197,10 @@ derives from the detail below and carries no fact that isn't there.
   (German prose, English tables, code), which is where four cold readers
   lost the thread (rounds 15–16, areas 18 and 19, 2026-10-09). Arms, lanes
   and draws, case classes and their id form, every registered constant, the
-  model alias, the files a reader meets. Before coining: `lib term
-  <candidate>` (the subject's word), the repo's `notes/theorie/begriffe.md`
-  (the lab's), the lab standard's vocabulary table (the method's) — a word
+  model alias, the files a reader meets. Before coining: the field's
+  established term (a textbook, the notation card the lab keeps), the repo's
+  `notes/theorie/begriffe.md` (the lab's), the lab standard's vocabulary
+  table (the method's) — a word
   found there is inherited, not re-coined (AS-084 Double-coinage check).
   "n/a — standard vocabulary" only if the protocol coins nothing. Until
   2026-10-09 this field sat under Context, after Result; protocols written
