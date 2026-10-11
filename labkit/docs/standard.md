@@ -455,6 +455,26 @@ evidence file under the same ID (top of this document).*
   adding, removing, renaming and editing change the stamp; the working directory and the spelling of the path do not; a missing file aborts instead of silently passing through. `preflight` and `labkit-audit`
   compute the same stamp.
 
+- **AS-103 · The audit reads by declared scope, not by import graph.** The
+  stamp answers "what determines the number" and must cover everything
+  (AS-019 The stamp covers everything that determines the number). The audit
+  answers a different question — does the code do what the registration
+  promises — and reads what that question needs: the protocol, the area's
+  scripts and analysis files, every file a `[[promise]]` table declares as
+  its scope, and the repo-local modules those files import directly. Modules
+  further down the import graph are the instrument's internals; the auditor
+  gets them as an index (path, top-level signatures, first docstring line),
+  not as text, and reads one only on an assignment: when a finding or an
+  output row points into it, the finding names the module and the caller
+  supplies it. The declared scope is the registration's own statement of
+  where a promise lives; an audit that reads by import graph instead audits
+  the repository, not the promise, and in an area whose scripts import the
+  system under test it reads that whole system for every number (uniagent,
+  2026-10-10: 280 of 444 kB were the agent under test, the declared scope
+  was one function). `labkit-audit` builds the prompt this way; the `scope:`
+  list the auditor returns names what it read in full, the caller adds the
+  indexed modules before holding the list to the stamp.
+
 ### 2B · The Data Path — raw → prepared → Result
 
 - **AS-020 · Materialize transformations:** *(was §2.B1)* Never perform data formatting or preparation

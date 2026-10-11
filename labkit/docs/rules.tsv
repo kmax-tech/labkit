@@ -101,3 +101,4 @@ AS-099			house
 AS-100		Answer before reasoning	active
 AS-101		Comparison tables	active
 AS-102		Cold reader before freezing	active
+AS-103		The audit reads by declared scope, not by import graph	active
