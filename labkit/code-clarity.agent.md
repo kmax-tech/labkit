@@ -57,7 +57,7 @@ Each rule names where it was observed.
 10. **A term before its definition.** A house word (arm, lane, draw,
     gap case, uncovered rule, admissibility) used in the Intent and
     defined only in Terms ninety lines later, or nowhere; a first use
-    carries the everyday word once in parentheses (AS-092 Term layering). (Round 15.)
+    carries the everyday word once in parentheses (LAB-092 Term layering). (Round 15.)
 11. **The question and its answer are not next to each other.** The
     Summary's Result must read as the answer to a question stated right
     above it. (Round 15, p1.)

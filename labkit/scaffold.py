@@ -9,7 +9,7 @@
 `models.toml`, the editor and type-checker settings, `experiments/`,
 `data/raw` → `data/prepared`, `lib/`, `notes/{theorie,messung,results}` and a
 test that the shared helpers resolve to the package. The lab standard is not
-copied: it comes with the pin (`python -m labkit.rules show AS-nnn`).
+copied: it comes with the pin (`python -m labkit.rules show LAB-nnn`).
 
 `exp` stamps one self-contained area `experiments/NN-<name>/`: the protocol
 (the pilot part by default; `--report` adds the † fields, now or when the run

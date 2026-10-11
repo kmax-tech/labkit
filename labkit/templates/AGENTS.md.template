@@ -2,14 +2,14 @@
 
 Entry file for any coding agent in this lab repo (`CLAUDE.md` may be a
 symlink to it). The rules behind every step are the lab standard that ships
-with the pinned labkit: `python -m labkit.rules show AS-nnn` prints one;
+with the pinned labkit: `python -m labkit.rules show LAB-nnn` prints one;
 a gate message names the rule it enforces by id and name.
 
 ## Lane `seconds` — one number in minutes
 
 Applies when the protocol head says `cost = "seconds"`: a run that can be
 repeated at will (a count, a handful of model calls for a minute and a cent),
-AS-017 The number of audits follows the cost tier.
+LAB-017 The number of audits follows the cost tier.
 
 1. `labkit-init exp <name> --cost seconds` (`--model <alias>` when a model is
    in the loop) — stamps the seconds cut of the protocol and the matching
@@ -44,30 +44,30 @@ fields, no reading of labkit's source.
 2. Read `protocol-check --contract`, then fill the TOML head (`type`, `cost`)
    and the Intent before the first call: hypothesis · success criterion ·
    admissibility condition, the prompt verbatim; an id `[C]/[A]/[B]` on every
-   promise to the code (AS-003 No run without an intent paragraph,
-   AS-004 Identifiers make the intent addressable).
+   promise to the code (LAB-003 No run without an intent paragraph,
+   LAB-004 Identifiers make the intent addressable).
 3. `01_measure.py --show 3` — render check: read prompts on real data, no
-   call (AS-007 Render check before the instrument check).
+   call (LAB-007 Render check before the instrument check).
 4. After every code change `code-check <area>`
-   (AS-018 Routine check after every implementation).
+   (LAB-018 Routine check after every implementation).
 5. `--probe` — instrument check in the real pipeline; it may change the
    instrument, never the hypothesis or the criteria; its numbers are never
-   reported (AS-008 Instrument check before freezing).
+   reported (LAB-008 Instrument check before freezing).
 6. Resolution check as a test: fill `tests/test_<NN>_<name>.py`
-   (AS-016 Resolution check before freezing).
+   (LAB-016 Resolution check before freezing).
 7. `preflight <area>`, then the preflight audit (`labkit-audit <area> --mode
    preflight`); decide the findings, the line with `scope sha` into the head
-   (AS-015 Preflight audit before freezing).
+   (LAB-015 Preflight audit before freezing).
 8. `labkit-init exp <name> --report`, fill the † fields, only now
-   `frozen = true` (AS-011 Required-field check).
+   `frozen = true` (LAB-011 Required-field check).
 9. Commit first, then pilot → run, always through `runlog`; resume = the same
-   command; state: `.venv/bin/runlog <area>` (AS-010 Commit before the run,
-   AS-043 Runs go through `runlog`).
+   command; state: `.venv/bin/runlog <area>` (LAB-010 Commit before the run,
+   LAB-043 Runs go through `runlog`).
 10. `finalize <area>`, then the analysis audit (`labkit-audit <area> --mode
     analysis`) against the frozen criterion
-    (AS-050 Analysis audit before reporting).
+    (LAB-050 Analysis audit before reporting).
 11. Result note + `analysis/<note>.py --check`; write the result back into
-    the protocol in the same session (AS-041 Generate numbers, don't retype them).
+    the protocol in the same session (LAB-041 Generate numbers, don't retype them).
 
 ## Setup
 

@@ -288,7 +288,7 @@ class TestBundle(unittest.TestCase):
 
     def test_bundle_opens_with_severity_legend(self):
         """Both audit agents must grade by the SAME definitions; the
-        code-check agent reads only the bundle, so the legend of AS-015 Preflight
+        code-check agent reads only the bundle, so the legend of LAB-015 Preflight
         audit before freezing is quoted from the lab standard — before the facts."""
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
             out = a.path / "bundle.md"
@@ -296,7 +296,7 @@ class TestBundle(unittest.TestCase):
             text = out.read_text(encoding="utf-8")
         self.assertIn("Severity legend", text)
         self.assertIn(
-            rules.paragraph("AS-015", "**Severity levels**"), text
+            rules.paragraph("LAB-015", "**Severity levels**"), text
         )  # verbatim, not a copy
         for grade in ("**BLOCKER**", "**WARNING**", "**NOTE**"):
             self.assertIn(grade, text)
@@ -304,7 +304,7 @@ class TestBundle(unittest.TestCase):
 
 
 class TestProtocolChoice(unittest.TestCase):
-    """The series rule (AS-061 Subexperiment-Serien tragen ihre Nummer) puts many protocols in one area. Picking the
+    """The series rule (LAB-061 Subexperiment-Serien tragen ihre Nummer) puts many protocols in one area. Picking the
     lexicographically first one wordlessly greened the check against s1
     while s13 was the protocol just built (2026-09-26)."""
 

@@ -34,12 +34,12 @@ Measurement contract:
     the parser.
 
 Why (house rules, one per line so a reference is never cut):
-  AS-034 Null condition in the same run
-  AS-035 Thresholds belong to the run
-  AS-041 Generate numbers, don't retype them
-  AS-004 Identifiers make the intent addressable
-  AS-052 Instance gate before registered use
-  AS-038 What the prompt demands
+  LAB-034 Null condition in the same run
+  LAB-035 Thresholds belong to the run
+  LAB-041 Generate numbers, don't retype them
+  LAB-004 Identifiers make the intent addressable
+  LAB-052 Instance gate before registered use
+  LAB-038 What the prompt demands
 Stamped by `labkit-init exp <name>`; fill the TODOs, keep the structure.
 """
 from __future__ import annotations
@@ -99,7 +99,7 @@ class CaseClass:
 def read_case_classes(path: Path = CASE_CLASSES) -> tuple[CaseClass, ...]:
     """The [[case]] rows of `path`, empty when the file does not exist.
     Refuses a duplicate id or a row without id/cls — a silent gap here
-    would put an item in no class (→ AS-023 No silent loss)."""
+    would put an item in no class (→ LAB-023 No silent loss)."""
     if not path.is_file():
         return ()
     rows = tomllib.loads(path.read_text(encoding="utf-8")).get("case", [])
@@ -139,7 +139,7 @@ PROMPT = ("TODO: the question about this text.\n\n"
 # TODO: the null lane — same renderer, same parser, same label mapping, a
 # question the data CANNOT answer (a placebo question, or the labels
 # shuffled before scoring). Its accuracy is the noise ceiling of THIS run;
-# derive its expected value in the protocol's null-condition field (AS-037 Every anchor carries its target and rationale).
+# derive its expected value in the protocol's null-condition field (LAB-037 Every anchor carries its target and rationale).
 # Safest placebo: one whose true answer is the SAME for every item ("Is this
 # text written in English?") — its expected accuracy is the gold share of
 # the class that answer maps to (0.5 on balanced gold), known before any
@@ -171,7 +171,7 @@ class MeasureConfig:
     margin: float               # [C1]: registered accuracy ≥ null accuracy + margin
     max_empty: int              # [A1]: at most this many empty/unreadable answers on the registered lane;
                                 # the protocol derives it from the stop rule "more than 2 of 96 empty →
-                                # the parser is the finding" (AS-028 An endpoint is a model slot); re-derive it when ITEMS changes
+                                # the parser is the finding" (LAB-028 An endpoint is a model slot); re-derive it when ITEMS changes
     null_band_items: int        # [A2]: the null lane sits at chance ± this many ITEMS (counted, not a share)
     model: str = MODEL          # alias from models.toml; runlog resolves it into models_resolved
     # the instrument's version: both prompts, so a reworded prompt is a
@@ -202,7 +202,7 @@ def plan(items: list[dict]) -> list[dict]:
 
 
 def render(j: dict) -> str:
-    """The ONE prompt renderer — `--show` prints it, `measure()` sends it (→ AS-007 Render check before the instrument check)."""
+    """The ONE prompt renderer — `--show` prints it, `measure()` sends it (→ LAB-007 Render check before the instrument check)."""
     return LANES[j["lane"]].format(text=j[TEXT_FIELD])
 
 
@@ -224,8 +224,8 @@ def measure(model: str, jobs: list[dict], out: Path, prov: dict | None = None) -
 
 def parse_answer(text: str) -> str | None:
     """Model text -> gold label via ANSWERS, or None for empty/unreadable.
-    Empty is its own state, never folded into a label (→ AS-030 Reasoning models); the first
-    token decides, a second line of explanation is ignored (→ AS-023 No silent loss)."""
+    Empty is its own state, never folded into a label (→ LAB-030 Reasoning models); the first
+    token decides, a second line of explanation is ignored (→ LAB-023 No silent loss)."""
     text = text.strip()
     if not text:
         return None
@@ -263,14 +263,14 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
       a1_empty · a1_pass           admissibility: yield of the registered lane
       a2_accuracy · a2_pass        admissibility: the null lane inside its band
       c1_accuracy · c1_threshold · c1_pass   criterion: registered lane against null + cfg.margin
-      n_items · n_rows             yield (→ AS-023 No silent loss)
+      n_items · n_rows             yield (→ LAB-023 No silent loss)
     A failed [A] reports its keys and no criterion verdict (`c1_pass` None)."""
     if not rows:
         raise ValueError("evaluate_rows(): no rows — refusing a number over nothing")
     reg = [r for r in rows if r["lane"] == "registered"]
     null = [r for r in rows if r["lane"] == "null"]
     if not reg or not null:
-        raise ValueError("evaluate_rows(): both lanes must be in the same run (AS-034 Null condition in the same run)")
+        raise ValueError("evaluate_rows(): both lanes must be in the same run (LAB-034 Null condition in the same run)")
     reg_acc, reg_empty = _accuracy(reg)
     null_acc, null_empty = _accuracy(null)
     metrics: dict = {"n_items": len(reg), "n_rows": len(rows),
@@ -321,7 +321,7 @@ def main() -> None:
         return
 
     if args.probe is not None:
-        # Throwaway: own output file, NO runlog (→ AS-008 Instrument check before freezing) — the moment a
+        # Throwaway: own output file, NO runlog (→ LAB-008 Instrument check before freezing) — the moment a
         # number is kept, it is a run.
         out = OUT.with_name(OUT.stem + "_probe.jsonl")
         # with case classes: one case per class; without: the first N items

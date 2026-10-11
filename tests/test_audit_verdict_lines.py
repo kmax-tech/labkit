@@ -44,7 +44,7 @@ def _run(answer: str) -> tuple[int, str]:
 class VerdictHeldToLines(unittest.TestCase):
     def test_a_blocker_line_under_a_zero_verdict_is_named(self) -> None:
         rc, err = _run(
-            "BLOCKER · a.py:1 · x · y · AS-015 Preflight-Audit vor dem Einfrieren · z\n"
+            "BLOCKER · a.py:1 · x · y · LAB-015 Preflight-Audit vor dem Einfrieren · z\n"
             "verdict: 0 blockers, 0 warnings, 0 notes"
         )
         self.assertEqual(rc, 0)  # the verdict line decides

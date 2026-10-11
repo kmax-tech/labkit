@@ -1,4 +1,4 @@
-"""Stamp WHICH code an audit looked at — the stamp of AS-019 The stamp covers everything that determines the number (preflight and analysis audit).
+"""Stamp WHICH code an audit looked at — the stamp of LAB-019 The stamp covers everything that determines the number (preflight and analysis audit).
 
 The audit fields in a protocol claim "this code was audited". A stamp that
 covers less than the code determining the number is worse than none: it makes
@@ -11,7 +11,7 @@ inputs. Sibling: `promises.declared_scope_sha` is the same idea per
 promise, over its declared scope.
 
 Why a command and not a shell one-liner: the one-liner in the first draft of
-AS-019 The stamp covers everything that determines the number
+LAB-019 The stamp covers everything that determines the number
     { cat "$S"; xargs -a "$S" shasum -a 256; ...; } | shasum -a 256
 which on macOS hashed NO file content at all — BSD xargs has no `-a`, and
 under zsh's noclobber the `>` that built the list was refused too. It printed
@@ -130,7 +130,7 @@ def imported_repo_helpers(area: Path, repo: Path) -> list[Path]:
     repo-local files (under LOCAL_ROOTS) the area's code reaches by
     import, transitively —
     shared anchors and thresholds live there, so they determine the number
-    (AS-019 The stamp covers everything that determines the number). Review 2026-10-07: `from lib import scoring` and `import
+    (LAB-019 The stamp covers everything that determines the number). Review 2026-10-07: `from lib import scoring` and `import
     lib.scoring` were read as a module `lib`, and a lib module's own imports
     were not followed; lib/scoring.py changed while the stamp stayed put."""
     roots = [repo / r for r in LOCAL_ROOTS if (repo / r).is_dir()]
@@ -150,7 +150,7 @@ def imported_repo_helpers(area: Path, repo: Path) -> list[Path]:
 def repo_imports(files: list[Path], repo: Path) -> list[Path]:
     """The repo-local files (under LOCAL_ROOTS) that `files` import DIRECTLY —
     one step of the graph `imported_repo_helpers` walks to the end. The
-    audit reads these in full and the rest as an index (AS-103 The audit
+    audit reads these in full and the rest as an index (LAB-103 The audit
     reads by declared scope, not by import graph); the stamp keeps the
     whole graph."""
     roots = [repo / r for r in LOCAL_ROOTS if (repo / r).is_dir()]

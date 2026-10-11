@@ -15,10 +15,10 @@ What it runs, in order:
                       ends here
   2. cost tier        `cost` in the protocol head — `seconds` makes the agent
                       audit optional before freezing (one audit after the
-                      first run suffices, AS-017 The number of audits follows the cost tier); `minutes`/`hours` ask
+                      first run suffices, LAB-017 The number of audits follows the cost tier); `minutes`/`hours` ask
                       for it here; an unfilled cost counts as `hours`.
                       Printed, never counted — "audit due" is a reminder,
-                      not a blocker; so is the cold-reader line (AS-102 Cold reader before freezing)
+                      not a blocker; so is the cold-reader line (LAB-102 Cold reader before freezing)
   3. code-check       intent ids against the code; a line starting with
                       `BLOCKER` is a blocker, any other a warning
   4. scope-sha        audit stamp over the input scope
@@ -26,7 +26,7 @@ What it runs, in order:
   6. hooks            the installed labkit hooks match this labkit (warning)
   7. area tests       tests/test_<NN>_<name>.py via pytest — the resolution
                       check and the parser cases as a permanent test
-                      (AS-016 Resolution check before freezing); a failing test is a blocker, a missing
+                      (LAB-016 Resolution check before freezing); a failing test is a blocker, a missing
                       file a warning — a blocker once frozen = true
 
 What it does NOT do: commit, freeze, or change any file. It is a
@@ -198,20 +198,20 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
         print(
             "  seconds — rerunnable at will: the agent audit is OPTIONAL before "
             "freezing; one audit after the first run, on real output, "
-            "suffices (AS-017 The number of audits follows the cost tier)"
+            "suffices (LAB-017 The number of audits follows the cost tier)"
         )
     elif tier is None:
         print(
             "  not filled — treated as `hours`: the experiment-preflight "
-            "audit is due before freezing (AS-015 Preflight audit before freezing); set `cost` in the head "
+            "audit is due before freezing (LAB-015 Preflight audit before freezing); set `cost` in the head "
             "to say otherwise"
         )
     else:
         print(
-            f"  {tier} — the experiment-preflight audit is due before freezing (AS-015 Preflight audit before freezing)"
+            f"  {tier} — the experiment-preflight audit is due before freezing (LAB-015 Preflight audit before freezing)"
         )
     print(
-        "  a cold reader is due while the prose can still change (AS-102 Cold reader before freezing): `labkit-audit <AREA> --mode clarity` — static "
+        "  a cold reader is due while the prose can still change (LAB-102 Cold reader before freezing): `labkit-audit <AREA> --mode clarity` — static "
         "evidence, never blocks"
     )
 
@@ -273,7 +273,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
         grade = "BLOCKER" if frozen else "WARNING"
         print(
             f"  {grade}: no {tests.pattern} — the resolution check has no "
-            f"permanent form (AS-016 Resolution check before freezing)"
+            f"permanent form (LAB-016 Resolution check before freezing)"
             + (" and frozen = true owes it" if frozen else "")
         )
         if frozen:

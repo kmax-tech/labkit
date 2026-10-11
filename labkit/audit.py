@@ -3,7 +3,7 @@
     labkit-audit <AREA> --mode preflight|analysis|clarity [--protocol FILE]
                  [--model ALIAS] [--timeout S] [--out FILE]
 
-The agent audit of AS-015 Preflight audit before freezing (preflight, before freezing) and AS-050 Analysis audit before reporting
+The agent audit of LAB-015 Preflight audit before freezing (preflight, before freezing) and LAB-050 Analysis audit before reporting
 (analysis, before a number leaves) as one command — the only runner since
 0.79.0; the Claude subagent copy of the instructions is gone. The
 instructions ship with the package (`experiment-preflight.agent.md`); the
@@ -11,10 +11,10 @@ files they tell the auditor to read are gathered here and inlined — the
 area's protocol, `scripts/*.py`, `analysis/*.py`, the repo-local `lib/`
 modules they import, and from the lab standard that ships with labkit
 exactly the rules the instructions cite (`cited_rules`):
-AS-015 Preflight audit before freezing (the scar table, the severity legend),
-AS-017 The number of audits follows the cost tier,
-AS-004 Identifiers make the intent addressable,
-AS-050 Analysis audit before reporting
+LAB-015 Preflight audit before freezing (the scar table, the severity legend),
+LAB-017 The number of audits follows the cost tier,
+LAB-004 Identifiers make the intent addressable,
+LAB-050 Analysis audit before reporting
 — not the whole standard, which cost ~30k tokens per read and was read twice
 per audit in uniagent, 2026-10-10. In MODE analysis the answering run's rows come too:
 the first 50 and the last 20 lines of every output it registered, numbered,
@@ -34,7 +34,7 @@ and verdict is printed as a NOTE, 2026-10-09):
     2  no audit: a missing file, an unreadable report, a backend failure
 
 The report is printed (and written to --out); deciding the findings and
-stamping the protocol field stays with the human (AS-015 Preflight audit before freezing). The command
+stamping the protocol field stays with the human (LAB-015 Preflight audit before freezing). The command
 prints the stamp's facts — date, scope sha, counts — to copy from, and what
 the call cost (`llm.last_usage()`: prompt and output tokens, USD where the
 backend prices it) beside the prompt size on stderr.
@@ -111,11 +111,11 @@ def instructions(mode: str = "preflight") -> str:
 
 
 def cited_rules(mode: str = "preflight") -> list[str]:
-    """The `AS-nnn` ids the instructions for MODE cite, in order of first
+    """The `LAB-nnn` ids the instructions for MODE cite, in order of first
     mention — the part of the standard the auditor gets to read."""
     seen: list[str] = []
     for m in rules.CODE_RE.finditer(instructions(mode)):
-        if m.group(1).startswith("AS-") and m.group(1) not in seen:
+        if m.group(1).startswith("LAB-") and m.group(1) not in seen:
             seen.append(m.group(1))
     return seen
 
@@ -228,7 +228,7 @@ def declared_scope_files(protocol: Path) -> list[Path]:
 
 
 def gather(area: Path, protocol: Path | None) -> Reading:
-    """What the agent reads, by AS-103 The audit reads by declared scope,
+    """What the agent reads, by LAB-103 The audit reads by declared scope,
     not by import graph: the area's scripts and analysis files, the files
     the promises declare as scope, the repo-local modules those import
     directly — in full; every deeper module of the import graph as an index.
@@ -309,7 +309,7 @@ def gather_clarity(area: Path, protocol: Path | None) -> tuple[Path, list[Path]]
 
 INDEX_LABEL = (
     "INDEX: repo-local modules further down the import graph — not inlined; "
-    "name one in a finding's assignment to have it read (AS-103 The audit "
+    "name one in a finding's assignment to have it read (LAB-103 The audit "
     "reads by declared scope, not by import graph)"
 )
 
@@ -504,7 +504,7 @@ def main(argv: list[str]) -> int:
     b, w, _ = result["verdict"]
     print(f"\nstamp: {stamp_facts(args.area, result['verdict'])}", file=sys.stderr)
     # the auditor lists what it read in full; the indexed modules are the
-    # caller's to add before the list is held to the stamp (AS-103 The audit reads by declared scope)
+    # caller's to add before the list is held to the stamp (LAB-103 The audit reads by declared scope)
     listed_scope = result["scope"] + [str(p) for p in indexed]
     for gap in scope_mismatch(args.area, listed_scope):
         print(f"scope WARNING: {gap}", file=sys.stderr)

@@ -79,7 +79,7 @@ class OneNameOneThing(unittest.TestCase):
                 ) and not n.name.startswith("_"):
                     where[n.name].append(m)
         twice = {k: v for k, v in where.items() if len(v) > 1 and k not in ENTRY_POINTS}
-        self.assertEqual(twice, {}, "one public name, one thing (CS-015)")
+        self.assertEqual(twice, {}, "one public name, one thing (CODE-015)")
 
 
 if __name__ == "__main__":

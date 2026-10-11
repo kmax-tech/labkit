@@ -23,17 +23,17 @@ LIVING = (
 )
 
 ROWS = [
-    RuleRow("AS-001", "§1.A", "A negative finding is a claim", "active"),
-    RuleRow("AS-002", "§1.B", "", "house"),
-    RuleRow("AS-003", "", "No run without an intent paragraph", "active"),
+    RuleRow("LAB-001", "§1.A", "A negative finding is a claim", "active"),
+    RuleRow("LAB-002", "§1.B", "Own example", "retired"),
+    RuleRow("LAB-003", "", "No run without an intent paragraph", "active"),
 ]
 DOC = """# Standard
 
-### AS-001 · A negative finding is a claim (2026-09-24) *(was §1.A)*
+### LAB-001 · A negative finding is a claim (2026-09-24) *(was §1.A)*
 
 Text of one.
 
-- **AS-003 · No run without an intent paragraph.** A run binds to a protocol.
+- **LAB-003 · No run without an intent paragraph.** A run binds to a protocol.
   Second line of three.
 
 ## Next chapter
@@ -44,14 +44,18 @@ class ShippedStandard(unittest.TestCase):
     def test_every_head_matches_the_ledger(self) -> None:
         heads = rules.rule_heads(rules.STANDARD.read_text(encoding="utf-8"))
         self.assertEqual(
-            rules.check_registry(rules.load_registry(rules.REGISTRY), heads, ("AS",)),
+            rules.check_registry(rules.load_registry(rules.REGISTRY), heads, ("LAB",)),
             [],
         )
 
-    def test_ledger_holds_every_number_once(self) -> None:
-        ids = [r.id for r in rules.load_registry(rules.REGISTRY)]
-        self.assertEqual(len(ids), len(set(ids)))
-        self.assertEqual(ids, [f"AS-{n:03d}" for n in range(1, len(ids) + 1)])
+    def test_ledger_holds_every_number_once_in_order(self) -> None:
+        numbers = [int(r.id.split("-")[1]) for r in rules.load_registry(rules.REGISTRY)]
+        self.assertEqual(numbers, sorted(set(numbers)))
+        # the seven numbers that left for the authoring lab's LOCAL ledger (0.82.0)
+        self.assertEqual(
+            sorted(set(range(1, max(numbers) + 1)) - set(numbers)),
+            [2, 70, 73, 78, 80, 81, 99],
+        )
 
     def test_every_living_reference_resolves_and_names_its_rule(self) -> None:
         rows = rules.load_registry(rules.REGISTRY)
@@ -79,20 +83,20 @@ class ShippedStandard(unittest.TestCase):
 class Heads(unittest.TestCase):
     def test_all_three_head_forms_and_the_alias_mark(self) -> None:
         heads = rules.rule_heads(
-            DOC + "**AS-004 · Bold paragraph rule** *(war §4.5)*, more\n"
+            DOC + "**LAB-004 · Bold paragraph rule** *(war §4.5)*, more\n"
         )
         self.assertEqual(
             [(h.id, h.title, h.alias) for h in heads],
             [
-                ("AS-001", "A negative finding is a claim", "§1.A"),
-                ("AS-003", "No run without an intent paragraph", ""),
-                ("AS-004", "Bold paragraph rule", "§4.5"),
+                ("LAB-001", "A negative finding is a claim", "§1.A"),
+                ("LAB-003", "No run without an intent paragraph", ""),
+                ("LAB-004", "Bold paragraph rule", "§4.5"),
             ],
         )
 
     def test_a_bold_title_may_wrap(self) -> None:
         (h,) = rules.rule_heads(
-            "- **AS-084 · Double-coinage check — first the field, then the\n  lab.** *(was §5.2)* x\n"
+            "- **LAB-084 · Double-coinage check — first the field, then the\n  lab.** *(was §5.2)* x\n"
         )
         self.assertEqual(
             (h.title, h.alias),
@@ -100,54 +104,58 @@ class Heads(unittest.TestCase):
         )
 
     def test_heads_in_fenced_code_are_not_rules(self) -> None:
-        self.assertEqual(rules.rule_heads("```\n- **AS-009 · Example.** x\n```\n"), [])
+        self.assertEqual(rules.rule_heads("```\n- **LAB-009 · Example.** x\n```\n"), [])
 
 
 class Registry(unittest.TestCase):
     def test_matching_document_passes(self) -> None:
-        self.assertEqual(rules.check_registry(ROWS, rules.rule_heads(DOC), ("AS",)), [])
+        self.assertEqual(
+            rules.check_registry(ROWS, rules.rule_heads(DOC), ("LAB",)), []
+        )
 
     def test_title_drift_is_caught(self) -> None:
         heads = rules.rule_heads(
             DOC.replace("A negative finding is a claim", "A negative finding")
         )
         self.assertTrue(
-            any("head says" in p for p in rules.check_registry(ROWS, heads, ("AS",)))
+            any("head says" in p for p in rules.check_registry(ROWS, heads, ("LAB",)))
         )
 
     def test_active_rule_without_head_is_caught(self) -> None:
-        heads = [h for h in rules.rule_heads(DOC) if h.id != "AS-003"]
+        heads = [h for h in rules.rule_heads(DOC) if h.id != "LAB-003"]
         self.assertEqual(
-            rules.check_registry(ROWS, heads, ("AS",)),
-            ["AS-003: active in the ledger but no rule head states it"],
+            rules.check_registry(ROWS, heads, ("LAB",)),
+            ["LAB-003: active in the ledger but no rule head states it"],
         )
 
-    def test_a_house_rule_stated_in_the_document_is_caught(self) -> None:
-        heads = [*rules.rule_heads(DOC), RuleHead("AS-002", "Own example", "§1.B", 40)]
+    def test_a_retired_rule_stated_in_the_document_is_caught(self) -> None:
+        heads = [*rules.rule_heads(DOC), RuleHead("LAB-002", "Own example", "§1.B", 40)]
         self.assertEqual(
-            rules.check_registry(ROWS, heads, ("AS",)),
-            ["line 40: AS-002 is house in the ledger, yet stated here"],
+            rules.check_registry(ROWS, heads, ("LAB",)),
+            ["line 40: LAB-002 is retired in the ledger, yet stated here"],
         )
 
     def test_ids_of_another_prefix_are_not_held_to_this_document(self) -> None:
-        rows = [*ROWS, RuleRow("HS-001", "", "A house rule", "active")]
-        self.assertEqual(rules.check_registry(rows, rules.rule_heads(DOC), ("AS",)), [])
+        rows = [*ROWS, RuleRow("LOCAL-001", "", "A house rule", "active")]
+        self.assertEqual(
+            rules.check_registry(rows, rules.rule_heads(DOC), ("LAB",)), []
+        )
 
     def test_bad_status_and_duplicate_id(self) -> None:
         rows = [
             *ROWS,
-            RuleRow("AS-003", "", "Twice", "active"),
-            RuleRow("AS-005", "", "x", "gone"),
+            RuleRow("LAB-003", "", "Twice", "active"),
+            RuleRow("LAB-005", "", "x", "gone"),
         ]
-        problems = rules.check_registry(rows, rules.rule_heads(DOC), ("AS",))
-        self.assertIn("AS-003: id given twice in the ledger", problems)
-        self.assertTrue(any("AS-005: status 'gone'" in p for p in problems))
+        problems = rules.check_registry(rows, rules.rule_heads(DOC), ("LAB",))
+        self.assertIn("LAB-003: id given twice in the ledger", problems)
+        self.assertTrue(any("LAB-005: status 'gone'" in p for p in problems))
 
 
 class Ledger(unittest.TestCase):
     def test_growth_by_the_next_number_passes(self) -> None:
         self.assertEqual(
-            rules.check_ledger(ROWS, [*ROWS, RuleRow("AS-004", "", "New", "active")]),
+            rules.check_ledger(ROWS, [*ROWS, RuleRow("LAB-004", "", "New", "active")]),
             [],
         )
 
@@ -158,20 +166,20 @@ class Ledger(unittest.TestCase):
     def test_removing_a_row_is_caught(self) -> None:
         self.assertEqual(
             rules.check_ledger(ROWS, ROWS[:2]),
-            ["AS-003: removed from the ledger — retire it, never delete"],
+            ["LAB-003: removed from the ledger — retire it, never delete"],
         )
 
     def test_rewriting_an_alias_is_caught(self) -> None:
         after = [ROWS[0]._replace(alias="§9.Z"), *ROWS[1:]]
         self.assertEqual(
-            rules.check_ledger(ROWS, after), ["AS-001: alias changed '§1.A' → '§9.Z'"]
+            rules.check_ledger(ROWS, after), ["LAB-001: alias changed '§1.A' → '§9.Z'"]
         )
 
     def test_reviving_a_retired_id_is_caught(self) -> None:
-        before = [*ROWS, RuleRow("AS-004", "", "Old", "retired")]
-        after = [*ROWS, RuleRow("AS-004", "", "Old", "active")]
+        before = [*ROWS, RuleRow("LAB-004", "", "Old", "retired")]
+        after = [*ROWS, RuleRow("LAB-004", "", "Old", "active")]
         self.assertTrue(
-            rules.check_ledger(before, after)[0].startswith("AS-004: was retired")
+            rules.check_ledger(before, after)[0].startswith("LAB-004: was retired")
         )
 
 
@@ -179,56 +187,63 @@ class Refs(unittest.TestCase):
     def test_a_named_reference_passes(self) -> None:
         self.assertEqual(
             rules.check_refs(
-                "f", "see AS-003 No run without an intent paragraph.", ROWS
+                "f", "see LAB-003 No run without an intent paragraph.", ROWS
             ),
             [],
         )
 
     def test_first_two_words_are_enough(self) -> None:
-        self.assertEqual(rules.check_refs("f", "(AS-001 A negative)", ROWS), [])
+        self.assertEqual(rules.check_refs("f", "(LAB-001 A negative)", ROWS), [])
 
     def test_a_bare_id_is_caught(self) -> None:
         self.assertEqual(
-            rules.check_refs("f", "see AS-003.", ROWS),
-            ["f:1: AS-003 without its name — write 'AS-003 No run without an…'"],
+            rules.check_refs("f", "see LAB-003.", ROWS),
+            ["f:1: LAB-003 without its name — write 'LAB-003 No run without an…'"],
         )
 
-    def test_unknown_and_house_ids_are_caught(self) -> None:
-        problems = rules.check_refs("f", "AS-099 Whatever and AS-002 Own example", ROWS)
+    def test_unknown_and_retired_ids_are_caught(self) -> None:
+        problems = rules.check_refs(
+            "f", "LAB-099 Whatever and LAB-002 Own example", ROWS
+        )
         self.assertEqual(
             problems,
-            ["f:1: AS-099 is not in the ledger", "f:1: AS-002 is house, not active"],
+            [
+                "f:1: LAB-099 is not in the ledger",
+                "f:1: LAB-002 is retired, not active",
+            ],
         )
 
-    def test_a_house_id_passes_when_allowed(self) -> None:
+    def test_a_retired_id_passes_when_allowed(self) -> None:
         self.assertEqual(
-            rules.check_refs("f", "number AS-002 is taken", ROWS, ("active", "house")),
+            rules.check_refs(
+                "f", "LAB-002 Own example, retired", ROWS, ("active", "retired")
+            ),
             [],
         )
 
     def test_ids_in_inline_code_and_heads_are_not_citations(self) -> None:
         self.assertEqual(
-            rules.check_refs("f", "run `labkit.rules show AS-003`\n" + DOC, ROWS), []
+            rules.check_refs("f", "run `labkit.rules show LAB-003`\n" + DOC, ROWS), []
         )
 
     def test_an_id_as_a_string_literal_is_an_argument(self) -> None:
-        self.assertEqual(rules.check_refs("f", 'rule_text("AS-003")', ROWS), [])
+        self.assertEqual(rules.check_refs("f", 'rule_text("LAB-003")', ROWS), [])
         # twin: a citation inside a longer string still needs its name
         self.assertEqual(
-            len(rules.check_refs("f", 'msg = "see AS-003 for why"', ROWS)), 1
+            len(rules.check_refs("f", 'msg = "see LAB-003 for why"', ROWS)), 1
         )
 
     def test_a_moved_id_is_left_to_the_ledger_it_moved_to(self) -> None:
-        rows = [*ROWS, RuleRow("AS-004", "", "Alter Name", "moved:labkit")]
-        self.assertEqual(rules.check_refs("f", "AS-004 New English name", rows), [])
+        rows = [*ROWS, RuleRow("LAB-004", "", "Alter Name", "moved:labkit")]
+        self.assertEqual(rules.check_refs("f", "LAB-004 New English name", rows), [])
         # twin: the same id while active here is held to its name
-        active = [*ROWS, RuleRow("AS-004", "", "Alter Name", "active")]
+        active = [*ROWS, RuleRow("LAB-004", "", "Alter Name", "active")]
         self.assertEqual(
-            len(rules.check_refs("f", "AS-004 New English name", active)), 1
+            len(rules.check_refs("f", "LAB-004 New English name", active)), 1
         )
 
     def test_a_prefix_the_ledger_does_not_keep_is_left_alone(self) -> None:
-        self.assertEqual(rules.check_refs("f", "CS-008 Run the linter", ROWS), [])
+        self.assertEqual(rules.check_refs("f", "CODE-008 Run the linter", ROWS), [])
 
     def test_a_marked_legacy_example_passes(self) -> None:
         self.assertEqual(
@@ -242,26 +257,26 @@ class Refs(unittest.TestCase):
         self.assertEqual(rules.check_refs("f", "the rule *(was §1.A)* says", ROWS), [])
         self.assertEqual(
             rules.check_refs("f", "as §1.A says", ROWS),
-            ["f:1: old id §1.A → AS-001 A negative finding is a claim"],
+            ["f:1: old id §1.A → LAB-001 A negative finding is a claim"],
         )
 
 
 class Show(unittest.TestCase):
     def test_the_block_from_head_to_next_head(self) -> None:
-        text = rules.rule_text("AS-003", DOC, ROWS)
+        text = rules.rule_text("LAB-003", DOC, ROWS)
         self.assertTrue(
-            text.startswith("- **AS-003 · No run without an intent paragraph.**")
+            text.startswith("- **LAB-003 · No run without an intent paragraph.**")
         )
         self.assertIn("Second line of three.", text)
         self.assertNotIn("Next chapter", text)
 
-    def test_a_house_rule_says_so(self) -> None:
-        with self.assertRaisesRegex(LookupError, "house rule; text is not distributed"):
-            rules.rule_text("AS-002", DOC, ROWS)
+    def test_a_retired_rule_says_so(self) -> None:
+        with self.assertRaisesRegex(LookupError, "LAB-002: retired"):
+            rules.rule_text("LAB-002", DOC, ROWS)
 
     def test_an_unknown_id_raises(self) -> None:
         with self.assertRaises(KeyError):
-            rules.rule_text("AS-777", DOC, ROWS)
+            rules.rule_text("LAB-777", DOC, ROWS)
 
     def test_the_shipped_standard_answers_every_active_id(self) -> None:
         for row in rules.load_registry(rules.REGISTRY):
@@ -283,13 +298,10 @@ class Cli(unittest.TestCase):
             (0, "rules: standard.md against rules.tsv: 0 problem(s)"),
         )
 
-    def test_show_a_house_rule_exits_1(self) -> None:
-        house = next(
-            r.id for r in rules.load_registry(rules.REGISTRY) if r.status == "house"
-        )
-        code, out = self.run_main("show", house)
+    def test_show_an_unknown_id_exits_1(self) -> None:
+        code, out = self.run_main("show", "LAB-002")  # a number that left for LOCAL
         self.assertEqual(
-            (code, out.strip()), (1, f"{house}: house rule; text is not distributed")
+            (code, out.strip()), (1, "LAB-002: no such rule in the ledger")
         )
 
     def test_refs_exits_1_on_a_bare_id(self) -> None:
@@ -297,10 +309,10 @@ class Cli(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             f = Path(tmp) / "note.md"
-            f.write_text("see AS-015.\n", encoding="utf-8")
+            f.write_text("see LAB-015.\n", encoding="utf-8")
             code, out = self.run_main("refs", str(f))
         self.assertEqual(code, 1)
-        self.assertTrue(re.search(r"AS-015 without its name", out))
+        self.assertTrue(re.search(r"LAB-015 without its name", out))
 
 
 if __name__ == "__main__":

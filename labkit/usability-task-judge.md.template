@@ -18,7 +18,7 @@ about a minute. The area
 
 Follow the repo's own rules: `CLAUDE.md` is in your context already (as a
 session loads it), the lab standard holds the long form
-(`python -m labkit.rules show AS-nnn`) — read what you need, no more.
+(`python -m labkit.rules show LAB-nnn`) — read what you need, no more.
 
 **The log** matters as much as the number. Append to `<log>` ONE line
 BEFORE each step (`touch` it first; append with `>>`):

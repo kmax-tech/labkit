@@ -5,6 +5,32 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.82.0 — 2026-10-11
+
+### Breaking — rule identifiers: `LAB` / `LOCAL` / `CODE` instead of `AS` / `HS` / `CS`
+
+- **Three families, named by scope, not origin.** `LAB-nnn` is the shipped
+  lab standard (was `AS-nnn`, for *Arbeitsstandard*), `LOCAL-nnn` a lab's
+  own rules in its own ledger (was `HS-nnn`), `CODE-nnn` the coding style
+  (was `CS-nnn`). Number for number: `AS-015 Preflight audit before
+  freezing` is `LAB-015 Preflight audit before freezing`.
+- **Hard cut, no alias, no reader of the old families.** `labkit.rules`
+  knows only the new prefixes; `python -m labkit.rules show AS-015` fails
+  under 0.82.0. 0.81.0 is the last version that reads `AS`/`HS`/`CS`;
+  material written before the cut (frozen protocols, run snapshots,
+  reports, this changelog) keeps its old identifiers and is reproduced with
+  its commit and pin. The standard carries the one-time note in its
+  *Identifiers* paragraph; identifier rule 3 (an id never changes) holds for
+  the published families from here on.
+- **The seven house numbers left the shipped ledger**: AS-002, -070, -073,
+  -078, -080, -081, -099 live on as `LOCAL-002` … `LOCAL-099` in the
+  authoring lab's ledger; `rules.tsv` keeps them as gaps (a new id is the
+  highest ever given + 1, so they are never reused). The status `house` is
+  gone with them.
+- Every living file of the package follows: standard, ledger, code,
+  templates, agent instructions, docs, tests. `docs/coding-style.md` is
+  re-vendored from its master with `CODE-nnn`.
+
 ## 0.81.0 — 2026-10-11
 
 ### Added — what a call cost

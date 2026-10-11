@@ -1,4 +1,4 @@
-<!-- vendored: coding-style.md @ 9e8571a54ba4 (master: ~/.claude/resources) — edit the master, then `lib sync pull` -->
+<!-- vendored: coding-style.md @ 8d9912f98440 (master: ~/.claude/resources) — edit the master, then `lib sync pull` -->
 # Code style
 
 Much of this code produces numbers that end up in a paper or a thesis. So the
@@ -25,7 +25,7 @@ Two words that recur below:
 
 ---
 
-## CS-001 · Fail loud — never swallow an error
+## CODE-001 · Fail loud — never swallow an error
 
 A swallowed error doesn't disappear. It comes back as a wrong result, far away
 from its cause, with nothing pointing at it.
@@ -59,7 +59,7 @@ original error with it.
 
 ---
 
-## CS-002 · Make assumptions explicit
+## CODE-002 · Make assumptions explicit
 
 When a choice materially changes your numbers, it must be visible in the code —
 not buried in a line you'll forget you wrote.
@@ -105,12 +105,11 @@ BINOCULARS_FPR_THRESHOLD = -0.8536
 ```
 
 A value tuned on the run's own null condition belongs to the run and its
-protocol, not to the module (AS-035 Schwellen gehören zum Lauf, nicht zum
-Maß); the constant in the module is the rule's default, with the same comment.
+protocol, not to the module (LAB-035 Thresholds belong to the run); the constant in the module is the rule's default, with the same comment.
 
 ---
 
-## CS-003 · Test the functions that produce numbers
+## CODE-003 · Test the functions that produce numbers
 
 Every function whose output can become a reported number — metrics, answer
 parsers, label normalization — gets a small test with hand-checked examples in
@@ -128,7 +127,7 @@ def test_average_score_macro_weights_classes_equally() -> None:
 ```
 
 Cover the normal case **and** the edges: empty input, boundaries, and the errors
-from CS-001 Fail loud — assert that bad input really does raise. Run `python3 -m pytest tests/`
+from CODE-001 Fail loud — assert that bad input really does raise. Run `python3 -m pytest tests/`
 **before** you report any number, and update tests in the same change that
 changes behavior.
 
@@ -137,7 +136,7 @@ can realistically occur for *this* code, not every edge the language permits.
 
 ---
 
-## CS-004 · One home per piece of logic
+## CODE-004 · One home per piece of logic
 
 Before writing a function, check whether it already exists — search, don't
 assume. The failure mode is two slightly different `compute_f1` helpers that
@@ -150,11 +149,11 @@ which script ran.
 - Don't generalize on speculation — extract once the repetition is real.
 
 A single shared function also means one signature and one behavior everywhere
-it is used, which is what makes CS-005 Keep interfaces consistent between functions hold.
+it is used, which is what makes CODE-005 Keep interfaces consistent between functions hold.
 
 ---
 
-## CS-005 · Keep interfaces consistent between functions
+## CODE-005 · Keep interfaces consistent between functions
 
 When one function's output feeds another's input, the **order, names and shape**
 stay identical along the chain.
@@ -182,7 +181,7 @@ every call site.
 
 ---
 
-## CS-006 · One function, one thing — and keep I/O at the edges
+## CODE-006 · One function, one thing — and keep I/O at the edges
 
 A function does exactly one thing, at one level of abstraction. Warning signs
 that it has grown too big:
@@ -195,7 +194,7 @@ that it has grown too big:
 Prefer **pure** functions for anything that computes: output depends only on the
 inputs, nothing outside changes. Don't mutate arguments, don't touch global
 state, and keep disk/network/randomness at the edges of the script. That is what
-makes CS-003 Test the functions that produce numbers easy — a pure metric function is a two-line test; one that reads a file
+makes CODE-003 Test the functions that produce numbers easy — a pure metric function is a two-line test; one that reads a file
 is not.
 
 If a side effect is genuinely needed, isolate it and say so:
@@ -211,7 +210,7 @@ def write_report(report: Report, path: Path) -> None:
 
 ---
 
-## CS-007 · Type hints and docstrings
+## CODE-007 · Type hints and docstrings
 
 - **Type hints** on every signature — parameters and return. Prefer precise
   types (`list[str]`, `Path`, a dataclass) over `Any` or a bare `dict`.
@@ -233,17 +232,16 @@ def write_report(report: Report, path: Path) -> None:
   original code: `Refactored from https://github.com/ahans30/Binoculars;
   Hans et al. 2024, arXiv:2401.12070.` A reader who doubts a number can then
   compare against the original in a minute; without the line they first have
-  to discover that it is a port at all (AS-026 Eine wiederverwendete
-  Komponente bringt ihre Fehler mit).
+  to discover that it is a port at all (LAB-026 A reused component brings its bugs with it).
 
 ---
 
-## CS-008 · Run the linter and the type checker
+## CODE-008 · Run the linter and the type checker
 
 ```bash
 ruff check .      # lint
 ruff format .     # format
-pyright           # type-check — catches the swapped-argument bug from CS-005 Keep interfaces consistent between functions
+pyright           # type-check — catches the swapped-argument bug from CODE-005 Keep interfaces consistent between functions
 ```
 
 Fix what they report rather than silencing it; a `# noqa` or `# type: ignore`
@@ -257,7 +255,7 @@ excluding the library in the pyright config), and let the decision be made.
 
 **And a cold reader.** Linter and type checker do not see a condition
 hidden behind a negated name or one word used for three things — the
-findings a person meets first (CS-017 The entry point shows the flow and its
+findings a person meets first (CODE-017 The entry point shows the flow and its
 conditions). Before a change is committed, a reader who did not write it
 reads the diff: the `code-clarity` agent (`MODE: review · DIFF: <patch> ·
 REPO: <repo>`, dotfiles `agents/code-clarity.md`), run as a different agent
@@ -271,7 +269,7 @@ gives three behaviour questions with the answers held back (`/code-quiz`).
 
 ---
 
-## CS-009 · Record every dependency
+## CODE-009 · Record every dependency
 
 Adding a dependency is a real decision — it affects everyone who runs the
 project. Don't pull one in silently.
@@ -282,12 +280,12 @@ project. Don't pull one in silently.
   `pyproject.toml` dependencies). A package that is installed but unrecorded
   works on your laptop and breaks on the cluster — usually the week before
   submission.
-- Prefer the standard library, or something already in the project (CS-004 One home per piece of logic), over a
+- Prefer the standard library, or something already in the project (CODE-004 One home per piece of logic), over a
   new package.
 
 ---
 
-## CS-010 · Read the docs first, and keep them in sync
+## CODE-010 · Read the docs first, and keep them in sync
 
 - **Before changing anything**, check the `README` and any relevant docs to
   understand how the affected part is meant to work. Don't infer the design
@@ -303,7 +301,7 @@ project. Don't pull one in silently.
 
 ---
 
-## CS-011 · Verify against the real system, not only against your tests
+## CODE-011 · Verify against the real system, not only against your tests
 
 Tests prove the code does what *you* expect. They cannot tell you whether that
 expectation matches reality. Before calling something done, put one real
@@ -351,7 +349,7 @@ artifact through the real path and look at what comes out.
 
 ---
 
-## CS-012 · Fake the external system — including the ways it misbehaves
+## CODE-012 · Fake the external system — including the ways it misbehaves
 
 When code talks to a device, service, or API you don't control, write a small
 fake that speaks its protocol and test against that. It turns "works while the
@@ -377,15 +375,15 @@ def do_POST(self) -> None:
 ```
 
 - Keep the fake beside the tests, in the same language, with no new dependency
-  (CS-009 Record every dependency) — a fake that needs its own toolchain stops being run.
+  (CODE-009 Record every dependency) — a fake that needs its own toolchain stops being run.
 - Every quirk the fake simulates should carry a comment saying it is real, not
   invented. Otherwise the next reader deletes it as noise.
 - The fake covers the protocol. It does **not** cover the hardware — see the
-  labelling rule in CS-011 Verify against the real system.
+  labelling rule in CODE-011 Verify against the real system.
 
 ---
 
-## CS-013 · Publish state atomically
+## CODE-013 · Publish state atomically
 
 Anything that watches a location — a consume folder, a queue directory, a config
 path another process reads — will eventually read your file while you are still
@@ -416,9 +414,9 @@ def deliver(pdf: bytes, target: Path) -> Path:
 
 ---
 
-## CS-014 · Shedding a dependency is as legitimate a fix as adding one
+## CODE-014 · Shedding a dependency is as legitimate a fix as adding one
 
-CS-009 Record every dependency governs taking a dependency on. This is the counterpart: when one breaks, or
+CODE-009 Record every dependency governs taking a dependency on. This is the counterpart: when one breaks, or
 turns out to be heavy for what you actually use it for, the first question is
 not "how do I work around this" but **"what do I actually need from it?"** Often
 the honest answer is a fraction of what it offers.
@@ -447,7 +445,7 @@ def xml_text(doc: bytes, tag: str) -> str:
 
 ---
 
-## CS-015 · Make the code findable by name
+## CODE-015 · Make the code findable by name
 
 A newcomer — a person or an agent — looking for where the code does a thing
 does not start from your README. Measured on two lab repos (labkit
@@ -461,7 +459,7 @@ the weaker readers missed, the repo had two similar mechanisms whose names
 did not say how they differ, or logic with no name of its own.
 
 - **Logic someone will look for gets its own function**, named for what it
-  does in the field's everyday words (CS-007 Type hints and docstrings): `majority`,
+  does in the field's everyday words (CODE-007 Type hints and docstrings): `majority`,
   `label_for`, `load_profile`. Logic buried in the middle of a long `main`
   has no name to find — the agents located the template-text check of
   `protocol_check` only by reading `main`, because it has no function of
@@ -476,7 +474,7 @@ did not say how they differ, or logic with no name of its own.
   comments was followed without a miss by the weakest reader we use (round
   5); the misses were all across files, where only a file, function or
   constant name is found. So findability alone is no reason to split a
-  function — CS-006 One function, one thing — and keep I/O at the edges
+  function — CODE-006 One function, one thing — and keep I/O at the edges
   still is: section comments are its warning sign, and the split makes
   the data a station depends on visible in its signature.
 - **Package and file names name a responsibility** (`deciding/`, `model/`,
@@ -541,7 +539,7 @@ def leftover_template_lines(text: str, template: set[str]) -> list[str]:
 
 ---
 
-## CS-016 · The experiment area reconstructs itself
+## CODE-016 · The experiment area reconstructs itself
 
 Months later someone opens `experiments/NN-<name>/` to find out which run
 produced the reported number, from which code and data, how to repeat it,
@@ -566,7 +564,7 @@ fact existed; none stood where a person looks. The area has to say it:
   registered). The verdict is one call on the area's own dicts
   (`verdict(criteria, admissibility)`). A chain of helpers that reuse one
   name across modules (`evaluate_rows` → `evaluate` → `evaluate_rows`) is
-  one word for three things — CS-015 Make the code findable by name, across
+  one word for three things — CODE-015 Make the code findable by name, across
   modules.
 - **The data an area measures on lies under its `data/`**, as a symlink
   where the file is another area's (`data/prepared/check_cases_v2.jsonl →
@@ -584,7 +582,7 @@ fact existed; none stood where a person looks. The area has to say it:
 
 ---
 
-## CS-017 · The entry point shows the flow and its conditions
+## CODE-017 · The entry point shows the flow and its conditions
 
 The best way to understand code is to understand its control flow, and the
 person who reviews agent-written code reads it in jumps, a minute per
@@ -614,13 +612,13 @@ numbers) was read right.
   decided" otherwise answers from the line that computes it and is wrong
   whenever an [A] fails (2026-10-08).
 - **Stages are numbered flat.** Section comments that name a stage carry a
-  reader through a long entry point (CS-015 Make the code findable by
+  reader through a long entry point (CODE-015 Make the code findable by
   name); sub-numbers (`2b`, `4b`) lost the person (round 8). A stage that
   needs a sub-number is a function of its own, and what it needs from an
   earlier stage is in its signature, not in state set far above
-  (CS-006 One function, one thing — and keep I/O at the edges).
+  (CODE-006 One function, one thing — and keep I/O at the edges).
 - **One word for one thing on the flow's path** — the function, its
-  objects and its variables do not share a name (CS-015 Make the code
+  objects and its variables do not share a name (CODE-015 Make the code
   findable by name).
 - **The deciding function's docstring names every promise it decides,
   by id, and what comes back when an admissibility condition fails.**
@@ -634,7 +632,7 @@ numbers) was read right.
 Agents are no proxy for a person on these questions: in every round the
 agents scored higher than the author on the author's own code. So the
 check is a reader who did not write the code, with the questions the
-person will ask — CS-008 Run the linter and the type checker, last
+person will ask — CODE-008 Run the linter and the type checker, last
 paragraph.
 
 ```python

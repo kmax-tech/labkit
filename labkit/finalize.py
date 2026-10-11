@@ -26,7 +26,7 @@ each step's condition):
   5. frozen source  at protocol `cost = "seconds"` only: the run froze its source
                     (`data=` in config.json) and every source and output file
                     is tracked in git — the two of the three questions the
-                    agent audit kept asking that a machine can answer (AS-017 The number of audits follows the cost tier, 2026-10-05);
+                    agent audit kept asking that a machine can answer (LAB-017 The number of audits follows the cost tier, 2026-10-05);
                     the third, the counted unit, is the protocol's `Unit` field
   6. area tests     tests/test_<NN>_<name>.py via the repo's interpreter, on
                     every tier: a failing test is a blocker (evaluate() lost
@@ -496,7 +496,7 @@ ROUTE_START = "<!-- labkit:route -->"
 ROUTE_END = "<!-- /labkit:route -->"
 #: What the README's route must point to: the stations a reader takes after
 #: the protocol — which run (`runlog`), which values (`labkit-params`), where
-#: the ids are decided, the proof (CS-016 The experiment area reconstructs
+#: the ids are decided, the proof (CODE-016 The experiment area reconstructs
 #: itself). The README points; it copies no question, answer, run id or
 #: threshold — each has its one home, and a copy went stale within a day
 #: (area 08, 2026-10-08).
@@ -547,7 +547,7 @@ def check_open_fields(
     findings: Findings, protocol: Path, text: str, head: protocol_block.Head
 ) -> None:
     """Station 4: fields of the protocol still empty or a placeholder, and
-    the README's route block (CS-016)."""
+    the README's route block (CODE-016)."""
     holes = open_holes(text, head)
     for lineno, label in holes:
         findings.warn(f"{protocol.name}:{lineno}: {label}")

@@ -78,7 +78,7 @@ path to this file.
   read by `protocol-check`, so they stay exactly as stamped; what you write
   after them — status words included — is German or English, one per
   protocol.
-- **`→ AS-nnn <name>`** points to the rule in the lab standard (`python -m labkit.rules show AS-nnn`):
+- **`→ LAB-nnn <name>`** points to the rule in the lab standard (`python -m labkit.rules show LAB-nnn`):
   the reasoning and the evidence live there, here only what the field
   demands.
 - **Budgets.** The HEAD (Summary, Context, Intent, Setup) is read and has a
@@ -201,7 +201,7 @@ derives from the detail below and carries no fact that isn't there.
   established term (a textbook, the notation card the lab keeps), the repo's
   `notes/theorie/begriffe.md` (the lab's), the lab standard's vocabulary
   table (the method's) — a word
-  found there is inherited, not re-coined (AS-084 Double-coinage check).
+  found there is inherited, not re-coined (LAB-084 Double-coinage check).
   "n/a — standard vocabulary" only if the protocol coins nothing. Until
   2026-10-09 this field sat under Context, after Result; protocols written
   before keep it there, the checker reads the field by label.
@@ -461,17 +461,17 @@ Delete this section if everything was prompted.
 
 | Field              | § |
 |--------------------|---|
-| Intent ids         | AS-004 Identifiers make the intent addressable |
-| Success criterion  | AS-003 No run without an intent paragraph |
-| Admissibility      | AS-004 Identifiers make the intent addressable |
+| Intent ids         | LAB-004 Identifiers make the intent addressable |
+| Success criterion  | LAB-003 No run without an intent paragraph |
+| Admissibility      | LAB-004 Identifiers make the intent addressable |
 | Timebox            | — |
 | Split touched      | — |
-| Registered branch  | AS-013 Registered branch when the run can answer two questions |
-| Preflight audit    | AS-015 Preflight audit before freezing |
-| Instrument check   | AS-014 One fully rendered example pair per gold class |
-| Resolution check   | AS-016 Resolution check before freezing |
-| Yield per stage    | AS-023 No silent loss |
-| Rival explanations | AS-044 The check on a confound is code |
-| Analysis audit     | AS-050 Analysis audit before reporting |
-| Null condition     | AS-037 Every anchor carries its target and rationale |
-| Prediction         | AS-045 The forecast comes before the follow-up run |
+| Registered branch  | LAB-013 Registered branch when the run can answer two questions |
+| Preflight audit    | LAB-015 Preflight audit before freezing |
+| Instrument check   | LAB-014 One fully rendered example pair per gold class |
+| Resolution check   | LAB-016 Resolution check before freezing |
+| Yield per stage    | LAB-023 No silent loss |
+| Rival explanations | LAB-044 The check on a confound is code |
+| Analysis audit     | LAB-050 Analysis audit before reporting |
+| Null condition     | LAB-037 Every anchor carries its target and rationale |
+| Prediction         | LAB-045 The forecast comes before the follow-up run |

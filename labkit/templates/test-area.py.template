@@ -129,7 +129,7 @@ def test_every_case_class_follows_from_its_facts():
 
 
 def test_probe_cases_are_pasted():
-    """Owed before a minutes/hours run (AS-014 One fully rendered example pair per gold class). At cost = seconds no probe
+    """Owed before a minutes/hours run (LAB-014 One fully rendered example pair per gold class). At cost = seconds no probe
     precedes the run, so the canonical forms carry the test until then."""
     from labkit import protocol_block
 

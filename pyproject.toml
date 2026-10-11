@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "labkit"
-version = "0.81.0"
+version = "0.82.0"
 description = "Shared lab helpers: run index, LLM backend, endpoint lease, resumable batches, protocol and notes checkers"
 requires-python = ">=3.12"
 # stdlib only, on purpose: a lab helper that drags dependencies in decides the
@@ -15,7 +15,7 @@ dependencies = []
 # Named so a fresh environment (a cloud session, CI) runs the same suite as
 # the local one instead of whichever interpreter happens to carry pytest.
 [project.optional-dependencies]
-# the coding style's three tools: test, lint, type-check (docs/coding-style.md CS-008 Run the linter and the type checker);
+# the coding style's three tools: test, lint, type-check (docs/coding-style.md CODE-008 Run the linter and the type checker);
 # viztracer for reading a run as a timeline (`just timeline audit ARGS`; the filter holds only when the
 # module FILE is run — with `-m` or a console script `--include_files` keeps nothing, viztracer 1.1.1),
 # the step past `labkit-calltree` when the order and duration of calls matter
@@ -55,10 +55,10 @@ extend-exclude = ["docs/usability/*.py"]
 [tool.ruff.lint]
 # Same pinned scope as the lab repos (a shifting default is a knob nobody set).
 select = ["E4", "E7", "E9", "F", "ANN0", "ANN2", "D100", "D101", "D102", "D103", "D104", "D419", "C901"]
-# ANN: every signature annotated (CS-007 Type hints and docstrings) — ANN401
+# ANN: every signature annotated (CODE-007 Type hints and docstrings) — ANN401
 # (no `Any`) left out: forwarding `**kw` to a typed function needs it.
 # D1xx: every public module, class and function has a docstring — its first
-# line is the map a reader searches (CS-015 Make the code findable by name); the
+# line is the map a reader searches (CODE-015 Make the code findable by name); the
 # rest of pydocstyle is a different docstring style than the house's and stays off.
 # C901: a function past complexity 10 is refused; the functions above it on
 # 2026-10-08 carry `# noqa: C901 complexity baseline 2026-10-08` at their

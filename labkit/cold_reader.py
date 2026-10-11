@@ -2,11 +2,11 @@
 
 The protocol reader, the glance reader, the terms judge and the code
 navigator all hand a cold agent a prompt and read back one JSON object. One
-home for the parts they share (CS-004 One home per piece of logic): who the
+home for the parts they share (CODE-004 One home per piece of logic): who the
 reader is, how it hands its answer back, how the answer is loaded and held
 to the asked-for keys, and how a number or a yes/no in it is read. An
 answer that is not the asked-for shape is refused with a sentence, never
-scored as wrong (CS-001 Fail loud).
+scored as wrong (CODE-001 Fail loud).
 """
 
 from __future__ import annotations

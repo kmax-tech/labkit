@@ -27,7 +27,7 @@ pre-run
       · clean                                                   → one line
     `LABKIT_PREFLIGHT=skip` in the command string skips the gate; it is
     visible in the transcript, like `--no-verify` on a commit.
-    The gate follows the cost tier (AS-017 The number of audits follows the cost tier): at `cost = "seconds"` preflight
+    The gate follows the cost tier (LAB-017 The number of audits follows the cost tier): at `cost = "seconds"` preflight
     does not run before a command — a rerun of seconds is the probe — and
     the hook only says whether the success criterion is written, which is
     what `runlog` will demand of a full run there. A `minutes`/`hours`/
@@ -224,7 +224,7 @@ def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
         if area is None:
             notes.append(
                 f"{script.name}: opens a run, but no PROTOCOL-*.md "
-                f"above it — unbound runs keep no number (AS-003 No run without an intent paragraph)."
+                f"above it — unbound runs keep no number (LAB-003 No run without an intent paragraph)."
             )
             continue
         protocol = protocol_named_in(script, area)
@@ -252,13 +252,13 @@ def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
             if not missing:
                 notes.append(
                     f"{head}: cost seconds — gate not run, the rerun is "
-                    f"the probe; registration written (AS-017 The number of audits follows the cost tier)."
+                    f"the probe; registration written (LAB-017 The number of audits follows the cost tier)."
                 )
             else:
                 notes.append(
                     f"{head}: cost seconds, but {', '.join(missing)} still "
                     f"empty or a placeholder — runlog refuses a full run "
-                    f"until the registration is written (AS-003 No run without an intent paragraph, AS-017 The number of audits follows the cost tier)."
+                    f"until the registration is written (LAB-003 No run without an intent paragraph, LAB-017 The number of audits follows the cost tier)."
                 )
             continue
         rc, out = _capture(preflight.preflight_area, area, protocol)

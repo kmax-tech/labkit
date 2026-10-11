@@ -118,7 +118,7 @@ class TestMetricsChoice(unittest.TestCase):
 
 
 class TestSeriesArea(unittest.TestCase):
-    """A series area (AS-061 Subexperiment-Serien tragen ihre Nummer: PROTOCOL-s1-*, PROTOCOL-s2-*, ...) once made the
+    """A series area (LAB-061 Subexperiment-Serien tragen ihre Nummer: PROTOCOL-s1-*, PROTOCOL-s2-*, ...) once made the
     automatic choice a guess that had to refuse (2026-09-26). The binding
     turns it into a filter; naming the run explicitly still works."""
 

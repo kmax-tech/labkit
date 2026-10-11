@@ -35,7 +35,7 @@ kein Ziel.
 | 4 | Usability mit/ohne labkit (Punkt 2 erweitert) | eigene Ansage |
 | D | Doktrin und Gerüstbauer ins Paket (Punkt 5; `AGENTS.md`-Vorlage aus Punkt 6 inbegriffen) | **jetzt** — Auslöser 2026-10-09: verwirrt den Autor selbst |
 | R | Rollout in einem Release: die Pins der Labor- und Thesis-Repos heben, Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus) | eigene Aufträge |
-| Tokenkosten | messen statt schätzen — `llm.last_usage()`, `labkit-audit` druckt Prompt- und Output-Tokens, `agent_transcript.tokens` liest die Usage-Blöcke der Claude-Code-Transkripte (0.81.0, 2026-10-11) | **erledigt 2026-10-11.** Auslöser: 30 Transkripte (labkit, uniagent) summieren 7 Mrd. Cache-Read-Tokens, die alten Subagenten-Audits je 3,65 Mio., und keine labkit-Zeile sagte, was ein Aufruf kostet. Pilot `labkit-paper` Bereich 04 (`audit-on-reachable-code-holds`, Lauf `2026-10-11T14-00-57_071a`): die direkten Importe auf erreichbaren Code zu kürzen spart 0–16 % des Prompts (Median 8 % über 24 uniagent-Bereiche) — **an der Renderprobe gestoppt, kein Modellaufruf; AS-103 bleibt.** Der Prompt ist groß, weil die Zahl fast den ganzen Agenten braucht (Bereich 19: 142 von 155 kB Importe erreicht), nicht wegen ungenutztem Code; Fixkosten je Audit ~69 kB (Instruktionen 9, zitierte Regeln 19, Protokoll 26, Index 15). Ein kleinerer Audit bräuchte eine andere Frage (Audit je Versprechen über seinen deklarierten Scope), kein Schnitt. Die Hauptsitzungen (Median 400–500 k Kontext je Aufruf) sind Sitzungshygiene, keine labkit-Aufgabe. |
+| Tokenkosten | messen statt schätzen — `llm.last_usage()`, `labkit-audit` druckt Prompt- und Output-Tokens, `agent_transcript.tokens` liest die Usage-Blöcke der Claude-Code-Transkripte (0.81.0, 2026-10-11) | **erledigt 2026-10-11.** Auslöser: 30 Transkripte (labkit, uniagent) summieren 7 Mrd. Cache-Read-Tokens, die alten Subagenten-Audits je 3,65 Mio., und keine labkit-Zeile sagte, was ein Aufruf kostet. Pilot `labkit-paper` Bereich 04 (`audit-on-reachable-code-holds`, Lauf `2026-10-11T14-00-57_071a`): die direkten Importe auf erreichbaren Code zu kürzen spart 0–16 % des Prompts (Median 8 % über 24 uniagent-Bereiche) — **an der Renderprobe gestoppt, kein Modellaufruf; LAB-103 bleibt.** Der Prompt ist groß, weil die Zahl fast den ganzen Agenten braucht (Bereich 19: 142 von 155 kB Importe erreicht), nicht wegen ungenutztem Code; Fixkosten je Audit ~69 kB (Instruktionen 9, zitierte Regeln 19, Protokoll 26, Index 15). Ein kleinerer Audit bräuchte eine andere Frage (Audit je Versprechen über seinen deklarierten Scope), kein Schnitt. Die Hauptsitzungen (Median 400–500 k Kontext je Aufruf) sind Sitzungshygiene, keine labkit-Aufgabe. |
 
 **1a gebaut (2026-10-06):** `labkit/promises.py` ist die eine Heimat des
 Alphabets (C/A/B plus Altbuchstaben K/S/W/N in Prosa) und des
@@ -124,8 +124,8 @@ mechanischer Check — die Aufgabe des Pilots.
       Median 295 k frische Tokens und 33 Tool-Calls, der 1539-Zeilen-Standard
       88-mal gelesen; die Hauskopie `~/.claude/agents/experiment-preflight.md`
       war 2026-10-07 schon einmal vom Paket abgedriftet. Jetzt: die Hauskopie
-      ist gelöscht, AS-015 nennt nur das Kommando, der Prompt trägt nur die
-      zitierten Regeln (AS-015, AS-017, AS-004, AS-050, ~18 kB statt 117 kB),
+      ist gelöscht, LAB-015 nennt nur das Kommando, der Prompt trägt nur die
+      zitierten Regeln (LAB-015, LAB-017, LAB-004, LAB-050, ~18 kB statt 117 kB),
       im Modus `analysis` die ersten 50 und letzten 20 Zeilen jeder
       registrierten Output-Datei plus `metrics.json`. **Offen, nicht
       gemessen:** ob der eine Aufruf mit Opus dieselben Treffer liefert wie
@@ -242,7 +242,7 @@ wird zur gestempelten Kopie der Paketdatei (Rollout).
 
 ## 1. `promote <bereich>` — der Beförderungs-Audit als Kommando
 
-**Was:** Die Regel seit 2026-10-05 (AS-015 Preflight-Audit vor dem Einfrieren): bei `Cost: seconds` kein
+**Was:** Die Regel seit 2026-10-05 (LAB-015 Preflight-Audit vor dem Einfrieren): bei `Cost: seconds` kein
 Agent-Audit je Lauf; der unabhängige Audit kommt, wenn die Zahl in eine Note
 oder ein Paper geht oder eine Entscheidung steuert. Dafür gibt es die Regel,
 aber kein Werkzeug. `promote <bereich>` startet den Agenten
@@ -276,7 +276,7 @@ Ursache kein Fehler des Agenten war (von Hand aus dem Bericht gezählt, Ziel
 0) · `reads of labkit source / standard` = 0 (gezählt aus den `read`-Zeilen
 des Logs, seit v0.44.0 in der Score-Tabelle). Erst damit steht der Stand auf
 Daten; danach `lib sync pull` in counterfactual-worlds, fallacy-datasets,
-fallacy-detection, paper-organization (eigener Auftrag, AS-098: Kern und
+fallacy-detection, paper-organization (eigener Auftrag, LAB-098: Kern und
 Rollout trennen).
 
 **Beleg:** Zählung 4m20s, 6m01s, 9m58s auf drei Ständen — die Streuung
@@ -371,23 +371,24 @@ sieht das niemand.
   der Lauf, den er prüft, oder ein Befund „über Versprechen hinweg" im
   Benchmark fehlt. Prüfstelle: labkit-paper, dieselben 34 Fälle wie Bereich
   03 — findet der Audit je Versprechen B1 noch?
-- **Präfixe der Regelkennungen englisch** (2026-10-10): `AS` (Arbeitsstandard),
-  `HS` (Hausstandard) und `CS` sind Abkürzungen deutscher bzw. gemischter
-  Namen; im englischen Standard erklärt sich `AS` nicht mehr. Kandidaten:
-  `LS` (lab standard) statt `AS`, `HR` (house rule) statt `HS`. Haken: eine
-  Kennung ändert sich nie (Kennungsregel 3) — ein Präfixwechsel braucht das
-  alte Präfix als Alias in `rules.tsv`, `check_refs` muss beide lesen, und
-  eingefrorene Protokolle und Lauf-Snapshots behalten das alte. Bis dahin:
-  das Präfix beim ersten Vorkommen ausschreiben (README, Kopf von
-  `standard.md`) — gemacht 2026-10-11, `AS` bleibt die Kennung. Auslöser für
-  mehr: die Veröffentlichung oder der erste fremde Leser, der fragt.
+- **Präfixe der Regelkennungen englisch — gemacht (2026-10-11, 0.82.0):**
+  `AS`/`HS`/`CS` waren Abkürzungen deutscher Namen; jetzt `LAB` (ausgelieferter
+  Laborstandard), `LOCAL` (Regeln eines Hauses, eigenes Register), `CODE`
+  (Coding-Regeln), Nummer für Nummer, hart und ohne Alias oder Altleser — vor
+  der Veröffentlichung ist das billig, danach Altbestand. Die sieben
+  Hausnummern (2, 70, 73, 78, 80, 81, 99) sind Lücken im LAB-Ledger und leben
+  als LOCAL-nnn im Haus-Register. Eingefrorene Protokolle, Snapshots und
+  historische Berichte behalten ihre alten Kennungen. Noch offen (Rollout, je
+  ein Auftrag): dotfiles (Master-Standard, Registry, CLAUDE.md, Agenten,
+  `arbeitsstandard-init --prefix`, der Pre-Commit-Hook ruft `rules check
+  --prefix AS` und `refs --status house`), dann uniagent und labkit-paper mit Pin.
 - Die Vertragskarte im Bereichs-README hält die Agenten nicht vom Lesen des
   Standards ab (vier von vier lasen ihn trotzdem). Kein Werkzeugproblem;
   nicht weiter optimieren — aber zählen (`reads of labkit source / standard`
   in `usability score`), damit sichtbar bleibt, ob es sich ändert.
 - Eine Stub-Zeile für `s1_*`/`k1_*` neben den TODOs im Zähl-Skelett (Sonnet,
   Probe 15) — erst, wenn das Zähl-Skelett Kennungen bekommt.
-- Allgemeine Beispiele je Regel im Paketstandard und `lib scar <AS-nnn>`
+- Allgemeine Beispiele je Regel im Paketstandard und `lib scar <LAB-nnn>`
   (datierter Beleg in die Haus-Schicht, Kandidaten aus echten Blockern) —
   aus Punkt 5 herausgenommen am 2026-10-09; erst, wenn ein Labor außerhalb
   des Hauses Belege sammelt.
@@ -415,7 +416,7 @@ den dotfiles. Daraus:
 - **Labor-Repos bekommen einen Verweis statt einer Kopie:** der Standard reist
   mit dem Pin. Der größte Teil von `sync` entfällt, statt portiert zu werden.
 
-**Befund (2026-10-09):** 26 AS-Kennungen im Paket, 9 davon in
+**Befund (2026-10-09):** 26 Regelkennungen im Paket, 9 davon in
 Laufzeitmeldungen (`preflight`, `code_check`, `runlog`, `claude_hooks`,
 `protocol_check`); ihr Text liegt nicht im Repo, und ob es sie gibt, prüft
 nur `check_refs` in den dotfiles. `labkit-audit` liest den Standard aus der
@@ -426,9 +427,9 @@ Regeln, die Belege liegen schon getrennt (`arbeitsstandard.evidence.md`), etwa
 
 **Grundsätze:**
 
-- **labkit vergibt alle AS-Nummern.** `labkit/docs/rules.tsv` führt alle
+- **labkit vergibt alle LAB-Nummern.** `labkit/docs/rules.tsv` führt alle
   Kennungen, Hausregeln mit Status `house` und ohne Titel. Neue Hausregeln
-  heißen in den dotfiles `HS-nnn`; bestehende Haus-AS behalten ihre Nummer.
+  heißen in den dotfiles `LOCAL-nnn` und behalten ihre Nummer.
 - **Nichts wird gelöscht.** Im dotfiles-Register bekommen umgezogene Zeilen
   den Status `moved:labkit` (`check_ledger`: „retire it, never delete“).
 - **Eine Heimat für den Parser:** `labkit/rules.py`. Die dotfiles rufen ihn als
@@ -448,12 +449,12 @@ labkit- und dotfiles-Teil landen am selben Tag, sonst werden die
 dotfiles-Hooks rot.
 
 1. **Schnitt** (erledigt 2026-10-09): `docs/standard-cut.tsv`, alle 102
-   Kennungen mit genau einer Seite — 95 `package`, 7 `house` (AS-002, AS-070,
-   AS-073, AS-078, AS-080, AS-081, AS-099). Geprüft: erkannte Köpfe =
-   Register, package ∩ house = ∅, package ∪ house = alle. AS-071/072 sind aus
-   2H herausgelöst; AS-049 wird harness-neutral (überwachte
-   Hintergrundausführung), AS-074/076 auf research record bzw. documented
-   limitation verallgemeinert, die Schreibregeln (AS-089, 093, 094, 100, 101)
+   Kennungen mit genau einer Seite — 95 `package`, 7 `house` (LAB-002, LAB-070,
+   LAB-073, LAB-078, LAB-080, LAB-081, LAB-099). Geprüft: erkannte Köpfe =
+   Register, package ∩ house = ∅, package ∪ house = alle. LAB-071/072 sind aus
+   2H herausgelöst; LAB-049 wird harness-neutral (überwachte
+   Hintergrundausführung), LAB-074/076 auf research record bzw. documented
+   limitation verallgemeinert, die Schreibregeln (LAB-089, 093, 094, 100, 101)
    gelten für Berichte, Protokolle und Agentenantworten, nicht für private
    Notizen. Ohne Kennung bleiben im Haus: Haus-Glossar, webis-Cluster,
    Geltung. Die Haus↔Fach-Tabelle kommt ins Paket (2026-10-09) als „Labkit
@@ -464,7 +465,7 @@ dotfiles-Hooks rot.
    Zielposition) ist entfallen, seit `rules.tsv` die Seite als Status trägt
    (2026-10-10; letzter Stand labkit `223e2fa`).
 2. **Inline-Belege raus** in die private Evidenz-Datei. Die Narbentabelle zu
-   AS-015 bleibt als Tabelle von Fehlerklassen ohne Datum, der Audit braucht
+   LAB-015 bleibt als Tabelle von Fehlerklassen ohne Datum, der Audit braucht
    sie.
 3. **Übersetzen:** Einmal-Skript außerhalb des Pakets, je Regelblock ein
    Sonnet-Aufruf über `labkit.llm`, Rohausgabe aufbewahrt. Ein fester
@@ -482,21 +483,21 @@ dotfiles-Hooks rot.
      in `package-data`.
    - `labkit/rules.py` (Schicht 1): `RULE_HEAD_RE`, `check_registry`,
      `check_ledger`, `check_refs` aus `arbeitsstandard-init.py`, erweitert auf
-     die Präfixe `AS`, `CS`, `HS` und die Status `active`, `house`, `retired`,
+     die Präfixe `LAB`, `LOCAL`, `CODE` und die Status `active`, `retired`,
      `moved:*`. Vertrag:
      ```
      python -m labkit.rules check
-     python -m labkit.rules check --standard PATH --registry PATH --prefix HS --prefix AS
+     python -m labkit.rules check --standard PATH --registry PATH --prefix LOCAL --prefix LAB
      python -m labkit.rules ledger BEFORE AFTER
      python -m labkit.rules refs --status active PATH…
-     python -m labkit.rules show AS-015
+     python -m labkit.rules show LAB-015
      ```
      `show` auf eine Hausregel sagt laut „house rule; text is not distributed“.
-   - `tests/test_rules.py`: Köpfe = Register; jede AS-Kennung in den lebenden
+   - `tests/test_rules.py`: Köpfe = Register; jede LAB-Kennung in den lebenden
      Dateien (`labkit/`, `README.md`, `AGENTS.md`, `docs/*.md`; nicht
      `CHANGELOG.md` und `docs/usability/`, das sind historische Belege)
      existiert, ist aktiv und trägt ihren Namen; Zwilling: korrekter Verweis
-     passiert. CS-Verweise nur auf Form (CS-Register liegt in den dotfiles).
+     passiert. CODE-Verweise nur auf Form (CODE-Register liegt in den dotfiles).
    - Alle Meldungen und Docstrings mit den englischen Namen; fehlende Namen
      ergänzen (`preflight.py`, `finalize.py`).
    - `audit.py` liest den Paketstandard; `experiment-preflight.agent.md` zeigt
@@ -557,7 +558,7 @@ ausstehend (bleibt Haus oder wird bereinigt).
   läuft dann ohne `~/.claude`.
 - Lebende Leser: `README.md` (Hook-Installation, Sync-/Shim-Absatz),
   `docs/student-repos.md` (`labkit-init thesis`), `labkit/docs/standard.md`
-  (`lib exp` in AS-003 und AS-046 → `labkit-init exp`); `package-data` für
+  (`lib exp` in LAB-003 und LAB-046 → `labkit-init exp`); `package-data` für
   `docs/*.md`, `docs/*.tsv`, verschachteltes `templates/` erweitern.
 - dotfiles am selben Tag: `IN_LABKIT`/`master_path` und der Test, der den
   labkit-Checkout liest, brechen beim Umzug; der Labor-Teil fliegt aus dem
@@ -568,9 +569,9 @@ ausstehend (bleibt Haus oder wird bereinigt).
 - Hook grün, einmal zusätzlich `HOME=$(mktemp -d) .venv/bin/pytest -q`.
 - Wheel: exakte Dateiliste; verboten sind `~/work`, `/Users/max`, `webis`,
   `~/.claude/resources`. Installiert in ein leeres venv laufen dort
-  `python -m labkit.rules check`, `show AS-015` und `labkit-init lab
+  `python -m labkit.rules check`, `show LAB-015` und `labkit-init lab
   --labkit-ref …`.
-- Register: jede AS-Kennung genau einmal aktiv — labkit oder Haus, nie beides
+- Register: jede LAB-Kennung genau einmal aktiv — labkit oder Haus, nie beides
   (liest die dotfiles nur, wenn vorhanden; sonst lauter Skip).
 - Alter Pin: Wegwerf-Klon auf `v0.76.0`, `lib sync pull` → laute
   Verweigerung.
@@ -594,7 +595,7 @@ Spiel. Claude-spezifisch sind vier Stellen in der weichen Schicht:
 | Stelle | heute | für jeden Agenten |
 |---|---|---|
 | Einstiegsdatei | `CLAUDE.md` (Claude Code liest sie) | `AGENTS.md` als gestempelte Datei (Codex, Cursor, Gemini-CLI lesen sie oder eine Variante); `CLAUDE.md` wird ein Symlink darauf. Der Scaffolder stempelt beide, `lib sync` hält eine. |
-| Live-Hooks | `claude-hook pre-run/post-change` über `.claude/settings.json` (PreToolUse/PostToolUse-JSON) | bleiben als **Adapter** für Claude Code; der Riegel in `runlog` und der Pre-Commit-Hook sind die Schicht, die ohne Harness hält (AS-011 Pflichtfeld-Check: „die Regel, die der Agent vergisst, steht im Riegel"). Ein zweiter Adapter je Harness nur, wenn er Hooks hat. |
+| Live-Hooks | `claude-hook pre-run/post-change` über `.claude/settings.json` (PreToolUse/PostToolUse-JSON) | bleiben als **Adapter** für Claude Code; der Riegel in `runlog` und der Pre-Commit-Hook sind die Schicht, die ohne Harness hält (LAB-011 Pflichtfeld-Check: „die Regel, die der Agent vergisst, steht im Riegel"). Ein zweiter Adapter je Harness nur, wenn er Hooks hat. |
 | Audit-Agenten | `experiment-preflight`, `code-check` als Claude-Subagenten (`~/.claude/agents/*.md`) | `labkit audit <bereich> --mode preflight\|analysis`: die Audit-Prompts ziehen ins Paket, `code-check --bundle` liefert heute schon das Bündel, der Aufruf geht über `labkit.llm` mit beliebigem Backend (claude-cli, openai, ollama), **synchron mit Zeitlimit**, Befunde als Text zurück. Das ist zugleich die Mechanik für `promote` (Punkt 1). |
 | Harness-Erkennung | `CLAUDECODE` in der Umgebung entscheidet den Detach-Riegel | generisch: `LABKIT_FOREGROUND_TIMEOUT_S` (gesetzt vom Harness-Adapter oder vom Nutzer) statt eines Harness-Namens; `CLAUDECODE` setzt ihn als Vorgabe. |
 
@@ -619,7 +620,7 @@ arbeitet. **Prüfstelle:** `labkit-init lab` stempelt `AGENTS.md`.
 
 ## 7. Englische Kennungen: `[C]` · `[A]` · `[B]` statt `[K]` · `[S]` · `[W]` · `[N]`
 
-**Was:** Die Kennungen auf den Versprechen des Protokolls (AS-004 Kennungen machen den Intent adressierbar) sind
+**Was:** Die Kennungen auf den Versprechen des Protokolls (LAB-004 Kennungen machen den Intent adressierbar) sind
 Bezeichner, die die Maschine liest — also englisch, und jede trägt den
 Fachterminus, den ein externer Leser kennt. Heute sind K (Kriterium) und
 W (Weiche) deutsch, S (stop) englisch, N doppeldeutig. Drei statt vier:
@@ -632,11 +633,11 @@ W (Weiche) deutsch, S (stop) englisch, N doppeldeutig. Drei statt vier:
 
 Warum N in A aufgeht: Kontrollen mit Sollwert (`shuffled` < 0,05, `anchor`
 trifft 0,716) haben dieselbe Folge wie eine Stop-Regel — zeigen sie das
-Erwartete nicht, gibt es kein Urteil (AS-034 Nullbedingung im selben Lauf). Im Fach
+Erwartete nicht, gibt es kein Urteil (LAB-034 Nullbedingung im selben Lauf). Im Fach
 sind positive controls und quality checks Beispiele für outcome-neutral
 conditions. Die Baseline ohne Sollwert ist ein comparator und gehört in den
 Text von `[C]`, nicht unter eine eigene Kennung. Die Pflicht „Kontrolle im
-selben Lauf“ (AS-034 Nullbedingung im selben Lauf) bleibt: `[A2]` verlangt `a2_pass`, also muss der Code
+selben Lauf“ (LAB-034 Nullbedingung im selben Lauf) bleibt: `[A2]` verlangt `a2_pass`, also muss der Code
 die Kontrolle erzeugen.
 
 Buchstabenwahl gegen Kollision: `ID_KEY` (`intent_check.py:50`) liest jeden
@@ -669,7 +670,7 @@ H (`h1`, hits@1; außerdem in Vorregistrierungen die Hypothese).
 3. **Doktrin im Master** — **erledigt 2026-10-07** bis auf `lib sync pull`
    in die Repos (dotfiles `51b9060`, `b6d54e2`; labkit `218bb68`). Das
    Mess-Skelett hält jetzt das C-Urteil zurück, wenn ein A fällt.
-   AS-004 Kennungen machen den Intent adressierbar, Abschnitt „Nullbedingung / Anker“,
+   LAB-004 Kennungen machen den Intent adressierbar, Abschnitt „Nullbedingung / Anker“,
    Haus↔Fach-Tabelle, `CLAUDE.md.template`, `measure-script.py.template`,
    `test-area.py.template`, `arbeitsstandard-init.py`, Agent
    `experiment-preflight`, Skill `run-experiment` (je auch die Kopie im
@@ -701,7 +702,7 @@ dann im selben Zug wie die Umbenennung, sonst wandern 14 Protokolle zweimal.
 **Beleg:** Diskussion 2026-10-06, Abgleich mit Registered-Reports-Guidelines
 und dem Code von preregister, sealedlab, prereg —
 `~/work/resources/dev-environment/vorregistrierungs-werkzeuge-vs-labkit.md`.
-Die Kennungen sind die Übergabe-Einheit zwischen Agenten (AS-004 Kennungen machen den Intent adressierbar); ein
+Die Kennungen sind die Übergabe-Einheit zwischen Agenten (LAB-004 Kennungen machen den Intent adressierbar); ein
 externer Leser kann `[S]`, `[W]` heute keinem Fachbegriff zuordnen, und
 „stop rule“ führt ihn auf den falschen.
 

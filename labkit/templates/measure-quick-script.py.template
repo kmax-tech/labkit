@@ -6,8 +6,8 @@
 
 cost = "seconds" (the protocol head says so) — no freeze, no audit before the run,
 the run itself is the instrument check; the one analysis audit comes when
-the number is promoted or steers a decision (AS-017 The number of audits follows the cost tier). The number is produced here, never
-retyped (AS-041 Generate numbers, don't retype them): the protocol's Result line cites it with the run_id, and
+the number is promoted or steers a decision (LAB-017 The number of audits follows the cost tier). The number is produced here, never
+retyped (LAB-041 Generate numbers, don't retype them): the protocol's Result line cites it with the run_id, and
 `--check` holds that line to the run.
 
 Fill the three TODOs: expected_ids(), rows(), evaluate(). Everything else

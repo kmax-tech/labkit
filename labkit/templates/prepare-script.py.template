@@ -6,11 +6,11 @@
     ../../.venv/bin/python scripts/00_prepare.py          # write data/prepared/ (runlog)
 
 Out: `data/prepared/<row-noun>_v1.jsonl` — read-only after writing. Naming
-(AS-020 Materialize transformations): the filename says what ONE row is, context-free
+(LAB-020 Materialize transformations): the filename says what ONE row is, context-free
 (`world_pairs`, `story_cells` — never just `pairs` or `items`); `_vN` counts
 regenerations of the SAME meaning; a change in what a row MEANS (renamed or
 re-coded fields included) is a NEW name, never a version bump. Rules with
-evidence: AS-020 Materialize transformations, AS-021 No dataset without a producer.
+evidence: LAB-020 Materialize transformations, LAB-021 No dataset without a producer.
 
 Checks that belong HERE, not in the analysis — `--audit` prints, you look:
 
@@ -27,7 +27,7 @@ register an EYEBALL admissibility condition in the protocol (does the render pre
 experiment needs? affected rows fall out via the producer, never by editing
 the file), and never let the render "repair" the property under test — a
 renderer once resolved the very contradiction the experiment measured
-(AS-020 Materialize transformations, lab standard).
+(LAB-020 Materialize transformations, lab standard).
 """
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ from labkit import batch, runlog
 SOURCE = REPO / "data" / "TODO"                 # raw input (record sha256 via runlog data=)
 OUT = AREA / "data" / "prepared" / "TODO_v1.jsonl"   # <row-noun>_v1, see docstring
 
-# The field legend — minted HERE, once (AS-086 Values rule (codes are names too): values are names
+# The field legend — minted HERE, once (LAB-086 Values rule (codes are names too): values are names
 # too). English only, no mixed-language names; every enum value is spelled
 # out and self-explanatory. Written into the file as the `_meta` header and
 # enforced per row by batch.write_dataset (field drift fails at write time).

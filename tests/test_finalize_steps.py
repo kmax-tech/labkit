@@ -1,4 +1,4 @@
-"""finalize's named decisions, each testable alone (CS-006 One function, one thing)."""
+"""finalize's named decisions, each testable alone (CODE-006 One function, one thing)."""
 
 import json
 import tempfile

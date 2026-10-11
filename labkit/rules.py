@@ -1,11 +1,12 @@
 """The lab standard's rules: their ledger, their heads, and every reference to them.
 
 `docs/standard.md` states each rule once, under a head line
-`- **AS-nnn · Title.** *(was §2.A12)* …` (also `### AS-nnn · Title` and a bold
-paragraph `**AS-nnn · Title**`). `docs/rules.tsv` is the ledger: one row per
-identifier ever given — `id alias title status`. labkit assigns every `AS`
-number; a lab's house standard uses its own `HS` numbers and the coding style
-`CS`, and both are checked with the same code (`check --standard … --registry …`).
+`- **LAB-nnn · Title.** *(was §2.A12)* …` (also `### LAB-nnn · Title` and a bold
+paragraph `**LAB-nnn · Title**`). `docs/rules.tsv` is the ledger: one row per
+identifier ever given — `id alias title status`. Three families, never mixed:
+labkit assigns every `LAB` number (the shipped lab standard); a lab's own rules
+carry `LOCAL` numbers in the lab's own ledger; the coding style carries `CODE`.
+All three are checked with the same code (`check --standard … --registry …`).
 
 What holds, as in the standard's identifier rules 1–8:
 
@@ -17,15 +18,16 @@ What holds, as in the standard's identifier rules 1–8:
   the rule's name (its first clause or at least two words of it); an old §-id
   appears only inside its alias mark.
 
-Status `house` reserves the number of a rule the authoring lab keeps to itself:
-the ledger lists it so the number is never given twice, the text does not ship,
-and `show` says so instead of printing nothing.
+A number the shipped ledger skips (2, 70, 73, 78, 80, 81, 99) belonged to a
+rule the authoring lab keeps to itself; it lives on under the same number in
+that lab's `LOCAL` ledger and is never given again here (identifier rule 2: a
+new id is the highest ever given + 1).
 
     python -m labkit.rules check
-    python -m labkit.rules check --standard PATH --registry PATH --prefix HS --prefix AS
+    python -m labkit.rules check --standard PATH --registry PATH --prefix LOCAL --prefix LAB
     python -m labkit.rules ledger BEFORE AFTER
     python -m labkit.rules refs [--status active] PATH...
-    python -m labkit.rules show `AS-015`
+    python -m labkit.rules show `LAB-015`
 """
 
 from __future__ import annotations
@@ -39,17 +41,17 @@ from typing import NamedTuple
 STANDARD = Path(__file__).resolve().parent / "docs" / "standard.md"
 REGISTRY = Path(__file__).resolve().parent / "docs" / "rules.tsv"
 REGISTRY_HEADER = ("id", "alias", "title", "status")
-PREFIXES = ("AS", "CS", "HS")
-STATUSES = ("active", "house", "retired")  # plus moved:<where>
+PREFIXES = ("LAB", "LOCAL", "CODE")
+STATUSES = ("active", "retired")  # plus moved:<where>
 
-RULE_ID_RE = re.compile(r"^(AS|CS|HS)-(\d{3})$")
-RULE_HEAD_RE = re.compile(r"^(?:- |### |## )?\*{0,2}((?:AS|CS|HS)-\d{3}) · (.*)$")
+RULE_ID_RE = re.compile(r"^(LAB|LOCAL|CODE)-(\d{3})$")
+RULE_HEAD_RE = re.compile(r"^(?:- |### |## )?\*{0,2}((?:LAB|LOCAL|CODE)-\d{3}) · (.*)$")
 # the English standard writes "was", a German house standard "war"
 ALIAS_MARK_RE = re.compile(r"\s*\*\((?:was|war) (§[^)]+)\)\*")
 TRAIL_DATE_RE = re.compile(r"\s*\([^)]*\d{4}-\d{2}-\d{2}[^)]*\)\s*$")
 HEADING_RE = re.compile(r"^#{1,3} ")
 REGISTER_START, REGISTER_END = "<!-- register:start", "<!-- register:end"
-CODE_RE = re.compile(r"\b((?:AS|CS|HS)-\d{3})\b")
+CODE_RE = re.compile(r"\b((?:LAB|LOCAL|CODE)-\d{3})\b")
 LEGACY_ID_RE = re.compile(r"§\d+\.[A-Z]?\d+[a-z]?|§\d+\.[A-Z]\b")
 ALIAS_IN_TEXT_RE = re.compile(r"\((?:was|war) §[^)]+\)")
 CLAUSE_CUT_RE = re.compile(r"[:,;—]| – | \(")
@@ -61,10 +63,10 @@ LEGACY_EXAMPLE_MARK = (
 class RuleRow(NamedTuple):
     """One ledger row: an identifier once given to a rule, never taken back."""
 
-    id: str  # AS-nnn / CS-nnn / HS-nnn
+    id: str  # LAB-nnn / LOCAL-nnn / CODE-nnn
     alias: str  # the old §-id it replaced, "" when there was none
-    title: str  # the rule's name; "" for a house rule, whose text does not ship
-    status: str  # active | house | retired | moved:<where it lives now>
+    title: str  # the rule's name
+    status: str  # active | retired | moved:<where it lives now>
 
 
 class RuleHead(NamedTuple):
@@ -162,7 +164,7 @@ def _ledger_problems(rows: list[RuleRow]) -> list[str]:
             )
         if not _valid_status(r.status):
             problems.append(
-                f"{r.id}: status {r.status!r} is not active|house|retired|moved:<where>"
+                f"{r.id}: status {r.status!r} is not active|retired|moved:<where>"
             )
         if r.status == "active" and not r.title:
             problems.append(f"{r.id}: active without a title")
@@ -235,13 +237,14 @@ def check_ledger(before: list[RuleRow], after: list[RuleRow]) -> list[str]:
     old = {r.id for r in before}
     for prefix in PREFIXES:
         top = max(
-            (int(r.id[3:]) for r in before if r.id.startswith(prefix + "-")), default=0
+            (int(r.id.split("-")[1]) for r in before if r.id.startswith(prefix + "-")),
+            default=0,
         )
         for r in after:
             if (
                 r.id.startswith(prefix + "-")
                 and r.id not in old
-                and int(r.id[3:]) <= top
+                and int(r.id.split("-")[1]) <= top
             ):
                 problems.append(
                     f"{r.id}: new id at or below the highest ever given ({prefix}-{top:03d}) — "
@@ -289,9 +292,11 @@ def _line_refs(
             f"{where}: old id {m.group()}"
             + (f" → {row.id} {row.title}" if row else " (no such rule)")
         )
-    # an id inside inline code or a bare string literal ("AS-015") is an argument, not a citation
+    # an id inside inline code or a bare string literal ("LAB-015") is an argument, not a citation
     scan = re.sub(
-        r"`[^`]*`|([\"'])(?:AS|CS|HS)-\d{3}\1", lambda c: " " * len(c.group()), line
+        r"`[^`]*`|([\"'])(?:LAB|LOCAL|CODE)-\d{3}\1",
+        lambda c: " " * len(c.group()),
+        line,
     )
     for m in CODE_RE.finditer(scan):
         row = by_id.get(m.group(1))
@@ -319,9 +324,8 @@ def check_refs(
     an id without its name, an old §-id outside its alias mark.
 
     Head lines, fenced code and a generated register are skipped (check_registry
-    holds the heads), so a standard is checked like any other file. A house rule
-    has no name to cite; with "house" in ALLOWED a bare house id passes. Ids of a
-    prefix the ledger does not keep (CS in labkit's), and ids the ledger marks
+    holds the heads), so a standard is checked like any other file. Ids of a
+    prefix the ledger does not keep (CODE in labkit's), and ids the ledger marks
     `moved:<where>`, are left to the ledger that holds them now.
     """
     problems, register, fence = [], False, False
@@ -342,15 +346,13 @@ def rule_text(
 ) -> str:
     """The block of DOC (default: the standard) that states RULE_ID, from its head to the next.
 
-    Raises for an unknown id and says so for a house rule: an empty answer
-    would look like a rule without text.
+    Raises for an unknown id and says the status of one that is not active:
+    an empty answer would look like a rule without text.
     """
     rows = load_registry(REGISTRY) if rows is None else rows
     row = {r.id: r for r in rows}.get(rule_id)
     if row is None:
         raise KeyError(f"{rule_id}: no such rule in the ledger")
-    if row.status == "house":
-        raise LookupError(f"{rule_id}: house rule; text is not distributed")
     if row.status != "active":
         raise LookupError(f"{rule_id}: {row.status}")
     lines = (STANDARD.read_text(encoding="utf-8") if doc is None else doc).splitlines()
@@ -374,7 +376,7 @@ def paragraph(rule_id: str, lead: str, doc: str | None = None) -> str:
     """The paragraph of RULE_ID's block that begins with LEAD, unindented and unwrapped.
 
     For text another tool hands on verbatim — the severity legend of
-    AS-015 Preflight audit before freezing goes into every code-check bundle —
+    LAB-015 Preflight audit before freezing goes into every code-check bundle —
     so it is quoted from the standard, not copied by hand. Raises when LEAD
     is not found: a renamed paragraph must not leave a bundle without it.
     """
@@ -399,7 +401,7 @@ def main(argv: list[str]) -> int:
         "--prefix",
         action="append",
         choices=PREFIXES,
-        help="ids held to the document (default AS)",
+        help="ids held to the document (default LAB)",
     )
     led = sub.add_parser(
         "ledger",
@@ -432,7 +434,7 @@ def main(argv: list[str]) -> int:
         problems = check_registry(
             load_registry(a.registry),
             rule_heads(a.standard.read_text(encoding="utf-8")),
-            tuple(a.prefix or ["AS"]),
+            tuple(a.prefix or ["LAB"]),
         )
         label = f"rules: {a.standard.name} against {a.registry.name}"
     elif a.cmd == "ledger":

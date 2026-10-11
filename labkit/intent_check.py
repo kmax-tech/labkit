@@ -7,7 +7,7 @@ three-conjunct criterion implemented as one conjunct, gate metrics written
 next to the content numbers the gate was meant to suppress. Reading catches
 this late; a set comparison catches it mechanically.
 
-The contract (Arbeitsstandard AS-004 Identifiers make the intent addressable): every registration that promises the
+The contract (Arbeitsstandard LAB-004 Identifiers make the intent addressable): every registration that promises the
 code something — a verdict, a branch, an abort, a control — carries an id
 in the protocol text (`[C1]` criterion, `[A1]` admissibility condition,
 `[B1]` registered branch; the alphabet is `promises`), and every id
@@ -25,7 +25,7 @@ that has no implementation at all.
 
 Existence, not correctness: a key `a1_pass` proves the stage reports, not
 that it computes the right thing — the semantic half stays with the
-preflight audit (AS-015 Preflight audit before freezing), which works the same ids.
+preflight audit (LAB-015 Preflight audit before freezing), which works the same ids.
 
 Since 2026-10-06 the alphabet lives in `promises`: the letters C
 (criterion), A (admissibility), B (branch), and the promise block that
@@ -146,7 +146,7 @@ def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     if not reg:
         print(
             "intent-check: no intent ids registered ([C1]/[A1]/[B1] — "
-            "AS-004 Identifiers make the intent addressable); nothing to hold the metrics against."
+            "LAB-004 Identifiers make the intent addressable); nothing to hold the metrics against."
         )
         return 0
 
@@ -425,7 +425,7 @@ def code_keys(area: Path) -> dict[str, list[str]]:
     # The imported repo-local code counts as the area's: a shared helper
     # under src/ or lib/ may write a registered key, and reading the area's
     # scripts alone made four promises "absent" (2026-10-07). The house rule
-    # (CS-016 The experiment area reconstructs itself) now wants every id
+    # (CODE-016 The experiment area reconstructs itself) now wants every id
     # literal in the area script, because an id in shared code is counted
     # for every importing area; the scan stays transitive so a repo that
     # has not moved yet is checked, not waved through.

@@ -83,6 +83,6 @@ translation, and it has its own commit.
   with rows defining area, promise and scar table (free knobs already had
   one), and the glossary of chapter 2 defines area.
 
-`lib exp` in AS-003 No run without an intent paragraph and
-AS-046 Notebooks: explore yes, report never became `labkit-init exp` with
+`lib exp` in LAB-003 No run without an intent paragraph and
+LAB-046 Notebooks: explore yes, report never became `labkit-init exp` with
 labkit's own scaffold (0.78.0).

@@ -1,103 +1,103 @@
 id	alias	title_de	template_line_at_0888ec5	side	note
-AS-001	§1.A	Ein Negativbefund ist eine Behauptung	169	package	
-AS-002	§1.B	Das eigene Belegbeispiel ist auch eine Notiz	180	house	notes (own example is a note)
-AS-003	§2.A1	Kein Lauf ohne Intent-Absatz	256	package	
-AS-004	§2.A1a	Kennungen machen den Intent adressierbar	262	package	
-AS-005	§2.A2	Pilot vor Skalierung	301	package	
-AS-006	§2.A3	Misst das Gold-Label, was du misst?	304	package	
-AS-007	§2.A4	Renderprobe vor der Instrumentenprobe	308	package	
-AS-008	§2.A5	Instrumentenprobe vor dem Einfrieren	320	package	
-AS-009	§2.A6	Urteil nur auf der registrierten Stufe	345	package	
-AS-010	§2.A7	Vor dem Lauf committen	353	package	
-AS-011	§2.A8	Pflichtfeld-Check	358	package	
-AS-012	§2.A9	Protokoll ist Inhalt	388	package	
-AS-013	§2.A10	Registrierte Weiche, wenn der Lauf zwei Fragen beantworten kann	394	package	
-AS-014	§2.A11	Je Gold-Klasse ein voll gerendertes Beispiel-Paar	400	package	
-AS-015	§2.A12	Preflight-Audit vor dem Einfrieren	406	package	
-AS-016	§2.A13	Auflösungsprobe vor dem Einfrieren	487	package	
-AS-017	§2.A14	Die Zahl der Audits folgt der Kostenstufe	524	package	
-AS-018	§2.A15	Nach jeder Umsetzung der Routine-Check	561	package	
-AS-019	§2.A16	Der Stempel deckt alles ab, was die Zahl bestimmt	600	package	
-AS-020	§2.B1	Transformationen materialisieren	621	package	
-AS-021	§2.B2	Kein Datensatz ohne Producer	634	package	
-AS-022	§2.B3	Datensätze erklären sich selbst	644	package	
-AS-023	§2.B4	Kein stiller Verlust	665	package	
-AS-024	§2.B5	Reproduzierbar	672	package	
-AS-025	§2.B6	Zwei-Nutzer-Regel: geteilt wird die Rechnung, nicht das Urteil	675	package	
-AS-026	§2.B7	Eine wiederverwendete Komponente bringt ihre Fehler mit	685	package	
-AS-027	§2.C1	Modell-Disziplin	693	package	
-AS-028	§2.C1a	Ein Endpunkt ist ein Modellplatz, kein Dienst	705	package	
-AS-029	§2.C1b	Ein Harness ist keine Inferenz-API: sein Kontext wird isoliert und gestempelt	727	package	
-AS-030	§2.C2	Reasoning-Modelle: das Token-Budget geht zuerst ans Denken	741	package	
-AS-031	§2.C3	Wer eine Differenz will, fragt nach der Differenz	763	package	
-AS-032	§2.C4	Freie Knöpfe: variieren und die Kurve berichten	774	package	
-AS-033	§2.C5	Ein Parameter, der angenommen und verworfen wird, ist der teuerste Bug	783	package	
-AS-034	§2.C6	Nullbedingung im selben Lauf	791	package	
-AS-035	§2.C7	Schwellen gehören zum Lauf, nicht zum Maß	800	package	
-AS-036	§2.C8	Validieren, nicht Einzel-Lauf trauen	806	package	
-AS-037	§2.C9	Jeder Anker trägt sein Soll mit Herleitung	810	package	
-AS-038	§2.C10	Was der Prompt verlangt, prüft das Gate — aus derselben Konstante	815	package	
-AS-039	§2.C11	Anker enthalten die nahen Fälle	824	package	
-AS-040	§2.D1	Am Output prüfen, nicht nur an Zahlen	834	package	
-AS-041	§2.D2	Zahlen erzeugen, nicht abtippen	844	package	
-AS-042	§2.D3	Ausgang protokollieren — auch Fehlschläge	865	package	
-AS-043	§2.D4	Runs über `runlog`	870	package	
-AS-044	§2.D5	Der Prüfblick auf einen Konfund ist Code, kein Absatz	895	package	
-AS-045	§2.D6	Die Prognose steht vor dem Folgelauf	901	package	
-AS-046	§2.D7	Notebooks: erkunden ja, berichten nie	906	package	
-AS-047	§2.D8	Ein Teillauf ist keine Zufallsstichprobe — kein Anker fängt das	921	package	
-AS-048	§2.D9	Eine Zwischenzahl ist kein Ergebnis	929	package	
-AS-049	§2.D10	Lange Läufe über den Hintergrund-Mechanismus des Harness	934	package	harness-neutral: require supervised background execution
-AS-050	§2.D11	Auswertungs-Audit vor dem Berichten	940	package	
-AS-051	§2.E1	Richter-Instanz, nicht Modellname	965	package	
-AS-052	§2.E2	Instanz-Tor vor registriertem Einsatz	972	package	
-AS-053	§2.E3	Auflösungs-Anker	978	package	
-AS-054	§2.E4	Selbstkonsistenz-Pflicht für Logprob-Ablesungen	987	package	
-AS-055	§2.E5	Polaritäts-Symmetrie prüfen	991	package	
-AS-056	§2.E6	Schwellen ungerundet nachrechnen	998	package	
-AS-057	§2.F1	Ein Bereich pro Idee	1014	package	
-AS-058	§2.F2	`data/prepared/` ist nach dem Schreiben read-only	1020	package	
-AS-059	§2.F3	Geteilte Helfer benutzen, nicht im Lauf ändern	1025	package	
-AS-060	§2.F4	Nachsehen statt nachfragen	1038	package	
-AS-061	§2.F5	Subexperiment-Serien tragen ihre Nummer im Namen	1043	package	
-AS-062	§2.F6	Umsortieren von Bestand ist erlaubt — als Paket	1049	package	
-AS-063	§2.F7	Eine Linie hat einen Einstieg	1057	package	
-AS-064	§2.F8	Auch der Pilot ist wiederaufnehmbar	1066	package	
-AS-065	§2.F9	Kein Worktree pro Experiment	1089	package	incident 2026-10-09 to private evidence
-AS-066	§2.G1	Extraktion erst beim zweiten Nutzer	1105	package	
-AS-067	§2.G2	Ein Prompt hat eine Heimat, die der Lauf einfriert	1108	package	
-AS-068	§2.G3	Neue Bereiche starten mit dem gestempelten Skelett	1124	package	
-AS-069	§2.G4	Kein LLM-Cache	1129	package	
-AS-070	§2.H1	Kernfrage zuerst, in Stufen	1142	house	2H paper port
-AS-071	§2.H2	Der Nachweis ist der itemweise Diff, kein Toleranzband	1150	package	lifted out of 2H
-AS-072	§2.H3	Bezeichner reisen englisch	1161	package	lifted out of 2H
-AS-073	§2.H4	Paper-Zahlen tragen ihre Herkunft	1167	house	2H paper port
-AS-074	§3.1	Note und Commit tragen das Warum; Reconcilen	1173	package	generalise note -> research record
-AS-075	§3.2	Docs tragen den Stand, Commits die Änderung	1175	package	
-AS-076	§3.3	Einschränkungs-Konvention	1183	package	generalise -> documented limitation
-AS-077	§3.4	Eigene Commits, fremder Stand bleibt beim Nutzer	1186	package	
-AS-078	§4.1	Eine Idee pro Note	1207	house	ch.4 knowledge side
-AS-079	§4.2	Self-contained Experiment-Bereiche	1208	package	
-AS-080	§4.3	Note-Sorten auf der Wissensseite	1223	house	ch.4 knowledge side
-AS-081	§4.4	Bindungstest: wohin die Note gehört	1264	house	ch.4 knowledge side (binding test, ~/work)
-AS-082	§4.5	In `notes/messung/` trägt jede Note ihre Sorte in der Metazeile	1283	package	
-AS-083	§5.1	Der Name trägt das Bezeichnete	1326	package	
-AS-084	§5.2	Doppelprägungs-Check — erst das Fach, dann das Haus, dann der Bestand	1333	package	
-AS-085	§5.3	Eigene Prägungen als solche markieren	1358	package	
-AS-086	§5.4	Werte-Regel (Codes sind auch Namen)	1362	package	
-AS-087	§5.5	Begriff vor Gebrauch	1372	package	
-AS-088	§5.6	Fach-Notation nachschlagen, nicht erfinden	1375	package	
-AS-089	§6.1	Straffe Prosa	1425	package	scope: reports, protocols, agent answers
-AS-090	§6.2	Protokolle sind selbsttragend	1427	package	
-AS-091	§6.3	Skript-Docstrings sind Referenz, nicht Erklärung	1430	package	
-AS-092	§6.4	Begriffs-Schichtung	1436	package	
-AS-093	§6.5	Detailbudget folgt Relevanz, nicht Analyse-Mühe	1444	package	scope: reports, protocols, agent answers
-AS-094	§6.6	Reihen als Liste oder Tabelle, nie als Fließtext-Kette	1448	package	scope: reports, protocols, agent answers
-AS-095	§7.1	Kern-Problem zuerst	1497	package	
-AS-096	§7.2	„Brauche ich das wirklich?“	1499	package	
-AS-097	§7.3	Bestand zuerst	1502	package	
-AS-098	§7.4	Kern und Rollout trennen	1506	package	
-AS-099		Die These darf sich wiederholen, Stand und Herleitung nicht	1452	house	notes (thesis may repeat, state may not)
-AS-100		Antwort vor Herleitung	1473	package	scope: reports, protocols, agent answers
-AS-101		Vergleichstabellen	1487	package	scope: reports, protocols, agent answers
-AS-102		Kaltleser vor dem Einfrieren	503	package	
+LAB-001	§1.A	Ein Negativbefund ist eine Behauptung	169	package	
+LAB-002	§1.B	Das eigene Belegbeispiel ist auch eine Notiz	180	house	notes (own example is a note)
+LAB-003	§2.A1	Kein Lauf ohne Intent-Absatz	256	package	
+LAB-004	§2.A1a	Kennungen machen den Intent adressierbar	262	package	
+LAB-005	§2.A2	Pilot vor Skalierung	301	package	
+LAB-006	§2.A3	Misst das Gold-Label, was du misst?	304	package	
+LAB-007	§2.A4	Renderprobe vor der Instrumentenprobe	308	package	
+LAB-008	§2.A5	Instrumentenprobe vor dem Einfrieren	320	package	
+LAB-009	§2.A6	Urteil nur auf der registrierten Stufe	345	package	
+LAB-010	§2.A7	Vor dem Lauf committen	353	package	
+LAB-011	§2.A8	Pflichtfeld-Check	358	package	
+LAB-012	§2.A9	Protokoll ist Inhalt	388	package	
+LAB-013	§2.A10	Registrierte Weiche, wenn der Lauf zwei Fragen beantworten kann	394	package	
+LAB-014	§2.A11	Je Gold-Klasse ein voll gerendertes Beispiel-Paar	400	package	
+LAB-015	§2.A12	Preflight-Audit vor dem Einfrieren	406	package	
+LAB-016	§2.A13	Auflösungsprobe vor dem Einfrieren	487	package	
+LAB-017	§2.A14	Die Zahl der Audits folgt der Kostenstufe	524	package	
+LAB-018	§2.A15	Nach jeder Umsetzung der Routine-Check	561	package	
+LAB-019	§2.A16	Der Stempel deckt alles ab, was die Zahl bestimmt	600	package	
+LAB-020	§2.B1	Transformationen materialisieren	621	package	
+LAB-021	§2.B2	Kein Datensatz ohne Producer	634	package	
+LAB-022	§2.B3	Datensätze erklären sich selbst	644	package	
+LAB-023	§2.B4	Kein stiller Verlust	665	package	
+LAB-024	§2.B5	Reproduzierbar	672	package	
+LAB-025	§2.B6	Zwei-Nutzer-Regel: geteilt wird die Rechnung, nicht das Urteil	675	package	
+LAB-026	§2.B7	Eine wiederverwendete Komponente bringt ihre Fehler mit	685	package	
+LAB-027	§2.C1	Modell-Disziplin	693	package	
+LAB-028	§2.C1a	Ein Endpunkt ist ein Modellplatz, kein Dienst	705	package	
+LAB-029	§2.C1b	Ein Harness ist keine Inferenz-API: sein Kontext wird isoliert und gestempelt	727	package	
+LAB-030	§2.C2	Reasoning-Modelle: das Token-Budget geht zuerst ans Denken	741	package	
+LAB-031	§2.C3	Wer eine Differenz will, fragt nach der Differenz	763	package	
+LAB-032	§2.C4	Freie Knöpfe: variieren und die Kurve berichten	774	package	
+LAB-033	§2.C5	Ein Parameter, der angenommen und verworfen wird, ist der teuerste Bug	783	package	
+LAB-034	§2.C6	Nullbedingung im selben Lauf	791	package	
+LAB-035	§2.C7	Schwellen gehören zum Lauf, nicht zum Maß	800	package	
+LAB-036	§2.C8	Validieren, nicht Einzel-Lauf trauen	806	package	
+LAB-037	§2.C9	Jeder Anker trägt sein Soll mit Herleitung	810	package	
+LAB-038	§2.C10	Was der Prompt verlangt, prüft das Gate — aus derselben Konstante	815	package	
+LAB-039	§2.C11	Anker enthalten die nahen Fälle	824	package	
+LAB-040	§2.D1	Am Output prüfen, nicht nur an Zahlen	834	package	
+LAB-041	§2.D2	Zahlen erzeugen, nicht abtippen	844	package	
+LAB-042	§2.D3	Ausgang protokollieren — auch Fehlschläge	865	package	
+LAB-043	§2.D4	Runs über `runlog`	870	package	
+LAB-044	§2.D5	Der Prüfblick auf einen Konfund ist Code, kein Absatz	895	package	
+LAB-045	§2.D6	Die Prognose steht vor dem Folgelauf	901	package	
+LAB-046	§2.D7	Notebooks: erkunden ja, berichten nie	906	package	
+LAB-047	§2.D8	Ein Teillauf ist keine Zufallsstichprobe — kein Anker fängt das	921	package	
+LAB-048	§2.D9	Eine Zwischenzahl ist kein Ergebnis	929	package	
+LAB-049	§2.D10	Lange Läufe über den Hintergrund-Mechanismus des Harness	934	package	harness-neutral: require supervised background execution
+LAB-050	§2.D11	Auswertungs-Audit vor dem Berichten	940	package	
+LAB-051	§2.E1	Richter-Instanz, nicht Modellname	965	package	
+LAB-052	§2.E2	Instanz-Tor vor registriertem Einsatz	972	package	
+LAB-053	§2.E3	Auflösungs-Anker	978	package	
+LAB-054	§2.E4	Selbstkonsistenz-Pflicht für Logprob-Ablesungen	987	package	
+LAB-055	§2.E5	Polaritäts-Symmetrie prüfen	991	package	
+LAB-056	§2.E6	Schwellen ungerundet nachrechnen	998	package	
+LAB-057	§2.F1	Ein Bereich pro Idee	1014	package	
+LAB-058	§2.F2	`data/prepared/` ist nach dem Schreiben read-only	1020	package	
+LAB-059	§2.F3	Geteilte Helfer benutzen, nicht im Lauf ändern	1025	package	
+LAB-060	§2.F4	Nachsehen statt nachfragen	1038	package	
+LAB-061	§2.F5	Subexperiment-Serien tragen ihre Nummer im Namen	1043	package	
+LAB-062	§2.F6	Umsortieren von Bestand ist erlaubt — als Paket	1049	package	
+LAB-063	§2.F7	Eine Linie hat einen Einstieg	1057	package	
+LAB-064	§2.F8	Auch der Pilot ist wiederaufnehmbar	1066	package	
+LAB-065	§2.F9	Kein Worktree pro Experiment	1089	package	incident 2026-10-09 to private evidence
+LAB-066	§2.G1	Extraktion erst beim zweiten Nutzer	1105	package	
+LAB-067	§2.G2	Ein Prompt hat eine Heimat, die der Lauf einfriert	1108	package	
+LAB-068	§2.G3	Neue Bereiche starten mit dem gestempelten Skelett	1124	package	
+LAB-069	§2.G4	Kein LLM-Cache	1129	package	
+LAB-070	§2.H1	Kernfrage zuerst, in Stufen	1142	house	2H paper port
+LAB-071	§2.H2	Der Nachweis ist der itemweise Diff, kein Toleranzband	1150	package	lifted out of 2H
+LAB-072	§2.H3	Bezeichner reisen englisch	1161	package	lifted out of 2H
+LAB-073	§2.H4	Paper-Zahlen tragen ihre Herkunft	1167	house	2H paper port
+LAB-074	§3.1	Note und Commit tragen das Warum; Reconcilen	1173	package	generalise note -> research record
+LAB-075	§3.2	Docs tragen den Stand, Commits die Änderung	1175	package	
+LAB-076	§3.3	Einschränkungs-Konvention	1183	package	generalise -> documented limitation
+LAB-077	§3.4	Eigene Commits, fremder Stand bleibt beim Nutzer	1186	package	
+LAB-078	§4.1	Eine Idee pro Note	1207	house	ch.4 knowledge side
+LAB-079	§4.2	Self-contained Experiment-Bereiche	1208	package	
+LAB-080	§4.3	Note-Sorten auf der Wissensseite	1223	house	ch.4 knowledge side
+LAB-081	§4.4	Bindungstest: wohin die Note gehört	1264	house	ch.4 knowledge side (binding test, ~/work)
+LAB-082	§4.5	In `notes/messung/` trägt jede Note ihre Sorte in der Metazeile	1283	package	
+LAB-083	§5.1	Der Name trägt das Bezeichnete	1326	package	
+LAB-084	§5.2	Doppelprägungs-Check — erst das Fach, dann das Haus, dann der Bestand	1333	package	
+LAB-085	§5.3	Eigene Prägungen als solche markieren	1358	package	
+LAB-086	§5.4	Werte-Regel (Codes sind auch Namen)	1362	package	
+LAB-087	§5.5	Begriff vor Gebrauch	1372	package	
+LAB-088	§5.6	Fach-Notation nachschlagen, nicht erfinden	1375	package	
+LAB-089	§6.1	Straffe Prosa	1425	package	scope: reports, protocols, agent answers
+LAB-090	§6.2	Protokolle sind selbsttragend	1427	package	
+LAB-091	§6.3	Skript-Docstrings sind Referenz, nicht Erklärung	1430	package	
+LAB-092	§6.4	Begriffs-Schichtung	1436	package	
+LAB-093	§6.5	Detailbudget folgt Relevanz, nicht Analyse-Mühe	1444	package	scope: reports, protocols, agent answers
+LAB-094	§6.6	Reihen als Liste oder Tabelle, nie als Fließtext-Kette	1448	package	scope: reports, protocols, agent answers
+LAB-095	§7.1	Kern-Problem zuerst	1497	package	
+LAB-096	§7.2	„Brauche ich das wirklich?“	1499	package	
+LAB-097	§7.3	Bestand zuerst	1502	package	
+LAB-098	§7.4	Kern und Rollout trennen	1506	package	
+LAB-099		Die These darf sich wiederholen, Stand und Herleitung nicht	1452	house	notes (thesis may repeat, state may not)
+LAB-100		Antwort vor Herleitung	1473	package	scope: reports, protocols, agent answers
+LAB-101		Vergleichstabellen	1487	package	scope: reports, protocols, agent answers
+LAB-102		Kaltleser vor dem Einfrieren	503	package	

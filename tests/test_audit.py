@@ -90,8 +90,8 @@ def run(area: Path, answer: str, *extra: str) -> tuple[int, str, str, list[str]]
 
 
 CLEAN = "verdict: 0 blockers, 0 warnings, 2 notes\nscope:\nscripts/01_measure.py"
-WARN = "WARNING · a.py:1 · x · y · AS-015 Preflight audit before freezing · z\nverdict: 0 blockers, 1 warnings, 0 notes"
-BLOCK = "BLOCKER · a.py:1 · x · y · AS-015 Preflight audit before freezing · z\nverdict: 1 blockers, 0 warnings, 0 notes"
+WARN = "WARNING · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\nverdict: 0 blockers, 1 warnings, 0 notes"
+BLOCK = "BLOCKER · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\nverdict: 1 blockers, 0 warnings, 0 notes"
 
 
 class Audit(unittest.TestCase):
@@ -110,25 +110,25 @@ class Audit(unittest.TestCase):
         self.assertIn("Experiment preflight audit", prompt)  # the shipped instructions
         # the standard: the cited rules' text, not the whole document
         self.assertIn(
-            "===== FILE: labkit/docs/standard.md (AS-103, AS-015, AS-017, AS-004, AS-050 — "
+            "===== FILE: labkit/docs/standard.md (LAB-103, LAB-015, LAB-017, LAB-004, LAB-050 — "
             "the rules this audit cites) =====",
             prompt,
         )
         for head in (
-            "AS-015 · Preflight audit before freezing",
-            "AS-050 · Analysis audit before reporting",
+            "LAB-015 · Preflight audit before freezing",
+            "LAB-050 · Analysis audit before reporting",
         ):
             self.assertIn(head, prompt)
-        self.assertIn("| Criterion ≠ code", prompt)  # the scar table came with AS-015
+        self.assertIn("| Criterion ≠ code", prompt)  # the scar table came with LAB-015
         self.assertNotIn("### 2B · The Data Path", prompt)  # a chapter nobody cited
         self.assertNotIn("## 1. Evidence", prompt)
         self.assertEqual(
             audit.cited_rules("preflight"),
-            ["AS-103", "AS-015", "AS-017", "AS-004", "AS-050"],
+            ["LAB-103", "LAB-015", "LAB-017", "LAB-004", "LAB-050"],
         )
 
     def test_declared_scope_and_direct_imports_in_full_deeper_modules_as_index(self):
-        # AS-103: scripts/01_measure imports lib/scoring (direct → full);
+        # LAB-103: scripts/01_measure imports lib/scoring (direct → full);
         # lib/scoring imports lib/deep (deeper → index); the promise block
         # declares scripts/helpers.py, which nothing imports (declared → full)
         area = repo_with()

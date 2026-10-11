@@ -281,7 +281,7 @@ class TestCostTier(unittest.TestCase):
 
 
 class AreaTestPython(unittest.TestCase):
-    """The interpreter for an area's tests has a name of its own (CS-015)."""
+    """The interpreter for an area's tests has a name of its own (CODE-015)."""
 
     def test_the_repo_venv_wins(self):
         with tempfile.TemporaryDirectory() as d:

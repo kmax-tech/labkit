@@ -113,7 +113,7 @@ has now (or says `n/a — <reason>`): a hand-written line is checked, not
 trusted.
 A long *pilot* acknowledges with `LABKIT_UNFROZEN=1`; the acknowledgement
 is written to `config.json` as `unfrozen_ack`, so the number carries it.
-The gate follows the cost tier (`cost` in the protocol head, AS-017 The number of audits follows the cost tier — `AS-nnn` names a rule of the shipped lab standard, `AS` for *Arbeitsstandard*): at
+The gate follows the cost tier (`cost` in the protocol head, LAB-017 The number of audits follows the cost tier — `LAB-nnn` names a rule of the shipped lab standard): at
 `seconds` a rerun costs nothing, so the gate is the **written success
 criterion**, not the freeze — an instrument change after it is a commit
 and a rerun, never a second freeze. `minutes`, `hours` and an unfilled
