@@ -5,6 +5,28 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.80.0 — 2026-10-11
+
+### Added — AS-103 The audit reads by declared scope, not by import graph
+
+- **New rule in the standard, chapter 2A** (ledger row AS-103). The stamp
+  covers everything that determines the number (AS-019); the audit reads
+  what its question needs: the scripts, the files the `[[promise]]` tables
+  declare as scope, and the repo-local modules those import directly.
+  Deeper modules are the instrument's internals: an index, read on
+  assignment.
+- **`labkit-audit` builds the prompt that way.** `audit.gather` returns a
+  `Reading`: code in full (scripts, analysis files, declared scopes,
+  direct imports via `scope_sha.repo_imports`) and the indexed rest of
+  `imported_repo_helpers`; `audit.module_index` renders path, line count,
+  top-level signatures and the first docstring line under one
+  `===== INDEX: … =====` piece. The auditor's `scope:` list names what it
+  read in full; the command adds the indexed modules before holding the
+  list to the stamp. A declared scope file that does not exist refuses
+  the audit (exit 2). uniagent area 22: 444 kB → the scripts, one declared
+  function's file, five direct imports and an index of the other ~30
+  modules.
+
 ## 0.79.0 — 2026-10-10
 
 ### Breaking — `labkit-audit` is the one runner of the experiment-preflight audit

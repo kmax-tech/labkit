@@ -49,15 +49,17 @@ the prose can still change.
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import sys
 import time
 from pathlib import Path
+from typing import NamedTuple
 
-from labkit import llm, protocol_block, rules
+from labkit import llm, promises, protocol_block, rules
 from labkit.repo import area_protocols, layout_root, no_such_area
 from labkit.runs import bound_answering_run, read_outputs
-from labkit.scope_sha import area_stamp, imported_repo_helpers
+from labkit.scope_sha import area_stamp, imported_repo_helpers, repo_imports
 
 AGENT = Path(__file__).with_name("experiment-preflight.agent.md")
 CLARITY_AGENT = Path(__file__).with_name("code-clarity.agent.md")
@@ -85,7 +87,9 @@ CLARITY_VERDICT = re.compile(
 INLINE_NOTE = (
     "The files you are told to read are inlined below instead of read with "
     "tools; each starts with a `===== FILE: <path> =====` line, the rules of "
-    "the standard under one such line, and in MODE analysis the answering "
+    "the standard under one such line, modules further down the import graph "
+    "as signatures under one `===== INDEX: … =====` line (not read — name one "
+    "in an assignment to have it supplied), and in MODE analysis the answering "
     "run's output rows under `===== ROWS <path> … =====` lines, each row as "
     "`<line>: <row>`. Nothing else is in scope."
 )
@@ -189,8 +193,44 @@ def rows_excerpt(path: Path, name: str) -> tuple[str, str]:
     return label, "\n".join(body)
 
 
-def gather(area: Path, protocol: Path | None) -> tuple[Path, list[Path], Path]:
-    """(protocol, code files, standard) the agent reads; refuses what is missing."""
+class Reading(NamedTuple):
+    """What the auditor gets: the protocol, the code read in full, the
+    standard (its cited rules), and the modules it gets as an index only."""
+
+    protocol: Path
+    code: list[Path]  # scripts, analysis files, declared scopes, direct imports
+    standard: Path
+    indexed: list[Path]  # deeper imports: path and signatures, read on assignment
+
+
+def declared_scope_files(protocol: Path) -> list[Path]:
+    """The files the protocol's `[[promise]]` tables declare as scope
+    (`file` or `file:function`, relative to the protocol's directory), each
+    once, in order. No tables: none. A declared file that is not there
+    raises — a promise resting on a missing file is not audited around."""
+    block = promises.parse_block(protocol.read_text(encoding="utf-8"))
+    if block is None:
+        return []
+    out: list[Path] = []
+    for p in block.promises:
+        for entry in p.scope:
+            f = (protocol.parent / entry.split(":", 1)[0]).resolve()
+            if not f.is_file():
+                raise AuditError(
+                    f"{protocol.name}: promise {p.id} declares scope `{entry}`, "
+                    f"and {f} is not a file"
+                )
+            if f not in out:
+                out.append(f)
+    return out
+
+
+def gather(area: Path, protocol: Path | None) -> Reading:
+    """What the agent reads, by AS-103 The audit reads by declared scope,
+    not by import graph: the area's scripts and analysis files, the files
+    the promises declare as scope, the repo-local modules those import
+    directly — in full; every deeper module of the import graph as an index.
+    Refuses what is missing."""
     if not area.is_dir():
         raise AuditError(no_such_area(area))
     protocols = area_protocols(area)
@@ -206,23 +246,55 @@ def gather(area: Path, protocol: Path | None) -> tuple[Path, list[Path], Path]:
     if not chosen.is_file():
         raise AuditError(f"no such protocol: {chosen}")
     repo = layout_root(area)
-    code = sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py"))
-    if not code:
+    scripts = sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py"))
+    if not scripts:
         raise AuditError(f"{area}: no scripts/*.py or analysis/*.py — nothing to audit")
-    code += imported_repo_helpers(area, repo)
+    code = [p.resolve() for p in scripts]
+    code += [f for f in declared_scope_files(chosen) if f not in code]
+    code += [f for f in repo_imports(code, repo) if f.resolve() not in code]
+    whole = imported_repo_helpers(area, repo)
+    indexed = [f for f in whole if f.resolve() not in {c.resolve() for c in code}]
     standard = rules.STANDARD
     if not standard.is_file():
         raise AuditError(
             f"{standard} is missing — labkit was installed without its standard "
             f"(scar table, severity legend); reinstall labkit"
         )
-    return chosen, code, standard
+    return Reading(chosen, code, standard, indexed)
+
+
+def module_index(files: list[Path], repo: Path) -> str:
+    """One line per file — path and line count — then its top-level
+    `def`/`class` signatures with the first docstring line: what the auditor
+    gets instead of the text of a module further down the import graph."""
+    out: list[str] = []
+    for f in files:
+        try:
+            rel = f.resolve().relative_to(repo.resolve()).as_posix()
+        except ValueError:
+            rel = str(f)
+        source = f.read_text(encoding="utf-8")
+        try:
+            tree = ast.parse(source, filename=str(f))
+        except SyntaxError as exc:
+            raise AuditError(f"{rel}: cannot index it ({exc})") from exc
+        out.append(f"{rel} ({len(source.splitlines())} lines)")
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                sig = f"def {node.name}({ast.unparse(node.args)})"
+            elif isinstance(node, ast.ClassDef):
+                sig = f"class {node.name}"
+            else:
+                continue
+            doc = (ast.get_docstring(node) or "").strip().splitlines()
+            out.append(f"  {sig}" + (f"  — {doc[0]}" if doc else ""))
+    return "\n".join(out)
 
 
 def gather_clarity(area: Path, protocol: Path | None) -> tuple[Path, list[Path]]:
     """(protocol, [README, the measure script]) the clarity reader gets — its
     reading scope and nothing else: no lib modules, no standard."""
-    chosen, _code, _standard = gather(area, protocol)
+    chosen = gather(area, protocol).protocol
     readme = area / "README.md"
     script = area / "scripts" / "01_measure.py"
     missing = [p.name for p in (readme, script) if not p.is_file()]
@@ -233,13 +305,26 @@ def gather_clarity(area: Path, protocol: Path | None) -> tuple[Path, list[Path]]
     return chosen, [readme, script]
 
 
+INDEX_LABEL = (
+    "INDEX: repo-local modules further down the import graph — not inlined; "
+    "name one in a finding's assignment to have it read (AS-103 The audit "
+    "reads by declared scope, not by import graph)"
+)
+
+
 def render(
-    mode: str, area: Path, protocol: Path, code: list[Path], standard: Path | None
+    mode: str,
+    area: Path,
+    protocol: Path,
+    code: list[Path],
+    standard: Path | None,
+    indexed: list[Path] | None = None,
 ) -> str:
     """The one prompt: instructions, MODE line, then every piece verbatim
     under a `===== <label> =====` line — the files, the cited rules of the
-    standard (when `standard` is given), in MODE analysis the answering run's
-    rows. Clarity: README and script around the protocol, no standard."""
+    standard (when `standard` is given), the index of the deeper modules
+    (when `indexed` is given), in MODE analysis the answering run's rows.
+    Clarity: README and script around the protocol, no standard, no index."""
     repo = layout_root(area)
 
     def rel(p: Path) -> str:
@@ -258,6 +343,8 @@ def render(
         if standard is not None:
             label, text = standard_excerpt(mode)
             pieces.append((f"FILE: {label}", text))
+        if indexed:
+            pieces.append((INDEX_LABEL, module_index(indexed, repo)))
         if mode == ANALYSIS:
             pieces += run_rows(area, protocol)
     body = "".join(f"===== {label} =====\n{text}\n" for label, text in pieces)
@@ -394,10 +481,11 @@ def main(argv: list[str]) -> int:
     if args.mode == CLARITY:
         return _clarity(args)
     try:
-        protocol, code, standard = gather(args.area, args.protocol)
-        prompt = render(args.mode, args.area, protocol, code, standard)
+        protocol, code, standard, indexed = gather(args.area, args.protocol)
+        prompt = render(args.mode, args.area, protocol, code, standard, indexed)
         print(
-            f"labkit-audit: {args.mode} · {protocol.name} · {len(code)} code file(s) · "
+            f"labkit-audit: {args.mode} · {protocol.name} · {len(code)} code file(s) "
+            f"in full, {len(indexed)} indexed · "
             f"{args.model} · {len(prompt) // 1000} kB",
             file=sys.stderr,
         )
@@ -412,7 +500,10 @@ def main(argv: list[str]) -> int:
         args.out.write_text(report, encoding="utf-8")
     b, w, _ = result["verdict"]
     print(f"\nstamp: {stamp_facts(args.area, result['verdict'])}", file=sys.stderr)
-    for gap in scope_mismatch(args.area, result["scope"]):
+    # the auditor lists what it read in full; the indexed modules are the
+    # caller's to add before the list is held to the stamp (AS-103 The audit reads by declared scope)
+    listed_scope = result["scope"] + [str(p) for p in indexed]
+    for gap in scope_mismatch(args.area, listed_scope):
         print(f"scope WARNING: {gap}", file=sys.stderr)
     listed = sum(grade in ("BLOCKER", "WARNING") for grade, _ in result["findings"])
     if listed and not (b or w):

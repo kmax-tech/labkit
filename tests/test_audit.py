@@ -109,7 +109,7 @@ class Audit(unittest.TestCase):
         self.assertIn("Experiment preflight audit", prompt)  # the shipped instructions
         # the standard: the cited rules' text, not the whole document
         self.assertIn(
-            "===== FILE: labkit/docs/standard.md (AS-015, AS-017, AS-004, AS-050 — "
+            "===== FILE: labkit/docs/standard.md (AS-103, AS-015, AS-017, AS-004, AS-050 — "
             "the rules this audit cites) =====",
             prompt,
         )
@@ -122,8 +122,68 @@ class Audit(unittest.TestCase):
         self.assertNotIn("### 2B · The Data Path", prompt)  # a chapter nobody cited
         self.assertNotIn("## 1. Evidence", prompt)
         self.assertEqual(
-            audit.cited_rules("preflight"), ["AS-015", "AS-017", "AS-004", "AS-050"]
+            audit.cited_rules("preflight"),
+            ["AS-103", "AS-015", "AS-017", "AS-004", "AS-050"],
         )
+
+    def test_declared_scope_and_direct_imports_in_full_deeper_modules_as_index(self):
+        # AS-103: scripts/01_measure imports lib/scoring (direct → full);
+        # lib/scoring imports lib/deep (deeper → index); the promise block
+        # declares scripts/helpers.py, which nothing imports (declared → full)
+        area = repo_with()
+        repo = area.parents[1]
+        (repo / "lib" / "scoring.py").write_text(
+            "import deep\nX = deep.anchor()\n", encoding="utf-8"
+        )
+        (repo / "lib" / "deep.py").write_text(
+            '"""The anchor module.\n\nMore."""\n\n'
+            "def anchor(k: int = 3) -> float:\n"
+            '    """The anchor value, by k."""\n    return 0.7 * k\n\n'
+            "class Table:\n    pass\n",
+            encoding="utf-8",
+        )
+        (area / "scripts" / "helpers.py").write_text("def foo():\n    return 1\n")
+        block = (
+            '[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "holds"\n'
+            'scope = ["scripts/helpers.py:foo"]\n'
+        )
+        (area / "PROTOCOL-x0.md").write_text(
+            fixture.head(id="p-0123456789abcdef", promises=block) + PROTOCOL,
+            encoding="utf-8",
+        )
+        rc, _, err, sent = run(area, CLEAN)
+        self.assertEqual(rc, 0)
+        prompt = sent[0]
+        for path in (
+            "experiments/01-x/scripts/01_measure.py",
+            "experiments/01-x/scripts/helpers.py",
+            "lib/scoring.py",
+        ):
+            self.assertIn(f"===== FILE: {path} =====", prompt)
+        self.assertNotIn("===== FILE: lib/deep.py =====", prompt)
+        self.assertNotIn("return 0.7 * k", prompt)  # not read, only indexed
+        self.assertIn("===== INDEX: repo-local modules further down", prompt)
+        self.assertIn(
+            "lib/deep.py (10 lines)\n  def anchor(k: int=3)  — The anchor value, by k.\n  class Table",
+            prompt,
+        )
+        self.assertIn("3 code file(s) in full, 1 indexed", err)
+        # the indexed module is the caller's to add: no scope WARNING for it
+        self.assertNotIn("scope WARNING: the stamp covers lib/deep.py", err)
+
+    def test_a_declared_scope_file_that_is_missing_refuses(self):
+        area = repo_with()
+        block = (
+            '[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "holds"\n'
+            'scope = ["scripts/gone.py"]\n'
+        )
+        (area / "PROTOCOL-x0.md").write_text(
+            fixture.head(id="p-0123456789abcdef", promises=block) + PROTOCOL,
+            encoding="utf-8",
+        )
+        rc, _, err, sent = run(area, CLEAN)
+        self.assertEqual((rc, sent), (2, []))
+        self.assertIn("declares scope `scripts/gone.py`", err)
 
     def test_mode_analysis_inlines_the_answering_runs_rows_and_metrics(self):
         area = repo_with()

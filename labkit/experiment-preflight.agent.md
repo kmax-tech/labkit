@@ -15,9 +15,16 @@ restate them from memory.
    admissibility condition, registered branch, null condition, free knobs, prompt verbatim.
    This is the ground truth you audit the code against.
 2. `<AREA>/scripts/*.py` and `<AREA>/analysis/*.py` — completely, not skimmed.
-3. The repo-local `lib/` modules those files import (`from lib import …`,
-   bare `import <module>` resolved against `<repo>/lib/`). Shared anchors and
-   thresholds live there and belong to your scope.
+3. The files the protocol's `[[promise]]` tables declare as scope, and the
+   repo-local modules (`lib/`, `src/`) that the scripts and those files
+   import directly — inlined in full. Shared anchors and thresholds live
+   there and belong to your scope. Modules further down the import graph
+   come as an INDEX only (path, signatures, first docstring line): you have
+   not read them. When a finding, a row or a declared constant points into
+   one, write the finding with an assignment that names the module
+   (AS-103 The audit reads by declared scope, not by import graph); the
+   caller supplies it. Never judge an indexed module's behaviour from its
+   signature.
 4. The rules of the lab standard inlined below, from `labkit/docs/standard.md`
    as shipped with labkit — AS-015 Preflight audit before freezing with the
    scar table and the severity legend, AS-017 The number of audits follows
@@ -143,12 +150,13 @@ Then exactly two closing lines:
 
 ```
 verdict: N blockers, M warnings, K notes
-scope: <every file whose content determines a reported number — the scripts,
-the analysis files, and the repo-local lib files reached by import, one per line>
+scope: <every file you READ IN FULL whose content determines a reported number —
+the scripts, the analysis files, the declared scopes and the inlined repo-local
+modules, one per line; the INDEX modules are the caller's to add>
 ```
 
-The `scope` list is used by the caller to compute the audit stamp, so it must
-be complete and path-exact. The severity comes from the legend in AS-015 Preflight audit before freezing — read
+The `scope` list is held by the caller against the audit stamp, so it must
+be complete for what you read and path-exact. The severity comes from the legend in AS-015 Preflight audit before freezing — read
 it there.
 
 **No finding without a failure scenario** (AS-015 Preflight audit before freezing). The fourth field must name

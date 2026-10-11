@@ -147,6 +147,21 @@ def imported_repo_helpers(area: Path, repo: Path) -> list[Path]:
     return sorted(seen)
 
 
+def repo_imports(files: list[Path], repo: Path) -> list[Path]:
+    """The repo-local files (under LOCAL_ROOTS) that `files` import DIRECTLY —
+    one step of the graph `imported_repo_helpers` walks to the end. The
+    audit reads these in full and the rest as an index (AS-103 The audit
+    reads by declared scope, not by import graph); the stamp keeps the
+    whole graph."""
+    roots = [repo / r for r in LOCAL_ROOTS if (repo / r).is_dir()]
+    seen: set[Path] = set()
+    for path in files:
+        for libdir in roots:
+            for name in _lib_names(path, libdir):
+                seen.update(_lib_files(name, libdir))
+    return sorted(seen)
+
+
 def find_pin(start: Path, name: str = "labkit==") -> tuple[str, str] | None:
     """(file, line) of the labkit pin, searched upwards from the area."""
     for d in [start, *start.parents]:
