@@ -1,6 +1,6 @@
 id	alias	title_de	template_line_at_0888ec5	side	note
 LAB-001	§1.A	Ein Negativbefund ist eine Behauptung	169	package	
-LAB-002	§1.B	Das eigene Belegbeispiel ist auch eine Notiz	180	house	notes (own example is a note)
+LOCAL-002	§1.B	Das eigene Belegbeispiel ist auch eine Notiz	180	house	notes (own example is a note)
 LAB-003	§2.A1	Kein Lauf ohne Intent-Absatz	256	package	
 LAB-004	§2.A1a	Kennungen machen den Intent adressierbar	262	package	
 LAB-005	§2.A2	Pilot vor Skalierung	301	package	
@@ -68,18 +68,18 @@ LAB-066	§2.G1	Extraktion erst beim zweiten Nutzer	1105	package
 LAB-067	§2.G2	Ein Prompt hat eine Heimat, die der Lauf einfriert	1108	package	
 LAB-068	§2.G3	Neue Bereiche starten mit dem gestempelten Skelett	1124	package	
 LAB-069	§2.G4	Kein LLM-Cache	1129	package	
-LAB-070	§2.H1	Kernfrage zuerst, in Stufen	1142	house	2H paper port
+LOCAL-070	§2.H1	Kernfrage zuerst, in Stufen	1142	house	2H paper port
 LAB-071	§2.H2	Der Nachweis ist der itemweise Diff, kein Toleranzband	1150	package	lifted out of 2H
 LAB-072	§2.H3	Bezeichner reisen englisch	1161	package	lifted out of 2H
-LAB-073	§2.H4	Paper-Zahlen tragen ihre Herkunft	1167	house	2H paper port
+LOCAL-073	§2.H4	Paper-Zahlen tragen ihre Herkunft	1167	house	2H paper port
 LAB-074	§3.1	Note und Commit tragen das Warum; Reconcilen	1173	package	generalise note -> research record
 LAB-075	§3.2	Docs tragen den Stand, Commits die Änderung	1175	package	
 LAB-076	§3.3	Einschränkungs-Konvention	1183	package	generalise -> documented limitation
 LAB-077	§3.4	Eigene Commits, fremder Stand bleibt beim Nutzer	1186	package	
-LAB-078	§4.1	Eine Idee pro Note	1207	house	ch.4 knowledge side
+LOCAL-078	§4.1	Eine Idee pro Note	1207	house	ch.4 knowledge side
 LAB-079	§4.2	Self-contained Experiment-Bereiche	1208	package	
-LAB-080	§4.3	Note-Sorten auf der Wissensseite	1223	house	ch.4 knowledge side
-LAB-081	§4.4	Bindungstest: wohin die Note gehört	1264	house	ch.4 knowledge side (binding test, ~/work)
+LOCAL-080	§4.3	Note-Sorten auf der Wissensseite	1223	house	ch.4 knowledge side
+LOCAL-081	§4.4	Bindungstest: wohin die Note gehört	1264	house	ch.4 knowledge side (binding test, ~/work)
 LAB-082	§4.5	In `notes/messung/` trägt jede Note ihre Sorte in der Metazeile	1283	package	
 LAB-083	§5.1	Der Name trägt das Bezeichnete	1326	package	
 LAB-084	§5.2	Doppelprägungs-Check — erst das Fach, dann das Haus, dann der Bestand	1333	package	
@@ -97,7 +97,7 @@ LAB-095	§7.1	Kern-Problem zuerst	1497	package
 LAB-096	§7.2	„Brauche ich das wirklich?“	1499	package	
 LAB-097	§7.3	Bestand zuerst	1502	package	
 LAB-098	§7.4	Kern und Rollout trennen	1506	package	
-LAB-099		Die These darf sich wiederholen, Stand und Herleitung nicht	1452	house	notes (thesis may repeat, state may not)
+LOCAL-099		Die These darf sich wiederholen, Stand und Herleitung nicht	1452	house	notes (thesis may repeat, state may not)
 LAB-100		Antwort vor Herleitung	1473	package	scope: reports, protocols, agent answers
 LAB-101		Vergleichstabellen	1487	package	scope: reports, protocols, agent answers
 LAB-102		Kaltleser vor dem Einfrieren	503	package	

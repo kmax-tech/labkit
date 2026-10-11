@@ -449,8 +449,8 @@ labkit- und dotfiles-Teil landen am selben Tag, sonst werden die
 dotfiles-Hooks rot.
 
 1. **Schnitt** (erledigt 2026-10-09): `docs/standard-cut.tsv`, alle 102
-   Kennungen mit genau einer Seite — 95 `package`, 7 `house` (LAB-002, LAB-070,
-   LAB-073, LAB-078, LAB-080, LAB-081, LAB-099). Geprüft: erkannte Köpfe =
+   Kennungen mit genau einer Seite — 95 `package`, 7 `house` (LOCAL-002, LOCAL-070,
+   LOCAL-073, LOCAL-078, LOCAL-080, LOCAL-081, LOCAL-099). Geprüft: erkannte Köpfe =
    Register, package ∩ house = ∅, package ∪ house = alle. LAB-071/072 sind aus
    2H herausgelöst; LAB-049 wird harness-neutral (überwachte
    Hintergrundausführung), LAB-074/076 auf research record bzw. documented
