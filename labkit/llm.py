@@ -34,6 +34,10 @@ models.toml:
     model = "gpt-oss:latest"
     endpoints = ["gamma1"]            # a name from [endpoints] or a literal URL;
                                       # legacy `endpoint = "<url>"` keeps working
+    num_ctx = 32768                   # context window ollama allots; without it
+                                      # the server's default applies, and a
+                                      # longer prompt is CUT, not refused —
+                                      # see _check_prompt_fit
 
     [models.gpt-oss-vllm]
     backend = "openai"                # any OpenAI-compatible server: vLLM, sglang
@@ -125,6 +129,7 @@ def resolve(alias: str) -> dict:
         known = ", ".join(cfg.get("models", {}))
         raise KeyError(f"model alias '{alias}' not in models.toml (known: {known})")
     spec["alias"] = alias
+    _check_num_ctx(alias, spec)
     # Endpoint names resolve against [endpoints]; literal URLs pass through.
     # `endpoints = [...]` (list) and legacy `endpoint = "..."` (string) both
     # normalize to spec["endpoints"] (list) + spec["endpoint"] (first entry,
@@ -167,6 +172,24 @@ def resolve(alias: str) -> dict:
         )
     _FROZEN[alias] = dict(spec)
     return spec
+
+
+def _check_num_ctx(alias: str, spec: dict) -> None:
+    """`num_ctx` is an ollama option and a positive integer; anything else
+    raises — on another backend it would be dropped without a word."""
+    if "num_ctx" not in spec:
+        return
+    value = spec["num_ctx"]
+    if spec.get("backend") != "ollama":
+        raise ValueError(
+            f"alias '{alias}': num_ctx is an ollama option, but the backend is "
+            f"'{spec.get('backend')}' — an OpenAI-compatible server sets its "
+            f"window at start (vllm --max-model-len) and refuses longer prompts"
+        )
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError(
+            f"alias '{alias}': num_ctx must be a positive integer, got {value!r}"
+        )
 
 
 def _aggregate_digests(per_endpoint: dict[str, str]) -> str:
@@ -252,6 +275,15 @@ class BackendError(RuntimeError):
     two CLI-heavy runs in parallel killed both after hundreds of successful
     calls). That is a hiccup, not a misconfiguration, and it belongs in the
     retry set. A real misconfiguration still fails — just three times, fast.
+    """
+
+
+class PromptTruncated(RuntimeError):
+    """The server read less of the prompt than was sent — not retryable.
+
+    ollama fits a prompt longer than its context window by dropping tokens
+    and answers anyway; the reply looks like any other. A retry reads the
+    same cut prompt, so this error stays out of _TRANSIENT.
     """
 
 
@@ -714,9 +746,12 @@ def _complete_ollama_raw(
         options["temperature"] = temperature
     if stop:
         options["stop"] = stop
+    if "num_ctx" in spec:
+        options["num_ctx"] = spec["num_ctx"]
     payload["options"] = options
     body = _post_json(spec, "/api/generate", payload, timeout)
     _TLS.usage = _ollama_usage(body)
+    _check_prompt_fit(spec, len(prompt), _TLS.usage)
     return body["response"].strip()
 
 
@@ -729,6 +764,56 @@ def _ollama_usage(body: dict) -> Usage:
         cached_tokens=None,
         cost_usd=None,
     )
+
+
+#: characters per prompt token above which a prompt counts as cut. Tokenizers
+#: average 3-6 characters per token on English and code (repetitive English
+#: read 5.2 on gpt-oss:20b, leguin, 2026-10-11); a ratio of 10 means
+#: more than half the prompt never reached the model. Floor, not estimate:
+#: a prompt cut by a third passes — the exact check needs `num_ctx`.
+TRUNCATION_CHARS_PER_TOKEN = 10
+#: prompts shorter than this are not checked by ratio: a short prompt fits
+#: every context window, and chat-template tokens skew its ratio
+TRUNCATION_MIN_CHARS = 4000
+
+
+def _check_prompt_fit(spec: dict, prompt_chars: int, usage: Usage) -> None:
+    """Raise PromptTruncated when ollama read less than the whole prompt.
+
+    ollama cuts a prompt longer than its context window and answers what is
+    left; nothing in the reply but `prompt_eval_count` shows it. Two tests:
+    with `num_ctx` set, a count that reaches the window is a cut (ollama
+    0.23.1 trims to exactly the window and answers with HTTP 200: a
+    25,272-character prompt at num_ctx 2048 read 2,048, leguin, 2026-10-11); without it, a count far below the prompt's
+    length (TRUNCATION_CHARS_PER_TOKEN). A reply without the count (whole
+    prompt from cache) cannot be judged and passes.
+    """
+    read = usage.prompt_tokens
+    if read is None or read <= 0:
+        return
+    alias = spec.get("alias", spec.get("model", "?"))
+    window = spec.get("num_ctx")
+    if window is not None and read >= window:
+        raise PromptTruncated(
+            f"{alias}: ollama read {read:,} prompt tokens, the whole num_ctx "
+            f"window of {window:,} — the prompt was cut to fit, and nothing is "
+            f"left to answer with. Raise num_ctx in models.toml or shorten the prompt."
+        )
+    if (
+        prompt_chars >= TRUNCATION_MIN_CHARS
+        and prompt_chars / read > TRUNCATION_CHARS_PER_TOKEN
+    ):
+        hint = (
+            f"num_ctx is {window:,}"
+            if window is not None
+            else "no num_ctx is set, so the server default applies"
+        )
+        raise PromptTruncated(
+            f"{alias}: ollama read {read:,} prompt tokens of a {prompt_chars:,}-"
+            f"character prompt ({prompt_chars / read:.0f} characters per token; "
+            f"a whole prompt reads at 3-6) — the server cut it to its context "
+            f"window, and {hint}. Set num_ctx in models.toml."
+        )
 
 
 def _complete_ollama_chat(
@@ -767,9 +852,12 @@ def _complete_ollama_chat(
         options["temperature"] = temperature
     if stop:
         options["stop"] = stop
+    if "num_ctx" in spec:
+        options["num_ctx"] = spec["num_ctx"]
     payload["options"] = options
     body = _post_json(spec, "/api/chat", payload, timeout)
     _TLS.usage = _ollama_usage(body)
+    _check_prompt_fit(spec, len(system or "") + len(prompt), _TLS.usage)
     message = body.get("message") or {}
     content = (message.get("content") or "").strip()
     _TLS.thinking = (message.get("thinking") or "").strip()

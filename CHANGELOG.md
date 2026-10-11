@@ -5,6 +5,25 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.83.0 — 2026-10-11
+
+### Changed — a cut ollama prompt fails loud
+
+- **`num_ctx` in `models.toml`** for an ollama alias: the context window
+  ollama allots, sent with every call (chat and raw). Unset, the server's
+  default applies. On any other backend, or as anything but a positive
+  integer, `resolve` raises — an OpenAI-compatible server sets its window
+  at start and refuses longer prompts itself.
+- **`llm.PromptTruncated`**: ollama fits a prompt longer than its window
+  by dropping tokens and answers with HTTP 200 (0.23.1 on leguin: a
+  25,272-character prompt at `num_ctx` 2048 read exactly 2,048 tokens).
+  `complete` now raises when `prompt_eval_count` reaches `num_ctx`, or lies
+  far below the prompt's length (more than 10 characters per token on a
+  prompt of 4,000 characters or more). Not retried. A call that 0.82.0
+  answered from a cut prompt raises under 0.83.0 — that answer was never a
+  reading of the whole prompt.
+- `labkit-audit` reports it as "no audit" (exit 2), like a backend failure.
+
 ## 0.82.0 — 2026-10-11
 
 ### Breaking — rule identifiers: `LAB` / `LOCAL` / `CODE` instead of `AS` / `HS` / `CS`

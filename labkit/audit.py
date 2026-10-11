@@ -494,7 +494,7 @@ def main(argv: list[str]) -> int:
         report = llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=4096)
         print(f"labkit-audit: tokens · {llm.last_usage().describe()}", file=sys.stderr)
         result = parse(report)
-    except (AuditError, llm.BackendError, KeyError) as exc:
+    except (AuditError, llm.BackendError, llm.PromptTruncated, KeyError) as exc:
         # KeyError: llm.resolve on an alias models.toml does not know
         print(f"labkit-audit: {str(exc).strip(chr(39))}", file=sys.stderr)
         return 2
@@ -537,7 +537,7 @@ def _clarity(args: argparse.Namespace) -> int:
         report = llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=4096)
         print(f"labkit-audit: tokens · {llm.last_usage().describe()}", file=sys.stderr)
         result = parse_clarity(report)
-    except (AuditError, llm.BackendError, KeyError) as exc:
+    except (AuditError, llm.BackendError, llm.PromptTruncated, KeyError) as exc:
         # KeyError: llm.resolve on an alias models.toml does not know
         print(f"labkit-audit: {str(exc).strip(chr(39))}", file=sys.stderr)
         return 2

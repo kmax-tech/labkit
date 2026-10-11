@@ -23,3 +23,6 @@ model = "claude-opus-5-5"
 #                                 # failover; llm.last_endpoint() says per call
 #                                 # which server answered (two servers are two
 #                                 # instrument instances — record it per row)
+# num_ctx = 32768                 # ollama's context window; unset, the server
+#                                 # default applies and a longer prompt is CUT
+#                                 # (llm raises PromptTruncated when it sees one)
