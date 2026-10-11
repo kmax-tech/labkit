@@ -58,6 +58,12 @@ and report results split by endpoint; the split must sit under the noise
 ceiling. A DIFFERENT model on the second server is simply another alias
 pointing at the other endpoint name.
 
+What a call cost: `llm.last_usage()` right after `complete` returns — the
+token counts the backend reported (`Usage`: prompt, output, cached, USD where
+priced), per thread like `last_endpoint()`. A run that records them per row
+or per batch can say what it cost; labkit-audit prints them beside the
+prompt size.
+
 For specialized calls (logprobs, raw payloads): use resolve(alias) for
 endpoint/model and do your own HTTP — never a literal URL in the experiment.
 """
@@ -77,7 +83,7 @@ import tomllib
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from labkit import endpoint_lease
 
@@ -285,6 +291,47 @@ def last_endpoint() -> str:
     return getattr(_TLS, "endpoint", "")
 
 
+class Usage(NamedTuple):
+    """The token counts of one completion, as the backend reported them;
+    None where it reported nothing. `prompt_tokens` is the whole prompt the
+    model read, cache hits included (claude-cli: input + cache creation +
+    cache read; ollama: `prompt_eval_count`; OpenAI-style: `prompt_tokens`);
+    `cached_tokens` is the part served from a prompt cache (claude-cli:
+    cache read; OpenAI-style: `prompt_tokens_details.cached_tokens`; ollama
+    says nothing); `cost_usd` only where the backend prices the call
+    (claude-cli `total_cost_usd`)."""
+
+    prompt_tokens: int | None
+    output_tokens: int | None
+    cached_tokens: int | None
+    cost_usd: float | None
+
+    def describe(self) -> str:
+        """One line for a log: `prompt 61,234 (8,671 cached) · output 1,902 · 0.41 USD`."""
+
+        def n(v: int | None) -> str:
+            return "n/a" if v is None else f"{v:,}"
+
+        cached = (
+            "" if self.cached_tokens is None else f" ({n(self.cached_tokens)} cached)"
+        )
+        cost = "" if self.cost_usd is None else f" · {self.cost_usd:.2f} USD"
+        return f"prompt {n(self.prompt_tokens)}{cached} · output {n(self.output_tokens)}{cost}"
+
+
+NO_USAGE = Usage(None, None, None, None)
+
+
+def last_usage() -> Usage:
+    """The token counts of this thread's most recent completion — read right
+    after `complete` returns, like `last_endpoint`. NO_USAGE before the first
+    call and when the backend reported none. labkit-audit prints it beside
+    the prompt size, so every stamp can carry what the audit cost
+    (2026-10-11: 30 transcripts, 7 billion cache-read tokens, and no line
+    anywhere said what one audit cost)."""
+    return getattr(_TLS, "usage", NO_USAGE)
+
+
 def last_thinking() -> str:
     """The reasoning trace of this thread's most recent completion — what a
     reasoning model wrote before its answer (ollama `thinking`, OpenAI-style
@@ -401,6 +448,7 @@ def complete(
     """
     for attempt in range(1, attempts + 1):
         _TLS.thinking = ""  # never a previous call's trace
+        _TLS.usage = NO_USAGE  # nor its token counts
         try:
             return _complete_once(
                 alias,
@@ -571,14 +619,60 @@ def _complete_claude_cli(
             f"{temperature}. Pass temperature=None and document the run "
             f"as backend-default sampling, or use an ollama alias."
         )
-    cmd = ["claude", "-p", prompt, "--model", spec["model"], *_CLI_ISOLATION]
+    cmd = [
+        "claude",
+        "-p",
+        prompt,
+        "--model",
+        spec["model"],
+        "--output-format",
+        "json",
+        *_CLI_ISOLATION,
+    ]
     if system:
         cmd += ["--append-system-prompt", system]
     r = _cli_run(cmd, timeout)
     if r.returncode != 0:
         detail = r.stderr.strip() or r.stdout.strip() or "no output on stderr or stdout"
         raise BackendError(f"claude-cli exit {r.returncode}: {detail[:300]}")
-    return r.stdout.strip()
+    return _cli_result(r.stdout)
+
+
+def _cli_result(stdout: str) -> str:
+    """The answer text of a `claude -p --output-format json` reply; its
+    `usage` and `total_cost_usd` go to `last_usage()`. Anything but that JSON
+    object is a backend failure, named with what came instead."""
+    try:
+        body = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        raise BackendError(
+            f"claude-cli: stdout is not the JSON reply of --output-format json "
+            f"({exc.msg}): {stdout.strip()[:200]!r}"
+        ) from exc
+    if not isinstance(body, dict) or "result" not in body:
+        raise BackendError(
+            f"claude-cli: JSON reply without a `result` field: {stdout.strip()[:200]!r}"
+        )
+    if body.get("is_error"):
+        raise BackendError(f"claude-cli: is_error — {str(body['result'])[:300]}")
+    usage = body.get("usage") or {}
+    counted = [
+        usage.get(k)
+        for k in (
+            "input_tokens",
+            "cache_creation_input_tokens",
+            "cache_read_input_tokens",
+        )
+    ]
+    _TLS.usage = Usage(
+        prompt_tokens=sum(int(v) for v in counted if v is not None)
+        if any(v is not None for v in counted)
+        else None,
+        output_tokens=usage.get("output_tokens"),
+        cached_tokens=usage.get("cache_read_input_tokens"),
+        cost_usd=body.get("total_cost_usd"),
+    )
+    return str(body["result"]).strip()
 
 
 def _complete_ollama_raw(
@@ -621,7 +715,20 @@ def _complete_ollama_raw(
     if stop:
         options["stop"] = stop
     payload["options"] = options
-    return _post_json(spec, "/api/generate", payload, timeout)["response"].strip()
+    body = _post_json(spec, "/api/generate", payload, timeout)
+    _TLS.usage = _ollama_usage(body)
+    return body["response"].strip()
+
+
+def _ollama_usage(body: dict) -> Usage:
+    """ollama counts `prompt_eval_count` and `eval_count`; it omits the
+    first when the whole prompt came from its cache, hence None."""
+    return Usage(
+        prompt_tokens=body.get("prompt_eval_count"),
+        output_tokens=body.get("eval_count"),
+        cached_tokens=None,
+        cost_usd=None,
+    )
 
 
 def _complete_ollama_chat(
@@ -662,6 +769,7 @@ def _complete_ollama_chat(
         options["stop"] = stop
     payload["options"] = options
     body = _post_json(spec, "/api/chat", payload, timeout)
+    _TLS.usage = _ollama_usage(body)
     message = body.get("message") or {}
     content = (message.get("content") or "").strip()
     _TLS.thinking = (message.get("thinking") or "").strip()
@@ -719,6 +827,13 @@ def _complete_openai(
     if stop:
         payload["stop"] = stop
     body = _post_json(spec, "/v1/chat/completions", payload, timeout)
+    usage = body.get("usage") or {}
+    _TLS.usage = Usage(
+        prompt_tokens=usage.get("prompt_tokens"),
+        output_tokens=usage.get("completion_tokens"),
+        cached_tokens=(usage.get("prompt_tokens_details") or {}).get("cached_tokens"),
+        cost_usd=None,
+    )
     first = (body.get("choices") or [{}])[0]
     message = first.get("message") or {}
     content = (message.get("content") or "").strip()

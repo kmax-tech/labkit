@@ -96,8 +96,9 @@ BLOCK = "BLOCKER · a.py:1 · x · y · AS-015 Preflight audit before freezing �
 
 class Audit(unittest.TestCase):
     def test_the_auditor_reads_protocol_code_lib_and_the_cited_rules(self):
-        rc, _, _, sent = run(repo_with(), CLEAN)
+        rc, _, err, sent = run(repo_with(), CLEAN)
         self.assertEqual(rc, 0)
+        self.assertIn("labkit-audit: tokens · prompt ", err)  # what the call cost
         prompt = sent[0]
         self.assertIn("MODE: preflight · AREA: experiments/01-x", prompt)
         for path in (

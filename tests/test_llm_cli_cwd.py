@@ -36,7 +36,9 @@ class CliIsolation(unittest.TestCase):
 
         def fake_run(cmd, **kw):
             seen["cmd"] = cmd
-            return subprocess.CompletedProcess(cmd, 0, stdout="Yes\n", stderr="")
+            return subprocess.CompletedProcess(
+                cmd, 0, stdout='{"result": "Yes"}\n', stderr=""
+            )
 
         with (
             mock.patch.object(

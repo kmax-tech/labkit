@@ -35,7 +35,9 @@ and verdict is printed as a NOTE, 2026-10-09):
 
 The report is printed (and written to --out); deciding the findings and
 stamping the protocol field stays with the human (AS-015 Preflight audit before freezing). The command
-prints the stamp's facts — date, scope sha, counts — to copy from.
+prints the stamp's facts — date, scope sha, counts — to copy from, and what
+the call cost (`llm.last_usage()`: prompt and output tokens, USD where the
+backend prices it) beside the prompt size on stderr.
 
 Mode `clarity` is the other reader (2026-10-09): the code-clarity agent's
 area mode (`code-clarity.agent.md`) reads README, protocol and the measure
@@ -490,6 +492,7 @@ def main(argv: list[str]) -> int:
             file=sys.stderr,
         )
         report = llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=4096)
+        print(f"labkit-audit: tokens · {llm.last_usage().describe()}", file=sys.stderr)
         result = parse(report)
     except (AuditError, llm.BackendError, KeyError) as exc:
         # KeyError: llm.resolve on an alias models.toml does not know
@@ -532,6 +535,7 @@ def _clarity(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         report = llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=4096)
+        print(f"labkit-audit: tokens · {llm.last_usage().describe()}", file=sys.stderr)
         result = parse_clarity(report)
     except (AuditError, llm.BackendError, KeyError) as exc:
         # KeyError: llm.resolve on an alias models.toml does not know
