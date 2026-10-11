@@ -382,10 +382,12 @@ sieht das niemand.
   erledigt (Master-Standard, Registry, CLAUDE.md, Agenten, Scaffolder, Hook;
   dotfiles 803db72), labkit-paper erledigt (Pin 0.82.0, lebende Dateien;
   Bereiche 01–03 und Traces bleiben alt; `docs/arbeitsstandard.md` für den
-  Sync „diverged", bis Zeile R den Pin auf ein Tag hebt). **Offen: uniagent**
-  — 18 Dateien, 23 eingefrorene Protokolle bleiben; erst, wenn das laufende
-  Experiment dort durch ist (2026-10-11: fremde offene Änderungen an
-  Settings, Hook, models.toml, Requirements).
+  Sync „diverged", bis Zeile R den Pin auf ein Tag hebt), uniagent erledigt
+  (Pin 0.82.0; CLAUDE.md, Standardkopie, Begriffsnote, Style-Guides). Alt
+  bleiben dort die 23 eingefrorenen Protokolle, sechs gestempelte
+  Mess-Skripte und zwei `CS-016`-Zitate in `src/measure/` — die liegen im
+  Audit-Scope von 19 Bereichen, eine Änderung verschiebt jeden Stempel;
+  umstellen beim nächsten Re-Audit dieser Module.
 - Die Vertragskarte im Bereichs-README hält die Agenten nicht vom Lesen des
   Standards ab (vier von vier lasen ihn trotzdem). Kein Werkzeugproblem;
   nicht weiter optimieren — aber zählen (`reads of labkit source / standard`
