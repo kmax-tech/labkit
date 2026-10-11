@@ -119,7 +119,9 @@ class Audit(unittest.TestCase):
             "LAB-050 · Analysis audit before reporting",
         ):
             self.assertIn(head, prompt)
-        self.assertIn("| Criterion ≠ code", prompt)  # the scar table came with LAB-015
+        self.assertIn(
+            "| Criterion ≠ code", prompt
+        )  # the scar table came with LAB-015 Preflight audit before freezing
         self.assertNotIn("### 2B · The Data Path", prompt)  # a chapter nobody cited
         self.assertNotIn("## 1. Evidence", prompt)
         self.assertEqual(
@@ -128,7 +130,7 @@ class Audit(unittest.TestCase):
         )
 
     def test_declared_scope_and_direct_imports_in_full_deeper_modules_as_index(self):
-        # LAB-103: scripts/01_measure imports lib/scoring (direct → full);
+        # LAB-103 The audit reads by declared scope, not by import graph: scripts/01_measure imports lib/scoring (direct → full);
         # lib/scoring imports lib/deep (deeper → index); the promise block
         # declares scripts/helpers.py, which nothing imports (declared → full)
         area = repo_with()

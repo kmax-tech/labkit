@@ -1,7 +1,7 @@
 """Tests for protocol-check.py against real protocol material.
 
 The checker turns freely written protocols into a pass/fail decision, so it
-gets the parser treatment (LAB-023 Kein stiller Verlust): tested with real raw text.
+gets the parser treatment (LAB-023 No silent loss): tested with real raw text.
 The frozen excerpt below is verbatim from experiments/_archiv/17-bruchstufe-nli/PROTOCOL-bruchstufe-nli.md
 (2026-08-11), one of the five freely written protocols that omitted exactly
 "Typ" and "Modell-I/O" — the two fields whose omission caused bad runs on

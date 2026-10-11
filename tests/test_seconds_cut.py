@@ -78,7 +78,7 @@ class Cut(unittest.TestCase):
         self.assertEqual(protocol_check.check_fields(gap).missing_must, ["Unit"])
 
     def test_frozen_at_seconds_is_refused_not_graduated(self):
-        """Nothing freezes at seconds (LAB-017 Die Zahl der Audits folgt der Kostenstufe): `frozen = true` there owes no
+        """Nothing freezes at seconds (LAB-017 The number of audits follows the cost tier): `frozen = true` there owes no
         should field, but claims a freeze no gate held — one must finding
         (review 2026-10-07: it used to pass silently)."""
         text = (
