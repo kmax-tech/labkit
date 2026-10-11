@@ -378,10 +378,14 @@ sieht das niemand.
   der Veröffentlichung ist das billig, danach Altbestand. Die sieben
   Hausnummern (2, 70, 73, 78, 80, 81, 99) sind Lücken im LAB-Ledger und leben
   als LOCAL-nnn im Haus-Register. Eingefrorene Protokolle, Snapshots und
-  historische Berichte behalten ihre alten Kennungen. Noch offen (Rollout, je
-  ein Auftrag): dotfiles (Master-Standard, Registry, CLAUDE.md, Agenten,
-  `arbeitsstandard-init --prefix`, der Pre-Commit-Hook ruft `rules check
-  --prefix AS` und `refs --status house`), dann uniagent und labkit-paper mit Pin.
+  historische Berichte behalten ihre alten Kennungen. Rollout: dotfiles
+  erledigt (Master-Standard, Registry, CLAUDE.md, Agenten, Scaffolder, Hook;
+  dotfiles 803db72), labkit-paper erledigt (Pin 0.82.0, lebende Dateien;
+  Bereiche 01–03 und Traces bleiben alt; `docs/arbeitsstandard.md` für den
+  Sync „diverged", bis Zeile R den Pin auf ein Tag hebt). **Offen: uniagent**
+  — 18 Dateien, 23 eingefrorene Protokolle bleiben; erst, wenn das laufende
+  Experiment dort durch ist (2026-10-11: fremde offene Änderungen an
+  Settings, Hook, models.toml, Requirements).
 - Die Vertragskarte im Bereichs-README hält die Agenten nicht vom Lesen des
   Standards ab (vier von vier lasen ihn trotzdem). Kein Werkzeugproblem;
   nicht weiter optimieren — aber zählen (`reads of labkit source / standard`
