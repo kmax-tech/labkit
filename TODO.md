@@ -388,6 +388,18 @@ sieht das niemand.
   Mess-Skripte und zwei `CS-016`-Zitate in `src/measure/` — die liegen im
   Audit-Scope von 19 Bereichen, eine Änderung verschiebt jeden Stempel;
   umstellen beim nächsten Re-Audit dieser Module.
+- **Prüfer auf einem lokalen Modell** (2026-10-11): `labkit-audit` läuft
+  schon heute mit jedem `models.toml`-Alias (`--model`); seit 0.83.0 schneidet
+  Ollama einen langen Audit-Prompt nicht mehr still ab (`num_ctx`,
+  `PromptTruncated`). Offen: (a) `code-check` ist noch ein Claude-Subagent
+  (`model: sonnet`) und läuft nur auf dem Modell der Session — als
+  `labkit-audit --mode code-check` (das Bündel inline, ein Aufruf über
+  `labkit.llm`) liefe er auf jedem Backend; das ist die Zeile „Audit-Agenten"
+  in Punkt 6, kein eigener Punkt. (b) Bevor ein lokales Modell als Prüfer
+  zählt: über die Benchmark-Fälle von labkit-paper laufen lassen, Fangquote
+  neben Opus. Der Agent, der einen Lauf startet und überwacht, bleibt die
+  Session; Überwachen braucht kein LLM (ferry + Skript). Auslöser: wer einen
+  Prüfer ohne Claude-Abo braucht (Studierende, Veröffentlichung).
 - Die Vertragskarte im Bereichs-README hält die Agenten nicht vom Lesen des
   Standards ab (vier von vier lasen ihn trotzdem). Kein Werkzeugproblem;
   nicht weiter optimieren — aber zählen (`reads of labkit source / standard`
