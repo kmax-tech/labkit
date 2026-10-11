@@ -360,6 +360,17 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
+- **Audit je Versprechen über seinen deklarierten Scope** (2026-10-11):
+  der Preflight-Audit liest heute den ganzen Bereich samt direkten Importen
+  (Bereich 19 in uniagent: 248 kB, davon 142 kB erreichter Agentencode);
+  der Schnitt auf erreichbaren Code brachte nur 8 % (labkit-paper Bereich
+  04, Zeile T). Der andere Hebel: ein Aufruf je `[[promise]]` mit Protokoll,
+  Satz, Konstanten und nur den Dateien seines `scope` — kleinere Prompts,
+  Befunde adressiert je Kennung, aber kein Blick auf das Zusammenspiel der
+  Versprechen. Auslöser: wenn der Audit je Bereich spürbar teurer wird als
+  der Lauf, den er prüft, oder ein Befund „über Versprechen hinweg" im
+  Benchmark fehlt. Prüfstelle: labkit-paper, dieselben 34 Fälle wie Bereich
+  03 — findet der Audit je Versprechen B1 noch?
 - **Präfixe der Regelkennungen englisch** (2026-10-10): `AS` (Arbeitsstandard),
   `HS` (Hausstandard) und `CS` sind Abkürzungen deutscher bzw. gemischter
   Namen; im englischen Standard erklärt sich `AS` nicht mehr. Kandidaten:
