@@ -5,6 +5,38 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.81.0 — 2026-10-11
+
+### Added — what a call cost
+
+- **`llm.last_usage()`**: the token counts of this thread's most recent
+  completion as the backend reported them (`Usage`: prompt tokens with
+  cache hits included, output tokens, the cached part, USD where the
+  backend prices the call), `NO_USAGE` where it reported none; reset per
+  attempt like `last_thinking()`. Every backend fills it: claude-cli from
+  its JSON reply, ollama from `prompt_eval_count`/`eval_count`,
+  OpenAI-style servers from `usage`.
+- **`labkit-audit` prints it** on stderr beside the prompt size
+  (`labkit-audit: tokens · prompt 61,234 (8,671 cached) · output 1,902 ·
+  0.41 USD`) in every mode — the stamp's facts can carry what the audit
+  cost. Why (2026-10-11): 30 Claude Code transcripts of labkit and
+  uniagent summed to seven billion cache-read tokens, the old subagent
+  audits at 3.65 M per audit, and no labkit line said what one call cost.
+- **`agent_transcript.tokens`** reads the `usage` blocks of a Claude Code
+  transcript (`Tokens`: calls, input, output, cache read, cache creation,
+  the largest context one call read); `TranscriptTrace.tokens` carries
+  it, `usability score --transcript` shows a `transcript · tokens` row and
+  `usability trace` ends with a `tokens:` line.
+
+### Breaking
+
+- **claude-cli runs `claude -p --output-format json`** and reads the
+  answer from the reply's `result` field; plain text on stdout, a reply
+  without `result` or one with `is_error` is a `BackendError`. Callers
+  see the same answer text as before. A test that fakes
+  `subprocess.run` for this backend returns `{"result": "…"}` now
+  (0.80.0 was the last version that took plain stdout).
+
 ## 0.80.0 — 2026-10-11
 
 ### Added — AS-103 The audit reads by declared scope, not by import graph

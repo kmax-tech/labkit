@@ -56,7 +56,7 @@ claude-hook pre-run|post-change|stop  # the Claude Code hooks a lab repo install
 claude-hook sessions [--run RUN_ID]  # the session log the stop hook keeps (.git/labkit-sessions.jsonl): session, transcript, runs
 labkit-hooks install|check [REPO]   # install this labkit's hooks (pre-commit, core.hooksPath, claude-hook); rerun after a pin raise
 usability stage|score|trace <DIR>  # cold-agent probe: stage a probe lab repo, score the agent's trace (time, steps, number), read a trace
-labkit-audit <AREA> --mode preflight|analysis   # the AGENT audit (the experiment-preflight instructions, one call: area + the rules they cite + in analysis the run's rows) through any models.toml alias — not the `preflight` gate; exit 1 on a blocker OR a warning
+labkit-audit <AREA> --mode preflight|analysis   # the AGENT audit (the experiment-preflight instructions, one call: area + the rules they cite + in analysis the run's rows) through any models.toml alias — not the `preflight` gate; exit 1 on a blocker OR a warning; stderr says the prompt size and what the call cost (`llm.last_usage()`)
 labkit-audit <AREA> --mode clarity              # a newcomer's reading of README, protocol and measure script (code-clarity); exit 1 on findings, never a gate
 labkit-params <AREA> [--run ID]     # the values the answering run ran with: home, meaning, tier (guaranteed / static evidence)
 labkit-calltree <COMMAND> [-- ARGS]  # what one run of a command called, cut to its package: path:line per call path (reading aid, not a check)
@@ -75,8 +75,8 @@ usability stage /tmp/probe --venv .venv --task judge   # seconds cut + measure s
 usability stage /tmp/probe --venv .venv --cost unset   # the full form; the agent declares the tier
 #   hand <probe>.prompt.md (CLAUDE.md as a session loads it + the TASK.md pointer) to a COLD agent; it logs one line per step
 usability score /tmp/probe                # number == truth? bound? tier? wall-clock, steps per tag → probe.score.json
-usability score /tmp/probe --transcript agent.jsonl   # plus measured: wall-clock, tool time, labkit commands, refusals, files and source reads
-usability trace agent.jsonl              # the agent's timeline: elapsed, duration, command (bookkeeping cut), REFUSED
+usability score /tmp/probe --transcript agent.jsonl   # plus measured: wall-clock, tool time, labkit commands, refusals, tokens (output, largest context, cache read), files and source reads
+usability trace agent.jsonl              # the agent's timeline: elapsed, duration, command (bookkeeping cut), REFUSED; last line: the tokens
 usability score /tmp/probe --transcript agent.jsonl --archive DIR   # keep transcript (gzip), timeline and score
 ```
 

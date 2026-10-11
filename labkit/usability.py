@@ -1006,6 +1006,7 @@ def score(root: Path, transcript: Path | None = None) -> int:  # noqa: C901 comp
                 or "none",
             ),
             ("transcript · gate refusals", str(measured.refusals)),
+            ("transcript · tokens", agent_transcript.describe_tokens(measured.tokens)),
             ("transcript · files opened", str(len(measured.files_read))),
             (
                 "transcript · source / standard reads",

@@ -14,12 +14,18 @@ Read here (Claude Code's JSONL, one record per line):
 - `type = "assistant"`: `message.content[]` blocks of `type = "tool_use"`
   with `id`, `name`, `input`;
 - `type = "user"`: `message.content[]` blocks of `type = "tool_result"`
-  with `tool_use_id`, `content` (a string or text blocks).
+  with `tool_use_id`, `content` (a string or text blocks);
+- `type = "assistant"`: `message.usage` with the model call's token counts
+  (`input_tokens`, `output_tokens`, `cache_read_input_tokens`,
+  `cache_creation_input_tokens`); a key the record lacks counts as 0.
 
 Two tiers, as everywhere in labkit:
 
 - **measured** — wall-clock (first to last record), tool time (call to its
-  result), the number of calls, which labkit commands ran;
+  result), the number of calls, which labkit commands ran, the tokens the
+  model calls cost (`Tokens`: output, cache read, the largest context one
+  call read — 2026-10-11: the usability probes averaged 2.9 M cache-read
+  tokens per agent and no score said so);
 - **heuristic** — which files a shell command read (the verbs `cat`, `head`,
   `tail`, `sed`, `less`, `wc`, `nl` and their arguments), and whether a
   result was a refusal (a line `pre-commit: …`, `finalize: N blocker(s)`
@@ -76,6 +82,21 @@ class Call:
 
 
 @dataclass(frozen=True)
+class Tokens:
+    """What the model calls of one transcript cost, summed over the assistant
+    records' `usage` blocks (measured). Every call reads its whole context
+    again, so `cache_read` grows with the square of the conversation while
+    `output` is what the agent wrote."""
+
+    calls: int  # assistant records carrying a usage block
+    input: int  # uncached prompt tokens
+    output: int
+    cache_read: int
+    cache_creation: int
+    context_max: int  # the largest context one call read: input + cache read + creation
+
+
+@dataclass(frozen=True)
 class TranscriptTrace:
     """What the transcript shows; see the module docstring for the tiers."""
 
@@ -84,6 +105,7 @@ class TranscriptTrace:
     calls: int
     commands: dict[str, int]  # labkit command → runs
     refusals: int  # results carrying a gate's refusal (heuristic)
+    tokens: Tokens
     files_read: list[str] = field(default_factory=list)  # in order, no repeats
     source_reads: list[str] = field(
         default_factory=list
@@ -108,17 +130,15 @@ def _text(content: object) -> str:
     return ""
 
 
-def read_calls(path: Path) -> tuple[list[Call], float, float]:  # noqa: C901 complexity baseline 2026-10-08
-    """(calls in order, first stamp, last stamp) of one transcript."""
-    uses: dict[str, tuple[float, str, str]] = {}
-    order: list[str] = []
-    results: dict[str, tuple[float, str]] = {}
-    stamps: list[float] = []
+def records(path: Path) -> list[tuple[int, dict]]:
+    """(line number, record) for every non-empty line of a transcript
+    (plain or gzipped JSONL); a line that is not a JSON object names itself."""
     raw = (
         gzip.decompress(path.read_bytes()).decode("utf-8")
         if path.suffix == ".gz"
         else path.read_text(encoding="utf-8")
     )
+    out: list[tuple[int, dict]] = []
     for n, line in enumerate(raw.splitlines(), 1):
         if not line.strip():
             continue
@@ -128,6 +148,66 @@ def read_calls(path: Path) -> tuple[list[Call], float, float]:  # noqa: C901 com
             raise TranscriptError(f"{path.name}:{n}: not JSON — {exc.msg}") from exc
         if not isinstance(record, dict):
             raise TranscriptError(f"{path.name}:{n}: a record is a JSON object")
+        out.append((n, record))
+    return out
+
+
+def tokens(path: Path) -> Tokens:
+    """The token counts of one transcript, summed over its assistant records'
+    `usage` blocks; a `usage` that is not an object, or a count that is not
+    an integer, names its line."""
+    calls = inp = out = read = created = context_max = 0
+    for n, record in records(path):
+        if record.get("type") != "assistant":
+            continue
+        usage = (record.get("message") or {}).get("usage")
+        if usage is None:
+            continue
+        if not isinstance(usage, dict):
+            raise TranscriptError(f"{path.name}:{n}: `usage` is not an object")
+        counts = {}
+        for key in (
+            "input_tokens",
+            "output_tokens",
+            "cache_read_input_tokens",
+            "cache_creation_input_tokens",
+        ):
+            v = usage.get(key, 0)
+            if v is None:
+                v = 0
+            if not isinstance(v, int) or isinstance(v, bool):
+                raise TranscriptError(
+                    f"{path.name}:{n}: usage.{key} is {v!r}, not an integer"
+                )
+            counts[key] = v
+        calls += 1
+        inp += counts["input_tokens"]
+        out += counts["output_tokens"]
+        read += counts["cache_read_input_tokens"]
+        created += counts["cache_creation_input_tokens"]
+        context_max = max(
+            context_max,
+            counts["input_tokens"]
+            + counts["cache_read_input_tokens"]
+            + counts["cache_creation_input_tokens"],
+        )
+    return Tokens(
+        calls=calls,
+        input=inp,
+        output=out,
+        cache_read=read,
+        cache_creation=created,
+        context_max=context_max,
+    )
+
+
+def read_calls(path: Path) -> tuple[list[Call], float, float]:
+    """(calls in order, first stamp, last stamp) of one transcript."""
+    uses: dict[str, tuple[float, str, str]] = {}
+    order: list[str] = []
+    results: dict[str, tuple[float, str]] = {}
+    stamps: list[float] = []
+    for n, record in records(path):
         at = _stamp(record, n)
         stamps.append(at)
         content = (record.get("message") or {}).get("content")
@@ -283,6 +363,7 @@ def trace(path: Path, root: Path, source: re.Pattern[str]) -> TranscriptTrace:
         calls=len(calls),
         commands=commands,
         refusals=sum(1 for c in calls if REFUSAL.search(c.output)),
+        tokens=tokens(path),
         files_read=files,
         source_reads=hits,
     )
@@ -297,10 +378,22 @@ def _log_step(words: list[str]) -> bool:
     )
 
 
+def describe_tokens(t: Tokens) -> str:
+    """One line: `12 calls · output 3,831 · context max 267,129 · cache read
+    75,841,155`, or `no usage recorded` for a transcript without one."""
+    if not t.calls:
+        return "no usage recorded"
+    return (
+        f"{t.calls} calls · output {t.output:,} · context max {t.context_max:,} · "
+        f"cache read {t.cache_read:,}"
+    )
+
+
 def timeline(path: Path) -> list[str]:
     """One line per call: elapsed since the first record, duration, tool,
     the command without its bookkeeping (cd, log appends) and heredoc
-    bodies; REFUSED where the result carries a gate's refusal."""
+    bodies; REFUSED where the result carries a gate's refusal. The last
+    line is what the model calls cost (`describe_tokens`)."""
     calls, first, _ = read_calls(path)
     out = []
     for c in calls:
@@ -317,4 +410,5 @@ def timeline(path: Path) -> list[str]:
         e = round(c.at - first)
         flag = " REFUSED" if REFUSAL.search(c.output) else ""
         out.append(f"{e // 60:2d}:{e % 60:02d} {dur} {c.tool:<6} {text[:110]}{flag}")
+    out.append(f"tokens: {describe_tokens(tokens(path))}")
     return out

@@ -26,7 +26,14 @@ def transcript(calls: list[tuple[float, str, dict, float, str]]) -> Path:
                 "message": {
                     "content": [
                         {"type": "tool_use", "id": f"u{n}", "name": tool, "input": inp}
-                    ]
+                    ],
+                    # what the call cost: the context grows by 1000 per call
+                    "usage": {
+                        "input_tokens": 3,
+                        "output_tokens": 50,
+                        "cache_read_input_tokens": 1000 * n,
+                        "cache_creation_input_tokens": 1000,
+                    },
                 },
             }
         )
@@ -103,6 +110,41 @@ class Measured(unittest.TestCase):
     def test_commands_count_by_position_not_inside_a_heredoc(self):
         self.assertEqual(self.t.commands, {"protocol-check": 1, "finalize": 1})
 
+    def test_tokens_sum_the_usage_blocks_and_keep_the_largest_context(self):
+        n = len(CALLS)
+        self.assertEqual(
+            self.t.tokens,
+            at.Tokens(
+                calls=n,
+                input=3 * n,
+                output=50 * n,
+                cache_read=1000 * sum(range(n)),
+                cache_creation=1000 * n,
+                context_max=3 + 1000 * (n - 1) + 1000,
+            ),
+        )
+
+    def test_a_count_that_is_not_an_integer_names_its_line(self):
+        path = transcript(CALLS[:1])
+        text = path.read_text(encoding="utf-8").replace(
+            '"output_tokens": 50', '"output_tokens": "50"'
+        )
+        path.write_text(text, encoding="utf-8")
+        with self.assertRaises(at.TranscriptError) as cm:
+            at.tokens(path)
+        self.assertIn("agent.jsonl:2: usage.output_tokens", str(cm.exception))
+
+    def test_a_transcript_without_usage_counts_no_calls(self):
+        path = transcript(CALLS[:1])
+        records = [
+            json.loads(ln) for ln in path.read_text(encoding="utf-8").splitlines() if ln
+        ]
+        for r in records:
+            r.get("message", {}).pop("usage", None)
+        path.write_text("\n".join(json.dumps(r) for r in records), encoding="utf-8")
+        self.assertEqual(at.tokens(path).calls, 0)
+        self.assertEqual(at.describe_tokens(at.tokens(path)), "no usage recorded")
+
 
 class Heuristic(unittest.TestCase):
     def setUp(self):
@@ -163,6 +205,10 @@ class Timeline(unittest.TestCase):
         self.assertNotIn("from labkit", lines[2])
         self.assertTrue(lines[5].endswith("REFUSED"), lines[5])
         self.assertFalse(lines[4].endswith("REFUSED"), lines[4])
+        self.assertTrue(
+            lines[-1].startswith("tokens: 7 calls · output 350 · context max "),
+            lines[-1],
+        )
 
 
 if __name__ == "__main__":
