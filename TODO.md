@@ -379,8 +379,8 @@ sieht das niemand.
   alte Präfix als Alias in `rules.tsv`, `check_refs` muss beide lesen, und
   eingefrorene Protokolle und Lauf-Snapshots behalten das alte. Bis dahin:
   das Präfix beim ersten Vorkommen ausschreiben (README, Kopf von
-  `standard.md`). Auslöser: die Veröffentlichung oder der erste fremde Leser,
-  der fragt.
+  `standard.md`) — gemacht 2026-10-11, `AS` bleibt die Kennung. Auslöser für
+  mehr: die Veröffentlichung oder der erste fremde Leser, der fragt.
 - Die Vertragskarte im Bereichs-README hält die Agenten nicht vom Lesen des
   Standards ab (vier von vier lasen ihn trotzdem). Kein Werkzeugproblem;
   nicht weiter optimieren — aber zählen (`reads of labkit source / standard`

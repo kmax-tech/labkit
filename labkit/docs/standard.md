@@ -14,7 +14,9 @@ standard ships the rule text only. The rule text says what applies, and in a
 half-sentence why; the evidence says where it went wrong. Anyone who doubts a
 rule or wants to change it reads the evidence first.
 
-**Identifiers.** Every rule carries an identifier `AS-nnn` and a name; the
+**Identifiers.** Every rule carries an identifier `AS-nnn` and a name; `AS`
+abbreviates *Arbeitsstandard*, the German name of this standard in the lab
+that wrote it, and stays as it is — an identifier never changes. The
 ledger is `rules.tsv` next to this file, and labkit assigns every `AS` number.
 Some numbers belong to rules of the lab that wrote this standard and are not
 distributed: the ledger lists them as `house`, and `python -m labkit.rules show`
