@@ -1,4 +1,4 @@
-"""Tests for scope-sha — the audit stamp of Arbeitsstandard LAB-015 Preflight-Audit vor dem Einfrieren / LAB-050 Auswertungs-Audit vor dem Berichten.
+"""Tests for scope-sha — the audit stamp of lab standard LAB-015 Preflight audit before freezing / LAB-050 Analysis audit before reporting.
 
 Occasion (2026-09-08): the shell one-liner this command replaces produced a
 stable-looking stamp that covered no file CONTENT on macOS (BSD xargs has no

@@ -136,7 +136,7 @@ def run_main(text: str) -> tuple[int, str]:
 
 
 class TestFrozenNeedsTheAudit(unittest.TestCase):
-    """`frozen = true` means audited first (LAB-015 Preflight-Audit vor dem Einfrieren): the old checker failed a
+    """`frozen = true` means audited first (LAB-015 Preflight audit before freezing): the old checker failed a
     frozen protocol whose audit field was still a placeholder."""
 
     def test_frozen_without_audit_line_fails(self):
@@ -623,7 +623,7 @@ class TestAuditFields(unittest.TestCase):
     a sign flip between BT score and log-odds, r2 fitted and scored on the
     same anchors, a gate without a positive control, a probe writing into the
     run's output file; none caught by the chain itself. Hence two audits
-    (Arbeitsstandard LAB-015 Preflight-Audit vor dem Einfrieren code vs. intent before freezing, LAB-050 Auswertungs-Audit vor dem Berichten
+    (lab standard LAB-015 Preflight audit before freezing code vs. intent before freezing, LAB-050 Analysis audit before reporting
     evaluation vs. frozen criterion before reporting). The preflight audit is
     now a head value (`preflight_audit`), the analysis audit a field written
     after the run."""
@@ -658,7 +658,7 @@ class TestAuditFields(unittest.TestCase):
 
 
 class TestResolutionCheckGate(unittest.TestCase):
-    """The resolution check field (LAB-016 Auflösungsprobe vor dem Einfrieren, 2026-09-09) is a should: owed as a
+    """The resolution check field (LAB-016 Resolution check before freezing, 2026-09-09) is a should: owed as a
     must once frozen; the template's own "Answer form + resolution †" field
     must NOT stand in for it."""
 
