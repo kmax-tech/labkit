@@ -161,3 +161,110 @@ class Prompts(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestFromRun(unittest.TestCase):
+    """--from-run (0.88.0): the number is written back from metrics.json, never retyped."""
+
+    PROTOCOL = """# Experiment protocol: count
+
+## Summary (after the run, for a person)
+
+- **Result:** <the answer to the question above, in at most two plain sentences…>
+
+## Intent (before the run)
+
+- **Question / hypothesis:** how many documents per case?
+
+## Result (after the run — write back, don't go quiet)
+
+- **Answer to the question:** <per registered id its verdict, and the run_id…>
+
+## Runs (documented runs — via `runlog`, cite run_ids instead of retyping numbers)
+
+- <run_id> — <one sentence: what this run was>
+
+## Head (read by the checks)
+"""
+    RUN = "2026-10-12T21-37-53_c3be"
+
+    def _area(self, metrics: dict) -> Path:
+        import json
+
+        area = Path(tempfile.mkdtemp())
+        run = area / "runs" / self.RUN
+        run.mkdir(parents=True)
+        (run / "config.json").write_text(
+            json.dumps({"schema_version": 2}), encoding="utf-8"
+        )
+        (run / "completion.json").write_text(
+            json.dumps({"status": "completed"}), encoding="utf-8"
+        )
+        (run / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
+        (area / "PROTOCOL-count.md").write_text(self.PROTOCOL, encoding="utf-8")
+        return area
+
+    def test_answer_result_and_runs_line_come_from_the_run(self):
+        from labkit import recheck
+
+        area = self._area(
+            {
+                "mean_docs_per_case": 3.5,
+                "n_cases": 12,
+                "a1_pass": True,
+                "duration_s": 0.02,
+            }
+        )
+        text, filled, run_id = protocol_fill.from_run(self.PROTOCOL, area)
+        self.assertEqual(run_id, self.RUN)
+        self.assertEqual(filled, ["Answer to the question", "Result", "Runs"])
+        line = (
+            "mean_docs_per_case = 3.5, n_cases = 12, a1_pass = True (run "
+            + self.RUN
+            + ")"
+        )
+        self.assertIn("- **Answer to the question:** " + line, text)
+        self.assertIn("- **Result:** " + line, text)
+        self.assertIn("- " + self.RUN + " — the kept run", text)
+        self.assertNotIn("duration_s", text)  # labkit's own key is not the number
+        self.assertNotIn("<run_id>", text)
+        # what --check holds the protocol to: every number and the run_id
+        note = area / "PROTOCOL-count.md"
+        note.write_text(text, encoding="utf-8")
+        recheck.cited(
+            note,
+            recheck.plain_numbers({"mean_docs_per_case": 3.5, "n_cases": 12}),
+            self.RUN,
+        )
+
+    def test_a_written_answer_is_refused_without_force_and_the_run_is_named_once(self):
+        area = self._area({"mean_docs_per_case": 3.5})
+        text, _, _ = protocol_fill.from_run(self.PROTOCOL, area)
+        with self.assertRaises(ValueError) as cm:
+            protocol_fill.from_run(text, area)
+        self.assertIn("already filled", str(cm.exception))
+        again, filled, _ = protocol_fill.from_run(text, area, force=True)
+        self.assertNotIn("Runs", filled)  # the run line is there once, not twice
+        self.assertEqual(again.count(self.RUN), 3)
+
+    def test_a_named_run_that_is_not_completed_refuses(self):
+        area = self._area({"x": 1})
+        with self.assertRaises(SystemExit):
+            protocol_fill.from_run(
+                self.PROTOCOL, area, run_id="2026-01-01T00-00-00_0000"
+            )
+
+    def test_the_command(self):
+        import contextlib
+        import io
+
+        area = self._area({"mean_docs_per_case": 3.5})
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = protocol_fill.main([str(area / "PROTOCOL-count.md"), "--from-run"])
+        self.assertEqual(rc, 0, buf.getvalue())
+        self.assertIn("filled from run " + self.RUN, buf.getvalue())
+        self.assertIn(
+            "mean_docs_per_case = 3.5",
+            (area / "PROTOCOL-count.md").read_text(encoding="utf-8"),
+        )

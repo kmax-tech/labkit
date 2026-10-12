@@ -358,7 +358,8 @@ def main() -> None:
         measure(args.model, plan(items), OUT,
                 prov={**llm.provenance(args.model), "run": run.run_id})
         evaluate(OUT, cfg, run)
-        print(f"run: {run.run_id}  → cite it in {PROTOCOL.name}, field Answer to the question")
+        print(f"run: {run.run_id}  → protocol-fill {PROTOCOL.name} --from-run {run.run_id}  "
+              f"(writes the Answer, Result and Runs lines from metrics.json)")
 
 
 if __name__ == "__main__":

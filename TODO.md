@@ -485,6 +485,10 @@ sieht das niemand.
   Umweg; die Rückschrift der Zahl von Hand in drei Zeilen ist der erste
   Punkt auf seiner Liste. Damit kommen alle drei Modelle ohne Quelltext zur
   gebundenen Zahl; die sechs offenen Schnitte sind modellunabhängig.
+  **Gebaut 2026-10-12 (0.88.0): (a)/(k) `protocol-fill --from-run`** — Antwort-,
+  Result- und Laufzeile aus `metrics.json`; Skelette und Spur nennen das
+  Kommando. Prüfstelle: ein Cloud-Durchgang, dessen Log keine Hand-Rückschrift
+  mehr zeigt.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:

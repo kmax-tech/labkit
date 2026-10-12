@@ -5,6 +5,24 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.88.0 — 2026-10-12
+
+### Added — `protocol-fill --from-run`: the number is written back, never retyped
+
+- **`protocol-fill PROTOCOL --from-run [RUN_ID]`** writes the Answer line,
+  the Summary's Result line and the Runs entry from the run's
+  `metrics.json` (the area's newest completed run by default): every
+  reported key and value as recorded, plus the run_id — exactly what
+  `--check` (`recheck.cited`) holds the protocol to. labkit's own keys
+  (`duration_s`, `llm_retries`) stay out; a filled line is refused without
+  `--force`; the stamped `<run_id>` placeholder becomes the entry.
+- The counting and the full measure skeleton print that command after the
+  run; the seconds lane and the area README name it. Why: twelve cold
+  agents in the cloud (Fable, Sonnet, Haiku; 2026-10-12) typed the number
+  into three lines by hand, every one named it as the retyping LAB-041
+  Generate numbers, don't retype them forbids, and one `--check` failed on
+  it.
+
 ## 0.87.1 — 2026-10-12
 
 ### Fixed — the gates agree with the 0.87.0 stamp: a count registers nothing and owes no table

@@ -48,6 +48,7 @@ intent-check <PROTOCOL-*.md>        # registered promise ids vs. metrics keys
 code-check <AREA>                   # intent ids, parser fixtures, prompt drift, code the stamp cannot follow (sys.path, dynamic loaders, imports outside lib/ and src/) + audit bundle for the agent
 scope-sha [--area DIR]              # audit stamp over the code that determines a number
 protocol-fill <PROTOCOL> FIELD VAL  # fill one stamped placeholder field by label
+protocol-fill <PROTOCOL> --from-run [RUN]  # write the number back from the run's metrics.json: Answer, Result and Runs lines, never retyped
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
 preflight <AREA>                    # the mechanical pre-freeze gate: protocol + audit findings decided + code + scope + dirty check + area tests (not the agent audit)
 finalize <AREA>                     # post-run gate: completion + intent-check + open fields

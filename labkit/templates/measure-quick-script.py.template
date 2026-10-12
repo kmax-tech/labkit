@@ -93,7 +93,8 @@ def main() -> None:
         metrics = evaluate_rows(items, ids)
         run.metrics(**metrics)
         print(json.dumps(metrics, indent=1))
-        print(f"run: {run.run_id}  → cite it in {PROTOCOL.name}, field \"Answer to the question\"")
+        print(f"run: {run.run_id}  → protocol-fill {PROTOCOL.name} --from-run {run.run_id}  "
+              f"(writes the Answer, Result and Runs lines from metrics.json)")
 
 
 if __name__ == "__main__":

@@ -11,19 +11,29 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md "Meaning of the gold label" "positive = ..."
     protocol-fill PROTOCOL-x.md --line 27 Question "does Y move X?"
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
+    protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   the Answer, Result and Runs lines from the
+                                               run's metrics.json (newest completed run by default)
 
 A field that is already filled is refused without --force — overwriting an
-answer silently is how two truths happen. Labels are matched with the †
+answer silently is how two truths happen.
+
+`--from-run` is the write-back LAB-041 Generate numbers, don't retype them
+asks for: twelve cold agents (cloud probes 2026-10-12) typed the number into
+three protocol lines by hand, and one `--check` failed on the retyping. The
+lines carry every metric key and value as the run recorded them, and the
+run_id — exactly what `--check` (`recheck.cited`) holds the protocol to. Labels are matched with the †
 marker and case ignored; an ambiguous label (same label in Summary and a
 section) is refused with the line numbers, disambiguate with --line.
 """
 
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 from pathlib import Path
 
+from labkit import recheck, runs
 from labkit.code_check import prompt_constants
 from labkit.protocol_check import field_name, fields, placeholder_fields
 
@@ -81,6 +91,76 @@ def fill(
 
 _FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})")
 
+RUNS_PLACEHOLDER = re.compile(r"^(\s*[-*]\s+)<run_id>\s+—\s+<[^>]*>\s*$")
+RUNS_HEADING = re.compile(r"^## Runs\b")
+
+
+def answer_line(metrics: dict, run_id: str) -> str:
+    """`key = value, … (run <id>)` — every reported key and value as the run
+    recorded them, so `recheck.cited` finds each number and the run_id."""
+    kept = {k: v for k, v in metrics.items() if k not in recheck.LABKIT_KEYS}
+    body = ", ".join(f"{k} = {v}" for k, v in kept.items())
+    return f"{body} (run {run_id})"
+
+
+def runs_line(text: str, run_id: str, sentence: str) -> tuple[str, bool]:
+    """The Runs section names `run_id`: the stamped `<run_id>` placeholder line
+    becomes the entry, else one is appended to the section; a section that
+    names the run already is left alone. (text, changed)."""
+    lines = text.split("\n")
+    heading = next((i for i, ln in enumerate(lines) if RUNS_HEADING.match(ln)), None)
+    if heading is None:
+        raise ValueError("no `## Runs` section to name the run in")
+    end = heading + 1
+    while end < len(lines) and not lines[end].startswith("## "):
+        end += 1
+    section = range(heading + 1, end)
+    if any(run_id in lines[i] for i in section):
+        return text, False
+    entry = f"- {run_id} — {sentence}"
+    for i in section:
+        if RUNS_PLACEHOLDER.match(lines[i]):
+            lines[i] = entry
+            return "\n".join(lines), True
+    k = end
+    while k > heading + 1 and not lines[k - 1].strip():
+        k -= 1
+    lines.insert(k, entry)
+    return "\n".join(lines), True
+
+
+def from_run(
+    text: str, area: Path, run_id: str | None = None, force: bool = False
+) -> tuple[str, list[str], str]:
+    """Write the run's number back: the Answer line, the Summary's Result line
+    and the Runs entry from `runs/<run_id>/metrics.json` (newest completed
+    run when RUN_ID is None). Returns (text, what was filled, run_id). A
+    filled Answer or Result is refused without `force` (fill's rule)."""
+    run = recheck.run_dir(area, run_id)
+    metrics = runs.read_metrics(run / "metrics.json")
+    answer = answer_line(metrics, run.name)
+    filled: list[str] = []
+    for label in ("Answer to the question", "Result"):
+        try:
+            text = fill(text, label, answer, force=force)
+            filled.append(label)
+        except ValueError as exc:
+            if "no field labelled" in str(exc):
+                continue  # a cut without this line (the Summary of a report-grade full form carries it)
+            raise
+    try:
+        text = fill(text, "Answering run", run.name, force=force)
+        filled.append("Answering run")
+    except ValueError as exc:
+        if "no field labelled" not in str(exc) and "already filled" not in str(exc):
+            raise
+    text, changed = runs_line(
+        text, run.name, "the kept run; its metrics.json is the number"
+    )
+    if changed:
+        filled.append("Runs")
+    return text, filled, run.name
+
 
 def fill_prompts(text: str, constants: dict[str, str]) -> str:
     """Return the protocol text with the Prompt field's code block written
@@ -131,9 +211,27 @@ def fill_prompts(text: str, constants: dict[str, str]) -> str:
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 
 
+def _write_back(args: argparse.Namespace, text: str) -> int:
+    """`--from-run`: the number from the run's metrics.json into the protocol."""
+    try:
+        new, filled, run_id = from_run(
+            text,
+            args.protocol.resolve().parent,
+            None if args.from_run == "newest" else args.from_run,
+            force=args.force,
+        )
+    except ValueError as exc:
+        print(f"protocol-fill: {exc}")
+        return 1
+    args.protocol.write_text(new, encoding="utf-8")
+    print(
+        f"filled from run {run_id}: {', '.join(filled) or 'nothing (all written already)'}"
+    )
+    return 0
+
+
 def main(argv: list[str]) -> int:
     """Command line of `protocol-fill`: fill one placeholder field by its label, or the Prompt block from the script."""
-    import argparse
 
     ap = argparse.ArgumentParser(
         prog="protocol-fill",
@@ -151,6 +249,15 @@ def main(argv: list[str]) -> int:
         "--prompts",
         action="store_true",
         help="write the Prompt block from the area scripts' PROMPT constants",
+    )
+    ap.add_argument(
+        "--from-run",
+        nargs="?",
+        const="newest",
+        default=None,
+        metavar="RUN_ID",
+        help="write the Answer, Result and Runs lines from the run's metrics.json "
+        "(the area's newest completed run without RUN_ID)",
     )
     ap.add_argument(
         "--line",
@@ -182,8 +289,10 @@ def main(argv: list[str]) -> int:
         args.protocol.write_text(new, encoding="utf-8")
         print("filled: Prompt (from the scripts' PROMPT constants)")
         return 0
+    if args.from_run is not None:
+        return _write_back(args, text)
     if not args.field or not args.value:
-        ap.error("need FIELD and VALUE (or --list)")
+        ap.error("need FIELD and VALUE (or --list or --from-run)")
     try:
         new = fill(
             text, args.field, " ".join(args.value), line_no=args.line, force=args.force

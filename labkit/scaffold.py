@@ -486,13 +486,13 @@ Intent; if it needs an "and", it is two experiments>
 
 **The gates, in order.** `code-check` after every code change · at
 `minutes`/`hours`: `preflight` + the preflight audit, then freeze · the run
-through `runlog` · `finalize` · number + run_id into the protocol · {recheck}.
+through `runlog` · `finalize` · `protocol-fill --from-run` writes the number back · {recheck}.
 
 ## State
 
 - [ ] Registration written in the protocol (**before** the first run)
 {"- [ ] `--probe` read, parser cases in the test" if skeleton else "- [ ] the area test green (`.venv/bin/python -m pytest tests/test_" + nn + "_" + slug + ".py`)"}
-- [ ] Run, `finalize` green, number + run_id in the protocol
+- [ ] Run, `protocol-fill --from-run`, `finalize` green
 """
 
 
@@ -657,7 +657,7 @@ Next (cost = "seconds" — no freeze, no audit per run, the first run is the pro
   1. PROTOCOL-{slug}.md: fill the seconds cut — `type` in the head, then question, unit,
      {"criterion, admissibility condition, prompt, null condition" if model else "data, exclusions — no criterion, no promise table: a count has no bar to clear"}; `protocol-check --contract` names the labels.
   2. scripts/01_measure.py: {"PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run" if model else "expected_ids(), rows(), evaluate_rows()"}.
-  3. git add + commit, then scripts/01_measure.py — number + run_id into "Answer to the question".
+  3. git add + commit, then scripts/01_measure.py, then `protocol-fill PROTOCOL-{slug}.md --from-run <run_id>`.
   4. finalize {rel} checks the provenance; the agent audit comes when the number is promoted."""
     test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
     return f"""
