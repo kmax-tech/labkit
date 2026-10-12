@@ -19,6 +19,11 @@ What it runs, in order:
                       for it here; an unfilled cost counts as `hours`.
                       Printed, never counted — "audit due" is a reminder,
                       not a blocker; so is the cold-reader line (LAB-102 Cold reader before freezing)
+  2b. audit findings  the findings files `labkit-audit` wrote (`audits/*.toml`,
+                      `labkit.findings`): a finding still `open` is a warning,
+                      a blocker once frozen = true; a `deferred` finding in
+                      another area of the repo is printed as a reminder, never
+                      counted; an unreadable file is a blocker
   3. code-check       intent ids against the code; a line starting with
                       `BLOCKER` is a blocker, any other a warning
   4. scope-sha        audit stamp over the input scope
@@ -42,7 +47,7 @@ import sys
 from pathlib import Path
 
 from labkit.code_check import check_intent_ids
-from labkit import install_hooks
+from labkit import findings, install_hooks
 from labkit.repo import (
     area_path,
     area_protocols,
@@ -215,16 +220,56 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
         "evidence, never blocks"
     )
 
+    # -- 2b. audit findings (the data behind the audit line) ----------------
+    print("── audit findings ──")
+    frozen = report.head is not None and report.head.frozen
+    try:
+        records = findings.area_records(area)
+    except findings.FindingsError as exc:
+        print(f"  BLOCKER: {exc}")
+        blockers += 1
+        records = []
+    undecided = [(r, f) for r in records for f in r.open]
+    grade = "BLOCKER" if frozen else "WARNING"
+    for r, f in undecided:
+        print(f"  {grade}: undecided in {r.path.name}: {f.text}")
+    if undecided:
+        print(
+            f"  {len(undecided)} finding(s) still `open` — decide each (fixed / accepted / "
+            f"deferred / dismissed) before freezing (LAB-015 Preflight audit before freezing)"
+            + (" — frozen = true owes it" if frozen else "")
+        )
+        if frozen:
+            blockers += len(undecided)
+        else:
+            warnings += len(undecided)
+    experiments = area.resolve().parent
+    try:
+        elsewhere = findings.deferred_elsewhere(area, experiments)
+    except findings.FindingsError as exc:
+        print(f"  WARNING: {exc}")
+        warnings += 1
+        elsewhere = []
+    for other, r, f in elsewhere:
+        print(f"  deferred in {other.name} ({r.date}): {f.text} — {f.reason}")
+    if elsewhere:
+        print(
+            f"  {len(elsewhere)} deferred finding(s) elsewhere in the repo — a reminder, "
+            f"not counted (uniagent 2026-10-08: one deferred in area 16 bit in 17)"
+        )
+    if not records and not elsewhere:
+        print("  none recorded")
+    elif not undecided and not elsewhere:
+        print(f"  all decided ({len(records)} audit(s) recorded)")
+
     # -- 3. code-check (intent ids) ---------------------------------------
     print("── code-check: intent ids ──")
-    findings = check_intent_ids(area, protocol)
-    for f in findings:
+    code_findings = check_intent_ids(area, protocol)
+    for f in code_findings:
         print(f"  {f}")
-    code_blockers = sum(1 for f in findings if f.startswith("BLOCKER"))
-    code_warnings = sum(1 for f in findings if f.startswith("WARNING"))
-    blockers += code_blockers
-    warnings += code_warnings
-    if not findings:
+    blockers += sum(1 for f in code_findings if f.startswith("BLOCKER"))
+    warnings += sum(1 for f in code_findings if f.startswith("WARNING"))
+    if not code_findings:
         print("  ok")
 
     # -- 4. scope-sha ------------------------------------------------------
@@ -265,7 +310,6 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
     # -- 7. area tests -----------------------------------------------------
     print("── tests ──")
     tests = area_tests(area, repo)
-    frozen = report.head is not None and report.head.frozen
     if not tests.files:
         # Frozen means every gap is owed (protocol-check's graduation); a
         # missing permanent resolution check is such a gap (2026-10-07: it

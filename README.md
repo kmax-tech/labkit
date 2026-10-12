@@ -49,7 +49,7 @@ code-check <AREA>                   # intent-id check + audit bundle for the age
 scope-sha [--area DIR]              # audit stamp over the code that determines a number
 protocol-fill <PROTOCOL> FIELD VAL  # fill one stamped placeholder field by label
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
-preflight <AREA>                    # the mechanical pre-freeze gate: protocol + code + scope + dirty check + area tests (not the agent audit)
+preflight <AREA>                    # the mechanical pre-freeze gate: protocol + audit findings decided + code + scope + dirty check + area tests (not the agent audit)
 finalize <AREA>                     # post-run gate: completion + intent-check + open fields
 finalize --if-reported <PROTOCOL>.. # the commit gate: finalize every protocol whose answer cites a run
 claude-hook pre-run|post-change|stop  # the Claude Code hooks a lab repo installs (stdin: event JSON)
@@ -57,7 +57,7 @@ claude-hook sessions [--run RUN_ID]  # the session log the stop hook keeps (.git
 labkit-hooks install|check [REPO]   # install this labkit's hooks (pre-commit, core.hooksPath, claude-hook); rerun after a pin raise
 labkit-check [REPO] [--offline]     # is this repo current: pin · installed · newest tag at the source · hook · rule references; reports only, exit 1 on STALE
 usability stage|score|trace <DIR>  # cold-agent probe: stage a probe lab repo, score the agent's trace (time, steps, number), read a trace
-labkit-audit <AREA> --mode preflight|analysis   # the AGENT audit (the experiment-preflight instructions, one call: area + the rules they cite + in analysis the run's rows) through any models.toml alias — not the `preflight` gate; exit 1 on a blocker OR a warning; stderr says the prompt size and what the call cost (`llm.last_usage()`)
+labkit-audit <AREA> --mode preflight|analysis   # the AGENT audit (the experiment-preflight instructions, one call: area + the rules they cite + in analysis the run's rows) through any models.toml alias — not the `preflight` gate; exit 1 on a blocker OR a warning; stderr says the prompt size and what the call cost (`llm.last_usage()`); writes its findings as data into `<AREA>/audits/<date>-<mode>.toml` — set status (fixed / accepted / deferred / dismissed) and reason per finding, `preflight` holds the file to it
 labkit-audit <AREA> --mode clarity              # a newcomer's reading of README, protocol and measure script (code-clarity); exit 1 on findings, never a gate
 labkit-params <AREA> [--run ID]     # the values the answering run ran with: home, meaning, tier (guaranteed / static evidence)
 labkit-calltree <COMMAND> [-- ARGS]  # what one run of a command called, cut to its package: path:line per call path (reading aid, not a check)

@@ -5,6 +5,31 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.85.0 — 2026-10-12
+
+Four levers from reading uniagent's 23 preflight and 21 analysis audits
+(2026-10-12): what the audits found is now data, what the stamp cannot
+follow is a mechanical warning, a criterion that noise can fail is a scar,
+and an audit at cost `seconds` before the first run says it is early.
+
+### Added — audit findings as data (`labkit.findings`)
+
+- **`labkit-audit --mode preflight|analysis` writes its findings into the
+  area**: `audits/<date>-<mode>.toml`, an `[audit]` table (date, mode,
+  model, scope sha, counts) and one `[[finding]]` per BLOCKER/WARNING/NOTE
+  line, every one `status = "open"`. The person sets the status — fixed,
+  accepted, deferred, dismissed — and a reason; `accepted`, `deferred` and
+  `dismissed` without a reason do not read.
+- **`preflight` has a station for it**: a finding still `open` is a
+  warning before the freeze and a blocker once `frozen = true`; a
+  `deferred` finding in any other area of the repo is printed as a
+  reminder and never counted; an unreadable findings file is a blocker.
+- Why: in uniagent a finding deferred in area 16 as "its own task" bit in
+  area 17; the same finding was accepted three times; 13 of 44 audit lines
+  end in accepted/dismissed and what they decided sits in a 400-character
+  protocol line. Now the deferred ones stay visible and an audit's yield
+  can be counted instead of read.
+
 ## 0.84.0 — 2026-10-12
 
 ### Added — `labkit-check`: is this repo current?

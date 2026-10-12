@@ -13,7 +13,7 @@ holds the imports to it — a new module or an upward import fails the suite.
 
 | Layer | Modules | Holds |
 |---|---|---|
-| 1 · formats and places | `protocol_block`, `promises`, `protocol_check`, `runs`, `repo`, `scope_sha`, `rules` | read-only answers: the protocol's TOML block and its head, the promise alphabet and tables, the protocol's prose fields by label, what a run directory says about itself, where the repo, the area's protocols and git are, the standard's rules and every reference to them |
+| 1 · formats and places | `protocol_block`, `promises`, `protocol_check`, `runs`, `repo`, `scope_sha`, `rules`, `findings` | read-only answers: the protocol's TOML block and its head, the promise alphabet and tables, the protocol's prose fields by label, what a run directory says about itself, where the repo, the area's protocols and git are, the standard's rules and every reference to them, an audit's findings as data (`audits/*.toml`: written by `labkit-audit`, decided by the person, read by `preflight`) |
 | 2 · a run and its effects | `runlog`, `batch`, `llm`, `endpoint_lease` | writing a run (binding, refusals, provenance, index), resumable output, model calls, the model-slot lease |
 | 3 · checks | `intent_check`, `code_check`, `recheck`, `notes_check` | one question each, against code, metrics or a note |
 | 4 · gates | `preflight`, `finalize`, `claude_hooks`, `audit`, `install_hooks` | sequence the checks at a decision point; the hooks call the gates; `audit` runs the agent audit through `llm`; `install_hooks` installs the git hooks the gates run in (preflight checks they are there) |

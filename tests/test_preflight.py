@@ -7,6 +7,7 @@ that the exit code reflects the worst finding.
 
 import contextlib
 import io
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -15,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import preflight  # noqa: E402
+from labkit import findings, preflight  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 BODY = """\
@@ -297,3 +298,76 @@ class AreaTestPython(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestAuditFindings(unittest.TestCase):
+    """Station 2b: findings files are read; open = warning, blocker once frozen; deferred elsewhere = reminder."""
+
+    ROW = [
+        (
+            "WARNING",
+            "WARNING · scripts/01_measure.py:1 · x · y · LAB-019 The stamp covers everything · z",
+        )
+    ]
+
+    def _recorded(self, d, frozen=False):
+        text = _protocol(frozen=True) if frozen else CLEAN_PROTOCOL
+        area, _ = _area(d, text)
+        path = findings.write(area, "preflight", "opus", "abc", (0, 1, 0), self.ROW)
+        return area, path
+
+    def test_open_finding_is_a_warning_before_the_freeze(self):
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = self._recorded(d)
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 0, out)
+            self.assertIn("WARNING: undecided in", out)
+            self.assertIn("1 finding(s) still `open`", out)
+
+    def test_open_finding_blocks_once_frozen(self):
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = self._recorded(d, frozen=True)
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 1, out)
+            self.assertIn("BLOCKER: undecided in", out)
+
+    def test_decided_findings_pass_and_an_unreadable_file_blocks(self):
+        with tempfile.TemporaryDirectory() as d:
+            area, path = self._recorded(d)
+            text = path.read_text().replace('status = "open"', 'status = "fixed"')
+            path.write_text(text)
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 0, out)
+            self.assertIn("all decided (1 audit(s) recorded)", out)
+            path.write_text(
+                text.replace('status = "fixed"', 'status = "accepted"')
+            )  # no reason
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 1, out)
+            self.assertIn("BLOCKER: ", out)
+            self.assertIn("owes a reason", out)
+
+    def test_deferred_in_another_area_is_a_reminder_not_a_count(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "experiments"
+            (root / "17-here").mkdir(parents=True)
+            area, _ = _area(root / "17-here")
+            other = root / "16-there"
+            other.mkdir()
+            path = findings.write(
+                other, "preflight", "opus", "abc", (0, 1, 0), self.ROW
+            )
+            path.write_text(
+                path.read_text()
+                .replace('status = "open"', 'status = "deferred"')
+                .replace('reason = ""', 'reason = "own task"')
+            )
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 0, out)
+            self.assertIn("deferred in 16-there", out)
+            self.assertIn("own task", out)
+            self.assertIn("1 deferred finding(s) elsewhere", out)
+            # a reminder, not a count: the summary line is the same without it
+            shutil.rmtree(other / "audits")
+            _, alone = _run_preflight(area)
+            self.assertEqual(out.splitlines()[-1], alone.splitlines()[-1])

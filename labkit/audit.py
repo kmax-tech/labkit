@@ -33,11 +33,15 @@ and verdict is printed as a NOTE, 2026-10-09):
        as a WARNING; an audit that passed on warnings would have let it by)
     2  no audit: a missing file, an unreadable report, a backend failure
 
-The report is printed (and written to --out); deciding the findings and
-stamping the protocol field stays with the human (LAB-015 Preflight audit before freezing). The command
-prints the stamp's facts — date, scope sha, counts — to copy from, and what
-the call cost (`llm.last_usage()`: prompt and output tokens, USD where the
-backend prices it) beside the prompt size on stderr.
+The report is printed (and written to --out), and its findings are written
+as data into the area — `audits/<date>-<mode>.toml`, one `[[finding]]` per
+line, every one `open` (`labkit.findings`); deciding each (fixed / accepted
+/ deferred / dismissed, with reason) and stamping the protocol field stays
+with the human (LAB-015 Preflight audit before freezing), and `preflight`
+holds the file to that. The command prints the stamp's facts — date, scope
+sha, counts — to copy from, and what the call cost (`llm.last_usage()`:
+prompt and output tokens, USD where the backend prices it) beside the
+prompt size on stderr.
 
 Mode `clarity` is the other reader (2026-10-09): the code-clarity agent's
 area mode (`code-clarity.agent.md`) reads README, protocol and the measure
@@ -58,7 +62,7 @@ import time
 from pathlib import Path
 from typing import NamedTuple
 
-from labkit import llm, promises, protocol_block, rules
+from labkit import findings, llm, promises, protocol_block, rules
 from labkit.repo import area_protocols, layout_root, no_such_area
 from labkit.runs import bound_answering_run, read_outputs
 from labkit.scope_sha import area_stamp, imported_repo_helpers, repo_imports
@@ -502,7 +506,16 @@ def main(argv: list[str]) -> int:
     if args.out:
         args.out.write_text(report, encoding="utf-8")
     b, w, _ = result["verdict"]
+    sha, _, _ = area_stamp(args.area)
+    recorded = findings.write(
+        args.area, args.mode, args.model, sha, result["verdict"], result["findings"]
+    )
     print(f"\nstamp: {stamp_facts(args.area, result['verdict'])}", file=sys.stderr)
+    print(
+        f"findings: {recorded} — set status (fixed / accepted / deferred / dismissed) "
+        f"and reason for each; preflight reads it",
+        file=sys.stderr,
+    )
     # the auditor lists what it read in full; the indexed modules are the
     # caller's to add before the list is held to the stamp (LAB-103 The audit reads by declared scope)
     listed_scope = result["scope"] + [str(p) for p in indexed]

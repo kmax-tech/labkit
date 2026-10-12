@@ -239,6 +239,19 @@ class Audit(unittest.TestCase):
         self.assertEqual((rc, sent), (2, []))
         self.assertIn("head unreadable", err)
 
+    def test_the_findings_are_written_as_data_into_the_area(self):
+        area = repo_with()
+        rc, _, err, _ = run(area, WARN)
+        self.assertEqual(rc, 1)
+        files = sorted((area / "audits").glob("*-preflight.toml"))
+        self.assertEqual(len(files), 1, err)
+        self.assertIn(f"findings: {files[0]}", err)
+        text = files[0].read_text(encoding="utf-8")
+        self.assertIn('grade = "WARNING"', text)
+        self.assertIn('status = "open"', text)
+        self.assertIn("LAB-015 Preflight audit before freezing", text)
+        self.assertIn("warnings = 1", text)
+
     def test_a_warning_is_a_finding_to_decide(self):
         self.assertEqual(run(repo_with(), WARN)[0], 1)
         self.assertEqual(run(repo_with(), BLOCK)[0], 1)
