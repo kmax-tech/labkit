@@ -442,6 +442,13 @@ sieht das niemand.
   den Tag der vorigen Sitzung; `rm -rf .venv` im Setup-Skript war nicht
   wirksam oder nicht gespeichert — vor Durchgang 8 das Setup-Log der Sitzung
   lesen (pwd, pip, `labkit-check`-Zeilen), nicht raten.
+  **Ursache gefunden (2026-10-12, im Browser nachgesehen):** die Cloud
+  nimmt den Container der vorigen Sitzung wieder auf und überspringt das
+  Setup-Skript, solange die Umgebung unverändert ist — Sitzungen 2, 4, 6
+  (Umgebung kurz zuvor editiert) zeigen „Ran setup script", 3, 5, 7 nicht.
+  Abhilfe im Probe-Repo: ein SessionStart-Hook in `.claude/settings.json`
+  prüft `labkit-check` und baut das venv sonst aus dem Pin neu; läuft vor
+  dem ersten Schritt des Agenten, nicht im Log.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:
