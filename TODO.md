@@ -360,6 +360,44 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
+- **Aus der Audit-Auswertung uniagent (2026-10-12, 23 Preflight- und 21
+  Analysis-Audits, 46 Leseproben) — vier Hebel, Reihenfolge ist Empfehlung:**
+  1. **Audit-Befunde als Daten, nicht als Prosa.** Heute landet ein Audit als
+     eine lange `preflight_audit`-Zeile; was „angenommen" oder „eigener
+     Auftrag" war, verschwindet darin. uniagent: der in 16 vertagte Befund
+     (Wortlaut der Referenzzeile nicht im Fingerabdruck) biss in 17; derselbe
+     Befund „Skript von 14 außerhalb des Stempels" dreimal angenommen; 13 von
+     44 Audit-Zeilen enden mit angenommen/verworfen. `labkit-audit` schreibt
+     seine Befunde je Bereich als Datei mit Status (fixed / accepted /
+     deferred / rejected + Grund); `preflight` listet offene deferred-Befunde
+     des Repos; der Ertrag eines Audits wird damit zählbar statt von Hand
+     gelesen. Stufe: guaranteed für die Buchführung, der Befund selbst bleibt
+     Agent-Audit.
+  2. **Static evidence: Importe außerhalb jedes deklarierten Scopes.** Fünfmal
+     in uniagent (15, 16, 17: Skript von 14; 22: `predict.py`; 23:
+     Leser-Module) meldete erst der Agent, dass Code, den das Mess-Skript
+     importiert, in keinem Scope liegt. Das ist mechanisch: `code-check`
+     warnt, wenn ein Repo-Modul im Importgraphen des Mess-Skripts von keinem
+     `[[promise]].scope` gedeckt ist. Der Pilot-Beleg, auf den Punkt 3
+     wartet, ist damit da.
+  3. **Narbentabelle, neue Zeile: Kriterium ohne Rauschgrenze.** Bereich 26:
+     [C3] zählte jede Ablehnung, auch durch eine Regel, die die Änderung nicht
+     berührt; eine Einzelstimme in einem Durchgang kippte das Kriterium, das
+     Preflight (1 Blocker zur Renderprobe) sah es nicht, nach dem Freeze blieb
+     nur Offenlegung. Zeile für LAB-015 und die experiment-preflight-
+     Anweisung: „ein C auf Modellausgaben nennt seine Rauschgrenze (Mehrheit
+     über n Ziehungen, nur Ablehnungen mit Beteiligung der geänderten
+     Komponente) oder sagt, warum nicht" — Bezug LAB-036 Validate, don't trust a single run.
+  4. **Zahl der Audits folgt der Kostenstufe, mechanisch.** Bereich 01 bekam
+     bei Cost seconds zwei Preflights und ein Analysis-Audit; das Protokoll
+     sagt selbst, eines nach dem ersten Lauf hätte gereicht. `labkit-audit`
+     warnt bei `cost = "seconds"` ohne vorhandenen Lauf: der Lauf ist die
+     billigere Probe (LAB-017 The number of audits follows the cost tier).
+  Nicht lösbar durch ein Audit, und so in LAB-015 festhalten: Modellverhalten
+  (16 und 24: Grenze ohne Geltungsbereich; 14 und 17: Zitat aus der Tabelle)
+  fand in uniagent nie ein Audit, immer der Lauf — die Probe dafür ist die
+  Instrumentenprobe an Randfällen, nicht mehr Audit.
+
 - ~~**`labkit-check`: ist dieses Repo auf Stand?**~~ **gebaut 2026-10-12
   (0.84.0, `labkit/repo_check.py`)** — Auslöser: Frage beim Rollout R; vorher drei getrennte Prüfungen: `labkit-hooks check` (Hook
   gegen Installation), `lib init . --sync check` (geerbte Blöcke, dotfiles),
