@@ -50,9 +50,11 @@ and refuses the commit otherwise; turn it on once per clone with
 
 The suite is self-contained: it passes in a fresh clone with an empty home
 directory. One test skips everywhere for want of
-a `requirements.lock` (`tests/test_runlog_env.py`). The `usability stage`
-command itself reads the house templates under `~/.claude/resources` and
-does not work outside the author's machine; its tests do not need them.
+a `requirements.lock` (`tests/test_runlog_env.py`). `usability stage` stamps
+its probe from the package's own templates (since 0.78.0) and pins labkit at
+the release tag of the installed version on GitHub — until that tag is
+pushed the probe's `pip install` fails (`--venv` links an existing venv
+instead).
 
 ## Rules
 
