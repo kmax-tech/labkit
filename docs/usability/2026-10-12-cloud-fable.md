@@ -59,6 +59,21 @@ of labkit source. Before the fixes (draw 1, 0.85.0): 4m27s, 3 unsure, 3 gate.
 - The number is written back by hand; a `--write-back` or `protocol-fill --from-run` would replace three edits.
 - Terms, Unit and Exclusions restate `visible()` in prose for a file count.
 
+## Sonnet 5.5, same probe, one draw
+
+| Draw | labkit | log span | read · run · edit · unsure · gate | number right, bound |
+|---|---|---|---|---|
+| sonnet-1 | 0.87.1 | 0m42s | 4 · 7 · 4 · 0 · 0 | yes |
+
+Right and bound, 0 reads of labkit source, finalize clear; the log was
+started after the first two reads, so the span is a floor. The SessionStart
+hook rebuilt the venv (the agent noted it). What Sonnet names: the same
+five cuts as Fable — README placeholders only finalize asks for, the field
+contract as a separate step, one protocol-fill per field, the two-pass
+finalize — plus a worked example in the counting skeleton. One new
+reading: "Result" was ambiguous between the Summary line and the Result
+section.
+
 ## Caveat
 
 The agent is Fable 5.1. "0 reads of labkit source" and ~2 minutes say little

@@ -472,6 +472,12 @@ sieht das niemand.
   (`2026-10-12-cloud-fable-count-10.score.json`). **Reihe abgeschlossen:**
   n = 3 auf 0.87.1 — 2m20s · 2m06s · 3m42s, Median 2m20s, 0–1 Gate-Zeile, 0
   Quelltext-Lesungen; Spur: `docs/usability/2026-10-12-cloud-fable.md`.
+  **Sonnet 5.5, ein Durchgang (0.87.1):** 3,5 richtig, gebunden, 0m42s laut
+  Log (spät gestartet, Untergrenze), 4 read · 7 run · 4 edit ·
+  0 unsure · 0 gate, 0 Quelltext-Lesungen
+  (`2026-10-12-cloud-sonnet-count-1.score.json`); SessionStart-Hook hat das
+  venv neu gebaut. Nennt dieselben fünf Schnitte wie Fable; neu: „Result"
+  ist zweideutig zwischen Summary-Zeile und Result-Abschnitt (t).
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:
