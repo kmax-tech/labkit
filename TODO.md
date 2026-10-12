@@ -360,6 +360,28 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
+- **Cloud-Leseprobe, Stand nach dem ersten Durchgang (2026-10-12).** Aufbau:
+  Probe-Repo `kmax-tech/labkit-probe` (öffentlich — pip klont labkit nur
+  anonym, also musste auch labkit öffentlich werden), Umgebung in
+  claude.ai/code mit Setup-Skript (`cd "$CLAUDE_PROJECT_DIR"`, venv,
+  `pip install -r requirements.txt`, `labkit-hooks install`), Netzwerk
+  „Trusted", kein Schlüssel; der Agent pusht `probe-count`, lokal wird der
+  Branch zu `probe-count-N`, `log.md` neben das Verzeichnis, `usability
+  score`. Durchgang 1 (0.85.0): 3,5 richtig, gebunden, 4m27s, 3 read · 17
+  run · 7 edit · 3 unsure · 3 gate, 0 Quelltext-Lesungen
+  (`docs/usability/2026-10-12-cloud-count-1.score.json`). Drei Befunde als
+  Vorlagenfehler behoben (0.86.0: pytest, `evaluate_rows`, keine A2-Tabelle
+  ohne Modell). Noch offen, aus dem Bericht des Agenten: (a) `protocol-fill
+  --from-run <run_id>` schreibt Antwortzeile und Laufzeile aus
+  `metrics.json` — die Rückschrift von Hand war die eine Stelle, an der der
+  Agent brach (LAB-041 Generate numbers, don't retype them); (b) die
+  `--help`-Texte von `finalize`, `intent-check`, `code-check` sagen bei
+  seconds, dass nur die erste Zeile von `protocol-check --contract` zählt;
+  (c) `runs.tsv` nach dem ersten Lauf ungetrackt, `.gitignore` nennt nur
+  das Lock — der Stempel sollte sagen, dass der Index committet wird.
+  Nächster Schritt: Probe auf 0.86.0 neu stempeln, drei Durchgänge, dann
+  (a)–(c) nach Ertrag.
+
 - **Englische Namen für die Notiz-Verzeichnisse** (2026-10-12) — das Paket
   stempelt und liest `notes/theorie`, `notes/messung`, `notes/results`
   (`scaffold.LAB_DIRS`, `notes_check`, `claude_hooks`, LAB-082 In `notes/messung/`), die

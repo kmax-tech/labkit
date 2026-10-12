@@ -65,6 +65,10 @@ REQUIREMENTS = """\
 #   .venv/bin/labkit-hooks install    (the hooks of this labkit)
 # Raise the pin on purpose, never silently.
 {pin}
+
+# The stamped areas carry a test (tests/test_<NN>_<name>.py); preflight and
+# finalize run it, and without pytest they only warn (cloud probe 2026-10-12).
+pytest
 """
 
 #: (template, destination) of the files `lab` copies verbatim
@@ -234,6 +238,25 @@ def seconds_cut(tmpl: str, model: bool = False) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
+CONSTANTS_HINT = (
+    "# constants = { <name> = <value> }  # every threshold the sentence names, read "
+    "with promises.all_constants() — none for a plain count"
+)
+
+
+def quick_block(tmpl: str, model: bool) -> str:
+    """The promise tables of the seconds cut: the example constants become a
+    commented hint (a count reads no thresholds, and runlog refuses a run whose
+    config lacks a registered constant — but a criterion with a threshold must
+    name it, and the cloud probe of 2026-10-12 read the promises docstring to
+    learn the field), and without a model the null-lane table A2 goes (there is
+    no null lane; the probe deleted it by hand)."""
+    out = re.sub(r"\nconstants = \{[^}\n]*\}", "\n" + CONSTANTS_HINT, tmpl)
+    if not model:
+        out = re.sub(r"\n\n\[\[promise\]\]\nid = \"A2\"\n(?:[^\n]+\n)*", "\n", out)
+    return out
+
+
 def pilot_and_report(tmpl: str) -> tuple[str, ProtocolBlocks]:
     """(pilot part, report blocks) of the template. A report block is (section key,
     heading, items): a daggered section whole, or the daggered items of a section."""
@@ -382,7 +405,7 @@ def area_readme(nn: str, slug: str, skeleton: bool) -> str:
         "`scripts/01_measure.py` (`evaluate_rows()`); `02_analyze.py --check` and the\n"
         "test call it there, and `intent-check` holds the protocol's ids to these keys."
         if skeleton
-        else "**What `evaluate()` returns.** <the number under `METRIC_KEY` and per\n"
+        else "**What `evaluate_rows()` returns.** <the number under `METRIC_KEY` and per\n"
         "registered promise its key — from the protocol's [[promise]] sentences: [C1]\n"
         "c1_pass …, [A1] a1_pass …>. The formula lives once, in `scripts/01_measure.py`;\n"
         "`--check` and the test call it, `intent-check` and `finalize` hold the ids to\n"
@@ -522,11 +545,8 @@ def stamp_area(
     )  # every written protocol is free of the cut markers
     pilot, blocks = pilot_and_report(clean)
     if quick:
-        # a count reads no thresholds: runlog would refuse a run whose config lacks a constant
         pilot, blocks = (
-            seconds_cut(
-                re.sub(r"\nconstants = \{[^}\n]*\}", "", tmpl), model=bool(model)
-            ),
+            seconds_cut(quick_block(tmpl, bool(model)), model=bool(model)),
             [],
         )
     existing = [
@@ -575,7 +595,7 @@ def next_steps(rel: Path, slug: str, nn: str, quick: bool, model: bool) -> str:
 Next (cost = "seconds" — no freeze, no audit per run, the first run is the probe):
   1. PROTOCOL-{slug}.md: fill the seconds cut — `type` in the head, then question, criterion,
      admissibility condition, unit, {"prompt, null condition" if model else "data, exclusions"}; `protocol-check --contract` names the labels.
-  2. scripts/01_measure.py: {"PROMPT, parse_answer(), evaluate(); --show 2, then the run" if model else "expected_ids(), rows(), evaluate()"}.
+  2. scripts/01_measure.py: {"PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run" if model else "expected_ids(), rows(), evaluate_rows()"}.
   3. git add + commit, then scripts/01_measure.py — number + run_id into "Answer to the question".
   4. finalize {rel} checks the provenance; the agent audit comes when the number is promoted."""
     test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"

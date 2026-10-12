@@ -10,7 +10,7 @@ the number is promoted or steers a decision (LAB-017 The number of audits follow
 retyped (LAB-041 Generate numbers, don't retype them): the protocol's Result line cites it with the run_id, and
 `--check` holds that line to the run.
 
-Fill the three TODOs: expected_ids(), rows(), evaluate(). Everything else
+Fill the three TODOs: expected_ids(), rows(), evaluate_rows(). Everything else
 stays — `visible()` is the one reader of a directory, the denominator is the
 source's id list, a missing item is a refusal.
 """
@@ -51,17 +51,17 @@ def rows(ids: list[str]) -> list[dict]:
     raise NotImplementedError("rows(): one dict per id, fail loud on a missing one")
 
 
-def evaluate(items: list[dict], ids: list[str]) -> dict:
+def evaluate_rows(items: list[dict], ids: list[str]) -> dict:
     """TODO: the number(s) from the rows, over the ids SOURCE lists, plus one
     key per intent id the protocol registers (`c1_pass`, `a1_pass`) —
     intent-check and finalize hold the ids to these keys. Every key lands in
     metrics.json, and `--check` demands each verbatim in the protocol's
     "Answer to the question" line — keep the dict to what that line carries."""
     if not ids:
-        raise ValueError("evaluate(): SOURCE lists no ids — refusing a number over nothing")
+        raise ValueError("evaluate_rows(): SOURCE lists no ids — refusing a number over nothing")
     if len(items) != len(ids):
-        raise ValueError(f"evaluate(): {len(items)} rows for {len(ids)} ids — a silent loss")
-    raise NotImplementedError("evaluate(): compute the number(s) from items")
+        raise ValueError(f"evaluate_rows(): {len(items)} rows for {len(ids)} ids — a silent loss")
+    raise NotImplementedError("evaluate_rows(): compute the number(s) from items")
 
 
 def main() -> None:
@@ -71,7 +71,7 @@ def main() -> None:
     args = ap.parse_args()
     ids = expected_ids()
     if args.check:
-        v = recheck.holds(area=AREA, out=OUT, recompute=lambda rs: evaluate(rs, ids),
+        v = recheck.holds(area=AREA, out=OUT, recompute=lambda rs: evaluate_rows(rs, ids),
                           note=PROTOCOL)
         print(f"check: run {v.run_id} — {v.keys_compared} keys identical, "
               f"{PROTOCOL.name} carries them and the run_id"
@@ -87,7 +87,7 @@ def main() -> None:
                     base_dir=AREA, data={"source": SOURCE},
                     long=True, protocol=PROTOCOL.name) as run:
         run.output(OUT)
-        metrics = evaluate(items, ids)
+        metrics = evaluate_rows(items, ids)
         run.metrics(**metrics)
         print(json.dumps(metrics, indent=1))
         print(f"run: {run.run_id}  → cite it in {PROTOCOL.name}, field \"Answer to the question\"")

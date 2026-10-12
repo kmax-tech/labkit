@@ -5,6 +5,35 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.86.0 — 2026-10-12
+
+### Fixed — three defects of the seconds stamp, found by the first cloud probe
+
+The first cold-agent probe in a claude.ai/code cloud session (count task,
+labkit 0.85.0, no house directory, no skills): number right and bound in
+4m27s, 0 reads of labkit source — and three of its five "what I would cut"
+items were template bugs, not agent trouble
+(`docs/usability/2026-10-12-cloud-count-1.score.json`).
+
+- **`labkit-init lab` stamps `pytest` into `requirements.txt`.** The
+  stamped area test needs it, preflight and finalize run it, AGENTS.md
+  names it — and the lab's requirements listed only labkit. The probe
+  installed it by hand, which made runlog record a lock drift and cost a
+  second run.
+- **The seconds skeleton's function is `evaluate_rows`**, as in the full
+  skeleton, the analysis script and the README route the stamp writes.
+  It was `evaluate`, so finalize warned twice on every seconds area that
+  the route names a function the script does not define.
+- **The seconds cut without a model stamps no null-lane table.** `[[promise]]`
+  A2 (the null condition) stood in every seconds protocol; without a model
+  there is no null lane, and the probe deleted the table by hand. The
+  example `constants = {…}` lines become one commented hint instead of
+  vanishing: a count registers no threshold, but a criterion that names
+  one must register it, and the probe read the promises docstring to learn
+  the field.
+- The protocol template's Terms field names the lab glossary by its new
+  name, `notes/theorie/terms.md`.
+
 ## 0.85.0 — 2026-10-12
 
 Four levers from reading uniagent's 23 preflight and 21 analysis audits

@@ -24,13 +24,13 @@ _spec.loader.exec_module(measure)
 
 def test_known_rows_give_the_known_number():
     rows = [{"id": "a", measure.COUNT_FIELD: 1}, {"id": "b", measure.COUNT_FIELD: 3}]
-    metrics = measure.evaluate(rows, ["a", "b"])
+    metrics = measure.evaluate_rows(rows, ["a", "b"])
     assert metrics[measure.METRIC_KEY] == pytest.approx(2.0)   # the mean those two rows give
 
 
 def test_a_lost_row_is_a_refusal_not_a_smaller_denominator():
     with pytest.raises(ValueError):
-        measure.evaluate([{"id": "a", measure.COUNT_FIELD: 1}], ["a", "b"])
+        measure.evaluate_rows([{"id": "a", measure.COUNT_FIELD: 1}], ["a", "b"])
 
 
 def test_hidden_entries_do_not_count(tmp_path):

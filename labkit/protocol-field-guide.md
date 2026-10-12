@@ -199,7 +199,7 @@ derives from the detail below and carries no fact that isn't there.
   and draws, case classes and their id form, every registered constant, the
   model alias, the files a reader meets. Before coining: the field's
   established term (a textbook, the notation card the lab keeps), the repo's
-  `notes/theorie/begriffe.md` (the lab's), the lab standard's vocabulary
+  `notes/theorie/terms.md` (the lab's), the lab standard's vocabulary
   table (the method's) — a word
   found there is inherited, not re-coined (LAB-084 Double-coinage check).
   "n/a — standard vocabulary" only if the protocol coins nothing. Until

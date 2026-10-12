@@ -154,9 +154,28 @@ class Exp(unittest.TestCase):
         area = self.area()
         proto = (area / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
         self.assertIn('cost = "seconds"', proto)
-        self.assertNotIn("constants =", proto)
+        self.assertNotRegex(
+            proto, r"(?m)^constants ="
+        )  # no registered constant for a count …
+        self.assertIn("# constants = {", proto)  # … but the hint how to register one
+        self.assertNotIn('id = "A2"', proto)  # no model, no null lane
+        self.assertIn('id = "A1"', proto)
         self.assertFalse((area / "scripts" / "00_prepare.py").exists())
-        self.assertTrue((area / "scripts" / "01_measure.py").is_file())
+        script = (area / "scripts" / "01_measure.py").read_text(encoding="utf-8")
+        self.assertIn(
+            "def evaluate_rows(", script
+        )  # the name the README route and finalize expect
+        self.assertNotIn("def evaluate(", script)
+        self.assertIn("evaluate_rows", (area / "README.md").read_text(encoding="utf-8"))
+
+    def test_seconds_with_a_model_keeps_the_null_lane(self) -> None:
+        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="seconds", model="haiku")
+        proto = (self.area() / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
+        self.assertIn('id = "A2"', proto)
+
+    def test_the_lab_requirements_carry_pytest(self) -> None:
+        req = (self.root / "requirements.txt").read_text(encoding="utf-8")
+        self.assertRegex(req, r"(?m)^pytest$")
 
     def test_a_model_alias_fills_the_skeleton(self) -> None:
         quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
