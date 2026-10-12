@@ -416,6 +416,18 @@ sieht das niemand.
   zwei Branches, weil die Cloud-Sitzung einen eigenen vorgibt — Artefakt.
   Die Entscheidung (d), keine Versprechen-Tabellen bei einer Zählung, nennt
   jetzt jeder der vier Agenten als größten Schnitt.
+  Durchgang 5 (Stempel 0.86.2, venv aber wieder 0.86.1 — das Setup-Skript
+  baute das venv nicht neu, `pip install -r` wechselt den Tag eines schon
+  installierten VCS-Pins nicht): 3,5 richtig, gebunden, 2m39s, 4 read · 10
+  run · 6 edit · 1 unsure · 2 gate (`2026-10-12-cloud-fable-count-5.score.json`);
+  ~40 s Lock-Abweichung aus dem Cache, der Rest wie Durchgang 4. **Stand der
+  Reihe (n = 5, Fable):** 4m27s → 2m28s → 2m26s → 2m09s → 2m39s; Zahl und
+  Bindung immer; unsicher 3 → 0/1, Gate 3 → 1/2; 0 Quelltext-Lesungen in
+  allen. Was bleibt, sind Entscheidungen am Standard: (d) keine Versprechen-
+  Tabellen und C/A-Felder bei einer Zählung, (f) Prosa der Vorlage hinter
+  `--guide`, (p) Summary-Felder bei seconds auf eine Result-Zeile. Dazu ein
+  Cloud-Punkt: ein VCS-Pin braucht `pip install --upgrade --force-reinstall
+  --no-deps` oder ein frisches venv, sonst bleibt der alte Tag stehen.
   Nachtrag aus den Beobachtungen des zweiten Agenten: (g) `log.md` im Repo
   macht jeden Lauf `+dirty` (der Patch ist nur das Log) — beim nächsten
   Stempel `log.md` in die `.gitignore` und im TASK `git add -f log.md` am
