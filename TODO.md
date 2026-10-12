@@ -33,7 +33,7 @@ kein Ziel.
 | 1b/3 | nur, was der Pilot verlangt: Punkt 3 (static evidence), Punkt 6 `labkit audit` mit Punkt 1, Punkt 4 | wartet auf den Pilot |
 | 2 | Benchmark — Stufe 1 + Katalog in gefüllten Proben (`count`, `judge`) | **Stufe erledigt 2026-10-06: `generalises`** — Sonnet findet 4/5 Haus-, 4/5 Katalogfälle, 0 Fehlalarme auf 22 stillen Ziehungen; B1 (positionaler Join) 0/3 übersehen (Lauf `2026-10-06T19-22-09_d352`, Labor `fe6a434`). Zweiter Auditor erledigt: `experiment-preflight` (Opus, Narbentabelle) findet B1 3/3, 5/5 + 5/5, 0 Fehlalarme (Labor `03`, Lauf `2026-10-06T19-56-51_8a20`) — **für `labkit audit` und `promote`: experiment-preflight, und WARNINGs sind Befunde zum Entscheiden**, denn B1 kommt nur als WARNING |
 | 4 | Usability mit/ohne labkit (Punkt 2 erweitert) | eigene Ansage |
-| D | Doktrin und Gerüstbauer ins Paket (Punkt 5; `AGENTS.md`-Vorlage aus Punkt 6 inbegriffen) | **jetzt** — Auslöser 2026-10-09: verwirrt den Autor selbst |
+| D | Doktrin und Gerüstbauer ins Paket (Punkt 5; `AGENTS.md`-Vorlage aus Punkt 6 inbegriffen) | **erledigt 2026-10-12** — Phase 1 (0.77.0) und Phase 2 (0.78.0) gebaut; der Thesis-Starter bleibt Haus (entschieden 2026-10-12, s. Punkt 5). Auslöser war 2026-10-09: verwirrt den Autor selbst |
 | R | Rollout in einem Release: die Pins der Labor- und Thesis-Repos heben, Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus) | eigene Aufträge |
 | Tokenkosten | messen statt schätzen — `llm.last_usage()`, `labkit-audit` druckt Prompt- und Output-Tokens, `agent_transcript.tokens` liest die Usage-Blöcke der Claude-Code-Transkripte (0.81.0, 2026-10-11) | **erledigt 2026-10-11.** Auslöser: 30 Transkripte (labkit, uniagent) summieren 7 Mrd. Cache-Read-Tokens, die alten Subagenten-Audits je 3,65 Mio., und keine labkit-Zeile sagte, was ein Aufruf kostet. Pilot `labkit-paper` Bereich 04 (`audit-on-reachable-code-holds`, Lauf `2026-10-11T14-00-57_071a`): die direkten Importe auf erreichbaren Code zu kürzen spart 0–16 % des Prompts (Median 8 % über 24 uniagent-Bereiche) — **an der Renderprobe gestoppt, kein Modellaufruf; LAB-103 The audit reads by declared scope, not by import graph bleibt.** Der Prompt ist groß, weil die Zahl fast den ganzen Agenten braucht (Bereich 19: 142 von 155 kB Importe erreicht), nicht wegen ungenutztem Code; Fixkosten je Audit ~69 kB (Instruktionen 9, zitierte Regeln 19, Protokoll 26, Index 15). Ein kleinerer Audit bräuchte eine andere Frage (Audit je Versprechen über seinen deklarierten Scope), kein Schnitt. Die Hauptsitzungen (Median 400–500 k Kontext je Aufruf) sind Sitzungshygiene, keine labkit-Aufgabe. |
 
@@ -552,30 +552,32 @@ dotfiles-Hooks rot.
 (0.78.0), Vorlagen in `labkit/templates/`, `usability stage` ohne
 `~/.claude`. Die `AGENTS.md`-Vorlage ist eine knappe englische Fassung der
 beiden Spuren, keine Übersetzung der 258 Zeilen `CLAUDE.md.template` — der
-Merkzettel und die Übergaben bleiben Haus. **Offen:** der Thesis-Starter —
-er trägt Webis-Vorlesungslinks, eingefrorene Lauf-Snapshots mit Autor-Pfaden
-und eine Skill-Kopie; im Wheel bräche er den Hausmarker-Test. Entscheidung
-ausstehend (bleibt Haus oder wird bereinigt).
+Merkzettel und die Übergaben bleiben Haus. **Entschieden 2026-10-12: der
+Thesis-Starter bleibt Haus** (`arbeitsstandard-init.py --thesis`). Er ist
+die Fassung des Hausstandards für die Studierenden dieses Hauses —
+Webis-Vorlesungslinks, eingefrorene Lauf-Snapshots mit Autor-Pfaden, eine
+Skill-Kopie; im Wheel bräche er den Hausmarker-Test. Kein `labkit-init
+thesis`; `docs/student-repos.md` und `docs/architecture.md` („What is still
+in the dotfiles“) sagen das schon. Damit ist Phase 2 abgeschlossen.
 
 - `labkit/scaffold.py` (Schicht tools), Console script `labkit-init` mit
-  `lab`, `exp`, `thesis`. Portiert: `scaffold_repo`, `--exp`, `--thesis`.
-  Nicht portiert: `sync`, `--thread`, `refs`, `upsert_labs`, der
-  accessio-Import, die Shim-Erkennung.
+  `lab`, `exp`. Portiert: `scaffold_repo`, `--exp`. Nicht portiert:
+  `--thesis` (bleibt Haus, s. o.), `sync`, `--thread`, `refs`,
+  `upsert_labs`, der accessio-Import, die Shim-Erkennung.
 - Vorlagen nach `labkit/templates/`: Skript-Vorlagen (prepare, measure,
   analyze, explore, test-area, quick), `test-shared-helpers`, `models.toml`,
   `pyrightconfig`, `vscode-*`, eine englische `AGENTS.md`-Vorlage (erfüllt
-  Punkt 6), `thesis-starter/` ohne `material/` (fremde PDFs) und ohne die
-  Skill-Kopie — die legt der dotfiles-Wrapper dazu.
+  Punkt 6). Nicht `thesis-starter/` — bleibt Haus.
 - Pin: `importlib.metadata.version("labkit")` → GitHub-Tag `v<version>`;
   `git+file://` fällt weg. `--labkit-ref REF` ausdrücklich für Entwicklung und
   Tests. Bis der Tag gepusht ist, ist der Pin nicht installierbar: Phase 2
   endet „ready to tag“, die Installations-Abnahme folgt nach Tag und Push.
 - Deutsche Texte (etwa 230 Zeilen) englisch, Hauspfade raus.
-- Tests: nur die Klassen zu init, exp, thesis aus `test_arbeitsstandard_init.py`.
+- Tests: nur die Klassen zu init und exp aus `test_arbeitsstandard_init.py`.
 - `usability.py`: `STAMPED`/`SCAFFOLDER` aus dem Paket; `usability stage`
   läuft dann ohne `~/.claude`.
 - Lebende Leser: `README.md` (Hook-Installation, Sync-/Shim-Absatz),
-  `docs/student-repos.md` (`labkit-init thesis`), `labkit/docs/standard.md`
+  `docs/student-repos.md` (Thesis-Starter bleibt Haus), `labkit/docs/standard.md`
   (`lib exp` in LAB-003 No run without an intent paragraph und LAB-046 Notebooks: explore yes, report never → `labkit-init exp`); `package-data` für
   `docs/*.md`, `docs/*.tsv`, verschachteltes `templates/` erweitern.
 - dotfiles am selben Tag: `IN_LABKIT`/`master_path` und der Test, der den
