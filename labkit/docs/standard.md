@@ -327,10 +327,21 @@ evidence file under the same ID (top of this document).*
   | One output file = one run      | Instrument check or debug writes into the run's file                                                                                                                                                                      | preflight | LAB-057 One area per idea                                                                                                                   |
   | Parser without fixture test    | Model-output parser without a test with a real raw answer; drops uncounted; empty answer not a state of its own                                                                                                           | beide     | LAB-023 No silent loss, LAB-030 Reasoning models                                                                                             |
   | Spread unknown                 | n = 1 draw, unseeded, temperature implicit — a difference without a noise floor                                                                                                                                           | beide     | LAB-036 Validate                                                                                                                            |
+  | Criterion fails on noise       | a criterion on model output that one vote of a component the change does not touch can fail: every rejection counts, no majority over draws, no restriction to the component under test (uniagent 26, 2026-10-12: [C3] fell to a single vote of an unchanged rule) | preflight | LAB-036 Validate, LAB-016 Resolution check before freezing                                                                                   |
   | Shared constant                | Anchor or threshold lives in `lib/` and is shared by several areas; whoever changes it changes other areas' numbers                                                                                                       | beide     | —                                                                                                                                          |
   | Index/assignment               | Join by position instead of id — two stages build their order independently                                                                                                                                               | beide     | —                                                                                                                                          |
   | Provenance incomplete          | `prompt_sha`/config does not cover everything that determines the prompt or the number                                                                                                                                    | beide     | LAB-043 Runs go through `runlog`                                                                                                            |
   | Operations                     | Alias not from `models.toml`, lock/resume missing, retries uncounted; a second alias in parallel is locked by the endpoint lease (LAB-028 An endpoint is a model slot, not a service) — check whether the area bypasses it | preflight | LAB-027 Model discipline, LAB-028 An endpoint is a model slot, not a service, LAB-049 Long runs go through the harness's background mechanism |
+
+  **What no audit sees — and what does.** The audit reads code and
+  protocol; it does not run the model. How the model will behave on the
+  cases — a limit it applies beyond its stated range, a value it cites
+  from a reference table instead of the document — is found by the run,
+  never by an audit (uniagent 2026-10-12: four criteria fell to model
+  behaviour, no audit had flagged one of them). The probe for that is the
+  instrument check on the boundary cases (LAB-008 Instrument check before
+  freezing, LAB-014 One fully rendered example pair per gold class), not a
+  second audit.
 
   **Refine by count, not by deadline:** the protocol lines carry
   findings/accepted/dismissed and are greppable
