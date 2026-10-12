@@ -45,7 +45,7 @@ protocol-check --contract           # the head, the fields by exact label, the b
 runlog [<area>]                     # the area's runs: open ones with state and pid, then the finished ones (what each is, committed or not, its command)
 runlog reindex <area>               # append rows for completed runs it missed
 intent-check <PROTOCOL-*.md>        # registered promise ids vs. metrics keys
-code-check <AREA>                   # intent-id check + audit bundle for the agent
+code-check <AREA>                   # intent ids, parser fixtures, prompt drift, code the stamp cannot follow (sys.path, dynamic loaders, imports outside lib/ and src/) + audit bundle for the agent
 scope-sha [--area DIR]              # audit stamp over the code that determines a number
 protocol-fill <PROTOCOL> FIELD VAL  # fill one stamped placeholder field by label
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung

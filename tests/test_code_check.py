@@ -361,3 +361,97 @@ class TestProtocolChoice(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestStampCoverage(unittest.TestCase):
+    """1d: code the stamp cannot follow is a WARNING naming the line; stamped imports stay silent."""
+
+    def _repo(self, script: str) -> tuple[Path, Path]:
+        repo = Path(tempfile.mkdtemp())
+        (repo / ".git").mkdir()
+        (repo / "lib").mkdir()
+        (repo / "lib" / "scoring.py").write_text("X = 1\n", encoding="utf-8")
+        (repo / "tools").mkdir()
+        (repo / "tools" / "helper.py").write_text("Y = 2\n", encoding="utf-8")
+        area = repo / "experiments" / "01-x"
+        (area / "scripts").mkdir(parents=True)
+        (area / "scripts" / "helpers.py").write_text("Z = 3\n", encoding="utf-8")
+        (area / "scripts" / "01_measure.py").write_text(script, encoding="utf-8")
+        return repo, area
+
+    def test_stamped_imports_and_the_templates_sys_path_line_are_silent(self):
+        repo, area = self._repo(
+            "import sys\nfrom pathlib import Path\nREPO = Path('.')\n"
+            "sys.path.insert(0, str(REPO / 'lib'))\nsys.path.insert(0, str(REPO / 'src'))\n"
+            "import json\nfrom lib import scoring\nimport helpers\nfrom labkit import runlog\n"
+        )
+        self.assertEqual(code_check.stamp_coverage_findings(area, repo), [])
+
+    def test_sys_path_edits_and_dynamic_loaders_warn_with_the_line(self):
+        repo, area = self._repo(
+            "import sys, importlib\n"
+            "sys.path.insert(0, str(REPO / 'experiments' / '14-other' / 'scripts'))\n"
+            "sys.path += [somewhere]\n"
+            "m = importlib.import_module('measure_14')\n"
+            "exec(open('z').read())\n"
+        )
+        found = code_check.stamp_coverage_findings(area, repo)
+        self.assertEqual(len(found), 5, found)
+        self.assertTrue(
+            all(
+                f.startswith("WARNING · experiments/01-x/scripts/01_measure.py:")
+                for f in found
+            )
+        )
+        self.assertIn(":2 · `sys.path` gains 14-other, experiments, scripts", found[0])
+        self.assertIn(":2 · names area `14-other`", found[1])
+        self.assertIn(":3 · `sys.path` gains a computed path", found[2])
+        self.assertIn(":4 · `import_module(…)`", found[3])
+        self.assertIn(":5 · `exec(…)`", found[4])
+        self.assertTrue(
+            all(
+                "LAB-019 The stamp covers everything that determines the number" in f
+                for f in found
+            )
+        )
+
+    def test_a_path_string_into_another_area_warns_the_own_area_does_not(self):
+        repo, area = self._repo(
+            "from lib import scoring\n"
+            "A14 = REPO / 'experiments/14-hotel-und-fremde-buchung/scripts/01_measure.py'\n"
+            "OWN = REPO / 'experiments/01-x/scripts/01_measure.py'\n"
+        )
+        found = code_check.stamp_coverage_findings(area, repo)
+        self.assertEqual(len(found), 1, found)
+        self.assertIn(":2 · names area `14-hotel-und-fremde-buchung`", found[0])
+
+    def test_a_loader_in_a_shared_helper_is_not_charged_to_every_area(self):
+        repo, area = self._repo(
+            "from lib import scoring\nP = REPO / 'experiments' / '01-x' / 'scripts'\n"
+        )
+        (repo / "lib" / "scoring.py").write_text(
+            "import importlib.util\ndef load(p):\n    return importlib.util.spec_from_file_location('m', p)\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(
+            code_check.stamp_coverage_findings(area, repo), []
+        )  # own area name: silent
+
+    def test_an_import_outside_lib_and_src_warns(self):
+        repo, area = self._repo("from tools import helper\nimport experiments\n")
+        found = code_check.stamp_coverage_findings(area, repo)
+        self.assertEqual(len(found), 2, found)
+        self.assertIn("`tools` resolves to tools, outside lib/ and src/", found[0])
+        self.assertIn("`experiments` resolves to experiments", found[1])
+
+    def test_the_command_counts_it_as_a_warning(self):
+        repo, area = self._repo("import sys\nsys.path.append(str(REPO / 'tools'))\n")
+        (area / "PROTOCOL-x.md").write_text(
+            "- **Protocol id:** p-0123456789abcdef\n", encoding="utf-8"
+        )
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = code_check.main([str(area)])
+        self.assertEqual(rc, 1)
+        self.assertIn("`sys.path` gains tools", buf.getvalue())
+        self.assertIn("1 warning(s)", buf.getvalue())

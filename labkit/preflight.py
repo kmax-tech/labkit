@@ -24,8 +24,11 @@ What it runs, in order:
                       a blocker once frozen = true; a `deferred` finding in
                       another area of the repo is printed as a reminder, never
                       counted; an unreadable file is a blocker
-  3. code-check       intent ids against the code; a line starting with
-                      `BLOCKER` is a blocker, any other a warning
+  3. code-check       intent ids against the code, and the code the stamp
+                      cannot follow (sys.path edits, dynamic loaders, imports
+                      outside lib/ and src/ — static evidence, warnings);
+                      a line starting with `BLOCKER` is a blocker, any other
+                      a warning
   4. scope-sha        audit stamp over the input scope
   5. working tree     uncommitted changes (warning, not a blocker)
   6. hooks            the installed labkit hooks match this labkit (warning)
@@ -46,7 +49,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from labkit.code_check import check_intent_ids
+from labkit.code_check import check_intent_ids, stamp_coverage_findings
 from labkit import findings, install_hooks
 from labkit.repo import (
     area_path,
@@ -263,8 +266,10 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
         print(f"  all decided ({len(records)} audit(s) recorded)")
 
     # -- 3. code-check (intent ids) ---------------------------------------
-    print("── code-check: intent ids ──")
-    code_findings = check_intent_ids(area, protocol)
+    print("── code-check: intent ids, stamp coverage ──")
+    code_findings = check_intent_ids(area, protocol) + stamp_coverage_findings(
+        area, layout_root(area)
+    )
     for f in code_findings:
         print(f"  {f}")
     blockers += sum(1 for f in code_findings if f.startswith("BLOCKER"))

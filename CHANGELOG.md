@@ -12,6 +12,22 @@ Four levers from reading uniagent's 23 preflight and 21 analysis audits
 follow is a mechanical warning, a criterion that noise can fail is a scar,
 and an audit at cost `seconds` before the first run says it is early.
 
+### Added — static evidence: code the stamp cannot follow (`code-check` 1d)
+
+- **`code_check.stamp_coverage_findings`**, run by `code-check` and by
+  `preflight` station 3: a WARNING naming the line for a `sys.path` edit
+  that does not point at `lib/` or `src/`, a dynamic loader (`importlib`,
+  `runpy`, `exec`, `__import__`), a path string naming another area
+  (`experiments/14-…/scripts/01_measure.py`) and an import that resolves to
+  a repo file outside `lib/` and `src/` — code that determines the number
+  and that the audit stamp does not see (LAB-019 The stamp covers
+  everything that determines the number). Never a blocker. The stamped
+  template's own `sys.path.insert(0, REPO / "lib")` is silent, and a
+  loader inside a shared helper is not charged to every area that imports
+  it. Why: in uniagent five audits (areas 15, 16, 17, 22, 23) found a
+  script loaded from another area by reading; on the same areas the check
+  now names the lines (15 and 16 load area 14, 16 and 22 load area 05).
+
 ### Added — audit findings as data (`labkit.findings`)
 
 - **`labkit-audit --mode preflight|analysis` writes its findings into the
