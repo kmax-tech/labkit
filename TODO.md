@@ -360,6 +360,16 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
+- **`labkit-check`: ist dieses Repo auf Stand?** (2026-10-12, Frage beim
+  Rollout R) — heute drei getrennte Prüfungen: `labkit-hooks check` (Hook
+  gegen Installation), `lib init . --sync check` (geerbte Blöcke, dotfiles),
+  `python -m labkit.rules refs` (Regelverweise). Niemand prüft Pin gegen
+  Installation (in allen vier aktiven Repos lag die Installation hinter dem
+  Pin) oder zeigt an, dass das Master-Repo einen neueren Tag hat. Ein
+  Kommando, fünf Zeilen: Pin · installiert · neuester Tag · Hook · Verweise;
+  nur Anzeige, der Pin wird weiter bewusst gehoben. Auslöser: der Rollout
+  zeigt, dass die drei Einzelprüfungen vergessen werden.
+
 - **Audit je Versprechen über seinen deklarierten Scope** (2026-10-11):
   der Preflight-Audit liest heute den ganzen Bereich samt direkten Importen
   (Bereich 19 in uniagent: 248 kB, davon 142 kB erreichter Agentencode);
