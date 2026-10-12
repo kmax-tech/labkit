@@ -360,6 +360,15 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
+- **Englische Namen für die Notiz-Verzeichnisse** (2026-10-12) — das Paket
+  stempelt und liest `notes/theorie`, `notes/messung`, `notes/results`
+  (`scaffold.LAB_DIRS`, `notes_check`, `claude_hooks`, LAB-082 In `notes/messung/`), die
+  Glossar-Note heißt seit heute `terms.md` (war `begriffe.md`: ein
+  Bezeichner, den der Standard zitiert, reist englisch, LAB-072 Identifiers travel in English).
+  Die Verzeichnisse sind ein angekündigter Bruch mit Rollout (Regeltext,
+  `notes-check`, Hook, alle Labore per `git mv`), kein Nebenbei. uniagent
+  und finance-discourse tragen `begriffe.md` → beim Rollout R umbenennen.
+
 - ~~**Aus der Audit-Auswertung uniagent — vier Hebel**~~ **alle vier gebaut
   2026-10-12 (0.85.0): `labkit/findings.py` + Station 2b in `preflight`;
   `code_check.stamp_coverage_findings`; Narbenzeile „Criterion fails on

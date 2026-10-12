@@ -34,6 +34,17 @@ and an audit at cost `seconds` before the first run says it is early.
   preflight audits and an analysis audit at seconds; its protocol says one
   after the first run would have done.
 
+### Added — `labkit-init lab` stamps the lab's glossary
+
+- **`notes/theorie/terms.md`**, empty, with the four columns the
+  standard's chapter 5 names (everyday word · lab term · code word · field
+  term) and the pointer to LAB-084 Double-coinage check. The standard has
+  said since 0.77.0 that this file is the one home of a lab term; nothing
+  stamped it, and the house template still carried a "core glossary" table
+  inside its inherited block — "fill this in" next to "edit the master, not
+  here", empty in all nine labs (2026-10-12). The house block now points
+  here; the table moves out of it.
+
 ### Added — static evidence: code the stamp cannot follow (`code-check` 1d)
 
 - **`code_check.stamp_coverage_findings`**, run by `code-check` and by

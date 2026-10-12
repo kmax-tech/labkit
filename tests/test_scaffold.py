@@ -36,8 +36,16 @@ class Lab(unittest.TestCase):
             ".vscode/settings.json",
             ".vscode/launch.json",
             "tests/test_shared_helpers_come_from_labkit.py",
+            "notes/theorie/terms.md",
         ):
             self.assertTrue((self.root / path).is_file(), path)
+        glossary = (self.root / "notes" / "theorie" / "terms.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "| Everyday word | Lab term | Code word | Field term (source) |", glossary
+        )
+        self.assertIn("LAB-084 Double-coinage check", glossary)
         for d in scaffold.LAB_DIRS:
             self.assertTrue((self.root / d).is_dir(), d)
         self.assertEqual(

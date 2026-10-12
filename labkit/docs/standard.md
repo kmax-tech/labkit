@@ -1004,7 +1004,7 @@ meta line remains allowed — the findings register reads exactly that one):
 
 **The glossary is the single source of truth for terms — project-wide, not
 per experiment.** Every experiment area, every script, every note uses
-*the same* terms; anyone who needs a new one enters it in the lab's glossary (`notes/theorie/begriffe.md`, see LAB-084 Double-coinage check) instead of introducing it locally. Otherwise the areas drift apart in their terminology and
+*the same* terms; anyone who needs a new one enters it in the lab's glossary (`notes/theorie/terms.md`, see LAB-084 Double-coinage check) instead of introducing it locally. Otherwise the areas drift apart in their terminology and
 results become incomparable — the same logic as with `models.toml`
 (backends in one place) or the run index (`runs.tsv`). Code and prompts in English, notes in the lab's working language; an ambiguous term is pinned in a
 definition note.
@@ -1023,7 +1023,7 @@ definition note.
   `grep -ri <candidate + synonyms> notes/`; if a lab term exists, it is inherited, never coined twice. **Four homes, one per kind of term:** *Method* (criterion, admissibility condition, registered branch, arm, draw) →
   the vocabulary table of this standard; *Tool* (answering run, derived
   run, stamp) → labkit README "Terms"; *Lab* (rival, gap case,
-  coverage per case) → `notes/theorie/begriffe.md` of the repo, per line
+  coverage per case) → `notes/theorie/terms.md` of the repo, per line
   everyday word · lab term · code word; *a protocol* → its field
   "Terms of this protocol", first field of the intent. Look up in this
   order: field, method, tool, lab; what is found

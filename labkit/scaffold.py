@@ -7,8 +7,10 @@
 `lab` lays out a lab repo: `AGENTS.md` (and `CLAUDE.md` pointing at it),
 `requirements.txt` pinning this labkit at its release tag on GitHub,
 `models.toml`, the editor and type-checker settings, `experiments/`,
-`data/raw` → `data/prepared`, `lib/`, `notes/{theorie,messung,results}` and a
-test that the shared helpers resolve to the package. The lab standard is not
+`data/raw` → `data/prepared`, `lib/`, `notes/{theorie,messung,results}` with the
+lab's empty glossary `notes/theorie/terms.md` (the one home of a lab term,
+LAB-084 Double-coinage check), and a test that the shared helpers resolve to
+the package. The lab standard is not
 copied: it comes with the pin (`python -m labkit.rules show LAB-nnn`).
 
 `exp` stamps one self-contained area `experiments/NN-<name>/`: the protocol
@@ -75,6 +77,10 @@ LAB_FILES = (
         "test-shared-helpers.py.template",
         "tests/test_shared_helpers_come_from_labkit.py",
     ),
+    (
+        "terms.md.template",
+        "notes/theorie/terms.md",
+    ),  # the lab's glossary (LAB-084 Double-coinage check)
 )
 LAB_DIRS = (
     "experiments",
