@@ -253,8 +253,61 @@ def quick_block(tmpl: str, model: bool) -> str:
     no null lane; the probe deleted it by hand)."""
     out = re.sub(r"\nconstants = \{[^}\n]*\}", "\n" + CONSTANTS_HINT, tmpl)
     if not model:
-        out = re.sub(r"\n\n\[\[promise\]\]\nid = \"A2\"\n(?:[^\n]+\n)*", "\n", out)
+        # a deterministic count has no bar to clear: no promise tables, no
+        # criterion — five cold agents each invented a tautological [C1]
+        # (cloud probes 2026-10-12); the number is held by --check and finalize
+        out = re.sub(r"\n\n# The promises as data[^\n]*\n(?:#[^\n]*\n)*", "\n", out)
+        out = re.sub(r"\n\[\[promise\]\]\n(?:[^\n]+\n)*", "\n", out)
+        out = re.sub(r"\n{3,}```", "\n```", out)
     return out
+
+
+PLACEHOLDER_WIDTH = 72  # a one-line hint; the long form is `protocol-check --guide`
+
+
+def short_placeholders(text: str) -> str:
+    """Every stamped `<…>` placeholder on one line. The template's placeholders
+    carry the field guide's prose — a third of a cold agent's reading time
+    (cloud probes 2026-10-12, five of five); the stamped protocol keeps the
+    label and a one-line hint, `protocol-check --guide` the long form.
+    Fenced blocks and the TOML head are untouched."""
+    out: list[str] = []
+    lines = text.split("\n")
+    i = 0
+    fence = False
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("```"):
+            fence = not fence
+        head = re.match(
+            r"^(- \*\*[^*]+\*\*:?\s*(?:<!-- sm? -->\s*)?|\s+(?:[^<*]*\*\*:?\s*)?)<(?!!--)(.*)$",
+            line,
+        )
+        if fence or head is None or line.rstrip().endswith(">"):
+            out.append(line)
+            i += 1
+            continue
+        # a placeholder opened on this line and not closed: gather its continuation
+        body = [head.group(2)]
+        j = i + 1
+        while (
+            j < len(lines)
+            and lines[j].startswith("  ")
+            and not lines[j].startswith("  ```")
+        ):
+            body.append(lines[j].strip())
+            j += 1
+        full = " ".join(body).rstrip(">").strip()
+        cut = full
+        for mark in (" — ", "; ", " (", ": "):
+            k = cut.find(mark)
+            if 0 < k < PLACEHOLDER_WIDTH:
+                cut = cut[:k]
+        if len(cut) > PLACEHOLDER_WIDTH:
+            cut = cut[:PLACEHOLDER_WIDTH].rsplit(" ", 1)[0]
+        out.append(f"{head.group(1)}<{cut.rstrip(' ,.')}…>")
+        i = j
+    return "\n".join(out)
 
 
 def pilot_and_report(tmpl: str) -> tuple[str, ProtocolBlocks]:
@@ -405,9 +458,8 @@ def area_readme(nn: str, slug: str, skeleton: bool) -> str:
         "`scripts/01_measure.py` (`evaluate_rows()`); `02_analyze.py --check` and the\n"
         "test call it there, and `intent-check` holds the protocol's ids to these keys."
         if skeleton
-        else "**What `evaluate_rows()` returns.** <the number under `METRIC_KEY` and per\n"
-        "registered promise its key — from the protocol's [[promise]] sentences: [C1]\n"
-        "c1_pass …, [A1] a1_pass …>. The formula lives once, in `scripts/01_measure.py`;\n"
+        else "**What `evaluate_rows()` returns.** <the number under `METRIC_KEY` — and,\n"
+        "only if the protocol registers ids, one key per id>. The formula lives once, in `scripts/01_measure.py`;\n"
         "`--check` and the test call it, `intent-check` and `finalize` hold the ids to\n"
         "these keys."
     )
@@ -576,7 +628,16 @@ def stamp_area(
         (area / "explore").mkdir(exist_ok=True)
         pre.rename(area / "explore" / pre.name)
         log.append(f"  moved          {pre} -> {area / 'explore' / pre.name}")
-    write_if_absent(area / f"PROTOCOL-{slug}.md", clean if report else pilot, log)
+    write_if_absent(
+        area / f"PROTOCOL-{slug}.md",
+        # a heading right after a cut item gets its blank line back
+        re.sub(
+            r"([^\n])\n(## )",
+            r"\1\n\n\2",
+            short_placeholders(clean if report else pilot),
+        ),
+        log,
+    )
     log += stamp_scripts(root, area, nn, slug, quick, model)
     if (root / ".git").exists() and (root / ".githooks").is_dir():
         # the hook runs only where core.hooksPath points at it (2026-10-05)
@@ -593,8 +654,8 @@ def next_steps(rel: Path, slug: str, nn: str, quick: bool, model: bool) -> str:
     if quick:
         return f"""
 Next (cost = "seconds" — no freeze, no audit per run, the first run is the probe):
-  1. PROTOCOL-{slug}.md: fill the seconds cut — `type` in the head, then question, criterion,
-     admissibility condition, unit, {"prompt, null condition" if model else "data, exclusions"}; `protocol-check --contract` names the labels.
+  1. PROTOCOL-{slug}.md: fill the seconds cut — `type` in the head, then question, unit,
+     {"criterion, admissibility condition, prompt, null condition" if model else "data, exclusions — no criterion, no promise table: a count has no bar to clear"}; `protocol-check --contract` names the labels.
   2. scripts/01_measure.py: {"PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run" if model else "expected_ids(), rows(), evaluate_rows()"}.
   3. git add + commit, then scripts/01_measure.py — number + run_id into "Answer to the question".
   4. finalize {rel} checks the provenance; the agent audit comes when the number is promoted."""

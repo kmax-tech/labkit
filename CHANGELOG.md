@@ -5,6 +5,29 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.87.0 — 2026-10-12
+
+### Breaking — the seconds cut is what a count owes, and the stamp carries hints, not the guide
+
+Three decisions after five cold-agent probes in the cloud (count task,
+Fable, 0.85.0 → 0.86.2, 4m27s → ~2m10s; every agent named the same
+cuts). Last version with the old seconds cut: 0.86.2.
+
+- **A count registers no promise.** At `cost = "seconds"` without a model
+  the stamp has no `[[promise]]` tables, and `Success / failure criterion`
+  and `Admissibility condition` are not owed (`sm` fields: with a model
+  they are, together with the C1/A1/A2 tables). Five agents each invented a
+  tautological [C1] for a mean; the number is held by `--check` and
+  `finalize` — `intent-check` has nothing to hold without ids.
+- **The Summary at seconds is the Result line.** `Limits` and `Next step`
+  belong to the full form; the after-run check and the cut agree
+  (`protocol_check.unreported` takes the tier).
+- **Every stamped placeholder is one line.** The template's placeholders
+  carry the field guide's prose — a third of every probe's reading time;
+  `scaffold.short_placeholders` keeps the label and a one-line hint,
+  `protocol-check --guide` is the long form. The seconds stamp went from
+  102 to 40 lines, the full form from 182 to 120.
+
 ## 0.86.2 — 2026-10-12
 
 ### Fixed — a path example in a code span is not a README placeholder

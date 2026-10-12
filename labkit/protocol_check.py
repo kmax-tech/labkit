@@ -88,8 +88,10 @@ FIELDS = (
     # Terms first: they precede the question they are asked in (LAB-087 Term before use).
     Field("Terms of this protocol", "must", "s"),
     Field("Question / hypothesis", "must", "s"),
-    Field("Success / failure criterion", "must", "s"),
-    Field("Admissibility condition", "must", "s"),
+    Field(
+        "Success / failure criterion", "must", "sm"
+    ),  # a count has no bar to clear (2026-10-12)
+    Field("Admissibility condition", "must", "sm"),
     Field("Data / scope", "must", "s"),
     Field("Model / tool", "must", "sm"),
     Field("Model I/O", "must"),
@@ -123,8 +125,8 @@ FIELDS = (
     Field("Raw output", "after", "sm"),  # a prompt+answer pair: only with a model
     # The Summary for a person, written after the run (2026-10-07)
     Field("Result", "after", "s"),
-    Field("Limits", "after", "s"),
-    Field("Next step", "after", "s"),
+    Field("Limits", "after"),  # at seconds the Summary is the Result line (2026-10-12)
+    Field("Next step", "after"),
     Field("Question", "report"),
     Field("Did", "report"),
     Field("Outcome", "report"),
@@ -520,17 +522,23 @@ def measure_runs(text: str) -> list[tuple[int, str]]:
     ]
 
 
-def unreported(text: str) -> list[str]:
+def unreported(text: str, seconds: bool = False) -> list[str]:
     """The result fields still missing, a placeholder or only dashes. A
     model-only field (`sm`, Raw output) is owed only with a model named — a
-    count has no prompt+answer pair to show."""
+    count has no prompt+answer pair to show; at SECONDS only the cut's fields
+    are owed (the Summary is the Result line, 2026-10-12)."""
     lines = fields(text)
     found = {f.name: f for f in lines}
     by_name: dict[str, list[FieldLine]] = {}
     for f in lines:
         by_name.setdefault(f.name, []).append(f)
     model = _model_named(by_name)
-    owed = [f for f in FIELDS if f.level == "after" and (f.seconds != "sm" or model)]
+    owed = [
+        f
+        for f in FIELDS
+        if f.level == "after"
+        and (_in_cut(f, model) if seconds else f.seconds != "sm" or model)
+    ]
     return [
         f.label.casefold()
         for f in owed
@@ -866,7 +874,9 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         # Post-run: a documented measure run makes an empty Result a MUST
         # gap — pilot suppression does not apply (write back, don't go quiet).
         measured = measure_runs(text)
-        run_unreported = unreported(text) if measured else []
+        run_unreported = (
+            unreported(text, seconds=report.head.cost == "seconds") if measured else []
+        )
         history = [
             (n, ln.strip())
             for n, ln in enumerate(text.splitlines(), 1)

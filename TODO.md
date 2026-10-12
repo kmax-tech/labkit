@@ -428,6 +428,11 @@ sieht das niemand.
   `--guide`, (p) Summary-Felder bei seconds auf eine Result-Zeile. Dazu ein
   Cloud-Punkt: ein VCS-Pin braucht `pip install --upgrade --force-reinstall
   --no-deps` oder ein frisches venv, sonst bleibt der alte Tag stehen.
+  **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
+  Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
+  Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:
+  die nächste Cloud-Reihe auf 0.87.0 — erwartet unter 2 Minuten und null
+  erfundene Kriterien.
   Nachtrag aus den Beobachtungen des zweiten Agenten: (g) `log.md` im Repo
   macht jeden Lauf `+dirty` (der Patch ist nur das Log) — beim nächsten
   Stempel `log.md` in die `.gitignore` und im TASK `git add -f log.md` am

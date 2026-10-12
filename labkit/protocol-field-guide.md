@@ -70,10 +70,13 @@ path to this file.
 ## The form: cuts, languages, rule references
 
 - **One template, three cuts.** `labkit-init exp --cost seconds` stamps the
-  `seconds` cut: head, question, criterion, admissibility, terms, data,
-  unit, exclusions, result — with `--model` also model, prompt and null
-  condition. The full form adds the rest; `labkit-init exp <name> --report` appends
-  the † fields. A field the cut left out is not owed.
+  `seconds` cut: head, terms, question, data, unit, exclusions, and after
+  the run the answer and the Result line — with `--model` also criterion,
+  admissibility condition, model, prompt, null condition and raw output. A
+  count without a model registers no promise and no criterion (its number
+  is held by `--check` and `finalize`). Every stamped placeholder is one line;
+  this guide is the long form. The full form adds the rest; `labkit-init exp
+  <name> --report` appends the † fields. A field the cut left out is not owed.
 - **Labels English, values in the protocol's language.** The labels are
   read by `protocol-check`, so they stay exactly as stamped; what you write
   after them — status words included — is German or English, one per

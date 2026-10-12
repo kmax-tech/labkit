@@ -481,6 +481,41 @@ class TestPromptAndExample(unittest.TestCase):
         self.assertNotIn("Raw output", out)
         self.assertEqual(rc, 0, out)
 
+    def test_a_count_at_seconds_owes_neither_criterion_nor_limits(self):
+        """Without a model the seconds cut has no criterion, no admissibility
+        condition, and after the run only the Result line of the Summary
+        (decisions 2026-10-12, five cloud probes)."""
+        base = pilot(cost="seconds").replace(
+            "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
+        )
+        lines = [
+            ln
+            for ln in base.splitlines()
+            if not ln.startswith(
+                ("- **Success / failure criterion:**", "- **Admissibility condition:**")
+            )
+        ]
+        text = (
+            "\n".join(lines)
+            + "\n## Summary\n\n- **Result:** The mean is 3.5 documents per case.\n"
+            + "\n## Result\n\n- **Answer to the question:** 3.5 (2026-09-06T10-00-00_aa11)\n"
+            "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
+        )
+        rc, out = run_main(text)
+        self.assertEqual(rc, 0, out)
+        for label in (
+            "Success / failure criterion",
+            "Admissibility condition",
+            "Limits",
+            "Next step",
+            "Raw output",
+        ):
+            self.assertNotIn(label, out)
+        # the twin: a model named brings the criterion back
+        rc, out = run_main(text.replace("n/a — deterministic", "haiku"))
+        self.assertEqual(rc, 1)
+        self.assertIn("Success / failure criterion", out)
+
     def test_a_probe_run_owes_no_result(self):
         text = (
             pilot() + "\n## Result\n\n- **Raw output:** —\n"

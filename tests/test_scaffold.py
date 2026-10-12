@@ -154,12 +154,14 @@ class Exp(unittest.TestCase):
         area = self.area()
         proto = (area / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
         self.assertIn('cost = "seconds"', proto)
-        self.assertNotRegex(
-            proto, r"(?m)^constants ="
-        )  # no registered constant for a count …
-        self.assertIn("# constants = {", proto)  # … but the hint how to register one
-        self.assertNotIn('id = "A2"', proto)  # no model, no null lane
-        self.assertIn('id = "A1"', proto)
+        # a count has no bar to clear: no promise tables, no criterion, no admissibility
+        self.assertNotIn("[[promise]]", proto)
+        self.assertNotIn("Success / failure criterion", proto)
+        self.assertNotIn("Admissibility condition", proto)
+        # the Summary at seconds is the Result line
+        self.assertIn("- **Result:**", proto)
+        self.assertNotIn("- **Limits:**", proto)
+        self.assertNotIn("- **Next step:**", proto)
         self.assertFalse((area / "scripts" / "00_prepare.py").exists())
         script = (area / "scripts" / "01_measure.py").read_text(encoding="utf-8")
         self.assertIn(
@@ -170,11 +172,55 @@ class Exp(unittest.TestCase):
         self.assertIn("evaluate_rows", readme)
         self.assertNotIn("--probe", readme)  # the counting skeleton has no probe
         self.assertIn('"_prov": {"run": run.run_id}', script)  # rows name their run
+        self.assertLess(len(proto.splitlines()), 50)  # was 102 lines of guide prose
 
-    def test_seconds_with_a_model_keeps_the_null_lane(self) -> None:
+    def test_seconds_with_a_model_keeps_criterion_promises_and_the_null_lane(
+        self,
+    ) -> None:
         quiet(scaffold.stamp_area, self.root, "foo-bar", cost="seconds", model="haiku")
         proto = (self.area() / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
-        self.assertIn('id = "A2"', proto)
+        for needle in (
+            'id = "C1"',
+            'id = "A1"',
+            'id = "A2"',
+            "# constants = {",
+            "Success / failure criterion",
+            "Admissibility condition",
+            "Raw output",
+        ):
+            self.assertIn(needle, proto, needle)
+        self.assertNotRegex(proto, r"(?m)^constants =")
+
+    def test_every_stamped_placeholder_is_one_line(self) -> None:
+        stamps = (
+            ("full", {}),
+            ("quick", {"cost": "seconds"}),
+            ("judge", {"cost": "seconds", "model": "haiku"}),
+        )
+        for name, kw in stamps:
+            quiet(scaffold.stamp_area, self.root, name, **kw)
+        for proto in (self.root / "experiments").glob("*/PROTOCOL-*.md"):
+            text = proto.read_text(encoding="utf-8")
+            fence = False
+            for line in text.splitlines():
+                if line.startswith("```"):
+                    fence = not fence
+                    continue
+                bare = re.sub(
+                    r"`[^`]*`", "", line
+                )  # `<name>` in a code span is no placeholder
+                if fence or "<!--" in line or "<" not in bare:
+                    continue
+                line = bare
+                self.assertTrue(
+                    line.rstrip().endswith(">"),
+                    f"{proto.name}: a placeholder runs past its line: {line!r}",
+                )
+            self.assertNotRegex(
+                text,
+                r"[^\n]\n## ",
+                f"{proto.name}: a heading without a blank line before it",
+            )
 
     def test_the_lab_requirements_carry_pytest(self) -> None:
         req = (self.root / "requirements.txt").read_text(encoding="utf-8")

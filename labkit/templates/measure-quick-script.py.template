@@ -52,9 +52,9 @@ def rows(ids: list[str]) -> list[dict]:
 
 
 def evaluate_rows(items: list[dict], ids: list[str]) -> dict:
-    """TODO: the number(s) from the rows, over the ids SOURCE lists, plus one
-    key per intent id the protocol registers (`c1_pass`, `a1_pass`) —
-    intent-check and finalize hold the ids to these keys. Every key lands in
+    """TODO: the number(s) from the rows, over the ids SOURCE lists — and,
+    only if the protocol registers ids (a model in the loop), one key per id
+    (`c1_pass`); a plain count registers none. Every key lands in
     metrics.json, and `--check` demands each verbatim in the protocol's
     "Answer to the question" line — keep the dict to what that line carries."""
     if not ids:

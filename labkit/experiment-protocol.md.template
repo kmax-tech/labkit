@@ -12,10 +12,10 @@
   admissibility condition failed, and what was still read descriptively;
   the result, not the procedure; no intent ids, metric keys or run_ids,
   they are below>
-- **Limits:** <!-- s --> <how far it holds, one sentence — the sample, a
+- **Limits:** <how far it holds, one sentence — the sample, a
   single run, what was not tested; a deviation after the freeze that
   touches the verdict is named here too>
-- **Next step:** <!-- s --> <what follows — a decision, the next experiment,
+- **Next step:** <what follows — a decision, the next experiment,
   or "none">
 - **Did †:** <what was done, one sentence — for a reader with no context>
 
@@ -28,7 +28,7 @@
   `notes/theorie/terms.md`, then the lab standard's vocabulary table);
   "n/a — standard vocabulary" only if nothing is coined>
 - **Question / hypothesis:** <!-- s --> <the one question — what do we expect?>
-- **Success / failure criterion:** <!-- s --> <how do we recognise whether it worked?
+- **Success / failure criterion:** <!-- sm --> <how do we recognise whether it worked?
   One id per conjunct, written `[C…]` with its number in the brackets
   (C1 → the key `c1_pass`), each reappearing as a lowercase key in the reportable
   run's metrics.json; where a number stands, name its constant from the
@@ -40,7 +40,7 @@
   `after`") — Terms below is the home of the definition, this line its
   first use (LAB-092 Term layering)
   (→ LAB-003 No run without an intent paragraph, LAB-004 Identifiers make the intent addressable)>
-- **Admissibility condition:** <!-- s --> <what must hold in the same run before
+- **Admissibility condition:** <!-- sm --> <what must hold in the same run before
   any verdict is issued — yield, coverage, a control showing its expected
   value; one A per condition, each with WHY its failure makes the measurement
   uninterpretable (not merely less likely to succeed — a threshold the
