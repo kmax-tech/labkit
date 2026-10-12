@@ -109,6 +109,23 @@ class ReadmePlaceholders(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             self.assertEqual(finalize.readme_placeholders(Path(d)), [])
 
+    def test_angle_brackets_inside_code_spans_are_examples_not_blanks(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "README.md").write_text(
+                "**The one question.** the files under `<inputs>/<case_id>/`.\n\n"
+                "```\n<inputs>/<case_id>/document-1.txt\n```\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(finalize.readme_placeholders(area), [])
+            (area / "README.md").write_text(
+                "**The one question.** <one sentence — the question>\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                len(finalize.readme_placeholders(area)), 1
+            )  # the twin: a real blank
+
 
 ROUTE = (
     "<!-- labkit:route -->\n**Nachvollziehen.**\n"

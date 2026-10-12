@@ -5,6 +5,15 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.86.2 — 2026-10-12
+
+### Fixed — a path example in a code span is not a README placeholder
+
+- **`finalize.readme_placeholders` ignores code spans and fenced blocks.**
+  `` `<inputs>/<case_id>/` `` in an area README was read as a stamped
+  blank; the fourth cloud probe (0.86.1, 2m09s, right and bound) spent a
+  gate line, a reword and a second finalize on it.
+
 ## 0.86.1 — 2026-10-12
 
 ### Fixed — what the second cloud probe found (0.86.0: 2m28s, right and bound)

@@ -406,6 +406,16 @@ sieht das niemand.
   nach dem Lauf, der Hook wiederholt es nicht, wenn es gerade grün war; (k)
   das Mess-Skript schreibt die Antwortzeile selbst (= (a)); (l) ein Lauf ist
   `+dirty` auch bei nur ungetrackten Dateien — Frage, ob `??` zählen soll.
+  Durchgang 4 (0.86.1 sauber, frisches venv): 3,5 richtig, gebunden, 2m09s,
+  4 read · 9 run · 6 edit · 0 unsure · 1 gate
+  (`2026-10-12-cloud-fable-count-4.score.json`). Behoben in 0.86.2: Pfad-
+  beispiele in Code-Spannen galten `finalize` als Platzhalter. Neu
+  notiert: (m) README dupliziert Frage und Vertrag des Protokolls; (n)
+  `SOURCE`, `COUNT_FIELD`, `METRIC_KEY` aus den Argumenten von `labkit-init
+  exp` stempeln, dann bleiben nur die drei Funktionen; (o) der Agent pusht
+  zwei Branches, weil die Cloud-Sitzung einen eigenen vorgibt — Artefakt.
+  Die Entscheidung (d), keine Versprechen-Tabellen bei einer Zählung, nennt
+  jetzt jeder der vier Agenten als größten Schnitt.
   Nachtrag aus den Beobachtungen des zweiten Agenten: (g) `log.md` im Repo
   macht jeden Lauf `+dirty` (der Patch ist nur das Log) — beim nächsten
   Stempel `log.md` in die `.gitignore` und im TASK `git add -f log.md` am

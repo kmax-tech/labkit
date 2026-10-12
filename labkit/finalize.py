@@ -485,8 +485,16 @@ def readme_placeholders(area: Path) -> list[str]:
     if not readme.is_file():
         return []
     text = readme.read_text(encoding="utf-8")
+    # a `<path>/<id>` inside a code span or a fenced block is an example, not a
+    # blank (cloud probe 2026-10-12, draw 4: a gate line and a reword for nothing)
+    scan = re.sub(
+        r"```.*?```|`[^`\n]*`",
+        lambda m: " " * len(m.group()),
+        text,
+        flags=re.S,
+    )
     out = []
-    for m in _PLACEHOLDER.finditer(text):
+    for m in _PLACEHOLDER.finditer(scan):
         line = text.count("\n", 0, m.start()) + 1
         out.append(f"README.md:{line}: {' '.join(m.group(0).split())[:70]}")
     return out
