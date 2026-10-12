@@ -465,6 +465,22 @@ class TestPromptAndExample(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("measure run in the run list", out)
 
+    def test_raw_output_is_not_owed_without_a_model_at_seconds(self):
+        """A count has no prompt+answer pair to show: the field is `sm`, owed
+        only with a model named (cloud probe 2026-10-12 filled it with n/a)."""
+        text = (
+            pilot(cost="seconds").replace(
+                "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
+            )
+            + "\n## Summary\n\n- **Result:** The mean is 3.5 documents per case.\n"
+            "- **Limits:** One count over 12 cases.\n- **Next step:** none\n"
+            + "\n## Result\n\n- **Answer to the question:** 3.5 (2026-09-06T10-00-00_aa11)\n"
+            "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
+        )
+        rc, out = run_main(text)
+        self.assertNotIn("Raw output", out)
+        self.assertEqual(rc, 0, out)
+
     def test_a_probe_run_owes_no_result(self):
         text = (
             pilot() + "\n## Result\n\n- **Raw output:** —\n"

@@ -16,6 +16,12 @@ pins (`requirements.txt` / `requirements.lock`).
   the probe venv before freezing the lock** (`other_requirements`). The lock
   knew only labkit, the cloud venv came from requirements.txt with pytest,
   and runlog reported a drift on the first run — in both draws.
+- **`Raw output` is owed only with a model** (`sm` in the template and the
+  checker): a count has no prompt+answer pair to show; the probe filled the
+  field with n/a.
+- **`code-check` says at cost seconds that schema, gate labels and
+  placeholders are not owed** instead of pointing at `--bundle`; the probe
+  never found out what the bundle was or whether it mattered.
 - **The seconds lane names `--show 2` only with a model, and the area README's
   state box names `--probe` only where the skeleton has one.** The counting
   skeleton has neither flag; the probe skipped both and said so.

@@ -66,7 +66,7 @@ import re
 import sys
 from pathlib import Path
 
-from labkit import promises, rules
+from labkit import promises, protocol_block, rules
 from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 from labkit.repo import area_path, area_protocols, layout_root, no_such_area
 from labkit.scope_sha import LOCAL_ROOTS, area_files, imported_repo_helpers
@@ -1102,6 +1102,15 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
     return warnings + findings
 
 
+def _cost_of(protocol: Path) -> str | None:
+    """The protocol head's cost tier, None when the head does not parse (the
+    checker reports that; this is only for the summary's wording)."""
+    try:
+        return protocol_block.head(protocol.read_text(encoding="utf-8")).cost
+    except protocol_block.BlockError:
+        return None
+
+
 def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Command line of `code-check`: check an area's code against its protocol, optionally write the bundle."""
     if not argv or argv[0] in ("-h", "--help"):
@@ -1184,6 +1193,12 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         parts.append(
             "schema + gate labels + placeholders extracted into "
             "the bundle for the code-check agent"
+        )
+    elif _cost_of(protocol) == "seconds":
+        parts.append(
+            "schema, gate labels, placeholders: not checked — not owed at cost "
+            "seconds, the first run is the probe (--bundle hands them to the "
+            "code-check agent anyway)"
         )
     else:
         parts.append(

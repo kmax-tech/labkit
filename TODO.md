@@ -396,6 +396,13 @@ sieht das niemand.
   Vorlagenfehlern findet, gilt für jeden Agenten; ob die Korrekturen einem
   schwächeren Agenten reichen, zeigt erst dieselbe Reihe mit Sonnet (lokal)
   oder einem Ollama-Modell.
+  Nachtrag aus den Beobachtungen des zweiten Agenten: (g) `log.md` im Repo
+  macht jeden Lauf `+dirty` (der Patch ist nur das Log) — beim nächsten
+  Stempel `log.md` in die `.gitignore` und im TASK `git add -f log.md` am
+  Ende; (h) Post-Change-Hook, `protocol-check` und Pre-Commit drucken
+  dieselbe Meldung dreimal — laut, nicht falsch, Dedupe später; (i) `Raw
+  output` ohne Modell und die `--bundle`-Meldung bei seconds: behoben in
+  0.86.1.
 
 - **Englische Namen für die Notiz-Verzeichnisse** (2026-10-12) — das Paket
   stempelt und liest `notes/theorie`, `notes/messung`, `notes/results`

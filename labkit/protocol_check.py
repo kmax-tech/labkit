@@ -120,7 +120,7 @@ FIELDS = (
     Field("Prediction for the follow-up run", "should"),
     # Written after the run: before it they cannot exist.
     Field("Answer to the question", "after", "s"),
-    Field("Raw output", "after", "s"),
+    Field("Raw output", "after", "sm"),  # a prompt+answer pair: only with a model
     # The Summary for a person, written after the run (2026-10-07)
     Field("Result", "after", "s"),
     Field("Limits", "after", "s"),
@@ -521,14 +521,22 @@ def measure_runs(text: str) -> list[tuple[int, str]]:
 
 
 def unreported(text: str) -> list[str]:
-    """The result fields still missing, a placeholder or only dashes."""
-    found = {f.name: f for f in fields(text)}
+    """The result fields still missing, a placeholder or only dashes. A
+    model-only field (`sm`, Raw output) is owed only with a model named — a
+    count has no prompt+answer pair to show."""
+    lines = fields(text)
+    found = {f.name: f for f in lines}
+    by_name: dict[str, list[FieldLine]] = {}
+    for f in lines:
+        by_name.setdefault(f.name, []).append(f)
+    model = _model_named(by_name)
+    owed = [f for f in FIELDS if f.level == "after" and (f.seconds != "sm" or model)]
     return [
-        name
-        for name in RESULT_FIELDS
-        if name not in found
-        or found[name].placeholder
-        or _DASHES.match(found[name].value)
+        f.label.casefold()
+        for f in owed
+        if f.label.casefold() not in found
+        or found[f.label.casefold()].placeholder
+        or _DASHES.match(found[f.label.casefold()].value)
     ]
 
 
