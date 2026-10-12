@@ -819,8 +819,8 @@ def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
         return [
             f'{path.name}: `cost = "seconds"`, but the registration is not '
             f"written: {', '.join(missing)} still empty or a placeholder — at "
-            f"seconds the gate is question · criterion · admissibility "
-            f"condition, not the freeze (LAB-003 No run without an intent paragraph, LAB-017 The number of audits follows the cost tier)"
+            f"seconds the gate is the question (with a model also criterion · "
+            f"admissibility condition), not the freeze (LAB-003 No run without an intent paragraph, LAB-017 The number of audits follows the cost tier)"
         ]
     out = []
     if not head.frozen:
@@ -865,6 +865,7 @@ def _registration_refusal(
     block: "promises.PromiseTables | None",
     config: dict,
     long: bool,
+    registers: bool = True,
 ) -> str | None:
     """The registration's contract, before any gate that can be acknowledged
     and before mkdir (standard 0.19): a frozen protocol and every full run
@@ -877,7 +878,9 @@ def _registration_refusal(
     name = Path(path).name if isinstance(path, str) and path else "(unbound)"
     if head is None:
         return None
-    owed = promises.promise_tables_owed(block, frozen=head.frozen, full_run=long)
+    owed = promises.promise_tables_owed(
+        block, frozen=head.frozen, full_run=long, registers=registers
+    )
     if owed:
         return f"{name}: {owed}"
     if block is not None:
@@ -968,7 +971,12 @@ class Run:
         # Frozen now: what the registration check holds is what config.json records.
         self._config = dict(config)
         refusal = _registration_refusal(
-            self._protocol, _phead, _block, self._config, long
+            self._protocol,
+            _phead,
+            _block,
+            self._config,
+            long,
+            registers=promises.registers_ids(_ptext) if _ptext is not None else True,
         )
         if refusal:
             raise SystemExit(f"runlog: {refusal}")
@@ -1021,7 +1029,7 @@ class Run:
                     + "\n  ".join(findings)
                     + "\nPilot it with long=False, or freeze first: `preflight "
                     "<AREA>` clean, audit stamped, `frozen = true` "
-                    '(at cost = "seconds": question, criterion and admissibility condition written suffice). A '
+                    '(at cost = "seconds": the question written suffices, with a model also criterion and admissibility condition). A '
                     "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded)."
                 )
         self.dir = base_dir / "runs" / self.run_id

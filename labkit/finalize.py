@@ -444,7 +444,7 @@ def check_intent_keys_in_metrics(
 
 
 def check_declared_scopes(
-    findings: Findings, area: Path, measurement_run: Path
+    findings: Findings, area: Path, measurement_run: Path, text: str = ""
 ) -> None:
     """Station 3: a promise's declared scope edited after the run: today's code is not
     the code that produced the number; until 2026-10-06 only recheck saw it
@@ -453,6 +453,9 @@ def check_declared_scopes(
     a registration that is data) — it came from a labkit that let it pass,
     or the block was added after the run."""
     recorded = (read_run_config(measurement_run) or {}).get("promises")
+    if recorded is None and text and not promises.registers_ids(text):
+        print("  n/a — the protocol registers no promise id (a count), nothing to hold")
+        return
     if recorded is None:
         owed = promises.promise_tables_owed(None, frozen=False, full_run=True)
         findings.block(
@@ -690,7 +693,7 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
     if measurement_run is None:
         print(NO_RUN)
     else:
-        check_declared_scopes(findings, area, measurement_run)
+        check_declared_scopes(findings, area, measurement_run, text)
 
     # 4. open fields — always
     header(f"open fields: {chosen.name}")

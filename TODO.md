@@ -428,6 +428,12 @@ sieht das niemand.
   `--guide`, (p) Summary-Felder bei seconds auf eine Result-Zeile. Dazu ein
   Cloud-Punkt: ein VCS-Pin braucht `pip install --upgrade --force-reinstall
   --no-deps` oder ein frisches venv, sonst bleibt der alte Tag stehen.
+  Durchgang 6 (0.87.0): 3,5 richtig, gebunden, 3m36s, 10 read · 15 run · 7
+  edit · 1 unsure · 3 gate, 1 Quelltext-Lesung „weil das Gate es erzwang"
+  (`2026-10-12-cloud-fable-count-6.score.json`) — der Schnitt 0.87.0 war
+  unvollständig: `protocol-check` verlangte die Tabellen, `runlog` Kriterium
+  und Zulassungsbedingung; behoben in 0.87.1 (eine Regel: wer keine Kennung
+  registriert, schuldet keine Tabelle; das Sekunden-Gate ist die Frage).
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:

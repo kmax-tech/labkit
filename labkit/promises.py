@@ -68,6 +68,14 @@ CONSTANT_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 _LETTERS = "".join(KINDS)
 #: an id anywhere in protocol prose: `[C1]`, `[k2]`
 ID_IN_PROTOCOL = re.compile(rf"\[([{_LETTERS}]\d+)\]", re.I)
+
+
+def registers_ids(text: str) -> bool:
+    """Does the protocol's prose name any promise id? A count at seconds
+    names none and owes no [[promise]] table (0.87.1)."""
+    return ID_IN_PROTOCOL.search(text) is not None
+
+
 #: an id in the letters labkit 0.47 read — detected, never read: a protocol
 #: carrying them would otherwise pass every id check with nothing checked
 EARLIER_ID = re.compile(r"\[([KSWN]\d+)\]")
@@ -319,13 +327,15 @@ def all_constants(block: PromiseTables) -> dict[str, int | float | str | bool]:
 
 
 def promise_tables_owed(
-    block: PromiseTables | None, *, frozen: bool, full_run: bool
+    block: PromiseTables | None, *, frozen: bool, full_run: bool, registers: bool = True
 ) -> str | None:
     """Why a protocol owes its [[promise]] tables, or None — the one home of
     the rule (standard 0.19) for protocol-check, preflight, runlog and
     finalize. The table:
 
-        frozen = true            → owed
+        frozen = true            → owed (the freeze is the registration)
+        registers = False and not frozen (the prose names no [C]/[A]/[B]
+            id — a plain count at seconds, 0.87.1) → not owed: nothing to hold
         full_run (runlog long=True; at cost = seconds every run) → owed
         otherwise (an unfrozen pilot) → not owed
 
@@ -334,6 +344,8 @@ def promise_tables_owed(
     and `PromiseTables` mean the [[promise]] tables alone."""
     if block is not None or not (frozen or full_run):
         return None
+    if not registers and not frozen:
+        return None  # a full run of a count: nothing registered, nothing to hold
     because = "frozen = true" if frozen else "a full run is held to the registration"
     return (
         f"{because}, but the protocol declares no [[promise]] table — the "

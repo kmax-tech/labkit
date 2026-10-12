@@ -35,10 +35,16 @@ PLACEHOLDER = head(
 )
 NO_FIELD = FROZEN.replace(f'preflight_audit = "{AUDIT}"\n', "")
 REGISTRATION = """
+- **Model / tool:** haiku
 - **Question / hypothesis:** does the register beat the trivial decider?
 - **Success / failure criterion:** [C1] accuracy above the trivial decider
 - **Admissibility condition:** [A1] every case parsed
 """
+# a count: no model, no id, the question only — the gate owes nothing more (0.87.1)
+SECONDS_COUNT = (
+    head(cost="seconds", promises=None)
+    + "\n- **Question / hypothesis:** how many documents per case?\n"
+)
 SECONDS = head(cost="seconds") + REGISTRATION
 SECONDS_NO_CRITERION = SECONDS.replace(
     "[C1] accuracy above the trivial decider", "<the criterion>"
@@ -177,6 +183,12 @@ class FreezeGate(unittest.TestCase):
         self.assertIn("Success / failure criterion", str(cm.exception))
         self.assertIn('cost = "seconds"', str(cm.exception))
         self.assertFalse((area / "runs").exists())
+
+    def test_a_count_at_seconds_starts_without_criterion_or_tables(self):
+        r, _ = self._start(SECONDS_COUNT, long=True)
+        cfg = json.loads((r.dir / "config.json").read_text())
+        self.assertEqual(cfg["cost_tier"], "seconds")
+        self.assertIsNone(cfg.get("promises"))  # nothing registered, nothing recorded
 
     def test_hours_keeps_the_freeze(self):
         area = self._area(HOURS_UNFROZEN)

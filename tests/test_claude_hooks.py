@@ -144,12 +144,12 @@ class PreRun(unittest.TestCase):
         self.assertIn("registration written", ctx)
         self.assertNotIn("BLOCKED", err)
 
-    def test_seconds_without_criterion_is_reported_not_blocked(self):
+    def test_seconds_without_question_is_reported_not_blocked(self):
         root = _repo(False, cost="seconds")
         proto = root / "experiments/01-x/PROTOCOL-x.md"
         proto.write_text(
             proto.read_text(encoding="utf-8").replace(
-                "[C1] p < .05", "<the criterion>"
+                "does it hold?", "<the question>"
             ),
             encoding="utf-8",
         )

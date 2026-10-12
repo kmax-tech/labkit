@@ -381,6 +381,7 @@ def check_fields(text: str) -> FieldReport:
             promises.parse_block(text),
             frozen=head.frozen,
             full_run=head.cost == "seconds",
+            registers=promises.registers_ids(text),
         )
     except promises.PromiseError as exc:
         tables_gap = f"[[promise]] tables: {exc}"
@@ -397,19 +398,19 @@ def check_fields(text: str) -> FieldReport:
 
 def seconds_registration_missing(text: str) -> list[str]:
     """The registration a run of seconds owes before its number counts:
-    question, criterion and admissibility condition written (not a
-    placeholder) and the cost declared. Returns what is missing — empty
-    means the gate is open (LAB-003 No run without an intent paragraph)."""
-    written = {f.name for f in fields(text) if f.value and not f.placeholder}
-    missing = [
-        label
-        for label in (
-            "Question / hypothesis",
-            "Success / failure criterion",
-            "Admissibility condition",
-        )
-        if label.casefold() not in written
-    ]
+    the question written (not a placeholder), with a model named also
+    criterion and admissibility condition, and the cost declared.
+    Returns what is missing — empty means the gate is open (LAB-003 No run
+    without an intent paragraph; a count has no bar to clear, 0.87.1)."""
+    lines = fields(text)
+    written = {f.name for f in lines if f.value and not f.placeholder}
+    by_name: dict[str, list[FieldLine]] = {}
+    for f in lines:
+        by_name.setdefault(f.name, []).append(f)
+    labels = ["Question / hypothesis"]
+    if _model_named(by_name):
+        labels += ["Success / failure criterion", "Admissibility condition"]
+    missing = [label for label in labels if label.casefold() not in written]
     try:
         cost = protocol_block.head(text).cost
     except protocol_block.BlockError:

@@ -101,7 +101,19 @@ class Cut(unittest.TestCase):
 
 
 class Registration(unittest.TestCase):
-    QUESTION = "- **Question / hypothesis:** q\n- **Success / failure criterion:** c\n"
+    QUESTION = (
+        "- **Model / tool:** haiku\n"  # with a model the gate owes criterion and admissibility
+        "- **Question / hypothesis:** q\n- **Success / failure criterion:** c\n"
+    )
+
+    def test_a_count_owes_only_its_question(self):
+        """Without a model there is no bar to clear: the gate is the question (0.87.1)."""
+        text = head(cost="seconds") + "- **Question / hypothesis:** how many?\n"
+        self.assertEqual(protocol_check.seconds_registration_missing(text), [])
+        text = head(cost="seconds") + "- **Question / hypothesis:** <the question>\n"
+        self.assertEqual(
+            protocol_check.seconds_registration_missing(text), ["Question / hypothesis"]
+        )
 
     def test_all_four_written(self):
         text = (

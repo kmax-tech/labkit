@@ -25,7 +25,8 @@ LAB-017 The number of audits follows the cost tier.
 3. Fill the skeleton (with a model: read `--show 2`), run `code-check <area>`.
 4. Commit, then the run — in the foreground; it is the instrument check too.
 5. Number + run_id into the protocol (answer, raw output, run line) and the
-   human summary at the top: Result, Limits, Next step. Commit `output/` and
+   human summary at the top: the Result line (Limits and Next step belong to
+   the full form). Commit `output/` and
    `runs/` with the protocol — `finalize <area>` checks the provenance and
    wants both in git.
 6. The agent audit is a later, separate task: due when the number goes into

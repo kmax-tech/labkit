@@ -128,9 +128,21 @@ class ProtocolCheckOwesTheBlock(unittest.TestCase):
             any("[[promise]]" in m for m in report.missing_must), report.missing_must
         )
 
-    def test_seconds_without_a_block_is_a_must_finding(self) -> None:
-        report = protocol_check.check_fields(head(cost="seconds", promises=None))
+    def test_seconds_without_a_block_is_a_must_finding_once_an_id_is_registered(
+        self,
+    ) -> None:
+        registered = (
+            head(cost="seconds", promises=None)
+            + "- **Success / failure criterion:** [C1] x\n"
+        )
+        report = protocol_check.check_fields(registered)
         self.assertTrue(
+            any("declares no [[promise]]" in m for m in report.missing_must),
+            report.missing_must,
+        )
+        # the twin: a count names no id and owes no table (0.87.1)
+        report = protocol_check.check_fields(head(cost="seconds", promises=None))
+        self.assertFalse(
             any("declares no [[promise]]" in m for m in report.missing_must),
             report.missing_must,
         )

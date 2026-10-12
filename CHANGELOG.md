@@ -5,6 +5,26 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.87.1 — 2026-10-12
+
+### Fixed — the gates agree with the 0.87.0 stamp: a count registers nothing and owes no table
+
+The sixth cloud probe ran on the 0.87.0 stamp and hit two gates the cut had
+not been told about (3m36s, one read of labkit source "because the gate
+forced it"): `protocol-check` demanded `[[promise]]` tables the stamp
+leaves out, and `runlog` refused the run for the criterion and the
+admissibility condition the cut no longer carries.
+
+- **`promises.promise_tables_owed` takes `registers`**: a protocol whose
+  prose names no [C]/[A]/[B] id owes no tables unless it is frozen —
+  there is nothing to hold (`promises.registers_ids`). protocol-check,
+  runlog and finalize pass it; finalize says "n/a — the protocol registers
+  no promise id" instead of blocking a count's run for a missing block.
+- **The seconds gate of runlog is the question** — with a model named also
+  criterion and admissibility condition (`protocol_check.seconds_registration_missing`).
+- The seconds lane names the Result line as the summary; Limits and Next
+  step belong to the full form.
+
 ## 0.87.0 — 2026-10-12
 
 ### Breaking — the seconds cut is what a count owes, and the stamp carries hints, not the guide
