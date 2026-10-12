@@ -467,6 +467,11 @@ sieht das niemand.
   nach dem Lauf meldet — bei seconds weglassen oder in `protocol-fill --list`
   aufnehmen; (s) Terms/Unit/Exclusions bei einer Dateizählung wiederholen
   `visible()` in Prosa.
+  Durchgang 10 (0.87.1, `drift:0`): 3,5 richtig, gebunden, 3m42s (ein
+  eigener Edit-Fehlschlag, zwei finalize), 0 gate
+  (`2026-10-12-cloud-fable-count-10.score.json`). **Reihe abgeschlossen:**
+  n = 3 auf 0.87.1 — 2m20s · 2m06s · 3m42s, Median 2m20s, 0–1 Gate-Zeile, 0
+  Quelltext-Lesungen; Spur: `docs/usability/2026-10-12-cloud-fable.md`.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:
