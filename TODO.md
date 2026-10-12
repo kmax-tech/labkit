@@ -458,6 +458,15 @@ sieht das niemand.
   immer über das noch ungetrackte `output/` (zwei Durchläufe), und die
   Rückschrift von Hand (Idee (a)). Der eine Fehlschlag im Log war ein `wc -l`
   auf Verzeichnisse, kein Gate.
+  Durchgang 9 (0.87.1, `drift:0`): 3,5 richtig, gebunden, 2m06s laut Log,
+  0 Gate-Treffer außer der README-Warnung von `finalize`, 0 Quelltext-
+  Lesungen (`2026-10-12-cloud-fable-count-9.score.json`). Neu genannt: (q)
+  `protocol-check --contract` druckt bei seconds die volle Form, obwohl nur
+  die erste Zeile zählt — bei seconds nur die geschuldete Zeile drucken;
+  (r) der README-Vertragsabsatz ist ein Platzhalter, den erst `finalize`
+  nach dem Lauf meldet — bei seconds weglassen oder in `protocol-fill --list`
+  aufnehmen; (s) Terms/Unit/Exclusions bei einer Dateizählung wiederholen
+  `visible()` in Prosa.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:
