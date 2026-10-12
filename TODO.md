@@ -434,6 +434,14 @@ sieht das niemand.
   unvollständig: `protocol-check` verlangte die Tabellen, `runlog` Kriterium
   und Zulassungsbedingung; behoben in 0.87.1 (eine Regel: wer keine Kennung
   registriert, schuldet keine Tabelle; das Sekunden-Gate ist die Frage).
+  Durchgang 7 (Stempel 0.87.1, venv aber 0.87.0 — der Lauf zeichnet
+  `drift:1` auf, labkit auf 79bda9b statt 20c98d3): 4m23s, 8 read · 13 run ·
+  6 edit · 1 unsure · 3 gate, 1 Quelltext-Lesung
+  (`2026-10-12-cloud-fable-count-7.score.json`). **Kein Beleg für 0.87.1:**
+  die zwei Gates sind die von 0.87.0. Dreimal (3, 5, 7) hatte das Cloud-venv
+  den Tag der vorigen Sitzung; `rm -rf .venv` im Setup-Skript war nicht
+  wirksam oder nicht gespeichert — vor Durchgang 8 das Setup-Log der Sitzung
+  lesen (pwd, pip, `labkit-check`-Zeilen), nicht raten.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:
