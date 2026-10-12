@@ -28,7 +28,7 @@ The first cold-agent probe in a claude.ai/code cloud session (count task,
 labkit 0.85.0, no house directory, no skills): number right and bound in
 4m27s, 0 reads of labkit source — and three of its five "what I would cut"
 items were template bugs, not agent trouble
-(`docs/usability/2026-10-12-cloud-count-1.score.json`).
+(`docs/usability/2026-10-12-cloud-fable-count-1.score.json`).
 
 - **`labkit-init lab` stamps `pytest` into `requirements.txt`.** The
   stamped area test needs it, preflight and finalize run it, AGENTS.md
