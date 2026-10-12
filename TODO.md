@@ -449,6 +449,15 @@ sieht das niemand.
   Abhilfe im Probe-Repo: ein SessionStart-Hook in `.claude/settings.json`
   prüft `labkit-check` und baut das venv sonst aus dem Pin neu; läuft vor
   dem ersten Schritt des Agenten, nicht im Log.
+  Durchgang 8 (0.87.1, venv passend, `drift:0`): 3,5 richtig, gebunden,
+  2m20s, 6 read · 14 run · 6 edit · 1 unsure · **0 gate**, 0 Quelltext-
+  Lesungen (`2026-10-12-cloud-fable-count-8.score.json`) — der erste Beleg
+  für den Schnitt: kein erfundenes Kriterium, keine Tabelle, kein Gate.
+  Übrig laut Agent: der Feldführer ist 480 Zeilen und `--guide` druckt nur
+  den Pfad (ein Drittel der Zeit), `finalize` warnt beim ersten Durchlauf
+  immer über das noch ungetrackte `output/` (zwei Durchläufe), und die
+  Rückschrift von Hand (Idee (a)). Der eine Fehlschlag im Log war ein `wc -l`
+  auf Verzeichnisse, kein Gate.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:
