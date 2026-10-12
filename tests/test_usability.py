@@ -270,3 +270,10 @@ class SourceReadsCountTheStandard(unittest.TestCase):
             "18:00:30 · read · experiments/01-x/README.md\n"
         )
         self.assertEqual(usability.parse_log(log).source_reads, 2)
+
+
+class OtherRequirements(unittest.TestCase):
+    def test_every_line_but_labkit_and_comments(self):
+        text = "# pinned\nlabkit @ git+https://x/labkit.git@v0.86.0\n\n# tests\npytest\nmarimo\n"
+        self.assertEqual(usability.other_requirements(text), ["pytest", "marimo"])
+        self.assertEqual(usability.other_requirements("labkit==1.0\n"), [])

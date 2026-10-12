@@ -5,6 +5,21 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.86.1 — 2026-10-12
+
+### Fixed — what the second cloud probe found (0.86.0: 2m28s, right and bound)
+
+- **The counting skeleton writes its rows inside the run, each with
+  `_prov.run`.** It wrote the file before opening the run, so finalize noted
+  twelve rows without provenance on every seconds area.
+- **`usability stage` installs the stamped requirements beyond labkit into
+  the probe venv before freezing the lock** (`other_requirements`). The lock
+  knew only labkit, the cloud venv came from requirements.txt with pytest,
+  and runlog reported a drift on the first run — in both draws.
+- **The seconds lane names `--show 2` only with a model, and the area README's
+  state box names `--probe` only where the skeleton has one.** The counting
+  skeleton has neither flag; the probe skipped both and said so.
+
 ## 0.86.0 — 2026-10-12
 
 ### Fixed — three defects of the seconds stamp, found by the first cloud probe

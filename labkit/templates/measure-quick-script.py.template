@@ -79,13 +79,16 @@ def main() -> None:
         return
     items = rows(ids)
     OUT.parent.mkdir(exist_ok=True)
-    OUT.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in items),
-                   encoding="utf-8")
     # data= freezes the source (sha, rows) in the run; `finalize` refuses a
     # run of seconds without it, and one whose source or OUT is not in git.
     with runlog.run("<name>", config={"source": str(SOURCE.relative_to(REPO))},
                     base_dir=AREA, data={"source": SOURCE},
                     long=True, protocol=PROTOCOL.name) as run:
+        # every row names the run that wrote it (`_prov.run`): finalize holds
+        # the file to it, and a row from another run is a file of two measurements
+        OUT.write_text("".join(json.dumps({**r, "_prov": {"run": run.run_id}},
+                                          ensure_ascii=False) + "\n" for r in items),
+                       encoding="utf-8")
         run.output(OUT)
         metrics = evaluate_rows(items, ids)
         run.metrics(**metrics)

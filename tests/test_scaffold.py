@@ -166,7 +166,10 @@ class Exp(unittest.TestCase):
             "def evaluate_rows(", script
         )  # the name the README route and finalize expect
         self.assertNotIn("def evaluate(", script)
-        self.assertIn("evaluate_rows", (area / "README.md").read_text(encoding="utf-8"))
+        readme = (area / "README.md").read_text(encoding="utf-8")
+        self.assertIn("evaluate_rows", readme)
+        self.assertNotIn("--probe", readme)  # the counting skeleton has no probe
+        self.assertIn('"_prov": {"run": run.run_id}', script)  # rows name their run
 
     def test_seconds_with_a_model_keeps_the_null_lane(self) -> None:
         quiet(scaffold.stamp_area, self.root, "foo-bar", cost="seconds", model="haiku")

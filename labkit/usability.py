@@ -168,6 +168,21 @@ def _sh(args: list[str], cwd: Path) -> str:
     return r.stdout
 
 
+def other_requirements(text: str) -> list[str]:
+    """The requirement lines of a stamped `requirements.txt` besides labkit —
+    `pytest` since 0.86.0. They go into the probe venv before the lock is
+    frozen: the cloud probe's venv came from requirements.txt, the stamped
+    lock knew only labkit, and runlog reported a drift on the first run
+    (2026-10-12, draws 1 and 2)."""
+    return [
+        ln.strip()
+        for ln in text.splitlines()
+        if ln.strip()
+        and not ln.lstrip().startswith("#")
+        and not re.match(r"^\s*labkit\b", ln)
+    ]
+
+
 def _labkit_spec(python: Path) -> str:
     """The labkit line of `pip freeze` under `python` — the one this
     interpreter would import, named the way pip names it."""
@@ -365,6 +380,11 @@ def stage(
             ],
             root,
         )
+        extra = other_requirements(
+            (root / "requirements.txt").read_text(encoding="utf-8")
+        )
+        if extra:
+            _sh([str(root / ".venv" / "bin" / "pip"), "install", "-q", *extra], root)
     # The hooks, as a real setup installs them (`labkit-hooks install`, labkit
     # 0.51): pre-commit with finalize, core.hooksPath, the claude-hook entries.
     _sh([str(root / ".venv" / "bin" / "labkit-hooks"), "install"], root)

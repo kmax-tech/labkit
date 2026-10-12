@@ -22,7 +22,7 @@ LAB-017 The number of audits follows the cost tier.
    `protocol-check --contract` names the labels; fill by label with
    `protocol-fill <PROTOCOL> "<Label>" "<value>"`, the prompt block from the
    script's `PROMPT` constants with `protocol-fill <PROTOCOL> --prompts`.
-3. Fill the skeleton, read `--show 2`, run `code-check <area>`.
+3. Fill the skeleton (with a model: read `--show 2`), run `code-check <area>`.
 4. Commit, then the run — in the foreground; it is the instrument check too.
 5. Number + run_id into the protocol (answer, raw output, run line) and the
    human summary at the top: Result, Limits, Next step. Commit `output/` and

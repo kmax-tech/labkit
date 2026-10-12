@@ -379,8 +379,17 @@ sieht das niemand.
   seconds, dass nur die erste Zeile von `protocol-check --contract` zählt;
   (c) `runs.tsv` nach dem ersten Lauf ungetrackt, `.gitignore` nennt nur
   das Lock — der Stempel sollte sagen, dass der Index committet wird.
-  Nächster Schritt: Probe auf 0.86.0 neu stempeln, drei Durchgänge, dann
-  (a)–(c) nach Ertrag.
+  Durchgang 2 (0.86.0): 3,5 richtig, gebunden, 2m28s, 4 read · 10 run · 7
+  edit · 2 unsure · 2 gate (`2026-10-12-cloud-count-2.score.json`). Drei
+  weitere Vorlagenfehler behoben (0.86.1: `_prov` je Zeile, Lock mit pytest,
+  `--show`/`--probe` nur mit Modell). Aus dem zweiten Bericht offen, als
+  Entscheidungen: (d) bei `cost = "seconds"` ohne Modell C1/A1 und die
+  Zulassungsbedingung weglassen — eine deterministische Zählung hat kein
+  Kriterium, der Agent registrierte Tautologien; (e) `type = "exploratory"`
+  bei seconds vorbelegen oder `protocol-fill` den TOML-Kopf setzen lassen;
+  (f) die Feldführer-Prosa aus der gestempelten Vorlage in
+  `protocol-check --guide` — ein Drittel der Sitzung war Lesen. Reihe: noch
+  zwei Durchgänge auf 0.86.0 (n = 3), dann 0.86.1 stempeln.
 
 - **Englische Namen für die Notiz-Verzeichnisse** (2026-10-12) — das Paket
   stempelt und liest `notes/theorie`, `notes/messung`, `notes/results`

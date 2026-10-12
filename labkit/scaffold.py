@@ -439,7 +439,7 @@ through `runlog` · `finalize` · number + run_id into the protocol · {recheck}
 ## State
 
 - [ ] Registration written in the protocol (**before** the first run)
-- [ ] `--probe` read, parser cases in the test
+{"- [ ] `--probe` read, parser cases in the test" if skeleton else "- [ ] the area test green (`.venv/bin/python -m pytest tests/test_" + nn + "_" + slug + ".py`)"}
 - [ ] Run, `finalize` green, number + run_id in the protocol
 """
 
