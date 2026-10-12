@@ -34,7 +34,7 @@ kein Ziel.
 | 2 | Benchmark — Stufe 1 + Katalog in gefüllten Proben (`count`, `judge`) | **Stufe erledigt 2026-10-06: `generalises`** — Sonnet findet 4/5 Haus-, 4/5 Katalogfälle, 0 Fehlalarme auf 22 stillen Ziehungen; B1 (positionaler Join) 0/3 übersehen (Lauf `2026-10-06T19-22-09_d352`, Labor `fe6a434`). Zweiter Auditor erledigt: `experiment-preflight` (Opus, Narbentabelle) findet B1 3/3, 5/5 + 5/5, 0 Fehlalarme (Labor `03`, Lauf `2026-10-06T19-56-51_8a20`) — **für `labkit audit` und `promote`: experiment-preflight, und WARNINGs sind Befunde zum Entscheiden**, denn B1 kommt nur als WARNING |
 | 4 | Usability mit/ohne labkit (Punkt 2 erweitert) | eigene Ansage |
 | D | Doktrin und Gerüstbauer ins Paket (Punkt 5; `AGENTS.md`-Vorlage aus Punkt 6 inbegriffen) | **erledigt 2026-10-12** — Phase 1 (0.77.0) und Phase 2 (0.78.0) gebaut; der Thesis-Starter bleibt Haus (entschieden 2026-10-12, s. Punkt 5). Auslöser war 2026-10-09: verwirrt den Autor selbst |
-| R | Rollout in einem Release: die Pins der Labor- und Thesis-Repos heben, Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus) | **läuft seit 2026-10-12** — Bestandsaufnahme und Vorarbeit unter Punkt 5, „Zeile R“; wartet auf den Tag `v0.84.0` |
+| R | Rollout in einem Release: die Pins der Labor- und Thesis-Repos heben, Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus) | **Kern erledigt 2026-10-12 (Tag `v0.85.0` auf GitHub):** die vier aktiven Labor-Repos auf dem Tag, je ein Commit; Reste unter Punkt 5, „Zeile R“ |
 | Tokenkosten | messen statt schätzen — `llm.last_usage()`, `labkit-audit` druckt Prompt- und Output-Tokens, `agent_transcript.tokens` liest die Usage-Blöcke der Claude-Code-Transkripte (0.81.0, 2026-10-11) | **erledigt 2026-10-11.** Auslöser: 30 Transkripte (labkit, uniagent) summieren 7 Mrd. Cache-Read-Tokens, die alten Subagenten-Audits je 3,65 Mio., und keine labkit-Zeile sagte, was ein Aufruf kostet. Pilot `labkit-paper` Bereich 04 (`audit-on-reachable-code-holds`, Lauf `2026-10-11T14-00-57_071a`): die direkten Importe auf erreichbaren Code zu kürzen spart 0–16 % des Prompts (Median 8 % über 24 uniagent-Bereiche) — **an der Renderprobe gestoppt, kein Modellaufruf; LAB-103 The audit reads by declared scope, not by import graph bleibt.** Der Prompt ist groß, weil die Zahl fast den ganzen Agenten braucht (Bereich 19: 142 von 155 kB Importe erreicht), nicht wegen ungenutztem Code; Fixkosten je Audit ~69 kB (Instruktionen 9, zitierte Regeln 19, Protokoll 26, Index 15). Ein kleinerer Audit bräuchte eine andere Frage (Audit je Versprechen über seinen deklarierten Scope), kein Schnitt. Die Hauptsitzungen (Median 400–500 k Kontext je Aufruf) sind Sitzungshygiene, keine labkit-Aufgabe. |
 
 **1a gebaut (2026-10-06):** `labkit/promises.py` ist die eine Heimat des
@@ -666,7 +666,22 @@ in the dotfiles“) sagen das schon. Damit ist Phase 2 abgeschlossen.
 - dotfiles: `python -m labkit.rules check|ledger|refs` grün über Hausdokument
   und Register.
 
-**Zeile R — Stand 2026-10-12 (Bestandsaufnahme, Vorarbeit erledigt):**
+**Zeile R — erledigt 2026-10-12 für die vier aktiven Repos** (uniagent
+`4e3ec93`, fallacy-dataset-generation `949085f`, labkit-paper `f1fef6e`,
+counterfactual-worlds — Pin `git+https://github.com/kmax-tech/labkit.git@v0.85.0`,
+`labkit-hooks install`, `lib sync pull`, Kennungen in lebenden Dateien,
+Suiten grün). `labkit-check` je Repo: Pin, Installation, neuester Tag, Hook OK;
+die Zeile `refs` bleibt STALE in dreien, bewusst: `resources/templates/`
+(Schnappschuss von vor 0.47, in uniagent und labkit-paper, nichts liest ihn —
+löschen wäre die saubere Lösung, Entscheidung des Nutzers), `src/measure/
+comparison.py:884` in uniagent (Audit-Scope von 19 eingefrorenen Bereichen),
+20 alte Kapitelverweise (`§2.2`, `§12.4` …) in Notizen und Archiv von
+counterfactual-worlds. Nebenbefund labkit-paper: Bereich 04 zitiert einen
+Lauf, dessen Scope sich geändert hat — `finalize --if-reported` meldet 4
+Blocker, der Hook hält jede Änderung an diesem Protokoll an, bis der Bereich
+weiterbearbeitet wird. counterfactual-worlds importierte
+`promises.registered_ids` (weg seit 0.74.1) — ein Bruch, den der CHANGELOG
+nicht als solchen angekündigt hatte. Stand vorher:**
 
 - **Prüfstelle je Repo:** `.venv/bin/labkit-check` aus dem Repo-venv, fünf
   Zeilen OK (0.84.0, gebaut 2026-10-12 für genau diesen Rollout).
