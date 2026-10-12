@@ -12,6 +12,28 @@ Four levers from reading uniagent's 23 preflight and 21 analysis audits
 follow is a mechanical warning, a criterion that noise can fail is a scar,
 and an audit at cost `seconds` before the first run says it is early.
 
+### Changed — the scar table knows a criterion that noise can fail
+
+- **New row in LAB-015's scar table, "Criterion fails on noise"**: a
+  criterion on model output that one vote of a component the change does
+  not touch can fail — every rejection counts, no majority over draws, no
+  restriction to the component under test (uniagent area 26: [C3] fell to a
+  single vote of an unchanged rule; the preflight audit, working the table,
+  had no row for it). Audit column `preflight`, rules LAB-036 and LAB-016.
+- **LAB-015 says what no audit sees**: model behaviour on the cases. In
+  uniagent four criteria fell to it and no audit had flagged one; the probe
+  for that is the instrument check on the boundary cases (LAB-008, LAB-014),
+  not a second audit.
+
+### Changed — `labkit-audit --mode preflight` says when it is early
+
+- **At `cost = "seconds"` with no completed run** the command prints one
+  WARNING on stderr and goes on: the first run is the cheaper probe, one
+  audit in mode analysis after it covers the preflight rows (LAB-017 The
+  number of audits follows the cost tier). uniagent area 01 had two
+  preflight audits and an analysis audit at seconds; its protocol says one
+  after the first run would have done.
+
 ### Added — static evidence: code the stamp cannot follow (`code-check` 1d)
 
 - **`code_check.stamp_coverage_findings`**, run by `code-check` and by

@@ -64,7 +64,7 @@ from typing import NamedTuple
 
 from labkit import findings, llm, promises, protocol_block, rules
 from labkit.repo import area_protocols, layout_root, no_such_area
-from labkit.runs import bound_answering_run, read_outputs
+from labkit.runs import bound_answering_run, completed_runs, read_outputs
 from labkit.scope_sha import area_stamp, imported_repo_helpers, repo_imports
 
 AGENT = Path(__file__).with_name("experiment-preflight.agent.md")
@@ -450,6 +450,30 @@ def scope_mismatch(area: Path, listed: list[str]) -> list[str]:
     return out
 
 
+def early_for_tier(area: Path, protocol: Path, mode: str) -> list[str]:
+    """One WARNING line when a preflight audit comes before the cost tier
+    asks for it: at `cost = "seconds"` the first run is the cheaper probe
+    and ONE audit in mode analysis after it covers the preflight rows
+    (LAB-017 The number of audits follows the cost tier). uniagent area 01,
+    2026-10-05: two preflight audits and an analysis audit at seconds, and
+    the protocol itself says one after the first run would have done. A
+    head this labkit cannot read says nothing here — protocol-check does."""
+    if mode != "preflight":
+        return []
+    try:
+        head = protocol_block.head(protocol.read_text(encoding="utf-8"))
+    except protocol_block.BlockError:
+        return []
+    if head.cost != "seconds" or completed_runs(area):
+        return []
+    return [
+        'WARNING · cost = "seconds" and no completed run · the first run is the '
+        "cheaper probe; one audit in --mode analysis after it covers the preflight "
+        "rows too · LAB-017 The number of audits follows the cost tier · run first, "
+        "audit once"
+    ]
+
+
 def stamp_facts(area: Path, verdict: tuple[int, int, int]) -> str:
     """The facts of the protocol's audit field — the human adds the decisions.
     The sha is `scope_sha.area_stamp`, the same a later `scope-sha` recomputes."""
@@ -488,6 +512,8 @@ def main(argv: list[str]) -> int:
         return _clarity(args)
     try:
         protocol, code, standard, indexed = gather(args.area, args.protocol)
+        for line in early_for_tier(args.area, protocol, args.mode):
+            print(f"labkit-audit: {line}", file=sys.stderr)
         prompt = render(args.mode, args.area, protocol, code, standard, indexed)
         print(
             f"labkit-audit: {args.mode} · {protocol.name} · {len(code)} code file(s) "

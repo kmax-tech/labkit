@@ -360,8 +360,14 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
-- **Aus der Audit-Auswertung uniagent (2026-10-12, 23 Preflight- und 21
-  Analysis-Audits, 46 Leseproben) — vier Hebel, Reihenfolge ist Empfehlung:**
+- ~~**Aus der Audit-Auswertung uniagent — vier Hebel**~~ **alle vier gebaut
+  2026-10-12 (0.85.0): `labkit/findings.py` + Station 2b in `preflight`;
+  `code_check.stamp_coverage_findings`; Narbenzeile „Criterion fails on
+  noise“ + Absatz „What no audit sees“ in LAB-015; `audit.early_for_tier`.
+  Prüfstelle: der nächste Audit-Zyklus in uniagent — zählt der Ertrag je
+  Klasse aus den `audits/*.toml`, und bleibt die Stempel-Warnung still, wo
+  sie still sein soll?** Ursprünglicher Eintrag (2026-10-12, 23 Preflight-
+  und 21 Analysis-Audits, 46 Leseproben):
   1. **Audit-Befunde als Daten, nicht als Prosa.** Heute landet ein Audit als
      eine lange `preflight_audit`-Zeile; was „angenommen" oder „eigener
      Auftrag" war, verschwindet darin. uniagent: der in 16 vertagte Befund
