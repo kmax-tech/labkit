@@ -616,7 +616,8 @@ dotfiles-Hooks rot.
 `~/.claude`. Die `AGENTS.md`-Vorlage ist eine knappe englische Fassung der
 beiden Spuren, keine Übersetzung der 258 Zeilen `CLAUDE.md.template` — der
 Merkzettel und die Übergaben bleiben Haus. **Entschieden 2026-10-12: der
-Thesis-Starter bleibt Haus** (`arbeitsstandard-init.py --thesis`). Er ist
+Thesis-Starter bleibt Haus** (`local-init.py --thesis`, bis 2026-10-12
+`arbeitsstandard-init.py`). Er ist
 die Fassung des Hausstandards für die Studierenden dieses Hauses —
 Webis-Vorlesungslinks, eingefrorene Lauf-Snapshots mit Autor-Pfaden, eine
 Skill-Kopie; im Wheel bräche er den Hausmarker-Test. Kein `labkit-init

@@ -27,7 +27,7 @@ nothing is copied. Until the tag is pushed the pin does not install;
 `--labkit-ref <commit>` pins a pushed commit instead.
 
 The author's house keeps a separate thesis starter
-(`arbeitsstandard-init.py --thesis` in the dotfiles) that adds house
+(`local-init.py --thesis` in the dotfiles) that adds house
 material around the same pin; whether it moves into labkit is open
 (`TODO.md` item 5).
 
