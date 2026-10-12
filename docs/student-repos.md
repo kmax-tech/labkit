@@ -35,6 +35,8 @@ material around the same pin; whether it moves into labkit is open
 
 Never automatic — the pin exists so nothing shifts under a running
 experiment.
+`labkit-check` says when the installed labkit lags the pin or the source has
+a newer tag; it reports and changes nothing.
 
 1. Change the pin line in `requirements.txt` to the new tag.
 2. `.venv/bin/pip install -r requirements.txt`.

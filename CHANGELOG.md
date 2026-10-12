@@ -5,6 +5,22 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.84.0 — 2026-10-12
+
+### Added — `labkit-check`: is this repo current?
+
+- **One command, five lines**: the pin (`requirements.txt` / `.lock`), the
+  installed labkit against it, the newest release tag at the pin's source
+  (a local checkout with `git tag`, a remote with `git ls-remote`;
+  `--offline` skips the remote), the hook (`labkit-hooks check`) and every
+  rule reference in the repo's `.md` and `.py` files (`labkit.rules
+  check_refs`). Each line ends OK, STALE or UNDECIDED; exit 0 / 1 / 2. It
+  reports and changes nothing: the pin is raised on purpose.
+- Why: the three checks existed apart and were forgotten; nothing compared
+  installed with pinned, and on 2026-10-12 the installed labkit lagged the
+  pin in all four active lab repos. A commit pin is STALE — the house sync
+  refuses it, and only a tag says which release a run used.
+
 ## 0.83.0 — 2026-10-11
 
 ### Changed — a cut ollama prompt fails loud

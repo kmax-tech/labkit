@@ -34,7 +34,7 @@ kein Ziel.
 | 2 | Benchmark — Stufe 1 + Katalog in gefüllten Proben (`count`, `judge`) | **Stufe erledigt 2026-10-06: `generalises`** — Sonnet findet 4/5 Haus-, 4/5 Katalogfälle, 0 Fehlalarme auf 22 stillen Ziehungen; B1 (positionaler Join) 0/3 übersehen (Lauf `2026-10-06T19-22-09_d352`, Labor `fe6a434`). Zweiter Auditor erledigt: `experiment-preflight` (Opus, Narbentabelle) findet B1 3/3, 5/5 + 5/5, 0 Fehlalarme (Labor `03`, Lauf `2026-10-06T19-56-51_8a20`) — **für `labkit audit` und `promote`: experiment-preflight, und WARNINGs sind Befunde zum Entscheiden**, denn B1 kommt nur als WARNING |
 | 4 | Usability mit/ohne labkit (Punkt 2 erweitert) | eigene Ansage |
 | D | Doktrin und Gerüstbauer ins Paket (Punkt 5; `AGENTS.md`-Vorlage aus Punkt 6 inbegriffen) | **erledigt 2026-10-12** — Phase 1 (0.77.0) und Phase 2 (0.78.0) gebaut; der Thesis-Starter bleibt Haus (entschieden 2026-10-12, s. Punkt 5). Auslöser war 2026-10-09: verwirrt den Autor selbst |
-| R | Rollout in einem Release: die Pins der Labor- und Thesis-Repos heben, Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus) | **läuft seit 2026-10-12** — Bestandsaufnahme und Vorarbeit unter Punkt 5, „Zeile R“; wartet auf den Tag `v0.83.0` |
+| R | Rollout in einem Release: die Pins der Labor- und Thesis-Repos heben, Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus) | **läuft seit 2026-10-12** — Bestandsaufnahme und Vorarbeit unter Punkt 5, „Zeile R“; wartet auf den Tag `v0.84.0` |
 | Tokenkosten | messen statt schätzen — `llm.last_usage()`, `labkit-audit` druckt Prompt- und Output-Tokens, `agent_transcript.tokens` liest die Usage-Blöcke der Claude-Code-Transkripte (0.81.0, 2026-10-11) | **erledigt 2026-10-11.** Auslöser: 30 Transkripte (labkit, uniagent) summieren 7 Mrd. Cache-Read-Tokens, die alten Subagenten-Audits je 3,65 Mio., und keine labkit-Zeile sagte, was ein Aufruf kostet. Pilot `labkit-paper` Bereich 04 (`audit-on-reachable-code-holds`, Lauf `2026-10-11T14-00-57_071a`): die direkten Importe auf erreichbaren Code zu kürzen spart 0–16 % des Prompts (Median 8 % über 24 uniagent-Bereiche) — **an der Renderprobe gestoppt, kein Modellaufruf; LAB-103 The audit reads by declared scope, not by import graph bleibt.** Der Prompt ist groß, weil die Zahl fast den ganzen Agenten braucht (Bereich 19: 142 von 155 kB Importe erreicht), nicht wegen ungenutztem Code; Fixkosten je Audit ~69 kB (Instruktionen 9, zitierte Regeln 19, Protokoll 26, Index 15). Ein kleinerer Audit bräuchte eine andere Frage (Audit je Versprechen über seinen deklarierten Scope), kein Schnitt. Die Hauptsitzungen (Median 400–500 k Kontext je Aufruf) sind Sitzungshygiene, keine labkit-Aufgabe. |
 
 **1a gebaut (2026-10-06):** `labkit/promises.py` ist die eine Heimat des
@@ -360,8 +360,8 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
-- **`labkit-check`: ist dieses Repo auf Stand?** (2026-10-12, Frage beim
-  Rollout R) — heute drei getrennte Prüfungen: `labkit-hooks check` (Hook
+- ~~**`labkit-check`: ist dieses Repo auf Stand?**~~ **gebaut 2026-10-12
+  (0.84.0, `labkit/repo_check.py`)** — Auslöser: Frage beim Rollout R; vorher drei getrennte Prüfungen: `labkit-hooks check` (Hook
   gegen Installation), `lib init . --sync check` (geerbte Blöcke, dotfiles),
   `python -m labkit.rules refs` (Regelverweise). Niemand prüft Pin gegen
   Installation (in allen vier aktiven Repos lag die Installation hinter dem
@@ -614,11 +614,14 @@ in the dotfiles“) sagen das schon. Damit ist Phase 2 abgeschlossen.
 
 **Zeile R — Stand 2026-10-12 (Bestandsaufnahme, Vorarbeit erledigt):**
 
-- **Tag zuerst:** `v0.83.0` auf HEAD (Nutzer). Die Labor-Pins zeigen auf
+- **Prüfstelle je Repo:** `.venv/bin/labkit-check` aus dem Repo-venv, fünf
+  Zeilen OK (0.84.0, gebaut 2026-10-12 für genau diesen Rollout).
+- **Tag zuerst:** `v0.84.0` auf HEAD (Nutzer; 0.83.0 ist ohne Tag geblieben,
+  der Rollout nimmt gleich die Version mit `labkit-check`). Die Labor-Pins zeigen auf
   `git+file://`, ein lokaler Tag reicht zum Installieren; der Push nach GitHub
   ist nur für Studi-Pins Voraussetzung. Ohne Versions-Tag verweigert
   `lib init . --sync pull` (Commit-Pin = „keine Version“).
-- **Vier aktive Labor-Repos, Commit-Pin → `@v0.83.0`:** uniagent (0.82.0),
+- **Vier aktive Labor-Repos, Commit-Pin → `@v0.84.0`:** uniagent (0.82.0),
   labkit-paper (0.82.0), fallacy-dataset-generation (0.76.0),
   counterfactual-worlds (0.72.1). Je Repo in dieser Reihenfolge, ein Commit:
   Pin in `requirements.txt` und `.lock` · `pip install -r` · `labkit-hooks
