@@ -396,6 +396,16 @@ sieht das niemand.
   Vorlagenfehlern findet, gilt für jeden Agenten; ob die Korrekturen einem
   schwächeren Agenten reichen, zeigt erst dieselbe Reihe mit Sonnet (lokal)
   oder einem Ollama-Modell.
+  Durchgang 3 (Stempel 0.86.1, venv aber 0.86.0 — die Cloud cacht das venv
+  der vorigen Sitzung, `pip install -r` wechselte den Tag nicht): 3,5 richtig,
+  gebunden, 2m26s, 3 read · 13 run · 6 edit · 0 unsure · 2 gate
+  (`2026-10-12-cloud-fable-count-3.score.json`); ein Drittel der Zeit ging
+  an die Lock-Abweichung aus dem Cache-Artefakt, nicht an labkit. Setup-Skript
+  ab Durchgang 4: `rm -rf .venv` vor dem Bau. Neue Vorschläge des dritten
+  Agenten: (j) `--check`, `protocol-check` und `finalize` als ein Kommando
+  nach dem Lauf, der Hook wiederholt es nicht, wenn es gerade grün war; (k)
+  das Mess-Skript schreibt die Antwortzeile selbst (= (a)); (l) ein Lauf ist
+  `+dirty` auch bei nur ungetrackten Dateien — Frage, ob `??` zählen soll.
   Nachtrag aus den Beobachtungen des zweiten Agenten: (g) `log.md` im Repo
   macht jeden Lauf `+dirty` (der Patch ist nur das Log) — beim nächsten
   Stempel `log.md` in die `.gitignore` und im TASK `git add -f log.md` am
