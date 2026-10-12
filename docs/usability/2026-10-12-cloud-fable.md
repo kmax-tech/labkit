@@ -59,7 +59,7 @@ of labkit source. Before the fixes (draw 1, 0.85.0): 4m27s, 3 unsure, 3 gate.
 - The number is written back by hand; a `--write-back` or `protocol-fill --from-run` would replace three edits.
 - Terms, Unit and Exclusions restate `visible()` in prose for a file count.
 
-## Sonnet 5.5, same probe, one draw
+## Sonnet 5.5 and Haiku 5.5, same probe, one draw each
 
 | Draw | labkit | log span | read · run · edit · unsure · gate | number right, bound |
 |---|---|---|---|---|
@@ -73,6 +73,15 @@ contract as a separate step, one protocol-fill per field, the two-pass
 finalize — plus a worked example in the counting skeleton. One new
 reading: "Result" was ambiguous between the Summary line and the Result
 section.
+
+| haiku-1 | 0.87.1 | 2m10s | 14 · 19 · 5 · 1 · 0 | yes |
+
+Haiku: right and bound, finalize clear, 0 reads of labkit source, but
+twice the reads and runs of Sonnet — it found every placeholder one round
+trip at a time (script stubs, the head's `type`, the README) and typed the
+number into three protocol lines by hand before `--check` passed, which it
+names as the retyping LAB-041 forbids. Its cuts are the same list again,
+with the write-back first.
 
 ## Caveat
 

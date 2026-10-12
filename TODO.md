@@ -478,6 +478,13 @@ sieht das niemand.
   (`2026-10-12-cloud-sonnet-count-1.score.json`); SessionStart-Hook hat das
   venv neu gebaut. Nennt dieselben fünf Schnitte wie Fable; neu: „Result"
   ist zweideutig zwischen Summary-Zeile und Result-Abschnitt (t).
+  **Haiku 5.5, ein Durchgang (0.87.1):** 3,5 richtig, gebunden, 2m10s,
+  14 read · 19 run · 5 edit · 1 unsure · 0 gate, 0
+  Quelltext-Lesungen (`2026-10-12-cloud-haiku-count-1.score.json`) — doppelt
+  so viele Lese- und Laufschritte wie Sonnet, jeder Platzhalter ein eigener
+  Umweg; die Rückschrift der Zahl von Hand in drei Zeilen ist der erste
+  Punkt auf seiner Liste. Damit kommen alle drei Modelle ohne Quelltext zur
+  gebundenen Zahl; die sechs offenen Schnitte sind modellunabhängig.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:
