@@ -387,23 +387,53 @@ DETERMINISTIC_NA = {
 }
 
 
+def _replace_placeholder(lines: list[str], label: str, value: str) -> bool:
+    """In place: the stamped `<…>` placeholder of LABEL (one line or wrapped)
+    becomes VALUE on the label line; False when the field is not stamped."""
+    head = re.compile(r"^(\s*-\s*\*\*" + re.escape(label) + r"\s*†?:\*\*\s*)<")
+    for i, line in enumerate(lines):
+        if m := head.match(line):
+            j = i
+            while ">" not in lines[j]:
+                j += 1
+            lines[i : j + 1] = [m.group(1) + value]
+            return True
+    return False
+
+
 def auto_fill_deterministic(text: str) -> tuple[str, int]:
     """Fill the placeholders a model-free protocol cannot answer; (text, fields filled)."""
     if not NO_MODEL.search(text):
         return text, 0
     lines = text.split("\n")
-    filled = 0
-    for label, value in DETERMINISTIC_NA.items():
-        head = re.compile(r"^(\s*-\s*\*\*" + re.escape(label) + r"\s*†?:\*\*\s*)<")
-        for i, line in enumerate(lines):
-            if m := head.match(line):
-                j = i
-                while ">" not in lines[j]:
-                    j += 1
-                lines[i : j + 1] = [m.group(1) + value]
-                filled += 1
-                break
+    filled = sum(
+        _replace_placeholder(lines, lb, v) for lb, v in DETERMINISTIC_NA.items()
+    )
     return "\n".join(lines), filled
+
+
+#: What a count's registration owes, said in the placeholder: three cold
+#: agents (Haiku, 2026-10-13) wrote a Terms sentence for a plain count — "n/a"
+#: was allowed by the check but unsaid by the stamp — and one read
+#: "hypothesis" as an expectation to invent, then reworded it with --force.
+COUNT_PLACEHOLDERS = {
+    "Terms of this protocol": '<one line per coined house word — or "n/a — no coinage">',
+    "Question / hypothesis": (
+        "<the one question: what is counted, over which items — a count tests no hypothesis>"
+    ),
+}
+
+
+def count_placeholders(text: str) -> str:
+    """The seconds cut without a model, its Terms and Question placeholders
+    replaced by COUNT_PLACEHOLDERS. Raises when the cut lacks one of them."""
+    lines = text.split("\n")
+    for label, value in COUNT_PLACEHOLDERS.items():
+        if not _replace_placeholder(lines, label, value):
+            raise ValueError(
+                f"count_placeholders: the cut has no stamped `{label}` field"
+            )
+    return "\n".join(lines)
 
 
 def new_protocol_id(root: Path) -> str:
@@ -612,6 +642,8 @@ def stamp_area(
             seconds_cut(quick_block(tmpl, bool(model)), model=bool(model)),
             [],
         )
+        if not model:
+            pilot = count_placeholders(pilot)
     existing = [
         p
         for p in experiments.iterdir()

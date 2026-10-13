@@ -16,6 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
 from labkit import code_check, protocol_block, protocol_check, protocol_fill  # noqa: E402
+from protocol_fixture import head  # noqa: E402
 
 SAMPLE = """# Experiment protocol: x
 
@@ -194,6 +195,75 @@ class Prompts(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             protocol_fill.fill_prompts(TEMPLATE, {})
         self.assertIn("no PROMPT constant", str(cm.exception))
+
+
+class OneCallFill(unittest.TestCase):
+    """`protocol-fill P "LABEL=VALUE" ...` fills several fields at once, all or
+    nothing — six calls for six fields were every cold agent's largest sink
+    (cloud probes, 2026-10-13)."""
+
+    BODY = (
+        "- **Terms of this protocol:** <the terms>\n"
+        "- **Unit:** <one thing>\n"
+        "- **Data / scope:** <where>\n"
+    )
+
+    def test_every_word_with_an_equals_sign_is_one_assignment(self):
+        self.assertEqual(
+            protocol_fill.assignments_of("Unit=a = b", ["Data / scope=x"]),
+            [("Unit", "a = b"), ("Data / scope", "x")],
+        )
+
+    def test_the_one_field_form_joins_the_value_words(self):
+        self.assertEqual(
+            protocol_fill.assignments_of("Unit", ["one", "thing"]),
+            [("Unit", "one thing")],
+        )
+        self.assertEqual(
+            protocol_fill.assignments_of("Unit", ["x = 1"]), [("Unit", "x = 1")]
+        )
+
+    def test_no_value_is_no_assignment(self):
+        self.assertEqual(protocol_fill.assignments_of("Unit", []), [])
+        self.assertEqual(protocol_fill.assignments_of(None, []), [])
+
+    def test_fill_many_fills_in_order_and_sets_the_head_type(self):
+        text = head(type="<exploratory | confirmatory>") + self.BODY
+        new = protocol_fill.fill_many(
+            text,
+            [
+                ("type", "confirmatory"),
+                ("Unit", "one case"),
+                ("Data / scope", "12 cases"),
+            ],
+        )
+        self.assertIn('type = "confirmatory"', new)
+        self.assertIn("- **Unit:** one case\n", new)
+        self.assertIn("- **Data / scope:** 12 cases\n", new)
+        self.assertIn("<the terms>", new)
+
+    def test_one_bad_label_fills_nothing(self):
+        text = head() + self.BODY
+        with self.assertRaises(ValueError):
+            protocol_fill.fill_many(text, [("Unit", "one case"), ("Nope", "x")])
+        with self.assertRaises(ValueError):
+            protocol_fill.fill_many(text, [("Unit", "")])
+
+    def test_the_command_writes_once_or_not_at_all(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "PROTOCOL-x.md"
+            f.write_text(head() + self.BODY)
+            with contextlib.redirect_stdout(io.StringIO()):
+                rc = protocol_fill.main([str(f), "Unit=one case", "Nope=x"])
+            self.assertEqual(rc, 1)
+            self.assertIn("<one thing>", f.read_text())
+            with contextlib.redirect_stdout(io.StringIO()):
+                rc = protocol_fill.main(
+                    [str(f), "Unit=one case", "Data / scope=12 cases"]
+                )
+            self.assertEqual(rc, 0)
+            self.assertIn("- **Unit:** one case\n", f.read_text())
+            self.assertIn("- **Data / scope:** 12 cases\n", f.read_text())
 
 
 if __name__ == "__main__":

@@ -5,6 +5,49 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.88.7 — 2026-10-13
+
+### Added — four cuts from the Haiku series on 0.88.5 (H5–H7, median 1m00s)
+
+- **`protocol-fill PROTOCOL "LABEL=VALUE" ...`** fills several fields in one
+  call, all or nothing (`type=exploratory` sets the head). Every cold agent
+  filled six fields in six calls and named it the largest sink. The one-field
+  form `FIELD VALUE...` stays; the stamped `AGENTS.md` names the one-call
+  form.
+- **The seconds cut without a model says what a count owes** in its
+  placeholders: `Terms of this protocol` → "one line per coined house word —
+  or n/a — no coinage" (the check allowed n/a, the stamp never said so;
+  three agents wrote a Terms sentence for a plain count), `Question /
+  hypothesis` → "what is counted, over which items — a count tests no
+  hypothesis" (H7 invented an expectation, then reworded it with `--force`).
+  The labels stay: one name per field, in the standard, the check and every
+  reader.
+- **The counting skeleton freezes what the rows read:** `INPUTS` names the
+  directory beyond `SOURCE` (a count of documents per case reads the case
+  directories), and `data=` carries both. Before, `data=` froze the case
+  list only and a changed document went unnoticed by `--check` (all three
+  draws).
+- **`usability log TAG TEXT [--log FILE] [-- CMD ...]`** writes the agent's
+  step line with the current time and then runs the command. Logging by hand
+  tempted every draw to batch: three wrote their first lines after the reads
+  they describe. The task sheets name it.
+
+### Changed
+
+- **`protocol-check`: the stamped Runs entry is not a leftover before the
+  run.** It is written by `--from-run`; counted as "still verbatim template
+  text", it made every registration read as unfinished and two agents
+  stopped to see whether it blocks. The check now says so in one line; a
+  frozen protocol with the stamped entry is still a leftover (the scar of
+  uniagent area 08). The pattern has one home, `protocol_check.RUNS_PLACEHOLDER`.
+
+### Decided, not built
+
+- The area test stays in the seconds lane (H6 would skip it): a
+  number-producing function gets a test, three seconds.
+- A pre-filled counting skeleton for the directory-per-item source (every
+  draw's other sink) is open — not to be cut to the weakest model.
+
 ## 0.88.6 — 2026-10-13
 
 ### Added — `usability stage --restamp`: the probe stamped again, by the tool

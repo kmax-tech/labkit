@@ -250,22 +250,34 @@ class StampedLeftovers(unittest.TestCase):
     2026-10-07): the template line carries a cut marker, the written one
     does not, and `- <…>` has no label for a field check to see."""
 
-    def leftovers(self, body: str) -> str:
+    def leftovers(self, body: str, frozen: bool = False) -> str:
         with tempfile.TemporaryDirectory() as d:
             f = Path(d) / "PROTOCOL-x.md"
-            f.write_text(head(cost="minutes") + body)
+            f.write_text(head(cost="minutes", frozen=frozen) + body)
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 protocol_check.main([str(f)])
         return buf.getvalue()
 
-    def test_the_stamped_runs_line_and_a_bare_item_are_named(self):
+    def test_the_stamped_runs_line_and_a_bare_item_are_named_when_frozen(self):
+        out = self.leftovers(
+            "## Runs\n\n- <run_id> — <one sentence: what this run was>\n\n"
+            "## Notes\n\n- <…>\n",
+            frozen=True,
+        )
+        self.assertIn("- <run_id> — <one sentence: what this run was>", out)
+        self.assertIn("- <…>", out)
+
+    def test_before_the_run_the_stamped_runs_line_names_from_run_not_a_leftover(self):
+        """Two cold agents stopped at 'still verbatim template text' for the
+        line only --from-run can write (Haiku H6, H7, 2026-10-13)."""
         out = self.leftovers(
             "## Runs\n\n- <run_id> — <one sentence: what this run was>\n\n"
             "## Notes\n\n- <…>\n"
         )
-        self.assertIn("- <run_id> — <one sentence: what this run was>", out)
-        self.assertIn("- <…>", out)
+        self.assertIn("--from-run", out)
+        self.assertNotIn("- <run_id> — <one sentence: what this run was>", out)
+        self.assertIn("- <…>", out)  # a bare item is still a leftover
 
     def test_a_written_runs_line_is_silent(self):
         out = self.leftovers(

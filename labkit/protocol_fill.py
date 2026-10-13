@@ -34,7 +34,12 @@ from pathlib import Path
 
 from labkit import console, recheck, runs
 from labkit.code_check import prompt_constants
-from labkit.protocol_check import field_name, fields, placeholder_fields
+from labkit.protocol_check import (
+    RUNS_PLACEHOLDER,
+    field_name,
+    fields,
+    placeholder_fields,
+)
 
 # Bullet and indentation of a label line, kept when the line is rewritten.
 _LEAD = re.compile(r"^\s*(?:[-*]\s+|\d+[.)]\s+)?")
@@ -119,7 +124,6 @@ def fill_head_type(text: str, value: str) -> str:
     return HEAD_TYPE.sub(lambda m: f'{m.group(1)}"{value}"', text, count=1)
 
 
-RUNS_PLACEHOLDER = re.compile(r"^(\s*[-*]\s+)<run_id>\s+—\s+<[^>]*>\s*$")
 RUNS_HEADING = re.compile(r"^## Runs\b")
 
 
@@ -273,18 +277,58 @@ def _list_open(text: str) -> int:
     return 0
 
 
+def assignments_of(field: str | None, value: list[str]) -> list[tuple[str, str]]:
+    """The (label, value) pairs a command line asks for: `FIELD VALUE...` is
+    one pair, `LABEL=VALUE [LABEL=VALUE ...]` (every word carries `=`; a
+    value with spaces is one quoted word) one pair per word. Empty when the
+    line names no value. Why the one-call form: seven cold agents filled six
+    fields in six calls and named it their largest sink (cloud probes,
+    2026-10-13)."""
+    if not field:
+        return []
+    words = [field, *value]
+    if all("=" in w for w in words):
+        return [(lb, v) for lb, v in (w.split("=", 1) for w in words)]
+    if not value:
+        return []
+    return [(field, " ".join(value))]
+
+
+def fill_many(
+    text: str,
+    assignments: list[tuple[str, str]],
+    line_no: int | None = None,
+    force: bool = False,
+) -> str:
+    """`fill` (or `fill_head_type` for the head's type) applied in order; the
+    first ValueError leaves the caller's file untouched — all or nothing."""
+    for label, value in assignments:
+        if not label.strip() or not value.strip():
+            raise ValueError(f"empty label or value in {label}={value!r}")
+        text = (
+            fill_head_type(text, value)
+            if label.strip().lower() == HEAD_TYPE_LABEL
+            else fill(text, label, value, line_no=line_no, force=force)
+        )
+    return text
+
+
 def main(argv: list[str]) -> int:
-    """Command line of `protocol-fill`: fill one placeholder field by its label, or the Prompt block from the script."""
+    """Command line of `protocol-fill`: fill placeholder fields by label (one, or several as LABEL=VALUE), or the Prompt block from the script."""
 
     ap = argparse.ArgumentParser(
         prog="protocol-fill",
-        description="Fill one stamped placeholder field in a PROTOCOL-*.md, "
-        "matched by its label (never by quoting the placeholder "
-        "text). --list shows what is still open.",
+        description="Fill stamped placeholder fields in a PROTOCOL-*.md, "
+        "matched by label (never by quoting the placeholder text): "
+        "`FIELD VALUE...` fills one, `LABEL=VALUE [LABEL=VALUE ...]` "
+        "fills several in one call (all or nothing). --list shows what "
+        "is still open.",
     )
     ap.add_argument("protocol", type=Path)
-    ap.add_argument("field", nargs="?", help="field label († optional)")
-    ap.add_argument("value", nargs="*", help="the field's new value")
+    ap.add_argument("field", nargs="?", help="field label († optional), or LABEL=VALUE")
+    ap.add_argument(
+        "value", nargs="*", help="the field's new value, or further LABEL=VALUE"
+    )
     ap.add_argument(
         "--list", action="store_true", help="list open placeholder fields and exit"
     )
@@ -329,25 +373,18 @@ def main(argv: list[str]) -> int:
         return 0
     if args.from_run is not None:
         return _write_back(args, text)
-    if not args.field or not args.value:
-        ap.error("need FIELD and VALUE (or --list or --from-run)")
+    assignments = assignments_of(args.field, args.value)
+    if not assignments:
+        ap.error("need FIELD and VALUE, LABEL=VALUE..., --list or --from-run")
+    if args.line is not None and len(assignments) > 1:
+        ap.error("--line goes with one FIELD, not with LABEL=VALUE")
     try:
-        new = (
-            fill_head_type(text, " ".join(args.value))
-            if args.field.strip().lower() == HEAD_TYPE_LABEL
-            else fill(
-                text,
-                args.field,
-                " ".join(args.value),
-                line_no=args.line,
-                force=args.force,
-            )
-        )
-    except ValueError as exc:
+        new = fill_many(text, assignments, line_no=args.line, force=args.force)
+    except ValueError as exc:  # all or nothing: the file is untouched
         print(f"protocol-fill: {exc}")
         return 1
     args.protocol.write_text(new, encoding="utf-8")
-    print(f"filled: {args.field}")
+    print("filled: " + ", ".join(label for label, _ in assignments))
     return 0
 
 

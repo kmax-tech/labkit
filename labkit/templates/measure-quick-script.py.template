@@ -10,9 +10,12 @@ the number is promoted or steers a decision (LAB-017 The number of audits follow
 retyped (LAB-041 Generate numbers, don't retype them): the protocol's Result line cites it with the run_id, and
 `--check` holds that line to the run.
 
-Fill the three TODOs: expected_ids(), rows(), evaluate_rows(). Everything else
-stays — `visible()` is the one reader of a directory, the denominator is the
-source's id list, a missing item is a refusal.
+Fill the constants and the three TODOs: expected_ids(), rows(), evaluate_rows().
+Everything else stays — `visible()` is the one reader of a directory, the
+denominator is the source's id list, a missing item is a refusal. INPUTS names
+what the rows read beyond SOURCE: a count of documents per case reads the case
+directories, and only a frozen directory makes the number citable against
+their content (three cold agents left them unfrozen, 2026-10-13).
 """
 from __future__ import annotations
 
@@ -26,6 +29,7 @@ AREA = Path(__file__).resolve().parent.parent
 REPO = AREA.parent.parent
 PROTOCOL = AREA / "PROTOCOL-<name>.md"
 SOURCE = REPO / "data" / "TODO"                 # what is counted — a file or a directory
+INPUTS = None                                   # TODO: a directory the rows read beyond SOURCE (REPO / "data" / "raw" / "inputs"), frozen with it; None when SOURCE is all the number reads
 OUT = AREA / "output" / "<name>.jsonl"          # one row per item, written by this script
 COUNT_FIELD = "TODO_count"                      # the per-item number in each row
 METRIC_KEY = "TODO_mean"                        # the kept number's key in metrics.json; the test reads both names from here
@@ -79,10 +83,12 @@ def main() -> None:
         return
     items = rows(ids)
     OUT.parent.mkdir(exist_ok=True)
-    # data= freezes the source (sha, rows) in the run; `finalize` refuses a
-    # run of seconds without it, and one whose source or OUT is not in git.
-    with runlog.run("<name>", config={"source": str(SOURCE.relative_to(REPO))},
-                    base_dir=AREA, data={"source": SOURCE},
+    # data= freezes every input the number reads (sha and rows; a directory:
+    # sha over each file) in the run; `finalize` refuses a run of seconds
+    # without it, and one whose source or OUT is not in git.
+    frozen = {"source": SOURCE, **({"inputs": INPUTS} if INPUTS else {})}
+    with runlog.run("<name>", config={k: str(p.relative_to(REPO)) for k, p in frozen.items()},
+                    base_dir=AREA, data=frozen,
                     long=True, protocol=PROTOCOL.name) as run:
         # every row names the run that wrote it (`_prov.run`): finalize holds
         # the file to it, and a row from another run is a file of two measurements

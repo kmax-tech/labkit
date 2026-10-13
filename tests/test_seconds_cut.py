@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import protocol_check  # noqa: E402
+from labkit import protocol_check, scaffold  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 TEMPLATE = (
@@ -148,6 +148,26 @@ class Registration(unittest.TestCase):
         self.assertEqual(
             protocol_check.seconds_registration_missing(text), ["[protocol] cost"]
         )
+
+
+class CountPlaceholders(unittest.TestCase):
+    """Without a model the Terms and Question placeholders say what a count
+    owes: three cold agents wrote a Terms sentence for a plain count, one read
+    'hypothesis' as an expectation to invent (Haiku H5–H7, 2026-10-13)."""
+
+    def test_the_count_cut_says_na_and_no_hypothesis(self):
+        cut = scaffold.seconds_cut(scaffold.template(scaffold.PROTOCOL_TEMPLATE.name))
+        out = scaffold.count_placeholders(cut)
+        self.assertIn(
+            '**Terms of this protocol:** <one line per coined house word — or "n/a — no coinage">',
+            out,
+        )
+        self.assertIn("a count tests no hypothesis>", out)
+        self.assertNotIn("what do we expect?", out)
+
+    def test_a_cut_without_the_field_is_refused(self):
+        with self.assertRaises(ValueError):
+            scaffold.count_placeholders("- **Unit:** <x>\n")
 
 
 if __name__ == "__main__":

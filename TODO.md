@@ -590,9 +590,19 @@ sieht das niemand.
   (w), (y). Neu notiert: (ab) ein Helfer, der Log-Zeile und Schritt in einem
   Aufruf anhängt und ausführt — Logging von Hand verführt zum Bündeln.
   **Stand 0.88.5: n = 3, Median 1m00s (54 s, 60 s, 83 s) gegen Median 1m47s
-  für Haiku auf 0.88.1 (1m13s, 2m30s, 1m47s).** Prüfstelle für die nächsten
-  Schnitte: Entscheidungen (q), (t), (y), (aa), (ab), dann 0.88.7 und eine
-  neue Reihe n = 3.
+  für Haiku auf 0.88.1 (1m13s, 2m30s, 1m47s).**
+  **Entschieden 2026-10-13, gebaut in 0.88.7:** (q) `protocol-fill` mit
+  mehreren `LABEL=WERT` je Aufruf, die Zähl-Platzhalter sagen „n/a — no
+  coinage“ und „a count tests no hypothesis“ (Labels bleiben, eine Heimat je
+  Feld); (t) `INPUTS` im Zählskelett, `data=` friert Quelle und Eingabeordner;
+  (y) die gestempelte Runs-Zeile ist vor dem Lauf kein Rest, `protocol-check`
+  nennt `--from-run`; (ab) `usability log` schreibt die Zeile und führt den
+  Schritt aus, die Aufgabenblätter nennen es. **(aa) nein:** der Bereichstest
+  bleibt, zahlproduzierende Funktion → Test. **(n)/(z) offen:** nicht auf das
+  schwächste Modell zuschneiden; Prüfstelle ist die nächste Reihe auf 0.88.7
+  — nennt ein Fable- oder Sonnet-Durchgang die Stubs noch, dann bauen.
+  Prüfstelle für 0.88.7: Reihe n = 3, Median unter einer Minute, kein
+  Durchgang nennt (q) mehr, keine nachträglichen Log-Zeilen.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:

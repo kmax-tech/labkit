@@ -152,6 +152,9 @@ BARE_REFERENCE = re.compile(
     re.I,
 )
 _STAMPED_ITEM = re.compile(r"[-*]\s+(<[^<>]*>[\s—–-]*)+")
+#: the stamped Runs entry, written by `protocol-fill --from-run` after the run
+#: (group 1: the list marker with its indent — protocol_fill keeps it)
+RUNS_PLACEHOLDER = re.compile(r"^(\s*[-*]\s+)<run_id>\s+[—–-]\s+<[^<>]*>\s*$")
 
 
 def field_name(label: str) -> str:
@@ -838,6 +841,14 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
                 and n not in in_placeholder
             }
         )
+        # Before the run the Runs entry is stamped by design: --from-run writes
+        # it. Counted as a leftover, it made every registration read as
+        # unfinished and two cold agents stopped to see whether it blocks
+        # (Haiku H6, H7, 2026-10-13). Frozen, the stamped entry is the scar of
+        # uniagent area 08 and stays a leftover.
+        runs_stamped = not frozen and any(RUNS_PLACEHOLDER.match(s) for s in left)
+        if runs_stamped:
+            left = [s for s in left if not RUNS_PLACEHOLDER.match(s)]
         # "mentions a prompt" means a Prompt FIELD, not the word: the stamped
         # legend says "prompt" in every protocol, and a count protocol cut
         # without the field was blocked for it (2026-10-05).
@@ -904,6 +915,11 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             or history
             or series
         )
+        if runs_stamped:
+            print(
+                f"{f}: Runs: the stamped entry is written by "
+                f"`protocol-fill {f.name} --from-run <run_id>` after the run"
+            )
         if clean:
             if pilot_note:
                 print(f"{f}: OK — must fields filled; {pilot_note}")

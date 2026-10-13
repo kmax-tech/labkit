@@ -48,6 +48,7 @@ intent-check <PROTOCOL-*.md>        # registered promise ids vs. metrics keys
 code-check <AREA>                   # intent ids, parser fixtures, prompt drift, code the stamp cannot follow (sys.path, dynamic loaders, imports outside lib/ and src/) + audit bundle for the agent
 scope-sha [--area DIR]              # audit stamp over the code that determines a number
 protocol-fill <PROTOCOL> FIELD VAL  # fill one stamped placeholder field by label
+protocol-fill <PROTOCOL> "LABEL=VALUE" ...  # fill several in one call, all or nothing (`type=exploratory` for the head)
 protocol-fill <PROTOCOL> --from-run [RUN]  # write the number back from the run's metrics.json: Answer, Result and Runs lines, never retyped
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
 preflight <AREA>                    # the mechanical pre-freeze gate: protocol + audit findings decided + code + scope + dirty check + area tests (not the agent audit)
@@ -76,6 +77,7 @@ usability stage /tmp/probe --venv .venv   # fresh lab repo, area stamped as the 
 usability stage /tmp/probe --venv .venv --task judge   # seconds cut + measure skeleton, a model in the loop (--model is the judge default)
 usability stage /tmp/probe --venv .venv --cost unset   # the full form; the agent declares the tier
 usability stage /tmp/probe --restamp --keep TASK.md   # the same probe stamped again with this labkit, in place; --keep names its hand edits (remembered in probe.json); venv rebuilt from the pin, change committed, push stays with you
+usability log run "the count" -- .venv/bin/python scripts/01_measure.py   # the agent's step line (HH:MM:SS · tag · text) appended to ./log.md (--log FILE), then the command; without `--` it only logs
 #   hand <probe>.prompt.md (CLAUDE.md as a session loads it + the TASK.md pointer) to a COLD agent; it logs one line per step
 usability score /tmp/probe                # number == truth? bound? tier? wall-clock, steps per tag → probe.score.json
 usability score /tmp/probe --agent fable-5.1   # the model that drew, stated by the operator (a cloud session leaves no transcript)

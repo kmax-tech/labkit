@@ -20,10 +20,10 @@ LAB-017 The number of audits follows the cost tier.
    success criterion, the admissibility condition, the prompt and the null
    condition. Every coinage of your own — a constant such as a margin, arms,
    item ids, the model alias — gets half a sentence under "Terms of this
-   protocol". Fill by label with `protocol-fill <PROTOCOL> "<Label>"
-   "<value>"` (`protocol-fill <PROTOCOL> type exploratory` for the head),
-   the prompt block from the script's `PROMPT` constants with
-   `protocol-fill <PROTOCOL> --prompts`.
+   protocol" — a count with no coinage writes "n/a — no coinage". Fill by
+   label, all in one call: `protocol-fill <PROTOCOL> "type=exploratory"
+   "<Label>=<value>" ...` (one quoted word per field); the prompt block from
+   the script's `PROMPT` constants with `protocol-fill <PROTOCOL> --prompts`.
 3. Fill the skeleton (with a model: read `--show 2`), run `code-check <area>`.
 4. Commit, then the run — in the foreground; it is the instrument check too.
 5. `protocol-fill PROTOCOL-<name>.md --from-run <run_id>` writes the number

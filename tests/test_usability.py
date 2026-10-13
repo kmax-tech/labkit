@@ -325,6 +325,33 @@ class RestampLaysTheStampOverTheProbe(unittest.TestCase):
         self.assertEqual((self.probe / "AGENTS.md").read_text(), "old agents\n")
 
 
+class LogStepWritesBeforeItRuns(unittest.TestCase):
+    """`usability log` (2026-10-13): one line with the time, then the command,
+    whose exit code it returns; a tag outside the contract is refused."""
+
+    def test_line_then_command_exit_code(self):
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / "log.md"
+            rc = usability.log_step(
+                log, "run", "the count", [sys.executable, "-c", "raise SystemExit(3)"]
+            )
+            self.assertEqual(rc, 3)
+            self.assertEqual(usability.log_step(log, "read", "TASK.md", []), 0)
+            lines = log.read_text().splitlines()
+            self.assertEqual(len(lines), 2)
+            self.assertRegex(lines[0], r"^\d\d:\d\d:\d\d · run · the count$")
+            self.assertRegex(lines[1], r"^\d\d:\d\d:\d\d · read · TASK\.md$")
+
+    def test_a_foreign_tag_or_empty_text_is_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / "log.md"
+            with self.assertRaises(SystemExit):
+                usability.log_step(log, "note", "x", [])
+            with self.assertRaises(SystemExit):
+                usability.log_step(log, "run", "  ", [])
+            self.assertFalse(log.exists())
+
+
 if __name__ == "__main__":
     unittest.main()
 

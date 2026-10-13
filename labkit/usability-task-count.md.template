@@ -16,15 +16,18 @@ Follow the repo's own rules: `CLAUDE.md` is in your context already (as a
 session loads it), the lab standard holds the long form
 (`python -m labkit.rules show LAB-nnn`) — read what you need, no more.
 
-**The log** matters as much as the number. Append to `<log>` ONE line
-BEFORE each step (`touch` it first; append with `>>`):
+**The log** matters as much as the number. ONE line per step, BEFORE the
+step, in `<log>`:
 
     HH:MM:SS · <tag> · <the step, in a few words>
 
-tags: `read` (a file you open) · `run` (a command) · `edit` (a file you
-write) · `unsure` (the rules leave you guessing) · `gate` (a check, hook
-or refusal makes you change course). `date '+%H:%M:%S'` gives the time.
-Every step gets a line; the log is the measurement.
+`.venv/bin/usability log <tag> "<the step>" --log <log> -- <command>` writes
+the line with the current time and then runs the command; without `--` it
+only logs (a read or an edit you do with a tool). tags: `read` (a file you
+open) · `run` (a command) · `edit` (a file you write) · `unsure` (the rules
+leave you guessing) · `gate` (a check, hook or refusal makes you change
+course). Every step gets a line, written before the step, never batched
+afterwards; the log is the measurement.
 
 **Report** when done, with these headings: (1) the number, the run_id and
 where the number lives · (2) files read with line counts, commands run,

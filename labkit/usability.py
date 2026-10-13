@@ -2,6 +2,7 @@
 
     usability stage <dir> [--venv PATH]     a fresh lab repo with one kept-number task
     usability stage <dir> --restamp [--keep PATH ...]   the same probe stamped again with this labkit
+    usability log TAG TEXT [--log FILE] [-- CMD ...]     one step line with the time, then CMD
     usability score <dir> [--transcript F] [--agent M]  number · binding · log (· transcript) → one table, one JSON
     usability trace <transcript>            the agent's timeline, one line per tool call
 
@@ -40,6 +41,15 @@ stage
     holds, a sha over the scaffolder and the templates it stamps, the flags.
     Side effects: a git repo with three commits, a venv or a symlink, three
     sidecar files next to <dir> (probe.json, log.md, prompt.md).
+
+log
+    The agent's step log, one call per step: appends `HH:MM:SS · TAG · TEXT`
+    to the log (`--log`, default `log.md` in the working directory) and then
+    runs CMD, whose exit code is the command's. Without CMD it only logs (a
+    read or an edit done with a tool). Why: logging by hand, with `date` and
+    `>>`, tempted every cold agent to batch — three draws wrote their first
+    lines after the reads they describe (Haiku H5–H7, 2026-10-13), and the
+    log is the measurement.
 
 stage --restamp
     The probe stamped again with this labkit, in place: a fresh stamp with
@@ -486,6 +496,22 @@ def stage(
         f"history), then `usability score {root} --transcript <its transcript>`"
     )
     return 0
+
+
+def log_step(log: Path, tag: str, text: str, cmd: list[str]) -> int:
+    """`usability log`: see the module docstring. Returns CMD's exit code, 0
+    without CMD. Refuses a tag outside LOG_TAGS and an empty text."""
+    if tag not in LOG_TAGS:
+        raise SystemExit(
+            f"usability log: tag must be one of {', '.join(LOG_TAGS)}, got {tag!r}"
+        )
+    if not text.strip():
+        raise SystemExit("usability log: the step text is empty")
+    with log.open("a", encoding="utf-8") as fh:
+        fh.write(f"{time.strftime('%H:%M:%S')} · {tag} · {text.strip()}\n")
+    if not cmd:
+        return 0
+    return subprocess.run(cmd).returncode
 
 
 @dataclass
@@ -1306,6 +1332,16 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         help="which task sheet and fixture: count (deterministic, the default) "
         "or judge (a model)",
     )
+    lg = sub.add_parser("log", help="append one step line with the time, then run CMD")
+    lg.add_argument("tag", choices=LOG_TAGS)
+    lg.add_argument("text", help="the step, in a few words")
+    lg.add_argument("--log", default="log.md", help="the log file (default: ./log.md)")
+    lg.add_argument(
+        "cmd_words",
+        nargs=argparse.REMAINDER,
+        metavar="CMD",
+        help="after `--`: the command the line announces",
+    )
     c = sub.add_parser("score", help="number, binding and log of a finished probe")
     c.add_argument("dir")
     c.add_argument(
@@ -1394,6 +1430,9 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             Path(args.out).resolve(),
             Path(args.transcript).resolve() if args.transcript else None,
         )
+    if args.cmd == "log":
+        cmd = args.cmd_words[1:] if args.cmd_words[:1] == ["--"] else args.cmd_words
+        return log_step(Path(args.log), args.tag, args.text, cmd)
     if args.cmd == "glance":
         return cmd_glance(Path(args.dir).resolve())
     if args.cmd == "glance-score":
