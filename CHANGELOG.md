@@ -5,6 +5,25 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.88.5 — 2026-10-13
+
+### Fixed — three things a cold agent tripped over (Haiku 5.5, draw H4)
+
+- **A reader that closes the pipe is not a crash.** `protocol-check
+  --contract P | head` ended in a BrokenPipe traceback and exit 120. Every
+  console command now exits through `labkit.console.exit_with`: a closed
+  pipe is exit 0, nothing printed — one home for the one exit.
+- **`protocol-check PROTOCOL --contract`** read the flag as a file name
+  ("not readable: '--contract'"). `--contract` and `--guide` are flags
+  anywhere on the line.
+- **`--check` before the write-back** said "numbers not in PROTOCOL", which
+  read as a failed check. When the Answer line still holds the stamp's
+  placeholder, `recheck` now says so and names the command:
+  `protocol-fill PROTOCOL --from-run <run_id>`.
+
+The code landed in `16d7510`; this entry, the version and the draw's notes
+follow in the next commit, and the tag was moved onto it.
+
 ## 0.88.4 — 2026-10-13
 
 ### Changed — a run's own products no longer make it `+dirty`

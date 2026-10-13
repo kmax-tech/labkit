@@ -525,6 +525,14 @@ sieht das niemand.
   Dateien, am Start weiter auch ungetrackte. Haikus `unsure` (leerer
   Fall-Ordner: 0 oder Verweigerung?) ist eine Skelett-Formulierung, notiert
   als (y): „empty item" im Skelett-Docstring eindeutig machen.
+  **Haiku H4 (noch 0.88.1, 1m47s, `2026-10-13-cloud-haiku-count-4.score.json`):**
+  drei Befunde, alle in 0.88.5 behoben — BrokenPipe-Traceback bei `--contract
+  | head` (jetzt ein Ausgang für alle Kommandos, `labkit/console.py`),
+  `protocol-check PFAD --contract` las die Flagge als Datei, `--check` vor der
+  Rückschrift sagte „numbers not in“ statt „noch keine Antwort, `--from-run`“.
+  Neu notiert: (z) Skelett für eine Quelle mit Ordner je Item (`rows()` braucht
+  den Pfad je Fall, nicht nur die id) — gehört zu (n). Prüfstelle: der nächste
+  Durchgang auf v0.88.5, der erste mit allen Fixes seit 0.88.1.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:

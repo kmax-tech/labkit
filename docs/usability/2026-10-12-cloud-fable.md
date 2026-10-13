@@ -41,6 +41,7 @@ see the caveat). Score files: `2026-10-12-cloud-fable-count-N.score.json`.*
 | 12 | 0.88.0 | 1m34s | 5 · 9 · 4 · 0 · 0 | yes |
 | H2 | 0.88.1 (Haiku 5.5) | 1m13s | 13 · 16 · 9 · 1 · 2 | yes |
 | H3 | 0.88.1 (Haiku 5.5) | 2m30s | 11 · 21 · 8 · 1 · 1 | yes |
+| H4 | 0.88.1 (Haiku 5.5) | 1m47s | 17 · 20 · 10 · 2 · 1 | yes |
 
 Three clean draws on 0.87.1 (8–10): median 2m20s, 0 or 1 gate line, 0 reads
 of labkit source. Before the fixes (draw 1, 0.85.0): 4m27s, 3 unsure, 3 gate.
@@ -67,6 +68,15 @@ round trip, and one new finding — the run index said `beae3bf+dirty` while
 `uncommitted.patch` was empty, because the end state counted the run's own
 untracked products (74 of 74 rows in uniagent carried the flag). Fixed in
 0.88.4: the end state counts tracked files only.
+
+Haiku H4 (0.88.1, the probe still not re-stamped): 1m47s, right and bound. Its
+three sinks were all labkit's and are fixed in 0.88.5 — a BrokenPipe traceback
+when `--contract` is piped to `head`, the flag read as a file name after the
+path, and `--check` before the write-back saying "numbers not in PROTOCOL"
+instead of "no answer yet, run `--from-run`". Its two `unsure` lines are the
+cloud's own (the venv already built; the session's branch vs. `probe-count`).
+Still open from its list: a skeleton for a directory-per-item source (n), the
+run outputs committed by the tool (w).
 
 ## What the draws changed in labkit
 
