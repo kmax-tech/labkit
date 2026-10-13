@@ -250,6 +250,59 @@ class TestCheckFields(unittest.TestCase):
             self.assertNotIn(label, report.missing_should)
 
 
+class TestCheckFileAsData(unittest.TestCase):
+    """`check_protocol` hands every finding back as data; `print_report` only
+    renders. A test asserts on fields, not on lines read back from stdout."""
+
+    def _report(self, text: str):
+        d = Path(tempfile.mkdtemp())
+        path = d / "PROTOCOL-x.md"
+        path.write_text(text, encoding="utf-8")
+        tmpl = protocol_check.template_lines(TEMPLATE)
+        return protocol_check.check_protocol(path, text, tmpl)
+
+    def test_a_filled_pilot_is_clean_and_does_not_block(self):
+        r = self._report(pilot())
+        self.assertIsNone(r.head_error)
+        self.assertTrue(r.clean, r)
+        self.assertFalse(r.blocks)
+        self.assertEqual(r.musts, [])
+        self.assertIn("should-field(s) due only at report time", r.pilot_note)
+
+    def test_a_missing_must_field_is_data_and_blocks(self):
+        r = self._report(pilot().replace("- **Unit:** one claim\n", ""))
+        self.assertIn("Unit", r.missing_must)
+        self.assertFalse(r.clean)
+        self.assertTrue(r.blocks)
+        self.assertEqual(r.musts, ["Unit"])
+
+    def test_an_unreadable_head_is_the_only_finding(self):
+        r = self._report("# x\n\nno block here\n")
+        self.assertIsNotNone(r.head_error)
+        self.assertTrue(r.blocks)
+        self.assertEqual(r.missing_must, [])
+
+    def test_the_prose_budget_counts_no_fence_and_no_table(self):
+        text = pilot() + "```\n" + "x\n" * 400 + "```\n" + "| a |\n" * 400
+        r = self._report(text)
+        self.assertFalse(r.too_long, r.n_lines)
+        padded = pilot() + "\n## Design\n" + "a line\n" * 400
+        r = self._report(padded)
+        self.assertTrue(r.too_long, r.n_lines)
+        self.assertIn(
+            "a shorter protocol (frozen)",
+            self._report(frozen() + "\n## Design\n" + "a line\n" * 400).musts,
+        )
+
+    def test_print_report_renders_the_data_only(self):
+        r = self._report(pilot().replace("- **Unit:** one claim\n", ""))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            protocol_check.print_report(r)
+        self.assertIn("MISSING (must): Unit", out.getvalue())
+        self.assertIn("must fields missing or empty", out.getvalue().splitlines()[-1])
+
+
 class TestMain(unittest.TestCase):
     def _run(self, argv):
         out = io.StringIO()

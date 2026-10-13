@@ -41,7 +41,7 @@ Protocols with a prose head (Standard 0.16/0.17) are read by labkit 0.47.
 """
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit import console, promises, protocol_block
@@ -588,14 +588,17 @@ SECTION_BUDGET = [
 ]
 
 
-def oversized_sections(text: str) -> list[tuple[str, int, int]]:
-    """(label, prose lines, budget) for each section over budget.
-
-    Counted like the global length check: code fences (rendered examples are
-    mandatory raw output) and table rows do not count against the budget.
-    """
-    counts: dict[str, int] = {}
-    cur, fence = None, False
+def prose_lines(text: str) -> list[tuple[str | None, str]]:
+    """(the `## ` line of the current section or None, stripped line) for
+    every PROSE line: code fences (rendered examples are the raw-output MUST)
+    and table rows (confound profiles, error directions) are not prose.
+    Section lines themselves are included. The one count behind the length
+    check and the section budgets — raw-line counting had flagged three
+    registration-dense protocols as journals, one of which never even ran
+    (2026-08-25)."""
+    out: list[tuple[str | None, str]] = []
+    section: str | None = None
+    fence = False
     for line in text.splitlines():
         stripped = line.strip()
         if stripped.startswith("```"):
@@ -604,13 +607,27 @@ def oversized_sections(text: str) -> list[tuple[str, int, int]]:
         if fence or stripped.startswith("|"):
             continue
         if stripped.startswith("## "):
-            head = stripped[3:].lower()
-            cur = next(
+            section = stripped
+        out.append((section, stripped))
+    return out
+
+
+def oversized_sections(text: str) -> list[tuple[str, int, int]]:
+    """(label, prose lines, budget) for each section over budget; the
+    section line itself does not count."""
+    budget_of: dict[str, str | None] = {}
+    counts: dict[str, int] = {}
+    for section, stripped in prose_lines(text):
+        if section is None or stripped.startswith("## "):
+            continue
+        if section not in budget_of:
+            head = section[3:].lower()
+            budget_of[section] = next(
                 (lb for lb, pat, _ in SECTION_BUDGET if re.search(pat, head)), None
             )
-            continue
-        if cur:
-            counts[cur] = counts.get(cur, 0) + 1
+        label = budget_of[section]
+        if label:
+            counts[label] = counts.get(label, 0) + 1
     return [
         (lb, counts[lb], lim)
         for lb, _, lim in SECTION_BUDGET
@@ -738,7 +755,290 @@ def collect_protocols(paths: list[str]) -> list[Path]:
     return files
 
 
-def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
+#: prose lines a whole protocol may hold (tables and code excluded). By
+#: 2026-08-20 one had grown to 646 lines because every re-freeze APPENDED its
+#: narrative instead of replacing it — presence was checked, length never.
+#: The condensed version of that same protocol (all fields, all numbers, four
+#: code blocks) has 296 lines; 350 leaves room.
+PROSE_LINE_BUDGET = 350
+
+
+@dataclass(frozen=True)
+class FileReport:
+    """Everything `protocol-check` decides about one protocol, as data.
+    `head_error` set means the head could not be read — nothing else is
+    filled. `print_report` is the one rendering; `blocks` the exit code's
+    half. Held as locals of `main`, the findings existed only as printed
+    text and every test read them back from stdout (audit 2026-10-13)."""
+
+    path: Path
+    head_error: str | None
+    frozen: bool = False
+    audit_drift: str | None = None
+    id_findings: list[str] = field(default_factory=list)
+    pilot_note: str = ""
+    missing_must: list[str] = field(default_factory=list)
+    #: owed should-fields; unfrozen they fold into the pilot note, frozen
+    #: or at seconds `owed()` has made them must — kept as data, never printed
+    missing_should: list[str] = field(default_factory=list)
+    must_holes: list[tuple[int, str]] = field(default_factory=list)
+    soft_holes: list[tuple[int, str]] = field(default_factory=list)
+    left: list[str] = field(default_factory=list)
+    runs_stamped: bool = False
+    no_block: bool = False
+    frozen_without_io: bool = False
+    n_lines: int = 0
+    big: list[tuple[str, int, int]] = field(default_factory=list)
+    series: list[tuple[int, str]] = field(default_factory=list)
+    measured: list[tuple[int, str]] = field(default_factory=list)
+    run_unreported: list[str] = field(default_factory=list)
+    history: list[tuple[int, str]] = field(default_factory=list)
+    bare_refs: list[tuple[int, str]] = field(default_factory=list)
+
+    @property
+    def too_long(self) -> bool:
+        """Over the whole-protocol prose budget."""
+        return self.n_lines > PROSE_LINE_BUDGET
+
+    @property
+    def clean(self) -> bool:
+        """Nothing to report beyond the pilot note."""
+        return not (
+            self.bare_refs
+            or self.missing_must
+            or self.missing_should
+            or self.must_holes
+            or self.soft_holes
+            or self.left
+            or self.no_block
+            or self.frozen_without_io
+            or self.too_long
+            or self.big
+            or self.run_unreported
+            or self.history
+            or self.series
+        )
+
+    @property
+    def musts(self) -> list[str]:
+        """The must findings in one list — repeated last in the report: in a
+        commit hook they sat among 20 warning lines and were missed
+        (usability probe 2026-10-07)."""
+        return (
+            list(self.missing_must)
+            + [f"{label} (line {n}, placeholder)" for n, label in self.must_holes]
+            + (["a prompt code block"] if self.no_block else [])
+            + (["a rendered example (frozen)"] if self.frozen_without_io else [])
+            + [f"{_label(n)} (a measure run exists)" for n in self.run_unreported]
+            + (
+                ["a shorter protocol (frozen)"]
+                if self.frozen and (self.too_long or self.big)
+                else []
+            )
+        )
+
+    @property
+    def blocks(self) -> bool:
+        """Whether this protocol fails the check (exit 1)."""
+        return bool(
+            self.head_error
+            or self.musts
+            or any("WARNING" not in f for f in self.id_findings)
+        )
+
+
+def check_protocol(path: Path, text: str, tmpl: set[str]) -> FileReport:
+    """Every finding of `protocol-check` on one protocol, against the
+    template's instruction lines `tmpl` (`template_lines`)."""
+    report = check_fields(text)
+    if report.head is None:
+        return FileReport(path, report.head_error)
+    head, frozen = report.head, report.frozen
+    audit_drift = None
+    if frozen and head.cost != "seconds" and head.preflight_audit:
+        # a warning: after the run, analysis scripts change legitimately
+        audit_drift = audit_stamp_drift(path.parent, head.preflight_audit) or None
+    field_lines = fields(text)
+    missing_should = report.missing_should
+    pilot_note = ""
+    if not frozen and missing_should:
+        pilot_note = (
+            f"pilot (frozen = false) — {len(missing_should)} "
+            f"should-field(s) due only at report time "
+            f"({', '.join(missing_should)}; append them: labkit-init exp <name> --report)"
+        )
+        missing_should = []
+    # A placeholder is reported as one already, and a comment can never
+    # be "filled" — neither is left-over template text (review 2026-10-07:
+    # a correctly filled seconds protocol was never clean).
+    in_placeholder = {
+        n for f in field_lines if f.placeholder for n in range(f.line, f.last + 1)
+    }
+    left = sorted(
+        {
+            s
+            for n, s in enumerate((ln.strip() for ln in text.splitlines()), 1)
+            if (s in tmpl or _STAMPED_ITEM.fullmatch(s))
+            and not s.startswith("<!--")
+            and n not in in_placeholder
+        }
+    )
+    # Before the run the Runs entry is stamped by design: --from-run writes
+    # it. Counted as a leftover, it made every registration read as
+    # unfinished and two cold agents stopped to see whether it blocks
+    # (Haiku H6, H7, 2026-10-13). Frozen, the stamped entry is the scar of
+    # uniagent area 08 and stays a leftover.
+    runs_stamped = not frozen and any(RUNS_PLACEHOLDER.match(s) for s in left)
+    if runs_stamped:
+        left = [s for s in left if not RUNS_PLACEHOLDER.match(s)]
+    examples = code_blocks(text)
+    # "mentions a prompt" means a Prompt FIELD, not the word: the stamped
+    # legend says "prompt" in every protocol, and a count protocol cut
+    # without the field was blocked for it (2026-10-05).
+    no_block = not examples and any(
+        f.name == "prompt" and not f.value.lower().startswith("n/a")
+        for f in field_lines
+    )
+    # A protocol is a registration, not a lab journal: only prose counts,
+    # and the Runs section (the documented runs) is not the registration.
+    n_lines = sum(
+        1
+        for section, _ in prose_lines(text)
+        if not (section and DOCUMENTED_RUNS_HEAD.match(section))
+    )
+    numbered = list(enumerate((ln.strip() for ln in text.splitlines()), 1))
+    # Post-run: a documented measure run makes an empty Result a MUST
+    # gap — pilot suppression does not apply (write back, don't go quiet).
+    measured = measure_runs(text)
+    return FileReport(
+        path=path,
+        head_error=None,
+        frozen=frozen,
+        audit_drift=audit_drift,
+        id_findings=check_protocol_id(path, head),
+        pilot_note=pilot_note,
+        missing_must=report.missing_must,
+        missing_should=missing_should,
+        must_holes=report.must_holes,
+        soft_holes=report.soft_holes,
+        left=left,
+        runs_stamped=runs_stamped,
+        no_block=no_block,
+        frozen_without_io=frozen and not examples,
+        n_lines=n_lines,
+        big=oversized_sections(text),
+        series=[(n, s) for n, s in numbered if SERIES_HEAD.match(s)],
+        measured=measured,
+        run_unreported=(
+            unreported(text, seconds=head.cost == "seconds") if measured else []
+        ),
+        history=[(n, s) for n, s in numbered if CHANGELOG.search(s)],
+        bare_refs=[
+            (fl.line, fl.label)
+            for fl in field_lines
+            if BARE_REFERENCE.search(fl.value) and "](" not in fl.value
+        ],
+    )
+
+
+def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in report order (2026-10-13)
+    """The report as `protocol-check` prints it: one line per finding, the
+    must findings repeated last."""
+    f = r.path
+    if r.head_error is not None:
+        print(f"{f}: HEAD (must): {r.head_error}")
+        return
+    if r.audit_drift:
+        print(f"{f}: WARNING: preflight_audit: {r.audit_drift}")
+    for finding in r.id_findings:
+        print(finding)
+    if r.runs_stamped:
+        print(
+            f"{f}: Runs: the stamped entry is written by "
+            f"`protocol-fill {f.name} --from-run <run_id>` after the run"
+        )
+    if r.clean:
+        if r.pilot_note:
+            print(f"{f}: OK — must fields filled; {r.pilot_note}")
+        else:
+            print(f"{f}: OK — all must and should fields filled")
+        return
+    if r.pilot_note:
+        print(f"{f}: {r.pilot_note}")
+    for label in r.missing_must:
+        print(f"{f}: MISSING (must): {label}")
+    # no `missing (should)` lines: unfrozen they are named in the pilot
+    # note above, frozen or at seconds `owed()` makes them MUST (2026-10-09)
+    for n, label in r.must_holes:
+        print(f"{f}:{n}: PLACEHOLDER ONLY (must): {label}")
+    for n, label in r.soft_holes:
+        print(f"{f}:{n}: placeholder only: {label}")
+    if r.left:
+        print(f"{f}: {len(r.left)} line(s) still verbatim template text, e.g.:")
+        for s in r.left[:3]:
+            print(f"    {s[:88]}")
+    if r.no_block:
+        print(
+            f"{f}: MISSING (must): mentions a prompt but contains no code "
+            f"block — a verbatim prompt belongs in ``` ```, anything else "
+            f"is a paraphrase."
+        )
+    if r.frozen_without_io:
+        print(
+            f"{f}: MISSING (must): `frozen = true`, but not a "
+            f"single rendered example (code block). Instrument check "
+            f"first, then freeze — otherwise the error freezes in."
+        )
+    sev = "OVERSIZED (must)" if r.frozen else "oversized"
+    if r.too_long:
+        print(
+            f"{f}: {sev}: {r.n_lines} prose lines (tables/code excluded) "
+            f"— a protocol is a registration, not a lab journal. "
+            f"Narratives (freeze history, diagnoses) belong in commit "
+            f"messages or a note; ONE sentence per freeze stays here."
+        )
+    for lb, n, lim in r.big:
+        print(
+            f"{f}: {sev}: section '{lb}': {n} prose lines (budget "
+            f"{lim}) — one field is one line; if a justification needs "
+            f"more, it goes into a note and the [[wikilink]] stays "
+            f"here."
+        )
+    if r.run_unreported:
+        print(
+            f"{f}:{r.measured[0][0]}: MISSING (must): measure run in the "
+            f"run list ({r.measured[0][1]}) but "
+            f"{', '.join(_label(n) for n in r.run_unreported)} empty — write "
+            f"the result back in the SAME session."
+        )
+    for n, ln in r.series:
+        print(
+            f"{f}:{n}: follow-up registration in the same protocol "
+            f"({ln[:60]!r}) — one question per protocol: a declared "
+            f"follow-up gets its own PROTOCOL-s<N>-<slug>.md "
+            f"(series rule, Arbeitsstandard LAB-061 Sub-experiment series carry their number in the name)."
+        )
+    for n, label in r.bare_refs:
+        print(
+            f"{f}:{n}: reference without a link: {label} — give the link "
+            f"([area NN](../NN-<name>/PROTOCOL-<name>.md)) and the sentence "
+            f"that matters here"
+        )
+    for n, ln in r.history:
+        print(
+            f"{f}:{n}: change history in the text ({ln[:60]!r}) — docs "
+            f"carry the current state, the why of the change goes in the "
+            f"commit message (LAB-075 Docs carry the state, commits the change)."
+        )
+    if r.musts:
+        print(
+            f"{f}: must fields missing or empty — fill them in, or "
+            f"justify as 'n/a — <why>' (the reason must be there, not "
+            f"just the angle brackets): {'; '.join(r.musts)}"
+        )
+
+
+def main(argv: list[str]) -> int:
     """Command line of `protocol-check`: check protocols against the template and their own head."""
     _ID_INDEX.clear()  # one scan per invocation; never a stale one
     if argv and argv[0] in ("-h", "--help"):
@@ -787,223 +1087,9 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             print(f"{f}: not readable ({exc})")
             failed = True
             continue
-
-        report = check_fields(text)
-        if report.head is None:
-            print(f"{f}: HEAD (must): {report.head_error}")
-            failed = True
-            continue
-        if (
-            report.frozen
-            and report.head.cost != "seconds"
-            and report.head.preflight_audit
-        ):
-            drift = audit_stamp_drift(f.parent, report.head.preflight_audit)
-            if drift:  # a warning: after the run, analysis scripts change legitimately
-                print(f"{f}: WARNING: preflight_audit: {drift}")
-        for finding in check_protocol_id(f, report.head):
-            print(finding)
-            if "WARNING" not in finding:
-                failed = True
-        frozen = report.frozen
-        missing_must, missing_should = report.missing_must, report.missing_should
-        must_holes, soft_holes = report.must_holes, report.soft_holes
-        holes = must_holes + soft_holes
-        examples = code_blocks(text)
-        pilot_note = ""
-        if not frozen and missing_should:
-            pilot_note = (
-                f"pilot (frozen = false) — {len(missing_should)} "
-                f"should-field(s) due only at report time "
-                f"({', '.join(missing_should)}; append them: labkit-init exp <name> --report)"
-            )
-            missing_should = []
-        # A placeholder is reported as one already, and a comment can never
-        # be "filled" — neither is left-over template text (review 2026-10-07:
-        # a correctly filled seconds protocol was never clean).
-        in_placeholder = {
-            n for f in fields(text) if f.placeholder for n in range(f.line, f.last + 1)
-        }
-        left = sorted(
-            {
-                s
-                for n, s in enumerate((ln.strip() for ln in text.splitlines()), 1)
-                if (s in tmpl or _STAMPED_ITEM.fullmatch(s))
-                and not s.startswith("<!--")
-                and n not in in_placeholder
-            }
-        )
-        # Before the run the Runs entry is stamped by design: --from-run writes
-        # it. Counted as a leftover, it made every registration read as
-        # unfinished and two cold agents stopped to see whether it blocks
-        # (Haiku H6, H7, 2026-10-13). Frozen, the stamped entry is the scar of
-        # uniagent area 08 and stays a leftover.
-        runs_stamped = not frozen and any(RUNS_PLACEHOLDER.match(s) for s in left)
-        if runs_stamped:
-            left = [s for s in left if not RUNS_PLACEHOLDER.match(s)]
-        # "mentions a prompt" means a Prompt FIELD, not the word: the stamped
-        # legend says "prompt" in every protocol, and a count protocol cut
-        # without the field was blocked for it (2026-10-05).
-        no_block = not examples and any(
-            f.name == "prompt" and not f.value.lower().startswith("n/a")
-            for f in fields(text)
-        )
-        frozen_without_io = frozen and not examples
-        # A protocol is a registration, not a lab journal. By 2026-08-20 one
-        # had grown to 646 lines because every re-freeze APPENDED its
-        # narrative instead of replacing it — presence was checked, length
-        # never. The condensed version of that same protocol (all fields,
-        # all numbers, four code blocks) has 296 lines; 350 leaves room.
-        # Only PROSE counts: code fences (rendered examples are the raw-output
-        # MUST) and table rows (confound profiles, error directions) do not —
-        # raw-line counting had flagged three registration-dense protocols
-        # as journals, one of which never even ran (2026-08-25).
-        in_fence, in_runs, n_lines = False, False, 0
-        for _l in text.splitlines():
-            _s = _l.strip()
-            if _s.startswith("```"):
-                in_fence = not in_fence
-                continue
-            if _s.startswith("## "):
-                in_runs = bool(DOCUMENTED_RUNS_HEAD.match(_s))
-            if not in_fence and not in_runs and not _s.startswith("|"):
-                n_lines += 1
-        too_long = n_lines > 350
-        big = oversized_sections(text)
-        series = [
-            (n, ln.strip())
-            for n, ln in enumerate(text.splitlines(), 1)
-            if SERIES_HEAD.match(ln)
-        ]
-
-        # Post-run: a documented measure run makes an empty Result a MUST
-        # gap — pilot suppression does not apply (write back, don't go quiet).
-        measured = measure_runs(text)
-        run_unreported = (
-            unreported(text, seconds=report.head.cost == "seconds") if measured else []
-        )
-        history = [
-            (n, ln.strip())
-            for n, ln in enumerate(text.splitlines(), 1)
-            if CHANGELOG.search(ln)
-        ]
-
-        bare_refs = [
-            (fl.line, fl.label)
-            for fl in fields(text)
-            if BARE_REFERENCE.search(fl.value) and "](" not in fl.value
-        ]
-        clean = not (
-            bare_refs
-            or missing_must
-            or missing_should
-            or holes
-            or left
-            or no_block
-            or frozen_without_io
-            or too_long
-            or big
-            or run_unreported
-            or history
-            or series
-        )
-        if runs_stamped:
-            print(
-                f"{f}: Runs: the stamped entry is written by "
-                f"`protocol-fill {f.name} --from-run <run_id>` after the run"
-            )
-        if clean:
-            if pilot_note:
-                print(f"{f}: OK — must fields filled; {pilot_note}")
-            else:
-                print(f"{f}: OK — all must and should fields filled")
-            continue
-
-        if pilot_note:
-            print(f"{f}: {pilot_note}")
-        for label in missing_must:
-            print(f"{f}: MISSING (must): {label}")
-        # no `missing (should)` lines: unfrozen they are named in the pilot
-        # note above, frozen or at seconds `owed()` makes them MUST (2026-10-09)
-        for n, label in must_holes:
-            print(f"{f}:{n}: PLACEHOLDER ONLY (must): {label}")
-        for n, label in soft_holes:
-            print(f"{f}:{n}: placeholder only: {label}")
-        if left:
-            print(f"{f}: {len(left)} line(s) still verbatim template text, e.g.:")
-            for s in left[:3]:
-                print(f"    {s[:88]}")
-        if no_block:
-            print(
-                f"{f}: MISSING (must): mentions a prompt but contains no code "
-                f"block — a verbatim prompt belongs in ``` ```, anything else "
-                f"is a paraphrase."
-            )
-        if frozen_without_io:
-            print(
-                f"{f}: MISSING (must): `frozen = true`, but not a "
-                f"single rendered example (code block). Instrument check "
-                f"first, then freeze — otherwise the error freezes in."
-            )
-        if too_long:
-            sev = "OVERSIZED (must)" if frozen else "oversized"
-            print(
-                f"{f}: {sev}: {n_lines} prose lines (tables/code excluded) "
-                f"— a protocol is a registration, not a lab journal. "
-                f"Narratives (freeze history, diagnoses) belong in commit "
-                f"messages or a note; ONE sentence per freeze stays here."
-            )
-        for lb, n, lim in big:
-            sev = "OVERSIZED (must)" if frozen else "oversized"
-            print(
-                f"{f}: {sev}: section '{lb}': {n} prose lines (budget "
-                f"{lim}) — one field is one line; if a justification needs "
-                f"more, it goes into a note and the [[wikilink]] stays "
-                f"here."
-            )
-        if run_unreported:
-            print(
-                f"{f}:{measured[0][0]}: MISSING (must): measure run in the "
-                f"run list ({measured[0][1]}) but "
-                f"{', '.join(_label(n) for n in run_unreported)} empty — write "
-                f"the result back in the SAME session."
-            )
-        for n, ln in series:
-            print(
-                f"{f}:{n}: follow-up registration in the same protocol "
-                f"({ln[:60]!r}) — one question per protocol: a declared "
-                f"follow-up gets its own PROTOCOL-s<N>-<slug>.md "
-                f"(series rule, Arbeitsstandard LAB-061 Sub-experiment series carry their number in the name)."
-            )
-        for n, label in bare_refs:
-            print(
-                f"{f}:{n}: reference without a link: {label} — give the link "
-                f"([area NN](../NN-<name>/PROTOCOL-<name>.md)) and the sentence "
-                f"that matters here"
-            )
-        for n, ln in history:
-            print(
-                f"{f}:{n}: change history in the text ({ln[:60]!r}) — docs "
-                f"carry the current state, the why of the change goes in the "
-                f"commit message (LAB-075 Docs carry the state, commits the change)."
-            )
-        # The must findings again, last: in a commit hook they sat among
-        # 20 warning lines and were missed (usability probe 2026-10-07).
-        musts = (
-            list(missing_must)
-            + [f"{label} (line {n}, placeholder)" for n, label in must_holes]
-            + (["a prompt code block"] if no_block else [])
-            + (["a rendered example (frozen)"] if frozen_without_io else [])
-            + [f"{_label(n)} (a measure run exists)" for n in run_unreported]
-            + (["a shorter protocol (frozen)"] if frozen and (too_long or big) else [])
-        )
-        if musts:
-            failed = True
-            print(
-                f"{f}: must fields missing or empty — fill them in, or "
-                f"justify as 'n/a — <why>' (the reason must be there, not "
-                f"just the angle brackets): {'; '.join(musts)}"
-            )
+        report = check_protocol(f, text, tmpl)
+        print_report(report)
+        failed = failed or report.blocks
     return 1 if failed else 0
 
 
