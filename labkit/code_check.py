@@ -1074,12 +1074,8 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
         f"spec this check does not compute) · prompt drift unchecked for it"
         for name in unreadable
     ]
-    blocks = (
-        [b for b in prompt_blocks(protocol) if "<" not in b.splitlines()[0][:1]]
-        if consts
-        else []
-    )
-    blocks = [b for b in blocks if not b.strip().startswith("<")]
+    # a block that only holds a `<placeholder>` is the template's, not a prompt
+    blocks = [b for b in prompt_blocks(protocol) if not b.strip().startswith("<")]
     if not consts or not blocks:
         return warnings
     have = {ln.strip() for b in blocks for ln in b.splitlines() if ln.strip()}

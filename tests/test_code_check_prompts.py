@@ -83,6 +83,15 @@ class Blocks(unittest.TestCase):
         )
         self.assertEqual(len(code_check.prompt_blocks(_write(moved))), 2)
 
+    def test_an_empty_fence_is_reported_not_a_crash(self):
+        # a stamped protocol whose prompt fence was left empty raised
+        # IndexError (audit 2026-10-13): the first line of "" does not exist
+        empty = "- **Prompt:**\n\n  ```text\n  ```\n\n- **Unit:** x\n"
+        findings = check(SCRIPT, empty)
+        self.assertEqual(len(findings), 2, findings)  # PROMPT and PROMPT_NULL
+        for f in findings:
+            self.assertTrue(f.startswith("BLOCKER"), f)
+
 
 def _write(text: str) -> Path:
     path = Path(tempfile.mkdtemp()) / "PROTOCOL-x.md"
