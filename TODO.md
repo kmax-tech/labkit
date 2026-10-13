@@ -489,6 +489,18 @@ sieht das niemand.
   Result- und Laufzeile aus `metrics.json`; Skelette und Spur nennen das
   Kommando. Prüfstelle: ein Cloud-Durchgang, dessen Log keine Hand-Rückschrift
   mehr zeigt.
+  **Geprüft 2026-10-13, Durchgang 11 (Fable, 0.88.0, 3m11s):** das Log zeigt
+  eine Zeile `protocol-fill --from-run`, keine Hand-Rückschrift; der Agent
+  ließ die erzeugte Result-Zeile stehen, weil `--check` den Schlüssel wörtlich
+  hält (`2026-10-13-cloud-fable-count-11.score.json`). Einzige Gate-Zeile:
+  der README-Vertragsplatzhalter (r). Neu genannt: (u) die README dupliziert
+  bei seconds das Protokoll (Frage, Vertrag, Kästchen) — bei seconds ohne
+  README stempeln oder aus dem Protokoll füllen; (v) das Mess-Skript könnte
+  die Rückschrift nach dem Lauf selbst ausführen — ein Kommando, ein Commit;
+  (w) drei Commits für eine 0,1-s-Zählung (Commit vor dem Lauf, Lauf-
+  Artefakte, README-Korrektur) — bei seconds einen Commit nach dem Lauf
+  zulassen, wenn der Lauf aus dem committeten Stand reproduzierbar ist;
+  (n) bleibt: Feldnamen aus dem Task stempeln.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:

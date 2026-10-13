@@ -37,9 +37,16 @@ see the caveat). Score files: `2026-10-12-cloud-fable-count-N.score.json`.*
 | 8 | 0.87.1 | 2m20s | 6 · 14 · 6 · 1 · 0 | yes |
 | 9 | 0.87.1 | 2m06s | 4 · 11 · 4 · 0 · 1 | yes |
 | 10 | 0.87.1 | 3m42s | 5 · 13 · 6 · 1 · 0 | yes |
+| 11 | 0.88.0 | 3m11s | 5 · 13 · 6 · 0 · 1 | yes |
 
 Three clean draws on 0.87.1 (8–10): median 2m20s, 0 or 1 gate line, 0 reads
 of labkit source. Before the fixes (draw 1, 0.85.0): 4m27s, 3 unsure, 3 gate.
+
+Draw 11 (0.88.0, 2026-10-13) is the check for `protocol-fill --from-run`: the
+log carries one write-back line (`protocol-fill --from-run <run_id>`) and no
+edit of the Answer, Result or run line by hand; the agent left the generated
+Result line unchanged because `--check` holds the key verbatim. The one gate
+line is the README contract placeholder again (decision below).
 
 ## What the draws changed in labkit
 
@@ -50,13 +57,15 @@ of labkit source. Before the fixes (draw 1, 0.85.0): 4m27s, 3 unsure, 3 gate.
 | 0.86.2 | draw 4 | a path example in a code span is not a README placeholder |
 | 0.87.0 | draws 1–5, decisions | no promise tables and no criterion for a count; Summary at seconds = Result line; one-line placeholders |
 | 0.87.1 | draw 6 | the gates agree with the stamp: a protocol that registers no id owes no table; the seconds gate is the question |
+| 0.88.0 | draws 1–10, Sonnet, Haiku | `protocol-fill --from-run` writes the Answer, Result and run lines from metrics.json; the skeletons print the command |
 
 ## What every agent still names (decisions, in TODO)
 
 - `protocol-check --contract` prints the full form at seconds; only its first line counts.
 - The README's contract paragraph is a placeholder only `finalize` reports, after the run.
 - `finalize` always warns on the first pass (output not yet tracked) — a second pass is built in.
-- The number is written back by hand; a `--write-back` or `protocol-fill --from-run` would replace three edits.
+- ~~The number is written back by hand~~ — `protocol-fill --from-run` since 0.88.0, confirmed by draw 11.
+- Draw 11 adds: the README duplicates the protocol at seconds (one question, contract, checkboxes); the measure script could run the write-back itself; the field names could be stamped from the task (TODO (n)); three commits for one 0.1 s count.
 - Terms, Unit and Exclusions restate `visible()` in prose for a file count.
 
 ## Sonnet 5.5 and Haiku 5.5, same probe, one draw each
