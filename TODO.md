@@ -557,6 +557,20 @@ sieht das niemand.
   Neu notiert: (z) Skelett für eine Quelle mit Ordner je Item (`rows()` braucht
   den Pfad je Fall, nicht nur die id) — gehört zu (n). Prüfstelle: der nächste
   Durchgang auf v0.88.5, der erste mit allen Fixes seit 0.88.1.
+  **Haiku H5 (0.88.5, 0m54s, `2026-10-13-cloud-haiku-count-5.score.json`):**
+  Prüfstelle bestanden — keiner der drei H4-Befunde taucht in Log oder
+  Bericht auf; 0 unsure, 0 Quelltext-Lesungen, 3 Edits, der kürzeste
+  Durchgang der Reihe (Spanne mit Vorbehalt: Log erst nach den ersten
+  Lesungen angelegt). Seine Liste: (n)/(z) die drei Stubs des Zählskeletts
+  zwingen zum Lesen von Skript und Bereichstest; (w) `log.md` ignoriert
+  kostet einen zweiten Commit. Neu notiert: (q) `Terms of this protocol`
+  wird bei einer Zählung ohne Prägung geschuldet, und `protocol-fill` nimmt
+  ein Label je Aufruf — entscheiden, ob das Feld bei seconds ohne Modell
+  „n/a“ sein darf und ob `protocol-fill` mehrere Label in einem Aufruf
+  nimmt; (t) `data=` friert die Fallliste ein, nicht die Dokumentdateien,
+  die die Zahl zählt — die Zahl ist gegen `cases.jsonl` zitierbar, nicht
+  gegen den Inhalt der Eingaben; entscheiden, ob das Zählskelett den
+  Eingabeordner (Hash je Datei) mit einfriert.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:

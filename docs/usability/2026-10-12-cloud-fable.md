@@ -42,6 +42,7 @@ see the caveat). Score files: `2026-10-12-cloud-fable-count-N.score.json`.*
 | H2 | 0.88.1 (Haiku 5.5) | 1m13s | 13 · 16 · 9 · 1 · 2 | yes |
 | H3 | 0.88.1 (Haiku 5.5) | 2m30s | 11 · 21 · 8 · 1 · 1 | yes |
 | H4 | 0.88.1 (Haiku 5.5) | 1m47s | 17 · 20 · 10 · 2 · 1 | yes |
+| H5 | 0.88.5 (Haiku 5.5) | 0m54s | 11 · 13 · 3 · 0 · 1 | yes |
 
 Three clean draws on 0.87.1 (8–10): median 2m20s, 0 or 1 gate line, 0 reads
 of labkit source. Before the fixes (draw 1, 0.85.0): 4m27s, 3 unsure, 3 gate.
@@ -77,6 +78,18 @@ instead of "no answer yet, run `--from-run`". Its two `unsure` lines are the
 cloud's own (the venv already built; the session's branch vs. `probe-count`).
 Still open from its list: a skeleton for a directory-per-item source (n), the
 run outputs committed by the tool (w).
+
+Haiku H5 (0.88.5, the first draw with every fix since 0.88.1, the probe
+re-stamped by `stage --restamp`): 0m54s, right and bound, 0 `unsure`, 0 source
+reads, 3 edits — the shortest draw of the series. None of H4's three sinks
+appears in its log or report. Its one `gate` line is the cloud's own (the
+session's branch vs. `probe-count`). Its list: the counting skeleton's three
+stubs made it read the script and the area test first (n/z); the
+`Terms of this protocol` field is owed at a count with no coinage, and
+`protocol-fill` takes one label per call (q, new); `log.md` git-ignored costs a
+second commit (w); `data=` freezes the case list, not the document files the
+number counts (t, new). Caveat on the span: the log was created after the
+first reads, so the first two lines carry the log's own creation time.
 
 ## What the draws changed in labkit
 
