@@ -471,7 +471,6 @@ def complete(
     raw: bool = False,
     stop: list[str] | None = None,
     max_tokens: int = 512,
-    keep_alive: str = "10m",
 ) -> str:
     """One text completion, retrying transport failures (see _TRANSIENT).
 
@@ -493,7 +492,6 @@ def complete(
                 raw=raw,
                 stop=stop,
                 max_tokens=max_tokens,
-                keep_alive=keep_alive,
             )
         except _TRANSIENT as exc:
             if attempt == attempts:
@@ -557,7 +555,6 @@ def _complete_once(
     raw: bool = False,
     stop: list[str] | None = None,
     max_tokens: int = 512,
-    keep_alive: str = "10m",
 ) -> str:
     """One text completion via the alias' backend. Returns the answer text.
 
@@ -589,7 +586,6 @@ def _complete_once(
             timeout=timeout,
             stop=stop,
             max_tokens=max_tokens,
-            keep_alive=keep_alive,
         )
     if backend == "ollama":
         return _complete_ollama_chat(
@@ -601,7 +597,6 @@ def _complete_once(
             timeout=timeout,
             stop=stop,
             max_tokens=max_tokens,
-            keep_alive=keep_alive,
         )
     if backend == "openai":
         return _complete_openai(
@@ -709,6 +704,46 @@ def _cli_result(stdout: str) -> str:
     return str(body["result"]).strip()
 
 
+#: how long ollama keeps the model loaded after a call. Without it ollama
+#: evicts the model between two calls (default 5 min) and every call pays a
+#: reload — ~13 GB for gpt-oss; that once drove a run into the timeout after
+#: 5 of 100 items. No caller ever set another value (audit 2026-10-13).
+OLLAMA_KEEP_ALIVE = "10m"
+
+
+def _ollama_options(
+    spec: dict, temperature: float | None, stop: list[str] | None, max_tokens: int
+) -> dict[str, object]:
+    """The `options` of an ollama request, for /api/generate and /api/chat
+    alike. `num_predict` is never left out: a completion has no natural end
+    and without a token budget it writes until the context is full (a pilot
+    stalled 12 min on one call; until 2026-08-19 the chat path — the one
+    every experiment takes — set only `temperature`, and a server log showed
+    `n_gen = 3520` at a nominal 2048, the request aborted after almost three
+    minutes, which looked like an overloaded cluster)."""
+    options: dict[str, object] = {"num_predict": max_tokens}
+    if temperature is not None:
+        options["temperature"] = temperature
+    if stop:
+        options["stop"] = stop
+    if "num_ctx" in spec:
+        options["num_ctx"] = spec["num_ctx"]
+    return options
+
+
+def _warn_empty(alias: str, detail: str) -> None:
+    """Said aloud, decided by the caller: a reasoning model that put its
+    trace in its own field and nothing in `content` thought and said
+    nothing — a MISSING measurement that would come back as an empty string
+    and look like a model answer to the parser. Silently lost items are the
+    most expensive error type."""
+    print(
+        f"llm: {alias} returned EMPTY content ({detail}) — count as unreadable, "
+        f"not as an answer",
+        file=sys.stderr,
+    )
+
+
 def _complete_ollama_raw(
     spec: dict,
     prompt: str,
@@ -718,7 +753,6 @@ def _complete_ollama_raw(
     timeout: int,
     stop: list[str] | None,
     max_tokens: int,
-    keep_alive: str,
 ) -> str:
     """ollama /api/generate with raw=true: the prompt goes untemplated."""
     # /api/generate with raw=true sends the prompt UNTEMPLATED — the
@@ -738,19 +772,9 @@ def _complete_ollama_raw(
         "prompt": prompt,
         "raw": True,
         "stream": False,
-        "keep_alive": keep_alive,
+        "keep_alive": OLLAMA_KEEP_ALIVE,
+        "options": _ollama_options(spec, temperature, stop, max_tokens),
     }
-    # A completion has no natural end: without a token budget it keeps
-    # writing until the context is full (a pilot stalled 12 min on one
-    # call). CASA bounds theirs at max_length=512.
-    options: dict[str, object] = {"num_predict": max_tokens}
-    if temperature is not None:
-        options["temperature"] = temperature
-    if stop:
-        options["stop"] = stop
-    if "num_ctx" in spec:
-        options["num_ctx"] = spec["num_ctx"]
-    payload["options"] = options
     body = _post_json(spec, "/api/generate", payload, timeout)
     _TLS.usage = _ollama_usage(body)
     _check_prompt_fit(spec, len(prompt), _TLS.usage)
@@ -828,56 +852,26 @@ def _complete_ollama_chat(
     timeout: int,
     stop: list[str] | None,
     max_tokens: int,
-    keep_alive: str,
 ) -> str:
     """ollama /api/chat — the path every templated experiment takes."""
-    # keep_alive: without it ollama evicts the model between two calls
-    # (default 5 min) and every call pays a reload — ~13 GB for gpt-oss.
-    # That once drove a run into the timeout after 5 of 100 items.
     payload: dict[str, object] = {
         "model": spec["model"],
         "messages": _chat_messages(system, prompt),
         "stream": False,
-        "keep_alive": keep_alive,
+        "keep_alive": OLLAMA_KEEP_ALIVE,
+        "options": _ollama_options(spec, temperature, stop, max_tokens),
     }
-    # `num_predict` belongs here TOO. Until 2026-08-19 this branch set
-    # only `temperature` and silently dropped `max_tokens` — the
-    # /api/generate branch above has always warned about this ("without a
-    # token budget it keeps writing until the context is full"), but the
-    # very path all experiments take had no cap. It surfaced in a server
-    # log: `n_gen = 3520` at a nominal 2048, gpt-oss at ~19 t/s still not
-    # done, request aborted after almost three minutes. No caller could
-    # set the cap, so every heavy prompt ran into the timeout — and that
-    # looked like an overloaded cluster.
-    options: dict[str, object] = {"num_predict": max_tokens}
-    if temperature is not None:
-        options["temperature"] = temperature
-    if stop:
-        options["stop"] = stop
-    if "num_ctx" in spec:
-        options["num_ctx"] = spec["num_ctx"]
-    payload["options"] = options
     body = _post_json(spec, "/api/chat", payload, timeout)
     _TLS.usage = _ollama_usage(body)
     _check_prompt_fit(spec, len(system or "") + len(prompt), _TLS.usage)
     message = body.get("message") or {}
     content = (message.get("content") or "").strip()
     _TLS.thinking = (message.get("thinking") or "").strip()
-    # Reasoning models put their thinking trace in its own field. If
-    # `content` stays empty while `thinking` is filled, the model thought
-    # and said nothing — a MISSING measurement that would come back as an
-    # empty string and look like a model answer to the parser. Do not
-    # decide here (the caller knows its gold classes), but make it
-    # visible: silently lost items are the most expensive error type.
     if not content:
-        think = (message.get("thinking") or "").strip()
-        print(
-            f"llm: {alias} returned EMPTY content "
-            f"(done_reason={body.get('done_reason')!r}, "
-            f"eval_count={body.get('eval_count')}, "
-            f"thinking={len(think)} chars) — count as unreadable, "
-            f"not as an answer",
-            file=sys.stderr,
+        _warn_empty(
+            alias,
+            f"done_reason={body.get('done_reason')!r}, "
+            f"eval_count={body.get('eval_count')}, thinking={len(_TLS.thinking)} chars",
         )
     return content
 
@@ -950,11 +944,8 @@ def _complete_openai(
             f"set reasoning = false if this model truly writes no trace."
         )
     if not content:
-        print(
-            f"llm: {alias} returned EMPTY content "
-            f"(finish_reason={first.get('finish_reason')!r}, "
-            f"reasoning={len(reasoning)} chars) — count as "
-            f"unreadable, not as an answer",
-            file=sys.stderr,
+        _warn_empty(
+            alias,
+            f"finish_reason={first.get('finish_reason')!r}, reasoning={len(reasoning)} chars",
         )
     return content
