@@ -33,14 +33,13 @@ import argparse
 import importlib.metadata
 import os
 import re
-import subprocess
 
 from labkit import console
 import uuid
 from pathlib import Path
 
 from labkit import protocol_block
-from labkit.repo import area_protocols
+from labkit.repo import area_protocols, git_run
 from labkit.repo_check import PYPROJECT_VERSION_RE
 
 PACKAGE = Path(__file__).resolve().parent
@@ -641,8 +640,10 @@ def stamp_area(
     cost: str | None = None,
     model: bool | str = False,
     report: bool = False,
-) -> Path:
-    """Stamp `experiments/NN-<name>/` (or promote it with REPORT); returns the area."""
+) -> tuple[Path, str]:
+    """Stamp `experiments/NN-<name>/` (or promote it with REPORT): the area
+    and the report to print (what was written, then the next steps) — the
+    caller prints; `stamp_lab` returns its log the same way."""
     slug = area_slug(name)
     experiments = root / "experiments"
     if not (root / "models.toml").is_file() or not experiments.is_dir():
@@ -678,8 +679,7 @@ def stamp_area(
             raise SystemExit(
                 f"labkit-init: experiment already exists: {existing[0]} (add report fields: --report)"
             )
-        print("\n".join(promote(existing[0], blocks)))
-        return existing[0]
+        return existing[0], "\n".join(promote(existing[0], blocks))
     nn = next_experiment_number(experiments)
     area = experiments / f"{nn}-{slug}"
     log: list[str] = []
@@ -706,14 +706,25 @@ def stamp_area(
         log,
     )
     log += stamp_scripts(root, area, nn, slug, quick, model)
-    if (root / ".git").exists() and (root / ".githooks").is_dir():
-        # the hook runs only where core.hooksPath points at it (2026-10-05)
-        subprocess.run(
-            ["git", "config", "core.hooksPath", ".githooks"], cwd=root, check=False
+    _point_hooks_at(root)
+    return area, (
+        f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
+        + "\n".join(log)
+        + "\n"
+        + next_steps(area.relative_to(root), slug, nn, quick, bool(model))
+    )
+
+
+def _point_hooks_at(root: Path) -> None:
+    """`core.hooksPath = .githooks` where the repo has both: the hook runs
+    only where that setting points at it (2026-10-05)."""
+    if not ((root / ".git").exists() and (root / ".githooks").is_dir()):
+        return
+    r = git_run(["config", "core.hooksPath", ".githooks"], root)
+    if r.returncode != 0:
+        raise SystemExit(
+            f"labkit-init: git config core.hooksPath failed: {r.stderr.strip()}"
         )
-    print(f"{'Measurement' if quick else 'Experiment'} -> {area}\n" + "\n".join(log))
-    print(next_steps(area.relative_to(root), slug, nn, quick, bool(model)))
-    return area
 
 
 def next_steps(rel: Path, slug: str, nn: str, quick: bool, model: bool) -> str:
@@ -797,7 +808,8 @@ def main(argv: list[str]) -> int:
             f"\nNext: fill the cells, read the render, look at real output; when it holds, `labkit-init exp {area_slug(a.name)}`."
         )
         return 0
-    stamp_area(root, a.name, cost=a.cost, model=a.model, report=a.report)
+    _, report = stamp_area(root, a.name, cost=a.cost, model=a.model, report=a.report)
+    print(report)
     return 0
 
 

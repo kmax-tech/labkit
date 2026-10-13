@@ -204,6 +204,38 @@ def _sh(args: list[str], cwd: Path) -> str:
     return r.stdout
 
 
+def _commit(root: Path, title: str, body: str | None = None) -> None:
+    """The probe's own commit of what is staged. It skips the pre-commit
+    hook: a freshly stamped protocol is all placeholders by design, and the
+    hook is the agent's gate, not the stamper's (`labkit-init exp` sets
+    core.hooksPath, 2026-10-05)."""
+    _sh(
+        [
+            "git",
+            "commit",
+            "-q",
+            "--no-verify",
+            "-m",
+            title,
+            *(["-m", body] if body else []),
+        ],
+        root,
+    )
+
+
+def _read_probe(path: Path) -> Probe:
+    """`<dir>.probe.json` as the record `stage` wrote."""
+    return Probe(**json.loads(path.read_text(encoding="utf-8")))
+
+
+def _answer_text(path: Path, who: str) -> str:
+    """The answer file a scorer holds to the truth; missing means `who` has
+    not answered yet — said so, not a traceback."""
+    if not path.is_file():
+        raise SystemExit(f"usability: {path} missing — has the {who} answered?")
+    return path.read_text(encoding="utf-8")
+
+
 def other_requirements(text: str) -> list[str]:
     """The requirement lines of a stamped `requirements.txt` besides labkit —
     `pytest` since 0.86.0. They go into the probe venv before the lock is
@@ -372,27 +404,14 @@ def stage(
     root.mkdir(parents=True, exist_ok=True)
     scaffold.stamp_lab(root, root.name)
     _sh(["git", "init", "-q", "."], root)
-    # The probe's own commits skip the pre-commit hook: a freshly stamped
-    # protocol is all placeholders by design, and the hook is the agent's
-    # gate, not the stamper's (`labkit-init exp` sets core.hooksPath, 2026-10-05).
     _sh(["git", "add", "-A"], root)
-    _sh(
-        [
-            "git",
-            "commit",
-            "-q",
-            "--no-verify",
-            "-m",
-            "Scaffold: a probe lab repo for the usability trace",
-        ],
-        root,
+    _commit(root, "Scaffold: a probe lab repo for the usability trace")
+    _, stamp_report = scaffold.stamp_area(
+        root, area_name, cost=cost, model="haiku" if model else False
     )
-    with contextlib.redirect_stdout(
-        sys.stderr
-    ):  # the stamp's log is for the operator, not the probe
-        scaffold.stamp_area(
-            root, area_name, cost=cost, model="haiku" if model else False
-        )
+    print(
+        stamp_report, file=sys.stderr
+    )  # the stamp's log is for the operator, not the probe
     areas = sorted(p.name for p in (root / "experiments").glob(f"*-{area_name}"))
     if len(areas) != 1:
         raise SystemExit(
@@ -402,19 +421,9 @@ def stage(
         plant_fixture(root)
     else:
         plant_claims(root)
-    if venv is not None:
-        os.symlink(venv.resolve(), root / ".venv")
-    else:
-        _sh([sys.executable, "-m", "venv", ".venv"], root)
-        _sh(
-            [
-                str(root / ".venv" / "bin" / "pip"),
-                "install",
-                "-q",
-                _labkit_spec(Path(sys.executable)),
-            ],
-            root,
-        )
+    # the labkit of the staging interpreter, so a probe measures this checkout
+    _probe_venv(root, venv, _labkit_spec(Path(sys.executable)))
+    if venv is None:
         extra = other_requirements(
             (root / "requirements.txt").read_text(encoding="utf-8")
         )
@@ -429,17 +438,7 @@ def stage(
         _sh([str(root / ".venv" / "bin" / "pip"), "freeze"], root), encoding="utf-8"
     )
     _sh(["git", "add", "-A"], root)
-    _sh(
-        [
-            "git",
-            "commit",
-            "-q",
-            "--no-verify",
-            "-m",
-            "Probe: requirements.lock and the hooks of the probe venv",
-        ],
-        root,
-    )
+    _commit(root, "Probe: requirements.lock and the hooks of the probe venv")
     probe = Probe(
         staged=time.strftime("%Y-%m-%dT%H:%M:%S"),
         task=task,
@@ -470,17 +469,7 @@ def stage(
         sheet = sheet.replace(key, val)
     (root / "TASK.md").write_text(sheet, encoding="utf-8")
     _sh(["git", "add", "-A"], root)
-    _sh(
-        [
-            "git",
-            "commit",
-            "-q",
-            "--no-verify",
-            "-m",
-            "Probe: the area, the fixture and TASK.md",
-        ],
-        root,
-    )
+    _commit(root, "Probe: the area, the fixture and TASK.md")
     _sidecar(root, "probe.json").write_text(
         json.dumps(asdict(probe), indent=1), encoding="utf-8"
     )
@@ -567,21 +556,23 @@ def restamp_files(
     return done
 
 
-def _probe_venv(root: Path, venv: Path | None) -> None:
-    """The probe's `.venv`: a link to VENV, or built from the stamped pin.
-    Side effects: removes the old one, creates the new one."""
+def _probe_venv(root: Path, venv: Path | None, labkit_spec: str) -> None:
+    """The probe's `.venv`: a link to VENV, or built with `labkit_spec`
+    installed (`stage`: the staging interpreter's labkit; `--restamp`: the
+    stamped pin). Side effects: removes the old one, creates the new one —
+    after the check, so a bad --venv leaves the old one standing."""
+    if venv is not None and not (venv / "bin" / "python").is_file():
+        raise SystemExit(f"usability: --venv {venv} has no bin/python")
     old = root / ".venv"
     if old.is_symlink():
         old.unlink()
     elif old.is_dir():
         shutil.rmtree(old)
     if venv is not None:
-        if not (venv / "bin" / "python").is_file():
-            raise SystemExit(f"usability: --venv {venv} has no bin/python")
         os.symlink(venv.resolve(), old)
         return
     _sh([sys.executable, "-m", "venv", ".venv"], root)
-    _sh([str(old / "bin" / "pip"), "install", "-q", scaffold.labkit_pin()], root)
+    _sh([str(old / "bin" / "pip"), "install", "-q", labkit_spec], root)
 
 
 def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
@@ -601,21 +592,19 @@ def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
             f"usability: {root} has uncommitted changes — commit or stash "
             f"first:\n{dirty.rstrip()}"
         )
-    probe = Probe(**json.loads(probe_file.read_text(encoding="utf-8")))
+    probe = _read_probe(probe_file)
     kept_paths = probe.kept if keep is None else keep
     flags = probe.scaffold_flags
     cost = flags[flags.index("--cost") + 1] if "--cost" in flags else "unset"
     model = "--model" in flags
-    _probe_venv(root, venv)
+    _probe_venv(root, venv, scaffold.labkit_pin())
     with tempfile.TemporaryDirectory() as tmp:
         fresh = Path(tmp) / root.name  # the stamp names the repo after its dir
         with contextlib.redirect_stdout(sys.stderr):  # the stamp's log
             stage(fresh, root / ".venv", cost=cost, task=probe.task, model=model)
         files = _sh(["git", "ls-files"], fresh).split("\n")
         done = restamp_files(fresh, root, [f for f in files if f], kept_paths)
-        fresh_probe = Probe(
-            **json.loads(_sidecar(fresh, "probe.json").read_text(encoding="utf-8"))
-        )
+        fresh_probe = _read_probe(_sidecar(fresh, "probe.json"))
     changed = done.overwritten + done.added
     extra = other_requirements((root / "requirements.txt").read_text(encoding="utf-8"))
     if extra and venv is None:
@@ -658,19 +647,11 @@ def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
         )
         return 0
     _sh(["git", "add", "--", *sorted(changed)], root)
-    _sh(
-        [
-            "git",
-            "commit",
-            "-q",
-            "--no-verify",
-            "-m",
-            f"Probe re-stamped at labkit {label}",
-            "-m",
-            f"usability stage --restamp; what changed between the stamps is "
-            f"labkit's CHANGELOG.md.\n\n{report}",
-        ],
+    _commit(
         root,
+        f"Probe re-stamped at labkit {label}",
+        f"usability stage --restamp; what changed between the stamps is "
+        f"labkit's CHANGELOG.md.\n\n{report}",
     )
     print(
         f"restamp {root}: committed at labkit {label}\n{report}\n"
@@ -819,12 +800,14 @@ def load_probe_run(root: Path) -> ProbeRun:
     probe_file = _sidecar(root, "probe.json")
     if not probe_file.is_file():
         raise SystemExit(f"usability: {probe_file} missing — was {root} staged here?")
-    probe = Probe(**json.loads(probe_file.read_text(encoding="utf-8")))
+    probe = _read_probe(probe_file)
     area = root / "experiments" / probe.area
     run = latest_run(area)
     if run is None:
         return ProbeRun(probe, area, None, {}, {}, None, None, False, None)
-    config = json.loads((run / "config.json").read_text(encoding="utf-8"))
+    config = runs.read_run_config(run)
+    if config is None:
+        raise SystemExit(f"usability: {run} has no config.json — not a run")
     metrics = runs.read_metrics(run / "metrics.json")
     binding = config.get("protocol") or {}
     named = binding.get("path")
@@ -896,13 +879,9 @@ def cmd_glance_score(root: Path) -> int:
     protocol, truth = _bound_protocol(root)
     text = protocol.read_text(encoding="utf-8")
     g = protocol_reading.glance(text)
-    answer = _sidecar(root, "glance-answer.json")
-    if not answer.is_file():
-        raise SystemExit(f"usability: {answer} missing — has the reader answered?")
+    answer = _answer_text(_sidecar(root, "glance-answer.json"), "reader")
     try:
-        got = protocol_reading.score_glance_answer(
-            answer.read_text(encoding="utf-8"), truth
-        )
+        got = protocol_reading.score_glance_answer(answer, truth)
     except ValueError as exc:
         raise SystemExit(f"usability: {exc}") from exc
     hits = protocol_reading.terms_coverage(text, got.unclear, str(protocol))
@@ -931,10 +910,8 @@ def cmd_glance_score(root: Path) -> int:
 def cmd_terms(root: Path) -> int:
     """The full reader's unclear terms against the Summary and Terms."""
     protocol, _ = _bound_protocol(root)
-    answer = _sidecar(root, "reader-answer.json")
-    if not answer.is_file():
-        raise SystemExit(f"usability: {answer} missing — has the reader answered?")
-    unclear = json.loads(answer.read_text(encoding="utf-8")).get("unclear") or []
+    answer = _answer_text(_sidecar(root, "reader-answer.json"), "reader")
+    unclear = json.loads(answer).get("unclear") or []
     hits = protocol_reading.terms_coverage(
         protocol.read_text(encoding="utf-8"), unclear, str(protocol)
     )
@@ -981,22 +958,18 @@ def cmd_nav_score(
 ) -> int:
     """Hold the answers to the truth; `<out>.nav.json`."""
     qs = code_navigation.load_questions(questions)
-    answer = out.with_name(out.name + ".nav-answer.json")
-    if not answer.is_file():
-        raise SystemExit(f"usability: {answer} missing — has the agent answered?")
+    answer = _answer_text(out.with_name(out.name + ".nav-answer.json"), "agent")
     try:
-        got = code_navigation.score_nav_answer(
-            answer.read_text(encoding="utf-8"), qs, repo
-        )
+        got = code_navigation.score_nav_answer(answer, qs, repo)
     except (ValueError, code_navigation.NavigationError) as exc:
         raise SystemExit(f"usability: {exc}") from exc
     eff = code_navigation.effort(transcript, repo) if transcript else None
     try:
         flows = code_navigation.score_flows(
-            answer.read_text(encoding="utf-8"), code_navigation.load_flows(questions)
+            answer, code_navigation.load_flows(questions)
         )
         choices = code_navigation.score_choices(
-            answer.read_text(encoding="utf-8"), code_navigation.load_choices(questions)
+            answer, code_navigation.load_choices(questions)
         )
     except ValueError as exc:
         raise SystemExit(f"usability: {exc}") from exc
@@ -1084,13 +1057,9 @@ def cmd_human(
 def cmd_read_score(root: Path, transcript: Path | None) -> int:
     """Hold the reader's answer to the run's number; `<dir>.reader.json`."""
     _, truth = _bound_protocol(root)
-    answer = _sidecar(root, "reader-answer.json")
-    if not answer.is_file():
-        raise SystemExit(f"usability: {answer} missing — has the reader answered?")
+    answer = _answer_text(_sidecar(root, "reader-answer.json"), "reader")
     try:
-        got = protocol_reading.score_reader_answer(
-            answer.read_text(encoding="utf-8"), truth
-        )
+        got = protocol_reading.score_reader_answer(answer, truth)
     except ValueError as exc:
         raise SystemExit(f"usability: {exc}") from exc
     seconds = None
