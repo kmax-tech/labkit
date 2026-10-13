@@ -43,6 +43,7 @@ see the caveat). Score files: `2026-10-12-cloud-fable-count-N.score.json`.*
 | H3 | 0.88.1 (Haiku 5.5) | 2m30s | 11 · 21 · 8 · 1 · 1 | yes |
 | H4 | 0.88.1 (Haiku 5.5) | 1m47s | 17 · 20 · 10 · 2 · 1 | yes |
 | H5 | 0.88.5 (Haiku 5.5) | 0m54s | 11 · 13 · 3 · 0 · 1 | yes |
+| H6 | 0.88.5 (Haiku 5.5) | 1m00s | 11 · 13 · 6 · 0 · 1 | yes |
 
 Three clean draws on 0.87.1 (8–10): median 2m20s, 0 or 1 gate line, 0 reads
 of labkit source. Before the fixes (draw 1, 0.85.0): 4m27s, 3 unsure, 3 gate.
@@ -90,6 +91,19 @@ stubs made it read the script and the area test first (n/z); the
 second commit (w); `data=` freezes the case list, not the document files the
 number counts (t, new). Caveat on the span: the log was created after the
 first reads, so the first two lines carry the log's own creation time.
+
+Haiku H6 (0.88.5, second draw on this stamp): 1m00s, right and bound, 0
+`unsure`, 0 source reads, 6 edits (the six protocol fields logged one by one).
+Its `gate` line is the skipped setup, mislabelled by its own account. Again
+none of H4's sinks. Its list: the skeleton's stubs and the placeholder type
+(n/z); the stamped Runs line `<run_id> — <one sentence…>` counts as "still
+verbatim template text" for code-check and the hook until `--from-run` writes
+it, and the agent stopped to see whether that blocks (y, new); the run's
+output committed after the run for `finalize` (w); `data=` freezes the case
+list, not the documents (t, repeated); and it would skip the area test at
+seconds, since the run and `--check` already hold the arithmetic (aa, new).
+Its summary says one of its commands failed; the log does not show which.
+Two draws on 0.88.5: 0m54s and 1m00s, against 1m13s–2m30s on 0.88.1.
 
 ## What the draws changed in labkit
 

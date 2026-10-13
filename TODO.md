@@ -571,6 +571,17 @@ sieht das niemand.
   die die Zahl zählt — die Zahl ist gegen `cases.jsonl` zitierbar, nicht
   gegen den Inhalt der Eingaben; entscheiden, ob das Zählskelett den
   Eingabeordner (Hash je Datei) mit einfriert.
+  **Haiku H6 (0.88.5, 1m00s, `2026-10-13-cloud-haiku-count-6.score.json`):**
+  zweiter Durchgang auf dem Stand, wieder ohne H4-Befunde; 0 unsure, 0
+  Quelltext-Lesungen. Wiederholt (n)/(z), (w), (t). Neu notiert: (y) die
+  gestempelte Runs-Zeile `<run_id> — <one sentence…>` gilt für `code-check`
+  und den Hook vor dem Lauf als „still verbatim template text“, obwohl erst
+  `--from-run` sie schreibt — der Agent prüfte, ob das blockt; entscheiden,
+  ob die Zeile vor dem ersten Lauf ausgenommen wird oder die Meldung sagt
+  „wird von `--from-run` geschrieben“. (aa) Bereichstest bei seconds
+  weglassen, weil Lauf und `--check` die Arithmetik schon halten —
+  Entscheidung, nicht Werkzeug. Stand 0.88.5: n = 2 (54 s, 60 s), ein
+  dritter Durchgang macht den Median.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:
