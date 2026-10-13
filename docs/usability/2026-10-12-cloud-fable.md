@@ -44,6 +44,7 @@ see the caveat). Score files: `2026-10-12-cloud-fable-count-N.score.json`.*
 | H4 | 0.88.1 (Haiku 5.5) | 1m47s | 17 · 20 · 10 · 2 · 1 | yes |
 | H5 | 0.88.5 (Haiku 5.5) | 0m54s | 11 · 13 · 3 · 0 · 1 | yes |
 | H6 | 0.88.5 (Haiku 5.5) | 1m00s | 11 · 13 · 6 · 0 · 1 | yes |
+| H7 | 0.88.5 (Haiku 5.5) | 1m23s | 11 · 26 · 1 · 3 · 3 | yes |
 
 Three clean draws on 0.87.1 (8–10): median 2m20s, 0 or 1 gate line, 0 reads
 of labkit source. Before the fixes (draw 1, 0.85.0): 4m27s, 3 unsure, 3 gate.
@@ -103,7 +104,22 @@ output committed after the run for `finalize` (w); `data=` freezes the case
 list, not the documents (t, repeated); and it would skip the area test at
 seconds, since the run and `--check` already hold the arithmetic (aa, new).
 Its summary says one of its commands failed; the log does not show which.
-Two draws on 0.88.5: 0m54s and 1m00s, against 1m13s–2m30s on 0.88.1.
+Haiku H7 (0.88.5, third draw on this stamp): 1m23s, right and bound, 0
+source reads, 26 run lines — seven of them `protocol-fill` (six fields, the
+Question reworded twice, once with `--force`, after it had first invented an
+expectation nobody held). Its three `gate` and two of its three `unsure` lines
+are retroactive, written at the end after a review of its own log; the span
+includes that review. The gates: preflight not owed at seconds (the hook
+saying so), the stamped Runs line as verbatim template (y), the untracked
+output before `finalize` (w). Its list: every label in one `protocol-fill`
+call (q); a counting template that already holds the case reader and the
+refusal rules (n/z); `finalize` or the run staging its own outputs (w); and a
+helper that appends the log line and runs the step in one call, because
+logging by hand tempts to batch (ab, new).
+
+Three draws on 0.88.5: 0m54s, 1m00s, 1m23s — median 1m00s, against a median
+of 1m47s for Haiku on 0.88.1 (1m13s, 2m30s, 1m47s). None of the three H4
+sinks appears in any of them.
 
 ## What the draws changed in labkit
 

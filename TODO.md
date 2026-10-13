@@ -580,8 +580,19 @@ sieht das niemand.
   ob die Zeile vor dem ersten Lauf ausgenommen wird oder die Meldung sagt
   „wird von `--from-run` geschrieben“. (aa) Bereichstest bei seconds
   weglassen, weil Lauf und `--check` die Arithmetik schon halten —
-  Entscheidung, nicht Werkzeug. Stand 0.88.5: n = 2 (54 s, 60 s), ein
-  dritter Durchgang macht den Median.
+  Entscheidung, nicht Werkzeug.
+  **Haiku H7 (0.88.5, 1m23s, `2026-10-13-cloud-haiku-count-7.score.json`):**
+  dritter Durchgang, wieder ohne H4-Befunde; 26 run-Zeilen, sieben davon
+  `protocol-fill` (die Frage zweimal umformuliert, einmal `--force`, nachdem
+  das Label „Question / hypothesis“ zu einer erfundenen Erwartung verleitet
+  hatte — gehört zu (q)). Drei gate- und zwei unsure-Zeilen nachträglich
+  geschrieben, die Spanne enthält die Log-Durchsicht. Wiederholt (q), (n)/(z),
+  (w), (y). Neu notiert: (ab) ein Helfer, der Log-Zeile und Schritt in einem
+  Aufruf anhängt und ausführt — Logging von Hand verführt zum Bündeln.
+  **Stand 0.88.5: n = 3, Median 1m00s (54 s, 60 s, 83 s) gegen Median 1m47s
+  für Haiku auf 0.88.1 (1m13s, 2m30s, 1m47s).** Prüfstelle für die nächsten
+  Schnitte: Entscheidungen (q), (t), (y), (aa), (ab), dann 0.88.7 und eine
+  neue Reihe n = 3.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:
