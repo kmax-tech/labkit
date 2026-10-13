@@ -384,6 +384,84 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
+- **Repo-Audit 2026-10-13 (Klarheit, Drift, Doku) — Befund, nichts
+  geändert.** Suite, ruff, pyright grün (1001 Tests). Drei Lesungen (große
+  Module, Drift zwischen Modulen, Doku gegen Code); `path:zeile` sind
+  Stand 0.88.8.
+  - *Bug (guaranteed-Stufe bricht ihre Zusage):* `code_check.check_prompt_drift`
+    stürzt mit `IndexError` ab, wenn ein Prompt-Fence leer ist
+    (`labkit/code_check.py:1078`, `"".splitlines()[0]`; der erste `<`-Filter
+    ist vom zweiten in :1082 ohnehin abgedeckt). Nachgestellt. Nebenbei:
+    `_prompts` überspringt ein Skript mit `SyntaxError` still (:1024).
+  - *Drift gegen die „eine Heimat"* (`docs/architecture.md`), jeweils verifiziert:
+    `repo.choose_protocol` dreimal inline nachgebaut
+    (`preflight.py:144-161`, `code_check.py:1147-1160`, `audit.py:242-252`);
+    `scaffold.py:474-479` und `:586` parsen Kopf-Id und `cost` per Regex
+    statt `protocol_block.head`, `:580` globt statt `repo.area_protocols`;
+    `usability.py:830` liest `config.json` roh statt `runs.read_run_config`;
+    `intent_check.py:432` listet Area-Skripte statt `scope_sha.area_files`;
+    git außerhalb von `repo`: `runlog.py:275` (`_checkout_head`, ohne Timeout),
+    `scaffold.py:714`, `usability._sh` (elf Stellen).
+  - *Vierfach gleiche Hilfslogik:* Tree-Digest (`scope_sha.py:192`,
+    `promises.py:434`, `runlog.py:443`, `usability.py:241`) mit
+    Schattenkonstante `promises.DIGEST_CHARS` (:100, Kommentar gibt es zu)
+    und Literalen `[:12]`/`[:16]` (`runlog.py:359,655,521,1154`);
+    `_write_atomic` dreimal (`endpoint_lease.py:152`, `runlog.py:609`,
+    `batch.py:234`); Run-Verzeichnis-Iteration sechsmal mit je eigener
+    `RunConfigError`-Behandlung (`runs.py:327,380`, `runlog.py:1241,1346,1538`,
+    `claude_hooks.py:468`); `"completed"` an zehn Stellen verglichen, ohne
+    Konstante; Kostenstufen in `scaffold.py:50`, `usability.py:1317` neben
+    `protocol_block.COST_TIERS`; Run-Id-Form dreimal (`runlog.py:1015`,
+    `protocol_check.py:501`, `claude_hooks.py:397`); Pin-Grammatik viermal
+    (`scope_sha.py:166`, `repo_check.py:46`, `runlog.py:195`, `usability.py:229`).
+    `tests/test_architecture.py:73` sieht nur öffentliche Doppelnamen —
+    für all das ist die Suite blind.
+  - *Modulintern:* `protocol_check.main` (:749, 265 Zeilen) hält zwölf
+    Befund-Flags als Locals und parst `fields()` bis zu siebenmal je Datei;
+    Tests prüfen nur gedruckten Text. `usability.stage` (:354) wiederholt
+    `_probe_venv` (:573) und den `git commit --no-verify`-Block viermal.
+    `runlog.Run.__init__` liest das gebundene Protokoll dreimal
+    (:769, :977, :810); Index-Zeile zweimal gebaut (:1209, :1557).
+    `scaffold.stamp_area` druckt (:684, :717), `stamp_lab` gibt ein Log zurück —
+    usability kapselt deshalb mit `redirect_stdout` (:393, :615).
+    Toter Code: `_index_lock(timeout=)` (:567), `_registration_refusal(binding=None, registers=)`
+    (:872), `llm.complete(keep_alive=)` (:472).
+  - *Altpfade trotz Regel „keine Legacy-Pfade":* `llm.py:134` `endpoint = "<url>"`
+    (Template `models.toml.template:21` nennt es noch gültig), `runlog.py:1377`
+    „labkit before 0.69", `runlog.active` (:1259) lässt `legacy`-Läufe still
+    fallen, `finalize.py:245-251` „protocols before 0.72.1" still durch,
+    `protocol_check.py:564` „ledger"-Überschrift, `usability.py:188` `arbeitsstandard`.
+  - *Doku gegen Code:* README „Sixteen" (17 Kommandos, :37); README `Develop`
+    (:267) nennt `unittest discover` und Hand-Release, AGENTS.md und
+    `just release` sagen anderes; README-Hook-JSON (:141) ohne `Stop`, Timeout 30
+    statt 60 (`install_hooks.py:110-113`); Vor-Freeze-Gate „vier Stationen"
+    (:216) vs. sieben in `preflight.py:13`, Post-Run „drei" (:225) vs. acht;
+    `usability` hat acht ungenannte Subkommandos (`reader … human`);
+    `protocol-fill --from-run` füllt auch „Answering run" (:184), README,
+    Docstring, Template (:70-73) und `finalize.py:269` schicken trotzdem zu
+    einem zweiten Aufruf; „Status fixed/accepted/deferred/dismissed":
+    `audit.py:484` und Field Guide :148 lassen `deferred` weg;
+    README :206 „thesis repos get `templates/PROTOCOL-FIELD-GUIDE.md`" — wird
+    nicht gestampt; `AGENTS.md:83` zeigt auf Punkt 8 (seit 0.48.0 erledigt);
+    `architecture.md:95` und `student-repos.md:31` nennen den Thesis-Starter
+    offen (entschieden 2026-10-12); `student-repos.md:73` lässt die Id per
+    `uuid` tippen (Field Guide :137: nie tippen); `protocol-run-binding.md:193`
+    kennt `code-check --protocol` nicht; `architecture.md:73` `docs/standard.md`
+    statt `labkit/docs/`; `CHANGELOG.md:17` „after the tag" (Rezept: vor dem
+    Commit); `claude_hooks.py:8` Docstring aus der Zwei-Hook-Zeit;
+    `tests/test_rules.py` globt `labkit/templates/*.template` nicht.
+  - *Stand 2026-10-13, fünf Commits für 0.89.0 (CHANGELOG-Eintrag geschrieben,
+    `just release 0.89.0` steht aus):* 1 Bug behoben; 2 `repo.the_protocol`
+    als Heimat, scaffold liest über `protocol_block`; 3 `runs.run_dirs`,
+    `runs.write_atomic`, `scope_sha.file_digest`/`tree_digest`;
+    4 `protocol_check.check_protocol` liefert `FileReport` als Daten;
+    5 Zustand `legacy`, `endpoint =`-String, `ledger`, `arbeitsstandard`
+    raus (Breaking). **Offen:** die Doku-Punkte oben (README-Kommandoliste
+    aus `--help` erzeugen oder testen, Gate-Zählungen, Hook-JSON, die vier
+    überholten Verweise), modulinterne Doppelungen in `usability.stage`,
+    `runlog.Run.__init__` (Protokoll dreimal gelesen), `scaffold.stamp_area`
+    druckt, tote Parameter; Pin-Grammatik und Run-Id-Form je noch mehrfach.
+
 - **Cloud-Leseprobe, Stand nach dem ersten Durchgang (2026-10-12).** Aufbau:
   Probe-Repo `kmax-tech/labkit-probe` (öffentlich — pip klont labkit nur
   anonym, also musste auch labkit öffentlich werden), Umgebung in
