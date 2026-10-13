@@ -603,6 +603,12 @@ sieht das niemand.
   — nennt ein Fable- oder Sonnet-Durchgang die Stubs noch, dann bauen.
   Prüfstelle für 0.88.7: Reihe n = 3, Median unter einer Minute, kein
   Durchgang nennt (q) mehr, keine nachträglichen Log-Zeilen.
+  **Falle beim Nachstempeln (2026-10-13):** `labkit_pin()` liest die Version
+  aus den Paket-Metadaten, und die eines editierbaren Installs stammen vom
+  letzten `pip install -e` — der erste `--restamp` nach dem Release 0.88.7
+  pinnte v0.88.5 mit 0.88.7-Vorlagen (zurückgesetzt, neu gestempelt). Nach
+  `just release` im labkit-venv `pip install -e '.[dev]'`, oder das Rezept
+  tut es; `restamp` druckt den Pin, die Zeile lesen.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:
