@@ -603,6 +603,19 @@ sieht das niemand.
   — nennt ein Fable- oder Sonnet-Durchgang die Stubs noch, dann bauen.
   Prüfstelle für 0.88.7: Reihe n = 3, Median unter einer Minute, kein
   Durchgang nennt (q) mehr, keine nachträglichen Log-Zeilen.
+  **Haiku H8 (0.88.7, 1m12s, `2026-10-13-cloud-haiku-count-8.score.json`):**
+  erster Durchgang mit den vier Schnitten, alle gehalten — Registrierung in
+  einem Aufruf, Terms „n/a — no coinage“, Frage ohne Hypothese, `inputs`
+  eingefroren (42 Dateien), Log aus `usability log`, 0 unsure, 0 gate, keine
+  nachträgliche Zeile. (q) wird nicht mehr als Aufrufzahl genannt, nur noch
+  das Formulieren der Werte. Wiederholt (n)/(z). Neu: (ac) `.venv/bin/usability`
+  aus dem Bereichsverzeichnis aufgerufen → exit 127; das Aufgabenblatt sagt
+  „from the repo root“ oder nennt den absoluten Pfad. (ad) Rückschrift als
+  Teil des Laufs: `runlog.run(..., protocol=…)` schreibt Answer, Result und
+  Runs am Ende eines abgeschlossenen Laufs — Entscheidung, spart zwei
+  Kommandos und einen Commit, nimmt dem Agenten aber den Blick auf die
+  Zeilen. (ae) Schrittlog bei seconds weglassen — nein, das Log ist das
+  Messinstrument der Probe, nicht Regel der Lane.
   **Falle beim Nachstempeln, behoben (0.88.8, 2026-10-13):** `labkit_pin()`
   las die Version aus den Paket-Metadaten, die eines editierbaren Installs
   stammen vom letzten `pip install -e` — der erste `--restamp` nach dem

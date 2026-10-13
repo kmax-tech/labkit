@@ -1,0 +1,55 @@
+{
+ "probe": {
+  "staged": "2026-10-12T18:37:08",
+  "task": "count",
+  "area": "01-docs-per-case",
+  "metric_key": "mean_docs_per_case",
+  "labkit_installed": "labkit @ git+https://github.com/kmax-tech/labkit.git@7844ff168f4ab6bfe39f8d28a4e9562c12b91cd2",
+  "scaffold_sha": "5ca6cff67303",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "docs-per-case",
+   "--cost",
+   "seconds"
+  ],
+  "target_minutes": 5,
+  "restamped": "2026-10-13T19:45:04",
+  "kept": [
+   "TASK.md",
+   ".gitignore",
+   ".claude/settings.json"
+  ]
+ },
+ "run_id": "2026-10-13T18-17-49_8c14",
+ "number": 3.5,
+ "expected": 3.5,
+ "number_ok": true,
+ "null_reported": null,
+ "bound_to": "PROTOCOL-docs-per-case.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 28,
+  "wall_seconds": 72,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 10,
+  "run": 14,
+  "edit": 4,
+  "unsure": 0,
+  "gate": 0,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 43,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 195,
+  "summary_codes": 1,
+  "answer_has_table": false
+ },
+ "transcript": null,
+ "agent": "haiku-5.5"
+}

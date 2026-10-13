@@ -45,6 +45,7 @@ see the caveat). Score files: `2026-10-12-cloud-fable-count-N.score.json`.*
 | H5 | 0.88.5 (Haiku 5.5) | 0m54s | 11 · 13 · 3 · 0 · 1 | yes |
 | H6 | 0.88.5 (Haiku 5.5) | 1m00s | 11 · 13 · 6 · 0 · 1 | yes |
 | H7 | 0.88.5 (Haiku 5.5) | 1m23s | 11 · 26 · 1 · 3 · 3 | yes |
+| H8 | 0.88.7 (Haiku 5.5) | 1m12s | 10 · 14 · 4 · 0 · 0 | yes |
 
 Three clean draws on 0.87.1 (8–10): median 2m20s, 0 or 1 gate line, 0 reads
 of labkit source. Before the fixes (draw 1, 0.85.0): 4m27s, 3 unsure, 3 gate.
@@ -120,6 +121,19 @@ logging by hand tempts to batch (ab, new).
 Three draws on 0.88.5: 0m54s, 1m00s, 1m23s — median 1m00s, against a median
 of 1m47s for Haiku on 0.88.1 (1m13s, 2m30s, 1m47s). None of the three H4
 sinks appears in any of them.
+
+Haiku H8 (0.88.7, the first draw with the four cuts): 1m12s, right and bound,
+0 `unsure`, 0 `gate`, 0 source reads, no retroactive log line. The cuts
+held: the registration is one `protocol-fill` call (one edit line for six
+fields), Terms reads "n/a — no coinage", the Question ends "A count tests no
+hypothesis", the run froze `inputs` (sha over the 42 files) beside the case
+list, and the log came from `usability log` — minus the first two reads
+before the helper was found, and one call that failed because
+`.venv/bin/usability` was run from the area directory (ac, new). Its list:
+the pre-filled skeleton (n/z, again), `--from-run` as part of the run
+(ad, new: a runlog option that writes the three lines at the end of a
+completed run), and dropping the per-step log at seconds — which is the
+probe's instrument, not the lane's rule (ae, no).
 
 ## What the draws changed in labkit
 
