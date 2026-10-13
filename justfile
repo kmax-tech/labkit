@@ -41,8 +41,9 @@ timeline module *args:
 
 # A release is one step in the one order the tag test allows: the CHANGELOG entry
 # `## X.Y.Z — date` is written (the only change in the tree), the recipe sets the
-# version in pyproject.toml, commits both through the hook, tags that commit and
-# reinstalls the editable labkit so its metadata carry the new version.
+# version in pyproject.toml, reinstalls the editable labkit (its metadata must
+# carry the new version before the hook's suite stamps), commits both through
+# the hook, then tags that commit.
 # The push stays with you; the recipe prints it. Why: on 2026-10-13 the tag
 # v0.88.5 was set before the version commit, the tag test went red, the commit
 # went in past the hook with --no-verify, and the tag stayed on the old commit.
@@ -92,6 +93,12 @@ release version:
     if version_re.search(text) is None:
         die("pyproject.toml has no version line")
     pyproject.write_text(version_re.sub(f'version = "{v}"', text, count=1), encoding="utf-8")
+    # before the commit, not after the tag: the hook's suite stamps, and the
+    # stamper refuses while the editable metadata lag the version just set
+    # (the first 0.88.8 release attempt: 21 red tests, 2026-10-13)
+    r = subprocess.run([".venv/bin/pip", "install", "-q", "-e", ".[dev]"])
+    if r.returncode != 0:
+        die(f"pyproject.toml says {v}, but reinstalling labkit failed — run .venv/bin/pip install -e '.[dev]', then run again")
 
     entry = changelog.split(f"## {v} — ", 1)[1].split("\n## ", 1)[0]
     subhead = re.search(r"^### (.+)$", entry, re.M)
@@ -101,10 +108,5 @@ release version:
     if r.returncode != 0:
         die(f"the commit was refused (hook above) — pyproject.toml already says {v}; fix, then run again")
     git("tag", tag)
-    # the editable install keeps the version of its last pip install: the
-    # stamper read 0.88.5 from it under 0.88.7 templates (2026-10-13)
-    r = subprocess.run([".venv/bin/pip", "install", "-q", "-e", ".[dev]"])
-    if r.returncode != 0:
-        die(f"tag {tag} is set, but reinstalling labkit failed — run .venv/bin/pip install -e '.[dev]'")
     sha = git("rev-parse", "--short", "HEAD").stdout.strip()
     print(f"release: {sha} {title}\nrelease: tag {tag} on it, labkit reinstalled — push with:\n  git push origin main {tag}")
