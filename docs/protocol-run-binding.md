@@ -70,9 +70,10 @@ file stays: **run metadata** means `runs/<run_id>/config.json`.
 
 A run directory says for itself whether it finished: complete when
 `metrics.json` AND `completion.json` exist. A run whose `config.json`
-carries no `schema_version` was written before labkit 0.21 (when
-`metrics.json` alone marked a finish); its state is `legacy`, it is never
-`completed` here, and it is read with labkit 0.47.
+carries no `schema_version >= 2` was written before labkit 0.21 (when
+`metrics.json` alone marked a finish); since 0.89.0 its metadata is
+`unreadable` here like a damaged file — listed with the reason, never
+chosen, never indexed — and it is read with labkit 0.47.
 
 `schema_version` is stamped into `config.json` at run START, which is what
 makes the distinction decidable: at the moment a reader has to judge a run,
@@ -119,7 +120,7 @@ That makes two failures tell themselves apart instead of looking alike:
   directory is open when `config.json` exists and the run is not complete by
   its own marker. The recorded pid decides between `running` and the two
   dead states, so each entry carries `state`: `running` · `unknown` ·
-  `crashed` · `unfinalized` · `corrupt`. `completed` and `legacy` runs are
+  `crashed` · `unfinalized` · `corrupt` · `unreadable`. `completed` runs are
   not open and are not listed. `alive` stays as it is.
 - **`--wait`** — exit codes keep their meaning: 0 nothing open · 2 a run
   failed · 3 still running at `--max-seconds`. `unfinalized` and `corrupt`
@@ -128,8 +129,8 @@ That makes two failures tell themselves apart instead of looking alike:
 - **`reindex`** — appends rows that are missing, and only those. It never
   rewrites an existing row, refuses an index with other columns, never
   appends a `run_id` the index already lists, reports an existing duplicate
-  `run_id` as an error, indexes only completed runs, and reports legacy and
-  incomplete runs instead of inventing rows for them.
+  `run_id` as an error, indexes only completed runs, and reports unreadable
+  (exit 2) and incomplete runs instead of inventing rows for them.
 
 ## Index columns
 
@@ -170,7 +171,7 @@ at all.
 it is also verified. Same id passes. A different id is a hard abort —
 holding one protocol's promises against another protocol's run answers
 nothing. An unbound run is allowed as an explicit choice, with a warning
-that says so; a run that is not completed (legacy included) never.
+that says so; a run that is not completed never.
 
 ## Index derivation
 

@@ -152,7 +152,7 @@ class TestOpenAIBackend(_Base):
                 p = Path(d) / "models.toml"
                 p.write_text(
                     '[models.v]\nbackend = "openai"\n'
-                    'model = "m"\nendpoint = "http://x.invalid:1"\n',
+                    'model = "m"\nendpoints = ["http://x.invalid:1"]\n',
                     encoding="utf-8",
                 )
                 llm._find_models_toml = lambda: p

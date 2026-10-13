@@ -244,7 +244,7 @@ ANSWERING_RUN_LABEL = "answering run"
 
 def answering_run_field(text: str) -> str | None:
     """The value of the protocol's `Answering run` field, None when the
-    protocol has no such line (protocols before 0.72.1)."""
+    protocol has no such line (a cut without the Result section)."""
     for f in fields(text):
         if f.name == ANSWERING_RUN_LABEL:
             return f.value.strip()

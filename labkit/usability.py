@@ -185,7 +185,7 @@ LOG_LINE = re.compile(r"^(\d\d):(\d\d):(\d\d)\s*·\s*(\w+)\s*·\s*(.*)$")
 #: — the area's README card should have sufficed (2026-10-05, four of four read on)
 SOURCE_READ = re.compile(
     r"labkit/\w+\.py|labkit[ /](runlog|recheck|protocol_check|llm|batch|finalize|preflight)"
-    r"|labkit/docs/standard|labkit\.rules|arbeitsstandard",  # the standard: packaged since 0.77, a lab copy before
+    r"|labkit/docs/standard|labkit\.rules",
     re.I,
 )
 #: The bar: one kept number in this many minutes. Set by hand (2026-10-05),

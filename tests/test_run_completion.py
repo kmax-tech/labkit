@@ -15,6 +15,8 @@ undecidable, and treating it as failed would hide a running run. `legacy`
 is read with labkit 0.47.
 """
 
+import contextlib
+import io
 import json
 import multiprocessing
 import os
@@ -139,9 +141,10 @@ class TestStates(unittest.TestCase):
             d = _run_dir(_area(t), "r1", completion=False)
             self.assertEqual(_state(d, alive=True), "running")
 
-    def test_a_run_without_schema_version_is_legacy_never_completed(self):
-        """labkit 0.48 dropped the metrics-only marker: a run without
-        `schema_version` >= 2 is `legacy` whatever its files or liveness say."""
+    def test_a_run_without_schema_version_is_unreadable_never_completed(self):
+        """labkit 0.48 dropped the metrics-only marker; 0.89.0 dropped the
+        `legacy` state: a run without `schema_version` >= 2 is unreadable
+        metadata whatever its files say — read it with labkit 0.47."""
         with tempfile.TemporaryDirectory() as t:
             area = _area(t)
             cases = {
@@ -151,11 +154,13 @@ class TestStates(unittest.TestCase):
             }
             for name, kwargs in cases.items():
                 d = _run_dir(area, name, schema=None, **kwargs)
-                for alive in (False, True, None):
-                    with self.subTest(run=name, alive=alive):
-                        self.assertEqual(_state(d, alive=alive), "legacy")
+                with self.subTest(run=name):
+                    with self.assertRaisesRegex(runs.RunConfigError, "labkit 0.47"):
+                        runs.read_run_config(d)
             d = _run_dir(area, "r4", schema=1)
-            self.assertEqual(_state(d), "legacy")
+            with self.assertRaisesRegex(runs.RunConfigError, "below 2"):
+                runs.read_run_config(d)
+            self.assertEqual((runs.run_facts(d) or {}).get("state"), "unreadable")
 
 
 class TestActive(unittest.TestCase):
@@ -239,13 +244,17 @@ class TestReindex(unittest.TestCase):
             _, rows = runlog._read_index(area / "runs.tsv")
         self.assertEqual(rows, [])
 
-    def test_legacy_runs_are_reported_not_invented(self):
+    def test_pre_schema_runs_are_reported_not_invented(self):
         with tempfile.TemporaryDirectory() as t:
             area = _area(t)
             _run_dir(area, "r1", schema=None, completion=False)
-            runlog.reindex(area)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = runlog.reindex(area)
             _, rows = runlog._read_index(area / "runs.tsv")
         self.assertEqual(rows, [])
+        self.assertEqual(code, 2)
+        self.assertIn("NOT INDEXED", out.getvalue())
 
     def test_a_duplicate_run_id_in_the_index_is_an_error(self):
         with tempfile.TemporaryDirectory() as t:

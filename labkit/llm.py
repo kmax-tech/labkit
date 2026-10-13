@@ -32,8 +32,7 @@ models.toml:
     [models.gpt-oss]
     backend = "ollama"
     model = "gpt-oss:latest"
-    endpoints = ["gamma1"]            # a name from [endpoints] or a literal URL;
-                                      # legacy `endpoint = "<url>"` keeps working
+    endpoints = ["gamma1"]            # names from [endpoints] or literal URLs
     num_ctx = 32768                   # context window ollama allots; without it
                                       # the server's default applies, and a
                                       # longer prompt is CUT, not refused —
@@ -131,14 +130,17 @@ def resolve(alias: str) -> dict:
     spec["alias"] = alias
     _check_num_ctx(alias, spec)
     # Endpoint names resolve against [endpoints]; literal URLs pass through.
-    # `endpoints = [...]` (list) and legacy `endpoint = "..."` (string) both
-    # normalize to spec["endpoints"] (list) + spec["endpoint"] (first entry,
-    # for direct-HTTP callers). Frozen with the rest of the spec: an edit to
-    # models.toml never reaches a running process.
+    # `endpoints = [...]` normalizes to spec["endpoints"] (list) +
+    # spec["endpoint"] (first entry, for direct-HTTP callers). Frozen with
+    # the rest of the spec: an edit to models.toml never reaches a running
+    # process. The string form `endpoint = "..."` is not read since 0.89.0.
+    if "endpoint" in spec:
+        raise ValueError(
+            f"models.toml [models.{alias}]: `endpoint = ...` is not read since "
+            f"labkit 0.89.0 — write `endpoints = [{spec['endpoint']!r}]`"
+        )
     table = cfg.get("endpoints", {})
-    raw_eps = spec.pop("endpoints", None) or (
-        [spec["endpoint"]] if spec.get("endpoint") else []
-    )
+    raw_eps = spec.pop("endpoints", None) or []
     eps = []
     for e in raw_eps:
         if "://" in e:

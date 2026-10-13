@@ -47,16 +47,19 @@ class TestWait(unittest.TestCase):
             self.assertIn("no open runs", out)
             self.assertIn("2026-09-09T10-00-00_done", out)
 
-    def test_a_legacy_run_does_not_keep_the_area_open(self):
+    def test_a_pre_schema_run_is_unreadable_and_ends_the_wait(self):
         """A run without schema_version ended long ago; counting it as open
-        made --wait loop until --max-seconds (found porting 0.48)."""
+        made --wait loop until --max-seconds (found porting 0.48). Since
+        0.89.0 its metadata is unreadable — a failed state, exit 2, named."""
         with tempfile.TemporaryDirectory() as d:
             old = Path(d) / "runs" / "2026-08-01T10-00-00_old"
             old.mkdir(parents=True)
             (old / "config.json").write_text("{}", encoding="utf-8")
             (old / "metrics.json").write_text("{}", encoding="utf-8")
             code, out = _run_main([d, "--wait", "--max-seconds", "1"])
-            self.assertEqual(code, 0, out)
+            self.assertEqual(code, 2, out)
+            self.assertIn("UNREADABLE", out)
+            self.assertIn("labkit 0.47", out)
 
     def test_crashed_run_exits_2_and_is_named(self):
         with tempfile.TemporaryDirectory() as d:

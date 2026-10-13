@@ -64,9 +64,10 @@ def is_alive(pid: object, script: object) -> bool | None:
 
 
 def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
-    """One of: completed · running · unknown · crashed · unfinalized · corrupt · legacy
-    (a run whose config.json cannot be read is `unreadable` — `run_facts`,
-    `runlog.active`; this function never sees one, it takes a parsed cfg).
+    """One of: completed · running · unknown · crashed · unfinalized · corrupt
+    (a run whose config.json cannot be read — damaged, or written before
+    schema 2 — is `unreadable`: `run_facts`, `runlog.active`; this function
+    never sees one, it takes a parsed cfg).
 
     metrics.json without completion.json is decided by liveness: alive →
     running, unknowable → unknown, dead → unfinalized.
@@ -76,18 +77,12 @@ def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
     that were deleted or never landed. Hence `corrupt` — completion without
     metrics — which is a failure like `unfinalized`, not a finish.
 
-    `legacy`: config.json carries no `schema_version` >= 2 (written before
-    labkit 0.21, when metrics.json alone marked a finish). Such a run is
-    read with labkit 0.47; here it is never `completed`.
-
     `alive is None` means the liveness check was undecidable (no `ps`, no
     script name). That is `unknown`, not `crashed` — claiming a process is
     dead when the evidence says "can't tell" is a false negative that hides
     a running run. `endpoint_lease` already treats None as conservatively
     alive; `run_state` uses the same contract.
     """
-    if cfg.get("schema_version", 0) < 2:
-        return "legacy"
     has_metrics = (run_dir / "metrics.json").is_file()
     has_completion = (run_dir / "completion.json").is_file()
     if has_metrics and has_completion:
@@ -248,9 +243,16 @@ def _shape_problem(cfg: object) -> str | None:
     later as an AttributeError far from the file (review 2026-10-07)."""
     if not isinstance(cfg, dict):
         return f"a JSON {type(cfg).__name__}, not an object"
+    # written before labkit 0.21 (when metrics.json alone marked a finish):
+    # 0.89.0 dropped the `legacy` state that listed such a run (CHANGELOG)
+    before_schema = "a run of labkit before 0.21 — read it with labkit 0.47"
     sv = cfg.get("schema_version")
-    if sv is not None and (not isinstance(sv, int) or isinstance(sv, bool)):
+    if sv is None:
+        return f"no schema_version: {before_schema}"
+    if not isinstance(sv, int) or isinstance(sv, bool):
         return f"schema_version = {sv!r}, not an integer"
+    if sv < 2:
+        return f"schema_version = {sv}, below 2: {before_schema}"
     binding = cfg.get("protocol")
     if binding is not None:
         if not isinstance(binding, dict):
@@ -268,12 +270,15 @@ def completion_state(run_dir: Path) -> str:
     recheck, a derived run's parent, intent-check's choice, the usability
     scorer. Asking `metrics.json` alone let an unfinalized v2 run (metrics,
     no completion record) be rechecked as a kept number and accepted as a
-    parent (review 2026-10-06). A directory without config.json predates
-    run metadata and is `legacy`; an unreadable config.json raises
-    RunConfigError — a damaged run must
-    not vanish and let an older one be chosen in its place.
+    parent (review 2026-10-06). A directory without config.json is not a
+    run, and an unreadable config.json is a damaged one: both raise
+    RunConfigError — neither may vanish and let an older run be chosen in
+    its place.
     """
-    return run_state(run_dir, read_run_config(run_dir) or {}, alive=False)
+    cfg = read_run_config(run_dir)
+    if cfg is None:
+        raise RunConfigError(f"{run_dir}: no config.json — not a run directory")
+    return run_state(run_dir, cfg, alive=False)
 
 
 @dataclass(frozen=True)

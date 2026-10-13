@@ -67,8 +67,9 @@ would be a new registration.
 `experiments/example-stance/` in the starter carries the TOML head and
 C/A/B ids; its script reports `c1_pass` and `a1_pass`. Its two runs from
 2026-08-25 were recorded before runs carried their protocol and a completion
-record: they stay readable, labkit lists them as `legacy` and never picks
-them. A student's first `run_experiment.py` starts a fresh `runs.tsv`.
+record: labkit lists them as `unreadable` with the reason and never picks
+them (read them with labkit 0.47). A student's first `run_experiment.py`
+starts a fresh `runs.tsv`.
 
 A copied protocol template still carries `id = "<protocol-id>"`; students
 stamp it once with

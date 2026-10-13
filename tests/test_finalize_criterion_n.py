@@ -22,9 +22,10 @@ class CriterionN(unittest.TestCase):
         (self.run_dir / "config.json").write_text(
             json.dumps(
                 {
+                    "schema_version": 2,
                     "data": {
                         "items": {"path": "/x/items.jsonl", "rows": 12, "sha256": "ab"}
-                    }
+                    },
                 }
             )
         )

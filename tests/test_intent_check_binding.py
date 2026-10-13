@@ -217,13 +217,14 @@ class TestExplicitMetrics(unittest.TestCase):
         self.assertIn("WARNING", out)
         self.assertIn("unbound", out)
 
-    def test_legacy_run_is_rejected(self):
+    def test_pre_schema_run_is_rejected(self):
         """A run without `schema_version >= 2` is read with labkit 0.47;
-        here it is never completed, so naming it explicitly is no loophole."""
+        here its metadata is unreadable, so naming it explicitly is no loophole."""
         d = _run(self.area, "r1", pid=None, schema=None, completion=False, metrics=FULL)
         code, out = _check([self.a, "--metrics", d / "metrics.json"])
         self.assertEqual(code, 2, out)
-        self.assertIn("not completed (legacy)", out)
+        self.assertIn("not completed (unreadable)", out)
+        self.assertIn("labkit 0.47", out)
 
     def test_incomplete_v2_run_is_rejected_even_when_named_explicitly(self):
         """A v2 run with metrics.json but no completion.json must fail.

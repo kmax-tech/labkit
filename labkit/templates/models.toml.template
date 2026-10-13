@@ -18,8 +18,8 @@ model = "claude-opus-5-5"
 # [models.<alias>]
 # backend = "ollama"              # a lab server
 # model = "<model:tag>"
-# endpoint = "gamma1"             # a name from [endpoints] or a literal URL
-# endpoints = ["gamma1","gamma2"] # same model on both servers: round-robin +
+# endpoints = ["gamma1"]          # names from [endpoints] or literal URLs;
+#                                 # two: same model on both servers, round-robin +
 #                                 # failover; llm.last_endpoint() says per call
 #                                 # which server answered (two servers are two
 #                                 # instrument instances — record it per row)

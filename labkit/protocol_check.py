@@ -556,9 +556,7 @@ SERIES_HEAD = re.compile(
 # The documented runs are mandatory content (one line per run_id), not prose —
 # counting it against the length budget taught people not to document runs
 # (found 2026-09-06: 93 of a protocol's 409 lines were its run list).
-# "ledger" stays in the pattern, not in the vocabulary: protocols written
-# before 2026-09-26 head the section "## Runs (ledger — ...)".
-DOCUMENTED_RUNS_HEAD = re.compile(r"(?i)^##\s.*(runs|ledger|l[\u00e4a]ufe)")
+DOCUMENTED_RUNS_HEAD = re.compile(r"(?i)^##\s.*(runs|l[\u00e4a]ufe)")
 
 # Change-history prose — the doc should carry the current rule, the commit the
 # change (LAB-075 Docs carry the state, commits the change). Warning only.

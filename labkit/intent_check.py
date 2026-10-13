@@ -286,11 +286,8 @@ def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path 
     # must not be a loophole around completion.
     if facts is None or facts["state"] != "completed":
         state = facts["state"] if facts else "no config.json"
-        why = (
-            "written before labkit 0.21 — read it with labkit 0.47"
-            if state == "legacy"
-            else "an incomplete run's numbers may not be reported, even when "
-            "named explicitly"
+        why = (facts or {}).get("why") or (
+            "an incomplete run's numbers may not be reported, even when named explicitly"
         )
         print(
             f"intent-check: {metrics_arg.parent.name} is not completed ({state}) — {why}."

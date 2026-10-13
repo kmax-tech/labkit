@@ -5,6 +5,68 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.89.0 — 2026-10-13
+
+### Breaking — the legacy paths are out, one home per question
+
+A repo audit (2026-10-13: the seven largest modules, the drift between
+modules, the docs against the code) found the readers of old formats
+still in place and a dozen second answers to questions
+`docs/architecture.md` gives one home. Last version with every old
+path: 0.88.8.
+
+- **No `legacy` run state.** A `config.json` without `schema_version >= 2`
+  (a run of labkit before 0.21) is unreadable run metadata like a damaged
+  file: `runs.read_run_config` raises naming the file and the version that
+  reads it (0.47); listings show `unreadable` with the reason, `runlog
+  --wait` exits 2 on it, `reindex` reports it and exits 2, no choice ever
+  takes it. `runs.completion_state` raises for a directory without
+  `config.json` (not a run) instead of answering `legacy`.
+- **`endpoint = "<url>"` in `models.toml` is not read.** `llm.resolve`
+  refuses it with the list spelling to write (`endpoints = ["..."]`); the
+  stamped `models.toml` documents only the list.
+- **`promises.DIGEST_CHARS` is gone** — it shadowed `scope_sha.DIGEST_CHARS`
+  (the comment said so). The digests themselves are unchanged.
+- **The probe's scaffold sha changes shape:** `usability.scaffold_sha`
+  computes through `scope_sha.tree_digest` (name + content digest per file)
+  instead of raw bytes. Only new probes record it; a score compares a
+  probe with its own record.
+- Smaller: the documented-runs heading no longer matches `ledger` (the word
+  left the vocabulary 2026-09-26); the usability source-read pattern no
+  longer matches `arbeitsstandard`; `runlog <area>` prints `(not recorded)`
+  for a run without a command instead of naming labkit 0.69.
+
+### Changed — one home for what was answered twice
+
+- **`repo.the_protocol(area, protocol)`** raises `ProtocolChoiceError`
+  (the candidates in the message); `repo.choose_protocol` prints it.
+  `preflight`, `code-check` and `labkit-audit` carried their own copies of
+  the rule — three wordings of one refusal.
+- **`protocol_block.id_of(text)`** is the one tolerant reader of a head's
+  id (`protocol_check`, scaffold's uniqueness scan); scaffold reads `cost`
+  through `protocol_block.head`, the area's protocols through
+  `repo.area_protocols`, the tiers from `protocol_block.COST_TIERS`.
+- **`scope_sha.area_files`** sorts and is the one list of an area's scripts
+  (`intent-check`, `labkit-audit` had their own globs).
+- **`runs.run_dirs(area)`** walks `runs/` once with every directory's
+  metadata read once; `completed_runs`, `bound_runs`, `runlog.active`, the
+  finished listing and `reindex` go through it (six loops, six decisions
+  before). **`runs.write_atomic`** replaces two private copies (`runlog`,
+  `endpoint_lease`). **`scope_sha.file_digest`** and
+  **`scope_sha.tree_digest`** are the one file digest and the one stamp
+  shape (area stamp, declared scope, directory source — byte-identical).
+- **`protocol_check.check_protocol(path, text, tmpl)`** returns a
+  `FileReport` with every finding as data (`clean`, `musts`, `blocks`);
+  `print_report` renders it, `main` loops. Fields parsed once per file;
+  `prose_lines` is the one walk behind the whole-protocol budget
+  (`PROSE_LINE_BUDGET`) and the section budgets. Output unchanged.
+
+### Fixed
+
+- **`code-check` crashed on an empty prompt fence** (`IndexError` reading
+  the first line of an empty block) instead of reporting the drift as a
+  blocker.
+
 ## 0.88.8 — 2026-10-13
 
 ### Fixed — the stamper refuses a version its templates do not belong to

@@ -55,8 +55,8 @@ can fail is read before mkdir, a failure while writing the record removes
 the directory). An incomplete run leaves its dir with config.json but
 without the required completion markers — visible, not silent. The run-index row is written on
 clean exit only. States: completed · running · unknown · crashed ·
-unfinalized · corrupt · unreadable (config.json damaged) · legacy (written
-before labkit 0.21).
+unfinalized · corrupt · unreadable (config.json damaged, or written before
+schema 2 — read with labkit 0.47).
 """
 
 from __future__ import annotations
@@ -107,8 +107,8 @@ RUN_INDEX_COLS = [
 # Bumped when a run directory's SHAPE changes, stamped into config.json at the
 # START of the run. It has to be readable before the run ends, because the
 # question it settles — did a run without completion.json break off? — is
-# asked exactly when that file is absent (2026-09-26). A run without it was
-# written before schema 2 and is read by labkit 0.47 only.
+# asked exactly when that file is absent (2026-09-26). A run without it is
+# unreadable here (`runs.read_run_config`) and is read by labkit 0.47.
 RUN_SCHEMA = 2
 SPLIT_KEYS = ("train", "dev", "test")
 #: Roles for the leakage check beyond splits (2026-10-05, three audits in
@@ -956,10 +956,9 @@ class Run:
                     f"runlog: derived_from={derived_from!r}: {exc}"
                 ) from exc
             if state != "completed":
-                hint = " (read it with labkit 0.47)" if state == "legacy" else ""
                 raise SystemExit(
                     f"runlog: derived_from={derived_from!r} names no completed "
-                    f"run under {base_dir / 'runs'} ({state}){hint} — a derived run "
+                    f"run under {base_dir / 'runs'} ({state}) — a derived run "
                     f"needs a finished parent"
                 )
             self._derived_from = derived_from
@@ -1041,8 +1040,8 @@ class Run:
         self._t0 = time.monotonic()
         # Everything that can fail on its own (git, the environment, the
         # model alias) is read BEFORE the directory exists: a failure after
-        # mkdir left a directory without config.json, which the listings
-        # read as `legacy` — "written before labkit 0.21" (2026-10-09).
+        # mkdir left a directory without config.json behind — a run that
+        # never was (2026-10-09).
         git_state, git_full = _git_state(base_dir), _head(base_dir)
         env = _env_state(base_dir)
         # A derived run re-reads the parent's rows; its model is the one that
@@ -1247,7 +1246,7 @@ def active(base_dir: str | Path) -> list[dict]:
             continue
         alive = is_alive(cfg.get("pid"), cfg.get("script"))
         state = run_state(d, cfg, alive)
-        if state in ("completed", "legacy"):  # legacy: ended long ago, not open
+        if state == "completed":
             continue
         out.append(
             {"run_id": d.name, "dir": str(d), "alive": alive, "state": state, **cfg}
@@ -1361,7 +1360,7 @@ def _print_finished(area: Path) -> None:
         else:
             code = f"code {commit}, committed"
         print(f"  {s.run_id}  {kind} · {code}")
-        print(f"      started as: {s.command or '(not recorded — labkit before 0.69)'}")
+        print(f"      started as: {s.command or '(not recorded)'}")
 
 
 def _finished_line(area: Path) -> str:
@@ -1496,8 +1495,8 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
     every completed run that has none. Never rewrites.
 
     A row that exists stays untouched. Only runs with both completion
-    markers are indexed; a run without `schema_version` is reported — it is
-    read with labkit 0.47.
+    markers are indexed; a run whose metadata cannot be read (damaged, or
+    written before schema 2) is reported, never indexed — exit 2.
     """
     index = base_dir / "runs.tsv"
     with _index_lock(base_dir):
@@ -1521,7 +1520,7 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
             )
             return 2
 
-        added, skipped_legacy, incomplete, unreadable = 0, [], [], []
+        added, incomplete, unreadable = 0, [], []
         for rd in run_dirs(base_dir):
             d, cfg = rd.dir, rd.config
             if d.name in seen:
@@ -1532,9 +1531,6 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
             if cfg is None:
                 continue
             state = run_state(d, cfg, alive=False)
-            if state == "legacy":
-                skipped_legacy.append(d.name)
-                continue
             if state != "completed":
                 incomplete.append(d.name)
                 continue
@@ -1558,11 +1554,6 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
             added += 1
 
     print(f"runlog: {added} row(s) appended to {index}.")
-    for name in skipped_legacy:
-        print(
-            f"  {name}: run without schema_version (labkit before 0.21) — "
-            f"not indexed; read it with labkit 0.47."
-        )
     for name in incomplete:
         print(f"  {name}: not completed — nothing to index.")
     for err in unreadable:

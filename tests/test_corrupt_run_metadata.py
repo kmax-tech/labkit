@@ -124,8 +124,9 @@ class Shape(unittest.TestCase):
         for content, fragment in (
             ("[]", "a JSON list"),
             ('{"schema_version": "2"}', "schema_version"),
-            ('{"protocol": "PROTOCOL-x.md"}', "protocol ="),
-            ('{"protocol": {"id": 7}}', "protocol.id"),
+            ('{"schema_version": 1}', "labkit 0.47"),
+            ('{"schema_version": 2, "protocol": "PROTOCOL-x.md"}', "protocol ="),
+            ('{"schema_version": 2, "protocol": {"id": 7}}', "protocol.id"),
         ):
             with tempfile.TemporaryDirectory() as d:
                 (Path(d) / "config.json").write_text(content)

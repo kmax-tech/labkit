@@ -41,6 +41,11 @@ b = "http://b.invalid:2222"
 [models.one]
 backend = "ollama"
 model = "m:latest"
+endpoints = ["a"]
+
+[models.oldform]
+backend = "ollama"
+model = "m:latest"
 endpoint = "a"
 
 [models.both]
@@ -51,12 +56,12 @@ endpoints = ["a", "b"]
 [models.literal]
 backend = "ollama"
 model = "m:latest"
-endpoint = "http://raw.invalid:3333"
+endpoints = ["http://raw.invalid:3333"]
 
 [models.dangling]
 backend = "ollama"
 model = "m:latest"
-endpoint = "nosuch"
+endpoints = ["nosuch"]
 """
 
 
@@ -108,7 +113,13 @@ class TestResolveEndpoints(_Base):
         self.assertEqual(spec["endpoint"], "http://a.invalid:1111")
         self.assertEqual(spec["endpoints"], ["http://a.invalid:1111"])
 
-    def test_endpoint_list_resolves_and_first_is_legacy_endpoint(self):
+    def test_the_string_form_is_refused_with_the_list_spelling(self):
+        # `endpoint = "..."` is not read since 0.89.0: one spelling, one reader
+        with self.assertRaises(ValueError) as ctx:
+            self.llm.resolve("oldform")
+        self.assertIn("endpoints = ['a']", str(ctx.exception))
+
+    def test_endpoint_list_resolves_and_first_is_the_direct_endpoint(self):
         spec = self.llm.resolve("both")
         self.assertEqual(
             spec["endpoints"], ["http://a.invalid:1111", "http://b.invalid:2222"]
