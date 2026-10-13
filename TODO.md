@@ -510,6 +510,13 @@ sieht das niemand.
   könnte den Commit vor dem Lauf selbst machen (`runlog --commit`) — gehört zu
   (w). Seit 0.88.2 trägt jede Score-Datei das Modell (`usability score
   --agent`).
+  **Haiku 5.5 auf 0.88.1 (2026-10-13, 1m13s, `2026-10-13-cloud-haiku-count-2.score.json`):**
+  zwei echte Befunde, beide in 0.88.3 behoben — `protocol-fill --list` nannte
+  den Kopf-Platzhalter `type` nicht (Hook: „MISSING (must): [protocol] type“,
+  Hand-Edit), und die Sekunden-Spur der Agenten-Vorlage verlangte noch
+  Kriterium und Zulässigkeit (Widerspruch zu `--contract`, seit dem
+  0.87.0-Schnitt veraltet). Haikus Liste sonst: (n), (v), (w) — schon notiert.
+  Prüfstelle: ein Haiku-Durchgang auf 0.88.3 ohne `unsure`-Zeile.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:

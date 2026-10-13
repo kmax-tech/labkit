@@ -39,6 +39,7 @@ see the caveat). Score files: `2026-10-12-cloud-fable-count-N.score.json`.*
 | 10 | 0.87.1 | 3m42s | 5 · 13 · 6 · 1 · 0 | yes |
 | 11 | 0.88.0 | 3m11s | 5 · 13 · 6 · 0 · 1 | yes |
 | 12 | 0.88.0 | 1m34s | 5 · 9 · 4 · 0 · 0 | yes |
+| H2 | 0.88.1 (Haiku 5.5) | 1m13s | 13 · 16 · 9 · 1 · 2 | yes |
 
 Three clean draws on 0.87.1 (8–10): median 2m20s, 0 or 1 gate line, 0 reads
 of labkit source. Before the fixes (draw 1, 0.85.0): 4m27s, 3 unsure, 3 gate.
@@ -52,6 +53,13 @@ line is the README contract placeholder again (decision below).
 Draw 12 (0.88.0, 2026-10-13) repeats it in 1m34s with no gate line in the log
 (finalize's README warning was handled inside one step); write-back again by
 `--from-run`. The model is in every score file since 0.88.2 (`"agent"`).
+
+Haiku 5.5 on 0.88.1 (draw H2, 2026-10-13): right and bound in 1m13s, 0 source
+reads, no README line any more. Its one `unsure` was a real contradiction — the
+seconds lane in AGENTS.md still asked for criterion and admissibility — and its
+hand edit of the head's `type` was a gap in `protocol-fill --list`; both fixed
+in 0.88.3. The two gate lines are its own notes (code-check not yet run; a late
+entry), not a labkit refusal.
 
 ## What the draws changed in labkit
 
