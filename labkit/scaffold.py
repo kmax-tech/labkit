@@ -50,7 +50,7 @@ COSTS = ("seconds", "minutes", "hours")
 
 GITIGNORE = """\
 # stamped by labkit-init — what a lab repo never commits
-.venv/
+.venv
 __pycache__/
 *.pyc
 .pytest_cache/
