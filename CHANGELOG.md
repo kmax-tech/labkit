@@ -60,6 +60,17 @@ path: 0.88.8.
   `print_report` renders it, `main` loops. Fields parsed once per file;
   `prose_lines` is the one walk behind the whole-protocol budget
   (`PROSE_LINE_BUDGET`) and the section budgets. Output unchanged.
+- **`scaffold.stamp_area` returns `(area, report)`** and prints nothing;
+  `labkit-init` prints. `runlog` reads the bound protocol once at binding
+  (text and head travel with the record; before: three reads, three
+  parses per run start). `usability` writes its probe commit, probe
+  record, answer-file and venv helpers once instead of four times.
+- **README's command list comes from `--help`** and is held by
+  `tests/test_readme_commands.py`; the hook JSON, the gates' stations and
+  `Develop` describe the current code; `protocol-fill --from-run` is
+  documented to write `Answering run` too (template, finalize's hint).
+  The field guide places `Answering run` and `Deviations after freeze`
+  under Result, as the template does, and knows the `deferred` status.
 
 ### Fixed
 

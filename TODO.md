@@ -456,11 +456,19 @@ sieht das niemand.
     `runs.write_atomic`, `scope_sha.file_digest`/`tree_digest`;
     4 `protocol_check.check_protocol` liefert `FileReport` als Daten;
     5 Zustand `legacy`, `endpoint =`-String, `ledger`, `arbeitsstandard`
-    raus (Breaking). **Offen:** die Doku-Punkte oben (README-Kommandoliste
-    aus `--help` erzeugen oder testen, Gate-Zählungen, Hook-JSON, die vier
-    überholten Verweise), modulinterne Doppelungen in `usability.stage`,
-    `runlog.Run.__init__` (Protokoll dreimal gelesen), `scaffold.stamp_area`
-    druckt, tote Parameter; Pin-Grammatik und Run-Id-Form je noch mehrfach.
+    raus (Breaking). Drei weitere Commits: `scaffold.stamp_area` gibt den
+    Bericht zurück, `usability` mit `_commit`/`_read_probe`/`_answer_text`/
+    `_probe_venv`, `runlog` liest das Protokoll einmal (`_Bound`), tote
+    Parameter raus; Doku-Drifts behoben, README-Kommandoliste durch
+    `tests/test_readme_commands.py` gehalten. **Offen (klein, ohne
+    Auslöser):** Pin-Grammatik viermal (`scope_sha.find_pin`,
+    `repo_check.PIN_RE`, `runlog._VCS_PIN`, `usability._labkit_spec`),
+    Run-Id-Form dreimal (`runlog`, `protocol_check.RUN_ID`,
+    `claude_hooks.RUN_DIR_TIME`), `"completed"` ohne Konstante,
+    `llm.complete(keep_alive=)` ohne Aufrufer, `code_check`-interne
+    Doppelungen (`_name_of`/`_var_name`, `_literal_strings`), `llm`
+    (`_ollama_options`, EMPTY-Hinweis zweimal), `protocol_check.fields()`
+    in `check_fields`/`open_holes`/`measure_runs` je eigener Parse.
 
 - **Cloud-Leseprobe, Stand nach dem ersten Durchgang (2026-10-12).** Aufbau:
   Probe-Repo `kmax-tech/labkit-probe` (öffentlich — pip klont labkit nur
