@@ -67,7 +67,7 @@ from pathlib import Path
 
 from labkit import console, promises, protocol_block, rules
 from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
-from labkit.repo import area_path, area_protocols, layout_root, no_such_area
+from labkit.repo import area_path, choose_protocol, layout_root, no_such_area
 from labkit.scope_sha import LOCAL_ROOTS, area_files, imported_repo_helpers
 
 
@@ -1140,26 +1140,9 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         print(f"code-check: {no_such_area(area)}")
         return 2
 
-    protocols = area_protocols(area)
-    if protocol_arg is not None:
-        if not protocol_arg.is_file():
-            print(f"code-check: no such protocol: {protocol_arg}")
-            return 2
-        protocol = protocol_arg
-    elif not protocols:
-        print(f"code-check: no PROTOCOL-*.md in {area}")
+    protocol = choose_protocol(area, protocol_arg, "code-check")
+    if protocol is None:
         return 2
-    elif len(protocols) > 1:
-        # Fail closed, never pick: see repo.area_protocols.
-        print(
-            f"code-check: {len(protocols)} protocols in {area} — name one "
-            f"with --protocol FILE:"
-        )
-        for p in protocols:
-            print(f"  {p}")
-        return 2
-    else:
-        protocol = protocols[0]
 
     repo = layout_root(area)
     findings = (

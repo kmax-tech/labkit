@@ -53,7 +53,7 @@ from labkit.code_check import check_intent_ids, stamp_coverage_findings
 from labkit import console, findings, install_hooks
 from labkit.repo import (
     area_path,
-    area_protocols,
+    choose_protocol,
     git,
     git_root,
     layout_root,
@@ -140,25 +140,9 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
     blockers = 0
     warnings = 0
 
-    # -- resolve protocol -------------------------------------------------
-    if protocol is not None:
-        if not protocol.is_file():
-            print(f"preflight: no such protocol: {protocol}")
-            return 2
-    else:
-        protocols = area_protocols(area)
-        if not protocols:
-            print(f"preflight: no PROTOCOL-*.md in {area}")
-            return 2
-        if len(protocols) > 1:
-            print(
-                f"preflight: {len(protocols)} protocols in {area} — name "
-                f"one with --protocol FILE:"
-            )
-            for p in protocols:
-                print(f"  {p}")
-            return 2
-        protocol = protocols[0]
+    protocol = choose_protocol(area, protocol, "preflight")
+    if protocol is None:
+        return 2
 
     text = protocol.read_text(encoding="utf-8")
 

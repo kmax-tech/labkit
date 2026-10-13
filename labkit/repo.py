@@ -124,24 +124,35 @@ def git(args: list[str], cwd: Path, timeout: float = GIT_TIMEOUT_S) -> str | Non
     return r.stdout.strip()
 
 
-def choose_protocol(area: Path, protocol: Path | None, tool: str) -> Path | None:
+class ProtocolChoiceError(ValueError):
+    """No protocol to hold the area to: none named and none or several there."""
+
+
+def the_protocol(area: Path, protocol: Path | None) -> Path:
     """The protocol a command holds the area to: the named one, else the
-    area's only one. Prints why (prefixed with `tool`) and returns None when
-    there is none, or several and none is named — a gate never guesses."""
+    area's only one. Raises ProtocolChoiceError (the message says why and
+    lists the candidates) when there is none, or several and none is named
+    — a gate never guesses. `choose_protocol` is the printing form."""
     if protocol is not None:
         if not protocol.is_file():
-            print(f"{tool}: no such protocol: {protocol}")
-            return None
+            raise ProtocolChoiceError(f"no such protocol: {protocol}")
         return protocol
     protocols = area_protocols(area)
     if not protocols:
-        print(f"{tool}: no PROTOCOL-*.md in {area}")
-        return None
+        raise ProtocolChoiceError(f"no PROTOCOL-*.md in {area}")
     if len(protocols) > 1:
-        print(
-            f"{tool}: {len(protocols)} protocols in {area} — name one with --protocol FILE:"
+        raise ProtocolChoiceError(
+            f"{len(protocols)} protocols in {area} — name one with --protocol FILE:\n"
+            + "\n".join(f"  {p}" for p in protocols)
         )
-        for p in protocols:
-            print(f"  {p}")
-        return None
     return protocols[0]
+
+
+def choose_protocol(area: Path, protocol: Path | None, tool: str) -> Path | None:
+    """`the_protocol` for a command line: prints why (prefixed with `tool`)
+    and returns None instead of raising."""
+    try:
+        return the_protocol(area, protocol)
+    except ProtocolChoiceError as exc:
+        print(f"{tool}: {exc}")
+        return None

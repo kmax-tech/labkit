@@ -43,10 +43,11 @@ AREA_GLOBS = ("scripts/*.py", "analysis/*.py")
 
 
 def area_files(area: Path, globs: tuple[str, ...] = AREA_GLOBS) -> list[Path]:
-    """The area's own code, in a stable order."""
+    """The area's own code: scripts, then analysis, each sorted by name
+    (the order every check and the audit prompt list them in)."""
     out: list[Path] = []
     for pat in globs:
-        out.extend(area.glob(pat))
+        out.extend(sorted(area.glob(pat)))
     return out
 
 

@@ -57,7 +57,7 @@ from labkit.runs import (
     run_facts,
 )
 from labkit.repo import layout_root
-from labkit.scope_sha import imported_repo_helpers
+from labkit.scope_sha import area_files, imported_repo_helpers
 
 # The alphabet lives in `promises`; these names stay importable from here
 # because code_check and tools outside labkit (befundregister) use them.
@@ -429,7 +429,7 @@ def code_keys(area: Path) -> dict[str, list[str]]:
     # for every importing area; the scan stays transitive so a repo that
     # has not moved yet is checked, not waved through.
     root = layout_root(area)
-    own = sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py"))
+    own = area_files(area)
     for path in own + imported_repo_helpers(area, root):
         try:
             source = path.read_text(encoding="utf-8")

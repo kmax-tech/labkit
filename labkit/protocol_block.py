@@ -154,6 +154,16 @@ def _choice(table: dict, field: str, allowed: tuple[str, ...]) -> str | None:
     return value
 
 
+def id_of(text: str) -> str | None:
+    """The head's id; None when the head is missing, malformed or unstamped.
+    For readers that index or count protocols — a broken head is reported
+    where that protocol itself is checked, not by every scan that meets it."""
+    try:
+        return head(text).id
+    except BlockError:
+        return None
+
+
 def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
     """The protocol's head. Raises BlockError when the block or the
     `[protocol]` table is missing, a field is missing or unknown, or a

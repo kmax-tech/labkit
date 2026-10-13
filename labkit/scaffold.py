@@ -39,7 +39,8 @@ from labkit import console
 import uuid
 from pathlib import Path
 
-from labkit.protocol_block import ID_SHAPE
+from labkit import protocol_block
+from labkit.repo import area_protocols
 from labkit.repo_check import PYPROJECT_VERSION_RE
 
 PACKAGE = Path(__file__).resolve().parent
@@ -47,7 +48,6 @@ TEMPLATES = PACKAGE / "templates"
 PROTOCOL_TEMPLATE = PACKAGE / "experiment-protocol.md.template"
 #: where every lab installs labkit from — a lab has no checkout of the package
 LABKIT_REMOTE = "https://github.com/kmax-tech/labkit.git"
-COSTS = ("seconds", "minutes", "hours")
 
 GITIGNORE = """\
 # stamped by labkit-init — what a lab repo never commits
@@ -470,16 +470,13 @@ def new_protocol_id(root: Path) -> str:
     leave the identity a run bound to intact; the scan catches a protocol
     copied as the start of the next one.
     """
-    taken = set()
-    for f in root.rglob("PROTOCOL-*.md"):
-        taken.update(
-            re.findall(
-                r'^id\s*=\s*"(p-[0-9a-f]{16})"', f.read_text(encoding="utf-8"), re.M
-            )
-        )
+    taken = {
+        protocol_block.id_of(f.read_text(encoding="utf-8"))
+        for f in root.rglob("PROTOCOL-*.md")
+    }
     while True:
         pid = "p-" + uuid.uuid4().hex[:16]
-        if ID_SHAPE.match(pid) and pid not in taken:
+        if protocol_block.ID_SHAPE.match(pid) and pid not in taken:
             return pid
 
 
@@ -577,13 +574,13 @@ def stamp_explore(experiments: Path, slug: str) -> list[str]:
 
 def promote(area: Path, blocks: ProtocolBlocks) -> list[str]:
     """Fill the report-grade fields into an existing area's protocols."""
-    protos = sorted(area.glob("PROTOCOL-*.md"))
+    protos = area_protocols(area)
     if not protos:
         raise SystemExit(f"labkit-init: no PROTOCOL-*.md in {area}")
     log = []
     for proto in protos:
         text = proto.read_text(encoding="utf-8")
-        if re.search(r'^cost\s*=\s*"seconds"', text, re.M):
+        if protocol_block.head(text).cost == "seconds":
             log.append(
                 f"  skip (cost seconds: nothing freezes, no report fields)  {proto}"
             )
@@ -764,7 +761,7 @@ def main(argv: list[str]) -> int:
     exp.add_argument("--repo", type=Path, default=Path("."))
     exp.add_argument(
         "--cost",
-        choices=COSTS,
+        choices=protocol_block.COST_TIERS,
         help="stamp this tier into the head; seconds stamps the seconds cut",
     )
     exp.add_argument(

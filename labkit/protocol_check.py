@@ -423,14 +423,6 @@ def seconds_registration_missing(text: str) -> list[str]:
 _ID_INDEX: dict[Path, dict[str, list[Path]]] = {}
 
 
-def _id_of(text: str) -> str | None:
-    """The head's id, None when the head is missing, malformed or unstamped."""
-    try:
-        return protocol_block.head(text).id
-    except protocol_block.BlockError:
-        return None
-
-
 def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
     """Every protocol id in the repo, mapped to the files carrying it.
 
@@ -445,7 +437,7 @@ def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
         index: dict[str, list[Path]] = {}
         for f in sorted(root.rglob("PROTOCOL-*.md")):
             try:
-                pid = _id_of(f.read_text(encoding="utf-8"))
+                pid = protocol_block.id_of(f.read_text(encoding="utf-8"))
             except OSError:
                 continue
             if pid:
@@ -465,7 +457,7 @@ def id_in_git_head(path: Path) -> str | None:
         return None
     rel = path.resolve().relative_to(root)
     r = git_run(["show", f"HEAD:{rel}"], root)
-    return _id_of(r.stdout) if r.returncode == 0 else None
+    return protocol_block.id_of(r.stdout) if r.returncode == 0 else None
 
 
 def check_protocol_id(path: Path, head: protocol_block.Head) -> list[str]:

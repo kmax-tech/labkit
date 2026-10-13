@@ -8,6 +8,8 @@ goes through git_run.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import subprocess
 import sys
 import tempfile
@@ -59,6 +61,41 @@ class Layout(unittest.TestCase):
         (r / "a").mkdir()
         self.assertEqual(repo.git_root(r / "a"), r.resolve())
         self.assertEqual(repo.layout_root(r / "a"), r.resolve())
+
+
+class ProtocolChoice(unittest.TestCase):
+    """`the_protocol` never guesses; `choose_protocol` says the same and returns None."""
+
+    def setUp(self):
+        self.area = Path(tempfile.mkdtemp())
+
+    def test_the_only_protocol_is_the_choice(self):
+        only = self.area / "PROTOCOL-a.md"
+        only.write_text("")
+        self.assertEqual(repo.the_protocol(self.area, None), only)
+        self.assertEqual(repo.choose_protocol(self.area, None, "t"), only)
+
+    def test_none_or_several_refuse_and_say_why(self):
+        with self.assertRaisesRegex(repo.ProtocolChoiceError, "no PROTOCOL-"):
+            repo.the_protocol(self.area, None)
+        (self.area / "PROTOCOL-a.md").write_text("")
+        (self.area / "PROTOCOL-b.md").write_text("")
+        with self.assertRaisesRegex(
+            repo.ProtocolChoiceError, r"2 protocols (.|\n)*PROTOCOL-b"
+        ):
+            repo.the_protocol(self.area, None)
+        with self.assertRaisesRegex(repo.ProtocolChoiceError, "no such protocol"):
+            repo.the_protocol(self.area, self.area / "PROTOCOL-c.md")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertIsNone(repo.choose_protocol(self.area, None, "t"))
+        self.assertIn("t: 2 protocols", out.getvalue())
+
+    def test_a_named_protocol_wins(self):
+        (self.area / "PROTOCOL-a.md").write_text("")
+        named = self.area / "PROTOCOL-b.md"
+        named.write_text("")
+        self.assertEqual(repo.the_protocol(self.area, named), named)
 
 
 class Git(unittest.TestCase):

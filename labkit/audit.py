@@ -63,9 +63,9 @@ from pathlib import Path
 from typing import NamedTuple
 
 from labkit import console, findings, llm, promises, protocol_block, rules
-from labkit.repo import area_protocols, layout_root, no_such_area
+from labkit.repo import ProtocolChoiceError, layout_root, no_such_area, the_protocol
 from labkit.runs import bound_answering_run, completed_runs, read_outputs
-from labkit.scope_sha import area_stamp, imported_repo_helpers, repo_imports
+from labkit.scope_sha import area_files, area_stamp, imported_repo_helpers, repo_imports
 
 AGENT = Path(__file__).with_name("experiment-preflight.agent.md")
 CLARITY_AGENT = Path(__file__).with_name("code-clarity.agent.md")
@@ -239,20 +239,12 @@ def gather(area: Path, protocol: Path | None) -> Reading:
     Refuses what is missing."""
     if not area.is_dir():
         raise AuditError(no_such_area(area))
-    protocols = area_protocols(area)
-    if protocol is not None:
-        chosen = protocol
-    elif len(protocols) == 1:
-        chosen = protocols[0]
-    else:
-        raise AuditError(
-            f"{len(protocols)} protocols in {area} — name one with --protocol: "
-            + ", ".join(p.name for p in protocols)
-        )
-    if not chosen.is_file():
-        raise AuditError(f"no such protocol: {chosen}")
+    try:
+        chosen = the_protocol(area, protocol)
+    except ProtocolChoiceError as exc:
+        raise AuditError(str(exc)) from exc
     repo = layout_root(area)
-    scripts = sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py"))
+    scripts = area_files(area)
     if not scripts:
         raise AuditError(f"{area}: no scripts/*.py or analysis/*.py — nothing to audit")
     code = [p.resolve() for p in scripts]
