@@ -505,6 +505,11 @@ sieht das niemand.
   README keinen Platzhalter mehr (Frage und Vertrag leben im Protokoll), und
   der Testpfad im Zustandskasten stimmt. Prüfstelle: ein Cloud-Durchgang auf
   0.88.1 mit null Gate-Zeilen.
+  Durchgang 12 (Fable, noch 0.88.0, 1m34s, 0 Gate-Zeilen im Log, README-
+  Warnung im selben Schritt erledigt) bestätigt 11; neu genannt: (x) `runlog`
+  könnte den Commit vor dem Lauf selbst machen (`runlog --commit`) — gehört zu
+  (w). Seit 0.88.2 trägt jede Score-Datei das Modell (`usability score
+  --agent`).
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:

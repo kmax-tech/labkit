@@ -38,6 +38,7 @@ see the caveat). Score files: `2026-10-12-cloud-fable-count-N.score.json`.*
 | 9 | 0.87.1 | 2m06s | 4 · 11 · 4 · 0 · 1 | yes |
 | 10 | 0.87.1 | 3m42s | 5 · 13 · 6 · 1 · 0 | yes |
 | 11 | 0.88.0 | 3m11s | 5 · 13 · 6 · 0 · 1 | yes |
+| 12 | 0.88.0 | 1m34s | 5 · 9 · 4 · 0 · 0 | yes |
 
 Three clean draws on 0.87.1 (8–10): median 2m20s, 0 or 1 gate line, 0 reads
 of labkit source. Before the fixes (draw 1, 0.85.0): 4m27s, 3 unsure, 3 gate.
@@ -47,6 +48,10 @@ log carries one write-back line (`protocol-fill --from-run <run_id>`) and no
 edit of the Answer, Result or run line by hand; the agent left the generated
 Result line unchanged because `--check` holds the key verbatim. The one gate
 line is the README contract placeholder again (decision below).
+
+Draw 12 (0.88.0, 2026-10-13) repeats it in 1m34s with no gate line in the log
+(finalize's README warning was handled inside one step); write-back again by
+`--from-run`. The model is in every score file since 0.88.2 (`"agent"`).
 
 ## What the draws changed in labkit
 
