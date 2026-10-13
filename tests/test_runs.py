@@ -72,6 +72,25 @@ class RunDirs(unittest.TestCase):
         )
 
 
+class RunIdShape(unittest.TestCase):
+    def test_run_started_reads_the_time_and_refuses_other_names(self):
+        started = runs.run_started("2026-10-13T14-00-57_071a")
+        self.assertEqual(
+            (started.year, started.hour, started.second) if started else None,
+            (2026, 14, 57),
+        )
+        for name in ("output", "2026-10-13T14-00-57", "start-2026-10-13T14-00-57.log"):
+            with self.subTest(name):
+                self.assertIsNone(runs.run_started(name))
+
+    def test_run_id_finds_a_cited_run_in_prose(self):
+        text = "0.91 (run 2026-10-07T10-00-00_aa11, derived 2026-10-07T11-00-00_bb22)"
+        self.assertEqual(
+            [m.group(0) for m in runs.RUN_ID.finditer(text)],
+            ["2026-10-07T10-00-00_aa11", "2026-10-07T11-00-00_bb22"],
+        )
+
+
 class WriteAtomic(unittest.TestCase):
     def test_the_file_is_whole_and_no_temp_file_stays(self):
         d = Path(tempfile.mkdtemp())

@@ -98,6 +98,46 @@ class ProtocolChoice(unittest.TestCase):
         self.assertEqual(repo.the_protocol(self.area, named), named)
 
 
+class RequirementLines(unittest.TestCase):
+    """One grammar for a pin: every spelling pip writes names its package."""
+
+    def test_every_spelling_names_the_package(self):
+        for line, name in (
+            ("labkit @ git+https://github.com/x/labkit@v0.89.0", "labkit"),
+            ("labkit @ git+file:///home/x/labkit@abc1234  # dev", "labkit"),
+            ("-e git+https://github.com/x/labkit@abc1234#egg=labkit", "labkit"),
+            ("-e /Users/x/projects/labkit", "labkit"),
+            ("labkit==0.89.0", "labkit"),
+            ("Lab_Kit==1.0", "lab-kit"),
+            ("en_core_web_sm @ https://x.invalid/en_core_web_sm.whl", "en-core-web-sm"),
+            ("# a comment", None),
+            ("", None),
+            ("pytest", None),
+        ):
+            with self.subTest(line):
+                self.assertEqual(repo.requirement_name(line), name)
+
+    def test_requirement_lines_filters_a_file(self):
+        text = "pytest==8.0\nlabkit @ git+https://g/x/labkit@v1\n# labkit old\n"
+        self.assertEqual(
+            repo.requirement_lines(text, "labkit"),
+            ["labkit @ git+https://g/x/labkit@v1"],
+        )
+        self.assertEqual(repo.requirement_lines(text, "numpy"), [])
+
+    def test_the_vcs_grammar_reads_url_and_ref(self):
+        m = repo.VCS_REQUIREMENT.match("labkit @ git+https://g/x/labkit@v0.1.0")
+        assert m is not None
+        self.assertEqual(
+            (m["name"], m["url"], m["ref"]), ("labkit", "https://g/x/labkit", "v0.1.0")
+        )
+        unpinned = repo.VCS_REQUIREMENT.match("labkit @ git+https://g/x/labkit")
+        assert unpinned is not None
+        self.assertIsNone(
+            unpinned["ref"]
+        )  # a VCS line without a ref is read, not a pin
+
+
 class Git(unittest.TestCase):
     def test_outside_a_repo_is_none(self):
         self.assertIsNone(repo.git(["status", "--porcelain"], Path(tempfile.mkdtemp())))

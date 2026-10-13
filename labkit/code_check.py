@@ -63,6 +63,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+from collections.abc import Iterable
 from pathlib import Path
 
 from labkit import console, promises, protocol_block, rules
@@ -72,6 +73,21 @@ from labkit.scope_sha import LOCAL_ROOTS, area_files, imported_repo_helpers
 
 
 # --- source analysis ------------------------------------------------------
+
+
+def _name_of(node: ast.expr) -> str | None:
+    """A bare name's identifier, None for any other expression — the one
+    reader both visitors used to carry (`_name_of`, `_var_name`)."""
+    return node.id if isinstance(node, ast.Name) else None
+
+
+def _string_constants(nodes: Iterable[ast.expr | None]) -> list[str]:
+    """The string literals among `nodes`, in order (a dict's `**spread` key is None)."""
+    return [
+        n.value
+        for n in nodes
+        if isinstance(n, ast.Constant) and isinstance(n.value, str)
+    ]
 
 
 class _FieldVisitor(ast.NodeVisitor):
@@ -93,10 +109,6 @@ class _FieldVisitor(ast.NodeVisitor):
     def _site(self, lineno: int) -> str:
         return f"{self.filename}:{lineno}"
 
-    @staticmethod
-    def _name_of(node: ast.expr) -> str | None:
-        return node.id if isinstance(node, ast.Name) else None
-
     def visit_Assign(self, node: ast.Assign) -> None:
         """`R = {}` / `R = defaultdict(list)` marks R as locally built."""
         val = node.value
@@ -107,7 +119,7 @@ class _FieldVisitor(ast.NodeVisitor):
         )
         if builds:
             for target in node.targets:
-                name = self._name_of(target)
+                name = _name_of(target)
                 if name:
                     self.built.add(name)
         self.generic_visit(node)
@@ -115,7 +127,7 @@ class _FieldVisitor(ast.NodeVisitor):
     def visit_Subscript(self, node: ast.Subscript) -> None:
         key = node.slice
         if isinstance(key, ast.Constant) and isinstance(key.value, str):
-            holder = self._name_of(node.value)
+            holder = _name_of(node.value)
             if isinstance(node.ctx, ast.Load):
                 self.reads.setdefault(key.value, (self._site(node.lineno), holder))
             else:  # Store / Del — the field is being produced here
@@ -138,7 +150,7 @@ class _FieldVisitor(ast.NodeVisitor):
                 if func.attr == "get":
                     self.reads.setdefault(
                         first.value,
-                        (self._site(node.lineno), self._name_of(func.value)),
+                        (self._site(node.lineno), _name_of(func.value)),
                     )
                 elif func.attr in ("setdefault", "pop"):
                     self.writes.add(first.value)
@@ -295,19 +307,11 @@ class _ComparisonVisitor(ast.NodeVisitor):
 
     @staticmethod
     def _literal_strings(node: ast.expr) -> set[str] | None:
-        """Extract string elements from a set/list/tuple/dict literal."""
+        """The string elements of a set/list/tuple literal, or a dict's string keys."""
         if isinstance(node, (ast.Set, ast.List, ast.Tuple)):
-            out = set()
-            for elt in node.elts:
-                if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
-                    out.add(elt.value)
-            return out if out else None
+            return set(_string_constants(node.elts)) or None
         if isinstance(node, ast.Dict):
-            out = set()
-            for k in node.keys:
-                if isinstance(k, ast.Constant) and isinstance(k.value, str):
-                    out.add(k.value)
-            return out if out else None
+            return set(_string_constants(node.keys)) or None
         return None
 
     @staticmethod
@@ -317,12 +321,6 @@ class _ComparisonVisitor(ast.NodeVisitor):
             return node.id
         if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
             return f"{node.value.id}.{node.attr}"
-        return None
-
-    @staticmethod
-    def _var_name(node: ast.expr) -> str | None:
-        if isinstance(node, ast.Name):
-            return node.id
         return None
 
     def _add(self, lineno: int, var: str, op: str, value_desc: str) -> None:
@@ -352,7 +350,7 @@ class _ComparisonVisitor(ast.NodeVisitor):
         for op, comparator in zip(node.ops, node.comparators):
             if isinstance(op, (ast.Eq, ast.NotEq)):
                 op_str = "==" if isinstance(op, ast.Eq) else "!="
-                left_var = self._var_name(node.left) or "?"
+                left_var = _name_of(node.left) or "?"
                 if isinstance(comparator, ast.Constant) and isinstance(
                     comparator.value, str
                 ):
@@ -361,7 +359,7 @@ class _ComparisonVisitor(ast.NodeVisitor):
                     label = self._node_label(comparator)
                     if label:
                         self._add(node.lineno, left_var, op_str, self._resolve(label))
-                right_var = self._var_name(comparator) or "?"
+                right_var = _name_of(comparator) or "?"
                 if isinstance(node.left, ast.Constant) and isinstance(
                     node.left.value, str
                 ):
@@ -369,12 +367,9 @@ class _ComparisonVisitor(ast.NodeVisitor):
 
             elif isinstance(op, (ast.In, ast.NotIn)):
                 op_str = "in" if isinstance(op, ast.In) else "not in"
-                left_var = self._var_name(node.left) or "?"
+                left_var = _name_of(node.left) or "?"
                 if isinstance(comparator, (ast.Set, ast.List, ast.Tuple)):
-                    strs = []
-                    for elt in comparator.elts:
-                        if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
-                            strs.append(elt.value)
+                    strs = _string_constants(comparator.elts)
                     if strs:
                         if all(_NOISE_LITERAL.match(s) for s in strs):
                             self._filtered.append(left_var)
@@ -396,7 +391,7 @@ class _ComparisonVisitor(ast.NodeVisitor):
         ):
             default = node.args[1]
             if isinstance(default, ast.Constant) and isinstance(default.value, str):
-                holder = self._var_name(func.value) or "?"
+                holder = _name_of(func.value) or "?"
                 self._add_literal(node.lineno, holder, ".get default", default.value)
         self.generic_visit(node)
 

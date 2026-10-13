@@ -40,6 +40,7 @@ MUST field is missing or unfilled in any file; SHOULD fields only warn.
 Protocols with a prose head (Standard 0.16/0.17) are read by labkit 0.47.
 """
 
+import functools
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -192,10 +193,18 @@ class FieldLine:
         )
 
 
-def fields(text: str) -> list[FieldLine]:  # noqa: C901 complexity baseline 2026-10-08
+def fields(text: str) -> list[FieldLine]:
     """Every bold field label in the prose, outside code fences. A label may
     wrap onto the next line (`- **Resolution check (ZERO calls, …\n
-    extremes):** <…>`); it is read whole."""
+    extremes):** <…>`); it is read whole. Parsed once per text: the checker
+    asks for a protocol's fields from seven places (owed fields, holes,
+    the model, the measure runs, the leftovers, the references), and each
+    parsed the file again (audit 2026-10-13)."""
+    return list(_parsed_fields(text))
+
+
+@functools.lru_cache(maxsize=64)
+def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity baseline 2026-10-08
     out: list[FieldLine] = []
     lines = text.splitlines()
     fence: str | None = None  # the open fence's marker; nested fences are body
@@ -258,7 +267,7 @@ def fields(text: str) -> list[FieldLine]:  # noqa: C901 complexity baseline 2026
                 last=nxt,
             )
         )
-    return out
+    return tuple(out)
 
 
 def placeholder_fields(text: str) -> list[tuple[int, str]]:
