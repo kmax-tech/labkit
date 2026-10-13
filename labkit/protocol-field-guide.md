@@ -145,8 +145,8 @@ The same block may hold the `[[promise]]` tables (labkit
   you a held-out number. Goes from `false` to `true` only after the
   instrument check; per (re-)freeze ONE sentence stays in the prose — the
   reasoning goes into the commit message.
-- **preflight_audit** — date · scope sha · N findings (blockers fixed /
-  accepted with reason / dismissed with reason): the code-vs-intent audit
+- **preflight_audit** — date · scope sha · N findings (each decided: fixed /
+  accepted / deferred / dismissed, with reason): the code-vs-intent audit
   after the instrument check and before freezing. Empty until then.
 
 **cost** — the price of a *repeat*, not whether a model is involved. A
@@ -311,6 +311,20 @@ scattered in output files nobody can interpret.
   promoted or steers a decision, and the field is added then — an open
   placeholder was what readers stumbled over (2026-10-07).
 
+- **Answering run:** the run `finalize` holds the protocol to — its
+  run_id, written with `protocol-fill` after a clean `finalize`, read by
+  a person who wants one id, not a list. It is a projection of
+  `runs.bound_answering_run` (the one choice intent-check, finalize and
+  labkit-params share), never a second binding: `finalize` refuses the
+  line when it names another run, and only warns while it still says
+  "none yet" (round 15, 2026-10-08: a person named the fresh run, not the
+  derived one that answers).
+- **Deviations after freeze:** "none", or what was changed after
+  `frozen = true`. The registered plan (Intent) is not rewritten; a
+  deviation stands here, in the Result block, and — where it touches the
+  verdict — in Summary → Limits. Not to be confused with "Changed", which
+  records instrument changes BEFORE the freeze.
+
 ### Context (APPARATUS)
 
 - **Problem in one sentence:** no technical terms — what is being found out?
@@ -404,19 +418,6 @@ to `true`.
 - **Parser cases harvested:** the probe's answer forms as REAL cases into
   the parser test.
 - **Clarified terms:** what was ambiguous, and what is it called now?
-- **Answering run:** the run `finalize` holds the protocol to — its
-  run_id, written with `protocol-fill` after a clean `finalize`, read by
-  a person who wants one id, not a list. It is a projection of
-  `runs.bound_answering_run` (the one choice intent-check, finalize and
-  labkit-params share), never a second binding: `finalize` refuses the
-  line when it names another run, and only warns while it still says
-  "none yet" (round 15, 2026-10-08: a person named the fresh run, not the
-  derived one that answers).
-- **Deviations after freeze:** "none", or what was changed after
-  `frozen = true`. The registered plan (Intent) is not rewritten; a
-  deviation stands here, in the Result block, and — where it touches the
-  verdict — in Summary → Limits. Not to be confused with "Changed", which
-  records instrument changes BEFORE the freeze.
 - **Changed — and in which class:** instrument changes (wording, answer form,
   parser, field names) are allowed; hypothesis, criterion, admissibility
   condition are not.
@@ -460,7 +461,7 @@ Delete this section if everything was prompted.
   gold inputs, which the previous stage's predictions. Report both if you
   can — the gap between them IS the error propagation.
 
-## Arbeitsstandard cross-references
+## Lab standard cross-references
 
 | Field              | § |
 |--------------------|---|

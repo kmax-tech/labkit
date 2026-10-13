@@ -77,7 +77,7 @@ path: 0.88.8.
   and the first `usability stage --restamp` after the 0.88.7 release pinned
   `v0.88.5` under 0.88.7 templates. A wheel install has no source beside
   the package and is unaffected. The release recipe (`just release`)
-  reinstalls the editable labkit after the tag, so the two never drift on
+  reinstalls the editable labkit before the commit, so the two never drift on
   the author's machine.
 
 ## 0.88.7 — 2026-10-13

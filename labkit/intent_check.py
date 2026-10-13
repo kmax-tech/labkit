@@ -7,7 +7,7 @@ three-conjunct criterion implemented as one conjunct, gate metrics written
 next to the content numbers the gate was meant to suppress. Reading catches
 this late; a set comparison catches it mechanically.
 
-The contract (Arbeitsstandard LAB-004 Identifiers make the intent addressable): every registration that promises the
+The contract (LAB-004 Identifiers make the intent addressable): every registration that promises the
 code something — a verdict, a branch, an abort, a control — carries an id
 in the protocol text (`[C1]` criterion, `[A1]` admissibility condition,
 `[B1]` registered branch; the alphabet is `promises`), and every id

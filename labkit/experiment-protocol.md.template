@@ -68,7 +68,7 @@
   run_id; numbers as a small table below the label (one row per arm or
   condition), produced by `analysis/<note>.py --check`, never retyped>
 - **Answering run:** none yet — the run `finalize` holds this protocol to,
-  written by `protocol-fill PROTOCOL-<name>.md "Answering run" <run_id>`
+  written with the number by `protocol-fill PROTOCOL-<name>.md --from-run`
   after `finalize`; `finalize` refuses any other run_id here (a readable
   projection of `runs.bound_answering_run`, never a second binding)
 - **Deviations after freeze:** <"none", or what was changed after

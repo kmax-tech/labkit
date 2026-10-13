@@ -16,6 +16,7 @@ its score against the run:
 Finding one's way in code (code_navigation):
 
     usability nav <repo> --questions Q --out P / nav-score ...   "where does the code do X?"
+    usability human <repo> --questions Q --out P   a person answers the behaviour questions, timed
 
 Why this exists (2026-10-05): the doctrine grew by scars, every scar added
 a gate, and nobody measured what the whole chain costs for the simplest

@@ -473,7 +473,7 @@ def stamp_facts(area: Path, verdict: tuple[int, int, int]) -> str:
     b, w, n = verdict
     return (
         f"{time.strftime('%Y-%m-%d')} · scope sha {sha} · {b + w + n} findings "
-        f"({b} blockers, {w} warnings, {n} notes — decide each: fixed / accepted / dismissed)"
+        f"({b} blockers, {w} warnings, {n} notes — decide each: fixed / accepted / deferred / dismissed)"
     )
 
 

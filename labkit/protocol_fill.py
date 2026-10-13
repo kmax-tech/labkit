@@ -11,8 +11,8 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md "Meaning of the gold label" "positive = ..."
     protocol-fill PROTOCOL-x.md --line 27 Question "does Y move X?"
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
-    protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   the Answer, Result and Runs lines from the
-                                               run's metrics.json (newest completed run by default)
+    protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   the Answer, Result, Answering run and Runs lines
+                                               from the run's metrics.json (newest completed run by default)
 
 A field that is already filled is refused without --force — overwriting an
 answer silently is how two truths happen.
@@ -343,7 +343,7 @@ def main(argv: list[str]) -> int:
         const="newest",
         default=None,
         metavar="RUN_ID",
-        help="write the Answer, Result and Runs lines from the run's metrics.json "
+        help="write the Answer, Result, Answering run and Runs lines from the run's metrics.json "
         "(the area's newest completed run without RUN_ID)",
     )
     ap.add_argument(

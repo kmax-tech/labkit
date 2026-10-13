@@ -266,8 +266,8 @@ def answering_run_field_mismatch(
     if value.startswith("none yet") or value.startswith("<"):
         return (
             "warn",
-            f'"Answering run" not written yet — protocol-fill it with '
-            f"{measurement_run.name} once this finalize is clean",
+            f'"Answering run" not written yet — `protocol-fill --from-run '
+            f"{measurement_run.name}` writes it with the number once this finalize is clean",
         )
     return (
         "block",

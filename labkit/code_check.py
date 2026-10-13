@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """code-check — the mechanical half of the preflight, before the model looks.
 
-The preflight audit (Arbeitsstandard LAB-015 Preflight audit before freezing) used to do three jobs in one
+The preflight audit (LAB-015 Preflight audit before freezing) used to do three jobs in one
 pass: mechanics, compliance, judgement. The mechanics are the cheap half and
 they do not need a model — an id that no script mentions, a field the
 analysis reads and no producer writes, a protocol still full of placeholders

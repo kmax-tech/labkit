@@ -5,9 +5,10 @@
     claude-hook stop          Stop
     claude-hook sessions [--run RUN_ID]   the session log: which session, which transcript, which runs
 
-Both read the hook's JSON event on stdin and answer the way Claude Code
-expects: `pre-run` blocks with exit 2 (the stderr text goes back to the
-agent), everything else is `additionalContext` on stdout and exit 0.
+The three hooks read the hook's JSON event on stdin and answer the way
+Claude Code expects: `pre-run` and `stop` block with exit 2 (the stderr
+text goes back to the agent), `post-change` is `additionalContext` on
+stdout and exit 0.
 
 Why these exist (2026-10-05): the rules that matter — "preflight before a
 full run", "protocol-check after writing a protocol" — lived in the skill

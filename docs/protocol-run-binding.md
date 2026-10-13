@@ -191,8 +191,8 @@ section and counts its lines, but does not verify the run ids.
 Built: identity (0.20.0); the binding in `config.json`, `schema_version`,
 `completion.json`, `runlog reindex`, the `protocol_id` column and the index
 lock (0.21.0); selection by id in `intent-check` (0.22.0); the id in the
-TOML head, legacy paths removed (0.48.0). `code-check` still resolves
-by area and refuses when several protocols are present — it runs before
+TOML head, legacy paths removed (0.48.0). `code-check` resolves by area,
+or takes `--protocol FILE` once the area holds several — it runs before
 any run exists, so it has nothing to bind to.
 
 Selection by id followed in 0.22.0. The binding is complete: a protocol

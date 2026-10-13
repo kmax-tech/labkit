@@ -4,8 +4,8 @@
 
   // Shared helpers come from the pinned labkit package (venv below),
   // imported directly; lib/ holds repo-local helpers (and, in legacy repos,
-  // the flat-import shims), reached via a sys.path insert — Schichten-Regel
-  // (Arbeitsstandard section 2G). experiments/ is listed for older repos that keep helpers there.
+  // the flat-import shims), reached via a sys.path insert — the layer rule
+  // of docs/coding-style.md. experiments/ is listed for older repos that keep helpers there.
   "extraPaths": ["lib", "experiments"],
 
   // Artefacts, not code under maintenance. runs/ holds the frozen

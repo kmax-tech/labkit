@@ -34,35 +34,40 @@ nothing vanished, grown keys reported as a derived run), the note holding
 every reported number as a token and the run_id. Two areas re-implemented
 it and got two of three parts wrong (2026-10-05).
 
-Sixteen **console commands** come with the installation, `runlog` with three
-sub-commands (all answer `--help`):
+The **console commands** come with the installation; every one answers
+`--help`, and `tests/test_readme_commands.py` holds this list to
+`pyproject.toml` and the sub-commands:
 
 ```bash
-labkit-init lab [DIR]               # lay out a lab repo: AGENTS.md, pinned requirements.txt, models.toml, experiments/, data/, notes/
-labkit-init exp <NAME> [--cost T] [--model [ALIAS]] [--report] [--explore]  # stamp an area: protocol, script skeletons, README, its test
-protocol-check <PROTOCOL-*.md>...   # mandatory-field check (must/should contract)
-protocol-check --contract           # the head, the fields by exact label, the budgets — read before writing
-runlog [<area>]                     # the area's runs: open ones with state and pid, then the finished ones (what each is, committed or not, its command)
-runlog reindex <area>               # append rows for completed runs it missed
-intent-check <PROTOCOL-*.md>        # registered promise ids vs. metrics keys
-code-check <AREA>                   # intent ids, parser fixtures, prompt drift, code the stamp cannot follow (sys.path, dynamic loaders, imports outside lib/ and src/) + audit bundle for the agent
-scope-sha [--area DIR]              # audit stamp over the code that determines a number
-protocol-fill <PROTOCOL> FIELD VAL  # fill one stamped placeholder field by label
+labkit-init lab [DIR] [--name NAME] [--labkit-ref REF]   # lay out a lab repo: AGENTS.md, pinned requirements.txt, models.toml, experiments/, data/, notes/
+labkit-init exp <NAME> [--repo DIR] [--cost T] [--model [ALIAS]] [--report] [--explore]  # stamp an area: protocol, script skeletons, README, its test
+protocol-check [--template PATH] <PROTOCOL-*.md | dir>...  # mandatory-field check (must/should contract)
+protocol-check --contract | --guide # the head, the fields by exact label, the budgets — read before writing; the path of the field guide
+runlog [<area>] [--wait | --follow] [--max-seconds N] [--interval S] [--notify]  # the area's runs: open ones with state and pid, then the finished ones; --wait exits 0 idle · 2 a run failed · 3 still running
+runlog start -- <cmd>               # detach a long run (own session, log file) and return
+runlog reindex <area>               # append rows for completed runs the index missed
+intent-check <PROTOCOL-*.md> [--metrics FILE]  # registered promise ids vs. the answering run's metrics keys
+code-check <AREA> [--protocol FILE] [--bundle FILE]  # intent ids, parser fixtures, prompt drift, code the stamp cannot follow (sys.path, dynamic loaders, imports outside lib/ and src/); --bundle packs the audit bundle for the agent
+scope-sha [AREA | --area DIR] [--globs PAT,...] [--no-pin] [FILE ...]  # audit stamp over the code that determines a number
+protocol-fill <PROTOCOL> FIELD VAL [--line N] [--force]  # fill one stamped placeholder field by label
 protocol-fill <PROTOCOL> "LABEL=VALUE" ...  # fill several in one call, all or nothing (`type=exploratory` for the head)
-protocol-fill <PROTOCOL> --from-run [RUN]  # write the number back from the run's metrics.json: Answer, Result and Runs lines, never retyped
+protocol-fill <PROTOCOL> --list | --prompts  # the open placeholder fields; the Prompt block from the scripts' PROMPT constants
+protocol-fill <PROTOCOL> --from-run [RUN]  # write the number back from the run's metrics.json: Answer, Result, Answering run and Runs lines, never retyped
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
-preflight <AREA>                    # the mechanical pre-freeze gate: protocol + audit findings decided + code + scope + dirty check + area tests (not the agent audit)
-finalize <AREA>                     # post-run gate: completion + intent-check + open fields
+preflight <AREA> [--protocol FILE]  # the mechanical pre-freeze gate, seven stations: protocol-check · cost tier · audit findings decided · code-check · scope-sha · working tree · hooks · area tests (not the agent audit; `labkit/preflight.py` lists them)
+finalize <AREA> [--protocol FILE]   # the post-run gate, eight steps: answering run and its record · intent-check · declared scopes · open fields · frozen source · area tests · criterion n (`labkit/finalize.py` lists them)
 finalize --if-reported <PROTOCOL>.. # the commit gate: finalize every protocol whose answer cites a run
-claude-hook pre-run|post-change|stop  # the Claude Code hooks a lab repo installs (stdin: event JSON)
+claude-hook pre-run|post-change|stop  # the three Claude Code hooks a lab repo installs (stdin: event JSON)
 claude-hook sessions [--run RUN_ID]  # the session log the stop hook keeps (.git/labkit-sessions.jsonl): session, transcript, runs
 labkit-hooks install|check [REPO]   # install this labkit's hooks (pre-commit, core.hooksPath, claude-hook); rerun after a pin raise
-labkit-check [REPO] [--offline]     # is this repo current: pin · installed · newest tag at the source · hook · rule references; reports only, exit 1 on STALE
-usability stage|score|trace <DIR>  # cold-agent probe: stage a probe lab repo, score the agent's trace (time, steps, number), read a trace
-labkit-audit <AREA> --mode preflight|analysis   # the AGENT audit (the experiment-preflight instructions, one call: area + the rules they cite + in analysis the run's rows) through any models.toml alias — not the `preflight` gate; exit 1 on a blocker OR a warning; stderr says the prompt size and what the call cost (`llm.last_usage()`); writes its findings as data into `<AREA>/audits/<date>-<mode>.toml` — set status (fixed / accepted / deferred / dismissed) and reason per finding, `preflight` holds the file to it
+labkit-check [REPO] [--offline]     # is this repo current: pin · installed · newest tag at the source · hook · rule references; reports only, exit 1 STALE, 2 UNDECIDED
+usability stage|log|score|trace     # cold-agent probe: stage a probe lab repo, log a step, score the agent's trace (time, steps, number), read a trace (next section)
+usability reader|read-score|glance|glance-score|terms  # reading a protocol: prompts for a cold reader and their score against the run
+usability nav|nav-score|human       # finding one's way in code: a navigation prompt, its score, a person at the keyboard
+labkit-audit <AREA> --mode preflight|analysis [--protocol FILE] [--model ALIAS] [--timeout S] [--out FILE]  # the AGENT audit (the experiment-preflight instructions, one call: area + the rules they cite + in analysis the run's rows) through any models.toml alias — not the `preflight` gate; exit 1 on a blocker OR a warning; stderr says the prompt size and what the call cost (`llm.last_usage()`); writes its findings as data into `<AREA>/audits/<date>-<mode>.toml` — set status (fixed / accepted / deferred / dismissed) and reason per finding, `preflight` holds the file to it
 labkit-audit <AREA> --mode clarity              # a newcomer's reading of README, protocol and measure script (code-clarity); exit 1 on findings, never a gate
-labkit-params <AREA> [--run ID]     # the values the answering run ran with: home, meaning, tier (guaranteed / static evidence)
-labkit-calltree <COMMAND> [-- ARGS]  # what one run of a command called, cut to its package: path:line per call path (reading aid, not a check)
+labkit-params <AREA> [--run ID] [--protocol FILE]  # the values the answering run ran with: home, meaning, tier (guaranteed / static evidence)
+labkit-calltree [--depth N] [--out FILE] <COMMAND> [-- ARGS]  # what one run of a command called, cut to its package: path:line per call path (reading aid, not a check)
 ```
 
 ## Usability trace — what the whole chain costs for one kept number
@@ -146,8 +151,10 @@ Install (what `labkit-hooks install` writes into `.claude/settings.json`):
                    "hooks": [{"type": "command", "timeout": 120,
                               "command": "\"${CLAUDE_PROJECT_DIR:-.}/.venv/bin/claude-hook\" pre-run"}]}],
   "PostToolUse": [{"matcher": "Bash|Write|Edit",
-                   "hooks": [{"type": "command", "timeout": 30,
-                              "command": "\"${CLAUDE_PROJECT_DIR:-.}/.venv/bin/claude-hook\" post-change"}]}]}}
+                   "hooks": [{"type": "command", "timeout": 60,
+                              "command": "\"${CLAUDE_PROJECT_DIR:-.}/.venv/bin/claude-hook\" post-change"}]}],
+  "Stop":        [{"hooks": [{"type": "command", "timeout": 120,
+                              "command": "\"${CLAUDE_PROJECT_DIR:-.}/.venv/bin/claude-hook\" stop"}]}]}}
 ```
 
 ## Terms
@@ -196,15 +203,16 @@ The hierarchy the vocabulary is meant to make visible:
     runs.tsv         run index — derived, never a source
     ## Runs          manual documentation, never a source
 
-A protocol has **one template, cut by cost**: `cost = "seconds"` (a count,
-or a handful of model calls — rerunnable at will) owes a short cut and never
-freezes — but the `[[promise]]` tables like every full run (standard 0.19); `minutes` and `hours` have **two modes**: `frozen = false` is the
-light pilot (MUST fields only), `frozen = true` the heavy report mode —
-every SHOULD field becomes mandatory. The price sits on the claim, not the
-activity: cheap tiers yield numbers that must not be reported. Every field's explanation — examples, rationale, the four questions to
-ask a criterion — lives in `protocol-field-guide.md` (packaged alongside
-the template; `protocol-check --guide` prints the path); thesis repos get
-a copy at `templates/PROTOCOL-FIELD-GUIDE.md`.
+A protocol has **one template, three cuts**: `cost = "seconds"` (a count,
+or a handful of model calls — rerunnable at will) owes the seconds cut and
+never freezes — but the `[[promise]]` tables like every full run (standard
+0.19); `minutes` and `hours` have two: `frozen = false` is the light pilot
+(MUST fields only), `frozen = true` the report — every SHOULD field
+becomes mandatory. The price sits on the claim, not the activity: cheap
+tiers yield numbers that must not be reported. Every field's explanation —
+examples, rationale, the four questions to ask a criterion — lives in
+`protocol-field-guide.md` (packaged alongside the template;
+`protocol-check --guide` prints the path).
 
 The commands are stations of **one lifecycle** — write the protocol, audit
 the code, run, hold the run against the promises. Two orchestrating
@@ -214,19 +222,21 @@ commands sequence the individual checks at the two decision points:
    enforces its fields from the first draft on (MUST for pilots, everything
    once `frozen = true`).
 2. Before freezing, **`preflight <area>`** runs the pre-freeze gate:
-   `protocol-check` (mandatory fields) → `code-check` (intent ids against
-   the code) → `scope-sha` (audit stamp) → dirty-tree warning. The
-   individual commands remain available for targeted use; `code-check
-   --bundle` additionally extracts schema facts and gate labels into a
-   bundle for the audit agent's judgement pass.
+   `protocol-check` (mandatory fields) → cost tier (is the agent audit
+   due) → the audit findings decided → `code-check` (intent ids against
+   the code) → `scope-sha` (audit stamp) → working tree, hooks → the area
+   tests. The individual commands remain available for targeted use;
+   `code-check --bundle` additionally extracts schema facts and gate labels
+   into a bundle for the audit agent's judgement pass.
 3. The run goes through `runlog` (frozen config, env fingerprint, script
    snapshot, split-leakage check); `runlog <area>` monitors it and lists the finished runs (what each is, committed or not, its command), `runlog
    start -- <cmd>` detaches long runs.
-4. After the run, **`finalize <area>`** runs the post-run gate: completion
-   check (newest bound run is `completed`) → `intent-check` (promises vs.
-   metrics) → open-fields report (placeholders still to fill). The
-   individual commands remain available; `protocol-fill` writes results
-   back into the protocol without touching the rest.
+4. After the run, **`finalize <area>`** runs the post-run gate: the
+   answering run (newest completed bound run) and its record → `intent-check`
+   (promises vs. metrics) → declared scopes unchanged → open fields →
+   frozen source (at seconds) → area tests → criterion denominators. The
+   individual commands remain available; `protocol-fill --from-run` writes
+   the number back into the protocol without touching the rest.
 
 `notes-check` sits beside the lifecycle: it gates the measurement notes the
 results flow into.
@@ -264,12 +274,14 @@ to be handed to students as-is. Field labels are English and held exactly
 ## Develop
 
 ```bash
-python3 -m unittest discover -s tests -v
+.venv/bin/pytest -q          # the suite; `just check` runs the commit gate (ruff, format, pyright, pytest)
 ```
 
-Change → test → bump `version` in `pyproject.toml` → commit → tag
-`v<version>`. The experiment repos catch up via their pin, each at its own
-time; a running experiment is never surprised by a bugfix.
+Change → test → commit, one commit per step. A release is one step: write
+the `CHANGELOG.md` entry, then `just release X.Y.Z` sets the version,
+commits through the hook and tags that commit; the push stays with the
+author. The experiment repos catch up via their pin, each at its own time;
+a running experiment is never surprised by a bugfix.
 
 **One version, one identity, one label.** `pyproject.toml` carries the
 version, the commit carries the identity, and the tag is a label over that

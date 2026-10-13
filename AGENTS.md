@@ -79,8 +79,8 @@ instead).
   formats. A format change is an announced break (`CHANGELOG.md`,
   "Breaking", naming the last version that reads the old format); old runs
   are reproduced with the repo's commit and its pinned labkit version.
-  Existing legacy paths are removed in one release with the template
-  rollout (`TODO.md` item 8), not piecemeal.
+  Existing legacy paths go in one Breaking release, not piecemeal (0.48.0
+  the id letters, 0.89.0 the `legacy` run state and the `endpoint` string).
 - **Order before features.** Build what `TODO.md` puts next, nothing ahead
   of it: static-evidence checks wait for the benchmark pilot to show they
   are needed. Rollout to other repos, templates and the house doctrine is a

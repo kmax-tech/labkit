@@ -28,8 +28,8 @@ nothing is copied. Until the tag is pushed the pin does not install;
 
 The author's house keeps a separate thesis starter
 (`local-init.py --thesis` in the dotfiles) that adds house
-material around the same pin; whether it moves into labkit is open
-(`TODO.md` item 5).
+material around the same pin; it stays house (decided 2026-10-12,
+`TODO.md` item 5).
 
 ## Moving to a newer version
 
@@ -71,7 +71,6 @@ record: labkit lists them as `unreadable` with the reason and never picks
 them (read them with labkit 0.47). A student's first `run_experiment.py`
 starts a fresh `runs.tsv`.
 
-A copied protocol template still carries `id = "<protocol-id>"`; students
-stamp it once with
-`python3 -c "import uuid; print('p-' + uuid.uuid4().hex[:16])"` — an
-unstamped id binds no run.
+`labkit-init exp <name>` stamps the protocol's id; a protocol copied by
+hand still carries `id = "<protocol-id>"` and binds no run — stamp a fresh
+area instead of copying one.

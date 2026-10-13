@@ -73,7 +73,7 @@ evidence** (warns), **agent audit** (semantic).
 | How does a registered constant stand against the record? | `promises.constant_records` (equal / different / missing, type-strict); runlog refuses before mkdir, intent-check/finalize block, `labkit-params` shows all three |
 | Does a frozen protocol owe a promise block? | `promises.promise_tables_owed` — protocol-check (MUST), preflight and finalize (blocker), runlog (refusal before mkdir) |
 | Which code did an audit see, and is it still that code? | `scope_sha.area_stamp`, `scope_sha.audit_stamp_drift` (area stamp, not per promise) |
-| Which rules exist, what do they say, and does a reference name one? | `rules.load_registry`, `rules.rule_heads`, `rules.check_registry`, `rules.check_ledger`, `rules.check_refs`, `rules.rule_text` (`docs/standard.md`, `docs/rules.tsv`) |
+| Which rules exist, what do they say, and does a reference name one? | `rules.load_registry`, `rules.rule_heads`, `rules.check_registry`, `rules.check_ledger`, `rules.check_refs`, `rules.rule_text` (`labkit/docs/standard.md`, `labkit/docs/rules.tsv`) |
 
 A second answer to any of these questions is drift: move the caller to the
 home, never copy the logic.
@@ -95,7 +95,7 @@ what concerns only this house stays in the author's dotfiles.**
 | author's global `~/.claude/CLAUDE.md` | one-line reflexes that point at rule ids | master (house only) |
 
 **What is still in the dotfiles.** The thesis starter, which carries house
-material (lecture links, run snapshots with the author's paths); whether it
-is cleaned for labkit or stays house is open (`TODO.md` item 5). Gate
+material (lecture links, run snapshots with the author's paths); it stays
+house (decided 2026-10-12, `TODO.md` item 5). Gate
 messages and docstrings cite rules by id and English name, and
 `tests/test_rules.py` holds every such reference to the ledger.

@@ -546,7 +546,7 @@ def unreported(text: str, seconds: bool = False) -> list[str]:
 # A follow-up registration appended to the SAME protocol — the pattern that
 # grew one file to 649 lines out of three experiments ("Lauf B — ...
 # (deklariert vor dem Lauf)", "Stufe 2 ..."): each such heading is a second
-# question in a one-question file. The series rule (Arbeitsstandard LAB-061 Sub-experiment series carry their number in the name)
+# question in a one-question file. The series rule (LAB-061 Sub-experiment series carry their number in the name)
 # gives every follow-up its own PROTOCOL-s<N>-<slug>.md. Warning only.
 SERIES_HEAD = re.compile(
     r"(?im)^##.*\((deklariert|registriert) vor dem( jeweils \w+)? "
@@ -1014,7 +1014,7 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
             f"{f}:{n}: follow-up registration in the same protocol "
             f"({ln[:60]!r}) — one question per protocol: a declared "
             f"follow-up gets its own PROTOCOL-s<N>-<slug>.md "
-            f"(series rule, Arbeitsstandard LAB-061 Sub-experiment series carry their number in the name)."
+            f"(series rule, LAB-061 Sub-experiment series carry their number in the name)."
         )
     for n, label in r.bare_refs:
         print(

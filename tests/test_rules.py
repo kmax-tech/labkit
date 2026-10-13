@@ -18,6 +18,7 @@ LIVING = (
     sorted((ROOT / "labkit").rglob("*.py"))
     + sorted((ROOT / "labkit").rglob("*.md"))
     + sorted((ROOT / "labkit").glob("*.template"))
+    + sorted((ROOT / "labkit" / "templates").glob("*.template"))
     + [ROOT / "README.md", ROOT / "AGENTS.md"]
     + [p for p in sorted((ROOT / "docs").glob("*.md")) if p.name != "coding-style.md"]
 )
