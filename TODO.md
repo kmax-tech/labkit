@@ -460,15 +460,13 @@ sieht das niemand.
     Bericht zurück, `usability` mit `_commit`/`_read_probe`/`_answer_text`/
     `_probe_venv`, `runlog` liest das Protokoll einmal (`_Bound`), tote
     Parameter raus; Doku-Drifts behoben, README-Kommandoliste durch
-    `tests/test_readme_commands.py` gehalten. **Offen (klein, ohne
-    Auslöser):** Pin-Grammatik viermal (`scope_sha.find_pin`,
-    `repo_check.PIN_RE`, `runlog._VCS_PIN`, `usability._labkit_spec`),
-    Run-Id-Form dreimal (`runlog`, `protocol_check.RUN_ID`,
-    `claude_hooks.RUN_DIR_TIME`), `"completed"` ohne Konstante,
-    `llm.complete(keep_alive=)` ohne Aufrufer, `code_check`-interne
-    Doppelungen (`_name_of`/`_var_name`, `_literal_strings`), `llm`
-    (`_ollama_options`, EMPTY-Hinweis zweimal), `protocol_check.fields()`
-    in `check_fields`/`open_holes`/`measure_runs` je eigener Parse.
+    `tests/test_readme_commands.py` gehalten. Drei letzte Commits
+    (2026-10-14): Requirement-Grammatik in `repo`, Run-Id-Form und
+    `COMPLETED` in `runs`, `keep_alive` als Konstante, `_ollama_options`/
+    `_warn_empty`, `code_check` `_name_of`/`_string_constants`,
+    `protocol_check.fields` einmal geparst. **Der Audit-Befund ist damit
+    abgearbeitet**; was bleibt, sind die 19 `noqa: C901`-Baselines
+    (sichtbare Schuld, `grep`).
 
 - **Cloud-Leseprobe, Stand nach dem ersten Durchgang (2026-10-12).** Aufbau:
   Probe-Repo `kmax-tech/labkit-probe` (öffentlich — pip klont labkit nur

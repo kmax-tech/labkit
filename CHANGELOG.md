@@ -31,6 +31,8 @@ path: 0.88.8.
   computes through `scope_sha.tree_digest` (name + content digest per file)
   instead of raw bytes. Only new probes record it; a score compares a
   probe with its own record.
+- **`llm.complete(keep_alive=)` is gone** — no caller ever passed it;
+  `llm.OLLAMA_KEEP_ALIVE` (10m) is the one value.
 - Smaller: the documented-runs heading no longer matches `ledger` (the word
   left the vocabulary 2026-09-26); the usability source-read pattern no
   longer matches `arbeitsstandard`; `runlog <area>` prints `(not recorded)`
@@ -71,6 +73,17 @@ path: 0.88.8.
   documented to write `Answering run` too (template, finalize's hint).
   The field guide places `Answering run` and `Deviations after freeze`
   under Result, as the template does, and knows the `deferred` status.
+- **One grammar for a requirement line** (`repo.VCS_REQUIREMENT`,
+  `EDITABLE_REQUIREMENT`, `EDITABLE_PATH_REQUIREMENT`, `VERSION_REQUIREMENT`,
+  `repo.requirement_name` / `requirement_lines`): the stamp's pin line,
+  `labkit-check`, runlog's lock parser and the probe's pip-freeze line read
+  through it (four spellings before). **One shape for a run id**
+  (`runs.RUN_ID`, `RUN_ID_TIME`, `run_started`): runlog writes with it,
+  protocol-check and finalize find a cited run, the stop hook reads the
+  start time. `runs.COMPLETED` replaces nine string comparisons.
+- `protocol_check.fields` parses a text once (seven readers before);
+  `code_check` reads a bare name and a string literal in one place each;
+  `llm` builds the ollama options and the empty-content notice once.
 
 ### Fixed
 
