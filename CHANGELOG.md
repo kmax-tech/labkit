@@ -5,6 +5,16 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.88.2 — 2026-10-13
+
+### Added — the score names the model
+
+- **`usability score --agent M`** writes the model that drew into
+  `<dir>.score.json` (`"agent": "fable-5.1"`) and the table's first row. A
+  cloud session leaves no transcript, so the operator states it; without
+  the flag the field is `null`, never guessed. The twelve cloud score files
+  under `docs/usability/` carry it now, taken from their file names.
+
 ## 0.88.1 — 2026-10-13
 
 ### Changed — a count's README carries no blank

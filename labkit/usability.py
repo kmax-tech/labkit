@@ -1,7 +1,7 @@
 """usability — stage a probe lab repo for a cold agent, then score the trace.
 
     usability stage <dir> [--venv PATH]     a fresh lab repo with one kept-number task
-    usability score <dir> [--transcript F]  number · binding · log (· transcript) → one table, one JSON
+    usability score <dir> [--transcript F] [--agent M]  number · binding · log (· transcript) → one table, one JSON
     usability trace <transcript>            the agent's timeline, one line per tool call
 
 Reading a protocol (protocol_reading), each a prompt for a cold reader and
@@ -542,6 +542,9 @@ class Score:
     transcript: agent_transcript.TranscriptTrace | None = (
         None  # measured, not self-reported
     )
+    agent: str | None = (
+        None  # the model that drew, as the operator names it (`--agent`)
+    )
 
 
 def archive(root: Path, transcript: Path, dest: Path) -> list[Path]:
@@ -889,8 +892,15 @@ def cmd_read_score(root: Path, transcript: Path | None) -> int:
     return 0 if got.correct == got.checkable else 1
 
 
-def score(root: Path, transcript: Path | None = None) -> int:  # noqa: C901 complexity baseline 2026-10-08
-    """Score a staged probe: its latest run's number against the truth, the binding, the log; write `<dir>.score.json`."""
+def score(  # noqa: C901 complexity baseline 2026-10-08
+    root: Path, transcript: Path | None = None, agent: str | None = None
+) -> int:
+    """Score a staged probe: its latest run's number against the truth, the binding, the log; write `<dir>.score.json`.
+
+    `agent` names the model that drew (`fable-5.1`, `sonnet-5.5`): a cloud
+    session leaves no transcript, so the operator states it and the score
+    carries it — twelve score files named the model only in their file name
+    (2026-10-13)."""
     pr = load_probe_run(root)
     probe, run, metrics = pr.probe, pr.run, pr.metrics
     expected = recount(root) if probe.task == "count" else None
@@ -943,12 +953,14 @@ def score(root: Path, transcript: Path | None = None) -> int:  # noqa: C901 comp
         log=trace,
         form=form,
         transcript=measured,
+        agent=agent,
     )
     _sidecar(root, "score.json").write_text(
         json.dumps(asdict(sc), indent=1), encoding="utf-8"
     )
 
     rows = [
+        ("agent", agent or "not stated (--agent)"),
         ("labkit in probe", probe.labkit_installed),
         ("scaffold sha", probe.scaffold_sha),
         ("run", sc.run_id or "none"),
@@ -1091,6 +1103,10 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         "files and refusals measured instead of self-reported",
     )
     c.add_argument(
+        "--agent",
+        help="the model that drew, e.g. fable-5.1 — stated by the operator, kept in the score",
+    )
+    c.add_argument(
         "--archive",
         metavar="DIR",
         help="with --transcript: keep transcript (gzip), timeline and score in DIR",
@@ -1199,7 +1215,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     if args.archive and not args.transcript:
         ap.error("--archive needs --transcript")
     transcript = Path(args.transcript).resolve() if args.transcript else None
-    rc = score(root, transcript)
+    rc = score(root, transcript, args.agent)
     if args.archive and transcript is not None:
         for path in archive(root, transcript, Path(args.archive)):
             print(f"  archived {path}")

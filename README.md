@@ -77,6 +77,7 @@ usability stage /tmp/probe --venv .venv --task judge   # seconds cut + measure s
 usability stage /tmp/probe --venv .venv --cost unset   # the full form; the agent declares the tier
 #   hand <probe>.prompt.md (CLAUDE.md as a session loads it + the TASK.md pointer) to a COLD agent; it logs one line per step
 usability score /tmp/probe                # number == truth? bound? tier? wall-clock, steps per tag → probe.score.json
+usability score /tmp/probe --agent fable-5.1   # the model that drew, stated by the operator (a cloud session leaves no transcript)
 usability score /tmp/probe --transcript agent.jsonl   # plus measured: wall-clock, tool time, labkit commands, refusals, tokens (output, largest context, cache read), files and source reads
 usability trace agent.jsonl              # the agent's timeline: elapsed, duration, command (bookkeeping cut), REFUSED; last line: the tokens
 usability score /tmp/probe --transcript agent.jsonl --archive DIR   # keep transcript (gzip), timeline and score

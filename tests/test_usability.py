@@ -146,15 +146,21 @@ class LoadProbeRun(unittest.TestCase):
 
 
 class ScoreVerdict(unittest.TestCase):
-    def _score(self, metrics: dict) -> tuple[int, dict]:
+    def _score(self, metrics: dict, agent: str | None = None) -> tuple[int, dict]:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "probe"
             root.mkdir()
             usability.plant_fixture(root)
             _probe(root, metrics)
             with contextlib.redirect_stdout(io.StringIO()):
-                rc = usability.score(root)
+                rc = usability.score(root, agent=agent)
             return rc, json.loads(usability._sidecar(root, "score.json").read_text())
+
+    def test_the_score_carries_the_agent_the_operator_names(self):
+        _, sc = self._score({"mean_docs_per_case": 3.5}, agent="fable-5.1")
+        self.assertEqual(sc["agent"], "fable-5.1")
+        _, sc = self._score({"mean_docs_per_case": 3.5})
+        self.assertIsNone(sc["agent"])  # not guessed: a cloud draw leaves no transcript
 
     def test_right_number_under_the_named_key(self):
         rc, sc = self._score({"mean_docs_per_case": 3.5, "n_cases": 12})

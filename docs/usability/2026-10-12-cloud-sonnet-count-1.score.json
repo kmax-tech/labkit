@@ -44,5 +44,6 @@
   "summary_codes": 1,
   "answer_has_table": false
  },
- "transcript": null
+ "transcript": null,
+ "agent": "sonnet-5.5"
 }
