@@ -38,7 +38,7 @@ def _bind(text: str) -> dict:
     (area / "PROTOCOL-x.md").write_text(text, encoding="utf-8")
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
-        return runlog._protocol_binding(area, None)
+        return runlog._protocol_binding(area, None).binding
 
 
 class Identity(unittest.TestCase):

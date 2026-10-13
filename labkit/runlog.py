@@ -62,6 +62,7 @@ schema 2 — read with labkit 0.47).
 from __future__ import annotations
 
 import contextlib
+from dataclasses import dataclass
 import fcntl
 import hashlib
 import importlib.metadata
@@ -563,8 +564,13 @@ def _describe(paths: dict) -> dict:  # noqa: C901 complexity baseline 2026-10-08
     return out
 
 
+#: how long an append or reindex waits for the index lock before it is
+#: called hung
+_INDEX_LOCK_TIMEOUT_S = 30.0
+
+
 @contextlib.contextmanager
-def _index_lock(base_dir: Path, timeout: float = 30.0) -> Iterator[None]:
+def _index_lock(base_dir: Path) -> Iterator[None]:
     """Exclusive lock for every change to runs.tsv — append, reindex.
 
     Without it a reindex and a finishing run race: one appends while the
@@ -582,9 +588,9 @@ def _index_lock(base_dir: Path, timeout: float = 30.0) -> Iterator[None]:
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 break
             except OSError:
-                if time.monotonic() - t0 >= timeout:
+                if time.monotonic() - t0 >= _INDEX_LOCK_TIMEOUT_S:
                     raise RuntimeError(
-                        f"runlog: runs.tsv locked for over {int(timeout)}s "
+                        f"runlog: runs.tsv locked for over {int(_INDEX_LOCK_TIMEOUT_S)}s "
                         f"({base_dir}) — another append or reindex "
                         f"is running, or one hung."
                     )
@@ -710,12 +716,31 @@ def _snapshot_untracked_sources(run_dir: Path) -> list[str]:
     return copied
 
 
-def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
-    """Which protocol this run belongs to: {"id": ..., "path": ...}.
+@dataclass(frozen=True)
+class _Bound:
+    """The bound protocol, read once at binding: `binding` is the record
+    config.json carries ({"id": ..., "path": ...}, both None when unbound),
+    `text` and `head` the protocol as read then (None when unbound). The
+    freeze gate and the registration check take it instead of reading the
+    file again (three reads and three parses before, audit 2026-10-13)."""
 
-    The shape never varies — both fields always exist, only the values
-    change. A reader never has to tell an absent key from null from an
-    object (2026-09-26).
+    binding: dict
+    text: str | None
+    head: "protocol_block.Head | None"
+
+    @property
+    def name(self) -> str:
+        """The protocol's file name, `(unbound)` without one."""
+        path = self.binding.get("path")
+        return Path(path).name if isinstance(path, str) and path else "(unbound)"
+
+
+def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
+    """Which protocol this run belongs to, with its text and head.
+
+    The record's shape never varies — `id` and `path` always exist, only
+    the values change. A reader never has to tell an absent key from null
+    from an object (2026-09-26).
 
     `id` is the binding; `path` is relative to the area, for lookup and
     diagnosis, and may go stale. An explicit protocol must lie inside the
@@ -744,7 +769,7 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
             f"is recorded as unbound. A kept number needs a protocol "
             f"(LAB-003 No run without an intent paragraph)."
         )
-        return {"id": None, "path": None}
+        return _Bound({"id": None, "path": None}, None, None)
     else:
         raise SystemExit(
             f"runlog: {len(found)} protocols in {base_dir} — nothing would "
@@ -757,16 +782,17 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
         rel = str(path.relative_to(base_dir.resolve()))
     except ValueError:
         rel = str(path)
+    text = path.read_text(encoding="utf-8")
     try:
-        pid = protocol_block.head(path.read_text(encoding="utf-8")).id
+        head = protocol_block.head(text)
     except protocol_block.BlockError as exc:
         raise SystemExit(f"runlog: {rel}: {exc}") from exc
-    if pid is None:
+    if head.id is None:
         print(
             f"runlog: WARNING — {rel} carries no stamped id (`id` in its "
             f"[protocol] table); this run is recorded as unbound."
         )
-    return {"id": pid, "path": rel}
+    return _Bound({"id": head.id, "path": rel}, text, head)
 
 
 # The freeze gate (2026-10-05). `long=True` is the script's declaration of a
@@ -785,35 +811,24 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> dict:
 # freeze. The tier lands in config.json as `cost_tier`.
 
 
-def _protocol_text(base_dir: Path, binding: dict) -> str | None:
-    """The bound protocol's text, or None when the run is unbound."""
-    if binding.get("path") is None:
-        return None
-    path = Path(binding["path"])
-    if not path.is_absolute():
-        path = base_dir / path
-    return path.read_text(encoding="utf-8")
-
-
-def _freeze_findings(base_dir: Path, binding: dict) -> list[str]:
+def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
     """Why a FULL run may not start on this protocol — empty means it may."""
     from labkit.protocol_check import seconds_registration_missing
 
-    text = _protocol_text(base_dir, binding)
-    if text is None:
+    text, head = bound.text, bound.head
+    if text is None or head is None:
         return [
             "the run is unbound (no protocol) — a full run needs a "
             "registered protocol (LAB-003 No run without an intent paragraph)"
         ]
-    path = Path(binding["path"])
-    if binding.get("id") is None:
+    path = Path(bound.name)
+    if bound.binding.get("id") is None:
         # a full run's number must be bound; an unstamped id binds nothing,
         # and finalize would only say so after the number exists (review 2026-10-07)
         return [
             f"{path.name}: the [protocol] id is not stamped — a full run "
             f"needs a bound protocol (`labkit-init exp` stamps it)"
         ]
-    head = protocol_block.head(text)  # read once at binding; valid here
     if head.cost == "seconds":
         missing = seconds_registration_missing(text)
         if not missing:
@@ -862,12 +877,10 @@ def _promise_snapshot(
 
 
 def _registration_refusal(
-    binding: dict | None,
-    head: "protocol_block.Head | None",
+    bound: _Bound,
     block: "promises.PromiseTables | None",
     config: dict,
     long: bool,
-    registers: bool = True,
 ) -> str | None:
     """The registration's contract, before any gate that can be acknowledged
     and before mkdir (standard 0.19): a frozen protocol and every full run
@@ -876,12 +889,14 @@ def _registration_refusal(
     number is held to a threshold nobody registered (Durchstich
     2026-10-06). None when it holds, or when the run is unbound (the
     freeze gate refuses an unbound full run on its own)."""
-    path = (binding or {}).get("path")
-    name = Path(path).name if isinstance(path, str) and path else "(unbound)"
-    if head is None:
+    name, head = bound.name, bound.head
+    if head is None or bound.text is None:
         return None
     owed = promises.promise_tables_owed(
-        block, frozen=head.frozen, full_run=long, registers=registers
+        block,
+        frozen=head.frozen,
+        full_run=long,
+        registers=promises.registers_ids(bound.text),
     )
     if owed:
         return f"{name}: {owed}"
@@ -964,21 +979,13 @@ class Run:
             self._derived_from = derived_from
         # Before any work: an unresolvable protocol is a refusal, and a
         # refusal must not leave an empty run dir behind (2026-09-26).
-        self._protocol = _protocol_binding(base_dir, protocol)
-        _ptext = _protocol_text(base_dir, self._protocol)
-        _phead = protocol_block.head(_ptext) if _ptext is not None else None
-        self._cost_tier = _phead.cost if _phead is not None else None
-        _block, self._promises = _promise_snapshot(base_dir, _ptext)
+        bound = _protocol_binding(base_dir, protocol)
+        self._protocol = bound.binding
+        self._cost_tier = bound.head.cost if bound.head is not None else None
+        _block, self._promises = _promise_snapshot(base_dir, bound.text)
         # Frozen now: what the registration check holds is what config.json records.
         self._config = dict(config)
-        refusal = _registration_refusal(
-            self._protocol,
-            _phead,
-            _block,
-            self._config,
-            long,
-            registers=promises.registers_ids(_ptext) if _ptext is not None else True,
-        )
+        refusal = _registration_refusal(bound, _block, self._config, long)
         if refusal:
             raise SystemExit(f"runlog: {refusal}")
         _short = self._cost_tier == "seconds"
@@ -1013,7 +1020,7 @@ class Run:
         # is a refusal, not a run with a warning (2026-10-05).
         self._unfrozen_ack = False
         if long:
-            findings = _freeze_findings(base_dir, self._protocol)
+            findings = _freeze_findings(base_dir, bound)
             if (
                 findings and os.environ.get("LABKIT_UNFROZEN") == "1"
             ):  # "0" is no acknowledgement
