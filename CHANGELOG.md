@@ -5,6 +5,19 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.88.8 — 2026-10-13
+
+### Fixed — the stamper refuses a version its templates do not belong to
+
+- **`labkit_pin()` compares the installed metadata with the source
+  checkout** and refuses when they differ: an editable install keeps the
+  version of its last `pip install -e` while the templates are read live,
+  and the first `usability stage --restamp` after the 0.88.7 release pinned
+  `v0.88.5` under 0.88.7 templates. A wheel install has no source beside
+  the package and is unaffected. The release recipe (`just release`)
+  reinstalls the editable labkit after the tag, so the two never drift on
+  the author's machine.
+
 ## 0.88.7 — 2026-10-13
 
 ### Added — four cuts from the Haiku series on 0.88.5 (H5–H7, median 1m00s)

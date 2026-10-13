@@ -40,6 +40,7 @@ import uuid
 from pathlib import Path
 
 from labkit.protocol_block import ID_SHAPE
+from labkit.repo_check import PYPROJECT_VERSION_RE
 
 PACKAGE = Path(__file__).resolve().parent
 TEMPLATES = PACKAGE / "templates"
@@ -119,10 +120,36 @@ def template(name: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def source_version() -> str | None:
+    """The version `pyproject.toml` declares when labkit runs from a source
+    checkout (an editable install: the file sits beside the package); None
+    from a wheel in site-packages."""
+    pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    if not pyproject.is_file():
+        return None
+    m = PYPROJECT_VERSION_RE.search(pyproject.read_text(encoding="utf-8"))
+    if m is None:
+        raise RuntimeError(f"{pyproject} has no version line")
+    return m.group(1)
+
+
 def labkit_pin(ref: str | None = None) -> str:
     """The requirements line pinning labkit: the release tag of the installed
-    version on GitHub, or REF when given (a pushed commit, for development)."""
+    version on GitHub, or REF when given (a pushed commit, for development).
+
+    Refuses when the installed metadata and the source checkout disagree: an
+    editable install keeps the version of its last `pip install -e` while
+    the templates are read live, and the first re-stamp after the 0.88.7
+    release pinned v0.88.5 under 0.88.7 templates (2026-10-13)."""
     version = importlib.metadata.version("labkit")
+    source = source_version()
+    if source is not None and source != version:
+        raise SystemExit(
+            f"labkit-init: the installed metadata say {version}, the source "
+            f"checkout declares {source} — an editable install keeps the "
+            f"version of its last install; run `pip install -e '.[dev]'` "
+            f"there, or the pin names a tag the templates do not belong to"
+        )
     return f"labkit @ git+{LABKIT_REMOTE}@{ref or 'v' + version}"
 
 

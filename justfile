@@ -41,7 +41,8 @@ timeline module *args:
 
 # A release is one step in the one order the tag test allows: the CHANGELOG entry
 # `## X.Y.Z — date` is written (the only change in the tree), the recipe sets the
-# version in pyproject.toml, commits both through the hook, then tags that commit.
+# version in pyproject.toml, commits both through the hook, tags that commit and
+# reinstalls the editable labkit so its metadata carry the new version.
 # The push stays with you; the recipe prints it. Why: on 2026-10-13 the tag
 # v0.88.5 was set before the version commit, the tag test went red, the commit
 # went in past the hook with --no-verify, and the tag stayed on the old commit.
@@ -100,5 +101,10 @@ release version:
     if r.returncode != 0:
         die(f"the commit was refused (hook above) — pyproject.toml already says {v}; fix, then run again")
     git("tag", tag)
+    # the editable install keeps the version of its last pip install: the
+    # stamper read 0.88.5 from it under 0.88.7 templates (2026-10-13)
+    r = subprocess.run([".venv/bin/pip", "install", "-q", "-e", ".[dev]"])
+    if r.returncode != 0:
+        die(f"tag {tag} is set, but reinstalling labkit failed — run .venv/bin/pip install -e '.[dev]'")
     sha = git("rev-parse", "--short", "HEAD").stdout.strip()
-    print(f"release: {sha} {title}\nrelease: tag {tag} on it — push with:\n  git push origin main {tag}")
+    print(f"release: {sha} {title}\nrelease: tag {tag} on it, labkit reinstalled — push with:\n  git push origin main {tag}")

@@ -70,6 +70,25 @@ class Lab(unittest.TestCase):
     def test_a_ref_overrides_the_tag(self) -> None:
         self.assertTrue(scaffold.labkit_pin("abc1234").endswith("labkit.git@abc1234"))
 
+    def test_stale_editable_metadata_refuse_the_pin(self) -> None:
+        """The first re-stamp after the 0.88.7 release pinned v0.88.5: the
+        editable install's metadata kept its last `pip install -e` while the
+        templates came from the source (2026-10-13). This suite runs from the
+        checkout, so source_version() is the pyproject's."""
+        source = scaffold.source_version()
+        self.assertIsNotNone(source)
+        real = scaffold.importlib.metadata.version
+        scaffold.importlib.metadata.version = lambda name: "0.0.1"
+        try:
+            with self.assertRaises(SystemExit) as cm:
+                scaffold.labkit_pin()
+            self.assertIn("0.0.1", str(cm.exception))
+            self.assertIn(str(source), str(cm.exception))
+            scaffold.importlib.metadata.version = lambda name: source
+            self.assertTrue(scaffold.labkit_pin().endswith(f"@v{source}"))
+        finally:
+            scaffold.importlib.metadata.version = real
+
     def test_rerunning_overwrites_nothing(self) -> None:
         (self.root / "AGENTS.md").write_text("mine\n", encoding="utf-8")
         log = scaffold.stamp_lab(self.root, "probe")
