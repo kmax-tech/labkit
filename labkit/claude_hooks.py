@@ -84,6 +84,7 @@ from labkit import (
     preflight,
     protocol_block,
     protocol_check,
+    runs,
 )
 from labkit.repo import area_protocols, git_run
 from labkit.scope_sha import file_digest
@@ -391,9 +392,6 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
     return 0
 
 
-RUN_DIR_TIME = re.compile(r"^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})_[0-9a-f]+$")
-
-
 def session_log(repo: Path) -> Path | None:
     """`.git/labkit-sessions.jsonl` of the repo (the common git dir, so a
     worktree logs into its main repo); None outside git."""
@@ -414,15 +412,6 @@ def read_sessions(log: Path) -> list[dict]:
             except json.JSONDecodeError as exc:
                 raise SystemExit(f"{log}:{n}: not JSON — {exc.msg}") from exc
     return out
-
-
-def _run_started(run_dir: Path) -> datetime | None:
-    m = RUN_DIR_TIME.match(run_dir.name)
-    if not m:
-        return None
-    return datetime.fromisoformat(
-        f"{m.group(1)}T{m.group(2)}:{m.group(3)}:{m.group(4)}"
-    )
 
 
 def _transcript_start(transcript: str | None) -> datetime | None:
@@ -458,13 +447,13 @@ def record_session(repo: Path, event: dict, now: datetime | None = None) -> dict
         if earlier
         else _transcript_start(event.get("transcript_path"))
     )
-    runs = sorted(
+    session_runs = sorted(
         str(d.relative_to(repo))
         # where areas live (experiments/<area>, or flat at the root) — not a
         # walk through .venv and data on every stop
         for d in [*repo.glob("experiments/*/runs/*"), *repo.glob("*/runs/*")]
         if d.is_dir()
-        and (started := _run_started(d)) is not None
+        and (started := runs.run_started(d.name)) is not None
         and (since is None or started >= since.replace(microsecond=0))
         and started <= now
     )
@@ -472,7 +461,7 @@ def record_session(repo: Path, event: dict, now: datetime | None = None) -> dict
         "session": session,
         "transcript": event.get("transcript_path"),
         "stopped": now.isoformat(timespec="seconds"),
-        "runs": runs,
+        "runs": session_runs,
     }
     with log.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")

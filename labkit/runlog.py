@@ -81,7 +81,9 @@ from collections.abc import Iterator
 from labkit import batch, console, promises, protocol_block, repo
 from labkit.scope_sha import audit_stamp_drift, file_digest, tree_digest
 from labkit.runs import (
+    COMPLETED,
     FAILED_STATES,
+    RUN_ID_TIME,
     RunConfigError,
     completed_runs,
     completion_state,
@@ -194,18 +196,12 @@ def _parse_lock(lock: Path) -> dict[str, str | None]:
 # pinned-any hid exactly the package that changes most often (2026-09-15:
 # installed labkit was two minor versions behind the lock, drift said 0 —
 # and the pinned tag did not even exist in the source repo).
-_VCS_PIN = re.compile(
-    r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._\-]*)\s*@\s*"
-    r"git\+(?P<url>[^@\s#]+)(?:@(?P<ref>[^#\s]+))?\s*(?:#.*)?$"
-)
+_VCS_PIN = repo.VCS_REQUIREMENT
 # An editable install freezes as `-e git+<url>@<commit>#egg=<name>`: pip
 # reads the commit from the source checkout. Unread, it counted as "installed
 # but not in the lock" — a lock written by `pip freeze` seconds earlier in the
 # same venv reported drift on every run (usability probe 2026-10-07, 6 of 6).
-_EDITABLE_PIN = re.compile(
-    r"^-e\s+git\+(?P<url>[^@\s#]+)@(?P<ref>[^#\s]+)"
-    r"#egg=(?P<name>[A-Za-z0-9][A-Za-z0-9._\-]*)\s*$"
-)
+_EDITABLE_PIN = repo.EDITABLE_REQUIREMENT
 _HEX_REF = re.compile(r"^[0-9a-f]{7,40}$")
 
 
@@ -970,7 +966,7 @@ class Run:
                 raise SystemExit(
                     f"runlog: derived_from={derived_from!r}: {exc}"
                 ) from exc
-            if state != "completed":
+            if state != COMPLETED:
                 raise SystemExit(
                     f"runlog: derived_from={derived_from!r} names no completed "
                     f"run under {base_dir / 'runs'} ({state}) — a derived run "
@@ -1010,7 +1006,7 @@ class Run:
                 "or, if the caller already detached it (run_in_background, "
                 "nohup+setsid), acknowledge with LABKIT_DETACHED=1."
             )
-        self.run_id = time.strftime("%Y-%m-%dT%H-%M-%S") + "_" + uuid.uuid4().hex[:4]
+        self.run_id = time.strftime(RUN_ID_TIME) + "_" + uuid.uuid4().hex[:4]
         self.experiment = experiment
         self.script = Path(sys.argv[0]).name if sys.argv[0] else "<interactive>"
         self.base = base_dir
@@ -1253,7 +1249,7 @@ def active(base_dir: str | Path) -> list[dict]:
             continue
         alive = is_alive(cfg.get("pid"), cfg.get("script"))
         state = run_state(d, cfg, alive)
-        if state == "completed":
+        if state == COMPLETED:
             continue
         out.append(
             {"run_id": d.name, "dir": str(d), "alive": alive, "state": state, **cfg}
@@ -1344,7 +1340,7 @@ def _print_finished(area: Path) -> None:
         if rd.config is None:
             continue
         s = run_summary(rd.dir)
-        if s.state == "completed":
+        if s.state == COMPLETED:
             done.append(s)
     if not done:
         return
@@ -1469,7 +1465,7 @@ def _start(argv: list[str]) -> int:
     log = (
         Path(args.log)
         if args.log
-        else Path("output") / f"start-{time.strftime('%Y-%m-%dT%H-%M-%S')}.log"
+        else Path("output") / f"start-{time.strftime(RUN_ID_TIME)}.log"
     )
     log.parent.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "LABKIT_DETACHED": "1"}
@@ -1538,7 +1534,7 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
             if cfg is None:
                 continue
             state = run_state(d, cfg, alive=False)
-            if state != "completed":
+            if state != COMPLETED:
                 incomplete.append(d.name)
                 continue
             comp = read_completion(d)

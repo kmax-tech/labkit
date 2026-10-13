@@ -37,7 +37,7 @@ from collections.abc import Iterable
 from labkit import console
 from pathlib import Path
 
-from labkit.repo import layout_root, no_such_area
+from labkit.repo import layout_root, no_such_area, requirement_lines
 
 DIGEST_CHARS = 12  # enough to spot a mismatch, short enough for a protocol line
 AREA_GLOBS = ("scripts/*.py", "analysis/*.py")
@@ -165,17 +165,16 @@ def repo_imports(files: list[Path], repo: Path) -> list[Path]:
     return sorted(seen)
 
 
-def find_pin(start: Path, name: str = "labkit==") -> tuple[str, str] | None:
-    """(file, line) of the labkit pin, searched upwards from the area."""
+def find_pin(start: Path, name: str = "labkit") -> tuple[str, str] | None:
+    """(file, line) of the pin of `name`, searched upwards from the area."""
     for d in [start, *start.parents]:
         for fn in ("requirements.lock", "requirements.txt"):
             p = d / fn
             if not p.exists():
                 continue
-            for line in p.read_text(encoding="utf-8").splitlines():
-                s = line.strip()
-                if s.startswith(name) or s.startswith("labkit @"):
-                    return str(p), s
+            lines = requirement_lines(p.read_text(encoding="utf-8"), name)
+            if lines:
+                return str(p), lines[0]
     return None
 
 

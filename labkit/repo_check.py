@@ -40,11 +40,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit import console, install_hooks, protocol_block, rules
-from labkit.repo import git_run
+from labkit.repo import VCS_REQUIREMENT, VERSION_REQUIREMENT, git_run, requirement_lines
 
 PIN_FILES = ("requirements.txt", "requirements.lock")
-PIN_RE = re.compile(r"^\s*labkit\s*@\s*(git\+\S+?)@(\S+)\s*$")
-VERSION_PIN_RE = re.compile(r"^\s*labkit\s*==\s*(\d+\.\d+\.\d+)\s*$")
 TAG_RE = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 PYPROJECT_VERSION_RE = re.compile(r'^version\s*=\s*"(\d+\.\d+\.\d+)"', re.M)
 SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__", "runs", "data"})
@@ -94,13 +92,11 @@ def read_pins(repo: Path) -> list[Pin]:
         path = repo / name
         if not path.is_file():
             continue
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if not re.match(r"^\s*labkit\b", line):
-                continue
-            if (m := PIN_RE.match(line)) is not None:
-                pins.append(Pin(name, m.group(1), m.group(2)))
-            elif (m := VERSION_PIN_RE.match(line)) is not None:
-                pins.append(Pin(name, "", m.group(1)))
+        for line in requirement_lines(path.read_text(encoding="utf-8"), "labkit"):
+            if (m := VCS_REQUIREMENT.match(line)) is not None and m.group("ref"):
+                pins.append(Pin(name, "git+" + m.group("url"), m.group("ref")))
+            elif (m := VERSION_REQUIREMENT.match(line)) is not None:
+                pins.append(Pin(name, "", m.group("version")))
             else:
                 raise ValueError(
                     f"{name}: the labkit line is not a pin I can read: {line.strip()!r} "

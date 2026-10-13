@@ -44,7 +44,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from labkit import console, promises, protocol_block
+from labkit import console, promises, protocol_block, runs
 from labkit.repo import git_root, git_run
 from labkit.scope_sha import audit_stamp_drift
 
@@ -490,7 +490,6 @@ def check_protocol_id(path: Path, head: protocol_block.Head) -> list[str]:
 # runlog run ids as they appear in the run index: 2026-08-23T20-37-21_afbe. A
 # line carrying one that is NOT data preparation or a throwaway probe is a
 # measure run — from then on an empty Result is a MUST gap, pilot or not.
-RUN_ID = re.compile(r"\b\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_[0-9a-f]{2,12}\b")
 SETUP_RUN = re.compile(r"prepare|probe|wegwerf|trockenlauf|dry.?run", re.I)
 #: the fields a documented measure run makes due; empty is a placeholder or
 #: nothing but dashes. A bare "Label:" at end of line is NOT empty —
@@ -513,7 +512,7 @@ def measure_runs(text: str) -> list[tuple[int, str]]:
     return [
         (n, m.group(0))
         for n, ln in enumerate(text.splitlines(), 1)
-        if (m := RUN_ID.search(ln)) and not SETUP_RUN.search(ln)
+        if (m := runs.RUN_ID.search(ln)) and not SETUP_RUN.search(ln)
     ]
 
 

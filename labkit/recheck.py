@@ -56,7 +56,7 @@ def run_dir(area: Path, run_id: str | None = None) -> Path:
         if run_id is not None:
             d = runs_dir / run_id
             state = runs.completion_state(d) if d.is_dir() else "missing"
-            if state != "completed":
+            if state != runs.COMPLETED:
                 raise SystemExit(f"recheck: {d} is not a completed run ({state})")
             return d
         done = runs.completed_runs(area)

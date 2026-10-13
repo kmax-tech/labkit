@@ -16,10 +16,47 @@ Two git calls, by what a non-zero exit means:
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 
 GIT_TIMEOUT_S = 20
+
+# --- requirement lines: the one grammar of a pin (four spellings before, audit 2026-10-13)
+_PKG = r"(?P<name>[A-Za-z0-9][A-Za-z0-9._\-]*)"
+#: `name @ git+<url>@<ref>` — a VCS pin; the ref is optional, a trailing `# comment` allowed
+VCS_REQUIREMENT = re.compile(
+    rf"^{_PKG}\s*@\s*git\+(?P<url>[^@\s#]+)(?:@(?P<ref>[^#\s]+))?\s*(?:#.*)?$"
+)
+#: `-e git+<url>@<ref>#egg=<name>` — how pip freezes an editable VCS install
+EDITABLE_REQUIREMENT = re.compile(
+    rf"^-e\s+git\+(?P<url>[^@\s#]+)@(?P<ref>[^#\s]+)#egg={_PKG}\s*$"
+)
+#: `-e /path/to/<name>` — how pip freezes an editable path install
+EDITABLE_PATH_REQUIREMENT = re.compile(rf"^-e\s+(?P<path>\S*/{_PKG})/?\s*$")
+#: `name==X.Y.Z` — a version pin
+VERSION_REQUIREMENT = re.compile(rf"^{_PKG}\s*==\s*(?P<version>\d+\.\d+\.\d+)\s*$")
+
+
+def requirement_name(line: str) -> str | None:
+    """The package a requirements line names, as pip normalises it
+    (lowercase, `_` to `-`): a VCS or editable pin, `name==…`, `name @ <url>`.
+    None for a blank, a comment or a line of another shape."""
+    s = line.strip()
+    if not s or s.startswith("#"):
+        return None
+    for pat in (VCS_REQUIREMENT, EDITABLE_REQUIREMENT, EDITABLE_PATH_REQUIREMENT):
+        if (m := pat.match(s)) is not None:
+            return m.group("name").lower().replace("_", "-")
+    for sep in ("==", " @ "):
+        if sep in s:
+            return s.split(sep, 1)[0].strip().lower().replace("_", "-")
+    return None
+
+
+def requirement_lines(text: str, name: str) -> list[str]:
+    """The lines of a requirements file (or `pip freeze` output) that name `name`."""
+    return [ln.strip() for ln in text.splitlines() if requirement_name(ln) == name]
 
 
 class GitError(RuntimeError):

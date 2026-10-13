@@ -50,6 +50,7 @@ from pathlib import Path
 
 from labkit import console, promises, protocol_block
 from labkit.runs import (
+    COMPLETED,
     MetricsError,
     bound_answering_run,
     read_metrics,
@@ -284,7 +285,7 @@ def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path 
     # A run that did not complete has numbers on disk and no finish —
     # "nothing may report it" (protocol-run-binding.md); naming the file
     # must not be a loophole around completion.
-    if facts is None or facts["state"] != "completed":
+    if facts is None or facts["state"] != COMPLETED:
         state = facts["state"] if facts else "no config.json"
         why = (facts or {}).get("why") or (
             "an incomplete run's numbers may not be reported, even when named explicitly"

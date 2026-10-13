@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import cast
 
@@ -86,7 +88,7 @@ def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
     has_metrics = (run_dir / "metrics.json").is_file()
     has_completion = (run_dir / "completion.json").is_file()
     if has_metrics and has_completion:
-        return "completed"
+        return COMPLETED
     if alive is True:
         return "running"
     if alive is None:
@@ -94,6 +96,26 @@ def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
     if has_completion:
         return "corrupt"
     return "unfinalized" if has_metrics else "crashed"
+
+
+#: the one state every consumer that picks or accepts a run compares to
+COMPLETED = "completed"
+
+#: a run id is its start time plus four hex: `2026-10-13T14-00-57_071a`.
+#: runlog writes it with RUN_ID_TIME; RUN_ID finds one in prose (a cited
+#: run) and names a run directory (`fullmatch`); `run_started` reads the time.
+RUN_ID_TIME = "%Y-%m-%dT%H-%M-%S"
+RUN_ID = re.compile(
+    r"\b(?P<date>\d{4}-\d{2}-\d{2})T(?P<h>\d{2})-(?P<m>\d{2})-(?P<s>\d{2})_[0-9a-f]{2,12}\b"
+)
+
+
+def run_started(run_id: str) -> datetime | None:
+    """The start time a run id carries (local time), None for a name of another shape."""
+    m = RUN_ID.fullmatch(run_id)
+    if m is None:
+        return None
+    return datetime.fromisoformat(f"{m['date']}T{m['h']}:{m['m']}:{m['s']}")
 
 
 class RunConfigError(ValueError):
@@ -362,7 +384,7 @@ def completed_runs(area: Path) -> list[Path]:
             raise RunConfigError(rd.error)
         if (
             rd.config is not None
-            and run_state(rd.dir, rd.config, alive=False) == "completed"
+            and run_state(rd.dir, rd.config, alive=False) == COMPLETED
         ):
             out.append(rd.dir)
     return out
@@ -430,7 +452,7 @@ def bound_runs(area: Path, pid: str) -> tuple[list[dict], list[dict]]:
         facts = _facts(rd)
         if facts is None:
             continue
-        if facts["state"] != "completed":
+        if facts["state"] != COMPLETED:
             facts.setdefault("why", facts["state"])
         elif facts["protocol_id"] == pid:
             taken.append(facts)

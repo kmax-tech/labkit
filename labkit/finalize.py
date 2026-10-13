@@ -58,6 +58,7 @@ from pathlib import Path
 
 from labkit import batch, console, promises, protocol_block
 from labkit.runs import (
+    RUN_ID,
     bound_answering_run,
     model_provenance_run,
     read_metrics,
@@ -73,7 +74,7 @@ from labkit.repo import (
 )
 from labkit.intent_check import main as intent_check_main, ids_in_prose
 from labkit.preflight import area_tests
-from labkit.protocol_check import RUN_ID, fields, open_holes
+from labkit.protocol_check import fields, open_holes
 
 
 def _tracked(repo: Path, path: Path) -> bool:
@@ -728,7 +729,7 @@ def cited_runs(text: str) -> list[str]:
     written back. Empty while the field is a placeholder or cites none."""
     for f in fields(text):
         if f.name == "answer to the question" and not f.placeholder:
-            return sorted(set(RUN_ID.findall(f.value)))
+            return sorted({m.group(0) for m in RUN_ID.finditer(f.value)})
     return []
 
 

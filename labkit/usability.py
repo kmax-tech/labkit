@@ -101,6 +101,7 @@ from labkit import (
     code_navigation,
     console,
     protocol_reading,
+    repo,
     runs,
     scaffold,
     scope_sha,
@@ -256,11 +257,7 @@ def _labkit_spec(python: Path) -> str:
     """The labkit line of `pip freeze` under `python` — the one this
     interpreter would import, named the way pip names it."""
     out = _sh([str(python), "-m", "pip", "freeze"], python.parent)
-    lines = [
-        ln
-        for ln in out.splitlines()
-        if re.match(r"^(-e\s+.*[/#]labkit\b|labkit\s*[=@])", ln)
-    ]
+    lines = repo.requirement_lines(out, "labkit")
     if len(lines) != 1:
         raise SystemExit(
             f"usability: expected one labkit line in `pip freeze` of "
