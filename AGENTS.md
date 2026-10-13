@@ -47,6 +47,10 @@ Before a commit: `.venv/bin/ruff check . && .venv/bin/ruff format --check . &&
 and the suite green. The versioned hook `.githooks/pre-commit` runs all four
 and refuses the commit otherwise; turn it on once per clone with
 `git config core.hooksPath .githooks`.
+A release is one step: write the `CHANGELOG.md` entry, then `just release
+X.Y.Z` sets the version, commits through the hook and tags that commit — in
+this order the tag test (`tests/test_release_tags.py`) is never red; the
+push stays with the author.
 
 The suite is self-contained: it passes in a fresh clone with an empty home
 directory. One test skips everywhere for want of

@@ -71,6 +71,15 @@ mechanischer Check — die Aufgabe des Pilots.
 
 ## Klein, ohne eigenen Punkt
 
+- [x] **Release in einem Schritt: `just release X.Y.Z`** (2026-10-13).
+  Auslöser: der Tag `v0.88.5` wurde auf `35734e0` gesetzt, bevor der
+  Versionscommit da war; der Tag-Test wurde rot, der Doku-Commit `a9dad50`
+  ging mit `--no-verify` am Hook vorbei, und der Tag blieb auf dem alten
+  Commit — wer `@v0.88.5` installierte, bekam die Fixes unter dem Namen
+  0.88.4. Das Rezept hält die eine Reihenfolge ein: Changelog-Eintrag
+  geschrieben → Version gesetzt → Commit durch den Hook → Tag auf diesen
+  Commit; Push bleibt beim Autor. Prüfstelle: das nächste Release, der
+  Tag-Test bleibt grün.
 - **Stand 2026-10-08, was labkit noch schuldet** (nach Standard 0.19,
   `labkit-params`, Runde 14/15):
   1. [x] **Modell-Provenienz, die labkit nicht sieht** — die Hotel-Bereiche
