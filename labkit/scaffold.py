@@ -449,7 +449,18 @@ def area_slug(name: str) -> str:
 
 
 def area_readme(nn: str, slug: str, skeleton: bool) -> str:
-    """The area README: the one question, the route through the area, the contract on one page."""
+    """The area README: the one question, the route through the area, the contract on one page.
+
+    A count (`skeleton=False`: cost seconds without a model) carries no blank:
+    its question and contract live in the protocol, and a README placeholder
+    was the one gate line left in the cloud probe (draw 11, 2026-10-13)."""
+    question = (
+        "**The one question.** <one sentence — the same question as in the protocol's\n"
+        'Intent; if it needs an "and", it is two experiments>'
+        if skeleton
+        else f"**The one question** is the protocol's Question field (`PROTOCOL-{slug}.md`);\n"
+        "a count asks one and reports one number."
+    )
     returns = (
         "**What `evaluate_rows()` returns.** <per registered promise its key, in the order\n"
         "of the decision — from the protocol's [[promise]] sentences, not from the\n"
@@ -458,18 +469,17 @@ def area_readme(nn: str, slug: str, skeleton: bool) -> str:
         "`scripts/01_measure.py` (`evaluate_rows()`); `02_analyze.py --check` and the\n"
         "test call it there, and `intent-check` holds the protocol's ids to these keys."
         if skeleton
-        else "**What `evaluate_rows()` returns.** <the number under `METRIC_KEY` — and,\n"
-        "only if the protocol registers ids, one key per id>. The formula lives once, in `scripts/01_measure.py`;\n"
-        "`--check` and the test call it, `intent-check` and `finalize` hold the ids to\n"
-        "these keys."
+        else "**What `evaluate_rows()` returns.** The number under `METRIC_KEY` of\n"
+        "`scripts/01_measure.py`; a count registers no ids. The formula lives once, there;\n"
+        "`--check` and the test call it, and `finalize` holds the protocol's Answer line\n"
+        "to the run's `metrics.json`."
     )
     recheck = "`02_analyze.py --check`" if skeleton else "`01_measure.py --check`"
     return f"""# Experiment {nn}: {slug}
 
 *Self-contained: data, scripts, output and this description live here.*
 
-**The one question.** <one sentence — the same question as in the protocol's
-Intent; if it needs an "and", it is two experiments>
+{question}
 
 <!-- labkit:route -->
 **Trace it.**
@@ -491,7 +501,7 @@ through `runlog` · `finalize` · `protocol-fill --from-run` writes the number b
 ## State
 
 - [ ] Registration written in the protocol (**before** the first run)
-{"- [ ] `--probe` read, parser cases in the test" if skeleton else "- [ ] the area test green (`.venv/bin/python -m pytest tests/test_" + nn + "_" + slug + ".py`)"}
+{"- [ ] `--probe` read, parser cases in the test" if skeleton else "- [ ] the area test green (`.venv/bin/python -m pytest tests/test_" + nn + "_" + slug.replace("-", "_") + ".py`)"}
 - [ ] Run, `protocol-fill --from-run`, `finalize` green
 """
 

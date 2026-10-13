@@ -501,6 +501,10 @@ sieht das niemand.
   Artefakte, README-Korrektur) — bei seconds einen Commit nach dem Lauf
   zulassen, wenn der Lauf aus dem committeten Stand reproduzierbar ist;
   (n) bleibt: Feldnamen aus dem Task stempeln.
+  **Gebaut 2026-10-13 (0.88.1): (u)+(r)** — bei einer Zählung stempelt die
+  README keinen Platzhalter mehr (Frage und Vertrag leben im Protokoll), und
+  der Testpfad im Zustandskasten stimmt. Prüfstelle: ein Cloud-Durchgang auf
+  0.88.1 mit null Gate-Zeilen.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:

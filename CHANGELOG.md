@@ -5,6 +5,25 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.88.1 — 2026-10-13
+
+### Changed — a count's README carries no blank
+
+- **`labkit-init exp --cost seconds` (no model)** stamps the area README
+  without a placeholder: the one-question line points to the protocol's
+  Question field, the contract paragraph names `METRIC_KEY` and the
+  write-back gate. The question and the contract live once, in the
+  protocol; the README's blank was the one gate line left in the cloud
+  probe (draw 11, `docs/usability/2026-10-12-cloud-fable.md`), reported by
+  `finalize` only after the run. Skeleton stamps (a model, or
+  minutes/hours) keep their placeholders.
+
+### Fixed
+
+- The README's state box named the area test with the slug's hyphens
+  (`tests/test_01_docs-per-case.py`); the stamped file has underscores. The
+  line now names the file that exists.
+
 ## 0.88.0 — 2026-10-12
 
 ### Added — `protocol-fill --from-run`: the number is written back, never retyped

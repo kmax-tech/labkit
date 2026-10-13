@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import rules, scaffold
+from labkit import finalize, rules, scaffold
 
 
 def quiet(fn, *args, **kw):  # noqa: ANN001, ANN002, ANN003, ANN201 — test helper
@@ -171,6 +171,13 @@ class Exp(unittest.TestCase):
         readme = (area / "README.md").read_text(encoding="utf-8")
         self.assertIn("evaluate_rows", readme)
         self.assertNotIn("--probe", readme)  # the counting skeleton has no probe
+        # a count's README carries no blank: question and contract live in the
+        # protocol (cloud draw 11: the placeholder was the one gate line left)
+        self.assertEqual(finalize.readme_placeholders(area), [])
+        self.assertIn("PROTOCOL-foo-bar.md", readme)
+        # the state box names the test file as stamped (underscores, not the slug)
+        self.assertIn("tests/test_01_foo_bar.py", readme)
+        self.assertTrue((self.root / "tests" / "test_01_foo_bar.py").is_file())
         self.assertIn('"_prov": {"run": run.run_id}', script)  # rows name their run
         self.assertLess(len(proto.splitlines()), 50)  # was 102 lines of guide prose
 
