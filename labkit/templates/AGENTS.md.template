@@ -14,14 +14,16 @@ LAB-017 The number of audits follows the cost tier.
 1. `labkit-init exp <name> --cost seconds` (`--model <alias>` when a model is
    in the loop) — stamps the seconds cut of the protocol and the matching
    skeleton.
-2. Write the registration: in the TOML head `type` (`cost = "seconds"` is
-   stamped), then question · success criterion · admissibility condition ·
-   unit; with a model also the prompt and the null condition. Every coinage
-   of your own — a constant such as a margin, arms, item ids, the model
-   alias — gets half a sentence under "Terms of this protocol".
-   `protocol-check --contract` names the labels; fill by label with
-   `protocol-fill <PROTOCOL> "<Label>" "<value>"`, the prompt block from the
-   script's `PROMPT` constants with `protocol-fill <PROTOCOL> --prompts`.
+2. Write the registration: `protocol-fill <PROTOCOL> --list` names every
+   open field, the TOML head's `type` first (`cost = "seconds"` is stamped).
+   A count owes question · data · exclusions · unit; with a model also the
+   success criterion, the admissibility condition, the prompt and the null
+   condition. Every coinage of your own — a constant such as a margin, arms,
+   item ids, the model alias — gets half a sentence under "Terms of this
+   protocol". Fill by label with `protocol-fill <PROTOCOL> "<Label>"
+   "<value>"` (`protocol-fill <PROTOCOL> type exploratory` for the head),
+   the prompt block from the script's `PROMPT` constants with
+   `protocol-fill <PROTOCOL> --prompts`.
 3. Fill the skeleton (with a model: read `--show 2`), run `code-check <area>`.
 4. Commit, then the run — in the foreground; it is the instrument check too.
 5. `protocol-fill PROTOCOL-<name>.md --from-run <run_id>` writes the number

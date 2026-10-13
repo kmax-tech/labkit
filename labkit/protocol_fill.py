@@ -90,6 +90,35 @@ def fill(
 
 
 _FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})")
+HEAD_TYPE = re.compile(r'^(type\s*=\s*)"<[^"\n]*>"\s*$', re.M)
+HEAD_TYPE_LABEL = "type"
+
+
+def head_type_open(text: str) -> int | None:
+    """Line number of the TOML head's `type = "<…>"` placeholder, or None once set.
+
+    The stamp leaves `type` as a placeholder in the head; `--list` named only
+    the prose fields, so an agent filled those, hit the hook's "MISSING (must):
+    [protocol] type" and edited the head by hand (cloud probe, Haiku 5.5,
+    2026-10-13)."""
+    m = HEAD_TYPE.search(text)
+    return text.count("\n", 0, m.start()) + 1 if m else None
+
+
+def fill_head_type(text: str, value: str) -> str:
+    """Set the head's `type` from its placeholder; one of `protocol_block.TYPES`."""
+    from labkit import protocol_block  # lazy: labkit modules import each other
+
+    if value not in protocol_block.TYPES:
+        raise ValueError(
+            f"type must be one of {' | '.join(protocol_block.TYPES)}, not {value!r}"
+        )
+    if head_type_open(text) is None:
+        raise ValueError(
+            "the head's type is already set (edit the TOML head to change it)"
+        )
+    return HEAD_TYPE.sub(lambda m: f'{m.group(1)}"{value}"', text, count=1)
+
 
 RUNS_PLACEHOLDER = re.compile(r"^(\s*[-*]\s+)<run_id>\s+—\s+<[^>]*>\s*$")
 RUNS_HEADING = re.compile(r"^## Runs\b")
@@ -230,6 +259,21 @@ def _write_back(args: argparse.Namespace, text: str) -> int:
     return 0
 
 
+def _list_open(text: str) -> int:
+    """`--list`: every open field, the TOML head's `type` first."""
+    holes = placeholder_fields(text)
+    head_line = head_type_open(text)
+    if head_line is not None:
+        holes = [
+            (head_line, f"{HEAD_TYPE_LABEL}  (TOML head: exploratory | confirmatory)")
+        ] + holes
+    if not holes:
+        print("no placeholder fields left")
+    for n, label in holes:
+        print(f"{n:4d}  {label}")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     """Command line of `protocol-fill`: fill one placeholder field by its label, or the Prompt block from the script."""
 
@@ -274,12 +318,7 @@ def main(argv: list[str]) -> int:
         return 2
     text = args.protocol.read_text(encoding="utf-8")
     if args.list:
-        holes = placeholder_fields(text)
-        if not holes:
-            print("no placeholder fields left")
-        for n, label in holes:
-            print(f"{n:4d}  {label}")
-        return 0
+        return _list_open(text)
     if args.prompts:
         try:
             new = fill_prompts(text, prompt_constants(args.protocol.resolve().parent))
@@ -294,8 +333,16 @@ def main(argv: list[str]) -> int:
     if not args.field or not args.value:
         ap.error("need FIELD and VALUE (or --list or --from-run)")
     try:
-        new = fill(
-            text, args.field, " ".join(args.value), line_no=args.line, force=args.force
+        new = (
+            fill_head_type(text, " ".join(args.value))
+            if args.field.strip().lower() == HEAD_TYPE_LABEL
+            else fill(
+                text,
+                args.field,
+                " ".join(args.value),
+                line_no=args.line,
+                force=args.force,
+            )
         )
     except ValueError as exc:
         print(f"protocol-fill: {exc}")

@@ -5,6 +5,25 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.88.3 — 2026-10-13
+
+### Added — `protocol-fill` knows the head's `type`
+
+- **`protocol-fill PROTOCOL --list`** names the TOML head's `type` first
+  while it is still the stamped placeholder, and **`protocol-fill PROTOCOL
+  type exploratory`** (or `confirmatory`) sets it. Before, `--list` showed
+  only the prose fields: an agent filled those, the post-edit hook answered
+  "MISSING (must): [protocol] type", and the head was edited by hand (cloud
+  probe, Haiku 5.5, 2026-10-13).
+
+### Fixed
+
+- The stamped `AGENTS.md`'s seconds lane still asked for a success
+  criterion and an admissibility condition at a count — the 0.87.0 cut had
+  dropped both from the contract, and the agent logged the contradiction.
+  Step 2 now follows `--list` and says what a count owes and what only a
+  model adds.
+
 ## 0.88.2 — 2026-10-13
 
 ### Added — the score names the model

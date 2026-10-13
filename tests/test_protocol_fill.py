@@ -6,6 +6,8 @@ The label match must hit single- and multi-line placeholders, refuse
 ambiguity and silent overwrites, and leave every other byte alone.
 """
 
+import contextlib
+import io
 import sys
 import tempfile
 import unittest
@@ -13,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit import code_check, protocol_check, protocol_fill  # noqa: E402
+from labkit import code_check, protocol_block, protocol_check, protocol_fill  # noqa: E402
 
 SAMPLE = """# Experiment protocol: x
 
@@ -108,6 +110,41 @@ SCRIPT = (
     'PROMPT_NULL = ("Is this text written in English?\\n\\n"\n'
     '               "Text: {text}\\n\\n" + ANSWER_LINE + "\\n\\nAnswer:")\n'
 )
+
+
+class HeadType(unittest.TestCase):
+    HEAD = (
+        "# Experiment protocol: x\n\n```toml\n[protocol]\n"
+        f'standard = "{protocol_block.STANDARD}"\nid = "p-0123456789abcdef"\n'
+        'type = "<exploratory | confirmatory>"\ncost = "seconds"\nfrozen = false\n'
+        'preflight_audit = "none"\n```\n\n'
+        "- **Unit:** <what one row is>\n"
+    )
+
+    def test_list_names_the_head_type_first_and_fill_sets_it(self):
+        self.assertEqual(protocol_fill.head_type_open(self.HEAD), 7)
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "PROTOCOL-x.md"
+            p.write_text(self.HEAD, encoding="utf-8")
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(protocol_fill.main([str(p), "--list"]), 0)
+                self.assertEqual(protocol_fill.main([str(p), "type", "exploratory"]), 0)
+            text = p.read_text(encoding="utf-8")
+        self.assertEqual(out.getvalue().splitlines()[0].split()[:2], ["7", "type"])
+        self.assertIn('type = "exploratory"', text)
+        self.assertIsNone(protocol_fill.head_type_open(text))
+        # the head reads: the hook's "MISSING (must): [protocol] type" is gone
+        self.assertEqual(protocol_block.head(text).type, "exploratory")
+
+    def test_a_wrong_type_and_a_set_type_are_refused(self):
+        with self.assertRaises(ValueError):
+            protocol_fill.fill_head_type(self.HEAD, "descriptive")
+        with self.assertRaises(ValueError):
+            protocol_fill.fill_head_type(
+                self.HEAD.replace('"<exploratory | confirmatory>"', '"exploratory"'),
+                "confirmatory",
+            )
 
 
 class Prompts(unittest.TestCase):
