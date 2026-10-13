@@ -75,6 +75,7 @@ three agent audits. `usability` makes that measurable and repeatable:
 usability stage /tmp/probe --venv .venv   # fresh lab repo, area stamped as the route does (seconds cut + counting skeleton), fixture, TASK.md
 usability stage /tmp/probe --venv .venv --task judge   # seconds cut + measure skeleton, a model in the loop (--model is the judge default)
 usability stage /tmp/probe --venv .venv --cost unset   # the full form; the agent declares the tier
+usability stage /tmp/probe --restamp --keep TASK.md   # the same probe stamped again with this labkit, in place; --keep names its hand edits (remembered in probe.json); venv rebuilt from the pin, change committed, push stays with you
 #   hand <probe>.prompt.md (CLAUDE.md as a session loads it + the TASK.md pointer) to a COLD agent; it logs one line per step
 usability score /tmp/probe                # number == truth? bound? tier? wall-clock, steps per tag → probe.score.json
 usability score /tmp/probe --agent fable-5.1   # the model that drew, stated by the operator (a cloud session leaves no transcript)

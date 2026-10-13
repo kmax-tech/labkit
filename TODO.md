@@ -71,6 +71,21 @@ mechanischer Check — die Aufgabe des Pilots.
 
 ## Klein, ohne eigenen Punkt
 
+- [x] **`usability stage --restamp`: die Probe stempelt das Werkzeug nach,
+  nicht das Gedächtnis** (0.88.6, 2026-10-13). Auslöser: acht Nachstempel
+  von `labkit-probe` von Hand, und zwei Sitzungen rekonstruierten das Rezept
+  am selben Tag verschieden („nur fünf Dateien“ gegen „alle gestempelten,
+  Cloud-Edits aussparen“). Jetzt: frischer Stempel über die Probe gelegt,
+  `--keep` für die Hand-Edits (`TASK.md`, `.gitignore`,
+  `.claude/settings.json`), in `probe.json` gemerkt; venv aus dem Pin,
+  Commit am Hook vorbei, Push beim Autor. Erster Lauf: Probe auf v0.88.5
+  (`0eed22d`). Nebenbefund dabei: die gestempelte `.gitignore` ignorierte nur
+  das Verzeichnis `.venv/`, nicht den Link, den `--venv` legt — behoben.
+  **Offen, nur notiert:** `labkit-check` meldet die Pin-Zeile der Probe als
+  STALE, weil `requirements.txt` den Tag und das Lock (aus `pip freeze`) den
+  Commit nennt, auf den der Tag zeigt — seit jedem Stempel so, kein Schaden
+  (der SessionStart-Hook liest nur die `installed`-Zeile). Entscheiden: Tag
+  auflösen und vergleichen, oder das Lock als Commit-Form des Tags lesen.
 - [x] **Release in einem Schritt: `just release X.Y.Z`** (2026-10-13).
   Auslöser: der Tag `v0.88.5` wurde auf `35734e0` gesetzt, bevor der
   Versionscommit da war; der Tag-Test wurde rot, der Doku-Commit `a9dad50`

@@ -5,6 +5,30 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.88.6 — 2026-10-13
+
+### Added — `usability stage --restamp`: the probe stamped again, by the tool
+
+- **`usability stage DIR --restamp [--keep PATH ...]`** lays a fresh stamp
+  (task and flags from `<dir>.probe.json`) over an existing probe file by
+  file: a stamped file whose bytes changed is overwritten, a new one added,
+  a `--keep` path (the probe's hand edits: `TASK.md`, `.gitignore`, the
+  cloud's `.claude/settings.json`) left alone and remembered in
+  `probe.json` (`kept`, `restamped`). The venv is rebuilt from the stamped
+  pin (or linked with `--venv`), `requirements.lock` comes from it, the
+  change is committed past the hook; the push stays with the operator. A
+  `--keep` path the stamp does not produce and a dirty tree are refused.
+  Why: eight re-stamps of `labkit-probe` were done by hand from memory, and
+  on 2026-10-13 two sessions reconstructed the recipe differently — one
+  would have copied the task sheet and lost the cloud edits.
+
+### Fixed
+
+- The stamped `.gitignore` ignored `.venv/` — a directory only. With
+  `--venv` the probe's `.venv` is a symlink, and `git add -A` committed it
+  (the first `--restamp` found the link in the fresh stamp's tracked
+  files). The pattern is `.venv` now: directory or link.
+
 ## 0.88.5 — 2026-10-13
 
 ### Fixed — three things a cold agent tripped over (Haiku 5.5, draw H4)

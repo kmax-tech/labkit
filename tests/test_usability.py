@@ -7,6 +7,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -258,6 +259,70 @@ class Archive(unittest.TestCase):
         (self.root.parent / "count-1.score.json").write_text('{"number": 4.0}')
         with self.assertRaises(SystemExit):
             usability.archive(self.root, self.transcript, self.dest)
+
+
+class RestampLaysTheStampOverTheProbe(unittest.TestCase):
+    """`stage --restamp` (2026-10-13): a changed stamped file is overwritten,
+    a new one added, an equal one untouched, a kept hand edit left alone; a
+    kept path the stamp does not produce is refused, not silently ignored."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        base = Path(self.tmp.name)
+        self.fresh, self.probe = base / "fresh", base / "probe"
+        for rel, text in (
+            ("AGENTS.md", "new agents\n"),
+            ("TASK.md", "stamped task\n"),
+            ("same.txt", "same\n"),
+            ("experiments/01/new.py", "added\n"),
+        ):
+            (self.fresh / rel).parent.mkdir(parents=True, exist_ok=True)
+            (self.fresh / rel).write_text(text)
+        (self.fresh / "CLAUDE.md").symlink_to("AGENTS.md")
+        self.probe.mkdir()
+        (self.probe / "AGENTS.md").write_text("old agents\n")
+        (self.probe / "TASK.md").write_text("hand-edited task\n")
+        (self.probe / "same.txt").write_text("same\n")
+        (self.probe / "log.md").write_text("the agent's own file\n")
+        self.files = [
+            "AGENTS.md",
+            "CLAUDE.md",
+            "TASK.md",
+            "same.txt",
+            "experiments/01/new.py",
+        ]
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_overwritten_added_kept_unchanged(self):
+        done = usability.restamp_files(self.fresh, self.probe, self.files, ["TASK.md"])
+        self.assertEqual(done.overwritten, ["AGENTS.md"])
+        self.assertEqual(done.added, ["CLAUDE.md", "experiments/01/new.py"])
+        self.assertEqual(done.kept, ["TASK.md"])
+        self.assertEqual(done.unchanged, ["same.txt"])
+        self.assertEqual((self.probe / "AGENTS.md").read_text(), "new agents\n")
+        self.assertEqual((self.probe / "TASK.md").read_text(), "hand-edited task\n")
+        self.assertEqual((self.probe / "experiments/01/new.py").read_text(), "added\n")
+        self.assertEqual(os.readlink(self.probe / "CLAUDE.md"), "AGENTS.md")
+        self.assertEqual((self.probe / "log.md").read_text(), "the agent's own file\n")
+
+    def test_a_kept_path_that_equals_the_stamp_is_unchanged_not_kept(self):
+        done = usability.restamp_files(self.fresh, self.probe, self.files, ["same.txt"])
+        self.assertEqual(done.kept, [])
+        self.assertIn("same.txt", done.unchanged)
+
+    def test_a_second_pass_changes_nothing(self):
+        usability.restamp_files(self.fresh, self.probe, self.files, ["TASK.md"])
+        done = usability.restamp_files(self.fresh, self.probe, self.files, ["TASK.md"])
+        self.assertEqual((done.overwritten, done.added), ([], []))
+        self.assertEqual(done.kept, ["TASK.md"])
+
+    def test_a_kept_path_the_stamp_does_not_produce_is_refused(self):
+        with self.assertRaises(SystemExit) as cm:
+            usability.restamp_files(self.fresh, self.probe, self.files, ["TASKS.md"])
+        self.assertIn("TASKS.md", str(cm.exception))
+        self.assertEqual((self.probe / "AGENTS.md").read_text(), "old agents\n")
 
 
 if __name__ == "__main__":

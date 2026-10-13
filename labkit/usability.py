@@ -1,6 +1,7 @@
 """usability — stage a probe lab repo for a cold agent, then score the trace.
 
     usability stage <dir> [--venv PATH]     a fresh lab repo with one kept-number task
+    usability stage <dir> --restamp [--keep PATH ...]   the same probe stamped again with this labkit
     usability score <dir> [--transcript F] [--agent M]  number · binding · log (· transcript) → one table, one JSON
     usability trace <transcript>            the agent's timeline, one line per tool call
 
@@ -40,6 +41,22 @@ stage
     Side effects: a git repo with three commits, a venv or a symlink, three
     sidecar files next to <dir> (probe.json, log.md, prompt.md).
 
+stage --restamp
+    The probe stamped again with this labkit, in place: a fresh stamp with
+    the task and flags `<dir>.probe.json` records is laid over <dir> file by
+    file — a stamped file whose bytes changed is overwritten, a new one
+    added, and every path named with `--keep` (the probe's hand edits: the
+    task sheet, the ignore list, a hook of the cloud) stays as it is. The
+    kept paths are recorded in `<dir>.probe.json` and are the default next
+    time. The probe's venv is rebuilt from the stamped pin (or linked with
+    `--venv`), so `requirements.lock` and `labkit-check` agree, and the
+    change is committed past the hook (the stamped protocol is placeholders
+    by design). The push stays with the operator. Why (2026-10-13): eight
+    re-stamps were done by hand, each from memory, and two sessions
+    reconstructed the recipe differently — one would have copied the task
+    sheet and lost the cloud edits. Refuses a dirty tree and a `--keep`
+    path the stamp does not produce.
+
 score
     Reads the latest run of the stamped area — the number under the named
     key, the protocol the run is bound to (and whether it is frozen), the
@@ -64,7 +81,9 @@ import re
 import subprocess
 import sys
 import time
-from dataclasses import asdict, dataclass
+import shutil
+import tempfile
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 from labkit import (
@@ -230,6 +249,8 @@ class Probe:
     scaffold_sha: str  # scaffolder + stamped templates
     scaffold_flags: list[str]
     target_minutes: int
+    restamped: str | None = None  # the last `stage --restamp`, if any
+    kept: list[str] = field(default_factory=list)  # hand edits a restamp leaves alone
 
 
 def plant_fixture(root: Path) -> float:
@@ -463,6 +484,176 @@ def stage(
         f"  probe:  {_sidecar(root, 'probe.json')}\n  prompt: {prompt}\n"
         f"next: hand the prompt file's text to a cold agent (fresh context, no "
         f"history), then `usability score {root} --transcript <its transcript>`"
+    )
+    return 0
+
+
+@dataclass
+class Restamp:
+    """What `restamp_files` did, path by path (relative to the probe)."""
+
+    overwritten: list[str]
+    added: list[str]
+    kept: list[str]  # named in keep and differing from the fresh stamp
+    unchanged: list[str]
+
+
+def restamp_files(
+    fresh: Path, target: Path, files: list[str], keep: list[str]
+) -> Restamp:
+    """Lay the fresh stamp over the probe: FILES (relative paths, the fresh
+    stamp's tracked files) are copied from FRESH to TARGET, except that a
+    path in KEEP whose bytes differ stays as it is. Side effects: writes
+    under TARGET. A KEEP path the stamp does not produce is refused — a typo
+    would protect nothing and say so never."""
+    unknown = sorted(set(keep) - set(files))
+    if unknown:
+        raise SystemExit(
+            f"usability: --keep names paths the stamp does not produce: "
+            f"{', '.join(unknown)}"
+        )
+    done = Restamp([], [], [], [])
+    for rel in sorted(files):
+        src, dst = fresh / rel, target / rel
+        if src.is_symlink():  # CLAUDE.md -> AGENTS.md: the link, not its text
+            if dst.is_symlink() and os.readlink(dst) == os.readlink(src):
+                done.unchanged.append(rel)
+                continue
+            if rel in keep:
+                done.kept.append(rel)
+                continue
+            if dst.exists() or dst.is_symlink():
+                dst.unlink()
+                done.overwritten.append(rel)
+            else:
+                done.added.append(rel)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            os.symlink(os.readlink(src), dst)
+            continue
+        new = src.read_bytes()
+        if dst.is_file() and dst.read_bytes() == new:
+            done.unchanged.append(rel)
+            continue
+        if rel in keep:
+            done.kept.append(rel)
+            continue
+        existed = dst.is_file()
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(new)
+        (done.overwritten if existed else done.added).append(rel)
+    return done
+
+
+def _probe_venv(root: Path, venv: Path | None) -> None:
+    """The probe's `.venv`: a link to VENV, or built from the stamped pin.
+    Side effects: removes the old one, creates the new one."""
+    old = root / ".venv"
+    if old.is_symlink():
+        old.unlink()
+    elif old.is_dir():
+        shutil.rmtree(old)
+    if venv is not None:
+        if not (venv / "bin" / "python").is_file():
+            raise SystemExit(f"usability: --venv {venv} has no bin/python")
+        os.symlink(venv.resolve(), old)
+        return
+    _sh([sys.executable, "-m", "venv", ".venv"], root)
+    _sh([str(old / "bin" / "pip"), "install", "-q", scaffold.labkit_pin()], root)
+
+
+def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
+    """`stage --restamp`: see the module docstring. KEEP None means the
+    paths `<dir>.probe.json` recorded last time."""
+    probe_file = _sidecar(root, "probe.json")
+    if not probe_file.is_file():
+        raise SystemExit(
+            f"usability: {probe_file} missing — {root} was not staged by "
+            f"`usability stage`, nothing to restamp"
+        )
+    if not (root / ".git").is_dir():
+        raise SystemExit(f"usability: {root} is not a git repo")
+    dirty = _sh(["git", "status", "--porcelain", "--untracked-files=no"], root)
+    if dirty.strip():
+        raise SystemExit(
+            f"usability: {root} has uncommitted changes — commit or stash "
+            f"first:\n{dirty.rstrip()}"
+        )
+    probe = Probe(**json.loads(probe_file.read_text(encoding="utf-8")))
+    kept_paths = probe.kept if keep is None else keep
+    flags = probe.scaffold_flags
+    cost = flags[flags.index("--cost") + 1] if "--cost" in flags else "unset"
+    model = "--model" in flags
+    _probe_venv(root, venv)
+    with tempfile.TemporaryDirectory() as tmp:
+        fresh = Path(tmp) / root.name  # the stamp names the repo after its dir
+        with contextlib.redirect_stdout(sys.stderr):  # the stamp's log
+            stage(fresh, root / ".venv", cost=cost, task=probe.task, model=model)
+        files = _sh(["git", "ls-files"], fresh).split("\n")
+        done = restamp_files(fresh, root, [f for f in files if f], kept_paths)
+        fresh_probe = Probe(
+            **json.loads(_sidecar(fresh, "probe.json").read_text(encoding="utf-8"))
+        )
+    changed = done.overwritten + done.added
+    extra = other_requirements((root / "requirements.txt").read_text(encoding="utf-8"))
+    if extra and venv is None:
+        _sh([str(root / ".venv" / "bin" / "pip"), "install", "-q", *extra], root)
+        lock = _sh([str(root / ".venv" / "bin" / "pip"), "freeze"], root)
+        if (root / "requirements.lock").read_text(encoding="utf-8") != lock:
+            (root / "requirements.lock").write_text(lock, encoding="utf-8")
+            if "requirements.lock" not in changed:
+                changed.append("requirements.lock")
+    probe = replace(
+        probe,
+        labkit_installed=fresh_probe.labkit_installed,
+        scaffold_sha=fresh_probe.scaffold_sha,
+        scaffold_flags=fresh_probe.scaffold_flags,
+        restamped=time.strftime("%Y-%m-%dT%H:%M:%S"),
+        kept=list(kept_paths),
+    )
+    probe_file.write_text(json.dumps(asdict(probe), indent=1), encoding="utf-8")
+    # pip freeze names the commit the tag resolved to; the stamped pin names the tag
+    pin = next(
+        ln
+        for ln in (root / "requirements.txt").read_text(encoding="utf-8").splitlines()
+        if ln.startswith("labkit")
+    )
+    m = re.search(r"@(v\d+\.\d+\.\d+)$", pin)
+    label = m.group(1) if m else pin
+    report = "\n".join(
+        f"  {what:12s}{path}"
+        for what, paths in (
+            ("overwritten", done.overwritten),
+            ("added", done.added),
+            ("kept", done.kept),
+        )
+        for path in paths
+    )
+    if not changed:
+        print(
+            f"restamp {root}: nothing to change at labkit {label}"
+            + (f"\n{report}" if report else "")
+        )
+        return 0
+    _sh(["git", "add", "--", *sorted(changed)], root)
+    _sh(
+        [
+            "git",
+            "commit",
+            "-q",
+            "--no-verify",
+            "-m",
+            f"Probe re-stamped at labkit {label}",
+            "-m",
+            f"usability stage --restamp; what changed between the stamps is "
+            f"labkit's CHANGELOG.md.\n\n{report}",
+        ],
+        root,
+    )
+    print(
+        f"restamp {root}: committed at labkit {label}\n{report}\n"
+        f"  probe:      {probe_file}\n"
+        f"next: amend the why onto the commit if the changelog is not enough, "
+        f"then push — the push stays with you"
     )
     return 0
 
@@ -1083,6 +1274,19 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     s.add_argument("dir")
     s.add_argument("--venv", help="link this venv instead of creating one")
     s.add_argument(
+        "--restamp",
+        action="store_true",
+        help="stamp the probe in DIR again with this labkit, in place; task "
+        "and tier come from <dir>.probe.json",
+    )
+    s.add_argument(
+        "--keep",
+        action="append",
+        metavar="PATH",
+        help="with --restamp: a hand-edited path the stamp leaves alone "
+        "(repeatable; default: the paths kept last time)",
+    )
+    s.add_argument(
         "--cost",
         choices=("seconds", "minutes", "hours", "unset"),
         metavar="TIER",
@@ -1099,8 +1303,8 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     s.add_argument(
         "--task",
         choices=sorted(TASKS),
-        default="count",
-        help="which task sheet and fixture: count (deterministic) or judge (a model)",
+        help="which task sheet and fixture: count (deterministic, the default) "
+        "or judge (a model)",
     )
     c = sub.add_parser("score", help="number, binding and log of a finished probe")
     c.add_argument("dir")
@@ -1212,12 +1416,15 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         return 0
     root = Path(args.dir).resolve()
     if args.cmd == "stage":
+        venv = Path(args.venv).resolve() if args.venv else None
+        if args.restamp:
+            if args.cost or args.task or args.model:
+                ap.error("--restamp takes task, tier and model from <dir>.probe.json")
+            return restamp(root, args.keep, venv)
+        if args.keep:
+            ap.error("--keep belongs to --restamp")
         return stage(
-            root,
-            Path(args.venv).resolve() if args.venv else None,
-            cost=args.cost,
-            task=args.task,
-            model=args.model,
+            root, venv, cost=args.cost, task=args.task or "count", model=args.model
         )
     if args.archive and not args.transcript:
         ap.error("--archive needs --transcript")
