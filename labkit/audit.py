@@ -62,7 +62,7 @@ import time
 from pathlib import Path
 from typing import NamedTuple
 
-from labkit import findings, llm, promises, protocol_block, rules
+from labkit import console, findings, llm, promises, protocol_block, rules
 from labkit.repo import area_protocols, layout_root, no_such_area
 from labkit.runs import bound_answering_run, completed_runs, read_outputs
 from labkit.scope_sha import area_stamp, imported_repo_helpers, repo_imports
@@ -594,7 +594,7 @@ def _clarity(args: argparse.Namespace) -> int:
 
 def cli() -> None:
     """Entry point for the installed `labkit-audit` command."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

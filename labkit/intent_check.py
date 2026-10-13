@@ -46,10 +46,9 @@ run is named with --metrics.
 from __future__ import annotations
 
 import ast
-import sys
 from pathlib import Path
 
-from labkit import promises, protocol_block
+from labkit import console, promises, protocol_block
 from labkit.runs import (
     MetricsError,
     bound_answering_run,
@@ -358,7 +357,7 @@ def choose_bound(protocol: Path, pid: str) -> Path | int:
 
 def cli() -> None:
     """Entry point for the installed `intent-check` command."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

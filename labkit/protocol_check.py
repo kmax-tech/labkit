@@ -41,11 +41,10 @@ Protocols with a prose head (Standard 0.16/0.17) are read by labkit 0.47.
 """
 
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import promises, protocol_block
+from labkit import console, promises, protocol_block
 from labkit.repo import git_root, git_run
 from labkit.scope_sha import audit_stamp_drift
 
@@ -760,10 +759,12 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             "recognised by — read it BEFORE writing, not from the pre-commit hook"
         )
         return 0
-    if argv and argv[0] == "--contract":
+    # `protocol-check PROTOCOL --contract` read the flag as a file name
+    # ("not readable: '--contract'", 2026-10-13): a flag is a flag anywhere.
+    if "--contract" in argv:
         print_contract()
         return 0
-    if argv and argv[0] == "--guide":
+    if "--guide" in argv:
         fg = find_field_guide()
         print(fg or "field guide not found")
         return 0 if fg else 1
@@ -1000,7 +1001,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
 
 def cli() -> None:
     """Entry point for the installed `protocol-check` command."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

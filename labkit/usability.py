@@ -67,7 +67,14 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from labkit import agent_transcript, code_navigation, protocol_reading, runs, scaffold
+from labkit import (
+    agent_transcript,
+    code_navigation,
+    console,
+    protocol_reading,
+    runs,
+    scaffold,
+)
 
 #: What the scaffold stamps into a repo and an area; their sha pins the measured
 #: condition. All of it ships with labkit — the probe needs no house machinery.
@@ -1224,7 +1231,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
 
 def cli() -> None:
     """Console entry point of `usability`."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

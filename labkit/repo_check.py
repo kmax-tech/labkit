@@ -39,7 +39,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import install_hooks, protocol_block, rules
+from labkit import console, install_hooks, protocol_block, rules
 from labkit.repo import git_run
 
 PIN_FILES = ("requirements.txt", "requirements.lock")
@@ -344,7 +344,7 @@ def main(argv: list[str]) -> int:
 
 def cli() -> None:
     """Entry point for the installed `labkit-check` command."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

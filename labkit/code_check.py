@@ -63,10 +63,9 @@ from __future__ import annotations
 import ast
 import json
 import re
-import sys
 from pathlib import Path
 
-from labkit import promises, protocol_block, rules
+from labkit import console, promises, protocol_block, rules
 from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 from labkit.repo import area_path, area_protocols, layout_root, no_such_area
 from labkit.scope_sha import LOCAL_ROOTS, area_files, imported_repo_helpers
@@ -1211,7 +1210,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
 
 def cli() -> None:
     """Console entry point of `code-check`."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

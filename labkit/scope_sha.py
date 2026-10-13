@@ -32,7 +32,8 @@ from __future__ import annotations
 import ast
 import hashlib
 import re
-import sys
+
+from labkit import console
 from pathlib import Path
 
 from labkit.repo import layout_root, no_such_area
@@ -326,7 +327,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
 
 def cli() -> None:
     """Entry point for the installed `scope-sha` command."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

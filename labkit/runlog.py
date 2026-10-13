@@ -77,7 +77,7 @@ from pathlib import Path
 from types import TracebackType
 from collections.abc import Iterator
 
-from labkit import batch, promises, protocol_block, repo
+from labkit import batch, console, promises, protocol_block, repo
 from labkit.scope_sha import audit_stamp_drift
 from labkit.runs import (
     FAILED_STATES,
@@ -1661,7 +1661,7 @@ def main(argv: list[str]) -> int:
 
 def cli() -> None:
     """Entry point for the installed `runlog` command."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

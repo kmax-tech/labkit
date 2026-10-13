@@ -23,7 +23,8 @@ Each hook names the labkit version that wrote it; `check` compares.
 from __future__ import annotations
 
 import json
-import sys
+
+from labkit import console
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
@@ -279,7 +280,7 @@ def main(argv: list[str]) -> int:
 
 def cli() -> None:
     """Entry point for the installed `labkit-hooks` command."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

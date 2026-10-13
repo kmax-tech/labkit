@@ -77,7 +77,14 @@ from datetime import datetime
 from collections.abc import Callable
 from pathlib import Path
 
-from labkit import finalize, notes_check, preflight, protocol_block, protocol_check
+from labkit import (
+    console,
+    finalize,
+    notes_check,
+    preflight,
+    protocol_block,
+    protocol_check,
+)
 from labkit.repo import area_protocols, git_run
 
 # The template's throwaway stages: none of them opens a run, and the probe
@@ -554,7 +561,7 @@ def main(argv: list[str]) -> int:
 
 def cli() -> None:
     """Console entry point of `claude-hook`."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

@@ -39,7 +39,8 @@ doctrine: extend, never move; regression = both lab repos exit 0 after the
 """
 
 import re
-import sys
+
+from labkit import console
 from pathlib import Path
 
 # The contract: kind tokens as they appear in meta lines. German on purpose —
@@ -210,7 +211,7 @@ def main(argv: list[str]) -> int:
 
 def cli() -> None:
     """Entry point for the installed `notes-check` command."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

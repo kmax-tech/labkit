@@ -50,7 +50,7 @@ import sys
 from pathlib import Path
 
 from labkit.code_check import check_intent_ids, stamp_coverage_findings
-from labkit import findings, install_hooks
+from labkit import console, findings, install_hooks
 from labkit.repo import (
     area_path,
     area_protocols,
@@ -385,7 +385,7 @@ def main(argv: list[str]) -> int:
 
 def cli() -> None:
     """Console entry point of `preflight`."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

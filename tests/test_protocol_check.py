@@ -165,6 +165,16 @@ class TestResultAfterARun(unittest.TestCase):
         self.assertIn("measure run in the run list", out)
 
 
+class TestFlagsAnywhere(unittest.TestCase):
+    def test_contract_after_the_path_is_the_flag_not_a_file(self):
+        for argv in (["--contract", "PROTOCOL-x.md"], ["PROTOCOL-x.md", "--contract"]):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(protocol_check.main(argv), 0, argv)
+            self.assertNotIn("not readable", out.getvalue())
+            self.assertIn("Question / hypothesis", out.getvalue())
+
+
 class TestFixtures(unittest.TestCase):
     """The shared fixtures are what they claim: a clean pilot, a clean freeze."""
 

@@ -35,6 +35,8 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+
+from labkit import console
 from pathlib import Path
 from typing import NamedTuple
 
@@ -463,4 +465,4 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)

@@ -178,10 +178,24 @@ def _present(number: str, text: str) -> bool:
     return re.search(rf"(?<![\d.]){re.escape(n)}(?![\d])", text) is not None
 
 
+ANSWER_OPEN = re.compile(
+    r"^\s*[-*]\s+\*\*Answer to the question:\*\*\s*(<!--[^>]*-->\s*)?<", re.M
+)
+
+
 def cited(note: Path, numbers: list[str], run_id: str) -> None:
-    """Refuse unless the note contains every reported number and cites the run."""
+    """Refuse unless the note contains every reported number and cites the run.
+
+    An Answer line still holding the stamp's placeholder is named as such —
+    "numbers not in PROTOCOL" before the write-back read as a failed check
+    (Haiku 5.5, 2026-10-13); the cure is one command."""
     text = note.read_text(encoding="utf-8").replace("−", "-").replace(",", ".")
     missing = sorted({n for n in numbers if not _present(n, text)})
+    if missing and ANSWER_OPEN.search(text):
+        raise SystemExit(
+            f"recheck: {note.name} has no answer yet — "
+            f"`protocol-fill {note.name} --from-run {run_id}` writes it"
+        )
     if missing:
         raise SystemExit(f"recheck: numbers not in {note.name}: {missing}")
     if run_id not in text:

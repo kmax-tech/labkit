@@ -36,11 +36,10 @@ from __future__ import annotations
 
 import ast
 import json
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import promises, protocol_block
+from labkit import console, promises, protocol_block
 from labkit.intent_check import protocol_id_of
 from labkit.repo import area_path, choose_protocol, no_such_area
 from labkit.runs import (
@@ -364,7 +363,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
 
 def cli() -> None:
     """Console entry point of `labkit-params`."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

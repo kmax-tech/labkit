@@ -34,7 +34,8 @@ import importlib.metadata
 import os
 import re
 import subprocess
-import sys
+
+from labkit import console
 import uuid
 from pathlib import Path
 
@@ -746,7 +747,7 @@ def main(argv: list[str]) -> int:
 
 def cli() -> None:
     """Console entry point `labkit-init`."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

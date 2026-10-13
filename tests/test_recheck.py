@@ -104,6 +104,15 @@ class Area(unittest.TestCase):
             recheck.holds(self.area, self.out, evaluate, self.note)
         self.assertIn("does not cite run", str(cm.exception))
 
+    def test_an_unwritten_answer_line_names_the_write_back(self):
+        self.note.write_text(
+            "- **Answer to the question:** <!-- s --> <per registered id its verdict>\n"
+        )
+        with self.assertRaises(SystemExit) as cm:
+            recheck.holds(self.area, self.out, evaluate, self.note)
+        self.assertIn("has no answer yet", str(cm.exception))
+        self.assertIn("--from-run", str(cm.exception))
+
     def test_number_must_be_a_token(self):
         self.assertFalse(recheck._present("3.5", "13.57"))
         self.assertFalse(recheck._present("2", "run 2026-10-05"))

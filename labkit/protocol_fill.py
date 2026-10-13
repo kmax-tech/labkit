@@ -30,10 +30,9 @@ from __future__ import annotations
 
 import argparse
 import re
-import sys
 from pathlib import Path
 
-from labkit import recheck, runs
+from labkit import console, recheck, runs
 from labkit.code_check import prompt_constants
 from labkit.protocol_check import field_name, fields, placeholder_fields
 
@@ -354,7 +353,7 @@ def main(argv: list[str]) -> int:
 
 def cli() -> None:
     """Entry point for the installed `protocol-fill` command."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

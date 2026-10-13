@@ -53,11 +53,10 @@ import io
 import ast
 import json
 import re
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from labkit import batch, promises, protocol_block
+from labkit import batch, console, promises, protocol_block
 from labkit.runs import (
     bound_answering_run,
     model_provenance_run,
@@ -786,7 +785,7 @@ def main(argv: list[str]) -> int:
 
 def cli() -> None:
     """Console entry point of `finalize`."""
-    sys.exit(main(sys.argv[1:]))
+    console.exit_with(main)
 
 
 if __name__ == "__main__":
