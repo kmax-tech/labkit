@@ -5,6 +5,21 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.88.4 — 2026-10-13
+
+### Changed — a run's own products no longer make it `+dirty`
+
+- **`completion.json` and the `runs.tsv` git column** record the state at
+  the end of the run over tracked files only. The run's own products
+  (`runs/<id>/`, `output/`, `runs.tsv`) are untracked until committed, so
+  every finished run read `+dirty` whatever the tree looked like — 74 of
+  74 index rows in one lab repo, and a cloud agent reported
+  "`beae3bf+dirty` but `uncommitted.patch` is empty" (Haiku 5.5,
+  2026-10-13). `config.json`'s `git` (the state at start) still counts
+  untracked files: a file git does not know may have been run. Rows
+  written by labkit up to 0.88.3 carry the old flag; `reindex` does not
+  rewrite rows.
+
 ## 0.88.3 — 2026-10-13
 
 ### Added — `protocol-fill` knows the head's `type`

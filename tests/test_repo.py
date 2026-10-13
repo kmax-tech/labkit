@@ -97,6 +97,31 @@ class RunlogGitState(unittest.TestCase):
         (r / "g.txt").write_text("y")
         self.assertEqual(runlog._git_state(r), clean + "+dirty")
 
+    def test_the_end_state_ignores_untracked_files_but_not_tracked_drift(self):
+        r = make_repo()
+        clean = runlog._git_state(r)
+        (r / "g.txt").write_text("y")  # untracked: counts at start, not at the end
+        self.assertEqual(runlog._git_state(r, untracked=False), clean)
+        (r / "f.txt").write_text("changed")  # tracked drift counts at both
+        self.assertEqual(runlog._git_state(r, untracked=False), clean + "+dirty")
+
+    def test_a_run_in_a_clean_tree_is_indexed_clean_despite_its_own_products(self):
+        import json
+
+        r = make_repo()
+        clean = runlog._git_state(r)
+        old_argv = sys.argv[0]
+        sys.argv[0] = str(r / "f.txt")
+        try:
+            with runlog.run("t", config={}, base_dir=r) as run:
+                run.metrics(n=1)
+        finally:
+            sys.argv[0] = old_argv
+        comp = json.loads((run.dir / "completion.json").read_text(encoding="utf-8"))
+        self.assertEqual(comp["git"], clean)  # runs/<id>/ and runs.tsv are its own
+        row = (r / "runs.tsv").read_text(encoding="utf-8").splitlines()[1].split("\t")
+        self.assertEqual(row[1], clean)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -287,7 +287,7 @@ class RunSummary:
     state: str  # completion_state: completed | unfinalized | corrupt | …
     derived_from: str | None  # the run whose rows this one re-evaluated
     models: tuple[str, ...]  # model aliases the run resolved; () when none
-    git: str  # the commit, "+dirty" when the tree was not clean
+    git: str  # the commit at start, "+dirty" when the tree was not clean (untracked files count)
     uncommitted_bytes: int  # size of uncommitted.patch; 0 when the tree was clean
     command: str | None  # the command line that started it; None: not recorded
 

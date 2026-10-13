@@ -145,11 +145,21 @@ def _head(cwd: Path, short: bool = False) -> str:
     return r.stdout.strip() if r.returncode == 0 else ""
 
 
-def _git_state(cwd: Path) -> str:
+def _git_state(cwd: Path, untracked: bool = True) -> str:
+    """HEAD's short commit, `+dirty` when the tree differs from it.
+
+    `untracked=True` (the state at start) counts untracked files too: a file
+    git does not know may have been run. `untracked=False` (the state at the
+    end) counts tracked files only — the run's own products (`runs/<id>/`,
+    `output/`, `runs.tsv`) are untracked until committed, so every finished
+    run read `+dirty` and the index column said nothing (74 of 74 rows in
+    one lab repo; a cloud agent reported "beae3bf+dirty but the patch is
+    empty", 2026-10-13)."""
     rev = _head(cwd, short=True)
     if not rev:
         return "no-git"
-    dirty = repo.git(["status", "--porcelain"], cwd)
+    args = ["status", "--porcelain"] + ([] if untracked else ["--untracked-files=no"])
+    dirty = repo.git(args, cwd)
     return f"{rev}{'+dirty' if dirty else ''}"
 
 
@@ -1179,7 +1189,8 @@ class Run:
         # leaves `unfinalized` (numbers on disk, run not finished); a break
         # after completion.json leaves a run the index missed but `reindex`
         # can rebuild in full. Before this file the two looked the same.
-        git_end = _git_state(self.base)
+        # tracked files only: the run's own untracked products are not drift
+        git_end = _git_state(self.base, untracked=False)
         _write_atomic(
             self.dir / "completion.json",
             json.dumps(
