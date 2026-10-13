@@ -40,6 +40,7 @@ see the caveat). Score files: `2026-10-12-cloud-fable-count-N.score.json`.*
 | 11 | 0.88.0 | 3m11s | 5 · 13 · 6 · 0 · 1 | yes |
 | 12 | 0.88.0 | 1m34s | 5 · 9 · 4 · 0 · 0 | yes |
 | H2 | 0.88.1 (Haiku 5.5) | 1m13s | 13 · 16 · 9 · 1 · 2 | yes |
+| H3 | 0.88.1 (Haiku 5.5) | 2m30s | 11 · 21 · 8 · 1 · 1 | yes |
 
 Three clean draws on 0.87.1 (8–10): median 2m20s, 0 or 1 gate line, 0 reads
 of labkit source. Before the fixes (draw 1, 0.85.0): 4m27s, 3 unsure, 3 gate.
@@ -60,6 +61,12 @@ seconds lane in AGENTS.md still asked for criterion and admissibility — and it
 hand edit of the head's `type` was a gap in `protocol-fill --list`; both fixed
 in 0.88.3. The two gate lines are its own notes (code-check not yet run; a late
 entry), not a labkit refusal.
+
+Haiku H3 (0.88.1 again, before 0.88.3 was stamped): the same head-`type`
+round trip, and one new finding — the run index said `beae3bf+dirty` while
+`uncommitted.patch` was empty, because the end state counted the run's own
+untracked products (74 of 74 rows in uniagent carried the flag). Fixed in
+0.88.4: the end state counts tracked files only.
 
 ## What the draws changed in labkit
 

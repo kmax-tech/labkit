@@ -405,7 +405,8 @@ sieht das niemand.
   Agenten: (j) `--check`, `protocol-check` und `finalize` als ein Kommando
   nach dem Lauf, der Hook wiederholt es nicht, wenn es gerade grün war; (k)
   das Mess-Skript schreibt die Antwortzeile selbst (= (a)); (l) ein Lauf ist
-  `+dirty` auch bei nur ungetrackten Dateien — Frage, ob `??` zählen soll.
+  `+dirty` auch bei nur ungetrackten Dateien — Frage, ob `??` zählen soll
+  (entschieden 2026-10-13, 0.88.4: am Ende nein, am Start ja).
   Durchgang 4 (0.86.1 sauber, frisches venv): 3,5 richtig, gebunden, 2m09s,
   4 read · 9 run · 6 edit · 0 unsure · 1 gate
   (`2026-10-12-cloud-fable-count-4.score.json`). Behoben in 0.86.2: Pfad-
@@ -517,6 +518,13 @@ sieht das niemand.
   Kriterium und Zulässigkeit (Widerspruch zu `--contract`, seit dem
   0.87.0-Schnitt veraltet). Haikus Liste sonst: (n), (v), (w) — schon notiert.
   Prüfstelle: ein Haiku-Durchgang auf 0.88.3 ohne `unsure`-Zeile.
+  **Haiku H3 (noch 0.88.1, 2m30s, `2026-10-13-cloud-haiku-count-3.score.json`):**
+  derselbe `type`-Umweg; neu und behoben in 0.88.4: (l) — der Index trug
+  `+dirty` für jeden Lauf, weil der Endzustand die eigenen ungetrackten
+  Produkte zählte (uniagent 74/74 Zeilen); jetzt zählen am Ende nur getrackte
+  Dateien, am Start weiter auch ungetrackte. Haikus `unsure` (leerer
+  Fall-Ordner: 0 oder Verweigerung?) ist eine Skelett-Formulierung, notiert
+  als (y): „empty item" im Skelett-Docstring eindeutig machen.
   **Entschieden und gebaut 2026-10-12 (0.87.0):** (d) keine Versprechen-
   Tabellen und kein Kriterium bei einer Zählung, (f) einzeilige Platzhalter,
   Langform im Feldführer, (p) Summary bei seconds = Result-Zeile. Prüfstelle:
