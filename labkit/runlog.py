@@ -78,7 +78,7 @@ from types import TracebackType
 from collections.abc import Iterator
 
 from labkit import batch, console, promises, protocol_block, repo
-from labkit.scope_sha import audit_stamp_drift
+from labkit.scope_sha import audit_stamp_drift, file_digest, tree_digest
 from labkit.runs import (
     FAILED_STATES,
     RunConfigError,
@@ -87,9 +87,10 @@ from labkit.runs import (
     is_alive,
     read_completion,
     read_metrics,
-    read_run_config,
+    run_dirs,
     run_state,
     run_summary,
+    write_atomic,
 )
 
 RUN_INDEX_COLS = [
@@ -356,7 +357,7 @@ def _env_state(cwd: Path) -> str:
     for d in [cwd.resolve(), *cwd.resolve().parents]:
         lock = d / "requirements.lock"
         if lock.exists():
-            h = hashlib.sha256(lock.read_bytes()).hexdigest()[:12]
+            h = file_digest(lock)[:12]
             try:
                 drift = _lock_drift(lock)
             except Exception:  # never let bookkeeping break a run
@@ -445,16 +446,15 @@ def _sha256(path: Path) -> str:
     relative path and content — so adding, removing, renaming or editing a
     file below it moves it (a directory source used to be unfreezable, and
     `finalize` then refused every run of the stamped count skeleton)."""
-    h = hashlib.sha256()
     if path.is_dir():
-        for f in _visible_files(path):
-            h.update(f.relative_to(path).as_posix().encode("utf-8") + b"\n")
-            h.update(_sha256(f).encode() + b"\n")
-        return h.hexdigest()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
+        return tree_digest(
+            (
+                (f.relative_to(path).as_posix(), f.read_bytes())
+                for f in _visible_files(path)
+            ),
+            chars=None,
+        )
+    return file_digest(path)
 
 
 def _is_meta(row: object) -> bool:
@@ -604,14 +604,6 @@ def _append_row(index: Path, row: list[str]) -> None:
         index.write_text("\t".join(RUN_INDEX_COLS) + "\n", encoding="utf-8")
     with index.open("a", encoding="utf-8") as f:
         f.write("\t".join(c.replace("\t", " ").replace("\n", " ") for c in row) + "\n")
-
-
-def _write_atomic(path: Path, text: str) -> None:
-    """Write via temp file in the same directory + rename: the reader sees
-    the old file or the new one, never half of either."""
-    tmp = path.with_name(path.name + f".tmp{os.getpid()}")
-    tmp.write_text(text, encoding="utf-8")
-    os.replace(tmp, path)
 
 
 def _check_run_index(base_dir: Path) -> None:
@@ -1191,7 +1183,7 @@ class Run:
         # can rebuild in full. Before this file the two looked the same.
         # tracked files only: the run's own untracked products are not drift
         git_end = _git_state(self.base, untracked=False)
-        _write_atomic(
+        write_atomic(
             self.dir / "completion.json",
             json.dumps(
                 {
@@ -1238,17 +1230,16 @@ def active(base_dir: str | Path) -> list[dict]:
         runlog <area>        (the installed console command)
     """
     out = []
-    for d in sorted((Path(base_dir) / "runs").glob("*")):
-        try:
-            cfg = read_run_config(d)
-        except RunConfigError as exc:
+    for rd in run_dirs(Path(base_dir)):
+        d, cfg = rd.dir, rd.config
+        if rd.error is not None:
             out.append(
                 {
                     "run_id": d.name,
                     "dir": str(d),
                     "alive": None,
                     "state": "unreadable",
-                    "error": str(exc),
+                    "error": rd.error,
                 }
             )
             continue
@@ -1339,18 +1330,14 @@ def _print_status(area: str, live: list[dict]) -> None:
 def _print_finished(area: Path) -> None:
     """One line per finished run: what it is, whether its code was committed,
     how it was started — `runlog <area>` after the open runs."""
-    runs_dir = Path(area) / "runs"
-    if not runs_dir.is_dir():
-        return
     done = []
-    for d in sorted(runs_dir.glob("*")):
-        if not (d / "config.json").is_file():
+    for rd in run_dirs(Path(area)):
+        if rd.error is not None:
+            print(f"  {rd.dir.name}  unreadable — {rd.error}")
             continue
-        try:
-            s = run_summary(d)
-        except RunConfigError as exc:
-            print(f"  {d.name}  unreadable — {exc}")
+        if rd.config is None:
             continue
+        s = run_summary(rd.dir)
         if s.state == "completed":
             done.append(s)
     if not done:
@@ -1535,13 +1522,12 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
             return 2
 
         added, skipped_legacy, incomplete, unreadable = 0, [], [], []
-        for d in sorted((base_dir / "runs").glob("*")):
+        for rd in run_dirs(base_dir):
+            d, cfg = rd.dir, rd.config
             if d.name in seen:
                 continue
-            try:
-                cfg = read_run_config(d)
-            except RunConfigError as exc:
-                unreadable.append(str(exc))
+            if rd.error is not None:
+                unreadable.append(rd.error)
                 continue
             if cfg is None:
                 continue

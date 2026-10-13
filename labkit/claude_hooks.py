@@ -66,7 +66,6 @@ unexpected failures 1, loud on stderr, never swallowed.
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import io
 import json
 import os
@@ -86,6 +85,7 @@ from labkit import (
     protocol_check,
 )
 from labkit.repo import area_protocols, git_run
+from labkit.scope_sha import file_digest
 
 # The template's throwaway stages: none of them opens a run, and the probe
 # is what comes BEFORE preflight, so gating it would invert the order.
@@ -342,10 +342,6 @@ def _load_cache(p: Path | None) -> dict:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
-def _sha(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """PostToolUse hook: a protocol or a measurement note just written gets its checker; the findings go back as context."""
     project = os.environ.get("CLAUDE_PROJECT_DIR")
@@ -373,7 +369,7 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
     cache = _load_cache(cache_file)
     reports = []
     for kind, path in targets:
-        digest = _sha(path)
+        digest = file_digest(path)
         if cache.get(str(path)) == digest:
             continue
         cache[str(path)] = digest

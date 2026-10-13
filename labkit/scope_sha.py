@@ -32,6 +32,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import re
+from collections.abc import Iterable
 
 from labkit import console
 from pathlib import Path
@@ -188,15 +189,46 @@ def _key(f: Path, root: Path) -> str:
         return f.as_posix()
 
 
+def file_digest(path: Path) -> str:
+    """sha256 of a file's bytes, full hex, read in chunks. The one file
+    digest: the stamp, the run record, the hooks and recheck used to spell
+    it four times (audit 2026-10-13); a caller that records a prefix cuts
+    it itself, so the recorded width stays where the format is."""
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def tree_digest(
+    entries: Iterable[tuple[str, bytes]],
+    trailer: Iterable[str] = (),
+    chars: int | None = DIGEST_CHARS,
+) -> str:
+    """One digest over named contents: per entry its name and the sha256 of
+    its bytes, one line each, then the trailer lines — so adding, dropping,
+    renaming or editing an entry moves it. The caller orders the entries
+    (sorted, for a stamp). `chars=None` keeps the full hex. The shape of the
+    area stamp, a promise's declared scope, a run's directory source and the
+    usability probe's scaffold sha."""
+    h = hashlib.sha256()
+    for name, content in entries:
+        h.update(name.encode("utf-8") + b"\n")
+        h.update(hashlib.sha256(content).hexdigest().encode() + b"\n")
+    for line in trailer:
+        h.update(line.encode("utf-8") + b"\n")
+    digest = h.hexdigest()
+    return digest if chars is None else digest[:chars]
+
+
 def scope_sha(files: list[Path], pin: str | None, root: Path) -> str:
     """Digest over (repo-relative path, content digest) per file plus the pin line."""
-    h = hashlib.sha256()
-    for key, f in sorted({_key(f, root): f for f in files}.items()):
-        h.update(key.encode("utf-8") + b"\n")
-        h.update(hashlib.sha256(Path(f).read_bytes()).hexdigest().encode() + b"\n")
-    if pin:
-        h.update(pin.encode("utf-8") + b"\n")
-    return h.hexdigest()[:DIGEST_CHARS]
+    entries = sorted({_key(f, root): f for f in files}.items())
+    return tree_digest(
+        ((key, Path(f).read_bytes()) for key, f in entries),
+        trailer=[pin] if pin else [],
+    )
 
 
 def area_stamp(

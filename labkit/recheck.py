@@ -23,14 +23,13 @@ was compared. Rules of the lab standard: LAB-041 Generate numbers, don't retype 
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import promises, protocol_block, runs
+from labkit import promises, protocol_block, runs, scope_sha
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
 #: reproduce: runlog's duration, llm's retry counter (the stamped evaluate()
@@ -80,7 +79,7 @@ def pin(run: Path, out: Path) -> None:
         raise SystemExit(
             f"recheck: {out} is gone — the run's rows are not here to recompute from"
         )
-    actual = hashlib.sha256(out.read_bytes()).hexdigest()
+    actual = scope_sha.file_digest(out)
     if not recorded.sha256 or not actual.startswith(recorded.sha256):
         raise SystemExit(
             f"recheck: {out.name} (sha {actual[:16]}) is not the file run {run.name} "

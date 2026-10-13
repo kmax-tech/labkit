@@ -9,6 +9,7 @@ membership sensitivity, and a hard failure on a missing file.
 """
 
 import contextlib
+import hashlib
 import importlib.util
 import io
 import tempfile
@@ -22,6 +23,40 @@ spec = importlib.util.spec_from_file_location(
 assert spec is not None and spec.loader is not None
 scope_sha = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(scope_sha)
+
+
+class Digests(unittest.TestCase):
+    """`file_digest` is sha256 of the bytes; `tree_digest` is the one stamp shape."""
+
+    def test_file_digest_is_the_full_sha256(self):
+        f = Path(tempfile.mkdtemp()) / "x.bin"
+        f.write_bytes(b"abc" * 1_000_000)  # past one read chunk
+        self.assertEqual(
+            scope_sha.file_digest(f), hashlib.sha256(b"abc" * 1_000_000).hexdigest()
+        )
+
+    def test_tree_digest_moves_on_name_content_order_and_trailer(self):
+        base = scope_sha.tree_digest([("a", b"1"), ("b", b"2")])
+        self.assertEqual(len(base), scope_sha.DIGEST_CHARS)
+        self.assertEqual(base, scope_sha.tree_digest([("a", b"1"), ("b", b"2")]))
+        self.assertNotEqual(base, scope_sha.tree_digest([("a", b"1"), ("c", b"2")]))
+        self.assertNotEqual(base, scope_sha.tree_digest([("a", b"1"), ("b", b"3")]))
+        self.assertNotEqual(base, scope_sha.tree_digest([("b", b"2"), ("a", b"1")]))
+        self.assertNotEqual(
+            base, scope_sha.tree_digest([("a", b"1"), ("b", b"2")], trailer=["pin"])
+        )
+        self.assertEqual(len(scope_sha.tree_digest([("a", b"1")], chars=None)), 64)
+
+    def test_tree_digest_is_the_spelled_out_shape(self):
+        # the shape the stamps were recorded with: name, newline, hex of the
+        # content's sha256, newline — a recorded stamp must stay recomputable
+        h = hashlib.sha256()
+        h.update(b"a\n" + hashlib.sha256(b"1").hexdigest().encode() + b"\n")
+        h.update(b"labkit==1\n")
+        self.assertEqual(
+            scope_sha.tree_digest([("a", b"1")], trailer=["labkit==1"], chars=None),
+            h.hexdigest(),
+        )
 
 
 class TestScopeSha(unittest.TestCase):

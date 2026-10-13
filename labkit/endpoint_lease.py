@@ -149,13 +149,6 @@ def _locked(d: Path) -> Iterator[None]:
             fcntl.flock(fh, fcntl.LOCK_UN)
 
 
-def _write_atomic(f: Path, rec: dict) -> None:
-    """Write `rec` so that no reader ever sees a partial file."""
-    tmp = f.with_name(f".{f.name}.tmp")
-    tmp.write_text(json.dumps(rec), encoding="utf-8")
-    os.replace(tmp, f)
-
-
 def _conflict(endpoint: str, alias: str) -> dict | None:
     """The oldest live holder of a DIFFERENT alias, or None."""
     others = [
@@ -216,7 +209,7 @@ def _lease_one(d: Path, endpoint: str, alias: str) -> None:
         "argv": " ".join(sys.argv)[:300],
     }
     f = d / f"{_slug(alias)}.{os.getpid()}.json"
-    _write_atomic(f, rec)
+    runs.write_atomic(f, json.dumps(rec))
     # On a shared filesystem flock may not hold, and two processes can pass
     # the check at the same moment. Re-read after writing: whoever is not
     # the oldest live holder yields.

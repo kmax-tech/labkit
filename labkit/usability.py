@@ -83,7 +83,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import hashlib
 import json
 import os
 import random
@@ -103,6 +102,7 @@ from labkit import (
     protocol_reading,
     runs,
     scaffold,
+    scope_sha,
 )
 
 #: What the scaffold stamps into a repo and an area; their sha pins the measured
@@ -238,13 +238,10 @@ def _labkit_spec(python: Path) -> str:
 
 def scaffold_sha() -> str:
     """sha256 (12 hex) over the scaffold and the templates it stamps."""
-    h = hashlib.sha256()
     for p in STAMPED:
         if not p.is_file():
             raise SystemExit(f"usability: stamped master missing: {p}")
-        h.update(p.name.encode())
-        h.update(p.read_bytes())
-    return h.hexdigest()[:12]
+    return scope_sha.tree_digest((p.name, p.read_bytes()) for p in STAMPED)
 
 
 @dataclass(frozen=True)

@@ -56,7 +56,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import protocol_block
+from labkit import protocol_block, scope_sha
 
 #: the letters of the promise block, and what each one is
 KINDS = {"C": "criterion", "A": "admissibility", "B": "branch"}
@@ -96,8 +96,6 @@ _ALLOWED_FIELDS = {"id", "key", "sentence", "scope", "constants"}
 #: what `block_sha` is a digest of — recorded with it, so a run from an
 #: earlier format is told apart instead of reported as changed promises
 DIGEST_FORMAT = "promises-normalized-json"
-#: same width as the area audit stamp (`scope_sha.DIGEST_CHARS`)
-DIGEST_CHARS = 12
 
 
 class PromiseError(ValueError):
@@ -160,7 +158,7 @@ def reported_ids(metrics: dict) -> set[str]:
 
 
 def _digest(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()[:DIGEST_CHARS]
+    return hashlib.sha256(data).hexdigest()[: scope_sha.DIGEST_CHARS]
 
 
 def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity baseline 2026-10-08
@@ -431,7 +429,7 @@ def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
     renaming an entry changes the stamp too. A missing file or function is
     a PromiseError, never an empty digest.
     """
-    h = hashlib.sha256()
+    entries: list[tuple[str, bytes]] = []
     for entry in sorted(scope):
         file_part, _, func = entry.partition(":")
         path = base / file_part
@@ -445,9 +443,8 @@ def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
             )
         except OSError as exc:
             raise PromiseError(f"scope entry {entry!r}: {exc}") from exc
-        h.update(entry.encode("utf-8") + b"\n")
-        h.update(hashlib.sha256(content).hexdigest().encode() + b"\n")
-    return h.hexdigest()[:DIGEST_CHARS]
+        entries.append((entry, content))
+    return scope_sha.tree_digest(entries)
 
 
 def scope_drift(recorded: dict | None, base: Path) -> list[str]:

@@ -317,17 +317,59 @@ def run_summary(run_dir: Path) -> RunSummary:
     )
 
 
-def completed_runs(area: Path) -> list[Path]:
-    """The area's completed run directories, oldest first (run_ids start
-    with the timestamp, so name order is start order)."""
+@dataclass(frozen=True)
+class RunDir:
+    """One directory under `runs/` and what its config.json says: `config`
+    None and `error` None is no run (no config.json); `error` set is a run
+    whose metadata cannot be read (the RunConfigError's sentence)."""
+
+    dir: Path
+    config: dict | None
+    error: str | None
+
+
+def _run_dir(d: Path) -> RunDir:
+    try:
+        return RunDir(d, read_run_config(d), None)
+    except RunConfigError as exc:
+        return RunDir(d, None, str(exc))
+
+
+def run_dirs(area: Path) -> list[RunDir]:
+    """Every directory under the area's `runs/`, oldest first (run_ids start
+    with the timestamp, so name order is start order), each with its
+    metadata read once. The one walk: listing, index, choice and completion
+    used to walk `runs/` six times and each decided for itself what an
+    unreadable run means (audit 2026-10-13). Here it is data — the caller
+    says whether it refuses, reports or skips."""
     runs = area / "runs"
     if not runs.is_dir():
         return []
-    return [
-        d
-        for d in sorted(runs.iterdir())
-        if d.is_dir() and completion_state(d) == "completed"
-    ]
+    return [_run_dir(d) for d in sorted(runs.glob("*")) if d.is_dir()]
+
+
+def completed_runs(area: Path) -> list[Path]:
+    """The area's completed run directories, oldest first. An unreadable
+    run raises RunConfigError: it may be the newest and must not vanish."""
+    out = []
+    for rd in run_dirs(area):
+        if rd.error is not None:
+            raise RunConfigError(rd.error)
+        if (
+            rd.config is not None
+            and run_state(rd.dir, rd.config, alive=False) == "completed"
+        ):
+            out.append(rd.dir)
+    return out
+
+
+def write_atomic(path: Path, text: str) -> None:
+    """Write `text` whole or not at all: a temp file beside `path`, then
+    rename — a reader sees the old file or the new one, never half of
+    either. The run record, the lease and the index write through it."""
+    tmp = path.with_name(f".{path.name}.tmp{os.getpid()}")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
 
 
 # ---- which run answers for a protocol — one choice for intent-check,
@@ -347,23 +389,25 @@ def run_facts(run_dir: Path) -> dict | None:
     Liveness is not asked here (`alive=False`): a run still finalizing in
     another process reads as `unfinalized`; `runlog.active` asks.
     """
-    try:
-        cfg = read_run_config(run_dir)
-    except RunConfigError as exc:
+    return _facts(_run_dir(run_dir))
+
+
+def _facts(rd: RunDir) -> dict | None:
+    if rd.error is not None:
         return {
-            "dir": run_dir,
-            "metrics": run_dir / "metrics.json",
+            "dir": rd.dir,
+            "metrics": rd.dir / "metrics.json",
             "state": "unreadable",
             "protocol_id": None,
-            "why": str(exc),
+            "why": rd.error,
         }
-    if cfg is None:
+    if rd.config is None:
         return None
-    binding = cfg.get("protocol") or {}
+    binding = rd.config.get("protocol") or {}
     return {
-        "dir": run_dir,
-        "metrics": run_dir / "metrics.json",
-        "state": run_state(run_dir, cfg, alive=False),
+        "dir": rd.dir,
+        "metrics": rd.dir / "metrics.json",
+        "state": run_state(rd.dir, rd.config, alive=False),
         "protocol_id": binding.get("id"),
     }
 
@@ -377,8 +421,8 @@ def bound_runs(area: Path, pid: str) -> tuple[list[dict], list[dict]]:
     humans, never a selection criterion: it goes stale by design.
     """
     taken, left = [], []
-    for d in sorted((area / "runs").glob("*")):
-        facts = run_facts(d)
+    for rd in run_dirs(area):
+        facts = _facts(rd)
         if facts is None:
             continue
         if facts["state"] != "completed":
