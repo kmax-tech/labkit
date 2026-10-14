@@ -5,6 +5,40 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.91.0 — 2026-10-14
+
+### Added — the lane has an end gate
+
+- **`report-check <AREA>`** — the last gate at `minutes`/`hours`, after the
+  analysis audit: `frozen = true`, finalize clean, an analysis audit record
+  of the code as it is now with every finding decided, and
+  `scripts/02_analyze.py --check` passing. At `seconds` nothing is owed
+  there. finalize could not ask for these without a circle (it comes before
+  the analysis audit); in the cloud judge probe an agent skipped the check
+  and the note with finalize green. The AGENTS.md template's step 11 ends
+  with it.
+- **`findings.audit_coverage(area, sha, mode)`** replaces
+  `preflight_coverage` (0.90.0): one answer for the freeze and the report.
+
+### Changed
+
+- **The measure skeleton's accuracy is over every item of the lane**; an
+  empty or unreadable answer is not correct (and still counted as
+  `*_empty`). Over readable answers only, a model gained accuracy by not
+  answering, and both cloud preflight audits flagged it. The stamped [C1]
+  sentence and the area test say the same.
+- **`protocol-fill --list`** prints the fields `--from-run` writes (Result,
+  Answer to the question) last, under "after the run".
+- **`labkit-init exp`** finds the lab repo above the working directory.
+
+### Fixed
+
+- **outputs.json recorded absolute paths**, so `02_analyze.py --check`
+  failed in every checkout but the one that measured (a cloud run's
+  `/home/user/...`). A path inside the repo is recorded relative to its
+  root and resolved on read; records written before keep their absolute
+  paths.
+
 ## 0.90.0 — 2026-10-14
 
 ### Breaking — the frozen code is the audited code; `runlog start` names its area

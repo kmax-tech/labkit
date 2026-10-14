@@ -509,6 +509,12 @@ sieht das niemand.
   Leeren ohnehin). (e) `finalize` ist grün ohne `02_analyze.py --check` und
   Ergebnis-Note, obwohl Schritt 11 sie verlangt. (f) Erste Audit-Wartezeit
   wieder ~8 min — ohne Cloud-Transkript nicht aufzuklären.
+  **Entschieden und gebaut (0.91.0, unreleased):** (d) Nenner = alle Items,
+  leer zählt als nicht richtig (`724daba`); (e) eigener End-Gate
+  `report-check` (`aa33896`), finalize bleibt vor dem Analyse-Audit.
+  Nebenbei: `outputs.json` schrieb absolute Pfade, `--check` scheiterte in
+  jedem anderen Checkout (`a4b7a75`). Offen: (f); und ob `report-check`
+  in den Pre-Commit-Hook gehört (heute nur Kommando + AGENTS-Schritt 11).
   **Rollout (eigener Auftrag):** jeder eingefrorene uniagent-Bereich (21)
   schuldet bei gehobenem Pin vor dem nächsten vollen Lauf einen neuen
   Preflight-Audit.
