@@ -500,6 +500,15 @@ sieht das niemand.
   geplant). (b) `runlog start AREA -- <cmd>`, Log in `AREA/output/`
   (`6e390ea`). (c) keine Ausnahme: LAB-017 ordnet eine Handvoll Aufrufe
   `seconds` zu; die Probe erzwang `minutes`, um den langen Weg zu testen.
+  **Durchgang 3 (0.90.0, 15m30s, netto 5m12s):** der strenge Riegel hielt
+  (zweiter Audit nach dem Blocker), Start-Log im Bereich. **Offen,
+  Entscheidung:** (d) Nenner der Mess-Vorlage — `_accuracy` teilt durch
+  lesbare Antworten, die Registrierung sagt „über alle zwölf“; beide
+  Cloud-Audits melden es (Durchgang 3 als BLOCKER). Vorschlag: leere Antwort
+  zählt als nicht richtig, Nenner = alle Items der Spur ([A1] begrenzt die
+  Leeren ohnehin). (e) `finalize` ist grün ohne `02_analyze.py --check` und
+  Ergebnis-Note, obwohl Schritt 11 sie verlangt. (f) Erste Audit-Wartezeit
+  wieder ~8 min — ohne Cloud-Transkript nicht aufzuklären.
   **Rollout (eigener Auftrag):** jeder eingefrorene uniagent-Bereich (21)
   schuldet bei gehobenem Pin vor dem nächsten vollen Lauf einen neuen
   Preflight-Audit.

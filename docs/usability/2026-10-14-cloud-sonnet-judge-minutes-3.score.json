@@ -1,0 +1,57 @@
+{
+ "probe": {
+  "staged": "2026-10-14T14:39:16",
+  "task": "judge",
+  "area": "01-causal-claims-judge",
+  "metric_key": "c1_accuracy",
+  "labkit_installed": "labkit @ git+https://github.com/kmax-tech/labkit.git@43e0190d2e7237a700d8b80a1d5efcc8d9305842",
+  "scaffold_sha": "491e6443f916",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "causal-claims-judge",
+   "--cost",
+   "minutes",
+   "--model",
+   "haiku"
+  ],
+  "target_minutes": 5,
+  "restamped": "2026-10-14T16:06:42",
+  "kept": [
+   "TASK.md",
+   ".gitignore",
+   ".claude/settings.json"
+  ]
+ },
+ "run_id": "2026-10-14T14-28-21_c86b",
+ "number": 0.9166666666666666,
+ "expected": null,
+ "number_ok": true,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-causal-claims-judge.md",
+ "frozen": true,
+ "cost_tier": "minutes",
+ "log": {
+  "lines": 27,
+  "wall_seconds": 930,
+  "gap_seconds": 618,
+  "monotonic": true,
+  "read": 5,
+  "run": 15,
+  "edit": 6,
+  "unsure": 0,
+  "gate": 1,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 155,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 503,
+  "summary_codes": 9,
+  "answer_has_table": false
+ },
+ "transcript": null,
+ "agent": "sonnet-cloud"
+}

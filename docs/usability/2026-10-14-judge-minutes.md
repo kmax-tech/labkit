@@ -124,6 +124,48 @@ start`, finalize, the write-back and the analysis audit.
    did not reach the repo on the first try (an `echo` setup plus the
    SessionStart hook worked).
 
+## Draw 3 — the cloud on 0.90.0
+
+Same repo, re-stamped at v0.90.0 (`usability stage --restamp`), branch
+`probe-judge-2`, same prompt. (A first attempt opened the count repo
+`labkit-probe` by mistake and counted there on 0.88.7 — not a draw of this
+series; its one finding, `protocol-fill --list` listing Result and Answer
+among the fields owed before the run, held on 0.90.0 and is fixed in
+`897c9c4`.) Score: `2026-10-14-cloud-sonnet-judge-minutes-3.score.json`.
+
+| | draw 2 (0.89.0) | draw 3 (0.90.0) |
+|---|---|---|
+| number | 0.8333 | 0.9167 (11 of 12) |
+| frozen, tier | yes · minutes | yes · minutes |
+| log span / net of silences ≥ 10 min | 22m35s / 10m21s | 15m30s / 5m12s |
+| preflight audits | 1, stamp rewritten by hand afterwards | **2** — the head carries the second audit's sha |
+| start log | repo root | the area's `output/` |
+
+What held: the strict gate (`35d406b`) — after the first audit's blocker
+the agent fixed the code and audited again (`97c1b40e024d` → `ff25b350978c`),
+the head names the second; `runlog start AREA` put the log in the area.
+
+What did not:
+1. **The first audit's wait again.** Audit started 14:15, its record is dated
+   14:17, the log resumes 14:25: about 8 minutes. The agent ended its turn to
+   be woken by the background task (as the template now says); the labkit
+   Stop hook re-prompted it on the way (a WIP commit). Where the minutes went
+   is not visible without the cloud transcript.
+2. **The denominator, second time.** Both cloud draws' preflight audits
+   flagged that the skeleton's accuracy divides by readable answers while
+   the registration says "over all twelve". A skeleton default every audit
+   flags is a decision to take, not a finding to repeat (TODO.md).
+3. **`labkit-init exp --report` from the area directory** called it "not a
+   lab repo" — fixed in `feb3387`: it walks up to the lab as git does.
+4. **Not done:** the result note and `02_analyze.py --check`; finalize was
+   green without them.
+5. **Probe, not labkit:** the run is `+dirty` by `log.md` alone — the agent
+   pushed a WIP commit with the log tracked, and the next log line changed
+   it.
+
+## Next
+
+The full lane is measured twice.
 ## Next
 
 The full lane is measured once. Before more draws: decide finding 3, and
