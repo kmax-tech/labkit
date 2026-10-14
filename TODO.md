@@ -487,6 +487,21 @@ sieht das niemand.
     abgearbeitet**; was bleibt, sind die 19 `noqa: C901`-Baselines
     (sichtbare Schuld, `grep`).
 
+- **Judge auf `minutes`, Durchgang 1 (2026-10-14, kalter Sonnet-Subagent).**
+  Auswertung `docs/usability/2026-10-14-judge-minutes.md`. Zahl richtig und
+  gebunden (0,8333, 2m28s), aber der Agent stellte den Kopf auf `seconds` —
+  der volle Weg ist **noch nicht gemessen**. Vier labkit-Fehler im Stempel
+  behoben (`93e2940` Prepare ohne Konstanten, `ec2dc52` `--from-run`
+  übersprang „Answering run“ still, `cca7136` `--check` mit eigenem
+  Zahlenformat, `6f740a8` WARNING aus der eigenen Analyse-Vorlage), dazu die
+  Probe (`d0ad9cc`: Aufgabenblatt nennt die gestempelte Stufe). **Nächster
+  Schritt:** Durchgang 2 auf dem behobenen Stempel; für die Claude-Hooks
+  `claude` im Probe-Verzeichnis starten statt Subagent. Ungeprüft aus dem
+  Bericht: `protocol-fill --list` zählt nach `--prompts` mehr offene Felder
+  („Model I/O“); `finalize` warnt bei README-Platzhaltern und einer
+  ungetrackten Ausgabedatei; mit Modell wird auch bei `seconds` das volle
+  366-Zeilen-Skelett gestempelt (größte Lesezeit).
+
 - **Fremd-Review 2026-10-14 (zweiter Agent, nichts geändert) — abgearbeitet.**
   Fünf Befunde, alle am Code bestätigt und behoben, je ein Commit mit
   Zwillingstest: Teilstring-Abgleich in `runs.is_alive` (`9f40916`),

@@ -113,6 +113,15 @@ path: 0.88.8.
   line resolves the tag at the source and compares commits.
 - **The usability task sheets** say that every `.venv/bin/…` path holds
   from the repo root (Haiku H8 called it from the area: exit 127).
+- **The stamped skeleton tripped its own gates** (a cold Sonnet agent, judge
+  at `minutes`): `00_prepare.py` passed no registered constants, so runlog
+  refused the first step of every area with a model; `02_analyze.py
+  --check` looked for `:.4f` numbers while `--from-run` writes them as
+  Python prints them; `--from-run` skipped the stamped `Answering run: none
+  yet` line silently (another run's id is now refused, not skipped); and
+  `code-check` warned on `02_analyze.py` loading its own `01_measure.py`.
+- **`usability stage`:** the task sheet names the stamped cost tier, and
+  says AGENTS.md (not CLAUDE.md) is in the agent's context.
 - **A dead run held "running" by a namesake:** `runs.is_alive` matched the
   recorded script as a substring (`not_01_measure.py` for `01_measure.py`);
   `runs.runs_script` now bounds the name.
