@@ -210,10 +210,18 @@ def render(j: dict) -> str:
     return LANES[j["lane"]].format(text=j[TEXT_FIELD])
 
 
-def measure(model: str, jobs: list[dict], out: Path, prov: dict | None = None) -> None:
+def instrument(cfg: MeasureConfig) -> dict:
+    """What makes two answers comparable: both prompts' digest and the model
+    alias. Every row carries it; a resume refuses rows of another
+    (batch.Store `instrument`) — by id alone a new prompt kept old answers."""
+    return {"prompt_sha": cfg.prompt_sha, "model": cfg.model}
+
+
+def measure(cfg: MeasureConfig, jobs: list[dict], out: Path, prov: dict | None = None) -> None:
     """Resume = same command again; the lock keeps a second writer out.
     `prov` stamps every row with _prov (run id, model@digest, endpoint)."""
-    with batch.Store(out, prov=prov) as store:
+    model = cfg.model
+    with batch.Store(out, prov=prov, instrument=instrument(cfg)) as store:
         todo = list(store.pending(jobs))
         print(f"to measure: {len(todo)} of {len(jobs)}")
         # Calls in parallel (labkit's complete_many, four workers): 24 serial
@@ -348,7 +356,7 @@ def main() -> None:
         jobs = [x for lane in LANES
                 for x in [y for y in plan(items) if y["lane"] == lane
                           and (not probe_ids or y["id"].split(":", 1)[1] in probe_ids)][:args.probe]]
-        measure(args.model, jobs, out)
+        measure(cfg, jobs, out)
         rows = read_jsonl(out)
         for r in rows:
             print(f"{r['id']:<28} {r['answer']!r:<40} -> {parse_answer(r['answer'])!r} (gold {r['gold']})")
@@ -374,7 +382,7 @@ def main() -> None:
     with runlog.run("<name>", config=config, base_dir=AREA, data={"prepared": ITEMS},
                     long=True, protocol=PROTOCOL.name) as run:
         run.output(OUT)
-        measure(args.model, plan(items), OUT,
+        measure(cfg, plan(items), OUT,
                 prov={**llm.provenance(args.model), "run": run.run_id})
         evaluate(OUT, cfg, run)
         print(f"run: {run.run_id}  → protocol-fill {PROTOCOL.name} --from-run {run.run_id}  "

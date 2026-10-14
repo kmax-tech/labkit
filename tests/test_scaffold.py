@@ -324,6 +324,47 @@ class Exp(unittest.TestCase):
             any("C1, A1, A2 still carries the stamp's" in g for g in gaps), gaps
         )
 
+    def test_the_stamped_measure_refuses_rows_of_another_prompt(self) -> None:
+        """Resume by id alone kept the old prompt's answers under a new one
+        (cloud judge probe, 2026-10-14). The stamped measure() hands its
+        instrument to the Store: rows of another prompt stop it before any
+        call; rows of its own resume."""
+        import importlib.util
+        import sys
+        from unittest import mock
+
+        from labkit import batch
+
+        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
+        path = self.area() / "scripts" / "01_measure.py"
+        spec = importlib.util.spec_from_file_location("stamped_measure_2", path)
+        assert spec is not None and spec.loader is not None
+        measure = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = measure
+        self.addCleanup(sys.modules.pop, spec.name, None)
+        spec.loader.exec_module(measure)
+        out = Path(self.tmp.name) / "rows.jsonl"
+        old = {**measure.instrument(measure.CONFIG), "prompt_sha": "000000000000"}
+        with batch.Store(out, instrument=old) as store:
+            store.append({"id": "registered:a", "answer": "Yes"})
+        jobs = [{"id": "registered:a"}, {"id": "registered:b"}]
+        with mock.patch.object(measure.llm, "complete_many") as calls:
+            with self.assertRaises(batch.InstrumentError):
+                quiet(measure.measure, measure.CONFIG, jobs, out)
+            calls.assert_not_called()
+        out.unlink()
+        own = measure.instrument(measure.CONFIG)
+        with batch.Store(out, instrument=own) as store:
+            store.append({"id": "registered:a", "answer": "Yes"})
+        with (
+            mock.patch.object(
+                measure.llm, "complete_many", return_value=["No"]
+            ) as calls,
+            mock.patch.object(measure, "render", return_value="p"),
+        ):
+            quiet(measure.measure, measure.CONFIG, jobs, out)
+        self.assertEqual(calls.call_count, 1)  # only registered:b was asked
+
     def test_every_stamped_placeholder_is_one_line(self) -> None:
         stamps = (
             ("full", {}),

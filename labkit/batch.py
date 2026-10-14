@@ -192,6 +192,10 @@ class Ledger:
         )
 
 
+class InstrumentError(ValueError):
+    """A resumed output holds rows of another instrument (prompt, model)."""
+
+
 class Store:
     """Append-only JSONL output with a lock, resume-by-id and a status view.
 
@@ -215,6 +219,13 @@ class Store:
     holds the pointer (run) plus the facts that die with the join (model
     identity, endpoint instance); everything else stays in the run config.
     An explicit `_prov` already present in a record is never overwritten.
+
+    `instrument`: what makes two answers comparable — the prompt's digest,
+    the model alias. Every appended record carries it as `_instrument`, and
+    `pending()` refuses to resume a file holding a row measured with another
+    (or none): a changed prompt is a new measurement, not a continuation.
+    Resume by id alone let a new prompt keep the old prompt's answers (the
+    cloud judge probe's analysis audit, 2026-10-14).
     """
 
     def __init__(
@@ -223,6 +234,7 @@ class Store:
         id_key: str = "id",
         prov: dict | None = None,
         mode: str = "resume",
+        instrument: dict | None = None,
     ) -> None:
         if mode not in ("resume", "produce"):
             raise ValueError(f"Store mode must be 'resume' or 'produce', not {mode!r}")
@@ -230,6 +242,7 @@ class Store:
         self.id_key = id_key
         self.prov = dict(prov) if prov else {}
         self.mode = mode
+        self.instrument = dict(instrument) if instrument else None
         self.lock = self.path.with_suffix(self.path.suffix + ".lock")
         self._tmp = self.path.with_suffix(self.path.suffix + ".tmp")
         self._fh = None
@@ -323,7 +336,23 @@ class Store:
         return {r[self.id_key] for r in self.records() if self.id_key in r}
 
     def pending(self, records: Iterable[dict]) -> Iterator[dict]:
-        """The input records that have no output line yet, in input order."""
+        """The input records that have no output line yet, in input order.
+
+        Raises:
+            InstrumentError: The store has an `instrument` and the file holds a
+                row measured with another one — resuming would mix them.
+        """
+        if self.instrument is not None and not self._producing:
+            other = [
+                r for r in self.records() if r.get("_instrument") != self.instrument
+            ]
+            if other:
+                raise InstrumentError(
+                    f"{self.path}: {len(other)} row(s) were measured with another "
+                    f"instrument ({other[0].get('_instrument')!r}), this run's is "
+                    f"{self.instrument!r} — a changed prompt or model is a new "
+                    f"measurement: write a new output file, never resume into this one"
+                )
         done = self.done_ids()
         for rec in records:
             if rec[self.id_key] not in done:
@@ -334,6 +363,8 @@ class Store:
         """One record, one line, flushed — a crash costs the current item only."""
         if self._fh is None:
             raise RuntimeError("Store.append outside the `with` block")
+        if self.instrument is not None and "_instrument" not in record:
+            record = {**record, "_instrument": self.instrument}
         if self.prov and "_prov" not in record:
             record = {
                 **record,

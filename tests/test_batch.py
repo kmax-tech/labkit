@@ -170,3 +170,38 @@ class DamagedFile(unittest.TestCase):
         with batch.Store(self.out) as s:
             s.append({"id": "b"})
         self.assertEqual([r["id"] for r in batch.Store(self.out).records()], ["a", "b"])
+
+
+class StoreInstrument(unittest.TestCase):
+    """Resume by id alone let a new prompt keep the old prompt's answers (the
+    cloud judge probe's analysis audit, 2026-10-14). With `instrument`, every
+    row carries it and a resume refuses rows of another."""
+
+    A = {"prompt_sha": "aaaaaaaaaaaa", "model": "haiku"}
+
+    def _with_rows(self, instrument: dict | None) -> Path:
+        out = Path(tempfile.mkdtemp()) / "rows.jsonl"
+        with batch.Store(out, instrument=instrument) as store:
+            store.append({"id": "x:1", "answer": "Yes"})
+        return out
+
+    def test_the_same_instrument_resumes_and_rows_carry_it(self):
+        out = self._with_rows(self.A)
+        with batch.Store(out, instrument=self.A) as store:
+            todo = list(store.pending([{"id": "x:1"}, {"id": "x:2"}]))
+        self.assertEqual([r["id"] for r in todo], ["x:2"])
+        self.assertEqual(batch.Store(out).records()[0]["_instrument"], self.A)
+
+    def test_another_instrument_or_none_is_refused(self):
+        for written in ({**self.A, "prompt_sha": "bbbbbbbbbbbb"}, None):
+            with self.subTest(written=written):
+                out = self._with_rows(written)
+                with batch.Store(out, instrument=self.A) as store:
+                    with self.assertRaises(batch.InstrumentError) as cm:
+                        list(store.pending([{"id": "x:2"}]))
+                self.assertIn("new output file", str(cm.exception))
+
+    def test_without_an_instrument_nothing_changes(self):
+        out = self._with_rows(None)
+        with batch.Store(out) as store:
+            self.assertEqual(len(list(store.pending([{"id": "x:2"}]))), 1)
