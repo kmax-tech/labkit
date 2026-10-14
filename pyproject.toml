@@ -39,6 +39,7 @@ labkit-params = "labkit.params:cli"
 labkit-calltree = "labkit.calltree:cli"
 labkit-init = "labkit.scaffold:cli"
 labkit-check = "labkit.repo_check:cli"
+report-check = "labkit.report_check:cli"
 
 [tool.setuptools]
 packages = ["labkit"]

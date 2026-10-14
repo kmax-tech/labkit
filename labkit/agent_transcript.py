@@ -50,6 +50,7 @@ LABKIT_COMMANDS = (
     "code-check",
     "preflight",
     "finalize",
+    "report-check",
     "intent-check",
     "recheck",
     "runlog",

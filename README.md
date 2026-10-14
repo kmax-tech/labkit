@@ -57,6 +57,7 @@ notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
 preflight <AREA> [--protocol FILE]  # the mechanical pre-freeze gate, seven stations: protocol-check · cost tier · audit findings decided · code-check · scope-sha · working tree · hooks · area tests (not the agent audit; `labkit/preflight.py` lists them)
 finalize <AREA> [--protocol FILE]   # the post-run gate, eight steps: answering run and its record · intent-check · declared scopes · open fields · frozen source · area tests · criterion n (`labkit/finalize.py` lists them)
 finalize --if-reported <PROTOCOL>.. # the commit gate: finalize every protocol whose answer cites a run
+report-check <AREA> [--protocol FILE]  # the last gate at minutes/hours: frozen · finalize clean · analysis audit of the code now, decided · 02_analyze.py --check passes
 claude-hook pre-run|post-change|stop  # the three Claude Code hooks a lab repo installs (stdin: event JSON)
 claude-hook sessions [--run RUN_ID]  # the session log the stop hook keeps (.git/labkit-sessions.jsonl): session, transcript, runs
 labkit-hooks install|check [REPO]   # install this labkit's hooks (pre-commit, core.hooksPath, claude-hook); rerun after a pin raise
