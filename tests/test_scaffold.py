@@ -217,6 +217,38 @@ class Exp(unittest.TestCase):
             self.assertIn(needle, proto, needle)
         self.assertNotRegex(proto, r"(?m)^constants =")
 
+    def test_the_stamped_prepare_step_runs_under_the_promise_block(self) -> None:
+        """runlog refuses any run under the block whose config lacks a
+        registered constant, the prepare step too; the stamped 00_prepare.py
+        passed none, so the first step of every area with a model refused
+        (cold Sonnet, judge at minutes, 2026-10-14)."""
+        import subprocess
+        import sys
+
+        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
+        raw = self.root / "data" / "raw"
+        raw.mkdir(parents=True, exist_ok=True)
+        (raw / "claims.jsonl").write_text(
+            '{"id": "c01", "text": "Rain causes floods.", "gold": "causal"}\n',
+            encoding="utf-8",
+        )
+        script = self.area() / "scripts" / "00_prepare.py"
+        script.write_text(
+            script.read_text(encoding="utf-8")
+            .replace('REPO / "data" / "TODO"', 'REPO / "data" / "raw" / "claims.jsonl"')
+            .replace('"TODO_v1.jsonl"', '"claims_v1.jsonl"'),
+            encoding="utf-8",
+        )
+        r = subprocess.run(
+            [sys.executable, str(script)],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("1 items ->", r.stdout)
+
     def test_every_stamped_placeholder_is_one_line(self) -> None:
         stamps = (
             ("full", {}),

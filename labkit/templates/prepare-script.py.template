@@ -40,8 +40,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 AREA = HERE.parent
 REPO = AREA.parent.parent
+PROTOCOL = AREA / "PROTOCOL-<name>.md"
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
-from labkit import batch, runlog
+from labkit import batch, promises, runlog
 
 SOURCE = REPO / "data" / "TODO"                 # raw input (record sha256 via runlog data=)
 OUT = AREA / "data" / "prepared" / "TODO_v1.jsonl"   # <row-noun>_v1, see docstring
@@ -108,7 +109,11 @@ def main() -> None:
         return
     if OUT.exists():
         sys.exit(f"{OUT.name} exists — data/prepared/ is read-only, variant = new name")
-    config = {"source": str(SOURCE), "n_items": len(items)}   # TODO: every knob
+    # TODO: every knob. The registered constants ride along: runlog refuses
+    # any run under the promise block whose config lacks one, this step too
+    # (cold Sonnet, judge at minutes, 2026-10-14: the first 00_prepare refused).
+    config = {"source": str(SOURCE), "n_items": len(items),
+              **promises.all_constants(promises.load(PROTOCOL))}
     with runlog.run("prepare", config=config, base_dir=AREA) as run:
         # A producer REPLACES its file, never appends. write_dataset does;
         # if this producer must write row-by-row instead, use
