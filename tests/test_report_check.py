@@ -15,6 +15,7 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from protocol_fixture import head, scope_file
@@ -41,10 +42,20 @@ class ReportCheck(unittest.TestCase):
         findings.write(area, "analysis", "opus", sha, (0, 0, 0), [])
 
     def _run(
-        self, area: Path, finalize: int = 0, check: str | None = None
+        self,
+        area: Path,
+        finalize: int = 0,
+        check: str | None = None,
+        fields: bool = False,
     ) -> tuple[int, str]:
+        """FINALIZE and CHECK stand in for their stations; the fixture's
+        protocol is a bare head, so its field gaps count only with FIELDS."""
         out = io.StringIO()
+        no_gaps = SimpleNamespace(missing_must=[])
         with (
+            contextlib.nullcontext()
+            if fields
+            else mock.patch.object(report_check, "check_fields", return_value=no_gaps),
             mock.patch.object(report_check, "finalize_area", return_value=finalize),
             mock.patch.object(
                 report_check, "check_analysis_script", return_value=check
@@ -60,6 +71,23 @@ class ReportCheck(unittest.TestCase):
         code, out = self._run(area)
         self.assertEqual(code, 0, out)
         self.assertIn("clean", out)
+
+    def test_a_freeze_with_a_must_gap_blocks(self):
+        """Frozen with the stamp's `<…>` promise sentences: the flag is set,
+        the freeze registers nothing (cloud judge probe, draw 4)."""
+        area = self._area()
+        self._audited(area)
+        proto = area / "PROTOCOL-x.md"
+        text = proto.read_text(encoding="utf-8")
+        start = text.index('sentence = "') + len('sentence = "')
+        end = text.index('"', start)
+        proto.write_text(
+            text[:start] + "<the criterion in one sentence>" + text[end:],
+            encoding="utf-8",
+        )
+        code, out = self._run(area, fields=True)
+        self.assertEqual(code, 1, out)
+        self.assertIn("still carries the stamp's", out)
 
     def test_seconds_owes_nothing_here(self):
         code, out = self._run(self._area(cost="seconds", frozen=False), finalize=1)

@@ -311,6 +311,19 @@ class Exp(unittest.TestCase):
         outside.mkdir()
         self.assertEqual(scaffold.lab_root(outside), outside.resolve())
 
+    def test_a_freshly_stamped_head_cannot_be_frozen_as_stamped(self) -> None:
+        """The stamp's promise sentences are `<…>`; setting frozen = true
+        without writing them is a must gap, not a registration."""
+        from labkit import protocol_check
+
+        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
+        text = (self.area() / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
+        frozen = text.replace("frozen = false", "frozen = true", 1)
+        gaps = protocol_check.check_fields(frozen).missing_must
+        self.assertTrue(
+            any("C1, A1, A2 still carries the stamp's" in g for g in gaps), gaps
+        )
+
     def test_every_stamped_placeholder_is_one_line(self) -> None:
         stamps = (
             ("full", {}),

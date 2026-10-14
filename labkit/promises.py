@@ -324,6 +324,16 @@ def all_constants(block: PromiseTables) -> dict[str, int | float | str | bool]:
     return out
 
 
+def placeholder_sentences(block: PromiseTables) -> list[str]:
+    """The ids whose `sentence` is still a stamp placeholder: the whole value
+    one `<…>`, as `labkit-init exp` writes it."""
+    return [
+        p.id
+        for p in block.promises
+        if p.sentence.startswith("<") and p.sentence.endswith(">")
+    ]
+
+
 def promise_tables_owed(
     block: PromiseTables | None, *, frozen: bool, full_run: bool, registers: bool = True
 ) -> str | None:
@@ -337,11 +347,29 @@ def promise_tables_owed(
         full_run (runlog long=True; at cost = seconds every run) → owed
         otherwise (an unfrozen pilot) → not owed
 
+    Where the tables are owed, a sentence still holding the stamp's `<…>`
+    placeholder is a table not yet written (`placeholder_sentences`): frozen,
+    it registered nothing (cloud judge probe, 2026-10-14: three placeholder
+    sentences frozen, hashed into the run's block digest, passed every gate).
+    An unfrozen pilot may carry them.
+
     "Block" elsewhere (`protocol_block.block_text`, `parse_toml_block`)
     means the whole ```toml block, [protocol] head included; this function
     and `PromiseTables` mean the [[promise]] tables alone."""
-    if block is not None or not (frozen or full_run):
+    if not (frozen or full_run):
         return None
+    if block is not None:
+        open_ids = placeholder_sentences(block)
+        if not open_ids:
+            return None
+        because = (
+            "frozen = true" if frozen else "a full run is held to the registration"
+        )
+        return (
+            f"{because}, but [[promise]] {', '.join(open_ids)} still carries the "
+            f"stamp's `<…>` sentence — state each promise explicitly in one "
+            f"sentence in its table"
+        )
     if not registers and not frozen:
         return None  # a full run of a count: nothing registered, nothing to hold
     because = "frozen = true" if frozen else "a full run is held to the registration"

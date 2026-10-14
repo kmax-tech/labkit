@@ -17,7 +17,9 @@ report-check comes last and holds the whole chain:
                    ends with finalize, the audit comes when the number is
                    promoted — LAB-017 The number of audits follows the cost
                    tier) and the command exits 0
-  1. frozen        `frozen = true`
+  1. frozen        `frozen = true`, and the freeze holds: no must gap
+                   `protocol-check` names (`check_fields`) — the [[promise]]
+                   tables written, not the stamp's `<…>` sentences
   2. finalize      `finalize_area` clean (its output is not repeated)
   3. analysis audit  a record `audits/*-analysis.toml` whose `scope_sha` is
                    the area's stamp now, every finding decided
@@ -45,6 +47,7 @@ from pathlib import Path
 from labkit import console, findings, protocol_block
 from labkit.finalize import finalize_area
 from labkit.preflight import area_test_python
+from labkit.protocol_check import check_fields
 from labkit.repo import choose_protocol, layout_root
 from labkit.scope_sha import area_stamp
 
@@ -70,6 +73,33 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
     return f"{ANALYZE_SCRIPT} --check exits {r.returncode}: " + " | ".join(tail)
 
 
+def freeze_gaps(protocol: Path, frozen: bool) -> list[str]:
+    """Station 1: why the freeze does not hold — the flag unset, or a must
+    gap protocol-check names (the stamp's `<…>` promise sentences among them)."""
+    gaps = [] if frozen else ["not `frozen = true` — a reported number owes the freeze"]
+    gaps += check_fields(protocol.read_text(encoding="utf-8")).missing_must
+    return [f"{protocol.name}: {g}" for g in gaps]
+
+
+def later_gaps(area: Path, protocol: Path) -> list[str]:
+    """Stations 2–4: finalize clean, an analysis audit of the code now, the check."""
+    out: list[str] = []
+    with contextlib.redirect_stdout(io.StringIO()):
+        finalized = finalize_area(area, protocol)
+    if finalized != 0:
+        out.append(f"finalize {area} has blockers — run it to see them")
+    try:
+        gap = findings.audit_coverage(area, area_stamp(area)[0], "analysis")
+    except (FileNotFoundError, ValueError) as exc:
+        gap = f"the analysis audit cannot be held to the code: {exc}"
+    if gap:
+        out.append(f"analysis audit: {gap} (LAB-050 Analysis audit before reporting)")
+    failed = check_analysis_script(area, layout_root(area))
+    if failed:
+        out.append(f"{failed} (LAB-041 Generate numbers, don't retype them)")
+    return out
+
+
 def report_check(area: Path, protocol: Path | None = None) -> int:
     """Run the stations on AREA; 0 clean, 1 a blocker, 2 no protocol to hold."""
     chosen = choose_protocol(area, protocol, "report-check")
@@ -86,27 +116,7 @@ def report_check(area: Path, protocol: Path | None = None) -> int:
             f"the short lane ends with finalize (LAB-017 The number of audits follows the cost tier)"
         )
         return 0
-    blockers: list[str] = []
-    if not head.frozen:
-        blockers.append(
-            f"{chosen.name}: not `frozen = true` — a reported number owes the freeze"
-        )
-    with contextlib.redirect_stdout(io.StringIO()):
-        finalized = finalize_area(area, chosen)
-    if finalized != 0:
-        blockers.append(f"finalize {area} has blockers — run it to see them")
-    try:
-        sha = area_stamp(area)[0]
-        gap = findings.audit_coverage(area, sha, "analysis")
-    except (FileNotFoundError, ValueError) as exc:
-        gap = f"the analysis audit cannot be held to the code: {exc}"
-    if gap:
-        blockers.append(
-            f"analysis audit: {gap} (LAB-050 Analysis audit before reporting)"
-        )
-    failed = check_analysis_script(area, layout_root(area))
-    if failed:
-        blockers.append(f"{failed} (LAB-041 Generate numbers, don't retype them)")
+    blockers = freeze_gaps(chosen, head.frozen) + later_gaps(area, chosen)
     for b in blockers:
         print(f"  BLOCKER: {b}")
     print(

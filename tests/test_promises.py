@@ -514,6 +514,37 @@ class Constants(unittest.TestCase):
         )
         self.assertEqual(promises.constant_records(block, {})[0].state, "missing")
 
+    def test_a_stamp_placeholder_sentence_is_a_table_not_yet_written(self):
+        """Three `<…>` sentences were frozen, hashed into the run's block
+        digest and passed every gate (cloud judge probe, 2026-10-14). The
+        twin: the written sentence passes; an unfrozen pilot may carry one."""
+        stamped = parsed(
+            protocol_text(C1).replace(
+                'sentence = "accuracy >= min_acc"',
+                'sentence = "<the criterion in one sentence>"',
+            )
+        )
+        self.assertEqual(promises.placeholder_sentences(stamped), ["C1"])
+        for frozen, full_run in ((True, False), (False, True)):
+            with self.subTest(frozen=frozen, full_run=full_run):
+                owed = (
+                    promises.promise_tables_owed(
+                        stamped, frozen=frozen, full_run=full_run
+                    )
+                    or ""
+                )
+                self.assertIn(
+                    "[[promise]] C1 still carries the stamp's `<…>` sentence", owed
+                )
+        self.assertIsNone(
+            promises.promise_tables_owed(stamped, frozen=False, full_run=False)
+        )
+        written = parsed(protocol_text(C1))
+        self.assertEqual(promises.placeholder_sentences(written), [])
+        self.assertIsNone(
+            promises.promise_tables_owed(written, frozen=True, full_run=True)
+        )
+
     def test_block_owed_when_frozen_or_a_full_run_without_tables(self):
         self.assertIsNone(
             promises.promise_tables_owed(None, frozen=False, full_run=False)
