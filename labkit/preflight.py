@@ -352,7 +352,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
 def _coverage_gap(area: Path, head: "protocol_block.Head | None") -> str | None:
     """Why the head's audit line claims an audit no record holds, or None:
     the line names a `scope sha` and no decided preflight record saw that
-    code (`findings.preflight_coverage`; runlog refuses the full run on the
+    code (`findings.audit_coverage`; runlog refuses the full run on the
     same answer). Silent at `seconds`, without a line, and on `n/a`."""
     if head is None or head.cost == "seconds" or not head.preflight_audit:
         return None
@@ -360,7 +360,7 @@ def _coverage_gap(area: Path, head: "protocol_block.Head | None") -> str | None:
     if m is None:
         return None
     try:
-        return findings.preflight_coverage(area, m.group(1))
+        return findings.audit_coverage(area, m.group(1), "preflight")
     except findings.FindingsError as exc:
         return str(exc)
 
