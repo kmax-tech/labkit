@@ -201,6 +201,39 @@ class Report(unittest.TestCase):
         self.assertEqual(code, repo_check.UNDECIDED)
         self.assertIn("UNDECIDED", lines[0])
 
+    def test_a_lock_on_the_tags_commit_is_the_same_pin(self):
+        """`pip freeze` writes the commit the requirements tag points at; the
+        probe's pin line was STALE on every stamp (2026-10-13). The twin: a
+        lock on another commit stays two pins."""
+        installed = install_hooks.labkit_version()
+        master = master_repo(installed, (f"v{installed}",))
+        commit = git(master, "rev-parse", "HEAD").strip()
+        source = f"labkit @ git+file://{master}"
+        repo = lab_repo(f"{source}@v{installed}")
+        (repo / "requirements.lock").write_text(f"{source}@{commit}\n")
+        line = repo_check.pin_line(repo_check.read_pins(repo), repo)
+        self.assertEqual(line.state, repo_check.OK, str(line))
+        self.assertIn(commit[:12], str(line))
+        (master / "x").write_text("x")
+        git(master, "add", "x")
+        git(master, "commit", "-q", "-m", "after the tag")
+        later = git(master, "rev-parse", "HEAD").strip()
+        (repo / "requirements.lock").write_text(f"{source}@{later}\n")
+        line = repo_check.pin_line(repo_check.read_pins(repo), repo)
+        self.assertEqual(line.state, repo_check.STALE, str(line))
+
+    def test_a_remote_tag_resolves_to_its_commit_annotated_or_not(self):
+        master = master_repo("0.1.0", ("v0.1.0",))
+        git(master, "tag", "-a", "v0.2.0", "-m", "annotated")
+        commit = git(master, "rev-parse", "HEAD").strip()
+        for tag in ("v0.1.0", "v0.2.0"):
+            pin = repo_check.Pin("requirements.txt", f"git+{master}", tag)
+            self.assertIsNone(pin.local_path)  # read with ls-remote
+            self.assertEqual(repo_check.tag_commit(pin, master), commit)
+        gone = repo_check.Pin("requirements.txt", f"git+{master}", "v9.9.9")
+        with self.assertRaises(RuntimeError):
+            repo_check.tag_commit(gone, master)
+
     def test_main_prints_and_exits(self):
         self.assertEqual(
             repo_check.main([str(Path(tempfile.mkdtemp()) / "nope")]),

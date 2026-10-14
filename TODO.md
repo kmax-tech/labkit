@@ -86,6 +86,11 @@ mechanischer Check — die Aufgabe des Pilots.
   Commit nennt, auf den der Tag zeigt — seit jedem Stempel so, kein Schaden
   (der SessionStart-Hook liest nur die `installed`-Zeile). Entscheiden: Tag
   auflösen und vergleichen, oder das Lock als Commit-Form des Tags lesen.
+  **Gebaut 2026-10-14:** `labkit-check` löst den Tag an der Quelle auf
+  (`git rev-parse` lokal, `git ls-remote` remote) und vergleicht Commits —
+  gleiche Quelle, Lock auf dem Commit des Tags heißt OK; offline bei einer
+  Remote-Quelle UNDECIDED. Gegen `labkit-probe` geprüft: `v0.88.7 (lock: its
+  commit 7844ff168f4a) … OK`.
 - [x] **Release in einem Schritt: `just release X.Y.Z`** (2026-10-13).
   Auslöser: der Tag `v0.88.5` wurde auf `35734e0` gesetzt, bevor der
   Versionscommit da war; der Tag-Test wurde rot, der Doku-Commit `a9dad50`

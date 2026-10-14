@@ -16,7 +16,9 @@ every line is OK, 1 when any is STALE, 2 when a line could not be decided
 It reports and changes nothing: the pin is raised on purpose (the
 requirements line `labkit-init` writes says so), never by this command.
 `installed` is the labkit this command runs from, so run it from the repo's
-venv. `latest` reads the source the pin names — a local path with `git tag`,
+venv. A lock that names the commit its requirements tag points at (what
+`pip freeze` writes) is the same pin: `pin` resolves the tag at the source
+and compares commits. `latest` reads the source the pin names — a local path with `git tag`,
 a remote with `git ls-remote --tags` (network; `--offline` skips it).
 `refs` holds every `.md` and `.py` outside `.git`, `.venv`, `runs/` and
 `data/` to the packaged ledger (`python -m labkit.rules refs`) — except the
@@ -149,6 +151,39 @@ def latest_tag(pin: Pin, cwd: Path, timeout: float = REMOTE_TIMEOUT_S) -> str | 
     return max(versions, key=lambda t: version_tuple(t[1:]))
 
 
+def tag_commit(pin: Pin, cwd: Path, timeout: float = REMOTE_TIMEOUT_S) -> str:
+    """The commit PIN's tag points at, read at the pin's source: a local
+    checkout with `git rev-parse`, a remote with `git ls-remote` (an
+    annotated tag peeled to its commit).
+
+    Raises:
+        RuntimeError: The source cannot be read or has no such tag.
+    """
+    path = pin.local_path
+    if path is not None:
+        r = git_run(["-C", str(path), "rev-parse", f"{pin.ref}^{{commit}}"], cwd)
+        where = str(path)
+    else:
+        ref = f"refs/tags/{pin.ref}"
+        r = git_run(
+            ["ls-remote", pin.source.removeprefix("git+"), ref, ref + "^{}"],
+            cwd,
+            timeout,
+        )
+        where = pin.source
+    if r.returncode != 0:
+        raise RuntimeError(f"{where}: {r.stderr.strip() or 'git failed'}")
+    if path is not None:
+        return r.stdout.strip()
+    found = {
+        ref: sha for sha, ref in (line.split("\t") for line in r.stdout.splitlines())
+    }
+    commit = found.get(f"refs/tags/{pin.ref}^{{}}") or found.get(f"refs/tags/{pin.ref}")
+    if commit is None:
+        raise RuntimeError(f"{where}: no tag {pin.ref}")
+    return commit
+
+
 def record_areas(repo: Path) -> list[Path]:
     """The areas `refs` does not read: an area whose protocol is frozen is a
     registration, one whose protocol this labkit cannot read (an older
@@ -205,7 +240,34 @@ class Line:
         return f"{self.label:<10} {self.what:<70} {verdict}{tail}"
 
 
-def pin_line(pins: list[Pin]) -> Line:
+def same_pin(pins: list[Pin], cwd: Path, offline: bool) -> Line | None:
+    """`pin` when the two files differ only in spelling: requirements.txt
+    names a tag, the lock (from `pip freeze`) the commit that tag points at,
+    both from one source. None when the pins are not of that shape or the
+    commits differ — then they are two pins."""
+    tags = [p for p in pins if p.version is not None and TAG_RE.match(p.ref)]
+    commits = [p for p in pins if p.version is None]
+    if len(tags) != 1 or len(commits) != 1 or tags[0].source != commits[0].source:
+        return None
+    tag, commit = tags[0], commits[0]
+    what = f"{tag.file} {tag.ref}, {commit.file} {commit.ref[:12]} from {tag.source}"
+    if offline and tag.local_path is None:
+        return Line("pin", what, UNDECIDED, f"{tag.source} not asked (--offline)")
+    try:
+        resolved = tag_commit(tag, cwd)
+    except RuntimeError as exc:
+        return Line("pin", what, UNDECIDED, str(exc))
+    if resolved != commit.ref:
+        return None
+    return Line(
+        "pin",
+        f"{tag.file} and {commit.file}: {tag.ref} (lock: its commit "
+        f"{commit.ref[:12]}) from {tag.source}",
+        OK,
+    )
+
+
+def pin_line(pins: list[Pin], cwd: Path, offline: bool = False) -> Line:
     """`pin`: the one labkit pin, or why there is none to work with."""
     if not pins:
         return Line(
@@ -215,6 +277,8 @@ def pin_line(pins: list[Pin]) -> Line:
             "pin labkit (labkit-init writes the line)",
         )
     if len({p.ref for p in pins}) > 1:
+        if (same := same_pin(pins, cwd, offline)) is not None:
+            return same
         return Line(
             "pin",
             "; ".join(f"{p.file} pins {p.ref}" for p in pins),
@@ -309,7 +373,7 @@ def check_repo(repo: Path, offline: bool = False) -> tuple[list[str], int]:
     want = pinned_version(pin, repo) if pin is not None else None
     installed = install_hooks.labkit_version()
     answers = [
-        pin_line(pins),
+        pin_line(pins, repo, offline),
         installed_line(pin, want, installed),
         latest_line(pin, want, repo, offline),
         hook_line(repo, installed),
