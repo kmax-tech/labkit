@@ -62,6 +62,7 @@ class FreezeGate(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp())
         os.environ.pop("LABKIT_UNFROZEN", None)
         os.environ.pop("CLAUDECODE", None)
+        os.environ.pop(runlog.FOREGROUND_TIMEOUT_ENV, None)
 
     def _area(self, text: str) -> Path:
         (self.tmp / "PROTOCOL-x.md").write_text(text, encoding="utf-8")
@@ -214,6 +215,30 @@ class FreezeGate(unittest.TestCase):
                 self._start(FROZEN, long=True)
             self.assertIn("foreground", str(cm.exception))
         finally:
+            os.environ.pop("CLAUDECODE", None)
+
+    def test_any_agent_names_its_foreground_limit(self):
+        """Under Codex or another agent the gate asked only for CLAUDECODE
+        and let a long run die with that harness's timeout (TODO item 6).
+        The variable names the limit for any agent; 0 says there is none,
+        even under Claude Code."""
+        env = runlog.FOREGROUND_TIMEOUT_ENV
+        frozen = self._audited()  # passes every gate but this one
+        try:
+            os.environ[env] = "300"
+            with self.assertRaises(SystemExit) as cm:
+                self._start(frozen, long=True)
+            self.assertIn(f"after 300 s ({env})", str(cm.exception))
+            os.environ["CLAUDECODE"] = "1"
+            os.environ[env] = "0"
+            r, _ = self._start(frozen, long=True)
+            self.assertTrue((r.dir / "config.json").is_file())
+            os.environ[env] = "ten minutes"
+            with self.assertRaises(SystemExit) as cm:
+                runlog.foreground_timeout()
+            self.assertIn("not a number of seconds", str(cm.exception))
+        finally:
+            os.environ.pop(env, None)
             os.environ.pop("CLAUDECODE", None)
 
     def test_tier_is_recorded_for_pilots_too(self):

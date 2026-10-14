@@ -348,7 +348,7 @@ def main() -> None:
     config = asdict(cfg)
     # long=True declares the full run. At cost = "seconds" runlog wants the
     # registration written (question · criterion · admissibility · cost) and
-    # lets the run start in a Claude Code foreground shell; at minutes/hours
+    # lets the run start in an agent's foreground shell; at minutes/hours
     # the protocol must be frozen with the preflight audit stamped and the
     # run detached (`runlog start -- …`; scar 2026-08-13). `data=` freezes
     # the source — finalize refuses a run of seconds without it.

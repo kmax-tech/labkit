@@ -103,8 +103,9 @@ number under five minutes.
 A rule the agent has to remember is the weak layer: it lives in the skill
 text and dies with a long session. The layers that do not depend on
 remembering (2026-10-05) — `runlog.Run` holds because every run passes
-through it, the git pre-commit hook because every commit does; the three
-Claude hooks hold only in a Claude Code session:
+through it, the git pre-commit hook because every commit does; both hold
+under any agent, or none. The three Claude hooks are an adapter for Claude
+Code and hold only in a Claude Code session:
 
 | Layer                | Where                                                      | Holds when                                            |
 |----------------------|------------------------------------------------------------|-------------------------------------------------------|
@@ -129,6 +130,15 @@ The gate follows the cost tier (`cost` in the protocol head, LAB-017 The number 
 criterion**, not the freeze — an instrument change after it is a commit
 and a rerun, never a second freeze. `minutes`, `hours` and an unfilled
 cost keep the freeze. The tier is written to `config.json` as `cost_tier`.
+
+**Detach gate.** A long run (`long=True`) started in an agent's foreground
+shell dies with the harness's tool timeout, and the kill takes the whole
+process group. `runlog` refuses it before any work and asks for `runlog start
+-- <cmd>` (or `LABKIT_DETACHED=1` when the caller already detached it).
+Which shell has such a limit is named by `LABKIT_FOREGROUND_TIMEOUT_S`
+(seconds; `0`: none), set in the environment the harness gives its shell —
+for Codex, Cursor or any other agent. Claude Code is recognised without it
+(`CLAUDECODE`, 600 s). Not at `cost = "seconds"`.
 
 **pre-run.** The hook sees every Bash command. One that names a `.py` file
 which opens a run (`runlog.run(`) and is not a throwaway stage (`--show`,

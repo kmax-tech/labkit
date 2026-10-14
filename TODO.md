@@ -1144,6 +1144,19 @@ so heißt, nicht weil sie Claude sind.
 Veröffentlichung oder dem ersten Mitarbeitenden, der mit Codex im Labor
 arbeitet. **Prüfstelle:** `labkit-init lab` stempelt `AGENTS.md`.
 
+**Stand 2026-10-14: alle drei Zeilen gebaut.** `AGENTS.md` stempelt
+`labkit-init lab` (0.78.0), der Audit ist `labkit-audit` (0.79.0), und die
+Harness-Erkennung kam auf Ansage (Codex soll die Verallgemeinerung
+mittragen können): `runlog.foreground_timeout()` liest
+`LABKIT_FOREGROUND_TIMEOUT_S` (Sekunden, `0` = kein Limit) für jeden Agenten,
+`CLAUDECODE` gilt ohne die Variable als 600 s. README („Detach gate“) und
+die `AGENTS.md`-Vorlage (Setup) sagen, wo man sie setzt. **Offen:** ob
+Codex seiner Shell die Variable per Konfiguration mitgibt, ist nicht
+geprüft — Prüfstelle: der erste Codex-Lauf im Labor, dort einen
+`long=True`-Lauf im Vordergrund starten und die Verweigerung sehen.
+Die Claude-Hooks bleiben Adapter; ein zweiter Adapter nur für einen
+Harness mit Hooks.
+
 ## 7. Englische Kennungen: `[C]` · `[A]` · `[B]` statt `[K]` · `[S]` · `[W]` · `[N]`
 
 **Was:** Die Kennungen auf den Versprechen des Protokolls (LAB-004 Identifiers make the intent addressable) sind

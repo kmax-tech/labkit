@@ -872,6 +872,45 @@ def _promise_snapshot(
         raise SystemExit(f"runlog: promise block: {exc}") from exc
 
 
+#: the time limit, in seconds, an agent harness puts on one foreground shell
+#: command — set in the environment the harness gives its shell (Codex,
+#: Cursor, any agent); `0` says the shell has none
+FOREGROUND_TIMEOUT_ENV = "LABKIT_FOREGROUND_TIMEOUT_S"
+#: Claude Code's limit, the default when `CLAUDECODE` is set and the variable
+#: is not: its Bash tool runs one command for at most 600 000 ms
+CLAUDE_CODE_FOREGROUND_S = 600.0
+
+
+def foreground_timeout() -> tuple[float, str] | None:
+    """The foreground limit of the shell this process runs in, and who
+    named it; None when no harness limits it.
+
+    `LABKIT_FOREGROUND_TIMEOUT_S` names it for any agent, and wins; without
+    it, Claude Code (`CLAUDECODE` in the environment) counts as
+    `CLAUDE_CODE_FOREGROUND_S`. Until 2026-10-14 the detach gate asked only
+    for `CLAUDECODE`, so a long run under another agent was not refused and
+    died with that agent's timeout (TODO item 6).
+
+    Raises:
+        SystemExit: The variable is set but not a number >= 0.
+    """
+    raw = os.environ.get(FOREGROUND_TIMEOUT_ENV)
+    if raw is not None and raw.strip():
+        try:
+            limit = float(raw)
+        except ValueError:
+            limit = -1.0
+        if not limit >= 0:  # also NaN
+            raise SystemExit(
+                f"runlog: {FOREGROUND_TIMEOUT_ENV}={raw!r} is not a number of "
+                f"seconds >= 0 (0: the shell has no limit)"
+            )
+        return (limit, FOREGROUND_TIMEOUT_ENV) if limit > 0 else None
+    if os.environ.get("CLAUDECODE"):
+        return CLAUDE_CODE_FOREGROUND_S, "CLAUDECODE: Claude Code"
+    return None
+
+
 def _registration_refusal(
     bound: _Bound,
     block: "promises.PromiseTables | None",
@@ -933,7 +972,7 @@ class Run:
         2. protocol binding unresolvable             → SystemExit
         3. frozen (or seconds) without promise tables → SystemExit
         4. a registered constant missing/different   → SystemExit
-        5. detach gate (long run under Claude Code)  → SystemExit
+        5. detach gate (long run in an agent's foreground shell)  → SystemExit
         6. run index header unknown                  → RuntimeError
         7. data split leakage                        → RuntimeError
         8. freeze gate (unfrozen full run, stale stamp) → SystemExit
@@ -986,22 +1025,19 @@ class Run:
             raise SystemExit(f"runlog: {refusal}")
         _short = self._cost_tier == "seconds"
         # Detach gate (scar 2026-08-13, twice in one evening): a long run
-        # started in a Claude Code foreground shell dies with the 10-min tool
-        # timeout — the kill takes the whole process group, run and lock with
-        # it. `long=True` is the script's own declaration (the --full stage
-        # sets it); the gate refuses the foreground start BEFORE any work.
-        # A run of seconds (`cost = "seconds"`) cannot meet that timeout and
-        # runs in the foreground (2026-10-05).
-        if (
-            long
-            and not _short
-            and os.environ.get("CLAUDECODE")
-            and os.environ.get("LABKIT_DETACHED") != "1"
-        ):
+        # started in an agent's foreground shell dies with the harness's
+        # tool timeout — the kill takes the whole process group, run and lock
+        # with it. `long=True` is the script's own declaration (the --full
+        # stage sets it); the gate refuses the foreground start BEFORE any
+        # work. A run of seconds (`cost = "seconds"`) cannot meet that
+        # timeout and runs in the foreground (2026-10-05).
+        limit = None if (_short or not long) else foreground_timeout()
+        if limit is not None and os.environ.get("LABKIT_DETACHED") != "1":
             raise SystemExit(
-                "runlog: this run declares long=True and sits in a Claude Code "
-                "foreground shell — the tool timeout would kill the process "
-                "group mid-run (2026-08-13). Start it detached:\n"
+                f"runlog: this run declares long=True and sits in a foreground "
+                f"shell an agent harness kills after {limit[0]:g} s ({limit[1]}) "
+                f"— the kill takes the process group mid-run (2026-08-13). "
+                f"Start it detached:\n"
                 "  runlog start -- <the same command>\n"
                 "or, if the caller already detached it (run_in_background, "
                 "nohup+setsid), acknowledge with LABKIT_DETACHED=1."

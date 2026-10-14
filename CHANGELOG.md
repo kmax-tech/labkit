@@ -5,7 +5,7 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
-## 0.89.0 — 2026-10-13
+## 0.89.0 — 2026-10-14
 
 ### Breaking — the legacy paths are out, one home per question
 
@@ -87,6 +87,13 @@ path: 0.88.8.
 
 ### Added
 
+- **The detach gate holds under any agent.** `runlog` refused a long run in
+  a foreground shell only under Claude Code (`CLAUDECODE`); under Codex or
+  another agent the run died with that harness's timeout.
+  `LABKIT_FOREGROUND_TIMEOUT_S` (seconds, `0` = no limit), set in the
+  environment the harness gives its shell, names the limit for any agent;
+  `CLAUDECODE` alone still counts as 600 s. `runlog.foreground_timeout()`
+  answers which limit applies and who named it.
 - **`code-check` warns on an [A] key nothing decides on.** An
   admissibility key the code writes but never tests (`if`, `and`/`or`/
   `not`, `all()`/`any()`, a loop over a key tuple) permits nothing: the C
