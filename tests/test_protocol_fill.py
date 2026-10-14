@@ -354,6 +354,39 @@ class TestFromRun(unittest.TestCase):
         self.assertNotIn("Runs", filled)  # the run line is there once, not twice
         self.assertEqual(again.count(self.RUN), 3)
 
+    def test_the_stamped_answering_run_line_is_written(self):
+        """The template stamps `none yet — …` over four lines, no `<…>`
+        placeholder: fill read it as filled and --from-run skipped it
+        silently, so the line a cold agent was told the command writes
+        stayed `none yet` (cold Sonnet, 2026-10-14)."""
+        from labkit import scaffold
+
+        stamped = scaffold.PROTOCOL_TEMPLATE.read_text(encoding="utf-8").splitlines()
+        k = next(i for i, ln in enumerate(stamped) if "**Answering run:**" in ln)
+        block = [stamped[k]]
+        for ln in stamped[k + 1 :]:
+            if not ln.startswith("  "):
+                break
+            block.append(ln)
+        protocol = self.PROTOCOL.replace("## Runs", "\n".join(block) + "\n\n## Runs")
+        area = self._area({"mean_docs_per_case": 3.5})
+        text, filled, _ = protocol_fill.from_run(protocol, area)
+        self.assertIn("Answering run", filled)
+        self.assertIn(f"- **Answering run:** {self.RUN}\n", text)
+        self.assertNotIn("none yet", text)
+        self.assertNotIn(block[-1].strip(), text)  # the stamp's continuation goes too
+
+    def test_an_answering_run_naming_another_run_is_refused_not_skipped(self):
+        protocol = self.PROTOCOL.replace(
+            "## Runs", "- **Answering run:** 2026-01-01T00-00-00_0000\n\n## Runs"
+        )
+        area = self._area({"mean_docs_per_case": 3.5})
+        with self.assertRaises(ValueError) as cm:
+            protocol_fill.from_run(protocol, area)
+        self.assertIn("names 2026-01-01T00-00-00_0000", str(cm.exception))
+        text, filled, _ = protocol_fill.from_run(protocol, area, force=True)
+        self.assertIn(f"- **Answering run:** {self.RUN}", text)
+
     def test_a_named_run_that_is_not_completed_refuses(self):
         area = self._area({"x": 1})
         with self.assertRaises(SystemExit):

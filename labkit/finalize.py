@@ -74,7 +74,12 @@ from labkit.repo import (
 )
 from labkit.intent_check import main as intent_check_main, ids_in_prose
 from labkit.preflight import area_tests
-from labkit.protocol_check import fields, open_holes
+from labkit.protocol_check import (
+    answering_run_field,
+    answering_run_open,
+    fields,
+    open_holes,
+)
 
 
 def _tracked(repo: Path, path: Path) -> bool:
@@ -240,18 +245,6 @@ def cited_run_mismatch(text: str, measurement_run: Path) -> str | None:
     return None
 
 
-ANSWERING_RUN_LABEL = "answering run"
-
-
-def answering_run_field(text: str) -> str | None:
-    """The value of the protocol's `Answering run` field, None when the
-    protocol has no such line (a cut without the Result section)."""
-    for f in fields(text):
-        if f.name == ANSWERING_RUN_LABEL:
-            return f.value.strip()
-    return None
-
-
 def answering_run_field_mismatch(
     text: str, measurement_run: Path
 ) -> tuple[str, str] | None:
@@ -264,7 +257,7 @@ def answering_run_field_mismatch(
     value = answering_run_field(text)
     if value is None or measurement_run.name in value:
         return None
-    if value.startswith("none yet") or value.startswith("<"):
+    if answering_run_open(value):
         return (
             "warn",
             f'"Answering run" not written yet — `protocol-fill --from-run '

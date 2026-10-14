@@ -429,6 +429,27 @@ def seconds_registration_missing(text: str) -> list[str]:
     return missing + ([] if cost else ["[protocol] cost"])
 
 
+ANSWERING_RUN_LABEL = "answering run"
+
+
+def answering_run_field(text: str) -> str | None:
+    """The value of the protocol's `Answering run` field, None when the
+    protocol has no such line (a cut without the Result section)."""
+    for f in fields(text):
+        if f.name == ANSWERING_RUN_LABEL:
+            return f.value.strip()
+    return None
+
+
+def answering_run_open(value: str) -> bool:
+    """Is this `Answering run` value still the stamp's — `none yet …` or a
+    `<…>` placeholder — rather than a run id? The one answer finalize (warn:
+    not written yet) and protocol-fill --from-run (write it) share; the stamp's
+    `none yet` is no `<…>` placeholder, so `fill` read it as filled and
+    --from-run skipped the line silently (cold Sonnet, 2026-10-14)."""
+    return value.startswith("none yet") or value.startswith("<")
+
+
 def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
     """Every protocol id in the repo, mapped to the files carrying it — read
     now, never cached: the caller holds the index for as long as it may

@@ -36,6 +36,8 @@ from labkit import console, recheck, runs
 from labkit.code_check import prompt_constants
 from labkit.protocol_check import (
     RUNS_PLACEHOLDER,
+    answering_run_field,
+    answering_run_open,
     field_name,
     fields,
     placeholder_fields,
@@ -180,12 +182,15 @@ def from_run(
             if "no field labelled" in str(exc):
                 continue  # a cut without this line (the Summary of a report-grade full form carries it)
             raise
-    try:
-        text = fill(text, "Answering run", run.name, force=force)
+    current = answering_run_field(text)
+    if current is not None and run.name not in current:
+        if not (answering_run_open(current) or force):
+            raise ValueError(
+                f'"Answering run" names {current.split()[0]}, not {run.name} — '
+                f"--force to replace it"
+            )
+        text = fill(text, "Answering run", run.name, force=True)
         filled.append("Answering run")
-    except ValueError as exc:
-        if "no field labelled" not in str(exc) and "already filled" not in str(exc):
-            raise
     text, changed = runs_line(
         text, run.name, "the kept run; its metrics.json is the number"
     )
