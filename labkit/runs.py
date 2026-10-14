@@ -62,7 +62,16 @@ def is_alive(pid: object, script: object) -> bool | None:
     cmd = _command_of(pid)
     if cmd is None or not isinstance(script, str) or not script:
         return None  # a script name that is not text cannot be matched — undecidable
-    return script in cmd
+    return runs_script(cmd, script)
+
+
+def runs_script(cmd: str, script: str) -> bool:
+    """Does the command line CMD run SCRIPT — as a word of its own or the last
+    component of a path (`python /a/01_measure.py --x`)? Not as part of
+    another name: `not_01_measure.py` held a dead run "running" while a
+    substring decided it (review 2026-10-14). A directory with a space in
+    its path still matches; the name is bounded, not the path split."""
+    return re.search(rf"(?:^|[\s/]){re.escape(script)}(?:\s|$)", cmd) is not None
 
 
 def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
@@ -115,7 +124,10 @@ def run_started(run_id: str) -> datetime | None:
     m = RUN_ID.fullmatch(run_id)
     if m is None:
         return None
-    return datetime.fromisoformat(f"{m['date']}T{m['h']}:{m['m']}:{m['s']}")
+    try:
+        return datetime.fromisoformat(f"{m['date']}T{m['h']}:{m['m']}:{m['s']}")
+    except ValueError:  # the shape of a run id, not a date: 2026-02-30T…
+        return None
 
 
 class RunConfigError(ValueError):
@@ -195,40 +207,52 @@ def read_outputs(run_dir: Path) -> list[OutputEntry] | None:
         raise ArtefactError(
             f"{path}: must be a list of entries, not {type(data).__name__}"
         )
-    out: list[OutputEntry] = []
-    for n, entry in enumerate(cast(list[object], data), 1):
-        if not isinstance(entry, dict):
-            raise ArtefactError(f"{path}: entry {n} is not an object")
-        e = cast(dict[str, object], entry)
-        p, sha, lines, note = (
-            e.get("path"),
-            e.get("sha256"),
-            e.get("lines"),
-            e.get("note", ""),
-        )
-        if not isinstance(p, str) or not p:
-            raise ArtefactError(f"{path}: entry {n} has no path")
-        if sha is not None and not isinstance(sha, str):
-            raise ArtefactError(f"{path}: entry {n}: sha256 is {sha!r}")
-        if lines is not None and (
-            isinstance(lines, bool) or not isinstance(lines, int)
-        ):
-            raise ArtefactError(f"{path}: entry {n}: lines is {lines!r}")
-        rows_from = e.get("rows_from", {})
-        cont = e.get("continues", [])
-        if not isinstance(rows_from, dict) or not isinstance(cont, list):
-            raise ArtefactError(f"{path}: entry {n}: rows_from/continues malformed")
-        out.append(
-            OutputEntry(
-                Path(p),
-                sha,
-                lines,
-                str(note),
-                {str(k): int(v) for k, v in cast(dict[str, object], rows_from).items()},  # type: ignore[arg-type]
-                tuple(str(c) for c in cast(list[object], cont)),
+    return [
+        _output_entry(path, n, entry)
+        for n, entry in enumerate(cast(list[object], data), 1)
+    ]
+
+
+def _is_count(value: object) -> bool:
+    """An integer that is not a bool — JSON `true` is no line or row count."""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _output_entry(path: Path, n: int, entry: object) -> OutputEntry:
+    """Entry N of outputs.json PATH, or ArtefactError naming what is wrong."""
+    if not isinstance(entry, dict):
+        raise ArtefactError(f"{path}: entry {n} is not an object")
+    e = cast(dict[str, object], entry)
+    p, sha, lines, note = (
+        e.get("path"),
+        e.get("sha256"),
+        e.get("lines"),
+        e.get("note", ""),
+    )
+    if not isinstance(p, str) or not p:
+        raise ArtefactError(f"{path}: entry {n} has no path")
+    if sha is not None and not isinstance(sha, str):
+        raise ArtefactError(f"{path}: entry {n}: sha256 is {sha!r}")
+    if lines is not None and not _is_count(lines):
+        raise ArtefactError(f"{path}: entry {n}: lines is {lines!r}")
+    rows_from = e.get("rows_from", {})
+    cont = e.get("continues", [])
+    if not isinstance(rows_from, dict) or not isinstance(cont, list):
+        raise ArtefactError(f"{path}: entry {n}: rows_from/continues malformed")
+    rows = cast(dict[str, object], rows_from)
+    for run_id, count in rows.items():
+        if not _is_count(count):
+            raise ArtefactError(
+                f"{path}: entry {n}: rows_from[{run_id!r}] is {count!r}, not a row count"
             )
-        )
-    return out
+    return OutputEntry(
+        Path(p),
+        sha,
+        cast(int | None, lines),
+        str(note),
+        {str(k): cast(int, v) for k, v in rows.items()},
+        tuple(str(c) for c in cast(list[object], cont)),
+    )
 
 
 def read_completion(run_dir: Path) -> dict[str, object]:

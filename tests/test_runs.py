@@ -79,7 +79,12 @@ class RunIdShape(unittest.TestCase):
             (started.year, started.hour, started.second) if started else None,
             (2026, 14, 57),
         )
-        for name in ("output", "2026-10-13T14-00-57", "start-2026-10-13T14-00-57.log"):
+        for name in (
+            "output",
+            "2026-10-13T14-00-57",
+            "start-2026-10-13T14-00-57.log",
+            "2026-02-30T12-00-00_abcd",  # the shape, not a date: the stop hook crashed on it
+        ):
             with self.subTest(name):
                 self.assertIsNone(runs.run_started(name))
 
@@ -125,3 +130,26 @@ class WriteAtomic(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ScriptOnCommandLine(unittest.TestCase):
+    """`is_alive` asks whether a live PID still runs the recorded script; a
+    substring held `python not_01_measure.py` for `01_measure.py`."""
+
+    def test_the_script_as_a_word_or_a_path_matches(self):
+        for cmd in (
+            "python 01_measure.py",
+            "/u/.venv/bin/python /u/exp/01-x/scripts/01_measure.py --full",
+            "python /Users/a b/scripts/01_measure.py",  # a space in the dir
+        ):
+            with self.subTest(cmd):
+                self.assertTrue(runs.runs_script(cmd, "01_measure.py"))
+
+    def test_another_name_containing_it_does_not(self):
+        for cmd in (
+            "python not_01_measure.py",
+            "python 01_measure.py.bak",
+            "python /x/01_measure.pyc",
+        ):
+            with self.subTest(cmd):
+                self.assertFalse(runs.runs_script(cmd, "01_measure.py"))

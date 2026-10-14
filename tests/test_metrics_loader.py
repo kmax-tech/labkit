@@ -78,6 +78,9 @@ class ReadOutputsAndCompletion(unittest.TestCase):
             '{"path": "x"}',
             '[{"lines": 3}]',
             '[{"path": "x", "lines": true}]',
+            '[{"path": "x", "rows_from": {"r": "not-an-int"}}]',
+            '[{"path": "x", "rows_from": {"r": 2.5}}]',
+            '[{"path": "x", "rows_from": {"r": true}}]',
             "[1]",
         ):
             with tempfile.TemporaryDirectory() as d, self.subTest(content=content):
