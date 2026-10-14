@@ -691,9 +691,10 @@ evidence file under the same ID (top of this document).*
   prompt+answer pair per finding** — a number without the output behind it can no longer be interpreted
   in three months.
 
-- **LAB-041 · Generate numbers, don't retype them.** *(was §2.D2)* One analysis script per result note
-  (`analysis/<note>.py`), which prints the table and uses `--check` to verify it against the
-  note. **Every parser that turns model output into data has a
+- **LAB-041 · Generate numbers, don't retype them.** *(was §2.D2)* One analysis script per area
+  (`scripts/02_analyze.py`, stamped with the area), which prints the table and uses `--check` to
+  verify it against the note its `NOTE` names — the protocol, or the result note once the number
+  is promoted; `report-check` holds that the check passes. **Every parser that turns model output into data has a
   test with real raw answers**. Freeze data sources via
   `runlog.run(..., data={...})` (path, sha256, rows,
   split-leak check). With `--check`, **normalize the characters** (decimal comma,
@@ -721,7 +722,7 @@ evidence file under the same ID (top of this document).*
 
   **A run names its protocol.** Every protocol carries an `id` in its head, and every run records it; the checks pair protocol and run via this identifier, never via the directory and never via the file path. An area with one protocol binds automatically; with several, it requires the identifier to be given — otherwise the run does not start. A run is complete only with a result **and** a confirmed completion; no number is reported from an aborted run, even if it is on disk. Contract: `~/projects/labkit/docs/protocol-run-binding.md`.
 
-  **Two homes for the run_id, not four.** The reported run_id is in the protocol (sections Runs and Result) and in the `## Sources` line of the result note — there `analysis/<note>.py --check` verifies it. Every other note (instrument note, lab notebook, theory) cites the result note via wikilink and carries no run_id; otherwise every repeat run drags four places along, and one of them stays behind.
+  **Two homes for the run_id, not four.** The reported run_id is in the protocol (sections Runs and Result) and in the `## Sources` line of the result note — there `scripts/02_analyze.py --check` verifies it (with `NOTE` pointing at that note). Every other note (instrument note, lab notebook, theory) cites the result note via wikilink and carries no run_id; otherwise every repeat run drags four places along, and one of them stays behind.
 
 - **LAB-044 · The check on a confound is code, not a paragraph.** *(was §2.D5)* Every rival explanation noted in advance comes with two things: the **error direction** (does the confound run for or against the hypothesis?) and a check computed by `evaluate()`. A check that is only described is a claim.
 

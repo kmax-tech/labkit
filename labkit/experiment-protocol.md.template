@@ -66,7 +66,7 @@
 
 - **Answer to the question:** <!-- s --> <per registered id its verdict, and the
   run_id; numbers as a small table below the label (one row per arm or
-  condition), produced by `analysis/<note>.py --check`, never retyped>
+  condition), produced by `scripts/02_analyze.py --check`, never retyped>
 - **Answering run:** none yet — the run `finalize` holds this protocol to,
   written with the number by `protocol-fill PROTOCOL-<name>.md --from-run`
   after `finalize`; `finalize` refuses any other run_id here (a readable

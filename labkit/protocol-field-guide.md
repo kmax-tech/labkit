@@ -287,7 +287,7 @@ scattered in output files nobody can interpret.
 - **Answer to the question:** per registered id its verdict, and the
   run_id; the numbers as a small table indented under the label, one row
   per arm or condition (not a chain `c1_pass True · c2_pass False · …`),
-  produced by `analysis/<note>.py --check`, never retyped; long form →
+  produced by `scripts/02_analyze.py --check`, never retyped; long form →
   [[note]]. Example:
 
   ```text
