@@ -36,9 +36,10 @@ def main() -> None:
                     help="pin OUT to the newest run, recompute, hold NOTE to it")
     args = ap.parse_args()
     if args.check:
-        v = recheck.holds(area=AREA, out=measure.OUT, recompute=measure.evaluate_rows, note=NOTE,
-                          numbers=lambda m: [f"{m[k]:.4f}" for k in ("c1_accuracy", "a2_accuracy")
-                                             if m[k] is not None])
+        # the numbers as protocol-fill --from-run writes them (recheck.plain_numbers):
+        # a format of its own here (`:.4f`) failed the check right after the
+        # write-back (cold Sonnet, 2026-10-14)
+        v = recheck.holds(area=AREA, out=measure.OUT, recompute=measure.evaluate_rows, note=NOTE)
         print(f"check: run {v.run_id} — {v.keys_compared} keys identical, {NOTE.name} carries "
               f"the numbers and the run_id" + (f"; grown: {v.grown}" if v.grown else ""))
         return
