@@ -174,8 +174,9 @@ class MeasureConfig:
 
     margin: float               # [C1]: registered accuracy ≥ null accuracy + margin
     max_empty: int              # [A1]: at most this many empty/unreadable answers on the registered lane;
-                                # the protocol derives it from the stop rule "more than 2 of 96 empty →
-                                # the parser is the finding" (LAB-028 An endpoint is a model slot); re-derive it when ITEMS changes
+                                # the stamped value is a placeholder: derive it for THIS item count, from how
+                                # many empty answers still leave the number readable (LAB-028 An endpoint is a
+                                # model slot) — and again when ITEMS changes
     null_band_items: int        # [A2]: the null lane sits at chance ± this many ITEMS (counted, not a share)
     model: str = MODEL          # alias from models.toml; runlog resolves it into models_resolved
     # the instrument's version: both prompts, so a reworded prompt is a
@@ -360,7 +361,7 @@ def main() -> None:
         rows = read_jsonl(out)
         for r in rows:
             print(f"{r['id']:<28} {r['answer']!r:<40} -> {parse_answer(r['answer'])!r} (gold {r['gold']})")
-        print("\n# parser cases — paste into tests/test_<NN>_<name>.py PARSER_CASES:")
+        print("\n# parser cases — paste into tests/test_<NN>_<name>.py PROBE_CASES:")
         for r in rows:
             print(f"    ({r['answer']!r}, {parse_answer(r['answer'])!r}),")
         return

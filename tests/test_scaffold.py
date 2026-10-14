@@ -365,6 +365,16 @@ class Exp(unittest.TestCase):
             quiet(measure.measure, measure.CONFIG, jobs, out)
         self.assertEqual(calls.call_count, 1)  # only registered:b was asked
 
+    def test_the_probe_names_the_area_test_file_and_its_case_list(self) -> None:
+        """The probe printed `tests/test_<NN>_<name>.py PARSER_CASES`: the
+        placeholder unreplaced in the scripts, and a list the test computes
+        rather than holds (cloud judge probe, 2026-10-14)."""
+        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
+        script = (self.area() / "scripts" / "01_measure.py").read_text(encoding="utf-8")
+        self.assertIn("paste into tests/test_01_foo_bar.py PROBE_CASES", script)
+        self.assertNotIn("<NN>", script)
+        self.assertTrue((self.root / "tests" / "test_01_foo_bar.py").is_file())
+
     def test_every_stamped_placeholder_is_one_line(self) -> None:
         stamps = (
             ("full", {}),

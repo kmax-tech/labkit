@@ -617,13 +617,21 @@ def stamp_scripts(
             ("analyze-script.py.template", "02_analyze.py"),
         )
         test = "test-area.py.template"
+    tname = (f"test_{nn}_{slug}" if nn else f"test_{slug}").replace("-", "_") + ".py"
     for tmpl, dest in scripts:
-        text = template(tmpl).replace("<name>", slug).replace("<model>", alias)
+        # `<NN>_<name>` first: the scripts name the area's test file too (the
+        # probe's "paste into tests/test_<NN>_<name>.py" stayed unreplaced,
+        # cloud judge probe 2026-10-14)
+        text = (
+            template(tmpl)
+            .replace("<NN>_<name>", tname[len("test_") : -3])
+            .replace("<name>", slug)
+            .replace("<model>", alias)
+        )
         if write_if_absent(area / "scripts" / dest, text, log):
             (area / "scripts" / dest).chmod(
                 0o755
             )  # a shebang nobody can run is a lint finding
-    tname = (f"test_{nn}_{slug}" if nn else f"test_{slug}").replace("-", "_") + ".py"
     text = (
         template(test)
         .replace("<area>", str(area.relative_to(root)))
