@@ -9,7 +9,7 @@ Usage:
         throwaway file; prints parser cases to paste into the test.
     ../../.venv/bin/python scripts/01_measure.py
         The full run, recorded by runlog (cost = "seconds": in the
-        foreground; minutes or hours: `runlog start -- …`).
+        foreground; minutes or hours: `runlog start <area> -- …`).
     ../../.venv/bin/python scripts/01_measure.py --eval-only
         Re-evaluate the kept rows; no model call.
 
@@ -362,7 +362,7 @@ def main() -> None:
     # registration written (question · criterion · admissibility · cost) and
     # lets the run start in an agent's foreground shell; at minutes/hours
     # the protocol must be frozen with the preflight audit stamped and the
-    # run detached (`runlog start -- …`; scar 2026-08-13). `data=` freezes
+    # run detached (`runlog start <area> -- …`; scar 2026-08-13). `data=` freezes
     # the source — finalize refuses a run of seconds without it.
     with runlog.run("<name>", config=config, base_dir=AREA, data={"prepared": ITEMS},
                     long=True, protocol=PROTOCOL.name) as run:

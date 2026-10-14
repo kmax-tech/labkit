@@ -44,7 +44,7 @@ labkit-init exp <NAME> [--repo DIR] [--cost T] [--model [ALIAS]] [--report] [--e
 protocol-check [--template PATH] <PROTOCOL-*.md | dir>...  # mandatory-field check (must/should contract)
 protocol-check --contract | --guide # the head, the fields by exact label, the budgets — read before writing; the path of the field guide
 runlog [<area>] [--wait | --follow] [--max-seconds N] [--interval S] [--notify]  # the area's runs: open ones with state and pid, then the finished ones; --wait exits 0 idle · 2 a run failed · 3 still running
-runlog start -- <cmd>               # detach a long run (own session, log file) and return
+runlog start <AREA> -- <cmd>        # detach a long run (own session, log in AREA/output/) and return
 runlog reindex <area>               # append rows for completed runs the index missed
 intent-check <PROTOCOL-*.md> [--metrics FILE]  # registered promise ids vs. the answering run's metrics keys
 code-check <AREA> [--protocol FILE] [--bundle FILE]  # intent ids, [A] keys tested, parser fixtures, prompt drift, code the stamp cannot follow (sys.path, dynamic loaders, imports outside lib/ and src/); --bundle packs the audit bundle for the agent
@@ -135,7 +135,7 @@ cost keep the freeze. The tier is written to `config.json` as `cost_tier`.
 **Detach gate.** A long run (`long=True`) started in an agent's foreground
 shell dies with the harness's tool timeout, and the kill takes the whole
 process group. `runlog` refuses it before any work and asks for `runlog start
--- <cmd>` (or `LABKIT_DETACHED=1` when the caller already detached it).
+<area> -- <cmd>`, which logs into the area's `output/` (or `LABKIT_DETACHED=1` when the caller already detached it).
 Which shell has such a limit is named by `LABKIT_FOREGROUND_TIMEOUT_S`
 (seconds; `0`: none), set in the harness's configuration so that every
 command it spawns has it — an `export` inside one command does not reach

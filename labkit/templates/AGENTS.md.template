@@ -91,7 +91,7 @@ fields, no reading of labkit's source.
   spawns has it (Codex: `[shell_environment_policy] set = {
   LABKIT_FOREGROUND_TIMEOUT_S = "N" }` in `.codex/config.toml`; Claude Code
   is recognised without it). A long run then refuses the foreground and
-  asks for `runlog start -- <cmd>` instead of dying mid-run.
+  asks for `runlog start <area> -- <cmd>` instead of dying mid-run.
 
 ## Layout
 

@@ -114,7 +114,7 @@ class TestStartDetaches(unittest.TestCase):
             try:
                 os.chdir(d)
                 code, out = _run_main(
-                    ["start", "--log", str(log), "--", sys.executable, "-c", script]
+                    ["start", d, "--log", str(log), "--", sys.executable, "-c", script]
                 )
             finally:
                 os.chdir(cwd)
@@ -144,6 +144,7 @@ class TestStartDetaches(unittest.TestCase):
                 code, _ = _run_main(
                     [
                         "start",
+                        d,
                         "--log",
                         str(Path(d) / "l.log"),
                         "--",
@@ -160,6 +161,49 @@ class TestStartDetaches(unittest.TestCase):
                     break
                 time.sleep(0.1)
             self.assertEqual(probe.read_text(), "1")
+
+
+class TestStartNamesTheArea(unittest.TestCase):
+    """The area is named, not guessed: the default log lands in its output/,
+    and the printed wait command names it. Before, the log went to output/
+    under the working directory, and a cold agent started from the repo root
+    looked for it in the area (cloud judge probe, 2026-10-14)."""
+
+    def test_the_default_log_lands_in_the_area(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d) / "experiments" / "01-x"
+            area.mkdir(parents=True)
+            cwd = os.getcwd()
+            try:
+                os.chdir(d)
+                code, out = _run_main(
+                    [
+                        "start",
+                        "experiments/01-x",
+                        "--",
+                        sys.executable,
+                        "-c",
+                        "print(1)",
+                    ]
+                )
+            finally:
+                os.chdir(cwd)
+            self.assertEqual(code, 0)
+            self.assertIn("wait:  runlog experiments/01-x --wait", out)
+            self.assertEqual(len(list((area / "output").glob("start-*.log"))), 1)
+            self.assertFalse((Path(d) / "output").exists())
+
+    def test_a_missing_area_is_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            cwd = os.getcwd()
+            try:
+                os.chdir(d)
+                with self.assertRaises(SystemExit) as cm:
+                    with contextlib.redirect_stderr(io.StringIO()):
+                        _run_main(["start", "--", sys.executable, "-c", "print(1)"])
+            finally:
+                os.chdir(cwd)
+            self.assertEqual(cm.exception.code, 2)
 
 
 class TestLongGate(unittest.TestCase):

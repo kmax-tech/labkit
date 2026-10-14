@@ -1052,7 +1052,7 @@ class Run:
                 f"shell an agent harness kills after {limit[0]:g} s ({limit[1]}) "
                 f"— the kill takes the process group mid-run (2026-08-13). "
                 f"Start it detached:\n"
-                "  runlog start -- <the same command>\n"
+                f"  runlog start {_shown_area(base_dir)} -- <the same command>\n"
                 "or, if the caller already detached it (run_in_background, "
                 "nohup+setsid), acknowledge with LABKIT_DETACHED=1."
             )
@@ -1489,8 +1489,24 @@ def _wait(
         time.sleep(interval)
 
 
+def _shown_area(area: Path) -> str:
+    """AREA as a person types it from here: relative to the working directory
+    when it lies below it, else absolute."""
+    resolved = area.resolve()
+    try:
+        return str(resolved.relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return str(resolved)
+
+
 def _start(argv: list[str]) -> int:
-    """runlog start [--log FILE] -- <cmd ...>: detach a run and return.
+    """runlog start AREA [--log FILE] -- <cmd ...>: detach a run and return.
+
+    AREA is named, not guessed from the command: the default log goes to
+    AREA/output/ and the printed wait command names AREA. Until 0.90.0 the
+    log went to `output/` under the working directory — the repo root when
+    started from there, as the task sheets ask — and a cold agent looked for
+    it in the area (cloud judge probe, 2026-10-14).
 
     setsid puts the run in its OWN process group and session: the shell that
     started it — and any tool timeout that kills that shell's group — cannot
@@ -1501,21 +1517,37 @@ def _start(argv: list[str]) -> int:
 
     ap = argparse.ArgumentParser(
         prog="runlog start",
+        usage="runlog start AREA [--log FILE] -- <cmd ...>",
         description="Start a command detached (own session via setsid), "
         "output to a log file, return immediately.",
     )
+    ap.add_argument("area", type=Path, help="the experiment area the run belongs to")
     ap.add_argument(
-        "--log", default=None, help="log file (default: output/start-<ts>.log)"
+        "--log", default=None, help="log file (default: AREA/output/start-<ts>.log)"
     )
-    ap.add_argument("cmd", nargs=argparse.REMAINDER, help="-- command and arguments")
-    args = ap.parse_args(argv)
-    cmd = args.cmd[1:] if args.cmd and args.cmd[0] == "--" else args.cmd
+    # split at the first `--` by hand: argparse's REMAINDER after a positional
+    # swallowed `--log FILE` along with the command
+    if "--" not in argv:
+        ap.parse_args(argv)  # --help prints and exits; a bad flag is named
+        ap.error(
+            "no command given — usage: runlog start AREA [--log FILE] -- <cmd ...>"
+        )
+    cut = argv.index("--")
+    args, cmd = ap.parse_args(argv[:cut]), argv[cut + 1 :]
     if not cmd:
-        ap.error("no command given — usage: runlog start -- <cmd ...>")
+        ap.error(
+            "no command given — usage: runlog start AREA [--log FILE] -- <cmd ...>"
+        )
+    area: Path = args.area
+    if not area.is_dir():
+        ap.error(
+            f"{area} is not a directory — name the experiment area first: "
+            f"runlog start AREA -- <cmd ...>"
+        )
     log = (
         Path(args.log)
         if args.log
-        else Path("output") / f"start-{time.strftime(RUN_ID_TIME)}.log"
+        else area / "output" / f"start-{time.strftime(RUN_ID_TIME)}.log"
     )
     log.parent.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "LABKIT_DETACHED": "1"}
@@ -1529,7 +1561,7 @@ def _start(argv: list[str]) -> int:
             env=env,
         )
     print(f"started detached: pid={proc.pid}  log={log}")
-    print("status:  runlog .        wait:  runlog . --wait")
+    print(f"status:  runlog {area}        wait:  runlog {area} --wait")
     return 0
 
 
@@ -1638,7 +1670,7 @@ def main(argv: list[str]) -> int:
         "`--wait` blocks until the area is idle (exit 0), a run "
         "crashed (exit 2) or --max-seconds passed (exit 3); "
         "`--follow` prints a status line per interval until idle; "
-        "`runlog start -- <cmd>` detaches a run (own session, "
+        "`runlog start <area> -- <cmd>` detaches a run (own session, "
         "log file) and returns. "
         "`runlog reindex <area>` appends rows for completed "
         "runs the index missed.",
