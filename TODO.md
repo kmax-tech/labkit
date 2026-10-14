@@ -701,7 +701,9 @@ sieht das niemand.
   nachträgliche Zeile. (q) wird nicht mehr als Aufrufzahl genannt, nur noch
   das Formulieren der Werte. Wiederholt (n)/(z). Neu: (ac) `.venv/bin/usability`
   aus dem Bereichsverzeichnis aufgerufen → exit 127; das Aufgabenblatt sagt
-  „from the repo root“ oder nennt den absoluten Pfad. (ad) Rückschrift als
+  „from the repo root“ oder nennt den absoluten Pfad. **Gebaut 2026-10-14:**
+  beide Aufgabenblätter sagen oben, dass jeder `.venv/bin/…`-Pfad vom
+  Repo-Root aus gilt; Prüfstelle: der nächste Durchgang, kein exit 127. (ad) Rückschrift als
   Teil des Laufs: `runlog.run(..., protocol=…)` schreibt Answer, Result und
   Runs am Ende eines abgeschlossenen Laufs — Entscheidung, spart zwei
   Kommandos und einen Commit, nimmt dem Agenten aber den Blick auf die

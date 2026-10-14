@@ -1,8 +1,10 @@
 # TASK — one kept number
 
 You are a researcher new to this lab repository. Work only inside this
-directory; use `.venv/bin/python`. You may commit (never push). Do not
-ask questions; make reasonable choices and note them in your report.
+directory; use `.venv/bin/python`. Every `.venv/bin/…` path is relative to
+the repo root: run commands from there, not from an area directory. You
+may commit (never push). Do not ask questions; make reasonable choices and
+note them in your report.
 
 **The number.** The mean number of input documents per case over the
 cases in `data/raw/cases.jsonl`. A case's documents are the files under
