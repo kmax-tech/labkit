@@ -282,6 +282,27 @@ class Exp(unittest.TestCase):
         below = measure.evaluate_rows(lane("registered", 7) + lane("null", 5))
         self.assertIs(below["c1_pass"], False)
 
+    def test_init_exp_from_inside_the_area_finds_the_lab(self) -> None:
+        """Run from an area directory, labkit-init called the area "not a lab
+        repo" (cloud judge probe, 2026-10-14); it finds the lab above, as git
+        finds its repo."""
+        import os
+
+        quiet(scaffold.stamp_area, self.root, "foo-bar")
+        area = self.area()
+        self.assertEqual(scaffold.lab_root(area / "scripts"), self.root.resolve())
+        cwd = os.getcwd()
+        try:
+            os.chdir(area)
+            self.assertEqual(quiet(scaffold.main, ["exp", "foo-bar", "--report"]), 0)
+        finally:
+            os.chdir(cwd)
+        proto = (area / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
+        self.assertIn("Deviations after freeze", proto)  # the report fields arrived
+        outside = Path(self.tmp.name) / "elsewhere"
+        outside.mkdir()
+        self.assertEqual(scaffold.lab_root(outside), outside.resolve())
+
     def test_every_stamped_placeholder_is_one_line(self) -> None:
         stamps = (
             ("full", {}),

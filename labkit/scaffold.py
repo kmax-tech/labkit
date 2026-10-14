@@ -769,7 +769,13 @@ def main(argv: list[str]) -> int:
     )
     exp = sub.add_parser("exp", help="stamp an experiment area")
     exp.add_argument("name")
-    exp.add_argument("--repo", type=Path, default=Path("."))
+    exp.add_argument(
+        "--repo",
+        type=Path,
+        default=None,
+        help="the lab repo (default: the nearest directory, here or above, "
+        "holding models.toml and experiments/)",
+    )
     exp.add_argument(
         "--cost",
         choices=protocol_block.COST_TIERS,
@@ -801,7 +807,7 @@ def main(argv: list[str]) -> int:
             "\nnext: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/labkit-hooks install"
         )
         return 0
-    root = a.repo.resolve()
+    root = a.repo.resolve() if a.repo is not None else lab_root(Path.cwd())
     if a.explore:
         print("\n".join(stamp_explore(root / "experiments", area_slug(a.name))))
         print(
@@ -811,6 +817,19 @@ def main(argv: list[str]) -> int:
     _, report = stamp_area(root, a.name, cost=a.cost, model=a.model, report=a.report)
     print(report)
     return 0
+
+
+def lab_root(start: Path) -> Path:
+    """The nearest directory, START or above, that is a lab repo (models.toml
+    and experiments/), as git finds its repo; START itself when none is, so
+    stamp_area names the directory it was asked about. Run from an area
+    directory, `labkit-init exp <name> --report` called the area "not a lab
+    repo" (cloud judge probe, 2026-10-14)."""
+    here = start.resolve()
+    for d in (here, *here.parents):
+        if (d / "models.toml").is_file() and (d / "experiments").is_dir():
+            return d
+    return here
 
 
 def cli() -> None:
