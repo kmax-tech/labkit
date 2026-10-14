@@ -528,11 +528,18 @@ sieht das niemand.
   ist der Auslöser für eine Regeländerung. **Haiku auf 0.91.2 (Durchgang 5,
   12m31s): ganzer Weg bis `report-check`, auch lokal sauber;** kein
   Korrektheitsbefund aus Kostengründen akzeptiert (3 fixed, 7 accepted mit
-  am Lauf geprüftem Grund) — (h) ohne Auslöser. **Kandidaten fürs Skelett**
-  (wiederkehrende Audit-Befunde, nicht gebaut): Parser nur exakte
-  Schreibung; `audit()`-Stub in `00_prepare.py`; fortgesetzte Zeilen ohne
-  `prompt_sha`; `max_empty`-Kommentar „2 of 96“; Probe-Ausgabe nennt
-  `test_<NN>_…`.
+  am Lauf geprüftem Grund) — (h) ohne Auslöser. **Aus den wiederkehrenden
+  Audit-Befunden gebaut (0.92.0):** Fortsetzen nur bei gleichem Instrument
+  (`batch.Store(instrument=…)`, `9240b95`); Probe-Ausgabe mit echtem
+  Testpfad und `PROBE_CASES`, `max_empty`-Kommentar (`3edff81`). **Keine
+  Fehler, sondern Entscheidungen (offen):** (i) Parser nur exakte
+  Schreibung — der Prompt verlangt ein Wort, Abweichungen zählen sichtbar
+  als unlesbar und [A1] begrenzt sie; jeder Audit meldet es trotzdem.
+  (j) `audit()` in `00_prepare.py` druckt die Yields, die Confound-Analyse
+  bleibt bewusst offen — ein generischer Confound-Audit gäbe falsche
+  Sicherheit; eher den offenen Pflichtteil klarer markieren oder prüfen,
+  dass er angepasst wurde. Die `minutes`-Reihe ist beendet; der nächste
+  Durchgang erst nach einer Änderung an Vorlagen oder Gates.
   **Rollout (eigener Auftrag):** jeder eingefrorene uniagent-Bereich (21)
   schuldet bei gehobenem Pin vor dem nächsten vollen Lauf einen neuen
   Preflight-Audit.

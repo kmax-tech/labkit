@@ -5,6 +5,28 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.92.0 — 2026-10-14
+
+### Added
+
+- **`batch.Store(..., instrument={...})`** — what makes two answers
+  comparable (the prompt's digest, the model alias). Every appended row
+  carries it as `_instrument`, and `pending()` raises `InstrumentError` when
+  the file holds a row of another instrument (or none): a changed prompt or
+  model is a new measurement, a new output file. Resume by id alone let a
+  new prompt keep the old prompt's answers (found by the cloud judge
+  probe's analysis audit).
+
+### Changed
+
+- **The measure skeleton** passes `{prompt_sha, model}` to the Store;
+  `measure(cfg, jobs, out, prov)` takes the config instead of the model
+  alias (`instrument(cfg)` builds the dict). Areas stamped earlier keep
+  their `measure`; a re-stamp brings the new one.
+- **The probe's print names the area's real test file and `PROBE_CASES`**
+  (it said `tests/test_<NN>_<name>.py PARSER_CASES`), and the `max_empty`
+  comment no longer derives the value from "2 of 96".
+
 ## 0.91.2 — 2026-10-14
 
 ### Fixed
