@@ -128,6 +128,10 @@ def fill_head_type(text: str, value: str) -> str:
 
 RUNS_HEADING = re.compile(r"^## Runs\b")
 
+#: the labels `--from-run` writes from the run's metrics.json — `--list` sets
+#: them apart, since filling them before the run makes --from-run refuse
+WRITTEN_BY_RUN = ("Answer to the question", "Result")
+
 
 def answer_line(metrics: dict, run_id: str) -> str:
     """`key = value, … (run <id>)` — every reported key and value as the run
@@ -174,7 +178,7 @@ def from_run(
     metrics = runs.read_metrics(run / "metrics.json")
     answer = answer_line(metrics, run.name)
     filled: list[str] = []
-    for label in ("Answer to the question", "Result"):
+    for label in WRITTEN_BY_RUN:
         try:
             text = fill(text, label, answer, force=force)
             filled.append(label)
@@ -268,7 +272,10 @@ def _write_back(args: argparse.Namespace, text: str) -> int:
 
 
 def _list_open(text: str) -> int:
-    """`--list`: every open field, the TOML head's `type` first."""
+    """`--list`: every open field, the TOML head's `type` first; the fields
+    `--from-run` writes last, under their own line. Listed among the rest
+    they read as owed before the run: a cold agent filled them with "pending
+    run", and --from-run then refused to overwrite them (cloud, 2026-10-14)."""
     holes = placeholder_fields(text)
     head_line = head_type_open(text)
     if head_line is not None:
@@ -277,8 +284,16 @@ def _list_open(text: str) -> int:
         ] + holes
     if not holes:
         print("no placeholder fields left")
-    for n, label in holes:
+    now = [(n, label) for n, label in holes if label not in WRITTEN_BY_RUN]
+    later = [(n, label) for n, label in holes if label in WRITTEN_BY_RUN]
+    for n, label in now:
         print(f"{n:4d}  {label}")
+    if later:
+        print(
+            "after the run — `protocol-fill <PROTOCOL> --from-run` writes these; leave them:"
+        )
+        for n, label in later:
+            print(f"{n:4d}  {label}")
     return 0
 
 

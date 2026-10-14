@@ -138,6 +138,29 @@ class HeadType(unittest.TestCase):
         # the head reads: the hook's "MISSING (must): [protocol] type" is gone
         self.assertEqual(protocol_block.head(text).type, "exploratory")
 
+    def test_list_sets_the_fields_from_run_writes_apart(self):
+        """Listed among the rest, Result and Answer read as owed before the
+        run: a cold agent filled them with "pending run" and --from-run then
+        refused to overwrite them (cloud, 2026-10-14)."""
+        from labkit import scaffold
+
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "PROTOCOL-x.md"
+            p.write_text(
+                scaffold.PROTOCOL_TEMPLATE.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(protocol_fill.main([str(p), "--list"]), 0)
+        lines = out.getvalue().splitlines()
+        cut = next(i for i, ln in enumerate(lines) if ln.startswith("after the run"))
+        before = " ".join(lines[:cut])
+        after = " ".join(lines[cut + 1 :])
+        for label in protocol_fill.WRITTEN_BY_RUN:
+            self.assertNotIn(label, before)
+            self.assertIn(label, after)
+        self.assertIn("Question / hypothesis", before)
+
     def test_a_wrong_type_and_a_set_type_are_refused(self):
         with self.assertRaises(ValueError):
             protocol_fill.fill_head_type(self.HEAD, "descriptive")
