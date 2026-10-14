@@ -259,7 +259,9 @@ class TestCheckFileAsData(unittest.TestCase):
         path = d / "PROTOCOL-x.md"
         path.write_text(text, encoding="utf-8")
         tmpl = protocol_check.template_lines(TEMPLATE)
-        return protocol_check.check_protocol(path, text, tmpl)
+        return protocol_check.check_protocol(
+            path, text, tmpl, protocol_check.repo_protocol_ids(path)
+        )
 
     def test_a_filled_pilot_is_clean_and_does_not_block(self):
         r = self._report(pilot())

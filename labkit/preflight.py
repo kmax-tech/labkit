@@ -59,7 +59,7 @@ from labkit.repo import (
     layout_root,
     no_such_area,
 )
-from labkit.protocol_check import check_fields, check_protocol_id
+from labkit.protocol_check import check_fields, check_protocol_id, repo_protocol_ids
 from labkit.scope_sha import AREA_GLOBS, area_stamp
 
 
@@ -156,7 +156,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
         return 1
     missing_must, missing_should = report.missing_must, report.missing_should
     must_holes, should_holes = report.must_holes, report.soft_holes
-    id_findings = check_protocol_id(protocol, report.head)
+    id_findings = check_protocol_id(protocol, report.head, repo_protocol_ids(protocol))
 
     if missing_must:
         for label in missing_must:

@@ -133,6 +133,22 @@ class TestUniqueness(unittest.TestCase):
         self.assertIn("PROTOCOL-s1-a.md", out)
         self.assertEqual(code, 1)
 
+    def test_a_copy_made_later_in_the_same_process_is_seen(self):
+        """The index was a module-level cache cleared only by `main`: a
+        caller of the API checked, copied the protocol, checked again, and
+        the duplicate stayed invisible (review 2026-10-14)."""
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / ".git").mkdir()
+            first = _protocol(d, name="PROTOCOL-s1-a.md")
+            head = protocol_check.check_fields(first.read_text()).head
+            assert head is not None
+            ids = protocol_check.repo_protocol_ids(first)
+            self.assertEqual(protocol_check.check_protocol_id(first, head, ids), [])
+            _protocol(d, name="PROTOCOL-s2-b.md")
+            ids = protocol_check.repo_protocol_ids(first)
+            found = protocol_check.check_protocol_id(first, head, ids)
+        self.assertTrue(any("DUPLICATE" in f for f in found), found)
+
     def test_distinct_ids_side_by_side_are_fine(self):
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / ".git").mkdir()

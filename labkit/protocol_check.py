@@ -429,11 +429,11 @@ def seconds_registration_missing(text: str) -> list[str]:
     return missing + ([] if cost else ["[protocol] cost"])
 
 
-_ID_INDEX: dict[Path, dict[str, list[Path]]] = {}
-
-
 def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
-    """Every protocol id in the repo, mapped to the files carrying it.
+    """Every protocol id in the repo, mapped to the files carrying it — read
+    now, never cached: the caller holds the index for as long as it may
+    trust it (`main`: one scan per repo per invocation). A module-level
+    cache kept a duplicate made later in the same process invisible.
 
     Uniqueness cannot be settled at the stamp alone: copying a protocol or
     editing the id by hand makes a duplicate long after `labkit-init exp` ran, and
@@ -442,17 +442,15 @@ def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
     root = git_root(start)
     if root is None:
         return {}
-    if root not in _ID_INDEX:
-        index: dict[str, list[Path]] = {}
-        for f in sorted(root.rglob("PROTOCOL-*.md")):
-            try:
-                pid = protocol_block.id_of(f.read_text(encoding="utf-8"))
-            except OSError:
-                continue
-            if pid:
-                index.setdefault(pid, []).append(f)
-        _ID_INDEX[root] = index
-    return _ID_INDEX[root]
+    index: dict[str, list[Path]] = {}
+    for f in sorted(root.rglob("PROTOCOL-*.md")):
+        try:
+            pid = protocol_block.id_of(f.read_text(encoding="utf-8"))
+        except OSError:
+            continue
+        if pid:
+            index.setdefault(pid, []).append(f)
+    return index
 
 
 def id_in_git_head(path: Path) -> str | None:
@@ -469,17 +467,16 @@ def id_in_git_head(path: Path) -> str | None:
     return protocol_block.id_of(r.stdout) if r.returncode == 0 else None
 
 
-def check_protocol_id(path: Path, head: protocol_block.Head) -> list[str]:
-    """Uniqueness and working-tree divergence of the protocol id; its shape
-    is the head parser's job, an unstamped id a must placeholder."""
+def check_protocol_id(
+    path: Path, head: protocol_block.Head, ids: dict[str, list[Path]]
+) -> list[str]:
+    """Uniqueness against IDS (`repo_protocol_ids` of the repo) and
+    working-tree divergence of the protocol id; its shape is the head
+    parser's job, an unstamped id a must placeholder."""
     if head.id is None:
         return []
     out = []
-    others = [
-        q
-        for q in repo_protocol_ids(path).get(head.id, [])
-        if q.resolve() != path.resolve()
-    ]
+    others = [q for q in ids.get(head.id, []) if q.resolve() != path.resolve()]
     if others:
         out.append(
             f"{path}: DUPLICATE protocol id {head.id} — also carried by "
@@ -853,9 +850,12 @@ class FileReport:
         )
 
 
-def check_protocol(path: Path, text: str, tmpl: set[str]) -> FileReport:
+def check_protocol(
+    path: Path, text: str, tmpl: set[str], ids: dict[str, list[Path]]
+) -> FileReport:
     """Every finding of `protocol-check` on one protocol, against the
-    template's instruction lines `tmpl` (`template_lines`)."""
+    template's instruction lines `tmpl` (`template_lines`) and the repo's
+    protocol ids `ids` (`repo_protocol_ids`)."""
     report = check_fields(text)
     if report.head is None:
         return FileReport(path, report.head_error)
@@ -921,7 +921,7 @@ def check_protocol(path: Path, text: str, tmpl: set[str]) -> FileReport:
         head_error=None,
         frozen=frozen,
         audit_drift=audit_drift,
-        id_findings=check_protocol_id(path, head),
+        id_findings=check_protocol_id(path, head, ids),
         pilot_note=pilot_note,
         missing_must=report.missing_must,
         missing_should=missing_should,
@@ -1044,9 +1044,29 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
         )
 
 
+def check_files(files: list[Path], tmpl: set[str]) -> bool:
+    """Check and print every protocol in FILES; True when any blocks.
+    The repo's protocol ids are read once per repo for this call."""
+    ids_by_root: dict[Path | None, dict[str, list[Path]]] = {}
+    failed = False
+    for f in files:
+        try:
+            text = f.read_text(encoding="utf-8")
+        except OSError as exc:
+            print(f"{f}: not readable ({exc})")
+            failed = True
+            continue
+        root = git_root(f)
+        if root not in ids_by_root:
+            ids_by_root[root] = repo_protocol_ids(f)
+        report = check_protocol(f, text, tmpl, ids_by_root[root])
+        print_report(report)
+        failed = failed or report.blocks
+    return failed
+
+
 def main(argv: list[str]) -> int:
     """Command line of `protocol-check`: check protocols against the template and their own head."""
-    _ID_INDEX.clear()  # one scan per invocation; never a stale one
     if argv and argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: protocol-check [--template PATH] <PROTOCOL-*.md | dir> ...")
@@ -1085,18 +1105,7 @@ def main(argv: list[str]) -> int:
         return 2
 
     tmpl = template_lines(find_template(tmpl_arg))
-    failed = False
-    for f in files:
-        try:
-            text = f.read_text(encoding="utf-8")
-        except OSError as exc:
-            print(f"{f}: not readable ({exc})")
-            failed = True
-            continue
-        report = check_protocol(f, text, tmpl)
-        print_report(report)
-        failed = failed or report.blocks
-    return 1 if failed else 0
+    return 1 if check_files(files, tmpl) else 0
 
 
 def cli() -> None:
