@@ -49,6 +49,7 @@ import hashlib
 import sys
 import tomllib
 from dataclasses import asdict, dataclass, replace
+from fractions import Fraction
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -256,6 +257,17 @@ def _within_chance(rows: list[dict], items: int) -> bool:
     return scored > 0 and abs(2 * correct - scored) <= 2 * items
 
 
+def _at_least(reg: list[dict], null: list[dict], margin: float) -> bool:
+    """[C1] exactly: correct/scored of the registered lane >= that of the null
+    lane + margin, in fractions (margin as written, 0.25 = 1/4). In floats the
+    bar sat one ulp high — 5/12 + 0.25 > 8/12 — so a lane exactly at null +
+    margin failed (found by the preflight audit of a cold Sonnet probe,
+    2026-10-14; the same class as `_within_chance`)."""
+    rc, rs, _ = _counts(reg)
+    nc, ns, _ = _counts(null)
+    return Fraction(rc, rs) >= Fraction(nc, ns) + Fraction(str(margin))
+
+
 def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     """THE experiment, as a pure function of the stored rows and the config — gates first.
 
@@ -284,7 +296,7 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
         metrics.update({"c1_accuracy": reg_acc, "c1_threshold": None, "c1_pass": None})
         return metrics
     metrics.update({"c1_accuracy": reg_acc, "c1_threshold": null_acc + cfg.margin,
-                    "c1_pass": reg_acc >= null_acc + cfg.margin})
+                    "c1_pass": _at_least(reg, null, cfg.margin)})
     return metrics
 
 

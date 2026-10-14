@@ -249,6 +249,39 @@ class Exp(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("1 items ->", r.stdout)
 
+    def test_the_stamped_criterion_holds_a_lane_exactly_at_null_plus_margin(
+        self,
+    ) -> None:
+        """[C1] compared floats: 5/12 + 0.25 is 0.6666666666666667, 8/12 is
+        0.6666666666666666, so a lane exactly at null + margin failed (the
+        preflight audit of a cold Sonnet probe, 2026-10-14). The twin: one
+        item below the bar still fails."""
+        import importlib.util
+        import sys
+
+        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
+        path = self.area() / "scripts" / "01_measure.py"
+        spec = importlib.util.spec_from_file_location("stamped_measure", path)
+        assert spec is not None and spec.loader is not None
+        measure = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = measure  # a dataclass resolves its module by name
+        self.addCleanup(sys.modules.pop, spec.name, None)
+        spec.loader.exec_module(measure)
+        measure.ANSWERS.update({"Yes": "pos", "No": "neg"})
+        self.assertEqual(measure.CONFIG.margin, 0.25)
+
+        def lane(name: str, correct: int) -> list[dict]:
+            return [
+                {"lane": name, "gold": "pos", "answer": "Yes" if i < correct else "No"}
+                for i in range(12)
+            ]
+
+        at_bar = measure.evaluate_rows(lane("registered", 8) + lane("null", 5))
+        self.assertTrue(at_bar["a2_pass"])  # 5/12 is chance ± one item
+        self.assertIs(at_bar["c1_pass"], True)
+        below = measure.evaluate_rows(lane("registered", 7) + lane("null", 5))
+        self.assertIs(below["c1_pass"], False)
+
     def test_every_stamped_placeholder_is_one_line(self) -> None:
         stamps = (
             ("full", {}),
