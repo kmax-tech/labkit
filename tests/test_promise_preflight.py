@@ -20,7 +20,9 @@ from labkit.code_check import check_intent_ids  # noqa: E402
 
 SCRIPT = """def evaluate(rows):
     macro = 0.7
-    return {"c1_macro_f1": macro, "c1_pass": macro >= 0.6, "a1_anchor_ok": True}
+    m = {"c1_macro_f1": macro, "a1_anchor_ok": True}
+    m["c1_pass"] = macro >= 0.6 if m["a1_anchor_ok"] else None
+    return m
 """
 PROTOCOL = """Criterion [C1], admissibility [A1].
 
@@ -62,8 +64,81 @@ class PromisePreflight(unittest.TestCase):
         self.assertIn("c1_passed", findings[0])
 
     def test_keyword_argument_answers_the_key(self):
-        script = "r.metrics(c1_pass=True, a1_anchor_ok=True)\ndef evaluate(rows):\n    return 1\n"
+        script = (
+            "a1_anchor_ok = True\n"
+            "r.metrics(c1_pass=True if a1_anchor_ok else None, a1_anchor_ok=a1_anchor_ok)\n"
+            "def evaluate(rows):\n    return 1\n"
+        )
         self.assertEqual(check_intent_ids(*area_with(script)), [])
+
+    def test_an_admissibility_key_never_read_is_a_warning(self):
+        """[A1] computed, reported, and nothing hangs on it: the C verdict
+        is reported whether the anchors held or not (probe 11, "a label
+        without effect"). Static evidence, so a WARNING."""
+        label_only = SCRIPT.replace(' if m["a1_anchor_ok"] else None', "")
+        findings = check_intent_ids(*area_with(label_only))
+        self.assertEqual(len(findings), 1, findings)
+        self.assertTrue(findings[0].startswith("WARNING · 01_measure.py:"), findings)
+        self.assertIn(
+            "[A1] key 'a1_anchor_ok' is written but nothing decides on it", findings[0]
+        )
+
+    def test_passing_the_value_into_its_own_key_is_not_a_read(self):
+        script = (
+            "a1_anchor_ok = True\n"
+            "r.metrics(c1_pass=True, a1_anchor_ok=a1_anchor_ok)\n"
+            "row = {'a1_anchor_ok': a1_anchor_ok}\n"
+            "def evaluate(rows):\n    return 1\n"
+        )
+        findings = check_intent_ids(*area_with(script))
+        self.assertEqual(len(findings), 1, findings)
+        self.assertIn("nothing decides on it", findings[0])
+
+    def test_a_read_through_get_or_in_a_helper_counts(self):
+        script = (
+            "from lib.gate import admissible\n"
+            "def evaluate(rows):\n"
+            "    m = {'a1_anchor_ok': True, 'c1_pass': True}\n"
+            "    return admissible(m)\n"
+        )
+        area, protocol = area_with(script)
+        repo = area
+        (repo / ".git").mkdir()
+        (repo / "lib").mkdir()
+        (repo / "lib" / "gate.py").write_text(
+            "def admissible(m):\n"
+            "    if not m.get('a1_anchor_ok'):\n"
+            "        m['c1_pass'] = None\n"
+            "    return m\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(check_intent_ids(area, protocol), [])
+
+    def test_a_loop_over_a_key_tuple_decides(self):
+        """uniagent 16: `if not all(metrics[k] for k in ADMISSIBILITY)` holds
+        the verdict; the first version of the check called it unread."""
+        script = (
+            "ADMISSIBILITY = ('a1_anchor_ok',)\n"
+            "def evaluate(rows):\n"
+            "    metrics = {'a1_anchor_ok': True, 'c1_pass': True}\n"
+            "    if not all(metrics[k] for k in ADMISSIBILITY):\n"
+            "        metrics['c1_pass'] = None\n"
+            "    return metrics\n"
+        )
+        self.assertEqual(check_intent_ids(*area_with(script)), [])
+
+    def test_a_print_is_not_a_decision(self):
+        script = (
+            "def evaluate(rows):\n"
+            "    m = {'a1_anchor_ok': True, 'c1_pass': True}\n"
+            "    for k in ('a1_anchor_ok', 'c1_pass'):\n"
+            "        print(k, m[k])\n"
+            "    print(m['a1_anchor_ok'])\n"
+            "    return m\n"
+        )
+        findings = check_intent_ids(*area_with(script))
+        self.assertEqual(len(findings), 1, findings)
+        self.assertIn("nothing decides on it", findings[0])
 
     def test_dangling_scope_blocks(self):
         findings = check_intent_ids(

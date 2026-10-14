@@ -8,13 +8,17 @@ analysis reads and no producer writes, a protocol still full of placeholders
 are all decidable from the source. Deciding them here leaves the model the
 one question worth its cost: does the code MEAN what the registration says.
 
-Three automated checks; the rest are extracted as facts for the
+Five automated checks; the rest are extracted as facts for the
 code-check agent (via ``--bundle``), not verified by this command:
 
   1. **intent ids against the code** (LAB-004 Identifiers make the intent addressable, AUTOMATED). Every registered
      [C1]/[A1]/[B1] must appear as a key literal in the area's scripts.
      Report time has `intent-check` for the metrics; before the run the same
      promise goes unchecked exactly when repairing it is still cheap.
+  1a. **[A] keys decide something** (STATIC EVIDENCE, 2026-10-14). An
+     admissibility key the code writes and never tests (`if`, `and`,
+     `all()`, …) permits nothing: the C verdict is reported either way. A
+     test is not proof of a branch, so each finding is a WARNING.
   1b. **parser fixtures** (AUTOMATED, 2026-10-05). Every `parse_*` function in
      the area's scripts is exercised by a test under the repo's tests/ — five
      audit findings in three repos were "this parser has no fixture test on
@@ -499,6 +503,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[str]:
         return []
     out = []
     keys = code_keys(area)
+    out += admissibility_reads(area, protocol, block, keys)
     for p in block.promises:
         try:
             promises.declared_scope_sha(area, p.scope)
@@ -518,6 +523,143 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[str]:
                 f"the block"
             )
     return out
+
+
+_DECIDING_CALLS = frozenset({"all", "any"})
+
+
+def _decides(node: ast.AST, parents: dict[int, ast.AST]) -> bool:
+    """Does NODE sit where a decision is taken: the test of an `if`, `while`,
+    `assert` or conditional expression, an operand of `and`/`or`/`not`, or
+    an argument of `all()`/`any()`? Climbs to the enclosing statement."""
+    child, here = node, parents.get(id(node))
+    while here is not None and not isinstance(child, ast.stmt):
+        if isinstance(here, (ast.If, ast.While, ast.Assert, ast.IfExp)):
+            if child is here.test:
+                return True
+        elif isinstance(here, ast.BoolOp) or (
+            isinstance(here, ast.UnaryOp) and isinstance(here.op, ast.Not)
+        ):
+            return True
+        elif isinstance(here, ast.Call) and _name_of(here.func) in _DECIDING_CALLS:
+            return True
+        child, here = here, parents.get(id(here))
+    return False
+
+
+def _loop_keys(
+    name: str, node: ast.AST, parents: dict[int, ast.AST], tuples: dict[str, list[str]]
+) -> list[str]:
+    """The string literals the loop variable NAME runs over, for the nearest
+    enclosing `for` or comprehension that binds it: an inline tuple, list or
+    set, or a name this file binds to one (`ADMISSIBILITY = ("a1_pass", …)`)."""
+    here = parents.get(id(node))
+    while here is not None:
+        loops = (
+            here.generators
+            if isinstance(
+                here, (ast.GeneratorExp, ast.ListComp, ast.SetComp, ast.DictComp)
+            )
+            else [here]
+            if isinstance(here, (ast.For, ast.AsyncFor))
+            else []
+        )
+        for loop in loops:
+            if _name_of(loop.target) == name:
+                it = loop.iter
+                if isinstance(it, (ast.Tuple, ast.List, ast.Set)):
+                    return _string_constants(it.elts)
+                return tuples.get(_name_of(it) or "", [])
+        here = parents.get(id(here))
+    return []
+
+
+def _key_reads(path: Path) -> set[str]:
+    """The keys this file reads where a decision is taken (`_decides`):
+    `m["a1_pass"]`, `m.get("a1_pass")`, `m[k]` with `k` running over a
+    collection of key literals, and a bare name `a1_pass`. A read anywhere
+    else — a print, a copy into another dict — decides nothing.
+
+    Raises:
+        ValueError: The file does not parse — a read check over code it
+            cannot read would report a missing branch that may be there.
+    """
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except SyntaxError as exc:
+        raise ValueError(f"{path}: does not parse ({exc.msg}, line {exc.lineno})")
+    parents = {id(c): n for n in ast.walk(tree) for c in ast.iter_child_nodes(n)}
+    tuples = {
+        t.id: _string_constants(n.value.elts)
+        for n in ast.walk(tree)
+        if isinstance(n, ast.Assign)
+        and isinstance(n.value, (ast.Tuple, ast.List, ast.Set))
+        for t in n.targets
+        if isinstance(t, ast.Name)
+    }
+    reads: set[str] = set()
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Subscript) and isinstance(n.ctx, ast.Load):
+            key = n.slice
+        elif (
+            isinstance(n, ast.Call)
+            and isinstance(n.func, ast.Attribute)
+            and n.func.attr == "get"
+            and n.args
+        ):
+            key = n.args[0]
+        elif isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load):
+            if _decides(n, parents):
+                reads.add(n.id)
+            continue
+        else:
+            continue
+        if not _decides(n, parents):
+            continue
+        if isinstance(key, ast.Constant) and isinstance(key.value, str):
+            reads.add(key.value)
+        elif (var := _name_of(key)) is not None:
+            reads.update(_loop_keys(var, n, parents, tuples))
+    return reads
+
+
+def admissibility_reads(
+    area: Path, protocol: Path, block: "promises.PromiseTables", keys: dict
+) -> list[str]:
+    """Every [A] key the code writes must also be read (static evidence).
+
+    An admissibility condition permits the C verdict — C judges, A permits
+    the verdict (LAB-004 Identifiers make the intent addressable). A key
+    that is computed and never read is a label without effect: the
+    criterion is reported whether the condition held or not (Opus audit,
+    probe 11: "[N1] was a label without effect"; class C, 24 findings over
+    six repos). Only a read where a decision is taken counts (`_key_reads`),
+    but a decision on the key is not proof that it withholds the verdict,
+    and a decision in a form this reader does not follow is missed — so
+    the finding is a WARNING, and silence means only "decided on
+    somewhere". A key the code does not mention at all is the blocker
+    `promise_block_findings` already reports.
+    """
+    owed = [p for p in block.promises if p.kind == "admissibility" and p.key in keys]
+    if not owed:
+        return []
+    root = layout_root(area)
+    files = area_files(area) + imported_repo_helpers(area, root)
+    try:
+        reads = set().union(*(_key_reads(f) for f in files))
+    except ValueError as exc:
+        return [
+            f"WARNING · {protocol.name} · [A] keys: read check not done — {exc} "
+            f"· fix the file"
+        ]
+    return [
+        f"WARNING · {keys[p.key][0]} · [{p.id}] key '{p.key}' is written but "
+        f"nothing decides on it · the C verdict is reported whether [{p.id}] held or "
+        f"not · LAB-004 Identifiers make the intent addressable · withhold "
+        f'the verdict when it fails (`if not m["{p.key}"]: …`)'
+        for p in owed
+        if p.key not in reads
+    ]
 
 
 def _literal(node: ast.expr) -> object:

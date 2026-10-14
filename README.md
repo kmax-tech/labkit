@@ -47,7 +47,7 @@ runlog [<area>] [--wait | --follow] [--max-seconds N] [--interval S] [--notify] 
 runlog start -- <cmd>               # detach a long run (own session, log file) and return
 runlog reindex <area>               # append rows for completed runs the index missed
 intent-check <PROTOCOL-*.md> [--metrics FILE]  # registered promise ids vs. the answering run's metrics keys
-code-check <AREA> [--protocol FILE] [--bundle FILE]  # intent ids, parser fixtures, prompt drift, code the stamp cannot follow (sys.path, dynamic loaders, imports outside lib/ and src/); --bundle packs the audit bundle for the agent
+code-check <AREA> [--protocol FILE] [--bundle FILE]  # intent ids, [A] keys tested, parser fixtures, prompt drift, code the stamp cannot follow (sys.path, dynamic loaders, imports outside lib/ and src/); --bundle packs the audit bundle for the agent
 scope-sha [AREA | --area DIR] [--globs PAT,...] [--no-pin] [FILE ...]  # audit stamp over the code that determines a number
 protocol-fill <PROTOCOL> FIELD VAL [--line N] [--force]  # fill one stamped placeholder field by label
 protocol-fill <PROTOCOL> "LABEL=VALUE" ...  # fill several in one call, all or nothing (`type=exploratory` for the head)

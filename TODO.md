@@ -110,8 +110,8 @@ mechanischer Check — die Aufgabe des Pilots.
      Herkunft `models_resolved` trägt; `labkit-params` zeigt ein Dict mit
      `alias`/`model`/`endpoint` unter fremdem Schlüssel als Indiz-Zeile.
      Beides static evidence, kein Legacy-Lesen (0.72.2).
-  2. [ ] **`code-check`: jeder registrierte Schlüssel wird gelesen, nicht
-     nur geschrieben** (Punkt 3 unten) — Bereich 17 als Zwilling.
+  2. [x] **`code-check`: jeder registrierte Schlüssel wird gelesen, nicht
+     nur geschrieben** (Punkt 3 unten) — gebaut 2026-10-14, s. Punkt 3.
   3. [ ] **Nachmessung `count`/`judge` mit n = 3** (Punkt 2 unten); die
      Navigationsaufgabe ist gemessen (Runde 14).
   4. [ ] **Standard 0.20** als ein Sprung — Kandidaten oben; Voraussetzung:
@@ -338,6 +338,18 @@ Quelltext-Zugriffe, fünf von sechs füllen mit `protocol-fill`. Damit steht
 der Stand auf Daten; als Nächstes der Rollout (eigener Auftrag).
 
 ## 3. `code-check`: jede registrierte Kennung braucht einen Zweig, nicht nur einen Schlüssel
+
+**Gebaut 2026-10-14 (static evidence, WARNING), auf Ansage vor dem
+Auslöser:** `code_check.admissibility_reads` — jeder [A]-Schlüssel des
+Blocks, den der Code schreibt, muss an einer Entscheidungsstelle stehen
+(`if`/`while`/`assert`-Test, bedingter Ausdruck, `and`/`or`/`not`,
+`all()`/`any()`; `m[k]` über ein Schlüssel-Tupel wird aufgelöst). Nur [A]:
+C ist das Urteil selbst, B meldet eine Weiche. Erste Fassung (Lesen
+irgendwo) gab 9 Fehlalarme in uniagent 16–18 (`all(metrics[k] for k in
+ADMISSIBILITY)`); die zweite schweigt auf allen 27 echten Bereichen mit
+[A]-Versprechen und meldet alle drei Schlüssel, wenn in einer Kopie von
+uniagent 16 die zurückhaltende Zeile fehlt. Der zweite Kandidat unten
+(Literal-Kopie einer Konstante) ist seit `constant_copies` gebaut.
 
 **Was:** Eine Kennung ist ein Versprechen des Protokolls an den Code: `[N1]`
 „die Null-Spur liegt bei 0,5 ± ein Item, sonst kein Inhaltswert". Heute
