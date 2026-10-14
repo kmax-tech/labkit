@@ -57,12 +57,15 @@ from __future__ import annotations
 import atexit
 import contextlib
 import fcntl
+import hashlib
 import json
 import os
 import re
 import sys
 import threading
 import time
+import urllib.parse
+import uuid
 from pathlib import Path
 from collections.abc import Iterator
 
@@ -81,8 +84,28 @@ def lease_dir() -> Path:
     return Path(env) if env else Path.home() / ".labkit" / "leases"
 
 
-def _slug(endpoint: str) -> str:
-    return re.sub(r"[^A-Za-z0-9]+", "_", endpoint).strip("_") or "default"
+def _slug(text: str) -> str:
+    """A readable file-name form of TEXT — not an identity: `a-b` and `a_b`
+    share one."""
+    return re.sub(r"[^A-Za-z0-9]+", "_", text).strip("_") or "default"
+
+
+def endpoint_dir(endpoint: str) -> str:
+    """The lease directory's name for ENDPOINT: one per serving slot.
+
+    The URL is made canonical first (scheme and host in lower case, no
+    trailing slash: `HTTP://Host/v1/` is `http://host/v1`), then named by a
+    digest of it, with a readable slug in front. The slug alone was the
+    identity until 2026-10-14: `http://h/a-b` and `http://h/a_b` shared a
+    directory (one slot's lease refused the other), and `Host` and `host`
+    had two (no interlock at all).
+    """
+    u = urllib.parse.urlsplit(endpoint.strip())
+    canonical = urllib.parse.urlunsplit(
+        (u.scheme.lower(), u.netloc.lower(), u.path.rstrip("/"), u.query, "")
+    )
+    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:12]
+    return f"{_slug(canonical)[:60]}-{digest}"
 
 
 def _script() -> str:
@@ -96,7 +119,7 @@ def holders(endpoint: str) -> list[dict]:
     the slot forever). A record whose liveness is undecidable is kept and
     returned — see the module docstring on the failure direction.
     """
-    d = lease_dir() / _slug(endpoint)
+    d = lease_dir() / endpoint_dir(endpoint)
     out: list[dict] = []
     if not d.is_dir():
         return out
@@ -149,6 +172,13 @@ def _locked(d: Path) -> Iterator[None]:
             fcntl.flock(fh, fcntl.LOCK_UN)
 
 
+def _order(rec: dict) -> tuple[str, str]:
+    """Who came first: the start time, then the record's random token — a
+    total order. On the second alone two writers in the same second each
+    saw the other as no younger and both yielded (review 2026-10-14)."""
+    return (str(rec.get("started", "")), str(rec.get("token", "")))
+
+
 def _conflict(endpoint: str, alias: str) -> dict | None:
     """The oldest live holder of a DIFFERENT alias, or None."""
     others = [
@@ -156,7 +186,7 @@ def _conflict(endpoint: str, alias: str) -> dict | None:
         for h in holders(endpoint)
         if h.get("alias") != alias and h.get("pid") != os.getpid()
     ]
-    return min(others, key=lambda h: h.get("started", "")) if others else None
+    return min(others, key=_order) if others else None
 
 
 def _refuse(endpoint: str, alias: str, other: dict) -> None:
@@ -187,7 +217,7 @@ def acquire(alias: str, endpoints: list[str] | None) -> None:
         with _MUTEX:
             if key in _HELD:
                 continue
-            d = lease_dir() / _slug(endpoint)
+            d = lease_dir() / endpoint_dir(endpoint)
             d.mkdir(parents=True, exist_ok=True)
             with _locked(d):
                 _lease_one(d, endpoint, alias)
@@ -206,6 +236,7 @@ def _lease_one(d: Path, endpoint: str, alias: str) -> None:
         "script": _script(),
         "endpoint": endpoint,
         "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "token": uuid.uuid4().hex,
         "argv": " ".join(sys.argv)[:300],
     }
     f = d / f"{_slug(alias)}.{os.getpid()}.json"
@@ -214,7 +245,7 @@ def _lease_one(d: Path, endpoint: str, alias: str) -> None:
     # the check at the same moment. Re-read after writing: whoever is not
     # the oldest live holder yields.
     other = _conflict(endpoint, alias)
-    if other is not None and other.get("started", "") <= rec["started"]:
+    if other is not None and _order(other) < _order(rec):
         f.unlink(missing_ok=True)
         _refuse(endpoint, alias, other)
 

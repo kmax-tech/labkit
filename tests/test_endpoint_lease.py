@@ -55,7 +55,7 @@ class TestEndpointLease(unittest.TestCase):
         started="2026-09-08T17:00:00",
     ):
         """A lease record of ANOTHER process, written by hand."""
-        d = Path(self.tmp.name) / el._slug(endpoint)
+        d = Path(self.tmp.name) / el.endpoint_dir(endpoint)
         d.mkdir(parents=True, exist_ok=True)
         rec = {
             "alias": alias,
@@ -108,6 +108,41 @@ class TestEndpointLease(unittest.TestCase):
         el.acquire("qwen", [EP2])  # different slot, no conflict
         self.assertEqual([h["alias"] for h in el.holders(EP2)], ["qwen"])
 
+    def test_two_endpoints_one_slug_are_two_slots(self):
+        """`a-b` and `a_b` shared one directory: one slot's lease refused
+        the other (review 2026-10-14, reproduced)."""
+        pid, script = self._live_other_process()
+        self._foreign("http://host/a-b", "gpt-oss-vllm", pid=pid, script=script)
+        el.acquire("qwen", ["http://host/a_b"])  # must not raise
+        self.assertNotEqual(
+            el.endpoint_dir("http://host/a-b"), el.endpoint_dir("http://host/a_b")
+        )
+
+    def test_one_endpoint_spelled_twice_is_one_slot(self):
+        """Host case and a trailing slash name the same slot; two directories
+        meant no interlock at all (on a case-sensitive filesystem — macOS
+        hid the case half)."""
+        self.assertEqual(
+            el.endpoint_dir("http://Host:8000/v1/"),
+            el.endpoint_dir("HTTP://host:8000/v1"),
+        )
+        pid, script = self._live_other_process()
+        self._foreign("http://Host:8000/v1/", "gpt-oss-vllm", pid=pid, script=script)
+        with self.assertRaises(SystemExit):
+            el.acquire("qwen", ["HTTP://host:8000/v1"])
+
+    def test_writers_in_the_same_second_are_ordered(self):
+        """On the second alone both re-reads saw the other as no younger and
+        both yielded; the token makes the order total — exactly one yields."""
+        a = {"started": "2026-10-14T12:00:00", "token": "1" * 32}
+        b = {"started": "2026-10-14T12:00:00", "token": "2" * 32}
+        yields = [el._order(b) < el._order(a), el._order(a) < el._order(b)]
+        self.assertEqual(yields.count(True), 1)
+        self.assertLess(
+            el._order({"started": "2026-10-14T11:59:59", "token": "f" * 32}),
+            el._order(a),
+        )  # the time decides first
+
     def test_dead_holder_does_not_block_forever(self):
         """A crashed run must not own the slot; PID 999999 is nobody."""
         self._foreign(EP, "gpt-oss-vllm", pid=999999)
@@ -150,7 +185,7 @@ class TestEndpointLease(unittest.TestCase):
         self.addCleanup(lambda: os.environ.pop("LABKIT_NO_ENDPOINT_LEASE", None))
 
     def _broken(self, age_s: float) -> Path:
-        d = Path(self.tmp.name) / el._slug(EP)
+        d = Path(self.tmp.name) / el.endpoint_dir(EP)
         d.mkdir(parents=True, exist_ok=True)
         f = d / "broken.json"
         f.write_text("{not json", encoding="utf-8")
@@ -176,7 +211,7 @@ class TestEndpointLease(unittest.TestCase):
 
     def test_record_is_written_whole_and_lock_is_not_a_record(self):
         el.acquire("qwen25-32b-awq", [EP])
-        d = Path(self.tmp.name) / el._slug(EP)
+        d = Path(self.tmp.name) / el.endpoint_dir(EP)
         names = sorted(p.name for p in d.iterdir())
         self.assertEqual(names, [".lock", f"qwen25_32b_awq.{os.getpid()}.json"])
         json.loads((d / names[1]).read_text(encoding="utf-8"))
