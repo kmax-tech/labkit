@@ -85,11 +85,27 @@ path: 0.88.8.
   `code_check` reads a bare name and a string literal in one place each;
   `llm` builds the ollama options and the empty-content notice once.
 
+### Added
+
+- **`code-check` warns on an [A] key nothing decides on.** An
+  admissibility key the code writes but never tests (`if`, `and`/`or`/
+  `not`, `all()`/`any()`, a loop over a key tuple) permits nothing: the C
+  verdict is reported either way. Static evidence — a WARNING, and code
+  this reader does not follow stays silent.
+
 ### Fixed
 
 - **`code-check` crashed on an empty prompt fence** (`IndexError` reading
   the first line of an empty block) instead of reporting the drift as a
   blocker.
+- **`labkit-params` missed a script copy in upper case:** `MIN_F1` for the
+  registered `min_f1` stood as a separate evidence row and the registered
+  row said only "not recorded". The copy now stands in the registered row.
+- **`labkit-check` called a tag pin and its lock STALE:** the lock from
+  `pip freeze` names the commit the requirements tag points at. The pin
+  line resolves the tag at the source and compares commits.
+- **The usability task sheets** say that every `.venv/bin/…` path holds
+  from the repo root (Haiku H8 called it from the area: exit 127).
 
 ## 0.88.8 — 2026-10-13
 
