@@ -123,10 +123,12 @@ mechanischer Check — die Aufgabe des Pilots.
      `area_tests` schon lesen. Projektion, keine zweite Wahrheit; Heimat
      wohl `runlog <area>` (eine Kopfzeile) oder `labkit-status`. Nicht
      bauen, bevor Runde 16 zeigt, dass die Zeile gelesen wird.
-  8. [ ] **`labkit-params`: eine Skript-Kopie `MIN_F1` zu `min_f1` nennen**
+  8. [x] **`labkit-params`: eine Skript-Kopie `MIN_F1` zu `min_f1` nennen**
      (Kaltleser 2026-10-09): die Indiz-Zeilen sehen nur Großbuchstaben, die
      Konstanten sind klein — die Kopie steht als eigene Zeile, die
      registrierte sagt nur „not recorded". Lookup auch unter `name.upper()`.
+     Gebaut 2026-10-14: die Kopie steht in der registrierten Zeile, keine
+     eigene Indiz-Zeile mehr (`tests/test_params.py`).
   Nicht nötig, geprüft: Schichten und eine Heimat je Frage
   (`tests/test_architecture.py`, `docs/architecture.md`), Hook mit vier
   Prüfungen, Vorlagen auf Stand 0.19. Die eigentliche Schuld liegt außerhalb

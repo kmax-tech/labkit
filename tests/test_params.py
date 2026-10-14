@@ -160,6 +160,25 @@ class Table(unittest.TestCase):
             self.assertIn("absent", rows["min_acc"].tier)
             self.assertIn(params.EVIDENCE, rows["min_acc"].tier)
 
+    def test_an_upper_case_copy_stands_in_the_registered_row(self) -> None:
+        """Cold reader 2026-10-09: the script copied `min_acc` as `MIN_ACC`;
+        the registered row said only "not recorded" and the copy stood as a
+        row of its own."""
+        with tempfile.TemporaryDirectory() as d:
+            area = _area(d, SCRIPT.replace("min_acc = 0.7", "MIN_ACC = 0.7"))
+            run = _run(
+                area,
+                "2026-10-01T10-00-00_aaaa",
+                {"margin": 0.1},
+                models_resolved=MODEL_A,
+            )
+            rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
+            self.assertEqual(
+                rows["min_acc"].in_run,
+                "— (not recorded; scripts/01_measure.py:1 holds MIN_ACC = 0.7)",
+            )
+            self.assertNotIn("MIN_ACC", rows)
+
     def test_a_differing_constant_is_marked(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             area = _area(d)

@@ -130,14 +130,18 @@ def constant_rows(
     """The protocol's registered constants against the record: equal,
     different, or missing — the state is certain; a missing one is a fault
     only as evidence, and the strongest evidence is a literal of the same
-    name in the script (`copies`: name -> (value, line))."""
+    name in the script, in either case (`copies`: name -> (value, line);
+    `min_f1` is copied as `MIN_F1`)."""
     rows = []
     for rec in promises.constant_records(block, run_config):
         if rec.state == "missing":
-            copy = copies.get(rec.name)
+            copy_name = next(
+                (n for n in (rec.name, rec.name.upper()) if n in copies), None
+            )
             held = (
-                f"; {MEASURE_SCRIPT}:{copy[1]} holds {rec.name} = {copy[0]!r}"
-                if copy
+                f"; {MEASURE_SCRIPT}:{copies[copy_name][1]} holds "
+                f"{copy_name} = {copies[copy_name][0]!r}"
+                if copy_name
                 else ""
             )
             in_run = f"— (not recorded{held})"
@@ -240,7 +244,8 @@ def script_constant_rows(
     literals: dict[str, tuple[object, int]], run_config: dict, registered: set[str]
 ) -> list[ParamRow]:
     """Module constants with no key of their name (either case) in the record
-    and no registered row of their own — evidence of a value the run may
+    and no registered row of their own (either case: `MIN_F1` is the copy of
+    the registered `min_f1` and stands in its row) — evidence of a value the run may
     have used without recording it, not a proof."""
     return [
         ParamRow(
@@ -256,6 +261,7 @@ def script_constant_rows(
         and name not in run_config
         and name.lower() not in run_config
         and name not in registered
+        and name.lower() not in registered
     ]
 
 
