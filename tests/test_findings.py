@@ -138,3 +138,36 @@ class Repo(unittest.TestCase):
         )
         self.assertEqual(findings.deferred_elsewhere(there, root)[0][0].name, "17-here")
         self.assertEqual(findings.area_records(root / "99-none"), [])
+
+
+class PreflightCoverage(unittest.TestCase):
+    """A full run at minutes/hours owes a preflight record of the code as it
+    is now, every finding decided (2026-10-14: a stamp no audit had seen)."""
+
+    SHA = "abc123def456"
+
+    def test_a_decided_preflight_record_of_the_stamp_covers_it(self):
+        area = area_with([("preflight", TWO)])
+        (path,) = sorted((area / findings.DIR).glob("*.toml"))
+        set_status(path, 1, "fixed")
+        set_status(path, 2, "accepted", "spread is a limit")
+        self.assertIsNone(findings.preflight_coverage(area, self.SHA))
+
+    def test_no_record_another_sha_or_only_an_analysis_record_does_not(self):
+        empty = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+        empty.mkdir(parents=True)
+        self.assertIn(
+            "audited: none", findings.preflight_coverage(empty, self.SHA) or ""
+        )
+        area = area_with([("preflight", []), ("analysis", [])])
+        gap = findings.preflight_coverage(area, "0123456789ab") or ""
+        self.assertIn("no preflight audit saw the code as it is now", gap)
+        self.assertIn(f"audited: {self.SHA}", gap)
+        analysis_only = area_with([("analysis", [])])
+        self.assertIn(
+            "audited: none", findings.preflight_coverage(analysis_only, self.SHA) or ""
+        )
+
+    def test_an_open_finding_of_the_covering_record_is_named(self):
+        area = area_with([("preflight", TWO)])
+        self.assertIn("2 finding(s)", findings.preflight_coverage(area, self.SHA) or "")

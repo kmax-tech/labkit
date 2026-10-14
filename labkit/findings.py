@@ -21,7 +21,10 @@ area, one file per audit:
     reason = ""          # owed for accepted, deferred and dismissed
 
 The person edits `status` and `reason`; nothing else writes the file.
-`preflight` reads every findings file of the area: a finding still `open`
+A full run at `minutes`/`hours` needs a preflight record whose `scope_sha`
+is the code's stamp now, every finding decided (`preflight_coverage`, held
+by runlog's freeze gate and by `preflight`). `preflight` reads every
+findings file of the area: a finding still `open`
 is a warning before the freeze and a blocker once `frozen = true`
 (LAB-015 Preflight audit before freezing: every finding is decided), a `deferred`
 finding anywhere in the repo is printed as a reminder and never counted.
@@ -214,6 +217,35 @@ def area_records(area: Path) -> list[Record]:
     if not folder.is_dir():
         return []
     return [read(p) for p in sorted(folder.glob("*.toml"))]
+
+
+def preflight_coverage(area: Path, sha: str) -> str | None:
+    """Why no preflight audit covers the area's code stamped SHA, or None:
+    a record with `mode = "preflight"` whose `scope_sha` is SHA, every
+    finding of it decided. The head's audit line is written by hand; this is
+    what makes "the frozen code was audited" a fact instead of a line
+    (2026-10-14: after fixing the audit's findings a cold agent stamped the
+    new sha, and no audit had seen that code).
+
+    Raises:
+        FindingsError: A findings file of AREA cannot be read.
+    """
+    records = [r for r in area_records(area) if r.mode == "preflight"]
+    covering = [r for r in records if r.scope_sha == sha]
+    if not covering:
+        seen = ", ".join(sorted({r.scope_sha for r in records})) or "none"
+        return (
+            f"no preflight audit saw the code as it is now (scope sha {sha}; "
+            f"audited: {seen}) — a change after the audit owes a new one: "
+            f"`labkit-audit <area> --mode preflight`"
+        )
+    undecided = [f for r in covering for f in r.open]
+    if undecided:
+        return (
+            f"{len(undecided)} finding(s) of the preflight audit of {sha} still "
+            f"`open` — decide each (fixed / accepted / deferred / dismissed)"
+        )
+    return None
 
 
 def repo_records(experiments: Path) -> list[tuple[Path, Record]]:

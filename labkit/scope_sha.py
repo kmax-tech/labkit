@@ -281,8 +281,9 @@ def audit_stamp_drift(area: Path, audit_line: str) -> str | None:
     if m.group(1) != now:
         return (
             f"the audit saw scope sha {m.group(1)}, the code now stamps {now} — "
-            f"it changed after the audit: re-audit, or restamp once the change "
-            f"is decided"
+            f"it changed after the audit, so the change owes a new audit "
+            f"(`labkit-audit <area> --mode preflight`); a new sha written into "
+            f"the line without one is refused too"
         )
     return None
 

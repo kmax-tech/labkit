@@ -78,8 +78,8 @@ from pathlib import Path
 from types import TracebackType
 from collections.abc import Iterator
 
-from labkit import batch, console, promises, protocol_block, repo
-from labkit.scope_sha import audit_stamp_drift, file_digest, tree_digest
+from labkit import batch, console, findings, promises, protocol_block, repo
+from labkit.scope_sha import AUDIT_SHA, audit_stamp_drift, file_digest, tree_digest
 from labkit.runs import (
     COMPLETED,
     FAILED_STATES,
@@ -838,16 +838,30 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
     out = []
     if not head.frozen:
         out.append(f"{path.name}: not `frozen = true`")
-    if not head.preflight_audit:
-        out.append(
+    out += _audit_line_findings(base_dir, path, head.preflight_audit)
+    return out
+
+
+def _audit_line_findings(base_dir: Path, path: Path, line: str) -> list[str]:
+    """Why the head's `preflight_audit` line does not cover a full run: empty,
+    its `scope sha` is not the code's now, or no decided preflight audit
+    record saw that code (`findings.preflight_coverage`, 2026-10-14)."""
+    if not line:
+        return [
             f"{path.name}: `preflight_audit` is empty — run `preflight`, "
             f"then the experiment-preflight audit (LAB-015 Preflight audit before freezing), and stamp it"
-        )
-    else:
-        drift = audit_stamp_drift(base_dir, head.preflight_audit)
-        if drift:
-            out.append(f"{path.name}: preflight_audit: {drift}")
-    return out
+        ]
+    drift = audit_stamp_drift(base_dir, line)
+    if drift:
+        return [f"{path.name}: preflight_audit: {drift}"]
+    m = AUDIT_SHA.search(line)
+    if m is None:  # `n/a — <reason>`: a visible decision, not a claim
+        return []
+    try:
+        gap = findings.preflight_coverage(base_dir, m.group(1))
+    except findings.FindingsError as exc:
+        gap = str(exc)
+    return [f"{path.name}: preflight_audit: {gap}"] if gap else []
 
 
 def _promise_snapshot(

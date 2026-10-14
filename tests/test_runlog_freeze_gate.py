@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import runlog, scope_sha  # noqa: E402
+from labkit import findings, runlog, scope_sha  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 AUDIT = "2026-10-05 · scope sha abc · 0 findings"
@@ -76,12 +76,15 @@ class FreezeGate(unittest.TestCase):
             r = runlog.Run("t", {}, area, long=long)
         return r, buf.getvalue()
 
-    def _audited(self) -> str:
-        """A frozen protocol whose audit line carries the area's real stamp."""
+    def _audited(self, record: bool = True) -> str:
+        """A frozen protocol whose audit line carries the area's real stamp,
+        and (RECORD) the decided preflight audit record of that stamp."""
         (self.tmp / "scripts").mkdir(exist_ok=True)
         (self.tmp / "scripts" / "m.py").write_text("x = 1\n")
         scope_file(self.tmp)  # part of the stamped code, written before the stamp
         sha = scope_sha.area_stamp(self.tmp)[0]
+        if record:
+            findings.write(self.tmp, "preflight", "opus", sha, (0, 0, 0), [])
         return head(
             cost="hours",
             frozen=True,
@@ -107,6 +110,35 @@ class FreezeGate(unittest.TestCase):
                 runlog.Run("t", {}, area, long=True)
         self.assertIn("changed after the audit", str(cm.exception))
         self.assertFalse((area / "runs").exists())
+
+    def test_a_stamp_no_audit_record_saw_is_refused(self):
+        """The line's sha is the code's now, but no preflight audit saw that
+        code: after fixing the findings a cold agent stamped the new sha
+        without a second audit (cloud judge probe, 2026-10-14)."""
+        area = self._area(self._audited(record=False))
+        with self.assertRaises(SystemExit) as cm:
+            with contextlib.redirect_stdout(io.StringIO()):
+                runlog.Run("t", {}, area, long=True)
+        self.assertIn("no preflight audit saw the code as it is now", str(cm.exception))
+        findings.write(area, "preflight", "opus", "0123456789ab", (0, 0, 0), [])
+        with self.assertRaises(SystemExit) as cm:
+            with contextlib.redirect_stdout(io.StringIO()):
+                runlog.Run("t", {}, area, long=True)
+        self.assertIn(
+            "audited: 0123456789ab", str(cm.exception)
+        )  # the old audit, named
+
+    def test_an_open_finding_of_the_covering_audit_is_refused(self):
+        text = self._audited(record=False)
+        sha = scope_sha.area_stamp(self.tmp)[0]
+        findings.write(
+            self.tmp, "preflight", "opus", sha, (0, 1, 0), [("WARNING", "WARNING · x")]
+        )
+        area = self._area(text)
+        with self.assertRaises(SystemExit) as cm:
+            with contextlib.redirect_stdout(io.StringIO()):
+                runlog.Run("t", {}, area, long=True)
+        self.assertIn("still `open`", str(cm.exception))
 
     def test_an_audit_line_without_a_stamp_is_refused(self):
         area = self._area(FROZEN)  # "scope sha abc" is no stamp

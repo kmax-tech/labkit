@@ -283,7 +283,12 @@ evidence file under the same ID (top of this document).*
   **The line is checked, not believed.** `runlog` refuses a full run
   if its `scope sha` is not the stamp the code has
   now (LAB-019 The stamp covers everything that determines the number) — the code changed after the audit, or the
-  line was written without an audit. Whoever deliberately waives the audit
+  line was written without an audit — and unless a preflight audit record
+  (`audits/*-preflight.toml`, written by `labkit-audit`) carries that same
+  `scope sha` with every finding decided. Fixing the findings changes the
+  stamp, so the fixed code owes a second audit; writing the new sha into the
+  line alone is refused (2026-10-14: a cold agent did, and no audit had seen
+  the frozen code). Whoever deliberately waives the audit
   writes `n/a — <reason>`; that is a visible decision.
 
   **The audit reads the filled-in protocol.** If the required intent fields

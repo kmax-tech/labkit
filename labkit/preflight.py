@@ -50,7 +50,7 @@ import sys
 from pathlib import Path
 
 from labkit.code_check import check_intent_ids, stamp_coverage_findings
-from labkit import console, findings, install_hooks
+from labkit import console, findings, install_hooks, protocol_block
 from labkit.repo import (
     area_path,
     choose_protocol,
@@ -60,7 +60,7 @@ from labkit.repo import (
     no_such_area,
 )
 from labkit.protocol_check import check_fields, check_protocol_id, repo_protocol_ids
-from labkit.scope_sha import AREA_GLOBS, area_stamp
+from labkit.scope_sha import AREA_GLOBS, AUDIT_SHA, area_stamp
 
 
 def _is_dirty(area: Path) -> bool:
@@ -230,6 +230,13 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
             blockers += len(undecided)
         else:
             warnings += len(undecided)
+    gap = _coverage_gap(area, report.head)
+    if gap:
+        print(f"  {grade}: {gap} (LAB-015 Preflight audit before freezing)")
+        if frozen:
+            blockers += 1
+        else:
+            warnings += 1
     experiments = area.resolve().parent
     try:
         elsewhere = findings.deferred_elsewhere(area, experiments)
@@ -340,6 +347,22 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
         return 0
     print("preflight: all clear.")
     return 0
+
+
+def _coverage_gap(area: Path, head: "protocol_block.Head | None") -> str | None:
+    """Why the head's audit line claims an audit no record holds, or None:
+    the line names a `scope sha` and no decided preflight record saw that
+    code (`findings.preflight_coverage`; runlog refuses the full run on the
+    same answer). Silent at `seconds`, without a line, and on `n/a`."""
+    if head is None or head.cost == "seconds" or not head.preflight_audit:
+        return None
+    m = AUDIT_SHA.search(head.preflight_audit)
+    if m is None:
+        return None
+    try:
+        return findings.preflight_coverage(area, m.group(1))
+    except findings.FindingsError as exc:
+        return str(exc)
 
 
 def main(argv: list[str]) -> int:
