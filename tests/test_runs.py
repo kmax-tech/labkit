@@ -171,14 +171,34 @@ class OutputPathsTravel(unittest.TestCase):
             run = self._repo(Path(d))
             out = Path(d) / "experiments" / "01-x" / "output" / "rows.jsonl"
             self.assertEqual(
-                runs.recorded_output_path(out, run),
+                runs.recorded_path(out, run),
                 "experiments/01-x/output/rows.jsonl",
             )
             with tempfile.TemporaryDirectory() as other:
                 elsewhere = Path(other) / "x.jsonl"
                 self.assertEqual(
-                    runs.recorded_output_path(elsewhere, run), str(elsewhere.resolve())
+                    runs.recorded_path(elsewhere, run), str(elsewhere.resolve())
                 )
+
+    def test_a_relative_data_path_is_recorded_against_the_repo_not_the_cwd(self):
+        """A `data=` path was kept as passed, relative to the working
+        directory; it is recorded against the repo root and read back."""
+        import os
+
+        with tempfile.TemporaryDirectory() as d:
+            run = self._repo(Path(d))
+            area = Path(d) / "experiments" / "01-x"
+            cwd = os.getcwd()
+            try:
+                os.chdir(area)
+                rec = runs.recorded_path(Path("data/raw.jsonl"), run)
+            finally:
+                os.chdir(cwd)
+            self.assertEqual(rec, "experiments/01-x/data/raw.jsonl")
+            self.assertEqual(
+                runs.resolve_recorded(rec, run),
+                Path(d).resolve() / "experiments/01-x/data/raw.jsonl",
+            )
 
     def test_a_clone_elsewhere_reads_its_own_copy(self):
         with tempfile.TemporaryDirectory() as d:

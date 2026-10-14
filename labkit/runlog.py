@@ -90,7 +90,7 @@ from labkit.runs import (
     is_alive,
     read_completion,
     read_metrics,
-    recorded_output_path,
+    recorded_path,
     run_dirs,
     run_state,
     run_summary,
@@ -509,14 +509,19 @@ def _ids(path: Path) -> set | None:
     return ids
 
 
-def _describe(paths: dict) -> dict:  # noqa: C901 complexity baseline 2026-10-08
-    """path + sha256 + rows per split, and the leakage verdict across splits."""
+def _describe(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity baseline 2026-10-08
+    """path (as `runs.recorded_path` writes it, against BASE_DIR's repo) +
+    sha256 + rows per split, and the leakage verdict across splits."""
     out: dict = {}
     for key, p in paths.items():
         p = Path(p)
         if not p.exists():
             raise FileNotFoundError(f"data[{key!r}] does not exist: {p}")
-        out[key] = {"path": str(p), "sha256": _sha256(p)[:16], "rows": _data_rows(p)}
+        out[key] = {
+            "path": recorded_path(p, base_dir),
+            "sha256": _sha256(p)[:16],
+            "rows": _data_rows(p),
+        }
 
     def role(key: str) -> str:
         return re.split(r"[_-]", key, 1)[0].lower()
@@ -1062,7 +1067,9 @@ class Run:
         self.script = Path(sys.argv[0]).name if sys.argv[0] else "<interactive>"
         self.base = base_dir
         _check_run_index(base_dir)  # raises before any work
-        self._data = _describe(data) if data else {}  # raises on leak, before mkdir
+        self._data = (
+            _describe(data, base_dir) if data else {}
+        )  # raises on leak, before mkdir
         # Freeze gate, also before mkdir: a full run on an unfrozen protocol
         # is a refusal, not a run with a warning (2026-10-05).
         self._unfrozen_ack = False
@@ -1195,7 +1202,7 @@ class Run:
                     with p.open("rb") as fh:
                         text_lines = sum(1 for _ in fh)
                     entry: dict = {
-                        "path": recorded_output_path(p, self.dir),
+                        "path": recorded_path(p, self.dir),
                         "sha256": _sha256(p)[:16],
                         "lines": text_lines,
                     }
@@ -1217,7 +1224,7 @@ class Run:
                 else:
                     rows.append(
                         {
-                            "path": recorded_output_path(p, self.dir),
+                            "path": recorded_path(p, self.dir),
                             "sha256": None,
                             "lines": None,
                             "note": "registered, but absent at end of run",

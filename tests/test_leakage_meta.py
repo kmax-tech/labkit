@@ -92,7 +92,7 @@ class TestLeakageWithMeta(unittest.TestCase):
             producer="test",
         )
         with self.assertRaises(RuntimeError, msg="leakage must be caught"):
-            _describe({"train": str(train), "test": str(test)})
+            _describe({"train": str(train), "test": str(test)}, self.dir)
 
     def test_no_leakage_passes(self):
         fields = {"id": "id", "text": "text"}
@@ -108,7 +108,7 @@ class TestLeakageWithMeta(unittest.TestCase):
         write_dataset(
             dev, [{"id": "b", "text": "y"}], about="dev", fields=fields, producer="test"
         )
-        result = _describe({"train": str(train), "dev": str(dev)})
+        result = _describe({"train": str(train), "dev": str(dev)}, self.dir)
         self.assertIn("leakage_check", result)
         self.assertIn("ok", result["leakage_check"])
         self.assertEqual(result["train"]["rows"], 1)

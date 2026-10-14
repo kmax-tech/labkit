@@ -195,17 +195,27 @@ class OutputEntry:
     continues: tuple[str, ...] = ()  # runs whose rows this file already held
 
 
-def recorded_output_path(path: Path, run_dir: Path) -> str:
-    """How outputs.json records PATH: relative to the repo root of RUN_DIR when
-    it lies inside the repo, so a clone elsewhere reads the same record; an
-    absolute path only for a file outside the repo. `read_outputs` resolves
-    it back. Absolute paths broke `02_analyze.py --check` on every machine but
-    the one that measured (a cloud run's `/home/user/...`, 2026-10-14)."""
-    root = layout_root(run_dir).resolve()
+def recorded_path(path: Path, inside: Path) -> str:
+    """How a run's record (outputs.json, config.json `data`) writes PATH:
+    relative to the root of the repo INSIDE lies in, when PATH lies in that
+    repo, so a clone elsewhere reads the same record; absolute only for a file
+    outside the repo. `resolve_recorded` reads it back. Absolute paths broke
+    `02_analyze.py --check` and finalize's source check on every machine but
+    the one that measured (a cloud run's `/home/user/...`, 2026-10-14); a
+    relative `data=` path was kept relative to whatever the working directory
+    was."""
+    root = layout_root(inside).resolve()
     resolved = path.resolve()
     if resolved.is_relative_to(root):
         return resolved.relative_to(root).as_posix()
     return str(resolved)
+
+
+def resolve_recorded(recorded: str, inside: Path) -> Path:
+    """A path as `recorded_path` wrote it, made absolute against the root of
+    the repo INSIDE lies in; an absolute record stays as it is."""
+    p = Path(recorded)
+    return p if p.is_absolute() else layout_root(inside) / p
 
 
 def read_outputs(run_dir: Path) -> list[OutputEntry] | None:
@@ -221,9 +231,8 @@ def read_outputs(run_dir: Path) -> list[OutputEntry] | None:
         raise ArtefactError(
             f"{path}: must be a list of entries, not {type(data).__name__}"
         )
-    root = layout_root(run_dir)
     return [
-        _output_entry(path, n, entry, root)
+        _output_entry(path, n, entry, run_dir)
         for n, entry in enumerate(cast(list[object], data), 1)
     ]
 
@@ -233,9 +242,9 @@ def _is_count(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def _output_entry(path: Path, n: int, entry: object, root: Path) -> OutputEntry:
+def _output_entry(path: Path, n: int, entry: object, run_dir: Path) -> OutputEntry:
     """Entry N of outputs.json PATH, or ArtefactError naming what is wrong; a
-    relative path is resolved against ROOT, the repo the run lives in."""
+    relative path is resolved against the repo RUN_DIR lives in."""
     if not isinstance(entry, dict):
         raise ArtefactError(f"{path}: entry {n} is not an object")
     e = cast(dict[str, object], entry)
@@ -261,9 +270,8 @@ def _output_entry(path: Path, n: int, entry: object, root: Path) -> OutputEntry:
             raise ArtefactError(
                 f"{path}: entry {n}: rows_from[{run_id!r}] is {count!r}, not a row count"
             )
-    recorded = Path(p)
     return OutputEntry(
-        recorded if recorded.is_absolute() else root / recorded,
+        resolve_recorded(p, run_dir),
         sha,
         cast(int | None, lines),
         str(note),

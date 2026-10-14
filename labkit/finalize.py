@@ -64,6 +64,7 @@ from labkit.runs import (
     read_metrics,
     read_outputs,
     read_run_config,
+    resolve_recorded,
 )
 from labkit.repo import (
     area_path,
@@ -144,7 +145,9 @@ def provenance_findings(
             "data={name: path} to runlog.run so sha and rows are recorded"
         )
     sources = [
-        Path(v["path"]) for v in data.values() if isinstance(v, dict) and v.get("path")
+        resolve_recorded(v["path"], measurement_run)
+        for v in data.values()
+        if isinstance(v, dict) and v.get("path")
     ]
     registered = read_outputs(measurement_run)
     outputs: list[Path] = [o.path for o in registered or []]

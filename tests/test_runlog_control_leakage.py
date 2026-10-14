@@ -33,14 +33,14 @@ class ControlLeakage(unittest.TestCase):
         items = _jsonl(self.d / "items.jsonl", ["a", "b", "c"])
         anchors = _jsonl(self.d / "anchors.jsonl", ["c", "z"])
         with self.assertRaises(RuntimeError) as cm:
-            runlog._describe({"items": items, "anchors": anchors})
+            runlog._describe({"items": items, "anchors": anchors}, self.d)
         self.assertIn("control leakage", str(cm.exception))
         self.assertIn("'c'", str(cm.exception))
 
     def test_disjoint_sets_pass_and_say_so(self):
         items = _jsonl(self.d / "items.jsonl", ["a", "b"])
         placebo = _jsonl(self.d / "placebo_v1.jsonl", ["y", "z"])
-        out = runlog._describe({"items": items, "placebo_v1": placebo})
+        out = runlog._describe({"items": items, "placebo_v1": placebo}, self.d)
         self.assertTrue(out["leakage_check"].startswith("ok:"))
         self.assertIn("placebo_v1", out["leakage_check"])
 
@@ -48,14 +48,14 @@ class ControlLeakage(unittest.TestCase):
         gate = _jsonl(self.d / "gate.jsonl", ["a"])
         anchor = _jsonl(self.d / "anchor.jsonl", ["a"])
         runlog._describe(
-            {"gate": gate, "anchor": anchor}
+            {"gate": gate, "anchor": anchor}, self.d
         )  # no measured set: nothing to leak into
 
     def test_split_leakage_still_refused(self):
         train = _jsonl(self.d / "train.jsonl", ["a"])
         test = _jsonl(self.d / "test.jsonl", ["a"])
         with self.assertRaises(RuntimeError) as cm:
-            runlog._describe({"train": train, "test": test})
+            runlog._describe({"train": train, "test": test}, self.d)
         self.assertIn("split leakage", str(cm.exception))
 
 
