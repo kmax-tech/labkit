@@ -35,7 +35,7 @@ stage
     from the files at score time, never written down) and TASK.md — the
     task sheet, from `usability-task-<task>.md.template`, with the log
     contract and the metrics key the number must land under — and
-    `<dir>.prompt.md`, the prompt a cold agent gets: the repo's CLAUDE.md
+    `<dir>.prompt.md`, the prompt a cold agent gets: the repo's AGENTS.md
     as a session loads it, then the pointer to TASK.md. A venv with
     labkit is created unless `--venv` links an existing one. What was
     measured is pinned in `<dir>.probe.json`: the labkit the probe venv
@@ -352,19 +352,21 @@ def stamp_flags(task: str, cost: str | None, model: bool) -> tuple[str | None, b
 
 
 def agent_prompt(root: Path) -> str:
-    """The prompt a cold agent gets: the repo's CLAUDE.md first, the way a
-    Claude Code session started in the repo loads it into context, then the
-    pointer to TASK.md. Handed only a pointer, every agent fetched CLAUDE.md
-    with `cat` and read all of it before any section marker could steer
-    it — a cost of the probe, not of a real session (re-measure 2026-10-07,
-    rounds 1 to 4)."""
-    claude = root / "CLAUDE.md"
-    if not claude.is_file():
-        raise SystemExit(f"usability: {claude} missing — the scaffolder stamps it")
+    """The prompt a cold agent gets: the repo's AGENTS.md first, the way a
+    session started in the repo loads it into context, then the pointer to
+    TASK.md. AGENTS.md is the entry file every agent reads; CLAUDE.md is
+    only Claude Code's link to it, and naming it made the probe read as
+    Claude-only to a Codex agent (2026-10-14). Handed only a pointer, every
+    agent fetched the file with `cat` and read all of it before any section
+    marker could steer it — a cost of the probe, not of a real session
+    (re-measure 2026-10-07, rounds 1 to 4)."""
+    entry = root / "AGENTS.md"
+    if not entry.is_file():
+        raise SystemExit(f"usability: {entry} missing — the scaffolder stamps it")
     return (
-        f"Contents of {claude} (project instructions, loaded the way a "
+        f"Contents of {entry} (project instructions, loaded the way a "
         f"session in this repository loads them):\n\n"
-        f"{claude.read_text(encoding='utf-8')}\n"
+        f"{entry.read_text(encoding='utf-8')}\n"
         f"---\n\n"
         f"Your working directory is {root} — a lab repository. Read TASK.md "
         f"there and do exactly what it says; it names the log file you keep. "

@@ -83,7 +83,7 @@ usability stage /tmp/probe --venv .venv --task judge   # seconds cut + measure s
 usability stage /tmp/probe --venv .venv --cost unset   # the full form; the agent declares the tier
 usability stage /tmp/probe --restamp --keep TASK.md   # the same probe stamped again with this labkit, in place; --keep names its hand edits (remembered in probe.json); venv rebuilt from the pin, change committed, push stays with you
 usability log run "the count" -- .venv/bin/python scripts/01_measure.py   # the agent's step line (HH:MM:SS · tag · text) appended to ./log.md (--log FILE), then the command; without `--` it only logs
-#   hand <probe>.prompt.md (CLAUDE.md as a session loads it + the TASK.md pointer) to a COLD agent; it logs one line per step
+#   hand <probe>.prompt.md (AGENTS.md as a session loads it + the TASK.md pointer) to a COLD agent, any harness; it logs one line per step
 usability score /tmp/probe                # number == truth? bound? tier? wall-clock, steps per tag → probe.score.json
 usability score /tmp/probe --agent fable-5.1   # the model that drew, stated by the operator (a cloud session leaves no transcript)
 usability score /tmp/probe --transcript agent.jsonl   # plus measured: wall-clock, tool time, labkit commands, refusals, tokens (output, largest context, cache read), files and source reads
@@ -136,9 +136,19 @@ shell dies with the harness's tool timeout, and the kill takes the whole
 process group. `runlog` refuses it before any work and asks for `runlog start
 -- <cmd>` (or `LABKIT_DETACHED=1` when the caller already detached it).
 Which shell has such a limit is named by `LABKIT_FOREGROUND_TIMEOUT_S`
-(seconds; `0`: none), set in the environment the harness gives its shell —
-for Codex, Cursor or any other agent. Claude Code is recognised without it
-(`CLAUDECODE`, 600 s). Not at `cost = "seconds"`.
+(seconds; `0`: none), set in the harness's configuration so that every
+command it spawns has it — an `export` inside one command does not reach
+the next. Claude Code is recognised without it (`CLAUDECODE`, 600 s).
+Codex documents no such limit (a 117 s suite ran in its foreground,
+2026-10-14); where a harness does kill, Codex for example sets it in
+`~/.codex/config.toml` or the repo's `.codex/config.toml`:
+
+```toml
+[shell_environment_policy]
+set = { LABKIT_FOREGROUND_TIMEOUT_S = "300" }
+```
+
+Not at `cost = "seconds"`.
 
 **pre-run.** The hook sees every Bash command. One that names a `.py` file
 which opens a run (`runlog.run(`) and is not a throwaway stage (`--show`,

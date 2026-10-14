@@ -81,10 +81,12 @@ fields, no reading of labkit's source.
 - `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt &&
   .venv/bin/labkit-hooks install` — the hooks come with the pinned labkit.
 - Tests: `.venv/bin/python -m pytest -q`.
-- If your harness kills a foreground shell command after N seconds, export
-  `LABKIT_FOREGROUND_TIMEOUT_S=N` in the environment it gives its shell
-  (Claude Code is recognised without it): a long run then refuses the
-  foreground and asks for `runlog start -- <cmd>` instead of dying mid-run.
+- If your harness kills a foreground shell command after N seconds, set
+  `LABKIT_FOREGROUND_TIMEOUT_S=N` in its configuration, so every command it
+  spawns has it (Codex: `[shell_environment_policy] set = {
+  LABKIT_FOREGROUND_TIMEOUT_S = "N" }` in `.codex/config.toml`; Claude Code
+  is recognised without it). A long run then refuses the foreground and
+  asks for `runlog start -- <cmd>` instead of dying mid-run.
 
 ## Layout
 

@@ -203,18 +203,20 @@ class StampFlags(unittest.TestCase):
 
 
 class AgentPrompt(unittest.TestCase):
-    """The agent gets CLAUDE.md the way a session loads it, not a pointer it
-    must `cat` (re-measure 2026-10-07: every agent read all of it by tool)."""
+    """The agent gets AGENTS.md the way a session loads it, not a pointer it
+    must `cat` (re-measure 2026-10-07: every agent read all of it by tool);
+    AGENTS.md, not CLAUDE.md, because every agent reads it (2026-10-14)."""
 
-    def test_claude_md_comes_first_then_the_task_pointer(self):
+    def test_agents_md_comes_first_then_the_task_pointer(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            (root / "CLAUDE.md").write_text("# CLAUDE.md — probe\n\nrule one\n")
+            (root / "AGENTS.md").write_text("# AGENTS.md — probe\n\nrule one\n")
+            (root / "CLAUDE.md").symlink_to("AGENTS.md")
             prompt = usability.agent_prompt(root)
-        self.assertTrue(prompt.startswith(f"Contents of {root / 'CLAUDE.md'}"))
+        self.assertTrue(prompt.startswith(f"Contents of {root / 'AGENTS.md'}"))
         self.assertLess(prompt.index("rule one"), prompt.index("Read TASK.md"))
 
-    def test_a_repo_without_claude_md_is_refused(self):
+    def test_a_repo_without_agents_md_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaises(SystemExit):
                 usability.agent_prompt(Path(d))

@@ -1157,6 +1157,23 @@ geprüft — Prüfstelle: der erste Codex-Lauf im Labor, dort einen
 Die Claude-Hooks bleiben Adapter; ein zweiter Adapter nur für einen
 Harness mit Hooks.
 
+**Codex-Prüfung 2026-10-14 (Codex selbst, nichts geändert):**
+`runlog.foreground_timeout()` liefert unter Codex `None` / mit `=300`
+`(300.0, 'LABKIT_FOREGROUND_TIMEOUT_S')` / mit `=0` `None`; die Suite läuft
+dort grün (1042 Tests, 117 s im Vordergrund). Codex dokumentiert kein
+festes Zeitlimit für einen Vordergrundbefehl (Config Reference, geprüft:
+nur `background_terminal_max_timeout` für das Polling), die Variable ist
+dort also nicht nötig, solange nichts getötet wird. Setzen ginge über
+`shell_environment_policy.set` in `~/.codex/config.toml` oder
+`.codex/config.toml` (Config Reference: „Explicit environment values
+injected after exclusions“) — so in README und `AGENTS.md`-Vorlage. Die
+Probe gibt dem kalten Agenten jetzt `AGENTS.md` statt `CLAUDE.md` (Inhalt
+gleich, `CLAUDE.md` ist der Link). Nebenbefund ohne labkit-Bezug: in der
+Codex-Sandbox scheitert `pip install -e` am gesperrten Netz
+(`setuptools>=68`), mit Netzfreigabe läuft es. Offen: ob Codex einen
+Vordergrundprozess am Sitzungsende beendet — erst bei einem echten
+Mehrstundenlauf unter Codex sichtbar.
+
 ## 7. Englische Kennungen: `[C]` · `[A]` · `[B]` statt `[K]` · `[S]` · `[W]` · `[N]`
 
 **Was:** Die Kennungen auf den Versprechen des Protokolls (LAB-004 Identifiers make the intent addressable) sind
