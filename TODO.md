@@ -487,6 +487,17 @@ sieht das niemand.
     abgearbeitet**; was bleibt, sind die 19 `noqa: C901`-Baselines
     (sichtbare Schuld, `grep`).
 
+- **Fremd-Review 2026-10-14 (zweiter Agent, nichts geändert) — abgearbeitet.**
+  Fünf Befunde, alle am Code bestätigt und behoben, je ein Commit mit
+  Zwillingstest: Teilstring-Abgleich in `runs.is_alive` (`9f40916`),
+  `run_started` bei unmöglichem Datum (Stop-Hook-Absturz), `rows_from`
+  ohne Typprüfung (beide `9f40916`), Lease-Identität per Slug und
+  Gleichstand im Tiebreak (`ebeba87`), modulweiter Cache der Protokoll-Ids
+  (`d139fbf`). Der Versionsbefund (HEAD trägt 0.89.0-Verhalten unter
+  0.88.8) erledigt sich mit `just release 0.89.0`. Bleibt notiert: die 19
+  `noqa: C901`-Ausnahmen nach Lebenszyklus abbauen, nicht Dateien
+  zerschneiden (runlog 1650, usability 1450, code_check 1330 Zeilen).
+
 - **Cloud-Leseprobe, Stand nach dem ersten Durchgang (2026-10-12).** Aufbau:
   Probe-Repo `kmax-tech/labkit-probe` (öffentlich — pip klont labkit nur
   anonym, also musste auch labkit öffentlich werden), Umgebung in

@@ -106,6 +106,24 @@ path: 0.88.8.
   line resolves the tag at the source and compares commits.
 - **The usability task sheets** say that every `.venv/bin/…` path holds
   from the repo root (Haiku H8 called it from the area: exit 127).
+- **A dead run held "running" by a namesake:** `runs.is_alive` matched the
+  recorded script as a substring (`not_01_measure.py` for `01_measure.py`);
+  `runs.runs_script` now bounds the name.
+- **The Stop hook crashed on a run-id-shaped name with no date**
+  (`2026-02-30T…`): `runs.run_started` answers None for it.
+- **`read_outputs` coerced `rows_from` with `int()`**; a count that is not
+  an integer is now an `ArtefactError` naming the entry.
+- **Endpoint leases:** the lease directory is named by the canonical URL
+  (lower-case scheme and host, no trailing slash) and its digest instead
+  of a slug, so `a-b`/`a_b` are two slots and `Host`/`host` one; two
+  writers in the same second no longer both yield. A process of an
+  earlier labkit leases under the old directory name and does not see a
+  0.89.0 lease on the same slot — let running stages finish before
+  switching.
+- **`protocol-check` cached the repo's protocol ids for the process**;
+  `check_protocol` and `check_protocol_id` now take the index
+  (`repo_protocol_ids`) as an argument, so an API caller sees a duplicate
+  made after its first check.
 
 ## 0.88.8 — 2026-10-13
 
