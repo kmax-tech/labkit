@@ -281,6 +281,14 @@ class Exp(unittest.TestCase):
         self.assertIs(at_bar["c1_pass"], True)
         below = measure.evaluate_rows(lane("registered", 7) + lane("null", 5))
         self.assertIs(below["c1_pass"], False)
+        # every item is in the denominator: two empty answers are not correct
+        empty = lane("registered", 10)
+        for row in empty[10:]:
+            row["answer"] = ""
+        two_empty = measure.evaluate_rows(empty + lane("null", 6))
+        self.assertEqual(
+            (two_empty["a1_empty"], two_empty["c1_accuracy"]), (2, 10 / 12)
+        )
 
     def test_init_exp_from_inside_the_area_finds_the_lab(self) -> None:
         """Run from an area directory, labkit-init called the area "not a lab

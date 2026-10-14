@@ -201,7 +201,7 @@ preflight_audit = ""
 [[promise]]
 id = "C1"
 key = "c1_pass"
-sentence = "<the criterion in one sentence: registered accuracy >= null accuracy + margin>"
+sentence = "<the criterion in one sentence: registered accuracy >= null accuracy + margin; accuracy over all items of the lane, an empty answer counts as not correct>"
 scope = ["scripts/01_measure.py"]
 constants = { margin = 0.25 }
 
