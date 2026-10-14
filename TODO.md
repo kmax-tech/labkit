@@ -487,6 +487,19 @@ sieht das niemand.
     abgearbeitet**; was bleibt, sind die 19 `noqa: C901`-Baselines
     (sichtbare Schuld, `grep`).
 
+- **Judge auf `minutes`, Durchgang 2 in der Cloud (2026-10-14): voller Weg
+  gemessen.** Eingefroren, Stufe gehalten, 0,8333, 22m35s (netto ~10 min,
+  ~14 min Warten auf fertige Audits wegen einer `pgrep`-Schleife, die sich
+  selbst findet → `c2b794a`). Der Preflight-Audit fand den Gleitkomma-
+  Vergleich in [C1] der Mess-Vorlage (`fcc083d`), der Analyse-Audit eine
+  abgetippte falsche Zählung. Auswertung `docs/usability/2026-10-14-judge-minutes.md`.
+  **Offen, Entscheidung:** (a) Stempel ohne Audit — nach Fixes trug der
+  Agent den neuen `scope sha` ein, kein Audit sah diesen Code; nichts hält
+  den Kopfstempel an den `scope_sha` eines Audit-Records. (b) `runlog
+  start` schreibt sein Log relativ zum Arbeitsverzeichnis, nicht in den
+  Bereich. (c) Soll ein 12-Aufrufe-Lauf auf `minutes` zwei Opus-Audits
+  schulden?
+
 - **Judge auf `minutes`, Durchgang 1 (2026-10-14, kalter Sonnet-Subagent).**
   Auswertung `docs/usability/2026-10-14-judge-minutes.md`. Zahl richtig und
   gebunden (0,8333, 2m28s), aber der Agent stellte den Kopf auf `seconds` —

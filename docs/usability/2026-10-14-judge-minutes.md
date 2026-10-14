@@ -70,8 +70,62 @@ Not checked, from the agent's report: `protocol-fill --list` counting more
 open fields after `--prompts` ("Model I/O reappeared"); finalize warning on
 README placeholders and an untracked output file. Noted in TODO.md.
 
+## Draw 2 — the cloud, the full lane (labkit 0.89.0)
+
+Probe repo `kmax-tech/labkit-probe-judge` (private), stamped with `usability
+stage --task judge --cost minutes` at v0.89.0, venv rebuilt from the GitHub
+tag, the cloud edits of the count probe (branch `probe-judge`, `log.md` in the
+repo, SessionStart hook). Agent: Sonnet in a claude.ai/code session; `claude
+-p` is logged in there, so haiku and the opus audits ran. Score (log only, no
+transcript from the cloud): `2026-10-14-cloud-sonnet-judge-minutes-2.score.json`.
+
+| | |
+|---|---|
+| number | 0.8333 (10 of 12), null 0.5, run `2026-10-14T13-13-29_403f` |
+| bound, frozen, tier | yes · **yes** · **minutes** — the full lane, kept |
+| log span | 22m35s (12m14s of silence; net 10m21s) |
+| read · run · edit · unsure · gate | 4 · 16 · 9 · 0 · 1 |
+| labkit source or standard read | 0 |
+| audits | preflight: 7 warnings, 1 note (6 fixed, 2 accepted); analysis: 3 warnings, 2 notes |
+
+The tier sentence held: the agent walked render check, probe, code-check,
+preflight, the opus preflight audit, the report fields, the freeze, `runlog
+start`, finalize, the write-back and the analysis audit.
+
+### Findings
+
+1. **The audits caught real faults.** The preflight audit found a labkit
+   template fault: [C1] compared floats, so a lane exactly at null + margin
+   failed (5/12 + 0.25 > 8/12 by one ulp) — fixed in `fcc083d`, the
+   comparison is in fractions. It also found the readable-only denominator
+   against the agent's "all twelve are scored" (a mismatch between the
+   skeleton's default and the registration, decided by the agent). The
+   analysis audit found a count the agent had retyped wrong into the
+   protocol (three "No" where the rows show four) — LAB-041 Generate numbers,
+   don't retype them, caught by the audit, not by a gate.
+2. **Most of the time was waiting on finished audits.** Each opus audit took
+   about 2.5 min (files written 13:03 and 13:16), past the shell's 120 s
+   foreground limit; the agent backgrounded it and waited with `until … !
+   pgrep -f labkit-audit`, which matches its own command line and never ends.
+   The log resumes at 13:12 and 13:21: about 14 of the 22 minutes. Step 7 of
+   the AGENTS.md template now says to wait for the background task
+   (`c2b794a`).
+3. **A stamp no audit saw.** After fixing the preflight findings the agent
+   wrote the new scope sha into the head without a second audit, and said so
+   in the head ("audited at 041c2f50a1a5"). preflight checks that every
+   finding is decided and runlog that the stamp matches the code now; nothing
+   holds the stamp to a sha an audit record carries. Open as a rule
+   question (TODO.md).
+4. **`runlog start` writes its log relative to the working directory**
+   (`output/start-<ts>.log` at the repo root when started from there, as the
+   sheet says), so the agent looked for it in the area. Noted.
+5. **Not labkit:** the push was refused (403) until the Claude GitHub App was
+   granted the new repo; the cloud setup script's `cd "$CLAUDE_PROJECT_DIR"`
+   did not reach the repo on the first try (an `echo` setup plus the
+   SessionStart hook worked).
+
 ## Next
 
-Draw 2 on the fixed stamp, same setup: does the agent keep `minutes` and
-walk the full lane, and where does that lane cost time? For the Claude hooks
-to count, start `claude` in the probe directory instead of a subagent.
+The full lane is measured once. Before more draws: decide finding 3, and
+whether a 12-call count at `minutes` should owe two opus audits at all (the
+agent's own cut: the seconds lane owes eight fields and no audit).
