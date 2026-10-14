@@ -5,6 +5,36 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.90.0 — 2026-10-14
+
+### Breaking — the frozen code is the audited code; `runlog start` names its area
+
+Both from the cloud judge probe at `minutes` (`docs/usability/2026-10-14-judge-minutes.md`).
+Last version with the old behaviour: 0.89.0.
+
+- **A full run's audit stamp must be one a preflight audit record saw.**
+  runlog's freeze gate (and `preflight`, a blocker once `frozen = true`)
+  now needs a record `audits/*-preflight.toml` whose `scope_sha` is the
+  code's stamp now, every finding decided (`findings.preflight_coverage`).
+  Writing a new `scope sha` into the head after fixing the findings, without
+  a second audit, is refused; `n/a — <reason>` stays a visible waiver.
+  Every frozen area audited before `labkit-audit` wrote records (all 21 in
+  uniagent) owes a fresh preflight audit before its next full run under a
+  raised pin.
+- **`runlog start AREA [--log FILE] -- <cmd>`.** The area is a required
+  argument; the default log is `AREA/output/start-<ts>.log` (was `output/`
+  under the working directory) and the printed wait command names AREA.
+  `runlog start -- <cmd>` is a usage error.
+
+### Fixed
+
+- **[C1] in the measure skeleton compared floats:** a registered lane
+  exactly at null + margin failed (5/12 + 0.25 > 8/12 by one ulp). It is
+  computed in fractions now — found by the probe's opus preflight audit.
+- **The AGENTS.md template** says an audit takes minutes: start it in the
+  background and wait for that task, not with a `pgrep` loop (which finds
+  its own command line; about 14 of the probe's 22 minutes).
+
 ## 0.89.0 — 2026-10-14
 
 ### Breaking — the legacy paths are out, one home per question

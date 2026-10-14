@@ -493,12 +493,16 @@ sieht das niemand.
   selbst findet → `c2b794a`). Der Preflight-Audit fand den Gleitkomma-
   Vergleich in [C1] der Mess-Vorlage (`fcc083d`), der Analyse-Audit eine
   abgetippte falsche Zählung. Auswertung `docs/usability/2026-10-14-judge-minutes.md`.
-  **Offen, Entscheidung:** (a) Stempel ohne Audit — nach Fixes trug der
-  Agent den neuen `scope sha` ein, kein Audit sah diesen Code; nichts hält
-  den Kopfstempel an den `scope_sha` eines Audit-Records. (b) `runlog
-  start` schreibt sein Log relativ zum Arbeitsverzeichnis, nicht in den
-  Bereich. (c) Soll ein 12-Aufrufe-Lauf auf `minutes` zwei Opus-Audits
-  schulden?
+  **Entschieden und gebaut (0.90.0):** (a) streng — ein voller Lauf auf
+  `minutes`/`hours` braucht einen entschiedenen Preflight-Record mit dem
+  aktuellen `scope_sha` (`35d406b`); langfristig soll der Kopf auf den
+  Record verweisen statt dessen Fakten als freien Text zu doppeln (nicht
+  geplant). (b) `runlog start AREA -- <cmd>`, Log in `AREA/output/`
+  (`6e390ea`). (c) keine Ausnahme: LAB-017 ordnet eine Handvoll Aufrufe
+  `seconds` zu; die Probe erzwang `minutes`, um den langen Weg zu testen.
+  **Rollout (eigener Auftrag):** jeder eingefrorene uniagent-Bereich (21)
+  schuldet bei gehobenem Pin vor dem nächsten vollen Lauf einen neuen
+  Preflight-Audit.
 
 - **Judge auf `minutes`, Durchgang 1 (2026-10-14, kalter Sonnet-Subagent).**
   Auswertung `docs/usability/2026-10-14-judge-minutes.md`. Zahl richtig und
