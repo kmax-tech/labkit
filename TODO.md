@@ -515,6 +515,13 @@ sieht das niemand.
   Nebenbei: `outputs.json` schrieb absolute Pfade, `--check` scheiterte in
   jedem anderen Checkout (`a4b7a75`). Offen: (f); und ob `report-check`
   in den Pre-Commit-Hook gehört (heute nur Kommando + AGENTS-Schritt 11).
+  **Durchgang 4 (0.91.1, 7m26s): der ganze Weg bis `report-check` sauber**,
+  auch lokal auf einem frischen Klon (relative Pfade tragen). **Offen,
+  Entscheidung:** (g) Platzhalter-Sätze in `[[promise]]` eines eingefrorenen
+  Kopfs werden nicht bemerkt (nur leer wird verweigert, `promises.py:219`);
+  verweigern beim Freeze, oder den Satz aus dem Intent-Feld füllen? (h) Der
+  strenge Audit-Riegel zieht zu „accepted“ statt „fixed“ (8 accepted, 3
+  fixed; der Agent nennt den Neu-Audit als Grund) — beobachten.
   **Rollout (eigener Auftrag):** jeder eingefrorene uniagent-Bereich (21)
   schuldet bei gehobenem Pin vor dem nächsten vollen Lauf einen neuen
   Preflight-Audit.

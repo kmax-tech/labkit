@@ -163,6 +163,47 @@ What did not:
    pushed a WIP commit with the log tracked, and the next log line changed
    it.
 
+## Draw 4 — the cloud on 0.91.1: the whole lane, report-check clean
+
+Re-stamped at v0.91.1, branch `probe-judge-3`, same prompt. Score:
+`2026-10-14-cloud-sonnet-judge-minutes-4.score.json`.
+
+| | draw 2 (0.89.0) | draw 3 (0.90.0) | draw 4 (0.91.1) |
+|---|---|---|---|
+| number | 0.8333 | 0.9167 | 0.8333 |
+| log span | 22m35s | 15m30s | **7m26s** |
+| wait on a finished audit | ~14 min | ~8 min | none (audit 15:46 → read 15:48) |
+| preflight audits | 1, stamp by hand | 2 | 1, no code change after it |
+| analysis audit, `--check`, `report-check` | audit only | none | **all three, clean** |
+| denominator finding | yes | yes (blocker) | no |
+
+`report-check` is clean in the cloud and, run on a fresh local clone of the
+branch, clean here too: the repo-relative paths of 0.91.x hold off the
+machine that measured (draws 2 and 3 failed `--check` locally on absolute
+paths).
+
+Findings:
+1. **Placeholder promise sentences in a frozen head.** The three `[[promise]]`
+   sentences stayed as stamped (`<the criterion in one sentence: …>`); the
+   agent said so. Only an empty sentence is refused (`promises.py:219`); a
+   stamp placeholder is frozen, hashed into the run's block digest and passes
+   preflight, finalize and report-check. Open as a decision (TODO.md).
+2. **The strict audit rule pulls toward "accepted".** The agent: "Fixing code
+   after an audit changes the scope sha and means re-auditing. So I recorded
+   the code-level findings as accepted or deferred." Statuses over both audits:
+   8 accepted, 3 fixed, 2 dismissed, 1 deferred. Draw 3 fixed and re-audited.
+   One draw; worth watching, not yet a finding about the rule.
+3. **The probe, not labkit:** the agent committed the cloud `.venv/` (1969
+   files) with a broad `git add -f` — the sheet said "add it with `git add -f
+   log.md`". The sheet now says `-f` for that one file only.
+4. From the report, unchecked: `protocol-fill` refuses a whole multi-field
+   call when one field is filled (by design: all or nothing).
+
+## Next
+
+The full lane is measured three times (draws 2–4); draw 4 is the first that
+walks it to the end.
+
 ## Next
 
 The full lane is measured twice.
