@@ -351,6 +351,19 @@ def stamp_flags(task: str, cost: str | None, model: bool) -> tuple[str | None, b
     return (None if cost == "unset" else cost), (model or default_model)
 
 
+def tier_sentence(cost: str | None) -> str:
+    """The task sheet's sentence on the stamped cost tier. Without it a cold
+    Sonnet agent, staged at `minutes`, read "twelve calls take about a
+    minute", set the head to `seconds` and took the short lane — the probe
+    measured a lane it was not staged for (2026-10-14)."""
+    if cost is None:
+        return "Its protocol head names no cost tier: declaring it is part of the task."
+    return (
+        f'Its protocol head says `cost = "{cost}"`: the number is owed at that '
+        f"tier — keep it, and follow the lane AGENTS.md gives for it."
+    )
+
+
 def agent_prompt(root: Path) -> str:
     """The prompt a cold agent gets: the repo's AGENTS.md first, the way a
     session started in the repo loads it into context, then the pointer to
@@ -465,6 +478,7 @@ def stage(
         ("<area>", areas[0]),
         ("<log>", str(log)),
         ("<target>", str(TARGET_MINUTES)),
+        ("<tier>", tier_sentence(cost)),
     ):
         sheet = sheet.replace(key, val)
     (root / "TASK.md").write_text(sheet, encoding="utf-8")

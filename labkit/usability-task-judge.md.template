@@ -16,9 +16,9 @@ under the key `<metric_key>`, alongside whatever the repo's rules demand
 of a measurement with a model (a null condition in the same run, the
 registered criterion, the prompt in the protocol). Twelve calls take
 about a minute. The area
-`experiments/<area>/` is already stamped for it.
+`experiments/<area>/` is already stamped for it. <tier>
 
-Follow the repo's own rules: `CLAUDE.md` is in your context already (as a
+Follow the repo's own rules: `AGENTS.md` is in your context already (as a
 session loads it), the lab standard holds the long form
 (`python -m labkit.rules show LAB-nnn`) — read what you need, no more.
 

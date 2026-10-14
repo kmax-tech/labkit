@@ -202,6 +202,29 @@ class StampFlags(unittest.TestCase):
         self.assertEqual(usability.stamp_flags("count", "unset", False), (None, False))
 
 
+class TierSentence(unittest.TestCase):
+    """The task sheet names the stamped tier: staged at `minutes`, a cold
+    Sonnet agent set the head to `seconds` and took the short lane
+    (2026-10-14)."""
+
+    def test_a_stamped_tier_is_named_and_kept(self):
+        line = usability.tier_sentence("minutes")
+        self.assertIn('`cost = "minutes"`', line)
+        self.assertIn("keep it", line)
+
+    def test_no_tier_leaves_it_to_the_agent(self):
+        self.assertIn("declaring it is part of the task", usability.tier_sentence(None))
+
+    def test_both_sheets_carry_the_slot(self):
+        here = Path(usability.__file__).resolve().parent
+        for name in (
+            "usability-task-count.md.template",
+            "usability-task-judge.md.template",
+        ):
+            with self.subTest(name):
+                self.assertIn("<tier>", (here / name).read_text(encoding="utf-8"))
+
+
 class AgentPrompt(unittest.TestCase):
     """The agent gets AGENTS.md the way a session loads it, not a pointer it
     must `cat` (re-measure 2026-10-07: every agent read all of it by tool);
