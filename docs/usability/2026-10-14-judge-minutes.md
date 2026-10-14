@@ -201,14 +201,11 @@ Findings:
 
 ## Next
 
-The full lane is measured three times (draws 2–4); draw 4 is the first that
-walks it to the end.
-
-## Next
-
-The full lane is measured twice.
-## Next
-
-The full lane is measured once. Before more draws: decide finding 3, and
-whether a 12-call count at `minutes` should owe two opus audits at all (the
-agent's own cut: the seconds lane owes eight fields and no audit).
+The full lane is measured three times (draws 2–4, on three labkit states —
+an iterative series, not a run-time comparison on one fixed state); draw 4
+is the first that walks it to the end. Finding 1 of draw 4 is closed in
+0.91.2 (`2b414b0`: a frozen head may not carry `<…>` promise sentences).
+Next: Haiku on that fixed state, read as a weaker-agent probe, not against
+draw 4's time. For finding 2, record per audit finding whether it is a
+correctness or a maintainability finding and why it was accepted; a
+correctness finding accepted for cost would trigger a rule change.

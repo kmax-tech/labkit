@@ -519,9 +519,14 @@ sieht das niemand.
   auch lokal auf einem frischen Klon (relative Pfade tragen). **Offen,
   Entscheidung:** (g) Platzhalter-Sätze in `[[promise]]` eines eingefrorenen
   Kopfs werden nicht bemerkt (nur leer wird verweigert, `promises.py:219`);
-  verweigern beim Freeze, oder den Satz aus dem Intent-Feld füllen? (h) Der
+  verweigern beim Freeze, oder den Satz aus dem Intent-Feld füllen? —
+  **entschieden (a), gebaut in 0.91.2 (`2b414b0`).** (h) Der
   strenge Audit-Riegel zieht zu „accepted“ statt „fixed“ (8 accepted, 3
-  fixed; der Agent nennt den Neu-Audit als Grund) — beobachten.
+  fixed; der Agent nennt den Neu-Audit als Grund) — beobachten: im nächsten
+  Durchgang je Befund Korrektheit vs. Wartbarkeit und den Grund für
+  „accepted“ erfassen; ein aus Kostengründen akzeptierter Korrektheitsbefund
+  ist der Auslöser für eine Regeländerung. **Nächster Schritt:** Haiku auf
+  0.91.2, gewertet als Probe mit schwächerem Agenten.
   **Rollout (eigener Auftrag):** jeder eingefrorene uniagent-Bereich (21)
   schuldet bei gehobenem Pin vor dem nächsten vollen Lauf einen neuen
   Preflight-Audit.

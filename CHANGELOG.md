@@ -5,6 +5,19 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.91.2 — 2026-10-14
+
+### Fixed
+
+- **A frozen head carried the stamp's `<…>` promise sentences** and passed
+  every gate (only an empty sentence was refused). At the freeze or a full
+  run a `[[promise]]` sentence that is one `<…>` placeholder is a must gap
+  now (`promises.promise_tables_owed`, `placeholder_sentences`) — in
+  protocol-check, preflight and runlog alike; an unfrozen pilot may carry
+  it. `report-check` holds the freeze to protocol-check's must gaps, not to
+  the flag alone. The template's hint says to state the promise explicitly
+  instead of "the same as the Intent field".
+
 ## 0.91.1 — 2026-10-14
 
 ### Fixed
