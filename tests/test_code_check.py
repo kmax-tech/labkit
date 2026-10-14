@@ -437,6 +437,25 @@ class TestStampCoverage(unittest.TestCase):
             code_check.stamp_coverage_findings(area, repo), []
         )  # own area name: silent
 
+    def test_loading_a_file_the_stamp_covers_is_silent_a_computed_one_is_not(self):
+        """The stamped 02_analyze.py loads its own 01_measure.py by
+        `AREA / "scripts" / "01_measure.py"`: every fresh area with a model
+        started with a WARNING from labkit's own skeleton (cold Sonnet,
+        2026-10-14). The twin: a path the reader cannot resolve, or a file
+        outside the area's stamp, stays a finding."""
+        repo, area = self._repo("from lib import scoring\n")
+        (area / "scripts" / "02_analyze.py").write_text(
+            "import importlib.util\n"
+            "_spec = importlib.util.spec_from_file_location('m', AREA / 'scripts' / '01_measure.py')\n"
+            "_other = importlib.util.spec_from_file_location('n', AREA / 'data' / 'gen.py')\n"
+            "_any = importlib.util.spec_from_file_location('o', somewhere)\n",
+            encoding="utf-8",
+        )
+        found = code_check.stamp_coverage_findings(area, repo)
+        self.assertEqual(len(found), 2, found)
+        self.assertIn("02_analyze.py:3 · `spec_from_file_location(…)`", found[0])
+        self.assertIn("02_analyze.py:4 · `spec_from_file_location(…)`", found[1])
+
     def test_an_import_outside_lib_and_src_warns(self):
         repo, area = self._repo("from tools import helper\nimport experiments\n")
         found = code_check.stamp_coverage_findings(area, repo)

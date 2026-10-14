@@ -938,6 +938,36 @@ def _import_findings(
     return out
 
 
+def _path_under_area(expr: ast.expr, area: Path) -> Path | None:
+    """`AREA / "scripts" / "01_measure.py"` read as that path; None for any
+    other expression (only literal parts after the area's own name)."""
+    if isinstance(expr, ast.Name) and expr.id == "AREA":
+        return area
+    if (
+        isinstance(expr, ast.BinOp)
+        and isinstance(expr.op, ast.Div)
+        and isinstance(expr.right, ast.Constant)
+        and isinstance(expr.right.value, str)
+    ):
+        base = _path_under_area(expr.left, area)
+        return base / expr.right.value if base is not None else None
+    return None
+
+
+def _loads_area_file(node: ast.Call, area: Path) -> bool:
+    """Does this loader call name, as a literal path, a file the area's stamp
+    covers already (`scope_sha.area_files`)? The stamped 02_analyze.py loads
+    its own 01_measure.py so; warning on it made every fresh area with a
+    model start with a WARNING from labkit's own skeleton (cold Sonnet,
+    2026-10-14). A computed path stays a finding."""
+    covered = {f.resolve() for f in area_files(area)}
+    return any(
+        (target := _path_under_area(arg, area)) is not None
+        and target.resolve() in covered
+        for arg in node.args
+    )
+
+
 def _coverage_in(
     path: Path, area: Path, repo: Path, own: bool
 ) -> list[tuple[int, str]]:
@@ -979,6 +1009,8 @@ def _coverage_in(
                 )
             )
         elif own and isinstance(node, ast.Call) and _call_name(node) in DYNAMIC_LOADERS:
+            if _loads_area_file(node, area):
+                continue  # the stamped analysis skeleton loading its own 01_measure.py
             out.append(
                 (
                     node.lineno,
