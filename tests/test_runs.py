@@ -153,3 +153,50 @@ class ScriptOnCommandLine(unittest.TestCase):
         ):
             with self.subTest(cmd):
                 self.assertFalse(runs.runs_script(cmd, "01_measure.py"))
+
+
+class OutputPathsTravel(unittest.TestCase):
+    """outputs.json recorded absolute paths: a cloud run's `/home/user/...`
+    failed `02_analyze.py --check` in every other checkout (2026-10-14). A path
+    inside the repo is recorded relative to its root and resolved on read."""
+
+    def _repo(self, base: Path) -> Path:
+        run = base / "experiments" / "01-x" / "runs" / "r1"
+        run.mkdir(parents=True)
+        (base / ".git").mkdir()
+        return run
+
+    def test_inside_the_repo_is_relative_outside_is_absolute(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = self._repo(Path(d))
+            out = Path(d) / "experiments" / "01-x" / "output" / "rows.jsonl"
+            self.assertEqual(
+                runs.recorded_output_path(out, run),
+                "experiments/01-x/output/rows.jsonl",
+            )
+            with tempfile.TemporaryDirectory() as other:
+                elsewhere = Path(other) / "x.jsonl"
+                self.assertEqual(
+                    runs.recorded_output_path(elsewhere, run), str(elsewhere.resolve())
+                )
+
+    def test_a_clone_elsewhere_reads_its_own_copy(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = self._repo(Path(d) / "clone")
+            (run / "outputs.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "path": "experiments/01-x/output/rows.jsonl",
+                            "sha256": "ab",
+                            "lines": 2,
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (entry,) = runs.read_outputs(run) or []
+            self.assertEqual(
+                entry.path,
+                (Path(d) / "clone").resolve() / "experiments/01-x/output/rows.jsonl",
+            )

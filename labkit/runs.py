@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import cast
 
 from labkit import promises
+from labkit.repo import layout_root
 
 
 def _command_of(pid: int) -> str | None:
@@ -194,6 +195,19 @@ class OutputEntry:
     continues: tuple[str, ...] = ()  # runs whose rows this file already held
 
 
+def recorded_output_path(path: Path, run_dir: Path) -> str:
+    """How outputs.json records PATH: relative to the repo root of RUN_DIR when
+    it lies inside the repo, so a clone elsewhere reads the same record; an
+    absolute path only for a file outside the repo. `read_outputs` resolves
+    it back. Absolute paths broke `02_analyze.py --check` on every machine but
+    the one that measured (a cloud run's `/home/user/...`, 2026-10-14)."""
+    root = layout_root(run_dir).resolve()
+    resolved = path.resolve()
+    if resolved.is_relative_to(root):
+        return resolved.relative_to(root).as_posix()
+    return str(resolved)
+
+
 def read_outputs(run_dir: Path) -> list[OutputEntry] | None:
     """The outputs a run registered, from its outputs.json; None when the run
     registered none (no file). Raises ArtefactError when an entry is not the
@@ -207,8 +221,9 @@ def read_outputs(run_dir: Path) -> list[OutputEntry] | None:
         raise ArtefactError(
             f"{path}: must be a list of entries, not {type(data).__name__}"
         )
+    root = layout_root(run_dir)
     return [
-        _output_entry(path, n, entry)
+        _output_entry(path, n, entry, root)
         for n, entry in enumerate(cast(list[object], data), 1)
     ]
 
@@ -218,8 +233,9 @@ def _is_count(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def _output_entry(path: Path, n: int, entry: object) -> OutputEntry:
-    """Entry N of outputs.json PATH, or ArtefactError naming what is wrong."""
+def _output_entry(path: Path, n: int, entry: object, root: Path) -> OutputEntry:
+    """Entry N of outputs.json PATH, or ArtefactError naming what is wrong; a
+    relative path is resolved against ROOT, the repo the run lives in."""
     if not isinstance(entry, dict):
         raise ArtefactError(f"{path}: entry {n} is not an object")
     e = cast(dict[str, object], entry)
@@ -245,8 +261,9 @@ def _output_entry(path: Path, n: int, entry: object) -> OutputEntry:
             raise ArtefactError(
                 f"{path}: entry {n}: rows_from[{run_id!r}] is {count!r}, not a row count"
             )
+    recorded = Path(p)
     return OutputEntry(
-        Path(p),
+        recorded if recorded.is_absolute() else root / recorded,
         sha,
         cast(int | None, lines),
         str(note),

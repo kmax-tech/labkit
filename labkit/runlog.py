@@ -90,6 +90,7 @@ from labkit.runs import (
     is_alive,
     read_completion,
     read_metrics,
+    recorded_output_path,
     run_dirs,
     run_state,
     run_summary,
@@ -1194,7 +1195,7 @@ class Run:
                     with p.open("rb") as fh:
                         text_lines = sum(1 for _ in fh)
                     entry: dict = {
-                        "path": str(p),
+                        "path": recorded_output_path(p, self.dir),
                         "sha256": _sha256(p)[:16],
                         "lines": text_lines,
                     }
@@ -1216,7 +1217,7 @@ class Run:
                 else:
                     rows.append(
                         {
-                            "path": str(p),
+                            "path": recorded_output_path(p, self.dir),
                             "sha256": None,
                             "lines": None,
                             "note": "registered, but absent at end of run",
