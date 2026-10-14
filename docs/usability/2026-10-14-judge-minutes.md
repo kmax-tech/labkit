@@ -199,13 +199,52 @@ Findings:
 4. From the report, unchecked: `protocol-fill` refuses a whole multi-field
    call when one field is filled (by design: all or nothing).
 
+## Draw 5 — Haiku in the cloud on 0.91.2: a weaker agent, the whole lane
+
+Re-stamped at v0.91.2, branch `probe-judge-4`, same prompt, model Haiku.
+Read as a weaker-agent probe, not against draw 4's time. Score:
+`2026-10-14-cloud-haiku-judge-minutes-5.score.json`.
+
+| | |
+|---|---|
+| number | 0.8333 (10 of 12), null 6/12, run `2026-10-14T16-40-15_5a4d` |
+| frozen, tier | yes · minutes; promise sentences written, the `<…>` gate held |
+| log span | 12m31s; 22 read · 26 run · 13 edit · 0 unsure · 1 gate |
+| audits | preflight ×2 (the second after four fixes), analysis ×1; about $0.5 each |
+| `02_analyze.py --check`, `report-check` | both pass — in the cloud and on a local clone |
+| `.venv` committed | no (the sheet's "`-f` for log.md only" held) |
+
+**Haiku walked the full lane to `report-check`.** It changed two registered
+constants (`max_empty` 2 → 1, `null_band_items` 1 → 2, "the template values
+were for 96 items") at 16:33:04 — before the render check and before any model
+call, so a registration, not a fit to seen answers.
+
+**Audit findings by kind** (three records, 22 findings): correctness — fixed 3
+(answers dropped by `zip`, unchecked gold values, the `<…>` promise
+sentences), accepted 7 each with a reason checked on the run (parser case and
+markup ×3, one draw, chance pass rate computed at P = 0.07, resume by id
+without `prompt_sha`, denominator from rows); maintainability — the rest.
+**No correctness finding was accepted for cost**, so finding 2 of draw 4 (the
+pull toward "accepted") does not trigger a rule change.
+
+**Findings that recur across draws** — candidates for the skeleton, not yet
+built: the parser reads only the exact case (every audit since draw 3); the
+stamped `audit()` stub in `00_prepare.py`; resumed rows carry no `prompt_sha`;
+the `max_empty` comment derives from "2 of 96" in a 12-item task; the probe's
+print names `tests/test_<NN>_…` while the stamp writes `test_01_…`.
+
+**Not labkit:** a Stop hook in the cloud re-prompted the agent twice while an
+audit ran in the background; it committed the half-written audit output each
+time ("in progress" commits).
+
 ## Next
 
-The full lane is measured three times (draws 2–4, on three labkit states —
-an iterative series, not a run-time comparison on one fixed state); draw 4
-is the first that walks it to the end. Finding 1 of draw 4 is closed in
-0.91.2 (`2b414b0`: a frozen head may not carry `<…>` promise sentences).
-Next: Haiku on that fixed state, read as a weaker-agent probe, not against
-draw 4's time. For finding 2, record per audit finding whether it is a
-correctness or a maintainability finding and why it was accepted; a
-correctness finding accepted for cost would trigger a rule change.
+The series at `minutes` ends here. Draws 2–5 walked the full lane on four
+labkit states (0.89.0 → 0.91.2) — an iterative usability series, not a
+run-time comparison on one fixed state. Draw 4 was the first to reach
+`report-check`; draw 5 showed a weaker agent (Haiku) reaches it too, and no
+correctness finding was accepted for cost, so the audit rule stays. The next
+draw is due after a change to the templates or the gates. From the recurring
+findings, the resume without `prompt_sha` is a correctness fault in the
+skeleton and is fixed on its own; the exact-case parser and the `audit()`
+stub are decisions, not faults (TODO.md).

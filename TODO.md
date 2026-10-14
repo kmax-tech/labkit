@@ -525,8 +525,14 @@ sieht das niemand.
   fixed; der Agent nennt den Neu-Audit als Grund) — beobachten: im nächsten
   Durchgang je Befund Korrektheit vs. Wartbarkeit und den Grund für
   „accepted“ erfassen; ein aus Kostengründen akzeptierter Korrektheitsbefund
-  ist der Auslöser für eine Regeländerung. **Nächster Schritt:** Haiku auf
-  0.91.2, gewertet als Probe mit schwächerem Agenten.
+  ist der Auslöser für eine Regeländerung. **Haiku auf 0.91.2 (Durchgang 5,
+  12m31s): ganzer Weg bis `report-check`, auch lokal sauber;** kein
+  Korrektheitsbefund aus Kostengründen akzeptiert (3 fixed, 7 accepted mit
+  am Lauf geprüftem Grund) — (h) ohne Auslöser. **Kandidaten fürs Skelett**
+  (wiederkehrende Audit-Befunde, nicht gebaut): Parser nur exakte
+  Schreibung; `audit()`-Stub in `00_prepare.py`; fortgesetzte Zeilen ohne
+  `prompt_sha`; `max_empty`-Kommentar „2 of 96“; Probe-Ausgabe nennt
+  `test_<NN>_…`.
   **Rollout (eigener Auftrag):** jeder eingefrorene uniagent-Bereich (21)
   schuldet bei gehobenem Pin vor dem nächsten vollen Lauf einen neuen
   Preflight-Audit.

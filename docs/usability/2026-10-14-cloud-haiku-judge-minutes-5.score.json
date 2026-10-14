@@ -1,0 +1,57 @@
+{
+ "probe": {
+  "staged": "2026-10-14T14:39:16",
+  "task": "judge",
+  "area": "01-causal-claims-judge",
+  "metric_key": "c1_accuracy",
+  "labkit_installed": "labkit @ git+https://github.com/kmax-tech/labkit.git@5e43972f878b034910380dc35108a47e05682019",
+  "scaffold_sha": "f1cce23ef5b4",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "causal-claims-judge",
+   "--cost",
+   "minutes",
+   "--model",
+   "haiku"
+  ],
+  "target_minutes": 5,
+  "restamped": "2026-10-14T18:30:28",
+  "kept": [
+   "TASK.md",
+   ".gitignore",
+   ".claude/settings.json"
+  ]
+ },
+ "run_id": "2026-10-14T16-40-15_5a4d",
+ "number": 0.8333333333333334,
+ "expected": null,
+ "number_ok": true,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-causal-claims-judge.md",
+ "frozen": true,
+ "cost_tier": "minutes",
+ "log": {
+  "lines": 62,
+  "wall_seconds": 751,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 22,
+  "run": 26,
+  "edit": 13,
+  "unsure": 0,
+  "gate": 1,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 187,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 542,
+  "summary_codes": 0,
+  "answer_has_table": false
+ },
+ "transcript": null,
+ "agent": "haiku-cloud"
+}
