@@ -5,6 +5,20 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.91.1 — 2026-10-14
+
+### Fixed
+
+- **`data=` inputs recorded absolute paths too** (0.91.0 fixed only the
+  outputs): after a checkout moved, finalize found the frozen source
+  "gone" — a blocker at `seconds` — and a relative `data=` path was kept
+  relative to whatever the working directory was. One pair for both,
+  `runs.recorded_path` / `runs.resolve_recorded`; `recorded_output_path`
+  (0.91.0) is gone.
+- **The analysis script has one name:** LAB-041, the field guide and the
+  protocol template said `analysis/<note>.py --check`; the stamp writes,
+  and `report-check` holds, `scripts/02_analyze.py`.
+
 ## 0.91.0 — 2026-10-14
 
 ### Added — the lane has an end gate
