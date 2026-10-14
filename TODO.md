@@ -502,6 +502,19 @@ sieht das niemand.
   ungetrackten Ausgabedatei; mit Modell wird auch bei `seconds` das volle
   366-Zeilen-Skelett gestempelt (größte Lesezeit).
 
+- **Nebenbefunde beim Aufstellen der Cloud-judge-Probe (2026-10-14), nicht
+  behoben:** (1) `labkit-check` bricht mit Traceback ab, wenn das Lock die
+  editierbare Form `-e git+…#egg=labkit` trägt (`repo_check.read_pins`
+  wirft `ValueError`, `main` fängt ihn nicht) — erwartet: eine Zeile
+  UNDECIDED, Exit 2. (2) `usability stage` ohne `--venv` installiert labkit
+  editierbar aus dem lokalen Checkout und schreibt das Lock in dieser Form;
+  für eine Cloud-Probe muss das venv danach vom Pin neu gebaut werden (von
+  Hand gemacht, `labkit-probe-judge-cloud` `c594989`). Entscheiden: Stage
+  baut vom Pin, wenn der Tag auf GitHub liegt, oder `--from-pin`.
+- **Release 0.89.0 (2026-10-14):** erster voller Lauf von `just release`
+  mit allen drei Korrekturen vom 13.10. — Hook grün, Tag `v0.89.0` auf
+  `ccd24de`, gepusht. Prüfstelle aus „Release in einem Schritt“ erfüllt.
+
 - **Fremd-Review 2026-10-14 (zweiter Agent, nichts geändert) — abgearbeitet.**
   Fünf Befunde, alle am Code bestätigt und behoben, je ein Commit mit
   Zwillingstest: Teilstring-Abgleich in `runs.is_alive` (`9f40916`),
