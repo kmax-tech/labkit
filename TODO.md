@@ -532,7 +532,11 @@ sieht das niemand.
   Audit-Befunden gebaut (0.92.0):** Fortsetzen nur bei gleichem Instrument
   (`batch.Store(instrument=…)`, `9240b95`); Probe-Ausgabe mit echtem
   Testpfad und `PROBE_CASES`, `max_empty`-Kommentar (`3edff81`). **Keine
-  Fehler, sondern Entscheidungen (offen):** (i) Parser nur exakte
+  Fehler, sondern Entscheidungen — entschieden 2026-10-14:** (i) Parser
+  bleibt exakt, keine Codeänderung; (j) `audit()` wird nicht generisch
+  automatisiert, der experimentabhängige Teil bleibt bewusst offen
+  (allenfalls später die Pflicht zur Anpassung deutlicher machen). Die
+  Begründungen: (i) Parser nur exakte
   Schreibung — der Prompt verlangt ein Wort, Abweichungen zählen sichtbar
   als unlesbar und [A1] begrenzt sie; jeder Audit meldet es trotzdem.
   (j) `audit()` in `00_prepare.py` druckt die Yields, die Confound-Analyse
