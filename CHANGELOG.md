@@ -5,6 +5,35 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.93.0 — 2026-10-15
+
+### Added — repeat draws: the spread of a model's number
+
+- **`runlog.run(..., repeat_of=RUN_ID)`** — the same measurement asked
+  again: new model calls, its own model record, `repeat_of` and `draw` (2,
+  3, …) in config.json. Refused before mkdir unless RUN_ID is a completed
+  primary run with the same protocol, promise block, experiment config and
+  inputs (`runs.repeat_mismatch`), and never with `derived_from` (which
+  re-reads old rows without a model call).
+- **A repeat never answers.** `runs.bound_runs` leaves it out of the
+  answering choice; `runs.completed_runs` takes a required `with_repeats=`,
+  so recheck (`--from-run`, `--check`) and usability keep the primary run.
+- **The skeleton:** `01_measure.py --repeat-of RUN_ID` writes
+  `<name>_draw<N>.jsonl`; `02_analyze.py --draws` prints c1 per draw, its
+  range and the items that flip. `runs.next_draw`, `runs.draws`.
+- **finalize warns** "one draw — no spread" for a run that asked a model
+  and has no repeat (static evidence).
+
+### Breaking
+
+- `runs.completed_runs(area)` needs `with_repeats=True|False`.
+
+### Fixed
+
+- **A judge area stamped at `seconds` failed its first run** (TypeError in
+  MeasureConfig): the seconds cut commented out the constants the full
+  measure skeleton reads. Broken since 0.87.0; the stamp keeps them now.
+
 ## 0.92.0 — 2026-10-14
 
 ### Added

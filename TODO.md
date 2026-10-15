@@ -382,6 +382,19 @@ es verlangt.
 
 ## 4. `--draw N` im Mess-Skelett — die Wiederholungs-Ziehung
 
+**Gebaut 2026-10-15 (0.93.0), anders als unten geplant:** nicht über
+`derived_from` (das heißt seit 0.72 „liest alte Zeilen neu, kein
+Modellaufruf, kein Modell-Record“), sondern als eigene Lauf-Beziehung
+`repeat_of` mit Nummer `draw`; verweigert, wenn Protokoll, Block, Config
+oder Eingaben abweichen. Eine Wiederholung antwortet nie (`bound_runs`,
+`completed_runs(with_repeats=…)` an jeder Aufrufstelle). Berichtet wird
+Ziehung 1, die Streuung ist Grenze (Variante (a)); ein Aggregat wäre eine
+andere registrierte Auswertung. Skelett `--repeat-of`, `02_analyze.py
+--draws`; `finalize` warnt bei einer Ziehung. Echt geprüft mit Haiku:
+10/12, 10/12, 12/12, es kippen c08 und c12. Nebenbei behoben: ein bei
+`seconds` mit Modell gestempelter Bereich stürzte seit 0.87.0 beim ersten
+Lauf ab (Konstanten auskommentiert).
+
 **Was:** `01_measure.py --draw N` fährt dieselben Jobs ein weiteres Mal:
 genau **ein** zusätzlicher Durchgang je Aufruf, Ausgabedatei
 `<name>_draw<N>.jsonl`, eigener Lauf mit `derived_from=<run_id des ersten>`
