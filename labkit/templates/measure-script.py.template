@@ -63,7 +63,7 @@ AREA = HERE.parent
 PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
-from labkit import batch, llm, promises, runlog
+from labkit import batch, llm, promises, runlog, runs
 
 ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"   # written by 00_prepare.py: id · text · gold
 # One run, one output file. A second start of the same command RESUMES this
@@ -335,6 +335,9 @@ def main() -> None:
                       help="instrument check: N items per lane through the REAL pipeline, "
                            "throwaway output, prints parser cases to paste into the test")
     mode.add_argument("--eval-only", action="store_true")
+    mode.add_argument("--repeat-of", metavar="RUN_ID",
+                      help="draw the kept run RUN_ID again: the same jobs and instrument, a run of "
+                           "its own (repeat_of) into <name>_draw<N>.jsonl — the spread, never the answer")
     args = ap.parse_args()
     cfg = replace(CONFIG, model=args.model)   # the one field the command line may set
     items = read_jsonl(ITEMS)
@@ -380,14 +383,23 @@ def main() -> None:
     # the protocol must be frozen with the preflight audit stamped and the
     # run detached (`runlog start <area> -- …`; scar 2026-08-13). `data=` freezes
     # the source — finalize refuses a run of seconds without it.
+    # A repeat draws the kept run again (runlog refuses it unless config, block
+    # and inputs are the same); its rows go to a file of their own, its number
+    # is the spread around the answer, never the answer (`02_analyze.py --draws`).
+    repeat = args.repeat_of
+    out = OUT if repeat is None else OUT.with_name(
+        f"{OUT.stem}_draw{runs.next_draw(AREA, repeat)}.jsonl")
     with runlog.run("<name>", config=config, base_dir=AREA, data={"prepared": ITEMS},
-                    long=True, protocol=PROTOCOL.name) as run:
-        run.output(OUT)
-        measure(cfg, plan(items), OUT,
+                    long=True, protocol=PROTOCOL.name, repeat_of=repeat) as run:
+        run.output(out)
+        measure(cfg, plan(items), out,
                 prov={**llm.provenance(args.model), "run": run.run_id})
-        evaluate(OUT, cfg, run)
-        print(f"run: {run.run_id}  → protocol-fill {PROTOCOL.name} --from-run {run.run_id}  "
-              f"(writes the Answer, Result and Runs lines from metrics.json)")
+        evaluate(out, cfg, run)
+        if repeat is None:
+            print(f"run: {run.run_id}  → protocol-fill {PROTOCOL.name} --from-run {run.run_id}  "
+                  f"(writes the Answer, Result and Runs lines from metrics.json)")
+        else:
+            print(f"repeat of {repeat}: {run.run_id} → scripts/02_analyze.py --draws")
 
 
 if __name__ == "__main__":

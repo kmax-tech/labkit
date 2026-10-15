@@ -3,6 +3,7 @@
 
     ../../.venv/bin/python scripts/02_analyze.py            # the metrics, recomputed from OUT
     ../../.venv/bin/python scripts/02_analyze.py --check    # pin OUT to the run, recompute, hold NOTE to it
+    ../../.venv/bin/python scripts/02_analyze.py --draws    # the kept run and its repeats: the spread
 
 `labkit.recheck.holds` does the three things every area used to re-implement
 (and twice got wrong, 2026-10-05): the output file pinned to the run's
@@ -19,7 +20,7 @@ import json
 import sys
 from pathlib import Path
 
-from labkit import recheck
+from labkit import recheck, runs
 
 AREA = Path(__file__).resolve().parent.parent
 NOTE = AREA / "PROTOCOL-<name>.md"     # or notes/results/<note>.md once the number is promoted
@@ -30,11 +31,41 @@ sys.modules[_spec.name] = measure
 _spec.loader.exec_module(measure)
 
 
+def draws() -> list[str]:
+    """The kept run and its repeats (`01_measure.py --repeat-of`): c1 per
+    draw, its range, and the items whose parsed answer differs between draws.
+    The answer stays draw 1; this is the spread around it (LAB-036 Validate)."""
+    primary = recheck.run_dir(AREA)
+    seen: dict[str, dict[int, object]] = {}
+    lines, accs = [], []
+    for n, d in runs.draws(AREA, primary.name):
+        m = runs.read_metrics(d / "metrics.json")
+        accs.append(m.get("c1_accuracy"))
+        lines.append(f"draw {n}  {d.name}  c1_accuracy {m.get('c1_accuracy')}  c1_pass {m.get('c1_pass')}")
+        rows = next(o.path for o in runs.read_outputs(d) or [] if o.path.suffix == ".jsonl")
+        for r in measure.read_jsonl(rows):
+            seen.setdefault(r["id"], {})[n] = measure.parse_answer(r["answer"])
+    if len(accs) == 1:
+        lines.append("one draw — no spread: `01_measure.py --repeat-of "
+                     f"{primary.name}` draws it again")
+        return lines
+    known = [a for a in accs if isinstance(a, (int, float))]
+    flipped = sorted(i for i, by_draw in seen.items() if len(set(by_draw.values())) > 1)
+    lines.append(f"c1_accuracy over {len(accs)} draws: {min(known)} … {max(known)}")
+    lines.append(f"items whose answer flipped: {len(flipped)} {flipped}")
+    return lines
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     ap.add_argument("--check", action="store_true",
                     help="pin OUT to the newest run, recompute, hold NOTE to it")
+    ap.add_argument("--draws", action="store_true",
+                    help="the kept run and its repeats: c1 per draw, range, flipped items")
     args = ap.parse_args()
+    if args.draws:
+        print("\n".join(draws()))
+        return
     if args.check:
         # the numbers as protocol-fill --from-run writes them (recheck.plain_numbers):
         # a format of its own here (`:.4f`) failed the check right after the

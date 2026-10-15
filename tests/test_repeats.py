@@ -74,6 +74,17 @@ class Repeats(unittest.TestCase):
             [p.name for p in runs.repeats_of(self.area, first)], [second, third]
         )
 
+    def test_draws_number_the_run_and_its_repeats(self):
+        first = self._run()
+        self.assertEqual(runs.next_draw(self.area, first), 2)
+        self.assertEqual([n for n, _ in runs.draws(self.area, first)], [1])
+        second = self._run(repeat_of=first)
+        self.assertEqual(runs.next_draw(self.area, first), 3)
+        self.assertEqual(
+            [(n, d.name) for n, d in runs.draws(self.area, first)],
+            [(1, first), (2, second)],
+        )
+
     def test_the_primary_keeps_answering_and_rechecking(self):
         first = self._run()
         self._run(repeat_of=first)

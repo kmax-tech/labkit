@@ -98,8 +98,8 @@ from labkit.runs import (
     read_run_config,
     recorded_path,
     repeat_mismatch,
+    next_draw,
     repeat_parent,
-    repeats_of,
     run_dirs,
     run_state,
     run_summary,
@@ -1171,7 +1171,7 @@ class Run:
                 f"runlog: this run is no repeat of {repeat_of} — it measures "
                 f"something else:\n  " + "\n  ".join(differs)
             )
-        return repeat_of, 2 + len(repeats_of(base_dir, repeat_of))
+        return repeat_of, next_draw(base_dir, repeat_of)
 
     def _write_record(
         self,

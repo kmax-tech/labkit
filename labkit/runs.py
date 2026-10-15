@@ -505,14 +505,41 @@ def repeat_parent(config: dict) -> str | None:
 
 
 def repeats_of(area: Path, run_id: str) -> list[Path]:
-    """The completed repeats of RUN_ID, oldest first (draw 2, 3, …)."""
-    return [
-        rd.dir
-        for rd in run_dirs(area)
-        if rd.config is not None
-        and repeat_parent(rd.config) == run_id
-        and run_state(rd.dir, rd.config, alive=False) == COMPLETED
-    ]
+    """The completed repeats of RUN_ID in draw order (2, 3, …) — by the
+    recorded `draw`, not by name: run ids carry the start second and a random
+    suffix, so two repeats started in one second sort by chance."""
+    return [d for _, d in _numbered_repeats(area, run_id)]
+
+
+def _numbered_repeats(area: Path, run_id: str) -> list[tuple[int, Path]]:
+    """(recorded draw, run dir) of RUN_ID's completed repeats, by draw."""
+    found: list[tuple[int, Path]] = []
+    for rd in run_dirs(area):
+        cfg = rd.config
+        if cfg is None or repeat_parent(cfg) != run_id:
+            continue
+        if run_state(rd.dir, cfg, alive=False) != COMPLETED:
+            continue
+        draw = cfg.get("draw")
+        if not isinstance(draw, int) or isinstance(draw, bool):
+            raise RunConfigError(
+                f"{rd.dir}/config.json: a repeat without an integer `draw`"
+            )
+        found.append((draw, rd.dir))
+    return sorted(found)
+
+
+def next_draw(area: Path, run_id: str) -> int:
+    """The draw number a new repeat of RUN_ID gets: the run itself is draw 1,
+    its completed repeats 2, 3, … — one count for runlog's record and the
+    script's output file name."""
+    return 2 + len(repeats_of(area, run_id))
+
+
+def draws(area: Path, run_id: str) -> list[tuple[int, Path]]:
+    """(draw, run dir) for RUN_ID and its completed repeats, draw 1 first —
+    what an analysis reads to show the spread of the number."""
+    return [(1, area / "runs" / run_id), *_numbered_repeats(area, run_id)]
 
 
 def repeat_mismatch(parent: dict, new: dict) -> list[str]:
