@@ -410,13 +410,13 @@ def scope_list(tail: str) -> list[str]:
     return []
 
 
-def scope_mismatch(area: Path, listed: list[str]) -> list[str]:
-    """Where the auditor's scope and the stamp disagree. The stamp is what a
-    later check recomputes, so a file the auditor read as part of the number
-    but the stamp misses can change unnoticed (review 2026-10-07: the list
-    was asked for and then dropped)."""
+def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str]:
+    """Where the auditor's scope and the stamp disagree — FILES are the
+    stamp's, taken before the call (`Stamp`). The stamp is what a later
+    check recomputes, so a file the auditor read as part of the number but
+    the stamp misses can change unnoticed (review 2026-10-07: the list was
+    asked for and then dropped)."""
     root = layout_root(area)
-    _, files, _ = area_stamp(area)
     stamped = {
         f.resolve().relative_to(root.resolve()).as_posix()
         for f in files
@@ -466,10 +466,20 @@ def early_for_tier(area: Path, protocol: Path, mode: str) -> list[str]:
     ]
 
 
-def stamp_facts(area: Path, verdict: tuple[int, int, int]) -> str:
+class Stamp(NamedTuple):
+    """The area's stamp as the auditor saw it: taken ONCE, before the call.
+    Until 0.95.0 it was taken after the model answered (up to 900 s later),
+    so a lib module edited meanwhile gave a record whose sha no auditor had
+    read, and the freeze gate took it as covered (audit 2026-10-15)."""
+
+    sha: str
+    files: list[Path]
+
+
+def stamp_facts(stamp: Stamp, verdict: tuple[int, int, int]) -> str:
     """The facts of the protocol's audit field — the human adds the decisions.
     The sha is `scope_sha.area_stamp`, the same a later `scope-sha` recomputes."""
-    sha, _, _ = area_stamp(area)
+    sha = stamp.sha
     b, w, n = verdict
     return (
         f"{time.strftime('%Y-%m-%d')} · scope sha {sha} · {b + w + n} findings "
@@ -506,6 +516,10 @@ def main(argv: list[str]) -> int:
         protocol, code, standard, indexed = gather(args.area, args.protocol)
         for line in early_for_tier(args.area, protocol, args.mode):
             print(f"labkit-audit: {line}", file=sys.stderr)
+        # the stamp names the code the auditor reads: taken before the call,
+        # recorded after it, never recomputed in between (Stamp)
+        sha, stamped, _ = area_stamp(args.area)
+        stamp = Stamp(sha, stamped)
         prompt = render(args.mode, args.area, protocol, code, standard, indexed)
         print(
             f"labkit-audit: {args.mode} · {protocol.name} · {len(code)} code file(s) "
@@ -516,19 +530,39 @@ def main(argv: list[str]) -> int:
         report = llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=4096)
         print(f"labkit-audit: tokens · {llm.last_usage().describe()}", file=sys.stderr)
         result = parse(report)
-    except (AuditError, llm.BackendError, llm.PromptTruncated, KeyError) as exc:
-        # KeyError: llm.resolve on an alias models.toml does not know
+    except (
+        AuditError,
+        llm.BackendError,
+        llm.PromptTruncated,
+        KeyError,
+        FileNotFoundError,
+        ValueError,
+    ) as exc:
+        # KeyError: llm.resolve on an alias models.toml does not know;
+        # FileNotFoundError, ValueError: the area cannot be stamped
         print(f"labkit-audit: {str(exc).strip(chr(39))}", file=sys.stderr)
         return 2
     print(report)
     if args.out:
         args.out.write_text(report, encoding="utf-8")
     b, w, _ = result["verdict"]
-    sha, _, _ = area_stamp(args.area)
     recorded = findings.write(
-        args.area, args.mode, args.model, sha, result["verdict"], result["findings"]
+        args.area,
+        args.mode,
+        args.model,
+        stamp.sha,
+        result["verdict"],
+        result["findings"],
     )
-    print(f"\nstamp: {stamp_facts(args.area, result['verdict'])}", file=sys.stderr)
+    print(f"\nstamp: {stamp_facts(stamp, result['verdict'])}", file=sys.stderr)
+    now = area_stamp(args.area)[0]
+    if now != stamp.sha:
+        print(
+            f"stamp NOTE: the code changed while the auditor read it — it saw scope "
+            f"sha {stamp.sha}, the code now stamps {now}; the record names {stamp.sha}, "
+            f"and the change owes its own audit",
+            file=sys.stderr,
+        )
     print(
         f"findings: {recorded} — set status (fixed / accepted / deferred / dismissed) "
         f"and reason for each; preflight reads it",
@@ -537,7 +571,7 @@ def main(argv: list[str]) -> int:
     # the auditor lists what it read in full; the indexed modules are the
     # caller's to add before the list is held to the stamp (LAB-103 The audit reads by declared scope)
     listed_scope = result["scope"] + [str(p) for p in indexed]
-    for gap in scope_mismatch(args.area, listed_scope):
+    for gap in scope_mismatch(args.area, listed_scope, stamp.files):
         print(f"scope WARNING: {gap}", file=sys.stderr)
     listed = sum(grade in ("BLOCKER", "WARNING") for grade, _ in result["findings"])
     if listed and not (b or w):

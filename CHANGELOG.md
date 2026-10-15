@@ -5,6 +5,18 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.95.0 — 2026-10-15
+
+Phase B of the audit of 2026-10-15: the audit chain and the hooks.
+
+### Fixed
+
+- **`labkit-audit` stamps the code before the model call.** The stamp was
+  taken after the answer (up to 900 s later): a lib module edited meanwhile
+  gave a record whose sha no auditor had read, and the freeze gate took it
+  as covered. The stamp is taken once, recorded as taken, and a change
+  during the call is said (`stamp NOTE`).
+
 ## 0.94.0 — 2026-10-15
 
 Phase A of the audit of 2026-10-15 (`docs/audit-2026-10-15.md`): the bugs

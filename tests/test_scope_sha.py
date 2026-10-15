@@ -209,8 +209,10 @@ class TestOneStampEverywhere(unittest.TestCase):
         from labkit import audit, preflight
         from labkit import scope_sha as packaged
 
-        sha = packaged.area_stamp(self.area)[0]
-        self.assertIn(f"scope sha {sha}", audit.stamp_facts(self.area, (0, 0, 0)))
+        sha, files, _ = packaged.area_stamp(self.area)
+        self.assertIn(
+            f"scope sha {sha}", audit.stamp_facts(audit.Stamp(sha, files), (0, 0, 0))
+        )
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             packaged.main(["--area", str(self.area)])
@@ -327,7 +329,7 @@ class TestImportForms(unittest.TestCase):
         self.assertEqual(
             listed, ["experiments/01/scripts/m.py", "lib/scoring.py", "lib/other.py"]
         )
-        gaps = audit.scope_mismatch(self.area, listed)
+        gaps = audit.scope_mismatch(self.area, listed, audit.area_stamp(self.area)[1])
         self.assertIn(
             "the auditor read lib/other.py as part of the number, the stamp "
             "does not cover it",
