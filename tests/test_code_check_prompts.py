@@ -83,6 +83,18 @@ class Blocks(unittest.TestCase):
         )
         self.assertEqual(len(code_check.prompt_blocks(_write(moved))), 2)
 
+    def test_a_tilde_fence_and_a_wrapped_label_are_read(self):
+        """`~~~` fences and a label wrapped onto the next line were invisible
+        to the prompt check's own parsers (audit 2026-10-15); the protocol
+        parser's fences and labels are read here."""
+        tilde = TWO_BLOCKS.replace("```text", "~~~text").replace("  ```", "  ~~~")
+        self.assertEqual(len(code_check.prompt_blocks(_write(tilde))), 2)
+        wrapped = TWO_BLOCKS.replace(
+            "- **Prompt (verbatim, per variant):**",
+            "- **Prompt (verbatim,\n  per variant):**",
+        )
+        self.assertEqual(len(code_check.prompt_blocks(_write(wrapped))), 2)
+
     def test_an_empty_fence_is_reported_not_a_crash(self):
         # a stamped protocol whose prompt fence was left empty raised
         # IndexError (audit 2026-10-13): the first line of "" does not exist

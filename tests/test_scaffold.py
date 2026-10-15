@@ -499,3 +499,20 @@ class Cli(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ModelNamed(unittest.TestCase):
+    """`--report` asks `protocol_check.model_named`, the one reading of the
+    Model / tool field: with its own regex a `—` or a `†` label read as "a
+    model", and the deterministic n/a fields stayed open (audit 2026-10-15)."""
+
+    def test_a_dash_and_a_daggered_label_are_no_model(self):
+        for value in ("—", "none", "n/a — a count"):
+            text = (
+                f"- **Model / tool †:** {value}\n- **Randomness controls †:** <seed>\n"
+            )
+            filled, n = scaffold.auto_fill_deterministic(text)
+            self.assertEqual(n, 1, value)
+            self.assertIn("n/a — deterministic", filled)
+        text = "- **Model / tool:** gpt-oss\n- **Randomness controls †:** <seed>\n"
+        self.assertEqual(scaffold.auto_fill_deterministic(text), (text, 0))

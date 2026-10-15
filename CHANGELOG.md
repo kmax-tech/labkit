@@ -35,6 +35,14 @@ keeps the copies from coming back.
   that reports no intent key while the protocol registers ids is a blocker
   everywhere now (intent-check warned and read every promise as
   unimplemented; params showed the probe's values as the answer).
+- **Fences and labels are parsed once.** `protocol_block.fence_spans` is
+  the one fence walker (`protocol-fill --prompts` closed a block on any
+  line starting with the marker; the prompt-drift check knew no `~~~` and
+  no nesting), `protocol_check.fields` the one label parser (the prompt
+  check had its own, blind to a wrapped label), `protocol_check.model_named`
+  the one reading of `Model / tool` (`labkit-init --report` matched the
+  raw text and read `—` as a model). `protocol-fill` reads the head's
+  `type` inside the TOML block, not in a fenced example.
 
 ## 0.95.0 — 2026-10-15
 

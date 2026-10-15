@@ -39,6 +39,7 @@ import uuid
 from pathlib import Path
 
 from labkit import protocol_block
+from labkit.protocol_check import model_named
 from labkit.repo import (
     AREA_NAME,
     area_protocols,
@@ -403,8 +404,8 @@ def insert_report_fields(text: str, blocks: ProtocolBlocks) -> tuple[str, int]:
 
 # A protocol that names no model has no seed, no temperature and nothing to
 # parse; asking for those fields cost a fix cycle each on a deterministic run
-# (2026-10-05). --report fills them when the Model / tool field says so.
-NO_MODEL = re.compile(r"\*\*model / tool:\*\*\s*(none|no model|-|n/a)\b", re.I)
+# (2026-10-05). --report fills them when the Model / tool field says so
+# (`protocol_check.model_named`, the one reading of that field).
 DETERMINISTIC_NA = {
     "Randomness controls": "n/a — deterministic, no model: no seed, no temperature, one run (auto-filled by --report)",
     "Noise ceiling → threshold": (  # the protocol field's label (the standard says noise floor)
@@ -431,7 +432,7 @@ def _replace_placeholder(lines: list[str], label: str, value: str) -> bool:
 
 def auto_fill_deterministic(text: str) -> tuple[str, int]:
     """Fill the placeholders a model-free protocol cannot answer; (text, fields filled)."""
-    if not NO_MODEL.search(text):
+    if model_named(text):
         return text, 0
     lines = text.split("\n")
     filled = sum(

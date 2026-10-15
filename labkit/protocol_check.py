@@ -297,6 +297,17 @@ class FieldReport:
 _NO_MODEL = re.compile(r"^(n/a|none|no model|—|–|-)", re.I)
 
 
+def model_named(text: str) -> bool:
+    """Does the protocol name a model in `Model / tool`? The one answer for
+    the cut, the seconds registration and `labkit-init --report` — the
+    scaffolder matched the raw text with its own spelling (audit 2026-10-15:
+    `**Model / tool:** —` was model-free here and a model there)."""
+    found: dict[str, list[FieldLine]] = {}
+    for f in fields(text):
+        found.setdefault(f.name, []).append(f)
+    return _model_named(found)
+
+
 def _model_named(found: dict[str, list[FieldLine]]) -> bool:
     for f in found.get("model / tool", []):
         if f.value and not f.placeholder and not _NO_MODEL.match(f.value):
