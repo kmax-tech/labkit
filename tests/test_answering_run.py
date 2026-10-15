@@ -199,3 +199,33 @@ class ModelProvenance(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Explain(unittest.TestCase):
+    """`AnsweringRun.explain` is the one telling of the choice: finalize,
+    intent-check, recheck, params and the audit rendered it four ways with
+    four semantics (audit 2026-10-15)."""
+
+    def test_no_run_blocker_and_exclusions(self):
+        choice = runs.AnsweringRun(
+            None,
+            0,
+            (runs.RunExclusion(Path("r/x"), "bound to p-b"),),
+            "no completed run bound to p-a",
+        )
+        self.assertEqual(
+            choice.explain(True), ("no completed run bound to p-a", ["x: bound to p-b"])
+        )
+
+    def test_a_probe_run_blocks_only_when_ids_are_registered(self):
+        choice = runs.AnsweringRun(Path("r/x"), 0, (), None, reports_intent_keys=False)
+        blocker, lines = choice.explain(True)
+        self.assertIn("probe or producer run", blocker or "")
+        self.assertEqual(choice.explain(False), (None, []))  # a count registers no id
+
+    def test_skipped_runs_are_said(self):
+        choice = runs.AnsweringRun(Path("r/x"), 2, (), None)
+        self.assertEqual(
+            choice.explain(True),
+            (None, ["skipped 2 newer bound run(s) without intent keys"]),
+        )

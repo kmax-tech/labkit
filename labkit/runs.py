@@ -715,6 +715,28 @@ class AnsweringRun:
     blocker: str | None
     reports_intent_keys: bool = True
 
+    def explain(self, ids_registered: bool) -> tuple[str | None, list[str]]:
+        """(why no run may answer, or None; the lines that say what was
+        looked at) — ONE telling for finalize, intent-check, recheck, params
+        and the audit, which each rendered this four ways with four
+        semantics (audit 2026-10-15). A chosen run that reports no intent
+        key while the protocol registers ids is a blocker here, everywhere:
+        a probe or producer run is not an answer."""
+        if self.run_dir is None:
+            return self.blocker, [f"{x.run_dir.name}: {x.why}" for x in self.exclusions]
+        if ids_registered and not self.reports_intent_keys:
+            return (
+                f"{self.run_dir.name} is the newest bound run, and no bound run "
+                f"reports an intent key — a probe or producer run, not an answer",
+                [],
+            )
+        lines = []
+        if self.skipped_newer:
+            lines.append(
+                f"skipped {self.skipped_newer} newer bound run(s) without intent keys"
+            )
+        return None, lines
+
 
 def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
     """The run every check holds the protocol to: the newest COMPLETED run

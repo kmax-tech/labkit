@@ -29,6 +29,12 @@ keeps the copies from coming back.
   had their own `^a\d+_` and `[ca]`, which the next change of the alphabet
   would have silenced. The area name `NN-<slug>` has one pattern,
   `repo.AREA_NAME` / `repo.split_area_name`, instead of four.
+- **One telling of the answering choice.** `runs.AnsweringRun.explain`
+  renders the choice for finalize, intent-check, recheck, `labkit-params`
+  and the audit, which did it four ways with four semantics: a chosen run
+  that reports no intent key while the protocol registers ids is a blocker
+  everywhere now (intent-check warned and read every promise as
+  unimplemented; params showed the probe's values as the answer).
 
 ## 0.95.0 — 2026-10-15
 

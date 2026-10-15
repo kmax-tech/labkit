@@ -127,7 +127,7 @@ class TwoProtocols(unittest.TestCase):
             (self.area / "runs" / r / "metrics.json").write_text('{"rows_written": 1}')
         with self.assertRaises(SystemExit) as cm:
             recheck.run_dir(self.area, self.a)
-        self.assertIn("reports no intent key", str(cm.exception))
+        self.assertIn("no bound run reports an intent key", str(cm.exception))
 
 
 if __name__ == "__main__":

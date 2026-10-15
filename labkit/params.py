@@ -328,8 +328,9 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     protocol = choose_protocol(area, protocol_arg, "labkit-params")
     if protocol is None:
         return 2
+    text = protocol.read_text(encoding="utf-8")
     try:
-        pid = protocol_id_of(protocol.read_text(encoding="utf-8"))
+        pid = protocol_id_of(text)
     except protocol_block.BlockError as exc:
         print(f"labkit-params: {protocol.name}: {exc}")
         return 2
@@ -346,17 +347,14 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             )
             return 2
         choice = bound_answering_run(area, pid)
-        if choice.run_dir is None or choice.blocker:
-            print(f"labkit-params: {choice.blocker}")
-            for x in choice.exclusions:
-                print(f"    {x.run_dir.name}: {x.why}")
+        blocker, lines = choice.explain(promises.registers_ids(text))
+        if blocker or choice.run_dir is None:
+            print(f"labkit-params: {blocker}")
+            for line in lines:
+                print(f"    {line}")
             return 2
         run_dir = choice.run_dir
-        how = f"the run that answers for {pid}" + (
-            f" ({choice.skipped_newer} newer bound run(s) without intent keys skipped)"
-            if choice.skipped_newer
-            else ""
-        )
+        how = f"the run that answers for {pid}" + "".join(f" ({ln})" for ln in lines)
     print(f"params: {area.name} · {protocol.name} · run {run_dir.name} ({how})")
     try:
         rows = params_table(area, protocol, run_dir)

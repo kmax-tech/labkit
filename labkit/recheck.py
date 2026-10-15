@@ -72,16 +72,9 @@ def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Pat
     if run_id is not None:
         return _named_run(area / "runs" / run_id, pid)
     choice = runs.bound_answering_run(area, pid)
-    if choice.run_dir is None:
-        raise SystemExit(
-            f"recheck: {choice.blocker}"
-            + "".join(f"\n  {x.run_dir.name}: {x.why}" for x in choice.exclusions)
-        )
-    if promises.registers_ids(protocol_text) and not choice.reports_intent_keys:
-        raise SystemExit(
-            f"recheck: {choice.run_dir.name} reports no intent key — a probe or "
-            f"producer run, not an answer to {pid}"
-        )
+    blocker, lines = choice.explain(promises.registers_ids(protocol_text))
+    if blocker or choice.run_dir is None:
+        raise SystemExit(f"recheck: {blocker}" + "".join(f"\n  {ln}" for ln in lines))
     return choice.run_dir
 
 

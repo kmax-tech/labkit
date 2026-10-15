@@ -218,22 +218,15 @@ def answering_run(
         findings.block("no stamped protocol id ([protocol] id) — no run is bound to it")
         return None
     choice = bound_answering_run(area, pid)
+    blocker, lines = choice.explain(ids_registered)
     if choice.run_dir is None:
-        findings.block(choice.blocker or f"no completed run bound to {pid}")
-        for x in choice.exclusions:
-            print(f"    {x.run_dir.name}: {x.why}")
+        findings.block(blocker or f"no completed run bound to {pid}")
+        for line in lines:
+            print(f"    {line}")
         return None
-    if ids_registered and not choice.reports_intent_keys:
-        findings.block(
-            f"{choice.run_dir.name}: no bound run reports an intent key — the "
-            f"newest is a probe or producer run, not an answer"
-        )
-    note = (
-        f" (skipped {choice.skipped_newer} newer bound run(s) without intent keys)"
-        if choice.skipped_newer
-        else ""
-    )
-    print(f"  {choice.run_dir.name}: completed{note}")
+    if blocker:
+        findings.block(blocker)
+    print(f"  {choice.run_dir.name}: completed" + "".join(f" ({ln})" for ln in lines))
     return choice.run_dir
 
 
