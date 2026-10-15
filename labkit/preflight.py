@@ -88,6 +88,11 @@ def area_test_python(repo: Path) -> str:
     return str(own) if own.is_file() else sys.executable
 
 
+#: how long an area's tests may run inside a gate; a hanging test hung the
+#: gate until the hook's own timeout killed it, wordless (audit 2026-10-15)
+AREA_TEST_TIMEOUT_S = 300.0
+
+
 def area_tests(area: Path, repo: Path) -> AreaTests:
     """Run the area's tests (`tests/test_*<slug>*.py`) — the resolution
     check and the parser cases in their permanent form. One home for
@@ -113,20 +118,31 @@ def area_tests(area: Path, repo: Path) -> AreaTests:
     )
     if not files:
         return AreaTests(pattern, [], "none", [])
-    r = subprocess.run(
-        [
-            area_test_python(repo),
-            "-m",
-            "pytest",
-            "-q",
-            "-p",
-            "no:cacheprovider",
-            *map(str, files),
-        ],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        r = subprocess.run(
+            [
+                area_test_python(repo),
+                "-m",
+                "pytest",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                *map(str, files),
+            ],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            timeout=AREA_TEST_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return AreaTests(
+            pattern,
+            files,
+            "failed",
+            [
+                f"timed out after {AREA_TEST_TIMEOUT_S:g} s — a test that hangs is a failing test"
+            ],
+        )
     if r.returncode == 0:
         return AreaTests(pattern, files, "ok", [])
     if "No module named pytest" in (r.stderr or ""):

@@ -39,6 +39,11 @@ Phase B of the audit of 2026-10-15: the audit chain and the hooks.
   `notes`; `labkit-hooks install` recognises its own hooks by the command
   as a word, so a foreign `./bin/my-protocol-checker` stays; `claude-hook
   sessions --run` without a value is a usage error, not a traceback.
+- **A gate's subprocess has a time limit.** An area test or `02_analyze.py
+  --check` that hangs hung preflight, finalize and report-check until the
+  hook's own timeout killed them, wordless; after 300 s it is a failing
+  test or check, said in the finding (`preflight.AREA_TEST_TIMEOUT_S`,
+  `report_check.CHECK_TIMEOUT_S`).
 
 ## 0.94.0 — 2026-10-15
 
