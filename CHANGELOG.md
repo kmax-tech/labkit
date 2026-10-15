@@ -42,6 +42,11 @@ of the guaranteed tier.
 - **report-check passed a must field still holding its placeholder.**
   Station 1 read protocol-check's missing fields only; the `<…>` holes
   count now, as in protocol-check and preflight.
+- **A scope file that is not Python is one blocker, not a traceback.** With
+  a `lib/` or `src/` in the repo, preflight station 3 and code-check raised
+  from the import walk on a stale `analysis/old.py` with a syntax error —
+  exit 1, and so not blocking in the pre-run hook. `scope_sha.SourceError`
+  names the file; code-check and preflight report it as `BLOCKER`.
 
 ### Breaking
 

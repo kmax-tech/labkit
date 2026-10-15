@@ -394,8 +394,11 @@ def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
     'c1'" — a blocker against correct code (2026-10-06, found in the first
     promise-block run). Only
     keyword names in CALLS count, not assignments: a local `c1_pass = …`
-    is not yet a reported key. A file that does not parse keeps its literal
-    hits and loses only the keyword half.
+    is not yet a reported key. An area file that does not parse keeps its
+    literal hits and loses only the keyword half; with a `lib/` or `src/` in
+    the repo the import walk needs its syntax tree and raises
+    `scope_sha.SourceError` naming it — code-check and preflight report
+    that as one blocker (audit 2026-10-15).
     """
     hits: dict[str, list[str]] = {}
     for key, where in code_keys(area).items():

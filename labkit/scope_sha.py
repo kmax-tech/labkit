@@ -40,6 +40,15 @@ from pathlib import Path
 from labkit.repo import layout_root, no_such_area, requirement_lines
 
 DIGEST_CHARS = 12  # enough to spot a mismatch, short enough for a protocol line
+
+
+class SourceError(ValueError):
+    """A file in the stamp's scope that cannot be read as Python; the message
+    names it. A gate reports it as a blocker — until 0.94.0 it was a
+    traceback in preflight and code-check, exit 1 and so not blocking in the
+    pre-run hook (audit 2026-10-15)."""
+
+
 AREA_GLOBS = ("scripts/*.py", "analysis/*.py")
 
 
@@ -64,12 +73,12 @@ def _lib_names(path: Path, libdir: Path) -> set[str]:  # noqa: C901 complexity b
     its syntax tree: `import a.b`, `from a.b import c` (c may be a module),
     `from a import b`, the root's own name as a prefix (`from lib import x`)
     and relative imports inside the root. Candidates, not facts: the caller
-    keeps those that are files. Raises ValueError naming the file when it
+    keeps those that are files. Raises SourceError naming the file when it
     does not parse — a stamp over code it cannot read would be a guess."""
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     except (SyntaxError, UnicodeDecodeError) as exc:
-        raise ValueError(f"{path}: cannot read its imports ({exc})") from exc
+        raise SourceError(f"{path}: cannot read its imports ({exc})") from exc
     prefix = libdir.name
     package: list[str] = []
     if libdir in path.parents:
