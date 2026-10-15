@@ -17,7 +17,11 @@ pins (`requirements.txt` / `requirements.lock`).
   `tests/test_one_home.py` keeps `start_second` inside `runs`.
 - **The standard: "Trivial solution passes" is a scar** (pilots 06 and 07:
   the null probe was measured but held to no expected value), in the scar
-  table of LAB-015 and so in the audit. **Section 8, a base layer from the
+  table of LAB-015 and so in the audit. The row orders the thing before
+  the bookkeeping: a trivial probe's expected value is 0 or chance; a
+  number above that is a finding first, a target only where the protocol
+  says why doing nothing is correct — a first audit with the row took the
+  easy half and proposed the predictable number as the target. **Section 8, a base layer from the
   literature** (31 error classes with source and check, from Kapoor,
   REFORMS, Biderman, ABC, Wicherts, Makin and Lones) stands outside every
   rule and is not read by the audit until the benchmark has been drawn
