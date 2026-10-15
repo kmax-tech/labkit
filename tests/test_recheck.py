@@ -12,6 +12,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from protocol_fixture import PID, head  # noqa: E402
+
 from labkit import recheck  # noqa: E402
 
 ROWS = [{"case": "a", "n": 4}, {"case": "b", "n": 3}]
@@ -34,14 +36,18 @@ class Area(unittest.TestCase):
         self.run_dir.mkdir(parents=True)
         # a current run: schema_version 2 plus a completion record — metrics
         # alone (a legacy run) is never completed since labkit 0.48
-        (self.run_dir / "config.json").write_text(json.dumps({"schema_version": 2}))
+        (self.run_dir / "config.json").write_text(
+            json.dumps(
+                {"schema_version": 2, "protocol": {"id": PID, "path": "PROTOCOL-x.md"}}
+            )
+        )
         (self.run_dir / "completion.json").write_text(
             json.dumps({"status": "completed"})
         )
         self._record(evaluate(ROWS))
         self.note = self.area / "PROTOCOL-x.md"
         self.note.write_text(
-            "- **Result:** 3,5 über 2 Fälle, run 2026-10-05T19-00-00_ab12\n",
+            "- **Result:** 3,5 über 2 Fälle, run 2026-10-05T19-00-00_ab12\n\n" + head(),
             encoding="utf-8",
         )
 
@@ -95,11 +101,13 @@ class Area(unittest.TestCase):
         self.assertIn("c1_pass", str(cm.exception))
 
     def test_note_missing_number_or_run(self):
-        self.note.write_text("- **Result:** 3.5, run 2026-10-05T19-00-00_ab12\n")
+        self.note.write_text(
+            "- **Result:** 3.5, run 2026-10-05T19-00-00_ab12\n" + "\n" + head()
+        )
         with self.assertRaises(SystemExit) as cm:
             recheck.holds(self.area, self.out, evaluate, self.note)
         self.assertIn("numbers not in", str(cm.exception))  # 2 (n_cases) is absent
-        self.note.write_text("- **Result:** 3.5 over 2 cases\n")
+        self.note.write_text("- **Result:** 3.5 over 2 cases\n" + "\n" + head())
         with self.assertRaises(SystemExit) as cm:
             recheck.holds(self.area, self.out, evaluate, self.note)
         self.assertIn("does not cite run", str(cm.exception))
@@ -107,6 +115,8 @@ class Area(unittest.TestCase):
     def test_an_unwritten_answer_line_names_the_write_back(self):
         self.note.write_text(
             "- **Answer to the question:** <!-- s --> <per registered id its verdict>\n"
+            + "\n"
+            + head()
         )
         with self.assertRaises(SystemExit) as cm:
             recheck.holds(self.area, self.out, evaluate, self.note)
@@ -122,7 +132,9 @@ class Area(unittest.TestCase):
 
     def test_custom_number_format_for_a_rounding_note(self):
         self._record({"ratio": 0.857142857})
-        self.note.write_text("ratio 0.86 · run 2026-10-05T19-00-00_ab12\n")
+        self.note.write_text(
+            "ratio 0.86 · run 2026-10-05T19-00-00_ab12\n" + "\n" + head()
+        )
         recheck.holds(
             self.area,
             self.out,

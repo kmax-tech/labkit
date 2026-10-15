@@ -174,7 +174,7 @@ def from_run(
     and the Runs entry from `runs/<run_id>/metrics.json` (newest completed
     run when RUN_ID is None). Returns (text, what was filled, run_id). A
     filled Answer or Result is refused without `force` (fill's rule)."""
-    run = recheck.run_dir(area, run_id)
+    run = recheck.chosen_run(area, text, run_id)
     metrics = runs.read_metrics(run / "metrics.json")
     answer = answer_line(metrics, run.name)
     filled: list[str] = []

@@ -142,7 +142,9 @@ class Repeats(unittest.TestCase):
         choice = runs.bound_answering_run(self.area, PID)
         self.assertEqual(choice.run_dir.name if choice.run_dir else None, first)
         self.assertIn("a repeat of", " ".join(e.why for e in choice.exclusions))
-        self.assertEqual(recheck.run_dir(self.area).name, first)
+        self.assertEqual(
+            recheck.run_dir(self.area, self.area / "PROTOCOL-x.md").name, first
+        )
         self.assertEqual(len(runs.completed_runs(self.area, with_repeats=True)), 2)
         self.assertEqual(len(runs.completed_runs(self.area, with_repeats=False)), 1)
 

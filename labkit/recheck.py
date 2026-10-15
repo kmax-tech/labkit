@@ -49,31 +49,70 @@ class Verdict:
     numbers: list[str]  # what the note was held to
 
 
-def run_dir(area: Path, run_id: str | None = None) -> Path:
-    """The run to recheck against — and the run `--from-run` writes back:
-    `run_id`, or the newest completed run; never a repeat draw."""
-    runs_dir = area / "runs"
+def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Path:
+    """The run a protocol is held to — and the run `--from-run` writes back.
+
+    The choice is `runs.bound_answering_run` for the protocol's stamped id,
+    the same one finalize and intent-check make; RUN_ID names a run instead,
+    which must be completed and bound to that id. Never a repeat draw, named
+    or not (review 2026-10-15: `--from-run <repeat>` wrote its number).
+    Until 0.94.0 this took the area's newest completed run with no look at
+    the binding: in an area holding two protocols `protocol-fill --from-run`
+    wrote the number of a run bound to the other one (audit 2026-10-15).
+    """
     try:
-        if run_id is not None:
-            d = runs_dir / run_id
-            state = runs.completion_state(d) if d.is_dir() else "missing"
-            if state != runs.COMPLETED:
-                raise SystemExit(f"recheck: {d} is not a completed run ({state})")
-            parent = runs.repeat_parent(runs.read_run_config(d) or {})
-            if parent is not None:
-                # no --force past this: a repeat never answers, named or not
-                # (review 2026-10-15: --from-run <repeat> wrote its number)
-                raise SystemExit(
-                    f"recheck: {run_id} is a repeat of {parent} — supporting "
-                    f"evidence, never the answer; `02_analyze.py --draws` shows it"
-                )
-            return d
-        done = runs.completed_runs(area, with_repeats=False)
+        pid = protocol_block.head(protocol_text).id
+    except protocol_block.BlockError as exc:
+        raise SystemExit(f"recheck: {exc}") from exc
+    if pid is None:
+        raise SystemExit(
+            "recheck: the protocol carries no stamped id ([protocol] id) — no run "
+            "binds to it; `labkit-init exp` stamps it"
+        )
+    if run_id is not None:
+        return _named_run(area / "runs" / run_id, pid)
+    choice = runs.bound_answering_run(area, pid)
+    if choice.run_dir is None:
+        raise SystemExit(
+            f"recheck: {choice.blocker}"
+            + "".join(f"\n  {x.run_dir.name}: {x.why}" for x in choice.exclusions)
+        )
+    if promises.registers_ids(protocol_text) and not choice.reports_intent_keys:
+        raise SystemExit(
+            f"recheck: {choice.run_dir.name} reports no intent key — a probe or "
+            f"producer run, not an answer to {pid}"
+        )
+    return choice.run_dir
+
+
+def _named_run(d: Path, pid: str) -> Path:
+    """RUN_ID as the explicit choice: completed, no repeat, bound to PID."""
+    try:
+        state = runs.completion_state(d) if d.is_dir() else "missing"
+        if state != runs.COMPLETED:
+            raise SystemExit(f"recheck: {d} is not a completed run ({state})")
+        cfg = runs.read_run_config(d) or {}
+        parent = runs.repeat_parent(cfg)
     except runs.RunConfigError as exc:
         raise SystemExit(f"recheck: {exc}") from exc
-    if not done:
-        raise SystemExit(f"recheck: no completed run under {runs_dir}")
-    return done[-1]
+    if parent is not None:
+        # no --force past this: a repeat never answers, named or not
+        raise SystemExit(
+            f"recheck: {d.name} is a repeat of {parent} — supporting "
+            f"evidence, never the answer; `02_analyze.py --draws` shows it"
+        )
+    bound = (cfg.get("protocol") or {}).get("id")
+    if bound != pid:
+        raise SystemExit(
+            f"recheck: {d.name} is bound to {bound or 'no protocol'}, not to "
+            f"{pid} — it answers another question"
+        )
+    return d
+
+
+def run_dir(area: Path, protocol: Path, run_id: str | None = None) -> Path:
+    """`chosen_run` for a protocol on disk."""
+    return chosen_run(area, protocol.read_text(encoding="utf-8"), run_id)
 
 
 def pin(run: Path, out: Path) -> None:
@@ -238,12 +277,15 @@ def holds(
     run_id: str | None = None,
     numbers: Callable[[dict], list[str]] = plain_numbers,
     ignore: frozenset[str] = LABKIT_KEYS,
+    protocol: Path | None = None,
 ) -> Verdict:
-    """pin → scopes → block → agree → cited, for `area`'s newest run (or `run_id`).
+    """pin → scopes → block → agree → cited, for the run that answers the
+    protocol (`chosen_run`; or `run_id`). The protocol is `note` unless
+    `protocol` names it — a results note under notes/ carries no head.
 
     `numbers(metrics)` formats what the note must carry — pass your own when
     the note rounds. Raises SystemExit on the first disagreement."""
-    run = run_dir(area, run_id)
+    run = run_dir(area, protocol or note, run_id)
     metrics, grown = verified(run, area, out, recompute, ignore)
     wanted = numbers({k: v for k, v in metrics.items() if k not in ignore})
     cited(note, wanted, run.name)

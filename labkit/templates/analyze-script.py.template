@@ -37,7 +37,7 @@ def draws() -> list[str]:
     and block unchanged, its metrics recomputed from its rows), then c1 per
     draw, its range, and the items whose parsed answer differs. The answer
     stays draw 1; this is the spread around it (LAB-036 Validate)."""
-    primary = recheck.run_dir(AREA)
+    primary = recheck.run_dir(AREA, NOTE)
     seen: dict[str, dict[int, object]] = {}
     lines, accs = [], []
     for n, d in runs.draws(AREA, primary.name):

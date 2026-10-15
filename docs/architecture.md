@@ -69,7 +69,7 @@ evidence** (warns), **agent audit** (semantic).
 | Which runs wrote a JSONL file's rows? | `batch.row_runs` (per-row `_prov.run`); runlog names the runs a resumed file continues, finalize holds every row to the run |
 | Is the recording process alive? | `runs.is_alive` |
 | Which protocol does a new run bind to? | `runlog._protocol_binding` |
-| Which run answers for a protocol? | `runs.bound_answering_run` (the choice; `intent_check.choose_explicit` takes a named run) |
+| Which run answers for a protocol? | `runs.bound_answering_run` (the choice; `intent_check.choose_explicit` takes a named run; `recheck.chosen_run` is the same choice behind `--check` and `--from-run`) |
 | Is this run a repeat draw, of which, and is it comparable? | `runs.repeat_parent`, `runs.repeats_of`, `runs.repeat_mismatch` — a repeat never answers (`bound_runs` leaves it out, `completed_runs(with_repeats=…)` makes every caller decide) |
 | Which run recorded the model that answered these rows? | `runs.model_provenance_run` (walks `derived_from`; a derived run records none) |
 | Which protocol does a command hold an area to? | `repo.choose_protocol` (the named one, else the only one; never a guess) |

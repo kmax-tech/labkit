@@ -730,7 +730,10 @@ def parse_log(text: str) -> LogTrace:
 
 def latest_run(area: Path) -> Path | None:
     """The newest completed run — run_ids start with the timestamp, so
-    their sort order is their start order (runlog.Run)."""
+    their sort order is their start order (runlog.Run). Not the answering
+    choice (`runs.bound_answering_run`, behind recheck and finalize): the
+    scorer reads what the cold agent produced, bound or not — an unbound
+    run is a finding of the probe, not a run to leave out."""
     try:
         done = runs.completed_runs(area, with_repeats=False)
     except runs.RunConfigError as exc:
