@@ -17,8 +17,12 @@ of the guaranteed tier.
   area holding two protocols the number of a run bound to protocol B was
   written into A, and a newer producer run made `--check` of a correct
   area block. The choice is `runs.bound_answering_run` now — the same one
-  finalize and intent-check make (`recheck.answering_run`); a run named
+  finalize and intent-check make (`recheck.chosen_run`); a run named
   with `--from-run RUN_ID` must be bound to the protocol.
+- **`runlog <typo>` read as idle.** A misspelt area printed "no open runs"
+  with exit 0, and `--wait` reported it as finished. Status, `--wait` and
+  `--follow` resolve the area like `reindex` and refuse one that is not a
+  directory (exit 2).
 
 ### Breaking
 
@@ -1424,7 +1428,7 @@ format changes.
 - `finalize.run` reads as its seven stations, one call each
   (`check_completion` … `check_criterion_n`), over a `Gate` that collects
   blockers and warnings; the decisions inside got names and tests of their
-  own — `choose_protocol`, `chosen_run`, `cited_run_mismatch`,
+  own — `choose_protocol`, `answering_run`, `cited_run_mismatch`,
   `provenance_owed`. Output and exit codes are unchanged, checked line by
   line on six real uniagent areas. Why: CS-006 One function, one thing —
   and keep I/O at the edges (210 lines of stations separated by section

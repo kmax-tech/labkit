@@ -1809,14 +1809,19 @@ def main(argv: list[str]) -> int:
         "--notify", action="store_true", help="macOS notification when the wait ends"
     )
     args = ap.parse_args(argv)
+    # a misspelt area read as "no open runs", exit 0 — and `--wait` as
+    # finished (audit 2026-10-15); `reindex` refused it, status did not
+    area = repo.area_path(args.area)
+    if not area.is_dir():
+        print(f"runlog: {repo.no_such_area(area)}")
+        return 2
+    shown = str(area)
     if args.follow:
-        return _wait(args.area, None, args.interval or 5.0, True, args.notify)
+        return _wait(shown, None, args.interval or 5.0, True, args.notify)
     if args.wait:
-        return _wait(
-            args.area, args.max_seconds, args.interval or 2.0, False, args.notify
-        )
-    _print_status(args.area, active(args.area))
-    _print_finished(Path(args.area))
+        return _wait(shown, args.max_seconds, args.interval or 2.0, False, args.notify)
+    _print_status(shown, active(area))
+    _print_finished(area)
     return 0
 
 
