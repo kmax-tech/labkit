@@ -16,9 +16,21 @@ pins (`requirements.txt` / `requirements.lock`).
   the choice, and an unreadable run in the same second blocks it like a
   newer one. Every check that holds a protocol to its run (finalize,
   intent-check, recheck, params, the audit) reads this choice.
+- **A draw cannot vanish or be counted twice.** `runs.draws` (the spread
+  `02_analyze.py --draws` shows) and `runs.next_draw` (the number a new
+  repeat reserves) skipped a run whose config.json could not be read — it
+  may be a draw, so the spread was shown over fewer draws than were taken,
+  and its number could be handed out again. Both now refuse; so does a
+  repeat whose `draw` is no integer (`next_draw` skipped it), and two
+  completed repeats recording one draw number (`draws` listed both).
+  `runlog` refuses the repeat with a sentence, finalize's single-draw
+  warning says the draws cannot be counted.
 - `tests/test_answering_run_exhaustive.py` holds the choice to an oracle
   over every area of up to three runs from nine kinds, on different days
-  and in one second (1640 areas); the code before this fix fails 90.
+  and in one second (1640 areas); the code before this fix fails 90. On
+  the same areas finalize, intent-check, recheck, params and the audit
+  are held to name one run; the draws are checked the same way over seven
+  kinds (800 areas, the code before fails 544).
 
 ## 0.96.1 — 2026-10-15
 

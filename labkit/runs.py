@@ -540,22 +540,44 @@ def repeats_of(area: Path, run_id: str) -> list[Path]:
     return [d for _, d in _numbered_repeats(area, run_id)]
 
 
-def _numbered_repeats(area: Path, run_id: str) -> list[tuple[int, Path]]:
-    """(recorded draw, run dir) of RUN_ID's completed repeats, by draw."""
-    found: list[tuple[int, Path]] = []
+def _repeats(area: Path, run_id: str) -> list[tuple[int, RunDir]]:
+    """(recorded draw, run) of every repeat of RUN_ID ever started.
+
+    Raises RunConfigError for a run whose config.json cannot be read — it
+    cannot say whether it is a draw of RUN_ID, and dropping it would show a
+    spread over fewer draws than were taken, or hand its number out again —
+    and for a repeat without an integer `draw` (2026-10-15)."""
+    found: list[tuple[int, RunDir]] = []
     for rd in run_dirs(area):
-        cfg = rd.config
-        if cfg is None or repeat_parent(cfg) != run_id:
+        if rd.error is not None:
+            raise RunConfigError(rd.error)
+        if rd.config is None or repeat_parent(rd.config) != run_id:
             continue
-        if run_state(rd.dir, cfg, alive=False) != COMPLETED:
-            continue
-        draw = cfg.get("draw")
+        draw = rd.config.get("draw")
         if not isinstance(draw, int) or isinstance(draw, bool):
             raise RunConfigError(
                 f"{rd.dir}/config.json: a repeat without an integer `draw`"
             )
-        found.append((draw, rd.dir))
-    return sorted(found)
+        found.append((draw, rd))
+    return found
+
+
+def _numbered_repeats(area: Path, run_id: str) -> list[tuple[int, Path]]:
+    """(recorded draw, run dir) of RUN_ID's completed repeats, by draw. Two
+    completed repeats with one draw number raise: the lock reserves each
+    number once, so a second holder was copied or written by hand."""
+    found = sorted(
+        (draw, rd.dir)
+        for draw, rd in _repeats(area, run_id)
+        if rd.config is not None
+        and run_state(rd.dir, rd.config, alive=False) == COMPLETED
+    )
+    for (a, da), (b, db) in zip(found, found[1:]):
+        if a == b:
+            raise RunConfigError(
+                f"{da.name} and {db.name} both record draw {a} of {run_id}"
+            )
+    return found
 
 
 def next_draw(area: Path, run_id: str) -> int:
@@ -563,12 +585,7 @@ def next_draw(area: Path, run_id: str) -> int:
     every repeat ever started — completed, running or crashed — holds its
     number, so the next is one past the highest. runlog counts it under its
     index lock (Run.draw); a crashed draw leaves a gap, never a reuse."""
-    taken = [
-        rd.config.get("draw")
-        for rd in run_dirs(area)
-        if rd.config is not None and repeat_parent(rd.config) == run_id
-    ]
-    return 1 + max([1, *(d for d in taken if isinstance(d, int))])
+    return 1 + max([1, *(draw for draw, _ in _repeats(area, run_id))])
 
 
 def draws(area: Path, run_id: str) -> list[tuple[int, Path]]:

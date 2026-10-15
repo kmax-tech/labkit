@@ -1207,7 +1207,13 @@ class Run:
                 f"runlog: this run is no repeat of {repeat_of} — it measures "
                 f"something else:\n  " + "\n  ".join(differs)
             )
-        return repeat_of, next_draw(base_dir, repeat_of)
+        try:
+            return repeat_of, next_draw(base_dir, repeat_of)
+        except RunConfigError as exc:
+            raise SystemExit(
+                f"runlog: repeat_of={repeat_of!r}: the next draw number cannot be "
+                f"counted — {exc}"
+            ) from exc
 
     def _write_record(
         self,

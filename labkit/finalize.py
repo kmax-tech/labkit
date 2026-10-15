@@ -59,6 +59,7 @@ from labkit import batch, console, promises, protocol_block
 from labkit.gate import Findings
 from labkit.runs import (
     RUN_ID,
+    RunConfigError,
     bound_answering_run,
     model_provenance_run,
     read_metrics,
@@ -266,9 +267,16 @@ def single_draw(area: Path, measurement_run: Path) -> str | None:
     has no repeat (`runlog` repeat_of). One draw per item cannot show how
     far the number moves — in the cloud judge probe it moved 10/12 ↔ 11/12
     between runs, and every audit named it (TODO item 4, 2026-10-14). A
-    warning, never a blocker: whether a spread is owed is the protocol's."""
-    if not called_a_model(measurement_run) or repeats_of(area, measurement_run.name):
+    warning, never a blocker: whether a spread is owed is the protocol's.
+    A run in the area that cannot say whether it is a draw (unreadable, a
+    broken or doubled draw number) is said here, not raised past."""
+    if not called_a_model(measurement_run):
         return None
+    try:
+        if repeats_of(area, measurement_run.name):
+            return None
+    except RunConfigError as exc:
+        return f"the draws of {measurement_run.name} cannot be counted: {exc}"
     return (
         f"{measurement_run.name} is one draw — no spread: `scripts/01_measure.py "
         f"--repeat-of {measurement_run.name}` draws it again, `02_analyze.py "

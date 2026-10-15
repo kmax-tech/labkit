@@ -259,6 +259,34 @@ class Repeats(unittest.TestCase):
                 self._run(repeat_of=kw[0], derived_from=kw[1])
             self.assertIn(needle, str(cm.exception))
 
+    def test_an_unreadable_run_refuses_the_next_draw_with_a_sentence(self):
+        """Mutant: a run that cannot say whether it is a draw — its number
+        may be the next one. Refused with the field named, not a traceback
+        and not a reused number (2026-10-15)."""
+        first = self._run()
+        bad = self.area / "runs" / "2026-10-15T00-00-00_dead"
+        bad.mkdir()
+        (bad / "config.json").write_text("{not json", encoding="utf-8")
+        with self.assertRaises(SystemExit) as cm:
+            self._run(repeat_of=first)
+        self.assertIn("next draw number cannot be counted", str(cm.exception))
+
+    def test_finalize_says_the_draws_cannot_be_counted(self):
+        """Mutant and twin: the single-draw warning names an unreadable run
+        instead of raising; with the area clean it is the usual warning."""
+        from labkit import finalize
+
+        first = self._run()
+        run = self.area / "runs" / first
+        (run / "metrics.json").write_text(
+            json.dumps({"c1_pass": True, "model_calls": 2}), encoding="utf-8"
+        )
+        self.assertIn("is one draw", finalize.single_draw(self.area, run) or "")
+        bad = self.area / "runs" / "2026-10-15T00-00-00_dead"
+        bad.mkdir()
+        (bad / "config.json").write_text("{not json", encoding="utf-8")
+        self.assertIn("cannot be counted", finalize.single_draw(self.area, run) or "")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -43,6 +43,8 @@ class Kind:
     metrics: dict | None = None  # None: no metrics.json
     completion: bool = True
     repeat: bool = False
+    parent: str = PARENT  # the run a repeat draws again
+    draw: object = 2
     unreadable: bool = False
     #: the reason bound_runs gives for leaving it out; None if it is taken
     why: str | None = None
@@ -84,8 +86,8 @@ def _write(area: Path, name: str, kind: Kind) -> Path:
         "config": {},
     }
     if kind.repeat:
-        cfg["repeat_of"] = PARENT
-        cfg["draw"] = 2
+        cfg["repeat_of"] = kind.parent
+        cfg["draw"] = kind.draw
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
     if kind.metrics is not None:
         (d / "metrics.json").write_text(json.dumps(kind.metrics), encoding="utf-8")
@@ -267,6 +269,72 @@ class EveryCheckChoosesTheSameRun(unittest.TestCase):
             chosen = _chosen_by_every_check(area, protocol)
             want = chosen.pop("bound_answering_run")
             self.assertEqual(chosen, dict.fromkeys(chosen, want))
+        finally:
+            shutil.rmtree(tmp)
+
+
+OTHER_PARENT = "2026-09-02T00-00-00_0000"
+DRAW_KINDS = (
+    Kind("draw2", metrics=KEYS, repeat=True, draw=2),
+    Kind("draw3", metrics=KEYS, repeat=True, draw=3),
+    Kind("crashed4", completion=False, repeat=True, draw=4),
+    Kind("other5", metrics=KEYS, repeat=True, parent=OTHER_PARENT, draw=5),
+    Kind("primary", metrics=KEYS),
+    Kind("unreadable", unreadable=True),
+    Kind("bad-draw", metrics=KEYS, repeat=True, draw="2"),
+)
+
+
+class EveryDrawArrangement(unittest.TestCase):
+    """`runs.draws` (what an analysis shows as the spread) and
+    `runs.next_draw` (the number a new repeat reserves) over every area of
+    up to three runs from seven kinds, against the rule restated: the draws
+    of PARENT are the run itself and its completed repeats by recorded draw;
+    the next number is one past every draw ever started. A run that cannot
+    say whether it is a draw of PARENT (unreadable), a draw number that is
+    no integer, or two completed draws with one number is a refusal — a
+    spread over fewer draws than were taken, or a reused number, would pass
+    unseen (2026-10-15)."""
+
+    def test_up_to_three_runs_of_seven_kinds(self) -> None:
+        for one_second in (False, True):
+            for n in range(4):
+                for combo in itertools.product(DRAW_KINDS, repeat=n):
+                    with self.subTest(
+                        kinds=[k.name for k in combo], one_second=one_second
+                    ):
+                        self._check(combo, one_second)
+
+    def _check(self, combo: tuple[Kind, ...], one_second: bool) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            area = tmp / "area"
+            (area / "runs").mkdir(parents=True)
+            for i, k in enumerate(combo):
+                _write(area, _name(i, one_second), k)
+            mine = [k for k in combo if k.repeat and k.parent == PARENT]
+            broken = any(k.unreadable for k in combo) or any(
+                not isinstance(k.draw, int) for k in mine
+            )
+            done = (
+                [] if broken else sorted(k.draw for k in mine if k.completion)  # type: ignore[type-var]
+            )
+            if broken or len(done) != len(set(done)):
+                with self.assertRaises(runs.RunConfigError):
+                    runs.draws(area, PARENT)
+            else:
+                got = runs.draws(area, PARENT)
+                self.assertEqual([d for d, _ in got], [1, *done])
+                self.assertEqual(got[0][1], area / "runs" / PARENT)
+            if broken:
+                with self.assertRaises(runs.RunConfigError):
+                    runs.next_draw(area, PARENT)
+            else:
+                started = [k.draw for k in mine]
+                self.assertEqual(
+                    runs.next_draw(area, PARENT),
+                    1 + max([1, *started]),  # type: ignore[list-item]
+                )
         finally:
             shutil.rmtree(tmp)
 
