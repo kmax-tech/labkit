@@ -1,5 +1,10 @@
 # The labkit lab standard
 
+*Version 0.19 — the version a protocol names in its head (`standard =
+"0.19"`, read by `protocol_block`). A change to a rule or a field is the
+next version; a dated change that alters no rule is listed under "Changes"
+at the end. Next: 0.20 (`TODO.md`).*
+
 These are the rules an experiment area is held to — before a run, during it,
 and before a number leaves the lab. labkit's checks enforce what can be
 checked mechanically and cite the rule they enforce by identifier and name;
@@ -325,7 +330,7 @@ evidence file under the same ID (top of this document).*
   | Criterion ≠ code               | Threshold, direction or cell comparison in the script deviates from the registered criterion                                                                                                                              | preflight | LAB-003 No run without an intent paragraph, LAB-009 Verdict only at the registered tier                                                      |
   | Prompt↔gate defined twice      | the same rule typed in the prompt text and in the validator instead of rendered from one constant (or held by a test)                                                                                                     | preflight | LAB-038 What the prompt demands                                                                                                             |
   | Null condition only on paper   | registered, not generated in the code or not in the same run                                                                                                                                                              | preflight | LAB-034 Null condition in the same run                                                                                                      |
-  | Trivial solution passes        | doing nothing, guessing, listing every answer or a constant passes the evaluation — the null probe is measured but held to no expected value, so the criterion never had a floor (pilots 06 and 07, 2026-10-15); the probe or anchor is bound to the thing (any code-fixed or trivial comparator carries an expected value), not to the word in the protocol | beide     | LAB-034 Null condition in the same run, LAB-037 Every anchor carries its target and rationale |
+  | Trivial solution passes / null probe without a target | two halves, both checked: (a) the thing — can a trivial output pass the evaluation (doing nothing, guessing, listing every answer, a constant)? (b) the registration — is a null probe or anchor registered WITH an expected value that would show it, and held to that value in the run? Pilots 06 and 07 (2026-10-15) had (b) half-done: the probe was measured and held to nothing. The target is bound to the thing (any code-fixed or trivial comparator carries an expected value), not to the word in the protocol | beide     | LAB-034 Null condition in the same run, LAB-037 Every anchor carries its target and rationale |
   | Branch not implemented         | registered fork without a branch in the code                                                                                                                                                                              | preflight | LAB-013 Registered branch                                                                                                                   |
   | Sign/direction                 | the metric assumes concordance where the question form is anticorrelated                                                                                                                                                  | analysis  | —                                                                                                                                          |
   | In-sample fit quality          | Fit and evaluation on the same points (r² without leave-one-out)                                                                                                                                                          | analysis  | —                                                                                                                                          |
@@ -1183,9 +1188,14 @@ protocol. Order: `TODO.md`, "Grundschicht aus der Literatur".*
 The scar table of LAB-015 Preflight audit before freezing holds what went
 wrong in this house, dated. What is documented elsewhere and has not
 happened here yet, it catches by chance. This table is the layer beneath:
-one row per error class with its source and the check that holds it. A
-scar that sharpens a row here cites it; the row stays the reason, the scar
-the evidence that it happened here. Column *Audit* as in the scar table;
+one row per error class with its source and the check that holds it.
+These rows are **prior knowledge, not scars**: the opposite of
+cherry-picking, and by this standard's own definition no evidence that it
+happened here. A scar that sharpens a row cites it; the row stays the
+reason, the scar the evidence. **Pruning rule:** a row without a house case
+that produces false alarms in the audit is removed — the legend is never
+sharpened to keep it (the rule of LAB-015 Preflight audit before freezing, "refine by count", applied
+before the first count). Column *Audit* as in the scar table;
 *Rule* "new" means no rule of this standard asks for it yet — half of
 those are registration fields for the protocol (a development set apart
 from the evaluation set, the unit of independence, the data's date against
@@ -1240,3 +1250,13 @@ Evaluation of Language Models, arXiv 2405.14782v3, §3–4, App. D · Zhu et al.
 Psychology* 7:1832, Table 1 · Makin & Orban de Xivry 2019, *eLife* 8:e48175
 (numbers: order of sections) · Lones 2024, Avoiding common machine learning
 pitfalls, *Patterns* 5:101046 (pages).
+
+
+## Changes
+
+Dated changes that alter no rule; a change to a rule or a field is the next
+version of the standard.
+
+- 2026-10-15 — LAB-015 Preflight audit before freezing: the scar "Trivial solution passes / null probe
+  without a target" (pilots 06 and 07). Section 8: the base layer from the
+  literature, draft, outside the audit.

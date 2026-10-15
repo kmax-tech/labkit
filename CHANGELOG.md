@@ -21,7 +21,10 @@ pins (`requirements.txt` / `requirements.lock`).
   literature** (31 error classes with source and check, from Kapoor,
   REFORMS, Biderman, ABC, Wicherts, Makin and Lones) stands outside every
   rule and is not read by the audit until the benchmark has been drawn
-  again with it.
+  again with it; its rows are prior knowledge, not scars, and a row without
+  a house case that produces false alarms is removed, the legend never
+  sharpened. The standard carries its version in its head (0.19, the one a
+  protocol names) and a dated "Changes" list at its end.
 
 ## 0.97.0 — 2026-10-15
 
