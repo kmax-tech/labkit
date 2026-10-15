@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
 from labkit import code_check, protocol_block, protocol_check, protocol_fill  # noqa: E402
-from protocol_fixture import head  # noqa: E402
+from protocol_fixture import PID, head  # noqa: E402
 
 SAMPLE = """# Experiment protocol: x
 
@@ -315,7 +315,8 @@ class TestFromRun(unittest.TestCase):
 - <run_id> — <one sentence: what this run was>
 
 ## Head (read by the checks)
-"""
+
+""" + head()
     RUN = "2026-10-12T21-37-53_c3be"
 
     def _area(self, metrics: dict) -> Path:
@@ -325,7 +326,13 @@ class TestFromRun(unittest.TestCase):
         run = area / "runs" / self.RUN
         run.mkdir(parents=True)
         (run / "config.json").write_text(
-            json.dumps({"schema_version": 2}), encoding="utf-8"
+            json.dumps(
+                {
+                    "schema_version": 2,
+                    "protocol": {"id": PID, "path": "PROTOCOL-count.md"},
+                }
+            ),
+            encoding="utf-8",
         )
         (run / "completion.json").write_text(
             json.dumps({"status": "completed"}), encoding="utf-8"

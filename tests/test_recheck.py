@@ -12,6 +12,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from protocol_fixture import PID, head  # noqa: E402
+
 from labkit import recheck  # noqa: E402
 
 ROWS = [{"case": "a", "n": 4}, {"case": "b", "n": 3}]
@@ -34,14 +36,18 @@ class Area(unittest.TestCase):
         self.run_dir.mkdir(parents=True)
         # a current run: schema_version 2 plus a completion record — metrics
         # alone (a legacy run) is never completed since labkit 0.48
-        (self.run_dir / "config.json").write_text(json.dumps({"schema_version": 2}))
+        (self.run_dir / "config.json").write_text(
+            json.dumps(
+                {"schema_version": 2, "protocol": {"id": PID, "path": "PROTOCOL-x.md"}}
+            )
+        )
         (self.run_dir / "completion.json").write_text(
             json.dumps({"status": "completed"})
         )
         self._record(evaluate(ROWS))
         self.note = self.area / "PROTOCOL-x.md"
         self.note.write_text(
-            "- **Result:** 3,5 über 2 Fälle, run 2026-10-05T19-00-00_ab12\n",
+            "- **Result:** 3,5 über 2 Fälle, run 2026-10-05T19-00-00_ab12\n\n" + head(),
             encoding="utf-8",
         )
 
@@ -95,11 +101,13 @@ class Area(unittest.TestCase):
         self.assertIn("c1_pass", str(cm.exception))
 
     def test_note_missing_number_or_run(self):
-        self.note.write_text("- **Result:** 3.5, run 2026-10-05T19-00-00_ab12\n")
+        self.note.write_text(
+            "- **Result:** 3.5, run 2026-10-05T19-00-00_ab12\n" + "\n" + head()
+        )
         with self.assertRaises(SystemExit) as cm:
             recheck.holds(self.area, self.out, evaluate, self.note)
         self.assertIn("numbers not in", str(cm.exception))  # 2 (n_cases) is absent
-        self.note.write_text("- **Result:** 3.5 over 2 cases\n")
+        self.note.write_text("- **Result:** 3.5 over 2 cases\n" + "\n" + head())
         with self.assertRaises(SystemExit) as cm:
             recheck.holds(self.area, self.out, evaluate, self.note)
         self.assertIn("does not cite run", str(cm.exception))
@@ -107,6 +115,8 @@ class Area(unittest.TestCase):
     def test_an_unwritten_answer_line_names_the_write_back(self):
         self.note.write_text(
             "- **Answer to the question:** <!-- s --> <per registered id its verdict>\n"
+            + "\n"
+            + head()
         )
         with self.assertRaises(SystemExit) as cm:
             recheck.holds(self.area, self.out, evaluate, self.note)
@@ -116,13 +126,29 @@ class Area(unittest.TestCase):
     def test_number_must_be_a_token(self):
         self.assertFalse(recheck._present("3.5", "13.57"))
         self.assertFalse(recheck._present("2", "run 2026-10-05"))
+        # the run id is in every note: its parts are never a cited number
+        self.assertFalse(recheck._present("10", "run 2026-10-05T10-22-33_ab12"))
+        self.assertFalse(recheck._present("22", "run 2026-10-05T10-22-33_ab12"))
+        self.assertFalse(recheck._present("2026", "frozen 2026-10-05T10:22"))
+        self.assertFalse(recheck._present("12", "mean 12.7"))
+        self.assertTrue(recheck._present("12", "n = 12."))
+        self.assertTrue(recheck._present("10", "10 of 2026-10-05T10-22-33_ab12"))
         self.assertTrue(recheck._present("3.5", "mean 3,5 docs"))
         self.assertTrue(recheck._present("-0.2", "delta −0.2"))
         self.assertTrue(recheck._present("+0.2", "delta 0.2"))
 
+    def test_a_tuple_is_the_list_the_run_recorded(self):
+        """evaluate() returns a tuple, metrics.json holds a list: the same
+        value after the JSON round trip, not a difference (audit 2026-10-15)."""
+        self.assertEqual(recheck.agree({"a": [1, 2]}, {"a": (1, 2)}), [])
+        with self.assertRaises(SystemExit):
+            recheck.agree({"a": [1, 2]}, {"a": (1, 3)})
+
     def test_custom_number_format_for_a_rounding_note(self):
         self._record({"ratio": 0.857142857})
-        self.note.write_text("ratio 0.86 · run 2026-10-05T19-00-00_ab12\n")
+        self.note.write_text(
+            "ratio 0.86 · run 2026-10-05T19-00-00_ab12\n" + "\n" + head()
+        )
         recheck.holds(
             self.area,
             self.out,

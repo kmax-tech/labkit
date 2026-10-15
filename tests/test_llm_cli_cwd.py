@@ -54,6 +54,33 @@ class CliIsolation(unittest.TestCase):
         self.assertEqual(cmd[cmd.index("--setting-sources") + 1], "")
         self.assertEqual(cmd[cmd.index("--tools") + 1], "")
 
+    def test_the_prompt_goes_on_stdin_not_argv(self):
+        """A 200 kB audit prompt as one argv entry is `OSError: Argument list
+        too long` on Linux (128 kB per entry); macOS let it through, every
+        cloud session died (audit 2026-10-15)."""
+        seen = {}
+
+        def fake_run(cmd, **kw):
+            seen["cmd"], seen["input"] = cmd, kw.get("input")
+            return subprocess.CompletedProcess(
+                cmd, 0, stdout='{"result": "Yes"}\n', stderr=""
+            )
+
+        prompt = "x" * 200_000
+        with (
+            mock.patch.object(
+                llm,
+                "resolve",
+                lambda alias: {"backend": "claude-cli", "model": "m", "alias": alias},
+            ),
+            mock.patch.object(llm.endpoint_lease, "acquire", lambda *a, **k: None),
+            mock.patch.object(llm.subprocess, "run", fake_run),
+        ):
+            llm._complete_once("x", prompt)
+        self.assertEqual(seen["input"], prompt)
+        self.assertNotIn(prompt, seen["cmd"])
+        self.assertTrue(all(len(a) < 1000 for a in seen["cmd"]))
+
 
 if __name__ == "__main__":
     unittest.main()

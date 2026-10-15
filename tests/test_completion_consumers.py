@@ -26,10 +26,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from protocol_fixture import PID, head  # noqa: E402
+
 from labkit import recheck, runlog, runs, usability  # noqa: E402
 
 DONE = "2026-10-06T10-00-00_aaaa"
 UNFINALIZED = "2026-10-06T11-00-00_bbbb"
+
+
+def protocol(area: Path) -> Path:
+    """The area's one protocol, stamped with PID — what recheck binds to."""
+    p = area / "PROTOCOL-x.md"
+    p.write_text(head(), encoding="utf-8")
+    return p
 
 
 def make_run(
@@ -37,7 +46,11 @@ def make_run(
 ) -> Path:
     d = area / "runs" / name
     d.mkdir(parents=True)
-    cfg: dict = {"script": "01_measure.py", "pid": 1}
+    cfg: dict = {
+        "script": "01_measure.py",
+        "pid": 1,
+        "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
+    }
     if schema is not None:
         cfg["schema_version"] = schema
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
@@ -52,6 +65,7 @@ def make_run(
 class Twin(unittest.TestCase):
     def setUp(self):
         self.area = Path(tempfile.mkdtemp())
+        self.protocol = protocol(self.area)
         self.done = make_run(self.area, DONE, completion=True)
         self.unfinalized = make_run(self.area, UNFINALIZED, completion=False)
 
@@ -61,13 +75,13 @@ class Twin(unittest.TestCase):
         self.assertEqual(runs.completed_runs(self.area, with_repeats=True), [self.done])
 
     def test_recheck_picks_the_completed_run(self):
-        self.assertEqual(recheck.run_dir(self.area), self.done)
+        self.assertEqual(recheck.run_dir(self.area, self.protocol), self.done)
 
     def test_recheck_refuses_a_named_unfinalized_run(self):
         with self.assertRaises(SystemExit) as cm:
-            recheck.run_dir(self.area, UNFINALIZED)
+            recheck.run_dir(self.area, self.protocol, UNFINALIZED)
         self.assertIn("unfinalized", str(cm.exception))
-        self.assertEqual(recheck.run_dir(self.area, DONE), self.done)
+        self.assertEqual(recheck.run_dir(self.area, self.protocol, DONE), self.done)
 
     def test_derived_run_refuses_an_unfinalized_parent(self):
         os.environ.pop("LABKIT_UNFROZEN", None)
@@ -97,7 +111,7 @@ class Edges(unittest.TestCase):
         with self.assertRaises(runs.RunConfigError):
             runs.completed_runs(area, with_repeats=True)
         with self.assertRaises(SystemExit) as cm:
-            recheck.run_dir(area, DONE)
+            recheck.run_dir(area, protocol(area), DONE)
         self.assertIn("labkit 0.47", str(cm.exception))
 
     def test_run_dir_without_config_is_not_a_run(self):

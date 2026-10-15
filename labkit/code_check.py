@@ -73,7 +73,12 @@ from pathlib import Path
 from labkit import console, promises, protocol_block, rules
 from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 from labkit.repo import area_path, choose_protocol, layout_root, no_such_area
-from labkit.scope_sha import LOCAL_ROOTS, area_files, imported_repo_helpers
+from labkit.scope_sha import (
+    LOCAL_ROOTS,
+    SourceError,
+    area_files,
+    imported_repo_helpers,
+)
 
 
 # --- source analysis ------------------------------------------------------
@@ -454,12 +459,29 @@ def split_stages(area: Path) -> tuple[list[Path], list[Path]]:
     return producers, consumers
 
 
+def unreadable_source(exc: SourceError) -> str:
+    """The blocker for a file in the area's scope that is not Python: the
+    scan cannot say what the code mentions, so nothing is waved through."""
+    return (
+        f"BLOCKER · {exc} · the code cannot be read, so no check over it holds "
+        f"· fix or remove the file"
+    )
+
+
 def check_intent_ids(area: Path, protocol: Path) -> list[str]:
     """Registered promises against the code, before any run exists.
 
     `intent-check` asks the same question of the metrics at report time, when
-    the tokens are already spent. Here the answer is still cheap.
+    the tokens are already spent. Here the answer is still cheap. A file in
+    the scope that does not parse is one blocker, not a traceback.
     """
+    try:
+        return _intent_id_findings(area, protocol)
+    except SourceError as exc:
+        return [unreadable_source(exc)]
+
+
+def _intent_id_findings(area: Path, protocol: Path) -> list[str]:
     text = protocol.read_text(encoding="utf-8")
     findings = promise_block_findings(area, protocol, text)
     registered = {m.group(1).lower() for m in ID_IN_PROTOCOL.finditer(text)}
@@ -1049,9 +1071,13 @@ def stamp_coverage_findings(area: Path, repo: Path) -> list[str]:
     imports into LOCAL_ROOTS and nothing else; what these lines pull in
     determines the number without any stamp seeing a change to it."""
     out: list[tuple[str, int, str]] = []
+    try:
+        helpers = imported_repo_helpers(area, repo)
+    except SourceError as exc:
+        return [unreadable_source(exc)]
     for path in area_files(area):
         out += [(str(path), n, f) for n, f in _coverage_in(path, area, repo, own=True)]
-    for path in imported_repo_helpers(area, repo):
+    for path in helpers:
         out += [(str(path), n, f) for n, f in _coverage_in(path, area, repo, own=False)]
     return [
         f for _, _, f in sorted(out)

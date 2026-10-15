@@ -5,6 +5,63 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.94.0 — 2026-10-15
+
+Phase A of the audit of 2026-10-15 (`docs/audit-2026-10-15.md`): the bugs
+of the guaranteed tier.
+
+### Fixed
+
+- **`protocol-fill --from-run` and `--check` chose the run without its
+  binding.** `recheck.run_dir` took the area's newest completed run; in an
+  area holding two protocols the number of a run bound to protocol B was
+  written into A, and a newer producer run made `--check` of a correct
+  area block. The choice is `runs.bound_answering_run` now — the same one
+  finalize and intent-check make (`recheck.chosen_run`); a run named
+  with `--from-run RUN_ID` must be bound to the protocol.
+- **`runlog <typo>` read as idle.** A misspelt area printed "no open runs"
+  with exit 0, and `--wait` reported it as finished. Status, `--wait` and
+  `--follow` resolve the area like `reindex` and refuse one that is not a
+  directory (exit 2).
+- **A server's 4xx was retried as an outage.** `HTTPError` is a `URLError`:
+  a wrong model id (404) or a missing key (401) went through six attempts
+  and 13 minutes of backoff. A status below 500 is now a `BackendError` at
+  once, with the sentence naming the alias; 5xx keeps the retry.
+- **`claude -p` reads the prompt from stdin.** As one argv entry a 200 kB
+  audit prompt was `OSError: Argument list too long` on Linux (128 kB per
+  entry); only macOS let it through.
+- **Every record file of a run is written whole or not at all.** config,
+  outputs and metrics went through `write_text`; only completion.json was
+  atomic, while `docs/architecture.md` claimed the whole record was
+  (CODE-013).
+- **A number inside the run id counted as cited.** `recheck.cited` found
+  `10` in `…T10-22-33_ab12` and `12` in `12.7`; the run id is mandatory in
+  every note, so a count equal to a date or time part passed. Run ids,
+  dates and times are masked before a number is looked for, and a number
+  followed by `.<digit>` is another number.
+- **report-check passed a must field still holding its placeholder.**
+  Station 1 read protocol-check's missing fields only; the `<…>` holes
+  count now, as in protocol-check and preflight.
+- **A scope file that is not Python is one blocker, not a traceback.** With
+  a `lib/` or `src/` in the repo, preflight station 3 and code-check raised
+  from the import walk on a stale `analysis/old.py` with a syntax error —
+  exit 1, and so not blocking in the pre-run hook. `scope_sha.SourceError`
+  names the file; code-check and preflight report it as `BLOCKER`.
+- Small: a split file with a damaged line names file and line instead of a
+  bare `JSONDecodeError`; `recheck.agree` compares the recomputation as JSON
+  (a tuple is the list the run recorded); `finalize` looks for the area's
+  tests under the layout root like preflight (a stamped tree before `git
+  init` read "none"); `runlog` no longer passes `maxsplit` positionally
+  (a DeprecationWarning on 3.13).
+
+### Breaking
+
+- `recheck.run_dir(area, protocol, run_id=None)` takes the protocol; an
+  area stamped before 0.94.0 calls `recheck.run_dir(AREA, NOTE)` in
+  `02_analyze.py --draws`. `recheck.holds(..., protocol=)` names the
+  protocol when `note` is a results note without a head. Last version with
+  the newest-run choice: 0.93.0.
+
 ## 0.93.0 — 2026-10-15
 
 ### Added — repeat draws: the spread of a model's number

@@ -117,3 +117,24 @@ class TestLeakageWithMeta(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDamagedLineIsNamed(unittest.TestCase):
+    """A line that is not JSON names file and line (audit 2026-10-15: a
+    bare JSONDecodeError named neither); a row that is no object is not
+    checkable, like a row without an id."""
+
+    def test_file_and_line_are_named(self):
+        with TemporaryDirectory() as d:
+            path = Path(d) / "train.jsonl"
+            path.write_text('{"id": 1}\n{not json\n', encoding="utf-8")
+            with self.assertRaises(ValueError) as cm:
+                _ids(path)
+            self.assertIn("train.jsonl:2", str(cm.exception))
+            self.assertIn("not JSON", str(cm.exception))
+
+    def test_a_row_that_is_no_object_is_not_checkable(self):
+        with TemporaryDirectory() as d:
+            path = Path(d) / "train.jsonl"
+            path.write_text("[1, 2]\n", encoding="utf-8")
+            self.assertIsNone(_ids(path))

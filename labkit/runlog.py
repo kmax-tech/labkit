@@ -506,13 +506,20 @@ def _ids(path: Path) -> set | None:
     if path.suffix != ".jsonl":
         return None
     ids = set()
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
             continue
-        row = json.loads(line)
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            # a bare JSONDecodeError named neither file nor line (audit 2026-10-15)
+            raise ValueError(
+                f"{path}:{n}: not JSON ({exc.msg}) — a data file the leakage "
+                f"check reads is one JSON object per line; repair the line"
+            ) from exc
         if _is_meta(row):
             continue
-        if "id" not in row:
+        if not isinstance(row, dict) or "id" not in row:
             return None
         ids.add(row["id"])
     return ids
@@ -533,7 +540,7 @@ def _describe(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity bas
         }
 
     def role(key: str) -> str:
-        return re.split(r"[_-]", key, 1)[0].lower()
+        return re.split(r"[_-]", key, maxsplit=1)[0].lower()
 
     known = {k: _ids(Path(p)) for k, p in paths.items() if k in SPLIT_KEYS}
     checkable = {k: v for k, v in known.items() if v is not None}
@@ -1241,8 +1248,10 @@ class Run:
             "data": self._data,
             "config": self._config,
         }
-        (self.dir / "config.json").write_text(
-            json.dumps(frozen, ensure_ascii=False, indent=2), encoding="utf-8"
+        # whole or not at all, like every record file: a listing that read
+        # config.json mid-write saw a damaged run (CODE-013; audit 2026-10-15)
+        write_atomic(
+            self.dir / "config.json", json.dumps(frozen, ensure_ascii=False, indent=2)
         )
         # A dirty tree makes the commit hash a lie: save what it doesn't cover.
         if _head(base_dir) and repo.git(["status", "--porcelain"], base_dir):
@@ -1319,11 +1328,13 @@ class Run:
                             "note": "registered, but absent at end of run",
                         }
                     )
-            (self.dir / "outputs.json").write_text(
-                json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8"
+            write_atomic(
+                self.dir / "outputs.json",
+                json.dumps(rows, ensure_ascii=False, indent=2),
             )
-        (self.dir / "metrics.json").write_text(
-            json.dumps(self._metrics, ensure_ascii=False, indent=2), encoding="utf-8"
+        write_atomic(
+            self.dir / "metrics.json",
+            json.dumps(self._metrics, ensure_ascii=False, indent=2),
         )
         # Order matters, and this is the reason for it: results first, then
         # the confirmed completion, then the index. A break after metrics
@@ -1809,14 +1820,19 @@ def main(argv: list[str]) -> int:
         "--notify", action="store_true", help="macOS notification when the wait ends"
     )
     args = ap.parse_args(argv)
+    # a misspelt area read as "no open runs", exit 0 — and `--wait` as
+    # finished (audit 2026-10-15); `reindex` refused it, status did not
+    area = repo.area_path(args.area)
+    if not area.is_dir():
+        print(f"runlog: {repo.no_such_area(area)}")
+        return 2
+    shown = str(area)
     if args.follow:
-        return _wait(args.area, None, args.interval or 5.0, True, args.notify)
+        return _wait(shown, None, args.interval or 5.0, True, args.notify)
     if args.wait:
-        return _wait(
-            args.area, args.max_seconds, args.interval or 2.0, False, args.notify
-        )
-    _print_status(args.area, active(args.area))
-    _print_finished(Path(args.area))
+        return _wait(shown, args.max_seconds, args.interval or 2.0, False, args.notify)
+    _print_status(shown, active(area))
+    _print_finished(area)
     return 0
 
 

@@ -34,6 +34,18 @@ class TestCli(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertIn("no open runs", out)
 
+    def test_a_missing_area_is_refused_not_read_as_idle(self):
+        """`runlog <typo>` said "no open runs" with exit 0, and `--wait`
+        reported the misspelt area as finished (audit 2026-10-15)."""
+        with tempfile.TemporaryDirectory() as d:
+            missing = str(Path(d) / "does-not-exist")
+            for argv in ([missing], [missing, "--wait"], [missing, "--follow"]):
+                with self.subTest(argv=argv):
+                    code, out = self._run_main(argv)
+                    self.assertEqual(code, 2)
+                    self.assertIn("no such area", out)
+                    self.assertNotIn("no open runs", out)
+
     def test_an_open_run_is_listed_with_id_and_state(self):
         with tempfile.TemporaryDirectory() as d:
             run_dir = Path(d) / "runs" / "20260906-120000-probe"
