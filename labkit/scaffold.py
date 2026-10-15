@@ -265,28 +265,23 @@ def seconds_cut(tmpl: str, model: bool = False) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
-CONSTANTS_HINT = (
-    "# constants = { <name> = <value> }  # every threshold the sentence names, read "
-    "with promises.all_constants() — none for a plain count"
-)
-
-
 def quick_block(tmpl: str, model: bool) -> str:
-    """The promise tables of the seconds cut: the example constants become a
-    commented hint (a count reads no thresholds, and runlog refuses a run whose
-    config lacks a registered constant — but a criterion with a threshold must
-    name it, and the cloud probe of 2026-10-12 read the promises docstring to
-    learn the field), and without a model the null-lane table A2 goes (there is
-    no null lane; the probe deleted it by hand)."""
-    out = re.sub(r"\nconstants = \{[^}\n]*\}", "\n" + CONSTANTS_HINT, tmpl)
-    if not model:
-        # a deterministic count has no bar to clear: no promise tables, no
-        # criterion — five cold agents each invented a tautological [C1]
-        # (cloud probes 2026-10-12); the number is held by --check and finalize
-        out = re.sub(r"\n\n# The promises as data[^\n]*\n(?:#[^\n]*\n)*", "\n", out)
-        out = re.sub(r"\n\[\[promise\]\]\n(?:[^\n]+\n)*", "\n", out)
-        out = re.sub(r"\n{3,}```", "\n```", out)
-    return out
+    """The promise tables of the seconds cut. With a model the full measure
+    skeleton is stamped, and it reads `margin`, `max_empty` and
+    `null_band_items` from the block — so the tables keep their constants.
+    (Until 0.92 they became a commented hint here, a rule written for the
+    count; once the count lost its tables in 0.87.0 the hint hit only the
+    model case, and every judge area stamped at seconds failed its first run
+    with a TypeError — found by a seconds probe, 2026-10-15.) Without a model
+    the tables go: a deterministic count has no bar to clear."""
+    if model:
+        return tmpl
+    # a deterministic count has no bar to clear: no promise tables, no
+    # criterion — five cold agents each invented a tautological [C1]
+    # (cloud probes 2026-10-12); the number is held by --check and finalize
+    out = re.sub(r"\n\n# The promises as data[^\n]*\n(?:#[^\n]*\n)*", "\n", tmpl)
+    out = re.sub(r"\n\[\[promise\]\]\n(?:[^\n]+\n)*", "\n", out)
+    return re.sub(r"\n{3,}```", "\n```", out)
 
 
 PLACEHOLDER_WIDTH = 72  # a one-line hint; the long form is `protocol-check --guide`

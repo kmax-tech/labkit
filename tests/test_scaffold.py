@@ -209,13 +209,27 @@ class Exp(unittest.TestCase):
             'id = "C1"',
             'id = "A1"',
             'id = "A2"',
-            "# constants = {",
+            "constants = { margin = 0.25 }",
+            "constants = { max_empty = 2 }",
+            "constants = { null_band_items = 1 }",
             "Success / failure criterion",
             "Admissibility condition",
             "Raw output",
         ):
             self.assertIn(needle, proto, needle)
-        self.assertNotRegex(proto, r"(?m)^constants =")
+        # the stamped skeleton reads those constants: its config builds
+        # (a commented hint made every first run a TypeError, 2026-10-15)
+        import importlib.util
+        import sys
+
+        path = self.area() / "scripts" / "01_measure.py"
+        spec = importlib.util.spec_from_file_location("stamped_seconds_measure", path)
+        assert spec is not None and spec.loader is not None
+        measure = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = measure
+        self.addCleanup(sys.modules.pop, spec.name, None)
+        spec.loader.exec_module(measure)
+        self.assertEqual(measure.CONFIG.margin, 0.25)
 
     def test_the_stamped_prepare_step_runs_under_the_promise_block(self) -> None:
         """runlog refuses any run under the block whose config lacks a
