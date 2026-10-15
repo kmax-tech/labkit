@@ -147,6 +147,16 @@ EARLIER_IDS_HELP = (
 )
 
 
+def key_kind(key: str) -> str | None:
+    """The kind a metrics key belongs to by its letter — "criterion",
+    "admissibility", "branch" — or None outside the id namespace. The one
+    way to ask "is this an [A] key": two tools re-spelled the letters
+    (`^a\\d+_`, `[ca]`) and would have gone silent on the next change of the
+    alphabet, as 0.48.0 was (audit 2026-10-15)."""
+    m = ID_KEY.match(key)
+    return KINDS[m.group(1)[0].upper()] if m else None
+
+
 def reported_ids(metrics: dict) -> set[str]:
     """Ids a metrics dict reports (bare id or id_suffix keys), lowercased."""
     out = set()

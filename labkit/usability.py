@@ -100,6 +100,7 @@ from labkit import (
     agent_transcript,
     code_navigation,
     console,
+    promises,
     protocol_reading,
     repo,
     runs,
@@ -1127,7 +1128,9 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         bound_to = pr.protocol_as_recorded if pr.bound else None
         tier = pr.cost_tier
         if probe.task != "count":
-            null_reported = any(re.match(r"^a\d+_", k) for k in metrics)
+            null_reported = any(
+                promises.key_kind(k) == "admissibility" for k in metrics
+            )
         if pr.bound and pr.protocol is not None:
             from labkit import protocol_block  # lazy: labkit modules import each other
 

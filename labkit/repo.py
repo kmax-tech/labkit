@@ -94,6 +94,17 @@ def no_such_area(area: Path) -> str:
     )
 
 
+#: an area's directory name as `labkit-init exp` prints it: `NN-<slug>`
+AREA_NAME = re.compile(r"^(\d+)-(.+)$")
+
+
+def split_area_name(name: str) -> tuple[str | None, str]:
+    """(number, slug) of an area directory name; (None, name) when it
+    carries no `NN-` prefix. Four regexes said this before (audit 2026-10-15)."""
+    m = AREA_NAME.match(name)
+    return (m.group(1), m.group(2)) if m else (None, name)
+
+
 #: the one name shape of a protocol file, as a glob and as a pattern
 PROTOCOL_GLOB = "PROTOCOL-*.md"
 PROTOCOL_NAME = re.compile(r"^PROTOCOL-[^/]+\.md$")

@@ -43,7 +43,6 @@ read-only gate.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 import subprocess
 import sys
@@ -58,6 +57,7 @@ from labkit.repo import (
     git_root,
     layout_root,
     no_such_area,
+    split_area_name,
 )
 from labkit.protocol_check import check_fields, check_protocol_id, repo_protocol_ids
 from labkit.scope_sha import AREA_GLOBS, AUDIT_SHA, area_stamp, audit_stamp_drift
@@ -106,8 +106,7 @@ def area_tests(area: Path, repo: Path) -> AreaTests:
     # or the pattern read `tests/test_.py` and the area's test was "none"
     # (fallacy-dataset-generation, 2026-10-09)
     area = area.resolve()
-    m = re.match(r"^(\d+)-(.+)$", area.name)
-    nn, name = (m.group(1), m.group(2)) if m else (None, area.name)
+    nn, name = split_area_name(area.name)
     stem = (f"test_{nn}_" if nn else "test_") + name.replace("-", "_")
     pattern = f"tests/{stem}.py"
     tests_dir = repo / "tests"

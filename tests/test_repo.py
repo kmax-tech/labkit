@@ -86,6 +86,13 @@ class RepoWide(unittest.TestCase):
             self.assertTrue(repo.PROTOCOL_NAME.match("PROTOCOL-s2-foo.md"))
             self.assertFalse(repo.PROTOCOL_NAME.match("PROTOCOL-x.md.bak"))
 
+    def test_split_area_name(self):
+        self.assertEqual(
+            repo.split_area_name("01-docs-per-case"), ("01", "docs-per-case")
+        )
+        self.assertEqual(repo.split_area_name("100-foo"), ("100", "foo"))
+        self.assertEqual(repo.split_area_name("explore"), (None, "explore"))
+
     def test_lab_root_is_the_nearest_models_toml(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)

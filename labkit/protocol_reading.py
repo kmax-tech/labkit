@@ -33,6 +33,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from labkit import promises
 from labkit.cold_reader import (
     NEWCOMER,
     answer_contract,
@@ -158,9 +159,6 @@ class Truth:
     admissible: bool | None
 
 
-_PASS_KEY = re.compile(r"([ca])\d+_pass")
-
-
 def metric_number(metrics: dict[str, object], key: str) -> float | None:
     """The metric under `key` as a number; None when it is absent or not a
     number (a bool is not a number here)."""
@@ -178,24 +176,25 @@ def truth_from_metrics(metrics: dict[str, object], number_key: str | None) -> Tr
     or the named number is missing — a verdict from a subset of the
     conjuncts, or a probe whose number key has a typo, would score nothing
     and look clean."""
-    flags: dict[str, list[bool]] = {"c": [], "a": []}
+    flags: dict[str, list[bool]] = {"criterion": [], "admissibility": []}
     for key, value in metrics.items():
-        m = _PASS_KEY.fullmatch(key)
-        if m:
+        kind = promises.key_kind(key)  # `c<i>_pass`, `a<i>_pass`: the id's letter
+        if kind in flags and key.endswith("_pass"):
             if not isinstance(value, bool):
                 raise ValueError(f"metrics: {key} is {value!r}, not true/false")
-            flags[m.group(1)].append(value)
+            flags[kind].append(value)
     crit = metrics.get("criterion_pass")
     if crit is not None and not isinstance(crit, bool):
         raise ValueError(f"metrics: criterion_pass is {crit!r}, not true/false")
     if crit is None:
-        crit = all(flags["c"]) if flags["c"] else None
+        crit = all(flags["criterion"]) if flags["criterion"] else None
     number = None
     if number_key is not None:
         number = metric_number(metrics, number_key)
         if number is None:
             raise ValueError(f"metrics: no number under {number_key!r}")
-    return Truth(number, crit, all(flags["a"]) if flags["a"] else None)
+    admissible = flags["admissibility"]
+    return Truth(number, crit, all(admissible) if admissible else None)
 
 
 @dataclass(frozen=True)

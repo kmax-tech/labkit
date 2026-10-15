@@ -39,7 +39,14 @@ import uuid
 from pathlib import Path
 
 from labkit import protocol_block
-from labkit.repo import area_protocols, git_run, lab_root, repo_protocols
+from labkit.repo import (
+    AREA_NAME,
+    area_protocols,
+    git_run,
+    lab_root,
+    repo_protocols,
+    split_area_name,
+)
 from labkit.repo_check import PYPROJECT_VERSION_RE
 
 PACKAGE = Path(__file__).resolve().parent
@@ -484,14 +491,14 @@ def next_experiment_number(experiments: Path) -> str:
         for d in (experiments, experiments / "_archiv")
         if d.is_dir()
         for p in d.iterdir()
-        if p.is_dir() and (m := re.match(r"^(\d+)-", p.name))
+        if p.is_dir() and (m := AREA_NAME.match(p.name))
     ]
     return f"{max(used) + 1 if used else 1:02d}"
 
 
 def area_slug(name: str) -> str:
     """The area name as a slug, without a typed `NN-` prefix (labkit owns the number)."""
-    slug = re.sub(r"^\d+-", "", re.sub(r"[^a-z0-9-]+", "-", name.lower()).strip("-"))
+    slug = split_area_name(re.sub(r"[^a-z0-9-]+", "-", name.lower()).strip("-"))[1]
     if not slug:
         raise SystemExit(f"labkit-init: unusable experiment name: {name!r}")
     return slug
@@ -675,7 +682,7 @@ def stamp_area(
     existing = [
         p
         for p in experiments.iterdir()
-        if p.is_dir() and re.sub(r"^\d+-", "", p.name) == slug
+        if p.is_dir() and split_area_name(p.name)[1] == slug
     ]
     if existing:
         if not report:

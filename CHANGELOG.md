@@ -24,6 +24,11 @@ keeps the copies from coming back.
   one spelling (`repo.PROTOCOL_GLOB`, `repo.PROTOCOL_NAME`), the lab root
   one rule (`repo.lab_root`: the nearest `models.toml`, for `labkit-init`
   and `llm`); `notes_check` no longer carries its own `git_root`.
+- **The id alphabet is asked, never re-spelled.** `promises.key_kind` says
+  which kind a metrics key belongs to; `usability` and `protocol_reading`
+  had their own `^a\d+_` and `[ca]`, which the next change of the alphabet
+  would have silenced. The area name `NN-<slug>` has one pattern,
+  `repo.AREA_NAME` / `repo.split_area_name`, instead of four.
 
 ## 0.95.0 — 2026-10-15
 

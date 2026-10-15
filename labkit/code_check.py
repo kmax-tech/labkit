@@ -901,7 +901,9 @@ def _outside_roots(name: str, area: Path, repo: Path) -> Path | None:
 
 
 #: an area name inside a path string: `14-hotel`, `experiments/14-hotel/scripts/x.py`
-AREA_IN_PATH = re.compile(r"(?:^|/)(\d{2}-[a-z0-9][a-z0-9-]*)(?:/|$)")
+#: an area name inside a path literal (`repo.AREA_NAME` is the name itself;
+#: here it is searched for in a string, any number of digits)
+AREA_IN_PATH = re.compile(r"(?:^|/)(\d+-[a-z0-9][a-z0-9-]*)(?:/|$)")
 
 
 def _str_constants(node: ast.AST) -> set[str]:
