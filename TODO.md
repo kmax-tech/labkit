@@ -451,24 +451,26 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
-- **Kern und Haus (2026-10-15).** Die Schichtentabelle in
-  `docs/architecture.md` trägt eine Spalte „House“, und
-  `tests/test_architecture.py` (`CoreAndHouse`) hält: ein Kern-Modul
-  importiert kein Haus-Modul. Test: Wird eine Zahl ohne die Regel weniger
-  nachvollziehbar (Kern), oder arbeitet das Labor nur anders (Haus)? Sechs
+- **Kern und Doktrin (2026-10-15).** Die Schichtentabelle in
+  `docs/architecture.md` trägt eine Spalte „Doctrine“, und
+  `tests/test_architecture.py` (`CoreAndDoctrine`) hält: ein Kern-Modul
+  importiert kein Doktrin-Modul. Test: Wird eine Zahl ohne die Regel weniger
+  nachvollziehbar (Kern), oder arbeitet das Labor nur anders (Doktrin)?
+  Zwei Achsen, zwei Wortpaare: Kern/Doktrin sagt, was etwas leistet;
+  LAB/LOCAL, für wen es gilt — „Haus“ heißt nur LOCAL und die Dotfiles. Sechs
   Übertretungen stehen heute mit Namen in `KNOWN_CROSSINGS`; die Liste
   darf nur schrumpfen:
   1. `runlog` → `findings.audit_coverage`, `protocol_check.seconds_registration_missing`
      — die Freeze-Sperre (LAB-015 Preflight audit before freezing) sitzt im
-     Laufschreiber. Echtes Leck; Kandidat: die Sperre als Haus-Prüfung, die
+     Laufschreiber. Echtes Leck; Kandidat: die Sperre als Doktrin-Prüfung, die
      `runlog` über eine Schnittstelle fragt.
   2. `code_check` → `protocol_check.fields`, `rules.paragraph` — der
-     Grenzfall: TOML-Kopf Kern, Feldkatalog Haus.
+     Grenzfall: TOML-Kopf Kern, Feldkatalog Doktrin.
   3. `repo_check` → `rules.check_refs`, `install_hooks` — Pin-Prüfung Kern,
-     Regelverweise und Hooks Haus.
+     Regelverweise und Hooks Doktrin.
 
   **Auslöser für den Umbau** in zwei Namensräume (`labkit` Kern,
-  `labkit.house` Standard, Vorlagen, Gate-Reihenfolge, Hooks, Notizen):
+  `labkit.doctrine` Standard, Vorlagen, Gate-Reihenfolge, Hooks, Notizen):
   die Kern-Evaluation fürs Paper, oder ein zweites Labor, das den Kern
   ohne die Doktrin will. Bis dahin nur die Liste abbauen, wo ein Schritt
   ohnehin an der Stelle arbeitet. Breaking, Pin-Heben in jedem Repo.
@@ -478,7 +480,17 @@ sieht das niemand.
   LAB/LOCAL-Test Haus, kein Laborstandard. Umzug in die Dotfiles ist
   Breaking: ein Kommando verschwindet, der Hook ruft es. **Auslöser:** die
   nächste Breaking-Release ohnehin, oder ein Labor außerhalb des Hauses,
-  das an der Prüfung scheitert.
+  das an der Prüfung scheitert. Gegenstück in die andere Richtung:
+  LOCAL-073 (unten) — beide zusammen in ein Breaking-Release.
+- **LOCAL-073 Paper-Zahlen tragen ihre Herkunft nach LAB (2026-10-15).**
+  Nach dem Streichtest Kern-nah: ohne sie wird eine Paper-Zahl weniger
+  nachvollziehbar, und sie verweist selbst auf LAB-041 Generate numbers,
+  don't retype them und LAB-043 Runs go through `runlog`. Ein fremdes
+  Labor bräuchte sie genauso. Umzug: Regeltext englisch in
+  `labkit/docs/standard.md` als LAB-073 — dieselbe Nummer, wie beim Schnitt
+  in 0.82.0 (073 ist im LAB-Ledger frei) —, LOCAL-073 im Haus-Ledger als
+  `moved:labkit`. **Auslöser:** derselbe wie
+  `notes_check`.
 
 - **Narbentabelle gegen fremde Fehlerkataloge (2026-10-15) — Befund,
   nichts geändert.** Abgleich mit Kapoor & Narayanan (Leckage L1–L3),

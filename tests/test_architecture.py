@@ -31,20 +31,20 @@ def layer_map() -> dict[str, int]:
     return out
 
 
-def house_modules() -> set[str]:
-    """The modules the layer table marks house; every other module is core."""
+def doctrine_modules() -> set[str]:
+    """The modules the layer table marks doctrine; every other module is core."""
     doc = (ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
     out: set[str] = set()
     for m in re.finditer(r"^\| (?:\d|tools)[^|]*\| ([^|]+)\| ([^|]+)\|", doc, re.M):
         listed = set(re.findall(r"`(\w+)`", m.group(1)))
         marked = set(re.findall(r"`(\w+)`", m.group(2)))
         if not marked <= listed:
-            raise AssertionError(f"house marks {marked - listed} not in its row")
+            raise AssertionError(f"doctrine marks {marked - listed} not in its row")
         out |= marked
     return out
 
 
-#: core → house imports that stand today, each a piece of house logic inside
+#: core → doctrine imports that stand today, each a piece of doctrine inside
 #: the core, listed by name until it moves (2026-10-15). The test asks for
 #: exactly this set: a new crossing fails, and so does a removed one left
 #: standing here — the list only shrinks.
@@ -54,10 +54,10 @@ KNOWN_CROSSINGS = {
     ("runlog", "findings"),  # findings.audit_coverage
     ("runlog", "protocol_check"),  # protocol_check.seconds_registration_missing
     # the field catalogue and a rule's text in the code check — the boundary
-    # case: the TOML head is core, the prose fields are house
+    # case: the TOML head is core, the prose fields are doctrine
     ("code_check", "protocol_check"),  # protocol_check.fields
     ("code_check", "rules"),  # rules.paragraph
-    # the pin check is core; checking rule references and hooks is house
+    # the pin check is core; checking rule references and hooks is doctrine
     ("repo_check", "rules"),  # rules.check_refs, rules.load_registry
     ("repo_check", "install_hooks"),  # install_hooks.check, .labkit_version
 }
@@ -101,22 +101,22 @@ class Layers(unittest.TestCase):
         self.assertEqual(up, [])
 
 
-class CoreAndHouse(unittest.TestCase):
+class CoreAndDoctrine(unittest.TestCase):
     """The core (which run made this number, from what) imports nothing of
-    the house (how this lab chooses to work): docs/architecture.md, "Core
-    or house"."""
+    the doctrine (how a lab chooses to work): docs/architecture.md, "Core
+    or doctrine"."""
 
-    def test_the_house_column_marks_known_modules(self):
-        self.assertLessEqual(house_modules(), set(modules()))
+    def test_the_doctrine_column_marks_known_modules(self):
+        self.assertLessEqual(doctrine_modules(), set(modules()))
 
-    def test_a_core_module_imports_no_house_module(self):
-        house = house_modules()
+    def test_a_core_module_imports_no_doctrine_module(self):
+        doctrine = doctrine_modules()
         crossings = {
             (m, t)
             for m in modules()
-            if m not in house
+            if m not in doctrine
             for t in imports_of(m)
-            if t in house
+            if t in doctrine
         }
         self.assertEqual(crossings, KNOWN_CROSSINGS)
 

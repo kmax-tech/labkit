@@ -11,18 +11,20 @@ layer imports a tool; tools may import any layer. Every module stands in
 the table exactly once. `tests/test_architecture.py` reads this table and
 holds the imports to it — a new module or an upward import fails the suite.
 
-**Core or house.** The core answers what every lab must answer the same way,
+**Core or doctrine.** The core answers what every lab must answer the same way,
 whatever its rules: which run made this number, from which code, data and
 model, under which protocol, and does the cited number match the run. The
-house is what another lab could decide differently without being less
+doctrine is what another lab could decide differently without being less
 scientific: the standard, the protocol's field catalogue, the templates, the
 order of the gates, the agent layer, the note conventions. The test: strike
 it — does a number become less traceable (core), or does the lab only work
-differently (house)? A core module imports no house module;
+differently (doctrine)? A core module imports no doctrine module;
 `tests/test_architecture.py` holds that, with the crossings that stand today
-listed by name until they are moved (2026-10-15).
+listed by name until they are moved (2026-10-15). Doctrine is not the
+house: the house is what holds only for this author's lab (`LOCAL` rules,
+the dotfiles, below); doctrine ships in labkit to every lab.
 
-| Layer | Modules | House (the rest is core) | Holds |
+| Layer | Modules | Doctrine (the rest is core) | Holds |
 |---|---|---|---|
 | 1 · formats and places | `protocol_block`, `promises`, `protocol_check`, `runs`, `repo`, `scope_sha`, `rules`, `findings`, `console`, `gate` | `protocol_check`, `rules`, `findings` | read-only answers: the protocol's TOML block and its head, the promise alphabet and tables, the protocol's prose fields by label, what a run directory says about itself, where the repo, the area's protocols and git are, the standard's rules and every reference to them, an audit's findings as data (`audits/*.toml`: written by `labkit-audit`, decided by the person, read by `preflight`); the one exit of every console command (`console.exit_with`: a reader closing the pipe is exit 0, not a traceback) and its one refusal (`console.refuse`: a usage error on stderr, findings on stdout); what a gate found, told once (`gate.Findings`: the grade's spelling, the summary, exit 1 with a blocker) |
 | 2 · a run and its effects | `runlog`, `batch`, `llm`, `endpoint_lease` | — | writing a run (binding, refusals, provenance, index), resumable output, model calls, the model-slot lease |
