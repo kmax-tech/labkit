@@ -56,10 +56,10 @@ class RunDirs(unittest.TestCase):
 
     def test_completed_runs_refuses_an_unreadable_run(self):
         self._run("2026-01-01T00-00-00_aaaa", done=True)
-        self.assertEqual(len(runs.completed_runs(self.area)), 1)
+        self.assertEqual(len(runs.completed_runs(self.area, with_repeats=True)), 1)
         self._run("2026-01-01T00-00-00_bbbb", config="{not json")
         with self.assertRaises(runs.RunConfigError):
-            runs.completed_runs(self.area)
+            runs.completed_runs(self.area, with_repeats=True)
 
     def test_bound_runs_sees_the_same_three_cases(self):
         self._run("2026-01-01T00-00-00_aaaa", done=True)

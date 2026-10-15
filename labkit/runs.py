@@ -424,9 +424,12 @@ def run_dirs(area: Path) -> list[RunDir]:
     return [_run_dir(d) for d in sorted(runs.glob("*")) if d.is_dir()]
 
 
-def completed_runs(area: Path) -> list[Path]:
-    """The area's completed run directories, oldest first. An unreadable
-    run raises RunConfigError: it may be the newest and must not vanish."""
+def completed_runs(area: Path, *, with_repeats: bool) -> list[Path]:
+    """The area's completed run directories, oldest first; WITH_REPEATS says
+    whether a repeat draw (`repeat_of`) counts — every caller decides it in
+    sight, since a "newest run" that is a repeat would displace the run that
+    answers. An unreadable run raises RunConfigError: it may be the newest
+    and must not vanish."""
     out = []
     for rd in run_dirs(area):
         if rd.error is not None:
@@ -434,6 +437,7 @@ def completed_runs(area: Path) -> list[Path]:
         if (
             rd.config is not None
             and run_state(rd.dir, rd.config, alive=False) == COMPLETED
+            and (with_repeats or repeat_parent(rd.config) is None)
         ):
             out.append(rd.dir)
     return out
@@ -488,6 +492,60 @@ def _facts(rd: RunDir) -> dict | None:
     }
 
 
+def repeat_parent(config: dict) -> str | None:
+    """The run a repeat draws again (config.json `repeat_of`), or None.
+
+    `derived_from` re-reads the parent's rows and makes no model call;
+    `repeat_of` asks the model again with the same instrument on the same
+    items — a full measurement with its own model record, recorded so the
+    spread of the number is visible (TODO item 4, 2026-10-14). A repeat is
+    supporting evidence: it never answers the protocol (`bound_runs`)."""
+    v = config.get("repeat_of")
+    return v if isinstance(v, str) and v else None
+
+
+def repeats_of(area: Path, run_id: str) -> list[Path]:
+    """The completed repeats of RUN_ID, oldest first (draw 2, 3, …)."""
+    return [
+        rd.dir
+        for rd in run_dirs(area)
+        if rd.config is not None
+        and repeat_parent(rd.config) == run_id
+        and run_state(rd.dir, rd.config, alive=False) == COMPLETED
+    ]
+
+
+def repeat_mismatch(parent: dict, new: dict) -> list[str]:
+    """Why a run whose config.json would be NEW is no comparable repeat of
+    PARENT (both config.json dicts), [] when it is: the same protocol, the
+    same promise block, the same experiment config (prompt digest, model,
+    constants, sampling) and the same inputs (data= digests and rows). A
+    repeat that differs in any of these measures something else, and its
+    spread would be noise of the change, not of the model."""
+    out: list[str] = []
+    pid = (parent.get("protocol") or {}).get("id")
+    if pid != (new.get("protocol") or {}).get("id"):
+        out.append(f"protocol {(new.get('protocol') or {}).get('id')} is not {pid}")
+    block = (parent.get("promises") or {}).get("block_sha")
+    if block != (new.get("promises") or {}).get("block_sha"):
+        out.append("the promise block changed")
+    pc, nc = parent.get("config") or {}, new.get("config") or {}
+    for key in sorted(set(pc) | set(nc)):
+        if pc.get(key) != nc.get(key):
+            out.append(f"config {key}: {pc.get(key)!r} → {nc.get(key)!r}")
+
+    def digests(cfg: dict) -> dict:
+        return {
+            k: (v.get("sha256"), v.get("rows"))
+            for k, v in (cfg.get("data") or {}).items()
+            if isinstance(v, dict)
+        }
+
+    if digests(parent) != digests(new):
+        out.append("the inputs (data=) differ")
+    return out
+
+
 def bound_runs(area: Path, pid: str) -> tuple[list[dict], list[dict]]:
     """(runs bound to `pid` and completed, everything else), oldest first.
 
@@ -501,8 +559,13 @@ def bound_runs(area: Path, pid: str) -> tuple[list[dict], list[dict]]:
         facts = _facts(rd)
         if facts is None:
             continue
+        parent = repeat_parent(rd.config) if rd.config is not None else None
         if facts["state"] != COMPLETED:
             facts.setdefault("why", facts["state"])
+        elif parent is not None:
+            facts["why"] = (
+                f"a repeat of {parent} — supporting evidence, never the answer"
+            )
         elif facts["protocol_id"] == pid:
             taken.append(facts)
             continue

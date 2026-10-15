@@ -732,7 +732,7 @@ def latest_run(area: Path) -> Path | None:
     """The newest completed run — run_ids start with the timestamp, so
     their sort order is their start order (runlog.Run)."""
     try:
-        done = runs.completed_runs(area)
+        done = runs.completed_runs(area, with_repeats=False)
     except runs.RunConfigError as exc:
         raise SystemExit(f"usability: {exc}") from exc
     return done[-1] if done else None

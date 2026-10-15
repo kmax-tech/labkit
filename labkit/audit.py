@@ -456,7 +456,7 @@ def early_for_tier(area: Path, protocol: Path, mode: str) -> list[str]:
         head = protocol_block.head(protocol.read_text(encoding="utf-8"))
     except protocol_block.BlockError:
         return []
-    if head.cost != "seconds" or completed_runs(area):
+    if head.cost != "seconds" or completed_runs(area, with_repeats=True):
         return []
     return [
         'WARNING · cost = "seconds" and no completed run · the first run is the '

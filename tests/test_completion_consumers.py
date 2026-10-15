@@ -58,7 +58,7 @@ class Twin(unittest.TestCase):
     def test_states(self):
         self.assertEqual(runs.completion_state(self.done), "completed")
         self.assertEqual(runs.completion_state(self.unfinalized), "unfinalized")
-        self.assertEqual(runs.completed_runs(self.area), [self.done])
+        self.assertEqual(runs.completed_runs(self.area, with_repeats=True), [self.done])
 
     def test_recheck_picks_the_completed_run(self):
         self.assertEqual(recheck.run_dir(self.area), self.done)
@@ -95,7 +95,7 @@ class Edges(unittest.TestCase):
         with self.assertRaisesRegex(runs.RunConfigError, "labkit 0.47"):
             runs.completion_state(old)
         with self.assertRaises(runs.RunConfigError):
-            runs.completed_runs(area)
+            runs.completed_runs(area, with_repeats=True)
         with self.assertRaises(SystemExit) as cm:
             recheck.run_dir(area, DONE)
         self.assertIn("labkit 0.47", str(cm.exception))
@@ -113,7 +113,7 @@ class Edges(unittest.TestCase):
         d = make_run(area, DONE, completion=True)
         (d / "config.json").write_text("{broken", encoding="utf-8")
         with self.assertRaises(runs.RunConfigError) as cm:
-            runs.completed_runs(area)
+            runs.completed_runs(area, with_repeats=True)
         self.assertIn("config.json", str(cm.exception))
 
 

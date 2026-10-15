@@ -32,6 +32,11 @@ Three ways a run depends on another run's rows — not one:
                    derived_from=ID)`), config.json holds it; the parent must
                    be completed; the run makes no model call and records no
                    model — `runs.model_provenance_run` walks this key alone
+    repeat_of      per run; `runlog.run(..., repeat_of=ID)`: the same measurement
+                   asked again — new model calls, its own model record, the
+                   same protocol, block, config and inputs as ID or a
+                   refusal (`runs.repeat_mismatch`); `draw` numbers it (2,
+                   3, …). Supporting evidence: it never answers the protocol
 
 Usage:
     import runlog
@@ -90,7 +95,11 @@ from labkit.runs import (
     is_alive,
     read_completion,
     read_metrics,
+    read_run_config,
     recorded_path,
+    repeat_mismatch,
+    repeat_parent,
+    repeats_of,
     run_dirs,
     run_state,
     run_summary,
@@ -1010,6 +1019,7 @@ class Run:
         long: bool = False,
         protocol: str | Path | None = None,
         derived_from: str | None = None,
+        repeat_of: str | None = None,
     ) -> None:
         # A derived run (2026-10-05): the same raw rows, evaluated again —
         # because evaluate() gained a descriptive key, not because anything
@@ -1094,6 +1104,7 @@ class Run:
                     '(at cost = "seconds": the question written suffices, with a model also criterion and admissibility condition). A '
                     "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded)."
                 )
+        self._repeat_of, self._draw = self._repeat(base_dir, repeat_of, derived_from)
         self.dir = base_dir / "runs" / self.run_id
         self._outputs: list[Path] = []
         self._metrics: dict = {}
@@ -1118,6 +1129,50 @@ class Run:
             shutil.rmtree(self.dir, ignore_errors=True)  # no half-made run
             raise
 
+    def _repeat(
+        self, base_dir: Path, repeat_of: str | None, derived_from: str | None
+    ) -> tuple[str | None, int | None]:
+        """(repeat_of, draw) for config.json, before mkdir: a repeat draws a
+        completed primary run of this area again, comparable in protocol,
+        promise block, config and inputs (`runs.repeat_mismatch`) — else a
+        refusal. Draw 1 is the run itself; its repeats count on from 2."""
+        if repeat_of is None:
+            return None, None
+        if derived_from is not None:
+            raise SystemExit(
+                "runlog: repeat_of and derived_from exclude each other — a repeat "
+                "asks the model again, a derived run re-reads old rows"
+            )
+        parent = base_dir / "runs" / repeat_of
+        try:
+            state = completion_state(parent) if parent.is_dir() else "missing"
+            pcfg = read_run_config(parent) if state == COMPLETED else None
+        except RunConfigError as exc:
+            raise SystemExit(f"runlog: repeat_of={repeat_of!r}: {exc}") from exc
+        if pcfg is None:
+            raise SystemExit(
+                f"runlog: repeat_of={repeat_of!r} names no completed run under "
+                f"{base_dir / 'runs'} ({state})"
+            )
+        if repeat_parent(pcfg) is not None:
+            raise SystemExit(
+                f"runlog: {repeat_of} is itself a repeat of {repeat_parent(pcfg)} — "
+                f"repeat the primary run"
+            )
+        mine = {
+            "protocol": self._protocol,
+            "promises": self._promises,
+            "config": self._config,
+            "data": self._data,
+        }
+        differs = repeat_mismatch(pcfg, mine)
+        if differs:
+            raise SystemExit(
+                f"runlog: this run is no repeat of {repeat_of} — it measures "
+                f"something else:\n  " + "\n  ".join(differs)
+            )
+        return repeat_of, 2 + len(repeats_of(base_dir, repeat_of))
+
     def _write_record(
         self,
         experiment: str,
@@ -1136,6 +1191,8 @@ class Run:
             "script": self.script,
             "protocol": self._protocol,
             "derived_from": self._derived_from,
+            "repeat_of": self._repeat_of,
+            "draw": self._draw,
             "unfrozen_ack": self._unfrozen_ack,
             "cost_tier": self._cost_tier,
             "promises": self._promises,
@@ -1330,8 +1387,9 @@ class run:
         long: bool = False,
         protocol: str | Path | None = None,
         derived_from: str | None = None,
+        repeat_of: str | None = None,
     ) -> None:
-        # `protocol` and `derived_from` last: no existing positional call shifts.
+        # `protocol`, `derived_from`, `repeat_of` last: no existing positional call shifts.
         base = Path(base_dir) if base_dir else Path(sys.argv[0]).resolve().parent
         self._run = Run(
             experiment,
@@ -1341,6 +1399,7 @@ class run:
             long=long,
             protocol=protocol,
             derived_from=derived_from,
+            repeat_of=repeat_of,
         )
 
     def __enter__(self) -> Run:
@@ -1427,7 +1486,7 @@ def _print_finished(area: Path) -> None:
 def _finished_line(area: Path) -> str:
     """The newest COMPLETED run, by its own marker — a run whose metrics
     landed but whose finalization broke off is not a finished run."""
-    done = completed_runs(area)
+    done = completed_runs(area, with_repeats=True)
     if not done:
         return "no finished runs"
     m = read_metrics(done[-1] / "metrics.json")

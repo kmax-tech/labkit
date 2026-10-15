@@ -59,7 +59,7 @@ def run_dir(area: Path, run_id: str | None = None) -> Path:
             if state != runs.COMPLETED:
                 raise SystemExit(f"recheck: {d} is not a completed run ({state})")
             return d
-        done = runs.completed_runs(area)
+        done = runs.completed_runs(area, with_repeats=False)
     except runs.RunConfigError as exc:
         raise SystemExit(f"recheck: {exc}") from exc
     if not done:
