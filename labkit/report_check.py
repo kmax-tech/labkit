@@ -44,6 +44,7 @@ import io
 import subprocess
 from pathlib import Path
 
+from labkit.gate import Findings
 from labkit import console, findings, protocol_block
 from labkit.finalize import finalize_area
 from labkit.preflight import area_test_python
@@ -126,18 +127,12 @@ def report_check(area: Path, protocol: Path | None = None) -> int:
             f"the short lane ends with finalize (LAB-017 The number of audits follows the cost tier)"
         )
         return 0
-    blockers = freeze_gaps(chosen, head.frozen) + later_gaps(area, chosen)
-    for b in blockers:
-        print(f"  BLOCKER: {b}")
-    print(
-        f"report-check {chosen.name}: "
-        + (
-            f"{len(blockers)} blocker(s)"
-            if blockers
-            else "clean — frozen, finalized, audited, checked"
-        )
-    )
-    return 1 if blockers else 0
+    findings = Findings()
+    for b in freeze_gaps(chosen, head.frozen) + later_gaps(area, chosen):
+        findings.block(b)
+    if not findings.blocked:
+        print(f"  {chosen.name}: frozen, finalized, audited, checked")
+    return findings.report("report-check", "reporting")
 
 
 def main(argv: list[str]) -> int:

@@ -43,6 +43,14 @@ keeps the copies from coming back.
   the one reading of `Model / tool` (`labkit-init --report` matched the
   raw text and read `—` as a model). `protocol-fill` reads the head's
   `type` inside the TOML block, not in a fenced example.
+- **`labkit.gate`: what a gate found, told once.** `gate.Findings` holds the
+  blockers and warnings of preflight, finalize, report-check, code-check and
+  notes-check, prints one spelling (`BLOCKER:` / `WARNING:`), one summary
+  and one exit contract (1 with a blocker). Five shapes and three
+  spellings before; preflight counted code-check's lines a second time by
+  `startswith`, and a protocol-id line graded `WARNING` counted as a
+  blocker. preflight's station lines carry the grade now
+  (`BLOCKER: MISSING (must): …`); notes-check ends with the same summary.
 
 ## 0.95.0 — 2026-10-15
 

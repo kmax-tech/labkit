@@ -72,6 +72,7 @@ from pathlib import Path
 
 from labkit import console, promises, protocol_block, rules
 from labkit.protocol_check import fields
+from labkit.gate import Findings
 from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 from labkit.repo import area_path, choose_protocol, layout_root, no_such_area
 from labkit.scope_sha import (
@@ -1343,14 +1344,14 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         return 2
 
     repo = layout_root(area)
-    findings = (
+    findings = Findings()
+    for line in (
         check_intent_ids(area, protocol)
         + check_parser_fixtures(area, repo)
         + check_prompt_drift(area, protocol)
         + stamp_coverage_findings(area, repo)
-    )
-    for f in findings:
-        print(f)
+    ):
+        findings.add(line)
 
     if bundle_to is not None:
         n = write_bundle(area, layout_root(area), protocol, bundle_to)
@@ -1359,10 +1360,8 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             f"({bundle_to.stat().st_size // 1024} KB)"
         )
 
-    blockers = sum(1 for f in findings if f.startswith("BLOCKER"))
-    warnings = sum(1 for f in findings if f.startswith("WARNING"))
     parts = [
-        f"intent-ids: {blockers} blocker(s), {warnings} warning(s) "
+        f"intent-ids: {len(findings.blocked)} blocker(s), {findings.warnings} warning(s) "
         f"(incl. parser fixtures, prompt drift, stamp coverage)"
     ]
     if bundle_to is not None:
@@ -1382,7 +1381,8 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             "(need --bundle for the code-check agent)"
         )
     print(" — ".join(parts))
-    return 1 if findings else 0
+    # exit 1 on a warning too: a static-evidence line is a finding to read
+    return 1 if findings.blocked or findings.warned else 0
 
 
 def cli() -> None:

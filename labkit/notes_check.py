@@ -41,6 +41,7 @@ doctrine: extend, never move; regression = both lab repos exit 0 after the
 import re
 
 from labkit import console
+from labkit.gate import Findings
 from labkit.repo import git_root
 from pathlib import Path
 
@@ -185,21 +186,20 @@ def main(argv: list[str]) -> int:
     if not files:
         print("notes-check: no notes/messung/*.md found")
         return 2
-    failed = False
+    findings = Findings()
     for f in files:
         try:
             must, warn = check_file(f)
         except OSError as exc:
-            print(f"{f}: not readable ({exc})")
-            failed = True
+            findings.block(f"{f}: not readable ({exc})")
             continue
-        for line in must + warn:
-            print(line)
-        if must:
-            failed = True
-        elif not warn:
+        for line in must:
+            findings.block(line)
+        for line in warn:
+            findings.warn(line)
+        if not must and not warn:
             print(f"{f}: OK")
-    return 1 if failed else 0
+    return findings.report("notes-check", "the note counts")
 
 
 def cli() -> None:

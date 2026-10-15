@@ -53,10 +53,10 @@ import io
 import ast
 import json
 import re
-from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit import batch, console, promises, protocol_block
+from labkit.gate import Findings
 from labkit.runs import (
     RUN_ID,
     bound_answering_run,
@@ -183,26 +183,6 @@ def provenance_findings(
                 f"the commit that cites the number"
             )
     return blockers, warnings
-
-
-@dataclass
-class Findings:
-    """What the stations found: every blocker as one line, repeated in the
-    summary — inside a commit hook the sections run to 20 lines and the one
-    blocker drowned in the middle (usability probe 2026-10-07)."""
-
-    blocked: list[str] = field(default_factory=list)
-    warnings: int = 0
-
-    def block(self, msg: str) -> None:
-        """Print a blocker and keep it for the summary."""
-        print(f"  BLOCKER: {msg}")
-        self.blocked.append(msg)
-
-    def warn(self, msg: str) -> None:
-        """Print a warning and count it for the summary."""
-        print(f"  warning: {msg}")
-        self.warnings += 1
 
 
 def answering_run(
@@ -631,23 +611,8 @@ def check_criterion_n(findings: Findings, measurement_run: Path) -> None:
 
 
 def report(findings: Findings) -> int:
-    """The summary: every blocker once more, then the exit code (0 clean, 1
-    findings)."""
-    print()
-    if findings.blocked:
-        print(
-            f"finalize: {len(findings.blocked)} blocker(s), {findings.warnings} warning(s) — fix the blockers before reporting:"
-        )
-        for msg in findings.blocked:
-            print(f"  - {msg}")
-        return 1
-    if findings.warnings:
-        print(
-            f"finalize: 0 blockers, {findings.warnings} warning(s) — review the warnings above before reporting."
-        )
-        return 0
-    print("finalize: all clear.")
-    return 0
+    """The summary and the exit code (`gate.Findings.report`)."""
+    return findings.report("finalize", "reporting")
 
 
 NO_RUN = "  no completed run to check"
