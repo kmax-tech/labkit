@@ -74,7 +74,10 @@ fields, no reading of labkit's source.
    LAB-043 Runs go through `runlog`).
 10. `finalize <area>`, then the analysis audit (`labkit-audit <area> --mode
     analysis`) against the frozen criterion
-    (LAB-050 Analysis audit before reporting).
+    (LAB-050 Analysis audit before reporting). A number a model gave is one
+    draw: `scripts/01_measure.py --repeat-of <run_id>` draws it again (a run
+    of its own, never the answer), `scripts/02_analyze.py --draws` shows how
+    far it moves.
 11. Write the result back into the protocol (`protocol-fill --from-run`),
     then `scripts/02_analyze.py --check` holds the note to the run, and
     `report-check <area>` closes the lane: frozen, finalize clean, an

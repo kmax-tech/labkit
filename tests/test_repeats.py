@@ -85,6 +85,23 @@ class Repeats(unittest.TestCase):
             [(1, first), (2, second)],
         )
 
+    def test_finalize_warns_on_one_draw_of_a_model_run_and_not_after_a_repeat(self):
+        """The spread is static evidence: a warning until a repeat exists,
+        nothing for a run that asked no model."""
+        from labkit import finalize
+
+        first = self._run()
+        primary = self.area / "runs" / first
+        self.assertIsNone(finalize.single_draw(self.area, primary))  # no model calls
+        metrics = primary / "metrics.json"
+        m = json.loads(metrics.read_text())
+        metrics.write_text(json.dumps({**m, "llm_retries": 0}), encoding="utf-8")
+        self.assertIn(
+            "is one draw — no spread", finalize.single_draw(self.area, primary) or ""
+        )
+        self._run(repeat_of=first)
+        self.assertIsNone(finalize.single_draw(self.area, primary))
+
     def test_the_primary_keeps_answering_and_rechecking(self):
         first = self._run()
         self._run(repeat_of=first)

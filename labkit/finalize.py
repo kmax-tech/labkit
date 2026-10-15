@@ -64,6 +64,7 @@ from labkit.runs import (
     read_metrics,
     read_outputs,
     read_run_config,
+    repeats_of,
     resolve_recorded,
 )
 from labkit.repo import (
@@ -274,6 +275,33 @@ def answering_run_field_mismatch(
     )
 
 
+def called_a_model(measurement_run: Path) -> bool:
+    """Do the run's metrics show model calls (`llm_retries` recorded, or
+    `model_calls` > 0)? Static evidence: a run without those keys may still
+    have called a model. False when metrics.json cannot be read."""
+    try:
+        metrics = read_metrics(measurement_run / "metrics.json")
+    except (OSError, ValueError):
+        return False
+    calls = metrics.get("model_calls")
+    return "llm_retries" in metrics or (isinstance(calls, int) and calls > 0)
+
+
+def single_draw(area: Path, measurement_run: Path) -> str | None:
+    """Why the number shows no spread, or None: the run asked a model and
+    has no repeat (`runlog` repeat_of). One draw per item cannot show how
+    far the number moves — in the cloud judge probe it moved 10/12 ↔ 11/12
+    between runs, and every audit named it (TODO item 4, 2026-10-14). A
+    warning, never a blocker: whether a spread is owed is the protocol's."""
+    if not called_a_model(measurement_run) or repeats_of(area, measurement_run.name):
+        return None
+    return (
+        f"{measurement_run.name} is one draw — no spread: `scripts/01_measure.py "
+        f"--repeat-of {measurement_run.name}` draws it again, `02_analyze.py "
+        f"--draws` shows how far the number moves"
+    )
+
+
 def model_provenance_gap(measurement_run: Path) -> str | None:
     """Why the run's model cannot be named from its record, or None: its
     metrics show model calls (`llm_retries` recorded, or `model_calls` > 0)
@@ -281,13 +309,7 @@ def model_provenance_gap(measurement_run: Path) -> str | None:
     not under `model`/`*_model`, the keys runlog resolves (uniagent areas
     14–17 recorded it as `judge`; round 15, 2026-10-08). Static evidence:
     a run without those keys may still have called a model."""
-    try:
-        metrics = read_metrics(measurement_run / "metrics.json")
-    except (OSError, ValueError):
-        return None
-    calls = metrics.get("model_calls")
-    called = "llm_retries" in metrics or (isinstance(calls, int) and calls > 0)
-    if not called:
+    if not called_a_model(measurement_run):
         return None
     try:
         if model_provenance_run(measurement_run) is not None:
@@ -403,9 +425,12 @@ def check_completion(
         if graded is not None:
             grade, message = graded
             (findings.block if grade == "block" else findings.warn)(message)
-        gap = model_provenance_gap(measurement_run)
-        if gap:
-            findings.warn(gap)
+        for warning in (
+            model_provenance_gap(measurement_run),
+            single_draw(area, measurement_run),
+        ):
+            if warning:
+                findings.warn(warning)
         blockers, notes = row_provenance_findings(measurement_run)
         for b in blockers:
             findings.block(b)
