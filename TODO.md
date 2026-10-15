@@ -466,6 +466,16 @@ sieht das niemand.
   ohne Sollwert; Audit und `preflight` sahen nur die fehlende Registrierung.
   Kandidat für Narbenzeile oder Gate: *Nullprobe ohne Sollwert*. Nächster Fall
   (SWE-Lancer) entscheidet, ob es eine Zeile wird.
+  **Zweiter Fall 2026-10-15** (Pilot 07, ScienceAgentBench Aufgabe 18,
+  Antwortlauf `2026-10-15T16-43-25_b7b7`): wieder `missed`. Der Bauer fand den
+  Pass des konstanten Prädiktors selbst und schrieb ihn in den Bericht,
+  registrierte ihn aber als Frage ohne Hürde (`cost = "seconds"`). Offene
+  Frage an labkit: LAB-004 verlangt `[[promise]]`-Tabellen „for every full
+  run — so with cost = seconds always“; beide Bauer-Bereiche (labkit 0.96.1
+  und 0.97.0) liefen ohne Tabellen, `preflight` 0 Blocker. Entweder gilt ein
+  beschreibender Lauf nicht als full run (dann sagt der Standard es nicht),
+  oder das Gate setzt die Regel nicht durch. Genau diese Lücke ließ in beiden
+  Fällen die Nullprobe ohne Sollwert durch.
 
 - **Repo-Audit 2026-10-13 (Klarheit, Drift, Doku) — Befund, nichts
   geändert.** Suite, ruff, pyright grün (1001 Tests). Drei Lesungen (große
