@@ -5,6 +5,21 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Fixed
+
+- **Two runs started in one second no longer answer by chance.** A run id
+  is the start second plus a random suffix, so `runs.bound_answering_run`
+  took whichever of two such runs had the larger suffix as "newest". Now a
+  second bound run of the same standing started in the same second blocks
+  the choice, and an unreadable run in the same second blocks it like a
+  newer one. Every check that holds a protocol to its run (finalize,
+  intent-check, recheck, params, the audit) reads this choice.
+- `tests/test_answering_run_exhaustive.py` holds the choice to an oracle
+  over every area of up to three runs from nine kinds, on different days
+  and in one second (1640 areas); the code before this fix fails 90.
+
 ## 0.96.1 — 2026-10-15
 
 Phase D of the audit of 2026-10-15: docs and hygiene.

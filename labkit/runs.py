@@ -667,13 +667,28 @@ def newest_with_intent_keys(cands: list[dict]) -> tuple[Path | None, int, bool]:
     return (cands[-1]["metrics"], 0, False) if cands else (None, 0, False)
 
 
+def _start_second(run_dir: Path) -> str:
+    """The start second a run id carries (everything before the suffix)."""
+    return run_dir.name.rsplit("_", 1)[0]
+
+
+def _not_older(run_dir: Path, chosen: Path) -> bool:
+    """Whether RUN_DIR may have started after CHOSEN: newer by name, or
+    started in the same second — the random suffix orders those by chance
+    (2026-10-15)."""
+    return run_dir.name > chosen.name or (
+        run_dir != chosen and _start_second(run_dir) == _start_second(chosen)
+    )
+
+
 def newer_unreadable(chosen: Path, rest: list[dict]) -> str | None:
-    """Why the choice must not stand: a run NEWER than the chosen one whose
-    config.json cannot be read. Its binding is unknowable, so it may be the
-    run that answers — choosing an older one past it is what
-    `runs.read_run_config` says must not happen (review 2026-10-07)."""
+    """Why the choice must not stand: a run NEWER than the chosen one, or
+    started in the same second, whose config.json cannot be read. Its
+    binding is unknowable, so it may be the run that answers — choosing an
+    older one past it is what `runs.read_run_config` says must not happen
+    (review 2026-10-07)."""
     bad = [
-        f for f in rest if f["state"] == "unreadable" and f["dir"].name > chosen.name
+        f for f in rest if f["state"] == "unreadable" and _not_older(f["dir"], chosen)
     ]
     if not bad:
         return None
@@ -681,6 +696,27 @@ def newer_unreadable(chosen: Path, rest: list[dict]) -> str | None:
         f"{len(bad)} newer run(s) cannot say which protocol they belong to — "
         + "; ".join(f["why"] for f in bad)
         + f". Repair or move them aside before {chosen.name} may answer."
+    )
+
+
+def same_second_rival(chosen: Path, taken: list[dict], has_keys: bool) -> str | None:
+    """Why the choice must not stand: another bound run of the same standing
+    (reporting an intent key, if the chosen one does) started in the same
+    second. The run id carries the second and a random suffix, so which of
+    the two is newest is chance (2026-10-15)."""
+    rivals = [
+        f["dir"].name
+        for f in taken
+        if f["dir"] != chosen
+        and _start_second(f["dir"]) == _start_second(chosen)
+        and (not has_keys or promises.reported_ids(read_metrics(f["metrics"])))
+    ]
+    if not rivals:
+        return None
+    return (
+        f"{chosen.name} and {', '.join(rivals)} started in the same second — "
+        "the run ids cannot say which is newest. Move the one that does not "
+        "answer out of runs/."
     )
 
 
@@ -745,7 +781,8 @@ def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
     run has numbers and no finish, a run bound elsewhere answers another
     question. A newer run whose config.json cannot be read (`unreadable`)
     blocks the choice: it may be the one that answers — then run_dir is
-    None and `blocker` says why."""
+    None and `blocker` says why. So does a rival started in the same
+    second, whose order the run ids cannot tell."""
     if not (area / "runs").is_dir():
         return AnsweringRun(
             None,
@@ -759,7 +796,9 @@ def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
         return AnsweringRun(None, 0, exclusions, f"no completed run bound to {pid}")
     mpath, skipped, has_keys = newest_with_intent_keys(taken)
     assert mpath is not None, "taken is non-empty, so a metrics file exists"
-    blocker = newer_unreadable(mpath.parent, rest)
+    blocker = newer_unreadable(mpath.parent, rest) or same_second_rival(
+        mpath.parent, taken, has_keys
+    )
     if blocker:
         return AnsweringRun(None, skipped, exclusions, blocker, has_keys)
     return AnsweringRun(mpath.parent, skipped, exclusions, None, has_keys)

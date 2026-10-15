@@ -4,9 +4,9 @@ nine kinds, held to an oracle that restates the rule from its docstrings.
 The worst faults the audit of 2026-10-15 found were in this choice (the
 wrong run's number written into the protocol), and the case tests in
 tests/test_answering_run.py each cover one arrangement. Here every
-arrangement up to three runs is checked (820 areas): the oracle is written
-from the rule, not from the code, so a disagreement is a finding on one
-side or the other.
+arrangement up to three runs is checked (820 areas, once on different days
+and once in one second): the oracle is written from the rule, not from
+the code, so a disagreement is a finding on one side or the other.
 
     .venv/bin/python -m pytest tests/test_answering_run_exhaustive.py
 """
@@ -95,7 +95,7 @@ class Expected:
     run_dir: Path | None
     skipped_newer: int
     reports_intent_keys: bool
-    blocked_by: str | None  # "none-bound", "newer-unreadable" or None
+    blocked_by: str | None  # "none-bound", "newer-unreadable", "same-second" or None
     exclusions: dict[str, str]
 
 
@@ -104,8 +104,10 @@ def oracle(placed: list[tuple[Path, Kind]]) -> Expected:
     are not repeats, the newest reporting an intent key answers (newer
     probes are skipped and counted); if none reports one, the newest bound
     run is returned and says so. No bound run is a blocker; an unreadable
-    run newer than the choice is a blocker. Every other run is excluded
-    with its reason. `placed` is oldest first."""
+    run that may have started after the choice (newer, or the same second)
+    is a blocker; so is another bound run of the same standing started in
+    the same second. Every other run is excluded with its reason. `placed`
+    is in name order."""
     exclusions = {d.name: k.why for d, k in placed if k.why is not None}
     taken = [(d, k) for d, k in placed if k.why is None]
     if not taken:
@@ -116,29 +118,54 @@ def oracle(placed: list[tuple[Path, Kind]]) -> Expected:
         chosen, skipped, has_keys = taken[i][0], len(taken) - 1 - i, True
     else:
         chosen, skipped, has_keys = taken[-1][0], 0, False
-    if any(k.unreadable and d.name > chosen.name for d, k in placed):
+
+    def second(d: Path) -> str:
+        return d.name.split("_")[0]
+
+    if any(
+        k.unreadable
+        and (d.name > chosen.name or (d != chosen and second(d) == second(chosen)))
+        for d, k in placed
+    ):
         return Expected(None, skipped, has_keys, "newer-unreadable", exclusions)
+    if any(
+        d != chosen and second(d) == second(chosen) and (k.keys or not has_keys)
+        for d, k in taken
+    ):
+        return Expected(None, skipped, has_keys, "same-second", exclusions)
     return Expected(chosen, skipped, has_keys, None, exclusions)
+
+
+def _name(i: int, one_second: bool) -> str:
+    """The i-th run id in name order: a day apart, or one second apart only
+    by suffix."""
+    if one_second:
+        return f"2026-10-01T10-00-00_{'abc'[i] * 4}"
+    return f"2026-10-0{i + 1}T10-00-00_aaaa"
 
 
 class EveryArrangement(unittest.TestCase):
     def test_up_to_three_runs_of_nine_kinds(self) -> None:
+        """Each arrangement twice: started on different days, and all in one
+        second (the suffix then orders them by chance, 2026-10-15)."""
         checked = 0
-        for n in range(4):
-            for combo in itertools.product(KINDS, repeat=n):
-                with self.subTest(kinds=[k.name for k in combo]):
-                    self._check(combo)
-                checked += 1
-        self.assertEqual(checked, 1 + 9 + 81 + 729)
+        for one_second in (False, True):
+            for n in range(4):
+                for combo in itertools.product(KINDS, repeat=n):
+                    with self.subTest(
+                        kinds=[k.name for k in combo], one_second=one_second
+                    ):
+                        self._check(combo, one_second)
+                    checked += 1
+        self.assertEqual(checked, 2 * (1 + 9 + 81 + 729))
 
-    def _check(self, combo: tuple[Kind, ...]) -> None:
+    def _check(self, combo: tuple[Kind, ...], one_second: bool) -> None:
         tmp = Path(tempfile.mkdtemp())
         try:
             area = tmp / "area"
             (area / "runs").mkdir(parents=True)
             placed = [
-                (_write(area, f"2026-10-0{i + 1}T10-00-00_aaaa", k), k)
-                for i, k in enumerate(combo)
+                (_write(area, _name(i, one_second), k), k) for i, k in enumerate(combo)
             ]
             want = oracle(placed)
             got = runs.bound_answering_run(area, PID)
@@ -147,6 +174,8 @@ class EveryArrangement(unittest.TestCase):
             self.assertEqual(got.reports_intent_keys, want.reports_intent_keys)
             if want.blocked_by is None:
                 self.assertIsNone(got.blocker)
+            elif want.blocked_by == "same-second":
+                self.assertIn("started in the same second", got.blocker or "")
             elif want.blocked_by == "none-bound":
                 self.assertIn(f"no completed run bound to {PID}", got.blocker or "")
             else:

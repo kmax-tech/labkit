@@ -130,6 +130,34 @@ class AnsweringRun(unittest.TestCase):
         self.assertFalse(choice.reports_intent_keys)
         self.assertEqual(choice.skipped_newer, 0)
 
+    def test_two_answers_started_in_one_second_block_the_choice(self) -> None:
+        """Mutant: the run id carries the start second and a random suffix, so
+        two runs started in one second sort by chance — `_0000` may have
+        started after `_ffff`. Neither may answer by being "newest"."""
+        _run(self.area, "2026-10-01T10-00-00_ffff")
+        _run(self.area, "2026-10-01T10-00-00_0000")
+        choice = runs.bound_answering_run(self.area, PID)
+        self.assertIsNone(choice.run_dir)
+        self.assertIn("started in the same second", choice.blocker or "")
+
+    def test_a_probe_in_the_same_second_does_not_block(self) -> None:
+        """Twin: only one of the two reports an intent key — it answers
+        whichever started first."""
+        chosen = _run(self.area, "2026-10-01T10-00-00_0000")
+        _run(self.area, "2026-10-01T10-00-00_ffff", metrics={"n_rows": 3})
+        choice = runs.bound_answering_run(self.area, PID)
+        self.assertEqual(choice.run_dir, chosen)
+        self.assertIsNone(choice.blocker)
+
+    def test_an_unreadable_run_in_the_same_second_blocks(self) -> None:
+        """Mutant: the unreadable run sorts before the bound one by suffix,
+        but may have started after it."""
+        _run(self.area, "2026-10-01T10-00-00_0000", config_text="{not json")
+        _run(self.area, "2026-10-01T10-00-00_ffff")
+        choice = runs.bound_answering_run(self.area, PID)
+        self.assertIsNone(choice.run_dir)
+        self.assertIn("cannot say which protocol", choice.blocker or "")
+
     def test_no_runs_directory(self) -> None:
         choice = runs.bound_answering_run(self.area / "nowhere", PID)
         self.assertIsNone(choice.run_dir)
