@@ -87,6 +87,18 @@ dieselben Kopiearten entfernt, und sie kamen zurück.
 | C · 0.96.0 | Eine Heimat je Frage: `labkit/gate.py` (`Findings`, eine Schreibweise, ein Exit-Vertrag) · Fences und Labels nur aus `protocol_block`/`protocol_check` · `repo.repo_protocols` mit Skip-Regel, `repo.PROTOCOL_NAME`, `repo.lab_root`, `repo.AREA_NAME` · Digest und git ohne Kopie, `runs.RECORD_SHA_CHARS` · Alphabet nur aus `promises` · `AnsweringRun.explain()` · `tests/test_one_home.py` greift `hashlib.sha256(`, `subprocess.run(["git"`, `rglob("PROTOCOL-`, `[ca]\d+`, Fence-Regexe außerhalb ihrer Heimat | **gebaut 2026-10-15**, sieben Commits auf `claude/gracious-dirac-s2botv`; `tests/test_one_home.py` hält zehn Kopieformen; Release `just release 0.96.0` beim Autor, nach 0.95.0 |
 | D | Doku und Hygiene: README-Zählungen, `docs/architecture.md` zur Atomarität, `docs/standard-*.tsv` einordnen, Befunde auf stdout und Bedienfehler auf stderr, CLAUDE.md „fresh clone with tags" | **gebaut 2026-10-15**, zwei Commits; `docs/standard-*.tsv` bleiben als Beleg des Schnitts (so schon unter Punkt 5 notiert), kein Release nötig |
 
+**Laufauswahl systematisch geprüft (2026-10-15, nach 0.96.1).**
+`tests/test_answering_run_exhaustive.py` hält `runs.bound_answering_run`
+gegen ein Orakel aus den Docstrings: alle Bereiche bis drei Läufe aus neun
+Arten, je an verschiedenen Tagen und in einer Sekunde (1640 Bereiche); drei
+eingebaute Mutanten werden rot. Befund dabei, behoben (`68e0706`): zwei
+Läufe derselben Sekunde ordnete das Zufallssuffix der Lauf-ID — jetzt ein
+Blocker. **Offen, nur notiert:** (1) dieselbe Prüfung für die anderen
+Wähler — `runs.draws`/`repeats_of` (nach `draw`), die Elternwahl eines
+`derived_from`-Laufs, `completed_runs` in `runlog` und `usability`;
+(2) ein Test, dass finalize, intent-check, recheck, params und audit auf
+denselben Bereichen denselben Lauf nennen (heute nur per Import belegt).
+
 ## Klein, ohne eigenen Punkt
 
 - [x] **`usability stage --restamp`: die Probe stempelt das Werkzeug nach,
