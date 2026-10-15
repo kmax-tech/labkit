@@ -16,6 +16,9 @@ Phase D of the audit of 2026-10-15: docs and hygiene.
   such area, no protocol to choose, no such file); 44 such lines went to
   stdout and 25 to stderr before, so a caller reading stdout for a gate's
   findings read "no such area" as one.
+- Docs: the README counts preflight's eight stations and finalize's seven
+  steps as listed (it said seven and eight); the tag test skips on a
+  shallow clone without tags instead of failing, and CLAUDE.md says so.
 
 ## 0.96.0 — 2026-10-15
 

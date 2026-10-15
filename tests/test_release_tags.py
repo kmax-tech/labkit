@@ -54,6 +54,11 @@ class TestReleaseTags(unittest.TestCase):
         if not (REPO / ".git").exists():
             raise unittest.SkipTest("not a git checkout")
         cls.tags = [t for t in _git("tag", "-l").split() if RELEASE_TAG.match(t)]
+        if not cls.tags and _git("rev-parse", "--is-shallow-repository") == "true":
+            # a cloud session's clone: depth-limited and without tags — there
+            # is nothing to hold, and "no tags" is the clone's shape, not a
+            # release gone wrong (audit 2026-10-15); `git fetch --tags` brings them
+            raise unittest.SkipTest("a shallow clone without tags")
 
     def test_there_are_release_tags_to_check(self):
         """Guard against the check quietly passing on an empty list."""

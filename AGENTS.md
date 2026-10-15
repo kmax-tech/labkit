@@ -53,7 +53,8 @@ this order the tag test (`tests/test_release_tags.py`) is never red; the
 push stays with the author.
 
 The suite is self-contained: it passes in a fresh clone with an empty home
-directory. One test skips everywhere for want of
+directory (a shallow clone without tags skips the tag test; `git fetch
+--tags origin` brings them). One test skips everywhere for want of
 a `requirements.lock` (`tests/test_runlog_env.py`). `usability stage` stamps
 its probe from the package's own templates (since 0.78.0) and pins labkit at
 the release tag of the installed version on GitHub — until that tag is
