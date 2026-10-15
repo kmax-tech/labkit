@@ -1,0 +1,164 @@
+"""`runs.bound_answering_run` over every area of up to three runs drawn from
+nine kinds, held to an oracle that restates the rule from its docstrings.
+
+The worst faults the audit of 2026-10-15 found were in this choice (the
+wrong run's number written into the protocol), and the case tests in
+tests/test_answering_run.py each cover one arrangement. Here every
+arrangement up to three runs is checked (820 areas): the oracle is written
+from the rule, not from the code, so a disagreement is a finding on one
+side or the other.
+
+    .venv/bin/python -m pytest tests/test_answering_run_exhaustive.py
+"""
+
+from __future__ import annotations
+
+import itertools
+import json
+import shutil
+import tempfile
+import unittest
+from dataclasses import dataclass
+from pathlib import Path
+
+from labkit import runs
+
+PID = "p-0001"
+PARENT = "2026-09-01T00-00-00_0000"
+
+
+@dataclass(frozen=True)
+class Kind:
+    """One kind of run directory and what the rule says about it."""
+
+    name: str
+    pid: str | None = PID
+    metrics: dict | None = None  # None: no metrics.json
+    completion: bool = True
+    repeat: bool = False
+    unreadable: bool = False
+    #: the reason bound_runs gives for leaving it out; None if it is taken
+    why: str | None = None
+    keys: bool = True
+
+
+KEYS = {"c1_pass": True}
+KINDS = (
+    Kind("answer", metrics=KEYS),
+    Kind("probe", metrics={"n_rows": 3}, keys=False),
+    Kind("unfinalized", metrics=KEYS, completion=False, why="unfinalized"),
+    Kind("corrupt", why="corrupt"),
+    Kind("crashed", completion=False, why="crashed"),
+    Kind("other", pid="p-0002", metrics=KEYS, why="bound to p-0002"),
+    Kind("unbound", pid=None, metrics=KEYS, why="unbound (no protocol id at run time)"),
+    Kind(
+        "repeat",
+        metrics=KEYS,
+        repeat=True,
+        why=f"a repeat of {PARENT} — supporting evidence, never the answer",
+    ),
+    Kind("unreadable", unreadable=True, why="<unreadable>"),
+)
+
+
+def _write(area: Path, name: str, kind: Kind) -> Path:
+    d = area / "runs" / name
+    d.mkdir(parents=True)
+    if kind.unreadable:
+        (d / "config.json").write_text("{not json", encoding="utf-8")
+        return d
+    cfg: dict = {
+        "schema_version": 2,
+        "script": "01_measure.py",
+        "pid": 1,
+        "protocol": {"id": kind.pid, "path": "x.md"},
+        "derived_from": None,
+        "models_resolved": {},
+        "config": {},
+    }
+    if kind.repeat:
+        cfg["repeat_of"] = PARENT
+        cfg["draw"] = 2
+    (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    if kind.metrics is not None:
+        (d / "metrics.json").write_text(json.dumps(kind.metrics), encoding="utf-8")
+    if kind.completion:
+        (d / "completion.json").write_text(
+            json.dumps({"schema_version": 2, "finished": "x", "git": "g"}),
+            encoding="utf-8",
+        )
+    return d
+
+
+@dataclass(frozen=True)
+class Expected:
+    run_dir: Path | None
+    skipped_newer: int
+    reports_intent_keys: bool
+    blocked_by: str | None  # "none-bound", "newer-unreadable" or None
+    exclusions: dict[str, str]
+
+
+def oracle(placed: list[tuple[Path, Kind]]) -> Expected:
+    """The rule, restated: of the completed runs bound to the protocol that
+    are not repeats, the newest reporting an intent key answers (newer
+    probes are skipped and counted); if none reports one, the newest bound
+    run is returned and says so. No bound run is a blocker; an unreadable
+    run newer than the choice is a blocker. Every other run is excluded
+    with its reason. `placed` is oldest first."""
+    exclusions = {d.name: k.why for d, k in placed if k.why is not None}
+    taken = [(d, k) for d, k in placed if k.why is None]
+    if not taken:
+        return Expected(None, 0, True, "none-bound", exclusions)
+    with_keys = [i for i, (_, k) in enumerate(taken) if k.keys]
+    if with_keys:
+        i = with_keys[-1]
+        chosen, skipped, has_keys = taken[i][0], len(taken) - 1 - i, True
+    else:
+        chosen, skipped, has_keys = taken[-1][0], 0, False
+    if any(k.unreadable and d.name > chosen.name for d, k in placed):
+        return Expected(None, skipped, has_keys, "newer-unreadable", exclusions)
+    return Expected(chosen, skipped, has_keys, None, exclusions)
+
+
+class EveryArrangement(unittest.TestCase):
+    def test_up_to_three_runs_of_nine_kinds(self) -> None:
+        checked = 0
+        for n in range(4):
+            for combo in itertools.product(KINDS, repeat=n):
+                with self.subTest(kinds=[k.name for k in combo]):
+                    self._check(combo)
+                checked += 1
+        self.assertEqual(checked, 1 + 9 + 81 + 729)
+
+    def _check(self, combo: tuple[Kind, ...]) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            area = tmp / "area"
+            (area / "runs").mkdir(parents=True)
+            placed = [
+                (_write(area, f"2026-10-0{i + 1}T10-00-00_aaaa", k), k)
+                for i, k in enumerate(combo)
+            ]
+            want = oracle(placed)
+            got = runs.bound_answering_run(area, PID)
+            self.assertEqual(got.run_dir, want.run_dir)
+            self.assertEqual(got.skipped_newer, want.skipped_newer)
+            self.assertEqual(got.reports_intent_keys, want.reports_intent_keys)
+            if want.blocked_by is None:
+                self.assertIsNone(got.blocker)
+            elif want.blocked_by == "none-bound":
+                self.assertIn(f"no completed run bound to {PID}", got.blocker or "")
+            else:
+                self.assertIn("cannot say which protocol", got.blocker or "")
+            got_ex = {x.run_dir.name: x.why for x in got.exclusions}
+            self.assertEqual(set(got_ex), set(want.exclusions))
+            for name, why in want.exclusions.items():
+                if why != "<unreadable>":
+                    self.assertEqual(got_ex[name], why, name)
+        finally:
+            shutil.rmtree(tmp)
+
+
+if __name__ == "__main__":
+    unittest.main()
