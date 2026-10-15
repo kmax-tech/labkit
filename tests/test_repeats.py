@@ -102,6 +102,40 @@ class Repeats(unittest.TestCase):
         self._run(repeat_of=first)
         self.assertIsNone(finalize.single_draw(self.area, primary))
 
+    def test_a_named_repeat_is_never_written_back_not_even_with_force(self):
+        """`protocol-fill --from-run <repeat>` wrote a repeat's number into
+        Answer, Result and Runs (review 2026-10-15). recheck.run_dir, the one
+        choice behind --from-run and --check, refuses it; the primary is
+        written."""
+        from labkit import protocol_fill
+
+        first = self._run()
+        second = self._run(repeat_of=first)
+        text = (self.area / "PROTOCOL-x.md").read_text(encoding="utf-8")
+        text += "\n## Result\n\n- **Answer to the question:** <the answer>\n\n## Runs\n\n- <run_id> — <one sentence>\n"
+        for force in (False, True):
+            with self.subTest(force=force), self.assertRaises(SystemExit) as cm:
+                protocol_fill.from_run(text, self.area, second, force=force)
+            self.assertIn("never the answer", str(cm.exception))
+        written, _, run_id = protocol_fill.from_run(text, self.area, first)
+        self.assertEqual(run_id, first)
+        self.assertIn(f"(run {first})", written)
+
+    def test_damaged_repeat_fields_are_unreadable_not_a_primary(self):
+        first = self._run()
+        cfg_path = self.area / "runs" / first / "config.json"
+        cfg = json.loads(cfg_path.read_text())
+        for damage, needle in (
+            ({"repeat_of": 17, "draw": 2}, "repeat_of = 17, not a run id"),
+            ({"repeat_of": None, "draw": 2}, "draw = 2 without repeat_of"),
+            ({"repeat_of": first, "draw": 1}, "not an integer >= 2"),
+        ):
+            with self.subTest(damage=damage):
+                cfg_path.write_text(json.dumps({**cfg, **damage}), encoding="utf-8")
+                with self.assertRaises(runs.RunConfigError) as cm:
+                    runs.read_run_config(cfg_path.parent)
+                self.assertIn(needle, str(cm.exception))
+
     def test_the_primary_keeps_answering_and_rechecking(self):
         first = self._run()
         self._run(repeat_of=first)

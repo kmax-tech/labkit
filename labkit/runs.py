@@ -331,6 +331,20 @@ def _shape_problem(cfg: object) -> str | None:
         for key in ("id", "path"):
             if binding.get(key) is not None and not isinstance(binding[key], str):
                 return f"protocol.{key} = {binding[key]!r}, not a string"
+    return _repeat_shape_problem(cfg)
+
+
+def _repeat_shape_problem(cfg: dict) -> str | None:
+    """`repeat_of` null or a run id; `draw` null without it, an integer >= 2
+    with it. A damaged value read as "no repeat" put a repeat back into the
+    answering choice — loud instead (review 2026-10-15)."""
+    parent, draw = cfg.get("repeat_of"), cfg.get("draw")
+    if parent is None:
+        return None if draw is None else f"draw = {draw!r} without repeat_of"
+    if not isinstance(parent, str) or RUN_ID.fullmatch(parent) is None:
+        return f"repeat_of = {parent!r}, not a run id"
+    if not isinstance(draw, int) or isinstance(draw, bool) or draw < 2:
+        return f"draw = {draw!r} for a repeat, not an integer >= 2"
     return None
 
 
@@ -501,7 +515,11 @@ def repeat_parent(config: dict) -> str | None:
     spread of the number is visible (TODO item 4, 2026-10-14). A repeat is
     supporting evidence: it never answers the protocol (`bound_runs`)."""
     v = config.get("repeat_of")
-    return v if isinstance(v, str) and v else None
+    if v is None:
+        return None
+    if not isinstance(v, str) or RUN_ID.fullmatch(v) is None:
+        raise RunConfigError(f"repeat_of = {v!r}, not a run id")
+    return v
 
 
 def repeats_of(area: Path, run_id: str) -> list[Path]:

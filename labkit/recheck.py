@@ -50,7 +50,8 @@ class Verdict:
 
 
 def run_dir(area: Path, run_id: str | None = None) -> Path:
-    """The run to recheck against: `run_id`, or the newest completed run."""
+    """The run to recheck against — and the run `--from-run` writes back:
+    `run_id`, or the newest completed run; never a repeat draw."""
     runs_dir = area / "runs"
     try:
         if run_id is not None:
@@ -58,6 +59,14 @@ def run_dir(area: Path, run_id: str | None = None) -> Path:
             state = runs.completion_state(d) if d.is_dir() else "missing"
             if state != runs.COMPLETED:
                 raise SystemExit(f"recheck: {d} is not a completed run ({state})")
+            parent = runs.repeat_parent(runs.read_run_config(d) or {})
+            if parent is not None:
+                # no --force past this: a repeat never answers, named or not
+                # (review 2026-10-15: --from-run <repeat> wrote its number)
+                raise SystemExit(
+                    f"recheck: {run_id} is a repeat of {parent} — supporting "
+                    f"evidence, never the answer; `02_analyze.py --draws` shows it"
+                )
             return d
         done = runs.completed_runs(area, with_repeats=False)
     except runs.RunConfigError as exc:
