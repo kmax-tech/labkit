@@ -546,6 +546,12 @@ sieht das niemand.
   beschreibender Lauf nicht als full run (dann sagt der Standard es nicht),
   oder das Gate setzt die Regel nicht durch. Genau diese Lücke ließ in beiden
   Fällen die Nullprobe ohne Sollwert durch.
+  Deutung nach Abgleich mit der Literatur: LAB-034 Null condition in the same
+  run und LAB-037 Every anchor carries its target and rationale verlangen den
+  Sollwert schon; die Bauer umgingen sie über den Namen („floor“,
+  „reference predictor“). Kandidat: die Regeln an die Sache binden, nicht ans
+  Wort. Dazu die Idee einer Literatur-Grundschicht unter der Narbentabelle
+  (19 Klassen, Entwurf): `~/work/projects/labkit-paper/narbentabelle-aus-der-literatur.md`.
 
 - **Repo-Audit 2026-10-13 (Klarheit, Drift, Doku) — Befund, nichts
   geändert.** Suite, ruff, pyright grün (1001 Tests). Drei Lesungen (große
