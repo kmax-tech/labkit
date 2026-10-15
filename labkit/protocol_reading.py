@@ -33,7 +33,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from labkit import promises
+from labkit import promises, runs
 from labkit.cold_reader import (
     NEWCOMER,
     answer_contract,
@@ -48,8 +48,9 @@ from labkit.cold_reader import (
 from labkit.protocol_check import fields
 
 #: what a reader of the Summary should not have to decode
-SUMMARY_CODES = re.compile(
-    r"\[[CAB]\d+\]|\b[cab]\d+_\w+|\b\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_[0-9a-f]+\b"
+SUMMARY_CODES = re.compile(  # an id in prose, an intent key, a run id — from their homes
+    rf"{promises.ID_IN_PROTOCOL.pattern}|\b{promises.INTENT_KEY.pattern.lstrip('^')}\w*|{runs.RUN_ID.pattern}",
+    re.I,
 )
 CHAIN = re.compile(r"·")
 TABLE_ROW = re.compile(r"^\s*\|.*\|\s*$")

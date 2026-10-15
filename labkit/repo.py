@@ -38,6 +38,12 @@ EDITABLE_PATH_REQUIREMENT = re.compile(rf"^-e\s+(?P<path>\S*/{_PKG})/?\s*$")
 VERSION_REQUIREMENT = re.compile(rf"^{_PKG}\s*==\s*(?P<version>\d+\.\d+\.\d+)\s*$")
 
 
+def pip_name(name: str) -> str:
+    """A package name as pip normalises it: lowercase, `_` to `-`. Spelled
+    seven times before (audit 2026-10-15)."""
+    return name.lower().replace("_", "-")
+
+
 def requirement_name(line: str) -> str | None:
     """The package a requirements line names, as pip normalises it
     (lowercase, `_` to `-`): a VCS or editable pin, `name==…`, `name @ <url>`.
@@ -47,10 +53,10 @@ def requirement_name(line: str) -> str | None:
         return None
     for pat in (VCS_REQUIREMENT, EDITABLE_REQUIREMENT, EDITABLE_PATH_REQUIREMENT):
         if (m := pat.match(s)) is not None:
-            return m.group("name").lower().replace("_", "-")
+            return pip_name(m.group("name"))
     for sep in ("==", " @ "):
         if sep in s:
-            return s.split(sep, 1)[0].strip().lower().replace("_", "-")
+            return pip_name(s.split(sep, 1)[0].strip())
     return None
 
 

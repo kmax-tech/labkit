@@ -194,16 +194,13 @@ def _parse_lock(lock: Path) -> dict[str, str | None]:
     out: dict[str, str | None] = {}
     for raw in lock.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
-        if not line or line.startswith("#"):
+        name = repo.requirement_name(line)  # the one grammar of a pin line
+        if name is None:
             continue
-        editable = _EDITABLE_PIN.match(line)
-        if editable:
-            out[editable.group("name").lower().replace("_", "-")] = None
-        elif "==" in line:
-            name, _, ver = line.partition("==")
-            out[name.strip().lower().replace("_", "-")] = ver.strip()
-        elif " @ " in line:
-            out[line.split(" @ ")[0].strip().lower().replace("_", "-")] = None
+        if _EDITABLE_PIN.match(line) or "==" not in line:
+            out[name] = None  # a VCS, editable or URL pin: no version to compare
+        else:
+            out[name] = line.partition("==")[2].strip()
     return out
 
 
@@ -227,7 +224,7 @@ def _parse_vcs_pins(lock: Path) -> dict[str, tuple[str, str]]:
     for raw in lock.read_text(encoding="utf-8").splitlines():
         m = _VCS_PIN.match(raw.strip()) or _EDITABLE_PIN.match(raw.strip())
         if m and m.group("ref"):
-            out[m.group("name").lower().replace("_", "-")] = (
+            out[repo.pip_name(m.group("name"))] = (
                 m.group("url"),
                 m.group("ref"),
             )
@@ -329,7 +326,7 @@ def _lock_drift(lock: Path) -> int:
     installed: dict[str, str] = {}
     vcs_commit: dict[str, str | None] = {}
     for dist in distributions():
-        name = (dist.metadata["Name"] or "").lower().replace("_", "-")
+        name = repo.pip_name(dist.metadata["Name"] or "")
         if name and name not in _FREEZE_OMITS:
             installed[name] = dist.version
             if name in vcs:

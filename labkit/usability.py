@@ -258,7 +258,7 @@ def other_requirements(text: str) -> list[str]:
         for ln in text.splitlines()
         if ln.strip()
         and not ln.lstrip().startswith("#")
-        and not re.match(r"^\s*labkit\b", ln)
+        and repo.requirement_name(ln) != "labkit"
     ]
 
 
@@ -647,13 +647,11 @@ def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
     )
     probe_file.write_text(json.dumps(asdict(probe), indent=1), encoding="utf-8")
     # pip freeze names the commit the tag resolved to; the stamped pin names the tag
-    pin = next(
-        ln
-        for ln in (root / "requirements.txt").read_text(encoding="utf-8").splitlines()
-        if ln.startswith("labkit")
-    )
-    m = re.search(r"@(v\d+\.\d+\.\d+)$", pin)
-    label = m.group(1) if m else pin
+    pin = repo.requirement_lines(
+        (root / "requirements.txt").read_text(encoding="utf-8"), "labkit"
+    )[0]
+    m = repo.VCS_REQUIREMENT.match(pin)
+    label = m.group("ref") if m and m.group("ref") else pin
     report = "\n".join(
         f"  {what:12s}{path}"
         for what, paths in (

@@ -82,7 +82,11 @@ evidence** (warns), **agent audit** (semantic).
 | Which rules exist, what do they say, and does a reference name one? | `rules.load_registry`, `rules.rule_heads`, `rules.check_registry`, `rules.check_ledger`, `rules.check_refs`, `rules.rule_text` (`labkit/docs/standard.md`, `labkit/docs/rules.tsv`) |
 
 A second answer to any of these questions is drift: move the caller to the
-home, never copy the logic.
+home, never copy the logic. `tests/test_one_home.py` greps `labkit/*.py` for
+the shapes a copy takes (a hand-spelled sha256, a `git` run outside `repo`,
+a `PROTOCOL-*.md` scan, the id letters, a fence regex, …) and fails on a
+match outside the home — three audits removed the same copies by hand and
+they came back each time (2026-10-15).
 
 ## Where what lives
 

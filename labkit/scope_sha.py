@@ -197,6 +197,14 @@ def _key(f: Path, root: Path) -> str:
         return f.as_posix()
 
 
+def digest(data: bytes, chars: int | None = DIGEST_CHARS) -> str:
+    """sha256 of DATA, cut to CHARS (None: full) — the one digest of bytes
+    that are not a file: a promise block's canonical JSON, a lease
+    endpoint's canonical URL (audit 2026-10-15: each spelled hashlib itself)."""
+    h = hashlib.sha256(data).hexdigest()
+    return h if chars is None else h[:chars]
+
+
 def file_digest(path: Path) -> str:
     """sha256 of a file's bytes, full hex, read in chunks. The one file
     digest: the stamp, the run record, the hooks and recheck used to spell

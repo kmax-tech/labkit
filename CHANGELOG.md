@@ -51,6 +51,15 @@ keeps the copies from coming back.
   `startswith`, and a protocol-id line graded `WARNING` counted as a
   blocker. preflight's station lines carry the grade now
   (`BLOCKER: MISSING (must): …`); notes-check ends with the same summary.
+- **`tests/test_one_home.py` keeps the copies from coming back.** It greps
+  `labkit/*.py` for the shapes a copy takes — a hand-spelled sha256, a `git`
+  run outside `repo`, a `PROTOCOL-*.md` scan, pip's name normalisation, a
+  fence regex, the id letters, the area name, a temp-and-rename write, the
+  run-id shape, a pin line spelled by hand — and fails on a match outside
+  the home; a line that must stay says why with `# home:`. On the way:
+  `scope_sha.digest` for bytes (promises, endpoint_lease), `repo.pip_name`,
+  `runlog._parse_lock` and the probe's pin line read through
+  `repo.requirement_name`.
 
 ## 0.95.0 — 2026-10-15
 

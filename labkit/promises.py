@@ -50,7 +50,6 @@ silent on a correct input, loud on a malformed one.
 from __future__ import annotations
 
 import ast
-import hashlib
 import json
 import re
 from dataclasses import dataclass
@@ -165,10 +164,6 @@ def reported_ids(metrics: dict) -> set[str]:
         if m:
             out.add(m.group(1))
     return out
-
-
-def _digest(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()[: scope_sha.DIGEST_CHARS]
 
 
 def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity baseline 2026-10-08
@@ -291,7 +286,9 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
         sort_keys=True,
         ensure_ascii=False,
     )
-    return PromiseTables(promises=tuple(out), sha=_digest(canonical.encode("utf-8")))
+    return PromiseTables(
+        promises=tuple(out), sha=scope_sha.digest(canonical.encode("utf-8"))
+    )
 
 
 def prose_mismatch(text: str, block: PromiseTables) -> tuple[list[str], list[str]]:
