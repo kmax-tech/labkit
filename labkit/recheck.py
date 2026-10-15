@@ -217,12 +217,22 @@ def plain_numbers(metrics: dict) -> list[str]:
     ]
 
 
+#: a run id, or a date or a time of day: digit runs a note carries that
+#: are never one of its numbers — masked before a number is looked for
+_NOT_A_NUMBER = re.compile(
+    rf"{runs.RUN_ID.pattern}|\b\d{{4}}-\d{{2}}-\d{{2}}(?:T\d{{2}}:\d{{2}}(?::\d{{2}})?)?\b"
+)
+
+
 def _present(number: str, text: str) -> bool:
-    """The number as a token, not as a digit run inside another number:
-    `3.5` is not in `13.57`, `2` is not in `2026-10-05` (2026-10-05)."""
+    """The number as a token, not as a digit run inside another number or a
+    stamp: `3.5` is not in `13.57`, `12` is not in `12.7`, and `10` is not
+    in the run id `…T10-22-33_ab12` or the date `2026-10-05` — the run id
+    is mandatory in every note, so a count equal to one of its parts
+    passed as cited (audit 2026-10-15)."""
     n = number.lstrip("+").replace(",", ".")
-    text = text.replace("−", "-").replace(",", ".")
-    return re.search(rf"(?<![\d.]){re.escape(n)}(?![\d])", text) is not None
+    text = _NOT_A_NUMBER.sub(" ", text.replace("−", "-").replace(",", "."))
+    return re.search(rf"(?<![\d.]){re.escape(n)}(?!\d|\.\d)", text) is not None
 
 
 ANSWER_OPEN = re.compile(

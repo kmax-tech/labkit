@@ -126,6 +126,13 @@ class Area(unittest.TestCase):
     def test_number_must_be_a_token(self):
         self.assertFalse(recheck._present("3.5", "13.57"))
         self.assertFalse(recheck._present("2", "run 2026-10-05"))
+        # the run id is in every note: its parts are never a cited number
+        self.assertFalse(recheck._present("10", "run 2026-10-05T10-22-33_ab12"))
+        self.assertFalse(recheck._present("22", "run 2026-10-05T10-22-33_ab12"))
+        self.assertFalse(recheck._present("2026", "frozen 2026-10-05T10:22"))
+        self.assertFalse(recheck._present("12", "mean 12.7"))
+        self.assertTrue(recheck._present("12", "n = 12."))
+        self.assertTrue(recheck._present("10", "10 of 2026-10-05T10-22-33_ab12"))
         self.assertTrue(recheck._present("3.5", "mean 3,5 docs"))
         self.assertTrue(recheck._present("-0.2", "delta −0.2"))
         self.assertTrue(recheck._present("+0.2", "delta 0.2"))

@@ -34,6 +34,14 @@ of the guaranteed tier.
   outputs and metrics went through `write_text`; only completion.json was
   atomic, while `docs/architecture.md` claimed the whole record was
   (CODE-013).
+- **A number inside the run id counted as cited.** `recheck.cited` found
+  `10` in `…T10-22-33_ab12` and `12` in `12.7`; the run id is mandatory in
+  every note, so a count equal to a date or time part passed. Run ids,
+  dates and times are masked before a number is looked for, and a number
+  followed by `.<digit>` is another number.
+- **report-check passed a must field still holding its placeholder.**
+  Station 1 read protocol-check's missing fields only; the `<…>` holes
+  count now, as in protocol-check and preflight.
 
 ### Breaking
 
