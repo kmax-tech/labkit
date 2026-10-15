@@ -41,6 +41,7 @@ doctrine: extend, never move; regression = both lab repos exit 0 after the
 import re
 
 from labkit import console
+from labkit.repo import git_root
 from pathlib import Path
 
 # The contract: kind tokens as they appear in meta lines. German on purpose —
@@ -90,14 +91,6 @@ def meta_paragraph(text: str) -> tuple[int, str] | None:
                 i += 1
             return start + 1, " ".join(para)
         return None
-    return None
-
-
-def repo_root(path: Path) -> Path | None:
-    """The nearest directory above `path` that holds a `.git`, or None."""
-    for parent in [path, *path.parents]:
-        if (parent / ".git").exists():
-            return parent
     return None
 
 
@@ -158,7 +151,7 @@ def check_file(f: Path) -> tuple[list[str], list[str]]:
                 f"experiments/ path"
             )
         else:
-            rotten = unresolved_scripts(text, repo_root(f.resolve()))
+            rotten = unresolved_scripts(text, git_root(f.resolve()))
             if rotten and len(rotten) == len(
                 set(m.group(0).lstrip("./") for m in PY_FILE.finditer(text))
             ):

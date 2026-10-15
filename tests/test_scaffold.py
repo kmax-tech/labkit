@@ -323,7 +323,7 @@ class Exp(unittest.TestCase):
         self.assertIn("Deviations after freeze", proto)  # the report fields arrived
         outside = Path(self.tmp.name) / "elsewhere"
         outside.mkdir()
-        self.assertEqual(scaffold.lab_root(outside), outside.resolve())
+        self.assertIsNone(scaffold.lab_root(outside))  # repo.lab_root: none above
 
     def test_a_freshly_stamped_head_cannot_be_frozen_as_stamped(self) -> None:
         """The stamp's promise sentences are `<…>`; setting frozen = true

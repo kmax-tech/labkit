@@ -86,7 +86,7 @@ from labkit import (
     protocol_check,
     runs,
 )
-from labkit.repo import area_protocols, git_run
+from labkit.repo import PROTOCOL_NAME, area_protocols, git_run
 from labkit.scope_sha import file_digest
 
 # The template's throwaway stages: none of them opens a run, and the probe
@@ -105,7 +105,6 @@ STRIP = "\"'`();"  # around a token: quotes, parentheses, a trailing ;
 OPENS_RUN = re.compile(r"runlog\.(run|Run)\(")
 PROTOCOL_IN_SCRIPT = re.compile(r"PROTOCOL-[\w.-]+\.md")
 SKIP_TOKEN = "LABKIT_PREFLIGHT=skip"
-PROTOCOL_NAME = re.compile(r"^PROTOCOL-.*\.md$")
 
 
 def _read_event() -> dict:

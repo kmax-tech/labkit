@@ -57,8 +57,8 @@ evidence** (warns), **agent audit** (semantic).
 | Which code does a promise rest on, and did it change? | `promises.declared_scope_sha`, `promises.scope_drift` |
 | What does the protocol's head say (id, type, cost, frozen, audit)? | `protocol_block.head` |
 | Which prose fields does a protocol owe, and which are filled? | `protocol_check.FIELDS`, `protocol_check.check_fields` |
-| Which protocols does an area hold? | `repo.area_protocols` |
-| Where is the repo? | `repo.git_root` (git), `repo.layout_root` (git, else stamped tree) |
+| Which protocols does an area hold? Which does the repo? | `repo.area_protocols`; `repo.repo_protocols` (outside `repo.SKIP_DIRS`); `repo.PROTOCOL_GLOB`, `repo.PROTOCOL_NAME` are the name |
+| Where is the repo? Where is the lab? | `repo.git_root` (git), `repo.layout_root` (git, else stamped tree); `repo.lab_root` (the nearest `models.toml`) |
 | Run git | `repo.git` (output, loud on failure), `repo.git_run` (exit code is the answer) |
 | Which directories does an area's `runs/` hold, and what does each say? | `runs.run_dirs` (one walk, metadata read once; an unreadable run is data — the caller refuses, reports or skips) |
 | Is this run finished? Which runs are? | `runs.completion_state`, `runs.completed_runs` |

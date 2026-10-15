@@ -17,6 +17,13 @@ keeps the copies from coming back.
   `GitError`); `usability` ran its eight git calls the same way. The width
   of a run's recorded digest has a name, `runs.RECORD_SHA_CHARS` (16) beside
   `scope_sha.DIGEST_CHARS` (12), instead of literals in three modules.
+- **One repo-wide protocol scan.** `repo.repo_protocols` reads the repo
+  outside `repo.SKIP_DIRS` (`.git`, `.venv`, `runs/`, `data/`, …); four
+  scans did it themselves and three read a protocol copied under `runs/`
+  as a second one (a false "two protocols carry id" blocker). The name has
+  one spelling (`repo.PROTOCOL_GLOB`, `repo.PROTOCOL_NAME`), the lab root
+  one rule (`repo.lab_root`: the nearest `models.toml`, for `labkit-init`
+  and `llm`); `notes_check` no longer carries its own `git_root`.
 
 ## 0.95.0 — 2026-10-15
 

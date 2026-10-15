@@ -94,6 +94,38 @@ def no_such_area(area: Path) -> str:
     )
 
 
+#: the one name shape of a protocol file, as a glob and as a pattern
+PROTOCOL_GLOB = "PROTOCOL-*.md"
+PROTOCOL_NAME = re.compile(r"^PROTOCOL-[^/]+\.md$")
+#: directories a repo-wide scan never reads: nothing under them is a living
+#: file of the lab — a protocol copied into `runs/<id>/` or shipped in
+#: `.venv/` is a record or a package, not a second protocol (audit
+#: 2026-10-15: four scans, one of them skipped these, three did not)
+SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__", "runs", "data"})
+
+
+def repo_protocols(root: Path) -> list[Path]:
+    """Every protocol anywhere under ROOT, outside SKIP_DIRS, sorted — the
+    repo-wide form of `area_protocols`."""
+    return sorted(
+        p
+        for p in root.rglob(PROTOCOL_GLOB)
+        if not SKIP_DIRS & set(p.relative_to(root).parts)
+    )
+
+
+def lab_root(start: Path) -> Path | None:
+    """The nearest directory, START or above, holding `models.toml` — where
+    a lab repo's layout starts for the scaffolder and the model backend;
+    None when none does. One rule: `labkit-init exp` asked for
+    `experiments/` too and `llm` for `models.toml` alone (audit 2026-10-15)."""
+    here = start.resolve()
+    for d in (here, *here.parents):
+        if (d / "models.toml").is_file():
+            return d
+    return None
+
+
 def area_protocols(area: Path) -> list[Path]:
     """Every protocol in the area (`PROTOCOL-*.md` directly in it),
     lexicographic — a list, not a first hit.
@@ -105,7 +137,7 @@ def area_protocols(area: Path) -> list[Path]:
     the wrong protocol is worse than no check, so the caller must choose
     (2026-09-26).
     """
-    return sorted(area.glob("PROTOCOL-*.md"))
+    return sorted(area.glob(PROTOCOL_GLOB))
 
 
 def git_root(path: Path) -> Path | None:

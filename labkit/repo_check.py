@@ -42,12 +42,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit import console, install_hooks, protocol_block, rules
-from labkit.repo import VCS_REQUIREMENT, VERSION_REQUIREMENT, git_run, requirement_lines
+from labkit.repo import (
+    SKIP_DIRS,
+    VCS_REQUIREMENT,
+    VERSION_REQUIREMENT,
+    git_run,
+    repo_protocols,
+    requirement_lines,
+)
 
 PIN_FILES = ("requirements.txt", "requirements.lock")
 TAG_RE = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 PYPROJECT_VERSION_RE = re.compile(r'^version\s*=\s*"(\d+\.\d+\.\d+)"', re.M)
-SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__", "runs", "data"})
 REMOTE_TIMEOUT_S = 15.0
 
 OK, STALE, UNDECIDED = 0, 1, 2
@@ -190,9 +196,7 @@ def record_areas(repo: Path) -> list[Path]:
     standard, a prose head) was written under an older pin — both keep the
     identifiers they were written with (CHANGELOG 0.82.0)."""
     out = set()
-    for proto in sorted(repo.rglob("PROTOCOL-*.md")):
-        if SKIP_DIRS & set(proto.relative_to(repo).parts):
-            continue
+    for proto in repo_protocols(repo):
         try:
             frozen = protocol_block.head(proto.read_text(encoding="utf-8")).frozen
         except protocol_block.BlockError:
