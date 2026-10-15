@@ -207,7 +207,7 @@ and the per-field explanations live in `protocol-field-guide.md`.
 | **branch**          | a promise of kind B — the registered sentence per outcome (`b1_branch`)                            |
 | **binding**         | a run's record of the protocol id it ran under (`config.json`); the choice of a run is a filter on it |
 | **answering run**   | the newest completed run bound to the protocol that reports an intent key — the one every check holds the protocol to (`runs.bound_answering_run`); a second such run started in the same second blocks the choice |
-| **derived run**     | a run that re-evaluates another run's rows (`derived_from`); it makes no model call and records no model |
+| **derived run**     | a run that re-evaluates another run's rows (`derived_from`), never a repeat's; it makes no model call and records no model |
 | **scope hash**      | per promise: the hash over its declared scope (`declared_scope_sha`), recorded by the run, held by `finalize` |
 | **stamp**           | per area: the hash over every file that determines a number (`scope-sha`), written into an audit field, held by `runlog` at the start of a full run |
 

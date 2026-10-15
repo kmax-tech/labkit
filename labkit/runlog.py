@@ -30,7 +30,8 @@ Three ways a run depends on another run's rows — not one:
                    the earlier run need not be completed; carries no model
     derived_from   per run; the SCRIPT declares it (`runlog.run(...,
                    derived_from=ID)`), config.json holds it; the parent must
-                   be completed; the run makes no model call and records no
+                   be completed and no repeat (else the best draw could
+                   answer through it); the run makes no model call and records no
                    model — `runs.model_provenance_run` walks this key alone
     repeat_of      per run; `runlog.run(..., repeat_of=ID)`: the same measurement
                    asked again — new model calls, its own model record, the
@@ -1009,6 +1010,36 @@ def _constants_refusal(block: "promises.PromiseTables", config: dict) -> str | N
     )
 
 
+def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
+    """DERIVED_FROM as config.json records it, or a refusal: the parent must
+    be a completed run of this area and no repeat."""
+    if derived_from is None:
+        return None
+    parent = base_dir / "runs" / derived_from
+    try:
+        state = completion_state(parent) if parent.is_dir() else "missing"
+        drawn_from = (
+            repeat_parent(read_run_config(parent) or {}) if state == COMPLETED else None
+        )
+    except RunConfigError as exc:
+        raise SystemExit(f"runlog: derived_from={derived_from!r}: {exc}") from exc
+    if state != COMPLETED:
+        raise SystemExit(
+            f"runlog: derived_from={derived_from!r} names no completed "
+            f"run under {base_dir / 'runs'} ({state}) — a derived run "
+            f"needs a finished parent"
+        )
+    # a derived run is no repeat and may answer: from a repeat, the
+    # best of several draws would answer through it (2026-10-15)
+    if drawn_from is not None:
+        raise SystemExit(
+            f"runlog: derived_from={derived_from!r} is a repeat of "
+            f"{drawn_from} — supporting evidence, never the answer; "
+            f"derive from {drawn_from}"
+        )
+    return derived_from
+
+
 class Run:
     """One measure run: its directory, its frozen config, the outputs it
     registers and the metrics it reports.
@@ -1044,22 +1075,7 @@ class Run:
         # about the measurement changed. It names its parent so the record
         # shows one measurement with two readings instead of two runs; the
         # parent must be a completed run of this area, or this is a refusal.
-        self._derived_from = None
-        if derived_from is not None:
-            parent = base_dir / "runs" / derived_from
-            try:
-                state = completion_state(parent) if parent.is_dir() else "missing"
-            except RunConfigError as exc:
-                raise SystemExit(
-                    f"runlog: derived_from={derived_from!r}: {exc}"
-                ) from exc
-            if state != COMPLETED:
-                raise SystemExit(
-                    f"runlog: derived_from={derived_from!r} names no completed "
-                    f"run under {base_dir / 'runs'} ({state}) — a derived run "
-                    f"needs a finished parent"
-                )
-            self._derived_from = derived_from
+        self._derived_from = _derived_parent(base_dir, derived_from)
         # Before any work: an unresolvable protocol is a refusal, and a
         # refusal must not leave an empty run dir behind (2026-09-26).
         bound = _protocol_binding(base_dir, protocol)

@@ -287,6 +287,38 @@ class Repeats(unittest.TestCase):
         (bad / "config.json").write_text("{not json", encoding="utf-8")
         self.assertIn("cannot be counted", finalize.single_draw(self.area, run) or "")
 
+    def test_a_derived_run_needs_a_completed_primary_parent(self):
+        """Every kind of parent a derived run can name. A derived run is no
+        repeat, so it may answer — derived from a repeat, it would let the
+        best of several draws answer through the back door (2026-10-15).
+        Twin: a completed primary parent, and a derived one, are taken."""
+        primary = self._run()
+        repeat = self._run(repeat_of=primary)
+        derived = self._run(derived_from=primary)
+        unfinalized = self.area / "runs" / "2026-10-15T00-00-01_0001"
+        unfinalized.mkdir()
+        (unfinalized / "config.json").write_text(
+            json.dumps(self._cfg(primary)), encoding="utf-8"
+        )
+        unreadable = self.area / "runs" / "2026-10-15T00-00-02_0002"
+        unreadable.mkdir()
+        (unreadable / "config.json").write_text("{not json", encoding="utf-8")
+        for parent, needle in (
+            (primary, None),
+            (derived, None),
+            (repeat, "is a repeat of"),
+            (unfinalized.name, "names no completed run"),
+            (unreadable.name, "derived_from="),
+            ("2026-01-01T00-00-00_0000", "names no completed run"),
+        ):
+            with self.subTest(parent=parent):
+                if needle is None:
+                    self._run(derived_from=parent)
+                    continue
+                with self.assertRaises(SystemExit) as cm:
+                    self._run(derived_from=parent)
+                self.assertIn(needle, str(cm.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -25,6 +25,10 @@ pins (`requirements.txt` / `requirements.lock`).
   completed repeats recording one draw number (`draws` listed both).
   `runlog` refuses the repeat with a sentence, finalize's single-draw
   warning says the draws cannot be counted.
+- **A derived run cannot be drawn from a repeat.** A derived run is no
+  repeat, so it may answer; `runlog` took a repeat as its parent, and the
+  best of several draws could answer through it. Now a refusal naming the
+  primary run to derive from.
 - `tests/test_answering_run_exhaustive.py` holds the choice to an oracle
   over every area of up to three runs from nine kinds, on different days
   and in one second (1640 areas); the code before this fix fails 90. On
