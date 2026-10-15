@@ -336,6 +336,28 @@ class Audit(unittest.TestCase):
             findings.audit_coverage(area, after, "preflight") or "",
         )
 
+    def test_a_finding_written_with_a_dash_or_colon_is_read(self):
+        """`BLOCKER — …` and `BLOCKER: …` parsed as no finding while the
+        verdict counted two; the record then read as covered (audit
+        2026-10-15)."""
+        report = (
+            "BLOCKER — a.py:1 — wrong denominator\n**BLOCKER:** b.py:2 · x\n"
+            "verdict: 2 blockers, 0 warnings"
+        )
+        self.assertEqual(len(audit.parse(report)["findings"]), 2)
+        area = repo_with()
+        rc, _, err, _ = run(area, report)
+        self.assertEqual(rc, 1)
+        record = next((area / "audits").glob("*-preflight.toml")).read_text()
+        self.assertEqual(record.count("[[finding]]"), 2)
+
+    def test_a_verdict_without_readable_findings_records_nothing(self):
+        area = repo_with()
+        rc, _, err, _ = run(area, "BLOCKER a.py:1 x\nverdict: 1 blockers, 0 warnings")
+        self.assertEqual(rc, 2)
+        self.assertIn("counts 1 blocker(s)", err)
+        self.assertEqual(list(area.glob("audits/*")), [])
+
     def test_the_stamp_facts_are_printed(self):
         _, _, err, _ = run(repo_with(), WARN)
         self.assertRegex(

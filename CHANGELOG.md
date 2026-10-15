@@ -16,6 +16,12 @@ Phase B of the audit of 2026-10-15: the audit chain and the hooks.
   gave a record whose sha no auditor had read, and the freeze gate took it
   as covered. The stamp is taken once, recorded as taken, and a change
   during the call is said (`stamp NOTE`).
+- **An audit whose finding lines the parser could not read was recorded as
+  covered.** `BLOCKER — …` and `BLOCKER: …` parsed as no finding while the
+  verdict counted two; the record then had nothing open and passed the
+  freeze gate. The parser reads a dash or colon after the grade too, and
+  `findings.write` refuses a verdict that counts more blockers or warnings
+  than lines it can record — exit 2, nothing written.
 
 ## 0.94.0 — 2026-10-15
 

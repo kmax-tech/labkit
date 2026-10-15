@@ -80,7 +80,10 @@ STANDARD_LABEL = (
 ROWS_HEAD, ROWS_TAIL = 50, 20  # what the instructions tell the auditor to read
 ROW_WIDTH = 2000  # a longer row (a trace) is cut, marked, never dropped
 
-FINDING = re.compile(r"^[\s>*`-]*\**(BLOCKER|WARNING|NOTE)\**\s*·", re.M)
+#: a finding line: the grade, then the ` · ` the instructions ask for — or
+#: a dash or colon, which auditors write too (audit 2026-10-15: two blockers
+#: written as `BLOCKER — …` parsed as none, and the record read as covered)
+FINDING = re.compile(r"^[\s>*`-]*\**(BLOCKER|WARNING|NOTE)\**\s*(?:·|—|–|:)", re.M)
 VERDICT = re.compile(
     r"verdict:\s*(\d+)\s*blockers?(?:\(s\))?,\s*(\d+)\s*warnings?(?:\(s\))?"
     r"(?:,\s*(\d+)\s*notes?(?:\(s\))?)?",
@@ -546,14 +549,18 @@ def main(argv: list[str]) -> int:
     if args.out:
         args.out.write_text(report, encoding="utf-8")
     b, w, _ = result["verdict"]
-    recorded = findings.write(
-        args.area,
-        args.mode,
-        args.model,
-        stamp.sha,
-        result["verdict"],
-        result["findings"],
-    )
+    try:
+        recorded = findings.write(
+            args.area,
+            args.mode,
+            args.model,
+            stamp.sha,
+            result["verdict"],
+            result["findings"],
+        )
+    except ValueError as exc:  # the verdict counts findings the lines do not carry
+        print(f"labkit-audit: {exc}", file=sys.stderr)
+        return 2
     print(f"\nstamp: {stamp_facts(stamp, result['verdict'])}", file=sys.stderr)
     now = area_stamp(args.area)[0]
     if now != stamp.sha:
