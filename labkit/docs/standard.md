@@ -325,6 +325,7 @@ evidence file under the same ID (top of this document).*
   | Criterion ≠ code               | Threshold, direction or cell comparison in the script deviates from the registered criterion                                                                                                                              | preflight | LAB-003 No run without an intent paragraph, LAB-009 Verdict only at the registered tier                                                      |
   | Prompt↔gate defined twice      | the same rule typed in the prompt text and in the validator instead of rendered from one constant (or held by a test)                                                                                                     | preflight | LAB-038 What the prompt demands                                                                                                             |
   | Null condition only on paper   | registered, not generated in the code or not in the same run                                                                                                                                                              | preflight | LAB-034 Null condition in the same run                                                                                                      |
+  | Trivial solution passes        | doing nothing, guessing, listing every answer or a constant passes the evaluation — the null probe is measured but held to no expected value, so the criterion never had a floor (pilots 06 and 07, 2026-10-15); the probe or anchor is bound to the thing (any code-fixed or trivial comparator carries an expected value), not to the word in the protocol | beide     | LAB-034 Null condition in the same run, LAB-037 Every anchor carries its target and rationale |
   | Branch not implemented         | registered fork without a branch in the code                                                                                                                                                                              | preflight | LAB-013 Registered branch                                                                                                                   |
   | Sign/direction                 | the metric assumes concordance where the question form is anticorrelated                                                                                                                                                  | analysis  | —                                                                                                                                          |
   | In-sample fit quality          | Fit and evaluation on the same points (r² without leave-one-out)                                                                                                                                                          | analysis  | —                                                                                                                                          |
@@ -1169,3 +1170,73 @@ labkit's own and defined here: area, promise, scar table, free knobs.*
   as a user decision); the plan lists it under "Deliberately not part of the
   plan" instead of quietly solving it along the way. Only what would create a second truth
   without the step stays in, explicitly marked.
+
+## 8. Error classes from the literature — the base layer under the scar table
+
+*Draft, 2026-10-15. Not read by the audit: `labkit-audit` inlines a rule's
+text from its head to the next heading, and this section is outside every
+rule. It becomes the auditor's second table once the benchmark cases of
+`labkit-paper` have been drawn again with it and the false-alarm count has
+stayed where it is; until then it is a reading list for the author of a
+protocol. Order: `TODO.md`, "Grundschicht aus der Literatur".*
+
+The scar table of LAB-015 Preflight audit before freezing holds what went
+wrong in this house, dated. What is documented elsewhere and has not
+happened here yet, it catches by chance. This table is the layer beneath:
+one row per error class with its source and the check that holds it. A
+scar that sharpens a row here cites it; the row stays the reason, the scar
+the evidence that it happened here. Column *Audit* as in the scar table;
+*Rule* "new" means no rule of this standard asks for it yet — half of
+those are registration fields for the protocol (a development set apart
+from the evaluation set, the unit of independence, the data's date against
+the model's cut-off, the baseline's justification, metric and averaging),
+which a code audit can hold the code to only once the protocol has stated
+them.
+
+| Group | Class | What goes wrong | Audit | Rule | Source |
+|---|---|---|---|---|---|
+| Intent | No hypothesis or direction | the question is open or the direction of the effect is unstated | preflight | LAB-003 No run without an intent paragraph | Wicherts T1, T2 |
+| Intent | Exploratory reported as confirmatory | the verdict rests on an analysis chosen after the data (HARKing) | analysis | LAB-009 Verdict only at the registered tier | Wicherts R6; Makin 7 |
+| Intent | Primary measure chosen afterwards | one of several measures, scorings or outcomes picked post hoc | beide | LAB-004 Identifiers make the intent addressable; new: list the alternatives | Wicherts D3, D4, A5–A7 |
+| Intent | Analysis choices ad hoc | outliers, missing values, exclusions or preprocessing decided after seeing the data | beide | LAB-023 No silent loss, LAB-032 Free knobs: vary them and report the curve | Wicherts A1–A4, A12; Makin 7; REFORMS 4a |
+| Intent | Stopping on the desired result | data collection or draws end at a favourable interim number | analysis | LAB-048 An intermediate number is not a result | Wicherts C4, D7 |
+| Intent | Sample too small | only large effects are resolvable, the effect is overestimated | preflight | LAB-016 Resolution check before freezing | Makin 5; Wicherts D6 |
+| Controls | No control condition | an effect without the same run minus the intervention | preflight | LAB-034 Null condition in the same run | Makin 1 |
+| Controls | Trivial solution passes | doing nothing, guessing, listing all answers or a constant passes the evaluation; the probe is measured but held to no expected value | beide | LAB-034 Null condition in the same run, LAB-037 Every anchor carries its target and rationale; a scar since 2026-10-15 | ABC O.b.2, O.b.3, O.h.2, O.g.3; Lones p. 11; house: pilots 06, 07 |
+| Controls | Baseline unjustified | compared against a weak or wrong baseline | preflight | new | REFORMS 5f; Lones p. 11 |
+| Leakage | No separate test set | fit and evaluation on the same points | analysis | scar row "In-sample fit quality" (r² only) | Kapoor L1.1; Lones p. 7 |
+| Leakage | Preprocessing or selection over all data | imputation, sampling, augmentation or feature selection sees the test set | preflight | new | Kapoor L1.2, L1.3; REFORMS 6a; Lones pp. 5, 8 |
+| Leakage | Tuning on the evaluation set | prompt, threshold, variant or feature chosen on the set that is reported (circular analysis, sequential overfitting) | beide | new | REFORMS 5d–5e; Biderman App. D 1; Makin 6; Lones pp. 2, 8 |
+| Leakage | Duplicates across splits | the same case on both sides | preflight | the split-leak check at the run (data only) | Kapoor L1.4; REFORMS 6b |
+| Leakage | Dependent cases | cases from one source, person or document counted as independent, in anchors or few-shot and in the test | preflight | new | Kapoor L3.2; REFORMS 6b; Makin 3 |
+| Leakage | Illegitimate feature | an input reveals the target; for LLMs: gold in the prompt | preflight | new | Kapoor L2; REFORMS 6c |
+| Leakage | Temporal leakage | test data older than the training or knowledge cut-off; for LLMs: pretraining contamination | preflight | new | Kapoor L3.1; Lones p. 10 |
+| Leakage | Test set not representative | the sample differs from the population of the claim | preflight | LAB-047 A partial run is not a random sample — no anchor catches that (order only) | Kapoor L3.3; REFORMS 3b, 3g |
+| Statistics | Metric or averaging | micro instead of macro, or a metric that does not fit the task | preflight | new | REFORMS 7a; Biderman 3.1; Lones p. 8; house: area 05 |
+| Statistics | Multiple comparisons | many tests, no correction, no exploratory label | analysis | new | Makin 8; Wicherts A15; Lones p. 12 |
+| Statistics | Difference without a direct test | "A is larger than B" from two separate tests | analysis | new | Makin 2; Lones p. 12 |
+| Statistics | Spread unknown | one draw, a difference without a noise floor | beide | scar row "Spread unknown"; LAB-036 Validate, don't trust a single run | Biderman 4.1, App. D 5; REFORMS 7b; Lones p. 8 |
+| Statistics | Non-significance over-read | no effect found read as no effect | analysis | LAB-016 Resolution check before freezing (resolution only) | Makin 9 |
+| Statistics | Over-generalising | the claim reaches beyond the data and the test population; correlation read as cause | analysis | new (intent paragraph and report) | REFORMS 1a, 8a–8b; Lones p. 13; Makin 10 |
+| Instrument | Evaluation not isolated from gold | the evaluated side can read or change what grades it | preflight | new (limit of a code audit) | ABC T.4, T.5 |
+| Instrument | Environment not frozen | external sites or data change after release | preflight | LAB-019 The stamp covers everything that determines the number (code and data only) | ABC T.6 |
+| Instrument | Parser with a silent format assumption | answers outside the expected form drop out | beide | scar row "Parser without fixture test" | ABC O.h.1 |
+| Instrument | Judge unvalidated | accuracy and consistency of an LLM judge never measured | preflight | LAB-052 Instance gate before registered use | ABC O.c.1 |
+| Instrument | Test cases insufficient | wrong solutions pass the tests | preflight | new | ABC O.d.1, O.e.1–3; Lones p. 12 |
+| Reporting | Provenance incomplete | prompt, format or hyperparameters that set the number are not recorded | beide | scar row "Provenance incomplete"; LAB-019 The stamp covers everything that determines the number | Biderman 3.1, App. D 1; Wicherts R1, R2 |
+| Reporting | Number copied from elsewhere | another implementation's result reported as one's own | analysis | LAB-041 Generate numbers, don't retype them (own numbers only) | Biderman App. D 2 |
+| Reporting | Failed runs unreported | only the fitting run is shown | analysis | LAB-042 Log the outcome — failures too | Wicherts R4 |
+
+Not taken up: Wicherts C1–C3 (randomisation, blinding) and A8–A11, A13–A14
+(choice of variables, model, estimator), to be translated for LLM
+experiments first; Lones' advice without an error class.
+
+Sources: Kapoor & Narayanan 2023, *Patterns* 4(9), 100804, "A taxonomy of
+data leakage" · Kapoor et al. 2024, REFORMS, *Science Advances* 10, eadk3452,
+Table 1 · Biderman et al. 2024, Lessons from the Trenches on Reproducible
+Evaluation of Language Models, arXiv 2405.14782v3, §3–4, App. D · Zhu et al.
+2025, Establishing Best Practices for Building Rigorous Agentic Benchmarks
+(ABC), arXiv 2507.02825v5, §4 · Wicherts et al. 2016, *Frontiers in
+Psychology* 7:1832, Table 1 · Makin & Orban de Xivry 2019, *eLife* 8:e48175
+(numbers: order of sections) · Lones 2024, Avoiding common machine learning
+pitfalls, *Patterns* 5:101046 (pages).

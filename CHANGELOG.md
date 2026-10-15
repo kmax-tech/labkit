@@ -15,6 +15,13 @@ pins (`requirements.txt` / `requirements.lock`).
   tie): the usability scorer had compared the seconds itself a second time
   in 0.97.0, and runlog's "last finished" line took the newest by name.
   `tests/test_one_home.py` keeps `start_second` inside `runs`.
+- **The standard: "Trivial solution passes" is a scar** (pilots 06 and 07:
+  the null probe was measured but held to no expected value), in the scar
+  table of LAB-015 and so in the audit. **Section 8, a base layer from the
+  literature** (31 error classes with source and check, from Kapoor,
+  REFORMS, Biderman, ABC, Wicherts, Makin and Lones) stands outside every
+  rule and is not read by the audit until the benchmark has been drawn
+  again with it.
 
 ## 0.97.0 — 2026-10-15
 

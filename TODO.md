@@ -451,6 +451,22 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
+- **Grundschicht aus der Literatur (2026-10-15).** Die Narbentabelle hält,
+  was im Haus passiert ist; Fehler, die anderswo belegt sind, fängt sie
+  zufällig. Abschnitt 8 des Standards trägt jetzt die Grundschicht (31
+  Klassen aus Kapoor, REFORMS, Biderman, ABC, Wicherts, Makin, Lones;
+  Entwurf aus der Note `narbentabelle-aus-der-literatur`), außerhalb jeder
+  Regel, also **nicht im Audit-Prompt** (`labkit-audit` schneidet LAB-015
+  von Kopf bis zur nächsten Überschrift). „Trivial solution passes" ist
+  mit Pilot 06/07 eine Narbe geworden und steht in der Narbentabelle.
+  **Auslöser** fürs Lesen durch den Auditor: die Benchmark-Fälle in
+  `labkit-paper` noch einmal mit beiden Tabellen gezogen, Treffer gleich
+  oder besser, Fehlalarme weiter null; eine Zeile, die Fehlalarme macht,
+  fliegt. Die „new"-Zeilen, die Registrierungsfelder sind (Entwicklungs-
+  gegen Auswertungsset, Einheit der Unabhängigkeit, Datum gegen
+  Wissensstand, Baseline, Metrik), gehören in den Feldkatalog von
+  Standard 0.20.
+
 - **Die Startzeit im Datensatz, nicht nur im Namen (2026-10-15).** Die
   Run-ID trägt die Sekunde plus vier Hex Zufall; zwei Läufe in einer
   Sekunde sortieren per Zufall, und seit 0.97.0 verweigert jeder Wähler
