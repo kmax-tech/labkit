@@ -257,3 +257,39 @@ class Explain(unittest.TestCase):
             choice.explain(True),
             (None, ["skipped 2 newer bound run(s) without intent keys"]),
         )
+
+
+class NewestCompleted(unittest.TestCase):
+    """`runs.newest_completed` is the one reading of "the newest run" for the
+    scorer and runlog's last-finished line; a tie in the start second is
+    refused there, by the same rule the answering choice uses
+    (`runs.same_second`) — the scorer compared seconds itself (0.97.0)."""
+
+    def _run(self, area: Path, name: str) -> Path:
+        d = area / "runs" / name
+        d.mkdir(parents=True)
+        (d / "config.json").write_text(json.dumps({"schema_version": 2}))
+        (d / "metrics.json").write_text("{}")
+        (d / "completion.json").write_text("{}")
+        return d
+
+    def test_the_newest_or_none(self):
+        area = Path(tempfile.mkdtemp())
+        self.assertIsNone(runs.newest_completed(area, with_repeats=True))
+        self._run(area, "2026-10-15T10-00-00_aaaa")
+        b = self._run(area, "2026-10-15T10-00-01_bbbb")
+        self.assertEqual(runs.newest_completed(area, with_repeats=True), b)
+
+    def test_two_newest_in_one_second_are_refused(self):
+        area = Path(tempfile.mkdtemp())
+        self._run(area, "2026-10-15T10-00-00_aaaa")
+        self._run(area, "2026-10-15T10-00-00_bbbb")
+        with self.assertRaises(runs.RunConfigError) as cm:
+            runs.newest_completed(area, with_repeats=True)
+        self.assertIn("started in the same second", str(cm.exception))
+        self.assertTrue(
+            runs.same_second(
+                Path("2026-10-15T10-00-00_aaaa"), Path("2026-10-15T10-00-00_bbbb")
+            )
+        )
+        self.assertFalse(runs.same_second(Path("x_aaaa"), Path("x_aaaa")))  # itself

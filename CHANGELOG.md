@@ -5,6 +5,17 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Changed
+
+- **One rule for a tie in the start second.** `runs.same_second` is the
+  one reading of "two runs the ids cannot order", and
+  `runs.newest_completed` the one reading of "the newest run" (refusing the
+  tie): the usability scorer had compared the seconds itself a second time
+  in 0.97.0, and runlog's "last finished" line took the newest by name.
+  `tests/test_one_home.py` keeps `start_second` inside `runs`.
+
 ## 0.97.0 — 2026-10-15
 
 ### Fixed

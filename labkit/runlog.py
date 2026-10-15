@@ -97,7 +97,7 @@ from labkit.runs import (
     RECORD_SHA_CHARS,
     RUN_ID_TIME,
     RunConfigError,
-    completed_runs,
+    newest_completed,
     completion_state,
     is_alive,
     read_completion,
@@ -1548,12 +1548,15 @@ def _print_finished(area: Path) -> None:
 def _finished_line(area: Path) -> str:
     """The newest COMPLETED run, by its own marker — a run whose metrics
     landed but whose finalization broke off is not a finished run."""
-    done = completed_runs(area, with_repeats=True)
-    if not done:
+    try:
+        last = newest_completed(area, with_repeats=True)
+    except RunConfigError as exc:
+        return f"last finished: cannot say — {exc}"
+    if last is None:
         return "no finished runs"
-    m = read_metrics(done[-1] / "metrics.json")
+    m = read_metrics(last / "metrics.json")
     keys = ", ".join(list(m)[:6])
-    return f"last finished: {done[-1].name} ({keys})"
+    return f"last finished: {last.name} ({keys})"
 
 
 def _wait(

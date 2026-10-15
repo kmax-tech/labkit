@@ -742,15 +742,9 @@ def latest_run(area: Path) -> Path | None:
     scorer reads what the cold agent produced, bound or not — an unbound
     run is a finding of the probe, not a run to leave out."""
     try:
-        done = runs.completed_runs(area, with_repeats=False)
-    except runs.RunConfigError as exc:
+        return runs.newest_completed(area, with_repeats=False)
+    except runs.RunConfigError as exc:  # unreadable, or two newest in one second
         raise SystemExit(f"usability: {exc}") from exc
-    if len(done) >= 2 and runs.start_second(done[-1]) == runs.start_second(done[-2]):
-        raise SystemExit(
-            f"usability: {done[-2].name} and {done[-1].name} started in the same "
-            f"second — the run ids cannot say which is newest (2026-10-15)"
-        )
-    return done[-1] if done else None
 
 
 @dataclass(frozen=True)

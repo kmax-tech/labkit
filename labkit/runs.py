@@ -690,13 +690,39 @@ def start_second(run_dir: Path) -> str:
     return run_dir.name.rsplit("_", 1)[0]
 
 
+def same_second(a: Path, b: Path) -> bool:
+    """Whether two DIFFERENT runs started in the same second — the one rule
+    for a tie the run ids cannot break: the answering choice, its
+    unreadable-run guard and `newest_completed` all ask here (until 0.97.1
+    the scorer compared the seconds itself, audit 2026-10-15)."""
+    return a != b and start_second(a) == start_second(b)
+
+
 def _not_older(run_dir: Path, chosen: Path) -> bool:
     """Whether RUN_DIR may have started after CHOSEN: newer by name, or
     started in the same second — the random suffix orders those by chance
     (2026-10-15)."""
-    return run_dir.name > chosen.name or (
-        run_dir != chosen and start_second(run_dir) == start_second(chosen)
-    )
+    return run_dir.name > chosen.name or same_second(run_dir, chosen)
+
+
+def newest_completed(area: Path, *, with_repeats: bool) -> Path | None:
+    """The newest completed run of the area (`completed_runs`), None without
+    one — refusing a tie: when the last two started in the same second the
+    run ids cannot say which is newest. The scorer's run and runlog's
+    "last finished" line read here; the answering choice adds the binding
+    and the intent keys (`bound_answering_run`).
+
+    Raises:
+        RunConfigError: An unreadable run, or two newest runs in one second.
+    """
+    done = completed_runs(area, with_repeats=with_repeats)
+    if len(done) >= 2 and same_second(done[-1], done[-2]):
+        raise RunConfigError(
+            f"{done[-2].name} and {done[-1].name} started in the same second — "
+            f"the run ids cannot say which is newest; move the one that does "
+            f"not count out of runs/"
+        )
+    return done[-1] if done else None
 
 
 def newer_unreadable(chosen: Path, rest: list[dict]) -> str | None:
@@ -725,8 +751,7 @@ def same_second_rival(chosen: Path, taken: list[dict], has_keys: bool) -> str | 
     rivals = [
         f["dir"].name
         for f in taken
-        if f["dir"] != chosen
-        and start_second(f["dir"]) == start_second(chosen)
+        if same_second(f["dir"], chosen)
         and (not has_keys or promises.reported_ids(read_metrics(f["metrics"])))
     ]
     if not rivals:

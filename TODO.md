@@ -451,6 +451,19 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
+- **Die Startzeit im Datensatz, nicht nur im Namen (2026-10-15).** Die
+  Run-ID trägt die Sekunde plus vier Hex Zufall; zwei Läufe in einer
+  Sekunde sortieren per Zufall, und seit 0.97.0 verweigert jeder Wähler
+  den Fall (`runs.same_second`, eine Heimat seit 0.97.1). Das ist die
+  Sperre, nicht die Ursache. Ursache beheben: `config.json` trägt
+  `started` mit Subsekunde (`time.time_ns()` oder ISO mit Mikrosekunden),
+  und die Wähler ordnen nach dem Datensatz, der Name bricht nur noch den
+  Gleichstand. Breaking (Schema 3, der Vergleich liest `started_ns`),
+  klein. **Auslöser:** die Sperre beißt in einem Labor-Repo, oder das
+  nächste Breaking-Release ohnehin. **Prüfstelle:** das Orakel in
+  `tests/test_answering_run_exhaustive.py` ohne den Fall „eine Sekunde"
+  als Verweigerung, dafür als geordnete Wahl.
+
 - **Kern und Doktrin (2026-10-15).** Die Schichtentabelle in
   `docs/architecture.md` trägt eine Spalte „Doctrine“, und
   `tests/test_architecture.py` (`CoreAndDoctrine`) hält: ein Kern-Modul
