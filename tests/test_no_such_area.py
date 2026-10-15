@@ -27,13 +27,14 @@ class NoSuchArea(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             os.chdir(d)
             try:
-                buf = io.StringIO()
-                with contextlib.redirect_stdout(buf):
+                out, err = io.StringIO(), io.StringIO()
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
                     rc = code_check.main(["experiments/01-x"])
             finally:
                 os.chdir(old)
         self.assertNotEqual(rc, 0)
-        self.assertIn("relative to", buf.getvalue())
+        self.assertIn("relative to", err.getvalue())  # a usage error: stderr
+        self.assertEqual(out.getvalue(), "")
 
 
 class BareName(unittest.TestCase):

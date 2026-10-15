@@ -1,4 +1,4 @@
-"""console — the one exit of every labkit command line.
+"""console — the one exit of every labkit command line, and its one refusal.
 
 `exit_with(main)` calls `main(sys.argv[1:])` and exits with its code. A reader
 that closes the pipe early (`protocol-check --contract P | head`) raises
@@ -14,6 +14,15 @@ from __future__ import annotations
 import os
 import sys
 from collections.abc import Callable
+
+
+def refuse(tool: str, why: str) -> None:
+    """A command that could not run — a bad argument, no such area, no
+    protocol to choose, no such file — says so on STDERR; what a gate FOUND
+    goes to stdout. The two were mixed (44 refusals on stdout, 25 on stderr,
+    audit 2026-10-15), so a caller reading stdout for findings read a usage
+    error as one."""
+    print(f"{tool}: {why}", file=sys.stderr)
 
 
 def exit_with(main: Callable[[list[str]], int]) -> None:

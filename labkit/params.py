@@ -320,10 +320,10 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         elif rest[0] == "--run" and len(rest) >= 2:
             run_arg, rest = rest[1], rest[2:]
         else:
-            print(f"labkit-params: unexpected argument {rest[0]!r}")
+            console.refuse("labkit-params", f"unexpected argument {rest[0]!r}")
             return 2
     if not area.is_dir():
-        print(f"labkit-params: {no_such_area(area)}")
+        console.refuse("labkit-params", no_such_area(area))
         return 2
     protocol = choose_protocol(area, protocol_arg, "labkit-params")
     if protocol is None:

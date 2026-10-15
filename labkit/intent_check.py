@@ -103,7 +103,7 @@ def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     if len(argv) >= 3 and argv[1] == "--metrics":
         metrics_arg = Path(argv[2])
     elif len(argv) > 1:
-        print(f"intent-check: unexpected argument {argv[1]!r}")
+        console.refuse("intent-check", f"unexpected argument {argv[1]!r}")
         return 2
 
     if not protocol.is_file():

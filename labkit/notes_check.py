@@ -184,7 +184,7 @@ def main(argv: list[str]) -> int:
         return 0 if argv else 2
     files = collect_notes(argv)
     if not files:
-        print("notes-check: no notes/messung/*.md found")
+        console.refuse("notes-check", "no notes/messung/*.md found")
         return 2
     findings = Findings()
     for f in files:

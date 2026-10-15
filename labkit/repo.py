@@ -20,6 +20,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from labkit import console
+
 GIT_TIMEOUT_S = 20
 
 # --- requirement lines: the one grammar of a pin (four spellings before, audit 2026-10-13)
@@ -235,10 +237,10 @@ def the_protocol(area: Path, protocol: Path | None) -> Path:
 
 
 def choose_protocol(area: Path, protocol: Path | None, tool: str) -> Path | None:
-    """`the_protocol` for a command line: prints why (prefixed with `tool`)
-    and returns None instead of raising."""
+    """`the_protocol` for a command line: says why on stderr
+    (`console.refuse`, prefixed with `tool`) and returns None instead of raising."""
     try:
         return the_protocol(area, protocol)
     except ProtocolChoiceError as exc:
-        print(f"{tool}: {exc}")
+        console.refuse(tool, str(exc))
         return None
