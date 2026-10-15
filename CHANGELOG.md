@@ -27,6 +27,12 @@ Phase B of the audit of 2026-10-15: the audit chain and the hooks.
   runlog refused at the run), so the pre-freeze gate passed exactly the
   state the freeze gate refuses. A stale sha is a blocker once frozen, a
   warning before.
+- **The pre-run hook follows a `cd` and judges throwaway flags per
+  command.** `cd AREA && python scripts/01_measure.py` resolved the script
+  against the event's cwd and found nothing; one `--probe` anywhere in a
+  line freed every command in it. The line is cut at `;`, `&&`, `||`, `|`
+  and line breaks (`claude_hooks.command_segments`); each segment is judged
+  on its own.
 
 ## 0.94.0 — 2026-10-15
 

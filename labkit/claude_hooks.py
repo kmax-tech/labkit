@@ -176,21 +176,57 @@ def executed_py(command: str) -> list[str]:
     return out
 
 
+#: what ends one command segment: a shell separator token or a line break
+SEPARATORS = {";", "&&", "||", "|"}
+
+
+def command_segments(command: str) -> list[list[str]]:
+    """The command as segments of whitespace tokens, cut at `;`, `&&`, `||`,
+    `|` and line breaks (a `;` glued to the last token is cut off). What a
+    `cd` or a throwaway flag means is decided per segment: until 0.95.0 the
+    whole line was one — `cd AREA && python scripts/01_measure.py` resolved
+    the script against the event's cwd and found nothing, and one `--probe`
+    anywhere in the line freed every command in it (audit 2026-10-15)."""
+    out: list[list[str]] = [[]]
+    for line in command.splitlines():
+        for raw in line.split():
+            if raw in SEPARATORS:
+                out.append([])
+                continue
+            tok = raw[:-1] if raw.endswith(";") and len(raw) > 1 else raw
+            out[-1].append(tok)
+            if tok is not raw:
+                out.append([])
+        out.append([])
+    return [seg for seg in out if seg]
+
+
 def run_scripts(command: str, cwd: Path) -> list[Path]:
-    """The .py files the command runs that open a run — resolved and existing."""
+    """The .py files the command runs that open a run — resolved against the
+    directory the command stands in at that point (a `cd` is followed) and
+    existing; a segment with a throwaway flag (`--show`, `--probe`,
+    `--eval-only`) opens no run."""
     out = []
-    for tok in executed_py(command):
-        p = Path(os.path.expanduser(tok))
-        if not p.is_absolute():
-            p = cwd / p
-        if not p.is_file():
+    here = cwd
+    for seg in command_segments(command):
+        if seg[0].strip(STRIP) == "cd":
+            target = seg[1].strip(STRIP) if len(seg) > 1 else "~"
+            here = here / os.path.expanduser(target)  # an absolute target replaces
             continue
-        try:
-            text = p.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+        if THROWAWAY_FLAGS.search(" ".join(seg)):
             continue
-        if OPENS_RUN.search(text):
-            out.append(p.resolve())
+        for tok in executed_py(" ".join(seg)):
+            p = Path(os.path.expanduser(tok))
+            if not p.is_absolute():
+                p = here / p
+            if not p.is_file():
+                continue
+            try:
+                text = p.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            if OPENS_RUN.search(text):
+                out.append(p.resolve())
     return out
 
 
@@ -210,7 +246,7 @@ def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
     if event.get("tool_name", "Bash") != "Bash":
         return 0
     command = (event.get("tool_input") or {}).get("command") or ""
-    if not command or THROWAWAY_FLAGS.search(command):
+    if not command:
         return 0
     cwd = Path(event.get("cwd") or os.getcwd())
     scripts = run_scripts(command, cwd)
