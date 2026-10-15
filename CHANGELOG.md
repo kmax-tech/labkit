@@ -5,6 +5,19 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.96.0 — 2026-10-15
+
+Phase C of the audit of 2026-10-15: one home per question, and a test that
+keeps the copies from coming back.
+
+### Changed
+
+- **Digests and git through their homes.** `runlog` hashed the script by
+  hand and ran `git rev-parse` outside `repo.git_run` (no timeout, no
+  `GitError`); `usability` ran its eight git calls the same way. The width
+  of a run's recorded digest has a name, `runs.RECORD_SHA_CHARS` (16) beside
+  `scope_sha.DIGEST_CHARS` (12), instead of literals in three modules.
+
 ## 0.95.0 — 2026-10-15
 
 Phase B of the audit of 2026-10-15: the audit chain and the hooks.

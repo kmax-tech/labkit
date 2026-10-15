@@ -197,8 +197,16 @@ TOL = 1e-9
 
 
 def _sh(args: list[str], cwd: Path) -> str:
-    """Run a command in `cwd`; a non-zero exit is a refusal with its output."""
-    r = subprocess.run(args, cwd=cwd, capture_output=True, text=True)
+    """Run a command in `cwd`; a non-zero exit is a refusal with its output.
+    git goes through `repo.git_run` (the one runner: timeout, GitError)."""
+    try:
+        r = (
+            repo.git_run(args[1:], cwd)
+            if args[0] == "git"
+            else subprocess.run(args, cwd=cwd, capture_output=True, text=True)
+        )
+    except repo.GitError as exc:
+        raise SystemExit(f"usability: {exc}") from exc
     if r.returncode != 0:
         raise SystemExit(
             f"usability: `{' '.join(args)}` failed in {cwd}:\n{r.stdout}{r.stderr}"

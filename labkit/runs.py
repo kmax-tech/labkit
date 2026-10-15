@@ -110,6 +110,10 @@ def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
 
 #: the one state every consumer that picks or accepts a run compares to
 COMPLETED = "completed"
+#: the width of every digest a run RECORDS (a data file, an output) — the
+#: area stamp and a promise's scope hash keep `scope_sha.DIGEST_CHARS`;
+#: `recheck.pin` compares by prefix, so the width is part of the format
+RECORD_SHA_CHARS = 16
 
 #: a run id is its start time plus four hex: `2026-10-13T14-00-57_071a`.
 #: runlog writes it with RUN_ID_TIME; RUN_ID finds one in prose (a cited
@@ -186,7 +190,9 @@ class OutputEntry:
     """One file a run registered as its output (`run.output`)."""
 
     path: Path
-    sha256: str | None  # the content's first 16 hex digits; None: absent at the end
+    sha256: (
+        str | None
+    )  # the content's first RECORD_SHA_CHARS hex digits; None: absent at the end
     lines: int | None  # lines of a text file; None: absent or not text
     note: str = ""
     rows_from: dict[str, int] = field(

@@ -69,7 +69,6 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass
 import fcntl
-import hashlib
 import importlib.metadata
 import json
 import os
@@ -84,10 +83,17 @@ from types import TracebackType
 from collections.abc import Iterator
 
 from labkit import batch, console, findings, promises, protocol_block, repo
-from labkit.scope_sha import AUDIT_SHA, audit_stamp_drift, file_digest, tree_digest
+from labkit.scope_sha import (
+    AUDIT_SHA,
+    DIGEST_CHARS,
+    audit_stamp_drift,
+    file_digest,
+    tree_digest,
+)
 from labkit.runs import (
     COMPLETED,
     FAILED_STATES,
+    RECORD_SHA_CHARS,
     RUN_ID_TIME,
     RunConfigError,
     completed_runs,
@@ -280,13 +286,11 @@ def _direct_url_commit(dist: importlib.metadata.Distribution) -> str | None:
 
 def _checkout_head(path: Path) -> str | None:
     """HEAD of the git checkout at `path`; None when it is none."""
-    proc = subprocess.run(
-        ["git", "-C", str(path), "rev-parse", "HEAD"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return proc.stdout.strip().lower() if proc.returncode == 0 else None
+    try:
+        r = repo.git_run(["rev-parse", "HEAD"], path)
+    except repo.GitError:
+        return None
+    return r.stdout.strip().lower() if r.returncode == 0 else None
 
 
 def _vcs_mismatch(url: str, ref: str, installed_commit: str | None) -> bool:
@@ -364,7 +368,7 @@ def _env_state(cwd: Path) -> str:
     for d in [cwd.resolve(), *cwd.resolve().parents]:
         lock = d / "requirements.lock"
         if lock.exists():
-            h = file_digest(lock)[:12]
+            h = file_digest(lock)[:DIGEST_CHARS]
             try:
                 drift = _lock_drift(lock)
             except Exception:  # never let bookkeeping break a run
@@ -535,7 +539,7 @@ def _describe(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity bas
             raise FileNotFoundError(f"data[{key!r}] does not exist: {p}")
         out[key] = {
             "path": recorded_path(p, base_dir),
-            "sha256": _sha256(p)[:16],
+            "sha256": _sha256(p)[:RECORD_SHA_CHARS],
             "rows": _data_rows(p),
         }
 
@@ -678,11 +682,7 @@ def _script_sha() -> str:
     "no-script" — read before mkdir too, for a repeat's comparison."""
     try:
         src = Path(sys.argv[0]).resolve()
-        return (
-            hashlib.sha256(src.read_bytes()).hexdigest()[:12]
-            if src.is_file()
-            else "no-script"
-        )
+        return file_digest(src)[:DIGEST_CHARS] if src.is_file() else "no-script"
     except OSError:
         return "no-script"
 
@@ -1301,7 +1301,7 @@ class Run:
                         text_lines = sum(1 for _ in fh)
                     entry: dict = {
                         "path": recorded_path(p, self.dir),
-                        "sha256": _sha256(p)[:16],
+                        "sha256": _sha256(p)[:RECORD_SHA_CHARS],
                         "lines": text_lines,
                     }
                     # A resumed file holds rows of the run that broke off:
