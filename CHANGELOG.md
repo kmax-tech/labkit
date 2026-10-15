@@ -27,6 +27,9 @@ of the guaranteed tier.
   a wrong model id (404) or a missing key (401) went through six attempts
   and 13 minutes of backoff. A status below 500 is now a `BackendError` at
   once, with the sentence naming the alias; 5xx keeps the retry.
+- **`claude -p` reads the prompt from stdin.** As one argv entry a 200 kB
+  audit prompt was `OSError: Argument list too long` on Linux (128 kB per
+  entry); only macOS let it through.
 
 ### Breaking
 

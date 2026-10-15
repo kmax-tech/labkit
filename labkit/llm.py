@@ -399,10 +399,15 @@ _CLI_ISOLATION = ["--setting-sources", "", "--tools", ""]
 _CLI_CWD = tempfile.gettempdir()
 
 
-def _cli_run(cmd: list[str], timeout: float | None) -> subprocess.CompletedProcess:
-    """The one place `claude -p` is spawned: isolated flags, neutral cwd."""
+def _cli_run(
+    cmd: list[str], timeout: float | None, stdin: str | None = None
+) -> subprocess.CompletedProcess:
+    """The one place `claude -p` is spawned: isolated flags, neutral cwd, the
+    prompt on STDIN. As an argument it hit Linux's 128 kB cap per argv entry
+    (`OSError: Argument list too long`) — an audit prompt is 200 kB, and
+    only macOS let it through (audit 2026-10-15)."""
     return subprocess.run(
-        cmd, capture_output=True, text=True, timeout=timeout, cwd=_CLI_CWD
+        cmd, capture_output=True, text=True, timeout=timeout, cwd=_CLI_CWD, input=stdin
     )
 
 
@@ -660,8 +665,7 @@ def _complete_claude_cli(
         )
     cmd = [
         "claude",
-        "-p",
-        prompt,
+        "-p",  # the prompt comes on stdin (_cli_run)
         "--model",
         spec["model"],
         "--output-format",
@@ -670,7 +674,7 @@ def _complete_claude_cli(
     ]
     if system:
         cmd += ["--append-system-prompt", system]
-    r = _cli_run(cmd, timeout)
+    r = _cli_run(cmd, timeout, stdin=prompt)
     if r.returncode != 0:
         detail = r.stderr.strip() or r.stdout.strip() or "no output on stderr or stdout"
         raise BackendError(f"claude-cli exit {r.returncode}: {detail[:300]}")
