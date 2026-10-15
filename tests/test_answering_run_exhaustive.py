@@ -13,17 +13,24 @@ the code, so a disagreement is a finding on one side or the other.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import itertools
 import json
+import re
 import shutil
 import tempfile
 import unittest
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import runs
+from protocol_fixture import head
 
-PID = "p-0001"
+from labkit import audit, finalize, intent_check, params, recheck, runs
+from labkit.gate import Findings
+
+PID = "p-aaaaaaaaaaaaaaaa"
+OTHER = "p-bbbbbbbbbbbbbbbb"
 PARENT = "2026-09-01T00-00-00_0000"
 
 
@@ -49,7 +56,7 @@ KINDS = (
     Kind("unfinalized", metrics=KEYS, completion=False, why="unfinalized"),
     Kind("corrupt", why="corrupt"),
     Kind("crashed", completion=False, why="crashed"),
-    Kind("other", pid="p-0002", metrics=KEYS, why="bound to p-0002"),
+    Kind("other", pid=OTHER, metrics=KEYS, why=f"bound to {OTHER}"),
     Kind("unbound", pid=None, metrics=KEYS, why="unbound (no protocol id at run time)"),
     Kind(
         "repeat",
@@ -185,6 +192,81 @@ class EveryArrangement(unittest.TestCase):
             for name, why in want.exclusions.items():
                 if why != "<unreadable>":
                     self.assertEqual(got_ex[name], why, name)
+        finally:
+            shutil.rmtree(tmp)
+
+
+#: a protocol that registers an id, so a probe-only area is no answer
+PROTOCOL_TEXT = "- **Answer to the question:** [C1] holds\n\n" + head(id=PID)
+BLOCKED = "<blocked>"
+
+
+def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
+    """The run each check holds the protocol to, by name, or BLOCKED."""
+    text = protocol.read_text(encoding="utf-8")
+    out: dict[str, str] = {}
+    quiet = contextlib.redirect_stdout(io.StringIO())
+
+    choice = runs.bound_answering_run(area, PID)
+    blocker, _ = choice.explain(promises_registered := True)
+    assert promises_registered
+    out["bound_answering_run"] = (
+        BLOCKED if blocker or choice.run_dir is None else choice.run_dir.name
+    )
+
+    found = Findings()
+    with quiet:
+        got = finalize.answering_run(found, area, PID, True)
+    out["finalize"] = BLOCKED if found.blocked or got is None else got.name
+
+    with contextlib.redirect_stdout(io.StringIO()):
+        bound = intent_check.choose_bound(protocol, PID, True)
+    out["intent-check"] = bound.parent.name if isinstance(bound, Path) else BLOCKED
+
+    try:
+        out["recheck"] = recheck.chosen_run(area, text).name
+    except SystemExit:
+        out["recheck"] = BLOCKED
+
+    printed = io.StringIO()
+    with contextlib.redirect_stdout(printed):
+        params.main([str(area)])
+    m = re.search(r" · run (\S+) \(", printed.getvalue())
+    out["params"] = m.group(1) if m else BLOCKED
+
+    label = audit.run_rows(area, protocol)[0][0]
+    out["audit"] = label.split("runs/", 1)[1] if "runs/" in label else BLOCKED
+    return out
+
+
+class EveryCheckChoosesTheSameRun(unittest.TestCase):
+    """finalize, intent-check, recheck, params and the audit each call
+    `bound_answering_run`, and each renders its outcome its own way (a
+    blocker, exit 2, SystemExit, a printed line, a ROWS label) — the audit
+    of 2026-10-15 found four renderings with four semantics. Here all five
+    are held to the one choice on every arrangement above."""
+
+    def test_every_check_names_the_run_bound_answering_run_names(self) -> None:
+        for one_second in (False, True):
+            for n in range(4):
+                for combo in itertools.product(KINDS, repeat=n):
+                    with self.subTest(
+                        kinds=[k.name for k in combo], one_second=one_second
+                    ):
+                        self._check(combo, one_second)
+
+    def _check(self, combo: tuple[Kind, ...], one_second: bool) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            area = tmp / "area"
+            (area / "runs").mkdir(parents=True)
+            protocol = area / "PROTOCOL-a.md"
+            protocol.write_text(PROTOCOL_TEXT, encoding="utf-8")
+            for i, k in enumerate(combo):
+                _write(area, _name(i, one_second), k)
+            chosen = _chosen_by_every_check(area, protocol)
+            want = chosen.pop("bound_answering_run")
+            self.assertEqual(chosen, dict.fromkeys(chosen, want))
         finally:
             shutil.rmtree(tmp)
 
