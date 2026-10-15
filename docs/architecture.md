@@ -62,7 +62,7 @@ evidence** (warns), **agent audit** (semantic).
 | Run git | `repo.git` (output, loud on failure), `repo.git_run` (exit code is the answer) |
 | Which directories does an area's `runs/` hold, and what does each say? | `runs.run_dirs` (one walk, metadata read once; an unreadable run is data — the caller refuses, reports or skips) |
 | Is this run finished? Which runs are? | `runs.completion_state`, `runs.completed_runs` |
-| Write a file whole or not at all | `runs.write_atomic` (run record, lease, index) |
+| Write a file whole or not at all | `runs.write_atomic` (every record file of a run, the lease; the index is appended under its lock) |
 | The digest of a file, or of a set of named contents | `scope_sha.file_digest`, `scope_sha.tree_digest` (`DIGEST_CHARS` is the one recorded width of a stamp) |
 | What does a run's metadata say? | `runs.read_run_config` |
 | Does an output file account for its input, item by item? | `batch.Store.ledger` (missing, duplicate, stray, stale per expected field); `require_complete()` inside the run keeps it from completing |

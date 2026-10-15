@@ -30,6 +30,10 @@ of the guaranteed tier.
 - **`claude -p` reads the prompt from stdin.** As one argv entry a 200 kB
   audit prompt was `OSError: Argument list too long` on Linux (128 kB per
   entry); only macOS let it through.
+- **Every record file of a run is written whole or not at all.** config,
+  outputs and metrics went through `write_text`; only completion.json was
+  atomic, while `docs/architecture.md` claimed the whole record was
+  (CODE-013).
 
 ### Breaking
 

@@ -48,6 +48,37 @@ class NoHalfMadeRun(unittest.TestCase):
                 runlog.Run("t", {}, area)
             self.assertEqual(list((area / "runs").iterdir()), [])
 
+    def test_every_record_file_is_written_whole_or_not_at_all(self) -> None:
+        """config, outputs, metrics and completion go through `runs.write_atomic`
+        (CODE-013); until 0.94.0 only completion.json did, and a listing that
+        read config.json mid-write saw a damaged run (audit 2026-10-15). No
+        staging file stays behind."""
+        written: list[str] = []
+        real = runlog.write_atomic
+
+        def spy(path: Path, text: str) -> None:
+            written.append(path.name)
+            real(path, text)
+
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "runs").mkdir()
+            out = area / "rows.jsonl"
+            out.write_text("{}\n", encoding="utf-8")
+            with (
+                mock.patch.object(runlog, "write_atomic", spy),
+                contextlib.redirect_stdout(io.StringIO()),
+                runlog.run("t", {}, area) as r,
+            ):
+                r.output(out)
+                r.metrics(n=1)
+            self.assertEqual(
+                set(written),
+                {"config.json", "outputs.json", "metrics.json", "completion.json"},
+            )
+            staged = [p.name for p in (area / "runs").rglob(".*tmp*")]
+            self.assertEqual(staged, [])
+
     def test_twin_a_run_starts_with_its_record(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)

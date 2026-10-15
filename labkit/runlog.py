@@ -1241,8 +1241,10 @@ class Run:
             "data": self._data,
             "config": self._config,
         }
-        (self.dir / "config.json").write_text(
-            json.dumps(frozen, ensure_ascii=False, indent=2), encoding="utf-8"
+        # whole or not at all, like every record file: a listing that read
+        # config.json mid-write saw a damaged run (CODE-013; audit 2026-10-15)
+        write_atomic(
+            self.dir / "config.json", json.dumps(frozen, ensure_ascii=False, indent=2)
         )
         # A dirty tree makes the commit hash a lie: save what it doesn't cover.
         if _head(base_dir) and repo.git(["status", "--porcelain"], base_dir):
@@ -1319,11 +1321,13 @@ class Run:
                             "note": "registered, but absent at end of run",
                         }
                     )
-            (self.dir / "outputs.json").write_text(
-                json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8"
+            write_atomic(
+                self.dir / "outputs.json",
+                json.dumps(rows, ensure_ascii=False, indent=2),
             )
-        (self.dir / "metrics.json").write_text(
-            json.dumps(self._metrics, ensure_ascii=False, indent=2), encoding="utf-8"
+        write_atomic(
+            self.dir / "metrics.json",
+            json.dumps(self._metrics, ensure_ascii=False, indent=2),
         )
         # Order matters, and this is the reason for it: results first, then
         # the confirmed completion, then the index. A break after metrics
