@@ -336,6 +336,34 @@ class PostChange(unittest.TestCase):
         self.assertIn("2026-10-05-x.md", ctx)
         self.assertNotIn("00-index.md", ctx)
 
+    def test_a_note_with_an_umlaut_in_its_name_is_checked(self):
+        """`git status --porcelain` quotes such a name with octal escapes;
+        the path then was no file and the note was never checked (audit
+        2026-10-15)."""
+        note = self.root / "notes/messung/2026-10-05-größe.md"
+        note.write_text("# x\n\nno kind line\n", encoding="utf-8")
+        ev = _bash(self.root, "ls")
+        ev["session_id"] = "s-" + os.urandom(4).hex()
+        rc, out, _ = _run(claude_hooks.post_change, ev)
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("größe.md", ctx)
+
+    def test_wants_check_takes_any_notes_messung_pair(self):
+        self.assertEqual(
+            claude_hooks.wants_check(Path("/home/u/notes/lab/notes/messung/a.md")),
+            "note",
+        )
+        self.assertIsNone(
+            claude_hooks.wants_check(Path("/home/u/notes/x/messung/a.md"))
+        )
+
+    def test_sessions_run_without_a_value_is_a_usage_error(self):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = claude_hooks.sessions(["--run"])
+        self.assertEqual(rc, 2)
+        self.assertIn("needs a RUN_ID", buf.getvalue())
+
     def test_nothing_changed_is_silent(self):
         ev = _bash(self.root, "ls")
         ev["session_id"] = "s-" + os.urandom(4).hex()

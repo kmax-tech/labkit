@@ -33,6 +33,12 @@ Phase B of the audit of 2026-10-15: the audit chain and the hooks.
   line freed every command in it. The line is cut at `;`, `&&`, `||`, `|`
   and line breaks (`claude_hooks.command_segments`); each segment is judged
   on its own.
+- **Hooks, small:** post-change and stop read `git status -z`, so a file
+  name with an umlaut (quoted and escaped in the text form) is checked;
+  a `notes/messung/` pair anywhere in the path counts, not only the first
+  `notes`; `labkit-hooks install` recognises its own hooks by the command
+  as a word, so a foreign `./bin/my-protocol-checker` stays; `claude-hook
+  sessions --run` without a value is a usage error, not a traceback.
 
 ## 0.94.0 — 2026-10-15
 
