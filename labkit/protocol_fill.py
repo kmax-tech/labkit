@@ -388,7 +388,7 @@ def main(argv: list[str]) -> int:
     )
     args = ap.parse_args(argv)
     if not args.protocol.is_file():
-        print(f"protocol-fill: no such file: {args.protocol}")
+        console.refuse("protocol-fill", f"no such file: {args.protocol}")
         return 2
     text = args.protocol.read_text(encoding="utf-8")
     if args.list:

@@ -5,6 +5,21 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+Phase D of the audit of 2026-10-15: docs and hygiene.
+
+### Changed
+
+- **A refusal to run goes to stderr, a finding to stdout.** `console.refuse`
+  is the one place a command says it could not run (a bad argument, no
+  such area, no protocol to choose, no such file); 44 such lines went to
+  stdout and 25 to stderr before, so a caller reading stdout for a gate's
+  findings read "no such area" as one.
+- Docs: the README counts preflight's eight stations and finalize's seven
+  steps as listed (it said seven and eight); the tag test skips on a
+  shallow clone without tags instead of failing, and CLAUDE.md says so.
+
 ## 0.96.0 — 2026-10-15
 
 Phase C of the audit of 2026-10-15: one home per question, and a test that

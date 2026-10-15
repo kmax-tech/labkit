@@ -356,7 +356,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         extra.append(Path(a))
         i += 1
     if not area.is_dir():
-        print(f"scope-sha: {no_such_area(area)}")
+        console.refuse("scope-sha", no_such_area(area))
         return 2
 
     try:

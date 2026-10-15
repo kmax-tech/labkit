@@ -24,7 +24,7 @@ from labkit import runlog  # noqa: E402
 class TestCli(unittest.TestCase):
     def _run_main(self, argv):
         buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
             code = runlog.main(argv)
         return code, buf.getvalue()
 

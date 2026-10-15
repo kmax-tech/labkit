@@ -315,8 +315,8 @@ class TestProtocolChoice(unittest.TestCase):
         return area / name
 
     def _main(self, argv):
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
+        buf = io.StringIO()  # findings and refusals alike (a refusal is on stderr)
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
             rc = code_check.main([str(a) for a in argv])
         return rc, buf.getvalue()
 

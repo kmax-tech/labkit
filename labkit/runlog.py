@@ -1760,7 +1760,7 @@ def main(argv: list[str]) -> int:
     if argv and argv[0] == "reindex":
         area = repo.area_path(argv[1]) if len(argv) > 1 else Path(".")
         if not area.is_dir():
-            print(f"runlog: {repo.no_such_area(area)}")
+            console.refuse("runlog", repo.no_such_area(area))
             return 2
         return reindex(area)
     import argparse
@@ -1821,7 +1821,7 @@ def main(argv: list[str]) -> int:
     # finished (audit 2026-10-15); `reindex` refused it, status did not
     area = repo.area_path(args.area)
     if not area.is_dir():
-        print(f"runlog: {repo.no_such_area(area)}")
+        console.refuse("runlog", repo.no_such_area(area))
         return 2
     shown = str(area)
     if args.follow:

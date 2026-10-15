@@ -362,11 +362,11 @@ def main(argv: list[str]) -> int:
             protocol = Path(rest[1])
             rest = rest[2:]
             continue
-        print(f"preflight: unexpected argument {rest[0]!r}")
+        console.refuse("preflight", f"unexpected argument {rest[0]!r}")
         return 2
 
     if not area.is_dir():
-        print(f"preflight: {no_such_area(area)}")
+        console.refuse("preflight", no_such_area(area))
         return 2
 
     return preflight_area(area, protocol)

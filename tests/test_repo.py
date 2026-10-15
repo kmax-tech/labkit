@@ -126,10 +126,10 @@ class ProtocolChoice(unittest.TestCase):
             repo.the_protocol(self.area, None)
         with self.assertRaisesRegex(repo.ProtocolChoiceError, "no such protocol"):
             repo.the_protocol(self.area, self.area / "PROTOCOL-c.md")
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):  # a refusal to run: stderr
             self.assertIsNone(repo.choose_protocol(self.area, None, "t"))
-        self.assertIn("t: 2 protocols", out.getvalue())
+        self.assertIn("t: 2 protocols", err.getvalue())
 
     def test_a_named_protocol_wins(self):
         (self.area / "PROTOCOL-a.md").write_text("")

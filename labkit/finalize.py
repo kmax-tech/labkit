@@ -756,11 +756,11 @@ def main(argv: list[str]) -> int:
             protocol = Path(rest[1])
             rest = rest[2:]
             continue
-        print(f"finalize: unexpected argument {rest[0]!r}")
+        console.refuse("finalize", f"unexpected argument {rest[0]!r}")
         return 2
 
     if not area.is_dir():
-        print(f"finalize: {no_such_area(area)}")
+        console.refuse("finalize", no_such_area(area))
         return 2
 
     return finalize_area(area, protocol)

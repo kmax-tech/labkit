@@ -1332,11 +1332,11 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
                 protocol_arg = Path(rest[1])
             rest = rest[2:]
             continue
-        print(f"code-check: unexpected argument {rest[0]!r}")
+        console.refuse("code-check", f"unexpected argument {rest[0]!r}")
         return 2
 
     if not area.is_dir():
-        print(f"code-check: {no_such_area(area)}")
+        console.refuse("code-check", no_such_area(area))
         return 2
 
     protocol = choose_protocol(area, protocol_arg, "code-check")

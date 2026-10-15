@@ -84,7 +84,7 @@ def _run_finalize(area, protocol=None):
     if protocol:
         argv += ["--protocol", str(protocol)]
     buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
+    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
         code = finalize.main(argv)
     return code, buf.getvalue()
 
