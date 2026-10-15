@@ -74,6 +74,18 @@ class Install(unittest.TestCase):
         )
         self.assertTrue(any("never runs" in g for g in install_hooks.check(repo)))
 
+    def test_a_foreign_command_with_a_labkit_name_inside_is_not_ours(self):
+        """`./bin/my-protocol-checker` matched `protocol-check` as a substring
+        and was erased by an install (audit 2026-10-15)."""
+        ours = lambda cmd: install_hooks._ours({"hooks": [{"command": cmd}]})  # noqa: E731
+        self.assertFalse(ours("./bin/my-protocol-checker"))
+        self.assertFalse(ours("echo claude-hooks-are-great"))
+        self.assertTrue(
+            ours('"${CLAUDE_PROJECT_DIR:-.}/.venv/bin/protocol-check" "$f"')
+        )
+        self.assertTrue(ours("notes-check notes/"))
+        self.assertTrue(ours("x; claude-hook stop"))
+
     def test_a_leftover_protocol_check_hook_is_named_and_replaced(self):
         # uniagent 2026-10-10: a jq one-liner from an earlier labkit ran
         # protocol-check on every PROTOCOL write beside post-change — every

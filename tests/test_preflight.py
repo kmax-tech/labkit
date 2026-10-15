@@ -347,6 +347,35 @@ class TestAuditFindings(unittest.TestCase):
             self.assertIn("BLOCKER: ", out)
             self.assertIn("owes a reason", out)
 
+    def test_a_stale_audit_line_blocks_once_frozen(self):
+        """The line names a sha, a decided record carries that sha, the code
+        stamps another: preflight said "all decided" and passed the state
+        runlog refuses at the run (audit 2026-10-15). The twin, the code's
+        own sha, is clean."""
+        from labkit import scope_sha
+
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(
+                d, _protocol(frozen=True, preflight_audit="scope sha 000000000000")
+            )
+            path = findings.write(
+                area, "preflight", "opus", "000000000000", (0, 0, 0), []
+            )
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 1, out)
+            self.assertIn(
+                "BLOCKER: preflight_audit: the audit saw scope sha 000000000000", out
+            )
+            sha = scope_sha.area_stamp(area)[0]
+            p = area / "PROTOCOL-x.md"
+            p.write_text(
+                p.read_text().replace("scope sha 000000000000", f"scope sha {sha}")
+            )
+            path.unlink()
+            findings.write(area, "preflight", "opus", sha, (0, 0, 0), [])
+            code, out = _run_preflight(area)
+            self.assertNotIn("preflight_audit:", out)
+
     def test_deferred_in_another_area_is_a_reminder_not_a_count(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "experiments"

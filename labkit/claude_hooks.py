@@ -176,21 +176,57 @@ def executed_py(command: str) -> list[str]:
     return out
 
 
+#: what ends one command segment: a shell separator token or a line break
+SEPARATORS = {";", "&&", "||", "|"}
+
+
+def command_segments(command: str) -> list[list[str]]:
+    """The command as segments of whitespace tokens, cut at `;`, `&&`, `||`,
+    `|` and line breaks (a `;` glued to the last token is cut off). What a
+    `cd` or a throwaway flag means is decided per segment: until 0.95.0 the
+    whole line was one — `cd AREA && python scripts/01_measure.py` resolved
+    the script against the event's cwd and found nothing, and one `--probe`
+    anywhere in the line freed every command in it (audit 2026-10-15)."""
+    out: list[list[str]] = [[]]
+    for line in command.splitlines():
+        for raw in line.split():
+            if raw in SEPARATORS:
+                out.append([])
+                continue
+            tok = raw[:-1] if raw.endswith(";") and len(raw) > 1 else raw
+            out[-1].append(tok)
+            if tok is not raw:
+                out.append([])
+        out.append([])
+    return [seg for seg in out if seg]
+
+
 def run_scripts(command: str, cwd: Path) -> list[Path]:
-    """The .py files the command runs that open a run — resolved and existing."""
+    """The .py files the command runs that open a run — resolved against the
+    directory the command stands in at that point (a `cd` is followed) and
+    existing; a segment with a throwaway flag (`--show`, `--probe`,
+    `--eval-only`) opens no run."""
     out = []
-    for tok in executed_py(command):
-        p = Path(os.path.expanduser(tok))
-        if not p.is_absolute():
-            p = cwd / p
-        if not p.is_file():
+    here = cwd
+    for seg in command_segments(command):
+        if seg[0].strip(STRIP) == "cd":
+            target = seg[1].strip(STRIP) if len(seg) > 1 else "~"
+            here = here / os.path.expanduser(target)  # an absolute target replaces
             continue
-        try:
-            text = p.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+        if THROWAWAY_FLAGS.search(" ".join(seg)):
             continue
-        if OPENS_RUN.search(text):
-            out.append(p.resolve())
+        for tok in executed_py(" ".join(seg)):
+            p = Path(os.path.expanduser(tok))
+            if not p.is_absolute():
+                p = here / p
+            if not p.is_file():
+                continue
+            try:
+                text = p.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            if OPENS_RUN.search(text):
+                out.append(p.resolve())
     return out
 
 
@@ -210,7 +246,7 @@ def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
     if event.get("tool_name", "Bash") != "Bash":
         return 0
     command = (event.get("tool_input") or {}).get("command") or ""
-    if not command or THROWAWAY_FLAGS.search(command):
+    if not command:
         return 0
     cwd = Path(event.get("cwd") or os.getcwd())
     scripts = run_scripts(command, cwd)
@@ -300,17 +336,26 @@ def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
 
 
 def _git_changed(repo: Path) -> list[Path]:
-    r = git_run(["status", "--porcelain", "--untracked-files=all"], repo)
+    """Every path git sees as changed, untracked included — NUL-separated
+    (`-z`): the text form quotes a name with a non-ASCII character
+    (`"notes/messung/gr\303\266\303\237e.md"`), which was then no file and
+    never checked (audit 2026-10-15). A rename comes as new path, then old."""
+    r = git_run(["status", "--porcelain", "-z", "--untracked-files=all"], repo)
     if r.returncode != 0:
         raise RuntimeError(f"git status failed in {repo}: {r.stderr.strip()}")
+    entries = r.stdout.split("\0")
     out = []
-    for line in r.stdout.splitlines():
-        if len(line) < 4 or line[1] == "D" or line[0] == "D":
+    i = 0
+    while i < len(entries):
+        line = entries[i]
+        i += 1
+        if len(line) < 4:
             continue
-        path = line[3:]
-        if " -> " in path:
-            path = path.split(" -> ", 1)[1]
-        out.append(repo / path)
+        if line[0] in "RC":
+            i += 1  # the entry after a rename or copy is its source
+        if line[1] == "D" or line[0] == "D":
+            continue
+        out.append(repo / line[3:])
     return out
 
 
@@ -319,13 +364,12 @@ def wants_check(path: Path) -> str | None:
     if PROTOCOL_NAME.match(path.name):
         return "protocol"
     parts = path.as_posix().split("/")
-    if (
-        "notes" in parts
-        and "messung" in parts
-        and parts.index("messung") == parts.index("notes") + 1
-        and path.suffix == ".md"
-        and not path.name.startswith("00-")
-    ):
+    # any `notes/messung/` pair on the way, not the first `notes`: a repo
+    # under an ancestor directory named notes never had its notes checked
+    under_messung = any(
+        a == "notes" and b == "messung" for a, b in zip(parts, parts[1:])
+    )
+    if under_messung and path.suffix == ".md" and not path.name.startswith("00-"):
         return "note"
     return None
 
@@ -470,6 +514,9 @@ def record_session(repo: Path, event: dict, now: datetime | None = None) -> dict
 
 def sessions(argv: list[str]) -> int:
     """Print the session log, or the session(s) a run came from."""
+    if "--run" in argv and argv.index("--run") + 1 >= len(argv):
+        print("claude-hook sessions: --run needs a RUN_ID")
+        return 2
     run = argv[argv.index("--run") + 1] if "--run" in argv else None
     repo = Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
     log = session_log(repo)

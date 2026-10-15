@@ -60,7 +60,7 @@ from labkit.repo import (
     no_such_area,
 )
 from labkit.protocol_check import check_fields, check_protocol_id, repo_protocol_ids
-from labkit.scope_sha import AREA_GLOBS, AUDIT_SHA, area_stamp
+from labkit.scope_sha import AREA_GLOBS, AUDIT_SHA, area_stamp, audit_stamp_drift
 
 
 def _is_dirty(area: Path) -> bool:
@@ -88,6 +88,11 @@ def area_test_python(repo: Path) -> str:
     return str(own) if own.is_file() else sys.executable
 
 
+#: how long an area's tests may run inside a gate; a hanging test hung the
+#: gate until the hook's own timeout killed it, wordless (audit 2026-10-15)
+AREA_TEST_TIMEOUT_S = 300.0
+
+
 def area_tests(area: Path, repo: Path) -> AreaTests:
     """Run the area's tests (`tests/test_*<slug>*.py`) — the resolution
     check and the parser cases in their permanent form. One home for
@@ -113,20 +118,31 @@ def area_tests(area: Path, repo: Path) -> AreaTests:
     )
     if not files:
         return AreaTests(pattern, [], "none", [])
-    r = subprocess.run(
-        [
-            area_test_python(repo),
-            "-m",
-            "pytest",
-            "-q",
-            "-p",
-            "no:cacheprovider",
-            *map(str, files),
-        ],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        r = subprocess.run(
+            [
+                area_test_python(repo),
+                "-m",
+                "pytest",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                *map(str, files),
+            ],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            timeout=AREA_TEST_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return AreaTests(
+            pattern,
+            files,
+            "failed",
+            [
+                f"timed out after {AREA_TEST_TIMEOUT_S:g} s — a test that hangs is a failing test"
+            ],
+        )
     if r.returncode == 0:
         return AreaTests(pattern, files, "ok", [])
     if "No module named pytest" in (r.stderr or ""):
@@ -350,14 +366,19 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
 
 
 def _coverage_gap(area: Path, head: "protocol_block.Head | None") -> str | None:
-    """Why the head's audit line claims an audit no record holds, or None:
-    the line names a `scope sha` and no decided preflight record saw that
-    code (`findings.audit_coverage`; runlog refuses the full run on the
-    same answer). Silent at `seconds`, without a line, and on `n/a`."""
+    """Why the head's audit line claims an audit of this code, or None: its
+    `scope sha` is not the code's stamp now (`scope_sha.audit_stamp_drift`
+    — until 0.95.0 preflight never compared them and passed the state the
+    freeze gate refuses, audit 2026-10-15), or no decided preflight record
+    saw that code (`findings.audit_coverage`; runlog refuses the full run on
+    the same answers). Silent at `seconds`, without a line, and on `n/a`."""
     if head is None or head.cost == "seconds" or not head.preflight_audit:
         return None
+    drift = audit_stamp_drift(area, head.preflight_audit)
+    if drift:
+        return f"preflight_audit: {drift}"
     m = AUDIT_SHA.search(head.preflight_audit)
-    if m is None:
+    if m is None:  # `n/a — <reason>`: a visible decision, not a claim
         return None
     try:
         return findings.audit_coverage(area, m.group(1), "preflight")

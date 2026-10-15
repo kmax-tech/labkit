@@ -23,6 +23,7 @@ Each hook names the labkit version that wrote it; `check` compares.
 from __future__ import annotations
 
 import json
+import re
 
 from labkit import console
 from importlib.metadata import PackageNotFoundError, version
@@ -119,13 +120,19 @@ CLAUDE_HOOKS = {
 #: running `protocol-check` on every PROTOCOL write survived three installs
 #: and doubled every report beside `claude-hook post-change`)
 LABKIT_COMMANDS = ("claude-hook", "protocol-check", "notes-check")
+#: one of labkit's commands as a word of the hook's command line — at the
+#: start, after a space, a `/` or a quote, and not inside a longer name: a
+#: foreign `./bin/my-protocol-checker` was taken for ours and erased by an
+#: install (audit 2026-10-15)
+_LABKIT_COMMAND = re.compile(
+    r"""(?:^|[\s/"'])(?:""" + "|".join(LABKIT_COMMANDS) + r""")(?=$|[\s"'])"""
+)
 
 
 def _ours(entry: dict) -> bool:
     return any(
-        cmd in h.get("command", "")
+        _LABKIT_COMMAND.search(h.get("command", "")) is not None
         for h in entry.get("hooks", [])
-        for cmd in LABKIT_COMMANDS
     )
 
 

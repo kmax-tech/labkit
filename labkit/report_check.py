@@ -53,6 +53,8 @@ from labkit.scope_sha import area_stamp
 
 #: the analysis script the area skeleton stamps; its `--check` holds the note
 ANALYZE_SCRIPT = Path("scripts") / "02_analyze.py"
+#: how long `--check` may take inside the gate (audit 2026-10-15: no limit)
+CHECK_TIMEOUT_S = 300.0
 
 
 def check_analysis_script(area: Path, repo: Path) -> str | None:
@@ -61,12 +63,16 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
     script = area / ANALYZE_SCRIPT
     if not script.is_file():
         return f"no {ANALYZE_SCRIPT} — the check that holds the note to the run is owed"
-    r = subprocess.run(
-        [area_test_python(repo), str(script), "--check"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        r = subprocess.run(
+            [area_test_python(repo), str(script), "--check"],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            timeout=CHECK_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return f"{ANALYZE_SCRIPT} --check did not finish in {CHECK_TIMEOUT_S:g} s"
     if r.returncode == 0:
         return None
     tail = (r.stderr.strip() or r.stdout.strip() or "no output").splitlines()[-3:]

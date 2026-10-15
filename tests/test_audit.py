@@ -19,7 +19,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import protocol_fixture as fixture  # noqa: E402
-from labkit import audit  # noqa: E402
+from labkit import audit, findings, scope_sha  # noqa: E402
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"
 SCRIPT = "import scoring\nfrom labkit import runlog\nprint(scoring.X)\n"
@@ -300,6 +300,63 @@ class Audit(unittest.TestCase):
         rc, _, err, sent = run(repo_with(protocols=2), CLEAN)
         self.assertEqual((rc, sent), (2, []))
         self.assertIn("--protocol", err)
+
+    def test_the_stamp_is_taken_before_the_call(self):
+        """A lib module edited while the model answers: the record names the
+        code the auditor read, not the code afterwards (audit 2026-10-15),
+        and the change is said."""
+        area = repo_with()
+        before = scope_sha.area_stamp(area)[0]
+        lib = area.parent.parent / "lib" / "scoring.py"
+
+        def fake(alias, prompt, **kw):
+            lib.write_text("X = 0.9\n", encoding="utf-8")  # during the call
+            return WARN
+
+        err = io.StringIO()
+        with (
+            mock.patch.object(audit.llm, "complete", fake),
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(err),
+        ):
+            rc = audit.main([str(area), "--mode", "preflight"])
+        self.assertEqual(rc, 1)
+        after = scope_sha.area_stamp(area)[0]
+        self.assertNotEqual(before, after)
+        record = next((area / "audits").glob("*-preflight.toml")).read_text()
+        self.assertIn(f'scope_sha = "{before}"', record)
+        self.assertIn("stamp: ", err.getvalue())
+        self.assertIn(f"scope sha {before}", err.getvalue())
+        self.assertIn("stamp NOTE: the code changed", err.getvalue())
+        self.assertIn(
+            "still `open`", findings.audit_coverage(area, before, "preflight") or ""
+        )
+        self.assertIn(
+            "no preflight audit saw",
+            findings.audit_coverage(area, after, "preflight") or "",
+        )
+
+    def test_a_finding_written_with_a_dash_or_colon_is_read(self):
+        """`BLOCKER — …` and `BLOCKER: …` parsed as no finding while the
+        verdict counted two; the record then read as covered (audit
+        2026-10-15)."""
+        report = (
+            "BLOCKER — a.py:1 — wrong denominator\n**BLOCKER:** b.py:2 · x\n"
+            "verdict: 2 blockers, 0 warnings"
+        )
+        self.assertEqual(len(audit.parse(report)["findings"]), 2)
+        area = repo_with()
+        rc, _, err, _ = run(area, report)
+        self.assertEqual(rc, 1)
+        record = next((area / "audits").glob("*-preflight.toml")).read_text()
+        self.assertEqual(record.count("[[finding]]"), 2)
+
+    def test_a_verdict_without_readable_findings_records_nothing(self):
+        area = repo_with()
+        rc, _, err, _ = run(area, "BLOCKER a.py:1 x\nverdict: 1 blockers, 0 warnings")
+        self.assertEqual(rc, 2)
+        self.assertIn("counts 1 blocker(s)", err)
+        self.assertEqual(list(area.glob("audits/*")), [])
 
     def test_the_stamp_facts_are_printed(self):
         _, _, err, _ = run(repo_with(), WARN)

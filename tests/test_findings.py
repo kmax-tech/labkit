@@ -23,7 +23,11 @@ def area_with(
             mode,
             "opus",
             "abc123def456",
-            (1, 1, 0),
+            (
+                sum(1 for g, _ in rows if g == "BLOCKER"),
+                sum(1 for g, _ in rows if g == "WARNING"),
+                0,
+            ),
             rows,
             now=1_700_000_000 + 60 * i,
         )
@@ -83,6 +87,17 @@ class WriteRead(unittest.TestCase):
             findings.write(area, "clarity", "m", "s", (0, 0, 0), [])
         with self.assertRaises(ValueError):
             findings.write(area, "preflight", "m", "s", (0, 0, 0), [("READ", "x")])
+
+    def test_a_verdict_counting_more_than_the_lines_is_refused(self):
+        """Two blockers in the verdict, none readable as a line: written, the
+        record read as covered with nothing open (audit 2026-10-15)."""
+        area = Path(tempfile.mkdtemp())
+        with self.assertRaises(ValueError) as cm:
+            findings.write(area, "preflight", "m", "s", (2, 0, 0), [])
+        self.assertIn("counts 2 blocker(s)", str(cm.exception))
+        self.assertEqual(list(area.glob("audits/*")), [])
+        # notes are not held; a warning line under a 1-warning verdict is
+        findings.write(area, "preflight", "m", "s", (0, 1, 2), [("WARNING", "w")])
 
 
 class Decisions(unittest.TestCase):

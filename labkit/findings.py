@@ -109,9 +109,24 @@ def write(
     now: float | None = None,
 ) -> Path:
     """Write the audit's findings file into AREA/audits/ and return its path.
-    Every finding starts `open`. Never overwrites: the name carries the minute."""
+    Every finding starts `open`. Never overwrites: the name carries the minute.
+    Refuses (ValueError) a verdict that counts more blockers or warnings than
+    FINDINGS lists of that grade — notes are not held, an auditor counts
+    them loosely.
+    """
     if mode not in MODES:
         raise ValueError(f"mode {mode!r} — one of {', '.join(MODES)}")
+    b, w, _ = verdict
+    listed = {g: sum(1 for grade, _ in findings if grade == g) for g in GRADES}
+    if b > listed["BLOCKER"] or w > listed["WARNING"]:
+        # a record whose counts outrun its tables read as "nothing open" —
+        # covered, decided, frozen (audit 2026-10-15)
+        raise ValueError(
+            f"the verdict counts {b} blocker(s) and {w} warning(s), the report "
+            f"carries {listed['BLOCKER']} BLOCKER and {listed['WARNING']} WARNING "
+            f"line(s) readable as findings (`BLOCKER · <where> · …`) — nothing is "
+            f"recorded; have the auditor write each finding as one such line"
+        )
     when = time.localtime(now)
     stamp = time.strftime("%Y-%m-%dT%H-%M", when)
     folder = area / DIR

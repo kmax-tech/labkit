@@ -114,6 +114,42 @@ class PreRun(unittest.TestCase):
         self.assertIn("BLOCKED", err)
         self.assertIn("preflight", err)
 
+    def test_a_cd_or_a_compound_line_does_not_pass_the_gate(self):
+        """`cd AREA && python scripts/01_measure.py` resolved the script
+        against the event's cwd and found nothing; one `--probe` anywhere in
+        a line freed every command in it (audit 2026-10-15)."""
+        root = _repo(True)
+        (root / "experiments/01-x/scripts/01_measure.py").write_text(
+            'from labkit import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
+            encoding="utf-8",
+        )
+        full = "python experiments/01-x/scripts/01_measure.py"
+        for cmd in (
+            "cd experiments/01-x && python scripts/01_measure.py",
+            "cd experiments/01-x; python scripts/01_measure.py",
+            f"{full} && {full} --probe",
+            f"{full} --probe 3\n{full}",
+            f"{full} --show 2 | head; {full}",
+        ):
+            rc, out, err = _run(claude_hooks.pre_run, _bash(root, cmd))
+            self.assertEqual(rc, 2, cmd)
+            self.assertIn("BLOCKED", err, cmd)
+        # the twin: a throwaway stage alone, before or after a cd, is free
+        for cmd in (
+            "cd experiments/01-x && python scripts/01_measure.py --probe 3",
+            f"{full} --show 2 | head",
+        ):
+            rc, out, err = _run(claude_hooks.pre_run, _bash(root, cmd))
+            self.assertEqual((rc, out, err), (0, "", ""), cmd)
+
+    def test_command_segments(self):
+        self.assertEqual(
+            claude_hooks.command_segments(
+                "cd a && python x.py; python y.py | head\nz.py"
+            ),
+            [["cd", "a"], ["python", "x.py"], ["python", "y.py"], ["head"], ["z.py"]],
+        )
+
     def test_unfrozen_with_blockers_only_reports(self):
         root = _repo(False)
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
@@ -299,6 +335,34 @@ class PostChange(unittest.TestCase):
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("2026-10-05-x.md", ctx)
         self.assertNotIn("00-index.md", ctx)
+
+    def test_a_note_with_an_umlaut_in_its_name_is_checked(self):
+        """`git status --porcelain` quotes such a name with octal escapes;
+        the path then was no file and the note was never checked (audit
+        2026-10-15)."""
+        note = self.root / "notes/messung/2026-10-05-größe.md"
+        note.write_text("# x\n\nno kind line\n", encoding="utf-8")
+        ev = _bash(self.root, "ls")
+        ev["session_id"] = "s-" + os.urandom(4).hex()
+        rc, out, _ = _run(claude_hooks.post_change, ev)
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("größe.md", ctx)
+
+    def test_wants_check_takes_any_notes_messung_pair(self):
+        self.assertEqual(
+            claude_hooks.wants_check(Path("/home/u/notes/lab/notes/messung/a.md")),
+            "note",
+        )
+        self.assertIsNone(
+            claude_hooks.wants_check(Path("/home/u/notes/x/messung/a.md"))
+        )
+
+    def test_sessions_run_without_a_value_is_a_usage_error(self):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = claude_hooks.sessions(["--run"])
+        self.assertEqual(rc, 2)
+        self.assertIn("needs a RUN_ID", buf.getvalue())
 
     def test_nothing_changed_is_silent(self):
         ev = _bash(self.root, "ls")

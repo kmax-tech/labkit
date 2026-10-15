@@ -5,6 +5,46 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.95.0 — 2026-10-15
+
+Phase B of the audit of 2026-10-15: the audit chain and the hooks.
+
+### Fixed
+
+- **`labkit-audit` stamps the code before the model call.** The stamp was
+  taken after the answer (up to 900 s later): a lib module edited meanwhile
+  gave a record whose sha no auditor had read, and the freeze gate took it
+  as covered. The stamp is taken once, recorded as taken, and a change
+  during the call is said (`stamp NOTE`).
+- **An audit whose finding lines the parser could not read was recorded as
+  covered.** `BLOCKER — …` and `BLOCKER: …` parsed as no finding while the
+  verdict counted two; the record then had nothing open and passed the
+  freeze gate. The parser reads a dash or colon after the grade too, and
+  `findings.write` refuses a verdict that counts more blockers or warnings
+  than lines it can record — exit 2, nothing written.
+- **preflight holds the audit line's `scope sha` to the code's stamp.** At
+  `frozen = true` it never compared them (only protocol-check warned and
+  runlog refused at the run), so the pre-freeze gate passed exactly the
+  state the freeze gate refuses. A stale sha is a blocker once frozen, a
+  warning before.
+- **The pre-run hook follows a `cd` and judges throwaway flags per
+  command.** `cd AREA && python scripts/01_measure.py` resolved the script
+  against the event's cwd and found nothing; one `--probe` anywhere in a
+  line freed every command in it. The line is cut at `;`, `&&`, `||`, `|`
+  and line breaks (`claude_hooks.command_segments`); each segment is judged
+  on its own.
+- **Hooks, small:** post-change and stop read `git status -z`, so a file
+  name with an umlaut (quoted and escaped in the text form) is checked;
+  a `notes/messung/` pair anywhere in the path counts, not only the first
+  `notes`; `labkit-hooks install` recognises its own hooks by the command
+  as a word, so a foreign `./bin/my-protocol-checker` stays; `claude-hook
+  sessions --run` without a value is a usage error, not a traceback.
+- **A gate's subprocess has a time limit.** An area test or `02_analyze.py
+  --check` that hangs hung preflight, finalize and report-check until the
+  hook's own timeout killed them, wordless; after 300 s it is a failing
+  test or check, said in the finding (`preflight.AREA_TEST_TIMEOUT_S`,
+  `report_check.CHECK_TIMEOUT_S`).
+
 ## 0.94.0 — 2026-10-15
 
 Phase A of the audit of 2026-10-15 (`docs/audit-2026-10-15.md`): the bugs
