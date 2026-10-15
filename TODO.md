@@ -451,6 +451,35 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
+- **Kern und Haus (2026-10-15).** Die Schichtentabelle in
+  `docs/architecture.md` trägt eine Spalte „House“, und
+  `tests/test_architecture.py` (`CoreAndHouse`) hält: ein Kern-Modul
+  importiert kein Haus-Modul. Test: Wird eine Zahl ohne die Regel weniger
+  nachvollziehbar (Kern), oder arbeitet das Labor nur anders (Haus)? Sechs
+  Übertretungen stehen heute mit Namen in `KNOWN_CROSSINGS`; die Liste
+  darf nur schrumpfen:
+  1. `runlog` → `findings.audit_coverage`, `protocol_check.seconds_registration_missing`
+     — die Freeze-Sperre (LAB-015 Preflight audit before freezing) sitzt im
+     Laufschreiber. Echtes Leck; Kandidat: die Sperre als Haus-Prüfung, die
+     `runlog` über eine Schnittstelle fragt.
+  2. `code_check` → `protocol_check.fields`, `rules.paragraph` — der
+     Grenzfall: TOML-Kopf Kern, Feldkatalog Haus.
+  3. `repo_check` → `rules.check_refs`, `install_hooks` — Pin-Prüfung Kern,
+     Regelverweise und Hooks Haus.
+
+  **Auslöser für den Umbau** in zwei Namensräume (`labkit` Kern,
+  `labkit.house` Standard, Vorlagen, Gate-Reihenfolge, Hooks, Notizen):
+  die Kern-Evaluation fürs Paper, oder ein zweites Labor, das den Kern
+  ohne die Doktrin will. Bis dahin nur die Liste abbauen, wo ein Schritt
+  ohnehin an der Stelle arbeitet. Breaking, Pin-Heben in jedem Repo.
+- **`notes_check` nach LOCAL (2026-10-15).** LAB-082 In `notes/messung/`
+  und `labkit/notes_check.py` prüfen deutsche Hauskonventionen
+  (Notizsorten „Instrument — Entwurf“, „Referenzkarte“ …) — nach dem
+  LAB/LOCAL-Test Haus, kein Laborstandard. Umzug in die Dotfiles ist
+  Breaking: ein Kommando verschwindet, der Hook ruft es. **Auslöser:** die
+  nächste Breaking-Release ohnehin, oder ein Labor außerhalb des Hauses,
+  das an der Prüfung scheitert.
+
 - **Narbentabelle gegen fremde Fehlerkataloge (2026-10-15) — Befund,
   nichts geändert.** Abgleich mit Kapoor & Narayanan (Leckage L1–L3),
   REFORMS (32 Punkte) und Biderman et al. (LM-Evaluation): fünf Klassen
