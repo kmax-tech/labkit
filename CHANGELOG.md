@@ -12,14 +12,21 @@ pins (`requirements.txt` / `requirements.lock`).
 - **`runlog.run(..., repeat_of=RUN_ID)`** — the same measurement asked
   again: new model calls, its own model record, `repeat_of` and `draw` (2,
   3, …) in config.json. Refused before mkdir unless RUN_ID is a completed
-  primary run with the same protocol, promise block, experiment config and
-  inputs (`runs.repeat_mismatch`), and never with `derived_from` (which
-  re-reads old rows without a model call).
-- **A repeat never answers.** `runs.bound_runs` leaves it out of the
-  answering choice; `runs.completed_runs` takes a required `with_repeats=`,
-  so recheck (`--from-run`, `--check`) and usability keep the primary run.
+  primary run with the same protocol, the same promise snapshot (block and
+  every declared scope's digest), the same measure script and resolved
+  model, the same experiment config and inputs (`runs.repeat_mismatch`), and
+  never with `derived_from` (which re-reads old rows without a model call).
+  The draw number is reserved once, under runlog's index lock, and exposed
+  as `run.draw`; a crashed draw keeps its number. Damaged `repeat_of` or
+  `draw` values make the run unreadable, not a primary.
+- **A repeat never answers** — not by default, not by name: `runs.bound_runs`
+  leaves it out of the answering choice, and `recheck.run_dir` (behind
+  `--from-run` and `--check`) refuses a repeat named explicitly, with no
+  `--force` past it. `runs.completed_runs` takes a required `with_repeats=`.
 - **The skeleton:** `01_measure.py --repeat-of RUN_ID` writes
-  `<name>_draw<N>.jsonl`; `02_analyze.py --draws` prints c1 per draw, its
+  `<name>_draw<N>.jsonl` by `run.draw`; `02_analyze.py --draws` holds every
+  draw like the kept number (`recheck.verified`: output pinned, scopes and
+  block unchanged, metrics recomputed) and then prints c1 per draw, its
   range and the items that flip. `runs.next_draw`, `runs.draws`.
 - **finalize warns** "one draw — no spread" for a run that asked a model
   and has no repeat (static evidence).
