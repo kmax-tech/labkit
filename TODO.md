@@ -69,6 +69,24 @@ geschlossen (`c8925a6`, `9c66178`, `6a7e4eb`, `c62c635`); K1 micro statt
 macro, K4 Duplikat, A1 Anker ohne Wirkung, B10 Konjunkt fehlt sieht kein
 mechanischer Check — die Aufgabe des Pilots.
 
+## Audit 2026-10-15: Fehler zuerst, dann die zweiten Heimaten
+
+Befund: `docs/audit-2026-10-15.md` (14 Fehler, reproduziert; ein Dutzend
+Stellen, an denen eine Frage mit Heimat ein zweites Mal beantwortet wird).
+Auslöser: der Audit selbst — `protocol-fill --from-run` schreibt in einem
+Bereich mit zwei Protokollen die Zahl des falschen Laufs ins Protokoll
+(`recheck.run_dir` wählt ohne Bindung, `finalize` mit). Prüfstelle: je
+Schritt ein Test mit Zwilling; Phase C ein Test, der jede Kopie beim
+Wiederkommen greift — die Audits vom 2026-10-06 und 2026-10-13 haben
+dieselben Kopiearten entfernt, und sie kamen zurück.
+
+| Phase | Inhalt | Stand |
+|---|---|---|
+| A · 0.94.0 | Stufe guaranteed: ein Wähler für den antwortenden Lauf (`recheck.run_dir` → `runs.bound_answering_run`, `holds` hält den Lauf an die Protokoll-ID der Notiz, `usability.latest_run` fällt) · `runlog <bereich>` verweigert einen unbekannten Bereich · HTTP 4xx ohne Retry · Prompt per stdin an `claude -p` (Linux: 128 kB je Argument) · Laufdatensatz atomar (CODE-013) · `recheck._present` maskiert Run-IDs und Daten · nicht parsender Skriptcode ist ein Blocker, kein Traceback · report-check zählt Must-Platzhalter · Kleinkram (`maxsplit`, `_ids`-Meldung, `agree` nach JSON-Rundreise, Area-Tests unter `layout_root`) | offen |
+| B · 0.95.0 | Audit-Kette und Hooks: Stamp vor dem Modellaufruf · `findings.write` verweigert ein Verdict mit mehr Blockern als Findings · preflight ruft `audit_stamp_drift` · pre-run über `shlex`-Tokens, `cd` verfolgt, Throwaway-Flags je Teilkommando · `git status -z` · `_ours` prüft den Pfad · Timeouts für Area-Tests und `--check` | offen |
+| C · 0.96.0 | Eine Heimat je Frage: `labkit/gate.py` (`Findings`, eine Schreibweise, ein Exit-Vertrag) · Fences und Labels nur aus `protocol_block`/`protocol_check` · `repo.repo_protocols` mit Skip-Regel, `repo.PROTOCOL_NAME`, `repo.lab_root`, `repo.AREA_NAME` · Digest und git ohne Kopie, `runs.RECORD_SHA_CHARS` · Alphabet nur aus `promises` · `AnsweringRun.explain()` · `tests/test_one_home.py` greift `hashlib.sha256(`, `subprocess.run(["git"`, `rglob("PROTOCOL-`, `[ca]\d+`, Fence-Regexe außerhalb ihrer Heimat | offen |
+| D | Doku und Hygiene: README-Zählungen, `docs/architecture.md` zur Atomarität, `docs/standard-*.tsv` einordnen, Befunde auf stdout und Bedienfehler auf stderr, CLAUDE.md „fresh clone with tags" | offen |
+
 ## Klein, ohne eigenen Punkt
 
 - [x] **`usability stage --restamp`: die Probe stempelt das Werkzeug nach,
