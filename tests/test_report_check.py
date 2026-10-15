@@ -51,7 +51,7 @@ class ReportCheck(unittest.TestCase):
         """FINALIZE and CHECK stand in for their stations; the fixture's
         protocol is a bare head, so its field gaps count only with FIELDS."""
         out = io.StringIO()
-        no_gaps = SimpleNamespace(missing_must=[])
+        no_gaps = SimpleNamespace(missing_must=[], must_holes=[])
         with (
             contextlib.nullcontext()
             if fields
@@ -88,6 +88,21 @@ class ReportCheck(unittest.TestCase):
         code, out = self._run(area, fields=True)
         self.assertEqual(code, 1, out)
         self.assertIn("still carries the stamp's", out)
+
+    def test_a_must_field_still_a_placeholder_blocks(self):
+        """Station 1 read `missing_must` only: a must field holding its
+        stamped `<…>` passed the last gate while protocol-check and preflight
+        refused it (audit 2026-10-15)."""
+        area = self._area()
+        self._audited(area)
+        proto = area / "PROTOCOL-x.md"
+        proto.write_text(
+            "- **Unit:** <the counted unit>\n\n" + proto.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        code, out = self._run(area, fields=True)
+        self.assertEqual(code, 1, out)
+        self.assertIn("Unit still a placeholder", out)
 
     def test_seconds_owes_nothing_here(self):
         code, out = self._run(self._area(cost="seconds", frozen=False), finalize=1)

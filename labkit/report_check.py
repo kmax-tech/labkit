@@ -77,7 +77,11 @@ def freeze_gaps(protocol: Path, frozen: bool) -> list[str]:
     """Station 1: why the freeze does not hold — the flag unset, or a must
     gap protocol-check names (the stamp's `<…>` promise sentences among them)."""
     gaps = [] if frozen else ["not `frozen = true` — a reported number owes the freeze"]
-    gaps += check_fields(protocol.read_text(encoding="utf-8")).missing_must
+    report = check_fields(protocol.read_text(encoding="utf-8"))
+    gaps += report.missing_must
+    # a must field still holding its `<…>` placeholder passed here while
+    # protocol-check and preflight refused it (audit 2026-10-15)
+    gaps += [f"line {n}: {label} still a placeholder" for n, label in report.must_holes]
     return [f"{protocol.name}: {g}" for g in gaps]
 
 
