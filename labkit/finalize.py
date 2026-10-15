@@ -72,6 +72,7 @@ from labkit.repo import (
     choose_protocol,
     git_root,
     git_run,
+    layout_root,
     no_such_area,
 )
 from labkit.intent_check import main as intent_check_main, ids_in_prose
@@ -610,7 +611,9 @@ def check_area_tests(findings: Findings, area: Path) -> None:
     of evaluate() that mutes the criterion is caught here too — on every
     tier, seconds included, where preflight is not owed (2026-10-07). A
     missing test is no finding here; preflight owes it at the freeze."""
-    tests = area_tests(area, git_root(area) or area)
+    # the same place preflight looks: a stamped tree before `git init` has
+    # tests/ under its layout root, and git_root found "none" (audit 2026-10-15)
+    tests = area_tests(area, layout_root(area))
     if tests.state == "none":
         print(f"  none ({tests.pattern})")
     elif tests.state == "ok":

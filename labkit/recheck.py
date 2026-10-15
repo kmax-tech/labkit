@@ -189,7 +189,10 @@ def rows_of(out: Path) -> list[dict]:
 def agree(
     metrics: dict, recomputed: dict, ignore: frozenset[str] = LABKIT_KEYS
 ) -> list[str]:
-    """metrics.json against the recomputation; returns the keys that grew."""
+    """metrics.json against the recomputation; returns the keys that grew.
+    The recomputation is compared as JSON, the way the run recorded it: a
+    tuple from evaluate() is the list in metrics.json, not a difference."""
+    recomputed = json.loads(json.dumps(recomputed))
     intent = {k for k in set(metrics) | set(recomputed) if INTENT_KEY.match(k)}
     one_sided = sorted(k for k in intent if (k in metrics) != (k in recomputed))
     vanished = sorted(set(metrics) - set(recomputed) - ignore)

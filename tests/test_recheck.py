@@ -137,6 +137,13 @@ class Area(unittest.TestCase):
         self.assertTrue(recheck._present("-0.2", "delta −0.2"))
         self.assertTrue(recheck._present("+0.2", "delta 0.2"))
 
+    def test_a_tuple_is_the_list_the_run_recorded(self):
+        """evaluate() returns a tuple, metrics.json holds a list: the same
+        value after the JSON round trip, not a difference (audit 2026-10-15)."""
+        self.assertEqual(recheck.agree({"a": [1, 2]}, {"a": (1, 2)}), [])
+        with self.assertRaises(SystemExit):
+            recheck.agree({"a": [1, 2]}, {"a": (1, 3)})
+
     def test_custom_number_format_for_a_rounding_note(self):
         self._record({"ratio": 0.857142857})
         self.note.write_text(

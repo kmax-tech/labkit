@@ -47,6 +47,12 @@ of the guaranteed tier.
   from the import walk on a stale `analysis/old.py` with a syntax error —
   exit 1, and so not blocking in the pre-run hook. `scope_sha.SourceError`
   names the file; code-check and preflight report it as `BLOCKER`.
+- Small: a split file with a damaged line names file and line instead of a
+  bare `JSONDecodeError`; `recheck.agree` compares the recomputation as JSON
+  (a tuple is the list the run recorded); `finalize` looks for the area's
+  tests under the layout root like preflight (a stamped tree before `git
+  init` read "none"); `runlog` no longer passes `maxsplit` positionally
+  (a DeprecationWarning on 3.13).
 
 ### Breaking
 

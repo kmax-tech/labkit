@@ -506,13 +506,20 @@ def _ids(path: Path) -> set | None:
     if path.suffix != ".jsonl":
         return None
     ids = set()
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
             continue
-        row = json.loads(line)
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            # a bare JSONDecodeError named neither file nor line (audit 2026-10-15)
+            raise ValueError(
+                f"{path}:{n}: not JSON ({exc.msg}) — a data file the leakage "
+                f"check reads is one JSON object per line; repair the line"
+            ) from exc
         if _is_meta(row):
             continue
-        if "id" not in row:
+        if not isinstance(row, dict) or "id" not in row:
             return None
         ids.add(row["id"])
     return ids
@@ -533,7 +540,7 @@ def _describe(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity bas
         }
 
     def role(key: str) -> str:
-        return re.split(r"[_-]", key, 1)[0].lower()
+        return re.split(r"[_-]", key, maxsplit=1)[0].lower()
 
     known = {k: _ids(Path(p)) for k, p in paths.items() if k in SPLIT_KEYS}
     checkable = {k: v for k, v in known.items() if v is not None}
