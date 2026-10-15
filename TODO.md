@@ -455,6 +455,12 @@ sieht das niemand.
   eine Hausnarbe; eine neue Zeile erst, wenn die K-Fälle des Benchmarks
   (K1, K3, K5) zeigen, dass der Auditor sie ohne Zeile übersieht.
   Herleitung: `~/work/projects/labkit-paper/narbentabelle-gegen-fremde.md`.
+  **Gemessen 2026-10-15** (Labor `labkit-paper`, Pilot 06, Antwortlauf
+  `2026-10-15T13-18-11_1ebf`): Der τ-bench-Fall aus ABC blieb unbenannt. Der
+  blinde Bauer maß einen untätigen Agenten mit (19/50), aber als Untergrenze
+  ohne Sollwert; Audit und `preflight` sahen nur die fehlende Registrierung.
+  Kandidat für Narbenzeile oder Gate: *Nullprobe ohne Sollwert*. Nächster Fall
+  (SWE-Lancer) entscheidet, ob es eine Zeile wird.
 
 - **Repo-Audit 2026-10-13 (Klarheit, Drift, Doku) — Befund, nichts
   geändert.** Suite, ruff, pyright grün (1001 Tests). Drei Lesungen (große
