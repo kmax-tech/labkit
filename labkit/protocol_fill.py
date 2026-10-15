@@ -32,7 +32,7 @@ import argparse
 import re
 from pathlib import Path
 
-from labkit import console, recheck, runs
+from labkit import console, protocol_block, recheck, runs
 from labkit.code_check import prompt_constants
 from labkit.protocol_check import (
     RUNS_PLACEHOLDER,
@@ -95,8 +95,7 @@ def fill(
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 
 
-_FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})")
-HEAD_TYPE = re.compile(r'^(type\s*=\s*)"<[^"\n]*>"\s*$', re.M)
+HEAD_TYPE = re.compile(r'^(type\s*=\s*)"<[^"\n]*>"\s*$')
 HEAD_TYPE_LABEL = "type"
 
 
@@ -106,24 +105,34 @@ def head_type_open(text: str) -> int | None:
     The stamp leaves `type` as a placeholder in the head; `--list` named only
     the prose fields, so an agent filled those, hit the hook's "MISSING (must):
     [protocol] type" and edited the head by hand (cloud probe, Haiku 5.5,
-    2026-10-13)."""
-    m = HEAD_TYPE.search(text)
-    return text.count("\n", 0, m.start()) + 1 if m else None
+    2026-10-13). Read inside the TOML block only (`protocol_block.toml_block_span`):
+    a `type = "<…>"` line in a fenced example was taken for the head
+    (audit 2026-10-15)."""
+    lines = text.splitlines()
+    span = protocol_block.toml_block_span(text)
+    if span is None:
+        return None
+    start, end = span
+    for i in range(start, end):
+        if HEAD_TYPE.match(lines[i]):
+            return i + 1
+    return None
 
 
 def fill_head_type(text: str, value: str) -> str:
     """Set the head's `type` from its placeholder; one of `protocol_block.TYPES`."""
-    from labkit import protocol_block  # lazy: labkit modules import each other
-
     if value not in protocol_block.TYPES:
         raise ValueError(
             f"type must be one of {' | '.join(protocol_block.TYPES)}, not {value!r}"
         )
-    if head_type_open(text) is None:
+    n = head_type_open(text)
+    if n is None:
         raise ValueError(
             "the head's type is already set (edit the TOML head to change it)"
         )
-    return HEAD_TYPE.sub(lambda m: f'{m.group(1)}"{value}"', text, count=1)
+    lines = text.split("\n")
+    lines[n - 1] = HEAD_TYPE.sub(lambda m: f'{m.group(1)}"{value}"', lines[n - 1])
+    return "\n".join(lines)
 
 
 RUNS_HEADING = re.compile(r"^## Runs\b")
@@ -231,13 +240,15 @@ def fill_prompts(text: str, constants: dict[str, str]) -> str:
         body += constants[name].splitlines()
     start = end = f.last  # 0-based index just after the field's value
     for j in range(f.last, min(f.last + 3, len(lines))):
-        m = _FENCE.match(lines[j])
+        m = protocol_block.FENCE.match(lines[j])
         if m:
+            # the one fence rule (protocol_block.closes): until 0.96.0 a line
+            # merely starting with the marker closed it (audit 2026-10-15)
             k = next(
                 (
                     k
                     for k in range(j + 1, len(lines))
-                    if lines[k].strip().startswith(m.group(2))
+                    if protocol_block.closes(lines[k], m.group(2))
                 ),
                 None,
             )

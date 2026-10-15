@@ -41,6 +41,8 @@ doctrine: extend, never move; regression = both lab repos exit 0 after the
 import re
 
 from labkit import console
+from labkit.gate import Findings
+from labkit.repo import git_root
 from pathlib import Path
 
 # The contract: kind tokens as they appear in meta lines. German on purpose —
@@ -90,14 +92,6 @@ def meta_paragraph(text: str) -> tuple[int, str] | None:
                 i += 1
             return start + 1, " ".join(para)
         return None
-    return None
-
-
-def repo_root(path: Path) -> Path | None:
-    """The nearest directory above `path` that holds a `.git`, or None."""
-    for parent in [path, *path.parents]:
-        if (parent / ".git").exists():
-            return parent
     return None
 
 
@@ -158,7 +152,7 @@ def check_file(f: Path) -> tuple[list[str], list[str]]:
                 f"experiments/ path"
             )
         else:
-            rotten = unresolved_scripts(text, repo_root(f.resolve()))
+            rotten = unresolved_scripts(text, git_root(f.resolve()))
             if rotten and len(rotten) == len(
                 set(m.group(0).lstrip("./") for m in PY_FILE.finditer(text))
             ):
@@ -192,21 +186,20 @@ def main(argv: list[str]) -> int:
     if not files:
         print("notes-check: no notes/messung/*.md found")
         return 2
-    failed = False
+    findings = Findings()
     for f in files:
         try:
             must, warn = check_file(f)
         except OSError as exc:
-            print(f"{f}: not readable ({exc})")
-            failed = True
+            findings.block(f"{f}: not readable ({exc})")
             continue
-        for line in must + warn:
-            print(line)
-        if must:
-            failed = True
-        elif not warn:
+        for line in must:
+            findings.block(line)
+        for line in warn:
+            findings.warn(line)
+        if not must and not warn:
             print(f"{f}: OK")
-    return 1 if failed else 0
+    return findings.report("notes-check", "the note counts")
 
 
 def cli() -> None:

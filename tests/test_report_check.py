@@ -70,7 +70,7 @@ class ReportCheck(unittest.TestCase):
         self._audited(area)
         code, out = self._run(area)
         self.assertEqual(code, 0, out)
-        self.assertIn("clean", out)
+        self.assertIn("all clear", out)
 
     def test_a_freeze_with_a_must_gap_blocks(self):
         """Frozen with the stamp's `<…>` promise sentences: the flag is set,

@@ -153,7 +153,7 @@ def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     if metrics_arg is not None:
         chosen = choose_explicit(protocol, metrics_arg, pid)
     elif pid is not None:
-        chosen = choose_bound(protocol, pid)
+        chosen = choose_bound(protocol, pid, promises.registers_ids(text))
     else:
         print(
             f"intent-check: {protocol.name} has no stamped id ([protocol] "
@@ -318,38 +318,32 @@ def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path 
     return metrics_arg
 
 
-def choose_bound(protocol: Path, pid: str) -> Path | int:
+def choose_bound(protocol: Path, pid: str, ids_registered: bool) -> Path | int:
     """The newest completed run bound to `pid` — `runs.bound_answering_run`,
-    its outcome told the operator; 2 when no choice stands."""
+    its outcome told the operator (`AnsweringRun.explain`); 2 when no
+    choice stands, a probe or producer run among them when the protocol
+    registers ids (until 0.96.0 a warning, and every promise then read as
+    unimplemented)."""
     choice = bound_answering_run(protocol.parent, pid)
-    if choice.run_dir is None:
-        # blocker: no completed bound run, or a newer run whose binding
-        # cannot be read — either way nothing may answer (run_dir is None
-        # whenever blocker is set, 0.74.0)
+    blocker, lines = choice.explain(ids_registered)
+    if blocker:
         print(
-            f"intent-check: {choice.blocker} ({protocol.name}) — nothing to hold "
+            f"intent-check: {blocker} ({protocol.name}) — nothing to hold "
             f"the promises against."
         )
-        if choice.exclusions:
-            print(f"  {len(choice.exclusions)} other run(s) in {protocol.parent}:")
-            for x in choice.exclusions:
-                print(f"    {x.run_dir.name}: {x.why}")
-        else:
+        if lines:
+            print(f"  {len(lines)} other run(s) in {protocol.parent}:")
+            for line in lines:
+                print(f"    {line}")
+        elif choice.run_dir is None:
             print(f"  no runs in {protocol.parent} yet.")
         print("  Name one explicitly with --metrics FILE if you know it belongs here.")
         return 2
-    if not choice.reports_intent_keys:
-        print(
-            f"intent-check: {choice.run_dir.name} is the newest bound run, and no "
-            f"bound run reports an intent key — a probe or producer run, not an "
-            f"answer; every promise below will read as unimplemented."
-        )
-    if choice.skipped_newer:
-        print(
-            f"intent-check: using {choice.run_dir.name}/metrics.json "
-            f"(newest bound run with intent keys; skipped {choice.skipped_newer} "
-            f"newer bound run(s) without any)."
-        )
+    assert choice.run_dir is not None, (
+        "explain() names a blocker whenever no run stands"
+    )
+    for line in lines:
+        print(f"intent-check: using {choice.run_dir.name}/metrics.json ({line}).")
     return choice.run_dir / "metrics.json"
 
 

@@ -50,7 +50,6 @@ silent on a correct input, loud on a malformed one.
 from __future__ import annotations
 
 import ast
-import hashlib
 import json
 import re
 from dataclasses import dataclass
@@ -147,6 +146,16 @@ EARLIER_IDS_HELP = (
 )
 
 
+def key_kind(key: str) -> str | None:
+    """The kind a metrics key belongs to by its letter — "criterion",
+    "admissibility", "branch" — or None outside the id namespace. The one
+    way to ask "is this an [A] key": two tools re-spelled the letters
+    (`^a\\d+_`, `[ca]`) and would have gone silent on the next change of the
+    alphabet, as 0.48.0 was (audit 2026-10-15)."""
+    m = ID_KEY.match(key)
+    return KINDS[m.group(1)[0].upper()] if m else None
+
+
 def reported_ids(metrics: dict) -> set[str]:
     """Ids a metrics dict reports (bare id or id_suffix keys), lowercased."""
     out = set()
@@ -155,10 +164,6 @@ def reported_ids(metrics: dict) -> set[str]:
         if m:
             out.add(m.group(1))
     return out
-
-
-def _digest(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()[: scope_sha.DIGEST_CHARS]
 
 
 def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity baseline 2026-10-08
@@ -281,7 +286,9 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
         sort_keys=True,
         ensure_ascii=False,
     )
-    return PromiseTables(promises=tuple(out), sha=_digest(canonical.encode("utf-8")))
+    return PromiseTables(
+        promises=tuple(out), sha=scope_sha.digest(canonical.encode("utf-8"))
+    )
 
 
 def prose_mismatch(text: str, block: PromiseTables) -> tuple[list[str], list[str]]:

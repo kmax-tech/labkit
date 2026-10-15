@@ -13,7 +13,7 @@ holds the imports to it — a new module or an upward import fails the suite.
 
 | Layer | Modules | Holds |
 |---|---|---|
-| 1 · formats and places | `protocol_block`, `promises`, `protocol_check`, `runs`, `repo`, `scope_sha`, `rules`, `findings`, `console` | read-only answers: the protocol's TOML block and its head, the promise alphabet and tables, the protocol's prose fields by label, what a run directory says about itself, where the repo, the area's protocols and git are, the standard's rules and every reference to them, an audit's findings as data (`audits/*.toml`: written by `labkit-audit`, decided by the person, read by `preflight`); the one exit of every console command (`console.exit_with`: a reader closing the pipe is exit 0, not a traceback) |
+| 1 · formats and places | `protocol_block`, `promises`, `protocol_check`, `runs`, `repo`, `scope_sha`, `rules`, `findings`, `console`, `gate` | read-only answers: the protocol's TOML block and its head, the promise alphabet and tables, the protocol's prose fields by label, what a run directory says about itself, where the repo, the area's protocols and git are, the standard's rules and every reference to them, an audit's findings as data (`audits/*.toml`: written by `labkit-audit`, decided by the person, read by `preflight`); the one exit of every console command (`console.exit_with`: a reader closing the pipe is exit 0, not a traceback); what a gate found, told once (`gate.Findings`: the grade's spelling, the summary, exit 1 with a blocker) |
 | 2 · a run and its effects | `runlog`, `batch`, `llm`, `endpoint_lease` | writing a run (binding, refusals, provenance, index), resumable output, model calls, the model-slot lease |
 | 3 · checks | `intent_check`, `code_check`, `recheck`, `notes_check` | one question each, against code, metrics or a note |
 | 4 · gates | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `install_hooks` | sequence the checks at a decision point (`report_check` the last: after the analysis audit and the note); the hooks call the gates; `audit` runs the agent audit through `llm`; `install_hooks` installs the git hooks the gates run in (preflight checks they are there) |
@@ -57,8 +57,8 @@ evidence** (warns), **agent audit** (semantic).
 | Which code does a promise rest on, and did it change? | `promises.declared_scope_sha`, `promises.scope_drift` |
 | What does the protocol's head say (id, type, cost, frozen, audit)? | `protocol_block.head` |
 | Which prose fields does a protocol owe, and which are filled? | `protocol_check.FIELDS`, `protocol_check.check_fields` |
-| Which protocols does an area hold? | `repo.area_protocols` |
-| Where is the repo? | `repo.git_root` (git), `repo.layout_root` (git, else stamped tree) |
+| Which protocols does an area hold? Which does the repo? | `repo.area_protocols`; `repo.repo_protocols` (outside `repo.SKIP_DIRS`); `repo.PROTOCOL_GLOB`, `repo.PROTOCOL_NAME` are the name |
+| Where is the repo? Where is the lab? | `repo.git_root` (git), `repo.layout_root` (git, else stamped tree); `repo.lab_root` (the nearest `models.toml`) |
 | Run git | `repo.git` (output, loud on failure), `repo.git_run` (exit code is the answer) |
 | Which directories does an area's `runs/` hold, and what does each say? | `runs.run_dirs` (one walk, metadata read once; an unreadable run is data — the caller refuses, reports or skips) |
 | Is this run finished? Which runs are? | `runs.completion_state`, `runs.completed_runs` |
@@ -78,10 +78,15 @@ evidence** (warns), **agent audit** (semantic).
 | Which code did an audit see, and is it still that code? | `scope_sha.area_stamp`, `scope_sha.audit_stamp_drift` (area stamp, not per promise) |
 | Which package does a requirements line name, and how is labkit pinned? | `repo.requirement_name`, `repo.requirement_lines`, the four `*_REQUIREMENT` grammars (stamp pin line, `labkit-check`, lock parser, probe) |
 | What is a run id, when did the run start? | `runs.RUN_ID`, `runs.RUN_ID_TIME`, `runs.run_started`; `runs.COMPLETED` is the one state word every consumer compares to |
+| How does a gate tell what it found, and exit? | `gate.Findings` (`block`, `warn`, `add` for a line graded by its own word, `report`) — preflight, finalize, report-check, code-check, notes-check |
 | Which rules exist, what do they say, and does a reference name one? | `rules.load_registry`, `rules.rule_heads`, `rules.check_registry`, `rules.check_ledger`, `rules.check_refs`, `rules.rule_text` (`labkit/docs/standard.md`, `labkit/docs/rules.tsv`) |
 
 A second answer to any of these questions is drift: move the caller to the
-home, never copy the logic.
+home, never copy the logic. `tests/test_one_home.py` greps `labkit/*.py` for
+the shapes a copy takes (a hand-spelled sha256, a `git` run outside `repo`,
+a `PROTOCOL-*.md` scan, the id letters, a fence regex, …) and fails on a
+match outside the home — three audits removed the same copies by hand and
+they came back each time (2026-10-15).
 
 ## Where what lives
 

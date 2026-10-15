@@ -88,7 +88,11 @@ class TestMetricsChoice(unittest.TestCase):
             self.assertIn("all report", out)
             self.assertIn("skipped 1 newer bound run(s)", out)
 
-    def test_no_run_with_keys_falls_back_to_newest_and_reports_missing(self):
+    def test_no_run_with_keys_is_no_answer(self):
+        """Until 0.96.0 the newest run was taken with a warning and every
+        promise read as unimplemented; finalize blocked on the same state.
+        One telling (`AnsweringRun.explain`): a probe or producer run is no
+        answer, exit 2."""
         with tempfile.TemporaryDirectory() as d:
             proto = _area(
                 d,
@@ -98,8 +102,9 @@ class TestMetricsChoice(unittest.TestCase):
                 },
             )
             code, out = _run_main([str(proto)])
-            self.assertEqual(code, 1)
-            self.assertIn("no 'c1'", out)
+            self.assertEqual(code, 2, out)
+            self.assertIn("probe or producer run", out)
+            self.assertIn("--metrics FILE", out)
 
     def test_explicit_metrics_argument_still_wins(self):
         with tempfile.TemporaryDirectory() as d:

@@ -46,7 +46,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit import console, promises, protocol_block, runs
-from labkit.repo import git_root, git_run
+from labkit.repo import git_root, git_run, repo_protocols
 from labkit.scope_sha import audit_stamp_drift
 
 
@@ -297,6 +297,17 @@ class FieldReport:
 _NO_MODEL = re.compile(r"^(n/a|none|no model|—|–|-)", re.I)
 
 
+def model_named(text: str) -> bool:
+    """Does the protocol name a model in `Model / tool`? The one answer for
+    the cut, the seconds registration and `labkit-init --report` — the
+    scaffolder matched the raw text with its own spelling (audit 2026-10-15:
+    `**Model / tool:** —` was model-free here and a model there)."""
+    found: dict[str, list[FieldLine]] = {}
+    for f in fields(text):
+        found.setdefault(f.name, []).append(f)
+    return _model_named(found)
+
+
 def _model_named(found: dict[str, list[FieldLine]]) -> bool:
     for f in found.get("model / tool", []):
         if f.value and not f.placeholder and not _NO_MODEL.match(f.value):
@@ -464,7 +475,7 @@ def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
     if root is None:
         return {}
     index: dict[str, list[Path]] = {}
-    for f in sorted(root.rglob("PROTOCOL-*.md")):
+    for f in repo_protocols(root):
         try:
             pid = protocol_block.id_of(f.read_text(encoding="utf-8"))
         except OSError:
@@ -773,7 +784,7 @@ def collect_protocols(paths: list[str]) -> list[Path]:
     files: list[Path] = []
     for p in map(Path, paths):
         if p.is_dir():
-            files.extend(sorted(p.rglob("PROTOCOL-*.md")))
+            files.extend(repo_protocols(p))
         else:
             files.append(p)
     return files

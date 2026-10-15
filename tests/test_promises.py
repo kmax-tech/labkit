@@ -562,3 +562,14 @@ class Constants(unittest.TestCase):
             "a full run is held to the registration, but",
             promises.promise_tables_owed(None, frozen=False, full_run=True) or "",
         )
+
+
+class KeyKind(unittest.TestCase):
+    """`promises.key_kind` is the one way to ask a key's letter."""
+
+    def test_kinds_and_outsiders(self):
+        self.assertEqual(promises.key_kind("c1_pass"), "criterion")
+        self.assertEqual(promises.key_kind("a2"), "admissibility")
+        self.assertEqual(promises.key_kind("b10_branch"), "branch")
+        for key in ("f1", "p1_x", "criterion_pass", "ac1_pass", "k1_pass"):
+            self.assertIsNone(promises.key_kind(key), key)

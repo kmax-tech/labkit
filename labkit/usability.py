@@ -100,6 +100,7 @@ from labkit import (
     agent_transcript,
     code_navigation,
     console,
+    promises,
     protocol_reading,
     repo,
     runs,
@@ -197,8 +198,16 @@ TOL = 1e-9
 
 
 def _sh(args: list[str], cwd: Path) -> str:
-    """Run a command in `cwd`; a non-zero exit is a refusal with its output."""
-    r = subprocess.run(args, cwd=cwd, capture_output=True, text=True)
+    """Run a command in `cwd`; a non-zero exit is a refusal with its output.
+    git goes through `repo.git_run` (the one runner: timeout, GitError)."""
+    try:
+        r = (
+            repo.git_run(args[1:], cwd)
+            if args[0] == "git"
+            else subprocess.run(args, cwd=cwd, capture_output=True, text=True)
+        )
+    except repo.GitError as exc:
+        raise SystemExit(f"usability: {exc}") from exc
     if r.returncode != 0:
         raise SystemExit(
             f"usability: `{' '.join(args)}` failed in {cwd}:\n{r.stdout}{r.stderr}"
@@ -249,7 +258,7 @@ def other_requirements(text: str) -> list[str]:
         for ln in text.splitlines()
         if ln.strip()
         and not ln.lstrip().startswith("#")
-        and not re.match(r"^\s*labkit\b", ln)
+        and repo.requirement_name(ln) != "labkit"
     ]
 
 
@@ -638,13 +647,11 @@ def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
     )
     probe_file.write_text(json.dumps(asdict(probe), indent=1), encoding="utf-8")
     # pip freeze names the commit the tag resolved to; the stamped pin names the tag
-    pin = next(
-        ln
-        for ln in (root / "requirements.txt").read_text(encoding="utf-8").splitlines()
-        if ln.startswith("labkit")
-    )
-    m = re.search(r"@(v\d+\.\d+\.\d+)$", pin)
-    label = m.group(1) if m else pin
+    pin = repo.requirement_lines(
+        (root / "requirements.txt").read_text(encoding="utf-8"), "labkit"
+    )[0]
+    m = repo.VCS_REQUIREMENT.match(pin)
+    label = m.group("ref") if m and m.group("ref") else pin
     report = "\n".join(
         f"  {what:12s}{path}"
         for what, paths in (
@@ -1119,7 +1126,9 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         bound_to = pr.protocol_as_recorded if pr.bound else None
         tier = pr.cost_tier
         if probe.task != "count":
-            null_reported = any(re.match(r"^a\d+_", k) for k in metrics)
+            null_reported = any(
+                promises.key_kind(k) == "admissibility" for k in metrics
+            )
         if pr.bound and pr.protocol is not None:
             from labkit import protocol_block  # lazy: labkit modules import each other
 

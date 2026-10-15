@@ -1,0 +1,84 @@
+"""One home per question — held by grep, not by memory.
+
+`docs/architecture.md` names the home of every recurring question and says
+a second answer is drift. Three audits (2026-10-06, 2026-10-13,
+2026-10-15) removed the same kinds of copies — a hand-spelled sha256, a
+`git` run outside `repo`, a `PROTOCOL-*.md` scan, the id letters, a fence
+regex — and they came back within two weeks each time. This test greps
+`labkit/*.py` for the shapes a copy takes; a match outside the home fails,
+naming file and line. A line that must stay says why with a `# home:`
+comment naming the home it is not.
+"""
+
+from __future__ import annotations
+
+import re
+import unittest
+from pathlib import Path
+
+PACKAGE = Path(__file__).resolve().parents[1] / "labkit"
+
+#: (what, the shape of a copy, the module(s) where it belongs)
+RULES: list[tuple[str, str, set[str]]] = [
+    ("sha256 by hand", r"hashlib\.", {"scope_sha"}),
+    (
+        "git outside repo.git_run",
+        r"subprocess\.\w+\(\s*\[\s*\"git\"",
+        {"repo"},
+    ),
+    ("a PROTOCOL-*.md scan", r"r?glob\(\s*\"PROTOCOL-", {"repo"}),
+    ("pip's name normalisation", r"\.lower\(\)\.replace\(\"_\", \"-\"\)", {"repo"}),
+    ("a fence regex", r"re\.compile\([^\n]*(`\{3|```|~\{3)", {"protocol_block"}),
+    ("the id letters", r"\[(?:[cab]{2,3}|[CAB]{2,3})\]|\^a\\d", {"promises"}),
+    ("the area name NN-slug", r"\^\(\\d\+\)-", {"repo"}),
+    ("a temp-and-rename write", r"os\.replace\(", {"runs"}),
+    ("the run-id shape", r"\\d\{4\}-\\d\{2\}-\\d\{2\}T", {"runs"}),
+    (
+        "a requirements pin spelled by hand",
+        r"startswith\(\"labkit\"\)|\^\\s\*labkit",
+        {"repo"},
+    ),
+]
+
+
+def offenders(what: str, shape: str, homes: set[str]) -> list[str]:
+    out = []
+    pattern = re.compile(shape)
+    for path in sorted(PACKAGE.glob("*.py")):
+        if path.stem in homes:
+            continue
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for n, line in enumerate(lines, 1):
+            said = "# home:" in line or (n > 1 and "# home:" in lines[n - 2])
+            if pattern.search(line) and not said:
+                out.append(f"{path.name}:{n}: {what} — {line.strip()[:80]}")
+    return out
+
+
+class OneHome(unittest.TestCase):
+    def test_no_copy_outside_its_home(self):
+        found = [o for rule in RULES for o in offenders(*rule)]
+        self.assertEqual(found, [], "\n" + "\n".join(found))
+
+    def test_the_rules_bite(self):
+        """Each shape matches what it is written for (a rule that matches
+        nothing guards nothing)."""
+        samples = {
+            "sha256 by hand": "h = hashlib.sha256(data).hexdigest()",
+            "git outside repo.git_run": 'subprocess.run(["git", "status"])',
+            "a PROTOCOL-*.md scan": 'for f in root.rglob("PROTOCOL-*.md"):',
+            "pip's name normalisation": 'name.lower().replace("_", "-")',
+            "a fence regex": 'FENCE = re.compile(r"^\\s*```")',
+            "the id letters": 'KEY = re.compile(r"([ca])\\d+_pass")',
+            "the area name NN-slug": 'm = re.match(r"^(\\d+)-(.+)$", name)',
+            "a temp-and-rename write": "os.replace(tmp, path)",
+            "the run-id shape": 'RUN = re.compile(r"\\d{4}-\\d{2}-\\d{2}T")',
+            "a requirements pin spelled by hand": 'if ln.startswith("labkit"):',
+        }
+        for what, shape, _ in RULES:
+            with self.subTest(what=what):
+                self.assertIsNotNone(re.compile(shape).search(samples[what]), shape)
+
+
+if __name__ == "__main__":
+    unittest.main()

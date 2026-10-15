@@ -43,14 +43,15 @@ read-only gate.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 import subprocess
 import sys
 from pathlib import Path
 
 from labkit.code_check import check_intent_ids, stamp_coverage_findings
-from labkit import console, findings, install_hooks, protocol_block
+from labkit import console, install_hooks, protocol_block
+from labkit import findings as audit_findings
+from labkit.gate import Findings
 from labkit.repo import (
     area_path,
     choose_protocol,
@@ -58,6 +59,7 @@ from labkit.repo import (
     git_root,
     layout_root,
     no_such_area,
+    split_area_name,
 )
 from labkit.protocol_check import check_fields, check_protocol_id, repo_protocol_ids
 from labkit.scope_sha import AREA_GLOBS, AUDIT_SHA, area_stamp, audit_stamp_drift
@@ -106,8 +108,7 @@ def area_tests(area: Path, repo: Path) -> AreaTests:
     # or the pattern read `tests/test_.py` and the area's test was "none"
     # (fallacy-dataset-generation, 2026-10-09)
     area = area.resolve()
-    m = re.match(r"^(\d+)-(.+)$", area.name)
-    nn, name = (m.group(1), m.group(2)) if m else (None, area.name)
+    nn, name = split_area_name(area.name)
     stem = (f"test_{nn}_" if nn else "test_") + name.replace("-", "_")
     pattern = f"tests/{stem}.py"
     tests_dir = repo / "tests"
@@ -153,8 +154,7 @@ def area_tests(area: Path, repo: Path) -> AreaTests:
 
 def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Run all preflight checks. Returns 0 (clean) or 1 (findings)."""
-    blockers = 0
-    warnings = 0
+    findings = Findings()
 
     protocol = choose_protocol(area, protocol, "preflight")
     if protocol is None:
@@ -168,32 +168,24 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
     # owed fields by cut, and the graduation at frozen = true.
     report = check_fields(text)
     if report.head is None:
-        print(f"  HEAD (must): {report.head_error}")
-        return 1
+        findings.block(f"HEAD (must): {report.head_error}")
+        return findings.report("preflight", "freezing")
     missing_must, missing_should = report.missing_must, report.missing_should
     must_holes, should_holes = report.must_holes, report.soft_holes
     id_findings = check_protocol_id(protocol, report.head, repo_protocol_ids(protocol))
 
-    if missing_must:
-        for label in missing_must:
-            print(f"  MISSING (must): {label}")
-        blockers += len(missing_must)
-    if must_holes:
-        for n, label in must_holes:
-            print(f"  {protocol.name}:{n}: PLACEHOLDER (must): {label}")
-        blockers += len(must_holes)
-    if id_findings:
-        for f in id_findings:
-            print(f"  {f}")
-        blockers += len(id_findings)
-    if missing_should:
-        for label in missing_should:
-            print(f"  missing (should): {label}")
-        warnings += len(missing_should)
-    if should_holes:
-        for n, label in should_holes:
-            print(f"  {protocol.name}:{n}: placeholder (should): {label}")
-        warnings += len(should_holes)
+    for label in missing_must:
+        findings.block(f"MISSING (must): {label}")
+    for n, label in must_holes:
+        findings.block(f"{protocol.name}:{n}: PLACEHOLDER (must): {label}")
+    for f in id_findings:
+        findings.add(
+            f
+        )  # graded by its own word (a changed id warns, a doubled one blocks)
+    for label in missing_should:
+        findings.warn(f"missing (should): {label}")
+    for n, label in should_holes:
+        findings.warn(f"{protocol.name}:{n}: placeholder (should): {label}")
     if not (
         missing_must or must_holes or id_findings or missing_should or should_holes
     ):
@@ -227,38 +219,30 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
     print("── audit findings ──")
     frozen = report.head is not None and report.head.frozen
     try:
-        records = findings.area_records(area)
-    except findings.FindingsError as exc:
-        print(f"  BLOCKER: {exc}")
-        blockers += 1
+        records = audit_findings.area_records(area)
+    except audit_findings.FindingsError as exc:
+        findings.block(str(exc))
         records = []
     undecided = [(r, f) for r in records for f in r.open]
-    grade = "BLOCKER" if frozen else "WARNING"
+    found = (
+        findings.block if frozen else findings.warn
+    )  # frozen = true owes every decision
     for r, f in undecided:
-        print(f"  {grade}: undecided in {r.path.name}: {f.text}")
+        found(f"undecided in {r.path.name}: {f.text}")
     if undecided:
         print(
             f"  {len(undecided)} finding(s) still `open` — decide each (fixed / accepted / "
             f"deferred / dismissed) before freezing (LAB-015 Preflight audit before freezing)"
             + (" — frozen = true owes it" if frozen else "")
         )
-        if frozen:
-            blockers += len(undecided)
-        else:
-            warnings += len(undecided)
     gap = _coverage_gap(area, report.head)
     if gap:
-        print(f"  {grade}: {gap} (LAB-015 Preflight audit before freezing)")
-        if frozen:
-            blockers += 1
-        else:
-            warnings += 1
+        found(f"{gap} (LAB-015 Preflight audit before freezing)")
     experiments = area.resolve().parent
     try:
-        elsewhere = findings.deferred_elsewhere(area, experiments)
-    except findings.FindingsError as exc:
-        print(f"  WARNING: {exc}")
-        warnings += 1
+        elsewhere = audit_findings.deferred_elsewhere(area, experiments)
+    except audit_findings.FindingsError as exc:
+        findings.warn(str(exc))
         elsewhere = []
     for other, r, f in elsewhere:
         print(f"  deferred in {other.name} ({r.date}): {f.text} — {f.reason}")
@@ -278,9 +262,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
         area, layout_root(area)
     )
     for f in code_findings:
-        print(f"  {f}")
-    blockers += sum(1 for f in code_findings if f.startswith("BLOCKER"))
-    warnings += sum(1 for f in code_findings if f.startswith("WARNING"))
+        findings.add(f)  # graded by code-check's own word, counted once
     if not code_findings:
         print("  ok")
 
@@ -296,9 +278,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
     print("── working tree ──")
     repo = layout_root(area)
     if _is_dirty(repo):
-        print(f"  WARNING: uncommitted changes in {repo}")
-        print("  (not a blocker — commit or stash before the run)")
-        warnings += 1
+        findings.warn(f"uncommitted changes in {repo} (commit or stash before the run)")
     else:
         print("  clean")
 
@@ -312,10 +292,9 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
     else:
         gaps = install_hooks.check(git_repo)
         for g in gaps:
-            print(f"  WARNING: {g}")
+            findings.warn(g)
         if gaps:
             print("  fix with  .venv/bin/labkit-hooks install")
-            warnings += 1
         else:
             print("  installed (this labkit's pre-commit, core.hooksPath, claude-hook)")
 
@@ -326,43 +305,25 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
         # Frozen means every gap is owed (protocol-check's graduation); a
         # missing permanent resolution check is such a gap (2026-10-07: it
         # only warned, and a protocol could freeze without any test).
-        grade = "BLOCKER" if frozen else "WARNING"
-        print(
-            f"  {grade}: no {tests.pattern} — the resolution check has no "
+        (findings.block if frozen else findings.warn)(
+            f"no {tests.pattern} — the resolution check has no "
             f"permanent form (LAB-016 Resolution check before freezing)"
             + (" and frozen = true owes it" if frozen else "")
         )
-        if frozen:
-            blockers += 1
-        else:
-            warnings += 1
     elif tests.state == "ok":
         print(f"  ok — {', '.join(f.name for f in tests.files)}")
     elif tests.state == "no-pytest":
-        print("  WARNING: pytest is not installed in this interpreter — tests not run")
-        warnings += 1
+        findings.warn("pytest is not installed in this interpreter — tests not run")
     else:
         for ln in tests.tail:
             print(f"  {ln}")
-        print(
-            f"  BLOCKER: {', '.join(f.name for f in tests.files)} failed — an "
+        findings.block(
+            f"{', '.join(f.name for f in tests.files)} failed — an "
             f"unfilled or broken resolution check must not pass the freeze"
         )
-        blockers += 1
 
     # -- summary -----------------------------------------------------------
-    print()
-    if blockers:
-        print(
-            f"preflight: {blockers} blocker(s), {warnings} warning(s) "
-            f"— fix the blockers before freezing."
-        )
-        return 1
-    if warnings:
-        print(f"preflight: 0 blockers, {warnings} warning(s) — review before freezing.")
-        return 0
-    print("preflight: all clear.")
-    return 0
+    return findings.report("preflight", "freezing")
 
 
 def _coverage_gap(area: Path, head: "protocol_block.Head | None") -> str | None:
@@ -381,8 +342,8 @@ def _coverage_gap(area: Path, head: "protocol_block.Head | None") -> str | None:
     if m is None:  # `n/a — <reason>`: a visible decision, not a claim
         return None
     try:
-        return findings.audit_coverage(area, m.group(1), "preflight")
-    except findings.FindingsError as exc:
+        return audit_findings.audit_coverage(area, m.group(1), "preflight")
+    except audit_findings.FindingsError as exc:
         return str(exc)
 
 

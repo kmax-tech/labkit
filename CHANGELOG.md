@@ -5,6 +5,62 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.96.0 — 2026-10-15
+
+Phase C of the audit of 2026-10-15: one home per question, and a test that
+keeps the copies from coming back.
+
+### Changed
+
+- **Digests and git through their homes.** `runlog` hashed the script by
+  hand and ran `git rev-parse` outside `repo.git_run` (no timeout, no
+  `GitError`); `usability` ran its eight git calls the same way. The width
+  of a run's recorded digest has a name, `runs.RECORD_SHA_CHARS` (16) beside
+  `scope_sha.DIGEST_CHARS` (12), instead of literals in three modules.
+- **One repo-wide protocol scan.** `repo.repo_protocols` reads the repo
+  outside `repo.SKIP_DIRS` (`.git`, `.venv`, `runs/`, `data/`, …); four
+  scans did it themselves and three read a protocol copied under `runs/`
+  as a second one (a false "two protocols carry id" blocker). The name has
+  one spelling (`repo.PROTOCOL_GLOB`, `repo.PROTOCOL_NAME`), the lab root
+  one rule (`repo.lab_root`: the nearest `models.toml`, for `labkit-init`
+  and `llm`); `notes_check` no longer carries its own `git_root`.
+- **The id alphabet is asked, never re-spelled.** `promises.key_kind` says
+  which kind a metrics key belongs to; `usability` and `protocol_reading`
+  had their own `^a\d+_` and `[ca]`, which the next change of the alphabet
+  would have silenced. The area name `NN-<slug>` has one pattern,
+  `repo.AREA_NAME` / `repo.split_area_name`, instead of four.
+- **One telling of the answering choice.** `runs.AnsweringRun.explain`
+  renders the choice for finalize, intent-check, recheck, `labkit-params`
+  and the audit, which did it four ways with four semantics: a chosen run
+  that reports no intent key while the protocol registers ids is a blocker
+  everywhere now (intent-check warned and read every promise as
+  unimplemented; params showed the probe's values as the answer).
+- **Fences and labels are parsed once.** `protocol_block.fence_spans` is
+  the one fence walker (`protocol-fill --prompts` closed a block on any
+  line starting with the marker; the prompt-drift check knew no `~~~` and
+  no nesting), `protocol_check.fields` the one label parser (the prompt
+  check had its own, blind to a wrapped label), `protocol_check.model_named`
+  the one reading of `Model / tool` (`labkit-init --report` matched the
+  raw text and read `—` as a model). `protocol-fill` reads the head's
+  `type` inside the TOML block, not in a fenced example.
+- **`labkit.gate`: what a gate found, told once.** `gate.Findings` holds the
+  blockers and warnings of preflight, finalize, report-check, code-check and
+  notes-check, prints one spelling (`BLOCKER:` / `WARNING:`), one summary
+  and one exit contract (1 with a blocker). Five shapes and three
+  spellings before; preflight counted code-check's lines a second time by
+  `startswith`, and a protocol-id line graded `WARNING` counted as a
+  blocker. preflight's station lines carry the grade now
+  (`BLOCKER: MISSING (must): …`); notes-check ends with the same summary.
+- **`tests/test_one_home.py` keeps the copies from coming back.** It greps
+  `labkit/*.py` for the shapes a copy takes — a hand-spelled sha256, a `git`
+  run outside `repo`, a `PROTOCOL-*.md` scan, pip's name normalisation, a
+  fence regex, the id letters, the area name, a temp-and-rename write, the
+  run-id shape, a pin line spelled by hand — and fails on a match outside
+  the home; a line that must stay says why with `# home:`. On the way:
+  `scope_sha.digest` for bytes (promises, endpoint_lease), `repo.pip_name`,
+  `runlog._parse_lock` and the probe's pin line read through
+  `repo.requirement_name`.
+
 ## 0.95.0 — 2026-10-15
 
 Phase B of the audit of 2026-10-15: the audit chain and the hooks.

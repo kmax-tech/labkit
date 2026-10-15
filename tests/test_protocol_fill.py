@@ -161,6 +161,27 @@ class HeadType(unittest.TestCase):
             self.assertIn(label, after)
         self.assertIn("Question / hypothesis", before)
 
+    def test_a_type_line_in_a_fenced_example_is_not_the_head(self):
+        """A prompt quoting TOML output carried `type = "<…>"`; it was taken
+        for the head (audit 2026-10-15). The head is read inside the one
+        ```toml block."""
+        example = (
+            '- **Prompt:**\n\n  ```text\n  answer as\n  type = "<yes | no>"\n  ```\n\n'
+        )
+        text = example + self.HEAD.replace(
+            '"<exploratory | confirmatory>"', '"exploratory"'
+        )
+        self.assertIsNone(protocol_fill.head_type_open(text))
+        text = example + self.HEAD
+        line = protocol_fill.head_type_open(text)
+        assert line is not None
+        self.assertEqual(
+            text.splitlines()[line - 1].strip(), 'type = "<exploratory | confirmatory>"'
+        )
+        filled = protocol_fill.fill_head_type(text, "confirmatory")
+        self.assertIn('type = "<yes | no>"', filled)  # the example is untouched
+        self.assertIn('type = "confirmatory"', filled)
+
     def test_a_wrong_type_and_a_set_type_are_refused(self):
         with self.assertRaises(ValueError):
             protocol_fill.fill_head_type(self.HEAD, "descriptive")

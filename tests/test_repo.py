@@ -63,6 +63,46 @@ class Layout(unittest.TestCase):
         self.assertEqual(repo.layout_root(r / "a"), r.resolve())
 
 
+class RepoWide(unittest.TestCase):
+    """`repo_protocols` reads the repo outside SKIP_DIRS: a protocol copied
+    under runs/<id>/ or shipped in .venv/ made a false "two protocols carry
+    id" blocker in three of four scans (audit 2026-10-15); `lab_root` is the
+    one rule for the scaffolder and the model backend."""
+
+    def test_repo_protocols_skips_records_and_packages(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            live = root / "experiments" / "01-x" / "PROTOCOL-x.md"
+            live.parent.mkdir(parents=True)
+            live.write_text("")
+            for copy in (
+                root / "experiments" / "01-x" / "runs" / "r1" / "PROTOCOL-x.md",
+                root / ".venv" / "lib" / "PROTOCOL-x.md",
+                root / "data" / "PROTOCOL-x.md",
+            ):
+                copy.parent.mkdir(parents=True)
+                copy.write_text("")
+            self.assertEqual(repo.repo_protocols(root), [live])
+            self.assertTrue(repo.PROTOCOL_NAME.match("PROTOCOL-s2-foo.md"))
+            self.assertFalse(repo.PROTOCOL_NAME.match("PROTOCOL-x.md.bak"))
+
+    def test_split_area_name(self):
+        self.assertEqual(
+            repo.split_area_name("01-docs-per-case"), ("01", "docs-per-case")
+        )
+        self.assertEqual(repo.split_area_name("100-foo"), ("100", "foo"))
+        self.assertEqual(repo.split_area_name("explore"), (None, "explore"))
+
+    def test_lab_root_is_the_nearest_models_toml(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "models.toml").write_text("")
+            deep = root / "experiments" / "01-x" / "scripts"
+            deep.mkdir(parents=True)
+            self.assertEqual(repo.lab_root(deep), root.resolve())
+            self.assertIsNone(repo.lab_root(Path(tempfile.mkdtemp())))
+
+
 class ProtocolChoice(unittest.TestCase):
     """`the_protocol` never guesses; `choose_protocol` says the same and returns None."""
 

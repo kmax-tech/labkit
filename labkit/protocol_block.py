@@ -68,14 +68,16 @@ class Head:
         return [f for f in ("id", "type", "cost") if getattr(self, f) is None]
 
 
-def fenced_blocks(text: str) -> list[tuple[str, str]]:
-    """(info string, body) of every top-level fenced block. A fence inside
-    another fence is body, not a block: a verbatim prompt that asks the
-    model for ```toml output is no second head (review 2026-10-07). A fence
-    closes with the same character, at least as long, and nothing after it;
-    an unclosed fence runs to the end."""
-    out: list[tuple[str, str]] = []
-    lines = text.splitlines()
+def fence_spans(lines: list[str]) -> list[tuple[str, int, int]]:
+    """(info string, first body line, line after the body) of every
+    top-level fenced block, as 0-based indexes into LINES — the one fence
+    walker; `fenced_blocks` is its text form, and the readers that need a
+    place (the head's line, the Prompt block to replace) use the spans.
+    A fence inside another fence is body, not a block: a verbatim prompt
+    that asks the model for ```toml output is no second head (review
+    2026-10-07). A fence closes with the same character, at least as long,
+    and nothing after it; an unclosed fence runs to the end."""
+    out: list[tuple[str, int, int]] = []
     i = 0
     while i < len(lines):
         m = FENCE.match(lines[i])
@@ -83,16 +85,35 @@ def fenced_blocks(text: str) -> list[tuple[str, str]]:
             i += 1
             continue
         marker, info = m.group(2), m.group(3).lower()
-        body: list[str] = []
-        i += 1
-        while i < len(lines):
-            if closes(lines[i], marker):
-                break
-            body.append(lines[i])
+        start = i + 1
+        i = start
+        while i < len(lines) and not closes(lines[i], marker):
             i += 1
-        out.append((info, "\n".join(body) + "\n"))
+        out.append((info, start, i))
         i += 1
     return out
+
+
+def fenced_blocks(text: str) -> list[tuple[str, str]]:
+    """(info string, body) of every top-level fenced block (`fence_spans`)."""
+    lines = text.splitlines()
+    return [
+        (info, "\n".join(lines[start:end]) + "\n")
+        for info, start, end in fence_spans(lines)
+    ]
+
+
+def toml_block_span(text: str) -> tuple[int, int] | None:
+    """(first body line, line after the body) of the protocol's one TOML
+    block, 0-based, or None without one; raises BlockError when there are
+    two — where a writer edits the head in place."""
+    spans = [(s, e) for info, s, e in fence_spans(text.splitlines()) if info == "toml"]
+    if len(spans) > 1:
+        raise BlockError(
+            f"{len(spans)} ```toml blocks — a protocol has exactly "
+            f"one, holding [protocol] and its [[promise]] tables"
+        )
+    return spans[0] if spans else None
 
 
 def closes(line: str, marker: str) -> bool:

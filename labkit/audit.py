@@ -150,8 +150,11 @@ def run_rows(area: Path, protocol: Path) -> list[tuple[str, str]]:
     if pid is None:
         return [("ROWS", "no rows: the protocol id is still a placeholder")]
     choice = bound_answering_run(area, pid)
-    if choice.run_dir is None:
-        return [("ROWS", f"no rows: {choice.blocker or 'no completed bound run'}")]
+    blocker, _ = choice.explain(
+        promises.registers_ids(protocol.read_text(encoding="utf-8"))
+    )
+    if blocker or choice.run_dir is None:
+        return [("ROWS", f"no rows: {blocker or 'no completed bound run'}")]
     run_dir = choice.run_dir
     registered = read_outputs(run_dir)
     out: list[tuple[str, str]] = []

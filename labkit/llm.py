@@ -89,18 +89,20 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 from labkit import endpoint_lease
+from labkit.repo import lab_root
 
 
 def _find_models_toml() -> Path:
+    """The lab's `models.toml`: `repo.lab_root` from the script's directory,
+    else from the working directory."""
     seeds = [
         Path(sys.argv[0]).resolve().parent if sys.argv[0] else Path.cwd(),
         Path.cwd(),
     ]
     for seed in seeds:
-        for d in [seed, *seed.parents]:
-            p = d / "models.toml"
-            if p.exists():
-                return p
+        root = lab_root(seed)
+        if root is not None:
+            return root / "models.toml"
     raise FileNotFoundError(
         "models.toml not found (searched upward from script dir and cwd)"
     )

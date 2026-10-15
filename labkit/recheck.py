@@ -7,8 +7,8 @@ Three mechanics every area used to re-implement in its `--check`, and two
 cold agents got two of them wrong on the first try (2026-10-05):
 
 1. **pin** — `out` is the file the chosen run recorded in `outputs.json`
-   (runlog keeps a 16-hex sha256 prefix; the comparison is `startswith`,
-   not equality — a full digest never matches a prefix).
+   (runlog keeps a `runs.RECORD_SHA_CHARS`-hex sha256 prefix; the comparison
+   is `startswith`, not equality — a full digest never matches a prefix).
 2. **agree** — `recompute(rows)` equals `metrics.json`: intent keys
    (`c1_…`, `a1_…`, `b1_…`) present on both sides or neither,
    nothing the run reported vanishes (runlog's own keys excepted), every
@@ -72,16 +72,9 @@ def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Pat
     if run_id is not None:
         return _named_run(area / "runs" / run_id, pid)
     choice = runs.bound_answering_run(area, pid)
-    if choice.run_dir is None:
-        raise SystemExit(
-            f"recheck: {choice.blocker}"
-            + "".join(f"\n  {x.run_dir.name}: {x.why}" for x in choice.exclusions)
-        )
-    if promises.registers_ids(protocol_text) and not choice.reports_intent_keys:
-        raise SystemExit(
-            f"recheck: {choice.run_dir.name} reports no intent key — a probe or "
-            f"producer run, not an answer to {pid}"
-        )
+    blocker, lines = choice.explain(promises.registers_ids(protocol_text))
+    if blocker or choice.run_dir is None:
+        raise SystemExit(f"recheck: {blocker}" + "".join(f"\n  {ln}" for ln in lines))
     return choice.run_dir
 
 
@@ -130,7 +123,7 @@ def pin(run: Path, out: Path) -> None:
     actual = scope_sha.file_digest(out)
     if not recorded.sha256 or not actual.startswith(recorded.sha256):
         raise SystemExit(
-            f"recheck: {out.name} (sha {actual[:16]}) is not the file run {run.name} "
+            f"recheck: {out.name} (sha {actual[: runs.RECORD_SHA_CHARS]}) is not the file run {run.name} "
             f"recorded ({recorded.sha256}) — rerun the script or name that run"
         )
 

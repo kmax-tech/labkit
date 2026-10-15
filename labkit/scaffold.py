@@ -39,7 +39,15 @@ import uuid
 from pathlib import Path
 
 from labkit import protocol_block
-from labkit.repo import area_protocols, git_run
+from labkit.protocol_check import model_named
+from labkit.repo import (
+    AREA_NAME,
+    area_protocols,
+    git_run,
+    lab_root,
+    repo_protocols,
+    split_area_name,
+)
 from labkit.repo_check import PYPROJECT_VERSION_RE
 
 PACKAGE = Path(__file__).resolve().parent
@@ -396,8 +404,8 @@ def insert_report_fields(text: str, blocks: ProtocolBlocks) -> tuple[str, int]:
 
 # A protocol that names no model has no seed, no temperature and nothing to
 # parse; asking for those fields cost a fix cycle each on a deterministic run
-# (2026-10-05). --report fills them when the Model / tool field says so.
-NO_MODEL = re.compile(r"\*\*model / tool:\*\*\s*(none|no model|-|n/a)\b", re.I)
+# (2026-10-05). --report fills them when the Model / tool field says so
+# (`protocol_check.model_named`, the one reading of that field).
 DETERMINISTIC_NA = {
     "Randomness controls": "n/a — deterministic, no model: no seed, no temperature, one run (auto-filled by --report)",
     "Noise ceiling → threshold": (  # the protocol field's label (the standard says noise floor)
@@ -424,7 +432,7 @@ def _replace_placeholder(lines: list[str], label: str, value: str) -> bool:
 
 def auto_fill_deterministic(text: str) -> tuple[str, int]:
     """Fill the placeholders a model-free protocol cannot answer; (text, fields filled)."""
-    if not NO_MODEL.search(text):
+    if model_named(text):
         return text, 0
     lines = text.split("\n")
     filled = sum(
@@ -466,7 +474,7 @@ def new_protocol_id(root: Path) -> str:
     """
     taken = {
         protocol_block.id_of(f.read_text(encoding="utf-8"))
-        for f in root.rglob("PROTOCOL-*.md")
+        for f in repo_protocols(root)
     }
     while True:
         pid = "p-" + uuid.uuid4().hex[:16]
@@ -484,14 +492,14 @@ def next_experiment_number(experiments: Path) -> str:
         for d in (experiments, experiments / "_archiv")
         if d.is_dir()
         for p in d.iterdir()
-        if p.is_dir() and (m := re.match(r"^(\d+)-", p.name))
+        if p.is_dir() and (m := AREA_NAME.match(p.name))
     ]
     return f"{max(used) + 1 if used else 1:02d}"
 
 
 def area_slug(name: str) -> str:
     """The area name as a slug, without a typed `NN-` prefix (labkit owns the number)."""
-    slug = re.sub(r"^\d+-", "", re.sub(r"[^a-z0-9-]+", "-", name.lower()).strip("-"))
+    slug = split_area_name(re.sub(r"[^a-z0-9-]+", "-", name.lower()).strip("-"))[1]
     if not slug:
         raise SystemExit(f"labkit-init: unusable experiment name: {name!r}")
     return slug
@@ -675,7 +683,7 @@ def stamp_area(
     existing = [
         p
         for p in experiments.iterdir()
-        if p.is_dir() and re.sub(r"^\d+-", "", p.name) == slug
+        if p.is_dir() and split_area_name(p.name)[1] == slug
     ]
     if existing:
         if not report:
@@ -810,7 +818,14 @@ def main(argv: list[str]) -> int:
             "\nnext: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/labkit-hooks install"
         )
         return 0
-    root = a.repo.resolve() if a.repo is not None else lab_root(Path.cwd())
+    # the nearest lab repo above the working directory, as git finds its
+    # repo; the directory itself when none, so stamp_area names what it
+    # was asked about (an area directory, cloud judge probe 2026-10-14)
+    root = (
+        a.repo.resolve()
+        if a.repo is not None
+        else lab_root(Path.cwd()) or Path.cwd().resolve()
+    )
     if a.explore:
         print("\n".join(stamp_explore(root / "experiments", area_slug(a.name))))
         print(
@@ -820,19 +835,6 @@ def main(argv: list[str]) -> int:
     _, report = stamp_area(root, a.name, cost=a.cost, model=a.model, report=a.report)
     print(report)
     return 0
-
-
-def lab_root(start: Path) -> Path:
-    """The nearest directory, START or above, that is a lab repo (models.toml
-    and experiments/), as git finds its repo; START itself when none is, so
-    stamp_area names the directory it was asked about. Run from an area
-    directory, `labkit-init exp <name> --report` called the area "not a lab
-    repo" (cloud judge probe, 2026-10-14)."""
-    here = start.resolve()
-    for d in (here, *here.parents):
-        if (d / "models.toml").is_file() and (d / "experiments").is_dir():
-            return d
-    return here
 
 
 def cli() -> None:

@@ -71,6 +71,8 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from labkit import console, promises, protocol_block, rules
+from labkit.protocol_check import fields
+from labkit.gate import Findings
 from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 from labkit.repo import area_path, choose_protocol, layout_root, no_such_area
 from labkit.scope_sha import (
@@ -901,7 +903,9 @@ def _outside_roots(name: str, area: Path, repo: Path) -> Path | None:
 
 
 #: an area name inside a path string: `14-hotel`, `experiments/14-hotel/scripts/x.py`
-AREA_IN_PATH = re.compile(r"(?:^|/)(\d{2}-[a-z0-9][a-z0-9-]*)(?:/|$)")
+#: an area name inside a path literal (`repo.AREA_NAME` is the name itself;
+#: here it is searched for in a string, any number of digits)
+AREA_IN_PATH = re.compile(r"(?:^|/)(\d+-[a-z0-9][a-z0-9-]*)(?:/|$)")
 
 
 def _str_constants(node: ast.AST) -> set[str]:
@@ -1086,8 +1090,6 @@ def stamp_coverage_findings(area: Path, repo: Path) -> list[str]:
 
 PARSE_DEF = re.compile(r"^\s*def (parse_\w+)\s*\(", re.M)
 PROMPT_NAME = re.compile(r"^PROMPT(_[A-Z0-9_]+)?$")
-PROMPT_FIELD = re.compile(r"^\s*[-*]\s*\*{0,2}prompt\b", re.I)
-FENCE = re.compile(r"^\s*```")
 PLACEHOLDER_IN_PROMPT = re.compile(r"\{[^{}]*\}")
 
 
@@ -1223,35 +1225,37 @@ def _prompts(area: Path) -> tuple[dict[str, str], list[str]]:
     return out, unreadable
 
 
-_NEXT_FIELD = re.compile(r"^(\s*)[-*]\s+\*\*|^#")
-
-
 def prompt_blocks(protocol: Path) -> list[str]:
-    """Every fenced block under a `Prompt` field, up to the next field or
-    heading — one block per variant is a written form, and reading only the
-    first made a null prompt in a second block look missing (re-measure
-    2026-10-07: five false blockers in twelve protocols once the check ran)."""
-    lines = protocol.read_text(encoding="utf-8").splitlines()
+    """Every fenced block under a `Prompt` field, up to the next field at the
+    same depth or the next heading — one block per variant is a written
+    form, and reading only the first made a null prompt in a second block
+    look missing (re-measure 2026-10-07: five false blockers in twelve
+    protocols once the check ran). The field is the one label parser's
+    (`protocol_check.fields`), the blocks the one fence walker's
+    (`protocol_block.fence_spans`): until 0.96.0 a second label grammar
+    and a backtick-only fence stood here (audit 2026-10-15)."""
+    text = protocol.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    found = fields(text)
     blocks: list[str] = []
-    i = 0
-    while i < len(lines):
-        if not PROMPT_FIELD.match(lines[i]):
-            i += 1
+    for n, f in enumerate(found):
+        if f.name != "prompt":
             continue
-        indent = len(lines[i]) - len(lines[i].lstrip())
-        j = i + 1
-        while j < len(lines):
-            nxt = _NEXT_FIELD.match(lines[j])
-            if nxt and (lines[j].startswith("#") or len(nxt.group(1)) <= indent):
+        indent = len(lines[f.line - 1]) - len(lines[f.line - 1].lstrip())
+        end = len(lines)
+        for g in found[n + 1 :]:
+            deeper = len(lines[g.line - 1]) - len(lines[g.line - 1].lstrip()) > indent
+            if not deeper:
+                end = g.line - 1
                 break
-            if FENCE.match(lines[j]):
-                k = j + 1
-                while k < len(lines) and not FENCE.match(lines[k]):
-                    k += 1
-                blocks.append("\n".join(lines[j + 1 : k]))
-                j = k
-            j += 1
-        i = j
+        for j in range(f.line, end):
+            if lines[j].startswith("#"):
+                end = j
+                break
+        region = lines[f.line : end]
+        blocks += [
+            "\n".join(region[s:e]) for _, s, e in protocol_block.fence_spans(region)
+        ]
     return blocks
 
 
@@ -1340,14 +1344,14 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         return 2
 
     repo = layout_root(area)
-    findings = (
+    findings = Findings()
+    for line in (
         check_intent_ids(area, protocol)
         + check_parser_fixtures(area, repo)
         + check_prompt_drift(area, protocol)
         + stamp_coverage_findings(area, repo)
-    )
-    for f in findings:
-        print(f)
+    ):
+        findings.add(line)
 
     if bundle_to is not None:
         n = write_bundle(area, layout_root(area), protocol, bundle_to)
@@ -1356,10 +1360,8 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             f"({bundle_to.stat().st_size // 1024} KB)"
         )
 
-    blockers = sum(1 for f in findings if f.startswith("BLOCKER"))
-    warnings = sum(1 for f in findings if f.startswith("WARNING"))
     parts = [
-        f"intent-ids: {blockers} blocker(s), {warnings} warning(s) "
+        f"intent-ids: {len(findings.blocked)} blocker(s), {findings.warnings} warning(s) "
         f"(incl. parser fixtures, prompt drift, stamp coverage)"
     ]
     if bundle_to is not None:
@@ -1379,7 +1381,8 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             "(need --bundle for the code-check agent)"
         )
     print(" — ".join(parts))
-    return 1 if findings else 0
+    # exit 1 on a warning too: a static-evidence line is a finding to read
+    return 1 if findings.blocked or findings.warned else 0
 
 
 def cli() -> None:

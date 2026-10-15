@@ -38,6 +38,12 @@ EDITABLE_PATH_REQUIREMENT = re.compile(rf"^-e\s+(?P<path>\S*/{_PKG})/?\s*$")
 VERSION_REQUIREMENT = re.compile(rf"^{_PKG}\s*==\s*(?P<version>\d+\.\d+\.\d+)\s*$")
 
 
+def pip_name(name: str) -> str:
+    """A package name as pip normalises it: lowercase, `_` to `-`. Spelled
+    seven times before (audit 2026-10-15)."""
+    return name.lower().replace("_", "-")
+
+
 def requirement_name(line: str) -> str | None:
     """The package a requirements line names, as pip normalises it
     (lowercase, `_` to `-`): a VCS or editable pin, `name==…`, `name @ <url>`.
@@ -47,10 +53,10 @@ def requirement_name(line: str) -> str | None:
         return None
     for pat in (VCS_REQUIREMENT, EDITABLE_REQUIREMENT, EDITABLE_PATH_REQUIREMENT):
         if (m := pat.match(s)) is not None:
-            return m.group("name").lower().replace("_", "-")
+            return pip_name(m.group("name"))
     for sep in ("==", " @ "):
         if sep in s:
-            return s.split(sep, 1)[0].strip().lower().replace("_", "-")
+            return pip_name(s.split(sep, 1)[0].strip())
     return None
 
 
@@ -94,6 +100,49 @@ def no_such_area(area: Path) -> str:
     )
 
 
+#: an area's directory name as `labkit-init exp` prints it: `NN-<slug>`
+AREA_NAME = re.compile(r"^(\d+)-(.+)$")
+
+
+def split_area_name(name: str) -> tuple[str | None, str]:
+    """(number, slug) of an area directory name; (None, name) when it
+    carries no `NN-` prefix. Four regexes said this before (audit 2026-10-15)."""
+    m = AREA_NAME.match(name)
+    return (m.group(1), m.group(2)) if m else (None, name)
+
+
+#: the one name shape of a protocol file, as a glob and as a pattern
+PROTOCOL_GLOB = "PROTOCOL-*.md"
+PROTOCOL_NAME = re.compile(r"^PROTOCOL-[^/]+\.md$")
+#: directories a repo-wide scan never reads: nothing under them is a living
+#: file of the lab — a protocol copied into `runs/<id>/` or shipped in
+#: `.venv/` is a record or a package, not a second protocol (audit
+#: 2026-10-15: four scans, one of them skipped these, three did not)
+SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__", "runs", "data"})
+
+
+def repo_protocols(root: Path) -> list[Path]:
+    """Every protocol anywhere under ROOT, outside SKIP_DIRS, sorted — the
+    repo-wide form of `area_protocols`."""
+    return sorted(
+        p
+        for p in root.rglob(PROTOCOL_GLOB)
+        if not SKIP_DIRS & set(p.relative_to(root).parts)
+    )
+
+
+def lab_root(start: Path) -> Path | None:
+    """The nearest directory, START or above, holding `models.toml` — where
+    a lab repo's layout starts for the scaffolder and the model backend;
+    None when none does. One rule: `labkit-init exp` asked for
+    `experiments/` too and `llm` for `models.toml` alone (audit 2026-10-15)."""
+    here = start.resolve()
+    for d in (here, *here.parents):
+        if (d / "models.toml").is_file():
+            return d
+    return None
+
+
 def area_protocols(area: Path) -> list[Path]:
     """Every protocol in the area (`PROTOCOL-*.md` directly in it),
     lexicographic — a list, not a first hit.
@@ -105,7 +154,7 @@ def area_protocols(area: Path) -> list[Path]:
     the wrong protocol is worse than no check, so the caller must choose
     (2026-09-26).
     """
-    return sorted(area.glob("PROTOCOL-*.md"))
+    return sorted(area.glob(PROTOCOL_GLOB))
 
 
 def git_root(path: Path) -> Path | None:

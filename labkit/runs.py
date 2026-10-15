@@ -110,6 +110,10 @@ def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
 
 #: the one state every consumer that picks or accepts a run compares to
 COMPLETED = "completed"
+#: the width of every digest a run RECORDS (a data file, an output) — the
+#: area stamp and a promise's scope hash keep `scope_sha.DIGEST_CHARS`;
+#: `recheck.pin` compares by prefix, so the width is part of the format
+RECORD_SHA_CHARS = 16
 
 #: a run id is its start time plus four hex: `2026-10-13T14-00-57_071a`.
 #: runlog writes it with RUN_ID_TIME; RUN_ID finds one in prose (a cited
@@ -186,7 +190,9 @@ class OutputEntry:
     """One file a run registered as its output (`run.output`)."""
 
     path: Path
-    sha256: str | None  # the content's first 16 hex digits; None: absent at the end
+    sha256: (
+        str | None
+    )  # the content's first RECORD_SHA_CHARS hex digits; None: absent at the end
     lines: int | None  # lines of a text file; None: absent or not text
     note: str = ""
     rows_from: dict[str, int] = field(
@@ -708,6 +714,28 @@ class AnsweringRun:
     exclusions: tuple[RunExclusion, ...]
     blocker: str | None
     reports_intent_keys: bool = True
+
+    def explain(self, ids_registered: bool) -> tuple[str | None, list[str]]:
+        """(why no run may answer, or None; the lines that say what was
+        looked at) — ONE telling for finalize, intent-check, recheck, params
+        and the audit, which each rendered this four ways with four
+        semantics (audit 2026-10-15). A chosen run that reports no intent
+        key while the protocol registers ids is a blocker here, everywhere:
+        a probe or producer run is not an answer."""
+        if self.run_dir is None:
+            return self.blocker, [f"{x.run_dir.name}: {x.why}" for x in self.exclusions]
+        if ids_registered and not self.reports_intent_keys:
+            return (
+                f"{self.run_dir.name} is the newest bound run, and no bound run "
+                f"reports an intent key — a probe or producer run, not an answer",
+                [],
+            )
+        lines = []
+        if self.skipped_newer:
+            lines.append(
+                f"skipped {self.skipped_newer} newer bound run(s) without intent keys"
+            )
+        return None, lines
 
 
 def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
