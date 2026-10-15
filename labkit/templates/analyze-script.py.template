@@ -32,18 +32,22 @@ _spec.loader.exec_module(measure)
 
 
 def draws() -> list[str]:
-    """The kept run and its repeats (`01_measure.py --repeat-of`): c1 per
-    draw, its range, and the items whose parsed answer differs between draws.
-    The answer stays draw 1; this is the spread around it (LAB-036 Validate)."""
+    """The kept run and its repeats (`01_measure.py --repeat-of`): every draw
+    held like the kept number (`recheck.verified`: its file pinned, scopes
+    and block unchanged, its metrics recomputed from its rows), then c1 per
+    draw, its range, and the items whose parsed answer differs. The answer
+    stays draw 1; this is the spread around it (LAB-036 Validate)."""
     primary = recheck.run_dir(AREA)
     seen: dict[str, dict[int, object]] = {}
     lines, accs = [], []
     for n, d in runs.draws(AREA, primary.name):
-        m = runs.read_metrics(d / "metrics.json")
+        rows = [o.path for o in runs.read_outputs(d) or [] if o.path.suffix == ".jsonl"]
+        if len(rows) != 1:
+            raise SystemExit(f"draws: {d.name} registered {len(rows)} JSONL outputs, not one")
+        m, _ = recheck.verified(d, AREA, rows[0], measure.evaluate_rows)
         accs.append(m.get("c1_accuracy"))
         lines.append(f"draw {n}  {d.name}  c1_accuracy {m.get('c1_accuracy')}  c1_pass {m.get('c1_pass')}")
-        rows = next(o.path for o in runs.read_outputs(d) or [] if o.path.suffix == ".jsonl")
-        for r in measure.read_jsonl(rows):
+        for r in measure.read_jsonl(rows[0]):
             seen.setdefault(r["id"], {})[n] = measure.parse_answer(r["answer"])
     if len(accs) == 1:
         lines.append("one draw — no spread: `01_measure.py --repeat-of "

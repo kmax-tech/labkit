@@ -210,6 +210,26 @@ def cited(note: Path, numbers: list[str], run_id: str) -> None:
         raise SystemExit(f"recheck: {note.name} does not cite run {run_id}")
 
 
+def verified(
+    run: Path,
+    area: Path,
+    out: Path,
+    recompute: Callable[[list[dict]], dict],
+    ignore: frozenset[str] = LABKIT_KEYS,
+) -> tuple[dict, list[str]]:
+    """pin → scopes → block → agree for one run, no note: (its metrics, the
+    keys the recomputation grew). What `holds` checks before the note, and
+    what `02_analyze.py --draws` checks for every draw — a draw shown
+    unchecked let an edited repeat file change the flipped items, an edited
+    metrics.json the range (review 2026-10-15). Raises SystemExit on the
+    first disagreement."""
+    pin(run, out)
+    scopes_unchanged(run, area)
+    block_unchanged(run, area)
+    metrics = runs.read_metrics(run / "metrics.json")
+    return metrics, agree(metrics, recompute(rows_of(out)), ignore)
+
+
 def holds(
     area: Path,
     out: Path,
@@ -224,11 +244,7 @@ def holds(
     `numbers(metrics)` formats what the note must carry — pass your own when
     the note rounds. Raises SystemExit on the first disagreement."""
     run = run_dir(area, run_id)
-    pin(run, out)
-    scopes_unchanged(run, area)
-    block_unchanged(run, area)
-    metrics = runs.read_metrics(run / "metrics.json")
-    grown = agree(metrics, recompute(rows_of(out)), ignore)
+    metrics, grown = verified(run, area, out, recompute, ignore)
     wanted = numbers({k: v for k, v in metrics.items() if k not in ignore})
     cited(note, wanted, run.name)
     return Verdict(

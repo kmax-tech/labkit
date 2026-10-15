@@ -210,6 +210,41 @@ class Repeats(unittest.TestCase):
         self.assertEqual(runs.next_draw(self.area, first), 3)
         self.assertEqual(self._cfg(self._run(repeat_of=first))["draw"], 3)
 
+    def test_every_draw_is_held_like_the_kept_number(self):
+        """--draws read each draw's file unchecked: an edited repeat file
+        changed the flipped items (review 2026-10-15). recheck.verified pins
+        a draw's output to its recorded digest before anything is shown."""
+        from labkit import batch, recheck
+
+        def recompute(rows: list[dict]) -> dict:
+            return {"n": len(rows)}
+
+        first = self._run()
+        second = self._run(repeat_of=first)
+        out = self.area / "draw2.jsonl"
+        with batch.Store(out) as store:
+            store.append({"id": "a", "answer": "Yes"})
+        run = self.area / "runs" / second
+        (run / "outputs.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "path": runs.recorded_path(out, run),
+                        "sha256": runlog._sha256(out)[:16],
+                        "lines": 1,
+                    }
+                ]
+            ),
+            encoding="utf-8",
+        )
+        (run / "metrics.json").write_text(json.dumps({"n": 1}), encoding="utf-8")
+        metrics, _ = recheck.verified(run, self.area, out, recompute)
+        self.assertEqual(metrics["n"], 1)
+        out.write_text('{"id": "a", "answer": "No"}\n', encoding="utf-8")
+        with self.assertRaises(SystemExit) as cm:
+            recheck.verified(run, self.area, out, recompute)
+        self.assertIn("is not the file run", str(cm.exception))
+
     def test_no_repeat_of_a_repeat_a_missing_run_or_with_derived_from(self):
         first = self._run()
         second = self._run(repeat_of=first)
