@@ -34,7 +34,10 @@ pins (`requirements.txt` / `requirements.lock`).
   and in one second (1640 areas); the code before this fix fails 90. On
   the same areas finalize, intent-check, recheck, params and the audit
   are held to name one run; the draws are checked the same way over seven
-  kinds (800 areas, the code before fails 544).
+  kinds (800 areas, the code before fails 544), and `runs.completed_runs`
+  over the nine.
+- `usability.latest_run` (the scorer's run) refuses when the last two
+  completed runs started in one second, like the answering-run choice.
 
 ## 0.96.1 — 2026-10-15
 

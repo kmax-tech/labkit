@@ -684,8 +684,9 @@ def newest_with_intent_keys(cands: list[dict]) -> tuple[Path | None, int, bool]:
     return (cands[-1]["metrics"], 0, False) if cands else (None, 0, False)
 
 
-def _start_second(run_dir: Path) -> str:
-    """The start second a run id carries (everything before the suffix)."""
+def start_second(run_dir: Path) -> str:
+    """The start second a run id carries (everything before the suffix):
+    two runs that share it sort by their random suffix, not by start."""
     return run_dir.name.rsplit("_", 1)[0]
 
 
@@ -694,7 +695,7 @@ def _not_older(run_dir: Path, chosen: Path) -> bool:
     started in the same second — the random suffix orders those by chance
     (2026-10-15)."""
     return run_dir.name > chosen.name or (
-        run_dir != chosen and _start_second(run_dir) == _start_second(chosen)
+        run_dir != chosen and start_second(run_dir) == start_second(chosen)
     )
 
 
@@ -725,7 +726,7 @@ def same_second_rival(chosen: Path, taken: list[dict], has_keys: bool) -> str | 
         f["dir"].name
         for f in taken
         if f["dir"] != chosen
-        and _start_second(f["dir"]) == _start_second(chosen)
+        and start_second(f["dir"]) == start_second(chosen)
         and (not has_keys or promises.reported_ids(read_metrics(f["metrics"])))
     ]
     if not rivals:

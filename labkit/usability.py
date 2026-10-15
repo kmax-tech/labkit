@@ -745,6 +745,11 @@ def latest_run(area: Path) -> Path | None:
         done = runs.completed_runs(area, with_repeats=False)
     except runs.RunConfigError as exc:
         raise SystemExit(f"usability: {exc}") from exc
+    if len(done) >= 2 and runs.start_second(done[-1]) == runs.start_second(done[-2]):
+        raise SystemExit(
+            f"usability: {done[-2].name} and {done[-1].name} started in the same "
+            f"second — the run ids cannot say which is newest (2026-10-15)"
+        )
     return done[-1] if done else None
 
 

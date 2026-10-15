@@ -93,11 +93,16 @@ gegen ein Orakel aus den Docstrings: alle Bereiche bis drei Läufe aus neun
 Arten, je an verschiedenen Tagen und in einer Sekunde (1640 Bereiche); drei
 eingebaute Mutanten werden rot. Befund dabei, behoben (`68e0706`): zwei
 Läufe derselben Sekunde ordnete das Zufallssuffix der Lauf-ID — jetzt ein
-Blocker. **Offen, nur notiert:** (1) dieselbe Prüfung für die anderen
-Wähler — `runs.draws`/`repeats_of` (nach `draw`), die Elternwahl eines
-`derived_from`-Laufs, `completed_runs` in `runlog` und `usability`;
-(2) ein Test, dass finalize, intent-check, recheck, params und audit auf
-denselben Bereichen denselben Lauf nennen (heute nur per Import belegt).
+Blocker. **Fortgesetzt am selben Tag:** dieselbe Prüfung für die anderen
+Wähler — finalize, intent-check, recheck, params und audit nennen auf allen
+1640 Bereichen denselben Lauf (`17a02a7`); `runs.draws`/`next_draw` über
+800 Bereiche: ein unlesbarer Lauf verschwand still aus der Streuung, eine
+Nicht-Integer-Ziehung wurde beim Zählen übersprungen, zwei Ziehungen mit
+einer Nummer liefen beide durch — jetzt Verweigerungen (`9790f1f`); ein
+abgeleiteter Lauf durfte eine Wiederholung als Eltern nehmen und so die
+beste Ziehung antworten lassen — jetzt Verweigerung (`50ab7e1`);
+`completed_runs` im Orakel, `usability.latest_run` verweigert zwei Läufe
+derselben Sekunde. Release steht aus (`CHANGELOG.md` „Unreleased“).
 
 ## Klein, ohne eigenen Punkt
 

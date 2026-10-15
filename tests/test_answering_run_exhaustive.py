@@ -26,7 +26,7 @@ from pathlib import Path
 
 from protocol_fixture import head
 
-from labkit import audit, finalize, intent_check, params, recheck, runs
+from labkit import audit, finalize, intent_check, params, recheck, runs, usability
 from labkit.gate import Findings
 
 PID = "p-aaaaaaaaaaaaaaaa"
@@ -269,6 +269,53 @@ class EveryCheckChoosesTheSameRun(unittest.TestCase):
             chosen = _chosen_by_every_check(area, protocol)
             want = chosen.pop("bound_answering_run")
             self.assertEqual(chosen, dict.fromkeys(chosen, want))
+        finally:
+            shutil.rmtree(tmp)
+
+
+class EveryCompletedArrangement(unittest.TestCase):
+    """`runs.completed_runs` (runlog's last finished run, the usability
+    scorer's latest run, the audit's "no run yet") on every arrangement of
+    the nine kinds: the completed runs in name order, repeats only when
+    asked; an unreadable run raises — it may be the newest and must not
+    vanish. `usability.latest_run` takes the last of them, and refuses when
+    the last two started in one second (2026-10-15)."""
+
+    def test_up_to_three_runs_of_nine_kinds(self) -> None:
+        for one_second in (False, True):
+            for n in range(4):
+                for combo in itertools.product(KINDS, repeat=n):
+                    with self.subTest(
+                        kinds=[k.name for k in combo], one_second=one_second
+                    ):
+                        self._check(combo, one_second)
+
+    def _check(self, combo: tuple[Kind, ...], one_second: bool) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            area = tmp / "area"
+            (area / "runs").mkdir(parents=True)
+            placed = [
+                (_write(area, _name(i, one_second), k), k) for i, k in enumerate(combo)
+            ]
+            if any(k.unreadable for k in combo):
+                for with_repeats in (False, True):
+                    with self.assertRaises(runs.RunConfigError):
+                        runs.completed_runs(area, with_repeats=with_repeats)
+                with self.assertRaises(SystemExit):
+                    usability.latest_run(area)
+                return
+            done = [d for d, k in placed if k.metrics is not None and k.completion]
+            primary = [d for d, k in placed if d in done and not k.repeat]
+            self.assertEqual(runs.completed_runs(area, with_repeats=True), done)
+            self.assertEqual(runs.completed_runs(area, with_repeats=False), primary)
+            if one_second and len(primary) >= 2:
+                with self.assertRaises(SystemExit):
+                    usability.latest_run(area)
+            else:
+                self.assertEqual(
+                    usability.latest_run(area), primary[-1] if primary else None
+                )
         finally:
             shutil.rmtree(tmp)
 
