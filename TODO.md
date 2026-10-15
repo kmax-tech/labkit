@@ -416,6 +416,16 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
+- **Narbentabelle gegen fremde Fehlerkataloge (2026-10-15) — Befund,
+  nichts geändert.** Abgleich mit Kapoor & Narayanan (Leckage L1–L3),
+  REFORMS (32 Punkte) und Biderman et al. (LM-Evaluation): fünf Klassen
+  fehlen im Standard — Tuning am Auswertungsset, Gold im Prompt,
+  Abhängigkeit zwischen Anker-/Few-shot- und Auswertungsfällen,
+  Kontamination durch das Vortraining, Metrikwahl/Mittelung. Keine ist
+  eine Hausnarbe; eine neue Zeile erst, wenn die K-Fälle des Benchmarks
+  (K1, K3, K5) zeigen, dass der Auditor sie ohne Zeile übersieht.
+  Herleitung: `~/work/projects/labkit-paper/narbentabelle-gegen-fremde.md`.
+
 - **Repo-Audit 2026-10-13 (Klarheit, Drift, Doku) — Befund, nichts
   geändert.** Suite, ruff, pyright grün (1001 Tests). Drei Lesungen (große
   Module, Drift zwischen Modulen, Doku gegen Code); `path:zeile` sind
