@@ -63,7 +63,7 @@ AREA = HERE.parent
 PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
-from labkit import batch, llm, promises, runlog, runs
+from labkit import batch, llm, promises, runlog
 
 ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"   # written by 00_prepare.py: id · text · gold
 # One run, one output file. A second start of the same command RESUMES this
@@ -387,10 +387,10 @@ def main() -> None:
     # and inputs are the same); its rows go to a file of their own, its number
     # is the spread around the answer, never the answer (`02_analyze.py --draws`).
     repeat = args.repeat_of
-    out = OUT if repeat is None else OUT.with_name(
-        f"{OUT.stem}_draw{runs.next_draw(AREA, repeat)}.jsonl")
     with runlog.run("<name>", config=config, base_dir=AREA, data={"prepared": ITEMS},
                     long=True, protocol=PROTOCOL.name, repeat_of=repeat) as run:
+        # the draw number runlog reserved and recorded — the one name source
+        out = OUT if run.draw is None else OUT.with_name(f"{OUT.stem}_draw{run.draw}.jsonl")
         run.output(out)
         measure(cfg, plan(items), out,
                 prov={**llm.provenance(args.model), "run": run.run_id})

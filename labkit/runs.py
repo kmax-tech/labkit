@@ -549,9 +549,15 @@ def _numbered_repeats(area: Path, run_id: str) -> list[tuple[int, Path]]:
 
 def next_draw(area: Path, run_id: str) -> int:
     """The draw number a new repeat of RUN_ID gets: the run itself is draw 1,
-    its completed repeats 2, 3, … — one count for runlog's record and the
-    script's output file name."""
-    return 2 + len(repeats_of(area, run_id))
+    every repeat ever started — completed, running or crashed — holds its
+    number, so the next is one past the highest. runlog counts it under its
+    index lock (Run.draw); a crashed draw leaves a gap, never a reuse."""
+    taken = [
+        rd.config.get("draw")
+        for rd in run_dirs(area)
+        if rd.config is not None and repeat_parent(rd.config) == run_id
+    ]
+    return 1 + max([1, *(d for d in taken if isinstance(d, int))])
 
 
 def draws(area: Path, run_id: str) -> list[tuple[int, Path]]:
@@ -563,17 +569,26 @@ def draws(area: Path, run_id: str) -> list[tuple[int, Path]]:
 def repeat_mismatch(parent: dict, new: dict) -> list[str]:
     """Why a run whose config.json would be NEW is no comparable repeat of
     PARENT (both config.json dicts), [] when it is: the same protocol, the
-    same promise block, the same experiment config (prompt digest, model,
-    constants, sampling) and the same inputs (data= digests and rows). A
+    same promise snapshot (block and every declared scope's digest), the same
+    measure script, the same resolved model, the same experiment config
+    (prompt digest, model alias, constants, sampling) and the same inputs
+    (data= digests and rows) — the job set follows from these. A
     repeat that differs in any of these measures something else, and its
     spread would be noise of the change, not of the model."""
     out: list[str] = []
     pid = (parent.get("protocol") or {}).get("id")
     if pid != (new.get("protocol") or {}).get("id"):
         out.append(f"protocol {(new.get('protocol') or {}).get('id')} is not {pid}")
-    block = (parent.get("promises") or {}).get("block_sha")
-    if block != (new.get("promises") or {}).get("block_sha"):
+    pp, np_ = parent.get("promises") or {}, new.get("promises") or {}
+    if pp.get("block_sha") != np_.get("block_sha"):
         out.append("the promise block changed")
+    elif pp != np_:
+        # same block, other code: a declared scope's digest moved
+        out.append("the code a promise rests on changed (declared_scope_sha)")
+    if parent.get("script_sha") != new.get("script_sha"):
+        out.append("the measure script changed (script_sha)")
+    if (parent.get("models_resolved") or {}) != (new.get("models_resolved") or {}):
+        out.append("the model resolved differently (models_resolved)")
     pc, nc = parent.get("config") or {}, new.get("config") or {}
     for key in sorted(set(pc) | set(nc)):
         if pc.get(key) != nc.get(key):

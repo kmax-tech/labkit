@@ -161,6 +161,55 @@ class Repeats(unittest.TestCase):
             len(runs.completed_runs(self.area, with_repeats=True)), 1
         )  # nothing made
 
+    def test_same_block_other_code_script_or_model_is_no_repeat(self):
+        """A record with the same block but another declared_scope_sha came
+        back comparable (review 2026-10-15): plan() could change and the new
+        run still count as a draw of the old. The whole promise snapshot, the
+        measure script and the resolved model are compared too."""
+        first = self._run()
+        parent = self._cfg(first)
+        base = {
+            k: parent.get(k)
+            for k in (
+                "protocol",
+                "promises",
+                "config",
+                "data",
+                "script_sha",
+                "models_resolved",
+            )
+        }
+        self.assertEqual(runs.repeat_mismatch(parent, base), [])
+        moved = json.loads(json.dumps(base))
+        some_id = next(iter(moved["promises"]["ids"]))
+        moved["promises"]["ids"][some_id]["declared_scope_sha"] = "000000000000"
+        for new, needle in (
+            (moved, "declared_scope_sha"),
+            ({**base, "script_sha": "000000000000"}, "script_sha"),
+            ({**base, "models_resolved": {"x": {"model": "other"}}}, "models_resolved"),
+        ):
+            with self.subTest(needle=needle):
+                self.assertTrue(
+                    any(needle in m for m in runs.repeat_mismatch(parent, new)),
+                    runs.repeat_mismatch(parent, new),
+                )
+
+    def test_the_draw_is_reserved_once_and_a_crashed_draw_keeps_its_number(self):
+        first = self._run()
+        r = runlog.run(
+            "m",
+            config={"prompt_sha": "aaaaaaaaaaaa", "model_alias": "x"},
+            base_dir=self.area,
+            data={"items": self.data},
+            repeat_of=first,
+        )
+        with contextlib.redirect_stdout(io.StringIO()):
+            run = r.__enter__()
+        self.assertEqual(run.draw, 2)  # the number the script names its file by
+        # left unfinished, like a crash: draw 2 stays taken
+        self.assertEqual(runs.next_draw(self.area, first), 3)
+        self.assertEqual(self._cfg(self._run(repeat_of=first))["draw"], 3)
+
     def test_no_repeat_of_a_repeat_a_missing_run_or_with_derived_from(self):
         first = self._run()
         second = self._run(repeat_of=first)

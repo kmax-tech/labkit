@@ -661,7 +661,21 @@ def _snapshot_script(run_dir: Path) -> str:
             return "no-script"
         body = src.read_bytes()
         (run_dir / f"script-source{src.suffix or '.txt'}").write_bytes(body)
-        return hashlib.sha256(body).hexdigest()[:12]
+        return _script_sha()
+    except OSError:
+        return "no-script"
+
+
+def _script_sha() -> str:
+    """The running script's content hash (config.json `script_sha`), or
+    "no-script" — read before mkdir too, for a repeat's comparison."""
+    try:
+        src = Path(sys.argv[0]).resolve()
+        return (
+            hashlib.sha256(src.read_bytes()).hexdigest()[:12]
+            if src.is_file()
+            else "no-script"
+        )
     except OSError:
         return "no-script"
 
@@ -1104,7 +1118,6 @@ class Run:
                     '(at cost = "seconds": the question written suffices, with a model also criterion and admissibility condition). A '
                     "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded)."
                 )
-        self._repeat_of, self._draw = self._repeat(base_dir, repeat_of, derived_from)
         self.dir = base_dir / "runs" / self.run_id
         self._outputs: list[Path] = []
         self._metrics: dict = {}
@@ -1122,15 +1135,32 @@ class Run:
         # records none, and `runs.model_provenance_run` walks derived_from
         # to the run that did (2026-10-08).
         models = {} if self._derived_from else _resolve_models(self._config)
-        self.dir.mkdir(parents=True, exist_ok=False)
-        try:
-            self._write_record(experiment, git_state, git_full, env, models, base_dir)
-        except BaseException:
-            shutil.rmtree(self.dir, ignore_errors=True)  # no half-made run
-            raise
+        # A repeat's draw number is counted and its record written under one
+        # lock: counted outside it, two parallel starts took the same number,
+        # and a file named before the record could disagree with it (review
+        # 2026-10-15). `self.draw` is the one number the script names its file by.
+        guard = (
+            _index_lock(base_dir) if repeat_of is not None else contextlib.nullcontext()
+        )
+        with guard:
+            self._repeat_of, self.draw = self._repeat(
+                base_dir, repeat_of, derived_from, models
+            )
+            self.dir.mkdir(parents=True, exist_ok=False)
+            try:
+                self._write_record(
+                    experiment, git_state, git_full, env, models, base_dir
+                )
+            except BaseException:
+                shutil.rmtree(self.dir, ignore_errors=True)  # no half-made run
+                raise
 
     def _repeat(
-        self, base_dir: Path, repeat_of: str | None, derived_from: str | None
+        self,
+        base_dir: Path,
+        repeat_of: str | None,
+        derived_from: str | None,
+        models: dict,
     ) -> tuple[str | None, int | None]:
         """(repeat_of, draw) for config.json, before mkdir: a repeat draws a
         completed primary run of this area again, comparable in protocol,
@@ -1164,6 +1194,8 @@ class Run:
             "promises": self._promises,
             "config": self._config,
             "data": self._data,
+            "script_sha": _script_sha(),
+            "models_resolved": models,
         }
         differs = repeat_mismatch(pcfg, mine)
         if differs:
@@ -1192,7 +1224,7 @@ class Run:
             "protocol": self._protocol,
             "derived_from": self._derived_from,
             "repeat_of": self._repeat_of,
-            "draw": self._draw,
+            "draw": self.draw,
             "unfrozen_ack": self._unfrozen_ack,
             "cost_tier": self._cost_tier,
             "promises": self._promises,
