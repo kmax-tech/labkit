@@ -12,6 +12,7 @@ The fix lives in `llm.py`, not in a rule: exhausted retries wrap the
 exception in `BackendError` and attach the original via `__cause__`.
 """
 
+import email.message
 import sys
 import tempfile
 import unittest
@@ -92,3 +93,47 @@ class TestExhaustedRetriesRaiseBackendError(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestServerRefusalsAreNotRetried(unittest.TestCase):
+    """`HTTPError` is a `URLError`: a 404 (wrong model id) or 401 was retried
+    six times, 13 minutes of backoff, before it surfaced (audit 2026-10-15).
+    A 4xx is the server's answer about the request; a 5xx is still an
+    outage and keeps the retry."""
+
+    def setUp(self):
+        from labkit import llm
+
+        self.llm = llm
+        self._once, self._sleep = llm._complete_once, llm.time.sleep
+        llm.time.sleep = lambda _s: None
+        self.calls = 0
+
+    def tearDown(self):
+        self.llm._complete_once, self.llm.time.sleep = self._once, self._sleep
+
+    def _http(self, code: int):
+        def once(*a, **k):
+            self.calls += 1
+            raise urllib.error.HTTPError(
+                "http://x/v1/chat", code, "nope", email.message.Message(), None
+            )
+
+        self.llm._complete_once = once
+
+    def test_a_4xx_fails_at_once_with_a_sentence(self):
+        for code in (400, 401, 404):
+            with self.subTest(code=code):
+                self.calls = 0
+                self._http(code)
+                with self.assertRaises(self.llm.BackendError) as ctx:
+                    self.llm.complete("gpt-oss", "anything", attempts=3)
+                self.assertEqual(self.calls, 1)
+                self.assertIn(f"HTTP {code}", str(ctx.exception))
+                self.assertIn("models.toml", str(ctx.exception))
+
+    def test_a_5xx_is_still_retried(self):
+        self._http(503)
+        with self.assertRaises(self.llm.BackendError):
+            self.llm.complete("gpt-oss", "anything", attempts=3)
+        self.assertEqual(self.calls, 3)

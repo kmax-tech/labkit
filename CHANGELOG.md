@@ -23,6 +23,10 @@ of the guaranteed tier.
   with exit 0, and `--wait` reported it as finished. Status, `--wait` and
   `--follow` resolve the area like `reindex` and refuse one that is not a
   directory (exit 2).
+- **A server's 4xx was retried as an outage.** `HTTPError` is a `URLError`:
+  a wrong model id (404) or a missing key (401) went through six attempts
+  and 13 minutes of backoff. A status below 500 is now a `BackendError` at
+  once, with the sentence naming the alias; 5xx keeps the retry.
 
 ### Breaking
 

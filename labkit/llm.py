@@ -494,6 +494,16 @@ def complete(
                 max_tokens=max_tokens,
             )
         except _TRANSIENT as exc:
+            if isinstance(exc, urllib.error.HTTPError) and exc.code < 500:
+                # the server answered, and the answer is about the request:
+                # a wrong model id (404), a missing key (401), a prompt the
+                # server refuses (400) — no retry changes it, and HTTPError
+                # is a URLError (six attempts, 13 min, audit 2026-10-15)
+                raise BackendError(
+                    f"{alias}: HTTP {exc.code} {exc.reason} — the server refused "
+                    f"the request, not the connection; check the alias in "
+                    f"models.toml (model id, api_key_env) and the prompt"
+                ) from exc
             if attempt == attempts:
                 # Exhausted retries ALWAYS raise BackendError, no matter what
                 # the backend threw. Otherwise WHICH exception escapes depends
