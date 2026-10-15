@@ -22,6 +22,11 @@ Phase B of the audit of 2026-10-15: the audit chain and the hooks.
   freeze gate. The parser reads a dash or colon after the grade too, and
   `findings.write` refuses a verdict that counts more blockers or warnings
   than lines it can record — exit 2, nothing written.
+- **preflight holds the audit line's `scope sha` to the code's stamp.** At
+  `frozen = true` it never compared them (only protocol-check warned and
+  runlog refused at the run), so the pre-freeze gate passed exactly the
+  state the freeze gate refuses. A stale sha is a blocker once frozen, a
+  warning before.
 
 ## 0.94.0 — 2026-10-15
 
