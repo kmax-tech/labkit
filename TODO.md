@@ -451,6 +451,53 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
+- **Ein Bericht außerhalb des Protokolls löst kein Gate aus (2026-10-16).**
+  Labor `labkit-paper`, Bereich 09, Haiku-Runde, Versuch `t3-labkit-r1`
+  (Speicher `output/attempts_pilot_haiku_v1/`, Transkript `out/trace.jsonl`):
+  Der Agent lief `preflight`, startete den Preflight-Audit, wartete 30 s
+  und dann 70 s, hielt den Audit für gescheitert und rechnete vier Läufe
+  mit `LABKIT_UNFROZEN=1` (drei abgestürzt, einer fertig). `frozen` blieb
+  `false`, `preflight_audit` leer, `finalize`, `protocol-fill --from-run`
+  und `report-check` liefen nie. Der Audit schrieb seinen BLOCKER (`G_VRH`
+  und `poisson_ratio` bestimmen K in geschlossener Form) kurz darauf nach
+  `audits/`, ungelesen. Die Zahl ging in eine `REPORT.md` im Repo-Root mit
+  Run-ID und wurde committet; `metrics.json` trägt `c1_pass = true` bei
+  `test_mae = 0.0`, weil der Testsatz keine Labels hat. Kein Gate hat die
+  Zahl gesehen: der Stop-Hook (`claude_hooks.py:551`) und `finalize
+  --if-reported` prüfen nur geänderte Protokolle, die einen Lauf zitieren,
+  und das Protokoll zitiert keinen. Drei mechanische Lücken, alle Stufe
+  guaranteed:
+  1. **runlog nimmt die Bestätigung immer** (`runlog.py:1123`). Liegt in
+     `audits/` ein Preflight-Audit zu diesem Protokoll mit unentschiedenem
+     BLOCKER und `preflight_audit` ist leer, ist das kein Pilot, sondern
+     ein ignorierter Befund: verweigern, auch mit `LABKIT_UNFROZEN=1`, und
+     den Befund nennen. Bei t3 lag die Datei beim ersten Lauf bereits da.
+  2. **`unfrozen_ack` liest niemand.** runlog schreibt es in `config.json`
+     (`runlog.py:1254`); finalize und report-check ignorieren es. Ein Lauf
+     mit dieser Marke darf kein antwortender Lauf sein und keine Zahl ins
+     Protokoll bringen — sonst wird aus dem „Pilot“ stillschweigend das
+     Ergebnis. (Enthält den älteren Kandidaten: `finalize` führt
+     unentschiedene BLOCKER aus `audits/` auf, solange `preflight_audit`
+     leer ist.)
+  3. **Der Stop-Hook hängt am Dateinamen, nicht an der Zahl.** Jede in der
+     Session geänderte Datei, die eine Run-ID trägt (exakt erkennbar,
+     `runs.RUN_ID`), zieht `finalize` für das Protokoll, an das dieser
+     Lauf gebunden ist (`runs.bound_answering_run`). Dann sieht das Gate
+     auch eine `REPORT.md` im Root. Das leere Kriterium (Nenner 0) fängt
+     `finalize` bereits, sobald es läuft; Punkt 3 sorgt dafür, dass es
+     läuft.
+
+  **Dauer, zur Einordnung:** 8 min für den halben Weg; der ganze Weg bis
+  `report-check` brauchte in Durchgang 4 7m26s und mit Haiku in Durchgang 5
+  12m31s (oben). Zeit war nicht knapp (Timebox 30 min im Protokoll); der
+  Agent gab beim Audit zweimal zu früh auf. **Auslöser:** der nächste
+  Pilot, in dem ein Agent `LABKIT_UNFROZEN=1` setzt, oder der nächste
+  Breaking-Schritt an `runlog` ohnehin. **Prüfstelle:** Zwillingstest je
+  Lücke — der Pilot ohne Audit-Datei startet weiter mit Bestätigung; ein
+  Lauf mit `unfrozen_ack` wird von `finalize` als antwortender Lauf
+  verweigert, ohne Marke nicht; eine geänderte Notiz mit fremder Run-ID
+  zieht `finalize` genau einmal.
+
 - **Grundschicht aus der Literatur (2026-10-15).** Die Narbentabelle hält,
   was im Haus passiert ist; Fehler, die anderswo belegt sind, fängt sie
   zufällig. Abschnitt 8 des Standards trägt jetzt die Grundschicht (31
