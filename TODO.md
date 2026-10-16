@@ -455,9 +455,10 @@ sieht das niemand.
   nichts geändert.** Labor `labkit-paper`, Bereich 09, Haiku-Runde, Versuch
   `t3-labkit-r1` (Speicher `output/attempts_pilot_haiku_v1/`): Der
   Preflight-Audit nannte die Leckage als BLOCKER (`G_VRH` und
-  `poisson_ratio` bestimmen K in geschlossener Form), der Agent rechnete mit
-  `LABKIT_UNFROZEN=1` weiter, und kein späteres Gate erwähnte den
-  unentschiedenen Befund; der Bericht schweigt dazu. Kandidat: `finalize`
+  `poisson_ratio` bestimmen K in geschlossener Form) — erst nachdem der
+  Agent nach 30 s Warten den Audit für gescheitert hielt und mit
+  `LABKIT_UNFROZEN=1` rechnete; den Befund hat er nie gelesen, kein späteres
+  Gate erwähnte ihn, der Bericht schweigt dazu. Kandidat: `finalize`
   (und der Bericht über `report-check`) führt unentschiedene BLOCKER aus
   `audits/` auf, solange `preflight_audit` leer ist. Zweiter Befund derselben
   Runde: `t5-labkit` registriert „test ROC-AUC“ als C1, der Code rechnet
