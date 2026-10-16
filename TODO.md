@@ -451,6 +451,21 @@ sieht das niemand.
 
 ## Notiert, nicht geplant
 
+- **Audit-BLOCKER überleben `LABKIT_UNFROZEN=1` still (2026-10-16) — Befund,
+  nichts geändert.** Labor `labkit-paper`, Bereich 09, Haiku-Runde, Versuch
+  `t3-labkit-r1` (Speicher `output/attempts_pilot_haiku_v1/`): Der
+  Preflight-Audit nannte die Leckage als BLOCKER (`G_VRH` und
+  `poisson_ratio` bestimmen K in geschlossener Form), der Agent rechnete mit
+  `LABKIT_UNFROZEN=1` weiter, und kein späteres Gate erwähnte den
+  unentschiedenen Befund; der Bericht schweigt dazu. Kandidat: `finalize`
+  (und der Bericht über `report-check`) führt unentschiedene BLOCKER aus
+  `audits/` auf, solange `preflight_audit` leer ist. Zweiter Befund derselben
+  Runde: `t5-labkit` registriert „test ROC-AUC“ als C1, der Code rechnet
+  Trainings-AUC; `t18-labkit` belegt `a1_*`/`a2_*` mit Genauigkeiten anderer
+  Konfigurationen — Kennung und Bedeutung laufen auseinander, ohne dass
+  `code-check` es sieht (gehört zu Punkt 3). Auslöser für einen Bau: dieselbe
+  Lücke in der vollen Runde von Bereich 09.
+
 - **Grundschicht aus der Literatur (2026-10-15).** Die Narbentabelle hält,
   was im Haus passiert ist; Fehler, die anderswo belegt sind, fängt sie
   zufällig. Abschnitt 8 des Standards trägt jetzt die Grundschicht (31
