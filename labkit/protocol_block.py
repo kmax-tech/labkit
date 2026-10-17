@@ -5,12 +5,22 @@ holds the fields a machine reads — the head — and its optional
 `[[promise]]` tables hold the promises (`promises.py`):
 
     [protocol]
-    standard = "0.19"
+    standard = "0.20"
     id = "p-0123456789abcdef"       # stamped by `labkit-init exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
     cost = "seconds"                # seconds | minutes | hours
+    instrument = "model"            # model | estimator | count — what produces a row's answer
     frozen = false
     preflight_audit = ""            # one line once the audit is decided
+
+The instrument is the kind of the experiment, as data (standard 0.20,
+2026-10-17): a *model* in the loop (a prompt per item, a parser, lanes of
+questions), an *estimator* (fit, predict, a permuted-label null lane), a
+*count* (deterministic, no bar to clear). Until 0.20 it was inferred at
+six places from the prose of "Model / tool" and from `labkit-init`'s
+flags; the field cut, the stamped skeleton, the promise block and the
+gates now read this key. A mixed form names the instrument that produces
+the row's answer; a model that renders features belongs to the prepare step.
 
 One parser (`tomllib`), exact keys, typed values: a typo is a loud error
 naming the field, never a silent "not found" — `Cost: second` used to read
@@ -32,9 +42,11 @@ from pathlib import Path
 
 #: the head format this labkit reads; a protocol of another standard is
 #: read with the labkit release it was written for
-STANDARD = "0.19"
+STANDARD = "0.20"
 TYPES = ("exploratory", "confirmatory")
 COST_TIERS = ("seconds", "minutes", "hours")
+#: what produces a row's answer — the kind of the experiment, as data
+INSTRUMENTS = ("model", "estimator", "count")
 #: `p-` plus 16 lowercase hex: not derived from name or path, so renaming
 #: and moving a protocol leave its identity intact
 ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
@@ -44,7 +56,15 @@ _TOP_LEVEL = {"protocol", "promise"}
 #: the settings every protocol carries in its ```toml head (the block at the
 #: end of the protocol), in the template's order — not the run's config.json,
 #: which runlog writes per run
-PROTOCOL_HEAD_KEYS = ("standard", "id", "type", "cost", "frozen", "preflight_audit")
+PROTOCOL_HEAD_KEYS = (
+    "standard",
+    "id",
+    "type",
+    "cost",
+    "instrument",
+    "frozen",
+    "preflight_audit",
+)
 
 
 class BlockError(ValueError):
@@ -59,13 +79,16 @@ class Head:
     id: str | None
     type: str | None
     cost: str | None
+    instrument: str | None  # model | estimator | count
     frozen: bool
     preflight_audit: str  # "" until the audit is decided
 
     @property
     def placeholders(self) -> list[str]:
         """The head fields still holding a template placeholder."""
-        return [f for f in ("id", "type", "cost") if getattr(self, f) is None]
+        return [
+            f for f in ("id", "type", "cost", "instrument") if getattr(self, f) is None
+        ]
 
 
 def fence_spans(lines: list[str]) -> list[tuple[str, int, int]]:
@@ -240,6 +263,7 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
         id=pid,
         type=_choice(table, "type", TYPES),
         cost=_choice(table, "cost", COST_TIERS),
+        instrument=_choice(table, "instrument", INSTRUMENTS),
         frozen=frozen,
         preflight_audit=audit.strip(),
     )

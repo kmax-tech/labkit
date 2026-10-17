@@ -95,43 +95,59 @@ def fill(
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 
 
-HEAD_TYPE = re.compile(r'^(type\s*=\s*)"<[^"\n]*>"\s*$')
-HEAD_TYPE_LABEL = "type"
+#: the head keys a person fills by label (`protocol-fill <P> "type=exploratory"
+#: "instrument=model"`), each with its allowed values
+HEAD_CHOICES = {
+    "type": protocol_block.TYPES,
+    "instrument": protocol_block.INSTRUMENTS,
+}
 
 
-def head_type_open(text: str) -> int | None:
-    """Line number of the TOML head's `type = "<…>"` placeholder, or None once set.
+def _head_placeholder(key: str) -> re.Pattern[str]:
+    return re.compile(rf'^({re.escape(key)}\s*=\s*)"<[^"\n]*>"\s*$')
 
-    The stamp leaves `type` as a placeholder in the head; `--list` named only
-    the prose fields, so an agent filled those, hit the hook's "MISSING (must):
-    [protocol] type" and edited the head by hand (cloud probe, Haiku 5.5,
-    2026-10-13). Read inside the TOML block only (`protocol_block.toml_block_span`):
-    a `type = "<…>"` line in a fenced example was taken for the head
-    (audit 2026-10-15)."""
+
+def head_choice_open(text: str, key: str) -> int | None:
+    """Line number of the TOML head's `KEY = "<…>"` placeholder, or None once set.
+
+    The stamp leaves `type` (and since 0.20 `instrument`, when not derived)
+    as a placeholder in the head; `--list` named only the prose fields, so
+    an agent filled those, hit the hook's "MISSING (must): [protocol] type"
+    and edited the head by hand (cloud probe, Haiku 5.5, 2026-10-13). Read
+    inside the TOML block only (`protocol_block.toml_block_span`): a
+    `type = "<…>"` line in a fenced example was taken for the head (audit
+    2026-10-15)."""
     lines = text.splitlines()
     span = protocol_block.toml_block_span(text)
     if span is None:
         return None
     start, end = span
+    pattern = _head_placeholder(key)
     for i in range(start, end):
-        if HEAD_TYPE.match(lines[i]):
+        if pattern.match(lines[i]):
             return i + 1
     return None
 
 
-def fill_head_type(text: str, value: str) -> str:
-    """Set the head's `type` from its placeholder; one of `protocol_block.TYPES`."""
-    if value not in protocol_block.TYPES:
+def fill_head_choice(text: str, key: str, value: str) -> str:
+    """Set the head's KEY (`type` or `instrument`) from its placeholder to one
+    of its allowed values (HEAD_CHOICES)."""
+    allowed = HEAD_CHOICES.get(key)
+    if allowed is None:
         raise ValueError(
-            f"type must be one of {' | '.join(protocol_block.TYPES)}, not {value!r}"
+            f"no head key {key!r} to fill — one of {', '.join(HEAD_CHOICES)}"
         )
-    n = head_type_open(text)
+    if value not in allowed:
+        raise ValueError(f"{key} must be one of {' | '.join(allowed)}, not {value!r}")
+    n = head_choice_open(text, key)
     if n is None:
         raise ValueError(
-            "the head's type is already set (edit the TOML head to change it)"
+            f"the head's {key} is already set (edit the TOML head to change it)"
         )
     lines = text.split("\n")
-    lines[n - 1] = HEAD_TYPE.sub(lambda m: f'{m.group(1)}"{value}"', lines[n - 1])
+    lines[n - 1] = _head_placeholder(key).sub(
+        lambda m: f'{m.group(1)}"{value}"', lines[n - 1]
+    )
     return "\n".join(lines)
 
 
@@ -298,11 +314,10 @@ def _list_open(text: str) -> int:
     they read as owed before the run: a cold agent filled them with "pending
     run", and --from-run then refused to overwrite them (cloud, 2026-10-14)."""
     holes = placeholder_fields(text)
-    head_line = head_type_open(text)
-    if head_line is not None:
-        holes = [
-            (head_line, f"{HEAD_TYPE_LABEL}  (TOML head: exploratory | confirmatory)")
-        ] + holes
+    for key, allowed in reversed(HEAD_CHOICES.items()):  # the head's keys first
+        head_line = head_choice_open(text, key)
+        if head_line is not None:
+            holes = [(head_line, f"{key}  (TOML head: {' | '.join(allowed)})")] + holes
     if not holes:
         print("no placeholder fields left")
     now = [(n, label) for n, label in holes if label not in WRITTEN_BY_RUN]
@@ -341,14 +356,16 @@ def fill_many(
     line_no: int | None = None,
     force: bool = False,
 ) -> str:
-    """`fill` (or `fill_head_type` for the head's type) applied in order; the
-    first ValueError leaves the caller's file untouched — all or nothing."""
+    """`fill` (or `fill_head_choice` for the head's `type` and `instrument`)
+    applied in order; the first ValueError leaves the caller's file untouched
+    — all or nothing."""
     for label, value in assignments:
         if not label.strip() or not value.strip():
             raise ValueError(f"empty label or value in {label}={value!r}")
+        key = label.strip().lower()
         text = (
-            fill_head_type(text, value)
-            if label.strip().lower() == HEAD_TYPE_LABEL
+            fill_head_choice(text, key, value)
+            if key in HEAD_CHOICES
             else fill(text, label, value, line_no=line_no, force=force)
         )
     return text

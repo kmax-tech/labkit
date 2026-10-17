@@ -792,6 +792,8 @@ def print_contract() -> None:
         + ", ".join(protocol_block.TYPES)
         + ", cost one of "
         + ", ".join(protocol_block.COST_TIERS)
+        + ", instrument one of "
+        + ", ".join(protocol_block.INSTRUMENTS)
         + "."
     )
     print(

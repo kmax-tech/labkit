@@ -51,6 +51,7 @@ def head(
     id: str = PID,
     type: str = "exploratory",
     cost: str = "minutes",
+    instrument: str = "model",
     frozen: bool = False,
     preflight_audit: str = "",
     promises: str | None = "",
@@ -64,10 +65,11 @@ def head(
     lines = [
         "```toml",
         "[protocol]",
-        'standard = "0.19"',
+        'standard = "0.20"',
         f'id = "{id}"',
         f'type = "{type}"',
         f'cost = "{cost}"',
+        f'instrument = "{instrument}"',
         f"frozen = {'true' if frozen else 'false'}",
         f'preflight_audit = "{preflight_audit}"',
     ]

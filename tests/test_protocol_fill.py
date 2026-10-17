@@ -117,13 +117,13 @@ class HeadType(unittest.TestCase):
     HEAD = (
         "# Experiment protocol: x\n\n```toml\n[protocol]\n"
         f'standard = "{protocol_block.STANDARD}"\nid = "p-0123456789abcdef"\n'
-        'type = "<exploratory | confirmatory>"\ncost = "seconds"\nfrozen = false\n'
+        'type = "<exploratory | confirmatory>"\ncost = "seconds"\ninstrument = "count"\nfrozen = false\n'
         'preflight_audit = "none"\n```\n\n'
         "- **Unit:** <what one row is>\n"
     )
 
     def test_list_names_the_head_type_first_and_fill_sets_it(self):
-        self.assertEqual(protocol_fill.head_type_open(self.HEAD), 7)
+        self.assertEqual(protocol_fill.head_choice_open(self.HEAD, "type"), 7)
         out = io.StringIO()
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp) / "PROTOCOL-x.md"
@@ -134,7 +134,7 @@ class HeadType(unittest.TestCase):
             text = p.read_text(encoding="utf-8")
         self.assertEqual(out.getvalue().splitlines()[0].split()[:2], ["7", "type"])
         self.assertIn('type = "exploratory"', text)
-        self.assertIsNone(protocol_fill.head_type_open(text))
+        self.assertIsNone(protocol_fill.head_choice_open(text, "type"))
         # the head reads: the hook's "MISSING (must): [protocol] type" is gone
         self.assertEqual(protocol_block.head(text).type, "exploratory")
 
@@ -171,23 +171,24 @@ class HeadType(unittest.TestCase):
         text = example + self.HEAD.replace(
             '"<exploratory | confirmatory>"', '"exploratory"'
         )
-        self.assertIsNone(protocol_fill.head_type_open(text))
+        self.assertIsNone(protocol_fill.head_choice_open(text, "type"))
         text = example + self.HEAD
-        line = protocol_fill.head_type_open(text)
+        line = protocol_fill.head_choice_open(text, "type")
         assert line is not None
         self.assertEqual(
             text.splitlines()[line - 1].strip(), 'type = "<exploratory | confirmatory>"'
         )
-        filled = protocol_fill.fill_head_type(text, "confirmatory")
+        filled = protocol_fill.fill_head_choice(text, "type", "confirmatory")
         self.assertIn('type = "<yes | no>"', filled)  # the example is untouched
         self.assertIn('type = "confirmatory"', filled)
 
     def test_a_wrong_type_and_a_set_type_are_refused(self):
         with self.assertRaises(ValueError):
-            protocol_fill.fill_head_type(self.HEAD, "descriptive")
+            protocol_fill.fill_head_choice(self.HEAD, "type", "descriptive")
         with self.assertRaises(ValueError):
-            protocol_fill.fill_head_type(
+            protocol_fill.fill_head_choice(
                 self.HEAD.replace('"<exploratory | confirmatory>"', '"exploratory"'),
+                "type",
                 "confirmatory",
             )
 

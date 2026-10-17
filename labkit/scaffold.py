@@ -752,6 +752,13 @@ def stamp_area(
     )
     if cost:
         tmpl = tmpl.replace('cost = "<seconds | minutes | hours>"', f'cost = "{cost}"')
+    # the instrument, as data in the head (standard 0.20): a model named
+    # means a model in the loop; seconds without one is a count; the rest an
+    # estimator — the one derivation, stamped, never left as a placeholder
+    instrument = "model" if model else ("count" if quick else "estimator")
+    tmpl = tmpl.replace(
+        'instrument = "<model | estimator | count>"', f'instrument = "{instrument}"'
+    )
     clean = re.sub(
         r" ?<!-- sm? -->", "", tmpl
     )  # every written protocol is free of the cut markers

@@ -44,7 +44,7 @@ class Contract(unittest.TestCase):
         report = protocol_check.check_fields(stamped)
         self.assertIsNone(report.head_error)
         assert report.head is not None
-        self.assertEqual(report.head.placeholders, ["type", "cost"])
+        self.assertEqual(report.head.placeholders, ["type", "cost", "instrument"])
 
 
 class Daggers(unittest.TestCase):

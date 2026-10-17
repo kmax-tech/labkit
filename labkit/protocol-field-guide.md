@@ -133,9 +133,17 @@ parser — exact keys, typed values; a typo is an error that names the field.
 The same block may hold the `[[promise]]` tables (labkit
 `docs/promise-block.md`).
 
-- **standard** — `"0.19"`; stamped, never edited. Standard 0.19 (labkit 0.72): a frozen protocol and every full run — at `cost = "seconds"` every run — owe the `[[promise]]` tables; a run records every registered constant unchanged.
+- **standard** — `"0.20"`; stamped, never edited. Standard 0.20 (2026-10-17):
+  the head carries `instrument`. Standard 0.19 (labkit 0.72): a frozen protocol and every full run — at `cost = "seconds"` every run — owe the `[[promise]]` tables; a run records every registered constant unchanged.
 - **id** — `p-` plus 16 hex digits, stamped by `labkit-init exp`, never typed: the
   run binds to it, so renaming or moving the file keeps the binding.
+- **instrument** — what produces a row's answer: `"model"` (a prompt per
+  item, a parser, lanes of questions), `"estimator"` (fit and predict, a
+  permuted-label null lane), `"count"` (deterministic, no bar to clear).
+  Stamped by `labkit-init exp` from `--model` and `--cost`, or named with
+  `--instrument`; the field cut, the skeleton, the promise block and the
+  gates follow from it. A mixed form names the instrument the criterion
+  holds; a model that renders features belongs to the prepare step.
 - **type** — `"exploratory"` generates hypotheses, iterate freely, but
   nothing from it may be reported as a test. `"confirmatory"` tests a
   hypothesis fixed BEFORE the run, on data that influenced no choice.

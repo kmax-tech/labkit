@@ -1,7 +1,7 @@
 # The labkit lab standard
 
-*Version 0.19 — the version a protocol names in its head (`standard =
-"0.19"`, read by `protocol_block`). A change to a rule or a field is the
+*Version 0.20 — the version a protocol names in its head (`standard =
+"0.20"`, read by `protocol_block`). A change to a rule or a field is the
 next version; a dated change that alters no rule is listed under "Changes"
 at the end. Next: 0.20 (`TODO.md`).*
 
@@ -1268,3 +1268,9 @@ version of the standard.
   inhibition, round with Opus auditor: labkit-paper 09, v3, t3 and t5). The field guide says where bands are calibrated (the null lane or a
   subset, never the registered lane over all items) and where a peek is
   disclosed (the noise-ceiling field). No rule changed; the version stays.
+- 2026-10-17 — **Version 0.20.** The head carries `instrument = "model" |
+  "estimator" | "count"`: what produces a row's answer, as data. Until
+  0.19 it was inferred from the prose of "Model / tool" and from
+  `labkit-init`'s flags; the field cut, the skeleton, the promise block and
+  the gates now read the key. A protocol of 0.19 is read with the labkit
+  release it was written for (no fallback).
