@@ -507,6 +507,177 @@ sieht das niemand.
 **Prüfstelle:** `finalize` bei `Cost: seconds` mit Modell — eine Warnung
 „eine Ziehung, keine Streuung", bis `--draw` existiert.
 
+## Verbesserungen aus oh-my-codex (2026-10-17) — notiert, nicht geplant
+
+*Drei Ideen aus den Prüf-Skills von oh-my-codex (omx,
+`github.com/Yeachan-Heo/oh-my-codex`, gelesen bei Commit `beb2299`). Die
+Skills selbst passen nicht: Sie hängen an omx' Laufzeit (`omx state write`,
+tmux-Teams) und nehmen sich Dinge heraus, die labkit verbietet (Schleifen
+mit automatischer Reparatur). Übernommen wird je eine Regel. Zu jedem Punkt
+steht, wie omx es macht, und wie es in labkit direkt aussähe. Keiner rückt
+vor Plan P; jeder wartet auf seinen Auslöser.*
+
+### V1. Ein Audit, der nicht gelaufen ist, ist nicht bestanden: der Zustand `unavailable`
+
+**Befund in labkit:** `labkit-audit` bricht bei `llm.BackendError`,
+Zeitüberschreitung oder Abbruch mit Exit 2 ab und schreibt **nichts** nach
+`audits/` (`audit.py:539–549`; `findings.write` steht erst danach). Ein
+gescheiterter Audit sieht also genauso aus wie einer, den niemand gestartet
+hat. A1 baut darauf sogar ausdrücklich: „Ohne Record bleibt der Pilot
+möglich (v2: Audit nicht erreichbar)“. Haiku t3 hat genau diese Lücke
+genommen: zweiter Aufruf abgebrochen, als gescheitert gedeutet, mit
+`LABKIT_UNFROZEN=1` weitergerechnet.
+
+**Wie omx es macht:**
+- `skills/code-review/SKILL.md:35`: Kann einer der zwei unabhängigen Prüfer
+  nicht starten oder liefert keine Belege, lautet das Ergebnis wörtlich
+  `independent review unavailable`. Der Autor springt nicht selbst ein,
+  und die Änderung gilt nicht als merge-bereit.
+- `:81` und `:90`: Ein fehlender oder gescheiterter Prüfer ist ein
+  *blockierender* Zustand, kein Rückfall auf Freigabe („missing or failed
+  delegation is a blocking unavailable-review state, not an approval
+  fallback“; „Do not self-review as a fallback“).
+- `:83–88`: Die Prüfer-Urteile werden nach einer festen Tabelle
+  kombiniert: BLOCK schlägt alles, dann REQUEST CHANGES, dann WATCH →
+  COMMENT, APPROVE nur, wenn beide Prüfer Belege geliefert haben.
+- `prompts/verifier.md:12`, `:41`: Der `verifier` trennt „Verhalten falsch“
+  (FAIL) von „Beweis fehlt“ und hat dafür einen dritten Ausgang, PARTIAL.
+
+**Vorschlag für labkit:**
+1. `labkit-audit` schreibt im Fehlerpfad einen Record
+   `audits/<datum>-<modus>.toml` mit `outcome = "unavailable"`, dem Grund
+   (Exception-Text, Modell, Prompt-kB) und dem Stamp, der vor dem Aufruf
+   schon feststeht (`Stamp(sha, stamped)`, `audit.py:527–528`). Bei SIGTERM
+   leistet das der `.running`-Vermerk aus A1b: Ein Vermerk ohne lebende pid
+   *ist* ein `unavailable`.
+2. `findings.area_records` liest `unavailable` als eigenen Zustand neben
+   „Befunde offen“ und „alles entschieden“. `preflight_audit` lässt sich
+   damit nicht füllen.
+3. `runlog` mit `LABKIT_UNFROZEN=1` und einem `unavailable` als jüngstem
+   Preflight-Record: Lauf startet (der Pilot bleibt möglich, A1 bleibt
+   richtig), aber die Bestätigungszeile sagt „audit unavailable since
+   <Zeit>: <Grund> — rerun `labkit-audit <bereich>`“, und `config.json`
+   trägt `audit_state = "unavailable"`. A2 und A3 lesen das wie
+   `unfrozen_ack`.
+4. Kombination fest wie bei omx: ein offener BLOCKER in irgendeinem Record
+   schlägt alles; dann `unavailable`; dann offene WARNINGs; „bestanden“ nur,
+   wenn der jüngste Record ein Ergebnis hat und nichts offen ist. Eine
+   Heimat: `findings.py`.
+
+**Stufe:** guaranteed (ob ein Ergebnis vorliegt, ist exakt).
+**Entscheidung des Autors:** ob `unavailable` den vollen Lauf blockt (wie
+omx) oder nur markiert (wie oben). Für die Blockade spricht omx und Haiku
+t3; dagegen, dass ein nicht erreichbares Backend sonst jeden Piloten
+stoppt.
+**Auslöser:** beim Bau von A1b mitnehmen, denn derselbe Vermerk trägt
+beides; sonst der nächste Lauf mit einem abgebrochenen Audit davor.
+**Prüfstelle:** `tests/test_audit_unavailable.py`: Backend wirft →
+Record mit `outcome = "unavailable"` und Grund, Exit 2; danach `runlog`
+mit Bestätigung → startet, Zeile nennt den Grund, `config.json` trägt die
+Marke; Audit mit Ergebnis → Marke fehlt (Zwilling, still).
+
+### V2. Stille Rückfallpfade im Messcode: verdeckend oder begründet
+
+**Befund in labkit:** Der Standard kennt die Nachbarn: LAB-023 No silent
+loss (Parser verliert Antworten), LAB-033 A parameter that is accepted and
+discarded is the most expensive bug, die Narbenzeile „Parser with a silent
+format assumption“ (`standard.md:1233`). Es fehlt die allgemeine Form im
+Auswertungscode: `row.get("score", 0)`, `except Exception: continue`,
+`value or 0.0`, `if x is None: x = default`. Jede davon macht aus einem
+fehlenden Feld still eine Zahl, und die berichtete Metrik sieht richtig aus.
+Haiku t3 ist ein Verwandter: `c1_pass = true` bei `test_mae = 0.0`, weil
+die fehlenden Testlabels zu Nullen wurden.
+
+**Wie omx es macht:** `skills/ai-slop-cleaner/SKILL.md:24–26`, zwei
+Schritte vor jeder Änderung:
+- *Inventar* (`:24`): jeden rückfallartigen Pfad im Scope auflisten, also
+  „swallowed errors, silent defaults, broad compatibility shims, duplicate
+  alternate execution paths“, auch Kommentare wie „temporary workaround“,
+  „just skip“.
+- *Einteilung* (`:25`): **Masking fallback** = verdeckt Belege, umgeht den
+  Vertrag, schaltet Prüfung ab, verschluckt Fehler, setzt still einen
+  Standardwert oder fügt ungetestete Pfade hinzu. **Grounded fallback** =
+  eng, an einer Grenze nach außen (fremde API, Version), Begründung
+  steht da, der Fehler bleibt sichtbar, Haupt- und Rückfallpfad sind
+  getestet.
+- *Abhilfe* (`:26`): Ursache reparieren, löschen oder ausdrücklich
+  scheitern lassen, nicht den Rückfall polieren.
+- Ausgabe je Fund: `finding -> masking | grounded -> escalation`.
+
+**Vorschlag für labkit:** in zwei Stufen, die zweite nur, wenn die erste
+es verlangt.
+1. *Benchmark-Fall zuerst* (Labor `labkit-paper`): ein gefüllter Proband,
+   dessen `02_analyze.py` eine Metrik mit `.get(key, 0)` über fehlende
+   Gold-Werte rechnet, und sein Zwilling mit explizitem `KeyError`. Frage:
+   findet `experiment-preflight` den Fall, ohne dass die Narbentabelle ihn
+   nennt?
+2. *Findet er ihn nicht:* eine Narbenzeile im Standard, gebaut nach omx'
+   Einteilung — Klasse „Silent fallback in the number's path“, Symptom
+   „a missing field, a failed call or an unparsable value becomes a
+   default that enters the reported number“; begründet ist ein Rückfall nur,
+   wenn er an einer Grenze nach außen sitzt, gezählt wird und die Zählung
+   im Bericht steht (das ist LAB-023, verallgemeinert). Der Auditor
+   meldet je Fund `masking` oder `grounded` im vierten Feld seiner Zeile
+   („which reported number goes wrong“).
+3. *Statische Hilfe, erst nach einem zweiten echten Fall:* `code-check`
+   listet `except …: pass|continue` und `.get(<k>, <Literal>)` in den
+   Skripten des deklarierten Scopes als Hinweis („the auditor decides
+   masking or grounded“), nie als Blocker.
+
+**Stufe:** agent audit (1, 2), static evidence (3).
+**Auslöser:** der nächste Benchmark-Durchgang (Schritt 2 der
+Reihenfolge); Stufe 3 erst nach einem echten Fund in einem Labor-Repo.
+**Prüfstelle:** Benchmark-Matrix: Proband → Befund mit `masking`;
+Zwilling → still.
+
+### V3. Jeder Befund sagt, worauf er steht: Evidence, Inference, Unknown
+
+**Befund in labkit:** Eine Auditzeile hat sechs Felder
+(`experiment-preflight.agent.md:138`), aber keines sagt, ob der Befund an
+einer gelesenen Zeile hängt oder ein Schluss über mehrere ist. Die drei
+Stufen (guaranteed, static evidence, agent audit) markieren das je
+*Prüfung*, nicht je *Befund*. Beim Entscheiden (`fixed` / `accepted` /
+`dismissed`) muss der Leser das selbst herausfinden. Beleg aus Schritt 2:
+B1 (positionaler Join) kam nur als WARNING; ob der Auditor ihn sah oder
+vermutete, steht nirgends.
+
+**Wie omx es macht:** `skills/analyze/SKILL.md:30–36` verlangt für jede
+wesentliche Behauptung eine Marke:
+- **Evidence** — direkt in Code, Test, Artefakt, Konfiguration oder Doku
+  gezeigt;
+- **Inference** — ein Schluss aus zitierten Belegen;
+- **Unknown** — vom Repo nicht entschieden.
+
+Dazu „Never present guesses as evidence or inference“ (`:36`) und eine
+Rangtabelle mit Konfidenz High/Medium/Low und der stärksten Stütze je
+Erklärung (`:45`ff.). Für Unknown nennt omx die kleinste Leseprobe, die es
+entscheiden würde.
+
+**Vorschlag für labkit:**
+1. Ein siebtes Feld in der Auditzeile, zwischen Ort und Befund:
+   `BLOCKER · scripts/02_analyze.py:42 · evidence · …`. Werte `evidence`
+   (die Zeile zeigt es), `inference` (Schluss über mehrere Stellen; die
+   anderen Stellen stehen im Befundtext), `unknown` (der Code entscheidet
+   es nicht; dann ist das letzte Feld die Leseprobe statt einer Änderung).
+2. `findings.py` liest das Feld als `basis` und prüft die Werte (Werte
+   sind Namen, LAB-086 Values rule (codes are names too): erst Fach- und Hausbegriff
+   nachschlagen). `findings.write` speichert es.
+3. Der Ertrag wird zählbar: Wie viele `inference`-Befunde enden in
+   `dismissed`? Ist es die Mehrheit, weiß man, wo die Fehlalarme
+   herkommen.
+
+**Stufe:** Format (agent audit, Ausgabe); das Lesen in `findings.py` ist
+guaranteed.
+**Breaking:** ja — das Zeilenformat ändert sich, und `findings` liest das
+alte nicht mehr (Leitsatz „Altlasten“). CHANGELOG „Breaking“ mit der
+letzten Version, die sechs Felder liest.
+**Auslöser:** der nächste Audit-Durchgang, bei dem eine Entscheidung
+`dismissed` lautet, weil der Befund geraten war; oder Schritt 2, wenn man
+den Ertrag je Klasse auszählt.
+**Prüfstelle:** `tests/test_findings_basis.py`: Zeile mit `evidence` →
+`basis` gelesen; fehlendes oder unbekanntes Feld → Fehler mit Feldname;
+`unknown` ohne Leseprobe → Fehler.
+
 ## Notiert, nicht geplant
 
 - **Ein Bericht außerhalb des Protokolls löst kein Gate aus (2026-10-16). → Plan 2026-10-17 oben.**
