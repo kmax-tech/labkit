@@ -105,7 +105,7 @@ Autors.
 | Schritt | Inhalt | Stufe | Prüfstelle |
 |---|---|---|---|
 | A1 | **runlog verweigert über einen ungelesenen BLOCKER hinweg.** `runlog.py:1121` nimmt `LABKIT_UNFROZEN=1` heute immer. Neu: liegt in `audits/` ein Preflight-Record (`findings.area_records`, `mode == "preflight"`) mit einem `open` Finding der Stufe BLOCKER, verweigert runlog auch mit Bestätigung und nennt Datei und Befund; offene WARNINGs stehen in der Warnzeile der Bestätigung. Ohne Record bleibt der Pilot möglich (v2: Audit nicht erreichbar). Nur volle Läufe (`long=True`, die Sperre steht unter `if long:`, `runlog.py:1121`): `--probe` muss einen BLOCKER untersuchen können, sonst ist er nicht zu entscheiden. Haiku t3: die Datei lag beim ersten Lauf bereits da. | guaranteed | `tests/test_runlog_unfrozen_blocker.py`: offener BLOCKER + Bestätigung → `SystemExit` nennt ihn; kein `audits/` + Bestätigung → startet, `unfrozen_ack = true`; BLOCKER `fixed`/`accepted` → startet; Probe trotz offenem BLOCKER → läuft |
-| A1b | **Der laufende Audit zählt.** A1 sieht nur einen fertigen Record; zehn Sekunden früher gerechnet, und Haiku t3 wäre durch. `labkit-audit` schreibt vor dem Modellaufruf `audits/<datum>-<modus>.running` (pid, Start) und entfernt ihn im `finally`; runlog hält den Vermerk für lebendig, solange die pid läuft (wie `active()` für Runs), und sagt dann „warte: audit since <Start>, pid N“, auch mit Bestätigung; ein Vermerk ohne lebende pid ist eine Warnung mit Dateinamen, keine Sperre (Haikus zweiter Audit starb mit SIGTERM nach 70 s — sonst bliebe nur das Löschen der Datei als Ausweg). `audit.py` schreibt heute vor dem Aufruf nichts. | guaranteed | `tests/test_runlog_audit_running.py`: Vermerk mit lebender pid → `SystemExit` „warte“; Vermerk mit toter pid → startet mit Warnung; kein Vermerk → unverändert |
+| A1b | **Der laufende Audit zählt.** A1 sieht nur einen fertigen Record; zehn Sekunden früher gerechnet, und Haiku t3 wäre durch. `labkit-audit` schreibt vor dem Modellaufruf `audits/<datum>-<modus>.running` (pid, Start) und entfernt ihn im `finally`; runlog hält den Vermerk für lebendig, solange die pid läuft (wie `active()` für Runs), und sagt dann „warte: audit since <Start>, pid N“, auch mit Bestätigung; ein Vermerk ohne lebende pid ist ein abgebrochener Audit, `unavailable` nach V1, und sperrt den vollen Lauf ebenso (entschieden 2026-10-17: laut scheitern statt still markieren); der Ausweg ist ein neuer `labkit-audit`, der den Vermerk durch ein Ergebnis ersetzt, nicht das Löschen der Datei (Haikus zweiter Audit starb mit SIGTERM nach 70 s). `audit.py` schreibt heute vor dem Aufruf nichts. | guaranteed | `tests/test_runlog_audit_running.py`: Vermerk mit lebender pid → `SystemExit` „warte“; Vermerk mit toter pid → `SystemExit` „audit unavailable“, `--probe` läuft; kein Vermerk → unverändert |
 | A2 | **Die Marke steht in der Antwortzeile.** `protocol_fill.answer_line` liest `runs.read_run_config` des Laufs; bei `unfrozen_ack = true` endet die Zeile `(run <id>, unfrozen — acknowledged with LABKIT_UNFROZEN=1)`, in Answer und Result gleich. `recheck.cited` findet die Run-ID weiter (`runs.RUN_ID` ist wortbegrenzt). v2 t5 schrieb das von Hand unter „Deviations after freeze“, ein Feld für etwas anderes. | guaranteed | `tests/test_protocol_fill_unfrozen.py`: Lauf mit Marke → Zeile trägt sie; ohne → Zeile unverändert; `--check` hält beide |
 | A3 | **finalize nennt offene Befunde, report-check blockt den bestätigten Piloten.** `finalize_area`: neue Station nach „answering run“ — `open` Findings aus `audits/` (jeder Modus): BLOCKER → Blocker, WARNING → Warnung, je mit Datei; dazu die Warnung „answering run acknowledged unfrozen“, wenn der Lauf die Marke trägt. `report_check.later_gaps`: ein antwortender Lauf mit `unfrozen_ack = true` ist ein Blocker („a reported number owes a frozen run“). Das ist der ältere Kandidat „finalize führt unentschiedene BLOCKER auf“. | guaranteed | `tests/test_finalize_open_findings.py`: offener BLOCKER → exit 1 mit Datei; alle entschieden → still; Lauf mit Marke → finalize warnt, report-check blockt; ohne Marke beide still |
 | A4 | **Der Stop-Hook folgt der Zahl, nicht dem Dateinamen.** Eine Heimat `finalize.cited_elsewhere(repo, paths)`: in jeder geänderten Datei (`claude_hooks._git_changed`) jede `runs.RUN_ID`-Fundstelle; existiert `runs/<id>/config.json` in einem Bereich des Repos, ist dessen `protocol`-Bindung das Protokoll, das `finalize_area` bekommt — auch wenn es selbst keinen Lauf zitiert (`--if-reported` überspringt es sonst). `claude_hooks.stop` und der von `install_hooks` gestempelte Pre-Commit der Labor-Repos (heute `finalize --if-reported` auf gestagten Protokollen) rufen dieselbe Funktion. Eine Run-ID ohne Verzeichnis im Repo zählt nicht (kein Fehlalarm aus einer Notiz über ein anderes Repo). Haiku t3: REPORT.md im Root zitiert den Lauf, das Protokoll nicht — heute kein Gate. **Zurückgestellt (2026-10-17):** der eine Fall war vom Sandbox-Prompt verlangt; in einem Labor-Repo zitieren TODO und Notizen alte Läufe desselben Bereichs, und jeder Stop zöge `finalize` auf unberührte Protokolle. Befund dazu: `notes_check` kennt heute weder Run-IDs noch `finalize`, der vorgesehene Weg ist `02_analyze.py --check` über `report-check`. **Auslöser:** ein zweiter Fall in einem echten Labor-Repo — dann zuerst auf `notes/messung/` begrenzt, wo der Stop-Hook schon hinschaut. | guaranteed | `tests/test_claude_hooks.py` erweitert: geänderte `REPORT.md` zitiert einen Lauf, dessen Protokoll keine Antwort trägt → exit 2 mit Protokollname; Datei ohne Run-ID → 0; Run-ID ohne Verzeichnis → 0; Pre-Commit derselbe Fall über `finalize --cited-in <paths>` |
@@ -553,28 +553,29 @@ genommen: zweiter Aufruf abgebrochen, als gescheitert gedeutet, mit
 2. `findings.area_records` liest `unavailable` als eigenen Zustand neben
    „Befunde offen“ und „alles entschieden“. `preflight_audit` lässt sich
    damit nicht füllen.
-3. `runlog` mit `LABKIT_UNFROZEN=1` und einem `unavailable` als jüngstem
-   Preflight-Record: Lauf startet (der Pilot bleibt möglich, A1 bleibt
-   richtig), aber die Bestätigungszeile sagt „audit unavailable since
-   <Zeit>: <Grund> — rerun `labkit-audit <bereich>`“, und `config.json`
-   trägt `audit_state = "unavailable"`. A2 und A3 lesen das wie
-   `unfrozen_ack`.
+3. `runlog` mit einem `unavailable` als jüngstem Preflight-Record
+   **verweigert den vollen Lauf, auch mit `LABKIT_UNFROZEN=1`**, und sagt
+   „audit unavailable since <Zeit>: <Grund> — rerun `labkit-audit
+   <bereich>`“. `--probe` läuft weiter (wie bei A1: sonst lässt sich der
+   Grund nicht untersuchen). Kein Record überhaupt bleibt der Pilotfall aus
+   A1, denn seit Schritt 1 hinterlässt jeder gestartete Audit einen.
 4. Kombination fest wie bei omx: ein offener BLOCKER in irgendeinem Record
    schlägt alles; dann `unavailable`; dann offene WARNINGs; „bestanden“ nur,
    wenn der jüngste Record ein Ergebnis hat und nichts offen ist. Eine
    Heimat: `findings.py`.
 
 **Stufe:** guaranteed (ob ein Ergebnis vorliegt, ist exakt).
-**Entscheidung des Autors:** ob `unavailable` den vollen Lauf blockt (wie
-omx) oder nur markiert (wie oben). Für die Blockade spricht omx und Haiku
-t3; dagegen, dass ein nicht erreichbares Backend sonst jeden Piloten
-stoppt.
+**Entschieden 2026-10-17 (Autor): `unavailable` blockt den vollen Lauf**
+— laut scheitern statt still markieren, als allgemeines Prinzip, nicht nur
+hier. Der Preis ist bewusst: Ist das Backend nicht erreichbar, steht der
+volle Lauf, bis ein Audit durchkommt; Proben laufen. A1b ist darauf
+angepasst (Vermerk mit toter pid sperrt).
 **Auslöser:** beim Bau von A1b mitnehmen, denn derselbe Vermerk trägt
 beides; sonst der nächste Lauf mit einem abgebrochenen Audit davor.
 **Prüfstelle:** `tests/test_audit_unavailable.py`: Backend wirft →
 Record mit `outcome = "unavailable"` und Grund, Exit 2; danach `runlog`
-mit Bestätigung → startet, Zeile nennt den Grund, `config.json` trägt die
-Marke; Audit mit Ergebnis → Marke fehlt (Zwilling, still).
+mit Bestätigung → `SystemExit` nennt Grund und Kommando; `--probe` → läuft;
+danach Audit mit Ergebnis → voller Lauf startet (Zwilling, still).
 
 ### V2. Stille Rückfallpfade im Messcode: verdeckend oder begründet
 
