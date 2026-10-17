@@ -13,7 +13,8 @@ LAB-017 The number of audits follows the cost tier.
 
 1. `labkit-init exp <name> --cost seconds` (`--model <alias>` when a model is
    in the loop) — stamps the seconds cut of the protocol and the matching
-   skeleton.
+   skeleton. Neither a count nor a model in the loop? Stop here and say so
+   (minutes lane, step 1) — never bend the stamped skeleton to fit.
 2. Write the registration: `protocol-fill <PROTOCOL> --list` names every
    open field, the TOML head's `type` first (`cost = "seconds"` is stamped).
    A count owes question · data · exclusions · unit; with a model also the
@@ -50,6 +51,10 @@ fields, no reading of labkit's source.
    `estimator` (fit, predict, a permuted-label null lane); a `count` is the
    seconds lane. Stamps the protocol and the script skeletons of that
    instrument (`scripts/00_prepare.py · 01_measure.py · 02_analyze.py`).
+   Fits none of the three? Stop here: one line under the protocol's Notes
+   saying what produces a row's answer, and no skeleton bent to fit — a
+   fourth instrument gets its name from that stop; a bent skeleton hides it
+   (nine of nine pilot attempts rebuilt the model skeleton, 2026-10-16).
 2. Read `protocol-check --contract`, then fill the TOML head (`type`, `cost`)
    and the Intent before the first call: hypothesis · success criterion ·
    admissibility condition, the prompt verbatim; an id `[C]/[A]/[B]` on every
