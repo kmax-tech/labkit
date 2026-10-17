@@ -441,10 +441,9 @@ class Exp(unittest.TestCase):
         self.assertIn("chance_of", test)
         proto = (area / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
         self.assertIn("**Model / tool:** n/a — no model call", proto)
-        self.assertIn("**Prompt (verbatim, per variant):** n/a — no prompt", proto)
-        self.assertNotIn("```text", proto)  # the prompt's example block is gone
-        self.assertIn("**Parser cases harvested:** n/a — no model text", proto)
-        self.assertFalse(protocol_check.model_named(proto))
+        for gone in ("**Prompt", "Render check", "Parser cases harvested", "```text"):
+            self.assertNotIn(gone, proto, gone)  # the cut, not an n/a line
+        self.assertEqual(protocol_check.instrument_of_text(proto), "estimator")
         block = promises.parse_block(proto)
         assert block is not None
         consts = promises.all_constants(block)
@@ -615,35 +614,43 @@ class Exp(unittest.TestCase):
 
 
 class Report(unittest.TestCase):
-    """--report answers what a model-free protocol cannot: seed, noise, parser."""
+    """--report adds the † fields the area's instrument owes (standard 0.20):
+    an estimator gets no prompt-shaped field and keeps seed and noise owed;
+    a model gets them all."""
 
-    def stamped(self, model_line: str) -> str:
+    def stamped(self, **kw) -> str:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             scaffold.stamp_lab(root, "lab")
-            quiet(scaffold.stamp_area, root, "foo-bar")
-            (proto,) = root.glob("experiments/*/PROTOCOL-foo-bar.md")
-            text = re.sub(
-                r"- \*\*Model / tool:\*\* <[^>]*>",
-                model_line,
-                proto.read_text(encoding="utf-8"),
-                count=1,
-            )
-            proto.write_text(text, encoding="utf-8")
+            quiet(scaffold.stamp_area, root, "foo-bar", cost="minutes", **kw)
             quiet(scaffold.stamp_area, root, "foo-bar", report=True)
+            (proto,) = root.glob("experiments/*/PROTOCOL-foo-bar.md")
             return proto.read_text(encoding="utf-8")
 
-    def test_no_model_fills_the_parser_field_and_leaves_randomness_owed(self) -> None:
-        """2026-10-17: a seeded estimator owes its randomness fields; --report
-        no longer writes "no seed, spread 0" into them (Sonnet on signal inhibition, round without auditor: labkit-paper 09, v2, t5)."""
-        text = self.stamped("- **Model / tool:** none")
-        self.assertIn("**Parser cases harvested:** n/a — no model", text)
-        self.assertNotIn("n/a — deterministic", text)
+    def test_an_estimator_owes_seed_and_noise_but_no_prompt_shaped_field(self) -> None:
+        text = self.stamped()
+        self.assertIn('instrument = "estimator"', text)
         self.assertRegex(text, r"\*\*Randomness controls †:\*\* <")
         self.assertRegex(text, r"\*\*Noise ceiling → threshold †:\*\* <")
+        for gone in (
+            "Gate labels",
+            "Parser cases harvested",
+            "**Prompt",
+            "Render check",
+        ):
+            self.assertNotIn(gone, text, gone)
+        self.assertNotIn("auto-filled", text)
 
-    def test_a_model_leaves_them_open(self) -> None:
-        self.assertNotIn("auto-filled", self.stamped("- **Model / tool:** haiku"))
+    def test_a_model_gets_every_field(self) -> None:
+        text = self.stamped(model="haiku")
+        self.assertIn('instrument = "model"', text)
+        for owed in (
+            "Gate labels",
+            "Parser cases harvested",
+            "**Prompt",
+            "Randomness controls",
+        ):
+            self.assertIn(owed, text, owed)
 
 
 class Cli(unittest.TestCase):
@@ -670,18 +677,3 @@ class Cli(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-class ModelNamed(unittest.TestCase):
-    """`--report` asks `protocol_check.model_named`, the one reading of the
-    Model / tool field: with its own regex a `—` or a `†` label read as "a
-    model", and the deterministic n/a fields stayed open (audit 2026-10-15)."""
-
-    def test_a_dash_and_a_daggered_label_are_no_model(self):
-        for value in ("—", "none", "n/a — a count"):
-            text = f"- **Model / tool †:** {value}\n- **Parser cases harvested:** <cases>\n"
-            filled, n = scaffold.auto_fill_deterministic(text)
-            self.assertEqual(n, 1, value)
-            self.assertIn("n/a — no model", filled)
-        text = "- **Model / tool:** gpt-oss\n- **Parser cases harvested:** <cases>\n"
-        self.assertEqual(scaffold.auto_fill_deterministic(text), (text, 0))

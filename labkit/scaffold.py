@@ -40,7 +40,6 @@ import uuid
 from pathlib import Path
 
 from labkit import protocol_block
-from labkit.protocol_check import model_named
 from labkit.repo import (
     AREA_NAME,
     area_protocols,
@@ -195,8 +194,11 @@ def stamp_lab(root: Path, name: str, ref: str | None = None) -> list[str]:
 # leaves them out; `--report` fills them into their sections when a run
 # graduates, so one topic never sits in two places.
 DAGGER = "†"
-SECONDS_TAG = "<!-- s -->"
-SECONDS_MODEL_TAG = "<!-- sm -->"  # owed at seconds only with a model in the loop
+SECONDS_TAG = "<!-- s -->"  # in the seconds cut
+MODEL_TAG = "<!-- m -->"  # owed by a model in the loop only
+MODEL_ESTIMATOR_TAG = "<!-- me -->"  # owed by model and estimator, not by a count
+TAGS = (SECONDS_TAG, MODEL_TAG, MODEL_ESTIMATOR_TAG)
+TAG_PATTERN = r" ?<!-- (?:s|m|me) -->"
 #: which template section a heading is about — a report field is placed by topic
 SECTION_KEYS = (
     "summary",
@@ -251,21 +253,37 @@ def _label_of(item: list[str]) -> str:
 
 
 def _untag(line: str) -> str:
-    for tag in (SECONDS_TAG, SECONDS_MODEL_TAG):
+    for tag in TAGS:
         line = line.replace(" " + tag, "").replace(tag, "")
     return line
 
 
-def seconds_cut(tmpl: str, model: bool = False) -> str:
-    """The `seconds` cut: the preamble, and of every section only the items tagged
-    `<!-- s -->` (with a model also `<!-- sm -->`), under their heading."""
-    tags = (SECONDS_TAG, SECONDS_MODEL_TAG) if model else (SECONDS_TAG,)
+def for_instrument(item: list[str], instrument: str) -> bool:
+    """Does INSTRUMENT owe this template item? Untagged: every one; `<!-- m -->`
+    a model only; `<!-- me -->` model and estimator — the template's half of
+    `protocol_check.in_instrument` (a test holds the two to each other). The
+    tag may sit on a wrapped label's second line, so the whole item is read."""
+    text = "\n".join(item)
+    if MODEL_ESTIMATOR_TAG in text:
+        return instrument in ("model", "estimator")
+    if MODEL_TAG in text:
+        return instrument == "model"
+    return True
+
+
+def seconds_cut(tmpl: str, instrument: str) -> str:
+    """The `seconds` cut for INSTRUMENT: the preamble, and of every section only
+    the items tagged `<!-- s -->` that the instrument owes, under their heading."""
     out: list[str] = []
     for heading, body in _segments(tmpl):
         if not heading:
             out.extend(line for item in _items(body) for line in item)
             continue
-        kept = [item for item in _items(body) if any(t in item[0] for t in tags)]
+        kept = [
+            item
+            for item in _items(body)
+            if SECONDS_TAG in "\n".join(item) and for_instrument(item, instrument)
+        ]
         if not kept:
             continue
         if out and out[-1].strip():
@@ -311,7 +329,7 @@ def short_placeholders(text: str) -> str:
         if line.startswith("```"):
             fence = not fence
         head = re.match(
-            r"^(- \*\*[^*]+\*\*:?\s*(?:<!-- sm? -->\s*)?|\s+(?:[^<*]*\*\*:?\s*)?)<(?!!--)(.*)$",
+            r"^(- \*\*[^*]+\*\*:?\s*|\s+(?:[^<*]*\*\*:?\s*)?)<(.*)$",
             line,
         )
         if fence or head is None or line.rstrip().endswith(">"):
@@ -341,9 +359,13 @@ def short_placeholders(text: str) -> str:
     return "\n".join(out)
 
 
-def pilot_and_report(tmpl: str) -> tuple[str, ProtocolBlocks]:
-    """(pilot part, report blocks) of the template. A report block is (section key,
-    heading, items): a daggered section whole, or the daggered items of a section."""
+def pilot_and_report(
+    tmpl: str, instrument: str = "model"
+) -> tuple[str, ProtocolBlocks]:
+    """(pilot part, report blocks) of the template for INSTRUMENT — items
+    another instrument owes are left out of both. A report block is (section
+    key, heading, items): a daggered section whole, or the daggered items of
+    a section."""
     pilot: list[str] = []
     report: ProtocolBlocks = []
     for heading, body in _segments(tmpl):
@@ -351,13 +373,16 @@ def pilot_and_report(tmpl: str) -> tuple[str, ProtocolBlocks]:
             # the preamble may MENTION the dagger (legend) — it stays pilot
             pilot.extend(line for item in _items(body) for line in item)
             continue
-        if DAGGER in heading:
-            report.append((section_key(heading) or heading, heading, _items(body)))
-            continue
-        keep = [
-            i for i in _items(body) if not (i[0].startswith("- ") and DAGGER in i[0])
+        items = [
+            [_untag(line) for line in i]
+            for i in _items(body)
+            if for_instrument(i, instrument)
         ]
-        moved = [i for i in _items(body) if i[0].startswith("- ") and DAGGER in i[0]]
+        if DAGGER in heading:
+            report.append((section_key(heading) or heading, heading, items))
+            continue
+        keep = [i for i in items if not (i[0].startswith("- ") and DAGGER in i[0])]
+        moved = [i for i in items if i[0].startswith("- ") and DAGGER in i[0]]
         pilot.append(heading)
         pilot.extend(line for item in keep for line in item)
         if moved:
@@ -403,46 +428,6 @@ def insert_report_fields(text: str, blocks: ProtocolBlocks) -> tuple[str, int]:
     return "\n".join(out).rstrip() + "\n", added
 
 
-# A protocol that names no model has nothing to parse; --report fills that
-# field when the Model / tool field says so (`protocol_check.model_named`,
-# the one reading of that field). Until 2026-10-17 it also wrote "no seed,
-# repetition spread 0" into Randomness controls and Noise ceiling: "no
-# language model" is not "no source of randomness" — a seeded forest, a
-# fold shuffle and a permutation are ones, and the pilot that got the line
-# (Sonnet on signal inhibition, round without auditor: labkit-paper 09, v2, t5) named seed 0 three lines below it
-# while the next round measured a null-AUC spread of 0.116 over ten seeds.
-# Those two fields stay owed: an estimator with a seed owes them.
-DETERMINISTIC_NA = {
-    "Parser cases harvested": "n/a — no model, nothing to parse (auto-filled by --report)",
-}
-
-
-def _replace_placeholder(lines: list[str], label: str, value: str) -> bool:
-    """In place: the stamped `<…>` placeholder of LABEL (one line or wrapped)
-    becomes VALUE on the label line; False when the field is not stamped."""
-    head = re.compile(r"^(\s*-\s*\*\*" + re.escape(label) + r"\s*†?:\*\*\s*)<")
-    for i, line in enumerate(lines):
-        if m := head.match(line):
-            j = i
-            while ">" not in lines[j]:
-                j += 1
-            lines[i : j + 1] = [m.group(1) + value]
-            return True
-    return False
-
-
-def auto_fill_deterministic(text: str) -> tuple[str, int]:
-    """Fill the placeholder a model-free protocol cannot answer — the parser
-    field, nothing about randomness (DETERMINISTIC_NA); (text, fields filled)."""
-    if model_named(text):
-        return text, 0
-    lines = text.split("\n")
-    filled = sum(
-        _replace_placeholder(lines, lb, v) for lb, v in DETERMINISTIC_NA.items()
-    )
-    return "\n".join(lines), filled
-
-
 #: What a count's registration owes, said in the placeholder: three cold
 #: agents (Haiku, 2026-10-13) wrote a Terms sentence for a plain count — "n/a"
 #: was allowed by the check but unsaid by the stamp — and one read
@@ -455,18 +440,15 @@ COUNT_PLACEHOLDERS = {
 }
 
 
-#: The pilot protocol of an estimator area: the model-shaped fields answered
-#: as what they are here, the promise sentences in the estimator's words.
+#: The pilot protocol of an estimator area: the fields the estimator shares
+#: with a model, worded for it (the model-only fields the cut leaves out),
+#: and the promise sentences in the estimator's words.
 #: No `: `, ` — `, `; ` or ` (` inside a `<…>`: `short_placeholders` cuts there.
 ESTIMATOR_FIELDS = {
     "Model / tool": "n/a — no model call; the instrument is the estimator of `make_estimator()` in scripts/01_measure.py <name it with its fixed parameters and the seed>",
-    "Prompt (verbatim, per variant)": "n/a — no prompt; the instrument is an estimator",
     "Model I/O": "<in · the feature fields per item · out · one prediction per item, scored out of fold>",
     "Null condition / anchors (in the same run)": "<A2 · the same estimator on labels permuted inside each fitting fold, expected at chance_of() within null_band>",
-    "Raw output": "<one registered row and one test row as --probe prints them>",
-    "Render check (ZERO calls, `--show N`)": "n/a — no prompt; `--show N` prints the config and N feature rows",
     "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · a reduced estimator on N labelled items, both lanes, throwaway · scores read, never reported>",
-    "Parser cases harvested": "n/a — no model text to parse",
 }
 ESTIMATOR_PROMISES = (
     (
@@ -484,6 +466,20 @@ ESTIMATOR_PROMISES = (
     ),
     (r"constants = \{ null_band_items = 1 \}", "constants = { null_band = 0.1 }"),
 )
+
+
+def _replace_placeholder(lines: list[str], label: str, value: str) -> bool:
+    """In place: the stamped `<…>` placeholder of LABEL (one line or wrapped)
+    becomes VALUE on the label line; False when the field is not stamped."""
+    head = re.compile(r"^(\s*-\s*\*\*" + re.escape(label) + r"\s*†?:\*\*\s*)<")
+    for i, line in enumerate(lines):
+        if m := head.match(line):
+            j = i
+            while ">" not in lines[j]:
+                j += 1
+            lines[i : j + 1] = [m.group(1) + value]
+            return True
+    return False
 
 
 def _replace_field(lines: list[str], label: str, value: str) -> bool:
@@ -645,32 +641,37 @@ def stamp_explore(experiments: Path, slug: str) -> list[str]:
     return log
 
 
-def promote(area: Path, blocks: ProtocolBlocks) -> list[str]:
-    """Fill the report-grade fields into an existing area's protocols."""
+def promote(area: Path, tmpl: str) -> list[str]:
+    """Fill the report-grade fields into an existing area's protocols: per
+    protocol the blocks of TMPL its head's instrument owes (`pilot_and_report`
+    is the one filter) — a count never reaches here (seconds), an estimator
+    gets no prompt-shaped field."""
     protos = area_protocols(area)
     if not protos:
         raise SystemExit(f"labkit-init: no PROTOCOL-*.md in {area}")
     log = []
     for proto in protos:
         text = proto.read_text(encoding="utf-8")
-        if protocol_block.head(text).cost == "seconds":
+        head = protocol_block.head(text)
+        if head.cost == "seconds":
             log.append(
                 f"  skip (cost seconds: nothing freezes, no report fields)  {proto}"
             )
             continue
+        if head.instrument is None:
+            raise SystemExit(
+                f"labkit-init: {proto}: [protocol] instrument is still a "
+                f"placeholder — set it (model | estimator | count) before --report"
+            )
+        _, blocks = pilot_and_report(tmpl, head.instrument)
         new, added = insert_report_fields(text, blocks)
         if not added:
             log.append(f"  skip (report fields already there)  {proto}")
             continue
-        new, auto = auto_fill_deterministic(new)
         proto.write_text(new, encoding="utf-8")
         log.append(
             f"  filled in      {proto} ({added} report field(s), each in its section)"
         )
-        if auto:
-            log.append(
-                f"  n/a stamped    {auto} field(s): no model, nothing to draw, nothing to parse"
-            )
     return log
 
 
@@ -773,6 +774,19 @@ def stamp_area(
         raise SystemExit(
             f"labkit-init: {root} is not a lab repo (no models.toml / experiments/) — run `labkit-init lab` first"
         )
+    existing = [
+        p
+        for p in experiments.iterdir()
+        if p.is_dir() and split_area_name(p.name)[1] == slug
+    ]
+    if existing:
+        if not report:
+            raise SystemExit(
+                f"labkit-init: experiment already exists: {existing[0]} (add report fields: --report)"
+            )
+        return existing[0], "\n".join(
+            promote(existing[0], template(PROTOCOL_TEMPLATE.name))
+        )
     quick = cost == "seconds"
     instrument = instrument_of(cost, model, instrument)
     tmpl = (
@@ -787,28 +801,18 @@ def stamp_area(
     tmpl = tmpl.replace(
         'instrument = "<model | estimator | count>"', f'instrument = "{instrument}"'
     )
-    clean = re.sub(
-        r" ?<!-- sm? -->", "", tmpl
-    )  # every written protocol is free of the cut markers
-    pilot, blocks = pilot_and_report(clean)
+    # the cut reads the tagged template; every written protocol is free of
+    # the markers (`_untag` in the cuts)
+    pilot, blocks = pilot_and_report(tmpl, instrument)
     if quick:
-        with_model = instrument == "model"
-        pilot, blocks = seconds_cut(quick_block(tmpl, with_model), model=with_model), []
+        pilot, blocks = (
+            seconds_cut(quick_block(tmpl, instrument == "model"), instrument),
+            [],
+        )
         if instrument == "count":
             pilot = count_placeholders(pilot)
     elif instrument == "estimator":
         pilot = estimator_placeholders(pilot)
-    existing = [
-        p
-        for p in experiments.iterdir()
-        if p.is_dir() and split_area_name(p.name)[1] == slug
-    ]
-    if existing:
-        if not report:
-            raise SystemExit(
-                f"labkit-init: experiment already exists: {existing[0]} (add report fields: --report)"
-            )
-        return existing[0], "\n".join(promote(existing[0], blocks))
     nn = next_experiment_number(experiments)
     area = experiments / f"{nn}-{slug}"
     log: list[str] = []
@@ -830,7 +834,9 @@ def stamp_area(
         re.sub(
             r"([^\n])\n(## )",
             r"\1\n\n\2",
-            short_placeholders(clean if report else pilot),
+            short_placeholders(
+                insert_report_fields(pilot, blocks)[0] if report else pilot
+            ),
         ),
         log,
     )

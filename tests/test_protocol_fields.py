@@ -18,13 +18,18 @@ TEMPLATE = (
 )
 
 
-def template_fields() -> dict[str, str]:
-    """field name -> cut marker ("s", "sm" or "") as the template stamps them."""
+def template_fields() -> dict[str, tuple[str, str]]:
+    """field name -> (seconds marker, instruments marker) as the template
+    stamps them: "s" / "" and "m" / "me" / ""; a wrapped label carries its
+    markers on its last line."""
     out = {}
+    lines = TEMPLATE.splitlines()
     for f in protocol_check.fields(TEMPLATE):
-        line = TEMPLATE.splitlines()[f.line - 1]
-        m = re.search(r"<!--\s*(sm?)\s*-->", line)
-        out.setdefault(f.name, m.group(1) if m else "")
+        span = "\n".join(lines[f.line - 1 : max(f.line, f.last)])
+        tags = set(re.findall(r"<!--\s*(s|m|me)\s*-->", span))
+        seconds = "s" if "s" in tags else ""
+        instruments = "me" if "me" in tags else ("m" if "m" in tags else "")
+        out.setdefault(f.name, (seconds, instruments))
     return out
 
 
@@ -34,10 +39,13 @@ class Contract(unittest.TestCase):
         for f in protocol_check.FIELDS:
             self.assertIn(f.label.casefold(), stamped, f.label)
 
-    def test_seconds_cut_is_the_template_markers(self):
+    def test_the_cuts_are_the_template_markers(self):
+        """Both axes: the seconds cut and the instruments that owe a field."""
         stamped = template_fields()
         for f in protocol_check.FIELDS:
-            self.assertEqual(f.seconds, stamped[f.label.casefold()], f.label)
+            self.assertEqual(
+                (f.seconds, f.instruments), stamped[f.label.casefold()], f.label
+            )
 
     def test_the_template_head_is_well_formed(self):
         stamped = TEMPLATE.replace("<protocol-id>", "p-0123456789abcdef")
@@ -153,12 +161,14 @@ class Fields(unittest.TestCase):
         self.assertEqual(frozen.missing_should, [])
 
     def test_seconds_owes_its_cut_and_nothing_graduates(self):
-        report = protocol_check.check_fields(head(cost="seconds", frozen=True))
+        report = protocol_check.check_fields(
+            head(cost="seconds", instrument="count", frozen=True)
+        )
         self.assertIn("Unit", report.missing_must)
         self.assertNotIn("Model I/O", report.missing_must)
         self.assertNotIn("Prompt", report.missing_must)
         self.assertEqual(report.missing_should, [])
-        with_model = head(cost="seconds") + "- **Model / tool:** haiku\n"
+        with_model = head(cost="seconds", instrument="model")
         self.assertIn("Prompt", protocol_check.check_fields(with_model).missing_must)
 
     def test_report_fields_fall_due_with_a_documented_run_once_frozen(self):
@@ -178,11 +188,13 @@ class Fields(unittest.TestCase):
             protocol_check.check_fields(head(cost="seconds") + run).missing_must,
         )
 
-    def test_none_names_no_model(self):
-        text = (
-            head(cost="seconds") + "- **Model / tool:** none — a deterministic count\n"
-        )
-        self.assertNotIn("Prompt", protocol_check.check_fields(text).missing_must)
+    def test_the_head_decides_the_instrument_not_the_prose(self):
+        """Until 0.20 a "Model / tool" line naming a model made the prompt
+        owed; the head's `instrument` is the one reading now."""
+        count = head(cost="seconds", instrument="count") + "- **Model / tool:** haiku\n"
+        self.assertNotIn("Prompt", protocol_check.check_fields(count).missing_must)
+        model = head(cost="seconds", instrument="model") + "- **Model / tool:** none\n"
+        self.assertIn("Prompt", protocol_check.check_fields(model).missing_must)
 
     def test_a_head_placeholder_is_a_must_gap(self):
         report = protocol_check.check_fields(head(cost="<seconds | minutes | hours>"))

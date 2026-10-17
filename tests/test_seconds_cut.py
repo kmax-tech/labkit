@@ -1,6 +1,8 @@
 """The seconds cut (2026-10-05): one template, tagged `<!-- s -->`; the
 checker's FIELDS name exactly the tagged fields as the cut; the registration
-gate asks for question, criterion, admissibility condition and cost."""
+gate asks for question, criterion, admissibility condition and cost. Which
+of the cut a count owes is the head's `instrument` (standard 0.20), never
+the prose of "Model / tool"."""
 
 from __future__ import annotations
 
@@ -28,15 +30,11 @@ def _tagged(marker: str) -> set[str]:
 class Cut(unittest.TestCase):
     def test_the_cut_is_exactly_the_tagged_template_fields(self):
         cut = {f.label.casefold() for f in protocol_check.FIELDS if f.seconds == "s"}
-        cut_model = {
-            f.label.casefold() for f in protocol_check.FIELDS if f.seconds == "sm"
-        }
         self.assertEqual(cut, _tagged("<!-- s -->"))
-        self.assertEqual(cut_model, _tagged("<!-- sm -->"))
 
-    def test_count_without_model_owes_no_prompt(self):
+    def test_a_count_owes_no_prompt_a_model_does(self):
         text = (
-            head(cost="seconds")
+            head(cost="seconds", instrument="count")
             + """
 - **Question / hypothesis:** how many?
 - **Success / failure criterion:** the mean is reported
@@ -48,7 +46,10 @@ class Cut(unittest.TestCase):
 """
         )
         self.assertEqual(protocol_check.check_fields(text).missing_must, [])
-        with_model = text + "- **Model / tool:** haiku\n"
+        with_model = (
+            text.replace('instrument = "count"', 'instrument = "model"')
+            + "- **Model / tool:** haiku\n"
+        )
         missing = protocol_check.check_fields(with_model).missing_must
         self.assertEqual(missing, ["Prompt", "Null condition / anchors"])
 
@@ -82,11 +83,9 @@ class Cut(unittest.TestCase):
         should field, but claims a freeze no gate held — one must finding
         (review 2026-10-07: it used to pass silently)."""
         text = (
-            head(cost="seconds", frozen=True)
+            head(cost="seconds", instrument="count", frozen=True)
             + """
 - **Question / hypothesis:** q
-- **Success / failure criterion:** c
-- **Admissibility condition:** a
 - **Terms of this protocol:** n/a
 - **Data / scope:** d
 - **Unit:** u
@@ -97,20 +96,20 @@ class Cut(unittest.TestCase):
         self.assertEqual(len(report.missing_must), 1, report.missing_must)
         self.assertIn('frozen = true at cost = "seconds"', report.missing_must[0])
         self.assertEqual(report.missing_should, [])
-        self.assertEqual(report.missing_should, [])
 
 
 class Registration(unittest.TestCase):
-    QUESTION = (
-        "- **Model / tool:** haiku\n"  # with a model the gate owes criterion and admissibility
-        "- **Question / hypothesis:** q\n- **Success / failure criterion:** c\n"
-    )
+    # the fixture head says `instrument = "model"`: the gate owes criterion
+    # and admissibility condition
+    QUESTION = "- **Question / hypothesis:** q\n- **Success / failure criterion:** c\n"
 
     def test_a_count_owes_only_its_question(self):
-        """Without a model there is no bar to clear: the gate is the question (0.87.1)."""
-        text = head(cost="seconds") + "- **Question / hypothesis:** how many?\n"
+        """A count has no bar to clear: the gate is the question (0.87.1) —
+        read from the head's instrument, not from a "Model / tool" line."""
+        count = head(cost="seconds", instrument="count")
+        text = count + "- **Question / hypothesis:** how many?\n"
         self.assertEqual(protocol_check.seconds_registration_missing(text), [])
-        text = head(cost="seconds") + "- **Question / hypothesis:** <the question>\n"
+        text = count + "- **Question / hypothesis:** <the question>\n"
         self.assertEqual(
             protocol_check.seconds_registration_missing(text), ["Question / hypothesis"]
         )
@@ -156,7 +155,9 @@ class CountPlaceholders(unittest.TestCase):
     'hypothesis' as an expectation to invent (Haiku H5–H7, 2026-10-13)."""
 
     def test_the_count_cut_says_na_and_no_hypothesis(self):
-        cut = scaffold.seconds_cut(scaffold.template(scaffold.PROTOCOL_TEMPLATE.name))
+        cut = scaffold.seconds_cut(
+            scaffold.template(scaffold.PROTOCOL_TEMPLATE.name), "count"
+        )
         out = scaffold.count_placeholders(cut)
         self.assertIn(
             '**Terms of this protocol:** <one line per coined house word — or "n/a — no coinage">',

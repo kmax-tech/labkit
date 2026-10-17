@@ -536,11 +536,11 @@ class TestPromptAndExample(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("measure run in the run list", out)
 
-    def test_raw_output_is_not_owed_without_a_model_at_seconds(self):
-        """A count has no prompt+answer pair to show: the field is `sm`, owed
-        only with a model named (cloud probe 2026-10-12 filled it with n/a)."""
+    def test_raw_output_is_not_owed_by_a_count(self):
+        """A count has no prompt+answer pair to show: the field is a model's
+        (`instruments = "m"`; cloud probe 2026-10-12 filled it with n/a)."""
         text = (
-            pilot(cost="seconds").replace(
+            pilot(cost="seconds", instrument="count").replace(
                 "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
             )
             + "\n## Summary\n\n- **Result:** The mean is 3.5 documents per case.\n"
@@ -556,7 +556,7 @@ class TestPromptAndExample(unittest.TestCase):
         """Without a model the seconds cut has no criterion, no admissibility
         condition, and after the run only the Result line of the Summary
         (decisions 2026-10-12, five cloud probes)."""
-        base = pilot(cost="seconds").replace(
+        base = pilot(cost="seconds", instrument="count").replace(
             "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
         )
         lines = [
@@ -582,8 +582,8 @@ class TestPromptAndExample(unittest.TestCase):
             "Raw output",
         ):
             self.assertNotIn(label, out)
-        # the twin: a model named brings the criterion back
-        rc, out = run_main(text.replace("n/a — deterministic", "haiku"))
+        # the twin: a model as the instrument brings the criterion back
+        rc, out = run_main(text.replace('instrument = "count"', 'instrument = "model"'))
         self.assertEqual(rc, 1)
         self.assertIn("Success / failure criterion", out)
 

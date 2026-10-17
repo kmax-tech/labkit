@@ -42,7 +42,7 @@ REGISTRATION = """
 """
 # a count: no model, no id, the question only — the gate owes nothing more (0.87.1)
 SECONDS_COUNT = (
-    head(cost="seconds", promises=None)
+    head(cost="seconds", instrument="count", promises=None)
     + "\n- **Question / hypothesis:** how many documents per case?\n"
 )
 SECONDS = head(cost="seconds") + REGISTRATION

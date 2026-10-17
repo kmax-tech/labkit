@@ -65,15 +65,20 @@ class Field:
                 the report half of the result; at seconds never — the audit
                 comes at promotion there)
 
-    `seconds`: owed in the seconds cut — "s" always, "sm" when a `Model /
-    tool` is named; after/report fields carry the template's marker but are
-    owed by their level, not by the cut. The template's † marks exactly the
-    should and report fields it stamps with `--report` (a test holds this).
+    `seconds`: "s" when the field is in the seconds cut; after/report fields
+    carry the template's marker but are owed by their level, not by the cut.
+    `instruments`: which instruments owe the field (standard 0.20): "" every
+    one, "m" a model in the loop only, "me" model and estimator (a count has
+    no bar to clear, no null lane, no seed). The template marks both axes
+    (`<!-- s -->`, `<!-- m -->`, `<!-- me -->`) and a test holds the
+    catalogue to its markers; † marks exactly the should and report fields it
+    stamps with `--report` (a test holds this).
     """
 
     label: str
     level: str
     seconds: str = ""
+    instruments: str = ""  # "" all · "m" model · "me" model and estimator
 
 
 LEVELS = ("must", "should", "after", "report")
@@ -89,14 +94,14 @@ FIELDS = (
     Field("Terms of this protocol", "must", "s"),
     Field("Question / hypothesis", "must", "s"),
     Field(
-        "Success / failure criterion", "must", "sm"
+        "Success / failure criterion", "must", "s", "me"
     ),  # a count has no bar to clear (2026-10-12)
-    Field("Admissibility condition", "must", "sm"),
+    Field("Admissibility condition", "must", "s", "me"),
     Field("Data / scope", "must", "s"),
-    Field("Model / tool", "must", "sm"),
-    Field("Model I/O", "must"),
-    Field("Prompt", "must", "sm"),
-    Field("Null condition / anchors", "must", "sm"),
+    Field("Model / tool", "must", "s", "me"),
+    Field("Model I/O", "must", "", "me"),
+    Field("Prompt", "must", "s", "m"),
+    Field("Null condition / anchors", "must", "s", "me"),
     Field("Exclusions / filters", "must", "s"),
     Field("Unit", "must", "s"),
     # A reportable run owes these on top (2026-08-18, "pilot light, report
@@ -105,24 +110,24 @@ FIELDS = (
     Field("Why this design", "should"),
     Field("Rival explanations", "should"),
     Field("Out of scope", "should"),
-    Field("Gate labels", "should"),
+    Field("Gate labels", "should", "", "m"),
     Field("Data preparation", "should"),
-    Field("Meaning of the gold label", "should"),
-    Field("Answer form + resolution", "should"),
+    Field("Meaning of the gold label", "should", "", "me"),
+    Field("Answer form + resolution", "should", "", "me"),
     Field("How measured", "should"),
-    Field("Validation", "should"),
-    Field("Noise ceiling → threshold", "should"),
-    Field("Free knobs", "should"),
-    Field("Randomness controls", "should"),
-    Field("Instrument check", "should"),
+    Field("Validation", "should", "", "me"),
+    Field("Noise ceiling → threshold", "should", "", "me"),
+    Field("Free knobs", "should", "", "me"),
+    Field("Randomness controls", "should", "", "me"),
+    Field("Instrument check", "should", "", "me"),
     Field("Yield per stage", "should"),
     # The resolution check (LAB-016 Resolution check before freezing): the criterion over synthetic extremes
     # by the REAL evaluate(), before freezing.
-    Field("Resolution check", "should"),
-    Field("Prediction for the follow-up run", "should"),
+    Field("Resolution check", "should", "", "me"),
+    Field("Prediction for the follow-up run", "should", "", "me"),
     # Written after the run: before it they cannot exist.
     Field("Answer to the question", "after", "s"),
-    Field("Raw output", "after", "sm"),  # a prompt+answer pair: only with a model
+    Field("Raw output", "after", "s", "m"),  # a prompt+answer pair: only with a model
     # The Summary for a person, written after the run (2026-10-07)
     Field("Result", "after", "s"),
     Field("Limits", "after"),  # at seconds the Summary is the Result line (2026-10-12)
@@ -293,31 +298,21 @@ class FieldReport:
         return bool(self.head and self.head.frozen)
 
 
-#: a `Model / tool` value that names no model
-_NO_MODEL = re.compile(r"^(n/a|none|no model|—|–|-)", re.I)
+def in_instrument(f: Field, instrument: str | None) -> bool:
+    """Does the protocol's instrument owe field `f`? "" every one; "m" a
+    model only; "me" model and estimator. A head still holding the
+    placeholder (None) owes every field — the checker names the head's gap
+    first. Until standard 0.20 this was read from the prose of "Model /
+    tool" (`model_named`), a heuristic the scaffolder once matched with its
+    own spelling (audit 2026-10-15); now it is the head's datum."""
+    if instrument is None or not f.instruments:
+        return True
+    return instrument in {"m": ("model",), "me": ("model", "estimator")}[f.instruments]
 
 
-def model_named(text: str) -> bool:
-    """Does the protocol name a model in `Model / tool`? The one answer for
-    the cut, the seconds registration and `labkit-init --report` — the
-    scaffolder matched the raw text with its own spelling (audit 2026-10-15:
-    `**Model / tool:** —` was model-free here and a model there)."""
-    found: dict[str, list[FieldLine]] = {}
-    for f in fields(text):
-        found.setdefault(f.name, []).append(f)
-    return _model_named(found)
-
-
-def _model_named(found: dict[str, list[FieldLine]]) -> bool:
-    for f in found.get("model / tool", []):
-        if f.value and not f.placeholder and not _NO_MODEL.match(f.value):
-            return True
-    return False
-
-
-def _in_cut(f: Field, model: bool) -> bool:
-    """Is `f` part of the seconds cut — "s" always, "sm" with a model named?"""
-    return f.seconds == "s" or (f.seconds == "sm" and model)
+def _in_cut(f: Field, instrument: str | None) -> bool:
+    """Is `f` part of the seconds cut for this instrument — marked "s", and owed by the instrument?"""
+    return f.seconds == "s" and in_instrument(f, instrument)
 
 
 def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
@@ -334,12 +329,15 @@ def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
     if not measure_runs(text):
         after = {f.label.casefold() for f in FIELDS if f.level == "after"}
         lines = [f for f in lines if f.name not in after]
+    by_name = {f.label.casefold(): f for f in FIELDS}
+    # a catalogue field another instrument owes is not this protocol's hole
+    lines = [
+        f
+        for f in lines
+        if f.name not in by_name or in_instrument(by_name[f.name], head.instrument)
+    ]
     if head.cost == "seconds":
-        found: dict[str, list[FieldLine]] = {}
-        for f in lines:
-            found.setdefault(f.name, []).append(f)
-        model = _model_named(found)
-        cut = {f.label.casefold() for f in FIELDS if _in_cut(f, model)}
+        cut = {f.label.casefold() for f in FIELDS if _in_cut(f, head.instrument)}
         lines = [f for f in lines if f.name in cut]
     return [(f.line, f.label) for f in lines if f.placeholder]
 
@@ -351,20 +349,19 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     freezes (LAB-017 The number of audits follows the cost tier). The full form owes every must; `frozen = true` turns
     every should into a must (the graduation gate, in ONE place), and once a
     measure run is documented a frozen protocol owes its report fields too."""
-    found: dict[str, list[FieldLine]] = {}
-    for f in fields(text):
-        found.setdefault(f.name, []).append(f)
+    mine = [f for f in FIELDS if in_instrument(f, head.instrument)]
     if head.cost == "seconds":
-        model = _model_named(found)
         must = [
-            f for f in FIELDS if f.level in ("must", "should") and _in_cut(f, model)
+            f
+            for f in mine
+            if f.level in ("must", "should") and _in_cut(f, head.instrument)
         ]
         return must, []
-    must = [f for f in FIELDS if f.level == "must"]
-    should = [f for f in FIELDS if f.level == "should"]
+    must = [f for f in mine if f.level == "must"]
+    should = [f for f in mine if f.level == "should"]
     if not head.frozen:
         return must, should
-    report = [f for f in FIELDS if f.level == "report"] if measure_runs(text) else []
+    report = [f for f in mine if f.level == "report"] if measure_runs(text) else []
     return must + should + report, []
 
 
@@ -418,26 +415,32 @@ def check_fields(text: str) -> FieldReport:
     return FieldReport(head, None, missing_must, missing_should, must_holes, soft_holes)
 
 
+def instrument_of_text(text: str) -> str | None:
+    """The head's instrument, None when the head cannot be read or holds the
+    placeholder — for readers that have the text alone."""
+    try:
+        return protocol_block.head(text).instrument
+    except protocol_block.BlockError:
+        return None
+
+
 def seconds_registration_missing(text: str) -> list[str]:
     """The registration a run of seconds owes before its number counts:
-    the question written (not a placeholder), with a model named also
-    criterion and admissibility condition, and the cost declared.
+    the question written (not a placeholder), with `instrument = "model"`
+    also criterion and admissibility condition, and the cost declared.
     Returns what is missing — empty means the gate is open (LAB-003 No run
     without an intent paragraph; a count has no bar to clear, 0.87.1)."""
     lines = fields(text)
     written = {f.name for f in lines if f.value and not f.placeholder}
-    by_name: dict[str, list[FieldLine]] = {}
-    for f in lines:
-        by_name.setdefault(f.name, []).append(f)
+    try:
+        head = protocol_block.head(text)
+    except protocol_block.BlockError:
+        head = None
     labels = ["Question / hypothesis"]
-    if _model_named(by_name):
+    if head and head.instrument == "model":
         labels += ["Success / failure criterion", "Admissibility condition"]
     missing = [label for label in labels if label.casefold() not in written]
-    try:
-        cost = protocol_block.head(text).cost
-    except protocol_block.BlockError:
-        cost = None
-    return missing + ([] if cost else ["[protocol] cost"])
+    return missing + ([] if head and head.cost else ["[protocol] cost"])
 
 
 ANSWERING_RUN_LABEL = "answering run"
@@ -599,22 +602,19 @@ def measure_runs(text: str) -> list[tuple[int, str]]:
     ]
 
 
-def unreported(text: str, seconds: bool = False) -> list[str]:
-    """The result fields still missing, a placeholder or only dashes. A
-    model-only field (`sm`, Raw output) is owed only with a model named — a
-    count has no prompt+answer pair to show; at SECONDS only the cut's fields
-    are owed (the Summary is the Result line, 2026-10-12)."""
+def unreported(
+    text: str, seconds: bool = False, instrument: str | None = None
+) -> list[str]:
+    """The result fields still missing, a placeholder or only dashes, for
+    this INSTRUMENT (a count has no prompt+answer pair to show); at SECONDS
+    only the cut's fields are owed (the Summary is the Result line, 2026-10-12)."""
     lines = fields(text)
     found = {f.name: f for f in lines}
-    by_name: dict[str, list[FieldLine]] = {}
-    for f in lines:
-        by_name.setdefault(f.name, []).append(f)
-    model = _model_named(by_name)
     owed = [
         f
         for f in FIELDS
         if f.level == "after"
-        and (_in_cut(f, model) if seconds else f.seconds != "sm" or model)
+        and (_in_cut(f, instrument) if seconds else in_instrument(f, instrument))
     ]
     return [
         f.label.casefold()
@@ -771,10 +771,10 @@ def print_contract() -> None:
         + ", ".join(
             f.label
             for f in FIELDS
-            if f.seconds == "s" and f.level in ("must", "should")
+            if f.seconds == "s" and f.level in ("must", "should") and not f.instruments
         )
-        + "; with a model named in `Model / tool` also "
-        + ", ".join(f.label for f in FIELDS if f.seconds == "sm")
+        + '; with instrument = "model" also '
+        + ", ".join(f.label for f in FIELDS if f.seconds == "s" and f.instruments)
         + "; after the run: "
         + ", ".join(f.label for f in FIELDS if f.seconds == "s" and f.level == "after")
         + "."
@@ -1032,7 +1032,9 @@ def check_protocol(
         series=[(n, s) for n, s in numbered if SERIES_HEAD.match(s)],
         measured=measured,
         run_unreported=(
-            unreported(text, seconds=head.cost == "seconds") if measured else []
+            unreported(text, seconds=head.cost == "seconds", instrument=head.instrument)
+            if measured
+            else []
         ),
         history=[(n, s) for n, s in numbered if CHANGELOG.search(s)],
         bare_refs=[
