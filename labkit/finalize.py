@@ -82,8 +82,8 @@ from labkit import (
     promises,
     protocol_block,
     protocol_check,
-    protocol_fill,
-    recheck,
+    protocol_fill,  # a tool above this gate: the one named upward import, for
+    recheck,  # --write-back (docs/architecture.md; test_architecture.KNOWN_UPWARD)
 )
 from labkit import findings as audit_findings
 from labkit.gate import Findings
