@@ -40,7 +40,7 @@ The **console commands** come with the installation; every one answers
 
 ```bash
 labkit-init lab [DIR] [--name NAME] [--labkit-ref REF]   # lay out a lab repo: AGENTS.md, pinned requirements.txt, models.toml, experiments/, data/, notes/
-labkit-init exp <NAME> [--repo DIR] [--cost T] [--model [ALIAS]] [--report] [--explore]  # stamp an area: protocol, script skeletons, README, its test
+labkit-init exp <NAME> [--repo DIR] [--cost T] [--model [ALIAS]] [--instrument I] [--report] [--explore]  # stamp an area by its instrument (model | estimator | count): the protocol's cut, script skeletons, README, its test
 protocol-check [--template PATH] <PROTOCOL-*.md | dir>...  # mandatory-field check (must/should contract)
 protocol-check --contract | --guide # the head, the fields by exact label, the budgets — read before writing; the path of the field guide
 runlog [<area>] [--wait | --follow] [--max-seconds N] [--interval S] [--notify]  # the area's runs: open ones with state and pid, then the finished ones; --wait exits 0 idle · 2 a run failed · 3 still running
@@ -218,7 +218,8 @@ and the per-field explanations live in `protocol-field-guide.md`.
 | **derived run**     | a run that re-evaluates another run's rows (`derived_from`), never a repeat's; it makes no model call and records no model |
 | **scope hash**      | per promise: the hash over its declared scope (`declared_scope_sha`), recorded by the run, held by `finalize` |
 | **stamp**           | per area: the hash over every file that determines a number (`scope-sha`), written into an audit field, held by `runlog` at the start of a full run |
-| **estimator**       | the instrument of a measurement without a model call: anything with fit and predict, scored out of fold against a lane fitted on permuted labels (`labkit-init exp` without `--model` at minutes/hours stamps it); the three instruments are model, estimator and count |
+| **instrument**      | what produces a row's answer, as data in the head (`instrument = "model" \| "estimator" \| "count"`, standard 0.20): a model in the loop, an estimator, a deterministic count; the field cut, the skeleton, the promise tables, the freeze gate, finalize and the audit read it, nothing infers it from prose |
+| **estimator**       | the instrument of a measurement without a model call: anything with fit and predict, scored out of fold against a lane fitted on permuted labels (`labkit-init exp` without `--model` at minutes/hours stamps it) |
 
 **"Ledger" is not used:** it named three different things — the run
 index, a run's metrics, and the hand-written `## Runs` section.
@@ -234,12 +235,16 @@ The hierarchy the vocabulary is meant to make visible:
     runs.tsv         run index — derived, never a source
     ## Runs          manual documentation, never a source
 
-A protocol has **one template, three cuts**: `cost = "seconds"` (a count,
-or a handful of model calls — rerunnable at will) owes the seconds cut and
-never freezes — but the `[[promise]]` tables like every full run (standard
-0.19); `minutes` and `hours` have two: `frozen = false` is the light pilot
-(MUST fields only), `frozen = true` the report — every SHOULD field
-becomes mandatory. The price sits on the claim, not the activity: cheap
+A protocol has **one template, three cuts by cost and a second cut by
+instrument**: `cost = "seconds"` (a count, or a handful of model calls —
+rerunnable at will) owes the seconds cut and never freezes — but the
+`[[promise]]` tables like every full run (since standard 0.19); `minutes`
+and `hours` have two: `frozen = false` is the light pilot (MUST fields
+only), `frozen = true` the report — every SHOULD field becomes mandatory.
+At every tier the head's `instrument` cuts again: a count owes neither
+criterion nor null lane nor seed, an estimator no prompt, no render check
+and no raw prompt+answer pair (`protocol-check --contract` prints both
+cuts). The price sits on the claim, not the activity: cheap
 tiers yield numbers that must not be reported. Every field's explanation —
 examples, rationale, the four questions to ask a criterion — lives in
 `protocol-field-guide.md` (packaged alongside the template;

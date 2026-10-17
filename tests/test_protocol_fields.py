@@ -55,6 +55,33 @@ class Contract(unittest.TestCase):
         self.assertEqual(report.head.placeholders, ["type", "cost", "instrument"])
 
 
+class FieldGuide(unittest.TestCase):
+    """The guide's instrument bullet lists the fields a count and an
+    estimator do not owe — the catalogue's two lists, never retyped by
+    hand (standard 0.20)."""
+
+    GUIDE = (
+        Path(protocol_check.__file__)
+        .with_name("protocol-field-guide.md")
+        .read_text(encoding="utf-8")
+    )
+
+    def listed(self, lead: str) -> list[str]:
+        m = re.search(re.escape(lead) + r"\s*(.*?)(?: \(nor|;|\.)", self.GUIDE, re.S)
+        assert m is not None, lead
+        return " ".join(m.group(1).split()).split(", ")
+
+    def test_the_guide_lists_the_catalogue_cut_by_instrument(self):
+        self.assertEqual(
+            self.listed("A count owes none of:"),
+            [f.label for f in protocol_check.FIELDS if f.instruments],
+        )
+        self.assertEqual(
+            self.listed("an estimator owes none of:"),
+            [f.label for f in protocol_check.FIELDS if f.instruments == "m"],
+        )
+
+
 class Daggers(unittest.TestCase):
     def test_dagger_marks_exactly_the_report_grade_fields(self):
         """† in the template = should or report in FIELDS, and every report

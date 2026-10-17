@@ -118,7 +118,7 @@ the record is therefore: *a run under a block recorded every registered
 constant unchanged*. Whether `evaluate_rows` uses the value right is the
 agent audit's question, not a mechanical one. A frozen protocol, and
 every full run — at `cost = "seconds"` every run — owes the block
-(`promises.promise_tables_owed`, standard 0.19): without tables, `protocol-check`
+(`promises.promise_tables_owed`, since standard 0.19): without tables, `protocol-check`
 reports a MUST failure (frozen or seconds), `preflight` and `finalize`
 block, and no full run starts under it; only an unfrozen pilot
 (`long=False`) runs without one. The seconds cut IS the registration — in

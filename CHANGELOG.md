@@ -7,6 +7,36 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ## Unreleased
 
+### Breaking
+
+- **Standard 0.20: the head carries `instrument`.** `instrument = "model"
+  | "estimator" | "count"` — what produces a row's answer — is a required
+  key of the `[protocol]` table, next to `cost`; a protocol without it, or
+  with `standard = "0.19"`, is refused with a sentence naming the field.
+  The last version reading standard 0.19 is 0.97.0; a lab repo raising
+  its pin writes two lines per protocol (`standard = "0.20"` and
+  `protocol-fill <P> "instrument=model"`, as `type=`), and reproduces an
+  older run with the version it pins. What reads the key: the field cut
+  (the template's `<!-- m -->` / `<!-- me -->` markers next to
+  `<!-- s -->`, `protocol_check.FIELDS.instruments`, `in_instrument`), the
+  stamped skeleton and protocol (`labkit-init exp --instrument`,
+  `scaffold.instrument_of` the one derivation from `--model` and `--cost`),
+  the promise tables (`scaffold.PROMISE_TABLES` per instrument, written
+  into the template's marker line; a count carries none), runlog
+  (`instrument` in config.json, `runs.run_instrument`), finalize (a model
+  run owes `models_resolved` and shows its one-draw spread; an estimator
+  or count run owes no model; a config without the key is named) and
+  `labkit-audit` (the MODE line tells the auditor the instrument and what
+  its instrument check looks like; a placeholder is refused). Until now
+  the kind of an experiment was inferred at six places from the prose of
+  "Model / tool" and from the scaffolder's flags — `protocol_check.model_named`,
+  `scaffold.auto_fill_deterministic`, `quick_block`'s `model: bool`, the
+  regex rewrite `ESTIMATOR_PROMISES`, `finalize.called_a_model` — all gone;
+  a "Model / tool" line naming a model no longer makes a prompt owed, the
+  head does. Evidence: nine of nine pilot attempts were estimators stamped
+  as model areas and audited for a prompt+answer pair they could not have
+  (labkit-paper 09, 2026-10-16; plan II, I1–I6).
+
 ### Added
 
 - **An audit that did not run is not passed.** `labkit-audit` leaves
@@ -56,8 +86,9 @@ pins (`requirements.txt` / `requirements.lock`).
   prediction, [A2] the null lane within `null_band` of a derived chance
   (`chance_of`); scores accuracy, r2 and auc in the stdlib, exact where the
   data is; `--probe` runs a reduced estimator, `--seed` a run of its own.
-  The stamped protocol answers the model-shaped fields (`estimator_placeholders`)
-  and carries the promise sentences in the estimator's words; the area's
+  The stamped protocol is the estimator's cut, the fields it shares with a
+  model answered in its words (`estimator_placeholders`) and the promise
+  tables in its words (`scaffold.PROMISE_TABLES`); the area's
   test checks the resolution on synthetic rows without any estimator
   library. Evidence: nine of nine pilot attempts (labkit-paper area 09,
   2026-10-16) were classical ML and got the prompt skeleton (plan P, C2).
@@ -88,16 +119,21 @@ pins (`requirements.txt` / `requirements.lock`).
 - **One reading of `unfrozen_ack`:** `runs.acknowledged_unfrozen`, used by
   protocol-fill, finalize and report-check.
 - **Without `--model`, minutes and hours stamp the estimator skeleton**
-  (until 0.98.0: the prompt skeleton with `TODO-alias`). A bare `--model`
+  (until 0.97.0: the prompt skeleton with `TODO-alias`). A bare `--model`
   still stamps the prompt skeleton.
-- **`labkit-init --report` no longer calls a model-free protocol
-  deterministic.** It pre-fills only "Parser cases harvested"; "Randomness
-  controls" and "Noise ceiling → threshold" stay owed, because a seeded
-  estimator, a fold shuffle and a permutation are sources of randomness
-  (Sonnet on signal inhibition, round without auditor — labkit-paper 09, v2, t5 — got "no seed, repetition spread 0" written into the field
-  while naming seed 0 three lines below; the next round measured a null-AUC
-  spread of 0.116 over ten seeds). The two fields come back as placeholders
-  for model-free areas (plan P, C1).
+- **`labkit-init --report` fills nothing in for a model-free area any
+  more.** The autofill ("Parser cases harvested: n/a — deterministic", and
+  until plan P also "Randomness controls" and "Noise ceiling → threshold")
+  is gone with the fields themselves: an estimator area is stamped
+  without the model-only fields (Prompt, Raw output, Gate labels, the
+  render check, the parser cases), and "Randomness controls" and "Noise
+  ceiling → threshold" stay owed, because a seeded estimator, a fold
+  shuffle and a permutation are sources of randomness (Sonnet on signal
+  inhibition, round without auditor — labkit-paper 09, v2, t5 — got "no
+  seed, repetition spread 0" written into the field while naming seed 0
+  three lines below; the next round measured a null-AUC spread of 0.116
+  over ten seeds). `--report` adds the † fields the protocol's own head
+  owes, not the stamp-time flags' (plan P, C1; plan II, I3).
 
 - **One rule for a tie in the start second.** `runs.same_second` is the
   one reading of "two runs the ids cannot order", and

@@ -780,6 +780,13 @@ def print_contract() -> None:
         + "."
     )
     print(
+        "by instrument (the head's `instrument`, at every tier): a count owes none of "
+        + ", ".join(f.label for f in FIELDS if f.instruments)
+        + "; an estimator owes none of "
+        + ", ".join(f.label for f in FIELDS if f.instruments == "m")
+        + "; a model owes every field of its tier."
+    )
+    print(
         "fill a field by its label, multi-line placeholders included: "
         'protocol-fill PROTOCOL-x.md "<label>" "<value>"; what is still open: '
         "protocol-fill PROTOCOL-x.md --list; the Prompt block from the scripts' "

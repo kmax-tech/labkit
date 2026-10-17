@@ -76,7 +76,9 @@ path to this file.
   count without a model registers no promise and no criterion (its number
   is held by `--check` and `finalize`). Every stamped placeholder is one line;
   this guide is the long form. The full form adds the rest; `labkit-init exp
-  <name> --report` appends the † fields. A field the cut left out is not owed.
+  <name> --report` appends the † fields the instrument owes. The head's
+  `instrument` cuts a second time, at every tier (see **instrument** under
+  the head below). A field the cut left out is not owed.
 - **Labels English, values in the protocol's language.** The labels are
   read by `protocol-check`, so they stay exactly as stamped; what you write
   after them — status words included — is German or English, one per
@@ -144,6 +146,17 @@ The same block may hold the `[[promise]]` tables (labkit
   `--instrument`; the field cut, the skeleton, the promise block and the
   gates follow from it. A mixed form names the instrument the criterion
   holds; a model that renders features belongs to the prepare step.
+  Which fields an instrument owes is the catalogue's second cut, at every tier
+  (`protocol-check --contract` prints it). A count owes none of: Success /
+  failure criterion, Admissibility condition, Model / tool, Model I/O, Prompt,
+  Null condition / anchors, Gate labels, Meaning of the gold label, Answer
+  form + resolution, Validation, Noise ceiling → threshold, Free knobs,
+  Randomness controls, Instrument check, Resolution check, Prediction for the
+  follow-up run, Raw output (nor the render check, the parser cases harvested,
+  the "Changed" line and the Pilot); an estimator owes none of: Prompt, Gate
+  labels, Raw output (nor the render check and the parser cases harvested).
+  `labkit-init exp` stamps only what the instrument owes; a field the cut left
+  out is not owed, and an n/a line for it is template residue.
 - **type** — `"exploratory"` generates hypotheses, iterate freely, but
   nothing from it may be reported as a test. `"confirmatory"` tests a
   hypothesis fixed BEFORE the run, on data that influenced no choice.
