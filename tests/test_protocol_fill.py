@@ -340,7 +340,7 @@ class TestFromRun(unittest.TestCase):
 """ + head()
     RUN = "2026-10-12T21-37-53_c3be"
 
-    def _area(self, metrics: dict) -> Path:
+    def _area(self, metrics: dict, unfrozen_ack: bool = False) -> Path:
         import json
 
         area = Path(tempfile.mkdtemp())
@@ -351,6 +351,7 @@ class TestFromRun(unittest.TestCase):
                 {
                     "schema_version": 2,
                     "protocol": {"id": PID, "path": "PROTOCOL-count.md"},
+                    "unfrozen_ack": unfrozen_ack,
                 }
             ),
             encoding="utf-8",
@@ -394,6 +395,30 @@ class TestFromRun(unittest.TestCase):
             recheck.plain_numbers({"mean_docs_per_case": 3.5, "n_cases": 12}),
             self.RUN,
         )
+
+    def test_an_acknowledged_unfrozen_run_marks_the_answer_and_result_line(self):
+        """A2 (2026-10-17): the number of a run started on LABKIT_UNFROZEN=1
+        carries the mark where it is read — Answer and Result alike — and
+        `--check` still finds every number and the run_id."""
+        from labkit import recheck
+
+        area = self._area({"mean_docs_per_case": 3.5}, unfrozen_ack=True)
+        text, _, _ = protocol_fill.from_run(self.PROTOCOL, area)
+        line = (
+            f"mean_docs_per_case = 3.5 (run {self.RUN}, {protocol_fill.UNFROZEN_MARK})"
+        )
+        self.assertIn("- **Answer to the question:** " + line, text)
+        self.assertIn("- **Result:** " + line, text)
+        note = area / "PROTOCOL-count.md"
+        note.write_text(text, encoding="utf-8")
+        recheck.cited(
+            note, recheck.plain_numbers({"mean_docs_per_case": 3.5}), self.RUN
+        )
+        # the twin: a run without the acknowledgement has no mark
+        area = self._area({"mean_docs_per_case": 3.5})
+        text, _, _ = protocol_fill.from_run(self.PROTOCOL, area)
+        self.assertNotIn("unfrozen", text)
+        self.assertIn(f"(run {self.RUN})", text)
 
     def test_a_written_answer_is_refused_without_force_and_the_run_is_named_once(self):
         area = self._area({"mean_docs_per_case": 3.5})

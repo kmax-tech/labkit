@@ -142,12 +142,22 @@ RUNS_HEADING = re.compile(r"^## Runs\b")
 WRITTEN_BY_RUN = ("Answer to the question", "Result")
 
 
-def answer_line(metrics: dict, run_id: str) -> str:
+#: what the answer line says of a run that started on LABKIT_UNFROZEN=1 —
+#: the mark travels with the number (A2, 2026-10-17): v2 t5 wrote the
+#: acknowledgement by hand under "Deviations after freeze", a field for
+#: something else, and nothing held it to the run
+UNFROZEN_MARK = "unfrozen — acknowledged with LABKIT_UNFROZEN=1"
+
+
+def answer_line(metrics: dict, run_id: str, unfrozen: bool = False) -> str:
     """`key = value, … (run <id>)` — every reported key and value as the run
-    recorded them, so `recheck.cited` finds each number and the run_id."""
+    recorded them, so `recheck.cited` finds each number and the run_id;
+    `(run <id>, unfrozen — acknowledged with LABKIT_UNFROZEN=1)` when the
+    run's record says `unfrozen_ack`."""
     kept = {k: v for k, v in metrics.items() if k not in recheck.LABKIT_KEYS}
     body = ", ".join(f"{k} = {v}" for k, v in kept.items())
-    return f"{body} (run {run_id})"
+    tail = f", {UNFROZEN_MARK}" if unfrozen else ""
+    return f"{body} (run {run_id}{tail})"
 
 
 def runs_line(text: str, run_id: str, sentence: str) -> tuple[str, bool]:
@@ -185,7 +195,8 @@ def from_run(
     filled Answer or Result is refused without `force` (fill's rule)."""
     run = recheck.chosen_run(area, text, run_id)
     metrics = runs.read_metrics(run / "metrics.json")
-    answer = answer_line(metrics, run.name)
+    cfg = runs.read_run_config(run) or {}
+    answer = answer_line(metrics, run.name, unfrozen=cfg.get("unfrozen_ack") is True)
     filled: list[str] = []
     for label in WRITTEN_BY_RUN:
         try:
