@@ -54,15 +54,16 @@ from labkit import findings as audit_findings
 from labkit.gate import Findings
 from labkit.repo import (
     area_path,
+    area_test_files,
     choose_protocol,
     git,
     git_root,
     layout_root,
     no_such_area,
-    split_area_name,
 )
 from labkit.protocol_check import check_fields, check_protocol_id, repo_protocol_ids
 from labkit.scope_sha import AREA_GLOBS, AUDIT_SHA, area_stamp, audit_stamp_drift
+from labkit.stamp_check import stamp_findings
 
 
 def _is_dirty(area: Path) -> bool:
@@ -96,27 +97,10 @@ AREA_TEST_TIMEOUT_S = 300.0
 
 
 def area_tests(area: Path, repo: Path) -> AreaTests:
-    """Run the area's tests (`tests/test_*<slug>*.py`) — the resolution
-    check and the parser cases in their permanent form. One home for
-    preflight (before the freeze) and finalize (before a number is
-    reported)."""
-    # The name the scaffolder stamps: test_<NN>_<name>.py (or test_<name>.py
-    # for an unnumbered area), split files as test_<NN>_<name>_<part>.py.
-    # A bare *<name>* glob ran area 09's test for area 08, whose name is a
-    # prefix of 09's (uniagent, 2026-10-07).
-    # `preflight .` passes a relative path whose .name is "" — resolved first,
-    # or the pattern read `tests/test_.py` and the area's test was "none"
-    # (fallacy-dataset-generation, 2026-10-09)
-    area = area.resolve()
-    nn, name = split_area_name(area.name)
-    stem = (f"test_{nn}_" if nn else "test_") + name.replace("-", "_")
-    pattern = f"tests/{stem}.py"
-    tests_dir = repo / "tests"
-    files = (
-        sorted({*tests_dir.glob(f"{stem}.py"), *tests_dir.glob(f"{stem}_*.py")})
-        if tests_dir.is_dir()
-        else []
-    )
+    """Run the area's tests (`repo.area_test_files`: the resolution check
+    and the parser cases in their permanent form). One home for preflight
+    (before the freeze) and finalize (before a number is reported)."""
+    pattern, files = area_test_files(area, repo)
     if not files:
         return AreaTests(pattern, [], "none", [])
     try:
@@ -279,6 +263,17 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
         findings.add(f)  # graded by code-check's own word, counted once
     if not code_findings:
         print("  ok")
+
+    # -- 3b. stamp check: the skeleton held to its instrument ---------------
+    print("── stamp check: the skeleton held to its instrument ──")
+    if report.head.instrument is None:
+        print("  skipped — [protocol] instrument is still a placeholder (named above)")
+    else:
+        stamp = stamp_findings(area, report.head, repo=layout_root(area))
+        for line in stamp:
+            (findings.block if frozen else findings.warn)(line)
+        if not stamp:
+            print(f"  ok — {report.head.instrument}")
 
     # -- 4. scope-sha ------------------------------------------------------
     print("── scope-sha ──")

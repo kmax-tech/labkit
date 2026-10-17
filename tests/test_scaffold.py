@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import finalize, rules, scaffold
+from labkit import finalize, rules, scaffold, skeletons
 
 
 def quiet(fn, *args, **kw):  # noqa: ANN001, ANN002, ANN003, ANN201 — test helper
@@ -99,7 +99,7 @@ class Lab(unittest.TestCase):
 
     def test_shipped_texts_name_their_rules_and_carry_no_house_path(self) -> None:
         rows = rules.load_registry(rules.REGISTRY)
-        for path in sorted(scaffold.TEMPLATES.iterdir()):
+        for path in sorted(skeletons.TEMPLATES.iterdir()):
             text = path.read_text(encoding="utf-8")
             self.assertEqual(rules.check_refs(path.name, text, rows), [], path.name)
             self.assertIsNone(

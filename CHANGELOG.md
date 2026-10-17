@@ -39,6 +39,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **The stamp check: the skeleton held to its instrument.** `stamp_check`
+  — a station of `preflight` (a blocker at `frozen = true`, a warning
+  before), `claude-hook post-change` on a changed `scripts/*.py` or area
+  test, `python -m labkit.stamp_check <area>` — holds two exact facts and
+  nothing about meaning: the measure script of a model area imports
+  `labkit.llm` and calls `llm.complete` or `llm.complete_many`, an
+  estimator's or a count's never imports it; every test function the
+  instrument's test template stamps still stands in the area's test,
+  not skipped. A bent skeleton is the finding before it is a red test.
+  `skeletons` is the one home of which templates an instrument gets and
+  the contract tests they stamp (the scaffolder writes from it),
+  `repo.area_test_files` of where an area's tests are. The AGENTS template
+  says what to do when no instrument fits: stop, one line under Notes, no
+  skeleton bent. Evidence: nine of nine pilot attempts rebuilt the model
+  skeleton and nothing mechanical saw it (labkit-paper 09, 2026-10-16;
+  plan II: the stamp check, I7).
 - **An audit that did not run is not passed.** `labkit-audit` leaves
   `audits/<minute>-<mode>.running` (pid, script) before its model call
   and replaces it by the findings record — or, when the call raised, the

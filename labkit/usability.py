@@ -106,15 +106,16 @@ from labkit import (
     runs,
     scaffold,
     scope_sha,
+    skeletons,
 )
 
 #: What the scaffold stamps into a repo and an area; their sha pins the measured
 #: condition. All of it ships with labkit — the probe needs no house machinery.
 STAMPED = (
     Path(scaffold.__file__).resolve(),
-    scaffold.PROTOCOL_TEMPLATE,
+    skeletons.PROTOCOL_TEMPLATE,
     *(
-        scaffold.TEMPLATES / t
+        skeletons.TEMPLATES / t
         for t in (
             "AGENTS.md.template",
             "prepare-script.py.template",

@@ -38,9 +38,11 @@ post-change
     Every file the repo now reports as changed (git status, untracked
     included) plus the tool's own file_path, filtered to PROTOCOL-*.md and
     notes/messung/*.md (not 00-*), is checked with protocol-check or
-    notes-check. A per-session cache of content hashes keeps a file that was
-    already checked at this content from being reported after every later
-    command.
+    notes-check; a changed `scripts/*.py` of an area or an area test under
+    `tests/` gets the stamp check of its area (`stamp_check`: the skeleton
+    held to the head's instrument, once per area). A per-session cache of
+    content hashes keeps a file that was already checked at this content
+    from being reported after every later command.
 
 stop
     Before the agent ends its turn: every changed PROTOCOL-*.md (git status)
@@ -85,8 +87,9 @@ from labkit import (
     protocol_block,
     protocol_check,
     runs,
+    stamp_check,
 )
-from labkit.repo import PROTOCOL_NAME, area_protocols, git_run
+from labkit.repo import PROTOCOL_NAME, area_protocols, area_test_files, git_run
 from labkit.scope_sha import file_digest
 
 # The template's throwaway stages: none of them opens a run, and the probe
@@ -359,9 +362,15 @@ def _git_changed(repo: Path) -> list[Path]:
 
 
 def wants_check(path: Path) -> str | None:
-    """Which checker a path belongs to: 'protocol', 'note' or None."""
+    """Which checker a path belongs to: 'protocol', 'note', 'stamp' (a
+    script of an area, or an area test under tests/) or None."""
     if PROTOCOL_NAME.match(path.name):
         return "protocol"
+    if path.suffix == ".py" and (
+        path.parent.name == "scripts"
+        or (path.parent.name == "tests" and path.name.startswith("test_"))
+    ):
+        return "stamp"
     parts = path.as_posix().split("/")
     # any `notes/messung/` pair on the way, not the first `notes`: a repo
     # under an ancestor directory named notes never had its notes checked
@@ -370,6 +379,21 @@ def wants_check(path: Path) -> str | None:
     )
     if under_messung and path.suffix == ".md" and not path.name.startswith("00-"):
         return "note"
+    return None
+
+
+def area_of_change(path: Path, repo: Path) -> Path | None:
+    """The area a changed script or area test belongs to: a script's nearest
+    protocol directory; a test's the area under experiments/ whose own test
+    files (`repo.area_test_files`) it is. None for a file of neither."""
+    if path.parent.name == "scripts":
+        return find_area(path, stop=repo)
+    experiments = repo / "experiments"
+    if not experiments.is_dir():
+        return None
+    for area in sorted(p for p in experiments.iterdir() if p.is_dir()):
+        if area_protocols(area) and path in area_test_files(area, repo)[1]:
+            return area
     return None
 
 
@@ -413,11 +437,21 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
     cache_file = _cache_path(event.get("session_id"))
     cache = _load_cache(cache_file)
     reports = []
+    stamped: set[Path] = set()  # the stamp check runs once per area
     for kind, path in targets:
         digest = file_digest(path)
         if cache.get(str(path)) == digest:
             continue
         cache[str(path)] = digest
+        if kind == "stamp":
+            area = area_of_change(path, repo.resolve())
+            if area is None or area in stamped:
+                continue
+            stamped.add(area)
+            rc, out = _capture(stamp_check.main, [str(area)])
+            if rc:  # findings, or no readable head — a clean stamp says nothing
+                reports.append(out)
+            continue
         fn = protocol_check.main if kind == "protocol" else notes_check.main
         _, out = _capture(fn, [str(path)])
         # The checker gets the absolute path (the hook's cwd is wherever the

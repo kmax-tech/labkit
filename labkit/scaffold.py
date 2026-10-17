@@ -49,10 +49,9 @@ from labkit.repo import (
     split_area_name,
 )
 from labkit.repo_check import PYPROJECT_VERSION_RE
+from labkit.skeletons import PROTOCOL_TEMPLATE, SKELETONS, template
 
 PACKAGE = Path(__file__).resolve().parent
-TEMPLATES = PACKAGE / "templates"
-PROTOCOL_TEMPLATE = PACKAGE / "experiment-protocol.md.template"
 #: where every lab installs labkit from — a lab has no checkout of the package
 LABKIT_REMOTE = "https://github.com/kmax-tech/labkit.git"
 
@@ -115,16 +114,6 @@ def write_if_absent(path: Path, content: str, log: list[str]) -> bool:
     path.write_text(content, encoding="utf-8")
     log.append(f"  created        {path}")
     return True
-
-
-def template(name: str) -> str:
-    """The text of a shipped template; a missing one is a broken install, said so."""
-    path = PROTOCOL_TEMPLATE if name == PROTOCOL_TEMPLATE.name else TEMPLATES / name
-    if not path.is_file():
-        raise FileNotFoundError(
-            f"{path} is missing — labkit was installed without its templates"
-        )
-    return path.read_text(encoding="utf-8")
 
 
 def source_version() -> str | None:
@@ -763,23 +752,10 @@ def stamp_scripts(
     log: list[str] = []
     (area / "scripts").mkdir(exist_ok=True)
     alias = model if isinstance(model, str) else "TODO-alias"
-    if instrument == "count":
-        scripts = (("measure-quick-script.py.template", "01_measure.py"),)
-        test = "test-quick.py.template"
-    elif instrument == "estimator":
-        scripts = (
-            ("prepare-script.py.template", "00_prepare.py"),
-            ("measure-estimator-script.py.template", "01_measure.py"),
-            ("analyze-script.py.template", "02_analyze.py"),
-        )
-        test = "test-estimator.py.template"
-    else:
-        scripts = (
-            ("prepare-script.py.template", "00_prepare.py"),
-            ("measure-script.py.template", "01_measure.py"),
-            ("analyze-script.py.template", "02_analyze.py"),
-        )
-        test = "test-area.py.template"
+    # the templates per instrument: one home with the stamp check, which
+    # holds the stamped area to them (skeletons.SKELETONS)
+    skeleton = SKELETONS[instrument]
+    scripts, test = skeleton.scripts, skeleton.test
     tname = (f"test_{nn}_{slug}" if nn else f"test_{slug}").replace("-", "_") + ".py"
     for tmpl, dest in scripts:
         # `<NN>_<name>` first: the scripts name the area's test file too (the

@@ -123,6 +123,28 @@ PROTOCOL_NAME = re.compile(r"^PROTOCOL-[^/]+\.md$")
 SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__", "runs", "data"})
 
 
+def area_test_files(area: Path, repo: Path) -> tuple[str, list[Path]]:
+    """(the pattern looked for, the files) of an area's own tests under
+    REPO/tests: `test_<NN>_<name>.py` as the scaffolder stamps it (or
+    `test_<name>.py` for an unnumbered area), split files as
+    `test_<NN>_<name>_<part>.py`. One home: preflight and finalize run
+    them, the stamp check reads them. A bare *<name>* glob ran area 09's
+    test for area 08, whose name is a prefix of 09's (uniagent,
+    2026-10-07); `preflight .` passes a relative path whose .name is "" —
+    resolved first, or the pattern read `tests/test_.py`
+    (fallacy-dataset-generation, 2026-10-09)."""
+    area = area.resolve()
+    nn, name = split_area_name(area.name)
+    stem = (f"test_{nn}_" if nn else "test_") + name.replace("-", "_")
+    tests_dir = repo / "tests"
+    files = (
+        sorted({*tests_dir.glob(f"{stem}.py"), *tests_dir.glob(f"{stem}_*.py")})
+        if tests_dir.is_dir()
+        else []
+    )
+    return f"tests/{stem}.py", files
+
+
 def repo_protocols(root: Path) -> list[Path]:
     """Every protocol anywhere under ROOT, outside SKIP_DIRS, sorted — the
     repo-wide form of `area_protocols`."""
