@@ -56,6 +56,7 @@ protocol-fill <PROTOCOL> --from-run [RUN]  # write the number back from the run'
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
 preflight <AREA> [--protocol FILE]  # the mechanical pre-freeze gate, eight stations: protocol-check · cost tier · audit findings decided · code-check · scope-sha · working tree · hooks · area tests (not the agent audit; `labkit/preflight.py` lists them)
 finalize <AREA> [--protocol FILE]   # the post-run gate, seven steps: answering run and its record · intent-check · declared scopes · open fields · frozen source · area tests · criterion n (`labkit/finalize.py` lists them)
+finalize <AREA> --write-back [--run ID]  # the post-run lane in one command, stopping at the first blocker: the gate · the number into the protocol (`protocol-fill --from-run`) · the area's `--check` · `protocol-check` — the one write finalize does
 finalize --if-reported <PROTOCOL>.. # the commit gate: finalize every protocol whose answer cites a run
 report-check <AREA> [--protocol FILE]  # the last gate at minutes/hours: frozen · finalize clean · analysis audit of the code now, decided · 02_analyze.py --check passes
 claude-hook pre-run|post-change|stop  # the three Claude Code hooks a lab repo installs (stdin: event JSON)

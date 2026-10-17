@@ -72,6 +72,19 @@ pins (`requirements.txt` / `requirements.lock`).
   the freeze empty; the field guide says where bands are calibrated (the
   null lane or a subset) and where a peek is disclosed (the noise-ceiling
   field); the template's placeholder says so too (plan P, D1 and D2).
+- **`finalize --write-back`: the post-run lane in one command.** The
+  read-only gate, then `protocol-fill --from-run`, then the area's
+  `--check` (`02_analyze.py`, at seconds the count's `01_measure.py`),
+  then `protocol-check` on the written protocol — stopping at the first
+  blocker, repeating without a change once the answer cites the run. The
+  documented exception to finalize's read-only contract: it writes what
+  `protocol-fill --from-run` writes, nothing else, and only after the gate
+  passed. The lane after the run drops from five commands to three
+  (write-back, the analysis audit, `report-check`); every one of nine
+  pilot attempts had stopped inside the five (labkit-paper 09, 2026-10-16;
+  usability proposal (j)). `finalize.check_analysis_script` and
+  `run_check` are the one home of running an area's check (report-check
+  re-exports).
 - **One reading of `unfrozen_ack`:** `runs.acknowledged_unfrozen`, used by
   protocol-fill, finalize and report-check.
 - **Without `--model`, minutes and hours stamp the estimator skeleton**

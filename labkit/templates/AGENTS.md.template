@@ -26,12 +26,13 @@ LAB-017 The number of audits follows the cost tier.
    the script's `PROMPT` constants with `protocol-fill <PROTOCOL> --prompts`.
 3. Fill the skeleton (with a model: read `--show 2`), run `code-check <area>`.
 4. Commit, then the run — in the foreground; it is the instrument check too.
-5. `protocol-fill PROTOCOL-<name>.md --from-run <run_id>` writes the number
-   back from metrics.json: the Answer line, the Summary's Result line and the
-   run line — never retype it (reword the Result line for a person if you
-   like; Limits and Next step belong to the full form). Commit `output/` and
-   `runs/` with the protocol — `finalize <area>` checks the provenance and
-   wants both in git.
+5. `finalize <area> --write-back` — one command after the run: the gate,
+   then the number from metrics.json into the protocol (the Answer line,
+   the Summary's Result line and the run line — never retyped), then
+   `01_measure.py --check`, then `protocol-check`; it stops at the first
+   blocker. Reword the Result line for a person if you like; Limits and
+   Next step belong to the full form. Commit `output/` and `runs/` with the
+   protocol — the gate wants both in git.
 6. The agent audit is a later, separate task: due when the number goes into
    a note or a paper or steers a decision.
 
@@ -72,17 +73,20 @@ fields, no reading of labkit's source.
 9. Commit first, then pilot → run, always through `runlog`; resume = the same
    command; state: `.venv/bin/runlog <area>` (LAB-010 Commit before the run,
    LAB-043 Runs go through `runlog`).
-10. `finalize <area>`, then the analysis audit (`labkit-audit <area> --mode
-    analysis`) against the frozen criterion
-    (LAB-050 Analysis audit before reporting). A number a model gave is one
-    draw: `scripts/01_measure.py --repeat-of <run_id>` draws it again (a run
-    of its own, never the answer), `scripts/02_analyze.py --draws` shows how
-    far it moves.
-11. Write the result back into the protocol (`protocol-fill --from-run`),
-    then `scripts/02_analyze.py --check` holds the note to the run, and
-    `report-check <area>` closes the lane: frozen, finalize clean, an
-    analysis audit of the code as it is, the check passing
-    (LAB-041 Generate numbers, don't retype them).
+10. `finalize <area> --write-back` — one command after the run, stopping
+    at the first blocker: the gate (read-only), the number from
+    metrics.json into the protocol (`protocol-fill --from-run`, never
+    retyped), `scripts/02_analyze.py --check` holding the note to the run,
+    `protocol-check` on the written protocol
+    (LAB-041 Generate numbers, don't retype them). A number a model gave is
+    one draw: `scripts/01_measure.py --repeat-of <run_id>` draws it again (a
+    run of its own, never the answer), `scripts/02_analyze.py --draws` shows
+    how far it moves.
+11. The analysis audit (`labkit-audit <area> --mode analysis`) against the
+    frozen criterion; decide its findings
+    (LAB-050 Analysis audit before reporting).
+12. `report-check <area>` closes the lane: frozen, finalize clean, an
+    analysis audit of the code as it is, the check passing.
 
 ## Setup
 

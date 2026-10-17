@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit import preflight, report_check
+from labkit import finalize, preflight
 
 
 class Timeouts(unittest.TestCase):
@@ -37,8 +37,8 @@ class Timeouts(unittest.TestCase):
             (area / "scripts" / "02_analyze.py").write_text(
                 "import time\ntime.sleep(30)\n", encoding="utf-8"
             )
-            with mock.patch.object(report_check, "CHECK_TIMEOUT_S", 1.0):
-                gap = report_check.check_analysis_script(area, repo)
+            with mock.patch.object(finalize, "CHECK_TIMEOUT_S", 1.0):
+                gap = finalize.check_analysis_script(area, repo)
             self.assertIsNotNone(gap)
             self.assertIn("did not finish in 1 s", gap or "")
 

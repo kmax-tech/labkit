@@ -43,44 +43,15 @@ from __future__ import annotations
 import argparse
 import contextlib
 import io
-import subprocess
 from pathlib import Path
 
 from labkit.gate import Findings
 from labkit import console, findings, protocol_block
-from labkit.finalize import finalize_area
-from labkit.preflight import area_test_python
+from labkit.finalize import check_analysis_script, finalize_area  # noqa: F401 — one home, re-exported
 from labkit.protocol_check import check_fields
 from labkit.repo import choose_protocol, layout_root
 from labkit.runs import RunConfigError, acknowledged_unfrozen, bound_answering_run
 from labkit.scope_sha import area_stamp
-
-#: the analysis script the area skeleton stamps; its `--check` holds the note
-ANALYZE_SCRIPT = Path("scripts") / "02_analyze.py"
-#: how long `--check` may take inside the gate (audit 2026-10-15: no limit)
-CHECK_TIMEOUT_S = 300.0
-
-
-def check_analysis_script(area: Path, repo: Path) -> str | None:
-    """Why `02_analyze.py --check` does not pass, or None: missing, or a
-    nonzero exit with the last lines it printed."""
-    script = area / ANALYZE_SCRIPT
-    if not script.is_file():
-        return f"no {ANALYZE_SCRIPT} — the check that holds the note to the run is owed"
-    try:
-        r = subprocess.run(
-            [area_test_python(repo), str(script), "--check"],
-            cwd=repo,
-            capture_output=True,
-            text=True,
-            timeout=CHECK_TIMEOUT_S,
-        )
-    except subprocess.TimeoutExpired:
-        return f"{ANALYZE_SCRIPT} --check did not finish in {CHECK_TIMEOUT_S:g} s"
-    if r.returncode == 0:
-        return None
-    tail = (r.stderr.strip() or r.stdout.strip() or "no output").splitlines()[-3:]
-    return f"{ANALYZE_SCRIPT} --check exits {r.returncode}: " + " | ".join(tail)
 
 
 def freeze_gaps(protocol: Path, frozen: bool) -> list[str]:

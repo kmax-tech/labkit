@@ -49,7 +49,21 @@ print (a note, uncounted). "0 blockers, N warnings" sums the warnings of
 every station, not the open fields alone.
 
 What it does NOT do: fill fields, edit the protocol, or commit. It is a
-read-only gate that reports findings.
+read-only gate that reports findings — with ONE documented exception:
+
+    finalize <AREA> --write-back [--run RUN_ID]
+
+runs the post-run lane in one command and stops at the first blocker:
+the gate above (read-only), then `protocol-fill --from-run` (the number
+into the protocol), then the area's `--check` (`02_analyze.py`, at
+seconds the count's `01_measure.py`) under the repo's interpreter, then
+`protocol-check` on the written protocol. It writes exactly what
+`protocol-fill --from-run` writes, nothing else, and only after the gate
+passed. The lane used to be five commands, and every one of nine pilot
+attempts stopped inside it (labkit-paper 09, 2026-10-16; usability
+proposal (j), 2026-10-13). What stays separate: the analysis audit (a
+model call the person decides), `report-check` (the last gate) and the
+commit.
 """
 
 from __future__ import annotations
@@ -59,9 +73,18 @@ import io
 import ast
 import json
 import re
+import subprocess
 from pathlib import Path
 
-from labkit import batch, console, promises, protocol_block
+from labkit import (
+    batch,
+    console,
+    promises,
+    protocol_block,
+    protocol_check,
+    protocol_fill,
+    recheck,
+)
 from labkit import findings as audit_findings
 from labkit.gate import Findings
 from labkit.runs import (
@@ -85,7 +108,7 @@ from labkit.repo import (
     no_such_area,
 )
 from labkit.intent_check import main as intent_check_main, ids_in_prose
-from labkit.preflight import area_tests
+from labkit.preflight import area_test_python, area_tests
 from labkit.protocol_check import (
     answering_run_field,
     answering_run_open,
@@ -778,6 +801,119 @@ def unfrozen_run_warning(run: Path) -> str | None:
     )
 
 
+# --- the area's check script, run under the repo's interpreter ----------------
+
+ANALYZE_SCRIPT = Path("scripts") / "02_analyze.py"
+COUNT_SCRIPT = (
+    Path("scripts") / "01_measure.py"
+)  # at seconds the count carries --check itself
+#: `--check` recomputes a run's metrics and reads the note; the bound is for a
+#: hang, not a slow area (2026-10-14: a hung check held the hook for minutes)
+CHECK_TIMEOUT_S = 300.0
+
+
+def check_script(area: Path) -> Path | None:
+    """The script whose `--check` holds the note to the run: `02_analyze.py`
+    where the area has one (minutes/hours), else the count's `01_measure.py`
+    (seconds); None when the area has neither."""
+    for script in (ANALYZE_SCRIPT, COUNT_SCRIPT):
+        if (area / script).is_file():
+            return script
+    return None
+
+
+def run_check(area: Path, repo: Path, script: Path) -> str | None:
+    """Why `<script> --check` does not pass, or None: a nonzero exit with
+    the last lines it printed, or no exit within CHECK_TIMEOUT_S."""
+    try:
+        r = subprocess.run(
+            [area_test_python(repo), str(area / script), "--check"],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            timeout=CHECK_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return f"{script} --check did not finish in {CHECK_TIMEOUT_S:g} s"
+    if r.returncode == 0:
+        return None
+    tail = (r.stderr.strip() or r.stdout.strip() or "no output").splitlines()[-3:]
+    return f"{script} --check exits {r.returncode}: " + " | ".join(tail)
+
+
+def check_analysis_script(area: Path, repo: Path) -> str | None:
+    """Why `02_analyze.py --check` does not pass, or None: missing (report-check
+    owes it at minutes/hours), or `run_check`'s reason."""
+    if not (area / ANALYZE_SCRIPT).is_file():
+        return f"no {ANALYZE_SCRIPT} — the check that holds the note to the run is owed"
+    return run_check(area, repo, ANALYZE_SCRIPT)
+
+
+# --- the one write: the post-run lane in one command ---------------------------
+
+
+def write_back(
+    area: Path, protocol: Path | None = None, run_id: str | None = None
+) -> int:
+    """`finalize --write-back`: the post-run lane as one command, stopping at
+    the first blocker — the documented exception to the read-only gate.
+
+    1. finalize_area, read-only: a blocker ends here, nothing is written.
+    2. the number into the protocol: `protocol_fill.from_run` on the run
+       finalize holds the protocol to (RUN_ID names one instead); a protocol
+       whose answer cites that run already is left as it is, so the command
+       repeats without a change.
+    3. the area's `--check` under the repo's interpreter (`check_script`).
+    4. `protocol-check` on the written protocol.
+    Returns 0, 1 (a blocker at any step) or 2 (no protocol to hold the area to).
+    """
+    chosen = choose_protocol(area, protocol, "finalize")
+    if chosen is None:
+        return 2
+    header("write-back 1/4: finalize (read-only)")
+    rc = finalize_area(area, chosen)
+    if rc != 0:
+        print("write-back stops here: finalize has blockers — nothing is written")
+        return rc
+    header("write-back 2/4: the number into the protocol")
+    text = chosen.read_text(encoding="utf-8")
+    try:
+        run = recheck.chosen_run(area, text, run_id)
+    except SystemExit as exc:
+        print(f"  {exc}")
+        return 1
+    if run.name in cited_runs(text):
+        print(f"  already written: the answer cites run {run.name}")
+    else:
+        try:
+            new, filled, _ = protocol_fill.from_run(text, area, run.name)
+        except ValueError as exc:
+            print(f"  {exc}")
+            return 1
+        chosen.write_text(new, encoding="utf-8")
+        print(f"  filled from run {run.name}: {', '.join(filled) or 'nothing'}")
+    header("write-back 3/4: the check")
+    script = check_script(area)
+    if script is None:
+        print(
+            f"  no {ANALYZE_SCRIPT} and no {COUNT_SCRIPT} — the check that holds the note to the run is owed"
+        )
+        return 1
+    gap = run_check(area, layout_root(area), script)
+    if gap:
+        print(f"  {gap}")
+        return 1
+    print(f"  {script} --check passes")
+    header("write-back 4/4: protocol-check")
+    tmpl = protocol_check.template_lines(protocol_check.find_template(None))
+    if protocol_check.check_files([chosen], tmpl):
+        return 1
+    print(
+        "write-back: done — next the analysis audit (`labkit-audit --mode analysis`), then `report-check`"
+    )
+    return 0
+
+
 def cited_runs(text: str) -> list[str]:
     """The run ids the protocol's "Answer to the question" cites — a number
     written back. Empty while the field is a placeholder or cites none."""
@@ -811,10 +947,16 @@ def main(argv: list[str]) -> int:
     """Command line of `finalize`: check one area, or every protocol whose answer cites a run (`--if-reported`)."""
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
-        print("usage: finalize <AREA> [--protocol PROTOCOL-*.md]")
+        print(
+            "usage: finalize <AREA> [--protocol PROTOCOL-*.md] [--write-back [--run RUN_ID]]"
+        )
         print(
             "       finalize --if-reported PROTOCOL-*.md ...   (the commit gate: only "
             "protocols whose answer cites a run)"
+        )
+        print(
+            "  --write-back   the post-run lane in one command: the gate, then the number "
+            "into the protocol, the area's --check, protocol-check (the one write)"
         )
         return 0 if argv else 2
     if argv[0] == "--if-reported":
@@ -822,19 +964,34 @@ def main(argv: list[str]) -> int:
 
     area = area_path(argv[0])
     protocol = None
+    writing = False
+    run_id = None
     rest = argv[1:]
     while rest:
         if rest[0] == "--protocol" and len(rest) >= 2:
             protocol = Path(rest[1])
             rest = rest[2:]
             continue
+        if rest[0] == "--write-back":
+            writing = True
+            rest = rest[1:]
+            continue
+        if rest[0] == "--run" and len(rest) >= 2:
+            run_id = rest[1]
+            rest = rest[2:]
+            continue
         console.refuse("finalize", f"unexpected argument {rest[0]!r}")
+        return 2
+    if run_id is not None and not writing:
+        console.refuse("finalize", "--run goes with --write-back")
         return 2
 
     if not area.is_dir():
         console.refuse("finalize", no_such_area(area))
         return 2
 
+    if writing:
+        return write_back(area, protocol, run_id)
     return finalize_area(area, protocol)
 
 
