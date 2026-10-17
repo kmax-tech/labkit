@@ -451,6 +451,7 @@ class Exp(unittest.TestCase):
         self.assertEqual(consts, {"margin": 0.25, "max_empty": 0, "null_band": 0.1})
         self.assertNotIn("null_band_items", proto)
         self.assertIn("permuted-label lane", proto)
+        self.assertIn('instrument = "estimator"', proto)
         # protocol-check reads the stamp as a clean pilot with placeholders only
         self.assertEqual(
             scaffold.estimator_placeholders.__name__, "estimator_placeholders"
@@ -541,6 +542,48 @@ class Exp(unittest.TestCase):
         )
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("9 passed", r.stdout)
+
+    def test_the_instrument_is_stamped_into_the_head(self) -> None:
+        """Standard 0.20: the head carries the instrument, derived once or
+        named with --instrument; contradictions are refused loudly."""
+        from labkit import protocol_block
+
+        cases = {
+            ("minutes", False, None): "estimator",
+            ("minutes", "haiku", None): "model",
+            ("seconds", False, None): "count",
+            ("seconds", "haiku", None): "model",
+            ("minutes", False, "model"): "model",
+        }
+        for (cost, model, explicit), expected in cases.items():
+            with self.subTest(cost=cost, model=model, explicit=explicit):
+                self.assertEqual(
+                    scaffold.instrument_of(cost, model, explicit), expected
+                )
+        for cost, model, explicit in (
+            ("minutes", "haiku", "estimator"),
+            ("minutes", False, "count"),
+            ("seconds", False, "estimator"),
+            ("minutes", False, "judge"),
+        ):
+            with self.subTest(cost=cost, model=model, explicit=explicit):
+                with self.assertRaises(SystemExit):
+                    scaffold.instrument_of(cost, model, explicit)
+        quiet(
+            scaffold.stamp_area,
+            self.root,
+            "foo-bar",
+            cost="minutes",
+            instrument="model",
+        )
+        head = protocol_block.head(
+            (self.area() / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
+        )
+        self.assertEqual(head.instrument, "model")
+        self.assertIn(
+            "PROMPT",
+            (self.area() / "scripts" / "01_measure.py").read_text(encoding="utf-8"),
+        )
 
     def test_a_bare_model_flag_keeps_the_prompt_skeleton(self) -> None:
         """`--model` without an alias still means a model in the loop."""

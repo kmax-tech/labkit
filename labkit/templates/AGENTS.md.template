@@ -44,8 +44,12 @@ fields, no reading of labkit's source.
 
 ## Lane `minutes` / `hours`
 
-1. `labkit-init exp <name>` — never `mkdir`. Stamps the protocol and the
-   script skeletons (`scripts/00_prepare.py · 01_measure.py · 02_analyze.py`).
+1. `labkit-init exp <name> [--model ALIAS | --instrument estimator]` — never
+   `mkdir`. The instrument is the kind of the experiment, stamped into the
+   head: `model` (a prompt per item, a parser) with `--model`, else
+   `estimator` (fit, predict, a permuted-label null lane); a `count` is the
+   seconds lane. Stamps the protocol and the script skeletons of that
+   instrument (`scripts/00_prepare.py · 01_measure.py · 02_analyze.py`).
 2. Read `protocol-check --contract`, then fill the TOML head (`type`, `cost`)
    and the Intent before the first call: hypothesis · success criterion ·
    admissibility condition, the prompt verbatim; an id `[C]/[A]/[B]` on every

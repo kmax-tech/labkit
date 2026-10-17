@@ -674,22 +674,50 @@ def promote(area: Path, blocks: ProtocolBlocks) -> list[str]:
     return log
 
 
+def instrument_of(cost: str | None, model: bool | str, explicit: str | None) -> str:
+    """The instrument an area is stamped with — the ONE derivation (standard
+    0.20): `--instrument` names it; else a model named means a model in the
+    loop, seconds without one is a count, the rest an estimator (nine of nine
+    pilot attempts were estimators and got the prompt skeleton, labkit-paper
+    09, 2026-10-16). Refuses a contradiction loudly: a model alias with an
+    instrument that is not `model`; a count at a tier other than seconds (a
+    count is rerunnable at will, that is what seconds means); an estimator
+    at seconds (the seconds cut has no estimator form — plan II, I3)."""
+    if explicit is not None and explicit not in protocol_block.INSTRUMENTS:
+        raise SystemExit(
+            f"labkit-init: --instrument {explicit!r} — one of {', '.join(protocol_block.INSTRUMENTS)}"
+        )
+    derived = "model" if model else ("count" if cost == "seconds" else "estimator")
+    instrument = explicit or derived
+    if model and instrument != "model":
+        raise SystemExit(
+            f"labkit-init: --model names a model in the loop, so the instrument is "
+            f"`model`, not {instrument!r} — drop one of the two"
+        )
+    if instrument == "count" and cost != "seconds":
+        raise SystemExit(
+            'labkit-init: a count is `cost = "seconds"` (rerunnable at will) — add '
+            "--cost seconds, or name the instrument that clears a bar"
+        )
+    if instrument == "estimator" and cost == "seconds":
+        raise SystemExit(
+            "labkit-init: an estimator runs at minutes or hours — the seconds cut "
+            "has no estimator form (a count at seconds, a model with --model)"
+        )
+    return instrument
+
+
 def stamp_scripts(
-    root: Path, area: Path, nn: str, slug: str, quick: bool, model: bool | str
+    root: Path, area: Path, nn: str, slug: str, instrument: str, model: bool | str
 ) -> list[str]:
-    """The script skeletons and the area's test under tests/."""
+    """The script skeletons and the area's test under tests/, by instrument."""
     log: list[str] = []
     (area / "scripts").mkdir(exist_ok=True)
     alias = model if isinstance(model, str) else "TODO-alias"
-    if quick and not model:
+    if instrument == "count":
         scripts = (("measure-quick-script.py.template", "01_measure.py"),)
         test = "test-quick.py.template"
-    elif not model:
-        # minutes/hours without a model: the instrument is an estimator (fit,
-        # predict, score out of fold against a permuted-label lane). Nine of
-        # nine pilot attempts were this shape and got the prompt skeleton
-        # (labkit-paper area 09, 2026-10-16): three agents rebuilt it, one
-        # kept its leftovers.
+    elif instrument == "estimator":
         scripts = (
             ("prepare-script.py.template", "00_prepare.py"),
             ("measure-estimator-script.py.template", "01_measure.py"),
@@ -734,6 +762,7 @@ def stamp_area(
     cost: str | None = None,
     model: bool | str = False,
     report: bool = False,
+    instrument: str | None = None,
 ) -> tuple[Path, str]:
     """Stamp `experiments/NN-<name>/` (or promote it with REPORT): the area
     and the report to print (what was written, then the next steps) — the
@@ -745,6 +774,7 @@ def stamp_area(
             f"labkit-init: {root} is not a lab repo (no models.toml / experiments/) — run `labkit-init lab` first"
         )
     quick = cost == "seconds"
+    instrument = instrument_of(cost, model, instrument)
     tmpl = (
         template(PROTOCOL_TEMPLATE.name)
         .replace("<name>", slug, 1)
@@ -752,10 +782,8 @@ def stamp_area(
     )
     if cost:
         tmpl = tmpl.replace('cost = "<seconds | minutes | hours>"', f'cost = "{cost}"')
-    # the instrument, as data in the head (standard 0.20): a model named
-    # means a model in the loop; seconds without one is a count; the rest an
-    # estimator — the one derivation, stamped, never left as a placeholder
-    instrument = "model" if model else ("count" if quick else "estimator")
+    # the instrument, as data in the head (standard 0.20): stamped with the
+    # value, never left as a placeholder
     tmpl = tmpl.replace(
         'instrument = "<model | estimator | count>"', f'instrument = "{instrument}"'
     )
@@ -764,13 +792,11 @@ def stamp_area(
     )  # every written protocol is free of the cut markers
     pilot, blocks = pilot_and_report(clean)
     if quick:
-        pilot, blocks = (
-            seconds_cut(quick_block(tmpl, bool(model)), model=bool(model)),
-            [],
-        )
-        if not model:
+        with_model = instrument == "model"
+        pilot, blocks = seconds_cut(quick_block(tmpl, with_model), model=with_model), []
+        if instrument == "count":
             pilot = count_placeholders(pilot)
-    elif not model:
+    elif instrument == "estimator":
         pilot = estimator_placeholders(pilot)
     existing = [
         p
@@ -790,7 +816,7 @@ def stamp_area(
         write_if_absent(area / d / ".gitkeep", "", log)
     write_if_absent(
         area / "README.md",
-        area_readme(nn, slug, skeleton=not quick or bool(model)),
+        area_readme(nn, slug, skeleton=instrument != "count"),
         log,
     )
     pre = experiments / "explore" / f"{slug}.py"
@@ -808,13 +834,13 @@ def stamp_area(
         ),
         log,
     )
-    log += stamp_scripts(root, area, nn, slug, quick, model)
+    log += stamp_scripts(root, area, nn, slug, instrument, model)
     _point_hooks_at(root)
     return area, (
         f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
         + "\n".join(log)
         + "\n"
-        + next_steps(area.relative_to(root), slug, nn, quick, bool(model))
+        + next_steps(area.relative_to(root), slug, nn, instrument, quick)
     )
 
 
@@ -830,8 +856,9 @@ def _point_hooks_at(root: Path) -> None:
         )
 
 
-def next_steps(rel: Path, slug: str, nn: str, quick: bool, model: bool) -> str:
-    """What to do after `exp`, in order — the lane of AGENTS.md for this area."""
+def next_steps(rel: Path, slug: str, nn: str, instrument: str, quick: bool) -> str:
+    """What to do after `exp`, in order — the lane of AGENTS.md for this area, by instrument."""
+    model = instrument == "model"
     if quick:
         return f"""
 Next (cost = "seconds" — no freeze, no audit per run, the first run is the probe):
@@ -841,7 +868,7 @@ Next (cost = "seconds" — no freeze, no audit per run, the first run is the pro
   3. git add + commit, then scripts/01_measure.py, then `protocol-fill PROTOCOL-{slug}.md --from-run <run_id>`.
   4. finalize {rel} checks the provenance; the agent audit comes when the number is promoted."""
     test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
-    if not model:
+    if instrument == "estimator":
         return f"""
 Next (light pilot, heavy report — the instrument is an estimator, no model call):
   1. PROTOCOL-{slug}.md: fill the pilot part (head: type, cost; question, success, admissibility, the estimator in Model / tool, the null condition).
@@ -903,6 +930,12 @@ def main(argv: list[str]) -> int:
         help="a model in the loop (without it, minutes/hours stamp the estimator skeleton)",
     )
     exp.add_argument(
+        "--instrument",
+        choices=protocol_block.INSTRUMENTS,
+        help="what produces a row's answer (default: model with --model, count at "
+        "seconds, else estimator) — stamped into the head",
+    )
+    exp.add_argument(
         "--report",
         action="store_true",
         help="add the † fields (now, or to an existing area)",
@@ -934,7 +967,14 @@ def main(argv: list[str]) -> int:
             f"\nNext: fill the cells, read the render, look at real output; when it holds, `labkit-init exp {area_slug(a.name)}`."
         )
         return 0
-    _, report = stamp_area(root, a.name, cost=a.cost, model=a.model, report=a.report)
+    _, report = stamp_area(
+        root,
+        a.name,
+        cost=a.cost,
+        model=a.model,
+        report=a.report,
+        instrument=a.instrument,
+    )
     print(report)
     return 0
 
