@@ -35,7 +35,7 @@ pins (`requirements.txt` / `requirements.lock`).
   a "Model / tool" line naming a model no longer makes a prompt owed, the
   head does. Evidence: nine of nine pilot attempts were estimators stamped
   as model areas and audited for a prompt+answer pair they could not have
-  (labkit-paper 09, 2026-10-16; plan II, I1–I6).
+  (labkit-paper 09, 2026-10-16; plan II).
 
 ### Added
 
@@ -53,8 +53,9 @@ pins (`requirements.txt` / `requirements.lock`).
   Haiku on bulk modulus (labkit-paper 09, Haiku round, t3-labkit-r1, 2026-10-16) — a killed second audit call
   read as "the audit failed", the first call's BLOCKER landed in `audits/`
   unread, the full run started on `LABKIT_UNFROZEN=1`. Author's decision
-  2026-10-17: fail loud instead of marking silently (plan P, A1 and A1b;
-  V1 of the oh-my-codex notes).
+  2026-10-17: fail loud instead of marking silently (plan P: the BLOCKER stop
+  and the running audit, A1 and A1b; the audit without a result, V1 of
+  the oh-my-codex notes).
 - **The acknowledgement travels with the number, and a report field
   needs its run.** `protocol-fill --from-run` writes the Answer and Result
   line of a run started on `LABKIT_UNFROZEN=1` as `(run <id>, unfrozen —
@@ -65,13 +66,14 @@ pins (`requirements.txt` / `requirements.lock`).
   as the reported number (`unfrozen_run_gap`). `protocol-check` warns per
   report field (Did, Outcome, Result, …) filled while "Answering run" is
   still the stamp's and no completed run is bound (`written_before_run`):
-  Sonnet on liver injury (labkit-paper 09, t18, both rounds) described a grid run that `runs/` never held (plan P, A2, A3,
-  B1).
+  Sonnet on liver injury (labkit-paper 09, t18, both rounds) described a grid run that `runs/` never held (plan P: the mark in
+  the answer line, open findings in finalize, report fields before any
+  run — A2, A3, B1).
 - **A registered constant no sentence names and no scope file reads is
   named.** `promises.unmentioned_constants`, printed by `protocol-check` as
   a warning (static evidence, never a blocker): the stamp's `margin`,
   `max_empty` and `null_band_items` stood under three Haiku protocols whose
-  sentences never used them, one re-read as a threshold (plan P, C3).
+  sentences never used them, one re-read as a threshold (plan P: the unmentioned constant, C3).
   `promises.scope_sources` is the one resolution of a declared scope that
   `declared_scope_sha` and this check share.
 
@@ -91,7 +93,8 @@ pins (`requirements.txt` / `requirements.lock`).
   tables in its words (`scaffold.PROMISE_TABLES`); the area's
   test checks the resolution on synthetic rows without any estimator
   library. Evidence: nine of nine pilot attempts (labkit-paper area 09,
-  2026-10-16) were classical ML and got the prompt skeleton (plan P, C2).
+  2026-10-16) were classical ML and got the prompt skeleton (plan P: the estimator
+  skeleton, C2).
   Both measure skeletons expose `answer_of(row)`, which `02_analyze.py
   --draws` compares across draws.
 
@@ -102,7 +105,8 @@ pins (`requirements.txt` / `requirements.lock`).
   "calibration" or an instrument check that was the full measurement make
   the freeze empty; the field guide says where bands are calibrated (the
   null lane or a subset) and where a peek is disclosed (the noise-ceiling
-  field); the template's placeholder says so too (plan P, D1 and D2).
+  field); the template's placeholder says so too (plan P: bands on the null lane
+  and the scar row, D1 and D2).
 - **`finalize --write-back`: the post-run lane in one command.** The
   read-only gate, then `protocol-fill --from-run`, then the area's
   `--check` (`02_analyze.py`, at seconds the count's `01_measure.py`),
@@ -123,7 +127,8 @@ pins (`requirements.txt` / `requirements.lock`).
   still stamps the prompt skeleton.
 - **`labkit-init --report` fills nothing in for a model-free area any
   more.** The autofill ("Parser cases harvested: n/a — deterministic", and
-  until plan P also "Randomness controls" and "Noise ceiling → threshold")
+  until plan P's no-autofill step also "Randomness controls" and "Noise
+  ceiling → threshold")
   is gone with the fields themselves: an estimator area is stamped
   without the model-only fields (Prompt, Raw output, Gate labels, the
   render check, the parser cases), and "Randomness controls" and "Noise
@@ -133,7 +138,8 @@ pins (`requirements.txt` / `requirements.lock`).
   seed, repetition spread 0" written into the field while naming seed 0
   three lines below; the next round measured a null-AUC spread of 0.116
   over ten seeds). `--report` adds the † fields the protocol's own head
-  owes, not the stamp-time flags' (plan P, C1; plan II, I3).
+  owes, not the stamp-time flags' (plan P: no autofill, C1; plan II: the
+  cut per instrument, I3).
 
 - **One rule for a tie in the start second.** `runs.same_second` is the
   one reading of "two runs the ids cannot order", and

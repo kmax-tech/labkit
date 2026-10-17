@@ -730,7 +730,8 @@ def instrument_of(cost: str | None, model: bool | str, explicit: str | None) -> 
     09, 2026-10-16). Refuses a contradiction loudly: a model alias with an
     instrument that is not `model`; a count at a tier other than seconds (a
     count is rerunnable at will, that is what seconds means); an estimator
-    at seconds (the seconds cut has no estimator form — plan II, I3)."""
+    at seconds (the seconds cut has no estimator form — the cut per
+    instrument, plan II I3)."""
     if explicit is not None and explicit not in protocol_block.INSTRUMENTS:
         raise SystemExit(
             f"labkit-init: --instrument {explicit!r} — one of {', '.join(protocol_block.INSTRUMENTS)}"

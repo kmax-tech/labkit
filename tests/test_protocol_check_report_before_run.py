@@ -1,4 +1,4 @@
-"""Report fields written before any run (2026-10-17, plan P step B1).
+"""Report fields written before any run (2026-10-17, plan P: report fields before any run, B1).
 
 Sonnet on liver injury, both rounds (labkit-paper 09, v2 and v3, t18), filled "Did" with the grid
 search and the 55 labelled test molecules while `runs/` held only the

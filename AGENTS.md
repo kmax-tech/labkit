@@ -96,7 +96,10 @@ instead).
   and run ids, which are never renamed. The same for identifiers in code
   and for fields: the name says the thing (`acknowledged_unfrozen`,
   `null_band`), not the mechanism or a leftover (`check_flag`,
-  `null_band_items` under a sentence that never counts items).
+  `null_band_items` under a sentence that never counts items). The same
+  for the steps of a plan: a step is named by what it does, the key once
+  in parentheses — "the BLOCKER stop (A1)", never `A1` alone, which is
+  also a promise id.
 
 ## Not in this repo
 

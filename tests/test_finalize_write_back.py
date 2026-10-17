@@ -1,4 +1,4 @@
-"""`finalize --write-back`: the post-run lane in one command (2026-10-17, plan P row E).
+"""`finalize --write-back`: the post-run lane in one command (2026-10-17, plan P: write-back, row E).
 
 The gate first and read-only; a blocker there writes nothing. Then the
 number into the protocol, the area's --check under the repo's interpreter,
