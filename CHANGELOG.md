@@ -37,8 +37,24 @@ pins (`requirements.txt` / `requirements.lock`).
   still the stamp's and no completed run is bound (`written_before_run`):
   Sonnet t18 described a grid run that `runs/` never held (plan P, A2, A3,
   B1).
+- **A registered constant no sentence names and no scope file reads is
+  named.** `promises.unmentioned_constants`, printed by `protocol-check` as
+  a warning (static evidence, never a blocker): the stamp's `margin`,
+  `max_empty` and `null_band_items` stood under three Haiku protocols whose
+  sentences never used them, one re-read as a threshold (plan P, C3).
+  `promises.scope_sources` is the one resolution of a declared scope that
+  `declared_scope_sha` and this check share.
 
 ### Changed
+
+- **`labkit-init --report` no longer calls a model-free protocol
+  deterministic.** It pre-fills only "Parser cases harvested"; "Randomness
+  controls" and "Noise ceiling → threshold" stay owed, because a seeded
+  estimator, a fold shuffle and a permutation are sources of randomness
+  (Sonnet v2 t5 got "no seed, repetition spread 0" written into the field
+  while naming seed 0 three lines below; the next round measured a null-AUC
+  spread of 0.116 over ten seeds). The two fields come back as placeholders
+  for model-free areas (plan P, C1).
 
 - **One rule for a tie in the start second.** `runs.same_second` is the
   one reading of "two runs the ids cannot order", and

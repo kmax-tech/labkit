@@ -876,6 +876,8 @@ class FileReport:
     bare_refs: list[tuple[int, str]] = field(default_factory=list)
     #: report fields filled before any completed run is bound (warning)
     before_run: list[tuple[int, str]] = field(default_factory=list)
+    #: registered constants no sentence names and no scope file reads (warning)
+    unmentioned_constants: list[str] = field(default_factory=list)
 
     @property
     def too_long(self) -> bool:
@@ -900,6 +902,7 @@ class FileReport:
             or self.history
             or self.series
             or self.before_run
+            or self.unmentioned_constants
         )
 
     @property
@@ -928,6 +931,17 @@ class FileReport:
             or self.musts
             or any("WARNING" not in f for f in self.id_findings)
         )
+
+
+def constants_unmentioned(area: Path, text: str) -> list[str]:
+    """`promises.unmentioned_constants` over the protocol's block, as the
+    warning lines of this check; a block or scope that cannot be read is
+    said, not skipped (the tables gap and the stamp name the cause)."""
+    try:
+        block = promises.parse_block(text)
+        return promises.unmentioned_constants(block, area) if block else []
+    except promises.PromiseError as exc:
+        return [f"constants not held to sentence and scope: {exc}"]
 
 
 def check_protocol(
@@ -1025,6 +1039,7 @@ def check_protocol(
             if BARE_REFERENCE.search(fl.value) and "](" not in fl.value
         ],
         before_run=written_before_run(path.parent, text, head),
+        unmentioned_constants=constants_unmentioned(path.parent, text),
     )
 
 
@@ -1118,6 +1133,8 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
             f"a report field describes a run that happened (write it with "
             f"`protocol-fill --from-run` after the run)"
         )
+    for line in r.unmentioned_constants:
+        print(f"{f}: WARNING: {line}")
     for n, ln in r.history:
         print(
             f"{f}:{n}: change history in the text ({ln[:60]!r}) — docs "
