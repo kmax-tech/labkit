@@ -462,8 +462,12 @@ sieht das niemand.
   und `poisson_ratio` bestimmen K in geschlossener Form) kurz darauf nach
   `audits/`, ungelesen. Die Zahl ging in eine `REPORT.md` im Repo-Root mit
   Run-ID und wurde committet; `metrics.json` trägt `c1_pass = true` bei
-  `test_mae = 0.0`, weil der Testsatz keine Labels hat. Kein Gate hat die
-  Zahl gesehen: der Stop-Hook (`claude_hooks.py:551`) und `finalize
+  `test_mae = 0.0`, weil der Testsatz keine Labels hat. Die REPORT.md nennt
+  beides als Abweichung: den unfrorenen Lauf und dass C1 „auf erfolgreiche
+  Vorhersage statt MAE-Vergleich“ umgedeutet wurde — der Promise-Satz sagt
+  weiter „MAE within 10 %“, die Umdeutung steht nur im Bericht. Was der
+  Bericht nicht trägt, ist der Audit-Befund zur Leckage, den der Agent nie
+  las. Kein Gate hat die Zahl gesehen: der Stop-Hook (`claude_hooks.py:551`) und `finalize
   --if-reported` prüfen nur geänderte Protokolle, die einen Lauf zitieren,
   und das Protokoll zitiert keinen. Drei mechanische Lücken, alle Stufe
   guaranteed:
@@ -520,7 +524,8 @@ sieht das niemand.
   Platzhalter, „Parser cases harvested“ wird gefüllt; mit Modell unverändert.
 
 - **Die registrierte Zahl war vor dem Freeze bekannt (2026-10-17).** Sonnet-
-  Runde v3, Versuche `t3` (`p-6b594f6a815b4d40`) und `t5`
+  Runde v3 (Manifest: `claude-sonnet-5-5` als Agent, `claude-opus-5-5` als
+  Auditor; v2 lief ohne Auditor), Versuche `t3` (`p-6b594f6a815b4d40`) und `t5`
   (`p-102a187cacd44561`): beide eingefroren, gestempelt, bis `report-check`
   gegangen, und beide schreiben selbst, dass die registrierte Lane vorher auf
   allen Items gerechnet wurde. t3: Seeds 1–5 „ad hoc, ohne runlog“ mit
@@ -547,9 +552,13 @@ sieht das niemand.
   „Prompt“, Render check, Parser cases, bei Haiku mit Vorlagenresten in den
   Konstanten (`margin`, `max_empty`, `null_band_items` unter Sätzen, die sie
   nicht nennen; mechanisch prüfbar: Konstante weder im Satz noch im Scope);
-  t18 schließt in v2 und v3 nicht ab (kein Run, kein Freeze, 81 Gitterpunkte
-  × 5 Folds × 3 Konfigurationen × 2 Lanes gegen eine Stunde Timebox; Ursache
-  nur im Trace). **Auslöser:** die Auswertung der Pilotrunden fürs Paper,
+  t18 schließt in v2 und v3 nicht ab: in `runs/` liegt jeweils nur der
+  Vorbereitungslauf, kein Freeze, und das Feld „Did“ behauptet beide Male,
+  das Grid sei gelaufen und die 55 Testmoleküle beschriftet — ein
+  Berichtsfeld, vor dem Lauf gefüllt, als wäre er geschehen (81
+  Gitterpunkte × 5 Folds × 3 Konfigurationen × 2 Lanes gegen das Zeitlimit
+  des Versuchs von 1800 s; die „Timebox: 1h“ im Protokoll ist die Zahl des
+  Agenten, nicht die Grenze, die griff). **Auslöser:** die Auswertung der Pilotrunden fürs Paper,
   oder der nächste Schnitt am Feldführer. **Prüfstelle:** ein Protokoll mit
   Offenlegung unter „Randomness controls“ bekommt vom Audit den Befund; eines
   ohne Vorab-Blick nicht (Zwilling); `--from-run` auf einem Lauf mit
