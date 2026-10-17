@@ -25,6 +25,18 @@ pins (`requirements.txt` / `requirements.lock`).
   unread, the full run started on `LABKIT_UNFROZEN=1`. Author's decision
   2026-10-17: fail loud instead of marking silently (plan P, A1 and A1b;
   V1 of the oh-my-codex notes).
+- **The acknowledgement travels with the number, and a report field
+  needs its run.** `protocol-fill --from-run` writes the Answer and Result
+  line of a run started on `LABKIT_UNFROZEN=1` as `(run <id>, unfrozen —
+  acknowledged with LABKIT_UNFROZEN=1)`; `finalize` gets station 1b,
+  the area's audits as data (an open BLOCKER, an audit without a result or
+  still running — blockers; an open WARNING — a warning) and warns when the
+  answering run carries `unfrozen_ack`; `report-check` refuses such a run
+  as the reported number (`unfrozen_run_gap`). `protocol-check` warns per
+  report field (Did, Outcome, Result, …) filled while "Answering run" is
+  still the stamp's and no completed run is bound (`written_before_run`):
+  Sonnet t18 described a grid run that `runs/` never held (plan P, A2, A3,
+  B1).
 
 ### Changed
 

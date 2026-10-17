@@ -443,6 +443,51 @@ def seconds_registration_missing(text: str) -> list[str]:
 ANSWERING_RUN_LABEL = "answering run"
 
 
+#: the fields that describe a run that happened — written back after it,
+#: never before: filled while no completed run is bound and "Answering run"
+#: is still the stamp's, they claim what did not happen (Sonnet t18, v2 and
+#: v3, 2026-10-16: "Did: ran the 81-point grid and labelled the 55 test
+#: molecules", and runs/ held only the preparation)
+BEFORE_RUN_CLAIMS = (
+    "Answer to the question",
+    "Raw output",
+    "Result",
+    "Limits",
+    "Next step",
+    "Did",
+    "Outcome",
+    "Rival check",
+    "Caps/drops",
+)
+_NA = re.compile(r"(?i)^n/a\b")
+
+
+def written_before_run(
+    area: Path, text: str, head: protocol_block.Head
+) -> list[tuple[int, str]]:
+    """(line, label) of every BEFORE_RUN_CLAIMS field that is filled while
+    the protocol's "Answering run" is still open and no completed run is
+    bound to its id — a report field written before any run. Exact in what
+    it says (no run exists) and silent on what it cannot know (whether the
+    text claims one); a value of `n/a — …` claims nothing. Empty for a cut
+    without the "Answering run" line, or once a run is named there."""
+    answering = answering_run_field(text)
+    if answering is None or not answering_run_open(answering):
+        return []
+    names = {field_name(label) for label in BEFORE_RUN_CLAIMS}
+    filled = [
+        (f.line, f.label)
+        for f in fields(text)
+        if f.name in names
+        and not f.placeholder
+        and not _DASHES.match(f.value)
+        and not _NA.match(f.value.strip())
+    ]
+    if not filled or head.id is None:
+        return filled
+    return filled if runs.bound_answering_run(area, head.id).run_dir is None else []
+
+
 def answering_run_field(text: str) -> str | None:
     """The value of the protocol's `Answering run` field, None when the
     protocol has no such line (a cut without the Result section)."""
@@ -829,6 +874,8 @@ class FileReport:
     run_unreported: list[str] = field(default_factory=list)
     history: list[tuple[int, str]] = field(default_factory=list)
     bare_refs: list[tuple[int, str]] = field(default_factory=list)
+    #: report fields filled before any completed run is bound (warning)
+    before_run: list[tuple[int, str]] = field(default_factory=list)
 
     @property
     def too_long(self) -> bool:
@@ -852,6 +899,7 @@ class FileReport:
             or self.run_unreported
             or self.history
             or self.series
+            or self.before_run
         )
 
     @property
@@ -976,6 +1024,7 @@ def check_protocol(
             for fl in field_lines
             if BARE_REFERENCE.search(fl.value) and "](" not in fl.value
         ],
+        before_run=written_before_run(path.parent, text, head),
     )
 
 
@@ -1061,6 +1110,13 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
             f"{f}:{n}: reference without a link: {label} — give the link "
             f"([area NN](../NN-<name>/PROTOCOL-<name>.md)) and the sentence "
             f"that matters here"
+        )
+    for n, label in r.before_run:
+        print(
+            f"{f}:{n}: WARNING: {label} written before any run — no completed "
+            f'run is bound to this protocol and "Answering run" is still open; '
+            f"a report field describes a run that happened (write it with "
+            f"`protocol-fill --from-run` after the run)"
         )
     for n, ln in r.history:
         print(
