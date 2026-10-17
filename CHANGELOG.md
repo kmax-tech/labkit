@@ -45,8 +45,30 @@ pins (`requirements.txt` / `requirements.lock`).
   `promises.scope_sources` is the one resolution of a declared scope that
   `declared_scope_sha` and this check share.
 
+- **The estimator skeleton.** `labkit-init exp` without `--model` at
+  minutes/hours stamps `measure-estimator-script.py.template` and
+  `test-estimator.py.template`: the instrument is an estimator (fit,
+  predict), scored out of fold over the labelled items; the null lane fits
+  labels permuted inside each fitting fold; the test lane predicts the
+  unlabelled split and is never scored (a withheld label stored as 0 or
+  -999 is no label — the prepare step writes null); [C1] registered score
+  ≥ null score + `margin`, [A1] at most `max_empty` items without a
+  prediction, [A2] the null lane within `null_band` of a derived chance
+  (`chance_of`); scores accuracy, r2 and auc in the stdlib, exact where the
+  data is; `--probe` runs a reduced estimator, `--seed` a run of its own.
+  The stamped protocol answers the model-shaped fields (`estimator_placeholders`)
+  and carries the promise sentences in the estimator's words; the area's
+  test checks the resolution on synthetic rows without any estimator
+  library. Evidence: nine of nine pilot attempts (labkit-paper area 09,
+  2026-10-16) were classical ML and got the prompt skeleton (plan P, C2).
+  Both measure skeletons expose `answer_of(row)`, which `02_analyze.py
+  --draws` compares across draws.
+
 ### Changed
 
+- **Without `--model`, minutes and hours stamp the estimator skeleton**
+  (until 0.98.0: the prompt skeleton with `TODO-alias`). A bare `--model`
+  still stamps the prompt skeleton.
 - **`labkit-init --report` no longer calls a model-free protocol
   deterministic.** It pre-fills only "Parser cases harvested"; "Randomness
   controls" and "Noise ceiling → threshold" stay owed, because a seeded

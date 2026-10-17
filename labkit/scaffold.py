@@ -16,8 +16,9 @@ copied: it comes with the pin (`python -m labkit.rules show LAB-nnn`).
 `exp` stamps one self-contained area `experiments/NN-<name>/`: the protocol
 (the pilot part by default; `--report` adds the † fields, now or when the run
 graduates; `--cost seconds` stamps the seconds cut instead), the script
-skeletons (`00_prepare`, `01_measure`, `02_analyze`, or the counting skeleton
-at seconds without a model), the area README and the area's test under
+skeletons (`00_prepare`, `01_measure`, `02_analyze` — with `--model` the
+prompt skeleton, without it the estimator skeleton; at seconds without a
+model the counting skeleton), the area README and the area's test under
 `tests/`. `--explore` stamps only `experiments/explore/<name>.py`, the entry
 before an area exists; the plain command later moves it into the area.
 
@@ -454,6 +455,75 @@ COUNT_PLACEHOLDERS = {
 }
 
 
+#: The pilot protocol of an estimator area: the model-shaped fields answered
+#: as what they are here, the promise sentences in the estimator's words.
+#: No `: `, ` — `, `; ` or ` (` inside a `<…>`: `short_placeholders` cuts there.
+ESTIMATOR_FIELDS = {
+    "Model / tool": "n/a — no model call; the instrument is the estimator of `make_estimator()` in scripts/01_measure.py <name it with its fixed parameters and the seed>",
+    "Prompt (verbatim, per variant)": "n/a — no prompt; the instrument is an estimator",
+    "Model I/O": "<in · the feature fields per item · out · one prediction per item, scored out of fold>",
+    "Null condition / anchors (in the same run)": "<A2 · the same estimator on labels permuted inside each fitting fold, expected at chance_of() within null_band>",
+    "Raw output": "<one registered row and one test row as --probe prints them>",
+    "Render check (ZERO calls, `--show N`)": "n/a — no prompt; `--show N` prints the config and N feature rows",
+    "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · a reduced estimator on N labelled items, both lanes, throwaway · scores read, never reported>",
+    "Parser cases harvested": "n/a — no model text to parse",
+}
+ESTIMATOR_PROMISES = (
+    (
+        r'sentence = "<the criterion in one sentence:[^"]*"',
+        "sentence = \"<the criterion · the registered lane's out-of-fold SCORE is at least the null lane's plus margin>\"",
+    ),
+    (
+        r'sentence = "<the yield condition:[^"]*"',
+        'sentence = "<the yield · at most max_empty labelled items without an out-of-fold prediction>"',
+    ),
+    (r"constants = \{ max_empty = 2 \}", "constants = { max_empty = 0 }"),
+    (
+        r'sentence = "<the null condition:[^"]*"',
+        'sentence = "<the null condition · the permuted-label lane scores within null_band of chance>"',
+    ),
+    (r"constants = \{ null_band_items = 1 \}", "constants = { null_band = 0.1 }"),
+)
+
+
+def _replace_field(lines: list[str], label: str, value: str) -> bool:
+    """In place: the stamped field LABEL becomes VALUE on its label line, and
+    the stamped continuation below it (indented placeholder lines, a fenced
+    example block) goes; False when the field is not stamped."""
+    head = re.compile(r"^(\s*-\s*\*\*" + re.escape(label) + r"\s*†?:\*\*)")
+    for i, line in enumerate(lines):
+        if not head.match(line):
+            continue
+        j = i + 1
+        while j < len(lines) and (not lines[j].strip() or lines[j].startswith("  ")):
+            j += 1
+        lines[i:j] = [f"{head.match(line).group(1)} {value}"]  # type: ignore[union-attr]
+        return True
+    return False
+
+
+def estimator_placeholders(text: str) -> str:
+    """The pilot protocol of an area without a model at minutes/hours: the
+    model-shaped fields answered (ESTIMATOR_FIELDS) and the promise sentences
+    and constants in the estimator's words (ESTIMATOR_PROMISES). Raises when
+    the stamp lacks a field or a table line — a silently unfilled field is
+    the leftover this exists to remove."""
+    lines = text.split("\n")
+    for label, value in ESTIMATOR_FIELDS.items():
+        if not _replace_field(lines, label, value):
+            raise ValueError(
+                f"estimator_placeholders: the stamp has no `{label}` field"
+            )
+    out = "\n".join(lines)
+    for pattern, replacement in ESTIMATOR_PROMISES:
+        out, n = re.subn(pattern, lambda _m, r=replacement: r, out, count=1, flags=re.M)
+        if n != 1:
+            raise ValueError(
+                f"estimator_placeholders: the stamp's block has no line matching {pattern!r}"
+            )
+    return out
+
+
 def count_placeholders(text: str) -> str:
     """The seconds cut without a model, its Terms and Question placeholders
     replaced by COUNT_PLACEHOLDERS. Raises when the cut lacks one of them."""
@@ -614,6 +684,18 @@ def stamp_scripts(
     if quick and not model:
         scripts = (("measure-quick-script.py.template", "01_measure.py"),)
         test = "test-quick.py.template"
+    elif not model:
+        # minutes/hours without a model: the instrument is an estimator (fit,
+        # predict, score out of fold against a permuted-label lane). Nine of
+        # nine pilot attempts were this shape and got the prompt skeleton
+        # (labkit-paper area 09, 2026-10-16): three agents rebuilt it, one
+        # kept its leftovers.
+        scripts = (
+            ("prepare-script.py.template", "00_prepare.py"),
+            ("measure-estimator-script.py.template", "01_measure.py"),
+            ("analyze-script.py.template", "02_analyze.py"),
+        )
+        test = "test-estimator.py.template"
     else:
         scripts = (
             ("prepare-script.py.template", "00_prepare.py"),
@@ -681,6 +763,8 @@ def stamp_area(
         )
         if not model:
             pilot = count_placeholders(pilot)
+    elif not model:
+        pilot = estimator_placeholders(pilot)
     existing = [
         p
         for p in experiments.iterdir()
@@ -750,6 +834,16 @@ Next (cost = "seconds" — no freeze, no audit per run, the first run is the pro
   3. git add + commit, then scripts/01_measure.py, then `protocol-fill PROTOCOL-{slug}.md --from-run <run_id>`.
   4. finalize {rel} checks the provenance; the agent audit comes when the number is promoted."""
     test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
+    if not model:
+        return f"""
+Next (light pilot, heavy report — the instrument is an estimator, no model call):
+  1. PROTOCOL-{slug}.md: fill the pilot part (head: type, cost; question, success, admissibility, the estimator in Model / tool, the null condition).
+  2. scripts/00_prepare.py: raw -> prepared, gold null for the unlabelled split   ({rel}/scripts)
+  3. scripts/01_measure.py: make_estimator(), SCORE, FEATURES_FIELD; --show 3 reads the config and feature rows
+  4. scripts/01_measure.py --probe 12  instrument check: a reduced estimator, both lanes, throwaway; the rows into the protocol's raw output
+  5. reportable? `labkit-init exp {slug} --report` adds the report fields; then `frozen = true` in the head
+  6. git add + commit, THEN scripts/01_measure.py   (untracked code is in no diff)
+  7. result note + scripts/02_analyze.py --check; running processes: .venv/bin/runlog {rel}"""
     return f"""
 Next (light pilot, heavy report):
   1. PROTOCOL-{slug}.md: fill the pilot part (head: type, cost; question, success, admissibility, prompt, null condition).
@@ -799,7 +893,7 @@ def main(argv: list[str]) -> int:
         const=True,
         default=False,
         metavar="ALIAS",
-        help="a model in the loop",
+        help="a model in the loop (without it, minutes/hours stamp the estimator skeleton)",
     )
     exp.add_argument(
         "--report",

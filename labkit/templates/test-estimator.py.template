@@ -1,0 +1,116 @@
+"""`<area>`: the resolution check as a permanent test (LAB-016 Resolution check before freezing).
+
+    .venv/bin/python -m pytest tests/test_<NN>_<name>.py
+
+Imports the area's script by path under a unique name (two areas in one
+pytest run must not share `01_measure`) and never copies its formula; the
+estimator itself is not needed here, only `evaluate_rows()`. The check runs
+it on synthetic rows in the run's real shape — perfect effect fires [C1], a
+null-like registered lane stays silent, missing predictions fail [A1] and
+withhold the verdict, a null lane off chance fails [A2]. The rows below are
+for SCORE = "accuracy" with two classes; TODO when the score changes: make
+the golds numeric (auc: 0/1 gold and a score per item; r2: floats).
+"""
+from __future__ import annotations
+
+import importlib.util
+import sys
+from pathlib import Path
+
+import pytest
+
+AREA = Path(__file__).resolve().parent.parent / "<area>"
+_spec = importlib.util.spec_from_file_location("measure_<NN>_<name>", AREA / "scripts" / "01_measure.py")
+assert _spec is not None and _spec.loader is not None
+measure = importlib.util.module_from_spec(_spec)
+sys.modules[_spec.name] = measure
+_spec.loader.exec_module(measure)
+
+POS, NEG = "pos", "neg"
+
+
+def rows(registered: list[tuple], null: list[tuple], test: int = 0) -> list[dict]:
+    """Synthetic kept rows in the run's shape: (pred, gold) per scored lane,
+    plus TEST rows of the test lane (a prediction, no gold)."""
+    out = []
+    for lane, pairs in (("registered", registered), ("null", null)):
+        for i, (pred, gold) in enumerate(pairs):
+            out.append({"id": f"{lane}:{i}", "lane": lane, "item": str(i), "fold": 0,
+                        "pred": pred, "gold": gold})
+    out += [{"id": f"test:{i}", "lane": "test", "item": f"t{i}", "fold": None,
+             "pred": POS, "gold": None} for i in range(test)]
+    return out
+
+
+def _twelve(correct: int) -> list[tuple]:
+    """Twelve items, `correct` of them predicted right, half of each class."""
+    golds = [POS] * 6 + [NEG] * 6
+    other = {POS: NEG, NEG: POS}
+    return [(g if i < correct else other[g], g) for i, g in enumerate(golds)]
+
+
+def test_perfect_effect_fires_c1():
+    m = measure.evaluate_rows(rows(_twelve(12), _twelve(6)))
+    assert m["c1_pass"] is True and m["a2_pass"] is True and m["a1_pass"] is True
+
+
+def test_null_like_registered_lane_stays_silent():
+    m = measure.evaluate_rows(rows(_twelve(6), _twelve(6)))
+    assert m["c1_pass"] is False
+
+
+def test_chance_is_derived_from_the_gold():
+    """Balanced binary gold: two draws agree half the time."""
+    assert measure.chance_of("accuracy", [POS] * 6 + [NEG] * 6) == 0.5
+    assert measure.chance_of("auc", [1, 0]) == 0.5 and measure.chance_of("r2", [1.0, 2.0]) == 0.0
+
+
+def test_missing_predictions_withhold_the_verdict():
+    max_empty = measure.CONFIG.max_empty
+    reg = [(None, g) for _, g in _twelve(12)[: max_empty + 1]] + _twelve(12)[max_empty + 1:]
+    m = measure.evaluate_rows(rows(reg, _twelve(6)))
+    assert m["a1_pass"] is False and m["c1_pass"] is None
+
+
+def test_null_out_of_band_withholds_the_verdict():
+    m = measure.evaluate_rows(rows(_twelve(12), _twelve(12)))
+    assert m["a2_pass"] is False and m["c1_pass"] is None
+
+
+def test_the_test_lane_is_counted_never_scored():
+    m = measure.evaluate_rows(rows(_twelve(12), _twelve(6), test=5))
+    assert m["n_test"] == 5 and m["n_items"] == 12 and m["c1_pass"] is True
+
+
+def test_a_scored_lane_without_gold_is_refused():
+    """A withheld label stored as 0 or -999 is no label: the prepare step writes
+    null, and a scored lane carrying one is a refusal, never a number."""
+    reg = _twelve(12)
+    reg[0] = (POS, None)
+    with pytest.raises(ValueError, match="without gold"):
+        measure.evaluate_rows(rows(reg, _twelve(6)))
+
+
+def test_the_formula_reads_its_thresholds_from_the_config():
+    """The run records `asdict(CONFIG)`; this holds that the formula reads the
+    same object — a threshold moved there moves the verdict."""
+    from dataclasses import asdict, fields, replace
+
+    from labkit import promises
+
+    assert set(asdict(measure.CONFIG)) == {f.name for f in fields(measure.MeasureConfig)}
+    registered = promises.all_constants(promises.load(measure.PROTOCOL))
+    assert registered and all(asdict(measure.CONFIG)[k] == v for k, v in registered.items())
+    strict = replace(measure.CONFIG, margin=0.9)
+    assert measure.evaluate_rows(rows(_twelve(12), _twelve(6)), strict)["c1_pass"] is False
+    assert measure.evaluate_rows(rows(_twelve(12), _twelve(6)))["c1_pass"] is True
+
+
+def test_a_lane_exactly_at_null_plus_margin_passes():
+    """8/12 against 5/12 + 0.25 is exactly the bar: in floats it fell one ulp
+    short (2026-10-14); the scores are fractions, so it passes."""
+    from dataclasses import replace
+
+    cfg = replace(measure.CONFIG, margin=0.25, null_band=0.25)
+    assert measure.evaluate_rows(rows(_twelve(8), _twelve(5)), cfg)["c1_pass"] is True
+    assert measure.evaluate_rows(rows(_twelve(7), _twelve(5)), cfg)["c1_pass"] is False
