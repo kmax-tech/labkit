@@ -19,6 +19,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import audit, findings  # noqa: E402
+from protocol_fixture import head  # noqa: E402
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"
 SCRIPT = "import scoring\nfrom labkit import runlog\nprint(scoring.X)\n"
@@ -32,7 +33,9 @@ def repo_with() -> Path:
     area = repo / "experiments" / "01-x"
     (area / "scripts").mkdir(parents=True)
     (area / "scripts" / "01_measure.py").write_text(SCRIPT, encoding="utf-8")
-    (area / "PROTOCOL-x.md").write_text(PROTOCOL, encoding="utf-8")
+    (area / "PROTOCOL-x.md").write_text(
+        head(id="p-0123456789abcdef") + PROTOCOL, encoding="utf-8"
+    )
     (repo / "lib").mkdir()
     (repo / "lib" / "scoring.py").write_text("X = 0.7\n", encoding="utf-8")
     return area

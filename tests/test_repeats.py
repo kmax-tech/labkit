@@ -87,20 +87,26 @@ class Repeats(unittest.TestCase):
 
     def test_finalize_warns_on_one_draw_of_a_model_run_and_not_after_a_repeat(self):
         """The spread is static evidence: a warning until a repeat exists,
-        nothing for a run that asked no model."""
+        nothing for a run of an estimator — the run's recorded instrument
+        decides (0.20), not its metrics."""
         from labkit import finalize
 
-        first = self._run()
+        first = self._run()  # the fixture head says instrument = "model"
         primary = self.area / "runs" / first
-        self.assertIsNone(finalize.single_draw(self.area, primary))  # no model calls
-        metrics = primary / "metrics.json"
-        m = json.loads(metrics.read_text())
-        metrics.write_text(json.dumps({**m, "llm_retries": 0}), encoding="utf-8")
         self.assertIn(
             "is one draw — no spread", finalize.single_draw(self.area, primary) or ""
         )
         self._run(repeat_of=first)
         self.assertIsNone(finalize.single_draw(self.area, primary))
+        proto = self.area / "PROTOCOL-x.md"
+        proto.write_text(
+            proto.read_text(encoding="utf-8").replace(
+                'instrument = "model"', 'instrument = "estimator"'
+            ),
+            encoding="utf-8",
+        )
+        estimator = self.area / "runs" / self._run()
+        self.assertIsNone(finalize.single_draw(self.area, estimator))
 
     def test_a_named_repeat_is_never_written_back_not_even_with_force(self):
         """`protocol-fill --from-run <repeat>` wrote a repeat's number into

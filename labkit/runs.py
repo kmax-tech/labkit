@@ -149,6 +149,19 @@ def acknowledged_unfrozen(run_dir: Path) -> bool:
     return cfg is not None and cfg.get("unfrozen_ack") is True
 
 
+def run_instrument(run_dir: Path) -> str | None:
+    """The instrument RUN_DIR ran under (`instrument` in its config.json,
+    written by runlog from the protocol head, standard 0.20): model,
+    estimator or count. The one reading for the gates that ask what the
+    run did — finalize holds a model run to its `models_resolved` and
+    names a one-draw spread with it. None for a run without config.json
+    or without the key (a run of a labkit before 0.20); an unreadable
+    config raises RunConfigError.
+    """
+    cfg = read_run_config(run_dir)
+    return None if cfg is None else cfg.get("instrument")
+
+
 def read_run_config(run_dir: Path) -> dict | None:
     """A run's metadata, None when the directory has no config.json.
 

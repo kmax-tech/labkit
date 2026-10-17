@@ -102,6 +102,31 @@ INLINE_NOTE = (
     "run's output rows under `===== ROWS <path> … =====` lines, each row as "
     "`<line>: <row>`. Nothing else is in scope."
 )
+#: what the auditor is told the instrument check looks like, per instrument
+#: (standard 0.20): asked for a prompt+answer pair, an auditor of an
+#: estimator area finds a gap that is none — the check that exists there is
+#: a reduced estimator on a few labelled items (plan II, 2026-10-17)
+INSTRUMENT_NOTES = {
+    "model": (
+        "INSTRUMENT model — a model in the loop: a prompt per item, a parser, "
+        "lanes of questions. The instrument check is one fully rendered "
+        "prompt+answer pair per gold class from the real pipeline (`--probe N`); "
+        "the null lane is anchors or a placebo in the same run."
+    ),
+    "estimator": (
+        "INSTRUMENT estimator — fit and predict, no model call: no prompt, no "
+        "parser, no render check, and the protocol's cut has no such field. The "
+        "instrument check is a reduced estimator on a few labelled items through "
+        "the real pipeline, both lanes, its scores read and never reported; the "
+        "null lane is the same estimator on labels permuted inside each fitting "
+        "fold; seeds and the noise ceiling are owed."
+    ),
+    "count": (
+        "INSTRUMENT count — a deterministic count, rerunnable at will: no bar to "
+        "clear, no null lane, no seed, no promise table. Audit the question, the "
+        "unit, the exclusions and the data path against the output."
+    ),
+}
 
 
 class AuditError(RuntimeError):
@@ -340,9 +365,11 @@ def render(
     def file(p: Path) -> tuple[str, str]:
         return f"FILE: {rel(p)}", p.read_text(encoding="utf-8")
 
+    about = f"MODE: {mode} · AREA: {rel(area)}"
     if mode == CLARITY:
         pieces = [file(p) for p in (code[0], protocol, *code[1:])]
     else:
+        about += f" · {instrument_note(protocol)}"
         pieces = [file(p) for p in (protocol, *code)]
         if standard is not None:
             label, text = standard_excerpt(mode)
@@ -352,10 +379,24 @@ def render(
         if mode == ANALYSIS:
             pieces += run_rows(area, protocol)
     body = "".join(f"===== {label} =====\n{text}\n" for label, text in pieces)
-    return (
-        f"{instructions(mode)}\n\nMODE: {mode} · AREA: {rel(area)}\n\n"
-        f"{INLINE_NOTE}\n\n{body}"
-    )
+    return f"{instructions(mode)}\n\n{about}\n\n{INLINE_NOTE}\n\n{body}"
+
+
+def instrument_note(protocol: Path) -> str:
+    """The note of the protocol's instrument (INSTRUMENT_NOTES), from its
+    head. Raises AuditError on a head still holding the placeholder: what
+    the auditor is to expect of the instrument check is this datum, and an
+    audit against the wrong expectation reports gaps that are none."""
+    try:
+        head = protocol_block.head(protocol.read_text(encoding="utf-8"))
+    except protocol_block.BlockError as exc:
+        raise AuditError(f"{protocol.name}: head unreadable — {exc}") from exc
+    if head.instrument is None:
+        raise AuditError(
+            f"{protocol.name}: [protocol] instrument is still a placeholder — "
+            f"set it ({' | '.join(protocol_block.INSTRUMENTS)}) before the audit"
+        )
+    return INSTRUMENT_NOTES[head.instrument]
 
 
 def parse_clarity(text: str) -> dict:

@@ -207,6 +207,7 @@ class FreezeGate(unittest.TestCase):
         r, _ = self._start(SECONDS, long=True)
         cfg = json.loads((r.dir / "config.json").read_text())
         self.assertEqual(cfg["cost_tier"], "seconds")
+        self.assertEqual(cfg["instrument"], "model")  # the head's datum, recorded
         self.assertFalse(cfg["unfrozen_ack"])
 
     def test_seconds_without_criterion_is_refused(self):
@@ -221,6 +222,7 @@ class FreezeGate(unittest.TestCase):
         r, _ = self._start(SECONDS_COUNT, long=True)
         cfg = json.loads((r.dir / "config.json").read_text())
         self.assertEqual(cfg["cost_tier"], "seconds")
+        self.assertEqual(cfg["instrument"], "count")
         self.assertIsNone(cfg.get("promises"))  # nothing registered, nothing recorded
 
     def test_hours_keeps_the_freeze(self):

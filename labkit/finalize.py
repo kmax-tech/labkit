@@ -98,6 +98,7 @@ from labkit.runs import (
     read_run_config,
     repeats_of,
     resolve_recorded,
+    run_instrument,
 )
 from labkit.repo import (
     area_path,
@@ -281,27 +282,17 @@ def answering_run_field_mismatch(
     )
 
 
-def called_a_model(measurement_run: Path) -> bool:
-    """Do the run's metrics show model calls (`llm_retries` recorded, or
-    `model_calls` > 0)? Static evidence: a run without those keys may still
-    have called a model. False when metrics.json cannot be read."""
-    try:
-        metrics = read_metrics(measurement_run / "metrics.json")
-    except (OSError, ValueError):
-        return False
-    calls = metrics.get("model_calls")
-    return "llm_retries" in metrics or (isinstance(calls, int) and calls > 0)
-
-
 def single_draw(area: Path, measurement_run: Path) -> str | None:
     """Why the number shows no spread, or None: the run asked a model and
     has no repeat (`runlog` repeat_of). One draw per item cannot show how
     far the number moves — in the cloud judge probe it moved 10/12 ↔ 11/12
     between runs, and every audit named it (TODO item 4, 2026-10-14). A
     warning, never a blocker: whether a spread is owed is the protocol's.
-    A run in the area that cannot say whether it is a draw (unreadable, a
-    broken or doubled draw number) is said here, not raised past."""
-    if not called_a_model(measurement_run):
+    Which runs ask a model is the run's recorded instrument (0.20); a run
+    without one is named by `model_provenance_gap`, not twice. A run in the
+    area that cannot say whether it is a draw (unreadable, a broken or
+    doubled draw number) is said here, not raised past."""
+    if run_instrument(measurement_run) != "model":
         return None
     try:
         if repeats_of(area, measurement_run.name):
@@ -316,13 +307,23 @@ def single_draw(area: Path, measurement_run: Path) -> str | None:
 
 
 def model_provenance_gap(measurement_run: Path) -> str | None:
-    """Why the run's model cannot be named from its record, or None: its
-    metrics show model calls (`llm_retries` recorded, or `model_calls` > 0)
-    while no run in its lineage recorded `models_resolved` — the alias was
-    not under `model`/`*_model`, the keys runlog resolves (uniagent areas
-    14–17 recorded it as `judge`; round 15, 2026-10-08). Static evidence:
-    a run without those keys may still have called a model."""
-    if not called_a_model(measurement_run):
+    """Why the run's model cannot be named from its record, or None: the run
+    ran a model protocol (`instrument = "model"` in its config.json, from
+    the head, standard 0.20) while no run in its lineage recorded
+    `models_resolved` — the alias was not under `model`/`*_model`, the keys
+    runlog resolves (uniagent areas 14–17 recorded it as `judge`; round 15,
+    2026-10-08). An estimator or count run owes no model. A run whose
+    config records no instrument is named as such: until 0.20 this was a
+    guess from the metrics (`llm_retries`, `model_calls`), and a guess is
+    not a record."""
+    instrument = run_instrument(measurement_run)
+    if instrument is None:
+        return (
+            f"{measurement_run.name}: config.json records no instrument — a run "
+            f"of a labkit before 0.20; its model provenance cannot be held here "
+            f"(reproduce it with the pinned release, or run it again)"
+        )
+    if instrument != "model":
         return None
     try:
         if model_provenance_run(measurement_run) is not None:
@@ -332,9 +333,10 @@ def model_provenance_gap(measurement_run: Path) -> str | None:
             f"model provenance: the lineage of {measurement_run.name} is broken — {exc}"
         )
     return (
-        f"{measurement_run.name} called a model, but no run in its lineage recorded "
-        f"models_resolved — record the alias under `model` (runlog resolves it); "
-        f"a spec under another key is not provenance labkit can hold"
+        f'{measurement_run.name} ran a model protocol (instrument = "model"), but '
+        f"no run in its lineage recorded models_resolved — record the alias under "
+        f"`model` (runlog resolves it); a spec under another key is not provenance "
+        f"labkit can hold"
     )
 
 

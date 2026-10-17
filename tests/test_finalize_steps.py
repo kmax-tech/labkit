@@ -57,38 +57,48 @@ class AnsweringRunField(unittest.TestCase):
 
 
 class ModelProvenanceGap(unittest.TestCase):
-    def _run(self, d: str, metrics: dict, models_resolved: dict) -> Path:
+    """The run's recorded instrument decides what it owes (standard 0.20): a
+    model run its `models_resolved`, an estimator or count nothing; a config
+    without the key is named, not guessed from the metrics."""
+
+    def _run(self, d: str, instrument: str | None, models_resolved: dict) -> Path:
         run = Path(d) / "runs" / "2026-10-08T10-00-00_aaaa"
         run.mkdir(parents=True)
-        (run / "config.json").write_text(
-            json.dumps(
-                {"schema_version": 2, "models_resolved": models_resolved, "config": {}}
-            ),
-            encoding="utf-8",
+        cfg = {"schema_version": 2, "models_resolved": models_resolved, "config": {}}
+        if instrument is not None:
+            cfg["instrument"] = instrument
+        (run / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+        (run / "metrics.json").write_text(
+            json.dumps({"c1_pass": True, "n_rows": 4}), encoding="utf-8"
         )
-        (run / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
         return run
 
     def test_a_model_run_without_models_resolved_is_named(self):
         with tempfile.TemporaryDirectory() as d:
-            run = self._run(d, {"c1_pass": True, "llm_retries": 0}, {})
+            run = self._run(d, "model", {})
             gap = finalize.model_provenance_gap(run) or ""
-            self.assertIn(
-                "called a model, but no run in its lineage recorded models_resolved",
-                gap,
-            )
+            self.assertIn("no run in its lineage recorded models_resolved", gap)
 
     def test_a_model_run_with_models_resolved_is_quiet(self):
         with tempfile.TemporaryDirectory() as d:
-            run = self._run(
-                d, {"c1_pass": True, "model_calls": 3}, {"m": {"model": "A"}}
-            )
+            run = self._run(d, "model", {"m": {"model": "A"}})
             self.assertIsNone(finalize.model_provenance_gap(run))
 
-    def test_a_run_without_model_calls_is_quiet(self):
+    def test_an_estimator_or_count_run_owes_no_model(self):
+        for instrument in ("estimator", "count"):
+            with (
+                self.subTest(instrument=instrument),
+                tempfile.TemporaryDirectory() as d,
+            ):
+                run = self._run(d, instrument, {})
+                self.assertIsNone(finalize.model_provenance_gap(run))
+
+    def test_a_run_without_a_recorded_instrument_is_named_not_guessed(self):
         with tempfile.TemporaryDirectory() as d:
-            run = self._run(d, {"c1_pass": True, "n_rows": 4}, {})
-            self.assertIsNone(finalize.model_provenance_gap(run))
+            run = self._run(d, None, {})
+            self.assertIn(
+                "records no instrument", finalize.model_provenance_gap(run) or ""
+            )
 
 
 class ReadmePlaceholders(unittest.TestCase):

@@ -66,7 +66,9 @@ def repo_with(protocols: int = 1) -> Path:
     (area / "scripts").mkdir(parents=True)
     (area / "scripts" / "01_measure.py").write_text(SCRIPT, encoding="utf-8")
     for i in range(protocols):
-        (area / f"PROTOCOL-x{i}.md").write_text(PROTOCOL, encoding="utf-8")
+        (area / f"PROTOCOL-x{i}.md").write_text(
+            fixture.head(id="p-0123456789abcdef") + PROTOCOL, encoding="utf-8"
+        )
     (repo / "lib").mkdir()
     (repo / "lib" / "scoring.py").write_text("X = 0.7\n", encoding="utf-8")
     return area
@@ -100,7 +102,9 @@ class Audit(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn("labkit-audit: tokens · prompt ", err)  # what the call cost
         prompt = sent[0]
-        self.assertIn("MODE: preflight · AREA: experiments/01-x", prompt)
+        self.assertIn(
+            "MODE: preflight · AREA: experiments/01-x · INSTRUMENT model", prompt
+        )
         for path in (
             "experiments/01-x/PROTOCOL-x0.md",
             "experiments/01-x/scripts/01_measure.py",
@@ -235,9 +239,36 @@ class Audit(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn("===== ROWS =====\nno rows: ", sent[0])
         # a prose head cannot name the run: refused as no audit, not a traceback
-        rc, _, err, sent = run(repo_with(), CLEAN, "--mode", "analysis")
+        area = repo_with()
+        (area / "PROTOCOL-x0.md").write_text(PROTOCOL, encoding="utf-8")
+        rc, _, err, sent = run(area, CLEAN, "--mode", "analysis")
         self.assertEqual((rc, sent), (2, []))
         self.assertIn("head unreadable", err)
+
+    def test_the_auditor_is_told_the_instrument_and_a_placeholder_is_refused(self):
+        """What the instrument check looks like is the head's datum (0.20):
+        an auditor of an estimator area asked for a prompt+answer pair finds
+        a gap that is none."""
+        area = repo_with()
+        (area / "PROTOCOL-x0.md").write_text(
+            fixture.head(id="p-0123456789abcdef", instrument="estimator") + PROTOCOL,
+            encoding="utf-8",
+        )
+        rc, _, _, sent = run(area, CLEAN)
+        self.assertEqual(rc, 0)
+        self.assertIn("· INSTRUMENT estimator — fit and predict", sent[0])
+        self.assertIn("reduced estimator on a few labelled items", sent[0])
+        self.assertNotIn("INSTRUMENT model", sent[0])
+        (area / "PROTOCOL-x0.md").write_text(
+            fixture.head(
+                id="p-0123456789abcdef", instrument="<model | estimator | count>"
+            )
+            + PROTOCOL,
+            encoding="utf-8",
+        )
+        rc, _, err, sent = run(area, CLEAN)
+        self.assertEqual((rc, sent), (2, []))
+        self.assertIn("[protocol] instrument is still a placeholder", err)
 
     def test_a_preflight_audit_at_cost_seconds_without_a_run_says_it_is_early(self):
         area = repo_with()

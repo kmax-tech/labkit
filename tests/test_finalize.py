@@ -46,7 +46,7 @@ PROTOCOL_WITH_HOLES = CLEAN_PROTOCOL.replace(
 )
 
 
-def _run(area, name, *, pid=PID, metrics=None, completion=True):
+def _run(area, name, *, pid=PID, metrics=None, completion=True, repeat_of=None):
     d = area / "runs" / name
     d.mkdir(parents=True, exist_ok=True)
     # a run under a frozen protocol recorded its block (0.71): the snapshot
@@ -58,8 +58,12 @@ def _run(area, name, *, pid=PID, metrics=None, completion=True):
         "pid": 1,
         "schema_version": 2,
         "protocol": {"id": pid, "path": "PROTOCOL-x.md"},
+        "instrument": "model",  # the fixture head's, as runlog records it (0.20)
+        "models_resolved": {"model": {"alias": "haiku"}},  # a model run names its model
         "promises": promises.snapshot(block, area) if block is not None else None,
     }
+    if repeat_of is not None:  # a second draw of REPEAT_OF, never the answer
+        cfg["repeat_of"], cfg["draw"] = repeat_of, 2
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
     if metrics is not None:
         (d / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
@@ -112,7 +116,17 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-            _run(area, "r1", metrics=CLEAN_METRICS)
+            # a model area is clean with its spread drawn: one draw is a
+            # warning, read from the run's recorded instrument (0.20); a
+            # repeat names its primary by run id, so both carry one here
+            primary = "2026-10-07T10-00-00_aa11"
+            _run(area, primary, metrics=CLEAN_METRICS)
+            _run(
+                area,
+                "2026-10-07T10-01-00_bb22",
+                metrics=CLEAN_METRICS,
+                repeat_of=primary,
+            )
             code, out = _run_finalize(area)
         self.assertEqual(code, 0, out)
         self.assertIn("all clear", out)

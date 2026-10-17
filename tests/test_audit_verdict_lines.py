@@ -15,6 +15,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from protocol_fixture import head
+
 from labkit import audit
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"
@@ -26,7 +28,9 @@ def _area() -> Path:
     area = repo / "experiments" / "01-x"
     (area / "scripts").mkdir(parents=True)
     (area / "scripts" / "01_measure.py").write_text("x = 1\n", encoding="utf-8")
-    (area / "PROTOCOL-x.md").write_text(PROTOCOL, encoding="utf-8")
+    (area / "PROTOCOL-x.md").write_text(
+        head(id="p-0123456789abcdef") + PROTOCOL, encoding="utf-8"
+    )
     return area
 
 
