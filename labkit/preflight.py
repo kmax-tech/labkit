@@ -236,7 +236,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
             + (" — frozen = true owes it" if frozen else "")
         )
     # an audit that did not run is not passed: a record without a result, a
-    # marker of a died or still running audit (2026-10-17, haiku t3)
+    # marker of a died or still running audit (Haiku on bulk modulus, 2026-10-16)
     try:
         no_result = audit_findings.no_result_stops(area, records=records)
     except audit_findings.FindingsError as exc:

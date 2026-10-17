@@ -400,7 +400,8 @@ scattered in output files nobody can interpret.
   items before the freeze: a registered number seen before `frozen = true`
   makes the freeze empty, and the prediction for the follow-up run a
   reading. Where it happened anyway, it stands here with the numbers and
-  the seeds (Sonnet v3 t3 and t5, 2026-10-16, wrote it under Randomness
+  the seeds (Sonnet on bulk modulus and on signal inhibition, round with
+  Opus auditor, labkit-paper 09, 2026-10-16, wrote it under Randomness
   controls, where nobody looks for it).
 - **Free knobs †:** every preprocessing parameter with its value: thresholds,
   filters, cutoffs, windows. Setting them a priori is right — but then vary

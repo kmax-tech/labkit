@@ -36,7 +36,7 @@ kein Ziel.
 | D | Doktrin und Gerüstbauer ins Paket (Punkt 5; `AGENTS.md`-Vorlage aus Punkt 6 inbegriffen) | **erledigt 2026-10-12** — Phase 1 (0.77.0) und Phase 2 (0.78.0) gebaut; der Thesis-Starter bleibt Haus (entschieden 2026-10-12, s. Punkt 5). Auslöser war 2026-10-09: verwirrt den Autor selbst |
 | R | Rollout in einem Release: die Pins der Labor- und Thesis-Repos heben, Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus) | **Kern erledigt 2026-10-12 (Tag `v0.85.0` auf GitHub):** die vier aktiven Labor-Repos auf dem Tag, je ein Commit; Reste unter Punkt 5, „Zeile R“ |
 | Tokenkosten | messen statt schätzen — `llm.last_usage()`, `labkit-audit` druckt Prompt- und Output-Tokens, `agent_transcript.tokens` liest die Usage-Blöcke der Claude-Code-Transkripte (0.81.0, 2026-10-11) | **erledigt 2026-10-11.** Auslöser: 30 Transkripte (labkit, uniagent) summieren 7 Mrd. Cache-Read-Tokens, die alten Subagenten-Audits je 3,65 Mio., und keine labkit-Zeile sagte, was ein Aufruf kostet. Pilot `labkit-paper` Bereich 04 (`audit-on-reachable-code-holds`, Lauf `2026-10-11T14-00-57_071a`): die direkten Importe auf erreichbaren Code zu kürzen spart 0–16 % des Prompts (Median 8 % über 24 uniagent-Bereiche) — **an der Renderprobe gestoppt, kein Modellaufruf; LAB-103 The audit reads by declared scope, not by import graph bleibt.** Der Prompt ist groß, weil die Zahl fast den ganzen Agenten braucht (Bereich 19: 142 von 155 kB Importe erreicht), nicht wegen ungenutztem Code; Fixkosten je Audit ~69 kB (Instruktionen 9, zitierte Regeln 19, Protokoll 26, Index 15). Ein kleinerer Audit bräuchte eine andere Frage (Audit je Versprechen über seinen deklarierten Scope), kein Schnitt. Die Hauptsitzungen (Median 400–500 k Kontext je Aufruf) sind Sitzungshygiene, keine labkit-Aufgabe. |
-| P | Pilotrunden 2026-10-16 (Haiku v1, Sonnet v2/v3, Labor `labkit-paper` Bereich 09): Plan „Kein stiller Ausweg“ unten — A Marke und Verweigerung · B Berichtsfelder vor dem Lauf · C Vorlage ohne Modell · D Doktrin zum Vorab-Blick | **geplant 2026-10-17**; A1, A1b, V1, A2, A3, B1, C1, C3 und C2 gebaut 2026-10-17 (Branch `claude/zealous-davinci-3hbhvk`, Release beim Autor); D1 und D2 am selben Tag (Version bleibt 0.19); offen: der Benchmark-Fall zu D2 im Labor, A4 zurückgestellt |
+| P | Pilotrunden 2026-10-16 (Haiku-Runde v1, Sonnet-Runden v2 ohne und v3 mit Opus-Auditor, Labor `labkit-paper` Bereich 09): Plan „Kein stiller Ausweg“ unten — A Marke und Verweigerung · B Berichtsfelder vor dem Lauf · C Vorlage ohne Modell · D Doktrin zum Vorab-Blick | **geplant 2026-10-17**; A1, A1b, V1, A2, A3, B1, C1, C3 und C2 gebaut 2026-10-17 (Branch `claude/zealous-davinci-3hbhvk`, Release beim Autor); D1 und D2 am selben Tag (Version bleibt 0.19); offen: der Benchmark-Fall zu D2 im Labor, A4 zurückgestellt |
 
 **1a gebaut (2026-10-06):** `labkit/promises.py` ist die eine Heimat des
 Alphabets (C/A/B plus Altbuchstaben K/S/W/N in Prosa) und des
@@ -76,7 +76,7 @@ mechanischer Check — die Aufgabe des Pilots.
 Belege erzeugt (den Leckage-BLOCKER, die Bestätigung `unfrozen_ack`, das
 Fehlen eines Laufs), und nichts hat sie in die berichtete Zahl gezwungen.
 Die Gates prüfen, ob etwas da ist, nicht, ob der Bericht es sagt. Beleg: die
-drei Einträge unter „Notiert, nicht geplant“ vom 2026-10-16/17 (Haiku t3,
+drei Einträge unter „Notiert, nicht geplant“ vom 2026-10-16/17 (Haiku an Bulk-Modulus (t3),
 `--report`, Vorab-Blick); dieser Plan ist ihre Heimat für die Reihenfolge.
 **Auslöser:** die Runden selbst — neun Versuche, drei Aufgaben, drei
 Modelle; in keinem lief der Weg bis `report-check`, und zwei Zahlen gingen
@@ -86,8 +86,8 @@ labkit; erst der Trace entscheidet), ein Sehen von `measure()`-Aufrufen
 ohne runlog (unmöglich), `finalize` verlangt weiter nicht `frozen = true`
 (das ist Station 1 von `report-check`, die Stufen bleiben getrennt).
 Ebenfalls nicht gelöst, und das sagt der Plan ausdrücklich: die inhaltlich
-leeren Kriterien von Haiku bleiben stehen — t5 „Test-ROC-AUC“ ohne
-Testlabels, t18 „Accuracy ≥ 0.5“ als Hürde, t3 ein C1, dessen Test-Gold
+leeren Kriterien von Haiku bleiben stehen — Signal-Inhibition (t5) „Test-ROC-AUC“ ohne
+Testlabels, Leberschaden (t18) „Accuracy ≥ 0.5“ als Hürde, Bulk-Modulus (t3) ein C1, dessen Test-Gold
 Nullen sind (Test-MAE 0.0) und das der Code zu „Vorhersagen erzeugt“
 umdeutete, während der Promise-Satz weiter „MAE within 10 %“ sagt. Das
 sieht der Audit; A sorgt nur dafür, dass ein Audit nicht übergangen wird.
@@ -104,26 +104,26 @@ Autors.
 
 | Schritt | Inhalt | Stufe | Prüfstelle |
 |---|---|---|---|
-| A1 | **runlog verweigert über einen ungelesenen BLOCKER hinweg.** `runlog.py:1121` nimmt `LABKIT_UNFROZEN=1` heute immer. Neu: liegt in `audits/` ein Preflight-Record (`findings.area_records`, `mode == "preflight"`) mit einem `open` Finding der Stufe BLOCKER, verweigert runlog auch mit Bestätigung und nennt Datei und Befund; offene WARNINGs stehen in der Warnzeile der Bestätigung. Ohne Record bleibt der Pilot möglich (v2: Audit nicht erreichbar). Nur volle Läufe (`long=True`, die Sperre steht unter `if long:`, `runlog.py:1121`): `--probe` muss einen BLOCKER untersuchen können, sonst ist er nicht zu entscheiden. Haiku t3: die Datei lag beim ersten Lauf bereits da. **Gebaut 2026-10-17** (`a72d439` findings · `74a7c63` audit · `8e5a3d8` runlog · preflight im Folge-Commit). | guaranteed | `tests/test_runlog_unfrozen_blocker.py`: offener BLOCKER + Bestätigung → `SystemExit` nennt ihn; kein `audits/` + Bestätigung → startet, `unfrozen_ack = true`; BLOCKER `fixed`/`accepted` → startet; Probe trotz offenem BLOCKER → läuft |
-| A1b | **Der laufende Audit zählt.** A1 sieht nur einen fertigen Record; zehn Sekunden früher gerechnet, und Haiku t3 wäre durch. `labkit-audit` schreibt vor dem Modellaufruf `audits/<datum>-<modus>.running` (pid, Start) und entfernt ihn im `finally`; runlog hält den Vermerk für lebendig, solange die pid läuft (wie `active()` für Runs), und sagt dann „warte: audit since <Start>, pid N“, auch mit Bestätigung; ein Vermerk ohne lebende pid ist ein abgebrochener Audit, `unavailable` nach V1, und sperrt den vollen Lauf ebenso (entschieden 2026-10-17: laut scheitern statt still markieren); der Ausweg ist ein neuer `labkit-audit`, der den Vermerk durch ein Ergebnis ersetzt, nicht das Löschen der Datei (Haikus zweiter Audit starb mit SIGTERM nach 70 s). `audit.py` schreibt heute vor dem Aufruf nichts. **Gebaut 2026-10-17** (`a72d439` findings · `74a7c63` audit · `8e5a3d8` runlog · preflight im Folge-Commit). Ein Vermerk ohne lebende pid und ein `unavailable`-Record sperren beide; `is_alive` ohne Antwort (kein `ps`) zählt als gestorben, laut. | guaranteed | `tests/test_runlog_audit_running.py`: Vermerk mit lebender pid → `SystemExit` „warte“; Vermerk mit toter pid → `SystemExit` „audit unavailable“, `--probe` läuft; kein Vermerk → unverändert |
-| A2 | **Die Marke steht in der Antwortzeile.** `protocol_fill.answer_line` liest `runs.read_run_config` des Laufs; bei `unfrozen_ack = true` endet die Zeile `(run <id>, unfrozen — acknowledged with LABKIT_UNFROZEN=1)`, in Answer und Result gleich. `recheck.cited` findet die Run-ID weiter (`runs.RUN_ID` ist wortbegrenzt). v2 t5 schrieb das von Hand unter „Deviations after freeze“, ein Feld für etwas anderes. **Gebaut 2026-10-17** (`50119f8`; `protocol_fill.UNFROZEN_MARK`). | guaranteed | `tests/test_protocol_fill_unfrozen.py`: Lauf mit Marke → Zeile trägt sie; ohne → Zeile unverändert; `--check` hält beide |
+| A1 | **runlog verweigert über einen ungelesenen BLOCKER hinweg.** `runlog.py:1121` nimmt `LABKIT_UNFROZEN=1` heute immer. Neu: liegt in `audits/` ein Preflight-Record (`findings.area_records`, `mode == "preflight"`) mit einem `open` Finding der Stufe BLOCKER, verweigert runlog auch mit Bestätigung und nennt Datei und Befund; offene WARNINGs stehen in der Warnzeile der Bestätigung. Ohne Record bleibt der Pilot möglich (v2: Audit nicht erreichbar). Nur volle Läufe (`long=True`, die Sperre steht unter `if long:`, `runlog.py:1121`): `--probe` muss einen BLOCKER untersuchen können, sonst ist er nicht zu entscheiden. Haiku an Bulk-Modulus (t3): die Datei lag beim ersten Lauf bereits da. **Gebaut 2026-10-17** (`a72d439` findings · `74a7c63` audit · `8e5a3d8` runlog · preflight im Folge-Commit). | guaranteed | `tests/test_runlog_unfrozen_blocker.py`: offener BLOCKER + Bestätigung → `SystemExit` nennt ihn; kein `audits/` + Bestätigung → startet, `unfrozen_ack = true`; BLOCKER `fixed`/`accepted` → startet; Probe trotz offenem BLOCKER → läuft |
+| A1b | **Der laufende Audit zählt.** A1 sieht nur einen fertigen Record; zehn Sekunden früher gerechnet, und Haiku an Bulk-Modulus (t3) wäre durch. `labkit-audit` schreibt vor dem Modellaufruf `audits/<datum>-<modus>.running` (pid, Start) und entfernt ihn im `finally`; runlog hält den Vermerk für lebendig, solange die pid läuft (wie `active()` für Runs), und sagt dann „warte: audit since <Start>, pid N“, auch mit Bestätigung; ein Vermerk ohne lebende pid ist ein abgebrochener Audit, `unavailable` nach V1, und sperrt den vollen Lauf ebenso (entschieden 2026-10-17: laut scheitern statt still markieren); der Ausweg ist ein neuer `labkit-audit`, der den Vermerk durch ein Ergebnis ersetzt, nicht das Löschen der Datei (Haikus zweiter Audit starb mit SIGTERM nach 70 s). `audit.py` schreibt heute vor dem Aufruf nichts. **Gebaut 2026-10-17** (`a72d439` findings · `74a7c63` audit · `8e5a3d8` runlog · preflight im Folge-Commit). Ein Vermerk ohne lebende pid und ein `unavailable`-Record sperren beide; `is_alive` ohne Antwort (kein `ps`) zählt als gestorben, laut. | guaranteed | `tests/test_runlog_audit_running.py`: Vermerk mit lebender pid → `SystemExit` „warte“; Vermerk mit toter pid → `SystemExit` „audit unavailable“, `--probe` läuft; kein Vermerk → unverändert |
+| A2 | **Die Marke steht in der Antwortzeile.** `protocol_fill.answer_line` liest `runs.read_run_config` des Laufs; bei `unfrozen_ack = true` endet die Zeile `(run <id>, unfrozen — acknowledged with LABKIT_UNFROZEN=1)`, in Answer und Result gleich. `recheck.cited` findet die Run-ID weiter (`runs.RUN_ID` ist wortbegrenzt). Signal-Inhibition, Sonnet ohne Auditor (v2 t5) schrieb das von Hand unter „Deviations after freeze“, ein Feld für etwas anderes. **Gebaut 2026-10-17** (`50119f8`; `protocol_fill.UNFROZEN_MARK`). | guaranteed | `tests/test_protocol_fill_unfrozen.py`: Lauf mit Marke → Zeile trägt sie; ohne → Zeile unverändert; `--check` hält beide |
 | A3 | **finalize nennt offene Befunde, report-check blockt den bestätigten Piloten.** `finalize_area`: neue Station nach „answering run“ — `open` Findings aus `audits/` (jeder Modus): BLOCKER → Blocker, WARNING → Warnung, je mit Datei; dazu die Warnung „answering run acknowledged unfrozen“, wenn der Lauf die Marke trägt. `report_check.later_gaps`: ein antwortender Lauf mit `unfrozen_ack = true` ist ein Blocker („a reported number owes a frozen run“). Das ist der ältere Kandidat „finalize führt unentschiedene BLOCKER auf“. **Gebaut 2026-10-17** (`b9016ba`; Station 1b `check_audit_records` liest `findings.audit_stops`, dieselbe Heimat wie runlog und preflight; `unfrozen_run_warning` / `report_check.unfrozen_run_gap`). | guaranteed | `tests/test_finalize_open_findings.py`: offener BLOCKER → exit 1 mit Datei; alle entschieden → still; Lauf mit Marke → finalize warnt, report-check blockt; ohne Marke beide still |
-| A4 | **Der Stop-Hook folgt der Zahl, nicht dem Dateinamen.** Eine Heimat `finalize.cited_elsewhere(repo, paths)`: in jeder geänderten Datei (`claude_hooks._git_changed`) jede `runs.RUN_ID`-Fundstelle; existiert `runs/<id>/config.json` in einem Bereich des Repos, ist dessen `protocol`-Bindung das Protokoll, das `finalize_area` bekommt — auch wenn es selbst keinen Lauf zitiert (`--if-reported` überspringt es sonst). `claude_hooks.stop` und der von `install_hooks` gestempelte Pre-Commit der Labor-Repos (heute `finalize --if-reported` auf gestagten Protokollen) rufen dieselbe Funktion. Eine Run-ID ohne Verzeichnis im Repo zählt nicht (kein Fehlalarm aus einer Notiz über ein anderes Repo). Haiku t3: REPORT.md im Root zitiert den Lauf, das Protokoll nicht — heute kein Gate. **Zurückgestellt (2026-10-17):** der eine Fall war vom Sandbox-Prompt verlangt; in einem Labor-Repo zitieren TODO und Notizen alte Läufe desselben Bereichs, und jeder Stop zöge `finalize` auf unberührte Protokolle. Befund dazu: `notes_check` kennt heute weder Run-IDs noch `finalize`, der vorgesehene Weg ist `02_analyze.py --check` über `report-check`. **Auslöser:** ein zweiter Fall in einem echten Labor-Repo — dann zuerst auf `notes/messung/` begrenzt, wo der Stop-Hook schon hinschaut. | guaranteed | `tests/test_claude_hooks.py` erweitert: geänderte `REPORT.md` zitiert einen Lauf, dessen Protokoll keine Antwort trägt → exit 2 mit Protokollname; Datei ohne Run-ID → 0; Run-ID ohne Verzeichnis → 0; Pre-Commit derselbe Fall über `finalize --cited-in <paths>` |
-| B1 | **Berichtsfelder vor dem Lauf.** `protocol_check`: ein Feld der Klasse `report` (`Field("Did", "report")`, Outcome, Rival check, Caps/drops) oder „Result“ (Klasse `after`) ist gefüllt, „Answering run“ offen (`answering_run_open`) und `runs.bound_answering_run` findet keinen abgeschlossenen Lauf → WARNING „written before any run“ je Feld. Läuft damit in `preflight`, `protocol-check` und dem PostToolUse-Hook. t18 v2 und v3: „Did“ behauptet Grid und 55 Testmoleküle, `runs/` hält nur die Vorbereitung. Dass der Text einen Lauf *behauptet*, bleibt Semantik; dass er vor jedem Lauf geschrieben wurde, ist exakt. **Gebaut 2026-10-17** (`protocol_check.written_before_run`, Felder `BEFORE_RUN_CLAIMS`; `n/a — …` behauptet nichts). | guaranteed (die Meldung sagt, was sie weiß) | `tests/test_protocol_check_report_before_run.py`: Did gefüllt + kein Lauf → Warnung; Did gefüllt + abgeschlossener Lauf → still; Did Platzhalter → still |
-| C1 | **`--report` erklärt nichts mehr für deterministisch.** `scaffold.DETERMINISTIC_NA` (`scaffold.py:409`) behält nur „Parser cases harvested“; „Randomness controls“ und „Noise ceiling → threshold“ bleiben ohne Modell geschuldet, weil ein Schätzer mit Seed sie schuldet. CHANGELOG „Changed“: zwei Felder kommen für modellfreie Bereiche als Platzhalter zurück. Beleg v2 t5 gegen v3 t5 (Streuung 0.116 über zehn Seeds). **Gebaut 2026-10-17** (`scaffold.DETERMINISTIC_NA` hält nur noch das Parser-Feld). | guaranteed | `tests/test_scaffold_report.py`: ohne Modell bleibt „Randomness controls“ Platzhalter, „Parser cases“ gefüllt; mit Modell unverändert |
-| C2 | **Vorlage für die Messung ohne Modell.** `labkit-init exp --estimator` (Name offen) stempelt `measure-estimator-script.py.template`: registrierte Lane = Schätzer auf wahren Labels, Null-Lane = derselbe Schätzer auf permutierten Labels in jedem Trainingsfold, A1 Yield (`max_empty`), A2 Null-Bande (`null_band`), C1 `margin`; Felder „Prompt“, „Render check“, „Parser cases“ vorgefüllt „n/a — no model“, Test-Vorlage mit den vier Extremen (perfekt, Zufall, leer, Null außerhalb). Beleg: neun von neun Versuchen waren modellfrei; drei von drei Modellen bauten das Skelett um (Sonnet v3 t3 schreibt es), Haiku ließ `margin`, `max_empty`, `null_band_items` als Reste stehen. Rollout in Labor-Repos ist eine eigene Aufgabe. **Gebaut 2026-10-17:** kein neuer Schalter — ohne `--model` bei minutes/hours stempelt `labkit-init exp` das Estimator-Skelett (`measure-estimator-script.py.template`, `test-estimator.py.template`, `scaffold.estimator_placeholders`); Konstanten `margin`, `max_empty`, `null_band`; Scores accuracy/r2/auc in der Stdlib, `chance_of` hergeleitet; Testlane nie bewertet. | Doktrin (Gerüst) | `tests/test_scaffold_estimator.py`: der gestempelte Bereich besteht `preflight` ohne Must-Lücke außer der Registrierung; sein Test läuft grün; `protocol-check` meldet keinen Vorlagenrest |
-| C3 | **Unerwähnte Konstante.** `promises`: ein registrierter Konstantenname, der weder im `sentence` seines Promise noch in einer Scope-Datei vorkommt → WARNING in `protocol-check`/`preflight` („constant `null_band_items` is named by no sentence and read by no scope file“). Haiku 3 von 3, mit umgedeutetem `margin = 0.70` als Schwelle bei t5. **Gebaut 2026-10-17** (`promises.unmentioned_constants`, Wortgrenze, Scope über `promises.scope_sources`; `protocol-check` druckt die Warnung). | static evidence | `tests/test_promises_constant_mentioned.py`: Rest → Warnung; im Satz genannt → still; nur im Scope gelesen → still |
-| D1 | **Feldführer: Banden an der Null-Lane kalibrieren.** `labkit/protocol-field-guide.md`, „Noise ceiling → threshold“ und „Instrument check“: Kalibrierung an der Null-Lane oder an einem Ausschnitt; die registrierte Lane auf allen Items vor dem Freeze macht den Freeze leer und steht, wenn geschehen, unter „Noise ceiling“ mit Zahl und Seeds. Beleg v3 t3 (Seeds 1–5 ad hoc, R² 0.910–0.916 vor dem Freeze), v3 t5 (zehn Seeds, AUC 0.93–0.96); Gegenbeispiel v3 t18. **Gebaut 2026-10-17** (Feldführer, Platzhalter in der Vorlage, Instrument-Check-Absatz ohne Modell). | Doktrin | Lesen; kein Test |
-| D2 | **Der Audit fragt danach.** LAB-015 Preflight audit before freezing bekommt den Satz: der Auditor fragt, ob die registrierte Zahl vor dem Freeze gesehen wurde, und wo das steht. `labkit-audit` schneidet LAB-015 in den Prompt, also reicht der Satz im Standard; `rules.tsv` und `labkit/rules.py` halten die Referenzen. Standard 0.19 → 0.20, ein Breaking im Sinne des Ledgers. Entscheidung des Autors. **Entschieden und gebaut 2026-10-17: Narbenzeile „Registered number seen before the freeze“ in LAB-015 plus datierter Änderungseintrag, Version bleibt 0.19** (wie die Zeile „Trivial solution passes“). Offen bleibt der Benchmark-Fall im Labor (v3 t3/t5 Proband, v3 t18 Zwilling). | agent audit | Benchmark-Fall im Labor: v3 t3 als Proband, Befund erwartet; v3 t18 als Zwilling, still |
+| A4 | **Der Stop-Hook folgt der Zahl, nicht dem Dateinamen.** Eine Heimat `finalize.cited_elsewhere(repo, paths)`: in jeder geänderten Datei (`claude_hooks._git_changed`) jede `runs.RUN_ID`-Fundstelle; existiert `runs/<id>/config.json` in einem Bereich des Repos, ist dessen `protocol`-Bindung das Protokoll, das `finalize_area` bekommt — auch wenn es selbst keinen Lauf zitiert (`--if-reported` überspringt es sonst). `claude_hooks.stop` und der von `install_hooks` gestempelte Pre-Commit der Labor-Repos (heute `finalize --if-reported` auf gestagten Protokollen) rufen dieselbe Funktion. Eine Run-ID ohne Verzeichnis im Repo zählt nicht (kein Fehlalarm aus einer Notiz über ein anderes Repo). Haiku an Bulk-Modulus (t3): REPORT.md im Root zitiert den Lauf, das Protokoll nicht — heute kein Gate. **Zurückgestellt (2026-10-17):** der eine Fall war vom Sandbox-Prompt verlangt; in einem Labor-Repo zitieren TODO und Notizen alte Läufe desselben Bereichs, und jeder Stop zöge `finalize` auf unberührte Protokolle. Befund dazu: `notes_check` kennt heute weder Run-IDs noch `finalize`, der vorgesehene Weg ist `02_analyze.py --check` über `report-check`. **Auslöser:** ein zweiter Fall in einem echten Labor-Repo — dann zuerst auf `notes/messung/` begrenzt, wo der Stop-Hook schon hinschaut. | guaranteed | `tests/test_claude_hooks.py` erweitert: geänderte `REPORT.md` zitiert einen Lauf, dessen Protokoll keine Antwort trägt → exit 2 mit Protokollname; Datei ohne Run-ID → 0; Run-ID ohne Verzeichnis → 0; Pre-Commit derselbe Fall über `finalize --cited-in <paths>` |
+| B1 | **Berichtsfelder vor dem Lauf.** `protocol_check`: ein Feld der Klasse `report` (`Field("Did", "report")`, Outcome, Rival check, Caps/drops) oder „Result“ (Klasse `after`) ist gefüllt, „Answering run“ offen (`answering_run_open`) und `runs.bound_answering_run` findet keinen abgeschlossenen Lauf → WARNING „written before any run“ je Feld. Läuft damit in `preflight`, `protocol-check` und dem PostToolUse-Hook. Leberschaden (t18) v2 und v3: „Did“ behauptet Grid und 55 Testmoleküle, `runs/` hält nur die Vorbereitung. Dass der Text einen Lauf *behauptet*, bleibt Semantik; dass er vor jedem Lauf geschrieben wurde, ist exakt. **Gebaut 2026-10-17** (`protocol_check.written_before_run`, Felder `BEFORE_RUN_CLAIMS`; `n/a — …` behauptet nichts). | guaranteed (die Meldung sagt, was sie weiß) | `tests/test_protocol_check_report_before_run.py`: Did gefüllt + kein Lauf → Warnung; Did gefüllt + abgeschlossener Lauf → still; Did Platzhalter → still |
+| C1 | **`--report` erklärt nichts mehr für deterministisch.** `scaffold.DETERMINISTIC_NA` (`scaffold.py:409`) behält nur „Parser cases harvested“; „Randomness controls“ und „Noise ceiling → threshold“ bleiben ohne Modell geschuldet, weil ein Schätzer mit Seed sie schuldet. CHANGELOG „Changed“: zwei Felder kommen für modellfreie Bereiche als Platzhalter zurück. Beleg Signal-Inhibition, Sonnet ohne Auditor (v2 t5) gegen v3 Signal-Inhibition (t5) (Streuung 0.116 über zehn Seeds). **Gebaut 2026-10-17** (`scaffold.DETERMINISTIC_NA` hält nur noch das Parser-Feld). | guaranteed | `tests/test_scaffold_report.py`: ohne Modell bleibt „Randomness controls“ Platzhalter, „Parser cases“ gefüllt; mit Modell unverändert |
+| C2 | **Vorlage für die Messung ohne Modell.** `labkit-init exp --estimator` (Name offen) stempelt `measure-estimator-script.py.template`: registrierte Lane = Schätzer auf wahren Labels, Null-Lane = derselbe Schätzer auf permutierten Labels in jedem Trainingsfold, A1 Yield (`max_empty`), A2 Null-Bande (`null_band`), C1 `margin`; Felder „Prompt“, „Render check“, „Parser cases“ vorgefüllt „n/a — no model“, Test-Vorlage mit den vier Extremen (perfekt, Zufall, leer, Null außerhalb). Beleg: neun von neun Versuchen waren modellfrei; drei von drei Modellen bauten das Skelett um (Sonnet v3 Bulk-Modulus (t3) schreibt es), Haiku ließ `margin`, `max_empty`, `null_band_items` als Reste stehen. Rollout in Labor-Repos ist eine eigene Aufgabe. **Gebaut 2026-10-17:** kein neuer Schalter — ohne `--model` bei minutes/hours stempelt `labkit-init exp` das Estimator-Skelett (`measure-estimator-script.py.template`, `test-estimator.py.template`, `scaffold.estimator_placeholders`); Konstanten `margin`, `max_empty`, `null_band`; Scores accuracy/r2/auc in der Stdlib, `chance_of` hergeleitet; Testlane nie bewertet. | Doktrin (Gerüst) | `tests/test_scaffold_estimator.py`: der gestempelte Bereich besteht `preflight` ohne Must-Lücke außer der Registrierung; sein Test läuft grün; `protocol-check` meldet keinen Vorlagenrest |
+| C3 | **Unerwähnte Konstante.** `promises`: ein registrierter Konstantenname, der weder im `sentence` seines Promise noch in einer Scope-Datei vorkommt → WARNING in `protocol-check`/`preflight` („constant `null_band_items` is named by no sentence and read by no scope file“). Haiku 3 von 3, mit umgedeutetem `margin = 0.70` als Schwelle bei Signal-Inhibition (t5). **Gebaut 2026-10-17** (`promises.unmentioned_constants`, Wortgrenze, Scope über `promises.scope_sources`; `protocol-check` druckt die Warnung). | static evidence | `tests/test_promises_constant_mentioned.py`: Rest → Warnung; im Satz genannt → still; nur im Scope gelesen → still |
+| D1 | **Feldführer: Banden an der Null-Lane kalibrieren.** `labkit/protocol-field-guide.md`, „Noise ceiling → threshold“ und „Instrument check“: Kalibrierung an der Null-Lane oder an einem Ausschnitt; die registrierte Lane auf allen Items vor dem Freeze macht den Freeze leer und steht, wenn geschehen, unter „Noise ceiling“ mit Zahl und Seeds. Beleg v3 Bulk-Modulus (t3) (Seeds 1–5 ad hoc, R² 0.910–0.916 vor dem Freeze), v3 Signal-Inhibition (t5) (zehn Seeds, AUC 0.93–0.96); Gegenbeispiel v3 Leberschaden (t18). **Gebaut 2026-10-17** (Feldführer, Platzhalter in der Vorlage, Instrument-Check-Absatz ohne Modell). | Doktrin | Lesen; kein Test |
+| D2 | **Der Audit fragt danach.** LAB-015 Preflight audit before freezing bekommt den Satz: der Auditor fragt, ob die registrierte Zahl vor dem Freeze gesehen wurde, und wo das steht. `labkit-audit` schneidet LAB-015 in den Prompt, also reicht der Satz im Standard; `rules.tsv` und `labkit/rules.py` halten die Referenzen. Standard 0.19 → 0.20, ein Breaking im Sinne des Ledgers. Entscheidung des Autors. **Entschieden und gebaut 2026-10-17: Narbenzeile „Registered number seen before the freeze“ in LAB-015 plus datierter Änderungseintrag, Version bleibt 0.19** (wie die Zeile „Trivial solution passes“). Offen bleibt der Benchmark-Fall im Labor (v3 t3/t5 Proband, v3 Leberschaden (t18) Zwilling). | agent audit | Benchmark-Fall im Labor: v3 Bulk-Modulus (t3) als Proband, Befund erwartet; v3 Leberschaden (t18) als Zwilling, still |
 
-**Was A gegen jeden Pilotfall tut:** Haiku t3 — A1 verweigert den
+**Was A gegen jeden Pilotfall tut:** Haiku an Bulk-Modulus (t3) — A1 verweigert den
 Lauf, bis der BLOCKER entschieden ist; hätte er ihn entschieden
 (`accepted`) und mit Bestätigung gerechnet, trüge die Antwortzeile die
 Marke (A2), `finalize` nennte die Entscheidung (A3); die REPORT.md im
 Root bliebe ungeprüft, bis A4 gebaut ist (zurückgestellt). Zehn Sekunden
-früher gerechnet, träfe A1b statt A1. Sonnet v2 t3/t5 — A2 setzt die Marke statt des Freitexts unter
+früher gerechnet, träfe A1b statt A1. Sonnet an Bulk-Modulus und Signal-Inhibition, Runde ohne Auditor (v2, t3/t5) — A2 setzt die Marke statt des Freitexts unter
 „Deviations“, A3 blockt den Bericht in `report-check`, bis Audit und Freeze
-nachgeholt sind; die Zahl bleibt als Pilotzahl lesbar. Sonnet t18 — B1
+nachgeholt sind; die Zahl bleibt als Pilotzahl lesbar. Sonnet an Leberschaden (DILI, t18) — B1
 warnt bei `preflight`, bevor „Did“ einen Lauf behauptet, den es nicht
 gibt.
 
@@ -524,7 +524,7 @@ Zeitüberschreitung oder Abbruch mit Exit 2 ab und schreibt **nichts** nach
 `audits/` (`audit.py:539–549`; `findings.write` steht erst danach). Ein
 gescheiterter Audit sieht also genauso aus wie einer, den niemand gestartet
 hat. A1 baut darauf sogar ausdrücklich: „Ohne Record bleibt der Pilot
-möglich (v2: Audit nicht erreichbar)“. Haiku t3 hat genau diese Lücke
+möglich (v2: Audit nicht erreichbar)“. Haiku an Bulk-Modulus (t3) hat genau diese Lücke
 genommen: zweiter Aufruf abgebrochen, als gescheitert gedeutet, mit
 `LABKIT_UNFROZEN=1` weitergerechnet.
 
@@ -591,7 +591,7 @@ format assumption“ (`standard.md:1233`). Es fehlt die allgemeine Form im
 Auswertungscode: `row.get("score", 0)`, `except Exception: continue`,
 `value or 0.0`, `if x is None: x = default`. Jede davon macht aus einem
 fehlenden Feld still eine Zahl, und die berichtete Metrik sieht richtig aus.
-Haiku t3 ist ein Verwandter: `c1_pass = true` bei `test_mae = 0.0`, weil
+Haiku an Bulk-Modulus (t3) ist ein Verwandter: `c1_pass = true` bei `test_mae = 0.0`, weil
 die fehlenden Testlabels zu Nullen wurden.
 
 **Wie omx es macht:** `skills/ai-slop-cleaner/SKILL.md:24–26`, zwei
@@ -687,7 +687,7 @@ den Ertrag je Klasse auszählt.
 ## Notiert, nicht geplant
 
 - **Ein Bericht außerhalb des Protokolls löst kein Gate aus (2026-10-16). → Plan 2026-10-17 oben.**
-  Labor `labkit-paper`, Bereich 09, Haiku-Runde, Versuch `t3-labkit-r1`
+  Labor `labkit-paper`, Bereich 09, Haiku-Runde, Versuch Bulk-Modulus `t3-labkit-r1`
   (Speicher `output/attempts_pilot_haiku_v1/`, Transkript `out/trace.jsonl`):
   Der Agent lief `preflight`, startete den Preflight-Audit, wartete 30 s
   und dann 70 s, hielt den Audit für gescheitert und rechnete vier Läufe
@@ -710,7 +710,7 @@ den Ertrag je Klasse auszählt.
      `audits/` ein Preflight-Audit zu diesem Protokoll mit unentschiedenem
      BLOCKER und `preflight_audit` ist leer, ist das kein Pilot, sondern
      ein ignorierter Befund: verweigern, auch mit `LABKIT_UNFROZEN=1`, und
-     den Befund nennen. Bei t3 lag die Datei beim ersten Lauf bereits da.
+     den Befund nennen. Bei Bulk-Modulus (t3) lag die Datei beim ersten Lauf bereits da.
   2. **`unfrozen_ack` liest niemand.** runlog schreibt es in `config.json`
      (`runlog.py:1254`); finalize und report-check ignorieren es. Ein Lauf
      mit dieser Marke darf kein antwortender Lauf sein und keine Zahl ins
@@ -727,8 +727,8 @@ den Ertrag je Klasse auszählt.
      läuft.
 
 
-  **Zweiter Befund derselben Runde:** `t5-labkit` registriert „test ROC-AUC“
-  als C1, der Code rechnet Trainings-AUC; `t18-labkit` belegt `a1_*`/`a2_*`
+  **Zweiter Befund derselben Runde:** Signal-Inhibition `t5-labkit` registriert „test ROC-AUC“
+  als C1, der Code rechnet Trainings-AUC; Leberschaden `t18-labkit` belegt `a1_*`/`a2_*`
   mit Genauigkeiten anderer Konfigurationen — Kennung und Bedeutung laufen
   auseinander, ohne dass `code-check` es sieht (gehört zu Punkt 3).
 
@@ -744,7 +744,7 @@ den Ertrag je Klasse auszählt.
   zieht `finalize` genau einmal.
 
 - **`--report` erklärt einen Wald mit Seed für deterministisch (2026-10-17). → Plan 2026-10-17 oben.**
-  Labor `labkit-paper`, Bereich 09, Sonnet-Runde v2, Versuch `t5` (Protokoll
+  Labor `labkit-paper`, Bereich 09, Sonnet-Runde ohne Auditor (v2), Versuch Signal-Inhibition `t5` (Protokoll
   `p-233d6d06bdd5422e`): „Randomness controls“ und „Noise ceiling →
   threshold“ tragen den Vermerk „auto-filled by --report“ mit „deterministic,
   no model: no seed, no temperature, one run“ und „repetition spread 0“.
@@ -765,19 +765,19 @@ den Ertrag je Klasse auszählt.
   Platzhalter, „Parser cases harvested“ wird gefüllt; mit Modell unverändert.
 
 - **Die registrierte Zahl war vor dem Freeze bekannt (2026-10-17). → Plan 2026-10-17 oben.** Sonnet-
-  Runde v3 (Manifest: `claude-sonnet-5-5` als Agent, `claude-opus-5-5` als
-  Auditor; v2 lief ohne Auditor), Versuche `t3` (`p-6b594f6a815b4d40`) und `t5`
+  Sonnet-Runde mit Opus-Auditor, v3 (Manifest: `claude-sonnet-5-5` als Agent, `claude-opus-5-5` als
+  Auditor; v2 lief ohne Auditor), Versuche Bulk-Modulus `t3` (`p-6b594f6a815b4d40`) und Signal-Inhibition `t5`
   (`p-102a187cacd44561`): beide eingefroren, gestempelt, bis `report-check`
   gegangen, und beide schreiben selbst, dass die registrierte Lane vorher auf
-  allen Items gerechnet wurde. t3: Seeds 1–5 „ad hoc, ohne runlog“ mit
+  allen Items gerechnet wurde. Bulk-Modulus (t3): Seeds 1–5 „ad hoc, ohne runlog“ mit
   CV-R² 0.910–0.916, danach eingefroren, gemessen 0.9116 („not blind
-  predictions“). t5: zehn Seeds beider Lanes als „instrument check“, AUC
+  predictions“). Signal-Inhibition (t5): zehn Seeds beider Lanes als „instrument check“, AUC
   0.93–0.96, dann eingefroren („the pass is not independent“). Der Freeze
   schützt dann nichts mehr; die Offenlegung steht in Freitext unter
   „Randomness controls“ und „Outcome“, kein Feld fragt danach, kein
   Prüfpunkt im Audit-Prompt. labkit sieht einen direkten Aufruf von
   `measure()` nicht; `--probe` ist für einen Wegwerfausschnitt gedacht, nicht
-  für die volle Messung ohne Run-ID. t18 derselben Runde hat es richtig
+  für die volle Messung ohne Run-ID. Leberschaden (t18) derselben Runde hat es richtig
   gemacht: Banden nur an der Null-Lane kalibriert, die registrierte Lane nur
   im reduzierten Probe. Kandidaten, Stufe Doktrin und Audit: (a) der
   Feldführer zu „Noise ceiling → threshold“ und „Instrument check“ sagt,
@@ -787,13 +787,13 @@ den Ertrag je Klasse auszählt.
   Vorlage trägt ein Feld dafür, damit die Antwort nicht in „Randomness
   controls“ versteckt steht. Dazu aus denselben Runden, kleiner:
   `protocol-fill --from-run` trägt `unfrozen_ack` aus `config.json` nicht in
-  die Antwortzeile (v2 t5 schreibt die Bestätigung von Hand unter
+  die Antwortzeile (Signal-Inhibition, Sonnet ohne Auditor (v2 t5) schreibt die Bestätigung von Hand unter
   „Deviations after freeze“, ein Feld für etwas anderes; gehört zu Lücke 2
   oben); die Vorlage ist LLM-förmig und kostet jedem ML-Versuch Turns für
   „Prompt“, Render check, Parser cases, bei Haiku mit Vorlagenresten in den
   Konstanten (`margin`, `max_empty`, `null_band_items` unter Sätzen, die sie
   nicht nennen; mechanisch prüfbar: Konstante weder im Satz noch im Scope);
-  t18 schließt in v2 und v3 nicht ab: in `runs/` liegt jeweils nur der
+  Leberschaden (t18) schließt in v2 und v3 nicht ab: in `runs/` liegt jeweils nur der
   Vorbereitungslauf, kein Freeze, und das Feld „Did“ behauptet beide Male,
   das Grid sei gelaufen und die 55 Testmoleküle beschriftet — ein
   Berichtsfeld, vor dem Lauf gefüllt, als wäre er geschehen (81

@@ -1,6 +1,6 @@
 """The running audit counts; an audit that died or got no result refuses the full run (2026-10-17).
 
-A1 sees only a finished record; ten seconds earlier and haiku t3 would have
+A1 sees only a finished record; ten seconds earlier and Haiku on bulk modulus (labkit-paper 09, Haiku round, t3) would have
 passed. Now `labkit-audit` leaves a `.running` marker before its model call:
 a marker with a live pid means wait, one with a dead pid means the audit
 died — `unavailable`, like a record of a call that got no result — and the

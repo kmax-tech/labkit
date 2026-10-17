@@ -736,7 +736,7 @@ def check_audit_records(findings: Findings, area: Path) -> None:
     """Station 1b: the area's audits as data. An open BLOCKER in any record,
     an audit without a result (unavailable, died) or one still running is a
     blocker — a number written back over an undecided or missing audit is
-    the haiku-t3 case (labkit-paper area 09, 2026-10-16: the BLOCKER lay in
+    the case of Haiku on bulk modulus (labkit-paper 09, Haiku round, t3-labkit-r1, 2026-10-16): the BLOCKER lay in
     `audits/`, no gate after runlog read it). An open WARNING is a warning.
     `findings.audit_stops` is the one reading; runlog's gate and preflight
     read the same (CODE-004 One home per piece of logic). At every tier:

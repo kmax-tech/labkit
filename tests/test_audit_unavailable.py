@@ -2,8 +2,7 @@
 
 Before the model call a `.running` marker; after it either the findings
 record or, when the call got no result, an `unavailable` record — so a
-failed audit never looks like one nobody started (haiku t3, labkit-paper
-area 09, 2026-10-16). The model call is faked, as in test_audit.
+failed audit never looks like one nobody started (Haiku on bulk modulus (labkit-paper 09, Haiku round, t3-labkit-r1, 2026-10-16)). The model call is faked, as in test_audit.
 """
 
 from __future__ import annotations

@@ -3,8 +3,7 @@
 Two records beside the findings file: the `.running` marker an audit leaves
 before its model call, and the `outcome = "unavailable"` record of a call
 that got no result. `audit_stops` reads both, with every open BLOCKER, as
-the reasons no full run may start whatever LABKIT_UNFROZEN says (haiku t3,
-labkit-paper area 09, 2026-10-16: a killed second audit call read as "the
+the reasons no full run may start whatever LABKIT_UNFROZEN says (Haiku on bulk modulus (labkit-paper 09, Haiku round, t3-labkit-r1, 2026-10-16): a killed second audit call read as "the
 audit failed", the first call's BLOCKER landed unread).
 """
 

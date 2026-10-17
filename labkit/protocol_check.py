@@ -445,8 +445,8 @@ ANSWERING_RUN_LABEL = "answering run"
 
 #: the fields that describe a run that happened — written back after it,
 #: never before: filled while no completed run is bound and "Answering run"
-#: is still the stamp's, they claim what did not happen (Sonnet t18, v2 and
-#: v3, 2026-10-16: "Did: ran the 81-point grid and labelled the 55 test
+#: is still the stamp's, they claim what did not happen (Sonnet on liver injury, both rounds: labkit-paper
+#: 09, v2 and v3, t18, 2026-10-16; "Did: ran the 81-point grid and labelled the 55 test
 #: molecules", and runs/ held only the preparation)
 BEFORE_RUN_CLAIMS = (
     "Answer to the question",

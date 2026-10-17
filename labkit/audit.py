@@ -616,7 +616,7 @@ def _no_result(
     REASON and the stamp it would have read, and take the marker away (the
     record replaces it). An audit that did not run is not passed — a full
     run is refused on this record until a rerun gets a result
-    (`findings.audit_stops`; haiku t3, 2026-10-16, read a killed call as
+    (`findings.audit_stops`; Haiku on bulk modulus (labkit-paper 09, Haiku round, t3-labkit-r1, 2026-10-16): it read a killed call as
     "the audit failed" and ran on)."""
     recorded = findings.write_unavailable(
         args.area, args.mode, args.model, stamp.sha, reason

@@ -20,7 +20,7 @@ pins (`requirements.txt` / `requirements.lock`).
   `LABKIT_UNFROZEN` says, a probe runs, open WARNINGs stand in the
   acknowledgement line; `preflight` names them (warning, blocker once
   frozen); `audit_coverage` counts only a record with a result. Evidence:
-  labkit-paper area 09, haiku t3 (2026-10-16) — a killed second audit call
+  Haiku on bulk modulus (labkit-paper 09, Haiku round, t3-labkit-r1, 2026-10-16) — a killed second audit call
   read as "the audit failed", the first call's BLOCKER landed in `audits/`
   unread, the full run started on `LABKIT_UNFROZEN=1`. Author's decision
   2026-10-17: fail loud instead of marking silently (plan P, A1 and A1b;
@@ -35,7 +35,7 @@ pins (`requirements.txt` / `requirements.lock`).
   as the reported number (`unfrozen_run_gap`). `protocol-check` warns per
   report field (Did, Outcome, Result, …) filled while "Answering run" is
   still the stamp's and no completed run is bound (`written_before_run`):
-  Sonnet t18 described a grid run that `runs/` never held (plan P, A2, A3,
+  Sonnet on liver injury (labkit-paper 09, t18, both rounds) described a grid run that `runs/` never held (plan P, A2, A3,
   B1).
 - **A registered constant no sentence names and no scope file reads is
   named.** `promises.unmentioned_constants`, printed by `protocol-check` as
@@ -81,7 +81,7 @@ pins (`requirements.txt` / `requirements.lock`).
   deterministic.** It pre-fills only "Parser cases harvested"; "Randomness
   controls" and "Noise ceiling → threshold" stay owed, because a seeded
   estimator, a fold shuffle and a permutation are sources of randomness
-  (Sonnet v2 t5 got "no seed, repetition spread 0" written into the field
+  (Sonnet on signal inhibition, round without auditor — labkit-paper 09, v2, t5 — got "no seed, repetition spread 0" written into the field
   while naming seed 0 three lines below; the next round measured a null-AUC
   spread of 0.116 over ten seeds). The two fields come back as placeholders
   for model-free areas (plan P, C1).

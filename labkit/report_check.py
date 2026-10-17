@@ -99,7 +99,8 @@ def unfrozen_run_gap(area: Path, pid: str | None) -> str | None:
     """Station 1, the run's side of the freeze: the answering run started on
     LABKIT_UNFROZEN=1 (`unfrozen_ack`) — a reported number owes a frozen,
     audited run, the acknowledgement made it a pilot's (2026-10-17: Sonnet
-    v2 t3/t5 wrote such numbers back, the protocols never frozen). None
+    Sonnet on bulk modulus and on signal inhibition, round without auditor
+    (labkit-paper 09, v2, t3 and t5), wrote such numbers back, the protocols never frozen). None
     without a stamped id or a bound run (finalize names those)."""
     if pid is None:
         return None

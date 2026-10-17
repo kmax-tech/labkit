@@ -143,7 +143,7 @@ WRITTEN_BY_RUN = ("Answer to the question", "Result")
 
 
 #: what the answer line says of a run that started on LABKIT_UNFROZEN=1 —
-#: the mark travels with the number (A2, 2026-10-17): v2 t5 wrote the
+#: the mark travels with the number (A2, 2026-10-17): Sonnet on signal inhibition, round without auditor (labkit-paper 09, v2, t5), wrote the
 #: acknowledgement by hand under "Deviations after freeze", a field for
 #: something else, and nothing held it to the run
 UNFROZEN_MARK = "unfrozen — acknowledged with LABKIT_UNFROZEN=1"

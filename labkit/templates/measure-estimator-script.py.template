@@ -41,7 +41,7 @@ Measurement contract:
   - A withheld label is no label: the prepare step writes `gold: null` for
     the unlabelled split (a test file storing 0 or -999 is a placeholder),
     and a lane carrying an item without gold is never scored — a criterion
-    on zero gold once "passed" (haiku t3, labkit-paper area 09, 2026-10-16).
+    on zero gold once "passed" (Haiku on bulk modulus (labkit-paper 09, Haiku round, t3-labkit-r1, 2026-10-16)).
   - `evaluate_rows()` is the only implementation of these formulas;
     `02_analyze.py` and the test import it, never copy it.
   - The protocol owns the registered thresholds; `MeasureConfig` holds them
@@ -49,7 +49,7 @@ Measurement contract:
   - A seed is a source of randomness, so the protocol's randomness and
     noise-ceiling fields are owed. Measure the spread on the probe or on
     the null lane; the registered lane on all items before the freeze makes
-    the freeze empty (Sonnet v3 t3 and t5, 2026-10-16).
+    the freeze empty (Sonnet on bulk modulus and on signal inhibition, round with Opus auditor, labkit-paper 09, 2026-10-16).
 
 Why (house rules, one per line so a reference is never cut):
   LAB-034 Null condition in the same run

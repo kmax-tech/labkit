@@ -1,6 +1,6 @@
 """LABKIT_UNFROZEN=1 passes a missing freeze, never an undecided BLOCKER (2026-10-17).
 
-Haiku t3 (labkit-paper area 09, 2026-10-16): the preflight audit's BLOCKER
+Haiku on bulk modulus (labkit-paper 09, Haiku round, t3-labkit-r1, 2026-10-16): the preflight audit's BLOCKER
 lay in `audits/` when the agent started the full run with the
 acknowledgement; no gate read it. Now `runlog` refuses a full run while a
 BLOCKER of any record is `open`, acknowledgement or not; a decided one, an

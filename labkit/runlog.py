@@ -837,7 +837,7 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
 # the area's audits themselves: an open BLOCKER in any record, an audit
 # that got no result, an audit still running (`findings.audit_stops`) refuse
 # the full run whatever the variable says — a pilot over an unread BLOCKER
-# is not a pilot (labkit-paper area 09, haiku t3, 2026-10-16; author's
+# is not a pilot (Haiku on bulk modulus (labkit-paper 09, Haiku round, t3-labkit-r1, 2026-10-16); author's
 # decision 2026-10-17: fail loud). The gate follows the cost tier: at `cost = "seconds"`
 # the run is rerunnable at will, so the freeze protects nothing — what a
 # full run needs there is the registration, written before the number

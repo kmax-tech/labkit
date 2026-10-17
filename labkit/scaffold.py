@@ -409,7 +409,7 @@ def insert_report_fields(text: str, blocks: ProtocolBlocks) -> tuple[str, int]:
 # repetition spread 0" into Randomness controls and Noise ceiling: "no
 # language model" is not "no source of randomness" — a seeded forest, a
 # fold shuffle and a permutation are ones, and the pilot that got the line
-# (labkit-paper area 09, Sonnet v2 t5) named seed 0 three lines below it
+# (Sonnet on signal inhibition, round without auditor: labkit-paper 09, v2, t5) named seed 0 three lines below it
 # while the next round measured a null-AUC spread of 0.116 over ten seeds.
 # Those two fields stay owed: an estimator with a seed owes them.
 DETERMINISTIC_NA = {

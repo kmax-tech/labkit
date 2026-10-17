@@ -592,7 +592,7 @@ class Report(unittest.TestCase):
 
     def test_no_model_fills_the_parser_field_and_leaves_randomness_owed(self) -> None:
         """2026-10-17: a seeded estimator owes its randomness fields; --report
-        no longer writes "no seed, spread 0" into them (Sonnet v2 t5)."""
+        no longer writes "no seed, spread 0" into them (Sonnet on signal inhibition, round without auditor: labkit-paper 09, v2, t5)."""
         text = self.stamped("- **Model / tool:** none")
         self.assertIn("**Parser cases harvested:** n/a — no model", text)
         self.assertNotIn("n/a — deterministic", text)

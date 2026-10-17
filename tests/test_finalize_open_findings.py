@@ -3,8 +3,8 @@
 Station 1b: an open BLOCKER in any `audits/` record, an audit without a
 result or one still running is a blocker, an open WARNING a warning, and
 the answering run's `unfrozen_ack` a warning in finalize and a blocker in
-report-check. Haiku t3 (labkit-paper area 09, 2026-10-16) wrote its number
-over a BLOCKER no gate after runlog read; Sonnet v2 wrote numbers back
+report-check. Haiku on bulk modulus (labkit-paper 09, Haiku round, t3-labkit-r1, 2026-10-16) wrote its number
+over a BLOCKER no gate after runlog read; Sonnet in the round without auditor (v2) wrote numbers back
 from runs the acknowledgement had made pilots.
 """
 

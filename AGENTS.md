@@ -88,6 +88,15 @@ instead).
   separate task and out of reach here.
 - **One commit per step**, the message says why. Do not push, tag or
   release; report what is ready to commit.
+- **Names for the reader.** A case, a round, a run or a thing is named by
+  what it is — subject, model, date, arm: "Haiku on bulk modulus, Haiku
+  round of 2026-10-16, with labkit" — and the archive key follows once in
+  parentheses (`labkit-paper 09, t3-labkit-r1`). A key alone (`v3 t3`)
+  names nothing to a reader a week later; keys are for paths, manifests
+  and run ids, which are never renamed. The same for identifiers in code
+  and for fields: the name says the thing (`acknowledged_unfrozen`,
+  `null_band`), not the mechanism or a leftover (`check_flag`,
+  `null_band_items` under a sentence that never counts items).
 
 ## Not in this repo
 

@@ -1,6 +1,6 @@
 """Report fields written before any run (2026-10-17, plan P step B1).
 
-Sonnet t18 (labkit-paper area 09, v2 and v3) filled "Did" with the grid
+Sonnet on liver injury, both rounds (labkit-paper 09, v2 and v3, t18), filled "Did" with the grid
 search and the 55 labelled test molecules while `runs/` held only the
 preparation. Whether the text claims a run is semantics; that it was written
 while no completed run is bound and "Answering run" is still the stamp's is

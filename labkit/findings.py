@@ -23,7 +23,7 @@ area, one file per audit:
 The person edits `status` and `reason`; nothing else writes the file.
 
 Two more records say that an audit was STARTED but has no result yet, or
-never got one (2026-10-16, labkit-paper area 09, haiku t3: the agent took
+never got one (Haiku on bulk modulus (labkit-paper 09, Haiku round, t3-labkit-r1, 2026-10-16): the agent took
 a killed second audit call for a failed audit and ran the full run with
 LABKIT_UNFROZEN=1 while the first call's BLOCKER landed in `audits/`
 unread; omx' code-review names the state `independent review
