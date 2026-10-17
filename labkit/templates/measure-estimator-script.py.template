@@ -7,7 +7,7 @@ Usage:
     ../../.venv/bin/python scripts/01_measure.py --probe
         Instrument check: a reduced estimator on twelve labelled items,
         both lanes, into a throwaway file; prints the scores (not reported)
-        and one row per lane for the protocol's raw-output field.
+        and one row per lane for the protocol's "Instrument check" field.
     ../../.venv/bin/python scripts/01_measure.py
         The full run, recorded by runlog (minutes or hours: `runlog start
         <area> -- …`, after the freeze and the preflight audit).
@@ -361,7 +361,8 @@ def main() -> None:
         rows = measure(cfg, few, out, probe=True)
         m = evaluate_rows(rows, cfg)
         print(f"probe: registered {m['c1_score']}  null {m['a2_score']}  chance {m['a2_chance']}  — not reported")
-        print("\n# one row per lane — paste into the protocol's raw-output field:")
+        print("\n# one row per lane — paste into the protocol's \"Instrument check\" field "
+              "(an estimator's cut has no raw-output field: no prompt+answer pair exists):")
         for lane in LANES:
             first = next((r for r in rows if r["lane"] == lane), None)
             if first is not None:

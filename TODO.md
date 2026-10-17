@@ -741,6 +741,35 @@ den Ertrag je Klasse auszählt.
 
 ## Notiert, nicht geplant
 
+- **Die geteilten Skelette sind modellförmig; der Estimator-Stempel bricht an
+  zwei Stellen (2026-10-17, Lektüre der drei Skelette nach Plan II).**
+  (1) `analyze-script.py.template --draws` liest `c1_accuracy` — der
+  Estimator meldet `c1_score`; bei zwei Draws `min()` über eine leere Liste,
+  und der Hinweis nennt `--repeat-of`, das das Estimator-Skelett nicht hat.
+  Dahinter die Entwurfslücke: die Streuung eines Schätzers ist der Seed, ein
+  Seed-Lauf ist für `runlog.repeat_mismatch` aber ein anderer Config („misst
+  etwas anderes“), also nie ein Draw — die Streuung steht heute von Hand
+  unter „Randomness controls“ (gegen LAB-041). Vorschlag: `runlog.run(...,
+  repeat_of=X, draw_keys=("seed",))` — ein Repeat darf sich genau in den
+  erklärten Draw-Schlüsseln unterscheiden; `02_analyze.py` liest den
+  Kriteriumsschlüssel aus dem Messskript (`measure.CRITERION_KEY`, je
+  Skelett) statt `c1_accuracy` fest. (2) `prepare-script.py.template` legt
+  `id · text · gold` an (Modellform); das Estimator-Skelett liest `id ·
+  features · gold (null für den unbeschrifteten Teil) · split`, und der
+  Stempel-Default von `build()` verweigert Zeilen ohne `text`. Vorschlag:
+  die Feldlegende je Instrument beim Stempeln (`stamp_scripts`) — oder das
+  Messskript als die eine Heimat der Zeilenform, von der Prepare liest.
+  Dazu AGENTS-Vorlage, Lane minutes/hours, Schritte 2, 3 und 8: „Prompt
+  verbatim“, „Prompts lesen“, `--repeat-of` — für einen Estimator-Bereich
+  heißt das `ESTIMATOR`-Zeile, `--show` (Config und Feature-Zeilen), `--seed`.
+  Die drei Messskelette sind je für sich schlüssig (Begriffe, Vertrag,
+  Config aus dem Block, `evaluate_rows` als eine Formel, eigener Test);
+  die Bruchstellen liegen in dem, was sie teilen. Stufe: Gerüst.
+  Prüfstelle: ein gestempelter Estimator-Bereich läuft `00_prepare →
+  01_measure --probe → 01_measure → 02_analyze --check/--draws` auf
+  synthetischen Daten in der Suite (heute prüft `test_scaffold` nur
+  `evaluate_rows`). Reihenfolge: vor dem Estimator-Laborlauf.
+
 - **Ein Bericht außerhalb des Protokolls löst kein Gate aus (2026-10-16). → Plan 2026-10-17 oben.**
   Labor `labkit-paper`, Bereich 09, Haiku-Runde, Versuch Bulk-Modulus `t3-labkit-r1`
   (Speicher `output/attempts_pilot_haiku_v1/`, Transkript `out/trace.jsonl`):
