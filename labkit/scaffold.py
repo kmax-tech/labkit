@@ -292,23 +292,94 @@ def seconds_cut(tmpl: str, instrument: str) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
-def quick_block(tmpl: str, model: bool) -> str:
-    """The promise tables of the seconds cut. With a model the full measure
-    skeleton is stamped, and it reads `margin`, `max_empty` and
-    `null_band_items` from the block — so the tables keep their constants.
-    (Until 0.92 they became a commented hint here, a rule written for the
-    count; once the count lost its tables in 0.87.0 the hint hit only the
-    model case, and every judge area stamped at seconds failed its first run
-    with a TypeError — found by a seconds probe, 2026-10-15.) Without a model
-    the tables go: a deterministic count has no bar to clear."""
-    if model:
-        return tmpl
-    # a deterministic count has no bar to clear: no promise tables, no
-    # criterion — five cold agents each invented a tautological [C1]
-    # (cloud probes 2026-10-12); the number is held by --check and finalize
-    out = re.sub(r"\n\n# The promises as data[^\n]*\n(?:#[^\n]*\n)*", "\n", tmpl)
-    out = re.sub(r"\n\[\[promise\]\]\n(?:[^\n]+\n)*", "\n", out)
-    return re.sub(r"\n{3,}```", "\n```", out)
+#: the [[promise]] tables a stamped protocol carries, per instrument — the one
+#: home (standard 0.20): id, key, the sentence naming its constant, the
+#: constant with its stamp value; the scope is the measure script, which
+#: reads exactly these (`promises.all_constants`). A count has no bar to
+#: clear and so no table: five cold agents each invented a tautological
+#: [C1] (cloud probes 2026-10-12); the number is held by --check and finalize.
+PROMISE_TABLES: dict[str, tuple[tuple[str, str, str, dict[str, int | float]], ...]] = {
+    "model": (
+        (
+            "C1",
+            "c1_pass",
+            "<the criterion in one sentence: registered accuracy >= null accuracy "
+            "+ margin; accuracy over all items of the lane, an empty answer counts "
+            "as not correct>",
+            {"margin": 0.25},
+        ),
+        (
+            "A1",
+            "a1_pass",
+            "<the yield condition: at most max_empty empty or unreadable answers "
+            "on the registered lane>",
+            {"max_empty": 2},
+        ),
+        (
+            "A2",
+            "a2_pass",
+            "<the null condition: the null lane sits at chance, within "
+            "null_band_items items>",
+            {"null_band_items": 1},
+        ),
+    ),
+    "estimator": (
+        (
+            "C1",
+            "c1_pass",
+            "<the criterion: the registered lane's out-of-fold SCORE is at least "
+            "the null lane's plus margin>",
+            {"margin": 0.25},
+        ),
+        (
+            "A1",
+            "a1_pass",
+            "<the yield: at most max_empty labelled items without an out-of-fold "
+            "prediction>",
+            {"max_empty": 0},
+        ),
+        (
+            "A2",
+            "a2_pass",
+            "<the null condition: the permuted-label lane scores within null_band "
+            "of chance>",
+            {"null_band": 0.1},
+        ),
+    ),
+    "count": (),
+}
+PROMISE_SCOPE = "scripts/01_measure.py"
+#: the template's one line where the tables go (a TOML comment, so the
+#: template's block parses as it stands)
+PROMISE_MARK = "# <the [[promise]] tables of the instrument — labkit-init stamps them>"
+
+
+def promise_tables(instrument: str) -> str:
+    """The [[promise]] tables of INSTRUMENT as TOML text, "" for a count."""
+    out = []
+    for pid, key, sentence, constants in PROMISE_TABLES[instrument]:
+        pairs = ", ".join(f"{k} = {v!r}" for k, v in constants.items())
+        out.append(
+            f'[[promise]]\nid = "{pid}"\nkey = "{key}"\nsentence = "{sentence}"\n'
+            f'scope = ["{PROMISE_SCOPE}"]\nconstants = {{ {pairs} }}\n'
+        )
+    return "\n".join(out)
+
+
+def promise_block_for(tmpl: str, instrument: str) -> str:
+    """TMPL with the block's marker replaced by the instrument's tables. A
+    count's block loses the paragraph about tables with the marker: no
+    table, no sentence that owes one. Raises when the marker is missing —
+    a template without it would stamp a protocol without promises."""
+    if tmpl.count(PROMISE_MARK + "\n") != 1:
+        raise ValueError(
+            f"promise_block_for: the template has no line {PROMISE_MARK!r}"
+        )
+    tables = promise_tables(instrument)
+    if tables:
+        return tmpl.replace(PROMISE_MARK + "\n", tables)
+    # the paragraph: the blank line, the comment lines, the marker
+    return re.sub(r"\n\n(?:#[^\n]*\n)*" + re.escape(PROMISE_MARK) + r"\n", "\n", tmpl)
 
 
 PLACEHOLDER_WIDTH = 72  # a one-line hint; the long form is `protocol-check --guide`
@@ -441,8 +512,8 @@ COUNT_PLACEHOLDERS = {
 
 
 #: The pilot protocol of an estimator area: the fields the estimator shares
-#: with a model, worded for it (the model-only fields the cut leaves out),
-#: and the promise sentences in the estimator's words.
+#: with a model, worded for it (the model-only fields the cut leaves out;
+#: its promise tables stand in PROMISE_TABLES).
 #: No `: `, ` — `, `; ` or ` (` inside a `<…>`: `short_placeholders` cuts there.
 ESTIMATOR_FIELDS = {
     "Model / tool": "n/a — no model call; the instrument is the estimator of `make_estimator()` in scripts/01_measure.py <name it with its fixed parameters and the seed>",
@@ -450,22 +521,6 @@ ESTIMATOR_FIELDS = {
     "Null condition / anchors (in the same run)": "<A2 · the same estimator on labels permuted inside each fitting fold, expected at chance_of() within null_band>",
     "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · a reduced estimator on N labelled items, both lanes, throwaway · scores read, never reported>",
 }
-ESTIMATOR_PROMISES = (
-    (
-        r'sentence = "<the criterion in one sentence:[^"]*"',
-        "sentence = \"<the criterion · the registered lane's out-of-fold SCORE is at least the null lane's plus margin>\"",
-    ),
-    (
-        r'sentence = "<the yield condition:[^"]*"',
-        'sentence = "<the yield · at most max_empty labelled items without an out-of-fold prediction>"',
-    ),
-    (r"constants = \{ max_empty = 2 \}", "constants = { max_empty = 0 }"),
-    (
-        r'sentence = "<the null condition:[^"]*"',
-        'sentence = "<the null condition · the permuted-label lane scores within null_band of chance>"',
-    ),
-    (r"constants = \{ null_band_items = 1 \}", "constants = { null_band = 0.1 }"),
-)
 
 
 def _replace_placeholder(lines: list[str], label: str, value: str) -> bool:
@@ -499,25 +554,17 @@ def _replace_field(lines: list[str], label: str, value: str) -> bool:
 
 
 def estimator_placeholders(text: str) -> str:
-    """The pilot protocol of an area without a model at minutes/hours: the
-    model-shaped fields answered (ESTIMATOR_FIELDS) and the promise sentences
-    and constants in the estimator's words (ESTIMATOR_PROMISES). Raises when
-    the stamp lacks a field or a table line — a silently unfilled field is
-    the leftover this exists to remove."""
+    """The pilot protocol of an estimator area: the fields it shares with a
+    model answered in its words (ESTIMATOR_FIELDS). Raises when the stamp
+    lacks a field — a silently unfilled field is the leftover this exists
+    to remove."""
     lines = text.split("\n")
     for label, value in ESTIMATOR_FIELDS.items():
         if not _replace_field(lines, label, value):
             raise ValueError(
                 f"estimator_placeholders: the stamp has no `{label}` field"
             )
-    out = "\n".join(lines)
-    for pattern, replacement in ESTIMATOR_PROMISES:
-        out, n = re.subn(pattern, lambda _m, r=replacement: r, out, count=1, flags=re.M)
-        if n != 1:
-            raise ValueError(
-                f"estimator_placeholders: the stamp's block has no line matching {pattern!r}"
-            )
-    return out
+    return "\n".join(lines)
 
 
 def count_placeholders(text: str) -> str:
@@ -798,17 +845,18 @@ def stamp_area(
         tmpl = tmpl.replace('cost = "<seconds | minutes | hours>"', f'cost = "{cost}"')
     # the instrument, as data in the head (standard 0.20): stamped with the
     # value, never left as a placeholder
-    tmpl = tmpl.replace(
-        'instrument = "<model | estimator | count>"', f'instrument = "{instrument}"'
+    tmpl = promise_block_for(
+        tmpl.replace(
+            'instrument = "<model | estimator | count>"',
+            f'instrument = "{instrument}"',
+        ),
+        instrument,
     )
     # the cut reads the tagged template; every written protocol is free of
     # the markers (`_untag` in the cuts)
     pilot, blocks = pilot_and_report(tmpl, instrument)
     if quick:
-        pilot, blocks = (
-            seconds_cut(quick_block(tmpl, instrument == "model"), instrument),
-            [],
-        )
+        pilot, blocks = seconds_cut(tmpl, instrument), []
         if instrument == "count":
             pilot = count_placeholders(pilot)
     elif instrument == "estimator":

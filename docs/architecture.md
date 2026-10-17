@@ -100,7 +100,8 @@ evidence** (warns), **agent audit** (semantic).
 | Did a run start on LABKIT_UNFROZEN=1? | `runs.acknowledged_unfrozen`; protocol-fill marks the answer line, finalize warns, report-check refuses |
 | Were report fields written before any run? | `protocol_check.written_before_run` (`BEFORE_RUN_CLAIMS`) |
 | Does a sentence or the scope name a registered constant? | `promises.unmentioned_constants` (`promises.scope_sources` resolves a scope, shared with `declared_scope_sha`) |
-| Which skeleton does an area get — model, estimator or count? | `scaffold.stamp_scripts` (by `--model` and `--cost`); the protocol's model-shaped fields by `scaffold.estimator_placeholders` / `count_placeholders` |
+| Which skeleton does an area get — model, estimator or count? | `scaffold.stamp_scripts` (by `scaffold.instrument_of`); the fields an instrument owes by the template's tags (`scaffold.for_instrument`, held to `protocol_check.in_instrument`); the wording of the shared fields by `scaffold.estimator_placeholders` / `count_placeholders` |
+| Which promise tables does a stamped protocol carry? | `scaffold.PROMISE_TABLES` per instrument, written by `scaffold.promise_block_for` into the template's marker line; a count carries none |
 | Which rules exist, what do they say, and does a reference name one? | `rules.load_registry`, `rules.rule_heads`, `rules.check_registry`, `rules.check_ledger`, `rules.check_refs`, `rules.rule_text` (`labkit/docs/standard.md`, `labkit/docs/rules.tsv`) |
 
 A second answer to any of these questions is drift: move the caller to the

@@ -451,10 +451,6 @@ class Exp(unittest.TestCase):
         self.assertNotIn("null_band_items", proto)
         self.assertIn("permuted-label lane", proto)
         self.assertIn('instrument = "estimator"', proto)
-        # protocol-check reads the stamp as a clean pilot with placeholders only
-        self.assertEqual(
-            scaffold.estimator_placeholders.__name__, "estimator_placeholders"
-        )
 
     def test_the_stamped_estimator_formula_holds_the_contract(self) -> None:
         """The stamped `evaluate_rows` runs without any estimator library:
