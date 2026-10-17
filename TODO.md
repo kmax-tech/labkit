@@ -498,6 +498,63 @@ sieht das niemand.
   verweigert, ohne Marke nicht; eine geänderte Notiz mit fremder Run-ID
   zieht `finalize` genau einmal.
 
+- **`--report` erklärt einen Wald mit Seed für deterministisch (2026-10-17).**
+  Labor `labkit-paper`, Bereich 09, Sonnet-Runde v2, Versuch `t5` (Protokoll
+  `p-233d6d06bdd5422e`): „Randomness controls“ und „Noise ceiling →
+  threshold“ tragen den Vermerk „auto-filled by --report“ mit „deterministic,
+  no model: no seed, no temperature, one run“ und „repetition spread 0“.
+  Dasselbe Protokoll nennt unter „Free knobs“ seed 0 für Wald, Folds und
+  Permutation, und die v3-Runde misst auf denselben 44 Chemikalien eine
+  Streuung der Null-AUC von 0.116 über zehn Seeds. labkit hat also eine
+  falsche Aussage in genau das Feld geschrieben, das diese Streuung
+  festhalten soll. Ursache: `scaffold.DETERMINISTIC_NA` (`scaffold.py:409`)
+  füllt drei Felder, sobald `protocol_check.model_named` kein Modell findet;
+  „kein Sprachmodell“ wird zu „keine Zufallsquelle“. Ein Schätzer mit Seed,
+  ein Fold-Shuffle und eine Permutation sind Zufallsquellen. Kandidat, Stufe
+  guaranteed: ohne Modell füllt `--report` nur „Parser cases harvested“ vor;
+  „Randomness controls“ und „Noise ceiling“ bleiben geschuldet. v3 hat beide
+  Felder von Hand richtig gefüllt (Seeds, Spread über Seeds). **Auslöser:**
+  der nächste `labkit-init --report` auf einem Bereich ohne Modell, oder
+  dieser Eintrag beim nächsten Release. **Prüfstelle:** Zwillingstest in
+  `tests/` für `--report`: ohne Modell bleibt „Randomness controls“ ein
+  Platzhalter, „Parser cases harvested“ wird gefüllt; mit Modell unverändert.
+
+- **Die registrierte Zahl war vor dem Freeze bekannt (2026-10-17).** Sonnet-
+  Runde v3, Versuche `t3` (`p-6b594f6a815b4d40`) und `t5`
+  (`p-102a187cacd44561`): beide eingefroren, gestempelt, bis `report-check`
+  gegangen, und beide schreiben selbst, dass die registrierte Lane vorher auf
+  allen Items gerechnet wurde. t3: Seeds 1–5 „ad hoc, ohne runlog“ mit
+  CV-R² 0.910–0.916, danach eingefroren, gemessen 0.9116 („not blind
+  predictions“). t5: zehn Seeds beider Lanes als „instrument check“, AUC
+  0.93–0.96, dann eingefroren („the pass is not independent“). Der Freeze
+  schützt dann nichts mehr; die Offenlegung steht in Freitext unter
+  „Randomness controls“ und „Outcome“, kein Feld fragt danach, kein
+  Prüfpunkt im Audit-Prompt. labkit sieht einen direkten Aufruf von
+  `measure()` nicht; `--probe` ist für einen Wegwerfausschnitt gedacht, nicht
+  für die volle Messung ohne Run-ID. t18 derselben Runde hat es richtig
+  gemacht: Banden nur an der Null-Lane kalibriert, die registrierte Lane nur
+  im reduzierten Probe. Kandidaten, Stufe Doktrin und Audit: (a) der
+  Feldführer zu „Noise ceiling → threshold“ und „Instrument check“ sagt,
+  dass Banden an der Null-Lane oder an einem Ausschnitt kalibriert werden,
+  nie an der registrierten Lane auf allen Items; (b) der Preflight-Audit
+  fragt: „Wurde die registrierte Zahl vor dem Freeze gesehen?“; (c) die
+  Vorlage trägt ein Feld dafür, damit die Antwort nicht in „Randomness
+  controls“ versteckt steht. Dazu aus denselben Runden, kleiner:
+  `protocol-fill --from-run` trägt `unfrozen_ack` aus `config.json` nicht in
+  die Antwortzeile (v2 t5 schreibt die Bestätigung von Hand unter
+  „Deviations after freeze“, ein Feld für etwas anderes; gehört zu Lücke 2
+  oben); die Vorlage ist LLM-förmig und kostet jedem ML-Versuch Turns für
+  „Prompt“, Render check, Parser cases, bei Haiku mit Vorlagenresten in den
+  Konstanten (`margin`, `max_empty`, `null_band_items` unter Sätzen, die sie
+  nicht nennen; mechanisch prüfbar: Konstante weder im Satz noch im Scope);
+  t18 schließt in v2 und v3 nicht ab (kein Run, kein Freeze, 81 Gitterpunkte
+  × 5 Folds × 3 Konfigurationen × 2 Lanes gegen eine Stunde Timebox; Ursache
+  nur im Trace). **Auslöser:** die Auswertung der Pilotrunden fürs Paper,
+  oder der nächste Schnitt am Feldführer. **Prüfstelle:** ein Protokoll mit
+  Offenlegung unter „Randomness controls“ bekommt vom Audit den Befund; eines
+  ohne Vorab-Blick nicht (Zwilling); `--from-run` auf einem Lauf mit
+  `unfrozen_ack = true` schreibt die Marke in die Antwortzeile.
+
 - **Grundschicht aus der Literatur (2026-10-15).** Die Narbentabelle hält,
   was im Haus passiert ist; Fehler, die anderswo belegt sind, fängt sie
   zufällig. Abschnitt 8 des Standards trägt jetzt die Grundschicht (31
