@@ -486,7 +486,7 @@ def area_running(area: Path) -> list[Running]:
 
 
 def audit_stops(
-    area: Path, alive: Callable[[object, object], bool | None] = is_alive
+    area: Path, alive: Callable[[object, object], bool | None] | None = None
 ) -> list[str]:
     """Why no FULL run may start in AREA whatever the acknowledgement says —
     one line each, in the order omx' review table combines verdicts: an open
@@ -494,7 +494,7 @@ def audit_stops(
     (a marker whose pid is dead, or the newest record of a mode unavailable);
     then an audit still running (a marker with a live pid: wait). Open
     WARNINGs are no stop — `open_warnings` lists them for the acknowledgement
-    line. ALIVE is `runs.is_alive` (pid, script) → True / False / None;
+    line. ALIVE defaults to `runs.is_alive` (pid, script) → True / False / None;
     None (undecidable: no `ps`) counts as not known to run, so the marker
     reads as an audit that died — loud, and a rerun resolves it. Empty when
     nothing stands in the way, including an area without `audits/` (the pilot
@@ -503,6 +503,7 @@ def audit_stops(
     Raises:
         FindingsError: A record or marker of AREA cannot be read.
     """
+    alive = is_alive if alive is None else alive  # resolved here: tests fake it
     out = []
     records = area_records(area)
     for r in records:

@@ -833,7 +833,12 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
 # text, which a long session forgets. Hence a refusal in the one place every
 # run passes through, before mkdir. Escape hatch for a long PILOT:
 # LABKIT_UNFROZEN=1 — the acknowledgement is recorded in config.json so the
-# number carries it. The gate follows the cost tier: at `cost = "seconds"`
+# number carries it. It passes a missing freeze and a missing audit, never
+# the area's audits themselves: an open BLOCKER in any record, an audit
+# that got no result, an audit still running (`findings.audit_stops`) refuse
+# the full run whatever the variable says — a pilot over an unread BLOCKER
+# is not a pilot (labkit-paper area 09, haiku t3, 2026-10-16; author's
+# decision 2026-10-17: fail loud). The gate follows the cost tier: at `cost = "seconds"`
 # the run is rerunnable at will, so the freeze protects nothing — what a
 # full run needs there is the registration, written before the number
 # (LAB-003 No run without an intent paragraph); an instrument change after it is a commit and a rerun, not a
@@ -874,6 +879,22 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
         out.append(f"{path.name}: not `frozen = true`")
     out += _audit_line_findings(base_dir, path, head.preflight_audit)
     return out
+
+
+def _audit_stops(base_dir: Path, bound: _Bound) -> list[str]:
+    """Why no FULL run may start whatever LABKIT_UNFROZEN says — the area's
+    audits as `findings.audit_stops` reads them: an open BLOCKER in any
+    record, the newest record of a mode without a result, a marker of an
+    audit that died, a marker of one still running (wait). Empty at `cost =
+    "seconds"`: there the gate is the registration and the audit is owed at
+    promotion (LAB-017 The number of audits follows the cost tier). A record
+    nobody can read is a stop too, never "no findings" (CODE-001)."""
+    if bound.head is not None and bound.head.cost == "seconds":
+        return []
+    try:
+        return findings.audit_stops(base_dir)
+    except findings.FindingsError as exc:
+        return [f"{exc} — a findings file nobody can read is not 'no findings'"]
 
 
 def _audit_line_findings(base_dir: Path, path: Path, line: str) -> list[str]:
@@ -1118,21 +1139,32 @@ class Run:
         # is a refusal, not a run with a warning (2026-10-05).
         self._unfrozen_ack = False
         if long:
-            findings = _freeze_findings(base_dir, bound)
+            stops = _audit_stops(base_dir, bound)
+            if stops:  # no acknowledgement passes these
+                raise SystemExit(
+                    "runlog: this run declares long=True (a full run), and the "
+                    "area's audits stand in its way — LABKIT_UNFROZEN=1 does not "
+                    "pass this:\n  "
+                    + "\n  ".join(stops)
+                    + "\nA probe (long=False) runs; decide the findings or rerun "
+                    "the audit, then start again."
+                )
+            freeze_gaps = _freeze_findings(base_dir, bound)
             if (
-                findings and os.environ.get("LABKIT_UNFROZEN") == "1"
+                freeze_gaps and os.environ.get("LABKIT_UNFROZEN") == "1"
             ):  # "0" is no acknowledgement
                 self._unfrozen_ack = True
+                open_warnings = findings.open_warnings(base_dir)
                 print(
                     "runlog: WARNING — LABKIT_UNFROZEN=1: full run on an "
                     "unfrozen protocol, acknowledged; recorded in config.json:\n  "
-                    + "\n  ".join(findings)
+                    + "\n  ".join(freeze_gaps + open_warnings)
                 )
-            elif findings:
+            elif freeze_gaps:
                 raise SystemExit(
                     "runlog: this run declares long=True (a full run), but its "
                     "protocol is not ready for one:\n  "
-                    + "\n  ".join(findings)
+                    + "\n  ".join(freeze_gaps)
                     + "\nPilot it with long=False, or freeze first: `preflight "
                     "<AREA>` clean, audit stamped, `frozen = true` "
                     '(at cost = "seconds": the question written suffices, with a model also criterion and admissibility condition). A '
