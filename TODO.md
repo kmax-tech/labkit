@@ -37,6 +37,7 @@ kein Ziel.
 | R | Rollout in einem Release: die Pins der Labor- und Thesis-Repos heben, Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus) | **Kern erledigt 2026-10-12 (Tag `v0.85.0` auf GitHub):** die vier aktiven Labor-Repos auf dem Tag, je ein Commit; Reste unter Punkt 5, „Zeile R“ |
 | Tokenkosten | messen statt schätzen — `llm.last_usage()`, `labkit-audit` druckt Prompt- und Output-Tokens, `agent_transcript.tokens` liest die Usage-Blöcke der Claude-Code-Transkripte (0.81.0, 2026-10-11) | **erledigt 2026-10-11.** Auslöser: 30 Transkripte (labkit, uniagent) summieren 7 Mrd. Cache-Read-Tokens, die alten Subagenten-Audits je 3,65 Mio., und keine labkit-Zeile sagte, was ein Aufruf kostet. Pilot `labkit-paper` Bereich 04 (`audit-on-reachable-code-holds`, Lauf `2026-10-11T14-00-57_071a`): die direkten Importe auf erreichbaren Code zu kürzen spart 0–16 % des Prompts (Median 8 % über 24 uniagent-Bereiche) — **an der Renderprobe gestoppt, kein Modellaufruf; LAB-103 The audit reads by declared scope, not by import graph bleibt.** Der Prompt ist groß, weil die Zahl fast den ganzen Agenten braucht (Bereich 19: 142 von 155 kB Importe erreicht), nicht wegen ungenutztem Code; Fixkosten je Audit ~69 kB (Instruktionen 9, zitierte Regeln 19, Protokoll 26, Index 15). Ein kleinerer Audit bräuchte eine andere Frage (Audit je Versprechen über seinen deklarierten Scope), kein Schnitt. Die Hauptsitzungen (Median 400–500 k Kontext je Aufruf) sind Sitzungshygiene, keine labkit-Aufgabe. |
 | P | Pilotrunden 2026-10-16 (Haiku-Runde v1, Sonnet-Runden v2 ohne und v3 mit Opus-Auditor, Labor `labkit-paper` Bereich 09): Plan „Kein stiller Ausweg“ unten — A Marke und Verweigerung · B Berichtsfelder vor dem Lauf · C Vorlage ohne Modell · D Doktrin zum Vorab-Blick | **geplant 2026-10-17**; A1, A1b, V1, A2, A3, B1, C1, C3 und C2 gebaut 2026-10-17 (Branch `claude/zealous-davinci-3hbhvk`, Release beim Autor); D1, D2 und E (j) am selben Tag (Version bleibt 0.19); offen: der Benchmark-Fall zu D2 im Labor, A4 zurückgestellt, die zweite Hälfte von (j) |
+| I | Das Instrument als Datum im Kopf: `instrument = "model" | "estimator" | "count"` — eine Registrierung statt sechs Ableitungen aus Prosa und Schaltern; Felder, Skelett, Promise-Block, Gates und Audit folgen daraus (Plan unten). Breaking: Kopfformat, Standard 0.19 → 0.20 | **geplant 2026-10-17**, nächster Schritt I1; Release zusammen mit den wartenden Brüchen (`notes_check` nach LOCAL, LOCAL-073, CLI-Dach) |
 
 **1a gebaut (2026-10-06):** `labkit/promises.py` ist die eine Heimat des
 Alphabets (C/A/B plus Altbuchstaben K/S/W/N in Prosa) und des
@@ -127,6 +128,53 @@ früher gerechnet, träfe A1b statt A1. Sonnet an Bulk-Modulus und Signal-Inhibi
 nachgeholt sind; die Zahl bleibt als Pilotzahl lesbar. Sonnet an Leberschaden (DILI, t18) — B1
 warnt bei `preflight`, bevor „Did“ einen Lauf behauptet, den es nicht
 gibt.
+
+## Plan 2026-10-17 (II): Das Instrument als Datum im Kopf
+
+**Befund in einem Satz:** Die Art eines Experiments — was die Antwort einer
+Zeile erzeugt und woran das Kriterium hängt — ist die eine Registrierung,
+die noch Prosa und Schalter ist, obwohl `docs/promise-block.md` die
+Registrierung als Daten verlangt. Heute wird sie an sechs Stellen
+abgeleitet: beim Stempeln aus `--cost` und `--model` (`scaffold.stamp_area`,
+`stamp_scripts`, `next_steps`, `area_readme`); in `protocol_check` aus dem
+Prosatext des Feldes „Model / tool“ (`_model_named` → `_in_cut`, `owed`,
+`open_holes`, `unreported`); in `scaffold.auto_fill_deterministic` aus
+derselben Lesung; in `seconds_cut`/`quick_block` als `model: bool`; seit
+heute in `estimator_placeholders` als n/a-Füllung modellgebundener Felder;
+in `finalize.model_provenance_gap` aus den Metriken (`llm_retries`,
+`model_calls`). Drei Arten kommen vor: **model** (Prompt, Parser, Lanes
+aus Fragen), **estimator** (fit, predict, permutierte Null-Lane),
+**count** (deterministisch, keine Hürde). Mischformen: das Instrument ist,
+was die Antwort der Zeile erzeugt; ein Modell, das Merkmale rendert, gehört
+in den Vorbereitungsschritt (Regeln dafür stehen in der Prepare-Vorlage).
+Eine vierte Art bekommt ihren Namen, wenn sie auftaucht.
+
+**Entscheidung (2026-10-17):** ein Kopfschlüssel `instrument`, Pflicht,
+drei Werte, kein Rückfall auf Ableitung — ein Protokoll ohne ihn wird
+abgewiesen (Leitsatz „Altlasten“). Das Kopfformat ist, was die
+Standardnummer benennt: Standard 0.19 → 0.20, `protocol_block.STANDARD`
+zieht mit, jedes Protokoll in jedem Labor-Repo trägt beim Pin-Heben zwei
+neue Zeilen (`standard = "0.20"`, `instrument = "…"`), geschrieben mit
+`protocol-fill <P> "instrument=model"` wie heute `type=`. Ein Breaking-Release
+mit den wartenden Brüchen. Jeder Schritt ein Commit, Zwillingstest, die vier
+Prüfungen grün.
+
+| Schritt | Inhalt | Stufe | Prüfstelle |
+|---|---|---|---|
+| I1 | **Der Schlüssel.** `protocol_block`: `INSTRUMENTS = ("model", "estimator", "count")`, `instrument` in `PROTOCOL_HEAD_KEYS`, `Head.instrument` (None bei Platzhalter, in `Head.placeholders`), `_choice` wie bei `type`; `STANDARD = "0.20"`; Vorlage stempelt `instrument = "<model | estimator | count>"`; `protocol-fill` schreibt den Kopfwert (`fill_head_type` wird `fill_head_choice(key)`). Doku: Kopfbeispiele in `docs/promise-block.md`, `docs/protocol-run-binding.md`, Modul-Docstring; `standard.md` Versionszeile und Changes-Eintrag. Tests: `protocol_fixture.head(instrument=…)` und die fünf Testdateien mit Roh-Köpfen (`test_protocol_fill`, `test_protocol_reading`, `test_repo_check`, `test_runlog_freeze_gate`, die Fixture). | guaranteed | fehlender Schlüssel → `BlockError` nennt ihn; unbekannter Wert → `BlockError` mit den drei Werten; Platzhalter → `Head.placeholders` nennt `instrument`; ein Protokoll mit `standard = "0.19"` wird mit dem Release-Hinweis abgewiesen (Zwilling: 0.20 liest) |
+| I2 | **Stempeln nach Instrument.** `labkit-init exp` bekommt `--instrument model\|estimator\|count`; ohne Angabe die heutige Ableitung (`--model` ⇒ model; seconds ohne Modell ⇒ count; sonst estimator), `--model ALIAS` bleibt der Alias. `stamp_scripts`, `stamp_area`, `next_steps`, `area_readme`, `usability` verzweigen auf das Instrument, nicht auf `quick and not model`; der Kopf wird mit dem Wert gestempelt, kein Platzhalter. | guaranteed | drei Stempel, je Skelett, je Kopfwert; `--instrument count --cost minutes` wird abgewiesen (eine Zählung ist seconds) |
+| I3 | **Ein Schnitt je Instrument in der einen Vorlage.** Zwei Achsen statt der Markierung `<!-- sm -->`: Kosten (`<!-- s -->` wie heute) und Instrument (`<!-- m -->` nur mit Modell, `<!-- me -->` Modell und Schätzer; unmarkiert = alle drei). Modell: Prompt, Render check, Parser cases, Raw output, Gate labels, Model I/O; Modell und Schätzer: Null condition, Randomness controls, Noise ceiling, Instrument check; alle: Terms, Question, Data, Exclusions, Unit, Result, Answer, Runs, Limits, Next step. `protocol_check.Field` trägt `instruments` statt `seconds == "sm"`; `_in_cut`, `owed`, `open_holes`, `unreported`, `auto_fill_deterministic` lesen `head.instrument`; `_model_named` fällt (die eine Prosa-Lesung weniger). `estimator_placeholders` schrumpft auf den Satz in „Model / tool“; die n/a-Zeilen verschwinden, weil die Felder nicht gestempelt werden. | guaranteed | je Instrument die geschuldeten Felder als Tabelle im Test; ein Estimator-Protokoll ohne Prompt-Feld ist sauber, ein Modell-Protokoll ohne hat eine Must-Lücke; `--report` füllt bei model nichts, bei estimator nur das Parser-Feld, bei count Parser und Randomness |
+| I4 | **Promise-Block je Instrument, eine Heimat.** `quick_block` (count: keine Tabellen) wird `promise_block_for(instrument)`: model → `margin`, `max_empty`, `null_band_items` mit den Lane-Sätzen; estimator → `margin`, `max_empty`, `null_band` mit den Score-Sätzen; count → keine. Die Regex-Umschreibung `ESTIMATOR_PROMISES` fällt. | guaranteed | der gestempelte Block je Instrument parst (`promises.parse_block`), `unmentioned_constants` ist still, das gestempelte Skelett liest seine Konstanten (`all_constants`) |
+| I5 | **Gates lesen das Datum.** runlog zeichnet `instrument` in `config.json` auf (neben `cost_tier`); `finalize.model_provenance_gap` hält `instrument = "model"` an `models_resolved` (ein Modell-Protokoll, dessen Lauf kein Modell aufzeichnet, ist der Befund; heute ein Schluss aus `llm_retries`) und ist bei estimator/count still; `labkit-audit` nennt dem Auditor das Instrument, damit der Instrument-Check erwartet wird, den es gibt (Prompt-Paar gegen reduzierten Schätzer); `intent-check` unverändert. | guaranteed | Zwilling je Instrument: Modell-Lauf ohne `models_resolved` → Warnung; Estimator-Lauf ohne → still; `config.json` trägt den Wert |
+| I6 | **Doku.** README: Begriff **instrument** in der Begriffstabelle (die Dreiheit; `estimator` verweist darauf), `labkit-init`-Zeile; Feldführer: je Feld, für welche Instrumente es gilt; AGENTS-Vorlage: Schritt 1 nennt das Instrument; `docs/architecture.md`: Heimat-Zeile „Welches Instrument hat ein Protokoll?“ → `protocol_block.Head.instrument`; CHANGELOG „Breaking“ mit der letzten Version, die 0.19 liest. | Doktrin | `rules check` sauber, Architektur-Test grün, `usability stage` stempelt die drei Proben |
+
+**Nicht im Plan:** ein Rückfall für Protokolle ohne den Schlüssel (alte
+Protokolle werden mit ihrer gepinnten Version gelesen); ein viertes
+Instrument; das CLI-Dach (eigener Eintrag, dasselbe Release). **Auslöser:**
+entschieden 2026-10-17, nächster Schritt nach Plan P. **Prüfstelle für das
+Ganze:** die drei Usability-Proben (count bei seconds, model, estimator)
+laufen auf dem Stempel bis `report-check`, ohne eine n/a-Zeile und ohne
+eine Ableitung aus Prosa im Code (`grep _model_named` findet nichts).
 
 ## Audit 2026-10-15: Fehler zuerst, dann die zweiten Heimaten
 
