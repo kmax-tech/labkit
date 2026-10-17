@@ -139,6 +139,16 @@ class RunConfigError(ValueError):
     """A run directory whose config.json exists but cannot be read."""
 
 
+def acknowledged_unfrozen(run_dir: Path) -> bool:
+    """Did RUN_DIR start on LABKIT_UNFROZEN=1 (`unfrozen_ack` in its
+    config.json)? The one reading: protocol-fill marks the answer line with
+    it, finalize warns, report-check refuses (2026-10-17). False for a run
+    without config.json; an unreadable one raises RunConfigError.
+    """
+    cfg = read_run_config(run_dir)
+    return cfg is not None and cfg.get("unfrozen_ack") is True
+
+
 def read_run_config(run_dir: Path) -> dict | None:
     """A run's metadata, None when the directory has no config.json.
 

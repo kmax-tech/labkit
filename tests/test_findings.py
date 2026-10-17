@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from labkit import findings
+from findings_fixture import set_status
 
 TWO = [
     ("BLOCKER", "BLOCKER · a.py:1 · x · y · LAB-038 What the prompt demands · z"),
@@ -32,19 +33,6 @@ def area_with(
             now=1_700_000_000 + 60 * i,
         )
     return area
-
-
-def set_status(path: Path, n: int, status: str, reason: str = "") -> None:
-    """Edit the n-th finding the way the person does: status and reason."""
-    text = path.read_text(encoding="utf-8")
-    parts = text.split("[[finding]]")
-    block = (
-        parts[n]
-        .replace('status = "open"', f'status = "{status}"')
-        .replace('reason = ""', f'reason = "{reason}"')
-    )
-    parts[n] = block
-    path.write_text("[[finding]]".join(parts), encoding="utf-8")
 
 
 class WriteRead(unittest.TestCase):

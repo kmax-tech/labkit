@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from findings_fixture import decide  # noqa: E402
 from labkit import findings, report_check  # noqa: E402
 from labkit.finalize import unfrozen_run_warning  # noqa: E402
 from protocol_fixture import PID  # noqa: E402
@@ -31,16 +32,6 @@ WARNING = (
     "WARNING",
     "WARNING · scripts/01_measure.py:3 · x · y · LAB-019 The stamp covers everything · z",
 )
-
-
-def decide(path: Path, status: str, reason: str = "seen and kept") -> None:
-    text = path.read_text(encoding="utf-8")
-    path.write_text(
-        text.replace('status = "open"', f'status = "{status}"', 1).replace(
-            'reason = ""', f'reason = "{reason}"', 1
-        ),
-        encoding="utf-8",
-    )
 
 
 def acknowledge(run: Path) -> None:

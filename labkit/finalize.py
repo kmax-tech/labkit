@@ -67,6 +67,7 @@ from labkit.gate import Findings
 from labkit.runs import (
     RUN_ID,
     RunConfigError,
+    acknowledged_unfrozen,
     bound_answering_run,
     model_provenance_run,
     read_metrics,
@@ -738,7 +739,9 @@ def check_audit_records(findings: Findings, area: Path) -> None:
     the haiku-t3 case (labkit-paper area 09, 2026-10-16: the BLOCKER lay in
     `audits/`, no gate after runlog read it). An open WARNING is a warning.
     `findings.audit_stops` is the one reading; runlog's gate and preflight
-    read the same (CODE-004 One home per piece of logic)."""
+    read the same (CODE-004 One home per piece of logic). At every tier:
+    runlog spares a run at `cost = "seconds"` (rerunnable at will), the
+    number written back is not — an open BLOCKER stops it here too."""
     try:
         records = audit_findings.area_records(area)
         stops = audit_findings.audit_stops(area)
@@ -764,11 +767,10 @@ def unfrozen_run_warning(run: Path) -> str | None:
     warns — the number stays readable as a pilot's; report-check refuses it
     as the reported number (`report_check.unfrozen_run_gap`)."""
     try:
-        cfg = read_run_config(run)
+        if not acknowledged_unfrozen(run):
+            return None
     except RunConfigError as exc:
         return str(exc)
-    if cfg is None or cfg.get("unfrozen_ack") is not True:
-        return None
     return (
         f"answering run {run.name} started on LABKIT_UNFROZEN=1 (acknowledged "
         f"unfrozen): a pilot's number — report-check refuses it as the reported "

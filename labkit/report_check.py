@@ -52,7 +52,7 @@ from labkit.finalize import finalize_area
 from labkit.preflight import area_test_python
 from labkit.protocol_check import check_fields
 from labkit.repo import choose_protocol, layout_root
-from labkit.runs import RunConfigError, bound_answering_run, read_run_config
+from labkit.runs import RunConfigError, acknowledged_unfrozen, bound_answering_run
 from labkit.scope_sha import area_stamp
 
 #: the analysis script the area skeleton stamps; its `--check` holds the note
@@ -107,11 +107,10 @@ def unfrozen_run_gap(area: Path, pid: str | None) -> str | None:
     if choice.run_dir is None:
         return None
     try:
-        cfg = read_run_config(choice.run_dir)
+        if not acknowledged_unfrozen(choice.run_dir):
+            return None
     except RunConfigError as exc:
         return str(exc)
-    if cfg is None or cfg.get("unfrozen_ack") is not True:
-        return None
     return (
         f"the answering run {choice.run_dir.name} started on LABKIT_UNFROZEN=1 — a "
         f"reported number owes a frozen run: freeze, audit, rerun (its number "

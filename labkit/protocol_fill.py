@@ -195,8 +195,7 @@ def from_run(
     filled Answer or Result is refused without `force` (fill's rule)."""
     run = recheck.chosen_run(area, text, run_id)
     metrics = runs.read_metrics(run / "metrics.json")
-    cfg = runs.read_run_config(run) or {}
-    answer = answer_line(metrics, run.name, unfrozen=cfg.get("unfrozen_ack") is True)
+    answer = answer_line(metrics, run.name, unfrozen=runs.acknowledged_unfrozen(run))
     filled: list[str] = []
     for label in WRITTEN_BY_RUN:
         try:

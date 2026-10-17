@@ -92,6 +92,11 @@ evidence** (warns), **agent audit** (semantic).
 | Which package does a requirements line name, and how is labkit pinned? | `repo.requirement_name`, `repo.requirement_lines`, the four `*_REQUIREMENT` grammars (stamp pin line, `labkit-check`, lock parser, probe) |
 | What is a run id, when did the run start? | `runs.RUN_ID`, `runs.RUN_ID_TIME`, `runs.run_started`; `runs.COMPLETED` is the one state word every consumer compares to |
 | How does a gate tell what it found, and exit? | `gate.Findings` (`block`, `warn`, `add` for a line graded by its own word, `report`) — preflight, finalize, report-check, code-check, notes-check |
+| Is the area's audit usable — an open BLOCKER, no result, still running? | `findings.audit_stops` (`open_blocker_stops` + `no_result_stops`); runlog's freeze gate, `preflight` and `finalize` read it, `findings.open_warnings` the rest |
+| Did a run start on LABKIT_UNFROZEN=1? | `runs.acknowledged_unfrozen`; protocol-fill marks the answer line, finalize warns, report-check refuses |
+| Were report fields written before any run? | `protocol_check.written_before_run` (`BEFORE_RUN_CLAIMS`) |
+| Does a sentence or the scope name a registered constant? | `promises.unmentioned_constants` (`promises.scope_sources` resolves a scope, shared with `declared_scope_sha`) |
+| Which skeleton does an area get — model, estimator or count? | `scaffold.stamp_scripts` (by `--model` and `--cost`); the protocol's model-shaped fields by `scaffold.estimator_placeholders` / `count_placeholders` |
 | Which rules exist, what do they say, and does a reference name one? | `rules.load_registry`, `rules.rule_heads`, `rules.check_registry`, `rules.check_ledger`, `rules.check_refs`, `rules.rule_text` (`labkit/docs/standard.md`, `labkit/docs/rules.tsv`) |
 
 A second answer to any of these questions is drift: move the caller to the

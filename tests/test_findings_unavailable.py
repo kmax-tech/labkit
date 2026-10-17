@@ -14,6 +14,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from findings_fixture import decide  # noqa: E402
 from labkit import findings
 
 SHA = "abc123def456"
@@ -28,14 +29,6 @@ def area() -> Path:
     a = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
     a.mkdir(parents=True)
     return a
-
-
-def decide(path: Path, status: str, reason: str = "seen") -> None:
-    text = path.read_text(encoding="utf-8")
-    text = text.replace('status = "open"', f'status = "{status}"', 1).replace(
-        'reason = ""', f'reason = "{reason}"', 1
-    )
-    path.write_text(text, encoding="utf-8")
 
 
 class UnavailableRecord(unittest.TestCase):
