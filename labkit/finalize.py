@@ -812,14 +812,14 @@ COUNT_SCRIPT = (
 CHECK_TIMEOUT_S = 300.0
 
 
-def check_script(area: Path) -> Path | None:
-    """The script whose `--check` holds the note to the run: `02_analyze.py`
-    where the area has one (minutes/hours), else the count's `01_measure.py`
-    (seconds); None when the area has neither."""
-    for script in (ANALYZE_SCRIPT, COUNT_SCRIPT):
-        if (area / script).is_file():
-            return script
-    return None
+def check_script(area: Path, cost: str | None) -> Path | None:
+    """The script whose `--check` holds the note to the run, by tier: the
+    count's `01_measure.py` at `cost = "seconds"`, `02_analyze.py` at
+    minutes, hours and an unfilled cost; None when the area lacks it. By
+    tier, not by what exists: a minutes area without `02_analyze.py` owes
+    it, and its measure script exiting 0 proves nothing."""
+    script = COUNT_SCRIPT if cost == "seconds" else ANALYZE_SCRIPT
+    return script if (area / script).is_file() else None
 
 
 def run_check(area: Path, repo: Path, script: Path) -> str | None:
@@ -877,6 +877,7 @@ def write_back(
         return rc
     header("write-back 2/4: the number into the protocol")
     text = chosen.read_text(encoding="utf-8")
+    cost = protocol_block.head(text).cost  # readable: finalize_area read it
     try:
         run = recheck.chosen_run(area, text, run_id)
     except SystemExit as exc:
@@ -893,11 +894,10 @@ def write_back(
         chosen.write_text(new, encoding="utf-8")
         print(f"  filled from run {run.name}: {', '.join(filled) or 'nothing'}")
     header("write-back 3/4: the check")
-    script = check_script(area)
+    script = check_script(area, cost)
     if script is None:
-        print(
-            f"  no {ANALYZE_SCRIPT} and no {COUNT_SCRIPT} — the check that holds the note to the run is owed"
-        )
+        owed = COUNT_SCRIPT if cost == "seconds" else ANALYZE_SCRIPT
+        print(f"  no {owed} — the check that holds the note to the run is owed")
         return 1
     gap = run_check(area, layout_root(area), script)
     if gap:

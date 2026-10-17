@@ -44,6 +44,13 @@ def doctrine_modules() -> set[str]:
     return out
 
 
+#: the one upward import, named: `finalize --write-back` (a gate) runs
+#: `protocol_fill.from_run` (a tool) — the post-run lane as one command, the
+#: documented exception to the read-only gate (decided 2026-10-17; the lane
+#: was five commands and every pilot attempt stopped inside it). The map in
+#: docs/architecture.md says so; this set only shrinks.
+KNOWN_UPWARD = {("finalize", "protocol_fill")}
+
 #: core → doctrine imports that stand today, each a piece of doctrine inside
 #: the core, listed by name until it moves (2026-10-15). The test asks for
 #: exactly this set: a new crossing fails, and so does a removed one left
@@ -91,14 +98,17 @@ class Layers(unittest.TestCase):
         self.assertEqual([m for m in layers if m not in modules()], [])
 
     def test_imports_point_downward(self):
+        """Every import points down the layer table — except the ones named
+        in KNOWN_UPWARD, which the test asks for exactly: a new one fails, and
+        so does a removed one left standing there."""
         layers = layer_map()
-        up = [
-            f"{m} (layer {layers[m]}) imports {t} (layer {layers[t]})"
+        up = {
+            (m, t)
             for m in modules()
-            for t in sorted(imports_of(m))
+            for t in imports_of(m)
             if t in layers and layers[t] > layers[m]
-        ]
-        self.assertEqual(up, [])
+        }
+        self.assertEqual(up, KNOWN_UPWARD)
 
 
 class CoreAndDoctrine(unittest.TestCase):

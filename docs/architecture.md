@@ -33,7 +33,11 @@ the dotfiles, below); doctrine ships in labkit to every lab.
 | tools | `protocol_fill`, `scaffold`, `repo_check`, `usability`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation`, `params`, `calltree` | `protocol_fill`, `scaffold`, `usability`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation`, `calltree` | fill a protocol field; stamp a lab repo and its areas from the shipped templates; say whether a lab repo is on its pin and the pin is current (`labkit-check`); stage and score a cold-agent probe; read what an agent did from its session transcript; what every cold-reader probe shares; how a person reads a protocol; how a newcomer finds their way in code; what one run of a command actually called |
 
 `runlog` (layer 2) reads layer 1 and calls `llm` only to record resolved
-models; `endpoint_lease` asks `runs.is_alive`, not the writer.
+models; `endpoint_lease` asks `runs.is_alive`, not the writer. One named
+upward call: `finalize --write-back` (a gate) runs `protocol_fill.from_run`
+(a tool) — the post-run lane as one command, the documented exception to
+the read-only gate (decided 2026-10-17); `tests/test_architecture.py`
+holds `KNOWN_UPWARD` to exactly this pair.
 
 ## The chain
 
