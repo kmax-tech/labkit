@@ -19,7 +19,9 @@ report-check comes last and holds the whole chain:
                    tier) and the command exits 0
   1. frozen        `frozen = true`, and the freeze holds: no must gap
                    `protocol-check` names (`check_fields`) — the [[promise]]
-                   tables written, not the stamp's `<…>` sentences
+                   tables written, not the stamp's `<…>` sentences; and the
+                   answering run did not start on LABKIT_UNFROZEN=1
+                   (`unfrozen_run_gap`: a pilot's number is not the reported one)
   2. finalize      `finalize_area` clean (its output is not repeated)
   3. analysis audit  a record `audits/*-analysis.toml` whose `scope_sha` is
                    the area's stamp now, every finding decided
@@ -50,6 +52,7 @@ from labkit.finalize import finalize_area
 from labkit.preflight import area_test_python
 from labkit.protocol_check import check_fields
 from labkit.repo import choose_protocol, layout_root
+from labkit.runs import RunConfigError, bound_answering_run, read_run_config
 from labkit.scope_sha import area_stamp
 
 #: the analysis script the area skeleton stamps; its `--check` holds the note
@@ -92,6 +95,30 @@ def freeze_gaps(protocol: Path, frozen: bool) -> list[str]:
     return [f"{protocol.name}: {g}" for g in gaps]
 
 
+def unfrozen_run_gap(area: Path, pid: str | None) -> str | None:
+    """Station 1, the run's side of the freeze: the answering run started on
+    LABKIT_UNFROZEN=1 (`unfrozen_ack`) — a reported number owes a frozen,
+    audited run, the acknowledgement made it a pilot's (2026-10-17: Sonnet
+    v2 t3/t5 wrote such numbers back, the protocols never frozen). None
+    without a stamped id or a bound run (finalize names those)."""
+    if pid is None:
+        return None
+    choice = bound_answering_run(area, pid)
+    if choice.run_dir is None:
+        return None
+    try:
+        cfg = read_run_config(choice.run_dir)
+    except RunConfigError as exc:
+        return str(exc)
+    if cfg is None or cfg.get("unfrozen_ack") is not True:
+        return None
+    return (
+        f"the answering run {choice.run_dir.name} started on LABKIT_UNFROZEN=1 — a "
+        f"reported number owes a frozen run: freeze, audit, rerun (its number "
+        f"stays readable as a pilot's)"
+    )
+
+
 def later_gaps(area: Path, protocol: Path) -> list[str]:
     """Stations 2–4: finalize clean, an analysis audit of the code now, the check."""
     out: list[str] = []
@@ -128,7 +155,9 @@ def report_check(area: Path, protocol: Path | None = None) -> int:
         )
         return 0
     findings = Findings()
-    for b in freeze_gaps(chosen, head.frozen) + later_gaps(area, chosen):
+    unfrozen = unfrozen_run_gap(area, head.id)
+    gaps = freeze_gaps(chosen, head.frozen) + ([unfrozen] if unfrozen else [])
+    for b in gaps + later_gaps(area, chosen):
         findings.block(b)
     if not findings.blocked:
         print(f"  {chosen.name}: frozen, finalized, audited, checked")

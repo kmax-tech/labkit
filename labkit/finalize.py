@@ -19,6 +19,12 @@ each step's condition):
                     JSONL rows come from this run, the runs it continues or
                     its derived_from lineage (blocker), a model record stands
                     in its lineage (warning), the arm lines match (warning)
+  1b. audits        the area's audits as data (`findings.audit_stops`, the
+                    reading runlog's gate and preflight share): an open
+                    BLOCKER in any record, an audit without a result or
+                    still running — blockers; an open WARNING — a warning;
+                    the answering run started on LABKIT_UNFROZEN=1 — a
+                    warning here, a blocker in report-check (2026-10-17)
   2. intent-check   every registered promise has a metrics key (and vice
                     versa); skipped when the protocol registers no id
   3. declared scopes  every declared promise scope unchanged since the run
@@ -56,6 +62,7 @@ import re
 from pathlib import Path
 
 from labkit import batch, console, promises, protocol_block
+from labkit import findings as audit_findings
 from labkit.gate import Findings
 from labkit.runs import (
     RUN_ID,
@@ -647,6 +654,8 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
     1. completion — choose the measurement run the later steps examine
        (`measurement_run`); none bound is a blocker, and steps 3, 5 and 7
        then skip.
+    1b. audits — always; with a measurement run also whether it started
+       on LABKIT_UNFROZEN=1 (a warning: a pilot's number).
     2. intent-check — always; with a measurement run it reads its metrics.
     3. declared scopes — only with a run.
     4. open fields — always; warnings only: protocol placeholders and
@@ -673,6 +682,14 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
     # 1. completion — the run every later step examines
     header(f"completion: {chosen.name}")
     measurement_run = check_completion(findings, area, text, head.id)
+
+    # 1b. audits — always; the run's acknowledgement with a run
+    header("audits")
+    check_audit_records(findings, area)
+    if measurement_run is not None:
+        unfrozen = unfrozen_run_warning(measurement_run)
+        if unfrozen:
+            findings.warn(unfrozen)
 
     # 2. intent-check — always
     header("intent-check")
@@ -712,6 +729,51 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
         check_criterion_n(findings, measurement_run)
 
     return report(findings)  # 1 if any step found a blocker, else 0
+
+
+def check_audit_records(findings: Findings, area: Path) -> None:
+    """Station 1b: the area's audits as data. An open BLOCKER in any record,
+    an audit without a result (unavailable, died) or one still running is a
+    blocker — a number written back over an undecided or missing audit is
+    the haiku-t3 case (labkit-paper area 09, 2026-10-16: the BLOCKER lay in
+    `audits/`, no gate after runlog read it). An open WARNING is a warning.
+    `findings.audit_stops` is the one reading; runlog's gate and preflight
+    read the same (CODE-004 One home per piece of logic)."""
+    try:
+        records = audit_findings.area_records(area)
+        stops = audit_findings.audit_stops(area)
+        warnings = audit_findings.open_warnings(area)
+    except audit_findings.FindingsError as exc:
+        findings.block(f"{exc} — a findings file nobody can read is not 'no findings'")
+        return
+    for line in stops:
+        findings.block(line)
+    for line in warnings:
+        findings.warn(line)
+    if not stops and not warnings:
+        print(
+            f"  {len(records)} audit(s) recorded, nothing open"
+            if records
+            else "  none recorded"
+        )
+
+
+def unfrozen_run_warning(run: Path) -> str | None:
+    """The line when RUN started on LABKIT_UNFROZEN=1 (`unfrozen_ack` in its
+    config.json), None otherwise or when the run has no config. finalize
+    warns — the number stays readable as a pilot's; report-check refuses it
+    as the reported number (`report_check.unfrozen_run_gap`)."""
+    try:
+        cfg = read_run_config(run)
+    except RunConfigError as exc:
+        return str(exc)
+    if cfg is None or cfg.get("unfrozen_ack") is not True:
+        return None
+    return (
+        f"answering run {run.name} started on LABKIT_UNFROZEN=1 (acknowledged "
+        f"unfrozen): a pilot's number — report-check refuses it as the reported "
+        f"number until a frozen, audited run answers"
+    )
 
 
 def cited_runs(text: str) -> list[str]:
