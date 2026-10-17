@@ -518,6 +518,12 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
     if args.mode == CLARITY:
         return _clarity(args)
+    # The marker an audit leaves between its stamp and its record: a full run
+    # waits on it while this process lives and is refused once it is dead
+    # without a record (findings.audit_stops). Set once the stamp exists —
+    # an audit that cannot even read its area has not started.
+    marker: Path | None = None
+    stamp: Stamp | None = None
     try:
         protocol, code, standard, indexed = gather(args.area, args.protocol)
         for line in early_for_tier(args.area, protocol, args.mode):
@@ -533,6 +539,7 @@ def main(argv: list[str]) -> int:
             f"{args.model} · {len(prompt) // 1000} kB",
             file=sys.stderr,
         )
+        marker = findings.mark_running(args.area, args.mode, args.model, stamp.sha)
         report = llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=4096)
         print(f"labkit-audit: tokens · {llm.last_usage().describe()}", file=sys.stderr)
         result = parse(report)
@@ -546,7 +553,10 @@ def main(argv: list[str]) -> int:
     ) as exc:
         # KeyError: llm.resolve on an alias models.toml does not know;
         # FileNotFoundError, ValueError: the area cannot be stamped
-        print(f"labkit-audit: {str(exc).strip(chr(39))}", file=sys.stderr)
+        reason = str(exc).strip(chr(39))
+        print(f"labkit-audit: {reason}", file=sys.stderr)
+        if marker is not None and stamp is not None:  # the call was started
+            _no_result(args, stamp, marker, reason)
         return 2
     print(report)
     if args.out:
@@ -563,7 +573,9 @@ def main(argv: list[str]) -> int:
         )
     except ValueError as exc:  # the verdict counts findings the lines do not carry
         print(f"labkit-audit: {exc}", file=sys.stderr)
+        _no_result(args, stamp, marker, f"report not readable as findings: {exc}")
         return 2
+    marker.unlink(missing_ok=True)  # the record replaces the marker
     print(f"\nstamp: {stamp_facts(stamp, result['verdict'])}", file=sys.stderr)
     now = area_stamp(args.area)[0]
     if now != stamp.sha:
@@ -595,6 +607,26 @@ def main(argv: list[str]) -> int:
             file=sys.stderr,
         )
     return 1 if b or w else 0
+
+
+def _no_result(
+    args: argparse.Namespace, stamp: Stamp, marker: Path, reason: str
+) -> None:
+    """The audit started and got no result: record it as `unavailable` with
+    REASON and the stamp it would have read, and take the marker away (the
+    record replaces it). An audit that did not run is not passed — a full
+    run is refused on this record until a rerun gets a result
+    (`findings.audit_stops`; haiku t3, 2026-10-16, read a killed call as
+    "the audit failed" and ran on)."""
+    recorded = findings.write_unavailable(
+        args.area, args.mode, args.model, stamp.sha, reason
+    )
+    marker.unlink(missing_ok=True)
+    print(
+        f"labkit-audit: NO RESULT — recorded {recorded}; a full run is refused "
+        f"until `labkit-audit {args.area} --mode {args.mode}` gets one",
+        file=sys.stderr,
+    )
 
 
 def _clarity(args: argparse.Namespace) -> int:

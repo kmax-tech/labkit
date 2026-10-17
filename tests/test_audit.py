@@ -351,12 +351,22 @@ class Audit(unittest.TestCase):
         record = next((area / "audits").glob("*-preflight.toml")).read_text()
         self.assertEqual(record.count("[[finding]]"), 2)
 
-    def test_a_verdict_without_readable_findings_records_nothing(self):
+    def test_a_verdict_without_readable_findings_records_no_result(self):
+        """A record whose counts outrun its tables would read as "nothing
+        open" (audit 2026-10-15); since 2026-10-17 the call leaves an
+        `unavailable` record instead of nothing — it covers no stamp and
+        refuses the full run until a rerun gets a result."""
         area = repo_with()
         rc, _, err, _ = run(area, "BLOCKER a.py:1 x\nverdict: 1 blockers, 0 warnings")
         self.assertEqual(rc, 2)
         self.assertIn("counts 1 blocker(s)", err)
-        self.assertEqual(list(area.glob("audits/*")), [])
+        [record] = findings.area_records(area)
+        self.assertIsNotNone(record.unavailable)
+        self.assertEqual(record.findings, ())
+        sha = scope_sha.area_stamp(area)[0]
+        gap = findings.audit_coverage(area, sha, "preflight")
+        assert gap is not None
+        self.assertIn("got no result", gap)
 
     def test_the_stamp_facts_are_printed(self):
         _, _, err, _ = run(repo_with(), WARN)
