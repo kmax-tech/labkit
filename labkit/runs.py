@@ -617,7 +617,9 @@ def draws(area: Path, run_id: str) -> list[tuple[int, Path]]:
     return [(1, area / "runs" / run_id), *_numbered_repeats(area, run_id)]
 
 
-def repeat_mismatch(parent: dict, new: dict) -> list[str]:
+def repeat_mismatch(
+    parent: dict, new: dict, draw_keys: tuple[str, ...] = ()
+) -> list[str]:
     """Why a run whose config.json would be NEW is no comparable repeat of
     PARENT (both config.json dicts), [] when it is: the same protocol, the
     same promise snapshot (block and every declared scope's digest), the same
@@ -625,7 +627,9 @@ def repeat_mismatch(parent: dict, new: dict) -> list[str]:
     (prompt digest, model alias, constants, sampling) and the same inputs
     (data= digests and rows) — the job set follows from these. A
     repeat that differs in any of these measures something else, and its
-    spread would be noise of the change, not of the model."""
+    spread would be noise of the change, not of the model. DRAW_KEYS are
+    the config keys a draw may differ in by declaration — an estimator's
+    `seed`: its spread over seeds is its draws (2026-10-17)."""
     out: list[str] = []
     pid = (parent.get("protocol") or {}).get("id")
     if pid != (new.get("protocol") or {}).get("id"):
@@ -642,7 +646,7 @@ def repeat_mismatch(parent: dict, new: dict) -> list[str]:
         out.append("the model resolved differently (models_resolved)")
     pc, nc = parent.get("config") or {}, new.get("config") or {}
     for key in sorted(set(pc) | set(nc)):
-        if pc.get(key) != nc.get(key):
+        if key not in draw_keys and pc.get(key) != nc.get(key):
             out.append(f"config {key}: {pc.get(key)!r} → {nc.get(key)!r}")
 
     def digests(cfg: dict) -> dict:

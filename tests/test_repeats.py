@@ -42,6 +42,7 @@ class Repeats(unittest.TestCase):
         config: dict | None = None,
         repeat_of: str | None = None,
         derived_from: str | None = None,
+        draw_keys: tuple[str, ...] = (),
     ) -> str:
         cfg = config or {"prompt_sha": "aaaaaaaaaaaa", "model_alias": "x"}
         r = runlog.run(
@@ -51,6 +52,7 @@ class Repeats(unittest.TestCase):
             data={"items": self.data},
             repeat_of=repeat_of,
             derived_from=derived_from,
+            draw_keys=draw_keys,
         )
         with contextlib.redirect_stdout(io.StringIO()), r as run:
             run.metrics(c1_pass=True, a1_pass=True, a2_pass=True)
@@ -201,6 +203,35 @@ class Repeats(unittest.TestCase):
                     any(needle in m for m in runs.repeat_mismatch(parent, new)),
                     runs.repeat_mismatch(parent, new),
                 )
+
+    def test_a_declared_draw_key_may_differ_and_is_recorded(self):
+        """An estimator's spread is its seed: a repeat may differ in the keys
+        it declares as draw keys and in nothing else (2026-10-17). Without
+        the declaration the same difference is a refusal (the twin)."""
+        seeded = {"estimator_sha": "aaaaaaaaaaaa", "seed": 0}
+        first = self._run(config=seeded)
+        second = self._run(
+            config={**seeded, "seed": 7}, repeat_of=first, draw_keys=("seed",)
+        )
+        cfg = self._cfg(second)
+        self.assertEqual(
+            (cfg["repeat_of"], cfg["draw"], cfg["draw_keys"]), (first, 2, ["seed"])
+        )
+        self.assertEqual(self._cfg(first)["draw_keys"], [])
+        self.assertEqual([p.name for p in runs.repeats_of(self.area, first)], [second])
+        with self.assertRaises(SystemExit) as cm:
+            self._run(config={**seeded, "seed": 8}, repeat_of=first)
+        self.assertIn("config seed: 0 → 8", str(cm.exception))
+        with self.assertRaises(SystemExit) as cm:
+            self._run(
+                config={**seeded, "estimator_sha": "bbbbbbbbbbbb", "seed": 9},
+                repeat_of=first,
+                draw_keys=("seed",),
+            )
+        self.assertIn("estimator_sha", str(cm.exception))
+        with self.assertRaises(SystemExit) as cm:
+            self._run(config=seeded, repeat_of=first, draw_keys=("fold_seed",))
+        self.assertIn("draw_keys ['fold_seed'] are not keys", str(cm.exception))
 
     def test_the_draw_is_reserved_once_and_a_crashed_draw_keeps_its_number(self):
         first = self._run()

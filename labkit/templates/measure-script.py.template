@@ -73,6 +73,8 @@ ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"   # written by 00_prepare.p
 # name, or this one moved aside first: never two measurements in one file.
 OUT = AREA / "output" / "<name>.jsonl"
 MODEL = "<model>"                                       # alias from models.toml, never an endpoint
+CRITERION_KEY = "c1_accuracy"                           # the number 02_analyze.py --draws compares across draws
+DRAW_COMMAND = "scripts/01_measure.py --repeat-of {run}"   # how a draw of the kept run is taken
 TEXT_FIELD = "text"                                     # TODO: the item field the prompt shows
 
 # Cases the criterion singles out, as DATA — delete this block when [C…]

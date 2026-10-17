@@ -13,9 +13,12 @@ Usage:
         <area> -- …`, after the freeze and the preflight audit).
     ../../.venv/bin/python scripts/01_measure.py --eval-only
         Re-evaluate the kept rows; no fit.
-    ../../.venv/bin/python scripts/01_measure.py --seed 7
-        Another seed: a run of its own — the spread over seeds, never the
-        answer (the kept run is the one the protocol names).
+    ../../.venv/bin/python scripts/01_measure.py --repeat-of RUN_ID --seed 7
+        A draw of the kept run with another seed: a run of its own under
+        repeat_of (draw key `seed`), into <name>_draw<N>.jsonl — the spread
+        over seeds (`02_analyze.py --draws`), never the answer (the kept
+        run is the one the protocol names). Another seed without
+        --repeat-of is refused: it would answer the protocol.
 
 Terms: the *estimator* is the instrument — anything with fit(X, y) and
 predict(X); it stands in `make_estimator()` and nowhere else. A *lane* is one
@@ -47,9 +50,11 @@ Measurement contract:
   - The protocol owns the registered thresholds; `MeasureConfig` holds them
     for one execution; config.json records that object whole.
   - A seed is a source of randomness, so the protocol's randomness and
-    noise-ceiling fields are owed. Measure the spread on the probe or on
-    the null lane; the registered lane on all items before the freeze makes
-    the freeze empty (Sonnet on bulk modulus and on signal inhibition, round with Opus auditor, labkit-paper 09, 2026-10-16).
+    noise-ceiling fields are owed. Before the freeze measure the spread on
+    the probe or on the null lane; the registered lane on all items before
+    the freeze makes the freeze empty (Sonnet on bulk modulus and on signal
+    inhibition, round with Opus auditor, labkit-paper 09, 2026-10-16).
+    After the kept run the spread is its draws: `--repeat-of RUN_ID --seed N`.
 
 Why (house rules, one per line so a reference is never cut):
   LAB-034 Null condition in the same run
@@ -85,6 +90,8 @@ ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"
 # One run, one output file; a new measurement — other estimator, other
 # features, other items — gets a new file name, never two measurements in one.
 OUT = AREA / "output" / "<name>.jsonl"
+CRITERION_KEY = "c1_score"                      # the number 02_analyze.py --draws compares across draws
+DRAW_COMMAND = "scripts/01_measure.py --repeat-of {run} --seed <N>"   # a draw: the kept run with another seed
 FEATURES_FIELD = "features"                     # TODO: the item field holding the numeric features
 GOLD_FIELD = "gold"
 SPLIT_FIELD = "split"
@@ -331,16 +338,26 @@ def evaluate(out: Path, cfg: MeasureConfig, run=None) -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
-    ap.add_argument("--seed", type=int, default=SEED, help="folds, permutation, estimator")
+    ap.add_argument("--seed", type=int, default=SEED,
+                    help="folds, permutation, estimator; with --repeat-of: the draw's seed")
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--show", type=int, metavar="N", help="the config and N feature rows per split, no fit")
     mode.add_argument("--probe", type=int, nargs="?", const=12, metavar="N",
                       help="instrument check: a reduced estimator on N labelled items, both lanes, "
                            "throwaway output; prints the scores (not reported) and one row per lane")
     mode.add_argument("--eval-only", action="store_true")
+    mode.add_argument("--repeat-of", metavar="RUN_ID",
+                      help="draw the kept run RUN_ID again with --seed N: a run of its own (repeat_of, "
+                           "draw key seed) into <name>_draw<N>.jsonl — the spread, never the answer")
     args = ap.parse_args()
     cfg = replace(CONFIG, seed=args.seed)   # the one field the command line may set
     items = read_jsonl(ITEMS)
+    full_run = args.show is None and args.probe is None and not args.eval_only
+    if full_run and args.repeat_of is None and args.seed != SEED:
+        # a second seed as a run of its own would be the newest bound run —
+        # and so the answering one; the spread is a draw, never the answer
+        ap.error(f"--seed {args.seed} without --repeat-of: another seed is a draw of "
+                 f"the kept run — name it with --repeat-of RUN_ID")
 
     if args.show is not None:          # `is not None`: `--show 0` must not start a run
         print("===== config (what a run writes to config.json)")
@@ -376,14 +393,24 @@ def main() -> None:
     # The whole config, never a hand-picked subset. long=True declares the
     # full run: at minutes/hours the protocol must be frozen with the
     # preflight audit stamped and the run detached (`runlog start <area> -- …`).
-    # `data=` freezes the items in the run.
+    # `data=` freezes the items in the run. A repeat draws the kept run again
+    # with another seed (draw_keys: the one config key a draw may differ in;
+    # runlog refuses any other difference); its rows go to a file of their
+    # own, its number is the spread around the answer (`02_analyze.py --draws`).
+    repeat = args.repeat_of
     with runlog.run("<name>", config=asdict(cfg), base_dir=AREA, data={"prepared": ITEMS},
-                    long=True, protocol=PROTOCOL.name) as run:
-        run.output(OUT)
-        measure(cfg, items, OUT, prov={"run": run.run_id})
-        evaluate(OUT, cfg, run)
-        print(f"run: {run.run_id}  → protocol-fill {PROTOCOL.name} --from-run {run.run_id}  "
-              f"(writes the Answer, Result and Runs lines from metrics.json)")
+                    long=True, protocol=PROTOCOL.name, repeat_of=repeat,
+                    draw_keys=("seed",)) as run:
+        # the draw number runlog reserved and recorded — the one name source
+        out = OUT if run.draw is None else OUT.with_name(f"{OUT.stem}_draw{run.draw}.jsonl")
+        run.output(out)
+        measure(cfg, items, out, prov={"run": run.run_id})
+        evaluate(out, cfg, run)
+        if repeat is None:
+            print(f"run: {run.run_id}  → protocol-fill {PROTOCOL.name} --from-run {run.run_id}  "
+                  f"(writes the Answer, Result and Runs lines from metrics.json)")
+        else:
+            print(f"draw {run.draw} of {repeat} (seed {cfg.seed}): {run.run_id} → scripts/02_analyze.py --draws")
 
 
 if __name__ == "__main__":

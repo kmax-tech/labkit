@@ -103,6 +103,8 @@ evidence** (warns), **agent audit** (semantic).
 | Were report fields written before any run? | `protocol_check.written_before_run` (`BEFORE_RUN_CLAIMS`) |
 | Does a sentence or the scope name a registered constant? | `promises.unmentioned_constants` (`promises.scope_sources` resolves a scope, shared with `declared_scope_sha`) |
 | Which skeleton does an area get — model, estimator or count? | `skeletons.SKELETONS`, written by `scaffold.stamp_scripts` (by `scaffold.instrument_of`); the fields an instrument owes by the template's tags (`scaffold.for_instrument`, held to `protocol_check.in_instrument`); the wording of the shared fields by `scaffold.estimator_placeholders` / `count_placeholders` |
+| Which row shape does an area's prepare step write? | `skeletons.SKELETONS[instrument].row_fields`, stamped by `scaffold.stamp_scripts` into `00_prepare.py`'s FIELDS — the shape the instrument's measure script reads |
+| Which config keys may a draw differ in? | `runs.repeat_mismatch(draw_keys=…)`, declared per run (`runlog.run(..., draw_keys=("seed",))`, recorded as `draw_keys`); an estimator's seed is its draw, `02_analyze.py --draws` reads the criterion's key from the measure script (`CRITERION_KEY`) |
 | Was the stamped skeleton kept within its instrument? | `stamp_check.stamp_findings` (`llm_use`, `contract_findings` against `skeletons.contract_tests`); a preflight station, the post-change hook on scripts and area tests |
 | Where are an area's own tests? | `repo.area_test_files` — preflight and finalize run them, the stamp check reads them |
 | Which promise tables does a stamped protocol carry? | `scaffold.PROMISE_TABLES` per instrument, written by `scaffold.promise_block_for` into the template's marker line; a count carries none |

@@ -32,30 +32,35 @@ _spec.loader.exec_module(measure)
 
 
 def draws() -> list[str]:
-    """The kept run and its repeats (`01_measure.py --repeat-of`): every draw
-    held like the kept number (`recheck.verified`: its file pinned, scopes
-    and block unchanged, its metrics recomputed from its rows), then c1 per
-    draw, its range, and the items whose parsed answer differs. The answer
-    stays draw 1; this is the spread around it (LAB-036 Validate)."""
+    """The kept run and its repeats (`01_measure.py --repeat-of`, an
+    estimator's with another seed): every draw held like the kept number
+    (`recheck.verified`: its file pinned, scopes and block unchanged, its
+    metrics recomputed from its rows), then the criterion's number per draw
+    (`measure.CRITERION_KEY` — the measure script says which), its range,
+    and the items whose answer differs. The answer stays draw 1; this is
+    the spread around it (LAB-036 Validate)."""
+    key = measure.CRITERION_KEY
     primary = recheck.run_dir(AREA, NOTE)
     seen: dict[str, dict[int, object]] = {}
-    lines, accs = [], []
+    lines, numbers = [], []
     for n, d in runs.draws(AREA, primary.name):
         rows = [o.path for o in runs.read_outputs(d) or [] if o.path.suffix == ".jsonl"]
         if len(rows) != 1:
             raise SystemExit(f"draws: {d.name} registered {len(rows)} JSONL outputs, not one")
         m, _ = recheck.verified(d, AREA, rows[0], measure.evaluate_rows)
-        accs.append(m.get("c1_accuracy"))
-        lines.append(f"draw {n}  {d.name}  c1_accuracy {m.get('c1_accuracy')}  c1_pass {m.get('c1_pass')}")
+        numbers.append(m.get(key))
+        lines.append(f"draw {n}  {d.name}  {key} {m.get(key)}  c1_pass {m.get('c1_pass')}")
         for r in measure.read_jsonl(rows[0]):
             seen.setdefault(r["id"], {})[n] = measure.answer_of(r)
-    if len(accs) == 1:
-        lines.append("one draw — no spread: `01_measure.py --repeat-of "
-                     f"{primary.name}` draws it again")
+    if len(numbers) == 1:
+        lines.append(f"one draw — no spread: `{measure.DRAW_COMMAND.format(run=primary.name)}` "
+                     "draws it again")
         return lines
-    known = [a for a in accs if isinstance(a, (int, float))]
+    known = [a for a in numbers if isinstance(a, (int, float))]
+    if not known:
+        raise SystemExit(f"draws: no draw reports {key} as a number — the criterion was withheld on every draw")
     flipped = sorted(i for i, by_draw in seen.items() if len(set(by_draw.values())) > 1)
-    lines.append(f"c1_accuracy over {len(accs)} draws: {min(known)} … {max(known)}")
+    lines.append(f"{key} over {len(numbers)} draws: {min(known)} … {max(known)}")
     lines.append(f"items whose answer flipped: {len(flipped)} {flipped}")
     return lines
 

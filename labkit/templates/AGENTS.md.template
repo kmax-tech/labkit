@@ -60,8 +60,9 @@ fields, no reading of labkit's source.
    admissibility condition, the prompt verbatim; an id `[C]/[A]/[B]` on every
    promise to the code (LAB-003 No run without an intent paragraph,
    LAB-004 Identifiers make the intent addressable).
-3. `01_measure.py --show 3` — render check: read prompts on real data, no
-   call (LAB-007 Render check before the instrument check).
+3. `01_measure.py --show 3` — render check: a model's prompts on real data,
+   an estimator's config and feature rows; no call, no fit
+   (LAB-007 Render check before the instrument check).
 4. After every code change `code-check <area>`
    (LAB-018 Routine check after every implementation).
 5. `--probe` — instrument check in the real pipeline; it may change the
@@ -88,9 +89,9 @@ fields, no reading of labkit's source.
     retyped), `scripts/02_analyze.py --check` holding the note to the run,
     `protocol-check` on the written protocol
     (LAB-041 Generate numbers, don't retype them). A number a model gave is
-    one draw: `scripts/01_measure.py --repeat-of <run_id>` draws it again (a
-    run of its own, never the answer), `scripts/02_analyze.py --draws` shows
-    how far it moves.
+    one draw: `scripts/01_measure.py --repeat-of <run_id>` draws it again (an
+    estimator: with `--seed N`; a run of its own, never the answer),
+    `scripts/02_analyze.py --draws` shows how far it moves.
 11. The analysis audit (`labkit-audit <area> --mode analysis`) against the
     frozen criterion; decide its findings
     (LAB-050 Analysis audit before reporting).

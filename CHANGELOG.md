@@ -39,6 +39,26 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **The prepare step writes the row shape its instrument reads.**
+  `00_prepare.py`'s FIELDS legend is stamped per instrument from
+  `skeletons.SKELETONS` — a model's `id · text · gold`, an estimator's
+  `id · features · gold · split` (gold `null` for the unlabelled split) —
+  where the shared template wrote the model's shape for both and its
+  default `build()` refused an estimator's rows for want of `text`. A
+  test holds every stamped field to the measure script that reads it.
+- **A seed is an estimator's draw.** `runlog.run(..., repeat_of=RUN,
+  draw_keys=("seed",))` accepts a repeat that differs from the kept run
+  exactly in the declared draw keys (recorded as `draw_keys`; a key the
+  config does not carry is a refusal), where every difference used to be
+  "measures something else". The estimator skeleton draws with
+  `--repeat-of RUN_ID --seed N` into `<name>_draw<N>.jsonl` and refuses
+  another seed without `--repeat-of` — a second seed as a run of its own
+  would have been the newest bound run and so the answer. `02_analyze.py
+  --draws` reads the criterion's key and the draw command from the measure
+  script (`CRITERION_KEY`, `DRAW_COMMAND`: `c1_accuracy` / `c1_score`),
+  where it read the model's key for both and would have failed on an
+  estimator's second draw; `test_the_criterion_key_is_reported` is a
+  contract test of both skeletons.
 - **The stamp check: the skeleton held to its instrument.** `stamp_check`
   — a station of `preflight` (a blocker at `frozen = true`, a warning
   before), `claude-hook post-change` on a changed `scripts/*.py` or area

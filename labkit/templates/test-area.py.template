@@ -51,6 +51,11 @@ def test_perfect_effect_fires_c1():
     assert m["c1_pass"] is True and m["a2_pass"] is True and m["a1_pass"] is True
 
 
+def test_the_criterion_key_is_reported():
+    """`02_analyze.py --draws` compares this key across draws."""
+    assert measure.CRITERION_KEY in measure.evaluate_rows(rows(_twelve(12), _twelve(6)))
+
+
 def test_null_band_is_symmetric_at_one_item():
     """Chance ± one item on twelve: 5, 6 and 7 correct are in, 4 and 8 are
     out — in shares, 7/12 fell out by floating point (2026-10-06)."""

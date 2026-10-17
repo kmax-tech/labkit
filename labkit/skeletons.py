@@ -32,15 +32,26 @@ class Skeleton:
     scripts: tuple[tuple[str, str], ...]  # (template name, file under scripts/)
     test: str  # the area test's template, stamped as tests/test_<NN>_<name>.py
     asks_a_model: bool  # the measure script imports and calls labkit.llm
+    #: the row shape the measure script reads, (field, its legend) — stamped
+    #: into 00_prepare.py's FIELDS; a count prepares nothing
+    row_fields: tuple[tuple[str, str], ...]
 
 
 PREPARE = ("prepare-script.py.template", "00_prepare.py")
 ANALYZE = ("analyze-script.py.template", "02_analyze.py")
+#: the marker line of 00_prepare.py's FIELDS body — replaced by the row shape
+ROW_FIELDS_MARK = "<row-fields>"
+ID_FIELD = ("id", "unique per row")
 SKELETONS: dict[str, Skeleton] = {
     "model": Skeleton(
         scripts=(PREPARE, ("measure-script.py.template", "01_measure.py"), ANALYZE),
         test="test-area.py.template",
         asks_a_model=True,
+        row_fields=(
+            ID_FIELD,
+            ("text", "the item the model reads"),
+            ("gold", "TODO: every gold value spelled out, e.g. causal | not_causal"),
+        ),
     ),
     "estimator": Skeleton(
         scripts=(
@@ -50,13 +61,37 @@ SKELETONS: dict[str, Skeleton] = {
         ),
         test="test-estimator.py.template",
         asks_a_model=False,
+        row_fields=(
+            ID_FIELD,
+            (
+                "features",
+                "the numeric features of the item, one list in a fixed order — "
+                "computed here, read by the estimator",
+            ),
+            (
+                "gold",
+                "TODO: the label or value spelled out; null for the unlabelled "
+                "split — a withheld label is no label",
+            ),
+            ("split", "train | test — train carries gold, test carries null"),
+        ),
     ),
     "count": Skeleton(
         scripts=(("measure-quick-script.py.template", "01_measure.py"),),
         test="test-quick.py.template",
         asks_a_model=False,
+        row_fields=(),
     ),
 }
+
+
+def row_fields_text(instrument: str) -> str:
+    """The FIELDS body of 00_prepare.py for INSTRUMENT, one `"field": "legend",`
+    line per field, as the template's marker line is replaced."""
+    return "\n".join(
+        f"    {field!r}: {legend!r},".replace("'", '"')
+        for field, legend in SKELETONS[instrument].row_fields
+    )
 
 
 def template(name: str) -> str:

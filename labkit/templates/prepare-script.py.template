@@ -52,10 +52,8 @@ OUT = AREA / "data" / "prepared" / "TODO_v1.jsonl"   # <row-noun>_v1, see docstr
 # out and self-explanatory. Written into the file as the `_meta` header and
 # enforced per row by batch.write_dataset (field drift fails at write time).
 ABOUT = "TODO: one sentence — what one row is and what this dataset is for."
-FIELDS = {
-    "id": "unique per row",
-    "text": "the item the model reads",
-    "gold": "TODO: every gold value spelled out, e.g. causal | not_causal",
+FIELDS = {  # the row shape the measure script reads, stamped per instrument
+<row-fields>
 }
 
 
@@ -63,10 +61,11 @@ def build() -> tuple[list[dict], dict]:
     """Returns (items, yields) — one yield entry per filter, per gold class.
 
     The stamped default copies SOURCE (JSONL) row by row, keeping the FIELDS
-    keys — all a clean raw file with id · text · gold needs (2026-10-07:
-    three of three cold agents wrote exactly this by hand to copy twelve
-    rows). Replace it when items are selected (fixed seed) or confound
-    columns precomputed (words, overlap, ...)."""
+    keys — all a clean raw file in the measure script's row shape needs
+    (2026-10-07: three of three cold agents wrote exactly this by hand to
+    copy twelve rows). Replace it when items are selected (fixed seed),
+    features or confound columns are computed (words, overlap, ...), or a
+    split is drawn."""
     items = []
     with SOURCE.open(encoding="utf-8") as fh:
         for n, line in enumerate(fh, 1):

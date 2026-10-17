@@ -49,7 +49,13 @@ from labkit.repo import (
     split_area_name,
 )
 from labkit.repo_check import PYPROJECT_VERSION_RE
-from labkit.skeletons import PROTOCOL_TEMPLATE, SKELETONS, template
+from labkit.skeletons import (
+    PROTOCOL_TEMPLATE,
+    ROW_FIELDS_MARK,
+    SKELETONS,
+    row_fields_text,
+    template,
+)
 
 PACKAGE = Path(__file__).resolve().parent
 #: where every lab installs labkit from — a lab has no checkout of the package
@@ -766,6 +772,7 @@ def stamp_scripts(
             .replace("<NN>_<name>", tname[len("test_") : -3])
             .replace("<name>", slug)
             .replace("<model>", alias)
+            .replace(ROW_FIELDS_MARK, row_fields_text(instrument))
         )
         if write_if_absent(area / "scripts" / dest, text, log):
             (area / "scripts" / dest).chmod(

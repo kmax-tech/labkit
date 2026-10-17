@@ -59,6 +59,11 @@ def test_null_like_registered_lane_stays_silent():
     assert m["c1_pass"] is False
 
 
+def test_the_criterion_key_is_reported():
+    """`02_analyze.py --draws` compares this key across draws."""
+    assert measure.CRITERION_KEY in measure.evaluate_rows(rows(_twelve(12), _twelve(6)))
+
+
 def test_chance_is_derived_from_the_gold():
     """Balanced binary gold: two draws agree half the time."""
     assert measure.chance_of("accuracy", [POS] * 6 + [NEG] * 6) == 0.5

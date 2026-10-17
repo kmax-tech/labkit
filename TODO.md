@@ -750,7 +750,17 @@ den Ertrag je Klasse auszählt.
 ## Notiert, nicht geplant
 
 - **Die geteilten Skelette sind modellförmig; der Estimator-Stempel bricht an
-  zwei Stellen (2026-10-17, Lektüre der drei Skelette nach Plan II).**
+  zwei Stellen (2026-10-17, Lektüre der drei Skelette nach Plan II).
+  Gebaut 2026-10-17:** die Zeilenform je Instrument aus
+  `skeletons.SKELETONS` in `00_prepare.py` gestempelt; `runlog.run(...,
+  draw_keys=("seed",))` — ein Repeat darf sich genau in den erklärten
+  Draw-Schlüsseln unterscheiden, der Estimator zieht mit `--repeat-of
+  RUN_ID --seed N` und verweigert einen zweiten Seed ohne `--repeat-of`;
+  `02_analyze.py --draws` liest `CRITERION_KEY` und `DRAW_COMMAND` aus dem
+  Messskript, `test_the_criterion_key_is_reported` ist Vertragstest beider
+  Skelette; AGENTS-Lane nennt beide Instrumente in Schritt 3 und 10. Offen
+  bleibt die Prüfstelle unten (der Durchlauf eines gestempelten
+  Estimator-Bereichs in der Suite). Der Befund:
   (1) `analyze-script.py.template --draws` liest `c1_accuracy` — der
   Estimator meldet `c1_score`; bei zwei Draws `min()` über eine leere Liste,
   und der Hinweis nennt `--repeat-of`, das das Estimator-Skelett nicht hat.

@@ -37,7 +37,10 @@ Three ways a run depends on another run's rows — not one:
                    asked again — new model calls, its own model record, the
                    same protocol, block, config and inputs as ID or a
                    refusal (`runs.repeat_mismatch`); `draw` numbers it (2,
-                   3, …). Supporting evidence: it never answers the protocol
+                   3, …); `draw_keys=("seed",)` names the config keys a draw
+                   may differ in (an estimator's seed: its spread over seeds
+                   is its draws), recorded as `draw_keys`, each one a key
+                   of the config or a refusal. Supporting evidence: it never answers the protocol
 
 Usage:
     import runlog
@@ -1032,6 +1035,19 @@ def _constants_refusal(block: "promises.PromiseTables", config: dict) -> str | N
     )
 
 
+def _draw_keys(config: dict, draw_keys: tuple[str, ...]) -> tuple[str, ...]:
+    """The declared draw keys, each a key of CONFIG — a key the run's config
+    does not carry cannot be what a draw differs in; a refusal names it."""
+    missing = [k for k in draw_keys if k not in config]
+    if missing:
+        raise SystemExit(
+            f"runlog: draw_keys {missing} are not keys of this run's config "
+            f"({', '.join(sorted(config)) or 'empty'}) — a draw can differ only "
+            f"in a recorded config key"
+        )
+    return tuple(draw_keys)
+
+
 def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
     """DERIVED_FROM as config.json records it, or a refusal: the parent must
     be a completed run of this area and no repeat."""
@@ -1091,6 +1107,7 @@ class Run:
         protocol: str | Path | None = None,
         derived_from: str | None = None,
         repeat_of: str | None = None,
+        draw_keys: tuple[str, ...] = (),
     ) -> None:
         # A derived run (2026-10-05): the same raw rows, evaluated again —
         # because evaluate() gained a descriptive key, not because anything
@@ -1197,6 +1214,7 @@ class Run:
             _index_lock(base_dir) if repeat_of is not None else contextlib.nullcontext()
         )
         with guard:
+            self._draw_keys = _draw_keys(self._config, draw_keys)
             self._repeat_of, self.draw = self._repeat(
                 base_dir, repeat_of, derived_from, models
             )
@@ -1216,6 +1234,8 @@ class Run:
         derived_from: str | None,
         models: dict,
     ) -> tuple[str | None, int | None]:
+        # the keys a draw may differ in: `self._draw_keys`, checked against
+        # the config before any comparison
         """(repeat_of, draw) for config.json, before mkdir: a repeat draws a
         completed primary run of this area again, comparable in protocol,
         promise block, config and inputs (`runs.repeat_mismatch`) — else a
@@ -1251,7 +1271,7 @@ class Run:
             "script_sha": _script_sha(),
             "models_resolved": models,
         }
-        differs = repeat_mismatch(pcfg, mine)
+        differs = repeat_mismatch(pcfg, mine, self._draw_keys)
         if differs:
             raise SystemExit(
                 f"runlog: this run is no repeat of {repeat_of} — it measures "
@@ -1285,6 +1305,7 @@ class Run:
             "derived_from": self._derived_from,
             "repeat_of": self._repeat_of,
             "draw": self.draw,
+            "draw_keys": list(self._draw_keys),
             "unfrozen_ack": self._unfrozen_ack,
             "cost_tier": self._cost_tier,
             "instrument": self._instrument,
@@ -1485,6 +1506,7 @@ class run:
         protocol: str | Path | None = None,
         derived_from: str | None = None,
         repeat_of: str | None = None,
+        draw_keys: tuple[str, ...] = (),
     ) -> None:
         # `protocol`, `derived_from`, `repeat_of` last: no existing positional call shifts.
         base = Path(base_dir) if base_dir else Path(sys.argv[0]).resolve().parent
@@ -1497,6 +1519,7 @@ class run:
             protocol=protocol,
             derived_from=derived_from,
             repeat_of=repeat_of,
+            draw_keys=draw_keys,
         )
 
     def __enter__(self) -> Run:

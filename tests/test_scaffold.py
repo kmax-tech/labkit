@@ -452,6 +452,39 @@ class Exp(unittest.TestCase):
         self.assertIn("permuted-label lane", proto)
         self.assertIn('instrument = "estimator"', proto)
 
+    def test_the_prepare_step_writes_the_row_shape_its_measure_script_reads(
+        self,
+    ) -> None:
+        """One row shape per instrument (2026-10-17): the model's prepare wrote
+        `id · text · gold` for an estimator that reads `features` and
+        `split`, and its default `build()` refused rows without `text`."""
+        import re
+
+        for kw, instrument in (
+            ({"cost": "minutes", "model": "haiku"}, "model"),
+            ({"cost": "minutes"}, "estimator"),
+        ):
+            with self.subTest(instrument=instrument):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp) / "x"
+                    scaffold.stamp_lab(root, "x", ref=None)
+                    quiet(scaffold.stamp_area, root, "foo-bar", **kw)
+                    area = root / "experiments" / "01-foo-bar"
+                    prepare = (area / "scripts" / "00_prepare.py").read_text(
+                        encoding="utf-8"
+                    )
+                    measure = (area / "scripts" / "01_measure.py").read_text(
+                        encoding="utf-8"
+                    )
+                self.assertNotIn(skeletons.ROW_FIELDS_MARK, prepare)
+                ast.parse(prepare)
+                stamped = re.findall(r'^    "(\w+)": ', prepare, re.M)
+                expected = [f for f, _ in skeletons.SKELETONS[instrument].row_fields]
+                self.assertEqual(stamped, expected)
+                for field in expected:  # the measure script reads every field
+                    self.assertRegex(measure, rf"""['"]{field}['"]""", field)
+        self.assertEqual(skeletons.SKELETONS["count"].row_fields, ())
+
     def test_the_stamped_estimator_formula_holds_the_contract(self) -> None:
         """The stamped `evaluate_rows` runs without any estimator library:
         perfect against chance fires [C1] exactly at the bar (fractions), a
@@ -536,7 +569,9 @@ class Exp(unittest.TestCase):
             timeout=120,
         )
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("9 passed", r.stdout)
+        # every contract test the template stamps ran — the count the stamp
+        # check holds the area to, never retyped here
+        self.assertIn(f"{len(skeletons.contract_tests('estimator'))} passed", r.stdout)
 
     def test_the_instrument_is_stamped_into_the_head(self) -> None:
         """Standard 0.20: the head carries the instrument, derived once or
