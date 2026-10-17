@@ -485,35 +485,38 @@ def area_running(area: Path) -> list[Running]:
     return [read_running(p) for p in sorted(folder.glob(f"*{RUNNING_SUFFIX}"))]
 
 
-def audit_stops(
-    area: Path, alive: Callable[[object, object], bool | None] | None = None
+def open_blocker_stops(records: list[Record]) -> list[str]:
+    """The BLOCKER findings still `open` in RECORDS, one stop each — an
+    undecided BLOCKER is ignored evidence, not a pilot's licence."""
+    return [
+        f"audit BLOCKER still `open` in {r.path.name}: {f.text} — decide "
+        f"it (fixed / accepted / deferred / dismissed); LABKIT_UNFROZEN=1 "
+        f"does not pass an undecided BLOCKER"
+        for r in records
+        for f in r.findings
+        if f.grade == "BLOCKER" and f.status == "open"
+    ]
+
+
+def no_result_stops(
+    area: Path,
+    alive: Callable[[object, object], bool | None] | None = None,
+    records: list[Record] | None = None,
 ) -> list[str]:
-    """Why no FULL run may start in AREA whatever the acknowledgement says —
-    one line each, in the order omx' review table combines verdicts: an open
-    BLOCKER in any record beats everything; then an audit without a result
-    (a marker whose pid is dead, or the newest record of a mode unavailable);
-    then an audit still running (a marker with a live pid: wait). Open
-    WARNINGs are no stop — `open_warnings` lists them for the acknowledgement
-    line. ALIVE defaults to `runs.is_alive` (pid, script) → True / False / None;
-    None (undecidable: no `ps`) counts as not known to run, so the marker
-    reads as an audit that died — loud, and a rerun resolves it. Empty when
-    nothing stands in the way, including an area without `audits/` (the pilot
-    whose audit nobody could start).
+    """The audits of AREA that have no result, one stop each: the newest
+    record of a mode `unavailable`; a marker whose pid is dead (the audit
+    died); last a marker with a live pid (the audit runs: wait). ALIVE
+    defaults to `runs.is_alive` (pid, script) → True / False / None; None
+    (undecidable: no `ps`) counts as not known to run, so the marker reads
+    as an audit that died — loud, and a rerun resolves it. RECORDS saves a
+    second read when the caller holds them.
 
     Raises:
         FindingsError: A record or marker of AREA cannot be read.
     """
     alive = is_alive if alive is None else alive  # resolved here: tests fake it
+    records = area_records(area) if records is None else records
     out = []
-    records = area_records(area)
-    for r in records:
-        for f in r.findings:
-            if f.grade == "BLOCKER" and f.status == "open":
-                out.append(
-                    f"audit BLOCKER still `open` in {r.path.name}: {f.text} — decide "
-                    f"it (fixed / accepted / deferred / dismissed); LABKIT_UNFROZEN=1 "
-                    f"does not pass an undecided BLOCKER"
-                )
     for mode in MODES:
         of_mode = [r for r in records if r.mode == mode]
         if of_mode and of_mode[-1].unavailable:
@@ -537,6 +540,25 @@ def audit_stops(
                 f"record replaces the marker, deleting it does not"
             )
     return out + waiting
+
+
+def audit_stops(
+    area: Path, alive: Callable[[object, object], bool | None] | None = None
+) -> list[str]:
+    """Why no FULL run may start in AREA whatever the acknowledgement says —
+    one line each, in the order omx' review table combines verdicts: an open
+    BLOCKER in any record beats everything (`open_blocker_stops`); then an
+    audit without a result, then one still running (`no_result_stops`).
+    Open WARNINGs are no stop — `open_warnings` lists them for the
+    acknowledgement line. Empty when nothing stands in the way, including an
+    area without `audits/` (the pilot whose audit nobody could start).
+    runlog's freeze gate and `preflight` read this.
+
+    Raises:
+        FindingsError: A record or marker of AREA cannot be read.
+    """
+    records = area_records(area)
+    return open_blocker_stops(records) + no_result_stops(area, alive, records)
 
 
 def open_warnings(area: Path) -> list[str]:

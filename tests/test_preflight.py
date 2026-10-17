@@ -331,6 +331,41 @@ class TestAuditFindings(unittest.TestCase):
             self.assertEqual(code, 1, out)
             self.assertIn("BLOCKER: undecided in", out)
 
+    def test_an_audit_without_a_result_is_named_warning_then_blocker(self):
+        """2026-10-17: a record of a call that got no result, or a marker of a
+        died audit, is not "none recorded" — a warning before the freeze, a
+        blocker once frozen; a rerun with a result clears it."""
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d, CLEAN_PROTOCOL)
+            findings.write_unavailable(
+                area, "preflight", "opus", "abc", "claude-cli: not logged in"
+            )
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 0, out)
+            self.assertIn("WARNING: audit unavailable since", out)
+            self.assertIn("not logged in", out)
+            self.assertNotIn("all decided", out)
+            findings.mark_running(
+                area, "analysis", "opus", "abc", pid=4_194_301, script="x"
+            )
+            code, out = _run_preflight(area)
+            self.assertIn("WARNING: audit died since", out)
+            # the twin: a result for the mode, marker gone — decided again
+            for m in findings.area_running(area):
+                m.path.unlink()
+            findings.write(
+                area, "preflight", "opus", "abc", (0, 0, 0), [], now=1_900_000_000
+            )
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 0, out)
+            self.assertIn("all decided (2 audit(s) recorded)", out)
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d, _protocol(frozen=True))
+            findings.write_unavailable(area, "preflight", "opus", "abc", "timeout")
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 1, out)
+            self.assertIn("BLOCKER: audit unavailable since", out)
+
     def test_decided_findings_pass_and_an_unreadable_file_blocks(self):
         with tempfile.TemporaryDirectory() as d:
             area, path = self._recorded(d)

@@ -7,6 +7,25 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ## Unreleased
 
+### Added
+
+- **An audit that did not run is not passed.** `labkit-audit` leaves
+  `audits/<minute>-<mode>.running` (pid, script) before its model call
+  and replaces it by the findings record — or, when the call raised, the
+  report had no verdict line or its counts outran its lines, by a record
+  with `outcome = "unavailable"` and the reason. `findings.audit_stops`
+  reads an open BLOCKER in any record, the newest record of a mode without
+  a result, a marker whose pid is dead (the audit died) and a marker with
+  a live pid (wait); `runlog` refuses the full run on each of them whatever
+  `LABKIT_UNFROZEN` says, a probe runs, open WARNINGs stand in the
+  acknowledgement line; `preflight` names them (warning, blocker once
+  frozen); `audit_coverage` counts only a record with a result. Evidence:
+  labkit-paper area 09, haiku t3 (2026-10-16) — a killed second audit call
+  read as "the audit failed", the first call's BLOCKER landed in `audits/`
+  unread, the full run started on `LABKIT_UNFROZEN=1`. Author's decision
+  2026-10-17: fail loud instead of marking silently (plan P, A1 and A1b;
+  V1 of the oh-my-codex notes).
+
 ### Changed
 
 - **One rule for a tie in the start second.** `runs.same_second` is the

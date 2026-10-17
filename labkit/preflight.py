@@ -235,6 +235,20 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
             f"deferred / dismissed) before freezing (LAB-015 Preflight audit before freezing)"
             + (" — frozen = true owes it" if frozen else "")
         )
+    # an audit that did not run is not passed: a record without a result, a
+    # marker of a died or still running audit (2026-10-17, haiku t3)
+    try:
+        no_result = audit_findings.no_result_stops(area, records=records)
+    except audit_findings.FindingsError as exc:
+        findings.block(str(exc))
+        no_result = []
+    for line in no_result:
+        found(line)
+    if no_result:
+        print(
+            "  an audit without a result is not passed — runlog refuses the full run "
+            "until a rerun gets one (LAB-015 Preflight audit before freezing)"
+        )
     gap = _coverage_gap(area, report.head)
     if gap:
         found(f"{gap} (LAB-015 Preflight audit before freezing)")
@@ -251,9 +265,9 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
             f"  {len(elsewhere)} deferred finding(s) elsewhere in the repo — a reminder, "
             f"not counted (uniagent 2026-10-08: one deferred in area 16 bit in 17)"
         )
-    if not records and not elsewhere:
+    if not records and not elsewhere and not no_result:
         print("  none recorded")
-    elif not undecided and not elsewhere:
+    elif not undecided and not elsewhere and not no_result:
         print(f"  all decided ({len(records)} audit(s) recorded)")
 
     # -- 3. code-check (intent ids) ---------------------------------------

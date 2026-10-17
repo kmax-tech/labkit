@@ -127,6 +127,13 @@ has now (or says `n/a — <reason>`), and a decided preflight audit record
 checked, not trusted, and code changed after the audit owes a new one.
 A long *pilot* acknowledges with `LABKIT_UNFROZEN=1`; the acknowledgement
 is written to `config.json` as `unfrozen_ack`, so the number carries it.
+It passes a missing freeze and a missing audit, never the area's audits:
+an open BLOCKER in any `audits/` record, an audit that got no result
+(`outcome = "unavailable"`, or a `.running` marker whose pid is dead) and
+an audit still running refuse the full run whatever the variable says
+(`findings.audit_stops`); a probe runs. `labkit-audit` leaves the marker
+before its model call and a record after it, so a failed audit never
+looks like one nobody started — an audit that did not run is not passed.
 The gate follows the cost tier (`cost` in the protocol head, LAB-017 The number of audits follows the cost tier — `LAB-nnn` names a rule of the shipped lab standard): at
 `seconds` a rerun costs nothing, so the gate is the **written success
 criterion**, not the freeze — an instrument change after it is a commit
