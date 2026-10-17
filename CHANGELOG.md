@@ -66,6 +66,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The standard's scar table names the registered number seen before the
+  freeze** (LAB-015, dated change, version stays 0.19): ad hoc seeds, a
+  "calibration" or an instrument check that was the full measurement make
+  the freeze empty; the field guide says where bands are calibrated (the
+  null lane or a subset) and where a peek is disclosed (the noise-ceiling
+  field); the template's placeholder says so too (plan P, D1 and D2).
+- **One reading of `unfrozen_ack`:** `runs.acknowledged_unfrozen`, used by
+  protocol-fill, finalize and report-check.
 - **Without `--model`, minutes and hours stamp the estimator skeleton**
   (until 0.98.0: the prompt skeleton with `TODO-alias`). A bare `--model`
   still stamps the prompt skeleton.

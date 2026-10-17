@@ -129,7 +129,8 @@
   answer have, and where does the expected value sit?>
 - **How measured †:** <metric or mechanism: what is compared, what counted>
 - **Validation †:** <anchor items, second model or self-consistency, cross-check>
-- **Noise ceiling → threshold †:** <measure repetition spread; the threshold
+- **Noise ceiling → threshold †:** <measure repetition spread on the probe or the null lane, never
+  the registered lane over all items before the freeze · the threshold
   comes from the null condition of THIS run>
 - **Free knobs †:** <every preprocessing parameter with its value:
   thresholds, filters, cutoffs, windows>
