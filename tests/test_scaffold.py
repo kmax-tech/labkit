@@ -465,11 +465,14 @@ class Report(unittest.TestCase):
             quiet(scaffold.stamp_area, root, "foo-bar", report=True)
             return proto.read_text(encoding="utf-8")
 
-    def test_no_model_fills_the_three_fields(self) -> None:
+    def test_no_model_fills_the_parser_field_and_leaves_randomness_owed(self) -> None:
+        """2026-10-17: a seeded estimator owes its randomness fields; --report
+        no longer writes "no seed, spread 0" into them (Sonnet v2 t5)."""
         text = self.stamped("- **Model / tool:** none")
-        self.assertIn("**Randomness controls †:** n/a — deterministic", text)
-        self.assertIn("**Noise ceiling → threshold †:** n/a — deterministic", text)
         self.assertIn("**Parser cases harvested:** n/a — no model", text)
+        self.assertNotIn("n/a — deterministic", text)
+        self.assertRegex(text, r"\*\*Randomness controls †:\*\* <")
+        self.assertRegex(text, r"\*\*Noise ceiling → threshold †:\*\* <")
 
     def test_a_model_leaves_them_open(self) -> None:
         self.assertNotIn("auto-filled", self.stamped("- **Model / tool:** haiku"))
@@ -508,11 +511,9 @@ class ModelNamed(unittest.TestCase):
 
     def test_a_dash_and_a_daggered_label_are_no_model(self):
         for value in ("—", "none", "n/a — a count"):
-            text = (
-                f"- **Model / tool †:** {value}\n- **Randomness controls †:** <seed>\n"
-            )
+            text = f"- **Model / tool †:** {value}\n- **Parser cases harvested:** <cases>\n"
             filled, n = scaffold.auto_fill_deterministic(text)
             self.assertEqual(n, 1, value)
-            self.assertIn("n/a — deterministic", filled)
-        text = "- **Model / tool:** gpt-oss\n- **Randomness controls †:** <seed>\n"
+            self.assertIn("n/a — no model", filled)
+        text = "- **Model / tool:** gpt-oss\n- **Parser cases harvested:** <cases>\n"
         self.assertEqual(scaffold.auto_fill_deterministic(text), (text, 0))

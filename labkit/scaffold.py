@@ -402,16 +402,16 @@ def insert_report_fields(text: str, blocks: ProtocolBlocks) -> tuple[str, int]:
     return "\n".join(out).rstrip() + "\n", added
 
 
-# A protocol that names no model has no seed, no temperature and nothing to
-# parse; asking for those fields cost a fix cycle each on a deterministic run
-# (2026-10-05). --report fills them when the Model / tool field says so
-# (`protocol_check.model_named`, the one reading of that field).
+# A protocol that names no model has nothing to parse; --report fills that
+# field when the Model / tool field says so (`protocol_check.model_named`,
+# the one reading of that field). Until 2026-10-17 it also wrote "no seed,
+# repetition spread 0" into Randomness controls and Noise ceiling: "no
+# language model" is not "no source of randomness" — a seeded forest, a
+# fold shuffle and a permutation are ones, and the pilot that got the line
+# (labkit-paper area 09, Sonnet v2 t5) named seed 0 three lines below it
+# while the next round measured a null-AUC spread of 0.116 over ten seeds.
+# Those two fields stay owed: an estimator with a seed owes them.
 DETERMINISTIC_NA = {
-    "Randomness controls": "n/a — deterministic, no model: no seed, no temperature, one run (auto-filled by --report)",
-    "Noise ceiling → threshold": (  # the protocol field's label (the standard says noise floor)
-        "n/a — deterministic, repetition spread 0; the threshold comes from the null "
-        "condition of this run (auto-filled by --report)"
-    ),
     "Parser cases harvested": "n/a — no model, nothing to parse (auto-filled by --report)",
 }
 
@@ -431,7 +431,8 @@ def _replace_placeholder(lines: list[str], label: str, value: str) -> bool:
 
 
 def auto_fill_deterministic(text: str) -> tuple[str, int]:
-    """Fill the placeholders a model-free protocol cannot answer; (text, fields filled)."""
+    """Fill the placeholder a model-free protocol cannot answer — the parser
+    field, nothing about randomness (DETERMINISTIC_NA); (text, fields filled)."""
     if model_named(text):
         return text, 0
     lines = text.split("\n")
