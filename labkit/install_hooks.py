@@ -9,7 +9,8 @@ before, the scaffolder in the house dotfiles wrote its own copy once, and
 existing repos never got a newer one).
 
     .githooks/pre-commit     protocol-check on staged protocols; finalize
-                             --if-reported on a written-back answer; the
+                             --if-reported on a written-back answer;
+                             claude-hook undecided on the staged paths; the
                              guard test where a repo has it; then the
                              repo's own .githooks/pre-commit.local, if any
                              (the repo owns it, labkit-hooks never writes it)
@@ -73,6 +74,19 @@ if [ -n "$staged_protocols" ] && [ -x .venv/bin/finalize ]; then
     if ! .venv/bin/finalize --if-reported $staged_protocols; then
         echo ""
         echo "pre-commit: finalize reports blockers for a written-back number (see above)."
+        fail=1
+    fi
+fi
+
+# 2b. An undecided audit BLOCKER in an area a staged file touches: the
+#     stop hook's rule at the commit (third haiku round on 0.99.0: audited,
+#     read, left open, measured with long=False, reported).
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+if [ -n "$staged" ] && [ -x .venv/bin/claude-hook ]; then
+    # shellcheck disable=SC2086
+    if ! .venv/bin/claude-hook undecided $staged; then
+        echo ""
+        echo "pre-commit: an audit BLOCKER nobody decided (see above) — decide each in its audits/ file."
         fail=1
     fi
 fi

@@ -59,6 +59,7 @@ finalize <AREA> [--protocol FILE]   # the post-run gate, eight steps: answering 
 finalize --if-reported <PROTOCOL>.. # the commit gate: finalize every protocol whose answer cites a run
 report-check <AREA> [--protocol FILE]  # the last gate at minutes/hours: frozen · finalize clean and its run a full run (long=True, not acknowledged unfrozen) · analysis audit of the code now, decided · 02_analyze.py --check passes
 claude-hook pre-run|post-change|stop  # the three Claude Code hooks a lab repo installs (stdin: event JSON)
+claude-hook undecided <paths…>      # the pre-commit's gate: an area a staged path touches holds an undecided audit BLOCKER → exit 1
 claude-hook sessions [--run RUN_ID]  # the session log the stop hook keeps (.git/labkit-sessions.jsonl): session, transcript, runs
 labkit-hooks install|check [REPO]   # install this labkit's hooks (pre-commit, core.hooksPath, claude-hook); rerun after a pin raise
 labkit-check [REPO] [--offline]     # is this repo current: pin · installed · newest tag at the source · hook · rule references; reports only, exit 1 STALE, 2 UNDECIDED
@@ -113,8 +114,8 @@ Code and hold only in a Claude Code session:
 | code refuses         | `runlog.Run` — leak, index header, detach, **freeze gate** | always: every run passes through it                   |
 | Claude hook blocks   | `claude-hook pre-run` (PreToolUse Bash, exit 2)            | a frozen protocol's area has preflight blockers; not at `cost = "seconds"` |
 | Claude hook reports  | `claude-hook post-change` (PostToolUse Bash\|Write\|Edit)  | a protocol or messung note changed, whatever wrote it |
-| Claude hook sends back | `claude-hook stop` (Stop, exit 2)                        | a protocol changed in this session cites a run and `finalize` has blockers — once per stop |
-| git pre-commit fails | `.githooks/pre-commit`                                     | a staged protocol misses must fields; a written-back answer fails `finalize --if-reported` |
+| Claude hook sends back | `claude-hook stop` (Stop, exit 2)                        | a protocol changed in this session cites a run and `finalize` has blockers; an area the session touched holds an audit BLOCKER nobody decided — once per stop |
+| git pre-commit fails | `.githooks/pre-commit`                                     | a staged protocol misses must fields; a written-back answer fails `finalize --if-reported`; an area a staged file touches holds an undecided audit BLOCKER (`claude-hook undecided`) |
 
 All of them are installed by `labkit-hooks install` from the pinned labkit, and
 `preflight` warns when they are missing or from another labkit version.

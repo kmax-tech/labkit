@@ -3,6 +3,8 @@
     claude-hook pre-run       PreToolUse  (matcher: Bash)
     claude-hook post-change   PostToolUse (matcher: Bash|Write|Edit)
     claude-hook stop          Stop
+    claude-hook undecided <paths…>        the pre-commit's half of the stop hook: an area a path
+                                          touches holds an undecided audit BLOCKER → exit 1
     claude-hook sessions [--run RUN_ID]   the session log: which session, which transcript, which runs
 
 The three hooks read the hook's JSON event on stdin and answer the way
@@ -50,6 +52,18 @@ stop
     session that still knows why it is there, not at the next commit
     (2026-10-07). Once per stop: when the agent was already sent back by
     this hook (`stop_hook_active`), it may stop; the commit gate still holds.
+    The same stop holds every area the session touched (a changed file
+    under it, git status) to its audit records: a BLOCKER nobody decided →
+    exit 2, naming file and finding (`undecided_blockers`). Third haiku
+    round on 0.99.0 (labkit-paper area 09, t5): the agent ran the audit,
+    read its four BLOCKERs, left all twelve findings `open`, measured with
+    long=False and reported — report-check would have refused the number,
+    but nothing made the agent call it. A gate the agent must call is no
+    gate; the stop and the commit are the two it cannot choose. The
+    pre-commit runs `claude-hook undecided` on the staged paths for the
+    same rule. Deciding is cheap and visible: `accepted` with a reason is
+    a documented deviation, which is what the gate is for; a hand-written
+    `fixed` is a lie the next audit sees (LAB-015 Preflight audit before freezing).
 
 session log
     Every stop also appends one line to the repo's `.git/labkit-sessions.jsonl`
@@ -80,6 +94,7 @@ from pathlib import Path
 from labkit import (
     console,
     finalize,
+    findings,
     notes_check,
     preflight,
     protocol_block,
@@ -548,22 +563,82 @@ def stop(event: dict) -> int:
     record_session(repo, event)
     if event.get("stop_hook_active"):
         return 0  # sent back once already; no loop
+    changed = _git_changed(repo)
+    undecided = undecided_blockers(repo, changed)
+    if undecided:
+        print(
+            "an audit of an area this session worked in found BLOCKER(s) nobody "
+            "decided — decide each (fixed / accepted / deferred / dismissed, with "
+            "reason) in its audits/ file before you stop; a number measured past "
+            "them cannot be reported, and a commit would be refused the same way "
+            "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(undecided),
+            file=sys.stderr,
+        )
     protocols = [
-        c.resolve()
-        for c in _git_changed(repo)
-        if c.is_file() and wants_check(c) == "protocol"
+        c.resolve() for c in changed if c.is_file() and wants_check(c) == "protocol"
     ]
     if not protocols:
-        return 0
+        return 2 if undecided else 0
     rc, out = _capture(finalize.main, ["--if-reported", *map(str, protocols)])
-    if rc == 0:
+    if rc != 0:
+        print(
+            "finalize reports blockers for a number written back in this session — "
+            "fix them before you stop (a commit would be refused the same way):\n"
+            + out,
+            file=sys.stderr,
+        )
+    return 2 if (rc != 0 or undecided) else 0
+
+
+def undecided_blockers(repo: Path, paths: list[Path]) -> list[str]:
+    """Every audit BLOCKER still `open` in an area one of PATHS lies in — as
+    `<area>: <file>: <text>`, each area once — or the sentence of a record
+    nobody can read. The area is the nearest directory above the path with a
+    PROTOCOL-*.md, inside REPO (`find_area`). A path outside every area, and
+    an area without audits/, contribute nothing: this holds the areas the
+    session worked in, not the whole repo (A4, 2026-10-17: a repo's old
+    areas must not block every stop)."""
+    areas: list[Path] = []
+    for path in paths:
+        area = find_area(path, stop=repo)
+        if area is not None and area not in areas:
+            areas.append(area)
+    out = []
+    for area in areas:
+        shown = area.relative_to(repo.resolve()).as_posix()
+        try:
+            records = findings.area_records(area)
+        except findings.FindingsError as exc:
+            out.append(f"{shown}: {exc}")
+            continue
+        for rec in records:
+            out += [
+                f"{shown}: {rec.path.name}: {f.text}"
+                for f in rec.open
+                if f.grade == "BLOCKER"
+            ]
+    return out
+
+
+def undecided(argv: list[str]) -> int:
+    """`claude-hook undecided <paths…>`: the pre-commit's gate — exit 1 and the
+    findings on stdout when an area a path touches holds an undecided BLOCKER."""
+    if not argv:
+        print(
+            "claude-hook undecided: name the paths (the staged files)", file=sys.stderr
+        )
+        return 2
+    repo = Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()).resolve()
+    lines = undecided_blockers(repo, [repo / p for p in argv])
+    if not lines:
         return 0
     print(
-        "finalize reports blockers for a number written back in this session — "
-        "fix them before you stop (a commit would be refused the same way):\n" + out,
-        file=sys.stderr,
+        "claude-hook: an audit of a staged area found BLOCKER(s) nobody decided — "
+        "decide each (fixed / accepted / deferred / dismissed, with reason) in its "
+        "audits/ file (LAB-015 Preflight audit before freezing):\n  "
+        + "\n  ".join(lines)
     )
-    return 2
+    return 1
 
 
 # -------------------------------------------------------------------- cli
@@ -575,11 +650,14 @@ def main(argv: list[str]) -> int:
         print((__doc__ or "").strip().splitlines()[0])
         print(
             "usage: claude-hook pre-run | post-change | stop   (hook event JSON on stdin)\n"
+            "       claude-hook undecided <paths…>\n"
             "       claude-hook sessions [--run RUN_ID]"
         )
         return 0 if argv else 1
     if argv[0] == "sessions":
         return sessions(argv[1:])
+    if argv[0] == "undecided":
+        return undecided(argv[1:])
     event = _read_event()
     if argv[0] == "pre-run":
         return pre_run(event)

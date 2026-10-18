@@ -9,6 +9,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **The stop hook and the pre-commit hold a touched area to its audit
+  records.** An area the session changed a file in (git status), or a
+  staged file lies in, that holds an audit BLOCKER nobody decided: `claude-hook
+  stop` sends the agent back (exit 2, once), the stamped pre-commit refuses
+  the commit through the new `claude-hook undecided <paths…>` (exit 1).
+  Third haiku round on 0.99.0 (labkit-paper area 09, t5): the agent ran
+  the audit, read its four BLOCKERs, left all twelve findings `open`,
+  measured with long=False and reported — report-check would have refused
+  the number, but no gate the agent has to call is a gate. Deciding is
+  cheap and visible (`accepted` with a reason is a documented deviation);
+  the whole repo is not held, so old areas do not block every stop (A4,
+  2026-10-17). Reinstall the hooks (`labkit-hooks install`).
+
 - **`LABKIT_UNFROZEN=1` acknowledges an audit that could not run, not one
   nobody ran.** Second haiku round on 0.98.0 (labkit-paper area 09): no
   labkit agent started an audit, so the refusal over an open BLOCKER never
