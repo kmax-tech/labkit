@@ -95,6 +95,18 @@ _ALLOWED_FIELDS = {"id", "key", "sentence", "scope", "constants"}
 #: what `block_sha` is a digest of — recorded with it, so a run from an
 #: earlier format is told apart instead of reported as changed promises
 DIGEST_FORMAT = "promises-normalized-json"
+#: what an audit record names as the promise block of a protocol that
+#: declares no [[promise]] tables (a count at seconds)
+NO_BLOCK = "none"
+
+
+def block_stamp(text: str) -> str:
+    """The protocol's promise block as an audit record names it: the digest
+    of its [[promise]] tables (`PromiseTables.sha`), or NO_BLOCK when it
+    declares none. Raises PromiseError on a malformed block, like
+    `parse_block` — an audit of promises nobody can read binds nothing."""
+    block = parse_block(text)
+    return NO_BLOCK if block is None else block.sha
 
 
 class PromiseError(ValueError):

@@ -6,6 +6,8 @@ from pathlib import Path
 
 from labkit import findings
 
+BLOCK = "b10c0000000a"  # the promise block every fixture record names
+RUN = "2026-01-01T00-00-00_0001"  # the run every analysis fixture record names
 TWO = [
     ("BLOCKER", "BLOCKER · a.py:1 · x · y · LAB-038 What the prompt demands · z"),
     ("WARNING", "WARNING · b.py:2 · x · y · LAB-019 The stamp covers everything · z"),
@@ -23,12 +25,14 @@ def area_with(
             mode,
             "opus",
             "abc123def456",
+            BLOCK,
             (
                 sum(1 for g, _ in rows if g == "BLOCKER"),
                 sum(1 for g, _ in rows if g == "WARNING"),
                 0,
             ),
             rows,
+            run_id=RUN if mode == "analysis" else None,
             now=1_700_000_000 + 60 * i,
         )
     return area
@@ -55,8 +59,15 @@ class WriteRead(unittest.TestCase):
         self.assertTrue(files[0].name.endswith("-preflight.toml"))
         rec = findings.read(files[0])
         self.assertEqual(
-            (rec.mode, rec.model, rec.scope_sha, rec.verdict),
-            ("preflight", "opus", "abc123def456", (1, 1, 0)),
+            (
+                rec.mode,
+                rec.model,
+                rec.scope_sha,
+                rec.block_sha,
+                rec.run_id,
+                rec.verdict,
+            ),
+            ("preflight", "opus", "abc123def456", BLOCK, None, (1, 1, 0)),
         )
         self.assertEqual([f.grade for f in rec.findings], ["BLOCKER", "WARNING"])
         self.assertEqual([f.status for f in rec.findings], ["open", "open"])
@@ -73,10 +84,10 @@ class WriteRead(unittest.TestCase):
     def test_a_second_audit_in_the_same_minute_does_not_overwrite(self):
         area = Path(tempfile.mkdtemp())
         a = findings.write(
-            area, "preflight", "m", "s", (0, 0, 0), [], now=1_700_000_000
+            area, "preflight", "m", "s", "b", (0, 0, 0), [], now=1_700_000_000
         )
         b = findings.write(
-            area, "preflight", "m", "s", (0, 0, 0), [], now=1_700_000_000
+            area, "preflight", "m", "s", "b", (0, 0, 0), [], now=1_700_000_000
         )
         self.assertNotEqual(a, b)
         self.assertEqual(len(findings.area_records(area)), 2)
@@ -84,20 +95,20 @@ class WriteRead(unittest.TestCase):
     def test_wrong_mode_or_grade_refuses_to_write(self):
         area = Path(tempfile.mkdtemp())
         with self.assertRaises(ValueError):
-            findings.write(area, "clarity", "m", "s", (0, 0, 0), [])
+            findings.write(area, "clarity", "m", "s", "b", (0, 0, 0), [])
         with self.assertRaises(ValueError):
-            findings.write(area, "preflight", "m", "s", (0, 0, 0), [("READ", "x")])
+            findings.write(area, "preflight", "m", "s", "b", (0, 0, 0), [("READ", "x")])
 
     def test_a_verdict_counting_more_than_the_lines_is_refused(self):
         """Two blockers in the verdict, none readable as a line: written, the
         record read as covered with nothing open (audit 2026-10-15)."""
         area = Path(tempfile.mkdtemp())
         with self.assertRaises(ValueError) as cm:
-            findings.write(area, "preflight", "m", "s", (2, 0, 0), [])
+            findings.write(area, "preflight", "m", "s", "b", (2, 0, 0), [])
         self.assertIn("counts 2 blocker(s)", str(cm.exception))
         self.assertEqual(list(area.glob("audits/*")), [])
         # notes are not held; a warning line under a 1-warning verdict is
-        findings.write(area, "preflight", "m", "s", (0, 1, 2), [("WARNING", "w")])
+        findings.write(area, "preflight", "m", "s", "b", (0, 1, 2), [("WARNING", "w")])
 
 
 class Decisions(unittest.TestCase):
@@ -134,7 +145,7 @@ class Decisions(unittest.TestCase):
         self.assertIn("carries 1 BLOCKER and 1 WARNING", str(cm.exception))
         self.assertIn(path.name, str(cm.exception))
         with self.assertRaises(findings.FindingsError):
-            findings.audit_coverage(area, "abc123def456", "preflight")
+            findings.audit_coverage(area, "abc123def456", "preflight", BLOCK)
         # a table cut out of the file is the same loss
         head, _, _ = text.partition("\n[[finding]]")
         path.write_text(head + "\n", encoding="utf-8")
@@ -190,26 +201,92 @@ class AuditCoverage(unittest.TestCase):
         (path,) = sorted((area / findings.DIR).glob("*.toml"))
         set_status(path, 1, "fixed")
         set_status(path, 2, "accepted", "spread is a limit")
-        self.assertIsNone(findings.audit_coverage(area, self.SHA, "preflight"))
+        self.assertIsNone(findings.audit_coverage(area, self.SHA, "preflight", BLOCK))
 
     def test_no_record_another_sha_or_only_an_analysis_record_does_not(self):
         empty = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         empty.mkdir(parents=True)
         self.assertIn(
-            "audited: none", findings.audit_coverage(empty, self.SHA, "preflight") or ""
+            "audited: none",
+            findings.audit_coverage(empty, self.SHA, "preflight", BLOCK) or "",
         )
         area = area_with([("preflight", []), ("analysis", [])])
-        gap = findings.audit_coverage(area, "0123456789ab", "preflight") or ""
-        self.assertIn("no preflight audit saw the code as it is now", gap)
-        self.assertIn(f"audited: {self.SHA}", gap)
+        gap = findings.audit_coverage(area, "0123456789ab", "preflight", BLOCK) or ""
+        self.assertIn("no preflight audit saw the area as it is now", gap)
+        self.assertIn(f"audited: code {self.SHA}, promises {BLOCK}", gap)
         analysis_only = area_with([("analysis", [])])
         self.assertIn(
             "audited: none",
-            findings.audit_coverage(analysis_only, self.SHA, "preflight") or "",
+            findings.audit_coverage(analysis_only, self.SHA, "preflight", BLOCK) or "",
         )
 
     def test_an_open_finding_of_the_covering_record_is_named(self):
         area = area_with([("preflight", TWO)])
         self.assertIn(
-            "2 finding(s)", findings.audit_coverage(area, self.SHA, "preflight") or ""
+            "2 finding(s)",
+            findings.audit_coverage(area, self.SHA, "preflight", BLOCK) or "",
         )
+
+
+class Binding(unittest.TestCase):
+    """A record binds what the auditor read — code, promises and (analysis)
+    the run; until 0.97.1 only the code, so a promise rewritten after the
+    audit or a later run under the same code kept the record valid (review
+    2026-10-18)."""
+
+    SHA = "abc123def456"
+
+    def test_a_changed_promise_block_is_not_covered(self):
+        area = area_with([("preflight", [])])
+        self.assertIsNone(findings.audit_coverage(area, self.SHA, "preflight", BLOCK))
+        gap = findings.audit_coverage(area, self.SHA, "preflight", "0ther0000000") or ""
+        self.assertIn("no preflight audit saw the area as it is now", gap)
+        self.assertIn(f"code {self.SHA}, promises 0ther0000000; audited: ", gap)
+
+    def test_an_analysis_audit_of_another_run_is_not_covered(self):
+        area = area_with([("analysis", [])])
+        self.assertIsNone(
+            findings.audit_coverage(area, self.SHA, "analysis", BLOCK, RUN)
+        )
+        gap = (
+            findings.audit_coverage(
+                area, self.SHA, "analysis", BLOCK, "2026-01-02T00-00-00_0002"
+            )
+            or ""
+        )
+        self.assertIn("run 2026-01-02T00-00-00_0002; audited: ", gap)
+        self.assertIn(f"run {RUN}", gap)
+
+    def test_the_run_is_owed_by_analysis_and_refused_by_preflight(self):
+        area = Path(tempfile.mkdtemp())
+        with self.assertRaisesRegex(ValueError, "names the run it read"):
+            findings.write(area, "analysis", "m", "s", "b", (0, 0, 0), [])
+        with self.assertRaisesRegex(ValueError, "names none"):
+            findings.write(area, "preflight", "m", "s", "b", (0, 0, 0), [], run_id=RUN)
+        with self.assertRaisesRegex(ValueError, "held to the answering run"):
+            findings.audit_coverage(area, self.SHA, "analysis", BLOCK)
+        with self.assertRaisesRegex(ValueError, "a preflight audit to none"):
+            findings.audit_coverage(area, self.SHA, "preflight", BLOCK, RUN)
+        # a record without a run is written as NO_RUN, and read so
+        path = findings.write(
+            area, "analysis", "m", "s", "b", (0, 0, 0), [], run_id=findings.NO_RUN
+        )
+        self.assertEqual(findings.read(path).run_id, "none")
+        self.assertIn(
+            "run none", findings.audit_coverage(area, "s", "analysis", "b", RUN) or ""
+        )
+
+    def test_a_record_missing_its_binding_is_loud(self):
+        area = area_with([("preflight", []), ("analysis", [])])
+        pre, ana = sorted((area / "audits").glob("*.toml"))
+        text = pre.read_text(encoding="utf-8")
+        pre.write_text(text.replace(f'block_sha = "{BLOCK}"\n', ""), encoding="utf-8")
+        with self.assertRaisesRegex(findings.FindingsError, "block_sha is missing"):
+            findings.read(pre)
+        pre.write_text(text + f'run_id = "{RUN}"\n', encoding="utf-8")
+        with self.assertRaisesRegex(findings.FindingsError, "reads no run"):
+            findings.read(pre)
+        text = ana.read_text(encoding="utf-8")
+        ana.write_text(text.replace(f'run_id = "{RUN}"\n', ""), encoding="utf-8")
+        with self.assertRaisesRegex(findings.FindingsError, "run_id is missing"):
+            findings.read(ana)

@@ -9,7 +9,9 @@ area, one file per audit:
     date = "2026-10-12T15:33"
     mode = "preflight"
     model = "opus"
-    scope_sha = "fa45c7618423"
+    scope_sha = "fa45c7618423"   # the code the auditor read (scope_sha.area_stamp)
+    block_sha = "0c1d2e3f4a5b"   # the promises it read (promises.block_stamp)
+    # run_id = "2026-10-12T15-01-07_a1b2"  — mode analysis only: the run whose rows it read
     blockers = 1
     warnings = 2
     notes = 1
@@ -21,9 +23,15 @@ area, one file per audit:
     reason = ""          # owed for accepted, deferred and dismissed
 
 The person edits `status` and `reason`; nothing else writes the file.
-A full run at `minutes`/`hours` needs a preflight record whose `scope_sha`
-is the code's stamp now, every finding decided (`audit_coverage`, held
-by runlog's freeze gate and by `preflight`). `preflight` reads every
+A record binds what the auditor read: the code (`scope_sha`), the promise
+block (`block_sha`) and, in mode analysis, the answering run (`run_id`).
+A full run at `minutes`/`hours` needs a preflight record of the code and
+the promises as they are now, every finding decided (`audit_coverage`,
+held by runlog's freeze gate and by `preflight`); a reported number needs
+an analysis record of code, promises and the answering run as they are
+now (`report-check`). Until 0.97.1 a record named the code only, so a
+promise rewritten after the audit, or a later run under the same code,
+kept the old audit valid (review 2026-10-18). `preflight` reads every
 findings file of the area: a finding still `open`
 is a warning before the freeze and a blocker once `frozen = true`
 (LAB-015 Preflight audit before freezing: every finding is decided), a `deferred`
@@ -55,6 +63,9 @@ STATUSES = ("open", "fixed", "accepted", "deferred", "dismissed")
 REASON_OWED = ("accepted", "deferred", "dismissed")
 GRADES = ("BLOCKER", "WARNING", "NOTE")
 MODES = ("preflight", "analysis")
+#: what an analysis record names as its run when no completed run was
+#: bound to the protocol while the auditor read — it saw no rows
+NO_RUN = "none"
 
 
 class FindingsError(ValueError):
@@ -79,7 +90,11 @@ class Record:
     date: str
     mode: str
     model: str
-    scope_sha: str
+    scope_sha: str  # the code the auditor read
+    block_sha: str  # the promise block it read (promises.NO_BLOCK: none declared)
+    run_id: (
+        str | None
+    )  # mode analysis: the run whose rows it read (NO_RUN: none); preflight: None
     verdict: tuple[int, int, int]
     findings: tuple[Finding, ...]
 
@@ -122,17 +137,28 @@ def write(
     mode: str,
     model: str,
     scope_sha: str,
+    block_sha: str,
     verdict: tuple[int, int, int],
     findings: list[tuple[str, str]],
+    *,
+    run_id: str | None = None,
     now: float | None = None,
 ) -> Path:
     """Write the audit's findings file into AREA/audits/ and return its path.
+    SCOPE_SHA is the code the auditor read, BLOCK_SHA the promise block
+    (`promises.block_stamp`), RUN_ID the run whose rows it read — owed in
+    mode analysis (NO_RUN when there was none), refused in mode preflight.
     Every finding starts `open`. Never overwrites: the name carries the minute.
     Refuses (ValueError) a verdict that counts more blockers or warnings than
     FINDINGS lists of that grade (`counts_outrun`).
     """
     if mode not in MODES:
         raise ValueError(f"mode {mode!r} — one of {', '.join(MODES)}")
+    if (mode == "analysis") != (run_id is not None):
+        raise ValueError(
+            f"mode {mode!r} with run_id {run_id!r}: an analysis audit names the "
+            f"run it read (NO_RUN for none), a preflight audit names none"
+        )
     outrun = counts_outrun(verdict, [grade for grade, _ in findings])
     if outrun:
         raise ValueError(
@@ -156,6 +182,8 @@ def write(
         f"mode = {_s(mode)}",
         f"model = {_s(model)}",
         f"scope_sha = {_s(scope_sha)}",
+        f"block_sha = {_s(block_sha)}",
+        *([f"run_id = {_s(run_id)}"] if run_id is not None else []),
         f"blockers = {b}",
         f"warnings = {w}",
         f"notes = {k}",
@@ -180,7 +208,7 @@ def _audit_table(path: Path, data: dict) -> dict:
     audit = data.get("audit")
     if not isinstance(audit, dict):
         raise FindingsError(f"{path}: no [audit] table")
-    for key in ("date", "mode", "model", "scope_sha"):
+    for key in ("date", "mode", "model", "scope_sha", "block_sha"):
         if not isinstance(audit.get(key), str):
             raise FindingsError(f"{path}: [audit] {key} is missing or not a string")
     for key in ("blockers", "warnings", "notes"):
@@ -189,6 +217,16 @@ def _audit_table(path: Path, data: dict) -> dict:
     if audit["mode"] not in MODES:
         raise FindingsError(
             f"{path}: [audit] mode {audit['mode']!r} — one of {', '.join(MODES)}"
+        )
+    if audit["mode"] == "analysis" and not isinstance(audit.get("run_id"), str):
+        raise FindingsError(
+            f"{path}: [audit] run_id is missing or not a string — an analysis "
+            f"audit names the run it read ({NO_RUN!r} for none)"
+        )
+    if audit["mode"] == "preflight" and "run_id" in audit:
+        raise FindingsError(
+            f"{path}: [audit] run_id {audit['run_id']!r} in a preflight audit, "
+            f"which reads no run"
         )
     return audit
 
@@ -240,6 +278,8 @@ def read(path: Path) -> Record:
         audit["mode"],
         audit["model"],
         audit["scope_sha"],
+        audit["block_sha"],
+        audit.get("run_id"),
         (audit["blockers"], audit["warnings"], audit["notes"]),
         parsed,
     )
@@ -253,29 +293,57 @@ def area_records(area: Path) -> list[Record]:
     return [read(p) for p in sorted(folder.glob("*.toml"))]
 
 
-def audit_coverage(area: Path, sha: str, mode: str) -> str | None:
-    """Why no audit of MODE covers the area's code stamped SHA, or None: a
-    record with that `mode` whose `scope_sha` is SHA, every finding of it
+def _bound(sha: str, block_sha: str, run_id: str | None) -> str:
+    """What a record binds, in words: `code <sha>, promises <block>[, run <id>]`."""
+    return f"code {sha}, promises {block_sha}" + (
+        f", run {run_id}" if run_id is not None else ""
+    )
+
+
+def audit_coverage(
+    area: Path, sha: str, mode: str, block_sha: str, run_id: str | None = None
+) -> str | None:
+    """Why no audit of MODE covers the area as it is now, or None: a record
+    with that `mode` whose `scope_sha` is SHA (the code), whose `block_sha`
+    is BLOCK_SHA (the promises, `promises.block_stamp`) and — mode analysis
+    — whose `run_id` is RUN_ID (the answering run), every finding of it
     decided. The head's audit line is written by hand; this is what makes
     "the frozen code was audited" a fact instead of a line (2026-10-14: after
     fixing the audit's findings a cold agent stamped the new sha, and no
     audit had seen that code). `preflight` for the freeze (runlog, preflight),
-    `analysis` for the report (report-check).
+    `analysis` for the report (report-check). Until 0.97.1 only the code was
+    held: a promise rewritten after the audit, or a later run under the same
+    code, kept the old record valid (review 2026-10-18).
 
     Raises:
         FindingsError: A findings file of AREA cannot be read.
-        ValueError: MODE is not one of MODES.
+        ValueError: MODE is not one of MODES, or RUN_ID is given for
+            `preflight` or missing for `analysis`.
     """
     if mode not in MODES:
         raise ValueError(f"audit mode {mode!r} is not one of {', '.join(MODES)}")
+    if (mode == "analysis") != (run_id is not None):
+        raise ValueError(
+            f"audit mode {mode!r} with run_id {run_id!r}: an analysis audit is "
+            f"held to the answering run, a preflight audit to none"
+        )
     records = [r for r in area_records(area) if r.mode == mode]
-    covering = [r for r in records if r.scope_sha == sha]
+    covering = [
+        r
+        for r in records
+        if (r.scope_sha, r.block_sha, r.run_id) == (sha, block_sha, run_id)
+    ]
     if not covering:
-        seen = ", ".join(sorted({r.scope_sha for r in records})) or "none"
+        seen = (
+            "; ".join(
+                sorted({_bound(r.scope_sha, r.block_sha, r.run_id) for r in records})
+            )
+            or "none"
+        )
         return (
-            f"no {mode} audit saw the code as it is now (scope sha {sha}; "
-            f"audited: {seen}) — a change after the audit owes a new one: "
-            f"`labkit-audit <area> --mode {mode}`"
+            f"no {mode} audit saw the area as it is now "
+            f"({_bound(sha, block_sha, run_id)}; audited: {seen}) — a change after "
+            f"the audit owes a new one: `labkit-audit <area> --mode {mode}`"
         )
     undecided = [f for r in covering for f in r.open]
     if undecided:

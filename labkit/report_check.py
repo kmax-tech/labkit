@@ -22,10 +22,12 @@ report-check comes last and holds the whole chain:
                    tables written, not the stamp's `<…>` sentences
   2. finalize      `finalize_area` clean (its output is not repeated)
   3. analysis audit  a record `audits/*-analysis.toml` whose `scope_sha` is
-                   the area's stamp now, every finding decided
-                   (`findings.audit_coverage`) — code changed after the
-                   analysis audit owes a new one (LAB-050 Analysis audit
-                   before reporting)
+                   the area's stamp now, whose `block_sha` is the promise
+                   block now and whose `run_id` is the answering run, every
+                   finding decided (`findings.audit_coverage`) — code or
+                   promises changed after the analysis audit, or a later
+                   run, owe a new one (LAB-050 Analysis audit before
+                   reporting)
   4. the check     `scripts/02_analyze.py --check` exits 0 under the repo's
                    interpreter: the rows recompute to the run's metrics and
                    the note it names carries every number and the run_id
@@ -45,7 +47,8 @@ import subprocess
 from pathlib import Path
 
 from labkit.gate import Findings
-from labkit import console, findings, protocol_block
+from labkit import console, findings, promises, protocol_block
+from labkit.audit import AuditError, audited_run
 from labkit.finalize import finalize_area
 from labkit.preflight import area_test_python
 from labkit.protocol_check import check_fields
@@ -92,17 +95,35 @@ def freeze_gaps(protocol: Path, frozen: bool) -> list[str]:
     return [f"{protocol.name}: {g}" for g in gaps]
 
 
+def analysis_audit_gap(area: Path, protocol: Path) -> str | None:
+    """Station 3: why no decided analysis record covers the code, the promise
+    block and the answering run as they are now, or None. Without an
+    answering run there is nothing the audit could be held to."""
+    try:
+        run_dir, why = audited_run(area, protocol)
+        if run_dir is None:
+            return f"no answering run to hold it to — {why}"
+        return findings.audit_coverage(
+            area,
+            area_stamp(area)[0],
+            "analysis",
+            promises.block_stamp(protocol.read_text(encoding="utf-8")),
+            run_dir.name,
+        )
+    except (FileNotFoundError, ValueError, AuditError) as exc:
+        # ValueError: nothing to stamp, a findings file or the promise block
+        # unreadable (FindingsError, PromiseError); AuditError: the head
+        return f"the analysis audit cannot be held to the area: {exc}"
+
+
 def later_gaps(area: Path, protocol: Path) -> list[str]:
-    """Stations 2–4: finalize clean, an analysis audit of the code now, the check."""
+    """Stations 2–4: finalize clean, an analysis audit of the area now, the check."""
     out: list[str] = []
     with contextlib.redirect_stdout(io.StringIO()):
         finalized = finalize_area(area, protocol)
     if finalized != 0:
         out.append(f"finalize {area} has blockers — run it to see them")
-    try:
-        gap = findings.audit_coverage(area, area_stamp(area)[0], "analysis")
-    except (FileNotFoundError, ValueError) as exc:
-        gap = f"the analysis audit cannot be held to the code: {exc}"
+    gap = analysis_audit_gap(area, protocol)
     if gap:
         out.append(f"analysis audit: {gap} (LAB-050 Analysis audit before reporting)")
     failed = check_analysis_script(area, layout_root(area))

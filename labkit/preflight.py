@@ -49,7 +49,7 @@ import sys
 from pathlib import Path
 
 from labkit.code_check import check_intent_ids, stamp_coverage_findings
-from labkit import console, install_hooks, protocol_block
+from labkit import console, install_hooks, promises, protocol_block
 from labkit import findings as audit_findings
 from labkit.gate import Findings
 from labkit.repo import (
@@ -235,7 +235,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
             f"deferred / dismissed) before freezing (LAB-015 Preflight audit before freezing)"
             + (" — frozen = true owes it" if frozen else "")
         )
-    gap = _coverage_gap(area, report.head)
+    gap = _coverage_gap(area, report.head, text)
     if gap:
         found(f"{gap} (LAB-015 Preflight audit before freezing)")
     experiments = area.resolve().parent
@@ -326,13 +326,16 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
     return findings.report("preflight", "freezing")
 
 
-def _coverage_gap(area: Path, head: "protocol_block.Head | None") -> str | None:
+def _coverage_gap(
+    area: Path, head: "protocol_block.Head | None", text: str
+) -> str | None:
     """Why the head's audit line claims an audit of this code, or None: its
     `scope sha` is not the code's stamp now (`scope_sha.audit_stamp_drift`
     — until 0.95.0 preflight never compared them and passed the state the
     freeze gate refuses, audit 2026-10-15), or no decided preflight record
-    saw that code (`findings.audit_coverage`; runlog refuses the full run on
-    the same answers). Silent at `seconds`, without a line, and on `n/a`."""
+    saw that code and the promise block TEXT carries now
+    (`findings.audit_coverage`; runlog refuses the full run on the same
+    answers). Silent at `seconds`, without a line, and on `n/a`."""
     if head is None or head.cost == "seconds" or not head.preflight_audit:
         return None
     drift = audit_stamp_drift(area, head.preflight_audit)
@@ -342,8 +345,10 @@ def _coverage_gap(area: Path, head: "protocol_block.Head | None") -> str | None:
     if m is None:  # `n/a — <reason>`: a visible decision, not a claim
         return None
     try:
-        return audit_findings.audit_coverage(area, m.group(1), "preflight")
-    except audit_findings.FindingsError as exc:
+        return audit_findings.audit_coverage(
+            area, m.group(1), "preflight", promises.block_stamp(text)
+        )
+    except (audit_findings.FindingsError, promises.PromiseError) as exc:
         return str(exc)
 
 

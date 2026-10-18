@@ -19,7 +19,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import protocol_fixture as fixture  # noqa: E402
-from labkit import audit, findings, scope_sha  # noqa: E402
+from labkit import audit, findings, promises, scope_sha  # noqa: E402
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"
 SCRIPT = "import scoring\nfrom labkit import runlog\nprint(scoring.X)\n"
@@ -211,6 +211,9 @@ class Audit(unittest.TestCase):
         self.assertEqual(rc, 0)
         prompt = sent[0]
         self.assertIn("MODE: analysis", prompt)
+        # the record names the run whose rows the auditor read (review 2026-10-18)
+        record = next((area / "audits").glob("*-analysis.toml")).read_text()
+        self.assertIn('run_id = "2026-01-01T00-00-00_0001"', record)
         self.assertIn(
             "===== ROWS experiments/01-x/output/x.jsonl (81 line(s); "
             "the first 50 and last 20 are shown) =====",
@@ -328,12 +331,16 @@ class Audit(unittest.TestCase):
         self.assertIn("stamp: ", err.getvalue())
         self.assertIn(f"scope sha {before}", err.getvalue())
         self.assertIn("stamp NOTE: the code changed", err.getvalue())
+        block = promises.NO_BLOCK  # the fixture's protocol declares no tables
+        self.assertIn(f'block_sha = "{block}"', record)
+        self.assertNotIn("run_id", record)  # a preflight audit reads no run
         self.assertIn(
-            "still `open`", findings.audit_coverage(area, before, "preflight") or ""
+            "still `open`",
+            findings.audit_coverage(area, before, "preflight", block) or "",
         )
         self.assertIn(
             "no preflight audit saw",
-            findings.audit_coverage(area, after, "preflight") or "",
+            findings.audit_coverage(area, after, "preflight", block) or "",
         )
 
     def test_a_finding_written_with_a_dash_or_colon_is_read(self):

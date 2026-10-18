@@ -57,7 +57,7 @@ evidence** (warns), **agent audit** (semantic).
 | code → run | block digest, per-promise `declared_scope_sha`, constants, git state, data hashes recorded | `runlog.Run`, `promises.snapshot` | (every run) | guaranteed | starting the run |
 | run → report (record) | run completed; declared keys reported; run recorded this block; a block constant not contradicted by the run config | `runs.completion_state`, `intent_check.check_block_against_run` | `intent-check`, `finalize` | guaranteed | after the run |
 | run → report (scopes) | declared scopes unchanged since the run | `promises.scope_drift` | `finalize`, `recheck` | guaranteed | before reporting |
-| run → report (the end) | frozen, finalize clean, an analysis audit record of the code now with every finding decided, `02_analyze.py --check` passes (the note carries the numbers and the run_id) | `report_check`, `findings.audit_coverage`, `recheck.holds` | `report-check` | guaranteed | before the number leaves the area |
+| run → report (the end) | frozen, finalize clean, an analysis audit record of the code, the promise block and the answering run as they are now, every finding decided, `02_analyze.py --check` passes (the note carries the numbers and the run_id) | `report_check`, `findings.audit_coverage`, `recheck.holds` | `report-check` | guaranteed | before the number leaves the area |
 | run → report (denominator) | denominator `c<i>_n` matches a recorded input count | `finalize.criterion_n_input_mismatches` | `finalize` | static evidence | after the run |
 | report → number | output pinned to the run, recomputation agrees, note cites every number and the run id, block unchanged | `recheck.holds` | (an area's `--check`) | guaranteed | keeping a number |
 

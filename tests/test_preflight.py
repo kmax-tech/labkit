@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import findings, preflight  # noqa: E402
+from labkit import findings, preflight, promises  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 BODY = """\
@@ -300,6 +300,11 @@ if __name__ == "__main__":
     unittest.main()
 
 
+def _block(area: Path) -> str:
+    """The promise block the area's protocol carries, as a record names it."""
+    return promises.block_stamp((area / "PROTOCOL-x.md").read_text(encoding="utf-8"))
+
+
 class TestAuditFindings(unittest.TestCase):
     """Station 2b: findings files are read; open = warning, blocker once frozen; deferred elsewhere = reminder."""
 
@@ -313,7 +318,9 @@ class TestAuditFindings(unittest.TestCase):
     def _recorded(self, d, frozen=False):
         text = _protocol(frozen=True) if frozen else CLEAN_PROTOCOL
         area, _ = _area(d, text)
-        path = findings.write(area, "preflight", "opus", "abc", (0, 1, 0), self.ROW)
+        path = findings.write(
+            area, "preflight", "opus", "abc", _block(area), (0, 1, 0), self.ROW
+        )
         return area, path
 
     def test_open_finding_is_a_warning_before_the_freeze(self):
@@ -359,7 +366,7 @@ class TestAuditFindings(unittest.TestCase):
                 d, _protocol(frozen=True, preflight_audit="scope sha 000000000000")
             )
             path = findings.write(
-                area, "preflight", "opus", "000000000000", (0, 0, 0), []
+                area, "preflight", "opus", "000000000000", _block(area), (0, 0, 0), []
             )
             code, out = _run_preflight(area)
             self.assertEqual(code, 1, out)
@@ -372,9 +379,19 @@ class TestAuditFindings(unittest.TestCase):
                 p.read_text().replace("scope sha 000000000000", f"scope sha {sha}")
             )
             path.unlink()
-            findings.write(area, "preflight", "opus", sha, (0, 0, 0), [])
+            findings.write(area, "preflight", "opus", sha, _block(area), (0, 0, 0), [])
             code, out = _run_preflight(area)
             self.assertNotIn("preflight_audit:", out)
+            # the promises rewritten after the audit: the record named the
+            # code only until 0.97.1 (review 2026-10-18)
+            p.write_text(
+                p.read_text().replace(
+                    "the criterion holds", "the criterion holds twice"
+                )
+            )
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 1, out)
+            self.assertIn("no preflight audit saw the area as it is now", out)
 
     def test_deferred_in_another_area_is_a_reminder_not_a_count(self):
         with tempfile.TemporaryDirectory() as d:
@@ -384,7 +401,7 @@ class TestAuditFindings(unittest.TestCase):
             other = root / "16-there"
             other.mkdir()
             path = findings.write(
-                other, "preflight", "opus", "abc", (0, 1, 0), self.ROW
+                other, "preflight", "opus", "abc", "b", (0, 1, 0), self.ROW
             )
             path.write_text(
                 path.read_text()

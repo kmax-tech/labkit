@@ -15,8 +15,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import finalize, promises  # noqa: E402
-from protocol_fixture import PID, head, scope_file  # noqa: E402
+from labkit import finalize  # noqa: E402
+from protocol_fixture import PID, completed_run, head  # noqa: E402
 
 BODY = """\
 - **Question / hypothesis:** does it hold?
@@ -46,39 +46,6 @@ PROTOCOL_WITH_HOLES = CLEAN_PROTOCOL.replace(
 )
 
 
-def _run(area, name, *, pid=PID, metrics=None, completion=True):
-    d = area / "runs" / name
-    d.mkdir(parents=True, exist_ok=True)
-    # a run under a frozen protocol recorded its block (0.71): the snapshot
-    # of the area's protocol, whose scopes name the fixture's script
-    scope_file(area)
-    block = promises.parse_block((area / "PROTOCOL-x.md").read_text(encoding="utf-8"))
-    cfg = {
-        "script": "01_measure.py",
-        "pid": 1,
-        "schema_version": 2,
-        "protocol": {"id": pid, "path": "PROTOCOL-x.md"},
-        "promises": promises.snapshot(block, area) if block is not None else None,
-    }
-    (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
-    if metrics is not None:
-        (d / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
-    if completion:
-        (d / "completion.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": 2,
-                    "finished": "x",
-                    "git": "g",
-                    "git_full": "g",
-                    "note": "",
-                }
-            ),
-            encoding="utf-8",
-        )
-    return d
-
-
 def _run_finalize(area, protocol=None):
     argv = [str(area)]
     if protocol:
@@ -99,8 +66,10 @@ class TestOneRunForEveryStation(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-            _run(area, "2026-10-07T10-00-00_meas", metrics={**CLEAN_METRICS, "c1_n": 7})
-            _run(area, "2026-10-07T11-00-00_prob", metrics={"rows_seen": 2})
+            completed_run(
+                area, "2026-10-07T10-00-00_meas", metrics={**CLEAN_METRICS, "c1_n": 7}
+            )
+            completed_run(area, "2026-10-07T11-00-00_prob", metrics={"rows_seen": 2})
             code, out = _run_finalize(area)
         self.assertIn("2026-10-07T10-00-00_meas: completed (skipped 1 newer", out)
         self.assertIn("c1_n", out)  # the warning names the measurement's key
@@ -112,7 +81,7 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-            _run(area, "r1", metrics=CLEAN_METRICS)
+            completed_run(area, "r1", metrics=CLEAN_METRICS)
             code, out = _run_finalize(area)
         self.assertEqual(code, 0, out)
         self.assertIn("all clear", out)
@@ -121,7 +90,7 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-            _run(area, "r1", metrics={"c1_pass": True}, completion=False)
+            completed_run(area, "r1", metrics={"c1_pass": True}, completion=False)
             code, out = _run_finalize(area)
         self.assertEqual(code, 1, out)
         self.assertIn("no completed run bound to", out)
@@ -149,7 +118,7 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-            _run(area, "r1", metrics={"c1_pass": True, "a1_pass": True})
+            completed_run(area, "r1", metrics={"c1_pass": True, "a1_pass": True})
             code, out = _run_finalize(area)
         self.assertEqual(code, 1, out)
         self.assertIn("[A2] registered", out)
@@ -158,7 +127,7 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(PROTOCOL_WITH_HOLES)
-            _run(area, "r1", metrics=CLEAN_METRICS)
+            completed_run(area, "r1", metrics=CLEAN_METRICS)
             code, out = _run_finalize(area)
         self.assertEqual(code, 0, out)
         self.assertIn("Outcome", out)
@@ -191,7 +160,7 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(proto)
-            _run(area, "r1", metrics={"something": 1})
+            completed_run(area, "r1", metrics={"something": 1})
             code, out = _run_finalize(area)
         self.assertEqual(code, 0, out)
         self.assertIn("no intent ids registered", out)
@@ -206,7 +175,7 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(prose)
-            _run(area, "r1", metrics=CLEAN_METRICS)
+            completed_run(area, "r1", metrics=CLEAN_METRICS)
             code, out = _run_finalize(area)
         self.assertEqual(code, 2, out)
         self.assertIn("no [protocol] table", out)
@@ -217,7 +186,7 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(_protocol(id="<protocol-id>"))
-            _run(area, "r1", metrics=CLEAN_METRICS)
+            completed_run(area, "r1", metrics=CLEAN_METRICS)
             code, out = _run_finalize(area)
         self.assertEqual(code, 1, out)
         self.assertIn("no stamped protocol id", out)
@@ -231,7 +200,7 @@ class AreaTestsBeforeReporting(unittest.TestCase):
     def area(self, d: str, test_body: str | None) -> Path:
         area = Path(d)
         (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-        _run(area, "r1", metrics={"c1_pass": True})
+        completed_run(area, "r1", metrics={"c1_pass": True})
         if test_body is not None:
             (area / "tests").mkdir()
             (area / "tests" / f"test_{area.name}.py").write_text(test_body)
@@ -271,7 +240,7 @@ class TestCommitGate(unittest.TestCase):
         (area / "PROTOCOL-x.md").write_text(
             CLEAN_PROTOCOL + f"- **Answer to the question:** {answer}\n"
         )
-        _run(area, self.RUN, metrics=CLEAN_METRICS)
+        completed_run(area, self.RUN, metrics=CLEAN_METRICS)
         return area
 
     def _gate(self, area: Path) -> tuple[int, str]:

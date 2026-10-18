@@ -6,7 +6,10 @@ One home for the shape, so a fixture states only what it varies:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+
+from labkit import promises
 
 PID = "p-0123456789abcdef"
 
@@ -44,6 +47,48 @@ def scope_file(area: Path) -> Path:
             encoding="utf-8",
         )
     return script
+
+
+def completed_run(
+    area: Path,
+    name: str,
+    *,
+    pid: str = PID,
+    metrics: dict | None = None,
+    completion: bool = True,
+) -> Path:
+    """A run directory as runlog leaves one: bound to PID, its promise
+    snapshot taken from the area's PROTOCOL-x.md (0.71: a run under a frozen
+    protocol recorded its block), METRICS written when given, finished when
+    COMPLETION. The one home for the shape (finalize, report-check)."""
+    d = area / "runs" / name
+    d.mkdir(parents=True, exist_ok=True)
+    scope_file(area)  # the block's scopes name the fixture's script
+    block = promises.parse_block((area / "PROTOCOL-x.md").read_text(encoding="utf-8"))
+    cfg = {
+        "script": "01_measure.py",
+        "pid": 1,
+        "schema_version": 2,
+        "protocol": {"id": pid, "path": "PROTOCOL-x.md"},
+        "promises": promises.snapshot(block, area) if block is not None else None,
+    }
+    (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    if metrics is not None:
+        (d / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
+    if completion:
+        (d / "completion.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 2,
+                    "finished": "x",
+                    "git": "g",
+                    "git_full": "g",
+                    "note": "",
+                }
+            ),
+            encoding="utf-8",
+        )
+    return d
 
 
 def head(

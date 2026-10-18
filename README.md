@@ -123,8 +123,10 @@ All of them are installed by `labkit-hooks install` from the pinned labkit, and
 `runlog` refuses it before `mkdir` unless the bound protocol's head says
 `frozen = true` and its `preflight_audit` names the `scope sha` the code
 has now (or says `n/a — <reason>`), and a decided preflight audit record
-(`audits/*-preflight.toml`) carries that same sha: a hand-written line is
-checked, not trusted, and code changed after the audit owes a new one.
+(`audits/*-preflight.toml`) carries that same sha and the digest of the
+promise block as it is now: a hand-written line is checked, not trusted,
+and code or promises changed after the audit owe a new one. An analysis
+record names the answering run too (`report-check` holds it).
 A long *pilot* acknowledges with `LABKIT_UNFROZEN=1`; the acknowledgement
 is written to `config.json` as `unfrozen_ack`, so the number carries it.
 The gate follows the cost tier (`cost` in the protocol head, LAB-017 The number of audits follows the cost tier — `LAB-nnn` names a rule of the shipped lab standard): at

@@ -18,9 +18,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from protocol_fixture import head, scope_file
+from protocol_fixture import completed_run, head, scope_file
 
-from labkit import findings, report_check, scope_sha
+from labkit import findings, promises, report_check, scope_sha
 
 
 class ReportCheck(unittest.TestCase):
@@ -37,9 +37,21 @@ class ReportCheck(unittest.TestCase):
         )
         return area
 
-    def _audited(self, area: Path) -> None:
+    def _answered(self, area: Path, name: str = "2026-01-01T00-00-00_0001") -> Path:
+        """The completed run bound to the fixture's protocol that answers it."""
+        return completed_run(area, name, metrics={"c1_pass": True})
+
+    def _audited(self, area: Path, run: Path | None = None) -> None:
+        """A decided analysis record of the area's code, promises and RUN
+        (the answering run when none is named)."""
+        run = run or self._answered(area)
         sha = scope_sha.area_stamp(area)[0]
-        findings.write(area, "analysis", "opus", sha, (0, 0, 0), [])
+        block = promises.block_stamp(
+            (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
+        )
+        findings.write(
+            area, "analysis", "opus", sha, block, (0, 0, 0), [], run_id=run.name
+        )
 
     def _run(
         self,
@@ -116,11 +128,43 @@ class ReportCheck(unittest.TestCase):
         for needle in (
             "not `frozen = true`",
             "finalize",
-            "no analysis audit saw the code as it is now",
+            "analysis audit: no answering run to hold it to",
             "--check exits 1",
         ):
             self.assertIn(needle, out)
         self.assertIn("4 blocker(s)", out)
+
+    def test_no_analysis_record_of_the_answering_run_blocks(self):
+        area = self._area()
+        self._answered(area)
+        code, out = self._run(area)
+        self.assertEqual(code, 1)
+        self.assertIn("no analysis audit saw the area as it is now", out)
+
+    def test_an_analysis_audit_of_an_earlier_run_or_other_promises_blocks(self):
+        """Same code, a later answering run: until 0.97.1 the old record
+        held, since it named the code only (review 2026-10-18). The twin:
+        a record of the newest run is clean. Then a promise sentence edited
+        after the audit."""
+        area = self._area()
+        self._audited(area)  # of the first run
+        later = self._answered(area, "2026-01-02T00-00-00_0002")
+        code, out = self._run(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn(f"run {later.name}; audited: ", out)
+        self._audited(area, later)
+        code, out = self._run(area)
+        self.assertEqual(code, 0, out)
+        proto = area / "PROTOCOL-x.md"
+        proto.write_text(
+            proto.read_text(encoding="utf-8").replace(
+                "the criterion holds", "the criterion holds twice"
+            ),
+            encoding="utf-8",
+        )
+        code, out = self._run(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn("no analysis audit saw the area as it is now", out)
 
     def test_an_analysis_audit_of_older_code_blocks(self):
         area = self._area()

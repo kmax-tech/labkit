@@ -872,14 +872,15 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
     out = []
     if not head.frozen:
         out.append(f"{path.name}: not `frozen = true`")
-    out += _audit_line_findings(base_dir, path, head.preflight_audit)
+    out += _audit_line_findings(base_dir, path, head.preflight_audit, text)
     return out
 
 
-def _audit_line_findings(base_dir: Path, path: Path, line: str) -> list[str]:
+def _audit_line_findings(base_dir: Path, path: Path, line: str, text: str) -> list[str]:
     """Why the head's `preflight_audit` line does not cover a full run: empty,
     its `scope sha` is not the code's now, or no decided preflight audit
-    record saw that code (`findings.audit_coverage`, 2026-10-14)."""
+    record saw that code and the promise block the protocol TEXT carries now
+    (`findings.audit_coverage`, 2026-10-14; the block since 0.98.0)."""
     if not line:
         return [
             f"{path.name}: `preflight_audit` is empty — run `preflight`, "
@@ -892,8 +893,10 @@ def _audit_line_findings(base_dir: Path, path: Path, line: str) -> list[str]:
     if m is None:  # `n/a — <reason>`: a visible decision, not a claim
         return []
     try:
-        gap = findings.audit_coverage(base_dir, m.group(1), "preflight")
-    except findings.FindingsError as exc:
+        gap = findings.audit_coverage(
+            base_dir, m.group(1), "preflight", promises.block_stamp(text)
+        )
+    except (findings.FindingsError, promises.PromiseError) as exc:
         gap = str(exc)
     return [f"{path.name}: preflight_audit: {gap}"] if gap else []
 

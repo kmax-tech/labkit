@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import findings, runlog, scope_sha  # noqa: E402
+from labkit import findings, promises, runlog, scope_sha  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 AUDIT = "2026-10-05 · scope sha abc · 0 findings"
@@ -83,13 +83,22 @@ class FreezeGate(unittest.TestCase):
         (self.tmp / "scripts" / "m.py").write_text("x = 1\n")
         scope_file(self.tmp)  # part of the stamped code, written before the stamp
         sha = scope_sha.area_stamp(self.tmp)[0]
-        if record:
-            findings.write(self.tmp, "preflight", "opus", sha, (0, 0, 0), [])
-        return head(
+        text = head(
             cost="hours",
             frozen=True,
             preflight_audit=f"2026-10-07 · scope sha {sha} · 0 findings",
         )
+        if record:
+            findings.write(
+                self.tmp,
+                "preflight",
+                "opus",
+                sha,
+                promises.block_stamp(text),
+                (0, 0, 0),
+                [],
+            )
+        return text
 
     def test_full_run_on_frozen_protocol_starts(self):
         r, _ = self._start(self._audited(), long=True)
@@ -119,20 +128,41 @@ class FreezeGate(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
                 runlog.Run("t", {}, area, long=True)
-        self.assertIn("no preflight audit saw the code as it is now", str(cm.exception))
-        findings.write(area, "preflight", "opus", "0123456789ab", (0, 0, 0), [])
+        self.assertIn("no preflight audit saw the area as it is now", str(cm.exception))
+        findings.write(area, "preflight", "opus", "0123456789ab", "b", (0, 0, 0), [])
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
                 runlog.Run("t", {}, area, long=True)
         self.assertIn(
-            "audited: 0123456789ab", str(cm.exception)
+            "audited: code 0123456789ab, promises b", str(cm.exception)
         )  # the old audit, named
+
+    def test_a_promise_rewritten_after_the_audit_is_refused(self):
+        """The code is the audited code, the record is decided — and a
+        promise sentence changed after the audit: the record named the
+        code only, and the run started (review 2026-10-18)."""
+        text = self._audited()
+        area = self._area(
+            text.replace("the criterion holds", "the criterion holds twice")
+        )
+        with self.assertRaises(SystemExit) as cm:
+            with contextlib.redirect_stdout(io.StringIO()):
+                runlog.Run("t", {}, area, long=True)
+        self.assertIn("no preflight audit saw the area as it is now", str(cm.exception))
+        self.assertIn("promises ", str(cm.exception))
+        self.assertFalse((area / "runs").exists())
 
     def test_an_open_finding_of_the_covering_audit_is_refused(self):
         text = self._audited(record=False)
         sha = scope_sha.area_stamp(self.tmp)[0]
         findings.write(
-            self.tmp, "preflight", "opus", sha, (0, 1, 0), [("WARNING", "WARNING · x")]
+            self.tmp,
+            "preflight",
+            "opus",
+            sha,
+            promises.block_stamp(text),
+            (0, 1, 0),
+            [("WARNING", "WARNING · x")],
         )
         area = self._area(text)
         with self.assertRaises(SystemExit) as cm:

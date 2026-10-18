@@ -136,6 +136,27 @@ def standard_excerpt(mode: str = "preflight") -> tuple[str, str]:
     return f"{STANDARD_LABEL} ({', '.join(ids)} — the rules this audit cites)", text
 
 
+def audited_run(area: Path, protocol: Path) -> tuple[Path | None, str]:
+    """The run an analysis audit reads and its record is bound to — the
+    answering run (`runs.bound_answering_run`, the one choice every gate
+    holds the protocol to) read off the protocol file, or `(None, why)`: no
+    protocol id, no completed bound run, a blocker of the choice. Raises
+    AuditError on a head it cannot read. report-check holds the record to
+    the same choice."""
+    text = protocol.read_text(encoding="utf-8")
+    try:
+        pid = protocol_block.head(text).id
+    except protocol_block.BlockError as exc:
+        raise AuditError(f"{protocol.name}: head unreadable — {exc}") from exc
+    if pid is None:
+        return None, "the protocol id is still a placeholder"
+    choice = bound_answering_run(area, pid)
+    blocker, _ = choice.explain(promises.registers_ids(text))
+    if blocker or choice.run_dir is None:
+        return None, blocker or "no completed bound run"
+    return choice.run_dir, ""
+
+
 def run_rows(area: Path, protocol: Path) -> list[tuple[str, str]]:
     """What MODE analysis is told to read of the answering run: `(label,
     text)` per piece — the first ROWS_HEAD and last ROWS_TAIL lines of every
@@ -143,19 +164,9 @@ def run_rows(area: Path, protocol: Path) -> list[tuple[str, str]]:
     metrics.json. One `(label, note)` pair says why there is nothing: no
     protocol id, no completed bound run, no registered output."""
     repo = layout_root(area)
-    try:
-        pid = protocol_block.head(protocol.read_text(encoding="utf-8")).id
-    except protocol_block.BlockError as exc:
-        raise AuditError(f"{protocol.name}: head unreadable — {exc}") from exc
-    if pid is None:
-        return [("ROWS", "no rows: the protocol id is still a placeholder")]
-    choice = bound_answering_run(area, pid)
-    blocker, _ = choice.explain(
-        promises.registers_ids(protocol.read_text(encoding="utf-8"))
-    )
-    if blocker or choice.run_dir is None:
-        return [("ROWS", f"no rows: {blocker or 'no completed bound run'}")]
-    run_dir = choice.run_dir
+    run_dir, why = audited_run(area, protocol)
+    if run_dir is None:
+        return [("ROWS", f"no rows: {why}")]
     registered = read_outputs(run_dir)
     out: list[tuple[str, str]] = []
     rel_run = run_dir.resolve().relative_to(repo.resolve()).as_posix()
@@ -523,9 +534,16 @@ def main(argv: list[str]) -> int:
         for line in early_for_tier(args.area, protocol, args.mode):
             print(f"labkit-audit: {line}", file=sys.stderr)
         # the stamp names the code the auditor reads: taken before the call,
-        # recorded after it, never recomputed in between (Stamp)
+        # recorded after it, never recomputed in between (Stamp); the same
+        # for the promises it reads and, in mode analysis, the run whose
+        # rows it reads (review 2026-10-18: a record bound to the code only)
         sha, stamped, _ = area_stamp(args.area)
         stamp = Stamp(sha, stamped)
+        block_sha = promises.block_stamp(protocol.read_text(encoding="utf-8"))
+        run_id: str | None = None
+        if args.mode == ANALYSIS:
+            run_dir, _ = audited_run(args.area, protocol)
+            run_id = run_dir.name if run_dir is not None else findings.NO_RUN
         prompt = render(args.mode, args.area, protocol, code, standard, indexed)
         print(
             f"labkit-audit: {args.mode} · {protocol.name} · {len(code)} code file(s) "
@@ -545,7 +563,8 @@ def main(argv: list[str]) -> int:
         ValueError,
     ) as exc:
         # KeyError: llm.resolve on an alias models.toml does not know;
-        # FileNotFoundError, ValueError: the area cannot be stamped
+        # FileNotFoundError, ValueError: the area cannot be stamped;
+        # ValueError also: the promise block cannot be read (PromiseError)
         print(f"labkit-audit: {str(exc).strip(chr(39))}", file=sys.stderr)
         return 2
     print(report)
@@ -558,8 +577,10 @@ def main(argv: list[str]) -> int:
             args.mode,
             args.model,
             stamp.sha,
+            block_sha,
             result["verdict"],
             result["findings"],
+            run_id=run_id,
         )
     except ValueError as exc:  # the verdict counts findings the lines do not carry
         print(f"labkit-audit: {exc}", file=sys.stderr)
