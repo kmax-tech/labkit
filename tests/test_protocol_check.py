@@ -920,6 +920,24 @@ class TestIntentBudgetCalibration(unittest.TestCase):
         self.assertEqual(protocol_check.oversized_sections(text), [("Intent", 36, 35)])
 
 
+class TestProseLinesReadFencesLikeTheParser(unittest.TestCase):
+    """Audit 2026-10-18: `prose_lines` toggled on ``` by hand, so a `~~~`
+    fence and a ``` nested in a fence counted code as prose; the one fence
+    walker (`protocol_block.fence_spans`) reads both right."""
+
+    def test_tilde_fence_is_not_prose(self):
+        text = "## Intent\nProse.\n~~~\ncode\ncode\n~~~\nMore prose.\n"
+        lines = [s for _, s in protocol_check.prose_lines(text)]
+        self.assertEqual(lines, ["## Intent", "Prose.", "More prose."])
+
+    def test_nested_fence_does_not_reopen_prose(self):
+        text = (
+            "## Intent\n````\nask for ```toml output\n```\nstill code\n````\nProse.\n"
+        )
+        lines = [s for _, s in protocol_check.prose_lines(text)]
+        self.assertEqual(lines, ["## Intent", "Prose."])
+
+
 class TestStampedLegendIsNotTemplateText(unittest.TestCase):
     """The template's preamble (before the first `## `) is a stamped legend
     that survives filling — the verbatim-template check must not flag it

@@ -245,7 +245,8 @@ def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity
             nxt < len(lines)
             and lines[nxt].startswith((" ", "\t"))
             and lines[nxt].strip()
-            and not lines[nxt].strip().startswith(("```", "- ", "* "))
+            and not protocol_block.FENCE.match(lines[nxt])
+            and not lines[nxt].strip().startswith(("- ", "* "))
             and not re.match(r"\d+[.)]\s", lines[nxt].strip())
         ):
             parts.append(lines[nxt].strip())
@@ -263,7 +264,7 @@ def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity
                 name=field_name(label),
                 label=label,
                 value=value,
-                block=below.lstrip().startswith(("```", "~~~")) or deeper,
+                block=bool(protocol_block.FENCE.match(below)) or deeper,
                 last=nxt,
             )
         )
@@ -633,13 +634,11 @@ def prose_lines(text: str) -> list[tuple[str | None, str]]:
     (2026-08-25)."""
     out: list[tuple[str | None, str]] = []
     section: str | None = None
-    fence = False
-    for line in text.splitlines():
+    lines = text.splitlines()
+    fenced = protocol_block.fenced_lines(lines)
+    for i, line in enumerate(lines):
         stripped = line.strip()
-        if stripped.startswith("```"):
-            fence = not fence
-            continue
-        if fence or stripped.startswith("|"):
+        if i in fenced or stripped.startswith("|"):
             continue
         if stripped.startswith("## "):
             section = stripped

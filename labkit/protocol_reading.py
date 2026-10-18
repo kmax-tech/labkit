@@ -33,7 +33,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from labkit import promises, runs
+from labkit import promises, protocol_block, runs
 from labkit.cold_reader import (
     NEWCOMER,
     answer_contract,
@@ -80,13 +80,11 @@ def form(text: str) -> Form:
     lines = text.splitlines()
     found = fields(text)
     first = found[0].line if found else len(lines) + 1
-    before, fence = 0, False
-    for ln in lines[: first - 1]:
-        if ln.strip().startswith("```"):
-            fence = not fence
-            continue
+    before = 0
+    fenced = protocol_block.fenced_lines(lines)
+    for i, ln in enumerate(lines[: first - 1]):
         if (
-            not fence
+            i not in fenced
             and ln.strip()
             and not ln.startswith("#")
             and not ln.strip().startswith("<!--")

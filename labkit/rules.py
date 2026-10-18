@@ -36,9 +36,10 @@ import argparse
 import re
 import sys
 
-from labkit import console
 from pathlib import Path
 from typing import NamedTuple
+
+from labkit import console, protocol_block
 
 STANDARD = Path(__file__).resolve().parent / "docs" / "standard.md"
 REGISTRY = Path(__file__).resolve().parent / "docs" / "rules.tsv"
@@ -112,16 +113,17 @@ def rule_heads(doc: str) -> list[RuleHead]:
     Lines inside a generated register block and inside fenced code are not heads.
     """
     lines = doc.splitlines()
-    heads, register, fence, i = [], False, False, 0
+    fenced = protocol_block.fenced_lines(lines)
+    heads, register, i = [], False, 0
     while i < len(lines):
         line = lines[i]
-        if line.startswith("```"):
-            fence = not fence
+        if i in fenced:
+            pass
         elif line.startswith(REGISTER_START):
             register = True
         elif line.startswith(REGISTER_END):
             register = False
-        elif not (register or fence) and (m := RULE_HEAD_RE.match(line)):
+        elif not register and (m := RULE_HEAD_RE.match(line)):
             raw, n = m.group(2), i + 1
             if (
                 line.lstrip().startswith(("- **", "**"))
@@ -330,15 +332,17 @@ def check_refs(
     prefix the ledger does not keep (CODE in labkit's), and ids the ledger marks
     `moved:<where>`, are left to the ledger that holds them now.
     """
-    problems, register, fence = [], False, False
-    for n, line in enumerate(text.splitlines(), start=1):
-        if line.startswith("```"):
-            fence = not fence
+    lines = text.splitlines()
+    fenced = protocol_block.fenced_lines(lines)
+    problems, register = [], False
+    for n, line in enumerate(lines, start=1):
+        if n - 1 in fenced:
+            pass
         elif line.startswith(REGISTER_START):
             register = True
         elif line.startswith(REGISTER_END):
             register = False
-        elif not (register or fence or RULE_HEAD_RE.match(line)):
+        elif not (register or RULE_HEAD_RE.match(line)):
             problems += _line_refs(f"{where}:{n}", line, rows, allowed)
     return problems
 

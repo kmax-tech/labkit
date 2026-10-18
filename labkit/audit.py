@@ -407,12 +407,12 @@ def scope_list(tail: str) -> list[str]:
     for i, line in enumerate(lines):
         if line.strip().startswith("scope:"):
             first = line.strip().removeprefix("scope:").strip()
-            rest = [ln.strip().lstrip("-*• ").strip("`") for ln in lines[i + 1 :]]
-            return [
-                s
-                for s in ([first.strip("`")] if first else []) + rest
-                if s and not s.startswith("```")
+            rest = [
+                ln.strip().lstrip("-*• ").strip("`")
+                for ln in lines[i + 1 :]
+                if not protocol_block.FENCE.match(ln)  # a marker is no entry
             ]
+            return [s for s in ([first.strip("`")] if first else []) + rest if s]
     return []
 
 

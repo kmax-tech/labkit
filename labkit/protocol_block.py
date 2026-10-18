@@ -94,6 +94,19 @@ def fence_spans(lines: list[str]) -> list[tuple[str, int, int]]:
     return out
 
 
+def fenced_lines(lines: list[str]) -> set[int]:
+    """The 0-based indexes of every line a fence takes — its markers and its
+    body, by `fence_spans`. For a reader that walks lines and must skip the
+    fenced ones (a prose count, a label search, a rule scan): until the
+    audit of 2026-10-18 seven readers toggled a flag on ``` by hand, so a
+    `~~~` fence or a ``` nested in a fence turned prose into code and code
+    into prose for them, while the protocol parser read it right."""
+    out: set[int] = set()
+    for _, start, end in fence_spans(lines):
+        out.update(range(start - 1, min(end + 1, len(lines))))
+    return out
+
+
 def fenced_blocks(text: str) -> list[tuple[str, str]]:
     """(info string, body) of every top-level fenced block (`fence_spans`)."""
     lines = text.splitlines()

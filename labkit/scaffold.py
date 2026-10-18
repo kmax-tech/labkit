@@ -232,11 +232,9 @@ def _segments(text: str) -> list[tuple[str, list[str]]]:
 def _items(body: list[str]) -> list[list[str]]:
     """A section body as bullet items; continuation lines stay with their item."""
     items: list[list[str]] = []
-    fence = False
-    for line in body:
-        starts = line.startswith("- ") and not fence
-        if line.lstrip().startswith("```"):
-            fence = not fence
+    fenced = protocol_block.fenced_lines(body)
+    for i, line in enumerate(body):
+        starts = line.startswith("- ") and i not in fenced
         if starts or not items:
             items.append([line])
         else:
@@ -303,17 +301,15 @@ def short_placeholders(text: str) -> str:
     Fenced blocks and the TOML head are untouched."""
     out: list[str] = []
     lines = text.split("\n")
+    fenced = protocol_block.fenced_lines(lines)
     i = 0
-    fence = False
     while i < len(lines):
         line = lines[i]
-        if line.startswith("```"):
-            fence = not fence
         head = re.match(
             r"^(- \*\*[^*]+\*\*:?\s*(?:<!-- sm? -->\s*)?|\s+(?:[^<*]*\*\*:?\s*)?)<(?!!--)(.*)$",
             line,
         )
-        if fence or head is None or line.rstrip().endswith(">"):
+        if i in fenced or head is None or line.rstrip().endswith(">"):
             out.append(line)
             i += 1
             continue
