@@ -7,6 +7,29 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ## Unreleased
 
+### Fixed
+
+- **A broken scope file is one blocker in every repo, not only one with a
+  `lib/`.** Audit 2026-10-15 bug 11 was closed through the import walk,
+  which parses the area's files only when the repo has a `lib/` or `src/`;
+  without one a script that does not parse reached a bare `ast.parse` in
+  code-check's constant check — the traceback in preflight again, exit 1
+  and so not blocking in the pre-run hook. `scope_sha.parse_source` is the
+  one parse of a scope file (`SourceError` naming the file); the constant
+  check and the admissibility read check go through it (audit 2026-10-18).
+- **Fences are read once, also by the readers that walk lines.** Seven
+  readers still toggled a flag on a line starting with three backticks
+  (`protocol_check.prose_lines` behind `OVERSIZED (must)`,
+  `protocol_reading.form`, two in `scaffold`, two in `rules`, the audit's
+  scope list): a `~~~` fence or a fence nested in a fence turned code into
+  prose for them while the protocol parser read it right.
+  `protocol_block.fenced_lines` is the one answer to "is this line inside a
+  fence"; `tests/test_one_home.py` now greps the hand-toggled shape too.
+- **The tag test skips in a shallow clone without tags, as promised.** Its
+  `--is-shallow-repository` check compared against `"true"` with the
+  trailing newline still on, so the skip of 0.96.1 never fired and a cloud
+  clone's suite was red on one test.
+
 ### Changed
 
 - **One rule for a tie in the start second.** `runs.same_second` is the

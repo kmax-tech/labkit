@@ -33,9 +33,11 @@ RELEASE_TAG = re.compile(r"^v(\d+\.\d+\.\d+)$")
 
 
 def _git(*args: str) -> str:
-    return subprocess.run(
-        ["git", *args], cwd=REPO, capture_output=True, text=True, timeout=20
-    ).stdout
+    return (
+        subprocess.run(
+            ["git", *args], cwd=REPO, capture_output=True, text=True, timeout=20
+        ).stdout.strip()
+    )  # `== "true"` never held against the trailing newline (audit 2026-10-18)
 
 
 def _declared_version(ref: str) -> str | None:
