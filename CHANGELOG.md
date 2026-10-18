@@ -124,9 +124,9 @@ pins (`requirements.txt` / `requirements.lock`).
   prediction, [A2] the null lane within `null_band` of a derived chance
   (`chance_of`); scores accuracy, r2 and auc in the stdlib, exact where the
   data is; `--probe` runs a reduced estimator, `--seed` a run of its own.
-  The stamped protocol is the estimator's cut, the fields it shares with a
-  model answered in its words (`estimator_placeholders`) and the promise
-  tables in its words (`scaffold.PROMISE_TABLES`); the area's
+  The stamped protocol is the estimator's cut, the placeholders of the
+  fields it shares with a model worded for it (`estimator_placeholders`)
+  and the promise tables in its words (`scaffold.PROMISE_TABLES`); the area's
   test checks the resolution on synthetic rows without any estimator
   library. Evidence: nine of nine pilot attempts (labkit-paper area 09,
   2026-10-16) were classical ML and got the prompt skeleton (plan P: the estimator

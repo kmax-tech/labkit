@@ -506,12 +506,15 @@ COUNT_PLACEHOLDERS = {
 }
 
 
-#: The pilot protocol of an estimator area: the fields the estimator shares
-#: with a model, worded for it (the model-only fields the cut leaves out;
-#: its promise tables stand in PROMISE_TABLES).
+#: The pilot protocol of an estimator area: the placeholders of the fields
+#: the estimator shares with a model, worded for it (the model-only fields
+#: the cut leaves out; its promise tables stand in PROMISE_TABLES). Every
+#: one is a `<…>` placeholder and nothing else: a prefilled "n/a — …" with a
+#: `<…>` tail read as filled, and protocol-check let the hole through
+#: (BERT example, 2026-10-18).
 #: No `: `, ` — `, `; ` or ` (` inside a `<…>`: `short_placeholders` cuts there.
 ESTIMATOR_FIELDS = {
-    "Model / tool": "n/a — no model call; the instrument is the estimator of `make_estimator()` in scripts/01_measure.py <name it with its fixed parameters and the seed>",
+    "Model / tool": "<make_estimator() · its fixed parameters · the seed · no model call, no alias>",
     "Model I/O": "<in · the feature fields per item · out · one prediction per item, scored out of fold>",
     "Null condition / anchors (in the same run)": "<A2 · the same estimator on labels permuted inside each fitting fold, expected at chance_of() within null_band>",
     "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · a reduced estimator on N labelled items, both lanes, throwaway · scores read, never reported>",

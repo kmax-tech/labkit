@@ -440,7 +440,13 @@ class Exp(unittest.TestCase):
         self.assertIn("measure_01_foo_bar", test)
         self.assertIn("chance_of", test)
         proto = (area / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
-        self.assertIn("**Model / tool:** n/a — no model call", proto)
+        # the shared fields are placeholders in the estimator's words, never a
+        # prefilled n/a with a `<…>` tail (read as filled, 2026-10-18)
+        self.assertIn(
+            "**Model / tool:** <make_estimator() · its fixed parameters", proto
+        )
+        holes = [label for _, label in protocol_check.check_fields(proto).must_holes]
+        self.assertIn("Model / tool", holes)  # a placeholder: owed until written
         for gone in ("**Prompt", "Render check", "Parser cases harvested", "```text"):
             self.assertNotIn(gone, proto, gone)  # the cut, not an n/a line
         self.assertEqual(protocol_check.instrument_of_text(proto), "estimator")
