@@ -120,6 +120,30 @@ class Decisions(unittest.TestCase):
         self.assertIn("owes a reason", str(cm.exception))
         self.assertIn(path.name, str(cm.exception))
 
+    def test_counts_outrunning_the_tables_are_loud_on_read(self):
+        """The writer refuses `blockers = 2` without a table; a person editing
+        the file can write the same — the reader holds the same line, or the
+        record reads as covered with nothing open (review 2026-10-18)."""
+        area = area_with([("preflight", TWO)])
+        path = next((area / "audits").glob("*.toml"))
+        text = path.read_text(encoding="utf-8")
+        path.write_text(text.replace("blockers = 1", "blockers = 2"), encoding="utf-8")
+        with self.assertRaises(findings.FindingsError) as cm:
+            findings.read(path)
+        self.assertIn("counts 2 blocker(s) and 1 warning(s)", str(cm.exception))
+        self.assertIn("carries 1 BLOCKER and 1 WARNING", str(cm.exception))
+        self.assertIn(path.name, str(cm.exception))
+        with self.assertRaises(findings.FindingsError):
+            findings.audit_coverage(area, "abc123def456", "preflight")
+        # a table cut out of the file is the same loss
+        head, _, _ = text.partition("\n[[finding]]")
+        path.write_text(head + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(findings.FindingsError, "carries 0 BLOCKER"):
+            findings.read(path)
+        # notes are not held, on read as on write
+        path.write_text(text.replace("notes = 0", "notes = 5"), encoding="utf-8")
+        self.assertEqual(findings.read(path).verdict, (1, 1, 5))
+
     def test_unknown_status_missing_table_and_bad_toml_are_loud(self):
         area = area_with([("preflight", TWO)])
         path = next((area / "audits").glob("*.toml"))

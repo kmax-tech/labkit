@@ -94,6 +94,24 @@ class Record:
         return [f for f in self.findings if f.status == "deferred"]
 
 
+def counts_outrun(verdict: tuple[int, int, int], grades: list[str]) -> str | None:
+    """Why VERDICT counts more blockers or warnings than GRADES lists, or
+    None: a record whose counts outrun its tables reads as "nothing open"
+    — covered, decided, frozen (audit 2026-10-15). Notes are not held; an
+    auditor counts them loosely. One answer for the writer and the reader:
+    a person edits the files, so the reader holds the same line (review
+    2026-10-18: `blockers = 2` without a table read as covered)."""
+    b, w, _ = verdict
+    listed = {g: sum(1 for grade in grades if grade == g) for g in GRADES}
+    if b > listed["BLOCKER"] or w > listed["WARNING"]:
+        return (
+            f"the verdict counts {b} blocker(s) and {w} warning(s), the record "
+            f"carries {listed['BLOCKER']} BLOCKER and {listed['WARNING']} WARNING "
+            f"line(s)"
+        )
+    return None
+
+
 def _s(value: str) -> str:
     """A TOML basic string: json's escaping is a subset of TOML's."""
     return json.dumps(value, ensure_ascii=False)
@@ -111,20 +129,14 @@ def write(
     """Write the audit's findings file into AREA/audits/ and return its path.
     Every finding starts `open`. Never overwrites: the name carries the minute.
     Refuses (ValueError) a verdict that counts more blockers or warnings than
-    FINDINGS lists of that grade — notes are not held, an auditor counts
-    them loosely.
+    FINDINGS lists of that grade (`counts_outrun`).
     """
     if mode not in MODES:
         raise ValueError(f"mode {mode!r} — one of {', '.join(MODES)}")
-    b, w, _ = verdict
-    listed = {g: sum(1 for grade, _ in findings if grade == g) for g in GRADES}
-    if b > listed["BLOCKER"] or w > listed["WARNING"]:
-        # a record whose counts outrun its tables read as "nothing open" —
-        # covered, decided, frozen (audit 2026-10-15)
+    outrun = counts_outrun(verdict, [grade for grade, _ in findings])
+    if outrun:
         raise ValueError(
-            f"the verdict counts {b} blocker(s) and {w} warning(s), the report "
-            f"carries {listed['BLOCKER']} BLOCKER and {listed['WARNING']} WARNING "
-            f"line(s) readable as findings (`BLOCKER · <where> · …`) — nothing is "
+            f"{outrun} readable as findings (`BLOCKER · <where> · …`) — nothing is "
             f"recorded; have the auditor write each finding as one such line"
         )
     when = time.localtime(now)
@@ -215,6 +227,13 @@ def read(path: Path) -> Record:
     rows = data.get("finding", [])
     if not isinstance(rows, list):
         raise FindingsError(f"{path}: `finding` must be [[finding]] tables")
+    parsed = tuple(_finding(path, i, row) for i, row in enumerate(rows, start=1))
+    outrun = counts_outrun(
+        (audit["blockers"], audit["warnings"], audit["notes"]),
+        [f.grade for f in parsed],
+    )
+    if outrun:
+        raise FindingsError(f"{path}: {outrun} — a finding was lost or a count edited")
     return Record(
         path,
         audit["date"],
@@ -222,7 +241,7 @@ def read(path: Path) -> Record:
         audit["model"],
         audit["scope_sha"],
         (audit["blockers"], audit["warnings"], audit["notes"]),
-        tuple(_finding(path, i, row) for i, row in enumerate(rows, start=1)),
+        parsed,
     )
 
 
