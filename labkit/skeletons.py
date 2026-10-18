@@ -1,4 +1,4 @@
-"""skeletons — which shipped templates an instrument gets, and the contract
+"""skeletons — which shipped templates an kind gets, and the contract
 tests they stamp (standard 0.20).
 
 One home for two readers: the scaffolder writes an area from these
@@ -19,7 +19,7 @@ from pathlib import Path
 PACKAGE = Path(__file__).resolve().parent
 TEMPLATES = PACKAGE / "templates"
 PROTOCOL_TEMPLATE = PACKAGE / "experiment-protocol.md.template"
-#: the script every instrument stamps — the one the stamp check reads
+#: the script every kind stamps — the one the stamp check reads
 MEASURE_SCRIPT = "scripts/01_measure.py"
 #: a test function a template stamps: `def test_…(` at column 0
 CONTRACT_TEST = re.compile(r"^def (test_\w+)\(", re.M)
@@ -27,7 +27,7 @@ CONTRACT_TEST = re.compile(r"^def (test_\w+)\(", re.M)
 
 @dataclass(frozen=True)
 class Skeleton:
-    """The templates an instrument's area is stamped from."""
+    """The templates an kind's area is stamped from."""
 
     scripts: tuple[tuple[str, str], ...]  # (template name, file under scripts/)
     test: str  # the area test's template, stamped as tests/test_<NN>_<name>.py
@@ -89,12 +89,12 @@ SKELETONS: dict[str, Skeleton] = {
 }
 
 
-def row_fields_text(instrument: str) -> str:
-    """The FIELDS body of 00_prepare.py for INSTRUMENT, one `"field": "legend",`
+def row_fields_text(kind: str) -> str:
+    """The FIELDS body of 00_prepare.py for KIND, one `"field": "legend",`
     line per field, as the template's marker line is replaced."""
     return "\n".join(
         f"    {field!r}: {legend!r},".replace("'", '"')
-        for field, legend in SKELETONS[instrument].row_fields
+        for field, legend in SKELETONS[kind].row_fields
     )
 
 
@@ -108,14 +108,14 @@ def template(name: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def contract_tests(instrument: str) -> tuple[str, ...]:
-    """The test functions the instrument's test template stamps, in order —
+def contract_tests(kind: str) -> tuple[str, ...]:
+    """The test functions the kind's test template stamps, in order —
     the resolution check in its permanent form; a stamped area keeps every
     one of them. Raises when the template stamps none: an empty contract
     would hold nothing and say so nowhere."""
-    names = tuple(CONTRACT_TEST.findall(template(SKELETONS[instrument].test)))
+    names = tuple(CONTRACT_TEST.findall(template(SKELETONS[kind].test)))
     if not names:
         raise ValueError(
-            f"{SKELETONS[instrument].test} stamps no test function — the contract is empty"
+            f"{SKELETONS[kind].test} stamps no test function — the contract is empty"
         )
     return names

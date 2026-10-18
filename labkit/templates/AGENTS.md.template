@@ -45,16 +45,16 @@ fields, no reading of labkit's source.
 
 ## Lane `minutes` / `hours`
 
-1. `labkit-init exp <name> [--model ALIAS | --instrument fit]` — never
-   `mkdir`. The instrument says what happens to this run's labels, stamped
+1. `labkit-init exp <name> [--model ALIAS | --kind fit]` — never
+   `mkdir`. The kind says what happens to this run's labels, stamped
    into the head: `apply` with `--model` (a fixed model asked per item: a
    prompt, a parser; it never sees the labels), else `fit` (an estimator
    fitted on them in the run: fit, predict, a permuted-label null lane); a
    `count` is the seconds lane. Stamps the protocol and the script skeletons
-   of that instrument (`scripts/00_prepare.py · 01_measure.py · 02_analyze.py`).
+   of that kind (`scripts/00_prepare.py · 01_measure.py · 02_analyze.py`).
    Fits none of the three? Stop here: one line under the protocol's Notes
    saying what produces a row's answer, and no skeleton bent to fit — a
-   fourth instrument gets its name from that stop; a bent skeleton hides it
+   fourth kind gets its name from that stop; a bent skeleton hides it
    (nine of nine pilot attempts rebuilt the model skeleton, 2026-10-16).
 2. Read `protocol-check --contract`, then fill the TOML head (`type`, `cost`)
    and the Intent before the first call: hypothesis · success criterion ·

@@ -9,27 +9,27 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
-- **Standard 0.20: the head carries `instrument`.** `instrument = "apply"
+- **Standard 0.20: the head carries `kind`.** `kind = "apply"
   | "fit" | "count"` — what happens to this run's labels: `apply` asks a
   fixed model per row that never sees them (today a prompt through
   `labkit.llm`), `fit` fits an estimator on them in the run, `count` has
   none; the pretraining of a model is no difference, it happened outside
-  the run — is a required key of the `[protocol]` table, next to `cost`; a protocol without it, or
+  the run — is a required key of the `[protocol]` table, next to `cost`. It is not called `instrument`: that word stays for the measuring apparatus (the "Instrument check", `instrument(cfg)` in the skeleton), one word, one thing; a protocol without it, or
   with `standard = "0.19"`, is refused with a sentence naming the field.
   The last version reading standard 0.19 is 0.97.0; a lab repo raising
   its pin writes two lines per protocol (`standard = "0.20"` and
-  `protocol-fill <P> "instrument=apply"`, as `type=`), and reproduces an
+  `protocol-fill <P> "kind=apply"`, as `type=`), and reproduces an
   older run with the version it pins. What reads the key: the field cut
   (the template's `<!-- m -->` / `<!-- me -->` markers next to
-  `<!-- s -->`, `protocol_check.FIELDS.instruments`, `in_instrument`), the
-  stamped skeleton and protocol (`labkit-init exp --instrument`,
-  `scaffold.instrument_of` the one derivation from `--model` and `--cost`),
-  the promise tables (`scaffold.PROMISE_TABLES` per instrument, written
+  `<!-- s -->`, `protocol_check.FIELDS.kinds`, `in_kind`), the
+  stamped skeleton and protocol (`labkit-init exp --kind`,
+  `scaffold.kind_of` the one derivation from `--model` and `--cost`),
+  the promise tables (`scaffold.PROMISE_TABLES` per kind, written
   into the template's marker line; a count carries none), runlog
-  (`instrument` in config.json, `runs.run_instrument`), finalize (an apply
+  (`kind` in config.json, `runs.run_kind`), finalize (an apply
   run owes `models_resolved` and shows its one-draw spread; a fit or
   count run owes no model; a config without the key is named) and
-  `labkit-audit` (the MODE line tells the auditor the instrument and what
+  `labkit-audit` (the MODE line tells the auditor the kind and what
   its instrument check looks like; a placeholder is refused). Until now
   the kind of an experiment was inferred at six places from the prose of
   "Model / tool" and from the scaffolder's flags — `protocol_check.model_named`,
@@ -42,8 +42,8 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
-- **The prepare step writes the row shape its instrument reads.**
-  `00_prepare.py`'s FIELDS legend is stamped per instrument from
+- **The prepare step writes the row shape its kind reads.**
+  `00_prepare.py`'s FIELDS legend is stamped per kind from
   `skeletons.SKELETONS` — a model's `id · text · gold`, an estimator's
   `id · features · gold · split` (gold `null` for the unlabelled split) —
   where the shared template wrote the apply shape for both and its
@@ -62,19 +62,19 @@ pins (`requirements.txt` / `requirements.lock`).
   where it read the model's key for both and would have failed on an
   estimator's second draw; `test_the_criterion_key_is_reported` is a
   contract test of both skeletons.
-- **The stamp check: the skeleton held to its instrument.** `stamp_check`
+- **The stamp check: the skeleton held to its kind.** `stamp_check`
   — a station of `preflight` (a blocker at `frozen = true`, a warning
   before), `claude-hook post-change` on a changed `scripts/*.py` or area
   test, `python -m labkit.stamp_check <area>` — holds two exact facts and
   nothing about meaning: the measure script of an apply area imports
   `labkit.llm` and calls `llm.complete` or `llm.complete_many`, a fit
   area's or a count's never imports it; every test function the
-  instrument's test template stamps still stands in the area's test,
+  kind's test template stamps still stands in the area's test,
   not skipped. A bent skeleton is the finding before it is a red test.
-  `skeletons` is the one home of which templates an instrument gets and
+  `skeletons` is the one home of which templates a kind gets and
   the contract tests they stamp (the scaffolder writes from it),
   `repo.area_test_files` of where an area's tests are. The AGENTS template
-  says what to do when no instrument fits: stop, one line under Notes, no
+  says what to do when no kind fits: stop, one line under Notes, no
   skeleton bent. Evidence: nine of nine pilot attempts rebuilt the model
   skeleton and nothing mechanical saw it (labkit-paper 09, 2026-10-16;
   plan II: the stamp check, I7).
@@ -118,7 +118,7 @@ pins (`requirements.txt` / `requirements.lock`).
 
 - **The fit skeleton.** `labkit-init exp` without `--model` at
   minutes/hours stamps `measure-fit-script.py.template` and
-  `test-fit.py.template`: the instrument is `fit` — an estimator (fit,
+  `test-fit.py.template`: the kind is `fit` — an estimator (fit,
   predict) fitted in the run, scored out of fold over the labelled items; the null lane fits
   labels permuted inside each fitting fold; the test lane predicts the
   unlabelled split and is never scored (a withheld label stored as 0 or
@@ -178,7 +178,7 @@ pins (`requirements.txt` / `requirements.lock`).
   three lines below; the next round measured a null-AUC spread of 0.116
   over ten seeds). `--report` adds the † fields the protocol's own head
   owes, not the stamp-time flags' (plan P: no autofill, C1; plan II: the
-  cut per instrument, I3).
+  cut per kind, I3).
 
 - **One rule for a tie in the start second.** `runs.same_second` is the
   one reading of "two runs the ids cannot order", and

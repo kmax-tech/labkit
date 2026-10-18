@@ -63,7 +63,7 @@ Why (house rules, one per line so a reference is never cut):
   LAB-004 Identifiers make the intent addressable
   LAB-016 Resolution check before freezing
   LAB-023 No silent loss
-Stamped by `labkit-init exp <name>` (instrument fit, no --model); fill the TODOs, keep the structure.
+Stamped by `labkit-init exp <name>` (kind fit, no --model); fill the TODOs, keep the structure.
 """
 from __future__ import annotations
 

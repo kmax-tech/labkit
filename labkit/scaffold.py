@@ -253,22 +253,22 @@ def _untag(line: str) -> str:
     return line
 
 
-def for_instrument(item: list[str], instrument: str) -> bool:
-    """Does INSTRUMENT owe this template item? Untagged: every one; `<!-- a -->`
+def for_kind(item: list[str], kind: str) -> bool:
+    """Does KIND owe this template item? Untagged: every one; `<!-- a -->`
     apply only; `<!-- af -->` apply and fit — the template's half of
-    `protocol_check.in_instrument` (a test holds the two to each other). The
+    `protocol_check.in_kind` (a test holds the two to each other). The
     tag may sit on a wrapped label's second line, so the whole item is read."""
     text = "\n".join(item)
     if APPLY_FIT_TAG in text:
-        return instrument in ("apply", "fit")
+        return kind in ("apply", "fit")
     if APPLY_TAG in text:
-        return instrument == "apply"
+        return kind == "apply"
     return True
 
 
-def seconds_cut(tmpl: str, instrument: str) -> str:
-    """The `seconds` cut for INSTRUMENT: the preamble, and of every section only
-    the items tagged `<!-- s -->` that the instrument owes, under their heading."""
+def seconds_cut(tmpl: str, kind: str) -> str:
+    """The `seconds` cut for KIND: the preamble, and of every section only
+    the items tagged `<!-- s -->` that the kind owes, under their heading."""
     out: list[str] = []
     for heading, body in _segments(tmpl):
         if not heading:
@@ -277,7 +277,7 @@ def seconds_cut(tmpl: str, instrument: str) -> str:
         kept = [
             item
             for item in _items(body)
-            if SECONDS_TAG in "\n".join(item) and for_instrument(item, instrument)
+            if SECONDS_TAG in "\n".join(item) and for_kind(item, kind)
         ]
         if not kept:
             continue
@@ -287,7 +287,7 @@ def seconds_cut(tmpl: str, instrument: str) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
-#: the [[promise]] tables a stamped protocol carries, per instrument — the one
+#: the [[promise]] tables a stamped protocol carries, per kind — the one
 #: home (standard 0.20): id, key, the sentence naming its constant, the
 #: constant with its stamp value; the scope is the measure script, which
 #: reads exactly these (`promises.all_constants`). A count has no bar to
@@ -346,13 +346,13 @@ PROMISE_TABLES: dict[str, tuple[tuple[str, str, str, dict[str, int | float]], ..
 PROMISE_SCOPE = "scripts/01_measure.py"
 #: the template's one line where the tables go (a TOML comment, so the
 #: template's block parses as it stands)
-PROMISE_MARK = "# <the [[promise]] tables of the instrument — labkit-init stamps them>"
+PROMISE_MARK = "# <the [[promise]] tables of the kind — labkit-init stamps them>"
 
 
-def promise_tables(instrument: str) -> str:
-    """The [[promise]] tables of INSTRUMENT as TOML text, "" for a count."""
+def promise_tables(kind: str) -> str:
+    """The [[promise]] tables of KIND as TOML text, "" for a count."""
     out = []
-    for pid, key, sentence, constants in PROMISE_TABLES[instrument]:
+    for pid, key, sentence, constants in PROMISE_TABLES[kind]:
         pairs = ", ".join(f"{k} = {v!r}" for k, v in constants.items())
         out.append(
             f'[[promise]]\nid = "{pid}"\nkey = "{key}"\nsentence = "{sentence}"\n'
@@ -361,8 +361,8 @@ def promise_tables(instrument: str) -> str:
     return "\n".join(out)
 
 
-def promise_block_for(tmpl: str, instrument: str) -> str:
-    """TMPL with the block's marker replaced by the instrument's tables. A
+def promise_block_for(tmpl: str, kind: str) -> str:
+    """TMPL with the block's marker replaced by the kind's tables. A
     count's block loses the paragraph about tables with the marker: no
     table, no sentence that owes one. Raises when the marker is missing —
     a template without it would stamp a protocol without promises."""
@@ -370,7 +370,7 @@ def promise_block_for(tmpl: str, instrument: str) -> str:
         raise ValueError(
             f"promise_block_for: the template has no line {PROMISE_MARK!r}"
         )
-    tables = promise_tables(instrument)
+    tables = promise_tables(kind)
     if tables:
         return tmpl.replace(PROMISE_MARK + "\n", tables)
     # the paragraph: the blank line, the comment lines, the marker
@@ -425,11 +425,9 @@ def short_placeholders(text: str) -> str:
     return "\n".join(out)
 
 
-def pilot_and_report(
-    tmpl: str, instrument: str = "apply"
-) -> tuple[str, ProtocolBlocks]:
-    """(pilot part, report blocks) of the template for INSTRUMENT — items
-    another instrument owes are left out of both. A report block is (section
+def pilot_and_report(tmpl: str, kind: str = "apply") -> tuple[str, ProtocolBlocks]:
+    """(pilot part, report blocks) of the template for KIND — items
+    another kind owes are left out of both. A report block is (section
     key, heading, items): a daggered section whole, or the daggered items of
     a section."""
     pilot: list[str] = []
@@ -440,9 +438,7 @@ def pilot_and_report(
             pilot.extend(line for item in _items(body) for line in item)
             continue
         items = [
-            [_untag(line) for line in i]
-            for i in _items(body)
-            if for_instrument(i, instrument)
+            [_untag(line) for line in i] for i in _items(body) if for_kind(i, kind)
         ]
         if DAGGER in heading:
             report.append((section_key(heading) or heading, heading, items))
@@ -686,7 +682,7 @@ def stamp_explore(experiments: Path, slug: str) -> list[str]:
 
 def promote(area: Path, tmpl: str) -> list[str]:
     """Fill the report-grade fields into an existing area's protocols: per
-    protocol the blocks of TMPL its head's instrument owes (`pilot_and_report`
+    protocol the blocks of TMPL its head's kind owes (`pilot_and_report`
     is the one filter) — a count never reaches here (seconds), an estimator
     gets no prompt-shaped field."""
     protos = area_protocols(area)
@@ -701,12 +697,12 @@ def promote(area: Path, tmpl: str) -> list[str]:
                 f"  skip (cost seconds: nothing freezes, no report fields)  {proto}"
             )
             continue
-        if head.instrument is None:
+        if head.kind is None:
             raise SystemExit(
-                f"labkit-init: {proto}: [protocol] instrument is still a "
+                f"labkit-init: {proto}: [protocol] kind is still a "
                 f"placeholder — set it (model | estimator | count) before --report"
             )
-        _, blocks = pilot_and_report(tmpl, head.instrument)
+        _, blocks = pilot_and_report(tmpl, head.kind)
         new, added = insert_report_fields(text, blocks)
         if not added:
             log.append(f"  skip (report fields already there)  {proto}")
@@ -718,50 +714,50 @@ def promote(area: Path, tmpl: str) -> list[str]:
     return log
 
 
-def instrument_of(cost: str | None, model: bool | str, explicit: str | None) -> str:
-    """The instrument an area is stamped with — the ONE derivation (standard
-    0.20): `--instrument` names it; else a model named means apply (a fixed
+def kind_of(cost: str | None, model: bool | str, explicit: str | None) -> str:
+    """The kind an area is stamped with — the ONE derivation (standard
+    0.20): `--kind` names it; else a model named means apply (a fixed
     model asked per row), seconds without one is a count, the rest fit (nine of nine
     pilot attempts were estimators and got the prompt skeleton, labkit-paper
     09, 2026-10-16). Refuses a contradiction loudly: a model alias with an
-    instrument that is not `apply`; a count at a tier other than seconds (a
+    kind that is not `apply`; a count at a tier other than seconds (a
     count is rerunnable at will, that is what seconds means); fit at
-    seconds (the seconds cut has no fit form — the cut per instrument,
+    seconds (the seconds cut has no fit form — the cut per kind,
     plan II I3)."""
-    if explicit is not None and explicit not in protocol_block.INSTRUMENTS:
+    if explicit is not None and explicit not in protocol_block.KINDS:
         raise SystemExit(
-            f"labkit-init: --instrument {explicit!r} — one of {', '.join(protocol_block.INSTRUMENTS)}"
+            f"labkit-init: --kind {explicit!r} — one of {', '.join(protocol_block.KINDS)}"
         )
     derived = "apply" if model else ("count" if cost == "seconds" else "fit")
-    instrument = explicit or derived
-    if model and instrument != "apply":
+    kind = explicit or derived
+    if model and kind != "apply":
         raise SystemExit(
-            f"labkit-init: --model names a model asked per row, so the instrument is "
-            f"`apply`, not {instrument!r} — drop one of the two"
+            f"labkit-init: --model names a model asked per row, so the kind is "
+            f"`apply`, not {kind!r} — drop one of the two"
         )
-    if instrument == "count" and cost != "seconds":
+    if kind == "count" and cost != "seconds":
         raise SystemExit(
             'labkit-init: a count is `cost = "seconds"` (rerunnable at will) — add '
-            "--cost seconds, or name the instrument that clears a bar"
+            "--cost seconds, or name the kind that clears a bar"
         )
-    if instrument == "fit" and cost == "seconds":
+    if kind == "fit" and cost == "seconds":
         raise SystemExit(
             "labkit-init: fit runs at minutes or hours — the seconds cut has no "
             "fit form (a count at seconds, apply with --model)"
         )
-    return instrument
+    return kind
 
 
 def stamp_scripts(
-    root: Path, area: Path, nn: str, slug: str, instrument: str, model: bool | str
+    root: Path, area: Path, nn: str, slug: str, kind: str, model: bool | str
 ) -> list[str]:
-    """The script skeletons and the area's test under tests/, by instrument."""
+    """The script skeletons and the area's test under tests/, by kind."""
     log: list[str] = []
     (area / "scripts").mkdir(exist_ok=True)
     alias = model if isinstance(model, str) else "TODO-alias"
-    # the templates per instrument: one home with the stamp check, which
+    # the templates per kind: one home with the stamp check, which
     # holds the stamped area to them (skeletons.SKELETONS)
-    skeleton = SKELETONS[instrument]
+    skeleton = SKELETONS[kind]
     scripts, test = skeleton.scripts, skeleton.test
     tname = (f"test_{nn}_{slug}" if nn else f"test_{slug}").replace("-", "_") + ".py"
     for tmpl, dest in scripts:
@@ -773,7 +769,7 @@ def stamp_scripts(
             .replace("<NN>_<name>", tname[len("test_") : -3])
             .replace("<name>", slug)
             .replace("<model>", alias)
-            .replace(ROW_FIELDS_MARK, row_fields_text(instrument))
+            .replace(ROW_FIELDS_MARK, row_fields_text(kind))
         )
         if write_if_absent(area / "scripts" / dest, text, log):
             (area / "scripts" / dest).chmod(
@@ -795,7 +791,7 @@ def stamp_area(
     cost: str | None = None,
     model: bool | str = False,
     report: bool = False,
-    instrument: str | None = None,
+    kind: str | None = None,
 ) -> tuple[Path, str]:
     """Stamp `experiments/NN-<name>/` (or promote it with REPORT): the area
     and the report to print (what was written, then the next steps) — the
@@ -820,7 +816,7 @@ def stamp_area(
             promote(existing[0], template(PROTOCOL_TEMPLATE.name))
         )
     quick = cost == "seconds"
-    instrument = instrument_of(cost, model, instrument)
+    kind = kind_of(cost, model, kind)
     tmpl = (
         template(PROTOCOL_TEMPLATE.name)
         .replace("<name>", slug, 1)
@@ -828,23 +824,23 @@ def stamp_area(
     )
     if cost:
         tmpl = tmpl.replace('cost = "<seconds | minutes | hours>"', f'cost = "{cost}"')
-    # the instrument, as data in the head (standard 0.20): stamped with the
+    # the kind, as data in the head (standard 0.20): stamped with the
     # value, never left as a placeholder
     tmpl = promise_block_for(
         tmpl.replace(
-            'instrument = "<apply | fit | count>"',
-            f'instrument = "{instrument}"',
+            'kind = "<apply | fit | count>"',
+            f'kind = "{kind}"',
         ),
-        instrument,
+        kind,
     )
     # the cut reads the tagged template; every written protocol is free of
     # the markers (`_untag` in the cuts)
-    pilot, blocks = pilot_and_report(tmpl, instrument)
+    pilot, blocks = pilot_and_report(tmpl, kind)
     if quick:
-        pilot, blocks = seconds_cut(tmpl, instrument), []
-        if instrument == "count":
+        pilot, blocks = seconds_cut(tmpl, kind), []
+        if kind == "count":
             pilot = count_placeholders(pilot)
-    elif instrument == "fit":
+    elif kind == "fit":
         pilot = fit_placeholders(pilot)
     nn = next_experiment_number(experiments)
     area = experiments / f"{nn}-{slug}"
@@ -853,7 +849,7 @@ def stamp_area(
         write_if_absent(area / d / ".gitkeep", "", log)
     write_if_absent(
         area / "README.md",
-        area_readme(nn, slug, skeleton=instrument != "count"),
+        area_readme(nn, slug, skeleton=kind != "count"),
         log,
     )
     pre = experiments / "explore" / f"{slug}.py"
@@ -873,13 +869,13 @@ def stamp_area(
         ),
         log,
     )
-    log += stamp_scripts(root, area, nn, slug, instrument, model)
+    log += stamp_scripts(root, area, nn, slug, kind, model)
     _point_hooks_at(root)
     return area, (
         f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
         + "\n".join(log)
         + "\n"
-        + next_steps(area.relative_to(root), slug, nn, instrument, quick)
+        + next_steps(area.relative_to(root), slug, nn, kind, quick)
     )
 
 
@@ -895,9 +891,9 @@ def _point_hooks_at(root: Path) -> None:
         )
 
 
-def next_steps(rel: Path, slug: str, nn: str, instrument: str, quick: bool) -> str:
-    """What to do after `exp`, in order — the lane of AGENTS.md for this area, by instrument."""
-    model = instrument == "apply"
+def next_steps(rel: Path, slug: str, nn: str, kind: str, quick: bool) -> str:
+    """What to do after `exp`, in order — the lane of AGENTS.md for this area, by kind."""
+    model = kind == "apply"
     if quick:
         return f"""
 Next (cost = "seconds" — no freeze, no audit per run, the first run is the probe):
@@ -907,9 +903,9 @@ Next (cost = "seconds" — no freeze, no audit per run, the first run is the pro
   3. git add + commit, then scripts/01_measure.py, then `protocol-fill PROTOCOL-{slug}.md --from-run <run_id>`.
   4. finalize {rel} checks the provenance; the agent audit comes when the number is promoted."""
     test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
-    if instrument == "fit":
+    if kind == "fit":
         return f"""
-Next (light pilot, heavy report — instrument fit: an estimator fitted in the run, no model call):
+Next (light pilot, heavy report — kind fit: an estimator fitted in the run, no model call):
   1. PROTOCOL-{slug}.md: fill the pilot part (head: type, cost; question, success, admissibility, the estimator in Model / tool, the null condition).
   2. scripts/00_prepare.py: raw -> prepared, gold null for the unlabelled split   ({rel}/scripts)
   3. scripts/01_measure.py: make_estimator(), SCORE, FEATURES_FIELD; --show 3 reads the config and feature rows
@@ -966,11 +962,11 @@ def main(argv: list[str]) -> int:
         const=True,
         default=False,
         metavar="ALIAS",
-        help="a model asked per row — instrument apply (without it, minutes/hours stamp fit)",
+        help="a model asked per row — kind apply (without it, minutes/hours stamp fit)",
     )
     exp.add_argument(
-        "--instrument",
-        choices=protocol_block.INSTRUMENTS,
+        "--kind",
+        choices=protocol_block.KINDS,
         help="what happens to this run's labels (default: apply with --model, count "
         "at seconds, else fit) — stamped into the head",
     )
@@ -1012,7 +1008,7 @@ def main(argv: list[str]) -> int:
         cost=a.cost,
         model=a.model,
         report=a.report,
-        instrument=a.instrument,
+        kind=a.kind,
     )
     print(report)
     return 0

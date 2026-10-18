@@ -1,7 +1,7 @@
 """repeat_of: the same measurement drawn again, never the answer.
 
 `derived_from` re-reads a parent's rows without a model call; `repeat_of`
-asks the model again with the same instrument on the same items, so the
+asks the model again with the same kind on the same items, so the
 spread of the number becomes visible (TODO item 4: every audit of the cloud
 judge probe named "one unseeded draw", 2026-10-14). A repeat is supporting
 evidence: the primary run keeps answering the protocol in every default
@@ -89,11 +89,11 @@ class Repeats(unittest.TestCase):
 
     def test_finalize_warns_on_one_draw_of_a_model_run_and_not_after_a_repeat(self):
         """The spread is static evidence: a warning until a repeat exists,
-        nothing for a run of an estimator — the run's recorded instrument
+        nothing for a run of an estimator — the run's recorded kind
         decides (0.20), not its metrics."""
         from labkit import finalize
 
-        first = self._run()  # the fixture head says instrument = "apply"
+        first = self._run()  # the fixture head says kind = "apply"
         primary = self.area / "runs" / first
         self.assertIn(
             "is one draw — no spread", finalize.single_draw(self.area, primary) or ""
@@ -102,9 +102,7 @@ class Repeats(unittest.TestCase):
         self.assertIsNone(finalize.single_draw(self.area, primary))
         proto = self.area / "PROTOCOL-x.md"
         proto.write_text(
-            proto.read_text(encoding="utf-8").replace(
-                'instrument = "apply"', 'instrument = "fit"'
-            ),
+            proto.read_text(encoding="utf-8").replace('kind = "apply"', 'kind = "fit"'),
             encoding="utf-8",
         )
         estimator = self.area / "runs" / self._run()

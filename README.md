@@ -40,7 +40,7 @@ The **console commands** come with the installation; every one answers
 
 ```bash
 labkit-init lab [DIR] [--name NAME] [--labkit-ref REF]   # lay out a lab repo: AGENTS.md, pinned requirements.txt, models.toml, experiments/, data/, notes/
-labkit-init exp <NAME> [--repo DIR] [--cost T] [--model [ALIAS]] [--instrument I] [--report] [--explore]  # stamp an area by its instrument (apply | fit | count): the protocol's cut, script skeletons, README, its test
+labkit-init exp <NAME> [--repo DIR] [--cost T] [--model [ALIAS]] [--kind K] [--report] [--explore]  # stamp an area by its kind (apply | fit | count): the protocol's cut, script skeletons, README, its test
 protocol-check [--template PATH] <PROTOCOL-*.md | dir>...  # mandatory-field check (must/should contract)
 protocol-check --contract | --guide # the head, the fields by exact label, the budgets — read before writing; the path of the field guide
 runlog [<area>] [--wait | --follow] [--max-seconds N] [--interval S] [--notify]  # the area's runs: open ones with state and pid, then the finished ones; --wait exits 0 idle · 2 a run failed · 3 still running
@@ -54,7 +54,7 @@ protocol-fill <PROTOCOL> "LABEL=VALUE" ...  # fill several in one call, all or n
 protocol-fill <PROTOCOL> --list | --prompts  # the open placeholder fields; the Prompt block from the scripts' PROMPT constants
 protocol-fill <PROTOCOL> --from-run [RUN]  # write the number back from the run's metrics.json: Answer, Result, Answering run and Runs lines, never retyped
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
-preflight <AREA> [--protocol FILE]  # the mechanical pre-freeze gate, nine stations: protocol-check · cost tier · audit findings decided · code-check · stamp check (the skeleton held to the head's instrument) · scope-sha · working tree · hooks · area tests (not the agent audit; `labkit/preflight.py` lists them)
+preflight <AREA> [--protocol FILE]  # the mechanical pre-freeze gate, nine stations: protocol-check · cost tier · audit findings decided · code-check · stamp check (the skeleton held to the head's kind) · scope-sha · working tree · hooks · area tests (not the agent audit; `labkit/preflight.py` lists them)
 finalize <AREA> [--protocol FILE]   # the post-run gate, seven steps: answering run and its record · intent-check · declared scopes · open fields · frozen source · area tests · criterion n (`labkit/finalize.py` lists them)
 finalize <AREA> --write-back [--run ID]  # the post-run lane in one command, stopping at the first blocker: the gate · the number into the protocol (`protocol-fill --from-run`) · the area's `--check` · `protocol-check` — the one write finalize does
 finalize --if-reported <PROTOCOL>.. # the commit gate: finalize every protocol whose answer cites a run
@@ -218,7 +218,7 @@ and the per-field explanations live in `protocol-field-guide.md`.
 | **derived run**     | a run that re-evaluates another run's rows (`derived_from`), never a repeat's; it makes no model call and records no model |
 | **scope hash**      | per promise: the hash over its declared scope (`declared_scope_sha`), recorded by the run, held by `finalize` |
 | **stamp**           | per area: the hash over every file that determines a number (`scope-sha`), written into an audit field, held by `runlog` at the start of a full run |
-| **instrument**      | what happens to this run's labels, as data in the head (`instrument = "apply" \| "fit" \| "count"`, standard 0.20): `apply` asks a fixed model per row that never sees them, `fit` fits an estimator on them in the run, `count` has none; the field cut, the skeleton, the promise tables, the freeze gate, finalize and the audit read it, nothing infers it from prose |
+| **kind**            | what happens to this run's labels, as data in the head (`kind = "apply" \| "fit" \| "count"`, standard 0.20): `apply` asks a fixed model per row that never sees them, `fit` fits an estimator on them in the run, `count` has none; the field cut, the skeleton, the promise tables, the freeze gate, finalize and the audit read it, nothing infers it from prose. Not the *instrument*: that word stays for the measuring apparatus — the prompt, parser and model of an apply area, the estimator of a fit area ("Instrument check", `instrument(cfg)` in the skeleton, `models_resolved`) |
 | **estimator**       | what a `fit` area fits: anything with fit and predict, scored out of fold against a lane fitted on permuted labels (`labkit-init exp` without `--model` at minutes/hours stamps the fit skeleton) |
 
 **"Ledger" is not used:** it named three different things — the run
@@ -236,12 +236,12 @@ The hierarchy the vocabulary is meant to make visible:
     ## Runs          manual documentation, never a source
 
 A protocol has **one template, three cuts by cost and a second cut by
-instrument**: `cost = "seconds"` (a count, or a handful of model calls —
+kind**: `cost = "seconds"` (a count, or a handful of model calls —
 rerunnable at will) owes the seconds cut and never freezes — but the
 `[[promise]]` tables like every full run (since standard 0.19); `minutes`
 and `hours` have two: `frozen = false` is the light pilot (MUST fields
 only), `frozen = true` the report — every SHOULD field becomes mandatory.
-At every tier the head's `instrument` cuts again: a count owes neither
+At every tier the head's `kind` cuts again: a count owes neither
 criterion nor null lane nor seed, fit no prompt, no render check and no
 raw prompt+answer pair (`protocol-check --contract` prints both cuts). The price sits on the claim, not the activity: cheap
 tiers yield numbers that must not be reported. Every field's explanation —

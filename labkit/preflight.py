@@ -264,16 +264,16 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
     if not code_findings:
         print("  ok")
 
-    # -- 3b. stamp check: the skeleton held to its instrument ---------------
-    print("── stamp check: the skeleton held to its instrument ──")
-    if report.head.instrument is None:
-        print("  skipped — [protocol] instrument is still a placeholder (named above)")
+    # -- 3b. stamp check: the skeleton held to its kind ---------------
+    print("── stamp check: the skeleton held to its kind ──")
+    if report.head.kind is None:
+        print("  skipped — [protocol] kind is still a placeholder (named above)")
     else:
         stamp = stamp_findings(area, report.head, repo=layout_root(area))
         for line in stamp:
             (findings.block if frozen else findings.warn)(line)
         if not stamp:
-            print(f"  ok — {report.head.instrument}")
+            print(f"  ok — {report.head.kind}")
 
     # -- 4. scope-sha ------------------------------------------------------
     print("── scope-sha ──")

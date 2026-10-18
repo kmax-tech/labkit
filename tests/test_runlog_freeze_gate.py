@@ -42,7 +42,7 @@ REGISTRATION = """
 """
 # a count: no model, no id, the question only — the gate owes nothing more (0.87.1)
 SECONDS_COUNT = (
-    head(cost="seconds", instrument="count", promises=None)
+    head(cost="seconds", kind="count", promises=None)
     + "\n- **Question / hypothesis:** how many documents per case?\n"
 )
 SECONDS = head(cost="seconds") + REGISTRATION
@@ -207,7 +207,7 @@ class FreezeGate(unittest.TestCase):
         r, _ = self._start(SECONDS, long=True)
         cfg = json.loads((r.dir / "config.json").read_text())
         self.assertEqual(cfg["cost_tier"], "seconds")
-        self.assertEqual(cfg["instrument"], "apply")  # the head's datum, recorded
+        self.assertEqual(cfg["kind"], "apply")  # the head's datum, recorded
         self.assertFalse(cfg["unfrozen_ack"])
 
     def test_seconds_without_criterion_is_refused(self):
@@ -222,7 +222,7 @@ class FreezeGate(unittest.TestCase):
         r, _ = self._start(SECONDS_COUNT, long=True)
         cfg = json.loads((r.dir / "config.json").read_text())
         self.assertEqual(cfg["cost_tier"], "seconds")
-        self.assertEqual(cfg["instrument"], "count")
+        self.assertEqual(cfg["kind"], "count")
         self.assertIsNone(cfg.get("promises"))  # nothing registered, nothing recorded
 
     def test_hours_keeps_the_freeze(self):

@@ -58,7 +58,7 @@ def _run(area, name, *, pid=PID, metrics=None, completion=True, repeat_of=None):
         "pid": 1,
         "schema_version": 2,
         "protocol": {"id": pid, "path": "PROTOCOL-x.md"},
-        "instrument": "apply",  # the fixture head's, as runlog records it (0.20)
+        "kind": "apply",  # the fixture head's, as runlog records it (0.20)
         "models_resolved": {"model": {"alias": "haiku"}},  # a model run names its model
         "promises": promises.snapshot(block, area) if block is not None else None,
     }
@@ -117,7 +117,7 @@ class TestFinalize(unittest.TestCase):
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
             # a model area is clean with its spread drawn: one draw is a
-            # warning, read from the run's recorded instrument (0.20); a
+            # warning, read from the run's recorded kind (0.20); a
             # repeat names its primary by run id, so both carry one here
             primary = "2026-10-07T10-00-00_aa11"
             _run(area, primary, metrics=CLEAN_METRICS)

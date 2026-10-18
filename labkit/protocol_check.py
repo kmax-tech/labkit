@@ -67,7 +67,7 @@ class Field:
 
     `seconds`: "s" when the field is in the seconds cut; after/report fields
     carry the template's marker but are owed by their level, not by the cut.
-    `instruments`: which instruments owe the field (standard 0.20): "" every
+    `kinds`: which kinds owe the field (standard 0.20): "" every
     one, "a" apply only (a fixed model asked per row: a prompt, a parser),
     "af" apply and fit (a count has no bar to clear, no null lane, no seed).
     The template marks both axes
@@ -79,7 +79,7 @@ class Field:
     label: str
     level: str
     seconds: str = ""
-    instruments: str = ""  # "" all · "a" apply · "af" apply and fit
+    kinds: str = ""  # "" all · "a" apply · "af" apply and fit
 
 
 LEVELS = ("must", "should", "after", "report")
@@ -299,21 +299,21 @@ class FieldReport:
         return bool(self.head and self.head.frozen)
 
 
-def in_instrument(f: Field, instrument: str | None) -> bool:
-    """Does the protocol's instrument owe field `f`? "" every one; "a"
+def in_kind(f: Field, kind: str | None) -> bool:
+    """Does the protocol's kind owe field `f`? "" every one; "a"
     apply only; "af" apply and fit. A head still holding the
     placeholder (None) owes every field — the checker names the head's gap
     first. Until standard 0.20 this was read from the prose of "Model /
     tool" (`model_named`), a heuristic the scaffolder once matched with its
     own spelling (audit 2026-10-15); now it is the head's datum."""
-    if instrument is None or not f.instruments:
+    if kind is None or not f.kinds:
         return True
-    return instrument in {"a": ("apply",), "af": ("apply", "fit")}[f.instruments]
+    return kind in {"a": ("apply",), "af": ("apply", "fit")}[f.kinds]
 
 
-def _in_cut(f: Field, instrument: str | None) -> bool:
-    """Is `f` part of the seconds cut for this instrument — marked "s", and owed by the instrument?"""
-    return f.seconds == "s" and in_instrument(f, instrument)
+def _in_cut(f: Field, kind: str | None) -> bool:
+    """Is `f` part of the seconds cut for this kind — marked "s", and owed by the kind?"""
+    return f.seconds == "s" and in_kind(f, kind)
 
 
 def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
@@ -331,14 +331,12 @@ def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
         after = {f.label.casefold() for f in FIELDS if f.level == "after"}
         lines = [f for f in lines if f.name not in after]
     by_name = {f.label.casefold(): f for f in FIELDS}
-    # a catalogue field another instrument owes is not this protocol's hole
+    # a catalogue field another kind owes is not this protocol's hole
     lines = [
-        f
-        for f in lines
-        if f.name not in by_name or in_instrument(by_name[f.name], head.instrument)
+        f for f in lines if f.name not in by_name or in_kind(by_name[f.name], head.kind)
     ]
     if head.cost == "seconds":
-        cut = {f.label.casefold() for f in FIELDS if _in_cut(f, head.instrument)}
+        cut = {f.label.casefold() for f in FIELDS if _in_cut(f, head.kind)}
         lines = [f for f in lines if f.name in cut]
     return [(f.line, f.label) for f in lines if f.placeholder]
 
@@ -350,12 +348,10 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     freezes (LAB-017 The number of audits follows the cost tier). The full form owes every must; `frozen = true` turns
     every should into a must (the graduation gate, in ONE place), and once a
     measure run is documented a frozen protocol owes its report fields too."""
-    mine = [f for f in FIELDS if in_instrument(f, head.instrument)]
+    mine = [f for f in FIELDS if in_kind(f, head.kind)]
     if head.cost == "seconds":
         must = [
-            f
-            for f in mine
-            if f.level in ("must", "should") and _in_cut(f, head.instrument)
+            f for f in mine if f.level in ("must", "should") and _in_cut(f, head.kind)
         ]
         return must, []
     must = [f for f in mine if f.level == "must"]
@@ -416,18 +412,18 @@ def check_fields(text: str) -> FieldReport:
     return FieldReport(head, None, missing_must, missing_should, must_holes, soft_holes)
 
 
-def instrument_of_text(text: str) -> str | None:
-    """The head's instrument, None when the head cannot be read or holds the
+def kind_of_text(text: str) -> str | None:
+    """The head's kind, None when the head cannot be read or holds the
     placeholder — for readers that have the text alone."""
     try:
-        return protocol_block.head(text).instrument
+        return protocol_block.head(text).kind
     except protocol_block.BlockError:
         return None
 
 
 def seconds_registration_missing(text: str) -> list[str]:
     """The registration a run of seconds owes before its number counts:
-    the question written (not a placeholder), with `instrument = "apply"`
+    the question written (not a placeholder), with `kind = "apply"`
     also criterion and admissibility condition, and the cost declared.
     Returns what is missing — empty means the gate is open (LAB-003 No run
     without an intent paragraph; a count has no bar to clear, 0.87.1)."""
@@ -438,7 +434,7 @@ def seconds_registration_missing(text: str) -> list[str]:
     except protocol_block.BlockError:
         head = None
     labels = ["Question / hypothesis"]
-    if head and head.instrument == "apply":
+    if head and head.kind == "apply":
         labels += ["Success / failure criterion", "Admissibility condition"]
     missing = [label for label in labels if label.casefold() not in written]
     return missing + ([] if head and head.cost else ["[protocol] cost"])
@@ -603,19 +599,16 @@ def measure_runs(text: str) -> list[tuple[int, str]]:
     ]
 
 
-def unreported(
-    text: str, seconds: bool = False, instrument: str | None = None
-) -> list[str]:
+def unreported(text: str, seconds: bool = False, kind: str | None = None) -> list[str]:
     """The result fields still missing, a placeholder or only dashes, for
-    this INSTRUMENT (a count has no prompt+answer pair to show); at SECONDS
+    this KIND (a count has no prompt+answer pair to show); at SECONDS
     only the cut's fields are owed (the Summary is the Result line, 2026-10-12)."""
     lines = fields(text)
     found = {f.name: f for f in lines}
     owed = [
         f
         for f in FIELDS
-        if f.level == "after"
-        and (_in_cut(f, instrument) if seconds else in_instrument(f, instrument))
+        if f.level == "after" and (_in_cut(f, kind) if seconds else in_kind(f, kind))
     ]
     return [
         f.label.casefold()
@@ -772,19 +765,19 @@ def print_contract() -> None:
         + ", ".join(
             f.label
             for f in FIELDS
-            if f.seconds == "s" and f.level in ("must", "should") and not f.instruments
+            if f.seconds == "s" and f.level in ("must", "should") and not f.kinds
         )
-        + '; with instrument = "apply" also '
-        + ", ".join(f.label for f in FIELDS if f.seconds == "s" and f.instruments)
+        + '; with kind = "apply" also '
+        + ", ".join(f.label for f in FIELDS if f.seconds == "s" and f.kinds)
         + "; after the run: "
         + ", ".join(f.label for f in FIELDS if f.seconds == "s" and f.level == "after")
         + "."
     )
     print(
-        "by instrument (the head's `instrument`, at every tier): a count owes none of "
-        + ", ".join(f.label for f in FIELDS if f.instruments)
+        "by kind (the head's `kind`, at every tier): a count owes none of "
+        + ", ".join(f.label for f in FIELDS if f.kinds)
         + "; fit owes none of "
-        + ", ".join(f.label for f in FIELDS if f.instruments == "a")
+        + ", ".join(f.label for f in FIELDS if f.kinds == "a")
         + "; apply owes every field of its tier."
     )
     print(
@@ -800,8 +793,8 @@ def print_contract() -> None:
         + ", ".join(protocol_block.TYPES)
         + ", cost one of "
         + ", ".join(protocol_block.COST_TIERS)
-        + ", instrument one of "
-        + ", ".join(protocol_block.INSTRUMENTS)
+        + ", kind one of "
+        + ", ".join(protocol_block.KINDS)
         + "."
     )
     print(
@@ -1040,7 +1033,7 @@ def check_protocol(
         series=[(n, s) for n, s in numbered if SERIES_HEAD.match(s)],
         measured=measured,
         run_unreported=(
-            unreported(text, seconds=head.cost == "seconds", instrument=head.instrument)
+            unreported(text, seconds=head.cost == "seconds", kind=head.kind)
             if measured
             else []
         ),

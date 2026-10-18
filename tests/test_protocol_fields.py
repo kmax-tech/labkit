@@ -19,7 +19,7 @@ TEMPLATE = (
 
 
 def template_fields() -> dict[str, tuple[str, str]]:
-    """field name -> (seconds marker, instruments marker) as the template
+    """field name -> (seconds marker, kinds marker) as the template
     stamps them: "s" / "" and "m" / "me" / ""; a wrapped label carries its
     markers on its last line."""
     out = {}
@@ -28,8 +28,8 @@ def template_fields() -> dict[str, tuple[str, str]]:
         span = "\n".join(lines[f.line - 1 : max(f.line, f.last)])
         tags = set(re.findall(r"<!--\s*(s|a|af)\s*-->", span))
         seconds = "s" if "s" in tags else ""
-        instruments = "af" if "af" in tags else ("a" if "a" in tags else "")
-        out.setdefault(f.name, (seconds, instruments))
+        kinds = "af" if "af" in tags else ("a" if "a" in tags else "")
+        out.setdefault(f.name, (seconds, kinds))
     return out
 
 
@@ -40,23 +40,21 @@ class Contract(unittest.TestCase):
             self.assertIn(f.label.casefold(), stamped, f.label)
 
     def test_the_cuts_are_the_template_markers(self):
-        """Both axes: the seconds cut and the instruments that owe a field."""
+        """Both axes: the seconds cut and the kinds that owe a field."""
         stamped = template_fields()
         for f in protocol_check.FIELDS:
-            self.assertEqual(
-                (f.seconds, f.instruments), stamped[f.label.casefold()], f.label
-            )
+            self.assertEqual((f.seconds, f.kinds), stamped[f.label.casefold()], f.label)
 
     def test_the_template_head_is_well_formed(self):
         stamped = TEMPLATE.replace("<protocol-id>", "p-0123456789abcdef")
         report = protocol_check.check_fields(stamped)
         self.assertIsNone(report.head_error)
         assert report.head is not None
-        self.assertEqual(report.head.placeholders, ["type", "cost", "instrument"])
+        self.assertEqual(report.head.placeholders, ["type", "cost", "kind"])
 
 
 class FieldGuide(unittest.TestCase):
-    """The guide's instrument bullet lists the fields a count and an
+    """The guide's kind bullet lists the fields a count and an
     estimator do not owe — the catalogue's two lists, never retyped by
     hand (standard 0.20)."""
 
@@ -71,14 +69,14 @@ class FieldGuide(unittest.TestCase):
         assert m is not None, lead
         return " ".join(m.group(1).split()).split(", ")
 
-    def test_the_guide_lists_the_catalogue_cut_by_instrument(self):
+    def test_the_guide_lists_the_catalogue_cut_by_kind(self):
         self.assertEqual(
             self.listed("A count owes none of:"),
-            [f.label for f in protocol_check.FIELDS if f.instruments],
+            [f.label for f in protocol_check.FIELDS if f.kinds],
         )
         self.assertEqual(
             self.listed("fit owes none of:"),
-            [f.label for f in protocol_check.FIELDS if f.instruments == "a"],
+            [f.label for f in protocol_check.FIELDS if f.kinds == "a"],
         )
 
 
@@ -189,13 +187,13 @@ class Fields(unittest.TestCase):
 
     def test_seconds_owes_its_cut_and_nothing_graduates(self):
         report = protocol_check.check_fields(
-            head(cost="seconds", instrument="count", frozen=True)
+            head(cost="seconds", kind="count", frozen=True)
         )
         self.assertIn("Unit", report.missing_must)
         self.assertNotIn("Model I/O", report.missing_must)
         self.assertNotIn("Prompt", report.missing_must)
         self.assertEqual(report.missing_should, [])
-        with_model = head(cost="seconds", instrument="apply")
+        with_model = head(cost="seconds", kind="apply")
         self.assertIn("Prompt", protocol_check.check_fields(with_model).missing_must)
 
     def test_report_fields_fall_due_with_a_documented_run_once_frozen(self):
@@ -215,12 +213,12 @@ class Fields(unittest.TestCase):
             protocol_check.check_fields(head(cost="seconds") + run).missing_must,
         )
 
-    def test_the_head_decides_the_instrument_not_the_prose(self):
+    def test_the_head_decides_the_kind_not_the_prose(self):
         """Until 0.20 a "Model / tool" line naming a model made the prompt
-        owed; the head's `instrument` is the one reading now."""
-        count = head(cost="seconds", instrument="count") + "- **Model / tool:** haiku\n"
+        owed; the head's `kind` is the one reading now."""
+        count = head(cost="seconds", kind="count") + "- **Model / tool:** haiku\n"
         self.assertNotIn("Prompt", protocol_check.check_fields(count).missing_must)
-        model = head(cost="seconds", instrument="apply") + "- **Model / tool:** none\n"
+        model = head(cost="seconds", kind="apply") + "- **Model / tool:** none\n"
         self.assertIn("Prompt", protocol_check.check_fields(model).missing_must)
 
     def test_a_head_placeholder_is_a_must_gap(self):

@@ -40,7 +40,7 @@ post-change
     notes/messung/*.md (not 00-*), is checked with protocol-check or
     notes-check; a changed `scripts/*.py` of an area or an area test under
     `tests/` gets the stamp check of its area (`stamp_check`: the skeleton
-    held to the head's instrument, once per area). A per-session cache of
+    held to the head's kind, once per area). A per-session cache of
     content hashes keeps a file that was already checked at this content
     from being reported after every later command.
 

@@ -102,9 +102,7 @@ class Audit(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn("labkit-audit: tokens · prompt ", err)  # what the call cost
         prompt = sent[0]
-        self.assertIn(
-            "MODE: preflight · AREA: experiments/01-x · INSTRUMENT apply", prompt
-        )
+        self.assertIn("MODE: preflight · AREA: experiments/01-x · KIND apply", prompt)
         for path in (
             "experiments/01-x/PROTOCOL-x0.md",
             "experiments/01-x/scripts/01_measure.py",
@@ -245,28 +243,28 @@ class Audit(unittest.TestCase):
         self.assertEqual((rc, sent), (2, []))
         self.assertIn("head unreadable", err)
 
-    def test_the_auditor_is_told_the_instrument_and_a_placeholder_is_refused(self):
+    def test_the_auditor_is_told_the_kind_and_a_placeholder_is_refused(self):
         """What the instrument check looks like is the head's datum (0.20):
         an auditor of an estimator area asked for a prompt+answer pair finds
         a gap that is none."""
         area = repo_with()
         (area / "PROTOCOL-x0.md").write_text(
-            fixture.head(id="p-0123456789abcdef", instrument="fit") + PROTOCOL,
+            fixture.head(id="p-0123456789abcdef", kind="fit") + PROTOCOL,
             encoding="utf-8",
         )
         rc, _, _, sent = run(area, CLEAN)
         self.assertEqual(rc, 0)
-        self.assertIn("· INSTRUMENT fit — an estimator fitted", sent[0])
+        self.assertIn("· KIND fit — an estimator fitted", sent[0])
         self.assertIn("reduced estimator on a few labelled items", sent[0])
-        self.assertNotIn("INSTRUMENT apply", sent[0])
+        self.assertNotIn("KIND apply", sent[0])
         (area / "PROTOCOL-x0.md").write_text(
-            fixture.head(id="p-0123456789abcdef", instrument="<apply | fit | count>")
+            fixture.head(id="p-0123456789abcdef", kind="<apply | fit | count>")
             + PROTOCOL,
             encoding="utf-8",
         )
         rc, _, err, sent = run(area, CLEAN)
         self.assertEqual((rc, sent), (2, []))
-        self.assertIn("[protocol] instrument is still a placeholder", err)
+        self.assertIn("[protocol] kind is still a placeholder", err)
 
     def test_a_preflight_audit_at_cost_seconds_without_a_run_says_it_is_early(self):
         area = repo_with()

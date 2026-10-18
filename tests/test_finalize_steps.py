@@ -57,16 +57,16 @@ class AnsweringRunField(unittest.TestCase):
 
 
 class ModelProvenanceGap(unittest.TestCase):
-    """The run's recorded instrument decides what it owes (standard 0.20): a
+    """The run's recorded kind decides what it owes (standard 0.20): a
     model run its `models_resolved`, an estimator or count nothing; a config
     without the key is named, not guessed from the metrics."""
 
-    def _run(self, d: str, instrument: str | None, models_resolved: dict) -> Path:
+    def _run(self, d: str, kind: str | None, models_resolved: dict) -> Path:
         run = Path(d) / "runs" / "2026-10-08T10-00-00_aaaa"
         run.mkdir(parents=True)
         cfg = {"schema_version": 2, "models_resolved": models_resolved, "config": {}}
-        if instrument is not None:
-            cfg["instrument"] = instrument
+        if kind is not None:
+            cfg["kind"] = kind
         (run / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
         (run / "metrics.json").write_text(
             json.dumps({"c1_pass": True, "n_rows": 4}), encoding="utf-8"
@@ -85,20 +85,18 @@ class ModelProvenanceGap(unittest.TestCase):
             self.assertIsNone(finalize.model_provenance_gap(run))
 
     def test_an_estimator_or_count_run_owes_no_model(self):
-        for instrument in ("fit", "count"):
+        for kind in ("fit", "count"):
             with (
-                self.subTest(instrument=instrument),
+                self.subTest(kind=kind),
                 tempfile.TemporaryDirectory() as d,
             ):
-                run = self._run(d, instrument, {})
+                run = self._run(d, kind, {})
                 self.assertIsNone(finalize.model_provenance_gap(run))
 
-    def test_a_run_without_a_recorded_instrument_is_named_not_guessed(self):
+    def test_a_run_without_a_recorded_kind_is_named_not_guessed(self):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(d, None, {})
-            self.assertIn(
-                "records no instrument", finalize.model_provenance_gap(run) or ""
-            )
+            self.assertIn("records no kind", finalize.model_provenance_gap(run) or "")
 
 
 class ReadmePlaceholders(unittest.TestCase):

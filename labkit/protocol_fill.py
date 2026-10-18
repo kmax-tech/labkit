@@ -96,10 +96,10 @@ def fill(
 
 
 #: the head keys a person fills by label (`protocol-fill <P> "type=exploratory"
-#: "instrument=model"`), each with its allowed values
+#: "kind=model"`), each with its allowed values
 HEAD_CHOICES = {
     "type": protocol_block.TYPES,
-    "instrument": protocol_block.INSTRUMENTS,
+    "kind": protocol_block.KINDS,
 }
 
 
@@ -110,7 +110,7 @@ def _head_placeholder(key: str) -> re.Pattern[str]:
 def head_choice_open(text: str, key: str) -> int | None:
     """Line number of the TOML head's `KEY = "<…>"` placeholder, or None once set.
 
-    The stamp leaves `type` (and since 0.20 `instrument`, when not derived)
+    The stamp leaves `type` (and since 0.20 `kind`, when not derived)
     as a placeholder in the head; `--list` named only the prose fields, so
     an agent filled those, hit the hook's "MISSING (must): [protocol] type"
     and edited the head by hand (cloud probe, Haiku 5.5, 2026-10-13). Read
@@ -130,7 +130,7 @@ def head_choice_open(text: str, key: str) -> int | None:
 
 
 def fill_head_choice(text: str, key: str, value: str) -> str:
-    """Set the head's KEY (`type` or `instrument`) from its placeholder to one
+    """Set the head's KEY (`type` or `kind`) from its placeholder to one
     of its allowed values (HEAD_CHOICES)."""
     allowed = HEAD_CHOICES.get(key)
     if allowed is None:
@@ -356,7 +356,7 @@ def fill_many(
     line_no: int | None = None,
     force: bool = False,
 ) -> str:
-    """`fill` (or `fill_head_choice` for the head's `type` and `instrument`)
+    """`fill` (or `fill_head_choice` for the head's `type` and `kind`)
     applied in order; the first ValueError leaves the caller's file untouched
     — all or nothing."""
     for label, value in assignments:

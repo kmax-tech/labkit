@@ -57,7 +57,7 @@ def rows(ids: list[str]) -> list[dict]:
 
 def evaluate_rows(items: list[dict], ids: list[str]) -> dict:
     """TODO: the number(s) from the rows, over the ids SOURCE lists. A count
-    registers no promise and no id (`instrument = "count"`: no bar to clear),
+    registers no promise and no id (`kind = "count"`: no bar to clear),
     so no `c1_pass` here — a model at seconds gets the model skeleton. Every
     key lands in metrics.json, and `--check` demands each verbatim in the
     protocol's "Answer to the question" line — keep the dict to what that

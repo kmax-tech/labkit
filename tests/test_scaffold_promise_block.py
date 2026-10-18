@@ -1,4 +1,4 @@
-"""The promise tables of a stamped protocol come from one home per instrument
+"""The promise tables of a stamped protocol come from one home per kind
 (standard 0.20): `scaffold.PROMISE_TABLES`, written into the template's
 marker line. The sentences name their constants and the stamped skeleton
 reads them, so `unmentioned_constants` is silent on a fresh stamp (Haiku left
@@ -34,19 +34,19 @@ class PromiseBlock(unittest.TestCase):
     def test_model_and_estimator_carry_their_tables_and_the_skeleton_reads_them(
         self,
     ) -> None:
-        for kw, instrument in (
+        for kw, kind in (
             ({"cost": "minutes", "model": "haiku"}, "apply"),
             ({"cost": "minutes"}, "fit"),
             ({"cost": "seconds", "model": "haiku"}, "apply"),
         ):
-            with self.subTest(instrument=instrument, **kw):
+            with self.subTest(kind=kind, **kw):
                 area, proto = self.stamp(**kw)
                 self.assertNotIn(scaffold.PROMISE_MARK, proto)
                 block = promises.parse_block(proto)
                 assert block is not None
                 expected = {
                     k: v
-                    for *_, constants in scaffold.PROMISE_TABLES[instrument]
+                    for *_, constants in scaffold.PROMISE_TABLES[kind]
                     for k, v in constants.items()
                 }
                 self.assertEqual(promises.all_constants(block), expected)
@@ -75,10 +75,8 @@ class PromiseBlock(unittest.TestCase):
         self.assertNotIn("[[promise]]\n", tmpl)
         self.assertIn(scaffold.PROMISE_MARK, tmpl)
         self.assertEqual(scaffold.promise_tables("count"), "")
-        for instrument in ("apply", "fit"):
-            self.assertEqual(
-                scaffold.promise_tables(instrument).count("[[promise]]"), 3
-            )
+        for kind in ("apply", "fit"):
+            self.assertEqual(scaffold.promise_tables(kind).count("[[promise]]"), 3)
 
     def test_a_template_without_the_marker_is_refused(self) -> None:
         with self.assertRaises(ValueError):

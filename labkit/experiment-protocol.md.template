@@ -190,7 +190,7 @@ standard = "0.20"
 id = "<protocol-id>"
 type = "<exploratory | confirmatory>"
 cost = "<seconds | minutes | hours>"
-instrument = "<apply | fit | count>"
+kind = "<apply | fit | count>"
 frozen = false
 preflight_audit = ""
 
@@ -201,5 +201,5 @@ preflight_audit = ""
 # named like the config key (lowercase) and stands in exactly one table;
 # `frozen = true` owes these tables, and no run starts whose config lacks a
 # constant or carries another value.
-# <the [[promise]] tables of the instrument — labkit-init stamps them>
+# <the [[promise]] tables of the kind — labkit-init stamps them>
 ```

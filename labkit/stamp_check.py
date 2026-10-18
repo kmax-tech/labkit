@@ -1,4 +1,4 @@
-"""stamp_check — the stamped skeleton, held to its instrument.
+"""stamp_check — the stamped skeleton, held to its kind.
 
     python -m labkit.stamp_check <AREA> [--protocol FILE]
 
@@ -6,14 +6,14 @@ Two exact facts of a stamped area, read from its code (plan II, the stamp
 check, 2026-10-17); what the code MEANS stays with the agent audit:
 
   1. The measure script asks a model exactly when the head says so.
-     `instrument = "apply"`: `scripts/01_measure.py` imports `labkit.llm`
+     `kind = "apply"`: `scripts/01_measure.py` imports `labkit.llm`
      and calls `llm.complete` or `llm.complete_many` — an apply protocol
      whose script asks no model is a finding. `fit` or `count`: the
      script does not import `labkit.llm` — a model call in a measurement
      the protocol declares model-free is a finding (a model that renders
      features belongs to `00_prepare.py`; a model that answers the rows
-     is `instrument = "apply"`).
-  2. The stamped contract tests survive. The instrument's test template
+     is `kind = "apply"`).
+  2. The stamped contract tests survive. The kind's test template
      stamps the resolution check as named test functions
      (`skeletons.contract_tests`); every one still stands in the area's
      test file, not under `pytest.mark.skip`, `skipif` or `xfail`. A
@@ -22,8 +22,8 @@ check, 2026-10-17); what the code MEANS stays with the agent audit:
 
 Why: nine of nine pilot attempts were estimators that got the model
 skeleton and rebuilt it, and nothing mechanical saw the rebuild
-(labkit-paper 09, 2026-10-16). With the instrument in the head (0.20) an
-agent that finds no instrument fits stops (AGENTS template, step 1); one
+(labkit-paper 09, 2026-10-16). With the kind in the head (0.20) an
+agent that finds no kind fits stops (AGENTS template, step 1); one
 that bends a skeleton instead meets this check. Tier: guaranteed — every
 sentence says what the AST says, nothing more. Runs as a station of
 `preflight` (a blocker at `frozen = true`, a warning before) and in
@@ -131,44 +131,44 @@ def test_functions(source: str) -> dict[str, list[str]]:
     return out
 
 
-def script_findings(area: Path, instrument: str) -> list[str]:
-    """Fact 1 for AREA's measure script under INSTRUMENT."""
+def script_findings(area: Path, kind: str) -> list[str]:
+    """Fact 1 for AREA's measure script under KIND."""
     script = area / MEASURE_SCRIPT
     if not script.is_file():
         return [
             f"no {MEASURE_SCRIPT} — the stamped measure skeleton is gone; "
-            f"the stamp check has nothing to hold to the instrument"
+            f"the stamp check has nothing to hold to the kind"
         ]
     try:
         use = llm_use(script.read_text(encoding="utf-8"))
     except SyntaxError as exc:
         return [f"{MEASURE_SCRIPT}:{exc.lineno}: not valid Python — {exc.msg}"]
-    if SKELETONS[instrument].asks_a_model:
+    if SKELETONS[kind].asks_a_model:
         if not use.imported:
             return [
-                f'{MEASURE_SCRIPT}: instrument = "apply", but the script never '
+                f'{MEASURE_SCRIPT}: kind = "apply", but the script never '
                 f"imports labkit.llm — an apply protocol whose script asks no model "
                 f"(a model is asked through labkit.llm, never through an endpoint "
                 f"of the script's own)"
             ]
         if not use.called:
             return [
-                f'{MEASURE_SCRIPT}: instrument = "apply", but the script never '
+                f'{MEASURE_SCRIPT}: kind = "apply", but the script never '
                 f"calls llm.complete or llm.complete_many — the import alone asks "
                 f"no model"
             ]
         return []
     if use.imported:
         return [
-            f"{MEASURE_SCRIPT} imports labkit.llm, but the head says instrument = "
-            f'"{instrument}" — a model call in a measurement the protocol declares '
+            f"{MEASURE_SCRIPT} imports labkit.llm, but the head says kind = "
+            f'"{kind}" — a model call in a measurement the protocol declares '
             f"model-free; a model that renders features belongs to "
-            f'scripts/00_prepare.py, a model that answers the rows is instrument = "apply"'
+            f'scripts/00_prepare.py, a model that answers the rows is kind = "apply"'
         ]
     return []
 
 
-def contract_findings(files: list[Path], instrument: str) -> list[str]:
+def contract_findings(files: list[Path], kind: str) -> list[str]:
     """Fact 2: the stamped contract tests missing or skipped in FILES —
     nothing without a file (preflight names a missing test file itself)."""
     if not files:
@@ -183,7 +183,7 @@ def contract_findings(files: list[Path], instrument: str) -> list[str]:
     if out:
         return out
     where = ", ".join(f.name for f in files)
-    for name in contract_tests(instrument):
+    for name in contract_tests(kind):
         if name not in found:
             out.append(
                 f"{where}: the stamped contract test `{name}` is gone — renamed or "
@@ -205,15 +205,13 @@ def stamp_findings(
 ) -> list[str]:
     """Every finding of the stamp check for AREA under HEAD, each a sentence
     naming the file and the fact; empty when the stamp holds. A head whose
-    instrument is still the placeholder yields nothing: protocol-check
-    names that gap, and there is no instrument to hold the code to."""
-    if head.instrument is None:
+    kind is still the placeholder yields nothing: protocol-check
+    names that gap, and there is no kind to hold the code to."""
+    if head.kind is None:
         return []
     repo = layout_root(area) if repo is None else repo
     _, files = area_test_files(area, repo)
-    return script_findings(area, head.instrument) + contract_findings(
-        files, head.instrument
-    )
+    return script_findings(area, head.kind) + contract_findings(files, head.kind)
 
 
 def main(argv: list[str]) -> int:
@@ -242,8 +240,8 @@ def main(argv: list[str]) -> int:
         print(f"stamp-check: {line}")
     if not found:
         print(
-            f"stamp-check: {area.name}: the stamp holds its instrument"
-            + (f" ({head.instrument})" if head.instrument else " — none set yet")
+            f"stamp-check: {area.name}: the stamp holds its kind"
+            + (f" ({head.kind})" if head.kind else " — none set yet")
         )
     return 1 if found else 0
 

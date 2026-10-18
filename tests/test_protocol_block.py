@@ -20,7 +20,7 @@ class Head(unittest.TestCase):
                 h.id,
                 h.type,
                 h.cost,
-                h.instrument,
+                h.kind,
                 h.frozen,
                 h.preflight_audit,
             ),

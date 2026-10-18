@@ -1,7 +1,7 @@
 """The seconds cut (2026-10-05): one template, tagged `<!-- s -->`; the
 checker's FIELDS name exactly the tagged fields as the cut; the registration
 gate asks for question, criterion, admissibility condition and cost. Which
-of the cut a count owes is the head's `instrument` (standard 0.20), never
+of the cut a count owes is the head's `kind` (standard 0.20), never
 the prose of "Model / tool"."""
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ class Cut(unittest.TestCase):
 
     def test_a_count_owes_no_prompt_a_model_does(self):
         text = (
-            head(cost="seconds", instrument="count")
+            head(cost="seconds", kind="count")
             + """
 - **Question / hypothesis:** how many?
 - **Success / failure criterion:** the mean is reported
@@ -47,7 +47,7 @@ class Cut(unittest.TestCase):
         )
         self.assertEqual(protocol_check.check_fields(text).missing_must, [])
         with_model = (
-            text.replace('instrument = "count"', 'instrument = "apply"')
+            text.replace('kind = "count"', 'kind = "apply"')
             + "- **Model / tool:** haiku\n"
         )
         missing = protocol_check.check_fields(with_model).missing_must
@@ -83,7 +83,7 @@ class Cut(unittest.TestCase):
         should field, but claims a freeze no gate held — one must finding
         (review 2026-10-07: it used to pass silently)."""
         text = (
-            head(cost="seconds", instrument="count", frozen=True)
+            head(cost="seconds", kind="count", frozen=True)
             + """
 - **Question / hypothesis:** q
 - **Terms of this protocol:** n/a
@@ -99,14 +99,14 @@ class Cut(unittest.TestCase):
 
 
 class Registration(unittest.TestCase):
-    # the fixture head says `instrument = "apply"`: the gate owes criterion
+    # the fixture head says `kind = "apply"`: the gate owes criterion
     # and admissibility condition
     QUESTION = "- **Question / hypothesis:** q\n- **Success / failure criterion:** c\n"
 
     def test_a_count_owes_only_its_question(self):
         """A count has no bar to clear: the gate is the question (0.87.1) —
-        read from the head's instrument, not from a "Model / tool" line."""
-        count = head(cost="seconds", instrument="count")
+        read from the head's kind, not from a "Model / tool" line."""
+        count = head(cost="seconds", kind="count")
         text = count + "- **Question / hypothesis:** how many?\n"
         self.assertEqual(protocol_check.seconds_registration_missing(text), [])
         text = count + "- **Question / hypothesis:** <the question>\n"

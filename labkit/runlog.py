@@ -847,7 +847,7 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
 # (LAB-003 No run without an intent paragraph); an instrument change after it is a commit and a rerun, not a
 # second freeze (LAB-017 The number of audits follows the cost tier). `minutes`, `hours` and an unfilled cost keep the
 # freeze. The tier lands in config.json as `cost_tier`, the head's
-# instrument as `instrument` (standard 0.20; `runs.run_instrument` reads it).
+# kind as `kind` (standard 0.20; `runs.run_kind` reads it).
 
 
 def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
@@ -1120,7 +1120,7 @@ class Run:
         bound = _protocol_binding(base_dir, protocol)
         self._protocol = bound.binding
         self._cost_tier = bound.head.cost if bound.head is not None else None
-        self._instrument = bound.head.instrument if bound.head is not None else None
+        self._kind = bound.head.kind if bound.head is not None else None
         _block, self._promises = _promise_snapshot(base_dir, bound.text)
         # Frozen now: what the registration check holds is what config.json records.
         self._config = dict(config)
@@ -1308,7 +1308,7 @@ class Run:
             "draw_keys": list(self._draw_keys),
             "unfrozen_ack": self._unfrozen_ack,
             "cost_tier": self._cost_tier,
-            "instrument": self._instrument,
+            "kind": self._kind,
             "promises": self._promises,
             "script_sha": _snapshot_script(self.dir),
             "untracked_sources": _snapshot_untracked_sources(self.dir),

@@ -76,8 +76,8 @@ path to this file.
   count without a model registers no promise and no criterion (its number
   is held by `--check` and `finalize`). Every stamped placeholder is one line;
   this guide is the long form. The full form adds the rest; `labkit-init exp
-  <name> --report` appends the † fields the instrument owes. The head's
-  `instrument` cuts a second time, at every tier (see **instrument** under
+  <name> --report` appends the † fields the kind owes. The head's
+  `kind` cuts a second time, at every tier (see **kind** under
   the head below). A field the cut left out is not owed.
 - **Labels English, values in the protocol's language.** The labels are
   read by `protocol-check`, so they stay exactly as stamped; what you write
@@ -136,20 +136,22 @@ The same block may hold the `[[promise]]` tables (labkit
 `docs/promise-block.md`).
 
 - **standard** — `"0.20"`; stamped, never edited. Standard 0.20 (2026-10-17):
-  the head carries `instrument`. Standard 0.19 (labkit 0.72): a frozen protocol and every full run — at `cost = "seconds"` every run — owe the `[[promise]]` tables; a run records every registered constant unchanged.
+  the head carries `kind`. Standard 0.19 (labkit 0.72): a frozen protocol and every full run — at `cost = "seconds"` every run — owe the `[[promise]]` tables; a run records every registered constant unchanged.
 - **id** — `p-` plus 16 hex digits, stamped by `labkit-init exp`, never typed: the
   run binds to it, so renaming or moving the file keeps the binding.
-- **instrument** — what happens to this run's labels: `"apply"` (a fixed
+- **kind** — what happens to this run's labels: `"apply"` (a fixed
   model asked per item that never sees them: a prompt, a parser, a placebo
   or anchor null lane), `"fit"` (an estimator fitted on them in the run:
   fit and predict out of fold, a permuted-label null lane, a seed),
   `"count"` (no labels, deterministic, no bar to clear). The pretraining of
   a model is no difference here — it happened outside the run. Stamped by
   `labkit-init exp` from `--model` and `--cost`, or named with
-  `--instrument`; the field cut, the skeleton, the promise block and the
+  `--kind`; the field cut, the skeleton, the promise block and the
   gates follow from it. A mixed form names what produces the row's answer;
-  a model that renders features belongs to the prepare step.
-  Which fields an instrument owes is the catalogue's second cut, at every tier
+  a model that renders features belongs to the prepare step. Not the
+  *instrument*: that word is the measuring apparatus ("Instrument check"
+  below, `instrument(cfg)` in the skeleton), never the kind.
+  Which fields a kind owes is the catalogue's second cut, at every tier
   (`protocol-check --contract` prints it). A count owes none of: Success /
   failure criterion, Admissibility condition, Model / tool, Model I/O, Prompt,
   Null condition / anchors, Gate labels, Meaning of the gold label, Answer
@@ -158,7 +160,7 @@ The same block may hold the `[[promise]]` tables (labkit
   follow-up run, Raw output (nor the render check, the parser cases harvested,
   the "Changed" line and the Pilot); fit owes none of: Prompt, Gate
   labels, Raw output (nor the render check and the parser cases harvested).
-  `labkit-init exp` stamps only what the instrument owes; a field the cut left
+  `labkit-init exp` stamps only what the kind owes; a field the cut left
   out is not owed, and an n/a line for it is template residue.
 - **type** — `"exploratory"` generates hypotheses, iterate freely, but
   nothing from it may be reported as a test. `"confirmatory"` tests a
@@ -364,7 +366,7 @@ scattered in output files nobody can interpret.
   that appears in one class and never in the other is a free rule — the model
   can read the label off it without doing the task.
 - **Model / tool:** alias from `models.toml` — never hardcode endpoint/ID.
-  No model call? Then the instrument is `fit`: name the estimator of
+  No model call? Then the kind is `fit`: name the estimator of
   `make_estimator()` with its fixed
   parameters and the seed (the stamp of an area without `--model` says so);
   `--report` then fills the parser field and leaves the randomness and

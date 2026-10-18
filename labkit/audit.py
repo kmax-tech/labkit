@@ -102,20 +102,20 @@ INLINE_NOTE = (
     "run's output rows under `===== ROWS <path> … =====` lines, each row as "
     "`<line>: <row>`. Nothing else is in scope."
 )
-#: what the auditor is told the instrument check looks like, per instrument
+#: what the auditor is told the instrument check looks like, per kind
 #: (standard 0.20): asked for a prompt+answer pair, an auditor of an
 #: estimator area finds a gap that is none — the check that exists there is
 #: a reduced estimator on a few labelled items (plan II, 2026-10-17)
-INSTRUMENT_NOTES = {
+KIND_NOTES = {
     "apply": (
-        "INSTRUMENT apply — a fixed model asked per item, never shown this run's "
-        "labels: a prompt per item, a parser, lanes of questions. The instrument "
+        "KIND apply — a fixed model asked per item, never shown this run's "
+        "labels: a prompt per item, a parser, lanes of questions. The kind "
         "check is one fully rendered prompt+answer pair per gold class from the "
         "real pipeline (`--probe N`); the null lane is anchors or a placebo in "
         "the same run."
     ),
     "fit": (
-        "INSTRUMENT fit — an estimator fitted on this run's labels, no model call: "
+        "KIND fit — an estimator fitted on this run's labels, no model call: "
         "no prompt, no parser, no render check, and the protocol's cut has no such "
         "field. The instrument check is a reduced estimator on a few labelled "
         "items through the real pipeline, both lanes, its scores read and never "
@@ -123,7 +123,7 @@ INSTRUMENT_NOTES = {
         "each fitting fold; seeds and the noise ceiling are owed."
     ),
     "count": (
-        "INSTRUMENT count — a deterministic count, rerunnable at will: no bar to "
+        "KIND count — a deterministic count, rerunnable at will: no bar to "
         "clear, no null lane, no seed, no promise table. Audit the question, the "
         "unit, the exclusions and the data path against the output."
     ),
@@ -370,7 +370,7 @@ def render(
     if mode == CLARITY:
         pieces = [file(p) for p in (code[0], protocol, *code[1:])]
     else:
-        about += f" · {instrument_note(protocol)}"
+        about += f" · {kind_note(protocol)}"
         pieces = [file(p) for p in (protocol, *code)]
         if standard is not None:
             label, text = standard_excerpt(mode)
@@ -383,8 +383,8 @@ def render(
     return f"{instructions(mode)}\n\n{about}\n\n{INLINE_NOTE}\n\n{body}"
 
 
-def instrument_note(protocol: Path) -> str:
-    """The note of the protocol's instrument (INSTRUMENT_NOTES), from its
+def kind_note(protocol: Path) -> str:
+    """The note of the protocol's kind (KIND_NOTES), from its
     head. Raises AuditError on a head still holding the placeholder: what
     the auditor is to expect of the instrument check is this datum, and an
     audit against the wrong expectation reports gaps that are none."""
@@ -392,12 +392,12 @@ def instrument_note(protocol: Path) -> str:
         head = protocol_block.head(protocol.read_text(encoding="utf-8"))
     except protocol_block.BlockError as exc:
         raise AuditError(f"{protocol.name}: head unreadable — {exc}") from exc
-    if head.instrument is None:
+    if head.kind is None:
         raise AuditError(
-            f"{protocol.name}: [protocol] instrument is still a placeholder — "
-            f"set it ({' | '.join(protocol_block.INSTRUMENTS)}) before the audit"
+            f"{protocol.name}: [protocol] kind is still a placeholder — "
+            f"set it ({' | '.join(protocol_block.KINDS)}) before the audit"
         )
-    return INSTRUMENT_NOTES[head.instrument]
+    return KIND_NOTES[head.kind]
 
 
 def parse_clarity(text: str) -> dict:

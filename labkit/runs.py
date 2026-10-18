@@ -149,8 +149,8 @@ def acknowledged_unfrozen(run_dir: Path) -> bool:
     return cfg is not None and cfg.get("unfrozen_ack") is True
 
 
-def run_instrument(run_dir: Path) -> str | None:
-    """The instrument RUN_DIR ran under (`instrument` in its config.json,
+def run_kind(run_dir: Path) -> str | None:
+    """The kind RUN_DIR ran under (`kind` in its config.json,
     written by runlog from the protocol head, standard 0.20): apply, fit
     or count. The one reading for the gates that ask what the
     run did — finalize holds an apply run to its `models_resolved` and
@@ -159,7 +159,7 @@ def run_instrument(run_dir: Path) -> str | None:
     config raises RunConfigError.
     """
     cfg = read_run_config(run_dir)
-    return None if cfg is None else cfg.get("instrument")
+    return None if cfg is None else cfg.get("kind")
 
 
 def read_run_config(run_dir: Path) -> dict | None:
@@ -544,7 +544,7 @@ def repeat_parent(config: dict) -> str | None:
     """The run a repeat draws again (config.json `repeat_of`), or None.
 
     `derived_from` re-reads the parent's rows and makes no model call;
-    `repeat_of` asks the model again with the same instrument on the same
+    `repeat_of` asks the model again with the same kind on the same
     items — a full measurement with its own model record, recorded so the
     spread of the number is visible (TODO item 4, 2026-10-14). A repeat is
     supporting evidence: it never answers the protocol (`bound_runs`)."""

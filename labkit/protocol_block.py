@@ -9,11 +9,11 @@ holds the fields a machine reads — the head — and its optional
     id = "p-0123456789abcdef"       # stamped by `labkit-init exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
     cost = "seconds"                # seconds | minutes | hours
-    instrument = "apply"            # apply | fit | count — what happens to this run's labels
+    kind = "apply"            # apply | fit | count — what happens to this run's labels
     frozen = false
     preflight_audit = ""            # one line once the audit is decided
 
-The instrument is the kind of the experiment, as data (standard 0.20,
+The kind of the experiment, as data (standard 0.20,
 2026-10-17; named 2026-10-18): what happens to this run's labels. *apply*
 asks a fixed model per item and never sees them (a prompt, a parser, a
 placebo or anchor null lane; today a model through `labkit.llm`); *fit*
@@ -50,7 +50,7 @@ STANDARD = "0.20"
 TYPES = ("exploratory", "confirmatory")
 COST_TIERS = ("seconds", "minutes", "hours")
 #: what happens to this run's labels — the kind of the experiment, as data
-INSTRUMENTS = ("apply", "fit", "count")
+KINDS = ("apply", "fit", "count")
 #: `p-` plus 16 lowercase hex: not derived from name or path, so renaming
 #: and moving a protocol leave its identity intact
 ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
@@ -65,7 +65,7 @@ PROTOCOL_HEAD_KEYS = (
     "id",
     "type",
     "cost",
-    "instrument",
+    "kind",
     "frozen",
     "preflight_audit",
 )
@@ -83,16 +83,14 @@ class Head:
     id: str | None
     type: str | None
     cost: str | None
-    instrument: str | None  # apply | fit | count
+    kind: str | None  # apply | fit | count
     frozen: bool
     preflight_audit: str  # "" until the audit is decided
 
     @property
     def placeholders(self) -> list[str]:
         """The head fields still holding a template placeholder."""
-        return [
-            f for f in ("id", "type", "cost", "instrument") if getattr(self, f) is None
-        ]
+        return [f for f in ("id", "type", "cost", "kind") if getattr(self, f) is None]
 
 
 def fence_spans(lines: list[str]) -> list[tuple[str, int, int]]:
@@ -267,7 +265,7 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
         id=pid,
         type=_choice(table, "type", TYPES),
         cost=_choice(table, "cost", COST_TIERS),
-        instrument=_choice(table, "instrument", INSTRUMENTS),
+        kind=_choice(table, "kind", KINDS),
         frozen=frozen,
         preflight_audit=audit.strip(),
     )

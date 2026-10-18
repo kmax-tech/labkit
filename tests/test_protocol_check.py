@@ -103,7 +103,7 @@ REPORT_FIELDS = """\
 - **Resolution check:** perfect effect fires, null stays silent
 - **Gate labels:** yes, no
 - **Randomness controls:** deterministic
-- **Why this design:** the judge is the instrument under test
+- **Why this design:** the judge is the kind under test
 - **Data preparation:** scripts/00_prepare.py writes data/prepared/claims.jsonl
 - **Answer form + resolution:** yes/no, two states
 - **How measured:** AUC over the judge's yes-probability
@@ -204,7 +204,7 @@ class TestCheckFields(unittest.TestCase):
                 "[protocol] id",
                 "[protocol] type",
                 "[protocol] cost",
-                "[protocol] instrument",
+                "[protocol] kind",
             ],
         )
         self.assertEqual(report.missing_should, [])
@@ -442,7 +442,7 @@ class TestFrozenWithoutExample(unittest.TestCase):
     Occasion (MH): the flow had to change — register first, then run the
     pipeline ONCE over a handful of real items, put the result into the
     protocol as the example, and only then freeze. Freezing on an unchecked
-    instrument freezes the error in.
+    kind freezes the error in.
     """
 
     NO_EXAMPLE = (
@@ -538,9 +538,9 @@ class TestPromptAndExample(unittest.TestCase):
 
     def test_raw_output_is_not_owed_by_a_count(self):
         """A count has no prompt+answer pair to show: the field is a model's
-        (`instruments = "m"`; cloud probe 2026-10-12 filled it with n/a)."""
+        (`kinds = "m"`; cloud probe 2026-10-12 filled it with n/a)."""
         text = (
-            pilot(cost="seconds", instrument="count").replace(
+            pilot(cost="seconds", kind="count").replace(
                 "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
             )
             + "\n## Summary\n\n- **Result:** The mean is 3.5 documents per case.\n"
@@ -556,7 +556,7 @@ class TestPromptAndExample(unittest.TestCase):
         """Without a model the seconds cut has no criterion, no admissibility
         condition, and after the run only the Result line of the Summary
         (decisions 2026-10-12, five cloud probes)."""
-        base = pilot(cost="seconds", instrument="count").replace(
+        base = pilot(cost="seconds", kind="count").replace(
             "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
         )
         lines = [
@@ -582,8 +582,8 @@ class TestPromptAndExample(unittest.TestCase):
             "Raw output",
         ):
             self.assertNotIn(label, out)
-        # the twin: a model as the instrument brings the criterion back
-        rc, out = run_main(text.replace('instrument = "count"', 'instrument = "apply"'))
+        # the twin: a model as the kind brings the criterion back
+        rc, out = run_main(text.replace('kind = "count"', 'kind = "apply"'))
         self.assertEqual(rc, 1)
         self.assertIn("Success / failure criterion", out)
 

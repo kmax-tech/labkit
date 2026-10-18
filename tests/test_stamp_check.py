@@ -1,4 +1,4 @@
-"""The stamp check (plan II, I7): a stamped area held to its instrument by
+"""The stamp check (plan II, I7): a stamped area held to its kind by
 two exact facts — the measure script asks a model exactly when the head
 says so, and the stamped contract tests survive by name, unskipped. Every
 fresh stamp is silent (the twin); a bent one is named with file and fact."""
@@ -46,7 +46,7 @@ def edit(path: Path, old: str, new: str) -> None:
 
 
 class FreshStamps(unittest.TestCase):
-    def test_every_fresh_stamp_holds_its_instrument(self) -> None:
+    def test_every_fresh_stamp_holds_its_kind(self) -> None:
         for kw in (
             {"cost": "minutes", "model": "haiku"},
             {"cost": "minutes"},
@@ -60,19 +60,19 @@ class FreshStamps(unittest.TestCase):
                 )
 
     def test_the_contract_tests_are_the_templates_test_functions(self) -> None:
-        for instrument, skeleton in skeletons.SKELETONS.items():
-            names = skeletons.contract_tests(instrument)
+        for kind, skeleton in skeletons.SKELETONS.items():
+            names = skeletons.contract_tests(kind)
             stamped_names = re.findall(
                 r"^def (test_\w+)\(", skeletons.template(skeleton.test), re.M
             )
-            self.assertEqual(list(names), stamped_names, instrument)
-            self.assertGreaterEqual(len(names), 3, instrument)
+            self.assertEqual(list(names), stamped_names, kind)
+            self.assertGreaterEqual(len(names), 3, kind)
 
-    def test_a_head_without_an_instrument_holds_nothing(self) -> None:
-        """protocol-check names the placeholder; there is no instrument to hold to."""
+    def test_a_head_without_an_kind_holds_nothing(self) -> None:
+        """protocol-check names the placeholder; there is no kind to hold to."""
         root, area = stamped(cost="minutes", model="haiku")
         proto = area / "PROTOCOL-foo-bar.md"
-        edit(proto, 'instrument = "apply"', 'instrument = "<apply | fit | count>"')
+        edit(proto, 'kind = "apply"', 'kind = "<apply | fit | count>"')
         self.assertEqual(stamp_check.stamp_findings(area, head_of(area), root), [])
 
 
@@ -87,7 +87,7 @@ class ModelCall(unittest.TestCase):
         )
         (finding,) = stamp_check.stamp_findings(area, head_of(area), root)
         self.assertIn(
-            'instrument = "apply", but the script never imports labkit.llm', finding
+            'kind = "apply", but the script never imports labkit.llm', finding
         )
         self.assertTrue(finding.startswith("scripts/01_measure.py"))
 
@@ -103,11 +103,11 @@ class ModelCall(unittest.TestCase):
         self.assertIn("never calls llm.complete or llm.complete_many", finding)
 
     def test_a_fit_or_count_script_with_the_llm_import_is_named(self) -> None:
-        for kw, instrument in (
+        for kw, kind in (
             ({"cost": "minutes"}, "fit"),
             ({"cost": "seconds"}, "count"),
         ):
-            with self.subTest(instrument=instrument):
+            with self.subTest(kind=kind):
                 root, area = stamped(**kw)
                 script = area / "scripts" / "01_measure.py"
                 script.write_text(
@@ -116,7 +116,7 @@ class ModelCall(unittest.TestCase):
                 )
                 (finding,) = stamp_check.stamp_findings(area, head_of(area), root)
                 self.assertIn(
-                    f'imports labkit.llm, but the head says instrument = "{instrument}"',
+                    f'imports labkit.llm, but the head says kind = "{kind}"',
                     finding,
                 )
 
@@ -197,16 +197,12 @@ class Stations(unittest.TestCase):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             preflight.preflight_area(area)
-        self.assertIn(
-            'WARNING: scripts/01_measure.py: instrument = "apply"', buf.getvalue()
-        )
+        self.assertIn('WARNING: scripts/01_measure.py: kind = "apply"', buf.getvalue())
         edit(area / "PROTOCOL-foo-bar.md", "frozen = false", "frozen = true")
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             preflight.preflight_area(area)
-        self.assertIn(
-            'BLOCKER: scripts/01_measure.py: instrument = "apply"', buf.getvalue()
-        )
+        self.assertIn('BLOCKER: scripts/01_measure.py: kind = "apply"', buf.getvalue())
 
     def test_the_command_says_the_stamp_holds_or_what_bent(self) -> None:
         root, area = stamped(cost="minutes")
@@ -215,7 +211,7 @@ class Stations(unittest.TestCase):
             rc = stamp_check.main([str(area)])
         self.assertEqual(
             (rc, buf.getvalue().strip()),
-            (0, "stamp-check: 01-foo-bar: the stamp holds its instrument (fit)"),
+            (0, "stamp-check: 01-foo-bar: the stamp holds its kind (fit)"),
         )
         edit(
             root / "tests" / "test_01_foo_bar.py",

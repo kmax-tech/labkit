@@ -51,7 +51,7 @@ def head(
     id: str = PID,
     type: str = "exploratory",
     cost: str = "minutes",
-    instrument: str = "apply",
+    kind: str = "apply",
     frozen: bool = False,
     preflight_audit: str = "",
     promises: str | None = "",
@@ -69,7 +69,7 @@ def head(
         f'id = "{id}"',
         f'type = "{type}"',
         f'cost = "{cost}"',
-        f'instrument = "{instrument}"',
+        f'kind = "{kind}"',
         f"frozen = {'true' if frozen else 'false'}",
         f'preflight_audit = "{preflight_audit}"',
     ]

@@ -341,7 +341,7 @@ class Exp(unittest.TestCase):
     def test_the_stamped_measure_refuses_rows_of_another_prompt(self) -> None:
         """Resume by id alone kept the old prompt's answers under a new one
         (cloud judge probe, 2026-10-14). The stamped measure() hands its
-        instrument to the Store: rows of another prompt stop it before any
+        kind to the Store: rows of another prompt stop it before any
         call; rows of its own resume."""
         import importlib.util
         import sys
@@ -426,7 +426,7 @@ class Exp(unittest.TestCase):
 
     def test_minutes_without_a_model_stamps_the_estimator_skeleton(self) -> None:
         """2026-10-17: nine of nine pilot attempts were classical ML and got the
-        prompt skeleton. Without `--model` at minutes/hours the instrument is
+        prompt skeleton. Without `--model` at minutes/hours the kind is
         an estimator: no prompt, no parser, a permuted-label null lane, the
         promise constants in its words, and the model-shaped fields answered."""
         from labkit import promises, protocol_check
@@ -449,28 +449,28 @@ class Exp(unittest.TestCase):
         self.assertIn("Model / tool", holes)  # a placeholder: owed until written
         for gone in ("**Prompt", "Render check", "Parser cases harvested", "```text"):
             self.assertNotIn(gone, proto, gone)  # the cut, not an n/a line
-        self.assertEqual(protocol_check.instrument_of_text(proto), "fit")
+        self.assertEqual(protocol_check.kind_of_text(proto), "fit")
         block = promises.parse_block(proto)
         assert block is not None
         consts = promises.all_constants(block)
         self.assertEqual(consts, {"margin": 0.25, "max_empty": 0, "null_band": 0.1})
         self.assertNotIn("null_band_items", proto)
         self.assertIn("permuted-label lane", proto)
-        self.assertIn('instrument = "fit"', proto)
+        self.assertIn('kind = "fit"', proto)
 
     def test_the_prepare_step_writes_the_row_shape_its_measure_script_reads(
         self,
     ) -> None:
-        """One row shape per instrument (2026-10-17): the model's prepare wrote
+        """One row shape per kind (2026-10-17): the model's prepare wrote
         `id · text · gold` for an estimator that reads `features` and
         `split`, and its default `build()` refused rows without `text`."""
         import re
 
-        for kw, instrument in (
+        for kw, kind in (
             ({"cost": "minutes", "model": "haiku"}, "apply"),
             ({"cost": "minutes"}, "fit"),
         ):
-            with self.subTest(instrument=instrument):
+            with self.subTest(kind=kind):
                 with tempfile.TemporaryDirectory() as tmp:
                     root = Path(tmp) / "x"
                     scaffold.stamp_lab(root, "x", ref=None)
@@ -485,7 +485,7 @@ class Exp(unittest.TestCase):
                 self.assertNotIn(skeletons.ROW_FIELDS_MARK, prepare)
                 ast.parse(prepare)
                 stamped = re.findall(r'^    "(\w+)": ', prepare, re.M)
-                expected = [f for f, _ in skeletons.SKELETONS[instrument].row_fields]
+                expected = [f for f, _ in skeletons.SKELETONS[kind].row_fields]
                 self.assertEqual(stamped, expected)
                 for field in expected:  # the measure script reads every field
                     self.assertRegex(measure, rf"""['"]{field}['"]""", field)
@@ -579,9 +579,9 @@ class Exp(unittest.TestCase):
         # check holds the area to, never retyped here
         self.assertIn(f"{len(skeletons.contract_tests('fit'))} passed", r.stdout)
 
-    def test_the_instrument_is_stamped_into_the_head(self) -> None:
-        """Standard 0.20: the head carries the instrument, derived once or
-        named with --instrument; contradictions are refused loudly."""
+    def test_the_kind_is_stamped_into_the_head(self) -> None:
+        """Standard 0.20: the head carries the kind, derived once or
+        named with --kind; contradictions are refused loudly."""
         from labkit import protocol_block
 
         cases = {
@@ -593,9 +593,7 @@ class Exp(unittest.TestCase):
         }
         for (cost, model, explicit), expected in cases.items():
             with self.subTest(cost=cost, model=model, explicit=explicit):
-                self.assertEqual(
-                    scaffold.instrument_of(cost, model, explicit), expected
-                )
+                self.assertEqual(scaffold.kind_of(cost, model, explicit), expected)
         for cost, model, explicit in (
             ("minutes", "haiku", "fit"),
             ("minutes", False, "count"),
@@ -604,18 +602,18 @@ class Exp(unittest.TestCase):
         ):
             with self.subTest(cost=cost, model=model, explicit=explicit):
                 with self.assertRaises(SystemExit):
-                    scaffold.instrument_of(cost, model, explicit)
+                    scaffold.kind_of(cost, model, explicit)
         quiet(
             scaffold.stamp_area,
             self.root,
             "foo-bar",
             cost="minutes",
-            instrument="apply",
+            kind="apply",
         )
         head = protocol_block.head(
             (self.area() / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
         )
-        self.assertEqual(head.instrument, "apply")
+        self.assertEqual(head.kind, "apply")
         self.assertIn(
             "PROMPT",
             (self.area() / "scripts" / "01_measure.py").read_text(encoding="utf-8"),
@@ -651,7 +649,7 @@ class Exp(unittest.TestCase):
 
 
 class Report(unittest.TestCase):
-    """--report adds the † fields the area's instrument owes (standard 0.20):
+    """--report adds the † fields the area's kind owes (standard 0.20):
     an estimator gets no prompt-shaped field and keeps seed and noise owed;
     a model gets them all."""
 
@@ -666,7 +664,7 @@ class Report(unittest.TestCase):
 
     def test_an_estimator_owes_seed_and_noise_but_no_prompt_shaped_field(self) -> None:
         text = self.stamped()
-        self.assertIn('instrument = "fit"', text)
+        self.assertIn('kind = "fit"', text)
         self.assertRegex(text, r"\*\*Randomness controls †:\*\* <")
         self.assertRegex(text, r"\*\*Noise ceiling → threshold †:\*\* <")
         for gone in (
@@ -680,7 +678,7 @@ class Report(unittest.TestCase):
 
     def test_a_model_gets_every_field(self) -> None:
         text = self.stamped(model="haiku")
-        self.assertIn('instrument = "apply"', text)
+        self.assertIn('kind = "apply"', text)
         for owed in (
             "Gate labels",
             "Parser cases harvested",

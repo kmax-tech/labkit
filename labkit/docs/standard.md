@@ -1268,10 +1268,11 @@ version of the standard.
   inhibition, round with Opus auditor: labkit-paper 09, v3, t3 and t5). The field guide says where bands are calibrated (the null lane or a
   subset, never the registered lane over all items) and where a peek is
   disclosed (the noise-ceiling field). No rule changed; the version stays.
-- 2026-10-17 — **Version 0.20.** The head carries `instrument = "apply" |
+- 2026-10-17 — **Version 0.20.** The head carries `kind = "apply" |
   "fit" | "count"`: what happens to this run's labels, as data (named
   2026-10-18: apply asks a fixed model that never sees them, fit learns
-  from them in the run, count has none — the backend is no instrument). Until
+  from them in the run, count has none — the backend is no kind, and the
+  key is not called instrument, which stays the measuring apparatus). Until
   0.19 it was inferred from the prose of "Model / tool" and from
   `labkit-init`'s flags; the field cut, the skeleton, the promise block and
   the gates now read the key. A protocol of 0.19 is read with the labkit

@@ -124,7 +124,7 @@ standard = "0.20"
 id = "p-0000000000000000"
 type = "exploratory"
 cost = "seconds"
-instrument = "count"
+kind = "count"
 frozen = false
 preflight_audit = ""
 ```

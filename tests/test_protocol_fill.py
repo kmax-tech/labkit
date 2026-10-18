@@ -117,7 +117,7 @@ class HeadType(unittest.TestCase):
     HEAD = (
         "# Experiment protocol: x\n\n```toml\n[protocol]\n"
         f'standard = "{protocol_block.STANDARD}"\nid = "p-0123456789abcdef"\n'
-        'type = "<exploratory | confirmatory>"\ncost = "seconds"\ninstrument = "count"\nfrozen = false\n'
+        'type = "<exploratory | confirmatory>"\ncost = "seconds"\nkind = "count"\nfrozen = false\n'
         'preflight_audit = "none"\n```\n\n'
         "- **Unit:** <what one row is>\n"
     )
