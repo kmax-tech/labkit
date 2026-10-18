@@ -95,7 +95,7 @@ class TestIntentIdsAgainstCode(unittest.TestCase):
             PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE + 'm["a9_pass"] = 3\n'}
         ) as a:
             rc, out = a.run()
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 0)  # a warning is read, not a stop (gate contract)
         self.assertIn("[A9]", out)
         self.assertIn("WARNING", out)
 
@@ -463,7 +463,10 @@ class TestStampCoverage(unittest.TestCase):
         self.assertIn("`tools` resolves to tools, outside lib/ and src/", found[0])
         self.assertIn("`experiments` resolves to experiments", found[1])
 
-    def test_the_command_counts_it_as_a_warning(self):
+    def test_the_command_counts_it_as_a_warning_and_exits_0(self):
+        """A warning is static evidence to read, not a stop: exit 0, as the
+        gate contract says (until 0.97.1 code-check exited 1 here, and a
+        calling script took evidence for a blocker — audit 2026-10-18)."""
         repo, area = self._repo("import sys\nsys.path.append(str(REPO / 'tools'))\n")
         (area / "PROTOCOL-x.md").write_text(
             "- **Protocol id:** p-0123456789abcdef\n", encoding="utf-8"
@@ -471,6 +474,6 @@ class TestStampCoverage(unittest.TestCase):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             rc = code_check.main([str(area)])
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 0)
         self.assertIn("`sys.path` gains tools", buf.getvalue())
         self.assertIn("1 warning(s)", buf.getvalue())

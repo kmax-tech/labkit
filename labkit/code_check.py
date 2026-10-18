@@ -59,7 +59,10 @@ Usage:
                                          #  repo-local lib modules) for the
                                          #  code-check agent to read in one go
 
-Exit code 1 if any check reports a finding, 2 on usage errors.
+Exit code 1 with a blocker, 0 with warnings only or all clear — the gate
+contract (`gate.Findings.report`): a warning is static evidence to read,
+never a stop. Until 0.97.1 code-check exited 1 on a warning too, against
+its own contract (audit 2026-10-18). 2 on usage errors.
 """
 
 from __future__ import annotations
@@ -1379,8 +1382,8 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             "(need --bundle for the code-check agent)"
         )
     print(" — ".join(parts))
-    # exit 1 on a warning too: a static-evidence line is a finding to read
-    return 1 if findings.blocked or findings.warned else 0
+    # the gate contract: a warning is read, a blocker stops (gate.py)
+    return 1 if findings.blocked else 0
 
 
 def cli() -> None:
