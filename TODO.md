@@ -127,6 +127,22 @@ nachgeholt sind; die Zahl bleibt als Pilotzahl lesbar. Sonnet t18 — B1
 warnt bei `preflight`, bevor „Did“ einen Lauf behauptet, den es nicht
 gibt.
 
+## Audit 2026-10-18: was unter dem Grep des One-Home-Tests liegt
+
+Befund: `docs/audit-2026-10-18.md` (drei Fehler, reproduziert; die halben
+Umzüge aus 0.96.x; Kopien, die `tests/test_one_home.py` nicht sieht).
+Auslöser: der Autor nach den Commits vom 15.–17.10. — gibt es Drift,
+mehrere Wahrheiten, doppelte Helfer? Prüfstelle: je Schritt eine
+One-Home-Regel, die die Form beim Wiederkommen greift.
+
+| Schritt | Inhalt | Stand |
+|---|---|---|
+| 1 | Die drei Fehler: `scope_sha.parse_source` als der eine Parse einer Scope-Datei (Audit-Bug 11 galt nur mit `lib/`) · `protocol_block.fenced_lines` statt sieben Hand-Toggles auf ``` · der Tag-Test-Skip (`.strip()`) | **gebaut 2026-10-18**, Branch `claude/project-thread-u3bner`; Release beim Autor |
+| 2 | Die halben Umzüge: jede Verweigerung über `console.refuse` (neun Module drucken noch auf stdout, `scaffold` wirft `SystemExit`), code-check durch `gate.report` oder die Ausnahme dokumentiert, das Shim-Rezept aus `__init__` | offen |
+| 3 | Drei neue Heimaten mit Regel: `repo.shown(path, base)` (18 Kopien), `runs.now_stamp()` (9), `shell_segments` in Schicht 1 (Hook und Transkript), `LABKIT_COMMANDS` aus `entry_points` | offen |
+| 4 | Lesbarkeit: `preflight_area` nach dem finalize-Muster teilen, `usability` in Stage, Score und CLI, `Path | int` in `intent_check` durch eine Ausnahme ersetzen | offen |
+| 5 | Namen in einem Commit: Fläche heißt `area: Path`, Wurzel nach ihrer Regel, `_sha256` → `_source_digest`, `trace` → `timeline`, `registry` oder `ledger` | offen |
+
 ## Audit 2026-10-15: Fehler zuerst, dann die zweiten Heimaten
 
 Befund: `docs/audit-2026-10-15.md` (14 Fehler, reproduziert; ein Dutzend
