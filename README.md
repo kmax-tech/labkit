@@ -270,23 +270,12 @@ records its environment; if the helpers could change under a finished run,
 that record is a claim about an environment that no longer exists. Editable
 installs belong here, where the tests are.
 
-**New code imports the package directly** — `from labkit import runlog` —
+**Code imports the package directly** — `from labkit import runlog` —
 and never creates shims; `labkit-init lab` stamps repos in this style, and a
 guard test (`test_shared_helpers_come_from_labkit.py`) fires if a file ever
-shadows the package.
-
-**Shims are the documented LEGACY bridge only:** repos whose frozen run
-snapshots say `import runlog` (hundreds of files that must not be touched)
-keep a module handover per name — never `import *`, which drops private
-helpers and makes monkeypatching land on a copy:
-
-```python
-# lib/runlog.py  (legacy repos only)
-import sys
-from labkit import runlog as _mod
-
-sys.modules[__name__] = _mod
-```
+shadows the package. A repo whose frozen run snapshots say `import runlog`
+is reproduced with its own commit and the labkit version it pins; labkit
+carries no legacy bridge for it.
 
 
 ## Language

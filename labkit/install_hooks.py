@@ -10,7 +10,7 @@ existing repos never got a newer one).
 
     .githooks/pre-commit     protocol-check on staged protocols; finalize
                              --if-reported on a written-back answer; the
-                             shim guard test where a repo has it; then the
+                             guard test where a repo has it; then the
                              repo's own .githooks/pre-commit.local, if any
                              (the repo owns it, labkit-hooks never writes it)
     git core.hooksPath       set to .githooks (it used to be a manual step

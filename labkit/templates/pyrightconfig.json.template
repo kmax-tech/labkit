@@ -3,8 +3,8 @@
   // pyright reads this file as JSONC, so these comments are legal.
 
   // Shared helpers come from the pinned labkit package (venv below),
-  // imported directly; lib/ holds repo-local helpers (and, in legacy repos,
-  // the flat-import shims), reached via a sys.path insert — the layer rule
+  // imported directly; lib/ holds repo-local helpers, reached via a
+  // sys.path insert — the layer rule
   // of docs/coding-style.md. experiments/ is listed for older repos that keep helpers there.
   "extraPaths": ["lib", "experiments"],
 

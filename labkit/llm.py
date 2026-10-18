@@ -41,7 +41,7 @@ models.toml:
     [models.gpt-oss-vllm]
     backend = "openai"                # any OpenAI-compatible server: vLLM, sglang
     model = "openai/gpt-oss-20b"      # the SERVED model id (vllm serve <id>)
-    endpoint = "gamma2"               # api_key_env = "MY_KEY_VAR" if the server
+    endpoints = ["gamma2"]            # api_key_env = "MY_KEY_VAR" if the server
                                       # requires a key: the NAME of an environment
                                       # variable, never the key — the spec lands in
                                       # every run config. A literal `api_key` is
