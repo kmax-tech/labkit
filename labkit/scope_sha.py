@@ -68,6 +68,18 @@ def area_files(area: Path, globs: tuple[str, ...] = AREA_GLOBS) -> list[Path]:
 LOCAL_ROOTS = ("lib", "src")
 
 
+def parse_source(path: Path) -> ast.Module:
+    """The syntax tree of a scope file, or SourceError naming the file. The
+    one parse behind every gate that reads code: until the audit of
+    2026-10-18 only the import walk raised SourceError, so without a `lib/`
+    in the repo a broken script reached a bare `ast.parse` in code-check's
+    constant check — a traceback in preflight, exit 1, not blocking."""
+    try:
+        return ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (SyntaxError, UnicodeDecodeError) as exc:
+        raise SourceError(f"{path}: cannot be read as Python ({exc})") from exc
+
+
 def _lib_names(path: Path, libdir: Path) -> set[str]:  # noqa: C901 complexity baseline 2026-10-08
     """Dotted module paths under `libdir` that `path` may import, read from
     its syntax tree: `import a.b`, `from a.b import c` (c may be a module),
@@ -75,10 +87,7 @@ def _lib_names(path: Path, libdir: Path) -> set[str]:  # noqa: C901 complexity b
     and relative imports inside the root. Candidates, not facts: the caller
     keeps those that are files. Raises SourceError naming the file when it
     does not parse — a stamp over code it cannot read would be a guess."""
-    try:
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    except (SyntaxError, UnicodeDecodeError) as exc:
-        raise SourceError(f"{path}: cannot read its imports ({exc})") from exc
+    tree = parse_source(path)
     prefix = libdir.name
     package: list[str] = []
     if libdir in path.parents:

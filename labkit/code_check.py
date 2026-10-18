@@ -80,6 +80,7 @@ from labkit.scope_sha import (
     SourceError,
     area_files,
     imported_repo_helpers,
+    parse_source,
 )
 
 
@@ -605,13 +606,10 @@ def _key_reads(path: Path) -> set[str]:
     else — a print, a copy into another dict — decides nothing.
 
     Raises:
-        ValueError: The file does not parse — a read check over code it
+        SourceError: The file does not parse — a read check over code it
             cannot read would report a missing branch that may be there.
     """
-    try:
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    except SyntaxError as exc:
-        raise ValueError(f"{path}: does not parse ({exc.msg}, line {exc.lineno})")
+    tree = parse_source(path)
     parents = {id(c): n for n in ast.walk(tree) for c in ast.iter_child_nodes(n)}
     tuples = {
         t.id: _string_constants(n.value.elts)
@@ -714,7 +712,7 @@ def constant_copies(area: Path, protocol: Path, p: "promises.Promise") -> list[s
     for path in sorted({area / entry.partition(":")[0] for entry in p.scope}):
         if path.suffix != ".py" or not path.is_file():
             continue
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        tree = parse_source(path)
         for node in ast.walk(tree):
             targets = (
                 node.targets

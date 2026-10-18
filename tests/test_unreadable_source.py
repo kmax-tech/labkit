@@ -71,5 +71,43 @@ class UnreadableSource(unittest.TestCase):
         self.assertIn("old.py", str(cm.exception))
 
 
+class UnreadableSourceWithoutLib(unittest.TestCase):
+    """Audit 2026-10-18: without a `lib/` the import walk parses nothing, so a
+    broken script with a `constants` promise reached a bare `ast.parse` in
+    the constant check — the traceback of 0.93.0 again, by another door."""
+
+    def setUp(self) -> None:
+        self.repo = Path(tempfile.mkdtemp())
+        (self.repo / "CLAUDE.md").write_text("", encoding="utf-8")
+        self.area = self.repo / "experiments" / "01-x"
+        self.area.mkdir(parents=True)
+        self.script = scope_file(self.area)
+        self.script.write_text("margin = 0.25\ndef f(:\n    pass\n", encoding="utf-8")
+        block = DEFAULT_BLOCK.replace(
+            'scope = ["scripts/01_measure.py"]\n\n[[promise]]\nid = "A1"',
+            'scope = ["scripts/01_measure.py"]\nconstants = { margin = 0.25 }\n\n'
+            '[[promise]]\nid = "A1"',
+        )
+        self.protocol = self.area / "PROTOCOL-x.md"
+        self.protocol.write_text(
+            head(promises=block) + "\n- **Question / hypothesis:** [C1] q\n",
+            encoding="utf-8",
+        )
+
+    def test_one_blocker_not_a_traceback(self):
+        findings = code_check.check_intent_ids(self.area, self.protocol)
+        self.assertEqual(len(findings), 1, findings)
+        self.assertTrue(findings[0].startswith("BLOCKER"))
+        self.assertIn("01_measure.py", findings[0])
+
+    def test_twin_the_fixed_script_passes(self):
+        self.script.write_text(
+            'margin = 0.25\ndef evaluate_rows(rows):\n    return {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n',
+            encoding="utf-8",
+        )
+        findings = code_check.check_intent_ids(self.area, self.protocol)
+        self.assertEqual([f for f in findings if f.startswith("BLOCKER")], [])
+
+
 if __name__ == "__main__":
     unittest.main()
