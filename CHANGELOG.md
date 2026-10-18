@@ -5,6 +5,46 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Breaking
+
+- **An audit record binds what the auditor read.** `audits/*.toml` carries
+  `block_sha` (the promise block, `promises.block_stamp`; `none` when the
+  protocol declares no tables) and, in mode analysis, `run_id` (the
+  answering run whose rows the auditor read; `none` when there was none).
+  `findings.audit_coverage` holds all three, so the freeze gate, `preflight`
+  and `report-check` refuse an audit of other promises or of an earlier
+  run — until now a record named the code's stamp only, and a promise
+  rewritten after the audit, or a later run under the same code, kept the
+  old audit valid (review 2026-10-18). `labkit-audit` fixes block and run
+  before the model call, like the stamp. A record without `block_sha` is
+  refused; 0.97.1 is the last version that reads one. `findings.write` and
+  `audit_coverage` take the new arguments. `report-check` holds the record
+  to the same run choice as the audit (`audit.audited_run`).
+- **`code-check` exits 0 on warnings only**, as `gate.py` promises for
+  every gate: a warning is static evidence to read, a blocker stops. Until
+  0.97.1 it exited 1 on a warning too (audit 2026-10-18).
+
+### Fixed
+
+- **runlog refuses a full run over an undecided audit BLOCKER, acknowledged
+  or not.** `LABKIT_UNFROZEN=1` acknowledged an unfrozen protocol and passed
+  a preflight record with an open BLOCKER too (labkit-paper area 09, haiku
+  round: the record lay in `audits/` before the first run, four full runs
+  went past it). Now the full run names the undecided BLOCKER(s) and
+  stops; open WARNINGs ride in the acknowledgement's line; a probe
+  (`long=False`) still runs so the finding can be examined.
+- **The findings reader holds the counts to the tables, as the writer
+  does.** A hand-edited record with `blockers = 2` and no `[[finding]]`
+  table read as covered with nothing open; `findings.read` refuses it
+  (`counts_outrun`, one home for both).
+- The `llm` module's `models.toml` example wrote `endpoint = "gamma2"`, the
+  string form `resolve` refuses since 0.89.0; it writes `endpoints = [...]`.
+  The `lib/runlog.py` shim recipe is gone from `labkit/__init__.py` and the
+  README: labkit carries no legacy bridge, a repo with flat imports is
+  reproduced with its own commit and pinned labkit.
+
 ## 0.97.1 — 2026-10-18
 
 ### Fixed
