@@ -55,7 +55,7 @@ protocol-fill <PROTOCOL> --list | --prompts  # the open placeholder fields; the 
 protocol-fill <PROTOCOL> --from-run [RUN]  # write the number back from the run's metrics.json: Answer, Result, Answering run and Runs lines, never retyped
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
 preflight <AREA> [--protocol FILE]  # the mechanical pre-freeze gate, eight stations: protocol-check · cost tier · audit findings decided · code-check · scope-sha · working tree · hooks · area tests (not the agent audit; `labkit/preflight.py` lists them)
-finalize <AREA> [--protocol FILE]   # the post-run gate, eight steps: answering run and its record (a pilot's run is a warning) · intent-check · declared scopes · open fields · frozen source · area tests · criterion n · open audit findings (`labkit/finalize.py` lists them)
+finalize <AREA> [--protocol FILE]   # the post-run gate, eight steps: answering run and its record (a probe or an acknowledged run is a warning) · intent-check · declared scopes · open fields · frozen source · area tests · criterion n · open audit findings (`labkit/finalize.py` lists them)
 finalize --if-reported <PROTOCOL>.. # the commit gate: finalize every protocol whose answer cites a run
 report-check <AREA> [--protocol FILE]  # the last gate at minutes/hours: frozen · finalize clean and its run a full run (long=True, not acknowledged unfrozen) · analysis audit of the code now, decided · 02_analyze.py --check passes
 claude-hook pre-run|post-change|stop  # the three Claude Code hooks a lab repo installs (stdin: event JSON)
@@ -127,17 +127,20 @@ has now (or says `n/a — <reason>`), and a decided preflight audit record
 promise block as it is now: a hand-written line is checked, not trusted,
 and code or promises changed after the audit owe a new one. An analysis
 record names the answering run too (`report-check` holds it).
-A long *pilot* acknowledges with `LABKIT_UNFROZEN=1`; the acknowledgement
-is written to `config.json` as `unfrozen_ack`, so the number carries it.
-At `minutes`/`hours` it acknowledges an audit that could *not* run, not one
+A full run on an unfrozen protocol acknowledges with `LABKIT_UNFROZEN=1`;
+the acknowledgement is written to `config.json` as `unfrozen_ack`, so the
+number carries it, and that number cannot be reported.
+At `minutes`/`hours` the acknowledgement is for an audit that could *not* run, not one
 nobody ran: `runlog` asks for the failed attempt `labkit-audit` writes when
 the backend does not answer (`audits/<date>-preflight-failed.toml`, with
 the backend's error, the code and promises it would have read and the time
 the call had — at least the default timeout), and records which one the
 run rests on (`audit_failed`). Every run records `long`; `finalize` warns
 and `report-check` refuses when the answering run is a probe (`long=False`)
-or an acknowledged pilot — a reported number owes a full run on a frozen
-protocol (`runs.pilot_marks`).
+or an acknowledged run — a reported number owes a full run on a frozen
+protocol (`runs.unreportable`). The refusal offers no way round and does
+not call the shortcut a "pilot": the agents of the benchmark rounds took
+the offered word for their run (review 2026-10-18).
 The gate follows the cost tier (`cost` in the protocol head, LAB-017 The number of audits follows the cost tier — `LAB-nnn` names a rule of the shipped lab standard): at
 `seconds` a rerun costs nothing, so the gate is the **written success
 criterion**, not the freeze — an instrument change after it is a commit

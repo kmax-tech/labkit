@@ -6,7 +6,7 @@ run-index row; PROTOCOL-<task>.md cites run_ids instead of pasting numbers.
 
     runs/<run_id>/config.json      the record at start: config, data, git state,
                                    env, models resolved, the binding (protocol id),
-                                   `long` (a full run or a pilot), `unfrozen_ack`
+                                   `long` (a full run or a probe), `unfrozen_ack`
                                    and the failed audit attempt it rests on
     runs/<run_id>/metrics.json     the numbers reported via r.metrics()
     runs/<run_id>/outputs.json     the files registered via r.output(), as the
@@ -829,20 +829,22 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
 
 
 # The freeze gate (2026-10-05). `long=True` is the script's declaration of a
-# full run (the measure template sets it for the no-flag stage; --probe and
-# pilots stay long=False). A full run on a protocol that is not `frozen =
+# full run (the measure template sets it for the no-flag stage; --probe
+# stays long=False). A full run on a protocol that is not `frozen =
 # true`, or whose `preflight_audit` is still empty, produces a number nobody
 # registered for — and the rule that forbade it lived only in the skill
 # text, which a long session forgets. Hence a refusal in the one place every
-# run passes through, before mkdir. Escape hatch for a long PILOT:
-# LABKIT_UNFROZEN=1 — the acknowledgement is recorded in config.json so the
-# number carries it. At `minutes`/`hours` the hatch acknowledges an audit
+# run passes through, before mkdir. Escape hatch: LABKIT_UNFROZEN=1 — the
+# acknowledgement is recorded in config.json so the number carries it, and
+# the number cannot be reported (`runs.unreportable`). The refusal names
+# that consequence and offers no way round: the agents of the benchmark
+# rounds took the way the message offered and called their run a "pilot"
+# (review 2026-10-18), so the gate's messages do not use the word. At `minutes`/`hours` the hatch acknowledges an audit
 # that could NOT run, not one nobody ran: it needs the failed attempt
 # `labkit-audit` wrote for this code and these promises
 # (`findings.audit_unavailable`, 0.99.0 — second haiku round on 0.98.0: no
 # agent started an audit, and the hatch passed without one). The run then
-# records which attempt it rests on (`audit_failed`). A pilot's number is
-# never reported: report-check blocks it (`runs.pilot_marks`). The gate
+# records which attempt it rests on (`audit_failed`). The gate
 # follows the cost tier: at `cost = "seconds"`
 # the run is rerunnable at will, so the freeze protects nothing — what a
 # full run needs there is the registration, written before the number
@@ -908,7 +910,7 @@ def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
 
 
 def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None":
-    """The failed audit attempt a long pilot's acknowledgement rests on, or
+    """The failed audit attempt an acknowledged full run rests on, or
     None at `cost = "seconds"`, where no audit is owed before the run. Raises
     SystemExit when none fits: the hatch is for an audit the backend refused,
     not for one nobody started. The attempt must name the code as it stamps
@@ -952,7 +954,8 @@ def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None
             f"Run the audit: `labkit-audit {_shown_area(base_dir)} --mode "
             "preflight`; when the backend does not answer, it writes "
             f"audits/<date>-preflight{findings.FAILED_SUFFIX}, and this "
-            "acknowledgement rests on that file. Or pilot with long=False."
+            "acknowledgement rests on that file — and its number cannot be "
+            "reported either (report-check refuses it)."
         )
     return failed
 
@@ -1205,15 +1208,15 @@ class Run:
         self._long = long  # the script's declaration, recorded (0.99.0)
         if long:
             # An undecided BLOCKER of a preflight audit is not an unfrozen
-            # protocol a pilot may acknowledge: it is a finding nobody read.
+            # protocol a run may acknowledge: it is a finding nobody read.
             # The acknowledgement passed it until 0.97.1 (labkit-paper area
             # 09, haiku round: the record lay in audits/ before the first run).
             blockers, open_warnings = _undecided_findings(base_dir)
             if blockers:
                 raise SystemExit(
                     "runlog: this run declares long=True (a full run), and a "
-                    "preflight audit found BLOCKER(s) nobody decided — not a "
-                    "pilot, an ignored finding; LABKIT_UNFROZEN=1 does not pass "
+                    "preflight audit found BLOCKER(s) nobody decided — not an "
+                    "unfrozen protocol, an ignored finding; LABKIT_UNFROZEN=1 does not pass "
                     "it. Decide each (fixed / accepted / deferred / dismissed) "
                     "in the record:\n  " + "\n  ".join(blockers)
                 )
@@ -1226,7 +1229,8 @@ class Run:
                 self._audit_failed = failed.path.name if failed is not None else None
                 print(
                     "runlog: WARNING — LABKIT_UNFROZEN=1: full run on an "
-                    "unfrozen protocol, acknowledged; recorded in config.json:\n  "
+                    "unfrozen protocol, acknowledged; recorded in config.json, and "
+                    "its number cannot be reported (report-check refuses it):\n  "
                     + "\n  ".join(gaps)
                     + (
                         f"\n  rests on the audit that could not run: "
@@ -1246,12 +1250,14 @@ class Run:
                     "runlog: this run declares long=True (a full run), but its "
                     "protocol is not ready for one:\n  "
                     + "\n  ".join(gaps)
-                    + "\nPilot it with long=False, or freeze first: `preflight "
-                    "<AREA>` clean, audit stamped, `frozen = true` "
-                    '(at cost = "seconds": the question written suffices, with a model also criterion and admissibility condition). A '
-                    "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded) — at "
-                    "minutes/hours only over an audit the backend refused "
-                    f"(audits/*{findings.FAILED_SUFFIX}, written by labkit-audit)."
+                    + "\nFreeze first: `preflight <AREA>` clean, audit stamped, "
+                    "`frozen = true` "
+                    '(at cost = "seconds": the question written suffices, with a model also criterion and admissibility condition). '
+                    "No other run yields a reported number: a probe (long=False) "
+                    "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
+                    "minutes/hours only over an audit the backend refused, "
+                    f"audits/*{findings.FAILED_SUFFIX} written by labkit-audit) are "
+                    "recorded as such, and report-check refuses their numbers."
                 )
         self.dir = base_dir / "runs" / self.run_id
         self._outputs: list[Path] = []

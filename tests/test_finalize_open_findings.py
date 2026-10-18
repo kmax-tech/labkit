@@ -1,12 +1,12 @@
-"""finalize names undecided audit findings and a pilot's answering run;
-report-check refuses the pilot's number (plan 2026-10-17, A3).
+"""finalize names undecided audit findings and an answering run whose number
+cannot be reported; report-check refuses that number (plan 2026-10-17, A3).
 
-Pilot rounds (labkit-paper area 09): the leakage BLOCKER lay undecided in
-audits/ and nothing between it and the reported number said so; in the
-second haiku round on 0.98.0 the answering runs were probes (long=False)
-or acknowledged long pilots (LABKIT_UNFROZEN=1), and both gates were silent.
-finalize warns about the pilot's run and blocks on an open BLOCKER;
-report-check blocks the pilot's run (`runs.pilot_marks`, one telling).
+Benchmark rounds (labkit-paper area 09): the leakage BLOCKER lay undecided
+in audits/ and nothing between it and the reported number said so; in the
+second haiku round on 0.98.0 the answering runs were probes (long=False) or
+acknowledged runs (LABKIT_UNFROZEN=1), and both gates were silent. finalize
+warns about such a run and blocks on an open BLOCKER; report-check blocks
+the run (`runs.unreportable`, one telling).
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ def _finalize(area: Path) -> tuple[int, str]:
 
 
 def _report_check(area: Path) -> tuple[int, str]:
-    """The other stations stand in: the pilot station is the one under test."""
+    """The other stations stand in: the run station is the one under test."""
     buf = io.StringIO()
     no_gaps = SimpleNamespace(missing_must=[], must_holes=[])
     with (
@@ -122,7 +122,7 @@ class OpenFindings(unittest.TestCase):
         self.assertIn("not TOML", out)
 
 
-class PilotRun(unittest.TestCase):
+class UnreportableRun(unittest.TestCase):
     def setUp(self):
         self.area = Path(tempfile.mkdtemp())
         (self.area / "PROTOCOL-x.md").write_text(PROTOCOL, encoding="utf-8")
@@ -139,12 +139,12 @@ class PilotRun(unittest.TestCase):
         completed_run(self.area, "r1", metrics=METRICS, unfrozen_ack=True)
         code, out = _finalize(self.area)
         self.assertEqual(code, 0, out)
-        self.assertIn("WARNING: the answering run r1: acknowledged unfrozen", out)
+        self.assertIn(
+            "WARNING: the answering run r1: a full run acknowledged over", out
+        )
         code, out = _report_check(self.area)
         self.assertEqual(code, 1, out)
-        self.assertIn(
-            "the answering run r1: acknowledged unfrozen with LABKIT_UNFROZEN=1", out
-        )
+        self.assertIn("unfrozen protocol with LABKIT_UNFROZEN=1", out)
         self.assertIn("a reported number owes a full run", out)
 
     def test_a_probe_warns_in_finalize_and_blocks_in_report_check(self):
@@ -152,10 +152,11 @@ class PilotRun(unittest.TestCase):
         completed_run(self.area, "r1", metrics=METRICS, long=False)
         code, out = _finalize(self.area)
         self.assertEqual(code, 0, out)
-        self.assertIn("a probe or pilot (long=False)", out)
+        self.assertIn("a probe (long=False)", out)
         code, out = _report_check(self.area)
         self.assertEqual(code, 1, out)
-        self.assertIn("a probe or pilot (long=False), not a full run", out)
+        self.assertIn("a probe (long=False), not a full run", out)
+        self.assertIn("its number cannot be reported", out)
 
     def test_a_record_without_long_cannot_say_and_is_refused(self):
         run = completed_run(self.area, "r1", metrics=METRICS)
@@ -168,10 +169,10 @@ class PilotRun(unittest.TestCase):
         self.assertIn("does not say whether it was a full run", out)
 
     def test_the_marks_are_one_telling(self):
-        self.assertEqual(runs.pilot_marks({"long": True, "unfrozen_ack": False}), [])
-        both = runs.pilot_marks({"long": False, "unfrozen_ack": True})
+        self.assertEqual(runs.unreportable({"long": True, "unfrozen_ack": False}), [])
+        both = runs.unreportable({"long": False, "unfrozen_ack": True})
         self.assertEqual(len(both), 2)
-        self.assertEqual(len(runs.pilot_marks({"long": "yes"})), 1)
+        self.assertEqual(len(runs.unreportable({"long": "yes"})), 1)
 
     def test_without_an_answering_run_report_check_leaves_it_to_finalize(self):
         code, out = _report_check(self.area)

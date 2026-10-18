@@ -61,8 +61,8 @@ def completed_run(
 ) -> Path:
     """A run directory as runlog leaves one: bound to PID, its promise
     snapshot taken from the area's PROTOCOL-x.md (0.71: a run under a frozen
-    protocol recorded its block), a full run unless LONG says a pilot, not
-    acknowledged unless UNFROZEN_ACK (0.99.0: both recorded, `runs.pilot_marks`),
+    protocol recorded its block), a full run unless LONG says a probe, not
+    acknowledged unless UNFROZEN_ACK (0.99.0: both recorded, `runs.unreportable`),
     METRICS written when given, finished when COMPLETION. The one home for the
     shape (finalize, report-check)."""
     d = area / "runs" / name

@@ -85,7 +85,7 @@ class FailedAudit(unittest.TestCase):
         self.assertFalse((self.tmp / "runs").exists())
         return str(cm.exception)
 
-    def test_the_fitting_attempt_lets_the_pilot_start_and_is_recorded(self):
+    def test_the_fitting_attempt_lets_the_acknowledged_run_start_and_is_recorded(self):
         tried = self._failed()
         r, out = self._start()
         self.assertIn(f"rests on the audit that could not run: {tried.name}", out)

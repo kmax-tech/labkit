@@ -26,16 +26,22 @@ pins (`requirements.txt` / `requirements.lock`).
   audit is owed before the run. 0.98.0 is the last version whose
   acknowledgement passes without an attempt. `findings.area_records`
   reads the records only; `failed_attempts` the attempts.
-- **A pilot's number is never a reported number (plan 2026-10-17, A3).**
-  Every run records `long` in `config.json` (the script's declaration of a
-  full run); `runs.pilot_marks` is the one telling of why a run is a
-  pilot's — `long=False` (a probe), `unfrozen_ack = true` (an acknowledged
-  long pilot), or a record without `long` (written before 0.99.0: it cannot
+- **A probe's or an acknowledged run's number is never a reported number
+  (plan 2026-10-17, A3).** Every run records `long` in `config.json` (the
+  script's declaration of a full run); `runs.unreportable` is the one
+  telling of why a run's number cannot be reported — `long=False` (a
+  probe), `unfrozen_ack = true` (a full run acknowledged over an unfrozen
+  protocol), or a record without `long` (written before 0.99.0: it cannot
   say, and is not read as a full run). `finalize` warns about such an
   answering run; `report-check` refuses it ("a reported number owes a full
   run (long=True) on a frozen protocol"). Haiku t3 and t18 on 0.98.0
   measured without `long=True` — a probe for labkit, so neither freeze nor
-  audit was owed — and reported the probe's number through both gates.
+  audit was owed — and reported the probe's number through both gates. The
+  freeze gate's refusal now names that consequence instead of offering the
+  way round ("Pilot it with long=False … A long PILOT acknowledges …"): the
+  agents took the offered way and the offered word, and called their run a
+  pilot (transcripts of both haiku rounds). The gate's messages no longer
+  use the word; labkit's term for a `long=False` run is "probe" (`--probe`).
   `finalize` also names every finding still `open` in `audits/` (any mode),
   with its file: a BLOCKER blocks, a WARNING warns — a finding nobody
   decided is an ignored finding (LAB-015 Preflight audit before freezing).

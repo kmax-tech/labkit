@@ -391,7 +391,7 @@ def audit_coverage(
 @dataclass(frozen=True)
 class Failed:
     """One attempt at an audit whose backend did not answer — written by
-    `labkit-audit`, never by hand (the evidence an acknowledged long pilot
+    `labkit-audit`, never by hand (the evidence an acknowledged full run
     rests on)."""
 
     path: Path
@@ -497,7 +497,7 @@ def audit_unavailable(
 ) -> Failed | None:
     """The newest failed attempt of MODE at the area as it is now — code SHA
     and, when given, promises BLOCK_SHA — whose call was given at least
-    ATTEMPT_TIMEOUT_S seconds; None when none is. This is what a long pilot's
+    ATTEMPT_TIMEOUT_S seconds; None when none is. This is what a full run's
     acknowledgement rests on: an audit that could not run. An attempt at
     other code or other promises says nothing about these; an attempt given
     less time than the audit takes (`--timeout 1`) is not an attempt. Both

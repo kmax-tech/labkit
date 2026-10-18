@@ -33,7 +33,7 @@ and verdict is printed as a NOTE, 2026-10-09):
        as a WARNING; an audit that passed on warnings would have let it by)
     2  no audit: a missing file, an unreadable report, a backend failure —
        a backend that did not answer leaves `audits/<date>-<mode>-failed.toml`
-       (`findings.write_failed`): the evidence a long pilot's
+       (`findings.write_failed`): the evidence an acknowledged full run's
        LABKIT_UNFROZEN=1 rests on, since 0.99.0
 
 The report is printed (and written to --out), and its findings are written
@@ -521,7 +521,7 @@ def _answer_or_record(
     evidence that one was tried — on this code, these promises, with this
     much time — goes next to the records (`findings.write_failed`) before
     the AuditError that ends the command with exit 2. That file is what a
-    long pilot's LABKIT_UNFROZEN=1 rests on (second haiku round on 0.98.0:
+    LABKIT_UNFROZEN=1 rests on (second haiku round on 0.98.0:
     no agent started an audit, and the hatch asked for nothing). A usage
     error (an alias models.toml does not know) is not an unavailable audit
     and propagates as it is, so none is written for it."""
@@ -541,8 +541,8 @@ def _answer_or_record(
         raise AuditError(
             f"{exc}\nlabkit-audit: no audit — the backend did not answer; recorded "
             f"as {tried}. A full run at minutes/hours may acknowledge it with "
-            f"LABKIT_UNFROZEN=1; its number stays a pilot's (report-check refuses "
-            f"it). Run the audit again when the backend answers."
+            f"LABKIT_UNFROZEN=1; its number cannot be reported (report-check "
+            f"refuses it). Run the audit again when the backend answers."
         ) from exc
 
 

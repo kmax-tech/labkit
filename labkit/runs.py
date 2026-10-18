@@ -354,20 +354,22 @@ def _repeat_shape_problem(cfg: dict) -> str | None:
     return None
 
 
-def pilot_marks(cfg: dict) -> list[str]:
-    """Why the run CFG records is a pilot's number and not an answer — empty
-    when it is a full run on a protocol the freeze gate let through.
+def unreportable(cfg: dict) -> list[str]:
+    """Why the number of the run CFG records cannot be reported — empty when
+    it is a full run on a protocol the freeze gate let through.
 
     A full run declares `long=True`; its record carries `long` (since
-    0.99.0) and `unfrozen_ack` (the acknowledgement of a long pilot,
-    `LABKIT_UNFROZEN=1`). Both are the run's own words at start, so the
-    question is a read, not a guess. The marks are one telling for finalize
-    (a warning) and report-check (a blocker): in the second haiku round on
-    labkit 0.98.0 (labkit-paper area 09, t3 and t18) the agents measured
-    without `long=True` and reported the probe's number; neither gate asked
-    whether the answering run was a full run. A record without `long` was
-    written by labkit before 0.99.0 and cannot say — that is a mark too, not
-    a pass (no legacy reading).
+    0.99.0) and `unfrozen_ack` (a full run acknowledged over an unfrozen
+    protocol with `LABKIT_UNFROZEN=1`). Both are the run's own words at
+    start, so the question is a read, not a guess. The marks are one telling
+    for finalize (a warning) and report-check (a blocker): in the second
+    haiku round on labkit 0.98.0 (labkit-paper area 09, t3 and t18) the
+    agents measured without `long=True` and reported the probe's number;
+    neither gate asked whether the answering run was a full run. A record
+    without `long` was written by labkit before 0.99.0 and cannot say — that
+    is a mark too, not a pass (no legacy reading). The word is "probe", not
+    "pilot": the agents of those rounds called their shortcut a pilot, and
+    labkit's own messages had offered them the word (review 2026-10-18).
     """
     marks = []
     long = cfg.get("long")
@@ -377,9 +379,11 @@ def pilot_marks(cfg: dict) -> list[str]:
             "recorded since 0.99.0) — a run of an earlier labkit, or a damaged record"
         )
     elif not long:
-        marks.append("a probe or pilot (long=False), not a full run")
+        marks.append("a probe (long=False), not a full run")
     if cfg.get("unfrozen_ack") is True:
-        marks.append("acknowledged unfrozen with LABKIT_UNFROZEN=1 — a long pilot")
+        marks.append(
+            "a full run acknowledged over an unfrozen protocol with LABKIT_UNFROZEN=1"
+        )
     return marks
 
 

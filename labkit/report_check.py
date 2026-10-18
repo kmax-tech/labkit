@@ -22,11 +22,11 @@ report-check comes last and holds the whole chain:
                    tables written, not the stamp's `<…>` sentences
   2. finalize      `finalize_area` clean (its output is not repeated), and
                    the answering run it holds is a full run: `long=True`,
-                   not acknowledged unfrozen (`runs.pilot_marks`) — a
-                   reported number owes a frozen full run; a probe's or a
-                   long pilot's number stays a pilot's (second haiku round
-                   on 0.98.0: t3 and t18 reported a probe, t5 an
-                   acknowledged run; plan 2026-10-17, A3)
+                   not acknowledged unfrozen (`runs.unreportable`) — a
+                   reported number owes a frozen full run; a probe's or an
+                   acknowledged run's number cannot be reported (second
+                   haiku round on 0.98.0: t3 and t18 reported a probe, t5
+                   an acknowledged run; plan 2026-10-17, A3)
   3. analysis audit  a record `audits/*-analysis.toml` whose `scope_sha` is
                    the area's stamp now, whose `block_sha` is the promise
                    block now and whose `run_id` is the answering run, every
@@ -59,7 +59,7 @@ from labkit.finalize import finalize_area
 from labkit.preflight import area_test_python
 from labkit.protocol_check import check_fields
 from labkit.repo import choose_protocol, layout_root
-from labkit.runs import pilot_marks, read_run_config
+from labkit.runs import read_run_config, unreportable
 from labkit.scope_sha import area_stamp
 
 #: the analysis script the area skeleton stamps; its `--check` holds the note
@@ -123,10 +123,10 @@ def analysis_audit_gap(area: Path, protocol: Path) -> str | None:
         return f"the analysis audit cannot be held to the area: {exc}"
 
 
-def pilot_gaps(area: Path, protocol: Path) -> list[str]:
-    """Station 2, the run: why the answering run's number is a pilot's and
-    not a report's (`runs.pilot_marks`), each a blocker. Without an answering
-    run there is nothing to hold — finalize says so."""
+def unreportable_gaps(area: Path, protocol: Path) -> list[str]:
+    """Station 2, the run: why the answering run's number cannot be reported
+    (`runs.unreportable`), each a blocker. Without an answering run there is
+    nothing to hold — finalize says so."""
     try:
         run_dir, _ = audited_run(area, protocol)
     except AuditError as exc:
@@ -137,9 +137,9 @@ def pilot_gaps(area: Path, protocol: Path) -> list[str]:
     if cfg is None:
         return [f"{run_dir.name}: no config.json — not a run"]
     return [
-        f"the answering run {run_dir.name}: {mark} — a reported number owes a "
-        f"full run (long=True) on a frozen protocol"
-        for mark in pilot_marks(cfg)
+        f"the answering run {run_dir.name}: {mark} — its number cannot be "
+        f"reported; a reported number owes a full run (long=True) on a frozen protocol"
+        for mark in unreportable(cfg)
     ]
 
 
@@ -151,7 +151,7 @@ def later_gaps(area: Path, protocol: Path) -> list[str]:
         finalized = finalize_area(area, protocol)
     if finalized != 0:
         out.append(f"finalize {area} has blockers — run it to see them")
-    out += pilot_gaps(area, protocol)
+    out += unreportable_gaps(area, protocol)
     gap = analysis_audit_gap(area, protocol)
     if gap:
         out.append(f"analysis audit: {gap} (LAB-050 Analysis audit before reporting)")

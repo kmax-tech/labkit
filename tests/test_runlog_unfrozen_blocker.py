@@ -3,8 +3,9 @@
 labkit-paper area 09, haiku round (2026-10-17): the preflight audit wrote its
 BLOCKER to audits/ before the first run; the agent took a killed second call
 for a failed audit and ran four full runs with LABKIT_UNFROZEN=1. The
-acknowledgement is for an unfrozen protocol a pilot may run on, not for a
-finding nobody read. Without a record the pilot stays possible over a failed
+acknowledgement is for an unfrozen protocol a run may be acknowledged on,
+not for a finding nobody read. Without a record the acknowledged run stays
+possible over a failed
 audit attempt (0.99.0); a decided BLOCKER starts; a probe (long=False) runs so the BLOCKER can be examined;
 open WARNINGs ride in the acknowledgement's warning line.
 """
@@ -96,9 +97,9 @@ class UnfrozenBlocker(unittest.TestCase):
         self.assertIn("-preflight.toml: BLOCKER · scripts/01_measure.py:3", msg)
         self.assertFalse((self.tmp / "runs").exists())
 
-    def test_without_a_record_the_acknowledged_pilot_starts_over_a_failed_audit(self):
+    def test_without_a_record_the_acknowledged_run_starts_over_a_failed_audit(self):
         """No findings record, but the audit was tried and the backend did not
-        answer (0.98.0 let the pilot through without any attempt)."""
+        answer (0.98.0 let the run through without any attempt)."""
         tried = self._audit_failed()
         os.environ["LABKIT_UNFROZEN"] = "1"
         r, out = self._start(long=True)

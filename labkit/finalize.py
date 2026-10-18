@@ -20,7 +20,7 @@ each step's condition):
                     its derived_from lineage (blocker), a model record stands
                     in its lineage (warning), the arm lines match (warning),
                     it is a full run — `long=True`, not acknowledged unfrozen
-                    (warning here, `runs.pilot_marks`; report-check blocks)
+                    (warning here, `runs.unreportable`; report-check blocks)
   2. intent-check   every registered promise has a metrics key (and vice
                     versa); skipped when the protocol registers no id
   3. declared scopes  every declared promise scope unchanged since the run
@@ -41,7 +41,7 @@ each step's condition):
   8. audit findings every finding still `open` in `audits/` (any mode), with
                     its file: a BLOCKER is a blocker, a WARNING a warning — a
                     finding nobody decided is an ignored finding
-                    (LAB-015 Preflight audit before freezing); the pilot
+                    (LAB-015 Preflight audit before freezing); the benchmark
                     rounds reported numbers past undecided BLOCKERs (plan
                     2026-10-17, A3)
 
@@ -70,7 +70,7 @@ from labkit.runs import (
     RunConfigError,
     bound_answering_run,
     model_provenance_run,
-    pilot_marks,
+    unreportable,
     read_metrics,
     read_outputs,
     read_run_config,
@@ -419,7 +419,7 @@ def check_completion(
         for warning in (
             model_provenance_gap(measurement_run),
             single_draw(area, measurement_run),
-            *pilot_warnings(measurement_run),
+            *unreportable_warnings(measurement_run),
         ):
             if warning:
                 findings.warn(warning)
@@ -433,16 +433,16 @@ def check_completion(
     return measurement_run
 
 
-def pilot_warnings(measurement_run: Path) -> list[str]:
-    """Why the answering run is a pilot's number (`runs.pilot_marks`), each a
-    warning here: finalize holds the run, report-check refuses the report."""
+def unreportable_warnings(measurement_run: Path) -> list[str]:
+    """Why the answering run's number cannot be reported (`runs.unreportable`),
+    each a warning here: finalize holds the run, report-check refuses the report."""
     cfg = read_run_config(measurement_run)
     if cfg is None:
         return []
     return [
-        f"the answering run {measurement_run.name}: {mark} — its number is a "
-        f"pilot's, not a report's (report-check refuses it)"
-        for mark in pilot_marks(cfg)
+        f"the answering run {measurement_run.name}: {mark} — its number cannot "
+        f"be reported (report-check refuses it)"
+        for mark in unreportable(cfg)
     ]
 
 

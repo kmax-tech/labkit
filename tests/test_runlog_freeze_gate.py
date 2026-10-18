@@ -2,7 +2,7 @@
 
 A full run (`long=True`) on a protocol whose head is not `frozen = true`,
 or whose `preflight_audit` is still empty, is refused before any run
-directory exists. Pilots (`long=False`) pass; a long pilot acknowledges
+directory exists. Probes (`long=False`) pass; a full run acknowledges
 with LABKIT_UNFROZEN=1 over an audit the backend refused (the failed
 attempt `labkit-audit` wrote, 0.99.0) and the acknowledgement lands in
 config.json with that attempt; `long` is recorded for every run. At
@@ -321,7 +321,7 @@ class FreezeGate(unittest.TestCase):
 
     def _audit_failed(self, text: str) -> Path:
         """The failed preflight attempt at this code and these promises that a
-        long pilot's acknowledgement rests on (0.99.0)."""
+        acknowledgement rests on (0.99.0)."""
         scope_file(self.tmp)
         return findings.write_failed(
             self.tmp,
@@ -334,7 +334,7 @@ class FreezeGate(unittest.TestCase):
             "labkit-audit x --mode preflight",
         )
 
-    def test_acknowledged_long_pilot_is_recorded(self):
+    def test_the_acknowledged_full_run_is_recorded(self):
         tried = self._audit_failed(UNFROZEN)
         os.environ["LABKIT_UNFROZEN"] = "1"
         try:
@@ -361,7 +361,7 @@ class FreezeGate(unittest.TestCase):
         self.assertIn("attempts: none", str(cm.exception))
         self.assertFalse((self.tmp / "runs").exists())
 
-    def test_a_full_run_records_long_and_a_pilot_records_not(self):
+    def test_a_full_run_records_long_and_a_probe_records_not(self):
         r, _ = self._start(FROZEN.replace(AUDIT, "n/a — test"), long=True)
         self.assertTrue(json.loads((r.dir / "config.json").read_text())["long"])
         self.tmp = Path(tempfile.mkdtemp())

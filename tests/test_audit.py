@@ -278,7 +278,7 @@ class Audit(unittest.TestCase):
         self.assertIn("warnings = 1", text)
 
     def test_a_backend_that_does_not_answer_leaves_the_failed_attempt(self):
-        """0.99.0: the evidence a long pilot's LABKIT_UNFROZEN=1 rests on —
+        """0.99.0: the evidence an acknowledged full run's LABKIT_UNFROZEN=1 rests on —
         written by labkit-audit with the backend's words, the code, the
         promises and the time the call had; a usage error writes none."""
         area = repo_with()
