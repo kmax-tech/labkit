@@ -697,6 +697,45 @@ den Ertrag je Klasse auszählt.
 
 ## Notiert, nicht geplant
 
+- **Externes Review 2026-10-18 (fünf Befunde, alle am Code bestätigt).**
+  Drei waren schon notiert: die Bestätigung übergeht Audit-BLOCKER (= A1
+  im Plan 2026-10-17), `code-check` liefert Exit 1 auch bei nur Warnungen
+  entgegen dem Vertrag in `gate.py:4` (Audit 2026-10-18, Punkt 2 der
+  Arbeitsordnung), `llm.py:41` zeigt `endpoint = "gamma2"`, das `resolve`
+  seit 0.89.0 verweigert, und `__init__.py:13` empfiehlt den Shim
+  (Audit 2026-10-18). Zwei sind neu:
+  1. **Der Audit-Record bindet nur Modus und Code-Stempel.** `findings.read`
+     hält `date, mode, model, scope_sha`; `audit_coverage`
+     (`findings.py:237`) vergleicht nur `mode` und `scope_sha`. Der Stempel
+     deckt laut `scope_sha.py:8` absichtlich nicht das Protokoll — ein
+     Preflight-Audit liest aber das Protokoll (LAB-015), und nach einer
+     Protokolländerung bei unverändertem Code gilt der alte Record weiter;
+     ein Analyse-Audit gilt für jeden späteren Lauf mit demselben Code.
+     Reproduziert am Code. Kandidat: der Record trägt zusätzlich den
+     Digest des TOML-Blocks (Head + Promises, `promise_block`) und beim
+     Analyse-Audit die Run-ID des beurteilten Laufs; `audit_coverage`
+     bekommt beide als Pflichtargumente, `preflight` und `report-check`
+     reichen sie durch. **Entscheidung des Autors:** was ein Audit bindet,
+     bestimmt, wann er fällig wird — ein Protokoll-Digest macht jede
+     Textkorrektur im Protokoll zu einem neuen Audit; die Alternative ist
+     nur der Promise-Digest (`declared_scope_sha` je Promise). Stufe
+     guaranteed; Prüfstelle `tests/test_findings_binding.py`: Protokoll
+     geändert, Code gleich → `audit_coverage` nennt die Lücke; beides
+     gleich → None.
+  2. **Der Leser hält die Zähler nicht gegen die Tabellen.** `findings.write`
+     verweigert `blockers`/`warnings` über der Zahl der `[[finding]]`-Tabellen
+     (`findings.py:113`); `findings.read` nimmt `blockers = 2` ohne eine
+     Tabelle, `audit_coverage` sieht dann nichts Offenes und besteht —
+     reproduziert mit einem Hand-Record. Dieselbe Grenze in `_audit_table`
+     als `FindingsError`, weil Menschen die Dateien bearbeiten. Stufe
+     guaranteed, klein, passt zu A1–A3 ins selbe Release; Prüfstelle
+     `tests/test_findings.py`: Zähler über den Tabellen → `FindingsError`
+     nennt Datei und Zahlen; Zähler gleich → liest; `notes` bleibt frei.
+  Dazu der Lesehinweis des Reviews: die README beginnt mit der Modulliste
+  und der Entstehungsgeschichte (`README.md:3`), der Ablauf mit den drei
+  Prüfstufen kommt erst aus vielen Befehlen zusammen — gehört zu
+  „Ablauf ins Paket: `docs/workflow.md`“ unten.
+
 - **Ein Bericht außerhalb des Protokolls löst kein Gate aus (2026-10-16). → Plan 2026-10-17 oben.**
   Labor `labkit-paper`, Bereich 09, Haiku-Runde, Versuch `t3-labkit-r1`
   (Speicher `output/attempts_pilot_haiku_v1/`, Transkript `out/trace.jsonl`):
