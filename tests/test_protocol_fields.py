@@ -26,9 +26,9 @@ def template_fields() -> dict[str, tuple[str, str]]:
     lines = TEMPLATE.splitlines()
     for f in protocol_check.fields(TEMPLATE):
         span = "\n".join(lines[f.line - 1 : max(f.line, f.last)])
-        tags = set(re.findall(r"<!--\s*(s|m|me)\s*-->", span))
+        tags = set(re.findall(r"<!--\s*(s|a|af)\s*-->", span))
         seconds = "s" if "s" in tags else ""
-        instruments = "me" if "me" in tags else ("m" if "m" in tags else "")
+        instruments = "af" if "af" in tags else ("a" if "a" in tags else "")
         out.setdefault(f.name, (seconds, instruments))
     return out
 
@@ -77,8 +77,8 @@ class FieldGuide(unittest.TestCase):
             [f.label for f in protocol_check.FIELDS if f.instruments],
         )
         self.assertEqual(
-            self.listed("an estimator owes none of:"),
-            [f.label for f in protocol_check.FIELDS if f.instruments == "m"],
+            self.listed("fit owes none of:"),
+            [f.label for f in protocol_check.FIELDS if f.instruments == "a"],
         )
 
 
@@ -195,7 +195,7 @@ class Fields(unittest.TestCase):
         self.assertNotIn("Model I/O", report.missing_must)
         self.assertNotIn("Prompt", report.missing_must)
         self.assertEqual(report.missing_should, [])
-        with_model = head(cost="seconds", instrument="model")
+        with_model = head(cost="seconds", instrument="apply")
         self.assertIn("Prompt", protocol_check.check_fields(with_model).missing_must)
 
     def test_report_fields_fall_due_with_a_documented_run_once_frozen(self):
@@ -220,7 +220,7 @@ class Fields(unittest.TestCase):
         owed; the head's `instrument` is the one reading now."""
         count = head(cost="seconds", instrument="count") + "- **Model / tool:** haiku\n"
         self.assertNotIn("Prompt", protocol_check.check_fields(count).missing_must)
-        model = head(cost="seconds", instrument="model") + "- **Model / tool:** none\n"
+        model = head(cost="seconds", instrument="apply") + "- **Model / tool:** none\n"
         self.assertIn("Prompt", protocol_check.check_fields(model).missing_must)
 
     def test_a_head_placeholder_is_a_must_gap(self):

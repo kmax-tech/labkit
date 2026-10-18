@@ -119,11 +119,11 @@ STAMPED = (
         for t in (
             "AGENTS.md.template",
             "prepare-script.py.template",
-            "measure-script.py.template",
+            "measure-apply-script.py.template",
             "analyze-script.py.template",
-            "test-area.py.template",
-            "measure-quick-script.py.template",
-            "test-quick.py.template",
+            "test-apply.py.template",
+            "measure-count-script.py.template",
+            "test-count.py.template",
         )
     ),
 )

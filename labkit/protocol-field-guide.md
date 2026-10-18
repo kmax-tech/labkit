@@ -139,13 +139,16 @@ The same block may hold the `[[promise]]` tables (labkit
   the head carries `instrument`. Standard 0.19 (labkit 0.72): a frozen protocol and every full run — at `cost = "seconds"` every run — owe the `[[promise]]` tables; a run records every registered constant unchanged.
 - **id** — `p-` plus 16 hex digits, stamped by `labkit-init exp`, never typed: the
   run binds to it, so renaming or moving the file keeps the binding.
-- **instrument** — what produces a row's answer: `"model"` (a prompt per
-  item, a parser, lanes of questions), `"estimator"` (fit and predict, a
-  permuted-label null lane), `"count"` (deterministic, no bar to clear).
-  Stamped by `labkit-init exp` from `--model` and `--cost`, or named with
+- **instrument** — what happens to this run's labels: `"apply"` (a fixed
+  model asked per item that never sees them: a prompt, a parser, a placebo
+  or anchor null lane), `"fit"` (an estimator fitted on them in the run:
+  fit and predict out of fold, a permuted-label null lane, a seed),
+  `"count"` (no labels, deterministic, no bar to clear). The pretraining of
+  a model is no difference here — it happened outside the run. Stamped by
+  `labkit-init exp` from `--model` and `--cost`, or named with
   `--instrument`; the field cut, the skeleton, the promise block and the
-  gates follow from it. A mixed form names the instrument the criterion
-  holds; a model that renders features belongs to the prepare step.
+  gates follow from it. A mixed form names what produces the row's answer;
+  a model that renders features belongs to the prepare step.
   Which fields an instrument owes is the catalogue's second cut, at every tier
   (`protocol-check --contract` prints it). A count owes none of: Success /
   failure criterion, Admissibility condition, Model / tool, Model I/O, Prompt,
@@ -153,7 +156,7 @@ The same block may hold the `[[promise]]` tables (labkit
   form + resolution, Validation, Noise ceiling → threshold, Free knobs,
   Randomness controls, Instrument check, Resolution check, Prediction for the
   follow-up run, Raw output (nor the render check, the parser cases harvested,
-  the "Changed" line and the Pilot); an estimator owes none of: Prompt, Gate
+  the "Changed" line and the Pilot); fit owes none of: Prompt, Gate
   labels, Raw output (nor the render check and the parser cases harvested).
   `labkit-init exp` stamps only what the instrument owes; a field the cut left
   out is not owed, and an n/a line for it is template residue.
@@ -361,8 +364,8 @@ scattered in output files nobody can interpret.
   that appears in one class and never in the other is a free rule — the model
   can read the label off it without doing the task.
 - **Model / tool:** alias from `models.toml` — never hardcode endpoint/ID.
-  No model call? Then the instrument is an estimator: write `n/a — no model
-  call; the instrument is …` and name the estimator with its fixed
+  No model call? Then the instrument is `fit`: name the estimator of
+  `make_estimator()` with its fixed
   parameters and the seed (the stamp of an area without `--model` says so);
   `--report` then fills the parser field and leaves the randomness and
   noise-ceiling fields owed, because a seed is a source of randomness.

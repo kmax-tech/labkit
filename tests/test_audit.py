@@ -103,7 +103,7 @@ class Audit(unittest.TestCase):
         self.assertIn("labkit-audit: tokens · prompt ", err)  # what the call cost
         prompt = sent[0]
         self.assertIn(
-            "MODE: preflight · AREA: experiments/01-x · INSTRUMENT model", prompt
+            "MODE: preflight · AREA: experiments/01-x · INSTRUMENT apply", prompt
         )
         for path in (
             "experiments/01-x/PROTOCOL-x0.md",
@@ -251,18 +251,16 @@ class Audit(unittest.TestCase):
         a gap that is none."""
         area = repo_with()
         (area / "PROTOCOL-x0.md").write_text(
-            fixture.head(id="p-0123456789abcdef", instrument="estimator") + PROTOCOL,
+            fixture.head(id="p-0123456789abcdef", instrument="fit") + PROTOCOL,
             encoding="utf-8",
         )
         rc, _, _, sent = run(area, CLEAN)
         self.assertEqual(rc, 0)
-        self.assertIn("· INSTRUMENT estimator — fit and predict", sent[0])
+        self.assertIn("· INSTRUMENT fit — an estimator fitted", sent[0])
         self.assertIn("reduced estimator on a few labelled items", sent[0])
-        self.assertNotIn("INSTRUMENT model", sent[0])
+        self.assertNotIn("INSTRUMENT apply", sent[0])
         (area / "PROTOCOL-x0.md").write_text(
-            fixture.head(
-                id="p-0123456789abcdef", instrument="<model | estimator | count>"
-            )
+            fixture.head(id="p-0123456789abcdef", instrument="<apply | fit | count>")
             + PROTOCOL,
             encoding="utf-8",
         )

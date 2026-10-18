@@ -583,7 +583,7 @@ class TestPromptAndExample(unittest.TestCase):
         ):
             self.assertNotIn(label, out)
         # the twin: a model as the instrument brings the criterion back
-        rc, out = run_main(text.replace('instrument = "count"', 'instrument = "model"'))
+        rc, out = run_main(text.replace('instrument = "count"', 'instrument = "apply"'))
         self.assertEqual(rc, 1)
         self.assertIn("Success / failure criterion", out)
 

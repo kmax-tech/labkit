@@ -151,9 +151,9 @@ def acknowledged_unfrozen(run_dir: Path) -> bool:
 
 def run_instrument(run_dir: Path) -> str | None:
     """The instrument RUN_DIR ran under (`instrument` in its config.json,
-    written by runlog from the protocol head, standard 0.20): model,
-    estimator or count. The one reading for the gates that ask what the
-    run did — finalize holds a model run to its `models_resolved` and
+    written by runlog from the protocol head, standard 0.20): apply, fit
+    or count. The one reading for the gates that ask what the
+    run did — finalize holds an apply run to its `models_resolved` and
     names a one-draw spread with it. None for a run without config.json
     or without the key (a run of a labkit before 0.20); an unreadable
     config raises RunConfigError.

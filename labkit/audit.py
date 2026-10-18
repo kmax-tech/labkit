@@ -107,19 +107,20 @@ INLINE_NOTE = (
 #: estimator area finds a gap that is none — the check that exists there is
 #: a reduced estimator on a few labelled items (plan II, 2026-10-17)
 INSTRUMENT_NOTES = {
-    "model": (
-        "INSTRUMENT model — a model in the loop: a prompt per item, a parser, "
-        "lanes of questions. The instrument check is one fully rendered "
-        "prompt+answer pair per gold class from the real pipeline (`--probe N`); "
-        "the null lane is anchors or a placebo in the same run."
+    "apply": (
+        "INSTRUMENT apply — a fixed model asked per item, never shown this run's "
+        "labels: a prompt per item, a parser, lanes of questions. The instrument "
+        "check is one fully rendered prompt+answer pair per gold class from the "
+        "real pipeline (`--probe N`); the null lane is anchors or a placebo in "
+        "the same run."
     ),
-    "estimator": (
-        "INSTRUMENT estimator — fit and predict, no model call: no prompt, no "
-        "parser, no render check, and the protocol's cut has no such field. The "
-        "instrument check is a reduced estimator on a few labelled items through "
-        "the real pipeline, both lanes, its scores read and never reported; the "
-        "null lane is the same estimator on labels permuted inside each fitting "
-        "fold; seeds and the noise ceiling are owed."
+    "fit": (
+        "INSTRUMENT fit — an estimator fitted on this run's labels, no model call: "
+        "no prompt, no parser, no render check, and the protocol's cut has no such "
+        "field. The instrument check is a reduced estimator on a few labelled "
+        "items through the real pipeline, both lanes, its scores read and never "
+        "reported; the null lane is the same estimator on labels permuted inside "
+        "each fitting fold; seeds and the noise ceiling are owed."
     ),
     "count": (
         "INSTRUMENT count — a deterministic count, rerunnable at will: no bar to "

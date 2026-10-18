@@ -75,17 +75,17 @@ class ModelProvenanceGap(unittest.TestCase):
 
     def test_a_model_run_without_models_resolved_is_named(self):
         with tempfile.TemporaryDirectory() as d:
-            run = self._run(d, "model", {})
+            run = self._run(d, "apply", {})
             gap = finalize.model_provenance_gap(run) or ""
             self.assertIn("no run in its lineage recorded models_resolved", gap)
 
     def test_a_model_run_with_models_resolved_is_quiet(self):
         with tempfile.TemporaryDirectory() as d:
-            run = self._run(d, "model", {"m": {"model": "A"}})
+            run = self._run(d, "apply", {"m": {"model": "A"}})
             self.assertIsNone(finalize.model_provenance_gap(run))
 
     def test_an_estimator_or_count_run_owes_no_model(self):
-        for instrument in ("estimator", "count"):
+        for instrument in ("fit", "count"):
             with (
                 self.subTest(instrument=instrument),
                 tempfile.TemporaryDirectory() as d,

@@ -449,14 +449,14 @@ class Exp(unittest.TestCase):
         self.assertIn("Model / tool", holes)  # a placeholder: owed until written
         for gone in ("**Prompt", "Render check", "Parser cases harvested", "```text"):
             self.assertNotIn(gone, proto, gone)  # the cut, not an n/a line
-        self.assertEqual(protocol_check.instrument_of_text(proto), "estimator")
+        self.assertEqual(protocol_check.instrument_of_text(proto), "fit")
         block = promises.parse_block(proto)
         assert block is not None
         consts = promises.all_constants(block)
         self.assertEqual(consts, {"margin": 0.25, "max_empty": 0, "null_band": 0.1})
         self.assertNotIn("null_band_items", proto)
         self.assertIn("permuted-label lane", proto)
-        self.assertIn('instrument = "estimator"', proto)
+        self.assertIn('instrument = "fit"', proto)
 
     def test_the_prepare_step_writes_the_row_shape_its_measure_script_reads(
         self,
@@ -467,8 +467,8 @@ class Exp(unittest.TestCase):
         import re
 
         for kw, instrument in (
-            ({"cost": "minutes", "model": "haiku"}, "model"),
-            ({"cost": "minutes"}, "estimator"),
+            ({"cost": "minutes", "model": "haiku"}, "apply"),
+            ({"cost": "minutes"}, "fit"),
         ):
             with self.subTest(instrument=instrument):
                 with tempfile.TemporaryDirectory() as tmp:
@@ -553,7 +553,7 @@ class Exp(unittest.TestCase):
             measure.make_estimator(0)
 
     def test_the_stamped_estimator_test_passes_as_stamped(self) -> None:
-        """The area's test (`test-estimator.py.template`) runs green on the
+        """The area's test (`test-fit.py.template`) runs green on the
         fresh stamp: the resolution check needs no estimator library."""
         import subprocess
         import sys
@@ -577,7 +577,7 @@ class Exp(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         # every contract test the template stamps ran — the count the stamp
         # check holds the area to, never retyped here
-        self.assertIn(f"{len(skeletons.contract_tests('estimator'))} passed", r.stdout)
+        self.assertIn(f"{len(skeletons.contract_tests('fit'))} passed", r.stdout)
 
     def test_the_instrument_is_stamped_into_the_head(self) -> None:
         """Standard 0.20: the head carries the instrument, derived once or
@@ -585,11 +585,11 @@ class Exp(unittest.TestCase):
         from labkit import protocol_block
 
         cases = {
-            ("minutes", False, None): "estimator",
-            ("minutes", "haiku", None): "model",
+            ("minutes", False, None): "fit",
+            ("minutes", "haiku", None): "apply",
             ("seconds", False, None): "count",
-            ("seconds", "haiku", None): "model",
-            ("minutes", False, "model"): "model",
+            ("seconds", "haiku", None): "apply",
+            ("minutes", False, "apply"): "apply",
         }
         for (cost, model, explicit), expected in cases.items():
             with self.subTest(cost=cost, model=model, explicit=explicit):
@@ -597,9 +597,9 @@ class Exp(unittest.TestCase):
                     scaffold.instrument_of(cost, model, explicit), expected
                 )
         for cost, model, explicit in (
-            ("minutes", "haiku", "estimator"),
+            ("minutes", "haiku", "fit"),
             ("minutes", False, "count"),
-            ("seconds", False, "estimator"),
+            ("seconds", False, "fit"),
             ("minutes", False, "judge"),
         ):
             with self.subTest(cost=cost, model=model, explicit=explicit):
@@ -610,12 +610,12 @@ class Exp(unittest.TestCase):
             self.root,
             "foo-bar",
             cost="minutes",
-            instrument="model",
+            instrument="apply",
         )
         head = protocol_block.head(
             (self.area() / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
         )
-        self.assertEqual(head.instrument, "model")
+        self.assertEqual(head.instrument, "apply")
         self.assertIn(
             "PROMPT",
             (self.area() / "scripts" / "01_measure.py").read_text(encoding="utf-8"),
@@ -666,7 +666,7 @@ class Report(unittest.TestCase):
 
     def test_an_estimator_owes_seed_and_noise_but_no_prompt_shaped_field(self) -> None:
         text = self.stamped()
-        self.assertIn('instrument = "estimator"', text)
+        self.assertIn('instrument = "fit"', text)
         self.assertRegex(text, r"\*\*Randomness controls †:\*\* <")
         self.assertRegex(text, r"\*\*Noise ceiling → threshold †:\*\* <")
         for gone in (
@@ -680,7 +680,7 @@ class Report(unittest.TestCase):
 
     def test_a_model_gets_every_field(self) -> None:
         text = self.stamped(model="haiku")
-        self.assertIn('instrument = "model"', text)
+        self.assertIn('instrument = "apply"', text)
         for owed in (
             "Gate labels",
             "Parser cases harvested",

@@ -13,7 +13,7 @@ LAB-017 The number of audits follows the cost tier.
 
 1. `labkit-init exp <name> --cost seconds` (`--model <alias>` when a model is
    in the loop) — stamps the seconds cut of the protocol and the matching
-   skeleton. Neither a count nor a model in the loop? Stop here and say so
+   skeleton. Neither a count nor a model asked per item (apply)? Stop here and say so
    (minutes lane, step 1) — never bend the stamped skeleton to fit.
 2. Write the registration: `protocol-fill <PROTOCOL> --list` names every
    open field, the TOML head's `type` first (`cost = "seconds"` is stamped).
@@ -45,12 +45,13 @@ fields, no reading of labkit's source.
 
 ## Lane `minutes` / `hours`
 
-1. `labkit-init exp <name> [--model ALIAS | --instrument estimator]` — never
-   `mkdir`. The instrument is the kind of the experiment, stamped into the
-   head: `model` (a prompt per item, a parser) with `--model`, else
-   `estimator` (fit, predict, a permuted-label null lane); a `count` is the
-   seconds lane. Stamps the protocol and the script skeletons of that
-   instrument (`scripts/00_prepare.py · 01_measure.py · 02_analyze.py`).
+1. `labkit-init exp <name> [--model ALIAS | --instrument fit]` — never
+   `mkdir`. The instrument says what happens to this run's labels, stamped
+   into the head: `apply` with `--model` (a fixed model asked per item: a
+   prompt, a parser; it never sees the labels), else `fit` (an estimator
+   fitted on them in the run: fit, predict, a permuted-label null lane); a
+   `count` is the seconds lane. Stamps the protocol and the script skeletons
+   of that instrument (`scripts/00_prepare.py · 01_measure.py · 02_analyze.py`).
    Fits none of the three? Stop here: one line under the protocol's Notes
    saying what produces a row's answer, and no skeleton bent to fit — a
    fourth instrument gets its name from that stop; a bent skeleton hides it
@@ -89,8 +90,8 @@ fields, no reading of labkit's source.
     retyped), `scripts/02_analyze.py --check` holding the note to the run,
     `protocol-check` on the written protocol
     (LAB-041 Generate numbers, don't retype them). A number a model gave is
-    one draw: `scripts/01_measure.py --repeat-of <run_id>` draws it again (an
-    estimator: with `--seed N`; a run of its own, never the answer),
+    one draw: `scripts/01_measure.py --repeat-of <run_id>` draws it again (fit:
+    with `--seed N`; a run of its own, never the answer),
     `scripts/02_analyze.py --draws` shows how far it moves.
 11. The analysis audit (`labkit-audit <area> --mode analysis`) against the
     frozen criterion; decide its findings

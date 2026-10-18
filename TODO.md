@@ -37,7 +37,7 @@ kein Ziel.
 | R | Rollout in einem Release: die Pins der Labor- und Thesis-Repos heben, Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus) | **Kern erledigt 2026-10-12 (Tag `v0.85.0` auf GitHub):** die vier aktiven Labor-Repos auf dem Tag, je ein Commit; Reste unter Punkt 5, „Zeile R“ |
 | Tokenkosten | messen statt schätzen — `llm.last_usage()`, `labkit-audit` druckt Prompt- und Output-Tokens, `agent_transcript.tokens` liest die Usage-Blöcke der Claude-Code-Transkripte (0.81.0, 2026-10-11) | **erledigt 2026-10-11.** Auslöser: 30 Transkripte (labkit, uniagent) summieren 7 Mrd. Cache-Read-Tokens, die alten Subagenten-Audits je 3,65 Mio., und keine labkit-Zeile sagte, was ein Aufruf kostet. Pilot `labkit-paper` Bereich 04 (`audit-on-reachable-code-holds`, Lauf `2026-10-11T14-00-57_071a`): die direkten Importe auf erreichbaren Code zu kürzen spart 0–16 % des Prompts (Median 8 % über 24 uniagent-Bereiche) — **an der Renderprobe gestoppt, kein Modellaufruf; LAB-103 The audit reads by declared scope, not by import graph bleibt.** Der Prompt ist groß, weil die Zahl fast den ganzen Agenten braucht (Bereich 19: 142 von 155 kB Importe erreicht), nicht wegen ungenutztem Code; Fixkosten je Audit ~69 kB (Instruktionen 9, zitierte Regeln 19, Protokoll 26, Index 15). Ein kleinerer Audit bräuchte eine andere Frage (Audit je Versprechen über seinen deklarierten Scope), kein Schnitt. Die Hauptsitzungen (Median 400–500 k Kontext je Aufruf) sind Sitzungshygiene, keine labkit-Aufgabe. |
 | P | Pilotrunden 2026-10-16 (Haiku-Runde v1, Sonnet-Runden v2 ohne und v3 mit Opus-Auditor, Labor `labkit-paper` Bereich 09): Plan „Kein stiller Ausweg“ unten — A Marke und Verweigerung · B Berichtsfelder vor dem Lauf · C Vorlage ohne Modell · D Doktrin zum Vorab-Blick | **geplant 2026-10-17**; gebaut 2026-10-17: der BLOCKER-Stopp (A1), der laufende Audit (A1b, mit dem Audit ohne Ergebnis, V1), die Marke in der Antwortzeile (A2), offene Befunde in finalize (A3), Berichtsfelder vor dem Lauf (B1), kein Autofill (C1), die unerwähnte Konstante (C3), das Estimator-Skelett (C2) (Branch `claude/zealous-davinci-3hbhvk`, Release beim Autor); Banden an der Null-Lane (D1), die Narbenzeile (D2) und Write-back (E) am selben Tag (Version bleibt 0.19); offen: der Benchmark-Fall zur Narbenzeile im Labor, der Stop-Hook (A4) zurückgestellt, die zweite Hälfte von Vorschlag (j) |
-| I | Das Instrument als Datum im Kopf: `instrument = "model" | "estimator" | "count"` — eine Registrierung statt sechs Ableitungen aus Prosa und Schaltern; Felder, Skelett, Promise-Block, Gates und Audit folgen daraus (Plan unten). Breaking: Kopfformat, Standard 0.19 → 0.20 | **gebaut 2026-10-17:** der Kopfschlüssel (I1, `bf7d537`), Stempeln nach Instrument (I2, `9784326`), der Schnitt je Instrument (I3, `9e33af5`), die Promise-Tabellen je Instrument (I4, `0fbe8c4`), die Gates lesen das Instrument (I5, `eab6b38`), die Doku zum Instrument (I6, `5069f5e`); offen: Release zusammen mit den wartenden Brüchen (`notes_check` nach LOCAL, LOCAL-073, CLI-Dach), die Estimator-Probe in `usability` (heute nur count und judge); der Stempel-Check (I7) **gebaut 2026-10-17** |
+| I | Das Instrument als Datum im Kopf: `instrument = "apply" | "fit" | "count"` (bis 2026-10-18 `model` / `estimator`) — eine Registrierung statt sechs Ableitungen aus Prosa und Schaltern; Felder, Skelett, Promise-Block, Gates und Audit folgen daraus (Plan unten). Breaking: Kopfformat, Standard 0.19 → 0.20 | **gebaut 2026-10-17:** der Kopfschlüssel (I1, `bf7d537`), Stempeln nach Instrument (I2, `9784326`), der Schnitt je Instrument (I3, `9e33af5`), die Promise-Tabellen je Instrument (I4, `0fbe8c4`), die Gates lesen das Instrument (I5, `eab6b38`), die Doku zum Instrument (I6, `5069f5e`); offen: Release zusammen mit den wartenden Brüchen (`notes_check` nach LOCAL, LOCAL-073, CLI-Dach), die Estimator-Probe in `usability` (heute nur count und judge); der Stempel-Check (I7) **gebaut 2026-10-17** |
 
 **1a gebaut (2026-10-06):** `labkit/promises.py` ist die eine Heimat des
 Alphabets (C/A/B plus Altbuchstaben K/S/W/N in Prosa) und des
@@ -155,6 +155,24 @@ aus Fragen), **estimator** (fit, predict, permutierte Null-Lane),
 was die Antwort der Zeile erzeugt; ein Modell, das Merkmale rendert, gehört
 in den Vorbereitungsschritt (Regeln dafür stehen in der Prepare-Vorlage).
 Eine vierte Art bekommt ihren Namen, wenn sie auftaucht.
+
+**Entschieden 2026-10-18: die Namen `apply` / `fit` / `count`.** Die Achse
+ist, was im Lauf mit den Labels dieses Laufs geschieht, nicht das Backend:
+`apply` fragt ein festes Modell je Zeile, das die Labels nie sieht (heute
+ein Prompt über `labkit.llm`); `fit` lernt im Lauf aus ihnen (ein Schätzer,
+out of fold, permutierte Null-Lane, Seed); `count` hat keine. Das
+Pretraining eines Modells ist kein Unterschied, es geschah außerhalb des
+Laufs. Ein fertiger Klassifikator ohne Finetuning und ein in einem früheren
+Lauf trainierter Schätzer sind damit kein viertes Instrument, sondern
+apply mit lokalem Vorhersager — ein zweites apply-Skelett mit
+`predict(items)`, einer Provenienzzeile `predictor_from = <fit run>` in
+runlog und den Scores als `labkit.scores`; die Null-Lane dafür (Placebo-
+Input oder Bewertung gegen permutiertes Gold) entscheidet der Standard,
+wenn der Fall da ist (Auslöser: ein fit-dann-apply-Fall im Labor). Umbenannt
+vor dem Release von 0.20 (`model` → `apply`, `estimator` → `fit`, Vorlagen
+`measure-apply-script`, `measure-fit-script`, `measure-count-script`,
+`test-apply`, `test-fit`, `test-count`, Markierungen `<!-- a -->` /
+`<!-- af -->`).
 
 **Entscheidung (2026-10-17):** ein Kopfschlüssel `instrument`, Pflicht,
 drei Werte, kein Rückfall auf Ableitung — ein Protokoll ohne ihn wird

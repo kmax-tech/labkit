@@ -35,9 +35,9 @@ class PromiseBlock(unittest.TestCase):
         self,
     ) -> None:
         for kw, instrument in (
-            ({"cost": "minutes", "model": "haiku"}, "model"),
-            ({"cost": "minutes"}, "estimator"),
-            ({"cost": "seconds", "model": "haiku"}, "model"),
+            ({"cost": "minutes", "model": "haiku"}, "apply"),
+            ({"cost": "minutes"}, "fit"),
+            ({"cost": "seconds", "model": "haiku"}, "apply"),
         ):
             with self.subTest(instrument=instrument, **kw):
                 area, proto = self.stamp(**kw)
@@ -75,14 +75,14 @@ class PromiseBlock(unittest.TestCase):
         self.assertNotIn("[[promise]]\n", tmpl)
         self.assertIn(scaffold.PROMISE_MARK, tmpl)
         self.assertEqual(scaffold.promise_tables("count"), "")
-        for instrument in ("model", "estimator"):
+        for instrument in ("apply", "fit"):
             self.assertEqual(
                 scaffold.promise_tables(instrument).count("[[promise]]"), 3
             )
 
     def test_a_template_without_the_marker_is_refused(self) -> None:
         with self.assertRaises(ValueError):
-            scaffold.promise_block_for("```toml\n[protocol]\n```\n", "model")
+            scaffold.promise_block_for("```toml\n[protocol]\n```\n", "apply")
 
 
 if __name__ == "__main__":

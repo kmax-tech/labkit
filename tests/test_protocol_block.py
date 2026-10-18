@@ -29,7 +29,7 @@ class Head(unittest.TestCase):
                 PID,
                 "exploratory",
                 "seconds",
-                "model",
+                "apply",
                 True,
                 "2026-10-07 · 0 findings",
             ),

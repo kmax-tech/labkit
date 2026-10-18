@@ -3,8 +3,8 @@ tests they stamp (standard 0.20).
 
 One home for two readers: the scaffolder writes an area from these
 templates (`scaffold.stamp_scripts`), and the stamp check holds a stamped
-area to them (`stamp_check`). The measure skeleton of a model asks its
-model through `labkit.llm`; an estimator's and a count's never do. The
+area to them (`stamp_check`). The measure skeleton of apply asks its
+model through `labkit.llm`; fit's and count's never do. The
 stamped test file carries the resolution check as named test functions,
 and a stamped area keeps every one of them (plan II, the stamp check,
 2026-10-17).
@@ -43,9 +43,13 @@ ANALYZE = ("analyze-script.py.template", "02_analyze.py")
 ROW_FIELDS_MARK = "<row-fields>"
 ID_FIELD = ("id", "unique per row")
 SKELETONS: dict[str, Skeleton] = {
-    "model": Skeleton(
-        scripts=(PREPARE, ("measure-script.py.template", "01_measure.py"), ANALYZE),
-        test="test-area.py.template",
+    "apply": Skeleton(
+        scripts=(
+            PREPARE,
+            ("measure-apply-script.py.template", "01_measure.py"),
+            ANALYZE,
+        ),
+        test="test-apply.py.template",
         asks_a_model=True,
         row_fields=(
             ID_FIELD,
@@ -53,13 +57,13 @@ SKELETONS: dict[str, Skeleton] = {
             ("gold", "TODO: every gold value spelled out, e.g. causal | not_causal"),
         ),
     ),
-    "estimator": Skeleton(
+    "fit": Skeleton(
         scripts=(
             PREPARE,
-            ("measure-estimator-script.py.template", "01_measure.py"),
+            ("measure-fit-script.py.template", "01_measure.py"),
             ANALYZE,
         ),
-        test="test-estimator.py.template",
+        test="test-fit.py.template",
         asks_a_model=False,
         row_fields=(
             ID_FIELD,
@@ -77,8 +81,8 @@ SKELETONS: dict[str, Skeleton] = {
         ),
     ),
     "count": Skeleton(
-        scripts=(("measure-quick-script.py.template", "01_measure.py"),),
-        test="test-quick.py.template",
+        scripts=(("measure-count-script.py.template", "01_measure.py"),),
+        test="test-count.py.template",
         asks_a_model=False,
         row_fields=(),
     ),

@@ -93,7 +93,7 @@ class Repeats(unittest.TestCase):
         decides (0.20), not its metrics."""
         from labkit import finalize
 
-        first = self._run()  # the fixture head says instrument = "model"
+        first = self._run()  # the fixture head says instrument = "apply"
         primary = self.area / "runs" / first
         self.assertIn(
             "is one draw — no spread", finalize.single_draw(self.area, primary) or ""
@@ -103,7 +103,7 @@ class Repeats(unittest.TestCase):
         proto = self.area / "PROTOCOL-x.md"
         proto.write_text(
             proto.read_text(encoding="utf-8").replace(
-                'instrument = "model"', 'instrument = "estimator"'
+                'instrument = "apply"', 'instrument = "fit"'
             ),
             encoding="utf-8",
         )

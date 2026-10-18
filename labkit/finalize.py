@@ -292,7 +292,7 @@ def single_draw(area: Path, measurement_run: Path) -> str | None:
     without one is named by `model_provenance_gap`, not twice. A run in the
     area that cannot say whether it is a draw (unreadable, a broken or
     doubled draw number) is said here, not raised past."""
-    if run_instrument(measurement_run) != "model":
+    if run_instrument(measurement_run) != "apply":
         return None
     try:
         if repeats_of(area, measurement_run.name):
@@ -308,11 +308,11 @@ def single_draw(area: Path, measurement_run: Path) -> str | None:
 
 def model_provenance_gap(measurement_run: Path) -> str | None:
     """Why the run's model cannot be named from its record, or None: the run
-    ran a model protocol (`instrument = "model"` in its config.json, from
+    asked a model per row (`instrument = "apply"` in its config.json, from
     the head, standard 0.20) while no run in its lineage recorded
     `models_resolved` — the alias was not under `model`/`*_model`, the keys
     runlog resolves (uniagent areas 14–17 recorded it as `judge`; round 15,
-    2026-10-08). An estimator or count run owes no model. A run whose
+    2026-10-08). A fit or count run owes no model. A run whose
     config records no instrument is named as such: until 0.20 this was a
     guess from the metrics (`llm_retries`, `model_calls`), and a guess is
     not a record."""
@@ -323,7 +323,7 @@ def model_provenance_gap(measurement_run: Path) -> str | None:
             f"of a labkit before 0.20; its model provenance cannot be held here "
             f"(reproduce it with the pinned release, or run it again)"
         )
-    if instrument != "model":
+    if instrument != "apply":
         return None
     try:
         if model_provenance_run(measurement_run) is not None:
@@ -333,7 +333,7 @@ def model_provenance_gap(measurement_run: Path) -> str | None:
             f"model provenance: the lineage of {measurement_run.name} is broken — {exc}"
         )
     return (
-        f'{measurement_run.name} ran a model protocol (instrument = "model"), but '
+        f'{measurement_run.name} asked a model per row (instrument = "apply"), but '
         f"no run in its lineage recorded models_resolved — record the alias under "
         f"`model` (runlog resolves it); a spec under another key is not provenance "
         f"labkit can hold"

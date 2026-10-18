@@ -6,13 +6,13 @@ Two exact facts of a stamped area, read from its code (plan II, the stamp
 check, 2026-10-17); what the code MEANS stays with the agent audit:
 
   1. The measure script asks a model exactly when the head says so.
-     `instrument = "model"`: `scripts/01_measure.py` imports `labkit.llm`
-     and calls `llm.complete` or `llm.complete_many` — a model protocol
-     whose script asks no model is a finding. `estimator` or `count`: the
+     `instrument = "apply"`: `scripts/01_measure.py` imports `labkit.llm`
+     and calls `llm.complete` or `llm.complete_many` — an apply protocol
+     whose script asks no model is a finding. `fit` or `count`: the
      script does not import `labkit.llm` — a model call in a measurement
      the protocol declares model-free is a finding (a model that renders
      features belongs to `00_prepare.py`; a model that answers the rows
-     is `instrument = "model"`).
+     is `instrument = "apply"`).
   2. The stamped contract tests survive. The instrument's test template
      stamps the resolution check as named test functions
      (`skeletons.contract_tests`); every one still stands in the area's
@@ -146,14 +146,14 @@ def script_findings(area: Path, instrument: str) -> list[str]:
     if SKELETONS[instrument].asks_a_model:
         if not use.imported:
             return [
-                f'{MEASURE_SCRIPT}: instrument = "model", but the script never '
-                f"imports labkit.llm — a model protocol whose script asks no model "
+                f'{MEASURE_SCRIPT}: instrument = "apply", but the script never '
+                f"imports labkit.llm — an apply protocol whose script asks no model "
                 f"(a model is asked through labkit.llm, never through an endpoint "
                 f"of the script's own)"
             ]
         if not use.called:
             return [
-                f'{MEASURE_SCRIPT}: instrument = "model", but the script never '
+                f'{MEASURE_SCRIPT}: instrument = "apply", but the script never '
                 f"calls llm.complete or llm.complete_many — the import alone asks "
                 f"no model"
             ]
@@ -163,7 +163,7 @@ def script_findings(area: Path, instrument: str) -> list[str]:
             f"{MEASURE_SCRIPT} imports labkit.llm, but the head says instrument = "
             f'"{instrument}" — a model call in a measurement the protocol declares '
             f"model-free; a model that renders features belongs to "
-            f'scripts/00_prepare.py, a model that answers the rows is instrument = "model"'
+            f'scripts/00_prepare.py, a model that answers the rows is instrument = "apply"'
         ]
     return []
 

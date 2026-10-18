@@ -51,7 +51,7 @@ def head(
     id: str = PID,
     type: str = "exploratory",
     cost: str = "minutes",
-    instrument: str = "model",
+    instrument: str = "apply",
     frozen: bool = False,
     preflight_audit: str = "",
     promises: str | None = "",

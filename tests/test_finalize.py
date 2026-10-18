@@ -58,7 +58,7 @@ def _run(area, name, *, pid=PID, metrics=None, completion=True, repeat_of=None):
         "pid": 1,
         "schema_version": 2,
         "protocol": {"id": pid, "path": "PROTOCOL-x.md"},
-        "instrument": "model",  # the fixture head's, as runlog records it (0.20)
+        "instrument": "apply",  # the fixture head's, as runlog records it (0.20)
         "models_resolved": {"model": {"alias": "haiku"}},  # a model run names its model
         "promises": promises.snapshot(block, area) if block is not None else None,
     }

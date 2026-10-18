@@ -47,7 +47,7 @@ class Cut(unittest.TestCase):
         )
         self.assertEqual(protocol_check.check_fields(text).missing_must, [])
         with_model = (
-            text.replace('instrument = "count"', 'instrument = "model"')
+            text.replace('instrument = "count"', 'instrument = "apply"')
             + "- **Model / tool:** haiku\n"
         )
         missing = protocol_check.check_fields(with_model).missing_must
@@ -99,7 +99,7 @@ class Cut(unittest.TestCase):
 
 
 class Registration(unittest.TestCase):
-    # the fixture head says `instrument = "model"`: the gate owes criterion
+    # the fixture head says `instrument = "apply"`: the gate owes criterion
     # and admissibility condition
     QUESTION = "- **Question / hypothesis:** q\n- **Success / failure criterion:** c\n"
 

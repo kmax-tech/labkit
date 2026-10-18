@@ -207,7 +207,7 @@ class FreezeGate(unittest.TestCase):
         r, _ = self._start(SECONDS, long=True)
         cfg = json.loads((r.dir / "config.json").read_text())
         self.assertEqual(cfg["cost_tier"], "seconds")
-        self.assertEqual(cfg["instrument"], "model")  # the head's datum, recorded
+        self.assertEqual(cfg["instrument"], "apply")  # the head's datum, recorded
         self.assertFalse(cfg["unfrozen_ack"])
 
     def test_seconds_without_criterion_is_refused(self):

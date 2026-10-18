@@ -9,18 +9,22 @@ holds the fields a machine reads — the head — and its optional
     id = "p-0123456789abcdef"       # stamped by `labkit-init exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
     cost = "seconds"                # seconds | minutes | hours
-    instrument = "model"            # model | estimator | count — what produces a row's answer
+    instrument = "apply"            # apply | fit | count — what happens to this run's labels
     frozen = false
     preflight_audit = ""            # one line once the audit is decided
 
 The instrument is the kind of the experiment, as data (standard 0.20,
-2026-10-17): a *model* in the loop (a prompt per item, a parser, lanes of
-questions), an *estimator* (fit, predict, a permuted-label null lane), a
-*count* (deterministic, no bar to clear). Until 0.20 it was inferred at
-six places from the prose of "Model / tool" and from `labkit-init`'s
-flags; the field cut, the stamped skeleton, the promise block and the
-gates now read this key. A mixed form names the instrument that produces
-the row's answer; a model that renders features belongs to the prepare step.
+2026-10-17; named 2026-10-18): what happens to this run's labels. *apply*
+asks a fixed model per item and never sees them (a prompt, a parser, a
+placebo or anchor null lane; today a model through `labkit.llm`); *fit*
+learns from them in the run (an estimator fitted out of fold, a
+permuted-label null lane, a seed); *count* has none (deterministic, no bar
+to clear). The pretraining of a model is no difference here — it happened
+outside the run. Until 0.20 the kind was inferred at six places from the
+prose of "Model / tool" and from `labkit-init`'s flags; the field cut, the
+stamped skeleton, the promise block and the gates read this key. A mixed
+form names what produces the row's answer; a model that renders features
+belongs to the prepare step.
 
 One parser (`tomllib`), exact keys, typed values: a typo is a loud error
 naming the field, never a silent "not found" — `Cost: second` used to read
@@ -45,8 +49,8 @@ from pathlib import Path
 STANDARD = "0.20"
 TYPES = ("exploratory", "confirmatory")
 COST_TIERS = ("seconds", "minutes", "hours")
-#: what produces a row's answer — the kind of the experiment, as data
-INSTRUMENTS = ("model", "estimator", "count")
+#: what happens to this run's labels — the kind of the experiment, as data
+INSTRUMENTS = ("apply", "fit", "count")
 #: `p-` plus 16 lowercase hex: not derived from name or path, so renaming
 #: and moving a protocol leave its identity intact
 ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
@@ -79,7 +83,7 @@ class Head:
     id: str | None
     type: str | None
     cost: str | None
-    instrument: str | None  # model | estimator | count
+    instrument: str | None  # apply | fit | count
     frozen: bool
     preflight_audit: str  # "" until the audit is decided
 

@@ -78,7 +78,7 @@ standard = "0.20"
 id = "p-9e2341c0390948dc"
 type = "confirmatory"
 cost = "minutes"
-instrument = "model"
+instrument = "apply"
 frozen = true
 preflight_audit = "2026-10-07 · scope sha 3f9a1c2b7e04 · 2 findings (2 fixed)"
 

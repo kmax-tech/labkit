@@ -190,10 +190,10 @@ def stamp_lab(root: Path, name: str, ref: str | None = None) -> list[str]:
 # graduates, so one topic never sits in two places.
 DAGGER = "†"
 SECONDS_TAG = "<!-- s -->"  # in the seconds cut
-MODEL_TAG = "<!-- m -->"  # owed by a model in the loop only
-MODEL_ESTIMATOR_TAG = "<!-- me -->"  # owed by model and estimator, not by a count
-TAGS = (SECONDS_TAG, MODEL_TAG, MODEL_ESTIMATOR_TAG)
-TAG_PATTERN = r" ?<!-- (?:s|m|me) -->"
+APPLY_TAG = "<!-- a -->"  # owed by apply only (a fixed model asked per row)
+APPLY_FIT_TAG = "<!-- af -->"  # owed by apply and fit, not by a count
+TAGS = (SECONDS_TAG, APPLY_TAG, APPLY_FIT_TAG)
+TAG_PATTERN = r" ?<!-- (?:s|a|af) -->"
 #: which template section a heading is about — a report field is placed by topic
 SECTION_KEYS = (
     "summary",
@@ -254,15 +254,15 @@ def _untag(line: str) -> str:
 
 
 def for_instrument(item: list[str], instrument: str) -> bool:
-    """Does INSTRUMENT owe this template item? Untagged: every one; `<!-- m -->`
-    a model only; `<!-- me -->` model and estimator — the template's half of
+    """Does INSTRUMENT owe this template item? Untagged: every one; `<!-- a -->`
+    apply only; `<!-- af -->` apply and fit — the template's half of
     `protocol_check.in_instrument` (a test holds the two to each other). The
     tag may sit on a wrapped label's second line, so the whole item is read."""
     text = "\n".join(item)
-    if MODEL_ESTIMATOR_TAG in text:
-        return instrument in ("model", "estimator")
-    if MODEL_TAG in text:
-        return instrument == "model"
+    if APPLY_FIT_TAG in text:
+        return instrument in ("apply", "fit")
+    if APPLY_TAG in text:
+        return instrument == "apply"
     return True
 
 
@@ -294,7 +294,7 @@ def seconds_cut(tmpl: str, instrument: str) -> str:
 #: clear and so no table: five cold agents each invented a tautological
 #: [C1] (cloud probes 2026-10-12); the number is held by --check and finalize.
 PROMISE_TABLES: dict[str, tuple[tuple[str, str, str, dict[str, int | float]], ...]] = {
-    "model": (
+    "apply": (
         (
             "C1",
             "c1_pass",
@@ -318,7 +318,7 @@ PROMISE_TABLES: dict[str, tuple[tuple[str, str, str, dict[str, int | float]], ..
             {"null_band_items": 1},
         ),
     ),
-    "estimator": (
+    "fit": (
         (
             "C1",
             "c1_pass",
@@ -426,7 +426,7 @@ def short_placeholders(text: str) -> str:
 
 
 def pilot_and_report(
-    tmpl: str, instrument: str = "model"
+    tmpl: str, instrument: str = "apply"
 ) -> tuple[str, ProtocolBlocks]:
     """(pilot part, report blocks) of the template for INSTRUMENT — items
     another instrument owes are left out of both. A report block is (section
@@ -506,14 +506,14 @@ COUNT_PLACEHOLDERS = {
 }
 
 
-#: The pilot protocol of an estimator area: the placeholders of the fields
-#: the estimator shares with a model, worded for it (the model-only fields
-#: the cut leaves out; its promise tables stand in PROMISE_TABLES). Every
+#: The pilot protocol of a fit area: the placeholders of the fields fit
+#: shares with apply, worded for it (the apply-only fields the cut leaves
+#: out; its promise tables stand in PROMISE_TABLES). Every
 #: one is a `<…>` placeholder and nothing else: a prefilled "n/a — …" with a
 #: `<…>` tail read as filled, and protocol-check let the hole through
 #: (BERT example, 2026-10-18).
 #: No `: `, ` — `, `; ` or ` (` inside a `<…>`: `short_placeholders` cuts there.
-ESTIMATOR_FIELDS = {
+FIT_FIELDS = {
     "Model / tool": "<make_estimator() · its fixed parameters · the seed · no model call, no alias>",
     "Model I/O": "<in · the feature fields per item · out · one prediction per item, scored out of fold>",
     "Null condition / anchors (in the same run)": "<A2 · the same estimator on labels permuted inside each fitting fold, expected at chance_of() within null_band>",
@@ -551,17 +551,15 @@ def _replace_field(lines: list[str], label: str, value: str) -> bool:
     return False
 
 
-def estimator_placeholders(text: str) -> str:
-    """The pilot protocol of an estimator area: the fields it shares with a
-    model answered in its words (ESTIMATOR_FIELDS). Raises when the stamp
+def fit_placeholders(text: str) -> str:
+    """The pilot protocol of a fit area: the placeholders of the fields it
+    shares with apply, worded for it (FIT_FIELDS). Raises when the stamp
     lacks a field — a silently unfilled field is the leftover this exists
     to remove."""
     lines = text.split("\n")
-    for label, value in ESTIMATOR_FIELDS.items():
+    for label, value in FIT_FIELDS.items():
         if not _replace_field(lines, label, value):
-            raise ValueError(
-                f"estimator_placeholders: the stamp has no `{label}` field"
-            )
+            raise ValueError(f"fit_placeholders: the stamp has no `{label}` field")
     return "\n".join(lines)
 
 
@@ -722,34 +720,34 @@ def promote(area: Path, tmpl: str) -> list[str]:
 
 def instrument_of(cost: str | None, model: bool | str, explicit: str | None) -> str:
     """The instrument an area is stamped with — the ONE derivation (standard
-    0.20): `--instrument` names it; else a model named means a model in the
-    loop, seconds without one is a count, the rest an estimator (nine of nine
+    0.20): `--instrument` names it; else a model named means apply (a fixed
+    model asked per row), seconds without one is a count, the rest fit (nine of nine
     pilot attempts were estimators and got the prompt skeleton, labkit-paper
     09, 2026-10-16). Refuses a contradiction loudly: a model alias with an
-    instrument that is not `model`; a count at a tier other than seconds (a
-    count is rerunnable at will, that is what seconds means); an estimator
-    at seconds (the seconds cut has no estimator form — the cut per
-    instrument, plan II I3)."""
+    instrument that is not `apply`; a count at a tier other than seconds (a
+    count is rerunnable at will, that is what seconds means); fit at
+    seconds (the seconds cut has no fit form — the cut per instrument,
+    plan II I3)."""
     if explicit is not None and explicit not in protocol_block.INSTRUMENTS:
         raise SystemExit(
             f"labkit-init: --instrument {explicit!r} — one of {', '.join(protocol_block.INSTRUMENTS)}"
         )
-    derived = "model" if model else ("count" if cost == "seconds" else "estimator")
+    derived = "apply" if model else ("count" if cost == "seconds" else "fit")
     instrument = explicit or derived
-    if model and instrument != "model":
+    if model and instrument != "apply":
         raise SystemExit(
-            f"labkit-init: --model names a model in the loop, so the instrument is "
-            f"`model`, not {instrument!r} — drop one of the two"
+            f"labkit-init: --model names a model asked per row, so the instrument is "
+            f"`apply`, not {instrument!r} — drop one of the two"
         )
     if instrument == "count" and cost != "seconds":
         raise SystemExit(
             'labkit-init: a count is `cost = "seconds"` (rerunnable at will) — add '
             "--cost seconds, or name the instrument that clears a bar"
         )
-    if instrument == "estimator" and cost == "seconds":
+    if instrument == "fit" and cost == "seconds":
         raise SystemExit(
-            "labkit-init: an estimator runs at minutes or hours — the seconds cut "
-            "has no estimator form (a count at seconds, a model with --model)"
+            "labkit-init: fit runs at minutes or hours — the seconds cut has no "
+            "fit form (a count at seconds, apply with --model)"
         )
     return instrument
 
@@ -834,7 +832,7 @@ def stamp_area(
     # value, never left as a placeholder
     tmpl = promise_block_for(
         tmpl.replace(
-            'instrument = "<model | estimator | count>"',
+            'instrument = "<apply | fit | count>"',
             f'instrument = "{instrument}"',
         ),
         instrument,
@@ -846,8 +844,8 @@ def stamp_area(
         pilot, blocks = seconds_cut(tmpl, instrument), []
         if instrument == "count":
             pilot = count_placeholders(pilot)
-    elif instrument == "estimator":
-        pilot = estimator_placeholders(pilot)
+    elif instrument == "fit":
+        pilot = fit_placeholders(pilot)
     nn = next_experiment_number(experiments)
     area = experiments / f"{nn}-{slug}"
     log: list[str] = []
@@ -899,7 +897,7 @@ def _point_hooks_at(root: Path) -> None:
 
 def next_steps(rel: Path, slug: str, nn: str, instrument: str, quick: bool) -> str:
     """What to do after `exp`, in order — the lane of AGENTS.md for this area, by instrument."""
-    model = instrument == "model"
+    model = instrument == "apply"
     if quick:
         return f"""
 Next (cost = "seconds" — no freeze, no audit per run, the first run is the probe):
@@ -909,9 +907,9 @@ Next (cost = "seconds" — no freeze, no audit per run, the first run is the pro
   3. git add + commit, then scripts/01_measure.py, then `protocol-fill PROTOCOL-{slug}.md --from-run <run_id>`.
   4. finalize {rel} checks the provenance; the agent audit comes when the number is promoted."""
     test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
-    if instrument == "estimator":
+    if instrument == "fit":
         return f"""
-Next (light pilot, heavy report — the instrument is an estimator, no model call):
+Next (light pilot, heavy report — instrument fit: an estimator fitted in the run, no model call):
   1. PROTOCOL-{slug}.md: fill the pilot part (head: type, cost; question, success, admissibility, the estimator in Model / tool, the null condition).
   2. scripts/00_prepare.py: raw -> prepared, gold null for the unlabelled split   ({rel}/scripts)
   3. scripts/01_measure.py: make_estimator(), SCORE, FEATURES_FIELD; --show 3 reads the config and feature rows
@@ -968,13 +966,13 @@ def main(argv: list[str]) -> int:
         const=True,
         default=False,
         metavar="ALIAS",
-        help="a model in the loop (without it, minutes/hours stamp the estimator skeleton)",
+        help="a model asked per row — instrument apply (without it, minutes/hours stamp fit)",
     )
     exp.add_argument(
         "--instrument",
         choices=protocol_block.INSTRUMENTS,
-        help="what produces a row's answer (default: model with --model, count at "
-        "seconds, else estimator) — stamped into the head",
+        help="what happens to this run's labels (default: apply with --model, count "
+        "at seconds, else fit) — stamped into the head",
     )
     exp.add_argument(
         "--report",
