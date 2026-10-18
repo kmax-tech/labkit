@@ -876,6 +876,27 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
     return out
 
 
+def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
+    """(blockers, warnings): every finding still `open` in a preflight audit
+    record of the area, each as `<file>: <text>`. A record of any stamp
+    counts — a finding nobody decided is an ignored finding, not an old one
+    (LAB-015 Preflight audit before freezing: every finding is decided).
+    Raises SystemExit on a record nobody can read."""
+    try:
+        records = findings.area_records(base_dir)
+    except findings.FindingsError as exc:
+        raise SystemExit(f"runlog: {exc}") from exc
+    blockers, warnings = [], []
+    for rec in records:
+        if rec.mode != "preflight":
+            continue
+        for f in rec.open:
+            (blockers if f.grade == "BLOCKER" else warnings).append(
+                f"{rec.path.name}: {f.text}"
+            )
+    return blockers, warnings
+
+
 def _audit_line_findings(base_dir: Path, path: Path, line: str, text: str) -> list[str]:
     """Why the head's `preflight_audit` line does not cover a full run: empty,
     its `scope sha` is not the code's now, or no decided preflight audit
@@ -1121,6 +1142,19 @@ class Run:
         # is a refusal, not a run with a warning (2026-10-05).
         self._unfrozen_ack = False
         if long:
+            # An undecided BLOCKER of a preflight audit is not an unfrozen
+            # protocol a pilot may acknowledge: it is a finding nobody read.
+            # The acknowledgement passed it until 0.97.1 (labkit-paper area
+            # 09, haiku round: the record lay in audits/ before the first run).
+            blockers, open_warnings = _undecided_findings(base_dir)
+            if blockers:
+                raise SystemExit(
+                    "runlog: this run declares long=True (a full run), and a "
+                    "preflight audit found BLOCKER(s) nobody decided — not a "
+                    "pilot, an ignored finding; LABKIT_UNFROZEN=1 does not pass "
+                    "it. Decide each (fixed / accepted / deferred / dismissed) "
+                    "in the record:\n  " + "\n  ".join(blockers)
+                )
             findings = _freeze_findings(base_dir, bound)
             if (
                 findings and os.environ.get("LABKIT_UNFROZEN") == "1"
@@ -1130,6 +1164,12 @@ class Run:
                     "runlog: WARNING — LABKIT_UNFROZEN=1: full run on an "
                     "unfrozen protocol, acknowledged; recorded in config.json:\n  "
                     + "\n  ".join(findings)
+                    + (
+                        "\n  open WARNING(s) of the preflight audit, undecided:\n  "
+                        + "\n  ".join(open_warnings)
+                        if open_warnings
+                        else ""
+                    )
                 )
             elif findings:
                 raise SystemExit(
