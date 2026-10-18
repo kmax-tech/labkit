@@ -3,7 +3,9 @@
 A full run (`long=True`) on a protocol whose head is not `frozen = true`,
 or whose `preflight_audit` is still empty, is refused before any run
 directory exists. Pilots (`long=False`) pass; a long pilot acknowledges
-with LABKIT_UNFROZEN=1 and the acknowledgement lands in config.json. At
+with LABKIT_UNFROZEN=1 over an audit the backend refused (the failed
+attempt `labkit-audit` wrote, 0.99.0) and the acknowledgement lands in
+config.json with that attempt; `long` is recorded for every run. At
 `cost = "seconds"` the gate is the written registration (question,
 criterion, admissibility condition), not the freeze (LAB-017 The number of audits follows the cost tier); the tier
 lands in config.json as `cost_tier`.
@@ -317,14 +319,57 @@ class FreezeGate(unittest.TestCase):
             self._start(text, long=True)
         self.assertIn("not `frozen = true`", str(cm.exception))
 
+    def _audit_failed(self, text: str) -> Path:
+        """The failed preflight attempt at this code and these promises that a
+        long pilot's acknowledgement rests on (0.99.0)."""
+        scope_file(self.tmp)
+        return findings.write_failed(
+            self.tmp,
+            "preflight",
+            "opus",
+            scope_sha.area_stamp(self.tmp)[0],
+            promises.block_stamp(text),
+            findings.ATTEMPT_TIMEOUT_S,
+            "claude-cli exit 1: ",
+            "labkit-audit x --mode preflight",
+        )
+
     def test_acknowledged_long_pilot_is_recorded(self):
+        tried = self._audit_failed(UNFROZEN)
         os.environ["LABKIT_UNFROZEN"] = "1"
         try:
             r, out = self._start(UNFROZEN, long=True)
         finally:
             os.environ.pop("LABKIT_UNFROZEN", None)
         self.assertIn("LABKIT_UNFROZEN=1", out)
-        self.assertTrue(json.loads((r.dir / "config.json").read_text())["unfrozen_ack"])
+        self.assertIn(f"rests on the audit that could not run: {tried.name}", out)
+        cfg = json.loads((r.dir / "config.json").read_text())
+        self.assertTrue(cfg["unfrozen_ack"])
+        self.assertTrue(cfg["long"])
+        self.assertEqual(cfg["audit_failed"], tried.name)
+
+    def test_the_acknowledgement_without_a_failed_audit_is_refused(self):
+        """Second haiku round on 0.98.0: no agent started an audit, and the
+        hatch asked for nothing. It acknowledges an audit that could not run."""
+        os.environ["LABKIT_UNFROZEN"] = "1"
+        try:
+            with self.assertRaises(SystemExit) as cm:
+                self._start(UNFROZEN, long=True)
+        finally:
+            os.environ.pop("LABKIT_UNFROZEN", None)
+        self.assertIn("not one nobody ran", str(cm.exception))
+        self.assertIn("attempts: none", str(cm.exception))
+        self.assertFalse((self.tmp / "runs").exists())
+
+    def test_a_full_run_records_long_and_a_pilot_records_not(self):
+        r, _ = self._start(FROZEN.replace(AUDIT, "n/a — test"), long=True)
+        self.assertTrue(json.loads((r.dir / "config.json").read_text())["long"])
+        self.tmp = Path(tempfile.mkdtemp())
+        r, _ = self._start(UNFROZEN, long=False)
+        cfg = json.loads((r.dir / "config.json").read_text())
+        self.assertFalse(cfg["long"])
+        self.assertFalse(cfg["unfrozen_ack"])
+        self.assertIsNone(cfg["audit_failed"])
 
 
 if __name__ == "__main__":

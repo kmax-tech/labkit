@@ -23,6 +23,30 @@ area, one file per audit:
     reason = ""          # owed for accepted, deferred and dismissed
 
 The person edits `status` and `reason`; nothing else writes the file.
+
+When the backend does not answer (`llm.BackendError`: the CLI died, the
+server was down, every retry ran out), `labkit-audit` writes no findings
+but the evidence that it tried, next to them:
+
+    audits/2026-10-12T15-33-preflight-failed.toml
+
+    [failed]
+    date = "2026-10-12T15:33"
+    mode = "preflight"
+    model = "opus"
+    scope_sha = "fa45c7618423"   # the code it would have read
+    block_sha = "0c1d2e3f4a5b"   # the promises it would have read
+    timeout_s = 900              # the time the call was given
+    error = "claude-cli exit 1: …"
+    command = "labkit-audit experiments/09-x --mode preflight"
+
+That file is what `LABKIT_UNFROZEN=1` acknowledges at `minutes`/`hours`:
+an audit that could not run, not one nobody ran (`audit_unavailable`, held
+by runlog's freeze gate since 0.99.0). labkit writes it, with the error the
+backend gave; a usage error (an unknown alias, an area that cannot be
+stamped) is not an unavailable audit and leaves none. A record of findings
+and a failed attempt never share a name; `area_records` reads the records
+only.
 A record binds what the auditor read: the code (`scope_sha`), the promise
 block (`block_sha`) and, in mode analysis, the answering run (`run_id`).
 A full run at `minutes`/`hours` needs a preflight record of the code and
@@ -59,6 +83,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DIR = "audits"
+#: the suffix of a failed attempt's file, never of a record of findings
+FAILED_SUFFIX = "-failed.toml"
+#: the seconds `labkit-audit` gives its one call by default, and the least a
+#: failed attempt must have been given to count as one (`audit_unavailable`):
+#: an attempt given less time than the audit takes is not an attempt
+ATTEMPT_TIMEOUT_S = 900
 STATUSES = ("open", "fixed", "accepted", "deferred", "dismissed")
 REASON_OWED = ("accepted", "deferred", "dismissed")
 GRADES = ("BLOCKER", "WARNING", "NOTE")
@@ -290,7 +320,11 @@ def area_records(area: Path) -> list[Record]:
     folder = area / DIR
     if not folder.is_dir():
         return []
-    return [read(p) for p in sorted(folder.glob("*.toml"))]
+    return [
+        read(p)
+        for p in sorted(folder.glob("*.toml"))
+        if not p.name.endswith(FAILED_SUFFIX)
+    ]
 
 
 def _bound(sha: str, block_sha: str, run_id: str | None) -> str:
@@ -352,6 +386,137 @@ def audit_coverage(
             f"`open` — decide each (fixed / accepted / deferred / dismissed)"
         )
     return None
+
+
+@dataclass(frozen=True)
+class Failed:
+    """One attempt at an audit whose backend did not answer — written by
+    `labkit-audit`, never by hand (the evidence an acknowledged long pilot
+    rests on)."""
+
+    path: Path
+    date: str
+    mode: str
+    model: str
+    scope_sha: str  # the code it would have read
+    block_sha: str  # the promise block it would have read
+    timeout_s: int  # the seconds the one call was given
+    error: str  # what the backend said
+    command: str  # the command line that tried
+
+
+def write_failed(
+    area: Path,
+    mode: str,
+    model: str,
+    scope_sha: str,
+    block_sha: str,
+    timeout_s: int,
+    error: str,
+    command: str,
+    *,
+    now: float | None = None,
+) -> Path:
+    """Write the evidence of an audit that could not run into AREA/audits/
+    and return its path: `<stamp>-<mode>-failed.toml`, never overwriting.
+    SCOPE_SHA and BLOCK_SHA name what the auditor would have read, so the
+    freeze gate can hold the acknowledgement to the code and promises as
+    they are now; TIMEOUT_S what the call was given; ERROR the backend's
+    words; COMMAND the line that tried."""
+    if mode not in MODES:
+        raise ValueError(f"mode {mode!r} — one of {', '.join(MODES)}")
+    when = time.localtime(now)
+    stamp = time.strftime("%Y-%m-%dT%H-%M", when)
+    folder = area / DIR
+    folder.mkdir(exist_ok=True)
+    path = folder / f"{stamp}-{mode}{FAILED_SUFFIX}"
+    n = 2
+    while path.exists():
+        path = folder / f"{stamp}-{mode}-{n}{FAILED_SUFFIX}"
+        n += 1
+    lines = [
+        "# written by labkit-audit — the audit did not run; this is the evidence, "
+        "not a record of findings",
+        "[failed]",
+        f"date = {_s(time.strftime('%Y-%m-%dT%H:%M', when))}",
+        f"mode = {_s(mode)}",
+        f"model = {_s(model)}",
+        f"scope_sha = {_s(scope_sha)}",
+        f"block_sha = {_s(block_sha)}",
+        f"timeout_s = {int(timeout_s)}",
+        f"error = {_s(error)}",
+        f"command = {_s(command)}",
+    ]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def read_failed(path: Path) -> Failed:
+    """The failed attempt at PATH; raises FindingsError on anything it
+    cannot hold to — a file nobody can read is not evidence."""
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
+        raise FindingsError(f"{path}: not TOML ({exc})") from exc
+    table = data.get("failed")
+    if not isinstance(table, dict):
+        raise FindingsError(f"{path}: no [failed] table")
+    for key in ("date", "mode", "model", "scope_sha", "block_sha", "error", "command"):
+        if not isinstance(table.get(key), str):
+            raise FindingsError(f"{path}: [failed] {key} is missing or not a string")
+    timeout = table.get("timeout_s")
+    if not isinstance(timeout, int) or isinstance(timeout, bool):
+        raise FindingsError(f"{path}: [failed] timeout_s is missing or not an integer")
+    if table["mode"] not in MODES:
+        raise FindingsError(
+            f"{path}: [failed] mode {table['mode']!r} — one of {', '.join(MODES)}"
+        )
+    return Failed(
+        path,
+        table["date"],
+        table["mode"],
+        table["model"],
+        table["scope_sha"],
+        table["block_sha"],
+        timeout,
+        table["error"],
+        table["command"],
+    )
+
+
+def failed_attempts(area: Path) -> list[Failed]:
+    """Every failed attempt of AREA, oldest first; a file that cannot be read raises."""
+    folder = area / DIR
+    if not folder.is_dir():
+        return []
+    return [read_failed(p) for p in sorted(folder.glob(f"*{FAILED_SUFFIX}"))]
+
+
+def audit_unavailable(
+    area: Path, sha: str, mode: str, block_sha: str | None
+) -> Failed | None:
+    """The newest failed attempt of MODE at the area as it is now — code SHA
+    and, when given, promises BLOCK_SHA — whose call was given at least
+    ATTEMPT_TIMEOUT_S seconds; None when none is. This is what a long pilot's
+    acknowledgement rests on: an audit that could not run. An attempt at
+    other code or other promises says nothing about these; an attempt given
+    less time than the audit takes (`--timeout 1`) is not an attempt. Both
+    are mechanical, and both are said in the refusal.
+
+    Raises:
+        FindingsError: A failed-attempt file of AREA cannot be read.
+    """
+    if mode not in MODES:
+        raise ValueError(f"audit mode {mode!r} is not one of {', '.join(MODES)}")
+    fitting = [
+        f
+        for f in failed_attempts(area)
+        if f.mode == mode
+        and f.scope_sha == sha
+        and (block_sha is None or f.block_sha == block_sha)
+        and f.timeout_s >= ATTEMPT_TIMEOUT_S
+    ]
+    return fitting[-1] if fitting else None
 
 
 def repo_records(experiments: Path) -> list[tuple[Path, Record]]:

@@ -5,7 +5,9 @@ Convention (LAB-043 Runs go through `runlog`, LAB-079 Self-contained experiment 
 run-index row; PROTOCOL-<task>.md cites run_ids instead of pasting numbers.
 
     runs/<run_id>/config.json      the record at start: config, data, git state,
-                                   env, models resolved, the binding (protocol id)
+                                   env, models resolved, the binding (protocol id),
+                                   `long` (a full run or a pilot), `unfrozen_ack`
+                                   and the failed audit attempt it rests on
     runs/<run_id>/metrics.json     the numbers reported via r.metrics()
     runs/<run_id>/outputs.json     the files registered via r.output(), as the
                                    run left them (sha, lines, rows_from, continues)
@@ -86,6 +88,7 @@ from collections.abc import Iterator
 from labkit import batch, console, findings, promises, protocol_block, repo
 from labkit.scope_sha import (
     AUDIT_SHA,
+    area_stamp,
     DIGEST_CHARS,
     audit_stamp_drift,
     file_digest,
@@ -833,7 +836,14 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
 # text, which a long session forgets. Hence a refusal in the one place every
 # run passes through, before mkdir. Escape hatch for a long PILOT:
 # LABKIT_UNFROZEN=1 — the acknowledgement is recorded in config.json so the
-# number carries it. The gate follows the cost tier: at `cost = "seconds"`
+# number carries it. At `minutes`/`hours` the hatch acknowledges an audit
+# that could NOT run, not one nobody ran: it needs the failed attempt
+# `labkit-audit` wrote for this code and these promises
+# (`findings.audit_unavailable`, 0.99.0 — second haiku round on 0.98.0: no
+# agent started an audit, and the hatch passed without one). The run then
+# records which attempt it rests on (`audit_failed`). A pilot's number is
+# never reported: report-check blocks it (`runs.pilot_marks`). The gate
+# follows the cost tier: at `cost = "seconds"`
 # the run is rerunnable at will, so the freeze protects nothing — what a
 # full run needs there is the registration, written before the number
 # (LAB-003 No run without an intent paragraph); an instrument change after it is a commit and a rerun, not a
@@ -895,6 +905,56 @@ def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
                 f"{rec.path.name}: {f.text}"
             )
     return blockers, warnings
+
+
+def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None":
+    """The failed audit attempt a long pilot's acknowledgement rests on, or
+    None at `cost = "seconds"`, where no audit is owed before the run. Raises
+    SystemExit when none fits: the hatch is for an audit the backend refused,
+    not for one nobody started. The attempt must name the code as it stamps
+    now and, under a protocol, the promise block as it reads now, and its
+    call must have had the default timeout at least (`findings.ATTEMPT_TIMEOUT_S`)."""
+    if bound.head is not None and bound.head.cost == "seconds":
+        return None
+    try:
+        sha = area_stamp(base_dir)[0]
+    except (FileNotFoundError, ValueError) as exc:
+        raise SystemExit(
+            f"runlog: LABKIT_UNFROZEN=1 — the area cannot be stamped ({exc}), so no "
+            f"failed audit attempt can be held to its code"
+        ) from exc
+    block_sha = None
+    if bound.text is not None:
+        try:
+            block_sha = promises.block_stamp(bound.text)
+        except promises.PromiseError as exc:
+            raise SystemExit(f"runlog: promise block: {exc}") from exc
+    try:
+        failed = findings.audit_unavailable(base_dir, sha, "preflight", block_sha)
+    except findings.FindingsError as exc:
+        raise SystemExit(f"runlog: {exc}") from exc
+    if failed is None:
+        tried = findings.failed_attempts(base_dir)
+        seen = (
+            "; ".join(
+                f"{f.path.name} (code {f.scope_sha}, promises {f.block_sha}, "
+                f"{f.timeout_s} s)"
+                for f in tried
+            )
+            or "none"
+        )
+        raise SystemExit(
+            "runlog: this run declares long=True (a full run) on a protocol not "
+            "ready for one, and LABKIT_UNFROZEN=1 acknowledges an audit that "
+            "could not run — not one nobody ran. No failed preflight attempt of "
+            f"the code as it is now (code {sha}, promises {block_sha or 'no protocol'}, at least "
+            f"{findings.ATTEMPT_TIMEOUT_S} s) is recorded; attempts: {seen}.\n"
+            f"Run the audit: `labkit-audit {_shown_area(base_dir)} --mode "
+            "preflight`; when the backend does not answer, it writes "
+            f"audits/<date>-preflight{findings.FAILED_SUFFIX}, and this "
+            "acknowledgement rests on that file. Or pilot with long=False."
+        )
+    return failed
 
 
 def _audit_line_findings(base_dir: Path, path: Path, line: str, text: str) -> list[str]:
@@ -1141,6 +1201,8 @@ class Run:
         # Freeze gate, also before mkdir: a full run on an unfrozen protocol
         # is a refusal, not a run with a warning (2026-10-05).
         self._unfrozen_ack = False
+        self._audit_failed: str | None = None
+        self._long = long  # the script's declaration, recorded (0.99.0)
         if long:
             # An undecided BLOCKER of a preflight audit is not an unfrozen
             # protocol a pilot may acknowledge: it is a finding nobody read.
@@ -1155,15 +1217,23 @@ class Run:
                     "it. Decide each (fixed / accepted / deferred / dismissed) "
                     "in the record:\n  " + "\n  ".join(blockers)
                 )
-            findings = _freeze_findings(base_dir, bound)
+            gaps = _freeze_findings(base_dir, bound)
             if (
-                findings and os.environ.get("LABKIT_UNFROZEN") == "1"
+                gaps and os.environ.get("LABKIT_UNFROZEN") == "1"
             ):  # "0" is no acknowledgement
+                failed = _audit_unavailable(base_dir, bound)  # SystemExit without one
                 self._unfrozen_ack = True
+                self._audit_failed = failed.path.name if failed is not None else None
                 print(
                     "runlog: WARNING — LABKIT_UNFROZEN=1: full run on an "
                     "unfrozen protocol, acknowledged; recorded in config.json:\n  "
-                    + "\n  ".join(findings)
+                    + "\n  ".join(gaps)
+                    + (
+                        f"\n  rests on the audit that could not run: "
+                        f"{failed.path.name} ({failed.error})"
+                        if failed is not None
+                        else ""
+                    )
                     + (
                         "\n  open WARNING(s) of the preflight audit, undecided:\n  "
                         + "\n  ".join(open_warnings)
@@ -1171,15 +1241,17 @@ class Run:
                         else ""
                     )
                 )
-            elif findings:
+            elif gaps:
                 raise SystemExit(
                     "runlog: this run declares long=True (a full run), but its "
                     "protocol is not ready for one:\n  "
-                    + "\n  ".join(findings)
+                    + "\n  ".join(gaps)
                     + "\nPilot it with long=False, or freeze first: `preflight "
                     "<AREA>` clean, audit stamped, `frozen = true` "
                     '(at cost = "seconds": the question written suffices, with a model also criterion and admissibility condition). A '
-                    "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded)."
+                    "long PILOT acknowledges with LABKIT_UNFROZEN=1 (recorded) — at "
+                    "minutes/hours only over an audit the backend refused "
+                    f"(audits/*{findings.FAILED_SUFFIX}, written by labkit-audit)."
                 )
         self.dir = base_dir / "runs" / self.run_id
         self._outputs: list[Path] = []
@@ -1294,7 +1366,9 @@ class Run:
             "derived_from": self._derived_from,
             "repeat_of": self._repeat_of,
             "draw": self.draw,
+            "long": self._long,
             "unfrozen_ack": self._unfrozen_ack,
+            "audit_failed": self._audit_failed,
             "cost_tier": self._cost_tier,
             "promises": self._promises,
             "script_sha": _snapshot_script(self.dir),

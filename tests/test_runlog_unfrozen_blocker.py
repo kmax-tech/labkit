@@ -4,8 +4,8 @@ labkit-paper area 09, haiku round (2026-10-17): the preflight audit wrote its
 BLOCKER to audits/ before the first run; the agent took a killed second call
 for a failed audit and ran four full runs with LABKIT_UNFROZEN=1. The
 acknowledgement is for an unfrozen protocol a pilot may run on, not for a
-finding nobody read. Without a record the pilot stays possible; a decided
-BLOCKER starts; a probe (long=False) runs so the BLOCKER can be examined;
+finding nobody read. Without a record the pilot stays possible over a failed
+audit attempt (0.99.0); a decided BLOCKER starts; a probe (long=False) runs so the BLOCKER can be examined;
 open WARNINGs ride in the acknowledgement's warning line.
 """
 
@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import findings, promises, runlog  # noqa: E402
+from labkit import findings, promises, runlog, scope_sha  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 UNFROZEN = head(
@@ -66,6 +66,19 @@ class UnfrozenBlocker(unittest.TestCase):
             rows,
         )
 
+    def _audit_failed(self) -> Path:
+        """The failed attempt the acknowledgement rests on (0.99.0)."""
+        return findings.write_failed(
+            self.tmp,
+            "preflight",
+            "haiku",
+            scope_sha.area_stamp(self.tmp)[0],
+            promises.block_stamp(UNFROZEN),
+            findings.ATTEMPT_TIMEOUT_S,
+            "claude-cli exit 1: ",
+            "labkit-audit x --mode preflight",
+        )
+
     def _start(self, long: bool):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
@@ -83,12 +96,16 @@ class UnfrozenBlocker(unittest.TestCase):
         self.assertIn("-preflight.toml: BLOCKER · scripts/01_measure.py:3", msg)
         self.assertFalse((self.tmp / "runs").exists())
 
-    def test_without_a_record_the_acknowledged_pilot_starts(self):
+    def test_without_a_record_the_acknowledged_pilot_starts_over_a_failed_audit(self):
+        """No findings record, but the audit was tried and the backend did not
+        answer (0.98.0 let the pilot through without any attempt)."""
+        tried = self._audit_failed()
         os.environ["LABKIT_UNFROZEN"] = "1"
         r, out = self._start(long=True)
         self.assertIn("acknowledged", out)
         cfg = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
         self.assertTrue(cfg["unfrozen_ack"])
+        self.assertEqual(cfg["audit_failed"], tried.name)
 
     def test_a_decided_blocker_starts_and_an_open_warning_is_said(self):
         path = self._record([BLOCKER, WARNING])
@@ -99,6 +116,7 @@ class UnfrozenBlocker(unittest.TestCase):
             'reason = ""', 'reason = "the leak is the measured quantity"'
         )
         path.write_text(first + "[[finding]]" + decided + "[[finding]]" + warning_tbl)
+        self._audit_failed()  # the protocol is still unfrozen: the hatch owes it
         os.environ["LABKIT_UNFROZEN"] = "1"
         _, out = self._start(long=True)
         self.assertIn("acknowledged", out)

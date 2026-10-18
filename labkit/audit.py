@@ -31,7 +31,10 @@ and verdict is printed as a NOTE, 2026-10-09):
     1  findings to decide — a blocker OR a warning (labkit-paper benchmark,
        2026-10-06: the table-led audit found the positional-join fault only
        as a WARNING; an audit that passed on warnings would have let it by)
-    2  no audit: a missing file, an unreadable report, a backend failure
+    2  no audit: a missing file, an unreadable report, a backend failure —
+       a backend that did not answer leaves `audits/<date>-<mode>-failed.toml`
+       (`findings.write_failed`): the evidence a long pilot's
+       LABKIT_UNFROZEN=1 rests on, since 0.99.0
 
 The report is printed (and written to --out), and its findings are written
 as data into the area — `audits/<date>-<mode>.toml`, one `[[finding]]` per
@@ -70,7 +73,9 @@ from labkit.scope_sha import area_files, area_stamp, imported_repo_helpers, repo
 AGENT = Path(__file__).with_name("experiment-preflight.agent.md")
 CLARITY_AGENT = Path(__file__).with_name("code-clarity.agent.md")
 DEFAULT_MODEL = "opus"  # the agent's model; any alias of models.toml works
-DEFAULT_TIMEOUT_S = 900  # one call reads the area, the cited rules, the rows
+DEFAULT_TIMEOUT_S = (
+    findings.ATTEMPT_TIMEOUT_S
+)  # one call reads the area, the rules, the rows
 MODES = ("preflight", "analysis", "clarity")
 CLARITY = "clarity"
 ANALYSIS = "analysis"
@@ -504,6 +509,43 @@ def stamp_facts(stamp: Stamp, verdict: tuple[int, int, int]) -> str:
     )
 
 
+def _answer_or_record(
+    args: argparse.Namespace,
+    argv: list[str],
+    prompt: str,
+    stamp: Stamp,
+    block_sha: str,
+) -> str:
+    """The auditor's report. When the backend does not answer (the CLI died,
+    the server was down, the retries ran out) there is no audit, and the
+    evidence that one was tried — on this code, these promises, with this
+    much time — goes next to the records (`findings.write_failed`) before
+    the AuditError that ends the command with exit 2. That file is what a
+    long pilot's LABKIT_UNFROZEN=1 rests on (second haiku round on 0.98.0:
+    no agent started an audit, and the hatch asked for nothing). A usage
+    error (an alias models.toml does not know) is not an unavailable audit
+    and propagates as it is, so none is written for it."""
+    try:
+        return llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=4096)
+    except llm.BackendError as exc:
+        tried = findings.write_failed(
+            args.area,
+            args.mode,
+            args.model,
+            stamp.sha,
+            block_sha,
+            args.timeout,
+            str(exc),
+            " ".join(["labkit-audit", *argv]),
+        )
+        raise AuditError(
+            f"{exc}\nlabkit-audit: no audit — the backend did not answer; recorded "
+            f"as {tried}. A full run at minutes/hours may acknowledge it with "
+            f"LABKIT_UNFROZEN=1; its number stays a pilot's (report-check refuses "
+            f"it). Run the audit again when the backend answers."
+        ) from exc
+
+
 def main(argv: list[str]) -> int:
     """Command line of `labkit-audit`: audit one area in one mode."""
     ap = argparse.ArgumentParser(
@@ -551,12 +593,11 @@ def main(argv: list[str]) -> int:
             f"{args.model} · {len(prompt) // 1000} kB",
             file=sys.stderr,
         )
-        report = llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=4096)
+        report = _answer_or_record(args, argv, prompt, stamp, block_sha)
         print(f"labkit-audit: tokens · {llm.last_usage().describe()}", file=sys.stderr)
         result = parse(report)
     except (
         AuditError,
-        llm.BackendError,
         llm.PromptTruncated,
         KeyError,
         FileNotFoundError,

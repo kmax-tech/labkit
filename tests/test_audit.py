@@ -277,6 +277,51 @@ class Audit(unittest.TestCase):
         self.assertIn("LAB-015 Preflight audit before freezing", text)
         self.assertIn("warnings = 1", text)
 
+    def test_a_backend_that_does_not_answer_leaves_the_failed_attempt(self):
+        """0.99.0: the evidence a long pilot's LABKIT_UNFROZEN=1 rests on —
+        written by labkit-audit with the backend's words, the code, the
+        promises and the time the call had; a usage error writes none."""
+        area = repo_with()
+
+        def dead(alias, prompt, **kw):
+            raise audit.llm.BackendError("claude-cli exit 1: quota")
+
+        err = io.StringIO()
+        with (
+            mock.patch.object(audit.llm, "complete", dead),
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(err),
+        ):
+            rc = audit.main([str(area), "--mode", "preflight", "--timeout", "1200"])
+        self.assertEqual(rc, 2)
+        files = list((area / "audits").glob(f"*{findings.FAILED_SUFFIX}"))
+        self.assertEqual(len(files), 1, err.getvalue())
+        self.assertIn(f"recorded as {files[0]}", err.getvalue())
+        self.assertIn("LABKIT_UNFROZEN=1", err.getvalue())
+        tried = findings.read_failed(files[0])
+        self.assertEqual(tried.error, "claude-cli exit 1: quota")
+        self.assertEqual(tried.timeout_s, 1200)
+        self.assertEqual(tried.scope_sha, scope_sha.area_stamp(area)[0])
+        self.assertIn("--mode preflight --timeout 1200", tried.command)
+        self.assertEqual(findings.area_records(area), [])  # no findings were made
+
+    def test_an_unknown_alias_is_a_usage_error_and_leaves_no_attempt(self):
+        area = repo_with()
+
+        def unknown(alias, prompt, **kw):
+            raise KeyError("no such alias")
+
+        with (
+            mock.patch.object(audit.llm, "complete", unknown),
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            rc = audit.main([str(area), "--mode", "preflight", "--model", "nope"])
+        self.assertEqual(rc, 2)
+        self.assertFalse(
+            list((area / "audits").glob("*")) if (area / "audits").is_dir() else []
+        )
+
     def test_a_warning_is_a_finding_to_decide(self):
         self.assertEqual(run(repo_with(), WARN)[0], 1)
         self.assertEqual(run(repo_with(), BLOCK)[0], 1)

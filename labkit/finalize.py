@@ -18,7 +18,9 @@ each step's condition):
                     `Answering run` field names it (blocker/warning), its
                     JSONL rows come from this run, the runs it continues or
                     its derived_from lineage (blocker), a model record stands
-                    in its lineage (warning), the arm lines match (warning)
+                    in its lineage (warning), the arm lines match (warning),
+                    it is a full run — `long=True`, not acknowledged unfrozen
+                    (warning here, `runs.pilot_marks`; report-check blocks)
   2. intent-check   every registered promise has a metrics key (and vice
                     versa); skipped when the protocol registers no id
   3. declared scopes  every declared promise scope unchanged since the run
@@ -36,6 +38,12 @@ each step's condition):
                     an output) — a warning, not a blocker, until the false
                     alarm rate is known (2026-10-05; the denominator class
                     was 31 of 171 audit findings)
+  8. audit findings every finding still `open` in `audits/` (any mode), with
+                    its file: a BLOCKER is a blocker, a WARNING a warning — a
+                    finding nobody decided is an ignored finding
+                    (LAB-015 Preflight audit before freezing); the pilot
+                    rounds reported numbers past undecided BLOCKERs (plan
+                    2026-10-17, A3)
 
 Three grades, decided where each finding is made and summed at the end:
 `Findings.block` (exit 1), `Findings.warn` (counted, exit 0), a plain
@@ -55,13 +63,14 @@ import json
 import re
 from pathlib import Path
 
-from labkit import batch, console, promises, protocol_block
+from labkit import batch, console, findings as audit_findings, promises, protocol_block
 from labkit.gate import Findings
 from labkit.runs import (
     RUN_ID,
     RunConfigError,
     bound_answering_run,
     model_provenance_run,
+    pilot_marks,
     read_metrics,
     read_outputs,
     read_run_config,
@@ -410,6 +419,7 @@ def check_completion(
         for warning in (
             model_provenance_gap(measurement_run),
             single_draw(area, measurement_run),
+            *pilot_warnings(measurement_run),
         ):
             if warning:
                 findings.warn(warning)
@@ -421,6 +431,47 @@ def check_completion(
         for w in arm_findings(text, area, measurement_run):
             findings.warn(w)
     return measurement_run
+
+
+def pilot_warnings(measurement_run: Path) -> list[str]:
+    """Why the answering run is a pilot's number (`runs.pilot_marks`), each a
+    warning here: finalize holds the run, report-check refuses the report."""
+    cfg = read_run_config(measurement_run)
+    if cfg is None:
+        return []
+    return [
+        f"the answering run {measurement_run.name}: {mark} — its number is a "
+        f"pilot's, not a report's (report-check refuses it)"
+        for mark in pilot_marks(cfg)
+    ]
+
+
+def check_open_audit_findings(findings: Findings, area: Path) -> None:
+    """Station 8: every finding still `open` in the area's audit records, any
+    mode — a BLOCKER blocks, a WARNING warns, a NOTE is printed — each with
+    its file. A record nobody can read is a blocker, not "no findings"."""
+    try:
+        records = audit_findings.area_records(area)
+    except audit_findings.FindingsError as exc:
+        findings.block(str(exc))
+        return
+    seen = 0
+    for rec in records:
+        for f in rec.open:
+            seen += 1
+            line = f"{rec.path.name}: {f.text} — undecided (LAB-015 Preflight audit before freezing)"
+            if f.grade == "BLOCKER":
+                findings.block(line)
+            elif f.grade == "WARNING":
+                findings.warn(line)
+            else:
+                print(f"  {line}")
+    if not seen:
+        print(
+            f"  every finding decided ({len(records)} record(s))"
+            if records
+            else "  no audit record in audits/"
+        )
 
 
 def check_intent_keys_in_metrics(
@@ -654,6 +705,7 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
     5. provenance — only for cost = seconds, and only with a run.
     6. area tests — always.
     7. criterion n — only with a run; warnings only.
+    8. audit findings — always: an `open` BLOCKER in `audits/` blocks.
 
     A blocker never stops a step: all of them run, then the summary lists
     every blocker again. Warnings alone end with 0.
@@ -710,6 +762,10 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
         print(NO_RUN)
     else:
         check_criterion_n(findings, measurement_run)
+
+    # 8. audit findings — always
+    header("audit findings")
+    check_open_audit_findings(findings, area)
 
     return report(findings)  # 1 if any step found a blocker, else 0
 

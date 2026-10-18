@@ -56,11 +56,15 @@ def completed_run(
     pid: str = PID,
     metrics: dict | None = None,
     completion: bool = True,
+    long: bool = True,
+    unfrozen_ack: bool = False,
 ) -> Path:
     """A run directory as runlog leaves one: bound to PID, its promise
     snapshot taken from the area's PROTOCOL-x.md (0.71: a run under a frozen
-    protocol recorded its block), METRICS written when given, finished when
-    COMPLETION. The one home for the shape (finalize, report-check)."""
+    protocol recorded its block), a full run unless LONG says a pilot, not
+    acknowledged unless UNFROZEN_ACK (0.99.0: both recorded, `runs.pilot_marks`),
+    METRICS written when given, finished when COMPLETION. The one home for the
+    shape (finalize, report-check)."""
     d = area / "runs" / name
     d.mkdir(parents=True, exist_ok=True)
     scope_file(area)  # the block's scopes name the fixture's script
@@ -70,6 +74,8 @@ def completed_run(
         "pid": 1,
         "schema_version": 2,
         "protocol": {"id": pid, "path": "PROTOCOL-x.md"},
+        "long": long,
+        "unfrozen_ack": unfrozen_ack,
         "promises": promises.snapshot(block, area) if block is not None else None,
     }
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")

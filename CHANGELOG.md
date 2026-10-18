@@ -5,6 +5,41 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Breaking
+
+- **`LABKIT_UNFROZEN=1` acknowledges an audit that could not run, not one
+  nobody ran.** Second haiku round on 0.98.0 (labkit-paper area 09): no
+  labkit agent started an audit, so the refusal over an open BLOCKER never
+  fired, and t5 measured with `long=True` and the acknowledgement over
+  nothing. At `minutes`/`hours` the freeze gate now asks for the failed
+  attempt `labkit-audit` writes when the backend does not answer
+  (`audits/<date>-<mode>-failed.toml`, `findings.write_failed`: the
+  backend's error, the code and promise block it would have read, the time
+  the call had, the command) — at the code as it stamps now, the promises
+  as they read now, in mode preflight, with the default timeout at least
+  (`findings.ATTEMPT_TIMEOUT_S`; `--timeout 1` is not an attempt). The run
+  records which attempt it rests on (`audit_failed` in `config.json`). A
+  usage error of `labkit-audit` (an unknown alias, an area that cannot be
+  stamped) writes no attempt. At `cost = "seconds"` nothing changes: no
+  audit is owed before the run. 0.98.0 is the last version whose
+  acknowledgement passes without an attempt. `findings.area_records`
+  reads the records only; `failed_attempts` the attempts.
+- **A pilot's number is never a reported number (plan 2026-10-17, A3).**
+  Every run records `long` in `config.json` (the script's declaration of a
+  full run); `runs.pilot_marks` is the one telling of why a run is a
+  pilot's — `long=False` (a probe), `unfrozen_ack = true` (an acknowledged
+  long pilot), or a record without `long` (written before 0.99.0: it cannot
+  say, and is not read as a full run). `finalize` warns about such an
+  answering run; `report-check` refuses it ("a reported number owes a full
+  run (long=True) on a frozen protocol"). Haiku t3 and t18 on 0.98.0
+  measured without `long=True` — a probe for labkit, so neither freeze nor
+  audit was owed — and reported the probe's number through both gates.
+  `finalize` also names every finding still `open` in `audits/` (any mode),
+  with its file: a BLOCKER blocks, a WARNING warns — a finding nobody
+  decided is an ignored finding (LAB-015 Preflight audit before freezing).
+
 ## 0.98.0 — 2026-10-18
 
 ### Breaking
