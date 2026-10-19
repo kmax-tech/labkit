@@ -464,18 +464,12 @@ def _function_source(path: Path, name: str) -> str:
     )
 
 
-def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
-    """Digest over ONE promise's declared scope, entries resolved against `base`
-    — not the area's audit stamp over its scripts and imported helpers
-    (`scope_sha.area_stamp`, `scope_sha.imported_repo_helpers`).
-
-    A `file` entry covers the file's bytes; a `file:function` entry covers
-    only that function's source, decorators included, so an edit to a
-    neighbouring function leaves the stamp alone. Each entry contributes
-    its own spelling plus its content digest, so adding, dropping or
-    renaming an entry changes the stamp too. A missing file or function is
-    a PromiseError, never an empty digest.
-    """
+def scope_sources(base: Path, scope: tuple[str, ...]) -> list[tuple[str, bytes]]:
+    """(entry, content) of ONE promise's declared scope, entries resolved
+    against `base` and sorted: a `file` entry is the file's bytes, a
+    `file:function` entry that function's source, decorators included. A
+    missing file or function is a PromiseError, never an empty entry. The
+    one resolution `declared_scope_sha` and `unmentioned_constants` share."""
     entries: list[tuple[str, bytes]] = []
     for entry in sorted(scope):
         file_part, _, func = entry.partition(":")
@@ -491,7 +485,54 @@ def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
         except OSError as exc:
             raise PromiseError(f"scope entry {entry!r}: {exc}") from exc
         entries.append((entry, content))
-    return scope_sha.tree_digest(entries)
+    return entries
+
+
+def unmentioned_constants(block: PromiseTables, base: Path) -> list[str]:
+    """Static evidence (warns, never blocks): a registered constant that its
+    promise's sentence does not name and no file of its declared scope reads
+    as a word — a template leftover (`margin`, `max_empty`, `null_band_items`
+    stood under three Haiku protocols whose sentences never used them,
+    labkit-paper area 09, 2026-10-16) or a knob the promise does not state.
+    runlog holds the constant to the run's config; this holds it to the
+    sentence and the code. One line per constant, naming the promise.
+
+    Raises:
+        PromiseError: A scope entry cannot be resolved.
+    """
+    out = []
+    for p in block.promises:
+        if not p.constants:
+            continue
+        sources = [
+            content.decode("utf-8", errors="replace")
+            for _, content in scope_sources(base, p.scope)
+        ]
+        for name in p.constants:
+            word = re.compile(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])")
+            if word.search(p.sentence) or any(word.search(s) for s in sources):
+                continue
+            out.append(
+                f"{p.id}: constant `{name}` is named by no sentence and read by no "
+                f"scope file ({', '.join(p.scope)}) — a template leftover, or a knob "
+                f"the promise does not state (static evidence)"
+            )
+    return out
+
+
+def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
+    """Digest over ONE promise's declared scope, entries resolved against `base`
+    — not the area's audit stamp over its scripts and imported helpers
+    (`scope_sha.area_stamp`, `scope_sha.imported_repo_helpers`).
+
+    A `file` entry covers the file's bytes; a `file:function` entry covers
+    only that function's source, decorators included, so an edit to a
+    neighbouring function leaves the stamp alone. Each entry contributes
+    its own spelling plus its content digest, so adding, dropping or
+    renaming an entry changes the stamp too. A missing file or function is
+    a PromiseError, never an empty digest.
+    """
+    return scope_sha.tree_digest(scope_sources(base, scope))
 
 
 def scope_drift(recorded: dict | None, base: Path) -> list[str]:

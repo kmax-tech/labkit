@@ -60,6 +60,13 @@ pins (`requirements.txt` / `requirements.lock`).
   in what it says (no run exists), silent on whether the text claims one:
   Sonnet t18 (labkit-paper area 09, 2026-10-16) described a grid run that
   `runs/` never held (plan P, B1).
+- **A registered constant no sentence names and no scope file reads is
+  named.** `promises.unmentioned_constants`, printed by `protocol-check` as
+  a warning (static evidence, never a blocker): the stamp's `margin`,
+  `max_empty` and `null_band_items` stood under three Haiku protocols whose
+  sentences never used them, one re-read as a threshold (plan P, C3).
+  `promises.scope_sources` is the one resolution of a declared scope that
+  `declared_scope_sha` and this check share.
 
 ### Changed
 
