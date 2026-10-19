@@ -921,7 +921,7 @@ experiment govern how a growing area stays readable.
 
 ### 2G · The layering rule — what is shared, what stays in the script
 
-Shared and tested are **question form and recording**: labkit provides `llm`, `batch` and `runlog` (pinned, imported directly: `from labkit import
+Shared and tested are **question form and recording**: labkit provides `llm`, `batch` and `runlog` (pinned, imported directly: `from labkit.run import
 runlog`), and repo-local helpers such as `elicit`, `stats` and `prompts` grow in `lib/`. No script ever writes an HTTP call, a logprob sum or an AUC itself.
 
 The **analysis is the experiment** and stays in the script: criteria (success as well as admissibility) and contrasts do not become framework options. Whoever opens the script reads the experiment.
