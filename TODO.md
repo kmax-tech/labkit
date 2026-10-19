@@ -228,6 +228,31 @@ Tabellensatz von LAB-017 selbst ist unverändert und gehört, wenn er
 geändert wird, in den Ledger (0.20). Weiter nicht lösbar: der Bericht
 außerhalb des Protokolls (t3) — kein Protokoll, keine Erklärung, kein Gate.
 
+## Paketstruktur 2026-10-19: Schichten als Ordner, große Module geteilt
+
+Auftrag des Autors, 2026-10-19: Die flache Ordnerstruktur machte die
+Orientierung schwer. **Gebaut, kein Release** (Commits `9b98063` bis
+`332946b`): jede Schicht ein Paket (`formats`, `run`, `checks`, `gates`,
+`tools`, `probes`), Begleitdateien in `templates/`, `agents/`, `docs/`;
+auch die acht Module, die Skripte importieren, sind umgezogen (Breaking,
+CHANGELOG). Danach `runlog`, `protocol_check`, `code_check` und
+`usability` entlang ihrer vorhandenen Blöcke geteilt. Die Geschichte samt
+Fallstricken steht in `docs/notes/2026-10-19-layer-packages.md`.
+
+Offen, eigener Auftrag (Rollout):
+
+1. Release mit Breaking-Eintrag (`just release X.Y.Z`); bis zum Push des
+   Tags scheitert der `pip install` der Usability-Sonde.
+2. dotfiles ziehen nach: `~/.claude/CLAUDE.md` nennt
+   `python -m labkit.rules show LAB-nnn` (jetzt
+   `python -m labkit.formats.rules`); `resources/tools/local-init.py` und
+   `skills/research-repo-init/SKILL.md` verweisen auf alte Pfade der
+   Begleitdateien.
+3. Lab- und Studi-Repos: Imports umschreiben, wenn sie den Pin heben
+   (`from labkit import runlog` → `from labkit.run import runlog`).
+4. Erwägen: ein Konsolenbefehl `labkit-rules` statt des längeren
+   `python -m labkit.formats.rules`.
+
 ## Refactoring 2026-10-19: Einstiegspunkte zeigen den Ablauf, Befunde sind Daten
 
 Auftrag des Autors, 2026-10-19 (Branch `claude/exciting-ptolemy-38ak97`,

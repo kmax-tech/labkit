@@ -32,6 +32,19 @@ pins (`requirements.txt` / `requirements.lock`).
   `labkit/agents/`. The console commands keep their names. 0.99.0 is the
   last version with the flat `from labkit import runlog`; a repo moves by
   rewriting its imports with its pin.
+- **Four large modules are split inside their layer; private names that
+  crossed are public in their new module.** No behaviour changed.
+  `runlog` keeps the run writer; `provenance` (git, environment, data,
+  snapshots), `start_check` (binding, preparation, the refusals before
+  mkdir) and `runlog_command` (the `runlog` command) moved out.
+  `protocol_check` keeps the field catalogue; `protocol_history` (what git
+  knows of a protocol) and `protocol_report` (the file report and the
+  `protocol-check` command) moved out. `code_check` keeps the id and
+  promise checks and the bundle; `code_scan`, `gate_label_scan`,
+  `import_check` and `prompt_check` moved out. `usability` keeps the
+  staging; `usability_score` and `usability_command` moved out. A script
+  that imports only the public helpers is unaffected; one that reached
+  into `runlog._git_state` finds `provenance.git_state`.
 - **`report-check` is the release check at every cost tier.** At
   `cost = "seconds"` it exited 0 with "nothing owed here"; a probe's number
   written back there passed as a reported one. Now only station 1 (the
