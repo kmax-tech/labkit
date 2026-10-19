@@ -39,7 +39,7 @@ from labkit import console
 import uuid
 from pathlib import Path
 
-from labkit import protocol_block
+from labkit import protocol_block, standard_contract
 from labkit.protocol_check import model_named
 from labkit.repo import (
     AREA_NAME,
@@ -653,9 +653,10 @@ def promote(area: Path, blocks: ProtocolBlocks) -> list[str]:
     log = []
     for proto in protos:
         text = proto.read_text(encoding="utf-8")
-        if protocol_block.head(text).cost == "seconds":
+        lane = standard_contract.lane(protocol_block.head(text).cost)
+        if not lane.freeze:
             log.append(
-                f"  skip (cost seconds: nothing freezes, no report fields)  {proto}"
+                f"  skip (cost {lane.tier}: nothing freezes, no report fields)  {proto}"
             )
             continue
         new, added = insert_report_fields(text, blocks)
@@ -675,43 +676,21 @@ def promote(area: Path, blocks: ProtocolBlocks) -> list[str]:
 
 
 def stamp_scripts(
-    root: Path, area: Path, nn: str, slug: str, quick: bool, model: bool | str
+    root: Path,
+    area: Path,
+    nn: str,
+    slug: str,
+    skeleton: standard_contract.Skeleton,
+    model: bool | str,
 ) -> list[str]:
-    """The script skeletons and the area's test under tests/."""
+    """The script skeletons and the area's test under tests/ — which ones
+    is the contract's answer (`standard_contract.skeleton`: the count, the
+    estimator or the prompt skeleton, every one with the check)."""
     log: list[str] = []
     (area / "scripts").mkdir(exist_ok=True)
     alias = model if isinstance(model, str) else "TODO-alias"
-    if quick and not model:
-        # the count: the measurement, and the one public recheck every area has
-        # (`02_analyze.py --check`; until 0.99.0 the count carried its check
-        # inside 01_measure.py and report-check asked for a file the skeleton
-        # never stamped, audit 2026-10-19)
-        scripts = (
-            ("measure-quick-script.py.template", "01_measure.py"),
-            ("analyze-quick-script.py.template", "02_analyze.py"),
-        )
-        test = "test-quick.py.template"
-    elif not model:
-        # minutes/hours without a model: the instrument is an estimator (fit,
-        # predict, score out of fold against a permuted-label lane). Nine of
-        # nine pilot attempts were this shape and got the prompt skeleton
-        # (labkit-paper area 09, 2026-10-16): three agents rebuilt it, one
-        # kept its leftovers.
-        scripts = (
-            ("prepare-script.py.template", "00_prepare.py"),
-            ("measure-estimator-script.py.template", "01_measure.py"),
-            ("analyze-script.py.template", "02_analyze.py"),
-        )
-        test = "test-estimator.py.template"
-    else:
-        scripts = (
-            ("prepare-script.py.template", "00_prepare.py"),
-            ("measure-script.py.template", "01_measure.py"),
-            ("analyze-script.py.template", "02_analyze.py"),
-        )
-        test = "test-area.py.template"
     tname = (f"test_{nn}_{slug}" if nn else f"test_{slug}").replace("-", "_") + ".py"
-    for tmpl, dest in scripts:
+    for tmpl, dest in skeleton.scripts:
         # `<NN>_<name>` first: the scripts name the area's test file too (the
         # probe's "paste into tests/test_<NN>_<name>.py" stayed unreplaced,
         # cloud judge probe 2026-10-14)
@@ -726,7 +705,7 @@ def stamp_scripts(
                 0o755
             )  # a shebang nobody can run is a lint finding
     text = (
-        template(test)
+        template(skeleton.test)
         .replace("<area>", str(area.relative_to(root)))
         .replace("<NN>_<name>", tname[len("test_") : -3])
         .replace("<name>", slug)
@@ -751,7 +730,10 @@ def stamp_area(
         raise SystemExit(
             f"labkit-init: {root} is not a lab repo (no models.toml / experiments/) — run `labkit-init lab` first"
         )
-    quick = cost == "seconds"
+    # the cut and the skeleton are the contract's answers, not read off the
+    # tier here (a `cost == "seconds"` outside the contract is a copy)
+    quick = standard_contract.lane(cost).cut == standard_contract.SECONDS_CUT
+    skeleton = standard_contract.skeleton(cost, bool(model))
     tmpl = (
         template(PROTOCOL_TEMPLATE.name)
         .replace("<name>", slug, 1)
@@ -768,9 +750,9 @@ def stamp_area(
             seconds_cut(quick_block(tmpl, bool(model)), model=bool(model)),
             [],
         )
-        if not model:
+        if skeleton is standard_contract.COUNT:
             pilot = count_placeholders(pilot)
-    elif not model:
+    elif skeleton is standard_contract.ESTIMATOR:
         pilot = estimator_placeholders(pilot)
     existing = [
         p
@@ -790,7 +772,7 @@ def stamp_area(
         write_if_absent(area / d / ".gitkeep", "", log)
     write_if_absent(
         area / "README.md",
-        area_readme(nn, slug, skeleton=not quick or bool(model)),
+        area_readme(nn, slug, skeleton=skeleton is not standard_contract.COUNT),
         log,
     )
     pre = experiments / "explore" / f"{slug}.py"
@@ -808,7 +790,7 @@ def stamp_area(
         ),
         log,
     )
-    log += stamp_scripts(root, area, nn, slug, quick, model)
+    log += stamp_scripts(root, area, nn, slug, skeleton, model)
     _point_hooks_at(root)
     return area, (
         f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
