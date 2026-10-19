@@ -61,7 +61,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from labkit.checks.code_check import check_intent_ids, stamp_coverage_findings
+from labkit.checks.code_check import check_intent_ids
+from labkit.checks.import_check import stamp_coverage_findings
 from labkit.formats import console, protocol_block, protocol_check, standard_contract
 from labkit.gates import install_hooks
 from labkit.formats import findings as audit_findings

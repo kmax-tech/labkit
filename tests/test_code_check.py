@@ -17,7 +17,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 
 
-from labkit.checks import code_check  # noqa: E402
+from labkit.checks import code_check, gate_label_scan, import_check  # noqa: E402
 
 rules = code_check.rules  # the module the bundle quotes from
 
@@ -172,7 +172,7 @@ class TestGateLabels(unittest.TestCase):
 
     def _labels(self, scripts):
         with AreaFixture(PROTOCOL_TWO, scripts) as a:
-            return code_check.gate_labels(a.path)
+            return gate_label_scan.gate_labels(a.path)
 
     def test_string_literal_in_equality(self):
         facts = self._labels(
@@ -373,7 +373,7 @@ class TestStampCoverage(unittest.TestCase):
             "sys.path.insert(0, str(REPO / 'lib'))\nsys.path.insert(0, str(REPO / 'src'))\n"
             "import json\nfrom lib import scoring\nimport helpers\nfrom labkit.run import runlog\n"
         )
-        self.assertEqual(code_check.stamp_coverage_findings(area, repo), [])
+        self.assertEqual(import_check.stamp_coverage_findings(area, repo), [])
 
     def test_sys_path_edits_and_dynamic_loaders_warn_with_the_line(self):
         repo, area = self._repo(
@@ -383,7 +383,7 @@ class TestStampCoverage(unittest.TestCase):
             "m = importlib.import_module('measure_14')\n"
             "exec(open('z').read())\n"
         )
-        found = code_check.stamp_coverage_findings(area, repo)
+        found = import_check.stamp_coverage_findings(area, repo)
         self.assertEqual(len(found), 5, found)
         self.assertTrue(
             all(
@@ -409,7 +409,7 @@ class TestStampCoverage(unittest.TestCase):
             "A14 = REPO / 'experiments/14-hotel-und-fremde-buchung/scripts/01_measure.py'\n"
             "OWN = REPO / 'experiments/01-x/scripts/01_measure.py'\n"
         )
-        found = code_check.stamp_coverage_findings(area, repo)
+        found = import_check.stamp_coverage_findings(area, repo)
         self.assertEqual(len(found), 1, found)
         self.assertIn(":2 · names area `14-hotel-und-fremde-buchung`", found[0])
 
@@ -422,7 +422,7 @@ class TestStampCoverage(unittest.TestCase):
             encoding="utf-8",
         )
         self.assertEqual(
-            code_check.stamp_coverage_findings(area, repo), []
+            import_check.stamp_coverage_findings(area, repo), []
         )  # own area name: silent
 
     def test_loading_a_file_the_stamp_covers_is_silent_a_computed_one_is_not(self):
@@ -439,14 +439,14 @@ class TestStampCoverage(unittest.TestCase):
             "_any = importlib.util.spec_from_file_location('o', somewhere)\n",
             encoding="utf-8",
         )
-        found = code_check.stamp_coverage_findings(area, repo)
+        found = import_check.stamp_coverage_findings(area, repo)
         self.assertEqual(len(found), 2, found)
         self.assertIn("02_analyze.py:3 · `spec_from_file_location(…)`", found[0])
         self.assertIn("02_analyze.py:4 · `spec_from_file_location(…)`", found[1])
 
     def test_an_import_outside_lib_and_src_warns(self):
         repo, area = self._repo("from tools import helper\nimport experiments\n")
-        found = code_check.stamp_coverage_findings(area, repo)
+        found = import_check.stamp_coverage_findings(area, repo)
         self.assertEqual(len(found), 2, found)
         self.assertIn("`tools` resolves to tools, outside lib/ and src/", found[0])
         self.assertIn("`experiments` resolves to experiments", found[1])

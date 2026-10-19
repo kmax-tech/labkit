@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit.checks import code_check
+from labkit.checks import prompt_check
 
 SCRIPT = (
     'ANSWERS = {"Yes": "causal", "No": "not_causal"}\n'
@@ -46,7 +46,7 @@ def check(script: str, protocol_text: str) -> list[str]:
         (area / "scripts" / "01_measure.py").write_text(script)
         protocol = area / "PROTOCOL-x.md"
         protocol.write_text(protocol_text)
-        return code_check.check_prompt_drift(area, protocol)
+        return prompt_check.check_prompt_drift(area, protocol)
 
 
 class Readable(unittest.TestCase):
@@ -54,7 +54,7 @@ class Readable(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / "scripts").mkdir()
             (Path(d) / "scripts" / "m.py").write_text(SCRIPT)
-            consts = code_check.prompt_constants(Path(d))
+            consts = prompt_check.prompt_constants(Path(d))
         self.assertEqual(
             consts["PROMPT"],
             "Causal?\n\nText: {text}\n\nAnswer with a single word, Yes or No.",
@@ -81,19 +81,19 @@ class Blocks(unittest.TestCase):
             "- **Null condition / anchors (in the same run):** placebo\n\n"
             "  ```text\n  Unrelated\n  ```\n",
         )
-        self.assertEqual(len(code_check.prompt_blocks(_write(moved))), 2)
+        self.assertEqual(len(prompt_check.prompt_blocks(_write(moved))), 2)
 
     def test_a_tilde_fence_and_a_wrapped_label_are_read(self):
         """`~~~` fences and a label wrapped onto the next line were invisible
         to the prompt check's own parsers (audit 2026-10-15); the protocol
         parser's fences and labels are read here."""
         tilde = TWO_BLOCKS.replace("```text", "~~~text").replace("  ```", "  ~~~")
-        self.assertEqual(len(code_check.prompt_blocks(_write(tilde))), 2)
+        self.assertEqual(len(prompt_check.prompt_blocks(_write(tilde))), 2)
         wrapped = TWO_BLOCKS.replace(
             "- **Prompt (verbatim, per variant):**",
             "- **Prompt (verbatim,\n  per variant):**",
         )
-        self.assertEqual(len(code_check.prompt_blocks(_write(wrapped))), 2)
+        self.assertEqual(len(prompt_check.prompt_blocks(_write(wrapped))), 2)
 
     def test_an_empty_fence_is_reported_not_a_crash(self):
         # a stamped protocol whose prompt fence was left empty raised

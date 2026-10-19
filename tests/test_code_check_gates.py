@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.checks import code_check  # noqa: E402
+from labkit.checks import prompt_check  # noqa: E402
 
 SCRIPT = """
 PROMPT = ("Judge the claim: {claim}\\n\\n"
@@ -58,7 +58,7 @@ class Gates(unittest.TestCase):
         (self.repo / "tests" / "test_01_x.py").write_text(
             "from x import parse_answer\n", encoding="utf-8"
         )
-        f = code_check.check_parser_fixtures(self.area, self.repo)
+        f = prompt_check.check_parser_fixtures(self.area, self.repo)
         self.assertEqual(len(f), 1)
         self.assertIn("parse_score()", f[0])
         self.assertTrue(f[0].startswith("BLOCKER"))
@@ -67,10 +67,10 @@ class Gates(unittest.TestCase):
         (self.repo / "tests" / "test_01_x.py").write_text(
             "measure.parse_answer('x'); measure.parse_score('1')\n", encoding="utf-8"
         )
-        self.assertEqual(code_check.check_parser_fixtures(self.area, self.repo), [])
+        self.assertEqual(prompt_check.check_parser_fixtures(self.area, self.repo), [])
 
     def test_rendered_block_matches_the_constant(self):
-        self.assertEqual(code_check.check_prompt_drift(self.area, self.protocol), [])
+        self.assertEqual(prompt_check.check_prompt_drift(self.area, self.protocol), [])
 
     def test_drifted_block_is_a_blocker(self):
         self.protocol.write_text(
@@ -79,7 +79,7 @@ class Gates(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        f = code_check.check_prompt_drift(self.area, self.protocol)
+        f = prompt_check.check_prompt_drift(self.area, self.protocol)
         self.assertEqual(len(f), 1)
         self.assertIn("drifted from PROMPT", f[0])
 
@@ -91,13 +91,13 @@ class Gates(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        self.assertEqual(code_check.check_prompt_drift(self.area, self.protocol), [])
+        self.assertEqual(prompt_check.check_prompt_drift(self.area, self.protocol), [])
 
     def test_no_prompt_constant_means_nothing_to_hold(self):
         (self.area / "scripts" / "01_measure.py").write_text(
             "x = 1\n", encoding="utf-8"
         )
-        self.assertEqual(code_check.check_prompt_drift(self.area, self.protocol), [])
+        self.assertEqual(prompt_check.check_prompt_drift(self.area, self.protocol), [])
 
 
 if __name__ == "__main__":

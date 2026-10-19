@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package unde
 
 from labkit import PACKAGE_DIR  # noqa: E402
 from labkit.tools import protocol_fill  # noqa: E402
-from labkit.checks import code_check  # noqa: E402
+from labkit.checks import prompt_check  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 
@@ -211,10 +211,10 @@ class Prompts(unittest.TestCase):
     def test_the_block_passes_the_drift_check(self):
         with tempfile.TemporaryDirectory() as d:
             protocol = self.area(d)
-            consts = code_check.prompt_constants(protocol.parent)
+            consts = prompt_check.prompt_constants(protocol.parent)
             protocol.write_text(protocol_fill.fill_prompts(TEMPLATE, consts))
             self.assertEqual(
-                code_check.check_prompt_drift(protocol.parent, protocol), []
+                prompt_check.check_prompt_drift(protocol.parent, protocol), []
             )
             text = protocol.read_text()
         self.assertIn("  ── PROMPT ──\n  Does this text make a causal claim?", text)
@@ -225,12 +225,12 @@ class Prompts(unittest.TestCase):
     def test_a_changed_constant_drifts_again(self):
         with tempfile.TemporaryDirectory() as d:
             protocol = self.area(d)
-            consts = code_check.prompt_constants(protocol.parent)
+            consts = prompt_check.prompt_constants(protocol.parent)
             protocol.write_text(protocol_fill.fill_prompts(TEMPLATE, consts))
             (protocol.parent / "scripts" / "01_measure.py").write_text(
                 SCRIPT.replace("causal claim", "claim of cause")
             )
-            drift = code_check.check_prompt_drift(protocol.parent, protocol)
+            drift = prompt_check.check_prompt_drift(protocol.parent, protocol)
         self.assertTrue(drift and "drifted from PROMPT" in drift[0], drift)
 
     def test_filling_twice_replaces_not_appends(self):

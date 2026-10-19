@@ -75,7 +75,7 @@ KNOWN_CROSSINGS = {
     ("runlog", "standard_contract"),  # standard_contract.lane (was a copied rule)
     # the field catalogue and a rule's text in the code check — the boundary
     # case: the TOML head is core, the prose fields are doctrine
-    ("code_check", "protocol_check"),  # protocol_check.fields
+    ("prompt_check", "protocol_check"),  # protocol_check.fields (moved from code_check)
     ("code_check", "rules"),  # rules.paragraph
     ("code_check", "standard_contract"),  # standard_contract.lane (was a copied rule)
     # the pin check is core; checking rule references and hooks is doctrine

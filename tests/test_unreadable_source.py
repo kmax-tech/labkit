@@ -17,7 +17,7 @@ from pathlib import Path
 
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file
 
-from labkit.checks import code_check
+from labkit.checks import code_check, import_check
 from labkit.gates import preflight
 from labkit.formats import scope_sha
 
@@ -42,7 +42,7 @@ class UnreadableSource(unittest.TestCase):
     def test_code_check_reports_one_blocker(self):
         for findings in (
             code_check.check_intent_ids(self.area, self.protocol),
-            code_check.stamp_coverage_findings(self.area, self.repo),
+            import_check.stamp_coverage_findings(self.area, self.repo),
         ):
             with self.subTest(findings=findings):
                 self.assertEqual(len(findings), 1)
@@ -62,7 +62,7 @@ class UnreadableSource(unittest.TestCase):
         self.stale.write_text("def fine():\n    return 1\n", encoding="utf-8")
         for findings in (
             code_check.check_intent_ids(self.area, self.protocol),
-            code_check.stamp_coverage_findings(self.area, self.repo),
+            import_check.stamp_coverage_findings(self.area, self.repo),
         ):
             # the fixture's warnings (static evidence) stay; no blocker, no traceback
             self.assertEqual([f for f in findings if f.startswith("BLOCKER")], [])
