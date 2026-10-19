@@ -116,7 +116,7 @@ fields, no reading of labkit's source.
 - `experiments/NN-<name>/` — one area per question, numbered by creation.
 - `data/raw/` → `data/prepared/` — materialized steps, read-only once written.
 - `lib/` — repo-local helpers; shared helpers come as the pinned labkit
-  package (`from labkit import runlog`), never as copies.
+  package (`from labkit.run import runlog`), never as copies.
 - `notes/` — `theorie/` (what holds independent of our runs), `messung/`
   (how we measure: instruments, protocols), `results/` (what a run showed).
 - `models.toml` — the one place for model backends; code names an alias.

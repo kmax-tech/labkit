@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit import runlog  # noqa: E402
+from labkit.run import runlog  # noqa: E402
 from labkit.formats.runs import _command_of, is_alive  # noqa: E402
 
 

@@ -23,7 +23,7 @@ dev = ["pytest", "ruff", "pyright", "viztracer"]
 
 [project.scripts]
 protocol-check = "labkit.formats.protocol_check:cli"
-runlog = "labkit.runlog:cli"
+runlog = "labkit.run.runlog:cli"
 scope-sha = "labkit.formats.scope_sha:cli"
 intent-check = "labkit.intent_check:cli"
 code-check = "labkit.code_check:cli"

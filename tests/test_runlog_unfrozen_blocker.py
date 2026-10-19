@@ -24,7 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
-from labkit import runlog  # noqa: E402
+from labkit.run import runlog  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 UNFROZEN = head(

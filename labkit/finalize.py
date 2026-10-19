@@ -63,7 +63,7 @@ import json
 import re
 from pathlib import Path
 
-from labkit import batch
+from labkit.run import batch
 from labkit.formats import console, findings as audit_findings, promises, protocol_block
 from labkit.formats.standard_contract import lane
 from labkit.formats.gate import Findings

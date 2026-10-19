@@ -42,7 +42,7 @@ AREA = HERE.parent
 REPO = AREA.parent.parent
 PROTOCOL = AREA / "PROTOCOL-<name>.md"
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
-from labkit import batch, runlog
+from labkit.run import batch, runlog
 from labkit.formats import promises
 
 SOURCE = REPO / "data" / "TODO"                 # raw input (record sha256 via runlog data=)

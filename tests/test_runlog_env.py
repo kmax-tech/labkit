@@ -34,7 +34,7 @@ def load(rel: str):
     return mod
 
 
-runlog = load("labkit/runlog.py")
+runlog = load("labkit/run/runlog.py")
 
 
 def write_lock(text: str) -> Path:

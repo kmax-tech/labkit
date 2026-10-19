@@ -389,7 +389,7 @@ class Exp(unittest.TestCase):
         import sys
         from unittest import mock
 
-        from labkit import batch
+        from labkit.run import batch
 
         quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
         path = self.area() / "scripts" / "01_measure.py"

@@ -16,7 +16,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit import runlog
+from labkit.run import runlog
 
 
 class NoHalfMadeRun(unittest.TestCase):

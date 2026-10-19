@@ -24,7 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
 from labkit.formats import findings, promises, runs, scope_sha  # noqa: E402
-from labkit import runlog  # noqa: E402
+from labkit.run import runlog  # noqa: E402
 from protocol_fixture import head, scope_file  # noqa: E402
 
 
@@ -212,7 +212,7 @@ class TestLongGate(unittest.TestCase):
         """Run a minimal long=True run in a subprocess with a chosen env."""
         code = (
             "import sys; sys.path.insert(0, sys.argv[1]);\n"
-            "from labkit import runlog\n"
+            "from labkit.run import runlog\n"
             "with runlog.run('gate-probe', config={}, base_dir='.',"
             " long=True):\n"
             "    pass\n"

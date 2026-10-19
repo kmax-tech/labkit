@@ -18,7 +18,8 @@ from pathlib import Path
 
 from protocol_fixture import PID, head, scope_file
 
-from labkit import finalize, runlog
+from labkit import finalize
+from labkit.run import runlog
 from labkit.formats import protocol_check
 
 AUDIT = "n/a — contract test, no code to audit"

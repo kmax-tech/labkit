@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import runlog
+from labkit.run import runlog
 
 
 class DirectorySource(unittest.TestCase):

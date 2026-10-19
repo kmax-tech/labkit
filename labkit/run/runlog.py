@@ -85,7 +85,7 @@ from pathlib import Path
 from types import TracebackType
 from collections.abc import Iterator
 
-from labkit import batch
+from labkit.run import batch
 from labkit.formats import console, findings, promises, protocol_block, repo
 from labkit.formats.standard_contract import PREFLIGHT_AUDIT, lane
 from labkit.formats.scope_sha import (
@@ -434,7 +434,7 @@ def _resolve_models(config: dict) -> dict:
     for key, val in config.items():
         if (key == "model" or key.endswith("_model")) and isinstance(val, str):
             try:
-                from labkit import llm
+                from labkit.run import llm
 
                 out[val] = llm.resolve(val)
             except Exception as e:

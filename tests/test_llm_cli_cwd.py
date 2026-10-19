@@ -12,7 +12,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import llm  # noqa: E402
+from labkit.run import llm  # noqa: E402
 
 
 class CliCwd(unittest.TestCase):

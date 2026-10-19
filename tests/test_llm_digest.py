@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
-from labkit import llm  # noqa: E402
+from labkit.run import llm  # noqa: E402
 
 TAGS = {
     "models": [
@@ -52,7 +52,7 @@ class TestPrefixedDigest(unittest.TestCase):
     """A proxy may send "sha256:<hex>"; the pin is the hex, not the prefix."""
 
     def test_algorithm_prefix_is_not_part_of_the_pin(self):
-        from labkit import llm
+        from labkit.run import llm
 
         tags = {
             "models": [{"name": "gemma3-4b", "digest": "sha256:f8ceb1a2b3c4d5e6f7"}]

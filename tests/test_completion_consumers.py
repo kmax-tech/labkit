@@ -28,7 +28,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from protocol_fixture import PID, head  # noqa: E402
 
-from labkit import recheck, runlog, usability  # noqa: E402
+from labkit import recheck, usability  # noqa: E402
+from labkit.run import runlog  # noqa: E402
 from labkit.formats import runs  # noqa: E402
 
 DONE = "2026-10-06T10-00-00_aaaa"

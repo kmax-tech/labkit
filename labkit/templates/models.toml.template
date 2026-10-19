@@ -1,4 +1,4 @@
-# models.toml — single place for LLM backends (read by labkit.llm).
+# models.toml — single place for LLM backends (read by labkit.run.llm).
 # Experiments call llm.complete("<alias>", ...) / llm.resolve("<alias>") —
 # NEVER a literal endpoint or model id in experiment code. Cluster address
 # changed? Edit the [endpoints] table, every experiment follows.

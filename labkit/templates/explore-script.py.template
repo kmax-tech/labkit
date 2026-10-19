@@ -21,7 +21,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent if "__file__" in globals() else Path.cwd()
 REPO = next(p for p in (HERE, *HERE.parents) if (p / "models.toml").is_file())  # the lab repo root
 sys.path.insert(0, str(REPO / "lib"))          # repo-local helpers only
-from labkit import llm  # noqa: E402  (pinned package — never a copy)
+from labkit.run import llm  # noqa: E402  (pinned package — never a copy)
 # Repo-local helpers and an existing area's evaluate() come by import, never
 # by copy — a hand copy of a formula is what LAB-016 Resolution check before freezing forbids:
 # from stats import auc  # noqa: E402

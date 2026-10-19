@@ -24,7 +24,8 @@ pip install ~/projects/labkit      # in repos: pinned via requirements.txt/.lock
 ```
 
 ```python
-from labkit import runlog, llm, batch, recheck
+from labkit.run import runlog, llm, batch
+from labkit import recheck
 ```
 
 `recheck.holds(area, out, recompute, note)` is the `--check` of an
@@ -300,7 +301,7 @@ records its environment; if the helpers could change under a finished run,
 that record is a claim about an environment that no longer exists. Editable
 installs belong here, where the tests are.
 
-**Code imports the package directly** — `from labkit import runlog` —
+**Code imports the package directly** — `from labkit.run import runlog` —
 and never creates shims; `labkit-init lab` stamps repos in this style, and a
 guard test (`test_shared_helpers_come_from_labkit.py`) fires if a file ever
 shadows the package. A repo whose frozen run snapshots say `import runlog`

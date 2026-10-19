@@ -67,7 +67,7 @@ endpoints = ["nosuch"]
 
 class _Base(unittest.TestCase):
     def setUp(self):
-        from labkit import llm
+        from labkit.run import llm
 
         self.llm = llm
         self._saved = (
@@ -139,17 +139,17 @@ class TestResolveEndpoints(_Base):
 
 class TestDigestAggregation(unittest.TestCase):
     def test_agreement_yields_the_digest(self):
-        from labkit import llm
+        from labkit.run import llm
 
         self.assertEqual(llm._aggregate_digests({"a": "x", "b": "x"}), "x")
 
     def test_unreachable_endpoints_do_not_hide_the_reachable_one(self):
-        from labkit import llm
+        from labkit.run import llm
 
         self.assertEqual(llm._aggregate_digests({"a": "x", "b": "unavailable"}), "x")
 
     def test_disagreement_is_loud(self):
-        from labkit import llm
+        from labkit.run import llm
 
         got = llm._aggregate_digests({"a": "x", "b": "y"})
         self.assertTrue(got.startswith("MISMATCH:"))
@@ -157,7 +157,7 @@ class TestDigestAggregation(unittest.TestCase):
         self.assertIn("y", got)
 
     def test_nothing_reachable_is_unavailable(self):
-        from labkit import llm
+        from labkit.run import llm
 
         self.assertEqual(llm._aggregate_digests({"a": "unavailable"}), "unavailable")
 

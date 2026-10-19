@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
-from labkit import batch  # noqa: E402
+from labkit.run import batch  # noqa: E402
 
 RECORDS = [{"id": f"item-{i}", "text": f"t{i}"} for i in range(5)]
 

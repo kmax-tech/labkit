@@ -18,7 +18,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import intent_check, runlog  # noqa: E402
+from labkit import intent_check  # noqa: E402
+from labkit.run import runlog  # noqa: E402
 from labkit.formats import runs  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 

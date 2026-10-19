@@ -485,7 +485,7 @@ class Judge(unittest.TestCase):
 
     def test_02_run_finalize_audit_adopt(self):
         lab = type(self).lab
-        from labkit import llm
+        from labkit.run import llm
 
         out = io.StringIO()
         with (

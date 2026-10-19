@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
-from labkit import batch  # noqa: E402
+from labkit.run import batch  # noqa: E402
 
 RECORDS = [{"id": f"item-{i}", "text": f"t{i}"} for i in range(4)]
 EXPECT = {"prompt_sha": "p1", "input_sha": lambda rec: "sha-" + rec["text"]}
@@ -98,7 +98,7 @@ class Ledger(unittest.TestCase):
             self.write([]).ledger(RECORDS + RECORDS[:1])
 
     def test_inside_a_run_the_raise_keeps_the_run_from_completing(self):
-        from labkit import runlog
+        from labkit.run import runlog
 
         area = self.out.parent
         store = self.write([row(0)])
@@ -113,7 +113,7 @@ class Ledger(unittest.TestCase):
         self.assertFalse((area / "runs.tsv").exists())
 
     def test_inside_a_run_a_balanced_output_completes(self):
-        from labkit import runlog
+        from labkit.run import runlog
 
         area = self.out.parent
         store = self.write([row(i) for i in range(4)])

@@ -23,7 +23,7 @@ import argparse
 import json
 from pathlib import Path
 
-from labkit import runlog
+from labkit.run import runlog
 
 AREA = Path(__file__).resolve().parent.parent
 REPO = AREA.parent.parent

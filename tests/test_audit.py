@@ -1,5 +1,5 @@
 """labkit-audit (2026-10-06): the experiment-preflight audit as a command,
-through labkit.llm instead of a Claude subagent.
+through labkit.run.llm instead of a Claude subagent.
 
 The model call is faked; what is tested is what the auditor gets to read,
 what refuses, and the exit-code contract — 1 for a blocker OR a warning,
@@ -23,7 +23,7 @@ from labkit import audit  # noqa: E402
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"
-SCRIPT = "import scoring\nfrom labkit import runlog\nprint(scoring.X)\n"
+SCRIPT = "import scoring\nfrom labkit.run import runlog\nprint(scoring.X)\n"
 
 
 def completed_run(area: Path, pid: str, output: str) -> Path:

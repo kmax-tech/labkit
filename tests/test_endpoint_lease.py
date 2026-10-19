@@ -25,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import endpoint_lease as el  # noqa: E402
+from labkit.run import endpoint_lease as el  # noqa: E402
 
 EP = "http://gammaweb07.medien.uni-weimar.de:11726"
 EP2 = "http://gammaweb09.medien.uni-weimar.de:11490"
@@ -220,7 +220,7 @@ class TestEndpointLease(unittest.TestCase):
         """Two processes race for one endpoint with different aliases."""
         code = (
             "import os,sys,time; sys.path.insert(0, %r);"
-            "from labkit import endpoint_lease as el;"
+            "from labkit.run import endpoint_lease as el;"
             "time.sleep(max(0, float(sys.argv[2]) - time.time()));"
             "el.acquire(sys.argv[1], [%r]); time.sleep(1.5); print('ADMITTED')"
             % (str(Path(__file__).resolve().parents[1]), EP)
@@ -241,7 +241,7 @@ class TestEndpointLease(unittest.TestCase):
 
     def test_llm_complete_leases_implicitly(self):
         """The point of the design: the SCRIPT does not have to remember."""
-        from labkit import llm
+        from labkit.run import llm
 
         pid, script = self._live_other_process()
         self._foreign(EP, "other-alias", pid=pid, script=script)

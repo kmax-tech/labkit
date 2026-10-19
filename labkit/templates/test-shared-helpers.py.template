@@ -3,7 +3,7 @@
 Why this test exists: shared helpers used to live in lab repos as file
 copies, and a fix in the master reached a repo only if someone remembered to
 copy it — audits found copies silently stale by hundreds of lines. New code
-therefore imports the package directly (`from labkit import runlog`) and
+therefore imports the package directly (`from labkit.run import runlog`) and
 creates no shims. This test fails the moment a file
 named like a shared helper appears where it could shadow or fork the
 package — that file would be the second truth all over again.
@@ -25,7 +25,7 @@ SHARED = ["runlog", "llm", "batch"]
 
 class TestHelpersResolveToPackage(unittest.TestCase):
     def test_the_package_imports(self):
-        from labkit import batch, llm, runlog
+        from labkit.run import batch, llm, runlog
         for mod, name in ((runlog, "runlog"), (llm, "llm"), (batch, "batch")):
             with self.subTest(module=name):
                 self.assertEqual(mod.__name__, f"labkit.{name}")
@@ -33,7 +33,7 @@ class TestHelpersResolveToPackage(unittest.TestCase):
 
     def test_private_names_are_reachable(self):
         """Monkeypatching in tests must land on the one real module."""
-        from labkit import llm
+        from labkit.run import llm
         from labkit.formats import runs
         self.assertTrue(callable(runs._command_of))
         self.assertTrue(callable(llm._find_models_toml))

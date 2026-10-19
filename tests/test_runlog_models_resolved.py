@@ -33,13 +33,13 @@ def load(rel: str):
     return mod
 
 
-runlog = load("labkit/runlog.py")
+runlog = load("labkit/run/runlog.py")
 
 
 class ResolveModels(unittest.TestCase):
     def test_model_and_suffixed_keys_resolve(self):
         spec = {"alias": "sonnet", "model": "claude-sonnet-5", "backend": "cli"}
-        with mock.patch("labkit.llm.resolve", return_value=spec) as res:
+        with mock.patch("labkit.run.llm.resolve", return_value=spec) as res:
             got = runlog._resolve_models(
                 {"model": "sonnet", "judge_model": "sonnet", "n": 5}
             )
@@ -47,7 +47,7 @@ class ResolveModels(unittest.TestCase):
         self.assertEqual(res.call_count, 2)  # both keys, deduped by alias key
 
     def test_non_model_keys_and_non_strings_skipped(self):
-        with mock.patch("labkit.llm.resolve") as res:
+        with mock.patch("labkit.run.llm.resolve") as res:
             got = runlog._resolve_models(
                 {"n": 5, "temperature": 0.0, "model": 7, "modelling": "x"}
             )
@@ -56,7 +56,8 @@ class ResolveModels(unittest.TestCase):
 
     def test_failure_recorded_not_raised(self):
         with mock.patch(
-            "labkit.llm.resolve", side_effect=KeyError("alias 'x' not in models.toml")
+            "labkit.run.llm.resolve",
+            side_effect=KeyError("alias 'x' not in models.toml"),
         ):
             got = runlog._resolve_models({"model": "x"})
         self.assertIn("unresolved:", got["x"])

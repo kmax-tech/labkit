@@ -37,7 +37,7 @@ class _Base(unittest.TestCase):
     }
 
     def setUp(self):
-        from labkit import llm
+        from labkit.run import llm
 
         self.llm = llm
         self.sent = {}

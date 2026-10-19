@@ -1,4 +1,4 @@
-<!-- the experiment-preflight agent's instructions, run by `labkit-audit` through labkit.llm —
+<!-- the experiment-preflight agent's instructions, run by `labkit-audit` through labkit.run.llm —
      the one runner since 0.79.0 (the Claude subagent copy under ~/.claude/agents is gone:
      it drifted from this file once, 2026-10-07, and read the whole standard twice per audit).
      `labkit-audit` inlines everything the list below names; the LAB ids this file cites are

@@ -326,7 +326,7 @@ def score_nav_answer(
 
 def _full_path(repo: Path, path: str, truths: list[str]) -> str:
     """The answer's path, or the truth path it names by its tail alone
-    (`runlog.py` for `labkit/runlog.py`) when that tail names exactly one
+    (`runlog.py` for `labkit/run/runlog.py`) when that tail names exactly one
     file in the repo — a reader who drops the package folder still found
     the file; an ambiguous tail stays as written and does not count."""
     if path in truths:

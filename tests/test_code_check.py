@@ -371,7 +371,7 @@ class TestStampCoverage(unittest.TestCase):
         repo, area = self._repo(
             "import sys\nfrom pathlib import Path\nREPO = Path('.')\n"
             "sys.path.insert(0, str(REPO / 'lib'))\nsys.path.insert(0, str(REPO / 'src'))\n"
-            "import json\nfrom lib import scoring\nimport helpers\nfrom labkit import runlog\n"
+            "import json\nfrom lib import scoring\nimport helpers\nfrom labkit.run import runlog\n"
         )
         self.assertEqual(code_check.stamp_coverage_findings(area, repo), [])
 

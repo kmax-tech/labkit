@@ -1,4 +1,4 @@
-"""Tests for the `runlog` console command (labkit.runlog:cli).
+"""Tests for the `runlog` console command (labkit.run.runlog:cli).
 
 Why this is tested: the working standard's "look, don't ask" rule hands users
 this exact command. Its predecessor — `python lib/runlog.py <area>` against a
@@ -18,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit import runlog  # noqa: E402
+from labkit.run import runlog  # noqa: E402
 
 
 class TestCli(unittest.TestCase):

@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import runlog  # noqa: E402
+from labkit.run import runlog  # noqa: E402
 
 
 def _jsonl(path: Path, ids: list[str]) -> Path:

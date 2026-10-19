@@ -37,7 +37,7 @@ class _FakeResponse:
 
 class TestChatPathSendsTokenBudget(unittest.TestCase):
     def setUp(self):
-        from labkit import llm
+        from labkit.run import llm
 
         self.llm = llm
         self.sent = {}
@@ -88,7 +88,7 @@ class TestEmptyContentIsReported(unittest.TestCase):
 
     def setUp(self):
         import io
-        from labkit import llm
+        from labkit.run import llm
 
         self.llm, self.io = llm, io
         self._resolve, self._urlopen = llm.resolve, llm.urllib.request.urlopen

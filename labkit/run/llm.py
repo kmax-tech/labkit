@@ -88,7 +88,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any, NamedTuple
 
-from labkit import endpoint_lease
+from labkit.run import endpoint_lease
 from labkit.formats.repo import lab_root
 
 

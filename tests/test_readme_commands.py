@@ -13,7 +13,8 @@ import tomllib
 import unittest
 from pathlib import Path
 
-from labkit import runlog, usability
+from labkit.run import runlog
+from labkit import usability
 
 ROOT = Path(__file__).resolve().parents[1]
 

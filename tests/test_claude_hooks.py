@@ -55,7 +55,7 @@ def _protocol(frozen: bool, cost: str = "minutes") -> str:
 
 
 RUN_SCRIPT = (
-    "from labkit import runlog\n"
+    "from labkit.run import runlog\n"
     'with runlog.run("t", {}, protocol="PROTOCOL-x.md") as r:\n'
     '    metrics = {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n'
 )
@@ -104,7 +104,7 @@ class PreRun(unittest.TestCase):
         root = _repo(True)  # frozen, but no tests/ -> only a warning;
         # a missing intent id in the script is the blocker:
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
-            'from labkit import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
+            'from labkit.run import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
             encoding="utf-8",
         )
         rc, out, err = _run(
@@ -121,7 +121,7 @@ class PreRun(unittest.TestCase):
         a line freed every command in it (audit 2026-10-15)."""
         root = _repo(True)
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
-            'from labkit import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
+            'from labkit.run import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
             encoding="utf-8",
         )
         full = "python experiments/01-x/scripts/01_measure.py"
@@ -154,7 +154,7 @@ class PreRun(unittest.TestCase):
     def test_unfrozen_with_blockers_only_reports(self):
         root = _repo(False)
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
-            'from labkit import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
+            'from labkit.run import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
             encoding="utf-8",
         )
         rc, out, err = _run(
@@ -168,7 +168,7 @@ class PreRun(unittest.TestCase):
     def test_seconds_skips_preflight_even_with_blockers(self):
         root = _repo(True, cost="seconds")
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
-            'from labkit import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
+            'from labkit.run import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
             encoding="utf-8",
         )
         rc, out, err = _run(

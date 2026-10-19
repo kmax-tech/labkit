@@ -19,7 +19,7 @@ LAB-050 Analysis audit before reporting
 per audit in uniagent, 2026-10-10. In MODE analysis the answering run's rows come too:
 the first 50 and the last 20 lines of every output it registered, numbered,
 and its `metrics.json` — the auditor has no tools, so what it is told to
-look at must be on the page. One call goes through `labkit.llm` to the alias
+look at must be on the page. One call goes through `labkit.run.llm` to the alias
 the lab's `models.toml` names (`opus` by default, stamped as `claude-cli`).
 Synchronous, with a timeout: on expiry the command fails, it never waits on
 in the background.
@@ -65,7 +65,8 @@ import time
 from pathlib import Path
 from typing import NamedTuple
 
-from labkit import PACKAGE_DIR, llm
+from labkit import PACKAGE_DIR
+from labkit.run import llm
 from labkit.formats import console, findings, promises, protocol_block, rules
 from labkit.formats.standard_contract import lane
 from labkit.formats.repo import (

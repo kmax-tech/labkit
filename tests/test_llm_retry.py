@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package unde
 
 class TestExhaustedRetriesRaiseBackendError(unittest.TestCase):
     def setUp(self):
-        from labkit import llm
+        from labkit.run import llm
 
         self.llm = llm
         self._once, self._sleep = llm._complete_once, llm.time.sleep
@@ -102,7 +102,7 @@ class TestServerRefusalsAreNotRetried(unittest.TestCase):
     outage and keeps the retry."""
 
     def setUp(self):
-        from labkit import llm
+        from labkit.run import llm
 
         self.llm = llm
         self._once, self._sleep = llm._complete_once, llm.time.sleep

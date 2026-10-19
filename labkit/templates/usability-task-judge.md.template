@@ -7,7 +7,7 @@ may commit (never push). Do not ask questions; make reasonable choices and
 note them in your report.
 
 **The question.** Does the model behind the alias `haiku` (see
-`models.toml`; it is called through `labkit.llm.complete`, never directly)
+`models.toml`; it is called through `labkit.run.llm.complete`, never directly)
 recognise whether a sentence makes a **causal claim**? The items are in
 `data/raw/claims.jsonl`: twelve rows with `id`, `text` and the gold label
 `gold` (`causal` | `not_causal`). The kept number is the model's

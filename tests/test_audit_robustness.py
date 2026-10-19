@@ -9,7 +9,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import intent_check, recheck, runlog
+from labkit import intent_check, recheck
+from labkit.run import runlog
 from labkit.formats import promises, protocol_block, protocol_check
 from protocol_fixture import PID, head
 

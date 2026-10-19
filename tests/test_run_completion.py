@@ -29,7 +29,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import runlog  # noqa: E402
+from labkit.run import runlog  # noqa: E402
 from labkit.formats import runs  # noqa: E402
 
 
@@ -189,7 +189,7 @@ class TestActive(unittest.TestCase):
                         sys.executable,
                         "-c",
                         "import sys; sys.path.insert(0, %r);"
-                        "from labkit import runlog;"
+                        "from labkit.run import runlog;"
                         "sys.exit(runlog.main([%r, '--wait', '--max-seconds', '0']))"
                         % (str(Path(runlog.__file__).parents[2]), str(area)),
                     ],
@@ -280,7 +280,7 @@ class TestReindex(unittest.TestCase):
 def _append_many(area_str, n):
     """Child process: n index rows, each taking the lock."""
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from labkit import runlog as rl
+    from labkit.run import runlog as rl
 
     area = Path(area_str)
     for i in range(n):
@@ -349,7 +349,9 @@ class TestDerivedRun(unittest.TestCase):
             cfg = json.loads((parent / "config.json").read_text(encoding="utf-8"))
             cfg["models_resolved"] = {"m": {"alias": "m", "model": "A"}}
             (parent / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
-            with mock.patch("labkit.llm.resolve", return_value={"model": "B"}) as res:
+            with mock.patch(
+                "labkit.run.llm.resolve", return_value={"model": "B"}
+            ) as res:
                 with runlog.run(
                     "x", {"model": "m"}, base_dir=area, derived_from=parent.name
                 ) as r:

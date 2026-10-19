@@ -13,8 +13,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from labkit.batch import write_dataset
-from labkit.runlog import _data_rows, _describe, _ids, _is_meta
+from labkit.run.batch import write_dataset
+from labkit.run.runlog import _data_rows, _describe, _ids, _is_meta
 
 
 class TestIsMetaRecognition(unittest.TestCase):

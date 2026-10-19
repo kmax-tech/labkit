@@ -12,7 +12,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import code_check, finalize, params, preflight, protocol_fill, runlog
+from labkit import code_check, finalize, params, preflight, protocol_fill
+from labkit.run import runlog
 from labkit.formats import scope_sha
 
 

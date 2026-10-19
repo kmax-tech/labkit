@@ -21,7 +21,7 @@ from protocol_fixture import head  # noqa: E402
 LOG = """\
 18:12:32 · read · CLAUDE.md
 18:12:40 · read · PROTOCOL
-18:12:50 · read · labkit/runlog.py (freeze gate)
+18:12:50 · read · labkit/run/runlog.py (freeze gate)
 18:13:03 · unsure · short form or long form?
 18:13:30 · edit · 01_measure.py
 18:14:00 · run · 01_measure.py --show 3

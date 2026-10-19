@@ -72,7 +72,7 @@
         "labkit.preflight",
         "labkit.formats.protocol_check",
         "labkit.protocol_fill",
-        "labkit.runlog",
+        "labkit.run.runlog",
         "labkit.formats.scope_sha"
       ]
     }

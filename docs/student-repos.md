@@ -21,7 +21,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
 The commands (`protocol-check`, `intent-check`, `scope-sha`, `runlog`, …)
-then live in `.venv/bin/`; scripts import `from labkit import llm, runlog`.
+then live in `.venv/bin/`; scripts import `from labkit.run import llm, runlog`.
 The lab standard comes with the pin (`python -m labkit.formats.rules show LAB-nnn`),
 nothing is copied. Until the tag is pushed the pin does not install;
 `--labkit-ref <commit>` pins a pushed commit instead.
