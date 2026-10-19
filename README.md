@@ -240,6 +240,7 @@ and the per-field explanations live in `protocol-field-guide.md`.
 | **derived run**     | a run that re-evaluates another run's rows (`derived_from`), never a repeat's; it makes no model call and records no model |
 | **scope hash**      | per promise: the hash over its declared scope (`declared_scope_sha`), recorded by the run, held by `finalize` |
 | **stamp**           | per area: the hash over every file that determines a number (`scope-sha`), written into an audit field, held by `runlog` at the start of a full run |
+| **estimator**       | the instrument of a measurement without a model call: anything with fit and predict, scored out of fold against a lane fitted on permuted labels (`labkit-init exp` without `--model` at minutes/hours stamps it); the three instruments are model, estimator and count |
 
 **"Ledger" is not used:** it named three different things — the run
 index, a run's metrics, and the hand-written `## Runs` section.

@@ -424,6 +424,133 @@ class Exp(unittest.TestCase):
         req = (self.root / "requirements.txt").read_text(encoding="utf-8")
         self.assertRegex(req, r"(?m)^pytest$")
 
+    def test_minutes_without_a_model_stamps_the_estimator_skeleton(self) -> None:
+        """2026-10-17: nine of nine pilot attempts were classical ML and got the
+        prompt skeleton. Without `--model` at minutes/hours the instrument is
+        an estimator: no prompt, no parser, a permuted-label null lane, the
+        promise constants in its words, and the model-shaped fields answered."""
+        from labkit import promises, protocol_check
+
+        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="minutes")
+        area = self.area()
+        script = (area / "scripts" / "01_measure.py").read_text(encoding="utf-8")
+        self.assertIn("def make_estimator", script)
+        self.assertNotIn("PROMPT", script)
+        test = (self.root / "tests" / "test_01_foo_bar.py").read_text(encoding="utf-8")
+        self.assertIn("measure_01_foo_bar", test)
+        self.assertIn("chance_of", test)
+        proto = (area / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
+        self.assertIn("**Model / tool:** n/a — no model call", proto)
+        model_line = next(ln for ln in proto.splitlines() if "**Model / tool:**" in ln)
+        self.assertNotIn("<", model_line)  # an n/a with a `<…>` tail read as filled
+        self.assertIn("**Prompt (verbatim, per variant):** n/a — no prompt", proto)
+        self.assertNotIn("```text", proto)  # the prompt's example block is gone
+        self.assertIn("**Parser cases harvested:** n/a — no model text", proto)
+        self.assertFalse(protocol_check.model_named(proto))
+        block = promises.parse_block(proto)
+        assert block is not None
+        consts = promises.all_constants(block)
+        self.assertEqual(consts, {"margin": 0.25, "max_empty": 0, "null_band": 0.1})
+        self.assertNotIn("null_band_items", proto)
+        self.assertIn("permuted-label lane", proto)
+        # protocol-check reads the stamp as a clean pilot with placeholders only
+        self.assertEqual(
+            scaffold.estimator_placeholders.__name__, "estimator_placeholders"
+        )
+
+    def test_the_stamped_estimator_formula_holds_the_contract(self) -> None:
+        """The stamped `evaluate_rows` runs without any estimator library:
+        perfect against chance fires [C1] exactly at the bar (fractions), a
+        lane without gold is refused, the test lane is counted, never scored."""
+        import importlib.util
+        import sys
+
+        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="minutes")
+        path = self.area() / "scripts" / "01_measure.py"
+        spec = importlib.util.spec_from_file_location("stamped_estimator", path)
+        assert spec is not None and spec.loader is not None
+        measure = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = measure
+        self.addCleanup(sys.modules.pop, spec.name, None)
+        spec.loader.exec_module(measure)
+        self.assertEqual(
+            (measure.CONFIG.margin, measure.CONFIG.max_empty, measure.CONFIG.null_band),
+            (0.25, 0, 0.1),
+        )
+
+        def lane(name: str, correct: int, gold_none: bool = False) -> list[dict]:
+            golds = ["pos"] * 6 + ["neg"] * 6
+            return [
+                {
+                    "id": f"{name}:{i}",
+                    "lane": name,
+                    "item": str(i),
+                    "fold": 0,
+                    "pred": g if i < correct else ("neg" if g == "pos" else "pos"),
+                    "gold": None if gold_none and i == 0 else g,
+                }
+                for i, g in enumerate(golds)
+            ]
+
+        test_rows = [
+            {
+                "id": "test:a",
+                "lane": "test",
+                "item": "a",
+                "fold": None,
+                "pred": "pos",
+                "gold": None,
+            }
+        ]
+        m = measure.evaluate_rows(lane("registered", 12) + lane("null", 6) + test_rows)
+        self.assertEqual(
+            (m["c1_pass"], m["a2_pass"], m["n_test"], m["a2_chance"]),
+            (True, True, 1, 0.5),
+        )
+        from dataclasses import replace
+
+        wide = replace(measure.CONFIG, null_band=0.25)
+        at_bar = measure.evaluate_rows(lane("registered", 8) + lane("null", 5), wide)
+        self.assertIs(at_bar["c1_pass"], True)  # 8/12 >= 5/12 + 1/4 exactly
+        with self.assertRaisesRegex(ValueError, "without gold"):
+            measure.evaluate_rows(
+                lane("registered", 12, gold_none=True) + lane("null", 6)
+            )
+        with self.assertRaises(NotImplementedError):
+            measure.make_estimator(0)
+
+    def test_the_stamped_estimator_test_passes_as_stamped(self) -> None:
+        """The area's test (`test-estimator.py.template`) runs green on the
+        fresh stamp: the resolution check needs no estimator library."""
+        import subprocess
+        import sys
+
+        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="minutes")
+        r = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                str(self.root / "tests" / "test_01_foo_bar.py"),
+            ],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("9 passed", r.stdout)
+
+    def test_a_bare_model_flag_keeps_the_prompt_skeleton(self) -> None:
+        """`--model` without an alias still means a model in the loop."""
+        quiet(scaffold.stamp_area, self.root, "foo-bar", model=True)
+        script = (self.area() / "scripts" / "01_measure.py").read_text(encoding="utf-8")
+        self.assertIn("PROMPT", script)
+        self.assertIn('MODEL = "TODO-alias"', script)
+
     def test_a_model_alias_fills_the_skeleton(self) -> None:
         quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
         self.assertIn(

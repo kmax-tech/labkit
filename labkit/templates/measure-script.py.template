@@ -245,6 +245,11 @@ def parse_answer(text: str) -> str | None:
     return ANSWERS.get(text.split()[0].rstrip(".,:;!"))
 
 
+def answer_of(r: dict) -> str | None:
+    """The parsed answer a row carries — what `02_analyze.py --draws` compares across draws."""
+    return parse_answer(r["answer"])
+
+
 def _counts(rows: list[dict]) -> tuple[int, int, int]:
     """(correct, items, empty) — integers, so a band is compared exactly. The
     denominator is every item of the lane: an empty or unreadable answer is

@@ -48,7 +48,7 @@ def draws() -> list[str]:
         accs.append(m.get("c1_accuracy"))
         lines.append(f"draw {n}  {d.name}  c1_accuracy {m.get('c1_accuracy')}  c1_pass {m.get('c1_pass')}")
         for r in measure.read_jsonl(rows[0]):
-            seen.setdefault(r["id"], {})[n] = measure.parse_answer(r["answer"])
+            seen.setdefault(r["id"], {})[n] = measure.answer_of(r)
     if len(accs) == 1:
         lines.append("one draw — no spread: `01_measure.py --repeat-of "
                      f"{primary.name}` draws it again")

@@ -340,6 +340,12 @@ scattered in output files nobody can interpret.
   that appears in one class and never in the other is a free rule — the model
   can read the label off it without doing the task.
 - **Model / tool:** alias from `models.toml` — never hardcode endpoint/ID.
+  No model call? Then the instrument is an estimator: `n/a — no model
+  call; the instrument is …` names where it is built (the stamp of an area
+  without `--model` writes `make_estimator()`); its fixed parameters go
+  under Free knobs and its seed under Randomness controls — `--report`
+  fills only the parser field and leaves the randomness and noise-ceiling
+  fields owed, because a seed is a source of randomness.
   Two arms compared (a profile each)? Name them here, one line per arm —
   by the one thing that differs where you can (`with-gas-classes`), and
   where the house keeps `before`/`after`, this line is where a reader
