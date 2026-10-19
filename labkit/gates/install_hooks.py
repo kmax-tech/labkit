@@ -78,7 +78,17 @@ fi
 #    under a reported number reopens it. --staged: the answer as the index
 #    holds it, and the area's tree must equal the index — the commit holds
 #    the index, the check reads the tree (audit 2026-10-19).
-staged=$(git diff --cached --name-only --diff-filter=ACMR)
+#    A deletion counts: a script or result removed under a reported number
+#    reopens it as an edit does (--no-renames: a move is its old path
+#    deleted and its new one added).
+staged=$(git diff --cached --name-only --no-renames)
+for tool in report-check claude-hook; do
+    if [ -n "$staged" ] && [ ! -x .venv/bin/$tool ]; then
+        echo "pre-commit: .venv/bin/$tool missing — the gates on the staged files"
+        echo "cannot run; install labkit into .venv (.venv/bin/pip install -r requirements.txt)."
+        fail=1
+    fi
+done
 if [ -n "$staged" ] && [ -x .venv/bin/report-check ]; then
     # shellcheck disable=SC2086
     if ! .venv/bin/report-check --if-reported --staged $staged; then

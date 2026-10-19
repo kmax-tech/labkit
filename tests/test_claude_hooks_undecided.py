@@ -94,6 +94,21 @@ class Undecided(unittest.TestCase):
         self.assertEqual(rc, 2)
         self.assertIn("the target leaks", err)
 
+    def test_a_deleted_or_moved_script_touches_its_area(self):
+        """A removal reopens the area as an edit does: the stop read only
+        what is still there."""
+        self._record(self.area, [BLOCKER])
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "audit")
+        (self.area / "scripts" / "01_measure.py").unlink()
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 2, err)
+        _git(self.root, "checkout", "--", ".")
+        _git(self.root, "mv", "experiments/01-x/scripts/01_measure.py", "moved.py")
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 2, err)
+        self.assertIn("the target leaks", err)
+
     def test_a_decided_blocker_and_an_open_warning_let_it_stop(self):
         path = self._record(self.area, [BLOCKER, WARNING])
         text = path.read_text(encoding="utf-8")

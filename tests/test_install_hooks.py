@@ -181,87 +181,83 @@ class RepoOwnSteps(unittest.TestCase):
         number reopens it (audit 2026-10-19). A shim records the call."""
         repo = git_repo()
         install_hooks.install(repo)
-        shim = repo / ".venv" / "bin"
-        shim.mkdir(parents=True)
-        (shim / "report-check").write_text(
-            '#!/bin/sh\necho "$@" > report-check.argv\nexit 0\n'
-        )
-        (shim / "report-check").chmod(0o755)
+        gate_shims(repo)
         (repo / "scripts").mkdir()
         (repo / "scripts" / "02_analyze.py").write_text("print('x')\n")
         subprocess.run(["git", "-C", str(repo), "add", "scripts"], check=True)
-        r = subprocess.run(
-            [
-                "git",
-                "-C",
-                str(repo),
-                "-c",
-                "user.name=t",
-                "-c",
-                "user.email=t@t",
-                "commit",
-                "-q",
-                "-m",
-                "x",
-            ],
-            capture_output=True,
-            text=True,
-            cwd=repo,
-        )
+        r = commit(repo)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertEqual(
             (repo / "report-check.argv").read_text().split(),
             ["--if-reported", "--staged", "scripts/02_analyze.py"],
         )
 
+    def test_a_staged_deletion_reaches_both_gates(self):
+        """Deleting the measure script under a reported number reopens it as
+        an edit does; until now --diff-filter=ACMR dropped it."""
+        repo = git_repo()
+        (repo / "scripts").mkdir()
+        (repo / "scripts" / "01_measure.py").write_text("print('x')\n")
+        subprocess.run(["git", "-C", str(repo), "add", "scripts"], check=True)
+        self.assertEqual(commit(repo).returncode, 0)  # no hook yet
+        install_hooks.install(repo)
+        gate_shims(repo)
+        subprocess.run(
+            ["git", "-C", str(repo), "rm", "-q", "scripts/01_measure.py"], check=True
+        )
+        r = commit(repo)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        for tool in ("report-check", "claude-hook"):
+            self.assertIn(
+                "scripts/01_measure.py", (repo / f"{tool}.argv").read_text(), tool
+            )
+
+    def test_a_missing_gate_tool_refuses_the_commit_by_name(self):
+        repo = git_repo()
+        install_hooks.install(repo)
+        gate_shims(repo)
+        (repo / ".venv" / "bin" / "claude-hook").unlink()
+        (repo / "f.txt").write_text("x")
+        subprocess.run(["git", "-C", str(repo), "add", "f.txt"], check=True)
+        r = commit(repo)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn(".venv/bin/claude-hook missing", r.stdout + r.stderr)
+
     def test_the_local_hook_runs_and_its_failure_blocks_the_commit(self):
         repo = git_repo()
         install_hooks.install(repo)
+        gate_shims(repo)
         local = repo / ".githooks" / "pre-commit.local"
         local.write_text("#!/bin/sh\necho local-ran\nexit 1\n")
         local.chmod(0o755)
         (repo / "f.txt").write_text("x")
         subprocess.run(["git", "-C", str(repo), "add", "f.txt"], check=True)
-        r = subprocess.run(
-            [
-                "git",
-                "-C",
-                str(repo),
-                "-c",
-                "user.name=t",
-                "-c",
-                "user.email=t@t",
-                "commit",
-                "-q",
-                "-m",
-                "x",
-            ],
-            capture_output=True,
-            text=True,
-            cwd=repo,
-        )
+        r = commit(repo)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("local-ran", r.stdout + r.stderr)
         local.write_text("#!/bin/sh\nexit 0\n")
-        r = subprocess.run(
-            [
-                "git",
-                "-C",
-                str(repo),
-                "-c",
-                "user.name=t",
-                "-c",
-                "user.email=t@t",
-                "commit",
-                "-q",
-                "-m",
-                "x",
-            ],
-            capture_output=True,
-            text=True,
-            cwd=repo,
-        )
+        r = commit(repo)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
+def gate_shims(repo: Path) -> None:
+    """`.venv/bin/report-check` and `claude-hook` stand-ins that record their
+    arguments in `<tool>.argv` and pass."""
+    shim = repo / ".venv" / "bin"
+    shim.mkdir(parents=True)
+    for tool in ("report-check", "claude-hook"):
+        (shim / tool).write_text(f'#!/bin/sh\necho "$@" > {tool}.argv\nexit 0\n')
+        (shim / tool).chmod(0o755)
+
+
+def commit(repo: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t"]
+        + ["commit", "-q", "-m", "x"],
+        capture_output=True,
+        text=True,
+        cwd=repo,
+    )
 
 
 if __name__ == "__main__":

@@ -228,6 +228,27 @@ def status_entries(repo: Path, pathspec: tuple[str, ...] = ()) -> list[tuple[str
     (`"notes/messung/gr\303\266\303\237e.md"`), which was then no file and
     never checked (audit 2026-10-15). A rename or copy comes as its new path
     with the old one dropped. Raises RuntimeError when git fails."""
+    return [(xy, path) for xy, path, _ in _status_records(repo, pathspec)]
+
+
+def touched_paths(repo: Path) -> list[Path]:
+    """Every path `git status` names under REPO: modified, added, untracked,
+    deleted, and both sides of a rename — what a gate holding "the areas
+    this work touched" reads, since a file removed from an area changes it
+    as an edit does. Raises RuntimeError when git fails."""
+    out: list[Path] = []
+    for _, path, source in _status_records(repo, ()):
+        out.append(repo / path)
+        if source is not None:
+            out.append(repo / source)
+    return out
+
+
+def _status_records(
+    repo: Path, pathspec: tuple[str, ...]
+) -> list[tuple[str, str, str | None]]:
+    """(XY, path, source of a rename or copy or None) per `git status`
+    entry — the one parse behind `status_entries` and `touched_paths`."""
     r = git_run(
         ["status", "--porcelain", "-z", "--untracked-files=all", "--", *pathspec],
         repo,
@@ -235,16 +256,18 @@ def status_entries(repo: Path, pathspec: tuple[str, ...] = ()) -> list[tuple[str
     if r.returncode != 0:
         raise RuntimeError(f"git status failed in {repo}: {r.stderr.strip()}")
     entries = r.stdout.split("\0")
-    out: list[tuple[str, str]] = []
+    out: list[tuple[str, str, str | None]] = []
     i = 0
     while i < len(entries):
         line = entries[i]
         i += 1
         if len(line) < 4:
             continue
+        source = None
         if line[0] in "RC":
-            i += 1  # the entry after a rename or copy is its source
-        out.append((line[:2], line[3:]))
+            source = entries[i]  # the entry after a rename or copy is its source
+            i += 1
+        out.append((line[:2], line[3:], source))
     return out
 
 

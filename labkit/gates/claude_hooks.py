@@ -105,6 +105,7 @@ from labkit.formats.repo import (
     find_area,
     git_run,
     status_entries,
+    touched_paths,
 )
 from labkit.formats.scope_sha import file_digest
 
@@ -540,7 +541,9 @@ def stop(event: dict) -> int:
     record_session(repo, event)
     if event.get("stop_hook_active"):
         return 0  # sent back once already; no loop
-    changed = _git_changed(repo)
+    # deletions and rename sources too: a script or result removed under a
+    # reported number reopens it as an edit does
+    changed = touched_paths(repo)
     undecided = undecided_blockers(repo, changed)
     if undecided:
         print(
