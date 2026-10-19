@@ -28,7 +28,7 @@ from protocol_fixture import head
 
 from labkit.gates import audit, finalize
 from labkit.tools import params
-from labkit.probes import usability
+from labkit.probes import usability_score
 from labkit.checks import intent_check, recheck
 from labkit.formats import runs
 from labkit.formats.gate import Findings
@@ -282,7 +282,7 @@ class EveryCompletedArrangement(unittest.TestCase):
     scorer's latest run, the audit's "no run yet") on every arrangement of
     the nine kinds: the completed runs in name order, repeats only when
     asked; an unreadable run raises — it may be the newest and must not
-    vanish. `usability.latest_run` takes the last of them, and refuses when
+    vanish. `usability_score.latest_run` takes the last of them, and refuses when
     the last two started in one second (2026-10-15)."""
 
     def test_up_to_three_runs_of_nine_kinds(self) -> None:
@@ -307,7 +307,7 @@ class EveryCompletedArrangement(unittest.TestCase):
                     with self.assertRaises(runs.RunConfigError):
                         runs.completed_runs(area, with_repeats=with_repeats)
                 with self.assertRaises(SystemExit):
-                    usability.latest_run(area)
+                    usability_score.latest_run(area)
                 return
             done = [d for d, k in placed if k.metrics is not None and k.completion]
             primary = [d for d, k in placed if d in done and not k.repeat]
@@ -315,10 +315,10 @@ class EveryCompletedArrangement(unittest.TestCase):
             self.assertEqual(runs.completed_runs(area, with_repeats=False), primary)
             if one_second and len(primary) >= 2:
                 with self.assertRaises(SystemExit):
-                    usability.latest_run(area)
+                    usability_score.latest_run(area)
             else:
                 self.assertEqual(
-                    usability.latest_run(area), primary[-1] if primary else None
+                    usability_score.latest_run(area), primary[-1] if primary else None
                 )
         finally:
             shutil.rmtree(tmp)

@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import PACKAGE_DIR  # noqa: E402
-from labkit.probes import usability  # noqa: E402
+from labkit.probes import usability, usability_score  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 LOG = """\
@@ -45,7 +45,7 @@ class Fixture(unittest.TestCase):
 
 class LogParser(unittest.TestCase):
     def test_counts_wall_clock_and_no_double_count(self):
-        got = usability.parse_log(LOG)
+        got = usability_score.parse_log(LOG)
         self.assertEqual(got.wall_seconds, 150)
         self.assertEqual(
             (got.read, got.run, got.edit, got.unsure, got.gate), (3, 2, 1, 1, 1)
@@ -56,7 +56,7 @@ class LogParser(unittest.TestCase):
         self.assertTrue(got.monotonic)
 
     def test_a_long_silence_is_reported_beside_the_span(self):
-        got = usability.parse_log(
+        got = usability_score.parse_log(
             "18:00:00 · read · a\n18:01:00 · run · b\n"
             "18:31:00 · run · c\n18:32:00 · edit · d\n"
         )
@@ -64,10 +64,12 @@ class LogParser(unittest.TestCase):
         self.assertEqual(got.gap_seconds, 1800)
 
     def test_one_line_has_no_wall_clock(self):
-        self.assertIsNone(usability.parse_log("18:00:00 · read · x\n").wall_seconds)
+        self.assertIsNone(
+            usability_score.parse_log("18:00:00 · read · x\n").wall_seconds
+        )
 
     def test_backwards_stamps_are_flagged_not_wrapped(self):
-        got = usability.parse_log("18:00:00 · read · a\n17:00:00 · run · b\n")
+        got = usability_score.parse_log("18:00:00 · read · a\n17:00:00 · run · b\n")
         self.assertFalse(got.monotonic)
         self.assertEqual(got.wall_seconds, 3600)
 
@@ -122,7 +124,7 @@ class LoadProbeRun(unittest.TestCase):
             root = Path(tmp) / "probe"
             root.mkdir()
             _probe(root, {"mean_docs_per_case": 3.5}, tier="minutes")
-            pr = usability.load_probe_run(root)
+            pr = usability_score.load_probe_run(root)
             self.assertTrue(pr.bound)
             self.assertEqual(pr.protocol, pr.area / "PROTOCOL-docs-per-case.md")
             self.assertEqual(pr.protocol_as_recorded, "PROTOCOL-docs-per-case.md")
@@ -137,14 +139,14 @@ class LoadProbeRun(unittest.TestCase):
             data = json.loads(cfg.read_text())
             del data["protocol"]["id"]
             cfg.write_text(json.dumps(data))
-            pr = usability.load_probe_run(root)
+            pr = usability_score.load_probe_run(root)
             self.assertFalse(pr.bound)
             self.assertIsNotNone(pr.protocol)
 
     def test_an_unstaged_dir_refuses(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(SystemExit):
-                usability.load_probe_run(Path(tmp) / "nothing")
+                usability_score.load_probe_run(Path(tmp) / "nothing")
 
 
 class ScoreVerdict(unittest.TestCase):
@@ -155,7 +157,7 @@ class ScoreVerdict(unittest.TestCase):
             usability.plant_fixture(root)
             _probe(root, metrics)
             with contextlib.redirect_stdout(io.StringIO()):
-                rc = usability.score(root, agent=agent)
+                rc = usability_score.score(root, agent=agent)
             return rc, json.loads(usability._sidecar(root, "score.json").read_text())
 
     def test_the_score_carries_the_agent_the_operator_names(self):
@@ -269,7 +271,7 @@ class Archive(unittest.TestCase):
     def test_three_files_and_a_rerun_changes_nothing(self):
         import gzip
 
-        written = usability.archive(self.root, self.transcript, self.dest)
+        written = usability_score.archive(self.root, self.transcript, self.dest)
         self.assertEqual(
             sorted(p.name for p in written),
             ["count-1.jsonl.gz", "count-1.score.json", "count-1.timeline.txt"],
@@ -278,13 +280,15 @@ class Archive(unittest.TestCase):
             gzip.decompress((self.dest / "count-1.jsonl.gz").read_bytes()),
             self.transcript.read_bytes(),
         )
-        usability.archive(self.root, self.transcript, self.dest)  # same bytes: fine
+        usability_score.archive(
+            self.root, self.transcript, self.dest
+        )  # same bytes: fine
 
     def test_other_bytes_under_the_same_name_are_refused(self):
-        usability.archive(self.root, self.transcript, self.dest)
+        usability_score.archive(self.root, self.transcript, self.dest)
         (self.root.parent / "count-1.score.json").write_text('{"number": 4.0}')
         with self.assertRaises(SystemExit):
-            usability.archive(self.root, self.transcript, self.dest)
+            usability_score.archive(self.root, self.transcript, self.dest)
 
 
 class RestampLaysTheStampOverTheProbe(unittest.TestCase):
@@ -393,7 +397,7 @@ class SourceReadsCountTheStandard(unittest.TestCase):
             "18:00:20 · read · python -m labkit.formats.rules show LAB-017\n"
             "18:00:30 · read · experiments/01-x/README.md\n"
         )
-        self.assertEqual(usability.parse_log(log).source_reads, 2)
+        self.assertEqual(usability_score.parse_log(log).source_reads, 2)
 
 
 class OtherRequirements(unittest.TestCase):

@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 from labkit.checks import code_check
-from labkit.probes import usability
+from labkit.probes import usability_score
 from labkit.formats import promises, protocol_block, protocol_check
 from protocol_fixture import head
 
@@ -104,7 +104,7 @@ class Usability(unittest.TestCase):
             (run / "config.json").write_text("{")
             with self.assertRaises(SystemExit) as cm:
                 with contextlib.redirect_stdout(io.StringIO()):
-                    usability.latest_run(Path(d))
+                    usability_score.latest_run(Path(d))
             self.assertIn("unreadable run metadata", str(cm.exception))
 
 

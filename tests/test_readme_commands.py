@@ -14,7 +14,7 @@ import unittest
 from pathlib import Path
 
 from labkit.run import runlog
-from labkit.probes import usability
+from labkit.probes import usability_command
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,7 +29,7 @@ def command_block() -> str:
 def usability_subcommands() -> set[str]:
     out = io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.suppress(SystemExit):
-        usability.main(["--help"])
+        usability_command.main(["--help"])
     m = re.search(r"\{([a-z,-]+)\}", out.getvalue())
     assert m, out.getvalue()
     return set(m.group(1).split(","))

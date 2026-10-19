@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from protocol_fixture import PID, head  # noqa: E402
 
 from labkit.checks import recheck  # noqa: E402
-from labkit.probes import usability  # noqa: E402
+from labkit.probes import usability_score  # noqa: E402
 from labkit.run import runlog  # noqa: E402
 from labkit.formats import runs  # noqa: E402
 
@@ -99,7 +99,7 @@ class Twin(unittest.TestCase):
         )
 
     def test_usability_scorer_picks_the_completed_run(self):
-        self.assertEqual(usability.latest_run(self.area), self.done)
+        self.assertEqual(usability_score.latest_run(self.area), self.done)
 
 
 class Edges(unittest.TestCase):
