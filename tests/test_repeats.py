@@ -109,7 +109,7 @@ class Repeats(unittest.TestCase):
         Answer, Result and Runs (review 2026-10-15). recheck.run_dir, the one
         choice behind --from-run and --check, refuses it; the primary is
         written."""
-        from labkit import protocol_fill
+        from labkit.tools import protocol_fill
 
         first = self._run()
         second = self._run(repeat_of=first)

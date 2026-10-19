@@ -8,7 +8,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-from labkit import calltree
+from labkit.tools import calltree
 
 ENTRY = """
 import sys
@@ -115,7 +115,7 @@ class Calltree(unittest.TestCase):
 class Targets(unittest.TestCase):
     def test_console_script_resolves_to_its_function(self):
         self.assertEqual(
-            calltree.resolve_target("labkit-params"), ("labkit.params", "cli")
+            calltree.resolve_target("labkit-params"), ("labkit.tools.params", "cli")
         )
 
     def test_module_function_form(self):

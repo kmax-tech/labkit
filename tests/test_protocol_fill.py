@@ -17,7 +17,8 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit import PACKAGE_DIR, protocol_fill  # noqa: E402
+from labkit import PACKAGE_DIR  # noqa: E402
+from labkit.tools import protocol_fill  # noqa: E402
 from labkit.checks import code_check  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
@@ -144,7 +145,7 @@ class HeadType(unittest.TestCase):
         """Listed among the rest, Result and Answer read as owed before the
         run: a cold agent filled them with "pending run" and --from-run then
         refused to overwrite them (cloud, 2026-10-14)."""
-        from labkit import scaffold
+        from labkit.tools import scaffold
 
         out = io.StringIO()
         with tempfile.TemporaryDirectory() as tmp:
@@ -412,7 +413,7 @@ class TestFromRun(unittest.TestCase):
         placeholder: fill read it as filled and --from-run skipped it
         silently, so the line a cold agent was told the command writes
         stayed `none yet` (cold Sonnet, 2026-10-14)."""
-        from labkit import scaffold
+        from labkit.tools import scaffold
 
         stamped = scaffold.PROTOCOL_TEMPLATE.read_text(encoding="utf-8").splitlines()
         k = next(i for i, ln in enumerate(stamped) if "**Answering run:**" in ln)

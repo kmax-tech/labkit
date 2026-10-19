@@ -63,15 +63,15 @@
       "description": "labkit command module (see [project.scripts] in pyproject.toml)",
       "options": [
         "labkit.gates.audit",
-        "labkit.calltree",
+        "labkit.tools.calltree",
         "labkit.checks.code_check",
         "labkit.gates.finalize",
         "labkit.checks.intent_check",
         "labkit.checks.notes_check",
-        "labkit.params",
+        "labkit.tools.params",
         "labkit.gates.preflight",
         "labkit.formats.protocol_check",
-        "labkit.protocol_fill",
+        "labkit.tools.protocol_fill",
         "labkit.run.runlog",
         "labkit.formats.scope_sha"
       ]

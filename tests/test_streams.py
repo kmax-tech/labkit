@@ -14,7 +14,7 @@ from pathlib import Path
 
 from labkit.checks import code_check
 from labkit.gates import finalize, preflight
-from labkit import params, protocol_fill
+from labkit.tools import params, protocol_fill
 from labkit.run import runlog
 from labkit.formats import scope_sha
 

@@ -15,7 +15,7 @@ from pathlib import Path
 
 from protocol_fixture import PID, head
 
-from labkit import params
+from labkit.tools import params
 
 C1 = """[[promise]]
 id = "C1"

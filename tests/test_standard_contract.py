@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 from labkit.formats import protocol_block, standard_contract as sc
-from labkit import scaffold
+from labkit.tools import scaffold
 from labkit.formats.protocol_check import FIELDS
 
 

@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 from labkit.gates import finalize
-from labkit import scaffold
+from labkit.tools import scaffold
 from labkit.formats import rules
 
 

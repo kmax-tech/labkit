@@ -50,7 +50,7 @@ from labkit.formats.repo import (
     repo_protocols,
     split_area_name,
 )
-from labkit.repo_check import PYPROJECT_VERSION_RE
+from labkit.tools.repo_check import PYPROJECT_VERSION_RE
 
 TEMPLATES = PACKAGE_DIR / "templates"
 PROTOCOL_TEMPLATE = TEMPLATES / "experiment-protocol.md.template"
