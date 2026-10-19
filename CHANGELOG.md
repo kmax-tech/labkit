@@ -51,6 +51,16 @@ pins (`requirements.txt` / `requirements.lock`).
   answer to the same; a provisional number stays a sketch in `runs/` and
   `output/`. Until 0.99.0 `--from-run` wrote unconditionally.
 
+### Added
+
+- **A report field written before any run is named.** `protocol-check`
+  warns per report field (Did, Outcome, Result, Rival check, …) filled
+  while "Answering run" is still the stamp's and no completed run is bound
+  to the protocol (`written_before_run`); `n/a — …` claims nothing. Exact
+  in what it says (no run exists), silent on whether the text claims one:
+  Sonnet t18 (labkit-paper area 09, 2026-10-16) described a grid run that
+  `runs/` never held (plan P, B1).
+
 ## 0.99.0 — 2026-10-19
 
 ### Breaking
