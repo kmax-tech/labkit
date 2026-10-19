@@ -67,7 +67,7 @@ endpoints = ["nosuch"]
 
 class _Base(unittest.TestCase):
     def setUp(self):
-        from labkit.run import llm
+        from labkit.run import llm, llm_backends
 
         self.llm = llm
         self._saved = (
@@ -76,7 +76,7 @@ class _Base(unittest.TestCase):
             llm.urllib.request.urlopen,
             llm.time.sleep,
             dict(llm._FROZEN),
-            dict(llm._RR),
+            dict(llm_backends._RR),
             llm._RETRIES["n"],
         )
         self.tmp = tempfile.TemporaryDirectory()
@@ -85,10 +85,12 @@ class _Base(unittest.TestCase):
         llm._find_models_toml = lambda: toml_path
         llm._ollama_digest = lambda ep, model, headers=None: "d34db33f4242"
         llm._FROZEN.clear()
-        llm._RR.clear()
+        llm_backends._RR.clear()
         llm.time.sleep = lambda s: None
 
     def tearDown(self):
+        from labkit.run import llm_backends
+
         llm = self.llm
         (
             llm._find_models_toml,
@@ -101,8 +103,8 @@ class _Base(unittest.TestCase):
         ) = self._saved
         llm._FROZEN.clear()
         llm._FROZEN.update(frozen)
-        llm._RR.clear()
-        llm._RR.update(rr)
+        llm_backends._RR.clear()
+        llm_backends._RR.update(rr)
         llm._RETRIES["n"] = retries
         self.tmp.cleanup()
 

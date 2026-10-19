@@ -66,7 +66,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from labkit import PACKAGE_DIR
-from labkit.run import llm
+from labkit.run import llm, llm_backends
 from labkit.formats import console, findings, promises, protocol_block, rules
 from labkit.formats.standard_contract import lane
 from labkit.formats.repo import (
@@ -545,7 +545,7 @@ def _answer_or_record(
     and propagates as it is, so none is written for it."""
     try:
         return llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=4096)
-    except llm.BackendError as exc:
+    except llm_backends.BackendError as exc:
         tried = findings.write_failed(
             args.area,
             args.mode,
@@ -616,7 +616,7 @@ def main(argv: list[str]) -> int:
         result = parse(report)
     except (
         AuditError,
-        llm.PromptTruncated,
+        llm_backends.PromptTruncated,
         KeyError,
         FileNotFoundError,
         ValueError,
@@ -692,7 +692,12 @@ def _clarity(args: argparse.Namespace) -> int:
         report = llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=4096)
         print(f"labkit-audit: tokens · {llm.last_usage().describe()}", file=sys.stderr)
         result = parse_clarity(report)
-    except (AuditError, llm.BackendError, llm.PromptTruncated, KeyError) as exc:
+    except (
+        AuditError,
+        llm_backends.BackendError,
+        llm_backends.PromptTruncated,
+        KeyError,
+    ) as exc:
         # KeyError: llm.resolve on an alias models.toml does not know
         print(f"labkit-audit: {str(exc).strip(chr(39))}", file=sys.stderr)
         return 2

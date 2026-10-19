@@ -17,7 +17,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit.run import llm  # noqa: E402
+from labkit.run import llm, llm_backends  # noqa: E402
 
 
 class _FakeResponse:
@@ -82,7 +82,7 @@ class NumCtxIsSent(unittest.TestCase):
 class CutPromptRaises(unittest.TestCase):
     def test_count_far_below_length_raises_without_num_ctx(self):
         # 20,000 characters read as 1,500 tokens: ~13 per token
-        with self.assertRaisesRegex(llm.PromptTruncated, "no num_ctx is set"):
+        with self.assertRaisesRegex(llm_backends.PromptTruncated, "no num_ctx is set"):
             _call(SPEC, PROMPT, _chat(1500))
 
     def test_whole_prompt_passes_without_num_ctx(self):
@@ -90,7 +90,7 @@ class CutPromptRaises(unittest.TestCase):
 
     def test_count_reaching_num_ctx_raises(self):
         # a cut to a 16k window: the ratio alone (~1.2) would pass it
-        with self.assertRaisesRegex(llm.PromptTruncated, "num_ctx"):
+        with self.assertRaisesRegex(llm_backends.PromptTruncated, "num_ctx"):
             _call({**SPEC, "num_ctx": 16384}, "x" * 20000, _chat(16384))
 
     def test_count_below_num_ctx_passes(self):
@@ -98,7 +98,7 @@ class CutPromptRaises(unittest.TestCase):
 
     def test_raw_path_checks_too(self):
         reply = {"response": "B", "prompt_eval_count": 1000}
-        with self.assertRaises(llm.PromptTruncated):
+        with self.assertRaises(llm_backends.PromptTruncated):
             _call(SPEC, PROMPT, reply, raw=True)
 
     def test_system_text_counts_toward_the_prompt(self):
@@ -116,7 +116,7 @@ class CutPromptRaises(unittest.TestCase):
             ):
                 llm.complete("local", "short", system=system, attempts=1)
 
-        with self.assertRaises(llm.PromptTruncated):
+        with self.assertRaises(llm_backends.PromptTruncated):
             run(PROMPT)
 
     def test_short_prompt_is_not_judged_by_ratio(self):
@@ -127,7 +127,7 @@ class CutPromptRaises(unittest.TestCase):
         _call(SPEC, PROMPT, {"message": {"content": "ok"}})
 
     def test_not_retried(self):
-        self.assertNotIn(llm.PromptTruncated, llm._TRANSIENT)
+        self.assertNotIn(llm_backends.PromptTruncated, llm._TRANSIENT)
 
 
 class NumCtxIsValidated(unittest.TestCase):

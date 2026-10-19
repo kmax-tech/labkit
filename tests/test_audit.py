@@ -285,7 +285,7 @@ class Audit(unittest.TestCase):
         area = repo_with()
 
         def dead(alias, prompt, **kw):
-            raise audit.llm.BackendError("claude-cli exit 1: quota")
+            raise audit.llm_backends.BackendError("claude-cli exit 1: quota")
 
         err = io.StringIO()
         with (

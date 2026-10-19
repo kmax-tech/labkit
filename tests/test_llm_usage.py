@@ -16,7 +16,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit.run import llm  # noqa: E402
+from labkit.run import llm, llm_backends  # noqa: E402
 
 
 class _FakeResponse:
@@ -70,12 +70,12 @@ class Ollama(unittest.TestCase):
         }
         with _stack(_http("ollama", reply)):
             self.assertEqual(llm.complete("a", "p"), "yes")
-        self.assertEqual(llm.last_usage(), llm.Usage(120, 7, None, None))
+        self.assertEqual(llm.last_usage(), llm_backends.Usage(120, 7, None, None))
 
     def test_a_reply_without_counts_reports_none_not_zero(self):
         with _stack(_http("ollama", {"message": {"content": "yes"}})):
             llm.complete("a", "p")
-        self.assertEqual(llm.last_usage(), llm.NO_USAGE)
+        self.assertEqual(llm.last_usage(), llm_backends.NO_USAGE)
 
     def test_the_raw_route_counts_too(self):
         reply = {"response": "B", "prompt_eval_count": 33, "eval_count": 1}
@@ -96,7 +96,7 @@ class OpenAI(unittest.TestCase):
         }
         with _stack(_http("openai", reply)):
             llm.complete("a", "p")
-        self.assertEqual(llm.last_usage(), llm.Usage(500, 12, 400, None))
+        self.assertEqual(llm.last_usage(), llm_backends.Usage(500, 12, 400, None))
 
 
 CLI_REPLY = {
@@ -138,20 +138,20 @@ class ClaudeCli(unittest.TestCase):
         self.assertEqual(cmd[cmd.index("--output-format") + 1], "json")
         # the prompt is everything the model read: uncached + created + read from cache
         self.assertEqual(
-            llm.last_usage(), llm.Usage(10 + 5735 + 8671, 43, 8671, 0.0125621)
+            llm.last_usage(), llm_backends.Usage(10 + 5735 + 8671, 43, 8671, 0.0125621)
         )
 
     def test_plain_text_on_stdout_is_a_backend_failure_not_an_answer(self):
         _, patches = _cli("ok\n")
         with _stack(patches):
-            with self.assertRaises(llm.BackendError) as cm:
+            with self.assertRaises(llm_backends.BackendError) as cm:
                 llm.complete("a", "p", attempts=1)
         self.assertIn("not the JSON reply", str(cm.exception))
 
     def test_is_error_is_a_backend_failure(self):
         _, patches = _cli(json.dumps({**CLI_REPLY, "is_error": True, "result": "boom"}))
         with _stack(patches):
-            with self.assertRaises(llm.BackendError) as cm:
+            with self.assertRaises(llm_backends.BackendError) as cm:
                 llm.complete("a", "p", attempts=1)
         self.assertIn("boom", str(cm.exception))
 
@@ -159,10 +159,10 @@ class ClaudeCli(unittest.TestCase):
 class Describe(unittest.TestCase):
     def test_one_line_with_thousands_separators(self):
         self.assertEqual(
-            llm.Usage(61234, 1902, 8671, 0.414).describe(),
+            llm_backends.Usage(61234, 1902, 8671, 0.414).describe(),
             "prompt 61,234 (8,671 cached) · output 1,902 · 0.41 USD",
         )
-        self.assertEqual(llm.NO_USAGE.describe(), "prompt n/a · output n/a")
+        self.assertEqual(llm_backends.NO_USAGE.describe(), "prompt n/a · output n/a")
 
     def test_a_new_call_never_inherits_the_previous_counts(self):
         reply = {
@@ -174,7 +174,7 @@ class Describe(unittest.TestCase):
             llm.complete("a", "p")
         with _stack(_http("ollama", {"message": {"content": "no"}})):
             llm.complete("a", "p")
-        self.assertEqual(llm.last_usage(), llm.NO_USAGE)
+        self.assertEqual(llm.last_usage(), llm_backends.NO_USAGE)
 
 
 if __name__ == "__main__":

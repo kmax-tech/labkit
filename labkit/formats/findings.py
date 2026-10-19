@@ -24,7 +24,7 @@ area, one file per audit:
 
 The person edits `status` and `reason`; nothing else writes the file.
 
-When the backend does not answer (`llm.BackendError`: the CLI died, the
+When the backend does not answer (`llm_backends.BackendError`: the CLI died, the
 server was down, every retry ran out), `labkit-audit` writes no findings
 but the evidence that it tried, next to them:
 

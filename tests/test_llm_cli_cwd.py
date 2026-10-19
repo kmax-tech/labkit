@@ -12,7 +12,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.run import llm  # noqa: E402
+from labkit.run import llm, llm_backends  # noqa: E402
 
 
 class CliCwd(unittest.TestCase):
@@ -24,7 +24,7 @@ class CliCwd(unittest.TestCase):
             return subprocess.CompletedProcess(cmd, 0, stdout="Causal\n", stderr="")
 
         with mock.patch.object(llm.subprocess, "run", fake_run):
-            r = llm._cli_run(["claude", "-p", "x"], timeout=5)
+            r = llm_backends._cli_run(["claude", "-p", "x"], timeout=5)
         self.assertEqual(r.stdout.strip(), "Causal")
         self.assertEqual(seen["cwd"], tempfile.gettempdir())
         self.assertTrue(seen["capture_output"])
