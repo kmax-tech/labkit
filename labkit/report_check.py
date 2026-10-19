@@ -55,10 +55,14 @@ Every station runs; the blockers are summed at the end. It reads and runs,
 never writes.
 
 `--if-reported` is the gate the agent cannot choose: `claude-hook stop`
-runs it on every changed PROTOCOL-*.md, the stamped pre-commit on every
-staged one, and it holds exactly the protocols whose "Answer to the
-question" cites a run (`finalize.cited_runs`) — the one line that declares
-a result reported, written by `protocol-fill --from-run`. A protocol whose
+runs it on every changed path, the stamped pre-commit on every staged one,
+and it holds every protocol of every area one of those paths lies in
+(`reported_protocols`) whose "Answer to the question" cites a run
+(`finalize.cited_runs`) — the one line that declares a result reported,
+written by `protocol-fill --from-run`. The area, not the protocol alone:
+a script edited after the answer was written back changes what the
+analysis audit saw and what `--check` recomputes, and with the protocol
+untouched both hooks passed it (audit 2026-10-19). A protocol whose
 answer is still open owes nothing here: an exploration ends with no
 reported result, probes or not (third haiku round on 0.99.0: t3 and t5
 reported a probe's number and never called report-check; TODO 2,
@@ -80,7 +84,13 @@ from labkit.audit import AuditError, audited_run
 from labkit.finalize import cited_runs, finalize_area
 from labkit.preflight import area_test_python
 from labkit.protocol_check import check_fields
-from labkit.repo import choose_protocol, layout_root
+from labkit.repo import (
+    area_protocols,
+    choose_protocol,
+    find_area,
+    git_root,
+    layout_root,
+)
 from labkit.runs import read_run_config, unreportable
 from labkit.scope_sha import area_stamp
 
@@ -246,14 +256,27 @@ def report_check(area: Path, protocol: Path | None = None) -> int:
     return findings.report("report-check", "reporting")
 
 
-def if_reported(protocols: list[Path]) -> int:
-    """`report-check` for every protocol whose "Answer to the question" cites
-    a run — the gate at the stop and the commit: a result declared reported
-    is held to the whole chain, a protocol whose answer is still open is
-    skipped (an exploration may end with no reported result). Returns the
-    worst exit code."""
+def reported_protocols(paths: list[Path], repo: Path) -> list[Path]:
+    """Every protocol of every area one of PATHS lies in, each once, in
+    path order: a changed script, run or audit record reopens the area's
+    reported numbers as a changed protocol does. A path under no area
+    (`repo.find_area`, stopping at REPO) contributes nothing."""
+    areas: list[Path] = []
+    for path in paths:
+        area = find_area(path, stop=repo)
+        if area is not None and area not in areas:
+            areas.append(area)
+    return [p for area in sorted(areas) for p in area_protocols(area)]
+
+
+def if_reported(paths: list[Path], repo: Path) -> int:
+    """`report-check` for every protocol of an area one of PATHS touches
+    whose "Answer to the question" cites a run — the gate at the stop and
+    the commit: a result declared reported is held to the whole chain, a
+    protocol whose answer is still open is skipped (an exploration may end
+    with no reported result). Returns the worst exit code."""
     worst = 0
-    for protocol in protocols:
+    for protocol in reported_protocols(paths, repo):
         try:
             text = protocol.read_text(encoding="utf-8")
         except OSError as exc:
@@ -271,7 +294,8 @@ def if_reported(protocols: list[Path]) -> int:
 def main(argv: list[str]) -> int:
     """Command line of `report-check`."""
     if argv and argv[0] == "--if-reported":
-        return if_reported([Path(a) for a in argv[1:]])
+        cwd = Path.cwd()
+        return if_reported([Path(a) for a in argv[1:]], git_root(cwd) or cwd)
     ap = argparse.ArgumentParser(
         prog="report-check", description=(__doc__ or "").split("\n\n")[0]
     )

@@ -159,6 +159,17 @@ def area_protocols(area: Path) -> list[Path]:
     return sorted(area.glob(PROTOCOL_GLOB))
 
 
+def find_area(path: Path, stop: Path | None = None) -> Path | None:
+    """The nearest directory above PATH holding a PROTOCOL-*.md, or None;
+    the walk ends at STOP (the repo root) without leaving it."""
+    for d in path.resolve().parents:
+        if area_protocols(d):
+            return d
+        if stop is not None and d == stop.resolve():
+            return None
+    return None
+
+
 def git_root(path: Path) -> Path | None:
     """The nearest ancestor (or `path`) holding `.git`; None outside a repo."""
     base = path if path.is_dir() else path.parent
@@ -193,6 +204,33 @@ def git_run(
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise GitError(f"git {' '.join(args)} in {cwd}: {exc}") from exc
+
+
+def status_entries(repo: Path, pathspec: tuple[str, ...] = ()) -> list[tuple[str, str]]:
+    """`git status --porcelain` under REPO (PATHSPEC narrows it), untracked
+    files included, as (XY, path) — NUL-separated (`-z`): the text form
+    quotes a name with a non-ASCII character
+    (`"notes/messung/gr\303\266\303\237e.md"`), which was then no file and
+    never checked (audit 2026-10-15). A rename or copy comes as its new path
+    with the old one dropped. Raises RuntimeError when git fails."""
+    r = git_run(
+        ["status", "--porcelain", "-z", "--untracked-files=all", "--", *pathspec],
+        repo,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(f"git status failed in {repo}: {r.stderr.strip()}")
+    entries = r.stdout.split("\0")
+    out: list[tuple[str, str]] = []
+    i = 0
+    while i < len(entries):
+        line = entries[i]
+        i += 1
+        if len(line) < 4:
+            continue
+        if line[0] in "RC":
+            i += 1  # the entry after a rename or copy is its source
+        out.append((line[:2], line[3:]))
+    return out
 
 
 def git(args: list[str], cwd: Path, timeout: float = GIT_TIMEOUT_S) -> str | None:

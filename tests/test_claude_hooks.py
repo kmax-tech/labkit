@@ -460,6 +460,22 @@ class Stop(unittest.TestCase):
         rc, _, err = self._stop()
         self.assertEqual(rc, 0, err)
 
+    def test_a_script_changed_under_a_reported_number_is_sent_back(self):
+        """The answer committed, then a script edited: the protocol is not
+        among the changed files, and the stop hook let it pass (audit
+        2026-10-19)."""
+        self._answer(self.RUN)
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the answer")
+        rc, out, err = self._stop()
+        self.assertEqual((rc, out, err), (0, "", ""))  # nothing changed
+        (self.area / "scripts" / "02_analyze.py").write_text(
+            "print('changed')\n", encoding="utf-8"
+        )
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 2)
+        self.assertIn("no analysis audit saw the area as it is now", err)
+
     def test_a_probes_number_written_back_is_sent_back(self):
         """Third haiku round (t3, t5): measured with long=False, reported."""
         self._run_dir(long=False)

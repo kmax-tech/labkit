@@ -9,7 +9,8 @@ before, the scaffolder in the house dotfiles wrote its own copy once, and
 existing repos never got a newer one).
 
     .githooks/pre-commit     protocol-check on staged protocols; report-check
-                             --if-reported on a written-back answer (the
+                             --if-reported on every staged path — a
+                             written-back answer in an area it touches (the
                              whole release check, finalize among its
                              stations); claude-hook undecided on the staged
                              paths; the
@@ -69,13 +70,16 @@ if [ -n "$staged_protocols" ]; then
     fi
 fi
 
-# 2. A number written back: a staged protocol whose answer cites a run goes
-#    through report-check — the whole release check at every cost tier
-#    (finalize clean, a full run, a decided analysis audit, the numbers
-#    recomputed); an answer still open owes nothing here.
-if [ -n "$staged_protocols" ] && [ -x .venv/bin/report-check ]; then
+# 2. A number written back: every protocol of an area a staged file touches
+#    whose answer cites a run goes through report-check — the whole release
+#    check at every cost tier (finalize clean, a full run, a decided
+#    analysis audit, the numbers recomputed); an answer still open owes
+#    nothing here. Every staged path, not only a protocol: a script changed
+#    under a reported number reopens it (audit 2026-10-19).
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+if [ -n "$staged" ] && [ -x .venv/bin/report-check ]; then
     # shellcheck disable=SC2086
-    if ! .venv/bin/report-check --if-reported $staged_protocols; then
+    if ! .venv/bin/report-check --if-reported $staged; then
         echo ""
         echo "pre-commit: report-check reports blockers for a written-back number (see above)."
         fail=1
@@ -85,7 +89,6 @@ fi
 # 2b. An undecided audit BLOCKER in an area a staged file touches: the
 #     stop hook's rule at the commit (third haiku round on 0.99.0: audited,
 #     read, left open, measured with long=False, reported).
-staged=$(git diff --cached --name-only --diff-filter=ACMR)
 if [ -n "$staged" ] && [ -x .venv/bin/claude-hook ]; then
     # shellcheck disable=SC2086
     if ! .venv/bin/claude-hook undecided $staged; then

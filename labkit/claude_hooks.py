@@ -45,9 +45,11 @@ post-change
     command.
 
 stop
-    Before the agent ends its turn: every changed PROTOCOL-*.md (git status)
-    whose "Answer to the question" cites a run goes through `report-check
-    --if-reported` — the whole release check at every cost tier: the run
+    Before the agent ends its turn: every protocol of an area a changed
+    path (git status) lies in whose "Answer to the question" cites a run
+    goes through `report-check --if-reported` — a script edited under a
+    reported number reopens it (audit 2026-10-19) — the whole release
+    check at every cost tier: the run
     bound to the protocol and cited, a full run (no probe, no acknowledged
     run), a decided analysis audit of code, promises and that run, the
     numbers recomputed by `02_analyze.py --check`; finalize is one of its
@@ -111,7 +113,13 @@ from labkit import (
     report_check,
     runs,
 )
-from labkit.repo import PROTOCOL_NAME, area_protocols, git_run
+from labkit.repo import (
+    PROTOCOL_NAME,
+    area_protocols,
+    find_area,
+    git_run,
+    status_entries,
+)
 from labkit.scope_sha import file_digest
 
 # The template's throwaway stages: none of them opens a run, and the probe
@@ -162,16 +170,6 @@ def _capture(fn: Callable[..., int], *args: object) -> tuple[int, str]:
 
 
 # ---------------------------------------------------------------- pre-run
-
-
-def find_area(script: Path, stop: Path | None = None) -> Path | None:
-    """The nearest directory above `script` holding a PROTOCOL-*.md."""
-    for d in script.resolve().parents:
-        if area_protocols(d):
-            return d
-        if stop is not None and d == stop.resolve():
-            return None
-    return None
 
 
 def executed_py(command: str) -> list[str]:
@@ -360,27 +358,9 @@ def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
 
 
 def _git_changed(repo: Path) -> list[Path]:
-    """Every path git sees as changed, untracked included — NUL-separated
-    (`-z`): the text form quotes a name with a non-ASCII character
-    (`"notes/messung/gr\303\266\303\237e.md"`), which was then no file and
-    never checked (audit 2026-10-15). A rename comes as new path, then old."""
-    r = git_run(["status", "--porcelain", "-z", "--untracked-files=all"], repo)
-    if r.returncode != 0:
-        raise RuntimeError(f"git status failed in {repo}: {r.stderr.strip()}")
-    entries = r.stdout.split("\0")
-    out = []
-    i = 0
-    while i < len(entries):
-        line = entries[i]
-        i += 1
-        if len(line) < 4:
-            continue
-        if line[0] in "RC":
-            i += 1  # the entry after a rename or copy is its source
-        if line[1] == "D" or line[0] == "D":
-            continue
-        out.append(repo / line[3:])
-    return out
+    """Every path git sees as changed, untracked included, deletions left
+    out (`repo.status_entries`)."""
+    return [repo / path for xy, path in status_entries(repo) if "D" not in xy]
 
 
 def wants_check(path: Path) -> str | None:
@@ -584,12 +564,11 @@ def stop(event: dict) -> int:
             "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(undecided),
             file=sys.stderr,
         )
-    protocols = [
-        c.resolve() for c in changed if c.is_file() and wants_check(c) == "protocol"
-    ]
-    if not protocols:
+    if not changed:
         return 2 if undecided else 0
-    rc, out = _capture(report_check.if_reported, protocols)
+    # every changed path, not only a protocol: a script edited after the
+    # answer was written back reopens the area's reported numbers
+    rc, out = _capture(report_check.if_reported, changed, repo)
     if rc != 0:
         print(
             "report-check reports blockers for a number written back in this "

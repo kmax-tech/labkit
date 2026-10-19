@@ -28,8 +28,11 @@ pins (`requirements.txt` / `requirements.lock`).
   reported is the run_id in the protocol's "Answer to the question"
   (`protocol-fill --from-run` writes it, `finalize.cited_runs` reads it) —
   the binding already expressed the occasion, so nothing new is declared.
-  Every changed (stop) or staged (commit) protocol whose answer cites a run
-  goes through the whole check above; a protocol whose answer is still
+  Every protocol of an area a changed (stop) or staged (commit) path
+  touches whose answer cites a run goes through the whole check above
+  (`report_check.reported_protocols` — a script edited under a reported
+  number reopens it, with the protocol untouched both hooks passed it,
+  audit 2026-10-19); a protocol whose answer is still
   open owes nothing, so an exploration ends with "no reported result",
   probes in `runs/` or not. Third haiku round on 0.99.0 (labkit-paper
   area 09): t3 and t5 reported a probe's number and no agent called

@@ -176,6 +176,44 @@ class RepoOwnSteps(unittest.TestCase):
         with self.assertRaises(SystemExit):
             install_hooks.install(repo)
 
+    def test_the_pre_commit_hands_report_check_every_staged_path(self):
+        """Not only the staged protocols: a script staged under a reported
+        number reopens it (audit 2026-10-19). A shim records the call."""
+        repo = git_repo()
+        install_hooks.install(repo)
+        shim = repo / ".venv" / "bin"
+        shim.mkdir(parents=True)
+        (shim / "report-check").write_text(
+            '#!/bin/sh\necho "$@" > report-check.argv\nexit 0\n'
+        )
+        (shim / "report-check").chmod(0o755)
+        (repo / "scripts").mkdir()
+        (repo / "scripts" / "02_analyze.py").write_text("print('x')\n")
+        subprocess.run(["git", "-C", str(repo), "add", "scripts"], check=True)
+        r = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@t",
+                "commit",
+                "-q",
+                "-m",
+                "x",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=repo,
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(
+            (repo / "report-check.argv").read_text().split(),
+            ["--if-reported", "scripts/02_analyze.py"],
+        )
+
     def test_the_local_hook_runs_and_its_failure_blocks_the_commit(self):
         repo = git_repo()
         install_hooks.install(repo)

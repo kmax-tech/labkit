@@ -329,11 +329,28 @@ class IfReported(unittest.TestCase):
             )
         return area
 
-    def _gate(self, area: Path) -> tuple[int, str]:
+    def _gate(self, area: Path, *paths: Path) -> tuple[int, str]:
+        """The gate over PATHS — the protocol itself when none are named."""
         buf = io.StringIO()
+        paths = paths or (area / "PROTOCOL-x.md",)
         with contextlib.redirect_stdout(buf):
-            code = report_check.main(["--if-reported", str(area / "PROTOCOL-x.md")])
+            code = report_check.main(["--if-reported", *map(str, paths)])
         return code, buf.getvalue()
+
+    def test_a_changed_script_reopens_the_areas_reported_number(self):
+        """The protocol untouched, a script under it edited: the analysis
+        audit saw other code, and both hooks passed it (audit 2026-10-19)."""
+        area = self._area(f"AUC 0.91 ({self.RUN})")
+        script = area / "scripts" / "02_analyze.py"
+        code, out = self._gate(area, script)
+        self.assertEqual(code, 0, out)  # the twin: unchanged, the gate holds
+        script.write_text("print('changed')\n", encoding="utf-8")
+        code, out = self._gate(area, script)
+        self.assertEqual(code, 1, out)
+        self.assertIn("no analysis audit saw the area as it is now", out)
+        # a path under no area, and a path in another area, owe nothing here
+        code, out = self._gate(area, area.parent.parent / "README.md")
+        self.assertEqual((code, out), (0, ""))
 
     def test_an_open_answer_owes_nothing_even_over_a_probe(self):
         """The exploration: a probe in runs/, the answer still the stamp's."""
