@@ -57,6 +57,23 @@ pins (`requirements.txt` / `requirements.lock`).
   estimator skeleton** (until 0.99.0: the prompt skeleton with
   `TODO-alias`). A bare `--model` still stamps the prompt skeleton; at
   seconds without a model the counting skeleton stays.
+- **The check is one command at every tier: `scripts/02_analyze.py
+  --check`.** The counting skeleton (`labkit-init exp --cost seconds`
+  without a model) stamps `02_analyze.py` beside `01_measure.py`
+  (`analyze-quick-script.py.template`): it loads the measure script and
+  holds metrics.json and the protocol's Answer line to the kept rows
+  through `recheck.holds` — the one recheck logic, no second formula.
+  Until 0.99.0 the count carried the check inside `01_measure.py --check`
+  and stamped no `02_analyze.py`; report-check's station 4 demanded the
+  analysis script and refused every correct count, so `protocol-fill
+  --from-run` never adopted one (audit 2026-10-19). Now station 4, the
+  stop hook, the pre-commit, the README route and the stamped `AGENTS.md`
+  name the same command for every skeleton, and the standard's own
+  wording (LAB-041 Generate numbers, don't retype them: one analysis
+  script per area) holds at seconds as well. An area stamped at seconds
+  by 0.99.0 or earlier owes the script: the gap names the template to
+  stamp beside its measure script. A check that prints a byte no codec
+  reads is a named gap, not a traceback.
 
 ### Added
 
@@ -95,14 +112,6 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
-- **`report-check` runs the counting skeleton's own check at seconds.**
-  `labkit-init exp --cost seconds` without a model stamps `01_measure.py`
-  with the `--check` inside and no `02_analyze.py`; station 4 demanded the
-  analysis script and refused every correct count, so `protocol-fill
-  --from-run` never adopted one (audit 2026-10-19). `report_check.check_script`
-  names the script: `02_analyze.py` where the area has one, at seconds
-  otherwise `01_measure.py`. A check that prints a byte no codec reads is
-  a named gap, not a traceback.
 - **`protocol-fill --from-run` puts the protocol back on any failed check.**
   `adopt` restored the file only on report-check's blocker exit; an
   exception out of the check left the unchecked declaration standing. Now

@@ -182,7 +182,18 @@ class Exp(unittest.TestCase):
         self.assertNotIn("- **Limits:**", proto)
         self.assertNotIn("- **Next step:**", proto)
         self.assertFalse((area / "scripts" / "00_prepare.py").exists())
+        # the one public recheck of every skeleton: the count's 02_analyze.py
+        # imports evaluate_rows from 01_measure.py and carries the --check
+        # (until 0.99.0 the check sat inside 01_measure.py, and report-check
+        # asked for a file the skeleton never stamped, audit 2026-10-19)
+        analyze = (area / "scripts" / "02_analyze.py").read_text(encoding="utf-8")
+        self.assertIn('"--check"', analyze)
+        self.assertIn("measure.evaluate_rows(rows, ids)", analyze)
+        self.assertIn('AREA / "scripts" / "01_measure.py"', analyze)
         script = (area / "scripts" / "01_measure.py").read_text(encoding="utf-8")
+        # one home for the check: the count's 01_measure.py only measures
+        self.assertNotIn('add_argument("--check"', script)
+        self.assertNotIn("recheck.holds", script)
         self.assertIn(
             "def evaluate_rows(", script
         )  # the name the README route and finalize expect

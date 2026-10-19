@@ -2,13 +2,13 @@
 """<name>: one question, one number — kept through runlog, rechecked from its rows.
 
     ../../.venv/bin/python scripts/01_measure.py            # count, keep, print the number + run_id
-    ../../.venv/bin/python scripts/01_measure.py --check    # recompute from the kept rows; hold metrics.json and the protocol to it
+    ../../.venv/bin/python scripts/02_analyze.py --check    # recompute from the kept rows; hold metrics.json and the protocol to it
 
 cost = "seconds" (the protocol head says so) — no freeze, no audit before the run,
 the run itself is the instrument check; the one analysis audit comes when
 the number is promoted or steers a decision (LAB-017 The number of audits follows the cost tier). The number is produced here, never
 retyped (LAB-041 Generate numbers, don't retype them): the protocol's Result line cites it with the run_id, and
-`--check` holds that line to the run.
+`scripts/02_analyze.py --check` (stamped beside this script) holds that line to the run.
 
 Fill the constants and the three TODOs: expected_ids(), rows(), evaluate_rows().
 Everything else stays — `visible()` is the one reader of a directory, the
@@ -23,7 +23,7 @@ import argparse
 import json
 from pathlib import Path
 
-from labkit import recheck, runlog
+from labkit import runlog
 
 AREA = Path(__file__).resolve().parent.parent
 REPO = AREA.parent.parent
@@ -59,7 +59,7 @@ def evaluate_rows(items: list[dict], ids: list[str]) -> dict:
     """TODO: the number(s) from the rows, over the ids SOURCE lists — and,
     only if the protocol registers ids (a model in the loop), one key per id
     (`c1_pass`); a plain count registers none. Every key lands in
-    metrics.json, and `--check` demands each verbatim in the protocol's
+    metrics.json, and `02_analyze.py --check` demands each verbatim in the protocol's
     "Answer to the question" line — keep the dict to what that line carries."""
     if not ids:
         raise ValueError("evaluate_rows(): SOURCE lists no ids — refusing a number over nothing")
@@ -69,18 +69,8 @@ def evaluate_rows(items: list[dict], ids: list[str]) -> dict:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
-    ap.add_argument("--check", action="store_true",
-                    help="recompute from OUT and hold metrics.json and the protocol to it")
-    args = ap.parse_args()
+    argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0]).parse_args()
     ids = expected_ids()
-    if args.check:
-        v = recheck.holds(area=AREA, out=OUT, recompute=lambda rs: evaluate_rows(rs, ids),
-                          note=PROTOCOL)
-        print(f"check: run {v.run_id} — {v.keys_compared} keys identical, "
-              f"{PROTOCOL.name} carries them and the run_id"
-              + (f"; grown since the run: {v.grown}" if v.grown else ""))
-        return
     items = rows(ids)
     OUT.parent.mkdir(exist_ok=True)
     # data= freezes every input the number reads (sha and rows; a directory:

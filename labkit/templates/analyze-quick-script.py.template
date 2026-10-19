@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""Hold the counted number to its own rows — one formula, imported, never copied.
+
+    ../../.venv/bin/python scripts/02_analyze.py            # the number, recomputed from OUT
+    ../../.venv/bin/python scripts/02_analyze.py --check    # pin OUT to the run, recompute, hold the protocol to it
+
+The one public recheck of every area (`report-check` runs it when the number
+is written back, LAB-041 Generate numbers, don't retype them): `labkit.recheck.holds`
+pins the output file to the run's recorded sha, recomputes `metrics.json`
+from the kept rows and holds the protocol to every number and the run_id.
+The formula is `01_measure.evaluate_rows`, imported by path under a unique
+name — a second copy here would be a second truth of the number.
+"""
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+from labkit import recheck
+
+AREA = Path(__file__).resolve().parent.parent
+_spec = importlib.util.spec_from_file_location("measure_<name>", AREA / "scripts" / "01_measure.py")
+assert _spec is not None and _spec.loader is not None
+measure = importlib.util.module_from_spec(_spec)
+sys.modules[_spec.name] = measure
+_spec.loader.exec_module(measure)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
+    ap.add_argument("--check", action="store_true",
+                    help="pin OUT to the run, recompute from its rows, hold the protocol to it")
+    args = ap.parse_args()
+    ids = measure.expected_ids()   # the denominator comes from the source, never from the rows
+    if args.check:
+        # the numbers as protocol-fill --from-run writes them (recheck.plain_numbers)
+        v = recheck.holds(area=AREA, out=measure.OUT, recompute=lambda rows: measure.evaluate_rows(rows, ids),
+                          note=measure.PROTOCOL)
+        print(f"check: run {v.run_id} — {v.keys_compared} keys identical, "
+              f"{measure.PROTOCOL.name} carries them and the run_id"
+              + (f"; grown since the run: {v.grown}" if v.grown else ""))
+        return
+    print(json.dumps(measure.evaluate_rows(recheck.rows_of(measure.OUT), ids), indent=1))
+
+
+if __name__ == "__main__":
+    main()

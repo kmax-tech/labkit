@@ -237,40 +237,33 @@ class ReportCheck(unittest.TestCase):
     def test_the_check_runs_the_areas_script(self):
         area = self._area()
         repo = area.parent.parent
-        self.assertIsNone(report_check.check_analysis_script(area, repo, False))
+        self.assertIsNone(report_check.check_analysis_script(area, repo))
         (area / "scripts" / "02_analyze.py").write_text(
             "import sys\nprint('recheck: numbers not in PROTOCOL')\nsys.exit(1)\n",
             encoding="utf-8",
         )
-        failed = report_check.check_analysis_script(area, repo, False) or ""
+        failed = report_check.check_analysis_script(area, repo) or ""
         self.assertIn("exits 1", failed)
         self.assertIn("numbers not in PROTOCOL", failed)
 
-    def test_at_seconds_the_counting_skeletons_check_is_the_check(self):
-        """The counting skeleton (`labkit-init exp --cost seconds`, no model)
-        stamps `01_measure.py` with the `--check` inside and no analysis
-        script; station 4 demanded `02_analyze.py` there and refused every
-        correct count (audit 2026-10-19)."""
-        area = self._area(cost="seconds", frozen=False)
-        repo = area.parent.parent
-        (area / "scripts" / "02_analyze.py").unlink()
-        (area / "scripts" / "01_measure.py").write_text(
-            "print('ok')\n", encoding="utf-8"
-        )
-        self.assertEqual(
-            report_check.check_script(area, True), Path("scripts/01_measure.py")
-        )
-        self.assertIsNone(report_check.check_analysis_script(area, repo, True))
-        self._audited(area)
-        code, out = self._run(area, check=None)
-        self.assertEqual(code, 0, out)
-        # the twin: at minutes the analysis script stays owed
-        failed = report_check.check_analysis_script(area, repo, False) or ""
-        self.assertIn("no scripts/02_analyze.py —", failed)
-        # neither script: both named
-        (area / "scripts" / "01_measure.py").unlink()
-        failed = report_check.check_analysis_script(area, repo, True) or ""
-        self.assertIn("no scripts/02_analyze.py and no scripts/01_measure.py", failed)
+    def test_the_check_is_one_command_at_every_tier(self):
+        """The counting skeleton carried its check inside `01_measure.py` and
+        stamped no analysis script; station 4 asked for `02_analyze.py` and
+        refused every correct count (audit 2026-10-19). Now every skeleton
+        stamps `02_analyze.py` (`standard_contract.CHECK_SCRIPT`), and the
+        station names the one it is missing — at seconds as at minutes."""
+        for cost in ("seconds", "minutes"):
+            with self.subTest(cost):
+                area = self._area(cost=cost, frozen=cost != "seconds")
+                repo = area.parent.parent
+                self.assertIsNone(report_check.check_analysis_script(area, repo))
+                (area / "scripts" / "02_analyze.py").unlink()
+                (area / "scripts" / "01_measure.py").write_text(
+                    "print('ok')\n", encoding="utf-8"
+                )
+                failed = report_check.check_analysis_script(area, repo) or ""
+                self.assertIn("no scripts/02_analyze.py —", failed)
+                self.assertIn("analyze-quick-script.py.template", failed)
 
     def test_a_check_printing_bytes_no_codec_reads_is_a_named_gap(self):
         """`protocol-fill --from-run` ran this inside `adopt`; a
@@ -281,7 +274,7 @@ class ReportCheck(unittest.TestCase):
             "import sys\nsys.stderr.buffer.write(b'bad \\xff byte\\n')\nsys.exit(1)\n",
             encoding="utf-8",
         )
-        failed = report_check.check_analysis_script(area, area.parent.parent, False)
+        failed = report_check.check_analysis_script(area, area.parent.parent)
         self.assertIn("exits 1: bad \ufffd byte", failed or "")
 
 

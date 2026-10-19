@@ -599,10 +599,10 @@ def area_readme(nn: str, slug: str, skeleton: bool) -> str:
         if skeleton
         else "**What `evaluate_rows()` returns.** The number under `METRIC_KEY` of\n"
         "`scripts/01_measure.py`; a count registers no ids. The formula lives once, there;\n"
-        "`--check` and the test call it, and `finalize` holds the protocol's Answer line\n"
-        "to the run's `metrics.json`."
+        "`02_analyze.py --check` and the test call it, and `finalize` holds the protocol's\n"
+        "Answer line to the run's `metrics.json`."
     )
-    recheck = "`02_analyze.py --check`" if skeleton else "`01_measure.py --check`"
+    recheck = "`02_analyze.py --check`"  # the one public recheck of every skeleton
     return f"""# Experiment {nn}: {slug}
 
 *Self-contained: data, scripts, output and this description live here.*
@@ -682,7 +682,14 @@ def stamp_scripts(
     (area / "scripts").mkdir(exist_ok=True)
     alias = model if isinstance(model, str) else "TODO-alias"
     if quick and not model:
-        scripts = (("measure-quick-script.py.template", "01_measure.py"),)
+        # the count: the measurement, and the one public recheck every area has
+        # (`02_analyze.py --check`; until 0.99.0 the count carried its check
+        # inside 01_measure.py and report-check asked for a file the skeleton
+        # never stamped, audit 2026-10-19)
+        scripts = (
+            ("measure-quick-script.py.template", "01_measure.py"),
+            ("analyze-quick-script.py.template", "02_analyze.py"),
+        )
         test = "test-quick.py.template"
     elif not model:
         # minutes/hours without a model: the instrument is an estimator (fit,
@@ -831,8 +838,9 @@ Next (cost = "seconds" — no freeze, no audit per run, the first run is the pro
   1. PROTOCOL-{slug}.md: fill the seconds cut — `type` in the head, then question, unit,
      {"criterion, admissibility condition, prompt, null condition" if model else "data, exclusions — no criterion, no promise table: a count has no bar to clear"}; `protocol-check --contract` names the labels.
   2. scripts/01_measure.py: {"PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run" if model else "expected_ids(), rows(), evaluate_rows()"}.
-  3. git add + commit, then scripts/01_measure.py, then `protocol-fill PROTOCOL-{slug}.md --from-run <run_id>`.
-  4. finalize {rel} checks the provenance; the agent audit comes when the number is promoted."""
+  3. git add + commit, then scripts/01_measure.py; `finalize {rel}` checks the provenance.
+  4. the analysis audit (`labkit-audit {rel} --mode analysis`), decided; then `protocol-fill PROTOCOL-{slug}.md --from-run <run_id>`
+     adopts the number: it runs report-check, whose last station is scripts/02_analyze.py --check."""
     test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
     if not model:
         return f"""
