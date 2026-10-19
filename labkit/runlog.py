@@ -86,6 +86,7 @@ from types import TracebackType
 from collections.abc import Iterator
 
 from labkit import batch, console, findings, promises, protocol_block, repo
+from labkit.standard_contract import PREFLIGHT_AUDIT, lane
 from labkit.scope_sha import (
     area_stamp,
     DIGEST_CHARS,
@@ -869,12 +870,13 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
             f"{path.name}: the [protocol] id is not stamped — a full run "
             f"needs a bound protocol (`labkit-init exp` stamps it)"
         ]
-    if head.cost == "seconds":
+    # the freeze or the registration: the lane's answer (`standard_contract`)
+    if lane(head.cost).registration:
         missing = seconds_registration_missing(text)
         if not missing:
             return []
         return [
-            f'{path.name}: `cost = "seconds"`, but the registration is not '
+            f'{path.name}: `cost = "{head.cost}"`, but the registration is not '
             f"written: {', '.join(missing)} still empty or a placeholder — at "
             f"seconds the gate is the question (with a model also criterion · "
             f"admissibility condition), not the freeze (LAB-003 No run without an intent paragraph, LAB-017 The number of audits follows the cost tier)"
@@ -914,7 +916,7 @@ def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None
     not for one nobody started. The attempt must name the code as it stamps
     now and, under a protocol, the promise block as it reads now, and its
     call must have had the default timeout at least (`findings.ATTEMPT_TIMEOUT_S`)."""
-    if bound.head is not None and bound.head.cost == "seconds":
+    if bound.head is not None and PREFLIGHT_AUDIT not in lane(bound.head.cost).audits:
         return None
     try:
         sha = area_stamp(base_dir)[0]
@@ -1162,15 +1164,15 @@ class Run:
         refusal = _registration_refusal(bound, _block, self._config, long)
         if refusal:
             raise SystemExit(f"runlog: {refusal}")
-        _short = self._cost_tier == "seconds"
         # Detach gate (scar 2026-08-13, twice in one evening): a long run
         # started in an agent's foreground shell dies with the harness's
         # tool timeout — the kill takes the whole process group, run and lock
         # with it. `long=True` is the script's own declaration (the --full
         # stage sets it); the gate refuses the foreground start BEFORE any
-        # work. A run of seconds (`cost = "seconds"`) cannot meet that
-        # timeout and runs in the foreground (2026-10-05).
-        limit = None if (_short or not long) else foreground_timeout()
+        # work. Which lane may start in the foreground is the contract's
+        # answer: a run of seconds cannot meet that timeout (2026-10-05).
+        foreground = lane(self._cost_tier).foreground
+        limit = None if (foreground or not long) else foreground_timeout()
         if limit is not None and os.environ.get("LABKIT_DETACHED") != "1":
             raise SystemExit(
                 f"runlog: this run declares long=True and sits in a foreground "

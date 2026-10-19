@@ -47,12 +47,16 @@ def doctrine_modules() -> set[str]:
 #: core → doctrine imports that stand today, each a piece of doctrine inside
 #: the core, listed by name until it moves (2026-10-15). The test asks for
 #: exactly this set: a new crossing fails, and so does a removed one left
-#: standing here — the list only shrinks.
+#: standing here — the list only shrinks, with one kind of exception: a
+#: rule the core had copied (`cost == "seconds"`) becoming a visible import
+#: of `standard_contract` is the same crossing made explicit, not a new one.
 KNOWN_CROSSINGS = {
-    # the freeze gate inside runlog: audit coverage (LAB-015) and the seconds
-    # registration — doctrine that refuses a run, sitting in the run writer
+    # the freeze gate inside runlog: audit coverage (LAB-015), the seconds
+    # registration and which lane owes the freeze, the audit or the foreground
+    # — doctrine that refuses a run, sitting in the run writer
     ("runlog", "findings"),  # findings.audit_coverage
     ("runlog", "protocol_check"),  # protocol_check.seconds_registration_missing
+    ("runlog", "standard_contract"),  # standard_contract.lane (was a copied rule)
     # the field catalogue and a rule's text in the code check — the boundary
     # case: the TOML head is core, the prose fields are doctrine
     ("code_check", "protocol_check"),  # protocol_check.fields
