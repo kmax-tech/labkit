@@ -243,11 +243,13 @@ Offen, eigener Auftrag (Rollout):
 
 1. Release mit Breaking-Eintrag (`just release X.Y.Z`); bis zum Push des
    Tags scheitert der `pip install` der Usability-Sonde.
-2. dotfiles ziehen nach: `~/.claude/CLAUDE.md` nennt
-   `python -m labkit.rules show LAB-nnn` (jetzt
-   `python -m labkit.formats.rules`); `resources/tools/local-init.py` und
-   `skills/research-repo-init/SKILL.md` verweisen auf alte Pfade der
-   Begleitdateien.
+2. dotfiles: was den Quellstand liest, ist **nachgezogen 2026-10-19**
+   (dotfiles `e86bc11`: `local-init.py`, Pre-commit-Hook, `check-config`,
+   Skill `research-repo-init`, globale `CLAUDE.md` mit beiden Formen je
+   Pin). Offen mit dem Release: `CLAUDE.md.template`,
+   `arbeitsstandard.md.template` und der `thesis-starter` (Imports,
+   `-m labkit.protocol_check`) beschreiben Repos mit gepinntem labkit und
+   ziehen erst mit dem neuen Pin um.
 3. Lab- und Studi-Repos: Imports umschreiben, wenn sie den Pin heben
    (`from labkit import runlog` → `from labkit.run import runlog`).
 4. Erwägen: ein Konsolenbefehl `labkit-rules` statt des längeren
