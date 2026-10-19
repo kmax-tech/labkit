@@ -103,6 +103,10 @@ class Findings:
         if self._tell is not None:
             self._tell(text)
 
+    def header(self, title: str) -> None:
+        """A station's header line, told like a note."""
+        self.note(f"── {title} ──")
+
     def take(self, finding: GateFinding) -> None:
         """Keep a finding and tell it."""
         self.found.append(finding)

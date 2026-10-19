@@ -203,6 +203,44 @@ class TestPreflight(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("HEAD (must): no [protocol] table", out)
 
+    def test_an_unreadable_head_ends_before_every_later_station(self):
+        """The one early end: the later stations would read a head that is
+        not there. The blocker is told, the summary follows, nothing else."""
+        prose = "# Experiment protocol: x\n\n- **Standard:** 0.16\n" + BODY
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d, protocol_text=prose)
+            code, out = _run_preflight(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn("BLOCKER: HEAD (must)", out)
+        for station in (
+            "── cost tier ──",
+            "── audit findings ──",
+            "── code-check",
+            "── tests ──",
+        ):
+            self.assertNotIn(station, out)
+        self.assertIn("preflight: 1 blocker(s), 0 warning(s)", out)
+
+    def test_any_other_blocker_lets_the_later_stations_run(self):
+        """A must gap in station 1 is a blocker, and stations 2–8 still run
+        and tell what they found — only the summary ends the gate."""
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d, protocol_text=_protocol(id="<protocol-id>"))
+            code, out = _run_preflight(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn("BLOCKER: MISSING (must): [protocol] id", out)
+        for station in (
+            "── cost tier ──",
+            "── audit findings ──",
+            "── code-check",
+            "── scope-sha ──",
+            "── working tree ──",
+            "── hooks ──",
+            "── tests ──",
+        ):
+            self.assertIn(station, out)
+        self.assertIn("WARNING: no tests/test_", out)  # station 8 found its own
+
     def test_dirty_tree_is_a_warning_not_a_blocker(self):
         with tempfile.TemporaryDirectory() as d:
             area, _ = _area(d)

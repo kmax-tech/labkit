@@ -682,11 +682,6 @@ def report(findings: Findings) -> int:
 NO_RUN = "  no completed run to check"
 
 
-def header(findings: Findings, title: str) -> None:
-    """Tell a station's header line through the gate's channel."""
-    findings.note(f"── {title} ──")
-
-
 def finalize_area(
     area: Path, protocol: Path | None = None, findings: Findings | None = None
 ) -> int:
@@ -734,26 +729,26 @@ def finalize_area(
         return 2
 
     # 1. completion — the run every later step examines
-    header(findings, f"completion: {chosen.name}")
+    findings.header(f"completion: {chosen.name}")
     measurement_run = check_completion(findings, area, text, head.id)
 
     # 2. intent-check — always
-    header(findings, "intent-check")
+    findings.header("intent-check")
     check_intent_keys_in_metrics(findings, chosen, text, measurement_run)
 
     # 3. declared scopes — only with a run
-    header(findings, "declared scopes")
+    findings.header("declared scopes")
     if measurement_run is None:
         findings.note(NO_RUN)
     else:
         check_declared_scopes(findings, area, measurement_run, text)
 
     # 4. open fields — always
-    header(findings, f"open fields: {chosen.name}")
+    findings.header(f"open fields: {chosen.name}")
     check_open_fields(findings, chosen, text, head)
 
     # 5. provenance — where the lane owes it (seconds), and only with a run
-    header(findings, "frozen source and tracked files")
+    findings.header("frozen source and tracked files")
     if not lane(head.cost).provenance:
         findings.note(
             f"  n/a — protocol cost is {head.cost!r} (the agent audit covers provenance there)"
@@ -764,18 +759,18 @@ def finalize_area(
         check_provenance(findings, area, measurement_run)
 
     # 6. area tests — always
-    header(findings, "area tests")
+    findings.header("area tests")
     check_area_tests(findings, area)
 
     # 7. criterion n — only with a run
-    header(findings, "criterion n")
+    findings.header("criterion n")
     if measurement_run is None:
         findings.note(NO_RUN)
     else:
         check_criterion_n(findings, measurement_run)
 
     # 8. audit findings — always
-    header(findings, "audit findings")
+    findings.header("audit findings")
     check_open_audit_findings(findings, area)
 
     return report(findings)  # 1 if any step found a blocker, else 0
