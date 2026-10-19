@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import code_check
+from labkit.checks import code_check
 from labkit.formats import repo
 
 

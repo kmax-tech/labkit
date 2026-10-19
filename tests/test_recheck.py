@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from protocol_fixture import PID, head  # noqa: E402
 
-from labkit import recheck  # noqa: E402
+from labkit.checks import recheck  # noqa: E402
 
 ROWS = [{"case": "a", "n": 4}, {"case": "b", "n": 3}]
 

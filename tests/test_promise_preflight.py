@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.code_check import check_intent_ids  # noqa: E402
+from labkit.checks.code_check import check_intent_ids  # noqa: E402
 
 SCRIPT = """def evaluate(rows):
     macro = 0.7

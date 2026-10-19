@@ -64,10 +64,10 @@
       "options": [
         "labkit.audit",
         "labkit.calltree",
-        "labkit.code_check",
+        "labkit.checks.code_check",
         "labkit.finalize",
-        "labkit.intent_check",
-        "labkit.notes_check",
+        "labkit.checks.intent_check",
+        "labkit.checks.notes_check",
         "labkit.params",
         "labkit.preflight",
         "labkit.formats.protocol_check",

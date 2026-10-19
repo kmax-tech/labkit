@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import intent_check, recheck  # noqa: E402
+from labkit.checks import intent_check, recheck  # noqa: E402
 from labkit.run import runlog  # noqa: E402
 from labkit.formats import promises  # noqa: E402
 from protocol_fixture import head  # noqa: E402

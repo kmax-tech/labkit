@@ -17,7 +17,8 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit import PACKAGE_DIR, code_check, protocol_fill  # noqa: E402
+from labkit import PACKAGE_DIR, protocol_fill  # noqa: E402
+from labkit.checks import code_check  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 
@@ -364,7 +365,7 @@ class TestFromRun(unittest.TestCase):
         return area
 
     def test_answer_result_and_runs_line_come_from_the_run(self):
-        from labkit import recheck
+        from labkit.checks import recheck
 
         area = self._area(
             {

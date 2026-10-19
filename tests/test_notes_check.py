@@ -10,18 +10,11 @@ a limitation blockquote BEFORE the meta line, and a kindless head.
 """
 
 import contextlib
-import importlib.util
 import io
 import unittest
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
-CHECKER = REPO / "labkit" / "notes_check.py"
-
-spec = importlib.util.spec_from_file_location("notes_check", CHECKER)
-assert spec is not None and spec.loader is not None
-notes_check = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(notes_check)
+from labkit.checks import notes_check
 
 
 # Verbatim head of counterstory-messprotokoll.md (counterfactual-worlds),
@@ -92,13 +85,17 @@ RELATED_NO_KEY = """\
 
 class TestMetaParagraph(unittest.TestCase):
     def test_finds_wrapped_meta(self):
-        n, para = notes_check.meta_paragraph(STAMPED_IMPLEMENTED)
+        found = notes_check.meta_paragraph(STAMPED_IMPLEMENTED)
+        assert found is not None
+        n, para = found
         self.assertEqual(n, 3)
         self.assertIn("Instrument — implementiert", para)
         self.assertIn("distanz-definition-kalibrierung", para)
 
     def test_blockquote_before_meta_is_skipped(self):
-        n, para = notes_check.meta_paragraph(BLOCKQUOTE_FIRST)
+        found = notes_check.meta_paragraph(BLOCKQUOTE_FIRST)
+        assert found is not None
+        n, para = found
         self.assertEqual(n, 6)
         self.assertIn("Instrument — implementiert", para)
 

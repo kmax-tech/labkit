@@ -5,7 +5,7 @@
     ../../.venv/bin/python scripts/02_analyze.py --check    # pin OUT to the run, recompute, hold the protocol to it
 
 The one public recheck of every area (`report-check` runs it when the number
-is written back, LAB-041 Generate numbers, don't retype them): `labkit.recheck.holds`
+is written back, LAB-041 Generate numbers, don't retype them): `labkit.checks.recheck.holds`
 pins the output file to the run's recorded sha, recomputes `metrics.json`
 from the kept rows and holds the protocol to every number and the run_id.
 The formula is `01_measure.evaluate_rows`, imported by path under a unique
@@ -19,7 +19,7 @@ import json
 import sys
 from pathlib import Path
 
-from labkit import recheck
+from labkit.checks import recheck
 
 AREA = Path(__file__).resolve().parent.parent
 _spec = importlib.util.spec_from_file_location("measure_<name>", AREA / "scripts" / "01_measure.py")

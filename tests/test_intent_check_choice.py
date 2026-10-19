@@ -19,7 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit import intent_check  # noqa: E402
+from labkit.checks import intent_check  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 
 CRITERION = "- **Success / failure criterion:** [C1] holds\n"

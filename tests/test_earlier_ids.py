@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import intent_check
+from labkit.checks import intent_check
 from labkit.formats import promises, protocol_check
 from protocol_fixture import head
 

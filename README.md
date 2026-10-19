@@ -25,7 +25,7 @@ pip install ~/projects/labkit      # in repos: pinned via requirements.txt/.lock
 
 ```python
 from labkit.run import runlog, llm, batch
-from labkit import recheck
+from labkit.checks import recheck
 ```
 
 `recheck.holds(area, out, recompute, note)` is the `--check` of an

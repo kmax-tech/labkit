@@ -19,8 +19,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.code_check import check_intent_ids  # noqa: E402
-from labkit.intent_check import code_ids  # noqa: E402
+from labkit.checks.code_check import check_intent_ids  # noqa: E402
+from labkit.checks.intent_check import code_ids  # noqa: E402
 
 PROTOCOL = "Criterion [C1]; admissibility [A1].\n"
 LITERAL = 'r.metrics(**{"c1_pass": ok, "a1_anchor_ok": a})\n'

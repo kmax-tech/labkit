@@ -40,7 +40,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import console, promises, protocol_block
-from labkit.intent_check import protocol_id_of
+from labkit.checks.intent_check import protocol_id_of
 from labkit.formats.repo import area_path, choose_protocol, no_such_area
 from labkit.formats.runs import (
     bound_answering_run,

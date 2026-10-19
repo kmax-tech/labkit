@@ -17,7 +17,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 
 
-from labkit import code_check  # noqa: E402
+from labkit.checks import code_check  # noqa: E402
 
 rules = code_check.rules  # the module the bundle quotes from
 

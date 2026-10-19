@@ -88,7 +88,7 @@ from labkit.formats.repo import (
     no_such_area,
     the_protocol,
 )
-from labkit.intent_check import main as intent_check_main, ids_in_prose
+from labkit.checks.intent_check import main as intent_check_main, ids_in_prose
 from labkit.preflight import area_tests
 from labkit.formats.protocol_check import (
     answer_field,

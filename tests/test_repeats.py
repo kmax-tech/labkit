@@ -21,7 +21,7 @@ from pathlib import Path
 
 from protocol_fixture import DEFAULT_BLOCK, PID, head, scope_file
 
-from labkit import recheck
+from labkit.checks import recheck
 from labkit.run import runlog
 from labkit.formats import runs
 
@@ -219,7 +219,7 @@ class Repeats(unittest.TestCase):
         changed the flipped items (review 2026-10-15). recheck.verified pins
         a draw's output to its recorded digest before anything is shown."""
         from labkit.run import batch
-        from labkit import recheck
+        from labkit.checks import recheck
 
         def recompute(rows: list[dict]) -> dict:
             return {"n": len(rows)}

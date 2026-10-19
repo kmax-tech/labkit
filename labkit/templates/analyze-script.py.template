@@ -5,7 +5,7 @@
     ../../.venv/bin/python scripts/02_analyze.py --check    # pin OUT to the run, recompute, hold NOTE to it
     ../../.venv/bin/python scripts/02_analyze.py --draws    # the kept run and its repeats: the spread
 
-`labkit.recheck.holds` does the three things every area used to re-implement
+`labkit.checks.recheck.holds` does the three things every area used to re-implement
 (and twice got wrong, 2026-10-05): the output file pinned to the run's
 recorded sha, metrics.json against `evaluate_rows()`, the note holding every
 reported number and the run_id. The formula is `01_measure.evaluate_rows`,
@@ -20,7 +20,7 @@ import json
 import sys
 from pathlib import Path
 
-from labkit import recheck
+from labkit.checks import recheck
 from labkit.formats import runs
 
 AREA = Path(__file__).resolve().parent.parent

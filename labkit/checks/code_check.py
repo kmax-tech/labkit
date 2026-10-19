@@ -76,7 +76,7 @@ from pathlib import Path
 from labkit.formats import console, promises, protocol_block, rules, standard_contract
 from labkit.formats.protocol_check import fields
 from labkit.formats.gate import Findings
-from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
+from labkit.checks.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 from labkit.formats.repo import area_path, choose_protocol, layout_root, no_such_area
 from labkit.formats.scope_sha import (
     LOCAL_ROOTS,

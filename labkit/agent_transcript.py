@@ -251,7 +251,7 @@ _WRITES = frozenset({">", ">>", ">|"})
 
 def _strip_heredocs(command: str) -> str:
     """The command without heredoc bodies: their lines are input data (a
-    Python script, a file's text), not shell — `from labkit import recheck`
+    Python script, a file's text), not shell — `from labkit.checks import recheck`
     in a body is no run of `recheck`."""
     lines = command.split("\n")
     out: list[str] = []

@@ -47,8 +47,9 @@ import re
 from pathlib import Path
 
 from labkit.formats import console, protocol_block, runs
-from labkit import recheck, report_check
-from labkit.code_check import prompt_constants
+from labkit.checks import recheck
+from labkit import report_check
+from labkit.checks.code_check import prompt_constants
 from labkit.formats.protocol_check import (
     RUNS_PLACEHOLDER,
     answering_run_field,

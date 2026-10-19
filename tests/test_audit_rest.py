@@ -6,7 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import code_check, usability
+from labkit.checks import code_check
+from labkit import usability
 from labkit.formats import promises, protocol_block, protocol_check
 from protocol_fixture import head
 

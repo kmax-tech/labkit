@@ -1,6 +1,6 @@
 """recheck — hold a kept number to its own output.
 
-    from labkit import recheck
+    from labkit.checks import recheck
     recheck.holds(area=AREA, out=OUT, recompute=evaluate, note=PROTOCOL)
 
 Three mechanics every area used to re-implement in its `--check`, and two

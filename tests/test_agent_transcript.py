@@ -71,7 +71,7 @@ CALLS = [
         8.0,
         "Bash",
         bash(
-            ".venv/bin/python - <<'EOF'\nfrom labkit import recheck\nimport inspect\n"
+            ".venv/bin/python - <<'EOF'\nfrom labkit.checks import recheck\nimport inspect\n"
             "print(inspect.signature(recheck.holds))\nEOF"
         ),
         1.0,

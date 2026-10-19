@@ -17,7 +17,8 @@ from pathlib import Path
 
 from protocol_fixture import head
 
-from labkit import protocol_fill, recheck
+from labkit import protocol_fill
+from labkit.checks import recheck
 from labkit.formats import runs
 from labkit.formats.scope_sha import file_digest
 

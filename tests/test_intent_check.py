@@ -16,7 +16,7 @@ from pathlib import Path
 from protocol_fixture import PID, head
 
 REPO = Path(__file__).resolve().parent.parent
-from labkit import intent_check  # noqa: E402
+from labkit.checks import intent_check  # noqa: E402
 
 PROTOCOL = (
     head()
