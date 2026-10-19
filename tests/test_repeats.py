@@ -169,6 +169,21 @@ class Repeats(unittest.TestCase):
             len(runs.completed_runs(self.area, with_repeats=True)), 1
         )  # nothing made
 
+    def test_a_tuple_in_the_config_repeats_as_the_list_it_was_stored_as(self):
+        cfg = {"prompt_sha": "aaaaaaaaaaaa", "model_alias": "x", "labels": ("a", "b")}
+        first = self._run(cfg)
+        second = self._run(cfg, repeat_of=first)
+        self.assertEqual(self._cfg(second)["draw"], 2)
+
+    def test_type_and_presence_of_a_config_value_count(self):
+        parent = {"config": {"greedy": 1, "seed": None}}
+        for new, needle in (
+            ({"config": {"greedy": True, "seed": None}}, "config greedy: 1 → true"),
+            ({"config": {"greedy": 1}}, "config seed: null → (absent)"),
+        ):
+            with self.subTest(needle=needle):
+                self.assertIn(needle, answering_run.repeat_mismatch(parent, new))
+
     def test_same_block_other_code_script_or_model_is_no_repeat(self):
         """A record with the same block but another declared_scope_sha came
         back comparable (review 2026-10-15): plan() could change and the new

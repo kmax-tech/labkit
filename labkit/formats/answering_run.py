@@ -12,6 +12,7 @@ recheck and labkit-params read the choice here. Read-only.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -134,7 +135,13 @@ def repeat_mismatch(parent: dict, new: dict) -> list[str]:
     (prompt digest, model alias, constants, sampling) and the same inputs
     (data= digests and rows) — the job set follows from these. A
     repeat that differs in any of these measures something else, and its
-    spread would be noise of the change, not of the model."""
+    spread would be noise of the change, not of the model.
+
+    NEW may hold Python values not yet written: it is compared as
+    config.json would store it (a tuple as a list), and values are compared
+    by their JSON text, so `1` is not `true` and a missing config key is not
+    `null`."""
+    new = json.loads(json.dumps(new, ensure_ascii=False))
     out: list[str] = []
     pid = (parent.get("protocol") or {}).get("id")
     if pid != (new.get("protocol") or {}).get("id"):
@@ -142,17 +149,19 @@ def repeat_mismatch(parent: dict, new: dict) -> list[str]:
     pp, np_ = parent.get("promises") or {}, new.get("promises") or {}
     if pp.get("block_sha") != np_.get("block_sha"):
         out.append("the promise block changed")
-    elif pp != np_:
+    elif _stored(pp) != _stored(np_):
         # same block, other code: a declared scope's digest moved
         out.append("the code a promise rests on changed (declared_scope_sha)")
     if parent.get("script_sha") != new.get("script_sha"):
         out.append("the measure script changed (script_sha)")
-    if (parent.get("models_resolved") or {}) != (new.get("models_resolved") or {}):
+    if _stored(parent.get("models_resolved") or {}) != _stored(
+        new.get("models_resolved") or {}
+    ):
         out.append("the model resolved differently (models_resolved)")
     pc, nc = parent.get("config") or {}, new.get("config") or {}
     for key in sorted(set(pc) | set(nc)):
-        if pc.get(key) != nc.get(key):
-            out.append(f"config {key}: {pc.get(key)!r} → {nc.get(key)!r}")
+        if key not in pc or key not in nc or _stored(pc[key]) != _stored(nc[key]):
+            out.append(f"config {key}: {_shown(pc, key)} → {_shown(nc, key)}")
 
     def digests(cfg: dict) -> dict:
         return {
@@ -164,6 +173,16 @@ def repeat_mismatch(parent: dict, new: dict) -> list[str]:
     if digests(parent) != digests(new):
         out.append("the inputs (data=) differ")
     return out
+
+
+def _stored(value: object) -> str:
+    """VALUE as config.json text, keys sorted — equal only when the stored
+    values are, type included."""
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def _shown(cfg: dict, key: str) -> str:
+    return _stored(cfg[key]) if key in cfg else "(absent)"
 
 
 def bound_runs(area: Path, pid: str) -> tuple[list[dict], list[dict]]:
