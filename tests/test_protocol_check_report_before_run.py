@@ -19,7 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import protocol_block, protocol_check  # noqa: E402
+from labkit.formats import protocol_block, protocol_check, protocol_report  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 from test_protocol_check import PILOT_FIELDS  # noqa: E402
 
@@ -96,7 +96,7 @@ class WrittenBeforeRun(unittest.TestCase):
             p.write_text(protocol(DID), encoding="utf-8")
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(p)])
+                rc = protocol_report.main([str(p)])
             out = buf.getvalue()
             self.assertIn("WARNING: Did † written before any run", out)
             self.assertIn("protocol-fill --from-run", out)
@@ -105,7 +105,7 @@ class WrittenBeforeRun(unittest.TestCase):
             completed_run(Path(d))
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                protocol_check.main([str(p)])
+                protocol_report.main([str(p)])
             self.assertNotIn("written before any run", buf.getvalue())
 
 

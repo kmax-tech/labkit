@@ -11,7 +11,7 @@ from pathlib import Path
 
 from labkit.checks import intent_check, recheck
 from labkit.run import runlog
-from labkit.formats import promises, protocol_block, protocol_check
+from labkit.formats import promises, protocol_block, protocol_check, protocol_report
 from protocol_fixture import PID, head
 
 C1 = """[[promise]]
@@ -93,7 +93,7 @@ class NestedFences(unittest.TestCase):
     def test_a_toml_example_inside_a_prompt_is_no_second_head(self):
         text = head() + self.PROMPT
         self.assertEqual(protocol_block.head(text).id, PID)
-        self.assertEqual(protocol_check.code_blocks(text), 1)
+        self.assertEqual(protocol_report.code_blocks(text), 1)
 
     def test_fields_inside_a_nested_fence_are_body(self):
         text = "````text\n```\n- **Unit:** inside\n```\n````\n"

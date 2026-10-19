@@ -3,7 +3,7 @@ on 0.99.0, labkit-paper area 09): t18 wrote `preflight_audit = "n/a — …"`
 and runlog took it (now refused: `findings.waived_audit_gap`, in preflight
 and protocol-check too); the next move is lowering `cost` to seconds, where
 nothing is owed before the run — exact over git, the head as first committed
-against the head now (`protocol_check.cost_lowered`, a WARNING in
+against the head now (`protocol_history.cost_lowered`, a WARNING in
 protocol-check and preflight). Twins: a raised or unchanged tier, a file git
 does not know, a line with a real stamp.
 """
@@ -20,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import findings, protocol_block, protocol_check  # noqa: E402
+from labkit.formats import findings, protocol_block, protocol_history, protocol_report  # noqa: E402
 from labkit.gates import preflight  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
@@ -69,7 +69,9 @@ class CostLowered(unittest.TestCase):
     def test_lowered_since_the_first_commit_warns_and_names_both_tiers(self):
         root, protocol = _repo("minutes")
         first = _git(root, "rev-parse", "HEAD")
-        warning = protocol_check.cost_lowered(protocol, _set_cost(protocol, "seconds"))
+        warning = protocol_history.cost_lowered(
+            protocol, _set_cost(protocol, "seconds")
+        )
         assert warning is not None
         self.assertIn("WARNING: cost tier lowered", warning)
         self.assertIn(f"{first[:7]}: minutes -> seconds", warning)
@@ -82,7 +84,7 @@ class CostLowered(unittest.TestCase):
         _git(root, "add", "-A")
         _git(root, "commit", "-qm", "lower")
         self.assertIsNotNone(
-            protocol_check.cost_lowered(
+            protocol_history.cost_lowered(
                 protocol, protocol_block.head(protocol.read_text())
             )
         )
@@ -90,20 +92,20 @@ class CostLowered(unittest.TestCase):
     def test_raised_unchanged_or_unknown_to_git_is_silent(self):
         root, protocol = _repo("minutes")
         self.assertIsNone(
-            protocol_check.cost_lowered(protocol, _set_cost(protocol, "hours"))
+            protocol_history.cost_lowered(protocol, _set_cost(protocol, "hours"))
         )
         self.assertIsNone(
-            protocol_check.cost_lowered(protocol, _set_cost(protocol, "minutes"))
+            protocol_history.cost_lowered(protocol, _set_cost(protocol, "minutes"))
         )
         fresh = protocol.with_name("PROTOCOL-y.md")
         fresh.write_text(head(cost="seconds") + BODY, encoding="utf-8")
         self.assertIsNone(
-            protocol_check.cost_lowered(fresh, protocol_block.head(fresh.read_text()))
+            protocol_history.cost_lowered(fresh, protocol_block.head(fresh.read_text()))
         )
         outside = Path(tempfile.mkdtemp()) / "PROTOCOL-z.md"
         outside.write_text(head(cost="seconds") + BODY, encoding="utf-8")
         self.assertIsNone(
-            protocol_check.cost_lowered(
+            protocol_history.cost_lowered(
                 outside, protocol_block.head(outside.read_text())
             )
         )
@@ -111,13 +113,13 @@ class CostLowered(unittest.TestCase):
     def test_protocol_check_and_preflight_carry_the_warning(self):
         root, protocol = _repo("minutes")
         _set_cost(protocol, "seconds")
-        report = protocol_check.check_protocol(
+        report = protocol_report.check_protocol(
             protocol, protocol.read_text(encoding="utf-8"), set(), {}
         )
         self.assertIn("cost tier lowered", report.cost_lowered or "")
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            protocol_check.print_report(report)
+            protocol_report.print_report(report)
         self.assertIn("WARNING: cost tier lowered", out.getvalue())
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
@@ -180,12 +182,12 @@ class WaivedAudit(unittest.TestCase):
 
     def test_protocol_check_warns_on_a_frozen_waiver_at_minutes(self):
         p = self._protocol("minutes", "n/a — not needed")
-        report = protocol_check.check_protocol(
+        report = protocol_report.check_protocol(
             p, p.read_text(encoding="utf-8"), set(), {}
         )
         self.assertIn("nobody waives", report.audit_drift or "")
         p = self._protocol("minutes", "n/a — not needed", frozen=False)
-        report = protocol_check.check_protocol(
+        report = protocol_report.check_protocol(
             p, p.read_text(encoding="utf-8"), set(), {}
         )
         self.assertIsNone(report.audit_drift)  # unfrozen: the line is not held yet

@@ -108,6 +108,7 @@ from labkit.formats import (
     findings,
     protocol_block,
     protocol_check,
+    protocol_report,
     runs,
     standard_contract,
 )
@@ -425,7 +426,7 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
         if cache.get(str(path)) == digest:
             continue
         cache[str(path)] = digest
-        fn = protocol_check.main if kind == "protocol" else notes_check.main
+        fn = protocol_report.main if kind == "protocol" else notes_check.main
         _, out = _capture(fn, [str(path)])
         # The checker gets the absolute path (the hook's cwd is wherever the
         # agent stood); the report shows it repo-relative, as pfad:zeile.

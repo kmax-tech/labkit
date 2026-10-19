@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import protocol_check  # noqa: E402
+from labkit.formats import protocol_check, protocol_report  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 RUN = "2026-10-07T10-00-00_ab12"
@@ -52,8 +52,8 @@ class AnswerWithoutRun(unittest.TestCase):
             p.write_text(_protocol("AUC 0.91"), encoding="utf-8")
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                protocol_check.main([str(p)])
-            report = protocol_check.check_protocol(
+                protocol_report.main([str(p)])
+            report = protocol_report.check_protocol(
                 p, p.read_text(encoding="utf-8"), set(), {}
             )
         self.assertIn(

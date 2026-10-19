@@ -22,7 +22,7 @@ dependencies = []
 dev = ["pytest", "ruff", "pyright", "viztracer"]
 
 [project.scripts]
-protocol-check = "labkit.formats.protocol_check:cli"
+protocol-check = "labkit.formats.protocol_report:cli"
 runlog = "labkit.run.runlog_command:cli"
 scope-sha = "labkit.formats.scope_sha:cli"
 intent-check = "labkit.checks.intent_check:cli"

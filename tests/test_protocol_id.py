@@ -21,7 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import protocol_check  # noqa: E402
+from labkit.formats import protocol_check, protocol_history, protocol_report  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 
 # Every must field of a pilot filled, so the id alone decides the verdict.
@@ -56,7 +56,7 @@ def _protocol(dirpath, pid: str = PID, name="PROTOCOL-x.md", extra: str = ""):
 def _check(paths):
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
-        code = protocol_check.main([str(p) for p in paths])
+        code = protocol_report.main([str(p) for p in paths])
     return code, buf.getvalue()
 
 
@@ -142,11 +142,11 @@ class TestUniqueness(unittest.TestCase):
             first = _protocol(d, name="PROTOCOL-s1-a.md")
             head = protocol_check.check_fields(first.read_text()).head
             assert head is not None
-            ids = protocol_check.repo_protocol_ids(first)
-            self.assertEqual(protocol_check.check_protocol_id(first, head, ids), [])
+            ids = protocol_history.repo_protocol_ids(first)
+            self.assertEqual(protocol_history.check_protocol_id(first, head, ids), [])
             _protocol(d, name="PROTOCOL-s2-b.md")
-            ids = protocol_check.repo_protocol_ids(first)
-            found = protocol_check.check_protocol_id(first, head, ids)
+            ids = protocol_history.repo_protocol_ids(first)
+            found = protocol_history.check_protocol_id(first, head, ids)
         self.assertTrue(any("DUPLICATE" in f for f in found), found)
 
     def test_distinct_ids_side_by_side_are_fine(self):

@@ -25,7 +25,12 @@ REPO = Path(__file__).resolve().parent.parent
 TEMPLATE = REPO / "labkit" / "templates" / "experiment-protocol.md.template"
 
 sys.path.insert(0, str(REPO))
-from labkit.formats import protocol_block, protocol_check  # noqa: E402
+from labkit.formats import (  # noqa: E402
+    protocol_block,
+    protocol_check,
+    protocol_history,
+    protocol_report,
+)  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 
@@ -119,13 +124,13 @@ def frozen(**head_kw) -> str:
 
 
 def run_main(text: str) -> tuple[int, str]:
-    """protocol_check.main over `text` written to a PROTOCOL-x.md."""
+    """protocol_report.main over `text` written to a PROTOCOL-x.md."""
     with tempfile.TemporaryDirectory() as d:
         p = Path(d) / "PROTOCOL-x.md"
         p.write_text(text, encoding="utf-8")
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            rc = protocol_check.main([str(p)])
+            rc = protocol_report.main([str(p)])
         return rc, buf.getvalue()
 
 
@@ -164,7 +169,7 @@ class TestFlagsAnywhere(unittest.TestCase):
         for argv in (["--contract", "PROTOCOL-x.md"], ["PROTOCOL-x.md", "--contract"]):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
-                self.assertEqual(protocol_check.main(argv), 0, argv)
+                self.assertEqual(protocol_report.main(argv), 0, argv)
             self.assertNotIn("not readable", out.getvalue())
             self.assertIn("Question / hypothesis", out.getvalue())
 
@@ -253,9 +258,9 @@ class TestCheckFileAsData(unittest.TestCase):
         d = Path(tempfile.mkdtemp())
         path = d / "PROTOCOL-x.md"
         path.write_text(text, encoding="utf-8")
-        tmpl = protocol_check.template_lines(TEMPLATE)
-        return protocol_check.check_protocol(
-            path, text, tmpl, protocol_check.repo_protocol_ids(path)
+        tmpl = protocol_report.template_lines(TEMPLATE)
+        return protocol_report.check_protocol(
+            path, text, tmpl, protocol_history.repo_protocol_ids(path)
         )
 
     def test_a_filled_pilot_is_clean_and_does_not_block(self):
@@ -295,7 +300,7 @@ class TestCheckFileAsData(unittest.TestCase):
         r = self._report(pilot().replace("- **Unit:** one claim\n", ""))
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            protocol_check.print_report(r)
+            protocol_report.print_report(r)
         self.assertIn("MISSING (must): Unit", out.getvalue())
         self.assertIn("must fields missing or empty", out.getvalue().splitlines()[-1])
 
@@ -304,7 +309,7 @@ class TestMain(unittest.TestCase):
     def _run(self, argv):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            code = protocol_check.main(argv)
+            code = protocol_report.main(argv)
         return code, out.getvalue()
 
     def test_template_itself_must_fail(self):
@@ -418,7 +423,7 @@ class TestTemplateLines(unittest.TestCase):
     def test_verbatim_template_line_is_recognised(self):
         if not TEMPLATE.exists():
             self.skipTest("template absent")
-        lines = protocol_check.template_lines(TEMPLATE)
+        lines = protocol_report.template_lines(TEMPLATE)
         self.assertTrue(lines, "template yields no comparison lines")
         # Any long template line must be recognised again.
         sample = next(iter(lines))
@@ -451,9 +456,9 @@ class TestFrozenWithoutExample(unittest.TestCase):
     def test_the_head_block_is_no_example(self):
         """The ```toml head is a fenced block too; it must not count."""
         self.assertEqual(
-            protocol_check.code_blocks(frozen().replace(*self.NO_EXAMPLE)), 0
+            protocol_report.code_blocks(frozen().replace(*self.NO_EXAMPLE)), 0
         )
-        self.assertEqual(protocol_check.code_blocks(frozen()), 1)
+        self.assertEqual(protocol_report.code_blocks(frozen()), 1)
 
     def test_unfrozen_without_code_block_is_no_must_failure(self):
         # A pre-registered protocol may exist without an example — it
@@ -693,7 +698,7 @@ class TestHelpFlag(unittest.TestCase):
         answer "nicht lesbar" — whoever looks for the flags must find usage."""
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            code = protocol_check.main(["--help"])
+            code = protocol_report.main(["--help"])
         self.assertEqual(code, 0)
         self.assertIn("usage: protocol-check", buf.getvalue())
 
@@ -908,11 +913,11 @@ class TestIntentBudgetCalibration(unittest.TestCase):
 
     def test_intent_35_lines_is_within_budget(self):
         text = "## Intent\n" + "Prose line.\n" * 35
-        self.assertEqual(protocol_check.oversized_sections(text), [])
+        self.assertEqual(protocol_report.oversized_sections(text), [])
 
     def test_intent_36_lines_is_over_budget(self):
         text = "## Intent\n" + "Prose line.\n" * 36
-        self.assertEqual(protocol_check.oversized_sections(text), [("Intent", 36, 35)])
+        self.assertEqual(protocol_report.oversized_sections(text), [("Intent", 36, 35)])
 
 
 class TestProseLinesReadFencesLikeTheParser(unittest.TestCase):
@@ -922,14 +927,14 @@ class TestProseLinesReadFencesLikeTheParser(unittest.TestCase):
 
     def test_tilde_fence_is_not_prose(self):
         text = "## Intent\nProse.\n~~~\ncode\ncode\n~~~\nMore prose.\n"
-        lines = [s for _, s in protocol_check.prose_lines(text)]
+        lines = [s for _, s in protocol_report.prose_lines(text)]
         self.assertEqual(lines, ["## Intent", "Prose.", "More prose."])
 
     def test_nested_fence_does_not_reopen_prose(self):
         text = (
             "## Intent\n````\nask for ```toml output\n```\nstill code\n````\nProse.\n"
         )
-        lines = [s for _, s in protocol_check.prose_lines(text)]
+        lines = [s for _, s in protocol_report.prose_lines(text)]
         self.assertEqual(lines, ["## Intent", "Prose."])
 
 
@@ -939,7 +944,7 @@ class TestStampedLegendIsNotTemplateText(unittest.TestCase):
     (2026-09-14/15: every freshly stamped protocol was flagged forever)."""
 
     def test_preamble_lines_are_excluded(self):
-        lines = protocol_check.template_lines(protocol_check.find_template(None))
+        lines = protocol_report.template_lines(protocol_report.find_template(None))
         self.assertTrue(lines, "template not found")
         self.assertFalse([s for s in lines if "A checklist, not a copy-form" in s])
         # The Head section (pointer and toml block) stays by design, like the preamble.
@@ -948,7 +953,7 @@ class TestStampedLegendIsNotTemplateText(unittest.TestCase):
         )
 
     def test_body_instruction_lines_still_count(self):
-        lines = protocol_check.template_lines(protocol_check.find_template(None))
+        lines = protocol_report.template_lines(protocol_report.find_template(None))
         # An instruction line from inside a section stays in the set.
         self.assertTrue([s for s in lines if "error direction" in s], lines)
 

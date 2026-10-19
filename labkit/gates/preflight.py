@@ -75,8 +75,8 @@ from labkit.formats.repo import (
     no_such_area,
     split_area_name,
 )
-from labkit.formats.protocol_check import (
-    check_fields,
+from labkit.formats.protocol_check import check_fields
+from labkit.formats.protocol_history import (
     check_protocol_id,
     cost_lowered,
     repo_protocol_ids,

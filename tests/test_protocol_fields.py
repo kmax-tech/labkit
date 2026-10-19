@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
-from labkit.formats import protocol_check
+from labkit.formats import protocol_check, protocol_report
 from protocol_fixture import head
 
 TEMPLATE = (PACKAGE_DIR / "templates" / "experiment-protocol.md.template").read_text(
@@ -233,7 +233,7 @@ class OpenHolesFollowTheCut(unittest.TestCase):
             f.write_text(head(cost="seconds") + self.BODY)
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                rc = protocol_check.main([str(f)])
+                rc = protocol_report.main([str(f)])
         self.assertEqual(rc, 1)
         self.assertIn("Unit (line", buf.getvalue().rstrip().splitlines()[-1])
 
@@ -255,7 +255,7 @@ class StampedLeftovers(unittest.TestCase):
             f.write_text(head(cost="minutes", frozen=frozen) + body)
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                protocol_check.main([str(f)])
+                protocol_report.main([str(f)])
         return buf.getvalue()
 
     def test_the_stamped_runs_line_and_a_bare_item_are_named_when_frozen(self):
@@ -294,7 +294,7 @@ class BareReferences(unittest.TestCase):
             f.write_text(head(cost="minutes") + f"- **Free knobs †:** {value}\n")
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                protocol_check.main([str(f)])
+                protocol_report.main([str(f)])
         return buf.getvalue()
 
     def test_a_bare_reference_warns(self):
