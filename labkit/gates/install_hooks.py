@@ -162,11 +162,9 @@ _LABKIT_COMMAND = re.compile(
 )
 
 
-def _ours(entry: dict) -> bool:
-    return any(
-        _LABKIT_COMMAND.search(h.get("command", "")) is not None
-        for h in entry.get("hooks", [])
-    )
+def _ours(hook: dict) -> bool:
+    """Whether one hook command was written by a labkit install."""
+    return _LABKIT_COMMAND.search(hook.get("command", "")) is not None
 
 
 def stale_entries(current: dict) -> list[str]:
@@ -176,10 +174,8 @@ def stale_entries(current: dict) -> list[str]:
     out = []
     for event, entries in (current.get("hooks") or {}).items():
         for entry in entries:
-            if not _ours(entry):
-                continue
             for h in entry.get("hooks", []):
-                if json.dumps(h, sort_keys=True) not in wanted:
+                if _ours(h) and json.dumps(h, sort_keys=True) not in wanted:
                     out.append(f"{event}: {h.get('command', '')[:70]}")
     return out
 
@@ -187,10 +183,16 @@ def stale_entries(current: dict) -> list[str]:
 def merged_settings(current: dict) -> dict:
     """`current` with labkit's hooks — this version's and any earlier
     install's (`LABKIT_COMMANDS`) — replaced by this version's; every other
-    key and every foreign hook kept."""
+    key and every foreign hook kept, also one that shares an entry (and its
+    matcher) with a labkit hook: the filter takes single commands, and an
+    entry left without any is dropped."""
     out = dict(current)
     hooks = {
-        event: [e for e in entries if not _ours(e)]
+        event: [
+            {**e, "hooks": kept}
+            for e in entries
+            if (kept := [h for h in e.get("hooks", []) if not _ours(h)])
+        ]
         for event, entries in (out.get("hooks") or {}).items()
     }
     hooks = {event: entries for event, entries in hooks.items() if entries}

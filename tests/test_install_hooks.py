@@ -56,6 +56,24 @@ class Install(unittest.TestCase):
             )
         )
 
+    def test_a_foreign_hook_sharing_an_entry_with_ours_is_kept(self):
+        repo = git_repo()
+        (repo / ".claude").mkdir()
+        old = {"type": "command", "command": ".venv/bin/claude-hook pre-run"}
+        mine = {"type": "command", "command": "my-linter"}
+        shared = {"hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [old, mine]}]}}
+        (repo / ".claude" / "settings.json").write_text(json.dumps(shared))
+        self.assertEqual(
+            install_hooks.stale_entries(shared),
+            ["PreToolUse: .venv/bin/claude-hook pre-run"],
+        )  # the foreign command is not named stale
+        install_hooks.install(repo)
+        s = json.loads((repo / ".claude" / "settings.json").read_text())
+        entries = s["hooks"]["PreToolUse"]
+        self.assertIn({"matcher": "Bash", "hooks": [mine]}, entries)
+        commands = [h["command"] for e in entries for h in e["hooks"]]
+        self.assertNotIn(old["command"], commands)
+
     def test_an_older_hook_is_reported_and_replaced(self):
         repo = git_repo()
         install_hooks.install(repo)
@@ -77,7 +95,7 @@ class Install(unittest.TestCase):
     def test_a_foreign_command_with_a_labkit_name_inside_is_not_ours(self):
         """`./bin/my-protocol-checker` matched `protocol-check` as a substring
         and was erased by an install (audit 2026-10-15)."""
-        ours = lambda cmd: install_hooks._ours({"hooks": [{"command": cmd}]})  # noqa: E731
+        ours = lambda cmd: install_hooks._ours({"command": cmd})  # noqa: E731
         self.assertFalse(ours("./bin/my-protocol-checker"))
         self.assertFalse(ours("echo claude-hooks-are-great"))
         self.assertTrue(
