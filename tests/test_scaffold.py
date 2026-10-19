@@ -4,6 +4,8 @@ import ast
 import contextlib
 import io
 import re
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -90,6 +92,21 @@ class Lab(unittest.TestCase):
             self.assertTrue(scaffold.labkit_pin().endswith(f"@v{source}"))
         finally:
             scaffold.importlib.metadata.version = real
+
+    def test_the_stamped_repo_tests_pass_against_this_labkit(self) -> None:
+        """The lab repo's own guard test compares the helpers' module names
+        with their package path; it is run here, not only read, so a stamped
+        repo starts green (docs/notes/2026-10-19-layer-packages.md)."""
+        tests = self.root / "tests"
+        r = subprocess.run(
+            [sys.executable, "-m", "unittest", "discover", "-s", str(tests)],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("Ran 3 tests", r.stderr)
 
     def test_rerunning_overwrites_nothing(self) -> None:
         (self.root / "AGENTS.md").write_text("mine\n", encoding="utf-8")

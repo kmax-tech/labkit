@@ -28,7 +28,7 @@ class TestHelpersResolveToPackage(unittest.TestCase):
         from labkit.run import batch, llm, runlog
         for mod, name in ((runlog, "runlog"), (llm, "llm"), (batch, "batch")):
             with self.subTest(module=name):
-                self.assertEqual(mod.__name__, f"labkit.{name}")
+                self.assertEqual(mod.__name__, f"labkit.run.{name}")
                 self.assertIn("labkit", Path(mod.__file__ or "").parts)
 
     def test_private_names_are_reachable(self):
