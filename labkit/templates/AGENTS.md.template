@@ -36,7 +36,9 @@ LAB-017 The number of audits follows the cost tier.
    line for a person if you like; Limits and Next step belong to the full
    form) — then runs `report-check` on the written protocol and puts the
    file back if it refuses: a full run (no probe), the decided analysis
-   audit of code, promises and that run, `02_analyze.py --check` passing.
+   audit of code, promises and that run, the `--check` passing
+   (`01_measure.py --check` in the counting skeleton, `02_analyze.py
+   --check` with a model).
    The run_id in the Answer declares the result reported; the stop hook
    and the pre-commit hold it to the same check. An exploration that
    reports nothing leaves the Answer open and may end; its number stays a

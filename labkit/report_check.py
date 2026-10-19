@@ -45,7 +45,11 @@ report-check comes last and holds the whole chain, at every cost tier:
                    interpreter: the rows recompute to the run's metrics and
                    the note it names carries every number and the run_id
                    (`recheck.holds`; LAB-041 Generate numbers, don't retype
-                   them)
+                   them). At seconds the counting skeleton stamps no
+                   analysis script, its `01_measure.py --check` is the
+                   recheck (`check_script`); until 0.99.0 this station
+                   demanded `02_analyze.py` there and refused every
+                   correct count (audit 2026-10-19)
 
 Every station runs; the blockers are summed at the end. It reads and runs,
 never writes.
@@ -80,32 +84,54 @@ from labkit.repo import choose_protocol, layout_root
 from labkit.runs import read_run_config, unreportable
 from labkit.scope_sha import area_stamp
 
-#: the analysis script the area skeleton stamps; its `--check` holds the note
+#: the analysis script the full skeleton stamps; its `--check` holds the note
 ANALYZE_SCRIPT = Path("scripts") / "02_analyze.py"
+#: the counting skeleton's one script (`labkit-init exp --cost seconds` without
+#: a model): it carries the `--check` itself, no analysis script is stamped
+MEASURE_SCRIPT = Path("scripts") / "01_measure.py"
 #: how long `--check` may take inside the gate (audit 2026-10-15: no limit)
 CHECK_TIMEOUT_S = 300.0
 
 
-def check_analysis_script(area: Path, repo: Path) -> str | None:
-    """Why `02_analyze.py --check` does not pass, or None: missing, or a
-    nonzero exit with the last lines it printed."""
-    script = area / ANALYZE_SCRIPT
-    if not script.is_file():
-        return f"no {ANALYZE_SCRIPT} — the check that holds the note to the run is owed"
+def check_script(area: Path, at_seconds: bool) -> Path | None:
+    """The script whose `--check` station 4 runs, relative to AREA, or None
+    when the area has none: `02_analyze.py` where the area has one; at
+    seconds, where the counting skeleton stamps only `01_measure.py` with
+    the `--check` inside (`scaffold.stamp_scripts`, quick), that script."""
+    if (area / ANALYZE_SCRIPT).is_file():
+        return ANALYZE_SCRIPT
+    if at_seconds and (area / MEASURE_SCRIPT).is_file():
+        return MEASURE_SCRIPT
+    return None
+
+
+def check_analysis_script(area: Path, repo: Path, at_seconds: bool) -> str | None:
+    """Why the area's `--check` (`check_script`) does not pass, or None:
+    no script, or a nonzero exit with the last lines it printed."""
+    script = check_script(area, at_seconds)
+    if script is None:
+        owed = (
+            f"{ANALYZE_SCRIPT} and no {MEASURE_SCRIPT}"
+            if at_seconds
+            else ANALYZE_SCRIPT
+        )
+        return f"no {owed} — the check that holds the note to the run is owed"
     try:
         r = subprocess.run(
-            [area_test_python(repo), str(script), "--check"],
+            [area_test_python(repo), str(area / script), "--check"],
             cwd=repo,
             capture_output=True,
             text=True,
+            errors="replace",  # the tail is quoted, not parsed: a byte no
+            # codec reads must not raise out of the gate (audit 2026-10-19)
             timeout=CHECK_TIMEOUT_S,
         )
     except subprocess.TimeoutExpired:
-        return f"{ANALYZE_SCRIPT} --check did not finish in {CHECK_TIMEOUT_S:g} s"
+        return f"{script} --check did not finish in {CHECK_TIMEOUT_S:g} s"
     if r.returncode == 0:
         return None
     tail = (r.stderr.strip() or r.stdout.strip() or "no output").splitlines()[-3:]
-    return f"{ANALYZE_SCRIPT} --check exits {r.returncode}: " + " | ".join(tail)
+    return f"{script} --check exits {r.returncode}: " + " | ".join(tail)
 
 
 def freeze_gaps(protocol: Path, frozen: bool) -> list[str]:
@@ -185,7 +211,7 @@ def later_gaps(area: Path, protocol: Path, freeze_owed: bool = True) -> list[str
     gap = analysis_audit_gap(area, protocol)
     if gap:
         out.append(f"analysis audit: {gap} (LAB-050 Analysis audit before reporting)")
-    failed = check_analysis_script(area, layout_root(area))
+    failed = check_analysis_script(area, layout_root(area), not freeze_owed)
     if failed:
         out.append(f"{failed} (LAB-041 Generate numbers, don't retype them)")
     return out

@@ -38,7 +38,7 @@ class Timeouts(unittest.TestCase):
                 "import time\ntime.sleep(30)\n", encoding="utf-8"
             )
             with mock.patch.object(report_check, "CHECK_TIMEOUT_S", 1.0):
-                gap = report_check.check_analysis_script(area, repo)
+                gap = report_check.check_analysis_script(area, repo, False)
             self.assertIsNotNone(gap)
             self.assertIn("did not finish in 1 s", gap or "")
 

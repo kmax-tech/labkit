@@ -90,6 +90,17 @@ pins (`requirements.txt` / `requirements.lock`).
   and got the prompt skeleton; three agents rebuilt it, one kept its
   leftovers (plan P, C2).
 
+### Fixed
+
+- **`report-check` runs the counting skeleton's own check at seconds.**
+  `labkit-init exp --cost seconds` without a model stamps `01_measure.py`
+  with the `--check` inside and no `02_analyze.py`; station 4 demanded the
+  analysis script and refused every correct count, so `protocol-fill
+  --from-run` never adopted one (audit 2026-10-19). `report_check.check_script`
+  names the script: `02_analyze.py` where the area has one, at seconds
+  otherwise `01_measure.py`. A check that prints a byte no codec reads is
+  a named gap, not a traceback.
+
 ### Changed
 
 - **`labkit-init --report` no longer declares a model-free protocol
