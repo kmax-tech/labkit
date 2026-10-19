@@ -107,18 +107,17 @@ from labkit.repo import (
 )
 from labkit.runs import read_run_config, unreportable
 from labkit.scope_sha import area_stamp
+from labkit.standard_contract import CHECK_SCRIPT, check_command, release
 
-#: the analysis script every skeleton stamps; its `--check` is the one
-#: public recheck of an area (the count's too, since 0.100.0)
-ANALYZE_SCRIPT = Path("scripts") / "02_analyze.py"
 #: how long `--check` may take inside the gate (audit 2026-10-15: no limit)
 CHECK_TIMEOUT_S = 300.0
 
 
 def check_analysis_script(area: Path, repo: Path) -> str | None:
-    """Why the area's `02_analyze.py --check` does not pass, or None: no
-    script, or a nonzero exit with the last lines it printed."""
-    script = ANALYZE_SCRIPT
+    """Why the area's check (`standard_contract.check_command`: the analysis
+    script's `--check`, stamped by every skeleton) does not pass, or None:
+    no script, or a nonzero exit with the last lines it printed."""
+    script = CHECK_SCRIPT
     if not (area / script).is_file():
         return (
             f"no {script} — the check that holds the note to the run is owed; "
@@ -128,7 +127,7 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
         )
     try:
         r = subprocess.run(
-            [area_test_python(repo), str(area / script), "--check"],
+            [area_test_python(repo), *check_command(area)],
             cwd=repo,
             capture_output=True,
             text=True,
@@ -237,14 +236,16 @@ def report_check(area: Path, protocol: Path | None = None) -> int:
     except protocol_block.BlockError as exc:
         print(f"report-check: {chosen.name}: {exc}")
         return 2
-    freeze_owed = head.cost != "seconds"
+    # what the release owes at this tier is the contract's answer: the freeze
+    # follows the lane, the rest is owed everywhere (`standard_contract.release`)
+    freeze_owed = release(head.cost).freeze
     findings = Findings()
     if freeze_owed:
         gaps = freeze_gaps(chosen, head.frozen)
     else:
         gaps = []
         print(
-            f'  {chosen.name}: cost = "seconds" — no freeze and no preflight audit '
+            f'  {chosen.name}: cost = "{head.cost}" — no freeze and no preflight audit '
             f"owed (LAB-017 The number of audits follows the cost tier); the full "
             f"run, the analysis audit and the check are"
         )
