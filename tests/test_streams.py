@@ -13,7 +13,8 @@ import unittest
 from pathlib import Path
 
 from labkit.checks import code_check
-from labkit import finalize, params, preflight, protocol_fill
+from labkit.gates import finalize, preflight
+from labkit import params, protocol_fill
 from labkit.run import runlog
 from labkit.formats import scope_sha
 

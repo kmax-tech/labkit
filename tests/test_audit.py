@@ -19,7 +19,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import protocol_fixture as fixture  # noqa: E402
-from labkit import audit  # noqa: E402
+from labkit.gates import audit  # noqa: E402
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"

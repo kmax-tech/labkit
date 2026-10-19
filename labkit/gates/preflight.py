@@ -63,7 +63,7 @@ from pathlib import Path
 
 from labkit.checks.code_check import check_intent_ids, stamp_coverage_findings
 from labkit.formats import console, protocol_block, protocol_check, standard_contract
-from labkit import install_hooks
+from labkit.gates import install_hooks
 from labkit.formats import findings as audit_findings
 from labkit.formats.gate import Findings
 from labkit.formats.repo import (

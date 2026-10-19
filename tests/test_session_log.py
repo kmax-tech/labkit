@@ -12,7 +12,7 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from labkit import claude_hooks
+from labkit.gates import claude_hooks
 
 
 class SessionLog(unittest.TestCase):

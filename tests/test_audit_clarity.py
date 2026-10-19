@@ -16,7 +16,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit import audit
+from labkit.gates import audit
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\n## Summary\nQuestion †: q\n"
 SCRIPT = '"""Does x?"""\nimport scoring\n\ndef evaluate_rows(rows):\n    return {}\n'

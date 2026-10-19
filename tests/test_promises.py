@@ -413,7 +413,7 @@ class Chain(unittest.TestCase):
     def test_finalize_blocks_a_changed_scope(self):
         """Durchstich 2026-10-06: a scope edited after the run went through
         finalize; only recheck saw it."""
-        from labkit import finalize
+        from labkit.gates import finalize
 
         self.complete(self.start(), self.GOOD)
 

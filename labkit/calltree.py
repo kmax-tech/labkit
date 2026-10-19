@@ -6,12 +6,12 @@
 run?" The editor's call hierarchy answers what the code COULD call; this
 answers what one run DID call, from its entry point down. TARGET is a
 console script name (`labkit-audit`) or `module:function`
-(`labkit.audit:cli`); ARGS become the command's `sys.argv[1:]`.
+(`labkit.gates.audit:cli`); ARGS become the command's `sys.argv[1:]`.
 
 What the tree shows — and no more:
 
   - only functions whose source lies inside the target's top-level package
-    (for `labkit.audit:cli`: everything under `labkit/`); a package function
+    (for `labkit.gates.audit:cli`: everything under `labkit/`); a package function
     called through the stdlib (a sort key, a callback) hangs under the
     nearest package function above it
   - one line per distinct call path: `module.qualname  path:line  ×N`, where

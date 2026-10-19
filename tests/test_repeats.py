@@ -90,7 +90,7 @@ class Repeats(unittest.TestCase):
     def test_finalize_warns_on_one_draw_of_a_model_run_and_not_after_a_repeat(self):
         """The spread is static evidence: a warning until a repeat exists,
         nothing for a run that asked no model."""
-        from labkit import finalize
+        from labkit.gates import finalize
 
         first = self._run()
         primary = self.area / "runs" / first
@@ -277,7 +277,7 @@ class Repeats(unittest.TestCase):
     def test_finalize_says_the_draws_cannot_be_counted(self):
         """Mutant and twin: the single-draw warning names an unreadable run
         instead of raising; with the area clean it is the usual warning."""
-        from labkit import finalize
+        from labkit.gates import finalize
 
         first = self._run()
         run = self.area / "runs" / first

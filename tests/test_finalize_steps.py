@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import finalize
+from labkit.gates import finalize
 from labkit.formats import repo
 
 

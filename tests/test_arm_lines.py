@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import finalize
+from labkit.gates import finalize
 
 SHA_B, SHA_A = "bcec0c37236d", "1d4c79af596a"
 TEXT = (

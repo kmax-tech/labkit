@@ -8,7 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import finalize, scaffold
+from labkit.gates import finalize
+from labkit import scaffold
 from labkit.formats import rules
 
 

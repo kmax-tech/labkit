@@ -89,7 +89,7 @@ from labkit.formats.repo import (
     the_protocol,
 )
 from labkit.checks.intent_check import main as intent_check_main, ids_in_prose
-from labkit.preflight import area_tests
+from labkit.gates.preflight import area_tests
 from labkit.formats.protocol_check import (
     answer_field,
     answering_run_field,

@@ -96,9 +96,9 @@ from pathlib import Path
 
 from labkit.formats.gate import Findings
 from labkit.formats import console, findings, promises, protocol_block
-from labkit.audit import AuditError, audited_run
-from labkit.finalize import cited_runs, finalize_area
-from labkit.preflight import area_test_python
+from labkit.gates.audit import AuditError, audited_run
+from labkit.gates.finalize import cited_runs, finalize_area
+from labkit.gates.preflight import area_test_python
 from labkit.formats.protocol_check import check_fields
 from labkit.formats.repo import (
     area_protocols,

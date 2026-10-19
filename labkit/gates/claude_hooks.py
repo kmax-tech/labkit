@@ -112,7 +112,7 @@ from labkit.formats import (
     standard_contract,
 )
 from labkit.checks import notes_check
-from labkit import preflight, report_check
+from labkit.gates import preflight, report_check
 from labkit.formats.repo import (
     PROTOCOL_NAME,
     area_protocols,

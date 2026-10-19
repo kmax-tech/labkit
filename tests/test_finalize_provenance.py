@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import finalize  # noqa: E402
+from labkit.gates import finalize  # noqa: E402
 from labkit.formats import promises  # noqa: E402
 from protocol_fixture import PID, head, scope_file  # noqa: E402
 

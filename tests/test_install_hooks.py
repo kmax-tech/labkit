@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import install_hooks
+from labkit.gates import install_hooks
 
 
 def git_repo() -> Path:

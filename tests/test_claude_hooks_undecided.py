@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import claude_hooks  # noqa: E402
+from labkit.gates import claude_hooks  # noqa: E402
 from labkit.formats import findings  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 from test_claude_hooks import _git, _run  # noqa: E402
@@ -151,7 +151,7 @@ class Undecided(unittest.TestCase):
             os.environ.pop("CLAUDE_PROJECT_DIR", None)
 
     def test_the_stamped_pre_commit_runs_it(self):
-        from labkit import install_hooks
+        from labkit.gates import install_hooks
 
         self.assertIn("claude-hook undecided $staged", install_hooks.pre_commit())
 

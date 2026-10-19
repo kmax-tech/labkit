@@ -26,7 +26,8 @@ from pathlib import Path
 
 from protocol_fixture import head
 
-from labkit import audit, finalize, params, usability
+from labkit.gates import audit, finalize
+from labkit import params, usability
 from labkit.checks import intent_check, recheck
 from labkit.formats import runs
 from labkit.formats.gate import Findings

@@ -15,7 +15,7 @@ import unittest
 from pathlib import Path
 
 from labkit.run import batch, runlog
-from labkit import finalize
+from labkit.gates import finalize
 from labkit.formats import runs
 
 A = "2026-10-01T10-00-00_aaaa"

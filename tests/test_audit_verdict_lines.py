@@ -15,7 +15,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit import audit
+from labkit.gates import audit
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"
 

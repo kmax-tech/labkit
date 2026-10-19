@@ -42,7 +42,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import console, protocol_block, rules
-from labkit import install_hooks
+from labkit.gates import install_hooks
 from labkit.formats.repo import (
     SKIP_DIRS,
     VCS_REQUIREMENT,

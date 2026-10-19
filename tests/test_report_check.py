@@ -31,7 +31,7 @@ from unittest import mock
 from protocol_fixture import completed_run, head, scope_file
 
 from labkit.formats import findings, promises, scope_sha, standard_contract
-from labkit import report_check
+from labkit.gates import report_check
 
 
 class ReportCheck(unittest.TestCase):

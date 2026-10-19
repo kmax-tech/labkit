@@ -18,7 +18,7 @@ from pathlib import Path
 
 from protocol_fixture import PID, head, scope_file
 
-from labkit import finalize
+from labkit.gates import finalize
 from labkit.run import runlog
 from labkit.formats import protocol_check
 

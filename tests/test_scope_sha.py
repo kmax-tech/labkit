@@ -199,7 +199,7 @@ class TestOneStampEverywhere(unittest.TestCase):
         self.assertNotEqual(before, packaged.area_stamp(self.area)[0])
 
     def test_audit_preflight_and_cli_agree(self):
-        from labkit import audit, preflight
+        from labkit.gates import audit, preflight
         from labkit.formats import scope_sha as packaged
 
         sha, files, _ = packaged.area_stamp(self.area)
@@ -311,7 +311,7 @@ class TestImportForms(unittest.TestCase):
             packaged.area_stamp(self.area)
 
     def test_the_auditors_scope_is_held_to_the_stamp(self):
-        from labkit import audit
+        from labkit.gates import audit
 
         (self.area / "scripts" / "m.py").write_text("import scoring\n")
         report = (

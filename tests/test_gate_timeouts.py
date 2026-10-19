@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit import preflight, report_check
+from labkit.gates import preflight, report_check
 
 
 class Timeouts(unittest.TestCase):

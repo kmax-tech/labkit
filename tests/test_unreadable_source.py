@@ -18,7 +18,7 @@ from pathlib import Path
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file
 
 from labkit.checks import code_check
-from labkit import preflight
+from labkit.gates import preflight
 from labkit.formats import scope_sha
 
 

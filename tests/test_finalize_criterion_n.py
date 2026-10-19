@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import finalize  # noqa: E402
+from labkit.gates import finalize  # noqa: E402
 
 
 class CriterionN(unittest.TestCase):

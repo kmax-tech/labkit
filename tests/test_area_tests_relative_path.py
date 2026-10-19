@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit.preflight import area_tests
+from labkit.gates.preflight import area_tests
 
 
 class RelativeAreaPath(unittest.TestCase):

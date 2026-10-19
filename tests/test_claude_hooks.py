@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import claude_hooks  # noqa: E402
+from labkit.gates import claude_hooks  # noqa: E402
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, PID, head  # noqa: E402
 

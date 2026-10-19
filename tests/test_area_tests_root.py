@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import finalize, preflight
+from labkit.gates import finalize, preflight
 from labkit.formats.repo import layout_root
 
 

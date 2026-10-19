@@ -113,7 +113,7 @@ class ReadLines(unittest.TestCase):
     with the report but are no findings and enter no verdict."""
 
     def test_read_lines_are_not_findings(self):
-        from labkit import audit
+        from labkit.gates import audit
 
         report = (
             "WARNING · scripts/m.py:3 · x · y · new class · z\n"

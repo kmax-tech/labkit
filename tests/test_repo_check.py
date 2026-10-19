@@ -5,7 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import install_hooks, repo_check
+from labkit.gates import install_hooks
+from labkit import repo_check
 
 GIT_ID = ["-c", "user.name=t", "-c", "user.email=t@example.org"]
 
