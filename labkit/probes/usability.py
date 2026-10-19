@@ -96,7 +96,7 @@ import tempfile
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
-from labkit import agent_transcript, code_navigation, protocol_reading
+from labkit.probes import agent_transcript, code_navigation, protocol_reading
 from labkit.tools import scaffold
 from labkit.formats import console, promises, repo, runs, scope_sha, standard_contract
 

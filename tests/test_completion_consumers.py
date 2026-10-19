@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from protocol_fixture import PID, head  # noqa: E402
 
 from labkit.checks import recheck  # noqa: E402
-from labkit import usability  # noqa: E402
+from labkit.probes import usability  # noqa: E402
 from labkit.run import runlog  # noqa: E402
 from labkit.formats import runs  # noqa: E402
 

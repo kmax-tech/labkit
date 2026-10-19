@@ -32,7 +32,7 @@ notes-check = "labkit.checks.notes_check:cli"
 preflight = "labkit.gates.preflight:cli"
 finalize = "labkit.gates.finalize:cli"
 claude-hook = "labkit.gates.claude_hooks:cli"
-usability = "labkit.usability:cli"
+usability = "labkit.probes.usability:cli"
 labkit-audit = "labkit.gates.audit:cli"
 labkit-hooks = "labkit.gates.install_hooks:cli"
 labkit-params = "labkit.tools.params:cli"
@@ -72,7 +72,7 @@ select = ["E4", "E7", "E9", "F", "ANN0", "ANN2", "D100", "D101", "D102", "D103",
 
 [tool.pyright]
 # strict where the code is new (2026-10-08); widen module by module
-strict = ["labkit/cold_reader.py", "labkit/code_navigation.py", "labkit/protocol_reading.py"]
+strict = ["labkit/probes/cold_reader.py", "labkit/probes/code_navigation.py", "labkit/probes/protocol_reading.py"]
 # the repo's own venv (`python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'`):
 # without it the editor resolved `labkit` to an old copy installed in some
 # other project's venv and flagged every new name as unknown

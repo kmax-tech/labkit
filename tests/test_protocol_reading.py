@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import protocol_reading as pr
+from labkit.probes import protocol_reading as pr
 from protocol_fixture import head
 
 DENSE = (

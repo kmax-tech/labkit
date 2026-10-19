@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import code_navigation as cn
+from labkit.probes import code_navigation as cn
 
 SOURCE = '''"""A small module."""
 

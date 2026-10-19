@@ -15,7 +15,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import PACKAGE_DIR, usability  # noqa: E402
+from labkit import PACKAGE_DIR  # noqa: E402
+from labkit.probes import usability  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 LOG = """\

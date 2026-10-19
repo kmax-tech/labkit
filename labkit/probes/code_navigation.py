@@ -42,8 +42,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from labkit import agent_transcript
-from labkit.cold_reader import answer_contract, load_answer
+from labkit.probes import agent_transcript
+from labkit.probes.cold_reader import answer_contract, load_answer
 
 
 class NavigationError(ValueError):

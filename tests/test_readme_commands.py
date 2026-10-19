@@ -14,7 +14,7 @@ import unittest
 from pathlib import Path
 
 from labkit.run import runlog
-from labkit import usability
+from labkit.probes import usability
 
 ROOT = Path(__file__).resolve().parents[1]
 

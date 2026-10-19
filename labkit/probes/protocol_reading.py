@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit.formats import promises, protocol_block, runs
-from labkit.cold_reader import (
+from labkit.probes.cold_reader import (
     NEWCOMER,
     answer_contract,
     asked_keys,

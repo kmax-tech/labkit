@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import agent_transcript as at
+from labkit.probes import agent_transcript as at
 
 ROOT = Path("/probe/count-1")
 SOURCE = re.compile(r"labkit/\w+\.py|labkit/docs/standard|arbeitsstandard", re.I)
