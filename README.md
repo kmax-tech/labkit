@@ -52,12 +52,12 @@ scope-sha [AREA | --area DIR] [--globs PAT,...] [--no-pin] [FILE ...]  # audit s
 protocol-fill <PROTOCOL> FIELD VAL [--line N] [--force]  # fill one stamped placeholder field by label
 protocol-fill <PROTOCOL> "LABEL=VALUE" ...  # fill several in one call, all or nothing (`type=exploratory` for the head)
 protocol-fill <PROTOCOL> --list | --prompts  # the open placeholder fields; the Prompt block from the scripts' PROMPT constants
-protocol-fill <PROTOCOL> --from-run [RUN]  # write the number back from the run's metrics.json: Answer, Result, Answering run and Runs lines, never retyped
+protocol-fill <PROTOCOL> --from-run [RUN]  # adopt the run as the result: Answer, Result, Answering run and Runs lines from its metrics.json, never retyped — kept only when report-check passes on the written protocol
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
 preflight <AREA> [--protocol FILE]  # the mechanical pre-freeze gate, eight stations: protocol-check · cost tier · audit findings decided · code-check · scope-sha · working tree · hooks · area tests (not the agent audit; `labkit/preflight.py` lists them)
 finalize <AREA> [--protocol FILE]   # the post-run gate, eight steps: answering run and its record (a probe or an acknowledged run is a warning) · intent-check · declared scopes · open fields · frozen source · area tests · criterion n · open audit findings (`labkit/finalize.py` lists them)
-finalize --if-reported <PROTOCOL>.. # the commit gate: finalize every protocol whose answer cites a run
-report-check <AREA> [--protocol FILE]  # the last gate at minutes/hours: frozen · finalize clean and its run a full run (long=True, not acknowledged unfrozen) · analysis audit of the code now, decided · 02_analyze.py --check passes
+report-check <AREA> [--protocol FILE]  # the last gate at every cost tier: frozen (minutes/hours only) · finalize clean, its blockers named · its run a full run (long=True, not acknowledged unfrozen) · analysis audit of code, promises and that run, decided · 02_analyze.py --check passes
+report-check --if-reported <PROTOCOL>.. # the gate at the stop and the commit: report-check every protocol whose answer cites a run (an open answer owes nothing)
 claude-hook pre-run|post-change|stop  # the three Claude Code hooks a lab repo installs (stdin: event JSON)
 claude-hook undecided <paths…>      # the pre-commit's gate: an area a staged path touches holds an undecided audit BLOCKER → exit 1
 claude-hook sessions [--run RUN_ID]  # the session log the stop hook keeps (.git/labkit-sessions.jsonl): session, transcript, runs
@@ -114,8 +114,8 @@ Code and hold only in a Claude Code session:
 | code refuses         | `runlog.Run` — leak, index header, detach, **freeze gate** | always: every run passes through it                   |
 | Claude hook blocks   | `claude-hook pre-run` (PreToolUse Bash, exit 2)            | a frozen protocol's area has preflight blockers; not at `cost = "seconds"` |
 | Claude hook reports  | `claude-hook post-change` (PostToolUse Bash\|Write\|Edit)  | a protocol or messung note changed, whatever wrote it |
-| Claude hook sends back | `claude-hook stop` (Stop, exit 2)                        | a protocol changed in this session cites a run and `finalize` has blockers; an area the session touched holds an audit BLOCKER nobody decided — once per stop |
-| git pre-commit fails | `.githooks/pre-commit`                                     | a staged protocol misses must fields; a written-back answer fails `finalize --if-reported`; an area a staged file touches holds an undecided audit BLOCKER (`claude-hook undecided`) |
+| Claude hook sends back | `claude-hook stop` (Stop, exit 2)                        | a protocol changed in this session cites a run in its answer and `report-check` has blockers (the whole release check, finalize among its stations; an open answer owes nothing); an area the session touched holds an audit BLOCKER nobody decided — once per stop |
+| git pre-commit fails | `.githooks/pre-commit`                                     | a staged protocol misses must fields; a written-back answer fails `report-check --if-reported`; an area a staged file touches holds an undecided audit BLOCKER (`claude-hook undecided`) |
 
 All of them are installed by `labkit-hooks install` from the pinned labkit, and
 `preflight` warns when they are missing or from another labkit version.
@@ -138,10 +138,25 @@ the backend's error, the code and promises it would have read and the time
 the call had — at least the default timeout), and records which one the
 run rests on (`audit_failed`). Every run records `long`; `finalize` warns
 and `report-check` refuses when the answering run is a probe (`long=False`)
-or an acknowledged run — a reported number owes a full run on a frozen
-protocol (`runs.unreportable`). The refusal offers no way round and does
+or an acknowledged run — a reported number owes a full run, on a frozen
+protocol at minutes/hours (`runs.unreportable`). The refusal offers no way round and does
 not call the shortcut a "pilot": the agents of the benchmark rounds took
 the offered word for their run (review 2026-10-18).
+`report-check` holds at every cost tier: at `seconds` only the freeze and
+the preflight audit are not owed; the full run, the decided analysis audit
+of code, promises and that run, and `02_analyze.py --check` are. The
+declaration that a result is reported is the run_id in the protocol's
+"Answer to the question", and the one path that writes it is
+`protocol-fill --from-run`: it writes the lines, runs `report-check` on the
+written protocol and puts the file back on a blocker, so every result
+adopted this way has passed every check (the declaration is not what makes
+a number sound; the check is). The stop hook and the pre-commit run
+`report-check --if-reported` on exactly those protocols, so a hand-written
+or later-changed answer is held to the same chain, and an exploration whose
+answer stays open may end with no reported result, probes in `runs/` or
+not. A provisional number stays a sketch in `runs/` and `output/`. An
+answer written without a run_id is a `protocol-check` warning — the hint,
+not a gate.
 The gate follows the cost tier (`cost` in the protocol head, LAB-017 The number of audits follows the cost tier — `LAB-nnn` names a rule of the shipped lab standard): at
 `seconds` a rerun costs nothing, so the gate is the **written success
 criterion**, not the freeze — an instrument change after it is a commit

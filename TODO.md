@@ -193,6 +193,41 @@ Vorgabe ist ab jetzt weg (Stufe nach LAB-017, Kriterium bei jeder Stufe
 verlangt) und bleibt als mögliche Einflussgröße notiert, nicht als Ursache —
 Bereich 09, Protokoll „Changed“ und „Notes“. Für labkit folgt daraus A5.
 
+**Gebaut 2026-10-19 (Unreleased), zwei Schritte nach der dritten Runde:**
+(1) `report-check` prüft an allen Kostenstufen; bei `seconds` entfällt nur
+Station 1 (Freeze, Vorab-Audit, LAB-017), der Rest hält wie bei
+`minutes`: finalize sauber (Lauf ans Protokoll gebunden und in der Antwort
+zitiert), voller Lauf (`runs.unreportable`), entschiedener Analysis-Record
+zu Code, Promises und Lauf (`findings.audit_coverage`), `02_analyze.py
+--check`. finalize-Blocker stehen namentlich in der Liste
+(`finalize_area(…, findings)`). Bis 0.99.0 endete der Befehl bei `seconds`
+sofort mit 0, eine zurückgeschriebene Probezahl galt dort als berichtet.
+(2) Stop-Hook und Pre-Commit rufen `report-check --if-reported`;
+`finalize --if-reported` ist weg. Die vorhandene Ergebnisbindung drückt den
+Anlass eindeutig aus: die Run-ID in „Answer to the question“
+(`protocol-fill --from-run` schreibt sie, `finalize.cited_runs` liest sie)
+ist die Erklärung „Ergebnis berichtet“; eine offene Antwort schuldet nichts,
+eine Exploration endet mit „kein freigegebenes Ergebnis“, Probeläufe in
+`runs/` oder nicht (`tests/test_claude_hooks.py` Stop, `tests/test_report_check.py`
+IfReported). Eine Antwort ohne Run-ID ist weder berichtet noch offen:
+`protocol-check` warnt (`answer_without_run`, static evidence), die Gates
+schweigen. (3) **Ein Übernahmeweg** (Max, 2026-10-19): `protocol-fill
+--from-run` schreibt die Zeilen, lässt `report-check` auf dem geschriebenen
+Protokoll laufen und stellt bei einem Blocker die Datei wieder her
+(`protocol_fill.adopt`, `tests/test_protocol_fill.py` Adopt). Das
+Einschreiben erklärt die Zahl zum Ergebnis, die Prüfung sichert den
+Anspruch; was über diesen Weg im Answer-Feld steht, hat jede Prüfung
+durchlaufen. Vorläufige Zahlen bleiben Skizze in `runs/` und `output/`. Ob
+jemand außerhalb des Wegs (REPORT.md, Chat) eine Zahl berichtet, bleibt
+Arbeitsdisziplin bzw. Audit. **Folge für die Doktrin, Entscheidung des Autors:** LAB-017 sagt
+für `seconds` „ein Analysis-Audit bei der Promotion, bis dahin Skizze“;
+jetzt ist das Zurückschreiben der Antwort die Promotion, der Audit also vor
+dem Stop bzw. Commit fällig, der sie trägt. Die `AGENTS.md`-Vorlage (Lane
+seconds, Schritte 5–6) und der LAB-011-Absatz des Standards sagen das; der
+Tabellensatz von LAB-017 selbst ist unverändert und gehört, wenn er
+geändert wird, in den Ledger (0.20). Weiter nicht lösbar: der Bericht
+außerhalb des Protokolls (t3) — kein Protokoll, keine Erklärung, kein Gate.
+
 ## Audit 2026-10-18: was unter dem Grep des One-Home-Tests liegt
 
 Befund: `docs/audit-2026-10-18.md` (drei Fehler, reproduziert; die halben

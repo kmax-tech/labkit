@@ -11,8 +11,10 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md "Meaning of the gold label" "positive = ..."
     protocol-fill PROTOCOL-x.md --line 27 Question "does Y move X?"
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
-    protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   the Answer, Result, Answering run and Runs lines
-                                               from the run's metrics.json (newest completed run by default)
+    protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: the Answer,
+                                               Result, Answering run and Runs lines from its
+                                               metrics.json (newest completed run by default),
+                                               written only when report-check passes on them
 
 A field that is already filled is refused without --force — overwriting an
 answer silently is how two truths happen.
@@ -24,6 +26,18 @@ lines carry every metric key and value as the run recorded them, and the
 run_id — exactly what `--check` (`recheck.cited`) holds the protocol to. Labels are matched with the †
 marker and case ignored; an ambiguous label (same label in Summary and a
 section) is refused with the line numbers, disambiguate with --line.
+
+`--from-run` is also the one path by which a number becomes the result
+(`adopt`, 2026-10-19): the run_id in the Answer declares it reported, and
+the declaration is not what makes it sound — the checks are. So the lines
+are written, `report-check` runs on the written protocol (finalize clean, a
+full run — no probe, no acknowledged run — a decided analysis audit of code,
+promises and that run, `02_analyze.py --check` holding the written numbers;
+frozen at minutes/hours), and a blocker puts the file back as it was. A
+result adopted this way has passed every check labkit prescribes; the stop
+hook and the pre-commit (`report-check --if-reported`) hold a hand-written or
+later-changed answer to the same. A provisional number stays a sketch in
+`runs/` and `output/`, never in the Answer.
 """
 
 from __future__ import annotations
@@ -32,7 +46,7 @@ import argparse
 import re
 from pathlib import Path
 
-from labkit import console, protocol_block, recheck, runs
+from labkit import console, protocol_block, recheck, report_check, runs
 from labkit.code_check import prompt_constants
 from labkit.protocol_check import (
     RUNS_PLACEHOLDER,
@@ -263,23 +277,47 @@ def fill_prompts(text: str, constants: dict[str, str]) -> str:
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 
 
+def adopt(protocol: Path, before: str, after: str) -> int:
+    """Adopt the result AFTER writes into PROTOCOL: write it, run report-check
+    on the written protocol, and on a blocker put BEFORE back and return 1.
+    The one path by which a number becomes the result: whatever stands in
+    the Answer through here has passed every check (the write-back is the
+    declaration, the check is what makes it hold; a declaration the check
+    refuses is no weaker kind of result, it is none). The gates at the stop
+    and the commit (`report-check --if-reported`) hold the same line to a
+    hand-written or later-changed answer."""
+    protocol.write_text(after, encoding="utf-8")
+    rc = report_check.report_check(protocol.parent, protocol)
+    if rc == 0:
+        return 0
+    protocol.write_text(before, encoding="utf-8")
+    print(
+        f"protocol-fill: not adopted — report-check refuses the written result "
+        f"(above); {protocol.name} is as it was. Pass the checks first, or leave "
+        f"the number a sketch in runs/ (an exploration reports no result)."
+    )
+    return 1
+
+
 def _write_back(args: argparse.Namespace, text: str) -> int:
-    """`--from-run`: the number from the run's metrics.json into the protocol."""
+    """`--from-run`: the number from the run's metrics.json into the protocol,
+    adopted as the result only when report-check passes on it (`adopt`)."""
+    protocol = args.protocol.resolve()
     try:
         new, filled, run_id = from_run(
             text,
-            args.protocol.resolve().parent,
+            protocol.parent,
             None if args.from_run == "newest" else args.from_run,
             force=args.force,
         )
     except ValueError as exc:
         print(f"protocol-fill: {exc}")
         return 1
-    args.protocol.write_text(new, encoding="utf-8")
     print(
         f"filled from run {run_id}: {', '.join(filled) or 'nothing (all written already)'}"
+        f" — adopting as the result:"
     )
-    return 0
+    return adopt(protocol, text, new)
 
 
 def _list_open(text: str) -> int:
@@ -374,7 +412,7 @@ def main(argv: list[str]) -> int:
         const="newest",
         default=None,
         metavar="RUN_ID",
-        help="write the Answer, Result, Answering run and Runs lines from the run's metrics.json "
+        help="adopt the run as the result: write the Answer, Result, Answering run and Runs lines from its metrics.json, kept only when report-check passes "
         "(the area's newest completed run without RUN_ID)",
     )
     ap.add_argument(

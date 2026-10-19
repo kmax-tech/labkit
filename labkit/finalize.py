@@ -88,9 +88,9 @@ from labkit.repo import (
 from labkit.intent_check import main as intent_check_main, ids_in_prose
 from labkit.preflight import area_tests
 from labkit.protocol_check import (
+    answer_field,
     answering_run_field,
     answering_run_open,
-    fields,
     open_holes,
 )
 
@@ -682,9 +682,14 @@ def header(title: str) -> None:
     print(f"── {title} ──")
 
 
-def finalize_area(area: Path, protocol: Path | None = None) -> int:
+def finalize_area(
+    area: Path, protocol: Path | None = None, findings: Findings | None = None
+) -> int:
     """Run finalize on an area. Returns 0 (clean or warnings only),
-    1 (a blocker) or 2 (no protocol to hold the area to).
+    1 (a blocker) or 2 (no protocol to hold the area to). FINDINGS, when
+    given, collects what the stations found, so a gate that runs finalize
+    as one of its stations (report-check) can name the blockers instead of
+    "run it to see them".
 
     The flow — every condition that decides whether a step runs is in this
     function; one level down is how a step works, not whether it runs. A
@@ -720,7 +725,7 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
     except protocol_block.BlockError as exc:
         print(f"finalize: {chosen.name}: {exc}")
         return 2
-    findings = Findings()
+    findings = Findings() if findings is None else findings
 
     # 1. completion — the run every later step examines
     header(f"completion: {chosen.name}")
@@ -772,45 +777,23 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
 
 def cited_runs(text: str) -> list[str]:
     """The run ids the protocol's "Answer to the question" cites — a number
-    written back. Empty while the field is a placeholder or cites none."""
-    for f in fields(text):
-        if f.name == "answer to the question" and not f.placeholder:
-            return sorted({m.group(0) for m in RUN_ID.finditer(f.value)})
-    return []
-
-
-def if_reported(protocols: list[Path]) -> int:
-    """`finalize` for every protocol whose answer cites a run — the commit
-    gate: a number written back does not enter the history unchecked
-    (review 2026-10-07: nothing showed whether finalize ever ran). Returns
-    the worst exit code; protocols without a cited run are skipped."""
-    worst = 0
-    for protocol in protocols:
-        try:
-            text = protocol.read_text(encoding="utf-8")
-        except OSError as exc:
-            print(f"finalize: {protocol}: {exc}")
-            worst = max(worst, 2)
-            continue
-        if not cited_runs(text):
-            continue
-        print(f"═══ finalize {protocol} (its answer cites a run) ═══")
-        worst = max(worst, finalize_area(protocol.parent, protocol))
-    return worst
+    written back, the one declaration that a result is reported
+    (`protocol_check.answer_field`; report-check holds it at the stop and
+    the commit). Empty while the field is a placeholder or cites none."""
+    value = answer_field(text)
+    return sorted({m.group(0) for m in RUN_ID.finditer(value)}) if value else []
 
 
 def main(argv: list[str]) -> int:
-    """Command line of `finalize`: check one area, or every protocol whose answer cites a run (`--if-reported`)."""
+    """Command line of `finalize`: check one area."""
     if not argv or argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print("usage: finalize <AREA> [--protocol PROTOCOL-*.md]")
         print(
-            "       finalize --if-reported PROTOCOL-*.md ...   (the commit gate: only "
-            "protocols whose answer cites a run)"
+            "       (the gate at the stop and the commit is `report-check --if-reported`, "
+            "which runs finalize as one station)"
         )
         return 0 if argv else 2
-    if argv[0] == "--if-reported":
-        return if_reported([Path(a) for a in argv[1:]])
 
     area = area_path(argv[0])
     protocol = None

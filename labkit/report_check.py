@@ -1,6 +1,9 @@
 """report-check — the gate after the last step, before a number leaves the area.
 
     report-check <AREA> [--protocol PROTOCOL-*.md]
+    report-check --if-reported PROTOCOL-*.md ...   every protocol whose answer
+                                                   cites a run (the stop hook
+                                                   and the pre-commit)
 
 Exit codes: 0 clean, 1 a blocker, 2 usage error.
 
@@ -10,23 +13,27 @@ run by `02_analyze.py --check` — had no gate. In the cloud judge probe at
 `minutes` (2026-10-14, draw 3) the agent skipped the check and the result
 note, and finalize was green. A gate there cannot be finalize itself: finalize
 comes before the analysis audit, so it cannot ask for what follows the audit.
-report-check comes last and holds the whole chain:
+report-check comes last and holds the whole chain, at every cost tier:
 
-  0. protocol      the named PROTOCOL-*.md or the area's only one; at
-                   `cost = "seconds"` nothing is owed here (the short lane
-                   ends with finalize, the audit comes when the number is
-                   promoted — LAB-017 The number of audits follows the cost
-                   tier) and the command exits 0
-  1. frozen        `frozen = true`, and the freeze holds: no must gap
-                   `protocol-check` names (`check_fields`) — the [[promise]]
-                   tables written, not the stamp's `<…>` sentences
-  2. finalize      `finalize_area` clean (its output is not repeated), and
-                   the answering run it holds is a full run: `long=True`,
+  0. protocol      the named PROTOCOL-*.md or the area's only one
+  1. frozen        at `minutes`/`hours`: `frozen = true`, and the freeze
+                   holds: no must gap `protocol-check` names
+                   (`check_fields`) — the [[promise]] tables written, not
+                   the stamp's `<…>` sentences. At `cost = "seconds"` no
+                   freeze and no preflight audit are owed
+                   (LAB-017 The number of audits follows the cost tier), so
+                   this station is skipped and says so; until 0.99.0 the whole
+                   command exited 0 there, and a probe's number passed as
+                   a reported one (TODO 1, 2026-10-19)
+  2. finalize      `finalize_area` clean — its blockers are named here —
+                   so the answering run is bound to this protocol and the
+                   answer cites it; and that run is a full run: `long=True`,
                    not acknowledged unfrozen (`runs.unreportable`) — a
-                   reported number owes a frozen full run; a probe's or an
-                   acknowledged run's number cannot be reported (second
-                   haiku round on 0.98.0: t3 and t18 reported a probe, t5
-                   an acknowledged run; plan 2026-10-17, A3)
+                   reported number owes a full run (frozen at
+                   minutes/hours); a probe's or an acknowledged run's number
+                   cannot be reported (second haiku round on 0.98.0: t3 and
+                   t18 reported a probe, t5 an acknowledged run; plan
+                   2026-10-17, A3)
   3. analysis audit  a record `audits/*-analysis.toml` whose `scope_sha` is
                    the area's stamp now, whose `block_sha` is the promise
                    block now and whose `run_id` is the answering run, every
@@ -42,6 +49,17 @@ report-check comes last and holds the whole chain:
 
 Every station runs; the blockers are summed at the end. It reads and runs,
 never writes.
+
+`--if-reported` is the gate the agent cannot choose: `claude-hook stop`
+runs it on every changed PROTOCOL-*.md, the stamped pre-commit on every
+staged one, and it holds exactly the protocols whose "Answer to the
+question" cites a run (`finalize.cited_runs`) — the one line that declares
+a result reported, written by `protocol-fill --from-run`. A protocol whose
+answer is still open owes nothing here: an exploration ends with no
+reported result, probes or not (third haiku round on 0.99.0: t3 and t5
+reported a probe's number and never called report-check; TODO 2,
+2026-10-19). finalize stays the check before the analysis audit; this is
+the check after it.
 """
 
 from __future__ import annotations
@@ -55,7 +73,7 @@ from pathlib import Path
 from labkit.gate import Findings
 from labkit import console, findings, promises, protocol_block
 from labkit.audit import AuditError, audited_run
-from labkit.finalize import finalize_area
+from labkit.finalize import cited_runs, finalize_area
 from labkit.preflight import area_test_python
 from labkit.protocol_check import check_fields
 from labkit.repo import choose_protocol, layout_root
@@ -123,10 +141,11 @@ def analysis_audit_gap(area: Path, protocol: Path) -> str | None:
         return f"the analysis audit cannot be held to the area: {exc}"
 
 
-def unreportable_gaps(area: Path, protocol: Path) -> list[str]:
+def unreportable_gaps(area: Path, protocol: Path, freeze_owed: bool) -> list[str]:
     """Station 2, the run: why the answering run's number cannot be reported
     (`runs.unreportable`), each a blocker. Without an answering run there is
-    nothing to hold — finalize says so."""
+    nothing to hold — finalize says so. FREEZE_OWED names the freeze in the
+    sentence (minutes/hours); at seconds a full run is owed, no freeze."""
     try:
         run_dir, _ = audited_run(area, protocol)
     except AuditError as exc:
@@ -136,22 +155,33 @@ def unreportable_gaps(area: Path, protocol: Path) -> list[str]:
     cfg = read_run_config(run_dir)
     if cfg is None:
         return [f"{run_dir.name}: no config.json — not a run"]
+    owed = "a full run (long=True)" + (" on a frozen protocol" if freeze_owed else "")
     return [
         f"the answering run {run_dir.name}: {mark} — its number cannot be "
-        f"reported; a reported number owes a full run (long=True) on a frozen protocol"
+        f"reported; a reported number owes {owed}"
         for mark in unreportable(cfg)
     ]
 
 
-def later_gaps(area: Path, protocol: Path) -> list[str]:
+def finalize_gaps(area: Path, protocol: Path) -> list[str]:
+    """Station 2, the gate before: finalize's blockers, each named here with
+    its prefix — inside the stop hook "run it to see them" was a round trip
+    the agent did not take. Exit 2 (no protocol to hold) is one blocker."""
+    collected = Findings()
+    with contextlib.redirect_stdout(io.StringIO()):
+        finalized = finalize_area(area, protocol, collected)
+    if finalized == 0:
+        return []
+    if collected.blocked:
+        return [f"finalize: {b}" for b in collected.blocked]
+    return [f"finalize {area} exits {finalized} — run it to see why"]
+
+
+def later_gaps(area: Path, protocol: Path, freeze_owed: bool = True) -> list[str]:
     """Stations 2–4: finalize clean and its run a full run, an analysis audit
     of the area now, the check."""
-    out: list[str] = []
-    with contextlib.redirect_stdout(io.StringIO()):
-        finalized = finalize_area(area, protocol)
-    if finalized != 0:
-        out.append(f"finalize {area} has blockers — run it to see them")
-    out += unreportable_gaps(area, protocol)
+    out = finalize_gaps(area, protocol)
+    out += unreportable_gaps(area, protocol, freeze_owed)
     gap = analysis_audit_gap(area, protocol)
     if gap:
         out.append(f"analysis audit: {gap} (LAB-050 Analysis audit before reporting)")
@@ -171,22 +201,51 @@ def report_check(area: Path, protocol: Path | None = None) -> int:
     except protocol_block.BlockError as exc:
         print(f"report-check: {chosen.name}: {exc}")
         return 2
-    if head.cost == "seconds":
-        print(
-            f'report-check: {chosen.name} is at cost = "seconds" — nothing owed here; '
-            f"the short lane ends with finalize (LAB-017 The number of audits follows the cost tier)"
-        )
-        return 0
+    freeze_owed = head.cost != "seconds"
     findings = Findings()
-    for b in freeze_gaps(chosen, head.frozen) + later_gaps(area, chosen):
+    if freeze_owed:
+        gaps = freeze_gaps(chosen, head.frozen)
+    else:
+        gaps = []
+        print(
+            f'  {chosen.name}: cost = "seconds" — no freeze and no preflight audit '
+            f"owed (LAB-017 The number of audits follows the cost tier); the full "
+            f"run, the analysis audit and the check are"
+        )
+    for b in gaps + later_gaps(area, chosen, freeze_owed):
         findings.block(b)
     if not findings.blocked:
-        print(f"  {chosen.name}: frozen, finalized, audited, checked")
+        held = ("frozen, " if freeze_owed else "") + "finalized, audited, checked"
+        print(f"  {chosen.name}: {held}")
     return findings.report("report-check", "reporting")
+
+
+def if_reported(protocols: list[Path]) -> int:
+    """`report-check` for every protocol whose "Answer to the question" cites
+    a run — the gate at the stop and the commit: a result declared reported
+    is held to the whole chain, a protocol whose answer is still open is
+    skipped (an exploration may end with no reported result). Returns the
+    worst exit code."""
+    worst = 0
+    for protocol in protocols:
+        try:
+            text = protocol.read_text(encoding="utf-8")
+        except OSError as exc:
+            print(f"report-check: {protocol}: {exc}")
+            worst = max(worst, 2)
+            continue
+        cited = cited_runs(text)
+        if not cited:
+            continue
+        print(f"═══ report-check {protocol} (its answer cites {', '.join(cited)}) ═══")
+        worst = max(worst, report_check(protocol.parent.resolve(), protocol))
+    return worst
 
 
 def main(argv: list[str]) -> int:
     """Command line of `report-check`."""
+    if argv and argv[0] == "--if-reported":
+        return if_reported([Path(a) for a in argv[1:]])
     ap = argparse.ArgumentParser(
         prog="report-check", description=(__doc__ or "").split("\n\n")[0]
     )
