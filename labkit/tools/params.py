@@ -42,11 +42,8 @@ from pathlib import Path
 from labkit.formats import console, promises, protocol_block
 from labkit.checks.intent_check import protocol_id_of
 from labkit.formats.repo import area_path, choose_protocol, no_such_area
-from labkit.formats.runs import (
-    bound_answering_run,
-    model_provenance_run,
-    read_run_config,
-)
+from labkit.formats.runs import read_run_config
+from labkit.formats.answering_run import bound_answering_run, model_provenance_run
 
 GUARANTEED = "guaranteed"
 EVIDENCE = "static evidence"
@@ -181,7 +178,7 @@ def model_rows(run_dir: Path) -> list[ParamRow]:
     """The model that answered the rows, from the record that holds it.
 
     Raises:
-        ValueError: From `runs.model_provenance_run` — a missing ancestor or
+        ValueError: From `answering_run.model_provenance_run` — a missing ancestor or
             a loop in `derived_from`.
     """
     found = model_provenance_run(run_dir)

@@ -45,7 +45,13 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats import promises, protocol_block, runs, standard_contract
+from labkit.formats import (
+    promises,
+    protocol_block,
+    runs,
+    standard_contract,
+    answering_run,
+)
 
 
 @dataclass(frozen=True)
@@ -485,7 +491,11 @@ def written_before_run(
     ]
     if not filled or head.id is None:
         return filled
-    return filled if runs.bound_answering_run(area, head.id).run_dir is None else []
+    return (
+        filled
+        if answering_run.bound_answering_run(area, head.id).run_dir is None
+        else []
+    )
 
 
 def answering_run_field(text: str) -> str | None:

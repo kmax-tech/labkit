@@ -58,7 +58,7 @@ Every station runs; the blockers are summed at the end. It reads and runs,
 never writes. The stations read one context (`Checked`, built once by
 `checked`): the protocol text as the named file state holds it, its head,
 the run ids the answer cites, and the answering run chosen once
-(`audit.audited_run`, through `runs.bound_answering_run`, the one choice
+(`audit.audited_run`, through `answering_run.bound_answering_run`, the one choice
 every gate holds a protocol to) — no station reads the file or chooses the
 run for itself, and the output names the state that was held.
 
@@ -147,7 +147,7 @@ class Checked:
         cited: The run ids the answer cites (`finalize.cited_runs`) — the
             declaration that a result is reported.
         run: The answering run (`audit.audited_run`, through
-            `runs.bound_answering_run`: the one choice every gate holds the
+            `answering_run.bound_answering_run`: the one choice every gate holds the
             protocol to), or None.
         why: Why there is no answering run, when RUN is None.
     """

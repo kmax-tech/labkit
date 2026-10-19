@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import protocol_check  # noqa: E402
-from labkit.tools import scaffold  # noqa: E402
+from labkit.tools import scaffold, protocol_cuts  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 TEMPLATE = (
@@ -160,8 +160,10 @@ class CountPlaceholders(unittest.TestCase):
     'hypothesis' as an expectation to invent (Haiku H5–H7, 2026-10-13)."""
 
     def test_the_count_cut_says_na_and_no_hypothesis(self):
-        cut = scaffold.seconds_cut(scaffold.template(scaffold.PROTOCOL_TEMPLATE.name))
-        out = scaffold.count_placeholders(cut)
+        cut = protocol_cuts.seconds_cut(
+            scaffold.template(scaffold.PROTOCOL_TEMPLATE.name)
+        )
+        out = protocol_cuts.count_placeholders(cut)
         self.assertIn(
             '**Terms of this protocol:** <one line per coined house word — or "n/a — no coinage">',
             out,
@@ -171,7 +173,7 @@ class CountPlaceholders(unittest.TestCase):
 
     def test_a_cut_without_the_field_is_refused(self):
         with self.assertRaises(ValueError):
-            scaffold.count_placeholders("- **Unit:** <x>\n")
+            protocol_cuts.count_placeholders("- **Unit:** <x>\n")
 
 
 if __name__ == "__main__":

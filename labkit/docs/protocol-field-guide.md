@@ -314,7 +314,7 @@ scattered in output files nobody can interpret.
 - **Answering run:** the run `finalize` holds the protocol to — its
   run_id, written with `protocol-fill` after a clean `finalize`, read by
   a person who wants one id, not a list. It is a projection of
-  `runs.bound_answering_run` (the one choice intent-check, finalize and
+  `answering_run.bound_answering_run` (the one choice intent-check, finalize and
   labkit-params share), never a second binding: `finalize` refuses the
   line when it names another run, and only warns while it still says
   "none yet" (round 15, 2026-10-08: a person named the fresh run, not the

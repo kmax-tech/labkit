@@ -12,7 +12,7 @@ import threading
 import unittest
 from pathlib import Path
 
-from labkit.formats import runs
+from labkit.formats import runs, answering_run
 
 CONFIG = {"schema_version": 2, "run_id": "r", "protocol": {"id": "p-" + "0" * 16}}
 
@@ -65,7 +65,7 @@ class RunDirs(unittest.TestCase):
         self._run("2026-01-01T00-00-00_aaaa", done=True)
         self._run("2026-01-01T00-00-00_bbbb", config=None)
         self._run("2026-01-01T00-00-00_cccc", config="{not json")
-        taken, left = runs.bound_runs(self.area, CONFIG["protocol"]["id"])
+        taken, left = answering_run.bound_runs(self.area, CONFIG["protocol"]["id"])
         self.assertEqual([f["dir"].name[-4:] for f in taken], ["aaaa"])
         self.assertEqual(
             [(f["dir"].name[-4:], f["state"]) for f in left], [("cccc", "unreadable")]

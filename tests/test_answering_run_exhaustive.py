@@ -1,4 +1,4 @@
-"""`runs.bound_answering_run` over every area of up to three runs drawn from
+"""`answering_run.bound_answering_run` over every area of up to three runs drawn from
 nine kinds, held to an oracle that restates the rule from its docstrings.
 
 The worst faults the audit of 2026-10-15 found were in this choice (the
@@ -30,7 +30,7 @@ from labkit.gates import audit, finalize
 from labkit.tools import params
 from labkit.probes import usability_score
 from labkit.checks import intent_check, recheck
-from labkit.formats import runs
+from labkit.formats import runs, answering_run
 from labkit.formats.gate import Findings
 
 PID = "p-aaaaaaaaaaaaaaaa"
@@ -181,7 +181,7 @@ class EveryArrangement(unittest.TestCase):
                 (_write(area, _name(i, one_second), k), k) for i, k in enumerate(combo)
             ]
             want = oracle(placed)
-            got = runs.bound_answering_run(area, PID)
+            got = answering_run.bound_answering_run(area, PID)
             self.assertEqual(got.run_dir, want.run_dir)
             self.assertEqual(got.skipped_newer, want.skipped_newer)
             self.assertEqual(got.reports_intent_keys, want.reports_intent_keys)
@@ -213,7 +213,7 @@ def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
     out: dict[str, str] = {}
     quiet = contextlib.redirect_stdout(io.StringIO())
 
-    choice = runs.bound_answering_run(area, PID)
+    choice = answering_run.bound_answering_run(area, PID)
     blocker, _ = choice.explain(promises_registered := True)
     assert promises_registered
     out["bound_answering_run"] = (
@@ -337,8 +337,8 @@ DRAW_KINDS = (
 
 
 class EveryDrawArrangement(unittest.TestCase):
-    """`runs.draws` (what an analysis shows as the spread) and
-    `runs.next_draw` (the number a new repeat reserves) over every area of
+    """`answering_run.draws` (what an analysis shows as the spread) and
+    `answering_run.next_draw` (the number a new repeat reserves) over every area of
     up to three runs from seven kinds, against the rule restated: the draws
     of PARENT are the run itself and its completed repeats by recorded draw;
     the next number is one past every draw ever started. A run that cannot
@@ -372,18 +372,18 @@ class EveryDrawArrangement(unittest.TestCase):
             )
             if broken or len(done) != len(set(done)):
                 with self.assertRaises(runs.RunConfigError):
-                    runs.draws(area, PARENT)
+                    answering_run.draws(area, PARENT)
             else:
-                got = runs.draws(area, PARENT)
+                got = answering_run.draws(area, PARENT)
                 self.assertEqual([d for d, _ in got], [1, *done])
                 self.assertEqual(got[0][1], area / "runs" / PARENT)
             if broken:
                 with self.assertRaises(runs.RunConfigError):
-                    runs.next_draw(area, PARENT)
+                    answering_run.next_draw(area, PARENT)
             else:
                 started = [k.draw for k in mine]
                 self.assertEqual(
-                    runs.next_draw(area, PARENT),
+                    answering_run.next_draw(area, PARENT),
                     1 + max([1, *started]),  # type: ignore[list-item]
                 )
         finally:

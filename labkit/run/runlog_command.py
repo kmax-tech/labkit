@@ -21,11 +21,11 @@ from labkit.formats.runs import (
     FAILED_STATES,
     RUN_ID_TIME,
     RunConfigError,
-    newest_completed,
     read_metrics,
     run_dirs,
     run_summary,
 )
+from labkit.formats.answering_run import newest_completed
 from labkit.run.runlog import active, notify_desktop, reindex
 
 

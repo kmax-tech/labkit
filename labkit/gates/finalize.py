@@ -70,14 +70,16 @@ from labkit.formats.gate import Findings
 from labkit.formats.runs import (
     RUN_ID,
     RunConfigError,
-    bound_answering_run,
-    model_provenance_run,
     unreportable,
     read_metrics,
     read_outputs,
     read_run_config,
-    repeats_of,
     resolve_recorded,
+)
+from labkit.formats.answering_run import (
+    bound_answering_run,
+    model_provenance_run,
+    repeats_of,
 )
 from labkit.formats.repo import (
     ProtocolChoiceError,
@@ -201,7 +203,7 @@ def provenance_findings(
 def answering_run(
     findings: Findings, area: Path, pid: str | None, ids_registered: bool
 ) -> Path | None:
-    """The run every station holds the protocol to — `runs.bound_answering_run`,
+    """The run every station holds the protocol to — `answering_run.bound_answering_run`,
     ONE choice for every station: intent-check skips newer runs without
     intent keys (a probe), so checking scopes or provenance on the newest
     run judged the probe while the numbers came from the measurement
@@ -245,7 +247,7 @@ def answering_run_field_mismatch(
     run than the one the checks hold (block), or is still "none yet"
     (warn: write it with protocol-fill). None when it names that run or
     the protocol has no such line. The field is a readable projection of
-    `runs.bound_answering_run`, never a second binding — so it is held to
+    `answering_run.bound_answering_run`, never a second binding — so it is held to
     the choice, not consulted for it."""
     value = answering_run_field(text)
     if value is None or measurement_run.name in value:

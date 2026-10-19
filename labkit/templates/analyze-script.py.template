@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 from labkit.checks import recheck
-from labkit.formats import runs
+from labkit.formats import answering_run, runs
 
 AREA = Path(__file__).resolve().parent.parent
 NOTE = AREA / "PROTOCOL-<name>.md"     # or notes/results/<note>.md once the number is promoted
@@ -41,7 +41,7 @@ def draws() -> list[str]:
     primary = recheck.run_dir(AREA, NOTE)
     seen: dict[str, dict[int, object]] = {}
     lines, accs = [], []
-    for n, d in runs.draws(AREA, primary.name):
+    for n, d in answering_run.draws(AREA, primary.name):
         rows = [o.path for o in runs.read_outputs(d) or [] if o.path.suffix == ".jsonl"]
         if len(rows) != 1:
             raise SystemExit(f"draws: {d.name} registered {len(rows)} JSONL outputs, not one")

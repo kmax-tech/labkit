@@ -40,7 +40,7 @@ RULES: list[tuple[str, str, set[str]]] = [
     (
         "a run id's start second compared by hand",
         r"start_second\(|rsplit\(\"_\", 1\)",
-        {"runs"},
+        {"answering_run"},
     ),
     (
         "a requirements pin spelled by hand",
@@ -90,7 +90,7 @@ class OneHome(unittest.TestCase):
             "the area name NN-slug": 'm = re.match(r"^(\\d+)-(.+)$", name)',
             "a temp-and-rename write": "os.replace(tmp, path)",
             "the run-id shape": 'RUN = re.compile(r"\\d{4}-\\d{2}-\\d{2}T")',
-            "a run id's start second compared by hand": "if runs.start_second(a) == runs.start_second(b):",
+            "a run id's start second compared by hand": "if answering_run.start_second(a) == answering_run.start_second(b):",
             "a requirements pin spelled by hand": 'if ln.startswith("labkit"):',
             "a tier rule read off the head": 'if head.cost == "seconds":',
         }

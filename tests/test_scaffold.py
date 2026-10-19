@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 from labkit.gates import finalize
-from labkit.tools import scaffold
+from labkit.tools import scaffold, protocol_cuts
 from labkit.formats import rules
 
 
@@ -515,7 +515,7 @@ class Exp(unittest.TestCase):
         self.assertIn("permuted-label lane", proto)
         # protocol-check reads the stamp as a clean pilot with placeholders only
         self.assertEqual(
-            scaffold.estimator_placeholders.__name__, "estimator_placeholders"
+            protocol_cuts.estimator_placeholders.__name__, "estimator_placeholders"
         )
 
     def test_the_stamped_estimator_formula_holds_the_contract(self) -> None:
@@ -699,8 +699,8 @@ class ModelNamed(unittest.TestCase):
     def test_a_dash_and_a_daggered_label_are_no_model(self):
         for value in ("—", "none", "n/a — a count"):
             text = f"- **Model / tool †:** {value}\n- **Parser cases harvested:** <cases>\n"
-            filled, n = scaffold.auto_fill_deterministic(text)
+            filled, n = protocol_cuts.auto_fill_deterministic(text)
             self.assertEqual(n, 1, value)
             self.assertIn("n/a — no model", filled)
         text = "- **Model / tool:** gpt-oss\n- **Parser cases harvested:** <cases>\n"
-        self.assertEqual(scaffold.auto_fill_deterministic(text), (text, 0))
+        self.assertEqual(protocol_cuts.auto_fill_deterministic(text), (text, 0))

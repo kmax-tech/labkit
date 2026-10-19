@@ -29,7 +29,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats import promises, protocol_block, runs, scope_sha
+from labkit.formats import promises, protocol_block, runs, scope_sha, answering_run
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
 #: reproduce: runlog's duration, llm's retry counter (the stamped evaluate()
@@ -52,7 +52,7 @@ class Verdict:
 def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Path:
     """The run a protocol is held to — and the run `--from-run` writes back.
 
-    The choice is `runs.bound_answering_run` for the protocol's stamped id,
+    The choice is `answering_run.bound_answering_run` for the protocol's stamped id,
     the same one finalize and intent-check make; RUN_ID names a run instead,
     which must be completed and bound to that id. Never a repeat draw, named
     or not (review 2026-10-15: `--from-run <repeat>` wrote its number).
@@ -71,7 +71,7 @@ def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Pat
         )
     if run_id is not None:
         return _named_run(area / "runs" / run_id, pid)
-    choice = runs.bound_answering_run(area, pid)
+    choice = answering_run.bound_answering_run(area, pid)
     blocker, lines = choice.explain(promises.registers_ids(protocol_text))
     if blocker or choice.run_dir is None:
         raise SystemExit(f"recheck: {blocker}" + "".join(f"\n  {ln}" for ln in lines))

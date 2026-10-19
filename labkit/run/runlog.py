@@ -34,11 +34,11 @@ Three ways a run depends on another run's rows — not one:
                    derived_from=ID)`), config.json holds it; the parent must
                    be completed and no repeat (else the best draw could
                    answer through it); the run makes no model call and records no
-                   model — `runs.model_provenance_run` walks this key alone
+                   model — `answering_run.model_provenance_run` walks this key alone
     repeat_of      per run; `runlog.run(..., repeat_of=ID)`: the same measurement
                    asked again — new model calls, its own model record, the
                    same protocol, block, config and inputs as ID or a
-                   refusal (`runs.repeat_mismatch`); `draw` numbers it (2,
+                   refusal (`answering_run.repeat_mismatch`); `draw` numbers it (2,
                    3, …). Supporting evidence: it never answers the protocol
 
 Usage:
@@ -96,13 +96,12 @@ from labkit.formats.runs import (
     read_metrics,
     read_run_config,
     recorded_path,
-    repeat_mismatch,
-    next_draw,
     repeat_parent,
     run_dirs,
     run_state,
     write_atomic,
 )
+from labkit.formats.answering_run import repeat_mismatch, next_draw
 from labkit.run.provenance import (
     Provenance,
     describe_data,
@@ -275,7 +274,7 @@ def _repeat_draw(
     """(repeat_of, draw) for config.json, before mkdir and under the index
     lock the caller holds: a repeat draws a completed primary run of this
     area again, comparable in protocol, promise block, config and inputs
-    (`runs.repeat_mismatch`) — else a refusal. Draw 1 is the run itself;
+    (`answering_run.repeat_mismatch`) — else a refusal. Draw 1 is the run itself;
     its repeats count on from 2. (None, None) for a run that repeats none."""
     if repeat_of is None:
         return None, None

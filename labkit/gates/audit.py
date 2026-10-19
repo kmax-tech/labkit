@@ -75,7 +75,8 @@ from labkit.formats.repo import (
     no_such_area,
     the_protocol,
 )
-from labkit.formats.runs import bound_answering_run, completed_runs, read_outputs
+from labkit.formats.runs import completed_runs, read_outputs
+from labkit.formats.answering_run import bound_answering_run
 from labkit.formats.scope_sha import (
     area_files,
     area_stamp,
@@ -158,7 +159,7 @@ def audited_run(
     area: Path, protocol: Path, text: str | None = None
 ) -> tuple[Path | None, str]:
     """The run an analysis audit reads and its record is bound to — the
-    answering run (`runs.bound_answering_run`, the one choice every gate
+    answering run (`answering_run.bound_answering_run`, the one choice every gate
     holds the protocol to) read off the protocol file (or TEXT, the
     protocol as the caller's file state holds it), or `(None, why)`: no
     protocol id, no completed bound run, a blocker of the choice. Raises

@@ -579,7 +579,7 @@ def record_provenance(base_dir: Path, config: dict, derived: bool) -> Provenance
     started, read BEFORE the directory exists — a failure here must leave
     no directory without config.json. A DERIVED run records no models: its
     rows were answered by its parent's model, and today's models.toml would
-    record a provenance the rows never had (`runs.model_provenance_run`
+    record a provenance the rows never had (`answering_run.model_provenance_run`
     walks derived_from to the run that did)."""
     return Provenance(
         git=git_state(base_dir),

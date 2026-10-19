@@ -22,7 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import intent_check  # noqa: E402
-from labkit.formats import runs  # noqa: E402
+from labkit.formats import answering_run  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 A_ID = "p-aaaaaaaaaaaaaaaa"
@@ -128,7 +128,7 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
         # check — exit 0 is itself the proof that A's run was used.
         code, out = _check([self.a])
         self.assertEqual(code, 0, out)
-        cands, _ = runs.bound_runs(self.area, A_ID)
+        cands, _ = answering_run.bound_runs(self.area, A_ID)
         self.assertEqual([c["dir"].name for c in cands], ["2026-01-01T00-00-00_aaaa"])
 
     def test_no_bound_run_exits_2_and_says_why_each_was_left_out(self):

@@ -19,7 +19,7 @@ from protocol_fixture import head
 
 from labkit.tools import protocol_fill
 from labkit.checks import recheck
-from labkit.formats import runs
+from labkit.formats import answering_run
 from labkit.formats.scope_sha import file_digest
 
 PID_A = "p-aaaaaaaaaaaaaaaa"
@@ -73,7 +73,7 @@ class TwoProtocols(unittest.TestCase):
     def test_the_run_bound_to_the_protocol_answers_not_the_newest(self):
         self.assertEqual(recheck.run_dir(self.area, self.a).name, RUN_A)
         self.assertEqual(
-            runs.bound_answering_run(self.area, PID_A).run_dir,
+            answering_run.bound_answering_run(self.area, PID_A).run_dir,
             self.area / "runs" / RUN_A,
         )
 

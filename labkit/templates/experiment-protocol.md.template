@@ -70,7 +70,7 @@
 - **Answering run:** none yet — the run `finalize` holds this protocol to,
   written with the number by `protocol-fill PROTOCOL-<name>.md --from-run`
   after `finalize`; `finalize` refuses any other run_id here (a readable
-  projection of `runs.bound_answering_run`, never a second binding)
+  projection of `answering_run.bound_answering_run`, never a second binding)
 - **Deviations after freeze:** <"none", or what was changed after
   `frozen = true` — the registered plan is the Intent above and is not
   rewritten; a deviation that touches the verdict is named in Summary →

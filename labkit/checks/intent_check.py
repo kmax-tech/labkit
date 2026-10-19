@@ -49,14 +49,8 @@ import ast
 from pathlib import Path
 
 from labkit.formats import console, promises, protocol_block
-from labkit.formats.runs import (
-    COMPLETED,
-    MetricsError,
-    bound_answering_run,
-    read_metrics,
-    read_run_config,
-    run_facts,
-)
+from labkit.formats.runs import COMPLETED, MetricsError, read_metrics, read_run_config
+from labkit.formats.answering_run import bound_answering_run, run_facts
 from labkit.formats.repo import layout_root
 from labkit.formats.scope_sha import area_files, imported_repo_helpers
 
@@ -319,7 +313,7 @@ def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path 
 
 
 def choose_bound(protocol: Path, pid: str, ids_registered: bool) -> Path | int:
-    """The newest completed run bound to `pid` — `runs.bound_answering_run`,
+    """The newest completed run bound to `pid` — `answering_run.bound_answering_run`,
     its outcome told the operator (`AnsweringRun.explain`); 2 when no
     choice stands, a probe or producer run among them when the protocol
     registers ids (until 0.96.0 a warning, and every promise then read as

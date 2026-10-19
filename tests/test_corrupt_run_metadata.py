@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import intent_check  # noqa: E402
 from labkit.run import runlog, runlog_command  # noqa: E402
-from labkit.formats import runs  # noqa: E402
+from labkit.formats import runs, answering_run  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 
 OLD = "2026-10-06T10-00-00_aaaa"
@@ -89,7 +89,7 @@ class BrokenConfig(unittest.TestCase):
         self.assertIn(NEW, out)
 
     def test_intent_check_lists_it_and_never_chooses_it(self):
-        taken, left = runs.bound_runs(self.area, PID)
+        taken, left = answering_run.bound_runs(self.area, PID)
         self.assertEqual([f["dir"].name for f in taken], [OLD])
         self.assertEqual(left[0]["state"], "unreadable")
         self.assertIn("unreadable run metadata", left[0]["why"])
@@ -121,7 +121,6 @@ class Shape(unittest.TestCase):
     AttributeError far from the file)."""
 
     def test_wrong_shapes_raise_naming_the_problem(self):
-        from labkit.formats import runs
 
         for content, fragment in (
             ("[]", "a JSON list"),
@@ -137,7 +136,6 @@ class Shape(unittest.TestCase):
                 self.assertIn(fragment, str(cm.exception), content)
 
     def test_the_current_shape_reads(self):
-        from labkit.formats import runs
 
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / "config.json").write_text(

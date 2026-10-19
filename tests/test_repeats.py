@@ -23,7 +23,7 @@ from protocol_fixture import DEFAULT_BLOCK, PID, head, scope_file
 
 from labkit.checks import recheck
 from labkit.run import runlog, provenance
-from labkit.formats import runs
+from labkit.formats import runs, answering_run
 
 
 class Repeats(unittest.TestCase):
@@ -73,17 +73,18 @@ class Repeats(unittest.TestCase):
             [(None, None), (first, 2), (first, 3)],
         )
         self.assertEqual(
-            [p.name for p in runs.repeats_of(self.area, first)], [second, third]
+            [p.name for p in answering_run.repeats_of(self.area, first)],
+            [second, third],
         )
 
     def test_draws_number_the_run_and_its_repeats(self):
         first = self._run()
-        self.assertEqual(runs.next_draw(self.area, first), 2)
-        self.assertEqual([n for n, _ in runs.draws(self.area, first)], [1])
+        self.assertEqual(answering_run.next_draw(self.area, first), 2)
+        self.assertEqual([n for n, _ in answering_run.draws(self.area, first)], [1])
         second = self._run(repeat_of=first)
-        self.assertEqual(runs.next_draw(self.area, first), 3)
+        self.assertEqual(answering_run.next_draw(self.area, first), 3)
         self.assertEqual(
-            [(n, d.name) for n, d in runs.draws(self.area, first)],
+            [(n, d.name) for n, d in answering_run.draws(self.area, first)],
             [(1, first), (2, second)],
         )
 
@@ -141,7 +142,7 @@ class Repeats(unittest.TestCase):
     def test_the_primary_keeps_answering_and_rechecking(self):
         first = self._run()
         self._run(repeat_of=first)
-        choice = runs.bound_answering_run(self.area, PID)
+        choice = answering_run.bound_answering_run(self.area, PID)
         self.assertEqual(choice.run_dir.name if choice.run_dir else None, first)
         self.assertIn("a repeat of", " ".join(e.why for e in choice.exclusions))
         self.assertEqual(
@@ -183,7 +184,7 @@ class Repeats(unittest.TestCase):
                 "models_resolved",
             )
         }
-        self.assertEqual(runs.repeat_mismatch(parent, base), [])
+        self.assertEqual(answering_run.repeat_mismatch(parent, base), [])
         moved = json.loads(json.dumps(base))
         some_id = next(iter(moved["promises"]["ids"]))
         moved["promises"]["ids"][some_id]["declared_scope_sha"] = "000000000000"
@@ -194,8 +195,10 @@ class Repeats(unittest.TestCase):
         ):
             with self.subTest(needle=needle):
                 self.assertTrue(
-                    any(needle in m for m in runs.repeat_mismatch(parent, new)),
-                    runs.repeat_mismatch(parent, new),
+                    any(
+                        needle in m for m in answering_run.repeat_mismatch(parent, new)
+                    ),
+                    answering_run.repeat_mismatch(parent, new),
                 )
 
     def test_the_draw_is_reserved_once_and_a_crashed_draw_keeps_its_number(self):
@@ -211,7 +214,7 @@ class Repeats(unittest.TestCase):
             run = r.__enter__()
         self.assertEqual(run.draw, 2)  # the number the script names its file by
         # left unfinished, like a crash: draw 2 stays taken
-        self.assertEqual(runs.next_draw(self.area, first), 3)
+        self.assertEqual(answering_run.next_draw(self.area, first), 3)
         self.assertEqual(self._cfg(self._run(repeat_of=first))["draw"], 3)
 
     def test_every_draw_is_held_like_the_kept_number(self):
