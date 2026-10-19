@@ -90,8 +90,6 @@ passed the commit (audit 2026-10-19).
 from __future__ import annotations
 
 import argparse
-import contextlib
-import io
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -279,10 +277,12 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[str]:
 def finalize_gaps(area: Path, protocol: Path) -> list[str]:
     """Station 2, the gate before: finalize's blockers, each named here with
     its prefix — inside the stop hook "run it to see them" was a round trip
-    the agent did not take. Exit 2 (no protocol to hold) is one blocker."""
-    collected = Findings()
-    with contextlib.redirect_stdout(io.StringIO()):
-        finalized = finalize_area(area, protocol, collected)
+    the agent did not take. finalize runs on a silent collector, so its
+    findings arrive as data and nothing of its output reaches this gate's
+    (until 0.100.0 stdout was redirected for that). Exit 2 (no protocol to
+    hold) is one blocker."""
+    collected = Findings(tell=None)  # the data, not the console
+    finalized = finalize_area(area, protocol, collected)
     if finalized == 0:
         return []
     if collected.blocked:

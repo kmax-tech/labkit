@@ -33,8 +33,8 @@ class Findings(unittest.TestCase):
         self.assertIn("  - x failed", out)
 
     def test_warnings_alone_are_exit_0_and_clear_is_said(self):
-        f = gate.Findings()
-        f.warned.append("w")
+        f = gate.Findings(tell=None)
+        f.warn("w")
         self.assertEqual(run(lambda: f.report("t", "x"))[0], 0)
         code, out = run(lambda: gate.Findings().report("t", "x"))
         self.assertEqual((code, out.strip()), (0, "t: all clear."))
@@ -48,6 +48,54 @@ class Findings(unittest.TestCase):
             f.add("something ungraded")  # nobody graded it: a blocker
         self.assertEqual((len(f.blocked), f.warnings), (2, 2))
         self.assertEqual(gate.grade_of("fine"), "BLOCKER")
+
+
+class Silent(unittest.TestCase):
+    """The findings are data; the console is one channel for them, and a
+    gate inside a gate wants the data alone (report-check's finalize
+    station — until 0.100.0 it redirected stdout to silence finalize)."""
+
+    def test_a_silent_collector_keeps_the_findings_and_prints_nothing(self):
+        f = gate.Findings(tell=None)
+        code, out = run(
+            lambda: (
+                f.note("── station ──"),
+                f.block("x failed"),
+                f.warn("y"),
+                f.add("WARNING · a.py:2 · z"),
+                f.report("t", "freezing"),
+            )[-1]
+        )
+        self.assertEqual((code, out), (1, ""))
+        self.assertEqual(f.blocked, ["x failed"])
+        self.assertEqual(f.warned, ["y", "WARNING · a.py:2 · z"])
+        self.assertEqual([x.grade for x in f.found], ["BLOCKER", "WARNING", "WARNING"])
+        self.assertEqual(f.exit_code, 1)
+
+    def test_the_summary_is_the_same_data_the_console_shows(self):
+        told = gate.Findings()
+        quiet = gate.Findings(tell=None)
+        for f in (told, quiet):
+            f.block("x failed")
+            f.warn("y")
+        _, out = run(lambda: told.report("t", "freezing"))
+        self.assertEqual(out.strip().splitlines()[-3:], quiet.summary("t", "freezing"))
+        self.assertEqual(gate.GateFinding("BLOCKER", "x").line, "BLOCKER: x")
+        self.assertEqual(
+            gate.GateFinding("WARNING", "WARNING · a · b", graded_by_text=True).line,
+            "WARNING · a · b",
+        )
+
+    def test_a_channel_of_ones_own_receives_every_line(self):
+        lines: list[str] = []
+        f = gate.Findings(tell=lines.append)
+        f.note("── x ──")
+        f.block("b")
+        f.report("t", "x")
+        self.assertEqual(lines[:2], ["── x ──", "  BLOCKER: b"])
+        self.assertIn(
+            "t: 1 blocker(s), 0 warning(s) — fix the blockers before x:", lines
+        )
 
 
 if __name__ == "__main__":

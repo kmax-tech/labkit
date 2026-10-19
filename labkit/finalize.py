@@ -213,11 +213,13 @@ def answering_run(
     if choice.run_dir is None:
         findings.block(blocker or f"no completed run bound to {pid}")
         for line in lines:
-            print(f"    {line}")
+            findings.note(f"    {line}")
         return None
     if blocker:
         findings.block(blocker)
-    print(f"  {choice.run_dir.name}: completed" + "".join(f" ({ln})" for ln in lines))
+    findings.note(
+        f"  {choice.run_dir.name}: completed" + "".join(f" ({ln})" for ln in lines)
+    )
     return choice.run_dir
 
 
@@ -428,7 +430,7 @@ def check_completion(
         for b in blockers:
             findings.block(b)
         for n in notes:
-            print(f"  {n}")
+            findings.note(f"  {n}")
         for w in arm_findings(text, area, measurement_run):
             findings.warn(w)
     return measurement_run
@@ -466,9 +468,9 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
             elif f.grade == "WARNING":
                 findings.warn(line)
             else:
-                print(f"  {line}")
+                findings.note(f"  {line}")
     if not seen:
-        print(
+        findings.note(
             f"  every finding decided ({len(records)} record(s))"
             if records
             else "  no audit record in audits/"
@@ -482,7 +484,7 @@ def check_intent_keys_in_metrics(
     run's metrics.json (intent-check). Not code_check.check_intent_ids, which
     holds the promises to the code before any run."""
     if not ids_in_prose(text):
-        print("  no intent ids registered — nothing to check")
+        findings.note("  no intent ids registered — nothing to check")
         return
     args = [str(protocol)] + (
         ["--metrics", str(measurement_run / "metrics.json")]
@@ -493,7 +495,7 @@ def check_intent_keys_in_metrics(
     with contextlib.redirect_stdout(buf):
         rc = intent_check_main(args)
     for line in buf.getvalue().splitlines():
-        print(f"  {line}")
+        findings.note(f"  {line}")
     if rc != 0:
         findings.block("intent-check failed (see its lines above)")
 
@@ -509,7 +511,9 @@ def check_declared_scopes(
     or the block was added after the run."""
     recorded = (read_run_config(measurement_run) or {}).get("promises")
     if recorded is None and text and not promises.registers_ids(text):
-        print("  n/a — the protocol registers no promise id (a count), nothing to hold")
+        findings.note(
+            "  n/a — the protocol registers no promise id (a count), nothing to hold"
+        )
         return
     if recorded is None:
         owed = promises.promise_tables_owed(None, frozen=False, full_run=True)
@@ -525,7 +529,7 @@ def check_declared_scopes(
             f"declared scope changed since {measurement_run.name}: {d} — rerun before reporting"
         )
     if not drift:
-        print(
+        findings.note(
             f"  {len(recorded['ids'])} declared scope(s) unchanged since {measurement_run.name}"
         )
 
@@ -624,7 +628,7 @@ def check_open_fields(
     for line in route:
         findings.warn(line)
     if not holes and not stale and not route:
-        print("  all fields filled")
+        findings.note("  all fields filled")
 
 
 def check_provenance(findings: Findings, area: Path, measurement_run: Path) -> None:
@@ -636,7 +640,7 @@ def check_provenance(findings: Findings, area: Path, measurement_run: Path) -> N
     for line in w:
         findings.warn(line)
     if not b and not w:
-        print("  source frozen in the run; source and output tracked in git")
+        findings.note("  source frozen in the run; source and output tracked in git")
 
 
 def check_area_tests(findings: Findings, area: Path) -> None:
@@ -648,14 +652,14 @@ def check_area_tests(findings: Findings, area: Path) -> None:
     # tests/ under its layout root, and git_root found "none" (audit 2026-10-15)
     tests = area_tests(area, layout_root(area))
     if tests.state == "none":
-        print(f"  none ({tests.pattern})")
+        findings.note(f"  none ({tests.pattern})")
     elif tests.state == "ok":
-        print(f"  ok — {', '.join(t.name for t in tests.files)}")
+        findings.note(f"  ok — {', '.join(t.name for t in tests.files)}")
     elif tests.state == "no-pytest":
         findings.warn("pytest is not installed in this interpreter — tests not run")
     else:
         for ln in tests.tail:
-            print(f"  {ln}")
+            findings.note(f"  {ln}")
         findings.block(
             f"{', '.join(t.name for t in tests.files)} failed — evaluate() no longer holds its resolution check"
         )
@@ -667,7 +671,7 @@ def check_criterion_n(findings: Findings, measurement_run: Path) -> None:
     for line in w:
         findings.warn(line)
     if not w:
-        print("  every c<i>_n equals a recorded input count (or there is none)")
+        findings.note("  every c<i>_n equals a recorded input count (or there is none)")
 
 
 def report(findings: Findings) -> int:
@@ -678,9 +682,9 @@ def report(findings: Findings) -> int:
 NO_RUN = "  no completed run to check"
 
 
-def header(title: str) -> None:
-    """Print a station's header line."""
-    print(f"── {title} ──")
+def header(findings: Findings, title: str) -> None:
+    """Tell a station's header line through the gate's channel."""
+    findings.note(f"── {title} ──")
 
 
 def finalize_area(
@@ -688,9 +692,10 @@ def finalize_area(
 ) -> int:
     """Run finalize on an area. Returns 0 (clean or warnings only),
     1 (a blocker) or 2 (no protocol to hold the area to). FINDINGS, when
-    given, collects what the stations found, so a gate that runs finalize
-    as one of its stations (report-check) can name the blockers instead of
-    "run it to see them".
+    given, collects what the stations found and is the channel every line
+    goes through (`gate.Findings`): a gate that runs finalize as one of its
+    stations (report-check) hands over a silent one (`Findings(tell=None)`)
+    and names the blockers instead of "run it to see them".
 
     The flow — every condition that decides whether a step runs is in this
     function; one level down is how a step works, not whether it runs. A
@@ -716,6 +721,7 @@ def finalize_area(
     A blocker never stops a step: all of them run, then the summary lists
     every blocker again. Warnings alone end with 0.
     """
+    findings = Findings() if findings is None else findings
     # 0. protocol and settings — the only early end
     chosen = choose_protocol(area, protocol, "finalize")
     if chosen is None:
@@ -724,53 +730,52 @@ def finalize_area(
     try:
         head = protocol_block.head(text)
     except protocol_block.BlockError as exc:
-        print(f"finalize: {chosen.name}: {exc}")
+        findings.note(f"finalize: {chosen.name}: {exc}")
         return 2
-    findings = Findings() if findings is None else findings
 
     # 1. completion — the run every later step examines
-    header(f"completion: {chosen.name}")
+    header(findings, f"completion: {chosen.name}")
     measurement_run = check_completion(findings, area, text, head.id)
 
     # 2. intent-check — always
-    header("intent-check")
+    header(findings, "intent-check")
     check_intent_keys_in_metrics(findings, chosen, text, measurement_run)
 
     # 3. declared scopes — only with a run
-    header("declared scopes")
+    header(findings, "declared scopes")
     if measurement_run is None:
-        print(NO_RUN)
+        findings.note(NO_RUN)
     else:
         check_declared_scopes(findings, area, measurement_run, text)
 
     # 4. open fields — always
-    header(f"open fields: {chosen.name}")
+    header(findings, f"open fields: {chosen.name}")
     check_open_fields(findings, chosen, text, head)
 
     # 5. provenance — where the lane owes it (seconds), and only with a run
-    header("frozen source and tracked files")
+    header(findings, "frozen source and tracked files")
     if not lane(head.cost).provenance:
-        print(
+        findings.note(
             f"  n/a — protocol cost is {head.cost!r} (the agent audit covers provenance there)"
         )
     elif measurement_run is None:
-        print(NO_RUN)
+        findings.note(NO_RUN)
     else:
         check_provenance(findings, area, measurement_run)
 
     # 6. area tests — always
-    header("area tests")
+    header(findings, "area tests")
     check_area_tests(findings, area)
 
     # 7. criterion n — only with a run
-    header("criterion n")
+    header(findings, "criterion n")
     if measurement_run is None:
-        print(NO_RUN)
+        findings.note(NO_RUN)
     else:
         check_criterion_n(findings, measurement_run)
 
     # 8. audit findings — always
-    header("audit findings")
+    header(findings, "audit findings")
     check_open_audit_findings(findings, area)
 
     return report(findings)  # 1 if any step found a blocker, else 0

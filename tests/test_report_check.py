@@ -21,6 +21,7 @@ import dataclasses
 import io
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -213,6 +214,36 @@ class ReportCheck(unittest.TestCase):
         self.assertEqual(code, 1, out.getvalue())
         self.assertIn("BLOCKER: finalize: no completed run bound to", out.getvalue())
         self.assertNotIn("run it to see", out.getvalue())
+
+    def test_finalize_findings_arrive_as_data_not_through_stdout(self):
+        """finalize runs on a silent collector: its blockers reach this gate
+        as findings, its headers and notes reach nothing, and stdout is never
+        redirected for it (until 0.100.0 it was, and the blockers were read
+        back from the collector while the output was thrown away)."""
+        area = self._area(cost="seconds", frozen=False)
+        out = io.StringIO()
+        seen: dict[str, object] = {}
+
+        def fake_finalize(area_: Path, protocol: Path | None, collected) -> int:
+            seen["stdout_untouched"] = sys.stdout is out  # this test's, no other
+            seen["silent"] = collected._tell is None
+            collected.note("── completion ──")
+            collected.block("no completed run bound to p-x")
+            return collected.report("finalize", "reporting")
+
+        with (
+            mock.patch.object(report_check, "finalize_area", fake_finalize),
+            mock.patch.object(report_check, "check_analysis_script", return_value=None),
+            contextlib.redirect_stdout(out),
+        ):
+            code = report_check.report_check(area)
+        self.assertEqual(code, 1, out.getvalue())
+        self.assertEqual(seen, {"stdout_untouched": True, "silent": True})
+        self.assertIn(
+            "BLOCKER: finalize: no completed run bound to p-x", out.getvalue()
+        )
+        self.assertNotIn("── completion ──", out.getvalue())
+        self.assertNotIn("finalize: 1 blocker", out.getvalue())
 
     def test_each_station_blocks_on_its_own(self):
         area = self._area(frozen=False)
