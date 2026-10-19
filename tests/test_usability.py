@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import usability  # noqa: E402
+from labkit import PACKAGE_DIR, usability  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 LOG = """\
@@ -216,7 +216,7 @@ class TierSentence(unittest.TestCase):
         self.assertIn("declaring it is part of the task", usability.tier_sentence(None))
 
     def test_both_sheets_carry_the_slot(self):
-        here = Path(usability.__file__).resolve().parent
+        here = PACKAGE_DIR / "templates"
         for name in (
             "usability-task-count.md.template",
             "usability-task-judge.md.template",

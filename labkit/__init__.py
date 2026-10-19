@@ -18,6 +18,12 @@ is reproduced with its own commit and the labkit version it pins — labkit
 carries no legacy bridge (CHANGELOG, "Breaking").
 """
 
+from pathlib import Path
+
+#: the package directory; the shipped assets — `templates/`, `agents/`,
+#: `docs/` — are read relative to it, from whichever layer package
+PACKAGE_DIR = Path(__file__).resolve().parent
+
 # The submodules are deliberately NOT imported here: `import labkit` must stay
 # free of side effects (llm reads models.toml when it is used, not when the
 # package is loaded). `from labkit import runlog` works regardless.

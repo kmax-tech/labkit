@@ -57,7 +57,7 @@ RULES: list[tuple[str, str, set[str]]] = [
 def offenders(what: str, shape: str, homes: set[str]) -> list[str]:
     out = []
     pattern = re.compile(shape)
-    paths = sorted(PACKAGE.glob("*.py"))
+    paths = sorted(PACKAGE.rglob("*.py"))
     if what in IN_TEMPLATES:
         paths += sorted((PACKAGE / "templates").glob("*.py.template"))
     for path in paths:

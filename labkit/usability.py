@@ -480,9 +480,7 @@ def stage(
     )
     log = _sidecar(root, "log.md")
     log.write_text("", encoding="utf-8")
-    sheet = (Path(__file__).resolve().parent / spec["template"]).read_text(
-        encoding="utf-8"
-    )
+    sheet = (scaffold.TEMPLATES / spec["template"]).read_text(encoding="utf-8")
     for key, val in (
         ("<metric_key>", metric_key),
         ("<area>", areas[0]),

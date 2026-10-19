@@ -17,7 +17,13 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit import code_check, protocol_block, protocol_check, protocol_fill  # noqa: E402
+from labkit import (
+    PACKAGE_DIR,
+    code_check,
+    protocol_block,
+    protocol_check,
+    protocol_fill,
+)  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 
 SAMPLE = """# Experiment protocol: x
@@ -97,10 +103,8 @@ class TestFill(unittest.TestCase):
         self.assertNotIn("Model / tool", labels)
 
 
-TEMPLATE = (
-    Path(protocol_fill.__file__)
-    .with_name("experiment-protocol.md.template")
-    .read_text(encoding="utf-8")
+TEMPLATE = (PACKAGE_DIR / "templates" / "experiment-protocol.md.template").read_text(
+    encoding="utf-8"
 )
 # The shape the stamped measure skeleton builds its prompts in — an
 # f-string answer line joined from ANSWERS (re-measure 2026-10-07: a plain

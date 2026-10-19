@@ -68,24 +68,31 @@ KNOWN_CROSSINGS = {
 }
 
 
+def module_paths() -> dict[str, Path]:
+    """Module name → its file, in whichever layer package it sits."""
+    return {f.stem: f for f in sorted(PACKAGE.rglob("*.py")) if f.stem != "__init__"}
+
+
 def modules() -> list[str]:
-    return sorted(f.stem for f in PACKAGE.glob("*.py") if f.stem != "__init__")
+    return sorted(module_paths())
 
 
 def imports_of(module: str) -> set[str]:
-    """The labkit modules a module imports, lazy imports inside functions included."""
-    tree = ast.parse((PACKAGE / f"{module}.py").read_text(encoding="utf-8"))
+    """The labkit modules a module imports, lazy imports inside functions
+    included: `from labkit.run import runlog`, `from labkit.run.runlog import
+    Run` and `import labkit.run.runlog` all name `runlog`."""
+    known = set(modules())
+    tree = ast.parse(module_paths()[module].read_text(encoding="utf-8"))
     out: set[str] = set()
     for n in ast.walk(tree):
         if isinstance(n, ast.ImportFrom) and n.module:
-            if n.module == "labkit":
-                out.update(a.name for a in n.names)
-            elif n.module.startswith("labkit."):
-                out.add(n.module.split(".")[1])
+            if n.module == "labkit" or n.module.startswith("labkit."):
+                out.update(p for p in n.module.split(".")[1:] if p in known)
+                out.update(a.name for a in n.names if a.name in known)
         elif isinstance(n, ast.Import):
-            out.update(
-                a.name.split(".")[1] for a in n.names if a.name.startswith("labkit.")
-            )
+            for a in n.names:
+                if a.name.startswith("labkit."):
+                    out.update(p for p in a.name.split(".")[1:] if p in known)
     return out
 
 
@@ -130,7 +137,7 @@ class OneNameOneThing(unittest.TestCase):
     def test_no_public_name_in_two_modules(self):
         where: dict[str, list[str]] = defaultdict(list)
         for m in modules():
-            for n in ast.parse((PACKAGE / f"{m}.py").read_text(encoding="utf-8")).body:
+            for n in ast.parse(module_paths()[m].read_text(encoding="utf-8")).body:
                 if isinstance(
                     n, (ast.FunctionDef, ast.ClassDef)
                 ) and not n.name.startswith("_"):

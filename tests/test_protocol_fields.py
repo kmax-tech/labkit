@@ -8,13 +8,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import protocol_check
+from labkit import PACKAGE_DIR, protocol_check
 from protocol_fixture import head
 
-TEMPLATE = (
-    Path(protocol_check.__file__)
-    .with_name("experiment-protocol.md.template")
-    .read_text(encoding="utf-8")
+TEMPLATE = (PACKAGE_DIR / "templates" / "experiment-protocol.md.template").read_text(
+    encoding="utf-8"
 )
 
 

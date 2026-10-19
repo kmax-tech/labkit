@@ -65,14 +65,14 @@ import time
 from pathlib import Path
 from typing import NamedTuple
 
-from labkit import console, findings, llm, promises, protocol_block, rules
+from labkit import PACKAGE_DIR, console, findings, llm, promises, protocol_block, rules
 from labkit.standard_contract import lane
 from labkit.repo import ProtocolChoiceError, layout_root, no_such_area, the_protocol
 from labkit.runs import bound_answering_run, completed_runs, read_outputs
 from labkit.scope_sha import area_files, area_stamp, imported_repo_helpers, repo_imports
 
-AGENT = Path(__file__).with_name("experiment-preflight.agent.md")
-CLARITY_AGENT = Path(__file__).with_name("code-clarity.agent.md")
+AGENT = PACKAGE_DIR / "agents" / "experiment-preflight.agent.md"
+CLARITY_AGENT = PACKAGE_DIR / "agents" / "code-clarity.agent.md"
 DEFAULT_MODEL = "opus"  # the agent's model; any alias of models.toml works
 DEFAULT_TIMEOUT_S = (
     findings.ATTEMPT_TIMEOUT_S

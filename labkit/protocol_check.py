@@ -45,7 +45,14 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from labkit import console, promises, protocol_block, runs, standard_contract
+from labkit import (
+    PACKAGE_DIR,
+    console,
+    promises,
+    protocol_block,
+    runs,
+    standard_contract,
+)
 from labkit.repo import git_root, git_run, repo_protocols
 from labkit.findings import waived_audit_gap
 from labkit.scope_sha import audit_stamp_drift
@@ -830,13 +837,13 @@ def find_template(explicit: str | None) -> Path | None:
     """The protocol template to check against: the one named, else the packaged one."""
     if explicit:
         return Path(explicit)
-    here = Path(__file__).resolve().parent / "experiment-protocol.md.template"
+    here = PACKAGE_DIR / "templates" / "experiment-protocol.md.template"
     return here if here.exists() else None
 
 
 def find_field_guide() -> Path | None:
     """The packaged protocol field guide, or None outside the package."""
-    here = Path(__file__).resolve().parent / "protocol-field-guide.md"
+    here = PACKAGE_DIR / "docs" / "protocol-field-guide.md"
     return here if here.exists() else None
 
 

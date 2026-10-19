@@ -39,10 +39,10 @@ import sys
 from pathlib import Path
 from typing import NamedTuple
 
-from labkit import console, protocol_block
+from labkit import PACKAGE_DIR, console, protocol_block
 
-STANDARD = Path(__file__).resolve().parent / "docs" / "standard.md"
-REGISTRY = Path(__file__).resolve().parent / "docs" / "rules.tsv"
+STANDARD = PACKAGE_DIR / "docs" / "standard.md"
+REGISTRY = PACKAGE_DIR / "docs" / "rules.tsv"
 REGISTRY_HEADER = ("id", "alias", "title", "status")
 PREFIXES = ("LAB", "LOCAL", "CODE")
 STATUSES = ("active", "retired")  # plus moved:<where>

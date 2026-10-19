@@ -217,7 +217,7 @@ method's live in the lab standard's vocabulary table, a lab's own in its
 `notes/theorie/terms.md`, a protocol's in its Terms field). Everything
 below occurs in more than one module, so it is coined here; the promise kinds and the block are specified in
 `docs/promise-block.md`, which run answers in `docs/protocol-run-binding.md`,
-and the per-field explanations live in `protocol-field-guide.md`.
+and the per-field explanations live in `labkit/docs/protocol-field-guide.md`.
 
 | Term                | Means                                                                                               |
 |---------------------|-----------------------------------------------------------------------------------------------------|
@@ -265,7 +265,7 @@ never freezes — but the `[[promise]]` tables like every full run (standard
 becomes mandatory. The price sits on the claim, not the activity: cheap
 tiers yield numbers that must not be reported. Every field's explanation —
 examples, rationale, the four questions to ask a criterion — lives in
-`protocol-field-guide.md` (packaged alongside the template;
+`labkit/docs/protocol-field-guide.md` (packaged with the template;
 `protocol-check --guide` prints the path).
 
 The commands are stations of **one lifecycle** — write the protocol, audit

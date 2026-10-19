@@ -39,7 +39,7 @@ from labkit import console
 import uuid
 from pathlib import Path
 
-from labkit import protocol_block, standard_contract
+from labkit import PACKAGE_DIR, protocol_block, standard_contract
 from labkit.protocol_check import model_named
 from labkit.repo import (
     AREA_NAME,
@@ -51,9 +51,8 @@ from labkit.repo import (
 )
 from labkit.repo_check import PYPROJECT_VERSION_RE
 
-PACKAGE = Path(__file__).resolve().parent
-TEMPLATES = PACKAGE / "templates"
-PROTOCOL_TEMPLATE = PACKAGE / "experiment-protocol.md.template"
+TEMPLATES = PACKAGE_DIR / "templates"
+PROTOCOL_TEMPLATE = TEMPLATES / "experiment-protocol.md.template"
 #: where every lab installs labkit from — a lab has no checkout of the package
 LABKIT_REMOTE = "https://github.com/kmax-tech/labkit.git"
 
@@ -120,7 +119,7 @@ def write_if_absent(path: Path, content: str, log: list[str]) -> bool:
 
 def template(name: str) -> str:
     """The text of a shipped template; a missing one is a broken install, said so."""
-    path = PROTOCOL_TEMPLATE if name == PROTOCOL_TEMPLATE.name else TEMPLATES / name
+    path = TEMPLATES / name
     if not path.is_file():
         raise FileNotFoundError(
             f"{path} is missing — labkit was installed without its templates"
@@ -132,7 +131,7 @@ def source_version() -> str | None:
     """The version `pyproject.toml` declares when labkit runs from a source
     checkout (an editable install: the file sits beside the package); None
     from a wheel in site-packages."""
-    pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    pyproject = PACKAGE_DIR.parent / "pyproject.toml"
     if not pyproject.is_file():
         return None
     m = PYPROJECT_VERSION_RE.search(pyproject.read_text(encoding="utf-8"))

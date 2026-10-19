@@ -24,7 +24,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 CHECKER = REPO / "labkit" / "protocol_check.py"
-TEMPLATE = REPO / "labkit" / "experiment-protocol.md.template"
+TEMPLATE = REPO / "labkit" / "templates" / "experiment-protocol.md.template"
 
 sys.path.insert(0, str(REPO))
 from labkit import protocol_block  # noqa: E402

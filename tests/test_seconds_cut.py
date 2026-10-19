@@ -14,7 +14,10 @@ from labkit import protocol_check, scaffold  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 TEMPLATE = (
-    Path(__file__).resolve().parents[1] / "labkit" / "experiment-protocol.md.template"
+    Path(__file__).resolve().parents[1]
+    / "labkit"
+    / "templates"
+    / "experiment-protocol.md.template"
 )
 
 

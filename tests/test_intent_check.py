@@ -92,9 +92,9 @@ class TestIntentCheck(unittest.TestCase):
         regex, so a fresh unfilled protocol registered phantom ids that
         could silently pass if a run happened to write keys like them.
         """
-        tmpl = (REPO / "labkit" / "experiment-protocol.md.template").read_text(
-            encoding="utf-8"
-        )
+        tmpl = (
+            REPO / "labkit" / "templates" / "experiment-protocol.md.template"
+        ).read_text(encoding="utf-8")
         self.assertEqual(
             intent_check.ids_in_prose(tmpl),
             set(),
