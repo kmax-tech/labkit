@@ -99,6 +99,15 @@ pins (`requirements.txt` / `requirements.lock`).
   permutation are sources of randomness. Sonnet v2 t5 got "no seed,
   repetition spread 0" auto-filled while naming seed 0 under "Free knobs";
   v3 measured a null-AUC spread of 0.116 over ten seeds (plan P, C1).
+- **The standard's scar table names the registered number seen before the
+  freeze** (LAB-015, audited at preflight): the registered lane run over
+  all items before `frozen = true` — ad hoc seeds, a "calibration", an
+  instrument check that was the full measurement. The field guide and the
+  template's noise-ceiling placeholder say to calibrate bands on the null
+  lane or a subset (`--probe`) and where a peek is disclosed; the
+  instrument-check entry says what the check is without a model. No rule
+  changed; the standard stays 0.19. Evidence: Sonnet v3 t3 and t5
+  (labkit-paper area 09, 2026-10-16); v3 t18 is the twin (plan P, D1, D2).
 
 ## 0.99.0 — 2026-10-19
 

@@ -396,7 +396,13 @@ scattered in output files nobody can interpret.
 - **How measured †:** metric or mechanism: what is compared, what counted.
 - **Validation †:** anchor items, second model or self-consistency, cross-check.
 - **Noise ceiling → threshold †:** measure repetition spread; the threshold
-  comes from the null condition of THIS run.
+  comes from the null condition of THIS run. Calibrate bands on the null
+  lane or on a subset (`--probe`), never on the registered lane over all
+  items before the freeze: a registered number seen before `frozen = true`
+  makes the freeze empty, and the prediction for the follow-up run a
+  reading. Where it happened anyway, it stands here with the numbers and
+  the seeds (Sonnet v3 t3 and t5, 2026-10-16, wrote it under Randomness
+  controls, where nobody looks for it).
 - **Free knobs †:** every preprocessing parameter with its value: thresholds,
   filters, cutoffs, windows. Setting them a priori is right — but then vary
   each one and report the curve, not the point.
@@ -420,6 +426,9 @@ to `true`.
   the question form cannot decide?
 - **Instrument check:** real pipeline, ~10 calls, `--probe N` — per gold
   class ONE fully rendered prompt+answer pair as a code block, real data.
+  Without a model: a reduced estimator on a few labelled items, both
+  lanes, into a throwaway file. The full measurement without a run id is
+  not an instrument check; it is the registered number, seen early.
 - **Yield per stage:** expected vs. obtained per parse step.
 - **Parser cases harvested:** the probe's answer forms as REAL cases into
   the parser test.
