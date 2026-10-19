@@ -486,6 +486,46 @@ class IfReported(unittest.TestCase):
         )
         self.assertNotIn("analysis audit", out)  # no station ran
 
+    def test_staged_finds_a_protocol_deleted_only_in_the_tree(self):
+        """The script staged, the reported protocol deleted in the tree and
+        not in the index: the commit keeps the protocol, so the gate holds
+        it — the search for protocols read the tree and found none."""
+        area = self._area(f"AUC 0.91 ({self.RUN})", git=True)
+        root = area.parent.parent
+        script = area / "scripts" / "02_analyze.py"
+        script.write_text("print('changed')\n", encoding="utf-8")
+        self._git(root, "add", "-A")
+        (area / "PROTOCOL-x.md").unlink()
+        code, out = self._staged_gate(root, script)
+        self.assertEqual(code, 1, out)
+        self.assertIn("report-check", out)
+        self.assertIn("the working tree differs from the index", out)
+
+    def test_a_shared_helper_reopens_the_areas_that_import_it(self):
+        """lib/scoring.py lies in no area; an area whose script imports it is
+        touched by its change, and one that does not is not."""
+        area = self._area(f"AUC 0.91 ({self.RUN})", git=False)
+        root = area.parent.parent
+        (root / "lib").mkdir()
+        helper = root / "lib" / "scoring.py"
+        helper.write_text("T = 1\n", encoding="utf-8")
+        (area / "scripts" / "01_measure.py").write_text(
+            "from lib import scoring\n", encoding="utf-8"
+        )
+        other = root / "experiments" / "02-y"
+        (other / "scripts").mkdir(parents=True)
+        (other / "PROTOCOL-y.md").write_text(head(), encoding="utf-8")
+        (other / "scripts" / "01_measure.py").write_text("x = 1\n")
+        self.assertEqual(
+            report_check.reported_protocols([helper], root),
+            [area.resolve() / "PROTOCOL-x.md"],
+        )
+        helper.unlink()  # a deleted helper is still one the area rests on
+        self.assertEqual(
+            report_check.reported_protocols([helper], root),
+            [area.resolve() / "PROTOCOL-x.md"],
+        )
+
     def test_the_cli_takes_staged(self):
         with mock.patch.object(report_check, "if_reported", return_value=0) as gate:
             report_check.main(["--if-reported", "--staged", "a/PROTOCOL-x.md"])

@@ -37,7 +37,13 @@ from collections.abc import Iterable
 from labkit.formats import console
 from pathlib import Path
 
-from labkit.formats.repo import layout_root, no_such_area, requirement_lines
+from labkit.formats.repo import (
+    areas_of,
+    layout_root,
+    no_such_area,
+    repo_protocols,
+    requirement_lines,
+)
 
 DIGEST_CHARS = 12  # enough to spot a mismatch, short enough for a protocol line
 
@@ -176,6 +182,57 @@ def imported_repo_helpers(area: Path, repo: Path) -> list[Path]:
                         seen.add(f)
                         todo.append(f)
     return sorted(seen)
+
+
+def import_reach(area: Path, repo: Path) -> set[Path]:
+    """Every repo-local path the area's code reaches by import, transitively:
+    the files `imported_repo_helpers` stamps, and the paths an import names
+    that do not exist (`a.py`, `a/__init__.py`) — a helper deleted under
+    the area is still one it depends on. Raises SourceError like the stamp."""
+    reach = {f.resolve() for f in imported_repo_helpers(area, repo)}
+    roots = [repo / r for r in LOCAL_ROOTS if (repo / r).is_dir()]
+    for path in [*area_files(area), *imported_repo_helpers(area, repo)]:
+        for libdir in roots:
+            for name in _lib_names(path, libdir):
+                target = libdir.joinpath(*name.split("."))
+                reach.add(target.with_suffix(".py").resolve())
+                reach.add((target / "__init__.py").resolve())
+    return reach
+
+
+def areas_touched(
+    paths: list[Path], repo: Path, protocols: list[Path] | None = None
+) -> list[Path]:
+    """The areas PATHS touch: the area each path lies in (`repo.areas_of`),
+    and for a path under a LOCAL_ROOT every area whose code imports it
+    (`import_reach`) — a shared helper changed or deleted reopens the
+    numbers that rest on it as a script in the area does. PROTOCOLS as in
+    `repo.find_area` (the index's at the commit), else the working tree's.
+    An area whose code cannot be parsed counts as touched: whether it
+    imports the helper cannot be told, and the gate is the safer answer.
+    The one answer for the stop, the commit's undecided gate and
+    report-check."""
+    root = repo.resolve()
+    out = areas_of(paths, root, protocols)
+    shared = [
+        p.resolve()
+        for p in paths
+        if any((root / r) in p.resolve().parents for r in LOCAL_ROOTS)
+    ]
+    if not shared:
+        return out
+    every = protocols if protocols is not None else repo_protocols(root)
+    for area in sorted({p.parent for p in every}):
+        if area in out:
+            continue
+        try:
+            reach = import_reach(area, root)
+        except SourceError:
+            out.append(area)
+            continue
+        if any(p in reach for p in shared):
+            out.append(area)
+    return out
 
 
 def repo_imports(files: list[Path], repo: Path) -> list[Path]:

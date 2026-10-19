@@ -87,15 +87,15 @@ from labkit.gates.preflight import area_test_python
 from labkit.formats.protocol_check import check_fields
 from labkit.formats.repo import (
     area_protocols,
-    areas_of,
     choose_protocol,
     git_root,
     git_run,
+    indexed_protocols,
     layout_root,
     status_entries,
 )
 from labkit.formats.runs import read_run_config, unreportable
-from labkit.formats.scope_sha import area_stamp
+from labkit.formats.scope_sha import area_stamp, areas_touched
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
     CHECK_SCRIPT,
@@ -339,13 +339,25 @@ def report_check(
     return findings.report("report-check", "reporting")
 
 
-def reported_protocols(paths: list[Path], repo: Path) -> list[Path]:
-    """Every protocol of every area one of PATHS lies in, each once, in
-    path order: a changed script, run or audit record reopens the area's
-    reported numbers as a changed protocol does. A path under no area
-    contributes nothing (`repo.areas_of`, the commit's undecided gate reads
-    the same answer)."""
-    return [p for area in sorted(areas_of(paths, repo)) for p in area_protocols(area)]
+def reported_protocols(
+    paths: list[Path], repo: Path, *, staged: bool = False
+) -> list[Path]:
+    """Every protocol of every area PATHS touch, each once, by area: a
+    changed script, run or audit record reopens the area's reported numbers
+    as a changed protocol does, and so does a shared helper the area's code
+    imports (`scope_sha.areas_touched`, the stop and the commit's undecided
+    gate read the same answer). STAGED: areas and protocols are the index's
+    (`repo.indexed_protocols`) — a protocol deleted only in the tree is
+    still in the commit."""
+    if not staged:
+        return [
+            p
+            for area in sorted(areas_touched(paths, repo))
+            for p in area_protocols(area)
+        ]
+    indexed = indexed_protocols(repo)
+    areas = areas_touched(paths, repo, indexed)
+    return [p for area in sorted(areas) for p in indexed if p.parent == area]
 
 
 def index_text(repo: Path, path: Path) -> str | None:
@@ -376,7 +388,7 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     blocker — the stations read the tree, the commit holds the index.
     Returns the worst exit code."""
     worst = 0
-    for protocol in reported_protocols(paths, repo):
+    for protocol in reported_protocols(paths, repo, staged=staged):
         if staged:
             text = index_text(repo, protocol)
             if text is None:

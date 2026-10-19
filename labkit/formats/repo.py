@@ -159,27 +159,52 @@ def area_protocols(area: Path) -> list[Path]:
     return sorted(area.glob(PROTOCOL_GLOB))
 
 
-def find_area(path: Path, stop: Path | None = None) -> Path | None:
+def indexed_protocols(repo: Path) -> list[Path]:
+    """Every protocol git's index holds under REPO, outside SKIP_DIRS,
+    sorted, as resolved paths — the commit's form of `repo_protocols`: a
+    protocol deleted only in the working tree is still here, one only in
+    the tree is not. Raises RuntimeError when git fails."""
+    r = git_run(["ls-files", "-z", "--cached"], repo)
+    if r.returncode != 0:
+        raise RuntimeError(f"git ls-files failed in {repo}: {r.stderr.strip()}")
+    root = repo.resolve()
+    return sorted(
+        root / rel
+        for rel in r.stdout.split("\0")
+        if rel
+        and PROTOCOL_NAME.match(Path(rel).name)
+        and not SKIP_DIRS & set(Path(rel).parts)
+    )
+
+
+def find_area(
+    path: Path, stop: Path | None = None, protocols: list[Path] | None = None
+) -> Path | None:
     """The nearest directory above PATH holding a PROTOCOL-*.md, or None;
-    the walk ends at STOP (the repo root) without leaving it."""
+    the walk ends at STOP (the repo root) without leaving it. PROTOCOLS,
+    when given (resolved paths, such as `indexed_protocols`), are the
+    protocols that make a directory an area instead of the working tree's."""
+    homes = None if protocols is None else {p.parent for p in protocols}
     for d in path.resolve().parents:
-        if area_protocols(d):
+        if (d in homes) if homes is not None else area_protocols(d):
             return d
         if stop is not None and d == stop.resolve():
             return None
     return None
 
 
-def areas_of(paths: list[Path], stop: Path) -> list[Path]:
+def areas_of(
+    paths: list[Path], stop: Path, protocols: list[Path] | None = None
+) -> list[Path]:
     """The areas PATHS touch, each once, in path order: the nearest area
     above each path (`find_area`, the walk ends at STOP without leaving it);
     a path under no area contributes nothing. The one answer for every gate
     that holds "the areas this session worked in" — the stop's reported
     numbers and the commit's undecided findings — so the two cannot drift
-    apart in what they call an area."""
+    apart in what they call an area. PROTOCOLS as in `find_area`."""
     out: list[Path] = []
     for path in paths:
-        area = find_area(path, stop=stop)
+        area = find_area(path, stop=stop, protocols=protocols)
         if area is not None and area not in out:
             out.append(area)
     return out

@@ -101,13 +101,12 @@ from labkit.gates import preflight, report_check
 from labkit.formats.repo import (
     PROTOCOL_NAME,
     area_protocols,
-    areas_of,
     find_area,
     git_run,
     status_entries,
     touched_paths,
 )
-from labkit.formats.scope_sha import file_digest
+from labkit.formats.scope_sha import areas_touched, file_digest
 
 # The template's throwaway stages: none of them opens a run, and the probe
 # is what comes BEFORE preflight, so gating it would invert the order.
@@ -574,12 +573,13 @@ def undecided_blockers(repo: Path, paths: list[Path]) -> list[str]:
     """Every audit BLOCKER still `open` in an area one of PATHS lies in — as
     `<area>: <file>: <text>`, each area once — or the sentence of a record
     nobody can read. The area is the nearest directory above the path with a
-    PROTOCOL-*.md, inside REPO (`repo.areas_of`, the stop's answer too). A
+    PROTOCOL-*.md, inside REPO, and every area whose code imports a changed
+    shared helper (`scope_sha.areas_touched`, the stop's answer too). A
     path outside every area, and an area without audits/, contribute
     nothing: this holds the areas the session worked in, not the whole repo
     (A4, 2026-10-17: a repo's old areas must not block every stop)."""
     out = []
-    for area in areas_of(paths, repo):
+    for area in areas_touched(paths, repo):
         shown = area.relative_to(repo.resolve()).as_posix()
         try:
             records = findings.area_records(area)
