@@ -228,6 +228,36 @@ Tabellensatz von LAB-017 selbst ist unverändert und gehört, wenn er
 geändert wird, in den Ledger (0.20). Weiter nicht lösbar: der Bericht
 außerhalb des Protokolls (t3) — kein Protokoll, keine Erklärung, kein Gate.
 
+## Refactoring 2026-10-19: Einstiegspunkte zeigen den Ablauf, Befunde sind Daten
+
+Auftrag des Autors, 2026-10-19 (Branch `claude/exciting-ptolemy-38ak97`,
+drei Commits, kein Release): `preflight_area` und der Run-Konstruktor
+sollen lesbar sein — der Einstiegspunkt zeigt Reihenfolge, Bedingungen und
+Abbrüche, Fachfunktionen die Prüfdetails; Befunde sind ohne Konsole
+verwendbar. Keine wissenschaftliche Pflicht und keine Kostenstufenregel
+geändert; Schweregrade, Meldungen, Zusammenfassungen und Exitcodes gleich.
+
+| Schritt | Inhalt | Stand |
+|---|---|---|
+| 1 | `gate.Findings` hält jeden Befund als `GateFinding` (Grad, Text) und erzählt jede Zeile über einen Kanal (`tell`: `print`, oder `None` für ein Gate im Gate); `note`/`header` für die ungezählten Zeilen, `summary`/`exit_code` ohne Druck lesbar. `finalize` spricht ganz über den übergebenen Sammler; `report_check.finalize_gaps` übergibt `Findings(tell=None)` statt stdout umzuleiten | **gebaut 2026-10-19**; `tests/test_gate.py` (`Silent`), `tests/test_report_check.py` (Befunde als Daten, stdout unberührt) |
+| 2 | `preflight_area` als Ablauf (CODE-017): Protokoll wählen, Kopf prüfen (ungültiger Kopf bleibt das eine frühe Ende, Exit 1), Lane aus `standard_contract`, acht Stationen in alter Reihenfolge, jede Auslassungsbedingung wörtlich im Körper (Audit-Abdeckung nur, wo die Lane den Freeze schuldet und eine Zeile steht; Hooks nur im Git-Repo); Stationen als Funktionen `check_protocol_fields`, `cost_tier_lines`, `check_audit_records`/`check_audit_coverage`/`check_deferred_elsewhere`, `check_code`, `scope_stamp_line`, `check_working_tree`, `check_hooks`, `check_tests_owed` | **gebaut 2026-10-19**; `tests/test_preflight.py`: frühes Ende ohne spätere Station, anderer Blocker lässt alle Stationen laufen |
+| 3 | `runlog.Run.__init__` in drei Phasen: `_prepare` (Elternlauf, Bindung, Promise-Snapshot, Config eingefroren → `_Prepared`), `_admit` (Registrierung, Detach-Gate, Index-Kopf, Leckage, für volle Läufe `_freeze_gate` → `_Admitted`), Anlegen (`_provenance`, `_repeat_draw` unter der Index-Sperre, mkdir, Record; Fehler entfernt das Verzeichnis). Kein Prüfhelfer liest mehr einen halb gebauten Run | **gebaut 2026-10-19**; `tests/test_run_record_atomic.py`: drei Verweigerungen der Startprüfung lassen kein Verzeichnis zurück |
+
+**Verbleibender Folgeauftrag, nicht beiläufig gelöst (2026-10-19):**
+`standard_contract.Lane.every_run_full` sagt für `seconds` „jeder Lauf
+durch runlog ist der volle Lauf“, und runlog hält einen Lauf mit
+`long=False` dort auch an die Pflichten eines vollen Laufs
+(`_is_full_run`: Tabellen, Registrierung). Zugleich zeichnet er `long =
+false` auf, und `runs.unreportable` nennt diesen Lauf eine Probe, deren
+Zahl `report-check` verweigert. Die Lane sagt also „voll“, der Record
+„Probe“. Entscheidung des Autors: entweder gilt bei `seconds` jeder Lauf
+auch als berichtbar (dann liest `unreportable` die Lane, nicht `long`
+allein), oder `every_run_full` beschreibt nur die Pflichten vor dem Start
+und heißt dann so. Weder ein Probelauf umklassifiziert noch ein Gate
+abgeschwächt — Prüfstelle: `tests/test_report_check.py`
+(`test_at_seconds_a_probes_number_is_refused`) und
+`tests/test_registration_contract.py` (`test_at_seconds_a_probe_without_a_block_is_refused_too`) halten den heutigen Stand beider Seiten.
+
 ## Audit 2026-10-18: was unter dem Grep des One-Home-Tests liegt
 
 Befund: `docs/audit-2026-10-18.md` (drei Fehler, reproduziert; die halben
@@ -241,7 +271,7 @@ One-Home-Regel, die die Form beim Wiederkommen greift.
 | 1 | Die drei Fehler: `scope_sha.parse_source` als der eine Parse einer Scope-Datei (Audit-Bug 11 galt nur mit `lib/`) · `protocol_block.fenced_lines` statt sieben Hand-Toggles auf ``` · der Tag-Test-Skip (`.strip()`) | **gebaut 2026-10-18**, Branch `claude/project-thread-u3bner`; Release beim Autor |
 | 2 | Die halben Umzüge: jede Verweigerung über `console.refuse` (neun Module drucken noch auf stdout, `scaffold` wirft `SystemExit`), code-check durch `gate.report` oder die Ausnahme dokumentiert, das Shim-Rezept aus `__init__` | offen |
 | 3 | Drei neue Heimaten mit Regel: `repo.shown(path, base)` (18 Kopien), `runs.now_stamp()` (9), `shell_segments` in Schicht 1 (Hook und Transkript), `LABKIT_COMMANDS` aus `entry_points` | offen |
-| 4 | Lesbarkeit: `preflight_area` nach dem finalize-Muster teilen, `usability` in Stage, Score und CLI, `Path | int` in `intent_check` durch eine Ausnahme ersetzen | offen |
+| 4 | Lesbarkeit: `preflight_area` nach dem finalize-Muster teilen, `usability` in Stage, Score und CLI, `Path | int` in `intent_check` durch eine Ausnahme ersetzen | **`preflight_area` und `runlog.Run` gebaut 2026-10-19** (Branch `claude/exciting-ptolemy-38ak97`, drei Commits, s. „Refactoring 2026-10-19“ unten); `usability` und `intent_check` offen |
 | 5 | Namen in einem Commit: Fläche heißt `area: Path`, Wurzel nach ihrer Regel, `_sha256` → `_source_digest`, `trace` → `timeline`, `registry` oder `ledger` | offen |
 
 ## Audit 2026-10-15: Fehler zuerst, dann die zweiten Heimaten

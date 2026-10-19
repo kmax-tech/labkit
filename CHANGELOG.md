@@ -181,6 +181,21 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A gate's findings are data; the console is one channel for them.**
+  `gate.Findings` keeps every finding as `GateFinding` (grade, text) and
+  tells each line through `tell` — `print` by default, `None` for a gate
+  run inside another gate; `note` and `header` carry the uncounted lines,
+  `summary` and `exit_code` are readable without printing. finalize's
+  stations tell everything through the collector they are handed, and
+  `report_check.finalize_gaps` hands over a silent one instead of
+  redirecting stdout. `preflight_area` shows its stations and every skip
+  condition at the entry point, each station a named function
+  (`check_protocol_fields`, `check_audit_records`, `check_audit_coverage`,
+  `check_deferred_elsewhere`, `check_code`, `check_working_tree`,
+  `check_hooks`, `check_tests_owed`; `cost_tier_lines`, `scope_stamp_line`
+  told); `runlog.Run.__init__` is three phases — `_prepare`, `_admit`, the
+  creation — with every refusal before mkdir in its unchanged order. Same
+  grades, messages, summaries and exit codes; no obligation changed.
 - **`report-check` builds one context per check and names the state it
   held.** The stations read `report_check.Checked` (`checked`): the
   protocol text as the named file state holds it — the working tree at
