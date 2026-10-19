@@ -1162,24 +1162,6 @@ class _Prepared:
 
 
 @dataclass(frozen=True)
-class _Admitted:
-    """Phase 2's result, the start check passed: the data as the record
-    describes it (path, digest, rows, the leakage verdict) and what the
-    freeze gate let through — whether the run was acknowledged unfrozen,
-    and the failed audit attempt that acknowledgement rests on.
-
-    Attributes:
-        data: `_describe` of the data files, {} without data.
-        unfrozen_ack: `LABKIT_UNFROZEN=1` took a full run past its gaps.
-        audit_failed: The `-failed.toml` the acknowledgement rests on, or None.
-    """
-
-    data: dict
-    unfrozen_ack: bool
-    audit_failed: str | None
-
-
-@dataclass(frozen=True)
 class _Provenance:
     """Phase 3's first step: what the record says about where the run
     started — git state and commit, the environment, the models resolved.
@@ -1227,19 +1209,13 @@ def _prepare(
     )
 
 
-def _foreground_refusal(base_dir: Path, cost: str | None, long: bool) -> None:
-    """The detach gate: a run that declares `long=True` may not start in a
-    foreground shell an agent harness limits (`foreground_timeout`) — the
-    harness kills the process group at its limit, run and lock with it.
-    Which lane may start in the foreground is the contract's answer
-    (`standard_contract.Lane.foreground`); `LABKIT_DETACHED=1` says the
-    detach already happened. Raises SystemExit on the refusal, before any
-    work. History: docs/notes/2026-10-19-gates-and-run-start.md."""
-    if lane(cost).foreground or not long:
-        return
-    limit = foreground_timeout()
-    if limit is None or os.environ.get("LABKIT_DETACHED") == "1":
-        return
+def _foreground_refusal(base_dir: Path, limit: tuple[float, str]) -> None:
+    """Refuse a foreground start under the harness LIMIT, before mkdir.
+
+    The caller decides whether detachment is owed and missing. The harness
+    kills the process group at its limit, including the run and its lock.
+    History: docs/notes/2026-10-19-gates-and-run-start.md.
+    """
     raise SystemExit(
         f"runlog: this run declares long=True and sits in a foreground "
         f"shell an agent harness kills after {limit[0]:g} s ({limit[1]}) "
@@ -1319,36 +1295,6 @@ def _freeze_gate(base_dir: Path, prepared: _Prepared) -> tuple[bool, str | None]
         )
     )
     return True, failed.path.name if failed is not None else None
-
-
-def _admit(base_dir: Path, prepared: _Prepared, data: dict | None) -> _Admitted:
-    """Phase 2 — the start check: every refusal a run can meet, before
-    mkdir, in this order (the order is the behaviour — a refusal names the
-    first gap it meets):
-
-    1. the registration (`_registration_refusal`): the promise tables a
-       frozen protocol or a full run owes, every registered constant in
-       the config unchanged — SystemExit
-    2. the detach gate (`_foreground_refusal`) — SystemExit
-    3. the run index header (`_check_run_index`) — RuntimeError
-    4. the data: described for the record, split and control leakage
-       (`_describe`) — RuntimeError, FileNotFoundError
-    5. for a full run only, the freeze gate (`_freeze_gate`): undecided
-       blockers, the freeze or the registration, the acknowledgement over
-       a failed audit — SystemExit, or the acknowledgement recorded
-    """
-    refusal = _registration_refusal(
-        prepared.bound, prepared.block, prepared.config, prepared.full_run
-    )
-    if refusal:
-        raise SystemExit(f"runlog: {refusal}")
-    _foreground_refusal(base_dir, prepared.cost_tier, prepared.long)
-    _check_run_index(base_dir)
-    described = _describe(data, base_dir) if data else {}
-    unfrozen_ack, audit_failed = False, None
-    if prepared.full_run:
-        unfrozen_ack, audit_failed = _freeze_gate(base_dir, prepared)
-    return _Admitted(described, unfrozen_ack, audit_failed)
 
 
 def _provenance(base_dir: Path, config: dict, derived: bool) -> _Provenance:
@@ -1432,9 +1378,12 @@ class Run:
 
       1. preparation (`_prepare`): the parent a derived run names, the
          protocol binding, the promise snapshot, the config frozen
-      2. the start check (`_admit`), in this order: the registration
-         (tables owed, constants unchanged), the detach gate, the run
-         index header, data leakage, and for a full run the freeze gate
+      2. the start check, in this order: the registration
+         (tables owed, constants unchanged), the detach gate only for a
+         declared long run whose lane forbids the foreground, whose
+         harness sets a limit and which is not already detached; the run
+         index header; data leakage when data is supplied; and for a full
+         run the freeze gate
          (undecided blockers, the freeze or the registration, the
          acknowledgement over a failed audit)
       3. creation: git, environment and models read (`_provenance` — a
@@ -1459,8 +1408,23 @@ class Run:
     ) -> None:
         # 1. preparation — what the run is held to, read once
         prepared = _prepare(base_dir, config, long, protocol, derived_from)
-        # 2. the start check — every refusal, before mkdir
-        admitted = _admit(base_dir, prepared, data)
+        # 2. the start check — the order and every skip are visible here;
+        #    helpers check the facts without reading a partly built Run
+        refusal = _registration_refusal(
+            prepared.bound, prepared.block, prepared.config, prepared.full_run
+        )
+        if refusal:
+            raise SystemExit(f"runlog: {refusal}")
+        obligations = lane(prepared.cost_tier)
+        if prepared.long and not obligations.foreground:
+            limit = foreground_timeout()
+            if limit is not None and os.environ.get("LABKIT_DETACHED") != "1":
+                _foreground_refusal(base_dir, limit)
+        _check_run_index(base_dir)
+        described = _describe(data, base_dir) if data else {}
+        unfrozen_ack, audit_failed = False, None
+        if prepared.full_run:
+            unfrozen_ack, audit_failed = _freeze_gate(base_dir, prepared)
         # 3. creation — the record, whole or not at all
         self.run_id = time.strftime(RUN_ID_TIME) + "_" + uuid.uuid4().hex[:4]
         self.experiment = experiment
@@ -1473,9 +1437,9 @@ class Run:
         self._config = prepared.config
         self._derived_from = prepared.derived_from
         self._long = prepared.long  # the script's declaration, recorded as `long`
-        self._data = admitted.data
-        self._unfrozen_ack = admitted.unfrozen_ack
-        self._audit_failed = admitted.audit_failed
+        self._data = described
+        self._unfrozen_ack = unfrozen_ack
+        self._audit_failed = audit_failed
         self._outputs: list[Path] = []
         self._metrics: dict = {}
         self._note = ""
@@ -1491,7 +1455,7 @@ class Run:
         )
         with guard:
             self._repeat_of, self.draw = _repeat_draw(
-                base_dir, repeat_of, prepared, admitted.data, provenance.models
+                base_dir, repeat_of, prepared, described, provenance.models
             )
             self.dir.mkdir(parents=True, exist_ok=False)
             try:

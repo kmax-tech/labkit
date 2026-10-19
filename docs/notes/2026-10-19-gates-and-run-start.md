@@ -88,3 +88,21 @@ refusals in their old order.
   file named before the record could disagree with it (review 2026-10-15).
 - `long` is recorded since 0.99.0, so `runs.unreportable` can tell a probe
   from a full run.
+
+
+## Review follow-up: visible start conditions and complete channel routing
+
+**Problem.** The first extraction put the full-run condition in `_admit`
+and the detach exceptions in `_foreground_refusal`, so the constructor
+still hid when those checks ran. Protocol selection in finalize also used
+the console form of the reader, bypassing a supplied silent channel.
+
+**Solution.** The constructor now sequences the start checks and shows the
+detach and full-run conditions; the refusal helper only formats and raises
+the selected refusal. The intermediate admission helper and result type
+are unnecessary. Finalize uses `repo.the_protocol`, routing its error to
+the supplied collector or, for the standalone command, to stderr.
+
+**Notes.** Check order, refusal cleanup and the repeat's index lock remain
+unchanged. Silence is checked on both stdout and stderr, including missing
+and ambiguous protocols.

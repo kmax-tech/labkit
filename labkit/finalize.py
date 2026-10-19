@@ -79,12 +79,13 @@ from labkit.runs import (
     resolve_recorded,
 )
 from labkit.repo import (
+    ProtocolChoiceError,
     area_path,
-    choose_protocol,
     git_root,
     git_run,
     layout_root,
     no_such_area,
+    the_protocol,
 )
 from labkit.intent_check import main as intent_check_main, ids_in_prose
 from labkit.preflight import area_tests
@@ -716,10 +717,16 @@ def finalize_area(
     A blocker never stops a step: all of them run, then the summary lists
     every blocker again. Warnings alone end with 0.
     """
+    console_output = findings is None
     findings = Findings() if findings is None else findings
     # 0. protocol and settings — the only early end
-    chosen = choose_protocol(area, protocol, "finalize")
-    if chosen is None:
+    try:
+        chosen = the_protocol(area, protocol)
+    except ProtocolChoiceError as exc:
+        if console_output:
+            console.refuse("finalize", str(exc))
+        else:
+            findings.note(f"finalize: {exc}")
         return 2
     text = chosen.read_text(encoding="utf-8")
     try:

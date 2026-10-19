@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import finalize  # noqa: E402
+from labkit import finalize, gate  # noqa: E402
 from protocol_fixture import PID, completed_run, head  # noqa: E402
 
 BODY = """\
@@ -76,6 +76,42 @@ class TestOneRunForEveryStation(unittest.TestCase):
 
 
 class TestFinalize(unittest.TestCase):
+    def test_protocol_choice_errors_follow_the_supplied_channel(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            for choice in ("none", "missing", "ambiguous"):
+                with self.subTest(choice=choice):
+                    protocol = area / "absent.md" if choice == "missing" else None
+                    if choice == "ambiguous":
+                        for name in ("a", "b"):
+                            (area / f"PROTOCOL-{name}.md").write_text(CLEAN_PROTOCOL)
+                    for silent in (True, False):
+                        lines: list[str] = []
+                        findings = gate.Findings(tell=None if silent else lines.append)
+                        out, err = io.StringIO(), io.StringIO()
+                        with (
+                            contextlib.redirect_stdout(out),
+                            contextlib.redirect_stderr(err),
+                        ):
+                            code = finalize.finalize_area(area, protocol, findings)
+                        self.assertEqual(
+                            (code, out.getvalue(), err.getvalue()), (2, "", "")
+                        )
+                        self.assertEqual(len(lines), 0 if silent else 1)
+                        if lines:
+                            self.assertIn("finalize:", lines[0])
+
+    def test_protocol_choice_errors_still_use_stderr_on_the_console(self):
+        with tempfile.TemporaryDirectory() as d:
+            out, err = io.StringIO(), io.StringIO()
+            with (
+                contextlib.redirect_stdout(out),
+                contextlib.redirect_stderr(err),
+            ):
+                code = finalize.finalize_area(Path(d))
+            self.assertEqual((code, out.getvalue()), (2, ""))
+            self.assertIn("finalize: no PROTOCOL-*.md", err.getvalue())
+
     def test_clean_area_exits_zero(self):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)

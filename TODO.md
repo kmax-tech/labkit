@@ -241,7 +241,14 @@ geändert; Schweregrade, Meldungen, Zusammenfassungen und Exitcodes gleich.
 |---|---|---|
 | 1 | `gate.Findings` hält jeden Befund als `GateFinding` (Grad, Text) und erzählt jede Zeile über einen Kanal (`tell`: `print`, oder `None` für ein Gate im Gate); `note`/`header` für die ungezählten Zeilen, `summary`/`exit_code` ohne Druck lesbar. `finalize` spricht ganz über den übergebenen Sammler; `report_check.finalize_gaps` übergibt `Findings(tell=None)` statt stdout umzuleiten | **gebaut 2026-10-19**; `tests/test_gate.py` (`Silent`), `tests/test_report_check.py` (Befunde als Daten, stdout unberührt) |
 | 2 | `preflight_area` als Ablauf (CODE-017): Protokoll wählen, Kopf prüfen (ungültiger Kopf bleibt das eine frühe Ende, Exit 1), Lane aus `standard_contract`, acht Stationen in alter Reihenfolge, jede Auslassungsbedingung wörtlich im Körper (Audit-Abdeckung nur, wo die Lane den Freeze schuldet und eine Zeile steht; Hooks nur im Git-Repo); Stationen als Funktionen `check_protocol_fields`, `cost_tier_lines`, `check_audit_records`/`check_audit_coverage`/`check_deferred_elsewhere`, `check_code`, `scope_stamp_line`, `check_working_tree`, `check_hooks`, `check_tests_owed` | **gebaut 2026-10-19**; `tests/test_preflight.py`: frühes Ende ohne spätere Station, anderer Blocker lässt alle Stationen laufen |
-| 3 | `runlog.Run.__init__` in drei Phasen: `_prepare` (Elternlauf, Bindung, Promise-Snapshot, Config eingefroren → `_Prepared`), `_admit` (Registrierung, Detach-Gate, Index-Kopf, Leckage, für volle Läufe `_freeze_gate` → `_Admitted`), Anlegen (`_provenance`, `_repeat_draw` unter der Index-Sperre, mkdir, Record; Fehler entfernt das Verzeichnis). Kein Prüfhelfer liest mehr einen halb gebauten Run | **gebaut 2026-10-19**; `tests/test_run_record_atomic.py`: drei Verweigerungen der Startprüfung lassen kein Verzeichnis zurück |
+| 3 | `runlog.Run.__init__` in drei Phasen: `_prepare` (Elternlauf, Bindung, Promise-Snapshot, Config eingefroren → `_Prepared`), Startprüfung direkt im Konstruktor (Registrierung, Detach-Gate mit sichtbaren Bedingungen, Index-Kopf, Leckage, für volle Läufe `_freeze_gate`), Anlegen (`_provenance`, `_repeat_draw` unter der Index-Sperre, mkdir, Record; Fehler entfernt das Verzeichnis). Kein Prüfhelfer liest mehr einen halb gebauten Run | **gebaut 2026-10-19**; `tests/test_run_record_atomic.py`: drei Verweigerungen der Startprüfung lassen kein Verzeichnis zurück |
+
+**Review-Nachbesserung 2026-10-19:** Die Bedingungen für Detach- und
+Freeze-Prüfung stehen jetzt im Run-Konstruktor; `_admit` und der nur dafür
+benötigte Übergabetyp entfallen. Fehler bei der Protokollwahl in `finalize`
+folgen ebenfalls dem übergebenen Ausgabekanal; der eigenständige Befehl
+behält stderr für Benutzungsfehler. Regressionstests prüfen den stillen
+Kanal, einen eigenen Kanal und die Konsolenausgabe.
 
 **Verbleibender Folgeauftrag, nicht beiläufig gelöst (2026-10-19):**
 `standard_contract.Lane.every_run_full` sagt für `seconds` „jeder Lauf
