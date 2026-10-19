@@ -155,6 +155,29 @@ pins (`requirements.txt` / `requirements.lock`).
   `tree_differs`) is a blocker before any station runs, since the
   stations read the tree and the commit holds the index. Reinstall the
   hooks (`labkit-hooks install`).
+- **runlog holds every run at seconds to the registration.** The contract
+  says every run through runlog at `cost = "seconds"` is the full run
+  (`Lane.every_run_full`), and protocol-check read it so; runlog read the
+  script's `long` alone, so a hand-written `long=False` started under
+  registered ids without their promise tables and without the written
+  registration while protocol-check named both a MUST (review
+  2026-10-19). The start now reads `long or lane.every_run_full`
+  (`runlog._is_full_run`); the script's word stays recorded as `long`, and
+  the release refuses a probe's number as before. The stamped skeletons
+  pass `long=True` at seconds and never met the gap.
+- **`labkit-init exp` prints the lane with its gates.** At minutes/hours
+  the next steps skipped the preflight and its audit, the analysis audit
+  and the adoption while the stamped `AGENTS.md` named them; an agent
+  following the console met the refusal at the run's start. The steps read
+  the contract (`scaffold.next_steps`): the preflight where the lane owes
+  the freeze, each audit where `Lane.audits` names it, `code-check` after
+  every change, the adoption at the end of every lane.
+- **report-check's station 3 reads `Lane.audits`.** The release read only
+  the freeze off the contract and owed the analysis audit on its own; now
+  `later_gaps` takes the lane and reads both. No behaviour changes: every
+  lane of the standard owes the analysis audit. `docs/architecture.md`
+  named a `standard_contract.release` that never existed; the home of the
+  release's obligations is `lane` (`freeze`, `audits`).
 
 ### Changed
 

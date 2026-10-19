@@ -17,6 +17,7 @@ cites a run.
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import io
 import json
 import subprocess
@@ -28,7 +29,7 @@ from unittest import mock
 
 from protocol_fixture import completed_run, head, scope_file
 
-from labkit import findings, promises, report_check, scope_sha
+from labkit import findings, promises, report_check, scope_sha, standard_contract
 
 
 class ReportCheck(unittest.TestCase):
@@ -298,6 +299,29 @@ class ReportCheck(unittest.TestCase):
                 failed = report_check.check_analysis_script(area, repo) or ""
                 self.assertIn("no scripts/02_analyze.py —", failed)
                 self.assertIn("analyze-quick-script.py.template", failed)
+
+    def test_the_later_stations_read_the_lane(self):
+        """Station 3 is owed where the lane's `audits` name the analysis
+        audit — every lane of the standard does; a lane without it (built
+        here, not in the contract) owes no record, and station 2 names the
+        freeze only where the lane owes it (review 2026-10-19: the release
+        read only `freeze` off the contract)."""
+        area = self._area(cost="seconds", frozen=False)
+        run = self._answered(area)
+        completed_run(area, run.name, metrics={"c1_pass": True}, long=False)
+        ctx = report_check.checked(area, area / "PROTOCOL-x.md")
+        seconds = standard_contract.lane("seconds")
+        with (
+            mock.patch.object(report_check, "finalize_area", return_value=0),
+            mock.patch.object(report_check, "check_analysis_script", return_value=None),
+        ):
+            gaps = report_check.later_gaps(ctx, seconds)
+            self.assertTrue(any("analysis audit:" in g for g in gaps), gaps)
+            self.assertFalse(any("on a frozen protocol" in g for g in gaps), gaps)
+            without = dataclasses.replace(seconds, audits=(), freeze=True)
+            gaps = report_check.later_gaps(ctx, without)
+            self.assertFalse(any("analysis audit:" in g for g in gaps), gaps)
+            self.assertTrue(any("on a frozen protocol" in g for g in gaps), gaps)
 
     def test_a_check_printing_bytes_no_codec_reads_is_a_named_gap(self):
         """`protocol-fill --from-run` ran this inside `adopt`; a

@@ -116,6 +116,7 @@ from labkit.scope_sha import area_stamp
 from labkit.standard_contract import (
     ANALYSIS_AUDIT,
     CHECK_SCRIPT,
+    Lane,
     check_command,
     lane,
 )
@@ -289,14 +290,19 @@ def finalize_gaps(area: Path, protocol: Path) -> list[str]:
     return [f"finalize {area} exits {finalized} — run it to see why"]
 
 
-def later_gaps(ctx: Checked, freeze_owed: bool = True) -> list[str]:
-    """Stations 2–4: finalize clean and its run a full run, an analysis audit
-    of the area now, the check."""
+def later_gaps(ctx: Checked, ln: Lane) -> list[str]:
+    """Stations 2–4: finalize clean and its run a full run, the analysis
+    audit where the lane LN owes it (`Lane.audits`; every lane of the
+    standard does), the check. The freeze names itself in station 2's
+    sentence where the lane owes it."""
     out = finalize_gaps(ctx.area, ctx.protocol)
-    out += unreportable_gaps(ctx, freeze_owed)
-    gap = analysis_audit_gap(ctx)
-    if gap:
-        out.append(f"analysis audit: {gap} (LAB-050 Analysis audit before reporting)")
+    out += unreportable_gaps(ctx, ln.freeze)
+    if ANALYSIS_AUDIT in ln.audits:
+        gap = analysis_audit_gap(ctx)
+        if gap:
+            out.append(
+                f"analysis audit: {gap} (LAB-050 Analysis audit before reporting)"
+            )
     failed = check_analysis_script(ctx.area, ctx.repo)
     if failed:
         out.append(f"{failed} (LAB-041 Generate numbers, don't retype them)")
@@ -328,10 +334,11 @@ def report_check(
         f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
     )
     # what the release owes at this tier is the contract's answer: the freeze
-    # follows the lane, the other stations are owed at every tier
-    freeze_owed = lane(ctx.head.cost).freeze
+    # (station 1) and the audits follow the lane; finalize, the full run and
+    # the check are owed at every tier
+    ln = lane(ctx.head.cost)
     findings = Findings()
-    if freeze_owed:
+    if ln.freeze:
         gaps = freeze_gaps(ctx)
     else:
         gaps = []
@@ -340,10 +347,10 @@ def report_check(
             f"owed (LAB-017 The number of audits follows the cost tier); the full "
             f"run, the analysis audit and the check are"
         )
-    for b in gaps + later_gaps(ctx, freeze_owed):
+    for b in gaps + later_gaps(ctx, ln):
         findings.block(b)
     if not findings.blocked:
-        held = ("frozen, " if freeze_owed else "") + "finalized, audited, checked"
+        held = ("frozen, " if ln.freeze else "") + "finalized, audited, checked"
         print(f"  {chosen.name}: {held}")
     return findings.report("report-check", "reporting")
 

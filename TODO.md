@@ -820,6 +820,24 @@ den Ertrag je Klasse auszählt.
   (`--diff-filter=ACMR`) sehen eine gelöschte Datei unter einer
   berichteten Zahl nicht; `report-check <bereich>` nennt die Lücke.
   `kind = apply/fit/count` bleibt zurückgestellt (s. u.).
+  **Review des Vertrags 2026-10-19, vier Befunde, alle am Code bestätigt
+  und behoben:** (1) `runlog` entschied den Laufstart allein nach `long`,
+  der Vertrag sagt bei `seconds` „jeder Lauf ist der volle Lauf“
+  (`every_run_full`) — ein handgeschriebenes `long=False` startete ohne
+  Tabellen und Registrierung, `protocol-check` nannte beides MUST; jetzt
+  liest der Start `long or every_run_full` (`_is_full_run`), die Marke
+  `long` bleibt das Wort des Skripts, die Freigabe verweigert die Probe
+  weiter. Entschieden: eine Probe bei `seconds` wird nicht verweigert, nur
+  an die Registrierung gehalten — die gestempelten Gerüste geben dort
+  ohnehin `long=True`. (2) `scaffold.next_steps` übersprang bei
+  minutes/hours Preflight, beide Audits und die Übernahme; die Schritte
+  lesen jetzt die Lane (`freeze`, `audits`, `foreground`, `provenance`).
+  (3) `report_check.later_gaps` nimmt die Lane und liest `audits`, nicht
+  nur `freeze`. (4) `docs/architecture.md` nannte ein
+  `standard_contract.release`, das es nie gab. Offen geblieben, kein
+  Bauauftrag: `tests/test_one_home.py` greift kopierte Schreibweisen, nicht
+  eine ausgelassene Vertragsauswertung wie (1); dafür gibt es keinen Grep,
+  nur den Zwillingstest je Verbraucher.
 - **Audit 2026-10-19 der Freigabekette, vier Befunde behoben** (Commits
   `228d0f9`, `a8cf35d`, `0246826`, `f4524aa`): Station 4 nimmt bei
   `seconds` das `01_measure.py --check` des Zählgerüsts (seit dem
