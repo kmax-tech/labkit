@@ -7,6 +7,7 @@ modules were missing from it, and a gate imported a tool).
 
 import ast
 import re
+import tomllib
 import unittest
 from collections import defaultdict
 from pathlib import Path
@@ -111,6 +112,20 @@ class Layers(unittest.TestCase):
             if t in layers and layers[t] > layers[m]
         ]
         self.assertEqual(up, [])
+
+
+class Packaging(unittest.TestCase):
+    def test_every_package_ships(self):
+        """pyproject names every folder holding an `__init__.py`: a package
+        left out is missing from the wheel while the editable install of
+        this repo still finds it."""
+        data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        listed = set(data["tool"]["setuptools"]["packages"])
+        on_disk = {
+            ".".join(i.parent.relative_to(ROOT).parts)
+            for i in PACKAGE.rglob("__init__.py")
+        }
+        self.assertEqual(listed, on_disk)
 
 
 class CoreAndDoctrine(unittest.TestCase):

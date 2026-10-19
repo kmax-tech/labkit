@@ -42,7 +42,17 @@ labkit-check = "labkit.tools.repo_check:cli"
 report-check = "labkit.gates.report_check:cli"
 
 [tool.setuptools]
-packages = ["labkit"]
+# every package by name: a layer package left out ships as a wheel without its
+# code, and an editable install does not show it (tests/test_architecture.py)
+packages = [
+    "labkit",
+    "labkit.formats",
+    "labkit.run",
+    "labkit.checks",
+    "labkit.gates",
+    "labkit.tools",
+    "labkit.probes",
+]
 
 [tool.setuptools.package-data]
 # the protocol template IS the checker's contract — shipping the checker
