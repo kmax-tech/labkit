@@ -8,6 +8,14 @@ block the prose never mentions. `print_report` tells it, `check_files`
 walks files and directories, `main` is the console command
 (`--contract` prints the field contract, `--guide` the field guide's
 path). Read-only.
+
+Usage:
+    protocol-check PROTOCOL-foo.md [more files or directories ...]
+    protocol-check --template experiment-protocol.md.template <files>
+
+Directories are searched recursively for PROTOCOL-*.md. Exit code 1 if any
+MUST field is missing or unfilled in any file; SHOULD fields only warn.
+Protocols with a prose head (Standard 0.16/0.17) are read by labkit 0.47.
 """
 
 import re

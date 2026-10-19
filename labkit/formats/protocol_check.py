@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Check experiment protocols: the head as data, the prose fields by label.
+"""protocol_check — the field contract of a protocol and its reading.
 
 The head — standard, id, type, cost, frozen, preflight audit — is the
 `[protocol]` table of the protocol's ```toml block, read by
@@ -10,34 +9,27 @@ carries it, filled when its value is not a `<…>` placeholder; an explicit
 "n/a — <why>" counts, silence does not (scar 2026-08-13: two freely written
 protocols omitted "Type" and "Model I/O"; each omission caused a bad run).
 
-The checks, each stated as its current rule (the change history lives in the
-commits, LAB-075 Docs carry the state, commits the change):
+What lives here, each stated as its current rule:
 
-  * **Two tiers, one template.** MUST is the pilot minimum; SHOULD is what
-    a REPORTABLE run owes on top. `frozen = true` escalates every SHOULD
-    field to MUST: an unfrozen pilot's numbers stay pilot numbers — "Pilot
-    leicht, Bericht schwer" without a second template that would drift
-    (2026-08-18). `cost = "seconds"` owes its own marked cut and nothing
-    graduates, because nothing freezes (LAB-017 The number of audits follows the cost tier).
-  * **Template-line detection.** Any line still identical to a line of the
-    template is instruction, not content.
-  * **Verbatim-block check.** A protocol with a Prompt field but no fenced
-    example block paraphrases its prompt — a MUST failure; so is `frozen =
-    true` without a single rendered example.
-  * **A measure run demands a written result.** A documented run_id that
-    is not a prepare/probe line makes empty `Answer to the question` / `Raw
-    output` fields a MUST failure — the context that explains the numbers
-    dies with the session (2026-08-24).
-  * **Change-history prose is a warning** (LAB-075 Docs carry the state, commits the change).
+  * **The fields** (`fields`, `FieldLine`): every `- **<label>:**` line
+    with its value, span and whether it is still a placeholder.
+  * **What a protocol owes** (`owed`, `check_fields`): two tiers, one
+    template. MUST is the pilot minimum; SHOULD is what a REPORTABLE run
+    owes on top. `frozen = true` escalates every SHOULD field to MUST and
+    needs the preflight audit line and the promise tables; `cost =
+    "seconds"` owes its own marked cut and nothing graduates, because
+    nothing freezes (LAB-017 The number of audits follows the cost tier).
+  * **The registration before a number** (`seconds_registration_missing`,
+    `written_before_run`): what a run of seconds owes first, and a report
+    field filled while no run exists.
+  * **The result section** (`answering_run_field`, `answer_field`,
+    `answer_without_run`, `answering_run_open`, `measure_runs`): the lines
+    finalize, report-check and protocol-fill read.
 
-Usage:
-    protocol-check PROTOCOL-foo.md [more files or directories ...]
-    protocol-check --template experiment-protocol.md.template <files>
-
-Directories are searched recursively for PROTOCOL-*.md. Exit code 1 if any
-MUST field is missing or unfilled in any file; SHOULD fields only warn.
-
-Protocols with a prose head (Standard 0.16/0.17) are read by labkit 0.47.
+The checks over the whole file — template lines left in, the verbatim
+prompt block, a measure run without a written result, change-history prose,
+the id against the repo — and the `protocol-check` command are
+`protocol_report`'s. Read-only.
 """
 
 import functools

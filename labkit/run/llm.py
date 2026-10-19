@@ -10,9 +10,9 @@ repo root is the single place where backends live.
                                       # runs.tsv records model+backend+endpoint
                                       # + controls_temperature (see below)
 
-Sampling control differs per backend: 'ollama' accepts a temperature,
-'claude-cli' cannot (the CLI exposes no such flag) and REFUSES the argument
-rather than ignoring it. resolve() therefore reports 'controls_temperature',
+Sampling control differs per backend: 'ollama' and 'openai' send a
+temperature, 'claude-cli' cannot (the CLI exposes no such flag) and REFUSES
+the argument rather than ignoring it. resolve() therefore reports 'controls_temperature',
 which lands in the run config — so a run is never recorded as deterministic
 when the backend never made it so.
 
@@ -444,8 +444,9 @@ def _complete_once(
 ) -> str:
     """One text completion via the alias' backend. Returns the answer text.
 
-    temperature: only the 'ollama' backend can set it. Passing a value to a
-    backend that cannot honour it raises instead of silently ignoring it —
+    temperature: the 'ollama' and 'openai' backends send it; 'claude-cli'
+    has no such flag. Passing a value to a backend that cannot honour it
+    raises instead of silently ignoring it —
     a run must not be documented as "temperature 0" when nothing set it.
 
     Dispatches to one adapter per backend; each adapter owns its protocol

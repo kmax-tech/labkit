@@ -218,7 +218,7 @@ def complete_claude_cli(
             f"alias '{alias}' uses backend 'claude-cli', which has no "
             f"temperature flag — it cannot honour temperature="
             f"{temperature}. Pass temperature=None and document the run "
-            f"as backend-default sampling, or use an ollama alias."
+            f"as backend-default sampling, or use an ollama or openai alias."
         )
     cmd = [
         "claude",
