@@ -37,12 +37,12 @@ from labkit.formats.protocol_check import (
     FIELDS,
     FieldLine,
     RUNS_PLACEHOLDER,
-    _DASHES,
-    _MARKER,
-    _STAMPED_ITEM,
-    _in_cut,
-    _label,
-    _model_named,
+    DASHES_ONLY,
+    HTML_COMMENT,
+    STAMPED_ITEM,
+    in_cut,
+    field_label,
+    model_named_in,
     answer_without_run,
     check_fields,
     fields,
@@ -61,19 +61,19 @@ def unreported(text: str, seconds: bool = False) -> list[str]:
     by_name: dict[str, list[FieldLine]] = {}
     for f in lines:
         by_name.setdefault(f.name, []).append(f)
-    model = _model_named(by_name)
+    model = model_named_in(by_name)
     owed = [
         f
         for f in FIELDS
         if f.level == "after"
-        and (_in_cut(f, model) if seconds else f.seconds != "sm" or model)
+        and (in_cut(f, model) if seconds else f.seconds != "sm" or model)
     ]
     return [
         f.label.casefold()
         for f in owed
         if f.label.casefold() not in found
         or found[f.label.casefold()].placeholder
-        or _DASHES.match(found[f.label.casefold()].value)
+        or DASHES_ONLY.match(found[f.label.casefold()].value)
     ]
 
 
@@ -187,7 +187,7 @@ def template_lines(path: Path | None) -> set[str]:
         # The written protocol carries no cut markers; compared with them,
         # the stamped Runs line `- <run_id> — <…> <!-- s -->` never matched
         # its leftover (uniagent area 08, 2026-10-07: frozen and reported).
-        s = _MARKER.sub("", line).strip()
+        s = HTML_COMMENT.sub("", line).strip()
         if s.startswith("## "):
             in_body = True
             in_head = s.startswith("## Head")
@@ -385,7 +385,7 @@ class FileReport:
             + [f"{label} (line {n}, placeholder)" for n, label in self.must_holes]
             + (["a prompt code block"] if self.no_block else [])
             + (["a rendered example (frozen)"] if self.frozen_without_io else [])
-            + [f"{_label(n)} (a measure run exists)" for n in self.run_unreported]
+            + [f"{field_label(n)} (a measure run exists)" for n in self.run_unreported]
             + (
                 ["a shorter protocol (frozen)"]
                 if self.frozen and (self.too_long or self.big)
@@ -452,7 +452,7 @@ def check_protocol(
         {
             s
             for n, s in enumerate((ln.strip() for ln in text.splitlines()), 1)
-            if (s in tmpl or _STAMPED_ITEM.fullmatch(s))
+            if (s in tmpl or STAMPED_ITEM.fullmatch(s))
             and not s.startswith("<!--")
             and n not in in_placeholder
         }
@@ -592,7 +592,7 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
         print(
             f"{f}:{r.measured[0][0]}: MISSING (must): measure run in the "
             f"run list ({r.measured[0][1]}) but "
-            f"{', '.join(_label(n) for n in r.run_unreported)} empty — write "
+            f"{', '.join(field_label(n) for n in r.run_unreported)} empty — write "
             f"the result back in the SAME session."
         )
     for n, ln in r.series:

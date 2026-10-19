@@ -98,7 +98,7 @@ def _probe(
         encoding="utf-8",
     )
     (run / "completion.json").write_text("{}", encoding="utf-8")
-    usability._sidecar(root, "probe.json").write_text(
+    usability.sidecar(root, "probe.json").write_text(
         json.dumps(
             {
                 "staged": "2026-10-05T17:59:00",
@@ -113,7 +113,7 @@ def _probe(
         ),
         encoding="utf-8",
     )
-    usability._sidecar(root, "log.md").write_text(LOG, encoding="utf-8")
+    usability.sidecar(root, "log.md").write_text(LOG, encoding="utf-8")
 
 
 class LoadProbeRun(unittest.TestCase):
@@ -158,7 +158,7 @@ class ScoreVerdict(unittest.TestCase):
             _probe(root, metrics)
             with contextlib.redirect_stdout(io.StringIO()):
                 rc = usability_score.score(root, agent=agent)
-            return rc, json.loads(usability._sidecar(root, "score.json").read_text())
+            return rc, json.loads(usability.sidecar(root, "score.json").read_text())
 
     def test_the_score_carries_the_agent_the_operator_names(self):
         _, sc = self._score({"mean_docs_per_case": 3.5}, agent="fable-5.1")

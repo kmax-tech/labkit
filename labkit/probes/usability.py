@@ -224,12 +224,12 @@ def _commit(root: Path, title: str, body: str | None = None) -> None:
     )
 
 
-def _read_probe(path: Path) -> Probe:
+def read_probe(path: Path) -> Probe:
     """`<dir>.probe.json` as the record `stage` wrote."""
     return Probe(**json.loads(path.read_text(encoding="utf-8")))
 
 
-def _answer_text(path: Path, who: str) -> str:
+def read_answer(path: Path, who: str) -> str:
     """The answer file a scorer holds to the truth; missing means `who` has
     not answered yet — said so, not a traceback."""
     if not path.is_file():
@@ -388,7 +388,8 @@ def agent_prompt(root: Path) -> str:
     )
 
 
-def _sidecar(root: Path, suffix: str) -> Path:
+def sidecar(root: Path, suffix: str) -> Path:
+    """The file `<root>.<suffix>` beside the probe directory ROOT."""
     return root.parent / f"{root.name}.{suffix}"
 
 
@@ -467,7 +468,7 @@ def stage(
         ],
         target_minutes=TARGET_MINUTES,
     )
-    log = _sidecar(root, "log.md")
+    log = sidecar(root, "log.md")
     log.write_text("", encoding="utf-8")
     sheet = (scaffold.TEMPLATES / spec["template"]).read_text(encoding="utf-8")
     for key, val in (
@@ -481,14 +482,14 @@ def stage(
     (root / "TASK.md").write_text(sheet, encoding="utf-8")
     _sh(["git", "add", "-A"], root)
     _commit(root, "Probe: the area, the fixture and TASK.md")
-    _sidecar(root, "probe.json").write_text(
+    sidecar(root, "probe.json").write_text(
         json.dumps(asdict(probe), indent=1), encoding="utf-8"
     )
-    prompt = _sidecar(root, "prompt.md")
+    prompt = sidecar(root, "prompt.md")
     prompt.write_text(agent_prompt(root), encoding="utf-8")
     print(
         f"staged {root}\n  task:   {root / 'TASK.md'}\n  log:    {log}\n"
-        f"  probe:  {_sidecar(root, 'probe.json')}\n  prompt: {prompt}\n"
+        f"  probe:  {sidecar(root, 'probe.json')}\n  prompt: {prompt}\n"
         f"next: hand the prompt file's text to a cold agent (fresh context, no "
         f"history), then `usability score {root} --transcript <its transcript>`"
     )
@@ -589,7 +590,7 @@ def _probe_venv(root: Path, venv: Path | None, labkit_spec: str) -> None:
 def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
     """`stage --restamp`: see the module docstring. KEEP None means the
     paths `<dir>.probe.json` recorded last time."""
-    probe_file = _sidecar(root, "probe.json")
+    probe_file = sidecar(root, "probe.json")
     if not probe_file.is_file():
         raise SystemExit(
             f"usability: {probe_file} missing — {root} was not staged by "
@@ -603,7 +604,7 @@ def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
             f"usability: {root} has uncommitted changes — commit or stash "
             f"first:\n{dirty.rstrip()}"
         )
-    probe = _read_probe(probe_file)
+    probe = read_probe(probe_file)
     kept_paths = probe.kept if keep is None else keep
     flags = probe.scaffold_flags
     cost = flags[flags.index("--cost") + 1] if "--cost" in flags else "unset"
@@ -615,7 +616,7 @@ def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
             stage(fresh, root / ".venv", cost=cost, task=probe.task, model=model)
         files = _sh(["git", "ls-files"], fresh).split("\n")
         done = restamp_files(fresh, root, [f for f in files if f], kept_paths)
-        fresh_probe = _read_probe(_sidecar(fresh, "probe.json"))
+        fresh_probe = read_probe(sidecar(fresh, "probe.json"))
     changed = done.overwritten + done.added
     extra = other_requirements((root / "requirements.txt").read_text(encoding="utf-8"))
     if extra and venv is None:

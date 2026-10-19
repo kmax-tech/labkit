@@ -24,9 +24,9 @@ from labkit.probes.usability import (
     Probe,
     SOURCE_READ,
     TOL,
-    _answer_text,
-    _read_probe,
-    _sidecar,
+    read_answer,
+    read_probe,
+    sidecar,
     recount,
 )
 
@@ -136,7 +136,7 @@ def archive(root: Path, transcript: Path, dest: Path) -> list[Path]:
         dest / f"{root.name}.timeline.txt": (
             "\n".join(agent_transcript.timeline(transcript)) + "\n"
         ).encode("utf-8"),
-        dest / f"{root.name}.score.json": _sidecar(root, "score.json").read_bytes(),
+        dest / f"{root.name}.score.json": sidecar(root, "score.json").read_bytes(),
     }
     clash = [p for p, b in payload.items() if p.exists() and p.read_bytes() != b]
     if clash:
@@ -168,10 +168,10 @@ class ProbeRun:
 def load_probe_run(root: Path) -> ProbeRun:
     """Read `<dir>.probe.json` and the probe area's latest completed run.
     Raises SystemExit when the probe was not staged here."""
-    probe_file = _sidecar(root, "probe.json")
+    probe_file = sidecar(root, "probe.json")
     if not probe_file.is_file():
         raise SystemExit(f"usability: {probe_file} missing — was {root} staged here?")
-    probe = _read_probe(probe_file)
+    probe = read_probe(probe_file)
     area = root / "experiments" / probe.area
     run = latest_run(area)
     if run is None:
@@ -216,8 +216,8 @@ def _bound_protocol(root: Path) -> tuple[Path, protocol_reading.Truth]:
 def cmd_reader(root: Path) -> int:
     """Write `<dir>.reader-prompt.md`: the bound protocol for a cold reader."""
     protocol, _ = _bound_protocol(root)
-    answer = _sidecar(root, "reader-answer.json")
-    prompt = _sidecar(root, "reader-prompt.md")
+    answer = sidecar(root, "reader-answer.json")
+    prompt = sidecar(root, "reader-prompt.md")
     prompt.write_text(
         protocol_reading.reader_prompt(
             protocol.read_text(encoding="utf-8"), str(answer)
@@ -232,8 +232,8 @@ def cmd_glance(root: Path) -> int:
     """Write `<dir>.glance-prompt.md`: only the first lines of the bound protocol."""
     protocol, _ = _bound_protocol(root)
     g = protocol_reading.glance(protocol.read_text(encoding="utf-8"))
-    answer = _sidecar(root, "glance-answer.json")
-    prompt = _sidecar(root, "glance-prompt.md")
+    answer = sidecar(root, "glance-answer.json")
+    prompt = sidecar(root, "glance-prompt.md")
     prompt.write_text(
         protocol_reading.glance_prompt(g.excerpt, str(answer)), encoding="utf-8"
     )
@@ -250,7 +250,7 @@ def cmd_glance_score(root: Path) -> int:
     protocol, truth = _bound_protocol(root)
     text = protocol.read_text(encoding="utf-8")
     g = protocol_reading.glance(text)
-    answer = _answer_text(_sidecar(root, "glance-answer.json"), "reader")
+    answer = read_answer(sidecar(root, "glance-answer.json"), "reader")
     try:
         got = protocol_reading.score_glance_answer(answer, truth)
     except ValueError as exc:
@@ -264,7 +264,7 @@ def cmd_glance_score(root: Path) -> int:
         "terms": [asdict(h) for h in hits],
         "truth": asdict(truth),
     }
-    _sidecar(root, "glance.json").write_text(
+    sidecar(root, "glance.json").write_text(
         json.dumps(out, indent=1, ensure_ascii=False), encoding="utf-8"
     )
     print(
@@ -281,7 +281,7 @@ def cmd_glance_score(root: Path) -> int:
 def cmd_terms(root: Path) -> int:
     """The full reader's unclear terms against the Summary and Terms."""
     protocol, _ = _bound_protocol(root)
-    answer = _answer_text(_sidecar(root, "reader-answer.json"), "reader")
+    answer = read_answer(sidecar(root, "reader-answer.json"), "reader")
     unclear = json.loads(answer).get("unclear") or []
     hits = protocol_reading.terms_coverage(
         protocol.read_text(encoding="utf-8"), unclear, str(protocol)
@@ -329,7 +329,7 @@ def cmd_nav_score(
 ) -> int:
     """Hold the answers to the truth; `<out>.nav.json`."""
     qs = code_navigation.load_questions(questions)
-    answer = _answer_text(out.with_name(out.name + ".nav-answer.json"), "agent")
+    answer = read_answer(out.with_name(out.name + ".nav-answer.json"), "agent")
     try:
         got = code_navigation.score_nav_answer(answer, qs, repo)
     except (ValueError, code_navigation.NavigationError) as exc:
@@ -428,7 +428,7 @@ def cmd_human(
 def cmd_read_score(root: Path, transcript: Path | None) -> int:
     """Hold the reader's answer to the run's number; `<dir>.reader.json`."""
     _, truth = _bound_protocol(root)
-    answer = _answer_text(_sidecar(root, "reader-answer.json"), "reader")
+    answer = read_answer(sidecar(root, "reader-answer.json"), "reader")
     try:
         got = protocol_reading.score_reader_answer(answer, truth)
     except ValueError as exc:
@@ -438,7 +438,7 @@ def cmd_read_score(root: Path, transcript: Path | None) -> int:
         _, first, last = agent_transcript.read_calls(transcript)
         seconds = round(last - first)
     out = {**asdict(got), "truth": asdict(truth), "reader_seconds": seconds}
-    _sidecar(root, "reader.json").write_text(
+    sidecar(root, "reader.json").write_text(
         json.dumps(out, indent=1, ensure_ascii=False), encoding="utf-8"
     )
     print(
@@ -493,7 +493,7 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
             except protocol_block.BlockError as exc:
                 print(f"  protocol head unreadable — {exc}")
                 frozen = None
-    log = _sidecar(root, "log.md")
+    log = sidecar(root, "log.md")
     trace = parse_log(log.read_text(encoding="utf-8")) if log.is_file() else None
     try:
         measured = (
@@ -520,7 +520,7 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         transcript=measured,
         agent=agent,
     )
-    _sidecar(root, "score.json").write_text(
+    sidecar(root, "score.json").write_text(
         json.dumps(asdict(sc), indent=1), encoding="utf-8"
     )
 
@@ -627,5 +627,5 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         f"  target: one kept number under {probe.target_minutes} min"
         + (" — MISSED" if over else "")
     )
-    print(f"→ {_sidecar(root, 'score.json')}")
+    print(f"→ {sidecar(root, 'score.json')}")
     return 0 if sc.number_ok and bound_to else 1

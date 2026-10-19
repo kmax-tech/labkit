@@ -137,7 +137,7 @@ _BULLET = r"^\s*(?:[-*]\s+|\d+[.)]\s+)?"  # `- `, `* `, `1. `, `1) ` or none
 _FIELD_OPEN = re.compile(
     _BULLET + r"\*\*(?P<label>[^*]+?)(?::\*\*|\*\*\s*:)(?P<value>.*)$"
 )
-_MARKER = re.compile(r"<!--.*?-->")
+HTML_COMMENT = re.compile(r"<!--.*?-->")
 #: A list item that is nothing but stamped placeholders — `- <…>`,
 #: `- <run_id> — <one sentence: …>`: no label, so no field sees it.
 #: A field that points at another area by name only — "wie Bereich 07",
@@ -148,7 +148,7 @@ BARE_REFERENCE = re.compile(
     r"\b(?:wie|siehe|vgl\.|as in|same as|see)\s+(?:in\s+)?(?:Bereich|area)\s+\d+",
     re.I,
 )
-_STAMPED_ITEM = re.compile(r"[-*]\s+(<[^<>]*>[\s—–-]*)+")
+STAMPED_ITEM = re.compile(r"[-*]\s+(<[^<>]*>[\s—–-]*)+")
 #: the stamped Runs entry, written by `protocol-fill --from-run` after the run
 #: (group 1: the list marker with its indent — protocol_fill keeps it)
 RUNS_PLACEHOLDER = re.compile(r"^(\s*[-*]\s+)<run_id>\s+[—–-]\s+<[^<>]*>\s*$")
@@ -247,7 +247,7 @@ def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity
         ):
             parts.append(lines[nxt].strip())
             nxt += 1
-        value = _MARKER.sub("", " ".join(parts)).strip()
+        value = HTML_COMMENT.sub("", " ".join(parts)).strip()
         label = " ".join(m.group("label").split())
         below = next((ln for ln in lines[nxt:] if ln.strip()), "")
         indent = len(line) - len(line.lstrip())
@@ -302,17 +302,18 @@ def model_named(text: str) -> bool:
     found: dict[str, list[FieldLine]] = {}
     for f in fields(text):
         found.setdefault(f.name, []).append(f)
-    return _model_named(found)
+    return model_named_in(found)
 
 
-def _model_named(found: dict[str, list[FieldLine]]) -> bool:
+def model_named_in(found: dict[str, list[FieldLine]]) -> bool:
+    """`model_named` over fields already grouped by name (FOUND)."""
     for f in found.get("model / tool", []):
         if f.value and not f.placeholder and not _NO_MODEL.match(f.value):
             return True
     return False
 
 
-def _in_cut(f: Field, model: bool) -> bool:
+def in_cut(f: Field, model: bool) -> bool:
     """Is `f` part of the seconds cut — "s" always, "sm" with a model named?"""
     return f.seconds == "s" or (f.seconds == "sm" and model)
 
@@ -335,8 +336,8 @@ def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
         found: dict[str, list[FieldLine]] = {}
         for f in lines:
             found.setdefault(f.name, []).append(f)
-        model = _model_named(found)
-        cut = {f.label.casefold() for f in FIELDS if _in_cut(f, model)}
+        model = model_named_in(found)
+        cut = {f.label.casefold() for f in FIELDS if in_cut(f, model)}
         lines = [f for f in lines if f.name in cut]
     return [(f.line, f.label) for f in lines if f.placeholder]
 
@@ -354,10 +355,8 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     # which cut the protocol owes is the contract's answer; the marks on
     # the fields (`Field.seconds`) are this module's
     if standard_contract.lane(head.cost).cut == standard_contract.SECONDS_CUT:
-        model = _model_named(found)
-        must = [
-            f for f in FIELDS if f.level in ("must", "should") and _in_cut(f, model)
-        ]
+        model = model_named_in(found)
+        must = [f for f in FIELDS if f.level in ("must", "should") and in_cut(f, model)]
         return must, []
     must = [f for f in FIELDS if f.level == "must"]
     should = [f for f in FIELDS if f.level == "should"]
@@ -429,7 +428,7 @@ def seconds_registration_missing(text: str) -> list[str]:
     by_name: dict[str, list[FieldLine]] = {}
     for f in lines:
         by_name.setdefault(f.name, []).append(f)
-    labels = standard_contract.registration_fields(_model_named(by_name))
+    labels = standard_contract.registration_fields(model_named_in(by_name))
     missing = [label for label in labels if label.casefold() not in written]
     try:
         cost = protocol_block.head(text).cost
@@ -478,7 +477,7 @@ def written_before_run(
         for f in fields(text)
         if f.name in names
         and not f.placeholder
-        and not _DASHES.match(f.value)
+        and not DASHES_ONLY.match(f.value)
         and not _NA.match(f.value.strip())
     ]
     if not filled or head.id is None:
@@ -552,12 +551,12 @@ SETUP_RUN = re.compile(r"prepare|probe|wegwerf|trockenlauf|dry.?run", re.I)
 RESULT_FIELDS = tuple(f.label.casefold() for f in FIELDS if f.level == "after")
 
 
-def _label(name: str) -> str:
+def field_label(name: str) -> str:
     """The template label of a casefolded field name."""
     return next(f.label for f in FIELDS if f.label.casefold() == name)
 
 
-_DASHES = re.compile(r"^[—–-]+$")
+DASHES_ONLY = re.compile(r"^[—–-]+$")
 
 
 def measure_runs(text: str) -> list[tuple[int, str]]:

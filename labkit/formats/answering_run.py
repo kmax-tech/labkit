@@ -21,7 +21,7 @@ from labkit.formats.runs import (
     COMPLETED,
     RunConfigError,
     RunDir,
-    _run_dir,
+    read_run_dir,
     completed_runs,
     read_metrics,
     read_run_config,
@@ -43,7 +43,7 @@ def run_facts(run_dir: Path) -> dict | None:
     Liveness is not asked here (`alive=False`): a run still finalizing in
     another process reads as `unfinalized`; `runlog.active` asks.
     """
-    return _facts(_run_dir(run_dir))
+    return _facts(read_run_dir(run_dir))
 
 
 def _facts(rd: RunDir) -> dict | None:

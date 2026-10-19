@@ -456,7 +456,9 @@ class RunDir:
     error: str | None
 
 
-def _run_dir(d: Path) -> RunDir:
+def read_run_dir(d: Path) -> RunDir:
+    """The `RunDir` of directory D, its config.json read once; an unreadable
+    one is carried in `error`, never raised."""
     try:
         return RunDir(d, read_run_config(d), None)
     except RunConfigError as exc:
@@ -473,7 +475,7 @@ def run_dirs(area: Path) -> list[RunDir]:
     runs = area / "runs"
     if not runs.is_dir():
         return []
-    return [_run_dir(d) for d in sorted(runs.glob("*")) if d.is_dir()]
+    return [read_run_dir(d) for d in sorted(runs.glob("*")) if d.is_dir()]
 
 
 def completed_runs(area: Path, *, with_repeats: bool) -> list[Path]:
