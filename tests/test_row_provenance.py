@@ -88,6 +88,27 @@ class ResumedRunNamesWhatItContinues(unittest.TestCase):
             self.assertEqual(run_record_check.row_provenance_findings(r.dir), ([], []))
 
 
+class ForeignRowsDuringTheRun(unittest.TestCase):
+    def test_rows_of_another_run_written_meanwhile_are_no_continuation(self):
+        """The file is new at registration; rows of a run that does not
+        exist appear during the run. They are foreign, not continued."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "runs").mkdir()
+            out = area / "output" / "x.jsonl"
+            out.parent.mkdir()
+            with contextlib.redirect_stdout(io.StringIO()):
+                with runlog.run("t", {}, base_dir=area) as r:
+                    r.output(out)
+                    _rows(out, A, ["1", "2"])
+                    r.metrics(c1_pass=True)
+            entries = runs.read_outputs(r.dir) or []
+            self.assertEqual(entries[0].continues, ())
+            self.assertEqual(entries[0].rows_from, {A: 2})
+            blockers, _ = run_record_check.row_provenance_findings(r.dir)
+            self.assertTrue(any(A in b for b in blockers), blockers)
+
+
 class FinalizeHoldsRowsToTheRun(unittest.TestCase):
     def _run(
         self,

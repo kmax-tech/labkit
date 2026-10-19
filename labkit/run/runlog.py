@@ -27,7 +27,7 @@ Three ways a run depends on another run's rows — not one:
                    names the run and model that wrote the row; read by
                    `batch.row_runs`, held by `finalize`
     continues      per run; runlog RECORDS it at finalize from the rows a
-                   registered .jsonl output already held (outputs.json per
+                   .jsonl output held when `r.output()` registered it (outputs.json per
                    file, completion.json as the union) — a resumed file;
                    the earlier run need not be completed; carries no model
     derived_from   per run; the SCRIPT declares it (`runlog.run(...,
@@ -239,6 +239,17 @@ def _check_run_index(base_dir: Path) -> None:
         )
 
 
+def _runs_held(path: Path) -> set[str] | None:
+    """The runs whose rows PATH holds now (`batch.row_runs`): empty for a
+    file not yet there, None when its rows cannot be read."""
+    if not path.exists():
+        return set()
+    try:
+        return set(batch.row_runs(path).runs)
+    except ValueError:
+        return None
+
+
 def _repeat_draw(
     base_dir: Path,
     repeat_of: str | None,
@@ -368,6 +379,9 @@ class Run:
         self._unfrozen_ack = unfrozen_ack
         self._audit_failed = audit_failed
         self._outputs: list[Path] = []
+        # per .jsonl output: the runs its rows named at registration, None
+        # when they could not be read
+        self._held_before: dict[Path, set[str] | None] = {}
         self._metrics: dict = {}
         self._note = ""
         self._t0 = time.monotonic()
@@ -442,8 +456,16 @@ class Run:
         paths land in `outputs.json` at finalize, with sha256 and line count
         taken AFTER the run, so the record describes the file as the run left
         it. Register the batch.Store target right next to opening it.
+
+        A .jsonl output's rows of other runs are read HERE, at registration:
+        those are the rows the run continues (`continues`). A foreign row
+        that appears later was written during the run by something else,
+        and stays foreign for finalize to hold.
         """
-        self._outputs.extend(Path(p) for p in paths)
+        for p in map(Path, paths):
+            self._outputs.append(p)
+            if p.suffix == ".jsonl":
+                self._held_before[p] = _runs_held(p)
 
     def save_raw(self, name: str, content: str) -> Path:
         """Write a raw text artefact into the run's directory and return its path."""
@@ -480,8 +502,10 @@ class Run:
                     }
                     # A resumed file holds rows of the run that broke off:
                     # name it, so "this run continues that one" is in the
-                    # record, not only in the rows' _prov (2026-10-09).
+                    # record — the runs the file held when it was
+                    # registered, never one whose rows came in meanwhile.
                     if p.suffix == ".jsonl":
+                        held = self._held_before.get(p, set())
                         try:
                             rr = batch.row_runs(p)
                         except ValueError as exc:
@@ -489,8 +513,15 @@ class Run:
                         else:
                             entry["rows_from"] = dict(sorted(rr.runs.items()))
                             entry["continues"] = sorted(
-                                r for r in rr.runs if r != self.run_id
+                                r
+                                for r in rr.runs
+                                if r != self.run_id and held is not None and r in held
                             )
+                            if held is None:
+                                entry["note"] = (
+                                    "rows unreadable at registration: no run "
+                                    "is continued"
+                                )
                             continues.update(entry["continues"])
                     rows.append(entry)
                 else:
