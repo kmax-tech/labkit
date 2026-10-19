@@ -34,9 +34,11 @@ What it runs, in order (`preflight_area` shows each station's condition):
                      (`findings.audit_line_gap`, the same answer runlog's
                      freeze gate gives). A `deferred` finding in another
                      area of the repo is told as a reminder, never counted
-  4. code-check      intent ids against the code, and the code the stamp
-                     cannot follow (sys.path edits, dynamic loaders, imports
-                     outside lib/ and src/ — static evidence, warnings);
+  4. code-check      its automated checks (`code_check.code_findings`):
+                     intent ids against the code, parser fixtures, prompt
+                     drift, and the code the stamp cannot follow (sys.path
+                     edits, dynamic loaders, imports outside lib/ and src/
+                     — static evidence, warnings);
                      a line starting with `BLOCKER` is a blocker, any other
                      a warning
   5. scope-sha       audit stamp over the input scope; told
@@ -61,8 +63,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from labkit.checks.code_check import check_intent_ids
-from labkit.checks.import_check import stamp_coverage_findings
+from labkit.checks.code_check import code_findings
 from labkit.formats import console, protocol_block, protocol_check, standard_contract
 from labkit.gates import install_hooks
 from labkit.formats import findings as audit_findings
@@ -401,10 +402,11 @@ def check_deferred_elsewhere(
 
 
 def check_code(findings: Findings, area: Path, protocol: Path, repo: Path) -> None:
-    """Station 4: code-check's intent ids against the code and the stamp's
-    coverage of it, each line graded by code-check's own word and counted
-    once — here, not again by code-check."""
-    lines = check_intent_ids(area, protocol) + stamp_coverage_findings(area, repo)
+    """Station 4: code-check's automated checks (`code_check.code_findings`:
+    intent ids, parser fixtures, prompt drift, stamp coverage), each line
+    graded by code-check's own word and counted once — here, not again by
+    code-check."""
+    lines = code_findings(area, protocol, repo)
     for line in lines:
         findings.add(line)
     if not lines:

@@ -117,6 +117,19 @@ def check_intent_ids(area: Path, protocol: Path) -> list[str]:
         return [unreadable_source(exc)]
 
 
+def code_findings(area: Path, protocol: Path, repo: Path) -> list[str]:
+    """The automated checks 1–1d, in order, as finding lines: intent ids,
+    parser fixtures, prompt drift, stamp coverage. The one list both
+    `code-check` and preflight's code station report; a line starting with
+    `BLOCKER` is a blocker, any other a warning."""
+    return (
+        check_intent_ids(area, protocol)
+        + check_parser_fixtures(area, repo)
+        + check_prompt_drift(area, protocol)
+        + stamp_coverage_findings(area, repo)
+    )
+
+
 def _intent_id_findings(area: Path, protocol: Path) -> list[str]:
     text = protocol.read_text(encoding="utf-8")
     findings = promise_block_findings(area, protocol, text)
@@ -532,12 +545,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
 
     repo = layout_root(area)
     findings = Findings()
-    for line in (
-        check_intent_ids(area, protocol)
-        + check_parser_fixtures(area, repo)
-        + check_prompt_drift(area, protocol)
-        + stamp_coverage_findings(area, repo)
-    ):
+    for line in code_findings(area, protocol, repo):
         findings.add(line)
 
     if bundle_to is not None:

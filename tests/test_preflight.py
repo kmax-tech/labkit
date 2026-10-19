@@ -242,6 +242,24 @@ class TestPreflight(unittest.TestCase):
             self.assertIn(station, out)
         self.assertIn("WARNING: no tests/test_", out)  # station 8 found its own
 
+    def test_code_station_reports_parser_fixtures_and_prompt_drift(self):
+        """Station 4 runs code-check's whole list: a parser without a
+        fixture test and a PROMPT the protocol does not hold block here as
+        they block in code-check."""
+        with tempfile.TemporaryDirectory() as d:
+            area, _ = _area(d)
+            (area / "scripts" / "01_measure.py").write_text(
+                'metrics = {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n'
+                'PROMPT = "Is it causal?"\n'
+                "def parse_answer(raw):\n    return raw\n",
+                encoding="utf-8",
+            )
+            code, out = _run_preflight(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn("parse_answer() has no test", out)
+        self.assertIn("PROMPT", out)
+        self.assertIn("Is it causal?", out)
+
     def test_dirty_tree_is_a_warning_not_a_blocker(self):
         with tempfile.TemporaryDirectory() as d:
             area, _ = _area(d)
