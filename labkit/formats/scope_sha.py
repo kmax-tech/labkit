@@ -95,7 +95,11 @@ def _lib_names(path: Path, libdir: Path) -> set[str]:  # noqa: C901 complexity b
     names: set[str] = set()
 
     def strip(parts: list[str]) -> list[str]:
-        return parts[1:] if parts and parts[0] == prefix else parts
+        if parts and parts[0] == prefix:
+            # `import lib.x` runs lib/__init__.py first: it is code too
+            names.add(ROOT_INIT)
+            return parts[1:]
+        return parts
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -120,6 +124,12 @@ def _lib_names(path: Path, libdir: Path) -> set[str]:  # noqa: C901 complexity b
             for alias in node.names:  # `from a import b`: b may be a module
                 names.add(".".join([*parts, alias.name]))
     return names
+
+
+#: The name `_lib_names` gives the root's own `__init__.py`, which an import
+#: through the root's name (`from lib import x`) executes; `_lib_files`
+#: resolves it to `<root>/__init__.py` when that file exists.
+ROOT_INIT = "__init__"
 
 
 def _lib_files(name: str, libdir: Path) -> list[Path]:

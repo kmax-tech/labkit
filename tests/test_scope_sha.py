@@ -271,6 +271,20 @@ class TestImportForms(unittest.TestCase):
             self.names("from pkg import core\n"), ["pkg/__init__.py", "pkg/core.py"]
         )
 
+    def test_an_import_through_the_root_brings_its_init(self):
+        """`from lib import scoring` runs lib/__init__.py first; `import
+        scoring` (lib/ on sys.path) does not."""
+        from labkit.formats import scope_sha as packaged
+
+        (self.repo / "lib" / "__init__.py").write_text("N = 2\n")
+        self.assertIn("__init__.py", self.names("from lib import scoring\n"))
+        self.assertIn("__init__.py", self.names("import lib\n"))
+        self.assertNotIn("__init__.py", self.names("import scoring\n"))
+        self.names("from lib import scoring\n")
+        before = packaged.area_stamp(self.area)[0]
+        (self.repo / "lib" / "__init__.py").write_text("N = 300\n")
+        self.assertNotEqual(before, packaged.area_stamp(self.area)[0])
+
     def test_a_sibling_module_is_not_charged(self):
         (self.repo / "lib" / "pkg" / "other.py").write_text("O = 1\n")
         self.assertNotIn("pkg/other.py", self.names("from pkg.core import C\n"))
