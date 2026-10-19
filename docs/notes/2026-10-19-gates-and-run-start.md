@@ -81,7 +81,8 @@ refusals in their old order.
   called their run a pilot (review 2026-10-18). At `cost = "seconds"` the
   run is rerunnable at will, so a freeze would protect nothing: what a
   full run needs there is the registration, written before the number
-  (LAB-003, LAB-017); an instrument change after it is a commit and a
+  (LAB-003 No run without an intent paragraph, LAB-017 The number of
+  audits follows the cost tier); an instrument change after it is a commit and a
   rerun, not a second freeze.
 - A derived run resolves no model anew (2026-10-08): its rows were
   answered by the model of the run it derives from; today's `models.toml`

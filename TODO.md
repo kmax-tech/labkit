@@ -865,6 +865,16 @@ den Ertrag je Klasse auszählt.
 
 ## Notiert, nicht geplant
 
+- **Review-Befunde 2026-10-19/20 (17 Stück, Unreleased, je ein Commit
+  `09dcfd0`…`91ce12d`):** Gates, Stamp, Hooks, `batch`, Doku-Drift. Folgen
+  für den Rollout (eigener Auftrag): (1) Labor-Repos mit `lib/__init__.py`
+  oder `src/__init__.py` bekommen neue Stamps — die Audit-Zeilen ihrer
+  Bereiche passen nicht mehr und schulden ein neues Audit; (2) der
+  gestempelte Pre-Commit hat sich geändert, `labkit-hooks install` je Repo.
+  Bewusst offen: der `llm`-Docstring (71 Zeilen) ist Bedienreferenz, keine
+  Vorfallgeschichte; `scope_sha.areas_touched` rechnet einen unparsbaren
+  Bereich als berührt (sicherer Fehlalarm statt stilles Durchlassen).
+
 - **Standardvertrag 2026-10-19 (Branch `claude/standard-contract-rpwkod`,
   Unreleased):** die Pflichten je Kostenstufe stehen einmal in
   `labkit/standard_contract.py` (Lane, Freigabe, Gerüst, Registrierungs-

@@ -119,6 +119,22 @@ pins (`requirements.txt` / `requirements.lock`).
   by 0.99.0 or earlier owes the script: the gap names the template to
   stamp beside its measure script. A check that prints a byte no codec
   reads is a named gap, not a traceback.
+- **An import through `lib`/`src` stamps the root's `__init__.py`.**
+  `from lib import x` runs `lib/__init__.py` first, and the audit stamp
+  left it out. In a repo with such a file every area that imports through
+  the root's name has a new stamp: its audit line no longer matches and
+  owes a new audit (`labkit-audit`).
+- **The stamped pre-commit changed; `labkit-hooks check` names it stale
+  until `labkit-hooks install`.** It hands every staged path to
+  report-check and the undecided gate, deletions included (`--no-renames`),
+  and refuses the commit by name when `.venv/bin/report-check` or
+  `.venv/bin/claude-hook` is missing — before, both gates were skipped in
+  silence.
+- **`protocol_check`, `runs`, `usability`: ten shared names are public.**
+  `HTML_COMMENT` (was `_MARKER`), `DASHES_ONLY` (`_DASHES`),
+  `STAMPED_ITEM`, `in_cut`, `field_label` (`_label`), `model_named_in`
+  (`_model_named`), `runs.read_run_dir` (`_run_dir`),
+  `usability.read_answer` (`_answer_text`), `read_probe`, `sidecar`.
 
 ### Added
 
@@ -185,6 +201,21 @@ pins (`requirements.txt` / `requirements.lock`).
   leftovers (plan P, C2).
 
 ### Fixed
+
+- **Gates and records found in the review of 2026-10-19.** preflight's
+  code station runs code-check's whole list (parser fixtures and prompt
+  drift were skipped). `llm.resolve` hands out deep copies and freezes each
+  alias once under a lock. A repeat is compared as config.json stores it
+  (a tuple config no longer refuses its identical repeat; `1` is not
+  `true`, a missing key not `null`). The stop hook and the commit reopen an
+  area when a file in it is deleted or moved away, and when a shared helper
+  under `lib/`/`src/` its code imports changes (`scope_sha.areas_touched`);
+  at the commit the protocols are read from the index. A run continues
+  only the rows its output held at `r.output()`; rows of another run
+  written meanwhile block at finalize. `batch.Store` completes a last line
+  without newline before appending, and a failed open releases its lock.
+  `labkit-hooks install` keeps a foreign command that shares an entry with
+  a labkit hook.
 
 - **`protocol-fill --from-run` puts the protocol back on any failed check.**
   `adopt` restored the file only on report-check's blocker exit; an
