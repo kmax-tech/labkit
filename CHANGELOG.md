@@ -61,6 +61,16 @@ pins (`requirements.txt` / `requirements.lock`).
   Sonnet t18 (labkit-paper area 09, 2026-10-16) described a grid run that
   `runs/` never held (plan P, B1).
 
+### Changed
+
+- **`labkit-init --report` no longer declares a model-free protocol
+  deterministic.** It fills only "Parser cases harvested"; "Randomness
+  controls" and "Noise ceiling → threshold" come back as placeholders for
+  an area without a model, because a seeded estimator, a fold shuffle and a
+  permutation are sources of randomness. Sonnet v2 t5 got "no seed,
+  repetition spread 0" auto-filled while naming seed 0 under "Free knobs";
+  v3 measured a null-AUC spread of 0.116 over ten seeds (plan P, C1).
+
 ## 0.99.0 — 2026-10-19
 
 ### Breaking
