@@ -1,11 +1,15 @@
-"""report-check: the last gate at minutes/hours — frozen, finalize clean, an
-analysis audit of the code as it is now, `02_analyze.py --check` passing.
+"""report-check: the last gate at every cost tier — frozen (minutes/hours
+only), finalize clean and named, the answering run a full run, an analysis
+audit of code, promises and that run as they are now, `02_analyze.py
+--check` passing.
 
 The cloud judge probe (2026-10-14, draw 3) skipped the analysis audit, the
 check and the note, and finalize was green; finalize cannot ask for what
-follows the analysis audit, so the end has its own gate. Each station is
-tested where it lives (findings.audit_coverage, recheck.holds, finalize);
-here: what is owed when, and that every station blocks on its own.
+follows the analysis audit, so the end has its own gate. Until 0.99.0 the
+gate exited 0 at `cost = "seconds"`, so a probe's number passed there as a
+reported one (TODO 1, 2026-10-19). Each station is tested where it lives
+(findings.audit_coverage, recheck.holds, finalize); here: what is owed when,
+and that every station blocks on its own.
 """
 
 from __future__ import annotations
@@ -116,10 +120,60 @@ class ReportCheck(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("Unit still a placeholder", out)
 
-    def test_seconds_owes_nothing_here(self):
-        code, out = self._run(self._area(cost="seconds", frozen=False), finalize=1)
-        self.assertEqual(code, 0)
-        self.assertIn("nothing owed here", out)
+    def test_seconds_owes_no_freeze_and_everything_after_it(self):
+        """The twin at seconds: unfrozen, no preflight audit, and clean — a
+        full run, the analysis record of it, the check."""
+        area = self._area(cost="seconds", frozen=False)
+        self._audited(area)
+        code, out = self._run(area)
+        self.assertEqual(code, 0, out)
+        self.assertIn("no freeze and no preflight audit owed", out)
+        self.assertIn("finalized, audited, checked", out)
+        self.assertNotIn("frozen,", out)
+
+    def test_at_seconds_a_probes_number_is_refused(self):
+        """Third haiku round: t3 and t5 reported a probe's number; at seconds
+        the gate said "nothing owed here"."""
+        area = self._area(cost="seconds", frozen=False)
+        run = self._answered(area)
+        completed_run(area, run.name, metrics={"c1_pass": True}, long=False)
+        self._audited(area, run)
+        code, out = self._run(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn("a probe (long=False), not a full run", out)
+        self.assertIn("owes a full run (long=True)", out)
+        self.assertNotIn("on a frozen protocol", out)  # none is owed at seconds
+
+    def test_at_seconds_an_acknowledged_run_is_refused(self):
+        area = self._area(cost="seconds", frozen=False)
+        run = self._answered(area)
+        completed_run(area, run.name, metrics={"c1_pass": True}, unfrozen_ack=True)
+        self._audited(area, run)
+        code, out = self._run(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn("acknowledged over an unfrozen protocol", out)
+
+    def test_at_seconds_the_analysis_audit_and_finalize_are_owed(self):
+        area = self._area(cost="seconds", frozen=False)
+        self._answered(area)
+        code, out = self._run(area, finalize=1)
+        self.assertEqual(code, 1, out)
+        self.assertIn("no analysis audit saw the area as it is now", out)
+        self.assertIn("finalize", out)
+
+    def test_finalize_blockers_are_named_not_pointed_at(self):
+        """Inside the stop hook "run it to see them" was a round trip the
+        agent did not take: finalize's blockers stand in report-check's list."""
+        area = self._area(cost="seconds", frozen=False)  # no run at all
+        out = io.StringIO()
+        with (
+            mock.patch.object(report_check, "check_analysis_script", return_value=None),
+            contextlib.redirect_stdout(out),
+        ):
+            code = report_check.report_check(area)
+        self.assertEqual(code, 1, out.getvalue())
+        self.assertIn("BLOCKER: finalize: no completed run bound to", out.getvalue())
+        self.assertNotIn("run it to see", out.getvalue())
 
     def test_each_station_blocks_on_its_own(self):
         area = self._area(frozen=False)

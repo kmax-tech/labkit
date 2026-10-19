@@ -682,9 +682,14 @@ def header(title: str) -> None:
     print(f"── {title} ──")
 
 
-def finalize_area(area: Path, protocol: Path | None = None) -> int:
+def finalize_area(
+    area: Path, protocol: Path | None = None, findings: Findings | None = None
+) -> int:
     """Run finalize on an area. Returns 0 (clean or warnings only),
-    1 (a blocker) or 2 (no protocol to hold the area to).
+    1 (a blocker) or 2 (no protocol to hold the area to). FINDINGS, when
+    given, collects what the stations found, so a gate that runs finalize
+    as one of its stations (report-check) can name the blockers instead of
+    "run it to see them".
 
     The flow — every condition that decides whether a step runs is in this
     function; one level down is how a step works, not whether it runs. A
@@ -720,7 +725,7 @@ def finalize_area(area: Path, protocol: Path | None = None) -> int:
     except protocol_block.BlockError as exc:
         print(f"finalize: {chosen.name}: {exc}")
         return 2
-    findings = Findings()
+    findings = Findings() if findings is None else findings
 
     # 1. completion — the run every later step examines
     header(f"completion: {chosen.name}")
