@@ -25,7 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
-from labkit.run import runlog  # noqa: E402
+from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 AUDIT = "2026-10-05 · scope sha abc · 0 findings"
@@ -65,7 +65,7 @@ class FreezeGate(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp())
         os.environ.pop("LABKIT_UNFROZEN", None)
         os.environ.pop("CLAUDECODE", None)
-        os.environ.pop(runlog.FOREGROUND_TIMEOUT_ENV, None)
+        os.environ.pop(start_check.FOREGROUND_TIMEOUT_ENV, None)
 
     def _area(self, text: str) -> Path:
         (self.tmp / "PROTOCOL-x.md").write_text(text, encoding="utf-8")
@@ -308,7 +308,7 @@ class FreezeGate(unittest.TestCase):
         and let a long run die with that harness's timeout (TODO item 6).
         The variable names the limit for any agent; 0 says there is none,
         even under Claude Code."""
-        env = runlog.FOREGROUND_TIMEOUT_ENV
+        env = start_check.FOREGROUND_TIMEOUT_ENV
         frozen = self._audited()  # passes every gate but this one
         try:
             os.environ[env] = "300"
@@ -321,7 +321,7 @@ class FreezeGate(unittest.TestCase):
             self.assertTrue((r.dir / "config.json").is_file())
             os.environ[env] = "ten minutes"
             with self.assertRaises(SystemExit) as cm:
-                runlog.foreground_timeout()
+                start_check.foreground_timeout()
             self.assertIn("not a number of seconds", str(cm.exception))
         finally:
             os.environ.pop(env, None)

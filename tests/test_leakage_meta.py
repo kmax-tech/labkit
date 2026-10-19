@@ -1,9 +1,9 @@
-"""Integration: write_dataset → _ids → _describe must not be fooled by _meta.
+"""Integration: write_dataset → _ids → describe_data must not be fooled by _meta.
 
 write_dataset() puts a _meta header as the first line of every dataset. Before
 the fix, _ids() bailed out on the missing "id" key in that header and returned
 None, causing the leakage check to be silently skipped for exactly the
-standard-generated files it is meant to protect. _describe()'s row count also
+standard-generated files it is meant to protect. describe_data()'s row count also
 included the _meta line.
 """
 
@@ -14,7 +14,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from labkit.run.batch import write_dataset
-from labkit.run.runlog import _data_rows, _describe, _ids, _is_meta
+from labkit.run.provenance import _data_rows, describe_data, _ids, _is_meta
 
 
 class TestIsMetaRecognition(unittest.TestCase):
@@ -92,7 +92,7 @@ class TestLeakageWithMeta(unittest.TestCase):
             producer="test",
         )
         with self.assertRaises(RuntimeError, msg="leakage must be caught"):
-            _describe({"train": str(train), "test": str(test)}, self.dir)
+            describe_data({"train": str(train), "test": str(test)}, self.dir)
 
     def test_no_leakage_passes(self):
         fields = {"id": "id", "text": "text"}
@@ -108,7 +108,7 @@ class TestLeakageWithMeta(unittest.TestCase):
         write_dataset(
             dev, [{"id": "b", "text": "y"}], about="dev", fields=fields, producer="test"
         )
-        result = _describe({"train": str(train), "dev": str(dev)}, self.dir)
+        result = describe_data({"train": str(train), "dev": str(dev)}, self.dir)
         self.assertIn("leakage_check", result)
         self.assertIn("ok", result["leakage_check"])
         self.assertEqual(result["train"]["rows"], 1)

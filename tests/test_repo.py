@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import repo  # noqa: E402
-from labkit.run import runlog  # noqa: E402
+from labkit.run import provenance, runlog  # noqa: E402
 
 
 def make_repo(commit: bool = True) -> Path:
@@ -228,28 +228,28 @@ class Git(unittest.TestCase):
 
 class RunlogGitState(unittest.TestCase):
     def test_unborn_head_is_a_state_not_an_error(self):
-        self.assertEqual(runlog._git_state(make_repo(commit=False)), "no-git")
+        self.assertEqual(provenance.git_state(make_repo(commit=False)), "no-git")
 
     def test_committed_and_dirty(self):
         r = make_repo()
-        clean = runlog._git_state(r)
+        clean = provenance.git_state(r)
         self.assertNotIn("+dirty", clean)
         (r / "g.txt").write_text("y")
-        self.assertEqual(runlog._git_state(r), clean + "+dirty")
+        self.assertEqual(provenance.git_state(r), clean + "+dirty")
 
     def test_the_end_state_ignores_untracked_files_but_not_tracked_drift(self):
         r = make_repo()
-        clean = runlog._git_state(r)
+        clean = provenance.git_state(r)
         (r / "g.txt").write_text("y")  # untracked: counts at start, not at the end
-        self.assertEqual(runlog._git_state(r, untracked=False), clean)
+        self.assertEqual(provenance.git_state(r, untracked=False), clean)
         (r / "f.txt").write_text("changed")  # tracked drift counts at both
-        self.assertEqual(runlog._git_state(r, untracked=False), clean + "+dirty")
+        self.assertEqual(provenance.git_state(r, untracked=False), clean + "+dirty")
 
     def test_a_run_in_a_clean_tree_is_indexed_clean_despite_its_own_products(self):
         import json
 
         r = make_repo()
-        clean = runlog._git_state(r)
+        clean = provenance.git_state(r)
         old_argv = sys.argv[0]
         sys.argv[0] = str(r / "f.txt")
         try:

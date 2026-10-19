@@ -24,14 +24,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
 from labkit.formats import findings, promises, runs, scope_sha  # noqa: E402
-from labkit.run import runlog  # noqa: E402
+from labkit.run import runlog_command  # noqa: E402
 from protocol_fixture import head, scope_file  # noqa: E402
 
 
 def _run_main(argv):
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
-        code = runlog.main(argv)
+        code = runlog_command.main(argv)
     return code, buf.getvalue()
 
 

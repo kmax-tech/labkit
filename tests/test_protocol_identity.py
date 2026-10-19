@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import intent_check  # noqa: E402
-from labkit.run import runlog  # noqa: E402
+from labkit.run import runlog, start_check  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 
@@ -40,7 +40,7 @@ def _bind(text: str) -> dict:
     (area / "PROTOCOL-x.md").write_text(text, encoding="utf-8")
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
-        return runlog._protocol_binding(area, None).binding
+        return start_check.protocol_binding(area, None).binding
 
 
 class Identity(unittest.TestCase):
@@ -73,7 +73,7 @@ class Identity(unittest.TestCase):
         )
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            runlog._protocol_binding(area, None)
+            start_check.protocol_binding(area, None)
         self.assertIn("carries no stamped id", buf.getvalue())
 
     def test_no_second_reader_left(self):

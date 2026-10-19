@@ -22,7 +22,7 @@ from pathlib import Path
 from protocol_fixture import DEFAULT_BLOCK, PID, head, scope_file
 
 from labkit.checks import recheck
-from labkit.run import runlog
+from labkit.run import runlog, provenance
 from labkit.formats import runs
 
 
@@ -235,7 +235,7 @@ class Repeats(unittest.TestCase):
                 [
                     {
                         "path": runs.recorded_path(out, run),
-                        "sha256": runlog._sha256(out)[:16],
+                        "sha256": provenance.sha256_file(out)[:16],
                         "lines": 1,
                     }
                 ]

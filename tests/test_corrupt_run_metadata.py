@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import intent_check  # noqa: E402
-from labkit.run import runlog  # noqa: E402
+from labkit.run import runlog, runlog_command  # noqa: E402
 from labkit.formats import runs  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 
@@ -78,7 +78,7 @@ class BrokenConfig(unittest.TestCase):
         self.assertIn("config.json", live[0]["error"])
 
     def test_wait_exits_failed(self):
-        rc, out = quiet(runlog._wait, str(self.area), 0, 0.01, False, False)
+        rc, out = quiet(runlog_command._wait, str(self.area), 0, 0.01, False, False)
         self.assertEqual(rc, 2)
         self.assertIn("unreadable run metadata", out)
 

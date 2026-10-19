@@ -29,7 +29,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.run import runlog  # noqa: E402
+from labkit.run import runlog, runlog_command  # noqa: E402
 from labkit.formats import runs  # noqa: E402
 
 
@@ -189,8 +189,8 @@ class TestActive(unittest.TestCase):
                         sys.executable,
                         "-c",
                         "import sys; sys.path.insert(0, %r);"
-                        "from labkit.run import runlog;"
-                        "sys.exit(runlog.main([%r, '--wait', '--max-seconds', '0']))"
+                        "from labkit.run import runlog_command;"
+                        "sys.exit(runlog_command.main([%r, '--wait', '--max-seconds', '0']))"
                         % (str(Path(runlog.__file__).parents[2]), str(area)),
                     ],
                     capture_output=True,
@@ -204,7 +204,7 @@ class TestActive(unittest.TestCase):
             area = _area(t)
             _run_dir(area, "2026-01-01T00-00-00_aaaa")
             _run_dir(area, "2026-01-01T00-00-09_zzzz", completion=False)
-            self.assertIn("aaaa", runlog._finished_line(area))
+            self.assertIn("aaaa", runlog_command._finished_line(area))
 
 
 class TestReindex(unittest.TestCase):

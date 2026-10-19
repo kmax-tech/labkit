@@ -26,7 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
-from labkit.run import runlog  # noqa: E402
+from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 UNFROZEN = head(cost="minutes", frozen=False, promises=DEFAULT_BLOCK)
@@ -48,7 +48,7 @@ class FailedAudit(unittest.TestCase):
         scope_file(self.tmp)
         os.environ["LABKIT_UNFROZEN"] = "1"
         os.environ.pop("CLAUDECODE", None)
-        os.environ.pop(runlog.FOREGROUND_TIMEOUT_ENV, None)
+        os.environ.pop(start_check.FOREGROUND_TIMEOUT_ENV, None)
 
     def tearDown(self):
         os.environ.pop("LABKIT_UNFROZEN", None)

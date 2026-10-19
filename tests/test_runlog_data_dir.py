@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit.run import runlog
+from labkit.run import provenance
 
 
 class DirectorySource(unittest.TestCase):
@@ -20,7 +20,9 @@ class DirectorySource(unittest.TestCase):
                 (self.src / case / f"d{i}").write_text(f"{case}{i}")
 
     def describe(self) -> dict:
-        return runlog._describe({"source": self.src}, Path(self.tmp.name))["source"]
+        return provenance.describe_data({"source": self.src}, Path(self.tmp.name))[
+            "source"
+        ]
 
     def test_rows_count_visible_files_and_hidden_ones_do_not_count(self):
         (self.src / "a" / ".DS_Store").write_text("x")

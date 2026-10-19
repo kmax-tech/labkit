@@ -16,7 +16,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit.run import runlog
+from labkit.run import provenance, runlog
 
 
 class NoHalfMadeRun(unittest.TestCase):
@@ -26,7 +26,7 @@ class NoHalfMadeRun(unittest.TestCase):
             (area / "runs").mkdir()
             with (
                 mock.patch.object(
-                    runlog, "_env_state", side_effect=RuntimeError("env")
+                    provenance, "env_state", side_effect=RuntimeError("env")
                 ),
                 contextlib.redirect_stdout(io.StringIO()),
                 self.assertRaises(RuntimeError),
@@ -40,7 +40,7 @@ class NoHalfMadeRun(unittest.TestCase):
             (area / "runs").mkdir()
             with (
                 mock.patch.object(
-                    runlog, "_snapshot_script", side_effect=OSError("disk")
+                    runlog, "snapshot_script", side_effect=OSError("disk")
                 ),
                 contextlib.redirect_stdout(io.StringIO()),
                 self.assertRaises(OSError),

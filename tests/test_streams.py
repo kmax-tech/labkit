@@ -15,7 +15,7 @@ from pathlib import Path
 from labkit.checks import code_check
 from labkit.gates import finalize, preflight
 from labkit.tools import params, protocol_fill
-from labkit.run import runlog
+from labkit.run import runlog_command
 from labkit.formats import scope_sha
 
 
@@ -34,7 +34,7 @@ class Refusals(unittest.TestCase):
             finalize.main,
             params.main,
             preflight.main,
-            runlog.main,
+            runlog_command.main,
         )
         for main, argv in [(m, [missing]) for m in mains] + [
             (scope_sha.main, ["--area", missing])

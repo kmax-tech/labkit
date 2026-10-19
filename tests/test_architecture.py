@@ -65,11 +65,13 @@ def doctrine_modules() -> set[str]:
 #: rule the core had copied (`cost == "seconds"`) becoming a visible import
 #: of `standard_contract` is the same crossing made explicit, not a new one.
 KNOWN_CROSSINGS = {
-    # the freeze gate inside runlog: audit coverage (LAB-015), the seconds
+    # the freeze gate at a run's start: audit coverage (LAB-015), the seconds
     # registration and which lane owes the freeze, the audit or the foreground
-    # — doctrine that refuses a run, sitting in the run writer
-    ("runlog", "findings"),  # findings.audit_coverage
-    ("runlog", "protocol_check"),  # protocol_check.seconds_registration_missing
+    # — doctrine that refuses a run, sitting in the run writer's start check
+    # (moved with it out of runlog; the same crossings, not new ones)
+    ("start_check", "findings"),  # findings.audit_coverage
+    ("start_check", "protocol_check"),  # protocol_check.seconds_registration_missing
+    ("start_check", "standard_contract"),  # standard_contract.lane
     ("runlog", "standard_contract"),  # standard_contract.lane (was a copied rule)
     # the field catalogue and a rule's text in the code check — the boundary
     # case: the TOML head is core, the prose fields are doctrine

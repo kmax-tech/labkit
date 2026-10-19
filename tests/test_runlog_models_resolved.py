@@ -12,9 +12,7 @@ Run:  .venv/bin/python -m unittest discover -s tests -v
 
 from __future__ import annotations
 
-import importlib.util
 import io
-import sys
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
@@ -22,25 +20,14 @@ from unittest import mock
 
 REPO = Path(__file__).resolve().parents[1]
 
-
-def load(rel: str):
-    path = REPO / rel
-    spec = importlib.util.spec_from_file_location("mod_" + path.stem, path)
-    assert spec and spec.loader, f"cannot load {path}"
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)
-    return mod
-
-
-runlog = load("labkit/run/runlog.py")
+from labkit.run import provenance  # noqa: E402
 
 
 class ResolveModels(unittest.TestCase):
     def test_model_and_suffixed_keys_resolve(self):
         spec = {"alias": "sonnet", "model": "claude-sonnet-5", "backend": "cli"}
         with mock.patch("labkit.run.llm.resolve", return_value=spec) as res:
-            got = runlog._resolve_models(
+            got = provenance.resolve_models(
                 {"model": "sonnet", "judge_model": "sonnet", "n": 5}
             )
         self.assertEqual(got, {"sonnet": spec})
@@ -48,7 +35,7 @@ class ResolveModels(unittest.TestCase):
 
     def test_non_model_keys_and_non_strings_skipped(self):
         with mock.patch("labkit.run.llm.resolve") as res:
-            got = runlog._resolve_models(
+            got = provenance.resolve_models(
                 {"n": 5, "temperature": 0.0, "model": 7, "modelling": "x"}
             )
         self.assertEqual(got, {})
@@ -59,7 +46,7 @@ class ResolveModels(unittest.TestCase):
             "labkit.run.llm.resolve",
             side_effect=KeyError("alias 'x' not in models.toml"),
         ):
-            got = runlog._resolve_models({"model": "x"})
+            got = provenance.resolve_models({"model": "x"})
         self.assertIn("unresolved:", got["x"])
         self.assertIn("models.toml", got["x"])
 
@@ -71,7 +58,7 @@ class UnpinnedWarning(unittest.TestCase):
         lockless = Path(tempfile.mkdtemp())
         err = io.StringIO()
         with redirect_stderr(err):
-            state = runlog._env_state(lockless)
+            state = provenance.env_state(lockless)
         self.assertTrue(state.endswith("| unpinned"))
         self.assertIn("unpinned", err.getvalue())
         self.assertIn("requirements.lock", err.getvalue())

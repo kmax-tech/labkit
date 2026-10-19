@@ -18,14 +18,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit.run import runlog  # noqa: E402
+from labkit.run import runlog_command  # noqa: E402
 
 
 class TestCli(unittest.TestCase):
     def _run_main(self, argv):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-            code = runlog.main(argv)
+            code = runlog_command.main(argv)
         return code, buf.getvalue()
 
     def test_empty_area_says_so_instead_of_staying_silent(self):
@@ -72,7 +72,7 @@ class TestCli(unittest.TestCase):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             with self.assertRaises(SystemExit) as ctx:
-                runlog.main(["--help"])
+                runlog_command.main(["--help"])
         self.assertEqual(ctx.exception.code, 0)
         self.assertIn("usage: runlog", buf.getvalue())
 
