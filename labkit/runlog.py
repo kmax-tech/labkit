@@ -1130,24 +1130,331 @@ def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
     return derived_from
 
 
+@dataclass(frozen=True)
+class _Prepared:
+    """Phase 1 of a run's start, the preparation: what the run is held to,
+    read once before any check — the parent it derives from, the bound
+    protocol with its text and head, the promise block and the snapshot
+    the record carries of it, the config frozen as it will be recorded, and
+    whether the run counts as a full run.
+
+    Attributes:
+        derived_from: The completed parent run, as config.json records it.
+        bound: The protocol binding (`_protocol_binding`).
+        cost_tier: The head's cost, None when unbound or unfilled.
+        block: The parsed promise block, None without tables.
+        promises: The snapshot of the block the record carries (`promises.snapshot`).
+        config: The run's config, frozen now — what the checks hold is what
+            config.json records.
+        long: The script's own declaration, recorded as `long`.
+        full_run: Held to what a full run owes (`_is_full_run`: the script's
+            word, or the lane says every run is one).
+    """
+
+    derived_from: str | None
+    bound: _Bound
+    cost_tier: str | None
+    block: "promises.PromiseTables | None"
+    promises: dict | None
+    config: dict
+    long: bool
+    full_run: bool
+
+
+@dataclass(frozen=True)
+class _Admitted:
+    """Phase 2's result, the start check passed: the data as the record
+    describes it (path, digest, rows, the leakage verdict) and what the
+    freeze gate let through — whether the run was acknowledged unfrozen,
+    and the failed audit attempt that acknowledgement rests on.
+
+    Attributes:
+        data: `_describe` of the data files, {} without data.
+        unfrozen_ack: `LABKIT_UNFROZEN=1` took a full run past its gaps.
+        audit_failed: The `-failed.toml` the acknowledgement rests on, or None.
+    """
+
+    data: dict
+    unfrozen_ack: bool
+    audit_failed: str | None
+
+
+@dataclass(frozen=True)
+class _Provenance:
+    """Phase 3's first step: what the record says about where the run
+    started — git state and commit, the environment, the models resolved.
+
+    Attributes:
+        git: HEAD's short commit, `+dirty` when the tree differs (`_git_state`).
+        git_full: HEAD's full commit, "" outside a repo.
+        env: Interpreter, lock fingerprint and drift (`_env_state`).
+        models: Alias → resolved spec (`_resolve_models`); {} for a derived run.
+    """
+
+    git: str
+    git_full: str
+    env: str
+    models: dict
+
+
+def _prepare(
+    base_dir: Path,
+    config: dict,
+    long: bool,
+    protocol: str | Path | None,
+    derived_from: str | None,
+) -> _Prepared:
+    """Phase 1 — preparation. Reads what every check holds the run to,
+    each once, and refuses what cannot be read, before any check and
+    before mkdir: a parent that is no completed run (`_derived_parent`),
+    a protocol that cannot be bound (`_protocol_binding`), a promise block
+    that does not parse or names code that does not exist
+    (`_promise_snapshot`) — each a SystemExit. Freezes the config: what
+    the registration check holds is what config.json records."""
+    derived = _derived_parent(base_dir, derived_from)
+    # A derived run (2026-10-05): the same raw rows, evaluated again —
+    # because evaluate() gained a descriptive key, not because anything
+    # about the measurement changed. It names its parent so the record
+    # shows one measurement with two readings instead of two runs.
+    bound = _protocol_binding(base_dir, protocol)
+    cost = bound.head.cost if bound.head is not None else None
+    block, snapshot = _promise_snapshot(base_dir, bound.text)
+    return _Prepared(
+        derived_from=derived,
+        bound=bound,
+        cost_tier=cost,
+        block=block,
+        promises=snapshot,
+        config=dict(config),
+        long=long,
+        full_run=_is_full_run(long, cost),
+    )
+
+
+def _foreground_refusal(base_dir: Path, cost: str | None, long: bool) -> None:
+    """The detach gate (scar 2026-08-13, twice in one evening): a long run
+    started in an agent's foreground shell dies with the harness's tool
+    timeout — the kill takes the whole process group, run and lock with
+    it. `long=True` is the script's own declaration (the --full stage sets
+    it); the gate refuses the foreground start BEFORE any work. Which lane
+    may start in the foreground is the contract's answer
+    (`standard_contract.Lane.foreground`): a run of seconds cannot meet
+    that timeout (2026-10-05). `LABKIT_DETACHED=1` says the detach already
+    happened. Raises SystemExit on the refusal."""
+    if lane(cost).foreground or not long:
+        return
+    limit = foreground_timeout()
+    if limit is None or os.environ.get("LABKIT_DETACHED") == "1":
+        return
+    raise SystemExit(
+        f"runlog: this run declares long=True and sits in a foreground "
+        f"shell an agent harness kills after {limit[0]:g} s ({limit[1]}) "
+        f"— the kill takes the process group mid-run (2026-08-13). "
+        f"Start it detached:\n"
+        f"  runlog start {_shown_area(base_dir)} -- <the same command>\n"
+        "or, if the caller already detached it (run_in_background, "
+        "nohup+setsid), acknowledge with LABKIT_DETACHED=1."
+    )
+
+
+def _freeze_gate(base_dir: Path, prepared: _Prepared) -> tuple[bool, str | None]:
+    """The freeze gate for a full run (2026-10-05), before mkdir: a full run
+    on a protocol not ready for one is a refusal, not a run with a warning.
+    Returns (unfrozen_ack, audit_failed): whether `LABKIT_UNFROZEN=1` took
+    the run past its gaps, and the failed audit attempt that rests on.
+
+    In order: an undecided BLOCKER of a preflight audit refuses, with or
+    without the acknowledgement — it is a finding nobody read, not an
+    unfrozen protocol (the acknowledgement passed it until 0.97.1,
+    labkit-paper area 09, haiku round: the record lay in audits/ before the
+    first run). Then the gaps (`_freeze_findings`: the freeze at
+    minutes/hours, the registration at seconds): none, and the run starts
+    plain; gaps and `LABKIT_UNFROZEN=1`, and the run starts acknowledged —
+    at minutes/hours only over an audit that could NOT run
+    (`_audit_unavailable`, SystemExit without one), recorded and told, its
+    number unreportable; gaps alone refuse. The refusals name the
+    consequence, not a way round: the agents of the benchmark rounds took
+    the way the message offered and called their run a "pilot" (review
+    2026-10-18), so the messages do not use the word."""
+    declares = (
+        "this run declares long=True (a full run)"
+        if prepared.long
+        else f'this run is at cost = "{prepared.cost_tier}", where every run is the full run'
+    )
+    blockers, open_warnings = _undecided_findings(base_dir)
+    if blockers:
+        raise SystemExit(
+            f"runlog: {declares}, and a "
+            "preflight audit found BLOCKER(s) nobody decided — not an "
+            "unfrozen protocol, an ignored finding; LABKIT_UNFROZEN=1 does not pass "
+            "it. Decide each (fixed / accepted / deferred / dismissed) "
+            "in the record:\n  " + "\n  ".join(blockers)
+        )
+    gaps = _freeze_findings(base_dir, prepared.bound)
+    if not gaps:
+        return False, None
+    if os.environ.get("LABKIT_UNFROZEN") != "1":  # "0" is no acknowledgement
+        raise SystemExit(
+            f"runlog: {declares}, but its "
+            "protocol is not ready for one:\n  "
+            + "\n  ".join(gaps)
+            + "\nFreeze first: `preflight <AREA>` clean, audit stamped, "
+            "`frozen = true` "
+            '(at cost = "seconds": the question written suffices, with a model also criterion and admissibility condition). '
+            "No other run yields a reported number: a probe (long=False) "
+            "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
+            "minutes/hours only over an audit the backend refused, "
+            f"audits/*{findings.FAILED_SUFFIX} written by labkit-audit) are "
+            "recorded as such, and report-check refuses their numbers."
+        )
+    failed = _audit_unavailable(base_dir, prepared.bound)  # SystemExit without one
+    print(
+        "runlog: WARNING — LABKIT_UNFROZEN=1: full run on an "
+        "unfrozen protocol, acknowledged; recorded in config.json, and "
+        "its number cannot be reported (report-check refuses it):\n  "
+        + "\n  ".join(gaps)
+        + (
+            f"\n  rests on the audit that could not run: "
+            f"{failed.path.name} ({failed.error})"
+            if failed is not None
+            else ""
+        )
+        + (
+            "\n  open WARNING(s) of the preflight audit, undecided:\n  "
+            + "\n  ".join(open_warnings)
+            if open_warnings
+            else ""
+        )
+    )
+    return True, failed.path.name if failed is not None else None
+
+
+def _admit(base_dir: Path, prepared: _Prepared, data: dict | None) -> _Admitted:
+    """Phase 2 — the start check: every refusal a run can meet, before
+    mkdir, in this order (the order is the behaviour — a refusal names the
+    first gap it meets):
+
+    1. the registration (`_registration_refusal`): the promise tables a
+       frozen protocol or a full run owes, every registered constant in
+       the config unchanged — SystemExit
+    2. the detach gate (`_foreground_refusal`) — SystemExit
+    3. the run index header (`_check_run_index`) — RuntimeError
+    4. the data: described for the record, split and control leakage
+       (`_describe`) — RuntimeError, FileNotFoundError
+    5. for a full run only, the freeze gate (`_freeze_gate`): undecided
+       blockers, the freeze or the registration, the acknowledgement over
+       a failed audit — SystemExit, or the acknowledgement recorded
+    """
+    refusal = _registration_refusal(
+        prepared.bound, prepared.block, prepared.config, prepared.full_run
+    )
+    if refusal:
+        raise SystemExit(f"runlog: {refusal}")
+    _foreground_refusal(base_dir, prepared.cost_tier, prepared.long)
+    _check_run_index(base_dir)
+    described = _describe(data, base_dir) if data else {}
+    unfrozen_ack, audit_failed = False, None
+    if prepared.full_run:
+        unfrozen_ack, audit_failed = _freeze_gate(base_dir, prepared)
+    return _Admitted(described, unfrozen_ack, audit_failed)
+
+
+def _provenance(base_dir: Path, config: dict, derived: bool) -> _Provenance:
+    """Phase 3, first step: everything the record says about where the run
+    started, read BEFORE the directory exists — a failure after mkdir left
+    a directory without config.json behind, a run that never was
+    (2026-10-09). A derived run re-reads the parent's rows; its model is
+    the one that answered THEN. Resolving the alias now, under today's
+    models.toml, would record a provenance the rows never had — so a
+    DERIVED run records none, and `runs.model_provenance_run` walks
+    derived_from to the run that did (2026-10-08)."""
+    return _Provenance(
+        git=_git_state(base_dir),
+        git_full=_head(base_dir),
+        env=_env_state(base_dir),
+        models={} if derived else _resolve_models(config),
+    )
+
+
+def _repeat_draw(
+    base_dir: Path,
+    repeat_of: str | None,
+    prepared: _Prepared,
+    data: dict,
+    models: dict,
+) -> tuple[str | None, int | None]:
+    """(repeat_of, draw) for config.json, before mkdir and under the index
+    lock the caller holds: a repeat draws a completed primary run of this
+    area again, comparable in protocol, promise block, config and inputs
+    (`runs.repeat_mismatch`) — else a refusal. Draw 1 is the run itself;
+    its repeats count on from 2. (None, None) for a run that repeats none."""
+    if repeat_of is None:
+        return None, None
+    if prepared.derived_from is not None:
+        raise SystemExit(
+            "runlog: repeat_of and derived_from exclude each other — a repeat "
+            "asks the model again, a derived run re-reads old rows"
+        )
+    parent = base_dir / "runs" / repeat_of
+    try:
+        state = completion_state(parent) if parent.is_dir() else "missing"
+        pcfg = read_run_config(parent) if state == COMPLETED else None
+    except RunConfigError as exc:
+        raise SystemExit(f"runlog: repeat_of={repeat_of!r}: {exc}") from exc
+    if pcfg is None:
+        raise SystemExit(
+            f"runlog: repeat_of={repeat_of!r} names no completed run under "
+            f"{base_dir / 'runs'} ({state})"
+        )
+    if repeat_parent(pcfg) is not None:
+        raise SystemExit(
+            f"runlog: {repeat_of} is itself a repeat of {repeat_parent(pcfg)} — "
+            f"repeat the primary run"
+        )
+    mine = {
+        "protocol": prepared.bound.binding,
+        "promises": prepared.promises,
+        "config": prepared.config,
+        "data": data,
+        "script_sha": _script_sha(),
+        "models_resolved": models,
+    }
+    differs = repeat_mismatch(pcfg, mine)
+    if differs:
+        raise SystemExit(
+            f"runlog: this run is no repeat of {repeat_of} — it measures "
+            f"something else:\n  " + "\n  ".join(differs)
+        )
+    try:
+        return repeat_of, next_draw(base_dir, repeat_of)
+    except RunConfigError as exc:
+        raise SystemExit(
+            f"runlog: repeat_of={repeat_of!r}: the next draw number cannot be "
+            f"counted — {exc}"
+        ) from exc
+
+
 class Run:
     """One measure run: its directory, its frozen config, the outputs it
     registers and the metrics it reports.
 
-    `__init__` refuses, in this order, BEFORE the directory exists:
+    `__init__` is three phases, every refusal BEFORE the directory exists:
 
-        1. derived_from names no completed run       → SystemExit
-        2. protocol binding unresolvable             → SystemExit
-        3. frozen (or seconds) without promise tables → SystemExit
-        4. a registered constant missing/different   → SystemExit
-        5. detach gate (long run in an agent's foreground shell)  → SystemExit
-        6. run index header unknown                  → RuntimeError
-        7. data split leakage                        → RuntimeError
-        8. freeze gate (unfrozen full run, stale stamp) → SystemExit
-        9. git / env / model alias read              → their own errors
-       10. mkdir, then the record; a failure here removes the dir
+      1. preparation (`_prepare`): the parent a derived run names, the
+         protocol binding, the promise snapshot, the config frozen
+      2. the start check (`_admit`), in this order: the registration
+         (tables owed, constants unchanged), the detach gate, the run
+         index header, data leakage, and for a full run the freeze gate
+         (undecided blockers, the freeze or the registration, the
+         acknowledgement over a failed audit)
+      3. creation: git, environment and models read (`_provenance` — a
+         derived run resolves no model anew), then under one lock for a
+         repeat: the draw counted (`_repeat_draw`), mkdir, the record
+         written (`_write_record`); a failure there removes the directory
 
-    `class run` is the context manager around this; every check is here."""
+    A refusal in 1 or 2 is a SystemExit (a RuntimeError for the index
+    header and a leak), and leaves no run directory behind. `class run` is
+    the context manager around this."""
 
     def __init__(
         self,
@@ -1160,131 +1467,32 @@ class Run:
         derived_from: str | None = None,
         repeat_of: str | None = None,
     ) -> None:
-        # A derived run (2026-10-05): the same raw rows, evaluated again —
-        # because evaluate() gained a descriptive key, not because anything
-        # about the measurement changed. It names its parent so the record
-        # shows one measurement with two readings instead of two runs; the
-        # parent must be a completed run of this area, or this is a refusal.
-        self._derived_from = _derived_parent(base_dir, derived_from)
-        # Before any work: an unresolvable protocol is a refusal, and a
-        # refusal must not leave an empty run dir behind (2026-09-26).
-        bound = _protocol_binding(base_dir, protocol)
-        self._protocol = bound.binding
-        self._cost_tier = bound.head.cost if bound.head is not None else None
-        _block, self._promises = _promise_snapshot(base_dir, bound.text)
-        # Frozen now: what the registration check holds is what config.json records.
-        self._config = dict(config)
-        full_run = _is_full_run(long, self._cost_tier)
-        refusal = _registration_refusal(bound, _block, self._config, full_run)
-        if refusal:
-            raise SystemExit(f"runlog: {refusal}")
-        # Detach gate (scar 2026-08-13, twice in one evening): a long run
-        # started in an agent's foreground shell dies with the harness's
-        # tool timeout — the kill takes the whole process group, run and lock
-        # with it. `long=True` is the script's own declaration (the --full
-        # stage sets it); the gate refuses the foreground start BEFORE any
-        # work. Which lane may start in the foreground is the contract's
-        # answer: a run of seconds cannot meet that timeout (2026-10-05).
-        foreground = lane(self._cost_tier).foreground
-        limit = None if (foreground or not long) else foreground_timeout()
-        if limit is not None and os.environ.get("LABKIT_DETACHED") != "1":
-            raise SystemExit(
-                f"runlog: this run declares long=True and sits in a foreground "
-                f"shell an agent harness kills after {limit[0]:g} s ({limit[1]}) "
-                f"— the kill takes the process group mid-run (2026-08-13). "
-                f"Start it detached:\n"
-                f"  runlog start {_shown_area(base_dir)} -- <the same command>\n"
-                "or, if the caller already detached it (run_in_background, "
-                "nohup+setsid), acknowledge with LABKIT_DETACHED=1."
-            )
+        # 1. preparation — what the run is held to, read once
+        prepared = _prepare(base_dir, config, long, protocol, derived_from)
+        # 2. the start check — every refusal, before mkdir
+        admitted = _admit(base_dir, prepared, data)
+        # 3. creation — the record, whole or not at all
         self.run_id = time.strftime(RUN_ID_TIME) + "_" + uuid.uuid4().hex[:4]
         self.experiment = experiment
         self.script = Path(sys.argv[0]).name if sys.argv[0] else "<interactive>"
         self.base = base_dir
-        _check_run_index(base_dir)  # raises before any work
-        self._data = (
-            _describe(data, base_dir) if data else {}
-        )  # raises on leak, before mkdir
-        # Freeze gate, also before mkdir: a full run on an unfrozen protocol
-        # is a refusal, not a run with a warning (2026-10-05).
-        self._unfrozen_ack = False
-        self._audit_failed: str | None = None
-        self._long = long  # the script's declaration, recorded (0.99.0)
-        declares = (
-            "this run declares long=True (a full run)"
-            if long
-            else f'this run is at cost = "{self._cost_tier}", where every run is the full run'
-        )
-        if full_run:
-            # An undecided BLOCKER of a preflight audit is not an unfrozen
-            # protocol a run may acknowledge: it is a finding nobody read.
-            # The acknowledgement passed it until 0.97.1 (labkit-paper area
-            # 09, haiku round: the record lay in audits/ before the first run).
-            blockers, open_warnings = _undecided_findings(base_dir)
-            if blockers:
-                raise SystemExit(
-                    f"runlog: {declares}, and a "
-                    "preflight audit found BLOCKER(s) nobody decided — not an "
-                    "unfrozen protocol, an ignored finding; LABKIT_UNFROZEN=1 does not pass "
-                    "it. Decide each (fixed / accepted / deferred / dismissed) "
-                    "in the record:\n  " + "\n  ".join(blockers)
-                )
-            gaps = _freeze_findings(base_dir, bound)
-            if (
-                gaps and os.environ.get("LABKIT_UNFROZEN") == "1"
-            ):  # "0" is no acknowledgement
-                failed = _audit_unavailable(base_dir, bound)  # SystemExit without one
-                self._unfrozen_ack = True
-                self._audit_failed = failed.path.name if failed is not None else None
-                print(
-                    "runlog: WARNING — LABKIT_UNFROZEN=1: full run on an "
-                    "unfrozen protocol, acknowledged; recorded in config.json, and "
-                    "its number cannot be reported (report-check refuses it):\n  "
-                    + "\n  ".join(gaps)
-                    + (
-                        f"\n  rests on the audit that could not run: "
-                        f"{failed.path.name} ({failed.error})"
-                        if failed is not None
-                        else ""
-                    )
-                    + (
-                        "\n  open WARNING(s) of the preflight audit, undecided:\n  "
-                        + "\n  ".join(open_warnings)
-                        if open_warnings
-                        else ""
-                    )
-                )
-            elif gaps:
-                raise SystemExit(
-                    f"runlog: {declares}, but its "
-                    "protocol is not ready for one:\n  "
-                    + "\n  ".join(gaps)
-                    + "\nFreeze first: `preflight <AREA>` clean, audit stamped, "
-                    "`frozen = true` "
-                    '(at cost = "seconds": the question written suffices, with a model also criterion and admissibility condition). '
-                    "No other run yields a reported number: a probe (long=False) "
-                    "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
-                    "minutes/hours only over an audit the backend refused, "
-                    f"audits/*{findings.FAILED_SUFFIX} written by labkit-audit) are "
-                    "recorded as such, and report-check refuses their numbers."
-                )
         self.dir = base_dir / "runs" / self.run_id
+        self._protocol = prepared.bound.binding
+        self._cost_tier = prepared.cost_tier
+        self._promises = prepared.promises
+        self._config = prepared.config
+        self._derived_from = prepared.derived_from
+        self._long = prepared.long  # the script's declaration, recorded (0.99.0)
+        self._data = admitted.data
+        self._unfrozen_ack = admitted.unfrozen_ack
+        self._audit_failed = admitted.audit_failed
         self._outputs: list[Path] = []
         self._metrics: dict = {}
         self._note = ""
         self._t0 = time.monotonic()
-        # Everything that can fail on its own (git, the environment, the
-        # model alias) is read BEFORE the directory exists: a failure after
-        # mkdir left a directory without config.json behind — a run that
-        # never was (2026-10-09).
-        git_state, git_full = _git_state(base_dir), _head(base_dir)
-        env = _env_state(base_dir)
-        # A derived run re-reads the parent's rows; its model is the one that
-        # answered THEN. Resolving the alias now, under today's models.toml,
-        # would record a provenance the rows never had — so a derived run
-        # records none, and `runs.model_provenance_run` walks derived_from
-        # to the run that did (2026-10-08).
-        models = {} if self._derived_from else _resolve_models(self._config)
+        provenance = _provenance(
+            base_dir, prepared.config, derived=prepared.derived_from is not None
+        )
         # A repeat's draw number is counted and its record written under one
         # lock: counted outside it, two parallel starts took the same number,
         # and a file named before the record could disagree with it (review
@@ -1293,89 +1501,24 @@ class Run:
             _index_lock(base_dir) if repeat_of is not None else contextlib.nullcontext()
         )
         with guard:
-            self._repeat_of, self.draw = self._repeat(
-                base_dir, repeat_of, derived_from, models
+            self._repeat_of, self.draw = _repeat_draw(
+                base_dir, repeat_of, prepared, admitted.data, provenance.models
             )
             self.dir.mkdir(parents=True, exist_ok=False)
             try:
-                self._write_record(
-                    experiment, git_state, git_full, env, models, base_dir
-                )
+                self._write_record(provenance)
             except BaseException:
                 shutil.rmtree(self.dir, ignore_errors=True)  # no half-made run
                 raise
 
-    def _repeat(
-        self,
-        base_dir: Path,
-        repeat_of: str | None,
-        derived_from: str | None,
-        models: dict,
-    ) -> tuple[str | None, int | None]:
-        """(repeat_of, draw) for config.json, before mkdir: a repeat draws a
-        completed primary run of this area again, comparable in protocol,
-        promise block, config and inputs (`runs.repeat_mismatch`) — else a
-        refusal. Draw 1 is the run itself; its repeats count on from 2."""
-        if repeat_of is None:
-            return None, None
-        if derived_from is not None:
-            raise SystemExit(
-                "runlog: repeat_of and derived_from exclude each other — a repeat "
-                "asks the model again, a derived run re-reads old rows"
-            )
-        parent = base_dir / "runs" / repeat_of
-        try:
-            state = completion_state(parent) if parent.is_dir() else "missing"
-            pcfg = read_run_config(parent) if state == COMPLETED else None
-        except RunConfigError as exc:
-            raise SystemExit(f"runlog: repeat_of={repeat_of!r}: {exc}") from exc
-        if pcfg is None:
-            raise SystemExit(
-                f"runlog: repeat_of={repeat_of!r} names no completed run under "
-                f"{base_dir / 'runs'} ({state})"
-            )
-        if repeat_parent(pcfg) is not None:
-            raise SystemExit(
-                f"runlog: {repeat_of} is itself a repeat of {repeat_parent(pcfg)} — "
-                f"repeat the primary run"
-            )
-        mine = {
-            "protocol": self._protocol,
-            "promises": self._promises,
-            "config": self._config,
-            "data": self._data,
-            "script_sha": _script_sha(),
-            "models_resolved": models,
-        }
-        differs = repeat_mismatch(pcfg, mine)
-        if differs:
-            raise SystemExit(
-                f"runlog: this run is no repeat of {repeat_of} — it measures "
-                f"something else:\n  " + "\n  ".join(differs)
-            )
-        try:
-            return repeat_of, next_draw(base_dir, repeat_of)
-        except RunConfigError as exc:
-            raise SystemExit(
-                f"runlog: repeat_of={repeat_of!r}: the next draw number cannot be "
-                f"counted — {exc}"
-            ) from exc
-
-    def _write_record(
-        self,
-        experiment: str,
-        git_state: str,
-        git_full: str,
-        env: str,
-        models: dict,
-        base_dir: Path,
-    ) -> None:
+    def _write_record(self, provenance: _Provenance) -> None:
         """config.json — what this run was, written once at start — plus the
         script snapshot and the dirty-tree patch. Not the protocol's settings
-        head (protocol_block.PROTOCOL_HEAD_KEYS)."""
+        head (protocol_block.PROTOCOL_HEAD_KEYS). Every field but the two
+        snapshots is set on the run before this is called."""
         frozen = {
             "schema_version": RUN_SCHEMA,
-            "experiment": experiment,
+            "experiment": self.experiment,
             "script": self.script,
             "protocol": self._protocol,
             "derived_from": self._derived_from,
@@ -1389,11 +1532,11 @@ class Run:
             "script_sha": _snapshot_script(self.dir),
             "untracked_sources": _snapshot_untracked_sources(self.dir),
             "pid": os.getpid(),  # lets `active()` tell running from crashed
-            "git": git_state,
-            "git_full": git_full,
+            "git": provenance.git,
+            "git_full": provenance.git_full,
             "python": sys.version.split()[0],
-            "env": env,
-            "models_resolved": models,
+            "env": provenance.env,
+            "models_resolved": provenance.models,
             "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "command": list(sys.argv),  # how to start this run again
             "data": self._data,
@@ -1405,9 +1548,9 @@ class Run:
             self.dir / "config.json", json.dumps(frozen, ensure_ascii=False, indent=2)
         )
         # A dirty tree makes the commit hash a lie: save what it doesn't cover.
-        if _head(base_dir) and repo.git(["status", "--porcelain"], base_dir):
+        if _head(self.base) and repo.git(["status", "--porcelain"], self.base):
             (self.dir / "uncommitted.patch").write_text(
-                repo.git(["diff", "HEAD"], base_dir) or "", encoding="utf-8"
+                repo.git(["diff", "HEAD"], self.base) or "", encoding="utf-8"
             )
 
     def output(self, *paths: str | Path) -> None:

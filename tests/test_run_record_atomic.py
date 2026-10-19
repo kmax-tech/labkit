@@ -79,6 +79,33 @@ class NoHalfMadeRun(unittest.TestCase):
             staged = [p.name for p in (area / "runs").rglob(".*tmp*")]
             self.assertEqual(staged, [])
 
+    def test_a_refusal_in_the_start_check_leaves_no_directory(self) -> None:
+        """Every refusal of the start check comes before mkdir: an unbound
+        full run (the freeze gate), a run index with foreign columns, a
+        split leakage — none leaves a run directory behind."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "runs").mkdir()
+            train = area / "train.jsonl"
+            train.write_text('{"id": "a"}\n', encoding="utf-8")
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                self.assertRaises(SystemExit),
+            ):
+                runlog.Run("t", {}, area, long=True)  # unbound full run
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                self.assertRaisesRegex(RuntimeError, "split leakage"),
+            ):
+                runlog.Run("t", {}, area, data={"train": train, "test": train})
+            (area / "runs.tsv").write_text("foreign\tcolumns\n", encoding="utf-8")
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                self.assertRaisesRegex(RuntimeError, "runs.tsv columns"),
+            ):
+                runlog.Run("t", {}, area)
+            self.assertEqual(list((area / "runs").iterdir()), [])
+
     def test_twin_a_run_starts_with_its_record(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
