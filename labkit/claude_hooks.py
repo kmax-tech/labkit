@@ -46,12 +46,22 @@ post-change
 
 stop
     Before the agent ends its turn: every changed PROTOCOL-*.md (git status)
-    whose "Answer to the question" cites a run goes through `finalize
-    --if-reported`. Blockers → exit 2, and the findings go back to the agent,
+    whose "Answer to the question" cites a run goes through `report-check
+    --if-reported` — the whole release check at every cost tier: the run
+    bound to the protocol and cited, a full run (no probe, no acknowledged
+    run), a decided analysis audit of code, promises and that run, the
+    numbers recomputed by `02_analyze.py --check`; finalize is one of its
+    stations. Blockers → exit 2, and the findings go back to the agent,
     which keeps working — the number it just wrote back is checked in the
     session that still knows why it is there, not at the next commit
-    (2026-10-07). Once per stop: when the agent was already sent back by
-    this hook (`stop_hook_active`), it may stop; the commit gate still holds.
+    (2026-10-07). The answer line citing a run is the one declaration that
+    a result is reported (`finalize.cited_runs`); a protocol whose answer is
+    still open owes nothing — an exploration ends with "no reported
+    result", probes in `runs/` or not (TODO 2, 2026-10-19; until 0.99.0 the
+    hook ran finalize only, and report-check, which refuses a probe's
+    number, was never called by any agent of the haiku rounds). Once per
+    stop: when the agent was already sent back by this hook
+    (`stop_hook_active`), it may stop; the commit gate still holds.
     The same stop holds every area the session touched (a changed file
     under it, git status) to its audit records: a BLOCKER nobody decided →
     exit 2, naming file and finding (`undecided_blockers`). Third haiku
@@ -93,12 +103,12 @@ from pathlib import Path
 
 from labkit import (
     console,
-    finalize,
     findings,
     notes_check,
     preflight,
     protocol_block,
     protocol_check,
+    report_check,
     runs,
 )
 from labkit.repo import PROTOCOL_NAME, area_protocols, git_run
@@ -555,7 +565,7 @@ def sessions(argv: list[str]) -> int:
 
 
 def stop(event: dict) -> int:
-    """Stop hook: a number written back in this session gets finalize; blockers send the agent back once (exit 2)."""
+    """Stop hook: a number written back in this session gets report-check; blockers send the agent back once (exit 2)."""
     project = os.environ.get("CLAUDE_PROJECT_DIR")
     repo = Path(project) if project else Path(event.get("cwd") or os.getcwd())
     if not (repo / ".git").exists():
@@ -579,12 +589,13 @@ def stop(event: dict) -> int:
     ]
     if not protocols:
         return 2 if undecided else 0
-    rc, out = _capture(finalize.main, ["--if-reported", *map(str, protocols)])
+    rc, out = _capture(report_check.if_reported, protocols)
     if rc != 0:
         print(
-            "finalize reports blockers for a number written back in this session — "
-            "fix them before you stop (a commit would be refused the same way):\n"
-            + out,
+            "report-check reports blockers for a number written back in this "
+            "session — fix them before you stop (a commit would be refused the "
+            "same way); a result not meant to be reported leaves the answer "
+            "open:\n" + out,
             file=sys.stderr,
         )
     return 2 if (rc != 0 or undecided) else 0

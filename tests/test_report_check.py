@@ -9,13 +9,16 @@ follows the analysis audit, so the end has its own gate. Until 0.99.0 the
 gate exited 0 at `cost = "seconds"`, so a probe's number passed there as a
 reported one (TODO 1, 2026-10-19). Each station is tested where it lives
 (findings.audit_coverage, recheck.holds, finalize); here: what is owed when,
-and that every station blocks on its own.
+that every station blocks on its own, and `--if-reported` — the gate the
+stop hook and the pre-commit run — holds exactly the protocols whose answer
+cites a run.
 """
 
 from __future__ import annotations
 
 import contextlib
 import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -240,6 +243,93 @@ class ReportCheck(unittest.TestCase):
         failed = report_check.check_analysis_script(area, area.parent.parent) or ""
         self.assertIn("exits 1", failed)
         self.assertIn("numbers not in PROTOCOL", failed)
+
+
+class IfReported(unittest.TestCase):
+    """`report-check --if-reported`: the gate at the stop and the commit (it
+    was `finalize --if-reported` until 0.99.0). A number written back into
+    "Answer to the question" is held to the whole chain; a protocol whose
+    answer is still open owes nothing — an exploration ends with no reported
+    result, probes in `runs/` or not (TODO 2, 2026-10-19)."""
+
+    RUN = "2026-10-07T10-00-00_ab12"
+
+    def _area(self, answer: str, *, long: bool = True, audited: bool = True) -> Path:
+        """A seconds area (no freeze owed, so the bare fixture head passes
+        station 1) whose protocol says ANSWER; its one run a full run unless
+        LONG says a probe; an analysis record of it when AUDITED."""
+        area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+        (area / "scripts").mkdir(parents=True)
+        (area / "scripts" / "02_analyze.py").write_text(
+            "print('ok')\n", encoding="utf-8"
+        )
+        scope_file(area)
+        proto = area / "PROTOCOL-x.md"
+        proto.write_text(
+            head(cost="seconds") + f"- **Answer to the question:** {answer}\n",
+            encoding="utf-8",
+        )
+        run = completed_run(area, self.RUN, metrics={"c1_pass": True}, long=long)
+        # at seconds finalize holds the provenance: the source frozen in the run
+        src = area / "data.jsonl"
+        src.write_text('{"id": 1}\n', encoding="utf-8")
+        cfg = run / "config.json"
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        data["data"] = {"cases": {"path": str(src), "sha": "x", "rows": 1}}
+        cfg.write_text(json.dumps(data), encoding="utf-8")
+        if audited:
+            findings.write(
+                area,
+                "analysis",
+                "opus",
+                scope_sha.area_stamp(area)[0],
+                promises.block_stamp(proto.read_text(encoding="utf-8")),
+                (0, 0, 0),
+                [],
+                run_id=run.name,
+            )
+        return area
+
+    def _gate(self, area: Path) -> tuple[int, str]:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = report_check.main(["--if-reported", str(area / "PROTOCOL-x.md")])
+        return code, buf.getvalue()
+
+    def test_an_open_answer_owes_nothing_even_over_a_probe(self):
+        """The exploration: a probe in runs/, the answer still the stamp's."""
+        code, out = self._gate(
+            self._area("<number + run_id>", long=False, audited=False)
+        )
+        self.assertEqual((code, out), (0, ""))
+
+    def test_an_answer_without_a_run_id_is_not_a_declaration(self):
+        """Neither reported nor open: protocol-check warns, this gate is silent."""
+        code, out = self._gate(self._area("AUC 0.91", audited=False))
+        self.assertEqual((code, out), (0, ""))
+
+    def test_a_reported_full_run_passes(self):
+        code, out = self._gate(self._area(f"AUC 0.91 ({self.RUN})"))
+        self.assertEqual(code, 0, out)
+        self.assertIn(f"its answer cites {self.RUN}", out)
+        self.assertIn("finalized, audited, checked", out)
+
+    def test_a_reported_probe_is_refused(self):
+        """Third haiku round, t3 and t5: the probe's number, written back."""
+        code, out = self._gate(self._area(f"AUC 0.91 ({self.RUN})", long=False))
+        self.assertEqual(code, 1, out)
+        self.assertIn("a probe (long=False), not a full run", out)
+
+    def test_citing_another_run_than_the_one_that_answers_blocks(self):
+        code, out = self._gate(self._area("AUC 0.91 (2026-10-01T09-00-00_ffff)"))
+        self.assertEqual(code, 1, out)
+        self.assertIn("finalize: ", out)
+        self.assertIn("but the run that answers is", out)
+
+    def test_a_reported_run_without_its_analysis_audit_blocks(self):
+        code, out = self._gate(self._area(f"AUC 0.91 ({self.RUN})", audited=False))
+        self.assertEqual(code, 1, out)
+        self.assertIn("no analysis audit saw the area as it is now", out)
 
 
 if __name__ == "__main__":

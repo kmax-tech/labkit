@@ -454,6 +454,39 @@ def answering_run_field(text: str) -> str | None:
     return None
 
 
+ANSWER_LABEL = "answer to the question"
+
+
+def answer_field(text: str) -> str | None:
+    """The value of the protocol's `Answer to the question` field — the one
+    line that declares a result reported: written by `protocol-fill
+    --from-run` with the number and the run_id, held by finalize to the
+    answering run. None while the field is absent or still a placeholder."""
+    for f in fields(text):
+        if f.name == ANSWER_LABEL and not f.placeholder:
+            return f.value.strip()
+    return None
+
+
+def answer_without_run(text: str) -> str | None:
+    """A WARNING when the Answer is written but names no run_id, or None.
+    A result is declared reported by its run_id in that line (report-check
+    holds it at the stop and the commit); an answer without one is neither
+    a reported result nor the open field of an exploration — it says a
+    number without saying where it came from. Static evidence: the hint,
+    not a gate (plan 2026-10-19, TODO 2)."""
+    value = answer_field(text)
+    if value is None or runs.RUN_ID.search(value):
+        return None
+    return (
+        "WARNING: `Answer to the question` is written but names no run_id — a "
+        "reported result names its run (`protocol-fill --from-run <run_id>` "
+        "writes both; report-check then holds it at the stop and the commit); "
+        "an exploration that reports no result leaves the field open "
+        "(LAB-041 Generate numbers, don't retype them)"
+    )
+
+
 def answering_run_open(value: str) -> bool:
     """Is this `Answering run` value still the stamp's — `none yet …` or a
     `<…>` placeholder — rather than a run id? The one answer finalize (warn:
@@ -858,6 +891,7 @@ class FileReport:
     audit_drift: str | None = None
     id_findings: list[str] = field(default_factory=list)
     cost_lowered: str | None = None  # a WARNING: the tier sank since the first commit
+    answer_unbound: str | None = None  # a WARNING: an Answer without a run_id
     pilot_note: str = ""
     missing_must: list[str] = field(default_factory=list)
     #: owed should-fields; unfrozen they fold into the pilot note, frozen
@@ -1005,6 +1039,7 @@ def check_protocol(
         audit_drift=audit_drift,
         id_findings=check_protocol_id(path, head, ids),
         cost_lowered=cost_lowered(path, head),
+        answer_unbound=answer_without_run(text),
         pilot_note=pilot_note,
         missing_must=report.missing_must,
         missing_should=missing_should,
@@ -1043,6 +1078,8 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
         print(finding)
     if r.cost_lowered:
         print(r.cost_lowered)
+    if r.answer_unbound:
+        print(f"{f}: {r.answer_unbound}")
     if r.runs_stamped:
         print(
             f"{f}: Runs: the stamped entry is written by "

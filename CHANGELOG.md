@@ -5,6 +5,42 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Breaking
+
+- **`report-check` is the release check at every cost tier.** At
+  `cost = "seconds"` it exited 0 with "nothing owed here"; a probe's number
+  written back there passed as a reported one. Now only station 1 (the
+  freeze, the preflight audit) is skipped at seconds, and the rest holds as
+  at minutes/hours: finalize clean — so the answering run is bound to this
+  protocol and the answer cites it — and that run a full run (`long=True`,
+  not acknowledged unfrozen; `runs.unreportable`), a decided analysis
+  record of code, promises and that run (`findings.audit_coverage`),
+  `02_analyze.py --check` passing. finalize's blockers are named in
+  report-check's list ("run it to see them" was a round trip inside a
+  hook); `finalize_area` takes a `Findings` collector for that. LAB-017 is
+  read as: at seconds the one analysis audit is owed when the number is
+  written back, which is its promotion. 0.99.0 is the last version that
+  passes a seconds area unchecked.
+- **The stop hook and the pre-commit run `report-check --if-reported`;
+  `finalize --if-reported` is gone.** The declaration that a result is
+  reported is the run_id in the protocol's "Answer to the question"
+  (`protocol-fill --from-run` writes it, `finalize.cited_runs` reads it) —
+  the binding already expressed the occasion, so nothing new is declared.
+  Every changed (stop) or staged (commit) protocol whose answer cites a run
+  goes through the whole check above; a protocol whose answer is still
+  open owes nothing, so an exploration ends with "no reported result",
+  probes in `runs/` or not. Third haiku round on 0.99.0 (labkit-paper
+  area 09): t3 and t5 reported a probe's number and no agent called
+  report-check; a gate the agent must call is no gate. Reinstall the hooks
+  (`labkit-hooks install`): the pre-commit is stamped anew. An answer
+  written without a run_id is neither a reported result nor an open field:
+  `protocol-check` warns (`answer_without_run`, static evidence — the hint
+  Max asked for where the declaration is not unambiguous), the gates stay
+  silent. The shipped standard's LAB-011 paragraph and the stamped
+  `AGENTS.md` lanes say so.
+
 ## 0.99.0 — 2026-10-19
 
 ### Breaking

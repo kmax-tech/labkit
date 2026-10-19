@@ -23,8 +23,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import claude_hooks, promises  # noqa: E402
-from protocol_fixture import DEFAULT_BLOCK, head  # noqa: E402
+from labkit import claude_hooks, findings, promises, scope_sha  # noqa: E402
+from protocol_fixture import DEFAULT_BLOCK, PID, head  # noqa: E402
 
 BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary
@@ -376,19 +376,34 @@ if __name__ == "__main__":
 
 class Stop(unittest.TestCase):
     """`claude-hook stop`: a number written back in this session goes through
-    finalize before the agent ends its turn (2026-10-07)."""
+    report-check before the agent ends its turn (finalize until 0.99.0; the
+    whole release check since — third haiku round: t3 and t5 reported a
+    probe's number and no agent ever called report-check). The area is at
+    seconds, where the hook's rule is the same and no freeze is owed."""
 
     RUN = "2026-10-07T10-00-00_ab12"
 
     def setUp(self):
         os.environ.pop("CLAUDE_PROJECT_DIR", None)
-        from protocol_fixture import PID
-
-        self.root = _repo(False)
+        self.root = _repo(False, cost="seconds")
         self.area = self.root / "experiments" / "01-x"
+        (self.area / "scripts" / "02_analyze.py").write_text(
+            "print('ok')\n", encoding="utf-8"
+        )
+        # at seconds finalize holds the provenance: the source tracked in git
+        (self.root / "data").mkdir()
+        (self.root / "data" / "cases.jsonl").write_text('{"id": 1}\n', encoding="utf-8")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "analyze and data")
+        self._run_dir(long=True)
+
+    def _run_dir(self, long: bool) -> None:
+        """The area's one completed run, a full run or a probe, with a decided
+        analysis record of it (what report-check owes beyond the run itself)."""
         d = self.area / "runs" / self.RUN
-        d.mkdir(parents=True)
-        block = promises.parse_block((self.area / "PROTOCOL-x.md").read_text())
+        d.mkdir(parents=True, exist_ok=True)
+        text = (self.area / "PROTOCOL-x.md").read_text()
+        block = promises.parse_block(text)
         assert block is not None
         (d / "config.json").write_text(
             json.dumps(
@@ -396,6 +411,10 @@ class Stop(unittest.TestCase):
                     "schema_version": 2,
                     "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                     "promises": promises.snapshot(block, self.area),
+                    "long": long,
+                    "data": {
+                        "cases": {"path": "data/cases.jsonl", "sha": "x", "rows": 1}
+                    },
                 }
             )
         )
@@ -403,6 +422,17 @@ class Stop(unittest.TestCase):
             json.dumps({"c1_pass": True, "a1_pass": True, "a2_pass": True})
         )
         (d / "completion.json").write_text(json.dumps({"schema_version": 2}))
+        if not (self.area / "audits").is_dir():
+            findings.write(
+                self.area,
+                "analysis",
+                "opus",
+                scope_sha.area_stamp(self.area)[0],
+                promises.block_stamp(text),
+                (0, 0, 0),
+                [],
+                run_id=self.RUN,
+            )
 
     def _answer(self, run_id: str) -> None:
         p = self.area / "PROTOCOL-x.md"
@@ -420,13 +450,32 @@ class Stop(unittest.TestCase):
         self._answer("2026-10-01T09-00-00_ffff")
         rc, _, err = self._stop()
         self.assertEqual(rc, 2)
+        self.assertIn("report-check reports blockers", err)
         self.assertIn("but the run that answers is", err)
 
     def test_a_correct_answer_lets_it_stop(self):
-        """Twin of the case above: the answer cites the run that answers."""
+        """Twin of the case above: the answer cites the run that answers, a
+        full run with its analysis record, and the check passes."""
         self._answer(self.RUN)
         rc, _, err = self._stop()
         self.assertEqual(rc, 0, err)
+
+    def test_a_probes_number_written_back_is_sent_back(self):
+        """Third haiku round (t3, t5): measured with long=False, reported."""
+        self._run_dir(long=False)
+        self._answer(self.RUN)
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 2)
+        self.assertIn("a probe (long=False), not a full run", err)
+
+    def test_an_exploration_over_a_probe_may_end(self):
+        """The twin that must stay: the protocol changed, a probe in runs/,
+        the answer still open — no reported result, nothing owed."""
+        self._run_dir(long=False)
+        p = self.area / "PROTOCOL-x.md"
+        p.write_text(p.read_text() + "- **Deviations after freeze:** none\n")
+        rc, out, err = self._stop()
+        self.assertEqual((rc, out, err), (0, "", ""))
 
     def test_sent_back_once_already_no_loop(self):
         self._answer("2026-10-01T09-00-00_ffff")

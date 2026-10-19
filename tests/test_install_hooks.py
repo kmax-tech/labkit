@@ -25,7 +25,7 @@ class Install(unittest.TestCase):
         self.assertEqual(again, ["git core.hooksPath = .githooks"])  # nothing rewritten
         hook = repo / ".githooks" / "pre-commit"
         self.assertTrue(hook.stat().st_mode & 0o100)
-        self.assertIn("finalize --if-reported", hook.read_text())
+        self.assertIn("report-check --if-reported", hook.read_text())
 
     def test_foreign_hooks_and_keys_are_kept(self):
         repo = git_repo()

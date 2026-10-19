@@ -1,6 +1,9 @@
 """report-check — the gate after the last step, before a number leaves the area.
 
     report-check <AREA> [--protocol PROTOCOL-*.md]
+    report-check --if-reported PROTOCOL-*.md ...   every protocol whose answer
+                                                   cites a run (the stop hook
+                                                   and the pre-commit)
 
 Exit codes: 0 clean, 1 a blocker, 2 usage error.
 
@@ -46,6 +49,17 @@ report-check comes last and holds the whole chain, at every cost tier:
 
 Every station runs; the blockers are summed at the end. It reads and runs,
 never writes.
+
+`--if-reported` is the gate the agent cannot choose: `claude-hook stop`
+runs it on every changed PROTOCOL-*.md, the stamped pre-commit on every
+staged one, and it holds exactly the protocols whose "Answer to the
+question" cites a run (`finalize.cited_runs`) — the one line that declares
+a result reported, written by `protocol-fill --from-run`. A protocol whose
+answer is still open owes nothing here: an exploration ends with no
+reported result, probes or not (third haiku round on 0.99.0: t3 and t5
+reported a probe's number and never called report-check; TODO 2,
+2026-10-19). finalize stays the check before the analysis audit; this is
+the check after it.
 """
 
 from __future__ import annotations
@@ -59,7 +73,7 @@ from pathlib import Path
 from labkit.gate import Findings
 from labkit import console, findings, promises, protocol_block
 from labkit.audit import AuditError, audited_run
-from labkit.finalize import finalize_area
+from labkit.finalize import cited_runs, finalize_area
 from labkit.preflight import area_test_python
 from labkit.protocol_check import check_fields
 from labkit.repo import choose_protocol, layout_root
@@ -206,8 +220,32 @@ def report_check(area: Path, protocol: Path | None = None) -> int:
     return findings.report("report-check", "reporting")
 
 
+def if_reported(protocols: list[Path]) -> int:
+    """`report-check` for every protocol whose "Answer to the question" cites
+    a run — the gate at the stop and the commit: a result declared reported
+    is held to the whole chain, a protocol whose answer is still open is
+    skipped (an exploration may end with no reported result). Returns the
+    worst exit code."""
+    worst = 0
+    for protocol in protocols:
+        try:
+            text = protocol.read_text(encoding="utf-8")
+        except OSError as exc:
+            print(f"report-check: {protocol}: {exc}")
+            worst = max(worst, 2)
+            continue
+        cited = cited_runs(text)
+        if not cited:
+            continue
+        print(f"═══ report-check {protocol} (its answer cites {', '.join(cited)}) ═══")
+        worst = max(worst, report_check(protocol.parent.resolve(), protocol))
+    return worst
+
+
 def main(argv: list[str]) -> int:
     """Command line of `report-check`."""
+    if argv and argv[0] == "--if-reported":
+        return if_reported([Path(a) for a in argv[1:]])
     ap = argparse.ArgumentParser(
         prog="report-check", description=(__doc__ or "").split("\n\n")[0]
     )

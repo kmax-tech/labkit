@@ -227,10 +227,13 @@ evidence file under the same ID (top of this document).*
   run again after every bump of the pin; `preflight` warns if they
   are missing or come from a different labkit version. The stop hook
   (`claude-hook stop`) sends the agent through
-  `finalize` before the end of its turn if it has written a number back. The pre-commit hook also sends every protocol whose
-  "Answer to the question" cites a run_id through `finalize
+  `report-check` before the end of its turn if it has written a number back. The pre-commit hook also sends every protocol whose
+  "Answer to the question" cites a run_id through `report-check
   --if-reported` — a number that has been written back does not enter the
-  history unchecked, and it must cite the run that the checks hold.
+  history unchecked: it cites the run the checks hold, that run is a full
+  run, its analysis audit is decided and the numbers recompute (at every
+  cost tier; `finalize` is one of its stations). An answer still open owes
+  nothing: an exploration ends with no reported result.
   Deliberate exception: `--no-verify`.
 
   **What the agent forgets, a gate holds.** A full run (`long=True`) on a protocol

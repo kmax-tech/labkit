@@ -26,14 +26,20 @@ LAB-017 The number of audits follows the cost tier.
    the script's `PROMPT` constants with `protocol-fill <PROTOCOL> --prompts`.
 3. Fill the skeleton (with a model: read `--show 2`), run `code-check <area>`.
 4. Commit, then the run — in the foreground; it is the instrument check too.
-5. `protocol-fill PROTOCOL-<name>.md --from-run <run_id>` writes the number
+5. `finalize <area>`, then the analysis audit (`labkit-audit <area> --mode
+   analysis`) and decide its findings: the one audit this lane owes
+   (LAB-017 The number of audits follows the cost tier). Until the number
+   is written back it is a sketch, and nothing is owed for it.
+6. `protocol-fill PROTOCOL-<name>.md --from-run <run_id>` writes the number
    back from metrics.json: the Answer line, the Summary's Result line and the
    run line — never retype it (reword the Result line for a person if you
-   like; Limits and Next step belong to the full form). Commit `output/` and
-   `runs/` with the protocol — `finalize <area>` checks the provenance and
-   wants both in git.
-6. The agent audit is a later, separate task: due when the number goes into
-   a note or a paper or steers a decision.
+   like; Limits and Next step belong to the full form). The run_id in the
+   Answer declares the result reported: at the stop and the commit
+   `report-check` holds it — a full run (no probe), the decided analysis
+   audit of code, promises and that run, `02_analyze.py --check` passing.
+   An exploration that reports nothing leaves the Answer open and may end.
+   Commit `output/` and `runs/` with the protocol — `finalize <area>` checks
+   the provenance and wants both in git.
 
 Nothing more is owed on this lane: no freeze, no probe before the run, no †
 fields, no reading of labkit's source.
@@ -82,7 +88,8 @@ fields, no reading of labkit's source.
     then `scripts/02_analyze.py --check` holds the note to the run, and
     `report-check <area>` closes the lane: frozen, finalize clean, an
     analysis audit of the code as it is, the check passing
-    (LAB-041 Generate numbers, don't retype them).
+    (LAB-041 Generate numbers, don't retype them). The stop hook and the
+    pre-commit run the same check on every protocol whose Answer cites a run.
 
 ## Setup
 

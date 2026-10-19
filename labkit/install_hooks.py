@@ -8,9 +8,11 @@ The hooks come with the pinned labkit, so raising the pin and running
 before, the scaffolder in the house dotfiles wrote its own copy once, and
 existing repos never got a newer one).
 
-    .githooks/pre-commit     protocol-check on staged protocols; finalize
-                             --if-reported on a written-back answer;
-                             claude-hook undecided on the staged paths; the
+    .githooks/pre-commit     protocol-check on staged protocols; report-check
+                             --if-reported on a written-back answer (the
+                             whole release check, finalize among its
+                             stations); claude-hook undecided on the staged
+                             paths; the
                              guard test where a repo has it; then the
                              repo's own .githooks/pre-commit.local, if any
                              (the repo owns it, labkit-hooks never writes it)
@@ -68,12 +70,14 @@ if [ -n "$staged_protocols" ]; then
 fi
 
 # 2. A number written back: a staged protocol whose answer cites a run goes
-#    through finalize — it must hold, and cite the run the checks hold.
-if [ -n "$staged_protocols" ] && [ -x .venv/bin/finalize ]; then
+#    through report-check — the whole release check at every cost tier
+#    (finalize clean, a full run, a decided analysis audit, the numbers
+#    recomputed); an answer still open owes nothing here.
+if [ -n "$staged_protocols" ] && [ -x .venv/bin/report-check ]; then
     # shellcheck disable=SC2086
-    if ! .venv/bin/finalize --if-reported $staged_protocols; then
+    if ! .venv/bin/report-check --if-reported $staged_protocols; then
         echo ""
-        echo "pre-commit: finalize reports blockers for a written-back number (see above)."
+        echo "pre-commit: report-check reports blockers for a written-back number (see above)."
         fail=1
     fi
 fi
