@@ -128,6 +128,45 @@ class TestResolveEndpoints(_Base):
         )
         self.assertEqual(spec["endpoint"], "http://a.invalid:1111")
 
+    def test_editing_a_resolved_spec_leaves_the_frozen_one(self):
+        self.llm.resolve("both")["endpoints"][0] = "http://edited.invalid:1"
+        spec = self.llm.resolve("both")
+        self.assertEqual(spec["endpoints"][0], spec["endpoint"])
+        self.assertEqual(spec["endpoint"], "http://a.invalid:1111")
+
+    def test_concurrent_first_calls_freeze_one_spec(self):
+        """The second reader sees an edited file; both threads still get the
+        spec the first resolution froze."""
+        import threading
+
+        toml_path = self.llm._find_models_toml()
+        reads = []
+        started = threading.Barrier(2)
+
+        def find():
+            reads.append(1)
+            if len(reads) == 2:
+                toml_path.write_text(
+                    TOML.replace("http://a.invalid:1111", "http://z.invalid:9"),
+                    encoding="utf-8",
+                )
+            return toml_path
+
+        self.llm._find_models_toml = find
+        got = []
+
+        def worker():
+            started.wait()
+            got.append(self.llm.resolve("one")["endpoint"])
+
+        threads = [threading.Thread(target=worker) for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        self.assertEqual(len(reads), 1)
+        self.assertEqual(got, ["http://a.invalid:1111"] * 2)
+
     def test_literal_url_passes_through(self):
         spec = self.llm.resolve("literal")
         self.assertEqual(spec["endpoint"], "http://raw.invalid:3333")

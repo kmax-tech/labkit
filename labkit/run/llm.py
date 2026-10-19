@@ -73,6 +73,7 @@ endpoint/model and do your own HTTP — never a literal URL in the experiment.
 
 from __future__ import annotations
 
+import copy
 import http.client
 import json
 import shlex
@@ -120,6 +121,7 @@ def _find_models_toml() -> Path:
 
 
 _FROZEN: dict[str, dict] = {}  # alias -> spec, fixed at first use per process
+_FROZEN_LOCK = threading.Lock()
 
 
 def resolve(alias: str) -> dict:
@@ -131,9 +133,21 @@ def resolve(alias: str) -> dict:
     file — the swap would be silent, and the run's config.json would keep
     naming the model that answered the first half. A new process picks up the
     edit; a running one keeps what it started with.
+
+    Every call returns its own deep copy, so a caller editing the result
+    (an `endpoints` list, say) never reaches the frozen spec. The first
+    resolution of an alias holds a lock: two threads starting together get
+    the same spec, not two readings of a file edited between them.
     """
-    if alias in _FROZEN:
-        return dict(_FROZEN[alias])
+    with _FROZEN_LOCK:
+        if alias not in _FROZEN:
+            _FROZEN[alias] = _load_spec(alias)
+        return copy.deepcopy(_FROZEN[alias])
+
+
+def _load_spec(alias: str) -> dict:
+    """The spec of ALIAS as `models.toml` states it now — what `resolve`
+    freezes."""
     cfg = tomllib.loads(_find_models_toml().read_text(encoding="utf-8"))
     try:
         spec = dict(cfg["models"][alias])
@@ -185,7 +199,6 @@ def resolve(alias: str) -> dict:
             {ep: _ollama_digest(ep, spec["model"], auth) for ep in eps}
             or {"": _ollama_digest("", spec["model"], auth)}
         )
-    _FROZEN[alias] = dict(spec)
     return spec
 
 
