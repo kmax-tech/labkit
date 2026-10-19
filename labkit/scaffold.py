@@ -796,7 +796,7 @@ def stamp_area(
         f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
         + "\n".join(log)
         + "\n"
-        + next_steps(area.relative_to(root), slug, nn, quick, bool(model))
+        + next_steps(area.relative_to(root), slug, nn, cost, bool(model))
     )
 
 
@@ -812,37 +812,103 @@ def _point_hooks_at(root: Path) -> None:
         )
 
 
-def next_steps(rel: Path, slug: str, nn: str, quick: bool, model: bool) -> str:
-    """What to do after `exp`, in order — the lane of AGENTS.md for this area."""
-    if quick:
-        return f"""
-Next (cost = "seconds" — no freeze, no audit per run, the first run is the probe):
-  1. PROTOCOL-{slug}.md: fill the seconds cut — `type` in the head, then question, unit,
-     {"criterion, admissibility condition, prompt, null condition" if model else "data, exclusions — no criterion, no promise table: a count has no bar to clear"}; `protocol-check --contract` names the labels.
-  2. scripts/01_measure.py: {"PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run" if model else "expected_ids(), rows(), evaluate_rows()"}.
-  3. git add + commit, then scripts/01_measure.py; `finalize {rel}` checks the provenance.
-  4. the analysis audit (`labkit-audit {rel} --mode analysis`), decided; then `protocol-fill PROTOCOL-{slug}.md --from-run <run_id>`
-     adopts the number: it runs report-check, whose last station is scripts/02_analyze.py --check."""
-    test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
-    if not model:
-        return f"""
-Next (light pilot, heavy report — the instrument is an estimator, no model call):
-  1. PROTOCOL-{slug}.md: fill the pilot part (head: type, cost; question, success, admissibility, the estimator in Model / tool, the null condition).
-  2. scripts/00_prepare.py: raw -> prepared, gold null for the unlabelled split   ({rel}/scripts)
-  3. scripts/01_measure.py: make_estimator(), SCORE, FEATURES_FIELD; --show 3 reads the config and feature rows
-  4. scripts/01_measure.py --probe 12  instrument check: a reduced estimator, both lanes, throwaway; the rows into the protocol's raw output
-  5. reportable? `labkit-init exp {slug} --report` adds the report fields; then `frozen = true` in the head
-  6. git add + commit, THEN scripts/01_measure.py   (untracked code is in no diff)
-  7. result note + scripts/02_analyze.py --check; running processes: .venv/bin/runlog {rel}"""
-    return f"""
-Next (light pilot, heavy report):
-  1. PROTOCOL-{slug}.md: fill the pilot part (head: type, cost; question, success, admissibility, prompt, null condition).
-  2. scripts/00_prepare.py: raw -> prepared   ({rel}/scripts)
-  3. scripts/01_measure.py --show 3    read the prompts, no call
-  4. scripts/01_measure.py --probe 4   instrument check in the real pipeline; raw answers into {test}
-  5. reportable? `labkit-init exp {slug} --report` adds the report fields; then `frozen = true` in the head
-  6. git add + commit, THEN scripts/01_measure.py   (untracked code is in no diff)
-  7. result note + scripts/02_analyze.py --check; running processes: .venv/bin/runlog {rel}"""
+def next_steps(rel: Path, slug: str, nn: str, cost: str | None, model: bool) -> str:
+    """What to do after `exp`, in order — the lane of AGENTS.md for this
+    area, read off the contract: the preflight and its audit stand where
+    the lane owes the freeze, the analysis audit where the lane owes it,
+    the adoption at the end of every lane. Until 2026-10-19 the printed
+    steps at minutes/hours skipped the preflight, both audits and the
+    adoption while the stamped AGENTS.md named them; an agent following the
+    console met the refusal at the run's start."""
+    ln = standard_contract.lane(cost)
+    sk = standard_contract.skeleton(cost, model)
+    protocol = f"PROTOCOL-{slug}.md"
+    audit = f"labkit-audit {rel} --mode"
+    code_check = f"after every code change `code-check {rel}`"
+    if ln.cut == standard_contract.SECONDS_CUT:
+        title = (
+            f'cost = "{ln.tier}" — no freeze, no audit before the run, '
+            "the run is the instrument check"
+        )
+        fields = (
+            "criterion, admissibility condition, prompt, null condition"
+            if model
+            else "data, exclusions — no criterion, no promise table: a count has no bar to clear"
+        )
+        fill = (
+            "PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run"
+            if model
+            else "expected_ids(), rows(), evaluate_rows()"
+        )
+        steps = [
+            f"{protocol}: fill the seconds cut — `type` in the head, then question, unit,\n"
+            f"     {fields}; `protocol-check --contract` names the labels.",
+            f"scripts/01_measure.py: {fill}; {code_check}.",
+        ]
+    else:
+        test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
+        estimator = sk is standard_contract.ESTIMATOR
+        title = f"lane {ln.tier}: light pilot, heavy report" + (
+            " — the instrument is an estimator, no model call" if estimator else ""
+        )
+        steps = [
+            f"{protocol}: fill the pilot part (head: type, cost; question, success, "
+            f"admissibility, {'the estimator in Model / tool' if estimator else 'prompt'}, "
+            "the null condition).",
+            "scripts/00_prepare.py: raw -> prepared"
+            + (", gold null for the unlabelled split" if estimator else "")
+            + f"   ({rel}/scripts)",
+            "scripts/01_measure.py: make_estimator(), SCORE, FEATURES_FIELD; --show 3 "
+            "reads the config and feature rows"
+            if estimator
+            else "scripts/01_measure.py --show 3    read the prompts, no call",
+            (
+                "scripts/01_measure.py --probe 12  instrument check: a reduced estimator, "
+                "both lanes, throwaway; the rows into the protocol's raw output"
+                if estimator
+                else "scripts/01_measure.py --probe 4   instrument check in the real "
+                f"pipeline; raw answers into {test}"
+            )
+            + f"; {code_check}.",
+            f"{test}: the resolution check as a test (LAB-016 Resolution check before freezing).",
+        ]
+    if ln.freeze:
+        if standard_contract.PREFLIGHT_AUDIT in ln.audits:
+            steps.append(
+                f"`preflight {rel}`, then the preflight audit (`{audit} preflight`) "
+                "in the background; decide its findings, the `scope sha` line into "
+                "the head (LAB-015 Preflight audit before freezing)."
+            )
+        steps.append(
+            f"reportable? `labkit-init exp {slug} --report` adds the report fields; "
+            "only now `frozen = true`."
+        )
+    if ln.foreground:
+        steps.append(
+            "git add + commit, then scripts/01_measure.py — in the foreground; it is "
+            "the instrument check too."
+        )
+    else:
+        steps.append(
+            "git add + commit, THEN scripts/01_measure.py, detached: "
+            f"`runlog start {rel} -- .venv/bin/python scripts/01_measure.py` "
+            f"(untracked code is in no diff); running processes: .venv/bin/runlog {rel}."
+        )
+    after = f"`finalize {rel}`" + (
+        " checks the provenance (source frozen in the run, tracked in git)"
+        if ln.provenance
+        else ""
+    )
+    if standard_contract.ANALYSIS_AUDIT in ln.audits:
+        after += f", then the analysis audit (`{audit} analysis`), decided"
+    steps.append(after + ".")
+    steps.append(
+        f"`protocol-fill {protocol} --from-run <run_id>` adopts the number: it runs "
+        "report-check, whose last station is scripts/02_analyze.py --check."
+    )
+    return f"\nNext ({title}):\n" + "\n".join(
+        f"  {i}. {step}" for i, step in enumerate(steps, 1)
+    )
 
 
 # --- command line -------------------------------------------------------------

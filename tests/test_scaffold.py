@@ -315,6 +315,36 @@ class Exp(unittest.TestCase):
             (two_empty["a1_empty"], two_empty["c1_accuracy"]), (2, 10 / 12)
         )
 
+    def test_the_next_steps_are_the_lane_with_its_gates(self) -> None:
+        """The printed steps at minutes/hours skipped the preflight, both
+        audits and the adoption while the stamped AGENTS.md named them; an
+        agent following the console met the refusal at the run's start
+        (review 2026-10-19). The steps read the contract: every gate the
+        lane owes stands in order, numbered without a gap."""
+        rel = Path("experiments/01-foo")
+        for cost, model in (("minutes", False), ("hours", True)):
+            text = scaffold.next_steps(rel, "foo", "01", cost, model)
+            order = [
+                "code-check experiments/01-foo",
+                "preflight experiments/01-foo",
+                "labkit-audit experiments/01-foo --mode preflight",
+                "`frozen = true`",
+                "git add + commit, THEN",
+                "runlog start experiments/01-foo",
+                "finalize experiments/01-foo",
+                "labkit-audit experiments/01-foo --mode analysis",
+                "protocol-fill PROTOCOL-foo.md --from-run",
+            ]
+            positions = [text.index(step) for step in order]
+            self.assertEqual(positions, sorted(positions), text)
+            numbers = [int(m) for m in re.findall(r"^  (\d+)\. ", text, re.M)]
+            self.assertEqual(numbers, list(range(1, len(numbers) + 1)), text)
+        seconds = scaffold.next_steps(rel, "foo", "01", "seconds", False)
+        for not_owed in ("preflight", "frozen = true", "runlog start", "--probe"):
+            self.assertNotIn(not_owed, seconds, seconds)
+        for owed in ("code-check", "finalize", "--mode analysis", "--from-run"):
+            self.assertIn(owed, seconds, seconds)
+
     def test_init_exp_from_inside_the_area_finds_the_lab(self) -> None:
         """Run from an area directory, labkit-init called the area "not a lab
         repo" (cloud judge probe, 2026-10-14); it finds the lab above, as git
