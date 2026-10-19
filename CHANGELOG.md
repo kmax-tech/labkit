@@ -5,7 +5,7 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
-## Unreleased
+## 0.99.0 — 2026-10-19
 
 ### Breaking
 
