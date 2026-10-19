@@ -15,7 +15,7 @@ import unittest
 from pathlib import Path
 
 from labkit.run import batch, runlog
-from labkit.gates import finalize
+from labkit.checks import run_record_check
 from labkit.formats import runs
 
 A = "2026-10-01T10-00-00_aaaa"
@@ -68,7 +68,7 @@ class ResumedRunNamesWhatItContinues(unittest.TestCase):
             )
             self.assertEqual(completion["continues"], [A])
             # finalize: the continuation is named, nothing foreign
-            blockers, notes = finalize.row_provenance_findings(r.dir)
+            blockers, notes = run_record_check.row_provenance_findings(r.dir)
             self.assertEqual(blockers, [])
             self.assertTrue(any("continues " + A in n for n in notes), notes)
 
@@ -85,7 +85,7 @@ class ResumedRunNamesWhatItContinues(unittest.TestCase):
                     r.metrics(c1_pass=True)
             entries = runs.read_outputs(r.dir) or []
             self.assertEqual(entries[0].continues, ())
-            self.assertEqual(finalize.row_provenance_findings(r.dir), ([], []))
+            self.assertEqual(run_record_check.row_provenance_findings(r.dir), ([], []))
 
 
 class FinalizeHoldsRowsToTheRun(unittest.TestCase):
@@ -128,7 +128,7 @@ class FinalizeHoldsRowsToTheRun(unittest.TestCase):
             run = self._run(area, "2026-10-02T10-00-00_bbbb", out)
             _rows(out, run.name, ["1"])
             _rows(out, A, ["2", "3"])  # from a run this one does not name
-            blockers, _ = finalize.row_provenance_findings(run)
+            blockers, _ = run_record_check.row_provenance_findings(run)
             self.assertEqual(len(blockers), 1)
             self.assertIn(f"2 row(s) from {A}", blockers[0])
             self.assertIn("file of two measurements", blockers[0])
@@ -140,7 +140,7 @@ class FinalizeHoldsRowsToTheRun(unittest.TestCase):
             self._run(area, A, out)
             child = self._run(area, "2026-10-02T10-00-00_bbbb", out, derived_from=A)
             _rows(out, A, ["1", "2"])
-            self.assertEqual(finalize.row_provenance_findings(child), ([], []))
+            self.assertEqual(run_record_check.row_provenance_findings(child), ([], []))
 
     def test_unstamped_rows_are_a_note(self) -> None:
         with tempfile.TemporaryDirectory() as d:
@@ -149,7 +149,7 @@ class FinalizeHoldsRowsToTheRun(unittest.TestCase):
             run = self._run(area, A, out)
             _rows(out, A, ["1"])
             _rows(out, None, ["2"])
-            blockers, notes = finalize.row_provenance_findings(run)
+            blockers, notes = run_record_check.row_provenance_findings(run)
             self.assertEqual(blockers, [])
             self.assertTrue(any("1 row(s) without _prov" in n for n in notes), notes)
 

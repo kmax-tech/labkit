@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit.gates import finalize
+from labkit.checks import readme_check
 from labkit.tools import scaffold, protocol_cuts
 from labkit.formats import rules
 
@@ -222,7 +222,7 @@ class Exp(unittest.TestCase):
         self.assertNotIn("--probe", readme)  # the counting skeleton has no probe
         # a count's README carries no blank: question and contract live in the
         # protocol (cloud draw 11: the placeholder was the one gate line left)
-        self.assertEqual(finalize.readme_placeholders(area), [])
+        self.assertEqual(readme_check.readme_placeholders(area), [])
         self.assertIn("PROTOCOL-foo-bar.md", readme)
         # the state box names the test file as stamped (underscores, not the slug)
         self.assertIn("tests/test_01_foo_bar.py", readme)

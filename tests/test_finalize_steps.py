@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from labkit.gates import finalize
+from labkit.checks import run_record_check, readme_check
 from labkit.formats import repo
 
 
@@ -73,7 +74,7 @@ class ModelProvenanceGap(unittest.TestCase):
     def test_a_model_run_without_models_resolved_is_named(self):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(d, {"c1_pass": True, "llm_retries": 0}, {})
-            gap = finalize.model_provenance_gap(run) or ""
+            gap = run_record_check.model_provenance_gap(run) or ""
             self.assertIn(
                 "called a model, but no run in its lineage recorded models_resolved",
                 gap,
@@ -84,12 +85,12 @@ class ModelProvenanceGap(unittest.TestCase):
             run = self._run(
                 d, {"c1_pass": True, "model_calls": 3}, {"m": {"model": "A"}}
             )
-            self.assertIsNone(finalize.model_provenance_gap(run))
+            self.assertIsNone(run_record_check.model_provenance_gap(run))
 
     def test_a_run_without_model_calls_is_quiet(self):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(d, {"c1_pass": True, "n_rows": 4}, {})
-            self.assertIsNone(finalize.model_provenance_gap(run))
+            self.assertIsNone(run_record_check.model_provenance_gap(run))
 
 
 class ReadmePlaceholders(unittest.TestCase):
@@ -100,15 +101,15 @@ class ReadmePlaceholders(unittest.TestCase):
                 "# x\n\n**Die eine Frage.** <ein Satz — dieselbe Frage wie im\n"
                 "PROTOCOL-Intent; braucht sie ein und, sind es zwei>\n\nok <3\n"
             )
-            got = finalize.readme_placeholders(area)
+            got = readme_check.readme_placeholders(area)
             self.assertEqual(len(got), 1)
             self.assertIn("README.md:3", got[0])  # a blank that wraps lines
             (area / "README.md").write_text("# x\n\n**Die eine Frage.** Zählt es?\n")
-            self.assertEqual(finalize.readme_placeholders(area), [])
+            self.assertEqual(readme_check.readme_placeholders(area), [])
 
     def test_no_readme_is_nothing(self):
         with tempfile.TemporaryDirectory() as d:
-            self.assertEqual(finalize.readme_placeholders(Path(d)), [])
+            self.assertEqual(readme_check.readme_placeholders(Path(d)), [])
 
     def test_angle_brackets_inside_code_spans_are_examples_not_blanks(self):
         with tempfile.TemporaryDirectory() as d:
@@ -118,13 +119,13 @@ class ReadmePlaceholders(unittest.TestCase):
                 "```\n<inputs>/<case_id>/document-1.txt\n```\n",
                 encoding="utf-8",
             )
-            self.assertEqual(finalize.readme_placeholders(area), [])
+            self.assertEqual(readme_check.readme_placeholders(area), [])
             (area / "README.md").write_text(
                 "**The one question.** <one sentence — the question>\n",
                 encoding="utf-8",
             )
             self.assertEqual(
-                len(finalize.readme_placeholders(area)), 1
+                len(readme_check.readme_placeholders(area)), 1
             )  # the twin: a real blank
 
 
@@ -155,14 +156,14 @@ class ReadmeRoute(unittest.TestCase):
     def test_the_stamped_route_is_quiet(self):
         with tempfile.TemporaryDirectory() as d:
             area = self._area(d, "# x\n\n" + ROUTE)
-            self.assertEqual(finalize.readme_route(area, "PROTOCOL-a.md"), [])
+            self.assertEqual(readme_check.readme_route(area, "PROTOCOL-a.md"), [])
             # the markers are HTML comments, not stamped blanks
-            self.assertEqual(finalize.readme_placeholders(area), [])
+            self.assertEqual(readme_check.readme_placeholders(area), [])
 
     def test_no_block_is_one_warning(self):
         with tempfile.TemporaryDirectory() as d:
             area = self._area(d, "# x\n\nDie Zahlen entstehen in comparison.py.\n")
-            got = finalize.readme_route(area, "PROTOCOL-a.md")
+            got = readme_check.readme_route(area, "PROTOCOL-a.md")
             self.assertEqual(len(got), 1)
             self.assertIn("no <!-- labkit:route -->", got[0])
 
@@ -170,7 +171,7 @@ class ReadmeRoute(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = self._area(d, ROUTE.replace("`labkit-params .`", "`params`"))
             self.assertEqual(
-                finalize.readme_route(area, "PROTOCOL-b.md"),
+                readme_check.readme_route(area, "PROTOCOL-b.md"),
                 [
                     "README.md route: does not name PROTOCOL-b.md",
                     "README.md route: does not name labkit-params",
@@ -181,13 +182,13 @@ class ReadmeRoute(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = self._area(d, ROUTE, script="def evaluate(rows):\n    return {}\n")
             self.assertEqual(
-                finalize.readme_route(area, "PROTOCOL-a.md"),
+                readme_check.readme_route(area, "PROTOCOL-a.md"),
                 ["README.md route: scripts/01_measure.py defines no evaluate_rows"],
             )
 
     def test_no_readme_is_nothing(self):
         with tempfile.TemporaryDirectory() as d:
-            self.assertEqual(finalize.readme_route(Path(d), "PROTOCOL-a.md"), [])
+            self.assertEqual(readme_check.readme_route(Path(d), "PROTOCOL-a.md"), [])
 
 
 if __name__ == "__main__":

@@ -91,19 +91,22 @@ class Repeats(unittest.TestCase):
     def test_finalize_warns_on_one_draw_of_a_model_run_and_not_after_a_repeat(self):
         """The spread is static evidence: a warning until a repeat exists,
         nothing for a run that asked no model."""
-        from labkit.gates import finalize
+        from labkit.checks import run_record_check
 
         first = self._run()
         primary = self.area / "runs" / first
-        self.assertIsNone(finalize.single_draw(self.area, primary))  # no model calls
+        self.assertIsNone(
+            run_record_check.single_draw(self.area, primary)
+        )  # no model calls
         metrics = primary / "metrics.json"
         m = json.loads(metrics.read_text())
         metrics.write_text(json.dumps({**m, "llm_retries": 0}), encoding="utf-8")
         self.assertIn(
-            "is one draw — no spread", finalize.single_draw(self.area, primary) or ""
+            "is one draw — no spread",
+            run_record_check.single_draw(self.area, primary) or "",
         )
         self._run(repeat_of=first)
-        self.assertIsNone(finalize.single_draw(self.area, primary))
+        self.assertIsNone(run_record_check.single_draw(self.area, primary))
 
     def test_a_named_repeat_is_never_written_back_not_even_with_force(self):
         """`protocol-fill --from-run <repeat>` wrote a repeat's number into
@@ -280,18 +283,21 @@ class Repeats(unittest.TestCase):
     def test_finalize_says_the_draws_cannot_be_counted(self):
         """Mutant and twin: the single-draw warning names an unreadable run
         instead of raising; with the area clean it is the usual warning."""
-        from labkit.gates import finalize
+
+        from labkit.checks import run_record_check
 
         first = self._run()
         run = self.area / "runs" / first
         (run / "metrics.json").write_text(
             json.dumps({"c1_pass": True, "model_calls": 2}), encoding="utf-8"
         )
-        self.assertIn("is one draw", finalize.single_draw(self.area, run) or "")
+        self.assertIn("is one draw", run_record_check.single_draw(self.area, run) or "")
         bad = self.area / "runs" / "2026-10-15T00-00-00_dead"
         bad.mkdir()
         (bad / "config.json").write_text("{not json", encoding="utf-8")
-        self.assertIn("cannot be counted", finalize.single_draw(self.area, run) or "")
+        self.assertIn(
+            "cannot be counted", run_record_check.single_draw(self.area, run) or ""
+        )
 
     def test_a_derived_run_needs_a_completed_primary_parent(self):
         """Every kind of parent a derived run can name. A derived run is no

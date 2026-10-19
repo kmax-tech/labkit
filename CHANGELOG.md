@@ -32,7 +32,7 @@ pins (`requirements.txt` / `requirements.lock`).
   `labkit/agents/`. The console commands keep their names. 0.99.0 is the
   last version with the flat `from labkit import runlog`; a repo moves by
   rewriting its imports with its pin.
-- **Seven large modules are split inside their layer; private names that
+- **Eight large modules are split inside their layer; private names that
   crossed are public in their new module.** No behaviour changed.
   `runlog` keeps the run writer; `provenance` (git, environment, data,
   snapshots), `start_check` (binding, preparation, the refusals before
@@ -48,7 +48,10 @@ pins (`requirements.txt` / `requirements.lock`).
   `answering_run.draws`. `scaffold` keeps stamping; `protocol_cuts` (the
   template cut to a tier) moved out. `llm` keeps resolve, complete and the
   retries; `llm_backends` (the call per backend, the endpoint choice,
-  `PromptTruncated`) moved out — `llm.BackendError` still resolves. A script
+  `PromptTruncated`) moved out — `llm.BackendError` still resolves.
+  `finalize` keeps its stations and the answering run's citation;
+  `checks/run_record_check` (what a run's record must show) and
+  `checks/readme_check` (placeholders, the route block) moved out. A script
   that imports only the public helpers is unaffected; one that reached
   into `runlog._git_state` finds `provenance.git_state`.
 - **`report-check` is the release check at every cost tier.** At

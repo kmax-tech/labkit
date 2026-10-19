@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit.gates import finalize
+from labkit.checks import run_record_check
 
 SHA_B, SHA_A = "bcec0c37236d", "1d4c79af596a"
 TEXT = (
@@ -56,7 +56,7 @@ class ArmLines(unittest.TestCase):
                 profiles=("a.toml", "b.toml"),
                 fingerprints={"before": SHA_B, "after": SHA_A},
             )
-            self.assertEqual(finalize.arm_findings(TEXT, area, run), [])
+            self.assertEqual(run_record_check.arm_findings(TEXT, area, run), [])
 
     def test_a_fingerprint_the_run_did_not_record_is_named(self) -> None:
         with tempfile.TemporaryDirectory() as d:
@@ -65,7 +65,7 @@ class ArmLines(unittest.TestCase):
                 profiles=("a.toml", "b.toml"),
                 fingerprints={"before": SHA_B, "after": "0000deadbeef"},
             )
-            got = finalize.arm_findings(TEXT, area, run)
+            got = run_record_check.arm_findings(TEXT, area, run)
             self.assertEqual(len(got), 1)
             self.assertIn(
                 f"arm `after`: the protocol names fingerprint {SHA_A}", got[0]
@@ -77,7 +77,7 @@ class ArmLines(unittest.TestCase):
                 d, profiles=("b.toml",), fingerprints={"before": SHA_B, "after": SHA_A}
             )
             text = TEXT.replace("model=gpt-oss-20b-leguin\n", "model=haiku\n", 1)
-            got = finalize.arm_findings(text, area, run)
+            got = run_record_check.arm_findings(text, area, run)
             self.assertTrue(
                 any("names register/profiles/a.toml, no such file" in g for g in got),
                 got,
@@ -91,7 +91,9 @@ class ArmLines(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area, run = _repo(d, profiles=(), fingerprints={})
             self.assertEqual(
-                finalize.arm_findings("- **Model / tool:** alias `haiku`\n", area, run),
+                run_record_check.arm_findings(
+                    "- **Model / tool:** alias `haiku`\n", area, run
+                ),
                 [],
             )
 

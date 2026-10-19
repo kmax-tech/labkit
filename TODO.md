@@ -237,8 +237,9 @@ Orientierung schwer. **Gebaut, kein Release** (Commits `9b98063` bis
 auch die acht Module, die Skripte importieren, sind umgezogen (Breaking,
 CHANGELOG). Danach `runlog`, `protocol_check`, `code_check` und
 `usability` entlang ihrer vorhandenen Blöcke geteilt, danach `runs`,
-`scaffold` und `llm` (`501aa56`, `8886f9d`); das größte Modul ist jetzt
-`gates/finalize.py` (833 Zeilen), danach `run/runlog.py` (739). Die Geschichte samt
+`scaffold` und `llm` (`501aa56`, `8886f9d`), zuletzt `finalize` (die
+Prüfungen am Laufrecord und am README nach `checks/`); das größte Modul ist
+jetzt `run/runlog.py` (739 Zeilen). Die Geschichte samt
 Fallstricken steht in `docs/notes/2026-10-19-layer-packages.md`.
 
 Offen, eigener Auftrag (Rollout):
