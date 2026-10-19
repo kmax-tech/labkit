@@ -173,55 +173,22 @@ def check_command(area: Path) -> list[str]:
 
 
 @dataclass(frozen=True)
-class Release:
-    """What a reported number owes when it is written back — the stations
-    of `report-check`, in their order. The answer line citing a run_id is
-    the declaration (`protocol-fill --from-run` writes it); these are what
-    make the declaration hold.
-
-    Attributes:
-        freeze: Station 1 — `frozen = true` and no must gap, where the lane
-            owes the freeze.
-        finalize: Station 2 — `finalize` clean, so the answering run is
-            bound to this protocol and the answer cites it.
-        full_run: Station 2 — that run is a full run: `long=True`, not
-            acknowledged unfrozen (`runs.unreportable`); a probe's number
-            is never reported.
-        analysis_audit: Station 3 — a decided analysis record of the code,
-            the promise block and the answering run as they are now
-            (`findings.audit_coverage`).
-        check: Station 4 — `check_command` exits 0: the numbers recompute
-            and the note carries them and the run_id.
-    """
-
-    freeze: bool
-    finalize: bool = True
-    full_run: bool = True
-    analysis_audit: bool = True
-    check: tuple[str, ...] = (CHECK_SCRIPT.as_posix(), CHECK_FLAG)
-
-
-def release(cost: str | None) -> Release:
-    """The release contract of a head's `cost`: the freeze follows the lane,
-    the rest is owed at every tier."""
-    return Release(freeze=lane(cost).freeze)
-
-
-@dataclass(frozen=True)
 class Skeleton:
     """What `labkit-init exp` stamps for one instrument, and what the stamped
     area then has: the script skeletons (template, destination under
     `scripts/`), the area's test template, and whether a `--probe` stage
     comes before the run. Every skeleton stamps `CHECK_SCRIPT`, so the
-    release's check is one command for every area.
+    release's check (`check_command`) is one command for every area.
 
     Attributes:
         instrument: `count`, `estimator` or `model` — the three instruments
             (README, Terms).
         scripts: (template name, destination under scripts/), in order.
         test: The template of `tests/test_<NN>_<name>.py`.
-        probe: A throwaway instrument check (`--probe`) precedes the run.
-            The count has none: its run is the instrument check.
+        probe: The skeleton has a throwaway instrument check (`--probe`).
+            The count has none: its run is the instrument check. Whether
+            the probe precedes a run is the lane's answer too — at seconds
+            every run is the full run (`Lane.every_run_full`).
     """
 
     instrument: str
@@ -276,8 +243,8 @@ def describe(cost: str | None, model: bool) -> list[str]:
     """The contract of one tier in sentences, by occasion — what
     `protocol-check --contract` prints, so an agent reads the obligations
     where it reads the fields, instead of learning them from a refusal."""
-    ln, rel, sk = lane(cost), release(cost), skeleton(cost, model)
-    check = " ".join(rel.check)
+    ln, sk = lane(cost), skeleton(cost, model)
+    check = " ".join((CHECK_SCRIPT.as_posix(), CHECK_FLAG))
     before = (
         "the registration written: " + ", ".join(registration_fields(model))
         if ln.registration
@@ -291,7 +258,7 @@ def describe(cost: str | None, model: bool) -> list[str]:
         + f"({', '.join(dest for _, dest in sk.scripts)}"
         + (
             ", a --probe stage before the run)"
-            if sk.probe
+            if sk.probe and not ln.every_run_full
             else "; the run is the instrument check)"
         ),
         f"before a full run: {before}"
@@ -306,7 +273,7 @@ def describe(cost: str | None, model: bool) -> list[str]:
             ", the source frozen in the run and tracked in git" if ln.provenance else ""
         ),
         "at the release (`protocol-fill --from-run`, the stop, the commit): "
-        + ("frozen, " if rel.freeze else "no freeze owed, ")
+        + ("frozen, " if ln.freeze else "no freeze owed, ")
         + "finalize clean, a full run (no probe, no acknowledged run), a decided "
         + f"{ANALYSIS_AUDIT} audit of code, promises and that run, `{check}` passing",
     ]

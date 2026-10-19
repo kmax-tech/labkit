@@ -117,7 +117,7 @@ from labkit.standard_contract import (
     ANALYSIS_AUDIT,
     CHECK_SCRIPT,
     check_command,
-    release,
+    lane,
 )
 
 #: which file state the declaration (the answer line) is read from — named
@@ -328,8 +328,8 @@ def report_check(
         f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
     )
     # what the release owes at this tier is the contract's answer: the freeze
-    # follows the lane, the rest is owed everywhere (`standard_contract.release`)
-    freeze_owed = release(ctx.head.cost).freeze
+    # follows the lane, the other stations are owed at every tier
+    freeze_owed = lane(ctx.head.cost).freeze
     findings = Findings()
     if freeze_owed:
         gaps = freeze_gaps(ctx)

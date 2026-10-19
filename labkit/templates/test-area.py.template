@@ -139,10 +139,10 @@ def test_every_case_class_follows_from_its_facts():
 def test_probe_cases_are_pasted():
     """Owed before a minutes/hours run (LAB-014 One fully rendered example pair per gold class). At cost = seconds no probe
     precedes the run, so the canonical forms carry the test until then."""
-    from labkit import protocol_block
+    from labkit import protocol_block, standard_contract
 
     head = protocol_block.head(measure.PROTOCOL.read_text(encoding="utf-8"))
-    if head.cost == "seconds":
+    if standard_contract.lane(head.cost).every_run_full:
         pytest.skip("cost = seconds: no probe before the run; canonical forms only")
     assert PROBE_CASES, "TODO: paste the parser cases that `--probe` prints into PROBE_CASES"
 

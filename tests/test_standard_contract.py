@@ -65,13 +65,18 @@ class Registration(unittest.TestCase):
 
 
 class TheRelease(unittest.TestCase):
-    def test_the_freeze_follows_the_lane_the_rest_is_owed_everywhere(self):
+    def test_the_description_names_a_probe_only_where_one_precedes_the_run(self):
         for cost in (None, "seconds", "minutes", "hours"):
-            with self.subTest(cost):
-                rel = sc.release(cost)
-                self.assertEqual(rel.freeze, sc.lane(cost).freeze)
-                self.assertTrue(rel.finalize and rel.full_run and rel.analysis_audit)
-                self.assertEqual(rel.check, ("scripts/02_analyze.py", "--check"))
+            for model in (True, False):
+                with self.subTest(cost=cost, model=model):
+                    first = sc.describe(cost, model)[0]
+                    owed = (
+                        sc.skeleton(cost, model).probe
+                        and not sc.lane(cost).every_run_full
+                    )
+                    self.assertEqual("--probe stage before the run" in first, owed)
+                    if not owed:
+                        self.assertIn("the run is the instrument check", first)
 
     def test_the_check_command_is_the_areas_analysis_script(self):
         self.assertEqual(

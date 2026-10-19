@@ -17,6 +17,9 @@ import unittest
 from pathlib import Path
 
 PACKAGE = Path(__file__).resolve().parents[1] / "labkit"
+#: rules that also hold in the stamped script templates — a stamped area reads
+#: its tier off the contract like labkit does (review 2026-10-19)
+IN_TEMPLATES = {"a tier rule read off the head"}
 
 #: (what, the shape of a copy, the module(s) where it belongs)
 RULES: list[tuple[str, str, set[str]]] = [
@@ -54,7 +57,10 @@ RULES: list[tuple[str, str, set[str]]] = [
 def offenders(what: str, shape: str, homes: set[str]) -> list[str]:
     out = []
     pattern = re.compile(shape)
-    for path in sorted(PACKAGE.glob("*.py")):
+    paths = sorted(PACKAGE.glob("*.py"))
+    if what in IN_TEMPLATES:
+        paths += sorted((PACKAGE / "templates").glob("*.py.template"))
+    for path in paths:
         if path.stem in homes:
             continue
         lines = path.read_text(encoding="utf-8").splitlines()

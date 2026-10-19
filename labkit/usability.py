@@ -106,23 +106,24 @@ from labkit import (
     runs,
     scaffold,
     scope_sha,
+    standard_contract,
 )
 
 #: What the scaffold stamps into a repo and an area; their sha pins the measured
 #: condition. All of it ships with labkit — the probe needs no house machinery.
+#: The skeleton templates come from `standard_contract.SKELETONS`, so the pin
+#: holds every template an instrument stamps and the table that picks them.
 STAMPED = (
     Path(scaffold.__file__).resolve(),
+    Path(standard_contract.__file__).resolve(),
     scaffold.PROTOCOL_TEMPLATE,
+    scaffold.TEMPLATES / "AGENTS.md.template",
     *(
         scaffold.TEMPLATES / t
-        for t in (
-            "AGENTS.md.template",
-            "prepare-script.py.template",
-            "measure-script.py.template",
-            "analyze-script.py.template",
-            "test-area.py.template",
-            "measure-quick-script.py.template",
-            "test-quick.py.template",
+        for t in dict.fromkeys(
+            name
+            for sk in standard_contract.SKELETONS
+            for name in (*(tmpl for tmpl, _ in sk.scripts), sk.test)
         )
     ),
 )

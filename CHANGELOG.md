@@ -84,15 +84,17 @@ pins (`requirements.txt` / `requirements.lock`).
   two), and the audit of 2026-10-19 found them disagreeing. The module
   states them once, as data read off facts a caller holds: the lane of a
   tier (`lane`: freeze or registration, the audits, the cut, the
-  foreground, the provenance check), the release of a reported number
-  (`release`: the stations of report-check), the skeleton an area gets
-  (`skeleton`) and the one check every skeleton stamps (`CHECK_SCRIPT`,
-  `check_command`). It reads no file, runs nothing, writes nothing; the
+  foreground, the provenance check; the release's freeze follows it), the
+  skeleton an area gets (`skeleton`) and the one check every skeleton
+  stamps (`CHECK_SCRIPT`, `check_command`). It reads no file, runs nothing, writes nothing; the
   checks stay with their modules, the contract says when each is due.
   Every consumer reads it (scaffold, report-check, protocol-check,
   runlog, preflight, finalize, the hooks, audit, code-check); a tier
   compared by hand outside the contract is a copy the one-home test
-  names. `protocol-check --contract` prints the contract by tier and
+  names, in labkit and in the stamped script templates (the model
+  skeleton's test reads `lane(cost).every_run_full`). The usability
+  probe's `scaffold sha` pins the contract and every template a skeleton
+  stamps (it missed the counting skeleton's `02_analyze.py`). `protocol-check --contract` prints the contract by tier and
   occasion (`describe`). No rule changed: the table is the standard's own
   (LAB-017, LAB-003, LAB-015, LAB-050, LAB-041), held to the template's
   labels and the shipped templates by its tests. Two core modules
