@@ -179,12 +179,26 @@ class FreezeGate(unittest.TestCase):
                 runlog.Run("t", {}, area, long=True)
         self.assertIn("names no `scope sha", str(cm.exception))
 
-    def test_an_explicit_na_audit_passes(self):
+    def test_a_waived_audit_is_refused_at_hours_and_names_the_honest_ways(self):
+        """Until 0.99.0 `n/a — <reason>` passed as a visible decision; third
+        haiku round, t18: the agent waived its own audit. The refusal names
+        labkit-audit and the failed attempt, and offers no word to write."""
         text = head(
             cost="hours",
             frozen=True,
             preflight_audit="n/a — decided with the supervisor",
         )
+        with self.assertRaises(SystemExit) as cm:
+            self._start(text, long=True)
+        msg = str(cm.exception)
+        self.assertIn("nobody waives their own", msg)
+        self.assertIn("labkit-audit <area> --mode preflight", msg)
+        self.assertIn("the cost tier is wrong, not the line", msg)
+        self.assertFalse((self.tmp / "runs").exists())
+
+    def test_a_waived_audit_at_seconds_is_no_finding(self):
+        """Twin: at seconds no audit is owed before the run; the line is not read."""
+        text = head(cost="seconds", preflight_audit="n/a — seconds") + REGISTRATION
         r, _ = self._start(text, long=True)
         self.assertTrue((r.dir / "config.json").is_file())
 
@@ -362,7 +376,7 @@ class FreezeGate(unittest.TestCase):
         self.assertFalse((self.tmp / "runs").exists())
 
     def test_a_full_run_records_long_and_a_probe_records_not(self):
-        r, _ = self._start(FROZEN.replace(AUDIT, "n/a — test"), long=True)
+        r, _ = self._start(self._audited(), long=True)
         self.assertTrue(json.loads((r.dir / "config.json").read_text())["long"])
         self.tmp = Path(tempfile.mkdtemp())
         r, _ = self._start(UNFROZEN, long=False)

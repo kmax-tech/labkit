@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit import runlog, runs  # noqa: E402
+from labkit import findings, promises, runlog, runs, scope_sha  # noqa: E402
 from protocol_fixture import head, scope_file  # noqa: E402
 
 
@@ -223,14 +223,24 @@ class TestLongGate(unittest.TestCase):
             # long=True also passes the freeze gate (2026-10-05): the run
             # needs a frozen, audited protocol, or it is refused for a
             # different reason than the one this test is about.
-            Path(d, "PROTOCOL-gate.md").write_text(
-                head(
-                    frozen=True,  # an explicit decision passes the stamp check
-                    preflight_audit="n/a — detach-gate test, no code to audit",
-                ),
-                encoding="utf-8",
-            )
             scope_file(Path(d))  # the frozen fixture's block names it
+            sha = scope_sha.area_stamp(Path(d))[0]
+            text = head(
+                frozen=True,
+                preflight_audit=f"2026-10-05 · scope sha {sha} · 0 findings",
+            )
+            # a decided record of this code and these promises: since 0.99.0
+            # the line names an audit, `n/a` is refused at minutes/hours
+            findings.write(
+                Path(d),
+                "preflight",
+                "opus",
+                sha,
+                promises.block_stamp(text),
+                (0, 0, 0),
+                [],
+            )
+            Path(d, "PROTOCOL-gate.md").write_text(text, encoding="utf-8")
             return subprocess.run(
                 [sys.executable, "-c", code, str(Path(__file__).resolve().parents[1])],
                 cwd=d,

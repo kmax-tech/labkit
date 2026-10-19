@@ -123,7 +123,7 @@ All of them are installed by `labkit-hooks install` from the pinned labkit, and
 **Freeze gate.** `long=True` is the script's declaration of a full run.
 `runlog` refuses it before `mkdir` unless the bound protocol's head says
 `frozen = true` and its `preflight_audit` names the `scope sha` the code
-has now (or says `n/a — <reason>`), and a decided preflight audit record
+has now (an `n/a — <reason>` is refused at minutes/hours since 0.99.0), and a decided preflight audit record
 (`audits/*-preflight.toml`) carries that same sha and the digest of the
 promise block as it is now: a hand-written line is checked, not trusted,
 and code or promises changed after the audit owe a new one. An analysis

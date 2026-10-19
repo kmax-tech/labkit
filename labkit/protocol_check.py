@@ -47,6 +47,7 @@ from pathlib import Path
 
 from labkit import console, promises, protocol_block, runs
 from labkit.repo import git_root, git_run, repo_protocols
+from labkit.findings import waived_audit_gap
 from labkit.scope_sha import audit_stamp_drift
 
 
@@ -500,6 +501,52 @@ def id_in_git_head(path: Path) -> str | None:
     return protocol_block.id_of(r.stdout) if r.returncode == 0 else None
 
 
+def cost_in_first_commit(path: Path) -> tuple[str, str | None] | None:
+    """(commit, cost) of the protocol as its first commit added it — the cost
+    tier it was registered at — or None when the file is new to git, outside
+    a repo, or that version has no readable head. `git log --diff-filter=A`
+    names the adding commit; `git show` reads the file as it was then."""
+    root = git_root(path)
+    if root is None:
+        return None
+    rel = path.resolve().relative_to(root).as_posix()
+    log = git_run(["log", "--diff-filter=A", "--format=%H", "--", rel], root)
+    if log.returncode != 0 or not log.stdout.strip():
+        return None
+    first = log.stdout.split()[-1]  # the oldest adding commit, if several
+    shown = git_run(["show", f"{first}:{rel}"], root)
+    if shown.returncode != 0:
+        return None
+    try:
+        return first, protocol_block.head(shown.stdout).cost
+    except protocol_block.BlockError:
+        return None
+
+
+def cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
+    """A WARNING when the protocol's cost tier is lower now than in the
+    commit that added it, or None. A lower tier owes less (`seconds`: no
+    audit before the run, no freeze; LAB-017 The number of audits follows
+    the cost tier), so lowering it is the next way round a gate once `n/a`
+    is refused — the same move as rewriting the promises until no check is
+    due (third haiku round on 0.99.0, t5). Exact over git: the head as it
+    was first committed against the head now; a legitimate correction says
+    why in the protocol. Static evidence, never a blocker."""
+    was = cost_in_first_commit(path)
+    if was is None or head.cost is None:
+        return None
+    commit, first = was
+    tiers = protocol_block.COST_TIERS
+    if first not in tiers or tiers.index(head.cost) >= tiers.index(first):
+        return None
+    return (
+        f"{path}: WARNING: cost tier lowered since the protocol's first commit "
+        f"({commit[:7]}: {first} -> {head.cost}) — a lower tier owes less "
+        f"(LAB-017 The number of audits follows the cost tier); say why in the "
+        f"protocol, or restore it"
+    )
+
+
 def check_protocol_id(
     path: Path, head: protocol_block.Head, ids: dict[str, list[Path]]
 ) -> list[str]:
@@ -810,6 +857,7 @@ class FileReport:
     frozen: bool = False
     audit_drift: str | None = None
     id_findings: list[str] = field(default_factory=list)
+    cost_lowered: str | None = None  # a WARNING: the tier sank since the first commit
     pilot_note: str = ""
     missing_must: list[str] = field(default_factory=list)
     #: owed should-fields; unfrozen they fold into the pilot note, frozen
@@ -893,8 +941,11 @@ def check_protocol(
     head, frozen = report.head, report.frozen
     audit_drift = None
     if frozen and head.cost != "seconds" and head.preflight_audit:
-        # a warning: after the run, analysis scripts change legitimately
-        audit_drift = audit_stamp_drift(path.parent, head.preflight_audit) or None
+        # a warning: after the run, analysis scripts change legitimately;
+        # `n/a` at minutes/hours waives an audit nobody may waive (0.99.0)
+        audit_drift = waived_audit_gap(head.preflight_audit) or (
+            audit_stamp_drift(path.parent, head.preflight_audit) or None
+        )
     field_lines = fields(text)
     missing_should = report.missing_should
     pilot_note = ""
@@ -953,6 +1004,7 @@ def check_protocol(
         frozen=frozen,
         audit_drift=audit_drift,
         id_findings=check_protocol_id(path, head, ids),
+        cost_lowered=cost_lowered(path, head),
         pilot_note=pilot_note,
         missing_must=report.missing_must,
         missing_should=missing_should,
@@ -989,6 +1041,8 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
         print(f"{f}: WARNING: preflight_audit: {r.audit_drift}")
     for finding in r.id_findings:
         print(finding)
+    if r.cost_lowered:
+        print(r.cost_lowered)
     if r.runs_stamped:
         print(
             f"{f}: Runs: the stamped entry is written by "

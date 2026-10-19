@@ -49,7 +49,7 @@ import sys
 from pathlib import Path
 
 from labkit.code_check import check_intent_ids, stamp_coverage_findings
-from labkit import console, install_hooks, promises, protocol_block
+from labkit import console, install_hooks, protocol_block
 from labkit import findings as audit_findings
 from labkit.gate import Findings
 from labkit.repo import (
@@ -61,8 +61,13 @@ from labkit.repo import (
     no_such_area,
     split_area_name,
 )
-from labkit.protocol_check import check_fields, check_protocol_id, repo_protocol_ids
-from labkit.scope_sha import AREA_GLOBS, AUDIT_SHA, area_stamp, audit_stamp_drift
+from labkit.protocol_check import (
+    check_fields,
+    check_protocol_id,
+    cost_lowered,
+    repo_protocol_ids,
+)
+from labkit.scope_sha import AREA_GLOBS, area_stamp
 
 
 def _is_dirty(area: Path) -> bool:
@@ -182,12 +187,20 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
         findings.add(
             f
         )  # graded by its own word (a changed id warns, a doubled one blocks)
+    lowered = cost_lowered(protocol, report.head)
+    if lowered:
+        findings.warn(lowered)
     for label in missing_should:
         findings.warn(f"missing (should): {label}")
     for n, label in should_holes:
         findings.warn(f"{protocol.name}:{n}: placeholder (should): {label}")
     if not (
-        missing_must or must_holes or id_findings or missing_should or should_holes
+        missing_must
+        or must_holes
+        or id_findings
+        or lowered
+        or missing_should
+        or should_holes
     ):
         print("  ok")
 
@@ -329,27 +342,15 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
 def _coverage_gap(
     area: Path, head: "protocol_block.Head | None", text: str
 ) -> str | None:
-    """Why the head's audit line claims an audit of this code, or None: its
-    `scope sha` is not the code's stamp now (`scope_sha.audit_stamp_drift`
-    — until 0.95.0 preflight never compared them and passed the state the
-    freeze gate refuses, audit 2026-10-15), or no decided preflight record
-    saw that code and the promise block TEXT carries now
-    (`findings.audit_coverage`; runlog refuses the full run on the same
-    answers). Silent at `seconds`, without a line, and on `n/a`."""
+    """Why the head's audit line does not cover a full run of this code, or
+    None — `findings.audit_line_gap`, the same answer runlog's freeze gate
+    gives (until 0.95.0 preflight never compared the stamps and passed the
+    state the freeze gate refuses, audit 2026-10-15; until 0.99.0 both took
+    `n/a` as a decision). Silent at `seconds` and without a line."""
     if head is None or head.cost == "seconds" or not head.preflight_audit:
         return None
-    drift = audit_stamp_drift(area, head.preflight_audit)
-    if drift:
-        return f"preflight_audit: {drift}"
-    m = AUDIT_SHA.search(head.preflight_audit)
-    if m is None:  # `n/a — <reason>`: a visible decision, not a claim
-        return None
-    try:
-        return audit_findings.audit_coverage(
-            area, m.group(1), "preflight", promises.block_stamp(text)
-        )
-    except (audit_findings.FindingsError, promises.PromiseError) as exc:
-        return str(exc)
+    gap = audit_findings.audit_line_gap(area, head.preflight_audit, text)
+    return f"preflight_audit: {gap}" if gap else None
 
 
 def main(argv: list[str]) -> int:

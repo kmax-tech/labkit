@@ -82,6 +82,9 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit import promises
+from labkit.scope_sha import AUDIT_SHA, audit_stamp_drift
+
 DIR = "audits"
 #: the suffix of a failed attempt's file, never of a record of findings
 FAILED_SUFFIX = "-failed.toml"
@@ -517,6 +520,50 @@ def audit_unavailable(
         and f.timeout_s >= ATTEMPT_TIMEOUT_S
     ]
     return fitting[-1] if fitting else None
+
+
+def waived_audit_gap(line: str) -> str | None:
+    """Why an audit line reading `n/a — <reason>` does not cover a full run
+    at `minutes`/`hours`, or None when the line says something else. Until
+    0.99.0 `n/a` passed every gate as "a visible decision"; third haiku round
+    on 0.99.0 (labkit-paper area 09, t18): the agent wrote `frozen = true`
+    with `preflight_audit = "n/a — RF model training does not require
+    external audit"`, and runlog took it. Nobody waives their own audit;
+    the line names the honest ways and offers no word to write instead."""
+    if not line.strip().lower().startswith("n/a"):
+        return None
+    return (
+        "`preflight_audit` says n/a — at minutes/hours a full run owes the "
+        "preflight audit, and nobody waives their own: run `labkit-audit <area> "
+        "--mode preflight` and stamp the scope sha it prints; when the backend "
+        "does not answer, labkit-audit records the failed attempt and a full run "
+        "acknowledges it with LABKIT_UNFROZEN=1 (its number stays unreportable). "
+        "If no audit is owed at all, the cost tier is wrong, not the line — and "
+        "a tier lowered after the protocol's first commit is reported "
+        "(LAB-015 Preflight audit before freezing, LAB-017 The number of audits follows the cost tier)"
+    )
+
+
+def audit_line_gap(area: Path, line: str, text: str) -> str | None:
+    """Why the head's non-empty `preflight_audit` LINE does not cover a full
+    run of AREA under the protocol TEXT, or None: it waives the audit
+    (`waived_audit_gap`), its `scope sha` is not the code's stamp now
+    (`scope_sha.audit_stamp_drift`), or no decided preflight record saw that
+    code and the promise block TEXT carries now (`audit_coverage`). One
+    answer for runlog's freeze gate and `preflight` (they had two copies
+    until 0.99.0); the caller decides what an empty line and `seconds` mean."""
+    waived = waived_audit_gap(line)
+    if waived:
+        return waived
+    drift = audit_stamp_drift(area, line)
+    if drift:
+        return drift
+    m = AUDIT_SHA.search(line)
+    assert m is not None, "audit_stamp_drift passes a line only with a sha"
+    try:
+        return audit_coverage(area, m.group(1), "preflight", promises.block_stamp(text))
+    except (FindingsError, promises.PromiseError) as exc:
+        return str(exc)
 
 
 def repo_records(experiments: Path) -> list[tuple[Path, Record]]:

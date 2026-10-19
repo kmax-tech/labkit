@@ -9,6 +9,28 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **`n/a` in `preflight_audit` no longer waives the audit at `minutes`/`hours`.**
+  Third haiku round on 0.99.0 (labkit-paper area 09, t18): the agent set
+  `frozen = true` with `preflight_audit = "n/a — RF model training does not
+  require external audit"`, and runlog took it as a visible decision. Now
+  a full run at `minutes`/`hours` is refused on such a line; `preflight`
+  blocks it when frozen and `protocol-check` warns. The refusal names the
+  honest ways — run `labkit-audit`, or let it record the failed attempt
+  when the backend does not answer — and says that whoever owes no audit
+  has the wrong cost tier; it offers no word to write. One home for the
+  line's reading: `findings.audit_line_gap` (runlog and preflight had two
+  copies). The shipped standard's paragraph says so (its stamp 0.20 is the
+  release's). `n/a` keeps its place at `seconds`. 0.98.0 is the last version
+  that passes it.
+- **A cost tier lowered since the protocol's first commit is a warning.**
+  The next way round, once `n/a` is refused, is `cost = "seconds"`, where
+  nothing is owed before the run — the same move as rewriting the promises
+  until no check is due. `protocol_check.cost_lowered` reads the head as
+  the adding commit has it (`git log --diff-filter=A`, `git show`) against
+  the head now; a lower tier is a WARNING in `protocol-check` (so in the
+  post-change hook) and `preflight`, naming commit and both tiers. Static
+  evidence: a legitimate correction says why in the protocol.
+
 - **The stop hook and the pre-commit hold a touched area to its audit
   records.** An area the session changed a file in (git status), or a
   staged file lies in, that holds an audit BLOCKER nobody decided: `claude-hook

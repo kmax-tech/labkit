@@ -293,8 +293,12 @@ evidence file under the same ID (top of this document).*
   `scope sha` with every finding decided. Fixing the findings changes the
   stamp, so the fixed code owes a second audit; writing the new sha into the
   line alone is refused (2026-10-14: a cold agent did, and no audit had seen
-  the frozen code). Whoever deliberately waives the audit
-  writes `n/a — <reason>`; that is a visible decision.
+  the frozen code). At `minutes`/`hours` the line names an audit — a
+  `n/a — <reason>` is refused for a full run (0.99.0: an agent waived its
+  own audit); when the backend does not answer, `labkit-audit` records the
+  failed attempt and a full run acknowledges it with `LABKIT_UNFROZEN=1`,
+  its number unreportable. Whoever owes no audit has the `seconds` tier,
+  and a tier lowered after the protocol's first commit is reported.
 
   **The audit reads the filled-in protocol.** If the required intent fields
   are still placeholders, the agent refuses with one line: an audit of the
@@ -1256,6 +1260,15 @@ pitfalls, *Patterns* 5:101046 (pages).
 
 Dated changes that alter no rule; a change to a rule or a field is the next
 version of the standard.
+
+- 2026-10-19 — LAB-015 Preflight audit before freezing, the paragraph "The
+  line is checked, not believed": `n/a — <reason>` no longer waives the
+  audit at `minutes`/`hours` (labkit 0.99.0 refuses it for a full run);
+  the failed attempt `labkit-audit` writes is the one acknowledged
+  exception. This alters what the rule demands and belongs to the next
+  version, 0.20, whose stamp (`standard = "0.20"` in every head) is the
+  author's release step; the text is corrected here so the shipped standard
+  says what the gate does.
 
 - 2026-10-15 — LAB-015 Preflight audit before freezing: the scar "Trivial solution passes / null probe
   without a target" (pilots 06 and 07). Section 8: the base layer from the
