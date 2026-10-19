@@ -798,9 +798,32 @@ den Ertrag je Klasse auszählt.
 
 ## Notiert, nicht geplant
 
+- **Standardvertrag 2026-10-19 (Branch `claude/standard-contract-rpwkod`,
+  Unreleased):** die Pflichten je Kostenstufe stehen einmal in
+  `labkit/standard_contract.py` (Lane, Freigabe, Gerüst, Registrierungs-
+  felder, der eine Check `scripts/02_analyze.py --check`), ohne eine Regel
+  zu ändern; jeder Verbraucher liest dort, `tests/test_one_home.py` greift
+  einen von Hand verglichenen Tier außerhalb des Vertrags. Zwei
+  Kern-Module (`runlog`, `code_check`) importieren die Doktrin, wo sie die
+  Regel vorher kopiert hatten — in `tests/test_architecture.py` als
+  Kreuzung notiert, nicht versteckt. Das Zählgerüst stempelt sein eigenes
+  `02_analyze.py` (Breaking: Bereiche aus 0.99.0 oder früher tragen den
+  Check noch in `01_measure.py`; die Lücke nennt die Vorlage).
+  `report-check` baut je Prüfung einen Kontext (`Checked`: Text im
+  benannten Dateistand, Kopf, zitierte Läufe, der eine antwortende Lauf)
+  und sagt, welchen Stand er hielt; `repo.areas_of` ist die eine Antwort
+  auf „welche Bereiche berühren diese Pfade“; `adopt` schreibt atomar.
+  Je Gerüst ein durchgängiger Test auf der echten Kette
+  (`tests/test_end_to_end.py`), die vier Auditbefunde dort festgenagelt.
+  **Beobachtet, kein Bauauftrag:** ein gelöschter Pfad öffnet keinen
+  Bereich — Stop-Hook (`_git_changed` lässt `D` aus) und Pre-Commit
+  (`--diff-filter=ACMR`) sehen eine gelöschte Datei unter einer
+  berichteten Zahl nicht; `report-check <bereich>` nennt die Lücke.
+  `kind = apply/fit/count` bleibt zurückgestellt (s. u.).
 - **Audit 2026-10-19 der Freigabekette, vier Befunde behoben** (Commits
   `228d0f9`, `a8cf35d`, `0246826`, `f4524aa`): Station 4 nimmt bei
-  `seconds` das `01_measure.py --check` des Zählgerüsts; `adopt` setzt
+  `seconds` das `01_measure.py --check` des Zählgerüsts (seit dem
+  Standardvertrag: `02_analyze.py --check` bei jedem Gerüst); `adopt` setzt
   bei jeder Ausnahme zurück; `--if-reported` hält jedes Protokoll eines
   Bereichs, den ein geänderter oder gestagter Pfad berührt; der
   Pre-Commit läuft mit `--staged` (Antwort aus dem Index, Bereich muss

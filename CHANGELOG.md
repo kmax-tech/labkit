@@ -77,6 +77,33 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **`standard_contract` — one home for what each tier owes, of which run,
+  at which occasion.** The obligations the standard puts on a number were
+  spelled by every component for itself (`head.cost == "seconds"` in
+  seven modules, the registration's labels in one, the check's script in
+  two), and the audit of 2026-10-19 found them disagreeing. The module
+  states them once, as data read off facts a caller holds: the lane of a
+  tier (`lane`: freeze or registration, the audits, the cut, the
+  foreground, the provenance check), the release of a reported number
+  (`release`: the stations of report-check), the skeleton an area gets
+  (`skeleton`) and the one check every skeleton stamps (`CHECK_SCRIPT`,
+  `check_command`). It reads no file, runs nothing, writes nothing; the
+  checks stay with their modules, the contract says when each is due.
+  Every consumer reads it (scaffold, report-check, protocol-check,
+  runlog, preflight, finalize, the hooks, audit, code-check); a tier
+  compared by hand outside the contract is a copy the one-home test
+  names. `protocol-check --contract` prints the contract by tier and
+  occasion (`describe`). No rule changed: the table is the standard's own
+  (LAB-017, LAB-003, LAB-015, LAB-050, LAB-041), held to the template's
+  labels and the shipped templates by its tests. Two core modules
+  (`runlog`, `code_check`) import it where they had copied the rule; the
+  architecture test records the crossing by name.
+- **Every skeleton end to end on the real chain** (`tests/test_end_to_end.py`):
+  the count at seconds, the prompt skeleton at seconds with the model
+  faked, the estimator at minutes through the freeze — stamped, filled,
+  registered, run under the interpreter, held by finalize, audited,
+  adopted, held again by the stop hook and the pre-commit. The four
+  findings of the 2026-10-19 audit are pinned there, not on fixtures.
 - **A report field written before any run is named.** `protocol-check`
   warns per report field (Did, Outcome, Result, Rival check, …) filled
   while "Answering run" is still the stamp's and no completed run is bound
@@ -129,6 +156,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **`report-check` builds one context per check and names the state it
+  held.** The stations read `report_check.Checked` (`checked`): the
+  protocol text as the named file state holds it — the working tree at
+  the stop, the index at the commit (`--staged`), the written proposal at
+  the adoption — its head, the runs the answer cites, and the answering
+  run chosen once (`audit.audited_run`, through
+  `runs.bound_answering_run`); no station reads the file or chooses the
+  run for itself, and the output says "read from the index". Which areas
+  changed or staged paths touch is one answer, `repo.areas_of`, for the
+  stop's reported numbers and the commit's undecided findings.
+  `protocol-fill --from-run` writes the proposal and its restore through
+  `runs.write_atomic`, whole or not at all. Same gates, same blockers.
 - **`labkit-init --report` no longer declares a model-free protocol
   deterministic.** It fills only "Parser cases harvested"; "Randomness
   controls" and "Noise ceiling → threshold" come back as placeholders for
