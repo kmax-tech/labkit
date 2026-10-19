@@ -78,6 +78,7 @@ evidence** (warns), **agent audit** (semantic).
 | Which prose fields does a protocol owe, and which are filled? | `protocol_check.FIELDS`, `protocol_check.check_fields` |
 | What does a cost tier owe — the freeze or the registration, which audits, which cut, the foreground, the provenance check? What does a reported number owe at its release? Which skeleton does an area get, and what is its check? | `standard_contract.lane`, `standard_contract.release`, `standard_contract.skeleton`, `standard_contract.registration_fields`, `standard_contract.CHECK_SCRIPT` — every consumer reads the field it needs; a `cost == "seconds"` outside the contract is a copy |
 | Which protocols does an area hold? Which does the repo? | `repo.area_protocols`; `repo.repo_protocols` (outside `repo.SKIP_DIRS`); `repo.PROTOCOL_GLOB`, `repo.PROTOCOL_NAME` are the name |
+| Which areas do changed or staged paths touch? | `repo.areas_of` (the nearest area above each path, each once; the stop's reported numbers and the commit's undecided findings read the same answer) |
 | Where is the repo? Where is the lab? | `repo.git_root` (git), `repo.layout_root` (git, else stamped tree); `repo.lab_root` (the nearest `models.toml`) |
 | Run git | `repo.git` (output, loud on failure), `repo.git_run` (exit code is the answer) |
 | Which directories does an area's `runs/` hold, and what does each say? | `runs.run_dirs` (one walk, metadata read once; an unreadable run is data — the caller refuses, reports or skips) |
@@ -93,6 +94,7 @@ evidence** (warns), **agent audit** (semantic).
 | Is this run a repeat draw, of which, and is it comparable? | `runs.repeat_parent`, `runs.repeats_of`, `runs.repeat_mismatch` — a repeat never answers (`bound_runs` leaves it out, `completed_runs(with_repeats=…)` makes every caller decide) |
 | Which run recorded the model that answered these rows? | `runs.model_provenance_run` (walks `derived_from`; a derived run records none) |
 | Which protocol does a command hold an area to? | `repo.choose_protocol` (the named one, else the only one; never a guess) |
+| What does one check hold — which protocol text, which file state, which answering run? | `report_check.checked` (`Checked`: built once, read by every station; the state is named — the working tree at the stop, the index at the commit, the written proposal at the adoption; the run is `runs.bound_answering_run`'s choice through `audit.audited_run`) |
 | How does a registered constant stand against the record? | `promises.constant_records` (equal / different / missing, type-strict); runlog refuses before mkdir, intent-check/finalize block, `labkit-params` shows all three |
 | Does a frozen protocol owe a promise block? | `promises.promise_tables_owed` — protocol-check (MUST), preflight and finalize (blocker), runlog (refusal before mkdir) |
 | Which code did an audit see, and is it still that code? | `scope_sha.area_stamp`, `scope_sha.audit_stamp_drift` (area stamp, not per promise) |

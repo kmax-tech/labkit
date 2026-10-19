@@ -570,3 +570,34 @@ class Adopt(unittest.TestCase):
         self.assertEqual(rc, 1, out)
         self.assertIn("no analysis audit saw the area as it is now", out)
         self.assertEqual(text, before)
+        self.assertEqual([p.name for p in area.glob(".PROTOCOL-*")], [])
+
+    def test_the_check_is_told_it_holds_the_proposal_written_whole(self):
+        """The written-back protocol goes to report-check as the proposed
+        state with its text (`report_check.PROPOSED`), written through
+        `runs.write_atomic`: no half-written protocol, no temp file left."""
+        area = self._area()
+        proto = area / "PROTOCOL-x.md"
+        seen: dict = {}
+
+        def check(area_, protocol, *, state, text):
+            seen.update(state=state, text=text)
+            self.assertEqual(protocol.read_text(encoding="utf-8"), text)
+            return 0
+
+        with (
+            mock.patch.object(protocol_fill.report_check, "report_check", check),
+            mock.patch.object(
+                protocol_fill.runs,
+                "write_atomic",
+                wraps=protocol_fill.runs.write_atomic,
+            ) as atomic,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            rc = protocol_fill.main([str(proto), "--from-run"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(seen["state"], protocol_fill.report_check.PROPOSED)
+        self.assertIn(f"c1_pass = True (run {self.RUN})", seen["text"])
+        self.assertEqual(atomic.call_count, 1)
+        self.assertEqual(proto.read_text(encoding="utf-8"), seen["text"])
+        self.assertEqual([p.name for p in area.glob(".PROTOCOL-*")], [])

@@ -142,14 +142,18 @@ def standard_excerpt(mode: str = "preflight") -> tuple[str, str]:
     return f"{STANDARD_LABEL} ({', '.join(ids)} — the rules this audit cites)", text
 
 
-def audited_run(area: Path, protocol: Path) -> tuple[Path | None, str]:
+def audited_run(
+    area: Path, protocol: Path, text: str | None = None
+) -> tuple[Path | None, str]:
     """The run an analysis audit reads and its record is bound to — the
     answering run (`runs.bound_answering_run`, the one choice every gate
-    holds the protocol to) read off the protocol file, or `(None, why)`: no
+    holds the protocol to) read off the protocol file (or TEXT, the
+    protocol as the caller's file state holds it), or `(None, why)`: no
     protocol id, no completed bound run, a blocker of the choice. Raises
     AuditError on a head it cannot read. report-check holds the record to
-    the same choice."""
-    text = protocol.read_text(encoding="utf-8")
+    the same choice (`report_check.checked`)."""
+    if text is None:
+        text = protocol.read_text(encoding="utf-8")
     try:
         pid = protocol_block.head(text).id
     except protocol_block.BlockError as exc:

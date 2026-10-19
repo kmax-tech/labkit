@@ -92,6 +92,40 @@ class ReportCheck(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertIn("all clear", out)
 
+    def test_the_context_is_built_once_and_names_what_it_holds(self):
+        """One text, one head, one answering run, one named file state for
+        every station (`checked`): the declaration is read from the text
+        the caller hands over, the run is chosen once through
+        `audit.audited_run`, and the output says which state was held."""
+        area = self._area(cost="seconds", frozen=False)
+        run = self._answered(area)
+        proto = area / "PROTOCOL-x.md"
+        ctx = report_check.checked(area, proto)
+        self.assertEqual((ctx.state, ctx.cited, ctx.run), (report_check.TREE, (), run))
+        self.assertEqual(ctx.text, proto.read_text(encoding="utf-8"))
+        # the index's text, not the tree's: the declaration comes from there
+        staged = ctx.text + f"- **Answer to the question:** 1 (run {run.name})\n"
+        ctx = report_check.checked(area, proto, state=report_check.INDEX, text=staged)
+        self.assertEqual((ctx.state, ctx.cited), (report_check.INDEX, (run.name,)))
+        self.assertEqual(ctx.head.cost, "seconds")
+        self._audited(area, run)
+        code, out = self._run(area)
+        self.assertEqual(code, 0, out)
+        self.assertIn(
+            f"read from the working tree; the answer cites no run; the answering "
+            f"run is {run.name}",
+            out,
+        )
+
+    def test_without_an_answering_run_the_context_says_why(self):
+        area = self._area()
+        ctx = report_check.checked(area, area / "PROTOCOL-x.md")
+        self.assertIsNone(ctx.run)
+        self.assertIn("no completed run bound to", ctx.why)
+        code, out = self._run(area)
+        self.assertEqual(code, 1)
+        self.assertIn(f"the answering run is none — {ctx.why}", out)
+
     def test_a_freeze_with_a_must_gap_blocks(self):
         """Frozen with the stamp's `<…>` promise sentences: the flag is set,
         the freeze registers nothing (cloud judge probe, draw 4)."""
@@ -372,6 +406,12 @@ class IfReported(unittest.TestCase):
         proto.write_text(reported, encoding="utf-8")
         code, out = self._staged_gate(root, proto)
         self.assertEqual((code, out), (0, ""))
+
+    def test_staged_names_the_index_as_the_state_held(self):
+        area = self._area(f"1 (run {self.RUN})", git=True)
+        code, out = self._staged_gate(area.parent.parent, area / "PROTOCOL-x.md")
+        self.assertEqual(code, 0, out)
+        self.assertIn("read from the index; the answer cites " + self.RUN, out)
 
     def test_staged_refuses_an_area_whose_tree_is_not_the_index(self):
         """A script modified and one untracked under a reported number: the

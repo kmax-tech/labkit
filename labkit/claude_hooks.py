@@ -117,6 +117,7 @@ from labkit import (
 from labkit.repo import (
     PROTOCOL_NAME,
     area_protocols,
+    areas_of,
     find_area,
     git_run,
     status_entries,
@@ -586,17 +587,12 @@ def undecided_blockers(repo: Path, paths: list[Path]) -> list[str]:
     """Every audit BLOCKER still `open` in an area one of PATHS lies in — as
     `<area>: <file>: <text>`, each area once — or the sentence of a record
     nobody can read. The area is the nearest directory above the path with a
-    PROTOCOL-*.md, inside REPO (`find_area`). A path outside every area, and
-    an area without audits/, contribute nothing: this holds the areas the
-    session worked in, not the whole repo (A4, 2026-10-17: a repo's old
-    areas must not block every stop)."""
-    areas: list[Path] = []
-    for path in paths:
-        area = find_area(path, stop=repo)
-        if area is not None and area not in areas:
-            areas.append(area)
+    PROTOCOL-*.md, inside REPO (`repo.areas_of`, the stop's answer too). A
+    path outside every area, and an area without audits/, contribute
+    nothing: this holds the areas the session worked in, not the whole repo
+    (A4, 2026-10-17: a repo's old areas must not block every stop)."""
     out = []
-    for area in areas:
+    for area in areas_of(paths, repo):
         shown = area.relative_to(repo.resolve()).as_posix()
         try:
             records = findings.area_records(area)

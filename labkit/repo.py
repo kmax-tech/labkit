@@ -170,6 +170,21 @@ def find_area(path: Path, stop: Path | None = None) -> Path | None:
     return None
 
 
+def areas_of(paths: list[Path], stop: Path) -> list[Path]:
+    """The areas PATHS touch, each once, in path order: the nearest area
+    above each path (`find_area`, the walk ends at STOP without leaving it);
+    a path under no area contributes nothing. The one answer for every gate
+    that holds "the areas this session worked in" — the stop's reported
+    numbers and the commit's undecided findings — so the two cannot drift
+    apart in what they call an area."""
+    out: list[Path] = []
+    for path in paths:
+        area = find_area(path, stop=stop)
+        if area is not None and area not in out:
+            out.append(area)
+    return out
+
+
 def git_root(path: Path) -> Path | None:
     """The nearest ancestor (or `path`) holding `.git`; None outside a repo."""
     base = path if path.is_dir() else path.parent

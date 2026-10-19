@@ -288,16 +288,21 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     hand-written or later-changed answer. A check that ends in an exception
     puts BEFORE back too and re-raises: until 0.99.0 only a blocker exit
     restored the file, and the unchecked declaration stayed (audit
-    2026-10-19, a check script printing a byte no codec reads)."""
-    protocol.write_text(after, encoding="utf-8")
+    2026-10-19, a check script printing a byte no codec reads). Both writes
+    go whole or not at all (`runs.write_atomic`): a reader, or the next
+    check, sees the protocol as it was or as proposed, never half of
+    either; the check is told it holds the proposal (`report_check.PROPOSED`)."""
+    runs.write_atomic(protocol, after)
     try:
-        rc = report_check.report_check(protocol.parent, protocol)
+        rc = report_check.report_check(
+            protocol.parent, protocol, state=report_check.PROPOSED, text=after
+        )
     except BaseException:
-        protocol.write_text(before, encoding="utf-8")
+        runs.write_atomic(protocol, before)
         raise
     if rc == 0:
         return 0
-    protocol.write_text(before, encoding="utf-8")
+    runs.write_atomic(protocol, before)
     print(
         f"protocol-fill: not adopted — report-check refuses the written result "
         f"(above); {protocol.name} is as it was. Pass the checks first, or leave "

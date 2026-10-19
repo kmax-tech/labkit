@@ -55,7 +55,12 @@ report-check comes last and holds the whole chain, at every cost tier:
                    a file the skeleton never wrote, audit 2026-10-19)
 
 Every station runs; the blockers are summed at the end. It reads and runs,
-never writes.
+never writes. The stations read one context (`Checked`, built once by
+`checked`): the protocol text as the named file state holds it, its head,
+the run ids the answer cites, and the answering run chosen once
+(`audit.audited_run`, through `runs.bound_answering_run`, the one choice
+every gate holds a protocol to) — no station reads the file or chooses the
+run for itself, and the output names the state that was held.
 
 `--if-reported` is the gate the agent cannot choose: `claude-hook stop`
 runs it on every changed path, the stamped pre-commit on every staged one,
@@ -88,6 +93,7 @@ import argparse
 import contextlib
 import io
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.gate import Findings
@@ -98,8 +104,8 @@ from labkit.preflight import area_test_python
 from labkit.protocol_check import check_fields
 from labkit.repo import (
     area_protocols,
+    areas_of,
     choose_protocol,
-    find_area,
     git_root,
     git_run,
     layout_root,
@@ -107,7 +113,79 @@ from labkit.repo import (
 )
 from labkit.runs import read_run_config, unreportable
 from labkit.scope_sha import area_stamp
-from labkit.standard_contract import CHECK_SCRIPT, check_command, release
+from labkit.standard_contract import (
+    ANALYSIS_AUDIT,
+    CHECK_SCRIPT,
+    check_command,
+    release,
+)
+
+#: which file state the declaration (the answer line) is read from — named
+#: in the output, so a reader knows what was held. The stations read the
+#: working tree in every case; the caller makes the tree that state: the
+#: pre-commit holds the area's tree equal to the index (`tree_differs`), the
+#: adoption writes the proposal into the tree and puts it back on refusal
+#: (`protocol_fill.adopt`)
+TREE = "working tree"
+INDEX = "index"
+PROPOSED = "proposed protocol"
+
+
+@dataclass(frozen=True)
+class Checked:
+    """The context of one check, built once (`checked`) and read by every
+    station: one protocol text, one head, one answering run, one named file
+    state — so the declaration, the audit record and the check are held to
+    the same run and the same text, and no station chooses for itself.
+
+    Attributes:
+        area: The area, resolved.
+        repo: Where the area's layout starts (`repo.layout_root`).
+        protocol: The protocol file.
+        text: The protocol as STATE holds it — the declaration is read here.
+        head: Its TOML head.
+        state: TREE, INDEX or PROPOSED.
+        cited: The run ids the answer cites (`finalize.cited_runs`) — the
+            declaration that a result is reported.
+        run: The answering run (`audit.audited_run`, through
+            `runs.bound_answering_run`: the one choice every gate holds the
+            protocol to), or None.
+        why: Why there is no answering run, when RUN is None.
+    """
+
+    area: Path
+    repo: Path
+    protocol: Path
+    text: str
+    head: protocol_block.Head
+    state: str
+    cited: tuple[str, ...]
+    run: Path | None
+    why: str
+
+
+def checked(
+    area: Path, protocol: Path, *, state: str = TREE, text: str | None = None
+) -> Checked:
+    """The context of one check: TEXT is the protocol as STATE holds it
+    (the working tree when None). Raises `protocol_block.BlockError` on an
+    unreadable head, `AuditError` out of the run choice."""
+    if text is None:
+        text = protocol.read_text(encoding="utf-8")
+    head = protocol_block.head(text)
+    run, why = audited_run(area, protocol, text)
+    return Checked(
+        area=area.resolve(),
+        repo=layout_root(area),
+        protocol=protocol,
+        text=text,
+        head=head,
+        state=state,
+        cited=tuple(cited_runs(text)),
+        run=run,
+        why=why,
+    )
+
 
 #: how long `--check` may take inside the gate (audit 2026-10-15: no limit)
 CHECK_TIMEOUT_S = 300.0
@@ -143,56 +221,55 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
     return f"{script} --check exits {r.returncode}: " + " | ".join(tail)
 
 
-def freeze_gaps(protocol: Path, frozen: bool) -> list[str]:
+def freeze_gaps(ctx: Checked) -> list[str]:
     """Station 1: why the freeze does not hold — the flag unset, or a must
     gap protocol-check names (the stamp's `<…>` promise sentences among them)."""
-    gaps = [] if frozen else ["not `frozen = true` — a reported number owes the freeze"]
-    report = check_fields(protocol.read_text(encoding="utf-8"))
+    gaps = (
+        []
+        if ctx.head.frozen
+        else ["not `frozen = true` — a reported number owes the freeze"]
+    )
+    report = check_fields(ctx.text)
     gaps += report.missing_must
     # a must field still holding its `<…>` placeholder passed here while
     # protocol-check and preflight refused it (audit 2026-10-15)
     gaps += [f"line {n}: {label} still a placeholder" for n, label in report.must_holes]
-    return [f"{protocol.name}: {g}" for g in gaps]
+    return [f"{ctx.protocol.name}: {g}" for g in gaps]
 
 
-def analysis_audit_gap(area: Path, protocol: Path) -> str | None:
+def analysis_audit_gap(ctx: Checked) -> str | None:
     """Station 3: why no decided analysis record covers the code, the promise
     block and the answering run as they are now, or None. Without an
     answering run there is nothing the audit could be held to."""
+    if ctx.run is None:
+        return f"no answering run to hold it to — {ctx.why}"
     try:
-        run_dir, why = audited_run(area, protocol)
-        if run_dir is None:
-            return f"no answering run to hold it to — {why}"
         return findings.audit_coverage(
-            area,
-            area_stamp(area)[0],
-            "analysis",
-            promises.block_stamp(protocol.read_text(encoding="utf-8")),
-            run_dir.name,
+            ctx.area,
+            area_stamp(ctx.area)[0],
+            ANALYSIS_AUDIT,
+            promises.block_stamp(ctx.text),
+            ctx.run.name,
         )
-    except (FileNotFoundError, ValueError, AuditError) as exc:
+    except (FileNotFoundError, ValueError) as exc:
         # ValueError: nothing to stamp, a findings file or the promise block
-        # unreadable (FindingsError, PromiseError); AuditError: the head
+        # unreadable (FindingsError, PromiseError)
         return f"the analysis audit cannot be held to the area: {exc}"
 
 
-def unreportable_gaps(area: Path, protocol: Path, freeze_owed: bool) -> list[str]:
+def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[str]:
     """Station 2, the run: why the answering run's number cannot be reported
     (`runs.unreportable`), each a blocker. Without an answering run there is
     nothing to hold — finalize says so. FREEZE_OWED names the freeze in the
     sentence (minutes/hours); at seconds a full run is owed, no freeze."""
-    try:
-        run_dir, _ = audited_run(area, protocol)
-    except AuditError as exc:
-        return [f"the answering run cannot be chosen: {exc}"]
-    if run_dir is None:
+    if ctx.run is None:
         return []
-    cfg = read_run_config(run_dir)
+    cfg = read_run_config(ctx.run)
     if cfg is None:
-        return [f"{run_dir.name}: no config.json — not a run"]
+        return [f"{ctx.run.name}: no config.json — not a run"]
     owed = "a full run (long=True)" + (" on a frozen protocol" if freeze_owed else "")
     return [
-        f"the answering run {run_dir.name}: {mark} — its number cannot be "
+        f"the answering run {ctx.run.name}: {mark} — its number cannot be "
         f"reported; a reported number owes {owed}"
         for mark in unreportable(cfg)
     ]
@@ -212,44 +289,58 @@ def finalize_gaps(area: Path, protocol: Path) -> list[str]:
     return [f"finalize {area} exits {finalized} — run it to see why"]
 
 
-def later_gaps(area: Path, protocol: Path, freeze_owed: bool = True) -> list[str]:
+def later_gaps(ctx: Checked, freeze_owed: bool = True) -> list[str]:
     """Stations 2–4: finalize clean and its run a full run, an analysis audit
     of the area now, the check."""
-    out = finalize_gaps(area, protocol)
-    out += unreportable_gaps(area, protocol, freeze_owed)
-    gap = analysis_audit_gap(area, protocol)
+    out = finalize_gaps(ctx.area, ctx.protocol)
+    out += unreportable_gaps(ctx, freeze_owed)
+    gap = analysis_audit_gap(ctx)
     if gap:
         out.append(f"analysis audit: {gap} (LAB-050 Analysis audit before reporting)")
-    failed = check_analysis_script(area, layout_root(area))
+    failed = check_analysis_script(ctx.area, ctx.repo)
     if failed:
         out.append(f"{failed} (LAB-041 Generate numbers, don't retype them)")
     return out
 
 
-def report_check(area: Path, protocol: Path | None = None) -> int:
-    """Run the stations on AREA; 0 clean, 1 a blocker, 2 no protocol to hold."""
+def report_check(
+    area: Path,
+    protocol: Path | None = None,
+    *,
+    state: str = TREE,
+    text: str | None = None,
+) -> int:
+    """Run the stations on AREA; 0 clean, 1 a blocker, 2 no protocol to hold.
+    STATE and TEXT name the file state the declaration is read from
+    (`checked`): the tree by default, the index for the pre-commit, the
+    written proposal for the adoption."""
     chosen = choose_protocol(area, protocol, "report-check")
     if chosen is None:
         return 2
     try:
-        head = protocol_block.head(chosen.read_text(encoding="utf-8"))
-    except protocol_block.BlockError as exc:
+        ctx = checked(area, chosen, state=state, text=text)
+    except (protocol_block.BlockError, AuditError) as exc:
         print(f"report-check: {chosen.name}: {exc}")
         return 2
+    print(
+        f"  {chosen.name}: read from the {ctx.state}; the answer cites "
+        f"{', '.join(ctx.cited) or 'no run'}; the answering run is "
+        f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
+    )
     # what the release owes at this tier is the contract's answer: the freeze
     # follows the lane, the rest is owed everywhere (`standard_contract.release`)
-    freeze_owed = release(head.cost).freeze
+    freeze_owed = release(ctx.head.cost).freeze
     findings = Findings()
     if freeze_owed:
-        gaps = freeze_gaps(chosen, head.frozen)
+        gaps = freeze_gaps(ctx)
     else:
         gaps = []
         print(
-            f'  {chosen.name}: cost = "{head.cost}" — no freeze and no preflight audit '
+            f'  {chosen.name}: cost = "{ctx.head.cost}" — no freeze and no preflight audit '
             f"owed (LAB-017 The number of audits follows the cost tier); the full "
             f"run, the analysis audit and the check are"
         )
-    for b in gaps + later_gaps(area, chosen, freeze_owed):
+    for b in gaps + later_gaps(ctx, freeze_owed):
         findings.block(b)
     if not findings.blocked:
         held = ("frozen, " if freeze_owed else "") + "finalized, audited, checked"
@@ -261,13 +352,9 @@ def reported_protocols(paths: list[Path], repo: Path) -> list[Path]:
     """Every protocol of every area one of PATHS lies in, each once, in
     path order: a changed script, run or audit record reopens the area's
     reported numbers as a changed protocol does. A path under no area
-    (`repo.find_area`, stopping at REPO) contributes nothing."""
-    areas: list[Path] = []
-    for path in paths:
-        area = find_area(path, stop=repo)
-        if area is not None and area not in areas:
-            areas.append(area)
-    return [p for area in sorted(areas) for p in area_protocols(area)]
+    contributes nothing (`repo.areas_of`, the commit's undecided gate reads
+    the same answer)."""
+    return [p for area in sorted(areas_of(paths, repo)) for p in area_protocols(area)]
 
 
 def index_text(repo: Path, path: Path) -> str | None:
@@ -327,7 +414,10 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
                 )
                 worst = max(worst, 1)
                 continue
-        worst = max(worst, report_check(area, protocol))
+        worst = max(
+            worst,
+            report_check(area, protocol, state=INDEX if staged else TREE, text=text),
+        )
     return worst
 
 

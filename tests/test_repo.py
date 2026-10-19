@@ -45,6 +45,28 @@ class Layout(unittest.TestCase):
             ["PROTOCOL-s1-a.md", "PROTOCOL-s10-b.md"],
         )
 
+    def test_areas_of_names_each_touched_area_once_in_path_order(self):
+        """The stop's reported numbers and the commit's undecided findings
+        read the same answer: the nearest area above each path, each once,
+        a path under no area contributing nothing."""
+        root = Path(tempfile.mkdtemp())
+        b, a = root / "experiments" / "02-b", root / "experiments" / "01-a"
+        for area in (a, b):
+            (area / "scripts").mkdir(parents=True)
+            (area / f"PROTOCOL-{area.name[3:]}.md").write_text("")
+        (root / "lib").mkdir()
+        touched = repo.areas_of(
+            [
+                b / "scripts" / "01_measure.py",
+                root / "lib" / "x.py",
+                a / "PROTOCOL-a.md",
+                b / "runs" / "r" / "metrics.json",
+            ],
+            stop=root,
+        )
+        self.assertEqual(touched, [b.resolve(), a.resolve()])
+        self.assertEqual(repo.areas_of([root / "lib" / "x.py"], stop=root), [])
+
     def test_roots(self):
         plain = Path(tempfile.mkdtemp())
         self.assertIsNone(repo.git_root(plain))
