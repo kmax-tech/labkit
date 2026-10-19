@@ -1040,22 +1040,23 @@ def _registration_refusal(
     bound: _Bound,
     block: "promises.PromiseTables | None",
     config: dict,
-    long: bool,
+    full_run: bool,
 ) -> str | None:
     """The registration's contract, before any gate that can be acknowledged
     and before mkdir (standard 0.19): a frozen protocol and every full run
     carry the promises as data (`promises.promise_tables_owed`), and a run under a
     block records every registered constant unchanged — otherwise the
     number is held to a threshold nobody registered (Durchstich
-    2026-10-06). None when it holds, or when the run is unbound (the
-    freeze gate refuses an unbound full run on its own)."""
+    2026-10-06). FULL_RUN is the lane's answer (`_is_full_run`), not the
+    script's word alone. None when it holds, or when the run is unbound
+    (the freeze gate refuses an unbound full run on its own)."""
     name, head = bound.name, bound.head
     if head is None or bound.text is None:
         return None
     owed = promises.promise_tables_owed(
         block,
         frozen=head.frozen,
-        full_run=long,
+        full_run=full_run,
         registers=promises.registers_ids(bound.text),
     )
     if owed:
@@ -1065,6 +1066,18 @@ def _registration_refusal(
         if refusal:
             return f"{name}: {refusal}"
     return None
+
+
+def _is_full_run(long: bool, cost: str | None) -> bool:
+    """Whether this run is held to what a full run owes: the script declares
+    it (`long=True`), or the lane says every run is one
+    (`standard_contract.Lane.every_run_full` — at seconds the run is the
+    instrument check, there is no probe stage before it). Until 2026-10-19
+    the gate read `long` alone, so a hand-written `long=False` at seconds
+    started under registered ids without their tables while protocol-check
+    named the missing tables a MUST. The script's word stays recorded as
+    `long`; the release refuses a probe's number (`runs.unreportable`)."""
+    return long or lane(cost).every_run_full
 
 
 def _constants_refusal(block: "promises.PromiseTables", config: dict) -> str | None:
@@ -1161,7 +1174,8 @@ class Run:
         _block, self._promises = _promise_snapshot(base_dir, bound.text)
         # Frozen now: what the registration check holds is what config.json records.
         self._config = dict(config)
-        refusal = _registration_refusal(bound, _block, self._config, long)
+        full_run = _is_full_run(long, self._cost_tier)
+        refusal = _registration_refusal(bound, _block, self._config, full_run)
         if refusal:
             raise SystemExit(f"runlog: {refusal}")
         # Detach gate (scar 2026-08-13, twice in one evening): a long run
@@ -1196,7 +1210,12 @@ class Run:
         self._unfrozen_ack = False
         self._audit_failed: str | None = None
         self._long = long  # the script's declaration, recorded (0.99.0)
-        if long:
+        declares = (
+            "this run declares long=True (a full run)"
+            if long
+            else f'this run is at cost = "{self._cost_tier}", where every run is the full run'
+        )
+        if full_run:
             # An undecided BLOCKER of a preflight audit is not an unfrozen
             # protocol a run may acknowledge: it is a finding nobody read.
             # The acknowledgement passed it until 0.97.1 (labkit-paper area
@@ -1204,7 +1223,7 @@ class Run:
             blockers, open_warnings = _undecided_findings(base_dir)
             if blockers:
                 raise SystemExit(
-                    "runlog: this run declares long=True (a full run), and a "
+                    f"runlog: {declares}, and a "
                     "preflight audit found BLOCKER(s) nobody decided — not an "
                     "unfrozen protocol, an ignored finding; LABKIT_UNFROZEN=1 does not pass "
                     "it. Decide each (fixed / accepted / deferred / dismissed) "
@@ -1237,7 +1256,7 @@ class Run:
                 )
             elif gaps:
                 raise SystemExit(
-                    "runlog: this run declares long=True (a full run), but its "
+                    f"runlog: {declares}, but its "
                     "protocol is not ready for one:\n  "
                     + "\n  ".join(gaps)
                     + "\nFreeze first: `preflight <AREA>` clean, audit stamped, "

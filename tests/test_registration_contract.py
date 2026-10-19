@@ -111,6 +111,27 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
             self.assertIn("a full run is held to the registration", str(cm.exception))
             self.assertFalse((area / "runs").exists())
 
+    def test_at_seconds_a_probe_without_a_block_is_refused_too(self) -> None:
+        """The lane says every run at seconds is the full run
+        (`Lane.every_run_full`); runlog read `long` alone and started a
+        hand-written `long=False` under registered ids without their tables
+        while protocol-check named them a MUST (review 2026-10-19). The
+        twin: a count registers no id and starts either way."""
+        with tempfile.TemporaryDirectory() as d:
+            area = _area(d, head(cost="seconds", promises=None) + BODY)
+            with self.assertRaises(SystemExit) as cm:
+                _start(area, {}, long=False)
+            self.assertIn("a full run is held to the registration", str(cm.exception))
+            self.assertFalse((area / "runs").exists())
+        with tempfile.TemporaryDirectory() as d:
+            count = _area(
+                d,
+                head(cost="seconds", promises=None)
+                + "\n- **Question / hypothesis:** q\n",
+            )
+            r = _start(count, {}, long=False)
+            self.assertTrue((r.dir / "config.json").is_file())
+
 
 class ProtocolCheckOwesTheBlock(unittest.TestCase):
     def test_frozen_without_a_block_is_a_must_finding(self) -> None:

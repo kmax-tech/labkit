@@ -262,6 +262,13 @@ class FreezeGate(unittest.TestCase):
         self.assertIn("Success / failure criterion", str(cm.exception))
         self.assertIn('cost = "seconds"', str(cm.exception))
         self.assertFalse((area / "runs").exists())
+        # a probe too: at seconds every run is the full run (the lane's
+        # answer, `every_run_full`), and the refusal says so
+        with self.assertRaises(SystemExit) as cm:
+            runlog.Run("t", {}, area, long=False)
+        self.assertIn("where every run is the full run", str(cm.exception))
+        self.assertIn("Success / failure criterion", str(cm.exception))
+        self.assertFalse((area / "runs").exists())
 
     def test_a_count_at_seconds_starts_without_criterion_or_tables(self):
         r, _ = self._start(SECONDS_COUNT, long=True)
