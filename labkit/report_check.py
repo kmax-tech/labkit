@@ -276,11 +276,10 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[str]:
 
 def finalize_gaps(area: Path, protocol: Path) -> list[str]:
     """Station 2, the gate before: finalize's blockers, each named here with
-    its prefix — inside the stop hook "run it to see them" was a round trip
-    the agent did not take. finalize runs on a silent collector, so its
-    findings arrive as data and nothing of its output reaches this gate's
-    (until 0.100.0 stdout was redirected for that). Exit 2 (no protocol to
-    hold) is one blocker."""
+    its prefix — a hook that says "run it to see them" asks for a round
+    trip the agent does not take. finalize runs on a silent collector
+    (`Findings(tell=None)`): its findings arrive as data and nothing of its
+    output reaches this gate's. Exit 2 (no protocol to hold) is one blocker."""
     collected = Findings(tell=None)  # the data, not the console
     finalized = finalize_area(area, protocol, collected)
     if finalized == 0:

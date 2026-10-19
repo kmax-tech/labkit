@@ -366,10 +366,9 @@ def check_audit_coverage(
 ) -> None:
     """Station 3, the line: why the head's AUDIT_LINE does not cover a full
     run of this code and the promise block TEXT carries now
-    (`findings.audit_line_gap` — the same answer runlog's freeze gate
-    gives; until 0.95.0 preflight never compared the stamps and passed the
-    state the freeze gate refuses, audit 2026-10-15; until 0.99.0 both took
-    `n/a` as a decision). A gap warns, and blocks once FROZEN."""
+    (`findings.audit_line_gap`, the same answer runlog's freeze gate gives
+    — preflight must not pass a state the run refuses). A gap warns, and
+    blocks once FROZEN."""
     gap = audit_findings.audit_line_gap(area, audit_line, text)
     if gap:
         (findings.block if frozen else findings.warn)(
@@ -381,9 +380,10 @@ def check_deferred_elsewhere(
     findings: Findings, area: Path, records: list[audit_findings.Record]
 ) -> None:
     """Station 3, the reminder: every `deferred` finding in another area of
-    the repo, told and never counted (uniagent 2026-10-08: one deferred in
-    area 16 bit in 17); a record elsewhere nobody can read warns. Closes
-    the station with what RECORDS (this area's) say when nothing is open."""
+    the repo, told and never counted — a finding deferred there as "its own
+    task" may be this area's; a record elsewhere nobody can read warns.
+    Closes the station with what RECORDS (this area's) say when nothing is
+    open."""
     experiments = area.resolve().parent
     try:
         elsewhere = audit_findings.deferred_elsewhere(area, experiments)
@@ -395,7 +395,7 @@ def check_deferred_elsewhere(
     if elsewhere:
         findings.note(
             f"  {len(elsewhere)} deferred finding(s) elsewhere in the repo — a reminder, "
-            f"not counted (uniagent 2026-10-08: one deferred in area 16 bit in 17)"
+            f"not counted"
         )
     undecided = any(r.open for r in records)
     if not records and not elsewhere:
@@ -407,7 +407,7 @@ def check_deferred_elsewhere(
 def check_code(findings: Findings, area: Path, protocol: Path, repo: Path) -> None:
     """Station 4: code-check's intent ids against the code and the stamp's
     coverage of it, each line graded by code-check's own word and counted
-    once (until 0.96.0 preflight counted them a second time)."""
+    once — here, not again by code-check."""
     lines = check_intent_ids(area, protocol) + stamp_coverage_findings(area, repo)
     for line in lines:
         findings.add(line)
@@ -453,10 +453,9 @@ def check_hooks(findings: Findings, git_repo: Path) -> None:
 def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> None:
     """Station 8: what running the area's tests found (TESTS, from
     `area_tests`). No file: a warning, a blocker once FROZEN — frozen means
-    every gap is owed (protocol-check's graduation), and a missing
-    permanent resolution check is such a gap (2026-10-07: it only warned,
-    and a protocol could freeze without any test). A failing run blocks,
-    with its last lines told; a missing pytest warns."""
+    every gap is owed (protocol-check's graduation), and the permanent
+    resolution check is such a gap. A failing run blocks, with its last
+    lines told; a missing pytest warns."""
     names = ", ".join(f.name for f in tests.files)
     if not tests.files:
         (findings.block if frozen else findings.warn)(

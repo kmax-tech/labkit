@@ -68,6 +68,14 @@ instead).
   the `dev` extra.
 - **Fail loud.** No bare `except`, no silent skip. A malformed input raises
   with a sentence naming the field.
+- **The current rule first, the history in a note.** A docstring says
+  what holds today: task, inputs, result, side effects, errors, the
+  conditions in force. A comment at the code names one non-obvious
+  decision or limit a later editor would otherwise break, with the short
+  why. Dates, the incident and the rejected approaches go into a note under
+  `docs/notes/` (one per topic, dated), which the code links. Test for each
+  historical sentence: would removing it make a present limit unclear or a
+  wrong change likelier? Then a short why stays; else it moves.
 - **One home per logic.** The id alphabet lives in `labkit/promises.py`;
   other modules import it. A second use means moving code, not copying it.
 - **Every number-producing function gets a test.** A gate that blocks gets

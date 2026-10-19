@@ -4,20 +4,17 @@ summary and the exit code.
 Every gate that blocks (preflight, finalize, report-check, code-check,
 notes-check) collects its findings here and ends with `report`: one
 spelling of the grade (`BLOCKER:` / `WARNING:`), one summary line, one exit
-contract — 1 with a blocker, 0 otherwise. Until 0.96.0 five gates spelled
-this five ways (a dataclass, two counters with inline prints, graded
-strings counted by `startswith` — and preflight counted code-check's
-strings a second time), and three spellings of the grade (audit 2026-10-15).
+contract — 1 with a blocker, 0 otherwise.
 
 A finding is data first (`GateFinding`: its grade and its text — not
 `findings.Finding`, an audit's finding the person decides) and a line on
 the console second. `Findings` keeps the data and tells each finding, as it
 is found, through one channel — `print` by default, `None` for a gate that
-runs inside another gate and only wants the data: report-check runs
-finalize that way and names its blockers, where until 0.100.0 it redirected
-stdout to silence them. Headers and the notes a station prints beside its
-findings (`note`) go through the same channel, so a silent gate is silent
-whole; they are told, never counted.
+runs inside another gate and only wants the data (report-check's finalize
+station). Headers and the notes a station prints beside its findings
+(`note`, `header`) go through the same channel, so a silent gate is silent
+whole; they are told, never counted. Why one collector and one channel:
+docs/notes/2026-10-19-gates-and-run-start.md.
 
 A finding that already carries its grade as a word (code-check's
 `BLOCKER · <where> · …`, protocol-check's `…: WARNING: …`) goes in through
@@ -63,9 +60,8 @@ class GateFinding:
 class Findings:
     """What the stations found, as data, and the channel they are told through.
 
-    Every blocker is told as one line and repeated in the summary — inside a
-    commit hook the sections run to 20 lines and the one blocker drowned in
-    the middle (usability probe 2026-10-07).
+    Every blocker is told as one line and repeated in the summary, so it is
+    found at the end of a long hook output too.
 
     Args:
         tell: Where each line goes as it is found — `print` by default;

@@ -1212,10 +1212,6 @@ def _prepare(
     (`_promise_snapshot`) — each a SystemExit. Freezes the config: what
     the registration check holds is what config.json records."""
     derived = _derived_parent(base_dir, derived_from)
-    # A derived run (2026-10-05): the same raw rows, evaluated again —
-    # because evaluate() gained a descriptive key, not because anything
-    # about the measurement changed. It names its parent so the record
-    # shows one measurement with two readings instead of two runs.
     bound = _protocol_binding(base_dir, protocol)
     cost = bound.head.cost if bound.head is not None else None
     block, snapshot = _promise_snapshot(base_dir, bound.text)
@@ -1232,15 +1228,13 @@ def _prepare(
 
 
 def _foreground_refusal(base_dir: Path, cost: str | None, long: bool) -> None:
-    """The detach gate (scar 2026-08-13, twice in one evening): a long run
-    started in an agent's foreground shell dies with the harness's tool
-    timeout — the kill takes the whole process group, run and lock with
-    it. `long=True` is the script's own declaration (the --full stage sets
-    it); the gate refuses the foreground start BEFORE any work. Which lane
-    may start in the foreground is the contract's answer
-    (`standard_contract.Lane.foreground`): a run of seconds cannot meet
-    that timeout (2026-10-05). `LABKIT_DETACHED=1` says the detach already
-    happened. Raises SystemExit on the refusal."""
+    """The detach gate: a run that declares `long=True` may not start in a
+    foreground shell an agent harness limits (`foreground_timeout`) — the
+    harness kills the process group at its limit, run and lock with it.
+    Which lane may start in the foreground is the contract's answer
+    (`standard_contract.Lane.foreground`); `LABKIT_DETACHED=1` says the
+    detach already happened. Raises SystemExit on the refusal, before any
+    work. History: docs/notes/2026-10-19-gates-and-run-start.md."""
     if lane(cost).foreground or not long:
         return
     limit = foreground_timeout()
@@ -1258,24 +1252,22 @@ def _foreground_refusal(base_dir: Path, cost: str | None, long: bool) -> None:
 
 
 def _freeze_gate(base_dir: Path, prepared: _Prepared) -> tuple[bool, str | None]:
-    """The freeze gate for a full run (2026-10-05), before mkdir: a full run
-    on a protocol not ready for one is a refusal, not a run with a warning.
-    Returns (unfrozen_ack, audit_failed): whether `LABKIT_UNFROZEN=1` took
-    the run past its gaps, and the failed audit attempt that rests on.
+    """The freeze gate for a full run, before mkdir: a full run on a protocol
+    not ready for one is a refusal, not a run with a warning. Returns
+    (unfrozen_ack, audit_failed): whether `LABKIT_UNFROZEN=1` took the run
+    past its gaps, and the failed audit attempt that rests on.
 
     In order: an undecided BLOCKER of a preflight audit refuses, with or
-    without the acknowledgement — it is a finding nobody read, not an
-    unfrozen protocol (the acknowledgement passed it until 0.97.1,
-    labkit-paper area 09, haiku round: the record lay in audits/ before the
-    first run). Then the gaps (`_freeze_findings`: the freeze at
+    without the acknowledgement — a finding nobody read is not an unfrozen
+    protocol. Then the gaps (`_freeze_findings`: the freeze at
     minutes/hours, the registration at seconds): none, and the run starts
     plain; gaps and `LABKIT_UNFROZEN=1`, and the run starts acknowledged —
     at minutes/hours only over an audit that could NOT run
     (`_audit_unavailable`, SystemExit without one), recorded and told, its
     number unreportable; gaps alone refuse. The refusals name the
-    consequence, not a way round: the agents of the benchmark rounds took
-    the way the message offered and called their run a "pilot" (review
-    2026-10-18), so the messages do not use the word."""
+    consequence and offer no way round, and they say "probe", never
+    "pilot" — agents take the way a message offers. Why each rule:
+    docs/notes/2026-10-19-gates-and-run-start.md."""
     declares = (
         "this run declares long=True (a full run)"
         if prepared.long
@@ -1361,13 +1353,11 @@ def _admit(base_dir: Path, prepared: _Prepared, data: dict | None) -> _Admitted:
 
 def _provenance(base_dir: Path, config: dict, derived: bool) -> _Provenance:
     """Phase 3, first step: everything the record says about where the run
-    started, read BEFORE the directory exists — a failure after mkdir left
-    a directory without config.json behind, a run that never was
-    (2026-10-09). A derived run re-reads the parent's rows; its model is
-    the one that answered THEN. Resolving the alias now, under today's
-    models.toml, would record a provenance the rows never had — so a
-    DERIVED run records none, and `runs.model_provenance_run` walks
-    derived_from to the run that did (2026-10-08)."""
+    started, read BEFORE the directory exists — a failure here must leave
+    no directory without config.json. A DERIVED run records no models: its
+    rows were answered by its parent's model, and today's models.toml would
+    record a provenance the rows never had (`runs.model_provenance_run`
+    walks derived_from to the run that did)."""
     return _Provenance(
         git=_git_state(base_dir),
         git_full=_head(base_dir),
@@ -1482,7 +1472,7 @@ class Run:
         self._promises = prepared.promises
         self._config = prepared.config
         self._derived_from = prepared.derived_from
-        self._long = prepared.long  # the script's declaration, recorded (0.99.0)
+        self._long = prepared.long  # the script's declaration, recorded as `long`
         self._data = admitted.data
         self._unfrozen_ack = admitted.unfrozen_ack
         self._audit_failed = admitted.audit_failed
@@ -1493,10 +1483,9 @@ class Run:
         provenance = _provenance(
             base_dir, prepared.config, derived=prepared.derived_from is not None
         )
-        # A repeat's draw number is counted and its record written under one
-        # lock: counted outside it, two parallel starts took the same number,
-        # and a file named before the record could disagree with it (review
-        # 2026-10-15). `self.draw` is the one number the script names its file by.
+        # Count a repeat's draw and write its record under the same lock:
+        # concurrent starts must not receive the same number, and `self.draw`
+        # is the one number the script names its file by.
         guard = (
             _index_lock(base_dir) if repeat_of is not None else contextlib.nullcontext()
         )
