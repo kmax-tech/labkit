@@ -798,6 +798,20 @@ den Ertrag je Klasse auszählt.
 
 ## Notiert, nicht geplant
 
+- **Audit 2026-10-19 der Freigabekette, vier Befunde behoben** (Commits
+  `228d0f9`, `a8cf35d`, `0246826`, `f4524aa`): Station 4 nimmt bei
+  `seconds` das `01_measure.py --check` des Zählgerüsts; `adopt` setzt
+  bei jeder Ausnahme zurück; `--if-reported` hält jedes Protokoll eines
+  Bereichs, den ein geänderter oder gestagter Pfad berührt; der
+  Pre-Commit läuft mit `--staged` (Antwort aus dem Index, Bereich muss
+  Index = Arbeitsbaum sein). **Zwei Folgen beobachten, kein Bauauftrag:**
+  (1) der Stop-Hook öffnet jetzt jeden Bereich mit alten, nicht
+  committeten Änderungen — ein Repo mit liegengebliebenem Stand in einem
+  berichteten Bereich wird bei jedem Stop einmal zurückgeschickt, bis der
+  Stand committet oder der Audit erneuert ist; (2) ein teilweise gestagter
+  Bereich mit berichteter Zahl wird am Commit verweigert — Arbeitsweise
+  „ganzen Bereich stagen oder stashen". Prüfstelle: die nächste
+  Pilotrunde und die eigenen Commits in `labkit-paper`.
 - **Branch `claude/zealous-davinci-3hbhvk` (2026-10-17/18) — ausgewertet
   2026-10-19.** Parallel zu `main` gebaut, vom selben Stand (`1c426bc`).
   Übernommen als je ein Commit: B1, C1, C3, C2, D1/D2 (s. Plan „Kein
