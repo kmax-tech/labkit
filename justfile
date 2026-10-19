@@ -23,7 +23,8 @@ test-start name:
 test-fail name:
     {{venv}}/pytest -q -k {{quote(name)}} --pdb
 
-# a labkit module under pdb from its entry point: just debug audit AREA --mode preflight
+# a labkit module under pdb from its entry point, named with its layer package:
+# just debug gates.audit AREA --mode preflight
 debug module *args:
     {{venv}}/python -m pdb -m labkit.{{module}} {{args}}
 
@@ -34,9 +35,9 @@ calltree command *args:
 # runs the module FILE, not -m: with -m, --include_files keeps nothing (viztracer 1.1.1);
 # the leading - opens the timeline even when the command exits non-zero
 
-# the run as a timeline in the browser: just timeline protocol_check --contract
+# the run as a timeline in the browser: just timeline formats.protocol_check --contract
 timeline module *args:
-    -{{venv}}/viztracer --quiet --include_files ./labkit -o /tmp/labkit-timeline.json -- labkit/{{module}}.py {{args}}
+    -{{venv}}/viztracer --quiet --include_files ./labkit -o /tmp/labkit-timeline.json -- labkit/{{replace(module, ".", "/")}}.py {{args}}
     {{venv}}/vizviewer /tmp/labkit-timeline.json
 
 # A release is one step in the one order the tag test allows: the CHANGELOG entry

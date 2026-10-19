@@ -32,8 +32,8 @@
     {
       "id": "module",
       "type": "promptString",
-      "description": "labkit module file name, without .py",
-      "default": "protocol_check"
+      "description": "labkit module with its layer package, e.g. formats.protocol_check",
+      "default": "formats.protocol_check"
     },
     {
       "id": "args",

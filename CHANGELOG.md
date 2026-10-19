@@ -9,6 +9,29 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **The modules live in layer packages; imports name the package.** The
+  layers of `docs/architecture.md` are folders now, and the package root
+  holds only `__init__.py`, the packages and the shipped assets
+  (`templates/`, `agents/`, `docs/`, read through `labkit.PACKAGE_DIR`):
+
+  | Package | Modules |
+  |---|---|
+  | `labkit.formats` | `protocol_block`, `promises`, `protocol_check`, `standard_contract`, `runs`, `repo`, `scope_sha`, `rules`, `findings`, `console`, `gate` |
+  | `labkit.run` | `runlog`, `batch`, `llm`, `endpoint_lease` |
+  | `labkit.checks` | `intent_check`, `code_check`, `recheck`, `notes_check` |
+  | `labkit.gates` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `install_hooks` |
+  | `labkit.tools` | `protocol_fill`, `scaffold`, `repo_check`, `params`, `calltree` |
+  | `labkit.probes` | `usability`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` |
+
+  An experiment script writes `from labkit.run import runlog, batch, llm`,
+  `from labkit.formats import promises, runs`, `from labkit.checks import
+  recheck`; the templates `labkit-init` stamps do so. `python -m
+  labkit.rules` is `python -m labkit.formats.rules`; the template
+  `experiment-protocol.md.template` sits in `labkit/templates/`, the
+  field guide in `labkit/docs/`, the audit agents' instructions in
+  `labkit/agents/`. The console commands keep their names. 0.99.0 is the
+  last version with the flat `from labkit import runlog`; a repo moves by
+  rewriting its imports with its pin.
 - **`report-check` is the release check at every cost tier.** At
   `cost = "seconds"` it exited 0 with "nothing owed here"; a probe's number
   written back there passed as a reported one. Now only station 1 (the

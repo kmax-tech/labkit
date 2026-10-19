@@ -32,6 +32,19 @@ def layer_map() -> dict[str, int]:
     return out
 
 
+def folder_map() -> dict[str, str]:
+    """Module → the package folder its row of the layer table names."""
+    doc = (ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
+    out: dict[str, str] = {}
+    for m in re.finditer(r"^\| ((?:\d|tools)[^|]*)\| ([^|]+)\|", doc, re.M):
+        folder = re.search(r"`labkit/(\w+)/`", m.group(1))
+        if folder is None:
+            raise AssertionError(f"layer row {m.group(1).strip()!r} names no folder")
+        for name in re.findall(r"`(\w+)`", m.group(2)):
+            out[name] = folder.group(1)
+    return out
+
+
 def doctrine_modules() -> set[str]:
     """The modules the layer table marks doctrine; every other module is core."""
     doc = (ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
@@ -102,6 +115,15 @@ class Layers(unittest.TestCase):
         layers = layer_map()
         self.assertEqual([m for m in modules() if m not in layers], [])
         self.assertEqual([m for m in layers if m not in modules()], [])
+
+    def test_every_module_sits_in_its_rows_folder(self):
+        folders, paths = folder_map(), module_paths()
+        astray = {
+            m: f"labkit/{paths[m].parent.name}/, its row says labkit/{f}/"
+            for m, f in folders.items()
+            if m in paths and paths[m].parent.name != f
+        }
+        self.assertEqual(astray, {})
 
     def test_imports_point_downward(self):
         layers = layer_map()
