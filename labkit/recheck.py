@@ -29,7 +29,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import promises, protocol_block, runs, scope_sha
+from labkit.formats import promises, protocol_block, runs, scope_sha
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
 #: reproduce: runlog's duration, llm's retry counter (the stamped evaluate()

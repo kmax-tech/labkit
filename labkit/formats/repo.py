@@ -20,7 +20,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from labkit import console
+from labkit.formats import console
 
 GIT_TIMEOUT_S = 20
 

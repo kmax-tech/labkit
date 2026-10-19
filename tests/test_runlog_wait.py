@@ -23,7 +23,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit import findings, promises, runlog, runs, scope_sha  # noqa: E402
+from labkit.formats import findings, promises, runs, scope_sha  # noqa: E402
+from labkit import runlog  # noqa: E402
 from protocol_fixture import head, scope_file  # noqa: E402
 
 

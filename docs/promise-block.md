@@ -1,7 +1,7 @@
 # Promise block
 
 What a protocol promises the code, as data instead of prose, and what the
-checks built on it may claim. Code: `labkit/promises.py`; tests:
+checks built on it may claim. Code: `labkit/formats/promises.py`; tests:
 `tests/test_promises.py`. Terms (`protocol`, `run`, `metrics`, `intent id`)
 are coined in the README.
 
@@ -69,7 +69,7 @@ R (`r1`), Q (`q1`), H (`h1`).
 ## The block
 
 The protocol's one fenced TOML block holds the head (`[protocol]`, see
-`labkit/protocol_block.py` and `docs/protocol-run-binding.md`) and the
+`labkit/formats/protocol_block.py` and `docs/protocol-run-binding.md`) and the
 `[[promise]]` tables:
 
 ```toml

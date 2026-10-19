@@ -15,7 +15,6 @@ anywhere in the text is gone on purpose.
 """
 
 import contextlib
-import importlib.util
 import io
 import sys
 import tempfile
@@ -23,17 +22,12 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-CHECKER = REPO / "labkit" / "protocol_check.py"
 TEMPLATE = REPO / "labkit" / "templates" / "experiment-protocol.md.template"
 
 sys.path.insert(0, str(REPO))
-from labkit import protocol_block  # noqa: E402
+from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
-spec = importlib.util.spec_from_file_location("protocol_check", CHECKER)
-assert spec is not None and spec.loader is not None
-protocol_check = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(protocol_check)
 
 MUST = [f.label for f in protocol_check.FIELDS if f.level == "must"]
 SHOULD = [f.label for f in protocol_check.FIELDS if f.level == "should"]
@@ -206,6 +200,7 @@ class TestCheckFields(unittest.TestCase):
     def test_real_freeform_protocol_has_no_head(self):
         report = protocol_check.check_fields(REAL_FREEFORM_PROTOCOL)
         self.assertIsNone(report.head)
+        assert report.head_error is not None
         self.assertIn("no [protocol] table", report.head_error)
 
     def test_real_freeform_protocol_misses_every_must_field(self):

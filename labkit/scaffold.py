@@ -11,7 +11,7 @@
 lab's empty glossary `notes/theorie/terms.md` (the one home of a lab term,
 LAB-084 Double-coinage check), and a test that the shared helpers resolve to
 the package. The lab standard is not
-copied: it comes with the pin (`python -m labkit.rules show LAB-nnn`).
+copied: it comes with the pin (`python -m labkit.formats.rules show LAB-nnn`).
 
 `exp` stamps one self-contained area `experiments/NN-<name>/`: the protocol
 (the pilot part by default; `--report` adds the † fields, now or when the run
@@ -35,13 +35,14 @@ import importlib.metadata
 import os
 import re
 
-from labkit import console
+from labkit.formats import console
 import uuid
 from pathlib import Path
 
-from labkit import PACKAGE_DIR, protocol_block, standard_contract
-from labkit.protocol_check import model_named
-from labkit.repo import (
+from labkit import PACKAGE_DIR
+from labkit.formats import protocol_block, standard_contract
+from labkit.formats.protocol_check import model_named
+from labkit.formats.repo import (
     AREA_NAME,
     area_protocols,
     git_run,

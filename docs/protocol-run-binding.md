@@ -7,7 +7,7 @@ coined in the README and not repeated here.
 ## Identity
 
 A protocol carries its own id in the `[protocol]` table of its ```toml
-block (the head, `labkit/protocol_block.py`):
+block (the head, `labkit/formats/protocol_block.py`):
 
 ```toml
 [protocol]

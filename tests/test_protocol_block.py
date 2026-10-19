@@ -2,7 +2,7 @@
 
 import unittest
 
-from labkit import protocol_block
+from labkit.formats import protocol_block
 from protocol_fixture import PID, head
 
 

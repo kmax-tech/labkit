@@ -17,7 +17,8 @@ from pathlib import Path
 
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file
 
-from labkit import code_check, preflight, scope_sha
+from labkit import code_check, preflight
+from labkit.formats import scope_sha
 
 
 class UnreadableSource(unittest.TestCase):

@@ -8,10 +8,8 @@ dict, a field staged by a later step.
 """
 
 import contextlib
-import importlib.util
 import io
 import json
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -19,18 +17,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 
 
-def _load(name):
-    spec = importlib.util.spec_from_file_location(name, REPO / "labkit" / f"{name}.py")
-    assert spec is not None and spec.loader is not None
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[name] = mod
-    spec.loader.exec_module(mod)
-    return mod
+from labkit import code_check  # noqa: E402
 
-
-intent_check = _load("intent_check")
-sys.modules["labkit.intent_check"] = intent_check
-code_check = _load("code_check")
 rules = code_check.rules  # the module the bundle quotes from
 
 

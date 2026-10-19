@@ -12,7 +12,7 @@ class ClosedPipe(unittest.TestCase):
     def test_a_reader_closing_the_pipe_is_not_a_crash(self):
         # 400 kB past the pipe buffer, the reader takes one byte and leaves
         prog = (
-            "from labkit import console\n"
+            "from labkit.formats import console\n"
             "console.exit_with(lambda argv: (print('x' * 400_000), 0)[1])\n"
         )
         writer = subprocess.Popen(
@@ -30,7 +30,7 @@ class ClosedPipe(unittest.TestCase):
         self.assertNotIn(b"BrokenPipe", err)
 
     def test_the_exit_code_is_main_s(self):
-        prog = "from labkit import console\nconsole.exit_with(lambda argv: 3)\n"
+        prog = "from labkit.formats import console\nconsole.exit_with(lambda argv: 3)\n"
         self.assertEqual(
             subprocess.run([sys.executable, "-c", prog], cwd=ROOT).returncode, 3
         )

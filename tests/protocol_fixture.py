@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from labkit import promises
+from labkit.formats import promises
 
 PID = "p-0123456789abcdef"
 

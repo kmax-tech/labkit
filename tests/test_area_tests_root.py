@@ -14,7 +14,7 @@ import unittest
 from pathlib import Path
 
 from labkit import finalize, preflight
-from labkit.repo import layout_root
+from labkit.formats.repo import layout_root
 
 
 class SameRoot(unittest.TestCase):

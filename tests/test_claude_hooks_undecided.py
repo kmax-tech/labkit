@@ -22,7 +22,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import claude_hooks, findings  # noqa: E402
+from labkit import claude_hooks  # noqa: E402
+from labkit.formats import findings  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 from test_claude_hooks import _git, _run  # noqa: E402
 

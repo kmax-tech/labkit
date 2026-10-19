@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import findings
+from labkit.formats import findings
 
 BLOCK = "b10c0000000a"  # the promise block every fixture record names
 RUN = "2026-01-01T00-00-00_0001"  # the run every analysis fixture record names

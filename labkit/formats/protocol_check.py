@@ -45,17 +45,11 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from labkit import (
-    PACKAGE_DIR,
-    console,
-    promises,
-    protocol_block,
-    runs,
-    standard_contract,
-)
-from labkit.repo import git_root, git_run, repo_protocols
-from labkit.findings import waived_audit_gap
-from labkit.scope_sha import audit_stamp_drift
+from labkit import PACKAGE_DIR
+from labkit.formats import console, promises, protocol_block, runs, standard_contract
+from labkit.formats.repo import git_root, git_run, repo_protocols
+from labkit.formats.findings import waived_audit_gap
+from labkit.formats.scope_sha import audit_stamp_drift
 
 
 @dataclass(frozen=True)

@@ -81,7 +81,7 @@ path to this file.
   read by `protocol-check`, so they stay exactly as stamped; what you write
   after them — status words included — is German or English, one per
   protocol.
-- **`→ LAB-nnn <name>`** points to the rule in the lab standard (`python -m labkit.rules show LAB-nnn`):
+- **`→ LAB-nnn <name>`** points to the rule in the lab standard (`python -m labkit.formats.rules show LAB-nnn`):
   the reasoning and the evidence live there, here only what the field
   demands.
 - **Budgets.** The HEAD (Summary, Context, Intent, Setup) is read and has a

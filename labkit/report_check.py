@@ -94,13 +94,13 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.gate import Findings
-from labkit import console, findings, promises, protocol_block
+from labkit.formats.gate import Findings
+from labkit.formats import console, findings, promises, protocol_block
 from labkit.audit import AuditError, audited_run
 from labkit.finalize import cited_runs, finalize_area
 from labkit.preflight import area_test_python
-from labkit.protocol_check import check_fields
-from labkit.repo import (
+from labkit.formats.protocol_check import check_fields
+from labkit.formats.repo import (
     area_protocols,
     areas_of,
     choose_protocol,
@@ -109,9 +109,9 @@ from labkit.repo import (
     layout_root,
     status_entries,
 )
-from labkit.runs import read_run_config, unreportable
-from labkit.scope_sha import area_stamp
-from labkit.standard_contract import (
+from labkit.formats.runs import read_run_config, unreportable
+from labkit.formats.scope_sha import area_stamp
+from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
     CHECK_SCRIPT,
     Lane,

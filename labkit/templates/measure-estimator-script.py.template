@@ -77,7 +77,8 @@ AREA = HERE.parent
 PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
-from labkit import batch, promises, runlog
+from labkit import batch, runlog
+from labkit.formats import promises
 
 # written by 00_prepare.py: id · features (a list of numbers) · gold (null for
 # the unlabelled split) · split ("train" | "test")

@@ -39,10 +39,10 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import console, promises, protocol_block
+from labkit.formats import console, promises, protocol_block
 from labkit.intent_check import protocol_id_of
-from labkit.repo import area_path, choose_protocol, no_such_area
-from labkit.runs import (
+from labkit.formats.repo import area_path, choose_protocol, no_such_area
+from labkit.formats.runs import (
     bound_answering_run,
     model_provenance_run,
     read_run_config,

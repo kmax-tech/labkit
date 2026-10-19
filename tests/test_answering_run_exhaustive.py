@@ -26,8 +26,9 @@ from pathlib import Path
 
 from protocol_fixture import head
 
-from labkit import audit, finalize, intent_check, params, recheck, runs, usability
-from labkit.gate import Findings
+from labkit import audit, finalize, intent_check, params, recheck, usability
+from labkit.formats import runs
+from labkit.formats.gate import Findings
 
 PID = "p-aaaaaaaaaaaaaaaa"
 OTHER = "p-bbbbbbbbbbbbbbbb"

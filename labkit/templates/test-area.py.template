@@ -77,7 +77,7 @@ def test_the_formula_reads_its_thresholds_from_the_config():
     constant decides a number the record does not carry."""
     from dataclasses import asdict, fields, replace
 
-    from labkit import promises
+    from labkit.formats import promises
 
     assert set(asdict(measure.CONFIG)) == {f.name for f in fields(measure.MeasureConfig)}
     # every registered constant is a field, read from the block, not copied
@@ -139,7 +139,7 @@ def test_every_case_class_follows_from_its_facts():
 def test_probe_cases_are_pasted():
     """Owed before a minutes/hours run (LAB-014 One fully rendered example pair per gold class). At cost = seconds no probe
     precedes the run, so the canonical forms carry the test until then."""
-    from labkit import protocol_block, standard_contract
+    from labkit.formats import protocol_block, standard_contract
 
     head = protocol_block.head(measure.PROTOCOL.read_text(encoding="utf-8"))
     if standard_contract.lane(head.cost).every_run_full:

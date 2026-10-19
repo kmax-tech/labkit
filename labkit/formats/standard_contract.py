@@ -36,7 +36,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.protocol_block import COST_TIERS
+from labkit.formats.protocol_block import COST_TIERS
 
 SECONDS, MINUTES, HOURS = COST_TIERS
 

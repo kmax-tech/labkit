@@ -85,15 +85,16 @@ from pathlib import Path
 from types import TracebackType
 from collections.abc import Iterator
 
-from labkit import batch, console, findings, promises, protocol_block, repo
-from labkit.standard_contract import PREFLIGHT_AUDIT, lane
-from labkit.scope_sha import (
+from labkit import batch
+from labkit.formats import console, findings, promises, protocol_block, repo
+from labkit.formats.standard_contract import PREFLIGHT_AUDIT, lane
+from labkit.formats.scope_sha import (
     area_stamp,
     DIGEST_CHARS,
     file_digest,
     tree_digest,
 )
-from labkit.runs import (
+from labkit.formats.runs import (
     COMPLETED,
     FAILED_STATES,
     RECORD_SHA_CHARS,
@@ -854,7 +855,7 @@ def _protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
 
 def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
     """Why a FULL run may not start on this protocol — empty means it may."""
-    from labkit.protocol_check import seconds_registration_missing
+    from labkit.formats.protocol_check import seconds_registration_missing
 
     text, head = bound.text, bound.head
     if text is None or head is None:

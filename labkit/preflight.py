@@ -26,7 +26,7 @@ What it runs, in order (`preflight_area` shows each station's condition):
                      a reminder, not a blocker; so is the cold-reader line
                      (LAB-102 Cold reader before freezing)
   3. audit findings  the records `labkit-audit` wrote (`audits/*.toml`,
-                     `labkit.findings`): a finding still `open` is a
+                     `labkit.formats.findings`): a finding still `open` is a
                      warning, a blocker once frozen = true; an unreadable
                      record is a blocker. Where the lane owes the freeze and
                      the head carries an audit line, that line must cover
@@ -62,16 +62,11 @@ import sys
 from pathlib import Path
 
 from labkit.code_check import check_intent_ids, stamp_coverage_findings
-from labkit import (
-    console,
-    install_hooks,
-    protocol_block,
-    protocol_check,
-    standard_contract,
-)
-from labkit import findings as audit_findings
-from labkit.gate import Findings
-from labkit.repo import (
+from labkit.formats import console, protocol_block, protocol_check, standard_contract
+from labkit import install_hooks
+from labkit.formats import findings as audit_findings
+from labkit.formats.gate import Findings
+from labkit.formats.repo import (
     area_path,
     choose_protocol,
     git,
@@ -80,13 +75,13 @@ from labkit.repo import (
     no_such_area,
     split_area_name,
 )
-from labkit.protocol_check import (
+from labkit.formats.protocol_check import (
     check_fields,
     check_protocol_id,
     cost_lowered,
     repo_protocol_ids,
 )
-from labkit.scope_sha import AREA_GLOBS, area_stamp
+from labkit.formats.scope_sha import AREA_GLOBS, area_stamp
 
 
 def _is_dirty(area: Path) -> bool:

@@ -96,18 +96,8 @@ import tempfile
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
-from labkit import (
-    agent_transcript,
-    code_navigation,
-    console,
-    promises,
-    protocol_reading,
-    repo,
-    runs,
-    scaffold,
-    scope_sha,
-    standard_contract,
-)
+from labkit import agent_transcript, code_navigation, protocol_reading, scaffold
+from labkit.formats import console, promises, repo, runs, scope_sha, standard_contract
 
 #: What the scaffold stamps into a repo and an area; their sha pins the measured
 #: condition. All of it ships with labkit — the probe needs no house machinery.
@@ -188,8 +178,9 @@ LOG_LINE = re.compile(r"^(\d\d):(\d\d):(\d\d)\s*·\s*(\w+)\s*·\s*(.*)$")
 #: a `read` of these is the agent learning the contract from the wrong place
 #: — the area's README card should have sufficed (2026-10-05, four of four read on)
 SOURCE_READ = re.compile(
-    r"labkit/\w+\.py|labkit[ /](runlog|recheck|protocol_check|llm|batch|finalize|preflight)"
-    r"|labkit/docs/standard|labkit\.rules",
+    r"labkit/(\w+/)?\w+\.py"
+    r"|labkit[ /](\w+/)?(runlog|recheck|protocol_check|llm|batch|finalize|preflight)"
+    r"|labkit/docs/standard|labkit\.(\w+\.)?rules",
     re.I,
 )
 #: The bar: one kept number in this many minutes. Set by hand (2026-10-05),
@@ -1128,7 +1119,9 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
                 promises.key_kind(k) == "admissibility" for k in metrics
             )
         if pr.bound and pr.protocol is not None:
-            from labkit import protocol_block  # lazy: labkit modules import each other
+            from labkit.formats import (
+                protocol_block,
+            )  # lazy: labkit modules import each other
 
             p = pr.protocol
             if p.is_file():

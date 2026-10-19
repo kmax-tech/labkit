@@ -1,4 +1,4 @@
-"""labkit.repo — repo root, an area's protocols and git, answered once.
+"""labkit.formats.repo — repo root, an area's protocols and git, answered once.
 
 Before 2026-10-06 two private `_git` helpers turned every git failure into
 "", which preflight read as "working tree clean". Now outside a repo is
@@ -18,7 +18,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import repo, runlog  # noqa: E402
+from labkit.formats import repo  # noqa: E402
+from labkit import runlog  # noqa: E402
 
 
 def make_repo(commit: bool = True) -> Path:

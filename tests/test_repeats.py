@@ -21,7 +21,8 @@ from pathlib import Path
 
 from protocol_fixture import DEFAULT_BLOCK, PID, head, scope_file
 
-from labkit import recheck, runlog, runs
+from labkit import recheck, runlog
+from labkit.formats import runs
 
 
 class Repeats(unittest.TestCase):

@@ -70,10 +70,10 @@
         "labkit.notes_check",
         "labkit.params",
         "labkit.preflight",
-        "labkit.protocol_check",
+        "labkit.formats.protocol_check",
         "labkit.protocol_fill",
         "labkit.runlog",
-        "labkit.scope_sha"
+        "labkit.formats.scope_sha"
       ]
     }
   ]

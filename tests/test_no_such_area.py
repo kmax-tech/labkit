@@ -9,7 +9,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import code_check, repo
+from labkit import code_check
+from labkit.formats import repo
 
 
 class NoSuchArea(unittest.TestCase):

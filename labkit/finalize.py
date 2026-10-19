@@ -63,10 +63,11 @@ import json
 import re
 from pathlib import Path
 
-from labkit import batch, console, findings as audit_findings, promises, protocol_block
-from labkit.standard_contract import lane
-from labkit.gate import Findings
-from labkit.runs import (
+from labkit import batch
+from labkit.formats import console, findings as audit_findings, promises, protocol_block
+from labkit.formats.standard_contract import lane
+from labkit.formats.gate import Findings
+from labkit.formats.runs import (
     RUN_ID,
     RunConfigError,
     bound_answering_run,
@@ -78,7 +79,7 @@ from labkit.runs import (
     repeats_of,
     resolve_recorded,
 )
-from labkit.repo import (
+from labkit.formats.repo import (
     ProtocolChoiceError,
     area_path,
     git_root,
@@ -89,7 +90,7 @@ from labkit.repo import (
 )
 from labkit.intent_check import main as intent_check_main, ids_in_prose
 from labkit.preflight import area_tests
-from labkit.protocol_check import (
+from labkit.formats.protocol_check import (
     answer_field,
     answering_run_field,
     answering_run_open,

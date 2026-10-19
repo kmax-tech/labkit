@@ -28,7 +28,7 @@ of semantics. Contract and rationale: `docs/promise-block.md`.
 | `docs/promise-block.md` | promise kinds C/A/B, the TOML block, what the declared-scope hash states |
 | `docs/protocol-run-binding.md` | which run belongs to which protocol |
 | `docs/student-repos.md` | how a student thesis repo gets labkit (pinned from GitHub) and moves to a newer one |
-| `labkit/docs/standard.md`, `labkit/docs/rules.tsv` | the lab standard every gate cites (`LAB-nnn Name`) and its ledger; `python -m labkit.rules show LAB-nnn` prints one rule, `labkit/rules.py` checks heads, ledger and every reference |
+| `labkit/docs/standard.md`, `labkit/docs/rules.tsv` | the lab standard every gate cites (`LAB-nnn Name`) and its ledger; `python -m labkit.formats.rules show LAB-nnn` prints one rule, `labkit/formats/rules.py` checks heads, ledger and every reference |
 | `docs/coding-style.md` | binding for every line of code (vendored copy — do not edit here) |
 
 ## Setup and tests
@@ -76,7 +76,7 @@ instead).
   `docs/notes/` (one per topic, dated), which the code links. Test for each
   historical sentence: would removing it make a present limit unclear or a
   wrong change likelier? Then a short why stays; else it moves.
-- **One home per logic.** The id alphabet lives in `labkit/promises.py`;
+- **One home per logic.** The id alphabet lives in `labkit/formats/promises.py`;
   other modules import it. A second use means moving code, not copying it.
 - **Every number-producing function gets a test.** A gate that blocks gets
   a twin test: the correct variant must pass (no false blocker).

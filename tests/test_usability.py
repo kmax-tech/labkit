@@ -388,8 +388,8 @@ class SourceReadsCountTheStandard(unittest.TestCase):
     def test_the_packaged_standard_and_a_rules_lookup_count(self) -> None:
         log = (
             "18:00:00 · read · labkit/docs/standard.md (LAB-015)\n"
-            "18:00:10 · run · python -m labkit.rules show LAB-015\n"
-            "18:00:20 · read · python -m labkit.rules show LAB-017\n"
+            "18:00:10 · run · python -m labkit.formats.rules show LAB-015\n"
+            "18:00:20 · read · python -m labkit.formats.rules show LAB-017\n"
             "18:00:30 · read · experiments/01-x/README.md\n"
         )
         self.assertEqual(usability.parse_log(log).source_reads, 2)

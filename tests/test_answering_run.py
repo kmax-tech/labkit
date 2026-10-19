@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import runs
+from labkit.formats import runs
 
 PID = "p-0001"
 

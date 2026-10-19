@@ -6,7 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import code_check, promises, protocol_block, protocol_check, usability
+from labkit import code_check, usability
+from labkit.formats import promises, protocol_block, protocol_check
 from protocol_fixture import head
 
 C1 = """[[promise]]
@@ -83,7 +84,7 @@ class ConstantCopies(unittest.TestCase):
     def test_reading_the_block_is_silent(self):
         self.assertEqual(
             self.findings(
-                "from labkit import promises\n"
+                "from labkit.formats import promises\n"
                 "min_mean = promises.constants(PROTOCOL, 'C1')['min_mean']\n"
             ),
             [],

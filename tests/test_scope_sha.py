@@ -10,19 +10,12 @@ membership sensitivity, and a hard failure on a missing file.
 
 import contextlib
 import hashlib
-import importlib.util
 import io
 import tempfile
 import unittest
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
-spec = importlib.util.spec_from_file_location(
-    "scope_sha", REPO / "labkit" / "scope_sha.py"
-)
-assert spec is not None and spec.loader is not None
-scope_sha = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(scope_sha)
+from labkit.formats import scope_sha
 
 
 class Digests(unittest.TestCase):
@@ -181,7 +174,7 @@ class TestOneStampEverywhere(unittest.TestCase):
 
     def test_spelling_and_cwd_do_not_move_the_stamp(self):
         import os
-        from labkit import scope_sha as packaged
+        from labkit.formats import scope_sha as packaged
 
         absolute = packaged.area_stamp(self.area)[0]
         cwd = os.getcwd()
@@ -196,7 +189,7 @@ class TestOneStampEverywhere(unittest.TestCase):
         self.assertEqual(absolute, here)
 
     def test_imported_lib_and_pin_are_in_scope(self):
-        from labkit import scope_sha as packaged
+        from labkit.formats import scope_sha as packaged
 
         _, files, pin = packaged.area_stamp(self.area)
         self.assertIn("anchors.py", [f.name for f in files])
@@ -207,7 +200,7 @@ class TestOneStampEverywhere(unittest.TestCase):
 
     def test_audit_preflight_and_cli_agree(self):
         from labkit import audit, preflight
-        from labkit import scope_sha as packaged
+        from labkit.formats import scope_sha as packaged
 
         sha, files, _ = packaged.area_stamp(self.area)
         self.assertIn(
@@ -248,7 +241,7 @@ class TestImportForms(unittest.TestCase):
         (lib / "pkg" / "core.py").write_text("C = 1\n")
 
     def names(self, source: str) -> list[str]:
-        from labkit import scope_sha as packaged
+        from labkit.formats import scope_sha as packaged
 
         (self.area / "scripts" / "m.py").write_text(source)
         return [
@@ -285,7 +278,7 @@ class TestImportForms(unittest.TestCase):
     def test_src_is_a_root_as_lib_is(self):
         """uniagent computes every registered key in src/measure: with lib/
         alone neither the stamp nor the key search saw it (2026-10-07)."""
-        from labkit import scope_sha as packaged
+        from labkit.formats import scope_sha as packaged
 
         src = self.repo / "src" / "measure"
         src.mkdir(parents=True)
@@ -303,7 +296,7 @@ class TestImportForms(unittest.TestCase):
         self.assertEqual(self.names("import json\n"), [])
 
     def test_a_change_two_imports_deep_moves_the_stamp(self):
-        from labkit import scope_sha as packaged
+        from labkit.formats import scope_sha as packaged
 
         (self.area / "scripts" / "m.py").write_text("from lib import scoring\n")
         before = packaged.area_stamp(self.area)[0]
@@ -311,7 +304,7 @@ class TestImportForms(unittest.TestCase):
         self.assertNotEqual(before, packaged.area_stamp(self.area)[0])
 
     def test_unparsable_code_is_refused_not_guessed(self):
-        from labkit import scope_sha as packaged
+        from labkit.formats import scope_sha as packaged
 
         (self.area / "scripts" / "m.py").write_text("def broken(:\n")
         with self.assertRaises(ValueError):

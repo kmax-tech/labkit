@@ -12,15 +12,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import (
-    code_check,
-    finalize,
-    params,
-    preflight,
-    protocol_fill,
-    runlog,
-    scope_sha,
-)
+from labkit import code_check, finalize, params, preflight, protocol_fill, runlog
+from labkit.formats import scope_sha
 
 
 def run(fn, argv: list[str]) -> tuple[int, str, str]:

@@ -96,7 +96,7 @@ def test_the_formula_reads_its_thresholds_from_the_config():
     same object — a threshold moved there moves the verdict."""
     from dataclasses import asdict, fields, replace
 
-    from labkit import promises
+    from labkit.formats import promises
 
     assert set(asdict(measure.CONFIG)) == {f.name for f in fields(measure.MeasureConfig)}
     registered = promises.all_constants(promises.load(measure.PROTOCOL))

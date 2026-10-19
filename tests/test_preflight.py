@@ -16,7 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import findings, preflight, promises  # noqa: E402
+from labkit.formats import findings, promises  # noqa: E402
+from labkit import preflight  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 BODY = """\
@@ -397,7 +398,7 @@ class TestAuditFindings(unittest.TestCase):
         stamps another: preflight said "all decided" and passed the state
         runlog refuses at the run (audit 2026-10-15). The twin, the code's
         own sha, is clean."""
-        from labkit import scope_sha
+        from labkit.formats import scope_sha
 
         with tempfile.TemporaryDirectory() as d:
             area, _ = _area(

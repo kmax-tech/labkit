@@ -31,15 +31,12 @@ from unittest import mock
 from labkit import (
     claude_hooks,
     finalize,
-    findings,
     preflight,
-    promises,
     protocol_fill,
     report_check,
     scaffold,
-    scope_sha,
-    standard_contract as sc,
 )
+from labkit.formats import findings, promises, scope_sha, standard_contract as sc
 
 
 def _replace(path: Path, pairs: list[tuple[str, str]]) -> None:
@@ -99,7 +96,7 @@ class Lab:
         """Fill every open field with a sentence, NAMED ones with their value
         — the full form's many prose fields need text, not a particular text."""
         text = protocol.read_text(encoding="utf-8")
-        from labkit.protocol_check import FIELDS, fields
+        from labkit.formats.protocol_check import FIELDS, fields
 
         after = {f.label.casefold() for f in FIELDS if f.level == "after"}
         pairs = []

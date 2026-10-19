@@ -103,18 +103,16 @@ from datetime import datetime
 from collections.abc import Callable
 from pathlib import Path
 
-from labkit import (
+from labkit.formats import (
     console,
     findings,
-    notes_check,
-    preflight,
     protocol_block,
     protocol_check,
-    report_check,
     runs,
     standard_contract,
 )
-from labkit.repo import (
+from labkit import notes_check, preflight, report_check
+from labkit.formats.repo import (
     PROTOCOL_NAME,
     area_protocols,
     areas_of,
@@ -122,7 +120,7 @@ from labkit.repo import (
     git_run,
     status_entries,
 )
-from labkit.scope_sha import file_digest
+from labkit.formats.scope_sha import file_digest
 
 # The template's throwaway stages: none of them opens a run, and the probe
 # is what comes BEFORE preflight, so gating it would invert the order.

@@ -8,7 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import finalize, rules, scaffold
+from labkit import finalize, scaffold
+from labkit.formats import rules
 
 
 def quiet(fn, *args, **kw):  # noqa: ANN001, ANN002, ANN003, ANN201 — test helper
@@ -369,7 +370,7 @@ class Exp(unittest.TestCase):
     def test_a_freshly_stamped_head_cannot_be_frozen_as_stamped(self) -> None:
         """The stamp's promise sentences are `<…>`; setting frozen = true
         without writing them is a must gap, not a registration."""
-        from labkit import protocol_check
+        from labkit.formats import protocol_check
 
         quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
         text = (self.area() / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
@@ -470,7 +471,7 @@ class Exp(unittest.TestCase):
         prompt skeleton. Without `--model` at minutes/hours the instrument is
         an estimator: no prompt, no parser, a permuted-label null lane, the
         promise constants in its words, and the model-shaped fields answered."""
-        from labkit import promises, protocol_check
+        from labkit.formats import promises, protocol_check
 
         quiet(scaffold.stamp_area, self.root, "foo-bar", cost="minutes")
         area = self.area()

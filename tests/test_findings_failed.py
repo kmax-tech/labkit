@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from labkit import findings
+from labkit.formats import findings
 
 SHA, BLOCK = "abc123def456", "b10c0000000a"
 

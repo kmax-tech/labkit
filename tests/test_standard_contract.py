@@ -8,8 +8,9 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from labkit import protocol_block, scaffold, standard_contract as sc
-from labkit.protocol_check import FIELDS
+from labkit.formats import protocol_block, standard_contract as sc
+from labkit import scaffold
+from labkit.formats.protocol_check import FIELDS
 
 
 class Lanes(unittest.TestCase):

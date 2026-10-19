@@ -10,7 +10,7 @@ and before a number leaves the lab. labkit's checks enforce what can be
 checked mechanically and cite the rule they enforce by identifier and name;
 the rest is for the author, the audits and the reviewer. A lab refers to this
 standard through its pinned labkit version instead of copying it:
-`python -m labkit.rules show LAB-015` prints one rule. A lab's own rules live in
+`python -m labkit.formats.rules show LAB-015` prints one rule. A lab's own rules live in
 its repository (`docs/`); they add to these rules and never override them.
 
 **Evidence lives alongside.** If a rule comes from a concrete failure, a lab
@@ -46,8 +46,8 @@ written with. The following applies:
    (§, `AS`).
 8. New §-identifiers are no longer created.
 
-`python -m labkit.rules check` holds 1–4 against the ledger;
-`python -m labkit.rules refs <paths>` holds 5, 6 and 8 at the references.
+`python -m labkit.formats.rules check` holds 1–4 against the ledger;
+`python -m labkit.formats.rules refs <paths>` holds 5, 6 and 8 at the references.
 
 ---
 

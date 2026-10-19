@@ -5,7 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import finalize, repo
+from labkit import finalize
+from labkit.formats import repo
 
 
 class Steps(unittest.TestCase):

@@ -10,7 +10,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import protocol_check, scaffold  # noqa: E402
+from labkit.formats import protocol_check  # noqa: E402
+from labkit import scaffold  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 TEMPLATE = (

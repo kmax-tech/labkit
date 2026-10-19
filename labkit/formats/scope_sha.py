@@ -34,10 +34,10 @@ import hashlib
 import re
 from collections.abc import Iterable
 
-from labkit import console
+from labkit.formats import console
 from pathlib import Path
 
-from labkit.repo import layout_root, no_such_area, requirement_lines
+from labkit.formats.repo import layout_root, no_such_area, requirement_lines
 
 DIGEST_CHARS = 12  # enough to spot a mismatch, short enough for a protocol line
 

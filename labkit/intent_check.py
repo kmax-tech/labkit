@@ -48,8 +48,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from labkit import console, promises, protocol_block
-from labkit.runs import (
+from labkit.formats import console, promises, protocol_block
+from labkit.formats.runs import (
     COMPLETED,
     MetricsError,
     bound_answering_run,
@@ -57,8 +57,8 @@ from labkit.runs import (
     read_run_config,
     run_facts,
 )
-from labkit.repo import layout_root
-from labkit.scope_sha import area_files, imported_repo_helpers
+from labkit.formats.repo import layout_root
+from labkit.formats.scope_sha import area_files, imported_repo_helpers
 
 # The alphabet lives in `promises`; these names stay importable from here
 # because code_check and tools outside labkit (befundregister) use them.

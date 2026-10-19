@@ -82,8 +82,8 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import promises
-from labkit.scope_sha import AUDIT_SHA, audit_stamp_drift
+from labkit.formats import promises
+from labkit.formats.scope_sha import AUDIT_SHA, audit_stamp_drift
 
 DIR = "audits"
 #: the suffix of a failed attempt's file, never of a record of findings

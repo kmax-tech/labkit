@@ -262,7 +262,9 @@ def find_by_id(area: Path, pid: str) -> Path:
     """The one protocol in `area` whose head carries `pid` — the binding a
     run recorded. A run's recorded path goes stale by design (renaming keeps
     the id); raises BlockError when no protocol or several carry it."""
-    from labkit.repo import area_protocols  # layer 1 both; imported late, no cycle
+    from labkit.formats.repo import (
+        area_protocols,
+    )  # layer 1 both; imported late, no cycle
 
     hits = []
     for p in area_protocols(area):

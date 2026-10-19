@@ -21,13 +21,13 @@ venv. A lock that names the commit its requirements tag points at (what
 and compares commits. `latest` reads the source the pin names — a local path with `git tag`,
 a remote with `git ls-remote --tags` (network; `--offline` skips it).
 `refs` holds every `.md` and `.py` outside `.git`, `.venv`, `runs/` and
-`data/` to the packaged ledger (`python -m labkit.rules refs`) — except the
+`data/` to the packaged ledger (`python -m labkit.formats.rules refs`) — except the
 areas that are records: a frozen protocol is a registration, a protocol this
 labkit cannot read was written under an older pin, and both keep the
 identifiers they were written with; the line says how many areas it left out.
 
 The three checks it bundles exist on their own (`labkit-hooks check`,
-`python -m labkit.rules refs`, the pin line in `requirements.txt`); what was
+`python -m labkit.formats.rules refs`, the pin line in `requirements.txt`); what was
 missing was one command that asks all of them, plus the two nobody asked:
 installed against pinned, pinned against the newest tag (2026-10-12: in all
 four active lab repos the installed labkit lagged the pin).
@@ -41,8 +41,9 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import console, install_hooks, protocol_block, rules
-from labkit.repo import (
+from labkit.formats import console, protocol_block, rules
+from labkit import install_hooks
+from labkit.formats.repo import (
     SKIP_DIRS,
     VCS_REQUIREMENT,
     VERSION_REQUIREMENT,
@@ -364,7 +365,7 @@ def refs_line(repo: Path) -> Line:
             "refs",
             f"{len(problems)} problem(s) in {n_files} file(s){skipped}",
             STALE,
-            "write the id with its name (python -m labkit.rules refs)",
+            "write the id with its name (python -m labkit.formats.rules refs)",
             tuple(f"    {p}" for p in problems),
         )
     return Line("refs", f"0 problem(s) in {n_files} file(s){skipped}", OK)

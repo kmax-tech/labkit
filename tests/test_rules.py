@@ -7,8 +7,8 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-from labkit import rules
-from labkit.rules import RuleHead, RuleRow
+from labkit.formats import rules
+from labkit.formats.rules import RuleHead, RuleRow
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -223,7 +223,10 @@ class Refs(unittest.TestCase):
 
     def test_ids_in_inline_code_and_heads_are_not_citations(self) -> None:
         self.assertEqual(
-            rules.check_refs("f", "run `labkit.rules show LAB-003`\n" + DOC, ROWS), []
+            rules.check_refs(
+                "f", "run `labkit.formats.rules show LAB-003`\n" + DOC, ROWS
+            ),
+            [],
         )
 
     def test_an_id_as_a_string_literal_is_an_argument(self) -> None:

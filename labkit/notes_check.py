@@ -40,9 +40,9 @@ doctrine: extend, never move; regression = both lab repos exit 0 after the
 
 import re
 
-from labkit import console
-from labkit.gate import Findings
-from labkit.repo import git_root
+from labkit.formats import console
+from labkit.formats.gate import Findings
+from labkit.formats.repo import git_root
 from pathlib import Path
 
 # The contract: kind tokens as they appear in meta lines. German on purpose —

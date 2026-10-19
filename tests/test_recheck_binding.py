@@ -17,8 +17,9 @@ from pathlib import Path
 
 from protocol_fixture import head
 
-from labkit import protocol_fill, recheck, runs
-from labkit.scope_sha import file_digest
+from labkit import protocol_fill, recheck
+from labkit.formats import runs
+from labkit.formats.scope_sha import file_digest
 
 PID_A = "p-aaaaaaaaaaaaaaaa"
 PID_B = "p-bbbbbbbbbbbbbbbb"

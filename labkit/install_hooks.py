@@ -29,11 +29,11 @@ from __future__ import annotations
 import json
 import re
 
-from labkit import console
+from labkit.formats import console
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-from labkit.repo import git_root, git_run
+from labkit.formats.repo import git_root, git_run
 
 MARK = "# installed by labkit-hooks"
 

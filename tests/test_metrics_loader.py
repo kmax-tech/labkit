@@ -5,7 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from labkit import finalize, promises, runs
+from labkit import finalize
+from labkit.formats import promises, runs
 
 
 class ReadMetrics(unittest.TestCase):

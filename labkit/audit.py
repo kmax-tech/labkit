@@ -38,7 +38,7 @@ and verdict is printed as a NOTE, 2026-10-09):
 
 The report is printed (and written to --out), and its findings are written
 as data into the area — `audits/<date>-<mode>.toml`, one `[[finding]]` per
-line, every one `open` (`labkit.findings`); deciding each (fixed / accepted
+line, every one `open` (`labkit.formats.findings`); deciding each (fixed / accepted
 / deferred / dismissed, with reason) and stamping the protocol field stays
 with the human (LAB-015 Preflight audit before freezing), and `preflight`
 holds the file to that. The command prints the stamp's facts — date, scope
@@ -65,11 +65,22 @@ import time
 from pathlib import Path
 from typing import NamedTuple
 
-from labkit import PACKAGE_DIR, console, findings, llm, promises, protocol_block, rules
-from labkit.standard_contract import lane
-from labkit.repo import ProtocolChoiceError, layout_root, no_such_area, the_protocol
-from labkit.runs import bound_answering_run, completed_runs, read_outputs
-from labkit.scope_sha import area_files, area_stamp, imported_repo_helpers, repo_imports
+from labkit import PACKAGE_DIR, llm
+from labkit.formats import console, findings, promises, protocol_block, rules
+from labkit.formats.standard_contract import lane
+from labkit.formats.repo import (
+    ProtocolChoiceError,
+    layout_root,
+    no_such_area,
+    the_protocol,
+)
+from labkit.formats.runs import bound_answering_run, completed_runs, read_outputs
+from labkit.formats.scope_sha import (
+    area_files,
+    area_stamp,
+    imported_repo_helpers,
+    repo_imports,
+)
 
 AGENT = PACKAGE_DIR / "agents" / "experiment-preflight.agent.md"
 CLARITY_AGENT = PACKAGE_DIR / "agents" / "code-clarity.agent.md"

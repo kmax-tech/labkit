@@ -68,7 +68,7 @@ import uuid
 from pathlib import Path
 from collections.abc import Iterator
 
-from labkit import runs, scope_sha
+from labkit.formats import runs, scope_sha
 
 _HELD: set[tuple[str, str]] = set()  # (endpoint, alias) held by this process
 _FILES: dict[tuple[str, str], Path] = {}

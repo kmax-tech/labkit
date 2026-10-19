@@ -7,7 +7,6 @@ The metrics structures are shaped like real runs/*/metrics.json files.
 """
 
 import contextlib
-import importlib.util
 import io
 import json
 import tempfile
@@ -17,12 +16,7 @@ from pathlib import Path
 from protocol_fixture import PID, head
 
 REPO = Path(__file__).resolve().parent.parent
-spec = importlib.util.spec_from_file_location(
-    "intent_check", REPO / "labkit" / "intent_check.py"
-)
-assert spec is not None and spec.loader is not None
-intent_check = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(intent_check)
+from labkit import intent_check  # noqa: E402
 
 PROTOCOL = (
     head()

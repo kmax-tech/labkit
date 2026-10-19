@@ -33,7 +33,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from labkit import promises, protocol_block, runs
+from labkit.formats import promises, protocol_block, runs
 from labkit.cold_reader import (
     NEWCOMER,
     answer_contract,
@@ -45,7 +45,7 @@ from labkit.cold_reader import (
     read_verdict,
     verdict_matches,
 )
-from labkit.protocol_check import fields
+from labkit.formats.protocol_check import fields
 
 #: what a reader of the Summary should not have to decode
 SUMMARY_CODES = re.compile(  # an id in prose, an intent key, a run id — from their homes

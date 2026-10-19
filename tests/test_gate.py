@@ -8,7 +8,7 @@ import contextlib
 import io
 import unittest
 
-from labkit import gate
+from labkit.formats import gate
 
 
 def run(fn) -> tuple[int, str]:

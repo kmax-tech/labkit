@@ -23,11 +23,11 @@ rule the authoring lab keeps to itself; it lives on under the same number in
 that lab's `LOCAL` ledger and is never given again here (identifier rule 2: a
 new id is the highest ever given + 1).
 
-    python -m labkit.rules check
-    python -m labkit.rules check --standard PATH --registry PATH --prefix LOCAL --prefix LAB
-    python -m labkit.rules ledger BEFORE AFTER
-    python -m labkit.rules refs [--status active] PATH...
-    python -m labkit.rules show `LAB-015`
+    python -m labkit.formats.rules check
+    python -m labkit.formats.rules check --standard PATH --registry PATH --prefix LOCAL --prefix LAB
+    python -m labkit.formats.rules ledger BEFORE AFTER
+    python -m labkit.formats.rules refs [--status active] PATH...
+    python -m labkit.formats.rules show `LAB-015`
 """
 
 from __future__ import annotations
@@ -39,7 +39,8 @@ import sys
 from pathlib import Path
 from typing import NamedTuple
 
-from labkit import PACKAGE_DIR, console, protocol_block
+from labkit import PACKAGE_DIR
+from labkit.formats import console, protocol_block
 
 STANDARD = PACKAGE_DIR / "docs" / "standard.md"
 REGISTRY = PACKAGE_DIR / "docs" / "rules.tsv"
@@ -395,9 +396,10 @@ def paragraph(rule_id: str, lead: str, doc: str | None = None) -> str:
 
 
 def main(argv: list[str]) -> int:
-    """`python -m labkit.rules` — see the module docstring; exit 1 on any problem."""
+    """`python -m labkit.formats.rules` — see the module docstring; exit 1 on any problem."""
     ap = argparse.ArgumentParser(
-        prog="python -m labkit.rules", description=(__doc__ or "").split("\n\n")[0]
+        prog="python -m labkit.formats.rules",
+        description=(__doc__ or "").split("\n\n")[0],
     )
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("check", help="a standard's rule heads against its ledger")

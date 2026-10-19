@@ -20,7 +20,8 @@ import json
 import sys
 from pathlib import Path
 
-from labkit import recheck, runs
+from labkit import recheck
+from labkit.formats import runs
 
 AREA = Path(__file__).resolve().parent.parent
 NOTE = AREA / "PROTOCOL-<name>.md"     # or notes/results/<note>.md once the number is promoted

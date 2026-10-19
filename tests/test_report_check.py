@@ -30,7 +30,8 @@ from unittest import mock
 
 from protocol_fixture import completed_run, head, scope_file
 
-from labkit import findings, promises, report_check, scope_sha, standard_contract
+from labkit.formats import findings, promises, scope_sha, standard_contract
+from labkit import report_check
 
 
 class ReportCheck(unittest.TestCase):

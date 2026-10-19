@@ -19,8 +19,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import cast
 
-from labkit import promises
-from labkit.repo import layout_root
+from labkit.formats import promises
+from labkit.formats.repo import layout_root
 
 
 def _command_of(pid: int) -> str | None:

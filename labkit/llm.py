@@ -89,7 +89,7 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 from labkit import endpoint_lease
-from labkit.repo import lab_root
+from labkit.formats.repo import lab_root
 
 
 def _find_models_toml() -> Path:

@@ -55,7 +55,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit import protocol_block, scope_sha
+from labkit.formats import protocol_block, scope_sha
 
 #: the letters of the promise block, and what each one is
 KINDS = {"C": "criterion", "A": "admissibility", "B": "branch"}

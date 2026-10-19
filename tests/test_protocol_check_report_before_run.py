@@ -19,7 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import protocol_block, protocol_check  # noqa: E402
+from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 from test_protocol_check import PILOT_FIELDS  # noqa: E402
 

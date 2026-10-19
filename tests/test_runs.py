@@ -12,7 +12,7 @@ import threading
 import unittest
 from pathlib import Path
 
-from labkit import runs
+from labkit.formats import runs
 
 CONFIG = {"schema_version": 2, "run_id": "r", "protocol": {"id": "p-" + "0" * 16}}
 

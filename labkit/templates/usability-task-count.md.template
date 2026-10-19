@@ -16,7 +16,7 @@ the way this repo keeps numbers, so it can be cited later: the run's
 
 Follow the repo's own rules: `AGENTS.md` is in your context already (as a
 session loads it), the lab standard holds the long form
-(`python -m labkit.rules show LAB-nnn`) — read what you need, no more.
+(`python -m labkit.formats.rules show LAB-nnn`) — read what you need, no more.
 
 **The log** matters as much as the number. ONE line per step, BEFORE the
 step, in `<log>`:

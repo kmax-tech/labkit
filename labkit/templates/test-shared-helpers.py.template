@@ -33,7 +33,8 @@ class TestHelpersResolveToPackage(unittest.TestCase):
 
     def test_private_names_are_reachable(self):
         """Monkeypatching in tests must land on the one real module."""
-        from labkit import llm, runs
+        from labkit import llm
+        from labkit.formats import runs
         self.assertTrue(callable(runs._command_of))
         self.assertTrue(callable(llm._find_models_toml))
 

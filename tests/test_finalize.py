@@ -14,7 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import finalize, gate  # noqa: E402
+from labkit import finalize  # noqa: E402
+from labkit.formats import gate  # noqa: E402
 from protocol_fixture import PID, completed_run, head  # noqa: E402
 
 BODY = """\

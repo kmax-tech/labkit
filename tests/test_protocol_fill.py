@@ -17,13 +17,8 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit import (
-    PACKAGE_DIR,
-    code_check,
-    protocol_block,
-    protocol_check,
-    protocol_fill,
-)  # noqa: E402
+from labkit import PACKAGE_DIR, code_check, protocol_fill  # noqa: E402
+from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 
 SAMPLE = """# Experiment protocol: x
@@ -495,7 +490,7 @@ class Adopt(unittest.TestCase):
 """
 
     def _area(self, *, long: bool = True, audited: bool = True) -> Path:
-        from labkit import findings, promises, scope_sha
+        from labkit.formats import findings, promises, scope_sha
         from protocol_fixture import completed_run, scope_file
 
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"

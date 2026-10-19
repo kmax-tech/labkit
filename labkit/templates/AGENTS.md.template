@@ -2,7 +2,7 @@
 
 Entry file for any coding agent in this lab repo (`CLAUDE.md` may be a
 symlink to it). The rules behind every step are the lab standard that ships
-with the pinned labkit: `python -m labkit.rules show LAB-nnn` prints one;
+with the pinned labkit: `python -m labkit.formats.rules show LAB-nnn` prints one;
 a gate message names the rule it enforces by id and name.
 
 ## Lane `seconds` — one number in minutes

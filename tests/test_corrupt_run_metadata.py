@@ -18,7 +18,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit import intent_check, runlog, runs  # noqa: E402
+from labkit import intent_check, runlog  # noqa: E402
+from labkit.formats import runs  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 
 OLD = "2026-10-06T10-00-00_aaaa"
@@ -119,7 +120,7 @@ class Shape(unittest.TestCase):
     AttributeError far from the file)."""
 
     def test_wrong_shapes_raise_naming_the_problem(self):
-        from labkit import runs
+        from labkit.formats import runs
 
         for content, fragment in (
             ("[]", "a JSON list"),
@@ -135,7 +136,7 @@ class Shape(unittest.TestCase):
                 self.assertIn(fragment, str(cm.exception), content)
 
     def test_the_current_shape_reads(self):
-        from labkit import runs
+        from labkit.formats import runs
 
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / "config.json").write_text(
