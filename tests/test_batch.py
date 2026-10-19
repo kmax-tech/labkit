@@ -171,6 +171,22 @@ class DamagedFile(unittest.TestCase):
             s.append({"id": "b"})
         self.assertEqual([r["id"] for r in batch.Store(self.out).records()], ["a", "b"])
 
+    def test_resume_after_a_whole_last_line_without_newline(self):
+        self.out.write_text('{"id": "a"}', encoding="utf-8")
+        with batch.Store(self.out) as s:
+            s.append({"id": "b"})
+        self.assertEqual([r["id"] for r in batch.Store(self.out).records()], ["a", "b"])
+
+    def test_a_failed_open_leaves_no_lock_behind(self):
+        self.out.write_text('{"id": "a"}\n{broken}\n{"id": "b"}\n', encoding="utf-8")
+        with self.assertRaises(ValueError):
+            with batch.Store(self.out):
+                pass
+        self.assertFalse(self.out.with_suffix(".jsonl.lock").exists())
+        self.out.write_text('{"id": "a"}\n', encoding="utf-8")  # repaired
+        with batch.Store(self.out) as s:  # would be refused by our own lock
+            s.append({"id": "b"})
+
 
 class StoreInstrument(unittest.TestCase):
     """Resume by id alone let a new prompt keep the old prompt's answers (the

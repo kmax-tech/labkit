@@ -265,6 +265,21 @@ class Store:
                 f"is dead (`.venv/bin/runlog <area>` shows which "
                 f"runs are still alive)."
             )
+        try:
+            self._open()
+        except BaseException:
+            # __exit__ does not run when __enter__ raises: the lock is ours
+            # to release, or the next open is refused by our own leftover
+            if self._fh is not None:
+                self._fh.close()
+                self._fh = None
+            self._producing = False
+            self.lock.unlink(missing_ok=True)
+            raise
+        return self
+
+    def _open(self) -> None:
+        """The output handle, under the lock `__enter__` holds."""
         if self.mode == "produce":
             # A producer REPLACES its file — running it twice must yield the
             # file of ONE run, never a concatenation (2026-08-19 producer
@@ -275,18 +290,23 @@ class Store:
             self._fh = self._tmp.open("w", encoding="utf-8")
             self._producing = True
         else:
-            self._drop_torn_tail()
+            self._settle_tail()
             self._fh = self.path.open("a", encoding="utf-8")
-        return self
 
-    def _drop_torn_tail(self) -> None:
-        """Before appending: cut a torn last line, said out loud — appending
-        after it would leave it mid-file (or glue the next record onto it)."""
+    def _settle_tail(self) -> None:
+        """Before appending: the file ends on a line boundary. A torn last
+        line is cut, said out loud — appending after it would leave it
+        mid-file. A whole last record without its newline gets the newline,
+        or the next record would be glued onto it and the reader drop both
+        as a torn rest."""
         if not self.path.exists():
             return
         text = self.path.read_text(encoding="utf-8")
         _, torn = _parse(text, self.path)
         if torn is None:
+            if text and not text.endswith("\n"):
+                with self.path.open("a", encoding="utf-8") as fh:
+                    fh.write("\n")
             return
         kept = text.splitlines()[: torn - 1]
         self.path.write_text("".join(ln + "\n" for ln in kept), encoding="utf-8")
