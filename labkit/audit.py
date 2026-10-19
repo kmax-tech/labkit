@@ -66,6 +66,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from labkit import console, findings, llm, promises, protocol_block, rules
+from labkit.standard_contract import lane
 from labkit.repo import ProtocolChoiceError, layout_root, no_such_area, the_protocol
 from labkit.runs import bound_answering_run, completed_runs, read_outputs
 from labkit.scope_sha import area_files, area_stamp, imported_repo_helpers, repo_imports
@@ -478,7 +479,7 @@ def early_for_tier(area: Path, protocol: Path, mode: str) -> list[str]:
         head = protocol_block.head(protocol.read_text(encoding="utf-8"))
     except protocol_block.BlockError:
         return []
-    if head.cost != "seconds" or completed_runs(area, with_repeats=True):
+    if mode in lane(head.cost).audits or completed_runs(area, with_repeats=True):
         return []
     return [
         'WARNING · cost = "seconds" and no completed run · the first run is the '

@@ -73,7 +73,7 @@ import re
 from collections.abc import Iterable
 from pathlib import Path
 
-from labkit import console, promises, protocol_block, rules
+from labkit import console, promises, protocol_block, rules, standard_contract
 from labkit.protocol_check import fields
 from labkit.gate import Findings
 from labkit.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
@@ -1370,7 +1370,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             "schema + gate labels + placeholders extracted into "
             "the bundle for the code-check agent"
         )
-    elif _cost_of(protocol) == "seconds":
+    elif standard_contract.lane(_cost_of(protocol)).every_run_full:
         parts.append(
             "schema, gate labels, placeholders: not checked — not owed at cost "
             "seconds, the first run is the probe (--bundle hands them to the "

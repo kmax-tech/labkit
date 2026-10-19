@@ -731,7 +731,7 @@ def stamp_area(
             f"labkit-init: {root} is not a lab repo (no models.toml / experiments/) — run `labkit-init lab` first"
         )
     # the cut and the skeleton are the contract's answers, not read off the
-    # tier here (a `cost == "seconds"` outside the contract is a copy)
+    # tier here (a tier compared by hand outside the contract is a copy)
     quick = standard_contract.lane(cost).cut == standard_contract.SECONDS_CUT
     skeleton = standard_contract.skeleton(cost, bool(model))
     tmpl = (

@@ -143,7 +143,7 @@ class Provenance(unittest.TestCase):
         self._run(HOURS, None, commit=True)
         rc, out = self._finalize()
         self.assertEqual(rc, 0, out)
-        self.assertIn("n/a — protocol cost is not 'seconds'", out)
+        self.assertIn("n/a — protocol cost is 'hours'", out)
 
 
 if __name__ == "__main__":

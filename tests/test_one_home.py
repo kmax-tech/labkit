@@ -44,6 +44,10 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"startswith\(\"labkit\"\)|\^\\s\*labkit",
         {"repo"},
     ),
+    # what a tier owes is read off `standard_contract.lane`, never off the
+    # head's word: seven modules compared it by hand and the gate and the
+    # skeleton disagreed (audit 2026-10-19)
+    ("a tier rule read off the head", r"[=!]=\s*\{?\"seconds\"", {"standard_contract"}),
 ]
 
 
@@ -82,6 +86,7 @@ class OneHome(unittest.TestCase):
             "the run-id shape": 'RUN = re.compile(r"\\d{4}-\\d{2}-\\d{2}T")',
             "a run id's start second compared by hand": "if runs.start_second(a) == runs.start_second(b):",
             "a requirements pin spelled by hand": 'if ln.startswith("labkit"):',
+            "a tier rule read off the head": 'if head.cost == "seconds":',
         }
         for what, shape, _ in RULES:
             with self.subTest(what=what):

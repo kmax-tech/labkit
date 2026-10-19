@@ -64,6 +64,7 @@ import re
 from pathlib import Path
 
 from labkit import batch, console, findings as audit_findings, promises, protocol_block
+from labkit.standard_contract import lane
 from labkit.gate import Findings
 from labkit.runs import (
     RUN_ID,
@@ -746,11 +747,11 @@ def finalize_area(
     header(f"open fields: {chosen.name}")
     check_open_fields(findings, chosen, text, head)
 
-    # 5. provenance — only for cost = seconds, and only with a run
+    # 5. provenance — where the lane owes it (seconds), and only with a run
     header("frozen source and tracked files")
-    if head.cost != "seconds":
+    if not lane(head.cost).provenance:
         print(
-            "  n/a — protocol cost is not 'seconds' (the agent audit covers provenance there)"
+            f"  n/a — protocol cost is {head.cost!r} (the agent audit covers provenance there)"
         )
     elif measurement_run is None:
         print(NO_RUN)

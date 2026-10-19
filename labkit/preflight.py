@@ -49,7 +49,7 @@ import sys
 from pathlib import Path
 
 from labkit.code_check import check_intent_ids, stamp_coverage_findings
-from labkit import console, install_hooks, protocol_block
+from labkit import console, install_hooks, protocol_block, standard_contract
 from labkit import findings as audit_findings
 from labkit.gate import Findings
 from labkit.repo import (
@@ -207,9 +207,10 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:  # noqa: C9
     # -- 2. cost tier (printed, never counted) ------------------------------
     print("── cost tier ──")
     tier = report.head.cost
-    if tier == "seconds":
+    lane = standard_contract.lane(tier)
+    if not lane.freeze:
         print(
-            "  seconds — rerunnable at will: the agent audit is OPTIONAL before "
+            f"  {lane.tier} — rerunnable at will: the agent audit is OPTIONAL before "
             "freezing; one audit after the first run, on real output, "
             "suffices (LAB-017 The number of audits follows the cost tier)"
         )
@@ -347,7 +348,9 @@ def _coverage_gap(
     gives (until 0.95.0 preflight never compared the stamps and passed the
     state the freeze gate refuses, audit 2026-10-15; until 0.99.0 both took
     `n/a` as a decision). Silent at `seconds` and without a line."""
-    if head is None or head.cost == "seconds" or not head.preflight_audit:
+    if head is None or not head.preflight_audit:
+        return None
+    if not standard_contract.lane(head.cost).freeze:
         return None
     gap = audit_findings.audit_line_gap(area, head.preflight_audit, text)
     return f"preflight_audit: {gap}" if gap else None
