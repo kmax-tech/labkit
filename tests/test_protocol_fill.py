@@ -13,6 +13,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
@@ -543,6 +544,24 @@ class Adopt(unittest.TestCase):
         self.assertIn("a probe (long=False), not a full run", out)
         self.assertIn("not adopted", out)
         self.assertEqual(text, before)
+
+    def test_a_check_that_raises_puts_the_file_back_and_raises(self):
+        """Only a blocker exit restored the protocol; an exception out of
+        report-check left the unchecked answer standing (audit 2026-10-19)."""
+        area = self._area()
+        proto = area / "PROTOCOL-x.md"
+        before = proto.read_text(encoding="utf-8")
+        with (
+            mock.patch.object(
+                protocol_fill.report_check,
+                "report_check",
+                side_effect=RuntimeError("x"),
+            ),
+            self.assertRaises(RuntimeError),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            protocol_fill.main([str(proto), "--from-run"])
+        self.assertEqual(proto.read_text(encoding="utf-8"), before)
 
     def test_a_run_without_its_analysis_record_is_refused(self):
         area = self._area(audited=False)

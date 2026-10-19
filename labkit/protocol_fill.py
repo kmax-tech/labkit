@@ -285,9 +285,16 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     declaration, the check is what makes it hold; a declaration the check
     refuses is no weaker kind of result, it is none). The gates at the stop
     and the commit (`report-check --if-reported`) hold the same line to a
-    hand-written or later-changed answer."""
+    hand-written or later-changed answer. A check that ends in an exception
+    puts BEFORE back too and re-raises: until 0.99.0 only a blocker exit
+    restored the file, and the unchecked declaration stayed (audit
+    2026-10-19, a check script printing a byte no codec reads)."""
     protocol.write_text(after, encoding="utf-8")
-    rc = report_check.report_check(protocol.parent, protocol)
+    try:
+        rc = report_check.report_check(protocol.parent, protocol)
+    except BaseException:
+        protocol.write_text(before, encoding="utf-8")
+        raise
     if rc == 0:
         return 0
     protocol.write_text(before, encoding="utf-8")

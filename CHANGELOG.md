@@ -100,6 +100,10 @@ pins (`requirements.txt` / `requirements.lock`).
   names the script: `02_analyze.py` where the area has one, at seconds
   otherwise `01_measure.py`. A check that prints a byte no codec reads is
   a named gap, not a traceback.
+- **`protocol-fill --from-run` puts the protocol back on any failed check.**
+  `adopt` restored the file only on report-check's blocker exit; an
+  exception out of the check left the unchecked declaration standing. Now
+  every unsuccessful end restores it, and the exception is re-raised.
 
 ### Changed
 
