@@ -1,0 +1,62 @@
+# Note 2026-10-19 — why the Claude hooks and report-check hold what they hold
+
+The history behind `labkit/gates/claude_hooks.py` and
+`labkit/gates/report_check.py`, kept here so their docstrings can state the
+rule that holds today. Each section names the code it belongs to.
+
+## `claude_hooks`: the layer that does not depend on remembering
+
+**Trigger (2026-10-05).** The rules that matter — "preflight before a full
+run", "protocol-check after writing a protocol" — lived in the skill text,
+in the agent's memory. The write hooks that did exist matched only the
+Write and Edit tools; a protocol written through a Bash heredoc got no
+check at all, and no hook stood between the agent and
+`python 01_measure.py`.
+
+**Stop runs report-check, not finalize.** Until 0.99.0 the stop hook ran
+finalize only, and report-check, which refuses a probe's number, was never
+called by any agent of the haiku rounds (TODO 2, 2026-10-19). The number
+is checked in the session that still knows why it is there, not at the
+next commit (2026-10-07).
+
+**The whole area, not the protocol alone.** A script edited under a
+reported number passed both hooks while the protocol stayed untouched
+(audit 2026-10-19).
+
+**Undecided blockers stop the turn.** Third haiku round on 0.99.0
+(labkit-paper area 09, t5): the agent ran the audit, read its four
+BLOCKERs, left all twelve findings `open`, measured with `long=False` and
+reported — report-check would have refused the number, but nothing made the
+agent call it. A gate the agent must call is no gate; the stop and the
+commit are the two it cannot choose.
+
+**The session log (2026-10-07).** Claude Code deletes transcripts after
+`cleanupPeriodDays`; the log keeps the link from a run to the session it
+came from.
+
+## `report_check`: the gate after the last step
+
+**Trigger.** `finalize` holds the run before the number is written back;
+what follows it — the analysis audit, the result note, the note held to the
+run by `02_analyze.py --check` — had no gate. In the cloud judge probe at
+`minutes` (2026-10-14, draw 3) the agent skipped the check and the result
+note, and finalize was green. finalize cannot be that gate: it comes before
+the analysis audit.
+
+**Where single stations came from.**
+
+- Station 1 at `seconds`: until 0.99.0 the whole command exited 0 there,
+  and a probe's number passed as a reported one (TODO 1, 2026-10-19).
+- Station 2, the full run: second haiku round on 0.98.0 — t3 and t18
+  reported a probe, t5 an acknowledged run (plan 2026-10-17, A3).
+- Station 4, one command for every skeleton: until 0.99.0 the count carried
+  its check inside `01_measure.py`, and the station asked for a file the
+  skeleton never wrote (audit 2026-10-19).
+- `--if-reported` holds the area: a script edited after the answer was
+  written back passed both hooks with the protocol untouched (audit
+  2026-10-19). An open answer owes nothing: in the third haiku round on
+  0.99.0, t3 and t5 reported a probe's number and never called
+  report-check.
+- `--staged` reads the index: until 0.99.0 the hook read the tree, and a
+  reported answer staged, then reopened in the tree, passed the commit
+  (audit 2026-10-19).

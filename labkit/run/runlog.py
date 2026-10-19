@@ -239,31 +239,6 @@ def _check_run_index(base_dir: Path) -> None:
         )
 
 
-# The freeze gate (2026-10-05). `long=True` is the script's declaration of a
-# full run (the measure template sets it for the no-flag stage; --probe
-# stays long=False). A full run on a protocol that is not `frozen =
-# true`, or whose `preflight_audit` is still empty, produces a number nobody
-# registered for — and the rule that forbade it lived only in the skill
-# text, which a long session forgets. Hence a refusal in the one place every
-# run passes through, before mkdir. Escape hatch: LABKIT_UNFROZEN=1 — the
-# acknowledgement is recorded in config.json so the number carries it, and
-# the number cannot be reported (`runs.unreportable`). The refusal names
-# that consequence and offers no way round: the agents of the benchmark
-# rounds took the way the message offered and called their run a "pilot"
-# (review 2026-10-18), so the gate's messages do not use the word. At `minutes`/`hours` the hatch acknowledges an audit
-# that could NOT run, not one nobody ran: it needs the failed attempt
-# `labkit-audit` wrote for this code and these promises
-# (`findings.audit_unavailable`, 0.99.0 — second haiku round on 0.98.0: no
-# agent started an audit, and the hatch passed without one). The run then
-# records which attempt it rests on (`audit_failed`). The gate
-# follows the cost tier: at `cost = "seconds"`
-# the run is rerunnable at will, so the freeze protects nothing — what a
-# full run needs there is the registration, written before the number
-# (LAB-003 No run without an intent paragraph); an instrument change after it is a commit and a rerun, not a
-# second freeze (LAB-017 The number of audits follows the cost tier). `minutes`, `hours` and an unfilled cost keep the
-# freeze. The tier lands in config.json as `cost_tier`.
-
-
 def _repeat_draw(
     base_dir: Path,
     repeat_of: str | None,

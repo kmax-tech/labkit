@@ -12,13 +12,9 @@ Claude Code expects: `pre-run` and `stop` block with exit 2 (the stderr
 text goes back to the agent), `post-change` is `additionalContext` on
 stdout and exit 0.
 
-Why these exist (2026-10-05): the rules that matter — "preflight before a
-full run", "protocol-check after writing a protocol" — lived in the skill
-text, in the agent's memory. The write hooks that did exist matched only
-the Write and Edit tools; a protocol written through a Bash heredoc got no
-check at all, and no hook at all stood between the agent and
-`python 01_measure.py`. A rule the agent has to remember is the weak layer;
-this is the layer that does not depend on remembering.
+A rule the agent has to remember is the weak layer; these hooks are the
+layer that does not depend on remembering. Why each rule holds:
+docs/notes/2026-10-19-hooks-and-report-check.md.
 
 pre-run
     The command is a run start when it names a .py file that opens a run
@@ -48,32 +44,21 @@ stop
     Before the agent ends its turn: every protocol of an area a changed
     path (git status) lies in whose "Answer to the question" cites a run
     goes through `report-check --if-reported` — a script edited under a
-    reported number reopens it (audit 2026-10-19) — the whole release
-    check at every cost tier: the run
-    bound to the protocol and cited, a full run (no probe, no acknowledged
-    run), a decided analysis audit of code, promises and that run, the
-    numbers recomputed by `02_analyze.py --check`; finalize is one of its
-    stations. Blockers → exit 2, and the findings go back to the agent,
-    which keeps working — the number it just wrote back is checked in the
-    session that still knows why it is there, not at the next commit
-    (2026-10-07). The answer line citing a run is the one declaration that
-    a result is reported (`finalize.cited_runs`); a protocol whose answer is
-    still open owes nothing — an exploration ends with "no reported
-    result", probes in `runs/` or not (TODO 2, 2026-10-19; until 0.99.0 the
-    hook ran finalize only, and report-check, which refuses a probe's
-    number, was never called by any agent of the haiku rounds). Once per
-    stop: when the agent was already sent back by this hook
+    reported number reopens it — the whole release check at every cost
+    tier: the run bound to the protocol and cited, a full run (no probe, no
+    acknowledged run), a decided analysis audit of code, promises and that
+    run, the numbers recomputed by `02_analyze.py --check`; finalize is one
+    of its stations. Blockers → exit 2, and the findings go back to the
+    agent, which keeps working. The answer line citing a run is the one
+    declaration that a result is reported (`finalize.cited_runs`); a
+    protocol whose answer is still open owes nothing — an exploration ends
+    with "no reported result", probes in `runs/` or not. Once per stop:
+    when the agent was already sent back by this hook
     (`stop_hook_active`), it may stop; the commit gate still holds.
     The same stop holds every area the session touched (a changed file
     under it, git status) to its audit records: a BLOCKER nobody decided →
-    exit 2, naming file and finding (`undecided_blockers`). Third haiku
-    round on 0.99.0 (labkit-paper area 09, t5): the agent ran the audit,
-    read its four BLOCKERs, left all twelve findings `open`, measured with
-    long=False and reported — report-check would have refused the number,
-    but nothing made the agent call it. A gate the agent must call is no
-    gate; the stop and the commit are the two it cannot choose. The
-    pre-commit runs `claude-hook undecided` on the staged paths for the
-    same rule. Deciding is cheap and visible: `accepted` with a reason is
+    exit 2, naming file and finding (`undecided_blockers`). The pre-commit
+    runs `claude-hook undecided` on the staged paths for the same rule. Deciding is cheap and visible: `accepted` with a reason is
     a documented deviation, which is what the gate is for; a hand-written
     `fixed` is a lie the next audit sees (LAB-015 Preflight audit before freezing).
 
@@ -83,8 +68,7 @@ session log
     path, the time, and the runs whose run_id dates from after this
     session's previous stop (or its first transcript record). `claude-hook
     sessions --run RUN_ID` finds the session — and so the transcript — a run
-    came from: what the agent read and decided before it, for debugging
-    (2026-10-07; Claude Code deletes transcripts after `cleanupPeriodDays`).
+    came from: what the agent read and decided before it, for debugging.
 
 Exit codes: pre-run 0 or 2 (block); stop 0 or 2 (keep working); post-change 0; usage errors and
 unexpected failures 1, loud on stderr, never swallowed.

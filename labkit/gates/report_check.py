@@ -11,13 +11,10 @@
 
 Exit codes: 0 clean, 1 a blocker, 2 usage error.
 
-`finalize` holds the run before the number is written back; what follows it
-— the analysis audit, the result written into its note, the note held to the
-run by `02_analyze.py --check` — had no gate. In the cloud judge probe at
-`minutes` (2026-10-14, draw 3) the agent skipped the check and the result
-note, and finalize was green. A gate there cannot be finalize itself: finalize
-comes before the analysis audit, so it cannot ask for what follows the audit.
-report-check comes last and holds the whole chain, at every cost tier:
+`finalize` holds the run before the number is written back and comes
+before the analysis audit; report-check comes last and holds the whole
+chain, at every cost tier (why each station holds what it holds:
+docs/notes/2026-10-19-hooks-and-report-check.md):
 
   0. protocol      the named PROTOCOL-*.md or the area's only one
   1. frozen        at `minutes`/`hours`: `frozen = true`, and the freeze
@@ -26,18 +23,14 @@ report-check comes last and holds the whole chain, at every cost tier:
                    the stamp's `<…>` sentences. At `cost = "seconds"` no
                    freeze and no preflight audit are owed
                    (LAB-017 The number of audits follows the cost tier), so
-                   this station is skipped and says so; until 0.99.0 the whole
-                   command exited 0 there, and a probe's number passed as
-                   a reported one (TODO 1, 2026-10-19)
+                   this station is skipped and says so
   2. finalize      `finalize_area` clean — its blockers are named here —
                    so the answering run is bound to this protocol and the
                    answer cites it; and that run is a full run: `long=True`,
                    not acknowledged unfrozen (`runs.unreportable`) — a
                    reported number owes a full run (frozen at
                    minutes/hours); a probe's or an acknowledged run's number
-                   cannot be reported (second haiku round on 0.98.0: t3 and
-                   t18 reported a probe, t5 an acknowledged run; plan
-                   2026-10-17, A3)
+                   cannot be reported
   3. analysis audit  a record `audits/*-analysis.toml` whose `scope_sha` is
                    the area's stamp now, whose `block_sha` is the promise
                    block now and whose `run_id` is the answering run, every
@@ -50,9 +43,7 @@ report-check comes last and holds the whole chain, at every cost tier:
                    the note it names carries every number and the run_id
                    (`recheck.holds`; LAB-041 Generate numbers, don't retype
                    them). One command for every skeleton: the count stamps
-                   its own `02_analyze.py` too (until 0.99.0 it carried the
-                   check inside `01_measure.py`, and this station asked for
-                   a file the skeleton never wrote, audit 2026-10-19)
+                   its own `02_analyze.py` too
 
 Every station runs; the blockers are summed at the end. It reads and runs,
 never writes. The stations read one context (`Checked`, built once by
@@ -69,22 +60,16 @@ and it holds every protocol of every area one of those paths lies in
 (`finalize.cited_runs`) — the one line that declares a result reported,
 written by `protocol-fill --from-run`. The area, not the protocol alone:
 a script edited after the answer was written back changes what the
-analysis audit saw and what `--check` recomputes, and with the protocol
-untouched both hooks passed it (audit 2026-10-19). A protocol whose
+analysis audit saw and what `--check` recomputes. A protocol whose
 answer is still open owes nothing here: an exploration ends with no
-reported result, probes or not (third haiku round on 0.99.0: t3 and t5
-reported a probe's number and never called report-check; TODO 2,
-2026-10-19). finalize stays the check before the analysis audit; this is
-the check after it.
+reported result, probes or not.
 
 `--staged` is the pre-commit's form. The commit holds the index, the
 stations read the working tree: so the declaration is read from the index
 (`index_text` — an answer only the tree carries is not in the commit), and
 an area whose tree differs from the index (`tree_differs`: a file modified
 and not staged, or untracked) is a blocker before any station runs, since
-the check would judge a state the commit does not hold. Until 0.99.0 the
-hook read the tree: a reported answer staged, then reopened in the tree,
-passed the commit (audit 2026-10-19).
+the check would judge a state the commit does not hold.
 """
 
 from __future__ import annotations

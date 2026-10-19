@@ -78,7 +78,11 @@ refusals in their old order.
   haiku round on 0.98.0: no agent started an audit, and the hatch passed).
   The messages say "probe" and "acknowledged run", never "pilot": the
   agents of the benchmark rounds took the way the message offered and
-  called their run a pilot (review 2026-10-18).
+  called their run a pilot (review 2026-10-18). At `cost = "seconds"` the
+  run is rerunnable at will, so a freeze would protect nothing: what a
+  full run needs there is the registration, written before the number
+  (LAB-003, LAB-017); an instrument change after it is a commit and a
+  rerun, not a second freeze.
 - A derived run resolves no model anew (2026-10-08): its rows were
   answered by the model of the run it derives from; today's `models.toml`
   would record a provenance the rows never had. `runs.model_provenance_run`
