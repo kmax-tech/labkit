@@ -75,11 +75,13 @@ fi
 #    check at every cost tier (finalize clean, a full run, a decided
 #    analysis audit, the numbers recomputed); an answer still open owes
 #    nothing here. Every staged path, not only a protocol: a script changed
-#    under a reported number reopens it (audit 2026-10-19).
+#    under a reported number reopens it. --staged: the answer as the index
+#    holds it, and the area's tree must equal the index — the commit holds
+#    the index, the check reads the tree (audit 2026-10-19).
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
 if [ -n "$staged" ] && [ -x .venv/bin/report-check ]; then
     # shellcheck disable=SC2086
-    if ! .venv/bin/report-check --if-reported $staged; then
+    if ! .venv/bin/report-check --if-reported --staged $staged; then
         echo ""
         echo "pre-commit: report-check reports blockers for a written-back number (see above)."
         fail=1

@@ -19,6 +19,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -293,12 +294,20 @@ class IfReported(unittest.TestCase):
 
     RUN = "2026-10-07T10-00-00_ab12"
 
-    def _area(self, answer: str, *, long: bool = True, audited: bool = True) -> Path:
+    def _area(
+        self, answer: str, *, long: bool = True, audited: bool = True, git: bool = False
+    ) -> Path:
         """A seconds area (no freeze owed, so the bare fixture head passes
         station 1) whose protocol says ANSWER; its one run a full run unless
-        LONG says a probe; an analysis record of it when AUDITED."""
+        LONG says a probe; an analysis record of it when AUDITED. GIT: the
+        root is a repository (before the record: the stamp's paths are
+        repo-relative) and everything is committed at the end."""
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         (area / "scripts").mkdir(parents=True)
+        if git:
+            self._git(area.parent.parent, "init", "-q", ".")
+            self._git(area.parent.parent, "config", "user.email", "t@t")
+            self._git(area.parent.parent, "config", "user.name", "t")
         (area / "scripts" / "02_analyze.py").write_text(
             "print('ok')\n", encoding="utf-8"
         )
@@ -327,7 +336,74 @@ class IfReported(unittest.TestCase):
                 [],
                 run_id=run.name,
             )
+        if git:
+            self._git(area.parent.parent, "add", "-A")
+            self._git(area.parent.parent, "commit", "-qm", "init")
         return area
+
+    @staticmethod
+    def _git(cwd: Path, *args: str) -> None:
+        subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True)
+
+    def _staged_gate(self, root: Path, *paths: Path) -> tuple[int, str]:
+        """The pre-commit's form of the gate over PATHS in the repo ROOT."""
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = report_check.if_reported(list(paths), root, staged=True)
+        return code, buf.getvalue()
+
+    def test_staged_reads_the_answer_as_the_index_holds_it(self):
+        """The pre-commit's form: a reported answer in the index, the tree's
+        reopened — the hook read the tree and passed the commit (audit
+        2026-10-19)."""
+        area = self._area(f"AUC 0.91 ({self.RUN})", git=True)
+        root = area.parent.parent
+        proto = area / "PROTOCOL-x.md"
+        code, out = self._staged_gate(root, proto)
+        self.assertEqual(code, 0, out)  # the twin: tree is index, all holds
+        self.assertIn("finalized, audited, checked", out)
+        reported = proto.read_text(encoding="utf-8")
+        proto.write_text(
+            reported.replace(f"AUC 0.91 ({self.RUN})", "<number + run_id>"),
+            encoding="utf-8",
+        )
+        code, out = self._staged_gate(root, proto)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            "the working tree differs from the index (experiments/01-x/PROTOCOL-x.md)",
+            out,
+        )
+        # the twin's twin: the index open, the answer only in the tree —
+        # the commit declares nothing, the gate is silent
+        self._git(root, "add", "-A")
+        proto.write_text(reported, encoding="utf-8")
+        code, out = self._staged_gate(root, proto)
+        self.assertEqual((code, out), (0, ""))
+
+    def test_staged_refuses_an_area_whose_tree_is_not_the_index(self):
+        """A script modified and one untracked under a reported number: the
+        stations would judge a state the commit does not hold."""
+        area = self._area(f"AUC 0.91 ({self.RUN})", git=True)
+        root = area.parent.parent
+        (area / "scripts" / "02_analyze.py").write_text(
+            "print('changed')\n", encoding="utf-8"
+        )
+        (area / "scripts" / "new.py").write_text("x = 1\n", encoding="utf-8")
+        code, out = self._staged_gate(root, area / "PROTOCOL-x.md")
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            "(experiments/01-x/scripts/02_analyze.py, experiments/01-x/scripts/new.py)",
+            out,
+        )
+        self.assertNotIn("analysis audit", out)  # no station ran
+
+    def test_the_cli_takes_staged(self):
+        with mock.patch.object(report_check, "if_reported", return_value=0) as gate:
+            report_check.main(["--if-reported", "--staged", "a/PROTOCOL-x.md"])
+        gate.assert_called_once_with([Path("a/PROTOCOL-x.md")], mock.ANY, staged=True)
+        with mock.patch.object(report_check, "if_reported", return_value=0) as gate:
+            report_check.main(["--if-reported", "a/PROTOCOL-x.md"])
+        gate.assert_called_once_with([Path("a/PROTOCOL-x.md")], mock.ANY, staged=False)
 
     def _gate(self, area: Path, *paths: Path) -> tuple[int, str]:
         """The gate over PATHS — the protocol itself when none are named."""

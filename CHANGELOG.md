@@ -107,6 +107,16 @@ pins (`requirements.txt` / `requirements.lock`).
   `adopt` restored the file only on report-check's blocker exit; an
   exception out of the check left the unchecked declaration standing. Now
   every unsuccessful end restores it, and the exception is re-raised.
+- **The pre-commit holds the commit, not the working tree.** `report-check
+  --if-reported` read the protocol from disk: a reported answer staged,
+  then reopened in the tree, passed the commit with the answer in it
+  (audit 2026-10-19). The pre-commit now runs `--if-reported --staged`:
+  the answer is read from the index (`report_check.index_text` — an answer
+  only the tree carries is not in the commit), and an area whose tree
+  differs from the index (a file modified and not staged, or untracked;
+  `tree_differs`) is a blocker before any station runs, since the
+  stations read the tree and the commit holds the index. Reinstall the
+  hooks (`labkit-hooks install`).
 
 ### Changed
 

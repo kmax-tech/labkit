@@ -568,7 +568,7 @@ def stop(event: dict) -> int:
         return 2 if undecided else 0
     # every changed path, not only a protocol: a script edited after the
     # answer was written back reopens the area's reported numbers
-    rc, out = _capture(report_check.if_reported, changed, repo)
+    rc, out = _capture(lambda: report_check.if_reported(changed, repo, staged=False))
     if rc != 0:
         print(
             "report-check reports blockers for a number written back in this "

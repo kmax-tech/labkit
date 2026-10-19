@@ -57,7 +57,7 @@ notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
 preflight <AREA> [--protocol FILE]  # the mechanical pre-freeze gate, eight stations: protocol-check · cost tier · audit findings decided · code-check · scope-sha · working tree · hooks · area tests (not the agent audit; `labkit/preflight.py` lists them)
 finalize <AREA> [--protocol FILE]   # the post-run gate, eight steps: answering run and its record (a probe or an acknowledged run is a warning) · intent-check · declared scopes · open fields · frozen source · area tests · criterion n · open audit findings (`labkit/finalize.py` lists them)
 report-check <AREA> [--protocol FILE]  # the last gate at every cost tier: frozen (minutes/hours only) · finalize clean, its blockers named · its run a full run (long=True, not acknowledged unfrozen) · analysis audit of code, promises and that run, decided · 02_analyze.py --check passes
-report-check --if-reported <PATH>..  # the gate at the stop and the commit: report-check every protocol of an area a path touches whose answer cites a run (an open answer owes nothing)
+report-check --if-reported [--staged] <PATH>..  # the gate at the stop and the commit: report-check every protocol of an area a path touches whose answer cites a run (an open answer owes nothing); --staged (the pre-commit): the answer as the index holds it, and the area's tree must equal the index
 claude-hook pre-run|post-change|stop  # the three Claude Code hooks a lab repo installs (stdin: event JSON)
 claude-hook undecided <paths…>      # the pre-commit's gate: an area a staged path touches holds an undecided audit BLOCKER → exit 1
 claude-hook sessions [--run RUN_ID]  # the session log the stop hook keeps (.git/labkit-sessions.jsonl): session, transcript, runs

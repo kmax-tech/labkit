@@ -1,9 +1,13 @@
 """report-check — the gate after the last step, before a number leaves the area.
 
     report-check <AREA> [--protocol PROTOCOL-*.md]
-    report-check --if-reported PROTOCOL-*.md ...   every protocol whose answer
-                                                   cites a run (the stop hook
-                                                   and the pre-commit)
+    report-check --if-reported [--staged] PATH ...  every protocol of an area
+                                                    a path touches whose answer
+                                                    cites a run (the stop hook;
+                                                    with --staged the pre-commit:
+                                                    the answer as the index
+                                                    holds it, and the area's
+                                                    tree must equal the index)
 
 Exit codes: 0 clean, 1 a blocker, 2 usage error.
 
@@ -68,6 +72,15 @@ reported result, probes or not (third haiku round on 0.99.0: t3 and t5
 reported a probe's number and never called report-check; TODO 2,
 2026-10-19). finalize stays the check before the analysis audit; this is
 the check after it.
+
+`--staged` is the pre-commit's form. The commit holds the index, the
+stations read the working tree: so the declaration is read from the index
+(`index_text` — an answer only the tree carries is not in the commit), and
+an area whose tree differs from the index (`tree_differs`: a file modified
+and not staged, or untracked) is a blocker before any station runs, since
+the check would judge a state the commit does not hold. Until 0.99.0 the
+hook read the tree: a reported answer staged, then reopened in the tree,
+passed the commit (audit 2026-10-19).
 """
 
 from __future__ import annotations
@@ -89,7 +102,9 @@ from labkit.repo import (
     choose_protocol,
     find_area,
     git_root,
+    git_run,
     layout_root,
+    status_entries,
 )
 from labkit.runs import read_run_config, unreportable
 from labkit.scope_sha import area_stamp
@@ -269,25 +284,64 @@ def reported_protocols(paths: list[Path], repo: Path) -> list[Path]:
     return [p for area in sorted(areas) for p in area_protocols(area)]
 
 
-def if_reported(paths: list[Path], repo: Path) -> int:
+def index_text(repo: Path, path: Path) -> str | None:
+    """PATH's content as git's index holds it — what a commit now would
+    carry — or None when the index does not hold it (untracked, or staged
+    as deleted). PATH must lie under REPO."""
+    rel = path.resolve().relative_to(repo.resolve()).as_posix()
+    r = git_run(["show", f":{rel}"], repo)
+    return r.stdout if r.returncode == 0 else None
+
+
+def tree_differs(repo: Path, area: Path) -> list[str]:
+    """The paths under AREA whose working tree differs from the index — a
+    tracked file modified or deleted and not staged, an untracked file —
+    relative to REPO. Empty when the tree under AREA is what the commit
+    would hold."""
+    rel = area.resolve().relative_to(repo.resolve()).as_posix()
+    return [path for xy, path in status_entries(repo, (rel,)) if xy[1] != " "]
+
+
+def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     """`report-check` for every protocol of an area one of PATHS touches
     whose "Answer to the question" cites a run — the gate at the stop and
     the commit: a result declared reported is held to the whole chain, a
     protocol whose answer is still open is skipped (an exploration may end
-    with no reported result). Returns the worst exit code."""
+    with no reported result). STAGED (the pre-commit): the answer is read
+    from the index, and an area whose tree differs from the index is a
+    blocker — the stations read the tree, the commit holds the index.
+    Returns the worst exit code."""
     worst = 0
     for protocol in reported_protocols(paths, repo):
-        try:
-            text = protocol.read_text(encoding="utf-8")
-        except OSError as exc:
-            print(f"report-check: {protocol}: {exc}")
-            worst = max(worst, 2)
-            continue
+        if staged:
+            text = index_text(repo, protocol)
+            if text is None:
+                continue  # not in the commit: nothing declared there
+        else:
+            try:
+                text = protocol.read_text(encoding="utf-8")
+            except OSError as exc:
+                print(f"report-check: {protocol}: {exc}")
+                worst = max(worst, 2)
+                continue
         cited = cited_runs(text)
         if not cited:
             continue
         print(f"═══ report-check {protocol} (its answer cites {', '.join(cited)}) ═══")
-        worst = max(worst, report_check(protocol.parent.resolve(), protocol))
+        area = protocol.parent.resolve()
+        if staged:
+            differs = tree_differs(repo, area)
+            if differs:
+                print(
+                    f"  {area.relative_to(repo.resolve()).as_posix()}: the working "
+                    f"tree differs from the index ({', '.join(differs)}) — the "
+                    f"stations read the tree, the commit holds the index; stage "
+                    f"these too, or stash them, so the commit holds what the "
+                    f"check sees"
+                )
+                worst = max(worst, 1)
+                continue
+        worst = max(worst, report_check(area, protocol))
     return worst
 
 
@@ -295,7 +349,10 @@ def main(argv: list[str]) -> int:
     """Command line of `report-check`."""
     if argv and argv[0] == "--if-reported":
         cwd = Path.cwd()
-        return if_reported([Path(a) for a in argv[1:]], git_root(cwd) or cwd)
+        rest = argv[1:]
+        staged = bool(rest) and rest[0] == "--staged"
+        paths = [Path(a) for a in (rest[1:] if staged else rest)]
+        return if_reported(paths, git_root(cwd) or cwd, staged=staged)
     ap = argparse.ArgumentParser(
         prog="report-check", description=(__doc__ or "").split("\n\n")[0]
     )

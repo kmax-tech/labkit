@@ -211,7 +211,7 @@ class RepoOwnSteps(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertEqual(
             (repo / "report-check.argv").read_text().split(),
-            ["--if-reported", "scripts/02_analyze.py"],
+            ["--if-reported", "--staged", "scripts/02_analyze.py"],
         )
 
     def test_the_local_hook_runs_and_its_failure_blocks_the_commit(self):
