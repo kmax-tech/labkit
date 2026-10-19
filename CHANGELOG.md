@@ -40,6 +40,16 @@ pins (`requirements.txt` / `requirements.lock`).
   Max asked for where the declaration is not unambiguous), the gates stay
   silent. The shipped standard's LAB-011 paragraph and the stamped
   `AGENTS.md` lanes say so.
+- **`protocol-fill --from-run` is the one path by which a number becomes
+  the result.** It writes the Answer, Result, Answering run and Runs lines
+  as before, then runs `report-check` on the written protocol and puts the
+  file back as it was on a blocker (`protocol_fill.adopt`). Writing the
+  number back declares it reported; the declaration is not what makes it
+  sound, the check is — a declaration the check refuses is no weaker kind
+  of result, it is none. So every result adopted this way has passed every
+  check labkit prescribes, and the hooks hold a hand-written or later-changed
+  answer to the same; a provisional number stays a sketch in `runs/` and
+  `output/`. Until 0.99.0 `--from-run` wrote unconditionally.
 
 ## 0.99.0 — 2026-10-19
 

@@ -198,7 +198,15 @@ eine Exploration endet mit „kein freigegebenes Ergebnis“, Probeläufe in
 `runs/` oder nicht (`tests/test_claude_hooks.py` Stop, `tests/test_report_check.py`
 IfReported). Eine Antwort ohne Run-ID ist weder berichtet noch offen:
 `protocol-check` warnt (`answer_without_run`, static evidence), die Gates
-schweigen. **Folge für die Doktrin, Entscheidung des Autors:** LAB-017 sagt
+schweigen. (3) **Ein Übernahmeweg** (Max, 2026-10-19): `protocol-fill
+--from-run` schreibt die Zeilen, lässt `report-check` auf dem geschriebenen
+Protokoll laufen und stellt bei einem Blocker die Datei wieder her
+(`protocol_fill.adopt`, `tests/test_protocol_fill.py` Adopt). Das
+Einschreiben erklärt die Zahl zum Ergebnis, die Prüfung sichert den
+Anspruch; was über diesen Weg im Answer-Feld steht, hat jede Prüfung
+durchlaufen. Vorläufige Zahlen bleiben Skizze in `runs/` und `output/`. Ob
+jemand außerhalb des Wegs (REPORT.md, Chat) eine Zahl berichtet, bleibt
+Arbeitsdisziplin bzw. Audit. **Folge für die Doktrin, Entscheidung des Autors:** LAB-017 sagt
 für `seconds` „ein Analysis-Audit bei der Promotion, bis dahin Skizze“;
 jetzt ist das Zurückschreiben der Antwort die Promotion, der Audit also vor
 dem Stop bzw. Commit fällig, der sie trägt. Die `AGENTS.md`-Vorlage (Lane

@@ -8,6 +8,7 @@ ambiguity and silent overwrites, and leave every other byte alone.
 
 import contextlib
 import io
+import json
 import sys
 import tempfile
 import unittest
@@ -445,17 +446,108 @@ class TestFromRun(unittest.TestCase):
                 self.PROTOCOL, area, run_id="2026-01-01T00-00-00_0000"
             )
 
-    def test_the_command(self):
-        import contextlib
-        import io
-
+    def test_the_command_refuses_an_unchecked_result_and_leaves_the_file(self):
+        """The one adoption path (2026-10-19): the fixture's run has no
+        analysis record and does not say it was a full run — report-check
+        refuses, and the protocol is byte-identical to before."""
         area = self._area({"mean_docs_per_case": 3.5})
+        before = (area / "PROTOCOL-count.md").read_text(encoding="utf-8")
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             rc = protocol_fill.main([str(area / "PROTOCOL-count.md"), "--from-run"])
-        self.assertEqual(rc, 0, buf.getvalue())
+        self.assertEqual(rc, 1, buf.getvalue())
         self.assertIn("filled from run " + self.RUN, buf.getvalue())
-        self.assertIn(
-            "mean_docs_per_case = 3.5",
-            (area / "PROTOCOL-count.md").read_text(encoding="utf-8"),
+        self.assertIn("not adopted", buf.getvalue())
+        self.assertIn("does not say whether it was a full run", buf.getvalue())
+        self.assertEqual(
+            (area / "PROTOCOL-count.md").read_text(encoding="utf-8"), before
         )
+
+
+class Adopt(unittest.TestCase):
+    """`protocol-fill --from-run` as the one path by which a number becomes
+    the result: the twin that passes every check is written; a probe, or a
+    run without its analysis record, is refused and the file is as it was."""
+
+    RUN = "2026-10-12T21-37-53_c3be"
+    BODY = """# Experiment protocol: x
+
+## Summary (after the run, for a person)
+
+- **Result:** <the answer to the question above, in at most two plain sentences…>
+
+## Result (after the run — write back, don't go quiet)
+
+- **Answer to the question:** <per registered id its verdict, and the run_id…>
+- **Answering run:** none yet — the run `finalize` holds this protocol to
+
+## Runs (documented runs)
+
+- <run_id> — <one sentence: what this run was>
+
+## Head (read by the checks)
+
+"""
+
+    def _area(self, *, long: bool = True, audited: bool = True) -> Path:
+        from labkit import findings, promises, scope_sha
+        from protocol_fixture import completed_run, scope_file
+
+        area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+        (area / "scripts").mkdir(parents=True)
+        (area / "scripts" / "02_analyze.py").write_text(
+            "print('ok')\n", encoding="utf-8"
+        )
+        scope_file(area)
+        proto = area / "PROTOCOL-x.md"
+        proto.write_text(self.BODY + head(cost="seconds"), encoding="utf-8")
+        run = completed_run(area, self.RUN, metrics={"c1_pass": True}, long=long)
+        src = area / "data.jsonl"
+        src.write_text('{"id": 1}\n', encoding="utf-8")
+        cfg = run / "config.json"
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        data["data"] = {"cases": {"path": str(src), "sha": "x", "rows": 1}}
+        cfg.write_text(json.dumps(data), encoding="utf-8")
+        if audited:
+            findings.write(
+                area,
+                "analysis",
+                "opus",
+                scope_sha.area_stamp(area)[0],
+                promises.block_stamp(proto.read_text(encoding="utf-8")),
+                (0, 0, 0),
+                [],
+                run_id=self.RUN,
+            )
+        return area
+
+    def _adopt(self, area: Path) -> tuple[int, str, str]:
+        proto = area / "PROTOCOL-x.md"
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = protocol_fill.main([str(proto), "--from-run"])
+        return rc, buf.getvalue(), proto.read_text(encoding="utf-8")
+
+    def test_a_checked_full_run_is_adopted(self):
+        rc, out, text = self._adopt(self._area())
+        self.assertEqual(rc, 0, out)
+        self.assertIn("report-check: all clear", out)
+        self.assertIn(f"c1_pass = True (run {self.RUN})", text)
+        self.assertIn(f"- **Answering run:** {self.RUN}", text)
+
+    def test_a_probe_is_refused_and_the_file_is_as_it_was(self):
+        area = self._area(long=False)
+        before = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
+        rc, out, text = self._adopt(area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("a probe (long=False), not a full run", out)
+        self.assertIn("not adopted", out)
+        self.assertEqual(text, before)
+
+    def test_a_run_without_its_analysis_record_is_refused(self):
+        area = self._area(audited=False)
+        before = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
+        rc, out, text = self._adopt(area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("no analysis audit saw the area as it is now", out)
+        self.assertEqual(text, before)

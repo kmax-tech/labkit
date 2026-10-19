@@ -52,7 +52,7 @@ scope-sha [AREA | --area DIR] [--globs PAT,...] [--no-pin] [FILE ...]  # audit s
 protocol-fill <PROTOCOL> FIELD VAL [--line N] [--force]  # fill one stamped placeholder field by label
 protocol-fill <PROTOCOL> "LABEL=VALUE" ...  # fill several in one call, all or nothing (`type=exploratory` for the head)
 protocol-fill <PROTOCOL> --list | --prompts  # the open placeholder fields; the Prompt block from the scripts' PROMPT constants
-protocol-fill <PROTOCOL> --from-run [RUN]  # write the number back from the run's metrics.json: Answer, Result, Answering run and Runs lines, never retyped
+protocol-fill <PROTOCOL> --from-run [RUN]  # adopt the run as the result: Answer, Result, Answering run and Runs lines from its metrics.json, never retyped — kept only when report-check passes on the written protocol
 notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
 preflight <AREA> [--protocol FILE]  # the mechanical pre-freeze gate, eight stations: protocol-check · cost tier · audit findings decided · code-check · scope-sha · working tree · hooks · area tests (not the agent audit; `labkit/preflight.py` lists them)
 finalize <AREA> [--protocol FILE]   # the post-run gate, eight steps: answering run and its record (a probe or an acknowledged run is a warning) · intent-check · declared scopes · open fields · frozen source · area tests · criterion n · open audit findings (`labkit/finalize.py` lists them)
@@ -146,12 +146,17 @@ the offered word for their run (review 2026-10-18).
 the preflight audit are not owed; the full run, the decided analysis audit
 of code, promises and that run, and `02_analyze.py --check` are. The
 declaration that a result is reported is the run_id in the protocol's
-"Answer to the question" (`protocol-fill --from-run` writes it): the stop
-hook and the pre-commit run `report-check --if-reported` on exactly those
-protocols, so a written-back number is held to the whole chain, and an
-exploration whose answer stays open may end with no reported result,
-probes in `runs/` or not. An answer written without a run_id is a
-`protocol-check` warning — the hint, not a gate.
+"Answer to the question", and the one path that writes it is
+`protocol-fill --from-run`: it writes the lines, runs `report-check` on the
+written protocol and puts the file back on a blocker, so every result
+adopted this way has passed every check (the declaration is not what makes
+a number sound; the check is). The stop hook and the pre-commit run
+`report-check --if-reported` on exactly those protocols, so a hand-written
+or later-changed answer is held to the same chain, and an exploration whose
+answer stays open may end with no reported result, probes in `runs/` or
+not. A provisional number stays a sketch in `runs/` and `output/`. An
+answer written without a run_id is a `protocol-check` warning — the hint,
+not a gate.
 The gate follows the cost tier (`cost` in the protocol head, LAB-017 The number of audits follows the cost tier — `LAB-nnn` names a rule of the shipped lab standard): at
 `seconds` a rerun costs nothing, so the gate is the **written success
 criterion**, not the freeze — an instrument change after it is a commit

@@ -30,16 +30,18 @@ LAB-017 The number of audits follows the cost tier.
    analysis`) and decide its findings: the one audit this lane owes
    (LAB-017 The number of audits follows the cost tier). Until the number
    is written back it is a sketch, and nothing is owed for it.
-6. `protocol-fill PROTOCOL-<name>.md --from-run <run_id>` writes the number
-   back from metrics.json: the Answer line, the Summary's Result line and the
-   run line — never retype it (reword the Result line for a person if you
-   like; Limits and Next step belong to the full form). The run_id in the
-   Answer declares the result reported: at the stop and the commit
-   `report-check` holds it — a full run (no probe), the decided analysis
+6. `protocol-fill PROTOCOL-<name>.md --from-run <run_id>` adopts the run
+   as the result: it writes the Answer line, the Summary's Result line and
+   the run line from metrics.json — never retype them (reword the Result
+   line for a person if you like; Limits and Next step belong to the full
+   form) — then runs `report-check` on the written protocol and puts the
+   file back if it refuses: a full run (no probe), the decided analysis
    audit of code, promises and that run, `02_analyze.py --check` passing.
-   An exploration that reports nothing leaves the Answer open and may end.
-   Commit `output/` and `runs/` with the protocol — `finalize <area>` checks
-   the provenance and wants both in git.
+   The run_id in the Answer declares the result reported; the stop hook
+   and the pre-commit hold it to the same check. An exploration that
+   reports nothing leaves the Answer open and may end; its number stays a
+   sketch in `runs/`. Commit `output/` and `runs/` with the protocol —
+   `finalize <area>` checks the provenance and wants both in git.
 
 Nothing more is owed on this lane: no freeze, no probe before the run, no †
 fields, no reading of labkit's source.
@@ -84,12 +86,13 @@ fields, no reading of labkit's source.
     draw: `scripts/01_measure.py --repeat-of <run_id>` draws it again (a run
     of its own, never the answer), `scripts/02_analyze.py --draws` shows how
     far it moves.
-11. Write the result back into the protocol (`protocol-fill --from-run`),
-    then `scripts/02_analyze.py --check` holds the note to the run, and
-    `report-check <area>` closes the lane: frozen, finalize clean, an
-    analysis audit of the code as it is, the check passing
-    (LAB-041 Generate numbers, don't retype them). The stop hook and the
-    pre-commit run the same check on every protocol whose Answer cites a run.
+11. Adopt the result into the protocol (`protocol-fill --from-run`): it
+    writes the lines and runs `report-check <area>` on them — frozen,
+    finalize clean, an analysis audit of the code as it is, the check
+    (`scripts/02_analyze.py --check`) holding the note to the run — and
+    keeps them only when it passes (LAB-041 Generate numbers, don't retype
+    them). The stop hook and the pre-commit run the same check on every
+    protocol whose Answer cites a run.
 
 ## Setup
 
