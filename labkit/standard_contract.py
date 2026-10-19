@@ -1,0 +1,312 @@
+"""standard_contract — what the lab standard demands, of which run, at which occasion.
+
+The one home of the obligations the standard puts on a number: what a
+protocol owes before the run, what a full run owes at its start, what
+finalize checks after it, what the release demands when the number is
+written back — and which artefacts the skeleton stamps so those checks have
+something to hold. Every consumer asks here; none decides for itself.
+Until this module existed each component spelled the rule it needed
+(`head.cost == "seconds"` in seven modules, the registration's labels in
+one, the check's script name in two), and the audit of 2026-10-19 found
+them disagreeing: the gate demanded a script the skeleton never stamped.
+
+What stands here is doctrine (docs/architecture.md, "Core or doctrine"):
+another lab could set the tiers differently without being less scientific.
+It belongs to the pinned labkit, not to a configuration file per experiment:
+the standard is versioned with the package, and the experiment supplies its
+facts — the head's cost tier, whether a model is named, whether the run
+declared itself a full run.
+
+This module reads no file, runs nothing and writes nothing. It takes facts
+a caller already holds and answers what is owed; reading the protocol, the
+run record or the audit records stays with their homes
+(`protocol_block.head`, `runs.read_run_config`, `findings.area_records`),
+and the checks themselves stay with their modules — the contract says WHEN
+each is due, not HOW it is made.
+
+Rules of the lab standard the table states: LAB-017 The number of audits
+follows the cost tier (the tiers), LAB-003 No run without an intent
+paragraph (the registration), LAB-015 Preflight audit before freezing and
+LAB-050 Analysis audit before reporting (the audits),
+LAB-041 Generate numbers, don't retype them (the check).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+
+from labkit.protocol_block import COST_TIERS
+
+SECONDS, MINUTES, HOURS = COST_TIERS
+
+#: the agent audits, by the mode `labkit-audit` and `findings` name them
+PREFLIGHT_AUDIT = "preflight"
+ANALYSIS_AUDIT = "analysis"
+
+#: the two forms of a protocol: the seconds cut (the fields marked in the
+#: template) and the full form (every must; every should once frozen; the
+#: report fields once a run is documented) — `protocol_check.owed` reads it
+SECONDS_CUT = "seconds"
+FULL_FORM = "full"
+
+
+def tier(cost: str | None) -> str:
+    """The cost tier a head's `cost` stands for: itself, or `hours` while
+    it is unfilled — an undeclared tier owes the most, never the least
+    (preflight read it so since 2026-10-05)."""
+    if cost is None:
+        return HOURS
+    if cost not in COST_TIERS:
+        raise ValueError(f"cost tier {cost!r} is not one of {', '.join(COST_TIERS)}")
+    return cost
+
+
+@dataclass(frozen=True)
+class Lane:
+    """What one cost tier owes, as the standard's table states it
+    (LAB-017 The number of audits follows the cost tier): the lane
+    `AGENTS.md` walks an agent along. One row per decision the components used to make on
+    their own; a consumer reads the field it needs and copies no rule.
+
+    Attributes:
+        tier: `seconds`, `minutes` or `hours` (an unfilled cost reads as hours).
+        freeze: A full run owes `frozen = true` and the preflight audit line
+            in the head — the preflight audit comes with the freeze
+            (LAB-015 Preflight audit before freezing). At seconds nothing
+            freezes: a rerun costs nothing, so the freeze protects nothing.
+        registration: A full run owes the written registration instead of
+            the freeze — the question, with a model also the criterion and
+            the admissibility condition (`registration_fields`), and the
+            cost declared (LAB-003 No run without an intent paragraph).
+        audits: The agent audits the number owes, by mode: the analysis
+            audit at every tier, when the number is written back
+            (LAB-050 Analysis audit before reporting); the preflight audit
+            only where the freeze is owed.
+        cut: Which fields the protocol owes — the seconds cut or the full
+            form (`protocol_check.FIELDS` carries the marks).
+        every_run_full: Every run through runlog is the full run — the run
+            itself is the instrument check, there is no probe stage before
+            it — so the promise tables are owed as soon as the protocol
+            registers an id, frozen or not (`promises.promise_tables_owed`).
+        foreground: A full run may start in an agent's foreground shell:
+            it ends within the harness's limit. Elsewhere the detach gate
+            refuses it (`runlog.Run`, scar 2026-08-13).
+        provenance: `finalize` holds the run's source frozen in the record
+            and source and output tracked in git — at seconds the machine
+            checks what the audit would otherwise ask every time
+            (LAB-017 The number of audits follows the cost tier).
+    """
+
+    tier: str
+    freeze: bool
+    registration: bool
+    audits: tuple[str, ...]
+    cut: str
+    every_run_full: bool
+    foreground: bool
+    provenance: bool
+
+
+SECONDS_LANE = Lane(
+    tier=SECONDS,
+    freeze=False,
+    registration=True,
+    audits=(ANALYSIS_AUDIT,),
+    cut=SECONDS_CUT,
+    every_run_full=True,
+    foreground=True,
+    provenance=True,
+)
+
+
+def lane(cost: str | None) -> Lane:
+    """The lane of a head's `cost` — the one answer to "what does this tier
+    owe", where every consumer read `cost == "seconds"` for itself."""
+    t = tier(cost)
+    if t == SECONDS:
+        return SECONDS_LANE
+    return Lane(
+        tier=t,
+        freeze=True,
+        registration=False,
+        audits=(PREFLIGHT_AUDIT, ANALYSIS_AUDIT),
+        cut=FULL_FORM,
+        every_run_full=False,
+        foreground=False,
+        provenance=False,
+    )
+
+
+#: the fields a full run at seconds owes written (not a placeholder) before
+#: it starts: a count registers its question; a model in the loop also the
+#: bar to clear and what must hold before it is read (LAB-003 No run without
+#: an intent paragraph; a count has no bar to clear, 0.87.1). The labels
+#: are the template's, held to `protocol_check.FIELDS` by a test.
+REGISTRATION_FIELDS = ("Question / hypothesis",)
+REGISTRATION_FIELDS_WITH_MODEL = (
+    "Success / failure criterion",
+    "Admissibility condition",
+)
+
+
+def registration_fields(model: bool) -> tuple[str, ...]:
+    """The labels the registration owes written, with or without a model."""
+    return REGISTRATION_FIELDS + (REGISTRATION_FIELDS_WITH_MODEL if model else ())
+
+
+#: the one public recheck of every area, relative to the area: the analysis
+#: script's `--check` pins the output to the run, recomputes the metrics
+#: and holds the note to them (`recheck.holds`; LAB-041 Generate numbers,
+#: don't retype them). Every skeleton stamps it (`Skeleton.scripts`), and
+#: station 4 of report-check runs it — the counting skeleton carried its
+#: check inside `01_measure.py` until 0.99.0 and the gate asked for a file
+#: the skeleton never wrote (audit 2026-10-19).
+CHECK_SCRIPT = Path("scripts") / "02_analyze.py"
+CHECK_FLAG = "--check"
+
+
+def check_command(area: Path) -> list[str]:
+    """The recheck of AREA as a command line, without its interpreter (the
+    caller picks the repo's own, `preflight.area_test_python`)."""
+    return [str(area / CHECK_SCRIPT), CHECK_FLAG]
+
+
+@dataclass(frozen=True)
+class Release:
+    """What a reported number owes when it is written back — the stations
+    of `report-check`, in their order. The answer line citing a run_id is
+    the declaration (`protocol-fill --from-run` writes it); these are what
+    make the declaration hold.
+
+    Attributes:
+        freeze: Station 1 — `frozen = true` and no must gap, where the lane
+            owes the freeze.
+        finalize: Station 2 — `finalize` clean, so the answering run is
+            bound to this protocol and the answer cites it.
+        full_run: Station 2 — that run is a full run: `long=True`, not
+            acknowledged unfrozen (`runs.unreportable`); a probe's number
+            is never reported.
+        analysis_audit: Station 3 — a decided analysis record of the code,
+            the promise block and the answering run as they are now
+            (`findings.audit_coverage`).
+        check: Station 4 — `check_command` exits 0: the numbers recompute
+            and the note carries them and the run_id.
+    """
+
+    freeze: bool
+    finalize: bool = True
+    full_run: bool = True
+    analysis_audit: bool = True
+    check: tuple[str, ...] = (CHECK_SCRIPT.as_posix(), CHECK_FLAG)
+
+
+def release(cost: str | None) -> Release:
+    """The release contract of a head's `cost`: the freeze follows the lane,
+    the rest is owed at every tier."""
+    return Release(freeze=lane(cost).freeze)
+
+
+@dataclass(frozen=True)
+class Skeleton:
+    """What `labkit-init exp` stamps for one instrument, and what the stamped
+    area then has: the script skeletons (template, destination under
+    `scripts/`), the area's test template, and whether a `--probe` stage
+    comes before the run. Every skeleton stamps `CHECK_SCRIPT`, so the
+    release's check is one command for every area.
+
+    Attributes:
+        instrument: `count`, `estimator` or `model` — the three instruments
+            (README, Terms).
+        scripts: (template name, destination under scripts/), in order.
+        test: The template of `tests/test_<NN>_<name>.py`.
+        probe: A throwaway instrument check (`--probe`) precedes the run.
+            The count has none: its run is the instrument check.
+    """
+
+    instrument: str
+    scripts: tuple[tuple[str, str], ...]
+    test: str
+    probe: bool
+
+
+COUNT = Skeleton(
+    instrument="count",
+    scripts=(
+        ("measure-quick-script.py.template", "01_measure.py"),
+        ("analyze-quick-script.py.template", "02_analyze.py"),
+    ),
+    test="test-quick.py.template",
+    probe=False,
+)
+ESTIMATOR = Skeleton(
+    instrument="estimator",
+    scripts=(
+        ("prepare-script.py.template", "00_prepare.py"),
+        ("measure-estimator-script.py.template", "01_measure.py"),
+        ("analyze-script.py.template", "02_analyze.py"),
+    ),
+    test="test-estimator.py.template",
+    probe=True,
+)
+MODEL = Skeleton(
+    instrument="model",
+    scripts=(
+        ("prepare-script.py.template", "00_prepare.py"),
+        ("measure-script.py.template", "01_measure.py"),
+        ("analyze-script.py.template", "02_analyze.py"),
+    ),
+    test="test-area.py.template",
+    probe=True,
+)
+SKELETONS = (COUNT, ESTIMATOR, MODEL)
+
+
+def skeleton(cost: str | None, model: bool) -> Skeleton:
+    """The skeleton an area gets: with a model the prompt skeleton at every
+    tier; without one the count at seconds (a deterministic count has no
+    bar to clear) and the estimator at minutes/hours (nine of nine pilot
+    attempts were classical ML, labkit-paper area 09, 2026-10-16)."""
+    if model:
+        return MODEL
+    return COUNT if lane(cost).cut == SECONDS_CUT else ESTIMATOR
+
+
+def describe(cost: str | None, model: bool) -> list[str]:
+    """The contract of one tier in sentences, by occasion — what
+    `protocol-check --contract` prints, so an agent reads the obligations
+    where it reads the fields, instead of learning them from a refusal."""
+    ln, rel, sk = lane(cost), release(cost), skeleton(cost, model)
+    check = " ".join(rel.check)
+    before = (
+        "the registration written: " + ", ".join(registration_fields(model))
+        if ln.registration
+        else "`preflight` clean, the preflight audit decided and its `scope sha` "
+        "in the head, `frozen = true`"
+    )
+    return [
+        f"cost = {ln.tier!r}"
+        + (" (an unfilled cost reads so)" if cost is None else "")
+        + f", {'a model named' if model else 'no model'}: the {sk.instrument} skeleton "
+        + f"({', '.join(dest for _, dest in sk.scripts)}"
+        + (
+            ", a --probe stage before the run)"
+            if sk.probe
+            else "; the run is the instrument check)"
+        ),
+        f"before a full run: {before}"
+        + (
+            "; the run may start in the foreground"
+            if ln.foreground
+            else "; the run starts detached"
+        ),
+        "after the run: `finalize` clean — the answering run bound and cited, the "
+        "promises answered, the scopes unchanged"
+        + (
+            ", the source frozen in the run and tracked in git" if ln.provenance else ""
+        ),
+        "at the release (`protocol-fill --from-run`, the stop, the commit): "
+        + ("frozen, " if rel.freeze else "no freeze owed, ")
+        + "finalize clean, a full run (no probe, no acknowledged run), a decided "
+        + f"{ANALYSIS_AUDIT} audit of code, promises and that run, `{check}` passing",
+    ]
