@@ -45,7 +45,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from labkit import console, promises, protocol_block, runs
+from labkit import console, promises, protocol_block, runs, standard_contract
 from labkit.repo import git_root, git_run, repo_protocols
 from labkit.findings import waived_audit_gap
 from labkit.scope_sha import audit_stamp_drift
@@ -336,7 +336,7 @@ def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
     if not measure_runs(text):
         after = {f.label.casefold() for f in FIELDS if f.level == "after"}
         lines = [f for f in lines if f.name not in after]
-    if head.cost == "seconds":
+    if standard_contract.lane(head.cost).cut == standard_contract.SECONDS_CUT:
         found: dict[str, list[FieldLine]] = {}
         for f in lines:
             found.setdefault(f.name, []).append(f)
@@ -356,7 +356,9 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     found: dict[str, list[FieldLine]] = {}
     for f in fields(text):
         found.setdefault(f.name, []).append(f)
-    if head.cost == "seconds":
+    # which cut the protocol owes is the contract's answer; the marks on
+    # the fields (`Field.seconds`) are this module's
+    if standard_contract.lane(head.cost).cut == standard_contract.SECONDS_CUT:
         model = _model_named(found)
         must = [
             f for f in FIELDS if f.level in ("must", "should") and _in_cut(f, model)
@@ -388,9 +390,10 @@ def check_fields(text: str) -> FieldReport:
         )
     # Frozen means audited first (LAB-015 Preflight audit before freezing); at seconds nothing freezes, so a
     # frozen flag there would claim a freeze no gate held (review 2026-10-07).
-    if head.frozen and head.cost == "seconds":
+    lane = standard_contract.lane(head.cost)
+    if head.frozen and not lane.freeze:
         missing_must.append(
-            '[protocol] frozen = true at cost = "seconds" — nothing '
+            f'[protocol] frozen = true at cost = "{head.cost}" — nothing '
             "freezes there; set frozen = false or choose minutes/hours"
         )
     elif head.frozen and not head.preflight_audit:
@@ -404,7 +407,7 @@ def check_fields(text: str) -> FieldReport:
         tables_gap = promises.promise_tables_owed(
             promises.parse_block(text),
             frozen=head.frozen,
-            full_run=head.cost == "seconds",
+            full_run=lane.every_run_full,
             registers=promises.registers_ids(text),
         )
     except promises.PromiseError as exc:
@@ -431,9 +434,7 @@ def seconds_registration_missing(text: str) -> list[str]:
     by_name: dict[str, list[FieldLine]] = {}
     for f in lines:
         by_name.setdefault(f.name, []).append(f)
-    labels = ["Question / hypothesis"]
-    if _model_named(by_name):
-        labels += ["Success / failure criterion", "Admissibility condition"]
+    labels = standard_contract.registration_fields(_model_named(by_name))
     missing = [label for label in labels if label.casefold() not in written]
     try:
         cost = protocol_block.head(text).cost
@@ -865,6 +866,21 @@ def print_contract() -> None:
         "PROMPT constants: protocol-fill PROTOCOL-x.md --prompts\n"
     )
     print(
+        "what each tier owes, by occasion — the one table every gate reads "
+        "(standard_contract; minutes owes what hours owes):"
+    )
+    for cost, model in (
+        (standard_contract.SECONDS, False),
+        (standard_contract.SECONDS, True),
+        (standard_contract.HOURS, False),
+        (standard_contract.HOURS, True),
+    ):
+        first, *rest = standard_contract.describe(cost, model)
+        print(f"  {first}")
+        for line in rest:
+            print(f"    {line}")
+    print()
+    print(
         "head: the ```toml block's [protocol] table — "
         + ", ".join(protocol_block.PROTOCOL_HEAD_KEYS)
         + f"; standard = {protocol_block.STANDARD!r}, type one of "
@@ -1035,8 +1051,9 @@ def check_protocol(
     if report.head is None:
         return FileReport(path, report.head_error)
     head, frozen = report.head, report.frozen
+    lane = standard_contract.lane(head.cost)
     audit_drift = None
-    if frozen and head.cost != "seconds" and head.preflight_audit:
+    if frozen and lane.freeze and head.preflight_audit:
         # a warning: after the run, analysis scripts change legitimately;
         # `n/a` at minutes/hours waives an audit nobody may waive (0.99.0)
         audit_drift = waived_audit_gap(head.preflight_audit) or (
@@ -1116,7 +1133,9 @@ def check_protocol(
         series=[(n, s) for n, s in numbered if SERIES_HEAD.match(s)],
         measured=measured,
         run_unreported=(
-            unreported(text, seconds=head.cost == "seconds") if measured else []
+            unreported(text, seconds=lane.cut == standard_contract.SECONDS_CUT)
+            if measured
+            else []
         ),
         history=[(n, s) for n, s in numbered if CHANGELOG.search(s)],
         bare_refs=[
