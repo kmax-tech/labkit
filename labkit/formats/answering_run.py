@@ -13,13 +13,19 @@ recheck and labkit-params read the choice here. Read-only.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import cast
 
 from labkit.formats import promises
 from labkit.formats.runs import (
     as_stored,
+    binding_of,
     COMPLETED,
+    JsonObject,
+    ProtocolBinding,
+    RunState,
+    UNREADABLE,
     RunConfigError,
     RunDir,
     read_run_dir,
@@ -32,39 +38,51 @@ from labkit.formats.runs import (
 )
 
 
-def run_facts(run_dir: Path) -> dict | None:
-    """What a run directory says about itself: state and binding.
+@dataclass(frozen=True)
+class RunFacts:
+    """What a run directory says about itself, read once: its state and its
+    binding, and — for a run left out of a choice — why.
 
-    `None` for a directory without config.json — not a run. An unreadable
-    config.json is a run in state `unreadable` with the reason in `why`: it
-    stays in the listing the operator reads instead of vanishing, and it is
-    never chosen (review 2026-10-06). Not `corrupt` — that word is
-    completion.json without metrics.json (0.74.0).
-
-    Liveness is not asked here (`alive=False`): a run still finalizing in
-    another process reads as `unfinalized`; `runlog.active` asks.
+    Attributes:
+        dir: The run directory.
+        state: `unreadable` for a config.json that cannot be read (never
+            `corrupt` — that word is completion.json without metrics.json),
+            else `run_state` with liveness not asked: a run still
+            finalizing in another process reads as `unfinalized`.
+        binding: The protocol it was started under; unbound for an
+            unreadable run, whose binding is unknowable.
+        why: The reason it cannot answer — the RunConfigError's sentence for
+            an unreadable run, the exclusion `bound_runs` gives — or None.
     """
+
+    dir: Path
+    state: RunState
+    binding: ProtocolBinding
+    why: str | None = None
+
+    @property
+    def metrics(self) -> Path:
+        """The run's metrics.json (it may not exist)."""
+        return self.dir / "metrics.json"
+
+
+def run_facts(run_dir: Path) -> RunFacts | None:
+    """The `RunFacts` of RUN_DIR, or None for a directory without
+    config.json — not a run. An unreadable config.json is a run in state
+    `unreadable` with the reason in `why`: it stays in the listing the
+    operator reads instead of vanishing, and it is never chosen (review
+    2026-10-06). `runlog.active` asks liveness."""
     return _facts(read_run_dir(run_dir))
 
 
-def _facts(rd: RunDir) -> dict | None:
+def _facts(rd: RunDir) -> RunFacts | None:
     if rd.error is not None:
-        return {
-            "dir": rd.dir,
-            "metrics": rd.dir / "metrics.json",
-            "state": "unreadable",
-            "protocol_id": None,
-            "why": rd.error,
-        }
+        return RunFacts(rd.dir, UNREADABLE, ProtocolBinding(None, None), rd.error)
     if rd.config is None:
         return None
-    binding = rd.config.get("protocol") or {}
-    return {
-        "dir": rd.dir,
-        "metrics": rd.dir / "metrics.json",
-        "state": run_state(rd.dir, rd.config, alive=False),
-        "protocol_id": binding.get("id"),
-    }
+    return RunFacts(
+        rd.dir, run_state(rd.dir, rd.config, alive=False), binding_of(rd.config)
+    )
 
 
 def repeats_of(area: Path, run_id: str) -> list[Path]:
@@ -128,7 +146,7 @@ def draws(area: Path, run_id: str) -> list[tuple[int, Path]]:
     return [(1, area / "runs" / run_id), *_numbered_repeats(area, run_id)]
 
 
-def repeat_mismatch(parent: dict, new: dict) -> list[str]:
+def repeat_mismatch(parent: JsonObject, new: JsonObject) -> list[str]:
     """Why a run whose config.json would be NEW is no comparable repeat of
     PARENT (both config.json dicts), [] when it is: the same protocol, the
     same promise snapshot (block and every declared scope's digest), the same
@@ -144,10 +162,10 @@ def repeat_mismatch(parent: dict, new: dict) -> list[str]:
     `null`."""
     new = json.loads(json.dumps(new, ensure_ascii=False))
     out: list[str] = []
-    pid = (parent.get("protocol") or {}).get("id")
-    if pid != (new.get("protocol") or {}).get("id"):
-        out.append(f"protocol {(new.get('protocol') or {}).get('id')} is not {pid}")
-    pp, np_ = parent.get("promises") or {}, new.get("promises") or {}
+    pid = binding_of(parent).id
+    if pid != binding_of(new).id:
+        out.append(f"protocol {binding_of(new).id} is not {pid}")
+    pp, np_ = _table(parent, "promises"), _table(new, "promises")
     if pp.get("block_sha") != np_.get("block_sha"):
         out.append("the promise block changed")
     elif as_stored(pp) != as_stored(np_):
@@ -155,20 +173,21 @@ def repeat_mismatch(parent: dict, new: dict) -> list[str]:
         out.append("the code a promise rests on changed (declared_scope_sha)")
     if parent.get("script_sha") != new.get("script_sha"):
         out.append("the measure script changed (script_sha)")
-    if as_stored(parent.get("models_resolved") or {}) != as_stored(
-        new.get("models_resolved") or {}
+    if as_stored(_table(parent, "models_resolved")) != as_stored(
+        _table(new, "models_resolved")
     ):
         out.append("the model resolved differently (models_resolved)")
-    pc, nc = parent.get("config") or {}, new.get("config") or {}
+    pc, nc = _table(parent, "config"), _table(new, "config")
     for key in sorted(set(pc) | set(nc)):
         if key not in pc or key not in nc or as_stored(pc[key]) != as_stored(nc[key]):
             out.append(f"config {key}: {_shown(pc, key)} → {_shown(nc, key)}")
 
-    def digests(cfg: dict) -> dict:
+    def digests(cfg: JsonObject) -> JsonObject:
+        data = _table(cfg, "data")
         return {
-            k: (v.get("sha256"), v.get("rows"))
-            for k, v in (cfg.get("data") or {}).items()
-            if isinstance(v, dict)
+            k: (_table(data, k).get("sha256"), _table(data, k).get("rows"))
+            for k in data
+            if isinstance(data[k], dict)
         }
 
     if digests(parent) != digests(new):
@@ -176,42 +195,52 @@ def repeat_mismatch(parent: dict, new: dict) -> list[str]:
     return out
 
 
-def _shown(cfg: dict, key: str) -> str:
+def _table(cfg: JsonObject, key: str) -> JsonObject:
+    """CFG[KEY] when it is an object, else an empty one — absent and null
+    read alike, as the comparison of two records needs."""
+    value = cfg.get(key)
+    return cast(JsonObject, value) if isinstance(value, dict) else {}
+
+
+def _shown(cfg: JsonObject, key: str) -> str:
     return as_stored(cfg[key]) if key in cfg else "(absent)"
 
 
-def bound_runs(area: Path, pid: str) -> tuple[list[dict], list[dict]]:
-    """(runs bound to `pid` and completed, everything else), oldest first.
+def bound_runs(area: Path, pid: str) -> tuple[list[RunFacts], list[RunFacts]]:
+    """(runs bound to `pid` and completed, everything else with its `why`),
+    oldest first.
 
     Only the first list may feed an automatic choice. The second carries
     the reason it was left out, for the operator who has to look. The
     binding is the id and nothing else — `protocol.path` is a hint for
     humans, never a selection criterion: it goes stale by design.
     """
-    taken, left = [], []
+    taken: list[RunFacts] = []
+    left: list[RunFacts] = []
     for rd in run_dirs(area):
         facts = _facts(rd)
         if facts is None:
             continue
         parent = repeat_parent(rd.config) if rd.config is not None else None
-        if facts["state"] != COMPLETED:
-            facts.setdefault("why", facts["state"])
+        bound_to = facts.binding.id
+        if facts.state != COMPLETED:
+            why = facts.why or facts.state
         elif parent is not None:
-            facts["why"] = (
-                f"a repeat of {parent} — supporting evidence, never the answer"
-            )
-        elif facts["protocol_id"] == pid:
+            why = f"a repeat of {parent} — supporting evidence, never the answer"
+        elif bound_to == pid:
             taken.append(facts)
             continue
-        elif facts["protocol_id"]:
-            facts["why"] = f"bound to {facts['protocol_id']}"
+        elif bound_to:
+            why = f"bound to {bound_to}"
         else:
-            facts["why"] = "unbound (no protocol id at run time)"
-        left.append(facts)
+            why = "unbound (no protocol id at run time)"
+        left.append(replace(facts, why=why))
     return taken, left
 
 
-def newest_with_intent_keys(cands: list[dict]) -> tuple[Path | None, int, bool]:
+def newest_with_intent_keys(
+    cands: list[RunFacts],
+) -> tuple[Path | None, int, bool]:
     """Among already-eligible runs: (metrics path, newer runs skipped for
     reporting no intent key, whether the chosen one reports any).
 
@@ -224,10 +253,10 @@ def newest_with_intent_keys(cands: list[dict]) -> tuple[Path | None, int, bool]:
     """
     skipped = 0
     for facts in reversed(cands):
-        if promises.reported_ids(read_metrics(facts["metrics"])):
-            return facts["metrics"], skipped, True
+        if promises.reported_ids(read_metrics(facts.metrics)):
+            return facts.metrics, skipped, True
         skipped += 1
-    return (cands[-1]["metrics"], 0, False) if cands else (None, 0, False)
+    return (cands[-1].metrics, 0, False) if cands else (None, 0, False)
 
 
 def start_second(run_dir: Path) -> str:
@@ -271,34 +300,34 @@ def newest_completed(area: Path, *, with_repeats: bool) -> Path | None:
     return done[-1] if done else None
 
 
-def newer_unreadable(chosen: Path, rest: list[dict]) -> str | None:
+def newer_unreadable(chosen: Path, rest: list[RunFacts]) -> str | None:
     """Why the choice must not stand: a run NEWER than the chosen one, or
     started in the same second, whose config.json cannot be read. Its
     binding is unknowable, so it may be the run that answers — choosing an
     older one past it is what `runs.read_run_config` says must not happen
     (review 2026-10-07)."""
-    bad = [
-        f for f in rest if f["state"] == "unreadable" and _not_older(f["dir"], chosen)
-    ]
+    bad = [f for f in rest if f.state == UNREADABLE and _not_older(f.dir, chosen)]
     if not bad:
         return None
     return (
         f"{len(bad)} newer run(s) cannot say which protocol they belong to — "
-        + "; ".join(f["why"] for f in bad)
+        + "; ".join(f.why or UNREADABLE for f in bad)
         + f". Repair or move them aside before {chosen.name} may answer."
     )
 
 
-def same_second_rival(chosen: Path, taken: list[dict], has_keys: bool) -> str | None:
+def same_second_rival(
+    chosen: Path, taken: list[RunFacts], has_keys: bool
+) -> str | None:
     """Why the choice must not stand: another bound run of the same standing
     (reporting an intent key, if the chosen one does) started in the same
     second. The run id carries the second and a random suffix, so which of
     the two is newest is chance (2026-10-15)."""
     rivals = [
-        f["dir"].name
+        f.dir.name
         for f in taken
-        if same_second(f["dir"], chosen)
-        and (not has_keys or promises.reported_ids(read_metrics(f["metrics"])))
+        if same_second(f.dir, chosen)
+        and (not has_keys or promises.reported_ids(read_metrics(f.metrics)))
     ]
     if not rivals:
         return None
@@ -355,7 +384,7 @@ class AnsweringRun:
                 f"reports an intent key — a probe or producer run, not an answer",
                 [],
             )
-        lines = []
+        lines: list[str] = []
         if self.skipped_newer:
             lines.append(
                 f"skipped {self.skipped_newer} newer bound run(s) without intent keys"
@@ -380,7 +409,7 @@ def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
             f"no completed run bound to {pid} — no runs/ directory in {area}",
         )
     taken, rest = bound_runs(area, pid)
-    exclusions = tuple(RunExclusion(f["dir"], f["why"]) for f in rest)
+    exclusions = tuple(RunExclusion(f.dir, f.why or f.state) for f in rest)
     if not taken:
         return AnsweringRun(None, 0, exclusions, f"no completed run bound to {pid}")
     mpath, skipped, has_keys = newest_with_intent_keys(taken)

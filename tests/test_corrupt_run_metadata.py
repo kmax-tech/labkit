@@ -90,9 +90,9 @@ class BrokenConfig(unittest.TestCase):
 
     def test_intent_check_lists_it_and_never_chooses_it(self):
         taken, left = answering_run.bound_runs(self.area, PID)
-        self.assertEqual([f["dir"].name for f in taken], [OLD])
-        self.assertEqual(left[0]["state"], "unreadable")
-        self.assertIn("unreadable run metadata", left[0]["why"])
+        self.assertEqual([f.dir.name for f in taken], [OLD])
+        self.assertEqual(left[0].state, "unreadable")
+        self.assertIn("unreadable run metadata", (left[0].why or ""))
 
 
 class BrokenMetrics(unittest.TestCase):

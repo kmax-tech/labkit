@@ -94,7 +94,7 @@ def _named_run(d: Path, pid: str) -> Path:
             f"recheck: {d.name} is a repeat of {parent} — supporting "
             f"evidence, never the answer; `02_analyze.py --draws` shows it"
         )
-    bound = (cfg.get("protocol") or {}).get("id")
+    bound = runs.binding_of(cfg).id
     if bound != pid:
         raise SystemExit(
             f"recheck: {d.name} is bound to {bound or 'no protocol'}, not to "
@@ -156,7 +156,7 @@ def block_unchanged(run: Path, area: Path) -> None:
     protocol's block must be the one the run recorded.
     """
     cfg = runs.read_run_config(run) or {}
-    pid = (cfg.get("protocol") or {}).get("id")
+    pid = runs.binding_of(cfg).id
     if pid is None:
         return  # unbound: nothing to hold
     try:

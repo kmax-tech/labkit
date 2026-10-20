@@ -279,20 +279,21 @@ def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path 
     # A run that did not complete has numbers on disk and no finish —
     # "nothing may report it" (protocol-run-binding.md); naming the file
     # must not be a loophole around completion.
-    if facts is None or facts["state"] != COMPLETED:
-        state = facts["state"] if facts else "no config.json"
-        why = (facts or {}).get("why") or (
+    if facts is None or facts.state != COMPLETED:
+        state = facts.state if facts else "no config.json"
+        why = (facts.why if facts else None) or (
             "an incomplete run's numbers may not be reported, even when named explicitly"
         )
         print(
             f"intent-check: {metrics_arg.parent.name} is not completed ({state}) — {why}."
         )
         return 2
-    if facts["protocol_id"]:
-        if pid and facts["protocol_id"] != pid:
+    bound_to = facts.binding.id
+    if bound_to:
+        if pid and bound_to != pid:
             print(
                 f"intent-check: {metrics_arg} belongs to protocol "
-                f"{facts['protocol_id']}, this protocol is {pid} — "
+                f"{bound_to}, this protocol is {pid} — "
                 f"holding one protocol's promises against another "
                 f"protocol's run answers nothing."
             )
@@ -300,7 +301,7 @@ def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path 
         if pid is None:
             print(
                 f"intent-check: WARNING — {metrics_arg} is bound to "
-                f"{facts['protocol_id']}, but {protocol.name} carries no "
+                f"{bound_to}, but {protocol.name} carries no "
                 f"stamped id to hold it against. Checking anyway, unverified."
             )
     else:

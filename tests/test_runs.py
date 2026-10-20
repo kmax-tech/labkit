@@ -66,10 +66,79 @@ class RunDirs(unittest.TestCase):
         self._run("2026-01-01T00-00-00_bbbb", config=None)
         self._run("2026-01-01T00-00-00_cccc", config="{not json")
         taken, left = answering_run.bound_runs(self.area, CONFIG["protocol"]["id"])
-        self.assertEqual([f["dir"].name[-4:] for f in taken], ["aaaa"])
+        self.assertEqual([f.dir.name[-4:] for f in taken], ["aaaa"])
         self.assertEqual(
-            [(f["dir"].name[-4:], f["state"]) for f in left], [("cccc", "unreadable")]
+            [(f.dir.name[-4:], f.state) for f in left], [("cccc", "unreadable")]
         )
+
+
+class TypedRecords(unittest.TestCase):
+    """The run record is checked once, where the file is read, and handed on
+    as types: a run's facts and its binding are dataclasses, its state one
+    of a closed set — no reader guesses a dict's keys again (2026-10-20)."""
+
+    def setUp(self):
+        self.area = Path(tempfile.mkdtemp())
+        (self.area / "runs").mkdir()
+
+    def _run(self, name: str, config: dict | str | None) -> Path:
+        d = self.area / "runs" / name
+        d.mkdir()
+        if isinstance(config, dict):
+            (d / "config.json").write_text(json.dumps(config))
+        elif isinstance(config, str):
+            (d / "config.json").write_text(config)
+        return d
+
+    def test_no_run_an_unreadable_run_and_a_run_are_three_results(self):
+        none = self._run("2026-01-01T00-00-00_aaaa", None)
+        broken = self._run("2026-01-01T00-00-00_bbbb", "{not json")
+        read = self._run("2026-01-01T00-00-00_cccc", CONFIG)
+        self.assertIsNone(answering_run.run_facts(none))
+        bad = answering_run.run_facts(broken)
+        assert bad is not None
+        self.assertEqual(bad.state, "unreadable")
+        self.assertEqual(bad.binding, runs.ProtocolBinding(None, None))
+        self.assertIn("unreadable run metadata", bad.why or "")
+        good = answering_run.run_facts(read)
+        assert good is not None
+        self.assertEqual(good.binding.id, CONFIG["protocol"]["id"])
+        self.assertIsNone(good.why)
+        self.assertEqual(good.metrics, read / "metrics.json")
+
+    def test_a_left_out_run_carries_its_reason(self):
+        self._run(
+            "2026-01-01T00-00-00_aaaa", {**CONFIG, "protocol": {"id": "p-" + "1" * 16}}
+        )
+        self._run("2026-01-01T00-00-00_bbbb", {**CONFIG, "protocol": None})
+        _, left = answering_run.bound_runs(self.area, CONFIG["protocol"]["id"])
+        # neither is completed: the state is the reason
+        self.assertEqual([f.why for f in left], ["crashed", "crashed"])
+
+    def test_a_record_is_read_or_unreadable_never_both(self):
+        d = self.area / "runs" / "x"
+        with self.assertRaises(ValueError):
+            runs.RunDir(d, dict(CONFIG), "unreadable run metadata")
+        runs.RunDir(d, dict(CONFIG), None)  # the twins: each alone is a record
+        runs.RunDir(d, None, "unreadable run metadata")
+        runs.RunDir(d, None, None)
+
+    def test_the_binding_is_held_to_its_shape(self):
+        self.assertEqual(runs.binding_of({}), runs.ProtocolBinding(None, None))
+        self.assertEqual(
+            runs.binding_of({"protocol": {"id": "p-x", "path": "PROTOCOL-a.md"}}),
+            runs.ProtocolBinding("p-x", "PROTOCOL-a.md"),
+        )
+        for bad, field in (({"id": 7}, "protocol.id"), ("p-x", "protocol =")):
+            with self.subTest(bad=bad):
+                with self.assertRaises(runs.RunConfigError) as cm:
+                    runs.binding_of({"protocol": bad})
+                self.assertIn(field, str(cm.exception))
+        # the reader refuses the same shape, with the same sentence
+        d = self._run("2026-01-01T00-00-00_dddd", {**CONFIG, "protocol": {"id": 7}})
+        with self.assertRaises(runs.RunConfigError) as cm:
+            runs.read_run_config(d)
+        self.assertIn("protocol.id = 7, not a string", str(cm.exception))
 
 
 class RunIdShape(unittest.TestCase):

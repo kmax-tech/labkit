@@ -88,6 +88,7 @@ from labkit.formats.standard_contract import lane
 from labkit.formats.runs import (
     COMPLETED,
     RECORD_SHA_CHARS,
+    binding_of,
     RUN_ID_TIME,
     RunConfigError,
     completion_state,
@@ -732,7 +733,7 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
                     ),
                     json.dumps(metrics, ensure_ascii=False, sort_keys=True),
                     str(comp.get("note", "")),
-                    (cfg.get("protocol") or {}).get("id") or "",
+                    binding_of(cfg).id or "",
                 ],
             )
             added += 1

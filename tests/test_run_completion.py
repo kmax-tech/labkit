@@ -162,7 +162,7 @@ class TestStates(unittest.TestCase):
             with self.assertRaisesRegex(runs.RunConfigError, "below 2"):
                 runs.read_run_config(d)
             self.assertEqual(
-                (answering_run.run_facts(d) or {}).get("state"), "unreadable"
+                getattr(answering_run.run_facts(d), "state", None), "unreadable"
             )
 
 

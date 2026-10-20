@@ -129,7 +129,7 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
         code, out = _check([self.a])
         self.assertEqual(code, 0, out)
         cands, _ = answering_run.bound_runs(self.area, A_ID)
-        self.assertEqual([c["dir"].name for c in cands], ["2026-01-01T00-00-00_aaaa"])
+        self.assertEqual([c.dir.name for c in cands], ["2026-01-01T00-00-00_aaaa"])
 
     def test_no_bound_run_exits_2_and_says_why_each_was_left_out(self):
         _run(self.area, "2026-01-01T00-00-00_bbbb", pid=B_ID, metrics=FULL)

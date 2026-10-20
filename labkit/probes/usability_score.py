@@ -180,8 +180,8 @@ def load_probe_run(root: Path) -> ProbeRun:
     if config is None:
         raise SystemExit(f"usability: {run} has no config.json — not a run")
     metrics = runs.read_metrics(run / "metrics.json")
-    binding = config.get("protocol") or {}
-    named = binding.get("path")
+    binding = runs.binding_of(config)
+    named = binding.path
     protocol = None
     if named:
         protocol = Path(named) if Path(named).is_absolute() else area / named
@@ -194,7 +194,7 @@ def load_probe_run(root: Path) -> ProbeRun:
         metrics,
         protocol,
         str(named) if named else None,
-        bool(binding.get("id")),
+        bool(binding.id),
         str(tier) if tier is not None else None,
     )
 

@@ -52,6 +52,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -168,9 +169,9 @@ def key_kind(key: str) -> str | None:
     return KINDS[m.group(1)[0].upper()] if m else None
 
 
-def reported_ids(metrics: dict) -> set[str]:
+def reported_ids(metrics: Mapping[str, object]) -> set[str]:
     """Ids a metrics dict reports (bare id or id_suffix keys), lowercased."""
-    out = set()
+    out: set[str] = set()
     for key in metrics:
         m = ID_KEY.match(str(key))
         if m:

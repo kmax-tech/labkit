@@ -17,7 +17,7 @@ import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import cast
+from typing import Any, Final, Literal, cast
 
 from labkit.formats.repo import layout_root
 
@@ -74,7 +74,20 @@ def runs_script(cmd: str, script: str) -> bool:
     return re.search(rf"(?:^|[\s/]){re.escape(script)}(?:\s|$)", cmd) is not None
 
 
-def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
+#: a JSON object as a run's record files hold it (config.json, completion.json):
+#: labkit's own keys are checked when the file is read (`read_run_config`),
+#: the experiment's config and metrics keys stay free — Any, not a schema
+JsonObject = dict[str, Any]
+
+#: what a run directory is — the closed set every reader compares to:
+#: `run_state` gives the first six, `unreadable` is a run whose config.json
+#: cannot be read (`RunDir.error`)
+RunState = Literal[
+    "completed", "running", "unknown", "crashed", "unfinalized", "corrupt", "unreadable"
+]
+
+
+def run_state(run_dir: Path, cfg: JsonObject, alive: bool | None) -> RunState:
     """One of: completed · running · unknown · crashed · unfinalized · corrupt
     (a run whose config.json cannot be read — damaged, or written before
     schema 2 — is `unreadable`: `run_facts`, `runlog.active`; this function
@@ -108,7 +121,8 @@ def run_state(run_dir: Path, cfg: dict, alive: bool | None) -> str:
 
 
 #: the one state every consumer that picks or accepts a run compares to
-COMPLETED = "completed"
+COMPLETED: Final = "completed"
+UNREADABLE: Final = "unreadable"
 #: the width of every digest a run RECORDS (a data file, an output) — the
 #: area stamp and a promise's scope hash keep `scope_sha.DIGEST_CHARS`;
 #: `recheck.pin` compares by prefix, so the width is part of the format
@@ -138,7 +152,7 @@ class RunConfigError(ValueError):
     """A run directory whose config.json exists but cannot be read."""
 
 
-def read_run_config(run_dir: Path) -> dict | None:
+def read_run_config(run_dir: Path) -> JsonObject | None:
     """A run's metadata, None when the directory has no config.json.
 
     Unreadable is not absent: a damaged config.json raises RunConfigError
@@ -195,7 +209,7 @@ class OutputEntry:
     lines: int | None  # lines of a text file; None: absent or not text
     note: str = ""
     rows_from: dict[str, int] = field(
-        default_factory=dict
+        default_factory=dict[str, int]
     )  # run_id -> rows (JSONL, 0.72.3)
     continues: tuple[str, ...] = ()  # runs whose rows this file already held
 
@@ -329,6 +343,7 @@ def _shape_problem(cfg: object) -> str | None:
     later as an AttributeError far from the file (review 2026-10-07)."""
     if not isinstance(cfg, dict):
         return f"a JSON {type(cfg).__name__}, not an object"
+    cfg = cast(JsonObject, cfg)
     # written before labkit 0.21 (when metrics.json alone marked a finish):
     # 0.89.0 dropped the `legacy` state that listed such a run (CHANGELOG)
     before_schema = "a run of labkit before 0.21 — read it with labkit 0.47"
@@ -339,17 +354,14 @@ def _shape_problem(cfg: object) -> str | None:
         return f"schema_version = {sv!r}, not an integer"
     if sv < 2:
         return f"schema_version = {sv}, below 2: {before_schema}"
-    binding = cfg.get("protocol")
-    if binding is not None:
-        if not isinstance(binding, dict):
-            return f"protocol = {binding!r}, not an object"
-        for key in ("id", "path"):
-            if binding.get(key) is not None and not isinstance(binding[key], str):
-                return f"protocol.{key} = {binding[key]!r}, not a string"
+    try:
+        binding_of(cfg)
+    except RunConfigError as exc:
+        return str(exc)
     return _repeat_shape_problem(cfg)
 
 
-def _repeat_shape_problem(cfg: dict) -> str | None:
+def _repeat_shape_problem(cfg: JsonObject) -> str | None:
     """`repeat_of` null or a run id; `draw` null without it, an integer >= 2
     with it. A damaged value read as "no repeat" put a repeat back into the
     answering choice — loud instead (review 2026-10-15)."""
@@ -363,7 +375,7 @@ def _repeat_shape_problem(cfg: dict) -> str | None:
     return None
 
 
-def unreportable(cfg: dict) -> list[str]:
+def unreportable(cfg: JsonObject) -> list[str]:
     """Why the number of the run CFG records cannot be reported — empty when
     it is a full run on a protocol the freeze gate let through.
 
@@ -380,7 +392,7 @@ def unreportable(cfg: dict) -> list[str]:
     "pilot": the agents of those rounds called their shortcut a pilot, and
     labkit's own messages had offered them the word (review 2026-10-18).
     """
-    marks = []
+    marks: list[str] = []
     long = cfg.get("long")
     if not isinstance(long, bool):
         marks.append(
@@ -396,7 +408,7 @@ def unreportable(cfg: dict) -> list[str]:
     return marks
 
 
-def completion_state(run_dir: Path) -> str:
+def completion_state(run_dir: Path) -> RunState:
     """`run_state` of a run directory read from disk, liveness not asked.
 
     The one question every consumer that picks or accepts a run must ask —
@@ -422,7 +434,7 @@ class RunSummary:
     code-navigation round 11, 2026-10-08)."""
 
     run_id: str
-    state: str  # completion_state: completed | unfinalized | corrupt | …
+    state: RunState  # completion_state
     derived_from: str | None  # the run whose rows this one re-evaluated
     models: tuple[str, ...]  # model aliases the run resolved; () when none
     git: str  # the commit at start, "+dirty" when the tree was not clean (untracked files count)
@@ -437,11 +449,15 @@ def run_summary(run_dir: Path) -> RunSummary:
     if cfg is None:
         raise ValueError(f"{run_dir}: no config.json — not a run folder")
     models = cfg.get("models_resolved")
-    aliases = tuple(sorted(models)) if isinstance(models, dict) else ()
+    aliases = (
+        tuple(sorted(cast(JsonObject, models))) if isinstance(models, dict) else ()
+    )
     patch = run_dir / "uncommitted.patch"
     argv = cfg.get("command")
     command = (
-        " ".join(str(a) for a in argv) if isinstance(argv, list) and argv else None
+        " ".join(str(a) for a in cast(list[object], argv))
+        if isinstance(argv, list) and argv
+        else None
     )
     derived = cfg.get("derived_from")
     return RunSummary(
@@ -456,14 +472,51 @@ def run_summary(run_dir: Path) -> RunSummary:
 
 
 @dataclass(frozen=True)
+class ProtocolBinding:
+    """The protocol a run was started under, as config.json `protocol`
+    records it. `id` is the binding — every choice of a run filters by it;
+    `path` is a hint for a person and goes stale by design. Both None:
+    the run is unbound."""
+
+    id: str | None
+    path: str | None
+
+
+def binding_of(cfg: JsonObject) -> ProtocolBinding:
+    """The run's binding, the one reading of `cfg["protocol"]` — absent or
+    null is unbound. `read_run_config` refuses a malformed table on read;
+    a config built in memory (a run about to be written) is held to the
+    same shape here. Raises RunConfigError naming the field."""
+    table = cfg.get("protocol")
+    if table is None:
+        return ProtocolBinding(None, None)
+    if not isinstance(table, dict):
+        raise RunConfigError(f"protocol = {table!r}, not an object")
+    table = cast(JsonObject, table)
+    found: list[str | None] = []
+    for key in ("id", "path"):
+        value = table.get(key)
+        if value is not None and not isinstance(value, str):
+            raise RunConfigError(f"protocol.{key} = {value!r}, not a string")
+        found.append(value)
+    return ProtocolBinding(found[0], found[1])
+
+
+@dataclass(frozen=True)
 class RunDir:
     """One directory under `runs/` and what its config.json says: `config`
     None and `error` None is no run (no config.json); `error` set is a run
     whose metadata cannot be read (the RunConfigError's sentence)."""
 
     dir: Path
-    config: dict | None
+    config: JsonObject | None
     error: str | None
+
+    def __post_init__(self) -> None:
+        if self.config is not None and self.error is not None:
+            raise ValueError(
+                f"{self.dir}: a RunDir is a read run or an unreadable one, not both"
+            )
 
 
 def read_run_dir(d: Path) -> RunDir:
@@ -494,7 +547,7 @@ def completed_runs(area: Path, *, with_repeats: bool) -> list[Path]:
     sight, since a "newest run" that is a repeat would displace the run that
     answers. An unreadable run raises RunConfigError: it may be the newest
     and must not vanish."""
-    out = []
+    out: list[Path] = []
     for rd in run_dirs(area):
         if rd.error is not None:
             raise RunConfigError(rd.error)
@@ -526,7 +579,7 @@ def write_atomic(path: Path, text: str) -> None:
 # finalize alike; a third copy for the parameter view was the line)
 
 
-def repeat_parent(config: dict) -> str | None:
+def repeat_parent(config: JsonObject) -> str | None:
     """The run a repeat draws again (config.json `repeat_of`), or None.
 
     `derived_from` re-reads the parent's rows and makes no model call;
