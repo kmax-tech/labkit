@@ -219,6 +219,32 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **Resume compares the instrument as JSON stores it.** `Store.pending`
+  uses `runs.as_stored`: `true` differs from `1`, while a tuple and its
+  stored list representation describe the same instrument.
+- **Every lineage reader uses one fully validated chain.**
+  `answering_run.lineage` checks every ancestor, including those beyond
+  the first recorded model. Missing parents and cycles are errors in
+  model provenance, parameter display and row-provenance checks alike.
+- **A declared scope file reopens its area even without an import.** The
+  stop hook and staged release check include files named in promises,
+  including data or rubrics outside `lib/` and `src/`. A damaged promise
+  block conservatively marks its area touched without preventing the
+  independent selection of other areas.
+- **An audit prompt and its stamp use one snapshot.** The stamp includes
+  declared scope files; every stamped file is shown to the auditor, and
+  a changed file listing between collection and snapshot refuses the
+  call. Audit records use exclusive creation instead of overwriting a
+  previous record with the same name.
+- **Malformed metadata and model tables fail at their boundaries.** Owned
+  run-record tables are objects or null, never silently read as empty
+  objects when damaged. `models.toml` validates its outer tables and the
+  selected alias before backend-specific parsing, with field-named errors.
+- **Scope and result comparisons refuse ambiguous evidence.** A function
+  scope rejects a name bound more than once. Recomputed values use the
+  shared type-strict stored comparison; cited numbers must be whole
+  tokens, including the correct sign and exponent.
+
 - **Gates and records found in the review of 2026-10-19.** preflight's
   code station runs code-check's whole list (parser fixtures and prompt
   drift were skipped). `llm.resolve` hands out deep copies and freezes each
@@ -269,6 +295,12 @@ pins (`requirements.txt` / `requirements.lock`).
   release's obligations is `lane` (`freeze`, `audits`).
 
 ### Changed
+
+- **The README introduces labkit and walks through using it.** Installation,
+  the measurement lifecycle, cost tiers and result adoption precede the
+  command reference. Internal records and enforcement live in
+  `docs/architecture.md`; TODO holds remaining work, decisions and triggers
+  instead of a chronological list of completed changes.
 
 - **A gate's findings are data; the console is one channel for them.**
   `gate.Findings` keeps every finding as `GateFinding` (grade, text) and

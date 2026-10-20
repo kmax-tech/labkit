@@ -1,354 +1,294 @@
-# labkit — shared lab helpers
+# labkit
 
-The modules every experiment repo imports, in **one** place: writing a
-run (`runlog`), reading one (`runs`), the promise block (`promises`), the
-protocol checker (`protocol_check`), the checks (`intent_check`,
-`code_check`, `recheck`, `scope_sha`, `notes_check`), model calls (`llm`,
-`endpoint_lease`), resumable output (`batch`) and repo layout (`repo`).
-Two orchestrating commands — `preflight` (before a full run, and before
-freezing a protocol that freezes) and `finalize` (after the run, before a
-number is reported) — sequence the checks at the two decision points. Layers,
-the chain from promise to number, and the one home of each recurring
-question: `docs/architecture.md`.
+labkit helps research labs keep an experiment's question, implementation,
+execution and reported result connected. It detects violations of
+**explicitly encoded scientific intent across implementation, execution
+and reporting**.
 
-They used to live as copies in every repo — up to three versions per file
-(`experiments/`, `resources/templates/`, `~/.claude/resources/`). On
-2026-09-01 an active repo's `experiments/llm.py` was 379 lines behind the
-master while the drift check reported "in sync": it compared the snapshot,
-not the imported file.
+You write a protocol, make its checkable promises explicit, and run your
+measurement through labkit. The result keeps a record of its code, inputs,
+configuration and model. Before you report a number, labkit checks that it
+belongs to that protocol and agrees with the recorded run.
 
-## Use
+For example, a protocol can require a minimum number of usable answers
+before an accuracy is meaningful. labkit checks the declared keys and
+recorded values; an agent audit reviews whether the code implements the
+requirement's meaning.
+
+It provides script templates, a Python package and command-line checks.
+It requires **Python 3.12+**, has no runtime dependencies, and keeps its
+records as files in your experiment repo.
+
+## Start a lab repo
+
+Choose a published release tag and replace `<release-tag>` below. Run these
+commands from the new repo's root:
 
 ```bash
-pip install ~/projects/labkit      # in repos: pinned via requirements.txt/.lock
+mkdir my-lab
+cd my-lab
+git init
+python3 -m venv .venv
+.venv/bin/pip install "labkit @ git+https://github.com/kmax-tech/labkit.git@<release-tag>"
+.venv/bin/labkit-init lab .
+.venv/bin/pip install -r requirements.txt
+.venv/bin/labkit-hooks install
+.venv/bin/pip freeze > requirements.lock
 ```
+
+This creates the lab layout, `AGENTS.md`, a pinned `requirements.txt`,
+`models.toml` and the shared-helper test. The standard and templates come
+with the package. Templates are starting points to fill in, not completed
+experiments.
+
+For an **existing lab repo**, install its pin instead:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/labkit-hooks install
+```
+
+Commit the requirements and lock file. Keep the package pinned in an
+experiment repo; editable installs belong in labkit development.
+[Updating a pin](docs/student-repos.md#moving-to-a-newer-version) is a
+separate, deliberate step; check [breaking changes](CHANGELOG.md) first.
+
+## Run an experiment
+
+An **area** is a directory for one question, its protocol, scripts, outputs
+and runs. Create one from the repo root:
+
+```bash
+.venv/bin/labkit-init exp document-count --cost seconds
+```
+
+In a fresh repo this creates `experiments/01-document-count/` and its test
+under `tests/`. The command prints the paths. Choose the cost tier by how
+cheaply you can repeat the measurement:
+
+| Tier | Before the full run | Before reporting a result |
+|---|---|---|
+| `seconds` | Write the registration and implement/test the measurement; no freeze or preflight audit. | Finalize, decide the analysis audit, adopt the result through `report-check`. |
+| `minutes` / `hours` | Also probe the instrument, pass preflight, decide the preflight audit, complete the report fields and freeze the protocol. | Finalize, decide the analysis audit, adopt the result through `report-check`. |
+
+Without `--model`, seconds creates a counting skeleton; minutes/hours
+creates an estimator skeleton. Add `--model <alias>` for an LLM measurement.
+Configure that alias in `models.toml`. Audits also use an alias; the default
+`opus` uses the Claude CLI and needs its authentication. `--model` on
+`labkit-audit` selects another configured backend.
+
+### A cheap measurement, from question to result
+
+The following paths assume the fresh area above. All commands run from the
+repo root.
+
+1. **Register the question.** Fill the protocol's open fields. For a count,
+   describe the data, unit and exclusions; the stamped form lists what is
+   owed. A model measurement also needs its criterion, admissibility
+   condition, prompt and null condition.
+
+   ```bash
+   .venv/bin/protocol-fill experiments/01-document-count/PROTOCOL-document-count.md --list
+   .venv/bin/protocol-check experiments/01-document-count/PROTOCOL-document-count.md --contract
+   ```
+
+   Use `protocol-fill PROTOCOL "LABEL=VALUE" ...` to fill several fields.
+   The [field guide](labkit/docs/protocol-field-guide.md) explains them.
+
+2. **Implement and test.** Fill the script and area-test TODOs, including
+   the source, expected items and calculation. The scripts already use
+   `runlog` to keep the measurement's record.
+
+   ```bash
+   .venv/bin/pytest -q
+   .venv/bin/code-check experiments/01-document-count
+   ```
+
+3. **Commit the code and inputs, then run.**
+
+   ```bash
+   .venv/bin/python experiments/01-document-count/scripts/01_measure.py
+   .venv/bin/runlog experiments/01-document-count
+   ```
+
+   Keep the printed run ID. Commit the recorded inputs, outputs and run
+   artifacts as required by the checks.
+
+4. **Check the result and audit its interpretation.**
+
+   ```bash
+   .venv/bin/finalize experiments/01-document-count
+   .venv/bin/labkit-audit experiments/01-document-count --mode analysis
+   ```
+
+   Resolve the findings in the written `audits/*.toml`: each needs a status
+   (`fixed`, `accepted`, `deferred` or `dismissed`) and a reason. Fixes can
+   invalidate the audit's binding; rerun the affected measurement or audit
+   when the checks require it.
+
+5. **Adopt the result.** Replace `<run-id>` with the recorded run ID:
+
+   ```bash
+   .venv/bin/protocol-fill experiments/01-document-count/PROTOCOL-document-count.md --from-run <run-id>
+   ```
+
+   This writes the answer and run reference from `metrics.json`, runs
+   `report-check`, and restores the protocol if a check blocks adoption.
+   Commit the resulting protocol and artifacts. Later, rerun
+   `report-check experiments/01-document-count` to check the reported result.
+
+Scripts declare `run_kind="measurement"`; a separate `run_kind="probe"`
+is only allowed at minutes/hours. Data preparation uses
+`run_kind="preparation"` and keeps its own provenance record. At seconds, repeat the full measurement
+to check or correct the instrument.
+
+An exploration may leave the answer open and end without a reported result.
+A probe (`run_kind="probe"`) or an acknowledged unfrozen run cannot supply a
+reportable number.
+
+### Longer measurements
+
+At `minutes`/`hours`, follow the longer lane in the repo's `AGENTS.md`:
+render real prompts where applicable, run the instrument probe, complete
+the area tests, run `preflight`, then `labkit-audit --mode preflight`.
+Decide the findings and fill the protocol's audit field with the matching
+stamp. Add report fields with `labkit-init exp <name> --report`, complete
+them, set `frozen = true`, and commit before the full run.
+
+When your agent's shell has a foreground time limit, start the run detached
+and wait for its recorded state:
+
+```bash
+.venv/bin/runlog start experiments/01-document-count -- .venv/bin/python experiments/01-document-count/scripts/01_measure.py
+.venv/bin/runlog experiments/01-document-count --wait
+```
+
+Use your actual area's path. Follow the same post-run steps as above:
+finalize, analysis audit, decisions, adoption. Internal checks and timeout
+configuration are described in [architecture](docs/architecture.md#run-and-hook-enforcement).
+
+## What the checks establish
+
+| Tier | What it tells you |
+|---|---|
+| **Guaranteed** | An exact encoded condition holds: for example, the run is bound to the protocol or a cited number matches its record. Silent on correct input. |
+| **Static evidence** | A code pattern deserves review. It warns and never blocks; it does not prove the code's meaning. |
+| **Agent audit** | A model reviews the implementation or analysis against the scientific intent. Findings need a decision; this is semantic review, not a guarantee. |
+
+`preflight` checks readiness before freezing; `finalize` checks the completed
+run. **`report-check` checks release of the result at every cost tier**,
+including a decided analysis audit and the area's recomputation check.
+`labkit-audit` performs the model review; running `preflight` alone does not
+perform that review.
+
+The run writer and git hooks enforce checks independently of an agent.
+Claude Code's live hooks add feedback during a session. Install the pinned
+hooks with `labkit-hooks install`, and repeat that after raising the pin.
+
+## Command reference
+
+The **console commands** are installed with the package. Use
+`.venv/bin/<command>` from the repo root; each supports `--help`.
+
+```bash
+labkit-init lab [DIR]               # create a lab repo
+labkit-init exp NAME [--cost T] [--model ALIAS] [--report] [--explore]
+protocol-check PROTOCOL             # check required fields and promise tables
+protocol-check --contract | --guide # field contract or field-guide path
+protocol-fill PROTOCOL "LABEL=VALUE" ... # fill fields
+protocol-fill PROTOCOL --list | --prompts | --from-run [RUN]
+code-check AREA [--protocol FILE] [--bundle FILE] # code checks; audit bundle
+intent-check PROTOCOL [--metrics FILE] # promises against recorded metrics
+scope-sha AREA                     # code stamp used by an audit
+preflight AREA                     # readiness before freezing
+finalize AREA                      # checks after the run
+labkit-audit AREA --mode preflight|analysis|clarity [--model ALIAS]
+report-check AREA                  # release check before reporting
+report-check --if-reported [--staged] PATH... # check affected reported areas
+runlog [AREA] [--wait | --follow]    # inspect or monitor runs
+runlog start AREA -- COMMAND       # start a detached run
+runlog reindex AREA                # recover missing index rows
+labkit-params AREA [--run ID]       # values and provenance of a run
+labkit-hooks install|check [REPO]   # install or check hooks
+claude-hook pre-run|post-change|stop # live Claude Code hook adapter
+claude-hook undecided PATH...      # unresolved audit blockers in touched areas
+claude-hook sessions [--run RUN_ID] # session records
+labkit-check [REPO] [--offline]     # report pin, installation and hook drift
+notes-check PATH                   # check measurement-note declarations
+labkit-calltree [--depth N] [--out FILE] COMMAND [-- ARGS] # inspect calls
+usability stage|log|score|trace     # prepare and measure an agent's workflow
+usability reader|read-score|glance|glance-score|terms # protocol reading probes
+usability nav|nav-score|human       # code navigation probes
+```
+
+Mechanical gates return failure when they have blockers; warnings alone
+pass. `labkit-audit` exits 1 for either blockers or warnings, and 2 on an
+execution error. `--mode clarity` reviews readability and is never a gate.
+
+## Terms
+
+This is the home of labkit's tool vocabulary. Method terms live in the
+[standard](labkit/docs/standard.md); terms local to an experiment belong in
+its protocol. The [promise format](docs/promise-block.md) and
+[protocol/run binding](docs/protocol-run-binding.md) specify the contracts.
+
+| Term | Meaning |
+|---|---|
+| **area** | Directory grouping an experiment's protocols, scripts and runs. |
+| **protocol** | Experiment specification in `PROTOCOL-*.md`. |
+| **protocol id** | Stable, path-independent identity: `p-` followed by 16 hex characters. |
+| **run** | One execution recorded under a protocol. |
+| **preparation** | Recorded data preparation, before the measurement; cannot supply a reported result. |
+| **probe** | Instrument check before a measurement at minutes/hours; its number is not reported. |
+| **measurement** | Run of the registered question, eligible for result release after the required checks. |
+| **run metadata** | Start and completion records: `config.json` and `completion.json`. |
+| **run index** | Searchable overview in `runs.tsv`. |
+| **metrics** | Measured values recorded in `metrics.json`. |
+| **documented runs** | Entries in a protocol's `## Runs` section. |
+| **intent id** | Identifier of a checked promise: `[C1]`, `[A1]`, `[B1]`, etc. |
+| **bundle** | Protocol, code and extracted facts packed for an audit agent. |
+| **frozen** | Protocol committed to its declared specification, with `frozen = true`. |
+| **promise** | Checkable commitment: id, metrics key, sentence, code scope and constants in a `[[promise]]` table. |
+| **criterion** | Kind C promise: success or failure decided from the run. |
+| **admissibility** | Kind A promise: prerequisite for reading a criterion; failure withholds all C verdicts. |
+| **branch** | Kind B promise: the registered interpretation for an outcome, recorded as `b1_branch`, etc. |
+| **binding** | Run's record of the protocol id it ran under. |
+| **answering run** | Completed run selected to answer a particular protocol; repeat draws are excluded. Selection rules: [protocol/run binding](docs/protocol-run-binding.md). |
+| **derived run** | Re-evaluation of a completed non-repeat run's rows through `derived_from`, with no new model calls. |
+| **scope hash** | Per-promise hash of its declared code scope, recorded with the run and checked by finalize. |
+| **stamp** | Area audit fingerprint of selected source files, declared scopes and the package pin. |
+| **estimator** | Instrument fitted to data; the stamped estimator skeleton compares true-label and permuted-label lanes. |
+
+The run index and a protocol's `## Runs` section are views of the run
+records; they are not the source of truth. Python scripts import helpers
+from their package directly:
 
 ```python
 from labkit.run import runlog, llm, batch
 from labkit.checks import recheck
 ```
 
-`recheck.holds(area, out, recompute, note)` is the `--check` of an
-analysis script in one call: the output file pinned to the run's recorded
-sha prefix, `metrics.json` against the recomputation (intent keys exact,
-nothing vanished, grown keys reported as a derived run), the note holding
-every reported number as a token and the run_id. Two areas re-implemented
-it and got two of three parts wrong (2026-10-05).
+Use the stamped scripts as integration examples. `recheck.holds` connects
+an analysis script's `--check` to recorded outputs, recomputed metrics and
+the cited result.
 
-The **console commands** come with the installation; every one answers
-`--help`, and `tests/test_readme_commands.py` holds this list to
-`pyproject.toml` and the sub-commands:
+## Develop labkit
+
+In a checkout of this repo:
 
 ```bash
-labkit-init lab [DIR] [--name NAME] [--labkit-ref REF]   # lay out a lab repo: AGENTS.md, pinned requirements.txt, models.toml, experiments/, data/, notes/
-labkit-init exp <NAME> [--repo DIR] [--cost T] [--model [ALIAS]] [--report] [--explore]  # stamp an area: protocol, script skeletons, README, its test
-protocol-check [--template PATH] <PROTOCOL-*.md | dir>...  # mandatory-field check (must/should contract)
-protocol-check --contract | --guide # the head, the fields by exact label, the budgets — read before writing; the path of the field guide
-runlog [<area>] [--wait | --follow] [--max-seconds N] [--interval S] [--notify]  # the area's runs: open ones with state and pid, then the finished ones; --wait exits 0 idle · 2 a run failed · 3 still running
-runlog start <AREA> -- <cmd>        # detach a long run (own session, log in AREA/output/) and return
-runlog reindex <area>               # append rows for completed runs the index missed
-intent-check <PROTOCOL-*.md> [--metrics FILE]  # registered promise ids vs. the answering run's metrics keys
-code-check <AREA> [--protocol FILE] [--bundle FILE]  # intent ids, [A] keys tested, parser fixtures, prompt drift, code the stamp cannot follow (sys.path, dynamic loaders, imports outside lib/ and src/); --bundle packs the audit bundle for the agent
-scope-sha [AREA | --area DIR] [--globs PAT,...] [--no-pin] [FILE ...]  # audit stamp over the code that determines a number
-protocol-fill <PROTOCOL> FIELD VAL [--line N] [--force]  # fill one stamped placeholder field by label
-protocol-fill <PROTOCOL> "LABEL=VALUE" ...  # fill several in one call, all or nothing (`type=exploratory` for the head)
-protocol-fill <PROTOCOL> --list | --prompts  # the open placeholder fields; the Prompt block from the scripts' PROMPT constants
-protocol-fill <PROTOCOL> --from-run [RUN]  # adopt the run as the result: Answer, Result, Answering run and Runs lines from its metrics.json, never retyped — kept only when report-check passes on the written protocol
-notes-check <repo | dir | note.md>  # kind declaration gate for notes/messung
-preflight <AREA> [--protocol FILE]  # the mechanical pre-freeze gate, eight stations: protocol-check · cost tier · audit findings decided · code-check · scope-sha · working tree · hooks · area tests (not the agent audit; `labkit/gates/preflight.py` lists them)
-finalize <AREA> [--protocol FILE]   # the post-run gate, eight steps: answering run and its record (a probe or an acknowledged run is a warning) · intent-check · declared scopes · open fields · frozen source · area tests · criterion n · open audit findings (`labkit/gates/finalize.py` lists them)
-report-check <AREA> [--protocol FILE]  # the last gate at every cost tier: frozen (minutes/hours only) · finalize clean, its blockers named · its run a full run (long=True, not acknowledged unfrozen) · analysis audit of code, promises and that run, decided · 02_analyze.py --check passes
-report-check --if-reported [--staged] <PATH>..  # the gate at the stop and the commit: report-check every protocol of an area a path touches whose answer cites a run (an open answer owes nothing); --staged (the pre-commit): the answer as the index holds it, and the area's tree must equal the index
-claude-hook pre-run|post-change|stop  # the three Claude Code hooks a lab repo installs (stdin: event JSON)
-claude-hook undecided <paths…>      # the pre-commit's gate: an area a staged path touches holds an undecided audit BLOCKER → exit 1
-claude-hook sessions [--run RUN_ID]  # the session log the stop hook keeps (.git/labkit-sessions.jsonl): session, transcript, runs
-labkit-hooks install|check [REPO]   # install this labkit's hooks (pre-commit, core.hooksPath, claude-hook); rerun after a pin raise
-labkit-check [REPO] [--offline]     # is this repo current: pin · installed · newest tag at the source · hook · rule references; reports only, exit 1 STALE, 2 UNDECIDED
-usability stage|log|score|trace     # cold-agent probe: stage a probe lab repo, log a step, score the agent's trace (time, steps, number), read a trace (next section)
-usability reader|read-score|glance|glance-score|terms  # reading a protocol: prompts for a cold reader and their score against the run
-usability nav|nav-score|human       # finding one's way in code: a navigation prompt, its score, a person at the keyboard
-labkit-audit <AREA> --mode preflight|analysis [--protocol FILE] [--model ALIAS] [--timeout S] [--out FILE]  # the AGENT audit (the experiment-preflight instructions, one call: area + the rules they cite + in analysis the run's rows) through any models.toml alias — not the `preflight` gate; exit 1 on a blocker OR a warning; stderr says the prompt size and what the call cost (`llm.last_usage()`); writes its findings as data into `<AREA>/audits/<date>-<mode>.toml` — set status (fixed / accepted / deferred / dismissed) and reason per finding, `preflight` holds the file to it
-labkit-audit <AREA> --mode clarity              # a newcomer's reading of README, protocol and measure script (code-clarity); exit 1 on findings, never a gate
-labkit-params <AREA> [--run ID] [--protocol FILE]  # the values the answering run ran with: home, meaning, tier (guaranteed / static evidence)
-labkit-calltree [--depth N] [--out FILE] <COMMAND> [-- ARGS]  # what one run of a command called, cut to its package: path:line per call path (reading aid, not a check)
+python3 -m venv .venv
+.venv/bin/pip install -e '.[dev]'
+.venv/bin/pytest -q
 ```
 
-## Usability trace — what the whole chain costs for one kept number
+`just check` runs lint, formatting, type checking and the suite.
+[AGENTS.md](AGENTS.md) holds the contribution rules;
+[architecture](docs/architecture.md) explains layers, records and enforcement;
+[TODO](TODO.md) holds open work. Historical audits and usability measurements
+live under `docs/` and `docs/usability/`.
 
-The doctrine grew by scars and every scar added a gate; nobody measured
-what the chain costs in the simplest case. On 2026-10-05 a deterministic
-seven-second run (uniagent area 01) took four days, three freezes and
-three agent audits. `usability` makes that measurable and repeatable:
-
-```bash
-usability stage /tmp/probe --venv .venv   # fresh lab repo, area stamped as the route does (seconds cut + counting skeleton), fixture, TASK.md
-usability stage /tmp/probe --venv .venv --task judge   # seconds cut + measure skeleton, a model in the loop (--model is the judge default)
-usability stage /tmp/probe --venv .venv --cost unset   # the full form; the agent declares the tier
-usability stage /tmp/probe --restamp --keep TASK.md   # the same probe stamped again with this labkit, in place; --keep names its hand edits (remembered in probe.json); venv rebuilt from the pin, change committed, push stays with you
-usability log run "the count" -- .venv/bin/python scripts/01_measure.py   # the agent's step line (HH:MM:SS · tag · text) appended to ./log.md (--log FILE), then the command; without `--` it only logs
-#   hand <probe>.prompt.md (AGENTS.md as a session loads it + the TASK.md pointer) to a COLD agent, any harness; it logs one line per step
-usability score /tmp/probe                # number == truth? bound? tier? wall-clock, steps per tag → probe.score.json
-usability score /tmp/probe --agent fable-5.1   # the model that drew, stated by the operator (a cloud session leaves no transcript)
-usability score /tmp/probe --transcript agent.jsonl   # plus measured: wall-clock, tool time, labkit commands, refusals, tokens (output, largest context, cache read), files and source reads
-usability trace agent.jsonl              # the agent's timeline: elapsed, duration, command (bookkeeping cut), REFUSED; last line: the tokens
-usability score /tmp/probe --transcript agent.jsonl --archive DIR   # keep transcript (gzip), timeline and score
-```
-
-The fixture is twelve cases with a known number of input files each
-(mean 3.5); the truth sits next to the repo, not in it. The log contract
-is `HH:MM:SS · read|run|edit|unsure|gate · step`; `score` counts per tag,
-takes the wall-clock from the stamps, and records the labkit version, so
-two versions can be compared on the same task. Target line: one kept
-number under five minutes.
-
-## Enforcement — five layers; the first and the last cannot be forgotten
-
-A rule the agent has to remember is the weak layer: it lives in the skill
-text and dies with a long session. The layers that do not depend on
-remembering (2026-10-05) — `runlog.Run` holds because every run passes
-through it, the git pre-commit hook because every commit does; both hold
-under any agent, or none. The three Claude hooks are an adapter for Claude
-Code and hold only in a Claude Code session:
-
-| Layer                | Where                                                      | Holds when                                            |
-|----------------------|------------------------------------------------------------|-------------------------------------------------------|
-| code refuses         | `runlog.Run` — leak, index header, detach, **freeze gate** | always: every run passes through it                   |
-| Claude hook blocks   | `claude-hook pre-run` (PreToolUse Bash, exit 2)            | a frozen protocol's area has preflight blockers; not at `cost = "seconds"` |
-| Claude hook reports  | `claude-hook post-change` (PostToolUse Bash\|Write\|Edit)  | a protocol or messung note changed, whatever wrote it |
-| Claude hook sends back | `claude-hook stop` (Stop, exit 2)                        | a protocol changed in this session cites a run in its answer and `report-check` has blockers (the whole release check, finalize among its stations; an open answer owes nothing); an area the session touched holds an audit BLOCKER nobody decided — once per stop |
-| git pre-commit fails | `.githooks/pre-commit`                                     | a staged protocol misses must fields; a written-back answer fails `report-check --if-reported`; an area a staged file touches holds an undecided audit BLOCKER (`claude-hook undecided`) |
-
-All of them are installed by `labkit-hooks install` from the pinned labkit, and
-`preflight` warns when they are missing or from another labkit version.
-
-**Freeze gate.** `long=True` is the script's declaration of a full run.
-`runlog` refuses it before `mkdir` unless the bound protocol's head says
-`frozen = true` and its `preflight_audit` names the `scope sha` the code
-has now (an `n/a — <reason>` is refused at minutes/hours since 0.99.0), and a decided preflight audit record
-(`audits/*-preflight.toml`) carries that same sha and the digest of the
-promise block as it is now: a hand-written line is checked, not trusted,
-and code or promises changed after the audit owe a new one. An analysis
-record names the answering run too (`report-check` holds it).
-A full run on an unfrozen protocol acknowledges with `LABKIT_UNFROZEN=1`;
-the acknowledgement is written to `config.json` as `unfrozen_ack`, so the
-number carries it, and that number cannot be reported.
-At `minutes`/`hours` the acknowledgement is for an audit that could *not* run, not one
-nobody ran: `runlog` asks for the failed attempt `labkit-audit` writes when
-the backend does not answer (`audits/<date>-preflight-failed.toml`, with
-the backend's error, the code and promises it would have read and the time
-the call had — at least the default timeout), and records which one the
-run rests on (`audit_failed`). Every run records `long`; `finalize` warns
-and `report-check` refuses when the answering run is a probe (`long=False`)
-or an acknowledged run — a reported number owes a full run, on a frozen
-protocol at minutes/hours (`runs.unreportable`). The refusal offers no way round and does
-not call the shortcut a "pilot": the agents of the benchmark rounds took
-the offered word for their run (review 2026-10-18).
-`report-check` holds at every cost tier: at `seconds` only the freeze and
-the preflight audit are not owed; the full run, the decided analysis audit
-of code, promises and that run, and `02_analyze.py --check` are. The
-declaration that a result is reported is the run_id in the protocol's
-"Answer to the question", and the one path that writes it is
-`protocol-fill --from-run`: it writes the lines, runs `report-check` on the
-written protocol and puts the file back on a blocker, so every result
-adopted this way has passed every check (the declaration is not what makes
-a number sound; the check is). The stop hook and the pre-commit run
-`report-check --if-reported` on every protocol of an area a changed or
-staged path touches, so a hand-written or later-changed answer, and a
-script changed under a reported one, are held to the same chain, and an exploration whose
-answer stays open may end with no reported result, probes in `runs/` or
-not. A provisional number stays a sketch in `runs/` and `output/`. An
-answer written without a run_id is a `protocol-check` warning — the hint,
-not a gate.
-The gate follows the cost tier (`cost` in the protocol head, LAB-017 The number of audits follows the cost tier — `LAB-nnn` names a rule of the shipped lab standard): at
-`seconds` a rerun costs nothing, so the gate is the **written success
-criterion**, not the freeze — an instrument change after it is a commit
-and a rerun, never a second freeze. `minutes`, `hours` and an unfilled
-cost keep the freeze. The tier is written to `config.json` as `cost_tier`.
-
-**Detach gate.** A long run (`long=True`) started in an agent's foreground
-shell dies with the harness's tool timeout, and the kill takes the whole
-process group. `runlog` refuses it before any work and asks for `runlog start
-<area> -- <cmd>`, which logs into the area's `output/` (or `LABKIT_DETACHED=1` when the caller already detached it).
-Which shell has such a limit is named by `LABKIT_FOREGROUND_TIMEOUT_S`
-(seconds; `0`: none), set in the harness's configuration so that every
-command it spawns has it — an `export` inside one command does not reach
-the next. Claude Code is recognised without it (`CLAUDECODE`, 600 s).
-Codex documents no such limit (a 117 s suite ran in its foreground,
-2026-10-14); where a harness does kill, Codex for example sets it in
-`~/.codex/config.toml` or the repo's `.codex/config.toml`:
-
-```toml
-[shell_environment_policy]
-set = { LABKIT_FOREGROUND_TIMEOUT_S = "300" }
-```
-
-Not at `cost = "seconds"`.
-
-**pre-run.** The hook sees every Bash command. One that names a `.py` file
-which opens a run (`runlog.run(`) and is not a throwaway stage (`--show`,
-`--probe`, `--eval-only`) triggers `preflight` on the script's area. Frozen
-protocol + blockers → the command is blocked and the agent reads why.
-Unfrozen (a pilot by declaration) + blockers → reported, not blocked.
-`LABKIT_PREFLIGHT=skip` in the command skips the gate, visibly.
-
-**post-change.** Matches on what changed (`git status`, untracked
-included), not on which tool wrote it — a protocol written through a
-heredoc gets the same `protocol-check` as one written with Edit. A
-per-session content hash keeps a file from being reported again after
-every later command.
-
-Install (what `labkit-hooks install` writes into `.claude/settings.json`):
-
-```json
-{"hooks": {
-  "PreToolUse":  [{"matcher": "Bash",
-                   "hooks": [{"type": "command", "timeout": 120,
-                              "command": "\"${CLAUDE_PROJECT_DIR:-.}/.venv/bin/claude-hook\" pre-run"}]}],
-  "PostToolUse": [{"matcher": "Bash|Write|Edit",
-                   "hooks": [{"type": "command", "timeout": 60,
-                              "command": "\"${CLAUDE_PROJECT_DIR:-.}/.venv/bin/claude-hook\" post-change"}]}],
-  "Stop":        [{"hooks": [{"type": "command", "timeout": 120,
-                              "command": "\"${CLAUDE_PROJECT_DIR:-.}/.venv/bin/claude-hook\" stop"}]}]}}
-```
-
-## Terms
-
-One word, one thing. This table is the home of the **tool's** words (the
-method's live in the lab standard's vocabulary table, a lab's own in its
-`notes/theorie/terms.md`, a protocol's in its Terms field). Everything
-below occurs in more than one module, so it is coined here; the promise kinds and the block are specified in
-`docs/promise-block.md`, which run answers in `docs/protocol-run-binding.md`,
-and the per-field explanations live in `labkit/docs/protocol-field-guide.md`.
-
-| Term                | Means                                                                                               |
-|---------------------|-----------------------------------------------------------------------------------------------------|
-| **area**            | the directory grouping protocols and their runs                                                     |
-| **protocol**        | the specification of one experiment (`PROTOCOL-*.md`)                                               |
-| **protocol id**     | a protocol's stable, path-independent identity (`p-` + 16 hex)                                      |
-| **run**             | one execution of a protocol                                                                         |
-| **run metadata**    | a run's own record (`config.json` + `completion.json`)                                              |
-| **run index**       | the searchable overview of runs (`runs.tsv`)                                                        |
-| **metrics**         | what a run measured and reported (`metrics.json`)                                                   |
-| **documented runs** | the runs listed by hand in a protocol's `## Runs` section                                           |
-| **intent id**       | the stable id of one checked promise (`[C1]`, `[A1]`, `[B1]`; kinds in `docs/promise-block.md`)   |
-| **bundle**          | the current protocol + scripts + extracted facts, packed for an audit agent (`code-check --bundle`) |
-| **frozen**          | unchangeable past a declared point (`frozen = true` in the protocol head); *freezing* is setting it, after `preflight` and the audits |
-| **promise**         | one checked commitment of the protocol: an intent id with a metrics key, a sentence, a scope and constants (`[[promise]]` table) |
-| **criterion**       | the promises of kind C — success or failure, decided after the run                                 |
-| **admissibility**   | the promises of kind A — what must hold before a criterion may be read; one fails, every C key is None |
-| **branch**          | a promise of kind B — the registered sentence per outcome (`b1_branch`)                            |
-| **binding**         | a run's record of the protocol id it ran under (`config.json`); the choice of a run is a filter on it |
-| **answering run**   | the newest completed run bound to the protocol that reports an intent key — the one every check holds the protocol to (`answering_run.bound_answering_run`); a second such run started in the same second blocks the choice |
-| **derived run**     | a run that re-evaluates another run's rows (`derived_from`), never a repeat's; it makes no model call and records no model |
-| **scope hash**      | per promise: the hash over its declared scope (`declared_scope_sha`), recorded by the run, held by `finalize` |
-| **stamp**           | per area: the hash over every file that determines a number (`scope-sha`), written into an audit field, held by `runlog` at the start of a full run |
-| **estimator**       | the instrument of a measurement without a model call: anything with fit and predict, scored out of fold against a lane fitted on permuted labels (`labkit-init exp` without `--model` at minutes/hours stamps it); the three instruments are model, estimator and count |
-
-**"Ledger" is not used:** it named three different things — the run
-index, a run's metrics, and the hand-written `## Runs` section.
-
-Which protocol a run belongs to — identity, binding, selection —
-is specified in `docs/protocol-run-binding.md`.
-
-The hierarchy the vocabulary is meant to make visible:
-
-    config.json      start state, and the binding of run to protocol
-    metrics.json     result data
-    completion.json  confirmed completion (note, end-of-run git state)
-    runs.tsv         run index — derived, never a source
-    ## Runs          manual documentation, never a source
-
-A protocol has **one template, three cuts**: `cost = "seconds"` (a count,
-or a handful of model calls — rerunnable at will) owes the seconds cut and
-never freezes — but the `[[promise]]` tables like every full run (standard
-0.19); `minutes` and `hours` have two: `frozen = false` is the light pilot
-(MUST fields only), `frozen = true` the report — every SHOULD field
-becomes mandatory. The price sits on the claim, not the activity: cheap
-tiers yield numbers that must not be reported. Every field's explanation —
-examples, rationale, the four questions to ask a criterion — lives in
-`labkit/docs/protocol-field-guide.md` (packaged with the template;
-`protocol-check --guide` prints the path).
-
-The commands are stations of **one lifecycle** — write the protocol, audit
-the code, run, hold the run against the promises. Two orchestrating
-commands sequence the individual checks at the two decision points:
-
-1. Write `PROTOCOL-<task>.md` from the packaged template; `protocol-check`
-   enforces its fields from the first draft on (MUST for pilots, everything
-   once `frozen = true`).
-2. Before freezing, **`preflight <area>`** runs the pre-freeze gate:
-   `protocol-check` (mandatory fields) → cost tier (is the agent audit
-   due) → the audit findings decided → `code-check` (intent ids against
-   the code) → `scope-sha` (audit stamp) → working tree, hooks → the area
-   tests. The individual commands remain available for targeted use;
-   `code-check --bundle` additionally extracts schema facts and gate labels
-   into a bundle for the audit agent's judgement pass.
-3. The run goes through `runlog` (frozen config, env fingerprint, script
-   snapshot, split-leakage check); `runlog <area>` monitors it and lists the finished runs (what each is, committed or not, its command), `runlog
-   start -- <cmd>` detaches long runs.
-4. After the run, **`finalize <area>`** runs the post-run gate: the
-   answering run (newest completed bound run) and its record → `intent-check`
-   (promises vs. metrics) → declared scopes unchanged → open fields →
-   frozen source (at seconds) → area tests → criterion denominators. The
-   individual commands remain available; `protocol-fill --from-run` writes
-   the number back into the protocol without touching the rest.
-
-`notes-check` sits beside the lifecycle: it gates the measurement notes the
-results flow into.
-
-**Pin the version, never `pip install -e` in an experiment repo.** A run
-records its environment; if the helpers could change under a finished run,
-that record is a claim about an environment that no longer exists. Editable
-installs belong here, where the tests are.
-
-**Code imports the package directly** — `from labkit.run import runlog` —
-and never creates shims; `labkit-init lab` stamps repos in this style, and a
-guard test (`test_shared_helpers_come_from_labkit.py`) fires if a file ever
-shadows the package. A repo whose frozen run snapshots say `import runlog`
-is reproduced with its own commit and the labkit version it pins; labkit
-carries no legacy bridge for it.
-
-
-## Language
-
-Code, messages, docstrings and this README are English — the kit is meant
-to be handed to students as-is. Field labels are English and held exactly
-(`protocol_check.FIELDS`); field content may be German or English.
-
-## Develop
-
-```bash
-.venv/bin/pytest -q          # the suite; `just check` runs the commit gate (ruff, format, pyright, pytest)
-```
-
-Change → test → commit, one commit per step. A release is one step: write
-the `CHANGELOG.md` entry, then `just release X.Y.Z` sets the version,
-commits through the hook and tags that commit; the push stays with the
-author. The experiment repos catch up via their pin, each at its own time;
-a running experiment is never surprised by a bugfix.
-
-**One version, one identity, one label.** `pyproject.toml` carries the
-version, the commit carries the identity, and the tag is a label over that
-commit — checked by `tests/test_release_tags.py`, which holds every
-`vX.Y.Z` against the version its commit declares. The package states no
-`__version__`: a literal nobody read, kept in step by hand, is a second
-truth waiting to drift. `labkit-init lab` pins the release tag of the
-installed version on GitHub; until that tag is pushed the pin does not
-install, and `--labkit-ref <commit>` pins a pushed commit instead.
-
-## Boundary
-
-Only what **more than one repo** uses lives here. Project-local helpers
-stay in the project (`lib/`) — a module moves here when it is needed for
-the second time.
-
-The templates `labkit-init` stamps ship here (`labkit/templates/`): a lab
-gets them once and fills them in, so they are meant to diverge there and are
-never synced. Not here: prose references of the author's house — the two
-style guides, `coding-style.md` (every line of code) and
-`writing-style-guide.md` (prose and LaTeX). Their masters live in the
-author's dotfiles (`~/.claude/resources/`); a lab repo of that house carries
-a stamped copy under `docs/` (`docs/coding-style.md`,
-`docs/writing-style-guide.md`), kept in step by the house scaffolder's
-`lib sync` — a house tool, not a labkit command. The lab standard is not a
-copy: it ships in the package (`labkit/docs/standard.md`).
+A release starts with its CHANGELOG entry; `just release X.Y.Z` sets the
+version, commits through the checks and tags that commit. The author pushes
+the tag. Experiment repos adopt it by changing their pin.

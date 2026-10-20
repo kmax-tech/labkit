@@ -28,8 +28,7 @@ nothing is copied. Until the tag is pushed the pin does not install;
 
 The author's house keeps a separate thesis starter
 (`local-init.py --thesis` in the dotfiles) that adds house
-material around the same pin; it stays house (decided 2026-10-12,
-`TODO.md` item 5).
+material around the same pin; it stays in the house layer.
 
 ## Moving to a newer version
 

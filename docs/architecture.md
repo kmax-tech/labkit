@@ -62,11 +62,11 @@ evidence** (warns), **agent audit** (semantic).
 | code → run | unfrozen full run, unbound run, dangling scope, control leakage: refused before the run dir exists | `runlog.Run` | (every run) | guaranteed | starting the run |
 | code → run | a full run's audit line names the stamp the code has now (`scope sha`) and a decided record; an `n/a` at minutes/hours is refused (nobody waives their own audit) | `runlog.Run`, `findings.audit_line_gap` | (every full run), `preflight` | guaranteed | starting the run |
 | promise → run (tier) | the cost tier is not lower than in the protocol's first commit — a lower tier owes less | `protocol_history.cost_lowered` | `protocol-check`, `preflight` | static evidence | before the run |
-| code → run | a long pilot's `LABKIT_UNFROZEN=1` rests on a failed audit attempt at the code and promises as they are now (`audits/*-failed.toml`, written by `labkit-audit` when the backend does not answer), else refused; `long`, `unfrozen_ack` and `audit_failed` recorded | `runlog.Run`, `findings.audit_unavailable` | (every acknowledged full run) | guaranteed | starting the run |
+| code → run | a long pilot's `LABKIT_UNFROZEN=1` rests on a failed audit attempt at the code and promises as they are now (`audits/*-failed.toml`, written by `labkit-audit` when the backend does not answer), else refused; `run_kind`, `unfrozen_ack` and `audit_failed` recorded | `runlog.Run`, `findings.audit_unavailable` | (every acknowledged full run) | guaranteed | starting the run |
 | code → run | block digest, per-promise `declared_scope_sha`, constants, git state, data hashes recorded | `runlog.Run`, `promises.snapshot` | (every run) | guaranteed | starting the run |
 | run → report (record) | run completed; declared keys reported; run recorded this block; a block constant not contradicted by the run config | `runs.completion_state`, `intent_check.check_block_against_run` | `intent-check`, `finalize` | guaranteed | after the run |
 | run → report (scopes) | declared scopes unchanged since the run | `promises.scope_drift` | `finalize`, `recheck` | guaranteed | before reporting |
-| run → report (the end) | at every cost tier: frozen (minutes/hours only — at seconds no freeze and no preflight audit are owed), finalize clean with its blockers named, the answering run a full run (`long=True`, not acknowledged unfrozen — a probe's or an acknowledged run's number is refused), an analysis audit record of the code, the promise block and the answering run as they are now, every finding decided, `02_analyze.py --check` passes (the note carries the numbers and the run_id; every skeleton stamps the script, the count's since 0.100.0) | `report_check`, `runs.unreportable`, `findings.audit_coverage`, `recheck.holds` | `report-check` | guaranteed | before the number leaves the area |
+| run → report (the end) | at every cost tier: frozen (minutes/hours only — at seconds no freeze and no preflight audit are owed), finalize clean with its blockers named, the answering run a full run (`run_kind="measurement"`, not acknowledged unfrozen — a probe's or an acknowledged run's number is refused), an analysis audit record of the code, the promise block and the answering run as they are now, every finding decided, `02_analyze.py --check` passes (the note carries the numbers and the run_id; every skeleton stamps the script, the count's since 0.100.0) | `report_check`, `runs.unreportable`, `findings.audit_coverage`, `recheck.holds` | `report-check` | guaranteed | before the number leaves the area |
 | run → report (the declaration) | a protocol whose "Answer to the question" cites a run — the one line that declares a result reported — goes through report-check at the stop and the commit, with every other protocol of an area a changed, deleted or staged path touches — a path in the area, a file its promises declare in scope, or a shared helper under `lib/`/`src/` its code imports (a script changed or removed under a reported number reopens it; at the commit the protocols are the index's); an open answer owes nothing (an exploration ends with no reported result); an answer without a run_id is a warning | `report_check.if_reported`, `report_check.reported_protocols`, `scope_sha.areas_touched`, `finalize.cited_runs`, `protocol_check.answer_without_run` | `claude-hook stop`, `.githooks/pre-commit` (`report-check --if-reported --staged`: the answer as the index holds it, the area's tree equal to the index), `protocol-check` | guaranteed (the warning: static evidence) | ending the turn, committing |
 | run → report (the adoption) | the one path that writes the declaration: the lines from the run's metrics.json are written, report-check runs on the written protocol, a blocker puts the file back — a result adopted this way has passed every check | `protocol_fill.adopt`, `report_check.report_check` | `protocol-fill --from-run` | guaranteed | writing the number back |
 | run → report (undecided findings) | every finding still `open` in `audits/`, any mode: a BLOCKER blocks, a WARNING warns, each with its file | `finalize.check_open_audit_findings`, `findings.area_records` | `finalize` | guaranteed | after the run |
@@ -132,12 +132,106 @@ what concerns only this house stays in the author's dotfiles.**
 | labkit (this repo) | the code and its gates; the lab standard (`labkit/docs/standard.md`, English) and its ledger (`labkit/docs/rules.tsv`: id → name → status, every `LAB` number); the protocol template and its field guide (`labkit/templates/experiment-protocol.md.template`, `labkit/docs/protocol-field-guide.md`); `labkit-init` and the templates it stamps (`labkit/templates/`: script skeletons, area tests, `AGENTS.md`, `models.toml`, editor settings); the audit agents' instructions (`labkit/agents/*.agent.md`) | master |
 | labkit (this repo) | `docs/notes/`: the history behind a rule in the code — trigger, rejected approaches, the long why — one dated note per topic, linked from the code that states the rule (`AGENTS.md`, "The current rule first") | master |
 | labkit (this repo) | `docs/coding-style.md` | copy, stamped with the master's hash; edit the master, then `lib sync pull` (the house scaffolder's command, not a labkit one) |
-| author's dotfiles (`~/.claude/resources/`) | the house standard (`arbeitsstandard.md.template`, German — cut down to the house chapters, `TODO.md` item 5), the dated evidence behind every rule (`arbeitsstandard.evidence.md`), the house ledger (`rule-registry.tsv`: `LOCAL` and `CODE` ids, `LAB` rows marked `moved:labkit`), the coding style, the house scaffolder (`tools/local-init.py`: house files, the thread in `~/work`, sync; its lab part hands over to `labkit-init`), the note seeds, the thesis starter | master |
+| author's dotfiles (`~/.claude/resources/`) | the house standard (`arbeitsstandard.md.template`, German, house chapters), the dated evidence behind every rule (`arbeitsstandard.evidence.md`), the house ledger (`rule-registry.tsv`: `LOCAL` and `CODE` ids, `LAB` rows marked `moved:labkit`), the coding style, the house scaffolder (`tools/local-init.py`: house files, the thread in `~/work`, sync; its lab part hands over to `labkit-init`), the note seeds, the thesis starter | master |
 | a lab repo | labkit as a pinned package, which brings the standard; `docs/coding-style.md`, `CLAUDE.md`, the scripts stamped from the templates (a repo pinned below 0.77 still carries its `docs/arbeitsstandard.md` copy) | copies, stamped by the scaffolder |
 | author's global `~/.claude/CLAUDE.md` | one-line reflexes that point at rule ids | master (house only) |
 
 **What is still in the dotfiles.** The thesis starter, which carries house
 material (lecture links, run snapshots with the author's paths); it stays
-house (decided 2026-10-12, `TODO.md` item 5). Gate
+in the house layer. Gate
 messages and docstrings cite rules by id and English name, and
 `tests/test_rules.py` holds every such reference to the ledger.
+
+## Run records
+
+An experiment script enters `runlog.run(...)` with its protocol, config
+and input paths. Preparation resolves the binding and records the promise
+snapshot; the start checks refuse an inadmissible run before its directory
+is created. The context manager confirms completion only on a clean exit.
+An interrupted run leaves its start record without confirmed completion.
+
+```text
+experiments/NN-name/
+  PROTOCOL-name.md
+  scripts/                      measurement and recomputation
+  output/                       registered output files
+  audits/                       findings and their decisions
+  runs/<run-id>/
+    config.json                 start config, protocol binding, inputs, environment
+    metrics.json                values reported through run.metrics(...)
+    outputs.json                registered output paths and their digests
+    completion.json             confirmed completion and end state
+    script-source.py            snapshot of the script as it ran
+  runs.tsv                      derived index of completed runs
+```
+
+The record can also hold raw model output, a patch and untracked source
+snapshots. Consumers read records through `runs`; `answering_run` selects
+the completed run bound to the protocol. The index and the protocol's
+manually documented runs do not choose the answer. Selection and run
+relationships are specified in [protocol-run-binding](protocol-run-binding.md).
+
+## Run and hook enforcement
+
+`standard_contract.lane` supplies the obligations for a protocol's cost
+tier. At `seconds` there is no freeze or preflight audit; release of a
+result still requires a full run, a clean finalize, a decided analysis
+audit bound to the current code, promises and answering run, and the
+recomputation check. At `minutes`/`hours`, the start of a full run also
+requires a frozen protocol and matching preflight audit coverage.
+
+The audit field is checked against an actual record under `audits/`.
+Changing the bound code or promises invalidates that coverage. An
+analysis record additionally names the answering run. Snapshot binding
+and the declared-scope hash have separate purposes; see
+[promise-block](promise-block.md) and the chain above.
+
+`run_kind="measurement"` declares a measurement; `run_kind="probe"` declares
+an instrument check. `run_kind="preparation"` records data preparation
+without releasing a result. At seconds a separate probe is refused: the complete
+measurement checks the instrument and can be repeated cheaply.
+`runs.unreportable` refuses a probe or an acknowledged unfrozen run as the
+source of a reported number. At minutes/hours, `LABKIT_UNFROZEN=1` permits
+an acknowledged run only when a matching failed preflight attempt is
+recorded with sufficient timeout. The run records that attempt and the
+acknowledgement; the resulting number remains unreportable. An open audit
+BLOCKER cannot be overridden this way.
+
+Adoption through `protocol-fill --from-run` writes the result lines, runs
+`report-check` against the written protocol and restores the file on
+failure. A run ID in the Answer declares a reported result; the hooks
+recheck affected areas so later edits are subject to the same contract.
+An exploration can leave its Answer open without releasing a result.
+
+| Enforcement point | Role |
+|---|---|
+| `runlog.Run` | Checks registration, protocol binding, leakage, foreground execution and freeze/audit obligations before a run starts. |
+| git pre-commit | Checks staged protocols, affected reported results and unresolved audit blockers. Report checks use the staged answer and require the area's working tree to agree with the index. |
+| Claude `pre-run` | Runs preflight for recognized measurement commands; blocks a frozen area's command on blockers. |
+| Claude `post-change` | Reports protocol and note checks after changes; tracks content per session to avoid repeating unchanged files. |
+| Claude `stop` | Sends the session back for a failed release check or an unresolved audit blocker in an affected area, once per stop cycle. |
+
+`labkit-hooks install` installs the pinned package's git and Claude hooks;
+`preflight` checks their installation. The run writer and git hooks work
+without Claude. Live hook configuration is generated by
+`gates/install_hooks.py`; it is not a second hand-maintained configuration
+in the README.
+
+### Long-running commands
+
+A harness that kills foreground commands can interrupt an experiment.
+Set `LABKIT_FOREGROUND_TIMEOUT_S` in that harness's environment policy so
+every command inherits it; `0` means no limit. Claude Code supplies a
+600-second default through `CLAUDECODE` when no explicit value is set.
+An export inside a single tool command does not configure later commands.
+
+When the lane requires background execution and a foreground limit is
+configured, `runlog` refuses a full run and asks for
+`runlog start AREA -- COMMAND`. The command starts a separate session and
+writes a log under the area's `output/`; `runlog AREA --wait` monitors its
+recorded state. A caller that already detached the process can declare
+`LABKIT_DETACHED=1`. The seconds lane allows foreground execution.
+
+An audit's duration is separate from a measurement's cost tier. Use the
+harness's background-task mechanism for a long `labkit-audit` call and
+wait for that task, rather than polling process-name matches.
