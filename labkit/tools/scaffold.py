@@ -431,16 +431,9 @@ def stamp_area(
         (area / "explore").mkdir(exist_ok=True)
         pre.rename(area / "explore" / pre.name)
         log.append(f"  moved          {pre} -> {area / 'explore' / pre.name}")
-    write_if_absent(
-        area / f"PROTOCOL-{slug}.md",
-        # a heading right after a cut item gets its blank line back
-        re.sub(
-            r"([^\n])\n(## )",
-            r"\1\n\n\2",
-            short_placeholders(clean if report else pilot),
-        ),
-        log,
-    )
+    stamped = blank_before_headings(short_placeholders(clean if report else pilot))
+    check_stamped_head(stamped, cost)
+    write_if_absent(area / f"PROTOCOL-{slug}.md", stamped, log)
     log += stamp_scripts(root, area, nn, slug, skeleton, model)
     _point_hooks_at(root)
     return area, (
@@ -460,6 +453,35 @@ def _point_hooks_at(root: Path) -> None:
     if r.returncode != 0:
         raise console.Refused(
             "labkit-init", f"git config core.hooksPath failed: {r.stderr.strip()}"
+        )
+
+
+def blank_before_headings(text: str) -> str:
+    """TEXT with a blank line before every `## ` heading that follows a
+    non-blank line — a heading right after a cut item gets its blank line
+    back. Lines inside a fenced block are no headings and stay as they are
+    (`protocol_block.fenced_lines`)."""
+    lines = text.split("\n")
+    fenced = protocol_block.fenced_lines(lines)
+    out: list[str] = []
+    for i, line in enumerate(lines):
+        if line.startswith("## ") and i not in fenced and out and out[-1].strip():
+            out.append("")
+        out.append(line)
+    return "\n".join(out)
+
+
+def check_stamped_head(text: str, cost: str | None) -> None:
+    """Raise ValueError unless the stamped protocol's head carries a real
+    id and, when COST was asked for, that tier. The stamp writes both by
+    replacing template tokens; a token the template no longer carried would
+    leave the placeholder without a word."""
+    head = protocol_block.head(text)
+    if head.id is None:
+        raise ValueError("labkit-init: the stamped head has no protocol id")
+    if cost is not None and head.cost != cost:
+        raise ValueError(
+            f"labkit-init: the stamped head says cost = {head.cost!r}, asked {cost!r}"
         )
 
 

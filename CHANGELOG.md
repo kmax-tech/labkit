@@ -273,6 +273,12 @@ pins (`requirements.txt` / `requirements.lock`).
   A test stamps a lab at every tier, with and without a model, and holds
   every fence of every stamped Markdown file closed. Areas stamped before
   keep the open block; closing it by hand is safe.
+- **`labkit-init exp` reads back the head it stamped.** The id and the
+  tier are written by replacing template tokens; a token the template no
+  longer carried left the placeholder without a word. The stamp is now
+  refused unless the head carries an id and the asked tier. The blank line
+  the stamp puts before a `## ` heading is no longer put inside a fenced
+  block (a verbatim prompt with a `##` line).
 
 - **The printed `protocol-fill … --from-run` line names the protocol's
   path.** The measure scripts, `labkit-init exp`, `protocol-check` and

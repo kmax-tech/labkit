@@ -85,5 +85,43 @@ class WithoutPromiseTables(unittest.TestCase):
         self.assertEqual(new, '```toml\n[protocol]\nid = "p-1"\n```\n')
 
 
+class StampReadBack(unittest.TestCase):
+    """The stamp writes the head's id and tier by replacing template tokens;
+    a token the template no longer carried left the placeholder without a
+    word. The stamped head is read back."""
+
+    def test_a_head_without_the_asked_tier_is_refused(self):
+        from labkit.tools import scaffold as sc
+
+        good = '```toml\n[protocol]\nstandard = "0.19"\nid = "p-0123456789abcdef"\ntype = "<exploratory | confirmatory>"\ncost = "seconds"\nfrozen = false\npreflight_audit = ""\n```\n'
+        sc.check_stamped_head(good, "seconds")
+        sc.check_stamped_head(
+            good.replace('cost = "seconds"', 'cost = "<seconds | minutes | hours>"'),
+            None,
+        )
+        with self.assertRaisesRegex(ValueError, "cost"):
+            sc.check_stamped_head(
+                good.replace(
+                    'cost = "seconds"', 'cost = "<seconds | minutes | hours>"'
+                ),
+                "seconds",
+            )
+        with self.assertRaisesRegex(ValueError, "id"):
+            sc.check_stamped_head(
+                good.replace("p-0123456789abcdef", "<protocol-id>"), "seconds"
+            )
+
+
+class BlankBeforeHeadings(unittest.TestCase):
+    def test_a_heading_inside_a_fence_is_left_alone(self):
+        from labkit.tools import scaffold as sc
+
+        text = "- item\n## A\n```text\nline\n## not a heading\n```\n"
+        self.assertEqual(
+            sc.blank_before_headings(text),
+            "- item\n\n## A\n```text\nline\n## not a heading\n```\n",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
