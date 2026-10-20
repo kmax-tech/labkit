@@ -433,12 +433,36 @@ class LogCommandLine(unittest.TestCase):
             self.assertEqual(out.read_text(), "--log y -- z")
 
     def test_words_after_the_text_without_the_separator_are_refused(self):
+        """Refused under the log usage, saying where the command goes —
+        the bare top-level usage gave no hint (review, 2026-10-20)."""
         with tempfile.TemporaryDirectory() as d:
-            with contextlib.redirect_stderr(io.StringIO()):
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
                 with self.assertRaises(SystemExit) as cm:
                     self._main(d, ["log", "run", "x", "true"])
             self.assertEqual(cm.exception.code, 2)
             self.assertFalse((Path(d) / "log.md").exists())
+            said = err.getvalue()
+            self.assertIn(
+                "usage: usability log TAG TEXT [--log FILE] [-- CMD ...]", said
+            )
+            self.assertIn("'true'", said)
+            self.assertIn("after `--`", said)
+
+    def test_the_help_names_file_and_cmd(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
+            self._main(".", ["log", "--help"])
+        self.assertIn("--log FILE", out.getvalue())
+        self.assertNotIn("--log LOG", out.getvalue())
+        self.assertIn("CMD", out.getvalue().split("usage:", 1)[1].split("\n", 1)[1])
+
+    def test_other_subcommands_still_refuse_unknown_words(self):
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            with self.assertRaises(SystemExit) as cm:
+                self._main(".", ["trace", "t.jsonl", "extra"])
+        self.assertEqual(cm.exception.code, 2)
+        self.assertIn("unrecognized arguments: extra", err.getvalue())
 
 
 if __name__ == "__main__":

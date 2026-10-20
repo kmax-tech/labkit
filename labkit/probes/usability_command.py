@@ -30,6 +30,10 @@ from labkit.probes.usability_score import (
 )
 
 
+#: the one spelling of the log line's command line, in its usage and its refusal
+LOG_USAGE = "usability log TAG TEXT [--log FILE] [-- CMD ...]"
+
+
 def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Command line of `usability`: stage probes and score what cold agents and readers did."""
     # only `log` runs a command; for the others a `--` is argparse's own
@@ -79,11 +83,19 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     lg = sub.add_parser(
         "log",
         help="append one step line with the time, then run CMD",
-        usage="usability log TAG TEXT [--log FILE] [-- CMD ...]",
+        usage=LOG_USAGE,
+        epilog="CMD: every word after the first `--`, run after the line is "
+        "written; the exit code is CMD's (0 without one). TEXT cannot begin "
+        "with `-`.",
     )
     lg.add_argument("tag", choices=LOG_TAGS)
     lg.add_argument("text", help="the step, in a few words")
-    lg.add_argument("--log", default="log.md", help="the log file (default: ./log.md)")
+    lg.add_argument(
+        "--log",
+        default="log.md",
+        metavar="FILE",
+        help="the log file (default: ./log.md)",
+    )
     c = sub.add_parser("score", help="number, binding and log of a finished probe")
     c.add_argument("dir")
     c.add_argument(
@@ -149,7 +161,14 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         action="store_true",
         help="ask after each answer how many questions went to an assistant",
     )
-    args = ap.parse_args(argv)
+    args, stray = ap.parse_known_args(argv)
+    if stray and args.cmd == "log":
+        lg.error(
+            f"unexpected {' '.join(map(repr, stray))} — the command goes after "
+            f"`--`: {LOG_USAGE}"
+        )
+    if stray:
+        ap.error(f"unrecognized arguments: {' '.join(stray)}")
     if args.cmd == "human":
         return cmd_human(
             Path(args.repo).resolve(),

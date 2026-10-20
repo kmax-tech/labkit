@@ -308,7 +308,10 @@ pins (`requirements.txt` / `requirements.lock`).
   swallowed `--log FILE`: the line went to `./log.md` and `--log` ran as
   the command, a traceback (all three count probes, 2026-10-20). The
   command is now everything after the first `--`; `--log` may stand
-  anywhere before it, and stray words without `--` are refused.
+  anywhere before it, and stray words without `--` are refused under the
+  log usage, saying the command goes after `--`. Two lines that ran before
+  no longer do: a TEXT beginning with `-` and a TEXT that is `--` itself
+  (`log read -- -x -- true` is refused, "required: text").
 - **A server reply of the wrong shape fails by name.** The ollama, openai
   and claude-cli parsers read replies field by field without checking
   them: a missing or mistyped field raised KeyError, AttributeError or

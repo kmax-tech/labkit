@@ -43,7 +43,7 @@ RULES: list[tuple[str, str, set[str]]] = [
     # the hook and the transcript cut a shell line three ways (audit 2026-10-18)
     ("a shell line cut by hand", r"shlex\.(shlex|split)\(", {"shell"}),
     # runlog start and usability log each cut at `--` by hand (2026-10-20)
-    ("a command cut at -- by hand", r"\.index\(\s*\"--\"\s*\)", {"console"}),
+    ("a command cut at -- by hand", r"\.index\(\s*[\"']--[\"']\s*\)", {"console"}),
     # six sites spelled `protocol-fill <file name> --from-run`; run from the
     # repo root the bare name failed (count probe, 2026-10-20)
     (
@@ -115,7 +115,7 @@ class OneHome(unittest.TestCase):
             "the run-id shape": 'RUN = re.compile(r"\\d{4}-\\d{2}-\\d{2}T")',
             "a path shown relative by hand": "shown = p.relative_to(b) if p.is_relative_to(b) else p",
             "a shell line cut by hand": "words = shlex.split(command)",
-            "a command cut at -- by hand": 'cut = argv.index("--")',
+            "a command cut at -- by hand": "cut = argv.index('--')",
             "an adopt command spelled by hand": 'print(f"protocol-fill {PROTOCOL.name} --from-run {rid}")',
             "a run record read by key": "cfg = read_run_config(run) or {}",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',
