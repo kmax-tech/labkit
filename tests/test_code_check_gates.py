@@ -56,12 +56,28 @@ class Gates(unittest.TestCase):
 
     def test_parser_without_test_is_a_blocker(self):
         (self.repo / "tests" / "test_01_x.py").write_text(
-            "from x import parse_answer\n", encoding="utf-8"
+            "from x import parse_answer\nparse_answer('Yes')\n", encoding="utf-8"
         )
         f = prompt_check.check_parser_fixtures(self.area, self.repo)
         self.assertEqual(len(f), 1)
         self.assertIn("parse_score()", f[0])
         self.assertTrue(f[0].startswith("BLOCKER"))
+
+    def test_a_name_in_a_comment_string_or_import_is_no_test(self):
+        """Any mention silenced the check (review 2026-10-20)."""
+        (self.repo / "tests" / "test_01_x.py").write_text(
+            "from x import parse_answer  # parse_score: TODO\n"
+            '"""parse_score is tested elsewhere"""\n',
+            encoding="utf-8",
+        )
+        f = prompt_check.check_parser_fixtures(self.area, self.repo)
+        named = sorted(x.split(" · ")[2].split("()")[0] for x in f)
+        self.assertEqual(named, ["parse_answer", "parse_score"])
+
+    def test_an_unparsable_test_file_is_said(self):
+        (self.repo / "tests" / "test_01_x.py").write_text("def (:\n", encoding="utf-8")
+        f = prompt_check.check_parser_fixtures(self.area, self.repo)
+        self.assertTrue(any("test_01_x.py · cannot be parsed" in x for x in f), f)
 
     def test_all_parsers_tested_is_silent(self):
         (self.repo / "tests" / "test_01_x.py").write_text(

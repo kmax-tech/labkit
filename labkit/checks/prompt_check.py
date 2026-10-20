@@ -1,7 +1,9 @@
 """prompt_check — the prompt as the protocol states it and as the code sends it.
 
-Every `parse_*` function of an area's scripts is exercised by a test
-(`check_parser_fixtures`: a parser fails silently into a wrong number);
+Every `parse_*` function of an area's scripts is called by a test file
+(`check_parser_fixtures`: a parser fails silently into a wrong number) —
+a call in the syntax tree, not a mention in a comment or string; whether
+the test asserts on its result is not checked;
 every line of a `PROMPT` constant without a `{placeholder}` appears in
 the protocol's prompt block (`check_prompt_drift`), read through
 `prompt_constants` and `prompt_blocks`.
@@ -27,7 +29,11 @@ PLACEHOLDER_IN_PROMPT = re.compile(r"\{[^{}]*\}")
 
 
 def check_parser_fixtures(area: Path, repo: Path) -> list[str]:
-    """Every `parse_*` in the area's scripts is named in some test file."""
+    """Every `parse_*` in the area's scripts is called in some test file under
+    the repo's tests/ (`parse_x(…)` or `module.parse_x(…)`). A name in a
+    comment, a string or an import passed until 2026-10-20 and is no call.
+    Whether the test asserts on the result is not checked. A test file that
+    cannot be parsed is a finding of its own: what it calls cannot be told."""
     scripts = (
         sorted((area / "scripts").glob("*.py")) if (area / "scripts").is_dir() else []
     )
@@ -38,16 +44,26 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[str]:
     if not parsers:
         return []
     tests_dir = repo / "tests"
-    test_text = (
-        "\n".join(
-            t.read_text(encoding="utf-8") for t in sorted(tests_dir.glob("test_*.py"))
-        )
-        if tests_dir.is_dir()
-        else ""
-    )
+    test_files = sorted(tests_dir.glob("test_*.py")) if tests_dir.is_dir() else []
     findings = []
+    called: set[str] = set()
+    for t in test_files:
+        try:
+            tree = ast.parse(t.read_text(encoding="utf-8"), filename=str(t))
+        except (SyntaxError, UnicodeDecodeError) as exc:
+            findings.append(
+                f"BLOCKER · {t.name} · cannot be parsed ({exc}) · which parsers it "
+                f"calls cannot be told · fix the test file"
+            )
+            continue
+        called |= {
+            node.func.id if isinstance(node.func, ast.Name) else node.func.attr
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, (ast.Name, ast.Attribute))
+        }
     for name, sp in sorted(parsers.items()):
-        if not re.search(rf"\b{re.escape(name)}\b", test_text):
+        if name not in called:
             findings.append(
                 f"BLOCKER · {sp.name} · {name}() has no test under {tests_dir.name}/ · "
                 f"a parser fails silently into a wrong number · give it a fixture "

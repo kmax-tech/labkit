@@ -20,7 +20,8 @@ code-check agent (via ``--bundle``), not verified by this command:
      `all()`, …) permits nothing: the C verdict is reported either way. A
      test is not proof of a branch, so each finding is a WARNING.
   1b. **parser fixtures** (AUTOMATED, 2026-10-05). Every `parse_*` function in
-     the area's scripts is exercised by a test under the repo's tests/ — five
+     the area's scripts is called by a test file under the repo's tests/ (a
+     call, not a mention; the assertion is not checked) — five
      audit findings in three repos were "this parser has no fixture test on
      real raw answers", and a parser fails silently into a wrong number.
   1c. **prompt drift** (AUTOMATED, 2026-10-05). The protocol's prompt block

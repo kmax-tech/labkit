@@ -219,6 +219,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A parser counts as tested only when a test calls it.** code-check's
+  parser-fixture check (a blocker) passed when the parser's name stood
+  anywhere in a test file — a comment, a string, an import. It now looks
+  for a call in the syntax tree (`parse_x(…)`, `measure.parse_x(…)`); a
+  test file that cannot be parsed is said. Whether the test asserts on the
+  result is still not checked.
 - **protocol-check says OK only when it found nothing.** A doubled id, an
   audit line that no longer covers the code, a lowered cost tier or an
   answer without a run stood above "OK — must fields filled"; the OK now
