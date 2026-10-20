@@ -219,6 +219,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **Audit records and failed attempts are read in the order written.**
+  Sorted by name, a minute's second and third file (`-2`, `-3`) came before
+  its first, and the newest failed attempt — what a run's acknowledgement
+  of an unavailable audit names — was the oldest. They now sort by minute
+  and then by that number; a file under `audits/` of another name is
+  refused by name instead of placed somewhere.
 - **An audit whose verdict and finding lines disagree is no audit.** A
   BLOCKER line followed by "Correction: no finding" and a zero verdict
   exited 0, while the record kept the blocker open and the next gate

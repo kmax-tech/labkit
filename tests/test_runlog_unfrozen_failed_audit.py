@@ -131,9 +131,11 @@ class FailedAudit(unittest.TestCase):
 
     def test_a_hand_written_file_without_the_table_is_loud(self):
         (self.tmp / findings.DIR).mkdir()
-        (self.tmp / findings.DIR / f"x-preflight{findings.FAILED_SUFFIX}").write_text(
-            "[audit]\nmode = 'preflight'\n", encoding="utf-8"
-        )
+        (
+            self.tmp
+            / findings.DIR
+            / f"2026-10-20T14-03-preflight{findings.FAILED_SUFFIX}"
+        ).write_text("[audit]\nmode = 'preflight'\n", encoding="utf-8")
         self.assertIn("no [failed] table", self._refused())
 
     def test_the_attempt_does_not_read_as_a_findings_record(self):

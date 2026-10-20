@@ -136,7 +136,9 @@ class Undecided(unittest.TestCase):
 
     def test_an_unreadable_record_is_loud(self):
         (self.area / findings.DIR).mkdir()
-        (self.area / findings.DIR / "x-preflight.toml").write_text("no = [toml\n")
+        (self.area / findings.DIR / "2026-10-20T14-03-preflight.toml").write_text(
+            "no = [toml\n"
+        )
         rc, _, err = self._stop()
         self.assertEqual(rc, 2)
         self.assertIn("not TOML", err)

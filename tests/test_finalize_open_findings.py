@@ -117,7 +117,9 @@ class OpenFindings(unittest.TestCase):
 
     def test_an_unreadable_record_is_a_blocker(self):
         (self.area / findings.DIR).mkdir()
-        (self.area / findings.DIR / "x-preflight.toml").write_text("no = [toml\n")
+        (self.area / findings.DIR / "2026-10-20T14-03-preflight.toml").write_text(
+            "no = [toml\n"
+        )
         code, out = _finalize(self.area)
         self.assertEqual(code, 1, out)
         self.assertIn("not TOML", out)

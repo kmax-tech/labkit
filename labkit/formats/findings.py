@@ -77,6 +77,7 @@ the field — a findings file nobody can read is not "no findings".
 from __future__ import annotations
 
 import json
+import re
 import time
 import tomllib
 from dataclasses import dataclass
@@ -350,16 +351,37 @@ def read(path: Path) -> Record:
     )
 
 
+#: the name `_create` gives a record or a failed attempt:
+#: `<minute>-<mode>[-<n>]` and its suffix, n counting the files of one minute
+_WRITTEN_NAME = re.compile(
+    rf"^(\d{{4}}-\d{{2}}-\d{{2}}T\d{{2}}-\d{{2}})-(?:{'|'.join(MODES)})(?:-(\d+))?"
+    rf"(?:{re.escape(FAILED_SUFFIX)}|\.toml)$"
+)
+
+
+def written_order(path: Path) -> tuple[str, int, str]:
+    """The sort key of a file `_create` wrote, oldest first: its minute, then
+    its number within the minute as a number. By name, `-2` and `-3` sorted
+    before the minute's first file, and the newest failed attempt read as
+    the oldest (review 2026-10-20). Raises FindingsError for a name of
+    another shape: its age cannot be told."""
+    m = _WRITTEN_NAME.match(path.name)
+    if m is None:
+        raise FindingsError(
+            f"{path}: not a name labkit-audit writes (<minute>-<mode>[-<n>].toml) "
+            f"— its place among the records cannot be told; rename or move it"
+        )
+    return (m.group(1), int(m.group(2) or 1), path.name)
+
+
 def area_records(area: Path) -> list[Record]:
-    """Every findings file of AREA, oldest first; a file that cannot be read raises."""
+    """Every findings file of AREA, oldest first (`written_order`); a file
+    that cannot be read raises."""
     folder = area / DIR
     if not folder.is_dir():
         return []
-    return [
-        read(p)
-        for p in sorted(folder.glob("*.toml"))
-        if not p.name.endswith(FAILED_SUFFIX)
-    ]
+    paths = [p for p in folder.glob("*.toml") if not p.name.endswith(FAILED_SUFFIX)]
+    return [read(p) for p in sorted(paths, key=written_order)]
 
 
 def _bound(sha: str, block_sha: str, run_id: str | None) -> str:
@@ -514,11 +536,15 @@ def read_failed(path: Path) -> Failed:
 
 
 def failed_attempts(area: Path) -> list[Failed]:
-    """Every failed attempt of AREA, oldest first; a file that cannot be read raises."""
+    """Every failed attempt of AREA, oldest first (`written_order`); a file
+    that cannot be read raises."""
     folder = area / DIR
     if not folder.is_dir():
         return []
-    return [read_failed(p) for p in sorted(folder.glob(f"*{FAILED_SUFFIX}"))]
+    return [
+        read_failed(p)
+        for p in sorted(folder.glob(f"*{FAILED_SUFFIX}"), key=written_order)
+    ]
 
 
 def audit_unavailable(
