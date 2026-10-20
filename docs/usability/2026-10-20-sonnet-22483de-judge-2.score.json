@@ -1,0 +1,91 @@
+{
+ "probe": {
+  "staged": "2026-10-20T23:09:23",
+  "task": "judge",
+  "area": "01-causal-claims-judge",
+  "metric_key": "c1_accuracy",
+  "labkit_installed": "labkit @ file:///Users/max/projects/labkit-probes-22483de/src",
+  "scaffold_sha": "4fb28702943e",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "causal-claims-judge",
+   "--cost",
+   "seconds",
+   "--model",
+   "haiku"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-20T23-25-13_53a5",
+ "number": 0.75,
+ "expected": null,
+ "number_ok": true,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-causal-claims-judge.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 23,
+  "wall_seconds": 338,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 6,
+  "run": 13,
+  "edit": 3,
+  "unsure": 0,
+  "gate": 1,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 98,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 405,
+  "summary_codes": 9,
+  "answer_has_table": false
+ },
+ "transcript": {
+  "wall_seconds": 361,
+  "tool_seconds": 260,
+  "calls": 21,
+  "commands": {
+   "protocol-fill": 5,
+   "protocol-check": 1,
+   "code-check": 1,
+   "finalize": 1,
+   "labkit-audit": 2
+  },
+  "refusals": 0,
+  "tokens": {
+   "calls": 31,
+   "input": 62,
+   "output": 412,
+   "cache_read": 2090334,
+   "cache_creation": 89983,
+   "context_max": 83970
+  },
+  "files_read": [
+   "TASK.md",
+   "experiments/01-causal-claims-judge/README.md",
+   "experiments/01-causal-claims-judge/*.md",
+   "experiments/01-causal-claims-judge/scripts/*",
+   "experiments/01-causal-claims-judge/PROTOCOL-causal-claims-judge.md",
+   "experiments/01-causal-claims-judge/scripts/01_measure.py",
+   "models.toml",
+   "data/raw/claims.jsonl",
+   "experiments/01-causal-claims-judge/scripts/00_prepare.py",
+   "experiments/01-causal-claims-judge/scripts/02_analyze.py",
+   "tests/test_01_causal_claims_judge.py",
+   "/tmp/j2_audit.out",
+   "experiments/01-causal-claims-judge/runs.tsv",
+   "/private/tmp/claude-501/-Users-max-projects-labkit/99696f9d-00d2-4cc5-830f-be98ca0b73dd/scratchpad/j2_audit.out",
+   "experiments/01-causal-claims-judge/audits/*.toml"
+  ],
+  "source_reads": []
+ },
+ "agent": null
+}

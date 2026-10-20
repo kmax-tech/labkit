@@ -97,24 +97,20 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   auf `db1695d` ist abgeschlossen ([Bericht](docs/usability/2026-10-20-cold-probes-db1695d.md)):
   alle Zahlen gebunden, Median Count 2m44s, Judge 4m10s; Wiederholung nach
   den Werkzeugkorrekturen unten.
-- **Nächste kalte Reihe (`seconds`):** Aus der Reihe 2026-10-20 sind fünf
-  Werkzeugfehler behoben (CHANGELOG, Unreleased, Fixed); der sechste, das
-  Hand-TOML der Audit-Entscheidungen, hat nur eine Bedienungshilfe
-  (Changed) — sie senkt das Risiko ungültigen TOMLs, verhindert es nicht.
-  Reihenfolge:
-  1. ~~Unabhängiger Review der Fixes~~ — erledigt 2026-10-20: elf Befunde,
-     alle behoben (CHANGELOG, Unreleased).
-  2. Dieselben Aufgaben auf einem festgehaltenen Commit, frisch gestempelte
-     Bereiche (alte behalten ihre gestempelten Skripte), Umgebungen
-     vollständig vorbereitet: die venv mit `requirements.txt` ohne die
-     labkit-Zeile ergänzen, da `usability stage --venv` kein pytest bringt.
-  3. Hauptziel Bedienungsreibung: Fehlaufrufe, Reparaturen, manuelle
-     Eingriffe, korrekte Ergebnisbindung. Wandzeit nur zusätzlich —
-     sechs Läufe belegen keine belastbare Beschleunigung.
-  Zurückgestellt: ein Kommando, das eine ausdrücklich eingegebene
-  Audit-Entscheidung validiert und sicher speichert. Es übernähme keine
-  Entscheidung, verletzt also „die Person entscheidet“ nicht; erst bei
-  einem weiteren Fall bauen.
+- **Kalte Reihe `seconds` nach den Fixes:** erledigt 2026-10-20 auf
+  `22483de` ([Bericht](docs/usability/2026-10-20-cold-probes-22483de.md)):
+  Fehlbedienung Count 11 → 1, Judge 2 → 0; alle Zahlen gebunden. Nächste
+  Punkte nach Beleg:
+  1. Count-Stempel: der ```toml-Block des Protokolls wird nie geschlossen
+     (jeder Count-Lauf, Audit-Notiz); Judge-Stempel schließt ihn.
+  2. Kommando, das eine ausdrücklich eingegebene Audit-Entscheidung
+     validiert und speichert — zweiter Fall (count-3: per Skript
+     geschriebenes `reason` mit ungeschützten Anführungszeichen). Es
+     übernähme keine Entscheidung.
+  3. Probe-Aufbau: ein `TMPDIR` je Probe (judge-2 las über `/tmp` die
+     Audit-Ausgabe einer früheren Probe).
+  Offen, nicht als Fehler: gehört `runs.tsv` ins Repo? Kein Gate verlangt
+  es, kein Hinweis nennt es.
 - **Andere Person:** Schreibprobe und Usability-Runde vor weiteren
   Änderungen am Protokollstandard. Bisherige Vorlagenentscheidungen des
   Autors ersetzen diese Probe nicht.
