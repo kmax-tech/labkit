@@ -151,14 +151,16 @@ CLAUDE_HOOKS = {
 #: a hook command that calls one of these was written by a labkit install —
 #: this version's or an earlier one (uniagent 2026-10-10: a jq one-liner
 #: running `protocol-check` on every PROTOCOL write survived three installs
-#: and doubled every report beside `claude-hook post-change`)
-LABKIT_COMMANDS = ("claude-hook", "protocol-check", "notes-check")
+#: and doubled every report beside `claude-hook post-change`). Not every
+#: labkit command (`console.command_names`): a foreign hook that calls
+#: `runlog` is not one an install wrote, and an install must not erase it.
+HOOK_COMMANDS = ("claude-hook", "protocol-check", "notes-check")
 #: one of labkit's commands as a word of the hook's command line — at the
 #: start, after a space, a `/` or a quote, and not inside a longer name: a
 #: foreign `./bin/my-protocol-checker` was taken for ours and erased by an
 #: install (audit 2026-10-15)
 _LABKIT_COMMAND = re.compile(
-    r"""(?:^|[\s/"'])(?:""" + "|".join(LABKIT_COMMANDS) + r""")(?=$|[\s"'])"""
+    r"""(?:^|[\s/"'])(?:""" + "|".join(HOOK_COMMANDS) + r""")(?=$|[\s"'])"""
 )
 
 
@@ -182,7 +184,7 @@ def stale_entries(current: dict) -> list[str]:
 
 def merged_settings(current: dict) -> dict:
     """`current` with labkit's hooks — this version's and any earlier
-    install's (`LABKIT_COMMANDS`) — replaced by this version's; every other
+    install's (`HOOK_COMMANDS`) — replaced by this version's; every other
     key and every foreign hook kept, also one that shares an entry (and its
     matcher) with a labkit hook: the filter takes single commands, and an
     entry left without any is dropped."""

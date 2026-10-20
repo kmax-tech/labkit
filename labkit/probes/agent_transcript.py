@@ -43,20 +43,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-#: The console commands of labkit an agent may run; counted per name.
-LABKIT_COMMANDS = (
-    "protocol-check",
-    "protocol-fill",
-    "code-check",
-    "preflight",
-    "finalize",
-    "report-check",
-    "intent-check",
-    "recheck",
-    "runlog",
-    "scope-sha",
-    "labkit-hooks",
-)
+from labkit.formats import console
+
 #: Shell verbs whose file arguments are reads.
 READ_VERBS = frozenset({"cat", "head", "tail", "sed", "less", "wc", "nl"})
 #: A result that is a gate's refusal, line-anchored so a `cat` of the hook
@@ -318,8 +306,9 @@ def shell_reads(command: str) -> list[str]:
 
 
 def labkit_commands(command: str) -> list[str]:
-    """The labkit console commands a shell line runs, by command position."""
-    return [_verb(w) for w in segments(command) if _verb(w) in LABKIT_COMMANDS]
+    """The labkit console commands (`console.command_names`) a shell line
+    runs, by command position."""
+    return [_verb(w) for w in segments(command) if _verb(w) in console.command_names()]
 
 
 #: Reading labkit's code without opening a file: an introspection call.

@@ -211,5 +211,13 @@ class Timeline(unittest.TestCase):
         )
 
 
+class Commands(unittest.TestCase):
+    def test_every_installed_command_counts_and_no_other(self):
+        """The hand list missed labkit-params and labkit-audit and named a
+        `recheck` labkit never installed (audit 2026-10-18)."""
+        line = "labkit-params experiments/01-x && recheck x; labkit-audit 01 --mode preflight"
+        self.assertEqual(at.labkit_commands(line), ["labkit-params", "labkit-audit"])
+
+
 if __name__ == "__main__":
     unittest.main()

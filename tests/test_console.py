@@ -37,6 +37,17 @@ class ClosedPipe(unittest.TestCase):
         )
 
 
+class CommandNames(unittest.TestCase):
+    def test_the_installed_commands_are_the_declared_scripts(self):
+        """A stale editable install lacks a command added since: reinstall."""
+        import tomllib
+
+        from labkit.formats import console
+
+        declared = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        self.assertEqual(console.command_names(), set(declared["project"]["scripts"]))
+
+
 class Refusal(unittest.TestCase):
     def test_a_refused_main_says_why_on_stderr_and_exits_2(self):
         prog = (

@@ -11,9 +11,11 @@ flush cannot raise, and the exit code is 0.
 
 from __future__ import annotations
 
+import functools
 import os
 import sys
 from collections.abc import Callable
+from importlib.metadata import distribution
 
 
 def refuse(tool: str, why: str) -> None:
@@ -53,3 +55,16 @@ def exit_with(main: Callable[[list[str]], int]) -> None:
         os.dup2(devnull, sys.stdout.fileno())
         code = 0
     sys.exit(code)
+
+
+@functools.cache
+def command_names() -> frozenset[str]:
+    """The console commands labkit installs: `[project.scripts]` as the
+    installed metadata hold it. Raises PackageNotFoundError when labkit is
+    not installed (`pip install -e '.[dev]'`); a stale editable install
+    lacks a command added since — reinstall."""
+    return frozenset(
+        ep.name
+        for ep in distribution("labkit").entry_points
+        if ep.group == "console_scripts"
+    )
