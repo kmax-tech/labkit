@@ -39,8 +39,10 @@ a newer tag; it reports and changes nothing.
 
 1. Change the pin line in `requirements.txt` to the new tag.
 2. `.venv/bin/pip install -r requirements.txt`.
-3. Run the tests, commit `requirements.txt`. The commit history then says
-   which labkit produced which run.
+3. `.venv/bin/labkit-hooks install` — the hooks the repo carries come from
+   the installed version; `labkit-hooks check` names them stale until then.
+4. Run the tests, commit `requirements.txt` and the reinstalled hooks. The
+   commit history then says which labkit produced which run.
 
 The student or the supervisor (a commit in the student's repo) can do it.
 A breaking release names in `CHANGELOG.md` the last version that reads the

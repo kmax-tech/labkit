@@ -128,9 +128,9 @@ parser can see.
 
 ## What the declared-scope hash states
 
-`declared_scope_sha` hashes one promise's declared scope. It is not the
-area audit stamp `scope-sha` (README: *scope hash*), which covers a whole
-area for an audit and binds to no promise.
+`declared_scope_sha` hashes one promise's declared scope — the README's
+*scope hash*. It is not the area's audit *stamp* (`scope-sha`, README:
+*stamp*), which covers a whole area for an audit and binds to no promise.
 
 > **The implementation region declared for this promise was byte-identical
 > in the run that produced the reported number.**
