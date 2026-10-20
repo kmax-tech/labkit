@@ -106,13 +106,29 @@ def content_sha(value: object) -> str:
     return scope_sha.digest(runs.as_stored(value).encode("utf-8"))
 
 
+def _key(value: object) -> str:
+    """An id as the file stores it (`runs.as_stored`) — the one equality of
+    ids: `1`, `true` and `1.0` are three ids. Python's sets and dicts take
+    `True == 1`, and a row with id `true` balanced an input id `1`
+    (review 2026-10-20)."""
+    return runs.as_stored(value)
+
+
+def _unique(ids: Iterable[object]) -> list:
+    """IDS each once by `_key`, in order of first sight."""
+    out: dict[str, object] = {}
+    for i in ids:
+        out.setdefault(_key(i), i)
+    return list(out.values())
+
+
 def _duplicate_ids(rows: list[dict], id_key: str) -> list:
     """The ids that stand on more than one row, in order of first sight."""
-    seen: dict = {}
+    seen: dict[str, list] = {}
     for r in rows:
         if id_key in r:
-            seen[r[id_key]] = seen.get(r[id_key], 0) + 1
-    return [i for i, n in seen.items() if n > 1]
+            seen.setdefault(_key(r[id_key]), [r[id_key], 0])[1] += 1
+    return [first for first, n in seen.values() if n > 1]
 
 
 @dataclass(frozen=True)
@@ -377,9 +393,10 @@ class Store:
             )
         return [o for o in objs if not (isinstance(o, dict) and "_meta" in o)]
 
-    def done_ids(self) -> set:
-        """The ids of the records already in the output file."""
-        return {r[self.id_key] for r in self.records() if self.id_key in r}
+    def done_ids(self) -> list:
+        """The ids of the records already in the output file, each once (by
+        `_key`), in file order."""
+        return _unique(r[self.id_key] for r in self.records() if self.id_key in r)
 
     def pending(self, records: Iterable[dict]) -> Iterator[dict]:
         """The input records that have no output line yet, in input order.
@@ -401,9 +418,9 @@ class Store:
                     f"{self.instrument!r} — a changed prompt or model is a new "
                     f"measurement: write a new output file, never resume into this one"
                 )
-        done = self.done_ids()
+        done = {_key(i) for i in self.done_ids()}
         for rec in records:
-            if rec[self.id_key] not in done:
+            if _key(rec[self.id_key]) not in done:
                 yield rec
 
     # -- writing ----------------------------------------------------------
@@ -428,18 +445,21 @@ class Store:
         named under `duplicate` — a counted set alone would let a missing
         item and a doubled one cancel out (2026-10-09)."""
         done = self.records()
-        done_ids = {r[self.id_key] for r in done if self.id_key in r}
+        done_ids = {
+            _key(r[self.id_key]): r[self.id_key] for r in done if self.id_key in r
+        }
         info: dict = {"path": str(self.path), "done": len(done_ids)}
         duplicate = _duplicate_ids(done, self.id_key)
         if duplicate:
             info["duplicate"] = duplicate[:10]
         if records is not None:
             want = [r[self.id_key] for r in records]
-            missing = [i for i in want if i not in done_ids]
+            wanted = {_key(i) for i in want}
+            missing = [i for i in want if _key(i) not in done_ids]
             info["total"] = len(want)
             info["missing"] = len(missing)
             info["missing_ids"] = missing[:10]
-            stray = sorted(done_ids - set(want))
+            stray = [i for k, i in sorted(done_ids.items()) if k not in wanted]
             if stray:  # output holds ids the input never had
                 info["stray"] = stray[:10]
         if self.lock.exists():
@@ -471,20 +491,21 @@ class Store:
                 f"ledger: the input itself carries ids twice ({doubled[:5]}) — "
                 f"a balance by id needs unique input ids"
             )
-        by_id = {r[self.id_key]: r for r in records}
+        by_id = {_key(r[self.id_key]): r for r in records}
         rows = self.records()
-        row_ids = {r[self.id_key] for r in rows if self.id_key in r}
+        row_ids = {_key(r[self.id_key]) for r in rows if self.id_key in r}
         stale: dict[str, list] = {}
         for field, want in (expect or {}).items():
             stale[field] = [
                 r[self.id_key]
                 for r in rows
-                if r.get(self.id_key) in by_id
+                if self.id_key in r
+                and _key(r[self.id_key]) in by_id
                 and (
                     field not in r
                     or runs.as_stored(r[field])
                     != runs.as_stored(
-                        want(by_id[r[self.id_key]]) if callable(want) else want
+                        want(by_id[_key(r[self.id_key])]) if callable(want) else want
                     )
                 )
             ]
@@ -492,12 +513,14 @@ class Store:
             path=self.path,
             items=len(records),
             rows=len(rows),
-            missing=[r[self.id_key] for r in records if r[self.id_key] not in row_ids],
+            missing=[
+                r[self.id_key] for r in records if _key(r[self.id_key]) not in row_ids
+            ],
             duplicate=_duplicate_ids(rows, self.id_key),
             stray=[
                 i
-                for i in dict.fromkeys(r[self.id_key] for r in rows if self.id_key in r)
-                if i not in by_id
+                for i in _unique(r[self.id_key] for r in rows if self.id_key in r)
+                if _key(i) not in by_id
             ],
             unidentified=sum(1 for r in rows if self.id_key not in r),
             stale=stale,

@@ -137,6 +137,36 @@ class Ledger(unittest.TestCase):
         self.assertEqual(metrics["n_missing"], 0)
 
 
+class IdsCompareAsStored(unittest.TestCase):
+    """Python's sets take `True == 1`: an output row with id `true` balanced
+    an input id `1`, and a resume skipped item 1 (review 2026-10-20)."""
+
+    def setUp(self):
+        self.out = Path(tempfile.mkdtemp()) / "out.jsonl"
+
+    def _store(self, row_ids: list) -> batch.Store:
+        self.out.write_text("".join(json.dumps({"id": i}) + "\n" for i in row_ids))
+        return batch.Store(self.out)
+
+    def test_true_is_not_1_and_1_0_is_not_1(self):
+        for other in (True, 1.0, "1"):
+            with self.subTest(other=other):
+                store = self._store([other])
+                led = store.ledger([{"id": 1}])
+                self.assertEqual((led.missing, led.stray), ([1], [other]))
+                self.assertEqual([r["id"] for r in store.pending([{"id": 1}])], [1])
+
+    def test_the_same_id_balances_and_resumes(self):
+        store = self._store([1, "a"])
+        self.assertTrue(store.ledger([{"id": 1}, {"id": "a"}]).ok)
+        self.assertEqual(list(store.pending([{"id": 1}, {"id": "a"}])), [])
+        self.assertEqual(store.done_ids(), [1, "a"])
+
+    def test_a_doubled_id_is_named_once_however_it_is_spelled(self):
+        led = self._store([1, 1, True]).ledger([{"id": 1}, {"id": True}])
+        self.assertEqual(led.duplicate, [1])
+
+
 class ContentSha(unittest.TestCase):
     def test_the_fingerprint_is_the_stored_json_hashed(self):
         import hashlib

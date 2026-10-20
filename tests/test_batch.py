@@ -43,7 +43,7 @@ class TestStore(unittest.TestCase):
     def test_truncated_last_line_is_skipped_and_redone(self):
         self.out.write_text('{"id": "item-0"}\n{"id": "item-1"\n', encoding="utf-8")
         with batch.Store(self.out) as s:
-            self.assertEqual(s.done_ids(), {"item-0"})
+            self.assertEqual(s.done_ids(), ["item-0"])
             self.assertIn("item-1", [r["id"] for r in s.pending(RECORDS)])
 
     def test_second_writer_is_refused_while_locked(self):

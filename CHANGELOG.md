@@ -219,6 +219,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **Ids compare as the file stores them.** The ledger, the resume, the
+  status and the duplicate count held ids in Python sets and dicts, where
+  `True == 1`: an output row with id `true` balanced an input id `1`, and a
+  resume skipped item 1. Ids now compare by their stored JSON
+  (`runs.as_stored`): `1`, `true`, `1.0` and `"1"` are four ids. Any JSON
+  value stays a valid id. `Store.done_ids()` returns a list in file order
+  instead of a set, which could not hold `1` and `true` apart.
 - **A Store's instrument is fixed when the Store is built.** It was copied
   one level deep: a caller changing an inner dict afterwards gave later
   rows another `_instrument` than earlier ones, while the resume compared
