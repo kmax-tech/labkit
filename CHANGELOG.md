@@ -219,6 +219,10 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **An audit's counts are non-negative.** `blockers = -1` could be written,
+  was read, and passed the coverage check. Writer and reader now hold
+  `blockers`, `warnings` and `notes` to one rule (`findings.count_problem`):
+  a non-negative integer.
 - **Audit records and failed attempts are read in the order written.**
   Sorted by name, a minute's second and third file (`-2`, `-3`) came before
   its first, and the newest failed attempt — what a run's acknowledgement

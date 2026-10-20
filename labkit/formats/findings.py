@@ -161,6 +161,16 @@ def counts_outrun(verdict: tuple[int, int, int], grades: list[str]) -> str | Non
     return None
 
 
+def count_problem(name: str, value: object) -> str | None:
+    """Why VALUE is no count of NAME (blockers, warnings, notes), or None: a
+    count is a non-negative integer. One rule for the writer and the reader
+    — `blockers = -1` was written, read and passed the coverage check
+    (review 2026-10-20)."""
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        return f"{name} = {value!r} is not a non-negative integer"
+    return None
+
+
 def verdict_disagrees(verdict: tuple[int, int, int], grades: list[str]) -> str | None:
     """Why VERDICT's blockers and warnings are not exactly the BLOCKER and
     WARNING lines GRADES lists, or None — the one audit result a record and
@@ -202,7 +212,8 @@ def write(
     mode analysis (NO_RUN when there was none), refused in mode preflight.
     Every finding starts `open`. Never overwrites: the name carries the minute,
     and a second record of that minute takes the next number (`_create`).
-    Refuses (ValueError) a verdict whose blockers and warnings are not
+    Refuses (ValueError) a count that is not a non-negative integer
+    (`count_problem`) and a verdict whose blockers and warnings are not
     exactly the BLOCKER and WARNING lines of FINDINGS (`verdict_disagrees`):
     a finding line is never withdrawn by prose below it.
     """
@@ -213,6 +224,10 @@ def write(
             f"mode {mode!r} with run_id {run_id!r}: an analysis audit names the "
             f"run it read (NO_RUN for none), a preflight audit names none"
         )
+    for key, value in zip(("blockers", "warnings", "notes"), verdict, strict=True):
+        problem = count_problem(key, value)
+        if problem:
+            raise ValueError(f"verdict: {problem}")
     disagree = verdict_disagrees(verdict, [grade for grade, _ in findings])
     if disagree:
         raise ValueError(
@@ -278,8 +293,9 @@ def _audit_table(path: Path, data: dict) -> dict:
         if not isinstance(audit.get(key), str):
             raise FindingsError(f"{path}: [audit] {key} is missing or not a string")
     for key in ("blockers", "warnings", "notes"):
-        if not isinstance(audit.get(key), int) or isinstance(audit.get(key), bool):
-            raise FindingsError(f"{path}: [audit] {key} is missing or not an integer")
+        problem = count_problem(key, audit.get(key))
+        if problem:
+            raise FindingsError(f"{path}: [audit] {problem}")
     if audit["mode"] not in MODES:
         raise FindingsError(
             f"{path}: [audit] mode {audit['mode']!r} — one of {', '.join(MODES)}"

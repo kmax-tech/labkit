@@ -69,5 +69,43 @@ class WrittenOrder(unittest.TestCase):
             findings.area_records(self.area)
 
 
+class Counts(unittest.TestCase):
+    """blockers = -1 wrote, read and passed the coverage check (review
+    2026-10-20): a count is a non-negative integer, held alike on write and
+    read."""
+
+    def setUp(self) -> None:
+        self.area = Path(tempfile.mkdtemp())
+
+    def test_a_negative_count_is_refused_on_write(self) -> None:
+        for verdict in ((-1, 0, 0), (0, -2, 0), (0, 0, -3)):
+            with self.subTest(verdict=verdict):
+                with self.assertRaisesRegex(ValueError, "non-negative"):
+                    findings.write(
+                        self.area,
+                        "preflight",
+                        "opus",
+                        "s" * 12,
+                        "b" * 12,
+                        verdict,
+                        [],
+                        now=NOW,
+                    )
+
+    def test_a_negative_count_is_refused_on_read(self) -> None:
+        path = findings.write(
+            self.area, "preflight", "opus", "s" * 12, "b" * 12, (0, 0, 0), [], now=NOW
+        )
+        path.write_text(path.read_text().replace("blockers = 0", "blockers = -1"))
+        with self.assertRaisesRegex(findings.FindingsError, "non-negative"):
+            findings.area_records(self.area)
+
+    def test_twin_zero_counts_write_and_read(self) -> None:
+        findings.write(
+            self.area, "preflight", "opus", "s" * 12, "b" * 12, (0, 0, 2), [], now=NOW
+        )
+        self.assertEqual(len(findings.area_records(self.area)), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
