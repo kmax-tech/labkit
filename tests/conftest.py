@@ -12,10 +12,30 @@ temporary repo then lands in the real one. Run from a worktree on 2026-10-09,
 the suite set `core.bare = true` and a local user `t <t@t>` in labkit's own
 .git/config, tagged a test commit `v1.0.0` and committed onto the worktree's
 HEAD (`tests/test_git_env_isolation.py`).
+
+Every temporary path of a session lives under one directory, removed when the
+session ends: `tempfile` and every subprocess (through TMPDIR) create theirs
+there, so a test that never cleans up leaves nothing behind. Left in the
+system temp directory, those leftovers piled up run after run, and preflight,
+which reads an area's siblings as the repo's other areas, scanned them all
+(docs/notes/2026-10-20-test-temp-dirs.md).
 """
 
 import os
+import shutil
 import tempfile
+
+import pytest
+
+_SESSION_TMP = tempfile.mkdtemp(prefix="labkit-test-")
+tempfile.tempdir = _SESSION_TMP
+os.environ["TMPDIR"] = _SESSION_TMP
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    """Remove the session's temporary directory with everything the tests left in it."""
+    shutil.rmtree(_SESSION_TMP)
+
 
 os.environ["LABKIT_LEASE_DIR"] = tempfile.mkdtemp(prefix="labkit-test-leases-")
 for _name in [n for n in os.environ if n.startswith("GIT_")]:
@@ -30,7 +50,6 @@ os.environ.pop("LABKIT_FOREGROUND_TIMEOUT_S", None)
 # a failure propagates out of pytest, and the debugger's "Uncaught Exceptions"
 # breakpoint lands on it — the IDE's counterpart of `pytest --pdb`.
 if os.environ.get("LABKIT_TEST_RAISE") == "1":
-    import pytest
 
     @pytest.hookimpl(tryfirst=True)
     def pytest_exception_interact(call: pytest.CallInfo[object]) -> None:
