@@ -16,6 +16,7 @@ from pathlib import Path
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
+from llm_fixture import spec_of  # noqa: E402
 
 from labkit.run import llm, llm_backends  # noqa: E402
 
@@ -43,7 +44,7 @@ def _call(spec: dict, prompt: str, reply: dict, *, raw: bool = False) -> dict:
         return _FakeResponse(reply)
 
     with (
-        mock.patch.object(llm, "resolve", lambda alias: dict(spec)),
+        mock.patch.object(llm, "spec", lambda alias: spec_of(spec)),
         mock.patch.object(llm.endpoint_lease, "acquire", lambda *a, **k: None),
         mock.patch.object(llm.urllib.request, "urlopen", fake_urlopen),
     ):
@@ -106,7 +107,7 @@ class CutPromptRaises(unittest.TestCase):
 
         def run(system: str) -> None:
             with (
-                mock.patch.object(llm, "resolve", lambda alias: dict(spec)),
+                mock.patch.object(llm, "spec", lambda alias: spec_of(spec)),
                 mock.patch.object(llm.endpoint_lease, "acquire", lambda *a, **k: None),
                 mock.patch.object(
                     llm.urllib.request,
@@ -142,7 +143,8 @@ class NumCtxIsValidated(unittest.TestCase):
 
     def test_ollama_with_num_ctx_resolves(self):
         spec = self._resolve(
-            '[models.m]\nbackend = "ollama"\nmodel = "q"\nnum_ctx = 32768\n'
+            '[models.m]\nbackend = "ollama"\nmodel = "q"\nendpoints = ["http://h:1"]\n'
+            "num_ctx = 32768\n"
         )
         self.assertEqual(spec["num_ctx"], 32768)
 
@@ -153,7 +155,8 @@ class NumCtxIsValidated(unittest.TestCase):
     def test_non_integer_num_ctx_raises(self):
         with self.assertRaisesRegex(ValueError, "positive integer"):
             self._resolve(
-                '[models.m]\nbackend = "ollama"\nmodel = "q"\nnum_ctx = "32k"\n'
+                '[models.m]\nbackend = "ollama"\nmodel = "q"\nendpoints = ["http://h:1"]\n'
+                'num_ctx = "32k"\n'
             )
 
 

@@ -9,6 +9,8 @@ repo root is the single place where backends live.
     spec = llm.resolve("gpt-oss")     # dict -> put into runlog config, so
                                       # runs.tsv records model+backend+endpoint
                                       # + controls_temperature (see below)
+    typed = llm.spec("gpt-oss")       # the immutable OllamaSpec every call
+                                      # is made with (llm_specs)
 
 Sampling control differs per backend: 'ollama' and 'openai' send a
 temperature, 'claude-cli' cannot (the CLI exposes no such flag) and REFUSES
@@ -20,7 +22,9 @@ when the backend never made it so.
 settings and CLAUDE.md files stay out of the call, and provenance() stamps
 CLI version + isolation flags (see CLI_ISOLATION).
 
-models.toml:
+models.toml (each backend reads only its own keys — `llm_specs.OPTIONS`;
+any other key, and a served backend without endpoints, is refused when the
+alias is first resolved):
     [endpoints]                       # URLs live ONCE, under a name; a srun
     gamma1 = "http://gammaweb07.medien.uni-weimar.de:11490"   # reallocation
     # gamma2 = "http://gammawebNN.medien.uni-weimar.de:11491" # edits HERE only
@@ -73,7 +77,7 @@ endpoint/model and do your own HTTP — never a literal URL in the experiment.
 
 from __future__ import annotations
 
-import copy
+import dataclasses
 import http.client
 import json
 import shlex
@@ -89,6 +93,14 @@ from typing import Any
 
 from labkit.run import endpoint_lease
 from labkit.formats.repo import lab_root
+from labkit.formats.runs import JsonObject
+from labkit.run.llm_specs import (
+    BackendSpec,
+    ClaudeCliSpec,
+    OllamaSpec,
+    parse_spec,
+    record,
+)
 from labkit.run.llm_backends import (
     BackendError,
     NO_USAGE,
@@ -120,72 +132,49 @@ def _find_models_toml() -> Path:
     )
 
 
-_FROZEN: dict[str, dict] = {}  # alias -> spec, fixed at first use per process
+_FROZEN: dict[str, BackendSpec] = {}  # alias -> spec, fixed at first use per process
 _FROZEN_LOCK = threading.Lock()
 
 
-def resolve(alias: str) -> dict:
-    """Alias -> full backend spec (put this into runlog's config).
+def spec(alias: str) -> BackendSpec:
+    """Alias -> its typed backend spec (`ClaudeCliSpec`, `OllamaSpec`,
+    `OpenAISpec`), what every call is made with.
 
     The spec is FROZEN per process at first use. `models.toml` is shared state:
     a cluster host changes with every allocation, and an experiment running in
     parallel must not have its backend swapped mid-run by whoever edits the
     file — the swap would be silent, and the run's config.json would keep
     naming the model that answered the first half. A new process picks up the
-    edit; a running one keeps what it started with.
+    edit; a running one keeps what it started with. The spec and every value
+    in it are immutable (endpoints a tuple), so no caller can edit it. The
+    first resolution of an alias holds a lock: two threads starting together
+    get the same spec, not two readings of a file edited between them.
 
-    Every call returns its own deep copy, so a caller editing the result
-    (an `endpoints` list, say) never reaches the frozen spec. The first
-    resolution of an alias holds a lock: two threads starting together get
-    the same spec, not two readings of a file edited between them.
+    Raises KeyError for an alias or endpoint name models.toml lacks,
+    ValueError for a table its backend cannot hold (`parse_spec`).
     """
     with _FROZEN_LOCK:
         if alias not in _FROZEN:
             _FROZEN[alias] = _load_spec(alias)
-        return copy.deepcopy(_FROZEN[alias])
+        return _FROZEN[alias]
 
 
-def _load_spec(alias: str) -> dict:
-    """The spec of ALIAS as `models.toml` states it now — what `resolve`
-    freezes."""
+def resolve(alias: str) -> JsonObject:
+    """Alias -> the spec as a run records it (`llm_backends.record`): put
+    this into runlog's config. A new dict every call, from the frozen spec
+    (`spec`)."""
+    return record(spec(alias))
+
+
+def _load_spec(alias: str) -> BackendSpec:
+    """The spec of ALIAS as `models.toml` states it now — what `spec`
+    freezes. For ollama the weights' digest is probed on every endpoint."""
     cfg = tomllib.loads(_find_models_toml().read_text(encoding="utf-8"))
-    try:
-        spec = dict(cfg["models"][alias])
-    except KeyError:
-        known = ", ".join(cfg.get("models", {}))
+    models = cfg.get("models", {})
+    if alias not in models:
+        known = ", ".join(models)
         raise KeyError(f"model alias '{alias}' not in models.toml (known: {known})")
-    spec["alias"] = alias
-    _check_num_ctx(alias, spec)
-    # Endpoint names resolve against [endpoints]; literal URLs pass through.
-    # `endpoints = [...]` normalizes to spec["endpoints"] (list) +
-    # spec["endpoint"] (first entry, for direct-HTTP callers). Frozen with
-    # the rest of the spec: an edit to models.toml never reaches a running
-    # process. The string form `endpoint = "..."` is not read since 0.89.0.
-    if "endpoint" in spec:
-        raise ValueError(
-            f"models.toml [models.{alias}]: `endpoint = ...` is not read since "
-            f"labkit 0.89.0 — write `endpoints = [{spec['endpoint']!r}]`"
-        )
-    table = cfg.get("endpoints", {})
-    raw_eps = spec.pop("endpoints", None) or []
-    eps = []
-    for e in raw_eps:
-        if "://" in e:
-            eps.append(e)
-        elif e in table:
-            eps.append(table[e])
-        else:
-            known = ", ".join(table) or "none defined"
-            raise KeyError(
-                f"endpoint name '{e}' for alias '{alias}' not in "
-                f"[endpoints] (known: {known})"
-            )
-    if eps:
-        spec["endpoints"] = eps
-        spec["endpoint"] = eps[0]
-    # Recorded in every runlog config, so a run never *looks* deterministic
-    # when the backend cannot control sampling at all.
-    spec["controls_temperature"] = spec["backend"] in ("ollama", "openai")
+    parsed = parse_spec(alias, models[alias], cfg.get("endpoints", {}))
     # Camera-ready gap closed 2026-08-18: the model NAME is not the model.
     # "qwen2.5:7b" can mean different weights in three months; the digest
     # pins what actually answered. Best-effort — a run must not die because
@@ -193,31 +182,13 @@ def _load_spec(alias: str) -> dict:
     # With several endpoints, all are probed: serving DIFFERENT weights under
     # the same alias would silently mix two models into one run — that is a
     # defect, and the config says so loudly instead of picking one digest.
-    if spec["backend"] == "ollama":
-        auth = auth_headers(spec)
-        spec["model_digest"] = _aggregate_digests(
-            {ep: _ollama_digest(ep, spec["model"], auth) for ep in eps}
-            or {"": _ollama_digest("", spec["model"], auth)}
+    if isinstance(parsed, OllamaSpec):
+        auth = auth_headers(parsed)
+        digest = _aggregate_digests(
+            {ep: _ollama_digest(ep, parsed.model, auth) for ep in parsed.endpoints}
         )
-    return spec
-
-
-def _check_num_ctx(alias: str, spec: dict) -> None:
-    """`num_ctx` is an ollama option and a positive integer; anything else
-    raises — on another backend it would be dropped without a word."""
-    if "num_ctx" not in spec:
-        return
-    value = spec["num_ctx"]
-    if spec.get("backend") != "ollama":
-        raise ValueError(
-            f"alias '{alias}': num_ctx is an ollama option, but the backend is "
-            f"'{spec.get('backend')}' — an OpenAI-compatible server sets its "
-            f"window at start (vllm --max-model-len) and refuses longer prompts"
-        )
-    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-        raise ValueError(
-            f"alias '{alias}': num_ctx must be a positive integer, got {value!r}"
-        )
+        parsed = dataclasses.replace(parsed, model_digest=digest)
+    return parsed
 
 
 def _aggregate_digests(per_endpoint: dict[str, str]) -> str:
@@ -325,12 +296,12 @@ def provenance(alias: str) -> dict:
     flags — the system prompt is the harness's own, and these two decide
     what else went into it.
     """
-    spec = resolve(alias)
-    model = spec["model"]
-    if spec.get("model_digest"):
-        model += "@" + spec["model_digest"]
-    prov = {"model": model, "endpoint": last_endpoint}
-    if spec["backend"] == "claude-cli":
+    used = spec(alias)
+    model = used.model
+    if isinstance(used, OllamaSpec):
+        model += "@" + used.model_digest
+    prov: dict[str, Any] = {"model": model, "endpoint": last_endpoint}
+    if isinstance(used, ClaudeCliSpec):
         prov["cli_version"] = cli_version()
         prov["cli_flags"] = shlex.join(CLI_ISOLATION)
     return prov
@@ -452,49 +423,43 @@ def _complete_once(
     Dispatches to one adapter per backend; each adapter owns its protocol
     (CLI flags, ollama /api/generate or /api/chat, OpenAI /v1).
     """
-    spec = resolve(alias)
+    used = spec(alias)
     # A serving endpoint is ONE model slot: a second alias against it makes
     # both stages swap the model back and forth, and the timeouts come back as
     # empty answers that an admissibility condition counts as a parser finding. The lease sits
     # HERE and not in the calling script on purpose — a rule a script has to
     # remember is an intention (endpoint_lease's docstring carries the chain).
-    endpoint_lease.acquire(alias, spec.get("endpoints"))
-    backend = spec["backend"]
-    if backend == "claude-cli":
+    endpoint_lease.acquire(
+        alias, None if isinstance(used, ClaudeCliSpec) else list(used.endpoints)
+    )
+    if isinstance(used, ClaudeCliSpec):
         return complete_claude_cli(
-            alias, spec, prompt, system=system, temperature=temperature, timeout=timeout
-        )
-    if backend == "ollama" and raw:
-        return complete_ollama_raw(
-            spec,
-            prompt,
-            system=system,
-            temperature=temperature,
-            timeout=timeout,
-            stop=stop,
-            max_tokens=max_tokens,
-        )
-    if backend == "ollama":
-        return complete_ollama_chat(
-            alias,
-            spec,
-            prompt,
-            system=system,
-            temperature=temperature,
-            timeout=timeout,
-            stop=stop,
-            max_tokens=max_tokens,
-        )
-    if backend == "openai":
-        return complete_openai(
-            alias,
-            spec,
+            used,
             prompt,
             system=system,
             temperature=temperature,
             timeout=timeout,
             raw=raw,
             stop=stop,
+        )
+    if isinstance(used, OllamaSpec):
+        call = complete_ollama_raw if raw else complete_ollama_chat
+        return call(
+            used,
+            prompt,
+            system=system,
+            temperature=temperature,
+            timeout=timeout,
+            stop=stop,
             max_tokens=max_tokens,
         )
-    raise ValueError(f"unknown backend '{backend}' for alias '{alias}'")
+    return complete_openai(
+        used,
+        prompt,
+        system=system,
+        temperature=temperature,
+        timeout=timeout,
+        raw=raw,
+        stop=stop,
+        max_tokens=max_tokens,
+    )

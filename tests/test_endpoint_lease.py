@@ -242,17 +242,11 @@ class TestEndpointLease(unittest.TestCase):
     def test_llm_complete_leases_implicitly(self):
         """The point of the design: the SCRIPT does not have to remember."""
         from labkit.run import llm
+        from labkit.run.llm_specs import OpenAISpec
 
         pid, script = self._live_other_process()
         self._foreign(EP, "other-alias", pid=pid, script=script)
-        llm._FROZEN["probe-alias"] = {
-            "alias": "probe-alias",
-            "backend": "openai",
-            "model": "m",
-            "endpoint": EP,
-            "endpoints": [EP],
-            "controls_temperature": True,
-        }
+        llm._FROZEN["probe-alias"] = OpenAISpec("probe-alias", "m", (EP,))
         self.addCleanup(lambda: llm._FROZEN.pop("probe-alias", None))
         with self.assertRaises(SystemExit):
             llm.complete("probe-alias", "hi", attempts=1)

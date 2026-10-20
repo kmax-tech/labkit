@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from llm_fixture import typed  # noqa: E402
 
 from labkit.run import llm, llm_backends  # noqa: E402
 
@@ -43,8 +44,8 @@ class CliIsolation(unittest.TestCase):
         with (
             mock.patch.object(
                 llm,
-                "resolve",
-                lambda alias: {"backend": "claude-cli", "model": "m", "alias": alias},
+                "spec",
+                typed(lambda alias: {"backend": "claude-cli", "model": "m"}),
             ),
             mock.patch.object(llm.endpoint_lease, "acquire", lambda *a, **k: None),
             mock.patch.object(llm.subprocess, "run", fake_run),
@@ -70,8 +71,8 @@ class CliIsolation(unittest.TestCase):
         with (
             mock.patch.object(
                 llm,
-                "resolve",
-                lambda alias: {"backend": "claude-cli", "model": "m", "alias": alias},
+                "spec",
+                typed(lambda alias: {"backend": "claude-cli", "model": "m"}),
             ),
             mock.patch.object(llm.endpoint_lease, "acquire", lambda *a, **k: None),
             mock.patch.object(llm.subprocess, "run", fake_run),

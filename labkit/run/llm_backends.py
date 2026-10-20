@@ -7,7 +7,8 @@ OpenAI-compatible endpoint; the endpoint chosen round-robin across the
 configured ones, the auth headers, the per-thread call state
 (`CALL_STATE`: endpoint, usage, thinking of the last call) and the
 types a call raises or returns (`BackendError`, `PromptTruncated`,
-`Usage`). `llm` resolves the alias, retries and records; it calls these.
+`Usage`). The specs a call is made with are `llm_specs`'. `llm`
+resolves the alias, retries and records; it calls these.
 """
 
 from __future__ import annotations
@@ -22,8 +23,10 @@ import urllib.error
 import urllib.request
 from typing import NamedTuple
 
+from labkit.run.llm_specs import ClaudeCliSpec, OllamaSpec, OpenAISpec, ServedSpec
 
-def auth_headers(spec: dict) -> dict[str, str]:
+
+def auth_headers(spec: ServedSpec) -> dict[str, str]:
     """Authorization header for a served endpoint, or nothing.
 
     `api_key_env` names the environment variable that holds the key: the
@@ -34,17 +37,17 @@ def auth_headers(spec: dict) -> dict[str, str]:
     unauthenticated and die after the first 401, or worse, fall back to an
     unauthenticated endpoint nobody chose.
     """
-    env = spec.get("api_key_env")
+    env = spec.api_key_env
     if env:
         key = os.environ.get(env)
         if not key:
             raise ValueError(
-                f"alias '{spec.get('alias', '?')}': api_key_env = {env!r}, but "
+                f"alias '{spec.alias}': api_key_env = {env!r}, but "
                 f"{env} is not set in the environment"
             )
         return {"Authorization": f"Bearer {key}"}
-    if spec.get("api_key"):
-        return {"Authorization": f"Bearer {spec['api_key']}"}
+    if spec.api_key:
+        return {"Authorization": f"Bearer {spec.api_key}"}
     return {}
 
 
@@ -165,21 +168,20 @@ def cli_version() -> str:
         return "unknown"
 
 
-def pick_endpoint(spec: dict) -> str:
+def pick_endpoint(spec: ServedSpec) -> str:
     """Next endpoint for this call: round-robin over spec['endpoints'].
 
     A single endpoint behaves exactly as before. With several, each call
     advances the counter — and because `complete()` re-enters here on retry,
     a dropped server naturally fails over to the next one.
     """
-    eps = spec.get("endpoints") or [spec["endpoint"]]
+    eps = spec.endpoints
     if len(eps) == 1:
         url = eps[0]
     else:
-        key = spec.get("alias", spec.get("model", ""))
         with _RR_LOCK:
-            i = _RR.get(key, 0)
-            _RR[key] = i + 1
+            i = _RR.get(spec.alias, 0)
+            _RR[spec.alias] = i + 1
         url = eps[i % len(eps)]
     CALL_STATE.endpoint = url
     return url
@@ -192,7 +194,7 @@ def _chat_messages(system: str | None, prompt: str) -> list[dict]:
     ]
 
 
-def _post_json(spec: dict, path: str, payload: dict, timeout: int) -> dict:
+def _post_json(spec: ServedSpec, path: str, payload: dict, timeout: int) -> dict:
     """POST `payload` to the alias' endpoint + `path`; the decoded answer."""
     req = urllib.request.Request(
         pick_endpoint(spec).rstrip("/") + path,
@@ -204,15 +206,26 @@ def _post_json(spec: dict, path: str, payload: dict, timeout: int) -> dict:
 
 
 def complete_claude_cli(
-    alias: str,
-    spec: dict,
+    spec: ClaudeCliSpec,
     prompt: str,
     *,
     system: str | None,
     temperature: float | None,
     timeout: int,
+    raw: bool,
+    stop: list[str] | None,
 ) -> str:
-    """`claude -p`, isolated from the operator's settings (CLI_ISOLATION)."""
+    """`claude -p`, isolated from the operator's settings (CLI_ISOLATION).
+    Refuses what the CLI cannot honour — a temperature, an untemplated
+    prompt, a stop sequence — instead of dropping it (`max_tokens` is the
+    CLI's own: the call has no flag for it, and every caller's default)."""
+    alias = spec.alias
+    if raw or stop:
+        raise ValueError(
+            f"alias '{alias}' uses backend 'claude-cli', which has no "
+            f"{'untemplated route (raw=True)' if raw else 'stop sequences'} — "
+            f"it would be dropped without a word; use an ollama or openai alias"
+        )
     if temperature is not None:
         raise ValueError(
             f"alias '{alias}' uses backend 'claude-cli', which has no "
@@ -224,7 +237,7 @@ def complete_claude_cli(
         "claude",
         "-p",  # the prompt comes on stdin (_cli_run)
         "--model",
-        spec["model"],
+        spec.model,
         "--output-format",
         "json",
         *CLI_ISOLATION,
@@ -283,7 +296,7 @@ OLLAMA_KEEP_ALIVE = "10m"
 
 
 def _ollama_options(
-    spec: dict, temperature: float | None, stop: list[str] | None, max_tokens: int
+    spec: OllamaSpec, temperature: float | None, stop: list[str] | None, max_tokens: int
 ) -> dict[str, object]:
     """The `options` of an ollama request, for /api/generate and /api/chat
     alike. `num_predict` is never left out: a completion has no natural end
@@ -297,8 +310,8 @@ def _ollama_options(
         options["temperature"] = temperature
     if stop:
         options["stop"] = stop
-    if "num_ctx" in spec:
-        options["num_ctx"] = spec["num_ctx"]
+    if spec.num_ctx is not None:
+        options["num_ctx"] = spec.num_ctx
     return options
 
 
@@ -316,7 +329,7 @@ def _warn_empty(alias: str, detail: str) -> None:
 
 
 def complete_ollama_raw(
-    spec: dict,
+    spec: OllamaSpec,
     prompt: str,
     *,
     system: str | None,
@@ -339,7 +352,7 @@ def complete_ollama_raw(
             "any system text into the prompt itself"
         )
     payload: dict[str, object] = {
-        "model": spec["model"],
+        "model": spec.model,
         "prompt": prompt,
         "raw": True,
         "stream": False,
@@ -376,7 +389,7 @@ TRUNCATION_CHARS_PER_TOKEN = 10
 TRUNCATION_MIN_CHARS = 4000
 
 
-def _check_prompt_fit(spec: dict, prompt_chars: int, usage: Usage) -> None:
+def _check_prompt_fit(spec: OllamaSpec, prompt_chars: int, usage: Usage) -> None:
     """Raise PromptTruncated when ollama read less than the whole prompt.
 
     ollama cuts a prompt longer than its context window and answers what is
@@ -390,8 +403,8 @@ def _check_prompt_fit(spec: dict, prompt_chars: int, usage: Usage) -> None:
     read = usage.prompt_tokens
     if read is None or read <= 0:
         return
-    alias = spec.get("alias", spec.get("model", "?"))
-    window = spec.get("num_ctx")
+    alias = spec.alias
+    window = spec.num_ctx
     if window is not None and read >= window:
         raise PromptTruncated(
             f"{alias}: ollama read {read:,} prompt tokens, the whole num_ctx "
@@ -416,8 +429,7 @@ def _check_prompt_fit(spec: dict, prompt_chars: int, usage: Usage) -> None:
 
 
 def complete_ollama_chat(
-    alias: str,
-    spec: dict,
+    spec: OllamaSpec,
     prompt: str,
     *,
     system: str | None,
@@ -427,8 +439,9 @@ def complete_ollama_chat(
     max_tokens: int,
 ) -> str:
     """ollama /api/chat — the path every templated experiment takes."""
+    alias = spec.alias
     payload: dict[str, object] = {
-        "model": spec["model"],
+        "model": spec.model,
         "messages": _chat_messages(system, prompt),
         "stream": False,
         "keep_alive": OLLAMA_KEEP_ALIVE,
@@ -450,8 +463,7 @@ def complete_ollama_chat(
 
 
 def complete_openai(
-    alias: str,
-    spec: dict,
+    spec: OpenAISpec,
     prompt: str,
     *,
     system: str | None,
@@ -468,13 +480,14 @@ def complete_openai(
     # Model pinning: /v1 exposes no weights digest — the served model id
     # plus the server launch command (revision, quantization) are the pin,
     # both belong in the run config.
+    alias = spec.alias
     if raw:
         raise ValueError(
             "raw=True needs ollama's /api/generate — the "
             "OpenAI-compatible API has no untemplated path"
         )
     payload: dict[str, object] = {
-        "model": spec["model"],
+        "model": spec.model,
         "messages": _chat_messages(system, prompt),
         "max_tokens": max_tokens,
         "stream": False,
@@ -508,7 +521,7 @@ def complete_openai(
         message.get("reasoning_content") or message.get("reasoning") or ""
     ).strip()
     CALL_STATE.thinking = reasoning
-    if spec.get("reasoning") and content and not reasoning:
+    if spec.reasoning and content and not reasoning:
         raise ValueError(
             f"{alias}: reasoning = true, but the answer carries content "
             f"without reasoning_content/reasoning — the server runs "

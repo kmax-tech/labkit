@@ -13,6 +13,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
+from llm_fixture import spec_of  # noqa: E402
 
 
 class _FakeResponse:
@@ -41,8 +42,8 @@ class _Base(unittest.TestCase):
 
         self.llm = llm
         self.sent = {}
-        self._resolve, self._urlopen = llm.resolve, llm.urllib.request.urlopen
-        llm.resolve = lambda alias: dict(self.SPEC)
+        self._resolve, self._urlopen = llm.spec, llm.urllib.request.urlopen
+        llm.spec = lambda alias: spec_of(self.SPEC)
 
         def fake_urlopen(req, timeout=None):
             self.sent["url"] = req.full_url
@@ -55,7 +56,7 @@ class _Base(unittest.TestCase):
         llm.urllib.request.urlopen = fake_urlopen
 
     def tearDown(self):
-        self.llm.resolve = self._resolve
+        self.llm.spec = self._resolve
         self.llm.urllib.request.urlopen = self._urlopen
 
 
@@ -99,7 +100,7 @@ class TestReasoningGuard(_Base):
         self.assertEqual(self.llm.complete("x", "p", attempts=1), "")
 
     def test_non_reasoning_alias_is_untouched(self):
-        self.llm.resolve = lambda alias: dict(_Base.SPEC)  # reasoning absent
+        self.llm.spec = lambda alias: spec_of(_Base.SPEC)  # reasoning absent
         self._respond_with({"content": "plain answer"})
         self.assertEqual(self.llm.complete("x", "p"), "plain answer")
 
@@ -124,7 +125,7 @@ class TestOpenAIBackend(_Base):
 
     def test_api_key_becomes_bearer_header(self):
         self.SPEC = {**self.SPEC, "api_key": "sk-test"}
-        self.llm.resolve = lambda alias: dict(self.SPEC)
+        self.llm.spec = lambda alias: spec_of(self.SPEC)
         self.llm.complete("x", "p")
         self.assertEqual(self.sent["headers"].get("Authorization"), "Bearer sk-test")
 
@@ -145,7 +146,7 @@ class TestOpenAIBackend(_Base):
         import tempfile
 
         llm = self.llm
-        llm.resolve = self._resolve  # real resolve for this one
+        llm.spec = self._resolve  # the real spec for this one
         saved_find, saved_frozen = llm._find_models_toml, dict(llm._FROZEN)
         try:
             with tempfile.TemporaryDirectory() as d:
@@ -178,7 +179,7 @@ class TestApiKeyEnv(_Base):
 
     def test_env_key_becomes_bearer_header(self):
         self.SPEC = {**self.SPEC, "api_key_env": "LABKIT_TEST_KEY"}
-        self.llm.resolve = lambda alias: dict(self.SPEC)
+        self.llm.spec = lambda alias: spec_of(self.SPEC)
         os.environ["LABKIT_TEST_KEY"] = "sk-from-env"
         try:
             self.llm.complete("x", "p")
@@ -191,7 +192,7 @@ class TestApiKeyEnv(_Base):
 
     def test_unset_env_fails_loud_without_retry(self):
         self.SPEC = {**self.SPEC, "api_key_env": "LABKIT_TEST_KEY_UNSET"}
-        self.llm.resolve = lambda alias: dict(self.SPEC)
+        self.llm.spec = lambda alias: spec_of(self.SPEC)
         os.environ.pop("LABKIT_TEST_KEY_UNSET", None)
         with self.assertRaises(ValueError):
             self.llm.complete("x", "p")

@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
+from llm_fixture import typed  # noqa: E402
 
 
 class _FakeResponse:
@@ -33,16 +34,18 @@ class TestLastThinking(unittest.TestCase):
 
         self.llm = llm
         self.reply = {}
-        self._resolve, self._urlopen = llm.resolve, llm.urllib.request.urlopen
-        llm.resolve = lambda alias: {
-            "backend": "ollama",
-            "model": "gpt-oss:latest",
-            "endpoint": "http://example.invalid:11490",
-        }
+        self._resolve, self._urlopen = llm.spec, llm.urllib.request.urlopen
+        llm.spec = typed(
+            lambda alias: {
+                "backend": "ollama",
+                "model": "gpt-oss:latest",
+                "endpoint": "http://example.invalid:11490",
+            }
+        )
         llm.urllib.request.urlopen = lambda req, timeout=None: _FakeResponse(self.reply)
 
     def tearDown(self):
-        setattr(self.llm, "resolve", self._resolve)
+        setattr(self.llm, "spec", self._resolve)
         self.llm.urllib.request.urlopen = self._urlopen
 
     def test_the_trace_of_the_last_call_is_kept(self):
