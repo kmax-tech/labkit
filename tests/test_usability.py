@@ -386,6 +386,61 @@ class LogStepWritesBeforeItRuns(unittest.TestCase):
             self.assertFalse(log.exists())
 
 
+class LogCommandLine(unittest.TestCase):
+    """The command line of `usability log` in the order TASK.md stamps:
+    `TAG TEXT --log FILE -- CMD`. The option may stand before or after the
+    text; everything after the first `--` is the command."""
+
+    def _main(self, d: str, argv: list[str]) -> int:
+        from labkit.probes import usability_command
+
+        cwd = os.getcwd()
+        try:
+            os.chdir(d)
+            return usability_command.main(argv)
+        finally:
+            os.chdir(cwd)
+
+    def test_the_stamped_order_writes_to_the_named_log_and_runs_the_command(self):
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / "probe.log.md"
+            rc = self._main(
+                d,
+                ["log", "run", "the count", "--log", str(log), "--"]
+                + [sys.executable, "-c", "raise SystemExit(3)"],
+            )
+            self.assertEqual(rc, 3)
+            self.assertRegex(log.read_text(), r"^\d\d:\d\d:\d\d · run · the count\n$")
+            self.assertFalse((Path(d) / "log.md").exists())
+
+    def test_the_option_before_the_tag_and_a_line_without_command(self):
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / "probe.log.md"
+            self.assertEqual(self._main(d, ["log", "--log", str(log), "read", "x"]), 0)
+            self.assertEqual(len(log.read_text().splitlines()), 1)
+
+    def test_a_command_word_like_an_option_stays_in_the_command(self):
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / "probe.log.md"
+            out = Path(d) / "argv.txt"
+            script = f"import sys,pathlib; pathlib.Path({str(out)!r}).write_text(' '.join(sys.argv[1:]))"
+            rc = self._main(
+                d,
+                ["log", "run", "x", "--log", str(log), "--"]
+                + [sys.executable, "-c", script, "--log", "y", "--", "z"],
+            )
+            self.assertEqual(rc, 0)
+            self.assertEqual(out.read_text(), "--log y -- z")
+
+    def test_words_after_the_text_without_the_separator_are_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            with contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as cm:
+                    self._main(d, ["log", "run", "x", "true"])
+            self.assertEqual(cm.exception.code, 2)
+            self.assertFalse((Path(d) / "log.md").exists())
+
+
 if __name__ == "__main__":
     unittest.main()
 

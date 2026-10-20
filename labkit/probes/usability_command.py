@@ -30,8 +30,23 @@ from labkit.probes.usability_score import (
 )
 
 
+def _split_log_command(argv: list[str]) -> tuple[list[str], list[str]]:
+    """(the words argparse reads, the command) of a `usability log` line:
+    the command is everything after the first `--`, untouched. Other
+    subcommands come back whole with an empty command.
+
+    argparse cannot do this cut itself: a trailing REMAINDER positional
+    swallowed `--log FILE -- CMD` when the option followed the text, the
+    order TASK.md stamps, and ran `--log` as the command."""
+    if argv[:1] != ["log"] or "--" not in argv:
+        return argv, []
+    cut = argv.index("--")
+    return argv[:cut], argv[cut + 1 :]
+
+
 def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Command line of `usability`: stage probes and score what cold agents and readers did."""
+    argv, log_cmd = _split_log_command(argv)
     ap = argparse.ArgumentParser(
         prog="usability", description=(__doc__ or "").split("\n\n")[0]
     )
@@ -72,16 +87,14 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         help="which task sheet and fixture: count (deterministic, the default) "
         "or judge (a model)",
     )
-    lg = sub.add_parser("log", help="append one step line with the time, then run CMD")
+    lg = sub.add_parser(
+        "log",
+        help="append one step line with the time, then run CMD",
+        usage="usability log TAG TEXT [--log FILE] [-- CMD ...]",
+    )
     lg.add_argument("tag", choices=LOG_TAGS)
     lg.add_argument("text", help="the step, in a few words")
     lg.add_argument("--log", default="log.md", help="the log file (default: ./log.md)")
-    lg.add_argument(
-        "cmd_words",
-        nargs=argparse.REMAINDER,
-        metavar="CMD",
-        help="after `--`: the command the line announces",
-    )
     c = sub.add_parser("score", help="number, binding and log of a finished probe")
     c.add_argument("dir")
     c.add_argument(
@@ -171,8 +184,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             Path(args.transcript).resolve() if args.transcript else None,
         )
     if args.cmd == "log":
-        cmd = args.cmd_words[1:] if args.cmd_words[:1] == ["--"] else args.cmd_words
-        return log_step(Path(args.log), args.tag, args.text, cmd)
+        return log_step(Path(args.log), args.tag, args.text, log_cmd)
     if args.cmd == "glance":
         return cmd_glance(Path(args.dir).resolve())
     if args.cmd == "glance-score":

@@ -263,6 +263,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`usability log TAG TEXT --log FILE -- CMD` writes to FILE and runs
+  CMD.** In the order the task sheet stamps, the trailing command argument
+  swallowed `--log FILE`: the line went to `./log.md` and `--log` ran as
+  the command, a traceback (all three count probes, 2026-10-20). The
+  command is now everything after the first `--`; `--log` may stand
+  anywhere before it, and stray words without `--` are refused.
 - **A server reply of the wrong shape fails by name.** The ollama, openai
   and claude-cli parsers read replies field by field without checking
   them: a missing or mistyped field raised KeyError, AttributeError or
