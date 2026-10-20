@@ -61,17 +61,15 @@ Auftrag. Forschung und Benchmark-Fallliste liegen in
 Kandidaten aus [Code-Audit](docs/audit-2026-10-18.md); vor Umsetzung am
 aktuellen Code prüfen, keine alten Zeilennummern als offenen Befund übernehmen:
 
-- Verbliebene Sonderausgaben über `console.refuse` und den gemeinsamen
-  Exit-Vertrag führen.
-- Wiederholte Pfaddarstellung und Zeitstempel zusammenführen; Shell-Segmente
-  für Hook und Transkript gemeinsam lesen; `LABKIT_COMMANDS` aus den
-  registrierten Einstiegspunkten beziehen. Je Umzug eine One-Home-Prüfung.
-- `Path | int` in der Laufauswahl von `intent_check` durch klares Ergebnis
-  oder Ausnahme ersetzen.
 - Namen prüfen: `area: Path`, Wurzelpfade, Digest-Begriffe,
   `trace`/`timeline`, `registry`/`ledger`. Keine pauschale Umbenennung.
 - Verbleibende `noqa: C901` entlang fachlicher Abläufe abbauen, wenn dort
   gearbeitet wird; nicht allein nach Dateilänge teilen.
+- `usability` lehnt noch mit `raise SystemExit("usability: …")` ab
+  (stderr, aber Exit 1 statt 2); bei Arbeit dort auf `console.Refused`
+  umstellen. Der Wächter für `repo.shown` in `tests/test_one_home.py`
+  erkennt nur die Bedingungsform (`is_relative_to`), keine neue
+  `try`/`except ValueError`-Kopie.
 
 ### Kern, Doktrin und Formatbrüche
 
