@@ -105,5 +105,71 @@ class BareName(unittest.TestCase):
                 self.assertNotIn("no such area", said)
 
 
+class AmbiguousName(unittest.TestCase):
+    """A name two areas carry (`01-x`, `02-x`, called with `x`) was refused
+    as "no such area … give its name" — the name it was given (review,
+    2026-10-20). It names the candidates and asks for one path."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name).resolve()
+        for name in ("01-x", "02-x", "03-y"):
+            (self.root / "experiments" / name).mkdir(parents=True)
+
+    def in_root(self, call):
+        old = Path.cwd()
+        os.chdir(self.root)
+        try:
+            return call()
+        finally:
+            os.chdir(old)
+
+    def test_the_ambiguous_name_names_every_candidate(self):
+        with self.assertRaises(repo.AmbiguousArea) as cm:
+            self.in_root(lambda: repo.area_path("x"))
+        said = str(cm.exception)
+        self.assertIn("experiments/01-x", said)
+        self.assertIn("experiments/02-x", said)
+        self.assertNotIn("no such area", said)
+
+    def test_a_unique_and_a_missing_name_are_unchanged(self):
+        self.assertEqual(
+            self.in_root(lambda: repo.area_path("y")),
+            self.root / "experiments" / "03-y",
+        )
+        self.assertEqual(
+            self.in_root(lambda: repo.area_path("01-x")),
+            self.root / "experiments" / "01-x",
+        )
+        self.assertEqual(self.in_root(lambda: repo.area_path("z")), Path("z"))
+
+    def test_every_command_refuses_with_the_candidates(self):
+        from labkit.gates import audit, finalize, preflight, report_check
+        from labkit.run import runlog_command
+        from labkit.tools import params
+
+        commands = {
+            "code-check": lambda: code_check.main(["x"]),
+            "finalize": lambda: finalize.main(["x"]),
+            "preflight": lambda: preflight.main(["x"]),
+            "params": lambda: params.main(["x"]),
+            "runlog": lambda: runlog_command.main(["x"]),
+            "labkit-audit": lambda: audit.main(["x", "--mode", "analysis"]),
+            "report-check": lambda: report_check.main(["x"]),
+        }
+        for name, call in commands.items():
+            with self.subTest(command=name):
+                out, err = io.StringIO(), io.StringIO()
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                    try:
+                        rc = self.in_root(call)
+                    except SystemExit as exc:
+                        rc = exc.code
+                self.assertEqual(rc, 2, out.getvalue() + err.getvalue())
+                self.assertIn("experiments/02-x", err.getvalue())
+                self.assertEqual(out.getvalue(), "")
+
+
 if __name__ == "__main__":
     unittest.main()

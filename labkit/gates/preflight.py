@@ -75,6 +75,7 @@ from labkit.gates import install_hooks
 from labkit.formats import findings as audit_findings
 from labkit.formats.gate import Findings
 from labkit.formats.repo import (
+    AmbiguousArea,
     area_path,
     choose_protocol,
     git,
@@ -490,7 +491,11 @@ def main(argv: list[str]) -> int:
         ]
         return console.usage("preflight", "\n".join(lines), asked=bool(argv))
 
-    area = area_path(argv[0])
+    try:
+        area = area_path(argv[0])
+    except AmbiguousArea as exc:
+        console.refuse("preflight", str(exc))
+        return 2
     protocol = None
     rest = argv[1:]
     while rest:

@@ -41,7 +41,12 @@ from pathlib import Path
 
 from labkit.formats import console, promises, protocol_block
 from labkit.checks.intent_check import protocol_id_of
-from labkit.formats.repo import area_path, choose_protocol, no_such_area
+from labkit.formats.repo import (
+    AmbiguousArea,
+    area_path,
+    choose_protocol,
+    no_such_area,
+)
 from labkit.formats.runs import read_run_config
 from labkit.formats.answering_run import (
     bound_answering_run,
@@ -299,7 +304,11 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             "usage: labkit-params <AREA> [--run RUN_ID] [--protocol PROTOCOL-*.md]",
         ]
         return console.usage("labkit-params", "\n".join(lines), asked=bool(argv))
-    area = area_path(argv[0])
+    try:
+        area = area_path(argv[0])
+    except AmbiguousArea as exc:
+        console.refuse("labkit-params", str(exc))
+        return 2
     protocol_arg: Path | None = None
     run_arg: str | None = None
     rest = argv[1:]

@@ -79,6 +79,7 @@ from labkit.formats import console, promises, protocol_block, rules, standard_co
 from labkit.formats.gate import Findings
 from labkit.checks.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 from labkit.formats.repo import (
+    AmbiguousArea,
     area_path,
     choose_protocol,
     layout_root,
@@ -522,7 +523,11 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         ]
         return console.usage("code-check", "\n".join(lines), asked=bool(argv))
 
-    area = area_path(argv[0])
+    try:
+        area = area_path(argv[0])
+    except AmbiguousArea as exc:
+        console.refuse("code-check", str(exc))
+        return 2
     bundle_to = None
     protocol_arg = None
     rest = argv[1:]

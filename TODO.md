@@ -103,7 +103,7 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   (Changed) — sie senkt das Risiko ungültigen TOMLs, verhindert es nicht.
   Reihenfolge:
   1. ~~Unabhängiger Review der Fixes~~ — erledigt 2026-10-20: elf Befunde,
-     alle behoben außer dem folgenden (CHANGELOG, Unreleased).
+     alle behoben (CHANGELOG, Unreleased).
   2. Dieselben Aufgaben auf einem festgehaltenen Commit, frisch gestempelte
      Bereiche (alte behalten ihre gestempelten Skripte), Umgebungen
      vollständig vorbereitet: die venv mit `requirements.txt` ohne die
@@ -111,11 +111,6 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   3. Hauptziel Bedienungsreibung: Fehlaufrufe, Reparaturen, manuelle
      Eingriffe, korrekte Ergebnisbindung. Wandzeit nur zusätzlich —
      sechs Läufe belegen keine belastbare Beschleunigung.
-  Notiert aus dem Review, vorbestehend: ein mehrdeutiger Area-Name
-  (`01-x` und `02-x`, Aufruf mit `x`) heißt „no such area … give its
-  name“ statt die Kandidaten zu nennen (`repo.area_path` gibt das Argument
-  unverändert zurück); seit dem Fix erreichen auch `labkit-audit` und
-  `report-check` diesen Weg.
   Zurückgestellt: ein Kommando, das eine ausdrücklich eingegebene
   Audit-Entscheidung validiert und sicher speichert. Es übernähme keine
   Entscheidung, verletzt also „die Person entscheidet“ nicht; erst bei

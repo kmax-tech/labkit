@@ -16,6 +16,7 @@ Two git calls, by what a non-zero exit means:
 
 from __future__ import annotations
 
+import argparse
 import re
 import subprocess
 from pathlib import Path
@@ -71,13 +72,23 @@ class GitError(RuntimeError):
     """git could not be run, or failed inside a repository."""
 
 
+class AmbiguousArea(argparse.ArgumentTypeError):
+    """A bare area name more than one area carries (`x` for `01-x` and
+    `02-x`). An ArgumentTypeError, so argparse prints its sentence where a
+    command parses the area with `type=area_path`; a command that calls
+    `area_path` itself refuses with it."""
+
+
 def area_path(arg: str) -> Path:
     """The area a command argument names: a directory as given, else the
     bare name as `labkit-init exp` prints it — `01-<name>` or `<name>` — under
     `experiments/` of the working directory or of its repository. Returns
-    the argument unchanged when nothing (or more than one area) matches, so
-    the caller's "no such area" still speaks (2026-10-07: two agents passed
-    `01-docs-per-case` to code-check and were refused)."""
+    the argument unchanged when nothing matches, so the caller's "no such
+    area" still speaks (2026-10-07: two agents passed `01-docs-per-case` to
+    code-check and were refused). Raises AmbiguousArea naming every
+    candidate when more than one area matches: "no such area" for a name
+    that exists twice sent the reader looking for a missing one (review,
+    2026-10-20)."""
     given = Path(arg)
     if given.is_dir() or given.is_absolute() or "/" in arg:
         return given
@@ -87,7 +98,13 @@ def area_path(arg: str) -> Path:
         if (exp / arg).is_dir():
             hits.add((exp / arg).resolve())
         hits.update(p.resolve() for p in exp.glob(f"[0-9]*-{arg}") if p.is_dir())
-    return hits.pop() if len(hits) == 1 else given
+    if len(hits) > 1:
+        names = ", ".join(sorted(shown(h, Path.cwd()) for h in hits))
+        raise AmbiguousArea(
+            f"area name {arg!r} matches {len(hits)} areas: {names} — give the "
+            f"one you mean by its path or its numbered name"
+        )
+    return hits.pop() if hits else given
 
 
 def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:

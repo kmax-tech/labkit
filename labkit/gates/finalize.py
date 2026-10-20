@@ -72,6 +72,7 @@ from labkit.formats.answering_run import (
     bound_answering_run,
 )
 from labkit.formats.repo import (
+    AmbiguousArea,
     ProtocolChoiceError,
     adopt_command,
     area_path,
@@ -485,7 +486,11 @@ def main(argv: list[str]) -> int:
         ]
         return console.usage("finalize", "\n".join(lines), asked=bool(argv))
 
-    area = area_path(argv[0])
+    try:
+        area = area_path(argv[0])
+    except AmbiguousArea as exc:
+        console.refuse("finalize", str(exc))
+        return 2
     protocol = None
     rest = argv[1:]
     while rest:

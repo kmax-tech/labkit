@@ -244,7 +244,11 @@ def main(argv: list[str]) -> int:
     if argv and argv[0] == "start":
         return _start(argv[1:])
     if argv and argv[0] == "reindex":
-        area = repo.area_path(argv[1]) if len(argv) > 1 else Path(".")
+        try:
+            area = repo.area_path(argv[1]) if len(argv) > 1 else Path(".")
+        except repo.AmbiguousArea as exc:
+            console.refuse("runlog", str(exc))
+            return 2
         if not area.is_dir():
             console.refuse("runlog", repo.no_such_area(area))
             return 2
@@ -305,7 +309,11 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
     # a misspelt area read as "no open runs", exit 0 — and `--wait` as
     # finished (audit 2026-10-15); `reindex` refused it, status did not
-    area = repo.area_path(args.area)
+    try:
+        area = repo.area_path(args.area)
+    except repo.AmbiguousArea as exc:
+        console.refuse("runlog", str(exc))
+        return 2
     if not area.is_dir():
         console.refuse("runlog", repo.no_such_area(area))
         return 2

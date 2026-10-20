@@ -298,6 +298,13 @@ pins (`requirements.txt` / `requirements.lock`).
   U+0085, U+2028 and U+2029 raw: a finding text from the auditor or a
   sentence carrying one of them made the file unreadable. They are escaped
   now; a lone surrogate is refused by name.
+- **An area name two areas carry is refused with both.** `x` for
+  `01-x` and `02-x` was refused as "no such area … give its name" by every
+  command that takes an area; `repo.area_path` now raises `AmbiguousArea`
+  naming the candidates, and `code-check`, `finalize`, `preflight`,
+  `labkit-params`, `runlog`, `labkit-audit` and `report-check` refuse with
+  it on stderr, exit 2. A unique name and a missing one behave as before
+  (review of the probe fixes, 2026-10-20).
 - **`labkit-audit` and `report-check` take the area's name.** `01-<name>`
   or `<name>`, as `labkit-init exp` prints it, resolves as it already did
   for `code-check`, `finalize`, `preflight`, `runlog` and `params`; both
