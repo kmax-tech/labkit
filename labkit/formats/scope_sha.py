@@ -235,26 +235,35 @@ def areas_touched(
     paths: list[Path], repo: Path, protocols: list[Path] | None = None
 ) -> list[Path]:
     """The areas PATHS touch: the area each path lies in (`repo.areas_of`),
-    and for a path under a LOCAL_ROOT every area whose code imports it
-    (`import_reach`) — a shared helper changed or deleted reopens the
-    numbers that rest on it as a script in the area does. PROTOCOLS as in
-    `repo.find_area` (the index's at the commit), else the working tree's.
-    An area whose code cannot be parsed counts as touched: whether it
-    imports the helper cannot be told, and the gate is the safer answer.
-    The one answer for the stop, the commit's undecided gate and
-    report-check."""
+    every area whose promises declare a path in their scope
+    (`declared_scope_files`) — a rubric or a label file read at run time
+    determines the number though no code imports it — and for a path under
+    a LOCAL_ROOT every area whose code imports it (`import_reach`): a
+    shared helper changed or deleted reopens the numbers that rest on it as
+    a script in the area does. PROTOCOLS as in `repo.find_area` (the
+    index's at the commit), else the working tree's; their text is read
+    from the working tree, as the area's code is. An area whose protocol
+    or code cannot be read counts as touched: whether it rests on the path
+    cannot be told, and the gate is the safer answer; the other areas
+    answer as if it were not there. The one answer for the stop, the
+    commit's undecided gate and report-check."""
     root = repo.resolve()
     out = areas_of(paths, root, protocols)
-    shared = [
-        p.resolve()
-        for p in paths
-        if any((root / r) in p.resolve().parents for r in LOCAL_ROOTS)
-    ]
-    if not shared:
-        return out
+    changed = {p.resolve() for p in paths}
+    shared = [p for p in changed if any((root / r) in p.parents for r in LOCAL_ROOTS)]
     every = protocols if protocols is not None else repo_protocols(root)
     for area in sorted({p.parent for p in every}):
         if area in out:
+            continue
+        try:
+            declared = declared_scope_files([p for p in every if p.parent == area])
+        except (ValueError, OSError):
+            out.append(area)
+            continue
+        if changed.intersection(declared):
+            out.append(area)
+            continue
+        if not shared:
             continue
         try:
             reach = import_reach(area, root)

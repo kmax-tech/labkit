@@ -573,8 +573,9 @@ def undecided_blockers(repo: Path, paths: list[Path]) -> list[str]:
     """Every audit BLOCKER still `open` in an area one of PATHS lies in — as
     `<area>: <file>: <text>`, each area once — or the sentence of a record
     nobody can read. The area is the nearest directory above the path with a
-    PROTOCOL-*.md, inside REPO, and every area whose code imports a changed
-    shared helper (`scope_sha.areas_touched`, the stop's answer too). A
+    PROTOCOL-*.md, inside REPO, and every area whose promises declare a
+    changed path in their scope or whose code imports a changed shared
+    helper (`scope_sha.areas_touched`, the stop's answer too). A
     path outside every area, and an area without audits/, contribute
     nothing: this holds the areas the session worked in, not the whole repo
     (A4, 2026-10-17: a repo's old areas must not block every stop)."""

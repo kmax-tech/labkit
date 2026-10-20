@@ -343,11 +343,11 @@ def reported_protocols(
 ) -> list[Path]:
     """Every protocol of every area PATHS touch, each once, by area: a
     changed script, run or audit record reopens the area's reported numbers
-    as a changed protocol does, and so does a shared helper the area's code
-    imports (`scope_sha.areas_touched`, the stop and the commit's undecided
-    gate read the same answer). STAGED: areas and protocols are the index's
-    (`repo.indexed_protocols`) — a protocol deleted only in the tree is
-    still in the commit."""
+    as a changed protocol does, and so does a file its promises declare in
+    scope or a shared helper its code imports (`scope_sha.areas_touched`,
+    the stop and the commit's undecided gate read the same answer). STAGED:
+    areas and protocols are the index's (`repo.indexed_protocols`) — a
+    protocol deleted only in the tree is still in the commit."""
     if not staged:
         return [
             p
