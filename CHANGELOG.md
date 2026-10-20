@@ -263,6 +263,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`labkit-audit` and `report-check` take the area's name.** `01-<name>`
+  or `<name>`, as `labkit-init exp` prints it, resolves as it already did
+  for `code-check`, `finalize`, `preflight`, `runlog` and `params`; both
+  took a plain path and refused the name with a sentence suggesting it
+  (four of seven cold probes, 2026-10-20, one paid audit run twice).
 - **`usability log TAG TEXT --log FILE -- CMD` writes to FILE and runs
   CMD.** In the order the task sheet stamps, the trailing command argument
   swallowed `--log FILE`: the line went to `./log.md` and `--log` ran as

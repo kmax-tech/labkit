@@ -87,6 +87,7 @@ from labkit.gates.finalize import cited_runs, finalize_area
 from labkit.gates.preflight import area_test_python
 from labkit.formats.protocol_check import check_fields
 from labkit.formats.repo import (
+    area_path,
     area_protocols,
     choose_protocol,
     git_root,
@@ -441,7 +442,7 @@ def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(
         prog="report-check", description=(__doc__ or "").split("\n\n")[0]
     )
-    ap.add_argument("area", type=Path)
+    ap.add_argument("area", type=area_path)
     ap.add_argument("--protocol", type=Path, default=None)
     a = ap.parse_args(argv)
     if not a.area.is_dir():

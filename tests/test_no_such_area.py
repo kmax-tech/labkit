@@ -71,6 +71,39 @@ class BareName(unittest.TestCase):
     def test_an_unknown_name_stays_as_given(self):
         self.assertEqual(self.resolve("nope"), Path("nope"))
 
+    def test_audit_and_report_check_take_the_name(self):
+        """Both took the argument as a plain path: `labkit-audit 01-<name>`
+        was refused in four of seven cold probes (2026-10-20) while
+        code-check and finalize took it. The area here is empty, so each
+        refuses — for the empty area, not for a missing one."""
+        from labkit.gates import audit, report_check
+
+        commands = {
+            "labkit-audit": lambda: audit.main(
+                ["01-docs-per-case", "--mode", "analysis"]
+            ),
+            "report-check": lambda: report_check.main(["01-docs-per-case"]),
+        }
+        for name, call in commands.items():
+            with self.subTest(command=name):
+                old = Path.cwd()
+                out, err = io.StringIO(), io.StringIO()
+                os.chdir(self.root)
+                try:
+                    with (
+                        contextlib.redirect_stdout(out),
+                        contextlib.redirect_stderr(err),
+                    ):
+                        try:
+                            rc = call()
+                        except SystemExit as exc:
+                            rc = exc.code
+                finally:
+                    os.chdir(old)
+                said = out.getvalue() + err.getvalue()
+                self.assertNotEqual(rc, 0, said)
+                self.assertNotIn("no such area", said)
+
 
 if __name__ == "__main__":
     unittest.main()

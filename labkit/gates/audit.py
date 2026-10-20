@@ -83,6 +83,7 @@ from labkit.formats import (
 from labkit.formats.standard_contract import lane
 from labkit.formats.repo import (
     ProtocolChoiceError,
+    area_path,
     layout_root,
     no_such_area,
     shown,
@@ -659,7 +660,7 @@ def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(
         prog="labkit-audit", description=(__doc__ or "").splitlines()[0]
     )
-    ap.add_argument("area", type=Path)
+    ap.add_argument("area", type=area_path)
     ap.add_argument("--mode", choices=MODES, required=True)
     ap.add_argument(
         "--protocol", type=Path, help="the protocol, in an area holding several"
