@@ -190,7 +190,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         try:
             lines = agent_transcript.timeline(Path(args.transcript))
         except (agent_transcript.TranscriptError, OSError) as exc:
-            raise SystemExit(f"usability: transcript: {exc}") from exc
+            raise console.Refused("usability", f"transcript: {exc}") from exc
         print("\n".join(lines))
         return 0
     root = Path(args.dir).resolve()

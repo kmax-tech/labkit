@@ -16,6 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import PACKAGE_DIR  # noqa: E402
+from labkit.formats import console  # noqa: E402
 from labkit.probes import usability, usability_score  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
@@ -146,7 +147,7 @@ class LoadProbeRun(unittest.TestCase):
 
     def test_an_unstaged_dir_refuses(self):
         with tempfile.TemporaryDirectory() as tmp:
-            with self.assertRaises(SystemExit):
+            with self.assertRaises(console.Refused):
                 usability_score.load_probe_run(Path(tmp) / "nothing")
 
 
@@ -245,7 +246,7 @@ class AgentPrompt(unittest.TestCase):
 
     def test_a_repo_without_agents_md_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
-            with self.assertRaises(SystemExit):
+            with self.assertRaises(console.Refused):
                 usability.agent_prompt(Path(d))
 
 
@@ -288,7 +289,7 @@ class Archive(unittest.TestCase):
     def test_other_bytes_under_the_same_name_are_refused(self):
         usability_score.archive(self.root, self.transcript, self.dest)
         (self.root.parent / "count-1.score.json").write_text('{"number": 4.0}')
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(console.Refused):
             usability_score.archive(self.root, self.transcript, self.dest)
 
 
@@ -350,7 +351,7 @@ class RestampLaysTheStampOverTheProbe(unittest.TestCase):
         self.assertEqual(done.kept, ["TASK.md"])
 
     def test_a_kept_path_the_stamp_does_not_produce_is_refused(self):
-        with self.assertRaises(SystemExit) as cm:
+        with self.assertRaises(console.Refused) as cm:
             usability.restamp_files(self.fresh, self.probe, self.files, ["TASKS.md"])
         self.assertIn("TASKS.md", str(cm.exception))
         self.assertEqual((self.probe / "AGENTS.md").read_text(), "old agents\n")
@@ -376,9 +377,9 @@ class LogStepWritesBeforeItRuns(unittest.TestCase):
     def test_a_foreign_tag_or_empty_text_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
             log = Path(d) / "log.md"
-            with self.assertRaises(SystemExit):
+            with self.assertRaises(console.Refused):
                 usability.log_step(log, "note", "x", [])
-            with self.assertRaises(SystemExit):
+            with self.assertRaises(console.Refused):
                 usability.log_step(log, "run", "  ", [])
             self.assertFalse(log.exists())
 

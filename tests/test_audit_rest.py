@@ -8,7 +8,7 @@ from pathlib import Path
 
 from labkit.checks import code_check
 from labkit.probes import usability_score
-from labkit.formats import promises, protocol_block, protocol_check
+from labkit.formats import console, promises, protocol_block, protocol_check
 from protocol_fixture import head
 
 C1 = """[[promise]]
@@ -102,7 +102,7 @@ class Usability(unittest.TestCase):
             run = Path(d) / "runs" / "2026-10-07T10-00-00_ab12"
             run.mkdir(parents=True)
             (run / "config.json").write_text("{")
-            with self.assertRaises(SystemExit) as cm:
+            with self.assertRaises(console.Refused) as cm:
                 with contextlib.redirect_stdout(io.StringIO()):
                     usability_score.latest_run(Path(d))
             self.assertIn("unreadable run metadata", str(cm.exception))

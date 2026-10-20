@@ -95,7 +95,7 @@ from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 from labkit.tools import scaffold
-from labkit.formats import repo, runs, scope_sha, standard_contract
+from labkit.formats import console, repo, runs, scope_sha, standard_contract
 
 #: What the scaffold stamps into a repo and an area; their sha pins the measured
 #: condition. All of it ships with labkit — the probe needs no house machinery.
@@ -197,10 +197,10 @@ def _sh(args: list[str], cwd: Path) -> str:
             else subprocess.run(args, cwd=cwd, capture_output=True, text=True)
         )
     except repo.GitError as exc:
-        raise SystemExit(f"usability: {exc}") from exc
+        raise console.Refused("usability", f"{exc}") from exc
     if r.returncode != 0:
-        raise SystemExit(
-            f"usability: `{' '.join(args)}` failed in {cwd}:\n{r.stdout}{r.stderr}"
+        raise console.Refused(
+            "usability", f"`{' '.join(args)}` failed in {cwd}:\n{r.stdout}{r.stderr}"
         )
     return r.stdout
 
@@ -233,7 +233,7 @@ def read_answer(path: Path, who: str) -> str:
     """The answer file a scorer holds to the truth; missing means `who` has
     not answered yet — said so, not a traceback."""
     if not path.is_file():
-        raise SystemExit(f"usability: {path} missing — has the {who} answered?")
+        raise console.Refused("usability", f"{path} missing — has the {who} answered?")
     return path.read_text(encoding="utf-8")
 
 
@@ -258,9 +258,9 @@ def _labkit_spec(python: Path) -> str:
     out = _sh([str(python), "-m", "pip", "freeze"], python.parent)
     lines = repo.requirement_lines(out, "labkit")
     if len(lines) != 1:
-        raise SystemExit(
-            f"usability: expected one labkit line in `pip freeze` of "
-            f"{python}, got {lines!r}"
+        raise console.Refused(
+            "usability",
+            f"expected one labkit line in `pip freeze` of {python}, got {lines!r}",
         )
     return lines[0].strip()
 
@@ -269,7 +269,7 @@ def scaffold_sha() -> str:
     """sha256 (12 hex) over the scaffold and the templates it stamps."""
     for p in STAMPED:
         if not p.is_file():
-            raise SystemExit(f"usability: stamped master missing: {p}")
+            raise console.Refused("usability", f"stamped master missing: {p}")
     return scope_sha.tree_digest((p.name, p.read_bytes()) for p in STAMPED)
 
 
@@ -374,7 +374,9 @@ def agent_prompt(root: Path) -> str:
     (re-measure 2026-10-07, rounds 1 to 4)."""
     entry = root / "AGENTS.md"
     if not entry.is_file():
-        raise SystemExit(f"usability: {entry} missing — the scaffolder stamps it")
+        raise console.Refused(
+            "usability", f"{entry} missing — the scaffolder stamps it"
+        )
     return (
         f"Contents of {entry} (project instructions, loaded the way a "
         f"session in this repository loads them):\n\n"
@@ -407,12 +409,13 @@ def stage(
     cost, model = stamp_flags(task, cost, model)
     area_name, metric_key = spec["area"], spec["metric_key"]
     if root.exists() and any(root.iterdir()):
-        raise SystemExit(
-            f"usability: {root} exists and is not empty — stage into "
-            f"a fresh directory, the probe must start cold"
+        raise console.Refused(
+            "usability",
+            f"{root} exists and is not empty — stage into "
+            f"a fresh directory, the probe must start cold",
         )
     if venv is not None and not (venv / "bin" / "python").is_file():
-        raise SystemExit(f"usability: --venv {venv} has no bin/python")
+        raise console.Refused("usability", f"--venv {venv} has no bin/python")
     sha = scaffold_sha()
     root.mkdir(parents=True, exist_ok=True)
     scaffold.stamp_lab(root, root.name)
@@ -427,8 +430,8 @@ def stage(
     )  # the stamp's log is for the operator, not the probe
     areas = sorted(p.name for p in (root / "experiments").glob(f"*-{area_name}"))
     if len(areas) != 1:
-        raise SystemExit(
-            f"usability: expected one stamped area *-{area_name}, got {areas}"
+        raise console.Refused(
+            "usability", f"expected one stamped area *-{area_name}, got {areas}"
         )
     if task == "count":
         plant_fixture(root)
@@ -500,11 +503,11 @@ def log_step(log: Path, tag: str, text: str, cmd: list[str]) -> int:
     """`usability log`: see the module docstring. Returns CMD's exit code, 0
     without CMD. Refuses a tag outside LOG_TAGS and an empty text."""
     if tag not in LOG_TAGS:
-        raise SystemExit(
-            f"usability log: tag must be one of {', '.join(LOG_TAGS)}, got {tag!r}"
+        raise console.Refused(
+            "usability log", f"tag must be one of {', '.join(LOG_TAGS)}, got {tag!r}"
         )
     if not text.strip():
-        raise SystemExit("usability log: the step text is empty")
+        raise console.Refused("usability log", "the step text is empty")
     with log.open("a", encoding="utf-8") as fh:
         fh.write(f"{time.strftime('%H:%M:%S')} · {tag} · {text.strip()}\n")
     if not cmd:
@@ -532,9 +535,9 @@ def restamp_files(
     would protect nothing and say so never."""
     unknown = sorted(set(keep) - set(files))
     if unknown:
-        raise SystemExit(
-            f"usability: --keep names paths the stamp does not produce: "
-            f"{', '.join(unknown)}"
+        raise console.Refused(
+            "usability",
+            f"--keep names paths the stamp does not produce: {', '.join(unknown)}",
         )
     done = Restamp([], [], [], [])
     for rel in sorted(files):
@@ -574,7 +577,7 @@ def _probe_venv(root: Path, venv: Path | None, labkit_spec: str) -> None:
     stamped pin). Side effects: removes the old one, creates the new one —
     after the check, so a bad --venv leaves the old one standing."""
     if venv is not None and not (venv / "bin" / "python").is_file():
-        raise SystemExit(f"usability: --venv {venv} has no bin/python")
+        raise console.Refused("usability", f"--venv {venv} has no bin/python")
     old = root / ".venv"
     if old.is_symlink():
         old.unlink()
@@ -592,17 +595,19 @@ def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
     paths `<dir>.probe.json` recorded last time."""
     probe_file = sidecar(root, "probe.json")
     if not probe_file.is_file():
-        raise SystemExit(
-            f"usability: {probe_file} missing — {root} was not staged by "
-            f"`usability stage`, nothing to restamp"
+        raise console.Refused(
+            "usability",
+            f"{probe_file} missing — {root} was not staged by "
+            f"`usability stage`, nothing to restamp",
         )
     if not (root / ".git").is_dir():
-        raise SystemExit(f"usability: {root} is not a git repo")
+        raise console.Refused("usability", f"{root} is not a git repo")
     dirty = _sh(["git", "status", "--porcelain", "--untracked-files=no"], root)
     if dirty.strip():
-        raise SystemExit(
-            f"usability: {root} has uncommitted changes — commit or stash "
-            f"first:\n{dirty.rstrip()}"
+        raise console.Refused(
+            "usability",
+            f"{root} has uncommitted changes — commit or stash "
+            f"first:\n{dirty.rstrip()}",
         )
     probe = read_probe(probe_file)
     kept_paths = probe.kept if keep is None else keep

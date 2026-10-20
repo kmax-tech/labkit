@@ -17,7 +17,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from labkit.probes import agent_transcript, code_navigation, protocol_reading
-from labkit.formats import promises, runs, answering_run
+from labkit.formats import answering_run, console, promises, runs
 from labkit.probes.usability import (
     LOG_LINE,
     LOG_TAGS,
@@ -92,7 +92,7 @@ def latest_run(area: Path) -> Path | None:
     try:
         return answering_run.newest_completed(area, with_repeats=False)
     except runs.RunConfigError as exc:  # unreadable, or two newest in one second
-        raise SystemExit(f"usability: {exc}") from exc
+        raise console.Refused("usability", f"{exc}") from exc
 
 
 @dataclass(frozen=True)
@@ -140,9 +140,10 @@ def archive(root: Path, transcript: Path, dest: Path) -> list[Path]:
     }
     clash = [p for p, b in payload.items() if p.exists() and p.read_bytes() != b]
     if clash:
-        raise SystemExit(
-            f"usability: archive refuses to overwrite {', '.join(map(str, clash))} — "
-            f"another probe of the same name? archive into another directory"
+        raise console.Refused(
+            "usability",
+            f"archive refuses to overwrite {', '.join(map(str, clash))} — "
+            f"another probe of the same name? archive into another directory",
         )
     for path, body in payload.items():
         path.write_bytes(body)
@@ -170,7 +171,9 @@ def load_probe_run(root: Path) -> ProbeRun:
     Raises SystemExit when the probe was not staged here."""
     probe_file = sidecar(root, "probe.json")
     if not probe_file.is_file():
-        raise SystemExit(f"usability: {probe_file} missing — was {root} staged here?")
+        raise console.Refused(
+            "usability", f"{probe_file} missing — was {root} staged here?"
+        )
     probe = read_probe(probe_file)
     area = root / "experiments" / probe.area
     run = latest_run(area)
@@ -178,7 +181,7 @@ def load_probe_run(root: Path) -> ProbeRun:
         return ProbeRun(probe, area, None, {}, {}, None, None, False, None)
     config = runs.read_run_config(run)
     if config is None:
-        raise SystemExit(f"usability: {run} has no config.json — not a run")
+        raise console.Refused("usability", f"{run} has no config.json — not a run")
     metrics = runs.read_metrics(run / "metrics.json")
     binding = runs.binding_of(config)
     named = binding.path
@@ -203,13 +206,15 @@ def _bound_protocol(root: Path) -> tuple[Path, protocol_reading.Truth]:
     """The protocol the probe's latest run names, and what the run says."""
     pr = load_probe_run(root)
     if pr.run is None:
-        raise SystemExit(f"usability: {pr.area} has no completed run — nothing to read")
+        raise console.Refused(
+            "usability", f"{pr.area} has no completed run — nothing to read"
+        )
     if pr.protocol is None:
-        raise SystemExit(f"usability: run {pr.run.name} is bound to no protocol")
+        raise console.Refused("usability", f"run {pr.run.name} is bound to no protocol")
     try:
         truth = protocol_reading.truth_from_metrics(pr.metrics, pr.probe.metric_key)
     except ValueError as exc:
-        raise SystemExit(f"usability: run {pr.run.name}: {exc}") from exc
+        raise console.Refused("usability", f"run {pr.run.name}: {exc}") from exc
     return pr.protocol, truth
 
 
@@ -254,7 +259,7 @@ def cmd_glance_score(root: Path) -> int:
     try:
         got = protocol_reading.score_glance_answer(answer, truth)
     except ValueError as exc:
-        raise SystemExit(f"usability: {exc}") from exc
+        raise console.Refused("usability", f"{exc}") from exc
     hits = protocol_reading.terms_coverage(text, got.unclear, str(protocol))
     out = {
         **asdict(got),
@@ -315,7 +320,7 @@ def cmd_nav(repo: Path, questions: Path, out: Path, shuffle: int | None = None) 
         rng.shuffle(choices_list)
     flows, choices = tuple(flows_list), tuple(choices_list)
     if not (qs or flows or choices):
-        raise SystemExit(f"usability: {questions} holds no question")
+        raise console.Refused("usability", f"{questions} holds no question")
     prompt.write_text(
         code_navigation.nav_prompt(repo, qs, str(answer), flows, choices),
         encoding="utf-8",
@@ -333,7 +338,7 @@ def cmd_nav_score(
     try:
         got = code_navigation.score_nav_answer(answer, qs, repo)
     except (ValueError, code_navigation.NavigationError) as exc:
-        raise SystemExit(f"usability: {exc}") from exc
+        raise console.Refused("usability", f"{exc}") from exc
     eff = code_navigation.effort(transcript, repo) if transcript else None
     try:
         flows = code_navigation.score_flows(
@@ -343,7 +348,7 @@ def cmd_nav_score(
             answer, code_navigation.load_choices(questions)
         )
     except ValueError as exc:
-        raise SystemExit(f"usability: {exc}") from exc
+        raise console.Refused("usability", f"{exc}") from exc
     out.with_name(out.name + ".nav.json").write_text(
         json.dumps(
             {
@@ -394,7 +399,9 @@ def cmd_human(
     by_id = {c.id: c for c in code_navigation.load_choices(questions)}
     unknown = [i for i in ids if i not in by_id]
     if unknown:
-        raise SystemExit(f"usability: no choice question {unknown} in {questions}")
+        raise console.Refused(
+            "usability", f"no choice question {unknown} in {questions}"
+        )
     chosen = [by_id[i] for i in ids]
     print(
         f"Open {repo} in your editor. Answer from the code; nothing is scored until the end."
@@ -432,7 +439,7 @@ def cmd_read_score(root: Path, transcript: Path | None) -> int:
     try:
         got = protocol_reading.score_reader_answer(answer, truth)
     except ValueError as exc:
-        raise SystemExit(f"usability: {exc}") from exc
+        raise console.Refused("usability", f"{exc}") from exc
     seconds = None
     if transcript is not None:
         _, first, last = agent_transcript.read_calls(transcript)
@@ -502,7 +509,7 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
             else None
         )
     except (agent_transcript.TranscriptError, OSError) as exc:
-        raise SystemExit(f"usability: transcript: {exc}") from exc
+        raise console.Refused("usability", f"transcript: {exc}") from exc
     sc = Score(
         probe=probe,
         run_id=run.name if run else None,

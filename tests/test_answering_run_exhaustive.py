@@ -319,7 +319,7 @@ class EveryCompletedArrangement(unittest.TestCase):
                 for with_repeats in (False, True):
                     with self.assertRaises(runs.RunConfigError):
                         runs.completed_runs(area, with_repeats=with_repeats)
-                with self.assertRaises(SystemExit):
+                with self.assertRaises(console.Refused):
                     usability_score.latest_run(area)
                 return
             done = [d for d, k in placed if k.metrics is not None and k.completion]
@@ -327,7 +327,7 @@ class EveryCompletedArrangement(unittest.TestCase):
             self.assertEqual(runs.completed_runs(area, with_repeats=True), done)
             self.assertEqual(runs.completed_runs(area, with_repeats=False), primary)
             if one_second and len(primary) >= 2:
-                with self.assertRaises(SystemExit):
+                with self.assertRaises(console.Refused):
                     usability_score.latest_run(area)
             else:
                 self.assertEqual(

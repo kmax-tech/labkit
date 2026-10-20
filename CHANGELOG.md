@@ -332,7 +332,7 @@ pins (`requirements.txt` / `requirements.lock`).
   `claude-hook sessions`, the run index of runlog and labkit-check sent
   some refusals to stdout or wrote stderr by hand; each now goes through
   `console.refuse`, and stdout carries only what a check found. labkit-init
-  refused with `SystemExit` (exit 1) and now exits 2; labkit-calltree
+  and usability refused with `SystemExit` (exit 1) and now exit 2; labkit-calltree
   leaves its own exit for `console.exit_with`. A refusal raised as
   `console.Refused(tool, why)` reaches `exit_with` from any depth, so a
   command that stamps through labkit-init's functions (`usability stage`)
