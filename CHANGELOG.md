@@ -230,7 +230,8 @@ pins (`requirements.txt` / `requirements.lock`).
   uses `runs.as_stored`: `true` differs from `1`, while a tuple and its
   stored list representation describe the same instrument. An instrument
   JSON cannot hold raises `TypeError` when the `Store` is built, not at the
-  first append.
+  first append. `Store.ledger(expect=...)` compares the same way: a row
+  stored with `1` is stale against an expected `True`.
 - **Every lineage reader uses one fully validated chain.**
   `answering_run.lineage` checks every ancestor, including those beyond
   the first recorded model. Missing parents and cycles are errors in

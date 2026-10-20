@@ -39,9 +39,6 @@ from typing import Iterable, Iterator, Mapping
 
 from labkit.formats import runs
 
-# A row without the expected field differs from every expected value, None included.
-_ABSENT = object()
-
 
 def _parse(text: str, path: Path) -> tuple[list[dict], int | None]:
     """(objects, line number of a torn last line or None). Only the LAST
@@ -442,6 +439,8 @@ class Store:
         either a constant (a prompt hash) or a function of the row's input
         record, joined by id (`lambda rec: item_sha(rec)`). Only rows whose
         id is in the input are checked; a row without the field is stale.
+        Values compare as the file stores them (`runs.as_stored`): `1` is
+        not `true`, a tuple is its list.
 
             ledger = store.ledger(records, expect={"prompt_sha": PROMPT_SHA})
             run.metrics(**ledger.counts())
@@ -463,8 +462,13 @@ class Store:
                 r[self.id_key]
                 for r in rows
                 if r.get(self.id_key) in by_id
-                and r.get(field, _ABSENT)
-                != (want(by_id[r[self.id_key]]) if callable(want) else want)
+                and (
+                    field not in r
+                    or runs.as_stored(r[field])
+                    != runs.as_stored(
+                        want(by_id[r[self.id_key]]) if callable(want) else want
+                    )
+                )
             ]
         return Ledger(
             path=self.path,

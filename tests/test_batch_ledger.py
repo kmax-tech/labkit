@@ -80,6 +80,15 @@ class Ledger(unittest.TestCase):
         self.assertEqual(led.stale, {"prompt_sha": ["item-0"], "input_sha": ["item-3"]})
         self.assertFalse(led.ok)
 
+    def test_an_expected_value_compares_as_stored_not_by_python_equality(self):
+        """`True == 1` in Python, but a row stored with `1` does not carry an
+        expected `True`; an expected tuple is the list the file stores."""
+        rows = [{**row(i), "flag": 1, "stops": ["a", "b"]} for i in range(4)]
+        led = self.write(rows).ledger(RECORDS, expect={"flag": True})
+        self.assertEqual(len(led.stale["flag"]), 4)
+        led = self.write(rows).ledger(RECORDS, expect={"stops": ("a", "b")})
+        self.assertTrue(led.ok, led.stale)
+
     def test_a_row_without_the_expected_field_is_stale_even_if_none_is_expected(self):
         rows = [{"id": f"item-{i}"} for i in range(4)]
         led = self.write(rows).ledger(RECORDS, expect={"problem": None})
