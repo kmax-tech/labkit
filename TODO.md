@@ -911,6 +911,29 @@ den Ertrag je Klasse auszählt.
   pyright strikt erst auf die neuen Vertragsmodule. Wartet: steht nicht in
   der Reihenfolge, nächster Schritt dort ist A5.
 
+  **Entschieden 2026-10-20:** A5 bleibt der nächste Schritt. Danach zuerst
+  der Audit-Snapshot (Punkt 3), dann Run-Records und Backend-Typen.
+  Strukturierte Findings (Punkt 1) erst, wenn eine konkrete
+  Fehlklassifikation oder ein Wartungsproblem sie verlangt — der Fallback
+  von `grade_of` (ungradiert = Blocker) begrenzt das Risiko bis dahin.
+  *Abnahme Snapshot:* eine Dateiänderung zwischen Einlesen und Modellaufruf
+  kann keinen Record erzeugen, dessen Digest andere Inhalte beschreibt als
+  der Prompt — mit gezieltem Regressionstest (Datei nach `gather`, vor
+  `llm.complete` ändern; der Record muss die gelesenen Bytes binden).
+
+  **Lesend geprüft 2026-10-20 (nichts geändert):**
+
+  | Operation | Heimat | Umgehungen | Tests |
+  |---|---|---|---|
+  | Abstammung (`derived_from`) | `answering_run.model_provenance_run` (`labkit/formats/answering_run.py:395`): fehlende Config, fehlender Elternlauf, Schleife → ValueError | (a) `params._lineage` (`labkit/tools/params.py:164`) läuft ein zweites Mal, ohne eigene Schleifenprüfung, und verlässt sich auf die Heimat — die bricht aber am ersten Lauf mit `models_resolved` ab, also ungeprüft darüber: eine Schleife oberhalb hängt `labkit-params` auf. (b) `run_record_check.row_provenance_findings` (`labkit/checks/run_record_check.py:205`) läuft ein drittes Mal: fehlender Elternlauf still als erlaubt, Schleife still beendet, Deckel 50 still. (c) `start_check._derived_parent` prüft nur den direkten Elternlauf (fertig, kein Repeat) — beim Anlegen genügt das. | Heimat: fehlend und Schleife (`tests/test_answering_run.py:204`, `:224`), Gegenvariante `:181`. `_lineage` und `row_provenance_findings`: nur korrekte Ketten, kein Fehlerfall. |
+  | Vorhersagen: jede erwartete ID genau einmal | `batch.Ledger` / `Store.ledger` (`labkit/run/batch.py:116`): missing, duplicate, stray, unidentified, stale | Kein Verbraucher in labkit oder den Vorlagen. Die Estimator-Vorlage zählt `n_items = len(reg)` aus den Zeilen, nicht aus der Quelle (`labkit/templates/measure-estimator-script.py.template:309`), und paart Vorhersagen mit `zip` ohne `strict=True` (`:210`, `:214`); ebenso `measure-script.py.template:234` und `explore-script.py.template:64`. Eine kürzere Antwortliste fiele dort still weg. Nur die Quick-Vorlage nimmt den Nenner aus `expected_ids()`. | `tests/test_batch_ledger.py`: jeder Fehlerfall und die Gegenvariante. Die Vorlagen-Wege: keiner. |
+  | Resume: Identität von Instrument und Eingaben | `batch.Store.pending` (`labkit/run/batch.py:359`): Instrument je Zeile gegen das des Laufs | (a) Vergleich mit `!=` — dieselbe Falle wie bei Befund 3 (`True == 1`, und ein Tupel im Instrument verweigert nach dem JSON-Rundweg jeden Resume); gehört auf `runs.as_stored`. (b) Eingaben: `pending` prüft nur, ob die ID schon da ist; ein geändertes Item behält seine alte Zeile. `Ledger.stale` kann das (`expect`), wird aber nicht aufgerufen. (c) Ohne `instrument` keine Prüfung (gewollt, Test `:220`); beide Mess-Vorlagen übergeben eins. | `tests/test_batch.py:204–220`: gleich, anders, keins. Typfalle und geänderte Eingabe: keiner. |
+
+  Kandidaten für eigene Commits (je an diesen Befund gekoppelt, nicht
+  geplant): `pending` über `runs.as_stored`; eine Heimat für den Gang
+  entlang `derived_from`, die alle drei Leser nehmen; `zip(strict=True)` in
+  den Vorlagen.
+
 - **Standardvertrag 2026-10-19 (Branch `claude/standard-contract-rpwkod`,
   Unreleased):** die Pflichten je Kostenstufe stehen einmal in
   `labkit/standard_contract.py` (Lane, Freigabe, Gerüst, Registrierungs-
