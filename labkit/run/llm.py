@@ -96,6 +96,7 @@ from labkit.formats.repo import lab_root
 from labkit.formats.runs import JsonObject
 from labkit.run.llm_specs import (
     BackendSpec,
+    alias_tables,
     ClaudeCliSpec,
     OllamaSpec,
     parse_spec,
@@ -169,12 +170,13 @@ def resolve(alias: str) -> JsonObject:
 def _load_spec(alias: str) -> BackendSpec:
     """The spec of ALIAS as `models.toml` states it now — what `spec`
     freezes. For ollama the weights' digest is probed on every endpoint."""
-    cfg = tomllib.loads(_find_models_toml().read_text(encoding="utf-8"))
-    models = cfg.get("models", {})
-    if alias not in models:
-        known = ", ".join(models)
-        raise KeyError(f"model alias '{alias}' not in models.toml (known: {known})")
-    parsed = parse_spec(alias, models[alias], cfg.get("endpoints", {}))
+    path = _find_models_toml()
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        raise ValueError(f"{path}: not TOML ({exc})") from exc
+    table, names = alias_tables(str(path), data, alias)
+    parsed = parse_spec(alias, table, names, str(path))
     # Camera-ready gap closed 2026-08-18: the model NAME is not the model.
     # "qwen2.5:7b" can mean different weights in three months; the digest
     # pins what actually answered. Best-effort — a run must not die because

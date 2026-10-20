@@ -77,16 +77,57 @@ OPTIONS: dict[str, frozenset[str]] = {
 }
 
 
+def alias_tables(
+    source: str, data: Mapping[str, object], alias: str
+) -> tuple[Mapping[str, object], Mapping[str, str]]:
+    """(the `[models.<ALIAS>]` table, the `[endpoints]` names) of a parsed
+    models.toml (DATA, read from SOURCE), each held to its outer shape
+    before `parse_spec` reads it: `[models]` a table, the alias's entry a
+    table, `[endpoints]` a table of URL strings. Raises KeyError for an
+    alias the file lacks, ValueError naming the file and the field for
+    any other shape — a string under `[models]` ended as AttributeError
+    far from the file (review 2026-10-20)."""
+    models = data.get("models", {})
+    if not isinstance(models, dict):
+        raise ValueError(
+            f"{source}: `models` = {models!r} — must be a table, [models.<alias>]"
+        )
+    models = cast(dict[str, object], models)
+    if alias not in models:
+        raise KeyError(
+            f"model alias '{alias}' not in {source} (known: {', '.join(models)})"
+        )
+    table = models[alias]
+    if not isinstance(table, dict):
+        raise ValueError(
+            f"{source}: models.{alias} = {table!r} — must be a table, [models.{alias}]"
+        )
+    names = data.get("endpoints", {})
+    if not isinstance(names, dict):
+        raise ValueError(f"{source}: `endpoints` = {names!r} — must be a table of URLs")
+    names = cast(dict[str, object], names)
+    for name, url in names.items():
+        if not isinstance(url, str):
+            raise ValueError(
+                f"{source}: endpoints.{name} = {url!r} — must be a URL string"
+            )
+    return cast(dict[str, object], table), cast(dict[str, str], names)
+
+
 def parse_spec(
-    alias: str, table: Mapping[str, object], endpoint_names: Mapping[str, object]
+    alias: str,
+    table: Mapping[str, object],
+    endpoint_names: Mapping[str, object],
+    source: str = "models.toml",
 ) -> BackendSpec:
     """The spec of `[models.<ALIAS>]` (TABLE), endpoint names resolved
     against `[endpoints]` (ENDPOINT_NAMES), literal URLs passed through.
     Raises ValueError naming the field for an unknown backend, a key its
     backend does not read, a value of the wrong type, a served backend
     without endpoints, and the `endpoint = ...` string form (not read
-    since 0.89.0); KeyError for an endpoint name `[endpoints]` lacks."""
-    where = f"models.toml [models.{alias}]"
+    since 0.89.0); KeyError for an endpoint name `[endpoints]` lacks.
+    Every message names SOURCE, the file the table came from."""
+    where = f"{source} [models.{alias}]"
     if "endpoint" in table:
         raise ValueError(
             f"{where}: `endpoint = ...` is not read since labkit 0.89.0 — "

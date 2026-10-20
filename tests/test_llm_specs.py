@@ -163,6 +163,68 @@ class Parse(unittest.TestCase):
             )
 
 
+class ModelsFile(unittest.TestCase):
+    """Review 2026-10-20: the loader handed TOML values to the typed parser
+    unchecked — `[models] demo = "not a model table"` ended as an
+    AttributeError. The outer shape is held first; every error names the
+    file and the field."""
+
+    def spec(self, body: str):
+        import tempfile
+
+        path = Path(tempfile.mkdtemp()) / "models.toml"
+        path.write_text(body, encoding="utf-8")
+        with (
+            mock.patch.object(llm, "_find_models_toml", lambda: path),
+            mock.patch.object(llm, "_ollama_digest", lambda *a: "abc"),
+            mock.patch.dict(llm._FROZEN, clear=True),
+        ):
+            return llm.spec("demo"), str(path)
+
+    def test_a_shape_the_file_cannot_hold_names_file_and_field(self):
+        for body, field in (
+            (
+                '[models]\ndemo = "not a model table"\n',
+                "models.demo = 'not a model table'",
+            ),
+            ("models = 3\n", "`models` = 3"),
+            (
+                'endpoints = ["a"]\n[models.demo]\nbackend = "claude-cli"\nmodel = "m"\n',
+                "`endpoints` = ['a']",
+            ),
+            (
+                '[endpoints]\ng = 7\n[models.demo]\nbackend = "claude-cli"\nmodel = "m"\n',
+                "endpoints.g = 7",
+            ),
+            (
+                '[models.demo]\nbackend = "claude-cli"\nmodel = "m"\nreasoning = true\n',
+                "[models.demo]: reasoning",
+            ),
+            ("[models.demo\n", "not TOML"),
+        ):
+            with self.subTest(field=field):
+                with self.assertRaises(ValueError) as cm:
+                    self.spec(body)
+                self.assertIn(field, str(cm.exception))
+                self.assertIn("models.toml", str(cm.exception))
+                self.assertNotIsInstance(cm.exception.__context__, AttributeError)
+
+    def test_an_unknown_alias_names_the_file(self):
+        with self.assertRaises(KeyError) as cm:
+            self.spec('[models.other]\nbackend = "claude-cli"\nmodel = "m"\n')
+        self.assertIn("models.toml (known: other)", str(cm.exception))
+
+    def test_a_file_of_the_right_shape_resolves(self):
+        """The twin."""
+        got, _ = self.spec(
+            '[endpoints]\ng = "http://g.invalid:1"\n'
+            '[models.demo]\nbackend = "ollama"\nmodel = "q"\nendpoints = ["g"]\n'
+        )
+        self.assertEqual(
+            got, OllamaSpec("demo", "q", ("http://g.invalid:1",), model_digest="abc")
+        )
+
+
 class Frozen(unittest.TestCase):
     def test_the_spec_and_its_values_cannot_be_edited(self):
         spec = OllamaSpec("o", "m", ("http://a.invalid:1",))
