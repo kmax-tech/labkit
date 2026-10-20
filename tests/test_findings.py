@@ -222,6 +222,51 @@ class Decisions(unittest.TestCase):
             findings.area_records(area)  # the loud file stays loud through the listing
 
 
+class HandDecisions(unittest.TestCase):
+    """The person decides in the file; nothing else writes it. A reason with
+    an unescaped quote made the record unreadable (count probe, 2026-10-20),
+    so the file says how a reason is written, and the refusal says where it
+    went wrong and how to write it."""
+
+    def test_the_file_says_how_a_reason_is_written(self):
+        area = area_with([("preflight", TWO)])
+        path = next((area / "audits").glob("*.toml"))
+        text = path.read_text(encoding="utf-8")
+        self.assertIn("'single quotes' take any text but a '", text)
+        # both forms the comment names read back
+        decided = text.replace(
+            'status = "open"\nreason = ""',
+            'status = "accepted"\nreason = \'the "inputs" root is fixed\'',
+            1,
+        ).replace(
+            'status = "open"\nreason = ""',
+            'status = "dismissed"\nreason = "a \\"quoted\\" word"',
+            1,
+        )
+        path.write_text(decided, encoding="utf-8")
+        rec = findings.read(path)
+        self.assertEqual(
+            [f.reason for f in rec.findings],
+            ['the "inputs" root is fixed', 'a "quoted" word'],
+        )
+
+    def test_an_unescaped_quote_is_named_with_its_cure(self):
+        area = area_with([("preflight", TWO)])
+        path = next((area / "audits").glob("*.toml"))
+        text = path.read_text(encoding="utf-8").replace(
+            'status = "open"\nreason = ""',
+            'status = "accepted"\nreason = "the "inputs" root is fixed"',
+            1,
+        )
+        path.write_text(text, encoding="utf-8")
+        with self.assertRaises(findings.FindingsError) as cm:
+            findings.read(path)
+        said = str(cm.exception)
+        self.assertIn("not TOML", said)
+        self.assertIn("line", said)
+        self.assertIn("'single quotes'", said)
+
+
 class Repo(unittest.TestCase):
     def test_deferred_elsewhere_names_the_other_area_only(self):
         root = Path(tempfile.mkdtemp()) / "experiments"

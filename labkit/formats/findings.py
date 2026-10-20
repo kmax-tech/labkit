@@ -192,6 +192,15 @@ def verdict_disagrees(verdict: tuple[int, int, int], grades: list[str]) -> str |
     return None
 
 
+#: how a person writes a reason by hand — in the file's head and in the
+#: refusal of a file that does not parse (count probe, 2026-10-20: an
+#: unescaped quote in a reason made the record unreadable)
+REASON_FORM = (
+    'a reason is a TOML string: "double quotes" escape a quote as \\" and a '
+    "backslash as \\\\; 'single quotes' take any text but a '"
+)
+
+
 def _s(value: str) -> str:
     """A TOML basic string: json's escaping is a subset of TOML's."""
     return json.dumps(value, ensure_ascii=False)
@@ -251,6 +260,7 @@ def write(
     b, w, k = verdict
     lines = [
         "# written by labkit-audit — decide each finding: set status and reason",
+        f"# {REASON_FORM}",
         "[audit]",
         f"date = {_s(time.strftime('%Y-%m-%dT%H:%M', when))}",
         f"mode = {_s(mode)}",
@@ -373,7 +383,7 @@ def read(path: Path) -> Record:
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
-        raise FindingsError(f"{path}: not TOML ({exc})") from exc
+        raise FindingsError(f"{path}: not TOML ({exc}) — {REASON_FORM}") from exc
     audit = _audit_table(path, data)
     rows = data.get("finding", [])
     if not isinstance(rows, list):
