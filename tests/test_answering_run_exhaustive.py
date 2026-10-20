@@ -240,7 +240,7 @@ def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
     m = re.search(r" · run (\S+) \(", printed.getvalue())
     out["params"] = m.group(1) if m else BLOCKED
 
-    label = audit.run_rows(area, protocol)[0][0]
+    label = audit.run_rows(area, *audit.audited_run(area, protocol))[0][0]
     out["audit"] = label.split("runs/", 1)[1] if "runs/" in label else BLOCKED
     return out
 

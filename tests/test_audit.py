@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -416,6 +417,92 @@ class Audit(unittest.TestCase):
         self.assertRegex(
             err, r"stamp: \d{4}-\d\d-\d\d · scope sha [0-9a-f]{12} · 1 findings"
         )
+
+
+class OneSnapshot(unittest.TestCase):
+    """Acceptance of the audit snapshot (2026-10-20): a file changed between
+    reading and the model call cannot give a record whose digest describes
+    other contents than the prompt. The edit lands inside the window — after
+    the area is read, before the prompt is built — through `audited_run`,
+    which both the old and the new flow call there in mode analysis."""
+
+    def area(self) -> Path:
+        area = repo_with()
+        (area / "PROTOCOL-x0.md").write_text(
+            fixture.head(id="p-0123456789abcdef") + PROTOCOL, encoding="utf-8"
+        )
+        rows = area / "output" / "x.jsonl"
+        rows.parent.mkdir()
+        rows.write_text('{"i": 1}\n', encoding="utf-8")
+        completed_run(area, "p-0123456789abcdef", "experiments/01-x/output/x.jsonl")
+        return area
+
+    def audit(self, area: Path, edit) -> tuple[str, findings.Record]:
+        real = audit.audited_run
+
+        def edited_then_chosen(*args, **kw):
+            edit()
+            return real(*args, **kw)
+
+        with mock.patch.object(audit, "audited_run", edited_then_chosen):
+            rc, _, err, sent = run(area, CLEAN, "--mode", "analysis")
+        self.assertEqual(rc, 0, err)
+        (record,) = findings.area_records(area)
+        return sent[0], record
+
+    @staticmethod
+    def digest_of_the_prompt(prompt: str, stamped: list[str]) -> str:
+        """The stamp recomputed from the bytes the prompt shows for each
+        stamped file — what the record must name."""
+        parts = re.split(r"^===== (.+?) =====\n", prompt, flags=re.M)
+        shown = {
+            label.removeprefix("FILE: "): body[:-1]  # the join's newline
+            for label, body in zip(parts[1::2], parts[2::2], strict=True)
+        }
+        return scope_sha.tree_digest(
+            sorted((key, shown[key].encode("utf-8")) for key in stamped)
+        )
+
+    def test_an_edit_after_reading_leaves_the_prompt_and_the_record_agreeing(self):
+        area = self.area()
+        lib = area.parents[1] / "lib" / "scoring.py"
+        stamped = sorted(
+            f.resolve().relative_to(area.parents[1].resolve()).as_posix()
+            for f in scope_sha.area_stamp(area)[1]
+        )
+        before = scope_sha.area_stamp(area)[0]
+        prompt, record = self.audit(
+            area, lambda: lib.write_text("X = 999\n", encoding="utf-8")
+        )
+        self.assertIn("X = 0.7", prompt)
+        self.assertNotIn("X = 999", prompt)
+        self.assertEqual(record.scope_sha, before)
+        self.assertEqual(record.scope_sha, self.digest_of_the_prompt(prompt, stamped))
+        # the edit owes its own audit: the record does not cover the code now
+        self.assertNotEqual(scope_sha.area_stamp(area)[0], record.scope_sha)
+
+    def test_without_an_edit_the_record_covers_the_code_now(self):
+        """The twin: nothing changes, the record names the stamp as it is."""
+        area = self.area()
+        stamped = sorted(
+            f.resolve().relative_to(area.parents[1].resolve()).as_posix()
+            for f in scope_sha.area_stamp(area)[1]
+        )
+        prompt, record = self.audit(area, lambda: None)
+        self.assertEqual(record.scope_sha, scope_sha.area_stamp(area)[0])
+        self.assertEqual(record.scope_sha, self.digest_of_the_prompt(prompt, stamped))
+
+    def test_a_protocol_edit_after_reading_leaves_block_and_prompt_agreeing(self):
+        """The promise block the record names is the one the prompt carries."""
+        area = self.area()
+        proto = area / "PROTOCOL-x0.md"
+        text = proto.read_text(encoding="utf-8")
+        prompt, record = self.audit(
+            area,
+            lambda: proto.write_text(text + "Criterion [C2].\n", encoding="utf-8"),
+        )
+        self.assertNotIn("Criterion [C2].", prompt)
+        self.assertEqual(record.block_sha, promises.block_stamp(text))
 
 
 if __name__ == "__main__":

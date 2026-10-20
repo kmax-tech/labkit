@@ -33,7 +33,9 @@ from __future__ import annotations
 import ast
 import hashlib
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
+from types import MappingProxyType
 
 from labkit.formats import console
 from pathlib import Path
@@ -343,13 +345,78 @@ def tree_digest(
     return digest if chars is None else digest[:chars]
 
 
-def scope_sha(files: list[Path], pin: str | None, root: Path) -> str:
-    """Digest over (repo-relative path, content digest) per file plus the pin line."""
-    entries = sorted({_key(f, root): f for f in files}.items())
-    return tree_digest(
-        ((key, Path(f).read_bytes()) for key, f in entries),
-        trailer=[pin] if pin else [],
+@dataclass(frozen=True)
+class Snapshot:
+    """An area's stamped code as read ONCE: every file's bytes, and the sha
+    over exactly these bytes. A reader that renders from `contents` shows
+    what `sha` names; reading the paths again may see other bytes.
+
+    Attributes:
+        sha: The stamp (`DIGEST_CHARS` hex) over `contents` and the pin line.
+        files: The stamped files in the order the scope lists them, each once.
+        contents: Resolved path → the bytes the sha covers.
+        pin: (file, line) of the labkit pin, or None.
+    """
+
+    sha: str
+    files: tuple[Path, ...]
+    contents: Mapping[Path, bytes]
+    pin: tuple[str, str] | None
+
+    def text(self, path: Path) -> str:
+        """The snapshot's text of PATH. Raises KeyError naming a path the
+        snapshot does not hold — a reader asking for one would show bytes
+        no sha covers."""
+        key = path.resolve()
+        if key not in self.contents:
+            raise KeyError(f"{path} is not in the snapshot of the stamped code")
+        return self.contents[key].decode("utf-8")
+
+
+def area_snapshot(
+    area: Path,
+    extra: list[Path] | tuple[Path, ...] = (),
+    globs: tuple[str, ...] = AREA_GLOBS,
+    use_pin: bool = True,
+) -> Snapshot:
+    """The area's stamped code, read once: its scripts, the files its
+    protocols' promises declare as scope, the repo-local lib modules all of
+    these import, `extra` files, and the labkit pin — at least every file
+    `labkit-audit` reads in full. The sha is a digest over (repo-relative
+    path, content digest) per file plus the pin line, taken from the bytes
+    the snapshot holds. Raises FileNotFoundError naming a missing file,
+    ValueError when there is nothing to stamp or a promise block is
+    malformed."""
+    root = layout_root(area)
+    # the audit reads a declared file and its direct imports in full, so the
+    # stamp walks from it too — every protocol's, so it needs no choice and
+    # covers at least what any audit of the area reads
+    declared = declared_scope_files(area_protocols(area))
+    listed = (
+        area_files(area, globs)
+        + declared
+        + _import_closure(
+            [*area_files(area), *(f for f in declared if f.is_file())], root
+        )
+        + list(extra)
     )
+    missing = [str(f) for f in listed if not f.is_file()]
+    if missing:
+        raise FileNotFoundError(f"scope file(s) missing: {', '.join(missing)}")
+    if not listed:
+        raise ValueError(
+            f"no scope files under {area} ({', '.join(globs)}) and none named"
+        )
+    files: list[Path] = []
+    contents: dict[Path, bytes] = {}
+    for f in listed:
+        if f.resolve() not in contents:
+            files.append(f)
+            contents[f.resolve()] = f.read_bytes()
+    pin = find_pin(area.resolve()) if use_pin else None
+    entries = sorted((_key(f, root), contents[f]) for f in contents)
+    sha = tree_digest(entries, trailer=[pin[1]] if pin else [])
+    return Snapshot(sha, tuple(files), MappingProxyType(contents), pin)
 
 
 def area_stamp(
@@ -358,34 +425,10 @@ def area_stamp(
     globs: tuple[str, ...] = AREA_GLOBS,
     use_pin: bool = True,
 ) -> tuple[str, list[Path], tuple[str, str] | None]:
-    """(sha, files, pin) of an area: its scripts, the files its protocols'
-    promises declare as scope, the repo-local lib modules all of these
-    import, `extra` files, and the labkit pin — at least every file
-    `labkit-audit` reads in full. Raises FileNotFoundError naming a missing
-    file, ValueError when there is nothing to stamp or a promise block is
-    malformed."""
-    root = layout_root(area)
-    # the audit reads a declared file and its direct imports in full, so the
-    # stamp walks from it too — every protocol's, so it needs no choice and
-    # covers at least what any audit of the area reads
-    declared = declared_scope_files(area_protocols(area))
-    files = (
-        area_files(area, globs)
-        + declared
-        + _import_closure(
-            [*area_files(area), *(f for f in declared if f.is_file())], root
-        )
-        + list(extra)
-    )
-    missing = [str(f) for f in files if not f.is_file()]
-    if missing:
-        raise FileNotFoundError(f"scope file(s) missing: {', '.join(missing)}")
-    if not files:
-        raise ValueError(
-            f"no scope files under {area} ({', '.join(globs)}) and none named"
-        )
-    pin = find_pin(area.resolve()) if use_pin else None
-    return scope_sha(files, pin[1] if pin else None, root), files, pin
+    """(sha, files, pin) of `area_snapshot` — for a caller that needs the
+    stamp, not the bytes. Raises as `area_snapshot` does."""
+    snap = area_snapshot(area, extra, globs, use_pin)
+    return snap.sha, list(snap.files), snap.pin
 
 
 #: the stamp as an audit line carries it (`labkit-audit`, `scope-sha` print it so)

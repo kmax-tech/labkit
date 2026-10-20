@@ -64,6 +64,7 @@ import re
 import sys
 import time
 from pathlib import Path
+from collections.abc import Callable
 from typing import NamedTuple
 
 from labkit import PACKAGE_DIR
@@ -80,6 +81,7 @@ from labkit.formats.runs import completed_runs, read_outputs
 from labkit.formats.answering_run import bound_answering_run
 from labkit.formats.scope_sha import (
     area_files,
+    area_snapshot,
     area_stamp,
     imported_repo_helpers,
     repo_imports,
@@ -181,14 +183,14 @@ def audited_run(
     return choice.run_dir, ""
 
 
-def run_rows(area: Path, protocol: Path) -> list[tuple[str, str]]:
-    """What MODE analysis is told to read of the answering run: `(label,
+def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]]:
+    """What MODE analysis is told to read of RUN_DIR, the answering run as
+    `audited_run` chose it ONCE for both the prompt and the record: `(label,
     text)` per piece — the first ROWS_HEAD and last ROWS_TAIL lines of every
     output the run registered, numbered as `<n>: <row>`, and its
-    metrics.json. One `(label, note)` pair says why there is nothing: no
-    protocol id, no completed bound run, no registered output."""
+    metrics.json. One `(label, note)` pair says why there is nothing: WHY
+    (no protocol id, no completed bound run), or no registered output."""
     repo = layout_root(area)
-    run_dir, why = audited_run(area, protocol)
     if run_dir is None:
         return [("ROWS", f"no rows: {why}")]
     registered = read_outputs(run_dir)
@@ -287,17 +289,18 @@ def gather(area: Path, protocol: Path | None) -> Reading:
     return Reading(chosen, code, standard, indexed)
 
 
-def module_index(files: list[Path], repo: Path) -> str:
+def module_index(files: list[Path], repo: Path, read: Callable[[Path], str]) -> str:
     """One line per file — path and line count — then its top-level
     `def`/`class` signatures with the first docstring line: what the auditor
-    gets instead of the text of a module further down the import graph."""
+    gets instead of the text of a module further down the import graph.
+    READ gives a file's text (the snapshot's, for an audit)."""
     out: list[str] = []
     for f in files:
         try:
             rel = f.resolve().relative_to(repo.resolve()).as_posix()
         except ValueError:
             rel = str(f)
-        source = f.read_text(encoding="utf-8")
+        source = read(f)
         try:
             tree = ast.parse(source, filename=str(f))
         except SyntaxError as exc:
@@ -336,6 +339,17 @@ INDEX_LABEL = (
 )
 
 
+class Source(NamedTuple):
+    """What a prompt is rendered from, each read once by the caller: the
+    protocol's text, a reader for every other file (`Snapshot.text` for an
+    audit, so the prompt shows the bytes the record's sha names), and in
+    MODE analysis the answering run as chosen once (`audited_run`)."""
+
+    protocol_text: str
+    read: Callable[[Path], str]
+    run: tuple[Path | None, str] = (None, "not an analysis audit")
+
+
 def render(
     mode: str,
     area: Path,
@@ -343,12 +357,15 @@ def render(
     code: list[Path],
     standard: Path | None,
     indexed: list[Path] | None = None,
+    *,
+    source: Source,
 ) -> str:
     """The one prompt: instructions, MODE line, then every piece verbatim
     under a `===== <label> =====` line — the files, the cited rules of the
     standard (when `standard` is given), the index of the deeper modules
     (when `indexed` is given), in MODE analysis the answering run's rows.
-    Clarity: README and script around the protocol, no standard, no index."""
+    Clarity: README and script around the protocol, no standard, no index.
+    Every file's text comes from SOURCE, never from the disk again."""
     repo = layout_root(area)
 
     def rel(p: Path) -> str:
@@ -358,7 +375,8 @@ def render(
             return str(p)
 
     def file(p: Path) -> tuple[str, str]:
-        return f"FILE: {rel(p)}", p.read_text(encoding="utf-8")
+        text = source.protocol_text if p == protocol else source.read(p)
+        return f"FILE: {rel(p)}", text
 
     if mode == CLARITY:
         pieces = [file(p) for p in (code[0], protocol, *code[1:])]
@@ -368,9 +386,9 @@ def render(
             label, text = standard_excerpt(mode)
             pieces.append((f"FILE: {label}", text))
         if indexed:
-            pieces.append((INDEX_LABEL, module_index(indexed, repo)))
+            pieces.append((INDEX_LABEL, module_index(indexed, repo, source.read)))
         if mode == ANALYSIS:
-            pieces += run_rows(area, protocol)
+            pieces += run_rows(area, *source.run)
     body = "".join(f"===== {label} =====\n{text}\n" for label, text in pieces)
     return (
         f"{instructions(mode)}\n\nMODE: {mode} · AREA: {rel(area)}\n\n"
@@ -550,6 +568,44 @@ def _answer_or_record(
         ) from exc
 
 
+def bound_prompt(
+    mode: str,
+    area: Path,
+    protocol: Path,
+    code: list[Path],
+    standard: Path,
+    indexed: list[Path],
+) -> tuple[str, Stamp, str, str | None]:
+    """(prompt, stamp, block sha, run id) from ONE reading: the record
+    binds what the prompt shows. The code is one snapshot (its bytes render
+    the prompt, its sha goes in the record), the promise block comes from
+    the one protocol text the prompt carries, and in MODE analysis the run
+    is chosen once for rows and record (NO_RUN when none answers). Raises
+    AuditError when the area changed between listing and reading it."""
+    text = protocol.read_text(encoding="utf-8")
+    snap = area_snapshot(area)
+    run_id: str | None = None
+    chosen_run: tuple[Path | None, str] = (None, "not an analysis audit")
+    if mode == ANALYSIS:
+        chosen_run = audited_run(area, protocol, text)
+        run_id = chosen_run[0].name if chosen_run[0] is not None else findings.NO_RUN
+    try:
+        prompt = render(
+            mode,
+            area,
+            protocol,
+            code,
+            standard,
+            indexed,
+            source=Source(text, snap.text, chosen_run),
+        )
+    except KeyError as exc:
+        raise AuditError(
+            f"{exc.args[0]} — the area changed while it was read; run the audit again"
+        ) from exc
+    return prompt, Stamp(snap.sha, list(snap.files)), promises.block_stamp(text), run_id
+
+
 def main(argv: list[str]) -> int:
     """Command line of `labkit-audit`: audit one area in one mode."""
     ap = argparse.ArgumentParser(
@@ -579,18 +635,9 @@ def main(argv: list[str]) -> int:
         protocol, code, standard, indexed = gather(args.area, args.protocol)
         for line in early_for_tier(args.area, protocol, args.mode):
             print(f"labkit-audit: {line}", file=sys.stderr)
-        # the stamp names the code the auditor reads: taken before the call,
-        # recorded after it, never recomputed in between (Stamp); the same
-        # for the promises it reads and, in mode analysis, the run whose
-        # rows it reads (review 2026-10-18: a record bound to the code only)
-        sha, stamped, _ = area_stamp(args.area)
-        stamp = Stamp(sha, stamped)
-        block_sha = promises.block_stamp(protocol.read_text(encoding="utf-8"))
-        run_id: str | None = None
-        if args.mode == ANALYSIS:
-            run_dir, _ = audited_run(args.area, protocol)
-            run_id = run_dir.name if run_dir is not None else findings.NO_RUN
-        prompt = render(args.mode, args.area, protocol, code, standard, indexed)
+        prompt, stamp, block_sha, run_id = bound_prompt(
+            args.mode, args.area, protocol, code, standard, indexed
+        )
         print(
             f"labkit-audit: {args.mode} · {protocol.name} · {len(code)} code file(s) "
             f"in full, {len(indexed)} indexed · "
@@ -669,7 +716,17 @@ def _clarity(args: argparse.Namespace) -> int:
     scope — static evidence, not a gate."""
     try:
         protocol, files = gather_clarity(args.area, args.protocol)
-        prompt = render(CLARITY, args.area, protocol, files, None)
+        prompt = render(
+            CLARITY,
+            args.area,
+            protocol,
+            files,
+            None,
+            source=Source(
+                protocol.read_text(encoding="utf-8"),
+                lambda p: p.read_text(encoding="utf-8"),
+            ),
+        )
         print(
             f"labkit-audit: clarity · {protocol.name} · README + {files[1].name} · "
             f"{args.model} · {len(prompt) // 1000} kB",
