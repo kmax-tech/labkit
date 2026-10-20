@@ -226,6 +226,19 @@ pins (`requirements.txt` / `requirements.lock`).
   dropping the unanswered items from the output. Re-stamp or edit
   existing `01_measure.py` files by hand; the check is the length only,
   not which item an answer belongs to.
+- **The stamped scripts hold their rows to the source before a number.**
+  `evaluate()` in the judge and estimator skeletons balances the output
+  file first (`balance`, `batch.Store.ledger`) and stops with every gap
+  named: a missing, doubled or stray row, or a row made from an item as it
+  was before an edit. The judge stamps each job with `item_sha`
+  (`batch.content_sha` of the item), so a resumed run that skipped an
+  edited item stops here; the estimator's instrument carries `items_sha`,
+  since an edited item changes every fit, and a resume refuses the file.
+  The complete, unchanged file passes, and its counts are counts of the
+  source. Counted from rows alone, six of twelve items could be missing
+  and every check still passed. `evaluate(out, cfg)` became
+  `evaluate(out, cfg, jobs)` (judge) and `evaluate(out, cfg, items)`
+  (estimator); re-stamp, or copy `balance` into an existing script.
 - **Resume compares the instrument as JSON stores it.** `Store.pending`
   uses `runs.as_stored`: `true` differs from `1`, while a tuple and its
   stored list representation describe the same instrument. An instrument

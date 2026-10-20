@@ -184,12 +184,20 @@ def fit_predict(cfg: MeasureConfig, fit: list[dict], predict: list[dict],
     return [_plain(p) for p in est.predict([it[FEATURES_FIELD] for it in predict])]
 
 
-def instrument(cfg: MeasureConfig) -> dict:
+def instrument(cfg: MeasureConfig, items: list[dict]) -> dict:
     """What makes two predictions comparable: the estimator line, the score,
-    the seed and the folds. Every row carries it; a resume refuses rows of
-    another (batch.Store `instrument`)."""
+    the seed, the folds and the items. Every row carries it; a resume refuses
+    rows of another (batch.Store `instrument`). The items as one fingerprint,
+    not one per item: an edited item changes the fit, so every prediction."""
     return {"estimator_sha": cfg.estimator_sha, "score": cfg.score,
-            "seed": cfg.seed, "n_folds": cfg.n_folds}
+            "seed": cfg.seed, "n_folds": cfg.n_folds, "items_sha": batch.content_sha(items)}
+
+
+def expected(items: list[dict]) -> list[dict]:
+    """The rows a complete run holds, by id: both scored lanes over the
+    labelled items, the test lane over the unlabelled ones."""
+    return ([{"id": f"{lane}:{it['id']}"} for lane in ("registered", "null") for it in labelled(items)]
+            + [{"id": f"test:{it['id']}"} for it in unlabelled(items)])
 
 
 def measure(cfg: MeasureConfig, items: list[dict], out: Path,
@@ -214,7 +222,7 @@ def measure(cfg: MeasureConfig, items: list[dict], out: Path,
         preds = fit_predict(cfg, train, test, None, probe)
         rows += [{"id": f"test:{it['id']}", "lane": "test", "item": it["id"], "fold": None,
                   "pred": p, "gold": None} for it, p in zip(test, preds, strict=True)]
-    with batch.Store(out, prov=prov, instrument=instrument(cfg)) as store:
+    with batch.Store(out, prov=prov, instrument=instrument(cfg, items)) as store:
         for r in store.pending(rows):
             store.append(r)
     print(f"rows: {len(rows)} — {len(train)} labelled items in two lanes, {len(test)} test items")
@@ -321,8 +329,19 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     return metrics
 
 
-def evaluate(out: Path, cfg: MeasureConfig, run=None) -> dict:
-    """Read the kept rows, print gates first, record the metrics on the run."""
+def balance(out: Path, cfg: MeasureConfig, items: list[dict]) -> None:
+    """Every expected row present once, no row the items do not ask for,
+    every row from this instrument and these items — or SystemExit naming
+    each gap, before any number (→ LAB-023 No silent loss). The rows then are
+    the source's items, and every count `evaluate_rows` makes is a count of
+    the source."""
+    batch.Store(out).ledger(expected(items),
+                            expect={"_instrument": instrument(cfg, items)}).require_complete()
+
+
+def evaluate(out: Path, cfg: MeasureConfig, items: list[dict], run=None) -> dict:
+    """Balance the kept rows against ITEMS, then gates first, then the metrics on the run."""
+    balance(out, cfg, items)
     metrics = evaluate_rows(read_jsonl(out), cfg)
     for key in ("a1_pass", "a1_empty", "a2_score", "a2_chance", "a2_pass",
                 "c1_score", "c1_threshold", "c1_pass"):
@@ -375,7 +394,7 @@ def main() -> None:
         return
 
     if args.eval_only:
-        evaluate(OUT, cfg)
+        evaluate(OUT, cfg, items)
         return
 
     # The whole config, never a hand-picked subset. run_kind="measurement" declares the
@@ -386,7 +405,7 @@ def main() -> None:
                     run_kind="measurement", protocol=PROTOCOL.name) as run:
         run.output(OUT)
         measure(cfg, items, OUT, prov={"run": run.run_id})
-        evaluate(OUT, cfg, run)
+        evaluate(OUT, cfg, items, run)
         print(f"run: {run.run_id}  → protocol-fill {PROTOCOL.name} --from-run {run.run_id}  "
               f"(writes the Answer, Result and Runs lines from metrics.json)")
 

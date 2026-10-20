@@ -137,5 +137,27 @@ class Ledger(unittest.TestCase):
         self.assertEqual(metrics["n_missing"], 0)
 
 
+class ContentSha(unittest.TestCase):
+    def test_the_fingerprint_is_the_stored_json_hashed(self):
+        import hashlib
+
+        want = hashlib.sha256(b'{"a": 1, "b": [2]}').hexdigest()[:12]
+        self.assertEqual(batch.content_sha({"b": (2,), "a": 1}), want)
+
+    def test_an_edit_or_a_type_changes_it_and_key_order_does_not(self):
+        base = batch.content_sha({"id": "x", "text": "t", "gold": 1})
+        self.assertEqual(base, batch.content_sha({"gold": 1, "text": "t", "id": "x"}))
+        self.assertNotEqual(
+            base, batch.content_sha({"id": "x", "text": "t2", "gold": 1})
+        )
+        self.assertNotEqual(
+            base, batch.content_sha({"id": "x", "text": "t", "gold": True})
+        )
+
+    def test_a_value_json_cannot_hold_raises(self):
+        with self.assertRaises(TypeError):
+            batch.content_sha({"x": object()})
+
+
 if __name__ == "__main__":
     unittest.main()

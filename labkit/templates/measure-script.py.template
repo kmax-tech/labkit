@@ -196,11 +196,12 @@ def read_jsonl(path: Path) -> list[dict]:
 
 
 def plan(items: list[dict]) -> list[dict]:
-    """One job per item per lane; `id` is the resume key (one line per model call)."""
+    """One job per item per lane; `id` is the resume key (one line per model
+    call), `item_sha` the item as it is now, which its row carries (`balance`)."""
     # `**it` first: the lane-qualified id must win, or both lanes share one
     # resume key and a resumed run skips the twin lane (found by a cold agent
     # reading the stamp, 2026-10-05).
-    jobs = [{**it, "id": f"{lane}:{it['id']}", "lane": lane}
+    jobs = [{**it, "id": f"{lane}:{it['id']}", "lane": lane, "item_sha": batch.content_sha(it)}
             for lane in LANES for it in items]
     if len({j["id"] for j in jobs}) != len(jobs):
         raise ValueError("plan(): job ids are not unique — two lanes would share one resume key")
@@ -322,8 +323,19 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     return metrics
 
 
-def evaluate(out: Path, cfg: MeasureConfig, run=None) -> dict:
-    """Read the kept rows, print gates first, record the metrics on the run."""
+def balance(out: Path, jobs: list[dict]) -> None:
+    """Every job on exactly one row, no row without a job, every row made
+    from its item as it is now — or SystemExit naming each gap, before any
+    number (→ LAB-023 No silent loss). A resume skips an id it has, so an
+    item edited since its row was written stays stale here: write a new
+    output file. The rows then are the source's items, and every count
+    `evaluate_rows` makes is a count of the source."""
+    batch.Store(out).ledger(jobs, expect={"item_sha": lambda j: j["item_sha"]}).require_complete()
+
+
+def evaluate(out: Path, cfg: MeasureConfig, jobs: list[dict], run=None) -> dict:
+    """Balance the kept rows against JOBS, then gates first, then the metrics on the run."""
+    balance(out, jobs)
     metrics = evaluate_rows(read_jsonl(out), cfg)
     for key in ("a1_pass", "a1_empty", "a2_accuracy", "a2_pass", "c1_accuracy", "c1_threshold", "c1_pass"):
         print(f"  {key:<13} {metrics[key]}")
@@ -379,7 +391,7 @@ def main() -> None:
         return
 
     if args.eval_only:
-        evaluate(OUT, cfg)
+        evaluate(OUT, cfg, plan(items))
         return
 
     # The whole config, never a hand-picked subset: a field added above is
@@ -401,9 +413,9 @@ def main() -> None:
         # the draw number runlog reserved and recorded — the one name source
         out = OUT if run.draw is None else OUT.with_name(f"{OUT.stem}_draw{run.draw}.jsonl")
         run.output(out)
-        measure(cfg, plan(items), out,
-                prov={**llm.provenance(args.model), "run": run.run_id})
-        evaluate(out, cfg, run)
+        jobs = plan(items)
+        measure(cfg, jobs, out, prov={**llm.provenance(args.model), "run": run.run_id})
+        evaluate(out, cfg, jobs, run)
         if repeat is None:
             print(f"run: {run.run_id}  → protocol-fill {PROTOCOL.name} --from-run {run.run_id}  "
                   f"(writes the Answer, Result and Runs lines from metrics.json)")

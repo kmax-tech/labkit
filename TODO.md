@@ -31,22 +31,6 @@ Auftrag. Forschung und Benchmark-Fallliste liegen in
 
 ## Offene Verträge und Korrektheitslücken
 
-### Gemeinsame Operationen auch in den Verbrauchern durchsetzen
-
-Diese zwei Schritte sind **notiert, nicht geplant**. Jeder braucht einen
-Fehlerfall und einen korrekten Zwilling. Weitere Dataclasses allein schließen
-die Lücken nicht.
-
-| Operation | Offene Lücke | Änderung und Abnahme |
-|---|---|---|
-| Items und Antworten paaren | Vorlagen verwenden `zip` ohne `strict=True`; bei frei implementierbarem `fit_predict` ist die Antwortlänge nicht garantiert. | Kürzere und längere Antworten verweigern, gleich lange akzeptieren. `zip(strict=True)` prüft nur die Länge, keine ID-Identität. |
-| Vorhersagen und Resume-Eingaben | Vorlagen verwenden `batch.Ledger` nicht. `pending` erkennt geänderte Inhalte einer vorhandenen ID nicht. Die Estimator-Vorlage zählt ihren Nenner aus geschriebenen Zeilen. | Ledger mit Eingabefingerabdruck je Item anschließen; Nenner aus der Quelle. Fehlende, doppelte, fremde und veraltete Items verweigern; vollständiger unveränderter Lauf besteht. Tests am Ledger und am Vorlagenweg. |
-
-Die Ledger-Lücke ist unabhängig vom `zip`-Schritt: Laut Review können
-sechs von zwölf Items fehlen und die Vorlagenprüfungen trotzdem bestehen.
-Hier noch nicht eigenständig nachgestellt; vor Umsetzung braucht der Fall
-einen reproduzierbaren Vorlagen-Test.
-
 ### Audit-Bindung und Hook-Auswahl
 
 - **Protokollprosa und Lauf-Inhalte:** Der Record bindet den Promise-Block
