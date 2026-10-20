@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from collections.abc import Iterator
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -45,6 +46,17 @@ def _protocol(**head_fields) -> str:
 
 
 CLEAN_PROTOCOL = _protocol()
+
+
+@contextlib.contextmanager
+def _area_dir() -> Iterator[str]:
+    """An empty area directory whose parent holds nothing else: preflight reads
+    the area's siblings as the repo's other areas, so the area must not sit
+    directly in the shared temp directory."""
+    with tempfile.TemporaryDirectory() as d:
+        area = Path(d) / "experiments" / "area"
+        area.mkdir(parents=True)
+        yield str(area)
 
 
 def _area(d, protocol_text=CLEAN_PROTOCOL, scripts=True, git=True):
@@ -89,7 +101,7 @@ class TestAreaTests(unittest.TestCase):
         return name
 
     def test_missing_test_file_is_a_warning(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d)
             code, out = _run_preflight(area)
             self.assertEqual(code, 0)
@@ -98,7 +110,7 @@ class TestAreaTests(unittest.TestCase):
     def test_missing_test_file_blocks_once_frozen(self):
         """frozen = true owes every gap; a missing resolution test is one
         (2026-10-07: it only warned, a protocol froze without any test)."""
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(
                 d, _protocol(frozen=True, preflight_audit="2026-10-07 · scope sha 0")
             )
@@ -108,7 +120,7 @@ class TestAreaTests(unittest.TestCase):
             self.assertIn("frozen = true owes it", out)
 
     def test_failing_area_test_is_a_blocker(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d)
             name = self._with_test(
                 d, "def test_resolution():\n    assert False, 'TODO'\n"
@@ -118,7 +130,7 @@ class TestAreaTests(unittest.TestCase):
             self.assertIn(f"BLOCKER: {name} failed", out)
 
     def test_passing_area_test_is_ok(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d)
             name = self._with_test(d, "def test_resolution():\n    assert True\n")
             code, out = _run_preflight(area)
@@ -131,7 +143,7 @@ class TestAreaTestNames(unittest.TestCase):
     (uniagent 2026-10-07: area 08 ran area 09's test)."""
 
     def test_a_longer_name_is_not_this_areas_test(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             repo = Path(d)
             (repo / "tests").mkdir()
             for name in (
@@ -151,20 +163,20 @@ class TestAreaTestNames(unittest.TestCase):
 
 class TestPreflight(unittest.TestCase):
     def test_clean_area_exits_zero(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d)
             code, out = _run_preflight(area)
         self.assertEqual(code, 0, out)
         self.assertIn("0 blocker", out)
 
     def test_missing_protocol_exits_two(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             code, out = _run_preflight(Path(d))
         self.assertEqual(code, 2, out)
         self.assertIn("no PROTOCOL", out)
 
     def test_multiple_protocols_exits_two(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d, git=False)
             (area / "PROTOCOL-y.md").write_text(
                 CLEAN_PROTOCOL.replace("p-0123456789abcdef", "p-fedcba9876543210"),
@@ -175,14 +187,14 @@ class TestPreflight(unittest.TestCase):
         self.assertIn("2 protocols", out)
 
     def test_explicit_protocol_flag(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, p = _area(d)
             code, out = _run_preflight(area, protocol=p)
         self.assertEqual(code, 0, out)
 
     def test_protocol_blocker_makes_exit_one(self):
         unstamped = _protocol(id="<protocol-id>")
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d, protocol_text=unstamped)
             code, out = _run_preflight(area)
         self.assertEqual(code, 1, out)
@@ -198,7 +210,7 @@ class TestPreflight(unittest.TestCase):
             "- **Protocol id:** p-0123456789abcdef\n- **Frozen before run:** no\n"
             + BODY
         )
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d, protocol_text=prose)
             code, out = _run_preflight(area)
         self.assertEqual(code, 1, out)
@@ -208,7 +220,7 @@ class TestPreflight(unittest.TestCase):
         """The one early end: the later stations would read a head that is
         not there. The blocker is told, the summary follows, nothing else."""
         prose = "# Experiment protocol: x\n\n- **Standard:** 0.16\n" + BODY
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d, protocol_text=prose)
             code, out = _run_preflight(area)
         self.assertEqual(code, 1, out)
@@ -225,7 +237,7 @@ class TestPreflight(unittest.TestCase):
     def test_any_other_blocker_lets_the_later_stations_run(self):
         """A must gap in station 1 is a blocker, and stations 2–8 still run
         and tell what they found — only the summary ends the gate."""
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d, protocol_text=_protocol(id="<protocol-id>"))
             code, out = _run_preflight(area)
         self.assertEqual(code, 1, out)
@@ -246,7 +258,7 @@ class TestPreflight(unittest.TestCase):
         """Station 4 runs code-check's whole list: a parser without a
         fixture test and a PROMPT the protocol does not hold block here as
         they block in code-check."""
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d)
             (area / "scripts" / "01_measure.py").write_text(
                 'metrics = {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n'
@@ -261,7 +273,7 @@ class TestPreflight(unittest.TestCase):
         self.assertIn("Is it causal?", out)
 
     def test_dirty_tree_is_a_warning_not_a_blocker(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d)
             (area / "new_file.txt").write_text("x", encoding="utf-8")
             code, out = _run_preflight(area)
@@ -284,7 +296,7 @@ class TestPreflight(unittest.TestCase):
 
 class TestNoScriptsDirectory(unittest.TestCase):
     def test_area_without_scripts_skips_scope_sha(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d, scripts=False)
             code, out = _run_preflight(area)
         self.assertIn("no scripts matching", out)
@@ -296,7 +308,7 @@ class GraduationGate(unittest.TestCase):
     protocol-check, from the same function (2026-10-05)."""
 
     def test_frozen_protocol_with_should_gaps_has_blockers(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d, _protocol(frozen=True))
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
@@ -305,7 +317,7 @@ class GraduationGate(unittest.TestCase):
             self.assertIn("MISSING (must): Problem in one sentence", buf.getvalue())
 
     def test_unfrozen_protocol_same_gaps_are_warnings(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d)
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
@@ -318,7 +330,7 @@ class TestCostTier(unittest.TestCase):
     """The tier names how much audit the run gets; preflight says it out loud."""
 
     def _out(self, protocol_text):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(d, protocol_text)
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
@@ -342,14 +354,14 @@ class AreaTestPython(unittest.TestCase):
     """The interpreter for an area's tests has a name of its own (CODE-015)."""
 
     def test_the_repo_venv_wins(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             own = Path(d) / ".venv" / "bin" / "python"
             own.parent.mkdir(parents=True)
             own.write_text("")
             self.assertEqual(preflight.area_test_python(Path(d)), str(own))
 
     def test_without_a_venv_the_running_python(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             self.assertEqual(preflight.area_test_python(Path(d)), sys.executable)
 
 
@@ -381,7 +393,7 @@ class TestAuditFindings(unittest.TestCase):
         return area, path
 
     def test_open_finding_is_a_warning_before_the_freeze(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = self._recorded(d)
             code, out = _run_preflight(area)
             self.assertEqual(code, 0, out)
@@ -389,14 +401,14 @@ class TestAuditFindings(unittest.TestCase):
             self.assertIn("1 finding(s) still `open`", out)
 
     def test_open_finding_blocks_once_frozen(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = self._recorded(d, frozen=True)
             code, out = _run_preflight(area)
             self.assertEqual(code, 1, out)
             self.assertIn("BLOCKER: undecided in", out)
 
     def test_decided_findings_pass_and_an_unreadable_file_blocks(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, path = self._recorded(d)
             text = path.read_text().replace('status = "open"', 'status = "fixed"')
             path.write_text(text)
@@ -418,7 +430,7 @@ class TestAuditFindings(unittest.TestCase):
         own sha, is clean."""
         from labkit.formats import scope_sha
 
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             area, _ = _area(
                 d, _protocol(frozen=True, preflight_audit="scope sha 000000000000")
             )
@@ -451,7 +463,7 @@ class TestAuditFindings(unittest.TestCase):
             self.assertIn("no preflight audit saw the area as it is now", out)
 
     def test_deferred_in_another_area_is_a_reminder_not_a_count(self):
-        with tempfile.TemporaryDirectory() as d:
+        with _area_dir() as d:
             root = Path(d) / "experiments"
             (root / "17-here").mkdir(parents=True)
             area, _ = _area(root / "17-here")

@@ -130,7 +130,10 @@ class CostLowered(unittest.TestCase):
 
 class WaivedAudit(unittest.TestCase):
     def setUp(self):
-        self.area = Path(tempfile.mkdtemp())
+        # inside an experiments folder of its own: preflight reads the
+        # area's siblings, and the shared temp directory holds every test's
+        self.area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+        self.area.mkdir(parents=True)
         scope_file(self.area)
 
     def _protocol(self, cost: str, line: str, frozen: bool = True) -> Path:
