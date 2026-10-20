@@ -110,9 +110,10 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   Entschieden 2026-10-20: `runs.tsv` ist lokale Übersicht, git-ignoriert,
   `runlog reindex` stellt sie her (CHANGELOG, Changed).
   Notiert, nicht geplant: Run-Ids einer Sekunde unterscheiden sich nur im
-  Zufallssuffix — „der neueste Lauf“ nach Namen (`protocol-fill
-  --from-run` ohne Run-Id, `runs.run_dirs`) ist dann beliebig. Eine feinere
-  Startzeit wäre ein Formatwechsel; erst bei einem echten Fall.
+  Zufallssuffix. Die Auswahl des antwortenden Laufs (`protocol-fill
+  --from-run` ohne Run-Id, finalize: `answering_run.same_second_rival`)
+  verweigert dann, statt zu raten. Feinere Startzeiten würden solche
+  Verweigerungen vermeiden — spätere Verbesserung, kein Fehler.
 - **Andere Person:** Schreibprobe und Usability-Runde vor weiteren
   Änderungen am Protokollstandard. Bisherige Vorlagenentscheidungen des
   Autors ersetzen diese Probe nicht.
