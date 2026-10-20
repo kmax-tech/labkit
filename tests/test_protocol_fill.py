@@ -611,3 +611,80 @@ class Adopt(unittest.TestCase):
         self.assertEqual(atomic.call_count, 1)
         self.assertEqual(proto.read_text(encoding="utf-8"), seen["text"])
         self.assertEqual([p.name for p in area.glob(".PROTOCOL-*")], [])
+
+
+class PromiseSentences(unittest.TestCase):
+    """The [[promise]] sentences of the TOML head: `--list` names the open
+    ones and `"<id> sentence=..."` fills one as a TOML string. Every judge
+    probe of 2026-10-20 found them only by reading the file, one lost a
+    commit to them, and a hand-written TOML string broke on a quote."""
+
+    BLOCK = (
+        "[[promise]]\n"
+        'id = "C1"\n'
+        'key = "c1_pass"\n'
+        'sentence = "<the criterion in one sentence>"\n'
+        'scope = ["scripts/01_measure.py"]\n'
+        "constants = { margin = 0.25 }\n"
+        "\n"
+        "[[promise]]\n"
+        'id = "A1"\n'
+        'key = "a1_pass"\n'
+        'sentence = "at most max_empty empty answers"\n'
+        'scope = ["scripts/01_measure.py"]\n'
+        "constants = { max_empty = 2 }\n"
+    )
+
+    def text(self) -> str:
+        return "# P\n\n" + head(cost="seconds", promises=self.BLOCK)
+
+    def test_list_names_the_open_sentence_and_not_the_written_one(self):
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "PROTOCOL-x.md"
+            p.write_text(self.text(), encoding="utf-8")
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(protocol_fill.main([str(p), "--list"]), 0)
+        line = (
+            self.text()
+            .splitlines()
+            .index('sentence = "<the criterion in one sentence>"')
+        )
+        self.assertIn(f"{line + 1:4d}  C1 sentence", out.getvalue())
+        self.assertNotIn("A1 sentence", out.getvalue())
+
+    def test_a_fill_writes_a_toml_string_that_reads_back(self):
+        value = 'registered accuracy >= null + margin; "empty" counts as wrong \\ ok'
+        new = protocol_fill.fill_many(self.text(), [("c1 sentence", value)])
+        from labkit.formats import promises
+
+        block = promises.parse_block(new)
+        assert block is not None
+        self.assertEqual({p.id: p.sentence for p in block.promises}["C1"], value)
+        self.assertEqual(promises.placeholder_sentences(block), [])
+        self.assertEqual(
+            [ln for ln in new.splitlines() if not ln.startswith("sentence")],
+            [ln for ln in self.text().splitlines() if not ln.startswith("sentence")],
+        )
+
+    def test_a_written_sentence_needs_force_and_an_unknown_id_is_named(self):
+        with self.assertRaisesRegex(ValueError, "already written"):
+            protocol_fill.fill_many(self.text(), [("A1 sentence", "x")])
+        new = protocol_fill.fill_many(self.text(), [("A1 sentence", "y")], force=True)
+        self.assertIn('sentence = "y"', new)
+        with self.assertRaisesRegex(ValueError, r"no \[\[promise\]\] 'B9'.*C1, A1"):
+            protocol_fill.fill_many(self.text(), [("B9 sentence", "x")])
+
+    def test_one_call_fills_a_field_and_a_sentence_or_nothing(self):
+        text = self.text() + "\n- **Unit:** <the unit>\n"
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "PROTOCOL-x.md"
+            p.write_text(text, encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                rc = protocol_fill.main([str(p), "Unit=one case", "B9 sentence=x"])
+            self.assertEqual(rc, 1)
+            self.assertEqual(p.read_text(encoding="utf-8"), text)
+            with contextlib.redirect_stdout(io.StringIO()):
+                rc = protocol_fill.main([str(p), "Unit=one case", "C1 sentence=s"])
+            self.assertEqual(rc, 0)
+            self.assertIn('sentence = "s"', p.read_text(encoding="utf-8"))

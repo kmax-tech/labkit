@@ -10,6 +10,7 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md --list
     protocol-fill PROTOCOL-x.md "Meaning of the gold label" "positive = ..."
     protocol-fill PROTOCOL-x.md --line 27 Question "does Y move X?"
+    protocol-fill PROTOCOL-x.md "C1 sentence=<the promise>"   a [[promise]]'s sentence, as a TOML string
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
     protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: the Answer,
                                                Result, Answering run and Runs lines from its
@@ -43,10 +44,11 @@ later-changed answer to the same. A provisional number stays a sketch in
 from __future__ import annotations
 
 import argparse
+import json
 import re
 from pathlib import Path
 
-from labkit.formats import console, files, protocol_block, runs
+from labkit.formats import console, files, promises, protocol_block, runs
 from labkit.checks import recheck
 from labkit.gates import report_check
 from labkit.checks.prompt_check import prompt_constants
@@ -149,6 +151,104 @@ def fill_head_type(text: str, value: str) -> str:
     lines = text.split("\n")
     lines[n - 1] = HEAD_TYPE.sub(lambda m: f'{m.group(1)}"{value}"', lines[n - 1])
     return "\n".join(lines)
+
+
+#: a promise's sentence as `--list` names it and a fill addresses it: `C1 sentence`
+SENTENCE_LABEL = re.compile(r"^\s*(\S+)\s+sentence\s*$", re.I)
+_TABLE = re.compile(r"^\s*\[")
+_KEY_LINE = re.compile(r"^\s*(id|sentence)\s*=\s*(.*?)\s*$")
+#: a sentence on one line as a TOML basic string — the form a fill rewrites
+_ONE_LINE_SENTENCE = re.compile(r'^(\s*sentence\s*=\s*)"(?:[^"\\\n]|\\.)*"\s*$')
+
+
+def sentence_lines(text: str) -> dict[str, int]:
+    """{promise id: line number of its `sentence =`} inside the TOML head;
+    which of them is still the stamp's placeholder is
+    `promises.placeholder_sentences`' call, not this one's. A table whose id
+    is not a one-line string literal is skipped (parse_block names it)."""
+    span = protocol_block.toml_block_span(text)
+    if span is None:
+        return {}
+    lines = text.splitlines()
+    out: dict[str, int] = {}
+    pid: str | None = None
+    line: int | None = None
+
+    def close() -> None:
+        if pid is not None and line is not None:
+            out[pid] = line
+
+    for i in range(span[0], span[1]):
+        if _TABLE.match(lines[i]):
+            close()
+            pid, line = None, None
+            continue
+        m = _KEY_LINE.match(lines[i])
+        if m and m.group(1) == "id":
+            try:
+                value = json.loads(m.group(2))
+            except json.JSONDecodeError:
+                value = None
+            pid = value if isinstance(value, str) else None
+        elif m:
+            line = i + 1
+    close()
+    return out
+
+
+def open_sentences(text: str) -> list[tuple[int, str]]:
+    """(line, `<id> sentence`) of every [[promise]] sentence still holding the
+    stamp's `<…>` — the pre-commit refuses them where the tables are owed,
+    and `--list` named only the prose fields (judge probes, 2026-10-20).
+    Raises promises.PromiseError on a malformed block."""
+    block = promises.parse_block(text)
+    if block is None:
+        return []
+    where = sentence_lines(text)
+    return [
+        (where[pid], f"{pid} sentence")
+        for pid in promises.placeholder_sentences(block)
+        if pid in where
+    ]
+
+
+def fill_sentence(text: str, pid: str, value: str, force: bool = False) -> str:
+    """Set [[promise]] PID's sentence to VALUE, written as a TOML string —
+    the escaping an agent got wrong by hand (an unescaped quote, count
+    probe 2026-10-20). Refuses a filled sentence without force, and a
+    sentence not on one line (edit that by hand); reads the block back and
+    raises unless it now holds exactly VALUE."""
+    block = promises.parse_block(text)
+    ids = [p.id for p in block.promises] if block is not None else []
+    match = [i for i in ids if i.lower() == pid.lower()]
+    if not match:
+        raise ValueError(
+            f"no [[promise]] {pid!r} in the TOML head"
+            + (f" (ids: {', '.join(ids)})" if ids else "")
+        )
+    (pid,) = match
+    assert block is not None
+    if pid not in promises.placeholder_sentences(block) and not force:
+        raise ValueError(
+            f"[[promise]] {pid}'s sentence is already written. Overwrite with --force."
+        )
+    n = sentence_lines(text).get(pid)
+    lines = text.split("\n")
+    m = _ONE_LINE_SENTENCE.match(lines[n - 1]) if n is not None else None
+    if n is None or m is None:
+        raise ValueError(
+            f'[[promise]] {pid}\'s sentence is not one `sentence = "..."` line '
+            f"— edit it in the TOML head by hand"
+        )
+    lines[n - 1] = m.group(1) + json.dumps(value, ensure_ascii=False)
+    new = "\n".join(lines)
+    after = promises.parse_block(new)
+    written = {p.id: p.sentence for p in after.promises} if after else {}
+    if written.get(pid) != value:
+        raise ValueError(
+            f"[[promise]] {pid}: the sentence did not read back as written"
+        )
+    return new
 
 
 RUNS_HEADING = re.compile(r"^## Runs\b")
@@ -335,16 +435,23 @@ def _write_back(args: argparse.Namespace, text: str) -> int:
 
 
 def _list_open(text: str) -> int:
-    """`--list`: every open field, the TOML head's `type` first; the fields
+    """`--list`: every open field, the TOML head's `type` and open promise
+    sentences first; the fields
     `--from-run` writes last, under their own line. Listed among the rest
     they read as owed before the run: a cold agent filled them with "pending
     run", and --from-run then refused to overwrite them (cloud, 2026-10-14)."""
     holes = placeholder_fields(text)
+    sentences = [
+        (n, f"{label}  (TOML head: this promise in one sentence)")
+        for n, label in open_sentences(text)
+    ]
     head_line = head_type_open(text)
-    if head_line is not None:
-        holes = [
-            (head_line, f"{HEAD_TYPE_LABEL}  (TOML head: exploratory | confirmatory)")
-        ] + holes
+    head = (
+        [(head_line, f"{HEAD_TYPE_LABEL}  (TOML head: exploratory | confirmatory)")]
+        if head_line is not None
+        else []
+    )
+    holes = head + sentences + holes
     if not holes:
         print("no placeholder fields left")
     now = [(n, label) for n, label in holes if label not in WRITTEN_BY_RUN]
@@ -383,16 +490,19 @@ def fill_many(
     line_no: int | None = None,
     force: bool = False,
 ) -> str:
-    """`fill` (or `fill_head_type` for the head's type) applied in order; the
-    first ValueError leaves the caller's file untouched — all or nothing."""
+    """`fill` applied in order — `fill_head_type` for the head's `type`,
+    `fill_sentence` for `<id> sentence`; the first ValueError leaves the
+    caller's file untouched — all or nothing."""
     for label, value in assignments:
         if not label.strip() or not value.strip():
             raise ValueError(f"empty label or value in {label}={value!r}")
-        text = (
-            fill_head_type(text, value)
-            if label.strip().lower() == HEAD_TYPE_LABEL
-            else fill(text, label, value, line_no=line_no, force=force)
-        )
+        sentence = SENTENCE_LABEL.match(label)
+        if label.strip().lower() == HEAD_TYPE_LABEL:
+            text = fill_head_type(text, value)
+        elif sentence:
+            text = fill_sentence(text, sentence.group(1), value, force=force)
+        else:
+            text = fill(text, label, value, line_no=line_no, force=force)
     return text
 
 
@@ -444,7 +554,11 @@ def main(argv: list[str]) -> int:
         return 2
     text = args.protocol.read_text(encoding="utf-8")
     if args.list:
-        return _list_open(text)
+        try:
+            return _list_open(text)
+        except promises.PromiseError as exc:
+            print(f"protocol-fill: {exc}")
+            return 1
     if args.prompts:
         try:
             new = fill_prompts(text, prompt_constants(args.protocol.resolve().parent))

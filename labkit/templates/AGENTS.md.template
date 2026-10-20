@@ -15,14 +15,16 @@ LAB-017 The number of audits follows the cost tier.
    in the loop) — stamps the seconds cut of the protocol and the matching
    skeleton.
 2. Write the registration: `protocol-fill <PROTOCOL> --list` names every
-   open field, the TOML head's `type` first (`cost = "seconds"` is stamped).
+   open field, the TOML head's `type` and, with a model, each promise's
+   `<id> sentence` first (`cost = "seconds"` is stamped).
    A count owes question · data · exclusions · unit; with a model also the
    success criterion, the admissibility condition, the prompt and the null
    condition. Every coinage of your own — a constant such as a margin, arms,
    item ids, the model alias — gets half a sentence under "Terms of this
    protocol" — a count with no coinage writes "n/a — no coinage". Fill by
    label, all in one call: `protocol-fill <PROTOCOL> "type=exploratory"
-   "<Label>=<value>" ...` (one quoted word per field); the prompt block from
+   "C1 sentence=<value>" "<Label>=<value>" ...` (one quoted word per
+   field); the prompt block from
    the script's `PROMPT` constants with `protocol-fill <PROTOCOL> --prompts`.
 3. Fill the skeleton (with a model: read `--show 2`), run `code-check <area>`.
 4. Commit, then the run — in the foreground; it is the instrument check too.

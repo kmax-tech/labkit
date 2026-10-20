@@ -263,6 +263,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`protocol-fill` lists and fills the promise sentences.** `--list` names
+  each [[promise]] sentence still holding the stamp's `<…>` as `<id>
+  sentence`, after the head's `type`; `"C1 sentence=..."` fills it, in the
+  same one call as the prose fields, written as a TOML string and read
+  back. Every judge probe of 2026-10-20 found the sentences only by
+  reading the file, and the pre-commit refused one that was left open.
 - **`labkit-audit` and `report-check` take the area's name.** `01-<name>`
   or `<name>`, as `labkit-init exp` prints it, resolves as it already did
   for `code-check`, `finalize`, `preflight`, `runlog` and `params`; both
