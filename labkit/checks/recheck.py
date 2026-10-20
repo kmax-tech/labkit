@@ -183,8 +183,9 @@ def agree(
     metrics: dict, recomputed: dict, ignore: frozenset[str] = LABKIT_KEYS
 ) -> list[str]:
     """metrics.json against the recomputation; returns the keys that grew.
-    The recomputation is compared as JSON, the way the run recorded it: a
-    tuple from evaluate() is the list in metrics.json, not a difference."""
+    The recomputation is compared as JSON, the way the run recorded it
+    (`runs.as_stored`): a tuple from evaluate() is the list in metrics.json,
+    not a difference, and `1` is not `true`."""
     recomputed = json.loads(json.dumps(recomputed))
     intent = {k for k in set(metrics) | set(recomputed) if INTENT_KEY.match(k)}
     one_sided = sorted(k for k in intent if (k in metrics) != (k in recomputed))
@@ -195,7 +196,9 @@ def agree(
             f"intent keys on one side only {one_sided}, vanished {vanished}"
         )
     differing = sorted(
-        k for k in recomputed if k in metrics and recomputed[k] != metrics[k]
+        k
+        for k in recomputed
+        if k in metrics and runs.as_stored(recomputed[k]) != runs.as_stored(metrics[k])
     )
     if differing:
         raise SystemExit(

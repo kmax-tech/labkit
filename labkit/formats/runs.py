@@ -296,6 +296,16 @@ def read_completion(run_dir: Path) -> dict[str, object]:
     return cast(dict[str, object], data)
 
 
+def as_stored(value: object) -> str:
+    """VALUE as a run's JSON files store it, keys sorted: the one equality
+    of stored values — two are the same only when their texts are, so `1`
+    is not `true`, `1` is not `1.0`, a tuple is its list and NaN is NaN.
+    Python's `==` takes `True == 1` and `1 == 1.0`, and a checker built on
+    it passed a recomputation of another type (review 2026-10-20). Raises
+    TypeError for a value JSON cannot hold."""
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
 def read_metrics(path: Path) -> dict[str, object]:
     """A run's metrics.json as a JSON object. Raises MetricsError naming the
     file when it is unreadable, not JSON, or not an object — a list such as

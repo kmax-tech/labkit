@@ -18,6 +18,7 @@ from pathlib import Path
 
 from labkit.formats import promises
 from labkit.formats.runs import (
+    as_stored,
     COMPLETED,
     RunConfigError,
     RunDir,
@@ -149,18 +150,18 @@ def repeat_mismatch(parent: dict, new: dict) -> list[str]:
     pp, np_ = parent.get("promises") or {}, new.get("promises") or {}
     if pp.get("block_sha") != np_.get("block_sha"):
         out.append("the promise block changed")
-    elif _stored(pp) != _stored(np_):
+    elif as_stored(pp) != as_stored(np_):
         # same block, other code: a declared scope's digest moved
         out.append("the code a promise rests on changed (declared_scope_sha)")
     if parent.get("script_sha") != new.get("script_sha"):
         out.append("the measure script changed (script_sha)")
-    if _stored(parent.get("models_resolved") or {}) != _stored(
+    if as_stored(parent.get("models_resolved") or {}) != as_stored(
         new.get("models_resolved") or {}
     ):
         out.append("the model resolved differently (models_resolved)")
     pc, nc = parent.get("config") or {}, new.get("config") or {}
     for key in sorted(set(pc) | set(nc)):
-        if key not in pc or key not in nc or _stored(pc[key]) != _stored(nc[key]):
+        if key not in pc or key not in nc or as_stored(pc[key]) != as_stored(nc[key]):
             out.append(f"config {key}: {_shown(pc, key)} → {_shown(nc, key)}")
 
     def digests(cfg: dict) -> dict:
@@ -175,14 +176,8 @@ def repeat_mismatch(parent: dict, new: dict) -> list[str]:
     return out
 
 
-def _stored(value: object) -> str:
-    """VALUE as config.json text, keys sorted — equal only when the stored
-    values are, type included."""
-    return json.dumps(value, ensure_ascii=False, sort_keys=True)
-
-
 def _shown(cfg: dict, key: str) -> str:
-    return _stored(cfg[key]) if key in cfg else "(absent)"
+    return as_stored(cfg[key]) if key in cfg else "(absent)"
 
 
 def bound_runs(area: Path, pid: str) -> tuple[list[dict], list[dict]]:

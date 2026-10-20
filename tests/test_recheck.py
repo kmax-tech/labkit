@@ -137,6 +137,18 @@ class Area(unittest.TestCase):
         self.assertTrue(recheck._present("-0.2", "delta −0.2"))
         self.assertTrue(recheck._present("+0.2", "delta 0.2"))
 
+    def test_a_value_of_another_json_type_differs(self):
+        """Review 2026-10-20: `true` and `1` were equal to Python's `==`."""
+        for stored, again in (
+            (True, 1),
+            (1, 1.0),
+            ([True], [1]),
+            ({"a": 0}, {"a": False}),
+        ):
+            with self.assertRaises(SystemExit, msg=f"{stored!r} vs {again!r}"):
+                recheck.agree({"c1_pass": stored}, {"c1_pass": again})
+        self.assertEqual(recheck.agree({"c1_pass": True}, {"c1_pass": True}), [])
+
     def test_a_tuple_is_the_list_the_run_recorded(self):
         """evaluate() returns a tuple, metrics.json holds a list: the same
         value after the JSON round trip, not a difference (audit 2026-10-15)."""

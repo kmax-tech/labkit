@@ -55,7 +55,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats import protocol_block, scope_sha
+from labkit.formats import protocol_block, runs, scope_sha
 
 #: the letters of the promise block, and what each one is
 KINDS = {"C": "criterion", "A": "admissibility", "B": "branch"}
@@ -431,7 +431,7 @@ def constant_records(block: PromiseTables, run_config: dict) -> list[ConstantRec
                 out.append(ConstantRecord(p.id, name, value, None, "missing"))
                 continue
             got = run_config[name]
-            same = type(got) is type(value) and got == value
+            same = runs.as_stored(got) == runs.as_stored(value)
             out.append(
                 ConstantRecord(p.id, name, value, got, "equal" if same else "different")
             )
