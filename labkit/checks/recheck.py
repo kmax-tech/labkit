@@ -223,15 +223,24 @@ _NOT_A_NUMBER = re.compile(
 )
 
 
+#: one number as the note writes it: a sign only where it cannot be a
+#: hyphen (`3-5` is 3 and 5, `x=-0.5` is -0.5), a decimal part, an exponent
+_NUMBER_TOKEN = re.compile(
+    r"(?<![\d.])(?:(?<![A-Za-z0-9_)\]])[-+])?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?(?!\d)"
+)
+
+
 def _present(number: str, text: str) -> bool:
-    """The number as a token, not as a digit run inside another number or a
-    stamp: `3.5` is not in `13.57`, `12` is not in `12.7`, and `10` is not
-    in the run id `…T10-22-33_ab12` or the date `2026-10-05` — the run id
-    is mandatory in every note, so a count equal to one of its parts
-    passed as cited (audit 2026-10-15)."""
-    n = number.lstrip("+").replace(",", ".")
+    """The number as a whole token of the note, sign and exponent included,
+    not as a digit run inside another number or a stamp: `3.5` is not in
+    `13.57`, `12` is not in `12.7`, `0.5` is not in `-0.5`, `1` and `5`
+    are not in `1e-5` (review 2026-10-20), and `10` is not in the run id
+    `…T10-22-33_ab12` or the date `2026-10-05` — the run id is mandatory
+    in every note, so a count equal to one of its parts passed as cited
+    (audit 2026-10-15). A leading `+` is no sign."""
+    n = number.replace("−", "-").replace(",", ".").lstrip("+")
     text = _NOT_A_NUMBER.sub(" ", text.replace("−", "-").replace(",", "."))
-    return re.search(rf"(?<![\d.]){re.escape(n)}(?!\d|\.\d)", text) is not None
+    return any(t.group().lstrip("+") == n for t in _NUMBER_TOKEN.finditer(text))
 
 
 ANSWER_OPEN = re.compile(

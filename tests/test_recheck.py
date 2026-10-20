@@ -137,6 +137,27 @@ class Area(unittest.TestCase):
         self.assertTrue(recheck._present("-0.2", "delta −0.2"))
         self.assertTrue(recheck._present("+0.2", "delta 0.2"))
 
+    def test_sign_and_exponent_belong_to_the_number(self):
+        """Review 2026-10-20: `0.5` was found in `-0.5`, `1` and `5` in `1e-5`."""
+        self.assertFalse(recheck._present("0.5", "delta -0.5"))
+        self.assertFalse(recheck._present("0.5", "delta −0.5"))
+        self.assertFalse(recheck._present("1", "p = 1e-5"))
+        self.assertFalse(recheck._present("5", "p = 1e-5"))
+        self.assertTrue(recheck._present("1e-5", "p = 1e-5"))
+        self.assertTrue(recheck._present("-0.5", "(-0.5)"))
+        # a hyphen between numbers is no sign: both ends are cited
+        self.assertTrue(recheck._present("3", "range 3-5"))
+        self.assertTrue(recheck._present("5", "range 3-5"))
+
+    def test_a_note_with_the_wrong_sign_is_refused(self):
+        self._record({"delta": -0.5})
+        self.note.write_text(
+            "delta 0.5 · run 2026-10-05T19-00-00_ab12\n" + "\n" + head()
+        )
+        with self.assertRaises(SystemExit) as cm:
+            recheck.holds(self.area, self.out, lambda rows: {"delta": -0.5}, self.note)
+        self.assertIn("numbers not in", str(cm.exception))
+
     def test_a_value_of_another_json_type_differs(self):
         """Review 2026-10-20: `true` and `1` were equal to Python's `==`."""
         for stored, again in (
