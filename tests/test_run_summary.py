@@ -66,13 +66,15 @@ class Summary(unittest.TestCase):
             run = _run(
                 Path(d),
                 "r2",
-                derived_from="r1",
+                derived_from="2026-10-01T10-00-00_aaaa",
                 git="abc1234+dirty",
                 models_resolved={"haiku": {"model": "x"}},
             )
             (run / "uncommitted.patch").write_text("diff --git a b\n")
             s = runs.run_summary(run)
-            self.assertEqual((s.derived_from, s.models), ("r1", ("haiku",)))
+            self.assertEqual(
+                (s.derived_from, s.models), ("2026-10-01T10-00-00_aaaa", ("haiku",))
+            )
             self.assertTrue(s.git.endswith("+dirty"))
             self.assertGreater(s.uncommitted_bytes, 0)
             self.assertIsNone(s.command)  # recorded only from labkit 0.69

@@ -207,7 +207,7 @@ class ModelProvenance(unittest.TestCase):
         child = _run(
             self.area,
             "2026-10-02T10-00-00_bbbb",
-            derived_from="2026-10-01T10-00-00_gone",
+            derived_from="2026-10-01T10-00-00_dead",
         )
         with self.assertRaisesRegex(ValueError, "not under"):
             answering_run.model_provenance_run(child)

@@ -23,6 +23,7 @@ from labkit.formats.standard_contract import PREFLIGHT_AUDIT, lane
 from labkit.formats.scope_sha import area_stamp
 from labkit.formats.runs import (
     COMPLETED,
+    RUN_ID,
     RunConfigError,
     completion_state,
     read_run_config,
@@ -349,6 +350,11 @@ def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
     be a completed run of this area and no repeat."""
     if derived_from is None:
         return None
+    if RUN_ID.fullmatch(derived_from) is None:
+        raise SystemExit(
+            f"runlog: derived_from={derived_from!r} is not a run id — name a "
+            f"run of {base_dir / 'runs'} by its id, never a path"
+        )
     parent = base_dir / "runs" / derived_from
     try:
         state = completion_state(parent) if parent.is_dir() else "missing"

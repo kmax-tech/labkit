@@ -449,8 +449,9 @@ def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
 def lineage(run_dir: Path) -> list[Path]:
     """The run and its ancestors along `derived_from`, the run first. The
     whole chain is checked, not only up to the run a reader needs: every
-    run has a config.json, every `derived_from` names a run directory
-    beside it, and no run comes twice.
+    run has a config.json, every `derived_from` is a run id (held where the
+    config is read, `runs.read_run_config`) naming a run directory beside
+    it, and no run comes twice — compared as resolved paths, not names.
 
     Raises:
         ValueError: A run without config.json, a `derived_from` that is not
@@ -474,10 +475,11 @@ def lineage(run_dir: Path) -> list[Path]:
             raise ValueError(
                 f"{here.name}: derived_from must name a run, not {parent!r}"
             )
-        if parent in (run.name for run in chain):
+        nxt = run_dir.parent / parent
+        if nxt.resolve() in (run.resolve() for run in chain):
             names = " -> ".join([*(run.name for run in chain), parent])
             raise ValueError(f"{run_dir.name}: derived_from loops: {names}")
-        here = run_dir.parent / parent
+        here = nxt
         if not here.is_dir():
             raise ValueError(
                 f"{run_dir.name}: derived_from names {parent}, which is not under {run_dir.parent}"

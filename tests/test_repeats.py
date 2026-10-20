@@ -375,6 +375,9 @@ class Repeats(unittest.TestCase):
             (unfinalized.name, "names no completed run"),
             (unreadable.name, "derived_from="),
             ("2026-01-01T00-00-00_0000", "names no completed run"),
+            # a path to a run, even the right one, is no run id (review 2026-10-20)
+            (f"./{primary}", "is not a run id"),
+            (f"../../elsewhere/runs/{primary}", "is not a run id"),
         ):
             with self.subTest(parent=parent):
                 if needle is None:

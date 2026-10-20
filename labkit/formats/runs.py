@@ -407,7 +407,7 @@ def _shape_problem(cfg: object) -> str | None:
         value = cfg.get(key)
         if value is not None and not isinstance(value, dict):
             return f"{key} = {value!r}, not an object"
-    return _repeat_shape_problem(cfg)
+    return _derived_shape_problem(cfg) or _repeat_shape_problem(cfg)
 
 
 #: labkit's own tables in config.json: each an object or null (`promises`
@@ -415,6 +415,18 @@ def _shape_problem(cfg: object) -> str | None:
 #: read as an empty table let a repeat with an empty config pass as
 #: comparable (review 2026-10-20).
 RECORD_TABLES = ("config", "data", "models_resolved", "promises")
+
+
+def _derived_shape_problem(cfg: JsonObject) -> str | None:
+    """`derived_from` null or a run id: the parent is a run of the same
+    runs/ directory, named, never a path — `./<own run>` looped the walk
+    forever and `../../<elsewhere>` left the area (review 2026-10-20)."""
+    parent = cfg.get("derived_from")
+    if parent is None or (isinstance(parent, str) and RUN_ID.fullmatch(parent)):
+        return None
+    return (
+        f"derived_from = {parent!r} must name a run of this runs/ directory (a run id)"
+    )
 
 
 def _repeat_shape_problem(cfg: JsonObject) -> str | None:

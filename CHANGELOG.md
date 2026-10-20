@@ -219,6 +219,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`derived_from` names a run, never a path.** `./<own run>` slipped
+  past the loop check by its spelling and hung every lineage reader;
+  `../../<elsewhere>` was accepted as a parent outside the area. runlog
+  refuses such a value at the start, a config.json holding one is
+  unreadable (`RunConfigError`, like a damaged `repeat_of`), and the walk
+  compares resolved paths. A record written with such a value no longer
+  reads; it was never a run of this area's chain.
 - **`runlog <area>` names each finished run's kind.** Preparation, probe
   and measurement all read "fresh run of the script"; each line now starts
   with its `run_kind` (`RunSummary.run_kind`), and the listing reads each
