@@ -36,7 +36,7 @@ kein Ziel.
 | D | Doktrin und Gerüstbauer ins Paket (Punkt 5; `AGENTS.md`-Vorlage aus Punkt 6 inbegriffen) | **erledigt 2026-10-12** — Phase 1 (0.77.0) und Phase 2 (0.78.0) gebaut; der Thesis-Starter bleibt Haus (entschieden 2026-10-12, s. Punkt 5). Auslöser war 2026-10-09: verwirrt den Autor selbst |
 | R | Rollout in einem Release: die Pins der Labor- und Thesis-Repos heben, Punkt 7 Schritte 0, 2–4, Punkt 8 (Kopffelder als Daten, Altpfade raus) | **Kern erledigt 2026-10-12 (Tag `v0.85.0` auf GitHub):** die vier aktiven Labor-Repos auf dem Tag, je ein Commit; Reste unter Punkt 5, „Zeile R“ |
 | Tokenkosten | messen statt schätzen — `llm.last_usage()`, `labkit-audit` druckt Prompt- und Output-Tokens, `agent_transcript.tokens` liest die Usage-Blöcke der Claude-Code-Transkripte (0.81.0, 2026-10-11) | **erledigt 2026-10-11.** Auslöser: 30 Transkripte (labkit, uniagent) summieren 7 Mrd. Cache-Read-Tokens, die alten Subagenten-Audits je 3,65 Mio., und keine labkit-Zeile sagte, was ein Aufruf kostet. Pilot `labkit-paper` Bereich 04 (`audit-on-reachable-code-holds`, Lauf `2026-10-11T14-00-57_071a`): die direkten Importe auf erreichbaren Code zu kürzen spart 0–16 % des Prompts (Median 8 % über 24 uniagent-Bereiche) — **an der Renderprobe gestoppt, kein Modellaufruf; LAB-103 The audit reads by declared scope, not by import graph bleibt.** Der Prompt ist groß, weil die Zahl fast den ganzen Agenten braucht (Bereich 19: 142 von 155 kB Importe erreicht), nicht wegen ungenutztem Code; Fixkosten je Audit ~69 kB (Instruktionen 9, zitierte Regeln 19, Protokoll 26, Index 15). Ein kleinerer Audit bräuchte eine andere Frage (Audit je Versprechen über seinen deklarierten Scope), kein Schnitt. Die Hauptsitzungen (Median 400–500 k Kontext je Aufruf) sind Sitzungshygiene, keine labkit-Aufgabe. |
-| P | Pilotrunden 2026-10-16 (Haiku v1, Sonnet v2/v3, Labor `labkit-paper` Bereich 09): Plan „Kein stiller Ausweg“ unten — A Marke und Verweigerung · B Berichtsfelder vor dem Lauf · C Vorlage ohne Modell · D Doktrin zum Vorab-Blick | **geplant 2026-10-17**; A1, A3, A4 gebaut (0.99.0); B1, C1, C2, C3, D1, D2 aus dem Branch `zealous-davinci` übernommen (Unreleased, 2026-10-19); A1b, A2 überholt; A5 erledigt 2026-10-20; nächster Schritt der Audit-Snapshot (s. „Architekturvorschlag 2026-10-20“) |
+| P | Pilotrunden 2026-10-16 (Haiku v1, Sonnet v2/v3, Labor `labkit-paper` Bereich 09): Plan „Kein stiller Ausweg“ unten — A Marke und Verweigerung · B Berichtsfelder vor dem Lauf · C Vorlage ohne Modell · D Doktrin zum Vorab-Blick | **geplant 2026-10-17**; A1, A3, A4 gebaut (0.99.0); B1, C1, C2, C3, D1, D2 aus dem Branch `zealous-davinci` übernommen (Unreleased, 2026-10-19); A1b, A2 überholt; A5 und der Audit-Snapshot erledigt 2026-10-20 (`0ffb98b`, `a38ed95`); nächster Schritt laut „Architekturvorschlag 2026-10-20“: Run-Records typisieren, dann Backend-Typen |
 
 **1a gebaut (2026-10-06):** `labkit/promises.py` ist die eine Heimat des
 Alphabets (C/A/B plus Altbuchstaben K/S/W/N in Prosa) und des
@@ -916,6 +916,13 @@ den Ertrag je Klasse auszählt.
   Strukturierte Findings (Punkt 1) erst, wenn eine konkrete
   Fehlklassifikation oder ein Wartungsproblem sie verlangt — der Fallback
   von `grade_of` (ungradiert = Blocker) begrenzt das Risiko bis dahin.
+  *Snapshot erledigt 2026-10-20 (`a38ed95`):* `scope_sha.area_snapshot`
+  liest die gestempelten Dateien einmal, Prompt, Scope-Sha, Block-Sha und
+  Laufwahl kommen aus dieser einen Lesung (`audit.bound_prompt`); Test
+  `tests/test_audit.py`, Klasse `OneSnapshot` — gegen den alten Ablauf
+  fallen beide Änderungsfälle, der Zwilling besteht. Nicht gebunden bleibt
+  die Prosa des Protokolls (nur der Promise-Block hat einen Digest) und
+  die gezeigten Zeilen des Laufs (gebunden ist die Lauf-ID).
   *Abnahme Snapshot:* eine Dateiänderung zwischen Einlesen und Modellaufruf
   kann keinen Record erzeugen, dessen Digest andere Inhalte beschreibt als
   der Prompt — mit gezieltem Regressionstest (Datei nach `gather`, vor
