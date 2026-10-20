@@ -221,11 +221,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 - **Resume compares the instrument as JSON stores it.** `Store.pending`
   uses `runs.as_stored`: `true` differs from `1`, while a tuple and its
-  stored list representation describe the same instrument.
+  stored list representation describe the same instrument. An instrument
+  JSON cannot hold raises `TypeError` when the `Store` is built, not at the
+  first append.
 - **Every lineage reader uses one fully validated chain.**
   `answering_run.lineage` checks every ancestor, including those beyond
   the first recorded model. Missing parents and cycles are errors in
-  model provenance, parameter display and row-provenance checks alike.
+  model provenance, parameter display and row-provenance checks alike;
+  finalize blocks on a broken chain instead of ending the walk silently.
 - **A declared scope file reopens its area even without an import.** The
   stop hook and staged release check include files named in promises,
   including data or rubrics outside `lib/` and `src/`. A damaged promise
