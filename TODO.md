@@ -53,7 +53,7 @@ Auftrag. Forschung und Benchmark-Fallliste liegen in
 
 | Bereich | Noch offen | Bedingung / Vertrag |
 |---|---|---|
-| Run-Records | `runlog.active` liefert Dicts mit hineingemischter Config. Eigene Config-Felder werden nach der Lesegrenze weiterhin über Schlüssel gelesen. | Öffentliche Skript-API gesondert behandeln. Vollständige `RunConfig` nur mit klaren Invarianten für die eigenen Felder; Experiment-Config bleibt frei. |
+| Run-Records | `runlog.active` liefert Dicts mit hineingemischter Config. Eigene Config-Felder werden nach der Lesegrenze weiterhin über Schlüssel gelesen. | Entwurf: [typisierte Run-Metadaten](docs/notes/2026-10-20-typed-run-metadata.md) — `RunConfig` an der Lesegrenze, `ActiveRun` statt Dict; drei Entscheidungen offen (`active` brechen, fremde Schlüssel, eigene Tabellen). |
 | Backend-Aufrufe | Server-Antworten sind noch nicht durchgängig strikt typisiert. (`max_tokens` ist optional; claude-cli verweigert eine ausdrückliche Angabe.) | Antwortparser als eigener Schritt mit fehlerhaften Antworten testen. |
 | Findings | Die erste Fehlklassifikation ist eingetreten und eng behoben (`e6dbb08`): Protokoll-ID-Befunde tragen ihren Grad als `GateFinding`, `grade_of` liest nur das erste Wort. `code_check.code_findings` liefert weiter Text, gradiert über das führende `BLOCKER ·`/`WARNING ·`. | Beim nächsten Fehlgrad oder Wartungsproblem Grad, Stufe, Fundstelle und Nachricht als Daten bis zur CLI reichen. Gemeinsame Prüfliste beibehalten. |
 
