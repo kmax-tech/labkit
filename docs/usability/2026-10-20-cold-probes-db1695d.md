@@ -167,8 +167,8 @@ got an aid (CHANGELOG, Unreleased; commits `4a4a130`..`80d2ff0`):
 - **An independent review of these fixes** (same day) found eleven
   more problems in them — among them valid id spellings dropped from
   `--list`, characters that broke a written TOML string, two adopt hints
-  still without a protocol. All but one pre-existing one are fixed
-  (CHANGELOG, Unreleased); the remaining one is in TODO.md.
+  still without a protocol, an ambiguous area name refused as missing.
+  All are fixed (CHANGELOG, Unreleased).
 - **Areas stamped before keep their stamped scripts.** The adopt line of
   finding 5 lives in the measure-script templates; an area stamped before
   the fix prints the bare file name until it is stamped again. The probes
