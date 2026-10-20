@@ -219,6 +219,10 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **protocol-check says OK only when it found nothing.** A doubled id, an
+  audit line that no longer covers the code, a lowered cost tier or an
+  answer without a run stood above "OK — must fields filled"; the OK now
+  needs all of them absent too.
 - **A file name no longer grades a finding.** protocol-check and preflight
   read the grade of a protocol-id finding from its text, which carries the
   path: in `PROTOCOL-WARNING.md` a doubled id passed as a warning. The id

@@ -30,8 +30,9 @@ from labkit.formats import (  # noqa: E402
     protocol_check,
     protocol_history,
     protocol_report,
+    scope_sha,
 )  # noqa: E402
-from protocol_fixture import head  # noqa: E402
+from protocol_fixture import head, scope_file  # noqa: E402
 
 
 MUST = [f.label for f in protocol_check.FIELDS if f.level == "must"]
@@ -182,9 +183,23 @@ class TestFixtures(unittest.TestCase):
         self.assertEqual(rc, 0, out)
 
     def test_frozen_passes(self):
-        rc, out = run_main(frozen())
-        self.assertEqual(rc, 0, out)
-        self.assertIn("all must and should fields filled", out)
+        """OK only when nothing at all is found: the area's code exists and
+        the audit line names the stamp it has now (until 2026-10-20 the OK
+        stood beside a preflight_audit warning)."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            scope_file(area)
+            sha = scope_sha.area_stamp(area)[0]
+            p = area / "PROTOCOL-x.md"
+            p.write_text(
+                frozen(preflight_audit=f"2026-10-20 · scope sha {sha} · 0 findings"),
+                encoding="utf-8",
+            )
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = protocol_report.main([str(p)])
+        self.assertEqual(rc, 0, buf.getvalue())
+        self.assertIn("all must and should fields filled", buf.getvalue())
 
 
 class TestCheckFields(unittest.TestCase):

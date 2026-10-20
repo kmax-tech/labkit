@@ -171,6 +171,41 @@ class TestUniqueness(unittest.TestCase):
                 grades = [f.grade for f in found.found if "DUPLICATE" in f.line]
                 self.assertEqual(grades, [BLOCKER], found.found)
 
+    def test_no_ok_line_beside_a_finding(self):
+        """`clean` ignored the findings printed before it: a doubled id stood
+        above "OK — must fields filled". The twin: nothing found, OK."""
+        from dataclasses import replace
+
+        from labkit.formats.gate import BLOCKER, GateFinding
+
+        base = protocol_report.FileReport(path=Path("P.md"), head_error=None)
+        self.assertTrue(base.clean)
+        for name, r in (
+            ("audit_drift", replace(base, audit_drift="the code now stamps abc")),
+            (
+                "id_findings",
+                replace(base, id_findings=[GateFinding(BLOCKER, "P.md: DUPLICATE")]),
+            ),
+            (
+                "cost_lowered",
+                replace(base, cost_lowered="P.md: WARNING: cost tier lowered"),
+            ),
+            (
+                "answer_unbound",
+                replace(base, answer_unbound="WARNING: Answer without run_id"),
+            ),
+        ):
+            with self.subTest(finding=name):
+                self.assertFalse(r.clean)
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / ".git").mkdir()
+            first = _protocol(d)
+            _, alone = _check([first])
+            _protocol(d, name="PROTOCOL-copy.md")
+            _, doubled = _check([first])
+        self.assertIn(": OK —", alone)
+        self.assertNotIn(": OK —", doubled)
+
     def test_distinct_ids_side_by_side_are_fine(self):
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / ".git").mkdir()

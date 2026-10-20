@@ -357,9 +357,16 @@ class FileReport:
 
     @property
     def clean(self) -> bool:
-        """Nothing to report beyond the pilot note."""
+        """No finding at all — what lets `print_report` say OK. The pilot note
+        and the Runs hint are notes, not findings. Every finding counts,
+        also those printed above the OK line (a doubled id stood above "OK
+        — must fields filled", review 2026-10-20)."""
         return not (
-            self.bare_refs
+            self.audit_drift
+            or self.id_findings
+            or self.cost_lowered
+            or self.answer_unbound
+            or self.bare_refs
             or self.missing_must
             or self.missing_should
             or self.must_holes
