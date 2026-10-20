@@ -219,6 +219,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A Store's instrument is fixed when the Store is built.** It was copied
+  one level deep: a caller changing an inner dict afterwards gave later
+  rows another `_instrument` than earlier ones, while the resume compared
+  against the first. The comparison and every row's stamp now come from
+  one snapshot taken at construction; `Store.instrument` returns a copy of
+  it.
 - **`derived_from` names a run, never a path.** `./<own run>` slipped
   past the loop check by its spelling and hung every lineage reader;
   `../../<elsewhere>` was accepted as a parent outside the area. runlog

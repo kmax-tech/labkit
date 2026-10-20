@@ -232,10 +232,18 @@ class Store:
     `pending()` refuses to resume a file holding a row measured with another
     (or none): a changed prompt is a new measurement, not a continuation.
     Instruments compare as the file stores them (`runs.as_stored`): `1` is
-    not `true`, a tuple is its list. An instrument JSON cannot hold raises
-    TypeError at construction. Resume by id alone let a new prompt keep the
+    not `true`, a tuple is its list. The instrument is snapshot at
+    construction; the comparison and every row's stamp come from that
+    snapshot. An instrument JSON cannot hold raises TypeError at
+    construction. Resume by id alone let a new prompt keep the
     old prompt's answers (the cloud judge probe's analysis audit, 2026-10-14).
     """
+
+    @property
+    def instrument(self) -> dict | None:
+        """The instrument as given at construction, a fresh copy of the one
+        snapshot each time (as the file stores it: a tuple is a list)."""
+        return json.loads(self._instrument_stored)
 
     def __init__(
         self,
@@ -251,12 +259,15 @@ class Store:
         self.id_key = id_key
         self.prov = dict(prov) if prov else {}
         self.mode = mode
-        self.instrument = dict(instrument) if instrument else None
+        given = dict(instrument) if instrument else None
         try:
-            self._instrument_stored = runs.as_stored(self.instrument)
+            # one snapshot, taken now: the comparison and every row's stamp
+            # come from it, so a caller changing an inner dict later changes
+            # neither (a shallow copy shared them, review 2026-10-20)
+            self._instrument_stored = runs.as_stored(given)
         except TypeError as exc:
             raise TypeError(
-                f"Store instrument {self.instrument!r} cannot be stored as JSON: {exc}"
+                f"Store instrument {given!r} cannot be stored as JSON: {exc}"
             ) from exc
         self.lock = self.path.with_suffix(self.path.suffix + ".lock")
         self._tmp = self.path.with_suffix(self.path.suffix + ".tmp")

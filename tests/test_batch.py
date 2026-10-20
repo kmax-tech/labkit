@@ -232,6 +232,20 @@ class StoreInstrument(unittest.TestCase):
             todo = list(store.pending([{"id": "x:1"}, {"id": "x:2"}]))
         self.assertEqual([r["id"] for r in todo], ["x:2"])
 
+    def test_every_row_carries_the_instrument_as_it_was_given(self):
+        """A shallow copy shared its inner dicts with the caller: changed
+        after construction, later rows carried another stamp than earlier
+        ones, while the resume compared against the first (review
+        2026-10-20)."""
+        given = {"model": {"alias": "haiku"}, "prompt_sha": "a"}
+        out = Path(tempfile.mkdtemp()) / "rows.jsonl"
+        with batch.Store(out, instrument=given) as store:
+            store.append({"id": "x:1"})
+            given["model"]["alias"] = "opus"
+            store.append({"id": "x:2"})
+        stamps = [r["_instrument"] for r in batch.Store(out).records()]
+        self.assertEqual(stamps, [{"model": {"alias": "haiku"}, "prompt_sha": "a"}] * 2)
+
     def test_an_instrument_json_cannot_hold_is_refused_at_construction(self):
         out = Path(tempfile.mkdtemp()) / "rows.jsonl"
         with self.assertRaises(TypeError) as cm:
