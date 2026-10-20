@@ -567,10 +567,13 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             "the bundle for the code-check agent"
         )
     elif standard_contract.lane(_cost_of(protocol)).registration:
+        # only the agent's review is not owed here; the protocol's open
+        # fields are, and the pre-commit holds them (judge probe, 2026-10-20)
         parts.append(
-            "schema, gate labels, placeholders: not checked — not owed at cost "
-            "seconds, the measurement checks the instrument (--bundle hands them to the "
-            "code-check agent anyway)"
+            "schema, gate labels: not checked — the agent's review is not owed "
+            "at cost seconds, the measurement checks the instrument (--bundle "
+            "hands them to the code-check agent anyway); the protocol's open "
+            "fields are owed: protocol-fill <PROTOCOL> --list"
         )
     else:
         parts.append(

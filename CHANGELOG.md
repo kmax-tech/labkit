@@ -263,6 +263,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`code-check` at `seconds` no longer calls the protocol's open fields
+  not owed.** Its closing line read "schema, gate labels, placeholders: not
+  checked — not owed at cost seconds"; only the agent's review of schema
+  and gate labels is not owed there. The line now says so and points at
+  `protocol-fill <PROTOCOL> --list` for the fields the pre-commit holds
+  (judge probe, 2026-10-20).
 - **`protocol-fill` lists and fills the promise sentences.** `--list` names
   each [[promise]] sentence still holding the stamp's `<…>` as `<id>
   sentence`, after the head's `type`; `"C1 sentence=..."` fills it, in the

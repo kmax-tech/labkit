@@ -347,6 +347,31 @@ class TestProtocolChoice(unittest.TestCase):
         self.assertIn("no such protocol", out)
 
 
+class TestSummaryLine(unittest.TestCase):
+    """What the closing line says is not checked. At seconds it read
+    "schema, gate labels, placeholders: not checked — not owed at cost
+    seconds", and an agent took the protocol's open fields for not owed; the
+    pre-commit then refused the open promise sentence (judge probe,
+    2026-10-20). Only the agent's review is not owed there."""
+
+    def _line(self, cost: str) -> str:
+        from protocol_fixture import head
+
+        with AreaFixture(head(cost=cost) + PROTOCOL_TWO, {"m.py": CLEAN_CODE}) as a:
+            _, out = a.run()
+        return out.strip().splitlines()[-1]
+
+    def test_at_seconds_the_open_fields_are_not_called_not_owed(self):
+        line = self._line("seconds")
+        self.assertNotIn("placeholders: not checked", line)
+        self.assertIn("schema, gate labels: not checked", line)
+        self.assertIn("protocol-fill <PROTOCOL> --list", line)
+
+    def test_above_seconds_the_bundle_is_named(self):
+        line = self._line("minutes")
+        self.assertIn("need --bundle for the code-check agent", line)
+
+
 if __name__ == "__main__":
     unittest.main()
 
