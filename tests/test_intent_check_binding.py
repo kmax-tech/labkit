@@ -82,7 +82,7 @@ def _run(
 
 def _check(argv):
     buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
+    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
         code = intent_check.main([str(a) for a in argv])
     return code, buf.getvalue()
 

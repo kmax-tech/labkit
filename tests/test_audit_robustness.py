@@ -109,7 +109,7 @@ class ChoiceNeverPassesAnUnreadableRun(unittest.TestCase):
             broken.mkdir()
             (broken / "config.json").write_text("{")
             buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
                 rc = intent_check.main([str(protocol)])
             self.assertEqual(rc, 2, buf.getvalue())
             self.assertIn("cannot say which protocol", buf.getvalue())

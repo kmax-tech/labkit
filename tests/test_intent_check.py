@@ -71,7 +71,7 @@ class TestIntentCheck(unittest.TestCase):
 
     def _run(self, argv):
         buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
             rc = intent_check.main(argv)
         return rc, buf.getvalue()
 
@@ -199,6 +199,21 @@ class TestIntentCheck(unittest.TestCase):
         )
         self.assertEqual(rc, 2)
         self.assertIn("no such metrics file", out)
+
+    def test_a_refusal_goes_to_stderr_and_leaves_stdout_to_findings(self):
+        """A caller reading stdout for findings must not read a refusal as one."""
+        self.proto.write_text(head() + "[C1]", encoding="utf-8")
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = intent_check.main(
+                [str(self.proto), "--metrics", str(self.area / "gone.json")]
+            )
+        self.assertEqual(rc, 2)
+        self.assertEqual(out.getvalue(), "")
+        self.assertEqual(
+            err.getvalue(),
+            f"intent-check: no such metrics file: {self.area / 'gone.json'}\n",
+        )
 
     def test_help_exits_zero(self):
         rc, out = self._run(["--help"])

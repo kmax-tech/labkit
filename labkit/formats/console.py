@@ -25,6 +25,13 @@ def refuse(tool: str, why: str) -> None:
     print(f"{tool}: {why}", file=sys.stderr)
 
 
+class Refused(Exception):
+    """A command that cannot run, raised where the reason is known and caught
+    where the command decides its exit: `refuse(tool, str(exc))`, exit 2. It
+    replaces an exit code returned beside a result (`Path | int`), where the
+    caller had to know that a number meant "already printed"."""
+
+
 def exit_with(main: Callable[[list[str]], int]) -> None:
     """Exit with `main(argv)`'s code; a pipe closed by the reader is exit 0."""
     try:

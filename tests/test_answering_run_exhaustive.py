@@ -26,6 +26,7 @@ from pathlib import Path
 
 from protocol_fixture import head
 
+from labkit.formats import console
 from labkit.gates import audit, finalize
 from labkit.tools import params
 from labkit.probes import usability_score
@@ -233,9 +234,13 @@ def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
         got = finalize.answering_run(found, area, PID, True)
     out["finalize"] = BLOCKED if found.blocked or got is None else got.name
 
-    with contextlib.redirect_stdout(io.StringIO()):
-        bound = intent_check.choose_bound(protocol, PID, True)
-    out["intent-check"] = bound.parent.name if isinstance(bound, Path) else BLOCKED
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            out["intent-check"] = intent_check.choose_bound(
+                protocol, PID, True
+            ).parent.name
+    except console.Refused:
+        out["intent-check"] = BLOCKED
 
     try:
         out["recheck"] = recheck.chosen_run(area, text).name

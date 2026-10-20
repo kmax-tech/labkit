@@ -70,7 +70,7 @@ def _area(d, runs):
 
 def _run_main(argv):
     buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
+    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
         code = intent_check.main(argv)
     return code, buf.getvalue()
 

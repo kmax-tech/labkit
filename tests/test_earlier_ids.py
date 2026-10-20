@@ -35,7 +35,7 @@ class EarlierIds(unittest.TestCase):
             p = Path(d) / "PROTOCOL-x.md"
             p.write_text(TEXT, encoding="utf-8")
             buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
                 rc = intent_check.main([str(p)])
         self.assertEqual(rc, 2, buf.getvalue())
         self.assertIn("K1, S1", buf.getvalue())

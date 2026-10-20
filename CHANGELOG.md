@@ -320,6 +320,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **intent-check refuses on stderr.** A protocol it cannot read, a
+  metrics file that may not answer, no bound run to choose: each goes
+  through `console.refuse` with exit 2, as the other gates already did;
+  stdout carries only what the check found. Inside `finalize` the reason
+  still stands above its blocker in the terminal.
 - **The README introduces labkit and walks through using it.** Installation,
   the measurement lifecycle, cost tiers and result adoption precede the
   command reference. Internal records and enforcement live in

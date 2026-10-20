@@ -60,8 +60,9 @@ def make_run(area: Path, name: str) -> Path:
 
 
 def quiet(fn, *args):
+    """(exit code, what FN printed on stdout and stderr together)."""
     buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
+    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
         rc = fn(*args)
     return rc, buf.getvalue()
 
