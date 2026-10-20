@@ -199,7 +199,7 @@ evidence** (warns), **agent audit** (semantic).
 | Which protocol does a new run bind to? | `start_check.protocol_binding` |
 | What refuses a run before its directory exists, in which order? | `runlog.Run.__init__` (the registration, the detach gate where required and not already detached, the index header, data leakage, then for a full run `start_check.freeze_gate`: undecided blockers, the freeze or the registration, the acknowledgement over a failed audit); `start_check.prepare` refuses what cannot be read before any check |
 | Which run answers for a protocol? | `answering_run.bound_answering_run` (the choice; `intent_check.choose_explicit` takes a named run; `recheck.chosen_run` is the same choice behind `--check` and `--from-run`) |
-| Is this run a repeat draw, of which, and is it comparable? | `runs.repeat_parent`, `answering_run.repeats_of`, `answering_run.repeat_mismatch` — a repeat never answers (`bound_runs` leaves it out, `completed_runs(with_repeats=…)` makes every caller decide) |
+| Is this run a repeat draw, of which, and is it comparable? | `RunConfig.repeat_of`, `answering_run.repeats_of`, `answering_run.repeat_mismatch` — a repeat never answers (`bound_runs` leaves it out, `completed_runs(with_repeats=…)` makes every caller decide) |
 | Which run recorded the model that answered these rows? | `answering_run.model_provenance_run` (walks `derived_from`; a derived run records none) |
 | Is a run's `derived_from` chain whole? | `answering_run.lineage` (every config readable, every parent present, no loop — the whole chain; model provenance, params and row provenance read it) |
 | Which protocol does a command hold an area to? | `repo.choose_protocol` (the named one, else the only one; never a guess) |

@@ -88,5 +88,64 @@ class NestedValuesAreCopies(unittest.TestCase):
         )
 
 
+class ReviewFindings(unittest.TestCase):
+    """The independent review of 8d789b4 and e0c21e0 (2026-10-20)."""
+
+    def test_the_record_keeps_its_key_order_and_its_null(self) -> None:
+        cfg = runs.parse_run_config({**BASE, "config": {"zeta": 1, "alpha": 2}})
+        self.assertEqual(list(cfg.config), ["zeta", "alpha"])
+        self.assertEqual(list(cfg.as_record()["config"]), ["zeta", "alpha"])
+        null = runs.parse_run_config({**BASE, "config": None})
+        self.assertIsNone(null.as_record()["config"])
+
+    def test_the_status_line_prints_the_config_as_stored(self) -> None:
+        from labkit.run import runlog_command
+
+        area = Path(tempfile.mkdtemp())
+        run = area / "runs" / "2026-01-01T00-00-00_aaaa"
+        run.mkdir(parents=True)
+        (run / "config.json").write_text(
+            json.dumps({**BASE, "config": {"zeta": "ü", "alpha": [0]}}),
+            encoding="utf-8",
+        )
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            runlog_command._print_status(str(area), runlog.active(area))
+        self.assertIn('{"zeta": "ü", "alpha": [0]}', out.getvalue())
+
+    def test_the_binding_holds_id_and_path_only_and_reads_back_as_stored(self) -> None:
+        with self.assertRaisesRegex(runs.RunConfigError, "protocol.zz: not a field"):
+            runs.parse_run_config(
+                {**BASE, "protocol": {"id": "x", "path": "p", "zz": 1}}
+            )
+        unbound = runs.parse_run_config({**BASE, "protocol": None})
+        self.assertIsNone(unbound.as_record()["protocol"])
+        self.assertEqual(unbound.protocol, runs.ProtocolBinding(None, None))
+
+    def test_bytes_no_text_and_runaway_nesting_are_an_unreadable_run(self) -> None:
+        area = Path(tempfile.mkdtemp())
+        for name, raw in (
+            ("2026-01-01T00-00-00_aaaa", b"\xff\xfe{"),
+            ("2026-01-01T00-00-01_bbbb", b"[" * 100_000),
+        ):
+            (area / "runs" / name).mkdir(parents=True)
+            (area / "runs" / name / "config.json").write_bytes(raw)
+            with self.assertRaises(runs.RunConfigError):
+                runs.read_run_config(area / "runs" / name)
+        self.assertEqual(
+            [r.state for r in runlog.active(area)], ["unreadable", "unreadable"]
+        )
+
+    def test_an_active_run_has_a_config_or_an_error_exactly_one(self) -> None:
+        d = Path("runs/x")
+        cfg = runs.parse_run_config(dict(BASE))
+        for config, error in ((None, None), (cfg, "broken")):
+            with self.subTest(config=config, error=error):
+                with self.assertRaises(ValueError):
+                    runlog.ActiveRun("x", d, "unreadable", None, config, error)
+        runlog.ActiveRun("x", d, "crashed", False, cfg, None)  # the twins
+        runlog.ActiveRun("x", d, "unreadable", None, None, "broken")
+
+
 if __name__ == "__main__":
     unittest.main()

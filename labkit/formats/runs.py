@@ -196,7 +196,7 @@ def read_run_config(run_dir: Path) -> RunConfig | None:
         return None
     try:
         cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
         raise RunConfigError(
             f"{cfg_file}: unreadable run metadata ({exc}) — the run cannot "
             f"say what it is; repair or move it aside"
@@ -517,6 +517,11 @@ def binding_of(cfg: JsonObject) -> ProtocolBinding:
     if not isinstance(table, dict):
         raise RunConfigError(f"protocol = {table!r}, not an object")
     table = cast(JsonObject, table)
+    extra = sorted(set(table) - {"id", "path"})
+    if extra:
+        raise RunConfigError(
+            f"protocol.{', protocol.'.join(extra)}: not a field of the binding"
+        )
     found: list[str | None] = []
     for key in ("id", "path"):
         value = table.get(key)
@@ -526,10 +531,12 @@ def binding_of(cfg: JsonObject) -> ProtocolBinding:
     return ProtocolBinding(found[0], found[1])
 
 
-#: the top-level keys of config.json — exactly what `runlog.Run._write_record`
-#: writes; a key outside them makes the record unreadable (the writer is its
-#: only author, and a key nobody defines would be carried on unexplained).
-#: The experiment's own settings live inside `config` and stay free.
+#: the top-level keys of config.json — what `runlog.Run._write_record`
+#: writes, every one of them; a key outside them makes the record unreadable
+#: (the writer is its only author, and a key nobody defines would be carried
+#: on unexplained). A key ABSENT is not refused: it reads None or its
+#: default (TODO, "Fehlende Felder"). The experiment's own settings live
+#: inside `config` and stay free.
 RUN_CONFIG_KEYS = (
     "schema_version",
     "experiment",
@@ -570,9 +577,11 @@ _SCALARS: dict[str, type] = {
     "env": str,
     "started": str,
 }
-#: the nested fields: held as stored JSON text and handed out as fresh
-#: copies, so no reader can change what another reads (`frozen=True` alone
-#: freezes the fields, not the dicts in them)
+#: the nested fields: held as stored JSON text — in the record's own key
+#: order, which a printed config shows — and handed out as fresh copies,
+#: so no reader can change what another reads (`frozen=True` alone freezes
+#: the fields, not the dicts in them). The `protocol` table is kept there
+#: too, as written, for `as_record`; readers take `protocol` (the binding).
 _NESTED = (
     "promises",
     "untracked_sources",
@@ -750,7 +759,7 @@ def parse_run_config(obj: object) -> RunConfig:
         unfrozen_ack=ack,
         **{key: cfg.get(key) for key in _SCALARS},
         _nested=json.dumps(
-            {key: cfg.get(key) for key in _NESTED}, ensure_ascii=False, sort_keys=True
+            {key: cfg.get(key) for key in (*_NESTED, "protocol")}, ensure_ascii=False
         ),
     )
 

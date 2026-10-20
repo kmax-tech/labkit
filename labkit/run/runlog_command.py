@@ -56,7 +56,8 @@ def _print_status(area: str, live: list[ActiveRun]) -> None:
         if r.config is None:
             print(f"    {r.error}")
         else:
-            print(f"    {json.dumps(r.config.config, ensure_ascii=False)[:160]}")
+            shown = r.config.as_record()["config"]  # as stored: key order, null
+            print(f"    {json.dumps(shown, ensure_ascii=False)[:160]}")
 
 
 def _print_finished(area: Path) -> None:

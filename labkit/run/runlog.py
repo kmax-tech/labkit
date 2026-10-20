@@ -603,6 +603,12 @@ class ActiveRun:
     config: RunConfig | None  # None exactly when `error` is set
     error: str | None
 
+    def __post_init__(self) -> None:
+        if (self.config is None) == (self.error is None):
+            raise ValueError(
+                f"{self.dir}: an ActiveRun has a config or an error, exactly one"
+            )
+
 
 def active(base_dir: str | Path) -> list[ActiveRun]:
     """Runs in this area that are not completed, each with its `state`.
