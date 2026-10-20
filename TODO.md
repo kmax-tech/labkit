@@ -97,21 +97,14 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   auf `db1695d` ist abgeschlossen ([Bericht](docs/usability/2026-10-20-cold-probes-db1695d.md)):
   alle Zahlen gebunden, Median Count 2m44s, Judge 4m10s; Wiederholung nach
   den Werkzeugkorrekturen unten.
-- **Werkzeugbefunde aus den kalten Proben 2026-10-20** (je erst
-  nachstellen, dann beheben; Belege im Bericht):
-  1. `usability log`: TASK.md-Reihenfolge `--log` nach dem Text stürzt ab
-     (`REMAINDER` schluckt `--log`); Parser oder TASK.md richten.
-  2. `labkit-audit` und `report-check` lösen den Area-Namen nicht über
-     `repo.area_path` auf (4 von 7 Proben, ein bezahltes Audit doppelt).
-  3. `protocol-fill --list` nennt die `sentence = "<…>"` des TOML-Kopfs nicht.
-  4. `code-check` bei `seconds`: „not owed“ liest sich als Befreiung, der
-     Pre-Commit verlangt die Promise-Sätze trotzdem.
-  5. Ausgegebenes `--from-run`-Kommando nennt nur den Dateinamen
-     (`protocol_report.py:550`); vom Repo-Root aus „no such file“.
-  6. Audit-Entscheidungen nur per Hand-TOML; ein Anführungszeichen machte
-     die Datei unlesbar. Kleinste Hilfe prüfen, keine zweite Heimat.
-  Probe-Aufbau: `usability stage` mit `--venv` hat kein pytest; nächste
-  Reihe die venv mit `requirements.txt` ohne labkit-Zeile ergänzen.
+- **Nächste kalte Reihe (`seconds`):** Die sechs Werkzeugbefunde der Reihe
+  2026-10-20 sind behoben (CHANGELOG, Unreleased, Fixed). Eine neue Reihe
+  misst, ob die Wandzeit fällt; das Analyse-Audit bleibt der größte Posten.
+  Probe-Aufbau dabei: `usability stage --venv` bringt kein pytest mit — die
+  venv vorher mit `requirements.txt` ohne die labkit-Zeile ergänzen.
+  Offen aus der Reihe, nicht als Fehler: eine Audit-Entscheidung per
+  Kommando statt per Hand im TOML würde den Vertrag „nur die Person
+  schreibt die Datei“ ändern — erst bei einem weiteren Fall entscheiden.
 - **Andere Person:** Schreibprobe und Usability-Runde vor weiteren
   Änderungen am Protokollstandard. Bisherige Vorlagenentscheidungen des
   Autors ersetzen diese Probe nicht.
