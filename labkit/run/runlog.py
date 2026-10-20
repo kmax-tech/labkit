@@ -84,6 +84,7 @@ from collections.abc import Iterator
 
 from labkit.run import batch
 from labkit.formats import console, repo
+from labkit.formats.files import write_atomic
 from labkit.formats.standard_contract import lane
 from labkit.formats.runs import (
     COMPLETED,
@@ -103,7 +104,6 @@ from labkit.formats.runs import (
     repeat_parent,
     run_dirs,
     run_state,
-    write_atomic,
 )
 from labkit.formats.answering_run import repeat_mismatch, next_draw
 from labkit.run.provenance import (

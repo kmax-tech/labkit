@@ -35,7 +35,7 @@ RULES: list[tuple[str, str, set[str]]] = [
     ("a fence toggled by hand", r"startswith\(\(?\"(```|~~~)", {"protocol_block"}),
     ("the id letters", r"\[(?:[cab]{2,3}|[CAB]{2,3})\]|\^a\\d", {"promises"}),
     ("the area name NN-slug", r"\^\(\\d\+\)-", {"repo"}),
-    ("a temp-and-rename write", r"os\.replace\(", {"runs"}),
+    ("a temp-and-rename write", r"os\.replace\(", {"files"}),
     ("the run-id shape", r"\\d\{4\}-\\d\{2\}-\\d\{2\}T", {"runs"}),
     # "relative to the repo, else absolute" stood about 18 times (audit
     # 2026-10-18); the conditional form is held here, a try/except copy is not

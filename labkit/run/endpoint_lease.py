@@ -68,7 +68,7 @@ import uuid
 from pathlib import Path
 from collections.abc import Iterator
 
-from labkit.formats import runs, scope_sha
+from labkit.formats import files, runs, scope_sha
 
 _HELD: set[tuple[str, str]] = set()  # (endpoint, alias) held by this process
 _FILES: dict[tuple[str, str], Path] = {}
@@ -238,7 +238,7 @@ def _lease_one(d: Path, endpoint: str, alias: str) -> None:
         "argv": " ".join(sys.argv)[:300],
     }
     f = d / f"{_slug(alias)}.{os.getpid()}.json"
-    runs.write_atomic(f, json.dumps(rec))
+    files.write_atomic(f, json.dumps(rec))
     # On a shared filesystem flock may not hold, and two processes can pass
     # the check at the same moment. Re-read after writing: whoever is not
     # the oldest live holder yields.

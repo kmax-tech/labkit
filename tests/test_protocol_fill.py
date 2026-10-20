@@ -581,7 +581,7 @@ class Adopt(unittest.TestCase):
     def test_the_check_is_told_it_holds_the_proposal_written_whole(self):
         """The written-back protocol goes to report-check as the proposed
         state with its text (`report_check.PROPOSED`), written through
-        `runs.write_atomic`: no half-written protocol, no temp file left."""
+        `files.write_atomic`: no half-written protocol, no temp file left."""
         area = self._area()
         proto = area / "PROTOCOL-x.md"
         seen: dict = {}
@@ -594,9 +594,9 @@ class Adopt(unittest.TestCase):
         with (
             mock.patch.object(protocol_fill.report_check, "report_check", check),
             mock.patch.object(
-                protocol_fill.runs,
+                protocol_fill.files,
                 "write_atomic",
-                wraps=protocol_fill.runs.write_atomic,
+                wraps=protocol_fill.files.write_atomic,
             ) as atomic,
             contextlib.redirect_stdout(io.StringIO()),
         ):

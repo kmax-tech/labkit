@@ -350,6 +350,10 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **`runs.write_atomic` is `files.write_atomic`.** Writing a file whole or
+  not at all serves every format (run records, the lease, a filled
+  protocol), not runs alone; it moved to `labkit/formats/files.py`. No alias
+  stays: code that imported it from `runs` imports it from `files`.
 - **Every command refuses on stderr with exit 2.** intent-check,
   protocol-check, scope-sha, report-check, labkit-params, labkit-hooks,
   `claude-hook sessions`, the run index of runlog and labkit-check sent

@@ -8,7 +8,6 @@ walk used to stand six times with six decisions (audit 2026-10-13).
 import json
 import os
 import tempfile
-import threading
 import unittest
 from pathlib import Path
 
@@ -170,38 +169,6 @@ class RunIdShape(unittest.TestCase):
         )
 
 
-class WriteAtomic(unittest.TestCase):
-    def test_the_file_is_whole_and_no_temp_file_stays(self):
-        d = Path(tempfile.mkdtemp())
-        target = d / "lease.json"
-        runs.write_atomic(target, "one")
-        runs.write_atomic(target, "two")
-        self.assertEqual(target.read_text(), "two")
-        self.assertEqual([p.name for p in d.iterdir()], ["lease.json"])
-
-    def test_a_reader_never_sees_a_partial_file(self):
-        d = Path(tempfile.mkdtemp())
-        target = d / "state.json"
-        body_a, body_b = "a" * 200_000, "b" * 200_000
-        runs.write_atomic(target, body_a)
-        seen: set[int] = set()
-        stop = threading.Event()
-
-        def read() -> None:
-            while not stop.is_set():
-                seen.add(len(target.read_text()))
-
-        t = threading.Thread(target=read)
-        t.start()
-        for _ in range(50):
-            runs.write_atomic(target, body_b)
-            runs.write_atomic(target, body_a)
-        stop.set()
-        t.join()
-        self.assertEqual(seen, {200_000})
-        self.assertFalse([p for p in d.iterdir() if f".tmp{os.getpid()}" in p.name])
-
-
 if __name__ == "__main__":
     unittest.main()
 
@@ -257,7 +224,6 @@ class OutputPathsTravel(unittest.TestCase):
     def test_a_relative_data_path_is_recorded_against_the_repo_not_the_cwd(self):
         """A `data=` path was kept as passed, relative to the working
         directory; it is recorded against the repo root and read back."""
-        import os
 
         with tempfile.TemporaryDirectory() as d:
             run = self._repo(Path(d))

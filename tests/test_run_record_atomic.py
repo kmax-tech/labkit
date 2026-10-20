@@ -49,7 +49,7 @@ class NoHalfMadeRun(unittest.TestCase):
             self.assertEqual(list((area / "runs").iterdir()), [])
 
     def test_every_record_file_is_written_whole_or_not_at_all(self) -> None:
-        """config, outputs, metrics and completion go through `runs.write_atomic`
+        """config, outputs, metrics and completion go through `files.write_atomic`
         (CODE-013); until 0.94.0 only completion.json did, and a listing that
         read config.json mid-write saw a damaged run (audit 2026-10-15). No
         staging file stays behind."""

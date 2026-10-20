@@ -337,7 +337,7 @@ class Store:
         if self._producing:
             self._producing = False
             if exc_type is None:
-                # home: a file streamed for a whole run, replaced whole (runs.write_atomic writes one text)
+                # home: a file streamed for a whole run, replaced whole (files.write_atomic writes one text)
                 os.replace(self._tmp, self.path)
             else:
                 print(

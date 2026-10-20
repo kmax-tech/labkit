@@ -613,20 +613,6 @@ def completed_runs(area: Path, *, with_repeats: bool) -> list[Path]:
     return out
 
 
-def write_atomic(path: Path, text: str) -> None:
-    """Write `text` whole or not at all: a temp file beside `path`, then
-    rename — a reader sees the old file or the new one, never half of
-    either. Every record file of a run (config, outputs, metrics,
-    completion) and the lease write through it; the index is appended
-    under its lock. Staged beside the target, not outside its directory
-    (CODE-013): the same filesystem is certain there, and every reader asks
-    for a record by name or lists directories — a `.config.json.tmp<pid>`
-    next to it is never read as one."""
-    tmp = path.with_name(f".{path.name}.tmp{os.getpid()}")
-    tmp.write_text(text, encoding="utf-8")
-    os.replace(tmp, path)
-
-
 # ---- which run answers for a protocol — one choice for intent-check,
 # finalize and labkit-params (2026-10-08: it stood in intent_check and
 # finalize alike; a third copy for the parameter view was the line)
