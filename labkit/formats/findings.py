@@ -181,7 +181,8 @@ def write(
     SCOPE_SHA is the code the auditor read, BLOCK_SHA the promise block
     (`promises.block_stamp`), RUN_ID the run whose rows it read — owed in
     mode analysis (NO_RUN when there was none), refused in mode preflight.
-    Every finding starts `open`. Never overwrites: the name carries the minute.
+    Every finding starts `open`. Never overwrites: the name carries the minute,
+    and a second record of that minute takes the next number (`_create`).
     Refuses (ValueError) a verdict that counts more blockers or warnings than
     FINDINGS lists of that grade (`counts_outrun`).
     """
@@ -200,13 +201,6 @@ def write(
         )
     when = time.localtime(now)
     stamp = time.strftime("%Y-%m-%dT%H-%M", when)
-    folder = area / DIR
-    folder.mkdir(exist_ok=True)
-    path = folder / f"{stamp}-{mode}.toml"
-    n = 2
-    while path.exists():
-        path = folder / f"{stamp}-{mode}-{n}.toml"
-        n += 1
     b, w, k = verdict
     lines = [
         "# written by labkit-audit — decide each finding: set status and reason",
@@ -232,8 +226,26 @@ def write(
             'status = "open"',
             'reason = ""',
         ]
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return path
+    return _create(area / DIR, f"{stamp}-{mode}", ".toml", "\n".join(lines) + "\n")
+
+
+def _create(folder: Path, name: str, suffix: str, text: str) -> Path:
+    """Write TEXT to `FOLDER/<name><suffix>`, else `<name>-2<suffix>`, … —
+    the first name no file holds, taken by exclusive create, so two audits
+    finishing in one minute get two files: a check for a free name before
+    a plain write let both take the same one, and one record was lost
+    (review 2026-10-20). Creates FOLDER."""
+    folder.mkdir(exist_ok=True)
+    n = 1
+    while True:
+        path = folder / f"{name}{'' if n == 1 else f'-{n}'}{suffix}"
+        try:
+            with path.open("x", encoding="utf-8") as f:
+                f.write(text)
+        except FileExistsError:
+            n += 1
+            continue
+        return path
 
 
 def _audit_table(path: Path, data: dict) -> dict:
@@ -430,13 +442,6 @@ def write_failed(
         raise ValueError(f"mode {mode!r} — one of {', '.join(MODES)}")
     when = time.localtime(now)
     stamp = time.strftime("%Y-%m-%dT%H-%M", when)
-    folder = area / DIR
-    folder.mkdir(exist_ok=True)
-    path = folder / f"{stamp}-{mode}{FAILED_SUFFIX}"
-    n = 2
-    while path.exists():
-        path = folder / f"{stamp}-{mode}-{n}{FAILED_SUFFIX}"
-        n += 1
     lines = [
         "# written by labkit-audit — the audit did not run; this is the evidence, "
         "not a record of findings",
@@ -450,8 +455,9 @@ def write_failed(
         f"error = {_s(error)}",
         f"command = {_s(command)}",
     ]
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return path
+    return _create(
+        area / DIR, f"{stamp}-{mode}", FAILED_SUFFIX, "\n".join(lines) + "\n"
+    )
 
 
 def read_failed(path: Path) -> Failed:

@@ -92,6 +92,53 @@ class WriteRead(unittest.TestCase):
         self.assertNotEqual(a, b)
         self.assertEqual(len(findings.area_records(area)), 2)
 
+    def test_audits_writing_at_once_keep_every_record(self):
+        """Review 2026-10-20: a free name was looked for, then written to —
+        two audits at once took one name and one record was lost."""
+        import threading
+
+        area = Path(tempfile.mkdtemp())
+        start = threading.Barrier(8)
+        paths: list[Path] = []
+
+        def one(i: int) -> None:
+            start.wait()
+            paths.append(
+                findings.write(
+                    area,
+                    "preflight",
+                    "m",
+                    f"s{i}",
+                    "b",
+                    (0, 0, 0),
+                    [],
+                    now=1_700_000_000,
+                )
+            )
+
+        threads = [threading.Thread(target=one, args=(i,)) for i in range(8)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        self.assertEqual(len(set(paths)), 8)
+        shas = {r.scope_sha for r in findings.area_records(area)}
+        self.assertEqual(shas, {f"s{i}" for i in range(8)})
+
+    def test_a_taken_name_is_skipped_not_overwritten(self):
+        """The twin, without threads: a file already holding the first name
+        stays as it was."""
+        area = Path(tempfile.mkdtemp())
+        first = findings.write(
+            area, "preflight", "m", "s", "b", (0, 0, 0), [], now=1_700_000_000
+        )
+        before = first.read_bytes()
+        second = findings.write(
+            area, "preflight", "m", "t", "b", (0, 0, 0), [], now=1_700_000_000
+        )
+        self.assertTrue(second.name.endswith("-preflight-2.toml"))
+        self.assertEqual(first.read_bytes(), before)
+
     def test_wrong_mode_or_grade_refuses_to_write(self):
         area = Path(tempfile.mkdtemp())
         with self.assertRaises(ValueError):
