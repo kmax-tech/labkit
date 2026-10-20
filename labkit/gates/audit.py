@@ -59,6 +59,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import os
 import re
 import sys
 import time
@@ -67,7 +68,7 @@ from typing import NamedTuple
 
 from labkit import PACKAGE_DIR
 from labkit.run import llm, llm_backends
-from labkit.formats import console, findings, promises, protocol_block, rules
+from labkit.formats import console, findings, promises, protocol_block, rules, scope_sha
 from labkit.formats.standard_contract import lane
 from labkit.formats.repo import (
     ProtocolChoiceError,
@@ -249,28 +250,6 @@ class Reading(NamedTuple):
     indexed: list[Path]  # deeper imports: path and signatures, read on assignment
 
 
-def declared_scope_files(protocol: Path) -> list[Path]:
-    """The files the protocol's `[[promise]]` tables declare as scope
-    (`file` or `file:function`, relative to the protocol's directory), each
-    once, in order. No tables: none. A declared file that is not there
-    raises — a promise resting on a missing file is not audited around."""
-    block = promises.parse_block(protocol.read_text(encoding="utf-8"))
-    if block is None:
-        return []
-    out: list[Path] = []
-    for p in block.promises:
-        for entry in p.scope:
-            f = (protocol.parent / entry.split(":", 1)[0]).resolve()
-            if not f.is_file():
-                raise AuditError(
-                    f"{protocol.name}: promise {p.id} declares scope `{entry}`, "
-                    f"and {f} is not a file"
-                )
-            if f not in out:
-                out.append(f)
-    return out
-
-
 def gather(area: Path, protocol: Path | None) -> Reading:
     """What the agent reads, by LAB-103 The audit reads by declared scope,
     not by import graph: the area's scripts and analysis files, the files
@@ -288,7 +267,14 @@ def gather(area: Path, protocol: Path | None) -> Reading:
     if not scripts:
         raise AuditError(f"{area}: no scripts/*.py or analysis/*.py — nothing to audit")
     code = [p.resolve() for p in scripts]
-    code += [f for f in declared_scope_files(chosen) if f not in code]
+    declared = scope_sha.declared_scope_files([chosen])
+    gone = [f for f in declared if not f.is_file()]
+    if gone:
+        # a promise resting on a missing file is not audited around
+        raise AuditError(
+            f"{chosen.name}: a promise declares scope `{os.path.relpath(gone[0], chosen.parent.resolve())}`, and it is not a file"
+        )
+    code += [f for f in declared if f not in code]
     code += [f for f in repo_imports(code, repo) if f.resolve() not in code]
     whole = imported_repo_helpers(area, repo)
     indexed = [f for f in whole if f.resolve() not in {c.resolve() for c in code}]

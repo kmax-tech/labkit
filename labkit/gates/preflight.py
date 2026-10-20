@@ -64,7 +64,13 @@ import sys
 from pathlib import Path
 
 from labkit.checks.code_check import code_findings
-from labkit.formats import console, protocol_block, protocol_check, standard_contract
+from labkit.formats import (
+    console,
+    promises,
+    protocol_block,
+    protocol_check,
+    standard_contract,
+)
 from labkit.gates import install_hooks
 from labkit.formats import findings as audit_findings
 from labkit.formats.gate import Findings
@@ -419,6 +425,8 @@ def scope_stamp_line(area: Path) -> str:
     never counted."""
     try:
         sha, _, _ = area_stamp(area)
+    except promises.PromiseError as exc:  # a ValueError too, but not "nothing to stamp"
+        return f"  cannot stamp: {exc}"
     except ValueError:
         return f"  no scripts matching {AREA_GLOBS} in {area} (skipped)"
     return f"  {sha}"

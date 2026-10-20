@@ -3,9 +3,10 @@
 The audit fields in a protocol claim "this code was audited". A stamp that
 covers less than the code determining the number is worse than none: it makes
 a stale audit look current. The scope covers exactly: `scripts/*.py` and
-`analysis/*.py` of the area, the repo-local `lib/` and `src/` modules they
-import (shared anchors and thresholds live there), and the `labkit==` pin
-line when one is found. NOT covered: data files, prompt files, models.toml,
+`analysis/*.py` of the area, the files its protocols' promises declare as
+scope, the repo-local `lib/` and `src/` modules all of these import (shared
+anchors and thresholds live there), and the `labkit==` pin line when one is
+found — at least what `labkit-audit` reads in full. NOT covered: data files, prompt files, models.toml,
 the protocol — an unchanged stamp says the CODE is the same, not the
 inputs. Sibling: `promises.declared_scope_sha` is the same idea per
 promise, over its declared scope.
@@ -38,6 +39,7 @@ from labkit.formats import console
 from pathlib import Path
 
 from labkit.formats.repo import (
+    area_protocols,
     areas_of,
     layout_root,
     no_such_area,
@@ -162,6 +164,28 @@ def _lib_files(name: str, libdir: Path) -> list[Path]:
     return found
 
 
+def declared_scope_files(protocols: list[Path]) -> list[Path]:
+    """The files the `[[promise]]` tables of `protocols` declare as scope
+    (`file` or `file:function`, relative to the protocol's directory), each
+    once, resolved, in order; no tables, none. A missing file is returned
+    as it is — the caller names it; a malformed block raises
+    `promises.PromiseError` (a ValueError). The audit reads these in full
+    for its protocol; the stamp covers them for every protocol of the area."""
+    from labkit.formats import promises  # layer 1 both; promises imports this module
+
+    out: list[Path] = []
+    for protocol in protocols:
+        block = promises.parse_block(protocol.read_text(encoding="utf-8"))
+        if block is None:
+            continue
+        for p in block.promises:
+            for entry in p.scope:
+                f = (protocol.parent / entry.split(":", 1)[0]).resolve()
+                if f not in out:
+                    out.append(f)
+    return out
+
+
 def imported_repo_helpers(area: Path, repo: Path) -> list[Path]:
     """The helper files elsewhere in the repo that the area's scripts import —
     repo-local files (under LOCAL_ROOTS) the area's code reaches by
@@ -170,9 +194,14 @@ def imported_repo_helpers(area: Path, repo: Path) -> list[Path]:
     (LAB-019 The stamp covers everything that determines the number). Review 2026-10-07: `from lib import scoring` and `import
     lib.scoring` were read as a module `lib`, and a lib module's own imports
     were not followed; lib/scoring.py changed while the stamp stayed put."""
+    return _import_closure(list(area_files(area)), repo)
+
+
+def _import_closure(start: list[Path], repo: Path) -> list[Path]:
+    """The repo-local files START reach by import, transitively, sorted."""
     roots = [repo / r for r in LOCAL_ROOTS if (repo / r).is_dir()]
     seen: set[Path] = set()
-    todo = list(area_files(area))
+    todo = list(start)
     while todo:
         path = todo.pop()
         for libdir in roots:
@@ -329,11 +358,25 @@ def area_stamp(
     globs: tuple[str, ...] = AREA_GLOBS,
     use_pin: bool = True,
 ) -> tuple[str, list[Path], tuple[str, str] | None]:
-    """(sha, files, pin) of an area: its scripts, the repo-local lib modules
-    they import, `extra` files, and the labkit pin. Raises FileNotFoundError
-    naming a missing file, ValueError when there is nothing to stamp."""
+    """(sha, files, pin) of an area: its scripts, the files its protocols'
+    promises declare as scope, the repo-local lib modules all of these
+    import, `extra` files, and the labkit pin — at least every file
+    `labkit-audit` reads in full. Raises FileNotFoundError naming a missing
+    file, ValueError when there is nothing to stamp or a promise block is
+    malformed."""
     root = layout_root(area)
-    files = area_files(area, globs) + imported_repo_helpers(area, root) + list(extra)
+    # the audit reads a declared file and its direct imports in full, so the
+    # stamp walks from it too — every protocol's, so it needs no choice and
+    # covers at least what any audit of the area reads
+    declared = declared_scope_files(area_protocols(area))
+    files = (
+        area_files(area, globs)
+        + declared
+        + _import_closure(
+            [*area_files(area), *(f for f in declared if f.is_file())], root
+        )
+        + list(extra)
+    )
     missing = [str(f) for f in files if not f.is_file()]
     if missing:
         raise FileNotFoundError(f"scope file(s) missing: {', '.join(missing)}")

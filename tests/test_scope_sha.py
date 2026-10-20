@@ -219,6 +219,75 @@ class TestOneStampEverywhere(unittest.TestCase):
         self.assertIn(f"  {sha}", buf.getvalue())
 
 
+class TestDeclaredScopeIsStamped(unittest.TestCase):
+    """Review 2026-10-20: `labkit-audit` reads a promise's declared scope in
+    full, the stamp covered it only when a script imported it — a declared
+    helper audited, then edited, left the old audit valid."""
+
+    def setUp(self):
+        from protocol_fixture import head
+
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.repo = Path(self.tmp.name)
+        (self.repo / "tests").mkdir()
+        self.area = self.repo / "experiments" / "01"
+        (self.area / "scripts").mkdir(parents=True)
+        (self.area / "scripts" / "m.py").write_text("x = 1\n")
+        (self.repo / "lib").mkdir()
+        (self.repo / "lib" / "deep.py").write_text("D = 1\n")
+        (self.area / "helper.py").write_text(
+            "import deep\n\ndef score():\n    return 2\n"
+        )
+        block = (
+            '[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "s"\n'
+            'scope = ["helper.py:score"]\n'
+        )
+        (self.area / "PROTOCOL-x.md").write_text("# x\n" + head(promises=block))
+
+    def test_the_audit_reads_nothing_the_stamp_does_not_bind(self):
+        from labkit.gates import audit
+        from labkit.formats import scope_sha as packaged
+
+        read = {f.resolve() for f in audit.gather(self.area, None).code}
+        stamped = {f.resolve() for f in packaged.area_stamp(self.area)[1]}
+        self.assertIn((self.area / "helper.py").resolve(), read)
+        self.assertLessEqual(read, stamped)
+
+    def test_an_edit_to_a_declared_file_moves_the_stamp(self):
+        from labkit.formats import scope_sha as packaged
+
+        before = packaged.area_stamp(self.area)[0]
+        (self.area / "helper.py").write_text(
+            "import deep\n\ndef score():\n    return 999\n"
+        )
+        self.assertNotEqual(before, packaged.area_stamp(self.area)[0])
+
+    def test_an_import_of_a_declared_file_moves_the_stamp(self):
+        from labkit.formats import scope_sha as packaged
+
+        before = packaged.area_stamp(self.area)[0]
+        (self.repo / "lib" / "deep.py").write_text("D = 2\n")
+        self.assertNotEqual(before, packaged.area_stamp(self.area)[0])
+
+    def test_a_missing_declared_file_is_named(self):
+        from labkit.formats import scope_sha as packaged
+
+        (self.area / "helper.py").unlink()
+        with self.assertRaises(FileNotFoundError) as cm:
+            packaged.area_stamp(self.area)
+        self.assertIn("helper.py", str(cm.exception))
+
+    def test_an_area_without_promises_stamps_as_before(self):
+        """The twin: no block, no declared files — the stamp is the scripts'."""
+        from protocol_fixture import head
+        from labkit.formats import scope_sha as packaged
+
+        (self.area / "PROTOCOL-x.md").write_text("# x\n" + head())
+        files = packaged.area_stamp(self.area)[1]
+        self.assertEqual([f.name for f in files], ["m.py"])
+
+
 class TestImportForms(unittest.TestCase):
     """Review 2026-10-07: `from lib import scoring` and `import lib.scoring`
     were read as a module `lib`; lib/scoring.py changed and the stamp stayed
