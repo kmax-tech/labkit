@@ -93,7 +93,25 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   Quelltext-/Standard-Lesungen. Alte Reihen belegen nur ihren Stand.
   Die `minutes`-Reihe ist abgeschlossen; Wiederholung erst nach relevanter
   Änderung. Belege: [Count](docs/usability/2026-10-12-cloud-fable.md),
-  [Judge](docs/usability/2026-10-14-judge-minutes.md).
+  [Judge](docs/usability/2026-10-14-judge-minutes.md). Die `seconds`-Reihe
+  auf `db1695d` ist abgeschlossen ([Bericht](docs/usability/2026-10-20-cold-probes-db1695d.md)):
+  alle Zahlen gebunden, Median Count 2m44s, Judge 4m10s; Wiederholung nach
+  den Werkzeugkorrekturen unten.
+- **Werkzeugbefunde aus den kalten Proben 2026-10-20** (je erst
+  nachstellen, dann beheben; Belege im Bericht):
+  1. `usability log`: TASK.md-Reihenfolge `--log` nach dem Text stürzt ab
+     (`REMAINDER` schluckt `--log`); Parser oder TASK.md richten.
+  2. `labkit-audit` und `report-check` lösen den Area-Namen nicht über
+     `repo.area_path` auf (4 von 7 Proben, ein bezahltes Audit doppelt).
+  3. `protocol-fill --list` nennt die `sentence = "<…>"` des TOML-Kopfs nicht.
+  4. `code-check` bei `seconds`: „not owed“ liest sich als Befreiung, der
+     Pre-Commit verlangt die Promise-Sätze trotzdem.
+  5. Ausgegebenes `--from-run`-Kommando nennt nur den Dateinamen
+     (`protocol_report.py:550`); vom Repo-Root aus „no such file“.
+  6. Audit-Entscheidungen nur per Hand-TOML; ein Anführungszeichen machte
+     die Datei unlesbar. Kleinste Hilfe prüfen, keine zweite Heimat.
+  Probe-Aufbau: `usability stage` mit `--venv` hat kein pytest; nächste
+  Reihe die venv mit `requirements.txt` ohne labkit-Zeile ergänzen.
 - **Andere Person:** Schreibprobe und Usability-Runde vor weiteren
   Änderungen am Protokollstandard. Bisherige Vorlagenentscheidungen des
   Autors ersetzen diese Probe nicht.
@@ -114,7 +132,7 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
 | `promote <area>` | Erste echte Beförderung, bei der vorhandene Kommandos nicht reichen. | Dünne Hülle um Analyse-Audit und Entscheidungen, synchron mit Zeitlimit. `report-check` prüft die Freigabe bereits. |
 | Protokollstandard 0.20 | Schreibprobe und externe Usability-Probe. | Kandidaten gemeinsam entscheiden: `Result`/`Answer`, Frage in Summary, verpflichtender antwortender Lauf, Weichenwerte als Daten, kürzere Vorlage. |
 | Bereichsstand als Faktenzeile | Andere Person zeigt, dass die Zeile gebraucht und gelesen wird. | Bestehende Fakten projizieren: Registrierung, Probe, Freeze, Lauf, Tests, Zitat. Keine zweite Statusquelle. |
-| Zählvorlage aus Task-Feldern | Fable-/Sonnet-Probe benennt Stubs ebenfalls als Hindernis. | `SOURCE`, `COUNT_FIELD`, `METRIC_KEY` und Ordner je Item gezielt unterstützen; nicht allein auf schwächstes Modell zuschneiden. |
+| Zählvorlage aus Task-Feldern | Fable-/Sonnet-Probe benennt Stubs ebenfalls als Hindernis — **erfüllt 2026-10-20** (Count- und Judge-Agenten: ~650 Zeilen lesen für ~8 Änderungen). | `SOURCE`, `COUNT_FIELD`, `METRIC_KEY` und Ordner je Item gezielt unterstützen; nicht allein auf schwächstes Modell zuschneiden. |
 | Rückschrift am Laufende / weniger Kommandos | Gemessener Umweg trotz `protocol-fill --from-run`. | Bewusste Prüfung erzeugter Zeilen klären. `finalize` bleibt lesend; kein `finalize --write-back`. |
 | Eigene Meldung für laufenden/abgebrochenen Audit | Realer Fall braucht mehr als bestehende Verweigerung ohne gültigen Record. | Keine zweite Heimat für „Audit ohne Ergebnis“. Frühere `.running`-/`unavailable`-Skizze ist kein offener Implementierungsplan. |
 | `labkit-rules` | Modulpfad behindert Nutzung nachweisbar. | Kürzerer Einstieg, keine neue Regellogik. |
