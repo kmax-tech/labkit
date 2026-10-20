@@ -875,6 +875,21 @@ den Ertrag je Klasse auszählt.
   Vorfallgeschichte; `scope_sha.areas_touched` rechnet einen unparsbaren
   Bereich als berührt (sicherer Fehlalarm statt stilles Durchlassen).
 
+- **Review-Befunde 2026-10-20 (5 Stück, Unreleased, `0523eda`…`dcc05c5`):**
+  Stamp bindet den deklarierten Scope, exklusives Anlegen der Audit-Records,
+  doppelte Definition im Funktionsscope verweigert, `runs.as_stored` als
+  einzige typstrikte Gleichheit, Zahlentokens in `recheck`. Offen:
+  (1) CHANGELOG-Einträge fehlen noch (in der Sitzung nicht geschrieben);
+  (2) `scope_sha.import_reach` / `areas_touched` kennen die deklarierten
+  Scope-Dateien nicht — eine nur deklarierte, nicht importierte `lib/`-Datei
+  öffnet den Bereich beim Commit nicht; bewusst draußen gelassen, weil ein
+  kaputter Versprechensblock sonst die Hooks aller Bereiche reißt.
+  Folgen für den Rollout (eigener Auftrag): Bereiche mit deklariertem Scope
+  außerhalb des Importgraphen bekommen neue Stamps und schulden ein neues
+  Audit; Notizen mit falschem Vorzeichen oder nur im Exponenten zitierter
+  Zahl, Metriken mit `true` gegen `1` und Funktionsscopes mit doppelter
+  Definition werden jetzt verweigert.
+
 - **Standardvertrag 2026-10-19 (Branch `claude/standard-contract-rpwkod`,
   Unreleased):** die Pflichten je Kostenstufe stehen einmal in
   `labkit/standard_contract.py` (Lane, Freigabe, Gerüst, Registrierungs-
