@@ -34,11 +34,15 @@ class Area(unittest.TestCase):
         )
         self.run_dir = self.area / "runs" / "2026-10-05T19-00-00_ab12"
         self.run_dir.mkdir(parents=True)
-        # a current run: schema_version 2 plus a completion record — metrics
+        # a current run: schema_version 3 plus a completion record — metrics
         # alone (a legacy run) is never completed since labkit 0.48
         (self.run_dir / "config.json").write_text(
             json.dumps(
-                {"schema_version": 2, "protocol": {"id": PID, "path": "PROTOCOL-x.md"}}
+                {
+                    "schema_version": 3,
+                    "run_kind": "measurement",
+                    "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
+                }
             )
         )
         (self.run_dir / "completion.json").write_text(

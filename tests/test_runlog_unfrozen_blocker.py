@@ -6,11 +6,13 @@ for a failed audit and ran four full runs with LABKIT_UNFROZEN=1. The
 acknowledgement is for an unfrozen protocol a run may be acknowledged on,
 not for a finding nobody read. Without a record the acknowledged run stays
 possible over a failed
-audit attempt (0.99.0); a decided BLOCKER starts; a probe (long=False) runs so the BLOCKER can be examined;
+audit attempt (0.99.0); a decided BLOCKER starts; a probe (run_kind='probe') runs so the BLOCKER can be examined;
 open WARNINGs ride in the acknowledgement's warning line.
 """
 
 from __future__ import annotations
+
+from labkit.formats.runs import RunKind
 
 import contextlib
 import io
@@ -81,17 +83,17 @@ class UnfrozenBlocker(unittest.TestCase):
             "labkit-audit x --mode preflight",
         )
 
-    def _start(self, long: bool):
+    def _start(self, run_kind: RunKind):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            r = runlog.Run("t", {}, self.tmp, long=long)
+            r = runlog.Run("t", {}, self.tmp, run_kind=run_kind)
         return r, buf.getvalue()
 
     def test_an_open_blocker_refuses_the_acknowledged_full_run(self):
         self._record([BLOCKER])
         os.environ["LABKIT_UNFROZEN"] = "1"
         with self.assertRaises(SystemExit) as cm:
-            self._start(long=True)
+            self._start(run_kind="measurement")
         msg = str(cm.exception)
         self.assertIn("BLOCKER(s) nobody decided", msg)
         self.assertIn("LABKIT_UNFROZEN=1 does not pass it", msg)
@@ -103,7 +105,7 @@ class UnfrozenBlocker(unittest.TestCase):
         answer (0.98.0 let the run through without any attempt)."""
         tried = self._audit_failed()
         os.environ["LABKIT_UNFROZEN"] = "1"
-        r, out = self._start(long=True)
+        r, out = self._start(run_kind="measurement")
         self.assertIn("acknowledged", out)
         cfg = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
         self.assertTrue(cfg["unfrozen_ack"])
@@ -120,21 +122,21 @@ class UnfrozenBlocker(unittest.TestCase):
         path.write_text(first + "[[finding]]" + decided + "[[finding]]" + warning_tbl)
         self._audit_failed()  # the protocol is still unfrozen: the hatch owes it
         os.environ["LABKIT_UNFROZEN"] = "1"
-        _, out = self._start(long=True)
+        _, out = self._start(run_kind="measurement")
         self.assertIn("acknowledged", out)
         self.assertIn("open WARNING(s) of the preflight audit", out)
         self.assertIn("the seed is not recorded", out)
 
     def test_a_probe_runs_over_an_open_blocker(self):
-        """The BLOCKER has to be examined, and a probe is how (long=False)."""
+        """The BLOCKER has to be examined, and a probe is how (run_kind='probe')."""
         self._record([BLOCKER])
-        r, _ = self._start(long=False)
+        r, _ = self._start(run_kind="probe")
         self.assertTrue((r.dir / "config.json").is_file())
 
     def test_the_refusal_holds_without_the_acknowledgement_too(self):
         self._record([BLOCKER])
         with self.assertRaises(SystemExit) as cm:
-            self._start(long=True)
+            self._start(run_kind="measurement")
         self.assertIn("BLOCKER(s) nobody decided", str(cm.exception))
 
     def test_an_unreadable_record_refuses_loudly(self):
@@ -144,7 +146,7 @@ class UnfrozenBlocker(unittest.TestCase):
         )
         os.environ["LABKIT_UNFROZEN"] = "1"
         with self.assertRaises(SystemExit) as cm:
-            self._start(long=True)
+            self._start(run_kind="measurement")
         self.assertIn("not TOML", str(cm.exception))
 
 

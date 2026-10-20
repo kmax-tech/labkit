@@ -41,7 +41,7 @@ os.environ["LABKIT_LEASE_DIR"] = tempfile.mkdtemp(prefix="labkit-test-leases-")
 for _name in [n for n in os.environ if n.startswith("GIT_")]:
     del os.environ[_name]
 # A harness limit the developer exported for their own agent would turn every
-# long=True test run into a detach refusal; the tests that want it set it.
+# run_kind='measurement' test run into a detach refusal; the tests that want it set it.
 os.environ.pop("LABKIT_FOREGROUND_TIMEOUT_S", None)
 
 

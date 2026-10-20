@@ -8,6 +8,8 @@ finding in protocol-check, a blocker in finalize.
 
 from __future__ import annotations
 
+from labkit.formats.runs import RunKind
+
 import contextlib
 import io
 import json
@@ -43,9 +45,9 @@ def _area(d: str, text: str) -> Path:
     return area
 
 
-def _start(area: Path, config: dict, long: bool = False) -> runlog.Run:
+def _start(area: Path, config: dict, run_kind: RunKind = "probe") -> runlog.Run:
     with contextlib.redirect_stdout(io.StringIO()):
-        return runlog.Run("t", config, area, long=long)
+        return runlog.Run("t", config, area, run_kind=run_kind)
 
 
 class RunlogRefusesBeforeMkdir(unittest.TestCase):
@@ -109,33 +111,27 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = _area(d, head(cost="seconds", promises=None) + BODY)
             with self.assertRaises(SystemExit) as cm:
-                _start(area, {}, long=True)
+                _start(area, {}, run_kind="measurement")
             self.assertIn("a full run is held to the registration", str(cm.exception))
             self.assertFalse((area / "runs").exists())
 
-    def test_at_seconds_a_probe_without_a_block_is_refused_too(self) -> None:
-        """The lane says every run at seconds is the full run
-        (`Lane.every_run_full`); runlog read `long` alone and started a
-        hand-written `long=False` under registered ids without their tables
-        while protocol-check named them a MUST (review 2026-10-19). The
-        twin: a count registers no id and starts either way."""
+    def test_seconds_refuses_a_probe_even_when_no_ids_are_registered(self) -> None:
+        """Seconds has no probe stage; the complete count is its instrument check."""
         with tempfile.TemporaryDirectory() as d:
-            area = _area(d, head(cost="seconds", promises=None) + BODY)
-            with self.assertRaises(SystemExit) as cm:
-                _start(area, {}, long=False)
-            self.assertIn("a full run is held to the registration", str(cm.exception))
-            self.assertFalse((area / "runs").exists())
-        with tempfile.TemporaryDirectory() as d:
-            count = _area(
+            area = _area(
                 d,
                 head(cost="seconds", promises=None)
-                + "\n- **Question / hypothesis:** q\n",
+                + "- **Question / hypothesis:** how many?\n",
             )
-            r = _start(count, {}, long=False)
-            self.assertTrue((r.dir / "config.json").is_file())
+            with self.assertRaisesRegex(SystemExit, "no separate probe stage"):
+                _start(area, {}, run_kind="probe")
+            self.assertFalse((area / "runs").exists())
+            r = _start(area, {}, run_kind="measurement")
+            self.assertEqual(
+                json.loads((r.dir / "config.json").read_text())["run_kind"],
+                "measurement",
+            )
 
-
-class ProtocolCheckOwesTheBlock(unittest.TestCase):
     def test_frozen_without_a_block_is_a_must_finding(self) -> None:
         report = protocol_check.check_fields(
             head(frozen=True, preflight_audit=AUDIT, promises=None)
@@ -191,7 +187,8 @@ class FinalizeBlocksAnUnrecordedBlock(unittest.TestCase):
         d = area / "runs" / "2026-10-08T10-00-00_aaaa"
         d.mkdir(parents=True)
         cfg = {
-            "schema_version": 2,
+            "schema_version": 3,
+            "run_kind": "measurement",
             "script": "01_measure.py",
             "pid": 1,
             "protocol": {"id": PID, "path": "PROTOCOL-x.md"},

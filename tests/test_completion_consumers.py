@@ -45,7 +45,7 @@ def protocol(area: Path) -> Path:
 
 
 def make_run(
-    area: Path, name: str, *, completion: bool, schema: int | None = 2
+    area: Path, name: str, *, completion: bool, schema: int | None = 3
 ) -> Path:
     d = area / "runs" / name
     d.mkdir(parents=True)
@@ -56,11 +56,13 @@ def make_run(
     }
     if schema is not None:
         cfg["schema_version"] = schema
+        cfg["run_kind"] = "measurement"
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
     (d / "metrics.json").write_text(json.dumps({"c1_pass": True}), encoding="utf-8")
     if completion:
         (d / "completion.json").write_text(
-            json.dumps({"schema_version": 2}), encoding="utf-8"
+            json.dumps({"schema_version": 3, "run_kind": "measurement"}),
+            encoding="utf-8",
         )
     return d
 

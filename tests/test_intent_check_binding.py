@@ -49,7 +49,7 @@ def _run(
     *,
     pid: str | None,
     metrics: dict,
-    schema: int | None = 2,
+    schema: int | None = 3,
     completion=True,
     with_metrics=True,
 ) -> Path:
@@ -58,6 +58,7 @@ def _run(
     cfg: dict = {"script": "01_measure.py", "pid": 1}
     if schema is not None:
         cfg["schema_version"] = schema
+        cfg["run_kind"] = "measurement"
         cfg["protocol"] = {"id": pid, "path": "whatever.md"}
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
     if with_metrics:
@@ -66,7 +67,8 @@ def _run(
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
+                    "run_kind": "measurement",
                     "finished": "x",
                     "git": "g",
                     "git_full": "g",

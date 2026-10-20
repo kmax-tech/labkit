@@ -364,7 +364,7 @@ def promise_tables_owed(
         frozen = true            → owed (the freeze is the registration)
         registers = False and not frozen (the prose names no [C]/[A]/[B]
             id — a plain count at seconds, 0.87.1) → not owed: nothing to hold
-        full_run (runlog long=True; at cost = seconds every run) → owed
+        full_run (runlog run_kind='measurement') → owed
         otherwise (an unfrozen pilot) → not owed
 
     Where the tables are owed, a sentence still holding the stamp's `<…>`

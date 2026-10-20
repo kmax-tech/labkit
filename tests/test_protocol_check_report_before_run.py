@@ -47,7 +47,11 @@ def completed_run(area: Path) -> None:
     run.mkdir(parents=True)
     (run / "config.json").write_text(
         json.dumps(
-            {"schema_version": 2, "protocol": {"id": PID, "path": "PROTOCOL-x.md"}}
+            {
+                "schema_version": 3,
+                "run_kind": "measurement",
+                "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
+            }
         ),
         encoding="utf-8",
     )

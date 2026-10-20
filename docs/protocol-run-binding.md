@@ -53,14 +53,25 @@ rewritten:
 - Omitted: exactly one protocol in the area binds to it, several are a hard
   error, none is `unbound` plus a warning.
 - A protocol whose id is not yet stamped yields `"id": null` with the path
-  filled — unbound, with a hint where to look; a full run (`long=True`) on
+  filled — unbound, with a hint where to look; a full run (`run_kind="measurement"`) on
   it is refused. A protocol without a readable head refuses the run.
 - The key always has the same shape. Missing protocol, missing id and found
   protocol differ in their VALUES, never in whether the key or the fields
   exist: no reader has to tell absent from null from object.
 
-`protocol` follows `long` in `runlog.run(...)`, and `derived_from` follows
-`protocol`, so no existing positional call shifts.
+`run_kind` states the run's purpose: `"probe"` checks the instrument;
+`"measurement"` measures the registered question; `"preparation"` records
+data preparation before measurement. The API defaults to
+`"probe"`; measurement scripts declare their kind explicitly. Seconds
+rejects a separate probe before creating a run directory. Minutes/hours
+allow a probe before freeze; a measurement owes the full start checks.
+Only a measurement without an unfrozen acknowledgement is eligible for
+result release, which still requires the audit and recomputation checks.
+
+The start record carries `run_kind` as one of these three strings. Its
+reader validates the field; missing or unknown values are errors. The
+contract replaces the duration-like boolean `long` without a compatibility
+reader. History: [run kinds](notes/2026-10-20-run-kinds.md).
 
 The file is named `config.json` and carries the provenance too. Renaming it
 would break every reader of every finished run, so the term moves and the
@@ -70,10 +81,10 @@ file stays: **run metadata** means `runs/<run_id>/config.json`.
 
 A run directory says for itself whether it finished: complete when
 `metrics.json` AND `completion.json` exist. A run whose `config.json`
-carries no `schema_version >= 2` was written before labkit 0.21 (when
-`metrics.json` alone marked a finish); since 0.89.0 its metadata is
-`unreadable` here like a damaged file — listed with the reason, never
-chosen, never indexed — and it is read with labkit 0.47.
+does not use the current schema (3) or lacks a valid `run_kind` is
+`unreadable`: listed with a reason, never chosen or indexed. Schema 2
+records are read with labkit 0.99.0; reproduce them with their original
+repo commit and pinned package.
 
 `schema_version` is stamped into `config.json` at run START, which is what
 makes the distinction decidable: at the moment a reader has to judge a run,
@@ -84,7 +95,7 @@ rename) so it is either absent or whole:
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "finished": "2026-09-26T21:14:02",
   "git": "a1b2c3d-dirty",
   "git_full": "a1b2c3d4e5f6...",

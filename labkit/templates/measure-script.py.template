@@ -64,7 +64,7 @@ PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
 from labkit.run import batch, llm, runlog
-from labkit.formats import promises
+from labkit.formats import promises, protocol_block, standard_contract
 
 ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"   # written by 00_prepare.py: id · text · gold
 # One run, one output file. A second start of the same command RESUMES this
@@ -345,6 +345,9 @@ def main() -> None:
                       help="draw the kept run RUN_ID again: the same jobs and instrument, a run of "
                            "its own (repeat_of) into <name>_draw<N>.jsonl — the spread, never the answer")
     args = ap.parse_args()
+    head = protocol_block.head(PROTOCOL.read_text(encoding="utf-8"))
+    if args.probe is not None and not standard_contract.lane(head.cost).probe_allowed:
+        ap.error("--probe is not available at cost='seconds'; run the full measurement")
     cfg = replace(CONFIG, model=args.model)   # the one field the command line may set
     items = read_jsonl(ITEMS)
 
@@ -383,7 +386,7 @@ def main() -> None:
     # recorded without anyone remembering to list it. `data=` freezes the
     # items; the prompts are in prompt_sha.
     config = asdict(cfg)
-    # long=True declares the full run. At cost = "seconds" runlog wants the
+    # run_kind="measurement" declares the full run. At cost = "seconds" runlog wants the
     # registration written (question · criterion · admissibility · cost) and
     # lets the run start in an agent's foreground shell; at minutes/hours
     # the protocol must be frozen with the preflight audit stamped and the
@@ -394,7 +397,7 @@ def main() -> None:
     # is the spread around the answer, never the answer (`02_analyze.py --draws`).
     repeat = args.repeat_of
     with runlog.run("<name>", config=config, base_dir=AREA, data={"prepared": ITEMS},
-                    long=True, protocol=PROTOCOL.name, repeat_of=repeat) as run:
+                    run_kind="measurement", protocol=PROTOCOL.name, repeat_of=repeat) as run:
         # the draw number runlog reserved and recorded — the one name source
         out = OUT if run.draw is None else OUT.with_name(f"{OUT.stem}_draw{run.draw}.jsonl")
         run.output(out)

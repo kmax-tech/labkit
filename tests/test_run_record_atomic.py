@@ -92,7 +92,7 @@ class NoHalfMadeRun(unittest.TestCase):
                 contextlib.redirect_stdout(io.StringIO()),
                 self.assertRaises(SystemExit),
             ):
-                runlog.Run("t", {}, area, long=True)  # unbound full run
+                runlog.Run("t", {}, area, run_kind="measurement")  # unbound full run
             with (
                 contextlib.redirect_stdout(io.StringIO()),
                 self.assertRaisesRegex(RuntimeError, "split leakage"),

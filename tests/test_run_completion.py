@@ -55,7 +55,7 @@ def _run_dir(
     area: Path,
     name: str,
     *,
-    schema: int | None = 2,
+    schema: int | None = 3,
     metrics=True,
     completion=True,
     pid=DEAD_PID,
@@ -72,6 +72,7 @@ def _run_dir(
     }
     if schema is not None:
         cfg["schema_version"] = schema
+        cfg["run_kind"] = "measurement"
     if protocol_id is not None:
         cfg["protocol"] = {"id": protocol_id, "path": "PROTOCOL-x.md"}
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
@@ -81,7 +82,8 @@ def _run_dir(
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
+                    "run_kind": "measurement",
                     "finished": "2026-09-26T21:00:00",
                     "git": "abc1234",
                     "git_full": "abc1234def",

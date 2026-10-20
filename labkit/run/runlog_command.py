@@ -184,7 +184,7 @@ def _start(argv: list[str]) -> int:
     setsid puts the run in its OWN process group and session: the shell that
     started it — and any tool timeout that kills that shell's group — cannot
     take the run down with it (scar 2026-08-13). LABKIT_DETACHED=1 tells the
-    `long=True` gate inside the script that the detach already happened.
+    `run_kind='measurement'` gate inside the script that the detach already happened.
     """
     import argparse
 

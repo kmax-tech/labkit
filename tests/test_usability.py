@@ -87,7 +87,8 @@ def _probe(
     (run / "config.json").write_text(
         json.dumps(
             {
-                "schema_version": 2,
+                "schema_version": 3,
+                "run_kind": "measurement",
                 "protocol": {
                     "id": "p-0123456789abcdef",
                     "path": "PROTOCOL-docs-per-case.md",

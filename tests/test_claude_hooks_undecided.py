@@ -4,7 +4,7 @@ the commit (`claude-hook undecided`).
 
 Third haiku round on labkit 0.99.0 (labkit-paper area 09, t5): the agent
 ran the preflight audit, read its four BLOCKERs, left every finding `open`,
-measured with long=False and reported. report-check would have refused the
+measured with run_kind='probe' and reported. report-check would have refused the
 number, but no gate the agent has to call is a gate; the stop and the
 commit are the two it cannot choose. Twins: a decided BLOCKER, an open
 WARNING, an area the session did not touch — all silent.

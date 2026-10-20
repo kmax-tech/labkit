@@ -6,6 +6,8 @@ One home for the shape, so a fixture states only what it varies:
 
 from __future__ import annotations
 
+from labkit.formats.runs import RunKind
+
 import json
 from pathlib import Path
 
@@ -56,7 +58,7 @@ def completed_run(
     pid: str = PID,
     metrics: dict | None = None,
     completion: bool = True,
-    long: bool = True,
+    run_kind: RunKind = "measurement",
     unfrozen_ack: bool = False,
 ) -> Path:
     """A run directory as runlog leaves one: bound to PID, its promise
@@ -72,9 +74,9 @@ def completed_run(
     cfg = {
         "script": "01_measure.py",
         "pid": 1,
-        "schema_version": 2,
+        "schema_version": 3,
         "protocol": {"id": pid, "path": "PROTOCOL-x.md"},
-        "long": long,
+        "run_kind": run_kind,
         "unfrozen_ack": unfrozen_ack,
         "promises": promises.snapshot(block, area) if block is not None else None,
     }
@@ -85,7 +87,7 @@ def completed_run(
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "finished": "x",
                     "git": "g",
                     "git_full": "g",

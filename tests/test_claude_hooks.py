@@ -11,6 +11,8 @@ tool wrote them (git status, not the tool name), once per content.
 
 from __future__ import annotations
 
+from labkit.formats.runs import RunKind
+
 import contextlib
 import io
 import json
@@ -396,9 +398,9 @@ class Stop(unittest.TestCase):
         (self.root / "data" / "cases.jsonl").write_text('{"id": 1}\n', encoding="utf-8")
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "analyze and data")
-        self._run_dir(long=True)
+        self._run_dir(run_kind="measurement")
 
-    def _run_dir(self, long: bool) -> None:
+    def _run_dir(self, run_kind: RunKind) -> None:
         """The area's one completed run, a full run or a probe, with a decided
         analysis record of it (what report-check owes beyond the run itself)."""
         d = self.area / "runs" / self.RUN
@@ -409,10 +411,10 @@ class Stop(unittest.TestCase):
         (d / "config.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                     "promises": promises.snapshot(block, self.area),
-                    "long": long,
+                    "run_kind": run_kind,
                     "data": {
                         "cases": {"path": "data/cases.jsonl", "sha": "x", "rows": 1}
                     },
@@ -422,7 +424,9 @@ class Stop(unittest.TestCase):
         (d / "metrics.json").write_text(
             json.dumps({"c1_pass": True, "a1_pass": True, "a2_pass": True})
         )
-        (d / "completion.json").write_text(json.dumps({"schema_version": 2}))
+        (d / "completion.json").write_text(
+            json.dumps({"schema_version": 3, "run_kind": "measurement"})
+        )
         if not (self.area / "audits").is_dir():
             findings.write(
                 self.area,
@@ -478,17 +482,17 @@ class Stop(unittest.TestCase):
         self.assertIn("no analysis audit saw the area as it is now", err)
 
     def test_a_probes_number_written_back_is_sent_back(self):
-        """Third haiku round (t3, t5): measured with long=False, reported."""
-        self._run_dir(long=False)
+        """Third haiku round (t3, t5): measured with run_kind='probe', reported."""
+        self._run_dir(run_kind="probe")
         self._answer(self.RUN)
         rc, _, err = self._stop()
         self.assertEqual(rc, 2)
-        self.assertIn("a probe (long=False), not a full run", err)
+        self.assertIn("a probe (run_kind='probe'), not a measurement", err)
 
     def test_an_exploration_over_a_probe_may_end(self):
         """The twin that must stay: the protocol changed, a probe in runs/,
         the answer still open — no reported result, nothing owed."""
-        self._run_dir(long=False)
+        self._run_dir(run_kind="probe")
         p = self.area / "PROTOCOL-x.md"
         p.write_text(p.read_text() + "- **Deviations after freeze:** none\n")
         rc, out, err = self._stop()

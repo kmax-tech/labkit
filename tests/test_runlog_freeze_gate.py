@@ -1,17 +1,19 @@
 """Tests for runlog's freeze gate (2026-10-05).
 
-A full run (`long=True`) on a protocol whose head is not `frozen = true`,
+A full run (`run_kind='measurement'`) on a protocol whose head is not `frozen = true`,
 or whose `preflight_audit` is still empty, is refused before any run
-directory exists. Probes (`long=False`) pass; a full run acknowledges
+directory exists. Probes (`run_kind='probe'`) pass; a full run acknowledges
 with LABKIT_UNFROZEN=1 over an audit the backend refused (the failed
 attempt `labkit-audit` wrote, 0.99.0) and the acknowledgement lands in
-config.json with that attempt; `long` is recorded for every run. At
+config.json with that attempt; `run_kind` is recorded for every run. At
 `cost = "seconds"` the gate is the written registration (question,
 criterion, admissibility condition), not the freeze (LAB-017 The number of audits follows the cost tier); the tier
 lands in config.json as `cost_tier`.
 """
 
 from __future__ import annotations
+
+from labkit.formats.runs import RunKind
 
 import contextlib
 import io
@@ -72,11 +74,11 @@ class FreezeGate(unittest.TestCase):
         scope_file(self.tmp)  # the frozen fixture's block names it
         return self.tmp
 
-    def _start(self, text: str, long: bool):
+    def _start(self, text: str, run_kind: RunKind):
         area = self._area(text)
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            r = runlog.Run("t", {}, area, long=long)
+            r = runlog.Run("t", {}, area, run_kind=run_kind)
         return r, buf.getvalue()
 
     def _audited(self, record: bool = True) -> str:
@@ -104,7 +106,7 @@ class FreezeGate(unittest.TestCase):
         return text
 
     def test_full_run_on_frozen_protocol_starts(self):
-        r, _ = self._start(self._audited(), long=True)
+        r, _ = self._start(self._audited(), run_kind="measurement")
         self.assertTrue((r.dir / "config.json").is_file())
         self.assertFalse(
             json.loads((r.dir / "config.json").read_text())["unfrozen_ack"]
@@ -119,7 +121,7 @@ class FreezeGate(unittest.TestCase):
         area = self._area(text)
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
-                runlog.Run("t", {}, area, long=True)
+                runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("changed after the audit", str(cm.exception))
         self.assertFalse((area / "runs").exists())
 
@@ -130,12 +132,12 @@ class FreezeGate(unittest.TestCase):
         area = self._area(self._audited(record=False))
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
-                runlog.Run("t", {}, area, long=True)
+                runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("no preflight audit saw the area as it is now", str(cm.exception))
         findings.write(area, "preflight", "opus", "0123456789ab", "b", (0, 0, 0), [])
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
-                runlog.Run("t", {}, area, long=True)
+                runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn(
             "audited: code 0123456789ab, promises b", str(cm.exception)
         )  # the old audit, named
@@ -150,7 +152,7 @@ class FreezeGate(unittest.TestCase):
         )
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
-                runlog.Run("t", {}, area, long=True)
+                runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("no preflight audit saw the area as it is now", str(cm.exception))
         self.assertIn("promises ", str(cm.exception))
         self.assertFalse((area / "runs").exists())
@@ -170,14 +172,14 @@ class FreezeGate(unittest.TestCase):
         area = self._area(text)
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
-                runlog.Run("t", {}, area, long=True)
+                runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("still `open`", str(cm.exception))
 
     def test_an_audit_line_without_a_stamp_is_refused(self):
         area = self._area(FROZEN)  # "scope sha abc" is no stamp
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
-                runlog.Run("t", {}, area, long=True)
+                runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("names no `scope sha", str(cm.exception))
 
     def test_a_waived_audit_is_refused_at_hours_and_names_the_honest_ways(self):
@@ -190,7 +192,7 @@ class FreezeGate(unittest.TestCase):
             preflight_audit="n/a — decided with the supervisor",
         )
         with self.assertRaises(SystemExit) as cm:
-            self._start(text, long=True)
+            self._start(text, run_kind="measurement")
         msg = str(cm.exception)
         self.assertIn("nobody waives their own", msg)
         self.assertIn("labkit-audit <area> --mode preflight", msg)
@@ -200,7 +202,7 @@ class FreezeGate(unittest.TestCase):
     def test_a_waived_audit_at_seconds_is_no_finding(self):
         """Twin: at seconds no audit is owed before the run; the line is not read."""
         text = head(cost="seconds", preflight_audit="n/a — seconds") + REGISTRATION
-        r, _ = self._start(text, long=True)
+        r, _ = self._start(text, run_kind="measurement")
         self.assertTrue((r.dir / "config.json").is_file())
 
     def test_full_run_on_an_unstamped_id_is_refused_before_mkdir(self):
@@ -213,21 +215,21 @@ class FreezeGate(unittest.TestCase):
             area = self._area(text)
             with self.assertRaises(SystemExit) as cm:
                 with contextlib.redirect_stdout(io.StringIO()):
-                    runlog.Run("t", {}, area, long=True)
+                    runlog.Run("t", {}, area, run_kind="measurement")
             self.assertIn("id is not stamped", str(cm.exception))
             self.assertFalse((area / "runs").exists())
 
     def test_full_run_on_unfrozen_protocol_is_refused_before_mkdir(self):
         area = self._area(UNFROZEN)
         with self.assertRaises(SystemExit) as cm:
-            runlog.Run("t", {}, area, long=True)
+            runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("not `frozen = true`", str(cm.exception))
         self.assertFalse((area / "runs").exists())
 
     def test_full_run_with_placeholder_audit_is_refused(self):
         area = self._area(PLACEHOLDER)
         with self.assertRaises(SystemExit) as cm:
-            runlog.Run("t", {}, area, long=True)
+            runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("`preflight_audit` is empty", str(cm.exception))
         self.assertFalse((area / "runs").exists())
 
@@ -236,22 +238,22 @@ class FreezeGate(unittest.TestCase):
         head naming the field, not a protocol that skips the audit."""
         area = self._area(NO_FIELD)
         with self.assertRaises(SystemExit) as cm:
-            runlog.Run("t", {}, area, long=True)
+            runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("preflight_audit", str(cm.exception))
         self.assertFalse((area / "runs").exists())
 
     def test_pilot_passes_unfrozen(self):
-        r, _ = self._start(UNFROZEN, long=False)
+        r, _ = self._start(UNFROZEN, run_kind="probe")
         self.assertTrue((r.dir / "config.json").is_file())
 
     def test_unbound_full_run_is_refused(self):
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
-                runlog.Run("t", {}, self.tmp, long=True)
+                runlog.Run("t", {}, self.tmp, run_kind="measurement")
         self.assertIn("unbound", str(cm.exception))
 
     def test_seconds_with_criterion_starts_unfrozen(self):
-        r, _ = self._start(SECONDS, long=True)
+        r, _ = self._start(SECONDS, run_kind="measurement")
         cfg = json.loads((r.dir / "config.json").read_text())
         self.assertEqual(cfg["cost_tier"], "seconds")
         self.assertFalse(cfg["unfrozen_ack"])
@@ -259,20 +261,18 @@ class FreezeGate(unittest.TestCase):
     def test_seconds_without_criterion_is_refused(self):
         area = self._area(SECONDS_NO_CRITERION)
         with self.assertRaises(SystemExit) as cm:
-            runlog.Run("t", {}, area, long=True)
+            runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("Success / failure criterion", str(cm.exception))
         self.assertIn('cost = "seconds"', str(cm.exception))
         self.assertFalse((area / "runs").exists())
-        # a probe too: at seconds every run is the full run (the lane's
-        # answer, `every_run_full`), and the refusal says so
+        # A seconds probe is refused before checking its registration.
         with self.assertRaises(SystemExit) as cm:
-            runlog.Run("t", {}, area, long=False)
-        self.assertIn("where every run is the full run", str(cm.exception))
-        self.assertIn("Success / failure criterion", str(cm.exception))
+            runlog.Run("t", {}, area, run_kind="probe")
+        self.assertIn("no separate probe stage", str(cm.exception))
         self.assertFalse((area / "runs").exists())
 
     def test_a_count_at_seconds_starts_without_criterion_or_tables(self):
-        r, _ = self._start(SECONDS_COUNT, long=True)
+        r, _ = self._start(SECONDS_COUNT, run_kind="measurement")
         cfg = json.loads((r.dir / "config.json").read_text())
         self.assertEqual(cfg["cost_tier"], "seconds")
         self.assertIsNone(cfg.get("promises"))  # nothing registered, nothing recorded
@@ -280,7 +280,7 @@ class FreezeGate(unittest.TestCase):
     def test_hours_keeps_the_freeze(self):
         area = self._area(HOURS_UNFROZEN)
         with self.assertRaises(SystemExit) as cm:
-            runlog.Run("t", {}, area, long=True)
+            runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("not `frozen = true`", str(cm.exception))
 
     def test_prose_head_is_refused_before_mkdir(self):
@@ -288,17 +288,17 @@ class FreezeGate(unittest.TestCase):
         gone: such a protocol is a loud refusal, even for a pilot (TODO 8)."""
         area = self._area(PROSE_HEAD)
         with self.assertRaises(SystemExit) as cm:
-            runlog.Run("t", {}, area, long=False)
+            runlog.Run("t", {}, area, run_kind="probe")
         self.assertIn("no [protocol] table", str(cm.exception))
         self.assertFalse((area / "runs").exists())
 
     def test_seconds_runs_in_a_claude_foreground_shell(self):
         os.environ["CLAUDECODE"] = "1"
         try:
-            r, _ = self._start(SECONDS, long=True)
+            r, _ = self._start(SECONDS, run_kind="measurement")
             self.assertTrue((r.dir / "config.json").is_file())
             with self.assertRaises(SystemExit) as cm:
-                self._start(FROZEN, long=True)
+                self._start(FROZEN, run_kind="measurement")
             self.assertIn("foreground", str(cm.exception))
         finally:
             os.environ.pop("CLAUDECODE", None)
@@ -313,11 +313,11 @@ class FreezeGate(unittest.TestCase):
         try:
             os.environ[env] = "300"
             with self.assertRaises(SystemExit) as cm:
-                self._start(frozen, long=True)
+                self._start(frozen, run_kind="measurement")
             self.assertIn(f"after 300 s ({env})", str(cm.exception))
             os.environ["CLAUDECODE"] = "1"
             os.environ[env] = "0"
-            r, _ = self._start(frozen, long=True)
+            r, _ = self._start(frozen, run_kind="measurement")
             self.assertTrue((r.dir / "config.json").is_file())
             os.environ[env] = "ten minutes"
             with self.assertRaises(SystemExit) as cm:
@@ -328,17 +328,17 @@ class FreezeGate(unittest.TestCase):
             os.environ.pop("CLAUDECODE", None)
 
     def test_tier_is_recorded_for_pilots_too(self):
-        r, _ = self._start(FROZEN, long=False)
+        r, _ = self._start(FROZEN, run_kind="probe")
         self.assertEqual(
             json.loads((r.dir / "config.json").read_text())["cost_tier"], "hours"
         )
 
     def test_unfilled_tier_is_recorded_as_none_and_keeps_the_freeze(self):
         text = head(cost="<seconds | minutes | hours>", promises=DEFAULT_BLOCK)
-        r, _ = self._start(text, long=False)
+        r, _ = self._start(text, run_kind="probe")
         self.assertIsNone(json.loads((r.dir / "config.json").read_text())["cost_tier"])
         with self.assertRaises(SystemExit) as cm:
-            self._start(text, long=True)
+            self._start(text, run_kind="measurement")
         self.assertIn("not `frozen = true`", str(cm.exception))
 
     def _audit_failed(self, text: str) -> Path:
@@ -360,14 +360,14 @@ class FreezeGate(unittest.TestCase):
         tried = self._audit_failed(UNFROZEN)
         os.environ["LABKIT_UNFROZEN"] = "1"
         try:
-            r, out = self._start(UNFROZEN, long=True)
+            r, out = self._start(UNFROZEN, run_kind="measurement")
         finally:
             os.environ.pop("LABKIT_UNFROZEN", None)
         self.assertIn("LABKIT_UNFROZEN=1", out)
         self.assertIn(f"rests on the audit that could not run: {tried.name}", out)
         cfg = json.loads((r.dir / "config.json").read_text())
         self.assertTrue(cfg["unfrozen_ack"])
-        self.assertTrue(cfg["long"])
+        self.assertEqual(cfg["run_kind"], "measurement")
         self.assertEqual(cfg["audit_failed"], tried.name)
 
     def test_the_acknowledgement_without_a_failed_audit_is_refused(self):
@@ -376,20 +376,22 @@ class FreezeGate(unittest.TestCase):
         os.environ["LABKIT_UNFROZEN"] = "1"
         try:
             with self.assertRaises(SystemExit) as cm:
-                self._start(UNFROZEN, long=True)
+                self._start(UNFROZEN, run_kind="measurement")
         finally:
             os.environ.pop("LABKIT_UNFROZEN", None)
         self.assertIn("not one nobody ran", str(cm.exception))
         self.assertIn("attempts: none", str(cm.exception))
         self.assertFalse((self.tmp / "runs").exists())
 
-    def test_a_full_run_records_long_and_a_probe_records_not(self):
-        r, _ = self._start(self._audited(), long=True)
-        self.assertTrue(json.loads((r.dir / "config.json").read_text())["long"])
+    def test_measurement_and_probe_record_their_kind(self):
+        r, _ = self._start(self._audited(), run_kind="measurement")
+        self.assertEqual(
+            json.loads((r.dir / "config.json").read_text())["run_kind"], "measurement"
+        )
         self.tmp = Path(tempfile.mkdtemp())
-        r, _ = self._start(UNFROZEN, long=False)
+        r, _ = self._start(UNFROZEN, run_kind="probe")
         cfg = json.loads((r.dir / "config.json").read_text())
-        self.assertFalse(cfg["long"])
+        self.assertEqual(cfg["run_kind"], "probe")
         self.assertFalse(cfg["unfrozen_ack"])
         self.assertIsNone(cfg["audit_failed"])
 

@@ -6,6 +6,8 @@ The label match must hit single- and multi-line placeholders, refuse
 ambiguity and silent overwrites, and leave every other byte alone.
 """
 
+from labkit.formats.runs import RunKind
+
 import contextlib
 import io
 import json
@@ -352,7 +354,8 @@ class TestFromRun(unittest.TestCase):
         (run / "config.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
+                    "run_kind": "measurement",
                     "protocol": {"id": PID, "path": "PROTOCOL-count.md"},
                 }
             ),
@@ -450,7 +453,7 @@ class TestFromRun(unittest.TestCase):
 
     def test_the_command_refuses_an_unchecked_result_and_leaves_the_file(self):
         """The one adoption path (2026-10-19): the fixture's run has no
-        analysis record and does not say it was a full run — report-check
+        analysis record — report-check
         refuses, and the protocol is byte-identical to before."""
         area = self._area({"mean_docs_per_case": 3.5})
         before = (area / "PROTOCOL-count.md").read_text(encoding="utf-8")
@@ -460,7 +463,7 @@ class TestFromRun(unittest.TestCase):
         self.assertEqual(rc, 1, buf.getvalue())
         self.assertIn("filled from run " + self.RUN, buf.getvalue())
         self.assertIn("not adopted", buf.getvalue())
-        self.assertIn("does not say whether it was a full run", buf.getvalue())
+        self.assertIn("analysis audit", buf.getvalue())
         self.assertEqual(
             (area / "PROTOCOL-count.md").read_text(encoding="utf-8"), before
         )
@@ -491,7 +494,7 @@ class Adopt(unittest.TestCase):
 
 """
 
-    def _area(self, *, long: bool = True, audited: bool = True) -> Path:
+    def _area(self, *, run_kind: RunKind = "measurement", audited: bool = True) -> Path:
         from labkit.formats import findings, promises, scope_sha
         from protocol_fixture import completed_run, scope_file
 
@@ -503,7 +506,9 @@ class Adopt(unittest.TestCase):
         scope_file(area)
         proto = area / "PROTOCOL-x.md"
         proto.write_text(self.BODY + head(cost="seconds"), encoding="utf-8")
-        run = completed_run(area, self.RUN, metrics={"c1_pass": True}, long=long)
+        run = completed_run(
+            area, self.RUN, metrics={"c1_pass": True}, run_kind=run_kind
+        )
         src = area / "data.jsonl"
         src.write_text('{"id": 1}\n', encoding="utf-8")
         cfg = run / "config.json"
@@ -538,11 +543,11 @@ class Adopt(unittest.TestCase):
         self.assertIn(f"- **Answering run:** {self.RUN}", text)
 
     def test_a_probe_is_refused_and_the_file_is_as_it_was(self):
-        area = self._area(long=False)
+        area = self._area(run_kind="probe")
         before = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
         rc, out, text = self._adopt(area)
         self.assertEqual(rc, 1, out)
-        self.assertIn("a probe (long=False), not a full run", out)
+        self.assertIn("a probe (run_kind='probe'), not a measurement", out)
         self.assertIn("not adopted", out)
         self.assertEqual(text, before)
 

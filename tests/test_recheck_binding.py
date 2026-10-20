@@ -54,7 +54,13 @@ class TwoProtocols(unittest.TestCase):
         r = self.area / "runs" / run_id
         r.mkdir()
         (r / "config.json").write_text(
-            json.dumps({"schema_version": 2, "protocol": {"id": pid, "path": "x"}})
+            json.dumps(
+                {
+                    "schema_version": 3,
+                    "run_kind": "measurement",
+                    "protocol": {"id": pid, "path": "x"},
+                }
+            )
         )
         (r / "metrics.json").write_text(json.dumps(metrics))
         (r / "outputs.json").write_text(

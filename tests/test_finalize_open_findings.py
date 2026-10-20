@@ -3,7 +3,7 @@ cannot be reported; report-check refuses that number (plan 2026-10-17, A3).
 
 Benchmark rounds (labkit-paper area 09): the leakage BLOCKER lay undecided
 in audits/ and nothing between it and the reported number said so; in the
-second haiku round on 0.98.0 the answering runs were probes (long=False) or
+second haiku round on 0.98.0 the answering runs were probes (run_kind='probe') or
 acknowledged runs (LABKIT_UNFROZEN=1), and both gates were silent. finalize
 warns about such a run and blocks on an open BLOCKER; report-check blocks
 the run (`runs.unreportable`, one telling).
@@ -149,31 +149,32 @@ class UnreportableRun(unittest.TestCase):
         self.assertIn("a reported number owes a full run", out)
 
     def test_a_probe_warns_in_finalize_and_blocks_in_report_check(self):
-        """Haiku t3 and t18 on 0.98.0: measured without long=True, reported."""
-        completed_run(self.area, "r1", metrics=METRICS, long=False)
+        """Haiku t3 and t18 on 0.98.0: measured without run_kind='measurement', reported."""
+        completed_run(self.area, "r1", metrics=METRICS, run_kind="probe")
         code, out = _finalize(self.area)
         self.assertEqual(code, 0, out)
-        self.assertIn("a probe (long=False)", out)
+        self.assertIn("a probe (run_kind='probe')", out)
         code, out = _report_check(self.area)
         self.assertEqual(code, 1, out)
-        self.assertIn("a probe (long=False), not a full run", out)
+        self.assertIn("a probe (run_kind='probe'), not a measurement", out)
         self.assertIn("its number cannot be reported", out)
 
-    def test_a_record_without_long_cannot_say_and_is_refused(self):
+    def test_a_record_without_run_kind_is_refused_at_the_read_boundary(self):
         run = completed_run(self.area, "r1", metrics=METRICS)
         cfg = run / "config.json"
         data = json.loads(cfg.read_text(encoding="utf-8"))
-        del data["long"]
+        del data["run_kind"]
         cfg.write_text(json.dumps(data), encoding="utf-8")
-        code, out = _report_check(self.area)
-        self.assertEqual(code, 1, out)
-        self.assertIn("does not say whether it was a full run", out)
+        with self.assertRaisesRegex(runs.RunConfigError, "run_kind"):
+            runs.read_run_config(run)
 
     def test_the_marks_are_one_telling(self):
-        self.assertEqual(runs.unreportable({"long": True, "unfrozen_ack": False}), [])
-        both = runs.unreportable({"long": False, "unfrozen_ack": True})
+        self.assertEqual(
+            runs.unreportable({"run_kind": "measurement", "unfrozen_ack": False}), []
+        )
+        both = runs.unreportable({"run_kind": "probe", "unfrozen_ack": True})
         self.assertEqual(len(both), 2)
-        self.assertEqual(len(runs.unreportable({"long": "yes"})), 1)
+        self.assertEqual(len(runs.unreportable({"run_kind": "yes"})), 1)
 
     def test_without_an_answering_run_report_check_leaves_it_to_finalize(self):
         code, out = _report_check(self.area)

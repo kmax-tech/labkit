@@ -20,7 +20,9 @@ class Lanes(unittest.TestCase):
             (ln.freeze, ln.registration, ln.audits, ln.cut),
             (False, True, ("analysis",), "seconds"),
         )
-        self.assertTrue(ln.every_run_full and ln.foreground and ln.provenance)
+        self.assertEqual(
+            (ln.probe_allowed, ln.foreground, ln.provenance), (False, True, True)
+        )
 
     def test_minutes_and_hours_owe_the_freeze_with_its_audit(self):
         for cost in ("minutes", "hours"):
@@ -30,7 +32,10 @@ class Lanes(unittest.TestCase):
                     (ln.tier, ln.freeze, ln.registration, ln.audits, ln.cut),
                     (cost, True, False, ("preflight", "analysis"), "full"),
                 )
-                self.assertFalse(ln.every_run_full or ln.foreground or ln.provenance)
+                self.assertEqual(
+                    (ln.probe_allowed, ln.foreground, ln.provenance),
+                    (True, False, False),
+                )
 
     def test_an_unfilled_cost_reads_as_hours(self):
         self.assertEqual(sc.lane(None), sc.lane("hours"))
@@ -72,8 +77,7 @@ class TheRelease(unittest.TestCase):
                 with self.subTest(cost=cost, model=model):
                     first = sc.describe(cost, model)[0]
                     owed = (
-                        sc.skeleton(cost, model).probe
-                        and not sc.lane(cost).every_run_full
+                        sc.skeleton(cost, model).probe and sc.lane(cost).probe_allowed
                     )
                     self.assertEqual("--probe stage before the run" in first, owed)
                     if not owed:

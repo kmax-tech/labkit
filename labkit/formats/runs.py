@@ -79,6 +79,25 @@ def runs_script(cmd: str, script: str) -> bool:
 #: the experiment's config and metrics keys stay free — Any, not a schema
 JsonObject = dict[str, Any]
 
+#: Current run-record format; the writer and reader use the same version.
+RUN_SCHEMA = 3
+
+RunKind = Literal["preparation", "probe", "measurement"]
+
+
+def parse_run_kind(value: object) -> RunKind:
+    """Validate the declared purpose of a run, naming the field on failure."""
+    if value == "preparation":
+        return "preparation"
+    if value == "probe":
+        return "probe"
+    if value == "measurement":
+        return "measurement"
+    raise ValueError(
+        f"run_kind = {value!r}; expected 'preparation', 'probe' or 'measurement'"
+    )
+
+
 #: what a run directory is — the closed set every reader compares to:
 #: `run_state` gives the first six, `unreadable` is a run whose config.json
 #: cannot be read (`RunDir.error`)
@@ -90,7 +109,7 @@ RunState = Literal[
 def run_state(run_dir: Path, cfg: JsonObject, alive: bool | None) -> RunState:
     """One of: completed · running · unknown · crashed · unfinalized · corrupt
     (a run whose config.json cannot be read — damaged, or written before
-    schema 2 — is `unreadable`: `run_facts`, `runlog.active`; this function
+    schema 3 — is `unreadable`: `run_facts`, `runlog.active`; this function
     never sees one, it takes a parsed cfg).
 
     metrics.json without completion.json is decided by liveness: alive →
@@ -337,6 +356,24 @@ def read_metrics(path: Path) -> dict[str, object]:
     return cast(dict[str, object], data)
 
 
+def _schema_problem(sv: object) -> str | None:
+    """Why a record's schema version cannot be read by this package."""
+    # written before labkit 0.21 (when metrics.json alone marked a finish):
+    # 0.89.0 dropped the `legacy` state that listed such a run (CHANGELOG)
+    before_schema = "a run of labkit before 0.21 — read it with labkit 0.47"
+    if sv is None:
+        return f"no schema_version: {before_schema}"
+    if not isinstance(sv, int) or isinstance(sv, bool):
+        return f"schema_version = {sv!r}, not an integer"
+    if sv < 2:
+        return f"schema_version = {sv}, below 2: {before_schema}"
+    if sv < RUN_SCHEMA:
+        return "schema_version = 2; read this record with labkit 0.99.0"
+    if sv != RUN_SCHEMA:
+        return f"schema_version = {sv}; expected {RUN_SCHEMA}"
+    return None
+
+
 def _shape_problem(cfg: object) -> str | None:
     """The minimal shape every reader relies on, checked in one place:
     valid JSON that is a list, or a binding that is a string, used to fail
@@ -344,16 +381,13 @@ def _shape_problem(cfg: object) -> str | None:
     if not isinstance(cfg, dict):
         return f"a JSON {type(cfg).__name__}, not an object"
     cfg = cast(JsonObject, cfg)
-    # written before labkit 0.21 (when metrics.json alone marked a finish):
-    # 0.89.0 dropped the `legacy` state that listed such a run (CHANGELOG)
-    before_schema = "a run of labkit before 0.21 — read it with labkit 0.47"
-    sv = cfg.get("schema_version")
-    if sv is None:
-        return f"no schema_version: {before_schema}"
-    if not isinstance(sv, int) or isinstance(sv, bool):
-        return f"schema_version = {sv!r}, not an integer"
-    if sv < 2:
-        return f"schema_version = {sv}, below 2: {before_schema}"
+    schema_problem = _schema_problem(cfg.get("schema_version"))
+    if schema_problem:
+        return schema_problem
+    try:
+        parse_run_kind(cfg.get("run_kind"))
+    except ValueError as exc:
+        return str(exc)
     try:
         binding_of(cfg)
     except RunConfigError as exc:
@@ -387,31 +421,20 @@ def _repeat_shape_problem(cfg: JsonObject) -> str | None:
 
 
 def unreportable(cfg: JsonObject) -> list[str]:
-    """Why the number of the run CFG records cannot be reported — empty when
-    it is a full run on a protocol the freeze gate let through.
+    """Reasons this run cannot supply a reported result.
 
-    A full run declares `long=True`; its record carries `long` (since
-    0.99.0) and `unfrozen_ack` (a full run acknowledged over an unfrozen
-    protocol with `LABKIT_UNFROZEN=1`). Both are the run's own words at
-    start, so the question is a read, not a guess. The marks are one telling
-    for finalize (a warning) and report-check (a blocker): in the second
-    haiku round on labkit 0.98.0 (labkit-paper area 09, t3 and t18) the
-    agents measured without `long=True` and reported the probe's number;
-    neither gate asked whether the answering run was a full run. A record
-    without `long` was written by labkit before 0.99.0 and cannot say — that
-    is a mark too, not a pass (no legacy reading). The word is "probe", not
-    "pilot": the agents of those rounds called their shortcut a pilot, and
-    labkit's own messages had offered them the word (review 2026-10-18).
+    Only a measurement without an unfrozen acknowledgement is eligible;
+    the release gate checks completion, audits and recomputation separately.
+    A missing or invalid kind is a damaged or unsupported record.
     """
     marks: list[str] = []
-    long = cfg.get("long")
-    if not isinstance(long, bool):
-        marks.append(
-            "the record does not say whether it was a full run (`long`, "
-            "recorded since 0.99.0) — a run of an earlier labkit, or a damaged record"
-        )
-    elif not long:
-        marks.append("a probe (long=False), not a full run")
+    try:
+        kind = parse_run_kind(cfg.get("run_kind"))
+    except ValueError as exc:
+        marks.append(str(exc))
+    else:
+        if kind != "measurement":
+            marks.append(f"a {kind} (run_kind={kind!r}), not a measurement")
     if cfg.get("unfrozen_ack") is True:
         marks.append(
             "a full run acknowledged over an unfrozen protocol with LABKIT_UNFROZEN=1"

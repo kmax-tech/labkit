@@ -46,7 +46,8 @@ class TestIntentCheck(unittest.TestCase):
                 {
                     "script": "01_measure.py",
                     "pid": 1,
-                    "schema_version": 2,
+                    "schema_version": 3,
+                    "run_kind": "measurement",
                     "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                 }
             ),
@@ -56,7 +57,8 @@ class TestIntentCheck(unittest.TestCase):
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
+                    "run_kind": "measurement",
                     "finished": "x",
                     "git": "g",
                     "git_full": "g",

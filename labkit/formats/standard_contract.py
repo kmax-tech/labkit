@@ -90,10 +90,8 @@ class Lane:
             reporting.
         cut: Which fields the protocol owes — the seconds cut or the full
             form (`protocol_check.FIELDS` carries the marks).
-        every_run_full: Every run through runlog is the full run — the run
-            itself is the instrument check, there is no probe stage before
-            it — so the promise tables are owed as soon as the protocol
-            registers an id, frozen or not (`promises.promise_tables_owed`).
+        probe_allowed: A separate instrument probe may precede the measurement.
+            False at seconds: repeat the full measurement to check the instrument.
         foreground: A full run may start in an agent's foreground shell:
             it ends within the harness's limit. Elsewhere the detach gate
             refuses it (`runlog.Run`, scar 2026-08-13).
@@ -109,7 +107,7 @@ class Lane:
     audits: tuple[str, ...]
     analysis_rule: str
     cut: str
-    every_run_full: bool
+    probe_allowed: bool
     foreground: bool
     provenance: bool
 
@@ -121,7 +119,7 @@ SECONDS_LANE = Lane(
     audits=(ANALYSIS_AUDIT,),
     analysis_rule="LAB-017 The number of audits follows the cost tier",
     cut=SECONDS_CUT,
-    every_run_full=True,
+    probe_allowed=False,
     foreground=True,
     provenance=True,
 )
@@ -140,7 +138,7 @@ def lane(cost: str | None) -> Lane:
         audits=(PREFLIGHT_AUDIT, ANALYSIS_AUDIT),
         analysis_rule="LAB-050 Analysis audit before reporting",
         cut=FULL_FORM,
-        every_run_full=False,
+        probe_allowed=True,
         foreground=False,
         provenance=False,
     )
@@ -196,7 +194,7 @@ class Skeleton:
         probe: The skeleton has a throwaway instrument check (`--probe`).
             The count has none: its run is the instrument check. Whether
             the probe precedes a run is the lane's answer too — at seconds
-            every run is the full run (`Lane.every_run_full`).
+            a separate probe is not allowed (`Lane.probe_allowed`).
     """
 
     instrument: str
@@ -266,7 +264,7 @@ def describe(cost: str | None, model: bool) -> list[str]:
         + f"({', '.join(dest for _, dest in sk.scripts)}"
         + (
             ", a --probe stage before the run)"
-            if sk.probe and not ln.every_run_full
+            if sk.probe and ln.probe_allowed
             else "; the run is the instrument check)"
         ),
         f"before a full run: {before}"

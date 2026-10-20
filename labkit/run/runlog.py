@@ -6,7 +6,7 @@ run-index row; PROTOCOL-<task>.md cites run_ids instead of pasting numbers.
 
     runs/<run_id>/config.json      the record at start: config, data, git state,
                                    env, models resolved, the binding (protocol id),
-                                   `long` (a full run or a probe), `unfrozen_ack`
+                                   `run_kind` (preparation, probe or measurement), `unfrozen_ack`
                                    and the failed audit attempt it rests on
     runs/<run_id>/metrics.json     the numbers reported via r.metrics()
     runs/<run_id>/outputs.json     the files registered via r.output(), as the
@@ -64,7 +64,7 @@ the directory). An incomplete run leaves its dir with config.json but
 without the required completion markers — visible, not silent. The run-index row is written on
 clean exit only. States: completed · running · unknown · crashed ·
 unfinalized · corrupt · unreadable (config.json damaged, or written before
-schema 2 — read with labkit 0.47).
+schema 3 — read with its pinned labkit).
 """
 
 from __future__ import annotations
@@ -87,6 +87,8 @@ from labkit.formats import repo
 from labkit.formats.standard_contract import lane
 from labkit.formats.runs import (
     COMPLETED,
+    RunKind,
+    RUN_SCHEMA,
     RECORD_SHA_CHARS,
     binding_of,
     RUN_ID_TIME,
@@ -133,13 +135,6 @@ RUN_INDEX_COLS = [
     "note",
     "protocol_id",
 ]
-
-# Bumped when a run directory's SHAPE changes, stamped into config.json at the
-# START of the run. It has to be readable before the run ends, because the
-# question it settles — did a run without completion.json break off? — is
-# asked exactly when that file is absent (2026-09-26). A run without it is
-# unreadable here (`runs.read_run_config`) and is read by labkit 0.47.
-RUN_SCHEMA = 2
 
 
 def notify_desktop(title: str, body: str) -> None:
@@ -343,29 +338,32 @@ class Run:
         config: dict,
         base_dir: Path,
         data: dict | None = None,
-        long: bool = False,
+        run_kind: RunKind = "probe",
         protocol: str | Path | None = None,
         derived_from: str | None = None,
         repeat_of: str | None = None,
     ) -> None:
         # 1. preparation — what the run is held to, read once
-        prepared = prepare(base_dir, config, long, protocol, derived_from)
+        prepared = prepare(base_dir, config, run_kind, protocol, derived_from)
         # 2. the start check — the order and every skip are visible here;
         #    helpers check the facts without reading a partly built Run
         refusal = registration_refusal(
-            prepared.bound, prepared.block, prepared.config, prepared.full_run
+            prepared.bound,
+            prepared.block,
+            prepared.config,
+            prepared.run_kind == "measurement",
         )
         if refusal:
             raise SystemExit(f"runlog: {refusal}")
         obligations = lane(prepared.cost_tier)
-        if prepared.long and not obligations.foreground:
+        if prepared.run_kind == "measurement" and not obligations.foreground:
             limit = foreground_timeout()
             if limit is not None and os.environ.get("LABKIT_DETACHED") != "1":
                 foreground_refusal(base_dir, limit)
         _check_run_index(base_dir)
         described = describe_data(data, base_dir) if data else {}
         unfrozen_ack, audit_failed = False, None
-        if prepared.full_run:
+        if prepared.run_kind == "measurement":
             unfrozen_ack, audit_failed = freeze_gate(base_dir, prepared)
         # 3. creation — the record, whole or not at all
         self.run_id = time.strftime(RUN_ID_TIME) + "_" + uuid.uuid4().hex[:4]
@@ -378,7 +376,7 @@ class Run:
         self._promises = prepared.promises
         self._config = prepared.config
         self._derived_from = prepared.derived_from
-        self._long = prepared.long  # the script's declaration, recorded as `long`
+        self._run_kind = prepared.run_kind
         self._data = described
         self._unfrozen_ack = unfrozen_ack
         self._audit_failed = audit_failed
@@ -422,7 +420,7 @@ class Run:
             "derived_from": self._derived_from,
             "repeat_of": self._repeat_of,
             "draw": self.draw,
-            "long": self._long,
+            "run_kind": self._run_kind,
             "unfrozen_ack": self._unfrozen_ack,
             "audit_failed": self._audit_failed,
             "cost_tier": self._cost_tier,
@@ -636,7 +634,7 @@ class run:
         config: dict,
         base_dir: str | Path | None = None,
         data: dict | None = None,
-        long: bool = False,
+        run_kind: RunKind = "probe",
         protocol: str | Path | None = None,
         derived_from: str | None = None,
         repeat_of: str | None = None,
@@ -648,7 +646,7 @@ class run:
             config,
             base,
             data,
-            long=long,
+            run_kind=run_kind,
             protocol=protocol,
             derived_from=derived_from,
             repeat_of=repeat_of,
@@ -684,7 +682,7 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
 
     A row that exists stays untouched. Only runs with both completion
     markers are indexed; a run whose metadata cannot be read (damaged, or
-    written before schema 2) is reported, never indexed — exit 2.
+    written before schema 3) is reported, never indexed — exit 2.
     """
     index = base_dir / "runs.tsv"
     with _index_lock(base_dir):

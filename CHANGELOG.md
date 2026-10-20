@@ -9,6 +9,23 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **Runs declare their purpose through `run_kind`, not `long`.** Pass
+  `run_kind="probe"` for an instrument check or `run_kind="measurement"`
+  for the registered measurement; `run_kind="preparation"` preserves the
+  separate data-preparation record. Only measurements can supply results.
+  The default remains an instrument probe.
+  Seconds retains data preparation but has no separate probe: a probe,
+  including a template's `--probe`, is refused before work starts.
+  Minutes/hours keeps
+  the probe stage; only measurements undergo freeze/audit and detachment
+  checks and can supply a reported result. Result release still requires
+  finalize, a decided analysis audit and the recomputation check.
+  Run schema 3 records the validated string as `run_kind`; missing or
+  unknown kinds and schema 2 records are unreadable. No `long` argument or
+  record fallback remains. 0.99.0 is the last release that reads the old
+  record format and accepts `long`. Update scripts and raise their pin
+  together; reproduce old runs with their original commit and pin.
+
 - **The modules live in layer packages; imports name the package.** The
   layers of `docs/architecture.md` are folders now, and the package root
   holds only `__init__.py`, the packages and the shipped assets
@@ -153,7 +170,7 @@ pins (`requirements.txt` / `requirements.lock`).
   runlog, preflight, finalize, the hooks, audit, code-check); a tier
   compared by hand outside the contract is a copy the one-home test
   names, in labkit and in the stamped script templates (the model
-  skeleton's test reads `lane(cost).every_run_full`). The usability
+  skeleton's test reads `lane(cost).probe_allowed`). The usability
   probe's `scaffold sha` pins the contract and every template a skeleton
   stamps (it missed the counting skeleton's `02_analyze.py`). `protocol-check --contract` prints the contract by tier and
   occasion (`describe`). No rule changed: the table is the standard's own
@@ -231,16 +248,12 @@ pins (`requirements.txt` / `requirements.lock`).
   `tree_differs`) is a blocker before any station runs, since the
   stations read the tree and the commit holds the index. Reinstall the
   hooks (`labkit-hooks install`).
-- **runlog holds every run at seconds to the registration.** The contract
-  says every run through runlog at `cost = "seconds"` is the full run
-  (`Lane.every_run_full`), and protocol-check read it so; runlog read the
-  script's `long` alone, so a hand-written `long=False` started under
-  registered ids without their promise tables and without the written
-  registration while protocol-check named both a MUST (review
-  2026-10-19). The start now reads `long or lane.every_run_full`
-  (`runlog._is_full_run`); the script's word stays recorded as `long`, and
-  the release refuses a probe's number as before. The stamped skeletons
-  pass `long=True` at seconds and never met the gap.
+- **runlog holds measurements at seconds to the registration.** A
+  measurement under registered ids requires its promise tables and written
+  question, criterion and admissibility condition before the run directory
+  exists. `run_kind="preparation"` preserves the separate data-preparation
+  record; a separate probe is refused at seconds. The registration check
+  and the declared purpose no longer classify the same run differently.
 - **`labkit-init exp` prints the lane with its gates.** At minutes/hours
   the next steps skipped the preflight and its audit, the analysis audit
   and the adoption while the stamped `AGENTS.md` named them; an agent

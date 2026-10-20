@@ -401,7 +401,7 @@ def check_fields(text: str) -> FieldReport:
         tables_gap = promises.promise_tables_owed(
             promises.parse_block(text),
             frozen=head.frozen,
-            full_run=lane.every_run_full,
+            full_run=lane.registration,
             registers=promises.registers_ids(text),
         )
     except promises.PromiseError as exc:

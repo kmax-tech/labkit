@@ -36,7 +36,8 @@ def _repo(
     (run / "config.json").write_text(
         json.dumps(
             {
-                "schema_version": 2,
+                "schema_version": 3,
+                "run_kind": "measurement",
                 "config": {
                     "judge": {"alias": "gpt-oss-20b-leguin", "model": "gpt-oss:20b"},
                     "fingerprints": fingerprints,

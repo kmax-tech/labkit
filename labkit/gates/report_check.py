@@ -26,7 +26,7 @@ docs/notes/2026-10-19-hooks-and-report-check.md):
                    this station is skipped and says so
   2. finalize      `finalize_area` clean — its blockers are named here —
                    so the answering run is bound to this protocol and the
-                   answer cites it; and that run is a full run: `long=True`,
+                   answer cites it; and that run is a full run: `run_kind='measurement'`,
                    not acknowledged unfrozen (`runs.unreportable`) — a
                    reported number owes a full run (frozen at
                    minutes/hours); a probe's or an acknowledged run's number
@@ -252,7 +252,9 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[str]:
     cfg = read_run_config(ctx.run)
     if cfg is None:
         return [f"{ctx.run.name}: no config.json — not a run"]
-    owed = "a full run (long=True)" + (" on a frozen protocol" if freeze_owed else "")
+    owed = "a full run (run_kind='measurement')" + (
+        " on a frozen protocol" if freeze_owed else ""
+    )
     return [
         f"the answering run {ctx.run.name}: {mark} — its number cannot be "
         f"reported; a reported number owes {owed}"

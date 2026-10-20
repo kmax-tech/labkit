@@ -64,7 +64,12 @@ class ModelProvenanceGap(unittest.TestCase):
         run.mkdir(parents=True)
         (run / "config.json").write_text(
             json.dumps(
-                {"schema_version": 2, "models_resolved": models_resolved, "config": {}}
+                {
+                    "schema_version": 3,
+                    "run_kind": "measurement",
+                    "models_resolved": models_resolved,
+                    "config": {},
+                }
             ),
             encoding="utf-8",
         )

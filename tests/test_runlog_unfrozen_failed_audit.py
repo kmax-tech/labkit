@@ -2,7 +2,7 @@
 
 Second haiku round on labkit 0.98.0 (labkit-paper area 09, 2026-10-18): no
 labkit agent started an audit, so the refusal over an open BLOCKER never
-fired; t5 measured with long=True and LABKIT_UNFROZEN=1, and the hatch asked
+fired; t5 measured with run_kind='measurement' and LABKIT_UNFROZEN=1, and the hatch asked
 for nothing. Since 0.99.0 the hatch at `minutes`/`hours` rests on the failed
 attempt `labkit-audit` writes when the backend does not answer
 (`audits/<date>-preflight-failed.toml`): at the code as it stamps now, the
@@ -77,7 +77,7 @@ class FailedAudit(unittest.TestCase):
     def _start(self):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            r = runlog.Run("t", {}, self.tmp, long=True)
+            r = runlog.Run("t", {}, self.tmp, run_kind="measurement")
         return r, buf.getvalue()
 
     def _refused(self) -> str:

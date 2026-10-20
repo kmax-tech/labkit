@@ -124,7 +124,7 @@ class EnvFlags(unittest.TestCase):
             try:
                 with self.assertRaises(SystemExit):
                     with contextlib.redirect_stdout(io.StringIO()):
-                        runlog.Run("t", {}, tmp, long=True)
+                        runlog.Run("t", {}, tmp, run_kind="measurement")
             finally:
                 os.environ.pop("LABKIT_UNFROZEN", None)
             self.assertFalse((tmp / "runs").exists())

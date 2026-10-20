@@ -19,7 +19,7 @@ each step's condition):
                     JSONL rows come from this run, the runs it continues or
                     its derived_from lineage (blocker), a model record stands
                     in its lineage (warning), the arm lines match (warning),
-                    it is a full run — `long=True`, not acknowledged unfrozen
+                    it is a full run — `run_kind='measurement'`, not acknowledged unfrozen
                     (warning here, `runs.unreportable`; report-check blocks)
   2. intent-check   every registered promise has a metrics key (and vice
                     versa); skipped when the protocol registers no id

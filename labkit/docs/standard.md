@@ -236,7 +236,7 @@ evidence file under the same ID (top of this document).*
   nothing: an exploration ends with no reported result.
   Deliberate exception: `--no-verify`.
 
-  **What the agent forgets, a gate holds.** A full run (`long=True`) on a protocol
+  **What the agent forgets, a gate holds.** A full run (`run_kind="measurement"`) on a protocol
   without `frozen = true` or with an empty `preflight_audit`
   is refused by `runlog` before `mkdir` — long pilot: `LABKIT_UNFROZEN=1`,
   lands as `unfrozen_ack` in `config.json`. In front of that sits the Claude hook

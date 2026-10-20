@@ -52,7 +52,8 @@ def _run(
     (d / "config.json").write_text(
         json.dumps(
             {
-                "schema_version": 2,
+                "schema_version": 3,
+                "run_kind": "measurement",
                 "script": "01_measure.py",
                 "pid": 1,
                 "protocol": {"id": pid, "path": "PROTOCOL-x.md"},
@@ -67,7 +68,8 @@ def _run(
     (d / "completion.json").write_text(
         json.dumps(
             {
-                "schema_version": 2,
+                "schema_version": 3,
+                "run_kind": "measurement",
                 "finished": "x",
                 "git": "g",
                 "git_full": "g",

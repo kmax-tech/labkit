@@ -33,7 +33,8 @@ def make_run(area: Path, name: str) -> Path:
     (d / "config.json").write_text(
         json.dumps(
             {
-                "schema_version": 2,
+                "schema_version": 3,
+                "run_kind": "measurement",
                 "script": "01_measure.py",
                 "pid": 1,
                 "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
@@ -45,7 +46,8 @@ def make_run(area: Path, name: str) -> Path:
     (d / "completion.json").write_text(
         json.dumps(
             {
-                "schema_version": 2,
+                "schema_version": 3,
+                "run_kind": "measurement",
                 "finished": "x",
                 "git": "g",
                 "git_full": "g",
@@ -126,8 +128,14 @@ class Shape(unittest.TestCase):
             ("[]", "a JSON list"),
             ('{"schema_version": "2"}', "schema_version"),
             ('{"schema_version": 1}', "labkit 0.47"),
-            ('{"schema_version": 2, "protocol": "PROTOCOL-x.md"}', "protocol ="),
-            ('{"schema_version": 2, "protocol": {"id": 7}}', "protocol.id"),
+            (
+                '{"schema_version": 3, "run_kind": "measurement", "protocol": "PROTOCOL-x.md"}',
+                "protocol =",
+            ),
+            (
+                '{"schema_version": 3, "run_kind": "measurement", "protocol": {"id": 7}}',
+                "protocol.id",
+            ),
         ):
             with tempfile.TemporaryDirectory() as d:
                 (Path(d) / "config.json").write_text(content)
@@ -139,8 +147,8 @@ class Shape(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / "config.json").write_text(
-                '{"schema_version": 2, "protocol": {"id": null, "path": null}}'
+                '{"schema_version": 3, "run_kind": "measurement", "protocol": {"id": null, "path": null}}'
             )
             cfg = runs.read_run_config(Path(d))
             assert cfg is not None
-            self.assertEqual(cfg["schema_version"], 2)
+            self.assertEqual(cfg["schema_version"], 3)

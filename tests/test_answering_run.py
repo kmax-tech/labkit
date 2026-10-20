@@ -31,7 +31,8 @@ def _run(
     d = area / "runs" / name
     d.mkdir(parents=True)
     cfg: dict = {
-        "schema_version": 2,
+        "schema_version": 3,
+        "run_kind": "measurement",
         "script": "01_measure.py",
         "pid": 1,
         "protocol": {"id": pid, "path": "x.md"},
@@ -49,7 +50,8 @@ def _run(
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
+                    "run_kind": "measurement",
                     "finished": "x",
                     "git": "g",
                     "git_full": "g",
@@ -270,7 +272,9 @@ class NewestCompleted(unittest.TestCase):
     def _run(self, area: Path, name: str) -> Path:
         d = area / "runs" / name
         d.mkdir(parents=True)
-        (d / "config.json").write_text(json.dumps({"schema_version": 2}))
+        (d / "config.json").write_text(
+            json.dumps({"schema_version": 3, "run_kind": "measurement"})
+        )
         (d / "metrics.json").write_text("{}")
         (d / "completion.json").write_text("{}")
         return d

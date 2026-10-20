@@ -79,7 +79,7 @@ def main() -> None:
     frozen = {"source": SOURCE, **({"inputs": INPUTS} if INPUTS else {})}
     with runlog.run("<name>", config={k: str(p.relative_to(REPO)) for k, p in frozen.items()},
                     base_dir=AREA, data=frozen,
-                    long=True, protocol=PROTOCOL.name) as run:
+                    run_kind="measurement", protocol=PROTOCOL.name) as run:
         # every row names the run that wrote it (`_prov.run`): finalize holds
         # the file to it, and a row from another run is a file of two measurements
         OUT.write_text("".join(json.dumps({**r, "_prov": {"run": run.run_id}},

@@ -16,6 +16,8 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 
+from labkit.formats.runs import RunKind, parse_run_kind
+
 from labkit.formats import findings, promises, protocol_block, repo
 from labkit.formats.standard_contract import PREFLIGHT_AUDIT, lane
 from labkit.formats.scope_sha import area_stamp
@@ -201,7 +203,7 @@ def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None
             or "none"
         )
         raise SystemExit(
-            "runlog: this run declares long=True (a full run) on a protocol not "
+            "runlog: this run declares run_kind='measurement' (a full run) on a protocol not "
             "ready for one, and LABKIT_UNFROZEN=1 acknowledges an audit that "
             "could not run — not one nobody ran. No failed preflight attempt of "
             f"the code as it is now (code {sha}, promises {block_sha or 'no protocol'}, at least "
@@ -304,8 +306,8 @@ def registration_refusal(
     carry the promises as data (`promises.promise_tables_owed`), and a run under a
     block records every registered constant unchanged — otherwise the
     number is held to a threshold nobody registered (Durchstich
-    2026-10-06). FULL_RUN is the lane's answer (`_is_full_run`), not the
-    script's word alone. None when it holds, or when the run is unbound
+    2026-10-06). FULL_RUN means the script declares a measurement. None
+    when it holds, or when the run is unbound
     (the freeze gate refuses an unbound full run on its own)."""
     name, head = bound.name, bound.head
     if head is None or bound.text is None:
@@ -323,18 +325,6 @@ def registration_refusal(
         if refusal:
             return f"{name}: {refusal}"
     return None
-
-
-def _is_full_run(long: bool, cost: str | None) -> bool:
-    """Whether this run is held to what a full run owes: the script declares
-    it (`long=True`), or the lane says every run is one
-    (`standard_contract.Lane.every_run_full` — at seconds the run is the
-    instrument check, there is no probe stage before it). Until 2026-10-19
-    the gate read `long` alone, so a hand-written `long=False` at seconds
-    started under registered ids without their tables while protocol-check
-    named the missing tables a MUST. The script's word stays recorded as
-    `long`; the release refuses a probe's number (`runs.unreportable`)."""
-    return long or lane(cost).every_run_full
 
 
 def _constants_refusal(block: "promises.PromiseTables", config: dict) -> str | None:
@@ -393,7 +383,7 @@ class Prepared:
     read once before any check — the parent it derives from, the bound
     protocol with its text and head, the promise block and the snapshot
     the record carries of it, the config frozen as it will be recorded, and
-    whether the run counts as a full run.
+    its declared purpose.
 
     Attributes:
         derived_from: The completed parent run, as config.json records it.
@@ -403,9 +393,7 @@ class Prepared:
         promises: The snapshot of the block the record carries (`promises.snapshot`).
         config: The run's config, frozen now — what the checks hold is what
             config.json records.
-        long: The script's own declaration, recorded as `long`.
-        full_run: Held to what a full run owes (`_is_full_run`: the script's
-            word, or the lane says every run is one).
+        run_kind: Data preparation, an instrument probe, or a measurement.
     """
 
     derived_from: str | None
@@ -414,14 +402,13 @@ class Prepared:
     block: "promises.PromiseTables | None"
     promises: dict | None
     config: dict
-    long: bool
-    full_run: bool
+    run_kind: RunKind
 
 
 def prepare(
     base_dir: Path,
     config: dict,
-    long: bool,
+    run_kind: RunKind,
     protocol: str | Path | None,
     derived_from: str | None,
 ) -> Prepared:
@@ -432,9 +419,18 @@ def prepare(
     that does not parse or names code that does not exist
     (`_promise_snapshot`) — each a SystemExit. Freezes the config: what
     the registration check holds is what config.json records."""
+    run_kind = parse_run_kind(run_kind)
     derived = _derived_parent(base_dir, derived_from)
     bound = protocol_binding(base_dir, protocol)
     cost = bound.head.cost if bound.head is not None else None
+    # Seconds uses the complete measurement as its instrument check.
+    # Rationale: docs/notes/2026-10-20-run-kinds.md.
+    if run_kind == "probe" and not lane(cost).probe_allowed:
+        raise SystemExit(
+            "runlog: run_kind='probe' is not allowed at cost='seconds'; "
+            "run the full measurement with run_kind='measurement' — "
+            "this cost tier has no separate probe stage"
+        )
     block, snapshot = _promise_snapshot(base_dir, bound.text)
     return Prepared(
         derived_from=derived,
@@ -443,8 +439,7 @@ def prepare(
         block=block,
         promises=snapshot,
         config=dict(config),
-        long=long,
-        full_run=_is_full_run(long, cost),
+        run_kind=run_kind,
     )
 
 
@@ -456,7 +451,7 @@ def foreground_refusal(base_dir: Path, limit: tuple[float, str]) -> None:
     History: docs/notes/2026-10-19-gates-and-run-start.md.
     """
     raise SystemExit(
-        f"runlog: this run declares long=True and sits in a foreground "
+        f"runlog: this run declares run_kind='measurement' and sits in a foreground "
         f"shell an agent harness kills after {limit[0]:g} s ({limit[1]}) "
         f"— the kill takes the process group mid-run (2026-08-13). "
         f"Start it detached:\n"
@@ -483,11 +478,7 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
     consequence and offer no way round, and they say "probe", never
     "pilot" — agents take the way a message offers. Why each rule:
     docs/notes/2026-10-19-gates-and-run-start.md."""
-    declares = (
-        "this run declares long=True (a full run)"
-        if prepared.long
-        else f'this run is at cost = "{prepared.cost_tier}", where every run is the full run'
-    )
+    declares = "this run declares run_kind='measurement'"
     blockers, open_warnings = _undecided_findings(base_dir)
     if blockers:
         raise SystemExit(
@@ -508,7 +499,7 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
             + "\nFreeze first: `preflight <AREA>` clean, audit stamped, "
             "`frozen = true` "
             '(at cost = "seconds": the question written suffices, with a model also criterion and admissibility condition). '
-            "No other run yields a reported number: a probe (long=False) "
+            "No other run yields a reported number: a probe (run_kind='probe') "
             "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
             "minutes/hours only over an audit the backend refused, "
             f"audits/*{findings.FAILED_SUFFIX} written by labkit-audit) are "

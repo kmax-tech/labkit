@@ -142,7 +142,7 @@ def test_probe_cases_are_pasted():
     from labkit.formats import protocol_block, standard_contract
 
     head = protocol_block.head(measure.PROTOCOL.read_text(encoding="utf-8"))
-    if standard_contract.lane(head.cost).every_run_full:
+    if not standard_contract.lane(head.cost).probe_allowed:
         pytest.skip("cost = seconds: no probe before the run; canonical forms only")
     assert PROBE_CASES, "TODO: paste the parser cases that `--probe` prints into PROBE_CASES"
 

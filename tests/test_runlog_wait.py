@@ -1,11 +1,11 @@
-"""Tests for `runlog --wait`, `runlog start` and the long=True detach gate.
+"""Tests for `runlog --wait`, `runlog start` and the run_kind='measurement' detach gate.
 
 Why this is tested: the 2026-08-13 scar — a long run started in a Claude Code
 foreground shell died with the tool timeout, which killed the whole process
 group including the batch lock, twice in one evening. The mechanics that
 prevent a repeat are (a) `runlog start` detaching the run into its OWN
 session, so a killed starter/waiter is harmless (Detach-Probe), and (b) the
-`long=True` gate refusing the foreground start before any work. `--wait`'s
+`run_kind='measurement'` gate refusing the foreground start before any work. `--wait`'s
 exit codes (0 idle / 2 crashed / 3 still running) are a contract scripts
 build on — a silent change would flip monitoring logic.
 """
@@ -40,7 +40,9 @@ class TestWait(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             done = Path(d) / "runs" / "2026-09-09T10-00-00_done"
             done.mkdir(parents=True)
-            (done / "config.json").write_text('{"schema_version": 2}', encoding="utf-8")
+            (done / "config.json").write_text(
+                '{"schema_version": 3, "run_kind": "measurement"}', encoding="utf-8"
+            )
             (done / "metrics.json").write_text('{"c1_pass": true}', encoding="utf-8")
             (done / "completion.json").write_text("{}", encoding="utf-8")
             code, out = _run_main([d, "--wait", "--max-seconds", "1"])
@@ -68,7 +70,12 @@ class TestWait(unittest.TestCase):
             run_dir.mkdir(parents=True)
             (run_dir / "config.json").write_text(
                 json.dumps(
-                    {"schema_version": 2, "pid": 999_999_99, "script": "01_measure.py"}
+                    {
+                        "schema_version": 3,
+                        "run_kind": "measurement",
+                        "pid": 999_999_99,
+                        "script": "01_measure.py",
+                    }
                 ),
                 encoding="utf-8",
             )
@@ -85,7 +92,12 @@ class TestWait(unittest.TestCase):
             me = runs._command_of(os.getpid()) or "python"
             (run_dir / "config.json").write_text(
                 json.dumps(
-                    {"schema_version": 2, "pid": os.getpid(), "script": me.split()[0]}
+                    {
+                        "schema_version": 3,
+                        "run_kind": "measurement",
+                        "pid": os.getpid(),
+                        "script": me.split()[0],
+                    }
                 ),
                 encoding="utf-8",
             )
@@ -209,19 +221,19 @@ class TestStartNamesTheArea(unittest.TestCase):
 
 class TestLongGate(unittest.TestCase):
     def _spawn(self, extra_env):
-        """Run a minimal long=True run in a subprocess with a chosen env."""
+        """Run a minimal run_kind='measurement' run in a subprocess with a chosen env."""
         code = (
             "import sys; sys.path.insert(0, sys.argv[1]);\n"
             "from labkit.run import runlog\n"
             "with runlog.run('gate-probe', config={}, base_dir='.',"
-            " long=True):\n"
+            " run_kind='measurement'):\n"
             "    pass\n"
         )
         env = {**os.environ, **extra_env}
         env.pop("LABKIT_DETACHED", None)
         env.update(extra_env)
         with tempfile.TemporaryDirectory() as d:
-            # long=True also passes the freeze gate (2026-10-05): the run
+            # run_kind='measurement' also passes the freeze gate (2026-10-05): the run
             # needs a frozen, audited protocol, or it is refused for a
             # different reason than the one this test is about.
             scope_file(Path(d))  # the frozen fixture's block names it

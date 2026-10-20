@@ -564,10 +564,10 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             "schema + gate labels + placeholders extracted into "
             "the bundle for the code-check agent"
         )
-    elif standard_contract.lane(_cost_of(protocol)).every_run_full:
+    elif standard_contract.lane(_cost_of(protocol)).registration:
         parts.append(
             "schema, gate labels, placeholders: not checked — not owed at cost "
-            "seconds, the first run is the probe (--bundle hands them to the "
+            "seconds, the measurement checks the instrument (--bundle hands them to the "
             "code-check agent anyway)"
         )
     else:

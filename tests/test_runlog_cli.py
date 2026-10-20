@@ -53,7 +53,8 @@ class TestCli(unittest.TestCase):
             (run_dir / "config.json").write_text(
                 json.dumps(
                     {
-                        "schema_version": 2,
+                        "schema_version": 3,
+                        "run_kind": "measurement",
                         "pid": 999_999,
                         "script": "01_measure.py",
                         "config": {"items": "data/prepared/x.jsonl"},
@@ -81,7 +82,7 @@ class TestCli(unittest.TestCase):
             run_dir = Path(d) / "runs" / "20260906-120000-done"
             run_dir.mkdir(parents=True)
             (run_dir / "config.json").write_text(
-                '{"schema_version": 2}', encoding="utf-8"
+                '{"schema_version": 3, "run_kind": "measurement"}', encoding="utf-8"
             )
             (run_dir / "metrics.json").write_text("{}", encoding="utf-8")
             (run_dir / "completion.json").write_text("{}", encoding="utf-8")

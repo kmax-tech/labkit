@@ -123,7 +123,12 @@ class FinalizeHoldsRowsToTheRun(unittest.TestCase):
         d.mkdir(parents=True)
         (d / "config.json").write_text(
             json.dumps(
-                {"schema_version": 2, "derived_from": derived_from, "config": {}}
+                {
+                    "schema_version": 3,
+                    "run_kind": "measurement",
+                    "derived_from": derived_from,
+                    "config": {},
+                }
             ),
             encoding="utf-8",
         )

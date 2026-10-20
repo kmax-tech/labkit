@@ -16,6 +16,8 @@ cites a run.
 
 from __future__ import annotations
 
+from labkit.formats.runs import RunKind
+
 import contextlib
 import dataclasses
 import io
@@ -177,12 +179,12 @@ class ReportCheck(unittest.TestCase):
         the gate said "nothing owed here"."""
         area = self._area(cost="seconds", frozen=False)
         run = self._answered(area)
-        completed_run(area, run.name, metrics={"c1_pass": True}, long=False)
+        completed_run(area, run.name, metrics={"c1_pass": True}, run_kind="probe")
         self._audited(area, run)
         code, out = self._run(area)
         self.assertEqual(code, 1, out)
-        self.assertIn("a probe (long=False), not a full run", out)
-        self.assertIn("owes a full run (long=True)", out)
+        self.assertIn("a probe (run_kind='probe'), not a measurement", out)
+        self.assertIn("owes a full run (run_kind='measurement')", out)
         self.assertNotIn("on a frozen protocol", out)  # none is owed at seconds
 
     def test_at_seconds_an_acknowledged_run_is_refused(self):
@@ -344,7 +346,7 @@ class ReportCheck(unittest.TestCase):
         read only `freeze` off the contract)."""
         area = self._area(cost="seconds", frozen=False)
         run = self._answered(area)
-        completed_run(area, run.name, metrics={"c1_pass": True}, long=False)
+        completed_run(area, run.name, metrics={"c1_pass": True}, run_kind="probe")
         ctx = report_check.checked(area, area / "PROTOCOL-x.md")
         seconds = standard_contract.lane("seconds")
         with (
@@ -382,7 +384,12 @@ class IfReported(unittest.TestCase):
     RUN = "2026-10-07T10-00-00_ab12"
 
     def _area(
-        self, answer: str, *, long: bool = True, audited: bool = True, git: bool = False
+        self,
+        answer: str,
+        *,
+        run_kind: RunKind = "measurement",
+        audited: bool = True,
+        git: bool = False,
     ) -> Path:
         """A seconds area (no freeze owed, so the bare fixture head passes
         station 1) whose protocol says ANSWER; its one run a full run unless
@@ -404,7 +411,9 @@ class IfReported(unittest.TestCase):
             head(cost="seconds") + f"- **Answer to the question:** {answer}\n",
             encoding="utf-8",
         )
-        run = completed_run(area, self.RUN, metrics={"c1_pass": True}, long=long)
+        run = completed_run(
+            area, self.RUN, metrics={"c1_pass": True}, run_kind=run_kind
+        )
         # at seconds finalize holds the provenance: the source frozen in the run
         src = area / "data.jsonl"
         src.write_text('{"id": 1}\n', encoding="utf-8")
@@ -564,7 +573,7 @@ class IfReported(unittest.TestCase):
     def test_an_open_answer_owes_nothing_even_over_a_probe(self):
         """The exploration: a probe in runs/, the answer still the stamp's."""
         code, out = self._gate(
-            self._area("<number + run_id>", long=False, audited=False)
+            self._area("<number + run_id>", run_kind="probe", audited=False)
         )
         self.assertEqual((code, out), (0, ""))
 
@@ -581,9 +590,9 @@ class IfReported(unittest.TestCase):
 
     def test_a_reported_probe_is_refused(self):
         """Third haiku round, t3 and t5: the probe's number, written back."""
-        code, out = self._gate(self._area(f"AUC 0.91 ({self.RUN})", long=False))
+        code, out = self._gate(self._area(f"AUC 0.91 ({self.RUN})", run_kind="probe"))
         self.assertEqual(code, 1, out)
-        self.assertIn("a probe (long=False), not a full run", out)
+        self.assertIn("a probe (run_kind='probe'), not a measurement", out)
 
     def test_citing_another_run_than_the_one_that_answers_blocks(self):
         code, out = self._gate(self._area("AUC 0.91 (2026-10-01T09-00-00_ffff)"))

@@ -14,7 +14,12 @@ from pathlib import Path
 
 from labkit.formats import runs, answering_run
 
-CONFIG = {"schema_version": 2, "run_id": "r", "protocol": {"id": "p-" + "0" * 16}}
+CONFIG = {
+    "schema_version": 3,
+    "run_kind": "measurement",
+    "run_id": "r",
+    "protocol": {"id": "p-" + "0" * 16},
+}
 
 
 class RunDirs(unittest.TestCase):

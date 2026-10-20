@@ -78,7 +78,7 @@ PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
 from labkit.run import batch, runlog
-from labkit.formats import promises
+from labkit.formats import promises, protocol_block, standard_contract
 
 # written by 00_prepare.py: id · features (a list of numbers) · gold (null for
 # the unlabelled split) · split ("train" | "test")
@@ -340,6 +340,9 @@ def main() -> None:
                            "throwaway output; prints the scores (not reported) and one row per lane")
     mode.add_argument("--eval-only", action="store_true")
     args = ap.parse_args()
+    head = protocol_block.head(PROTOCOL.read_text(encoding="utf-8"))
+    if args.probe is not None and not standard_contract.lane(head.cost).probe_allowed:
+        ap.error("--probe is not available at cost='seconds'; run the full measurement")
     cfg = replace(CONFIG, seed=args.seed)   # the one field the command line may set
     items = read_jsonl(ITEMS)
 
@@ -373,12 +376,12 @@ def main() -> None:
         evaluate(OUT, cfg)
         return
 
-    # The whole config, never a hand-picked subset. long=True declares the
+    # The whole config, never a hand-picked subset. run_kind="measurement" declares the
     # full run: at minutes/hours the protocol must be frozen with the
     # preflight audit stamped and the run detached (`runlog start <area> -- …`).
     # `data=` freezes the items in the run.
     with runlog.run("<name>", config=asdict(cfg), base_dir=AREA, data={"prepared": ITEMS},
-                    long=True, protocol=PROTOCOL.name) as run:
+                    run_kind="measurement", protocol=PROTOCOL.name) as run:
         run.output(OUT)
         measure(cfg, items, OUT, prov={"run": run.run_id})
         evaluate(OUT, cfg, run)

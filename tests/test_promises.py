@@ -259,14 +259,15 @@ class Chain(unittest.TestCase):
 
     def start(self) -> runlog.Run:
         with contextlib.redirect_stdout(io.StringIO()):
-            return runlog.Run("t", {"min_acc": 0.7}, self.area, long=False)
+            return runlog.Run("t", {"min_acc": 0.7}, self.area, run_kind="probe")
 
     def complete(self, run: runlog.Run, metrics: dict) -> Path:
         (run.dir / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
         (run.dir / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
+                    "run_kind": "measurement",
                     "finished": "x",
                     "git": "g",
                     "git_full": "g",
@@ -340,7 +341,7 @@ class Chain(unittest.TestCase):
         registered value."""
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
-                runlog.Run("t", {"min_acc": 0.5}, self.area, long=False)
+                runlog.Run("t", {"min_acc": 0.5}, self.area, run_kind="probe")
         self.assertIn(
             "min_acc = 0.7 is registered, the config says 0.5", str(cm.exception)
         )
@@ -372,7 +373,7 @@ class Chain(unittest.TestCase):
 
     def test_run_config_agreeing_with_a_constant_is_silent(self):
         with contextlib.redirect_stdout(io.StringIO()):
-            run = runlog.Run("t", {"min_acc": 0.7}, self.area, long=False)
+            run = runlog.Run("t", {"min_acc": 0.7}, self.area, run_kind="probe")
         self.complete(run, self.GOOD)
         rc, out = self.check()
         self.assertEqual(rc, 0, out)

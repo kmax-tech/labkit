@@ -100,7 +100,7 @@ fi
 
 # 2b. An undecided audit BLOCKER in an area a staged file touches: the
 #     stop hook's rule at the commit (third haiku round on 0.99.0: audited,
-#     read, left open, measured with long=False, reported).
+#     read, left open, measured with run_kind='probe', reported).
 if [ -n "$staged" ] && [ -x .venv/bin/claude-hook ]; then
     # shellcheck disable=SC2086
     if ! .venv/bin/claude-hook undecided $staged; then

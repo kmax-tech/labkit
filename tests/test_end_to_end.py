@@ -511,6 +511,17 @@ class Judge(unittest.TestCase):
         self.assertEqual(rc, 0, out_text)
         lab.commit("the verdict, adopted")
 
+    def test_03_seconds_refuses_the_templates_separate_probe(self):
+        result = subprocess.run(
+            [sys.executable, str(self.measure), "--probe", "2"],
+            cwd=type(self).lab.root,
+            capture_output=True,
+            text=True,
+            env=type(self).lab.env,
+        )
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("--probe is not available at cost='seconds'", result.stderr)
+
 
 class Estimator(unittest.TestCase):
     """The estimator skeleton at minutes, through the freeze: a threshold on
