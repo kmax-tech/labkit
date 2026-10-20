@@ -251,6 +251,44 @@ class AgentPrompt(unittest.TestCase):
             with self.assertRaises(console.Refused):
                 usability.agent_prompt(Path(d))
 
+    def test_temporary_files_are_sent_into_the_probe(self):
+        """judge-2 of 2026-10-20 read an earlier probe's `/tmp` file and wrote
+        into the operator's scratchpad: the prompt names the probe's own
+        `.tmp/` and the places it must not use."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "AGENTS.md").write_text("# AGENTS.md — probe\n")
+            prompt = usability.agent_prompt(root)
+        self.assertIn(f"Temporary files go to {root / '.tmp'}/", prompt)
+        self.assertIn("/tmp", prompt)
+        self.assertIn("scratchpad", prompt)
+
+
+class ProbeIsolation(unittest.TestCase):
+    """What `stage` sets up so probes share no store: the probe's own scratch
+    directory, ignored by git, and a fixed labkit."""
+
+    def test_the_scratch_directory_is_made_and_ignored(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / ".gitignore").write_text(".venv\n")
+            usability.probe_scratch(root)
+            usability.probe_scratch(root)  # twice: one line
+            self.assertTrue((root / ".tmp").is_dir())
+            self.assertEqual((root / ".gitignore").read_text().count(".tmp/"), 1)
+
+    def test_an_editable_labkit_is_refused_to_build_and_warned_to_link(self):
+        editable = "-e git+https://github.com/x/labkit.git@43a391a#egg=labkit"
+        fixed = "labkit @ file:///probes/src"
+        self.assertIsNone(usability.labkit_spec_problem(fixed, linked=False))
+        self.assertIsNone(usability.labkit_spec_problem(fixed, linked=True))
+        kind, why = usability.labkit_spec_problem(editable, linked=False) or ("", "")
+        self.assertEqual(kind, "refuse")
+        self.assertIn("git archive", why)
+        kind, why = usability.labkit_spec_problem(editable, linked=True) or ("", "")
+        self.assertEqual(kind, "warn")
+        self.assertIn("working tree", why)
+
 
 class Archive(unittest.TestCase):
     """A probe is kept for debugging: transcript, timeline, score — and a

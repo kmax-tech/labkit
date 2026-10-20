@@ -36,12 +36,16 @@ stage
     task sheet, from `usability-task-<task>.md.template`, with the log
     contract and the metrics key the number must land under — and
     `<dir>.prompt.md`, the prompt a cold agent gets: the repo's AGENTS.md
-    as a session loads it, then the pointer to TASK.md. A venv with
-    labkit is created unless `--venv` links an existing one. What was
-    measured is pinned in `<dir>.probe.json`: the labkit the probe venv
-    holds, a sha over the scaffolder and the templates it stamps, the flags.
-    Side effects: a git repo with three commits, a venv or a symlink, three
-    sidecar files next to <dir> (probe.json, log.md, prompt.md).
+    as a session loads it, then the pointer to TASK.md and the probe's own
+    `.tmp/` for temporary files. A venv with the staging interpreter's
+    labkit and the rest of requirements.txt is created unless `--venv`
+    links an existing one; an editable staging labkit is refused there and
+    warned with `--venv` (`labkit_spec_problem`) — a probe measures a fixed
+    labkit. What was measured is pinned in `<dir>.probe.json`: the labkit
+    the probe venv holds, a sha over the scaffolder and the templates it
+    stamps, the flags. Side effects: a git repo with three commits, a venv
+    or a symlink, `.tmp/` (git-ignored), three sidecar files next to <dir>
+    (probe.json, log.md, prompt.md).
 
 log
     The agent's step log, one call per step: appends `HH:MM:SS · TAG · TEXT`
@@ -386,7 +390,58 @@ def agent_prompt(root: Path) -> str:
         f"there and do exactly what it says; it names the log file you keep. "
         f"Every shell command must first `cd` into that directory (your shell "
         f"does not start there). Work only inside it; do not touch sibling "
-        f"directories. When done, give the report TASK.md asks for.\n"
+        f"directories. Temporary files go to {root / SCRATCH}/ — never /tmp, a "
+        f"scratchpad your harness names, or any other place outside this "
+        f"directory. When done, give the report TASK.md asks for.\n"
+    )
+
+
+#: the probe's own place for temporary files, ignored by its git
+SCRATCH = ".tmp"
+
+
+def probe_scratch(root: Path) -> None:
+    """Make ROOT/.tmp/ and ignore it in ROOT/.gitignore (once). Probes
+    shared `/tmp` and the operator's scratchpad: judge-2 of 2026-10-20 read
+    an earlier probe's audit output there first and wrote its own into the
+    scratchpad. A subagent inherits the operator's environment, so no
+    TMPDIR can be set for it; the prompt names this directory instead, and
+    `usability score` lists the paths a probe used outside it."""
+    (root / SCRATCH).mkdir(exist_ok=True)
+    ignore = root / ".gitignore"
+    text = ignore.read_text(encoding="utf-8") if ignore.is_file() else ""
+    if f"{SCRATCH}/" not in text.splitlines():
+        ignore.write_text(
+            text + ("" if text.endswith("\n") or not text else "\n") + f"{SCRATCH}/\n",
+            encoding="utf-8",
+        )
+
+
+def labkit_spec_problem(spec: str, *, linked: bool) -> tuple[str, str] | None:
+    """("refuse" | "warn", why) when SPEC, a `pip freeze` line of labkit, is
+    an editable install, else None. Built into the probe's own venv
+    (LINKED false) it installs from GitHub at the checkout's HEAD — not the
+    working tree, and nothing before HEAD is pushed: refused. Linked
+    (`--venv`) the probe imports the working tree, which moves under it:
+    warned. A probe measures a fixed labkit: a non-editable install of a
+    `git archive` of the commit (2026-10-20: a probe linked to the
+    developer's venv was bound to no commit)."""
+    if not spec.startswith("-e "):
+        return None
+    if linked:
+        return (
+            "warn",
+            f"--venv runs an editable labkit ({spec}) — the probe imports the "
+            f"working tree, which moves under it; for a measurement stage from "
+            f"a non-editable install of a `git archive` of the commit",
+        )
+    return (
+        "refuse",
+        f"the staging labkit is an editable install ({spec}); the probe venv "
+        f"would install it from GitHub at that commit, not this working tree. "
+        f"Stage with the interpreter of a non-editable install of a `git "
+        f"archive` of the commit (`pip install <archive dir>`), or link a venv "
+        f"with --venv",
     )
 
 
@@ -416,9 +471,18 @@ def stage(
         )
     if venv is not None and not (venv / "bin" / "python").is_file():
         raise console.Refused("usability", f"--venv {venv} has no bin/python")
+    staged_labkit = _labkit_spec(
+        venv / "bin" / "python" if venv else Path(sys.executable)
+    )
+    problem = labkit_spec_problem(staged_labkit, linked=venv is not None)
+    if problem and problem[0] == "refuse":
+        raise console.Refused("usability", problem[1])
+    if problem:
+        print(f"usability: WARNING: {problem[1]}", file=sys.stderr)
     sha = scaffold_sha()
     root.mkdir(parents=True, exist_ok=True)
     scaffold.stamp_lab(root, root.name)
+    probe_scratch(root)
     _sh(["git", "init", "-q", "."], root)
     _sh(["git", "add", "-A"], root)
     _commit(root, "Scaffold: a probe lab repo for the usability trace")

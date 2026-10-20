@@ -199,6 +199,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **Probes share less, and the score shows what they shared.** `usability
+  stage` gives each probe its own `.tmp/` (git-ignored) and its prompt
+  says temporary files go there — never `/tmp`, a harness scratchpad or
+  anywhere outside the probe; an editable staging labkit is refused when
+  the probe's venv is built (it would install from GitHub at HEAD, not the
+  working tree) and warned when `--venv` links one (the probe would follow
+  the working tree). `usability score` lists the paths a probe used
+  outside its directory, its own files and its venv
+  (`agent_transcript.outside_paths`, static evidence). judge-2 of
+  2026-10-20 read an earlier probe's `/tmp` file and wrote into the
+  operator's scratchpad; a subagent inherits the operator's environment,
+  so no per-probe TMPDIR can be set for it.
+
 - **`labkit-audit AREA --decide N STATUS REASON` stores a decision on a
   finding.** The person gives status and reason explicitly; the command
   checks the number, the status and the owed reason, writes both as TOML

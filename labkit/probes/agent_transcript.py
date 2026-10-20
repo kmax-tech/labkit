@@ -99,6 +99,9 @@ class TranscriptTrace:
     source_reads: list[str] = field(
         default_factory=list
     )  # reads of labkit source / the standard
+    outside_paths: list[str] = field(
+        default_factory=list
+    )  # paths used outside the probe and its own files (`outside_paths`)
 
 
 def _stamp(record: dict, n: int) -> float:
@@ -272,6 +275,55 @@ _INTROSPECTION = re.compile(
 )
 
 
+#: an absolute or home path in a shell line: not glued to a word, a dot or
+#: another path (`s/a/b/` in a sed script is no path)
+_PATH = re.compile(r"""(?<![\w.~/-])(~?/[^\s'"`;|&<>()]+)""")
+#: where tools and devices live: a path there is no store a probe shares
+_SYSTEM = (
+    "/usr/",
+    "/bin/",
+    "/sbin/",
+    "/opt/homebrew/",
+    "/System/",
+    "/Library/",
+    "/dev/",
+)
+
+
+def outside_paths(calls: list[Call], root: Path) -> list[str]:
+    """Paths the calls used outside the probe ROOT, in order, no repeats —
+    the paths of file tools and those a shell line names (heuristic). Not
+    outside: ROOT and below, its own files beside it (`<root>.log.md`, …),
+    the venv its `.venv` links to, and system paths. Static evidence: a
+    shared store the probe's isolation did not cover (judge-2, 2026-10-20,
+    read an earlier probe's `/tmp` file first)."""
+    venv = (root / ".venv").resolve()
+    allowed = (f"{root}/", f"{root.parent}/{root.name}.", f"{venv}/")
+    out: list[str] = []
+    for c in calls:
+        found = (
+            [m.group(1) for m in _PATH.finditer(c.text)]
+            if c.tool == "Bash"
+            else [c.text]
+            if c.text.startswith(("/", "~/"))
+            else []
+        )
+        for raw in found:
+            path = raw.rstrip(".,:")
+            # `/` alone and `/x` are mostly the tail of an unexpanded
+            # `"$VAR"/x` or a pattern; a store sits two levels down at least
+            if (
+                path.count("/") < 2
+                or path in (str(root), str(venv))
+                or path.startswith(allowed)
+                or path.startswith(_SYSTEM)
+                or path in out
+            ):
+                continue
+            out.append(path)
+    return out
+
+
 def trace(path: Path, root: Path, source: re.Pattern[str]) -> TranscriptTrace:
     """The transcript of one agent working in `root`; `source` names what
     counts as reading labkit's source or the standard. Refuses a transcript
@@ -311,6 +363,7 @@ def trace(path: Path, root: Path, source: re.Pattern[str]) -> TranscriptTrace:
         tokens=tokens(path),
         files_read=files,
         source_reads=hits,
+        outside_paths=outside_paths(calls, root),
     )
 
 

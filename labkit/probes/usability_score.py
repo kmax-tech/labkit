@@ -613,6 +613,15 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
             ("transcript · tokens", agent_transcript.describe_tokens(measured.tokens)),
             ("transcript · files opened", str(len(measured.files_read))),
             (
+                "transcript · paths outside the probe",
+                str(len(measured.outside_paths))
+                + (
+                    " — " + "; ".join(measured.outside_paths[:3])
+                    if measured.outside_paths
+                    else ""
+                ),
+            ),
+            (
                 "transcript · source / standard reads",
                 str(len(measured.source_reads))
                 + (

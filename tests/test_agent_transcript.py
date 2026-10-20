@@ -219,5 +219,47 @@ class Commands(unittest.TestCase):
         self.assertEqual(at.labkit_commands(line), ["labkit-params", "labkit-audit"])
 
 
+class OutsidePaths(unittest.TestCase):
+    """Paths the agent used outside its probe: judge-2 of 2026-10-20 named
+    its audit output `/tmp/j2_audit.out` as an earlier probe had, and read
+    that probe's file first. The score lists such paths for the operator —
+    static evidence, a shared store the isolation did not cover."""
+
+    def test_a_shared_store_is_listed_the_probe_its_log_and_null_are_not(self):
+        calls = [
+            (
+                2.0,
+                "Bash",
+                bash("labkit-audit x --mode analysis > /tmp/j2_audit.out 2>/dev/null"),
+                1.0,
+                "",
+            ),
+            (
+                4.0,
+                "Bash",
+                bash(f"cat /tmp/j2_audit.out; ls {ROOT}/experiments"),
+                1.0,
+                "",
+            ),
+            (6.0, "Read", {"file_path": "/Users/someone/other-probe/RUNS.md"}, 0.5, ""),
+            (
+                8.0,
+                "Bash",
+                bash(f"cat {ROOT}.log.md; sed -n 's/a/b/' x; /usr/bin/env true"),
+                1.0,
+                "",
+            ),
+            # an unexpanded `"$D"/x` and `/` alone are no store
+            (9.0, "Bash", bash('git diff > "$D"/x.patch; ls / >/dev/null'), 1.0, ""),
+        ]
+        got = at.trace(transcript(calls), ROOT, SOURCE).outside_paths
+        self.assertEqual(
+            got, ["/tmp/j2_audit.out", "/Users/someone/other-probe/RUNS.md"]
+        )
+
+    def test_a_probe_inside_its_dir_lists_none(self):
+        self.assertEqual(at.trace(transcript(CALLS), ROOT, SOURCE).outside_paths, [])
+
+
 if __name__ == "__main__":
     unittest.main()
