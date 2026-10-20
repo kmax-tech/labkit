@@ -201,6 +201,9 @@ class ReportCheck(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("no analysis audit saw the area as it is now", out)
         self.assertIn("finalize", out)
+        # the lane's one audit, at the promotion: its rule, not the long lane's
+        self.assertIn("(LAB-017 The number of audits follows the cost tier)", out)
+        self.assertNotIn("LAB-050", out)
 
     def test_finalize_blockers_are_named_not_pointed_at(self):
         """Inside the stop hook "run it to see them" was a round trip the
@@ -265,6 +268,7 @@ class ReportCheck(unittest.TestCase):
         code, out = self._run(area)
         self.assertEqual(code, 1)
         self.assertIn("no analysis audit saw the area as it is now", out)
+        self.assertIn("(LAB-050 Analysis audit before reporting)", out)
 
     def test_an_analysis_audit_of_an_earlier_run_or_other_promises_blocks(self):
         """Same code, a later answering run: until 0.97.1 the old record

@@ -37,7 +37,8 @@ docs/notes/2026-10-19-hooks-and-report-check.md):
                    finding decided (`findings.audit_coverage`) — code or
                    promises changed after the analysis audit, or a later
                    run, owe a new one (LAB-050 Analysis audit before
-                   reporting)
+                   reporting; at seconds the lane's one audit,
+                   LAB-017 The number of audits follows the cost tier)
   4. the check     `scripts/02_analyze.py --check` exits 0 under the repo's
                    interpreter: the rows recompute to the run's metrics and
                    the note it names carries every number and the run_id
@@ -284,9 +285,7 @@ def later_gaps(ctx: Checked, ln: Lane) -> list[str]:
     if ANALYSIS_AUDIT in ln.audits:
         gap = analysis_audit_gap(ctx)
         if gap:
-            out.append(
-                f"analysis audit: {gap} (LAB-050 Analysis audit before reporting)"
-            )
+            out.append(f"analysis audit: {gap} ({ln.analysis_rule})")
     failed = check_analysis_script(ctx.area, ctx.repo)
     if failed:
         out.append(f"{failed} (LAB-041 Generate numbers, don't retype them)")

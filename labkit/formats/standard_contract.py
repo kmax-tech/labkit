@@ -83,6 +83,11 @@ class Lane:
             audit at every tier, when the number is written back
             (LAB-050 Analysis audit before reporting); the preflight audit
             only where the freeze is owed.
+        analysis_rule: The rule a gate cites when the analysis audit is
+            missing: at seconds the one audit of the lane, owed at the
+            promotion of the number (LAB-017 The number of audits follows
+            the cost tier); elsewhere LAB-050 Analysis audit before
+            reporting.
         cut: Which fields the protocol owes — the seconds cut or the full
             form (`protocol_check.FIELDS` carries the marks).
         every_run_full: Every run through runlog is the full run — the run
@@ -102,6 +107,7 @@ class Lane:
     freeze: bool
     registration: bool
     audits: tuple[str, ...]
+    analysis_rule: str
     cut: str
     every_run_full: bool
     foreground: bool
@@ -113,6 +119,7 @@ SECONDS_LANE = Lane(
     freeze=False,
     registration=True,
     audits=(ANALYSIS_AUDIT,),
+    analysis_rule="LAB-017 The number of audits follows the cost tier",
     cut=SECONDS_CUT,
     every_run_full=True,
     foreground=True,
@@ -131,6 +138,7 @@ def lane(cost: str | None) -> Lane:
         freeze=True,
         registration=False,
         audits=(PREFLIGHT_AUDIT, ANALYSIS_AUDIT),
+        analysis_rule="LAB-050 Analysis audit before reporting",
         cut=FULL_FORM,
         every_run_full=False,
         foreground=False,
