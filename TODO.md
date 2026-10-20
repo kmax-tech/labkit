@@ -65,11 +65,6 @@ aktuellen Code prüfen, keine alten Zeilennummern als offenen Befund übernehmen
   `trace`/`timeline`, `registry`/`ledger`. Keine pauschale Umbenennung.
 - Verbleibende `noqa: C901` entlang fachlicher Abläufe abbauen, wenn dort
   gearbeitet wird; nicht allein nach Dateilänge teilen.
-- Schicht 1 heißt in `docs/architecture.md` „read-only answers“, enthält aber
-  Schreibendes (`runs.write_atomic`, `findings.write`) und Konsolenausgabe
-  (`console`, `gate`). Entweder die Beschreibung an den Bestand anpassen
-  oder Schreiben/Ausgabe in eine eigene Schicht ziehen — Vertragsfrage,
-  nicht nebenbei (Review 2026-10-20).
 - Der Wächter für `repo.shown` in `tests/test_one_home.py` erkennt nur die
   Bedingungsform (`is_relative_to`), keine neue `try`/`except
   ValueError`-Kopie.

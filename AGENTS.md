@@ -76,6 +76,13 @@ instead).
   `docs/notes/` (one per topic, dated), which the code links. Test for each
   historical sentence: would removing it make a present limit unclear or a
   wrong change likelier? Then a short why stays; else it moves.
+- **Check, file access and display apart.** A validation or comparison is a
+  pure function: input in, result or error out — a `validate_*` never
+  writes. A format reads and writes its own files in its own module, and a
+  writer names its side effect (`write_*`). A check returns data and works
+  without a console; output goes through `console` and `gate`. Order and
+  conditions of the checks stand at the entry point (`preflight`,
+  `finalize`, `report_check`).
 - **One home per logic.** The id alphabet lives in `labkit/formats/promises.py`;
   other modules import it. A second use means moving code, not copying it.
 - **Every number-producing function gets a test.** A gate that blocks gets
