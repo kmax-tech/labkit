@@ -8,9 +8,11 @@ coined in the README; the promise block in `docs/promise-block.md`.
 
 Each layer is a package — a folder under `labkit/` — and a module sits in
 the folder of its row. Imports point downward only; no module imports a
-layer above it, and no layer imports a tool; tools may import any layer. Every module stands in
-the table exactly once. `tests/test_architecture.py` reads this table and
-holds the imports and the folders to it — a new module, an upward import or
+layer above it, and no layer imports a tool. Tools may import any layer.
+The table maps modules to layers and marks doctrine; the sections below
+explain each layer. Every module stands in the table exactly once.
+`tests/test_architecture.py` reads this table and holds the imports and
+the folders to it — a new module, an upward import or
 a module in another row's folder fails the suite. The shipped assets sit
 beside the packages: `templates/`, `agents/`, `docs/`, read relative to
 `labkit.PACKAGE_DIR`.
@@ -28,17 +30,115 @@ listed by name until they are moved (2026-10-15). Doctrine is not the
 house: the house is what holds only for this author's lab (`LOCAL` rules,
 the dotfiles, below); doctrine ships in labkit to every lab.
 
-| Layer | Modules | Doctrine (the rest is core) | Holds |
-|---|---|---|---|
-| 1 · formats and places · `labkit/formats/` | `protocol_block`, `promises`, `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `rules`, `findings`, `console`, `gate`, `shell`, `files` | `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `rules`, `findings` | the formats, their contracts and the technical helpers they share. Validation and comparison are pure functions (input in, result or error out); a format reads and writes its own files beside its contract, and a function that writes says so in its name (`findings.write`, `files.write_atomic`); a check returns data and works without a console, while output goes through `console` and `gate`. In detail: the protocol's TOML block and its head, the promise alphabet and tables, the protocol's prose fields by label (`protocol_check`), what git knows of it (`protocol_history`), the report on one protocol file behind `protocol-check` (`protocol_report`), what the standard demands of a number at each tier and occasion (`standard_contract`: the lane, the release, the skeleton — read off facts a caller holds, never off a file), what a run directory says about itself (`runs`), which run answers for a protocol (`answering_run`), where the repo, the area's protocols and git are, the standard's rules and every reference to them, an audit's findings as data (`audits/*.toml`: written by `labkit-audit`, decided by the person, read by `preflight`); the one exit of every console command (`console.exit_with`: a reader closing the pipe is exit 0, not a traceback) and its one refusal (`console.refuse`: a usage error on stderr, findings on stdout; `console.Refused` raised from any depth); a file written whole or not at all (`files.write_atomic`, for every format that writes one); a shell line as its simple commands (`shell.segments`: quote-aware, heredoc bodies cut — the pre-run hook and the transcript reader read it alike); what a gate found, told once (`gate.Findings`: the findings as data, one channel for every line — `print`, or none for a gate run inside a gate — the grade's spelling, the summary, exit 1 with a blocker) |
-| 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `start_check`, `runlog_command`, `batch`, `llm`, `llm_specs`, `llm_backends`, `endpoint_lease` | — | writing a run — its start in three phases, every refusal before mkdir: preparation (`start_check.prepare`: binding, promise snapshot, config frozen), the start check (registration, detach gate, index header, leakage, the freeze gate — `start_check`; conditions visible in `Run.__init__`), creation (`provenance`: git, environment, models, data, snapshots; a repeat's draw under the index lock, the record) — the index, resumable output, model calls (`llm`: alias, retries, the record; `llm_specs`: one type per backend, refused at load when models.toml says what it cannot do; `llm_backends`: the wire call per backend), the model-slot lease; the `runlog` command in `runlog_command` |
-| 3 · checks · `labkit/checks/` | `intent_check`, `code_check`, `code_scan`, `gate_label_scan`, `import_check`, `prompt_check`, `run_record_check`, `readme_check`, `recheck`, `notes_check` | `readme_check`, `notes_check` | one question each, against code, metrics or a note; `code_check` runs the code checks and writes the bundle, `code_scan` is the source reading they share (fields, keys, stages), `gate_label_scan` the string comparisons, `import_check` the code no stamp sees, `prompt_check` parser fixtures and prompt drift; `run_record_check` what a finished run's record must show (denominators, frozen and tracked source, the model named, draws, row provenance, arms), `readme_check` whether an area's README can lead a reader — finalize's stations call both |
-| 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `install_hooks` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `install_hooks` | sequence the checks at a decision point (`report_check` the last: after the analysis audit and the note); the entry point (`preflight_area`, `finalize_area`, `report_check`) shows the stations and every condition under which one is skipped, a station function holds the detail and tells through `gate.Findings`; the hooks call the gates; `audit` runs the agent audit through `llm`; `install_hooks` installs the git hooks the gates run in (preflight checks they are there) |
-| tools · `labkit/tools/` | `protocol_fill`, `scaffold`, `protocol_cuts`, `repo_check`, `params`, `calltree` | `protocol_fill`, `scaffold`, `protocol_cuts`, `calltree` | fill a protocol field; stamp a lab repo and its areas from the shipped templates (`scaffold`), the protocol template cut to a tier (`protocol_cuts`); say whether a lab repo is on its pin and the pin is current (`labkit-check`); a run's values; what one run of a command actually called |
-| tools · probes · `labkit/probes/` | `usability`, `usability_score`, `usability_command`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` | `usability`, `usability_score`, `usability_command`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` | stage a cold-agent probe (`usability`), score it (`usability_score`), the `usability` command (`usability_command`); read what an agent did from its session transcript; what every cold-reader probe shares; how a person reads a protocol; how a newcomer finds their way in code |
+| Layer | Modules | Doctrine (the rest is core) |
+|---|---|---|
+| 1 · formats and places · `labkit/formats/` | `protocol_block`, `promises`, `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `rules`, `findings`, `console`, `gate`, `shell`, `files` | `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `rules`, `findings` |
+| 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `start_check`, `runlog_command`, `batch`, `llm`, `llm_specs`, `llm_backends`, `endpoint_lease` | — |
+| 3 · checks · `labkit/checks/` | `intent_check`, `code_check`, `code_scan`, `gate_label_scan`, `import_check`, `prompt_check`, `run_record_check`, `readme_check`, `recheck`, `notes_check` | `readme_check`, `notes_check` |
+| 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `install_hooks` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `install_hooks` |
+| tools · `labkit/tools/` | `protocol_fill`, `scaffold`, `protocol_cuts`, `repo_check`, `params`, `calltree` | `protocol_fill`, `scaffold`, `protocol_cuts`, `calltree` |
+| tools · probes · `labkit/probes/` | `usability`, `usability_score`, `usability_command`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` | `usability`, `usability_score`, `usability_command`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` |
 
-`runlog` (layer 2) reads layer 1 and calls `llm` only to record resolved
-models; `endpoint_lease` asks `runs.is_alive`, not the writer.
+### 1 · Formats and places
+
+`labkit/formats/` holds the file formats, their contracts, repository
+locations and shared technical helpers. Validation and comparison are pure:
+input in, result or error out. Each format reads and writes its own files;
+a writer names its side effect, as in `findings.write`. Checks return data;
+console output goes through `console` and `gate`.
+
+The protocol modules separate the TOML head (`protocol_block`), promise
+alphabet and tables (`promises`), prose fields (`protocol_check`), git
+history (`protocol_history`) and the report behind `protocol-check`
+(`protocol_report`). `standard_contract` derives the obligations of a cost
+lane, release or skeleton from facts the caller supplies; it reads no files.
+
+`runs` reads what a run directory says about itself; `answering_run` selects
+the run that answers a protocol. `repo` locates the repository and its
+protocols and runs git. `scope_sha` computes scope hashes and audit stamps.
+`rules` holds the standard's rules and checks their references. `findings`
+reads and writes audit findings: the auditor records them, a person decides
+them, and the gates check those decisions.
+
+The remaining helpers have narrow responsibilities. `files.write_atomic`
+writes one file whole or not at all. `shell.segments` reads a shell line as
+simple commands, respecting quotes and excluding heredoc bodies; hooks and
+transcript readers use the same parser. `console` provides command exits
+and refusals: usage errors go to stderr, findings to stdout, and a reader
+closing the pipe exits cleanly. `gate.Findings` collects grades, formats
+messages and summaries, and returns failure for blockers. It can also
+collect findings without printing when one gate runs inside another.
+
+### 2 · A run and its effects
+
+`labkit/run/` records executions, manages resumable output, calls models
+and holds model-slot leases. A run starts in three phases, with the order
+and conditions visible in `Run.__init__`:
+
+1. `start_check.prepare` resolves the protocol binding, takes the promise
+   snapshot and freezes the config.
+2. The start checks cover registration, detachment, the index header,
+   data leakage and the freeze gate where required. These refusals occur
+   before the run directory is created.
+3. Creation records provenance and snapshots. A repeat's draw is reserved
+   under the index lock before its record is written.
+
+`provenance` gathers git state, environment, models, data and snapshots.
+`runlog` writes the run and index; `runlog_command` implements the console
+command. `batch` manages resumable output. Model calls are split between
+`llm` (aliases, retries and call records), `llm_specs` (one configuration
+type per backend, validated when loading `models.toml`) and `llm_backends`
+(the wire calls). `endpoint_lease` manages the model-slot lease.
+
+`runlog` calls `llm` to record resolved models. `endpoint_lease` checks
+liveness through `runs.is_alive`, without calling the run writer.
+
+### 3 · Checks
+
+`labkit/checks/` answers individual questions about code, recorded metrics
+or notes. `intent_check` compares promises with run records. `code_check`
+collects the code checks and writes the audit bundle; `code_scan` supplies
+the source facts those checks share, such as fields, keys and stages.
+`gate_label_scan` extracts string comparisons, `import_check` identifies
+code the stamp cannot follow, and `prompt_check` checks parser fixtures
+and prompt drift.
+
+`run_record_check` checks what a finished record must show: denominators,
+frozen and tracked source, model identity, draws, row provenance and arms.
+`readme_check` checks whether an area's README can lead a reader;
+`notes_check` checks measurement-note declarations. Finalize calls the run
+record and README checks as separate stations. `recheck` connects recorded
+outputs, recomputed metrics and the cited result.
+
+### 4 · Gates
+
+`labkit/gates/` sequences checks at decision points. The entry points
+`preflight_area`, `finalize_area` and `report_check` show the stations and
+every condition under which a station is skipped. Station functions hold
+the detail and report through `gate.Findings`. `report_check` checks release
+after the analysis audit and the note.
+
+`claude_hooks` calls the gates during an agent session. `audit` runs the
+agent review through `llm`. `install_hooks` installs the git hooks that run
+the gates; preflight checks that they are installed.
+
+### Tools
+
+`labkit/tools/` provides commands that may use any layer. `protocol_fill`
+fills protocol fields. `scaffold` stamps a lab repo and its areas from the
+shipped templates; `protocol_cuts` selects the protocol template for a cost
+tier. `repo_check`, behind `labkit-check`, compares the installation with
+the repo's pin and checks whether that pin is current. `params` displays a
+run's values and provenance; `calltree` shows what a command actually called.
+
+### Probes
+
+`labkit/probes/` contains the workflow and reading probes. `usability`
+stages a cold-agent probe, `usability_score` scores it, and
+`usability_command` implements the command. `agent_transcript` reads what
+an agent did in its session. `cold_reader` holds the shared probe logic;
+`protocol_reading` measures how a person reads a protocol, and
+`code_navigation` measures how a newcomer finds their way in code.
 
 ## The chain
 
