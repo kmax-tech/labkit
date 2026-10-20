@@ -219,6 +219,10 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A run's `script_sha` is the hash of the script copy it keeps.** The
+  record hashed a second read of the script after copying it; a save in
+  between left a `script-source.py` the recorded hash did not match. Copy
+  and hash now come from the same bytes.
 - **The pre-run hook no longer takes a mention for a run.** It cut a shell
   line at whitespace and read a heredoc's body and a quoted `-c` string as
   commands: writing a note that names `scripts/01_measure.py`, or a

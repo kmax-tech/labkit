@@ -21,6 +21,7 @@ from pathlib import Path
 from labkit.formats import repo
 from labkit.formats.scope_sha import (
     DIGEST_CHARS,
+    digest,
     file_digest,
     tree_digest,
 )
@@ -465,7 +466,8 @@ def describe_data(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity
 
 
 def snapshot_script(run_dir: Path) -> str:
-    """Copy the running script into the run dir; return its content hash.
+    """Copy the running script into the run dir; return the content hash of
+    the bytes copied (`script_sha`'s width), so record and copy agree.
 
     Not a nicety: a run's result belongs to the CODE that produced it, and
     neither the commit hash nor `git diff` pins that down. A dirty tree makes
@@ -480,7 +482,9 @@ def snapshot_script(run_dir: Path) -> str:
             return "no-script"
         body = src.read_bytes()
         (run_dir / f"script-source{src.suffix or '.txt'}").write_bytes(body)
-        return script_sha()
+        # the hash of the bytes copied, not of a second read: a save in
+        # between left a record whose hash matched no stored script
+        return digest(body)
     except OSError:
         return "no-script"
 
