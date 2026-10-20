@@ -26,6 +26,7 @@ from labkit.formats.runs import (
     resolve_recorded,
 )
 from labkit.formats.answering_run import (
+    lineage,
     model_provenance_run,
     repeats_of,
 )
@@ -198,17 +199,16 @@ def row_provenance_findings(measurement_run: Path) -> tuple[list[str], list[str]
     it continues (a resumed file, named in outputs.json), or — for a
     derived run — from its derived_from lineage. Rows from any other run
     are a blocker: a file of two measurements. Rows without `_prov` are a
-    note (a Store without `prov`), not proof of anything (2026-10-09)."""
+    note (a Store without `prov`), not proof of anything (2026-10-09). A
+    broken lineage (`answering_run.lineage`) is the one blocker: without
+    it no row can be held to a run."""
     blockers, notes = [], []
-    cfg = read_run_config(measurement_run) or {}
-    allowed = {measurement_run.name}
-    parent = cfg.get("derived_from")
-    seen = 0
-    while isinstance(parent, str) and parent and parent not in allowed and seen < 50:
-        allowed.add(parent)
-        pcfg = read_run_config(measurement_run.parent / parent) or {}
-        parent = pcfg.get("derived_from")
-        seen += 1
+    try:
+        allowed = {run.name for run in lineage(measurement_run)}
+    except ValueError as exc:
+        return [
+            f"row provenance: the lineage of {measurement_run.name} is broken — {exc}"
+        ], []
     for entry in read_outputs(measurement_run) or []:
         if entry.path.suffix != ".jsonl" or not entry.path.is_file():
             continue

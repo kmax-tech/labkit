@@ -20,7 +20,7 @@ What a row claims — and no more:
   model               the model that answered these rows, from the
                       `models_resolved` of the run that recorded it —
                       a derived run records none, so the walk along
-                      `derived_from` names the ancestor (`runs.
+                      `derived_from` names the ancestor (`answering_run.
                       model_provenance_run`); a chain without one says so  guaranteed
   module constant     an UPPER_CASE constant in scripts/01_measure.py with
                       no key of its name in the record — whether it moves
@@ -43,7 +43,11 @@ from labkit.formats import console, promises, protocol_block
 from labkit.checks.intent_check import protocol_id_of
 from labkit.formats.repo import area_path, choose_protocol, no_such_area
 from labkit.formats.runs import read_run_config
-from labkit.formats.answering_run import bound_answering_run, model_provenance_run
+from labkit.formats.answering_run import (
+    bound_answering_run,
+    lineage,
+    model_provenance_run,
+)
 
 GUARANTEED = "guaranteed"
 EVIDENCE = "static evidence"
@@ -161,28 +165,15 @@ def constant_rows(
     return rows
 
 
-def _lineage(run_dir: Path) -> list[str]:
-    """The run and its ancestors along `derived_from`, newest first — after
-    `model_provenance_run` has already refused a loop or a missing parent."""
-    names, here = [], run_dir
-    while True:
-        names.append(here.name)
-        cfg = read_run_config(here) or {}
-        parent = cfg.get("derived_from")
-        if not isinstance(parent, str) or not parent:
-            return names
-        here = here.parent / parent
-
-
 def model_rows(run_dir: Path) -> list[ParamRow]:
     """The model that answered the rows, from the record that holds it.
 
     Raises:
-        ValueError: From `answering_run.model_provenance_run` — a missing ancestor or
-            a loop in `derived_from`.
+        ValueError: From `answering_run.lineage` — a broken `derived_from`
+            chain, wherever in it.
     """
     found = model_provenance_run(run_dir)
-    chain = _lineage(run_dir)
+    chain = [run.name for run in lineage(run_dir)]
     if found is None:
         return [
             ParamRow(

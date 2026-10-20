@@ -6,7 +6,8 @@ and whether they are comparable (`repeats_of`, `repeat_mismatch`,
 within one second refused rather than guessed (`same_second_rival`),
 the answering run with the reasons the others were excluded
 (`bound_answering_run`), and the run that recorded the model behind a
-derived run's rows (`model_provenance_run`). intent-check, finalize,
+derived run's rows (`model_provenance_run`) along the validated
+`derived_from` chain (`lineage`). intent-check, finalize,
 recheck and labkit-params read the choice here. Read-only.
 """
 
@@ -445,6 +446,44 @@ def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
     return AnsweringRun(mpath.parent, skipped, exclusions, None, has_keys)
 
 
+def lineage(run_dir: Path) -> list[Path]:
+    """The run and its ancestors along `derived_from`, the run first. The
+    whole chain is checked, not only up to the run a reader needs: every
+    run has a config.json, every `derived_from` names a run directory
+    beside it, and no run comes twice.
+
+    Raises:
+        ValueError: A run without config.json, a `derived_from` that is not
+            a run name, a parent that is not under run_dir's parent, or a
+            loop — wherever in the chain it sits. RunConfigError (a
+            ValueError) for a damaged config.json.
+    """
+    chain: list[Path] = []
+    here = run_dir
+    while True:
+        cfg = read_run_config(here)
+        if cfg is None:
+            raise ValueError(
+                f"{here}: no config.json — the lineage of {run_dir.name} breaks here"
+            )
+        chain.append(here)
+        parent = cfg.get("derived_from")
+        if parent is None:
+            return chain
+        if not isinstance(parent, str) or not parent:
+            raise ValueError(
+                f"{here.name}: derived_from must name a run, not {parent!r}"
+            )
+        if parent in (run.name for run in chain):
+            names = " -> ".join([*(run.name for run in chain), parent])
+            raise ValueError(f"{run_dir.name}: derived_from loops: {names}")
+        here = run_dir.parent / parent
+        if not here.is_dir():
+            raise ValueError(
+                f"{run_dir.name}: derived_from names {parent}, which is not under {run_dir.parent}"
+            )
+
+
 def model_provenance_run(run_dir: Path) -> Path | None:
     """The run whose `models_resolved` says which model answered the rows
     `run_dir` reads: the run itself when it recorded one, else the nearest
@@ -454,32 +493,10 @@ def model_provenance_run(run_dir: Path) -> Path | None:
     a model.
 
     Raises:
-        ValueError: If an ancestor is missing or the chain loops.
+        ValueError: From `lineage` — a broken chain, also above the run
+            that recorded the model.
     """
-    seen: list[str] = []
-    here = run_dir
-    while True:
-        cfg = read_run_config(here)
-        if cfg is None:
-            raise ValueError(
-                f"{here}: no config.json — the lineage of {run_dir.name} breaks here"
-            )
-        if cfg.get("models_resolved"):
-            return here
-        parent = cfg.get("derived_from")
-        if parent is None:
-            return None
-        if not isinstance(parent, str) or not parent:
-            raise ValueError(
-                f"{here.name}: derived_from must name a run, not {parent!r}"
-            )
-        if parent in seen or parent == here.name:
-            raise ValueError(
-                f"{run_dir.name}: derived_from loops: {' -> '.join([*seen, here.name, parent])}"
-            )
-        seen.append(here.name)
-        here = here.parent / parent
-        if not here.is_dir():
-            raise ValueError(
-                f"{run_dir.name}: derived_from names {parent}, which is not under {run_dir.parent}"
-            )
+    for run in lineage(run_dir):
+        if (read_run_config(run) or {}).get("models_resolved"):
+            return run
+    return None
