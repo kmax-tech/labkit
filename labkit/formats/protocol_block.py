@@ -25,6 +25,7 @@ unfilled field instead of a malformed one.
 
 from __future__ import annotations
 
+import json
 import re
 import tomllib
 from dataclasses import dataclass
@@ -66,6 +67,30 @@ class Head:
     def placeholders(self) -> list[str]:
         """The head fields still holding a template placeholder."""
         return [f for f in ("id", "type", "cost") if getattr(self, f) is None]
+
+
+#: characters json leaves raw that a one-line TOML string cannot hold raw:
+#: DEL (TOML forbids it unescaped) and the line breaks `str.splitlines` cuts
+#: beyond those json escapes — the fence walker would split the string
+_TOML_RAW_UNSAFE = str.maketrans(
+    {"\x7f": "\\u007f", "\x85": "\\u0085", " ": "\\u2028", " ": "\\u2029"}
+)
+
+
+def toml_string(value: str) -> str:
+    """VALUE as a one-line TOML basic string, the one writer of a TOML
+    string labkit writes (findings files, a promise sentence). json's
+    escaping is TOML's for the quote, the backslash and every control
+    character below U+0020; DEL, U+0085, U+2028 and U+2029 are escaped on
+    top. Raises
+    ValueError on a lone surrogate, which no TOML string can hold."""
+    bad = next((c for c in value if 0xD800 <= ord(c) <= 0xDFFF), None)
+    if bad is not None:
+        raise ValueError(
+            f"a lone surrogate U+{ord(bad):04X} is no character a TOML string "
+            f"can hold — the text was not decoded as UTF-8"
+        )
+    return json.dumps(value, ensure_ascii=False).translate(_TOML_RAW_UNSAFE)
 
 
 def fence_spans(lines: list[str]) -> list[tuple[str, int, int]]:

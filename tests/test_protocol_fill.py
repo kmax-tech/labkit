@@ -688,3 +688,76 @@ class PromiseSentences(unittest.TestCase):
                 rc = protocol_fill.main([str(p), "Unit=one case", "C1 sentence=s"])
             self.assertEqual(rc, 0)
             self.assertIn('sentence = "s"', p.read_text(encoding="utf-8"))
+
+
+class PromiseSentencesReview(unittest.TestCase):
+    """What an independent review of the sentence fill found (2026-10-20):
+    a valid id spelling dropped the table from `--list`, a line cut other
+    than the fence walker's moved the line, a value with a character that
+    `str.splitlines` cuts broke the written string, and a prose label of
+    one word plus "sentence" was taken for a promise id."""
+
+    def text(self, id_line: str = 'id = "C1"', prose: str = "") -> str:
+        block = (
+            "[[promise]]\n"
+            f"{id_line}\n"
+            'key = "c1_pass"\n'
+            'sentence = "<the criterion>"\n'
+            'scope = ["scripts/01_measure.py"]\n'
+        )
+        return "# P\n" + prose + "\n" + head(cost="seconds", promises=block)
+
+    def listed(self, text: str) -> str:
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "PROTOCOL-x.md"
+            p.write_text(text, encoding="utf-8")
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(protocol_fill.main([str(p), "--list"]), 0)
+        return out.getvalue()
+
+    def sentence_line(self, text: str) -> int:
+        return 1 + text.splitlines().index('sentence = "<the criterion>"')
+
+    def test_every_valid_id_spelling_lists_and_fills(self):
+        for id_line in ('id = "C1"  # the criterion', "id = 'C1'", '"id" = "C1"'):
+            with self.subTest(id_line=id_line):
+                text = self.text(id_line)
+                self.assertIn(
+                    f"{self.sentence_line(text):4d}  C1 sentence", self.listed(text)
+                )
+                new = protocol_fill.fill_many(text, [("C1 sentence", "s")])
+                self.assertIn('sentence = "s"', new)
+
+    def test_a_line_break_character_in_the_prose_keeps_the_line(self):
+        for mark in (" ", "\x85", "\x0c"):
+            with self.subTest(mark=repr(mark)):
+                text = self.text(prose=f"a{mark}b\n")
+                self.assertIn(
+                    f"{self.sentence_line(text):4d}  C1 sentence", self.listed(text)
+                )
+                new = protocol_fill.fill_many(text, [("C1 sentence", "s")])
+                self.assertIn(f"a{mark}b", new)
+                self.assertIn('sentence = "s"', new)
+
+    def test_every_character_a_line_cut_or_toml_refuses_reads_back(self):
+        from labkit.formats import promises
+
+        value = "a b c\x85d\x7fe\nf\tg\\h\"i'"
+        new = protocol_fill.fill_many(self.text(), [("C1 sentence", value)])
+        block = promises.parse_block(new)
+        assert block is not None
+        self.assertEqual(block.promises[0].sentence, value)
+
+    def test_a_lone_surrogate_is_refused_by_name(self):
+        with self.assertRaisesRegex(ValueError, "surrogate"):
+            protocol_fill.fill_many(self.text(), [("C1 sentence", "a\udcffb")])
+
+    def test_a_prose_label_ending_in_sentence_stays_a_prose_field(self):
+        text = self.text() + "\n- **Key sentence:** <the one sentence>\n"
+        new = protocol_fill.fill_many(text, [("Key sentence", "k")])
+        self.assertIn("- **Key sentence:** k", new)
+
+    def test_line_is_refused_for_a_promise_sentence(self):
+        with self.assertRaisesRegex(ValueError, "--line"):
+            protocol_fill.fill_many(self.text(), [("C1 sentence", "s")], line_no=3)

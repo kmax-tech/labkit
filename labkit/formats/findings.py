@@ -76,7 +76,6 @@ the field — a findings file nobody can read is not "no findings".
 
 from __future__ import annotations
 
-import json
 import re
 import time
 import tomllib
@@ -84,6 +83,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import promises
+from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.scope_sha import AUDIT_SHA, audit_stamp_drift
 
 DIR = "audits"
@@ -197,13 +197,9 @@ def verdict_disagrees(verdict: tuple[int, int, int], grades: list[str]) -> str |
 #: unescaped quote in a reason made the record unreadable)
 REASON_FORM = (
     'a reason is a TOML string: "double quotes" escape a quote as \\" and a '
-    "backslash as \\\\; 'single quotes' take any text but a '"
+    "backslash as \\\\; 'single quotes' take one line of text without a ' "
+    "or a control character"
 )
-
-
-def _s(value: str) -> str:
-    """A TOML basic string: json's escaping is a subset of TOML's."""
-    return json.dumps(value, ensure_ascii=False)
 
 
 def write(

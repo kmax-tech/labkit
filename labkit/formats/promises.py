@@ -179,6 +179,11 @@ def reported_ids(metrics: Mapping[str, object]) -> set[str]:
     return out
 
 
+def is_block_id(name: str) -> bool:
+    """Is NAME a promise id as a [[promise]] table spells it (`C1`, `A2`)?"""
+    return bool(_BLOCK_ID.match(name))
+
+
 def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity baseline 2026-10-08
     """The protocol's promises, or None if its block declares none.
 

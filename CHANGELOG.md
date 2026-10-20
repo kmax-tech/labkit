@@ -282,6 +282,19 @@ pins (`requirements.txt` / `requirements.lock`).
   same one call as the prose fields, written as a TOML string and read
   back. Every judge probe of 2026-10-20 found the sentences only by
   reading the file, and the pre-commit refused one that was left open.
+  Every valid spelling of the id is read (a comment after it, single
+  quotes, a quoted key); a sentence the table walk cannot place is listed
+  with `?` for its line, never left out. `<word> sentence` is a promise's
+  only when the word is a promise id — a prose field "Key sentence" stays
+  a prose field — and `--line` is refused for it. `--list` on a protocol
+  whose promise block is malformed now prints the block's error and exits
+  1 instead of listing the prose fields (it used to exit 0; with two TOML
+  blocks it raised a traceback).
+- **Every TOML string labkit writes reads back** (`protocol_block.toml_string`,
+  the one writer for findings files and promise sentences). json left DEL,
+  U+0085, U+2028 and U+2029 raw: a finding text from the auditor or a
+  sentence carrying one of them made the file unreadable. They are escaped
+  now; a lone surrogate is refused by name.
 - **`labkit-audit` and `report-check` take the area's name.** `01-<name>`
   or `<name>`, as `labkit-init exp` prints it, resolves as it already did
   for `code-check`, `finalize`, `preflight`, `runlog` and `params`; both

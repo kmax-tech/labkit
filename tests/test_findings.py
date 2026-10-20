@@ -232,7 +232,7 @@ class HandDecisions(unittest.TestCase):
         area = area_with([("preflight", TWO)])
         path = next((area / "audits").glob("*.toml"))
         text = path.read_text(encoding="utf-8")
-        self.assertIn("'single quotes' take any text but a '", text)
+        self.assertIn("'single quotes' take one line of text without a '", text)
         # both forms the comment names read back
         decided = text.replace(
             'status = "open"\nreason = ""',
@@ -265,6 +265,18 @@ class HandDecisions(unittest.TestCase):
         self.assertIn("not TOML", said)
         self.assertIn("line", said)
         self.assertIn("'single quotes'", said)
+
+
+class ModelTextReadsBack(unittest.TestCase):
+    """The auditor's finding text is the model's: json left DEL and the
+    line breaks `str.splitlines` cuts (U+0085, U+2028, U+2029) raw, and the
+    record would not have read back (review of the reason fix, 2026-10-20)."""
+
+    def test_every_character_json_leaves_raw_reads_back(self):
+        text = "NOTE · a.py:1 · x\x7fy\u2028z\x85w\u2029v · y · LAB-019 r · z"
+        area = area_with([("preflight", [("NOTE", text)])])
+        path = next((area / "audits").glob("*.toml"))
+        self.assertEqual(findings.read(path).findings[0].text, text)
 
 
 class Repo(unittest.TestCase):

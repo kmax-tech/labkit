@@ -44,7 +44,6 @@ later-changed answer to the same. A provisional number stays a sketch in
 from __future__ import annotations
 
 import argparse
-import json
 import re
 from pathlib import Path
 
@@ -153,74 +152,77 @@ def fill_head_type(text: str, value: str) -> str:
     return "\n".join(lines)
 
 
-#: a promise's sentence as `--list` names it and a fill addresses it: `C1 sentence`
+#: a promise's sentence as `--list` names it and a fill addresses it:
+#: `C1 sentence` — the word before "sentence" is a promise id
+#: (`promises.is_block_id`), else the label is a prose field's
 SENTENCE_LABEL = re.compile(r"^\s*(\S+)\s+sentence\s*$", re.I)
+_PROMISE_HEADER = re.compile(r"^\s*\[\[\s*promise\s*\]\]\s*(?:#.*)?$")
 _TABLE = re.compile(r"^\s*\[")
-_KEY_LINE = re.compile(r"^\s*(id|sentence)\s*=\s*(.*?)\s*$")
-#: a sentence on one line as a TOML basic string — the form a fill rewrites
-_ONE_LINE_SENTENCE = re.compile(r'^(\s*sentence\s*=\s*)"(?:[^"\\\n]|\\.)*"\s*$')
+#: a one-line `sentence = <string>` with an optional comment, the key bare
+#: or quoted, the value a basic or a literal string — the form a fill rewrites
+_ONE_LINE_SENTENCE = re.compile(
+    r"""^(\s*(?:sentence|"sentence"|'sentence')\s*=\s*)"""
+    r"""(?:"(?:[^"\\]|\\.)*"|'[^']*')(\s*(?:#.*)?)$"""
+)
+_SENTENCE_KEY = re.compile(r"""^\s*(?:sentence|"sentence"|'sentence')\s*=""")
 
 
 def sentence_lines(text: str) -> dict[str, int]:
-    """{promise id: line number of its `sentence =`} inside the TOML head;
-    which of them is still the stamp's placeholder is
-    `promises.placeholder_sentences`' call, not this one's. A table whose id
-    is not a one-line string literal is skipped (parse_block names it)."""
+    """{promise id: line number of its `sentence =`} in the TOML head. The
+    ids come from `promises.parse_block`, in table order; this function
+    only counts `[[promise]]` headers and finds each table's sentence key,
+    so every valid spelling of the id reads (a comment after it, single
+    quotes, a quoted key dropped the table, review 2026-10-20). Lines are
+    cut as the fence walker cuts them (`str.splitlines`). An id is missing
+    when its table has no one-line sentence key, or when the headers do not
+    count the tables (an inline array of tables). Raises
+    promises.PromiseError on a malformed block."""
+    block = promises.parse_block(text)
     span = protocol_block.toml_block_span(text)
-    if span is None:
+    if block is None or span is None:
         return {}
     lines = text.splitlines()
-    out: dict[str, int] = {}
-    pid: str | None = None
-    line: int | None = None
-
-    def close() -> None:
-        if pid is not None and line is not None:
-            out[pid] = line
-
+    tables: list[int | None] = []
+    inside = False
     for i in range(span[0], span[1]):
-        if _TABLE.match(lines[i]):
-            close()
-            pid, line = None, None
-            continue
-        m = _KEY_LINE.match(lines[i])
-        if m and m.group(1) == "id":
-            try:
-                value = json.loads(m.group(2))
-            except json.JSONDecodeError:
-                value = None
-            pid = value if isinstance(value, str) else None
-        elif m:
-            line = i + 1
-    close()
-    return out
+        if _PROMISE_HEADER.match(lines[i]):
+            tables.append(None)
+            inside = True
+        elif _TABLE.match(lines[i]):
+            inside = False
+        elif inside and tables[-1] is None and _SENTENCE_KEY.match(lines[i]):
+            tables[-1] = i + 1
+    if len(tables) != len(block.promises):
+        return {}
+    return {p.id: n for p, n in zip(block.promises, tables) if n is not None}
 
 
-def open_sentences(text: str) -> list[tuple[int, str]]:
+def open_sentences(text: str) -> list[tuple[int | None, str]]:
     """(line, `<id> sentence`) of every [[promise]] sentence still holding the
-    stamp's `<…>` — the pre-commit refuses them where the tables are owed,
-    and `--list` named only the prose fields (judge probes, 2026-10-20).
-    Raises promises.PromiseError on a malformed block."""
+    stamp's `<…>`, the line None where `sentence_lines` cannot place it —
+    named all the same: the pre-commit refuses each one where the tables
+    are owed (judge probes, 2026-10-20). Raises promises.PromiseError on a
+    malformed block."""
     block = promises.parse_block(text)
     if block is None:
         return []
     where = sentence_lines(text)
     return [
-        (where[pid], f"{pid} sentence")
+        (where.get(pid), f"{pid} sentence")
         for pid in promises.placeholder_sentences(block)
-        if pid in where
     ]
 
 
 def fill_sentence(text: str, pid: str, value: str, force: bool = False) -> str:
-    """Set [[promise]] PID's sentence to VALUE, written as a TOML string —
-    the escaping an agent got wrong by hand (an unescaped quote, count
-    probe 2026-10-20). Refuses a filled sentence without force, and a
-    sentence not on one line (edit that by hand); reads the block back and
-    raises unless it now holds exactly VALUE."""
+    """Set [[promise]] PID's sentence to VALUE, written by
+    `protocol_block.toml_string` — the escaping an agent got wrong by hand
+    (an unescaped quote, count probe 2026-10-20). The line keeps its key,
+    comment and line ending; every other byte stays. Refuses a written
+    sentence without force, and a sentence not on one line (edit that by
+    hand); reads the block back and raises unless it holds exactly VALUE."""
     block = promises.parse_block(text)
     ids = [p.id for p in block.promises] if block is not None else []
-    match = [i for i in ids if i.lower() == pid.lower()]
+    match = [i for i in ids if i == pid.upper()]
     if not match:
         raise ValueError(
             f"no [[promise]] {pid!r} in the TOML head"
@@ -233,15 +235,17 @@ def fill_sentence(text: str, pid: str, value: str, force: bool = False) -> str:
             f"[[promise]] {pid}'s sentence is already written. Overwrite with --force."
         )
     n = sentence_lines(text).get(pid)
-    lines = text.split("\n")
-    m = _ONE_LINE_SENTENCE.match(lines[n - 1]) if n is not None else None
+    lines = text.splitlines(keepends=True)
+    body = lines[n - 1].splitlines()[0] if n is not None else ""
+    m = _ONE_LINE_SENTENCE.match(body) if n is not None else None
     if n is None or m is None:
         raise ValueError(
             f'[[promise]] {pid}\'s sentence is not one `sentence = "..."` line '
             f"— edit it in the TOML head by hand"
         )
-    lines[n - 1] = m.group(1) + json.dumps(value, ensure_ascii=False)
-    new = "\n".join(lines)
+    ending = lines[n - 1][len(body) :]
+    lines[n - 1] = m.group(1) + protocol_block.toml_string(value) + m.group(2) + ending
+    new = "".join(lines)
     after = promises.parse_block(new)
     written = {p.id: p.sentence for p in after.promises} if after else {}
     if written.get(pid) != value:
@@ -440,30 +444,30 @@ def _list_open(text: str) -> int:
     `--from-run` writes last, under their own line. Listed among the rest
     they read as owed before the run: a cold agent filled them with "pending
     run", and --from-run then refused to overwrite them (cloud, 2026-10-14)."""
-    holes = placeholder_fields(text)
-    sentences = [
+    sentences: list[tuple[int | None, str]] = [
         (n, f"{label}  (TOML head: this promise in one sentence)")
         for n, label in open_sentences(text)
     ]
     head_line = head_type_open(text)
-    head = (
+    head: list[tuple[int | None, str]] = (
         [(head_line, f"{HEAD_TYPE_LABEL}  (TOML head: exploratory | confirmatory)")]
         if head_line is not None
         else []
     )
-    holes = head + sentences + holes
+    holes = head + sentences + list(placeholder_fields(text))
     if not holes:
         print("no placeholder fields left")
     now = [(n, label) for n, label in holes if label not in WRITTEN_BY_RUN]
     later = [(n, label) for n, label in holes if label in WRITTEN_BY_RUN]
     for n, label in now:
-        print(f"{n:4d}  {label}")
+        # a sentence the table walk cannot place is named all the same
+        print(f"{n:4d}  {label}" if n is not None else f"   ?  {label}")
     if later:
         print(
             "after the run — `protocol-fill <PROTOCOL> --from-run` writes these; leave them:"
         )
         for n, label in later:
-            print(f"{n:4d}  {label}")
+            print(f"{n:4d}  {label}" if n is not None else f"   ?  {label}")
     return 0
 
 
@@ -497,9 +501,16 @@ def fill_many(
         if not label.strip() or not value.strip():
             raise ValueError(f"empty label or value in {label}={value!r}")
         sentence = SENTENCE_LABEL.match(label)
+        if sentence and not promises.is_block_id(sentence.group(1).upper()):
+            sentence = None  # a prose label such as "Key sentence"
         if label.strip().lower() == HEAD_TYPE_LABEL:
             text = fill_head_type(text, value)
         elif sentence:
+            if line_no is not None:
+                raise ValueError(
+                    f"--line names a prose field; {label.strip()!r} is a "
+                    f"promise's sentence, addressed by its id"
+                )
             text = fill_sentence(text, sentence.group(1), value, force=force)
         else:
             text = fill(text, label, value, line_no=line_no, force=force)
