@@ -175,8 +175,29 @@ class TestActive(unittest.TestCase):
             _run_dir(area, "2026-01-01T00-00-01_bbbb", completion=False)
             _run_dir(area, "2026-01-01T00-00-02_cccc", metrics=False)
             live = runlog.active(area)
-        self.assertEqual([r["run_id"][-4:] for r in live], ["bbbb", "cccc"])
-        self.assertEqual([r["state"] for r in live], ["unfinalized", "corrupt"])
+        self.assertEqual([r.run_id[-4:] for r in live], ["bbbb", "cccc"])
+        self.assertEqual([r.state for r in live], ["unfinalized", "corrupt"])
+
+    def test_what_a_run_is_and_what_it_recorded_stay_apart(self):
+        """active merged the state and the record into one dict, where a
+        record key could overwrite a computed one (2026-10-20): the record
+        is the typed `config`, the state beside it; an unreadable run has
+        no config and says why."""
+        with tempfile.TemporaryDirectory() as t:
+            area = _area(t)
+            _run_dir(area, "2026-01-01T00-00-01_bbbb", completion=False)
+            broken = area / "runs" / "2026-01-01T00-00-02_cccc"
+            broken.mkdir(parents=True)
+            (broken / "config.json").write_text("{", encoding="utf-8")
+            readable, unreadable = runlog.active(area)
+        self.assertIsInstance(readable, runlog.ActiveRun)
+        assert readable.config is not None
+        self.assertEqual(
+            (readable.state, readable.config.run_kind, readable.error),
+            ("unfinalized", "measurement", None),
+        )
+        self.assertEqual((unreadable.state, unreadable.config), ("unreadable", None))
+        self.assertIn("config.json", unreadable.error or "")
 
     def test_wait_exits_2_on_every_failed_state(self):
         for kwargs, expected in (

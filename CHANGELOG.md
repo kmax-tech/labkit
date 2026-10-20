@@ -9,6 +9,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **`runlog.active()` returns `ActiveRun` objects, not dicts.** Each open
+  run is `run_id`, `dir`, `state`, `alive`, `config` (its `RunConfig`, None
+  for an unreadable record) and `error`; the record is no longer merged
+  into the same dict as the computed state, where a record key could
+  overwrite a computed one. A script that read `r["state"]` reads
+  `r.state`; one that read a recorded field such as `r["script"]` reads
+  `r.config.script`. 0.99.0 is the last release that returns dicts.
+
 - **A run's config.json is read into `runs.RunConfig`.** `read_run_config`
   returns a frozen `RunConfig` instead of a dict: labkit's own fields typed
   (`cfg.run_kind`, `cfg.protocol.id`, `cfg.derived_from`, …), the

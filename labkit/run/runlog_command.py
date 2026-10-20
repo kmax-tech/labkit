@@ -26,7 +26,7 @@ from labkit.formats.runs import (
     summarize,
 )
 from labkit.formats.answering_run import newest_completed
-from labkit.run.runlog import active, notify_desktop, reindex
+from labkit.run.runlog import ActiveRun, active, notify_desktop, reindex
 
 
 def _newest_output(area: Path) -> str:
@@ -47,16 +47,16 @@ def _newest_output(area: Path) -> str:
     return f"output: {newest.name} {lines} line(s), last write {age}s ago"
 
 
-def _print_status(area: str, live: list[dict]) -> None:
+def _print_status(area: str, live: list[ActiveRun]) -> None:
     if not live:
         print(f"{area}: no open runs")
     for r in live:
-        state = r.get("state", "unknown")
-        print(f"{r['run_id']}  {state:12s} pid={r.get('pid')}  {r.get('script')}")
-        if r.get("error"):
-            print(f"    {r['error']}")
+        pid, script = (r.config.pid, r.config.script) if r.config else (None, None)
+        print(f"{r.run_id}  {r.state:12s} pid={pid}  {script}")
+        if r.config is None:
+            print(f"    {r.error}")
         else:
-            print(f"    {json.dumps(r.get('config', {}), ensure_ascii=False)[:160]}")
+            print(f"    {json.dumps(r.config.config, ensure_ascii=False)[:160]}")
 
 
 def _print_finished(area: Path) -> None:
@@ -137,24 +137,24 @@ def _wait(
             "corrupt": "completion.json without metrics.json — the results are gone",
             "unreadable": "config.json cannot be read — the run's record is damaged",
         }
-        failed = [r for r in live if r.get("state") in FAILED_STATES]
+        failed = [r for r in live if r.state in FAILED_STATES]
         if failed:
             for r in failed:
-                state = r.get("state", "?")
-                why = r.get("error") or f"{r['dir']}: {WHY.get(state, '')}"
+                state = r.state
+                why = r.error or f"{r.dir}: {WHY.get(state, '')}"
                 print(
-                    f"{r['run_id']}  {state.upper()}  pid={r.get('pid')}  "
-                    f"{r.get('script')}  ({why})"
+                    f"{r.run_id}  {state.upper()}  pid={r.config.pid if r.config else None}  "
+                    f"{r.config.script if r.config else None}  ({why})"
                 )
             if notify:
-                notify_desktop("runlog --wait", f"{area}: run {failed[0].get('state')}")
+                notify_desktop("runlog --wait", f"{area}: run {failed[0].state}")
             return 2
         if follow:
             stamp = time.strftime("%H:%M:%S")
             extra = _newest_output(apath)
             print(
                 f"[{stamp}] {len(live)} open run(s): "
-                + ", ".join(r["run_id"] for r in live)
+                + ", ".join(r.run_id for r in live)
                 + (f" · {extra}" if extra else ""),
                 flush=True,
             )
@@ -162,7 +162,9 @@ def _wait(
             extra = _newest_output(apath)
             print(
                 f"{area}: still running after {int(max_seconds)}s — "
-                + ", ".join(f"{r['run_id']} pid={r.get('pid')}" for r in live)
+                + ", ".join(
+                    f"{r.run_id} pid={r.config.pid if r.config else None}" for r in live
+                )
                 + (f" · {extra}" if extra else "")
                 + "\nre-check: runlog "
                 + area

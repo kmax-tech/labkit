@@ -76,9 +76,9 @@ class BrokenConfig(unittest.TestCase):
 
     def test_open_runs_list_it_as_unreadable_with_the_reason(self):
         live = runlog.active(self.area)
-        self.assertEqual([r["run_id"] for r in live], [NEW])
-        self.assertEqual(live[0]["state"], "unreadable")
-        self.assertIn("config.json", live[0]["error"])
+        self.assertEqual([r.run_id for r in live], [NEW])
+        self.assertEqual(live[0].state, "unreadable")
+        self.assertIn("config.json", live[0].error or "")
 
     def test_wait_exits_failed(self):
         rc, out = quiet(runlog_command._wait, str(self.area), 0, 0.01, False, False)

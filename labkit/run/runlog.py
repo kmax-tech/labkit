@@ -71,6 +71,7 @@ from __future__ import annotations
 
 import contextlib
 import fcntl
+from dataclasses import dataclass
 import json
 import os
 import shutil
@@ -92,7 +93,10 @@ from labkit.formats.runs import (
     RUN_SCHEMA,
     RECORD_SHA_CHARS,
     RUN_ID_TIME,
+    UNREADABLE,
+    RunConfig,
     RunConfigError,
+    RunState,
     completion_state,
     is_alive,
     now_stamp,
@@ -584,30 +588,38 @@ class Run:
             )
 
 
-def active(base_dir: str | Path) -> list[dict]:
+@dataclass(frozen=True)
+class ActiveRun:
+    """A run of the area that is not completed, as `active` sees it: what it
+    is (`state`, `alive` from the recorded pid) beside what it recorded
+    (`config`). An unreadable record has no config and says why (`error`).
+    The two are kept apart — merged into one dict, a record key named like
+    a computed one would have overwritten it."""
+
+    run_id: str
+    dir: Path
+    state: RunState
+    alive: bool | None  # None: unreadable, or liveness undecidable
+    config: RunConfig | None  # None exactly when `error` is set
+    error: str | None
+
+
+def active(base_dir: str | Path) -> list[ActiveRun]:
     """Runs in this area that are not completed, each with its `state`.
 
     This is what makes parallel work cheap — before starting an experiment you
     LOOK instead of asking: which runs are live, and which files do they read
-    and write (their config.json says). `alive` distinguishes a running process
-    from a crashed one by checking the recorded pid; `state` says what the run
+    and write (their config). `alive` distinguishes a running process from a
+    crashed one by checking the recorded pid; `state` says what the run
     directory is (see `run_state`).
 
         runlog <area>        (the installed console command)
     """
-    out = []
+    out: list[ActiveRun] = []
     for rd in run_dirs(Path(base_dir)):
         d, cfg = rd.dir, rd.config
         if rd.error is not None:
-            out.append(
-                {
-                    "run_id": d.name,
-                    "dir": str(d),
-                    "alive": None,
-                    "state": "unreadable",
-                    "error": rd.error,
-                }
-            )
+            out.append(ActiveRun(d.name, d, UNREADABLE, None, None, rd.error))
             continue
         if cfg is None:
             continue
@@ -615,15 +627,7 @@ def active(base_dir: str | Path) -> list[dict]:
         state = run_state(d, alive)
         if state == COMPLETED:
             continue
-        out.append(
-            {
-                "run_id": d.name,
-                "dir": str(d),
-                "alive": alive,
-                "state": state,
-                **cfg.as_record(),
-            }
-        )
+        out.append(ActiveRun(d.name, d, state, alive, cfg, None))
     return out
 
 
