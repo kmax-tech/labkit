@@ -127,9 +127,55 @@ def quick_block(tmpl: str, model: bool) -> str:
     # a deterministic count has no bar to clear: no promise tables, no
     # criterion — five cold agents each invented a tautological [C1]
     # (cloud probes 2026-10-12); the number is held by --check and finalize
-    out = re.sub(r"\n\n# The promises as data[^\n]*\n(?:#[^\n]*\n)*", "\n", tmpl)
-    out = re.sub(r"\n\[\[promise\]\]\n(?:[^\n]+\n)*", "\n", out)
-    return re.sub(r"\n{3,}```", "\n```", out)
+    return without_promise_tables(tmpl)
+
+
+def without_promise_tables(text: str) -> str:
+    """TEXT with every `[[promise]]` table of its TOML block removed, and
+    the comment lines right above each; nothing outside the block changes.
+    The tables are found by the block's own structure (the fence walker,
+    then table headers), not by a pattern over the text: a pattern took the
+    block's closing fence with the last table, and every count stamped at
+    seconds ended inside its TOML block (count probes, 2026-10-20). Reads
+    the block back and raises ValueError unless `[protocol]` is unchanged,
+    no promise is left and the block is still closed."""
+    span = protocol_block.toml_block_span(text)
+    if span is None:
+        return text
+    lines = text.splitlines(keepends=True)
+    start, end = span
+    body = lines[start:end]
+    keep: list[str] = []
+    in_promise = False
+    for line in body:
+        if protocol_block.PROMISE_HEADER.match(line):
+            in_promise = True
+            while keep and keep[-1].lstrip().startswith("#"):
+                keep.pop()  # the comment that introduces the tables
+            continue
+        if protocol_block.TABLE_HEADER.match(line):
+            in_promise = False
+        if not in_promise:
+            keep.append(line)
+    while keep and not keep[-1].strip():
+        keep.pop()
+    new = "".join(lines[:start] + keep + lines[end:])
+    before, after = (
+        protocol_block.parse_toml_block(text),
+        protocol_block.parse_toml_block(new),
+    )
+    new_span = protocol_block.toml_block_span(new)
+    closed = new_span is not None and new_span[1] < len(new.splitlines())
+    if (
+        "promise" in after
+        or after.get("protocol") != before.get("protocol")
+        or (end < len(lines) and not closed)
+    ):
+        raise ValueError(
+            "without_promise_tables: the block did not read back as the same "
+            "[protocol] without promises, closed"
+        )
+    return new
 
 
 PLACEHOLDER_WIDTH = 72  # a one-line hint; the long form is `protocol-check --guide`

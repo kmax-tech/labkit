@@ -156,8 +156,6 @@ def fill_head_type(text: str, value: str) -> str:
 #: `C1 sentence` — the word before "sentence" is a promise id
 #: (`promises.is_block_id`), else the label is a prose field's
 SENTENCE_LABEL = re.compile(r"^\s*(\S+)\s+sentence\s*$", re.I)
-_PROMISE_HEADER = re.compile(r"^\s*\[\[\s*promise\s*\]\]\s*(?:#.*)?$")
-_TABLE = re.compile(r"^\s*\[")
 #: a one-line `sentence = <string>` with an optional comment, the key bare
 #: or quoted, the value a basic or a literal string — the form a fill rewrites
 _ONE_LINE_SENTENCE = re.compile(
@@ -185,10 +183,10 @@ def sentence_lines(text: str) -> dict[str, int]:
     tables: list[int | None] = []
     inside = False
     for i in range(span[0], span[1]):
-        if _PROMISE_HEADER.match(lines[i]):
+        if protocol_block.PROMISE_HEADER.match(lines[i]):
             tables.append(None)
             inside = True
-        elif _TABLE.match(lines[i]):
+        elif protocol_block.TABLE_HEADER.match(lines[i]):
             inside = False
         elif inside and tables[-1] is None and _SENTENCE_KEY.match(lines[i]):
             tables[-1] = i + 1

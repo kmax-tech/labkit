@@ -69,6 +69,13 @@ class Head:
         return [f for f in ("id", "type", "cost") if getattr(self, f) is None]
 
 
+#: a `[[promise]]` table header line, spaces and a comment allowed — where
+#: an editor of the block finds a promise table
+PROMISE_HEADER = re.compile(r"^\s*\[\[\s*promise\s*\]\]\s*(?:#.*)?$")
+#: any table header line (`[protocol]`, `[[promise]]`, `[promise.constants]`)
+TABLE_HEADER = re.compile(r"^\s*\[")
+
+
 #: characters json leaves raw that a one-line TOML string cannot hold raw:
 #: DEL (TOML forbids it unescaped) and the line breaks `str.splitlines` cuts
 #: beyond those json escapes — the fence walker would split the string

@@ -263,6 +263,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A count stamped at `seconds` closes its TOML block.** The cut removed
+  the promise tables with a pattern that took the block's closing fence
+  along: every such protocol ended inside its ```toml block (parsed all
+  the same, raised by the audit in every count probe of 2026-10-20). The
+  tables are now removed by the block's structure (`protocol_cuts.
+  without_promise_tables`: the fence walker, then table headers), read
+  back, and refused unless `[protocol]` is unchanged and the block closed.
+  A test stamps a lab at every tier, with and without a model, and holds
+  every fence of every stamped Markdown file closed. Areas stamped before
+  keep the open block; closing it by hand is safe.
+
 - **The printed `protocol-fill … --from-run` line names the protocol's
   path.** The measure scripts, `labkit-init exp`, `protocol-check` and
   `--check` printed the bare file name, which failed "no such file" from
