@@ -544,6 +544,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **`runs.tsv` is a local index, git-ignored by the lab stamp.** The
+  versioned run directories under `runs/<run_id>/` are the truth; no gate
+  reads the index, and `runlog reindex AREA` writes it back with the same
+  rows (a test holds that). Two runs of one second may come back in the
+  other order — no record holds a finer start time. The rule stands in the
+  stamped `.gitignore` and AGENTS.md and in `docs/protocol-run-binding.md`.
+  A lab stamped before keeps tracking it: add `runs.tsv` to its
+  `.gitignore` and `git rm --cached` each index (a commit of its own).
+
 - **A findings file says how a reason is written, and so does its
   refusal** — an aid, not a fix: it lowers the risk of a hand-written
   reason breaking the TOML and does not prevent it. The file's head names

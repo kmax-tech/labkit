@@ -46,7 +46,9 @@ LAB-017 The number of audits follows the cost tier.
    and the pre-commit hold it to the same check. An exploration that
    reports nothing leaves the Answer open and may end; its number stays a
    sketch in `runs/`. Commit `output/` and `runs/` with the protocol —
-   `finalize <area>` checks the provenance and wants both in git.
+   `finalize <area>` checks the provenance and wants both in git; the run
+   index `runs.tsv` is a local view, git-ignored (`runlog reindex <area>`
+   rebuilds it from `runs/`).
 
 Nothing more is owed on this lane: no freeze, no probe before the run, no †
 fields, no reading of labkit's source.

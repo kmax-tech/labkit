@@ -140,6 +140,12 @@ migrate-index`). Every writer — the finishing run's append, `reindex`,
 header creation and the duplicate scan — takes one exclusive `flock` on
 `.runs.tsv.lock` in the area, so a killed process leaves no stale lock.
 
+The index is a local view, not a record: the versioned run directories
+under `runs/<run_id>/` are the truth, `runs.tsv` is git-ignored by the lab
+stamp, and `runlog reindex AREA` writes it back from them — the same rows;
+two runs started in the same second may come back in the other order,
+since no record holds a finer start time. No gate reads the index.
+
 The index is a derived view: the run directories are authoritative. The
 tools that search by protocol read the run directories, not the index; the
 `protocol_id` column serves people filtering by hand.

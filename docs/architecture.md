@@ -264,7 +264,7 @@ experiments/NN-name/
     outputs.json                registered output paths and their digests
     completion.json             confirmed completion and end state
     script-source.py            snapshot of the script as it ran
-  runs.tsv                      derived index of completed runs
+  runs.tsv                      derived index of completed runs — git-ignored, `runlog reindex` rebuilds it
 ```
 
 The record can also hold raw model output, a patch and untracked source

@@ -99,18 +99,20 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   den Werkzeugkorrekturen unten.
 - **Kalte Reihe `seconds` nach den Fixes:** erledigt 2026-10-20 auf
   `22483de` ([Bericht](docs/usability/2026-10-20-cold-probes-22483de.md)):
-  Fehlbedienung Count 11 → 1, Judge 2 → 0; alle Zahlen gebunden. Nächste
-  Punkte nach Beleg:
-  1. Count-Stempel: der ```toml-Block des Protokolls wird nie geschlossen
-     (jeder Count-Lauf, Audit-Notiz); Judge-Stempel schließt ihn.
-  2. Kommando, das eine ausdrücklich eingegebene Audit-Entscheidung
-     validiert und speichert — zweiter Fall (count-3: per Skript
-     geschriebenes `reason` mit ungeschützten Anführungszeichen). Es
-     übernähme keine Entscheidung.
-  3. Probe-Aufbau: ein `TMPDIR` je Probe (judge-2 las über `/tmp` die
-     Audit-Ausgabe einer früheren Probe).
-  Offen, nicht als Fehler: gehört `runs.tsv` ins Repo? Kein Gate verlangt
-  es, kein Hinweis nennt es.
+  Fehlbedienung Count 11 → 1, Judge 2 → 0; alle Zahlen gebunden. Die
+  Folgepunkte sind umgesetzt (CHANGELOG, Unreleased): Count-Stempel
+  schließt seinen TOML-Block; `labkit-audit --decide`; je Probe `.tmp/`,
+  festes labkit beim Stagen, Pfade außerhalb der Probe im Score. Grenze der
+  Isolation: Subagents erben Umgebung und Scratchpad der Sitzung —
+  vollständig getrennt nur als eigener Prozess je Probe (eigenes
+  Arbeitsverzeichnis, `TMPDIR`, Home); erst wenn der Score Pfade außerhalb
+  zeigt.
+  Entschieden 2026-10-20: `runs.tsv` ist lokale Übersicht, git-ignoriert,
+  `runlog reindex` stellt sie her (CHANGELOG, Changed).
+  Notiert, nicht geplant: Run-Ids einer Sekunde unterscheiden sich nur im
+  Zufallssuffix — „der neueste Lauf“ nach Namen (`protocol-fill
+  --from-run` ohne Run-Id, `runs.run_dirs`) ist dann beliebig. Eine feinere
+  Startzeit wäre ein Formatwechsel; erst bei einem echten Fall.
 - **Andere Person:** Schreibprobe und Usability-Runde vor weiteren
   Änderungen am Protokollstandard. Bisherige Vorlagenentscheidungen des
   Autors ersetzen diese Probe nicht.

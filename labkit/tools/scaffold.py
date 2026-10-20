@@ -75,6 +75,8 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 .runs.tsv.lock
+# the run index: a local view, rebuilt from runs/<run_id>/ by `runlog reindex`
+runs.tsv
 """
 
 REQUIREMENTS = """\

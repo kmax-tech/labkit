@@ -795,8 +795,10 @@ def read_run_dir(d: Path) -> RunDir:
 
 
 def run_dirs(area: Path) -> list[RunDir]:
-    """Every directory under the area's `runs/`, oldest first (run_ids start
-    with the timestamp, so name order is start order), each with its
+    """Every directory under the area's `runs/`, oldest first by name (run_ids
+    start with the timestamp; two runs of one second differ only in their
+    random suffix, and their order among themselves is not their start
+    order — no record holds a finer time), each with its
     metadata read once. The one walk: listing, index, choice and completion
     used to walk `runs/` six times and each decided for itself what an
     unreadable run means (audit 2026-10-13). Here it is data — the caller
