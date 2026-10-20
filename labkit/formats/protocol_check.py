@@ -524,7 +524,7 @@ def answer_without_run(text: str) -> str | None:
         return None
     return (
         "WARNING: `Answer to the question` is written but names no run_id — a "
-        "reported result names its run (`protocol-fill --from-run <run_id>` "
+        "reported result names its run (`protocol-fill <PROTOCOL> --from-run <run_id>` "
         "writes both; report-check then holds it at the stop and the commit); "
         "an exploration that reports no result leaves the field open "
         "(LAB-041 Generate numbers, don't retype them)"

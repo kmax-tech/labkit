@@ -267,9 +267,12 @@ pins (`requirements.txt` / `requirements.lock`).
   path.** The measure scripts, `labkit-init exp`, `protocol-check` and
   `--check` printed the bare file name, which failed "no such file" from
   the repo root, where agents run the scripts (count probe, 2026-10-20).
-  All six now print `repo.adopt_command`: the protocol as the working
-  directory reaches it. Stamped measure scripts import it; areas stamped
-  before keep the old line.
+  They now print `repo.adopt_command`: the protocol as the working
+  directory reaches it. So do `finalize`'s "Answering run not written yet"
+  and `protocol-check`'s "written before any run", which named no protocol
+  at all (`protocol-fill --from-run <run>` exits 2); the run-less hint of
+  `protocol-check` names `<PROTOCOL>`. Stamped measure scripts import it;
+  areas stamped before keep the old line.
 - **`code-check` at `seconds` no longer calls the protocol's open fields
   not owed.** Its closing line read "schema, gate labels, placeholders: not
   checked — not owed at cost seconds"; only the agent's review of schema

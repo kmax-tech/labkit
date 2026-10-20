@@ -621,7 +621,7 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
             f"{f}:{n}: WARNING: {label} written before any run — no completed "
             f'run is bound to this protocol and "Answering run" is still open; '
             f"a report field describes a run that happened (write it with "
-            f"`protocol-fill --from-run` after the run)"
+            f"`{adopt_command(f)}` after the run)"
         )
     for line in r.unmentioned_constants:
         print(f"{f}: WARNING: {line}")

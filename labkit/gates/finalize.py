@@ -73,6 +73,7 @@ from labkit.formats.answering_run import (
 )
 from labkit.formats.repo import (
     ProtocolChoiceError,
+    adopt_command,
     area_path,
     layout_root,
     no_such_area,
@@ -138,11 +139,12 @@ def cited_run_mismatch(text: str, measurement_run: Path) -> str | None:
 
 
 def answering_run_field_mismatch(
-    text: str, measurement_run: Path
+    text: str, measurement_run: Path, protocol: Path
 ) -> tuple[str, str] | None:
     """("block" | "warn", message): the `Answering run` line names another
     run than the one the checks hold (block), or is still "none yet"
-    (warn: write it with protocol-fill). None when it names that run or
+    (warn: write it with protocol-fill, the line naming PROTOCOL by
+    `repo.adopt_command`). None when it names that run or
     the protocol has no such line. The field is a readable projection of
     `answering_run.bound_answering_run`, never a second binding — so it is held to
     the choice, not consulted for it."""
@@ -152,8 +154,9 @@ def answering_run_field_mismatch(
     if answering_run_open(value):
         return (
             "warn",
-            f'"Answering run" not written yet — `protocol-fill --from-run '
-            f"{measurement_run.name}` writes it with the number once this finalize is clean",
+            f'"Answering run" not written yet — '
+            f"`{adopt_command(protocol, measurement_run.name)}` writes it with "
+            f"the number once this finalize is clean",
         )
     return (
         "block",
@@ -164,7 +167,7 @@ def answering_run_field_mismatch(
 
 
 def check_completion(
-    findings: Findings, area: Path, text: str, pid: str | None
+    findings: Findings, area: Path, protocol: Path, text: str, pid: str | None
 ) -> Path | None:
     """Station 1: the run every later station holds the protocol to — chosen,
     shown, and held to the run the answer cites. Returns it, or None."""
@@ -173,7 +176,7 @@ def check_completion(
         mismatch = cited_run_mismatch(text, measurement_run)
         if mismatch:
             findings.block(mismatch)
-        graded = answering_run_field_mismatch(text, measurement_run)  # (grade, message)
+        graded = answering_run_field_mismatch(text, measurement_run, protocol)
         if graded is not None:
             grade, message = graded
             (findings.block if grade == "block" else findings.warn)(message)
@@ -416,7 +419,7 @@ def finalize_area(
 
     # 1. completion — the run every later step examines
     findings.header(f"completion: {chosen.name}")
-    measurement_run = check_completion(findings, area, text, head.id)
+    measurement_run = check_completion(findings, area, chosen, text, head.id)
 
     # 2. intent-check — always
     findings.header("intent-check")

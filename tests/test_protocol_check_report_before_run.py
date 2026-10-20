@@ -105,7 +105,7 @@ class WrittenBeforeRun(unittest.TestCase):
                 rc = protocol_report.main([str(p)])
             out = buf.getvalue()
             self.assertIn("WARNING: Did † written before any run", out)
-            self.assertIn("protocol-fill --from-run", out)
+            self.assertIn("PROTOCOL-x.md --from-run <run_id>` after the run", out)
             self.assertEqual(rc, 0, out)
             # the twin: with the run, the line is gone
             completed_run(Path(d))
