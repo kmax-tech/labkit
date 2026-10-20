@@ -294,7 +294,10 @@ def _repeat_draw(
         "script_sha": script_sha(),
         "models_resolved": models,
     }
-    differs = repeat_mismatch(pcfg, mine)
+    try:
+        differs = repeat_mismatch(pcfg, mine)
+    except RunConfigError as exc:
+        raise SystemExit(f"runlog: repeat_of={repeat_of!r}: {exc}") from exc
     if differs:
         raise SystemExit(
             f"runlog: this run is no repeat of {repeat_of} — it measures "

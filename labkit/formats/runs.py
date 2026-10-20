@@ -358,7 +358,18 @@ def _shape_problem(cfg: object) -> str | None:
         binding_of(cfg)
     except RunConfigError as exc:
         return str(exc)
+    for key in RECORD_TABLES:
+        value = cfg.get(key)
+        if value is not None and not isinstance(value, dict):
+            return f"{key} = {value!r}, not an object"
     return _repeat_shape_problem(cfg)
+
+
+#: labkit's own tables in config.json: each an object or null (`promises`
+#: is null for a protocol without a block). Held on read — a damaged one
+#: read as an empty table let a repeat with an empty config pass as
+#: comparable (review 2026-10-20).
+RECORD_TABLES = ("config", "data", "models_resolved", "promises")
 
 
 def _repeat_shape_problem(cfg: JsonObject) -> str | None:

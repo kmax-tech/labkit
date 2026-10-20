@@ -184,6 +184,44 @@ class Repeats(unittest.TestCase):
             with self.subTest(needle=needle):
                 self.assertIn(needle, answering_run.repeat_mismatch(parent, new))
 
+    def test_a_damaged_table_is_not_an_empty_one(self):
+        """Review 2026-10-20: a parent recording `"config": ["invalid-record"]`
+        read as an empty config, and a repeat with an empty one passed."""
+        with self.assertRaises(runs.RunConfigError) as cm:
+            answering_run.repeat_mismatch(
+                {"config": ["invalid-record"]}, {"config": {}}
+            )
+        self.assertIn("config = ['invalid-record'], not an object", str(cm.exception))
+        # the reader refuses the record before anything compares it
+        first = self._run()
+        cfg_path = self.area / "runs" / first / "config.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        cfg_path.write_text(
+            json.dumps({**cfg, "config": ["invalid-record"]}), encoding="utf-8"
+        )
+        with self.assertRaises(runs.RunConfigError):
+            runs.read_run_config(cfg_path.parent)
+        with self.assertRaises(SystemExit) as cm:
+            self._run(repeat_of=first)
+        self.assertIn("config = ['invalid-record'], not an object", str(cm.exception))
+
+    def test_absent_null_and_an_object_are_three_forms(self):
+        for parent, new, needle in (
+            (
+                {"promises": None},
+                {"promises": {}},
+                "promises: null in the parent, an object here",
+            ),
+            ({}, {"promises": None}, "promises: absent in the parent, null here"),
+            ({"data": {}}, {}, "data: an object in the parent, absent here"),
+        ):
+            with self.subTest(needle=needle):
+                self.assertIn(needle, answering_run.repeat_mismatch(parent, new))
+        # the twin: the same form on both sides says nothing
+        self.assertEqual(
+            answering_run.repeat_mismatch({"promises": None}, {"promises": None}), []
+        )
+
     def test_same_block_other_code_script_or_model_is_no_repeat(self):
         """A record with the same block but another declared_scope_sha came
         back comparable (review 2026-10-15): plan() could change and the new

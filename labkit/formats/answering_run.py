@@ -26,6 +26,7 @@ from labkit.formats.runs import (
     ProtocolBinding,
     RunState,
     UNREADABLE,
+    RECORD_TABLES,
     RunConfigError,
     RunDir,
     read_run_dir,
@@ -159,9 +160,15 @@ def repeat_mismatch(parent: JsonObject, new: JsonObject) -> list[str]:
     NEW may hold Python values not yet written: it is compared as
     config.json would store it (a tuple as a list), and values are compared
     by their JSON text, so `1` is not `true` and a missing config key is not
-    `null`."""
+    `null`. A record table (`runs.RECORD_TABLES`) absent on one side, null
+    on the other or an object on one only differs; a table that is neither
+    raises RunConfigError."""
     new = json.loads(json.dumps(new, ensure_ascii=False))
-    out: list[str] = []
+    out: list[str] = [
+        f"{key}: {_form(parent, key)} in the parent, {_form(new, key)} here"
+        for key in RECORD_TABLES
+        if _form(parent, key) != _form(new, key)
+    ]
     pid = binding_of(parent).id
     if pid != binding_of(new).id:
         out.append(f"protocol {binding_of(new).id} is not {pid}")
@@ -196,10 +203,26 @@ def repeat_mismatch(parent: JsonObject, new: JsonObject) -> list[str]:
 
 
 def _table(cfg: JsonObject, key: str) -> JsonObject:
-    """CFG[KEY] when it is an object, else an empty one — absent and null
-    read alike, as the comparison of two records needs."""
+    """CFG[KEY] as an object; absent and null give an empty one — whether a
+    side has the table at all is `_form`'s question. Raises RunConfigError
+    for any other value: a damaged table is not an empty one."""
     value = cfg.get(key)
-    return cast(JsonObject, value) if isinstance(value, dict) else {}
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise RunConfigError(f"{key} = {value!r}, not an object")
+    return cast(JsonObject, value)
+
+
+def _form(cfg: JsonObject, key: str) -> str:
+    """How CFG holds table KEY: absent, null or an object (`_table` refuses
+    any other value)."""
+    if key not in cfg:
+        return "absent"
+    if cfg[key] is None:
+        return "null"
+    _table(cfg, key)
+    return "an object"
 
 
 def _shown(cfg: JsonObject, key: str) -> str:
