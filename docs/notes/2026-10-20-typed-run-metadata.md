@@ -75,4 +75,21 @@ Where the build departed from the draft:
   null (both read None). The writer writes every key, so only hand-made
   fixtures had the absent form; the new run's side keeps the distinction.
 
-No record format changed: schema 3 stays; only the in-memory shape did.
+## After the review: a complete record
+
+An independent review found that missing keys passed while unknown ones
+were refused: a record without `"unfrozen_ack": true` read as a plain
+measurement, its number reportable. Two answers were weighed — require
+the fields a gate decides on, or all of them. Decided: all of them. A
+list of gate fields would have to stay complete forever (`run_kind`,
+`repeat_of`, `derived_from` decide too), and a `RunConfig` is meant to be
+the whole record. `parse_run_config` now refuses a missing field, and
+null is a value only where the writer writes one; the field table
+(`_FIELDS`) states type and nullability once. The 3304 tests this broke
+had fixtures writing parts of a record; they now build one through
+`tests/protocol_fixture.run_record`, and a test of a damaged record drops
+or breaks its field explicitly. A missing table and a null one no longer
+meet in a valid record.
+
+No record format changed: schema 3 stays; only the in-memory shape and
+the reader's strictness did.

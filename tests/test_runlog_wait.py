@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package unde
 
 from labkit.formats import findings, promises, runs, scope_sha  # noqa: E402
 from labkit.run import runlog_command  # noqa: E402
-from protocol_fixture import head, scope_file  # noqa: E402
+from protocol_fixture import run_record, head, scope_file  # noqa: E402
 
 
 def _run_main(argv):
@@ -41,7 +41,7 @@ class TestWait(unittest.TestCase):
             done = Path(d) / "runs" / "2026-09-09T10-00-00_done"
             done.mkdir(parents=True)
             (done / "config.json").write_text(
-                '{"schema_version": 3, "run_kind": "measurement"}', encoding="utf-8"
+                json.dumps(run_record()), encoding="utf-8"
             )
             (done / "metrics.json").write_text('{"c1_pass": true}', encoding="utf-8")
             (done / "completion.json").write_text("{}", encoding="utf-8")
@@ -70,12 +70,14 @@ class TestWait(unittest.TestCase):
             run_dir.mkdir(parents=True)
             (run_dir / "config.json").write_text(
                 json.dumps(
-                    {
-                        "schema_version": 3,
-                        "run_kind": "measurement",
-                        "pid": 999_999_99,
-                        "script": "01_measure.py",
-                    }
+                    run_record(
+                        {
+                            "schema_version": 3,
+                            "run_kind": "measurement",
+                            "pid": 999_999_99,
+                            "script": "01_measure.py",
+                        }
+                    )
                 ),
                 encoding="utf-8",
             )
@@ -92,12 +94,14 @@ class TestWait(unittest.TestCase):
             me = runs._command_of(os.getpid()) or "python"
             (run_dir / "config.json").write_text(
                 json.dumps(
-                    {
-                        "schema_version": 3,
-                        "run_kind": "measurement",
-                        "pid": os.getpid(),
-                        "script": me.split()[0],
-                    }
+                    run_record(
+                        {
+                            "schema_version": 3,
+                            "run_kind": "measurement",
+                            "pid": os.getpid(),
+                            "script": me.split()[0],
+                        }
+                    )
                 ),
                 encoding="utf-8",
             )

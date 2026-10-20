@@ -517,6 +517,12 @@ def binding_of(cfg: JsonObject) -> ProtocolBinding:
     if not isinstance(table, dict):
         raise RunConfigError(f"protocol = {table!r}, not an object")
     table = cast(JsonObject, table)
+    missing = [key for key in ("id", "path") if key not in table]
+    if missing:
+        raise RunConfigError(
+            f"protocol.{', protocol.'.join(missing)} missing — the binding carries "
+            f"both, null where there is none"
+        )
     extra = sorted(set(table) - {"id", "path"})
     if extra:
         raise RunConfigError(
@@ -531,51 +537,48 @@ def binding_of(cfg: JsonObject) -> ProtocolBinding:
     return ProtocolBinding(found[0], found[1])
 
 
-#: the top-level keys of config.json — what `runlog.Run._write_record`
-#: writes, every one of them; a key outside them makes the record unreadable
-#: (the writer is its only author, and a key nobody defines would be carried
-#: on unexplained). A key ABSENT is not refused: it reads None or its
-#: default (TODO, "Fehlende Felder"). The experiment's own settings live
+#: every field of config.json, as `runlog.Run._write_record` writes it: the
+#: type it holds, and whether null is a value the writer writes (a run
+#: without parent, repeat, draw, failed audit, tier or promise block). A
+#: record carries EVERY field — a missing one is no null and no default:
+#: dropping `"unfrozen_ack": true` once made an acknowledged run reportable
+#: (review 2026-10-20). A key outside the table is refused as well: the
+#: writer is the record's only author. The experiment's own settings live
 #: inside `config` and stay free.
-RUN_CONFIG_KEYS = (
-    "schema_version",
-    "experiment",
-    "script",
-    "protocol",
-    "derived_from",
-    "repeat_of",
-    "draw",
-    "run_kind",
-    "unfrozen_ack",
-    "audit_failed",
-    "cost_tier",
-    "promises",
-    "script_sha",
-    "untracked_sources",
-    "pid",
-    "git",
-    "git_full",
-    "python",
-    "env",
-    "models_resolved",
-    "started",
-    "command",
-    "data",
-    "config",
-)
-#: the scalar fields and the type each holds when present (absent is None)
-_SCALARS: dict[str, type] = {
-    "experiment": str,
-    "script": str,
-    "audit_failed": str,
-    "cost_tier": str,
-    "script_sha": str,
-    "pid": int,
-    "git": str,
-    "git_full": str,
-    "python": str,
-    "env": str,
-    "started": str,
+_FIELDS: dict[str, tuple[type, bool]] = {
+    "schema_version": (int, False),
+    "experiment": (str, False),
+    "script": (str, False),
+    "protocol": (dict, False),
+    "derived_from": (str, True),
+    "repeat_of": (str, True),
+    "draw": (int, True),
+    "run_kind": (str, False),
+    "unfrozen_ack": (bool, False),
+    "audit_failed": (str, True),
+    "cost_tier": (str, True),
+    "promises": (dict, True),
+    "script_sha": (str, False),
+    "untracked_sources": (list, False),
+    "pid": (int, False),
+    "git": (str, False),
+    "git_full": (str, False),
+    "python": (str, False),
+    "env": (str, False),
+    "models_resolved": (dict, False),
+    "started": (str, False),
+    "command": (list, False),
+    "data": (dict, False),
+    "config": (dict, False),
+}
+RUN_CONFIG_KEYS = tuple(_FIELDS)
+#: a field's type as the record's JSON names it, for the refusal
+_JSON_NAME = {
+    dict: "object",
+    list: "list",
+    str: "string",
+    int: "integer",
+    bool: "boolean",
 }
 #: the nested fields: held as stored JSON text — in the record's own key
 #: order, which a printed config shows — and handed out as fresh copies,
@@ -594,11 +597,11 @@ _NESTED = (
 
 @dataclass(frozen=True)
 class RunConfig:
-    """A run's metadata as labkit wrote it, read once and checked once
-    (`parse_run_config`). Scalars are typed fields, None when the record
-    does not carry them; the nested tables come from the attributes below
-    as fresh copies of the stored JSON, never a shared dict. The
-    experiment's own settings are `config`, free JSON."""
+    """A run's metadata as labkit wrote it, every field present, read once
+    and checked once (`parse_run_config`). Scalars are typed fields, None
+    only where the writer writes null; the nested tables come from the
+    attributes below as fresh copies of the stored JSON, never a shared
+    dict. The experiment's own settings are `config`, free JSON."""
 
     schema_version: int
     run_kind: RunKind
@@ -612,36 +615,36 @@ class RunConfig:
     repeat_of: str | None
     draw: int | None  # a repeat's draw number, >= 2 (the run itself is 1)
     unfrozen_ack: bool
-    experiment: str | None
-    script: str | None
+    experiment: str
+    script: str
     audit_failed: str | None
     cost_tier: str | None
-    script_sha: str | None
-    pid: int | None
-    git: str | None
-    git_full: str | None
-    python: str | None
-    env: str | None
-    started: str | None
+    script_sha: str
+    pid: int
+    git: str
+    git_full: str
+    python: str
+    env: str
+    started: str
     _nested: str = field(repr=False)
 
     def _get(self, key: str) -> Any:
-        return json.loads(self._nested).get(key)
+        return json.loads(self._nested)[key]
 
     @property
     def config(self) -> JsonObject:
-        """The experiment's settings (free JSON), {} when none were recorded."""
-        return cast(JsonObject, self._get("config") or {})
+        """The experiment's settings, free JSON."""
+        return cast(JsonObject, self._get("config"))
 
     @property
     def data(self) -> JsonObject:
-        """The described inputs (`data=`), {} when none."""
-        return cast(JsonObject, self._get("data") or {})
+        """The described inputs (`data=`), {} when none were given."""
+        return cast(JsonObject, self._get("data"))
 
     @property
     def models_resolved(self) -> JsonObject:
         """The model aliases the run resolved (`llm` records), {} when none."""
-        return cast(JsonObject, self._get("models_resolved") or {})
+        return cast(JsonObject, self._get("models_resolved"))
 
     @property
     def promises(self) -> JsonObject | None:
@@ -650,30 +653,23 @@ class RunConfig:
         return cast("JsonObject | None", self._get("promises"))
 
     @property
-    def command(self) -> list[str] | None:
-        """The command line that started the run, None when not recorded."""
-        return cast("list[str] | None", self._get("command"))
+    def command(self) -> list[str]:
+        """The command line that started the run."""
+        return cast(list[str], self._get("command"))
 
     @property
     def untracked_sources(self) -> list[str]:
         """The untracked sources the run snapshot beside its script."""
-        return cast(list[str], self._get("untracked_sources") or [])
+        return cast(list[str], self._get("untracked_sources"))
 
     def as_record(self) -> JsonObject:
         """The record as config.json stores it, a fresh copy: for a reader
         that prints or searches it whole (the index row, an arm line's
         fingerprint), never for reading one field."""
-        scalars = {k: getattr(self, k) for k in _SCALARS}
+        nested = json.loads(self._nested)
         return {
-            "schema_version": self.schema_version,
-            "run_kind": self.run_kind,
-            "protocol": {"id": self.protocol.id, "path": self.protocol.path},
-            "derived_from": self.derived_from,
-            "repeat_of": self.repeat_of,
-            "draw": self.draw,
-            "unfrozen_ack": self.unfrozen_ack,
-            **scalars,
-            **json.loads(self._nested),
+            key: nested[key] if key in nested else getattr(self, key)
+            for key in RUN_CONFIG_KEYS
         }
 
     def repeat_basis(self) -> JsonObject:
@@ -691,42 +687,42 @@ class RunConfig:
         }
 
 
-def _field_type_problem(cfg: JsonObject) -> str | None:
-    """Why a present field of CFG has the wrong type, or None: the record
-    tables objects, the scalars their `_SCALARS` type, `command` and
-    `untracked_sources` lists of strings, `unfrozen_ack` a boolean."""
-    for key in RECORD_TABLES:
-        value = cfg.get(key)
-        if value is not None and not isinstance(value, dict):
-            return f"{key} = {value!r}, not an object"
-    for key, kind_of in _SCALARS.items():
-        value = cfg.get(key)
-        if value is not None and (
-            not isinstance(value, kind_of)
-            or (kind_of is int and isinstance(value, bool))
-        ):
-            return f"{key} = {value!r}, not a {kind_of.__name__}"
+def _field_problem(cfg: JsonObject) -> str | None:
+    """Why CFG's fields are not the record's, or None: a field missing, a
+    null where the writer never writes one, a value of another type (a bool
+    is no int), `command` or `untracked_sources` not a list of strings."""
+    missing = [key for key in RUN_CONFIG_KEYS if key not in cfg]
+    if missing:
+        return (
+            f"{', '.join(missing)} missing — a labkit record carries every field "
+            f"its writer writes; missing is no null and no default"
+        )
+    for key, (kind, nullable) in _FIELDS.items():
+        value = cfg[key]
+        name = _JSON_NAME[kind]
+        expected = f"{'an' if name[0] in 'aeiou' else 'a'} {name}"
+        if value is None:
+            if not nullable:
+                return f"{key} = null, not {expected}"
+            continue
+        if not isinstance(value, kind) or (kind is int and isinstance(value, bool)):
+            return f"{key} = {value!r}, not {expected}"
     for key in ("command", "untracked_sources"):
-        value = cfg.get(key)
-        if value is not None and not (
-            isinstance(value, list)
-            and all(isinstance(v, str) for v in cast(list[object], value))
-        ):
-            return f"{key} = {value!r}, not a list of strings"
-    ack = cfg.get("unfrozen_ack", False)
-    return None if isinstance(ack, bool) else f"unfrozen_ack = {ack!r}, not a boolean"
+        if not all(isinstance(v, str) for v in cast(list[object], cfg[key])):
+            return f"{key} = {cfg[key]!r}, not a list of strings"
+    return None
 
 
 def parse_run_config(obj: object) -> RunConfig:
     """The RunConfig of OBJ, a parsed config.json — or RunConfigError naming
-    the field: not an object, a key labkit does not write, the schema, the
-    run kind, the binding, a record table that is no object, a scalar of
-    the wrong type, `derived_from` or the repeat fields of a wrong shape."""
+    the field: not an object, the schema, a key labkit does not write, a
+    field missing, null where it may not be or of another type, the run
+    kind, the binding, `derived_from` or the repeat fields of a wrong shape."""
     if not isinstance(obj, dict):
         raise RunConfigError(f"a JSON {type(obj).__name__}, not an object")
     cfg = cast(JsonObject, obj)
     # the schema first: a record of another labkit names the version that
-    # reads it, rather than its unfamiliar keys
+    # reads it, rather than its unfamiliar or missing keys
     problem = _schema_problem(cfg.get("schema_version"))
     if problem:
         raise RunConfigError(problem)
@@ -736,30 +732,38 @@ def parse_run_config(obj: object) -> RunConfig:
             f"{', '.join(unknown)}: not a field labkit writes into config.json — "
             f"an experiment's own settings belong in `config`"
         )
+    problem = _field_problem(cfg)
+    if problem:
+        raise RunConfigError(problem)
     try:
-        kind = parse_run_kind(cfg.get("run_kind"))
+        kind = parse_run_kind(cfg["run_kind"])
     except ValueError as exc:
         raise RunConfigError(str(exc)) from exc
     binding = binding_of(cfg)
-    problem = (
-        _field_type_problem(cfg)
-        or _derived_shape_problem(cfg)
-        or _repeat_shape_problem(cfg)
-    )
+    problem = _derived_shape_problem(cfg) or _repeat_shape_problem(cfg)
     if problem:
         raise RunConfigError(problem)
-    ack = cfg.get("unfrozen_ack", False)
     return RunConfig(
-        schema_version=cast(int, cfg["schema_version"]),
+        schema_version=cfg["schema_version"],
         run_kind=kind,
         protocol=binding,
-        derived_from=cfg.get("derived_from"),
-        repeat_of=cfg.get("repeat_of"),
-        draw=cfg.get("draw"),
-        unfrozen_ack=ack,
-        **{key: cfg.get(key) for key in _SCALARS},
+        derived_from=cfg["derived_from"],
+        repeat_of=cfg["repeat_of"],
+        draw=cfg["draw"],
+        unfrozen_ack=cfg["unfrozen_ack"],
+        experiment=cfg["experiment"],
+        script=cfg["script"],
+        audit_failed=cfg["audit_failed"],
+        cost_tier=cfg["cost_tier"],
+        script_sha=cfg["script_sha"],
+        pid=cfg["pid"],
+        git=cfg["git"],
+        git_full=cfg["git_full"],
+        python=cfg["python"],
+        env=cfg["env"],
+        started=cfg["started"],
         _nested=json.dumps(
-            {key: cfg.get(key) for key in (*_NESTED, "protocol")}, ensure_ascii=False
+            {key: cfg[key] for key in (*_NESTED, "protocol")}, ensure_ascii=False
         ),
     )
 

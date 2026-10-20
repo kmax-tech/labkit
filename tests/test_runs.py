@@ -11,14 +11,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from protocol_fixture import run_record  # noqa: E402
 from labkit.formats import runs, answering_run
 
-CONFIG = {
-    "schema_version": 3,
-    "run_kind": "measurement",
-    "experiment": "r",
-    "protocol": {"id": "p-" + "0" * 16},
-}
+CONFIG = run_record(experiment="r", protocol={"id": "p-" + "0" * 16, "path": None})
 
 
 class RunDirs(unittest.TestCase):
@@ -33,7 +29,7 @@ class RunDirs(unittest.TestCase):
         d = self.runs / name
         d.mkdir()
         if isinstance(config, dict):
-            (d / "config.json").write_text(json.dumps(config))
+            (d / "config.json").write_text(json.dumps(run_record(config)))
         elif isinstance(config, str):
             (d / "config.json").write_text(config)
         if done:
@@ -90,7 +86,7 @@ class TypedRecords(unittest.TestCase):
         d = self.area / "runs" / name
         d.mkdir()
         if isinstance(config, dict):
-            (d / "config.json").write_text(json.dumps(config))
+            (d / "config.json").write_text(json.dumps(run_record(config)))
         elif isinstance(config, str):
             (d / "config.json").write_text(config)
         return d
@@ -113,9 +109,13 @@ class TypedRecords(unittest.TestCase):
 
     def test_a_left_out_run_carries_its_reason(self):
         self._run(
-            "2026-01-01T00-00-00_aaaa", {**CONFIG, "protocol": {"id": "p-" + "1" * 16}}
+            "2026-01-01T00-00-00_aaaa",
+            {**CONFIG, "protocol": {"id": "p-" + "1" * 16, "path": None}},
         )
-        self._run("2026-01-01T00-00-00_bbbb", {**CONFIG, "protocol": None})
+        self._run(
+            "2026-01-01T00-00-00_bbbb",
+            {**CONFIG, "protocol": {"id": None, "path": None}},
+        )
         _, left = answering_run.bound_runs(self.area, CONFIG["protocol"]["id"])
         # neither is completed: the state is the reason
         self.assertEqual([f.why for f in left], ["crashed", "crashed"])
@@ -135,13 +135,19 @@ class TypedRecords(unittest.TestCase):
             runs.binding_of({"protocol": {"id": "p-x", "path": "PROTOCOL-a.md"}}),
             runs.ProtocolBinding("p-x", "PROTOCOL-a.md"),
         )
-        for bad, field in (({"id": 7}, "protocol.id"), ("p-x", "protocol =")):
+        for bad, field in (
+            ({"id": 7, "path": None}, "protocol.id = 7"),
+            ({"id": "p-x"}, "protocol.path missing"),
+            ("p-x", "protocol ="),
+        ):
             with self.subTest(bad=bad):
                 with self.assertRaises(runs.RunConfigError) as cm:
                     runs.binding_of({"protocol": bad})
                 self.assertIn(field, str(cm.exception))
         # the reader refuses the same shape, with the same sentence
-        d = self._run("2026-01-01T00-00-00_dddd", {**CONFIG, "protocol": {"id": 7}})
+        d = self._run(
+            "2026-01-01T00-00-00_dddd", {**CONFIG, "protocol": {"id": 7, "path": None}}
+        )
         with self.assertRaises(runs.RunConfigError) as cm:
             runs.read_run_config(d)
         self.assertIn("protocol.id = 7, not a string", str(cm.exception))

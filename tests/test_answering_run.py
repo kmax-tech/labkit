@@ -12,6 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from protocol_fixture import run_record  # noqa: E402
 from labkit.formats import runs, answering_run
 
 PID = "p-0001"
@@ -30,16 +31,11 @@ def _run(
 ) -> Path:
     d = area / "runs" / name
     d.mkdir(parents=True)
-    cfg: dict = {
-        "schema_version": 3,
-        "run_kind": "measurement",
-        "script": "01_measure.py",
-        "pid": 1,
-        "protocol": {"id": pid, "path": "x.md"},
-        "derived_from": derived_from,
-        "models_resolved": models_resolved or {},
-        "config": {},
-    }
+    cfg = run_record(
+        protocol={"id": pid, "path": "x.md"},
+        derived_from=derived_from,
+        models_resolved=models_resolved or {},
+    )
     (d / "config.json").write_text(
         config_text if config_text is not None else json.dumps(cfg), encoding="utf-8"
     )
@@ -274,7 +270,7 @@ class NewestCompleted(unittest.TestCase):
         d = area / "runs" / name
         d.mkdir(parents=True)
         (d / "config.json").write_text(
-            json.dumps({"schema_version": 3, "run_kind": "measurement"})
+            json.dumps(run_record({"schema_version": 3, "run_kind": "measurement"}))
         )
         (d / "metrics.json").write_text("{}")
         (d / "completion.json").write_text("{}")

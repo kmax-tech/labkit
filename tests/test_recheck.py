@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from protocol_fixture import PID, head  # noqa: E402
+from protocol_fixture import run_record, PID, head  # noqa: E402
 
 from labkit.checks import recheck  # noqa: E402
 
@@ -38,11 +38,13 @@ class Area(unittest.TestCase):
         # alone (a legacy run) is never completed since labkit 0.48
         (self.run_dir / "config.json").write_text(
             json.dumps(
-                {
-                    "schema_version": 3,
-                    "run_kind": "measurement",
-                    "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
-                }
+                run_record(
+                    {
+                        "schema_version": 3,
+                        "run_kind": "measurement",
+                        "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
+                    }
+                )
             )
         )
         (self.run_dir / "completion.json").write_text(

@@ -24,7 +24,7 @@ from labkit.tools import protocol_fill  # noqa: E402
 from labkit.gates import audit  # noqa: E402
 from labkit.checks import prompt_check  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
-from protocol_fixture import PID, head  # noqa: E402
+from protocol_fixture import run_record, PID, head  # noqa: E402
 
 SAMPLE = """# Experiment protocol: x
 
@@ -354,11 +354,13 @@ class TestFromRun(unittest.TestCase):
         run.mkdir(parents=True)
         (run / "config.json").write_text(
             json.dumps(
-                {
-                    "schema_version": 3,
-                    "run_kind": "measurement",
-                    "protocol": {"id": PID, "path": "PROTOCOL-count.md"},
-                }
+                run_record(
+                    {
+                        "schema_version": 3,
+                        "run_kind": "measurement",
+                        "protocol": {"id": PID, "path": "PROTOCOL-count.md"},
+                    }
+                )
             ),
             encoding="utf-8",
         )

@@ -15,7 +15,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import head
+from protocol_fixture import run_record, head
 
 from labkit.tools import protocol_fill
 from labkit.checks import recheck
@@ -55,11 +55,13 @@ class TwoProtocols(unittest.TestCase):
         r.mkdir()
         (r / "config.json").write_text(
             json.dumps(
-                {
-                    "schema_version": 3,
-                    "run_kind": "measurement",
-                    "protocol": {"id": pid, "path": "x"},
-                }
+                run_record(
+                    {
+                        "schema_version": 3,
+                        "run_kind": "measurement",
+                        "protocol": {"id": pid, "path": "x"},
+                    }
+                )
             )
         )
         (r / "metrics.json").write_text(json.dumps(metrics))

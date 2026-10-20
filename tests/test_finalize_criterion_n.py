@@ -11,6 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from protocol_fixture import run_record  # noqa: E402
 from labkit.checks import run_record_check  # noqa: E402
 
 
@@ -21,13 +22,19 @@ class CriterionN(unittest.TestCase):
         self.run_dir.mkdir(parents=True)
         (self.run_dir / "config.json").write_text(
             json.dumps(
-                {
-                    "schema_version": 3,
-                    "run_kind": "measurement",
-                    "data": {
-                        "items": {"path": "/x/items.jsonl", "rows": 12, "sha256": "ab"}
-                    },
-                }
+                run_record(
+                    {
+                        "schema_version": 3,
+                        "run_kind": "measurement",
+                        "data": {
+                            "items": {
+                                "path": "/x/items.jsonl",
+                                "rows": 12,
+                                "sha256": "ab",
+                            }
+                        },
+                    }
+                )
             )
         )
         (self.run_dir / "outputs.json").write_text(

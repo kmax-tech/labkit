@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
+from protocol_fixture import run_record  # noqa: E402
 from labkit.run import runlog_command  # noqa: E402
 
 
@@ -52,13 +53,15 @@ class TestCli(unittest.TestCase):
             run_dir.mkdir(parents=True)
             (run_dir / "config.json").write_text(
                 json.dumps(
-                    {
-                        "schema_version": 3,
-                        "run_kind": "measurement",
-                        "pid": 999_999,
-                        "script": "01_measure.py",
-                        "config": {"items": "data/prepared/x.jsonl"},
-                    }
+                    run_record(
+                        {
+                            "schema_version": 3,
+                            "run_kind": "measurement",
+                            "pid": 999_999,
+                            "script": "01_measure.py",
+                            "config": {"items": "data/prepared/x.jsonl"},
+                        }
+                    )
                 ),
                 encoding="utf-8",
             )
@@ -82,7 +85,7 @@ class TestCli(unittest.TestCase):
             run_dir = Path(d) / "runs" / "20260906-120000-done"
             run_dir.mkdir(parents=True)
             (run_dir / "config.json").write_text(
-                '{"schema_version": 3, "run_kind": "measurement"}', encoding="utf-8"
+                json.dumps(run_record()), encoding="utf-8"
             )
             (run_dir / "metrics.json").write_text("{}", encoding="utf-8")
             (run_dir / "completion.json").write_text("{}", encoding="utf-8")

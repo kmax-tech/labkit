@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit import PACKAGE_DIR  # noqa: E402
 from labkit.formats import console  # noqa: E402
 from labkit.probes import usability, usability_score  # noqa: E402
-from protocol_fixture import head  # noqa: E402
+from protocol_fixture import run_record, head  # noqa: E402
 
 LOG = """\
 18:12:32 · read · CLAUDE.md
@@ -87,15 +87,17 @@ def _probe(
     (run / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
     (run / "config.json").write_text(
         json.dumps(
-            {
-                "schema_version": 3,
-                "run_kind": "measurement",
-                "protocol": {
-                    "id": "p-0123456789abcdef",
-                    "path": "PROTOCOL-docs-per-case.md",
-                },
-                "cost_tier": tier,
-            }
+            run_record(
+                {
+                    "schema_version": 3,
+                    "run_kind": "measurement",
+                    "protocol": {
+                        "id": "p-0123456789abcdef",
+                        "path": "PROTOCOL-docs-per-case.md",
+                    },
+                    "cost_tier": tier,
+                }
+            )
         ),
         encoding="utf-8",
     )
@@ -139,7 +141,7 @@ class LoadProbeRun(unittest.TestCase):
             _probe(root, {"mean_docs_per_case": 3.5})
             cfg = next(root.glob("experiments/*/runs/*/config.json"))
             data = json.loads(cfg.read_text())
-            del data["protocol"]["id"]
+            data["protocol"]["id"] = None  # the binding names a path, no id
             cfg.write_text(json.dumps(data))
             pr = usability_score.load_probe_run(root)
             self.assertFalse(pr.bound)

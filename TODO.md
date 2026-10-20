@@ -53,7 +53,6 @@ Auftrag. Forschung und Benchmark-Fallliste liegen in
 
 | Bereich | Noch offen | Bedingung / Vertrag |
 |---|---|---|
-| Fehlende Felder | `parse_run_config` lehnt unbekannte Schlüssel ab, fehlende aber nicht: sie lesen None bzw. den Default. Gate-relevant ist vor allem `unfrozen_ack` — fehlt die Zeile, gilt ein bestätigt-ungefrorener Lauf als berichtbar (Review 2026-10-20; vorher dasselbe Verhalten). Alle 24 Schlüssel zu verlangen bricht 3304 Tests in 31 Dateien, deren Fixtures Teil-Configs schreiben. | Entscheidung offen: alle Schlüssel verlangen (Fixtures über einen gemeinsamen Helfer umstellen) oder nur die gate-relevanten (`unfrozen_ack`, `protocol`, `promises`). |
 | Run-Tabellen | `RunConfig` typisiert die Felder, die labkit schreibt; `models_resolved` und `promises` bleiben geprüfte Tabellen (entschieden 2026-10-20, [Notiz](docs/notes/2026-10-20-typed-run-metadata.md)). | Typen in `llm_specs` bzw. `promises` ergänzen, sobald eine konkrete Invariante sie verlangt — nicht vorab. |
 | Findings | Die erste Fehlklassifikation ist eingetreten und eng behoben (`e6dbb08`): Protokoll-ID-Befunde tragen ihren Grad als `GateFinding`, `grade_of` liest nur das erste Wort. `code_check.code_findings` liefert weiter Text, gradiert über das führende `BLOCKER ·`/`WARNING ·`. | Beim nächsten Fehlgrad oder Wartungsproblem Grad, Stufe, Fundstelle und Nachricht als Daten bis zur CLI reichen. Gemeinsame Prüfliste beibehalten. |
 

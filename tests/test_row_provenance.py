@@ -14,6 +14,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from protocol_fixture import run_record  # noqa: E402
 from labkit.run import batch, runlog
 from labkit.checks import run_record_check
 from labkit.formats import runs
@@ -123,12 +124,14 @@ class FinalizeHoldsRowsToTheRun(unittest.TestCase):
         d.mkdir(parents=True)
         (d / "config.json").write_text(
             json.dumps(
-                {
-                    "schema_version": 3,
-                    "run_kind": "measurement",
-                    "derived_from": derived_from,
-                    "config": {},
-                }
+                run_record(
+                    {
+                        "schema_version": 3,
+                        "run_kind": "measurement",
+                        "derived_from": derived_from,
+                        "config": {},
+                    }
+                )
             ),
             encoding="utf-8",
         )

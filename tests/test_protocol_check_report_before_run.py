@@ -20,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import protocol_block, protocol_check, protocol_report  # noqa: E402
-from protocol_fixture import PID, head  # noqa: E402
+from protocol_fixture import run_record, PID, head  # noqa: E402
 from test_protocol_check import PILOT_FIELDS  # noqa: E402
 
 ANSWERING_OPEN = (
@@ -47,11 +47,13 @@ def completed_run(area: Path) -> None:
     run.mkdir(parents=True)
     (run / "config.json").write_text(
         json.dumps(
-            {
-                "schema_version": 3,
-                "run_kind": "measurement",
-                "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
-            }
+            run_record(
+                {
+                    "schema_version": 3,
+                    "run_kind": "measurement",
+                    "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
+                }
+            )
         ),
         encoding="utf-8",
     )

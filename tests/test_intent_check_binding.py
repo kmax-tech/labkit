@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import intent_check  # noqa: E402
 from labkit.formats import answering_run  # noqa: E402
-from protocol_fixture import head  # noqa: E402
+from protocol_fixture import run_record, head  # noqa: E402
 
 A_ID = "p-aaaaaaaaaaaaaaaa"
 B_ID = "p-bbbbbbbbbbbbbbbb"
@@ -60,7 +60,14 @@ def _run(
         cfg["schema_version"] = schema
         cfg["run_kind"] = "measurement"
         cfg["protocol"] = {"id": pid, "path": "whatever.md"}
-    (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (d / "config.json").write_text(
+        json.dumps(
+            run_record(
+                cfg, drop=() if schema is not None else ("schema_version", "run_kind")
+            )
+        ),
+        encoding="utf-8",
+    )
     if with_metrics:
         (d / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
     if completion:
@@ -185,7 +192,7 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
         d = _run(self.area, "2026-01-01T00-00-00_aaaa", pid=A_ID, metrics=FULL)
         cfg = json.loads((d / "config.json").read_text(encoding="utf-8"))
         cfg["protocol"]["path"] = "PROTOCOL-s2-b.md"  # points at B
-        (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+        (d / "config.json").write_text(json.dumps(run_record(cfg)), encoding="utf-8")
         code, out = _check([self.a])
         self.assertEqual(code, 0, out)
         code_b, out_b = _check([self.b])

@@ -10,7 +10,7 @@ from unittest import mock
 
 from labkit.formats import runs
 from labkit.run import runlog
-from protocol_fixture import head
+from protocol_fixture import run_record, head
 
 
 class RunKind(unittest.TestCase):
@@ -77,9 +77,11 @@ class RunKind(unittest.TestCase):
         for kind in (None, "other", True, "preparation", "probe", "measurement"):
             with self.subTest(kind=kind), tempfile.TemporaryDirectory() as d:
                 area = Path(d)
-                record: dict[str, object] = {"schema_version": 3}
-                if kind is not None:
-                    record["run_kind"] = kind
+                record = (
+                    run_record(drop=("run_kind",))  # the kind missing
+                    if kind is None
+                    else run_record(run_kind=kind)
+                )
                 (area / "config.json").write_text(json.dumps(record), encoding="utf-8")
                 if kind in ("preparation", "probe", "measurement"):
                     self.assertIsNotNone(runs.read_run_config(area))
@@ -89,7 +91,8 @@ class RunKind(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "config.json").write_text(
-                json.dumps({"schema_version": 2, "long": True}), encoding="utf-8"
+                json.dumps(run_record({"schema_version": 2, "long": True})),
+                encoding="utf-8",
             )
             with self.assertRaisesRegex(runs.RunConfigError, "0.99.0"):
                 runs.read_run_config(area)

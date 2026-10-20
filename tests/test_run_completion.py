@@ -29,6 +29,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from protocol_fixture import run_record  # noqa: E402
 from labkit.run import runlog, runlog_command  # noqa: E402
 from labkit.formats import runs, answering_run  # noqa: E402
 
@@ -63,16 +64,11 @@ def _run_dir(
 ) -> Path:
     d = area / "runs" / name
     d.mkdir(parents=True)
-    cfg = {
-        "experiment": "x",
-        "script": "01_measure.py",
-        "pid": pid,
-        "data": {},
-        "config": {},
-    }
-    if schema is not None:
+    cfg = run_record(pid=pid)
+    if schema is None:  # a record from before the schema: no version, no kind
+        del cfg["schema_version"], cfg["run_kind"]
+    else:
         cfg["schema_version"] = schema
-        cfg["run_kind"] = "measurement"
     if protocol_id is not None:
         cfg["protocol"] = {"id": protocol_id, "path": "PROTOCOL-x.md"}
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
@@ -372,7 +368,9 @@ class TestDerivedRun(unittest.TestCase):
             parent = _run_dir(area, "2026-10-05T10-00-00_aaaa")
             cfg = json.loads((parent / "config.json").read_text(encoding="utf-8"))
             cfg["models_resolved"] = {"m": {"alias": "m", "model": "A"}}
-            (parent / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+            (parent / "config.json").write_text(
+                json.dumps(run_record(cfg)), encoding="utf-8"
+            )
             with mock.patch(
                 "labkit.run.llm.resolve", return_value={"model": "B"}
             ) as res:

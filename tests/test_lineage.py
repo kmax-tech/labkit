@@ -12,6 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from protocol_fixture import run_record  # noqa: E402
 from labkit.checks.run_record_check import row_provenance_findings
 from labkit.formats import answering_run, runs
 from labkit.tools import params
@@ -37,7 +38,7 @@ def _run(
         "models_resolved": models_resolved or {},
         "config": {},
     }
-    (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (d / "config.json").write_text(json.dumps(run_record(cfg)), encoding="utf-8")
     return d
 
 

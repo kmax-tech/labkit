@@ -11,7 +11,7 @@ from labkit.formats.runs import RunKind
 import json
 from pathlib import Path
 
-from labkit.formats import promises
+from labkit.formats import promises, runs
 
 PID = "p-0123456789abcdef"
 
@@ -51,6 +51,50 @@ def scope_file(area: Path) -> Path:
     return script
 
 
+def run_record(
+    fields: dict | None = None, /, *, drop: tuple[str, ...] = (), **more: object
+) -> dict:
+    """A complete config.json as runlog writes it — schema 3, every field of
+    `runs.RUN_CONFIG_KEYS`: a measurement, unbound, no parent, no repeat, no
+    data, an empty config. FIELDS and MORE replace what a test varies; a
+    test of a damaged record breaks a field explicitly: DROP leaves fields
+    out (a record from before the schema), or it deletes one from the
+    result (`del record["unfrozen_ack"]`). The one home for the record's shape in
+    the tests: a fixture that wrote a part of it read, until 2026-10-20, as
+    a record with defaults."""
+    record: dict = {
+        "schema_version": 3,
+        "experiment": "x",
+        "script": "01_measure.py",
+        "protocol": {"id": None, "path": None},
+        "derived_from": None,
+        "repeat_of": None,
+        "draw": None,
+        "run_kind": "measurement",
+        "unfrozen_ack": False,
+        "audit_failed": None,
+        "cost_tier": None,
+        "promises": None,
+        "script_sha": "no-script",
+        "untracked_sources": [],
+        "pid": 1,
+        "git": "g",
+        "git_full": "g",
+        "python": "3.12",
+        "env": "unpinned",
+        "models_resolved": {},
+        "started": "2026-01-01T00:00:00",
+        "command": [],
+        "data": {},
+        "config": {},
+    }
+    assert tuple(record) == runs.RUN_CONFIG_KEYS, "run_record lags runs.RUN_CONFIG_KEYS"
+    out = {**record, **(fields or {}), **more}
+    for key in drop:
+        del out[key]
+    return out
+
+
 def completed_run(
     area: Path,
     name: str,
@@ -71,15 +115,12 @@ def completed_run(
     d.mkdir(parents=True, exist_ok=True)
     scope_file(area)  # the block's scopes name the fixture's script
     block = promises.parse_block((area / "PROTOCOL-x.md").read_text(encoding="utf-8"))
-    cfg = {
-        "script": "01_measure.py",
-        "pid": 1,
-        "schema_version": 3,
-        "protocol": {"id": pid, "path": "PROTOCOL-x.md"},
-        "run_kind": run_kind,
-        "unfrozen_ack": unfrozen_ack,
-        "promises": promises.snapshot(block, area) if block is not None else None,
-    }
+    cfg = run_record(
+        protocol={"id": pid, "path": "PROTOCOL-x.md"},
+        run_kind=run_kind,
+        unfrozen_ack=unfrozen_ack,
+        promises=promises.snapshot(block, area) if block is not None else None,
+    )
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
     if metrics is not None:
         (d / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")

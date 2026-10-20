@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from protocol_fixture import PID, head  # noqa: E402
+from protocol_fixture import run_record, PID, head  # noqa: E402
 
 from labkit.checks import recheck  # noqa: E402
 from labkit.probes import usability_score  # noqa: E402
@@ -57,7 +57,14 @@ def make_run(
     if schema is not None:
         cfg["schema_version"] = schema
         cfg["run_kind"] = "measurement"
-    (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (d / "config.json").write_text(
+        json.dumps(
+            run_record(
+                cfg, drop=() if schema is not None else ("schema_version", "run_kind")
+            )
+        ),
+        encoding="utf-8",
+    )
     (d / "metrics.json").write_text(json.dumps({"c1_pass": True}), encoding="utf-8")
     if completion:
         (d / "completion.json").write_text(

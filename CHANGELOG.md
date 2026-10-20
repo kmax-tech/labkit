@@ -22,11 +22,15 @@ pins (`requirements.txt` / `requirements.lock`).
   (`cfg.run_kind`, `cfg.protocol.id`, `cfg.derived_from`, …), the
   experiment's settings free JSON in `cfg.config`, nested values (`config`,
   `data`, `promises`, `models_resolved`, `command`) handed out as fresh
-  copies; `cfg.as_record()` gives the whole record as stored. A key on the
-  top level of config.json that labkit does not write, a labkit field of
-  the wrong type, a `protocol` table with keys besides `id` and `path`, or
-  bytes that are no UTF-8 text make the record unreadable; the experiment
-  config keeps its key order. `runs.repeat_parent` is gone
+  copies; `cfg.as_record()` gives the whole record as stored. The record
+  is complete or unreadable: every field the writer writes must be present
+  (missing is no null and no default — deleting `"unfrozen_ack": true` made
+  an acknowledged run reportable), null only where the writer writes null
+  (`derived_from`, `repeat_of`, `draw`, `audit_failed`, `cost_tier`,
+  `promises`), and a key labkit does not write, a field of another type, a
+  `protocol` table without both `id` and `path` or with more, or bytes that
+  are no UTF-8 text make it unreadable. The experiment config keeps its
+  key order. `runs.repeat_parent` is gone
   (`cfg.repeat_of`); `run_state(run_dir, alive)`, `unreportable` and
   `summarize` take the `RunConfig`; `answering_run.repeat_mismatch` takes the
   parent's `RunConfig` and the new run's keys. 0.99.0 is the last release

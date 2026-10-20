@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import PID, head
+from protocol_fixture import run_record, PID, head
 
 from labkit.tools import params
 
@@ -51,16 +51,18 @@ def _run(
     d.mkdir()
     (d / "config.json").write_text(
         json.dumps(
-            {
-                "schema_version": 3,
-                "run_kind": "measurement",
-                "script": "01_measure.py",
-                "pid": 1,
-                "protocol": {"id": pid, "path": "PROTOCOL-x.md"},
-                "derived_from": derived_from,
-                "models_resolved": models_resolved or {},
-                "config": config,
-            }
+            run_record(
+                {
+                    "schema_version": 3,
+                    "run_kind": "measurement",
+                    "script": "01_measure.py",
+                    "pid": 1,
+                    "protocol": {"id": pid, "path": "PROTOCOL-x.md"},
+                    "derived_from": derived_from,
+                    "models_resolved": models_resolved or {},
+                    "config": config,
+                }
+            )
         ),
         encoding="utf-8",
     )

@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import finalize  # noqa: E402
 from labkit.formats import promises  # noqa: E402
-from protocol_fixture import PID, head, scope_file  # noqa: E402
+from protocol_fixture import run_record, PID, head, scope_file  # noqa: E402
 
 BODY = """
 - **Question / hypothesis:** how many documents per case?
@@ -74,7 +74,7 @@ class Provenance(unittest.TestCase):
             # a frozen protocol's run recorded its block (0.71)
             "promises": _snapshot(self.area, protocol),
         }
-        (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+        (d / "config.json").write_text(json.dumps(run_record(cfg)), encoding="utf-8")
         (d / "metrics.json").write_text(json.dumps({"mean": 3.5}), encoding="utf-8")
         (d / "completion.json").write_text(
             json.dumps(

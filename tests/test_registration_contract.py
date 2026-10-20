@@ -18,7 +18,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import PID, head, scope_file
+from protocol_fixture import run_record, PID, head, scope_file
 
 from labkit.gates import finalize
 from labkit.run import runlog
@@ -195,7 +195,7 @@ class FinalizeBlocksAnUnrecordedBlock(unittest.TestCase):
             "promises": recorded,
             "config": {},
         }
-        (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+        (d / "config.json").write_text(json.dumps(run_record(cfg)), encoding="utf-8")
         return d
 
     def test_an_answering_run_without_a_recorded_block_is_a_blocker(self) -> None:

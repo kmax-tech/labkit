@@ -14,12 +14,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import head
+from protocol_fixture import run_record, head
 
 from labkit.formats import runs
 from labkit.run import runlog
 
-BASE = {"schema_version": 3, "run_kind": "measurement"}
+BASE = run_record()
 
 
 class Fields(unittest.TestCase):
@@ -46,6 +46,43 @@ class Fields(unittest.TestCase):
             runs.RunConfigError, "^seed: not a field labkit writes"
         ):
             runs.parse_run_config({**BASE, "seed": 3})
+
+    def test_a_missing_field_is_refused_and_null_only_where_the_writer_writes_it(
+        self,
+    ) -> None:
+        """Missing is no null and no default (2026-10-20); null is a value
+        only where the writer writes one."""
+        for key in runs.RUN_CONFIG_KEYS[1:]:  # without the schema: its own check
+            with self.subTest(missing=key):
+                record = run_record(drop=(key,))
+                with self.assertRaisesRegex(runs.RunConfigError, f"^{key} missing"):
+                    runs.parse_run_config(record)
+        cfg = runs.parse_run_config(run_record(promises=None, derived_from=None))
+        self.assertIsNone(cfg.promises)  # a protocol without a block
+        for key in ("config", "data", "protocol", "unfrozen_ack", "pid"):
+            with self.subTest(null=key):
+                with self.assertRaisesRegex(runs.RunConfigError, f"^{key} = null, not"):
+                    runs.parse_run_config(run_record({key: None}))
+
+    def test_an_acknowledged_run_stays_unreportable_and_without_the_field_unreadable(
+        self,
+    ) -> None:
+        """Deleting `"unfrozen_ack": true` from config.json made an acknowledged
+        run read as a plain measurement, its number reportable (review
+        2026-10-20). The complete record stays unreportable; without the
+        field it is no record."""
+        area = Path(tempfile.mkdtemp())
+        run = area / "runs" / "2026-01-01T00-00-00_aaaa"
+        run.mkdir(parents=True)
+        record = run_record(unfrozen_ack=True)
+        (run / "config.json").write_text(json.dumps(record), encoding="utf-8")
+        cfg = runs.read_run_config(run)
+        assert cfg is not None
+        self.assertIn("LABKIT_UNFROZEN=1", " ".join(runs.unreportable(cfg)))
+        del record["unfrozen_ack"]
+        (run / "config.json").write_text(json.dumps(record), encoding="utf-8")
+        with self.assertRaisesRegex(runs.RunConfigError, "unfrozen_ack missing"):
+            runs.read_run_config(run)
 
     def test_an_older_record_names_its_version_not_its_keys(self) -> None:
         with self.assertRaisesRegex(runs.RunConfigError, "0.99.0"):
@@ -91,12 +128,10 @@ class NestedValuesAreCopies(unittest.TestCase):
 class ReviewFindings(unittest.TestCase):
     """The independent review of 8d789b4 and e0c21e0 (2026-10-20)."""
 
-    def test_the_record_keeps_its_key_order_and_its_null(self) -> None:
+    def test_the_record_keeps_its_key_order(self) -> None:
         cfg = runs.parse_run_config({**BASE, "config": {"zeta": 1, "alpha": 2}})
         self.assertEqual(list(cfg.config), ["zeta", "alpha"])
         self.assertEqual(list(cfg.as_record()["config"]), ["zeta", "alpha"])
-        null = runs.parse_run_config({**BASE, "config": None})
-        self.assertIsNone(null.as_record()["config"])
 
     def test_the_status_line_prints_the_config_as_stored(self) -> None:
         from labkit.run import runlog_command
@@ -105,7 +140,7 @@ class ReviewFindings(unittest.TestCase):
         run = area / "runs" / "2026-01-01T00-00-00_aaaa"
         run.mkdir(parents=True)
         (run / "config.json").write_text(
-            json.dumps({**BASE, "config": {"zeta": "ü", "alpha": [0]}}),
+            json.dumps(run_record(config={"zeta": "ü", "alpha": [0]})),
             encoding="utf-8",
         )
         out = io.StringIO()
@@ -118,9 +153,11 @@ class ReviewFindings(unittest.TestCase):
             runs.parse_run_config(
                 {**BASE, "protocol": {"id": "x", "path": "p", "zz": 1}}
             )
-        unbound = runs.parse_run_config({**BASE, "protocol": None})
-        self.assertIsNone(unbound.as_record()["protocol"])
+        unbound = runs.parse_run_config(
+            {**BASE, "protocol": {"id": None, "path": None}}
+        )
         self.assertEqual(unbound.protocol, runs.ProtocolBinding(None, None))
+        self.assertEqual(unbound.as_record()["protocol"], {"id": None, "path": None})
 
     def test_bytes_no_text_and_runaway_nesting_are_an_unreadable_run(self) -> None:
         area = Path(tempfile.mkdtemp())

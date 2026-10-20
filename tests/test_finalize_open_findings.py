@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, promises, runs  # noqa: E402
 from labkit.gates import finalize, report_check  # noqa: E402
-from protocol_fixture import completed_run, head  # noqa: E402
+from protocol_fixture import completed_run, head, run_record  # noqa: E402
 
 BODY = """\
 - **Question / hypothesis:** does it hold?
@@ -173,7 +173,7 @@ class UnreportableRun(unittest.TestCase):
 
     def test_the_marks_are_one_telling(self):
         def record(**fields: object) -> runs.RunConfig:
-            return runs.parse_run_config({"schema_version": 3, **fields})
+            return runs.parse_run_config(run_record(fields))
 
         self.assertEqual(
             runs.unreportable(record(run_kind="measurement", unfrozen_ack=False)), []

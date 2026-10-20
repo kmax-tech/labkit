@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import audit, claude_hooks  # noqa: E402
 from labkit.formats import findings, promises, scope_sha, shell  # noqa: E402
-from protocol_fixture import DEFAULT_BLOCK, PID, head  # noqa: E402
+from protocol_fixture import run_record, DEFAULT_BLOCK, PID, head  # noqa: E402
 
 BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary
@@ -434,15 +434,17 @@ class Stop(unittest.TestCase):
         assert block is not None
         (d / "config.json").write_text(
             json.dumps(
-                {
-                    "schema_version": 3,
-                    "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
-                    "promises": promises.snapshot(block, self.area),
-                    "run_kind": run_kind,
-                    "data": {
-                        "cases": {"path": "data/cases.jsonl", "sha": "x", "rows": 1}
-                    },
-                }
+                run_record(
+                    {
+                        "schema_version": 3,
+                        "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
+                        "promises": promises.snapshot(block, self.area),
+                        "run_kind": run_kind,
+                        "data": {
+                            "cases": {"path": "data/cases.jsonl", "sha": "x", "rows": 1}
+                        },
+                    }
+                )
             )
         )
         (d / "metrics.json").write_text(

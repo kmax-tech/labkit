@@ -20,6 +20,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import protocol_fixture as fixture  # noqa: E402
+from protocol_fixture import run_record  # noqa: E402
 from labkit.gates import audit  # noqa: E402
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
 
@@ -42,7 +43,7 @@ def completed_run(area: Path, pid: str, output: str) -> Path:
         "models_resolved": {},
         "config": {},
     }
-    (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (d / "config.json").write_text(json.dumps(run_record(cfg)), encoding="utf-8")
     (d / "metrics.json").write_text(json.dumps({"c1_pass": True}), encoding="utf-8")
     (d / "outputs.json").write_text(
         json.dumps([{"path": output, "sha256": None, "lines": None}]), encoding="utf-8"

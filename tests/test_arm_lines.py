@@ -12,6 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from protocol_fixture import run_record  # noqa: E402
 from labkit.checks import run_record_check
 
 SHA_B, SHA_A = "bcec0c37236d", "1d4c79af596a"
@@ -35,14 +36,19 @@ def _repo(
     run.mkdir(parents=True)
     (run / "config.json").write_text(
         json.dumps(
-            {
-                "schema_version": 3,
-                "run_kind": "measurement",
-                "config": {
-                    "judge": {"alias": "gpt-oss-20b-leguin", "model": "gpt-oss:20b"},
-                    "fingerprints": fingerprints,
-                },
-            }
+            run_record(
+                {
+                    "schema_version": 3,
+                    "run_kind": "measurement",
+                    "config": {
+                        "judge": {
+                            "alias": "gpt-oss-20b-leguin",
+                            "model": "gpt-oss:20b",
+                        },
+                        "fingerprints": fingerprints,
+                    },
+                }
+            )
         ),
         encoding="utf-8",
     )

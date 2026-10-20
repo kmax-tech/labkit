@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.checks import intent_check  # noqa: E402
 from labkit.run import runlog, runlog_command  # noqa: E402
 from labkit.formats import runs, answering_run  # noqa: E402
-from protocol_fixture import PID, head  # noqa: E402
+from protocol_fixture import run_record, PID, head  # noqa: E402
 
 OLD = "2026-10-06T10-00-00_aaaa"
 NEW = "2026-10-06T11-00-00_bbbb"
@@ -32,13 +32,15 @@ def make_run(area: Path, name: str) -> Path:
     d.mkdir(parents=True)
     (d / "config.json").write_text(
         json.dumps(
-            {
-                "schema_version": 3,
-                "run_kind": "measurement",
-                "script": "01_measure.py",
-                "pid": 1,
-                "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
-            }
+            run_record(
+                {
+                    "schema_version": 3,
+                    "run_kind": "measurement",
+                    "script": "01_measure.py",
+                    "pid": 1,
+                    "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
+                }
+            )
         ),
         encoding="utf-8",
     )
@@ -129,14 +131,8 @@ class Shape(unittest.TestCase):
             ("[]", "a JSON list"),
             ('{"schema_version": "2"}', "schema_version"),
             ('{"schema_version": 1}', "labkit 0.47"),
-            (
-                '{"schema_version": 3, "run_kind": "measurement", "protocol": "PROTOCOL-x.md"}',
-                "protocol =",
-            ),
-            (
-                '{"schema_version": 3, "run_kind": "measurement", "protocol": {"id": 7}}',
-                "protocol.id",
-            ),
+            (json.dumps(run_record(protocol="PROTOCOL-x.md")), "protocol ="),
+            (json.dumps(run_record(protocol={"id": 7, "path": None})), "protocol.id"),
         ):
             with tempfile.TemporaryDirectory() as d:
                 (Path(d) / "config.json").write_text(content)
@@ -147,9 +143,7 @@ class Shape(unittest.TestCase):
     def test_the_current_shape_reads(self):
 
         with tempfile.TemporaryDirectory() as d:
-            (Path(d) / "config.json").write_text(
-                '{"schema_version": 3, "run_kind": "measurement", "protocol": {"id": null, "path": null}}'
-            )
+            (Path(d) / "config.json").write_text(json.dumps(run_record()))
             cfg = runs.read_run_config(Path(d))
             assert cfg is not None
             self.assertEqual(cfg.schema_version, 3)

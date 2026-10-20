@@ -19,7 +19,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import DEFAULT_BLOCK, PID, head, scope_file
+from protocol_fixture import run_record, DEFAULT_BLOCK, PID, head, scope_file
 
 from labkit.checks import recheck
 from labkit.run import runlog, provenance
@@ -29,9 +29,7 @@ from labkit.formats import runs, answering_run
 def _read(table: dict) -> runs.RunConfig:
     """A parent run as the reader gives it: TABLE's fields in a schema-3
     measurement record."""
-    return runs.parse_run_config(
-        {"schema_version": 3, "run_kind": "measurement", **table}
-    )
+    return runs.parse_run_config(run_record(table))
 
 
 class Repeats(unittest.TestCase):
@@ -140,7 +138,7 @@ class Repeats(unittest.TestCase):
         cfg_path = self.area / "runs" / first / "config.json"
         cfg = json.loads(cfg_path.read_text())
         for damage, needle in (
-            ({"repeat_of": 17, "draw": 2}, "repeat_of = 17, not a run id"),
+            ({"repeat_of": 17, "draw": 2}, "repeat_of = 17, not a string"),
             ({"repeat_of": None, "draw": 2}, "draw = 2 without repeat_of"),
             ({"repeat_of": first, "draw": 1}, "not an integer >= 2"),
         ):
@@ -224,22 +222,14 @@ class Repeats(unittest.TestCase):
                 "promises: null in the parent, an object here",
             ),
             ({"data": {}}, {}, "data: an object in the parent, absent here"),
-            ({"data": None}, {}, "data: null in the parent, absent here"),
+            ({"promises": None}, {}, "promises: null in the parent, absent here"),
         ):
             with self.subTest(needle=needle):
                 self.assertIn(needle, answering_run.repeat_mismatch(_read(parent), new))
         # the twin: the same form on both sides says nothing
+        parent = _read({"promises": None})
         self.assertEqual(
-            answering_run.repeat_mismatch(
-                _read({"promises": None}),
-                {
-                    "protocol": {"id": None, "path": None},
-                    **dict.fromkeys(
-                        ("promises", "config", "data", "script_sha", "models_resolved")
-                    ),
-                },
-            ),
-            [],
+            answering_run.repeat_mismatch(parent, parent.repeat_basis()), []
         )
 
     def test_same_block_other_code_script_or_model_is_no_repeat(self):
@@ -384,7 +374,7 @@ class Repeats(unittest.TestCase):
         unfinalized = self.area / "runs" / "2026-10-15T00-00-01_0001"
         unfinalized.mkdir()
         (unfinalized / "config.json").write_text(
-            json.dumps(self._cfg(primary)), encoding="utf-8"
+            json.dumps(run_record(self._cfg(primary))), encoding="utf-8"
         )
         unreadable = self.area / "runs" / "2026-10-15T00-00-02_0002"
         unreadable.mkdir()

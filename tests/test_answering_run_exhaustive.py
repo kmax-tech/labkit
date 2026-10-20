@@ -24,7 +24,7 @@ import unittest
 from dataclasses import dataclass
 from pathlib import Path
 
-from protocol_fixture import head
+from protocol_fixture import run_record, head
 
 from labkit.formats import console
 from labkit.gates import audit, finalize
@@ -94,7 +94,7 @@ def _write(area: Path, name: str, kind: Kind) -> Path:
     if kind.repeat:
         cfg["repeat_of"] = kind.parent
         cfg["draw"] = kind.draw
-    (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (d / "config.json").write_text(json.dumps(run_record(cfg)), encoding="utf-8")
     if kind.metrics is not None:
         (d / "metrics.json").write_text(json.dumps(kind.metrics), encoding="utf-8")
     if kind.completion:

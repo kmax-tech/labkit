@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import PID, head
+from protocol_fixture import run_record, PID, head
 
 REPO = Path(__file__).resolve().parent.parent
 from labkit.checks import intent_check  # noqa: E402
@@ -43,13 +43,15 @@ class TestIntentCheck(unittest.TestCase):
         d.mkdir(parents=True, exist_ok=True)
         (d / "config.json").write_text(
             json.dumps(
-                {
-                    "script": "01_measure.py",
-                    "pid": 1,
-                    "schema_version": 3,
-                    "run_kind": "measurement",
-                    "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
-                }
+                run_record(
+                    {
+                        "script": "01_measure.py",
+                        "pid": 1,
+                        "schema_version": 3,
+                        "run_kind": "measurement",
+                        "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
+                    }
+                )
             ),
             encoding="utf-8",
         )
