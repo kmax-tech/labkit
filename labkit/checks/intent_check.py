@@ -51,7 +51,7 @@ from pathlib import Path
 from labkit.formats import console, promises, protocol_block
 from labkit.formats.runs import COMPLETED, read_metrics, read_run_config
 from labkit.formats.answering_run import bound_answering_run, run_facts
-from labkit.formats.repo import layout_root
+from labkit.formats.repo import layout_root, shown
 from labkit.formats.scope_sha import area_files, imported_repo_helpers
 
 # The alphabet lives in `promises`; these names stay importable from here
@@ -434,10 +434,7 @@ def _where(path: Path, area: Path, root: Path) -> str:
     """An area file by its name, an imported one by its repo path."""
     if path.parent.parent == area:
         return path.name
-    try:
-        return str(path.resolve().relative_to(root.resolve()))
-    except ValueError:
-        return str(path)
+    return shown(path, root)
 
 
 def _keyword_names(source: str, path: Path) -> list[tuple[str, int]]:

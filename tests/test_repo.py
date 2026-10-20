@@ -263,5 +263,26 @@ class RunlogGitState(unittest.TestCase):
         self.assertEqual(row[1], clean)
 
 
+class Shown(unittest.TestCase):
+    def test_below_the_base_relative_else_absolute(self):
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d).resolve() / "repo"
+            (base / "lib").mkdir(parents=True)
+            self.assertEqual(repo.shown(base / "lib" / "a.py", base), "lib/a.py")
+            outside = Path(d).resolve() / "elsewhere.py"
+            self.assertEqual(repo.shown(outside, base), outside.as_posix())
+
+    def test_a_path_below_the_base_only_through_a_link_is_still_below(self):
+        """One side resolved, the other not, found nothing below (macOS
+        /var is /private/var)."""
+        with tempfile.TemporaryDirectory() as d:
+            real = Path(d).resolve() / "real"
+            (real / "lib").mkdir(parents=True)
+            link = Path(d).resolve() / "link"
+            link.symlink_to(real)
+            self.assertEqual(repo.shown(link / "lib" / "a.py", real), "lib/a.py")
+            self.assertEqual(repo.shown(real / "lib" / "a.py", link), "lib/a.py")
+
+
 if __name__ == "__main__":
     unittest.main()

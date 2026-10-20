@@ -77,7 +77,13 @@ from pathlib import Path
 from labkit.formats import console, promises, protocol_block, rules, standard_contract
 from labkit.formats.gate import Findings
 from labkit.checks.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
-from labkit.formats.repo import area_path, choose_protocol, layout_root, no_such_area
+from labkit.formats.repo import (
+    area_path,
+    choose_protocol,
+    layout_root,
+    no_such_area,
+    shown,
+)
 from labkit.formats.scope_sha import (
     SourceError,
     area_files,
@@ -484,10 +490,7 @@ def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
             body = f.read_text(encoding="utf-8")
         except OSError:
             continue
-        try:
-            label = f.relative_to(repo)
-        except ValueError:
-            label = f
+        label = shown(f, repo)
         parts.append(f"\n===== FILE: {label} =====\n{body}")
     out.write_text("".join(parts), encoding="utf-8")
     return len(files)

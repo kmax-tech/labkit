@@ -90,6 +90,16 @@ def area_path(arg: str) -> Path:
     return hits.pop() if len(hits) == 1 else given
 
 
+def shown(path: Path, base: Path) -> str:
+    """PATH as a report line, a bundle header or a refusal names it: relative
+    to BASE when it lies below it, else absolute; both resolved first (on
+    macOS /var is /private/var, and a comparison of one resolved and one
+    unresolved path found nothing below), `/`-separated. The key a stamp
+    hashes is its own rule (`scope_sha._key`), not a display."""
+    p, b = path.resolve(), base.resolve()
+    return p.relative_to(b).as_posix() if p.is_relative_to(b) else p.as_posix()
+
+
 def no_such_area(area: Path) -> str:
     """The sentence for an area path that is not a directory. A relative
     path resolves against the working directory, so the sentence names it

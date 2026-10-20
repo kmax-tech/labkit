@@ -218,6 +218,7 @@ def ref_problems(repo: Path) -> tuple[int, int, list[str]]:
         if f.is_file()
         and f.suffix in (".md", ".py")
         and not (SKIP_DIRS & set(f.relative_to(repo).parts))
+        # home: a membership test (inside a records directory), not a display
         and not any(f.is_relative_to(a) for a in records)
     )
     problems: list[str] = []

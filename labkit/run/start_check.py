@@ -92,10 +92,7 @@ def protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
             + "\n  ".join(f.name for f in found)
         )
 
-    try:
-        rel = str(path.relative_to(base_dir.resolve()))
-    except ValueError:
-        rel = str(path)
+    rel = repo.shown(path, base_dir)
     text = path.read_text(encoding="utf-8")
     try:
         head = protocol_block.head(text)
@@ -530,8 +527,4 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
 def shown_area(area: Path) -> str:
     """AREA as a person types it from here: relative to the working directory
     when it lies below it, else absolute."""
-    resolved = area.resolve()
-    try:
-        return str(resolved.relative_to(Path.cwd().resolve()))
-    except ValueError:
-        return str(resolved)
+    return repo.shown(area, Path.cwd())

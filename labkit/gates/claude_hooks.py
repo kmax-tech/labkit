@@ -103,6 +103,7 @@ from labkit.formats.repo import (
     area_protocols,
     find_area,
     git_run,
+    shown,
     status_entries,
     touched_paths,
 )
@@ -414,10 +415,7 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
         _, out = _capture(fn, [str(path)])
         # The checker gets the absolute path (the hook's cwd is wherever the
         # agent stood); the report shows it repo-relative, as pfad:zeile.
-        try:
-            out = out.replace(str(path), str(path.relative_to(repo.resolve())))
-        except ValueError:
-            pass
+        out = out.replace(str(path), shown(path, repo))
         if out:
             reports.append(out)
     if cache_file is not None:

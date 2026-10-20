@@ -75,6 +75,7 @@ from labkit.formats.repo import (
     ProtocolChoiceError,
     layout_root,
     no_such_area,
+    shown,
     the_protocol,
 )
 from labkit.formats.runs import completed_runs, read_outputs
@@ -202,11 +203,7 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
         path = path if path.is_absolute() else repo / path
         if not path.is_file():
             raise AuditError(f"{run_dir.name} registered {entry.path}, which is gone")
-        name = (
-            path.resolve().relative_to(repo.resolve()).as_posix()
-            if path.resolve().is_relative_to(repo.resolve())
-            else str(entry.path)
-        )
+        name = shown(path, repo)
         out.append(rows_excerpt(path, name))
     metrics = run_dir / "metrics.json"
     if metrics.is_file():
@@ -293,10 +290,7 @@ def module_index(files: list[Path], repo: Path, read: Callable[[Path], str]) -> 
     READ gives a file's text (the snapshot's, for an audit)."""
     out: list[str] = []
     for f in files:
-        try:
-            rel = f.resolve().relative_to(repo.resolve()).as_posix()
-        except ValueError:
-            rel = str(f)
+        rel = shown(f, repo)
         source = read(f)
         try:
             tree = ast.parse(source, filename=str(f))
@@ -366,10 +360,7 @@ def render(
     repo = layout_root(area)
 
     def rel(p: Path) -> str:
-        try:
-            return str(p.resolve().relative_to(repo.resolve()))
-        except ValueError:
-            return str(p)
+        return shown(p, repo)
 
     def file(p: Path) -> tuple[str, str]:
         text = source.protocol_text if p == protocol else source.read(p)
@@ -458,9 +449,11 @@ def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str
     the stamp misses can change unnoticed (review 2026-10-07: the list was
     asked for and then dropped)."""
     root = layout_root(area)
+    # home: sets compared to each other, not a display (repo.shown)
     stamped = {
         f.resolve().relative_to(root.resolve()).as_posix()
         for f in files
+        # home: only the stamp's files below the root take part
         if f.resolve().is_relative_to(root.resolve())
     }
     named = set()
@@ -469,6 +462,7 @@ def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str
         q = q if q.is_absolute() else root / q
         named.add(
             q.resolve().relative_to(root.resolve()).as_posix()
+            # home: compared with `stamped`; outside the root, as the auditor wrote it
             if q.resolve().is_relative_to(root.resolve())
             else s
         )

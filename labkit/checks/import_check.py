@@ -14,6 +14,7 @@ import ast
 import re
 from pathlib import Path
 
+from labkit.formats.repo import shown
 from labkit.formats.scope_sha import (
     LOCAL_ROOTS,
     SourceError,
@@ -109,7 +110,7 @@ def _import_findings(
     node: ast.Import | ast.ImportFrom,
     area: Path,
     repo: Path,
-    where: Path,
+    where: str,
     rule: str,
     fix: str,
 ) -> list[tuple[int, str]]:
@@ -183,11 +184,7 @@ def _coverage_in(
     except (SyntaxError, UnicodeDecodeError):
         return []  # scope_sha raises on this file already; one loud place
     root = repo.resolve()
-    where = (
-        path.resolve().relative_to(root)
-        if path.resolve().is_relative_to(root)
-        else path
-    )
+    where = shown(path, root)
     out: list[tuple[int, str]] = []
     for node in ast.walk(tree):
         line = getattr(node, "lineno", 0)

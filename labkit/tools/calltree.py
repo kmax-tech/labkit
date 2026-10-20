@@ -35,6 +35,7 @@ from pathlib import Path
 from types import FrameType
 
 from labkit.formats import console
+from labkit.formats.repo import shown
 
 USAGE = "usage: labkit-calltree [--depth N] [--out FILE] TARGET [-- ARGS...]"
 
@@ -149,8 +150,7 @@ def render_tree(tree: Node, depth: int | None, cwd: Path) -> list[str]:
 
     def where(node: Node) -> str:
         path = Path(node.path)
-        shown = path.relative_to(cwd) if path.is_relative_to(cwd) else path
-        return f"{shown}:{node.line}"
+        return f"{shown(path, cwd)}:{node.line}"
 
     def walk(node: Node, level: int) -> None:
         if depth is not None and level >= depth:
