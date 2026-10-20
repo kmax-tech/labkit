@@ -219,6 +219,10 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`runlog <area>` names each finished run's kind.** Preparation, probe
+  and measurement all read "fresh run of the script"; each line now starts
+  with its `run_kind` (`RunSummary.run_kind`), and the listing reads each
+  run's config.json once instead of three times.
 - **A parser counts as tested only when a test calls it.** code-check's
   parser-fixture check (a blocker) passed when the parser's name stood
   anywhere in a test file — a comment, a string, an import. It now looks

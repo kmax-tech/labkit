@@ -36,6 +36,30 @@ class Summary(unittest.TestCase):
             )
             self.assertEqual(s.command, "python 01_measure.py")
             self.assertEqual(s.state, "completed")
+            self.assertEqual(s.run_kind, "measurement")
+
+    def test_the_listing_names_each_runs_kind(self):
+        """Preparation, probe and measurement all read "fresh run of the
+        script" (review 2026-10-20)."""
+        import contextlib
+        import io
+
+        from labkit.run import runlog_command
+
+        with tempfile.TemporaryDirectory() as d:
+            for name, kind in (
+                ("r1", "preparation"),
+                ("r2", "probe"),
+                ("r3", "measurement"),
+            ):
+                _run(Path(d), name, run_kind=kind)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                runlog_command._print_finished(Path(d))
+        lines = [ln for ln in buf.getvalue().splitlines() if ln.startswith("  r")]
+        self.assertEqual(
+            [ln.split()[1] for ln in lines], ["preparation", "probe", "measurement"]
+        )
 
     def test_a_derived_dirty_model_run(self):
         with tempfile.TemporaryDirectory() as d:

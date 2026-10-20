@@ -479,7 +479,8 @@ class RunSummary:
     code-navigation round 11, 2026-10-08)."""
 
     run_id: str
-    state: RunState  # completion_state
+    state: RunState  # run_state, liveness not asked
+    run_kind: RunKind  # preparation · probe · measurement, as config.json records it
     derived_from: str | None  # the run whose rows this one re-evaluated
     models: tuple[str, ...]  # model aliases the run resolved; () when none
     git: str  # the commit at start, "+dirty" when the tree was not clean (untracked files count)
@@ -488,11 +489,17 @@ class RunSummary:
 
 
 def run_summary(run_dir: Path) -> RunSummary:
-    """Read one run folder into a RunSummary. Raises RunConfigError when its
-    config.json is unreadable, ValueError when the folder has none."""
+    """Read one run folder into a RunSummary, its config.json once. Raises
+    RunConfigError when it is unreadable, ValueError when the folder has none."""
     cfg = read_run_config(run_dir)
     if cfg is None:
         raise ValueError(f"{run_dir}: no config.json — not a run folder")
+    return summarize(run_dir, cfg)
+
+
+def summarize(run_dir: Path, cfg: JsonObject) -> RunSummary:
+    """The RunSummary of RUN_DIR from CFG, its config.json as already read
+    (`run_dirs`) — a listing reads each run once, not once per fact."""
     models = cfg.get("models_resolved")
     aliases = (
         tuple(sorted(cast(JsonObject, models))) if isinstance(models, dict) else ()
@@ -507,7 +514,8 @@ def run_summary(run_dir: Path) -> RunSummary:
     derived = cfg.get("derived_from")
     return RunSummary(
         run_id=run_dir.name,
-        state=completion_state(run_dir),
+        state=run_state(run_dir, cfg, alive=False),
+        run_kind=parse_run_kind(cfg.get("run_kind")),
         derived_from=str(derived) if derived else None,
         models=aliases,
         git=str(cfg.get("git") or "?"),

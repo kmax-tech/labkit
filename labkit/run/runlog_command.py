@@ -23,7 +23,7 @@ from labkit.formats.runs import (
     RunConfigError,
     read_metrics,
     run_dirs,
-    run_summary,
+    summarize,
 )
 from labkit.formats.answering_run import newest_completed
 from labkit.run.runlog import active, notify_desktop, reindex
@@ -69,14 +69,14 @@ def _print_finished(area: Path) -> None:
             continue
         if rd.config is None:
             continue
-        s = run_summary(rd.dir)
+        s = summarize(rd.dir, rd.config)
         if s.state == COMPLETED:
             done.append(s)
     if not done:
         return
     print(f"finished runs ({len(done)}, oldest first):")
     for s in done:
-        kind = (
+        kind = f"{s.run_kind} run, " + (
             f"derived from {s.derived_from} (its rows re-evaluated)"
             if s.derived_from
             else "fresh run of the script"
