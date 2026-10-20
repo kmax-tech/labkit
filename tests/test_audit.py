@@ -330,12 +330,19 @@ class Audit(unittest.TestCase):
         self.assertEqual(run(repo_with(), WARN)[0], 1)
         self.assertEqual(run(repo_with(), BLOCK)[0], 1)
 
-    def test_the_last_verdict_line_counts(self):
+    def test_the_last_verdict_line_counts_and_must_match_the_lines(self):
+        """A second verdict line below the first is read, and held to the
+        finding lines like any: a withdrawn BLOCKER is no audit (exit 2)."""
         corrected = (
             BLOCK
             + "\nCorrection: no finding.\nverdict: 0 blockers, 0 warnings, 0 notes"
         )
-        self.assertEqual(run(repo_with(), corrected)[0], 0)
+        self.assertEqual(run(repo_with(), corrected)[0], 2)
+        recounted = (
+            "verdict: 2 blockers, 0 warnings, 0 notes\n"
+            "verdict: 0 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
+        )
+        self.assertEqual(run(repo_with(), recounted)[0], 0)
 
     def test_an_unreadable_report_is_no_audit(self):
         rc, _, err, _ = run(repo_with(), "Looks fine to me.")

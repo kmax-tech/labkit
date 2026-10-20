@@ -160,6 +160,24 @@ def counts_outrun(verdict: tuple[int, int, int], grades: list[str]) -> str | Non
     return None
 
 
+def verdict_disagrees(verdict: tuple[int, int, int], grades: list[str]) -> str | None:
+    """Why VERDICT's blockers and warnings are not exactly the BLOCKER and
+    WARNING lines GRADES lists, or None — the one audit result a record and
+    an exit code are made from. More lines than counted is a withdrawn
+    finding ("Correction: no finding" under a BLOCKER line): exit 0 while the
+    record kept the blocker open, and the next gate refused the coverage
+    (review 2026-10-20). Notes are not held; an auditor counts them loosely."""
+    b, w, _ = verdict
+    listed = {g: sum(1 for grade in grades if grade == g) for g in GRADES}
+    if b != listed["BLOCKER"] or w != listed["WARNING"]:
+        return (
+            f"the verdict counts {b} blocker(s) and {w} warning(s), the report "
+            f"lists {listed['BLOCKER']} BLOCKER and {listed['WARNING']} WARNING "
+            f"line(s)"
+        )
+    return None
+
+
 def _s(value: str) -> str:
     """A TOML basic string: json's escaping is a subset of TOML's."""
     return json.dumps(value, ensure_ascii=False)
@@ -183,8 +201,9 @@ def write(
     mode analysis (NO_RUN when there was none), refused in mode preflight.
     Every finding starts `open`. Never overwrites: the name carries the minute,
     and a second record of that minute takes the next number (`_create`).
-    Refuses (ValueError) a verdict that counts more blockers or warnings than
-    FINDINGS lists of that grade (`counts_outrun`).
+    Refuses (ValueError) a verdict whose blockers and warnings are not
+    exactly the BLOCKER and WARNING lines of FINDINGS (`verdict_disagrees`):
+    a finding line is never withdrawn by prose below it.
     """
     if mode not in MODES:
         raise ValueError(f"mode {mode!r} — one of {', '.join(MODES)}")
@@ -193,11 +212,12 @@ def write(
             f"mode {mode!r} with run_id {run_id!r}: an analysis audit names the "
             f"run it read (NO_RUN for none), a preflight audit names none"
         )
-    outrun = counts_outrun(verdict, [grade for grade, _ in findings])
-    if outrun:
+    disagree = verdict_disagrees(verdict, [grade for grade, _ in findings])
+    if disagree:
         raise ValueError(
-            f"{outrun} readable as findings (`BLOCKER · <where> · …`) — nothing is "
-            f"recorded; have the auditor write each finding as one such line"
+            f"{disagree} — nothing is recorded: every finding is one "
+            f"`BLOCKER · <where> · …` line, the verdict counts exactly those, and "
+            f"no line is withdrawn below it; run the audit again"
         )
     when = time.localtime(now)
     stamp = time.strftime("%Y-%m-%dT%H-%M", when)

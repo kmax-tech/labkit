@@ -24,9 +24,11 @@ the lab's `models.toml` names (`opus` by default, stamped as `claude-cli`).
 Synchronous, with a timeout: on expiry the command fails, it never waits on
 in the background.
 
-Exit codes are the contract (the auditor's LAST verdict line decides — it
-may correct itself below a finding; a disagreement between finding lines
-and verdict is printed as a NOTE, 2026-10-09):
+Exit codes are the contract, made from one audit result: the LAST verdict
+line and the finding lines above it must count the same blockers and
+warnings, else nothing is recorded and the exit is 2 — a finding withdrawn
+in prose below its line left an open blocker in the record behind exit 0
+(review 2026-10-20):
     0  no blocker and no warning
     1  findings to decide — a blocker OR a warning (labkit-paper benchmark,
        2026-10-06: the table-led audit found the positional-join fault only
@@ -407,8 +409,8 @@ def parse_clarity(text: str) -> dict:
 
 def parse(text: str) -> dict:
     """{"verdict": (blockers, warnings, notes), "findings": [(grade, line)]} from
-    the LAST verdict line (an auditor may correct itself), findings from the
-    text before it. Raises AuditError when no verdict line is readable."""
+    the LAST verdict line, findings from the text before it (that the two
+    agree is the writer's check, `findings.verdict_disagrees`). Raises AuditError when no verdict line is readable."""
     matches = list(VERDICT.finditer(text or ""))
     if not matches:
         raise AuditError("the report has no readable `verdict:` line — not an audit")
@@ -678,7 +680,7 @@ def main(argv: list[str]) -> int:
             result["findings"],
             run_id=run_id,
         )
-    except ValueError as exc:  # the verdict counts findings the lines do not carry
+    except ValueError as exc:  # verdict and finding lines disagree
         print(f"labkit-audit: {exc}", file=sys.stderr)
         return 2
     print(f"\nstamp: {stamp_facts(stamp, result['verdict'])}", file=sys.stderr)
@@ -700,17 +702,6 @@ def main(argv: list[str]) -> int:
     listed_scope = result["scope"] + [str(p) for p in indexed]
     for gap in scope_mismatch(args.area, listed_scope, stamp.files):
         print(f"scope WARNING: {gap}", file=sys.stderr)
-    listed = sum(grade in ("BLOCKER", "WARNING") for grade, _ in result["findings"])
-    if listed and not (b or w):
-        # The verdict line decides — an auditor may correct itself below a
-        # finding ("Correction: no finding"). The disagreement is said, so a
-        # reader of exit 0 sees the lines were there (2026-10-09).
-        print(
-            f"verdict NOTE: the verdict line counts 0 blockers and 0 warnings, the "
-            f"report lists {listed} BLOCKER/WARNING line(s) above it — read them; the "
-            f"verdict line decides",
-            file=sys.stderr,
-        )
     return 1 if b or w else 0
 
 

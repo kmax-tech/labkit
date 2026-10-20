@@ -219,6 +219,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **An audit whose verdict and finding lines disagree is no audit.** A
+  BLOCKER line followed by "Correction: no finding" and a zero verdict
+  exited 0, while the record kept the blocker open and the next gate
+  refused the coverage. `labkit-audit` now records only a report whose
+  verdict counts exactly its BLOCKER and WARNING lines; otherwise it exits
+  2 and writes nothing. The auditor's prompt says a written finding line
+  counts.
 - **A probe answers the items as they are now.** The judge skeleton's
   `--probe` resumed its `_probe.jsonl`: an item edited since the last probe
   made no new call and showed its old answer, beside rows of earlier

@@ -1,7 +1,7 @@
-"""labkit-audit (0.74.0): the verdict line decides (an auditor may correct
-itself — tests/test_audit.py), and a report that lists a BLOCKER or WARNING
-line while summing to zero says so on stderr, so exit 0 is not read as "no
-line was there".
+"""labkit-audit: the verdict and the finding lines are one result. A report
+whose verdict counts other blockers or warnings than its lines is no audit
+(exit 2, nothing recorded) — a line withdrawn in prose below it once gave
+exit 0 and left an open blocker in the record (review 2026-10-20).
 
     .venv/bin/python -m pytest tests/test_audit_verdict_lines.py
 """
@@ -30,30 +30,40 @@ def _area() -> Path:
     return area
 
 
-def _run(answer: str) -> tuple[int, str]:
+def _run(answer: str) -> tuple[int, str, list[Path]]:
+    """(exit code, stderr, the records written)."""
     err = io.StringIO()
+    area = _area()
     with (
         mock.patch.object(audit.llm, "complete", lambda *a, **k: answer),
         contextlib.redirect_stdout(io.StringIO()),
         contextlib.redirect_stderr(err),
     ):
-        rc = audit.main([str(_area()), "--mode", "preflight"])
-    return rc, err.getvalue()
+        rc = audit.main([str(area), "--mode", "preflight"])
+    return rc, err.getvalue(), sorted((area / "audits").glob("*.toml"))
+
+
+LINE = "BLOCKER · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\n"
 
 
 class VerdictHeldToLines(unittest.TestCase):
-    def test_a_blocker_line_under_a_zero_verdict_is_named(self) -> None:
-        rc, err = _run(
-            "BLOCKER · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\n"
-            "verdict: 0 blockers, 0 warnings, 0 notes"
-        )
-        self.assertEqual(rc, 0)  # the verdict line decides
-        self.assertIn("the report lists 1 BLOCKER/WARNING line(s)", err)
+    def test_a_blocker_withdrawn_in_prose_is_no_audit(self) -> None:
+        for tail in ("", "Correction: no finding.\n"):
+            with self.subTest(tail=tail):
+                rc, err, records = _run(
+                    LINE + tail + "verdict: 0 blockers, 0 warnings, 0 notes"
+                )
+                self.assertEqual((rc, records), (2, []))
+                self.assertIn("the verdict counts 0 blocker(s) and 0 warning(s)", err)
+                self.assertIn("lists 1 BLOCKER and 0 WARNING line(s)", err)
 
-    def test_twin_notes_only_under_a_zero_verdict_is_exit_0(self) -> None:
-        rc, err = _run("NOTE · a.py:1 · x\nverdict: 0 blockers, 0 warnings, 1 notes")
-        self.assertEqual(rc, 0)
-        self.assertNotIn("verdict NOTE", err)
+    def test_twin_verdict_and_lines_agree(self) -> None:
+        rc, _, records = _run(LINE + "verdict: 1 blockers, 0 warnings, 0 notes")
+        self.assertEqual((rc, len(records)), (1, 1))
+        rc, _, records = _run(
+            "NOTE · a.py:1 · x\nverdict: 0 blockers, 0 warnings, 1 notes"
+        )
+        self.assertEqual((rc, len(records)), (0, 1))
 
 
 if __name__ == "__main__":

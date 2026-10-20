@@ -132,7 +132,10 @@ worst first; they carry no failure scenario and do not enter the verdict:
 
 ## Report format
 
-One line per finding, most severe first, nothing else:
+One line per finding, most severe first, nothing else. Write a line only
+for a finding you stand by: every BLOCKER and WARNING line counts, the
+verdict must count exactly them, and a line withdrawn in prose below it
+makes the audit unrecordable.
 
 ```
 BLOCKER|WARNING|NOTE · <file>:<line> · <what is wrong> · <which reported number
