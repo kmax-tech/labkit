@@ -464,6 +464,33 @@ class Decorators(unittest.TestCase):
             )
 
 
+class Redefinition(unittest.TestCase):
+    """Review 2026-10-20: `file:score` hashed the first of two `def score`;
+    Python runs the second, so its result went 2 → 999 under an unmoved
+    stamp. A name bound twice at the top level is refused."""
+
+    def stamp(self, source: str) -> str:
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "m.py").write_text(source)
+            return promises.declared_scope_sha(Path(d), ("m.py:score",))
+
+    def test_a_second_def_is_refused(self):
+        with self.assertRaises(promises.PromiseError) as cm:
+            self.stamp("def score():\n    return 2\n\ndef score():\n    return 999\n")
+        self.assertIn("lines 1, 4", str(cm.exception))
+
+    def test_a_rebinding_assignment_or_import_is_refused(self):
+        for tail in ("score = lambda: 999\n", "from other import score\n"):
+            with self.assertRaises(promises.PromiseError, msg=tail):
+                self.stamp("def score():\n    return 2\n" + tail)
+
+    def test_one_definition_and_other_names_pass(self):
+        """The twin: neighbours, imports and assignments of other names do not block."""
+        self.stamp(
+            "import json\nx = 1\n\ndef score():\n    return 2\n\ndef other():\n    pass\n"
+        )
+
+
 class Constants(unittest.TestCase):
     """A constant is named like its config key, has one home, and is held
     type-strictly (0.71.0)."""

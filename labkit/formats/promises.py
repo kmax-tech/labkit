@@ -438,8 +438,27 @@ def constant_records(block: PromiseTables, run_config: dict) -> list[ConstantRec
     return out
 
 
+def _top_level_names(node: ast.stmt) -> set[str]:
+    """The names a top-level statement binds: a `def` or `class`, a plain
+    assignment's names, an import's aliases."""
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        return {node.name}
+    if isinstance(node, (ast.Import, ast.ImportFrom)):
+        return {(a.asname or a.name).split(".")[0] for a in node.names}
+    targets: list[ast.expr] = []
+    if isinstance(node, ast.Assign):
+        targets = node.targets
+    elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+        targets = [node.target]
+    return {n.id for t in targets for n in ast.walk(t) if isinstance(n, ast.Name)}
+
+
 def _function_source(path: Path, name: str) -> str:
-    """Source text of the top-level function or class `name` in `path`."""
+    """Source text of the top-level function or class `name` in `path`.
+    A name the module binds more than once at the top level (a second
+    `def`, an assignment, an import) is refused: Python runs the last
+    binding, and hashing the first `def` let the code that computes the
+    number change under an unmoved stamp (review 2026-10-20)."""
     try:
         source = path.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(path))
@@ -448,16 +467,27 @@ def _function_source(path: Path, name: str) -> str:
             f"{path}: cannot read {name!r} from it ({exc.__class__.__name__}: "
             f"{exc}) — the declared scope must be parseable code"
         ) from exc
-    for node in tree.body:
-        if (
-            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
-            and node.name == name
-        ):
-            # decorators included: `@cache` → `@retry` can change what the
-            # function does, so it must move the stamp (review 2026-10-07)
-            first = min([d.lineno for d in node.decorator_list] + [node.lineno])
-            assert node.end_lineno is not None, f"{path}:{name} has no end line"
-            return "\n".join(source.splitlines()[first - 1 : node.end_lineno])
+    defs = [
+        node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        and node.name == name
+    ]
+    bound = [node.lineno for node in tree.body if name in _top_level_names(node)]
+    if defs and len(bound) > 1:
+        raise PromiseError(
+            f"{path}: {name!r} is bound {len(bound)} times at the top level "
+            f"(lines {', '.join(map(str, bound))}) — Python runs the last one; "
+            f"the declared scope must name one definition, so remove or rename "
+            f"the others"
+        )
+    if defs:
+        node = defs[0]
+        # decorators included: `@cache` → `@retry` can change what the
+        # function does, so it must move the stamp (review 2026-10-07)
+        first = min([d.lineno for d in node.decorator_list] + [node.lineno])
+        assert node.end_lineno is not None, f"{path}:{name} has no end line"
+        return "\n".join(source.splitlines()[first - 1 : node.end_lineno])
     raise PromiseError(
         f"{path}: no top-level function or class {name!r} — the "
         f"declared scope names code that does not exist"
