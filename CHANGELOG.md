@@ -257,6 +257,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A server reply of the wrong shape fails by name.** The ollama, openai
+  and claude-cli parsers read replies field by field without checking
+  them: a missing or mistyped field raised KeyError, AttributeError or
+  TypeError deep in the parser, an HTML error page or a reply cut in
+  transit a JSONDecodeError (a ValueError, which labkit-audit read as an
+  area it could not stamp), and a count sent as text was stored as a
+  token number. One reading (`llm_backends.json_reply`, `reply_field`)
+  now holds every reply: each departure is a `ReplyError` naming the
+  backend, the route and the field. It is a `BackendError`, so it is
+  retried and, in labkit-audit, recorded as an audit that could not run.
 - **An audit's counts are non-negative.** `blockers = -1` could be written,
   was read, and passed the coverage check. Writer and reader now hold
   `blockers`, `warnings` and `notes` to one rule (`findings.count_problem`):

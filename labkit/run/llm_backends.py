@@ -21,8 +21,9 @@ import sys
 import threading
 import urllib.error
 import urllib.request
-from typing import NamedTuple
+from typing import Any, NamedTuple, cast
 
+from labkit.formats.runs import JsonObject
 from labkit.run.llm_specs import ClaudeCliSpec, OllamaSpec, OpenAISpec, ServedSpec
 
 
@@ -64,6 +65,66 @@ class BackendError(RuntimeError):
     calls). That is a hiccup, not a misconfiguration, and it belongs in the
     retry set. A real misconfiguration still fails — just three times, fast.
     """
+
+
+class ReplyError(BackendError):
+    """A server's reply that is not the shape its API defines — not JSON, cut
+    off mid-object, a field missing or of another type — named with the
+    backend and the field. Retryable like any BackendError: an HTML error
+    page or a reply cut in transit can be gone on the next try; a server
+    that always answers so fails after the retries, by name. Before, the
+    same replies surfaced as KeyError, AttributeError, TypeError or a
+    JSONDecodeError (a ValueError, which labkit-audit read as an area it
+    could not stamp) far from the reply (review 2026-10-20)."""
+
+
+def json_reply(raw: str | bytes, where: str) -> JsonObject:
+    """The JSON object a server replied with, or ReplyError naming WHERE
+    (the backend and route) and what came instead."""
+    try:
+        body = json.loads(raw)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        text = raw.decode("utf-8", "replace") if isinstance(raw, bytes) else raw
+        raise ReplyError(
+            f"{where}: the reply is not JSON ({exc}): {text.strip()[:200]!r}"
+        ) from exc
+    if not isinstance(body, dict):
+        raise ReplyError(
+            f"{where}: the reply is a JSON {type(body).__name__}, not an object"
+        )
+    return cast(JsonObject, body)
+
+
+def reply_field(
+    body: JsonObject,
+    key: str,
+    kind: type | tuple[type, ...],
+    where: str,
+    *,
+    required: bool = False,
+) -> Any:
+    """BODY[KEY] when it is of KIND; None when absent or null and not
+    REQUIRED; else ReplyError naming WHERE.KEY and what it holds. A bool is
+    no int here: a count of `true` is a broken reply."""
+    value = body.get(key)
+    if value is None:
+        if required:
+            raise ReplyError(f"{where}: the reply has no `{key}`")
+        return None
+    kinds = kind if isinstance(kind, tuple) else (kind,)
+    if not isinstance(value, kinds) or (isinstance(value, bool) and bool not in kinds):
+        names = " or ".join(k.__name__ for k in kinds)
+        raise ReplyError(f"{where}: `{key}` = {value!r:.80}, not {names}")
+    return value
+
+
+def _count(body: JsonObject, key: str, where: str) -> int | None:
+    """A token count of the reply: a non-negative integer, or None when the
+    server reported none."""
+    value = reply_field(body, key, int, where)
+    if value is not None and value < 0:
+        raise ReplyError(f"{where}: `{key}` = {value}, not a count")
+    return value
 
 
 class PromptTruncated(RuntimeError):
@@ -202,7 +263,7 @@ def _post_json(spec: ServedSpec, path: str, payload: dict, timeout: int) -> dict
         headers={"Content-Type": "application/json", **auth_headers(spec)},
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read())
+        return json_reply(resp.read(), f"{spec.alias} {path}")
 
 
 def complete_claude_cli(
@@ -263,22 +324,14 @@ def _cli_result(stdout: str) -> str:
     """The answer text of a `claude -p --output-format json` reply; its
     `usage` and `total_cost_usd` go to `last_usage()`. Anything but that JSON
     object is a backend failure, named with what came instead."""
-    try:
-        body = json.loads(stdout)
-    except json.JSONDecodeError as exc:
-        raise BackendError(
-            f"claude-cli: stdout is not the JSON reply of --output-format json "
-            f"({exc.msg}): {stdout.strip()[:200]!r}"
-        ) from exc
-    if not isinstance(body, dict) or "result" not in body:
-        raise BackendError(
-            f"claude-cli: JSON reply without a `result` field: {stdout.strip()[:200]!r}"
-        )
-    if body.get("is_error"):
-        raise BackendError(f"claude-cli: is_error — {str(body['result'])[:300]}")
-    usage = body.get("usage") or {}
+    where = "claude-cli --output-format json"
+    body = json_reply(stdout, where)
+    result = reply_field(body, "result", str, where, required=True)
+    if reply_field(body, "is_error", bool, where):
+        raise BackendError(f"claude-cli: is_error — {result[:300]}")
+    usage = reply_field(body, "usage", dict, where) or {}
     counted = [
-        usage.get(k)
+        _count(usage, k, f"{where} usage")
         for k in (
             "input_tokens",
             "cache_creation_input_tokens",
@@ -286,14 +339,14 @@ def _cli_result(stdout: str) -> str:
         )
     ]
     CALL_STATE.usage = Usage(
-        prompt_tokens=sum(int(v) for v in counted if v is not None)
+        prompt_tokens=sum(v for v in counted if v is not None)
         if any(v is not None for v in counted)
         else None,
-        output_tokens=usage.get("output_tokens"),
-        cached_tokens=usage.get("cache_read_input_tokens"),
-        cost_usd=body.get("total_cost_usd"),
+        output_tokens=_count(usage, "output_tokens", f"{where} usage"),
+        cached_tokens=counted[2],
+        cost_usd=reply_field(body, "total_cost_usd", (int, float), where),
     )
-    return str(body["result"]).strip()
+    return result.strip()
 
 
 #: how long ollama keeps the model loaded after a call. Without it ollama
@@ -368,17 +421,18 @@ def complete_ollama_raw(
         "options": _ollama_options(spec, temperature, stop, max_tokens),
     }
     body = _post_json(spec, "/api/generate", payload, timeout)
-    CALL_STATE.usage = _ollama_usage(body)
+    where = f"{spec.alias} /api/generate"
+    CALL_STATE.usage = _ollama_usage(body, where)
     _check_prompt_fit(spec, len(prompt), CALL_STATE.usage)
-    return body["response"].strip()
+    return reply_field(body, "response", str, where, required=True).strip()
 
 
-def _ollama_usage(body: dict) -> Usage:
+def _ollama_usage(body: JsonObject, where: str) -> Usage:
     """ollama counts `prompt_eval_count` and `eval_count`; it omits the
     first when the whole prompt came from its cache, hence None."""
     return Usage(
-        prompt_tokens=body.get("prompt_eval_count"),
-        output_tokens=body.get("eval_count"),
+        prompt_tokens=_count(body, "prompt_eval_count", where),
+        output_tokens=_count(body, "eval_count", where),
         cached_tokens=None,
         cost_usd=None,
     )
@@ -456,16 +510,19 @@ def complete_ollama_chat(
         "options": _ollama_options(spec, temperature, stop, max_tokens),
     }
     body = _post_json(spec, "/api/chat", payload, timeout)
-    CALL_STATE.usage = _ollama_usage(body)
+    where = f"{alias} /api/chat"
+    CALL_STATE.usage = _ollama_usage(body, where)
     _check_prompt_fit(spec, len(system or "") + len(prompt), CALL_STATE.usage)
-    message = body.get("message") or {}
-    content = (message.get("content") or "").strip()
-    CALL_STATE.thinking = (message.get("thinking") or "").strip()
+    message = reply_field(body, "message", dict, where, required=True)
+    content = (reply_field(message, "content", str, f"{where} message") or "").strip()
+    thinking = reply_field(message, "thinking", str, f"{where} message") or ""
+    CALL_STATE.thinking = thinking.strip()
     if not content:
         _warn_empty(
             alias,
             f"done_reason={body.get('done_reason')!r}, "
-            f"eval_count={body.get('eval_count')}, thinking={len(CALL_STATE.thinking)} chars",
+            f"eval_count={CALL_STATE.usage.output_tokens}, "
+            f"thinking={len(CALL_STATE.thinking)} chars",
         )
     return content
 
@@ -505,16 +562,22 @@ def complete_openai(
     if stop:
         payload["stop"] = stop
     body = _post_json(spec, "/v1/chat/completions", payload, timeout)
-    usage = body.get("usage") or {}
+    where = f"{alias} /v1/chat/completions"
+    usage = reply_field(body, "usage", dict, where) or {}
+    details = reply_field(usage, "prompt_tokens_details", dict, f"{where} usage") or {}
     CALL_STATE.usage = Usage(
-        prompt_tokens=usage.get("prompt_tokens"),
-        output_tokens=usage.get("completion_tokens"),
-        cached_tokens=(usage.get("prompt_tokens_details") or {}).get("cached_tokens"),
+        prompt_tokens=_count(usage, "prompt_tokens", f"{where} usage"),
+        output_tokens=_count(usage, "completion_tokens", f"{where} usage"),
+        cached_tokens=_count(details, "cached_tokens", f"{where} usage"),
         cost_usd=None,
     )
-    first = (body.get("choices") or [{}])[0]
-    message = first.get("message") or {}
-    content = (message.get("content") or "").strip()
+    choices = reply_field(body, "choices", list, where, required=True)
+    if not choices or not isinstance(choices[0], dict):
+        raise ReplyError(f"{where}: `choices` = {choices!r:.80}, not a list of objects")
+    first = cast(JsonObject, choices[0])
+    message = reply_field(first, "message", dict, f"{where} choices[0]", required=True)
+    at = f"{where} message"
+    content = (reply_field(message, "content", str, at) or "").strip()
     # Reasoning models: with a server-side --reasoning-parser the
     # thinking trace sits in its own field (reasoning_content; newer
     # vLLM: reasoning) and content is the bare answer — the same split
@@ -526,7 +589,9 @@ def complete_openai(
     # the parser flag — fail immediately, no retry changes a server
     # config.
     reasoning = (
-        message.get("reasoning_content") or message.get("reasoning") or ""
+        reply_field(message, "reasoning_content", str, at)
+        or reply_field(message, "reasoning", str, at)
+        or ""
     ).strip()
     CALL_STATE.thinking = reasoning
     if spec.reasoning and content and not reasoning:

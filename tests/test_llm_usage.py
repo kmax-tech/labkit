@@ -149,7 +149,7 @@ class ClaudeCli(unittest.TestCase):
         with _stack(patches):
             with self.assertRaises(llm_backends.BackendError) as cm:
                 llm.complete("a", "p", attempts=1)
-        self.assertIn("not the JSON reply", str(cm.exception))
+        self.assertIn("the reply is not JSON", str(cm.exception))
 
     def test_is_error_is_a_backend_failure(self):
         _, patches = _cli(json.dumps({**CLI_REPLY, "is_error": True, "result": "boom"}))
