@@ -1,89 +1,78 @@
-# Typed run metadata — design, 2026-10-20
+# Typed run metadata — 2026-10-20
 
-Status: decided 2026-10-20 (below) and built: `RunConfig` at the read
-boundary, then `ActiveRun`.
+Built the same day: `RunConfig` at the read boundary (`8d789b4`), then
+`ActiveRun` (`e0c21e0`). The contract is in the docstrings of
+`labkit/formats/runs.py` and `labkit/run/runlog.py`; this note keeps why,
+what the draft proposed, and where the build departed from it.
 
-## Problem
+## The problem as it stood
 
-`runs/<run_id>/config.json` is held to its shape where it is read
-(`runs.read_run_config` → `_shape_problem`: schema, `run_kind`, binding,
-the record tables, `derived_from`, the repeat fields), but it is handed on
-as a dict. Thirteen modules then read labkit's own fields by string key
-(`cfg.get("run_kind")`, `cfg.get("derived_from")`, …): `intent_check`,
-`recheck`, `run_record_check`, `answering_run`, `runs`, `standard_contract`,
-`finalize`, `report_check`, `usability_score`, `runlog_command`, `runlog`,
-`start_check`, `params`. A field the reader validated is read again as
-`object` and narrowed by hand; a misspelt key is a silent `None`.
+`runs/<run_id>/config.json` was held to its shape where it was read
+(`read_run_config` → `_shape_problem`: schema, `run_kind`, binding, the
+record tables, `derived_from`, the repeat fields), then handed on as a
+dict. Thirteen modules read labkit's own fields by string key
+(`cfg.get("run_kind")`, `cfg.get("derived_from")`, …); a validated field
+was read again as `object` and narrowed by hand, and a misspelt key was a
+silent `None`. `runlog.active` merged computed facts and the record into
+one dict, `{"run_id", "dir", "alive", "state", **cfg}`: a record key named
+like a computed one would overwrite it.
 
-`runlog.active` makes it worse: it merges computed facts and the record
-into one dict, `{"run_id", "dir", "alive", "state", **cfg}`. A record key
-named like a computed one would overwrite it, and a reader cannot tell
-which keys the run wrote and which `active` computed.
+## What holds now
 
-Already typed: `RunDir` (directory, config dict, error), `RunFacts` (state,
-binding), `ProtocolBinding`, `RunSummary`, `OutputEntry`, `RunKind`.
+- `read_run_config` returns a frozen `RunConfig` built by
+  `parse_run_config`, the one check of a record: the schema first (an
+  older record names the version that reads it), then no top-level key
+  outside `RUN_CONFIG_KEYS` (the keys `runlog.Run._write_record` writes),
+  the run kind, the binding, each labkit field's type, `derived_from` and
+  the repeat fields. The experiment's own settings, `config`, stay free
+  JSON.
+- Nested values (`config`, `data`, `promises`, `models_resolved`,
+  `command`, `untracked_sources`) are stored as their JSON text and handed
+  out as fresh copies; `as_record()` gives the whole record as stored.
+- `models_resolved` and `promises` stay checked tables; their modules
+  (`llm_specs`, `promises`) own their shape.
+- `runlog.active()` returns `ActiveRun` — `run_id`, `dir`, `state`,
+  `alive`, `config` (None for an unreadable record), `error` — and merges
+  nothing.
 
-## Proposal
+Held by `tests/test_run_config.py` (wrong types and unknown keys refused by
+name, the experiment config free, writer and reader holding the same keys
+on a real run, nested values copies), `tests/test_run_completion.py`
+(`ActiveRun`), and a rule in `tests/test_one_home.py` against reading the
+record by key outside `runs`.
 
-1. **`RunConfig`**, a frozen dataclass in `labkit/formats/runs.py`, holds
-   labkit's own fields — the keys `runlog.Run._write_record` writes:
-   `schema_version`, `experiment`, `script`, `protocol` (`ProtocolBinding`),
-   `derived_from`, `repeat_of`, `draw`, `run_kind`, `unfrozen_ack`,
-   `audit_failed`, `cost_tier`, `promises`, `script_sha`,
-   `untracked_sources`, `pid`, `git`, `git_full`, `python`, `env`,
-   `models_resolved`, `started`, `command`, `data`, `config`.
-   - `config` (the experiment's own settings) stays a free `JsonObject`:
-     labkit types what it writes, never what an experiment chooses.
-   - `_shape_problem` becomes the constructor's validation: one place
-     decides what a readable record is, as today.
-   - Writer and reader share the field list: a test holds every key
-     `_write_record` writes to a `RunConfig` field and back.
-2. **`read_run_config` returns `RunConfig | None`**; `RunDir.config` follows.
-   Readers move from `cfg.get("x")` to `cfg.x`, one commit per reader
-   group, each with the suite green; pyright then finds every reader left.
-3. **`runlog.active` returns `ActiveRun`** — `run_id`, `dir`, `state`,
-   `alive`, `error`, `config: RunConfig | None` — and merges nothing.
+## The draft, and what changed
 
-## Decisions
+The draft of the morning proposed a `RunConfig` for labkit's fields, the
+reader boundary returning it, and `ActiveRun`. It left three questions to
+the owner, decided before the build:
 
-Taken 2026-10-20: (1) `runlog.active` breaks and returns `ActiveRun`, no
-dict beside it; (2) an unknown top-level key is refused, the `config`
-inside stays free; (3) `models_resolved` and `promises` stay checked
-tables, their modules own their shape. Nested values are stored as their
-JSON text and handed out as fresh copies — not stored as read-only views,
-which `json.dumps` cannot write and every printing reader would trip on;
-`tests/test_run_config.py` holds it. The boundary and its readers moved in
-one commit, not per reader group: a changed return type breaks every
-reader at once, and a `.get()` on `RunConfig` to bridge them would have
-been a legacy path. The options as they were weighed:
+1. `runlog.active` is public script API — break it to `ActiveRun`, or keep
+   a dict for scripts beside a typed call. Decided: break, no dict beside
+   it (the house rule: breaking changes, not legacy paths).
+2. A config.json key labkit does not write — refuse the record, or keep
+   the key in an `extra` mapping. Decided: refuse; an `extra` would carry
+   unexplained fields on indefinitely.
+3. Type `models_resolved` and `promises` here, or leave them as checked
+   tables. Decided: tables, until a concrete invariant asks for types
+   (TODO, "Run-Tabellen").
 
-1. **`runlog.active` is public script API.** Return `ActiveRun` (a
-   Breaking change: a script reading `r["state"]` or a config key from it
-   breaks, announced in the CHANGELOG with the last version that returns
-   dicts), or keep a dict for scripts beside a typed internal call. The
-   house rule says break, not legacy paths; the draft follows it unless
-   a lab script is known to read `active`.
-2. **Unknown keys in config.json.** A record carrying a key labkit does not
-   write: refuse it as unreadable (strict, the writer is the only author),
-   or keep it in an `extra` mapping. The draft proposes strict: config.json
-   is write-once and written by labkit alone.
-3. **`models_resolved` and `promises`** carry their own shapes
-   (`llm_specs`, `promises`). Type them here too, or keep them as
-   validated `JsonObject` tables in this step. The draft keeps them as
-   tables: their own modules own their shape.
+The owner added a fourth: `frozen=True` does not freeze a dict inside a
+field. Decided in the build: store nested values as JSON text and hand out
+copies. Read-only views (`MappingProxyType`) were rejected — `json.dumps`
+cannot write them, and several readers print or compare the record.
 
-## Acceptance
+Where the build departed from the draft:
 
-- A config.json whose labkit field has the wrong type is unreadable,
-  naming the field; the twin, any experiment `config`, passes untouched.
-- Every key `_write_record` writes is a `RunConfig` field (writer–reader
-  parity test).
-- No module outside `runs` reads a labkit field by string key (a
-  one-home rule in `tests/test_one_home.py`).
-- `runlog <area>` prints what it prints today.
+- The draft planned the boundary in one commit and the thirteen readers in
+  about five more. The return type broke every reader at once, and a
+  `.get()` on `RunConfig` to bridge them would have been a legacy path, so
+  boundary and readers moved in one commit, pyright naming each reader.
+- `run_state` lost its `cfg` argument, which it never read; `repeat_parent`
+  went, replaced by the field `repeat_of`; `repeat_mismatch` compares the
+  parent's `repeat_basis()` with the new run's keys.
+- A parent run can no longer tell a table absent from one recorded as
+  null (both read None). The writer writes every key, so only hand-made
+  fixtures had the absent form; the new run's side keeps the distinction.
 
-## Size
-
-One commit for `RunConfig` and the reader boundary, then about five
-commits moving the thirteen readers, then `active`. No record format
-changes: schema 3 stays; only the in-memory shape does.
+No record format changed: schema 3 stays; only the in-memory shape did.
