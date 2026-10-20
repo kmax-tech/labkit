@@ -30,23 +30,12 @@ from labkit.probes.usability_score import (
 )
 
 
-def _split_log_command(argv: list[str]) -> tuple[list[str], list[str]]:
-    """(the words argparse reads, the command) of a `usability log` line:
-    the command is everything after the first `--`, untouched. Other
-    subcommands come back whole with an empty command.
-
-    argparse cannot do this cut itself: a trailing REMAINDER positional
-    swallowed `--log FILE -- CMD` when the option followed the text, the
-    order TASK.md stamps, and ran `--log` as the command."""
-    if argv[:1] != ["log"] or "--" not in argv:
-        return argv, []
-    cut = argv.index("--")
-    return argv[:cut], argv[cut + 1 :]
-
-
 def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Command line of `usability`: stage probes and score what cold agents and readers did."""
-    argv, log_cmd = _split_log_command(argv)
+    # only `log` runs a command; for the others a `--` is argparse's own
+    words, log_cmd = console.split_command(argv)
+    if argv[:1] == ["log"]:
+        argv = words
     ap = argparse.ArgumentParser(
         prog="usability", description=(__doc__ or "").split("\n\n")[0]
     )
@@ -184,7 +173,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             Path(args.transcript).resolve() if args.transcript else None,
         )
     if args.cmd == "log":
-        return log_step(Path(args.log), args.tag, args.text, log_cmd)
+        return log_step(Path(args.log), args.tag, args.text, log_cmd or [])
     if args.cmd == "glance":
         return cmd_glance(Path(args.dir).resolve())
     if args.cmd == "glance-score":

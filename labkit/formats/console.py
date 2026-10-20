@@ -79,3 +79,17 @@ def command_names() -> frozenset[str]:
         for ep in distribution("labkit").entry_points
         if ep.group == "console_scripts"
     )
+
+
+def split_command(argv: list[str]) -> tuple[list[str], list[str] | None]:
+    """(the words before the first `--`, the command after it) of a command
+    line that runs another command; the command is None when ARGV holds no
+    `--`, and every word after the cut stays untouched — `--log` included.
+
+    The cut happens before argparse: a trailing REMAINDER positional takes
+    an option that follows the other positionals (`--log FILE -- CMD`) as
+    part of the command."""
+    if "--" not in argv:
+        return argv, None
+    cut = argv.index("--")
+    return argv[:cut], argv[cut + 1 :]

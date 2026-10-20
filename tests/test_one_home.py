@@ -42,6 +42,8 @@ RULES: list[tuple[str, str, set[str]]] = [
     ("a path shown relative by hand", r"\.is_relative_to\(", {"repo", "runs"}),
     # the hook and the transcript cut a shell line three ways (audit 2026-10-18)
     ("a shell line cut by hand", r"shlex\.(shlex|split)\(", {"shell"}),
+    # runlog start and usability log each cut at `--` by hand (2026-10-20)
+    ("a command cut at -- by hand", r"\.index\(\s*\"--\"\s*\)", {"console"}),
     # thirteen modules read config.json's labkit fields by key; RunConfig
     # holds them typed where the record is read (2026-10-20)
     (
@@ -106,6 +108,7 @@ class OneHome(unittest.TestCase):
             "the run-id shape": 'RUN = re.compile(r"\\d{4}-\\d{2}-\\d{2}T")',
             "a path shown relative by hand": "shown = p.relative_to(b) if p.is_relative_to(b) else p",
             "a shell line cut by hand": "words = shlex.split(command)",
+            "a command cut at -- by hand": 'cut = argv.index("--")',
             "a run record read by key": "cfg = read_run_config(run) or {}",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',
             "a run id's start second compared by hand": "if answering_run.start_second(a) == answering_run.start_second(b):",

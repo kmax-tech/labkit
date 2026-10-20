@@ -133,5 +133,24 @@ class RefusalsOnStderr(unittest.TestCase):
         self.assertEqual(found, [], "refuse through console.refuse")
 
 
+class SplitCommand(unittest.TestCase):
+    """The one cut of a command line that runs another command: at the
+    first `--`, the rest untouched (`runlog start`, `usability log`)."""
+
+    def test_the_cut_is_at_the_first_separator(self):
+        from labkit.formats import console
+
+        self.assertEqual(
+            console.split_command(["run", "x", "--log", "f", "--", "c", "--log", "--"]),
+            (["run", "x", "--log", "f"], ["c", "--log", "--"]),
+        )
+
+    def test_no_separator_is_no_command_and_an_empty_one_is_empty(self):
+        from labkit.formats import console
+
+        self.assertEqual(console.split_command(["a", "b"]), (["a", "b"], None))
+        self.assertEqual(console.split_command(["a", "--"]), (["a"], []))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -201,15 +201,13 @@ def _start(argv: list[str]) -> int:
     ap.add_argument(
         "--log", default=None, help="log file (default: AREA/output/start-<ts>.log)"
     )
-    # split at the first `--` by hand: argparse's REMAINDER after a positional
-    # swallowed `--log FILE` along with the command
-    if "--" not in argv:
+    words, cmd = console.split_command(argv)
+    if cmd is None:
         ap.parse_args(argv)  # --help prints and exits; a bad flag is named
         ap.error(
             "no command given — usage: runlog start AREA [--log FILE] -- <cmd ...>"
         )
-    cut = argv.index("--")
-    args, cmd = ap.parse_args(argv[:cut]), argv[cut + 1 :]
+    args = ap.parse_args(words)
     if not cmd:
         ap.error(
             "no command given — usage: runlog start AREA [--log FILE] -- <cmd ...>"
