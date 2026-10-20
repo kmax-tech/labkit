@@ -890,6 +890,27 @@ den Ertrag je Klasse auszählt.
   Zahl, Metriken mit `true` gegen `1` und Funktionsscopes mit doppelter
   Definition werden jetzt verweigert.
 
+- **Architekturvorschlag 2026-10-20 (externes Review): Verträge zwischen den
+  Modulen statt Dicts und Text.** Paketstruktur bleibt. Vorgeschlagene
+  Reihenfolge, jeder Schritt an einen belegten Fehler gekoppelt:
+  (1) Findings als Daten — Checks liefern Grad, Stufe, Fundstelle,
+  Meldung; `gate.grade_of` liest den Grad heute noch aus dem Text
+  (`labkit/formats/gate.py:37`). Die gemeinsame Prüfliste von code-check und
+  preflight gibt es schon (`code_check.code_findings`, seit `09dcfd0`), sie
+  liefert aber `list[str]`. (2) Run-Records typisiert an der Dateigrenze:
+  `answering_run` reicht Dicts mit `state`/`why`/`protocol_id` weiter
+  (`labkit/formats/answering_run.py:55`); lesbar / fehlend / kaputt als
+  unterscheidbare Ergebnisse. (3) Audit-Prompt und Stempel aus einem
+  Snapshot der gelesenen Bytes, nicht aus zwei Lesungen derselben Pfade
+  (Rest von Befund 1 vom 2026-10-20). (4) Backend-Specs als eigene Typen
+  statt `spec: dict` (`labkit/run/llm_backends.py:175`), eingefrorene Werte
+  als Tupel. Dazu: je Querschnittsoperation eine Heimat mit Zwillingstest
+  (JSON-Gleichheit — erledigt, `runs.as_stored`; Audit-Record schreiben —
+  erledigt, `findings._create`; Abstammung mit Zyklen, Vorhersagen genau
+  einmal, Resume-Identität — prüfen, ob schon je eine Heimat besteht);
+  pyright strikt erst auf die neuen Vertragsmodule. Wartet: steht nicht in
+  der Reihenfolge, nächster Schritt dort ist A5.
+
 - **Standardvertrag 2026-10-19 (Branch `claude/standard-contract-rpwkod`,
   Unreleased):** die Pflichten je Kostenstufe stehen einmal in
   `labkit/standard_contract.py` (Lane, Freigabe, Gerüst, Registrierungs-
