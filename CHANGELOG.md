@@ -219,6 +219,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The stamped scripts pair each item with exactly one answer.** The
+  judge and estimator skeletons (and the explore notebook) zip items and
+  answers with `strict=True`: a `fit_predict` or a model batch that
+  returns fewer answers than items raises `ValueError` instead of
+  dropping the unanswered items from the output. Re-stamp or edit
+  existing `01_measure.py` files by hand; the check is the length only,
+  not which item an answer belongs to.
 - **Resume compares the instrument as JSON stores it.** `Store.pending`
   uses `runs.as_stored`: `true` differs from `1`, while a tuple and its
   stored list representation describe the same instrument. An instrument

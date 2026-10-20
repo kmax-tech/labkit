@@ -61,7 +61,7 @@ for it in ITEMS:
 
 # %%
 answers = [llm.complete(MODEL, render(it)) for it in ITEMS]
-for it, a in zip(ITEMS, answers):
+for it, a in zip(ITEMS, answers, strict=True):
     print("-" * 72)
     print(it["id"], "· gold:", it["gold"])
     print(a)

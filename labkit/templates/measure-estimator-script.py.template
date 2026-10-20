@@ -206,12 +206,14 @@ def measure(cfg: MeasureConfig, items: list[dict], out: Path,
         for lane, permute in (("registered", None),
                               ("null", random.Random((cfg.seed + 1) * 1000 + k))):
             preds = fit_predict(cfg, fit, out_items, permute, probe)
+            # strict: a fit_predict that returns fewer predictions is refused,
+            # never cut to the shorter list (the missing items would vanish)
             rows += [{"id": f"{lane}:{it['id']}", "lane": lane, "item": it["id"], "fold": k,
-                      "pred": p, "gold": it[GOLD_FIELD]} for it, p in zip(out_items, preds)]
+                      "pred": p, "gold": it[GOLD_FIELD]} for it, p in zip(out_items, preds, strict=True)]
     if test:
         preds = fit_predict(cfg, train, test, None, probe)
         rows += [{"id": f"test:{it['id']}", "lane": "test", "item": it["id"], "fold": None,
-                  "pred": p, "gold": None} for it, p in zip(test, preds)]
+                  "pred": p, "gold": None} for it, p in zip(test, preds, strict=True)]
     with batch.Store(out, prov=prov, instrument=instrument(cfg)) as store:
         for r in store.pending(rows):
             store.append(r)

@@ -231,7 +231,7 @@ def measure(cfg: MeasureConfig, jobs: list[dict], out: Path, prov: dict | None =
         for chunk_start in range(0, len(todo), 40):
             chunk = todo[chunk_start:chunk_start + 40]
             answers = llm.complete_many(model, [render(j) for j in chunk])
-            for j, text in zip(chunk, answers):
+            for j, text in zip(chunk, answers, strict=True):
                 store.append({**j, "answer": text})
             print(f"  {min(chunk_start + 40, len(todo))}/{len(todo)}")
 
