@@ -11,6 +11,7 @@ through `repo.git_run`.
 from pathlib import Path
 
 from labkit.formats import protocol_block
+from labkit.formats.gate import BLOCKER, WARNING, GateFinding
 from labkit.formats.repo import git_root, git_run, repo_protocols
 
 
@@ -100,25 +101,36 @@ def cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
 
 def check_protocol_id(
     path: Path, head: protocol_block.Head, ids: dict[str, list[Path]]
-) -> list[str]:
+) -> list[GateFinding]:
     """Uniqueness against IDS (`repo_protocol_ids` of the repo) and
-    working-tree divergence of the protocol id; its shape is the head
-    parser's job, an unstamped id a must placeholder."""
+    working-tree divergence of the protocol id, each with its grade as data:
+    a doubled id blocks, a changed one warns. The grade is never read back
+    from the text, which carries the path (PROTOCOL-WARNING.md turned a
+    doubled id into a warning). Its shape is the head parser's job, an
+    unstamped id a must placeholder."""
     if head.id is None:
         return []
-    out = []
+    out: list[GateFinding] = []
     others = [q for q in ids.get(head.id, []) if q.resolve() != path.resolve()]
     if others:
         out.append(
-            f"{path}: DUPLICATE protocol id {head.id} — also carried by "
-            + ", ".join(str(q) for q in others)
-            + ". An id binds runs to ONE protocol; re-stamp the copy."
+            GateFinding(
+                BLOCKER,
+                f"{path}: DUPLICATE protocol id {head.id} — also carried by "
+                + ", ".join(str(q) for q in others)
+                + ". An id binds runs to ONE protocol; re-stamp the copy.",
+                graded_by_text=True,
+            )
         )
     was = id_in_git_head(path)
     if was and was != head.id:
         out.append(
-            f"{path}: WARNING: protocol id changed against HEAD "
-            f"({was} -> {head.id}) — runs bound to the old id stop "
-            f"resolving."
+            GateFinding(
+                WARNING,
+                f"{path}: WARNING: protocol id changed against HEAD "
+                f"({was} -> {head.id}) — runs bound to the old id stop "
+                f"resolving.",
+                graded_by_text=True,
+            )
         )
     return out

@@ -44,10 +44,16 @@ class Findings(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()):
             f.add("BLOCKER · a.py:1 · x")
             f.add("WARNING · a.py:2 · y")
-            f.add("PROTOCOL-x.md: WARNING: protocol id changed against HEAD")
+            f.add("WARNING · PROTOCOL-BLOCKER.md:3 · z")
             f.add("something ungraded")  # nobody graded it: a blocker
         self.assertEqual((len(f.blocked), f.warnings), (2, 2))
         self.assertEqual(gate.grade_of("fine"), "BLOCKER")
+
+    def test_only_the_first_word_grades_a_line(self):
+        """A path or quoted text further on must not grade it: a doubled id
+        in PROTOCOL-WARNING.md passed as a warning (review 2026-10-20)."""
+        self.assertEqual(gate.grade_of("PROTOCOL-WARNING.md: DUPLICATE id"), "BLOCKER")
+        self.assertEqual(gate.grade_of("  WARNING · x"), "WARNING")
 
 
 class Silent(unittest.TestCase):

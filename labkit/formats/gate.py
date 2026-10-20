@@ -16,10 +16,10 @@ station). Headers and the notes a station prints beside its findings
 whole; they are told, never counted. Why one collector and one channel:
 docs/notes/2026-10-19-gates-and-run-start.md.
 
-A finding that already carries its grade as a word (code-check's
-`BLOCKER · <where> · …`, protocol-check's `…: WARNING: …`) goes in through
-`add`, told as written and counted by that word; `block` and `warn` tell
-the grade themselves.
+A finding line that starts with its grade (code-check's `BLOCKER · <where>
+· …`) goes in through `add`, told as written and counted by that first
+word; `block` and `warn` tell the grade themselves; a finding built as data
+elsewhere (`GateFinding`, e.g. a protocol id's) goes in through `take`.
 """
 
 from __future__ import annotations
@@ -28,24 +28,28 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
-#: the grade a line carries as a word — the first one wins
-GRADE = re.compile(r"\b(BLOCKER|WARNING)\b")
+#: the grade a line carries as its first word (`BLOCKER · …`, `WARNING · …`)
+GRADE = re.compile(r"^\s*(BLOCKER|WARNING)\b")
 BLOCKER = "BLOCKER"
 WARNING = "WARNING"
 
 
 def grade_of(line: str) -> str:
-    """`BLOCKER` or `WARNING`, read from the line; a line naming neither is a
-    blocker — a finding nobody graded must not pass as a warning."""
-    m = GRADE.search(line)
+    """`BLOCKER` or `WARNING`, read from the line's first word; a line that
+    does not start with one is a blocker — a finding nobody graded must not
+    pass as a warning. Only the first word: a path or a quoted text further
+    on (`PROTOCOL-WARNING.md`) must not grade the line."""
+    m = GRADE.match(line)
     return m.group(1) if m else BLOCKER
 
 
 @dataclass(frozen=True)
 class GateFinding:
-    """One finding of a gate: its grade, its text (what the summary repeats),
-    and whether the text already spells the grade (`add`) or the gate spells
-    it (`block`, `warn`)."""
+    """One finding of a gate: its grade (what counts), its text (what the
+    summary repeats), and whether the text is told as written — it says its
+    grade in its own words (`BLOCKER · …`, `DUPLICATE protocol id`) — or the
+    gate prefixes the grade (`block`, `warn`). The grade field decides,
+    never the words."""
 
     grade: str
     text: str

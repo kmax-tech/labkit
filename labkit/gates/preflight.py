@@ -284,16 +284,16 @@ def check_protocol_fields(
     fields by cut, the graduation at frozen = true), the stamped id against
     the repo's others, a cost tier lowered since the first commit. A must
     gap or a must placeholder blocks; a should gap, a should placeholder
-    and a lowered tier warn; an id finding is graded by its own word (a
-    changed id warns, a doubled one blocks)."""
+    and a lowered tier warn; an id finding carries its grade (a changed id
+    warns, a doubled one blocks)."""
     id_findings = check_protocol_id(protocol, head, repo_protocol_ids(protocol))
     lowered = cost_lowered(protocol, head)
     for label in report.missing_must:
         findings.block(f"MISSING (must): {label}")
     for n, label in report.must_holes:
         findings.block(f"{protocol.name}:{n}: PLACEHOLDER (must): {label}")
-    for line in id_findings:
-        findings.add(line)
+    for finding in id_findings:
+        findings.take(finding)
     if lowered:
         findings.warn(lowered)
     for label in report.missing_should:

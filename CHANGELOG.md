@@ -219,6 +219,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A file name no longer grades a finding.** protocol-check and preflight
+  read the grade of a protocol-id finding from its text, which carries the
+  path: in `PROTOCOL-WARNING.md` a doubled id passed as a warning. The id
+  findings now carry their grade as data (`GateFinding`), and `grade_of`
+  reads only a line's first word (`BLOCKER · …`, `WARNING · …`).
 - **A run's `script_sha` is the hash of the script copy it keeps.** The
   record hashed a second read of the script after copying it; a save in
   between left a `script-source.py` the recorded hash did not match. Copy

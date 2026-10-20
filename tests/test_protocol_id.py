@@ -147,7 +147,29 @@ class TestUniqueness(unittest.TestCase):
             _protocol(d, name="PROTOCOL-s2-b.md")
             ids = protocol_history.repo_protocol_ids(first)
             found = protocol_history.check_protocol_id(first, head, ids)
-        self.assertTrue(any("DUPLICATE" in f for f in found), found)
+        self.assertTrue(any("DUPLICATE" in f.text for f in found), found)
+
+    def test_a_file_name_does_not_grade_a_duplicate(self):
+        """The grade was read from the finding's text, and the text carries
+        the path: PROTOCOL-WARNING.md turned the doubled id into a warning in
+        protocol-check and in preflight. The twin: the same doubled id under
+        another name blocks too."""
+        from labkit.formats.gate import BLOCKER, Findings
+        from labkit.gates import preflight
+
+        for name in ("PROTOCOL-WARNING.md", "PROTOCOL-normal.md"):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as d:
+                (Path(d) / ".git").mkdir()
+                first = _protocol(d, name=name)
+                _protocol(d, name="PROTOCOL-copy.md")
+                code, out = _check([first])
+                self.assertEqual(code, 1, out)
+                report = protocol_check.check_fields(first.read_text())
+                assert report.head is not None
+                found = Findings(tell=None)
+                preflight.check_protocol_fields(found, first, report, report.head)
+                grades = [f.grade for f in found.found if "DUPLICATE" in f.line]
+                self.assertEqual(grades, [BLOCKER], found.found)
 
     def test_distinct_ids_side_by_side_are_fine(self):
         with tempfile.TemporaryDirectory() as d:

@@ -27,6 +27,7 @@ from labkit.formats import console, promises, protocol_block, standard_contract
 from labkit.formats.repo import git_root, repo_protocols
 from labkit.formats.findings import waived_audit_gap
 from labkit.formats.scope_sha import audit_stamp_drift
+from labkit.formats.gate import BLOCKER, GateFinding
 from labkit.formats.protocol_history import (
     check_protocol_id,
     cost_lowered,
@@ -323,7 +324,7 @@ class FileReport:
     head_error: str | None
     frozen: bool = False
     audit_drift: str | None = None
-    id_findings: list[str] = field(default_factory=list)
+    id_findings: list[GateFinding] = field(default_factory=list)
     cost_lowered: str | None = None  # a WARNING: the tier sank since the first commit
     answer_unbound: str | None = None  # a WARNING: an Answer without a run_id
     pilot_note: str = ""
@@ -399,7 +400,7 @@ class FileReport:
         return bool(
             self.head_error
             or self.musts
-            or any("WARNING" not in f for f in self.id_findings)
+            or any(f.grade == BLOCKER for f in self.id_findings)
         )
 
 
@@ -531,7 +532,7 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
     if r.audit_drift:
         print(f"{f}: WARNING: preflight_audit: {r.audit_drift}")
     for finding in r.id_findings:
-        print(finding)
+        print(finding.line)
     if r.cost_lowered:
         print(r.cost_lowered)
     if r.answer_unbound:
