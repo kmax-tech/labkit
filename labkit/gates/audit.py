@@ -83,7 +83,6 @@ from labkit.formats.scope_sha import (
     area_files,
     area_snapshot,
     area_stamp,
-    imported_repo_helpers,
     repo_imports,
 )
 
@@ -243,21 +242,21 @@ def rows_excerpt(path: Path, name: str) -> tuple[str, str]:
 
 
 class Reading(NamedTuple):
-    """What the auditor gets: the protocol, the code read in full, the
-    standard (its cited rules), and the modules it gets as an index only."""
+    """What the auditor reads in full: the protocol, the code, the standard
+    (its cited rules). Every other stamped file comes as an index, taken
+    from the snapshot (`bound_prompt`)."""
 
     protocol: Path
     code: list[Path]  # scripts, analysis files, declared scopes, direct imports
     standard: Path
-    indexed: list[Path]  # deeper imports: path and signatures, read on assignment
 
 
 def gather(area: Path, protocol: Path | None) -> Reading:
     """What the agent reads, by LAB-103 The audit reads by declared scope,
     not by import graph: the area's scripts and analysis files, the files
     the promises declare as scope, the repo-local modules those import
-    directly — in full; every deeper module of the import graph as an index.
-    Refuses what is missing."""
+    directly — in full (every other stamped file is indexed from the
+    snapshot, `bound_prompt`). Refuses what is missing."""
     if not area.is_dir():
         raise AuditError(no_such_area(area))
     try:
@@ -278,15 +277,13 @@ def gather(area: Path, protocol: Path | None) -> Reading:
         )
     code += [f for f in declared if f not in code]
     code += [f for f in repo_imports(code, repo) if f.resolve() not in code]
-    whole = imported_repo_helpers(area, repo)
-    indexed = [f for f in whole if f.resolve() not in {c.resolve() for c in code}]
     standard = rules.STANDARD
     if not standard.is_file():
         raise AuditError(
             f"{standard} is missing — labkit was installed without its standard "
             f"(scar table, severity legend); reinstall labkit"
         )
-    return Reading(chosen, code, standard, indexed)
+    return Reading(chosen, code, standard)
 
 
 def module_index(files: list[Path], repo: Path, read: Callable[[Path], str]) -> str:
@@ -569,41 +566,53 @@ def _answer_or_record(
 
 
 def bound_prompt(
-    mode: str,
-    area: Path,
-    protocol: Path,
-    code: list[Path],
-    standard: Path,
-    indexed: list[Path],
-) -> tuple[str, Stamp, str, str | None]:
-    """(prompt, stamp, block sha, run id) from ONE reading: the record
-    binds what the prompt shows. The code is one snapshot (its bytes render
-    the prompt, its sha goes in the record), the promise block comes from
-    the one protocol text the prompt carries, and in MODE analysis the run
-    is chosen once for rows and record (NO_RUN when none answers). Raises
-    AuditError when the area changed between listing and reading it."""
+    mode: str, area: Path, reading: Reading
+) -> tuple[str, Stamp, str, str | None, list[Path]]:
+    """(prompt, stamp, block sha, run id, indexed files) from ONE reading:
+    the record binds what the prompt shows. The code is one snapshot: its
+    bytes render the prompt, its sha goes in the record, and every stamped
+    file the reading does not take in full is indexed — so the prompt shows
+    each file the stamp covers, no more and no fewer. The promise block
+    comes from the one protocol text the prompt carries; in MODE analysis
+    the run is chosen once for rows and record (NO_RUN when none answers).
+
+    The reading's file list was taken before the snapshot. After rendering,
+    the list, the snapshot and the protocol are taken again; any change
+    means the prompt rests on a list or bytes the area no longer has, and
+    the audit is refused (AuditError) — a file added in between stood in
+    the stamp and not in the prompt (review 2026-10-20)."""
+    protocol = reading.protocol
     text = protocol.read_text(encoding="utf-8")
     snap = area_snapshot(area)
+    full = {c.resolve() for c in reading.code}
+    indexed = [f for f in snap.files if f.resolve() not in full]
     run_id: str | None = None
     chosen_run: tuple[Path | None, str] = (None, "not an analysis audit")
     if mode == ANALYSIS:
         chosen_run = audited_run(area, protocol, text)
         run_id = chosen_run[0].name if chosen_run[0] is not None else findings.NO_RUN
+    changed = "the area changed while it was read; run the audit again"
     try:
         prompt = render(
             mode,
             area,
             protocol,
-            code,
-            standard,
+            reading.code,
+            reading.standard,
             indexed,
             source=Source(text, snap.text, chosen_run),
         )
     except KeyError as exc:
-        raise AuditError(
-            f"{exc.args[0]} — the area changed while it was read; run the audit again"
-        ) from exc
-    return prompt, Stamp(snap.sha, list(snap.files)), promises.block_stamp(text), run_id
+        raise AuditError(f"{exc.args[0]} — {changed}") from exc
+    again = gather(area, protocol)
+    if (
+        [c.resolve() for c in again.code] != [c.resolve() for c in reading.code]
+        or area_snapshot(area).sha != snap.sha
+        or protocol.read_text(encoding="utf-8") != text
+    ):
+        raise AuditError(f"{area}: {changed}")
+    stamp = Stamp(snap.sha, list(snap.files))
+    return prompt, stamp, promises.block_stamp(text), run_id, indexed
 
 
 def main(argv: list[str]) -> int:
@@ -632,11 +641,12 @@ def main(argv: list[str]) -> int:
     if args.mode == CLARITY:
         return _clarity(args)
     try:
-        protocol, code, standard, indexed = gather(args.area, args.protocol)
+        reading = gather(args.area, args.protocol)
+        protocol, code = reading.protocol, reading.code
         for line in early_for_tier(args.area, protocol, args.mode):
             print(f"labkit-audit: {line}", file=sys.stderr)
-        prompt, stamp, block_sha, run_id = bound_prompt(
-            args.mode, args.area, protocol, code, standard, indexed
+        prompt, stamp, block_sha, run_id, indexed = bound_prompt(
+            args.mode, args.area, reading
         )
         print(
             f"labkit-audit: {args.mode} · {protocol.name} · {len(code)} code file(s) "

@@ -422,9 +422,9 @@ class Audit(unittest.TestCase):
 class OneSnapshot(unittest.TestCase):
     """Acceptance of the audit snapshot (2026-10-20): a file changed between
     reading and the model call cannot give a record whose digest describes
-    other contents than the prompt. The edit lands inside the window — after
-    the area is read, before the prompt is built — through `audited_run`,
-    which both the old and the new flow call there in mode analysis."""
+    other contents than the prompt. Inside the reading — listing, snapshot,
+    rendering — a change refuses the audit; during the model call the
+    record keeps the bytes the prompt showed."""
 
     def area(self) -> Path:
         area = repo_with()
@@ -437,18 +437,44 @@ class OneSnapshot(unittest.TestCase):
         completed_run(area, "p-0123456789abcdef", "experiments/01-x/output/x.jsonl")
         return area
 
-    def audit(self, area: Path, edit) -> tuple[str, findings.Record]:
-        real = audit.audited_run
+    def audit(self, area: Path, answer=None, **hooks) -> tuple[int, str, list[str]]:
+        """labkit-audit in mode analysis; HOOKS wrap a function of the
+        reading (`audited_run`, `area_snapshot`) to edit the area first;
+        ANSWER fakes the model (it may edit the area too)."""
+        patches = []
+        for name, edit in hooks.items():
+            real = getattr(audit, name)
 
-        def edited_then_chosen(*args, **kw):
-            edit()
-            return real(*args, **kw)
+            def edited_then(*args, _real=real, _edit=edit, **kw):
+                _edit()
+                return _real(*args, **kw)
 
-        with mock.patch.object(audit, "audited_run", edited_then_chosen):
-            rc, _, err, sent = run(area, CLEAN, "--mode", "analysis")
-        self.assertEqual(rc, 0, err)
-        (record,) = findings.area_records(area)
-        return sent[0], record
+            patches.append(mock.patch.object(audit, name, edited_then))
+        sent: list[str] = []
+
+        def fake(alias, prompt, **kw):
+            sent.append(prompt)
+            if answer is not None:
+                answer()
+            return CLEAN
+
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.ExitStack() as stack:
+            for p in patches:
+                stack.enter_context(p)
+            stack.enter_context(mock.patch.object(audit.llm, "complete", fake))
+            stack.enter_context(contextlib.redirect_stdout(out))
+            stack.enter_context(contextlib.redirect_stderr(err))
+            rc = audit.main([str(area), "--mode", "analysis"])
+        return rc, err.getvalue(), sent
+
+    @staticmethod
+    def stamped(area: Path) -> list[str]:
+        root = area.parents[1].resolve()
+        return sorted(
+            f.resolve().relative_to(root).as_posix()
+            for f in scope_sha.area_stamp(area)[1]
+        )
 
     @staticmethod
     def digest_of_the_prompt(prompt: str, stamped: list[str]) -> str:
@@ -463,46 +489,93 @@ class OneSnapshot(unittest.TestCase):
             sorted((key, shown[key].encode("utf-8")) for key in stamped)
         )
 
-    def test_an_edit_after_reading_leaves_the_prompt_and_the_record_agreeing(self):
+    def test_an_edit_inside_the_reading_refuses_the_audit(self):
         area = self.area()
         lib = area.parents[1] / "lib" / "scoring.py"
-        stamped = sorted(
-            f.resolve().relative_to(area.parents[1].resolve()).as_posix()
-            for f in scope_sha.area_stamp(area)[1]
+        proto = area / "PROTOCOL-x0.md"
+        for name, edit in (
+            ("audited_run", lambda: lib.write_text("X = 999\n", encoding="utf-8")),
+            ("audited_run", lambda: proto.write_text("# edited\n", encoding="utf-8")),
+        ):
+            with self.subTest(name=name):
+                rc, err, sent = self.audit(area, **{name: edit})
+                self.assertEqual((rc, sent), (2, []), err)
+                self.assertIn("changed while it was read", err)
+                self.assertEqual(findings.area_records(area), [])
+
+    def test_a_script_added_between_listing_and_snapshot_refuses(self):
+        """Review 2026-10-20: the snapshot came after gather(), the prompt
+        used gather's list — a script added in between stood in the stamp
+        and not in the prompt."""
+        area = self.area()
+        new = area / "scripts" / "02_new.py"
+        rc, err, sent = self.audit(
+            area, area_snapshot=lambda: new.write_text("Y = 1\n", encoding="utf-8")
         )
-        before = scope_sha.area_stamp(area)[0]
-        prompt, record = self.audit(
-            area, lambda: lib.write_text("X = 999\n", encoding="utf-8")
+        self.assertEqual((rc, sent), (2, []), err)
+        self.assertIn("changed while it was read", err)
+
+    def test_an_edit_during_the_call_leaves_the_record_on_the_prompts_bytes(self):
+        area = self.area()
+        lib = area.parents[1] / "lib" / "scoring.py"
+        stamped, before = self.stamped(area), scope_sha.area_stamp(area)[0]
+        rc, err, sent = self.audit(
+            area, answer=lambda: lib.write_text("X = 999\n", encoding="utf-8")
         )
-        self.assertIn("X = 0.7", prompt)
-        self.assertNotIn("X = 999", prompt)
+        self.assertEqual(rc, 0, err)
+        (record,) = findings.area_records(area)
+        self.assertIn("X = 0.7", sent[0])
         self.assertEqual(record.scope_sha, before)
-        self.assertEqual(record.scope_sha, self.digest_of_the_prompt(prompt, stamped))
-        # the edit owes its own audit: the record does not cover the code now
-        self.assertNotEqual(scope_sha.area_stamp(area)[0], record.scope_sha)
+        self.assertEqual(record.scope_sha, self.digest_of_the_prompt(sent[0], stamped))
+        self.assertIn("the code changed while the auditor read it", err)
 
     def test_without_an_edit_the_record_covers_the_code_now(self):
         """The twin: nothing changes, the record names the stamp as it is."""
         area = self.area()
-        stamped = sorted(
-            f.resolve().relative_to(area.parents[1].resolve()).as_posix()
-            for f in scope_sha.area_stamp(area)[1]
-        )
-        prompt, record = self.audit(area, lambda: None)
+        stamped = self.stamped(area)
+        rc, err, sent = self.audit(area)
+        self.assertEqual(rc, 0, err)
+        (record,) = findings.area_records(area)
         self.assertEqual(record.scope_sha, scope_sha.area_stamp(area)[0])
-        self.assertEqual(record.scope_sha, self.digest_of_the_prompt(prompt, stamped))
+        self.assertEqual(record.scope_sha, self.digest_of_the_prompt(sent[0], stamped))
 
-    def test_a_protocol_edit_after_reading_leaves_block_and_prompt_agreeing(self):
-        """The promise block the record names is the one the prompt carries."""
+    def test_every_stamped_file_stands_in_the_prompt(self):
+        """A file the stamp covers and the reading does not take in full —
+        here one another protocol declares — is indexed, never left out."""
         area = self.area()
-        proto = area / "PROTOCOL-x0.md"
-        text = proto.read_text(encoding="utf-8")
-        prompt, record = self.audit(
-            area,
-            lambda: proto.write_text(text + "Criterion [C2].\n", encoding="utf-8"),
+        other = area.parents[1] / "lib" / "other.py"
+        other.write_text("def helper():\n    return 1\n", encoding="utf-8")
+        block = (
+            '[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "s"\n'
+            'scope = ["../../lib/other.py"]\n'
         )
-        self.assertNotIn("Criterion [C2].", prompt)
-        self.assertEqual(record.block_sha, promises.block_stamp(text))
+        (area / "PROTOCOL-x1.md").write_text(
+            fixture.head(id="p-1123456789abcdef", promises=block), encoding="utf-8"
+        )
+        sent: list[str] = []
+
+        def fake(alias, prompt, **kw):
+            sent.append(prompt)
+            return CLEAN
+
+        with (
+            mock.patch.object(audit.llm, "complete", fake),
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            rc = audit.main(
+                [
+                    str(area),
+                    "--mode",
+                    "preflight",
+                    "--protocol",
+                    str(area / "PROTOCOL-x0.md"),
+                ]
+            )
+        self.assertEqual(rc, 0)
+        self.assertIn("lib/other.py (2 lines)", sent[0])
+        for key in self.stamped(area):
+            self.assertIn(key, sent[0])
 
 
 if __name__ == "__main__":
