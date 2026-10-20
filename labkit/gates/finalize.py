@@ -473,13 +473,13 @@ def cited_runs(text: str) -> list[str]:
 def main(argv: list[str]) -> int:
     """Command line of `finalize`: check one area."""
     if not argv or argv[0] in ("-h", "--help"):
-        print((__doc__ or "").strip().splitlines()[0])
-        print("usage: finalize <AREA> [--protocol PROTOCOL-*.md]")
-        print(
+        lines = [
+            (__doc__ or "").strip().splitlines()[0],
+            "usage: finalize <AREA> [--protocol PROTOCOL-*.md]",
             "       (the gate at the stop and the commit is `report-check --if-reported`, "
-            "which runs finalize as one station)"
-        )
-        return 0 if argv else 2
+            "which runs finalize as one station)",
+        ]
+        return console.usage("finalize", "\n".join(lines), asked=bool(argv))
 
     area = area_path(argv[0])
     protocol = None

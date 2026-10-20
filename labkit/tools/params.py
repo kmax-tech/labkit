@@ -295,9 +295,11 @@ def render_table(rows: list[ParamRow]) -> str:
 def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Command line: the table for one area's answering run, or a named run."""
     if not argv or argv[0] in ("-h", "--help"):
-        print((__doc__ or "").strip().splitlines()[0])
-        print("usage: labkit-params <AREA> [--run RUN_ID] [--protocol PROTOCOL-*.md]")
-        return 0 if argv else 2
+        lines = [
+            (__doc__ or "").strip().splitlines()[0],
+            "usage: labkit-params <AREA> [--run RUN_ID] [--protocol PROTOCOL-*.md]",
+        ]
+        return console.usage("labkit-params", "\n".join(lines), asked=bool(argv))
     area = area_path(argv[0])
     protocol_arg: Path | None = None
     run_arg: str | None = None

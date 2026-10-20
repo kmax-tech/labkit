@@ -336,8 +336,10 @@ pins (`requirements.txt` / `requirements.lock`).
   leaves its own exit for `console.exit_with`. A refusal raised as
   `console.Refused(tool, why)` reaches `exit_with` from any depth, so a
   command that stamps through labkit-init's functions (`usability stage`)
-  shows the refusal, not a traceback. Inside `finalize` intent-check's
-  reason still stands above its blocker in the terminal.
+  shows the refusal, not a traceback. A command called without arguments
+  prints its usage as such a refusal (`console.usage`); asked with `-h` or
+  `--help`, the usage stays on stdout with exit 0. Inside `finalize`
+  intent-check's reason still stands above its blocker in the terminal.
 - **The README introduces labkit and walks through using it.** Installation,
   the measurement lifecycle, cost tiers and result adoption precede the
   command reference. Internal records and enforcement live in

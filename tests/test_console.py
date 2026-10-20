@@ -97,6 +97,33 @@ class RefusalsOnStderr(unittest.TestCase):
         self.assertEqual(self.refusals_on_stdout(bad), [3])
         self.assertEqual(self.refusals_on_stdout(good), [])
 
+    def test_usage_asked_is_stdout_usage_missing_is_a_refusal(self):
+        import contextlib
+        import io
+
+        from labkit.formats import console
+
+        for asked, want in (
+            (True, (0, "usage: t X\n", "")),
+            (False, (2, "", "t: no arguments\nusage: t X\n")),
+        ):
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = console.usage("t", "usage: t X", asked=asked)
+            self.assertEqual((code, out.getvalue(), err.getvalue()), want)
+
+    def test_no_command_prints_its_usage_on_stdout_and_exits_2(self):
+        """`return 0 if argv else 2` after the usage on stdout: eight commands
+        called without arguments refused on stdout (2026-10-20)."""
+        found = [
+            f"{p.relative_to(ROOT)}"
+            for p in sorted((ROOT / "labkit").rglob("*.py"))
+            if "0 if argv else 2" in p.read_text(encoding="utf-8")
+        ]
+        self.assertEqual(
+            found, [], "return console.usage(tool, text, asked=bool(argv))"
+        )
+
     def test_no_module_refuses_on_stdout(self):
         found = [
             f"{p.relative_to(ROOT)}:{line}"

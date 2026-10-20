@@ -85,15 +85,15 @@ def main(argv: list[str]) -> int:
 
 def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     if not argv or argv[0] in ("-h", "--help"):
-        print((__doc__ or "").strip().splitlines()[0])
-        print("usage: intent-check <PROTOCOL-*.md> [--metrics FILE]")
-        print(
+        lines = [
+            (__doc__ or "").strip().splitlines()[0],
+            "usage: intent-check <PROTOCOL-*.md> [--metrics FILE]",
             "  --metrics FILE  metrics.json to check against. Default: "
             "the newest COMPLETED run bound to this protocol's id that "
             "reports intent keys; required while the protocol's id is "
-            "unstamped."
-        )
-        return 0 if argv else 2
+            "unstamped.",
+        ]
+        return console.usage("intent-check", "\n".join(lines), asked=bool(argv))
 
     protocol = Path(argv[0])
     metrics_arg = None

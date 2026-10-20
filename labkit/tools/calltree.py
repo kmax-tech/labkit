@@ -204,9 +204,11 @@ def parse_args(argv: list[str]) -> tuple[str, list[str], int | None, Path | None
 def main(argv: list[str]) -> int:
     """Command line: run TARGET with ARGS, print its call tree, return its exit code."""
     if not argv or argv[0] in ("-h", "--help"):
-        print((__doc__ or "").strip().splitlines()[0])
-        print(USAGE)
-        return 0 if argv else 2
+        lines = [
+            (__doc__ or "").strip().splitlines()[0],
+            USAGE,
+        ]
+        return console.usage("labkit-calltree", "\n".join(lines), asked=bool(argv))
     target, args, depth, out = parse_args(argv)
     module_name, func_name = resolve_target(target)
     module = importlib.import_module(module_name)

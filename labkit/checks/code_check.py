@@ -511,17 +511,15 @@ def _cost_of(protocol: Path) -> str | None:
 def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """Command line of `code-check`: check an area's code against its protocol, optionally write the bundle."""
     if not argv or argv[0] in ("-h", "--help"):
-        print((__doc__ or "").strip().splitlines()[0])
-        print("usage: code-check <AREA> [--protocol FILE] [--bundle FILE]")
-        print(
+        lines = [
+            (__doc__ or "").strip().splitlines()[0],
+            "usage: code-check <AREA> [--protocol FILE] [--bundle FILE]",
             "  --protocol FILE  the PROTOCOL-*.md to check against "
-            "(required once the area holds more than one)"
-        )
-        print(
+            "(required once the area holds more than one)",
             "  --bundle FILE    pack sources + schema facts + gate labels "
-            "for the audit agent"
-        )
-        return 0 if argv else 2
+            "for the audit agent",
+        ]
+        return console.usage("code-check", "\n".join(lines), asked=bool(argv))
 
     area = area_path(argv[0])
     bundle_to = None

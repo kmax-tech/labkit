@@ -27,6 +27,17 @@ def refuse(tool: str, why: str) -> None:
     print(f"{tool}: {why}", file=sys.stderr)
 
 
+def usage(tool: str, text: str, asked: bool) -> int:
+    """TEXT, the command's usage: on stdout with exit 0 when ASKED (`-h`,
+    `--help`); else the command ran with nothing to work on, a refusal on
+    stderr with exit 2 (`refuse`)."""
+    if asked:
+        print(text)
+        return 0
+    refuse(tool, f"no arguments\n{text}")
+    return 2
+
+
 class Refused(Exception):
     """A command that cannot run, raised where the reason is known: TOOL is
     the command that refuses (named, not read off sys.argv, which `-m` and

@@ -179,9 +179,11 @@ def check_file(f: Path) -> tuple[list[str], list[str]]:
 def main(argv: list[str]) -> int:
     """Command line of `notes-check`: check the measurement notes named in argv."""
     if not argv or argv[0] in ("-h", "--help"):
-        print((__doc__ or "").strip().splitlines()[0])
-        print("usage: notes-check <repo-root | notes-dir | note.md> ...")
-        return 0 if argv else 2
+        lines = [
+            (__doc__ or "").strip().splitlines()[0],
+            "usage: notes-check <repo-root | notes-dir | note.md> ...",
+        ]
+        return console.usage("notes-check", "\n".join(lines), asked=bool(argv))
     files = collect_notes(argv)
     if not files:
         console.refuse("notes-check", "no notes/messung/*.md found")

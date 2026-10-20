@@ -484,9 +484,11 @@ def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> N
 def main(argv: list[str]) -> int:
     """Command line of `preflight`: the mechanical gate before an area is frozen."""
     if not argv or argv[0] in ("-h", "--help"):
-        print((__doc__ or "").strip().splitlines()[0])
-        print("usage: preflight <AREA> [--protocol PROTOCOL-*.md]")
-        return 0 if argv else 2
+        lines = [
+            (__doc__ or "").strip().splitlines()[0],
+            "usage: preflight <AREA> [--protocol PROTOCOL-*.md]",
+        ]
+        return console.usage("preflight", "\n".join(lines), asked=bool(argv))
 
     area = area_path(argv[0])
     protocol = None
