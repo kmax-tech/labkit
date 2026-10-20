@@ -40,6 +40,8 @@ RULES: list[tuple[str, str, set[str]]] = [
     # "relative to the repo, else absolute" stood about 18 times (audit
     # 2026-10-18); the conditional form is held here, a try/except copy is not
     ("a path shown relative by hand", r"\.is_relative_to\(", {"repo", "runs"}),
+    # the hook and the transcript cut a shell line three ways (audit 2026-10-18)
+    ("a shell line cut by hand", r"shlex\.(shlex|split)\(", {"shell"}),
     # six hand-spelled copies of a record's time (audit 2026-10-18)
     ("a record time spelled by hand", r"%Y-%m-%dT%H:%M:%S", {"runs"}),
     (
@@ -96,6 +98,7 @@ class OneHome(unittest.TestCase):
             "a temp-and-rename write": "os.replace(tmp, path)",
             "the run-id shape": 'RUN = re.compile(r"\\d{4}-\\d{2}-\\d{2}T")',
             "a path shown relative by hand": "shown = p.relative_to(b) if p.is_relative_to(b) else p",
+            "a shell line cut by hand": "words = shlex.split(command)",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',
             "a run id's start second compared by hand": "if answering_run.start_second(a) == answering_run.start_second(b):",
             "a requirements pin spelled by hand": 'if ln.startswith("labkit"):',

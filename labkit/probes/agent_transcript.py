@@ -38,12 +38,12 @@ from __future__ import annotations
 import gzip
 import json
 import re
-import shlex
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
 from labkit.formats import console
+from labkit.formats.shell import pieces, segments
 
 #: Shell verbs whose file arguments are reads.
 READ_VERBS = frozenset({"cat", "head", "tail", "sed", "less", "wc", "nl"})
@@ -232,52 +232,7 @@ def read_calls(path: Path) -> tuple[list[Call], float, float]:
     return calls, min(stamps), max(stamps)
 
 
-_HEREDOC = re.compile(r"<<-?\s*(['\"]?)(\w+)\1")
-_SEPARATORS = frozenset({"&&", "||", ";", "|", "&", "(", ")"})
 _WRITES = frozenset({">", ">>", ">|"})
-
-
-def _strip_heredocs(command: str) -> str:
-    """The command without heredoc bodies: their lines are input data (a
-    Python script, a file's text), not shell — `from labkit.checks import recheck`
-    in a body is no run of `recheck`."""
-    lines = command.split("\n")
-    out: list[str] = []
-    i = 0
-    while i < len(lines):
-        out.append(lines[i])
-        tags = [m.group(2) for m in _HEREDOC.finditer(lines[i])]
-        i += 1
-        for tag in tags:
-            while i < len(lines) and lines[i].strip() != tag:
-                i += 1
-            i += 1  # the terminator
-    return "\n".join(out)
-
-
-def _pieces(command: str) -> list[tuple[list[str], str]]:
-    """(words, the separator after them) for each simple command."""
-    text = _strip_heredocs(command).replace("\n", " ; ")
-    try:
-        lexer = shlex.shlex(text, posix=True, punctuation_chars=True)
-        lexer.whitespace_split = True
-        tokens = list(lexer)
-    except ValueError:
-        tokens = text.split()
-    out: list[tuple[list[str], str]] = [([], "")]
-    for tok in tokens:
-        if tok in _SEPARATORS:
-            out[-1] = (out[-1][0], tok)
-            out.append(([], ""))
-        else:
-            out[-1][0].append(tok)
-    return [(w, op) for w, op in out if w]
-
-
-def segments(command: str) -> list[list[str]]:
-    """The simple commands of a shell line, as word lists (heuristic: a
-    quote-aware split at `&&`, `||`, `;`, `|`, newlines; heredoc bodies cut)."""
-    return [w for w, _ in _pieces(command)]
 
 
 def _verb(words: list[str]) -> str:
@@ -389,7 +344,7 @@ def timeline(path: Path) -> list[str]:
     for c in calls:
         text = c.text
         if c.tool == "Bash":
-            work = [(w, op) for w, op in _pieces(text) if not _log_step(w)]
+            work = [(w, op) for w, op in pieces(text) if not _log_step(w)]
             text = (
                 " ".join(
                     " ".join(w) + (f" {op}" if op else "") for w, op in work

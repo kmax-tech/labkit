@@ -26,7 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import claude_hooks  # noqa: E402
-from labkit.formats import findings, promises, scope_sha  # noqa: E402
+from labkit.formats import findings, promises, scope_sha, shell  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, PID, head  # noqa: E402
 
 BODY = """\
@@ -147,11 +147,28 @@ class PreRun(unittest.TestCase):
 
     def test_command_segments(self):
         self.assertEqual(
-            claude_hooks.command_segments(
-                "cd a && python x.py; python y.py | head\nz.py"
-            ),
+            shell.segments("cd a && python x.py; python y.py | head\nz.py"),
             [["cd", "a"], ["python", "x.py"], ["python", "y.py"], ["head"], ["z.py"]],
         )
+
+    def test_a_script_inside_a_heredoc_or_a_quote_is_no_run(self):
+        """The hook read a heredoc's body and a quoted `;` as shell: writing a
+        file that mentions the measure script, or a `-c` string, was gated
+        as running it. The twin: the same script run is held."""
+        root = _repo(False)
+        (root / "experiments/01-x/scripts/01_measure.py").write_text(
+            'from labkit.run import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
+            encoding="utf-8",
+        )
+        script = "python experiments/01-x/scripts/01_measure.py"
+        for cmd in (
+            f"cat > notes.md <<'EOF'\n{script}\nEOF",
+            f"python -c 'print(1); {script}'",
+        ):
+            rc, out, err = _run(claude_hooks.pre_run, _bash(root, cmd))
+            self.assertEqual((rc, out, err), (0, "", ""), cmd)
+        _, out, _ = _run(claude_hooks.pre_run, _bash(root, script))
+        self.assertNotEqual(out, "")
 
     def test_unfrozen_with_blockers_only_reports(self):
         root = _repo(False)
@@ -251,18 +268,24 @@ class PreRun(unittest.TestCase):
             "nohup x.py &": ["x.py"],
             "LABKIT_UNFROZEN=1 python x.py": ["x.py"],
         }
+
+        def executed(cmd: str) -> list[str]:
+            return [
+                p for seg in shell.segments(cmd) for p in claude_hooks.executed_py(seg)
+            ]
+
         for cmd, want in runs.items():
-            self.assertEqual(claude_hooks.executed_py(cmd), want, cmd)
+            self.assertEqual(executed(cmd), want, cmd)
         for cmd in (
             "sed -n 1,5p x.py",
             "cat x.py",
             "ls -l x.py",
             "git add x.py",
-            'p = Path("x.py")',
+            """echo 'p = Path("x.py")'""",
             "python -c 'import x'",
             "pytest tests/test_x.py -q",
         ):
-            self.assertEqual(claude_hooks.executed_py(cmd), [], cmd)
+            self.assertEqual(executed(cmd), [], cmd)
 
     def test_skip_token_is_reported_not_blocked(self):
         root = _repo(True)

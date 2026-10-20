@@ -96,6 +96,7 @@ from labkit.formats import (
     runs,
     standard_contract,
 )
+from labkit.formats.shell import segments
 from labkit.checks import notes_check
 from labkit.gates import preflight, report_check
 from labkit.formats.repo import (
@@ -115,12 +116,12 @@ THROWAWAY_FLAGS = re.compile(r"(^|\s)--(show|probe|eval-only)\b")
 PY_TOKEN = re.compile(r"[\w./~-]+\.py")
 # A .py file is RUN when an interpreter precedes it (`python`, `python3.12`,
 # `.venv/bin/python`, flags between allowed), when it starts a command
-# segment (`./x.py`, after `;`, `&&`, `|`, `(`, `runlog start --`, `nohup`,
-# `time`), never when it is merely named (`sed -n 1,5p lib/x.py`, a path in
+# command (`./x.py`, first in a `shell.segments` command, after
+# `runlog start --`, `nohup`, `time`, `exec`), never when it is merely named (`sed -n 1,5p lib/x.py`, a path in
 # a heredoc): uniagent 2026-10-10, 85 of 272 hook lines in one session said
 # "opens a run" about a lib module someone was reading.
 INTERPRETER = re.compile(r"(?:^|/)python[\d.]*$")
-SEGMENT_START = {";", "&&", "||", "|", "(", "--", "nohup", "time", "exec"}
+COMMAND_PREFIX = {"--", "nohup", "time", "exec"}
 STRIP = "\"'`();"  # around a token: quotes, parentheses, a trailing ;
 OPENS_RUN = re.compile(r"runlog\.(run|Run)\(")
 PROTOCOL_IN_SCRIPT = re.compile(r"PROTOCOL-[\w.-]+\.md")
@@ -159,25 +160,26 @@ def _capture(fn: Callable[..., int], *args: object) -> tuple[int, str]:
 # ---------------------------------------------------------------- pre-run
 
 
-def executed_py(command: str) -> list[str]:
-    """The .py paths the command RUNS, in order: preceded by an interpreter
-    (flags in between allowed) or starting a command segment, or `./x.py`.
-    A .py path that is only named — read, edited, written in a heredoc — is
-    not among them."""
-    tokens = command.split()
+def executed_py(words: list[str]) -> list[str]:
+    """The .py paths one simple command (WORDS, a `shell.segments` entry)
+    RUNS, in order: preceded by an interpreter (flags in between allowed),
+    first in the command or after a prefix (`nohup`, `--`), or `./x.py`. A
+    .py path that is only named — read, edited, inside a quoted `-c` string
+    — is not among them."""
+    tokens = words
     out: list[str] = []
     for i, raw in enumerate(tokens):
         tok = raw.strip(STRIP)
         if not PY_TOKEN.fullmatch(tok):
             continue
         j = i - 1
-        while j >= 0 and tokens[j].startswith("-") and tokens[j] not in SEGMENT_START:
+        while j >= 0 and tokens[j].startswith("-") and tokens[j] not in COMMAND_PREFIX:
             j -= 1  # interpreter flags: python -u x.py
         before = tokens[j].strip(STRIP) if j >= 0 else None
         runs = (
             tok.startswith("./")
             or before is None
-            or before in SEGMENT_START
+            or before in COMMAND_PREFIX
             or INTERPRETER.search(before) is not None
         )
         if runs and (j == i - 1 or (before is not None and INTERPRETER.search(before))):
@@ -185,46 +187,24 @@ def executed_py(command: str) -> list[str]:
     return out
 
 
-#: what ends one command segment: a shell separator token or a line break
-SEPARATORS = {";", "&&", "||", "|"}
-
-
-def command_segments(command: str) -> list[list[str]]:
-    """The command as segments of whitespace tokens, cut at `;`, `&&`, `||`,
-    `|` and line breaks (a `;` glued to the last token is cut off). What a
-    `cd` or a throwaway flag means is decided per segment: until 0.95.0 the
-    whole line was one — `cd AREA && python scripts/01_measure.py` resolved
-    the script against the event's cwd and found nothing, and one `--probe`
-    anywhere in the line freed every command in it (audit 2026-10-15)."""
-    out: list[list[str]] = [[]]
-    for line in command.splitlines():
-        for raw in line.split():
-            if raw in SEPARATORS:
-                out.append([])
-                continue
-            tok = raw[:-1] if raw.endswith(";") and len(raw) > 1 else raw
-            out[-1].append(tok)
-            if tok is not raw:
-                out.append([])
-        out.append([])
-    return [seg for seg in out if seg]
-
-
 def run_scripts(command: str, cwd: Path) -> list[Path]:
     """The .py files the command runs that open a run — resolved against the
     directory the command stands in at that point (a `cd` is followed) and
     existing; a segment with a throwaway flag (`--show`, `--probe`,
-    `--eval-only`) opens no run."""
+    `--eval-only`) opens no run. Each simple command of the line
+    (`shell.segments`) is judged on its own: read as one, `cd AREA && python
+    scripts/01_measure.py` found no script, and one `--probe` freed every
+    command of the line (audit 2026-10-15)."""
     out = []
     here = cwd
-    for seg in command_segments(command):
+    for seg in segments(command):
         if seg[0].strip(STRIP) == "cd":
             target = seg[1].strip(STRIP) if len(seg) > 1 else "~"
             here = here / os.path.expanduser(target)  # an absolute target replaces
             continue
         if THROWAWAY_FLAGS.search(" ".join(seg)):
             continue
-        for tok in executed_py(" ".join(seg)):
+        for tok in executed_py(seg):
             p = Path(os.path.expanduser(tok))
             if not p.is_absolute():
                 p = here / p

@@ -219,6 +219,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The pre-run hook no longer takes a mention for a run.** It cut a shell
+  line at whitespace and read a heredoc's body and a quoted `-c` string as
+  commands: writing a note that names `scripts/01_measure.py`, or a
+  `python -c '…; python scripts/01_measure.py'`, was gated as running it.
+  The hook now reads the line as the transcript reader does
+  (`shell.segments`: quote-aware, heredoc bodies cut); running the script
+  is held as before.
 - **The stamped scripts pair each item with exactly one answer.** The
   judge and estimator skeletons (and the explore notebook) zip items and
   answers with `strict=True`: a `fit_predict` or a model batch that
