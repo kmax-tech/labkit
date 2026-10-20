@@ -33,7 +33,6 @@ import json
 import os
 import sys
 from dataclasses import dataclass
-import time
 from pathlib import Path
 from typing import Iterable, Iterator, Mapping
 
@@ -270,8 +269,7 @@ class Store:
         try:
             with self.lock.open("x", encoding="utf-8") as f:
                 f.write(
-                    f"pid {os.getpid()} · {time.strftime('%Y-%m-%dT%H:%M:%S')} · "
-                    f"{' '.join(sys.argv)}\n"
+                    f"pid {os.getpid()} · {runs.now_stamp()} · {' '.join(sys.argv)}\n"
                 )
         except FileExistsError:
             raise SystemExit(

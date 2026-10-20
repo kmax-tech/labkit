@@ -37,6 +37,8 @@ RULES: list[tuple[str, str, set[str]]] = [
     ("the area name NN-slug", r"\^\(\\d\+\)-", {"repo"}),
     ("a temp-and-rename write", r"os\.replace\(", {"runs"}),
     ("the run-id shape", r"\\d\{4\}-\\d\{2\}-\\d\{2\}T", {"runs"}),
+    # six hand-spelled copies of a record's time (audit 2026-10-18)
+    ("a record time spelled by hand", r"%Y-%m-%dT%H:%M:%S", {"runs"}),
     (
         "a run id's start second compared by hand",
         r"start_second\(|rsplit\(\"_\", 1\)",
@@ -90,6 +92,7 @@ class OneHome(unittest.TestCase):
             "the area name NN-slug": 'm = re.match(r"^(\\d+)-(.+)$", name)',
             "a temp-and-rename write": "os.replace(tmp, path)",
             "the run-id shape": 'RUN = re.compile(r"\\d{4}-\\d{2}-\\d{2}T")',
+            "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',
             "a run id's start second compared by hand": "if answering_run.start_second(a) == answering_run.start_second(b):",
             "a requirements pin spelled by hand": 'if ln.startswith("labkit"):',
             "a tier rule read off the head": 'if head.cost == "seconds":',

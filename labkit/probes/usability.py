@@ -95,7 +95,7 @@ from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 from labkit.tools import scaffold
-from labkit.formats import repo, scope_sha, standard_contract
+from labkit.formats import repo, runs, scope_sha, standard_contract
 
 #: What the scaffold stamps into a repo and an area; their sha pins the measured
 #: condition. All of it ships with labkit — the probe needs no house machinery.
@@ -453,7 +453,7 @@ def stage(
     _sh(["git", "add", "-A"], root)
     _commit(root, "Probe: requirements.lock and the hooks of the probe venv")
     probe = Probe(
-        staged=time.strftime("%Y-%m-%dT%H:%M:%S"),
+        staged=runs.now_stamp(),
         task=task,
         area=areas[0],
         metric_key=metric_key,
@@ -631,7 +631,7 @@ def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
         labkit_installed=fresh_probe.labkit_installed,
         scaffold_sha=fresh_probe.scaffold_sha,
         scaffold_flags=fresh_probe.scaffold_flags,
-        restamped=time.strftime("%Y-%m-%dT%H:%M:%S"),
+        restamped=runs.now_stamp(),
         kept=list(kept_paths),
     )
     probe_file.write_text(json.dumps(asdict(probe), indent=1), encoding="utf-8")

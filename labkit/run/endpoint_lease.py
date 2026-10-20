@@ -233,7 +233,7 @@ def _lease_one(d: Path, endpoint: str, alias: str) -> None:
         "pid": os.getpid(),
         "script": _script(),
         "endpoint": endpoint,
-        "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "started": runs.now_stamp(),
         "token": uuid.uuid4().hex,
         "argv": " ".join(sys.argv)[:300],
     }

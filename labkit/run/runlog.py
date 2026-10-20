@@ -95,6 +95,7 @@ from labkit.formats.runs import (
     RunConfigError,
     completion_state,
     is_alive,
+    now_stamp,
     read_completion,
     read_metrics,
     read_run_config,
@@ -433,7 +434,7 @@ class Run:
             "python": sys.version.split()[0],
             "env": provenance.env,
             "models_resolved": provenance.models,
-            "started": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "started": now_stamp(),
             "command": list(sys.argv),  # how to start this run again
             "data": self._data,
             "config": self._config,
@@ -555,7 +556,7 @@ class Run:
             json.dumps(
                 {
                     "schema_version": RUN_SCHEMA,
-                    "finished": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                    "finished": now_stamp(),
                     "git": git_end,
                     "git_full": git_head(self.base),
                     "note": self._note,

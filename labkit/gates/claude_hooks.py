@@ -495,7 +495,7 @@ def record_session(repo: Path, event: dict, now: datetime | None = None) -> dict
     record = {
         "session": session,
         "transcript": event.get("transcript_path"),
-        "stopped": now.isoformat(timespec="seconds"),
+        "stopped": now.strftime(runs.RECORD_TIME),
         "runs": session_runs,
     }
     with log.open("a", encoding="utf-8") as fh:

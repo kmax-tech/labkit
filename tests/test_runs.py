@@ -294,3 +294,13 @@ class OutputPathsTravel(unittest.TestCase):
                 entry.path,
                 (Path(d) / "clone").resolve() / "experiments/01-x/output/rows.jsonl",
             )
+
+
+class NowStamp(unittest.TestCase):
+    def test_the_record_time_is_local_seconds_and_reads_back(self):
+        from datetime import datetime
+
+        stamp = runs.now_stamp()
+        self.assertRegex(stamp, r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$")
+        read = datetime.fromisoformat(stamp)
+        self.assertLess(abs((datetime.now() - read).total_seconds()), 5)

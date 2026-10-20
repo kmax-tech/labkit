@@ -11,6 +11,7 @@ the LLM backend). Contract: docs/protocol-run-binding.md, "Run completion".
 from __future__ import annotations
 
 import json
+import time
 import os
 import re
 import subprocess
@@ -151,6 +152,16 @@ RECORD_SHA_CHARS = 16
 #: runlog writes it with RUN_ID_TIME; RUN_ID finds one in prose (a cited
 #: run) and names a run directory (`fullmatch`); `run_started` reads the time.
 RUN_ID_TIME = "%Y-%m-%dT%H-%M-%S"
+#: the local time a record states (`started`, `finished`, a lock's holder,
+#: a staged probe): `2026-10-13T14:00:57`, read back by `fromisoformat`.
+RECORD_TIME = "%Y-%m-%dT%H:%M:%S"
+
+
+def now_stamp() -> str:
+    """The local time now in RECORD_TIME — the one spelling of a record's time."""
+    return time.strftime(RECORD_TIME)
+
+
 RUN_ID = re.compile(
     r"\b(?P<date>\d{4}-\d{2}-\d{2})T(?P<h>\d{2})-(?P<m>\d{2})-(?P<s>\d{2})_[0-9a-f]{2,12}\b"
 )
