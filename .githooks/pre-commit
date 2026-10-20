@@ -24,7 +24,9 @@ run() {
 run "ruff check" "$venv/ruff" check .
 run "ruff format --check" "$venv/ruff" format --check .
 run "pyright" "$venv/pyright"
-run "pytest" "$venv/python" -m pytest -q -p no:warnings
+# On every core; loadscope keeps a class on one worker, because some classes
+# build test_02 on what test_01 left behind (tests/test_end_to_end.py).
+run "pytest" "$venv/python" -m pytest -q -p no:warnings -n auto --dist loadscope
 if [ "$fail" -ne 0 ]; then
     echo "pre-commit: commit refused — fix the above (or --no-verify for a deliberate exception)" >&2
     exit 1

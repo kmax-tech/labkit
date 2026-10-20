@@ -40,5 +40,9 @@ in the system temp directory after a run.
 - The leftovers from before this change stay in the system temp directory
   until deleted by hand
   (`find "$TMPDIR" -maxdepth 1 \( -name 'tmp*' -o -name 'labkit-test-leases-*' \) -type d -mtime +0 -exec rm -rf {} +`).
-- What remains of the 54 s is mostly waiting on git subprocesses; running
-  the tests in parallel (pytest-xdist) is the next lever, not yet measured.
+- The pre-commit hook runs the suite in parallel (pytest-xdist, `-n auto
+  --dist loadscope`): 54 s -> 20 s, measured over repeated runs. More
+  workers barely help (4: 23 s, 8: 21 s, 11: 20 s) and no single test is
+  longer than 8 s; the floor is the cost of starting processes and writing
+  files on macOS. `--dist load` is not safe: classes in
+  `tests/test_end_to_end.py` build `test_02` on `test_01`.

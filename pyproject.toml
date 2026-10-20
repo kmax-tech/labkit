@@ -18,8 +18,9 @@ dependencies = []
 # the coding style's three tools: test, lint, type-check (docs/coding-style.md CODE-008 Run the linter and the type checker);
 # viztracer for reading a run as a timeline (`just timeline audit ARGS`; the filter holds only when the
 # module FILE is run — with `-m` or a console script `--include_files` keeps nothing, viztracer 1.1.1),
-# the step past `labkit-calltree` when the order and duration of calls matter
-dev = ["pytest", "ruff", "pyright", "viztracer"]
+# the step past `labkit-calltree` when the order and duration of calls matter;
+# pytest-xdist runs the suite on every core in the pre-commit hook
+dev = ["pytest", "pytest-xdist", "ruff", "pyright", "viztracer"]
 
 [project.scripts]
 protocol-check = "labkit.formats.protocol_report:cli"
