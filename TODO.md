@@ -930,9 +930,22 @@ den Ertrag je Klasse auszählt.
   | Resume: Identität von Instrument und Eingaben | `batch.Store.pending` (`labkit/run/batch.py:359`): Instrument je Zeile gegen das des Laufs | (a) Vergleich mit `!=` — dieselbe Falle wie bei Befund 3 (`True == 1`, und ein Tupel im Instrument verweigert nach dem JSON-Rundweg jeden Resume); gehört auf `runs.as_stored`. (b) Eingaben: `pending` prüft nur, ob die ID schon da ist; ein geändertes Item behält seine alte Zeile. `Ledger.stale` kann das (`expect`), wird aber nicht aufgerufen. (c) Ohne `instrument` keine Prüfung (gewollt, Test `:220`); beide Mess-Vorlagen übergeben eins. | `tests/test_batch.py:204–220`: gleich, anders, keins. Typfalle und geänderte Eingabe: keiner. |
 
   Kandidaten für eigene Commits (je an diesen Befund gekoppelt, nicht
-  geplant): `pending` über `runs.as_stored`; eine Heimat für den Gang
-  entlang `derived_from`, die alle drei Leser nehmen; `zip(strict=True)` in
-  den Vorlagen.
+  geplant):
+  1. `pending` vergleicht das Instrument über `runs.as_stored`.
+  2. Abstammung: eine Funktion validiert die **ganze** Kette (jede Config
+     lesbar, jeder Elternlauf da, keine Schleife) und gibt sie zurück;
+     `model_provenance_run` wählt daraus den nächsten Modellrecord,
+     `params._lineage` und `row_provenance_findings` nehmen dieselbe Kette.
+     So hängt die Prüfung nicht davon ab, wo ein Modell gefunden wird.
+  3. `zip(strict=True)` in den Vorlagen — fängt nur ungleich lange Listen.
+  4. **Eigene Korrektheitslücke, nicht durch 3 gedeckt:** die Vorlagen an
+     `Ledger` anschließen, mit Eingabefingerabdruck je Item, damit doppelte
+     IDs und fehlende oder veraltete Items einer fortgesetzten Datei
+     verweigert werden und der Nenner aus der Quelle kommt. Laut Review
+     2026-10-20 reproduziert: beim frei implementierbaren Estimator
+     verschwinden 6 von 12 Items, und A1, A2, C1 bestehen trotzdem
+     (hier nicht nachgestellt). Das zip-Risiko ist damit nicht „praktisch
+     gering“ — `fit_predict` ist Nutzercode, seine Länge garantiert niemand.
 
 - **Standardvertrag 2026-10-19 (Branch `claude/standard-contract-rpwkod`,
   Unreleased):** die Pflichten je Kostenstufe stehen einmal in
