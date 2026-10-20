@@ -656,12 +656,24 @@ def bound_prompt(
 
 
 def main(argv: list[str]) -> int:
-    """Command line of `labkit-audit`: audit one area in one mode."""
+    """Command line of `labkit-audit`: audit one area in one mode, or store
+    a decision the person gives on one of its findings (`--decide`)."""
     ap = argparse.ArgumentParser(
         prog="labkit-audit", description=(__doc__ or "").splitlines()[0]
     )
     ap.add_argument("area", type=area_path)
-    ap.add_argument("--mode", choices=MODES, required=True)
+    ap.add_argument("--mode", choices=MODES)
+    ap.add_argument(
+        "--decide",
+        nargs=3,
+        metavar=("N", "STATUS", "REASON"),
+        help="store your decision on finding N of the newest record: STATUS "
+        f"({' | '.join(findings.STATUSES)}) and REASON (owed for "
+        f"{', '.join(findings.REASON_OWED)}); no audit runs",
+    )
+    ap.add_argument(
+        "--record", type=Path, help="with --decide: this record, not the newest"
+    )
     ap.add_argument(
         "--protocol", type=Path, help="the protocol, in an area holding several"
     )
@@ -678,6 +690,9 @@ def main(argv: list[str]) -> int:
     )
     ap.add_argument("--out", type=Path, help="also write the report here")
     args = ap.parse_args(argv)
+    _check_args(ap, args)
+    if args.decide is not None:
+        return _decide(args.area, args.decide, args.record)
     if args.mode == CLARITY:
         return _clarity(args)
     try:
@@ -738,8 +753,8 @@ def main(argv: list[str]) -> int:
             file=sys.stderr,
         )
     print(
-        f"findings: {recorded} — set status (fixed / accepted / deferred / dismissed) "
-        f"and reason for each; preflight reads it",
+        f"findings: {recorded} — decide each: `labkit-audit {args.area} --decide N "
+        f"STATUS REASON` (fixed / accepted / deferred / dismissed); preflight reads it",
         file=sys.stderr,
     )
     # the auditor lists what it read in full; the indexed modules are the
@@ -748,6 +763,43 @@ def main(argv: list[str]) -> int:
     for gap in scope_mismatch(args.area, listed_scope, stamp.files):
         print(f"scope WARNING: {gap}", file=sys.stderr)
     return 1 if b or w else 0
+
+
+def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    """Exactly one of --mode (audit) and --decide (store a decision); --record
+    only with --decide. A usage error exits 2 through argparse."""
+    if (args.mode is None) == (args.decide is None):
+        ap.error("give --mode to audit, or --decide N STATUS REASON — one of them")
+    if args.record is not None and args.decide is None:
+        ap.error("--record goes with --decide")
+
+
+def _decide(area: Path, decide: list[str], record: Path | None) -> int:
+    """`--decide`: store the person's decision on one finding of RECORD (the
+    area's newest record without it) through `findings.write_decision`;
+    print what was written and how many findings stay open. Exit 2 on a
+    decision that cannot be stored, the file untouched."""
+    n_text, status, reason = decide
+    try:
+        if not n_text.isdigit():
+            raise findings.FindingsError(f"N must be a finding number, not {n_text!r}")
+        if record is None:
+            records = findings.area_records(area)
+            if not records:
+                raise findings.FindingsError(
+                    f"{area}: no findings record to decide in — run the audit first"
+                )
+            record = records[-1].path
+        rec = findings.write_decision(record, int(n_text), status, reason)
+    except findings.FindingsError as exc:
+        console.refuse("labkit-audit", str(exc))
+        return 2
+    print(
+        f"decided: {record.name} finding {n_text}: {status}"
+        + (f" — {reason.strip()}" if reason.strip() else "")
+        + f" · {len(rec.open)} open"
+    )
+    return 0
 
 
 def _clarity(args: argparse.Namespace) -> int:

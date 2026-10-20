@@ -1,5 +1,7 @@
 """Audit findings as data (2026-10-12): written by labkit-audit, decided by the person, read by preflight."""
 
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -277,6 +279,150 @@ class ModelTextReadsBack(unittest.TestCase):
         area = area_with([("preflight", [("NOTE", text)])])
         path = next((area / "audits").glob("*.toml"))
         self.assertEqual(findings.read(path).findings[0].text, text)
+
+
+class WriteDecision(unittest.TestCase):
+    """The person's decision, given explicitly, stored safely: the tool
+    validates it, writes it as TOML and replaces the file whole. It decides
+    nothing (count probes 2026-10-20: two hand-written reasons broke the
+    file)."""
+
+    def record(self) -> Path:
+        area = area_with([("preflight", TWO)])
+        return next((area / "audits").glob("*.toml"))
+
+    def test_one_finding_changes_and_nothing_else(self):
+        path = self.record()
+        before = findings.read(path)
+        text_before = path.read_text(encoding="utf-8")
+        reason = 'the "inputs" root is fixed \\ checked\nall 12 rows'
+        after = findings.write_decision(path, 2, "accepted", reason)
+        self.assertEqual(after.findings[1].status, "accepted")
+        self.assertEqual(after.findings[1].reason, reason.strip())
+        self.assertEqual(after.findings[0], before.findings[0])
+        self.assertEqual(
+            (after.date, after.mode, after.scope_sha, after.block_sha, after.verdict),
+            (
+                before.date,
+                before.mode,
+                before.scope_sha,
+                before.block_sha,
+                before.verdict,
+            ),
+        )
+        self.assertEqual(findings.read(path), after)
+        changed = [
+            (a, b)
+            for a, b in zip(text_before.splitlines(), path.read_text().splitlines())
+            if a != b
+        ]
+        self.assertEqual(len(changed), 2, changed)  # the status and the reason line
+        self.assertEqual(list(path.parent.glob(".*tmp*")), [])
+
+    def test_a_reason_is_owed_and_a_status_is_one_of_the_list(self):
+        path = self.record()
+        before = path.read_text(encoding="utf-8")
+        for status, reason in (("accepted", " "), ("dismissed", ""), ("done", "x")):
+            with self.subTest(status=status):
+                with self.assertRaises(findings.FindingsError):
+                    findings.write_decision(path, 1, status, reason)
+        findings.write_decision(path, 1, "fixed", "")  # fixed owes no reason
+        self.assertEqual(findings.read(path).findings[0].status, "fixed")
+        findings.write_decision(path, 1, "open", "")
+        self.assertEqual(findings.read(path).findings[0].status, "open")
+        self.assertEqual(path.read_text(encoding="utf-8"), before)
+
+    def test_a_number_outside_the_record_is_named(self):
+        path = self.record()
+        for n in (0, 3, -1):
+            with self.subTest(n=n):
+                with self.assertRaisesRegex(findings.FindingsError, "finding 1..2"):
+                    findings.write_decision(path, n, "fixed", "")
+
+    def test_a_broken_file_is_refused_and_left_as_it_is(self):
+        path = self.record()
+        broken = path.read_text(encoding="utf-8").replace(
+            'reason = ""', 'reason = "a "b""', 1
+        )
+        path.write_text(broken, encoding="utf-8")
+        with self.assertRaisesRegex(findings.FindingsError, "not TOML"):
+            findings.write_decision(path, 1, "fixed", "")
+        self.assertEqual(path.read_text(encoding="utf-8"), broken)
+
+    def test_a_table_between_findings_does_not_shift_the_count(self):
+        """A sub-table after finding 1, then findings 2 and 3: a count that
+        restarted at the sub-table reached 1 again at finding 3."""
+        three = TWO + [("NOTE", "NOTE · c.py:3 · x · y · LAB-019 r · z")]
+        area = area_with([("preflight", three)])
+        path = next((area / "audits").glob("*.toml"))
+        text = path.read_text(encoding="utf-8")
+        i = text.index("\n[[finding]]", text.index("[[finding]]") + 1)
+        extra = '\n[finding.extra]\nnote = "x"\n'
+        path.write_text(text[:i] + extra + text[i:], encoding="utf-8")
+        findings.write_decision(path, 1, "fixed", "")
+        rec = findings.read(path)
+        self.assertEqual([f.status for f in rec.findings], ["fixed", "open", "open"])
+
+    def test_a_status_line_not_on_one_line_is_refused(self):
+        path = self.record()
+        text = path.read_text(encoding="utf-8").replace(
+            'status = "open"\nreason = ""', 'reason = ""\nstatus = """\nopen"""', 1
+        )
+        path.write_text(text, encoding="utf-8")
+        with self.assertRaises(findings.FindingsError):
+            findings.write_decision(path, 1, "fixed", "")
+        self.assertEqual(path.read_text(encoding="utf-8"), text)
+
+
+class DecideCommand(unittest.TestCase):
+    """`labkit-audit AREA --decide N STATUS REASON` writes the newest record
+    of the area, or the one `--record` names."""
+
+    def run_main(self, argv):
+        from labkit.gates import audit
+
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            try:
+                rc = audit.main(argv)
+            except SystemExit as exc:
+                rc = exc.code
+        return rc, out.getvalue(), err.getvalue()
+
+    def test_the_newest_record_is_decided_and_named(self):
+        area = area_with([("preflight", TWO), ("analysis", TWO)])
+        records = sorted((area / "audits").glob("*.toml"), key=findings.written_order)
+        rc, out, err = self.run_main(
+            [str(area), "--decide", "1", "dismissed", 'not a "bug": the data say so']
+        )
+        self.assertEqual(rc, 0, err)
+        self.assertIn(records[-1].name, out)
+        self.assertEqual(findings.read(records[-1]).findings[0].status, "dismissed")
+        self.assertEqual(findings.read(records[0]).findings[0].status, "open")
+        self.assertIn("1 open", out)
+
+    def test_record_names_another_one_and_a_bad_decision_exits_2(self):
+        area = area_with([("preflight", TWO), ("analysis", TWO)])
+        first = sorted((area / "audits").glob("*.toml"), key=findings.written_order)[0]
+        rc, _, err = self.run_main(
+            [str(area), "--decide", "2", "fixed", "", "--record", str(first)]
+        )
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(findings.read(first).findings[1].status, "fixed")
+        rc, out, err = self.run_main([str(area), "--decide", "2", "accepted", ""])
+        self.assertEqual(rc, 2)
+        self.assertIn("owes a reason", err)
+        self.assertEqual(out, "")
+
+    def test_decide_and_mode_do_not_go_together_and_one_is_needed(self):
+        area = area_with([("preflight", TWO)])
+        rc, _, err = self.run_main(
+            [str(area), "--mode", "analysis", "--decide", "1", "fixed", ""]
+        )
+        self.assertEqual(rc, 2)
+        rc, _, err = self.run_main([str(area)])
+        self.assertEqual(rc, 2)
+        self.assertIn("--mode", err)
 
 
 class Repo(unittest.TestCase):

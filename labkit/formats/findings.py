@@ -22,7 +22,9 @@ area, one file per audit:
     status = "open"      # open | fixed | accepted | deferred | dismissed
     reason = ""          # owed for accepted, deferred and dismissed
 
-The person edits `status` and `reason`; nothing else writes the file.
+The person decides each finding — by hand in the file, or with
+`labkit-audit AREA --decide N STATUS REASON`, which validates the decision
+the person typed and stores it (`write_decision`). labkit never decides.
 
 When the backend does not answer (`llm_backends.BackendError`: the CLI died, the
 server was down, every retry ran out), `labkit-audit` writes no findings
@@ -255,7 +257,8 @@ def write(
     stamp = time.strftime("%Y-%m-%dT%H-%M", when)
     b, w, k = verdict
     lines = [
-        "# written by labkit-audit — decide each finding: set status and reason",
+        "# written by labkit-audit — decide each finding: "
+        "`labkit-audit <area> --decide N STATUS REASON`, or set status and reason here",
         f"# {REASON_FORM}",
         "[audit]",
         f"date = {_s(time.strftime('%Y-%m-%dT%H:%M', when))}",
@@ -377,8 +380,18 @@ def _finding(path: Path, i: int, row: object) -> Finding:
 def read(path: Path) -> Record:
     """The findings file at PATH; raises FindingsError on anything it cannot hold to."""
     try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise FindingsError(f"{path}: not TOML ({exc}) — {REASON_FORM}") from exc
+    return _record_of(path, text)
+
+
+def _record_of(path: Path, text: str) -> Record:
+    """TEXT read as the findings file at PATH (`read`'s check, on text not yet
+    written: `write_decision` reads its result back before it writes)."""
+    try:
+        data = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as exc:
         raise FindingsError(f"{path}: not TOML ({exc}) — {REASON_FORM}") from exc
     audit = _audit_table(path, data)
     rows = data.get("finding", [])
@@ -403,6 +416,102 @@ def read(path: Path) -> Record:
         (audit["blockers"], audit["warnings"], audit["notes"]),
         parsed,
     )
+
+
+_FINDING_HEADER = re.compile(r"^\s*\[\[\s*finding\s*\]\]\s*(?:#.*)?$")
+_TABLE_HEADER = re.compile(r"^\s*\[")
+#: a one-line `status = …` or `reason = …` — the lines a decision rewrites
+_DECISION_LINE = re.compile(
+    r"""^(\s*(status|reason)\s*=\s*)(?:"(?:[^"\\]|\\.)*"|'[^']*')(\s*(?:#.*)?)$"""
+)
+
+
+def _decision_lines(
+    lines: list[str], n: int
+) -> dict[str, tuple[int, re.Match[str]]] | None:
+    """{"status": (index, match), "reason": …} of the N-th `[[finding]]`
+    table in LINES, or None when it lacks either as a one-line value. The
+    table runs from its header to the next table header of any kind."""
+    seen, inside = 0, False
+    at: dict[str, tuple[int, re.Match[str]]] = {}
+    for i, line in enumerate(lines):
+        if _FINDING_HEADER.match(line):
+            seen += 1
+            inside = seen == n
+            continue
+        if _TABLE_HEADER.match(line):
+            inside = False
+            continue
+        m = (
+            _DECISION_LINE.match(line.splitlines()[0])
+            if inside and line.strip()
+            else None
+        )
+        if m:
+            at[m.group(2)] = (i, m)
+    return at if set(at) == {"status", "reason"} else None
+
+
+def write_decision(path: Path, n: int, status: str, reason: str) -> Record:
+    """Set finding N (1-based) of the record at PATH to STATUS with REASON —
+    the decision the person gives, stored, never made: the side effect is
+    the file. The two lines are found by the record's structure (the N-th
+    `[[finding]]` table), their values written by `toml_string`, every other
+    byte kept; the result is read back and the file replaced whole
+    (`files.write_atomic`) only when exactly that finding changed. Raises
+    FindingsError — the file untouched — on a record that does not read, a
+    number outside it, a status outside STATUSES, a reason owed and empty,
+    or a status or reason not on one line (edit those by hand)."""
+    from labkit.formats.files import write_atomic
+
+    before = read(path)
+    if not 1 <= n <= len(before.findings):
+        raise FindingsError(
+            f"{path}: no finding {n} — the record holds finding 1..{len(before.findings)}"
+        )
+    if status not in STATUSES:
+        raise FindingsError(f"status {status!r} — one of {', '.join(STATUSES)}")
+    if status in REASON_OWED and not reason.strip():
+        raise FindingsError(f"status {status!r} owes a reason — why it is {status}")
+    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+    at = _decision_lines(lines, n)
+    if at is None:
+        raise FindingsError(
+            f"{path}: finding {n} has no one-line `status = …` and `reason = …` "
+            f"— edit it by hand"
+        )
+    for key, value in (("status", status), ("reason", reason.strip())):
+        i, m = at[key]
+        ending = lines[i][len(lines[i].splitlines()[0]) :]
+        lines[i] = m.group(1) + _s(value) + m.group(3) + ending
+    text = "".join(lines)
+    after = _record_of(path, text)
+    expected = list(before.findings)
+    old = expected[n - 1]
+    expected[n - 1] = Finding(old.grade, old.text, status, reason.strip())
+    same_head = (
+        after.date,
+        after.mode,
+        after.model,
+        after.scope_sha,
+        after.block_sha,
+        after.run_id,
+        after.shown_sha,
+        after.verdict,
+    ) == (
+        before.date,
+        before.mode,
+        before.model,
+        before.scope_sha,
+        before.block_sha,
+        before.run_id,
+        before.shown_sha,
+        before.verdict,
+    )
+    if list(after.findings) != expected or not same_head:
+        raise FindingsError(f"{path}: the decision did not read back as written")
+    write_atomic(path, text)
+    return after
 
 
 #: the name `_create` gives a record or a failed attempt:

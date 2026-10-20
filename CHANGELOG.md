@@ -199,6 +199,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **`labkit-audit AREA --decide N STATUS REASON` stores a decision on a
+  finding.** The person gives status and reason explicitly; the command
+  checks the number, the status and the owed reason, writes both as TOML
+  strings into finding N of the newest record (or `--record FILE`), reads
+  the result back — only that finding may change — and replaces the file
+  whole. It decides nothing. Editing the file by hand stays possible. Two
+  count probes of 2026-10-20 broke a record with a hand-written reason;
+  the reason-form hint eased the repair but did not prevent it.
+  `labkit-audit` now takes `--mode` or `--decide`, exactly one.
+
 - **`standard_contract` — one home for what each tier owes, of which run,
   at which occasion.** The obligations the standard puts on a number were
   spelled by every component for itself (`head.cost == "seconds"` in

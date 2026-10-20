@@ -204,6 +204,7 @@ scope-sha AREA                     # code stamp used by an audit
 preflight AREA                     # readiness before freezing
 finalize AREA                      # checks after the run
 labkit-audit AREA --mode preflight|analysis|clarity [--model ALIAS]
+labkit-audit AREA --decide N STATUS REASON [--record FILE] # store your decision on a finding
 report-check AREA                  # release check before reporting
 report-check --if-reported [--staged] PATH... # check affected reported areas
 runlog [AREA] [--wait | --follow]    # inspect or monitor runs
