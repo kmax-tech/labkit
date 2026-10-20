@@ -382,6 +382,7 @@ def main() -> None:
         # number is kept, it is a run. A reduced estimator on a few items: the
         # pipeline is checked, the registered number is not seen.
         out = OUT.with_name(OUT.stem + "_probe.jsonl")
+        out.unlink(missing_ok=True)  # a fresh file each probe: its items may have changed
         few = labelled(items)[:args.probe] + unlabelled(items)[:5]
         rows = measure(cfg, few, out, probe=True)
         m = evaluate_rows(rows, cfg)

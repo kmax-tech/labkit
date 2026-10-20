@@ -182,6 +182,22 @@ class Balance(unittest.TestCase):
             m.evaluate(self.out, m.CONFIG, jobs)
         self.assertIn("item_sha", str(cm.exception))
 
+    def test_judge_probe_shows_the_answer_to_the_item_as_it_is_now(self) -> None:
+        """The probe resumed its file: an item edited since the last probe
+        made no new call and showed the old answer (review 2026-10-20)."""
+        m = self.judge
+        answer = lambda model, prompts: [  # noqa: E731
+            "Yes" if "corrected" in p else "No" for p in prompts
+        ]
+        items = self._items()
+        with mock.patch.object(m.llm, "complete_many", answer):
+            first = m.probe(m.CONFIG, items, 2)
+            items[0] = {**items[0], "text": "item 0, corrected"}
+            again = m.probe(m.CONFIG, items, 2)
+        x0 = lambda rows: {r["answer"] for r in rows if r["id"].endswith(":x0")}  # noqa: E731
+        self.assertEqual((x0(first), x0(again)), ({"No"}, {"Yes"}))
+        self.assertEqual(len(again), 4)  # two jobs per lane, nothing of the last probe
+
     # -- the estimator: one fingerprint over all items, since each fit uses them all
     ITEMS = Pairing.ITEMS
 

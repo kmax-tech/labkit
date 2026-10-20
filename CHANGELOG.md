@@ -219,6 +219,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A probe answers the items as they are now.** The judge skeleton's
+  `--probe` resumed its `_probe.jsonl`: an item edited since the last probe
+  made no new call and showed its old answer, beside rows of earlier
+  probes. Both skeletons now start each probe in a fresh file (the judge's
+  as `probe(cfg, items, n)`); the estimator's no longer refuses a re-probe
+  after a data edit. Existing `01_measure.py` files keep the old probe —
+  re-stamp, or delete the probe file before each probe.
 - **Ids compare as the file stores them.** The ledger, the resume, the
   status and the duplicate count held ids in Python sets and dicts, where
   `True == 1`: an output row with id `true` balanced an input id `1`, and a

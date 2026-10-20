@@ -237,6 +237,21 @@ def measure(cfg: MeasureConfig, jobs: list[dict], out: Path, prov: dict | None =
             print(f"  {min(chunk_start + 40, len(todo))}/{len(todo)}")
 
 
+def probe(cfg: MeasureConfig, items: list[dict], n: int) -> list[dict]:
+    """N jobs per lane through the real pipeline into a throwaway file, and
+    its rows. A fresh file each time: resumed, a probe skipped an item
+    edited since the last one and showed its old answer (review 2026-10-20)."""
+    out = OUT.with_name(OUT.stem + "_probe.jsonl")
+    out.unlink(missing_ok=True)
+    # with case classes: one case per class; without: the first N items
+    probe_ids = set(one_per_class())
+    jobs = [x for lane in LANES
+            for x in [y for y in plan(items) if y["lane"] == lane
+                      and (not probe_ids or y["id"].split(":", 1)[1] in probe_ids)][:n]]
+    measure(cfg, jobs, out)
+    return read_jsonl(out)
+
+
 def parse_answer(text: str) -> str | None:
     """Model text -> gold label via ANSWERS, or None for empty/unreadable.
     Empty is its own state, never folded into a label (→ LAB-030 Reasoning models); the first
@@ -375,14 +390,7 @@ def main() -> None:
     if args.probe is not None:
         # Throwaway: own output file, NO runlog (→ LAB-008 Instrument check before freezing) — the moment a
         # number is kept, it is a run.
-        out = OUT.with_name(OUT.stem + "_probe.jsonl")
-        # with case classes: one case per class; without: the first N items
-        probe_ids = set(one_per_class())
-        jobs = [x for lane in LANES
-                for x in [y for y in plan(items) if y["lane"] == lane
-                          and (not probe_ids or y["id"].split(":", 1)[1] in probe_ids)][:args.probe]]
-        measure(cfg, jobs, out)
-        rows = read_jsonl(out)
+        rows = probe(cfg, items, args.probe)
         for r in rows:
             print(f"{r['id']:<28} {r['answer']!r:<40} -> {parse_answer(r['answer'])!r} (gold {r['gold']})")
         print("\n# parser cases — paste into tests/test_<NN>_<name>.py PROBE_CASES:")
