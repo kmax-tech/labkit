@@ -1,0 +1,90 @@
+{
+ "probe": {
+  "staged": "2026-10-20T21:45:47",
+  "task": "judge",
+  "area": "01-causal-claims-judge",
+  "metric_key": "c1_accuracy",
+  "labkit_installed": "labkit @ file:///Users/max/projects/labkit-probes-db1695d/src",
+  "scaffold_sha": "d1de7d60240f",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "causal-claims-judge",
+   "--cost",
+   "seconds",
+   "--model",
+   "haiku"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-20T21-50-01_4bf1",
+ "number": 0.9166666666666666,
+ "expected": null,
+ "number_ok": true,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-causal-claims-judge.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 27,
+  "wall_seconds": 318,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 6,
+  "run": 15,
+  "edit": 5,
+  "unsure": 0,
+  "gate": 1,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 98,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 446,
+  "summary_codes": 9,
+  "answer_has_table": false
+ },
+ "transcript": {
+  "wall_seconds": 343,
+  "tool_seconds": 203,
+  "calls": 28,
+  "commands": {
+   "protocol-fill": 5,
+   "finalize": 2,
+   "labkit-audit": 3
+  },
+  "refusals": 0,
+  "tokens": {
+   "calls": 45,
+   "input": 90,
+   "output": 573,
+   "cache_read": 3072975,
+   "cache_creation": 92360,
+   "context_max": 84683
+  },
+  "files_read": [
+   "TASK.md",
+   "experiments/01-causal-claims-judge/README.md",
+   "models.toml",
+   "data/raw/claims.jsonl",
+   "experiments/01-causal-claims-judge/PROTOCOL-causal-claims-judge.md",
+   "experiments/01-causal-claims-judge/scripts/*",
+   "experiments/01-causal-claims-judge/scripts/*.py",
+   "01_measure.py",
+   "experiments/01-causal-claims-judge/scripts/00_prepare.py",
+   "experiments/01-causal-claims-judge/scripts/02_analyze.py",
+   "tests/test_01_causal_claims_judge.py",
+   "README.md",
+   "/tmp/judge4_audit.out",
+   "experiments/01-causal-claims-judge/audits/*.toml",
+   "experiments/01-causal-claims-judge/output/causal-claims-judge.jsonl",
+   "/tmp/judge4_t0"
+  ],
+  "source_reads": []
+ },
+ "agent": null
+}

@@ -1,0 +1,90 @@
+{
+ "probe": {
+  "staged": "2026-10-20T20:51:09",
+  "task": "judge",
+  "area": "01-causal-claims-judge",
+  "metric_key": "c1_accuracy",
+  "labkit_installed": "labkit @ file:///Users/max/projects/labkit-probes-db1695d/src",
+  "scaffold_sha": "d1de7d60240f",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "causal-claims-judge",
+   "--cost",
+   "seconds",
+   "--model",
+   "haiku"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-20T21-44-53_7f95",
+ "number": 0.8333333333333334,
+ "expected": null,
+ "number_ok": true,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-causal-claims-judge.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 17,
+  "wall_seconds": 230,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 5,
+  "run": 9,
+  "edit": 2,
+  "unsure": 0,
+  "gate": 1,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 98,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 277,
+  "summary_codes": 9,
+  "answer_has_table": false
+ },
+ "transcript": {
+  "wall_seconds": 261,
+  "tool_seconds": 127,
+  "calls": 24,
+  "commands": {
+   "protocol-fill": 4,
+   "code-check": 1,
+   "finalize": 1,
+   "labkit-audit": 1
+  },
+  "refusals": 1,
+  "tokens": {
+   "calls": 38,
+   "input": 76,
+   "output": 584,
+   "cache_read": 2484869,
+   "cache_creation": 96179,
+   "context_max": 81920
+  },
+  "files_read": [
+   "TASK.md",
+   "experiments/01-causal-claims-judge/README.md",
+   "experiments/01-causal-claims-judge/PROTOCOL*.md",
+   "experiments/01-causal-claims-judge/scripts/*",
+   "models.toml",
+   "experiments/01-causal-claims-judge/PROTOCOL-causal-claims-judge.md",
+   "scripts/01_measure.py",
+   "data/raw/claims.jsonl",
+   "experiments/01-causal-claims-judge/scripts/02_analyze.py",
+   "experiments/01-causal-claims-judge/scripts/00_prepare.py",
+   "tests/../../../tests/test_01_causal_claims_judge.py",
+   "/tmp/judge3_audit.txt",
+   "experiments/01-causal-claims-judge/audits/*.toml",
+   "/Users/max/projects/labkit-probes-db1695d/judge-3.log.md",
+   "../../../judge-3.log.md"
+  ],
+  "source_reads": []
+ },
+ "agent": null
+}

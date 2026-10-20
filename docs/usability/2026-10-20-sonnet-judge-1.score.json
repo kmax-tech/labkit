@@ -1,0 +1,93 @@
+{
+ "probe": {
+  "staged": "2026-10-20T20:51:06",
+  "task": "judge",
+  "area": "01-causal-claims-judge",
+  "metric_key": "c1_accuracy",
+  "labkit_installed": "labkit @ file:///Users/max/projects/labkit-probes-db1695d/src",
+  "scaffold_sha": "d1de7d60240f",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "causal-claims-judge",
+   "--cost",
+   "seconds",
+   "--model",
+   "haiku"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-20T21-09-36_f5e5",
+ "number": 0.8333333333333334,
+ "expected": null,
+ "number_ok": true,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-causal-claims-judge.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 26,
+  "wall_seconds": 1721,
+  "gap_seconds": 1064,
+  "monotonic": true,
+  "read": 6,
+  "run": 11,
+  "edit": 4,
+  "unsure": 0,
+  "gate": 5,
+  "untagged": 0,
+  "source_reads": 1
+ },
+ "form": {
+  "lines": 98,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 301,
+  "summary_codes": 9,
+  "answer_has_table": false
+ },
+ "transcript": {
+  "wall_seconds": 1744,
+  "tool_seconds": 569,
+  "calls": 34,
+  "commands": {
+   "protocol-fill": 4,
+   "finalize": 1,
+   "runlog": 3
+  },
+  "refusals": 0,
+  "tokens": {
+   "calls": 54,
+   "input": 108,
+   "output": 1137,
+   "cache_read": 3695296,
+   "cache_creation": 254646,
+   "context_max": 87481
+  },
+  "files_read": [
+   "TASK.md",
+   "experiments/01-causal-claims-judge/README.md",
+   "models.toml",
+   "experiments/01-causal-claims-judge/PROTOCOL*",
+   "experiments/01-causal-claims-judge/scripts/*",
+   "data/raw/claims.jsonl",
+   "experiments/01-causal-claims-judge/scripts/01_measure.py",
+   "experiments/01-causal-claims-judge/scripts/00_prepare.py",
+   "tests/test_01*",
+   "/tmp/judge1-audit.txt",
+   "/tmp/judge1-audit.time",
+   "/tmp/judge1-audit2.txt",
+   "experiments/01-causal-claims-judge/audits/*.toml",
+   "/private/tmp/claude-501/-Users-max-projects-labkit/99696f9d-00d2-4cc5-830f-be98ca0b73dd/tasks/bbi7x2538.output",
+   "output/*",
+   "output/*draw3*",
+   "../judge-1.log.md"
+  ],
+  "source_reads": [
+   "site-packages/labkit/run/llm.py"
+  ]
+ },
+ "agent": null
+}
