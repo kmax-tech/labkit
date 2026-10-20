@@ -284,5 +284,36 @@ class Shown(unittest.TestCase):
             self.assertEqual(repo.shown(real / "lib" / "a.py", link), "lib/a.py")
 
 
+class AdoptCommand(unittest.TestCase):
+    """The adopt line names the protocol as the working directory reaches
+    it: a bare file name failed from the repo root (count probe, 2026-10-20)."""
+
+    def test_the_protocol_is_named_from_the_working_directory(self):
+        import os
+
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d).resolve()
+            proto = root / "experiments" / "01-x" / "PROTOCOL-x.md"
+            proto.parent.mkdir(parents=True)
+            old = Path.cwd()
+            try:
+                os.chdir(root)
+                at_root = repo.adopt_command(proto, "R1")
+                os.chdir(proto.parent)
+                in_area = repo.adopt_command(proto)
+                os.chdir(root.parent)
+                above = repo.adopt_command(proto)
+            finally:
+                os.chdir(old)
+        self.assertEqual(
+            at_root, "protocol-fill experiments/01-x/PROTOCOL-x.md --from-run R1"
+        )
+        self.assertEqual(in_area, "protocol-fill PROTOCOL-x.md --from-run <run_id>")
+        self.assertEqual(
+            above,
+            f"protocol-fill {root.name}/experiments/01-x/PROTOCOL-x.md --from-run <run_id>",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

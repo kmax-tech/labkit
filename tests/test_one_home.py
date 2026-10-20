@@ -19,7 +19,7 @@ from pathlib import Path
 PACKAGE = Path(__file__).resolve().parents[1] / "labkit"
 #: rules that also hold in the stamped script templates — a stamped area reads
 #: its tier off the contract like labkit does (review 2026-10-19)
-IN_TEMPLATES = {"a tier rule read off the head"}
+IN_TEMPLATES = {"a tier rule read off the head", "an adopt command spelled by hand"}
 
 #: (what, the shape of a copy, the module(s) where it belongs)
 RULES: list[tuple[str, str, set[str]]] = [
@@ -44,6 +44,13 @@ RULES: list[tuple[str, str, set[str]]] = [
     ("a shell line cut by hand", r"shlex\.(shlex|split)\(", {"shell"}),
     # runlog start and usability log each cut at `--` by hand (2026-10-20)
     ("a command cut at -- by hand", r"\.index\(\s*\"--\"\s*\)", {"console"}),
+    # six sites spelled `protocol-fill <file name> --from-run`; run from the
+    # repo root the bare name failed (count probe, 2026-10-20)
+    (
+        "an adopt command spelled by hand",
+        r"protocol-fill \{[^}]*\} --from-run",
+        {"repo"},
+    ),
     # thirteen modules read config.json's labkit fields by key; RunConfig
     # holds them typed where the record is read (2026-10-20)
     (
@@ -109,6 +116,7 @@ class OneHome(unittest.TestCase):
             "a path shown relative by hand": "shown = p.relative_to(b) if p.is_relative_to(b) else p",
             "a shell line cut by hand": "words = shlex.split(command)",
             "a command cut at -- by hand": 'cut = argv.index("--")',
+            "an adopt command spelled by hand": 'print(f"protocol-fill {PROTOCOL.name} --from-run {rid}")',
             "a run record read by key": "cfg = read_run_config(run) or {}",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',
             "a run id's start second compared by hand": "if answering_run.start_second(a) == answering_run.start_second(b):",

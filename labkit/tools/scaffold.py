@@ -41,6 +41,7 @@ from pathlib import Path
 from labkit import PACKAGE_DIR
 from labkit.formats import protocol_block, standard_contract
 from labkit.formats.repo import (
+    adopt_command,
     AREA_NAME,
     area_protocols,
     git_run,
@@ -553,7 +554,7 @@ def next_steps(rel: Path, slug: str, nn: str, cost: str | None, model: bool) -> 
         after += f", then the analysis audit (`{audit} analysis`), decided"
     steps.append(after + ".")
     steps.append(
-        f"`protocol-fill {protocol} --from-run <run_id>` adopts the number: it runs "
+        f"`{adopt_command(rel / protocol)}` adopts the number: it runs "
         "report-check, whose last station is scripts/02_analyze.py --check."
     )
     return f"\nNext ({title}):\n" + "\n".join(

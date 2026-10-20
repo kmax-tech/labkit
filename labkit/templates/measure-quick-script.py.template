@@ -23,6 +23,7 @@ import argparse
 import json
 from pathlib import Path
 
+from labkit.formats.repo import adopt_command
 from labkit.run import runlog
 
 AREA = Path(__file__).resolve().parent.parent
@@ -89,7 +90,7 @@ def main() -> None:
         metrics = evaluate_rows(items, ids)
         run.metrics(**metrics)
         print(json.dumps(metrics, indent=1))
-        print(f"run: {run.run_id}  → protocol-fill {PROTOCOL.name} --from-run {run.run_id}  "
+        print(f"run: {run.run_id}  → {adopt_command(PROTOCOL, run.run_id)}  "
               f"(writes the Answer, Result and Runs lines from metrics.json)")
 
 

@@ -263,6 +263,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The printed `protocol-fill … --from-run` line names the protocol's
+  path.** The measure scripts, `labkit-init exp`, `protocol-check` and
+  `--check` printed the bare file name, which failed "no such file" from
+  the repo root, where agents run the scripts (count probe, 2026-10-20).
+  All six now print `repo.adopt_command`: the protocol as the working
+  directory reaches it. Stamped measure scripts import it; areas stamped
+  before keep the old line.
 - **`code-check` at `seconds` no longer calls the protocol's open fields
   not owed.** Its closing line read "schema, gate labels, placeholders: not
   checked — not owed at cost seconds"; only the agent's review of schema

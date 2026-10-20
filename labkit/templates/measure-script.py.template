@@ -65,6 +65,7 @@ REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
 from labkit.run import batch, llm, runlog
 from labkit.formats import promises, protocol_block, standard_contract
+from labkit.formats.repo import adopt_command
 
 ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"   # written by 00_prepare.py: id · text · gold
 # One run, one output file. A second start of the same command RESUMES this
@@ -425,7 +426,7 @@ def main() -> None:
         measure(cfg, jobs, out, prov={**llm.provenance(args.model), "run": run.run_id})
         evaluate(out, cfg, jobs, run)
         if repeat is None:
-            print(f"run: {run.run_id}  → protocol-fill {PROTOCOL.name} --from-run {run.run_id}  "
+            print(f"run: {run.run_id}  → {adopt_command(PROTOCOL, run.run_id)}  "
                   f"(writes the Answer, Result and Runs lines from metrics.json)")
         else:
             print(f"repeat of {repeat}: {run.run_id} → scripts/02_analyze.py --draws")

@@ -352,7 +352,7 @@ class Exp(unittest.TestCase):
                 "runlog start experiments/01-foo",
                 "finalize experiments/01-foo",
                 "labkit-audit experiments/01-foo --mode analysis",
-                "protocol-fill PROTOCOL-foo.md --from-run",
+                "protocol-fill experiments/01-foo/PROTOCOL-foo.md --from-run",
             ]
             positions = [text.index(step) for step in order]
             self.assertEqual(positions, sorted(positions), text)

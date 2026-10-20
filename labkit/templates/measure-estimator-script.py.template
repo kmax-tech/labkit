@@ -79,6 +79,7 @@ REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
 from labkit.run import batch, runlog
 from labkit.formats import promises, protocol_block, standard_contract
+from labkit.formats.repo import adopt_command
 
 # written by 00_prepare.py: id · features (a list of numbers) · gold (null for
 # the unlabelled split) · split ("train" | "test")
@@ -407,7 +408,7 @@ def main() -> None:
         run.output(OUT)
         measure(cfg, items, OUT, prov={"run": run.run_id})
         evaluate(OUT, cfg, items, run)
-        print(f"run: {run.run_id}  → protocol-fill {PROTOCOL.name} --from-run {run.run_id}  "
+        print(f"run: {run.run_id}  → {adopt_command(PROTOCOL, run.run_id)}  "
               f"(writes the Answer, Result and Runs lines from metrics.json)")
 
 

@@ -90,6 +90,14 @@ def area_path(arg: str) -> Path:
     return hits.pop() if len(hits) == 1 else given
 
 
+def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
+    """The `protocol-fill … --from-run` line that adopts RUN_ID into PROTOCOL,
+    the protocol named as the working directory reaches it (`shown`): a bare
+    file name failed from the repo root, where agents run the scripts
+    (count probe, 2026-10-20)."""
+    return f"protocol-fill {shown(protocol, Path.cwd())} --from-run {run_id}"
+
+
 def shown(path: Path, base: Path) -> str:
     """PATH as a report line, a bundle header or a refusal names it: relative
     to BASE when it lies below it, else absolute; both resolved first (on

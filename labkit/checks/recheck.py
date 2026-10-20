@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import promises, protocol_block, runs, scope_sha, answering_run
+from labkit.formats.repo import adopt_command
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
 #: reproduce: runlog's duration, llm's retry counter (the stamped evaluate()
@@ -259,7 +260,7 @@ def cited(note: Path, numbers: list[str], run_id: str) -> None:
     if missing and ANSWER_OPEN.search(text):
         raise SystemExit(
             f"recheck: {note.name} has no answer yet — "
-            f"`protocol-fill {note.name} --from-run {run_id}` writes it"
+            f"`{adopt_command(note, run_id)}` writes it"
         )
     if missing:
         raise SystemExit(f"recheck: numbers not in {note.name}: {missing}")

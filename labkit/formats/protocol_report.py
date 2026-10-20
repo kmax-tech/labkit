@@ -24,7 +24,7 @@ from pathlib import Path
 
 from labkit import PACKAGE_DIR
 from labkit.formats import console, promises, protocol_block, standard_contract
-from labkit.formats.repo import git_root, repo_protocols
+from labkit.formats.repo import adopt_command, git_root, repo_protocols
 from labkit.formats.findings import waived_audit_gap
 from labkit.formats.scope_sha import audit_stamp_drift
 from labkit.formats.gate import BLOCKER, GateFinding
@@ -547,7 +547,7 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
     if r.runs_stamped:
         print(
             f"{f}: Runs: the stamped entry is written by "
-            f"`protocol-fill {f.name} --from-run <run_id>` after the run"
+            f"`{adopt_command(f)}` after the run"
         )
     if r.clean:
         if r.pilot_note:
