@@ -217,6 +217,27 @@ class StoreInstrument(unittest.TestCase):
                         list(store.pending([{"id": "x:2"}]))
                 self.assertIn("new output file", str(cm.exception))
 
+    def test_the_instrument_compares_as_stored_not_by_python_equality(self):
+        """`True == 1` in Python, but a row stored with `1` was measured with
+        another instrument; a tuple comes back from the file as a list and is
+        still the same one."""
+        written = {**self.A, "deterministic": 1}
+        out = self._with_rows(written)
+        with batch.Store(out, instrument={**self.A, "deterministic": True}) as store:
+            with self.assertRaises(batch.InstrumentError):
+                list(store.pending([{"id": "x:2"}]))
+        stops = {**self.A, "stops": ("a", "b")}
+        out = self._with_rows(stops)
+        with batch.Store(out, instrument=stops) as store:
+            todo = list(store.pending([{"id": "x:1"}, {"id": "x:2"}]))
+        self.assertEqual([r["id"] for r in todo], ["x:2"])
+
+    def test_an_instrument_json_cannot_hold_is_refused_at_construction(self):
+        out = Path(tempfile.mkdtemp()) / "rows.jsonl"
+        with self.assertRaises(TypeError) as cm:
+            batch.Store(out, instrument={"model": object()})
+        self.assertIn("instrument", str(cm.exception))
+
     def test_without_an_instrument_nothing_changes(self):
         out = self._with_rows(None)
         with batch.Store(out) as store:

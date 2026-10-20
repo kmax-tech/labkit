@@ -37,6 +37,8 @@ import time
 from pathlib import Path
 from typing import Iterable, Iterator, Mapping
 
+from labkit.formats import runs
+
 # A row without the expected field differs from every expected value, None included.
 _ABSENT = object()
 
@@ -224,8 +226,10 @@ class Store:
     the model alias. Every appended record carries it as `_instrument`, and
     `pending()` refuses to resume a file holding a row measured with another
     (or none): a changed prompt is a new measurement, not a continuation.
-    Resume by id alone let a new prompt keep the old prompt's answers (the
-    cloud judge probe's analysis audit, 2026-10-14).
+    Instruments compare as the file stores them (`runs.as_stored`): `1` is
+    not `true`, a tuple is its list. An instrument JSON cannot hold raises
+    TypeError at construction. Resume by id alone let a new prompt keep the
+    old prompt's answers (the cloud judge probe's analysis audit, 2026-10-14).
     """
 
     def __init__(
@@ -243,6 +247,12 @@ class Store:
         self.prov = dict(prov) if prov else {}
         self.mode = mode
         self.instrument = dict(instrument) if instrument else None
+        try:
+            self._instrument_stored = runs.as_stored(self.instrument)
+        except TypeError as exc:
+            raise TypeError(
+                f"Store instrument {self.instrument!r} cannot be stored as JSON: {exc}"
+            ) from exc
         self.lock = self.path.with_suffix(self.path.suffix + ".lock")
         self._tmp = self.path.with_suffix(self.path.suffix + ".tmp")
         self._fh = None
@@ -365,7 +375,9 @@ class Store:
         """
         if self.instrument is not None and not self._producing:
             other = [
-                r for r in self.records() if r.get("_instrument") != self.instrument
+                r
+                for r in self.records()
+                if runs.as_stored(r.get("_instrument")) != self._instrument_stored
             ]
             if other:
                 raise InstrumentError(
