@@ -33,11 +33,12 @@ Auftrag. Forschung und Benchmark-Fallliste liegen in
 
 ### Audit-Bindung und Hook-Auswahl
 
-- **Protokollprosa und Lauf-Inhalte:** Der Record bindet den Promise-Block
-  und beim Analyse-Audit die Lauf-ID. Übrige Protokollprosa und gezeigte
-  Ausgabezeilen des Laufs haben keinen eigenen gebundenen Digest. Eine
-  Erweiterung verändert, wann ein Audit fällig wird, und braucht eine
-  ausdrückliche Vertragsentscheidung. Für den bestehenden Snapshot gilt:
+- **Protokollprosa:** Der Record bindet Code, Promise-Block und beim
+  Analyse-Audit den Lauf samt dem Gezeigten (`shown_sha`). Die übrige
+  Protokollprosa hat keinen eigenen Digest — entschieden 2026-10-20:
+  vorerst nicht binden, weil jede Prosakorrektur ein bezahltes Audit fällig
+  machte. Auslöser: ein echter Fall, in dem eine Prosaänderung ein
+  berichtetes Ergebnis verfälscht hat. Für den bestehenden Snapshot gilt:
   Prompt und Stempel müssen dieselben gelesenen Bytes beschreiben;
   Änderungsfälle gehören in `tests/test_audit.py` (`OneSnapshot`).
 - **Berichte außerhalb des Protokolls:** Nicht jede Run-ID in einer Notiz

@@ -82,7 +82,7 @@ from pathlib import Path
 
 from labkit.formats.gate import Findings
 from labkit.formats import console, findings, promises, protocol_block
-from labkit.gates.audit import AuditError, audited_run
+from labkit.gates.audit import AuditError, audited_run, run_shown
 from labkit.gates.finalize import cited_runs, finalize_area
 from labkit.gates.preflight import area_test_python
 from labkit.formats.protocol_check import check_fields
@@ -225,8 +225,9 @@ def freeze_gaps(ctx: Checked) -> list[str]:
 
 def analysis_audit_gap(ctx: Checked) -> str | None:
     """Station 3: why no decided analysis record covers the code, the promise
-    block and the answering run as they are now, or None. Without an
-    answering run there is nothing the audit could be held to."""
+    block, the answering run and what the audit was shown of it as they are
+    now, or None. Without an answering run there is nothing the audit could
+    be held to."""
     if ctx.run is None:
         return f"no answering run to hold it to — {ctx.why}"
     try:
@@ -236,7 +237,10 @@ def analysis_audit_gap(ctx: Checked) -> str | None:
             ANALYSIS_AUDIT,
             promises.block_stamp(ctx.text),
             ctx.run.name,
+            run_shown(ctx.area, ctx.run, "").sha,
         )
+    except AuditError as exc:  # a registered output is gone
+        return f"the analysis audit cannot be held to the run: {exc}"
     except (FileNotFoundError, ValueError) as exc:
         # ValueError: nothing to stamp, a findings file or the promise block
         # unreadable (FindingsError, PromiseError)

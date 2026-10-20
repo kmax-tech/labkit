@@ -71,7 +71,15 @@ from typing import NamedTuple
 
 from labkit import PACKAGE_DIR
 from labkit.run import llm, llm_backends
-from labkit.formats import console, findings, promises, protocol_block, rules, scope_sha
+from labkit.formats import (
+    console,
+    findings,
+    promises,
+    protocol_block,
+    rules,
+    runs,
+    scope_sha,
+)
 from labkit.formats.standard_contract import lane
 from labkit.formats.repo import (
     ProtocolChoiceError,
@@ -215,6 +223,23 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
     return out
 
 
+class RunShown(NamedTuple):
+    """What MODE analysis shows of the answering run, taken once: the
+    pieces the prompt renders (`run_rows`) and their digest, which the record
+    carries as `shown_sha` and report-check recomputes — a metrics.json or
+    output rows changed after the audit owe a new one (review 2026-10-20:
+    the run id alone could not tell)."""
+
+    pieces: tuple[tuple[str, str], ...]
+    sha: str
+
+
+def run_shown(area: Path, run_dir: Path | None, why: str) -> RunShown:
+    """`run_rows` of RUN_DIR as one snapshot with its digest."""
+    pieces = tuple(run_rows(area, run_dir, why))
+    return RunShown(pieces, scope_sha.digest(runs.as_stored(pieces).encode("utf-8")))
+
+
 def rows_excerpt(path: Path, name: str) -> tuple[str, str]:
     """`(label, text)` of one output file: its first ROWS_HEAD and last
     ROWS_TAIL lines as `<line>: <row>`, a gap marked by its size, a row
@@ -336,11 +361,12 @@ class Source(NamedTuple):
     """What a prompt is rendered from, each read once by the caller: the
     protocol's text, a reader for every other file (`Snapshot.text` for an
     audit, so the prompt shows the bytes the record's sha names), and in
-    MODE analysis the answering run as chosen once (`audited_run`)."""
+    MODE analysis what it shows of the answering run (`run_shown`, the same
+    pieces whose digest the record carries)."""
 
     protocol_text: str
     read: Callable[[Path], str]
-    run: tuple[Path | None, str] = (None, "not an analysis audit")
+    run: tuple[tuple[str, str], ...] = ()
 
 
 def render(
@@ -378,7 +404,7 @@ def render(
         if indexed:
             pieces.append((INDEX_LABEL, module_index(indexed, repo, source.read)))
         if mode == ANALYSIS:
-            pieces += run_rows(area, *source.run)
+            pieces += source.run
     body = "".join(f"===== {label} =====\n{text}\n" for label, text in pieces)
     return (
         f"{instructions(mode)}\n\nMODE: {mode} · AREA: {rel(area)}\n\n"
@@ -563,14 +589,16 @@ def _answer_or_record(
 
 def bound_prompt(
     mode: str, area: Path, reading: Reading
-) -> tuple[str, Stamp, str, str | None, list[Path]]:
-    """(prompt, stamp, block sha, run id, indexed files) from ONE reading:
+) -> tuple[str, Stamp, str, str | None, str | None, list[Path]]:
+    """(prompt, stamp, block sha, run id, shown sha, indexed files) from ONE
+    reading:
     the record binds what the prompt shows. The code is one snapshot: its
     bytes render the prompt, its sha goes in the record, and every stamped
     file the reading does not take in full is indexed — so the prompt shows
     each file the stamp covers, no more and no fewer. The promise block
     comes from the one protocol text the prompt carries; in MODE analysis
-    the run is chosen once for rows and record (NO_RUN when none answers).
+    the run is chosen once, and what the prompt shows of it is one snapshot
+    whose digest goes in the record (NO_RUN when none answers).
 
     The reading's file list was taken before the snapshot. After rendering,
     the list, the snapshot and the protocol are taken again; any change
@@ -583,10 +611,11 @@ def bound_prompt(
     full = {c.resolve() for c in reading.code}
     indexed = [f for f in snap.files if f.resolve() not in full]
     run_id: str | None = None
-    chosen_run: tuple[Path | None, str] = (None, "not an analysis audit")
+    shown: RunShown | None = None
     if mode == ANALYSIS:
-        chosen_run = audited_run(area, protocol, text)
-        run_id = chosen_run[0].name if chosen_run[0] is not None else findings.NO_RUN
+        run_dir, why = audited_run(area, protocol, text)
+        run_id = run_dir.name if run_dir is not None else findings.NO_RUN
+        shown = run_shown(area, run_dir, why)
     changed = "the area changed while it was read; run the audit again"
     try:
         prompt = render(
@@ -596,7 +625,7 @@ def bound_prompt(
             reading.code,
             reading.standard,
             indexed,
-            source=Source(text, snap.text, chosen_run),
+            source=Source(text, snap.text, shown.pieces if shown else ()),
         )
     except KeyError as exc:
         raise AuditError(f"{exc.args[0]} — {changed}") from exc
@@ -608,7 +637,8 @@ def bound_prompt(
     ):
         raise AuditError(f"{area}: {changed}")
     stamp = Stamp(snap.sha, list(snap.files))
-    return prompt, stamp, promises.block_stamp(text), run_id, indexed
+    shown_sha = shown.sha if shown else None
+    return prompt, stamp, promises.block_stamp(text), run_id, shown_sha, indexed
 
 
 def main(argv: list[str]) -> int:
@@ -641,7 +671,7 @@ def main(argv: list[str]) -> int:
         protocol, code = reading.protocol, reading.code
         for line in early_for_tier(args.area, protocol, args.mode):
             print(f"labkit-audit: {line}", file=sys.stderr)
-        prompt, stamp, block_sha, run_id, indexed = bound_prompt(
+        prompt, stamp, block_sha, run_id, shown_sha, indexed = bound_prompt(
             args.mode, args.area, reading
         )
         print(
@@ -679,6 +709,7 @@ def main(argv: list[str]) -> int:
             result["verdict"],
             result["findings"],
             run_id=run_id,
+            shown_sha=shown_sha,
         )
     except ValueError as exc:  # verdict and finding lines disagree
         print(f"labkit-audit: {exc}", file=sys.stderr)

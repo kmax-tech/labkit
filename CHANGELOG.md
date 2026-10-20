@@ -9,6 +9,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **An analysis audit record names what it was shown of the run.** The
+  record bound the run id only, so a `metrics.json` or output rows changed
+  after the audit still read as audited. `labkit-audit --mode analysis`
+  writes `shown_sha`, the digest of the rows' excerpts and the metrics.json
+  the prompt showed (one snapshot for prompt and record), and report-check
+  recomputes it for the answering run. An analysis record without
+  `shown_sha` is no longer read: run the analysis audit again. 0.99.0 is the
+  last release that reads it.
+
 - **Runs declare their purpose through `run_kind`, not `long`.** Pass
   `run_kind="probe"` for an instrument check or `run_kind="measurement"`
   for the registered measurement; `run_kind="preparation"` preserves the

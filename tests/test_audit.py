@@ -232,6 +232,13 @@ class Audit(unittest.TestCase):
         self.assertNotIn('\n51: {"i": 51,', prompt)
         self.assertIn("runs/2026-01-01T00-00-00_0001/metrics.json =====", prompt)
         self.assertIn('"c1_pass": true', prompt)
+        # what the prompt showed is one snapshot: every shown piece stands in
+        # the prompt, and the record's shown_sha is its digest, the one
+        # report-check recomputes for the answering run
+        shown = audit.run_shown(area, area / "runs" / "2026-01-01T00-00-00_0001", "")
+        for label, text in shown.pieces:
+            self.assertIn(f"===== {label} =====\n{text}\n", prompt)
+        self.assertIn(f'shown_sha = "{shown.sha}"', record)
 
     def test_mode_analysis_without_a_run_says_so(self):
         area = repo_with()

@@ -25,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.gates import claude_hooks  # noqa: E402
+from labkit.gates import audit, claude_hooks  # noqa: E402
 from labkit.formats import findings, promises, scope_sha, shell  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, PID, head  # noqa: E402
 
@@ -461,6 +461,9 @@ class Stop(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 run_id=self.RUN,
+                shown_sha=audit.run_shown(
+                    self.area, self.area / "runs" / self.RUN, ""
+                ).sha,
             )
 
     def _answer(self, run_id: str) -> None:

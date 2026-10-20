@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package unde
 
 from labkit import PACKAGE_DIR  # noqa: E402
 from labkit.tools import protocol_fill  # noqa: E402
+from labkit.gates import audit  # noqa: E402
 from labkit.checks import prompt_check  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
@@ -525,6 +526,7 @@ class Adopt(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 run_id=self.RUN,
+                shown_sha=audit.run_shown(area, area / "runs" / self.RUN, "").sha,
             )
         return area
 

@@ -28,7 +28,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit.gates import claude_hooks, finalize, preflight, report_check
+from labkit.gates import audit, claude_hooks, finalize, preflight, report_check
 from labkit.tools import protocol_fill, scaffold
 from labkit.formats import findings, promises, scope_sha, standard_contract as sc
 
@@ -140,6 +140,11 @@ class Lab:
             (0, 0, 0),
             [],
             run_id=run_id,
+            shown_sha=(
+                audit.run_shown(area, area / "runs" / run_id, "").sha
+                if run_id is not None
+                else None
+            ),
         )
         return sha
 

@@ -8,6 +8,7 @@ from labkit.formats import findings
 
 BLOCK = "b10c0000000a"  # the promise block every fixture record names
 RUN = "2026-01-01T00-00-00_0001"  # the run every analysis fixture record names
+SHOWN = "5" * 12  # what every analysis fixture record was shown of RUN
 TWO = [
     ("BLOCKER", "BLOCKER · a.py:1 · x · y · LAB-038 What the prompt demands · z"),
     ("WARNING", "WARNING · b.py:2 · x · y · LAB-019 The stamp covers everything · z"),
@@ -33,6 +34,7 @@ def area_with(
             ),
             rows,
             run_id=RUN if mode == "analysis" else None,
+            shown_sha=SHOWN if mode == "analysis" else None,
             now=1_700_000_000 + 60 * i,
         )
     return area
@@ -293,16 +295,27 @@ class Binding(unittest.TestCase):
     def test_an_analysis_audit_of_another_run_is_not_covered(self):
         area = area_with([("analysis", [])])
         self.assertIsNone(
-            findings.audit_coverage(area, self.SHA, "analysis", BLOCK, RUN)
+            findings.audit_coverage(area, self.SHA, "analysis", BLOCK, RUN, SHOWN)
         )
         gap = (
             findings.audit_coverage(
-                area, self.SHA, "analysis", BLOCK, "2026-01-02T00-00-00_0002"
+                area, self.SHA, "analysis", BLOCK, "2026-01-02T00-00-00_0002", SHOWN
             )
             or ""
         )
-        self.assertIn("run 2026-01-02T00-00-00_0002; audited: ", gap)
+        self.assertIn(f"run 2026-01-02T00-00-00_0002, shown {SHOWN}; audited: ", gap)
         self.assertIn(f"run {RUN}", gap)
+
+    def test_the_same_run_showing_other_rows_or_metrics_is_not_covered(self):
+        """The run id alone could not tell a metrics.json or output rows
+        changed after the audit (review 2026-10-20)."""
+        area = area_with([("analysis", [])])
+        gap = (
+            findings.audit_coverage(area, self.SHA, "analysis", BLOCK, RUN, "6" * 12)
+            or ""
+        )
+        self.assertIn(f"run {RUN}, shown {'6' * 12}; audited: ", gap)
+        self.assertIn(f"shown {SHOWN}", gap)
 
     def test_the_run_is_owed_by_analysis_and_refused_by_preflight(self):
         area = Path(tempfile.mkdtemp())
@@ -310,17 +323,34 @@ class Binding(unittest.TestCase):
             findings.write(area, "analysis", "m", "s", "b", (0, 0, 0), [])
         with self.assertRaisesRegex(ValueError, "names none"):
             findings.write(area, "preflight", "m", "s", "b", (0, 0, 0), [], run_id=RUN)
+        with self.assertRaisesRegex(ValueError, "names what it was shown"):
+            findings.write(area, "analysis", "m", "s", "b", (0, 0, 0), [], run_id=RUN)
+        with self.assertRaisesRegex(ValueError, "is shown none"):
+            findings.write(
+                area, "preflight", "m", "s", "b", (0, 0, 0), [], shown_sha=SHOWN
+            )
         with self.assertRaisesRegex(ValueError, "held to the answering run"):
             findings.audit_coverage(area, self.SHA, "analysis", BLOCK)
-        with self.assertRaisesRegex(ValueError, "a preflight audit to none"):
+        with self.assertRaisesRegex(ValueError, "held to the answering run"):
+            findings.audit_coverage(area, self.SHA, "analysis", BLOCK, RUN)
+        with self.assertRaisesRegex(ValueError, "a preflight audit to neither"):
             findings.audit_coverage(area, self.SHA, "preflight", BLOCK, RUN)
         # a record without a run is written as NO_RUN, and read so
         path = findings.write(
-            area, "analysis", "m", "s", "b", (0, 0, 0), [], run_id=findings.NO_RUN
+            area,
+            "analysis",
+            "m",
+            "s",
+            "b",
+            (0, 0, 0),
+            [],
+            run_id=findings.NO_RUN,
+            shown_sha=SHOWN,
         )
         self.assertEqual(findings.read(path).run_id, "none")
         self.assertIn(
-            "run none", findings.audit_coverage(area, "s", "analysis", "b", RUN) or ""
+            "run none",
+            findings.audit_coverage(area, "s", "analysis", "b", RUN, SHOWN) or "",
         )
 
     def test_a_record_missing_its_binding_is_loud(self):
@@ -333,7 +363,16 @@ class Binding(unittest.TestCase):
         pre.write_text(text + f'run_id = "{RUN}"\n', encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "reads no run"):
             findings.read(pre)
+        pre.write_text(text + f'shown_sha = "{SHOWN}"\n', encoding="utf-8")
+        with self.assertRaisesRegex(findings.FindingsError, "reads no run"):
+            findings.read(pre)
         text = ana.read_text(encoding="utf-8")
         ana.write_text(text.replace(f'run_id = "{RUN}"\n', ""), encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "run_id is missing"):
+            findings.read(ana)
+        # an analysis record written before shown_sha existed is no longer read
+        ana.write_text(text.replace(f'shown_sha = "{SHOWN}"\n', ""), encoding="utf-8")
+        with self.assertRaisesRegex(
+            findings.FindingsError, "run the analysis audit again"
+        ):
             findings.read(ana)

@@ -87,6 +87,7 @@ class OpenFindings(unittest.TestCase):
             ),
             rows,
             run_id="r1" if mode == "analysis" else None,
+            shown_sha="0" * 12 if mode == "analysis" else None,
         )
 
     def test_an_open_blocker_blocks_with_its_file(self):

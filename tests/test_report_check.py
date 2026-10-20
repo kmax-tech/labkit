@@ -33,7 +33,7 @@ from unittest import mock
 from protocol_fixture import completed_run, head, scope_file
 
 from labkit.formats import findings, promises, scope_sha, standard_contract
-from labkit.gates import report_check
+from labkit.gates import audit, report_check
 
 
 class ReportCheck(unittest.TestCase):
@@ -63,7 +63,15 @@ class ReportCheck(unittest.TestCase):
             (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
         )
         findings.write(
-            area, "analysis", "opus", sha, block, (0, 0, 0), [], run_id=run.name
+            area,
+            "analysis",
+            "opus",
+            sha,
+            block,
+            (0, 0, 0),
+            [],
+            run_id=run.name,
+            shown_sha=audit.run_shown(area, run, "").sha,
         )
 
     def _run(
@@ -282,7 +290,7 @@ class ReportCheck(unittest.TestCase):
         later = self._answered(area, "2026-01-02T00-00-00_0002")
         code, out = self._run(area)
         self.assertEqual(code, 1, out)
-        self.assertIn(f"run {later.name}; audited: ", out)
+        self.assertIn(f"run {later.name}, shown ", out)
         self._audited(area, later)
         code, out = self._run(area)
         self.assertEqual(code, 0, out)
@@ -295,6 +303,22 @@ class ReportCheck(unittest.TestCase):
         )
         code, out = self._run(area)
         self.assertEqual(code, 1, out)
+        self.assertIn("no analysis audit saw the area as it is now", out)
+
+    def test_the_same_run_with_other_metrics_or_rows_than_audited_blocks(self):
+        """The record named the run id only, so a metrics.json or output rows
+        changed after the audit still read as audited (review 2026-10-20).
+        The twin: the audited run as it was is clean."""
+        area = self._area()
+        run = self._answered(area)
+        self._audited(area, run)
+        code, out = self._run(area)
+        self.assertEqual(code, 0, out)
+        metrics = run / "metrics.json"
+        metrics.write_text(metrics.read_text(encoding="utf-8").replace("true", "false"))
+        code, out = self._run(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn(f"run {run.name}, shown ", out)
         self.assertIn("no analysis audit saw the area as it is now", out)
 
     def test_an_analysis_audit_of_older_code_blocks(self):
@@ -431,6 +455,7 @@ class IfReported(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 run_id=run.name,
+                shown_sha=audit.run_shown(area, run, "").sha,
             )
         if git:
             self._git(area.parent.parent, "add", "-A")
