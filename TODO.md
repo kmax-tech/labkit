@@ -54,7 +54,7 @@ Auftrag. Forschung und Benchmark-Fallliste liegen in
 |---|---|---|
 | Run-Records | `runlog.active` liefert Dicts mit hineingemischter Config. Eigene Config-Felder werden nach der Lesegrenze weiterhin über Schlüssel gelesen. | Öffentliche Skript-API gesondert behandeln. Vollständige `RunConfig` nur mit klaren Invarianten für die eigenen Felder; Experiment-Config bleibt frei. |
 | Backend-Aufrufe | `max_tokens` bleibt bei claude-cli wirkungslos; ein Default unterscheidet explizite Angabe nicht von Vorgabe. Server-Antworten sind noch nicht durchgängig strikt typisiert. | Aufrufvertrag festlegen, etwa optionales `max_tokens`, dann unbediente Optionen verweigern. Antwortparser als eigener Schritt mit fehlerhaften Antworten testen. |
-| Findings | `GateFinding` existiert; die gemeinsame Prüfliste `code_check.code_findings` liefert Text. `grade_of` liest den Grad daraus; ungradierter Text zählt als Blocker. | Erst bei konkreter Fehlklassifikation oder Wartungsproblem Grad, Stufe, Fundstelle und Nachricht als Daten bis zur CLI reichen. Gemeinsame Prüfliste beibehalten. |
+| Findings | Die erste Fehlklassifikation ist eingetreten und eng behoben (`e6dbb08`): Protokoll-ID-Befunde tragen ihren Grad als `GateFinding`, `grade_of` liest nur das erste Wort. `code_check.code_findings` liefert weiter Text, gradiert über das führende `BLOCKER ·`/`WARNING ·`. | Beim nächsten Fehlgrad oder Wartungsproblem Grad, Stufe, Fundstelle und Nachricht als Daten bis zur CLI reichen. Gemeinsame Prüfliste beibehalten. |
 
 ### Restarbeiten aus dem Code-Audit
 
@@ -65,6 +65,11 @@ aktuellen Code prüfen, keine alten Zeilennummern als offenen Befund übernehmen
   `trace`/`timeline`, `registry`/`ledger`. Keine pauschale Umbenennung.
 - Verbleibende `noqa: C901` entlang fachlicher Abläufe abbauen, wenn dort
   gearbeitet wird; nicht allein nach Dateilänge teilen.
+- Schicht 1 heißt in `docs/architecture.md` „read-only answers“, enthält aber
+  Schreibendes (`runs.write_atomic`, `findings.write`) und Konsolenausgabe
+  (`console`, `gate`). Entweder die Beschreibung an den Bestand anpassen
+  oder Schreiben/Ausgabe in eine eigene Schicht ziehen — Vertragsfrage,
+  nicht nebenbei (Review 2026-10-20).
 - Der Wächter für `repo.shown` in `tests/test_one_home.py` erkennt nur die
   Bedingungsform (`is_relative_to`), keine neue `try`/`except
   ValueError`-Kopie.
