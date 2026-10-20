@@ -161,11 +161,12 @@ def labkit_pin(ref: str | None = None) -> str:
     version = importlib.metadata.version("labkit")
     source = source_version()
     if source is not None and source != version:
-        raise SystemExit(
-            f"labkit-init: the installed metadata say {version}, the source "
+        raise console.Refused(
+            "labkit-init",
+            f"the installed metadata say {version}, the source "
             f"checkout declares {source} — an editable install keeps the "
             f"version of its last install; run `pip install -e '.[dev]'` "
-            f"there, or the pin names a tag the templates do not belong to"
+            f"there, or the pin names a tag the templates do not belong to",
         )
     return f"labkit @ git+{LABKIT_REMOTE}@{ref or 'v' + version}"
 
@@ -219,7 +220,7 @@ def area_slug(name: str) -> str:
     """The area name as a slug, without a typed `NN-` prefix (labkit owns the number)."""
     slug = split_area_name(re.sub(r"[^a-z0-9-]+", "-", name.lower()).strip("-"))[1]
     if not slug:
-        raise SystemExit(f"labkit-init: unusable experiment name: {name!r}")
+        raise console.Refused("labkit-init", f"unusable experiment name: {name!r}")
     return slug
 
 
@@ -296,7 +297,7 @@ def promote(area: Path, blocks: ProtocolBlocks) -> list[str]:
     """Fill the report-grade fields into an existing area's protocols."""
     protos = area_protocols(area)
     if not protos:
-        raise SystemExit(f"labkit-init: no PROTOCOL-*.md in {area}")
+        raise console.Refused("labkit-init", f"no PROTOCOL-*.md in {area}")
     log = []
     for proto in protos:
         text = proto.read_text(encoding="utf-8")
@@ -374,8 +375,9 @@ def stamp_area(
     slug = area_slug(name)
     experiments = root / "experiments"
     if not (root / "models.toml").is_file() or not experiments.is_dir():
-        raise SystemExit(
-            f"labkit-init: {root} is not a lab repo (no models.toml / experiments/) — run `labkit-init lab` first"
+        raise console.Refused(
+            "labkit-init",
+            f"{root} is not a lab repo (no models.toml / experiments/) — run `labkit-init lab` first",
         )
     # the cut and the skeleton are the contract's answers, not read off the
     # tier here (a tier compared by hand outside the contract is a copy)
@@ -408,8 +410,9 @@ def stamp_area(
     ]
     if existing:
         if not report:
-            raise SystemExit(
-                f"labkit-init: experiment already exists: {existing[0]} (add report fields: --report)"
+            raise console.Refused(
+                "labkit-init",
+                f"experiment already exists: {existing[0]} (add report fields: --report)",
             )
         return existing[0], "\n".join(promote(existing[0], blocks))
     nn = next_experiment_number(experiments)
@@ -454,8 +457,8 @@ def _point_hooks_at(root: Path) -> None:
         return
     r = git_run(["config", "core.hooksPath", ".githooks"], root)
     if r.returncode != 0:
-        raise SystemExit(
-            f"labkit-init: git config core.hooksPath failed: {r.stderr.strip()}"
+        raise console.Refused(
+            "labkit-init", f"git config core.hooksPath failed: {r.stderr.strip()}"
         )
 
 

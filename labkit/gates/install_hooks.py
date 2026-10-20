@@ -303,7 +303,7 @@ def main(argv: list[str]) -> int:
     cmd, where = argv[0], Path(argv[1]) if len(argv) > 1 else Path(".")
     repo = git_root(where)
     if repo is None:
-        print(f"labkit-hooks: {where} is not inside a git repo")
+        console.refuse("labkit-hooks", f"{where} is not inside a git repo")
         return 2
     if cmd == "install":
         for line in install(repo):
@@ -316,7 +316,7 @@ def main(argv: list[str]) -> int:
         if gaps:
             print("labkit-hooks: fix with  .venv/bin/labkit-hooks install")
         return 1 if gaps else 0
-    print(f"labkit-hooks: unknown command {cmd!r}")
+    console.refuse("labkit-hooks", f"unknown command {cmd!r}")
     return 2
 
 

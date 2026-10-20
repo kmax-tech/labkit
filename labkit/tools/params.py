@@ -320,26 +320,27 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     try:
         pid = protocol_id_of(text)
     except protocol_block.BlockError as exc:
-        print(f"labkit-params: {protocol.name}: {exc}")
+        console.refuse("labkit-params", f"{protocol.name}: {exc}")
         return 2
     if run_arg is not None:
         run_dir = area / "runs" / run_arg
         if not run_dir.is_dir():
-            print(f"labkit-params: no run {run_arg} under {area / 'runs'}")
+            console.refuse("labkit-params", f"no run {run_arg} under {area / 'runs'}")
             return 2
         how = "named with --run"
     else:
         if pid is None:
-            print(
-                f"labkit-params: {protocol.name} is unstamped — name a run with --run"
+            console.refuse(
+                "labkit-params", f"{protocol.name} is unstamped — name a run with --run"
             )
             return 2
         choice = bound_answering_run(area, pid)
         blocker, lines = choice.explain(promises.registers_ids(text))
         if blocker or choice.run_dir is None:
-            print(f"labkit-params: {blocker}")
-            for line in lines:
-                print(f"    {line}")
+            console.refuse(
+                "labkit-params",
+                "\n".join([str(blocker), *(f"    {ln}" for ln in lines)]),
+            )
             return 2
         run_dir = choice.run_dir
         how = f"the run that answers for {pid}" + "".join(f" ({ln})" for ln in lines)
@@ -347,7 +348,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     try:
         rows = params_table(area, protocol, run_dir)
     except ValueError as exc:
-        print(f"labkit-params: {exc}")
+        console.refuse("labkit-params", str(exc))
         return 2
     print(render_table(rows))
     return 0

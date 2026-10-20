@@ -83,7 +83,7 @@ from types import TracebackType
 from collections.abc import Iterator
 
 from labkit.run import batch
-from labkit.formats import repo
+from labkit.formats import console, repo
 from labkit.formats.standard_contract import lane
 from labkit.formats.runs import (
     COMPLETED,
@@ -688,9 +688,10 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
     with _index_lock(base_dir):
         header, rows = _read_index(index)
         if header and header != RUN_INDEX_COLS:
-            print(
-                f"runlog: {index} has old columns {header} — migrate it "
-                f"with labkit 0.47 (`runlog migrate-index`) first."
+            console.refuse(
+                "runlog",
+                f"{index} has old columns {header} — migrate it "
+                f"with labkit 0.47 (`runlog migrate-index`) first.",
             )
             return 2
         seen: dict[str, int] = {}
@@ -699,10 +700,11 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
                 seen[row[0]] = seen.get(row[0], 0) + 1
         dupes = sorted(rid for rid, n in seen.items() if n > 1)
         if dupes:
-            print(
-                f"runlog: {index} lists {len(dupes)} run_id(s) more than "
+            console.refuse(
+                "runlog",
+                f"{index} lists {len(dupes)} run_id(s) more than "
                 f"once: {', '.join(dupes[:5])} — repair by hand; a run "
-                f"belongs in the index exactly once."
+                f"belongs in the index exactly once.",
             )
             return 2
 

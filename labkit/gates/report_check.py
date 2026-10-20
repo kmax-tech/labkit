@@ -93,6 +93,7 @@ from labkit.formats.repo import (
     git_run,
     indexed_protocols,
     layout_root,
+    no_such_area,
     status_entries,
 )
 from labkit.formats.runs import read_run_config, unreportable
@@ -311,7 +312,7 @@ def report_check(
     try:
         ctx = checked(area, chosen, state=state, text=text)
     except (protocol_block.BlockError, AuditError) as exc:
-        print(f"report-check: {chosen.name}: {exc}")
+        console.refuse("report-check", f"{chosen.name}: {exc}")
         return 2
     print(
         f"  {chosen.name}: read from the {ctx.state}; the answer cites "
@@ -440,7 +441,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--protocol", type=Path, default=None)
     a = ap.parse_args(argv)
     if not a.area.is_dir():
-        print(f"report-check: {a.area} is not a directory")
+        console.refuse("report-check", no_such_area(a.area))
         return 2
     return report_check(a.area.resolve(), a.protocol)
 

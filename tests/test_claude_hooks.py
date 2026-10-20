@@ -361,11 +361,12 @@ class PostChange(unittest.TestCase):
         )
 
     def test_sessions_run_without_a_value_is_a_usage_error(self):
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             rc = claude_hooks.sessions(["--run"])
         self.assertEqual(rc, 2)
-        self.assertIn("needs a RUN_ID", buf.getvalue())
+        self.assertEqual(out.getvalue(), "")  # a refusal, not a finding
+        self.assertIn("needs a RUN_ID", err.getvalue())
 
     def test_nothing_changed_is_silent(self):
         ev = _bash(self.root, "ls")

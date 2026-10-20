@@ -70,8 +70,9 @@ class TestScopeSha(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
 
     def _run(self, argv):
+        """(exit code, stdout and stderr together)."""
         buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
             rc = scope_sha.main(argv)
         return rc, buf.getvalue()
 

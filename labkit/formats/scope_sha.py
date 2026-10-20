@@ -504,14 +504,16 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         a = argv[i]
         if a == "--area":
             if i + 1 >= len(argv):
-                print("--area needs a directory")
+                console.refuse("scope-sha", "--area needs a directory")
                 return 2
             area = Path(argv[i + 1])
             i += 2
             continue
         if a == "--globs":
             if i + 1 >= len(argv):
-                print("--globs needs a comma-separated pattern list")
+                console.refuse(
+                    "scope-sha", "--globs needs a comma-separated pattern list"
+                )
                 return 2
             globs = tuple(p.strip() for p in argv[i + 1].split(","))
             i += 2
@@ -533,7 +535,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     try:
         sha, files, pin_found = area_stamp(area, extra, globs, use_pin)
     except (FileNotFoundError, ValueError) as exc:
-        print(f"scope-sha: {exc}")
+        console.refuse("scope-sha", str(exc))
         return 2
     root = layout_root(area)
     for key in sorted({_key(f, root) for f in files}):

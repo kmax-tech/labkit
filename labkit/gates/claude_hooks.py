@@ -506,7 +506,7 @@ def record_session(repo: Path, event: dict, now: datetime | None = None) -> dict
 def sessions(argv: list[str]) -> int:
     """Print the session log, or the session(s) a run came from."""
     if "--run" in argv and argv.index("--run") + 1 >= len(argv):
-        print("claude-hook sessions: --run needs a RUN_ID")
+        console.refuse("claude-hook sessions", "--run needs a RUN_ID")
         return 2
     run = argv[argv.index("--run") + 1] if "--run" in argv else None
     repo = Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())

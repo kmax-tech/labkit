@@ -34,11 +34,16 @@ from importlib.metadata import entry_points
 from pathlib import Path
 from types import FrameType
 
+from labkit.formats import console
+
 USAGE = "usage: labkit-calltree [--depth N] [--out FILE] TARGET [-- ARGS...]"
 
 
-class CalltreeError(Exception):
+class CalltreeError(console.Refused):
     """A target that cannot be resolved, or a malformed command line."""
+
+    def __init__(self, why: str) -> None:
+        super().__init__("labkit-calltree", why)
 
 
 @dataclass
@@ -230,12 +235,7 @@ def main(argv: list[str]) -> int:
 
 def cli() -> None:
     """Console entry point of `labkit-calltree`."""
-    try:
-        code = main(sys.argv[1:])
-    except CalltreeError as exc:
-        sys.stderr.write(f"labkit-calltree: {exc}\n")
-        code = 2
-    sys.exit(code)
+    console.exit_with(main)
 
 
 if __name__ == "__main__":

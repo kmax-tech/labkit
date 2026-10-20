@@ -679,16 +679,18 @@ def main(argv: list[str]) -> int:
     tmpl_arg = None
     if argv and argv[0] == "--template":
         if len(argv) < 2:
-            print("--template needs a path")
+            console.refuse("protocol-check", "--template needs a path")
             return 2
         tmpl_arg, argv = argv[1], argv[2:]
     if not argv:
-        print((__doc__ or "").strip().splitlines()[0])
-        print("usage: protocol-check [--template PATH] <PROTOCOL-*.md | dir> ...")
+        console.refuse(
+            "protocol-check",
+            "no protocol named\nusage: protocol-check [--template PATH] <PROTOCOL-*.md | dir> ...",
+        )
         return 2
     files = collect_protocols(argv)
     if not files:
-        print("protocol-check: no PROTOCOL-*.md found")
+        console.refuse("protocol-check", "no PROTOCOL-*.md found")
         return 2
 
     tmpl = template_lines(find_template(tmpl_arg))

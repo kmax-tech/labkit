@@ -320,11 +320,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
-- **intent-check refuses on stderr.** A protocol it cannot read, a
-  metrics file that may not answer, no bound run to choose: each goes
-  through `console.refuse` with exit 2, as the other gates already did;
-  stdout carries only what the check found. Inside `finalize` the reason
-  still stands above its blocker in the terminal.
+- **Every command refuses on stderr with exit 2.** intent-check,
+  protocol-check, scope-sha, report-check, labkit-params, labkit-hooks,
+  `claude-hook sessions`, the run index of runlog and labkit-check sent
+  some refusals to stdout or wrote stderr by hand; each now goes through
+  `console.refuse`, and stdout carries only what a check found. labkit-init
+  refused with `SystemExit` (exit 1) and now exits 2; labkit-calltree
+  leaves its own exit for `console.exit_with`. A refusal raised as
+  `console.Refused(tool, why)` reaches `exit_with` from any depth, so a
+  command that stamps through labkit-init's functions (`usability stage`)
+  shows the refusal, not a traceback. Inside `finalize` intent-check's
+  reason still stands above its blocker in the terminal.
 - **The README introduces labkit and walks through using it.** Installation,
   the measurement lifecycle, cost tiers and result adoption precede the
   command reference. Internal records and enforcement live in

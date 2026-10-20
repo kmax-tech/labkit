@@ -75,8 +75,11 @@ def main(argv: list[str]) -> int:
     stamped id). `finalize` treats 1 and 2 alike as a blocker."""
     try:
         return _main(argv)
-    except (ValueError, console.Refused) as exc:  # read_metrics / RunConfigError
+    except ValueError as exc:  # read_metrics / RunConfigError
         console.refuse("intent-check", str(exc))
+        return 2
+    except console.Refused as exc:  # main also runs as finalize's station
+        console.refuse(exc.tool, exc.why)
         return 2
 
 
@@ -101,16 +104,18 @@ def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         return 2
 
     if not protocol.is_file():
-        raise console.Refused(f"no such protocol: {protocol}")
+        raise console.Refused("intent-check", f"no such protocol: {protocol}")
     text = protocol.read_text(encoding="utf-8")
     try:
         pid = protocol_id_of(text)
     except protocol_block.BlockError as exc:
-        raise console.Refused(f"{protocol}: {exc}") from exc
+        raise console.Refused("intent-check", f"{protocol}: {exc}") from exc
     try:
         block = promises.parse_block(text)
     except promises.PromiseError as exc:
-        raise console.Refused(f"{protocol}: promise block: {exc}") from exc
+        raise console.Refused(
+            "intent-check", f"{protocol}: promise block: {exc}"
+        ) from exc
     if block is not None:
         only_prose, only_block = promises.prose_mismatch(text, block)
         for i in only_prose:
@@ -130,7 +135,8 @@ def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     earlier = promises.earlier_ids(text)
     if earlier:
         raise console.Refused(
-            f"{protocol}: intent ids {', '.join(earlier)} — {promises.EARLIER_IDS_HELP}"
+            "intent-check",
+            f"{protocol}: intent ids {', '.join(earlier)} — {promises.EARLIER_IDS_HELP}",
         )
     reg = ids_in_prose(text)
     if not reg:
@@ -146,8 +152,9 @@ def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         mpath = choose_bound(protocol, pid, promises.registers_ids(text))
     else:
         raise console.Refused(
+            "intent-check",
             f"{protocol.name} has no stamped id ([protocol] "
-            f"id) — no run is bound to it; name the run with --metrics FILE."
+            f"id) — no run is bound to it; name the run with --metrics FILE.",
         )
     metrics = read_metrics(mpath)  # MetricsError is a ValueError: main refuses it
     led = reported_intent_ids(metrics)
@@ -258,7 +265,7 @@ def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path:
     """`--metrics FILE`: the named file, if it may answer for this protocol.
     Raises console.Refused when it may not."""
     if not metrics_arg.is_file():
-        raise console.Refused(f"no such metrics file: {metrics_arg}")
+        raise console.Refused("intent-check", f"no such metrics file: {metrics_arg}")
     # An explicit file still has to be a file that MAY answer for this
     # protocol. Naming one was always a seatbelt, never a proof of
     # belonging — where the run records a binding, that proof now
@@ -273,16 +280,18 @@ def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path:
             "an incomplete run's numbers may not be reported, even when named explicitly"
         )
         raise console.Refused(
-            f"{metrics_arg.parent.name} is not completed ({state}) — {why}."
+            "intent-check",
+            f"{metrics_arg.parent.name} is not completed ({state}) — {why}.",
         )
     bound_to = facts.binding.id
     if bound_to:
         if pid and bound_to != pid:
             raise console.Refused(
+                "intent-check",
                 f"{metrics_arg} belongs to protocol "
                 f"{bound_to}, this protocol is {pid} — "
                 f"holding one protocol's promises against another "
-                f"protocol's run answers nothing."
+                f"protocol's run answers nothing.",
             )
         if pid is None:
             print(
@@ -317,7 +326,7 @@ def choose_bound(protocol: Path, pid: str, ids_registered: bool) -> Path:
         why.append(
             "  Name one explicitly with --metrics FILE if you know it belongs here."
         )
-        raise console.Refused("\n".join(why))
+        raise console.Refused("intent-check", "\n".join(why))
     assert choice.run_dir is not None, (
         "explain() names a blocker whenever no run stands"
     )

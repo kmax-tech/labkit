@@ -12,7 +12,7 @@ from pathlib import Path
 
 from labkit.checks import readme_check
 from labkit.tools import scaffold, protocol_cuts
-from labkit.formats import rules
+from labkit.formats import console, rules
 
 
 def quiet(fn, *args, **kw):  # noqa: ANN001, ANN002, ANN003, ANN201 — test helper
@@ -84,7 +84,7 @@ class Lab(unittest.TestCase):
         real = scaffold.importlib.metadata.version
         scaffold.importlib.metadata.version = lambda name: "0.0.1"
         try:
-            with self.assertRaises(SystemExit) as cm:
+            with self.assertRaises(console.Refused) as cm:
                 scaffold.labkit_pin()
             self.assertIn("0.0.1", str(cm.exception))
             self.assertIn(str(source), str(cm.exception))
@@ -184,7 +184,7 @@ class Exp(unittest.TestCase):
 
     def test_an_existing_area_refuses_without_report(self) -> None:
         quiet(scaffold.stamp_area, self.root, "foo-bar")
-        with self.assertRaisesRegex(SystemExit, "already exists"):
+        with self.assertRaisesRegex(console.Refused, "already exists"):
             quiet(scaffold.stamp_area, self.root, "foo-bar")
 
     def test_seconds_stamps_the_cut_and_the_counting_skeleton(self) -> None:
@@ -629,7 +629,7 @@ class Exp(unittest.TestCase):
     def test_a_repo_without_the_lab_layout_is_refused(self) -> None:
         bare = Path(self.tmp.name) / "bare"
         bare.mkdir()
-        with self.assertRaisesRegex(SystemExit, "labkit-init lab"):
+        with self.assertRaisesRegex(console.Refused, "labkit-init lab"):
             scaffold.stamp_area(bare, "foo-bar")
 
 

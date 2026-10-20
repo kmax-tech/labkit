@@ -26,16 +26,28 @@ def refuse(tool: str, why: str) -> None:
 
 
 class Refused(Exception):
-    """A command that cannot run, raised where the reason is known and caught
-    where the command decides its exit: `refuse(tool, str(exc))`, exit 2. It
-    replaces an exit code returned beside a result (`Path | int`), where the
-    caller had to know that a number meant "already printed"."""
+    """A command that cannot run, raised where the reason is known: TOOL is
+    the command that refuses (named, not read off sys.argv, which `-m` and
+    a caller's own command change), WHY the reason. `exit_with` prints it
+    through `refuse` and exits 2; a main that runs as another gate's station
+    catches it itself. It replaces an exit code returned beside a result
+    (`Path | int`), where the caller had to know that a number meant
+    "already printed"."""
+
+    def __init__(self, tool: str, why: str) -> None:
+        super().__init__(f"{tool}: {why}")
+        self.tool = tool
+        self.why = why
 
 
 def exit_with(main: Callable[[list[str]], int]) -> None:
-    """Exit with `main(argv)`'s code; a pipe closed by the reader is exit 0."""
+    """Exit with `main(argv)`'s code; a `Refused` raised out of it is printed
+    through `refuse` and exits 2; a pipe closed by the reader is exit 0."""
     try:
         code = main(sys.argv[1:])
+    except Refused as exc:
+        refuse(exc.tool, exc.why)
+        code = 2
     except BrokenPipeError:
         devnull = os.open(os.devnull, os.O_WRONLY)
         os.dup2(devnull, sys.stdout.fileno())

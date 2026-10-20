@@ -291,10 +291,13 @@ class CommandLine(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = _area(d)
             _run(area, "2026-10-01T10-00-00_aaaa", {"min_acc": 0.7}, pid="p-other")
-            code, out = _main([str(area)])
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = params.main([str(area)])
             self.assertEqual(code, 2)
-            self.assertIn("no completed run bound to", out)
-            self.assertIn("bound to p-other", out)
+            self.assertEqual(out.getvalue(), "")  # a refusal, not a table
+            self.assertIn("no completed run bound to", err.getvalue())
+            self.assertIn("bound to p-other", err.getvalue())
 
 
 if __name__ == "__main__":

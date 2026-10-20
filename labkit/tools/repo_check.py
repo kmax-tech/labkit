@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -400,7 +399,7 @@ def main(argv: list[str]) -> int:
     a = ap.parse_args(argv)
     repo = a.repo.resolve()
     if not repo.is_dir():
-        print(f"labkit-check: {repo} is not a directory", file=sys.stderr)
+        console.refuse("labkit-check", f"{repo} is not a directory")
         return UNDECIDED
     lines, code = check_repo(repo, offline=a.offline)
     print("\n".join(lines))
