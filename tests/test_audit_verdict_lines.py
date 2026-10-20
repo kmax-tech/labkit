@@ -36,6 +36,7 @@ def _run(answer: str) -> tuple[int, str, list[Path]]:
     area = _area()
     with (
         mock.patch.object(audit.llm, "complete", lambda *a, **k: answer),
+        mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
         contextlib.redirect_stdout(io.StringIO()),
         contextlib.redirect_stderr(err),
     ):

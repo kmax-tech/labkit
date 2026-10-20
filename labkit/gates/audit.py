@@ -100,6 +100,7 @@ from labkit.formats.scope_sha import (
 AGENT = PACKAGE_DIR / "agents" / "experiment-preflight.agent.md"
 CLARITY_AGENT = PACKAGE_DIR / "agents" / "code-clarity.agent.md"
 DEFAULT_MODEL = "opus"  # the agent's model; any alias of models.toml works
+REPORT_TOKENS = 4096  # room for a report of many findings, where a backend caps
 DEFAULT_TIMEOUT_S = (
     findings.ATTEMPT_TIMEOUT_S
 )  # one call reads the area, the rules, the rows
@@ -567,7 +568,12 @@ def _answer_or_record(
     error (an alias models.toml does not know) is not an unavailable audit
     and propagates as it is, so none is written for it."""
     try:
-        return llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=4096)
+        return llm.complete(
+            args.model,
+            prompt,
+            timeout=args.timeout,
+            max_tokens=_report_room(args.model),
+        )
     except llm_backends.BackendError as exc:
         tried = findings.write_failed(
             args.area,
@@ -585,6 +591,13 @@ def _answer_or_record(
             f"LABKIT_UNFROZEN=1; its number cannot be reported (report-check "
             f"refuses it). Run the audit again when the backend answers."
         ) from exc
+
+
+def _report_room(alias: str) -> int | None:
+    """The token cap an audit report is given: REPORT_TOKENS where the
+    backend takes a cap, none where it has none (claude-cli, whose own limit
+    is far above a report)."""
+    return REPORT_TOKENS if llm.takes_max_tokens(alias) else None
 
 
 def bound_prompt(
@@ -758,7 +771,12 @@ def _clarity(args: argparse.Namespace) -> int:
             f"{args.model} · {len(prompt) // 1000} kB",
             file=sys.stderr,
         )
-        report = llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=4096)
+        report = llm.complete(
+            args.model,
+            prompt,
+            timeout=args.timeout,
+            max_tokens=_report_room(args.model),
+        )
         print(f"labkit-audit: tokens · {llm.last_usage().describe()}", file=sys.stderr)
         result = parse_clarity(report)
     except (

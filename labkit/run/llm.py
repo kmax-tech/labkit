@@ -309,6 +309,20 @@ def provenance(alias: str) -> dict:
     return prov
 
 
+#: the token cap ollama and openai send when the caller names none — a
+#: request without one let gpt-oss generate 3520 tokens at a nominal limit
+#: (tests/test_llm_chat_options.py)
+DEFAULT_MAX_TOKENS = 512
+
+
+def takes_max_tokens(alias: str) -> bool:
+    """Whether ALIAS's backend takes a token cap: ollama and openai do,
+    claude-cli has no flag for it. A caller that wants room for a long
+    answer asks here before passing one (`complete` refuses an unhonoured
+    cap)."""
+    return not isinstance(spec(alias), ClaudeCliSpec)
+
+
 def complete(
     alias: str,
     prompt: str,
@@ -319,9 +333,14 @@ def complete(
     attempts: int = 6,
     raw: bool = False,
     stop: list[str] | None = None,
-    max_tokens: int = 512,
+    max_tokens: int | None = None,
 ) -> str:
     """One text completion, retrying transport failures (see _TRANSIENT).
+
+    `max_tokens`: the answer's token cap. None leaves it to the backend —
+    ollama and openai then send DEFAULT_MAX_TOKENS, the CLI its own; a value
+    given to a backend that has no cap (claude-cli) is refused, as an
+    unhonoured temperature is (`takes_max_tokens` asks first).
 
     `attempts` counts total tries, not extra ones; backoff follows _BACKOFF
     (10 s … 300 s, ~13 min in all, so a short outage is survived). Errors
@@ -413,7 +432,7 @@ def _complete_once(
     timeout: int = 300,
     raw: bool = False,
     stop: list[str] | None = None,
-    max_tokens: int = 512,
+    max_tokens: int | None = None,
 ) -> str:
     """One text completion via the alias' backend. Returns the answer text.
 
@@ -443,7 +462,10 @@ def _complete_once(
             timeout=timeout,
             raw=raw,
             stop=stop,
+            max_tokens=max_tokens,
         )
+    if max_tokens is None:
+        max_tokens = DEFAULT_MAX_TOKENS
     if isinstance(used, OllamaSpec):
         call = complete_ollama_raw if raw else complete_ollama_chat
         return call(

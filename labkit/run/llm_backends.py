@@ -214,12 +214,20 @@ def complete_claude_cli(
     timeout: int,
     raw: bool,
     stop: list[str] | None,
+    max_tokens: int | None = None,
 ) -> str:
     """`claude -p`, isolated from the operator's settings (CLI_ISOLATION).
     Refuses what the CLI cannot honour — a temperature, an untemplated
-    prompt, a stop sequence — instead of dropping it (`max_tokens` is the
-    CLI's own: the call has no flag for it, and every caller's default)."""
+    prompt, a stop sequence, a token cap — instead of dropping it: the CLI
+    has no flag for any of them, and a run must not be documented with a
+    setting nothing applied."""
     alias = spec.alias
+    if max_tokens is not None:
+        raise ValueError(
+            f"alias '{alias}' uses backend 'claude-cli', which has no token cap "
+            f"— it cannot honour max_tokens={max_tokens}. Pass none (the CLI's "
+            f"own limit holds), or use an ollama or openai alias."
+        )
     if raw or stop:
         raise ValueError(
             f"alias '{alias}' uses backend 'claude-cli', which has no "

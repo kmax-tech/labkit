@@ -9,6 +9,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **`llm.complete(max_tokens=...)` is refused where a backend has no cap.**
+  claude-cli has no token flag, and an explicit `max_tokens` was dropped
+  without a word. `max_tokens` now defaults to `None`: ollama and openai
+  still send 512 (`llm.DEFAULT_MAX_TOKENS`), claude-cli its own limit; a
+  value given to a claude-cli alias raises `ValueError`, as a temperature
+  does. `llm.takes_max_tokens(alias)` says which backends take a cap;
+  `labkit-audit` asks it before giving a report 4096 tokens.
+
 - **An analysis audit record names what it was shown of the run.** The
   record bound the run id only, so a `metrics.json` or output rows changed
   after the audit still read as audited. `labkit-audit --mode analysis`

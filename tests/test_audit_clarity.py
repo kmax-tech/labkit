@@ -53,6 +53,7 @@ def run(area: Path, answer: str) -> tuple[int, str, str, list[str]]:
     out, err = io.StringIO(), io.StringIO()
     with (
         mock.patch.object(audit.llm, "complete", fake),
+        mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
         contextlib.redirect_stdout(out),
         contextlib.redirect_stderr(err),
     ):
@@ -99,9 +100,10 @@ class Clarity(unittest.TestCase):
         area = area_with()
         err = io.StringIO()
         with (
+            # an unknown alias is found where its backend is first asked
             mock.patch.object(
                 audit.llm,
-                "complete",
+                "takes_max_tokens",
                 mock.Mock(side_effect=KeyError("model alias 'x' not in models.toml")),
             ),
             contextlib.redirect_stdout(io.StringIO()),

@@ -54,7 +54,7 @@ Auftrag. Forschung und Benchmark-Fallliste liegen in
 | Bereich | Noch offen | Bedingung / Vertrag |
 |---|---|---|
 | Run-Records | `runlog.active` liefert Dicts mit hineingemischter Config. Eigene Config-Felder werden nach der Lesegrenze weiterhin über Schlüssel gelesen. | Öffentliche Skript-API gesondert behandeln. Vollständige `RunConfig` nur mit klaren Invarianten für die eigenen Felder; Experiment-Config bleibt frei. |
-| Backend-Aufrufe | `max_tokens` bleibt bei claude-cli wirkungslos; ein Default unterscheidet explizite Angabe nicht von Vorgabe. Server-Antworten sind noch nicht durchgängig strikt typisiert. | Aufrufvertrag festlegen, etwa optionales `max_tokens`, dann unbediente Optionen verweigern. Antwortparser als eigener Schritt mit fehlerhaften Antworten testen. |
+| Backend-Aufrufe | Server-Antworten sind noch nicht durchgängig strikt typisiert. (`max_tokens` ist optional; claude-cli verweigert eine ausdrückliche Angabe.) | Antwortparser als eigener Schritt mit fehlerhaften Antworten testen. |
 | Findings | Die erste Fehlklassifikation ist eingetreten und eng behoben (`e6dbb08`): Protokoll-ID-Befunde tragen ihren Grad als `GateFinding`, `grade_of` liest nur das erste Wort. `code_check.code_findings` liefert weiter Text, gradiert über das führende `BLOCKER ·`/`WARNING ·`. | Beim nächsten Fehlgrad oder Wartungsproblem Grad, Stufe, Fundstelle und Nachricht als Daten bis zur CLI reichen. Gemeinsame Prüfliste beibehalten. |
 
 ### Restarbeiten aus dem Code-Audit

@@ -86,6 +86,7 @@ def run(area: Path, answer: str, *extra: str) -> tuple[int, str, str, list[str]]
     out, err = io.StringIO(), io.StringIO()
     with (
         mock.patch.object(audit.llm, "complete", fake),
+        mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
         contextlib.redirect_stdout(out),
         contextlib.redirect_stderr(err),
     ):
@@ -300,6 +301,7 @@ class Audit(unittest.TestCase):
         err = io.StringIO()
         with (
             mock.patch.object(audit.llm, "complete", dead),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
             contextlib.redirect_stdout(io.StringIO()),
             contextlib.redirect_stderr(err),
         ):
@@ -324,6 +326,7 @@ class Audit(unittest.TestCase):
 
         with (
             mock.patch.object(audit.llm, "complete", unknown),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
             contextlib.redirect_stdout(io.StringIO()),
             contextlib.redirect_stderr(io.StringIO()),
         ):
@@ -382,6 +385,7 @@ class Audit(unittest.TestCase):
         err = io.StringIO()
         with (
             mock.patch.object(audit.llm, "complete", fake),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
             contextlib.redirect_stdout(io.StringIO()),
             contextlib.redirect_stderr(err),
         ):
@@ -479,6 +483,9 @@ class OneSnapshot(unittest.TestCase):
             for p in patches:
                 stack.enter_context(p)
             stack.enter_context(mock.patch.object(audit.llm, "complete", fake))
+            stack.enter_context(
+                mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True)
+            )
             stack.enter_context(contextlib.redirect_stdout(out))
             stack.enter_context(contextlib.redirect_stderr(err))
             rc = audit.main([str(area), "--mode", "analysis"])
@@ -576,6 +583,7 @@ class OneSnapshot(unittest.TestCase):
 
         with (
             mock.patch.object(audit.llm, "complete", fake),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
             contextlib.redirect_stdout(io.StringIO()),
             contextlib.redirect_stderr(io.StringIO()),
         ):
