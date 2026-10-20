@@ -263,13 +263,6 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
-- **A findings file says how a reason is written, and so does its
-  refusal.** The person still decides in the file and nothing else writes
-  it; its head now names the TOML string forms (`"…"` with `\"`, or `'…'`),
-  and a file that does not parse is refused with the same sentence after
-  the parser's line and column. A reason with an unescaped quote had made
-  the record unreadable, refused only as "not TOML" (count probe,
-  2026-10-20).
 - **The printed `protocol-fill … --from-run` line names the protocol's
   path.** The measure scripts, `labkit-init exp`, `protocol-check` and
   `--check` printed the bare file name, which failed "no such file" from
@@ -485,6 +478,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A findings file says how a reason is written, and so does its
+  refusal** — an aid, not a fix: it lowers the risk of a hand-written
+  reason breaking the TOML and does not prevent it. The file's head names
+  the TOML string forms (`"…"` with `\"`, or `'…'`), and a file that does
+  not parse is refused with the same sentence after the parser's line and
+  column. A reason with an unescaped quote had made the record unreadable,
+  refused only as "not TOML" (count probe, 2026-10-20). A command that
+  validates and stores a decision the person typed stays deferred.
 - **`runs.write_atomic` is `files.write_atomic`.** Writing a file whole or
   not at all serves every format (run records, the lease, a filled
   protocol), not runs alone; it moved to `labkit/formats/files.py`. No alias

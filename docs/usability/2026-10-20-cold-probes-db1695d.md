@@ -149,3 +149,27 @@ Not labkit's:
   (LAB-017 The number of audits follows the cost tier), not a fault; the
   numbers here are its evidence.
 - No architecture change is indicated by these runs.
+
+## After the series
+
+The same day, after this report, findings 1–5 were fixed and finding 6
+got an aid (CHANGELOG, Unreleased; commits `4a4a130`..`80d2ff0`):
+
+| finding | state |
+|---|---|
+| 1 `usability log` argument order | fixed: the command is what follows the first `--` |
+| 2 area name at `labkit-audit`, `report-check` | fixed: both resolve it through `repo.area_path` |
+| 3 promise sentences not listed | fixed: `--list` names them, `"C1 sentence=…"` fills them as a TOML string |
+| 4 "not owed" at `seconds` | fixed: the line separates the review (not owed) from the open fields (owed) |
+| 5 bare file name in the adopt line | fixed: `repo.adopt_command` names the path from the working directory |
+| 6 hand-written audit decisions | **aid, not fixed**: file head and refusal name the TOML string forms; invalid TOML stays possible |
+
+- **Areas stamped before keep their stamped scripts.** The adopt line of
+  finding 5 lives in the measure-script templates; an area stamped before
+  the fix prints the bare file name until it is stamped again. The probes
+  above are such areas.
+- **The next series** uses freshly stamped areas on one pinned commit,
+  with environments prepared in full (pytest included), after an
+  independent review of the fixes. Its main measure is operating friction
+  — wrong calls, repairs, manual interventions, correct binding of the
+  result; wall-clock alongside, since six runs show no reliable speed-up.
