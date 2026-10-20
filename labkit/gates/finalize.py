@@ -267,7 +267,8 @@ def check_declared_scopes(
     (standard 0.19, `promises.promise_tables_owed`: every reportable run is held to
     a registration that is data) — it came from a labkit that let it pass,
     or the block was added after the run."""
-    recorded = (read_run_config(measurement_run) or {}).get("promises")
+    cfg = read_run_config(measurement_run)
+    recorded = cfg.promises if cfg else None
     if recorded is None and text and not promises.registers_ids(text):
         findings.note(
             "  n/a — the protocol registers no promise id (a count), nothing to hold"

@@ -96,8 +96,7 @@ def _run_dir(
 
 
 def _state(d: Path, alive: bool | None = False) -> str:
-    cfg = json.loads((d / "config.json").read_text(encoding="utf-8"))
-    return runs.run_state(d, cfg, alive)
+    return runs.run_state(d, alive)
 
 
 class TestStates(unittest.TestCase):

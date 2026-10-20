@@ -195,8 +195,9 @@ class ModelProvenance(unittest.TestCase):
         found = answering_run.model_provenance_run(child)
         self.assertEqual(found, parent)
         assert found is not None
-        cfg = runs.read_run_config(found) or {}
-        self.assertEqual(cfg["models_resolved"], {"m": {"model": "A"}})
+        cfg = runs.read_run_config(found)
+        assert cfg is not None
+        self.assertEqual(cfg.models_resolved, {"m": {"model": "A"}})
 
     def test_a_chain_without_any_model_record_is_none(self) -> None:
         parent = _run(self.area, "2026-10-01T10-00-00_aaaa")

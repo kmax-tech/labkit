@@ -9,6 +9,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **A run's config.json is read into `runs.RunConfig`.** `read_run_config`
+  returns a frozen `RunConfig` instead of a dict: labkit's own fields typed
+  (`cfg.run_kind`, `cfg.protocol.id`, `cfg.derived_from`, …), the
+  experiment's settings free JSON in `cfg.config`, nested values (`config`,
+  `data`, `promises`, `models_resolved`, `command`) handed out as fresh
+  copies; `cfg.as_record()` gives the whole record as stored. A key on the
+  top level of config.json that labkit does not write, or a labkit field of
+  the wrong type, makes the record unreadable. `runs.repeat_parent` is gone
+  (`cfg.repeat_of`); `run_state(run_dir, alive)`, `unreportable` and
+  `summarize` take the `RunConfig`; `answering_run.repeat_mismatch` takes the
+  parent's `RunConfig` and the new run's keys. 0.99.0 is the last release
+  that returns the dict.
+
 - **`llm.complete(max_tokens=...)` is refused where a backend has no cap.**
   claude-cli has no token flag, and an explicit `max_tokens` was dropped
   without a word. `max_tokens` now defaults to `None`: ollama and openai

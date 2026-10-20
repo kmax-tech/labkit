@@ -172,12 +172,16 @@ class UnreportableRun(unittest.TestCase):
             runs.read_run_config(run)
 
     def test_the_marks_are_one_telling(self):
+        def record(**fields: object) -> runs.RunConfig:
+            return runs.parse_run_config({"schema_version": 3, **fields})
+
         self.assertEqual(
-            runs.unreportable({"run_kind": "measurement", "unfrozen_ack": False}), []
+            runs.unreportable(record(run_kind="measurement", unfrozen_ack=False)), []
         )
-        both = runs.unreportable({"run_kind": "probe", "unfrozen_ack": True})
+        both = runs.unreportable(record(run_kind="probe", unfrozen_ack=True))
         self.assertEqual(len(both), 2)
-        self.assertEqual(len(runs.unreportable({"run_kind": "yes"})), 1)
+        with self.assertRaises(runs.RunConfigError):  # refused where it is read
+            record(run_kind="yes")
 
     def test_without_an_answering_run_report_check_leaves_it_to_finalize(self):
         code, out = _report_check(self.area)

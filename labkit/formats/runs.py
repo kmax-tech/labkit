@@ -107,11 +107,11 @@ RunState = Literal[
 ]
 
 
-def run_state(run_dir: Path, cfg: JsonObject, alive: bool | None) -> RunState:
+def run_state(run_dir: Path, alive: bool | None) -> RunState:
     """One of: completed · running · unknown · crashed · unfinalized · corrupt
     (a run whose config.json cannot be read — damaged, or written before
     schema 3 — is `unreadable`: `run_facts`, `runlog.active`; this function
-    never sees one, it takes a parsed cfg).
+    never sees one, its caller has read the config).
 
     metrics.json without completion.json is decided by liveness: alive →
     running, unknowable → unknown, dead → unfinalized.
@@ -182,8 +182,9 @@ class RunConfigError(ValueError):
     """A run directory whose config.json exists but cannot be read."""
 
 
-def read_run_config(run_dir: Path) -> JsonObject | None:
-    """A run's metadata, None when the directory has no config.json.
+def read_run_config(run_dir: Path) -> RunConfig | None:
+    """A run's metadata, read and checked once (`parse_run_config`), None
+    when the directory has no config.json.
 
     Unreadable is not absent: a damaged config.json raises RunConfigError
     naming the file. Skipping it silently made a broken newer run vanish
@@ -200,12 +201,12 @@ def read_run_config(run_dir: Path) -> JsonObject | None:
             f"{cfg_file}: unreadable run metadata ({exc}) — the run cannot "
             f"say what it is; repair or move it aside"
         ) from exc
-    problem = _shape_problem(cfg)
-    if problem:
+    try:
+        return parse_run_config(cfg)
+    except RunConfigError as exc:
         raise RunConfigError(
-            f"{cfg_file}: unreadable run metadata ({problem}) — repair or move it aside"
-        )
-    return cfg
+            f"{cfg_file}: unreadable run metadata ({exc}) — repair or move it aside"
+        ) from exc
 
 
 class ArtefactError(ValueError):
@@ -385,31 +386,6 @@ def _schema_problem(sv: object) -> str | None:
     return None
 
 
-def _shape_problem(cfg: object) -> str | None:
-    """The minimal shape every reader relies on, checked in one place:
-    valid JSON that is a list, or a binding that is a string, used to fail
-    later as an AttributeError far from the file (review 2026-10-07)."""
-    if not isinstance(cfg, dict):
-        return f"a JSON {type(cfg).__name__}, not an object"
-    cfg = cast(JsonObject, cfg)
-    schema_problem = _schema_problem(cfg.get("schema_version"))
-    if schema_problem:
-        return schema_problem
-    try:
-        parse_run_kind(cfg.get("run_kind"))
-    except ValueError as exc:
-        return str(exc)
-    try:
-        binding_of(cfg)
-    except RunConfigError as exc:
-        return str(exc)
-    for key in RECORD_TABLES:
-        value = cfg.get(key)
-        if value is not None and not isinstance(value, dict):
-            return f"{key} = {value!r}, not an object"
-    return _derived_shape_problem(cfg) or _repeat_shape_problem(cfg)
-
-
 #: labkit's own tables in config.json: each an object or null (`promises`
 #: is null for a protocol without a block). Held on read — a damaged one
 #: read as an empty table let a repeat with an empty config pass as
@@ -443,22 +419,16 @@ def _repeat_shape_problem(cfg: JsonObject) -> str | None:
     return None
 
 
-def unreportable(cfg: JsonObject) -> list[str]:
+def unreportable(cfg: RunConfig) -> list[str]:
     """Reasons this run cannot supply a reported result.
 
     Only a measurement without an unfrozen acknowledgement is eligible;
     the release gate checks completion, audits and recomputation separately.
-    A missing or invalid kind is a damaged or unsupported record.
     """
     marks: list[str] = []
-    try:
-        kind = parse_run_kind(cfg.get("run_kind"))
-    except ValueError as exc:
-        marks.append(str(exc))
-    else:
-        if kind != "measurement":
-            marks.append(f"a {kind} (run_kind={kind!r}), not a measurement")
-    if cfg.get("unfrozen_ack") is True:
+    if cfg.run_kind != "measurement":
+        marks.append(f"a {cfg.run_kind} (run_kind={cfg.run_kind!r}), not a measurement")
+    if cfg.unfrozen_ack:
         marks.append(
             "a full run acknowledged over an unfrozen protocol with LABKIT_UNFROZEN=1"
         )
@@ -480,7 +450,7 @@ def completion_state(run_dir: Path) -> RunState:
     cfg = read_run_config(run_dir)
     if cfg is None:
         raise RunConfigError(f"{run_dir}: no config.json — not a run directory")
-    return run_state(run_dir, cfg, alive=False)
+    return run_state(run_dir, alive=False)
 
 
 @dataclass(frozen=True)
@@ -509,30 +479,19 @@ def run_summary(run_dir: Path) -> RunSummary:
     return summarize(run_dir, cfg)
 
 
-def summarize(run_dir: Path, cfg: JsonObject) -> RunSummary:
+def summarize(run_dir: Path, cfg: RunConfig) -> RunSummary:
     """The RunSummary of RUN_DIR from CFG, its config.json as already read
     (`run_dirs`) — a listing reads each run once, not once per fact."""
-    models = cfg.get("models_resolved")
-    aliases = (
-        tuple(sorted(cast(JsonObject, models))) if isinstance(models, dict) else ()
-    )
     patch = run_dir / "uncommitted.patch"
-    argv = cfg.get("command")
-    command = (
-        " ".join(str(a) for a in cast(list[object], argv))
-        if isinstance(argv, list) and argv
-        else None
-    )
-    derived = cfg.get("derived_from")
     return RunSummary(
         run_id=run_dir.name,
-        state=run_state(run_dir, cfg, alive=False),
-        run_kind=parse_run_kind(cfg.get("run_kind")),
-        derived_from=str(derived) if derived else None,
-        models=aliases,
-        git=str(cfg.get("git") or "?"),
+        state=run_state(run_dir, alive=False),
+        run_kind=cfg.run_kind,
+        derived_from=cfg.derived_from,
+        models=tuple(sorted(cfg.models_resolved)),
+        git=cfg.git or "?",
         uncommitted_bytes=patch.stat().st_size if patch.is_file() else 0,
-        command=command,
+        command=" ".join(cfg.command) if cfg.command else None,
     )
 
 
@@ -567,6 +526,235 @@ def binding_of(cfg: JsonObject) -> ProtocolBinding:
     return ProtocolBinding(found[0], found[1])
 
 
+#: the top-level keys of config.json — exactly what `runlog.Run._write_record`
+#: writes; a key outside them makes the record unreadable (the writer is its
+#: only author, and a key nobody defines would be carried on unexplained).
+#: The experiment's own settings live inside `config` and stay free.
+RUN_CONFIG_KEYS = (
+    "schema_version",
+    "experiment",
+    "script",
+    "protocol",
+    "derived_from",
+    "repeat_of",
+    "draw",
+    "run_kind",
+    "unfrozen_ack",
+    "audit_failed",
+    "cost_tier",
+    "promises",
+    "script_sha",
+    "untracked_sources",
+    "pid",
+    "git",
+    "git_full",
+    "python",
+    "env",
+    "models_resolved",
+    "started",
+    "command",
+    "data",
+    "config",
+)
+#: the scalar fields and the type each holds when present (absent is None)
+_SCALARS: dict[str, type] = {
+    "experiment": str,
+    "script": str,
+    "audit_failed": str,
+    "cost_tier": str,
+    "script_sha": str,
+    "pid": int,
+    "git": str,
+    "git_full": str,
+    "python": str,
+    "env": str,
+    "started": str,
+}
+#: the nested fields: held as stored JSON text and handed out as fresh
+#: copies, so no reader can change what another reads (`frozen=True` alone
+#: freezes the fields, not the dicts in them)
+_NESTED = (
+    "promises",
+    "untracked_sources",
+    "models_resolved",
+    "command",
+    "data",
+    "config",
+)
+
+
+@dataclass(frozen=True)
+class RunConfig:
+    """A run's metadata as labkit wrote it, read once and checked once
+    (`parse_run_config`). Scalars are typed fields, None when the record
+    does not carry them; the nested tables come from the attributes below
+    as fresh copies of the stored JSON, never a shared dict. The
+    experiment's own settings are `config`, free JSON."""
+
+    schema_version: int
+    run_kind: RunKind
+    protocol: ProtocolBinding
+    # the run whose rows this one re-reads, making no model call
+    derived_from: str | None
+    # the run a repeat draws again: the model asked once more with the same
+    # instrument on the same items, its own model record, so the spread of
+    # the number is visible — supporting evidence that never answers the
+    # protocol (`answering_run.bound_runs`)
+    repeat_of: str | None
+    draw: int | None  # a repeat's draw number, >= 2 (the run itself is 1)
+    unfrozen_ack: bool
+    experiment: str | None
+    script: str | None
+    audit_failed: str | None
+    cost_tier: str | None
+    script_sha: str | None
+    pid: int | None
+    git: str | None
+    git_full: str | None
+    python: str | None
+    env: str | None
+    started: str | None
+    _nested: str = field(repr=False)
+
+    def _get(self, key: str) -> Any:
+        return json.loads(self._nested).get(key)
+
+    @property
+    def config(self) -> JsonObject:
+        """The experiment's settings (free JSON), {} when none were recorded."""
+        return cast(JsonObject, self._get("config") or {})
+
+    @property
+    def data(self) -> JsonObject:
+        """The described inputs (`data=`), {} when none."""
+        return cast(JsonObject, self._get("data") or {})
+
+    @property
+    def models_resolved(self) -> JsonObject:
+        """The model aliases the run resolved (`llm` records), {} when none."""
+        return cast(JsonObject, self._get("models_resolved") or {})
+
+    @property
+    def promises(self) -> JsonObject | None:
+        """The promise snapshot (`promises.snapshot`), None for a protocol
+        without a block."""
+        return cast("JsonObject | None", self._get("promises"))
+
+    @property
+    def command(self) -> list[str] | None:
+        """The command line that started the run, None when not recorded."""
+        return cast("list[str] | None", self._get("command"))
+
+    @property
+    def untracked_sources(self) -> list[str]:
+        """The untracked sources the run snapshot beside its script."""
+        return cast(list[str], self._get("untracked_sources") or [])
+
+    def as_record(self) -> JsonObject:
+        """The record as config.json stores it, a fresh copy: for a reader
+        that prints or searches it whole (the index row, an arm line's
+        fingerprint), never for reading one field."""
+        scalars = {k: getattr(self, k) for k in _SCALARS}
+        return {
+            "schema_version": self.schema_version,
+            "run_kind": self.run_kind,
+            "protocol": {"id": self.protocol.id, "path": self.protocol.path},
+            "derived_from": self.derived_from,
+            "repeat_of": self.repeat_of,
+            "draw": self.draw,
+            "unfrozen_ack": self.unfrozen_ack,
+            **scalars,
+            **json.loads(self._nested),
+        }
+
+    def repeat_basis(self) -> JsonObject:
+        """What makes two runs comparable as draws of one measurement
+        (`answering_run.repeat_mismatch`): binding, promise snapshot, the
+        script's digest, the resolved model, the config and the inputs — as
+        config.json stores them. A run about to start builds the same keys."""
+        return {
+            "protocol": {"id": self.protocol.id, "path": self.protocol.path},
+            "promises": self.promises,
+            "config": self._get("config"),
+            "data": self._get("data"),
+            "script_sha": self.script_sha,
+            "models_resolved": self._get("models_resolved"),
+        }
+
+
+def _field_type_problem(cfg: JsonObject) -> str | None:
+    """Why a present field of CFG has the wrong type, or None: the record
+    tables objects, the scalars their `_SCALARS` type, `command` and
+    `untracked_sources` lists of strings, `unfrozen_ack` a boolean."""
+    for key in RECORD_TABLES:
+        value = cfg.get(key)
+        if value is not None and not isinstance(value, dict):
+            return f"{key} = {value!r}, not an object"
+    for key, kind_of in _SCALARS.items():
+        value = cfg.get(key)
+        if value is not None and (
+            not isinstance(value, kind_of)
+            or (kind_of is int and isinstance(value, bool))
+        ):
+            return f"{key} = {value!r}, not a {kind_of.__name__}"
+    for key in ("command", "untracked_sources"):
+        value = cfg.get(key)
+        if value is not None and not (
+            isinstance(value, list)
+            and all(isinstance(v, str) for v in cast(list[object], value))
+        ):
+            return f"{key} = {value!r}, not a list of strings"
+    ack = cfg.get("unfrozen_ack", False)
+    return None if isinstance(ack, bool) else f"unfrozen_ack = {ack!r}, not a boolean"
+
+
+def parse_run_config(obj: object) -> RunConfig:
+    """The RunConfig of OBJ, a parsed config.json — or RunConfigError naming
+    the field: not an object, a key labkit does not write, the schema, the
+    run kind, the binding, a record table that is no object, a scalar of
+    the wrong type, `derived_from` or the repeat fields of a wrong shape."""
+    if not isinstance(obj, dict):
+        raise RunConfigError(f"a JSON {type(obj).__name__}, not an object")
+    cfg = cast(JsonObject, obj)
+    # the schema first: a record of another labkit names the version that
+    # reads it, rather than its unfamiliar keys
+    problem = _schema_problem(cfg.get("schema_version"))
+    if problem:
+        raise RunConfigError(problem)
+    unknown = sorted(set(cfg) - set(RUN_CONFIG_KEYS))
+    if unknown:
+        raise RunConfigError(
+            f"{', '.join(unknown)}: not a field labkit writes into config.json — "
+            f"an experiment's own settings belong in `config`"
+        )
+    try:
+        kind = parse_run_kind(cfg.get("run_kind"))
+    except ValueError as exc:
+        raise RunConfigError(str(exc)) from exc
+    binding = binding_of(cfg)
+    problem = (
+        _field_type_problem(cfg)
+        or _derived_shape_problem(cfg)
+        or _repeat_shape_problem(cfg)
+    )
+    if problem:
+        raise RunConfigError(problem)
+    ack = cfg.get("unfrozen_ack", False)
+    return RunConfig(
+        schema_version=cast(int, cfg["schema_version"]),
+        run_kind=kind,
+        protocol=binding,
+        derived_from=cfg.get("derived_from"),
+        repeat_of=cfg.get("repeat_of"),
+        draw=cfg.get("draw"),
+        unfrozen_ack=ack,
+        **{key: cfg.get(key) for key in _SCALARS},
+        _nested=json.dumps(
+            {key: cfg.get(key) for key in _NESTED}, ensure_ascii=False, sort_keys=True
+        ),
+    )
+
+
 @dataclass(frozen=True)
 class RunDir:
     """One directory under `runs/` and what its config.json says: `config`
@@ -574,7 +762,7 @@ class RunDir:
     whose metadata cannot be read (the RunConfigError's sentence)."""
 
     dir: Path
-    config: JsonObject | None
+    config: RunConfig | None
     error: str | None
 
     def __post_init__(self) -> None:
@@ -618,8 +806,8 @@ def completed_runs(area: Path, *, with_repeats: bool) -> list[Path]:
             raise RunConfigError(rd.error)
         if (
             rd.config is not None
-            and run_state(rd.dir, rd.config, alive=False) == COMPLETED
-            and (with_repeats or repeat_parent(rd.config) is None)
+            and run_state(rd.dir, alive=False) == COMPLETED
+            and (with_repeats or rd.config.repeat_of is None)
         ):
             out.append(rd.dir)
     return out
@@ -628,22 +816,6 @@ def completed_runs(area: Path, *, with_repeats: bool) -> list[Path]:
 # ---- which run answers for a protocol — one choice for intent-check,
 # finalize and labkit-params (2026-10-08: it stood in intent_check and
 # finalize alike; a third copy for the parameter view was the line)
-
-
-def repeat_parent(config: JsonObject) -> str | None:
-    """The run a repeat draws again (config.json `repeat_of`), or None.
-
-    `derived_from` re-reads the parent's rows and makes no model call;
-    `repeat_of` asks the model again with the same instrument on the same
-    items — a full measurement with its own model record, recorded so the
-    spread of the number is visible (TODO item 4, 2026-10-14). A repeat is
-    supporting evidence: it never answers the protocol (`bound_runs`)."""
-    v = config.get("repeat_of")
-    if v is None:
-        return None
-    if not isinstance(v, str) or RUN_ID.fullmatch(v) is None:
-        raise RunConfigError(f"repeat_of = {v!r}, not a run id")
-    return v
 
 
 #: States that mean "this run is not a clean finish" — `--wait` exits 2 on

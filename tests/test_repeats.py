@@ -26,6 +26,14 @@ from labkit.run import runlog, provenance
 from labkit.formats import runs, answering_run
 
 
+def _read(table: dict) -> runs.RunConfig:
+    """A parent run as the reader gives it: TABLE's fields in a schema-3
+    measurement record."""
+    return runs.parse_run_config(
+        {"schema_version": 3, "run_kind": "measurement", **table}
+    )
+
+
 class Repeats(unittest.TestCase):
     def setUp(self) -> None:
         os.environ.pop("CLAUDECODE", None)
@@ -182,15 +190,16 @@ class Repeats(unittest.TestCase):
             ({"config": {"greedy": 1}}, "config seed: null → (absent)"),
         ):
             with self.subTest(needle=needle):
-                self.assertIn(needle, answering_run.repeat_mismatch(parent, new))
+                self.assertIn(needle, answering_run.repeat_mismatch(_read(parent), new))
 
     def test_a_damaged_table_is_not_an_empty_one(self):
         """Review 2026-10-20: a parent recording `"config": ["invalid-record"]`
         read as an empty config, and a repeat with an empty one passed."""
         with self.assertRaises(runs.RunConfigError) as cm:
-            answering_run.repeat_mismatch(
-                {"config": ["invalid-record"]}, {"config": {}}
-            )
+            answering_run.repeat_mismatch(_read({}), {"config": ["invalid-record"]})
+        self.assertIn("config = ['invalid-record'], not an object", str(cm.exception))
+        with self.assertRaises(runs.RunConfigError) as cm:
+            _read({"config": ["invalid-record"]})  # a parent never gets this far
         self.assertIn("config = ['invalid-record'], not an object", str(cm.exception))
         # the reader refuses the record before anything compares it
         first = self._run()
@@ -206,20 +215,31 @@ class Repeats(unittest.TestCase):
         self.assertIn("config = ['invalid-record'], not an object", str(cm.exception))
 
     def test_absent_null_and_an_object_are_three_forms(self):
+        """On the side of the run about to start; a read parent states every
+        table (the writer writes all), absent or null alike reading None."""
         for parent, new, needle in (
             (
                 {"promises": None},
                 {"promises": {}},
                 "promises: null in the parent, an object here",
             ),
-            ({}, {"promises": None}, "promises: absent in the parent, null here"),
             ({"data": {}}, {}, "data: an object in the parent, absent here"),
+            ({"data": None}, {}, "data: null in the parent, absent here"),
         ):
             with self.subTest(needle=needle):
-                self.assertIn(needle, answering_run.repeat_mismatch(parent, new))
+                self.assertIn(needle, answering_run.repeat_mismatch(_read(parent), new))
         # the twin: the same form on both sides says nothing
         self.assertEqual(
-            answering_run.repeat_mismatch({"promises": None}, {"promises": None}), []
+            answering_run.repeat_mismatch(
+                _read({"promises": None}),
+                {
+                    "protocol": {"id": None, "path": None},
+                    **dict.fromkeys(
+                        ("promises", "config", "data", "script_sha", "models_resolved")
+                    ),
+                },
+            ),
+            [],
         )
 
     def test_same_block_other_code_script_or_model_is_no_repeat(self):
@@ -228,9 +248,10 @@ class Repeats(unittest.TestCase):
         run still count as a draw of the old. The whole promise snapshot, the
         measure script and the resolved model are compared too."""
         first = self._run()
-        parent = self._cfg(first)
+        parent = runs.read_run_config(self.area / "runs" / first)
+        assert parent is not None
         base = {
-            k: parent.get(k)
+            k: parent.as_record().get(k)
             for k in (
                 "protocol",
                 "promises",

@@ -53,7 +53,7 @@ history (`protocol_history`) and the report behind `protocol-check`
 (`protocol_report`). `standard_contract` derives the obligations of a cost
 lane, release or skeleton from facts the caller supplies; it reads no files.
 
-`runs` reads what a run directory says about itself; `answering_run` selects
+`runs` reads what a run directory says about itself — its config.json as one `RunConfig`, labkit's fields typed where the record is read, the experiment's own `config` free JSON, nested values handed out as copies; `answering_run` selects
 the run that answers a protocol. `repo` locates the repository and its
 protocols and runs git. `scope_sha` computes scope hashes and audit stamps.
 `rules` holds the standard's rules and checks their references. `findings`

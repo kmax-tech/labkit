@@ -59,9 +59,9 @@ def criterion_n_input_mismatches(measurement_run: Path) -> list[str]:  # noqa: C
     }
     if not ns:
         return []
-    cfg = read_run_config(measurement_run) or {}
+    cfg = read_run_config(measurement_run)
     counts: dict[str, int] = {}
-    for key, d in (cfg.get("data") or {}).items():
+    for key, d in (cfg.data if cfg else {}).items():
         if isinstance(d, dict) and isinstance(d.get("rows"), int):
             counts[f"data[{key}].rows"] = d["rows"]
     for o in read_outputs(measurement_run) or []:
@@ -90,8 +90,8 @@ def provenance_findings(
     """(blockers, warnings) for a run of seconds: source frozen, files tracked."""
     blockers: list[str] = []
     warnings: list[str] = []
-    cfg = read_run_config(measurement_run) or {}
-    data = cfg.get("data") or {}
+    cfg = read_run_config(measurement_run)
+    data = cfg.data if cfg else {}
     if not data:
         blockers.append(
             "source not frozen — the run carries no `data=`; pass "
@@ -256,7 +256,7 @@ def arm_findings(text: str, area: Path, measurement_run: Path) -> list[str]:
     cfg = read_run_config(measurement_run)
     if cfg is None:
         return out
-    recorded = json.dumps(cfg, ensure_ascii=False)
+    recorded = json.dumps(cfg.as_record(), ensure_ascii=False)
     root = git_root(area) or area
     for m in ARM_LINE.finditer(text):
         arm, profile, sha, model = m.group("arm", "profile", "sha", "model")

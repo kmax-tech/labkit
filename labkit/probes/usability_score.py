@@ -158,7 +158,7 @@ class ProbeRun:
     probe: Probe
     area: Path
     run: Path | None  # None: no completed run yet
-    config: dict[str, object]
+    config: runs.RunConfig | None
     metrics: dict[str, object]
     protocol: Path | None  # the protocol the run names, resolved; None: none named
     protocol_as_recorded: str | None  # the path as config.json holds it
@@ -178,17 +178,17 @@ def load_probe_run(root: Path) -> ProbeRun:
     area = root / "experiments" / probe.area
     run = latest_run(area)
     if run is None:
-        return ProbeRun(probe, area, None, {}, {}, None, None, False, None)
+        return ProbeRun(probe, area, None, None, {}, None, None, False, None)
     config = runs.read_run_config(run)
     if config is None:
         raise console.Refused("usability", f"{run} has no config.json — not a run")
     metrics = runs.read_metrics(run / "metrics.json")
-    binding = runs.binding_of(config)
+    binding = config.protocol
     named = binding.path
     protocol = None
     if named:
         protocol = Path(named) if Path(named).is_absolute() else area / named
-    tier = config.get("cost_tier")
+    tier = config.cost_tier
     return ProbeRun(
         probe,
         area,

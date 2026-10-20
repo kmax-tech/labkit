@@ -16,7 +16,7 @@ from labkit.formats import runs, answering_run
 CONFIG = {
     "schema_version": 3,
     "run_kind": "measurement",
-    "run_id": "r",
+    "experiment": "r",
     "protocol": {"id": "p-" + "0" * 16},
 }
 
@@ -53,7 +53,8 @@ class RunDirs(unittest.TestCase):
         self.assertEqual([rd.dir.name[-4:] for rd in got], ["aaaa", "bbbb", "cccc"])
         no_run, a_run, broken = got
         self.assertEqual((no_run.config, no_run.error), (None, None))
-        self.assertEqual((a_run.config or {}).get("run_id"), "r")
+        assert a_run.config is not None
+        self.assertEqual(a_run.config.experiment, "r")
         self.assertIsNone(a_run.error)
         self.assertIsNone(broken.config)
         self.assertIn("unreadable run metadata", broken.error or "")
@@ -121,9 +122,10 @@ class TypedRecords(unittest.TestCase):
 
     def test_a_record_is_read_or_unreadable_never_both(self):
         d = self.area / "runs" / "x"
+        record = runs.parse_run_config(dict(CONFIG))
         with self.assertRaises(ValueError):
-            runs.RunDir(d, dict(CONFIG), "unreadable run metadata")
-        runs.RunDir(d, dict(CONFIG), None)  # the twins: each alone is a record
+            runs.RunDir(d, record, "unreadable run metadata")
+        runs.RunDir(d, record, None)  # the twins: each alone is a record
         runs.RunDir(d, None, "unreadable run metadata")
         runs.RunDir(d, None, None)
 

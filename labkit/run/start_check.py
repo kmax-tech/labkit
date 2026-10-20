@@ -27,7 +27,6 @@ from labkit.formats.runs import (
     RunConfigError,
     completion_state,
     read_run_config,
-    repeat_parent,
 )
 
 
@@ -358,9 +357,8 @@ def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
     parent = base_dir / "runs" / derived_from
     try:
         state = completion_state(parent) if parent.is_dir() else "missing"
-        drawn_from = (
-            repeat_parent(read_run_config(parent) or {}) if state == COMPLETED else None
-        )
+        pcfg = read_run_config(parent) if state == COMPLETED else None
+        drawn_from = pcfg.repeat_of if pcfg else None
     except RunConfigError as exc:
         raise SystemExit(f"runlog: derived_from={derived_from!r}: {exc}") from exc
     if state != COMPLETED:

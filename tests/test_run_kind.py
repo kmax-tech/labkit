@@ -54,9 +54,9 @@ class RunKind(unittest.TestCase):
             cfg = runs.read_run_config(run.dir)
             self.assertIsNotNone(cfg)
             assert cfg is not None
-            self.assertEqual(cfg["schema_version"], 3)
-            self.assertEqual(cfg["run_kind"], "measurement")
-            self.assertNotIn("long", cfg)
+            self.assertEqual(cfg.schema_version, 3)
+            self.assertEqual(cfg.run_kind, "measurement")
+            self.assertNotIn("long", cfg.as_record())
             self.assertEqual(runs.unreportable(cfg), [])
 
     def test_preparation_at_seconds_preserves_provenance_but_cannot_be_reported(self):
@@ -70,7 +70,7 @@ class RunKind(unittest.TestCase):
                     run.metrics(n_items=12)
             cfg = runs.read_run_config(run.dir)
             assert cfg is not None
-            self.assertEqual(cfg["run_kind"], "preparation")
+            self.assertEqual(cfg.run_kind, "preparation")
             self.assertIn("not a measurement", runs.unreportable(cfg)[0])
 
     def test_current_records_require_a_valid_kind_and_reject_the_old_schema(self):

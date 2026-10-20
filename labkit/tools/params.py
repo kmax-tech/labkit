@@ -186,7 +186,8 @@ def model_rows(run_dir: Path) -> list[ParamRow]:
                 tier=GUARANTEED,
             )
         ]
-    resolved = (read_run_config(found) or {}).get("models_resolved") or {}
+    found_cfg = read_run_config(found)
+    resolved = found_cfg.models_resolved if found_cfg else {}
     via = chain[: chain.index(found.name)]
     home = f"models_resolved of {found.name}" + (
         f", inherited through {' → '.join(via)}" if via else ""
@@ -262,9 +263,7 @@ def params_table(area: Path, protocol: Path, run_dir: Path) -> list[ParamRow]:
     cfg = read_run_config(run_dir)
     if cfg is None:
         raise ValueError(f"{run_dir}: no config.json")
-    run_config = cfg.get("config") or {}
-    if not isinstance(run_config, dict):
-        raise ValueError(f"{run_dir.name}: config.json `config` is not an object")
+    run_config = cfg.config  # an object, held where the config is read
     block = promises.parse_block(protocol.read_text(encoding="utf-8"))
     literals = script_literals(area)
     rows: list[ParamRow] = []

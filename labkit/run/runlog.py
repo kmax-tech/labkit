@@ -91,7 +91,6 @@ from labkit.formats.runs import (
     RunKind,
     RUN_SCHEMA,
     RECORD_SHA_CHARS,
-    binding_of,
     RUN_ID_TIME,
     RunConfigError,
     completion_state,
@@ -101,7 +100,6 @@ from labkit.formats.runs import (
     read_metrics,
     read_run_config,
     recorded_path,
-    repeat_parent,
     run_dirs,
     run_state,
 )
@@ -277,9 +275,9 @@ def _repeat_draw(
             f"runlog: repeat_of={repeat_of!r} names no completed run under "
             f"{base_dir / 'runs'} ({state})"
         )
-    if repeat_parent(pcfg) is not None:
+    if pcfg.repeat_of is not None:
         raise SystemExit(
-            f"runlog: {repeat_of} is itself a repeat of {repeat_parent(pcfg)} — "
+            f"runlog: {repeat_of} is itself a repeat of {pcfg.repeat_of} — "
             f"repeat the primary run"
         )
     mine = {
@@ -613,12 +611,18 @@ def active(base_dir: str | Path) -> list[dict]:
             continue
         if cfg is None:
             continue
-        alive = is_alive(cfg.get("pid"), cfg.get("script"))
-        state = run_state(d, cfg, alive)
+        alive = is_alive(cfg.pid, cfg.script)
+        state = run_state(d, alive)
         if state == COMPLETED:
             continue
         out.append(
-            {"run_id": d.name, "dir": str(d), "alive": alive, "state": state, **cfg}
+            {
+                "run_id": d.name,
+                "dir": str(d),
+                "alive": alive,
+                "state": state,
+                **cfg.as_record(),
+            }
         )
     return out
 
@@ -719,7 +723,7 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
                 continue
             if cfg is None:
                 continue
-            state = run_state(d, cfg, alive=False)
+            state = run_state(d, alive=False)
             if state != COMPLETED:
                 incomplete.append(d.name)
                 continue
@@ -730,14 +734,12 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
                 [
                     d.name,
                     str(comp.get("git", "")),
-                    cfg.get("script", ""),
-                    json.dumps(cfg.get("data", {}), ensure_ascii=False, sort_keys=True),
-                    json.dumps(
-                        cfg.get("config", {}), ensure_ascii=False, sort_keys=True
-                    ),
+                    cfg.script or "",
+                    json.dumps(cfg.data, ensure_ascii=False, sort_keys=True),
+                    json.dumps(cfg.config, ensure_ascii=False, sort_keys=True),
                     json.dumps(metrics, ensure_ascii=False, sort_keys=True),
                     str(comp.get("note", "")),
-                    binding_of(cfg).id or "",
+                    cfg.protocol.id or "",
                 ],
             )
             added += 1

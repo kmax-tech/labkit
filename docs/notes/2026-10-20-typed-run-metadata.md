@@ -1,7 +1,7 @@
 # Typed run metadata — design, 2026-10-20
 
-Status: a draft for decision, nothing built. The TODO row "Run-Records"
-(Typisierte Grenzen vervollständigen) points here.
+Status: decided 2026-10-20 (below) and built: `RunConfig` at the read
+boundary, then `ActiveRun`.
 
 ## Problem
 
@@ -44,7 +44,18 @@ binding), `ProtocolBinding`, `RunSummary`, `OutputEntry`, `RunKind`.
 3. **`runlog.active` returns `ActiveRun`** — `run_id`, `dir`, `state`,
    `alive`, `error`, `config: RunConfig | None` — and merges nothing.
 
-## Decisions owed
+## Decisions
+
+Taken 2026-10-20: (1) `runlog.active` breaks and returns `ActiveRun`, no
+dict beside it; (2) an unknown top-level key is refused, the `config`
+inside stays free; (3) `models_resolved` and `promises` stay checked
+tables, their modules own their shape. Nested values are stored as their
+JSON text and handed out as fresh copies — not stored as read-only views,
+which `json.dumps` cannot write and every printing reader would trip on;
+`tests/test_run_config.py` holds it. The boundary and its readers moved in
+one commit, not per reader group: a changed return type breaks every
+reader at once, and a `.get()` on `RunConfig` to bridge them would have
+been a legacy path. The options as they were weighed:
 
 1. **`runlog.active` is public script API.** Return `ActiveRun` (a
    Breaking change: a script reading `r["state"]` or a config key from it

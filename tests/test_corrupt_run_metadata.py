@@ -152,4 +152,4 @@ class Shape(unittest.TestCase):
             )
             cfg = runs.read_run_config(Path(d))
             assert cfg is not None
-            self.assertEqual(cfg["schema_version"], 3)
+            self.assertEqual(cfg.schema_version, 3)

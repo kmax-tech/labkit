@@ -28,13 +28,13 @@ from labkit.formats.runs import (
     RunState,
     UNREADABLE,
     RECORD_TABLES,
+    RunConfig,
     RunConfigError,
     RunDir,
     read_run_dir,
     completed_runs,
     read_metrics,
     read_run_config,
-    repeat_parent,
     run_dirs,
     run_state,
 )
@@ -82,9 +82,7 @@ def _facts(rd: RunDir) -> RunFacts | None:
         return RunFacts(rd.dir, UNREADABLE, ProtocolBinding(None, None), rd.error)
     if rd.config is None:
         return None
-    return RunFacts(
-        rd.dir, run_state(rd.dir, rd.config, alive=False), binding_of(rd.config)
-    )
+    return RunFacts(rd.dir, run_state(rd.dir, alive=False), rd.config.protocol)
 
 
 def repeats_of(area: Path, run_id: str) -> list[Path]:
@@ -105,10 +103,10 @@ def _repeats(area: Path, run_id: str) -> list[tuple[int, RunDir]]:
     for rd in run_dirs(area):
         if rd.error is not None:
             raise RunConfigError(rd.error)
-        if rd.config is None or repeat_parent(rd.config) != run_id:
+        if rd.config is None or rd.config.repeat_of != run_id:
             continue
-        draw = rd.config.get("draw")
-        if not isinstance(draw, int) or isinstance(draw, bool):
+        draw = rd.config.draw
+        if draw is None:
             raise RunConfigError(
                 f"{rd.dir}/config.json: a repeat without an integer `draw`"
             )
@@ -123,8 +121,7 @@ def _numbered_repeats(area: Path, run_id: str) -> list[tuple[int, Path]]:
     found = sorted(
         (draw, rd.dir)
         for draw, rd in _repeats(area, run_id)
-        if rd.config is not None
-        and run_state(rd.dir, rd.config, alive=False) == COMPLETED
+        if rd.config is not None and run_state(rd.dir, alive=False) == COMPLETED
     )
     for (a, da), (b, db) in zip(found, found[1:]):
         if a == b:
@@ -148,9 +145,10 @@ def draws(area: Path, run_id: str) -> list[tuple[int, Path]]:
     return [(1, area / "runs" / run_id), *_numbered_repeats(area, run_id)]
 
 
-def repeat_mismatch(parent: JsonObject, new: JsonObject) -> list[str]:
+def repeat_mismatch(parent_run: RunConfig, new: JsonObject) -> list[str]:
     """Why a run whose config.json would be NEW is no comparable repeat of
-    PARENT (both config.json dicts), [] when it is: the same protocol, the
+    PARENT_RUN, [] when it is — compared on `RunConfig.repeat_basis`, the keys
+    NEW carries too: the same protocol, the
     same promise snapshot (block and every declared scope's digest), the same
     measure script, the same resolved model, the same experiment config
     (prompt digest, model alias, constants, sampling) and the same inputs
@@ -164,6 +162,7 @@ def repeat_mismatch(parent: JsonObject, new: JsonObject) -> list[str]:
     `null`. A record table (`runs.RECORD_TABLES`) absent on one side, null
     on the other or an object on one only differs; a table that is neither
     raises RunConfigError."""
+    parent = parent_run.repeat_basis()
     new = json.loads(json.dumps(new, ensure_ascii=False))
     out: list[str] = [
         f"{key}: {_form(parent, key)} in the parent, {_form(new, key)} here"
@@ -245,7 +244,7 @@ def bound_runs(area: Path, pid: str) -> tuple[list[RunFacts], list[RunFacts]]:
         facts = _facts(rd)
         if facts is None:
             continue
-        parent = repeat_parent(rd.config) if rd.config is not None else None
+        parent = rd.config.repeat_of if rd.config is not None else None
         bound_to = facts.binding.id
         if facts.state != COMPLETED:
             why = facts.why or facts.state
@@ -468,13 +467,9 @@ def lineage(run_dir: Path) -> list[Path]:
                 f"{here}: no config.json — the lineage of {run_dir.name} breaks here"
             )
         chain.append(here)
-        parent = cfg.get("derived_from")
+        parent = cfg.derived_from  # a run id, held where the config is read
         if parent is None:
             return chain
-        if not isinstance(parent, str) or not parent:
-            raise ValueError(
-                f"{here.name}: derived_from must name a run, not {parent!r}"
-            )
         nxt = run_dir.parent / parent
         if nxt.resolve() in (run.resolve() for run in chain):
             names = " -> ".join([*(run.name for run in chain), parent])
@@ -499,6 +494,7 @@ def model_provenance_run(run_dir: Path) -> Path | None:
             that recorded the model.
     """
     for run in lineage(run_dir):
-        if (read_run_config(run) or {}).get("models_resolved"):
+        cfg = read_run_config(run)
+        if cfg is not None and cfg.models_resolved:
             return run
     return None

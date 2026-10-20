@@ -210,13 +210,12 @@ def check_block_against_run(
                 f"{mpath}: [{p.id}] declares key '{p.key}', which the "
                 f"run does not report."
             )
-    cfg = read_run_config(mpath.parent) or {}
-    recorded = cfg.get("promises")
-    drift = promises.block_drift(recorded, block)
+    cfg = read_run_config(mpath.parent)
+    drift = promises.block_drift(cfg.promises if cfg else None, block)
     if drift:
         out.append(f"{mpath.parent.name}: {drift}.")
     out += promised_constant_mismatches(
-        block, cfg.get("config") or {}, mpath.parent.name
+        block, cfg.config if cfg else {}, mpath.parent.name
     )
     return out
 

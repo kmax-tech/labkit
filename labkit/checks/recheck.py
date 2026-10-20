@@ -84,8 +84,8 @@ def _named_run(d: Path, pid: str) -> Path:
         state = runs.completion_state(d) if d.is_dir() else "missing"
         if state != runs.COMPLETED:
             raise SystemExit(f"recheck: {d} is not a completed run ({state})")
-        cfg = runs.read_run_config(d) or {}
-        parent = runs.repeat_parent(cfg)
+        cfg = runs.read_run_config(d)
+        parent = cfg.repeat_of if cfg else None
     except runs.RunConfigError as exc:
         raise SystemExit(f"recheck: {exc}") from exc
     if parent is not None:
@@ -94,7 +94,7 @@ def _named_run(d: Path, pid: str) -> Path:
             f"recheck: {d.name} is a repeat of {parent} — supporting "
             f"evidence, never the answer; `02_analyze.py --draws` shows it"
         )
-    bound = runs.binding_of(cfg).id
+    bound = cfg.protocol.id if cfg else None
     if bound != pid:
         raise SystemExit(
             f"recheck: {d.name} is bound to {bound or 'no protocol'}, not to "
@@ -137,8 +137,8 @@ def scopes_unchanged(run: Path, area: Path) -> None:
     promise block — and run dirs without config.json, which predate it —
     have nothing to compare and pass.
     """
-    recorded = (runs.read_run_config(run) or {}).get("promises")
-    changed = promises.scope_drift(recorded, area)
+    cfg = runs.read_run_config(run)
+    changed = promises.scope_drift(cfg.promises if cfg else None, area)
     if changed:
         raise SystemExit(
             f"recheck: declared scope changed since run {run.name}: "
@@ -155,16 +155,16 @@ def block_unchanged(run: Path, area: Path) -> None:
     nobody registered before the number (Durchstich 2026-10-06). The bound
     protocol's block must be the one the run recorded.
     """
-    cfg = runs.read_run_config(run) or {}
-    pid = runs.binding_of(cfg).id
-    if pid is None:
+    cfg = runs.read_run_config(run)
+    if cfg is None or cfg.protocol.id is None:
         return  # unbound: nothing to hold
+    pid = cfg.protocol.id
     try:
         protocol = protocol_block.find_by_id(area, pid)  # by id; the path goes stale
         block = promises.parse_block(protocol.read_text(encoding="utf-8"))
     except (protocol_block.BlockError, promises.PromiseError) as exc:
         raise SystemExit(f"recheck: run {run.name}: {exc}") from exc
-    drift = promises.block_drift(cfg.get("promises"), block)
+    drift = promises.block_drift(cfg.promises, block)
     if drift:
         raise SystemExit(f"recheck: run {run.name} {drift}")
 
