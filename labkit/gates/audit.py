@@ -63,6 +63,7 @@ import argparse
 import ast
 import os
 import re
+import shlex
 import sys
 import time
 from pathlib import Path
@@ -752,17 +753,59 @@ def main(argv: list[str]) -> int:
             f"and the change owes its own audit",
             file=sys.stderr,
         )
-    print(
-        f"findings: {recorded} — decide each: `labkit-audit {args.area} --decide N "
-        f"STATUS REASON` (fixed / accepted / deferred / dismissed); preflight reads it",
-        file=sys.stderr,
-    )
+    for line in decision_lines(findings.read(recorded), args.area, report):
+        print(line, file=sys.stderr)
     # the auditor lists what it read in full; the indexed modules are the
     # caller's to add before the list is held to the stamp (LAB-103 The audit reads by declared scope)
     listed_scope = result["scope"] + [str(p) for p in indexed]
     for gap in scope_mismatch(args.area, listed_scope, stamp.files):
         print(f"scope WARNING: {gap}", file=sys.stderr)
     return 1 if b or w else 0
+
+
+#: a READ line of the auditor's report: a reading hint, printed and never
+#: recorded (the record keeps what FINDING matches)
+READ_HINT = re.compile(r"^[\s>*`-]*\**READ\**\s*(?:·|—|–|:)")
+#: how long a finding's text stands in the decision list
+DECISION_TEXT_WIDTH = 160
+
+
+def decision_lines(record: findings.Record, area: Path, report: str) -> list[str]:
+    """What the person decides, as printed after an audit is recorded: the
+    record's path, its findings numbered as `--decide` takes them — from
+    the stored record, never counted in the model's text — each with the
+    command that decides it (`--record` named, so a later audit cannot
+    shift it), then the READ lines of REPORT apart: printed, not recorded,
+    nothing to decide. Five of six sandbox probes (2026-10-21) numbered the
+    printed lines and decided findings the record does not hold."""
+    here = Path.cwd()
+    where = shown(record.path, here)
+    out: list[str] = []
+    if not record.findings:
+        out.append(f"findings: {where} — no findings to decide")
+    else:
+        owed = ", ".join(findings.REASON_OWED)
+        out.append(
+            f"findings: {where} — {len(record.findings)} to decide "
+            f"({' / '.join(s for s in findings.STATUSES if s != 'open')}; a reason "
+            f"owed for {owed}):"
+        )
+        for n, f in enumerate(record.findings, 1):
+            text = (
+                f.text
+                if len(f.text) <= DECISION_TEXT_WIDTH
+                else f.text[: DECISION_TEXT_WIDTH - 1] + "…"
+            )
+            out.append(f"  {n} · {text}")
+            out.append(
+                f"      labkit-audit {shlex.quote(shown(area, here))} --decide {n} "
+                f'STATUS "REASON" --record {shlex.quote(where)}'
+            )
+    hints = [ln.strip() for ln in report.splitlines() if READ_HINT.match(ln)]
+    if hints:
+        out.append("reading hints — not recorded, nothing to decide:")
+        out += [f"  {h}" for h in hints]
+    return out
 
 
 def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:

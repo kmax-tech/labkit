@@ -286,6 +286,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`labkit-audit` lists what there is to decide, numbered from the
+  record.** After recording it prints the record's path and each stored
+  finding with the number `--decide` takes and the command that decides it
+  (`--record` named), then the auditor's READ lines apart — printed, not
+  recorded, nothing to decide — or "no findings to decide". The numbers
+  come from the stored record, not from the model's text: five of six
+  sandbox probes (2026-10-21) numbered the printed lines, READ hints
+  included, and ten `--decide` calls named findings the record does not
+  hold.
+
 - **`usability score` takes a transcript whose working directory is the
   probe.** It refused every transcript that named the probe's path in no
   call; an agent whose shell starts in the probe needs no `cd` and may

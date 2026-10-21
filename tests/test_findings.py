@@ -425,6 +425,84 @@ class DecideCommand(unittest.TestCase):
         self.assertIn("--mode", err)
 
 
+class DecisionList(unittest.TestCase):
+    """After recording, labkit-audit lists the record's findings with the
+    number `--decide` takes — read from the stored record, never counted in
+    the model's text — and the READ lines apart: printed, not recorded,
+    nothing to decide. Five of six sandbox probes (2026-10-21) numbered the
+    printed lines and decided findings the record does not hold."""
+
+    REPORT = (
+        "BLOCKER · scripts/01_measure.py:12 · the key is never written · x · LAB-004 Identifiers make the intent addressable · y\n"
+        "READ · PROTOCOL-x.md:5 · Answer still a placeholder · write it with --from-run\n"
+        "WARNING · scripts/01_measure.py:30 · one draw · x · LAB-050 Analysis audit before reporting · y\n"
+        "READ · README.md:3 · a stamped placeholder\n"
+        "verdict: 1 blocker, 1 warning, 0 notes\n"
+    )
+
+    def recorded(self) -> tuple[Path, Path]:
+        from labkit.gates import audit
+
+        result = audit.parse(self.REPORT)
+        area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+        area.mkdir(parents=True)
+        path = findings.write(
+            area,
+            "preflight",
+            "opus",
+            "abc123def456",
+            BLOCK,
+            result["verdict"],
+            result["findings"],
+        )
+        return area, path
+
+    def test_the_stored_findings_are_numbered_and_decided_by_those_numbers(self):
+        import shlex
+
+        from labkit.gates import audit
+
+        area, path = self.recorded()
+        lines = audit.decision_lines(findings.read(path), area, self.REPORT)
+        text = "\n".join(lines)
+        self.assertIn(str(path.name), text)
+        self.assertRegex(text, r"\n  1 · BLOCKER · scripts/01_measure.py:12")
+        self.assertRegex(text, r"\n  2 · WARNING · scripts/01_measure.py:30")
+        self.assertNotRegex(text, r"\n  3 · ")
+        self.assertIn("reading hints — not recorded, nothing to decide", text)
+        self.assertIn("READ · PROTOCOL-x.md:5", text)
+        commands = [ln.strip() for ln in lines if "--decide" in ln and "--record" in ln]
+        self.assertEqual(len(commands), 2, text)
+        for cmd, status in zip(commands, ("fixed", "dismissed")):
+            argv = shlex.split(cmd)[1:]  # without the program name
+            argv = [
+                status if w == "STATUS" else "checked by hand" if w == "REASON" else w
+                for w in argv
+            ]
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                self.assertEqual(audit.main(argv), 0)
+        rec = findings.read(path)
+        self.assertEqual([f.status for f in rec.findings], ["fixed", "dismissed"])
+        self.assertEqual(rec.open, [])
+
+    def test_a_record_without_findings_says_so(self):
+        from labkit.gates import audit
+
+        area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+        area.mkdir(parents=True)
+        path = findings.write(
+            area, "preflight", "opus", "abc123def456", BLOCK, (0, 0, 0), []
+        )
+        report = "READ · README.md:3 · a stamped placeholder\nverdict: 0 blockers, 0 warnings\n"
+        text = "\n".join(audit.decision_lines(findings.read(path), area, report))
+        self.assertIn("no findings to decide", text)
+        self.assertNotIn("--decide", text)
+        self.assertIn("READ · README.md:3", text)
+
+
 class Repo(unittest.TestCase):
     def test_deferred_elsewhere_names_the_other_area_only(self):
         root = Path(tempfile.mkdtemp()) / "experiments"
