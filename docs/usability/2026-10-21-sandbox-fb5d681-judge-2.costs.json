@@ -1,0 +1,313 @@
+{
+ "agent_usd": 0.361212,
+ "nested_usd": 0.459304,
+ "total_usd": 0.820516,
+ "sessions": {
+  "-work/136cd36a-132a-41f9-b44b-6ded64e2ac17": {
+   "cost_usd": 0.361212,
+   "models": {
+    "claude-sonnet-5-5": {
+     "input_tokens": 36,
+     "cache_read_input_tokens": 543490,
+     "cache_creation_input_tokens": 43313,
+     "output_tokens": 7919
+    }
+   }
+  },
+  "-work--tmp/0ccecce0-3d6c-4f2a-99f4-2c4a6de3fad3": {
+   "cost_usd": 0.0021393000000000002,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 552,
+     "output_tokens": 86
+    }
+   }
+  },
+  "-work--tmp/161150ea-6dd0-4aaf-9256-289bbb329f27": {
+   "cost_usd": 0.0024743,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 567,
+     "output_tokens": 147
+    }
+   }
+  },
+  "-work--tmp/385c3b0d-0150-4180-a6be-50873914a62a": {
+   "cost_usd": 0.0022142999999999998,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 552,
+     "output_tokens": 101
+    }
+   }
+  },
+  "-work--tmp/41243f77-f49d-45d8-8705-6aa5825b988e": {
+   "cost_usd": 0.0057183,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 569,
+     "output_tokens": 795
+    }
+   }
+  },
+  "-work--tmp/46a39bca-f22e-4bd8-90f0-591f32fd3e32": {
+   "cost_usd": 0.0021263000000000002,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 553,
+     "output_tokens": 83
+    }
+   }
+  },
+  "-work--tmp/641a6c81-848e-42c5-ad8c-ed20ccc59ff5": {
+   "cost_usd": 0.0021463000000000003,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 553,
+     "output_tokens": 87
+    }
+   }
+  },
+  "-work--tmp/64c4e699-dfd0-49bf-8e08-9c90261f019a": {
+   "cost_usd": 0.0021723,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 551,
+     "output_tokens": 93
+    }
+   }
+  },
+  "-work--tmp/683bbdb9-3a11-4ffc-a7b8-8f3c228e53dc": {
+   "cost_usd": 0.0042213,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 568,
+     "output_tokens": 496
+    }
+   }
+  },
+  "-work--tmp/7f50bbf9-885f-4604-b6af-bc9349f69108": {
+   "cost_usd": 0.0023263,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 553,
+     "output_tokens": 123
+    }
+   }
+  },
+  "-work--tmp/8558e788-782a-4b08-bf92-c4096fd6a369": {
+   "cost_usd": 0.0028063000000000003,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 568,
+     "output_tokens": 213
+    }
+   }
+  },
+  "-work--tmp/8599b8f2-fbd1-4f51-85c8-04c4a8446392": {
+   "cost_usd": 0.0021593000000000003,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 552,
+     "output_tokens": 90
+    }
+   }
+  },
+  "-work--tmp/968a017b-22af-469a-8c5d-73dac5c076cd": {
+   "cost_usd": 0.0021383,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 554,
+     "output_tokens": 85
+    }
+   }
+  },
+  "-work--tmp/9cdb65a2-8e9c-4283-9c5a-0c45bd753c87": {
+   "cost_usd": 0.0023533,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 569,
+     "output_tokens": 122
+    }
+   }
+  },
+  "-work--tmp/a4c43d77-9d2c-43ba-a511-92ea00a06ba4": {
+   "cost_usd": 0.0044573,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 566,
+     "output_tokens": 544
+    }
+   }
+  },
+  "-work--tmp/ac19c555-db35-4e62-a487-2c538d292de1": {
+   "cost_usd": 0.0025163,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 568,
+     "output_tokens": 155
+    }
+   }
+  },
+  "-work--tmp/b18fd99b-eeab-4e49-b8bf-89f498972152": {
+   "cost_usd": 0.0050963,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 568,
+     "output_tokens": 671
+    }
+   }
+  },
+  "-work--tmp/b3de3668-b655-44cb-b903-353c29a984a6": {
+   "cost_usd": 0.3931038,
+   "models": {
+    "claude-opus-5-5": {
+     "input_tokens": 2,
+     "cache_read_input_tokens": 1839,
+     "cache_creation_input_tokens": 28286,
+     "output_tokens": 8322
+    }
+   }
+  },
+  "-work--tmp/c92057de-bcff-4f8c-a4a9-dc08eba40ab8": {
+   "cost_usd": 0.0025393,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 567,
+     "output_tokens": 160
+    }
+   }
+  },
+  "-work--tmp/cd74c213-c57e-4f9f-bc78-ab3b3707d939": {
+   "cost_usd": 0.0021203000000000003,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 550,
+     "output_tokens": 83
+    }
+   }
+  },
+  "-work--tmp/ce344b08-03b1-42a6-92fd-dbc18dc88a77": {
+   "cost_usd": 0.0021953,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 565,
+     "output_tokens": 92
+    }
+   }
+  },
+  "-work--tmp/d5290dfc-5e6b-40b9-be67-13166fbecd02": {
+   "cost_usd": 0.0021753,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 550,
+     "output_tokens": 94
+    }
+   }
+  },
+  "-work--tmp/d9afd665-39a1-421d-abdf-5c51100ab655": {
+   "cost_usd": 0.0023583,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 554,
+     "output_tokens": 129
+    }
+   }
+  },
+  "-work--tmp/e2e569b2-9538-48ee-919b-0b2156b6b55d": {
+   "cost_usd": 0.0025003,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 565,
+     "output_tokens": 153
+    }
+   }
+  },
+  "-work--tmp/f89774d6-f781-426b-b63a-1bfc419325a1": {
+   "cost_usd": 0.0030793,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 567,
+     "output_tokens": 268
+    }
+   }
+  },
+  "-work--tmp/ff794a6e-158c-4666-98bc-07144354b02c": {
+   "cost_usd": 0.0021663000000000003,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 553,
+     "output_tokens": 91
+    }
+   }
+  }
+ },
+ "proxy_tokens": {
+  "claude-sonnet-5-5": {
+   "input_tokens": 36,
+   "cache_read_input_tokens": 543490,
+   "cache_creation_input_tokens": 43313,
+   "output_tokens": 7919
+  },
+  "claude-haiku-4-5-20251001": {
+   "input_tokens": 240,
+   "cache_read_input_tokens": 142872,
+   "cache_creation_input_tokens": 13434,
+   "output_tokens": 4961
+  },
+  "claude-opus-5-5": {
+   "input_tokens": 2,
+   "cache_read_input_tokens": 1839,
+   "cache_creation_input_tokens": 28286,
+   "output_tokens": 8322
+  }
+ }
+}

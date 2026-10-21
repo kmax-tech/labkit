@@ -1,0 +1,313 @@
+{
+ "agent_usd": 0.30619460000000004,
+ "nested_usd": 0.519396,
+ "total_usd": 0.82559,
+ "sessions": {
+  "-work/feb5f879-3588-48cb-b33e-b3706c198848": {
+   "cost_usd": 0.30619460000000004,
+   "models": {
+    "claude-sonnet-5-5": {
+     "input_tokens": 28,
+     "cache_read_input_tokens": 371443,
+     "cache_creation_input_tokens": 39430,
+     "output_tokens": 7413
+    }
+   }
+  },
+  "-work--tmp/024dfe0e-417d-4b99-8cf4-166604af5834": {
+   "cost_usd": 0.0041473000000000005,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 571,
+     "output_tokens": 480
+    }
+   }
+  },
+  "-work--tmp/1bf4c76d-9b2f-48f3-a7ec-3510105e1f19": {
+   "cost_usd": 0.013618,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 0,
+     "cache_creation_input_tokens": 6524,
+     "output_tokens": 112
+    }
+   }
+  },
+  "-work--tmp/1e818b21-124f-41aa-b28a-e7980ed62496": {
+   "cost_usd": 0.0022313000000000003,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 553,
+     "output_tokens": 104
+    }
+   }
+  },
+  "-work--tmp/28f53bd3-daf1-4381-b945-b2301bcf7a4c": {
+   "cost_usd": 0.0023853,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 570,
+     "output_tokens": 128
+    }
+   }
+  },
+  "-work--tmp/310d0821-fe9f-42f6-a3e2-abbef6bae0fb": {
+   "cost_usd": 0.0020773,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 551,
+     "output_tokens": 74
+    }
+   }
+  },
+  "-work--tmp/3569567d-b921-4af0-870f-1f8096573052": {
+   "cost_usd": 0.0021343,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 552,
+     "output_tokens": 85
+    }
+   }
+  },
+  "-work--tmp/550d80ab-a057-4508-8e9a-f6487ae624af": {
+   "cost_usd": 0.0024253,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 570,
+     "output_tokens": 136
+    }
+   }
+  },
+  "-work--tmp/58668cb3-1b4c-441e-9ced-f3f0ad6707e4": {
+   "cost_usd": 0.014158,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 0,
+     "cache_creation_input_tokens": 6524,
+     "output_tokens": 220
+    }
+   }
+  },
+  "-work--tmp/5f5319df-62b6-4a15-b401-7d0314994d70": {
+   "cost_usd": 0.0022243,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 552,
+     "output_tokens": 103
+    }
+   }
+  },
+  "-work--tmp/6a54916c-aa67-4799-9f8c-023973407f36": {
+   "cost_usd": 0.0021113,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 553,
+     "output_tokens": 80
+    }
+   }
+  },
+  "-work--tmp/70a1740e-cd27-4be2-8719-5f9702dd9fd5": {
+   "cost_usd": 0.0022713000000000004,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 568,
+     "output_tokens": 106
+    }
+   }
+  },
+  "-work--tmp/74cb8fe6-61c8-457b-91cc-60f25691fb41": {
+   "cost_usd": 0.005334299999999999,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 572,
+     "output_tokens": 717
+    }
+   }
+  },
+  "-work--tmp/761c2edd-68f0-416e-899e-193938d12c68": {
+   "cost_usd": 0.0020433,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 554,
+     "output_tokens": 66
+    }
+   }
+  },
+  "-work--tmp/79569533-88d0-43c7-92dc-d2d52b5f7ae8": {
+   "cost_usd": 0.41267580000000004,
+   "models": {
+    "claude-opus-5-5": {
+     "input_tokens": 2,
+     "cache_read_input_tokens": 1839,
+     "cache_creation_input_tokens": 28155,
+     "output_tokens": 9353
+    }
+   }
+  },
+  "-work--tmp/8a4f605e-57c7-4cc6-94b7-604c01437ff5": {
+   "cost_usd": 0.0022513000000000003,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 568,
+     "output_tokens": 102
+    }
+   }
+  },
+  "-work--tmp/94a721a6-e3fc-4cce-a2f5-8cf75d298cb5": {
+   "cost_usd": 0.014663,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 0,
+     "cache_creation_input_tokens": 6524,
+     "output_tokens": 321
+    }
+   }
+  },
+  "-work--tmp/a3101860-d2fc-4f02-8cef-f68e8c0cdb0b": {
+   "cost_usd": 0.0021653,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 550,
+     "output_tokens": 92
+    }
+   }
+  },
+  "-work--tmp/befcf008-538b-471b-931c-143cf05b1292": {
+   "cost_usd": 0.0021613,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 553,
+     "output_tokens": 90
+    }
+   }
+  },
+  "-work--tmp/c7ad7d65-75e8-4ef7-bca5-cd9f9ecaac98": {
+   "cost_usd": 0.0021003000000000003,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 550,
+     "output_tokens": 79
+    }
+   }
+  },
+  "-work--tmp/d3f69d8d-3f19-465b-bdd6-287608bc45d1": {
+   "cost_usd": 0.013890000000000001,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 0,
+     "cache_creation_input_tokens": 6525,
+     "output_tokens": 166
+    }
+   }
+  },
+  "-work--tmp/d84d8344-2be0-459b-8c13-6834f3a07bf8": {
+   "cost_usd": 0.0021043,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 552,
+     "output_tokens": 79
+    }
+   }
+  },
+  "-work--tmp/dd385c28-9533-4376-a096-386dfc284e44": {
+   "cost_usd": 0.0021083,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 554,
+     "output_tokens": 79
+    }
+   }
+  },
+  "-work--tmp/ed20d5f7-e411-4db8-8143-945e24643b20": {
+   "cost_usd": 0.0030232999999999996,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 569,
+     "output_tokens": 256
+    }
+   }
+  },
+  "-work--tmp/f71ee396-b03e-43b2-a5e9-993c452cde44": {
+   "cost_usd": 0.0021513,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 553,
+     "output_tokens": 88
+    }
+   }
+  },
+  "-work--tmp/f947f561-2073-4ef8-ae79-6ebeb169885a": {
+   "cost_usd": 0.0029403,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 570,
+     "output_tokens": 239
+    }
+   }
+  }
+ },
+ "proxy_tokens": {
+  "claude-sonnet-5-5": {
+   "input_tokens": 28,
+   "cache_read_input_tokens": 371443,
+   "cache_creation_input_tokens": 39430,
+   "output_tokens": 7413
+  },
+  "claude-haiku-4-5-20251001": {
+   "input_tokens": 240,
+   "cache_read_input_tokens": 119060,
+   "cache_creation_input_tokens": 37282,
+   "output_tokens": 4002
+  },
+  "claude-opus-5-5": {
+   "input_tokens": 2,
+   "cache_read_input_tokens": 1839,
+   "cache_creation_input_tokens": 28155,
+   "output_tokens": 9353
+  }
+ }
+}
