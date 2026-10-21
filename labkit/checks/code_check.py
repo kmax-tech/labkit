@@ -76,7 +76,7 @@ import ast
 from pathlib import Path
 
 from labkit.formats import console, promises, protocol_block, rules, standard_contract
-from labkit.formats.gate import Findings
+from labkit.formats.gate import BLOCKER, WARNING, Findings, GateFinding, coded
 from labkit.checks.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 from labkit.formats.repo import (
     AmbiguousArea,
@@ -109,10 +109,14 @@ from labkit.checks.prompt_check import check_parser_fixtures, check_prompt_drift
 # --- source analysis ------------------------------------------------------
 
 
+#: the rule every intent-id finding cites
+ID_RULE = "LAB-004 Identifiers make the intent addressable"
+
+
 # --- gate-label extraction ------------------------------------------------
 
 
-def check_intent_ids(area: Path, protocol: Path) -> list[str]:
+def check_intent_ids(area: Path, protocol: Path) -> list[GateFinding]:
     """Registered promises against the code, before any run exists.
 
     `intent-check` asks the same question of the metrics at report time, when
@@ -125,11 +129,11 @@ def check_intent_ids(area: Path, protocol: Path) -> list[str]:
         return [unreadable_source(exc)]
 
 
-def code_findings(area: Path, protocol: Path, repo: Path) -> list[str]:
+def code_findings(area: Path, protocol: Path, repo: Path) -> list[GateFinding]:
     """The automated checks 1–1d, in order, as finding lines: intent ids,
     parser fixtures, prompt drift, stamp coverage. The one list both
-    `code-check` and preflight's code station report; a line starting with
-    `BLOCKER` is a blocker, any other a warning."""
+    `code-check` and preflight's code station report, each finding with its
+    grade as data."""
     return (
         check_intent_ids(area, protocol)
         + check_parser_fixtures(area, repo)
@@ -138,7 +142,7 @@ def code_findings(area: Path, protocol: Path, repo: Path) -> list[str]:
     )
 
 
-def _intent_id_findings(area: Path, protocol: Path) -> list[str]:
+def _intent_id_findings(area: Path, protocol: Path) -> list[GateFinding]:
     text = protocol.read_text(encoding="utf-8")
     findings = promise_block_findings(area, protocol, text)
     registered = {m.group(1).lower() for m in ID_IN_PROTOCOL.finditer(text)}
@@ -148,22 +152,32 @@ def _intent_id_findings(area: Path, protocol: Path) -> list[str]:
     unmistakable = code_ids(area, suffixed_only=True)
     for i in sorted(registered - set(in_code)):
         findings.append(
-            f"BLOCKER · {protocol.name} · [{i.upper()}] is registered, but no "
-            f"script mentions a '{i}'/'{i}_*' key · the run reports nothing "
-            f"for this promise and the metrics check fails after the tokens "
-            f"are spent · LAB-004 Identifiers make the intent addressable · implement the key or drop the id"
+            coded(
+                BLOCKER,
+                protocol.name,
+                f"[{i.upper()}] is registered, but no script mentions a "
+                f"'{i}'/'{i}_*' key · the run reports nothing for this promise "
+                f"and the metrics check fails after the tokens are spent",
+                rule=ID_RULE,
+                fix="implement the key or drop the id",
+            )
         )
     for i in sorted(set(unmistakable) - registered):
         findings.append(
-            f"WARNING · {unmistakable[i][0]} · key '{i}_*' is in the intent-id "
-            f"namespace, but the protocol registers no [{i.upper()}] · a "
-            f"number gets reported that nobody registered · LAB-004 Identifiers make the intent addressable · register "
-            f"it or rename the key"
+            coded(
+                WARNING,
+                unmistakable[i][0],
+                f"key '{i}_*' is in the intent-id namespace, but the protocol "
+                f"registers no [{i.upper()}] · a number gets reported that "
+                f"nobody registered",
+                rule=ID_RULE,
+                fix="register it or rename the key",
+            )
         )
     return findings
 
 
-def promise_block_findings(area: Path, protocol: Path, text: str) -> list[str]:
+def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFinding]:
     """The promise block against the code, before any run (guaranteed tier).
 
     Three things a run would otherwise discover after the tokens are spent:
@@ -176,11 +190,17 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[str]:
         block = promises.parse_block(text)
     except promises.PromiseError as exc:
         return [
-            f"BLOCKER · {protocol.name} · promise block: {exc} · LAB-004 Identifiers make the intent addressable · fix the block"
+            coded(
+                BLOCKER,
+                protocol.name,
+                f"promise block: {exc}",
+                rule=ID_RULE,
+                fix="fix the block",
+            )
         ]
     if block is None:
         return []
-    out = []
+    out: list[GateFinding] = []
     keys = code_keys(area)
     out += admissibility_reads(area, protocol, block, keys)
     for p in block.promises:
@@ -188,18 +208,25 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[str]:
             promises.declared_scope_sha(area, p.scope)
         except promises.PromiseError as exc:
             out.append(
-                f"BLOCKER · {protocol.name} · [{p.id}] declared scope: "
-                f"{exc} · runlog refuses the run · fix the scope"
+                coded(
+                    BLOCKER,
+                    protocol.name,
+                    f"[{p.id}] declared scope: {exc} · runlog refuses the run",
+                    fix="fix the scope",
+                )
             )
         out += constant_copies(area, protocol, p)
         if p.key not in keys:
             near = sorted(k for k in keys if k.startswith(p.id.lower()))
             hint = f" (the code has {', '.join(near)})" if near else ""
             out.append(
-                f"BLOCKER · {protocol.name} · [{p.id}] declares key "
-                f"'{p.key}', which no script mentions{hint} · intent-check "
-                f"fails after the run · report the declared key or fix "
-                f"the block"
+                coded(
+                    BLOCKER,
+                    protocol.name,
+                    f"[{p.id}] declares key '{p.key}', which no script "
+                    f"mentions{hint} · intent-check fails after the run",
+                    fix="report the declared key or fix the block",
+                )
             )
     return out
 
@@ -301,7 +328,7 @@ def _key_reads(path: Path) -> set[str]:
 
 def admissibility_reads(
     area: Path, protocol: Path, block: "promises.PromiseTables", keys: dict
-) -> list[str]:
+) -> list[GateFinding]:
     """Every [A] key the code writes must also be read (static evidence).
 
     An admissibility condition permits the C verdict — C judges, A permits
@@ -325,14 +352,22 @@ def admissibility_reads(
         reads = set().union(*(_key_reads(f) for f in files))
     except ValueError as exc:
         return [
-            f"WARNING · {protocol.name} · [A] keys: read check not done — {exc} "
-            f"· fix the file"
+            coded(
+                WARNING,
+                protocol.name,
+                f"[A] keys: read check not done — {exc}",
+                fix="fix the file",
+            )
         ]
     return [
-        f"WARNING · {keys[p.key][0]} · [{p.id}] key '{p.key}' is written but "
-        f"nothing decides on it · the C verdict is reported whether [{p.id}] held or "
-        f"not · LAB-004 Identifiers make the intent addressable · withhold "
-        f'the verdict when it fails (`if not m["{p.key}"]: …`)'
+        coded(
+            WARNING,
+            keys[p.key][0],
+            f"[{p.id}] key '{p.key}' is written but nothing decides on it · "
+            f"the C verdict is reported whether [{p.id}] held or not",
+            rule=ID_RULE,
+            fix=f'withhold the verdict when it fails (`if not m["{p.key}"]: …`)',
+        )
         for p in owed
         if p.key not in reads
     ]
@@ -349,7 +384,9 @@ def _literal(node: ast.expr) -> object:
 _NOT_LITERAL = object()
 
 
-def constant_copies(area: Path, protocol: Path, p: "promises.Promise") -> list[str]:
+def constant_copies(
+    area: Path, protocol: Path, p: "promises.Promise"
+) -> list[GateFinding]:
     """A declared constant the scope's code sets itself, as a literal
     (static evidence — a warning, never a blocker).
 
@@ -362,7 +399,7 @@ def constant_copies(area: Path, protocol: Path, p: "promises.Promise") -> list[s
     """
     if not p.constants:
         return []
-    out = []
+    out: list[GateFinding] = []
     for path in sorted({area / entry.partition(":")[0] for entry in p.scope}):
         if path.suffix != ".py" or not path.is_file():
             continue
@@ -392,11 +429,15 @@ def constant_copies(area: Path, protocol: Path, p: "promises.Promise") -> list[s
                     else f"the block says {declared!r}"
                 )
                 out.append(
-                    f"WARNING · {protocol.name} · [{p.id}] "
-                    f"{path.relative_to(area).as_posix()}:{node.lineno} sets "
-                    f"{target.id} = {value!r} itself ({same}) · a copy judges by "
-                    f"an unregistered value once they drift · read it with "
-                    f'promises.constants(PROTOCOL, "{p.id}")["{target.id}"]'
+                    coded(
+                        WARNING,
+                        protocol.name,
+                        f"[{p.id}] {path.relative_to(area).as_posix()}:{node.lineno} "
+                        f"sets {target.id} = {value!r} itself ({same}) · a copy "
+                        f"judges by an unregistered value once they drift",
+                        fix=f'read it with promises.constants(PROTOCOL, "{p.id}")'
+                        f'["{target.id}"]',
+                    )
                 )
     return out
 
@@ -552,8 +593,8 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
 
     repo = layout_root(area)
     findings = Findings()
-    for line in code_findings(area, protocol, repo):
-        findings.add(line)
+    for finding in code_findings(area, protocol, repo):
+        findings.take(finding)
 
     if bundle_to is not None:
         n = write_bundle(area, layout_root(area), protocol, bundle_to)

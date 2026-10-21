@@ -80,6 +80,7 @@ from labkit.formats import (
     rules,
     scope_sha,
 )
+from labkit.formats.gate import WARNING, GateFinding, coded
 from labkit.formats.standard_contract import lane
 from labkit.formats.repo import (
     ProtocolChoiceError,
@@ -404,7 +405,7 @@ def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str
     return out
 
 
-def early_for_tier(area: Path, protocol: Path, mode: str) -> list[str]:
+def early_for_tier(area: Path, protocol: Path, mode: str) -> list[GateFinding]:
     """One WARNING line when a preflight audit comes before the cost tier
     asks for it: at `cost = "seconds"` the first run is the cheaper probe
     and ONE audit in mode analysis after it covers the preflight rows
@@ -421,10 +422,14 @@ def early_for_tier(area: Path, protocol: Path, mode: str) -> list[str]:
     if mode in lane(head.cost).audits or completed_runs(area, with_repeats=True):
         return []
     return [
-        'WARNING · cost = "seconds" and no completed run · the first run is the '
-        "cheaper probe; one audit in --mode analysis after it covers the preflight "
-        "rows too · LAB-017 The number of audits follows the cost tier · run first, "
-        "audit once"
+        coded(
+            WARNING,
+            None,
+            'cost = "seconds" and no completed run · the first run is the cheaper '
+            "probe; one audit in --mode analysis after it covers the preflight rows too",
+            rule="LAB-017 The number of audits follows the cost tier",
+            fix="run first, audit once",
+        )
     ]
 
 
@@ -612,8 +617,8 @@ def main(argv: list[str]) -> int:
     try:
         reading = gather(args.area, args.protocol)
         protocol, code = reading.protocol, reading.code
-        for line in early_for_tier(args.area, protocol, args.mode):
-            print(f"labkit-audit: {line}", file=sys.stderr)
+        for finding in early_for_tier(args.area, protocol, args.mode):
+            print(f"labkit-audit: {finding.line}", file=sys.stderr)
         prompt, stamp, block_sha, run_id, shown_sha, indexed = bound_prompt(
             args.mode, args.area, reading
         )

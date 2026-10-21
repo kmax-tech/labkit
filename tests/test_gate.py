@@ -39,21 +39,38 @@ class Findings(unittest.TestCase):
         code, out = run(lambda: gate.Findings().report("t", "x"))
         self.assertEqual((code, out.strip()), (0, "t: all clear."))
 
-    def test_a_graded_line_counts_by_its_own_word(self):
+    def test_the_grade_is_data_never_a_word_of_the_line(self):
+        """A path or quoted text must not grade a finding: a doubled id in
+        PROTOCOL-WARNING.md passed as a warning (review 2026-10-20). The
+        field counts; the words are only told."""
         f = gate.Findings()
         with contextlib.redirect_stdout(io.StringIO()):
-            f.add("BLOCKER · a.py:1 · x")
-            f.add("WARNING · a.py:2 · y")
-            f.add("WARNING · PROTOCOL-BLOCKER.md:3 · z")
-            f.add("something ungraded")  # nobody graded it: a blocker
-        self.assertEqual((len(f.blocked), f.warnings), (2, 2))
-        self.assertEqual(gate.grade_of("fine"), "BLOCKER")
+            f.take(gate.coded("BLOCKER", "a.py:1", "x"))
+            f.take(gate.coded("WARNING", "PROTOCOL-BLOCKER.md:3", "z"))
+            f.take(
+                gate.GateFinding(
+                    "BLOCKER", "PROTOCOL-WARNING.md: DUPLICATE id", gate.AS_WRITTEN
+                )
+            )
+        self.assertEqual((len(f.blocked), f.warnings), (2, 1))
 
-    def test_only_the_first_word_grades_a_line(self):
-        """A path or quoted text further on must not grade it: a doubled id
-        in PROTOCOL-WARNING.md passed as a warning (review 2026-10-20)."""
-        self.assertEqual(gate.grade_of("PROTOCOL-WARNING.md: DUPLICATE id"), "BLOCKER")
-        self.assertEqual(gate.grade_of("  WARNING · x"), "WARNING")
+    def test_a_coded_finding_is_told_with_the_parts_it_has(self):
+        full = gate.coded(
+            "WARNING", "a.py:2", "y · why", rule="LAB-004 Name", fix="do this"
+        )
+        self.assertEqual(
+            full.line, "WARNING · a.py:2 · y · why · LAB-004 Name · do this"
+        )
+        self.assertEqual(gate.coded("BLOCKER", None, "x").line, "BLOCKER · x")
+        self.assertEqual(
+            (full.where, full.rule, full.fix), ("a.py:2", "LAB-004 Name", "do this")
+        )
+
+    def test_an_ungraded_finding_is_refused(self):
+        with self.assertRaises(ValueError):
+            gate.GateFinding("NOTE", "x")
+        with self.assertRaises(ValueError):
+            gate.GateFinding("BLOCKER", "x", "shouted")
 
 
 class Silent(unittest.TestCase):
@@ -68,7 +85,7 @@ class Silent(unittest.TestCase):
                 f.note("── station ──"),
                 f.block("x failed"),
                 f.warn("y"),
-                f.add("WARNING · a.py:2 · z"),
+                f.take(gate.coded("WARNING", "a.py:2", "z")),
                 f.report("t", "freezing"),
             )[-1]
         )
@@ -88,7 +105,7 @@ class Silent(unittest.TestCase):
         self.assertEqual(out.strip().splitlines()[-3:], quiet.summary("t", "freezing"))
         self.assertEqual(gate.GateFinding("BLOCKER", "x").line, "BLOCKER: x")
         self.assertEqual(
-            gate.GateFinding("WARNING", "WARNING · a · b", graded_by_text=True).line,
+            gate.GateFinding("WARNING", "WARNING · a · b", gate.AS_WRITTEN).line,
             "WARNING · a · b",
         )
 

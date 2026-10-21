@@ -16,6 +16,7 @@ import re
 from pathlib import Path
 
 from labkit.formats import protocol_block
+from labkit.formats.gate import BLOCKER, WARNING, GateFinding, coded
 from labkit.formats.protocol_check import fields
 
 
@@ -28,7 +29,7 @@ PROMPT_NAME = re.compile(r"^PROMPT(_[A-Z0-9_]+)?$")
 PLACEHOLDER_IN_PROMPT = re.compile(r"\{[^{}]*\}")
 
 
-def check_parser_fixtures(area: Path, repo: Path) -> list[str]:
+def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
     """Every `parse_*` in the area's scripts is called in some test file under
     the repo's tests/ (`parse_x(…)` or `module.parse_x(…)`). A name in a
     comment, a string or an import passed until 2026-10-20 and is no call.
@@ -45,15 +46,19 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[str]:
         return []
     tests_dir = repo / "tests"
     test_files = sorted(tests_dir.glob("test_*.py")) if tests_dir.is_dir() else []
-    findings = []
+    findings: list[GateFinding] = []
     called: set[str] = set()
     for t in test_files:
         try:
             tree = ast.parse(t.read_text(encoding="utf-8"), filename=str(t))
         except (SyntaxError, UnicodeDecodeError) as exc:
             findings.append(
-                f"BLOCKER · {t.name} · cannot be parsed ({exc}) · which parsers it "
-                f"calls cannot be told · fix the test file"
+                coded(
+                    BLOCKER,
+                    t.name,
+                    f"cannot be parsed ({exc}) · which parsers it calls cannot be told",
+                    fix="fix the test file",
+                )
             )
             continue
         called |= {
@@ -65,9 +70,14 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[str]:
     for name, sp in sorted(parsers.items()):
         if name not in called:
             findings.append(
-                f"BLOCKER · {sp.name} · {name}() has no test under {tests_dir.name}/ · "
-                f"a parser fails silently into a wrong number · give it a fixture "
-                f"with real raw answers (LAB-016 Resolution check before freezing, 2026-10-05)"
+                coded(
+                    BLOCKER,
+                    sp.name,
+                    f"{name}() has no test under {tests_dir.name}/ · a parser "
+                    f"fails silently into a wrong number",
+                    rule="LAB-016 Resolution check before freezing",
+                    fix="give it a fixture with real raw answers",
+                )
             )
     return findings
 
@@ -208,7 +218,7 @@ def prompt_blocks(protocol: Path) -> list[str]:
     return blocks
 
 
-def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
+def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:
     """The protocol's prompt block against the PROMPT constant(s).
 
     Compared line by line: every non-empty line of the constant that carries
@@ -218,8 +228,12 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
     # A prompt this reader cannot compute is unchecked — said aloud, never a
     # silent pass (re-measure 2026-10-07: the stamped skeleton's were).
     warnings = [
-        f"WARNING · {name} is not statically readable (a call or a format "
-        f"spec this check does not compute) · prompt drift unchecked for it"
+        coded(
+            WARNING,
+            None,
+            f"{name} is not statically readable (a call or a format spec this "
+            f"check does not compute) · prompt drift unchecked for it",
+        )
         for name in unreadable
     ]
     # a block that only holds a `<placeholder>` is the template's, not a prompt
@@ -227,7 +241,7 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
     if not consts or not blocks:
         return warnings
     have = {ln.strip() for b in blocks for ln in b.splitlines() if ln.strip()}
-    findings = []
+    findings: list[GateFinding] = []
     for name, text in sorted(consts.items()):
         fixed = [
             ln.strip()
@@ -237,9 +251,13 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[str]:
         missing = [ln for ln in fixed if ln not in have]
         if fixed and missing:
             findings.append(
-                f"BLOCKER · {protocol.name} · prompt block drifted from {name}: "
-                f"{len(missing)} of {len(fixed)} fixed line(s) missing, e.g. "
-                f"{missing[0][:60]!r} · paste the rendered `--show` output, not a "
-                f"transcript (LAB-007 Render check before the instrument check, 2026-10-05)"
+                coded(
+                    BLOCKER,
+                    protocol.name,
+                    f"prompt block drifted from {name}: {len(missing)} of "
+                    f"{len(fixed)} fixed line(s) missing, e.g. {missing[0][:60]!r}",
+                    rule="LAB-007 Render check before the instrument check",
+                    fix="paste the rendered `--show` output, not a transcript",
+                )
             )
     return warnings + findings

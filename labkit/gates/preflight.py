@@ -38,9 +38,8 @@ What it runs, in order (`preflight_area` shows each station's condition):
                      intent ids against the code, parser fixtures, prompt
                      drift, and the code the stamp cannot follow (sys.path
                      edits, dynamic loaders, imports outside lib/ and src/
-                     — static evidence, warnings);
-                     a line starting with `BLOCKER` is a blocker, any other
-                     a warning
+                     — static evidence, warnings); each finding carries
+                     its grade as data
   5. scope-sha       audit stamp over the input scope; told
   6. working tree    uncommitted changes (warning, not a blocker)
   7. hooks           the installed labkit hooks match this labkit (warning);
@@ -410,13 +409,12 @@ def check_deferred_elsewhere(
 
 def check_code(findings: Findings, area: Path, protocol: Path, repo: Path) -> None:
     """Station 4: code-check's automated checks (`code_check.code_findings`:
-    intent ids, parser fixtures, prompt drift, stamp coverage), each line
-    graded by code-check's own word and counted once — here, not again by
-    code-check."""
-    lines = code_findings(area, protocol, repo)
-    for line in lines:
-        findings.add(line)
-    if not lines:
+    intent ids, parser fixtures, prompt drift, stamp coverage), each with
+    its grade as data and counted once — here, not again by code-check."""
+    found = code_findings(area, protocol, repo)
+    for finding in found:
+        findings.take(finding)
+    if not found:
         findings.note("  ok")
 
 

@@ -225,7 +225,7 @@ evidence** (warns), **agent audit** (semantic).
 | What is a run id, when did the run start? | `runs.RUN_ID`, `runs.RUN_ID_TIME`, `runs.run_started`; `runs.COMPLETED` is the one state word every consumer compares to |
 | How is a path shown in a report line, a bundle or a refusal? | `repo.shown(path, base)` — relative to the base when below it, else absolute, both resolved; a record's path is `runs.recorded_path`, a stamp's hashed key `scope_sha._key` |
 | How does a record state a time? | `runs.now_stamp()` in `runs.RECORD_TIME` (`2026-10-13T14:00:57`, local) — a run's `started`/`finished`, a lock's or lease's holder, a staged probe, a session's stop |
-| How does a gate tell what it found, and exit? | `gate.Findings` (`block`, `warn`, `add` for a line graded by its own word, `note` for a line counted as nothing, `report`; `Findings(tell=None)` collects the same findings without a console — report-check reads finalize's so) — preflight, finalize, report-check, code-check, notes-check |
+| How does a gate tell what it found, and exit? | `gate.Findings` (`block`, `warn`, `take` for a `GateFinding` built where it was found — `gate.coded` for a code check's, grade, where, rule and fix as fields; `note` for a line counted as nothing, `report`; `Findings(tell=None)` collects the same findings without a console — report-check reads finalize's so) — preflight, finalize, report-check, code-check, notes-check |
 | Which rules exist, what do they say, and does a reference name one? | `rules.load_registry`, `rules.rule_heads`, `rules.check_registry`, `rules.check_ledger`, `rules.check_refs`, `rules.rule_text` (`labkit/docs/standard.md`, `labkit/docs/rules.tsv`) |
 
 A second answer to any of these questions is drift: move the caller to the

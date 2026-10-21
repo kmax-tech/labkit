@@ -46,7 +46,7 @@ def check(script: str, protocol_text: str) -> list[str]:
         (area / "scripts" / "01_measure.py").write_text(script)
         protocol = area / "PROTOCOL-x.md"
         protocol.write_text(protocol_text)
-        return prompt_check.check_prompt_drift(area, protocol)
+        return [f.line for f in prompt_check.check_prompt_drift(area, protocol)]
 
 
 class Readable(unittest.TestCase):

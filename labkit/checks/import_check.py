@@ -14,6 +14,7 @@ import ast
 import re
 from pathlib import Path
 
+from labkit.formats.gate import WARNING, GateFinding, coded
 from labkit.formats.repo import shown
 from labkit.formats.scope_sha import (
     LOCAL_ROOTS,
@@ -113,7 +114,7 @@ def _import_findings(
     where: str,
     rule: str,
     fix: str,
-) -> list[tuple[int, str]]:
+) -> list[tuple[int, GateFinding]]:
     """The imports of NODE that resolve outside lib/ and src/."""
     names = (
         [a.name for a in node.names]
@@ -127,10 +128,14 @@ def _import_findings(
             out.append(
                 (
                     node.lineno,
-                    (
-                        f"WARNING · {where}:{node.lineno} · `{name}` resolves to "
-                        f"{found.relative_to(repo)}, outside lib/ and src/ · the stamp does "
-                        f"not cover it, a change there moves the number unseen · {rule} · {fix}"
+                    coded(
+                        WARNING,
+                        f"{where}:{node.lineno}",
+                        f"`{name}` resolves to {found.relative_to(repo)}, outside "
+                        f"lib/ and src/ · the stamp does not cover it, a change "
+                        f"there moves the number unseen",
+                        rule=rule,
+                        fix=fix,
                     ),
                 )
             )
@@ -169,7 +174,7 @@ def _loads_area_file(node: ast.Call, area: Path) -> bool:
 
 def _coverage_in(
     path: Path, area: Path, repo: Path, own: bool
-) -> list[tuple[int, str]]:
+) -> list[tuple[int, GateFinding]]:
     """(line, finding) for one file — see stamp_coverage_findings. Dynamic
     loaders and foreign-area paths are read in the area's OWN files only: a
     shared helper's loader is parameterised by its caller, and reporting it
@@ -185,7 +190,7 @@ def _coverage_in(
         return []  # scope_sha raises on this file already; one loud place
     root = repo.resolve()
     where = shown(path, root)
-    out: list[tuple[int, str]] = []
+    out: list[tuple[int, GateFinding]] = []
     for node in ast.walk(tree):
         line = getattr(node, "lineno", 0)
         target = _sys_path_target(node)
@@ -196,10 +201,15 @@ def _coverage_in(
             out.append(
                 (
                     line,
-                    (
-                        f"WARNING · {where}:{line} · `sys.path` gains "
-                        f"{', '.join(sorted(names)) or 'a computed path'} · imports after it may "
-                        f"resolve outside lib/ and src/, which the stamp does not follow · {rule} · {fix}"
+                    coded(
+                        WARNING,
+                        f"{where}:{line}",
+                        f"`sys.path` gains "
+                        f"{', '.join(sorted(names)) or 'a computed path'} · imports "
+                        f"after it may resolve outside lib/ and src/, which the "
+                        f"stamp does not follow",
+                        rule=rule,
+                        fix=fix,
                     ),
                 )
             )
@@ -209,10 +219,14 @@ def _coverage_in(
             out.append(
                 (
                     node.lineno,
-                    (
-                        f"WARNING · {where}:{node.lineno} · `{_call_name(node)}(…)` loads code at "
-                        f"run time · the stamp follows `import` lines only, so what this loads "
-                        f"changes the number unseen · {rule} · {fix}"
+                    coded(
+                        WARNING,
+                        f"{where}:{node.lineno}",
+                        f"`{_call_name(node)}(…)` loads code at run time · the "
+                        f"stamp follows `import` lines only, so what this loads "
+                        f"changes the number unseen",
+                        rule=rule,
+                        fix=fix,
                     ),
                 )
             )
@@ -224,10 +238,14 @@ def _coverage_in(
                 out.append(
                     (
                         node.lineno,
-                        (
-                            f"WARNING · {where}:{node.lineno} · names area `{foreign[0]}` · a file "
-                            f"of another area determines this number, and this area's stamp does "
-                            f"not cover it (uniagent 15–17: the script of 14) · {rule} · {fix}"
+                        coded(
+                            WARNING,
+                            f"{where}:{node.lineno}",
+                            f"names area `{foreign[0]}` · a file of another area "
+                            f"determines this number, and this area's stamp does "
+                            f"not cover it (uniagent 15–17: the script of 14)",
+                            rule=rule,
+                            fix=fix,
                         ),
                     )
                 )
@@ -236,14 +254,14 @@ def _coverage_in(
     return out
 
 
-def stamp_coverage_findings(area: Path, repo: Path) -> list[str]:
+def stamp_coverage_findings(area: Path, repo: Path) -> list[GateFinding]:
     """Code the stamp cannot follow (static evidence, WARNING only): a
     `sys.path` edit that does not point at `lib/` or `src/`, a dynamic
     loader, a path naming another area, an import resolving outside
     `lib/` and `src/`. The stamp (`scope_sha.area_stamp`) walks static
     imports into LOCAL_ROOTS and nothing else; what these lines pull in
     determines the number without any stamp seeing a change to it."""
-    out: list[tuple[str, int, str]] = []
+    out: list[tuple[str, int, GateFinding]] = []
     try:
         helpers = imported_repo_helpers(area, repo)
     except SourceError as exc:
@@ -252,6 +270,6 @@ def stamp_coverage_findings(area: Path, repo: Path) -> list[str]:
         out += [(str(path), n, f) for n, f in _coverage_in(path, area, repo, own=True)]
     for path in helpers:
         out += [(str(path), n, f) for n, f in _coverage_in(path, area, repo, own=False)]
-    return [
-        f for _, _, f in sorted(out)
-    ]  # ast.walk is breadth-first; the reader wants source order
+    # ast.walk is breadth-first; the reader wants source order (the line on
+    # a tie, as before the findings were data)
+    return [f for _, _, f in sorted(out, key=lambda t: (t[0], t[1], t[2].line))]

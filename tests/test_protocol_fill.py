@@ -260,7 +260,10 @@ class Prompts(unittest.TestCase):
             (protocol.parent / "scripts" / "01_measure.py").write_text(
                 SCRIPT.replace("causal claim", "claim of cause")
             )
-            drift = prompt_check.check_prompt_drift(protocol.parent, protocol)
+            drift = [
+                f.line
+                for f in prompt_check.check_prompt_drift(protocol.parent, protocol)
+            ]
         self.assertTrue(drift and "drifted from PROMPT" in drift[0], drift)
 
     def test_filling_twice_replaces_not_appends(self):

@@ -710,6 +710,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A code check's finding is data up to the console: `gate.coded`.** The
+  nine checks behind `code-check` and preflight's code station (intent ids,
+  the promise block, declared scopes and keys, `[A]` reads, constant
+  copies, parser fixtures, prompt drift, stamp coverage, unreadable source)
+  and the audit's tier note returned `BLOCKER · …` strings, and the gate
+  read the grade back from the first word (`gate.grade_of`). Each now
+  returns a `GateFinding` with grade, where, text, rule and fix as fields;
+  the gates `take` it. `grade_of` and `Findings.add` are gone, and an
+  ungraded finding is refused when it is built. The lines read as before,
+  except that the parser-fixture and prompt-drift blockers name their rule
+  in its own place instead of in a dated parenthesis.
+
 - **What an analysis audit is held to has one home below the gates:
   `labkit.checks.audit_binding`.** The run choice (`audited_run`), the
   snapshot of what the audit was shown (`run_shown`, `run_rows`,

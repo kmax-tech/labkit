@@ -18,6 +18,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks.code_check import check_intent_ids  # noqa: E402
 
+
+def intent_id_lines(area: Path, protocol: Path) -> list[str]:
+    """`check_intent_ids` as the lines a gate tells."""
+    return [f.line for f in check_intent_ids(area, protocol)]
+
+
 SCRIPT = """def evaluate(rows):
     macro = 0.7
     m = {"c1_macro_f1": macro, "a1_anchor_ok": True}
@@ -53,10 +59,10 @@ def area_with(script: str, protocol: str = PROTOCOL) -> tuple[Path, Path]:
 
 class PromisePreflight(unittest.TestCase):
     def test_clean_twin_passes(self):
-        self.assertEqual(check_intent_ids(*area_with(SCRIPT)), [])
+        self.assertEqual(intent_id_lines(*area_with(SCRIPT)), [])
 
     def test_renamed_key_blocks_though_the_id_is_present(self):
-        findings = check_intent_ids(
+        findings = intent_id_lines(
             *area_with(SCRIPT.replace('"c1_pass"', '"c1_passed"'))
         )
         self.assertEqual(len(findings), 1, findings)
@@ -69,14 +75,14 @@ class PromisePreflight(unittest.TestCase):
             "r.metrics(c1_pass=True if a1_anchor_ok else None, a1_anchor_ok=a1_anchor_ok)\n"
             "def evaluate(rows):\n    return 1\n"
         )
-        self.assertEqual(check_intent_ids(*area_with(script)), [])
+        self.assertEqual(intent_id_lines(*area_with(script)), [])
 
     def test_an_admissibility_key_never_read_is_a_warning(self):
         """[A1] computed, reported, and nothing hangs on it: the C verdict
         is reported whether the anchors held or not (probe 11, "a label
         without effect"). Static evidence, so a WARNING."""
         label_only = SCRIPT.replace(' if m["a1_anchor_ok"] else None', "")
-        findings = check_intent_ids(*area_with(label_only))
+        findings = intent_id_lines(*area_with(label_only))
         self.assertEqual(len(findings), 1, findings)
         self.assertTrue(findings[0].startswith("WARNING · 01_measure.py:"), findings)
         self.assertIn(
@@ -90,7 +96,7 @@ class PromisePreflight(unittest.TestCase):
             "row = {'a1_anchor_ok': a1_anchor_ok}\n"
             "def evaluate(rows):\n    return 1\n"
         )
-        findings = check_intent_ids(*area_with(script))
+        findings = intent_id_lines(*area_with(script))
         self.assertEqual(len(findings), 1, findings)
         self.assertIn("nothing decides on it", findings[0])
 
@@ -112,7 +118,7 @@ class PromisePreflight(unittest.TestCase):
             "    return m\n",
             encoding="utf-8",
         )
-        self.assertEqual(check_intent_ids(area, protocol), [])
+        self.assertEqual(intent_id_lines(area, protocol), [])
 
     def test_a_loop_over_a_key_tuple_decides(self):
         """uniagent 16: `if not all(metrics[k] for k in ADMISSIBILITY)` holds
@@ -125,7 +131,7 @@ class PromisePreflight(unittest.TestCase):
             "        metrics['c1_pass'] = None\n"
             "    return metrics\n"
         )
-        self.assertEqual(check_intent_ids(*area_with(script)), [])
+        self.assertEqual(intent_id_lines(*area_with(script)), [])
 
     def test_a_print_is_not_a_decision(self):
         script = (
@@ -136,18 +142,18 @@ class PromisePreflight(unittest.TestCase):
             "    print(m['a1_anchor_ok'])\n"
             "    return m\n"
         )
-        findings = check_intent_ids(*area_with(script))
+        findings = intent_id_lines(*area_with(script))
         self.assertEqual(len(findings), 1, findings)
         self.assertIn("nothing decides on it", findings[0])
 
     def test_dangling_scope_blocks(self):
-        findings = check_intent_ids(
+        findings = intent_id_lines(
             *area_with(SCRIPT.replace("def evaluate", "def score"))
         )
         self.assertTrue(any("declared scope" in f for f in findings), findings)
 
     def test_malformed_block_blocks(self):
-        findings = check_intent_ids(
+        findings = intent_id_lines(
             *area_with(SCRIPT, PROTOCOL.replace('id = "A1"', 'id = "K1"'))
         )
         self.assertTrue(any("promise block" in f for f in findings), findings)

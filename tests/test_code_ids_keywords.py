@@ -51,7 +51,7 @@ class KeywordKeys(unittest.TestCase):
 
     def test_assignment_is_not_a_reported_key(self):
         area, protocol = area_with("c1_pass = ok\nr.metrics(**{'a1_anchor_ok': a})\n")
-        findings = check_intent_ids(area, protocol)
+        findings = [f.line for f in check_intent_ids(area, protocol)]
         self.assertEqual(len(findings), 1)
         self.assertIn("[C1] is registered, but no script mentions", findings[0])
 

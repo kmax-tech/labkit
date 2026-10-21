@@ -16,49 +16,86 @@ station). Headers and the notes a station prints beside its findings
 whole; they are told, never counted. Why one collector and one channel:
 docs/notes/2026-10-19-gates-and-run-start.md.
 
-A finding line that starts with its grade (code-check's `BLOCKER · <where>
-· …`) goes in through `add`, told as written and counted by that first
-word; `block` and `warn` tell the grade themselves; a finding built as data
-elsewhere (`GateFinding`, e.g. a protocol id's) goes in through `take`.
+A finding goes in as data: `block` and `warn` for a text the gate words
+itself, `take` for a `GateFinding` built where it was found — a protocol
+id's, or a code check's (`coded`: grade, where, what, rule, fix as fields,
+told as `BLOCKER · <where> · <what> · <rule> · <fix>`). No gate reads a
+grade back from a line's words.
 """
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
-#: the grade a line carries as its first word (`BLOCKER · …`, `WARNING · …`)
-GRADE = re.compile(r"^\s*(BLOCKER|WARNING)\b")
 BLOCKER = "BLOCKER"
 WARNING = "WARNING"
 
-
-def grade_of(line: str) -> str:
-    """`BLOCKER` or `WARNING`, read from the line's first word; a line that
-    does not start with one is a blocker — a finding nobody graded must not
-    pass as a warning. Only the first word: a path or a quoted text further
-    on (`PROTOCOL-WARNING.md`) must not grade the line."""
-    m = GRADE.match(line)
-    return m.group(1) if m else BLOCKER
+#: how a finding is told: the gate prefixes the grade (`BLOCKER: …`), the
+#: text says its grade in its own words, or the code checks' ` · ` form
+PREFIXED, AS_WRITTEN, DOTTED = "prefixed", "as written", "dotted"
 
 
 @dataclass(frozen=True)
 class GateFinding:
-    """One finding of a gate: its grade (what counts), its text (what the
-    summary repeats), and whether the text is told as written — it says its
-    grade in its own words (`BLOCKER · …`, `DUPLICATE protocol id`) — or the
-    gate prefixes the grade (`block`, `warn`). The grade field decides,
-    never the words."""
+    """One finding of a gate. The grade field decides what counts, never the
+    words; FORM decides how it is told (`line`).
+
+    Attributes:
+        grade: BLOCKER or WARNING.
+        text: What was found — for a DOTTED finding the part between where
+            and rule (`<what> · <consequence>`), else the whole message.
+        form: PREFIXED (`<grade>: <text>`), AS_WRITTEN (the text says its
+            grade itself, `DUPLICATE protocol id`), DOTTED (`coded`).
+        where: The file or `file:line` the finding points at, when it has one.
+        rule: The standard's rule it cites (`LAB-nnn Name`), when it cites one.
+        fix: What to do about it.
+    """
 
     grade: str
     text: str
-    graded_by_text: bool = False
+    form: str = PREFIXED
+    where: str | None = None
+    rule: str | None = None
+    fix: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.grade not in (BLOCKER, WARNING):
+            raise ValueError(
+                f"a gate finding's grade is BLOCKER or WARNING, not {self.grade!r}"
+            )
+        if self.form not in (PREFIXED, AS_WRITTEN, DOTTED):
+            raise ValueError(f"a gate finding's form is not {self.form!r}")
 
     @property
     def line(self) -> str:
         """The finding as a gate tells it, without the indent."""
-        return self.text if self.graded_by_text else f"{self.grade}: {self.text}"
+        if self.form == AS_WRITTEN:
+            return self.text
+        if self.form == DOTTED:
+            parts = (self.grade, self.where, self.text, self.rule, self.fix)
+            return " · ".join(p for p in parts if p)
+        return f"{self.grade}: {self.text}"
+
+    @property
+    def message(self) -> str:
+        """What the summary repeats: the text, and for a DOTTED finding the
+        whole line — its text alone would lose where it points and the fix."""
+        return self.line if self.form == DOTTED else self.text
+
+
+def coded(
+    grade: str,
+    where: str | None,
+    text: str,
+    *,
+    rule: str | None = None,
+    fix: str | None = None,
+) -> GateFinding:
+    """A code check's finding (code-check, preflight's code station, the
+    audit's tier note), told as `<grade> · <where> · <text> · <rule> · <fix>`
+    with the parts it has."""
+    return GateFinding(grade, text, DOTTED, where=where, rule=rule, fix=fix)
 
 
 class Findings:
@@ -79,13 +116,13 @@ class Findings:
 
     @property
     def blocked(self) -> list[str]:
-        """The blockers' texts, in the order found."""
-        return [f.text for f in self.found if f.grade == BLOCKER]
+        """The blockers' messages (`GateFinding.message`), in the order found."""
+        return [f.message for f in self.found if f.grade == BLOCKER]
 
     @property
     def warned(self) -> list[str]:
-        """The warnings' texts, in the order found."""
-        return [f.text for f in self.found if f.grade == WARNING]
+        """The warnings' messages (`GateFinding.message`), in the order found."""
+        return [f.message for f in self.found if f.grade == WARNING]
 
     @property
     def warnings(self) -> int:
@@ -119,10 +156,6 @@ class Findings:
     def warn(self, msg: str) -> None:
         """A warning: told as `WARNING: msg`, counted, exit 0 on its own."""
         self.take(GateFinding(WARNING, msg))
-
-    def add(self, line: str) -> None:
-        """A finding graded by its own words (`grade_of`): told as written."""
-        self.take(GateFinding(grade_of(line), line, graded_by_text=True))
 
     def summary(self, tool: str, before: str) -> list[str]:
         """The summary lines: with a blocker the count and every blocker named

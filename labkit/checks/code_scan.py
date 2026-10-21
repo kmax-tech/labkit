@@ -16,6 +16,7 @@ import re
 from collections.abc import Iterable
 from pathlib import Path
 
+from labkit.formats.gate import BLOCKER, GateFinding, coded
 from labkit.formats.scope_sha import (
     SourceError,
 )
@@ -194,10 +195,12 @@ def split_stages(area: Path) -> tuple[list[Path], list[Path]]:
     return producers, consumers
 
 
-def unreadable_source(exc: SourceError) -> str:
+def unreadable_source(exc: SourceError) -> GateFinding:
     """The blocker for a file in the area's scope that is not Python: the
     scan cannot say what the code mentions, so nothing is waved through."""
-    return (
-        f"BLOCKER · {exc} · the code cannot be read, so no check over it holds "
-        f"· fix or remove the file"
+    return coded(
+        BLOCKER,
+        None,
+        f"{exc} · the code cannot be read, so no check over it holds",
+        fix="fix or remove the file",
     )

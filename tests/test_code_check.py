@@ -408,7 +408,7 @@ class TestStampCoverage(unittest.TestCase):
             "m = importlib.import_module('measure_14')\n"
             "exec(open('z').read())\n"
         )
-        found = import_check.stamp_coverage_findings(area, repo)
+        found = [f.line for f in import_check.stamp_coverage_findings(area, repo)]
         self.assertEqual(len(found), 5, found)
         self.assertTrue(
             all(
@@ -434,7 +434,7 @@ class TestStampCoverage(unittest.TestCase):
             "A14 = REPO / 'experiments/14-hotel-und-fremde-buchung/scripts/01_measure.py'\n"
             "OWN = REPO / 'experiments/01-x/scripts/01_measure.py'\n"
         )
-        found = import_check.stamp_coverage_findings(area, repo)
+        found = [f.line for f in import_check.stamp_coverage_findings(area, repo)]
         self.assertEqual(len(found), 1, found)
         self.assertIn(":2 · names area `14-hotel-und-fremde-buchung`", found[0])
 
@@ -464,14 +464,14 @@ class TestStampCoverage(unittest.TestCase):
             "_any = importlib.util.spec_from_file_location('o', somewhere)\n",
             encoding="utf-8",
         )
-        found = import_check.stamp_coverage_findings(area, repo)
+        found = [f.line for f in import_check.stamp_coverage_findings(area, repo)]
         self.assertEqual(len(found), 2, found)
         self.assertIn("02_analyze.py:3 · `spec_from_file_location(…)`", found[0])
         self.assertIn("02_analyze.py:4 · `spec_from_file_location(…)`", found[1])
 
     def test_an_import_outside_lib_and_src_warns(self):
         repo, area = self._repo("from tools import helper\nimport experiments\n")
-        found = import_check.stamp_coverage_findings(area, repo)
+        found = [f.line for f in import_check.stamp_coverage_findings(area, repo)]
         self.assertEqual(len(found), 2, found)
         self.assertIn("`tools` resolves to tools, outside lib/ and src/", found[0])
         self.assertIn("`experiments` resolves to experiments", found[1])

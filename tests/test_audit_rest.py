@@ -69,9 +69,10 @@ class ConstantCopies(unittest.TestCase):
             (area / "scripts" / "m.py").write_text(source)
             block = promises.parse_block(head(promises=C1))
             assert block is not None
-            return code_check.constant_copies(
+            found = code_check.constant_copies(
                 area, area / "PROTOCOL-x.md", block.promises[0]
             )
+            return [f.line for f in found]
 
     def test_a_literal_copy_warns_and_names_the_way_out(self):
         (f,) = self.findings(

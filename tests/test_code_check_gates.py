@@ -58,7 +58,7 @@ class Gates(unittest.TestCase):
         (self.repo / "tests" / "test_01_x.py").write_text(
             "from x import parse_answer\nparse_answer('Yes')\n", encoding="utf-8"
         )
-        f = prompt_check.check_parser_fixtures(self.area, self.repo)
+        f = [x.line for x in prompt_check.check_parser_fixtures(self.area, self.repo)]
         self.assertEqual(len(f), 1)
         self.assertIn("parse_score()", f[0])
         self.assertTrue(f[0].startswith("BLOCKER"))
@@ -70,13 +70,13 @@ class Gates(unittest.TestCase):
             '"""parse_score is tested elsewhere"""\n',
             encoding="utf-8",
         )
-        f = prompt_check.check_parser_fixtures(self.area, self.repo)
+        f = [x.line for x in prompt_check.check_parser_fixtures(self.area, self.repo)]
         named = sorted(x.split(" · ")[2].split("()")[0] for x in f)
         self.assertEqual(named, ["parse_answer", "parse_score"])
 
     def test_an_unparsable_test_file_is_said(self):
         (self.repo / "tests" / "test_01_x.py").write_text("def (:\n", encoding="utf-8")
-        f = prompt_check.check_parser_fixtures(self.area, self.repo)
+        f = [x.line for x in prompt_check.check_parser_fixtures(self.area, self.repo)]
         self.assertTrue(any("test_01_x.py · cannot be parsed" in x for x in f), f)
 
     def test_all_parsers_tested_is_silent(self):
@@ -95,7 +95,7 @@ class Gates(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        f = prompt_check.check_prompt_drift(self.area, self.protocol)
+        f = [x.line for x in prompt_check.check_prompt_drift(self.area, self.protocol)]
         self.assertEqual(len(f), 1)
         self.assertIn("drifted from PROMPT", f[0])
 

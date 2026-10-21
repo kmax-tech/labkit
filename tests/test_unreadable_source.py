@@ -41,8 +41,11 @@ class UnreadableSource(unittest.TestCase):
 
     def test_code_check_reports_one_blocker(self):
         for findings in (
-            code_check.check_intent_ids(self.area, self.protocol),
-            import_check.stamp_coverage_findings(self.area, self.repo),
+            [f.line for f in code_check.check_intent_ids(self.area, self.protocol)],
+            [
+                f.line
+                for f in import_check.stamp_coverage_findings(self.area, self.repo)
+            ],
         ):
             with self.subTest(findings=findings):
                 self.assertEqual(len(findings), 1)
@@ -61,8 +64,11 @@ class UnreadableSource(unittest.TestCase):
     def test_twin_a_readable_scope_is_clean_here(self):
         self.stale.write_text("def fine():\n    return 1\n", encoding="utf-8")
         for findings in (
-            code_check.check_intent_ids(self.area, self.protocol),
-            import_check.stamp_coverage_findings(self.area, self.repo),
+            [f.line for f in code_check.check_intent_ids(self.area, self.protocol)],
+            [
+                f.line
+                for f in import_check.stamp_coverage_findings(self.area, self.repo)
+            ],
         ):
             # the fixture's warnings (static evidence) stay; no blocker, no traceback
             self.assertEqual([f for f in findings if f.startswith("BLOCKER")], [])
@@ -97,7 +103,9 @@ class UnreadableSourceWithoutLib(unittest.TestCase):
         )
 
     def test_one_blocker_not_a_traceback(self):
-        findings = code_check.check_intent_ids(self.area, self.protocol)
+        findings = [
+            f.line for f in code_check.check_intent_ids(self.area, self.protocol)
+        ]
         self.assertEqual(len(findings), 1, findings)
         self.assertTrue(findings[0].startswith("BLOCKER"))
         self.assertIn("01_measure.py", findings[0])
@@ -107,7 +115,9 @@ class UnreadableSourceWithoutLib(unittest.TestCase):
             'margin = 0.25\ndef evaluate_rows(rows):\n    return {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n',
             encoding="utf-8",
         )
-        findings = code_check.check_intent_ids(self.area, self.protocol)
+        findings = [
+            f.line for f in code_check.check_intent_ids(self.area, self.protocol)
+        ]
         self.assertEqual([f for f in findings if f.startswith("BLOCKER")], [])
 
 

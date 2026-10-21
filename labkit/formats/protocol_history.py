@@ -11,7 +11,7 @@ through `repo.git_run`.
 from pathlib import Path
 
 from labkit.formats import protocol_block
-from labkit.formats.gate import BLOCKER, WARNING, GateFinding
+from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
 from labkit.formats.repo import git_root, git_run, repo_protocols
 
 
@@ -119,7 +119,7 @@ def check_protocol_id(
                 f"{path}: DUPLICATE protocol id {head.id} — also carried by "
                 + ", ".join(str(q) for q in others)
                 + ". An id binds runs to ONE protocol; re-stamp the copy.",
-                graded_by_text=True,
+                form=AS_WRITTEN,
             )
         )
     was = id_in_git_head(path)
@@ -130,7 +130,7 @@ def check_protocol_id(
                 f"{path}: WARNING: protocol id changed against HEAD "
                 f"({was} -> {head.id}) — runs bound to the old id stop "
                 f"resolving.",
-                graded_by_text=True,
+                form=AS_WRITTEN,
             )
         )
     return out
