@@ -140,7 +140,11 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   (stderr vor gepuffertem stdout, `tail` schneidet sie ab); judge-1 zahlte
   ein zweites Audit, nur um sie zu sehen. Vorschlag, zu entscheiden: Liste
   auf stdout nach dem Bericht; `labkit-audit AREA --findings` zeigt die
-  Liste des neuesten Records ohne neuen Aufruf.
+  Liste des neuesten Records ohne neuen Aufruf. — Umgesetzt (`a2302bc`);
+  Wiederholung ([Bericht](docs/usability/2026-10-21-sandbox-judge-a2302bc.md)):
+  Fehlbedienung 4 → 0, kein zweites Audit, die Liste stand in der
+  gekürzten Ausgabe. Bleibt: das lange Judge-Skelett (436 Zeilen für
+  sechs Stellen), Raw output vor dem Lauf in `--list`.
   Erledigt: die labkit-Proben laufen auf dem Paket (Runner
   `~/projects/labkit-probes-sandbox-bcea990/run.py`). Offen als eigener
   Auftrag: labkit-paper umstellen und seine Kopie in `lib/agentsandbox`
