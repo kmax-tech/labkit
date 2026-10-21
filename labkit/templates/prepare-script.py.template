@@ -2,7 +2,7 @@
 """raw -> prepared: materialise the data this experiment reads. ONE transformation.
 
     ../../.venv/bin/python scripts/00_prepare.py --show   # look at items, no write
-    ../../.venv/bin/python scripts/00_prepare.py --audit  # yields + confound profile
+    ../../.venv/bin/python scripts/00_prepare.py --audit  # yields + data profile: read and judge it
     ../../.venv/bin/python scripts/00_prepare.py          # write data/prepared/ (runlog)
 
 Out: `data/prepared/<row-noun>_v1.jsonl` — read-only after writing. Naming
@@ -12,14 +12,21 @@ regenerations of the SAME meaning; a change in what a row MEANS (renamed or
 re-coded fields included) is a NEW name, never a version bump. Rules with
 evidence: LAB-020 Materialize transformations, LAB-021 No dataset without a producer.
 
-Checks that belong HERE, not in the analysis — `--audit` prints, you look:
+Checks that belong HERE, not in the analysis — `--audit` prints the data
+profile (`labkit.run.profile`); you read it and write your judgement into
+the protocol's Data profile field BEFORE the measuring run:
 
-- confound columns per gold class (lengths, overlap, ...) — the confound
-  profile can replace the primary metric before any model call
-- marker counts per gold class with an explicit ZERO check — a
-  class-exclusive marker is a free rule, not a confound
+- items and mean words per gold class, always
+- MARKERS: the words or phrases that could answer the question without the
+  model, counted per class — one found in one class only is a shortcut
+  candidate (a cue the model could use, not proof it does)
+- CONFOUNDS: further numeric item fields (overlap, ...) averaged per class
 - yield of every filter, per class — a one-sided filter puts itself inside
   the measured quantity; apply it to the matched pair
+
+MARKERS and CONFOUNDS are this area's decisions: None is "not decided yet"
+and the profile says so; () is "decided: none applies"; a named marker in
+no item is "checked, no hit".
 
 An LLM inside the producer (rendering, rewriting)? Three rules: cache per
 unique input (identical inputs must stay textually identical downstream),
@@ -42,7 +49,7 @@ AREA = HERE.parent
 REPO = AREA.parent.parent
 PROTOCOL = AREA / "PROTOCOL-<name>.md"
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
-from labkit.run import batch, runlog
+from labkit.run import batch, profile, runlog
 from labkit.formats import promises
 
 SOURCE = REPO / "data" / "TODO"                 # raw input (record sha256 via runlog data=)
@@ -58,6 +65,10 @@ FIELDS = {
     "text": "the item the model reads",
     "gold": "TODO: every gold value spelled out, e.g. causal | not_causal",
 }
+# The data profile's two decisions (see the module docstring): None = not
+# decided yet, () = decided, none applies.
+MARKERS: tuple[str, ...] | None = None    # TODO: e.g. ("because", "due to")
+CONFOUNDS: tuple[str, ...] | None = None  # TODO: numeric FIELDS keys beside the word count
 
 
 def build() -> tuple[list[dict], dict]:
@@ -82,22 +93,20 @@ def build() -> tuple[list[dict], dict]:
 
 
 def audit(items: list[dict], yields: dict) -> None:
-    """Yields per filter + confound profile per gold class — read BEFORE measuring.
-
-    TODO: per gold class print n, the mean of every numeric confound column, and
-    for every marker column the COUNT — then look at the zeros. A marker with a
-    zero in one class is a free rule, not a confound (see module docstring).
-    """
+    """Yields per filter, then the data profile per gold class — read and
+    judge it BEFORE measuring (the protocol's Data profile field)."""
     print("== yield ==")
     for k in sorted(yields):
         print(f"  {k:28s} {yields[k]}")
+    p = profile.profile(items, markers=MARKERS, confounds=CONFOUNDS)
+    print("\n".join(profile.lines(p)))
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--show", action="store_true")
     ap.add_argument("--audit", action="store_true",
-                    help="yields + confound profile, no write — read this first")
+                    help="yields + data profile, no write — read and judge this first")
     args = ap.parse_args()
 
     items, yields = build()

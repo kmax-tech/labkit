@@ -133,7 +133,7 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
             f'{path.name}: `cost = "{head.cost}"`, but the registration is not '
             f"written: {', '.join(missing)} still empty or a placeholder — at "
             f"seconds the gate is the question (with a model also criterion · "
-            f"admissibility condition), not the freeze (LAB-003 No run without an intent paragraph, LAB-017 The number of audits follows the cost tier)"
+            f"admissibility condition · data profile), not the freeze (LAB-003 No run without an intent paragraph, LAB-017 The number of audits follows the cost tier)"
         ]
     out = []
     if not head.frozen:
@@ -499,7 +499,7 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
             + "\n  ".join(gaps)
             + "\nFreeze first: `preflight <AREA>` clean, audit stamped, "
             "`frozen = true` "
-            '(at cost = "seconds": the question written suffices, with a model also criterion and admissibility condition). '
+            '(at cost = "seconds": the question written suffices, with a model also criterion, admissibility condition and data profile). '
             "No other run yields a reported number: a probe (run_kind='probe') "
             "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
             "minutes/hours only over an audit the backend refused, "

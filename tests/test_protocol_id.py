@@ -42,6 +42,7 @@ PILOT = """# Experiment protocol: x
 - **Null condition / anchors:** [A2] shuffled labels
 - **Exclusions / filters:** none
 - **Data / scope:** data/x.jsonl, 12 items
+- **Data profile:** 6 and 6 items, mean words 9 and 9; no marker only in one class
 - **Model / tool:** n/a — deterministic
 - **Unit:** one item
 """

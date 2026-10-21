@@ -146,13 +146,16 @@ def lane(cost: str | None) -> Lane:
 
 #: the fields a full run at seconds owes written (not a placeholder) before
 #: it starts: a count registers its question; a model in the loop also the
-#: bar to clear and what must hold before it is read (LAB-003 No run without
-#: an intent paragraph; a count has no bar to clear, 0.87.1). The labels
-#: are the template's, held to `protocol_check.FIELDS` by a test.
+#: bar to clear, what must hold before it is read, and the judged data
+#: profile — read before the model is asked, or a cue in the data answers
+#: in its place (LAB-003 No run without an intent paragraph; a count has no
+#: bar to clear, 0.87.1; review 2026-10-21). The labels are the template's,
+#: held to `protocol_check.FIELDS` by a test.
 REGISTRATION_FIELDS = ("Question / hypothesis",)
 REGISTRATION_FIELDS_WITH_MODEL = (
     "Success / failure criterion",
     "Admissibility condition",
+    "Data profile",
 )
 
 

@@ -89,6 +89,9 @@ FIELDS = (
     ),  # a count has no bar to clear (2026-10-12)
     Field("Admissibility condition", "must", "sm"),
     Field("Data / scope", "must", "s"),
+    # read and judged before the measuring run, not just printed (review
+    # 2026-10-21: a class-exclusive cue went unexamined in three judge probes)
+    Field("Data profile", "must", "sm"),
     Field("Model / tool", "must", "sm"),
     Field("Model I/O", "must"),
     Field("Prompt", "must", "sm"),
@@ -420,7 +423,8 @@ def check_fields(text: str) -> FieldReport:
 def seconds_registration_missing(text: str) -> list[str]:
     """The registration a run of seconds owes before its number counts:
     the question written (not a placeholder), with a model named also
-    criterion and admissibility condition, and the cost declared.
+    criterion, admissibility condition and the judged data profile, and
+    the cost declared.
     Returns what is missing — empty means the gate is open (LAB-003 No run
     without an intent paragraph; a count has no bar to clear, 0.87.1)."""
     lines = fields(text)

@@ -458,6 +458,7 @@ class Judge(unittest.TestCase):
             "Success / failure criterion=[C1] registered accuracy at least the null lane's plus margin",
             "Admissibility condition=[A1] at most max_empty empty answers; [A2] the null lane at chance within null_band_items",
             "Data / scope=data/prepared/sentences_v1.jsonl, 12 sentences, 00_prepare.py",
+            "Data profile=6 and 6 sentences, the marker 'because' in both classes",
             "Model / tool=haiku",
             "Null condition / anchors (in the same run)=[A2] the placebo question (English?) answers Yes for every item: expected accuracy 6 of 12",
             "Exclusions / filters=none",

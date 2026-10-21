@@ -86,6 +86,7 @@ PILOT_FIELDS = """\
 - **Null condition / anchors:** [A2] shuffled labels at chance
 - **Exclusions / filters:** none
 - **Data / scope:** data/prepared/claims.jsonl, 50 items
+- **Data profile:** 6 and 6 items, mean words 9 and 9; no marker only in one class
 - **Model / tool:** haiku
 - **Unit:** one claim
 """

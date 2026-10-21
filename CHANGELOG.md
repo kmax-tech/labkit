@@ -9,6 +9,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **With a model, the judged data profile is part of the registration.**
+  The stamped `00_prepare.py --audit` prints the data profile per gold
+  class (`labkit.run.profile`): items and mean words always, the markers
+  in `MARKERS` counted per class with the union of them, and the numeric
+  fields in `CONFOUNDS` averaged. `None` prints "not decided", `()`
+  prints "none applies", and a named marker found in no item prints
+  "checked, no hit". A marker in one class only is a shortcut candidate,
+  not proof the model uses it. The protocol has a new field, Data profile
+  (must, model only), for the judgement. At `seconds` with a model, a
+  full run is refused until that field is written; at minutes/hours the
+  freeze holds it. Before, `audit()` was a stamped TODO, and two of three
+  judge probes left it alone while the data carried a cue only one class
+  had; the analysis audit found it after the run (sandbox, 2026-10-21). A
+  protocol registered under 0.99.0 without the field writes it before its
+  next full run.
+
 - **An accepted BLOCKER owes its effect on the verdicts, and the reported
   protocol carries it.** `labkit-audit AREA --decide N accepted REASON`
   on a BLOCKER now needs `--effect stands` (the verdicts hold, read

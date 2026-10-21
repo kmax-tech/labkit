@@ -335,10 +335,16 @@ scattered in output files nobody can interpret.
 
 - **Data / scope:** source, N, producer script; pilot subset first. Look at
   the prepared file before running — otherwise a format bug and a model
-  failure look identical. Once per dataset, at prepare time: count surface
-  markers per gold class (hedges, modal words, length, boilerplate). A marker
-  that appears in one class and never in the other is a free rule — the model
-  can read the label off it without doing the task.
+  failure look identical.
+- **Data profile:** what `00_prepare.py --audit` shows per gold class, and
+  your judgement, written before the measuring run. Items and mean words
+  per class come always; the markers (hedges, modal words, connectives,
+  boilerplate) and further confounds are your choice in `MARKERS` and
+  `CONFOUNDS` — `None` prints "not decided", `()` "none applies", a named
+  marker in no item "checked, no hit". A marker that appears in one class
+  and never in the other is a shortcut candidate: the model could read the
+  label off it without doing the task. That is a reason to change the data
+  or to name the limit, not yet proof the model uses it.
 - **Model / tool:** alias from `models.toml` — never hardcode endpoint/ID.
   No model call? Then the instrument is an estimator: `n/a — no model
   call; the instrument is …` names where it is built (the stamp of an area

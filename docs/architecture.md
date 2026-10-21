@@ -33,7 +33,7 @@ the dotfiles, below); doctrine ships in labkit to every lab.
 | Layer | Modules | Doctrine (the rest is core) |
 |---|---|---|
 | 1 · formats and places · `labkit/formats/` | `protocol_block`, `promises`, `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `rules`, `findings`, `console`, `gate`, `shell`, `files` | `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `rules`, `findings` |
-| 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `start_check`, `runlog_command`, `batch`, `llm`, `llm_specs`, `llm_backends`, `endpoint_lease`, `lanes` | `lanes` |
+| 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `start_check`, `runlog_command`, `batch`, `llm`, `llm_specs`, `llm_backends`, `endpoint_lease`, `lanes`, `profile` | `lanes`, `profile` |
 | 3 · checks · `labkit/checks/` | `intent_check`, `code_check`, `code_scan`, `gate_label_scan`, `import_check`, `prompt_check`, `run_record_check`, `readme_check`, `recheck`, `notes_check` | `readme_check`, `notes_check` |
 | 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `install_hooks` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `install_hooks` |
 | tools · `labkit/tools/` | `protocol_fill`, `scaffold`, `protocol_cuts`, `repo_check`, `params`, `calltree` | `protocol_fill`, `scaffold`, `protocol_cuts`, `calltree` |
@@ -90,7 +90,10 @@ the stamped two-lane judge — jobs per item and lane, batches, resume, the
 probe, the balance, the area's command line — doctrine, since the two lanes
 and the probe policy per tier are how the lab chooses to measure; the
 area's `01_measure.py` keeps the prompts and the formulas, which the audit
-reads. Model calls are split between
+reads. `profile` is the data profile per gold class that
+`00_prepare.py --audit` prints before any model call — items, mean words,
+the markers and confounds the area names — doctrine too: which cue counts
+as a shortcut is the lab's reading. Model calls are split between
 `llm` (aliases, retries and call records), `llm_specs` (one configuration
 type per backend, validated when loading `models.toml`) and `llm_backends`
 (the wire calls). `endpoint_lease` manages the model-slot lease.

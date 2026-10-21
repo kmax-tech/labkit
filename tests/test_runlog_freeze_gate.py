@@ -44,6 +44,7 @@ REGISTRATION = """
 - **Question / hypothesis:** does the register beat the trivial decider?
 - **Success / failure criterion:** [C1] accuracy above the trivial decider
 - **Admissibility condition:** [A1] every case parsed
+- **Data profile:** 6 and 6 cases, mean words alike; no marker only in one class
 """
 # a count: no model, no id, the question only — the gate owes nothing more (0.87.1)
 SECONDS_COUNT = (

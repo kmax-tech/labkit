@@ -54,7 +54,9 @@ class Cut(unittest.TestCase):
         self.assertEqual(protocol_check.check_fields(text).missing_must, [])
         with_model = text + "- **Model / tool:** haiku\n"
         missing = protocol_check.check_fields(with_model).missing_must
-        self.assertEqual(missing, ["Prompt", "Null condition / anchors"])
+        self.assertEqual(
+            missing, ["Data profile", "Prompt", "Null condition / anchors"]
+        )
 
     def test_seconds_protocol_is_checked_against_the_cut_only(self):
         text = (
@@ -66,6 +68,7 @@ class Cut(unittest.TestCase):
 - **Admissibility condition:** [A1] at most two empty answers
 - **Terms of this protocol:** n/a — standard vocabulary
 - **Data / scope:** data/raw/claims.jsonl, 12 rows
+- **Data profile:** 6 and 6 items, mean words 9 and 9; no marker only in one class
 - **Unit:** one sentence, judged once
 - **Model / tool:** haiku
 - **Prompt (verbatim, per variant):** see block
@@ -93,6 +96,7 @@ class Cut(unittest.TestCase):
 - **Admissibility condition:** a
 - **Terms of this protocol:** n/a
 - **Data / scope:** d
+- **Data profile:** 6 and 6 items, mean words 9 and 9; no marker only in one class
 - **Unit:** u
 - **Exclusions / filters:** none
 """
@@ -108,6 +112,7 @@ class Registration(unittest.TestCase):
     QUESTION = (
         "- **Model / tool:** haiku\n"  # with a model the gate owes criterion and admissibility
         "- **Question / hypothesis:** q\n- **Success / failure criterion:** c\n"
+        "- **Data profile:** 6 and 6 items; 'because' in both classes\n"
     )
 
     def test_a_count_owes_only_its_question(self):
@@ -134,6 +139,19 @@ class Registration(unittest.TestCase):
         self.assertEqual(
             protocol_check.seconds_registration_missing(text),
             ["Admissibility condition"],
+        )
+
+    def test_with_a_model_the_judged_data_profile_is_owed(self):
+        """Review 2026-10-21: printing the profile is not judging it; the run
+        waits for the judgement in the protocol."""
+        text = (
+            head(cost="seconds")
+            + self.QUESTION.replace("- **Data profile:** 6 and 6 items; 'because' in both classes\n", "")
+            + "- **Admissibility condition:** a\n"
+            + "- **Data profile:** <what `00_prepare.py --audit` shows>\n"
+        )  # fmt: skip
+        self.assertEqual(
+            protocol_check.seconds_registration_missing(text), ["Data profile"]
         )
 
     def test_the_old_stop_rule_label_does_not_register(self):

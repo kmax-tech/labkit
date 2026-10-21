@@ -58,6 +58,7 @@ class Registration(unittest.TestCase):
                 "Question / hypothesis",
                 "Success / failure criterion",
                 "Admissibility condition",
+                "Data profile",
             ),
         )
 

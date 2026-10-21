@@ -97,6 +97,7 @@
 ## Setup
 
 - **Data / scope:** <!-- s --> <source, N, producer script; pilot subset first>
+- **Data profile:** <!-- sm --> <what `00_prepare.py --audit` shows per gold class — items, mean words, each marker and confound chosen (or "none applies", and why) — and your judgement: could a surface cue answer the question without the model?>
 - **Model / tool:** <!-- sm --> <alias from `models.toml` — never hardcode endpoint/ID>
   <two arms (profiles) compared? one line each, held by finalize against the run:
   Arm `before`: register/profiles/<x>.toml @ <fingerprint>, model=<alias>
