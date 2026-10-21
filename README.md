@@ -86,7 +86,8 @@ repo root.
 1. **Register the question.** Fill the protocol's open fields. For a count,
    describe the data, unit and exclusions; the stamped form lists what is
    owed. A model measurement also needs its criterion, admissibility
-   condition, prompt and null condition.
+   condition, prompt, null condition and the judged data profile
+   (`00_prepare.py --audit`, read before the run).
 
    ```bash
    .venv/bin/protocol-fill experiments/01-document-count/PROTOCOL-document-count.md --list
