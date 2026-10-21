@@ -128,10 +128,13 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   von 3. (c) Skelett-Docstring nennt „three TODOs“, `INPUTS` ist ein
   vierter. — Alle drei behoben (`45bb0a2`); Wiederholung
   ([Bericht](docs/usability/2026-10-21-sandbox-count-45bb0a2.md)): keine
-  Audit-Befunde mehr aus diesen Widersprüchen, keine Fehlbedienung. Neu,
-  offen zur Entscheidung: zählt `visible()` Nicht-Punkt-Artefakte (`~$`
-  Office-Sperrdateien) als Dokument? Beobachten: Commit vor `finalize`,
-  Audit im Vordergrund bei `seconds`.
+  Audit-Befunde mehr aus diesen Widersprüchen, keine Fehlbedienung.
+  Entschieden 2026-10-21: `visible()` bleibt (regulär, keine Punkt-Datei,
+  nicht verschachtelt); was ein Dokument ist und was nicht — etwa eine
+  `~$`-Office-Sperrdatei — legt das Protokoll im Feld `Unit` fest; eine
+  feste Ausschlussliste nähme diese Entscheidung vorweg. Die Warnung in
+  count-3 war ein sinnvoller Befund, begründet abgelehnt. Beobachten:
+  Commit vor `finalize`, Audit im Vordergrund bei `seconds`.
   Erledigt: die labkit-Proben laufen auf dem Paket (Runner
   `~/projects/labkit-probes-sandbox-bcea990/run.py`). Offen als eigener
   Auftrag: labkit-paper umstellen und seine Kopie in `lib/agentsandbox`
