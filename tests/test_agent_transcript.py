@@ -294,5 +294,27 @@ class RecordsWithoutTimestamp(unittest.TestCase):
             at.trace(path, ROOT, SOURCE)
 
 
+class BelongsByWorkingDirectory(unittest.TestCase):
+    """An agent whose shell starts in the probe needs no `cd` and may name no
+    path at all (count-2 in the sandbox, 2026-10-21); its records carry the
+    probe as `cwd`. That proves the transcript as well as a mention; another
+    working directory and no mention are still refused."""
+
+    def with_cwd(self, cwd: str) -> Path:
+        path = transcript([(2.0, "Bash", {"command": "cat TASK.md"}, 1.0, "...")])
+        rows = [json.loads(x) for x in path.read_text().splitlines() if x.strip()]
+        for r in rows:
+            r["cwd"] = cwd
+        path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+        return path
+
+    def test_the_probe_as_working_directory_is_enough(self):
+        self.assertEqual(at.trace(self.with_cwd(str(ROOT)), ROOT, SOURCE).calls, 1)
+
+    def test_another_working_directory_without_a_mention_is_refused(self):
+        with self.assertRaisesRegex(at.TranscriptError, "not this probe"):
+            at.trace(self.with_cwd("/elsewhere"), ROOT, SOURCE)
+
+
 if __name__ == "__main__":
     unittest.main()

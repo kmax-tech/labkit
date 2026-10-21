@@ -286,6 +286,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`usability score` takes a transcript whose working directory is the
+  probe.** It refused every transcript that named the probe's path in no
+  call; an agent whose shell starts in the probe needs no `cd` and may
+  name none (count-2 in the sandbox, 2026-10-21). A record's `cwd` equal
+  to the probe now proves it as well; another one without a mention is
+  still refused.
 - **`usability score` reads a Claude Code 2.1.285 transcript.** That
   version writes session bookkeeping records without a timestamp
   (`atis-latch`, `last-prompt`, `cost-state`), and the reader refused the

@@ -332,9 +332,13 @@ def outside_paths(calls: list[Call], root: Path) -> list[str]:
 def trace(path: Path, root: Path, source: re.Pattern[str]) -> TranscriptTrace:
     """The transcript of one agent working in `root`; `source` names what
     counts as reading labkit's source or the standard. Refuses a transcript
-    that never mentions `root` — the wrong file measures the wrong agent."""
+    that neither mentions `root` in a call nor carries it as a record's
+    `cwd` — the wrong file measures the wrong agent. The working directory
+    counts because an agent whose shell starts in the probe may name no
+    path at all (count-2 in the sandbox, 2026-10-21)."""
     calls, first, last = read_calls(path)
-    if not any(str(root) in c.text for c in calls):
+    in_root = any(r.get("cwd") == str(root) for _, r in records(path))
+    if not in_root and not any(str(root) in c.text for c in calls):
         raise TranscriptError(
             f"{path.name}: no call mentions {root} — not this probe's transcript"
         )
