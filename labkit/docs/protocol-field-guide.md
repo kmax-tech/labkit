@@ -352,25 +352,39 @@ scattered in output files nobody can interpret.
   uses it; a cue may sit in no word you listed, and a filled profile is
   no evidence that the data fit the question. Whether they do is the
   audit's question, and a control experiment's where it matters.
-- **Model / tool:** alias from `models.toml` — never hardcode endpoint/ID.
-  No model call? Then the instrument is an estimator: `n/a — no model
-  call; the instrument is …` names where it is built (the stamp of an area
-  without `--model` writes `make_estimator()`); its fixed parameters go
-  under Free knobs and its seed under Randomness controls — `--report`
-  fills only the parser field and leaves the randomness and noise-ceiling
-  fields owed, because a seed is a source of randomness.
-  Two arms compared (a profile each)? Name them here, one line per arm —
-  by the one thing that differs where you can (`with-gas-classes`), and
-  where the house keeps `before`/`after`, this line is where a reader
-  learns which profile each is — in this form — `Arm \`before\`: register/profiles/x.toml @ 1d4c79af596a,
-  model=gpt-oss-20b-leguin` — and put the diff between the two profiles
-  verbatim under Prompt. A reader of the protocol then knows what the arms
-  are without opening the register; `finalize` holds every line to the
-  answering run (profile exists, fingerprint and alias recorded) and warns
-  when the profile changed after the stamp. The profile is the instrument
-  (model alias, temperature, repeats, rule texts, switches), versioned in
-  the register and shared across areas; the run's config.json records what
-  was resolved; the protocol names which are compared (2026-10-09).
+- **Model / tool:** the instrument in one sentence — what the model does
+  here and what it sees. The alias itself stands in the head: `[model]
+  alias = "<alias from models.toml>"`, stamped by `labkit-init exp --model
+  <alias>` (a bare `--model` leaves the placeholder, `protocol-fill "model
+  alias=…"` fills it); never hardcode endpoint or ID. The table is the one
+  answer to "is a model in the loop" — for the seconds cut, the
+  registration and `--report` — since phase 4 of the 1.0 line (2026-10-21;
+  until 0.100.0 this prose line decided it, read with a pattern for "n/a",
+  "none" and dashes). No `[model]`? Then the instrument is an estimator:
+  `n/a — no model call; the instrument is …` names where it is built (the
+  stamp of an area without `--model` writes `make_estimator()`); its fixed
+  parameters go under Free knobs and its seed under Randomness controls —
+  `--report` fills only the parser field and leaves the randomness and
+  noise-ceiling fields owed, because a seed is a source of randomness.
+  Two arms compared (a profile each)? Say here what `before` and `after`
+  are — by the one thing that differs where you can (`with-gas-classes`) —
+  and declare the profiles in the head, one table per arm:
+
+  ```toml
+  [model.arms.before]
+  profile = "register/profiles/x.toml"
+  fingerprint = "1d4c79af596a"
+  alias = "gpt-oss-20b-leguin"
+  ```
+
+  and put the diff between the two profiles verbatim under Prompt. A
+  reader of the protocol then knows what the arms are without opening the
+  register; `finalize` holds every arm to the answering run (profile
+  exists, fingerprint and alias recorded) and warns when the profile
+  changed after the stamp. The profile is the instrument (model alias,
+  temperature, repeats, rule texts, switches), versioned in the register
+  and shared across areas; the run's config.json records what was
+  resolved; the protocol names which are compared (2026-10-09).
 - **Prompt (verbatim, per variant):** paste the actual prompt here. It
   belongs in the protocol, not only in the script.
 - **Model I/O:**
@@ -385,8 +399,12 @@ scattered in output files nobody can interpret.
     how many it actually produced. Count EMPTY answers as their own number:
     reasoning models can burn the whole token budget thinking
     (finish_reason=length) — a binding token cap is a setup defect.
-- **Gate labels (expected) †:** which labels the gate accepts — the declared
-  set for the mechanical check against code-extracted labels.
+- **`[gate] labels` (TOML head, not a prose field):** which labels the gate
+  accepts — `labels = ["causal", "not_causal"]`, the registered set. The
+  code check extracts the code's string comparisons and lists them beside
+  the declared set in the agent's bundle; the agent judges the match
+  (LAB-038 What the prompt demands), no gate compares them (phase 4,
+  2026-10-21; a prose field until 0.100.0).
 - **Null condition / anchors (in the same run):** what runs along in THIS run
   and must show null — anchors of known rate, placebo, swap; not "was
   validated earlier". Per anchor its expected outcome WITH the derivation in

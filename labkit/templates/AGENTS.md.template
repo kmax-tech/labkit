@@ -12,8 +12,9 @@ repeated at will (a count, a handful of model calls for a minute and a cent),
 LAB-017 The number of audits follows the cost tier.
 
 1. `labkit-init exp <name> --cost seconds` (`--model <alias>` when a model is
-   in the loop) — stamps the seconds cut of the protocol and the matching
-   skeleton.
+   in the loop — it writes `[model] alias` into the TOML head, the one place
+   that says a model is in the loop) — stamps the seconds cut of the
+   protocol and the matching skeleton.
 2. Write the registration: `protocol-fill <PROTOCOL> --list` names every
    open field, the TOML head's `type` and, with a model, each promise's
    `<id> sentence` first (`cost = "seconds"` is stamped); the fields

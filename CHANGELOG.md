@@ -9,6 +9,27 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **The model in the loop, its arms and the gate labels are declared in
+  the TOML head.** `labkit-init exp --model <alias>` writes `[model] alias`
+  (a bare `--model` its placeholder, which `protocol-fill "model alias=…"`
+  fills); `[model.arms.<arm>]` tables carry profile, fingerprint and alias
+  of a compared arm; `[gate] labels` the labels the gate accepts
+  (`protocol_block.model`, `declared_labels`). The table decides whether a
+  model is named — for the seconds cut, the registration and `--report` —
+  where the prose `Model / tool` line did, read with a pattern for "n/a",
+  "none" and dashes; `finalize` holds the arm tables to the run where it
+  parsed `Arm \`x\`: … @ … model=…` lines; the code-check bundle lists the
+  declared labels beside the extracted comparisons, data for the agent,
+  no gate compares them. The prose `Model / tool` field stays and asks for
+  the instrument's sentence, not the alias; the `Gate labels (expected)`
+  field is gone. Phase 4 of the 1.0 line; 0.100.0 is the last version that
+  reads model, arms and labels from the prose. A protocol stamped before
+  declares no model to this version: add `[model] alias = "<alias>"` to
+  its head (and the arm tables where it compared arms). Gone:
+  `protocol_check.model_named_in`, `_NO_MODEL`, `run_record_check.ARM_LINE`;
+  `protocol_check.model_named` reads the head; `protocol_fill.HEAD_KEYS`
+  replaces `HEAD_CHOICES` as the table of head placeholders.
+
 - **The declaration that a number is reported is `[result] run` in the
   TOML head, not a run id in the Answer line.** `protocol-fill --from-run`
   writes a `[result]` table right after `[protocol]` naming the run
