@@ -23,9 +23,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from labkit.checks import prompt_check  # noqa: E402
+from labkit.checks import prompt_check, result_render  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
-from labkit.gates import finalize, report_check  # noqa: E402
+from labkit.gates import finalize  # noqa: E402
 from labkit.tools import protocol_fill  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
@@ -43,12 +43,7 @@ class ProseValueReaders(unittest.TestCase):
         (protocol_check, "fields"),  # the label parser every reader below rests on
         (protocol_check, "answer_field"),  # the Answer line: a generated section
         (protocol_check, "answer_without_run"),  # an Answer without a declaration
-        (
-            protocol_check,
-            "measure_runs",
-        ),  # run ids in the Runs list make the result due
         (prompt_check, "prompt_blocks"),  # the Prompt block held to the constants
-        (report_check, "limit_gaps"),  # Limit lines held to the record
     )
     #: left since phase 3 (2026-10-21): the declaration is `[result] run` in the
     #: head — `answering_run_field`, `answering_run_open`, `finalize.cited_runs`,
@@ -60,13 +55,18 @@ class ProseValueReaders(unittest.TestCase):
         "cited_runs",
         "cited_run_gaps",
         "model_named_in",
+        "measure_runs",  # phase 5: the declaration makes the result due
     )
+    #: the one reader of generated sections: exact equality with the rendering
+    GENERATED = ((result_render, "render_gaps"),)
 
     def test_the_inventory_is_exactly_these(self):
         for module, name in self.READERS:
             with self.subTest(reader=f"{module.__name__}.{name}"):
                 self.assertTrue(callable(getattr(module, name)))
-        self.assertEqual(len(self.READERS), 6)
+        self.assertEqual(len(self.READERS), 4)
+        for module, name in self.GENERATED:
+            self.assertTrue(callable(getattr(module, name)))
         for name in self.GONE:
             self.assertFalse(hasattr(protocol_check, name) or hasattr(finalize, name))
 
@@ -208,14 +208,18 @@ class LaneDuties(unittest.TestCase):
         frozen = head(cost="minutes", frozen=True, preflight_audit="2026-10-21 · x")
         self.assertEqual(self.owed(frozen), (self.FULL_MUST + self.FULL_SHOULD, []))
 
-    def test_a_documented_measure_run_makes_the_report_fields_due(self):
+    def test_a_declared_result_makes_the_report_fields_due(self):
+        """Since phase 5 the declaration makes the result due; a run id in the
+        Runs list declares nothing (until 0.101.0 it did, minus "prepare")."""
         frozen = head(cost="minutes", frozen=True, preflight_audit="2026-10-21 · x")
-        with_run = frozen + f"\n## Runs\n\n- {RUN} — the run\n"
-        self.assertEqual(
-            self.owed(with_run), (self.FULL_MUST + self.FULL_SHOULD + self.REPORT, [])
+        declared = head(
+            cost="minutes", frozen=True, preflight_audit="2026-10-21 · x", result=RUN
         )
-        prepared = frozen + f"\n## Runs\n\n- {RUN} — prepare: the data\n"
-        self.assertEqual(protocol_check.measure_runs(prepared), [])
+        self.assertEqual(
+            self.owed(declared), (self.FULL_MUST + self.FULL_SHOULD + self.REPORT, [])
+        )
+        listed = frozen + f"\n## Runs\n\n- {RUN} — the run\n"
+        self.assertEqual(self.owed(listed), (self.FULL_MUST + self.FULL_SHOULD, []))
 
 
 class WriteBack(unittest.TestCase):

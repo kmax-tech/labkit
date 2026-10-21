@@ -47,7 +47,7 @@ from labkit.formats.protocol_check import (
     answer_without_run,
     check_fields,
     fields,
-    measure_runs,
+    result_due,
     written_before_run,
 )
 
@@ -338,7 +338,7 @@ class FileReport:
     n_lines: int = 0
     big: list[tuple[str, int, int]] = field(default_factory=list)
     series: list[tuple[int, str]] = field(default_factory=list)
-    measured: list[tuple[int, str]] = field(default_factory=list)
+    declared: str | None = None  # the run the head declares, when it does
     run_unreported: list[str] = field(default_factory=list)
     history: list[tuple[int, str]] = field(default_factory=list)
     bare_refs: list[tuple[int, str]] = field(default_factory=list)
@@ -390,7 +390,7 @@ class FileReport:
             + [f"{label} (line {n}, placeholder)" for n, label in self.must_holes]
             + (["a prompt code block"] if self.no_block else [])
             + (["a rendered example (frozen)"] if self.frozen_without_io else [])
-            + [f"{field_label(n)} (a measure run exists)" for n in self.run_unreported]
+            + [f"{field_label(n)} (a result is declared)" for n in self.run_unreported]
             + (
                 ["a shorter protocol (frozen)"]
                 if self.frozen and (self.too_long or self.big)
@@ -486,9 +486,9 @@ def check_protocol(
         if not (section and DOCUMENTED_RUNS_HEAD.match(section))
     )
     numbered = list(enumerate((ln.strip() for ln in text.splitlines()), 1))
-    # Post-run: a documented measure run makes an empty Result a MUST
-    # gap — pilot suppression does not apply (write back, don't go quiet).
-    measured = measure_runs(text)
+    # Post-run: a declared result makes an empty result field a MUST gap —
+    # pilot suppression does not apply (write back, don't go quiet).
+    declared = result_due(text)
     return FileReport(
         path=path,
         head_error=None,
@@ -509,10 +509,10 @@ def check_protocol(
         n_lines=n_lines,
         big=oversized_sections(text),
         series=[(n, s) for n, s in numbered if SERIES_HEAD.match(s)],
-        measured=measured,
+        declared=declared,
         run_unreported=(
             unreported(text, seconds=lane.cut == standard_contract.SECONDS_CUT)
-            if measured
+            if declared
             else []
         ),
         history=[(n, s) for n, s in numbered if CHANGELOG.search(s)],
@@ -595,10 +595,9 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
         )
     if r.run_unreported:
         print(
-            f"{f}:{r.measured[0][0]}: MISSING (must): measure run in the "
-            f"run list ({r.measured[0][1]}) but "
+            f"{f}: MISSING (must): the head declares run {r.declared} but "
             f"{', '.join(field_label(n) for n in r.run_unreported)} empty — write "
-            f"the result in the SAME session: `protocol-fill --from-run` for the "
+            f"the result in the SAME session: `protocol-fill --render` for the "
             f"Answer; Result (the question's answer in two sentences, within the "
             f"Limits) and Raw output are yours."
         )

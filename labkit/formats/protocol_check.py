@@ -23,9 +23,10 @@ What lives here, each stated as its current rule:
     `written_before_run`): what a run of seconds owes first, and a report
     field filled while no run exists.
   * **The result section** (`answer_field`, `answer_without_run`,
-    `measure_runs`): the lines report-check and protocol-fill read; the
+    `result_due`): the lines report-check and protocol-fill read; the
     declaration itself is the head's `[result] run`
-    (`protocol_block.declared_run`).
+    (`protocol_block.declared_run`), and it is what makes the result
+    fields due.
 
 The checks over the whole file — template lines left in, the verbatim
 prompt block, a measure run without a written result, change-history prose,
@@ -42,7 +43,6 @@ from labkit import PACKAGE_DIR
 from labkit.formats import (
     promises,
     protocol_block,
-    runs,
     standard_contract,
     answering_run,
 )
@@ -58,8 +58,8 @@ class Field:
 
         must    by every pilot
         should  by a reportable run: a must once `frozen = true`
-        after   once a measure run is documented (the result written back)
-        report  once frozen AND a measure run is documented (the summary and
+        after   once the head declares a result (`[result] run`, the write-back)
+        report  once frozen AND a result is declared (the summary and
                 the report half of the result; at seconds never — the audit
                 comes at promotion there)
 
@@ -364,11 +364,12 @@ def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
     form is not owed there, and listing it buried the one real blocker
     under 10 to 20 warnings in every correct seconds protocol (usability
     probe 2026-10-07, 6 of 6 runs). Fields written after the run count only
-    once a measure run is documented — before it they cannot be filled, and
+    once the head declares a result — before it they cannot be filled, and
     every second agent read them as errors in the commit hook (re-measure
-    2026-10-07)."""
+    2026-10-07; until 0.101.0 a run id in the Runs list, minus the words
+    "prepare" and "probe", stood for the run)."""
     lines = fields(text)
-    if not measure_runs(text):
+    if result_due(text) is None:
         after = {f.label.casefold() for f in FIELDS if f.level == "after"}
         lines = [f for f in lines if f.name not in after]
     if standard_contract.lane(head.cost).cut == standard_contract.SECONDS_CUT:
@@ -384,7 +385,7 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     The seconds cut owes its marked fields and nothing graduates — nothing
     freezes (LAB-017 The number of audits follows the cost tier). The full form owes every must; `frozen = true` turns
     every should into a must (the graduation gate, in ONE place), and once a
-    measure run is documented a frozen protocol owes its report fields too."""
+    result is declared a frozen protocol owes its report fields too."""
     # which cut the protocol owes is the contract's answer; the marks on
     # the fields (`Field.seconds`) are this module's
     if standard_contract.lane(head.cost).cut == standard_contract.SECONDS_CUT:
@@ -395,7 +396,7 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     should = [f for f in FIELDS if f.level == "should"]
     if not head.frozen:
         return must, should
-    report = [f for f in FIELDS if f.level == "report"] if measure_runs(text) else []
+    report = [f for f in FIELDS if f.level == "report"] if result_due(text) else []
     return must + should + report, []
 
 
@@ -558,11 +559,7 @@ def answer_without_run(text: str) -> str | None:
     )
 
 
-# runlog run ids as they appear in the run index: 2026-08-23T20-37-21_afbe. A
-# line carrying one that is NOT data preparation or a throwaway probe is a
-# measure run — from then on an empty Result is a MUST gap, pilot or not.
-SETUP_RUN = re.compile(r"prepare|probe|wegwerf|trockenlauf|dry.?run", re.I)
-#: the fields a documented measure run makes due; empty is a placeholder or
+#: the fields a declared result makes due; empty is a placeholder or
 #: nothing but dashes. A bare "Label:" at end of line is NOT empty —
 #: multi-line values start on the next line (the 25er protocol writes them
 #: that way; the first version false-alarmed).
@@ -577,11 +574,14 @@ def field_label(name: str) -> str:
 DASHES_ONLY = re.compile(r"^[—–-]+$")
 
 
-def measure_runs(text: str) -> list[tuple[int, str]]:
-    """(line, run_id) of every documented run that is not data preparation
-    or a throwaway probe — from the first one on, the result is due."""
-    return [
-        (n, m.group(0))
-        for n, ln in enumerate(text.splitlines(), 1)
-        if (m := runs.RUN_ID.search(ln)) and not SETUP_RUN.search(ln)
-    ]
+def result_due(text: str) -> str | None:
+    """The run the head declares (`protocol_block.declared_run`) — from the
+    write-back on, the result fields are due (`RESULT_FIELDS`, the report
+    fields of a frozen protocol); None while nothing is declared, and for a
+    head that does not read (the head check names that). Until 0.101.0 a
+    run id in the Runs list, minus the words "prepare" and "probe", stood
+    for a measure run and made the result due."""
+    try:
+        return protocol_block.declared_run(text)
+    except protocol_block.BlockError:
+        return None

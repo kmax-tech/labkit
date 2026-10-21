@@ -153,19 +153,30 @@ class TestFrozenNeedsTheAudit(unittest.TestCase):
 
 
 class TestResultAfterARun(unittest.TestCase):
-    """A documented measure run makes the result due — a placeholder counts
-    as empty, not only a dash."""
+    """A declared result (`[result] run`, phase 5) makes the result fields due
+    — a placeholder counts as empty, not only a dash. Until 0.101.0 a run id
+    in the Runs list, minus "prepare" and "probe", stood for the run."""
 
-    RUN = "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
+    RUN_ID = "2026-09-06T10-00-00_aa11"
+    RUN = f"\n## Runs\n\n- {RUN_ID} — the full run\n"
 
-    def test_placeholder_answer_after_a_run_fails(self):
+    def test_placeholder_answer_after_a_declared_run_fails(self):
+        text = (
+            pilot(result=self.RUN_ID)
+            + "\n- **Answer to the question:** <number + run_id>\n"
+            "- **Raw output:** see output/examples.md\n" + self.RUN
+        )
+        rc, out = run_main(text)
+        self.assertEqual(rc, 1)
+        self.assertIn(f"the head declares run {self.RUN_ID}", out)
+
+    def test_a_run_in_the_list_alone_declares_nothing(self):
         text = (
             pilot() + "\n- **Answer to the question:** <number + run_id>\n"
             "- **Raw output:** see output/examples.md\n" + self.RUN
         )
         rc, out = run_main(text)
-        self.assertEqual(rc, 1)
-        self.assertIn("measure run in the run list", out)
+        self.assertNotIn("the head declares run", out)
 
 
 class TestFlagsAnywhere(unittest.TestCase):
@@ -593,14 +604,15 @@ class TestPromptAndExample(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertNotIn("Raw output", out)
 
-    def test_empty_raw_output_after_a_measure_run_is_a_must_failure(self):
+    def test_empty_raw_output_after_a_declared_run_is_a_must_failure(self):
         text = (
-            pilot() + "\n## Result\n\n- **Raw output:** —\n"
+            pilot(result="2026-09-06T10-00-00_aa11")
+            + "\n## Result\n\n- **Raw output:** —\n"
             "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
         )
         rc, out = run_main(text)
         self.assertEqual(rc, 1)
-        self.assertIn("measure run in the run list", out)
+        self.assertIn("the head declares run 2026-09-06T10-00-00_aa11", out)
 
     def test_raw_output_is_not_owed_without_a_model_at_seconds(self):
         """A count has no prompt+answer pair to show: the field is `sm`, owed
@@ -662,12 +674,12 @@ class TestPromptAndExample(unittest.TestCase):
             "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — probe, 10 calls\n"
         )
         rc, out = run_main(text)
-        self.assertNotIn("measure run in the run list", out)
+        self.assertNotIn("the head declares run", out)
         self.assertEqual(rc, 0, out)
 
-    def test_written_raw_output_after_a_measure_run_passes(self):
+    def test_written_raw_output_after_a_declared_run_passes(self):
         text = (
-            pilot()
+            pilot(result="2026-09-06T10-00-00_aa11")
             + "\n## Summary\n\n- **Result:** The classifier separates the two classes"
             " well on the held-out set.\n- **Limits:** One run on one split.\n"
             "- **Next step:** none\n"
@@ -678,10 +690,10 @@ class TestPromptAndExample(unittest.TestCase):
         rc, out = run_main(text)
         self.assertEqual(rc, 0, out)
 
-    def test_a_summary_without_limits_after_a_measure_run_fails(self):
+    def test_a_summary_without_limits_after_a_declared_run_fails(self):
         # The twin above passes; the same protocol without Limits must not.
         text = (
-            pilot()
+            pilot(result="2026-09-06T10-00-00_aa11")
             + "\n## Summary\n\n- **Result:** The classifier separates the two classes"
             " well on the held-out set.\n- **Next step:** none\n"
             + "\n## Result\n\n- **Answer to the question:** AUC 0.91 "

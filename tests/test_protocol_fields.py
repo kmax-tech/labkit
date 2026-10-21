@@ -160,21 +160,26 @@ class Fields(unittest.TestCase):
         with_model = head(cost="seconds", model="haiku") + "- **Model / tool:** haiku\n"
         self.assertIn("Prompt", protocol_check.check_fields(with_model).missing_must)
 
-    def test_report_fields_fall_due_with_a_documented_run_once_frozen(self):
-        run = "\n## Runs\n\n- 2026-10-07T10-00-00_ab12 — the full run\n"
+    def test_report_fields_fall_due_with_a_declared_result_once_frozen(self):
+        run = "2026-10-07T10-00-00_ab12"
+        listed = f"\n## Runs\n\n- {run} — the full run\n"
         frozen = head(frozen=True, preflight_audit="x")
         self.assertNotIn(
             "Analysis audit", protocol_check.check_fields(frozen).missing_must
         )
+        self.assertNotIn(  # a run in the list declares nothing (phase 5)
+            "Analysis audit", protocol_check.check_fields(frozen + listed).missing_must
+        )
+        declared = head(frozen=True, preflight_audit="x", result=run)
         self.assertIn(
-            "Analysis audit", protocol_check.check_fields(frozen + run).missing_must
+            "Analysis audit", protocol_check.check_fields(declared).missing_must
         )
         self.assertNotIn(
-            "Analysis audit", protocol_check.check_fields(head() + run).missing_must
+            "Analysis audit", protocol_check.check_fields(head(result=run)).missing_must
         )  # pilot
         self.assertNotIn(
             "Analysis audit",
-            protocol_check.check_fields(head(cost="seconds") + run).missing_must,
+            protocol_check.check_fields(head(cost="seconds", result=run)).missing_must,
         )
 
     def test_none_names_no_model(self):
@@ -214,9 +219,9 @@ class OpenHolesFollowTheCut(unittest.TestCase):
         block = protocol_check.protocol_block.head(text)
         self.assertEqual(protocol_check.open_holes(text, block), [])
 
-    def test_once_a_run_is_documented_they_are_owed(self):
+    def test_once_a_result_is_declared_they_are_owed(self):
         text = (
-            head(cost="seconds")
+            head(cost="seconds", result="2026-10-07T16-50-37_a9db")
             + "- **Answer to the question:** <number + run_id>\n"
             + "- Runs: 2026-10-07T16-50-37_a9db measure\n"
         )
