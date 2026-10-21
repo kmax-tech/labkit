@@ -205,6 +205,7 @@ preflight AREA                     # readiness before freezing
 finalize AREA                      # checks after the run
 labkit-audit AREA --mode preflight|analysis|clarity [--model ALIAS]
 labkit-audit AREA --decide N STATUS REASON [--record FILE] # store your decision on a finding
+labkit-audit AREA --findings [--record FILE]               # show what there is to decide, no audit
 report-check AREA                  # release check before reporting
 report-check --if-reported [--staged] PATH... # check affected reported areas
 runlog [AREA] [--wait | --follow]    # inspect or monitor runs

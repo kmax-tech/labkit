@@ -286,6 +286,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`labkit-audit`'s decision list survives a pipe, and can be shown
+  again without a new audit.** The list went to stderr while the report
+  went to buffered stdout; in a pipe it came out first, and `2>&1 | tail`
+  cut it off — one sandbox agent re-ran the paid audit only to see it,
+  which wrote a second record and doubled its decisions (judge probes,
+  2026-10-21). The list now comes last, on stdout, after the report.
+  `labkit-audit AREA --findings [--record FILE]` shows a record's list
+  (the newest by default) with no model call and no new record;
+  `--mode`, `--decide` and `--findings` take exactly one.
+
 - **The standard states the count's exemption.** A plain count at
   `seconds` whose prose names no `[C]`/`[A]`/`[B]` id owes no promise
   table and no success criterion — so the code has decided since 0.87.1

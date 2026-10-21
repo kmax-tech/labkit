@@ -31,8 +31,9 @@ LAB-017 The number of audits follows the cost tier.
 5. `finalize <area>`, then the analysis audit (`labkit-audit <area> --mode
    analysis`) and decide its findings — it lists each recorded one with
    its number and the `labkit-audit … --decide N STATUS "REASON" --record …`
-   that decides it; READ lines are hints, nothing to decide: the one audit
-   this lane owes
+   that decides it, last in its output; `labkit-audit <area> --findings`
+   shows that list again without a new audit. READ lines are hints,
+   nothing to decide. This is the one audit this lane owes
    (LAB-017 The number of audits follows the cost tier). Until the number
    is written back it is a sketch, and nothing is owed for it.
 6. `protocol-fill PROTOCOL-<name>.md --from-run <run_id>` adopts the run

@@ -279,13 +279,14 @@ class Audit(unittest.TestCase):
 
     def test_the_findings_are_written_as_data_into_the_area(self):
         area = repo_with()
-        rc, _, err, _ = run(area, WARN)
+        rc, out, err, _ = run(area, WARN)
         self.assertEqual(rc, 1)
         files = sorted((area / "audits").glob("*-preflight.toml"))
         self.assertEqual(len(files), 1, err)
-        # the record as the working directory reaches it (`repo.shown`: resolved)
-        self.assertIn(f"findings: {files[0].resolve()}", err)
-        self.assertIn("  1 · WARNING · ", err)
+        # the record as the working directory reaches it (`repo.shown`:
+        # resolved), on stdout after the report — what the person acts on
+        self.assertIn(f"findings: {files[0].resolve()}", out)
+        self.assertIn("  1 · WARNING · ", out)
         text = files[0].read_text(encoding="utf-8")
         self.assertIn('grade = "WARNING"', text)
         self.assertIn('status = "open"', text)
@@ -603,6 +604,85 @@ class OneSnapshot(unittest.TestCase):
         self.assertIn("lib/other.py (2 lines)", sent[0])
         for key in self.stamped(area):
             self.assertIn(key, sent[0])
+
+
+class DecisionListReachesThePerson(unittest.TestCase):
+    """The numbered list is what the person acts on. Printed on stderr while
+    the report went to buffered stdout, it came out before the report in a
+    pipe, and `2>&1 | tail -30` cut it off; one agent paid for a second
+    audit only to see it (sandbox judge probes, 2026-10-21)."""
+
+    def test_in_one_pipe_the_list_comes_after_the_report(self):
+        import subprocess
+
+        area = repo_with()
+        child = (
+            "import sys; sys.path.insert(0, sys.argv[1])\n"
+            "from unittest import mock\n"
+            "from labkit.gates import audit\n"
+            "import test_audit as t\n"
+            "with mock.patch.object(audit.llm, 'complete', lambda a, p, **kw: t.WARN), "
+            "mock.patch.object(audit.llm, 'takes_max_tokens', lambda a: True):\n"
+            "    sys.exit(audit.main([sys.argv[2], '--mode', 'preflight']))\n"
+        )
+        p = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                child,
+                str(Path(__file__).resolve().parent),
+                str(area),
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            timeout=120,
+        )
+        self.assertEqual(p.returncode, 1, p.stdout)
+        out = p.stdout
+        self.assertLess(out.index("verdict:"), out.index("  1 · WARNING · "), out)
+        tail = "\n".join(out.splitlines()[-6:])
+        self.assertIn("--decide 1", tail, out)
+
+    def test_findings_shows_the_newest_record_without_a_call(self):
+        area = repo_with()
+        run(area, WARN)
+
+        def no_call(alias, prompt, **kw):
+            raise AssertionError("--findings called the model")
+
+        out, err = io.StringIO(), io.StringIO()
+        with (
+            mock.patch.object(audit.llm, "complete", no_call),
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(err),
+        ):
+            rc = audit.main([str(area), "--findings"])
+        self.assertEqual(rc, 0, err.getvalue())
+        self.assertIn("1 to decide", out.getvalue())
+        self.assertIn("  1 · WARNING · a.py:1", out.getvalue())
+        self.assertIn("--decide 1 STATUS", out.getvalue())
+        self.assertEqual(
+            len(list((area / "audits").glob("*.toml"))), 1
+        )  # no new record
+
+    def test_findings_without_a_record_and_with_mode_are_refused(self):
+        area = repo_with()
+        for argv in (
+            [str(area), "--findings"],
+            [str(area), "--findings", "--mode", "analysis"],
+        ):
+            with self.subTest(argv=argv[1:]):
+                err = io.StringIO()
+                with (
+                    contextlib.redirect_stdout(io.StringIO()),
+                    contextlib.redirect_stderr(err),
+                ):
+                    try:
+                        rc = audit.main(argv)
+                    except SystemExit as exc:
+                        rc = exc.code
+                self.assertEqual(rc, 2, err.getvalue())
 
 
 if __name__ == "__main__":

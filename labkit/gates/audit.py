@@ -657,8 +657,9 @@ def bound_prompt(
 
 
 def main(argv: list[str]) -> int:
-    """Command line of `labkit-audit`: audit one area in one mode, or store
-    a decision the person gives on one of its findings (`--decide`)."""
+    """Command line of `labkit-audit`: audit one area in one mode, store a
+    decision the person gives on one of its findings (`--decide`), or show
+    what there is to decide (`--findings`)."""
     ap = argparse.ArgumentParser(
         prog="labkit-audit", description=(__doc__ or "").splitlines()[0]
     )
@@ -673,7 +674,14 @@ def main(argv: list[str]) -> int:
         f"{', '.join(findings.REASON_OWED)}); no audit runs",
     )
     ap.add_argument(
-        "--record", type=Path, help="with --decide: this record, not the newest"
+        "--findings",
+        action="store_true",
+        help="show the newest record's findings with their --decide commands; no audit runs",
+    )
+    ap.add_argument(
+        "--record",
+        type=Path,
+        help="with --decide or --findings: this record, not the newest",
     )
     ap.add_argument(
         "--protocol", type=Path, help="the protocol, in an area holding several"
@@ -692,8 +700,8 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--out", type=Path, help="also write the report here")
     args = ap.parse_args(argv)
     _check_args(ap, args)
-    if args.decide is not None:
-        return _decide(args.area, args.decide, args.record)
+    if args.mode is None:
+        return _without_audit(args)
     if args.mode == CLARITY:
         return _clarity(args)
     try:
@@ -753,13 +761,17 @@ def main(argv: list[str]) -> int:
             f"and the change owes its own audit",
             file=sys.stderr,
         )
-    for line in decision_lines(findings.read(recorded), args.area, report):
-        print(line, file=sys.stderr)
     # the auditor lists what it read in full; the indexed modules are the
     # caller's to add before the list is held to the stamp (LAB-103 The audit reads by declared scope)
     listed_scope = result["scope"] + [str(p) for p in indexed]
     for gap in scope_mismatch(args.area, listed_scope, stamp.files):
         print(f"scope WARNING: {gap}", file=sys.stderr)
+    # last, on stdout after the report: what the person acts on. On stderr
+    # it came out before the buffered report in a pipe, and `| tail` cut it
+    # off (sandbox judge probes, 2026-10-21)
+    print()
+    for line in decision_lines(findings.read(recorded), args.area, report):
+        print(line)
     return 1 if b or w else 0
 
 
@@ -809,12 +821,50 @@ def decision_lines(record: findings.Record, area: Path, report: str) -> list[str
 
 
 def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
-    """Exactly one of --mode (audit) and --decide (store a decision); --record
-    only with --decide. A usage error exits 2 through argparse."""
-    if (args.mode is None) == (args.decide is None):
-        ap.error("give --mode to audit, or --decide N STATUS REASON — one of them")
-    if args.record is not None and args.decide is None:
-        ap.error("--record goes with --decide")
+    """Exactly one of --mode (audit), --decide (store a decision) and
+    --findings (show what there is to decide); --record only with --decide
+    or --findings. A usage error exits 2 through argparse."""
+    chosen = [args.mode is not None, args.decide is not None, args.findings]
+    if sum(chosen) != 1:
+        ap.error(
+            "give --mode to audit, --decide N STATUS REASON to decide, or --findings "
+            "to show what there is to decide — one of them"
+        )
+    if args.record is not None and args.mode is not None:
+        ap.error("--record goes with --decide or --findings")
+
+
+def _without_audit(args: argparse.Namespace) -> int:
+    """`--decide` or `--findings`: the two calls that read or write a record
+    and run no audit."""
+    if args.decide is not None:
+        return _decide(args.area, args.decide, args.record)
+    return _findings(args.area, args.record)
+
+
+def _newest_record(area: Path) -> Path:
+    """The area's newest findings record; FindingsError when it has none."""
+    records = findings.area_records(area)
+    if not records:
+        raise findings.FindingsError(
+            f"{area}: no findings record — run the audit first"
+        )
+    return records[-1].path
+
+
+def _findings(area: Path, record: Path | None) -> int:
+    """`--findings`: RECORD's (the newest's) findings numbered with their
+    `--decide` commands, read from the record — no model call, no new
+    record. The auditor's READ hints are not recorded, so none show here.
+    Exit 2 when there is no record to read."""
+    try:
+        rec = findings.read(record if record is not None else _newest_record(area))
+    except findings.FindingsError as exc:
+        console.refuse("labkit-audit", str(exc))
+        return 2
+    for line in decision_lines(rec, area, ""):
+        print(line)
+    return 0
 
 
 def _decide(area: Path, decide: list[str], record: Path | None) -> int:
@@ -827,12 +877,7 @@ def _decide(area: Path, decide: list[str], record: Path | None) -> int:
         if not n_text.isdigit():
             raise findings.FindingsError(f"N must be a finding number, not {n_text!r}")
         if record is None:
-            records = findings.area_records(area)
-            if not records:
-                raise findings.FindingsError(
-                    f"{area}: no findings record to decide in — run the audit first"
-                )
-            record = records[-1].path
+            record = _newest_record(area)
         rec = findings.write_decision(record, int(n_text), status, reason)
     except findings.FindingsError as exc:
         console.refuse("labkit-audit", str(exc))
