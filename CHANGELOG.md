@@ -326,6 +326,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The stamped prepare run records its raw file.** `00_prepare.py` passes
+  `data={"source": SOURCE}` to `runlog.run`, so the run holds the raw
+  file's path, sha256 and row count; the stamp's own comment promised it
+  ("record sha256 via runlog data=") and the call passed none — the
+  analysis audit of a finished judge protocol found the prepare run
+  without it (2026-10-21). A `build()` that reads several files lists each
+  under its own key.
+
 - **`protocol-fill` lists and sets the head's `cost` as it does `type`.**
   `labkit-init exp` without `--cost` leaves `cost = "<seconds | minutes |
   hours>"` in the TOML head; `--list` named only `type` among the head's

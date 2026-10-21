@@ -309,6 +309,20 @@ class Exp(unittest.TestCase):
         r = run()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("1 items ->", r.stdout)
+        # the run binds the raw file it read (audit 2026-10-21: none recorded)
+        import json
+
+        # the refused attempt left its record too; the written run is the newest
+        record = max((self.area() / "runs").glob("*/config.json"))
+        data = json.loads(record.read_text(encoding="utf-8"))["data"]
+        self.assertIn("source", data)  # beside runlog's own leakage_check
+        self.assertEqual(
+            data["source"]["path"], "data/raw/claims.jsonl"
+        )  # repo-relative
+        from labkit.run.provenance import RECORD_SHA_CHARS
+
+        self.assertEqual(len(data["source"]["sha256"]), RECORD_SHA_CHARS)
+        self.assertEqual(data["source"]["rows"], 1)
 
     def test_the_stamped_criterion_holds_a_lane_exactly_at_null_plus_margin(
         self,

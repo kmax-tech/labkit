@@ -126,8 +126,12 @@ def main() -> None:
     # (cold Sonnet, judge at minutes, 2026-10-14: the first 00_prepare refused).
     config = {"source": str(SOURCE), "n_items": len(items),
               **promises.all_constants(promises.load(PROTOCOL))}
-    with runlog.run("prepare", config=config, base_dir=AREA,
-                    run_kind="preparation") as run:
+    # data= records SOURCE's path, sha256 and row count in the run — the raw
+    # file this dataset came from stays answerable (the stamped run recorded
+    # none, audit 2026-10-21). SOURCE is the file build() reads; a build()
+    # reading several files lists each under its own key.
+    with runlog.run("prepare", config=config, data={"source": SOURCE},
+                    base_dir=AREA, run_kind="preparation") as run:
         # A producer REPLACES its file, never appends. write_dataset does;
         # if this producer must write row-by-row instead, use
         # batch.Store(OUT, mode="produce") — append-only Store turned a
