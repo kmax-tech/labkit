@@ -326,6 +326,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A dataset header still reading the stamp's `TODO` is refused.**
+  `batch.write_dataset` raises ValueError naming `about` or the legend
+  value (`fields['gold']`) that still starts with `TODO`, and writes
+  nothing; the prepare template stamps both as `TODO: …`, and the header
+  — what a reader opens first — went into the frozen dataset unchanged
+  (review, 2026-10-21). A prepare script that kept the stamp fills the two
+  lines and runs again.
+
 - **A field that still holds the stamp's phrase is a placeholder, whatever
   stands around it.** `protocol-check`, `protocol-fill --list` and the
   gates read a value as unfilled when it holds one of the template's own

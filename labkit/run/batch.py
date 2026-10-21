@@ -537,8 +537,20 @@ def write_dataset(
     answers.read_jsonl — skips the header, so consumers see data only; a
     human opening the file sees FIRST what it is. Every row is validated
     against the legend: field drift (a renamed or forgotten column) fails
-    loudly at write time, not silently at analysis time.
+    loudly at write time, not silently at analysis time. So does the stamp's
+    `TODO` left in ABOUT or a legend value (ValueError naming it): the
+    header is what a reader opens first, and the prepare template stamps
+    both as `TODO: …` for the author to replace.
     """
+    for name, text in (
+        ("about", about),
+        *((f"fields[{k!r}]", v) for k, v in fields.items()),
+    ):
+        if text.lstrip().startswith("TODO"):
+            raise ValueError(
+                f"{name} still reads {text!r} — the stamp's TODO is no legend; "
+                f"say what it is before the dataset is written"
+            )
     for i, r in enumerate(rows):
         extra, missing = set(r) - fields.keys(), fields.keys() - set(r)
         if extra or missing:

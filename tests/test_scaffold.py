@@ -277,19 +277,36 @@ class Exp(unittest.TestCase):
             encoding="utf-8",
         )
         script = self.area() / "scripts" / "00_prepare.py"
-        script.write_text(
-            script.read_text(encoding="utf-8")
-            .replace('REPO / "data" / "TODO"', 'REPO / "data" / "raw" / "claims.jsonl"')
-            .replace('"TODO_v1.jsonl"', '"claims_v1.jsonl"'),
-            encoding="utf-8",
-        )
-        r = subprocess.run(
+        stamped = script.read_text(encoding="utf-8")
+        pointed = stamped.replace(
+            'REPO / "data" / "TODO"', 'REPO / "data" / "raw" / "claims.jsonl"'
+        ).replace('"TODO_v1.jsonl"', '"claims_v1.jsonl"')
+        script.write_text(pointed, encoding="utf-8")
+        run = lambda: subprocess.run(  # noqa: E731
             [sys.executable, str(script)],
             cwd=self.root,
             capture_output=True,
             text=True,
             timeout=60,
         )
+        # the legend still stamped `TODO: …` is refused before the file is written
+        r = run()
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("about still reads 'TODO:", r.stderr)
+        self.assertFalse(
+            (self.area() / "data" / "prepared" / "claims_v1.jsonl").exists()
+        )
+        # the author fills the two legend lines, as the stamp asks
+        legend = pointed.replace(
+            'ABOUT = "TODO: one sentence — what one row is and what this dataset is for."',
+            'ABOUT = "one claim per row, judged causal or not"',
+        ).replace(
+            '"gold": "TODO: every gold value spelled out, e.g. causal | not_causal"',
+            '"gold": "causal | not_causal"',
+        )
+        self.assertNotIn('"TODO:', legend)  # the knob comment may keep its TODO
+        script.write_text(legend, encoding="utf-8")
+        r = run()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("1 items ->", r.stdout)
 

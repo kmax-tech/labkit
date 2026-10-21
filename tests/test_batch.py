@@ -256,3 +256,52 @@ class StoreInstrument(unittest.TestCase):
         out = self._with_rows(None)
         with batch.Store(out) as store:
             self.assertEqual(len(list(store.pending([{"id": "x:2"}]))), 1)
+
+
+class TestWriteDatasetLegend(unittest.TestCase):
+    """The `_meta` header is what a reader opens first; the prepare template
+    stamps `about` and the gold legend as `TODO: …`, and nothing refused a
+    dataset written with them (review, 2026-10-21)."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.out = self.tmp / "x_v1.jsonl"
+        self.rows = [{"id": "a", "text": "t", "gold": "causal"}]
+        self.fields = {
+            "id": "unique per row",
+            "text": "the item",
+            "gold": "causal | not_causal",
+        }
+
+    def test_a_filled_legend_is_written_with_its_header(self):
+        batch.write_dataset(
+            self.out,
+            self.rows,
+            about="one claim per row",
+            fields=self.fields,
+            producer="t",
+        )
+        first = json.loads(self.out.read_text(encoding="utf-8").splitlines()[0])
+        self.assertEqual(first["_meta"]["about"], "one claim per row")
+
+    def test_the_stamped_todo_is_refused_and_nothing_is_written(self):
+        with self.assertRaisesRegex(
+            ValueError, "about still reads 'TODO: one sentence"
+        ):
+            batch.write_dataset(
+                self.out,
+                self.rows,
+                about="TODO: one sentence — what one row is",
+                fields=self.fields,
+                producer="t",
+            )
+        legend = dict(self.fields, gold="TODO: every gold value spelled out")
+        with self.assertRaisesRegex(ValueError, r"fields\['gold'\] still reads"):
+            batch.write_dataset(
+                self.out,
+                self.rows,
+                about="one claim per row",
+                fields=legend,
+                producer="t",
+            )
+        self.assertFalse(self.out.exists())
