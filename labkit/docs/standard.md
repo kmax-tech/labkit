@@ -146,7 +146,12 @@ evidence file under the same ID (top of this document).*
   The promises are also present as data in the head: the `[[promise]]` tables
   (key, sentence, code region, constants). Protocol standard 0.19
   (labkit 0.72) requires them when `frozen = true` and for every full run
-  — so with `cost = "seconds"` always. A constant is named like the
+  — so with `cost = "seconds"` always, with one exception: a plain count
+  at `cost = "seconds"` whose prose names no `[C]`/`[A]`/`[B]` id registers
+  nothing, and owes neither tables nor a success criterion (labkit 0.87.1,
+  `promises.promise_tables_owed`); its question, data, exclusions and unit
+  are its registration. Its `[protocol]` head and the release of its number
+  (the analysis audit, `report-check`) stay owed. A constant is named like the
   config key (`margin`, lowercase) and appears in exactly one table; the
   script reads it with `promises.all_constants()`, never as a copy, and
   `runlog` refuses, before creating the run directory, a run
@@ -413,7 +418,8 @@ evidence file under the same ID (top of this document).*
   | `minutes`, `hours` | `code-check`, then preflight audit (LAB-015 Preflight audit before freezing)                                                                                | Analysis audit (LAB-050 Analysis audit before reporting), before a number is reported                                                                                                                                                                                                                            |
 
   **At `seconds`, the criterion freezes once, the instrument never.** The
-  criterion is fixed before the number exists and does not move afterwards. The
+  criterion is fixed before the number exists and does not move afterwards
+  (a plain count registers none — see the `[[promise]]` tables above). The
   instrument may change after the first run — one more role, a
   check per computation, a different aggregation. Every change is a commit
   with a test and a new run of the same command: no second

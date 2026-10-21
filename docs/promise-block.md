@@ -119,7 +119,11 @@ agent audit's question, not a mechanical one. A frozen protocol, and
 every measurement, including at `cost = "seconds"`, owes the block
 (`promises.promise_tables_owed`, standard 0.19): without tables, `protocol-check`
 reports a MUST failure (frozen or seconds), `preflight` and `finalize`
-block, and no measurement starts under it. Unfrozen preparation and
+block, and no measurement starts under it. The one exception: a plain
+count at `seconds` whose prose names no `[C]`/`[A]`/`[B]` id registers
+nothing and owes no tables and no success criterion (0.87.1); its
+`[protocol]` head and the release of its number (the analysis audit,
+`report-check`) stay owed. Unfrozen preparation and
 probe runs can start without tables; seconds permits no separate probe. The seconds cut IS the registration — in
 prose and in tables, so the machine chain (block digest, scope hashes,
 constants) holds for every reportable run, not only for frozen ones. Mechanically guaranteed is the one home of a

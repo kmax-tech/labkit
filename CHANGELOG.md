@@ -286,6 +286,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The standard states the count's exemption.** A plain count at
+  `seconds` whose prose names no `[C]`/`[A]`/`[B]` id owes no promise
+  table and no success criterion — so the code has decided since 0.87.1
+  (`promises.promise_tables_owed`), while the standard the auditor reads
+  and `docs/promise-block.md` said the tables are owed at `seconds`
+  always; an analysis audit asked a count for a criterion (sandbox probe,
+  2026-10-21). Both now say it, with what stays owed: the `[protocol]`
+  head and the release of the number. A test holds code, the auditor's
+  excerpt and the contract together.
+
 - **The count skeleton reads its items under the frozen `INPUTS`.** It
   froze `INPUTS` while every cold agent took each case's directory from a
   path the record named; the number followed a value the run did not
