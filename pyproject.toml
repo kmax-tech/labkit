@@ -91,3 +91,6 @@ venvPath = "."
 venv = ".venv"
 # tests import their shared fixture module (tests/protocol_fixture.py) by name
 extraPaths = ["tests"]
+# a wheel build leaves a stale copy of the package in build/ (git-ignored);
+# checking it failed the pre-commit on code that no longer exists
+exclude = ["build", "**/__pycache__", ".venv"]
