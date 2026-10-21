@@ -17,6 +17,7 @@ cites a run.
 from __future__ import annotations
 
 from labkit.formats.runs import RunKind
+from labkit.tools import protocol_fill
 
 import contextlib
 import dataclasses
@@ -115,18 +116,20 @@ class ReportCheck(unittest.TestCase):
         run = self._answered(area)
         proto = area / "PROTOCOL-x.md"
         ctx = report_check.checked(area, proto)
-        self.assertEqual((ctx.state, ctx.cited, ctx.run), (report_check.TREE, (), run))
+        self.assertEqual(
+            (ctx.state, ctx.declared, ctx.run), (report_check.TREE, None, run)
+        )
         self.assertEqual(ctx.text, proto.read_text(encoding="utf-8"))
         # the index's text, not the tree's: the declaration comes from there
-        staged = ctx.text + f"- **Answer to the question:** 1 (run {run.name})\n"
+        staged = protocol_fill.fill_result_run(ctx.text, run.name)
         ctx = report_check.checked(area, proto, state=report_check.INDEX, text=staged)
-        self.assertEqual((ctx.state, ctx.cited), (report_check.INDEX, (run.name,)))
+        self.assertEqual((ctx.state, ctx.declared), (report_check.INDEX, run.name))
         self.assertEqual(ctx.head.cost, "seconds")
         self._audited(area, run)
         code, out = self._run(area)
         self.assertEqual(code, 0, out)
         self.assertIn(
-            f"read from the working tree; the answer cites no run; the answering "
+            f"read from the working tree; the head declares no run; the answering "
             f"run is {run.name}",
             out,
         )
@@ -412,13 +415,16 @@ class IfReported(unittest.TestCase):
         self,
         answer: str,
         *,
+        declared: str | None = None,
         run_kind: RunKind = "measurement",
         audited: bool = True,
         git: bool = False,
     ) -> Path:
         """A seconds area (no freeze owed, so the bare fixture head passes
-        station 1) whose protocol says ANSWER; its one run a full run unless
-        LONG says a probe; an analysis record of it when AUDITED. GIT: the
+        station 1) whose protocol says ANSWER and declares DECLARED as its
+        result (the head's `[result] run`; None: an exploration); its one
+        run a full run unless LONG says a probe; an analysis record of it
+        when AUDITED. GIT: the
         root is a repository (before the record: the stamp's paths are
         repo-relative) and everything is committed at the end."""
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
@@ -433,7 +439,8 @@ class IfReported(unittest.TestCase):
         scope_file(area)
         proto = area / "PROTOCOL-x.md"
         proto.write_text(
-            head(cost="seconds") + f"- **Answer to the question:** {answer}\n",
+            head(cost="seconds", result=declared)
+            + f"- **Answer to the question:** {answer}\n",
             encoding="utf-8",
         )
         run = completed_run(
@@ -478,7 +485,7 @@ class IfReported(unittest.TestCase):
         """The pre-commit's form: a reported answer in the index, the tree's
         reopened — the hook read the tree and passed the commit (audit
         2026-10-19)."""
-        area = self._area(f"AUC 0.91 ({self.RUN})", git=True)
+        area = self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN, git=True)
         root = area.parent.parent
         proto = area / "PROTOCOL-x.md"
         code, out = self._staged_gate(root, proto)
@@ -486,7 +493,7 @@ class IfReported(unittest.TestCase):
         self.assertIn("finalized, audited, checked", out)
         reported = proto.read_text(encoding="utf-8")
         proto.write_text(
-            reported.replace(f"AUC 0.91 ({self.RUN})", "<number + run_id>"),
+            reported.replace(f'\n[result]\nrun = "{self.RUN}"\n', ""),
             encoding="utf-8",
         )
         code, out = self._staged_gate(root, proto)
@@ -503,15 +510,15 @@ class IfReported(unittest.TestCase):
         self.assertEqual((code, out), (0, ""))
 
     def test_staged_names_the_index_as_the_state_held(self):
-        area = self._area(f"1 (run {self.RUN})", git=True)
+        area = self._area(f"1 (run {self.RUN})", declared=self.RUN, git=True)
         code, out = self._staged_gate(area.parent.parent, area / "PROTOCOL-x.md")
         self.assertEqual(code, 0, out)
-        self.assertIn("read from the index; the answer cites " + self.RUN, out)
+        self.assertIn("read from the index; the head declares " + self.RUN, out)
 
     def test_staged_refuses_an_area_whose_tree_is_not_the_index(self):
         """A script modified and one untracked under a reported number: the
         stations would judge a state the commit does not hold."""
-        area = self._area(f"AUC 0.91 ({self.RUN})", git=True)
+        area = self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN, git=True)
         root = area.parent.parent
         (area / "scripts" / "02_analyze.py").write_text(
             "print('changed')\n", encoding="utf-8"
@@ -529,7 +536,7 @@ class IfReported(unittest.TestCase):
         """The script staged, the reported protocol deleted in the tree and
         not in the index: the commit keeps the protocol, so the gate holds
         it — the search for protocols read the tree and found none."""
-        area = self._area(f"AUC 0.91 ({self.RUN})", git=True)
+        area = self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN, git=True)
         root = area.parent.parent
         script = area / "scripts" / "02_analyze.py"
         script.write_text("print('changed')\n", encoding="utf-8")
@@ -543,7 +550,7 @@ class IfReported(unittest.TestCase):
     def test_a_shared_helper_reopens_the_areas_that_import_it(self):
         """lib/scoring.py lies in no area; an area whose script imports it is
         touched by its change, and one that does not is not."""
-        area = self._area(f"AUC 0.91 ({self.RUN})", git=False)
+        area = self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN, git=False)
         root = area.parent.parent
         (root / "lib").mkdir()
         helper = root / "lib" / "scoring.py"
@@ -584,7 +591,7 @@ class IfReported(unittest.TestCase):
     def test_a_changed_script_reopens_the_areas_reported_number(self):
         """The protocol untouched, a script under it edited: the analysis
         audit saw other code, and both hooks passed it (audit 2026-10-19)."""
-        area = self._area(f"AUC 0.91 ({self.RUN})")
+        area = self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN)
         script = area / "scripts" / "02_analyze.py"
         code, out = self._gate(area, script)
         self.assertEqual(code, 0, out)  # the twin: unchanged, the gate holds
@@ -603,31 +610,53 @@ class IfReported(unittest.TestCase):
         )
         self.assertEqual((code, out), (0, ""))
 
-    def test_an_answer_without_a_run_id_is_not_a_declaration(self):
+    def test_an_answer_without_a_declaration_is_not_one(self):
         """Neither reported nor open: protocol-check warns, this gate is silent."""
         code, out = self._gate(self._area("AUC 0.91", audited=False))
         self.assertEqual((code, out), (0, ""))
 
+    def test_a_declaration_that_does_not_read_is_held_and_blocks(self):
+        """A typed `…_final` in [result]: no exploration to skip, a blocker
+        naming the table — the commit must not carry it."""
+        area = self._area("AUC 0.91")
+        proto = area / "PROTOCOL-x.md"
+        proto.write_text(
+            proto.read_text(encoding="utf-8").replace(
+                'preflight_audit = ""\n',
+                'preflight_audit = ""\n\n[result]\nrun = "2026-10-01T09-00-00_final"\n',
+            ),
+            encoding="utf-8",
+        )
+        code, out = self._gate(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn("a result that does not read", out)
+        self.assertIn("no run id runlog writes", out)
+
     def test_a_reported_full_run_passes(self):
-        code, out = self._gate(self._area(f"AUC 0.91 ({self.RUN})"))
+        code, out = self._gate(self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN))
         self.assertEqual(code, 0, out)
-        self.assertIn(f"its answer cites {self.RUN}", out)
+        self.assertIn(f"its head declares {self.RUN}", out)
         self.assertIn("finalized, audited, checked", out)
 
     def test_a_reported_probe_is_refused(self):
         """Third haiku round, t3 and t5: the probe's number, written back."""
-        code, out = self._gate(self._area(f"AUC 0.91 ({self.RUN})", run_kind="probe"))
+        code, out = self._gate(
+            self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN, run_kind="probe")
+        )
         self.assertEqual(code, 1, out)
         self.assertIn("a probe (run_kind='probe'), not a measurement", out)
 
     def test_citing_another_run_than_the_one_that_answers_blocks(self):
-        code, out = self._gate(self._area("AUC 0.91 (2026-10-01T09-00-00_ffff)"))
+        other = "2026-10-01T09-00-00_ffff"
+        code, out = self._gate(self._area(f"AUC 0.91 ({other})", declared=other))
         self.assertEqual(code, 1, out)
         self.assertIn("finalize: ", out)
         self.assertIn("but the run that answers is", out)
 
     def test_a_reported_run_without_its_analysis_audit_blocks(self):
-        code, out = self._gate(self._area(f"AUC 0.91 ({self.RUN})", audited=False))
+        code, out = self._gate(
+            self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN, audited=False)
+        )
         self.assertEqual(code, 1, out)
         self.assertIn("no analysis audit saw the area as it is now", out)
 

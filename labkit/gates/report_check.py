@@ -58,7 +58,7 @@ run for itself, and the output names the state that was held.
 runs it on every changed path, the stamped pre-commit on every staged one,
 and it holds every protocol of every area one of those paths lies in
 (`reported_protocols`) whose "Answer to the question" cites a run
-(`finalize.cited_runs`) — the one line that declares a result reported,
+(`protocol_block.declared_run`, `[result] run`) — the one declaration that a result is reported,
 written by `protocol-fill --from-run`. The area, not the protocol alone:
 a script edited after the answer was written back changes what the
 analysis audit saw and what `--check` recomputes. A protocol whose
@@ -88,7 +88,7 @@ from labkit.checks.audit_binding import (
     audited_run,
     covering_analysis,
 )
-from labkit.gates.finalize import cited_runs, finalize_area
+from labkit.gates.finalize import finalize_area
 from labkit.gates.preflight import area_test_python
 from labkit.formats.protocol_check import check_fields, field_name, fields
 from labkit.formats.repo import (
@@ -137,8 +137,12 @@ class Checked:
         text: The protocol as STATE holds it — the declaration is read here.
         head: Its TOML head.
         state: TREE, INDEX or PROPOSED.
-        cited: The run ids the answer cites (`finalize.cited_runs`) — the
-            declaration that a result is reported.
+        declared: The run the head declares as the reported result
+            (`protocol_block.declared_run`, `[result] run`), None for an
+            exploration — or for a `[result]` that does not read, which
+            `declaration_gap` then names (a blocker: the commit must not
+            carry it).
+        declaration_gap: Why the declaration does not read, or None.
         run: The answering run (`audit_binding.audited_run`, through
             `answering_run.bound_answering_run`: the one choice every gate holds the
             protocol to), or None.
@@ -151,7 +155,8 @@ class Checked:
     text: str
     head: protocol_block.Head
     state: str
-    cited: tuple[str, ...]
+    declared: str | None
+    declaration_gap: str | None
     run: Path | None
     why: str
 
@@ -165,6 +170,7 @@ def checked(
     if text is None:
         text = protocol.read_text(encoding="utf-8")
     head = protocol_block.head(text)
+    declared, declaration_gap = _declaration(text)
     run, why = audited_run(area, protocol, text)
     return Checked(
         area=area.resolve(),
@@ -173,7 +179,8 @@ def checked(
         text=text,
         head=head,
         state=state,
-        cited=tuple(cited_runs(text)),
+        declared=declared,
+        declaration_gap=declaration_gap,
         run=run,
         why=why,
     )
@@ -211,6 +218,14 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
         return None
     tail = (r.stderr.strip() or r.stdout.strip() or "no output").splitlines()[-3:]
     return f"{script} --check exits {r.returncode}: " + " | ".join(tail)
+
+
+def _declaration(text: str) -> tuple[str | None, str | None]:
+    """(the declared run, None) or (None, why the `[result]` table does not read)."""
+    try:
+        return protocol_block.declared_run(text), None
+    except protocol_block.BlockError as exc:
+        return None, str(exc)
 
 
 def freeze_gaps(ctx: Checked) -> list[str]:
@@ -374,8 +389,8 @@ def report_check(
         console.refuse("report-check", f"{chosen.name}: {exc}")
         return 2
     print(
-        f"  {chosen.name}: read from the {ctx.state}; the answer cites "
-        f"{', '.join(ctx.cited) or 'no run'}; the answering run is "
+        f"  {chosen.name}: read from the {ctx.state}; the head declares "
+        f"{ctx.declared or 'no run'}; the answering run is "
         f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
     )
     # what the release owes at this tier is the contract's answer: the freeze
@@ -383,6 +398,8 @@ def report_check(
     # the check are owed at every tier
     ln = lane(ctx.head.cost)
     findings = Findings()
+    if ctx.declaration_gap:
+        findings.block(f"{chosen.name}: {ctx.declaration_gap}")
     if ln.freeze:
         gaps = freeze_gaps(ctx)
     else:
@@ -461,10 +478,13 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
                 print(f"report-check: {protocol}: {exc}")
                 worst = max(worst, 2)
                 continue
-        cited = cited_runs(text)
-        if not cited:
-            continue
-        print(f"═══ report-check {protocol} (its answer cites {', '.join(cited)}) ═══")
+        declared, gap = _declaration(text)
+        if declared is None and gap is None:
+            continue  # an exploration: nothing declared, nothing owed
+        print(
+            f"═══ report-check {protocol} (its head declares "
+            f"{declared or 'a result that does not read'}) ═══"
+        )
         area = protocol.parent.resolve()
         if staged:
             differs = tree_differs(repo, area)

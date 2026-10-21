@@ -14,8 +14,8 @@ each step's condition):
   1. answering run  the run that answers — the newest completed bound run
                     reporting an intent key, the same choice as intent-check
                     — and every later step checks THAT run. Then its record:
-                    the run the answer cites is this one (blocker), the
-                    `Answering run` field names it (blocker/warning), its
+                    the head's `[result] run` names this one or none yet
+                    (blocker / note with the command), its
                     JSONL rows come from this run, the runs it continues or
                     its derived_from lineage (blocker), a model record stands
                     in its lineage (warning), the arm lines match (warning),
@@ -64,8 +64,6 @@ from labkit.formats import console, findings as audit_findings, promises, protoc
 from labkit.formats.standard_contract import lane
 from labkit.formats.gate import Findings
 from labkit.formats.runs import (
-    RUN_ID,
-    RUN_ID_LIKE,
     unreportable,
     read_run_config,
 )
@@ -84,9 +82,6 @@ from labkit.formats.repo import (
 from labkit.checks.intent_check import main as intent_check_main, ids_in_prose
 from labkit.gates.preflight import area_tests
 from labkit.formats.protocol_check import (
-    answer_field,
-    answering_run_field,
-    answering_run_open,
     open_holes,
 )
 from labkit.checks.run_record_check import (
@@ -127,63 +122,71 @@ def answering_run(
     return choice.run_dir
 
 
-def cited_run_mismatch(text: str, measurement_run: Path) -> str | None:
-    """A blocker when the protocol's answer cites runs and not the one the
-    checks hold; None when it cites that run or none."""
-    cited = cited_runs(text)
-    if cited and measurement_run.name not in cited:
-        return (
-            f'"Answer to the question" cites {", ".join(cited)}, '
-            f"but the run that answers is {measurement_run.name} — cite the run "
-            f"the checks hold, or rerun"
-        )
-    return None
-
-
-def answering_run_field_mismatch(
-    text: str, measurement_run: Path, protocol: Path
-) -> tuple[str, str] | None:
-    """("block" | "warn", message): the `Answering run` line names another
-    run than the one the checks hold (block), or is still "none yet"
-    (warn: write it with protocol-fill, the line naming PROTOCOL by
-    `repo.adopt_command`). None when it names that run or
-    the protocol has no such line. The field is a readable projection of
-    `answering_run.bound_answering_run`, never a second binding — so it is held to
-    the choice, not consulted for it."""
-    value = answering_run_field(text)
-    if value is None or measurement_run.name in value:
+def declared_run_mismatch(text: str, measurement_run: Path) -> str | None:
+    """A blocker when the head's `[result] run` names another run than the
+    one the checks hold; None when it names that run or the protocol
+    declares none (an exploration). The declaration is a projection of
+    `answering_run.bound_answering_run`, never a second binding — held to the
+    choice, not consulted for it."""
+    declared = protocol_block.declared_run(text)
+    if declared is None or declared == measurement_run.name:
         return None
-    if answering_run_open(value):
-        return (
-            "warn",
-            f'"Answering run" not written yet — '
-            f"`{adopt_command(protocol, measurement_run.name)}` writes it with "
-            f"the number once this finalize is clean",
-        )
     return (
-        "block",
-        f'"Answering run" names {value.split()[0]}, but the run that answers is '
-        f"{measurement_run.name} — the field is a projection of the binding; "
-        f"protocol-fill it with the run the checks hold",
+        f"[result] declares {declared}, but the run that answers is "
+        f"{measurement_run.name} — `protocol-fill --from-run {measurement_run.name} "
+        f"--force` declares the run the checks hold, or rerun"
     )
+
+
+def undeclared_hint(text: str, measurement_run: Path, protocol: Path) -> str | None:
+    """A note while the protocol declares no result yet — the normal state
+    before adoption, so no warning: the command that declares
+    MEASUREMENT_RUN and writes its number (`repo.adopt_command`, naming
+    PROTOCOL — `--from-run <run>` alone exits 2, review 2026-10-20). None
+    once a run is declared."""
+    if protocol_block.declared_run(text) is not None:
+        return None
+    return (
+        f"no [result] declared yet — `{adopt_command(protocol, measurement_run.name)}` "
+        f"declares the run and writes the number once this finalize is clean"
+    )
+
+
+def _hold_declaration(
+    findings: Findings, area: Path, protocol: Path, text: str, run: Path | None
+) -> None:
+    """The head's `[result]` against RUN, the run the checks hold: a table
+    that does not read or names no run of AREA blocks (`declared_run_gaps`),
+    one naming another run blocks (`declared_run_mismatch`), none yet is a
+    note with the command (`undeclared_hint`)."""
+    gaps = declared_run_gaps(area, text)
+    for gap in gaps:
+        findings.block(gap)
+    if run is None:
+        return
+    try:
+        protocol_block.declared_run(text)
+    except protocol_block.BlockError:
+        return  # named in GAPS; nothing to hold to the run
+    mismatch = declared_run_mismatch(text, run)
+    if mismatch:
+        findings.block(mismatch)
+    hint = undeclared_hint(text, run, protocol)
+    if hint:
+        findings.note(
+            f"  {hint}"
+        )  # the normal state before adoption: a note, finalize stays clear
 
 
 def check_completion(
     findings: Findings, area: Path, protocol: Path, text: str, pid: str | None
 ) -> Path | None:
     """Station 1: the run every later station holds the protocol to — chosen,
-    shown, and held to the run the answer cites. Returns it, or None."""
-    for gap in cited_run_gaps(area, text):
-        findings.block(gap)
+    shown, and held to the run the head declares (`[result] run`). Returns
+    it, or None."""
     measurement_run = answering_run(findings, area, pid, bool(ids_in_prose(text)))
+    _hold_declaration(findings, area, protocol, text, measurement_run)
     if measurement_run is not None:
-        mismatch = cited_run_mismatch(text, measurement_run)
-        if mismatch:
-            findings.block(mismatch)
-        graded = answering_run_field_mismatch(text, measurement_run, protocol)
-        if graded is not None:
-            grade, message = graded
-            (findings.block if grade == "block" else findings.warn)(message)
         for warning in (
             model_provenance_gap(measurement_run),
             single_draw(area, measurement_run),
@@ -469,36 +472,23 @@ def finalize_area(
     return report(findings)  # 1 if any step found a blocker, else 0
 
 
-def cited_runs(text: str) -> list[str]:
-    """The run ids the protocol's "Answer to the question" cites — a number
-    written back, the one declaration that a result is reported
-    (`protocol_check.answer_field`; report-check holds it at the stop and
-    the commit). Everything that reads as a run id counts (`RUN_ID_LIKE`),
-    a typed `…_final` too: `cited_run_gaps` then says it names no run.
-    Empty while the field is a placeholder or cites none."""
-    value = answer_field(text)
-    return sorted({m.group(0) for m in RUN_ID_LIKE.finditer(value)}) if value else []
-
-
-def cited_run_gaps(area: Path, text: str) -> list[str]:
-    """A blocker for every run id the answer cites that names no run of
-    AREA: not in the shape runlog writes, or no `runs/<id>/` there. A run
-    id is written by runlog and copied by `protocol-fill --from-run`,
-    never typed — a typed one claims a run that may not exist."""
-    gaps = []
-    for rid in cited_runs(text):
-        if not RUN_ID.fullmatch(rid):
-            gaps.append(
-                f'"Answer to the question" cites {rid}, which is no run id runlog '
-                f"writes (<date>T<time>_<hex>) — cite a run from runs/, written by "
-                f"`protocol-fill <PROTOCOL> --from-run <run_id>`"
-            )
-        elif not (area / "runs" / rid).is_dir():
-            gaps.append(
-                f'"Answer to the question" cites {rid}, but there is no runs/{rid}/ '
-                f"in this area — a run id is runlog's, never typed"
-            )
-    return gaps
+def declared_run_gaps(area: Path, text: str) -> list[str]:
+    """A blocker when the head's `[result] run` names no run of AREA (no
+    `runs/<id>/` there), or when the table does not read (a typed id, a
+    stray key: `protocol_block.declared_run`'s sentence). A run id is
+    written by runlog and copied by `protocol-fill --from-run`, never
+    typed — a typed one claims a run that may not exist. Empty without a
+    declaration."""
+    try:
+        declared = protocol_block.declared_run(text)
+    except protocol_block.BlockError as exc:
+        return [str(exc)]
+    if declared is None or (area / "runs" / declared).is_dir():
+        return []
+    return [
+        f"[result] declares {declared}, but there is no runs/{declared}/ in this "
+        f"area — a run id is runlog's, never typed"
+    ]
 
 
 def main(argv: list[str]) -> int:

@@ -42,16 +42,16 @@ post-change
 
 stop
     Before the agent ends its turn: every protocol of an area a changed
-    path (git status) lies in whose "Answer to the question" cites a run
+    path (git status) lies in whose head declares a result (`[result] run`)
     goes through `report-check --if-reported` — a script edited under a
     reported number reopens it — the whole release check at every cost
-    tier: the run bound to the protocol and cited, a full run (no probe, no
+    tier: the run bound to the protocol and declared, a full run (no probe, no
     acknowledged run), a decided analysis audit of code, promises and that
     run, the numbers recomputed by `02_analyze.py --check`; finalize is one
     of its stations. Blockers → exit 2, and the findings go back to the
-    agent, which keeps working. The answer line citing a run is the one
-    declaration that a result is reported (`finalize.cited_runs`); a
-    protocol whose answer is still open owes nothing — an exploration ends
+    agent, which keeps working. The head's `[result] run` is the one
+    declaration that a result is reported (`protocol_block.declared_run`); a
+    protocol declaring none owes nothing — an exploration ends
     with "no reported result", probes in `runs/` or not. Once per stop:
     when the agent was already sent back by this hook
     (`stop_hook_active`), it may stop; the commit gate still holds.

@@ -41,78 +41,77 @@ class ProseValueReaders(unittest.TestCase):
 
     READERS = (
         (protocol_check, "fields"),  # the label parser every reader below rests on
-        (protocol_check, "answer_field"),  # the Answer line: numbers and the run id
-        (protocol_check, "answering_run_field"),
-        (protocol_check, "answering_run_open"),
-        (protocol_check, "answer_without_run"),
+        (protocol_check, "answer_field"),  # the Answer line: a generated section
+        (protocol_check, "answer_without_run"),  # an Answer without a declaration
         (protocol_check, "model_named_in"),  # Model / tool decides the cut
         (
             protocol_check,
             "measure_runs",
         ),  # run ids in the Runs list make the result due
-        (finalize, "cited_runs"),  # the declaration "reported"
-        (finalize, "cited_run_gaps"),
         (run_record_check, "arm_findings"),  # Arm lines held to the run
         (prompt_check, "prompt_blocks"),  # the Prompt block held to the constants
         (report_check, "limit_gaps"),  # Limit lines held to the record
     )
+    #: left since phase 3 (2026-10-21): the declaration is `[result] run` in the
+    #: head — `answering_run_field`, `answering_run_open`, `finalize.cited_runs`,
+    #: `finalize.cited_run_gaps` read prose for it
+    GONE = ("answering_run_field", "answering_run_open", "cited_runs", "cited_run_gaps")
 
     def test_the_inventory_is_exactly_these(self):
         for module, name in self.READERS:
             with self.subTest(reader=f"{module.__name__}.{name}"):
                 self.assertTrue(callable(getattr(module, name)))
-        self.assertEqual(len(self.READERS), 12)
+        self.assertEqual(len(self.READERS), 8)
+        for name in self.GONE:
+            self.assertFalse(hasattr(protocol_check, name) or hasattr(finalize, name))
 
 
 class Declaration(unittest.TestCase):
-    """What declares a result reported today: a run id in the Answer line,
-    written by `--from-run`. Phase 3 makes it `[result].run` in the head;
-    the four shapes below are the cases it must still tell apart."""
+    """What declares a result reported since phase 3: `[result] run` in the
+    TOML head, written by `--from-run`. The four shapes it tells apart;
+    the Answer line is a generated section and declares nothing by itself."""
 
-    def protocol(self, answer: str) -> str:
+    def protocol(self, answer: str, declared: str | None = None) -> str:
         return (
-            head(cost="seconds")
+            head(cost="seconds", result=declared)
             + "\n## Result\n\n"
             + f"- **Answer to the question:** {answer}\n"
         )
 
-    def test_a_placeholder_declares_nothing(self):
+    def test_no_table_declares_nothing(self):
         text = self.protocol("<per registered id its verdict, and the run_id…>")
-        self.assertIsNone(protocol_check.answer_field(text))
-        self.assertEqual(finalize.cited_runs(text), [])
+        self.assertIsNone(protocol_block.declared_run(text))
         self.assertIsNone(protocol_check.answer_without_run(text))
 
-    def test_a_run_id_in_the_answer_declares_the_result_reported(self):
-        text = self.protocol(f"c1_pass = True (run {RUN})")
-        self.assertEqual(finalize.cited_runs(text), [RUN])
+    def test_the_table_declares_the_run_and_the_answer_is_held_to_it(self):
+        text = self.protocol(f"c1_pass = True (run {RUN})", declared=RUN)
+        self.assertEqual(protocol_block.declared_run(text), RUN)
         self.assertIsNone(protocol_check.answer_without_run(text))
+        self.assertIsNone(finalize.declared_run_mismatch(text, Path("runs") / RUN))
 
-    def test_a_typed_id_counts_as_cited_and_is_refused_as_no_run(self):
+    def test_a_typed_id_does_not_read_and_a_shaped_one_must_be_a_run(self):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
-            typed = self.protocol("c1_pass = True (run 2026-10-21T12-48-00_final)")
-            self.assertEqual(finalize.cited_runs(typed), ["2026-10-21T12-48-00_final"])
-            (gap,) = finalize.cited_run_gaps(area, typed)
+            typed = self.protocol("c1_pass = True").replace(
+                'preflight_audit = ""\n',
+                'preflight_audit = ""\n\n[result]\nrun = "2026-10-21T12-48-00_final"\n',
+            )
+            with self.assertRaisesRegex(
+                protocol_block.BlockError, "no run id runlog writes"
+            ):
+                protocol_block.declared_run(typed)
+            (gap,) = finalize.declared_run_gaps(area, typed)
             self.assertIn("no run id runlog writes", gap)
-            shaped = self.protocol(f"c1_pass = True (run {RUN})")
-            (gap,) = finalize.cited_run_gaps(area, shaped)
+            shaped = self.protocol(f"c1_pass = True (run {RUN})", declared=RUN)
+            (gap,) = finalize.declared_run_gaps(area, shaped)
             self.assertIn(f"no runs/{RUN}/", gap)
 
-    def test_an_answer_without_a_run_id_is_a_warning_not_a_declaration(self):
+    def test_an_answer_without_a_declaration_is_a_warning_not_a_declaration(self):
         text = self.protocol("c1_pass = True, see the run")
-        self.assertEqual(finalize.cited_runs(text), [])
+        self.assertIsNone(protocol_block.declared_run(text))
         warning = protocol_check.answer_without_run(text)
         assert warning is not None
         self.assertTrue(warning.startswith("WARNING"))
-
-    def test_the_answering_run_line_is_open_until_a_run_id_stands_there(self):
-        self.assertTrue(
-            protocol_check.answering_run_open(
-                "none yet — the run finalize holds this to"
-            )
-        )
-        self.assertTrue(protocol_check.answering_run_open("<run_id>"))
-        self.assertFalse(protocol_check.answering_run_open(RUN))
 
 
 class LaneDuties(unittest.TestCase):

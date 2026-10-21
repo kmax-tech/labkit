@@ -5,25 +5,26 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import run_record  # noqa: E402
+from protocol_fixture import head, run_record  # noqa: E402
 from labkit.gates import finalize
 from labkit.checks import run_record_check, readme_check
 from labkit.formats import repo
 
 
 class Steps(unittest.TestCase):
-    def test_a_cited_run_that_is_not_the_answering_one_blocks(self):
+    def test_a_declared_run_that_is_not_the_answering_one_blocks(self):
         run = Path("/x/runs/2026-10-07T10-00-00_aa11")
-        text = "- **Answer to the question:** 0.91 (2026-10-07T09-00-00_bb22)\n"
-        mismatch = finalize.cited_run_mismatch(text, run)
+        text = head(cost="seconds", result="2026-10-07T09-00-00_bb22")
+        mismatch = finalize.declared_run_mismatch(text, run)
         assert mismatch is not None
-        self.assertIn("2026-10-07T09-00-00_bb22", mismatch)
+        self.assertIn("[result] declares 2026-10-07T09-00-00_bb22", mismatch)
+        self.assertIn("--from-run 2026-10-07T10-00-00_aa11 --force", mismatch)
 
-    def test_citing_the_answering_run_or_none_passes(self):
+    def test_declaring_the_answering_run_or_none_passes(self):
         run = Path("/x/runs/2026-10-07T10-00-00_aa11")
-        cites_it = "- **Answer to the question:** 0.91 (2026-10-07T10-00-00_aa11)\n"
-        self.assertIsNone(finalize.cited_run_mismatch(cites_it, run))
-        self.assertIsNone(finalize.cited_run_mismatch("no run cited\n", run))
+        declares_it = head(cost="seconds", result="2026-10-07T10-00-00_aa11")
+        self.assertIsNone(finalize.declared_run_mismatch(declares_it, run))
+        self.assertIsNone(finalize.declared_run_mismatch(head(cost="seconds"), run))
 
     def test_two_protocols_and_none_named_refuses(self):
         with tempfile.TemporaryDirectory() as d:
@@ -37,40 +38,48 @@ class Steps(unittest.TestCase):
             )
 
 
-class AnsweringRunField(unittest.TestCase):
+class DeclaredRunHint(unittest.TestCase):
+    """While no result is declared, finalize notes the command that declares
+    the answering run and writes its number — a note, not a warning: it is
+    the normal state before adoption, and finalize stays clear. A command
+    that runs: it names the protocol (review 2026-10-20: `--from-run <run>`
+    alone exits 2)."""
+
     RUN = Path("/x/runs/2026-10-07T10-00-00_aa11")
     PROTOCOL = Path("/x/PROTOCOL-a.md")
 
-    def test_the_field_naming_the_chosen_run_is_quiet(self):
-        text = "- **Answering run:** `2026-10-07T10-00-00_aa11`\n"
-        self.assertIsNone(
-            finalize.answering_run_field_mismatch(text, self.RUN, self.PROTOCOL)
-        )
-
-    def test_another_run_in_the_field_is_a_blocker(self):
-        text = "- **Answering run:** `2026-10-01T09-00-00_ffff`\n"
-        kind, msg = finalize.answering_run_field_mismatch(
-            text, self.RUN, self.PROTOCOL
-        ) or ("", "")
-        self.assertEqual(kind, "block")
-        self.assertIn("2026-10-07T10-00-00_aa11", msg)
-
-    def test_none_yet_is_a_warning_and_no_field_is_nothing(self):
-        text = "- **Answering run:** none yet — written by protocol-fill\n"
-        kind, msg = finalize.answering_run_field_mismatch(
-            text, self.RUN, self.PROTOCOL
-        ) or ("", "")
-        self.assertEqual(kind, "warn")
-        # the hint is a command that runs: it names the protocol (review,
-        # 2026-10-20: `protocol-fill --from-run <run>` alone exits 2)
+    def test_no_declaration_is_a_hint_with_the_command(self):
+        hint = finalize.undeclared_hint(head(cost="seconds"), self.RUN, self.PROTOCOL)
+        assert hint is not None
+        self.assertIn("no [result] declared yet", hint)
         self.assertIn(
-            "protocol-fill /x/PROTOCOL-a.md --from-run 2026-10-07T10-00-00_aa11", msg
+            "protocol-fill /x/PROTOCOL-a.md --from-run 2026-10-07T10-00-00_aa11", hint
         )
-        self.assertIsNone(
-            finalize.answering_run_field_mismatch(
-                "- **Result:** x\n", self.RUN, self.PROTOCOL
+
+    def test_a_declared_run_is_quiet(self):
+        text = head(cost="seconds", result="2026-10-07T10-00-00_aa11")
+        self.assertIsNone(finalize.undeclared_hint(text, self.RUN, self.PROTOCOL))
+
+    def test_a_declared_run_with_no_directory_or_a_typed_id_is_a_blocker(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (gap,) = finalize.declared_run_gaps(
+                area, head(cost="seconds", result="2026-10-07T10-00-00_aa11")
             )
-        )
+            self.assertIn("no runs/2026-10-07T10-00-00_aa11/", gap)
+            typed = head(cost="seconds").replace(
+                'preflight_audit = ""\n',
+                'preflight_audit = ""\n\n[result]\nrun = "2026-10-07T10-00-00_final"\n',
+            )
+            (gap,) = finalize.declared_run_gaps(area, typed)
+            self.assertIn("no run id runlog writes", gap)
+            (area / "runs" / "2026-10-07T10-00-00_aa11").mkdir(parents=True)
+            self.assertEqual(
+                finalize.declared_run_gaps(
+                    area, head(cost="seconds", result="2026-10-07T10-00-00_aa11")
+                ),
+                [],
+            )
 
 
 class ModelProvenanceGap(unittest.TestCase):

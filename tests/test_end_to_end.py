@@ -332,17 +332,13 @@ class Count(unittest.TestCase):
         pre-commit holds it; staged, the open answer owes nothing."""
         lab = type(self).lab
         text = self.protocol.read_text(encoding="utf-8")
-        reopened = re.sub(
-            r"- \*\*Answer to the question:\*\* .*",
-            "- **Answer to the question:** <per registered id its verdict, and the run_id…>",
-            text,
-        )
+        reopened = re.sub(r'\n\[result\]\nrun = "[^"]+"\n', "", text)
         self.assertNotEqual(reopened, text)
         self.protocol.write_text(reopened, encoding="utf-8")
         rc, out = lab.pre_commit(self.protocol)
         self.assertEqual(rc, 1, out)
         self.assertIn("the working tree differs from the index", out)
-        self.assertIn(f"its answer cites {self.run_id}", out)
+        self.assertIn(f"its head declares {self.run_id}", out)
         lab.git("add", "-A")
         rc, out = lab.pre_commit(self.protocol)
         self.assertEqual(rc, 0, out)
@@ -687,11 +683,12 @@ class Judge(unittest.TestCase):
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)
 
-    def test_06_a_cited_run_id_must_name_a_run_of_the_area(self):
+    def test_06_a_declared_run_id_must_name_a_run_of_the_area(self):
         """labkit-paper area 08, 2026-10-21: an agent typed `(run
         2026-10-21T12-48-00_final)` into the Answer; the gates read only the
-        exact id shape, saw no citation and let the commit through. Every
-        token that reads as a run id is a citation, and each must be a run."""
+        exact id shape, saw no citation and let the commit through. Since
+        phase 3 the declaration is `[result] run`: a typed id there does not
+        read and blocks where it stands, a shaped one must be a run."""
         lab = type(self).lab
         text = self.protocol.read_text(encoding="utf-8")
         self.addCleanup(self.protocol.write_text, text, encoding="utf-8")
@@ -704,13 +701,13 @@ class Judge(unittest.TestCase):
                     text.replace(self.run_id, typed), encoding="utf-8"
                 )
                 rc, err = lab.stop_hook()
-                self.assertNotEqual(rc, 0, err)  # cited, so held — not skipped
+                self.assertNotEqual(rc, 0, err)  # declared, so held — not skipped
                 rc, out = self._report_check()
                 self.assertEqual(rc, 1, out)
                 self.assertIn(says, out)
         self.protocol.write_text(text, encoding="utf-8")
         rc, out = self._report_check()
-        self.assertEqual(rc, 0, out)  # the twin: the run the answer cites exists
+        self.assertEqual(rc, 0, out)  # the twin: the declared run exists
 
 
 class Estimator(unittest.TestCase):

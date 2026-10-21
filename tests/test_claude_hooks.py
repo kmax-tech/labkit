@@ -26,6 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import claude_hooks  # noqa: E402
+from labkit.tools import protocol_fill  # noqa: E402
 from labkit.checks import audit_binding  # noqa: E402
 from labkit.formats import findings, promises, scope_sha, shell  # noqa: E402
 from protocol_fixture import run_record, DEFAULT_BLOCK, PID, head  # noqa: E402
@@ -470,9 +471,11 @@ class Stop(unittest.TestCase):
             )
 
     def _answer(self, run_id: str) -> None:
+        """Declare RUN_ID in the head and write the Answer, as --from-run does."""
         p = self.area / "PROTOCOL-x.md"
         p.write_text(
-            p.read_text() + f"- **Answer to the question:** p = .01 ({run_id})\n"
+            protocol_fill.fill_result_run(p.read_text(), run_id)
+            + f"- **Answer to the question:** p = .01 ({run_id})\n"
         )
 
     def _stop(self, active: bool = False) -> tuple[int, str, str]:
@@ -489,7 +492,7 @@ class Stop(unittest.TestCase):
         self.assertIn("but the run that answers is", err)
 
     def test_a_correct_answer_lets_it_stop(self):
-        """Twin of the case above: the answer cites the run that answers, a
+        """Twin of the case above: the head declares the run that answers, a
         full run with its analysis record, and the check passes."""
         self._answer(self.RUN)
         rc, _, err = self._stop()

@@ -22,9 +22,10 @@ What lives here, each stated as its current rule:
   * **The registration before a number** (`seconds_registration_missing`,
     `written_before_run`): what a run of seconds owes first, and a report
     field filled while no run exists.
-  * **The result section** (`answering_run_field`, `answer_field`,
-    `answer_without_run`, `answering_run_open`, `measure_runs`): the lines
-    finalize, report-check and protocol-fill read.
+  * **The result section** (`answer_field`, `answer_without_run`,
+    `measure_runs`): the lines report-check and protocol-fill read; the
+    declaration itself is the head's `[result] run`
+    (`protocol_block.declared_run`).
 
 The checks over the whole file — template lines left in, the verbatim
 prompt block, a measure run without a written result, change-history prose,
@@ -486,12 +487,9 @@ def seconds_registration_missing(text: str) -> list[str]:
     return missing + ([] if cost else ["[protocol] cost"])
 
 
-ANSWERING_RUN_LABEL = "answering run"
-
-
 #: the fields that describe a run that happened — written back after it,
-#: never before: filled while no completed run is bound and "Answering run"
-#: is still the stamp's, they claim what did not happen (Sonnet t18, v2 and
+#: never before: filled while no completed run is bound and the head declares
+#: no `[result] run`, they claim what did not happen (Sonnet t18, v2 and
 #: v3, 2026-10-16: "Did: ran the 81-point grid and labelled the 55 test
 #: molecules", and runs/ held only the preparation)
 BEFORE_RUN_CLAIMS = (
@@ -512,13 +510,16 @@ def written_before_run(
     area: Path, text: str, head: protocol_block.Head
 ) -> list[tuple[int, str]]:
     """(line, label) of every BEFORE_RUN_CLAIMS field that is filled while
-    the protocol's "Answering run" is still open and no completed run is
-    bound to its id — a report field written before any run. Exact in what
-    it says (no run exists) and silent on what it cannot know (whether the
-    text claims one); a value of `n/a — …` claims nothing. Empty for a cut
-    without the "Answering run" line, or once a run is named there."""
-    answering = answering_run_field(text)
-    if answering is None or not answering_run_open(answering):
+    the head declares no `[result] run` and no completed run is bound to
+    the protocol's id — a report field written before any run. Exact in
+    what it says (no run exists) and silent on what it cannot know (whether
+    the text claims one); a value of `n/a — …` claims nothing. Empty once a
+    run is declared, and for a head that does not read (the head check
+    names that)."""
+    try:
+        if protocol_block.declared_run(text) is not None:
+            return []
+    except protocol_block.BlockError:
         return []
     names = {field_name(label) for label in BEFORE_RUN_CLAIMS}
     filled = [
@@ -538,15 +539,6 @@ def written_before_run(
     )
 
 
-def answering_run_field(text: str) -> str | None:
-    """The value of the protocol's `Answering run` field, None when the
-    protocol has no such line (a cut without the Result section)."""
-    for f in fields(text):
-        if f.name == ANSWERING_RUN_LABEL:
-            return f.value.strip()
-    return None
-
-
 ANSWER_LABEL = "answer to the question"
 
 
@@ -562,31 +554,27 @@ def answer_field(text: str) -> str | None:
 
 
 def answer_without_run(text: str) -> str | None:
-    """A WARNING when the Answer is written but names no run_id, or None.
-    A result is declared reported by its run_id in that line (report-check
-    holds it at the stop and the commit); an answer without one is neither
-    a reported result nor the open field of an exploration — it says a
-    number without saying where it came from. Static evidence: the hint,
-    not a gate (plan 2026-10-19, TODO 2)."""
-    value = answer_field(text)
-    if value is None or runs.RUN_ID.search(value):
+    """A WARNING when the Answer is written while the head declares no
+    `[result] run`, or None. A result is declared reported by that table
+    (report-check holds it at the stop and the commit); an answer without
+    it is neither a reported result nor the open field of an exploration —
+    it says a number without declaring where it came from. Static evidence:
+    the hint, not a gate (plan 2026-10-19, TODO 2). None for a head that
+    does not read (the head check names that)."""
+    if answer_field(text) is None:
+        return None
+    try:
+        if protocol_block.declared_run(text) is not None:
+            return None
+    except protocol_block.BlockError:
         return None
     return (
-        "WARNING: `Answer to the question` is written but names no run_id — a "
-        "reported result names its run (`protocol-fill <PROTOCOL> --from-run <run_id>` "
-        "writes both; report-check then holds it at the stop and the commit); "
-        "an exploration that reports no result leaves the field open "
-        "(LAB-041 Generate numbers, don't retype them)"
+        "WARNING: `Answer to the question` is written but the head declares no "
+        "`[result] run` — a reported result is declared by `protocol-fill <PROTOCOL> "
+        "--from-run <run_id>`, which writes the table and the Answer; report-check "
+        "then holds it at the stop and the commit; an exploration that reports no "
+        "result leaves the field open (LAB-041 Generate numbers, don't retype them)"
     )
-
-
-def answering_run_open(value: str) -> bool:
-    """Is this `Answering run` value still the stamp's — `none yet …` or a
-    `<…>` placeholder — rather than a run id? The one answer finalize (warn:
-    not written yet) and protocol-fill --from-run (write it) share; the stamp's
-    `none yet` is no `<…>` placeholder, so `fill` read it as filled and
-    --from-run skipped the line silently (cold Sonnet, 2026-10-14)."""
-    return value.startswith("none yet") or value.startswith("<")
 
 
 # runlog run ids as they appear in the run index: 2026-08-23T20-37-21_afbe. A

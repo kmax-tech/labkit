@@ -3,7 +3,7 @@
 Sonnet t18 (labkit-paper area 09, v2 and v3) filled "Did" with the grid
 search and the 55 labelled test molecules while `runs/` held only the
 preparation. Whether the text claims a run is semantics; that it was written
-while no completed run is bound and "Answering run" is still the stamp's is
+while no completed run is bound and the head declares no `[result] run` is
 exact — a warning, never a blocker.
 """
 
@@ -23,21 +23,18 @@ from labkit.formats import protocol_block, protocol_check, protocol_report  # no
 from protocol_fixture import run_record, PID, head  # noqa: E402
 from test_protocol_check import PILOT_FIELDS  # noqa: E402
 
-ANSWERING_OPEN = (
-    "- **Answering run:** none yet — the run `finalize` holds this protocol to\n"
-)
 DID = "- **Did †:** Ran the 81-point grid and labelled the 55 test molecules.\n"
 RESULT = "- **Result:** AUC 0.83 in every task.\n"
 
 
-def protocol(*lines: str, answering: str = ANSWERING_OPEN) -> str:
-    """A complete pilot registration plus the Result lines under test."""
+def protocol(*lines: str, declared: str | None = None) -> str:
+    """A complete pilot registration plus the Result lines under test; DECLARED
+    is the run the head's `[result]` names (None: none yet)."""
     return (
         "# x\n\n"
-        + head(cost="minutes")
+        + head(cost="minutes", result=declared)
         + "\n"
         + PILOT_FIELDS
-        + answering
         + "".join(lines)
     )
 
@@ -87,14 +84,10 @@ class WrittenBeforeRun(unittest.TestCase):
             )
             self.assertEqual(before_run(text, Path(d)), [])
 
-    def test_a_named_answering_run_or_no_such_line_is_silent(self):
+    def test_a_declared_run_is_silent(self):
         with tempfile.TemporaryDirectory() as d:
-            named = protocol(
-                DID, answering="- **Answering run:** 2026-10-16T13-00-00_ab12\n"
-            )
+            named = protocol(DID, declared="2026-10-16T13-00-00_ab12")
             self.assertEqual(before_run(named, Path(d)), [])
-            cut = protocol(DID, answering="")
-            self.assertEqual(before_run(cut, Path(d)), [])
 
     def test_the_check_prints_a_warning_and_does_not_block(self):
         with tempfile.TemporaryDirectory() as d:
