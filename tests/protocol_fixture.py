@@ -149,11 +149,17 @@ def head(
     preflight_audit: str = "",
     promises: str | None = "",
     result: str | None = None,
+    model: str | None = None,
+    arms: dict[str, tuple[str, str, str | None]] | None = None,
+    labels: tuple[str, ...] | None = None,
 ) -> str:
     """The fenced TOML block; `promises` is appended inside it verbatim. A
     frozen or seconds head without an explicit block carries `DEFAULT_BLOCK`;
     `None` means no block even then (the mutant of standard 0.19's rule).
-    RESULT is the run id a `[result]` table declares (phase 3, 2026-10-21)."""
+    RESULT is the run id a `[result]` table declares (phase 3, 2026-10-21);
+    MODEL the alias of a `[model]` table, ARMS its `[model.arms.<arm>]`
+    tables as {arm: (profile, fingerprint, alias)}, LABELS a `[gate]` table
+    (phase 4)."""
     if promises == "" and (frozen or cost == "seconds"):
         promises = DEFAULT_BLOCK  # frozen, or at seconds every run is the full run
     promises = promises or ""
@@ -169,6 +175,23 @@ def head(
     ]
     if result is not None:
         lines += ["", "[result]", f'run = "{result}"']
+    if model is not None:
+        lines += ["", "[model]", f'alias = "{model}"']
+        for arm, (profile, fingerprint, alias) in (arms or {}).items():
+            lines += [
+                "",
+                f"[model.arms.{arm}]",
+                f'profile = "{profile}"',
+                f'fingerprint = "{fingerprint}"',
+            ]
+            if alias is not None:
+                lines.append(f'alias = "{alias}"')
+    if labels is not None:
+        lines += [
+            "",
+            "[gate]",
+            "labels = [" + ", ".join(f'"{x}"' for x in labels) + "]",
+        ]
     body = "\n".join(lines) + "\n"
     if promises:
         body += "\n" + promises.strip() + "\n"

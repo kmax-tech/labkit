@@ -169,3 +169,84 @@ class DeclaredRun(unittest.TestCase):
         )
         with self.assertRaisesRegex(protocol_block.BlockError, "must be a table"):
             protocol_block.declared_run(scalar)
+
+
+class ModelTable(unittest.TestCase):
+    """`[model]` says a model is in the loop (phase 4 of the 1.0 line,
+    2026-10-21): the alias, the compared arms finalize holds to the run;
+    absent is a count or an estimator. Exact or unreadable, like the head."""
+
+    def test_no_table_is_no_model(self):
+        self.assertIsNone(protocol_block.model(head(cost="seconds")))
+
+    def test_the_alias_and_the_arms_read_back(self):
+        text = head(
+            cost="seconds",
+            model="haiku",
+            arms={
+                "before": ("register/profiles/b.toml", "bcec0c37236d", None),
+                "after": (
+                    "register/profiles/a.toml",
+                    "1d4c79af596a",
+                    "gpt-oss-20b-leguin",
+                ),
+            },
+        )
+        m = protocol_block.model(text)
+        assert m is not None
+        self.assertEqual(m.alias, "haiku")
+        self.assertEqual(
+            m.arms,
+            {
+                "before": protocol_block.Arm(
+                    "register/profiles/b.toml", "bcec0c37236d", None
+                ),
+                "after": protocol_block.Arm(
+                    "register/profiles/a.toml", "1d4c79af596a", "gpt-oss-20b-leguin"
+                ),
+            },
+        )
+        self.assertEqual(
+            protocol_block.head(text), protocol_block.head(head(cost="seconds"))
+        )
+        self.assertEqual(
+            promises.block_stamp(text), promises.block_stamp(head(cost="seconds"))
+        )
+
+    def test_the_stamps_placeholder_alias_is_a_model_without_a_name(self):
+        m = protocol_block.model(head(cost="seconds", model="<alias from models.toml>"))
+        assert m is not None
+        self.assertIsNone(m.alias)
+        self.assertEqual(m.arms, {})
+
+    def test_malformed_tables_are_refused_by_name(self):
+        cases = (
+            ('\n[model]\nalias = ""\n', "non-empty string"),
+            (
+                '\n[model]\nalias = "haiku"\nmodel = "x"\n',
+                r"unknown field\(s\) \['model'\]",
+            ),
+            ("\n[model]\narms = {}\n", "missing `alias`"),
+            (
+                '\n[model]\nalias = "haiku"\n[model.arms.before]\nprofile = "x.toml"\n',
+                r"\[model.arms.before\]: missing `fingerprint`",
+            ),
+            (
+                '\n[model]\nalias = "haiku"\n[model.arms.before]\nprofile = "x.toml"\nfingerprint = "zz"\n',
+                "8 to 64 hex digits",
+            ),
+            ("\n[gate]\nlabels = []\n", "non-empty list"),
+            ('\n[gate]\nlabels = ["a", 1]\n', "non-empty list"),
+            ('\n[gate]\naccepts = ["a"]\n', r"unknown field\(s\) \['accepts'\]"),
+        )
+        for body, said in cases:
+            with self.subTest(body=body):
+                with self.assertRaisesRegex(protocol_block.BlockError, said):
+                    text = with_result(head(cost="seconds"), body)
+                    protocol_block.model(text)
+                    protocol_block.declared_labels(text)
+
+    def test_gate_labels_read_back_and_absent_is_none(self):
+        self.assertIsNone(protocol_block.declared_labels(head(cost="seconds")))
+        text = head(cost="seconds", labels=("causal", "not_causal"))
+        self.assertEqual(protocol_block.declared_labels(text), ("causal", "not_causal"))

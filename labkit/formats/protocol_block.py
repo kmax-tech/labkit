@@ -43,7 +43,7 @@ COST_TIERS = ("seconds", "minutes", "hours")
 ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
 
 FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})\s*([\w+-]*)")
-_TOP_LEVEL = {"protocol", "promise", "result"}
+_TOP_LEVEL = {"protocol", "promise", "result", "model", "gate"}
 #: the settings every protocol carries in its ```toml head (the block at the
 #: end of the protocol), in the template's order — not the run's config.json,
 #: which runlog writes per run
@@ -213,6 +213,119 @@ def _placeholder(value: object) -> bool:
 
 #: the keys of the `[result]` table: the one declaration that a number is reported
 RESULT_KEYS = ("run",)
+#: the `[model]` table — a model is in the loop — and its arms, one table each
+MODEL_KEYS = ("alias", "arms")
+ARM_KEYS = ("profile", "fingerprint", "alias")
+FINGERPRINT = re.compile(r"^[0-9a-f]{8,64}$")
+#: the `[gate]` table: the labels the gate accepts, declared for the code check
+GATE_KEYS = ("labels",)
+
+
+@dataclass(frozen=True)
+class Arm:
+    """One compared arm: its profile file, the fingerprint the run must record, its alias."""
+
+    profile: str  # register/profiles/x.toml, relative to the repo
+    fingerprint: str  # 8–64 hex digits, recorded somewhere in the run's config
+    alias: str | None  # the model alias behind it, when it differs
+
+
+@dataclass(frozen=True)
+class Model:
+    """The model in the loop, as the head declares it (`[model]`)."""
+
+    alias: str | None  # None while the stamp's `"<…>"` stands
+    arms: dict[str, Arm]  # {} when the protocol compares no arms
+
+
+def _table(data: dict, name: str) -> dict | None:
+    """DATA's top-level table NAME, None when absent; BlockError when it is no table."""
+    if name not in data:
+        return None
+    table = data[name]
+    if not isinstance(table, dict):
+        raise BlockError(f"`{name}` must be a table: [{name}]")
+    return table
+
+
+def _only_keys(table: dict, where: str, allowed: tuple[str, ...]) -> None:
+    unknown = set(table) - set(allowed)
+    if unknown:
+        raise BlockError(
+            f"{where}: unknown field(s) {sorted(unknown)}; allowed: {', '.join(allowed)}"
+        )
+
+
+def _arm(name: str, raw: object) -> Arm:
+    where = f"[model.arms.{name}]"
+    if not isinstance(raw, dict):
+        raise BlockError(f"{where} must be a table with profile and fingerprint")
+    _only_keys(raw, where, ARM_KEYS)
+    for key in ("profile", "fingerprint"):
+        if key not in raw:
+            raise BlockError(f"{where}: missing `{key}`")
+    profile, fingerprint, alias = raw["profile"], raw["fingerprint"], raw.get("alias")
+    if not isinstance(profile, str) or not profile.endswith(".toml"):
+        raise BlockError(
+            f"{where} profile = {profile!r} — a `.toml` path under the repo"
+        )
+    if not isinstance(fingerprint, str) or not FINGERPRINT.match(fingerprint):
+        raise BlockError(f"{where} fingerprint = {fingerprint!r} — 8 to 64 hex digits")
+    if alias is not None and (not isinstance(alias, str) or not alias.strip()):
+        raise BlockError(f"{where} alias = {alias!r} — a non-empty string")
+    return Arm(profile, fingerprint, alias)
+
+
+def model(text: str) -> Model | None:
+    """The model the protocol declares in its loop — `[model] alias = "<alias
+    from models.toml>"`, stamped by `labkit-init exp --model`, with the
+    compared arms as `[model.arms.<arm>]` tables (profile, fingerprint,
+    alias) finalize holds to the run — or None without the table: no model,
+    a count or an estimator. The one answer to "is a model named" for the
+    seconds cut, the registration and `--report` (until 0.100.0 the prose
+    `Model / tool` line, read with a pattern for "n/a", "none" and dashes).
+    `alias` is None while it is still the stamp's placeholder. Raises
+    BlockError on a non-table, an unknown key, an alias that is no string,
+    or an arm without profile and hex fingerprint."""
+    table = _table(parse_toml_block(text), "model")
+    if table is None:
+        return None
+    _only_keys(table, "[model]", MODEL_KEYS)
+    if "alias" not in table:
+        raise BlockError("[model]: missing `alias` — the alias from models.toml")
+    alias = table["alias"]
+    if not isinstance(alias, str) or not alias.strip():
+        raise BlockError(f"[model] alias = {alias!r} — a non-empty string")
+    arms_raw = table.get("arms", {})
+    if not isinstance(arms_raw, dict):
+        raise BlockError("[model] arms — one table per arm: [model.arms.<arm>]")
+    arms = {name: _arm(name, raw) for name, raw in arms_raw.items()}
+    return Model(None if _placeholder(alias) else alias, arms)
+
+
+def declared_labels(text: str) -> tuple[str, ...] | None:
+    """The labels the gate accepts, declared as `[gate] labels = ["…", …]` —
+    the registered set the code-check agent holds the code's string
+    comparisons against (LAB-038 What the prompt demands); the judgement
+    stays the agent's, no gate compares them. None without the table.
+    Raises BlockError on a non-table, an unknown key, or labels that are
+    not a non-empty list of non-empty strings."""
+    table = _table(parse_toml_block(text), "gate")
+    if table is None:
+        return None
+    _only_keys(table, "[gate]", GATE_KEYS)
+    if "labels" not in table:
+        raise BlockError("[gate]: missing `labels` — the labels the gate accepts")
+    labels = table["labels"]
+    if (
+        not isinstance(labels, list)
+        or not labels
+        or any(not isinstance(x, str) or not x.strip() for x in labels)
+    ):
+        raise BlockError(
+            f"[gate] labels = {labels!r} — a non-empty list of non-empty strings"
+        )
+    return tuple(labels)
 
 
 def declared_run(text: str) -> str | None:
