@@ -1,0 +1,91 @@
+{
+ "probe": {
+  "staged": "2026-10-21T21:53:22",
+  "task": "judge",
+  "area": "01-causal-claims-judge",
+  "metric_key": "c1_accuracy",
+  "labkit_installed": "labkit @ file:///Users/max/projects/labkit-probes-sandbox-42f0ec8/src",
+  "scaffold_sha": "7dab59b761d3",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "causal-claims-judge",
+   "--cost",
+   "seconds",
+   "--model",
+   "haiku"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-21T20-59-20_c769",
+ "number": 0.9166666666666666,
+ "expected": null,
+ "number_ok": true,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-causal-claims-judge.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 23,
+  "wall_seconds": 815,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 6,
+  "run": 13,
+  "edit": 4,
+  "unsure": 0,
+  "gate": 0,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 111,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 482,
+  "summary_codes": 0,
+  "answer_has_table": false
+ },
+ "transcript": {
+  "wall_seconds": 1317,
+  "tool_seconds": 492,
+  "calls": 16,
+  "commands": {
+   "code-check": 2,
+   "protocol-fill": 5,
+   "finalize": 1,
+   "labkit-audit": 3
+  },
+  "refusals": 0,
+  "tokens": {
+   "calls": 25,
+   "input": 50,
+   "output": 12305,
+   "cache_read": 751571,
+   "cache_creation": 56641,
+   "context_max": 41390
+  },
+  "files_read": [
+   "TASK.md",
+   "experiments/01-causal-claims-judge/README.md",
+   "models.toml",
+   "experiments/01-causal-claims-judge/PROTOCOL-causal-claims-judge.md",
+   "experiments/01-causal-claims-judge/scripts/*",
+   "experiments/01-causal-claims-judge/scripts/00_prepare.py",
+   "experiments/01-causal-claims-judge/scripts/01_measure.py",
+   "data/raw/claims.jsonl",
+   ".tmp/claude-1000/-work/*/tasks/b6j68m5e7.output",
+   ".tmp/audit.out",
+   "experiments/01-causal-claims-judge/output/causal-claims-judge.jsonl",
+   "/out/probe.log.md"
+  ],
+  "source_reads": [],
+  "outside_paths": [
+   "/out/probe.log.md",
+   "/tasks/b6j68m5e7.output"
+  ]
+ },
+ "agent": null
+}

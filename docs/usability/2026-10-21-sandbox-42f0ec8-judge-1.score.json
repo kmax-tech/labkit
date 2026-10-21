@@ -1,0 +1,92 @@
+{
+ "probe": {
+  "staged": "2026-10-21T21:53:20",
+  "task": "judge",
+  "area": "01-causal-claims-judge",
+  "metric_key": "c1_accuracy",
+  "labkit_installed": "labkit @ file:///Users/max/projects/labkit-probes-sandbox-42f0ec8/src",
+  "scaffold_sha": "7dab59b761d3",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "causal-claims-judge",
+   "--cost",
+   "seconds",
+   "--model",
+   "haiku"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-21T21-00-15_29f7",
+ "number": 0.8333333333333334,
+ "expected": null,
+ "number_ok": true,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-causal-claims-judge.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 23,
+  "wall_seconds": 846,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 4,
+  "run": 14,
+  "edit": 4,
+  "unsure": 0,
+  "gate": 1,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 111,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 482,
+  "summary_codes": 0,
+  "answer_has_table": false
+ },
+ "transcript": {
+  "wall_seconds": 1361,
+  "tool_seconds": 360,
+  "calls": 18,
+  "commands": {
+   "protocol-fill": 5,
+   "code-check": 1,
+   "finalize": 1,
+   "labkit-audit": 3
+  },
+  "refusals": 0,
+  "tokens": {
+   "calls": 27,
+   "input": 54,
+   "output": 12747,
+   "cache_read": 811836,
+   "cache_creation": 49820,
+   "context_max": 42088
+  },
+  "files_read": [
+   "TASK.md",
+   "experiments/01-causal-claims-judge/README.md",
+   "experiments/01-causal-claims-judge/scripts/*",
+   "experiments/01-causal-claims-judge/scripts/01_measure.py",
+   "models.toml",
+   "experiments/01-causal-claims-judge/scripts/00_prepare.py",
+   "experiments/01-causal-claims-judge/PROTOCOL-causal-claims-judge.md",
+   "data/raw/claims.jsonl",
+   ".tmp/claude-1000/-work/*/tasks/baejny1g3.output",
+   "experiments/01-causal-claims-judge/output/*.jsonl",
+   "experiments/01-causal-claims-judge/runs/2026-10-21T21-00-15_29f7/metrics.json",
+   ".tmp/audit.out",
+   "/out/probe.log.md"
+  ],
+  "source_reads": [],
+  "outside_paths": [
+   "/out/probe.log.md",
+   "/tasks/baejny1g3.output"
+  ]
+ },
+ "agent": null
+}
