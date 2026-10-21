@@ -261,5 +261,38 @@ class OutsidePaths(unittest.TestCase):
         self.assertEqual(at.trace(transcript(CALLS), ROOT, SOURCE).outside_paths, [])
 
 
+class RecordsWithoutTimestamp(unittest.TestCase):
+    """Claude Code 2.1.285 writes session bookkeeping without a timestamp
+    (`atis-latch`, `last-prompt`, `cost-state`; the sandbox probe of
+    2026-10-21). Those carry no call and are skipped; a message record
+    without one is still refused."""
+
+    def with_record(self, record: dict) -> Path:
+        path = transcript(CALLS)
+        lines = path.read_text(encoding="utf-8").splitlines()
+        lines.insert(2, json.dumps(record))
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return path
+
+    def test_bookkeeping_without_a_timestamp_is_skipped(self):
+        for kind in ("atis-latch", "last-prompt", "cost-state"):
+            with self.subTest(kind=kind):
+                path = self.with_record({"type": kind, "sessionId": "s"})
+                self.assertEqual(
+                    at.trace(path, ROOT, SOURCE).calls,
+                    at.trace(transcript(CALLS), ROOT, SOURCE).calls,
+                )
+
+    def test_a_message_without_a_timestamp_is_refused(self):
+        path = self.with_record(
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "text", "text": "x"}]},
+            }
+        )
+        with self.assertRaisesRegex(at.TranscriptError, "without a timestamp"):
+            at.trace(path, ROOT, SOURCE)
+
+
 if __name__ == "__main__":
     unittest.main()

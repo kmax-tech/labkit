@@ -194,12 +194,17 @@ def tokens(path: Path) -> Tokens:
 
 
 def read_calls(path: Path) -> tuple[list[Call], float, float]:
-    """(calls in order, first stamp, last stamp) of one transcript."""
+    """(calls in order, first stamp, last stamp) of one transcript. A record
+    without a timestamp and without a message is session bookkeeping
+    (`atis-latch`, `last-prompt`, `cost-state` in Claude Code 2.1.285) and is
+    skipped; a message without one is refused (`_stamp`)."""
     uses: dict[str, tuple[float, str, str]] = {}
     order: list[str] = []
     results: dict[str, tuple[float, str]] = {}
     stamps: list[float] = []
     for n, record in records(path):
+        if "timestamp" not in record and "message" not in record:
+            continue
         at = _stamp(record, n)
         stamps.append(at)
         content = (record.get("message") or {}).get("content")

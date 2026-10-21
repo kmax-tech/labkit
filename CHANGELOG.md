@@ -286,6 +286,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`usability score` reads a Claude Code 2.1.285 transcript.** That
+  version writes session bookkeeping records without a timestamp
+  (`atis-latch`, `last-prompt`, `cost-state`), and the reader refused the
+  whole transcript. A record without timestamp and message is skipped now;
+  a message without a timestamp is still refused.
+
 - **A count stamped at `seconds` closes its TOML block.** The cut removed
   the promise tables with a pattern that took the block's closing fence
   along: every such protocol ended inside its ```toml block (parsed all
