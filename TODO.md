@@ -179,11 +179,21 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   Profil in 3 von 3 vor dem Lauf bewertet (Marker nach Lesen der Daten
   gewählt — ein ungesehener Cue ist nicht belegt), akzeptierter BLOCKER
   in 1 von 1 als Limit-Zeile und „C1 not assessable“ im Protokoll, Raw
-  output ohne Nacharbeit, Fehlbedienung 0; Kontext +3–8k. Offen, zu
-  entscheiden: akzeptierte WARNINGs, die die Lesart der Zahl begrenzen,
-  tragen keine Limit-Zeile (judge-2/3: `c1_pass = True` allein in der
-  Antwort, die Grenze nur im Data-profile-Feld). Beobachten: Prompt
-  breiter als das Gold („state or imply“) in 2 von 6 Judge-Proben.
+  output ohne Nacharbeit, Fehlbedienung 0; Kontext +3–8k. Akzeptierte
+  WARNINGs: erledigt (`63d1104`) — `--effect` freiwillig, eine genannte
+  Wirkung landet als Limit-Zeile und als Vermerk in der Antwort („read
+  within …“); welche Wirkung, folgt aus dem, was C1 behauptet, nicht aus
+  dem Schweregrad. Nicht mit kalten Proben gemessen. Beobachten (kein
+  statischer Check bei zwei Fällen): Prompt breiter als das Gold („state
+  or imply“) in 2 von 6 Judge-Proben, vom Audit erst nach dem Lauf
+  erkannt — bei `seconds` ist das Analyse-Audit das einzige
+  (LAB-017); falls es wiederkommt: prüfen, ob `code-check` vor dem Lauf
+  die Prompt-Gold-Passung fragen kann.
+  Zitierte Run-ID muss existieren: erledigt (`1e78f50`) — jedes Token in
+  Run-ID-Form ist ein Zitat, eines ohne runlog-Format oder ohne `runs/<id>/`
+  blockt (labkit-paper Bereich 08: `…T12-48-00_final` erfunden, Gates
+  sahen kein Zitat). labkit-paper pinnt 0.85 — wirkt dort erst nach dem
+  Umstieg auf ein neues Release.
   Erledigt: die labkit-Proben laufen auf dem Paket (Runner
   `~/projects/labkit-probes-sandbox-bcea990/run.py`). Offen als eigener
   Auftrag: labkit-paper umstellen und seine Kopie in `lib/agentsandbox`
