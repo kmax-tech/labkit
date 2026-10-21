@@ -37,9 +37,10 @@ pins (`requirements.txt` / `requirements.lock`).
   allows. The record stores it as `effect`, and its ids are held to the
   protocol's promises. `protocol-fill --from-run` writes each finding
   with an effect below the Answer as `Limit (audit <record> #N): <effect>
-  — <reason>`, and the Answer names it ("; read within Limit (…)" or
-  "; C1 not assessable with this run (Limit (…))"); the number stays
-  reported. report-check refuses a report whose covering analysis record
+  — <reason>`, and the Answer carries one note counting them ("; subject
+  to N recorded limitations (the Limit lines below)") and names each
+  promise left "not assessable with this run (Limit (…))"; the number
+  stays reported. report-check refuses a report whose covering analysis record
   holds an accepted BLOCKER without an effect, or a named effect without
   its Limit line or its note in the Answer. Before, a judge probe accepted a BLOCKER — its
   prompt asked more than the gold scores — and "C1 not met" passed with

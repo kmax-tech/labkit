@@ -628,7 +628,9 @@ class Judge(unittest.TestCase):
             f"- **{label}:** the verdicts stand, read within this limit — ", text
         )
         self.assertNotIn("not assessable with this run", text)
-        self.assertIn(f"; read within {label}", text)  # the Answer points to it
+        self.assertIn(
+            "; subject to 1 recorded limitation (the Limit lines below)", text
+        )
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)
         # fixed after all: no effect owed, and the line is the record's no longer
@@ -666,7 +668,10 @@ class Judge(unittest.TestCase):
             f"- **{label}:** the verdicts stand, read within this limit — {reason}",
             text,
         )
-        self.assertIn(f"c1_pass = True (run {self.run_id}); read within {label}", text)
+        self.assertIn(
+            f"c1_pass = True (run {self.run_id}); subject to 1 recorded limitation",
+            text,
+        )
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)
         # accepted without an effect it is no limit: nothing is owed for it

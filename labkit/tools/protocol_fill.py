@@ -315,8 +315,8 @@ def from_run(
     run = recheck.chosen_run(area, text, run_id)
     metrics = runs.read_metrics(run / "metrics.json")
     limits = accepted_limits(area, text, run)
-    answer = answer_line(metrics, run.name) + "".join(
-        findings.answer_note(label, effect) for label, _, effect in limits
+    answer = answer_line(metrics, run.name) + findings.answer_note(
+        [(label, effect) for label, _, effect in limits]
     )
     filled: list[str] = []
     for label in WRITTEN_BY_RUN:

@@ -285,6 +285,7 @@ def limit_gaps(ctx: Checked) -> list[str]:
         (f.value for f in fields(ctx.text) if f.name == field_name(ANSWER_LABEL)), ""
     )
     gaps: list[str] = []
+    decided: list[tuple[str, str]] = []
     for r in records:
         for n, f in r.limits():
             label = findings.limit_label(r, n)
@@ -303,13 +304,14 @@ def limit_gaps(ctx: Checked) -> list[str]:
                     f"limit belongs in the protocol; `protocol-fill <PROTOCOL> "
                     f"--from-run` writes it from the record"
                 )
-            note = findings.answer_note(label, f.effect).lstrip("; ")
-            for part in note.split("; "):
-                if part not in answer:
-                    gaps.append(
-                        f'the Answer does not say "{part}" — {label} decided so; '
-                        f"`protocol-fill <PROTOCOL> --from-run --force` writes it"
-                    )
+            decided.append((label, f.effect))
+    note = findings.answer_note(decided)
+    for part in note.lstrip("; ").split("; ") if note else []:
+        if part not in answer:
+            gaps.append(
+                f'the Answer does not say "{part}" — the audit record\'s limits '
+                f"decide so; `protocol-fill <PROTOCOL> --from-run --force` writes it"
+            )
     return gaps
 
 

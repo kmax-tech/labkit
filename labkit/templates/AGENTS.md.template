@@ -59,8 +59,9 @@ LAB-017 The number of audits follows the cost tier.
    audit of code, promises and that run, `scripts/02_analyze.py --check`
    passing (stamped with every skeleton; the count's recomputes from the
    kept rows). Each finding with an effect lands below the Answer as its
-   `Limit (audit <record> #N)` line, and the Answer names it: "read
-   within" the limit, or the promise "not assessable with this run". With a model it then names what is still yours: Raw output,
+   `Limit (audit <record> #N)` line, and the Answer counts them in one
+   note ("subject to N recorded limitations") and names each promise
+   left "not assessable with this run". With a model it then names what is still yours: Raw output,
    one real prompt+answer pair per finding, read from the run's output
    file it names.
    The run_id in the Answer declares the result reported; the stop hook

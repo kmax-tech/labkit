@@ -82,14 +82,19 @@ class Decide(unittest.TestCase):
         ):
             findings.write_decision(self.path, 2, "deferred", "later", "stands")
 
-    def test_the_answer_note_names_the_limit(self):
-        label = "Limit (audit x #1)"
+    def test_the_answer_note_counts_the_limits_and_names_each_unjudged_promise(self):
+        """One note however many limits; three "read within" tails grew the
+        Answer (sandbox, 2026-10-21). An unjudged promise stays named."""
+        a, b = "Limit (audit x #1)", "Limit (audit x #2)"
+        self.assertEqual(findings.answer_note([]), "")
         self.assertEqual(
-            findings.answer_note(label, "stands"), f"; read within {label}"
+            findings.answer_note([(a, "stands")]),
+            "; subject to 1 recorded limitation (the Limit lines below)",
         )
         self.assertEqual(
-            findings.answer_note(label, "C1, A2 not assessable"),
-            f"; C1 not assessable with this run ({label}); A2 not assessable with this run ({label})",
+            findings.answer_note([(a, "stands"), (b, "C1, A2 not assessable")]),
+            f"; C1 not assessable with this run ({b}); A2 not assessable with this run ({b})"
+            "; subject to 2 recorded limitations (the Limit lines below)",
         )
 
     def test_a_hand_written_effect_is_held_on_reading(self):
