@@ -190,7 +190,19 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   0. Aber: jede akzeptierte WARNING bekam eine Wirkung (auch „one draw“),
   die Antwort sammelt bis zu drei Vermerke — offen, ob das so bleiben
   soll. Fehler im Profil gefunden und behoben (`e3731f2`): `" so "` mit
-  Leerzeichen wurde nach Komma nicht gezählt (5/6 statt 6/6). Beobachten (kein
+  Leerzeichen wurde nach Komma nicht gezählt (5/6 statt 6/6).
+  Ein Sammelvermerk statt je einer Notiz (`8aabde6`); Marker nur statische
+  Evidenz, verlangt ist die Datenbeurteilung (`acd872e`). Abschluss-Audit
+  der fertigen Antworten ([Bericht](docs/usability/2026-10-21-final-answer-audit-ef6c3b1.md)):
+  das unveränderte Analyse-Audit findet den Cue wieder, liest Antwort und
+  Limits aber nur auf Lesbarkeit; ob die eingeschränkte Antwort die Frage
+  trägt, beurteilt keine Stufe (das Analyse-Audit läuft vor den Limits).
+  Offen, zu entscheiden: (a) ein Abschluss-Audit nach `--from-run` (zweiter
+  Aufruf, Kosten ×2 bei seconds), (b) die Effekt-Entscheidung vor das
+  Audit ziehen geht nicht (sie antwortet auf seine Befunde), (c) die
+  Analyse-Anweisung um „Frage gegen Kriterium“ erweitern — fängt die
+  Lücke vor den Limits, nicht deren Angemessenheit. Neu gefunden: Chance
+  für C1-Bestehen bei N=12 ≈ 0,073 (judge-3), Prepare-Lauf ohne `data=`. Beobachten (kein
   statischer Check bei zwei Fällen): Prompt breiter als das Gold („state
   or imply“) in 2 von 6 Judge-Proben, vom Audit erst nach dem Lauf
   erkannt — bei `seconds` ist das Analyse-Audit das einzige
