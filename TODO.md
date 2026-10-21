@@ -175,9 +175,15 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   `MARKERS`/`CONFOUNDS` (None „not decided“, () „none applies“, ohne
   Treffer „checked, no hit“); neues Feld Data profile, bei `seconds` mit
   Modell Teil der Registrierung, also vor dem Messlauf verlangt. Reihe
-  auf `07a610e` läuft (`~/projects/labkit-probes-sandbox-07a610e`): prüft,
-  ob Einschränkungen im Protokoll ankommen und ob das Profil vor dem
-  Messlauf bewertet wird.
+  auf `07a610e` ([Bericht](docs/usability/2026-10-21-sandbox-judge-07a610e.md)):
+  Profil in 3 von 3 vor dem Lauf bewertet (Marker nach Lesen der Daten
+  gewählt — ein ungesehener Cue ist nicht belegt), akzeptierter BLOCKER
+  in 1 von 1 als Limit-Zeile und „C1 not assessable“ im Protokoll, Raw
+  output ohne Nacharbeit, Fehlbedienung 0; Kontext +3–8k. Offen, zu
+  entscheiden: akzeptierte WARNINGs, die die Lesart der Zahl begrenzen,
+  tragen keine Limit-Zeile (judge-2/3: `c1_pass = True` allein in der
+  Antwort, die Grenze nur im Data-profile-Feld). Beobachten: Prompt
+  breiter als das Gold („state or imply“) in 2 von 6 Judge-Proben.
   Erledigt: die labkit-Proben laufen auf dem Paket (Runner
   `~/projects/labkit-probes-sandbox-bcea990/run.py`). Offen als eigener
   Auftrag: labkit-paper umstellen und seine Kopie in `lib/agentsandbox`
