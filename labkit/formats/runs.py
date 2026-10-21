@@ -165,6 +165,12 @@ def now_stamp() -> str:
 RUN_ID = re.compile(
     r"\b(?P<date>\d{4}-\d{2}-\d{2})T(?P<h>\d{2})-(?P<m>\d{2})-(?P<s>\d{2})_[0-9a-f]{2,12}\b"
 )
+#: what reads as a run id in prose: RUN_ID's time with any suffix. A cited
+#: token of this shape that is not a RUN_ID names no run runlog wrote —
+#: an agent typed `…T12-48-00_final` into the Answer, and a gate that saw
+#: only RUN_ID saw no citation and let it through (labkit-paper area 08,
+#: 2026-10-21)
+RUN_ID_LIKE = re.compile(r"\b\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_[\w-]+")
 
 
 def run_started(run_id: str) -> datetime | None:

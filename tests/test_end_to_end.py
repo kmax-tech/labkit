@@ -675,6 +675,31 @@ class Judge(unittest.TestCase):
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)
 
+    def test_06_a_cited_run_id_must_name_a_run_of_the_area(self):
+        """labkit-paper area 08, 2026-10-21: an agent typed `(run
+        2026-10-21T12-48-00_final)` into the Answer; the gates read only the
+        exact id shape, saw no citation and let the commit through. Every
+        token that reads as a run id is a citation, and each must be a run."""
+        lab = type(self).lab
+        text = self.protocol.read_text(encoding="utf-8")
+        self.addCleanup(self.protocol.write_text, text, encoding="utf-8")
+        for typed, says in (
+            ("2026-10-21T12-48-00_final", "no run id runlog writes"),
+            ("2026-10-21T12-48-00_a1b2", "no runs/2026-10-21T12-48-00_a1b2/"),
+        ):
+            with self.subTest(typed=typed):
+                self.protocol.write_text(
+                    text.replace(self.run_id, typed), encoding="utf-8"
+                )
+                rc, err = lab.stop_hook()
+                self.assertNotEqual(rc, 0, err)  # cited, so held — not skipped
+                rc, out = self._report_check()
+                self.assertEqual(rc, 1, out)
+                self.assertIn(says, out)
+        self.protocol.write_text(text, encoding="utf-8")
+        rc, out = self._report_check()
+        self.assertEqual(rc, 0, out)  # the twin: the run the answer cites exists
+
 
 class Estimator(unittest.TestCase):
     """The estimator skeleton at minutes, through the freeze: a threshold on

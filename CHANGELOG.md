@@ -322,6 +322,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A cited run id must name a run of the area.** The gates read a
+  citation only in the exact shape runlog writes, so an Answer that cited
+  a typed `(run 2026-10-21T12-48-00_final)` counted as citing nothing:
+  the stop hook and the pre-commit skipped the protocol, and the commit
+  went through (labkit-paper area 08, 2026-10-21). Every token that reads
+  as a run id (`runs.RUN_ID_LIKE`) is now a citation, and finalize, and
+  report-check through it, block each one that is not in runlog's shape
+  or has no `runs/<id>/` in the area.
+
 - **Raw output is listed as an after-run field, and `--from-run` names
   it.** `protocol-fill --list` listed Raw output among the fields owed
   before the run. Two of three cold judge agents filled it at

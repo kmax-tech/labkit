@@ -65,6 +65,7 @@ from labkit.formats.standard_contract import lane
 from labkit.formats.gate import Findings
 from labkit.formats.runs import (
     RUN_ID,
+    RUN_ID_LIKE,
     unreportable,
     read_run_config,
 )
@@ -172,6 +173,8 @@ def check_completion(
 ) -> Path | None:
     """Station 1: the run every later station holds the protocol to — chosen,
     shown, and held to the run the answer cites. Returns it, or None."""
+    for gap in cited_run_gaps(area, text):
+        findings.block(gap)
     measurement_run = answering_run(findings, area, pid, bool(ids_in_prose(text)))
     if measurement_run is not None:
         mismatch = cited_run_mismatch(text, measurement_run)
@@ -470,9 +473,32 @@ def cited_runs(text: str) -> list[str]:
     """The run ids the protocol's "Answer to the question" cites — a number
     written back, the one declaration that a result is reported
     (`protocol_check.answer_field`; report-check holds it at the stop and
-    the commit). Empty while the field is a placeholder or cites none."""
+    the commit). Everything that reads as a run id counts (`RUN_ID_LIKE`),
+    a typed `…_final` too: `cited_run_gaps` then says it names no run.
+    Empty while the field is a placeholder or cites none."""
     value = answer_field(text)
-    return sorted({m.group(0) for m in RUN_ID.finditer(value)}) if value else []
+    return sorted({m.group(0) for m in RUN_ID_LIKE.finditer(value)}) if value else []
+
+
+def cited_run_gaps(area: Path, text: str) -> list[str]:
+    """A blocker for every run id the answer cites that names no run of
+    AREA: not in the shape runlog writes, or no `runs/<id>/` there. A run
+    id is written by runlog and copied by `protocol-fill --from-run`,
+    never typed — a typed one claims a run that may not exist."""
+    gaps = []
+    for rid in cited_runs(text):
+        if not RUN_ID.fullmatch(rid):
+            gaps.append(
+                f'"Answer to the question" cites {rid}, which is no run id runlog '
+                f"writes (<date>T<time>_<hex>) — cite a run from runs/, written by "
+                f"`protocol-fill <PROTOCOL> --from-run <run_id>`"
+            )
+        elif not (area / "runs" / rid).is_dir():
+            gaps.append(
+                f'"Answer to the question" cites {rid}, but there is no runs/{rid}/ '
+                f"in this area — a run id is runlog's, never typed"
+            )
+    return gaps
 
 
 def main(argv: list[str]) -> int:
