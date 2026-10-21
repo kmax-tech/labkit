@@ -286,6 +286,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The count skeleton reads its items under the frozen `INPUTS`.** It
+  froze `INPUTS` while every cold agent took each case's directory from a
+  path the record named; the number followed a value the run did not
+  freeze, and the analysis audit warned in each of three sandbox probes
+  (2026-10-21). The stamped `01_measure.py` now has `input_dir(record,
+  id)`: the directory under `INPUTS`, and a refusal for a record that
+  names another path; `rows()` says to use it. Areas stamped before keep
+  their script.
+
 - **`labkit-audit` lists what there is to decide, numbered from the
   record.** After recording it prints the record's path and each stored
   finding with the number `--decide` takes and the command that decides it

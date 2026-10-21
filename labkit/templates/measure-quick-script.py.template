@@ -44,6 +44,22 @@ def visible(directory: Path) -> list[Path]:
     return sorted(p for p in directory.iterdir() if p.is_file() and not p.name.startswith("."))
 
 
+def input_dir(record: dict, item_id: str) -> Path:
+    """The directory of one item, under INPUTS — the frozen root decides what
+    is read. A record that names its own `inputs` path must name INPUTS
+    (relative to REPO); another path is a refusal: the run freezes INPUTS,
+    and a number read from elsewhere could not be held to it."""
+    if INPUTS is None:
+        raise ValueError("input_dir(): INPUTS is None — set it to the directory the rows read")
+    named = record.get("inputs")
+    if named is not None and (REPO / named).resolve() != INPUTS.resolve():
+        raise ValueError(
+            f"input_dir(): {item_id} names inputs {named!r}, the run freezes "
+            f"{INPUTS.relative_to(REPO)} — fix the record or INPUTS, never read past the frozen root"
+        )
+    return INPUTS / item_id
+
+
 def expected_ids() -> list[str]:
     """TODO: the ids the number is over, read from SOURCE — the denominator
     comes from the source, never from the rows that happened to be produced."""
@@ -52,7 +68,8 @@ def expected_ids() -> list[str]:
 
 def rows(ids: list[str]) -> list[dict]:
     """TODO: one row per id — the raw material of the number. A missing or
-    empty item is a refusal, not a skipped row."""
+    empty item is a refusal, not a skipped row. An item's directory comes
+    from `input_dir(record, id)`, never from a path the record names alone."""
     raise NotImplementedError("rows(): one dict per id, fail loud on a missing one")
 
 
