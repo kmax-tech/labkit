@@ -160,7 +160,6 @@ class LaneDuties(unittest.TestCase):
         "Why this design",
         "Rival explanations",
         "Out of scope",
-        "Gate labels",
         "Data preparation",
         "Meaning of the gold label",
         "Answer form + resolution",

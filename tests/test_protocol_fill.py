@@ -214,6 +214,36 @@ class HeadType(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not a choice protocol-fill sets"):
             protocol_fill.head_open(text, "frozen")
 
+    def test_the_model_alias_left_by_a_bare_model_flag_is_listed_and_set(self):
+        """`labkit-init exp --model` without an alias stamps `[model] alias =
+        "<alias from models.toml>"` (phase 4, 2026-10-21); --list names it
+        and `"model alias=haiku"` writes it as a TOML string."""
+        text = self.HEAD.replace(
+            'preflight_audit = "none"\n',
+            'preflight_audit = "none"\n\n[model]\nalias = "<alias from models.toml>"\n',
+        )
+        self.assertEqual(protocol_fill.head_open(text, "alias"), 13)
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "PROTOCOL-x.md"
+            p.write_text(text, encoding="utf-8")
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(protocol_fill.main([str(p), "--list"]), 0)
+                rc = protocol_fill.main(
+                    [str(p), "type=exploratory", "model alias=haiku"]
+                )
+            self.assertEqual(rc, 0)
+            filled = p.read_text(encoding="utf-8")
+        self.assertIn(
+            "  13  model alias  (TOML head: the alias from models.toml)", out.getvalue()
+        )
+        m = protocol_block.model(filled)
+        assert m is not None
+        self.assertEqual(m.alias, "haiku")
+        self.assertIsNone(protocol_fill.head_open(filled, "alias"))
+        with self.assertRaisesRegex(ValueError, "alias: an empty value"):
+            protocol_fill.fill_head(text, "alias", " ")
+
     def test_a_wrong_type_and_a_set_type_are_refused(self):
         with self.assertRaises(ValueError):
             protocol_fill.fill_head(self.HEAD, "type", "descriptive")

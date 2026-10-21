@@ -386,13 +386,7 @@ def stamp_area(
     # tier here (a tier compared by hand outside the contract is a copy)
     quick = standard_contract.lane(cost).cut == standard_contract.SECONDS_CUT
     skeleton = standard_contract.skeleton(cost, bool(model))
-    tmpl = (
-        template(PROTOCOL_TEMPLATE.name)
-        .replace("<name>", slug, 1)
-        .replace("<protocol-id>", new_protocol_id(root))
-    )
-    if cost:
-        tmpl = tmpl.replace('cost = "<seconds | minutes | hours>"', f'cost = "{cost}"')
+    tmpl = stamped_head(template(PROTOCOL_TEMPLATE.name), root, slug, cost, model)
     clean = re.sub(
         r" ?<!-- sm? -->", "", tmpl
     )  # every written protocol is free of the cut markers
@@ -434,7 +428,7 @@ def stamp_area(
         pre.rename(area / "explore" / pre.name)
         log.append(f"  moved          {pre} -> {area / 'explore' / pre.name}")
     stamped = blank_before_headings(short_placeholders(clean if report else pilot))
-    check_stamped_head(stamped, cost)
+    check_stamped_head(stamped, cost, bool(model))
     write_if_absent(area / f"PROTOCOL-{slug}.md", stamped, log)
     log += stamp_scripts(root, area, nn, slug, skeleton, model)
     _point_hooks_at(root)
@@ -473,11 +467,34 @@ def blank_before_headings(text: str) -> str:
     return "\n".join(out)
 
 
-def check_stamped_head(text: str, cost: str | None) -> None:
+def stamped_head(
+    tmpl: str, root: Path, slug: str, cost: str | None, model: bool | str
+) -> str:
+    """The template with its head tokens replaced: the name once, a fresh
+    protocol id, COST when asked, and with MODEL a `[model]` table after
+    `preflight_audit` — the alias when --model named one, else its
+    placeholder for `protocol-fill "model alias=…"` (phase 4, 2026-10-21)."""
+    out = tmpl.replace("<name>", slug, 1).replace(
+        "<protocol-id>", new_protocol_id(root)
+    )
+    if cost:
+        out = out.replace('cost = "<seconds | minutes | hours>"', f'cost = "{cost}"')
+    if model:
+        alias = model if isinstance(model, str) else "<alias from models.toml>"
+        out = out.replace(
+            'preflight_audit = ""\n',
+            f'preflight_audit = ""\n\n[model]\nalias = {protocol_block.toml_string(alias)}\n',
+            1,
+        )
+    return out
+
+
+def check_stamped_head(text: str, cost: str | None, model: bool = False) -> None:
     """Raise ValueError unless the stamped protocol's head carries a real
-    id and, when COST was asked for, that tier. The stamp writes both by
-    replacing template tokens; a token the template no longer carried would
-    leave the placeholder without a word."""
+    id, when COST was asked for that tier, and when MODEL was asked for a
+    `[model]` table. The stamp writes them by replacing template tokens; a
+    token the template no longer carried would leave the placeholder
+    without a word."""
     head = protocol_block.head(text)
     if head.id is None:
         raise ValueError("labkit-init: the stamped head has no protocol id")
@@ -485,6 +502,8 @@ def check_stamped_head(text: str, cost: str | None) -> None:
         raise ValueError(
             f"labkit-init: the stamped head says cost = {head.cost!r}, asked {cost!r}"
         )
+    if model and protocol_block.model(text) is None:
+        raise ValueError("labkit-init: --model asked, the stamped head has no [model]")
 
 
 def next_steps(rel: Path, slug: str, nn: str, cost: str | None, model: bool) -> str:

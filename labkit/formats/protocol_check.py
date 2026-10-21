@@ -106,7 +106,6 @@ FIELDS = (
     Field("Why this design", "should"),
     Field("Rival explanations", "should"),
     Field("Out of scope", "should"),
-    Field("Gate labels", "should"),
     Field("Data preparation", "should"),
     Field("Meaning of the gold label", "should"),
     Field("Answer form + resolution", "should"),

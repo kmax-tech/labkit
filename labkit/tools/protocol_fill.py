@@ -11,7 +11,7 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md "Meaning of the gold label" "positive = ..."
     protocol-fill PROTOCOL-x.md --line 27 Question "does Y move X?"
     protocol-fill PROTOCOL-x.md "C1 sentence=<the promise>"   a [[promise]]'s sentence, as a TOML string
-    protocol-fill PROTOCOL-x.md type=exploratory cost=seconds   the TOML head's stamped choices
+    protocol-fill PROTOCOL-x.md type=exploratory cost=seconds "model alias=haiku"   the TOML head's stamped placeholders
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
     protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: `[result] run`
                                                in the TOML head (the declaration), the Answer and
@@ -118,10 +118,16 @@ def fill(
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 
 
-#: the head's stamped choices `protocol-fill` sets: key → its allowed values
-HEAD_CHOICES: dict[str, tuple[str, ...]] = {
-    "type": protocol_block.TYPES,
-    "cost": protocol_block.COST_TIERS,
+#: the head's stamped placeholders `protocol-fill` sets, by the label a fill
+#: names: (the TOML key, its allowed values — None for a free string)
+HEAD_KEYS: dict[str, tuple[str, tuple[str, ...] | None]] = {
+    "type": ("type", protocol_block.TYPES),
+    "cost": ("cost", protocol_block.COST_TIERS),
+    "model alias": ("alias", None),  # [model] alias, stamped by --model without a name
+}
+#: TOML key → its allowed values (None: free), for `head_open` and `fill_head`
+HEAD_CHOICES: dict[str, tuple[str, ...] | None] = {
+    key: choices for key, choices in HEAD_KEYS.values()
 }
 
 
@@ -159,18 +165,21 @@ def head_open(text: str, key: str) -> int | None:
 
 
 def fill_head(text: str, key: str, value: str) -> str:
-    """Set the head's KEY from its placeholder; VALUE one of `HEAD_CHOICES[key]`."""
+    """Set the head's KEY from its placeholder; VALUE one of `HEAD_CHOICES[key]`,
+    or any non-empty string where the key is free (written by `toml_string`)."""
     n = head_open(text, key)
-    if value not in HEAD_CHOICES[key]:
-        raise ValueError(
-            f"{key} must be one of {' | '.join(HEAD_CHOICES[key])}, not {value!r}"
-        )
+    choices = HEAD_CHOICES[key]
+    if choices is not None and value not in choices:
+        raise ValueError(f"{key} must be one of {' | '.join(choices)}, not {value!r}")
+    if not value.strip():
+        raise ValueError(f"{key}: an empty value")
     if n is None:
         raise ValueError(
             f"the head's {key} is already set (edit the TOML head to change it)"
         )
     lines = text.split("\n")
-    lines[n - 1] = _head_line(key).sub(lambda m: f'{m.group(1)}"{value}"', lines[n - 1])
+    written = protocol_block.toml_string(value)
+    lines[n - 1] = _head_line(key).sub(lambda m: f"{m.group(1)}{written}", lines[n - 1])
     return "\n".join(lines)
 
 
@@ -633,8 +642,8 @@ def _name_yours(text: str, area: Path, run: Path) -> None:
 
 
 def _list_open(text: str) -> int:
-    """`--list`: every open field, the TOML head's `type` and `cost` and open
-    promise sentences first; then, each under its own line, the fields `--from-run`
+    """`--list`: every open field, the TOML head's placeholders (`HEAD_KEYS`)
+    and open promise sentences first; then, each under its own line, the fields `--from-run`
     writes and the after-run fields the author writes. Listed among the rest
     they read as owed before the run: cold agents filled them with "pending
     run" or "filled after the run", and the write after the run was then
@@ -644,8 +653,12 @@ def _list_open(text: str) -> int:
         for n, label in open_sentences(text)
     ]
     head: list[tuple[int | None, str]] = [
-        (n, f"{key}  (TOML head: {' | '.join(choices)})")
-        for key, choices in HEAD_CHOICES.items()
+        (
+            n,
+            f"{label}  (TOML head: "
+            f"{' | '.join(choices) if choices else 'the alias from models.toml'})",
+        )
+        for label, (key, choices) in HEAD_KEYS.items()
         if (n := head_open(text, key)) is not None
     ]
     holes = head + sentences + list(placeholder_fields(text))
@@ -695,17 +708,18 @@ def fill_many(
     line_no: int | None = None,
     force: bool = False,
 ) -> str:
-    """`fill` applied in order — `fill_head` for the head's `type` and
-    `cost`, `fill_sentence` for `<id> sentence`; the first ValueError
-    leaves the caller's file untouched — all or nothing."""
+    """`fill` applied in order — `fill_head` for the head's `type`, `cost`
+    and `model alias` (`HEAD_KEYS`), `fill_sentence` for `<id> sentence`;
+    the first ValueError leaves the caller's file untouched — all or
+    nothing."""
     for label, value in assignments:
         if not label.strip() or not value.strip():
             raise ValueError(f"empty label or value in {label}={value!r}")
         sentence = SENTENCE_LABEL.match(label)
         if sentence and not promises.is_block_id(sentence.group(1).upper()):
             sentence = None  # a prose label such as "Key sentence"
-        if label.strip().lower() in HEAD_CHOICES:
-            text = fill_head(text, label.strip().lower(), value)
+        if label.strip().lower() in HEAD_KEYS:
+            text = fill_head(text, HEAD_KEYS[label.strip().lower()][0], value)
         elif sentence:
             if line_no is not None:
                 raise ValueError(

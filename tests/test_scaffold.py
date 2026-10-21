@@ -12,7 +12,7 @@ from pathlib import Path
 
 from labkit.checks import readme_check
 from labkit.tools import scaffold, protocol_cuts
-from labkit.formats import console, rules
+from labkit.formats import console, protocol_block, rules
 
 
 def quiet(fn, *args, **kw):  # noqa: ANN001, ANN002, ANN003, ANN201 — test helper
@@ -634,6 +634,27 @@ class Exp(unittest.TestCase):
         )
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("9 passed", r.stdout)
+
+    def test_the_stamp_declares_the_model_in_the_head(self) -> None:
+        """Phase 4 (2026-10-21): `--model <alias>` writes `[model] alias`, a bare
+        `--model` its placeholder, no flag no table; the prose field asks for
+        the instrument's sentence, not the alias."""
+        quiet(
+            scaffold.stamp_area, self.root, "with-alias", cost="seconds", model="haiku"
+        )
+        text = next(self.root.glob("experiments/*with-alias/PROTOCOL-*.md")).read_text()
+        m = protocol_block.model(text)
+        assert m is not None
+        self.assertEqual((m.alias, m.arms), ("haiku", {}))
+        self.assertNotIn("Arm `before`", text)
+        quiet(scaffold.stamp_area, self.root, "bare-flag", cost="seconds", model=True)
+        text = next(self.root.glob("experiments/*bare-flag/PROTOCOL-*.md")).read_text()
+        m = protocol_block.model(text)
+        assert m is not None
+        self.assertIsNone(m.alias)
+        quiet(scaffold.stamp_area, self.root, "no-model", cost="seconds")
+        text = next(self.root.glob("experiments/*no-model/PROTOCOL-*.md")).read_text()
+        self.assertIsNone(protocol_block.model(text))
 
     def test_a_bare_model_flag_keeps_the_prompt_skeleton(self) -> None:
         """`--model` without an alias still means a model in the loop."""

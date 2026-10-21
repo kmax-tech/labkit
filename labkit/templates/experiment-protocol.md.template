@@ -94,11 +94,11 @@
 
 - **Data / scope:** <!-- s --> <source, N, producer script; pilot subset first>
 - **Data profile:** <!-- sm --> <your judgement of the data before the run: could a surface feature answer the question without the model? What you looked at (the `00_prepare.py --audit` profile, any cue words you counted) and what it cannot show>
-- **Model / tool:** <!-- sm --> <alias from `models.toml` — never hardcode endpoint/ID>
-  <two arms (profiles) compared? one line each, held by finalize against the run:
-  Arm `before`: register/profiles/<x>.toml @ <fingerprint>, model=<alias>
-  Arm `after`: register/profiles/<y>.toml @ <fingerprint>, model=<alias> — and
-  the diff between the two profiles verbatim under Prompt>
+- **Model / tool:** <!-- sm --> <the instrument in one sentence: what the model
+  does here and what it sees — its alias stands in the head's `[model]`, never
+  hardcode endpoint or ID; two arms (profiles) compared? say what `before` and
+  `after` are — the profiles themselves stand in `[model.arms.<arm>]`, and the
+  diff between them verbatim under Prompt>
 - **Prompt (verbatim, per variant):** <!-- sm -->
 
   ```text
@@ -107,8 +107,6 @@
 
 - **Model I/O:** <in: which fields · out as instructed: required format ·
   out in fact: what comes back + which function parses it>
-- **Gate labels (expected) †:** <which labels the gate accepts — the declared
-  set for the mechanical check against code-extracted labels>
 - **Null condition / anchors (in the same run):** <!-- sm --> <one A per anchor — what runs along in THIS
   run and must show null — anchors of known rate, placebo (safest: one whose
   true answer is the same for every item), swap; not "was
@@ -182,10 +180,8 @@ protocol's `cost` owes, and which fall due after a documented run:
 label with `protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.*
 
 ```toml
-# `[result] run = "<run_id>"` stands below the [protocol] table once
-# `protocol-fill PROTOCOL-<name>.md --from-run` wrote it after a clean
-# `finalize`: the one declaration that this protocol reports a number, held
-# by report-check at the stop and the commit; absent while exploring.
+# `[result] run = "<run_id>"` below [protocol], written by `protocol-fill --from-run`
+# after a clean `finalize`: the one declaration that this protocol reports a number.
 [protocol]
 standard = "0.19"
 id = "<protocol-id>"
@@ -193,6 +189,8 @@ type = "<exploratory | confirmatory>"
 cost = "<seconds | minutes | hours>"
 frozen = false
 preflight_audit = ""
+# With a model: `[model] alias` (stamped by --model), `[model.arms.<arm>]` with
+# profile, fingerprint, alias (finalize holds them to the run); `[gate] labels = […]`.
 
 # The promises as data (labkit 0.71): one table per id — the key the run
 # reports, the sentence (this promise stated explicitly — no `<…>` left at the

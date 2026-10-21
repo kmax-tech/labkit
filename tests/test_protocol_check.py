@@ -102,7 +102,6 @@ REPORT_FIELDS = """\
 - **Prediction for the follow-up run:** AUC 0.65
 - **Instrument check:** 10 calls, see block
 - **Resolution check:** perfect effect fires, null stays silent
-- **Gate labels:** yes, no
 - **Randomness controls:** deterministic
 - **Why this design:** the judge is the instrument under test
 - **Data preparation:** scripts/00_prepare.py writes data/prepared/claims.jsonl
@@ -458,13 +457,14 @@ class TestStampPlaceholders(unittest.TestCase):
                 [lb for _, lb in protocol_check.placeholder_fields(text)], ["Timebox"]
             )
 
-    def test_the_arm_lines_left_under_an_alias_are_a_placeholder(self):
+    def test_the_stamps_phrase_left_under_an_alias_is_a_placeholder(self):
         text = (
             "- **Model / tool:** qwen\n"
-            "  <two arms (profiles) compared? one line each, held by finalize against the run:\n"
-            "  Arm `before`: register/profiles/<x>.toml @ <fingerprint>, model=<alias>\n"
-            "  Arm `after`: register/profiles/<y>.toml @ <fingerprint>, model=<alias> — and\n"
-            "  the diff between the two profiles verbatim under Prompt>\n"
+            "  <the instrument in one sentence: what the model\n"
+            "  does here and what it sees — its alias stands in the head's `[model]`, never\n"
+            "  hardcode endpoint or ID; two arms (profiles) compared? say what `before` and\n"
+            "  `after` are — the profiles themselves stand in `[model.arms.<arm>]`, and the\n"
+            "  diff between them verbatim under Prompt>\n"
         )
         self.assertEqual(
             [lb for _, lb in protocol_check.placeholder_fields(text)], ["Model / tool"]
@@ -968,8 +968,11 @@ class TestExclusions(unittest.TestCase):
     def test_template_stamps_exclusions(self):
         self.assertIn("Exclusions / filters", TEMPLATE.read_text(encoding="utf-8"))
 
-    def test_template_stamps_gate_labels(self):
-        self.assertIn("Gate labels (expected)", TEMPLATE.read_text(encoding="utf-8"))
+    def test_the_gate_labels_moved_into_the_head(self):
+        """Phase 4 (2026-10-21): `[gate] labels` in the TOML head, no prose field."""
+        text = TEMPLATE.read_text(encoding="utf-8")
+        self.assertNotIn("Gate labels (expected)", text)
+        self.assertIn("[gate] labels", text)
 
     def test_template_stamps_randomness(self):
         self.assertIn("Randomness controls", TEMPLATE.read_text(encoding="utf-8"))
