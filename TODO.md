@@ -194,14 +194,18 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   Ein Sammelvermerk statt je einer Notiz (`8aabde6`); Marker nur statische
   Evidenz, verlangt ist die Datenbeurteilung (`acd872e`). Abschluss-Audit
   der fertigen Antworten ([Bericht](docs/usability/2026-10-21-final-answer-audit-ef6c3b1.md)):
-  das unveränderte Analyse-Audit findet den Cue wieder, liest Antwort und
-  Limits aber nur auf Lesbarkeit; ob die eingeschränkte Antwort die Frage
-  trägt, beurteilt keine Stufe (das Analyse-Audit läuft vor den Limits).
-  Offen, zu entscheiden: (a) ein Abschluss-Audit nach `--from-run` (zweiter
-  Aufruf, Kosten ×2 bei seconds), (b) die Effekt-Entscheidung vor das
-  Audit ziehen geht nicht (sie antwortet auf seine Befunde), (c) die
-  Analyse-Anweisung um „Frage gegen Kriterium“ erweitern — fängt die
-  Lücke vor den Limits, nicht deren Angemessenheit. Neu gefunden: Chance
+  das unveränderte Analyse-Audit findet den Cue wieder und benennt in
+  judge-1 die offene Frage („needs an item set with near cases, a new
+  experiment“); verloren geht der Befund im Result-Feld, das `--from-run`
+  in 3/3 mit der Answer-Zeile (Key-Dump) füllte und kein Autor umschrieb.
+  Entschieden 2026-10-21: Result schreibt der Autor (`--from-run` schreibt
+  Answer und Runs), `protocol-check` hält das leere Result nach einem
+  Messlauf als Pflicht. Danach eine Judge-Reihe; erst wenn der Autor-Satz
+  den Befund nicht trägt: (a) ein Abschluss-Audit nach `--from-run`
+  (Kosten ×2 bei seconds) oder (c) die Analyse-Anweisung um „Frage gegen
+  Kriterium“ schärfen (wirkt nur indirekt, das Audit sieht die fertige
+  Antwort nicht); eine dritte Effektform („C1 steht, Frage offen“) erst
+  dann. Neu gefunden: Chance
   für C1-Bestehen bei N=12 ≈ 0,073 (judge-3), Prepare-Lauf ohne `data=`. Beobachten (kein
   statischer Check bei zwei Fällen): Prompt breiter als das Gold („state
   or imply“) in 2 von 6 Judge-Proben, vom Audit erst nach dem Lauf
