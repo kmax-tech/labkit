@@ -37,14 +37,13 @@ from labkit.formats.protocol_check import (
     BARE_REFERENCE,
     PROTOCOL_TEMPLATE,
     FIELDS,
-    FieldLine,
     RUNS_PLACEHOLDER,
     DASHES_ONLY,
     HTML_COMMENT,
     STAMPED_ITEM,
     in_cut,
     field_label,
-    model_named_in,
+    model_named,
     answer_without_run,
     check_fields,
     fields,
@@ -60,10 +59,7 @@ def unreported(text: str, seconds: bool = False) -> list[str]:
     are owed (the Summary is the Result line, 2026-10-12)."""
     lines = fields(text)
     found = {f.name: f for f in lines}
-    by_name: dict[str, list[FieldLine]] = {}
-    for f in lines:
-        by_name.setdefault(f.name, []).append(f)
-    model = model_named_in(by_name)
+    model = model_named(text)
     owed = [
         f
         for f in FIELDS

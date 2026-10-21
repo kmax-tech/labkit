@@ -338,27 +338,18 @@ class FieldReport:
         return bool(self.head and self.head.frozen)
 
 
-#: a `Model / tool` value that names no model
-_NO_MODEL = re.compile(r"^(n/a|none|no model|—|–|-)", re.I)
-
-
 def model_named(text: str) -> bool:
-    """Does the protocol name a model in `Model / tool`? The one answer for
-    the cut, the seconds registration and `labkit-init --report` — the
-    scaffolder matched the raw text with its own spelling (audit 2026-10-15:
-    `**Model / tool:** —` was model-free here and a model there)."""
-    found: dict[str, list[FieldLine]] = {}
-    for f in fields(text):
-        found.setdefault(f.name, []).append(f)
-    return model_named_in(found)
-
-
-def model_named_in(found: dict[str, list[FieldLine]]) -> bool:
-    """`model_named` over fields already grouped by name (FOUND)."""
-    for f in found.get("model / tool", []):
-        if f.value and not f.placeholder and not _NO_MODEL.match(f.value):
-            return True
-    return False
+    """Does the protocol declare a model in the loop — a `[model]` table in
+    the head (`protocol_block.model`)? The one answer for the cut, the
+    seconds registration and `labkit-init --report`. Until 0.100.0 the
+    prose `Model / tool` line decided it, read with a pattern for "n/a",
+    "none" and dashes (audit 2026-10-15: `—` was model-free here and a
+    model there). False for a head that does not read: the head check
+    names that."""
+    try:
+        return protocol_block.model(text) is not None
+    except protocol_block.BlockError:
+        return False
 
 
 def in_cut(f: Field, model: bool) -> bool:
@@ -381,10 +372,7 @@ def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
         after = {f.label.casefold() for f in FIELDS if f.level == "after"}
         lines = [f for f in lines if f.name not in after]
     if standard_contract.lane(head.cost).cut == standard_contract.SECONDS_CUT:
-        found: dict[str, list[FieldLine]] = {}
-        for f in lines:
-            found.setdefault(f.name, []).append(f)
-        model = model_named_in(found)
+        model = model_named(text)
         cut = {f.label.casefold() for f in FIELDS if in_cut(f, model)}
         lines = [f for f in lines if f.name in cut]
     return [(f.line, f.label) for f in lines if f.placeholder]
@@ -397,13 +385,10 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     freezes (LAB-017 The number of audits follows the cost tier). The full form owes every must; `frozen = true` turns
     every should into a must (the graduation gate, in ONE place), and once a
     measure run is documented a frozen protocol owes its report fields too."""
-    found: dict[str, list[FieldLine]] = {}
-    for f in fields(text):
-        found.setdefault(f.name, []).append(f)
     # which cut the protocol owes is the contract's answer; the marks on
     # the fields (`Field.seconds`) are this module's
     if standard_contract.lane(head.cost).cut == standard_contract.SECONDS_CUT:
-        model = model_named_in(found)
+        model = model_named(text)
         must = [f for f in FIELDS if f.level in ("must", "should") and in_cut(f, model)]
         return must, []
     must = [f for f in FIELDS if f.level == "must"]
@@ -474,10 +459,7 @@ def seconds_registration_missing(text: str) -> list[str]:
     without an intent paragraph; a count has no bar to clear, 0.87.1)."""
     lines = fields(text)
     written = {f.name for f in lines if f.value and not f.placeholder}
-    by_name: dict[str, list[FieldLine]] = {}
-    for f in lines:
-        by_name.setdefault(f.name, []).append(f)
-    labels = standard_contract.registration_fields(model_named_in(by_name))
+    labels = standard_contract.registration_fields(model_named(text))
     missing = [label for label in labels if label.casefold() not in written]
     try:
         cost = protocol_block.head(text).cost

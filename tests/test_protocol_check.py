@@ -113,6 +113,9 @@ REPORT_FIELDS = """\
 
 
 def pilot(**head_kw) -> str:
+    """A pilot with a model in the loop (the head's `[model]`, phase 4) unless
+    `model=None` is passed; PILOT_FIELDS names haiku in prose for the reader."""
+    head_kw.setdefault("model", "haiku")
     return "# x\n\n" + head(**head_kw) + "\n" + PILOT_FIELDS
 
 
@@ -603,7 +606,7 @@ class TestPromptAndExample(unittest.TestCase):
         """A count has no prompt+answer pair to show: the field is `sm`, owed
         only with a model named (cloud probe 2026-10-12 filled it with n/a)."""
         text = (
-            pilot(cost="seconds").replace(
+            pilot(cost="seconds", model=None).replace(
                 "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
             )
             + "\n## Summary\n\n- **Result:** The mean is 3.5 documents per case.\n"
@@ -619,7 +622,7 @@ class TestPromptAndExample(unittest.TestCase):
         """Without a model the seconds cut has no criterion, no admissibility
         condition, and after the run only the Result line of the Summary
         (decisions 2026-10-12, five cloud probes)."""
-        base = pilot(cost="seconds").replace(
+        base = pilot(cost="seconds", model=None).replace(
             "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
         )
         lines = [
@@ -645,8 +648,11 @@ class TestPromptAndExample(unittest.TestCase):
             "Raw output",
         ):
             self.assertNotIn(label, out)
-        # the twin: a model named brings the criterion back
-        rc, out = run_main(text.replace("n/a — deterministic", "haiku"))
+        # the twin: a model declared in the head brings the criterion back
+        # (prose alone decides nothing since phase 4)
+        rc, out = run_main(
+            text.replace(head(cost="seconds"), head(cost="seconds", model="haiku"), 1)
+        )
         self.assertEqual(rc, 1)
         self.assertIn("Success / failure criterion", out)
 

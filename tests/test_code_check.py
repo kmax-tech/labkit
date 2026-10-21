@@ -272,6 +272,7 @@ class TestBundle(unittest.TestCase):
             code_check.write_bundle(a.path, a.path, a.path / "PROTOCOL-fixture.md", out)
             text = out.read_text(encoding="utf-8")
         self.assertIn("Gate labels", text)
+        self.assertIn("Gate labels declared ([gate] labels)", text)
         self.assertIn("'yes'", text)
 
     def test_bundle_opens_with_severity_legend(self):

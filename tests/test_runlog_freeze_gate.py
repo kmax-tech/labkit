@@ -31,12 +31,19 @@ from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 AUDIT = "2026-10-05 · scope sha abc · 0 findings"
-FROZEN = head(cost="hours", frozen=True, preflight_audit=AUDIT)
+FROZEN = head(cost="hours", frozen=True, preflight_audit=AUDIT, model="haiku")
 UNFROZEN = head(
-    cost="hours", frozen=False, preflight_audit=AUDIT, promises=DEFAULT_BLOCK
+    cost="hours",
+    frozen=False,
+    preflight_audit=AUDIT,
+    promises=DEFAULT_BLOCK,
+    model="haiku",
 )
 PLACEHOLDER = head(
-    cost="hours", frozen=True, preflight_audit="<date · scope sha · N findings>"
+    cost="hours",
+    frozen=True,
+    preflight_audit="<date · scope sha · N findings>",
+    model="haiku",
 )
 NO_FIELD = FROZEN.replace(f'preflight_audit = "{AUDIT}"\n', "")
 REGISTRATION = """
@@ -51,7 +58,7 @@ SECONDS_COUNT = (
     head(cost="seconds", promises=None)
     + "\n- **Question / hypothesis:** how many documents per case?\n"
 )
-SECONDS = head(cost="seconds") + REGISTRATION
+SECONDS = head(cost="seconds", model="haiku") + REGISTRATION
 SECONDS_NO_CRITERION = SECONDS.replace(
     "[C1] accuracy above the trivial decider", "<the criterion>"
 )

@@ -29,14 +29,14 @@ from labkit.formats import findings, promises, scope_sha  # noqa: E402
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
-UNFROZEN = head(cost="minutes", frozen=False, promises=DEFAULT_BLOCK)
+UNFROZEN = head(cost="minutes", frozen=False, promises=DEFAULT_BLOCK, model="haiku")
 REGISTRATION = """
 - **Model / tool:** haiku
 - **Question / hypothesis:** does the register beat the trivial decider?
 - **Success / failure criterion:** [C1] accuracy above the trivial decider
 - **Admissibility condition:** [A1] every case parsed
 """
-SECONDS_NO_CRITERION = (head(cost="seconds") + REGISTRATION).replace(
+SECONDS_NO_CRITERION = (head(cost="seconds", model="haiku") + REGISTRATION).replace(
     "[C1] accuracy above the trivial decider", "<the criterion>"
 )
 

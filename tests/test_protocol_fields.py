@@ -157,7 +157,7 @@ class Fields(unittest.TestCase):
         self.assertNotIn("Model I/O", report.missing_must)
         self.assertNotIn("Prompt", report.missing_must)
         self.assertEqual(report.missing_should, [])
-        with_model = head(cost="seconds") + "- **Model / tool:** haiku\n"
+        with_model = head(cost="seconds", model="haiku") + "- **Model / tool:** haiku\n"
         self.assertIn("Prompt", protocol_check.check_fields(with_model).missing_must)
 
     def test_report_fields_fall_due_with_a_documented_run_once_frozen(self):

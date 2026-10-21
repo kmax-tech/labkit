@@ -23,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from labkit.checks import prompt_check, run_record_check  # noqa: E402
+from labkit.checks import prompt_check  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from labkit.gates import finalize, report_check  # noqa: E402
 from labkit.tools import protocol_fill  # noqa: E402
@@ -43,25 +43,30 @@ class ProseValueReaders(unittest.TestCase):
         (protocol_check, "fields"),  # the label parser every reader below rests on
         (protocol_check, "answer_field"),  # the Answer line: a generated section
         (protocol_check, "answer_without_run"),  # an Answer without a declaration
-        (protocol_check, "model_named_in"),  # Model / tool decides the cut
         (
             protocol_check,
             "measure_runs",
         ),  # run ids in the Runs list make the result due
-        (run_record_check, "arm_findings"),  # Arm lines held to the run
         (prompt_check, "prompt_blocks"),  # the Prompt block held to the constants
         (report_check, "limit_gaps"),  # Limit lines held to the record
     )
     #: left since phase 3 (2026-10-21): the declaration is `[result] run` in the
     #: head — `answering_run_field`, `answering_run_open`, `finalize.cited_runs`,
     #: `finalize.cited_run_gaps` read prose for it
-    GONE = ("answering_run_field", "answering_run_open", "cited_runs", "cited_run_gaps")
+    #: left since phase 4: `[model]` decides the cut and carries the arms
+    GONE = (
+        "answering_run_field",
+        "answering_run_open",
+        "cited_runs",
+        "cited_run_gaps",
+        "model_named_in",
+    )
 
     def test_the_inventory_is_exactly_these(self):
         for module, name in self.READERS:
             with self.subTest(reader=f"{module.__name__}.{name}"):
                 self.assertTrue(callable(getattr(module, name)))
-        self.assertEqual(len(self.READERS), 8)
+        self.assertEqual(len(self.READERS), 6)
         for name in self.GONE:
             self.assertFalse(hasattr(protocol_check, name) or hasattr(finalize, name))
 
@@ -116,7 +121,7 @@ class Declaration(unittest.TestCase):
 
 class LaneDuties(unittest.TestCase):
     """Which prose fields each lane owes today, as `protocol_check.owed`
-    answers from the head and the Model / tool line. The lists are the
+    answers from the head — its `[model]` table decides the cut. The lists are the
     standard's decision (LAB-003, LAB-004, LAB-017), not the format's:
     phase 5 may change how a field is recognised, not whether it is owed —
     a change to a list here is a change of the standard."""
@@ -189,12 +194,12 @@ class LaneDuties(unittest.TestCase):
 
     def test_seconds_owes_the_cut_and_nothing_graduates(self):
         self.assertEqual(self.owed(head(cost="seconds")), (self.SECONDS, []))
-        with_model = head(cost="seconds") + "- **Model / tool:** haiku\n"
+        with_model = head(cost="seconds", model="haiku")
         self.assertEqual(self.owed(with_model), (self.SECONDS_MODEL, []))
-        no_model = (
-            head(cost="seconds") + "- **Model / tool:** n/a — a count, no model\n"
-        )
-        self.assertEqual(self.owed(no_model), (self.SECONDS, []))
+        prose_only = head(cost="seconds") + "- **Model / tool:** haiku\n"
+        self.assertEqual(
+            self.owed(prose_only), (self.SECONDS, [])
+        )  # prose decides nothing
 
     def test_the_full_form_graduates_its_shoulds_at_the_freeze(self):
         self.assertEqual(

@@ -514,6 +514,22 @@ def severity_legend() -> str:
     )
 
 
+def declared_labels_section(protocol: Path) -> str:
+    """The labels the protocol's head declares (`[gate] labels`), for the
+    agent to hold the extracted comparisons against — data, no judgement;
+    a head that does not read says so instead."""
+    try:
+        labels = protocol_block.declared_labels(protocol.read_text(encoding="utf-8"))
+    except (OSError, protocol_block.BlockError) as exc:
+        return f"## Gate labels declared ([gate] labels)\n\nnot readable: {exc}\n"
+    body = (
+        "none declared — the protocol registers no label set"
+        if labels is None
+        else "\n".join(f"- {label}" for label in labels)
+    )
+    return f"## Gate labels declared ([gate] labels)\n\n{body}\n"
+
+
 def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
     """Write the audit bundle for the code-check agent: schema facts, gate labels, intent ids, protocol and code in one file."""
     parts = [
@@ -523,6 +539,8 @@ def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
         schema_facts(area),
         "\n",
         gate_labels(area),
+        "\n",
+        declared_labels_section(protocol),
         "\n",
     ]
     files = [protocol]

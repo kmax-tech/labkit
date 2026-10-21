@@ -1,6 +1,7 @@
-"""Arm lines in `Model / tool` (0.73.1): a protocol that compares two
-profiles names each with file, fingerprint and model alias; finalize holds
-the line to the answering run and warns on what the run did not record.
+"""Arms in the head (`[model.arms.<arm>]`, phase 4 of the 1.0 line; prose
+lines until 0.100.0): a protocol that compares two profiles names each with
+file, fingerprint and model alias; finalize holds the table to the answering
+run and warns on what the run did not record.
 
     .venv/bin/python -m pytest tests/test_arm_lines.py
 """
@@ -12,14 +13,18 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from protocol_fixture import run_record  # noqa: E402
+from protocol_fixture import head, run_record  # noqa: E402
 from labkit.checks import run_record_check
 
 SHA_B, SHA_A = "bcec0c37236d", "1d4c79af596a"
-TEXT = (
-    "- **Model / tool:** alias `gpt-oss-20b-leguin`\n"
-    f"  Arm `before`: register/profiles/b.toml @ {SHA_B}, model=gpt-oss-20b-leguin\n"
-    f"  Arm `after`: register/profiles/a.toml @ {SHA_A}, model=gpt-oss-20b-leguin\n"
+ALIAS = "gpt-oss-20b-leguin"
+TEXT = head(
+    cost="seconds",
+    model=ALIAS,
+    arms={
+        "before": ("register/profiles/b.toml", SHA_B, ALIAS),
+        "after": ("register/profiles/a.toml", SHA_A, ALIAS),
+    },
 )
 
 
@@ -83,14 +88,18 @@ class ArmLines(unittest.TestCase):
             area, run = _repo(
                 d, profiles=("b.toml",), fingerprints={"before": SHA_B, "after": SHA_A}
             )
-            text = TEXT.replace("model=gpt-oss-20b-leguin\n", "model=haiku\n", 1)
+            text = TEXT.replace(
+                f'alias = "{ALIAS}"\n\n[model.arms.after]',
+                'alias = "haiku"\n\n[model.arms.after]',
+                1,
+            )
             got = run_record_check.arm_findings(text, area, run)
             self.assertTrue(
                 any("names register/profiles/a.toml, no such file" in g for g in got),
                 got,
             )
             self.assertTrue(
-                any("arm `before`: the protocol names model=haiku" in g for g in got),
+                any("arm `before`: the protocol names alias haiku" in g for g in got),
                 got,
             )
 
@@ -99,7 +108,7 @@ class ArmLines(unittest.TestCase):
             area, run = _repo(d, profiles=(), fingerprints={})
             self.assertEqual(
                 run_record_check.arm_findings(
-                    "- **Model / tool:** alias `haiku`\n", area, run
+                    head(cost="seconds", model="haiku"), area, run
                 ),
                 [],
             )

@@ -52,7 +52,11 @@ class Cut(unittest.TestCase):
 """
         )
         self.assertEqual(protocol_check.check_fields(text).missing_must, [])
-        with_model = text + "- **Model / tool:** haiku\n"
+        with_model = (
+            head(cost="seconds", model="haiku")
+            + text[len(head(cost="seconds")) :]
+            + "- **Model / tool:** haiku\n"
+        )
         missing = protocol_check.check_fields(with_model).missing_must
         self.assertEqual(
             missing, ["Data profile", "Prompt", "Null condition / anchors"]
@@ -61,7 +65,7 @@ class Cut(unittest.TestCase):
     def test_seconds_protocol_is_checked_against_the_cut_only(self):
         text = (
             "# Experiment protocol: x\n"
-            + head(type="confirmatory", cost="seconds")
+            + head(type="confirmatory", cost="seconds", model="haiku")
             + """
 - **Question / hypothesis:** does it hold?
 - **Success / failure criterion:** [C1] accuracy > 0.5
@@ -126,13 +130,15 @@ class Registration(unittest.TestCase):
 
     def test_all_four_written(self):
         text = (
-            head(cost="seconds") + self.QUESTION + "- **Admissibility condition:** a\n"
+            head(cost="seconds", model="haiku")
+            + self.QUESTION
+            + "- **Admissibility condition:** a\n"
         )
         self.assertEqual(protocol_check.seconds_registration_missing(text), [])
 
     def test_placeholder_counts_as_missing(self):
         text = (
-            head(cost="seconds")
+            head(cost="seconds", model="haiku")
             + self.QUESTION
             + "- **Admissibility condition:** <what must hold…>\n"
         )
@@ -145,7 +151,7 @@ class Registration(unittest.TestCase):
         """Review 2026-10-21: printing the profile is not judging it; the run
         waits for the judgement in the protocol."""
         text = (
-            head(cost="seconds")
+            head(cost="seconds", model="haiku")
             + self.QUESTION.replace("- **Data profile:** 6 and 6 items; 'because' in both classes\n", "")
             + "- **Admissibility condition:** a\n"
             + "- **Data profile:** <what `00_prepare.py --audit` shows>\n"
@@ -155,7 +161,9 @@ class Registration(unittest.TestCase):
         )
 
     def test_the_old_stop_rule_label_does_not_register(self):
-        text = head(cost="seconds") + self.QUESTION + "- **Stop rule:** s\n"
+        text = (
+            head(cost="seconds", model="haiku") + self.QUESTION + "- **Stop rule:** s\n"
+        )
         self.assertEqual(
             protocol_check.seconds_registration_missing(text),
             ["Admissibility condition"],

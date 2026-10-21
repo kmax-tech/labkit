@@ -13,6 +13,7 @@ from pathlib import Path
 from labkit.checks import readme_check
 from labkit.tools import scaffold, protocol_cuts
 from labkit.formats import console, protocol_block, rules
+from protocol_fixture import head  # noqa: E402
 
 
 def quiet(fn, *args, **kw):  # noqa: ANN001, ANN002, ANN003, ANN201 — test helper
@@ -688,33 +689,27 @@ class Exp(unittest.TestCase):
 class Report(unittest.TestCase):
     """--report answers what a model-free protocol cannot: seed, noise, parser."""
 
-    def stamped(self, model_line: str) -> str:
+    def stamped(self, model: bool | str) -> str:
+        """An area stamped with MODEL (the head's `[model]`, phase 4), then promoted."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             scaffold.stamp_lab(root, "lab")
-            quiet(scaffold.stamp_area, root, "foo-bar")
+            quiet(scaffold.stamp_area, root, "foo-bar", model=model)
             (proto,) = root.glob("experiments/*/PROTOCOL-foo-bar.md")
-            text = re.sub(
-                r"- \*\*Model / tool:\*\* <[^>]*>",
-                model_line,
-                proto.read_text(encoding="utf-8"),
-                count=1,
-            )
-            proto.write_text(text, encoding="utf-8")
             quiet(scaffold.stamp_area, root, "foo-bar", report=True)
             return proto.read_text(encoding="utf-8")
 
     def test_no_model_fills_the_parser_field_and_leaves_randomness_owed(self) -> None:
         """2026-10-17: a seeded estimator owes its randomness fields; --report
         no longer writes "no seed, spread 0" into them (Sonnet v2 t5)."""
-        text = self.stamped("- **Model / tool:** none")
+        text = self.stamped(False)
         self.assertIn("**Parser cases harvested:** n/a — no model", text)
         self.assertNotIn("n/a — deterministic", text)
         self.assertRegex(text, r"\*\*Randomness controls †:\*\* <")
         self.assertRegex(text, r"\*\*Noise ceiling → threshold †:\*\* <")
 
     def test_a_model_leaves_them_open(self) -> None:
-        self.assertNotIn("auto-filled", self.stamped("- **Model / tool:** haiku"))
+        self.assertNotIn("auto-filled", self.stamped("haiku"))
 
 
 class Cli(unittest.TestCase):
@@ -744,15 +739,26 @@ if __name__ == "__main__":
 
 
 class ModelNamed(unittest.TestCase):
-    """`--report` asks `protocol_check.model_named`, the one reading of the
-    Model / tool field: with its own regex a `—` or a `†` label read as "a
-    model", and the deterministic n/a fields stayed open (audit 2026-10-15)."""
+    """`--report` asks `protocol_check.model_named`, since phase 4 the head's
+    `[model]` table: prose that says "—", "none" or names an alias decides
+    nothing (until 0.100.0 a regex over the Model / tool line did, and a `—`
+    or a `†` label read as "a model", audit 2026-10-15)."""
 
-    def test_a_dash_and_a_daggered_label_are_no_model(self):
-        for value in ("—", "none", "n/a — a count"):
-            text = f"- **Model / tool †:** {value}\n- **Parser cases harvested:** <cases>\n"
+    PARSER = "- **Parser cases harvested:** <cases>\n"
+
+    def test_without_a_model_table_the_parser_field_is_filled(self):
+        for value in ("—", "none", "gpt-oss"):
+            text = (
+                head(cost="minutes") + f"- **Model / tool †:** {value}\n" + self.PARSER
+            )
             filled, n = protocol_cuts.auto_fill_deterministic(text)
             self.assertEqual(n, 1, value)
             self.assertIn("n/a — no model", filled)
-        text = "- **Model / tool:** gpt-oss\n- **Parser cases harvested:** <cases>\n"
+
+    def test_a_model_table_leaves_it_open(self):
+        text = (
+            head(cost="minutes", model="gpt-oss")
+            + "- **Model / tool:** none\n"
+            + self.PARSER
+        )
         self.assertEqual(protocol_cuts.auto_fill_deterministic(text), (text, 0))
