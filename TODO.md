@@ -47,19 +47,19 @@ Prosa-Felder vor einem Lauf zwingend vorliegen (Frage, Kriterium,
 Zulassungsbedingung, LAB-003/-004), bleibt Entscheidung des Standards,
 nicht des Formats: das Formatproblem rechtfertigt keine schwächere
 Pflicht; was sinkt, ist nur die Lesung von Labels, die kein Gate mehr
-steuern (Scheibe 5 prüft jedes Feld einzeln auf seinen Grad). Fehler
+steuern (Phase 5 prüft jedes Feld einzeln auf seinen Grad). Fehler
 werden exakt (`[result].run fehlt`, `[model].arms.before: kein String`);
 `protocol-fill` schrumpft auf `protocol-set key=value` und
 `protocol-render`.
 
 Nach außen ein zusammenhängender angekündigter Formatbruch (CHANGELOG
 nennt die letzte Version, die Maschinenfelder aus der Prosa liest; keine
-stückweisen Legacy-Pfade); intern in Scheiben, jede mit derselben
+stückweisen Legacy-Pfade); intern in Phasen, jede mit derselben
 Messlatte davor und danach. Studi-Repos pinnen und bleiben unberührt.
 
-| Scheibe | Inhalt | Abnahme |
+| Phase | Inhalt | Abnahme |
 |---|---|---|
-| 1 Messlatte | Heutiges Verhalten sichern: Judge- und Count-Reihe (je drei kalte Läufe) auf dem Stand nach `2f61ab0`, plus Gegenbeispiele und die lane-spezifischen Pflichten (`seconds`, `minutes`/`hours`) als Tests — richtige und gebundene Zahl, Fehlaufrufe, Gate-Ablehnungen, Zeit, Kosten | Reihe und Zwillinge liegen vor; ohne sie findet kein Bruch statt. Erfüllt 2026-10-21: mechanisch `tests/test_migration_bar.py` (Leser-Inventar, Deklaration, Lane-Pflichten, Write-back), die Reihe in `docs/usability/2026-10-21-sandbox-fb5d681.md` (sechs von sechs Zahlen richtig und gebunden, keine Gate-Ablehnung, 3,69 USD; Läufe in `~/projects/labkit-probes-sandbox-fb5d681/`). Dieselben sechs Proben laufen nach Scheibe 3 und nach Scheibe 5 erneut |
+| 1 Messlatte | Heutiges Verhalten sichern: Judge- und Count-Reihe (je drei kalte Läufe) auf dem Stand nach `2f61ab0`, plus Gegenbeispiele und die lane-spezifischen Pflichten (`seconds`, `minutes`/`hours`) als Tests — richtige und gebundene Zahl, Fehlaufrufe, Gate-Ablehnungen, Zeit, Kosten | Reihe und Zwillinge liegen vor; ohne sie findet kein Bruch statt. Erfüllt 2026-10-21: mechanisch `tests/test_migration_bar.py` (Leser-Inventar, Deklaration, Lane-Pflichten, Write-back), die Reihe in `docs/usability/2026-10-21-sandbox-fb5d681.md` (sechs von sechs Zahlen richtig und gebunden, keine Gate-Ablehnung, 3,69 USD; Läufe in `~/projects/labkit-probes-sandbox-fb5d681/`). Dieselben sechs Proben laufen nach Phase 3 und nach Phase 5 erneut |
 | 2 Kopplung | Gemeinsame Audit-Auswahl und Snapshot-Bildung unterhalb der Gates: `covering_analysis` (`gates/report_check.py:251`) braucht `run_shown` aus `gates/audit`, ein bloßes Verschieben nach `formats/findings` importierte nach oben — beide Fragen („welche Records decken diesen Stand?“, „was wurde dem Audit gezeigt?“) ziehen gemeinsam in eine Schicht unter den Gates; die Ergebnisübernahme (`protocol_fill.adopt`, `:483`) ruft die Freigabeprüfung weiterhin verbindlich auf und stellt bei Ablehnung den alten Inhalt wieder her — „Tool ohne Gate-Import“ ist kein Ziel. Befunde als Daten (Grad, Regel, Fundstelle, Text) bis zur CLI — neun Stellen lesen den Grad heute aus Text, die Parkbedingung ist mit `e6dbb08` erfüllt | Auswahl und Snapshot ohne Import aus `gates`; `adopt` ruft `report_check` auf (Test bleibt); kein `grade_of` auf Text außerhalb der Textquellen |
 | 3 `[result] run = "<run_id>"` | Die ausdrückliche Deklaration „berichtet“ ersetzt Answering-run-Zeile und Run-ID in der Answer; `report-check`, Stop-Hook, Pre-Commit lesen den Kopf; Answer und Limits werden daraus erzeugt | Reihe grün; `cited_runs`/`answering_run_field` ohne Prosa-Leser; Zwilling: ein Protokoll ohne `[result]` ist Exploration, kein Fehler |
 | 4 `[model] alias, arms` und `[gate] labels` | Ersetzen das Parsen von Model / tool, Arm-Zeilen und Gate labels (`model_named_in`, `arm_findings`); die Registrierung wird strukturiert, die semantische Zuordnung bleibt beim Audit: `gate_label_scan` extrahiert Stringvergleiche als Material für den Code-Check-Agenten und urteilt nicht — daraus wird beim Formatwechsel kein harter Gleichheitstest, denn nicht jeder Stringvergleich gehört zum Labelalphabet; ein exakter Vergleich braucht einen enger bestimmten Gegenstand und korrekte Gegenbeispiele | `finalize` hält Arme gegen den Lauf aus dem Kopf; der Code-Check-Agent erhält die Labels aus dem Kopf statt aus der Prosa |

@@ -1,13 +1,13 @@
 """The measuring bar for the 1.0 line — today's mechanical contract at every
 transition the migration replaces, pinned literally (TODO "Reihenfolge",
-2026-10-21, slice 1).
+2026-10-21, phase 1).
 
 The line: machine contracts structured, the explanation as prose, the
-result rendered from bound sources. Slices 2–5 move what the gates read out
+result rendered from bound sources. Phases 2–5 move what the gates read out
 of the Markdown prose and into the TOML head, the run records and the
 findings files. This file names what reads prose for a decision today, what
 declares a result reported, which fields each lane owes and what
-`--from-run` writes — so that every slice changes a line here on purpose
+`--from-run` writes — so that every phase changes a line here on purpose
 and nothing changes by accident. What a cold probe measures (the number,
 its binding, misuse, cost) lives in `docs/usability/`; the flows are in
 `tests/test_end_to_end.py`; this is the inventory between them.
@@ -34,7 +34,7 @@ RUN = "2026-10-21T10-00-00_abcd"
 
 class ProseValueReaders(unittest.TestCase):
     """Every function that reads a value out of the protocol's prose and
-    steers a decision with it — the inventory slices 3–5 shrink. A reader
+    steers a decision with it — the inventory phases 3–5 shrink. A reader
     leaves this list when its question is answered from a typed source
     (`[result]`, `[model]`, `[gate]`, the run record, `audits/*.toml`), and
     the removal is a conscious edit here, never a side effect."""
@@ -66,7 +66,7 @@ class ProseValueReaders(unittest.TestCase):
 
 class Declaration(unittest.TestCase):
     """What declares a result reported today: a run id in the Answer line,
-    written by `--from-run`. Slice 3 makes it `[result].run` in the head;
+    written by `--from-run`. Phase 3 makes it `[result].run` in the head;
     the four shapes below are the cases it must still tell apart."""
 
     def protocol(self, answer: str) -> str:
@@ -119,7 +119,7 @@ class LaneDuties(unittest.TestCase):
     """Which prose fields each lane owes today, as `protocol_check.owed`
     answers from the head and the Model / tool line. The lists are the
     standard's decision (LAB-003, LAB-004, LAB-017), not the format's:
-    slice 5 may change how a field is recognised, not whether it is owed —
+    phase 5 may change how a field is recognised, not whether it is owed —
     a change to a list here is a change of the standard."""
 
     SECONDS = [
@@ -217,7 +217,7 @@ class LaneDuties(unittest.TestCase):
 
 class WriteBack(unittest.TestCase):
     """What `--from-run` writes from the run and what stays the author's.
-    Slice 4 renders the Answer and the Limit lines from the run and the
+    Phase 3 renders the Answer and the Limit lines from the run and the
     record instead; the Result stays the author's two sentences throughout."""
 
     def test_from_run_writes_the_answer_and_the_author_writes_the_rest(self):
