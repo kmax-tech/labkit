@@ -103,10 +103,14 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   Folgepunkte sind umgesetzt (CHANGELOG, Unreleased): Count-Stempel
   schließt seinen TOML-Block; `labkit-audit --decide`; je Probe `.tmp/`,
   festes labkit beim Stagen, Pfade außerhalb der Probe im Score. Grenze der
-  Isolation: Subagents erben Umgebung und Scratchpad der Sitzung —
-  vollständig getrennt nur als eigener Prozess je Probe (eigenes
-  Arbeitsverzeichnis, `TMPDIR`, Home); erst wenn der Score Pfade außerhalb
-  zeigt.
+  Isolation: Subagents erben Umgebung und Scratchpad der Sitzung. Seit
+  2026-10-21 laufen Proben in der Agent-Sandbox von `labkit-paper`
+  (Container ohne Host-Mounts, Proxy mit Abo-Token, nur `/v1/messages`),
+  Runner `~/projects/labkit-probes-sandbox-44db3ac/run.py`: Gegenprobe
+  ohne und mit Modell bestanden, count-1 normal durchgelaufen (Hooks der
+  Probe feuern erstmals). Offen: die übrigen fünf Proben der Reihe; dann
+  `usability run` — Heimat des Sandbox-Codes zu entscheiden (labkit-paper
+  `agentsandbox` importieren, oder nach labkit ziehen; nicht kopieren).
   Entschieden 2026-10-20: `runs.tsv` ist lokale Übersicht, git-ignoriert,
   `runlog reindex` stellt sie her (CHANGELOG, Changed).
   Notiert, nicht geplant: Run-Ids einer Sekunde unterscheiden sich nur im
