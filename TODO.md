@@ -413,7 +413,7 @@ bleiben mit damaligem Commit und Pin reproduzierbar.
 - Prompt weiter als die Gold-Legende: 3 von 30 kalten Judges schrieben
   „state or imply“ statt der Legende „claims“; im Eingriff (je fünf
   Ziehungen, nur die Frage getauscht) 8–9/12 gegen 10–11/12, C1 an der
-  Kante ([Bericht](docs/usability/2026-10-21-sandbox-42f0ec8.md)). Das
+  Kante ([Notiz](docs/notes/2026-10-21-judge-prompt-wider-than-gold.md)). Das
   Audit fand es (judge-3). Möglicher Hinweis im Skelett beim `PROMPT`-TODO:
   die Frage in den Worten der Gold-Legende stellen. Neue Vorgabe — erst
   nach dem Stabilisierungsfenster und nur, wenn es wieder vorkommt; das
