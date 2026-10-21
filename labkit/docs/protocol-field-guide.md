@@ -135,7 +135,14 @@ parser — exact keys, typed values; a typo is an error that names the field.
 The same block may hold the `[[promise]]` tables (labkit
 `docs/promise-block.md`).
 
-- **standard** — `"0.19"`; stamped, never edited. Standard 0.19 (labkit 0.72): a frozen protocol and every full run — at `cost = "seconds"` every run — owe the `[[promise]]` tables; a run records every registered constant unchanged.
+- **standard** — `"0.20"`; stamped, never edited. A protocol of another
+  version is refused with the release that reads it, never read half: a
+  0.19 protocol has no `[result]`, `[model]` or `[gate]` table and would
+  read as an exploration without a model (phase 4 review, 2026-10-21).
+  Standard 0.20 (labkit 0.101): the head carries those tables. Standard
+  0.19 (labkit 0.72): a frozen protocol and every full run — at `cost =
+  "seconds"` every run — owe the `[[promise]]` tables; a run records every
+  registered constant unchanged.
 - **id** — `p-` plus 16 hex digits, stamped by `labkit-init exp`, never typed: the
   run binds to it, so renaming or moving the file keeps the binding.
 - **type** — `"exploratory"` generates hypotheses, iterate freely, but

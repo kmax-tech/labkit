@@ -183,7 +183,7 @@ label with `protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.*
 # `[result] run = "<run_id>"` below [protocol], written by `protocol-fill --from-run`
 # after a clean `finalize`: the one declaration that this protocol reports a number.
 [protocol]
-standard = "0.19"
+standard = "0.20"
 id = "<protocol-id>"
 type = "<exploratory | confirmatory>"
 cost = "<seconds | minutes | hours>"

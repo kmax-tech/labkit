@@ -1,9 +1,13 @@
 # The labkit lab standard
 
-*Version 0.19 — the version a protocol names in its head (`standard =
-"0.19"`, read by `protocol_block`). A change to a rule or a field is the
+*Version 0.20 — the version a protocol names in its head (`standard =
+"0.20"`, read by `protocol_block`). A change to a rule or a field is the
 next version; a dated change that alters no rule is listed under "Changes"
-at the end. Next: 0.20 (`TODO.md`).*
+at the end. 0.20 (2026-10-21): the head carries the machine fields —
+`[result] run` declares the reported number, `[model]` the model and its
+arms, `[gate] labels` the gate's labels — where the prose carried them; a
+protocol of 0.19 is refused by name and migrates by writing the tables.
+Next: 0.21 (`TODO.md`).*
 
 These are the rules an experiment area is held to — before a run, during it,
 and before a number leaves the lab. labkit's checks enforce what can be

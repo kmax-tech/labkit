@@ -9,6 +9,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **Head format `standard = "0.20"`.** The three new tables (`[result]`,
+  `[model]`, `[gate]`) are the format's change; a protocol that still says
+  `"0.19"` is refused by `protocol_block.head` with the release that reads
+  it ("use the labkit release the protocol was written for, or update the
+  protocol") instead of being read as an exploration without a model —
+  the silent misreading a review named (2026-10-21). To migrate a 0.19
+  protocol: write `standard = "0.20"`, add `[model] alias` where a model
+  is in the loop (and the arm tables where arms are compared), then
+  `protocol-fill <PROTOCOL> --from-run <run_id> --force` where a number
+  was reported.
+
 - **The model in the loop, its arms and the gate labels are declared in
   the TOML head.** `labkit-init exp --model <alias>` writes `[model] alias`
   (a bare `--model` its placeholder, which `protocol-fill "model alias=…"`

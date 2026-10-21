@@ -18,7 +18,7 @@ class Head(unittest.TestCase):
         )
         self.assertEqual(
             (h.standard, h.id, h.type, h.cost, h.frozen, h.preflight_audit),
-            ("0.19", PID, "exploratory", "seconds", True, "2026-10-07 · 0 findings"),
+            ("0.20", PID, "exploratory", "seconds", True, "2026-10-07 · 0 findings"),
         )
         self.assertEqual(h.placeholders, [])
 
@@ -64,7 +64,7 @@ class Head(unittest.TestCase):
         )
 
     def test_other_standard_names_the_way_out(self):
-        self.assertRejects(head().replace('"0.19"', '"0.18"'), "use the labkit release")
+        self.assertRejects(head().replace('"0.20"', '"0.18"'), "use the labkit release")
 
     def test_no_block_or_no_table(self):
         self.assertRejects("# P\n- **Standard:** 0.16\n", "no [protocol] table")

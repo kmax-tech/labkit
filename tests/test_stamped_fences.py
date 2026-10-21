@@ -93,7 +93,7 @@ class StampReadBack(unittest.TestCase):
     def test_a_head_without_the_asked_tier_is_refused(self):
         from labkit.tools import scaffold as sc
 
-        good = '```toml\n[protocol]\nstandard = "0.19"\nid = "p-0123456789abcdef"\ntype = "<exploratory | confirmatory>"\ncost = "seconds"\nfrozen = false\npreflight_audit = ""\n```\n'
+        good = '```toml\n[protocol]\nstandard = "0.20"\nid = "p-0123456789abcdef"\ntype = "<exploratory | confirmatory>"\ncost = "seconds"\nfrozen = false\npreflight_audit = ""\n```\n'
         sc.check_stamped_head(good, "seconds")
         sc.check_stamped_head(
             good.replace('cost = "seconds"', 'cost = "<seconds | minutes | hours>"'),
