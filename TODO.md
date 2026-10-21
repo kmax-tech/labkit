@@ -108,7 +108,14 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   (Container ohne Host-Mounts, Proxy mit Abo-Token, nur `/v1/messages`),
   Runner `~/projects/labkit-probes-sandbox-44db3ac/run.py`: Gegenprobe
   ohne und mit Modell bestanden, count-1 normal durchgelaufen (Hooks der
-  Probe feuern erstmals). Offen: die übrigen fünf Proben der Reihe.
+  Probe feuern erstmals). Reihe abgeschlossen 2026-10-21
+  ([Bericht](docs/usability/2026-10-21-sandbox-probes-44db3ac.md)): alle
+  Zahlen gebunden, kein Pfad außerhalb, Kosten gemessen (3,63 USD).
+  Nächster Fehler: `labkit-audit` druckt READ-Zeilen, die der Record nicht
+  hält, und nennt die Nummern für `--decide` nirgends — fünf von sechs
+  Agenten entschieden ins Leere (10 Aufrufe). Zu entscheiden: gespeicherte
+  Befunde nummeriert ausgeben und READ als nicht zu entscheiden
+  kennzeichnen, oder READ als Befund speichern.
   Entschieden 2026-10-21: der allgemeine Sandbox-Code wird ein **eigenes
   Paket** `~/projects/agentsandbox` (eigenes Git-Repo, Python, Docker als
   ausdrücklich benötigte externe Laufzeit) — nicht nach labkit, damit die

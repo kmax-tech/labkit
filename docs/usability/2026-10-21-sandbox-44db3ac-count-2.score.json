@@ -1,0 +1,76 @@
+{
+ "probe": {
+  "staged": "2026-10-21T10:17:09",
+  "task": "count",
+  "area": "01-docs-per-case",
+  "metric_key": "mean_docs_per_case",
+  "labkit_installed": "labkit @ file:///Users/max/projects/labkit-probes-sandbox-44db3ac/src",
+  "scaffold_sha": "5f42385e6295",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "docs-per-case",
+   "--cost",
+   "seconds"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-21T08-17-56_3054",
+ "number": 3.5,
+ "expected": 3.5,
+ "number_ok": true,
+ "null_reported": null,
+ "bound_to": "PROTOCOL-docs-per-case.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 18,
+  "wall_seconds": 105,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 5,
+  "run": 11,
+  "edit": 2,
+  "unsure": 0,
+  "gate": 0,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 44,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 109,
+  "summary_codes": 1,
+  "answer_has_table": false
+ },
+ "transcript": {
+  "wall_seconds": 125,
+  "tool_seconds": 55,
+  "calls": 16,
+  "commands": {
+   "usability": 18
+  },
+  "refusals": 0,
+  "tokens": {
+   "calls": 22,
+   "input": 44,
+   "output": 6631,
+   "cache_read": 428007,
+   "cache_creation": 30984,
+   "context_max": 26567
+  },
+  "files_read": [
+   "TASK.md",
+   "data/raw/cases.jsonl",
+   "/out/probe.log.md"
+  ],
+  "source_reads": [],
+  "outside_paths": [
+   "/out/probe.log.md"
+  ]
+ },
+ "agent": null
+}

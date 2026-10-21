@@ -1,0 +1,44 @@
+{
+ "agent_usd": 0.19937999999999997,
+ "nested_usd": 0.188124,
+ "total_usd": 0.387504,
+ "sessions": {
+  "-work/c7eb0a0e-ad19-44cd-8953-14f451d142e3": {
+   "cost_usd": 0.19937999999999997,
+   "models": {
+    "claude-sonnet-5-5": {
+     "input_tokens": 32,
+     "cache_read_input_tokens": 325320,
+     "cache_creation_input_tokens": 21243,
+     "output_tokens": 4928
+    }
+   }
+  },
+  "-work--tmp/ede99e91-4cca-45b9-9643-e9662dd2fbcf": {
+   "cost_usd": 0.1881238,
+   "models": {
+    "claude-opus-5-5": {
+     "input_tokens": 2,
+     "cache_read_input_tokens": 1839,
+     "cache_creation_input_tokens": 15561,
+     "output_tokens": 3163
+    }
+   }
+  }
+ },
+ "proxy_tokens": {
+  "claude-sonnet-5-5": {
+   "input_tokens": 32,
+   "cache_read_input_tokens": 325320,
+   "cache_creation_input_tokens": 21243,
+   "output_tokens": 4928
+  },
+  "claude-opus-5-5": {
+   "input_tokens": 2,
+   "cache_read_input_tokens": 1839,
+   "cache_creation_input_tokens": 15561,
+   "output_tokens": 3163
+  }
+ },
+ "cross_check": "proxy = sessions, every model, every token count"
+}
