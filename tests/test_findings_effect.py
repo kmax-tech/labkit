@@ -116,3 +116,27 @@ class Decide(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LimitLinesInRecordOrder(unittest.TestCase):
+    """Each limit was inserted right below the Answer, so three of them read
+    #3, #2, #1 — all three final audits named it (2026-10-21)."""
+
+    def test_the_limit_lines_follow_the_record_order(self):
+        from labkit.tools import protocol_fill
+
+        text = "## Result\n\n- **Answer to the question:** a = 1 (run x)\n- **Raw output:** r\n"
+        limits = [(f"Limit (audit r #{n})", f"v{n}", "stands") for n in (1, 2, 3)]
+        out, written = protocol_fill.limit_lines(text, limits)
+        self.assertEqual(written, [label for label, _, _ in limits])
+        rows = [ln for ln in out.splitlines() if ln.startswith("- **")]
+        self.assertEqual(
+            rows,
+            [
+                "- **Answer to the question:** a = 1 (run x)",
+                "- **Limit (audit r #1):** v1",
+                "- **Limit (audit r #2):** v2",
+                "- **Limit (audit r #3):** v3",
+                "- **Raw output:** r",
+            ],
+        )

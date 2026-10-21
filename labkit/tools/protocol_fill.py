@@ -392,7 +392,14 @@ def limit_lines(
             )
             if answer is None:
                 raise ValueError(f"no Answer line to write {label!r} under")
-            lines.insert(answer.last, line)
+            # below the Answer and the Limit lines already under it: in
+            # record order (inserted right below the Answer, three limits
+            # read #3, #2, #1 — the final audits, 2026-10-21)
+            at = answer.last
+            for f in fields(text):
+                if f.line == at + 1 and f.label.startswith(findings.LIMIT_PREFIX):
+                    at = f.last
+            lines.insert(at, line)
         text = "\n".join(lines)
         written.append(label)
     return text, written

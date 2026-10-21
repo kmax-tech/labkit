@@ -214,9 +214,13 @@ class Record:
         ]
 
 
+#: how every Limit line's label opens
+LIMIT_PREFIX = "Limit (audit "
+
+
 def limit_label(record: Record, n: int) -> str:
     """The protocol label that carries finding N of RECORD as a limit."""
-    return f"Limit (audit {record.path.stem} #{n})"
+    return f"{LIMIT_PREFIX}{record.path.stem} #{n})"
 
 
 def limit_line(record: Record, n: int, finding: Finding) -> str:

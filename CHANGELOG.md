@@ -326,6 +326,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The Limit lines stand in record order.** `--from-run` inserted each
+  one right below the Answer, so three limits read #3, #2, #1; all three
+  audits of the finished judge protocols named it (2026-10-21). Each now
+  goes below the Limit lines already there.
+
 - **A data-profile marker padded with spaces is refused.** Two cold
   agents wrote `" so "` to keep the marker out of longer words. The
   whole-word match then needed a non-word character outside each space,
