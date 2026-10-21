@@ -108,9 +108,20 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   (Container ohne Host-Mounts, Proxy mit Abo-Token, nur `/v1/messages`),
   Runner `~/projects/labkit-probes-sandbox-44db3ac/run.py`: Gegenprobe
   ohne und mit Modell bestanden, count-1 normal durchgelaufen (Hooks der
-  Probe feuern erstmals). Offen: die übrigen fünf Proben der Reihe; dann
-  `usability run` — Heimat des Sandbox-Codes zu entscheiden (labkit-paper
-  `agentsandbox` importieren, oder nach labkit ziehen; nicht kopieren).
+  Probe feuern erstmals). Offen: die übrigen fünf Proben der Reihe.
+  Entschieden 2026-10-21: der allgemeine Sandbox-Code wird ein **eigenes
+  Paket** `~/projects/agentsandbox` (eigenes Git-Repo, Python, Docker als
+  ausdrücklich benötigte externe Laufzeit) — nicht nach labkit, damit die
+  Messinfrastruktur nicht vom gemessenen Werkzeug kommt. Ins Paket: ein
+  Versuch (Netze, Proxy, Container, Kopie hinein/heraus, Siegel, Manifest),
+  Proxy mit Platzhalter-Token, Agenten-Adapter mit korrigierter
+  Token-Zählung, Kosten je Sitzung mit Proxy-Gegenprüfung, Batch, die
+  Gegenproben als Selbsttest. Draußen: Benchmarks und ihre Bewertung,
+  labkit-spezifisches Stempeln, Token-Beschaffung (der Aufrufer übergibt
+  ihn), das Fach-Basis-Image. labkit importiert das Paket nicht; es stempelt
+  und bewertet, das Paket führt aus. Reihenfolge: erst die laufende Reihe
+  abschließen und daraus den Umfang ableiten, dann herauslösen, dann die
+  Nutzer (labkit-Proben, labkit-paper) je als eigenen Auftrag umstellen.
   Entschieden 2026-10-20: `runs.tsv` ist lokale Übersicht, git-ignoriert,
   `runlog reindex` stellt sie her (CHANGELOG, Changed).
   Notiert, nicht geplant: Run-Ids einer Sekunde unterscheiden sich nur im
