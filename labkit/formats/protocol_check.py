@@ -37,6 +37,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit import PACKAGE_DIR
 from labkit.formats import (
     promises,
     protocol_block,
@@ -141,6 +142,44 @@ _FIELD_OPEN = re.compile(
     _BULLET + r"\*\*(?P<label>[^*]+?)(?::\*\*|\*\*\s*:)(?P<value>.*)$"
 )
 HTML_COMMENT = re.compile(r"<!--.*?-->")
+
+#: the one protocol template labkit stamps (`labkit-init exp`); the readers
+#: that compare a protocol with it, or recognise its placeholders, start here
+PROTOCOL_TEMPLATE = PACKAGE_DIR / "templates" / "experiment-protocol.md.template"
+
+
+@functools.lru_cache(maxsize=1)
+def stamp_placeholders() -> frozenset[str]:
+    """Every `<…>` phrase of two or more words the protocol template writes
+    in its prose, whitespace collapsed: the exact placeholders a stamp
+    leaves, no heuristic. Read outside code fences and HTML comments (the
+    TOML head's sentences are `promises.placeholder_sentences`, the Prompt
+    block is `prompt_check`'s); a one-word `<…>` (`<alias>`, `<name>`) is
+    left out, since it also occurs in quoted commands as content
+    (`PROTOCOL-<name>.md`). A `<…>` nested in another yields both phrases."""
+    lines = PROTOCOL_TEMPLATE.read_text(encoding="utf-8").splitlines()
+    fenced = protocol_block.fenced_lines(lines)
+    prose = HTML_COMMENT.sub(
+        "", "\n".join(ln for i, ln in enumerate(lines) if i not in fenced)
+    )
+    out: set[str] = set()
+    open_at: list[int] = []
+    for i, ch in enumerate(prose):
+        if ch == "<":
+            open_at.append(i)
+        elif ch == ">" and open_at:
+            phrase = " ".join(prose[open_at.pop() : i + 1].split())
+            if " " in phrase:
+                out.add(phrase)
+    return frozenset(out)
+
+
+def holds_stamp_placeholder(value: str) -> bool:
+    """Does VALUE, whitespace collapsed, still hold one of `stamp_placeholders`?"""
+    flat = " ".join(value.split())
+    return any(phrase in flat for phrase in stamp_placeholders())
+
+
 #: A list item that is nothing but stamped placeholders — `- <…>`,
 #: `- <run_id> — <one sentence: …>`: no label, so no field sees it.
 #: A field that points at another area by name only — "wie Bereich 07",
@@ -178,10 +217,15 @@ class FieldLine:
     @property
     def placeholder(self) -> bool:
         """Not yet filled: the template's `<…>`, an `n/a — <why>` left as
-        stamped, `TODO`, or a bare label with nothing below it (a code block,
-        sub-bullets or an indented paragraph count as its value). A value that merely starts with `<` (`<10% unparsed`) is
-        content (review 2026-10-07: it read as a placeholder, while `TODO`
-        read as filled and let a freeze through)."""
+        stamped, `TODO`, a bare label with nothing below it (a code block,
+        sub-bullets or an indented paragraph count as its value), or a value
+        that still holds one of the stamp's own phrases
+        (`holds_stamp_placeholder`): text written before or after a left
+        placeholder read as filled (the Model / tool arm lines, 2026-10-21).
+        A value that merely starts with `<` (`<10% unparsed`) is content
+        (review 2026-10-07: it read as a placeholder, while `TODO` read as
+        filled and let a freeze through); a placeholder the author coins
+        (`<fill later>`) inside their own prose is not recognised."""
         v = self.value
         if not v:
             return not self.block
@@ -189,6 +233,7 @@ class FieldLine:
             v.startswith("TODO")
             or "<why>" in v
             or (v.startswith("<") and v.endswith(">"))
+            or holds_stamp_placeholder(v)
         )
 
 

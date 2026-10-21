@@ -43,8 +43,9 @@ path to this file.
    in the head — that is, the moment you want to report the number; those
    in Summary and Result once the run is written back as well. Until then,
    leave the `<…>` placeholder rather than padding them. `TODO`, an empty
-   label and a bare `n/a — <why>` count as unfilled; `n/a — <the reason>`
-   counts as filled.
+   label, a bare `n/a — <why>` and a value that still holds one of the
+   stamp's `<…>` phrases (text written before or after it included) count
+   as unfilled; `n/a — <the reason>` counts as filled.
 8. **Write for the reader who opens only this file.** A protocol is read
    by a person, months later, without the session that wrote it
    (2026-10-07: a frozen, audited protocol was sound and still read "far too

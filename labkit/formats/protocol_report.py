@@ -35,6 +35,7 @@ from labkit.formats.protocol_history import (
 )
 from labkit.formats.protocol_check import (
     BARE_REFERENCE,
+    PROTOCOL_TEMPLATE,
     FIELDS,
     FieldLine,
     RUNS_PLACEHOLDER,
@@ -204,7 +205,7 @@ def find_template(explicit: str | None) -> Path | None:
     """The protocol template to check against: the one named, else the packaged one."""
     if explicit:
         return Path(explicit)
-    here = PACKAGE_DIR / "templates" / "experiment-protocol.md.template"
+    here = PROTOCOL_TEMPLATE
     return here if here.exists() else None
 
 

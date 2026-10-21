@@ -326,6 +326,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A field that still holds the stamp's phrase is a placeholder, whatever
+  stands around it.** `protocol-check`, `protocol-fill --list` and the
+  gates read a value as unfilled when it holds one of the template's own
+  `<…>` phrases (two words or more, whitespace collapsed:
+  `protocol_check.stamp_placeholders`), not only when the whole value is
+  `<…>`. An alias written before the Model / tool arm lines left the
+  stamp's `<two arms (profiles) compared? …>` in the field, and it read as
+  filled (sandbox, 2026-10-21). A one-word `<alias>` and a placeholder an
+  author coins in their own prose stay unrecognised; `<10% unparsed` stays
+  content. The template's path has one home, `protocol_check.PROTOCOL_TEMPLATE`.
+
 - **The Limit lines stand in record order.** `--from-run` inserted each
   one right below the Answer, so three limits read #3, #2, #1; all three
   audits of the finished judge protocols named it (2026-10-21). Each now

@@ -435,6 +435,59 @@ class TestPlaceholders(unittest.TestCase):
         self.assertIn("MISSING (must): Model I/O", out)
 
 
+class TestStampPlaceholders(unittest.TestCase):
+    """The stamp's own `<…>` phrases are recognised exactly, wherever they
+    stand in a value: an agent wrote the alias before the Model / tool arm
+    lines and left them, and the field read as filled (sandbox, 2026-10-21).
+    A placeholder the author coins inside their own prose is not a stamp's
+    and stays unrecognised — that limit is deliberate."""
+
+    def test_the_template_yields_phrases_and_no_single_word(self):
+        phrases = protocol_check.stamp_placeholders()
+        self.assertGreaterEqual(len(phrases), 40)
+        self.assertEqual([p for p in phrases if " " not in p], [])
+        self.assertIn("<hard budget, e.g. 4h — then log and ask>", phrases)
+        # the TOML head's sentences and the Prompt block's are other readers'
+        self.assertNotIn("<the criterion in one sentence>", " ".join(phrases))
+
+    def test_text_before_or_after_a_left_phrase_is_still_a_placeholder(self):
+        before = "- **Timebox:** 2h <hard budget, e.g. 4h — then log and ask>\n"
+        after = "- **Timebox:** <hard budget, e.g. 4h — then log and ask> 2h\n"
+        for text in (before, after):
+            self.assertEqual(
+                [lb for _, lb in protocol_check.placeholder_fields(text)], ["Timebox"]
+            )
+
+    def test_the_arm_lines_left_under_an_alias_are_a_placeholder(self):
+        text = (
+            "- **Model / tool:** qwen\n"
+            "  <two arms (profiles) compared? one line each, held by finalize against the run:\n"
+            "  Arm `before`: register/profiles/<x>.toml @ <fingerprint>, model=<alias>\n"
+            "  Arm `after`: register/profiles/<y>.toml @ <fingerprint>, model=<alias> — and\n"
+            "  the diff between the two profiles verbatim under Prompt>\n"
+        )
+        self.assertEqual(
+            [lb for _, lb in protocol_check.placeholder_fields(text)], ["Model / tool"]
+        )
+
+    def test_a_wrapped_phrase_matches_whitespace_collapsed(self):
+        text = (
+            "- **Why this design †:** <choice of model,\n"
+            "    dataset, method — one\n"
+            "    sentence>\n"
+        )
+        self.assertTrue(protocol_check.fields(text)[0].placeholder)
+
+    def test_content_with_angle_brackets_and_own_placeholders_stays_content(self):
+        filled = (
+            "- **Limits:** <10% unparsed; one draw\n"
+            "- **Timebox:** 2h, then log and ask\n"
+            "- **Did †:** ran `protocol-fill PROTOCOL-<name>.md --list` once\n"
+            "- **Next step:** one draw; <what was not tested>\n"
+        )
+        self.assertEqual(protocol_check.placeholder_fields(filled), [])
+
+
 class TestTemplateLines(unittest.TestCase):
     def test_verbatim_template_line_is_recognised(self):
         if not TEMPLATE.exists():

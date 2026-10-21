@@ -39,7 +39,7 @@ from labkit.formats import console
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
-from labkit.formats import protocol_block, standard_contract
+from labkit.formats import protocol_block, protocol_check, standard_contract
 from labkit.formats.repo import (
     adopt_command,
     AREA_NAME,
@@ -63,7 +63,7 @@ from labkit.tools.protocol_cuts import (
 )
 
 TEMPLATES = PACKAGE_DIR / "templates"
-PROTOCOL_TEMPLATE = TEMPLATES / "experiment-protocol.md.template"
+PROTOCOL_TEMPLATE = protocol_check.PROTOCOL_TEMPLATE  # one home for the path
 #: where every lab installs labkit from — a lab has no checkout of the package
 LABKIT_REMOTE = "https://github.com/kmax-tech/labkit.git"
 
