@@ -326,6 +326,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`protocol-fill` lists and sets the head's `cost` as it does `type`.**
+  `labkit-init exp` without `--cost` leaves `cost = "<seconds | minutes |
+  hours>"` in the TOML head; `--list` named only `type` among the head's
+  fields, and the hook's "MISSING (must): [protocol] cost" sent the agent
+  into the head by hand. `protocol-fill <PROTOCOL> cost=seconds` sets it,
+  held to the three tiers; `--list` names both open choices first.
+  `head_type_open`/`fill_head_type` are `head_open(text, key)` and
+  `fill_head(text, key, value)`.
+
 - **A dataset header still reading the stamp's `TODO` is refused.**
   `batch.write_dataset` raises ValueError naming `about` or the legend
   value (`fields['gold']`) that still starts with `TODO`, and writes

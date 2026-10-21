@@ -11,6 +11,7 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md "Meaning of the gold label" "positive = ..."
     protocol-fill PROTOCOL-x.md --line 27 Question "does Y move X?"
     protocol-fill PROTOCOL-x.md "C1 sentence=<the promise>"   a [[promise]]'s sentence, as a TOML string
+    protocol-fill PROTOCOL-x.md type=exploratory cost=seconds   the TOML head's stamped choices
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
     protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: the Answer,
                                                Result, Answering run and Runs lines from its
@@ -116,43 +117,59 @@ def fill(
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 
 
-HEAD_TYPE = re.compile(r'^(type\s*=\s*)"<[^"\n]*>"\s*$')
-HEAD_TYPE_LABEL = "type"
+#: the head's stamped choices `protocol-fill` sets: key → its allowed values
+HEAD_CHOICES: dict[str, tuple[str, ...]] = {
+    "type": protocol_block.TYPES,
+    "cost": protocol_block.COST_TIERS,
+}
 
 
-def head_type_open(text: str) -> int | None:
-    """Line number of the TOML head's `type = "<…>"` placeholder, or None once set.
+def _head_line(key: str) -> re.Pattern[str]:
+    """The head's `KEY = "<…>"` placeholder line, its key and `=` kept."""
+    return re.compile(rf'^({re.escape(key)}\s*=\s*)"<[^"\n]*>"\s*$')
 
-    The stamp leaves `type` as a placeholder in the head; `--list` named only
-    the prose fields, so an agent filled those, hit the hook's "MISSING (must):
+
+def head_open(text: str, key: str) -> int | None:
+    """Line number of the TOML head's `KEY = "<…>"` placeholder, KEY one of
+    `HEAD_CHOICES`, or None once set; ValueError on another key.
+
+    The stamp leaves `type` — and `cost`, when `labkit-init exp` got no
+    `--cost` — as a placeholder in the head; `--list` named only the prose
+    fields, so an agent filled those, hit the hook's "MISSING (must):
     [protocol] type" and edited the head by hand (cloud probe, Haiku 5.5,
     2026-10-13). Read inside the TOML block only (`protocol_block.toml_block_span`):
     a `type = "<…>"` line in a fenced example was taken for the head
     (audit 2026-10-15)."""
+    if key not in HEAD_CHOICES:
+        raise ValueError(
+            f"the head's {key!r} is not a choice protocol-fill sets "
+            f"({', '.join(HEAD_CHOICES)})"
+        )
     lines = text.splitlines()
     span = protocol_block.toml_block_span(text)
     if span is None:
         return None
     start, end = span
+    pattern = _head_line(key)
     for i in range(start, end):
-        if HEAD_TYPE.match(lines[i]):
+        if pattern.match(lines[i]):
             return i + 1
     return None
 
 
-def fill_head_type(text: str, value: str) -> str:
-    """Set the head's `type` from its placeholder; one of `protocol_block.TYPES`."""
-    if value not in protocol_block.TYPES:
+def fill_head(text: str, key: str, value: str) -> str:
+    """Set the head's KEY from its placeholder; VALUE one of `HEAD_CHOICES[key]`."""
+    n = head_open(text, key)
+    if value not in HEAD_CHOICES[key]:
         raise ValueError(
-            f"type must be one of {' | '.join(protocol_block.TYPES)}, not {value!r}"
+            f"{key} must be one of {' | '.join(HEAD_CHOICES[key])}, not {value!r}"
         )
-    n = head_type_open(text)
     if n is None:
         raise ValueError(
-            "the head's type is already set (edit the TOML head to change it)"
+            f"the head's {key} is already set (edit the TOML head to change it)"
         )
     lines = text.split("\n")
-    lines[n - 1] = HEAD_TYPE.sub(lambda m: f'{m.group(1)}"{value}"', lines[n - 1])
+    lines[n - 1] = _head_line(key).sub(lambda m: f'{m.group(1)}"{value}"', lines[n - 1])
     return "\n".join(lines)
 
 
@@ -536,8 +553,8 @@ def _name_yours(text: str, area: Path, run: Path) -> None:
 
 
 def _list_open(text: str) -> int:
-    """`--list`: every open field, the TOML head's `type` and open promise
-    sentences first; then, each under its own line, the fields `--from-run`
+    """`--list`: every open field, the TOML head's `type` and `cost` and open
+    promise sentences first; then, each under its own line, the fields `--from-run`
     writes and the after-run fields the author writes. Listed among the rest
     they read as owed before the run: cold agents filled them with "pending
     run" or "filled after the run", and the write after the run was then
@@ -546,12 +563,11 @@ def _list_open(text: str) -> int:
         (n, f"{label}  (TOML head: this promise in one sentence)")
         for n, label in open_sentences(text)
     ]
-    head_line = head_type_open(text)
-    head: list[tuple[int | None, str]] = (
-        [(head_line, f"{HEAD_TYPE_LABEL}  (TOML head: exploratory | confirmatory)")]
-        if head_line is not None
-        else []
-    )
+    head: list[tuple[int | None, str]] = [
+        (n, f"{key}  (TOML head: {' | '.join(choices)})")
+        for key, choices in HEAD_CHOICES.items()
+        if (n := head_open(text, key)) is not None
+    ]
     holes = head + sentences + list(placeholder_fields(text))
     if not holes:
         print("no placeholder fields left")
@@ -599,17 +615,17 @@ def fill_many(
     line_no: int | None = None,
     force: bool = False,
 ) -> str:
-    """`fill` applied in order — `fill_head_type` for the head's `type`,
-    `fill_sentence` for `<id> sentence`; the first ValueError leaves the
-    caller's file untouched — all or nothing."""
+    """`fill` applied in order — `fill_head` for the head's `type` and
+    `cost`, `fill_sentence` for `<id> sentence`; the first ValueError
+    leaves the caller's file untouched — all or nothing."""
     for label, value in assignments:
         if not label.strip() or not value.strip():
             raise ValueError(f"empty label or value in {label}={value!r}")
         sentence = SENTENCE_LABEL.match(label)
         if sentence and not promises.is_block_id(sentence.group(1).upper()):
             sentence = None  # a prose label such as "Key sentence"
-        if label.strip().lower() == HEAD_TYPE_LABEL:
-            text = fill_head_type(text, value)
+        if label.strip().lower() in HEAD_CHOICES:
+            text = fill_head(text, label.strip().lower(), value)
         elif sentence:
             if line_no is not None:
                 raise ValueError(

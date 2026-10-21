@@ -129,7 +129,7 @@ class HeadType(unittest.TestCase):
     )
 
     def test_list_names_the_head_type_first_and_fill_sets_it(self):
-        self.assertEqual(protocol_fill.head_type_open(self.HEAD), 7)
+        self.assertEqual(protocol_fill.head_open(self.HEAD, "type"), 7)
         out = io.StringIO()
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp) / "PROTOCOL-x.md"
@@ -140,7 +140,7 @@ class HeadType(unittest.TestCase):
             text = p.read_text(encoding="utf-8")
         self.assertEqual(out.getvalue().splitlines()[0].split()[:2], ["7", "type"])
         self.assertIn('type = "exploratory"', text)
-        self.assertIsNone(protocol_fill.head_type_open(text))
+        self.assertIsNone(protocol_fill.head_open(text, "type"))
         # the head reads: the hook's "MISSING (must): [protocol] type" is gone
         self.assertEqual(protocol_block.head(text).type, "exploratory")
 
@@ -177,23 +177,50 @@ class HeadType(unittest.TestCase):
         text = example + self.HEAD.replace(
             '"<exploratory | confirmatory>"', '"exploratory"'
         )
-        self.assertIsNone(protocol_fill.head_type_open(text))
+        self.assertIsNone(protocol_fill.head_open(text, "type"))
         text = example + self.HEAD
-        line = protocol_fill.head_type_open(text)
+        line = protocol_fill.head_open(text, "type")
         assert line is not None
         self.assertEqual(
             text.splitlines()[line - 1].strip(), 'type = "<exploratory | confirmatory>"'
         )
-        filled = protocol_fill.fill_head_type(text, "confirmatory")
+        filled = protocol_fill.fill_head(text, "type", "confirmatory")
         self.assertIn('type = "<yes | no>"', filled)  # the example is untouched
         self.assertIn('type = "confirmatory"', filled)
 
+    def test_the_head_cost_left_by_the_stamp_is_listed_and_set(self):
+        """`labkit-init exp` without --cost leaves `cost = "<…>"`; --list named
+        only type, and the agent edited the head by hand (2026-10-21)."""
+        text = self.HEAD.replace(
+            'cost = "seconds"', 'cost = "<seconds | minutes | hours>"'
+        )
+        self.assertEqual(protocol_fill.head_open(text, "cost"), 8)
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "PROTOCOL-x.md"
+            p.write_text(text, encoding="utf-8")
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(protocol_fill.main([str(p), "--list"]), 0)
+                rc = protocol_fill.main([str(p), "type=exploratory", "cost=minutes"])
+            self.assertEqual(rc, 0)
+            filled = p.read_text(encoding="utf-8")
+        listed = [ln.split()[:2] for ln in out.getvalue().splitlines()[:2]]
+        self.assertEqual(listed, [["7", "type"], ["8", "cost"]])
+        self.assertIn("seconds | minutes | hours", out.getvalue())
+        self.assertEqual(protocol_block.head(filled).cost, "minutes")
+        self.assertIsNone(protocol_fill.head_open(filled, "cost"))
+        with self.assertRaisesRegex(ValueError, "cost must be one of seconds"):
+            protocol_fill.fill_head(text, "cost", "days")
+        with self.assertRaisesRegex(ValueError, "not a choice protocol-fill sets"):
+            protocol_fill.head_open(text, "frozen")
+
     def test_a_wrong_type_and_a_set_type_are_refused(self):
         with self.assertRaises(ValueError):
-            protocol_fill.fill_head_type(self.HEAD, "descriptive")
+            protocol_fill.fill_head(self.HEAD, "type", "descriptive")
         with self.assertRaises(ValueError):
-            protocol_fill.fill_head_type(
+            protocol_fill.fill_head(
                 self.HEAD.replace('"<exploratory | confirmatory>"', '"exploratory"'),
+                "type",
                 "confirmatory",
             )
 
