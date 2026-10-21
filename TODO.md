@@ -329,3 +329,13 @@ bleiben mit damaligem Commit und Pin reproduzierbar.
   und durch die Zulassungsbedingung begrenzt. Fachlicher Confound-Audit
   bleibt experimentabhängig. Wünsche nach generischen Rückfällen sind
   keine offenen Reparaturen.
+- `--effect stands` als Reflex: In der Reihe auf `ef6c3b1` gaben alle
+  drei Agenten jedem akzeptierten Befund `stands`, auch dem „ein Zug,
+  Streuung ungemessen". Trägt der Effekt noch Information, wenn nie etwas
+  anderes gewählt wird? In der nächsten Judge-Reihe zählen, wie oft `not
+  assessable` vorkommt; Konsequenz erst bei Befund (2026-10-21).
+- Platzhalter-Erkennung (`c1dd888`): exakt sind nur die Phrasen des
+  Stempels; ein vom Autor geprägtes `<…>` mitten im eigenen Satz bleibt
+  unerkannt — absichtlich, weil Inhalt und Platzhalter dort nicht
+  mechanisch zu trennen sind. Beobachten, ob kalte Agenten solche eigenen
+  Platzhalter hinterlassen (2026-10-21).
