@@ -47,7 +47,9 @@ import argparse
 import re
 from pathlib import Path
 
-from labkit.formats import console, files, promises, protocol_block, runs
+from labkit.formats import console, files, findings, promises, protocol_block, runs
+from labkit.gates.audit import AuditError
+from labkit.gates.report_check import ANSWER_LABEL
 from labkit.formats.repo import shown
 from labkit.checks import recheck
 from labkit.gates import report_check
@@ -312,7 +314,12 @@ def from_run(
     filled Answer or Result is refused without `force` (fill's rule)."""
     run = recheck.chosen_run(area, text, run_id)
     metrics = runs.read_metrics(run / "metrics.json")
-    answer = answer_line(metrics, run.name)
+    limits = accepted_limits(area, text, run)
+    answer = answer_line(metrics, run.name) + "".join(
+        f"; {pid} not assessable with this run ({label})"
+        for label, _, effect in limits
+        for pid in findings.effect_ids(effect)
+    )
     filled: list[str] = []
     for label in WRITTEN_BY_RUN:
         try:
@@ -336,7 +343,60 @@ def from_run(
     )
     if changed:
         filled.append("Runs")
+    text, written = limit_lines(text, limits, force)
+    filled += written
     return text, filled, run.name
+
+
+def accepted_limits(area: Path, text: str, run: Path) -> list[tuple[str, str, str]]:
+    """(label, value, effect) of every decided accepted BLOCKER in the
+    analysis records covering RUN (`report_check.covering_analysis`). An
+    area the gate cannot hold to that run gives none here: report-check,
+    which runs on the written result, names why."""
+    try:
+        records = report_check.covering_analysis(area, text, run)
+    except (AuditError, FileNotFoundError, ValueError):
+        return []
+    return [
+        (findings.limit_label(r, n), findings.limit_line(r, n, f), f.effect)
+        for r in records
+        for n, f in r.accepted_blockers()
+        if f.effect
+    ]
+
+
+def limit_lines(
+    text: str, limits: list[tuple[str, str, str]], force: bool = False
+) -> tuple[str, list[str]]:
+    """Each LIMITS entry as its `- **<label>:** <value>` line, below the
+    Answer: added when missing, left when it says that already, replaced
+    only with FORCE. (text, labels written). Raises ValueError on a
+    differing line without FORCE, or with no Answer line to stand under."""
+    written: list[str] = []
+    for label, value, _ in limits:
+        lines = text.split("\n")
+        by_label = {f.label.replace("†", "").strip(): f for f in fields(text)}
+        line = f"- **{label}:** {value}"
+        have = by_label.get(label)
+        if have is not None:
+            if have.value == value:
+                continue
+            if not force:
+                raise ValueError(
+                    f"line {have.line} ({label!r}) says {have.value[:80]!r}, the "
+                    f"record says otherwise — --force to write the record's"
+                )
+            lines[have.line - 1 : have.last] = [line]
+        else:
+            answer = next(
+                (f for f in fields(text) if f.name == field_name(ANSWER_LABEL)), None
+            )
+            if answer is None:
+                raise ValueError(f"no Answer line to write {label!r} under")
+            lines.insert(answer.last, line)
+        text = "\n".join(lines)
+        written.append(label)
+    return text, written
 
 
 def fill_prompts(text: str, constants: dict[str, str]) -> str:

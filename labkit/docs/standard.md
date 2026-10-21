@@ -285,7 +285,13 @@ evidence file under the same ID (top of this document).*
   standard twice per audit.
 
   Every finding is decided (fixed / accepted with reason /
-  dismissed), the raw report stays in the scratchpad (LAB-012 Protocol is content), and the result
+  dismissed); an accepted BLOCKER also says its effect on the verdicts —
+  they stand, read within it, or the run leaves the named promises not
+  assessable (a number may be reported within a fault; a verdict needs an
+  instrument fit to judge it) — and the reported protocol carries it as a
+  `Limit (audit <record> #N)` line that report-check holds to the record;
+  whether the limit is enough stays a reader's judgement. The raw report
+  stays in the scratchpad (LAB-012 Protocol is content), and the result
   goes in ONE line in the head; the check value in it is the stamp
   (LAB-019 The stamp covers everything that determines the number):
 

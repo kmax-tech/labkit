@@ -85,7 +85,7 @@ from labkit.formats import console, findings, promises, protocol_block
 from labkit.gates.audit import AuditError, audited_run, run_shown
 from labkit.gates.finalize import cited_runs, finalize_area
 from labkit.gates.preflight import area_test_python
-from labkit.formats.protocol_check import check_fields
+from labkit.formats.protocol_check import check_fields, field_name, fields
 from labkit.formats.repo import (
     area_path,
     area_protocols,
@@ -248,6 +248,70 @@ def analysis_audit_gap(ctx: Checked) -> str | None:
         return f"the analysis audit cannot be held to the area: {exc}"
 
 
+def covering_analysis(area: Path, text: str, run: Path) -> list[findings.Record]:
+    """The analysis records that saw AREA's code, the promises of TEXT and
+    RUN (its rows and metrics as shown) as they are now — the ones
+    `analysis_audit_gap` holds the report to. Raises what that gate names:
+    AuditError, FileNotFoundError, ValueError."""
+    records = [r for r in findings.area_records(area) if r.mode == ANALYSIS_AUDIT]
+    return findings.covering_records(
+        records,
+        area_stamp(area)[0],
+        promises.block_stamp(text),
+        run.name,
+        run_shown(area, run, "").sha,
+    )
+
+
+ANSWER_LABEL = "Answer to the question"
+
+
+def limit_gaps(ctx: Checked) -> list[str]:
+    """Station 3, the limits: every accepted BLOCKER of the covering analysis
+    audit has its effect decided and stands in the protocol as its `Limit
+    (audit <record> #N)` line, opening with that effect; a promise it leaves
+    not assessable is said so in the Answer. Exact in what it holds — the
+    record and the protocol agree, by label — and silent on whether the
+    limit is enough: that is the audit's question. Empty when no covering
+    record exists (`analysis_audit_gap` names that)."""
+    if ctx.run is None:
+        return []
+    try:
+        records = covering_analysis(ctx.area, ctx.text, ctx.run)
+    except (AuditError, FileNotFoundError, ValueError):
+        return []
+    lines = {f.label.replace("†", "").strip(): f for f in fields(ctx.text)}
+    answer = next(
+        (f.value for f in fields(ctx.text) if f.name == field_name(ANSWER_LABEL)), ""
+    )
+    gaps: list[str] = []
+    for r in records:
+        for n, f in r.accepted_blockers():
+            label = findings.limit_label(r, n)
+            if not f.effect:
+                gaps.append(
+                    f"{label}: an accepted BLOCKER owes its effect on the verdicts — "
+                    f'`labkit-audit <area> --decide {n} accepted "REASON" --effect '
+                    f'stands|"<ID> not assessable" --record {r.path.name}`'
+                )
+                continue
+            opening = findings.effect_sentence(f.effect)
+            got = lines.get(label)
+            if got is None or not got.value.startswith(opening):
+                gaps.append(
+                    f'no "{label}" line opening "{opening}" — the accepted BLOCKER\'s '
+                    f"limit belongs in the protocol; `protocol-fill <PROTOCOL> "
+                    f"--from-run` writes it from the record"
+                )
+            for pid in findings.effect_ids(f.effect):
+                if f"{pid} not assessable with this run" not in answer:
+                    gaps.append(
+                        f'the Answer does not say "{pid} not assessable with this '
+                        f'run" — {label} decided so'
+                    )
+    return gaps
+
+
 def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[str]:
     """Station 2, the run: why the answering run's number cannot be reported
     (`runs.unreportable`), each a blocker. Without an answering run there is
@@ -294,6 +358,7 @@ def later_gaps(ctx: Checked, ln: Lane) -> list[str]:
         gap = analysis_audit_gap(ctx)
         if gap:
             out.append(f"analysis audit: {gap} ({ln.analysis_rule})")
+        out += [f"analysis audit: {g}" for g in limit_gaps(ctx)]
     failed = check_analysis_script(ctx.area, ctx.repo)
     if failed:
         out.append(f"{failed} (LAB-041 Generate numbers, don't retype them)")

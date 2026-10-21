@@ -161,6 +161,13 @@ class Lab:
             rc = protocol_fill.main([str(protocol), "--from-run", run_id])
         return rc, out.getvalue()
 
+    def adopt_forced(self, protocol: Path, run_id: str) -> tuple[int, str]:
+        """`protocol-fill PROTOCOL --from-run RUN_ID --force`."""
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = protocol_fill.main([str(protocol), "--from-run", run_id, "--force"])
+        return rc, out.getvalue()
+
     def stop_hook(self) -> tuple[int, str]:
         """`claude-hook stop` over everything git sees as changed."""
         err = io.StringIO()
@@ -374,6 +381,8 @@ class Judge(unittest.TestCase):
     """The prompt skeleton at seconds, the model faked: twelve texts, a
     registered question the text answers, a placebo for the null lane."""
 
+    run_id: str  # the kept run of test_02
+
     GOLD = {
         "causal": "Rain causes the street to be wet.",
         "not_causal": "The street is wet.",
@@ -505,6 +514,7 @@ class Judge(unittest.TestCase):
         ):
             _load(self.measure, "e2e_judge_measure").main()
         run_id = lab.run_id_of(out.getvalue())
+        type(self).run_id = run_id  # test_04 reads the same kept run
         self.assertIn("c1_pass       True", out.getvalue())
         rc, out_text = lab.finalize(self.area)
         self.assertEqual(rc, 0, out_text)
@@ -535,6 +545,94 @@ class Judge(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
         self.assertIn("--probe is not available at cost='seconds'", result.stderr)
+
+    def _blocker(self) -> Path:
+        """A second analysis record of the kept run, holding one BLOCKER."""
+        return findings.write(
+            self.area,
+            sc.ANALYSIS_AUDIT,
+            "test",
+            scope_sha.area_stamp(self.area)[0],
+            promises.block_stamp(self.protocol.read_text(encoding="utf-8")),
+            (1, 0, 0),
+            [("BLOCKER", "BLOCKER · scripts/01_measure.py:1 · the prompt asks more than the gold scores")],
+            run_id=self.run_id,
+            shown_sha=audit.run_shown(self.area, self.area / "runs" / self.run_id, "").sha,
+        )  # fmt: skip
+
+    def _decide(self, record: Path, *argv: str) -> tuple[int, str]:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            rc = audit.main(
+                [str(self.area), "--decide", "1", *argv, "--record", str(record)]
+            )
+        return rc, out.getvalue()
+
+    def _report_check(self) -> tuple[int, str]:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            rc = report_check.main([str(self.area)])
+        return rc, out.getvalue()
+
+    def test_04_an_accepted_blocker_reaches_the_protocol_as_its_limit(self):
+        """Review 2026-10-21 (judge-2): an accepted BLOCKER may carry a
+        number read within it, but an instrument unfit for C1 leaves C1
+        unjudged — the decision says which, the protocol carries it as a
+        Limit line, report-check holds the two together."""
+        lab = type(self).lab
+        record = self._blocker()
+        label = f"Limit (audit {record.stem} #1)"
+        reason = "real: the prompt says states or implies, the gold codes juxtaposition not causal"
+        rc, out = self._decide(record, "accepted", reason)
+        self.assertEqual(rc, 2, out)  # the effect is owed
+        self.assertIn("owes its effect", out)
+        rc, out = self._decide(
+            record, "accepted", reason, "--effect", "C9 not assessable"
+        )
+        self.assertEqual(rc, 2, out)  # an id the protocol does not register
+        self.assertIn("C9", out)
+        rc, out = self._decide(
+            record, "accepted", reason, "--effect", "C1 not assessable"
+        )
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(findings.read(record).findings[0].effect, "C1 not assessable")
+        rc, out = self._report_check()
+        self.assertEqual(rc, 1, out)  # the record says so, the protocol not yet
+        self.assertIn(label, out)
+        rc, out = lab.adopt_forced(self.protocol, self.run_id)
+        self.assertEqual(rc, 0, out)
+        text = self.protocol.read_text(encoding="utf-8")
+        self.assertIn(
+            f"- **{label}:** C1 not assessable with this run — {reason}", text
+        )
+        self.assertIn(f"C1 not assessable with this run ({label})", text)  # the Answer
+        self.assertIn("c1_pass = True", text)  # the number stays reported
+        rc, out = self._report_check()
+        self.assertEqual(rc, 0, out)
+        # a limit line taken out by hand is missed
+        self.protocol.write_text(
+            "\n".join(ln for ln in text.split("\n") if not ln.startswith(f"- **{label}"))
+            , encoding="utf-8",
+        )  # fmt: skip
+        rc, out = self._report_check()
+        self.assertEqual(rc, 1, out)
+        self.assertIn(label, out)
+        # the twin: the verdicts stand, the limit named beside them
+        rc, out = self._decide(record, "accepted", reason, "--effect", "stands")
+        self.assertEqual(rc, 0, out)
+        rc, out = lab.adopt_forced(self.protocol, self.run_id)
+        self.assertEqual(rc, 0, out)
+        text = self.protocol.read_text(encoding="utf-8")
+        self.assertIn(
+            f"- **{label}:** the verdicts stand, read within this limit — ", text
+        )
+        self.assertNotIn("not assessable with this run", text)
+        rc, out = self._report_check()
+        self.assertEqual(rc, 0, out)
+        # fixed after all: no effect owed, and the line is the record's no longer
+        rc, out = self._decide(record, "fixed", "")
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("effect", record.read_text(encoding="utf-8"))
 
 
 class Estimator(unittest.TestCase):

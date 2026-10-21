@@ -9,6 +9,24 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **An accepted BLOCKER owes its effect on the verdicts, and the reported
+  protocol carries it.** `labkit-audit AREA --decide N accepted REASON`
+  on a BLOCKER now needs `--effect stands` (the verdicts hold, read
+  within it) or `--effect "C1 not assessable"` (the run does not judge
+  C1); the record stores it as `effect`, and its ids are held to the
+  protocol's promises. `protocol-fill --from-run` writes each accepted
+  BLOCKER below the Answer as `Limit (audit <record> #N): <effect> —
+  <reason>`, and says "C1 not assessable with this run" in the Answer
+  for each such id; the number stays reported. report-check refuses a
+  report whose covering analysis record holds an accepted BLOCKER
+  without an effect, without its Limit line, or not-assessable ids the
+  Answer does not name. Before, a judge probe accepted a BLOCKER — its
+  prompt asked more than the gold scores — and "C1 not met" passed with
+  the limit only in the record (sandbox, 2026-10-21). Whether a limit
+  is enough stays the reader's judgement. A reported protocol resting
+  on a BLOCKER accepted under 0.99.0 is decided again with `--effect`
+  and adopted again with `--from-run --force`.
+
 - **`runlog.active()` returns `ActiveRun` objects, not dicts.** Each open
   run is `run_id`, `dir`, `state`, `alive`, `config` (its `RunConfig`, None
   for an unreadable record) and `error`; the record is no longer merged

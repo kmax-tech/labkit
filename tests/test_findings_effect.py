@@ -1,0 +1,87 @@
+"""An accepted BLOCKER's effect on the verdicts, as the record holds it.
+
+`stands` keeps the verdicts with the limit named; `C1 not assessable`
+says the run does not judge C1. Only an accepted BLOCKER carries one, and
+`--decide` refuses an accepted BLOCKER without it (review 2026-10-21).
+"""
+
+import tempfile
+import unittest
+from pathlib import Path
+
+from labkit.formats import findings
+
+
+def record(area: Path) -> Path:
+    return findings.write(
+        area,
+        "analysis",
+        "test",
+        "aaaaaaaaaaaa",
+        "bbbbbbbbbbbb",
+        (1, 1, 0),
+        [("BLOCKER", "BLOCKER · x.py:1 · a"), ("WARNING", "WARNING · x.py:2 · b")],
+        run_id="2026-10-21T10-00-00_aa11",
+        shown_sha="cccccccccccc",
+    )
+
+
+class EffectGrammar(unittest.TestCase):
+    def test_stands_and_not_assessable(self):
+        self.assertEqual(findings.effect_ids("stands"), ())
+        self.assertEqual(findings.effect_ids("C1 not assessable"), ("C1",))
+        self.assertEqual(findings.effect_ids("C1, A2 not assessable"), ("C1", "A2"))
+
+    def test_anything_else_is_refused(self):
+        for bad in ("", "C1", "c1 not assessable", "C1 not met", "holds"):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                findings.effect_ids(bad)
+
+
+class Decide(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = record(Path(self.tmp.name))
+
+    def test_an_accepted_blocker_owes_its_effect(self):
+        before = self.path.read_bytes()
+        with self.assertRaisesRegex(findings.FindingsError, "owes its effect"):
+            findings.write_decision(self.path, 1, "accepted", "kept")
+        self.assertEqual(self.path.read_bytes(), before)
+
+    def test_the_effect_is_stored_and_read_back(self):
+        rec = findings.write_decision(
+            self.path, 1, "accepted", "kept", "C1 not assessable"
+        )
+        self.assertEqual(rec.findings[0].effect, "C1 not assessable")
+        self.assertEqual(rec.accepted_blockers(), [(1, rec.findings[0])])
+        again = findings.write_decision(self.path, 1, "accepted", "kept", "stands")
+        self.assertEqual(again.findings[0].effect, "stands")
+        self.assertEqual(self.path.read_text(encoding="utf-8").count("effect ="), 1)
+
+    def test_no_effect_on_anything_but_an_accepted_blocker(self):
+        with self.assertRaisesRegex(findings.FindingsError, "accepted BLOCKER only"):
+            findings.write_decision(self.path, 2, "accepted", "kept", "stands")
+        with self.assertRaisesRegex(findings.FindingsError, "accepted BLOCKER only"):
+            findings.write_decision(self.path, 1, "dismissed", "no", "stands")
+
+    def test_a_hand_written_effect_is_held_on_reading(self):
+        text = self.path.read_text(encoding="utf-8").replace(
+            'status = "open"\nreason = ""', 'status = "accepted"\nreason = "k"\neffect = "C1 not met"', 1
+        )  # fmt: skip
+        self.path.write_text(text, encoding="utf-8")
+        with self.assertRaisesRegex(findings.FindingsError, "finding 1: effect"):
+            findings.read(self.path)
+
+    def test_an_accepted_blocker_decided_by_hand_without_effect_reads(self):
+        """report-check asks for the effect; the record itself stays readable."""
+        text = self.path.read_text(encoding="utf-8").replace(
+            'status = "open"\nreason = ""', 'status = "accepted"\nreason = "k"', 1
+        )
+        self.path.write_text(text, encoding="utf-8")
+        self.assertEqual(findings.read(self.path).findings[0].effect, "")
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -674,6 +674,14 @@ def main(argv: list[str]) -> int:
         f"{', '.join(findings.REASON_OWED)}); no audit runs",
     )
     ap.add_argument(
+        "--effect",
+        default="",
+        metavar="EFFECT",
+        help="with --decide, owed for an accepted BLOCKER: `stands` (the verdicts hold, "
+        'the limit named beside them) or "<ID>[, <ID>] not assessable" (this run '
+        "does not judge those promises)",
+    )
+    ap.add_argument(
         "--findings",
         action="store_true",
         help="show the newest record's findings with their --decide commands; no audit runs",
@@ -813,6 +821,11 @@ def decision_lines(record: findings.Record, area: Path, report: str) -> list[str
                 f"      labkit-audit {shlex.quote(shown(area, here))} --decide {n} "
                 f'STATUS "REASON" --record {shlex.quote(where)}'
             )
+            if f.grade == "BLOCKER":
+                out.append(
+                    "      accepted owes its effect: --effect stands (the verdicts "
+                    'hold, read within it) or --effect "<ID> not assessable"'
+                )
     hints = [ln.strip() for ln in report.splitlines() if READ_HINT.match(ln)]
     if hints:
         out.append("reading hints — not recorded, nothing to decide:")
@@ -832,13 +845,15 @@ def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
         )
     if args.record is not None and args.mode is not None:
         ap.error("--record goes with --decide or --findings")
+    if args.effect and args.decide is None:
+        ap.error("--effect goes with --decide")
 
 
 def _without_audit(args: argparse.Namespace) -> int:
     """`--decide` or `--findings`: the two calls that read or write a record
     and run no audit."""
     if args.decide is not None:
-        return _decide(args.area, args.decide, args.record)
+        return _decide(args.area, args.decide, args.record, args.effect, args.protocol)
     return _findings(args.area, args.record)
 
 
@@ -867,27 +882,59 @@ def _findings(area: Path, record: Path | None) -> int:
     return 0
 
 
-def _decide(area: Path, decide: list[str], record: Path | None) -> int:
+def _decide(
+    area: Path,
+    decide: list[str],
+    record: Path | None,
+    effect: str = "",
+    protocol: Path | None = None,
+) -> int:
     """`--decide`: store the person's decision on one finding of RECORD (the
-    area's newest record without it) through `findings.write_decision`;
-    print what was written and how many findings stay open. Exit 2 on a
-    decision that cannot be stored, the file untouched."""
+    area's newest record without it) through `findings.write_decision`,
+    with EFFECT for an accepted BLOCKER — its ids held to the promises the
+    protocol registers; print what was written and how many findings stay
+    open. Exit 2 on a decision that cannot be stored, the file untouched."""
     n_text, status, reason = decide
     try:
         if not n_text.isdigit():
             raise findings.FindingsError(f"N must be a finding number, not {n_text!r}")
+        if effect:
+            _registered(area, protocol, effect)
         if record is None:
             record = _newest_record(area)
-        rec = findings.write_decision(record, int(n_text), status, reason)
+        rec = findings.write_decision(record, int(n_text), status, reason, effect)
     except findings.FindingsError as exc:
         console.refuse("labkit-audit", str(exc))
         return 2
     print(
         f"decided: {record.name} finding {n_text}: {status}"
+        + (f" ({effect.strip()})" if effect.strip() else "")
         + (f" — {reason.strip()}" if reason.strip() else "")
         + f" · {len(rec.open)} open"
     )
     return 0
+
+
+def _registered(area: Path, protocol: Path | None, effect: str) -> None:
+    """FindingsError unless every id EFFECT names is a promise of the area's protocol."""
+    try:
+        ids = findings.effect_ids(effect)
+    except ValueError as exc:
+        raise findings.FindingsError(str(exc)) from exc
+    if not ids:
+        return
+    try:
+        chosen = the_protocol(area, protocol)
+    except ProtocolChoiceError as exc:
+        raise findings.FindingsError(f"the effect's ids: {exc}") from exc
+    block = promises.parse_block(chosen.read_text(encoding="utf-8"))
+    known = set(block.by_id()) if block is not None else set()
+    unknown = [i for i in ids if i not in known]
+    if unknown:
+        raise findings.FindingsError(
+            f"effect names {', '.join(unknown)} — {chosen.name} registers "
+            f"{', '.join(sorted(known)) or 'no promise'}"
+        )
 
 
 def _clarity(args: argparse.Namespace) -> int:

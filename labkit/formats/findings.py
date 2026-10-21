@@ -21,6 +21,7 @@ area, one file per audit:
     text = "BLOCKER · scripts/01_measure.py:42 · … · LAB-038 What the prompt demands · …"
     status = "open"      # open | fixed | accepted | deferred | dismissed
     reason = ""          # owed for accepted, deferred and dismissed
+    # effect = "C1 not assessable"  — an accepted BLOCKER only: see EFFECT
 
 The person decides each finding — by hand in the file, or with
 `labkit-audit AREA --decide N STATUS REASON`, which validates the decision
@@ -71,6 +72,18 @@ protocol line. With the findings as data the deferred ones stay visible and
 an audit's yield (fixed / accepted / dismissed per class) can be counted
 instead of read.
 
+An accepted BLOCKER is a fault the person keeps: the number may still be
+reported, read within the fault, but a fault in the instrument can leave
+a promise unjudged by the run. The decision says which (`effect`):
+`stands` — the verdicts hold, the limit named beside them — or `C1 not
+assessable` (ids comma-separated) — this run does not judge them. The
+protocol carries each accepted BLOCKER as a `Limit (audit <record> #N)`
+line (`protocol-fill --from-run` writes it from the record), and
+report-check holds the two to each other (`limit_line`). Whether the
+named limit is enough stays the audit's question, not this check's
+(judge probe, 2026-10-21: a prompt broader than the gold, accepted, and
+"C1 not met" reported with the limit in the record only).
+
 Reading is loud: an unknown status, a decided status without a reason, a
 file without its `[audit]` table raise FindingsError naming the file and
 the field — a findings file nobody can read is not "no findings".
@@ -97,6 +110,11 @@ FAILED_SUFFIX = "-failed.toml"
 ATTEMPT_TIMEOUT_S = 900
 STATUSES = ("open", "fixed", "accepted", "deferred", "dismissed")
 REASON_OWED = ("accepted", "deferred", "dismissed")
+#: an accepted BLOCKER's effect on the verdicts: they stand with the limit,
+#: or the run judges the named promises not at all
+EFFECT_STANDS = "stands"
+_EFFECT_NOT = re.compile(r"^(\S+(?:\s*,\s*\S+)*)\s+not assessable$")
+EFFECT_FORM = '`stands` or `<ID>[, <ID>] not assessable` (e.g. "C1 not assessable")'
 GRADES = ("BLOCKER", "WARNING", "NOTE")
 MODES = ("preflight", "analysis")
 #: what an analysis record names as its run when no completed run was
@@ -116,6 +134,33 @@ class Finding:
     text: str
     status: str
     reason: str
+    effect: str = ""  # an accepted BLOCKER: EFFECT_STANDS or "<ids> not assessable"
+
+    @property
+    def effect_owed(self) -> bool:
+        """An accepted BLOCKER owes the effect it has on the verdicts."""
+        return self.grade == "BLOCKER" and self.status == "accepted"
+
+
+def effect_ids(effect: str) -> tuple[str, ...]:
+    """The promise ids EFFECT leaves not assessable, in its order — () for
+    `stands`. Raises ValueError on any other text or an id that is no
+    promise id (`promises.is_block_id`)."""
+    if effect == EFFECT_STANDS:
+        return ()
+    m = _EFFECT_NOT.match(effect.strip())
+    ids = tuple(i.strip() for i in m.group(1).split(",")) if m else ()
+    if not ids or not all(promises.is_block_id(i) for i in ids):
+        raise ValueError(f"effect {effect!r} — {EFFECT_FORM}")
+    return ids
+
+
+def effect_sentence(effect: str) -> str:
+    """EFFECT as the protocol's Limit line opens with it."""
+    ids = effect_ids(effect)
+    if not ids:
+        return "the verdicts stand, read within this limit"
+    return f"{', '.join(ids)} not assessable with this run"
 
 
 @dataclass(frozen=True)
@@ -146,6 +191,21 @@ class Record:
     def deferred(self) -> list[Finding]:
         """The findings put off as somebody's later task."""
         return [f for f in self.findings if f.status == "deferred"]
+
+    def accepted_blockers(self) -> list[tuple[int, Finding]]:
+        """(number, finding) of every accepted BLOCKER, numbered as `--decide` takes them."""
+        return [(n, f) for n, f in enumerate(self.findings, 1) if f.effect_owed]
+
+
+def limit_label(record: Record, n: int) -> str:
+    """The protocol label that carries finding N of RECORD as a limit."""
+    return f"Limit (audit {record.path.stem} #{n})"
+
+
+def limit_line(record: Record, n: int, finding: Finding) -> str:
+    """The value of that line: the effect, then the person's reason."""
+    reason = " ".join(finding.reason.split())
+    return f"{effect_sentence(finding.effect)} — {reason}"
 
 
 def counts_outrun(verdict: tuple[int, int, int], grades: list[str]) -> str | None:
@@ -374,7 +434,16 @@ def _finding(path: Path, i: int, row: object) -> Finding:
         raise FindingsError(
             f"{path}: finding {i}: status {row['status']!r} owes a reason"
         )
-    return Finding(row["grade"], row["text"], row["status"], row["reason"].strip())
+    effect = row.get("effect", "")
+    if not isinstance(effect, str):
+        raise FindingsError(f"{path}: finding {i}: effect is not a string")
+    found = Finding(
+        row["grade"], row["text"], row["status"], row["reason"].strip(), effect.strip()
+    )
+    problem = _effect_problem(found)
+    if problem:
+        raise FindingsError(f"{path}: finding {i}: {problem}")
+    return found
 
 
 def read(path: Path) -> Record:
@@ -420,18 +489,20 @@ def _record_of(path: Path, text: str) -> Record:
 
 _FINDING_HEADER = re.compile(r"^\s*\[\[\s*finding\s*\]\]\s*(?:#.*)?$")
 _TABLE_HEADER = re.compile(r"^\s*\[")
-#: a one-line `status = …` or `reason = …` — the lines a decision rewrites
+#: a one-line `status = …`, `reason = …` or `effect = …` — the lines a
+#: decision rewrites
 _DECISION_LINE = re.compile(
-    r"""^(\s*(status|reason)\s*=\s*)(?:"(?:[^"\\]|\\.)*"|'[^']*')(\s*(?:#.*)?)$"""
+    r"""^(\s*(status|reason|effect)\s*=\s*)(?:"(?:[^"\\]|\\.)*"|'[^']*')(\s*(?:#.*)?)$"""
 )
 
 
 def _decision_lines(
     lines: list[str], n: int
 ) -> dict[str, tuple[int, re.Match[str]]] | None:
-    """{"status": (index, match), "reason": …} of the N-th `[[finding]]`
-    table in LINES, or None when it lacks either as a one-line value. The
-    table runs from its header to the next table header of any kind."""
+    """{"status": (index, match), "reason": …, "effect": … when it stands} of
+    the N-th `[[finding]]` table in LINES, or None when it lacks status or
+    reason as a one-line value. The table runs from its header to the next
+    table header of any kind."""
     seen, inside = 0, False
     at: dict[str, tuple[int, re.Match[str]]] = {}
     for i, line in enumerate(lines):
@@ -449,19 +520,24 @@ def _decision_lines(
         )
         if m:
             at[m.group(2)] = (i, m)
-    return at if set(at) == {"status", "reason"} else None
+    return at if {"status", "reason"} <= set(at) else None
 
 
-def write_decision(path: Path, n: int, status: str, reason: str) -> Record:
+def write_decision(
+    path: Path, n: int, status: str, reason: str, effect: str = ""
+) -> Record:
     """Set finding N (1-based) of the record at PATH to STATUS with REASON —
-    the decision the person gives, stored, never made: the side effect is
-    the file. The two lines are found by the record's structure (the N-th
-    `[[finding]]` table), their values written by `toml_string`, every other
-    byte kept; the result is read back and the file replaced whole
+    and, for an accepted BLOCKER, EFFECT (`effect_ids`) — the decision the
+    person gives, stored, never made: the side effect is the file. The
+    lines are found by the record's structure (the N-th `[[finding]]`
+    table), their values written by `toml_string`, every other byte kept;
+    an effect line is added after the reason, or dropped when the decision
+    no longer owes one. The result is read back and the file replaced whole
     (`files.write_atomic`) only when exactly that finding changed. Raises
     FindingsError — the file untouched — on a record that does not read, a
     number outside it, a status outside STATUSES, a reason owed and empty,
-    or a status or reason not on one line (edit those by hand)."""
+    an accepted BLOCKER without its effect or an effect anywhere else, or a
+    status or reason not on one line (edit those by hand)."""
     from labkit.formats.files import write_atomic
 
     before = read(path)
@@ -473,6 +549,51 @@ def write_decision(path: Path, n: int, status: str, reason: str) -> Record:
         raise FindingsError(f"status {status!r} — one of {', '.join(STATUSES)}")
     if status in REASON_OWED and not reason.strip():
         raise FindingsError(f"status {status!r} owes a reason — why it is {status}")
+    old = before.findings[n - 1]
+    decided = Finding(old.grade, old.text, status, reason.strip(), effect.strip())
+    _hold_effect(decided)
+    text = _decided_text(path, n, decided)
+    after = _record_of(path, text)
+    expected = list(before.findings)
+    expected[n - 1] = decided
+    if list(after.findings) != expected or _head(after) != _head(before):
+        raise FindingsError(f"{path}: the decision did not read back as written")
+    write_atomic(path, text)
+    return after
+
+
+def _effect_problem(f: Finding) -> str | None:
+    """Why F's effect cannot stand, or None: an effect on anything but an
+    accepted BLOCKER, or not in EFFECT_FORM. An accepted BLOCKER without
+    one reads (a record decided by hand); report-check asks for it."""
+    if not f.effect:
+        return None
+    if not f.effect_owed:
+        return (
+            f"an effect belongs to an accepted BLOCKER only, not to a "
+            f"{f.status} {f.grade}"
+        )
+    try:
+        effect_ids(f.effect)
+    except ValueError as exc:
+        return str(exc)
+    return None
+
+
+def _hold_effect(decided: Finding) -> None:
+    """An accepted BLOCKER names its effect, nothing else does — or FindingsError."""
+    if decided.effect_owed and not decided.effect:
+        raise FindingsError(
+            "an accepted BLOCKER owes its effect on the verdicts — "
+            f"--effect {EFFECT_FORM}: does this run still judge the promise?"
+        )
+    problem = _effect_problem(decided)
+    if problem:
+        raise FindingsError(problem)
+
+
+def _decided_text(path: Path, n: int, decided: Finding) -> str:
+    """The record's text with finding N's decision lines set to DECIDED."""
     lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
     at = _decision_lines(lines, n)
     if at is None:
@@ -480,38 +601,31 @@ def write_decision(path: Path, n: int, status: str, reason: str) -> Record:
             f"{path}: finding {n} has no one-line `status = …` and `reason = …` "
             f"— edit it by hand"
         )
-    for key, value in (("status", status), ("reason", reason.strip())):
+    for key, value in (("status", decided.status), ("reason", decided.reason)):
         i, m = at[key]
         ending = lines[i][len(lines[i].splitlines()[0]) :]
         lines[i] = m.group(1) + _s(value) + m.group(3) + ending
-    text = "".join(lines)
-    after = _record_of(path, text)
-    expected = list(before.findings)
-    old = expected[n - 1]
-    expected[n - 1] = Finding(old.grade, old.text, status, reason.strip())
-    same_head = (
-        after.date,
-        after.mode,
-        after.model,
-        after.scope_sha,
-        after.block_sha,
-        after.run_id,
-        after.shown_sha,
-        after.verdict,
-    ) == (
-        before.date,
-        before.mode,
-        before.model,
-        before.scope_sha,
-        before.block_sha,
-        before.run_id,
-        before.shown_sha,
-        before.verdict,
-    )
-    if list(after.findings) != expected or not same_head:
-        raise FindingsError(f"{path}: the decision did not read back as written")
-    write_atomic(path, text)
-    return after
+    if "effect" in at:
+        i, m = at["effect"]
+        if decided.effect:
+            ending = lines[i][len(lines[i].splitlines()[0]) :]
+            lines[i] = m.group(1) + _s(decided.effect) + m.group(3) + ending
+        else:
+            del lines[i]
+    elif decided.effect:
+        i = at["reason"][0]
+        ending = lines[i][len(lines[i].splitlines()[0]) :] or "\n"
+        if not lines[i].endswith("\n"):
+            lines[i] += "\n"
+        lines.insert(i + 1, f"effect = {_s(decided.effect)}{ending}")
+    return "".join(lines)
+
+
+def _head(r: Record) -> tuple:
+    """What a decision must leave as it was besides the findings."""
+    return (
+        r.date, r.mode, r.model, r.scope_sha, r.block_sha, r.run_id, r.shown_sha, r.verdict,
+    )  # fmt: skip
 
 
 #: the name `_create` gives a record or a failed attempt:
@@ -559,6 +673,21 @@ def _bound(
     )
 
 
+def covering_records(
+    records: list[Record],
+    sha: str,
+    block_sha: str,
+    run_id: str | None,
+    shown_sha: str | None,
+) -> list[Record]:
+    """The RECORDS that saw the area as it is now: that code, that promise
+    block and — mode analysis — that run and what was shown of it."""
+    now = (sha, block_sha, run_id, shown_sha)
+    return [
+        r for r in records if (r.scope_sha, r.block_sha, r.run_id, r.shown_sha) == now
+    ]
+
+
 def audit_coverage(
     area: Path,
     sha: str,
@@ -597,9 +726,7 @@ def audit_coverage(
         )
     records = [r for r in area_records(area) if r.mode == mode]
     now = (sha, block_sha, run_id, shown_sha)
-    covering = [
-        r for r in records if (r.scope_sha, r.block_sha, r.run_id, r.shown_sha) == now
-    ]
+    covering = covering_records(records, *now)
     if not covering:
         seen = (
             "; ".join(
