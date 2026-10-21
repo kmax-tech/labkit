@@ -51,6 +51,30 @@ class Counts(unittest.TestCase):
         self.assertIsNone(p.markers[2].only_in)
         self.assertEqual(p.any_marker, {"causal": 2, "not_causal": 2})
 
+    def test_a_marker_padded_with_spaces_is_refused(self):
+        """Two cold agents wrote " so " to keep it out of longer words; the
+        whole-word match then needed a word character on neither side of the
+        spaces, and `…cut, so the…` went uncounted — 5/6 instead of 6/6
+        (sandbox, 2026-10-21). Markers match as whole words already."""
+        for padded in (" so ", "so ", " so"):
+            with (
+                self.subTest(padded=padded),
+                self.assertRaisesRegex(ValueError, "whole words"),
+            ):
+                profile.profile(ITEMS, markers=(padded,), confounds=())
+
+    def test_a_marker_after_a_comma_is_counted(self):
+        rows = [
+            {
+                "id": "c3",
+                "text": "Sales rose after the cut, so the cut drove demand.",
+                "gold": "causal",
+            }
+        ]
+        p = profile.profile(rows, markers=("so",), confounds=())
+        assert p.markers is not None
+        self.assertEqual(p.markers[0].per_class, {"causal": 1})
+
     def test_the_markers_together_can_separate_the_classes(self):
         p = profile.profile(ITEMS, markers=("because", "drove"), confounds=())
         self.assertEqual(p.any_marker, {"causal": 2, "not_causal": 0})

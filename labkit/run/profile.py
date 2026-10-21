@@ -61,6 +61,22 @@ def _pattern(marker: str) -> re.Pattern[str]:
     return re.compile(rf"(?<!\w){re.escape(marker)}(?!\w)", re.I)
 
 
+def _hold_names(
+    markers: tuple[str, ...] | None, confounds: tuple[str, ...] | None
+) -> None:
+    """ValueError on an empty marker or confound name, or a padded marker."""
+    for name in (*(markers or ()), *(confounds or ())):
+        if not name.strip():
+            raise ValueError("an empty marker or confound name")
+    for m in markers or ():
+        if m != m.strip():
+            # padding defeats the whole-word match: " so " needs a
+            # non-word character outside each space (sandbox, 2026-10-21)
+            raise ValueError(
+                f"marker {m!r}: markers match as whole words already — write {m.strip()!r}"
+            )
+
+
 def _by_class(
     items: list[dict],
     markers: tuple[str, ...] | None,
@@ -71,9 +87,7 @@ def _by_class(
     """ITEMS grouped by gold value, held to `profile`'s rules (ValueError)."""
     if not items:
         raise ValueError("no items to profile")
-    for name in (*(markers or ()), *(confounds or ())):
-        if not name.strip():
-            raise ValueError("an empty marker or confound name")
+    _hold_names(markers, confounds)
     by_class: dict[str, list[dict]] = {}
     for n, it in enumerate(items, 1):
         for key in (text_field, gold_field):
@@ -100,7 +114,8 @@ def profile(
     """The profile of ITEMS per gold class, classes in order of first
     appearance. Raises ValueError on an item without the text or gold
     field, a confound that is not a number, an empty marker or confound
-    name, or no items."""
+    name, a marker padded with spaces, or no items. A marker matches as a
+    whole word or phrase, case ignored."""
     by_class = _by_class(items, markers, confounds, text_field, gold_field)
     classes = tuple(
         ClassProfile(

@@ -67,7 +67,7 @@ FIELDS = {
 }
 # The data profile's two decisions (see the module docstring): None = not
 # decided yet, () = decided, none applies.
-MARKERS: tuple[str, ...] | None = None    # TODO: e.g. ("because", "due to")
+MARKERS: tuple[str, ...] | None = None    # TODO: whole words, case ignored, e.g. ("because", "due to")
 CONFOUNDS: tuple[str, ...] | None = None  # TODO: numeric FIELDS keys beside the word count
 
 

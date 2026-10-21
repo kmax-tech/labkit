@@ -322,6 +322,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A data-profile marker padded with spaces is refused.** Two cold
+  agents wrote `" so "` to keep the marker out of longer words. The
+  whole-word match then needed a non-word character outside each space,
+  so `…cut, so the…` went uncounted and the profile showed 5/6 where
+  6/6 was true (sandbox, 2026-10-21). Markers match as whole words
+  already. `profile.profile` now refuses a padded marker and names the
+  form to write, and the stamped `MARKERS` comment says so.
+
 - **A cited run id must name a run of the area.** The gates read a
   citation only in the exact shape runlog writes, so an Answer that cited
   a typed `(run 2026-10-21T12-48-00_final)` counted as citing nothing:
