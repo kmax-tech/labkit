@@ -1,0 +1,143 @@
+"""result_render: the result section is held to equality with its rendering
+(phase 5 of the 1.0 line, 2026-10-21). The sources — the declared run's
+metrics.json and the covering analysis records — render the Answer line and
+the Limit lines; `--from-run` writes them, `--render` writes them again, and
+a line that differs from the rendering is a blocker whatever it says.
+"""
+
+from __future__ import annotations
+
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from labkit.checks import result_render  # noqa: E402
+from labkit.formats import findings, promises, scope_sha  # noqa: E402
+from labkit.checks import audit_binding  # noqa: E402
+from labkit.tools import protocol_fill  # noqa: E402
+from protocol_fixture import completed_run, head, scope_file  # noqa: E402
+
+RUN = "2026-10-21T10-00-00_abcd"
+BODY = "\n## Result\n\n- **Answer to the question:** <per registered id its verdict…>\n- **Raw output:** r\n\n## Runs\n\n- <run_id> — <one sentence>\n"
+
+
+def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]:
+    """A seconds area, its protocol declaring RUN, a completed run, and an
+    analysis record covering it with one accepted WARNING carrying an effect
+    (none when LIMIT_REASON is None)."""
+    area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+    (area / "scripts").mkdir(parents=True)
+    scope_file(area)
+    protocol = area / "PROTOCOL-x.md"
+    protocol.write_text(head(cost="seconds", result=RUN) + BODY, encoding="utf-8")
+    run = completed_run(area, RUN, metrics={"c1_pass": True, "c1_accuracy": 0.83})
+    text = protocol.read_text(encoding="utf-8")
+    items = [
+        ("WARNING", "WARNING · scripts/01_measure.py:1 · one draw · x · LAB-019 r · z")
+    ]
+    path = findings.write(
+        area,
+        "analysis",
+        "test",
+        scope_sha.area_stamp(area)[0],
+        promises.block_stamp(text),
+        (0, 1, 0),
+        items,
+        run_id=run.name,
+        shown_sha=audit_binding.run_shown(area, run, "").sha,
+    )
+    if limit_reason is not None:
+        findings.write_decision(path, 1, "accepted", limit_reason, "stands")
+    return area, protocol
+
+
+class Rendering(unittest.TestCase):
+    def test_the_rendering_is_the_answer_line_with_its_note_and_the_limit_lines(self):
+        area, protocol = area_with_record()
+        text = protocol.read_text(encoding="utf-8")
+        r = result_render.rendering(area, text, area / "runs" / RUN)
+        self.assertEqual(
+            r.answer,
+            f"c1_pass = True, c1_accuracy = 0.83 (run {RUN}); subject to 1 recorded "
+            "limitation (the Limit lines below)",
+        )
+        ((label, value),) = r.limits
+        self.assertTrue(label.startswith("Limit (audit ") and label.endswith(" #1)"))
+        self.assertEqual(value, "the verdicts stand, read within this limit — one draw")
+
+    def test_no_decided_limit_renders_a_bare_answer(self):
+        area, protocol = area_with_record(limit_reason=None)
+        text = protocol.read_text(encoding="utf-8")
+        r = result_render.rendering(area, text, area / "runs" / RUN)
+        self.assertEqual(r.answer, f"c1_pass = True, c1_accuracy = 0.83 (run {RUN})")
+        self.assertEqual(r.limits, ())
+
+
+class RenderGaps(unittest.TestCase):
+    """Exact: the written lines equal the rendering, or each difference is named."""
+
+    def setUp(self):
+        self.area, self.protocol = area_with_record()
+        self.text = self.protocol.read_text(encoding="utf-8")
+        self.expected = result_render.rendering(
+            self.area, self.text, self.area / "runs" / RUN
+        )
+
+    def written(self) -> str:
+        text, _, _ = protocol_fill.from_run(self.text, self.area)
+        return text
+
+    def test_what_from_run_writes_has_no_gap_and_render_changes_nothing(self):
+        text = self.written()
+        self.assertEqual(result_render.render_gaps(text, self.expected), [])
+        again, written = protocol_fill.render_result(text, self.area)
+        self.assertEqual((again, written), (text, []))
+
+    def test_an_unwritten_answer_is_named(self):
+        (gap,) = [
+            g
+            for g in result_render.render_gaps(self.text, self.expected)
+            if "Answer" in g
+        ]
+        self.assertIn("not written", gap)
+
+    def test_a_retyped_answer_and_a_changed_limit_are_named_and_rendered_back(self):
+        text = self.written()
+        edited = text.replace("c1_accuracy = 0.83", "c1_accuracy = 0.85").replace(
+            "— one draw", "— one draw, fine"
+        )
+        gaps = result_render.render_gaps(edited, self.expected)
+        self.assertEqual(len(gaps), 2, gaps)
+        self.assertIn("Answer line differs from its rendering", gaps[0])
+        self.assertIn("differs from the record", gaps[1])
+        rendered, written = protocol_fill.render_result(edited, self.area)
+        self.assertEqual(rendered, text)
+        self.assertEqual(len(written), 2)
+
+    def test_a_limit_line_no_record_decides_is_named_and_dropped(self):
+        text = self.written()
+        stray = text.replace(
+            "- **Raw output:** r",
+            "- **Limit (audit 2026-10-01T00-00-analysis #9):** the verdicts stand, "
+            "read within this limit — invented\n- **Raw output:** r",
+        )
+        (gap,) = result_render.render_gaps(stray, self.expected)
+        self.assertIn("no covering record decides", gap)
+        rendered, written = protocol_fill.render_result(stray, self.area)
+        self.assertEqual(rendered, text)
+        self.assertEqual(
+            written, ["dropped Limit (audit 2026-10-01T00-00-analysis #9)"]
+        )
+
+    def test_render_refuses_without_a_declaration(self):
+        undeclared = head(cost="seconds") + BODY
+        with self.assertRaisesRegex(ValueError, "no \\[result\\] run declared"):
+            protocol_fill.render_result(undeclared, self.area)
+
+
+if __name__ == "__main__":
+    unittest.main()

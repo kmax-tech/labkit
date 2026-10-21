@@ -89,9 +89,10 @@ from labkit.checks.audit_binding import (
     audited_run,
     covering_analysis,
 )
+from labkit.checks.result_render import render_gaps, rendering
 from labkit.gates.finalize import finalize_area
 from labkit.gates.preflight import area_test_python
-from labkit.formats.protocol_check import check_fields, field_name, fields
+from labkit.formats.protocol_check import check_fields
 from labkit.formats.repo import (
     area_path,
     area_protocols,
@@ -265,56 +266,38 @@ def analysis_audit_gap(ctx: Checked) -> str | None:
         return f"the analysis audit cannot be held to the area: {exc}"
 
 
-ANSWER_LABEL = "Answer to the question"
-
-
 def limit_gaps(ctx: Checked) -> list[str]:
     """Station 3, the limits: every accepted BLOCKER of the covering analysis
-    audit has its effect decided and stands in the protocol as its `Limit
-    (audit <record> #N)` line, opening with that effect; a promise it leaves
-    not assessable is said so in the Answer. Exact in what it holds — the
-    record and the protocol agree, by label — and silent on whether the
-    limit is enough: that is the audit's question. Empty when no covering
-    record exists (`analysis_audit_gap` names that)."""
+    records has its effect decided, and the result section says exactly
+    what those records and the run render (`result_render.render_gaps`):
+    the Answer line with its note, one Limit line per decided limit, none
+    that no record decides. Exact in what it holds — equality with the
+    rendering — and silent on whether a limit is enough: that is the
+    audit's question. Empty when no covering record exists
+    (`analysis_audit_gap` names that), and the rendering is not owed while
+    the head declares no result."""
     if ctx.run is None:
         return []
     try:
         records = covering_analysis(ctx.area, ctx.text, ctx.run)
     except (AuditError, FileNotFoundError, ValueError):
         return []
-    lines = {f.label.replace("†", "").strip(): f for f in fields(ctx.text)}
-    answer = next(
-        (f.value for f in fields(ctx.text) if f.name == field_name(ANSWER_LABEL)), ""
-    )
     gaps: list[str] = []
-    decided: list[tuple[str, str]] = []
     for r in records:
         for n, f in r.limits():
-            label = findings.limit_label(r, n)
             if not f.effect:
                 gaps.append(
-                    f"{label}: an accepted BLOCKER owes its effect on the verdicts — "
-                    f'`labkit-audit <area> --decide {n} accepted "REASON" --effect '
-                    f'stands|"<ID> not assessable" --record {r.path.name}`'
+                    f"{findings.limit_label(r, n)}: an accepted BLOCKER owes its effect "
+                    f'on the verdicts — `labkit-audit <area> --decide {n} accepted "REASON" '
+                    f'--effect stands|"<ID> not assessable" --record {r.path.name}`'
                 )
-                continue
-            opening = findings.effect_sentence(f.effect)
-            got = lines.get(label)
-            if got is None or not got.value.startswith(opening):
-                gaps.append(
-                    f'no "{label}" line opening "{opening}" — the accepted {f.grade}\'s '
-                    f"limit belongs in the protocol; `protocol-fill <PROTOCOL> "
-                    f"--from-run` writes it from the record"
-                )
-            decided.append((label, f.effect))
-    note = findings.answer_note(decided)
-    for part in note.lstrip("; ").split("; ") if note else []:
-        if part not in answer:
-            gaps.append(
-                f'the Answer does not say "{part}" — the audit record\'s limits '
-                f"decide so; `protocol-fill <PROTOCOL> --from-run --force` writes it"
-            )
-    return gaps
+    if ctx.declared is None:
+        return gaps  # nothing reported: the result section is not owed yet
+    try:
+        expected = rendering(ctx.area, ctx.text, ctx.run)
+    except (OSError, ValueError) as exc:
+        return gaps + [f"the result cannot be rendered from {ctx.run.name}: {exc}"]
+    return gaps + render_gaps(ctx.text, expected)
 
 
 def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[str]:

@@ -13,6 +13,8 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md "C1 sentence=<the promise>"   a [[promise]]'s sentence, as a TOML string
     protocol-fill PROTOCOL-x.md type=exploratory cost=seconds "model alias=haiku"   the TOML head's stamped placeholders
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
+    protocol-fill PROTOCOL-x.md --render       the result section written again from its sources:
+                                               Answer, Limit lines (stray ones dropped), Prompt block
     protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: `[result] run`
                                                in the TOML head (the declaration), the Answer and
                                                Runs lines from its metrics.json (newest completed
@@ -52,8 +54,7 @@ import re
 from pathlib import Path
 
 from labkit.formats import console, files, findings, promises, protocol_block, runs
-from labkit.checks.audit_binding import AuditError, covering_analysis
-from labkit.gates.report_check import ANSWER_LABEL
+from labkit.checks.result_render import ANSWER_LABEL, Rendering, rendering
 from labkit.formats.repo import shown
 from labkit.checks import recheck
 from labkit.gates import report_check
@@ -378,14 +379,6 @@ WRITTEN_AFTER_RUN = tuple(
 )
 
 
-def answer_line(metrics: dict, run_id: str) -> str:
-    """`key = value, … (run <id>)` — every reported key and value as the run
-    recorded them, so `recheck.cited` finds each number and the run_id."""
-    kept = {k: v for k, v in metrics.items() if k not in recheck.LABKIT_KEYS}
-    body = ", ".join(f"{k} = {v}" for k, v in kept.items())
-    return f"{body} (run {run_id})"
-
-
 def runs_line(text: str, run_id: str, sentence: str) -> tuple[str, bool]:
     """The Runs section names `run_id`: the stamped `<run_id>` placeholder line
     becomes the entry, else one is appended to the section; a section that
@@ -417,21 +410,18 @@ def from_run(
 ) -> tuple[str, list[str], str]:
     """Write the run back: `[result] run` in the TOML head (the one
     declaration that the number is reported, `fill_result_run`), the Answer
-    line and the Runs entry from `runs/<run_id>/metrics.json` (newest
-    completed run when RUN_ID is None); the Summary's Result stays the
-    author's (`WRITTEN_AFTER_RUN`). Returns (text, what was filled, run_id).
-    A filled Answer, or a `[result]` naming another run, is refused without
-    `force`."""
+    line, the Limit lines and the Runs entry as `runs/<run_id>/metrics.json`
+    and the covering records render them (`result_render.rendering`; newest
+    completed run when RUN_ID is None), a Limit line of a record that covers
+    the run no longer dropped; the Summary's Result stays the author's
+    (`WRITTEN_AFTER_RUN`). Returns (text, what was filled, run_id). A filled
+    Answer, or a `[result]` naming another run, is refused without `force`."""
     run = recheck.chosen_run(area, text, run_id)
-    metrics = runs.read_metrics(run / "metrics.json")
-    limits = accepted_limits(area, text, run)
-    answer = answer_line(metrics, run.name) + findings.answer_note(
-        [(label, effect) for label, _, effect in limits]
-    )
+    r = rendering(area, text, run)
     filled: list[str] = []
     for label in WRITTEN_BY_RUN:
         try:
-            text = fill(text, label, answer, force=force)
+            text = fill(text, label, r.answer, force=force)
             filled.append(label)
         except ValueError as exc:
             if "no field labelled" in str(exc):
@@ -446,38 +436,78 @@ def from_run(
     )
     if changed:
         filled.append("Runs")
-    text, written = limit_lines(text, limits, force)
+    text, written = limit_lines(text, r.limits, force)
     filled += written
+    # a Limit line of a record that no longer covers the run is labkit's own
+    # stale line, never the author's prose: it goes with the write-back
+    text, dropped = drop_stray_limits(text, r.limits)
+    filled += [f"dropped {label}" for label in dropped]
     return text, filled, run.name
 
 
-def accepted_limits(area: Path, text: str, run: Path) -> list[tuple[str, str, str]]:
-    """(label, value, effect) of every limit with its effect decided — an
-    accepted BLOCKER, an accepted WARNING that names one — in the
-    analysis records covering RUN (`audit_binding.covering_analysis`). An
-    area the gate cannot hold to that run gives none here: report-check,
-    which runs on the written result, names why."""
-    try:
-        records = covering_analysis(area, text, run)
-    except (AuditError, FileNotFoundError, ValueError):
-        return []
-    return [
-        (findings.limit_label(r, n), findings.limit_line(r, n, f), f.effect)
-        for r in records
-        for n, f in r.limits()
-        if f.effect
-    ]
+def drop_stray_limits(
+    text: str, keep: tuple[tuple[str, str], ...]
+) -> tuple[str, list[str]]:
+    """TEXT without the Limit lines no covering record decides (labels not in
+    KEEP) — written by hand or from an older record. (text, labels dropped)."""
+    keep_labels = {label for label, _ in keep}
+    dropped: list[str] = []
+    lines = text.split("\n")
+    for f in sorted(fields(text), key=lambda f: -f.line):
+        label = f.label.replace("†", "").strip()
+        if label.startswith(findings.LIMIT_PREFIX) and label not in keep_labels:
+            del lines[f.line - 1 : f.last]
+            dropped.append(label)
+    return "\n".join(lines), dropped
+
+
+def render_result(text: str, area: Path) -> tuple[str, list[str]]:
+    """`--render`: the result section written again from its sources for the
+    declared run — the Answer line, the Limit lines (stray ones dropped) and,
+    where the scripts' PROMPT constants read statically, the Prompt block.
+    Idempotent: a text that says what its sources say comes back unchanged.
+    (text, what was written). Raises ValueError without a declared run or
+    without `runs/<id>/` for it — `--from-run` declares first."""
+    declared = protocol_block.declared_run(text)
+    if declared is None:
+        raise ValueError(
+            "no [result] run declared — `--from-run <run_id>` declares the run and "
+            "writes the result; --render only writes it again"
+        )
+    run = area / "runs" / declared
+    if not (run / "metrics.json").is_file():
+        raise ValueError(
+            f"[result] declares {declared}, but runs/{declared}/metrics.json is not there"
+        )
+    r: Rendering = rendering(area, text, run)
+    written: list[str] = []
+    before = text
+    text = fill(text, ANSWER_LABEL, r.answer, force=True)
+    if text != before:
+        written.append(ANSWER_LABEL)
+    text, limits_written = limit_lines(text, r.limits, force=True)
+    written += limits_written
+    text, dropped = drop_stray_limits(text, r.limits)
+    written += [f"dropped {label}" for label in dropped]
+    constants = prompt_constants(area)
+    if constants:
+        before = text
+        text = fill_prompts(text, constants)
+        if text != before:
+            written.append("Prompt")
+    return text, written
 
 
 def limit_lines(
-    text: str, limits: list[tuple[str, str, str]], force: bool = False
+    text: str, limits: tuple[tuple[str, str], ...], force: bool = False
 ) -> tuple[str, list[str]]:
-    """Each LIMITS entry as its `- **<label>:** <value>` line, below the
-    Answer: added when missing, left when it says that already, replaced
-    only with FORCE. (text, labels written). Raises ValueError on a
-    differing line without FORCE, or with no Answer line to stand under."""
+    """Each LIMITS entry (label, value — `result_render.Rendering.limits`) as
+    its `- **<label>:** <value>` line, below the Answer: added when missing,
+    left when it says that already, replaced only with FORCE. (text, labels
+    written). Raises ValueError on a differing line without FORCE, or with
+    no Answer line to stand under."""
     written: list[str] = []
-    for label, value, _ in limits:
+    for label, value in limits:
         lines = text.split("\n")
         by_label = {f.label.replace("†", "").strip(): f for f in fields(text)}
         line = f"- **{label}:** {value}"
@@ -732,6 +762,37 @@ def fill_many(
     return text
 
 
+def _prompts_file(protocol: Path, text: str) -> int:
+    """`--prompts` on PROTOCOL: the Prompt block from the scripts' PROMPT constants."""
+    try:
+        new = fill_prompts(text, prompt_constants(protocol.resolve().parent))
+    except ValueError as exc:
+        print(f"protocol-fill: {exc}")
+        return 1
+    protocol.write_text(new, encoding="utf-8")
+    print("filled: Prompt (from the scripts' PROMPT constants)")
+    return 0
+
+
+def _render_file(protocol: Path, text: str) -> int:
+    """`--render` on PROTOCOL: write the rendering when it differs, say what changed."""
+    try:
+        new, written = render_result(text, protocol.resolve().parent)
+    except (ValueError, protocol_block.BlockError) as exc:
+        print(f"protocol-fill: {exc}")
+        return 1
+    if new != text:
+        protocol.write_text(new, encoding="utf-8")
+    print(
+        "rendered: "
+        + (
+            ", ".join(written)
+            or "nothing changed — the result says what its sources say"
+        )
+    )
+    return 0
+
+
 def main(argv: list[str]) -> int:
     """Command line of `protocol-fill`: fill placeholder fields by label (one, or several as LABEL=VALUE), or the Prompt block from the script."""
 
@@ -755,6 +816,12 @@ def main(argv: list[str]) -> int:
         "--prompts",
         action="store_true",
         help="write the Prompt block from the area scripts' PROMPT constants",
+    )
+    ap.add_argument(
+        "--render",
+        action="store_true",
+        help="write the result section again from its sources for the declared run: "
+        "the Answer line, the Limit lines (stray ones dropped), the Prompt block",
     )
     ap.add_argument(
         "--from-run",
@@ -786,19 +853,14 @@ def main(argv: list[str]) -> int:
             print(f"protocol-fill: {exc}")
             return 1
     if args.prompts:
-        try:
-            new = fill_prompts(text, prompt_constants(args.protocol.resolve().parent))
-        except ValueError as exc:
-            print(f"protocol-fill: {exc}")
-            return 1
-        args.protocol.write_text(new, encoding="utf-8")
-        print("filled: Prompt (from the scripts' PROMPT constants)")
-        return 0
+        return _prompts_file(args.protocol, text)
+    if args.render:
+        return _render_file(args.protocol, text)
     if args.from_run is not None:
         return _write_back(args, text)
     assignments = assignments_of(args.field, args.value)
     if not assignments:
-        ap.error("need FIELD and VALUE, LABEL=VALUE..., --list or --from-run")
+        ap.error("need FIELD and VALUE, LABEL=VALUE..., --list, --render or --from-run")
     if args.line is not None and len(assignments) > 1:
         ap.error("--line goes with one FIELD, not with LABEL=VALUE")
     try:

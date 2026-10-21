@@ -485,7 +485,9 @@ class IfReported(unittest.TestCase):
         """The pre-commit's form: a reported answer in the index, the tree's
         reopened — the hook read the tree and passed the commit (audit
         2026-10-19)."""
-        area = self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN, git=True)
+        area = self._area(
+            f"c1_pass = True (run {self.RUN})", declared=self.RUN, git=True
+        )
         root = area.parent.parent
         proto = area / "PROTOCOL-x.md"
         code, out = self._staged_gate(root, proto)
@@ -495,7 +497,7 @@ class IfReported(unittest.TestCase):
         proto.write_text(
             reported.replace(f'\n[result]\nrun = "{self.RUN}"\n', ""),
             encoding="utf-8",
-        )
+        )  # reopened: the declaration gone, the tree differs from the index
         code, out = self._staged_gate(root, proto)
         self.assertEqual(code, 1, out)
         self.assertIn(
@@ -510,7 +512,9 @@ class IfReported(unittest.TestCase):
         self.assertEqual((code, out), (0, ""))
 
     def test_staged_names_the_index_as_the_state_held(self):
-        area = self._area(f"1 (run {self.RUN})", declared=self.RUN, git=True)
+        area = self._area(
+            f"c1_pass = True (run {self.RUN})", declared=self.RUN, git=True
+        )
         code, out = self._staged_gate(area.parent.parent, area / "PROTOCOL-x.md")
         self.assertEqual(code, 0, out)
         self.assertIn("read from the index; the head declares " + self.RUN, out)
@@ -518,7 +522,9 @@ class IfReported(unittest.TestCase):
     def test_staged_refuses_an_area_whose_tree_is_not_the_index(self):
         """A script modified and one untracked under a reported number: the
         stations would judge a state the commit does not hold."""
-        area = self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN, git=True)
+        area = self._area(
+            f"c1_pass = True (run {self.RUN})", declared=self.RUN, git=True
+        )
         root = area.parent.parent
         (area / "scripts" / "02_analyze.py").write_text(
             "print('changed')\n", encoding="utf-8"
@@ -536,7 +542,9 @@ class IfReported(unittest.TestCase):
         """The script staged, the reported protocol deleted in the tree and
         not in the index: the commit keeps the protocol, so the gate holds
         it — the search for protocols read the tree and found none."""
-        area = self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN, git=True)
+        area = self._area(
+            f"c1_pass = True (run {self.RUN})", declared=self.RUN, git=True
+        )
         root = area.parent.parent
         script = area / "scripts" / "02_analyze.py"
         script.write_text("print('changed')\n", encoding="utf-8")
@@ -550,7 +558,9 @@ class IfReported(unittest.TestCase):
     def test_a_shared_helper_reopens_the_areas_that_import_it(self):
         """lib/scoring.py lies in no area; an area whose script imports it is
         touched by its change, and one that does not is not."""
-        area = self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN, git=False)
+        area = self._area(
+            f"c1_pass = True (run {self.RUN})", declared=self.RUN, git=False
+        )
         root = area.parent.parent
         (root / "lib").mkdir()
         helper = root / "lib" / "scoring.py"
@@ -591,7 +601,7 @@ class IfReported(unittest.TestCase):
     def test_a_changed_script_reopens_the_areas_reported_number(self):
         """The protocol untouched, a script under it edited: the analysis
         audit saw other code, and both hooks passed it (audit 2026-10-19)."""
-        area = self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN)
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=self.RUN)
         script = area / "scripts" / "02_analyze.py"
         code, out = self._gate(area, script)
         self.assertEqual(code, 0, out)  # the twin: unchanged, the gate holds
@@ -633,7 +643,9 @@ class IfReported(unittest.TestCase):
         self.assertIn("no run id runlog writes", out)
 
     def test_a_reported_full_run_passes(self):
-        code, out = self._gate(self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN))
+        code, out = self._gate(
+            self._area(f"c1_pass = True (run {self.RUN})", declared=self.RUN)
+        )
         self.assertEqual(code, 0, out)
         self.assertIn(f"its head declares {self.RUN}", out)
         self.assertIn("finalized, audited, checked", out)
@@ -641,21 +653,27 @@ class IfReported(unittest.TestCase):
     def test_a_reported_probe_is_refused(self):
         """Third haiku round, t3 and t5: the probe's number, written back."""
         code, out = self._gate(
-            self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN, run_kind="probe")
+            self._area(
+                f"c1_pass = True (run {self.RUN})", declared=self.RUN, run_kind="probe"
+            )
         )
         self.assertEqual(code, 1, out)
         self.assertIn("a probe (run_kind='probe'), not a measurement", out)
 
     def test_citing_another_run_than_the_one_that_answers_blocks(self):
         other = "2026-10-01T09-00-00_ffff"
-        code, out = self._gate(self._area(f"AUC 0.91 ({other})", declared=other))
+        code, out = self._gate(
+            self._area(f"c1_pass = True (run {other})", declared=other)
+        )
         self.assertEqual(code, 1, out)
         self.assertIn("finalize: ", out)
         self.assertIn("but the run that answers is", out)
 
     def test_a_reported_run_without_its_analysis_audit_blocks(self):
         code, out = self._gate(
-            self._area(f"AUC 0.91 ({self.RUN})", declared=self.RUN, audited=False)
+            self._area(
+                f"c1_pass = True (run {self.RUN})", declared=self.RUN, audited=False
+            )
         )
         self.assertEqual(code, 1, out)
         self.assertIn("no analysis audit saw the area as it is now", out)

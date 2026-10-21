@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import claude_hooks  # noqa: E402
 from labkit.tools import protocol_fill  # noqa: E402
+from labkit.checks import result_render  # noqa: E402
 from labkit.checks import audit_binding  # noqa: E402
 from labkit.formats import findings, promises, scope_sha, shell  # noqa: E402
 from protocol_fixture import run_record, DEFAULT_BLOCK, PID, head  # noqa: E402
@@ -475,7 +476,11 @@ class Stop(unittest.TestCase):
         p = self.area / "PROTOCOL-x.md"
         p.write_text(
             protocol_fill.fill_result_run(p.read_text(), run_id)
-            + f"- **Answer to the question:** p = .01 ({run_id})\n"
+            + "- **Answer to the question:** "
+            + result_render.answer_line(
+                {"c1_pass": True, "a1_pass": True, "a2_pass": True}, run_id
+            )
+            + "\n"
         )
 
     def _stop(self, active: bool = False) -> tuple[int, str, str]:

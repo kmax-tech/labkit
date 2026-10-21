@@ -126,9 +126,9 @@ class LimitLinesInRecordOrder(unittest.TestCase):
         from labkit.tools import protocol_fill
 
         text = "## Result\n\n- **Answer to the question:** a = 1 (run x)\n- **Raw output:** r\n"
-        limits = [(f"Limit (audit r #{n})", f"v{n}", "stands") for n in (1, 2, 3)]
+        limits = tuple((f"Limit (audit r #{n})", f"v{n}") for n in (1, 2, 3))
         out, written = protocol_fill.limit_lines(text, limits)
-        self.assertEqual(written, [label for label, _, _ in limits])
+        self.assertEqual(written, [label for label, _ in limits])
         rows = [ln for ln in out.splitlines() if ln.startswith("- **")]
         self.assertEqual(
             rows,

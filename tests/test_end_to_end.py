@@ -677,9 +677,19 @@ class Judge(unittest.TestCase):
         )
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)
-        # accepted without an effect it is no limit: nothing is owed for it
+        # accepted without an effect it is no limit — and the result section
+        # must say so again: the rendering is exact (phase 5), a Limit line
+        # and a note the records no longer decide are blockers until written back
         rc, out = self._decide(record, "accepted", reason)
         self.assertEqual(rc, 0, out)
+        rc, out = self._report_check()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("no covering record decides", out)
+        rc, out = lab.adopt_forced(self.protocol, self.run_id)
+        self.assertEqual(rc, 0, out)
+        text = self.protocol.read_text(encoding="utf-8")
+        self.assertNotIn(label, text)
+        self.assertNotIn("recorded limitation", text)
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)
 
