@@ -5,7 +5,7 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
-## Unreleased
+## 0.102.0 — 2026-10-21
 
 ### Breaking
 
@@ -27,7 +27,8 @@ pins (`requirements.txt` / `requirements.lock`).
   dropped, the Prompt block where the constants read statically),
   idempotent; `protocol_fill.answer_line` and `accepted_limits` moved to
   `result_render.answer_line` and `limits_of`; `limit_lines` takes (label,
-  value) pairs.
+  value) pairs. 0.101.0 is the last version that checks the Limit lines by
+  their opening words instead of their rendering.
 
 - **The declaration makes the result due.** The after-run fields (Answer,
   Result, Raw output, Limits, Next step) and a frozen protocol's report
@@ -41,7 +42,9 @@ pins (`requirements.txt` / `requirements.lock`).
   line (2026-10-21); the remaining prose readers — the label parser, the
   Answer field as a generated section, its warning, the Prompt block's
   drift check — stay at their grades, each decided
-  (`tests/test_migration_bar.py`).
+  (`tests/test_migration_bar.py`). 0.101.0 is the last version that reads
+  a measure run from the prose Runs list. The bar after this phase:
+  [docs/usability/2026-10-21-sandbox-42f0ec8.md](docs/usability/2026-10-21-sandbox-42f0ec8.md).
 
 ## 0.101.0 — 2026-10-21
 
