@@ -5,6 +5,7 @@ import unittest
 
 from labkit.formats import protocol_block
 from protocol_fixture import PID, head
+from labkit.formats import promises
 
 
 class Head(unittest.TestCase):
@@ -118,3 +119,53 @@ class TomlString(unittest.TestCase):
     def test_a_lone_surrogate_is_refused_with_the_cause(self):
         with self.assertRaisesRegex(ValueError, "lone surrogate U\\+D800.*UTF-8"):
             protocol_block.toml_string("bad \ud800 byte")
+
+
+RUN = "2026-10-21T13-40-06_ad5f"
+
+
+def with_result(block: str, body: str) -> str:
+    """BLOCK with BODY appended inside its fence, before the closing ```."""
+    k = block.rindex("```")
+    return block[:k] + body.rstrip("\n") + "\n" + block[k:]
+
+
+class DeclaredRun(unittest.TestCase):
+    """`[result] run` is the one declaration that a protocol reports a
+    number (phase 3 of the 1.0 line, 2026-10-21): absent while exploring,
+    written by `protocol-fill --from-run`, exact or unreadable — a typed id
+    that is no run id runlog writes is refused where it stands, not read as
+    a citation the gates then chase."""
+
+    def test_no_table_is_no_declaration(self):
+        self.assertIsNone(protocol_block.declared_run(head(cost="seconds")))
+
+    def test_the_declared_run_reads_back_and_leaves_head_and_promises_alone(self):
+        plain = head(cost="seconds")
+        text = with_result(plain, f'\n[result]\nrun = "{RUN}"\n')
+        self.assertEqual(protocol_block.declared_run(text), RUN)
+        self.assertEqual(protocol_block.head(text), protocol_block.head(plain))
+        self.assertEqual(promises.block_stamp(text), promises.block_stamp(plain))
+
+    def test_a_typed_id_an_unknown_key_and_a_scalar_are_refused_by_name(self):
+        cases = (
+            (
+                '\n[result]\nrun = "2026-10-21T12-48-00_final"\n',
+                "no run id runlog writes",
+            ),
+            (
+                f'\n[result]\nrun = "{RUN}"\nreported = true\n',
+                r"unknown field\(s\) \['reported'\]",
+            ),
+            ("\n[result]\n", "missing `run`"),
+        )
+        for body, said in cases:
+            with self.subTest(body=body):
+                with self.assertRaisesRegex(protocol_block.BlockError, said):
+                    protocol_block.declared_run(with_result(head(cost="seconds"), body))
+        # a scalar `result = …` standing before the tables is no table
+        scalar = head(cost="seconds").replace(
+            "```toml\n", f'```toml\nresult = "{RUN}"\n', 1
+        )
+        with self.assertRaisesRegex(protocol_block.BlockError, "must be a table"):
+            protocol_block.declared_run(scalar)

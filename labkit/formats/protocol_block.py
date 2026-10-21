@@ -31,6 +31,8 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.runs import RUN_ID
+
 #: the head format this labkit reads; a protocol of another standard is
 #: read with the labkit release it was written for
 STANDARD = "0.19"
@@ -41,7 +43,7 @@ COST_TIERS = ("seconds", "minutes", "hours")
 ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
 
 FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})\s*([\w+-]*)")
-_TOP_LEVEL = {"protocol", "promise"}
+_TOP_LEVEL = {"protocol", "promise", "result"}
 #: the settings every protocol carries in its ```toml head (the block at the
 #: end of the protocol), in the template's order — not the run's config.json,
 #: which runlog writes per run
@@ -207,6 +209,43 @@ def _placeholder(value: object) -> bool:
         and value.strip().startswith("<")
         and value.strip().endswith(">")
     )
+
+
+#: the keys of the `[result]` table: the one declaration that a number is reported
+RESULT_KEYS = ("run",)
+
+
+def declared_run(text: str) -> str | None:
+    """The run the protocol declares as its reported result — `[result]
+    run = "<run_id>"` in the TOML block, written by `protocol-fill
+    --from-run` and never typed; report-check holds the protocol to it at
+    the stop and the commit. None without a `[result]` table: an
+    exploration that reports nothing (until 0.100.0 the declaration was a
+    run id in the prose "Answer to the question" line, and a typed
+    `…_final` there passed as a citation). Raises BlockError when the
+    table is not a table, holds a key other than `run`, or `run` is not a
+    string in the shape runlog writes (`runs.RUN_ID`)."""
+    data = parse_toml_block(text)
+    if "result" not in data:
+        return None
+    table = data["result"]
+    if not isinstance(table, dict):
+        raise BlockError("`result` must be a table: [result]")
+    unknown = set(table) - set(RESULT_KEYS)
+    if unknown:
+        raise BlockError(
+            f"[result]: unknown field(s) {sorted(unknown)}; allowed: {', '.join(RESULT_KEYS)}"
+        )
+    if "run" not in table:
+        raise BlockError("[result]: missing `run` — the run id the result reports")
+    run = table["run"]
+    if not isinstance(run, str) or not RUN_ID.fullmatch(run):
+        raise BlockError(
+            f"[result] run = {run!r} — no run id runlog writes (<date>T<time>_<hex>); "
+            f"a run id is runlog's, written by `protocol-fill <PROTOCOL> --from-run "
+            f"<run_id>`, never typed"
+        )
+    return run
 
 
 def _choice(table: dict, field: str, allowed: tuple[str, ...]) -> str | None:
