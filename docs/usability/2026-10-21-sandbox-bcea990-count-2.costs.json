@@ -1,0 +1,43 @@
+{
+ "agent_usd": 0.1862796,
+ "nested_usd": 0.210896,
+ "total_usd": 0.397175,
+ "sessions": {
+  "-work/6678d280-1252-4033-8d6e-c0b9caade297": {
+   "cost_usd": 0.1862796,
+   "models": {
+    "claude-sonnet-5-5": {
+     "input_tokens": 28,
+     "cache_read_input_tokens": 268688,
+     "cache_creation_input_tokens": 20164,
+     "output_tokens": 5183
+    }
+   }
+  },
+  "-work--tmp/e40f78a5-3fc4-4d05-ab11-7bceb6b535e8": {
+   "cost_usd": 0.2108958,
+   "models": {
+    "claude-opus-5-5": {
+     "input_tokens": 2,
+     "cache_read_input_tokens": 1839,
+     "cache_creation_input_tokens": 15550,
+     "output_tokens": 4306
+    }
+   }
+  }
+ },
+ "proxy_tokens": {
+  "claude-sonnet-5-5": {
+   "input_tokens": 28,
+   "cache_read_input_tokens": 268688,
+   "cache_creation_input_tokens": 20164,
+   "output_tokens": 5183
+  },
+  "claude-opus-5-5": {
+   "input_tokens": 2,
+   "cache_read_input_tokens": 1839,
+   "cache_creation_input_tokens": 15550,
+   "output_tokens": 4306
+  }
+ }
+}

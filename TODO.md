@@ -117,12 +117,21 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   herausgelöst 2026-10-21 (Commit `260370b` dort): Versuch, Proxy,
   Claude-Code-Adapter mit Einrichtungsschritt, Kosten mit
   Proxy-Gegenprüfung, Selbsttest (20 von 20 gegen die gebauten Images).
-  Offen, je ein eigener Auftrag: (1) die labkit-Proben auf das Paket
-  umstellen (Runner der Reihe ersetzt `agentsandbox` aus labkit-paper durch
-  das Paket, abgeleitetes Image mit dem labkit-Wheel); (2) labkit-paper
-  umstellen und seine Kopie in `lib/agentsandbox` entfernen — bis dahin
-  liegt der Code zweimal vor; batch, arms, benches, standard_check bleiben
-  dort.
+  Count-Reihe auf dem Paket 2026-10-21 ([Bericht](docs/usability/2026-10-21-sandbox-count-bcea990.md)):
+  keine Fehlbedienung, `--decide` in allen drei Läufen richtig. Nächste
+  Punkte nach Beleg: (a) Count-Fixture gibt jedem Fall einen eigenen
+  `inputs`-Pfad, das Skelett friert nur `INPUTS` ein — Audit warnt in
+  jedem Lauf; entscheiden: Skelett liest aus `INPUTS` und lehnt
+  abweichende Records ab, oder die Fixture verliert das Feld. (b) Die
+  Count-Ausnahme (kein Kriterium, keine Promise-Tabelle) steht in
+  `promises.py` und AGENTS.md, nicht im Standard — Audit-Fehlalarm in 1
+  von 3. (c) Skelett-Docstring nennt „three TODOs“, `INPUTS` ist ein
+  vierter.
+  Erledigt: die labkit-Proben laufen auf dem Paket (Runner
+  `~/projects/labkit-probes-sandbox-bcea990/run.py`). Offen als eigener
+  Auftrag: labkit-paper umstellen und seine Kopie in `lib/agentsandbox`
+  entfernen — bis dahin liegt der Code zweimal vor; batch, arms,
+  benches, standard_check bleiben dort.
   Entschieden 2026-10-21: der allgemeine Sandbox-Code wird ein **eigenes
   Paket** `~/projects/agentsandbox` (eigenes Git-Repo, Python, Docker als
   ausdrücklich benötigte externe Laufzeit) — nicht nach labkit, damit die
