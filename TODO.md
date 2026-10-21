@@ -135,6 +135,12 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   feste Ausschlussliste nähme diese Entscheidung vorweg. Die Warnung in
   count-3 war ein sinnvoller Befund, begründet abgelehnt. Beobachten:
   Commit vor `finalize`, Audit im Vordergrund bei `seconds`.
+  Judge-Reihe auf `45bb0a2` ([Bericht](docs/usability/2026-10-21-sandbox-judge-45bb0a2.md)):
+  `--decide` ohne Fehlnummer, aber die Liste geht in der Pipe verloren
+  (stderr vor gepuffertem stdout, `tail` schneidet sie ab); judge-1 zahlte
+  ein zweites Audit, nur um sie zu sehen. Vorschlag, zu entscheiden: Liste
+  auf stdout nach dem Bericht; `labkit-audit AREA --findings` zeigt die
+  Liste des neuesten Records ohne neuen Aufruf.
   Erledigt: die labkit-Proben laufen auf dem Paket (Runner
   `~/projects/labkit-probes-sandbox-bcea990/run.py`). Offen als eigener
   Auftrag: labkit-paper umstellen und seine Kopie in `lib/agentsandbox`
