@@ -25,18 +25,20 @@ pins (`requirements.txt` / `requirements.lock`).
   protocol registered under 0.99.0 without the field writes it before its
   next full run.
 
-- **An accepted BLOCKER owes its effect on the verdicts, and the reported
-  protocol carries it.** `labkit-audit AREA --decide N accepted REASON`
-  on a BLOCKER now needs `--effect stands` (the verdicts hold, read
-  within it) or `--effect "C1 not assessable"` (the run does not judge
-  C1); the record stores it as `effect`, and its ids are held to the
-  protocol's promises. `protocol-fill --from-run` writes each accepted
-  BLOCKER below the Answer as `Limit (audit <record> #N): <effect> —
-  <reason>`, and says "C1 not assessable with this run" in the Answer
-  for each such id; the number stays reported. report-check refuses a
-  report whose covering analysis record holds an accepted BLOCKER
-  without an effect, without its Limit line, or not-assessable ids the
-  Answer does not name. Before, a judge probe accepted a BLOCKER — its
+- **An accepted BLOCKER owes its effect on the verdicts, an accepted
+  WARNING may name one, and the reported protocol carries it.**
+  `labkit-audit AREA --decide N accepted REASON` on a BLOCKER now needs
+  `--effect stands` (the verdicts hold, read within it) or `--effect "C1
+  not assessable"` (the run does not judge C1); on a WARNING the same
+  `--effect` is optional, for a finding that limits what the result
+  allows. The record stores it as `effect`, and its ids are held to the
+  protocol's promises. `protocol-fill --from-run` writes each finding
+  with an effect below the Answer as `Limit (audit <record> #N): <effect>
+  — <reason>`, and the Answer names it ("; read within Limit (…)" or
+  "; C1 not assessable with this run (Limit (…))"); the number stays
+  reported. report-check refuses a report whose covering analysis record
+  holds an accepted BLOCKER without an effect, or a named effect without
+  its Limit line or its note in the Answer. Before, a judge probe accepted a BLOCKER — its
   prompt asked more than the gold scores — and "C1 not met" passed with
   the limit only in the record (sandbox, 2026-10-21). Whether a limit
   is enough stays the reader's judgement. A reported protocol resting

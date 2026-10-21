@@ -1,8 +1,10 @@
-"""An accepted BLOCKER's effect on the verdicts, as the record holds it.
+"""An accepted finding's effect on the verdicts, as the record holds it.
 
-`stands` keeps the verdicts with the limit named; `C1 not assessable`
-says the run does not judge C1. Only an accepted BLOCKER carries one, and
-`--decide` refuses an accepted BLOCKER without it (review 2026-10-21).
+`stands` keeps the verdicts, read within the limit; `C1 not assessable`
+says the run does not judge C1. An accepted BLOCKER owes one (`--decide`
+refuses it without), an accepted WARNING may name one — severity and
+what the result still allows are two questions — and nothing else
+carries one (review 2026-10-21).
 """
 
 import tempfile
@@ -55,16 +57,40 @@ class Decide(unittest.TestCase):
             self.path, 1, "accepted", "kept", "C1 not assessable"
         )
         self.assertEqual(rec.findings[0].effect, "C1 not assessable")
-        self.assertEqual(rec.accepted_blockers(), [(1, rec.findings[0])])
+        self.assertEqual(rec.limits(), [(1, rec.findings[0])])
         again = findings.write_decision(self.path, 1, "accepted", "kept", "stands")
         self.assertEqual(again.findings[0].effect, "stands")
         self.assertEqual(self.path.read_text(encoding="utf-8").count("effect ="), 1)
 
-    def test_no_effect_on_anything_but_an_accepted_blocker(self):
-        with self.assertRaisesRegex(findings.FindingsError, "accepted BLOCKER only"):
-            findings.write_decision(self.path, 2, "accepted", "kept", "stands")
-        with self.assertRaisesRegex(findings.FindingsError, "accepted BLOCKER only"):
+    def test_an_accepted_warning_may_name_an_effect_and_is_then_a_limit(self):
+        rec = findings.write_decision(self.path, 2, "accepted", "a cue", "stands")
+        self.assertEqual(rec.findings[1].effect, "stands")
+        self.assertEqual([n for n, _ in rec.limits()], [2])  # the BLOCKER is still open
+
+    def test_an_accepted_warning_without_an_effect_is_no_limit(self):
+        rec = findings.write_decision(self.path, 2, "accepted", "noted")
+        self.assertEqual(rec.findings[1].effect, "")
+        self.assertEqual(rec.limits(), [])  # the BLOCKER is still open
+
+    def test_no_effect_on_anything_but_an_accepted_blocker_or_warning(self):
+        with self.assertRaisesRegex(
+            findings.FindingsError, "accepted BLOCKER or WARNING"
+        ):
             findings.write_decision(self.path, 1, "dismissed", "no", "stands")
+        with self.assertRaisesRegex(
+            findings.FindingsError, "accepted BLOCKER or WARNING"
+        ):
+            findings.write_decision(self.path, 2, "deferred", "later", "stands")
+
+    def test_the_answer_note_names_the_limit(self):
+        label = "Limit (audit x #1)"
+        self.assertEqual(
+            findings.answer_note(label, "stands"), f"; read within {label}"
+        )
+        self.assertEqual(
+            findings.answer_note(label, "C1, A2 not assessable"),
+            f"; C1 not assessable with this run ({label}); A2 not assessable with this run ({label})",
+        )
 
     def test_a_hand_written_effect_is_held_on_reading(self):
         text = self.path.read_text(encoding="utf-8").replace(

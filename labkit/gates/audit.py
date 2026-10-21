@@ -677,7 +677,8 @@ def main(argv: list[str]) -> int:
         "--effect",
         default="",
         metavar="EFFECT",
-        help="with --decide, owed for an accepted BLOCKER: `stands` (the verdicts hold, "
+        help="with --decide, owed for an accepted BLOCKER, open to an accepted WARNING: "
+        "`stands` (the verdicts hold, "
         'the limit named beside them) or "<ID>[, <ID>] not assessable" (this run '
         "does not judge those promises)",
     )
@@ -825,6 +826,11 @@ def decision_lines(record: findings.Record, area: Path, report: str) -> list[str
                 out.append(
                     "      accepted owes its effect: --effect stands (the verdicts "
                     'hold, read within it) or --effect "<ID> not assessable"'
+                )
+            elif f.grade == "WARNING":
+                out.append(
+                    "      accepted may name its effect when it limits what the "
+                    'result allows: --effect stands | --effect "<ID> not assessable"'
                 )
     hints = [ln.strip() for ln in report.splitlines() if READ_HINT.match(ln)]
     if hints:

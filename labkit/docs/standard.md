@@ -285,11 +285,15 @@ evidence file under the same ID (top of this document).*
   standard twice per audit.
 
   Every finding is decided (fixed / accepted with reason /
-  dismissed); an accepted BLOCKER also says its effect on the verdicts —
-  they stand, read within it, or the run leaves the named promises not
-  assessable (a number may be reported within a fault; a verdict needs an
-  instrument fit to judge it) — and the reported protocol carries it as a
-  `Limit (audit <record> #N)` line that report-check holds to the record;
+  dismissed); an accepted BLOCKER also says its effect on the verdicts,
+  and an accepted WARNING may — they stand, read within it, or the run
+  leaves the named promises not assessable (a number may be reported
+  within a fault; a verdict needs an instrument fit to judge it). How
+  severe a finding is and what the result still allows are two
+  questions: the effect follows from what the promise claims, not from
+  the grade. The reported protocol carries each named effect as a
+  `Limit (audit <record> #N)` line and a note in the Answer, both held
+  to the record by report-check;
   whether the limit is enough stays a reader's judgement. The raw report
   stays in the scratchpad (LAB-012 Protocol is content), and the result
   goes in ONE line in the head; the check value in it is the stamp

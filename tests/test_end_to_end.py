@@ -628,12 +628,52 @@ class Judge(unittest.TestCase):
             f"- **{label}:** the verdicts stand, read within this limit — ", text
         )
         self.assertNotIn("not assessable with this run", text)
+        self.assertIn(f"; read within {label}", text)  # the Answer points to it
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)
         # fixed after all: no effect owed, and the line is the record's no longer
         rc, out = self._decide(record, "fixed", "")
         self.assertEqual(rc, 0, out)
         self.assertNotIn("effect", record.read_text(encoding="utf-8"))
+
+    def test_05_an_accepted_warning_that_names_its_effect_reaches_the_result(self):
+        """Review 2026-10-21 (judge-2/3): the cue that limits how the number
+        reads was a WARNING, accepted, and the Answer said `c1_pass = True`
+        alone. A WARNING may name its effect; named, it reaches the result."""
+        lab = type(self).lab
+        record = findings.write(
+            self.area,
+            sc.ANALYSIS_AUDIT,
+            "test",
+            scope_sha.area_stamp(self.area)[0],
+            promises.block_stamp(self.protocol.read_text(encoding="utf-8")),
+            (0, 1, 0),
+            [("WARNING", "WARNING · data/raw:1 · six connectives separate the classes")],
+            run_id=self.run_id,
+            shown_sha=audit.run_shown(self.area, self.area / "runs" / self.run_id, "").sha,
+        )  # fmt: skip
+        label = f"Limit (audit {record.stem} #1)"
+        reason = "C1 reached on these items; a keyword rule scores 12/12, so no causal understanding is shown"
+        rc, out = self._decide(record, "accepted", reason, "--effect", "stands")
+        self.assertEqual(rc, 0, out)
+        rc, out = self._report_check()
+        self.assertEqual(rc, 1, out)  # named, the effect is owed in the result
+        self.assertIn(label, out)
+        rc, out = lab.adopt_forced(self.protocol, self.run_id)
+        self.assertEqual(rc, 0, out)
+        text = self.protocol.read_text(encoding="utf-8")
+        self.assertIn(
+            f"- **{label}:** the verdicts stand, read within this limit — {reason}",
+            text,
+        )
+        self.assertIn(f"c1_pass = True (run {self.run_id}); read within {label}", text)
+        rc, out = self._report_check()
+        self.assertEqual(rc, 0, out)
+        # accepted without an effect it is no limit: nothing is owed for it
+        rc, out = self._decide(record, "accepted", reason)
+        self.assertEqual(rc, 0, out)
+        rc, out = self._report_check()
+        self.assertEqual(rc, 0, out)
 
 
 class Estimator(unittest.TestCase):

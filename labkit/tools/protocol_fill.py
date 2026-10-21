@@ -316,9 +316,7 @@ def from_run(
     metrics = runs.read_metrics(run / "metrics.json")
     limits = accepted_limits(area, text, run)
     answer = answer_line(metrics, run.name) + "".join(
-        f"; {pid} not assessable with this run ({label})"
-        for label, _, effect in limits
-        for pid in findings.effect_ids(effect)
+        findings.answer_note(label, effect) for label, _, effect in limits
     )
     filled: list[str] = []
     for label in WRITTEN_BY_RUN:
@@ -349,7 +347,8 @@ def from_run(
 
 
 def accepted_limits(area: Path, text: str, run: Path) -> list[tuple[str, str, str]]:
-    """(label, value, effect) of every decided accepted BLOCKER in the
+    """(label, value, effect) of every limit with its effect decided — an
+    accepted BLOCKER, an accepted WARNING that names one — in the
     analysis records covering RUN (`report_check.covering_analysis`). An
     area the gate cannot hold to that run gives none here: report-check,
     which runs on the written result, names why."""
@@ -360,7 +359,7 @@ def accepted_limits(area: Path, text: str, run: Path) -> list[tuple[str, str, st
     return [
         (findings.limit_label(r, n), findings.limit_line(r, n, f), f.effect)
         for r in records
-        for n, f in r.accepted_blockers()
+        for n, f in r.limits()
         if f.effect
     ]
 

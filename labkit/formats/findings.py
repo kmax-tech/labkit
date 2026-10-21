@@ -21,7 +21,7 @@ area, one file per audit:
     text = "BLOCKER · scripts/01_measure.py:42 · … · LAB-038 What the prompt demands · …"
     status = "open"      # open | fixed | accepted | deferred | dismissed
     reason = ""          # owed for accepted, deferred and dismissed
-    # effect = "C1 not assessable"  — an accepted BLOCKER only: see EFFECT
+    # effect = "C1 not assessable"  — an accepted BLOCKER or WARNING: see EFFECT
 
 The person decides each finding — by hand in the file, or with
 `labkit-audit AREA --decide N STATUS REASON`, which validates the decision
@@ -72,14 +72,19 @@ protocol line. With the findings as data the deferred ones stay visible and
 an audit's yield (fixed / accepted / dismissed per class) can be counted
 instead of read.
 
-An accepted BLOCKER is a fault the person keeps: the number may still be
+An accepted finding is a fault the person keeps: the number may still be
 reported, read within the fault, but a fault in the instrument can leave
 a promise unjudged by the run. The decision says which (`effect`):
-`stands` — the verdicts hold, the limit named beside them — or `C1 not
-assessable` (ids comma-separated) — this run does not judge them. The
-protocol carries each accepted BLOCKER as a `Limit (audit <record> #N)`
-line (`protocol-fill --from-run` writes it from the record), and
-report-check holds the two to each other (`limit_line`). Whether the
+`stands` — the verdicts hold, read within the limit — or `C1 not
+assessable` (ids comma-separated) — this run does not judge them. How
+severe a finding is and what the result still allows are two questions:
+an accepted BLOCKER owes its effect, an accepted WARNING may name one
+(a cue that limits how the number reads), and either way a named effect
+reaches the result. Which effect follows from what the promise's sentence
+claims — a threshold on these items, or a capability — not from the
+grade. The protocol carries each as a `Limit (audit <record> #N)` line
+and a note in the Answer (`protocol-fill --from-run` writes both from the
+record), and report-check holds them to it (`limit_line`, `answer_note`). Whether the
 named limit is enough stays the audit's question, not this check's
 (judge probe, 2026-10-21: a prompt broader than the gold, accepted, and
 "C1 not met" reported with the limit in the record only).
@@ -113,6 +118,7 @@ REASON_OWED = ("accepted", "deferred", "dismissed")
 #: an accepted BLOCKER's effect on the verdicts: they stand with the limit,
 #: or the run judges the named promises not at all
 EFFECT_STANDS = "stands"
+EFFECT_GRADES = ("BLOCKER", "WARNING")
 _EFFECT_NOT = re.compile(r"^(\S+(?:\s*,\s*\S+)*)\s+not assessable$")
 EFFECT_FORM = '`stands` or `<ID>[, <ID>] not assessable` (e.g. "C1 not assessable")'
 GRADES = ("BLOCKER", "WARNING", "NOTE")
@@ -134,12 +140,17 @@ class Finding:
     text: str
     status: str
     reason: str
-    effect: str = ""  # an accepted BLOCKER: EFFECT_STANDS or "<ids> not assessable"
+    effect: str = ""  # accepted: EFFECT_STANDS or "<ids> not assessable"
 
     @property
     def effect_owed(self) -> bool:
         """An accepted BLOCKER owes the effect it has on the verdicts."""
         return self.grade == "BLOCKER" and self.status == "accepted"
+
+    @property
+    def effect_allowed(self) -> bool:
+        """An accepted BLOCKER or WARNING may name an effect; nothing else."""
+        return self.grade in EFFECT_GRADES and self.status == "accepted"
 
 
 def effect_ids(effect: str) -> tuple[str, ...]:
@@ -192,9 +203,15 @@ class Record:
         """The findings put off as somebody's later task."""
         return [f for f in self.findings if f.status == "deferred"]
 
-    def accepted_blockers(self) -> list[tuple[int, Finding]]:
-        """(number, finding) of every accepted BLOCKER, numbered as `--decide` takes them."""
-        return [(n, f) for n, f in enumerate(self.findings, 1) if f.effect_owed]
+    def limits(self) -> list[tuple[int, Finding]]:
+        """(number, finding) of every finding that is a limit of the result:
+        an accepted BLOCKER (its effect owed) and an accepted WARNING that
+        names an effect — numbered as `--decide` takes them."""
+        return [
+            (n, f)
+            for n, f in enumerate(self.findings, 1)
+            if f.effect_owed or (f.effect_allowed and f.effect)
+        ]
 
 
 def limit_label(record: Record, n: int) -> str:
@@ -206,6 +223,15 @@ def limit_line(record: Record, n: int, finding: Finding) -> str:
     """The value of that line: the effect, then the person's reason."""
     reason = " ".join(finding.reason.split())
     return f"{effect_sentence(finding.effect)} — {reason}"
+
+
+def answer_note(label: str, effect: str) -> str:
+    """What the Answer says of the limit LABEL: each id left not assessable,
+    or that the verdicts are read within it — appended to the metric line."""
+    ids = effect_ids(effect)
+    if not ids:
+        return f"; read within {label}"
+    return "".join(f"; {pid} not assessable with this run ({label})" for pid in ids)
 
 
 def counts_outrun(verdict: tuple[int, int, int], grades: list[str]) -> str | None:
@@ -564,13 +590,13 @@ def write_decision(
 
 def _effect_problem(f: Finding) -> str | None:
     """Why F's effect cannot stand, or None: an effect on anything but an
-    accepted BLOCKER, or not in EFFECT_FORM. An accepted BLOCKER without
-    one reads (a record decided by hand); report-check asks for it."""
+    accepted BLOCKER or WARNING, or not in EFFECT_FORM. An accepted BLOCKER
+    without one reads (a record decided by hand); report-check asks for it."""
     if not f.effect:
         return None
-    if not f.effect_owed:
+    if not f.effect_allowed:
         return (
-            f"an effect belongs to an accepted BLOCKER only, not to a "
+            f"an effect belongs to an accepted BLOCKER or WARNING, not to a "
             f"{f.status} {f.grade}"
         )
     try:
@@ -581,7 +607,7 @@ def _effect_problem(f: Finding) -> str | None:
 
 
 def _hold_effect(decided: Finding) -> None:
-    """An accepted BLOCKER names its effect, nothing else does — or FindingsError."""
+    """An accepted BLOCKER names its effect, an accepted WARNING may, nothing else does — or FindingsError."""
     if decided.effect_owed and not decided.effect:
         raise FindingsError(
             "an accepted BLOCKER owes its effect on the verdicts — "

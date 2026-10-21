@@ -286,7 +286,7 @@ def limit_gaps(ctx: Checked) -> list[str]:
     )
     gaps: list[str] = []
     for r in records:
-        for n, f in r.accepted_blockers():
+        for n, f in r.limits():
             label = findings.limit_label(r, n)
             if not f.effect:
                 gaps.append(
@@ -299,15 +299,16 @@ def limit_gaps(ctx: Checked) -> list[str]:
             got = lines.get(label)
             if got is None or not got.value.startswith(opening):
                 gaps.append(
-                    f'no "{label}" line opening "{opening}" — the accepted BLOCKER\'s '
+                    f'no "{label}" line opening "{opening}" — the accepted {f.grade}\'s '
                     f"limit belongs in the protocol; `protocol-fill <PROTOCOL> "
                     f"--from-run` writes it from the record"
                 )
-            for pid in findings.effect_ids(f.effect):
-                if f"{pid} not assessable with this run" not in answer:
+            note = findings.answer_note(label, f.effect).lstrip("; ")
+            for part in note.split("; "):
+                if part not in answer:
                     gaps.append(
-                        f'the Answer does not say "{pid} not assessable with this '
-                        f'run" — {label} decided so'
+                        f'the Answer does not say "{part}" — {label} decided so; '
+                        f"`protocol-fill <PROTOCOL> --from-run --force` writes it"
                     )
     return gaps
 
