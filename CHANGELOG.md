@@ -286,6 +286,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **Raw output is listed as an after-run field, and `--from-run` names
+  it.** `protocol-fill --list` listed Raw output among the fields owed
+  before the run. Two of three cold judge agents filled it at
+  registration: one with "filled after the run", which `--from-run` then
+  could not overwrite without `--force`, and one only after the post hook
+  asked for it (sandbox, 2026-10-21). `--list` now sets the after-run
+  fields the author writes (Raw output, and Limits and Next step on the
+  full form) apart, under their own line. After an adopted write-back,
+  `--from-run` names those still open together with the run's output
+  files. It does not write Raw output: which prompt+answer pair shows a
+  finding is a choice no run record makes.
+
 - **`labkit-audit`'s decision list survives a pipe, and can be shown
   again without a new audit.** The list went to stderr while the report
   went to buffered stdout; in a pipe it came out first, and `2>&1 | tail`

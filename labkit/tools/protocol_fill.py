@@ -48,10 +48,12 @@ import re
 from pathlib import Path
 
 from labkit.formats import console, files, promises, protocol_block, runs
+from labkit.formats.repo import shown
 from labkit.checks import recheck
 from labkit.gates import report_check
 from labkit.checks.prompt_check import prompt_constants
 from labkit.formats.protocol_check import (
+    BEFORE_RUN_CLAIMS,
     RUNS_PLACEHOLDER,
     answering_run_field,
     answering_run_open,
@@ -258,6 +260,13 @@ RUNS_HEADING = re.compile(r"^## Runs\b")
 #: the labels `--from-run` writes from the run's metrics.json — `--list` sets
 #: them apart, since filling them before the run makes --from-run refuse
 WRITTEN_BY_RUN = ("Answer to the question", "Result")
+#: the fields about the run that the author writes after it (Raw output from
+#: its rows: which pair shows a finding is a choice no record makes) —
+#: `--list` sets them apart too, and `--from-run` names the open ones with
+#: the run's output files
+WRITTEN_AFTER_RUN = tuple(
+    label for label in BEFORE_RUN_CLAIMS if label not in WRITTEN_BY_RUN
+)
 
 
 def answer_line(metrics: dict, run_id: str) -> str:
@@ -433,15 +442,40 @@ def _write_back(args: argparse.Namespace, text: str) -> int:
         f"filled from run {run_id}: {', '.join(filled) or 'nothing (all written already)'}"
         f" — adopting as the result:"
     )
-    return adopt(protocol, text, new)
+    rc = adopt(protocol, text, new)
+    if rc == 0:
+        _name_yours(
+            new, protocol.parent, recheck.chosen_run(protocol.parent, new, run_id)
+        )
+    return rc
+
+
+def _name_yours(text: str, area: Path, run: Path) -> None:
+    """After an adopted write-back: the after-run fields still open, which
+    the author writes (Raw output from the rows), and the run's output files —
+    the post hook asked for Raw output only after the commit, and two of
+    three cold agents filled it in a second round (sandbox, 2026-10-21)."""
+    open_ = [
+        (n, label)
+        for n, label in placeholder_fields(text)
+        if label in WRITTEN_AFTER_RUN
+    ]
+    if not open_:
+        return
+    outputs = runs.read_outputs(run) or []
+    where = ", ".join(shown(o.path, area) for o in outputs) or f"runs/{run.name}/"
+    print(f"still yours, after the run (its rows: {where}):")
+    for n, label in open_:
+        print(f"{n:4d}  {label}")
 
 
 def _list_open(text: str) -> int:
     """`--list`: every open field, the TOML head's `type` and open promise
-    sentences first; the fields
-    `--from-run` writes last, under their own line. Listed among the rest
-    they read as owed before the run: a cold agent filled them with "pending
-    run", and --from-run then refused to overwrite them (cloud, 2026-10-14)."""
+    sentences first; then, each under its own line, the fields `--from-run`
+    writes and the after-run fields the author writes. Listed among the rest
+    they read as owed before the run: cold agents filled them with "pending
+    run" or "filled after the run", and the write after the run was then
+    refused without --force (cloud 2026-10-14, sandbox 2026-10-21)."""
     sentences: list[tuple[int | None, str]] = [
         (n, f"{label}  (TOML head: this promise in one sentence)")
         for n, label in open_sentences(text)
@@ -455,16 +489,23 @@ def _list_open(text: str) -> int:
     holes = head + sentences + list(placeholder_fields(text))
     if not holes:
         print("no placeholder fields left")
-    now = [(n, label) for n, label in holes if label not in WRITTEN_BY_RUN]
-    later = [(n, label) for n, label in holes if label in WRITTEN_BY_RUN]
-    for n, label in now:
-        # a sentence the table walk cannot place is named all the same
-        print(f"{n:4d}  {label}" if n is not None else f"   ?  {label}")
-    if later:
-        print(
-            "after the run — `protocol-fill <PROTOCOL> --from-run` writes these; leave them:"
-        )
-        for n, label in later:
+    after = WRITTEN_BY_RUN + WRITTEN_AFTER_RUN
+    groups = (
+        (None, [(n, label) for n, label in holes if label not in after]),
+        (
+            "after the run — `protocol-fill <PROTOCOL> --from-run` writes these; leave them:",
+            [(n, label) for n, label in holes if label in WRITTEN_BY_RUN],
+        ),
+        (
+            "after the run — yours, once its rows exist (`--from-run` names them); leave them now:",
+            [(n, label) for n, label in holes if label in WRITTEN_AFTER_RUN],
+        ),
+    )
+    for title, group in groups:
+        if title is not None and group:
+            print(title)
+        for n, label in group:
+            # a sentence the table walk cannot place is named all the same
             print(f"{n:4d}  {label}" if n is not None else f"   ?  {label}")
     return 0
 

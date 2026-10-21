@@ -148,11 +148,26 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   Judge-Skelett geteilt (`be50b1b`, `labkit.run.lanes`); Reihe
   ([Bericht](docs/usability/2026-10-21-sandbox-judge-be50b1b.md)): gleiche
   Prüfungen und Bindung, keine Fehlbedienung, Mess-Skript 436 → 255
-  Zeilen, Kontext 37–41k → 34–38k. Nächste Punkte nach Beleg: (a) das
+  Zeilen (Ziel waren ~150; weiter kürzen hieße die Formeln oder die
+  Dokumentation aus dem Bereich nehmen, die das Audit lesen soll),
+  Kontext 37–41k → 34–38k (auch andere Einflüsse; kein Zeit- oder
+  Kostenschluss). Nächste Punkte nach Beleg: (a) das
   gestempelte `00_prepare.py` mit seinem TODO `audit()` (Audit-Befund in
-  2 von 3 Läufen, nun der größere Leseanteil); (b) `Raw output`: von
-  `--list` vor dem Lauf verlangt, von `--from-run` nicht geschrieben
-  (2 von 3 Läufen ein Nacharbeiten).
+  2 von 3 Läufen, nun der größere Leseanteil) — zuerst klären, welche
+  fachliche Prüfung `audit()` verlangt und warum der unveränderte TODO
+  Befunde erzeugt; nur streichen, wenn keine nötige Entscheidung
+  verschwindet; (b) `Raw output` — erledigt: `--list` führt es unter
+  „after the run — yours“, `--from-run` nennt es danach mit den
+  Ausgabedateien des Laufs (schreibt es nicht: welches Paar einen Befund
+  zeigt, steht in keinem Record). Ursache des `--force` in judge-2: der
+  Agent füllte das Feld bei der Registrierung mit „filled after the run“.
+  Offen, zu entscheiden: judge-2 hat einen BLOCKER (Prompt „states or
+  implies“ breiter als das Gold) als `accepted` entschieden; `finalize`
+  lief vor dem Audit, `report-check` und `--from-run` nahmen „C1 not met“
+  an, und das Protokoll nennt die Einschränkung nirgends (sie steht nur
+  im Audit-Record). Frage: darf ein akzeptierter BLOCKER ein Ergebnis
+  tragen, oder muss er im Protokoll stehen bzw. das Kriterium ohne
+  Urteil lassen?
   Erledigt: die labkit-Proben laufen auf dem Paket (Runner
   `~/projects/labkit-probes-sandbox-bcea990/run.py`). Offen als eigener
   Auftrag: labkit-paper umstellen und seine Kopie in `lib/agentsandbox`

@@ -448,7 +448,6 @@ class Judge(unittest.TestCase):
             "Question / hypothesis=Does the model read a causal claim off one sentence?",
             "Success / failure criterion=[C1] registered accuracy at least the null lane's plus margin",
             "Admissibility condition=[A1] at most max_empty empty answers; [A2] the null lane at chance within null_band_items",
-            "Raw output=one pair per finding, from the run",
             "Data / scope=data/prepared/sentences_v1.jsonl, 12 sentences, 00_prepare.py",
             "Model / tool=haiku",
             "Null condition / anchors (in the same run)=[A2] the placebo question (English?) answers Yes for every item: expected accuracy 6 of 12",
@@ -486,6 +485,12 @@ class Judge(unittest.TestCase):
         lab = type(self).lab
         from labkit.run import llm
 
+        listed = io.StringIO()
+        with contextlib.redirect_stdout(listed):
+            self.assertEqual(protocol_fill.main([str(self.protocol), "--list"]), 0)
+        before, _, after = listed.getvalue().partition("after the run — yours")
+        self.assertNotIn("Raw output", before)  # not owed before the run
+        self.assertIn("Raw output", after)
         out = io.StringIO()
         with (
             mock.patch.object(llm, "complete_many", self._model),
@@ -509,6 +514,10 @@ class Judge(unittest.TestCase):
         self.assertIn("finalized, audited, checked", out_text)
         text = self.protocol.read_text(encoding="utf-8")
         self.assertIn(f"c1_pass = True (run {run_id})", text)
+        yours = out_text.partition("still yours")[2]
+        self.assertIn("output/", yours)  # the run's rows, where the pair is read
+        self.assertIn("Raw output", yours)
+        lab.fill(self.protocol, "Raw output=one pair per finding, from the run")
         rc, err = lab.stop_hook()
         self.assertEqual(rc, 0, err)
         lab.git("add", "-A")
@@ -675,6 +684,7 @@ class Estimator(unittest.TestCase):
         rc, out = lab.adopt(self.protocol, run_id)
         self.assertEqual(rc, 0, out)
         self.assertIn("frozen, finalized, audited, checked", out)
+        self.assertNotIn("Raw output", out)  # filled already: not named again
         text = self.protocol.read_text(encoding="utf-8")
         self.assertIn(f"c1_pass = True (run {run_id})", text)
         self.assertIn(f"- **Answering run:** {run_id}", text)

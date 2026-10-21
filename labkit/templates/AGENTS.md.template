@@ -16,7 +16,8 @@ LAB-017 The number of audits follows the cost tier.
    skeleton.
 2. Write the registration: `protocol-fill <PROTOCOL> --list` names every
    open field, the TOML head's `type` and, with a model, each promise's
-   `<id> sentence` first (`cost = "seconds"` is stamped).
+   `<id> sentence` first (`cost = "seconds"` is stamped); the fields
+   written after the run stand apart at the end — leave them now.
    A count owes question · data · exclusions · unit; with a model also the
    success criterion, the admissibility condition, the prompt and the null
    condition. Every coinage of your own — a constant such as a margin, arms,
@@ -44,7 +45,9 @@ LAB-017 The number of audits follows the cost tier.
    file back if it refuses: a full run (no probe), the decided analysis
    audit of code, promises and that run, `scripts/02_analyze.py --check`
    passing (stamped with every skeleton; the count's recomputes from the
-   kept rows).
+   kept rows). With a model it then names what is still yours: Raw output,
+   one real prompt+answer pair per finding, read from the run's output
+   file it names.
    The run_id in the Answer declares the result reported; the stop hook
    and the pre-commit hold it to the same check. An exploration that
    reports nothing leaves the Answer open and may end; its number stays a
