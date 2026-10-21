@@ -19,8 +19,8 @@ LAB-017 The number of audits follows the cost tier.
    `<id> sentence` first (`cost = "seconds"` is stamped); the fields
    written after the run stand apart at the end — leave them now.
    A count owes question · data · exclusions · unit; with a model also the
-   success criterion, the admissibility condition, the prompt and the null
-   condition. Every coinage of your own — a constant such as a margin, arms,
+   success criterion, the admissibility condition, the prompt, the null
+   condition and the data profile (step 3; the full run waits for it). Every coinage of your own — a constant such as a margin, arms,
    item ids, the model alias — gets half a sentence under "Terms of this
    protocol" — a count with no coinage writes "n/a — no coinage". Fill by
    label, all in one call: `protocol-fill <PROTOCOL> "type=exploratory"
