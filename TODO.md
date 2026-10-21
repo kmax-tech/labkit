@@ -17,10 +17,61 @@ umgesetzt. Ihre Übernahme in andere Repos ist ein eigener Auftrag.
 ersetzt `long`; bei `seconds` ist keine gesonderte Probe zulässig. Ergebnisfreigabe bleibt
 eine eigene Prüfung.
 
+**Beschlossene Richtung (2026-10-21): Maschinelle Verträge strukturiert,
+fachliche Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen
+— die Linie für 1.0.** Befund: Nur sieben Angaben des Protokolls steuern
+Prüfungen (Answer-Zahlen und Run-ID, Answering run, Runs-Liste,
+Modell-Alias und Arme, Prompt-Block, Gate labels, Limit-Zeilen; 27 Aufrufe
+in 8 Modulen, 10 in `finalize`); 33 der 40 Felder werden nur auf
+Vollständigkeit geprüft. Für die sieben trägt labkit 21 Prosa-Muster in
+vier Modulen (Labels, Platzhalter, Fences, Kommentare, Schnittmarken), und
+dort entstehen die Kanten jeder Probe (allein 2026-10-21: Platzhalter
+mitten im Wert, Result als Key-Dump, `cost` im Kopf).
+
+Ziel: Zur Stufe „guaranteed“ gehören nur der TOML-Block, die Run-Records
+und `audits/*.toml`, jeder mit eigenem typisiertem Validator (tomllib
+meldet Syntax mit Zeile, kein Schema; `protocol_block.head` ist das
+Muster). Die Ergebnisdarstellung wird aus diesen Quellen erzeugt, nie aus
+der Prosa zurückgelesen: Answer aus `metrics.json` des Laufs in
+`[result]`, Limits aus `audits/*.toml`, Prompt aus den `PROMPT`-Konstanten.
+Erzeugte Abschnitte sind im Markdown abgegrenzt, und ihre Übereinstimmung
+mit den Quellen wird geprüft (erzeugt == neu erzeugt); so ist das Markdown
+eine Ansicht, keine zweite Wahrheit. Exakte Zahlprüfungen gelten nur
+diesen erzeugten Abschnitten — ein Token-Scan über freie Prosa findet
+Zahlen, kann aber Stichprobe, Schwelle und Ergebnis nicht auseinanderhalten;
+freie fachliche Aussagen bleiben Gegenstand des Audits. Welche
+Prosa-Felder vor einem Lauf zwingend vorliegen (Frage, Kriterium,
+Zulassungsbedingung, LAB-003/-004), bleibt Entscheidung des Standards,
+nicht des Formats: das Formatproblem rechtfertigt keine schwächere
+Pflicht; was sinkt, ist nur die Lesung von Labels, die kein Gate mehr
+steuern (Scheibe 5 prüft jedes Feld einzeln auf seinen Grad). Fehler
+werden exakt (`[result].run fehlt`, `[model].arms.before: kein String`);
+`protocol-fill` schrumpft auf `protocol-set key=value` und
+`protocol-render`.
+
+Nach außen ein zusammenhängender angekündigter Formatbruch (CHANGELOG
+nennt die letzte Version, die Maschinenfelder aus der Prosa liest; keine
+stückweisen Legacy-Pfade); intern in Scheiben, jede mit derselben
+Messlatte davor und danach. Studi-Repos pinnen und bleiben unberührt.
+
+| Scheibe | Inhalt | Abnahme |
+|---|---|---|
+| 1 Messlatte | Heutiges Verhalten sichern: Judge- und Count-Reihe (je drei kalte Läufe) auf dem Stand nach `2f61ab0`, plus Gegenbeispiele und die lane-spezifischen Pflichten (`seconds`, `minutes`/`hours`) als Tests — richtige und gebundene Zahl, Fehlaufrufe, Gate-Ablehnungen, Zeit, Kosten | Reihe und Zwillinge liegen vor; ohne sie findet kein Bruch statt |
+| 2 Kopplung | „Welche Audits decken diesen Stand?“ (`covering_analysis`) zieht aus `gates/report_check` nach `formats/findings`; `protocol_fill` importiert kein Gate mehr; Befunde als Daten (Grad, Regel, Fundstelle, Text) bis zur CLI — neun Stellen lesen den Grad heute aus Text, die Parkbedingung ist mit `e6dbb08` erfüllt | `test_architecture`: Tool ohne Gate-Import; kein `grade_of` auf Text außerhalb der Textquellen |
+| 3 `[result] run = "<run_id>"` | Die ausdrückliche Deklaration „berichtet“ ersetzt Answering-run-Zeile und Run-ID in der Answer; `report-check`, Stop-Hook, Pre-Commit lesen den Kopf; Answer und Limits werden daraus erzeugt | Reihe grün; `cited_runs`/`answering_run_field` ohne Prosa-Leser; Zwilling: ein Protokoll ohne `[result]` ist Exploration, kein Fehler |
+| 4 `[model] alias, arms` und `[gate] labels` | Ersetzen das Parsen von Model / tool, Arm-Zeilen und Gate labels (`model_named_in`, `arm_findings`, `gate_label_scan` gegen den Kopf); die fachliche Übereinstimmung bleibt Sache des Audits | `finalize` hält Arme gegen den Lauf aus dem Kopf; Code-Labels gegen Kopf |
+| 5 Prosa einzeln | Jedes verbliebene Prosa-Muster auf seinen notwendigen Grad prüfen: Pflichtfeld des Standards (bleibt must), Vollständigkeitshinweis (Warnung) oder entbehrlich; `protocol-fill` → `protocol-set` + `protocol-render`; Schnittmarken nur noch Template-Sache | Pre-Commit blockt auf Kopf, Lauf, Findings und die vom Standard genannten Pflichtfelder; der Rest warnt |
+
+Bis zur Messlatte gilt ein Stabilisierungsfenster: keine neue Prüfung,
+ein Release statt vieler (119 Releases in sieben Wochen, 25 an einem Tag;
+312 Commits in der Woche bis 2026-10-21, davon ein Drittel Buchführung).
+Die Buchführung schrumpft mit: Unreleased (819 Zeilen) in das Release,
+diese Datei auf Reihenfolge und Auslösertabellen, Herleitungen in
+`docs/notes/`.
+
 **Für die übrigen Punkte ist keine neue Umsetzungsreihenfolge beschlossen.**
 Die offenen Vertragsfragen und Korrektheitslücken unten sind sichtbar, aber dadurch
-nicht vorgezogen. Strukturierte Findings bleiben ausdrücklich geparkt,
-bis eine Fehlklassifikation oder ein konkretes Wartungsproblem sie verlangt.
+nicht vorgezogen.
 
 Für neue Prüfungen gilt: Die Evaluation steuert die Entwicklung. Erst ein
 belegter Fehler und sein korrekter Zwilling, dann die kleinste passende
