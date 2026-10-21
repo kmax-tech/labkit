@@ -600,6 +600,24 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The judge skeleton keeps the experiment; its run mechanics are
+  `labkit.run.lanes`.** The stamped `01_measure.py` of a model area was 436
+  lines for about six edits (every judge probe of 2026-10-21 said so). It
+  now holds one block of what to fill (items, text field, answer words,
+  both prompts, the case-class file), then what decides the number —
+  `MeasureConfig`, `parse_answer`, the counting functions and
+  `evaluate_rows` with its null band — where the audit reads them and the
+  stamp covers them, and hands the run to `lanes.Lanes`: jobs per item and
+  lane, batches, resume, the instrument, the probe, the balance, the
+  command line. The mechanics are tested once in labkit (answers stay with
+  their jobs whatever order the calls finish in, a break resumes to every
+  job once, `--eval-only` gives the run's numbers) and pinned with labkit;
+  a test holds that the audit's prompt still carries the prompts, the null
+  lane, the config and the formulas. The names `02_analyze.py` and the
+  area test read stay (`plan`, `measure`, `evaluate`, `probe`,
+  `read_jsonl`, `read_case_classes`, `one_per_class`, `main`). Areas
+  stamped before keep their script; the estimator skeleton is unchanged.
+
 - **`runs.tsv` is a local index, git-ignored by the lab stamp.** The
   versioned run directories under `runs/<run_id>/` are the truth; no gate
   reads the index, and `runlog reindex AREA` writes it back with the same

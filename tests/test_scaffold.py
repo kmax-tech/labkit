@@ -421,8 +421,10 @@ class Exp(unittest.TestCase):
         old = {**measure.instrument(measure.CONFIG), "prompt_sha": "000000000000"}
         with batch.Store(out, instrument=old) as store:
             store.append({"id": "registered:a", "answer": "Yes"})
-        jobs = [{"id": "registered:a"}, {"id": "registered:b"}]
-        with mock.patch.object(measure.llm, "complete_many") as calls:
+        jobs = [
+            {"id": f"registered:{x}", "lane": "registered", "text": x} for x in "ab"
+        ]
+        with mock.patch.object(measure.lanes.llm, "complete_many") as calls:
             with self.assertRaises(batch.InstrumentError):
                 quiet(measure.measure, measure.CONFIG, jobs, out)
             calls.assert_not_called()
@@ -430,12 +432,9 @@ class Exp(unittest.TestCase):
         own = measure.instrument(measure.CONFIG)
         with batch.Store(out, instrument=own) as store:
             store.append({"id": "registered:a", "answer": "Yes"})
-        with (
-            mock.patch.object(
-                measure.llm, "complete_many", return_value=["No"]
-            ) as calls,
-            mock.patch.object(measure, "render", return_value="p"),
-        ):
+        with mock.patch.object(
+            measure.lanes.llm, "complete_many", return_value=["No"]
+        ) as calls:
             quiet(measure.measure, measure.CONFIG, jobs, out)
         self.assertEqual(calls.call_count, 1)  # only registered:b was asked
 
@@ -445,7 +444,8 @@ class Exp(unittest.TestCase):
         rather than holds (cloud judge probe, 2026-10-14)."""
         quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
         script = (self.area() / "scripts" / "01_measure.py").read_text(encoding="utf-8")
-        self.assertIn("paste into tests/test_01_foo_bar.py PROBE_CASES", script)
+        # the area names its test; `lanes` prints "paste into <it> PROBE_CASES"
+        self.assertIn('probe_cases_in="tests/test_01_foo_bar.py"', script)
         self.assertNotIn("<NN>", script)
         self.assertTrue((self.root / "tests" / "test_01_foo_bar.py").is_file())
 

@@ -36,6 +36,13 @@ Measurement contract:
   - One answer vocabulary (`ANSWERS`), rendered into the prompt and read by
     the parser.
 
+What to fill is the block below — the items, the text field, the answer
+words, both prompts — and the null band in `evaluate_rows()`; every place
+carries a TODO. Everything from `MeasureConfig` on is the experiment, and
+stays. How the calls are made — one job per item and lane, the batches,
+resume, the probe, the balance of the rows against the items, the command
+line — is labkit's (`labkit.run.lanes`), the same in every area.
+
 Why (house rules, one per line so a reference is never cut):
   LAB-034 Null condition in the same run
   LAB-035 Thresholds belong to the run
@@ -43,15 +50,13 @@ Why (house rules, one per line so a reference is never cut):
   LAB-004 Identifiers make the intent addressable
   LAB-052 Instance gate before registered use
   LAB-038 What the prompt demands
-Stamped by `labkit-init exp <name>`; fill the TODOs, keep the structure.
+Stamped by `labkit-init exp <name>`.
 """
 from __future__ import annotations
 
-import argparse
 import hashlib
 import sys
-import tomllib
-from dataclasses import asdict, dataclass, replace
+from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
 
@@ -63,75 +68,14 @@ AREA = HERE.parent
 PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
-from labkit.run import batch, llm, runlog
-from labkit.formats import promises, protocol_block, standard_contract
-from labkit.formats.repo import adopt_command
+from labkit.formats import promises
+from labkit.run import lanes
+
+# ===== What this measurement asks — fill every TODO of this block ==========
 
 ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"   # written by 00_prepare.py: id · text · gold
-# One run, one output file. A second start of the same command RESUMES this
-# file (rows already answered are skipped); runlog records the file's sha per
-# run, so a run can always be told from the file it produced. A new
-# measurement — other prompt, other model, other items — gets a new file
-# name, or this one moved aside first: never two measurements in one file.
-OUT = AREA / "output" / "<name>.jsonl"
-MODEL = "<model>"                                       # alias from models.toml, never an endpoint
 TEXT_FIELD = "text"                                     # TODO: the item field the prompt shows
-
-# Cases the criterion singles out, as DATA — delete this block when [C…]
-# names no case classes. One [[case]] per singled-out item in
-# data/prepared/case_classes.toml:
-#
-#     [[case]]
-#     id = "dienstreiseantrag-33"      # the item's id in ITEMS, never a copy of the item
-#     cls = "over_ceiling"            # a class [C…] speaks of
-#     facts = { hotel_eur = 140, ceiling_eur = 117 }   # what the class follows from
-#
-# The stamped test recomputes each class from its facts (CLASS_RULE), so an
-# id cannot sit in the wrong list; the probe takes one case per class. A
-# tuple of ids with the reason in a docstring ("33 in Wien, 140 € > ARV
-# 117") was the form a reader could not check (uniagent area 17, 2026-10-08).
-CASE_CLASSES = AREA / "data" / "prepared" / "case_classes.toml"
-
-
-@dataclass(frozen=True)
-class CaseClass:
-    """One item the criterion names: its id, its class, and the facts the class rests on."""
-
-    id: str
-    cls: str
-    facts: dict
-
-
-def read_case_classes(path: Path = CASE_CLASSES) -> tuple[CaseClass, ...]:
-    """The [[case]] rows of `path`, empty when the file does not exist.
-    Refuses a duplicate id or a row without id/cls — a silent gap here
-    would put an item in no class (→ LAB-023 No silent loss)."""
-    if not path.is_file():
-        return ()
-    rows = tomllib.loads(path.read_text(encoding="utf-8")).get("case", [])
-    seen: set[str] = set()
-    out = []
-    for n, row in enumerate(rows, 1):
-        if not isinstance(row.get("id"), str) or not isinstance(row.get("cls"), str):
-            raise ValueError(f"{path.name}: [[case]] #{n} needs string `id` and `cls`")
-        if row["id"] in seen:
-            raise ValueError(f"{path.name}: {row['id']} stands twice")
-        seen.add(row["id"])
-        out.append(CaseClass(row["id"], row["cls"], dict(row.get("facts", {}))))
-    return tuple(out)
-
-
-def ids_of(cls: str, cases: tuple[CaseClass, ...] | None = None) -> tuple[str, ...]:
-    """The ids of one class, in table order."""
-    return tuple(c.id for c in (read_case_classes() if cases is None else cases) if c.cls == cls)
-
-
-def one_per_class(cases: tuple[CaseClass, ...] | None = None) -> tuple[str, ...]:
-    """The probe's cases: the first id of every class — one per thing the criterion distinguishes."""
-    first: dict[str, str] = {}
-    for c in read_case_classes() if cases is None else cases:
-        first.setdefault(c.cls, c.id)
-    return tuple(first.values())
+MODEL = "<model>"                                       # alias from models.toml, never an endpoint
 
 # The answer vocabulary — one constant, two readers (prompt and parser).
 # TODO: map each answer word to the gold label it means.
@@ -143,17 +87,30 @@ ANSWER_LINE = f"Answer with a single word, {' or '.join(ANSWERS)}."
 PROMPT = ("TODO: the question about this text.\n\n"
           "Text: {text}\n\n" + ANSWER_LINE + "\n\nAnswer:")
 # TODO: the null lane — same renderer, same parser, same label mapping, a
-# question the data CANNOT answer (a placebo question, or the labels
-# shuffled before scoring). Its accuracy is the noise ceiling of THIS run;
-# derive its expected value in the protocol's null-condition field (LAB-037 Every anchor carries its target and rationale).
-# Safest placebo: one whose true answer is the SAME for every item ("Is this
-# text written in English?") — its expected accuracy is the gold share of
-# the class that answer maps to (0.5 on balanced gold), known before any
-# call. A placebo whose answer varies per item (numbers, length, negation)
-# can track the gold label: one cold agent's did, and [A2] withheld [C1]
-# (usability probe 2026-10-07).
+# question the data CANNOT answer. Its accuracy is the noise ceiling of THIS
+# run; derive its expected value in the protocol's null-condition field
+# (LAB-037 Every anchor carries its target and rationale). Safest placebo:
+# one whose true answer is the SAME for every item ("Is this text written in
+# English?") — its expected accuracy is the gold share of the class that
+# answer maps to (0.5 on balanced gold). A placebo whose answer varies per
+# item (numbers, length, negation) can track the gold label (usability
+# probe 2026-10-07).
 PROMPT_NULL = ("TODO: a question about this text that has nothing to do with the gold label.\n\n"
                "Text: {text}\n\n" + ANSWER_LINE + "\n\nAnswer:")
+
+# Cases the criterion singles out, as DATA, when [C…] names case classes:
+# one [[case]] per such item in this file — `id` (the item's id in ITEMS),
+# `cls` (a class [C…] speaks of), `facts` (what the class follows from).
+# The stamped test recomputes each class from its facts (CLASS_RULE there);
+# the probe takes one case per class. No file: no classes.
+CASE_CLASSES = AREA / "data" / "prepared" / "case_classes.toml"
+
+# ===== The experiment — everything below stays ==============================
+
+# One run, one output file. A second start of the same command RESUMES it
+# (rows already answered are skipped); a new measurement — other prompt,
+# model or items — gets a new file name, never two measurements in one file.
+OUT = AREA / "output" / "<name>.jsonl"
 LANES = {"registered": PROMPT, "null": PROMPT_NULL}
 
 
@@ -161,17 +118,15 @@ LANES = {"registered": PROMPT, "null": PROMPT_NULL}
 class MeasureConfig:
     """Every value that shapes the number — one execution of this protocol.
 
-    The PROTOCOL owns validity and meaning (criterion, registered constants,
-    which run reports); this object materialises one execution; the run's
-    config.json records it whole (`asdict(cfg)`); `evaluate_rows()` reads
-    its thresholds from here and nowhere else (the stamped test flips one
-    and expects the verdict to move). The thresholds have NO default: they
-    come from the protocol's [[promise]] tables, under the SAME name
-    (`constants = { margin = 0.25 }` ↔ `margin`), through
-    `promises.all_constants()` — the name is the mapping; runlog refuses a
-    run whose config lacks a registered constant or carries another value
-    (labkit 0.71). A constant registered in the protocol that this class
-    does not know fails loudly at import (TypeError: unexpected keyword).
+    The PROTOCOL owns validity and meaning; this object materialises one
+    execution; the run's config.json records it whole; `evaluate_rows()`
+    reads its thresholds from here and nowhere else (the stamped test flips
+    one and expects the verdict to move). The thresholds have NO default:
+    they come from the protocol's [[promise]] tables under the SAME name
+    (`constants = { margin = 0.25 }` ↔ `margin`) through
+    `promises.all_constants()`; runlog refuses a run whose config lacks a
+    registered constant or carries another value, and a constant this class
+    does not know fails at import (TypeError: unexpected keyword).
     """
 
     margin: float               # [C1]: registered accuracy ≥ null accuracy + margin
@@ -189,68 +144,6 @@ class MeasureConfig:
 # The registered execution: thresholds from the protocol, nothing copied;
 # `--model` replaces one field.
 CONFIG = MeasureConfig(**promises.all_constants(promises.load(PROTOCOL)))
-
-
-def read_jsonl(path: Path) -> list[dict]:
-    """Input records; the `_meta` header line is documentation, not data."""
-    return batch.Store(path).records()
-
-
-def plan(items: list[dict]) -> list[dict]:
-    """One job per item per lane; `id` is the resume key (one line per model
-    call), `item_sha` the item as it is now, which its row carries (`balance`)."""
-    # `**it` first: the lane-qualified id must win, or both lanes share one
-    # resume key and a resumed run skips the twin lane (found by a cold agent
-    # reading the stamp, 2026-10-05).
-    jobs = [{**it, "id": f"{lane}:{it['id']}", "lane": lane, "item_sha": batch.content_sha(it)}
-            for lane in LANES for it in items]
-    if len({j["id"] for j in jobs}) != len(jobs):
-        raise ValueError("plan(): job ids are not unique — two lanes would share one resume key")
-    return jobs
-
-
-def render(j: dict) -> str:
-    """The ONE prompt renderer — `--show` prints it, `measure()` sends it (→ LAB-007 Render check before the instrument check)."""
-    return LANES[j["lane"]].format(text=j[TEXT_FIELD])
-
-
-def instrument(cfg: MeasureConfig) -> dict:
-    """What makes two answers comparable: both prompts' digest and the model
-    alias. Every row carries it; a resume refuses rows of another
-    (batch.Store `instrument`) — by id alone a new prompt kept old answers."""
-    return {"prompt_sha": cfg.prompt_sha, "model": cfg.model}
-
-
-def measure(cfg: MeasureConfig, jobs: list[dict], out: Path, prov: dict | None = None) -> None:
-    """Resume = same command again; the lock keeps a second writer out.
-    `prov` stamps every row with _prov (run id, model@digest, endpoint)."""
-    model = cfg.model
-    with batch.Store(out, prov=prov, instrument=instrument(cfg)) as store:
-        todo = list(store.pending(jobs))
-        print(f"to measure: {len(todo)} of {len(jobs)}")
-        # Calls in parallel (labkit's complete_many, four workers): 24 serial
-        # `claude -p` calls took 103 s where nothing needed the order.
-        for chunk_start in range(0, len(todo), 40):
-            chunk = todo[chunk_start:chunk_start + 40]
-            answers = llm.complete_many(model, [render(j) for j in chunk])
-            for j, text in zip(chunk, answers, strict=True):
-                store.append({**j, "answer": text})
-            print(f"  {min(chunk_start + 40, len(todo))}/{len(todo)}")
-
-
-def probe(cfg: MeasureConfig, items: list[dict], n: int) -> list[dict]:
-    """N jobs per lane through the real pipeline into a throwaway file, and
-    its rows. A fresh file each time: resumed, a probe skipped an item
-    edited since the last one and showed its old answer (review 2026-10-20)."""
-    out = OUT.with_name(OUT.stem + "_probe.jsonl")
-    out.unlink(missing_ok=True)
-    # with case classes: one case per class; without: the first N items
-    probe_ids = set(one_per_class())
-    jobs = [x for lane in LANES
-            for x in [y for y in plan(items) if y["lane"] == lane
-                      and (not probe_ids or y["id"].split(":", 1)[1] in probe_ids)][:n]]
-    measure(cfg, jobs, out)
-    return read_jsonl(out)
 
 
 def parse_answer(text: str) -> str | None:
@@ -271,10 +164,7 @@ def answer_of(r: dict) -> str | None:
 def _counts(rows: list[dict]) -> tuple[int, int, int]:
     """(correct, items, empty) — integers, so a band is compared exactly. The
     denominator is every item of the lane: an empty or unreadable answer is
-    not correct, and is counted on its own (LAB-030 Reasoning models: empty
-    is its own state, never folded into a label). Over readable answers only,
-    both preflight audits of the cloud judge probe flagged it against "over
-    all twelve" (2026-10-14)."""
+    not correct, and is counted on its own (LAB-030 Reasoning models)."""
     labels = [(parse_answer(r["answer"]), r["gold"]) for r in rows]
     empty = sum(1 for got, _ in labels if got is None)
     return sum(1 for got, gold in labels if got is not None and got == gold), len(rows), empty
@@ -288,20 +178,16 @@ def _accuracy(rows: list[dict]) -> tuple[float, int]:
 
 def _within_chance(rows: list[dict], items: int) -> bool:
     """Is the lane at chance ± `items` items? Compared in item counts:
-    |correct - n/2| <= items, written as |2·correct - n| <= 2·items.
-    In shares the band was asymmetric in floating point — 7/12 fell out of
-    "0.5 ± one item" while 5/12 stayed in (found by an agent audit,
-    2026-10-06; labkit-paper benchmark stage)."""
+    |correct - n/2| <= items, written as |2·correct - n| <= 2·items — in
+    shares the band was asymmetric in floating point (7/12 out, 5/12 in)."""
     correct, n, _ = _counts(rows)
     return n > 0 and abs(2 * correct - n) <= 2 * items
 
 
 def _at_least(reg: list[dict], null: list[dict], margin: float) -> bool:
     """[C1] exactly: correct/items of the registered lane >= that of the null
-    lane + margin, in fractions (margin as written, 0.25 = 1/4). In floats the
-    bar sat one ulp high — 5/12 + 0.25 > 8/12 — so a lane exactly at null +
-    margin failed (found by the preflight audit of a cold Sonnet probe,
-    2026-10-14; the same class as `_within_chance`)."""
+    lane + margin, in fractions (margin as written, 0.25 = 1/4) — in floats
+    a lane exactly at null + margin failed by one ulp."""
     rc, rn, _ = _counts(reg)
     nc, nn, _ = _counts(null)
     return Fraction(rc, rn) >= Fraction(nc, nn) + Fraction(str(margin))
@@ -339,97 +225,30 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     return metrics
 
 
-def balance(out: Path, jobs: list[dict]) -> None:
-    """Every job on exactly one row, no row without a job, every row made
-    from its item as it is now — or SystemExit naming each gap, before any
-    number (→ LAB-023 No silent loss). A resume skips an id it has, so an
-    item edited since its row was written stays stale here: write a new
-    output file. The rows then are the source's items, and every count
-    `evaluate_rows` makes is a count of the source."""
-    batch.Store(out).ledger(jobs, expect={"item_sha": lambda j: j["item_sha"]}).require_complete()
+# ===== How it runs — labkit's, the same in every area =======================
+
+RUN = lanes.Lanes(name="<name>", protocol=PROTOCOL, items=ITEMS, out=OUT, prompts=LANES,
+                  text_field=TEXT_FIELD, parse_answer=parse_answer,
+                  evaluate_rows=evaluate_rows, case_classes=CASE_CLASSES,
+                  probe_cases_in="tests/test_<NN>_<name>.py")
+# the names 02_analyze.py and the area test read
+plan, measure, probe, evaluate, instrument = RUN.plan, RUN.measure, RUN.probe, RUN.evaluate, RUN.instrument
+read_jsonl = lanes.read_jsonl
 
 
-def evaluate(out: Path, cfg: MeasureConfig, jobs: list[dict], run=None) -> dict:
-    """Balance the kept rows against JOBS, then gates first, then the metrics on the run."""
-    balance(out, jobs)
-    metrics = evaluate_rows(read_jsonl(out), cfg)
-    for key in ("a1_pass", "a1_empty", "a2_accuracy", "a2_pass", "c1_accuracy", "c1_threshold", "c1_pass"):
-        print(f"  {key:<13} {metrics[key]}")
-    if run is not None:
-        run.metrics(**metrics, llm_retries=llm.retries())
-    return metrics
+def read_case_classes() -> tuple[lanes.CaseClass, ...]:
+    """The [[case]] rows of CASE_CLASSES (`lanes.read_case_classes`)."""
+    return lanes.read_case_classes(CASE_CLASSES)
+
+
+def one_per_class() -> tuple[str, ...]:
+    """The probe's cases: the first id of every class."""
+    return lanes.one_per_class(read_case_classes())
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
-    ap.add_argument("--model", default=MODEL)
-    mode = ap.add_mutually_exclusive_group()
-    mode.add_argument("--show", type=int, metavar="N", help="render N prompts per lane, no calls")
-    mode.add_argument("--probe", type=int, nargs="?", const=12, metavar="N",
-                      help="instrument check: N items per lane through the REAL pipeline, "
-                           "throwaway output, prints parser cases to paste into the test")
-    mode.add_argument("--eval-only", action="store_true")
-    mode.add_argument("--repeat-of", metavar="RUN_ID",
-                      help="draw the kept run RUN_ID again: the same jobs and instrument, a run of "
-                           "its own (repeat_of) into <name>_draw<N>.jsonl — the spread, never the answer")
-    args = ap.parse_args()
-    head = protocol_block.head(PROTOCOL.read_text(encoding="utf-8"))
-    if args.probe is not None and not standard_contract.lane(head.cost).probe_allowed:
-        ap.error("--probe is not available at cost='seconds'; run the full measurement")
-    cfg = replace(CONFIG, model=args.model)   # the one field the command line may set
-    items = read_jsonl(ITEMS)
-
-    if args.show is not None:          # `is not None`: `--show 0` must not start a paid run
-        print("===== config (what a run writes to config.json)")
-        for key, value in asdict(cfg).items():
-            print(f"  {key:<16} {value}")
-        for lane in LANES:
-            for j in [x for x in plan(items) if x["lane"] == lane][:args.show]:
-                print(f"===== {j['id']}\n{render(j)}")
-        return
-
-    if args.probe is not None:
-        # Throwaway: own output file, NO runlog (→ LAB-008 Instrument check before freezing) — the moment a
-        # number is kept, it is a run.
-        rows = probe(cfg, items, args.probe)
-        for r in rows:
-            print(f"{r['id']:<28} {r['answer']!r:<40} -> {parse_answer(r['answer'])!r} (gold {r['gold']})")
-        print("\n# parser cases — paste into tests/test_<NN>_<name>.py PROBE_CASES:")
-        for r in rows:
-            print(f"    ({r['answer']!r}, {parse_answer(r['answer'])!r}),")
-        return
-
-    if args.eval_only:
-        evaluate(OUT, cfg, plan(items))
-        return
-
-    # The whole config, never a hand-picked subset: a field added above is
-    # recorded without anyone remembering to list it. `data=` freezes the
-    # items; the prompts are in prompt_sha.
-    config = asdict(cfg)
-    # run_kind="measurement" declares the full run. At cost = "seconds" runlog wants the
-    # registration written (question · criterion · admissibility · cost) and
-    # lets the run start in an agent's foreground shell; at minutes/hours
-    # the protocol must be frozen with the preflight audit stamped and the
-    # run detached (`runlog start <area> -- …`; scar 2026-08-13). `data=` freezes
-    # the source — finalize refuses a run of seconds without it.
-    # A repeat draws the kept run again (runlog refuses it unless config, block
-    # and inputs are the same); its rows go to a file of their own, its number
-    # is the spread around the answer, never the answer (`02_analyze.py --draws`).
-    repeat = args.repeat_of
-    with runlog.run("<name>", config=config, base_dir=AREA, data={"prepared": ITEMS},
-                    run_kind="measurement", protocol=PROTOCOL.name, repeat_of=repeat) as run:
-        # the draw number runlog reserved and recorded — the one name source
-        out = OUT if run.draw is None else OUT.with_name(f"{OUT.stem}_draw{run.draw}.jsonl")
-        run.output(out)
-        jobs = plan(items)
-        measure(cfg, jobs, out, prov={**llm.provenance(args.model), "run": run.run_id})
-        evaluate(out, cfg, jobs, run)
-        if repeat is None:
-            print(f"run: {run.run_id}  → {adopt_command(PROTOCOL, run.run_id)}  "
-                  f"(writes the Answer, Result and Runs lines from metrics.json)")
-        else:
-            print(f"repeat of {repeat}: {run.run_id} → scripts/02_analyze.py --draws")
+    """The command line (`--show`, `--probe`, `--eval-only`, `--repeat-of`, the run): `lanes.Lanes.main`."""
+    RUN.main(CONFIG)
 
 
 if __name__ == "__main__":

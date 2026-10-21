@@ -98,7 +98,7 @@ class Pairing(unittest.TestCase):
         def complete_many(model, prompts):
             return ["Yes"] * (len(prompts) - short_by)
 
-        return mock.patch.object(self.judge.llm, "complete_many", complete_many)
+        return mock.patch.object(self.judge.lanes.llm, "complete_many", complete_many)
 
     def test_judge_refuses_fewer_or_more_answers_than_prompts(self) -> None:
         m = self.judge
@@ -150,7 +150,7 @@ class Balance(unittest.TestCase):
         m = self.judge
         jobs = m.plan(items)
         answer = lambda model, prompts: ["Yes"] * len(prompts)  # noqa: E731
-        with mock.patch.object(m.llm, "complete_many", answer):
+        with mock.patch.object(m.lanes.llm, "complete_many", answer):
             m.measure(m.CONFIG, jobs, self.out)
         return jobs
 
@@ -190,7 +190,7 @@ class Balance(unittest.TestCase):
             "Yes" if "corrected" in p else "No" for p in prompts
         ]
         items = self._items()
-        with mock.patch.object(m.llm, "complete_many", answer):
+        with mock.patch.object(m.lanes.llm, "complete_many", answer):
             first = m.probe(m.CONFIG, items, 2)
             items[0] = {**items[0], "text": "item 0, corrected"}
             again = m.probe(m.CONFIG, items, 2)
