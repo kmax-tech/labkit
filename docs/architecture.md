@@ -92,8 +92,9 @@ and the probe policy per tier are how the lab chooses to measure; the
 area's `01_measure.py` keeps the prompts and the formulas, which the audit
 reads. `profile` is the data profile per gold class that
 `00_prepare.py --audit` prints before any model call — items, mean words,
-the markers and confounds the area names — doctrine too: which cue counts
-as a shortcut is the lab's reading. Model calls are split between
+the markers and confounds the area lists — doctrine too, and static
+evidence only: an aid for the judgement the Data profile field owes and
+for the audit, never proof that the data fit the question. Model calls are split between
 `llm` (aliases, retries and call records), `llm_specs` (one configuration
 type per backend, validated when loading `models.toml`) and `llm_backends`
 (the wire calls). `endpoint_lease` manages the model-slot lease.

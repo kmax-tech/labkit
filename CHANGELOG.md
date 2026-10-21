@@ -11,13 +11,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 - **With a model, the judged data profile is part of the registration.**
   The stamped `00_prepare.py --audit` prints the data profile per gold
-  class (`labkit.run.profile`): items and mean words always, the markers
-  in `MARKERS` counted per class with the union of them, and the numeric
-  fields in `CONFOUNDS` averaged. `None` prints "not decided", `()`
-  prints "none applies", and a named marker found in no item prints
-  "checked, no hit". A marker in one class only is a shortcut candidate,
-  not proof the model uses it. The protocol has a new field, Data profile
-  (must, model only), for the judgement. At `seconds` with a model, a
+  class (`labkit.run.profile`): items and mean words always; optionally,
+  the cue words in `MARKERS` counted per class with the union of them,
+  and the numeric fields in `CONFOUNDS` averaged. `None` prints "none
+  counted", `()` prints "none applies", and a listed marker found in no
+  item prints "checked, no hit". The profile is static evidence: an aid
+  for the judgement and the audit, never proof that the data fit the
+  question; a marker in one class only is a shortcut candidate, not proof
+  the model uses it. The protocol has a new field, Data profile (must,
+  model only), for the judgement of the data — what is owed is the
+  judgement, not a word list. At `seconds` with a model, a
   full run is refused until that field is written; at minutes/hours the
   freeze holds it. Before, `audit()` was a stamped TODO, and two of three
   judge probes left it alone while the data carried a cue only one class

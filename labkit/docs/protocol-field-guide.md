@@ -336,15 +336,18 @@ scattered in output files nobody can interpret.
 - **Data / scope:** source, N, producer script; pilot subset first. Look at
   the prepared file before running — otherwise a format bug and a model
   failure look identical.
-- **Data profile:** what `00_prepare.py --audit` shows per gold class, and
-  your judgement, written before the measuring run. Items and mean words
-  per class come always; the markers (hedges, modal words, connectives,
-  boilerplate) and further confounds are your choice in `MARKERS` and
-  `CONFOUNDS` — `None` prints "not decided", `()` "none applies", a named
-  marker in no item "checked, no hit". A marker that appears in one class
-  and never in the other is a shortcut candidate: the model could read the
-  label off it without doing the task. That is a reason to change the data
-  or to name the limit, not yet proof the model uses it.
+- **Data profile:** your judgement of the data, written before the
+  measuring run: could a surface feature answer the question without the
+  model? `00_prepare.py --audit` prints an aid — items and mean words per
+  class always; cue words (hedges, modal words, connectives, boilerplate)
+  and numeric confounds only if you list them in `MARKERS` and
+  `CONFOUNDS` (`None` prints "none counted", `()` "none applies", a
+  listed marker in no item "checked, no hit"). The counts are static
+  evidence: a word found in one class only is a shortcut candidate, a
+  reason to change the data or to name the limit, not proof the model
+  uses it; a cue may sit in no word you listed, and a filled profile is
+  no evidence that the data fit the question. Whether they do is the
+  audit's question, and a control experiment's where it matters.
 - **Model / tool:** alias from `models.toml` — never hardcode endpoint/ID.
   No model call? Then the instrument is an estimator: `n/a — no model
   call; the instrument is …` names where it is built (the stamp of an area

@@ -2,7 +2,7 @@
 """raw -> prepared: materialise the data this experiment reads. ONE transformation.
 
     ../../.venv/bin/python scripts/00_prepare.py --show   # look at items, no write
-    ../../.venv/bin/python scripts/00_prepare.py --audit  # yields + data profile: read and judge it
+    ../../.venv/bin/python scripts/00_prepare.py --audit  # yields + data profile: an aid to judge the data
     ../../.venv/bin/python scripts/00_prepare.py          # write data/prepared/ (runlog)
 
 Out: `data/prepared/<row-noun>_v1.jsonl` — read-only after writing. Naming
@@ -12,21 +12,23 @@ regenerations of the SAME meaning; a change in what a row MEANS (renamed or
 re-coded fields included) is a NEW name, never a version bump. Rules with
 evidence: LAB-020 Materialize transformations, LAB-021 No dataset without a producer.
 
-Checks that belong HERE, not in the analysis — `--audit` prints the data
-profile (`labkit.run.profile`); you read it and write your judgement into
-the protocol's Data profile field BEFORE the measuring run:
+Checks that belong HERE, not in the analysis. Before the measuring run you
+judge the data — could a surface feature answer the question without the
+model? — and write that judgement into the protocol's Data profile field.
+`--audit` prints an aid for it (`labkit.run.profile`), static evidence
+and never proof:
 
 - items and mean words per gold class, always
-- MARKERS: the words or phrases that could answer the question without the
-  model, counted per class — one found in one class only is a shortcut
-  candidate (a cue the model could use, not proof it does)
-- CONFOUNDS: further numeric item fields (overlap, ...) averaged per class
+- MARKERS (optional): words or phrases you suspect as cues, counted per
+  class — one found in one class only is a shortcut candidate, a hint,
+  not proof; a cue may also sit in no word you listed
+- CONFOUNDS (optional): further numeric item fields (overlap, ...)
+  averaged per class
 - yield of every filter, per class — a one-sided filter puts itself inside
   the measured quantity; apply it to the matched pair
 
-MARKERS and CONFOUNDS are this area's decisions: None is "not decided yet"
-and the profile says so; () is "decided: none applies"; a named marker in
-no item is "checked, no hit".
+None prints "none counted"; () is "decided: none applies"; a listed marker
+in no item is "checked, no hit".
 
 An LLM inside the producer (rendering, rewriting)? Three rules: cache per
 unique input (identical inputs must stay textually identical downstream),
@@ -65,10 +67,10 @@ FIELDS = {
     "text": "the item the model reads",
     "gold": "TODO: every gold value spelled out, e.g. causal | not_causal",
 }
-# The data profile's two decisions (see the module docstring): None = not
-# decided yet, () = decided, none applies.
-MARKERS: tuple[str, ...] | None = None    # TODO: whole words, case ignored, e.g. ("because", "due to")
-CONFOUNDS: tuple[str, ...] | None = None  # TODO: numeric FIELDS keys beside the word count
+# Optional aids of the data profile (see the module docstring): None = none
+# counted, () = decided, none applies.
+MARKERS: tuple[str, ...] | None = None    # whole words, case ignored, e.g. ("because", "due to")
+CONFOUNDS: tuple[str, ...] | None = None  # numeric FIELDS keys beside the word count
 
 
 def build() -> tuple[list[dict], dict]:
@@ -93,8 +95,8 @@ def build() -> tuple[list[dict], dict]:
 
 
 def audit(items: list[dict], yields: dict) -> None:
-    """Yields per filter, then the data profile per gold class — read and
-    judge it BEFORE measuring (the protocol's Data profile field)."""
+    """Yields per filter, then the data profile per gold class — an aid for
+    judging the data BEFORE measuring (the protocol's Data profile field)."""
     print("== yield ==")
     for k in sorted(yields):
         print(f"  {k:28s} {yields[k]}")
@@ -106,7 +108,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--show", action="store_true")
     ap.add_argument("--audit", action="store_true",
-                    help="yields + data profile, no write — read and judge this first")
+                    help="yields + data profile, no write — an aid to judge the data first")
     args = ap.parse_args()
 
     items, yields = build()

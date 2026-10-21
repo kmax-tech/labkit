@@ -1,16 +1,24 @@
 """profile — what a prepared dataset shows per gold class before any model call.
 
 A gold class that a surface cue tells apart answers the question without
-the model: the item count and word count per class, each marker the area
-names (a word or phrase) counted per class, each further numeric confound
-column the area names averaged per class. `00_prepare.py --audit` prints
-it; the person reads it and writes the judgement into the protocol's Data
-profile field before the measuring run. A marker found in one class only
-is a shortcut candidate — a cue the model could use, not proof it does.
+the model. The profile is an aid for judging that: the item count and
+word count per class, each marker the area lists (a word or phrase)
+counted per class, each further numeric confound column it lists averaged
+per class. `00_prepare.py --audit` prints it; the person judges the data
+and writes the judgement into the protocol's Data profile field before
+the measuring run.
 
-Which markers and confounds matter is the area's decision, and an open
-decision stays visible: `None` is "not decided yet", `()` is "decided:
-none applies", and a named marker found in no item is "checked, no hit".
+Static evidence, never proof (tier: static evidence). The counts say
+where the listed words occur, nothing about the task: "because" may sit
+in a negated or quoted sentence, a causal claim may carry no listed word,
+and "no hit" means only that the listed patterns did not occur. A marker
+found in one class only is a shortcut candidate — a hint for the
+judgement and the audit, not proof the model uses it; a filled profile
+is no evidence that the data fit the question.
+
+Listing markers and confounds is optional, and what was not counted
+stays visible: `None` is "none counted", `()` is "decided: none applies",
+and a listed marker found in no item is "checked, no hit".
 
     p = profile.profile(items, markers=MARKERS, confounds=CONFOUNDS)
     print("\\n".join(profile.lines(p)))
@@ -48,7 +56,7 @@ class MarkerCount:
 
 @dataclass(frozen=True)
 class Profile:
-    """The data profile; `markers`/`confounds` None when the area has not decided them."""
+    """The data profile; `markers`/`confounds` None when the area listed none (optional)."""
 
     classes: tuple[ClassProfile, ...]
     markers: tuple[MarkerCount, ...] | None
@@ -154,8 +162,8 @@ def lines(p: Profile) -> list[str]:
     out.append("== markers (MARKERS) ==")
     if p.markers is None:
         out.append(
-            "  not decided — MARKERS is None: name the words or phrases that could "
-            "answer the question without the model, or () when none applies"
+            "  none counted — MARKERS is None (optional: words or phrases you "
+            "suspect could answer the question without the model)"
         )
     elif not p.markers:
         out.append("  decided: none applies (MARKERS = ())")
@@ -177,8 +185,8 @@ def lines(p: Profile) -> list[str]:
     out.append("== further confounds (CONFOUNDS) ==")
     if p.confounds is None:
         out.append(
-            "  not decided — CONFOUNDS is None: name the numeric item fields beside "
-            "the word count that could differ by class, or () when none applies"
+            "  none counted — CONFOUNDS is None (optional: numeric item fields "
+            "beside the word count that could differ by class)"
         )
     elif not p.confounds:
         out.append("  decided: none beyond the word count (CONFOUNDS = ())")
@@ -186,4 +194,8 @@ def lines(p: Profile) -> list[str]:
         for name in p.confounds:
             means = " · ".join(f"{c.gold} {c.confounds[name]:.3g}" for c in p.classes)
             out.append(f"  {name:<16} {means}")
+    out.append(
+        "static evidence: counts of what is listed, no test of the task — "
+        "a cue may sit in no listed word; judge the data, the audit reads it"
+    )
     return out

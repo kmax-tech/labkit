@@ -4,7 +4,8 @@ Three judge probes left the stamped `audit()` TODO alone, and their audits
 found a cue only one class carried — six connectives, every causal item
 holds one, no other item does (sandbox, 2026-10-21). The profile counts
 what the area names; an open decision prints as open, never as an empty
-table, and "checked, no hit" reads apart from "not decided".
+table, and "checked, no hit" reads apart from "none counted". The counts
+are static evidence for the judgement and the audit, never proof.
 """
 
 import contextlib
@@ -97,18 +98,25 @@ class Counts(unittest.TestCase):
 
 
 class OpenReadsApartFromNoHit(unittest.TestCase):
+    def test_the_profile_says_it_is_static_evidence(self):
+        out = "\n".join(
+            profile.lines(profile.profile(ITEMS, markers=("because",), confounds=()))
+        )
+        self.assertIn("static evidence", out)
+        self.assertIn("no test of the task", out)
+
     def test_not_decided_none_applies_and_no_hit_are_three_lines(self):
         undecided = "\n".join(
             profile.lines(profile.profile(ITEMS, markers=None, confounds=None))
         )
-        self.assertIn("not decided — MARKERS is None", undecided)
-        self.assertIn("not decided — CONFOUNDS is None", undecided)
+        self.assertIn("none counted — MARKERS is None", undecided)
+        self.assertIn("none counted — CONFOUNDS is None", undecided)
         none = "\n".join(
             profile.lines(profile.profile(ITEMS, markers=(), confounds=()))
         )
         self.assertIn("decided: none applies (MARKERS = ())", none)
         self.assertIn("decided: none beyond the word count (CONFOUNDS = ())", none)
-        self.assertNotIn("not decided", none)
+        self.assertNotIn("none counted", none)
         checked = "\n".join(
             profile.lines(profile.profile(ITEMS, markers=("whereas",), confounds=()))
         )
@@ -161,7 +169,7 @@ class TheStampedPrepare(unittest.TestCase):
             )
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn("causal              2  7.5", r.stdout)
-            self.assertIn("not decided — MARKERS is None", r.stdout)
+            self.assertIn("none counted — MARKERS is None", r.stdout)
             script.write_text(
                 text.replace(
                     "MARKERS: tuple[str, ...] | None = None",
