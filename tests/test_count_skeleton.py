@@ -65,3 +65,36 @@ class InputDir(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FillList(unittest.TestCase):
+    """The skeleton's docstring names every blank it stamps: it said "the
+    three TODOs" while INPUTS was a fourth place to fill, and an agent left
+    its TODO behind (sandbox probe, 2026-10-21)."""
+
+    def test_every_constant_and_function_with_a_todo_is_named(self):
+        import re
+
+        text = (
+            Path(scaffold.__file__).resolve().parent.parent
+            / "templates"
+            / "measure-quick-script.py.template"
+        ).read_text(encoding="utf-8")
+        doc = text.split('"""', 2)[1]
+        blanks = re.findall(r"^([A-Z_]+) = .*TODO", text, re.M)
+        blanks += re.findall(r'^def (\w+)\(.*\n    """TODO', text, re.M)
+        self.assertEqual(
+            sorted(blanks),
+            [
+                "COUNT_FIELD",
+                "INPUTS",
+                "METRIC_KEY",
+                "SOURCE",
+                "evaluate_rows",
+                "expected_ids",
+                "rows",
+            ],
+        )
+        for name in blanks:
+            self.assertIn(name, doc, name)
+        self.assertNotRegex(doc, r"\b(three|four|five) TODOs\b")

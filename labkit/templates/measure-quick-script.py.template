@@ -10,12 +10,14 @@ the number is promoted or steers a decision (LAB-017 The number of audits follow
 retyped (LAB-041 Generate numbers, don't retype them): the protocol's Result line cites it with the run_id, and
 `scripts/02_analyze.py --check` (stamped beside this script) holds that line to the run.
 
-Fill the constants and the three TODOs: expected_ids(), rows(), evaluate_rows().
-Everything else stays — `visible()` is the one reader of a directory, the
+Fill four constants — SOURCE, INPUTS, COUNT_FIELD, METRIC_KEY — and the
+bodies of three functions — expected_ids(), rows(), evaluate_rows(); each
+place carries a TODO, and none may be left. Everything else stays — `visible()` is the one reader of a directory, the
 denominator is the source's id list, a missing item is a refusal. INPUTS names
 what the rows read beyond SOURCE: a count of documents per case reads the case
 directories, and only a frozen directory makes the number citable against
-their content (three cold agents left them unfrozen, 2026-10-13).
+their content (three cold agents left them unfrozen, 2026-10-13); rows() reads
+an item's directory through `input_dir()`, under INPUTS.
 """
 from __future__ import annotations
 

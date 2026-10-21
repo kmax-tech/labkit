@@ -296,6 +296,11 @@ pins (`requirements.txt` / `requirements.lock`).
   head and the release of the number. A test holds code, the auditor's
   excerpt and the contract together.
 
+- **The count skeleton names every blank it stamps.** Its docstring said
+  "the constants and the three TODOs" while `INPUTS` was a fourth place to
+  fill, and an agent left its TODO behind (sandbox probe, 2026-10-21). It
+  now names the four constants and the three functions; a test holds the
+  list to the TODOs the template carries.
 - **The count skeleton reads its items under the frozen `INPUTS`.** It
   froze `INPUTS` while every cold agent took each case's directory from a
   path the record named; the number followed a value the run did not
