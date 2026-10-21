@@ -61,7 +61,8 @@ LAB-017 The number of audits follows the cost tier.
    kept rows). Each finding with an effect lands below the Answer as its
    `Limit (audit <record> #N)` line, and the Answer counts them in one
    note ("subject to N recorded limitations") and names each promise
-   left "not assessable with this run". It then names what is still
+   left "not assessable with this run"; both are labkit's rendering, held
+   exactly — a changed decision is written again with `--render`. It then names what is still
    yours: the Summary's **Result** — the question's answer in at most two
    plain sentences, read within the Limit lines ("C1 met on these twelve
    items; whether the model recognises causal claims independent of
@@ -127,7 +128,10 @@ fields, no reading of labkit's source.
     finalize clean, an analysis audit of the code as it is, the check
     (`scripts/02_analyze.py --check`) holding the note to the run — and
     keeps them only when it passes (LAB-041 Generate numbers, don't retype
-    them). The stop hook and the pre-commit run the same check on every
+    them). The Answer and the Limit lines are labkit's rendering of the run
+    and the records and are held to it exactly: never retype them, and
+    after a changed decision write them again (`protocol-fill <PROTOCOL>
+    --render`). The stop hook and the pre-commit run the same check on every
     protocol whose head declares a result (`[result] run`).
 
 ## Setup

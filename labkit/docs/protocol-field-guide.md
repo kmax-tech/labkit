@@ -293,11 +293,15 @@ Write this back into the protocol as soon as the run finishes — a protocol
 that ends before the result is only a plan, and the results then live
 scattered in output files nobody can interpret.
 
-- **Answer to the question:** per registered id its verdict, and the
-  run_id; the numbers as a small table indented under the label, one row
-  per arm or condition (not a chain `c1_pass True · c2_pass False · …`),
-  produced by `scripts/02_analyze.py --check`, never retyped; long form →
-  [[note]]. Example:
+- **Answer to the question:** every reported key and value of the declared
+  run as its `metrics.json` recorded them, the run_id, and one note on the
+  recorded limits — written by `protocol-fill --from-run` and held exactly
+  to that rendering by `report-check` (phase 5, 2026-10-21): never retyped,
+  never reworded; after a changed decision `protocol-fill --render` writes
+  it again. The Limit lines below it are rendered the same way from the
+  audit records. What the number means goes into the Summary's Result, in
+  your words; long form → [[note]]. Example (the rendered form is one
+  line):
 
   ```text
   - **Answer to the question:** nein — [C2] verfehlt, [C1] [C3] [A1] [A2]

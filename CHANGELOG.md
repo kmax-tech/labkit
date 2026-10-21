@@ -5,6 +5,44 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Breaking
+
+- **The result section is held to equality with its rendering.** The
+  Answer line and the Limit lines are generated — from the declared run's
+  `metrics.json` and the covering analysis records (`checks/result_render`)
+  — and report-check's limit station compares what the protocol says with
+  that rendering exactly: a retyped number, a changed Limit line, a Limit
+  line no covering record decides, a missing one — each a blocker that
+  names the line, whatever the line says. Until now the station checked
+  that each record's limit had a line opening with its effect and that
+  the Answer carried the note's parts; a stale line from an older record
+  passed. Consequences: a re-decided finding owes a write-back
+  (`protocol-fill <PROTOCOL> --from-run <run_id> --force`, or `--render`);
+  `--from-run` drops a Limit line of a record that covers the run no
+  longer. The Result sentence and the rest of the prose stay the author's
+  and are not compared. New: `protocol-fill --render` writes the result
+  section again from its sources (Answer, Limit lines with stray ones
+  dropped, the Prompt block where the constants read statically),
+  idempotent; `protocol_fill.answer_line` and `accepted_limits` moved to
+  `result_render.answer_line` and `limits_of`; `limit_lines` takes (label,
+  value) pairs.
+
+- **The declaration makes the result due.** The after-run fields (Answer,
+  Result, Raw output, Limits, Next step) and a frozen protocol's report
+  fields are owed once the head declares `[result] run`
+  (`protocol_check.result_due`); until now a run id in the prose Runs list
+  — minus the words "prepare", "probe", "wegwerf", "trockenlauf" and "dry
+  run" — stood for a measure run (`measure_runs`, `SETUP_RUN`, gone). A run
+  listed and never adopted is an exploration and owes nothing; a declared
+  one owes the fields the moment the declaration stands. `protocol-check`
+  says "the head declares run <id> but <fields> empty". Phase 5 of the 1.0
+  line (2026-10-21); the remaining prose readers — the label parser, the
+  Answer field as a generated section, its warning, the Prompt block's
+  drift check — stay at their grades, each decided
+  (`tests/test_migration_bar.py`).
+
 ## 0.101.0 — 2026-10-21
 
 ### Breaking
