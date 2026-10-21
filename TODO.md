@@ -113,8 +113,16 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   Zahlen gebunden, kein Pfad außerhalb, Kosten gemessen (3,63 USD).
   Behoben danach: `labkit-audit` listet die gespeicherten Befunde mit der
   Nummer für `--decide` (aus dem Record) und READ-Zeilen getrennt als
-  Lesehinweis (CHANGELOG, Fixed). Nächster Schritt: das Paket
-  `~/projects/agentsandbox` herauslösen (Umfang im Bericht).
+  Lesehinweis (CHANGELOG, Fixed). Paket `~/projects/agentsandbox`
+  herausgelöst 2026-10-21 (Commit `260370b` dort): Versuch, Proxy,
+  Claude-Code-Adapter mit Einrichtungsschritt, Kosten mit
+  Proxy-Gegenprüfung, Selbsttest (20 von 20 gegen die gebauten Images).
+  Offen, je ein eigener Auftrag: (1) die labkit-Proben auf das Paket
+  umstellen (Runner der Reihe ersetzt `agentsandbox` aus labkit-paper durch
+  das Paket, abgeleitetes Image mit dem labkit-Wheel); (2) labkit-paper
+  umstellen und seine Kopie in `lib/agentsandbox` entfernen — bis dahin
+  liegt der Code zweimal vor; batch, arms, benches, standard_check bleiben
+  dort.
   Entschieden 2026-10-21: der allgemeine Sandbox-Code wird ein **eigenes
   Paket** `~/projects/agentsandbox` (eigenes Git-Repo, Python, Docker als
   ausdrücklich benötigte externe Laufzeit) — nicht nach labkit, damit die
