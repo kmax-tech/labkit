@@ -111,11 +111,10 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   Probe feuern erstmals). Reihe abgeschlossen 2026-10-21
   ([Bericht](docs/usability/2026-10-21-sandbox-probes-44db3ac.md)): alle
   Zahlen gebunden, kein Pfad außerhalb, Kosten gemessen (3,63 USD).
-  Nächster Fehler: `labkit-audit` druckt READ-Zeilen, die der Record nicht
-  hält, und nennt die Nummern für `--decide` nirgends — fünf von sechs
-  Agenten entschieden ins Leere (10 Aufrufe). Zu entscheiden: gespeicherte
-  Befunde nummeriert ausgeben und READ als nicht zu entscheiden
-  kennzeichnen, oder READ als Befund speichern.
+  Behoben danach: `labkit-audit` listet die gespeicherten Befunde mit der
+  Nummer für `--decide` (aus dem Record) und READ-Zeilen getrennt als
+  Lesehinweis (CHANGELOG, Fixed). Nächster Schritt: das Paket
+  `~/projects/agentsandbox` herauslösen (Umfang im Bericht).
   Entschieden 2026-10-21: der allgemeine Sandbox-Code wird ein **eigenes
   Paket** `~/projects/agentsandbox` (eigenes Git-Repo, Python, Docker als
   ausdrücklich benötigte externe Laufzeit) — nicht nach labkit, damit die
