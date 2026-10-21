@@ -27,7 +27,8 @@ from pathlib import Path
 from protocol_fixture import run_record, head
 
 from labkit.formats import console
-from labkit.gates import audit, finalize
+from labkit.gates import finalize
+from labkit.checks import audit_binding  # noqa: E402
 from labkit.tools import params
 from labkit.probes import usability_score
 from labkit.checks import intent_check, recheck
@@ -253,7 +254,9 @@ def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
     m = re.search(r" · run (\S+) \(", printed.getvalue())
     out["params"] = m.group(1) if m else BLOCKED
 
-    label = audit.run_rows(area, *audit.audited_run(area, protocol))[0][0]
+    label = audit_binding.run_rows(area, *audit_binding.audited_run(area, protocol))[0][
+        0
+    ]
     out["audit"] = label.split("runs/", 1)[1] if "runs/" in label else BLOCKED
     return out
 

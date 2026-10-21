@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import protocol_fixture as fixture  # noqa: E402
 from protocol_fixture import run_record  # noqa: E402
 from labkit.gates import audit  # noqa: E402
+from labkit.checks import audit_binding  # noqa: E402
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"
@@ -237,7 +238,9 @@ class Audit(unittest.TestCase):
         # what the prompt showed is one snapshot: every shown piece stands in
         # the prompt, and the record's shown_sha is its digest, the one
         # report-check recomputes for the answering run
-        shown = audit.run_shown(area, area / "runs" / "2026-01-01T00-00-00_0001", "")
+        shown = audit_binding.run_shown(
+            area, area / "runs" / "2026-01-01T00-00-00_0001", ""
+        )
         for label, text in shown.pieces:
             self.assertIn(f"===== {label} =====\n{text}\n", prompt)
         self.assertIn(f'shown_sha = "{shown.sha}"', record)

@@ -51,7 +51,7 @@ import re
 from pathlib import Path
 
 from labkit.formats import console, files, findings, promises, protocol_block, runs
-from labkit.gates.audit import AuditError
+from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.gates.report_check import ANSWER_LABEL
 from labkit.formats.repo import shown
 from labkit.checks import recheck
@@ -373,11 +373,11 @@ def from_run(
 def accepted_limits(area: Path, text: str, run: Path) -> list[tuple[str, str, str]]:
     """(label, value, effect) of every limit with its effect decided — an
     accepted BLOCKER, an accepted WARNING that names one — in the
-    analysis records covering RUN (`report_check.covering_analysis`). An
+    analysis records covering RUN (`audit_binding.covering_analysis`). An
     area the gate cannot hold to that run gives none here: report-check,
     which runs on the written result, names why."""
     try:
-        records = report_check.covering_analysis(area, text, run)
+        records = covering_analysis(area, text, run)
     except (AuditError, FileNotFoundError, ValueError):
         return []
     return [

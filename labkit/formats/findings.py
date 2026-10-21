@@ -188,7 +188,7 @@ class Record:
         str | None
     )  # mode analysis: the run whose rows it read (NO_RUN: none); preflight: None
     # mode analysis: the digest of what the prompt showed of that run (its
-    # rows' excerpts and metrics.json, `audit.run_shown`); preflight: None
+    # rows' excerpts and metrics.json, `audit_binding.run_shown`); preflight: None
     shown_sha: str | None
     verdict: tuple[int, int, int]
     findings: tuple[Finding, ...]
@@ -318,7 +318,7 @@ def write(
     """Write the audit's findings file into AREA/audits/ and return its path.
     SCOPE_SHA is the code the auditor read, BLOCK_SHA the promise block
     (`promises.block_stamp`), RUN_ID the run whose rows it read and SHOWN_SHA
-    the digest of what the prompt showed of it (`audit.run_shown`) — both
+    the digest of what the prompt showed of it (`audit_binding.run_shown`) — both
     owed in mode analysis (RUN_ID NO_RUN when there was none), refused in
     mode preflight.
     Every finding starts `open`. Never overwrites: the name carries the minute,

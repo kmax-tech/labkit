@@ -29,6 +29,7 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.gates import audit, claude_hooks, finalize, preflight, report_check
+from labkit.checks import audit_binding  # noqa: E402
 from labkit.tools import protocol_fill, scaffold
 from labkit.formats import findings, promises, scope_sha, standard_contract as sc
 
@@ -141,7 +142,7 @@ class Lab:
             [],
             run_id=run_id,
             shown_sha=(
-                audit.run_shown(area, area / "runs" / run_id, "").sha
+                audit_binding.run_shown(area, area / "runs" / run_id, "").sha
                 if run_id is not None
                 else None
             ),
@@ -558,7 +559,7 @@ class Judge(unittest.TestCase):
             (1, 0, 0),
             [("BLOCKER", "BLOCKER · scripts/01_measure.py:1 · the prompt asks more than the gold scores")],
             run_id=self.run_id,
-            shown_sha=audit.run_shown(self.area, self.area / "runs" / self.run_id, "").sha,
+            shown_sha=audit_binding.run_shown(self.area, self.area / "runs" / self.run_id, "").sha,
         )  # fmt: skip
 
     def _decide(self, record: Path, *argv: str) -> tuple[int, str]:
@@ -652,7 +653,7 @@ class Judge(unittest.TestCase):
             (0, 1, 0),
             [("WARNING", "WARNING · data/raw:1 · six connectives separate the classes")],
             run_id=self.run_id,
-            shown_sha=audit.run_shown(self.area, self.area / "runs" / self.run_id, "").sha,
+            shown_sha=audit_binding.run_shown(self.area, self.area / "runs" / self.run_id, "").sha,
         )  # fmt: skip
         label = f"Limit (audit {record.stem} #1)"
         reason = "C1 reached on these items; a keyword rule scores 12/12, so no causal understanding is shown"

@@ -33,7 +33,8 @@ from unittest import mock
 from protocol_fixture import completed_run, head, scope_file
 
 from labkit.formats import findings, promises, scope_sha, standard_contract
-from labkit.gates import audit, report_check
+from labkit.gates import report_check
+from labkit.checks import audit_binding  # noqa: E402
 
 
 class ReportCheck(unittest.TestCase):
@@ -71,7 +72,7 @@ class ReportCheck(unittest.TestCase):
             (0, 0, 0),
             [],
             run_id=run.name,
-            shown_sha=audit.run_shown(area, run, "").sha,
+            shown_sha=audit_binding.run_shown(area, run, "").sha,
         )
 
     def _run(
@@ -109,7 +110,7 @@ class ReportCheck(unittest.TestCase):
         """One text, one head, one answering run, one named file state for
         every station (`checked`): the declaration is read from the text
         the caller hands over, the run is chosen once through
-        `audit.audited_run`, and the output says which state was held."""
+        `audit_binding.audited_run`, and the output says which state was held."""
         area = self._area(cost="seconds", frozen=False)
         run = self._answered(area)
         proto = area / "PROTOCOL-x.md"
@@ -455,7 +456,7 @@ class IfReported(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 run_id=run.name,
-                shown_sha=audit.run_shown(area, run, "").sha,
+                shown_sha=audit_binding.run_shown(area, run, "").sha,
             )
         if git:
             self._git(area.parent.parent, "add", "-A")

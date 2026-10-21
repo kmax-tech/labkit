@@ -78,7 +78,6 @@ from labkit.formats import (
     promises,
     protocol_block,
     rules,
-    runs,
     scope_sha,
 )
 from labkit.formats.standard_contract import lane
@@ -90,8 +89,8 @@ from labkit.formats.repo import (
     shown,
     the_protocol,
 )
-from labkit.formats.runs import completed_runs, read_outputs
-from labkit.formats.answering_run import bound_answering_run
+from labkit.formats.runs import completed_runs
+from labkit.checks.audit_binding import AuditError, RunShown, audited_run, run_shown
 from labkit.formats.scope_sha import (
     area_files,
     area_snapshot,
@@ -112,8 +111,6 @@ ANALYSIS = "analysis"
 STANDARD_LABEL = (
     "labkit/docs/standard.md"  # the shipped standard, wherever labkit is installed
 )
-ROWS_HEAD, ROWS_TAIL = 50, 20  # what the instructions tell the auditor to read
-ROW_WIDTH = 2000  # a longer row (a trace) is cut, marked, never dropped
 
 #: a finding line: the grade, then the ` · ` the instructions ask for — or
 #: a dash or colon, which auditors write too (audit 2026-10-15: two blockers
@@ -137,10 +134,6 @@ INLINE_NOTE = (
     "run's output rows under `===== ROWS <path> … =====` lines, each row as "
     "`<line>: <row>`. Nothing else is in scope."
 )
-
-
-class AuditError(RuntimeError):
-    """No audit could be made — the cause is in the message."""
 
 
 def instructions(mode: str = "preflight") -> str:
@@ -169,103 +162,6 @@ def standard_excerpt(mode: str = "preflight") -> tuple[str, str]:
     ids = cited_rules(mode)
     text = "\n".join(rules.rule_text(rid) for rid in ids)
     return f"{STANDARD_LABEL} ({', '.join(ids)} — the rules this audit cites)", text
-
-
-def audited_run(
-    area: Path, protocol: Path, text: str | None = None
-) -> tuple[Path | None, str]:
-    """The run an analysis audit reads and its record is bound to — the
-    answering run (`answering_run.bound_answering_run`, the one choice every gate
-    holds the protocol to) read off the protocol file (or TEXT, the
-    protocol as the caller's file state holds it), or `(None, why)`: no
-    protocol id, no completed bound run, a blocker of the choice. Raises
-    AuditError on a head it cannot read. report-check holds the record to
-    the same choice (`report_check.checked`)."""
-    if text is None:
-        text = protocol.read_text(encoding="utf-8")
-    try:
-        pid = protocol_block.head(text).id
-    except protocol_block.BlockError as exc:
-        raise AuditError(f"{protocol.name}: head unreadable — {exc}") from exc
-    if pid is None:
-        return None, "the protocol id is still a placeholder"
-    choice = bound_answering_run(area, pid)
-    blocker, _ = choice.explain(promises.registers_ids(text))
-    if blocker or choice.run_dir is None:
-        return None, blocker or "no completed bound run"
-    return choice.run_dir, ""
-
-
-def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]]:
-    """What MODE analysis is told to read of RUN_DIR, the answering run as
-    `audited_run` chose it ONCE for both the prompt and the record: `(label,
-    text)` per piece — the first ROWS_HEAD and last ROWS_TAIL lines of every
-    output the run registered, numbered as `<n>: <row>`, and its
-    metrics.json. One `(label, note)` pair says why there is nothing: WHY
-    (no protocol id, no completed bound run), or no registered output."""
-    repo = layout_root(area)
-    if run_dir is None:
-        return [("ROWS", f"no rows: {why}")]
-    registered = read_outputs(run_dir)
-    out: list[tuple[str, str]] = []
-    rel_run = run_dir.resolve().relative_to(repo.resolve()).as_posix()
-    if not registered:
-        out.append((f"ROWS {rel_run}", "no rows: the run registered no output file"))
-    for entry in registered or []:
-        path = Path(entry.path)
-        path = path if path.is_absolute() else repo / path
-        if not path.is_file():
-            raise AuditError(f"{run_dir.name} registered {entry.path}, which is gone")
-        name = shown(path, repo)
-        out.append(rows_excerpt(path, name))
-    metrics = run_dir / "metrics.json"
-    if metrics.is_file():
-        out.append(
-            (f"FILE: {rel_run}/metrics.json", metrics.read_text(encoding="utf-8"))
-        )
-    return out
-
-
-class RunShown(NamedTuple):
-    """What MODE analysis shows of the answering run, taken once: the
-    pieces the prompt renders (`run_rows`) and their digest, which the record
-    carries as `shown_sha` and report-check recomputes — a metrics.json or
-    output rows changed after the audit owe a new one (review 2026-10-20:
-    the run id alone could not tell)."""
-
-    pieces: tuple[tuple[str, str], ...]
-    sha: str
-
-
-def run_shown(area: Path, run_dir: Path | None, why: str) -> RunShown:
-    """`run_rows` of RUN_DIR as one snapshot with its digest."""
-    pieces = tuple(run_rows(area, run_dir, why))
-    return RunShown(pieces, scope_sha.digest(runs.as_stored(pieces).encode("utf-8")))
-
-
-def rows_excerpt(path: Path, name: str) -> tuple[str, str]:
-    """`(label, text)` of one output file: its first ROWS_HEAD and last
-    ROWS_TAIL lines as `<line>: <row>`, a gap marked by its size, a row
-    longer than ROW_WIDTH cut and marked — never silently dropped."""
-    lines = path.read_text(encoding="utf-8").splitlines()
-    n = len(lines)
-    shown = (
-        range(n)
-        if n <= ROWS_HEAD + ROWS_TAIL
-        else [*range(ROWS_HEAD), *range(n - ROWS_TAIL, n)]
-    )
-    body: list[str] = []
-    last = -1
-    for i in shown:
-        if i != last + 1:
-            body.append(f"… {i - last - 1} line(s) not shown …")
-        row = lines[i]
-        if len(row) > ROW_WIDTH:
-            row = row[:ROW_WIDTH] + f" … [{len(lines[i]) - ROW_WIDTH} more chars]"
-        body.append(f"{i + 1}: {row}")
-        last = i
-    label = f"ROWS {name} ({n} line(s); the first {ROWS_HEAD} and last {ROWS_TAIL} are shown)"
-    return label, "\n".join(body)
 
 
 class Reading(NamedTuple):

@@ -710,6 +710,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **What an analysis audit is held to has one home below the gates:
+  `labkit.checks.audit_binding`.** The run choice (`audited_run`), the
+  snapshot of what the audit was shown (`run_shown`, `run_rows`,
+  `rows_excerpt`) and the question which records cover the area now
+  (`covering_analysis`, `analysis_now`) lived in `gates/audit` and
+  `gates/report_check`, so `protocol-fill --from-run` imported a gate to
+  ask it and moving the selection into `formats` would have imported
+  upward. `labkit-audit`, report-check and `--from-run` now ask the one
+  module; `AuditError` moved with it. Behaviour unchanged; the adoption
+  still runs report-check and restores the protocol on a refusal.
+
 - **`protocol-fill --from-run` no longer writes the Summary's Result; the
   author does.** The Result is "the answer to the question above, in at
   most two plain sentences"; `--from-run` filled it with the Answer line —

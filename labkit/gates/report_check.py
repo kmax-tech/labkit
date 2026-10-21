@@ -50,7 +50,7 @@ Every station runs; the blockers are summed at the end. It reads and runs,
 never writes. The stations read one context (`Checked`, built once by
 `checked`): the protocol text as the named file state holds it, its head,
 the run ids the answer cites, and the answering run chosen once
-(`audit.audited_run`, through `answering_run.bound_answering_run`, the one choice
+(`audit_binding.audited_run`, through `answering_run.bound_answering_run`, the one choice
 every gate holds a protocol to) — no station reads the file or chooses the
 run for itself, and the output names the state that was held.
 
@@ -81,8 +81,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats.gate import Findings
-from labkit.formats import console, findings, promises, protocol_block
-from labkit.gates.audit import AuditError, audited_run, run_shown
+from labkit.formats import console, findings, protocol_block
+from labkit.checks.audit_binding import (
+    AuditError,
+    analysis_now,
+    audited_run,
+    covering_analysis,
+)
 from labkit.gates.finalize import cited_runs, finalize_area
 from labkit.gates.preflight import area_test_python
 from labkit.formats.protocol_check import check_fields, field_name, fields
@@ -98,7 +103,7 @@ from labkit.formats.repo import (
     status_entries,
 )
 from labkit.formats.runs import read_run_config, unreportable
-from labkit.formats.scope_sha import area_stamp, areas_touched
+from labkit.formats.scope_sha import areas_touched
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
     CHECK_SCRIPT,
@@ -134,7 +139,7 @@ class Checked:
         state: TREE, INDEX or PROPOSED.
         cited: The run ids the answer cites (`finalize.cited_runs`) — the
             declaration that a result is reported.
-        run: The answering run (`audit.audited_run`, through
+        run: The answering run (`audit_binding.audited_run`, through
             `answering_run.bound_answering_run`: the one choice every gate holds the
             protocol to), or None.
         why: Why there is no answering run, when RUN is None.
@@ -232,13 +237,9 @@ def analysis_audit_gap(ctx: Checked) -> str | None:
     if ctx.run is None:
         return f"no answering run to hold it to — {ctx.why}"
     try:
+        sha, block_sha, run_id, shown_sha = analysis_now(ctx.area, ctx.text, ctx.run)
         return findings.audit_coverage(
-            ctx.area,
-            area_stamp(ctx.area)[0],
-            ANALYSIS_AUDIT,
-            promises.block_stamp(ctx.text),
-            ctx.run.name,
-            run_shown(ctx.area, ctx.run, "").sha,
+            ctx.area, sha, ANALYSIS_AUDIT, block_sha, run_id, shown_sha
         )
     except AuditError as exc:  # a registered output is gone
         return f"the analysis audit cannot be held to the run: {exc}"
@@ -246,21 +247,6 @@ def analysis_audit_gap(ctx: Checked) -> str | None:
         # ValueError: nothing to stamp, a findings file or the promise block
         # unreadable (FindingsError, PromiseError)
         return f"the analysis audit cannot be held to the area: {exc}"
-
-
-def covering_analysis(area: Path, text: str, run: Path) -> list[findings.Record]:
-    """The analysis records that saw AREA's code, the promises of TEXT and
-    RUN (its rows and metrics as shown) as they are now — the ones
-    `analysis_audit_gap` holds the report to. Raises what that gate names:
-    AuditError, FileNotFoundError, ValueError."""
-    records = [r for r in findings.area_records(area) if r.mode == ANALYSIS_AUDIT]
-    return findings.covering_records(
-        records,
-        area_stamp(area)[0],
-        promises.block_stamp(text),
-        run.name,
-        run_shown(area, run, "").sha,
-    )
 
 
 ANSWER_LABEL = "Answer to the question"
