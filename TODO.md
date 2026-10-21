@@ -28,10 +28,13 @@ vier Modulen (Labels, Platzhalter, Fences, Kommentare, Schnittmarken), und
 dort entstehen die Kanten jeder Probe (allein 2026-10-21: Platzhalter
 mitten im Wert, Result als Key-Dump, `cost` im Kopf).
 
-Ziel: Zur Stufe „guaranteed“ gehören nur der TOML-Block, die Run-Records
-und `audits/*.toml`, jeder mit eigenem typisiertem Validator (tomllib
-meldet Syntax mit Zeile, kein Schema; `protocol_block.head` ist das
-Muster). Die Ergebnisdarstellung wird aus diesen Quellen erzeugt, nie aus
+Ziel: Maschinelle Entscheidungen lesen typisierte Quellen — den
+TOML-Block, die Run-Records und `audits/*.toml`, jede mit eigenem
+typisiertem Validator (tomllib meldet Syntax mit Zeile, kein Schema;
+`protocol_block.head` ist das Muster). Die Stufen bezeichnen Prüfungen,
+keine Dateiformate: jede Prüfung behält ihre ausdrücklich bestimmte Stufe
+(„erzeugter Abschnitt entspricht seinen Quellen“ ist exakt; eine fachliche
+Aussage wird durch TOML nicht garantiert richtig). Die Ergebnisdarstellung wird aus diesen Quellen erzeugt, nie aus
 der Prosa zurückgelesen: Answer aus `metrics.json` des Laufs in
 `[result]`, Limits aus `audits/*.toml`, Prompt aus den `PROMPT`-Konstanten.
 Erzeugte Abschnitte sind im Markdown abgegrenzt, und ihre Übereinstimmung
@@ -57,9 +60,9 @@ Messlatte davor und danach. Studi-Repos pinnen und bleiben unberührt.
 | Scheibe | Inhalt | Abnahme |
 |---|---|---|
 | 1 Messlatte | Heutiges Verhalten sichern: Judge- und Count-Reihe (je drei kalte Läufe) auf dem Stand nach `2f61ab0`, plus Gegenbeispiele und die lane-spezifischen Pflichten (`seconds`, `minutes`/`hours`) als Tests — richtige und gebundene Zahl, Fehlaufrufe, Gate-Ablehnungen, Zeit, Kosten | Reihe und Zwillinge liegen vor; ohne sie findet kein Bruch statt |
-| 2 Kopplung | „Welche Audits decken diesen Stand?“ (`covering_analysis`) zieht aus `gates/report_check` nach `formats/findings`; `protocol_fill` importiert kein Gate mehr; Befunde als Daten (Grad, Regel, Fundstelle, Text) bis zur CLI — neun Stellen lesen den Grad heute aus Text, die Parkbedingung ist mit `e6dbb08` erfüllt | `test_architecture`: Tool ohne Gate-Import; kein `grade_of` auf Text außerhalb der Textquellen |
+| 2 Kopplung | Gemeinsame Audit-Auswahl und Snapshot-Bildung unterhalb der Gates: `covering_analysis` (`gates/report_check.py:251`) braucht `run_shown` aus `gates/audit`, ein bloßes Verschieben nach `formats/findings` importierte nach oben — beide Fragen („welche Records decken diesen Stand?“, „was wurde dem Audit gezeigt?“) ziehen gemeinsam in eine Schicht unter den Gates; die Ergebnisübernahme (`protocol_fill.adopt`, `:483`) ruft die Freigabeprüfung weiterhin verbindlich auf und stellt bei Ablehnung den alten Inhalt wieder her — „Tool ohne Gate-Import“ ist kein Ziel. Befunde als Daten (Grad, Regel, Fundstelle, Text) bis zur CLI — neun Stellen lesen den Grad heute aus Text, die Parkbedingung ist mit `e6dbb08` erfüllt | Auswahl und Snapshot ohne Import aus `gates`; `adopt` ruft `report_check` auf (Test bleibt); kein `grade_of` auf Text außerhalb der Textquellen |
 | 3 `[result] run = "<run_id>"` | Die ausdrückliche Deklaration „berichtet“ ersetzt Answering-run-Zeile und Run-ID in der Answer; `report-check`, Stop-Hook, Pre-Commit lesen den Kopf; Answer und Limits werden daraus erzeugt | Reihe grün; `cited_runs`/`answering_run_field` ohne Prosa-Leser; Zwilling: ein Protokoll ohne `[result]` ist Exploration, kein Fehler |
-| 4 `[model] alias, arms` und `[gate] labels` | Ersetzen das Parsen von Model / tool, Arm-Zeilen und Gate labels (`model_named_in`, `arm_findings`, `gate_label_scan` gegen den Kopf); die fachliche Übereinstimmung bleibt Sache des Audits | `finalize` hält Arme gegen den Lauf aus dem Kopf; Code-Labels gegen Kopf |
+| 4 `[model] alias, arms` und `[gate] labels` | Ersetzen das Parsen von Model / tool, Arm-Zeilen und Gate labels (`model_named_in`, `arm_findings`); die Registrierung wird strukturiert, die semantische Zuordnung bleibt beim Audit: `gate_label_scan` extrahiert Stringvergleiche als Material für den Code-Check-Agenten und urteilt nicht — daraus wird beim Formatwechsel kein harter Gleichheitstest, denn nicht jeder Stringvergleich gehört zum Labelalphabet; ein exakter Vergleich braucht einen enger bestimmten Gegenstand und korrekte Gegenbeispiele | `finalize` hält Arme gegen den Lauf aus dem Kopf; der Code-Check-Agent erhält die Labels aus dem Kopf statt aus der Prosa |
 | 5 Prosa einzeln | Jedes verbliebene Prosa-Muster auf seinen notwendigen Grad prüfen: Pflichtfeld des Standards (bleibt must), Vollständigkeitshinweis (Warnung) oder entbehrlich; `protocol-fill` → `protocol-set` + `protocol-render`; Schnittmarken nur noch Template-Sache | Pre-Commit blockt auf Kopf, Lauf, Findings und die vom Standard genannten Pflichtfelder; der Rest warnt |
 
 Bis zur Messlatte gilt ein Stabilisierungsfenster: keine neue Prüfung,
@@ -129,7 +132,7 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
 
 | Kandidat | Auslöser und Abnahme |
 |---|---|
-| Startzeit mit Subsekunden im Record | Gleichsekunden-Sperre trifft ein Labor oder passender Formatbruch steht an. Eindeutige zeitliche Wahl im Orakel `tests/test_answering_run_exhaustive.py`; kein Altformat-Leser. |
+| Startzeit mit Subsekunden im Record | Gleichsekunden-Sperre trifft ein Labor oder passender Formatbruch steht an. Eindeutige zeitliche Wahl im Orakel `tests/test_answering_run_exhaustive.py`; kein Altformat-Leser. Beobachtet 2026-10-21: `test_repeats` legte drei Läufe in einer Sekunde an, zwei bekamen dasselbe zufällige 4-Hex-Suffix (`uuid4().hex[:4]`, `runlog.py:372`; 1/65536 je Paar) — `FileExistsError` beim `mkdir`, der Pre-Commit wies den Commit ab, der Wiederholungslauf war grün. Das ist eine Suffix-Kollision, keine Reihenfolgeannahme des Tests; die Kur ist ein neues Suffix bei `FileExistsError` (wenige Zeilen in `Run.__init__`), kein Formatbruch. |
 | `notes_check` und deutsche Notizkonventionen nach LOCAL; Herkunft von Paper-Zahlen nach LAB | Fremdes Labor braucht die Trennung oder passende Breaking-Release. Beide Richtungen mit Regeltext und Hook-Anpassung gemeinsam behandeln. |
 | Englische Notizverzeichnisse | Angekündigter Bruch mit Regeltext, Scaffolder, Lesern, Hooks und externem Rollout. Kein Umbenennen nebenbei. |
 | Instrument als Kopffeld `kind` (`apply`/`fit`/`count`) | Offene Forschungsentscheidung. Konkrete Instrumente müssen verschiedene Pflichten brauchen, die Vorlagenwahl nicht ausdrückt. Ein `RandomForest(…)`, das im Feld „Model / tool“ Modellpflichten auslöst, ist ein Indiz. Branch `claude/zealous-davinci-3hbhvk` ist Material, kein beschlossener Plan. |
