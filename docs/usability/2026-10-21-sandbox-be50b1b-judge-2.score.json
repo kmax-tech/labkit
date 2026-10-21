@@ -1,0 +1,88 @@
+{
+ "probe": {
+  "staged": "2026-10-21T13:07:52",
+  "task": "judge",
+  "area": "01-causal-claims-judge",
+  "metric_key": "c1_accuracy",
+  "labkit_installed": "labkit @ file:///Users/max/projects/labkit-probes-sandbox-be50b1b/src",
+  "scaffold_sha": "66aa2eba096c",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "causal-claims-judge",
+   "--cost",
+   "seconds",
+   "--model",
+   "haiku"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-21T11-08-39_7f6b",
+ "number": 0.6666666666666666,
+ "expected": null,
+ "number_ok": true,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-causal-claims-judge.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 15,
+  "wall_seconds": 231,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 4,
+  "run": 6,
+  "edit": 4,
+  "unsure": 0,
+  "gate": 1,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 98,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 246,
+  "summary_codes": 9,
+  "answer_has_table": false
+ },
+ "transcript": {
+  "wall_seconds": 258,
+  "tool_seconds": 168,
+  "calls": 15,
+  "commands": {
+   "protocol-fill": 6,
+   "code-check": 1,
+   "finalize": 1,
+   "labkit-audit": 5,
+   "report-check": 2
+  },
+  "refusals": 0,
+  "tokens": {
+   "calls": 26,
+   "input": 52,
+   "output": 13740,
+   "cache_read": 718115,
+   "cache_creation": 46716,
+   "context_max": 38313
+  },
+  "files_read": [
+   "TASK.md",
+   "experiments/01-causal-claims-judge/README.md",
+   "models.toml",
+   "PROTOCOL*.md",
+   "scripts/*",
+   "scripts/01_measure.py",
+   "scripts/00_prepare.py",
+   "data/raw/claims.jsonl",
+   "/out/probe.log.md"
+  ],
+  "source_reads": [],
+  "outside_paths": [
+   "/out/probe.log.md"
+  ]
+ },
+ "agent": null
+}

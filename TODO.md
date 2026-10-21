@@ -145,6 +145,14 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   Fehlbedienung 4 → 0, kein zweites Audit, die Liste stand in der
   gekürzten Ausgabe. Bleibt: das lange Judge-Skelett (436 Zeilen für
   sechs Stellen), Raw output vor dem Lauf in `--list`.
+  Judge-Skelett geteilt (`be50b1b`, `labkit.run.lanes`); Reihe
+  ([Bericht](docs/usability/2026-10-21-sandbox-judge-be50b1b.md)): gleiche
+  Prüfungen und Bindung, keine Fehlbedienung, Mess-Skript 436 → 255
+  Zeilen, Kontext 37–41k → 34–38k. Nächste Punkte nach Beleg: (a) das
+  gestempelte `00_prepare.py` mit seinem TODO `audit()` (Audit-Befund in
+  2 von 3 Läufen, nun der größere Leseanteil); (b) `Raw output`: von
+  `--list` vor dem Lauf verlangt, von `--from-run` nicht geschrieben
+  (2 von 3 Läufen ein Nacharbeiten).
   Erledigt: die labkit-Proben laufen auf dem Paket (Runner
   `~/projects/labkit-probes-sandbox-bcea990/run.py`). Offen als eigener
   Auftrag: labkit-paper umstellen und seine Kopie in `lib/agentsandbox`
