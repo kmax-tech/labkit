@@ -71,10 +71,10 @@ if [ -n "$staged_protocols" ]; then
 fi
 
 # 2. A number written back: every protocol of an area a staged file touches
-#    whose answer cites a run goes through report-check — the whole release
-#    check at every cost tier (finalize clean, a full run, a decided
-#    analysis audit, the numbers recomputed); an answer still open owes
-#    nothing here. Every staged path, not only a protocol: a script changed
+#    whose head declares a result ([result] run) goes through report-check —
+#    the whole release check at every cost tier (finalize clean, a full run,
+#    a decided analysis audit, the numbers recomputed); a protocol declaring
+#    none owes nothing here. Every staged path, not only a protocol: a script changed
 #    under a reported number reopens it. --staged: the answer as the index
 #    holds it, and the area's tree must equal the index — the commit holds
 #    the index, the check reads the tree (audit 2026-10-19).

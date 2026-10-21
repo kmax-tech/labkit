@@ -2,12 +2,13 @@
 
     report-check <AREA> [--protocol PROTOCOL-*.md]
     report-check --if-reported [--staged] PATH ...  every protocol of an area
-                                                    a path touches whose answer
-                                                    cites a run (the stop hook;
-                                                    with --staged the pre-commit:
-                                                    the answer as the index
-                                                    holds it, and the area's
-                                                    tree must equal the index)
+                                                    a path touches whose head
+                                                    declares a result (the stop
+                                                    hook; with --staged the
+                                                    pre-commit: the head as the
+                                                    index holds it, and the
+                                                    area's tree must equal the
+                                                    index)
 
 Exit codes: 0 clean, 1 a blocker, 2 usage error.
 
@@ -26,7 +27,7 @@ docs/notes/2026-10-19-hooks-and-report-check.md):
                    this station is skipped and says so
   2. finalize      `finalize_area` clean — its blockers are named here —
                    so the answering run is bound to this protocol and the
-                   answer cites it; and that run is a full run: `run_kind='measurement'`,
+                   head declares it; and that run is a full run: `run_kind='measurement'`,
                    not acknowledged unfrozen (`runs.unreportable`) — a
                    reported number owes a full run (frozen at
                    minutes/hours); a probe's or an acknowledged run's number
@@ -49,7 +50,7 @@ docs/notes/2026-10-19-hooks-and-report-check.md):
 Every station runs; the blockers are summed at the end. It reads and runs,
 never writes. The stations read one context (`Checked`, built once by
 `checked`): the protocol text as the named file state holds it, its head,
-the run ids the answer cites, and the answering run chosen once
+the run the head declares, and the answering run chosen once
 (`audit_binding.audited_run`, through `answering_run.bound_answering_run`, the one choice
 every gate holds a protocol to) — no station reads the file or chooses the
 run for itself, and the output names the state that was held.
@@ -57,13 +58,13 @@ run for itself, and the output names the state that was held.
 `--if-reported` is the gate the agent cannot choose: `claude-hook stop`
 runs it on every changed path, the stamped pre-commit on every staged one,
 and it holds every protocol of every area one of those paths lies in
-(`reported_protocols`) whose "Answer to the question" cites a run
-(`protocol_block.declared_run`, `[result] run`) — the one declaration that a result is reported,
-written by `protocol-fill --from-run`. The area, not the protocol alone:
-a script edited after the answer was written back changes what the
-analysis audit saw and what `--check` recomputes. A protocol whose
-answer is still open owes nothing here: an exploration ends with no
-reported result, probes or not.
+(`reported_protocols`) whose head declares a result (`[result] run`,
+`protocol_block.declared_run`) — the one declaration that a result is
+reported, written by `protocol-fill --from-run`. The area, not the protocol
+alone: a script edited after the answer was written back changes what the
+analysis audit saw and what `--check` recomputes. A protocol declaring no
+result owes nothing here: an exploration ends with no reported result,
+probes or not; a `[result]` that does not read is held and blocks.
 
 `--staged` is the pre-commit's form. The commit holds the index, the
 stations read the working tree: so the declaration is read from the index
