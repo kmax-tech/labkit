@@ -414,7 +414,9 @@ class TestFromRun(unittest.TestCase):
         )
         text, filled, run_id = protocol_fill.from_run(self.PROTOCOL, area)
         self.assertEqual(run_id, self.RUN)
-        self.assertEqual(filled, ["Answer to the question", "Runs"])
+        self.assertEqual(
+            filled, ["Answer to the question", protocol_fill.RESULT_LABEL, "Runs"]
+        )
         line = (
             "mean_docs_per_case = 3.5, n_cases = 12, a1_pass = True (run "
             + self.RUN
@@ -445,40 +447,37 @@ class TestFromRun(unittest.TestCase):
         self.assertIn("already filled", str(cm.exception))
         again, filled, _ = protocol_fill.from_run(text, area, force=True)
         self.assertNotIn("Runs", filled)  # the run line is there once, not twice
-        self.assertEqual(again.count(self.RUN), 2)  # the Answer and the Runs line
+        self.assertEqual(
+            again.count(self.RUN), 3
+        )  # [result], the Answer, the Runs line
 
-    def test_the_stamped_answering_run_line_is_written(self):
-        """The template stamps `none yet — …` over four lines, no `<…>`
-        placeholder: fill read it as filled and --from-run skipped it
-        silently, so the line a cold agent was told the command writes
-        stayed `none yet` (cold Sonnet, 2026-10-14)."""
-        from labkit.tools import scaffold
-
-        stamped = scaffold.PROTOCOL_TEMPLATE.read_text(encoding="utf-8").splitlines()
-        k = next(i for i, ln in enumerate(stamped) if "**Answering run:**" in ln)
-        block = [stamped[k]]
-        for ln in stamped[k + 1 :]:
-            if not ln.startswith("  "):
-                break
-            block.append(ln)
-        protocol = self.PROTOCOL.replace("## Runs", "\n".join(block) + "\n\n## Runs")
+    def test_the_run_is_declared_in_the_head_after_the_protocol_table(self):
+        """`[result] run` is the declaration (phase 3, 2026-10-21): written
+        once, right after the [protocol] table, read back exactly; the
+        template's comment above [protocol] and every other byte stay."""
         area = self._area({"mean_docs_per_case": 3.5})
-        text, filled, _ = protocol_fill.from_run(protocol, area)
-        self.assertIn("Answering run", filled)
-        self.assertIn(f"- **Answering run:** {self.RUN}\n", text)
-        self.assertNotIn("none yet", text)
-        self.assertNotIn(block[-1].strip(), text)  # the stamp's continuation goes too
+        text, filled, _ = protocol_fill.from_run(self.PROTOCOL, area)
+        self.assertIn(protocol_fill.RESULT_LABEL, filled)
+        self.assertEqual(protocol_block.declared_run(text), self.RUN)
+        self.assertIn(f'preflight_audit = ""\n\n[result]\nrun = "{self.RUN}"\n', text)
+        again, filled, _ = protocol_fill.from_run(text, area, force=True)
+        self.assertNotIn(protocol_fill.RESULT_LABEL, filled)  # declared already
+        self.assertEqual(again.count("[result]"), 1)
 
-    def test_an_answering_run_naming_another_run_is_refused_not_skipped(self):
+    def test_a_head_declaring_another_run_is_refused_not_skipped(self):
+        other = "2026-01-01T00-00-00_0000"
         protocol = self.PROTOCOL.replace(
-            "## Runs", "- **Answering run:** 2026-01-01T00-00-00_0000\n\n## Runs"
+            'preflight_audit = ""\n',
+            f'preflight_audit = ""\n\n[result]\nrun = "{other}"\n',
         )
         area = self._area({"mean_docs_per_case": 3.5})
         with self.assertRaises(ValueError) as cm:
             protocol_fill.from_run(protocol, area)
-        self.assertIn("names 2026-01-01T00-00-00_0000", str(cm.exception))
+        self.assertIn(f"[result] declares {other}, not {self.RUN}", str(cm.exception))
         text, filled, _ = protocol_fill.from_run(protocol, area, force=True)
-        self.assertIn(f"- **Answering run:** {self.RUN}", text)
+        self.assertEqual(protocol_block.declared_run(text), self.RUN)
+        self.assertNotIn(other, text)
+        self.assertEqual(text.count("[result]"), 1)
 
     def test_a_named_run_that_is_not_completed_refuses(self):
         area = self._area({"x": 1})
@@ -520,7 +519,6 @@ class Adopt(unittest.TestCase):
 ## Result (after the run — write back, don't go quiet)
 
 - **Answer to the question:** <per registered id its verdict, and the run_id…>
-- **Answering run:** none yet — the run `finalize` holds this protocol to
 
 ## Runs (documented runs)
 
@@ -579,7 +577,7 @@ class Adopt(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertIn("report-check: all clear", out)
         self.assertIn(f"c1_pass = True (run {self.RUN})", text)
-        self.assertIn(f"- **Answering run:** {self.RUN}", text)
+        self.assertEqual(protocol_block.declared_run(text), self.RUN)
 
     def test_a_probe_is_refused_and_the_file_is_as_it_was(self):
         area = self._area(run_kind="probe")

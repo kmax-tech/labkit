@@ -148,10 +148,12 @@ def head(
     frozen: bool = False,
     preflight_audit: str = "",
     promises: str | None = "",
+    result: str | None = None,
 ) -> str:
     """The fenced TOML block; `promises` is appended inside it verbatim. A
     frozen or seconds head without an explicit block carries `DEFAULT_BLOCK`;
-    `None` means no block even then (the mutant of standard 0.19's rule)."""
+    `None` means no block even then (the mutant of standard 0.19's rule).
+    RESULT is the run id a `[result]` table declares (phase 3, 2026-10-21)."""
     if promises == "" and (frozen or cost == "seconds"):
         promises = DEFAULT_BLOCK  # frozen, or at seconds every run is the full run
     promises = promises or ""
@@ -165,6 +167,8 @@ def head(
         f"frozen = {'true' if frozen else 'false'}",
         f'preflight_audit = "{preflight_audit}"',
     ]
+    if result is not None:
+        lines += ["", "[result]", f'run = "{result}"']
     body = "\n".join(lines) + "\n"
     if promises:
         body += "\n" + promises.strip() + "\n"

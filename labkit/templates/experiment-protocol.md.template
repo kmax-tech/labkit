@@ -67,10 +67,6 @@
 - **Answer to the question:** <!-- s --> <per registered id its verdict, and the
   run_id; numbers as a small table below the label (one row per arm or
   condition), produced by `scripts/02_analyze.py --check`, never retyped>
-- **Answering run:** none yet — the run `finalize` holds this protocol to,
-  written with the number by `protocol-fill PROTOCOL-<name>.md --from-run`
-  after `finalize`; `finalize` refuses any other run_id here (a readable
-  projection of `answering_run.bound_answering_run`, never a second binding)
 - **Deviations after freeze:** <"none", or what was changed after
   `frozen = true` — the registered plan is the Intent above and is not
   rewritten; a deviation that touches the verdict is named in Summary →
@@ -186,6 +182,10 @@ protocol's `cost` owes, and which fall due after a documented run:
 label with `protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.*
 
 ```toml
+# `[result] run = "<run_id>"` stands below the [protocol] table once
+# `protocol-fill PROTOCOL-<name>.md --from-run` wrote it after a clean
+# `finalize`: the one declaration that this protocol reports a number, held
+# by report-check at the stop and the commit; absent while exploring.
 [protocol]
 standard = "0.19"
 id = "<protocol-id>"

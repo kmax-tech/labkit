@@ -31,7 +31,13 @@ from unittest import mock
 from labkit.gates import audit, claude_hooks, finalize, preflight, report_check
 from labkit.checks import audit_binding  # noqa: E402
 from labkit.tools import protocol_fill, scaffold
-from labkit.formats import findings, promises, scope_sha, standard_contract as sc
+from labkit.formats import (
+    findings,
+    promises,
+    protocol_block,
+    scope_sha,
+    standard_contract as sc,
+)
 
 
 def _replace(path: Path, pairs: list[tuple[str, str]]) -> None:
@@ -857,7 +863,7 @@ class Estimator(unittest.TestCase):
         self.assertNotIn("Raw output", out)  # filled already: not named again
         text = self.protocol.read_text(encoding="utf-8")
         self.assertIn(f"c1_pass = True (run {run_id})", text)
-        self.assertIn(f"- **Answering run:** {run_id}", text)
+        self.assertEqual(protocol_block.declared_run(text), run_id)
         rc, err = lab.stop_hook()
         self.assertEqual(rc, 0, err)
         lab.git("add", "-A")

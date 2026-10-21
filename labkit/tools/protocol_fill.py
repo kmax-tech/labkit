@@ -13,12 +13,13 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md "C1 sentence=<the promise>"   a [[promise]]'s sentence, as a TOML string
     protocol-fill PROTOCOL-x.md type=exploratory cost=seconds   the TOML head's stamped choices
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
-    protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: the Answer,
-                                               Answering run and Runs lines from its metrics.json
-                                               (newest completed run by default), written only
-                                               when report-check passes on them; the Summary's
-                                               Result — the question's answer in two sentences,
-                                               within the Limits — stays yours
+    protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: `[result] run`
+                                               in the TOML head (the declaration), the Answer and
+                                               Runs lines from its metrics.json (newest completed
+                                               run by default), written only when report-check
+                                               passes on them; the Summary's Result — the
+                                               question's answer in two sentences, within the
+                                               Limits — stays yours
 
 A field that is already filled is refused without --force — overwriting an
 answer silently is how two truths happen.
@@ -60,8 +61,6 @@ from labkit.checks.prompt_check import prompt_constants
 from labkit.formats.protocol_check import (
     BEFORE_RUN_CLAIMS,
     RUNS_PLACEHOLDER,
-    answering_run_field,
-    answering_run_open,
     field_name,
     fields,
     placeholder_fields,
@@ -278,6 +277,82 @@ def fill_sentence(text: str, pid: str, value: str, force: bool = False) -> str:
 
 RUNS_HEADING = re.compile(r"^## Runs\b")
 
+#: how `--from-run` names the declaration among what it filled
+RESULT_LABEL = "[result] run"
+_PROTOCOL_HEADER = re.compile(r"^\s*\[\s*protocol\s*\]\s*(?:#.*)?$")
+_RESULT_HEADER = re.compile(r"^\s*\[\s*result\s*\]\s*(?:#.*)?$")
+#: the `[result]` table's one line, its key and `=` and a trailing comment kept
+_RESULT_RUN_LINE = re.compile(r'^(\s*run\s*=\s*)"[^"\n]*"(\s*(?:#.*)?)$')
+
+
+def fill_result_run(text: str, run_id: str, force: bool = False) -> str:
+    """Declare RUN_ID as the protocol's reported result: `[result] run =
+    "<id>"` in the TOML block, the one declaration report-check holds the
+    protocol to (`protocol_block.declared_run`). Without a `[result]` the
+    table is written right after the `[protocol]` table's last key; one
+    naming RUN_ID already leaves the text as it is; one naming another run
+    is refused without FORCE. Every other byte stays, and the block is read
+    back and must declare exactly RUN_ID. Raises BlockError on a head that
+    does not read, ValueError on the refusal or a block without
+    `[protocol]`."""
+    current = protocol_block.declared_run(text)
+    if current == run_id:
+        return text
+    if current is not None and not force:
+        raise ValueError(
+            f"[result] declares {current}, not {run_id} — --force to replace it"
+        )
+    span = protocol_block.toml_block_span(text)
+    if span is None:
+        raise ValueError("no ```toml block — the head is where the result is declared")
+    lines = text.split("\n")
+    if current is not None:
+        _replace_result_run(lines, span, run_id)
+    else:
+        _insert_result_table(lines, span, run_id)
+    new = "\n".join(lines)
+    if protocol_block.declared_run(new) != run_id:
+        raise ValueError("[result] run did not read back as written")
+    return new
+
+
+def _replace_result_run(lines: list[str], span: tuple[int, int], run_id: str) -> None:
+    """Set the `run = "…"` line of the `[result]` table in LINES[SPAN] to RUN_ID."""
+    inside = False
+    for i in range(*span):
+        if _RESULT_HEADER.match(lines[i]):
+            inside = True
+            continue
+        if protocol_block.TABLE_HEADER.match(lines[i]):
+            inside = False
+            continue
+        m = _RESULT_RUN_LINE.match(lines[i]) if inside else None
+        if m:
+            lines[i] = f'{m.group(1)}"{run_id}"{m.group(2)}'
+            return
+    raise ValueError(
+        '[result] has no one-line `run = "…"` — edit the TOML head by hand'
+    )
+
+
+def _insert_result_table(lines: list[str], span: tuple[int, int], run_id: str) -> None:
+    """Write `[result]` with RUN_ID after the last key of the `[protocol]`
+    table in LINES[SPAN] — before the comments and tables that follow it."""
+    start, end = span
+    for i in range(start, end):
+        if not _PROTOCOL_HEADER.match(lines[i]):
+            continue
+        last_key = i
+        for j in range(i + 1, end):
+            if protocol_block.TABLE_HEADER.match(lines[j]):
+                break
+            if lines[j].strip() and not lines[j].lstrip().startswith("#"):
+                last_key = j
+        lines[last_key + 1 : last_key + 1] = ["", "[result]", f'run = "{run_id}"']
+        return
+    raise ValueError("no [protocol] table in the ```toml block")
+
+
 #: the label `--from-run` writes from the run's metrics.json — `--list` sets
 #: it apart, since filling it before the run makes --from-run refuse
 WRITTEN_BY_RUN = ("Answer to the question",)
@@ -331,11 +406,13 @@ def runs_line(text: str, run_id: str, sentence: str) -> tuple[str, bool]:
 def from_run(
     text: str, area: Path, run_id: str | None = None, force: bool = False
 ) -> tuple[str, list[str], str]:
-    """Write the run's number back: the Answer line and the Runs entry from
-    `runs/<run_id>/metrics.json` (newest completed run when RUN_ID is None);
-    the Summary's Result stays the author's (`WRITTEN_AFTER_RUN`). Returns
-    (text, what was filled, run_id). A filled Answer is refused without
-    `force` (fill's rule)."""
+    """Write the run back: `[result] run` in the TOML head (the one
+    declaration that the number is reported, `fill_result_run`), the Answer
+    line and the Runs entry from `runs/<run_id>/metrics.json` (newest
+    completed run when RUN_ID is None); the Summary's Result stays the
+    author's (`WRITTEN_AFTER_RUN`). Returns (text, what was filled, run_id).
+    A filled Answer, or a `[result]` naming another run, is refused without
+    `force`."""
     run = recheck.chosen_run(area, text, run_id)
     metrics = runs.read_metrics(run / "metrics.json")
     limits = accepted_limits(area, text, run)
@@ -351,15 +428,10 @@ def from_run(
             if "no field labelled" in str(exc):
                 continue  # a cut without this line (the Summary of a report-grade full form carries it)
             raise
-    current = answering_run_field(text)
-    if current is not None and run.name not in current:
-        if not (answering_run_open(current) or force):
-            raise ValueError(
-                f'"Answering run" names {current.split()[0]}, not {run.name} — '
-                f"--force to replace it"
-            )
-        text = fill(text, "Answering run", run.name, force=True)
-        filled.append("Answering run")
+    declared = fill_result_run(text, run.name, force=force)
+    if declared != text:
+        text = declared
+        filled.append(RESULT_LABEL)
     text, changed = runs_line(
         text, run.name, "the kept run; its metrics.json is the number"
     )
@@ -676,7 +748,7 @@ def main(argv: list[str]) -> int:
         const="newest",
         default=None,
         metavar="RUN_ID",
-        help="adopt the run as the result: write the Answer, Answering run and Runs lines from its metrics.json, kept only when report-check passes "
+        help="adopt the run as the result: declare it as `[result] run` in the TOML head and write the Answer and Runs lines from its metrics.json, kept only when report-check passes "
         "(the area's newest completed run without RUN_ID); the Summary's Result stays yours — the question's answer in two sentences, within the Limits",
     )
     ap.add_argument(
