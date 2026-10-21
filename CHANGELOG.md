@@ -190,7 +190,7 @@ pins (`requirements.txt` / `requirements.lock`).
   silent. The shipped standard's LAB-011 paragraph and the stamped
   `AGENTS.md` lanes say so.
 - **`protocol-fill --from-run` is the one path by which a number becomes
-  the result.** It writes the Answer, Result, Answering run and Runs lines
+  the result.** It writes the Answer, Answering run and Runs lines
   as before, then runs `report-check` on the written protocol and puts the
   file back as it was on a blocker (`protocol_fill.adopt`). Writing the
   number back declares it reported; the declaration is not what makes it
@@ -709,6 +709,17 @@ pins (`requirements.txt` / `requirements.lock`).
   release's obligations is `lane` (`freeze`, `audits`).
 
 ### Changed
+
+- **`protocol-fill --from-run` no longer writes the Summary's Result; the
+  author does.** The Result is "the answer to the question above, in at
+  most two plain sentences"; `--from-run` filled it with the Answer line —
+  a dump of every metric key with the "read within Limit" tails — and in
+  three of three finished judge protocols nobody replaced it, so the one
+  field meant to say whether the question is answered held machine text
+  (final-answer audit, 2026-10-21). `--from-run` writes the Answer and
+  Runs lines and names Result among the fields still yours; `protocol-check`
+  holds an empty Result after a measure run as before, now saying who
+  writes what. A protocol adopted under 0.99.0 keeps its Result.
 
 - **The judge skeleton keeps the experiment; its run mechanics are
   `labkit.run.lanes`.** The stamped `01_measure.py` of a model area was 436

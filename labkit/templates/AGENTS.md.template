@@ -51,19 +51,24 @@ LAB-017 The number of audits follows the cost tier.
    (LAB-017 The number of audits follows the cost tier). Until the number
    is written back it is a sketch, and nothing is owed for it.
 6. `protocol-fill PROTOCOL-<name>.md --from-run <run_id>` adopts the run
-   as the result: it writes the Answer line, the Summary's Result line and
-   the run line from metrics.json — never retype them (reword the Result
-   line for a person if you like; Limits and Next step belong to the full
-   form) — then runs `report-check` on the written protocol and puts the
+   as the result: it writes the Answer line and the run line from
+   metrics.json — never retype them — then runs `report-check` on the
+   written protocol and puts the
    file back if it refuses: a full run (no probe), the decided analysis
    audit of code, promises and that run, `scripts/02_analyze.py --check`
    passing (stamped with every skeleton; the count's recomputes from the
    kept rows). Each finding with an effect lands below the Answer as its
    `Limit (audit <record> #N)` line, and the Answer counts them in one
    note ("subject to N recorded limitations") and names each promise
-   left "not assessable with this run". With a model it then names what is still yours: Raw output,
-   one real prompt+answer pair per finding, read from the run's output
-   file it names.
+   left "not assessable with this run". It then names what is still
+   yours: the Summary's **Result** — the question's answer in at most two
+   plain sentences, read within the Limit lines ("C1 met on these twelve
+   items; whether the model recognises causal claims independent of
+   connectives stays open"), never the Answer line again (three of three
+   judge protocols carried the key dump there, 2026-10-21) — and, with a
+   model, Raw output: one real prompt+answer pair per finding, read from
+   the run's output file it names. `protocol-check` holds both after a
+   measure run.
    The run_id in the Answer declares the result reported; the stop hook
    and the pre-commit hold it to the same check. An exploration that
    reports nothing leaves the Answer open and may end; its number stays a

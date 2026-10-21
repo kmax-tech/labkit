@@ -411,14 +411,17 @@ class TestFromRun(unittest.TestCase):
         )
         text, filled, run_id = protocol_fill.from_run(self.PROTOCOL, area)
         self.assertEqual(run_id, self.RUN)
-        self.assertEqual(filled, ["Answer to the question", "Result", "Runs"])
+        self.assertEqual(filled, ["Answer to the question", "Runs"])
         line = (
             "mean_docs_per_case = 3.5, n_cases = 12, a1_pass = True (run "
             + self.RUN
             + ")"
         )
         self.assertIn("- **Answer to the question:** " + line, text)
-        self.assertIn("- **Result:** " + line, text)
+        # the Result is the author's two sentences, not the key dump again
+        # (three of three judge protocols carried it there, 2026-10-21)
+        self.assertIn("- **Result:** <the answer to the question above", text)
+        self.assertIn("Result", protocol_fill.WRITTEN_AFTER_RUN)
         self.assertIn("- " + self.RUN + " — the kept run", text)
         self.assertNotIn("duration_s", text)  # labkit's own key is not the number
         self.assertNotIn("<run_id>", text)
@@ -439,7 +442,7 @@ class TestFromRun(unittest.TestCase):
         self.assertIn("already filled", str(cm.exception))
         again, filled, _ = protocol_fill.from_run(text, area, force=True)
         self.assertNotIn("Runs", filled)  # the run line is there once, not twice
-        self.assertEqual(again.count(self.RUN), 3)
+        self.assertEqual(again.count(self.RUN), 2)  # the Answer and the Runs line
 
     def test_the_stamped_answering_run_line_is_written(self):
         """The template stamps `none yet — …` over four lines, no `<…>`

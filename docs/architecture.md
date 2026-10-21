@@ -308,7 +308,8 @@ recorded with sufficient timeout. The run records that attempt and the
 acknowledgement; the resulting number remains unreportable. An open audit
 BLOCKER cannot be overridden this way.
 
-Adoption through `protocol-fill --from-run` writes the result lines, runs
+Adoption through `protocol-fill --from-run` writes the Answer and Runs
+lines (the Summary's Result stays the author's sentence), runs
 `report-check` against the written protocol and restores the file on
 failure. A run ID in the Answer declares a reported result; the hooks
 recheck affected areas so later edits are subject to the same contract.

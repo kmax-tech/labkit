@@ -14,9 +14,11 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md type=exploratory cost=seconds   the TOML head's stamped choices
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
     protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: the Answer,
-                                               Result, Answering run and Runs lines from its
-                                               metrics.json (newest completed run by default),
-                                               written only when report-check passes on them
+                                               Answering run and Runs lines from its metrics.json
+                                               (newest completed run by default), written only
+                                               when report-check passes on them; the Summary's
+                                               Result — the question's answer in two sentences,
+                                               within the Limits — stays yours
 
 A field that is already filled is refused without --force — overwriting an
 answer silently is how two truths happen.
@@ -276,13 +278,17 @@ def fill_sentence(text: str, pid: str, value: str, force: bool = False) -> str:
 
 RUNS_HEADING = re.compile(r"^## Runs\b")
 
-#: the labels `--from-run` writes from the run's metrics.json — `--list` sets
-#: them apart, since filling them before the run makes --from-run refuse
-WRITTEN_BY_RUN = ("Answer to the question", "Result")
-#: the fields about the run that the author writes after it (Raw output from
-#: its rows: which pair shows a finding is a choice no record makes) —
-#: `--list` sets them apart too, and `--from-run` names the open ones with
-#: the run's output files
+#: the label `--from-run` writes from the run's metrics.json — `--list` sets
+#: it apart, since filling it before the run makes --from-run refuse
+WRITTEN_BY_RUN = ("Answer to the question",)
+#: the fields about the run that the author writes after it — Result: the
+#: question's answer in two plain sentences, read within the Limit lines
+#: (until 2026-10-21 `--from-run` wrote the Answer line there too, and in
+#: three of three judge protocols nobody replaced the key dump; the one field
+#: meant to say whether the question is answered held machine text); Raw
+#: output from the run's rows (which pair shows a finding is a choice no
+#: record makes) — `--list` sets them apart too, and `--from-run` names the
+#: open ones with the run's output files
 WRITTEN_AFTER_RUN = tuple(
     label for label in BEFORE_RUN_CLAIMS if label not in WRITTEN_BY_RUN
 )
@@ -325,10 +331,11 @@ def runs_line(text: str, run_id: str, sentence: str) -> tuple[str, bool]:
 def from_run(
     text: str, area: Path, run_id: str | None = None, force: bool = False
 ) -> tuple[str, list[str], str]:
-    """Write the run's number back: the Answer line, the Summary's Result line
-    and the Runs entry from `runs/<run_id>/metrics.json` (newest completed
-    run when RUN_ID is None). Returns (text, what was filled, run_id). A
-    filled Answer or Result is refused without `force` (fill's rule)."""
+    """Write the run's number back: the Answer line and the Runs entry from
+    `runs/<run_id>/metrics.json` (newest completed run when RUN_ID is None);
+    the Summary's Result stays the author's (`WRITTEN_AFTER_RUN`). Returns
+    (text, what was filled, run_id). A filled Answer is refused without
+    `force` (fill's rule)."""
     run = recheck.chosen_run(area, text, run_id)
     metrics = runs.read_metrics(run / "metrics.json")
     limits = accepted_limits(area, text, run)
@@ -535,9 +542,10 @@ def _write_back(args: argparse.Namespace, text: str) -> int:
 
 def _name_yours(text: str, area: Path, run: Path) -> None:
     """After an adopted write-back: the after-run fields still open, which
-    the author writes (Raw output from the rows), and the run's output files —
-    the post hook asked for Raw output only after the commit, and two of
-    three cold agents filled it in a second round (sandbox, 2026-10-21)."""
+    the author writes (Result: the question's answer in two sentences within
+    the Limits; Raw output from the rows), and the run's output files — the
+    post hook asked for Raw output only after the commit, and two of three
+    cold agents filled it in a second round (sandbox, 2026-10-21)."""
     open_ = [
         (n, label)
         for n, label in placeholder_fields(text)
@@ -668,8 +676,8 @@ def main(argv: list[str]) -> int:
         const="newest",
         default=None,
         metavar="RUN_ID",
-        help="adopt the run as the result: write the Answer, Result, Answering run and Runs lines from its metrics.json, kept only when report-check passes "
-        "(the area's newest completed run without RUN_ID)",
+        help="adopt the run as the result: write the Answer, Answering run and Runs lines from its metrics.json, kept only when report-check passes "
+        "(the area's newest completed run without RUN_ID); the Summary's Result stays yours — the question's answer in two sentences, within the Limits",
     )
     ap.add_argument(
         "--line",

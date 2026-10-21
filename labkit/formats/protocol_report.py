@@ -602,7 +602,9 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
             f"{f}:{r.measured[0][0]}: MISSING (must): measure run in the "
             f"run list ({r.measured[0][1]}) but "
             f"{', '.join(field_label(n) for n in r.run_unreported)} empty — write "
-            f"the result back in the SAME session."
+            f"the result in the SAME session: `protocol-fill --from-run` for the "
+            f"Answer; Result (the question's answer in two sentences, within the "
+            f"Limits) and Raw output are yours."
         )
     for n, ln in r.series:
         print(

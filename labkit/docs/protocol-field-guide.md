@@ -72,7 +72,8 @@ path to this file.
 
 - **One template, three cuts.** `labkit-init exp --cost seconds` stamps the
   `seconds` cut: head, terms, question, data, unit, exclusions, and after
-  the run the answer and the Result line — with `--model` also criterion,
+  the run the Answer line (`protocol-fill --from-run` writes it) and the
+  Result, your two sentences — with `--model` also criterion,
   admissibility condition, model, prompt, null condition and raw output. A
   count without a model registers no promise and no criterion (its number
   is held by `--check` and `finalize`). Every stamped placeholder is one line;
