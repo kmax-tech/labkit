@@ -161,13 +161,23 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   Ausgabedateien des Laufs (schreibt es nicht: welches Paar einen Befund
   zeigt, steht in keinem Record). Ursache des `--force` in judge-2: der
   Agent füllte das Feld bei der Registrierung mit „filled after the run“.
-  Offen, zu entscheiden: judge-2 hat einen BLOCKER (Prompt „states or
-  implies“ breiter als das Gold) als `accepted` entschieden; `finalize`
-  lief vor dem Audit, `report-check` und `--from-run` nahmen „C1 not met“
-  an, und das Protokoll nennt die Einschränkung nirgends (sie steht nur
-  im Audit-Record). Frage: darf ein akzeptierter BLOCKER ein Ergebnis
-  tragen, oder muss er im Protokoll stehen bzw. das Kriterium ohne
-  Urteil lassen?
+  judge-2 hatte einen BLOCKER (Prompt „states or implies“ breiter als
+  das Gold) akzeptiert, und „C1 not met“ ging durch, die Einschränkung
+  nur im Audit-Record. Entschieden: Zahl und Urteil getrennt — erledigt
+  (`b7802b3`): `--decide … accepted … --effect stands | "C1 not
+  assessable"`, `--from-run` schreibt je akzeptiertem BLOCKER eine Zeile
+  `Limit (audit <record> #N)` und „C1 not assessable with this run“ in die
+  Antwort, report-check hält Protokoll und Record zusammen. Ob die
+  Einschränkung fachlich reicht, prüft keine Maschine. Offen: nur
+  Analyse-Records, akzeptierte BLOCKER aus Preflight-Records (minutes/
+  hours) noch nicht. (a) erledigt (`df504b4`): `labkit.run.profile`,
+  `00_prepare.py --audit` druckt Items und mittlere Wortzahl je Klasse,
+  `MARKERS`/`CONFOUNDS` (None „not decided“, () „none applies“, ohne
+  Treffer „checked, no hit“); neues Feld Data profile, bei `seconds` mit
+  Modell Teil der Registrierung, also vor dem Messlauf verlangt. Reihe
+  auf `07a610e` läuft (`~/projects/labkit-probes-sandbox-07a610e`): prüft,
+  ob Einschränkungen im Protokoll ankommen und ob das Profil vor dem
+  Messlauf bewertet wird.
   Erledigt: die labkit-Proben laufen auf dem Paket (Runner
   `~/projects/labkit-probes-sandbox-bcea990/run.py`). Offen als eigener
   Auftrag: labkit-paper umstellen und seine Kopie in `lib/agentsandbox`
