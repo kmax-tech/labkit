@@ -1,0 +1,313 @@
+{
+ "agent_usd": 0.29652100000000003,
+ "nested_usd": 0.560055,
+ "total_usd": 0.856576,
+ "sessions": {
+  "-work/c87e72c2-4eb7-46fe-a2c3-c0cad389d893": {
+   "cost_usd": 0.29652100000000003,
+   "models": {
+    "claude-sonnet-5-5": {
+     "input_tokens": 30,
+     "cache_read_input_tokens": 419935,
+     "cache_creation_input_tokens": 34771,
+     "output_tokens": 7339
+    }
+   }
+  },
+  "-work--tmp/12bf828d-9692-419e-b6f5-4ad9176bfa27": {
+   "cost_usd": 0.0037603,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 570,
+     "output_tokens": 403
+    }
+   }
+  },
+  "-work--tmp/1b0226da-dfe6-4ec9-8064-7c1df93ad59e": {
+   "cost_usd": 0.0023763,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 568,
+     "output_tokens": 127
+    }
+   }
+  },
+  "-work--tmp/22766bba-873b-4500-a28e-bba200efcc4a": {
+   "cost_usd": 0.0029132999999999997,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 569,
+     "output_tokens": 234
+    }
+   }
+  },
+  "-work--tmp/34388150-2cb4-469e-b294-44f92482b7cd": {
+   "cost_usd": 0.49630379999999996,
+   "models": {
+    "claude-opus-5-5": {
+     "input_tokens": 2,
+     "cache_read_input_tokens": 1839,
+     "cache_creation_input_tokens": 27931,
+     "output_tokens": 13624
+    }
+   }
+  },
+  "-work--tmp/3a67509b-847f-464b-95bd-5f93f08262e6": {
+   "cost_usd": 0.0022123,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 551,
+     "output_tokens": 101
+    }
+   }
+  },
+  "-work--tmp/4eafd9e2-b0c3-4278-94e4-95f10f0b7ccb": {
+   "cost_usd": 0.0023783,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 569,
+     "output_tokens": 127
+    }
+   }
+  },
+  "-work--tmp/5b1d38ea-0fb6-4d30-a085-7c16d0d7c089": {
+   "cost_usd": 0.0025903,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 570,
+     "output_tokens": 169
+    }
+   }
+  },
+  "-work--tmp/6a0c0395-a58c-4173-91e6-7f637e72d64d": {
+   "cost_usd": 0.0021292999999999998,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 552,
+     "output_tokens": 84
+    }
+   }
+  },
+  "-work--tmp/6a6f069d-d7ac-4073-b908-1b1f8946ae9a": {
+   "cost_usd": 0.0022113000000000002,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 548,
+     "output_tokens": 102
+    }
+   }
+  },
+  "-work--tmp/6b406814-adcb-4d39-836a-646d2f737f3e": {
+   "cost_usd": 0.0032443,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 567,
+     "output_tokens": 301
+    }
+   }
+  },
+  "-work--tmp/7b447745-16a5-42d1-84c0-b4c73522b2d0": {
+   "cost_usd": 0.0023923,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 566,
+     "output_tokens": 131
+    }
+   }
+  },
+  "-work--tmp/8deb98ce-f6db-432b-aa62-ca8d957af316": {
+   "cost_usd": 0.0021543,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 552,
+     "output_tokens": 89
+    }
+   }
+  },
+  "-work--tmp/9d4690e1-9481-4971-9495-fc6b6c53e456": {
+   "cost_usd": 0.0021583,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 549,
+     "output_tokens": 91
+    }
+   }
+  },
+  "-work--tmp/a39cddf8-6475-4155-b0d4-6ccd2b3163b6": {
+   "cost_usd": 0.0021003000000000003,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 550,
+     "output_tokens": 79
+    }
+   }
+  },
+  "-work--tmp/a4b88820-322d-4daa-99c7-de2c5a870f8f": {
+   "cost_usd": 0.0052333,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 569,
+     "output_tokens": 698
+    }
+   }
+  },
+  "-work--tmp/a711430a-1c03-44f4-9b41-89c86458cd05": {
+   "cost_usd": 0.0023073,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 551,
+     "output_tokens": 120
+    }
+   }
+  },
+  "-work--tmp/b0aca66b-5913-44d2-8002-07cef9d6d364": {
+   "cost_usd": 0.0023763,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 568,
+     "output_tokens": 127
+    }
+   }
+  },
+  "-work--tmp/b94c9d1b-5bfe-4d87-b519-be358f05f5b9": {
+   "cost_usd": 0.0021022999999999997,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 551,
+     "output_tokens": 79
+    }
+   }
+  },
+  "-work--tmp/c979a052-27a0-4880-ba42-c90226ba588e": {
+   "cost_usd": 0.0039033,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 569,
+     "output_tokens": 432
+    }
+   }
+  },
+  "-work--tmp/cd142321-504a-4322-a594-69174adcefea": {
+   "cost_usd": 0.0020953,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 550,
+     "output_tokens": 78
+    }
+   }
+  },
+  "-work--tmp/d340f6aa-0906-450c-b30f-b371e078ef06": {
+   "cost_usd": 0.0022373000000000002,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 566,
+     "output_tokens": 100
+    }
+   }
+  },
+  "-work--tmp/ea2c6eef-dfe7-4588-b9af-96f0e6114496": {
+   "cost_usd": 0.0021162999999999998,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 548,
+     "output_tokens": 83
+    }
+   }
+  },
+  "-work--tmp/ec2f444d-f621-470c-8a1c-3e9bdf722d4b": {
+   "cost_usd": 0.0021103,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 550,
+     "output_tokens": 81
+    }
+   }
+  },
+  "-work--tmp/ed9de02c-55c1-401a-8cc9-74276a85df08": {
+   "cost_usd": 0.0022823,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 551,
+     "output_tokens": 115
+    }
+   }
+  },
+  "-work--tmp/ef590c04-be97-4e40-8858-dd59fde4cd45": {
+   "cost_usd": 0.0043663,
+   "models": {
+    "claude-haiku-4-5-20251001": {
+     "input_tokens": 10,
+     "cache_read_input_tokens": 5953,
+     "cache_creation_input_tokens": 568,
+     "output_tokens": 525
+    }
+   }
+  }
+ },
+ "proxy_tokens": {
+  "claude-sonnet-5-5": {
+   "input_tokens": 30,
+   "cache_read_input_tokens": 419935,
+   "cache_creation_input_tokens": 34771,
+   "output_tokens": 7339
+  },
+  "claude-haiku-4-5-20251001": {
+   "input_tokens": 240,
+   "cache_read_input_tokens": 142872,
+   "cache_creation_input_tokens": 13422,
+   "output_tokens": 4476
+  },
+  "claude-opus-5-5": {
+   "input_tokens": 2,
+   "cache_read_input_tokens": 1839,
+   "cache_creation_input_tokens": 27931,
+   "output_tokens": 13624
+  }
+ }
+}

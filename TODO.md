@@ -183,7 +183,14 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
   WARNINGs: erledigt (`63d1104`) — `--effect` freiwillig, eine genannte
   Wirkung landet als Limit-Zeile und als Vermerk in der Antwort („read
   within …“); welche Wirkung, folgt aus dem, was C1 behauptet, nicht aus
-  dem Schweregrad. Nicht mit kalten Proben gemessen. Beobachten (kein
+  dem Schweregrad. Reihe auf `ef6c3b1`
+  ([Bericht](docs/usability/2026-10-21-sandbox-judge-ef6c3b1.md)): 3 von 3
+  setzen `--effect stands` für den Signalwort-Befund, begründet aus C1
+  („a threshold on these 12 items“), Vermerk in der Antwort, Fehlbedienung
+  0. Aber: jede akzeptierte WARNING bekam eine Wirkung (auch „one draw“),
+  die Antwort sammelt bis zu drei Vermerke — offen, ob das so bleiben
+  soll. Fehler im Profil gefunden und behoben (`e3731f2`): `" so "` mit
+  Leerzeichen wurde nach Komma nicht gezählt (5/6 statt 6/6). Beobachten (kein
   statischer Check bei zwei Fällen): Prompt breiter als das Gold („state
   or imply“) in 2 von 6 Judge-Proben, vom Audit erst nach dem Lauf
   erkannt — bei `seconds` ist das Analyse-Audit das einzige
