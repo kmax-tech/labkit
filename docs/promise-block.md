@@ -69,8 +69,10 @@ R (`r1`), Q (`q1`), H (`h1`).
 ## The block
 
 The protocol's one fenced TOML block holds the head (`[protocol]`, see
-`labkit/formats/protocol_block.py` and `docs/protocol-run-binding.md`) and the
-`[[promise]]` tables:
+`labkit/formats/protocol_block.py` and `docs/protocol-run-binding.md`), the
+`[[promise]]` tables and — once a number is reported — the `[result]` table
+naming the run (`protocol_block.declared_run`, written by `protocol-fill
+--from-run`; the binding document says what the gates hold it to):
 
 ```toml
 [protocol]

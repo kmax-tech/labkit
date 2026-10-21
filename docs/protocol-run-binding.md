@@ -194,10 +194,24 @@ warning that says so; a run that is not completed never.
 
 ## Documented runs
 
-The answer to the question cites the run it reports, and the protocol's
-`Answering run` field names it; `finalize` and `report-check` hold both to
-the answering run. The other lines of the `## Runs` section are not checked
-against the runs bound to the protocol.
+The protocol declares the run it reports in its TOML head:
+
+```toml
+[result]
+run = "2026-10-21T13-40-06_ad5f"
+```
+
+Written by `protocol-fill --from-run` after a clean `finalize`, never typed
+(`protocol_block.declared_run`; until 0.100.0 the declaration was a run id
+in the prose Answer line, and the `Answering run` field a second projection
+of it). It is a projection of the answering run, never a second binding:
+`finalize` and `report-check` hold it to `bound_answering_run`'s choice — a
+table naming another run blocks, one naming no run of the area blocks, one
+that does not read (a typed `…_final`, a stray key) blocks where it stands,
+and a protocol without the table is an exploration that reports nothing.
+The Answer line is generated from the declared run's `metrics.json`, and the
+other lines of the `## Runs` section are not checked against the runs bound
+to the protocol.
 
 `code-check` runs before any run exists and has nothing to bind to: it
 resolves by area, or takes `--protocol FILE` once the area holds several.

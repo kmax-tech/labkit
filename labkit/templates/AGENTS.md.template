@@ -69,9 +69,10 @@ LAB-017 The number of audits follows the cost tier.
    model, Raw output: one real prompt+answer pair per finding, read from
    the run's output file it names. `protocol-check` holds both after a
    measure run.
-   The run_id in the Answer declares the result reported; the stop hook
-   and the pre-commit hold it to the same check. An exploration that
-   reports nothing leaves the Answer open and may end; its number stays a
+   `[result] run` in the TOML head, written by `--from-run`, declares the
+   result reported; the stop hook and the pre-commit hold it to the same
+   check. An exploration that reports nothing declares no result and may
+   end; its number stays a
    sketch in `runs/`. Commit `output/` and `runs/` with the protocol —
    `finalize <area>` checks the provenance and wants both in git; the run
    index `runs.tsv` is a local view, git-ignored (`runlog reindex <area>`
@@ -126,7 +127,7 @@ fields, no reading of labkit's source.
     (`scripts/02_analyze.py --check`) holding the note to the run — and
     keeps them only when it passes (LAB-041 Generate numbers, don't retype
     them). The stop hook and the pre-commit run the same check on every
-    protocol whose Answer cites a run.
+    protocol whose head declares a result (`[result] run`).
 
 ## Setup
 

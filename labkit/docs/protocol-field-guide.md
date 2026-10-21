@@ -313,14 +313,16 @@ scattered in output files nobody can interpret.
   promoted or steers a decision, and the field is added then — an open
   placeholder was what readers stumbled over (2026-10-07).
 
-- **Answering run:** the run `finalize` holds the protocol to — its
-  run_id, written with `protocol-fill` after a clean `finalize`, read by
-  a person who wants one id, not a list. It is a projection of
-  `answering_run.bound_answering_run` (the one choice intent-check, finalize and
-  labkit-params share), never a second binding: `finalize` refuses the
-  line when it names another run, and only warns while it still says
-  "none yet" (round 15, 2026-10-08: a person named the fresh run, not the
-  derived one that answers).
+- **`[result] run` (TOML head, not a prose field):** the run the protocol
+  reports — its run_id, written by `protocol-fill --from-run` after a clean
+  `finalize`, the one declaration that the number is reported (phase 3 of
+  the 1.0 line, 2026-10-21; before, a run id in the Answer line and an
+  `Answering run` field carried it). A projection of
+  `answering_run.bound_answering_run` (the one choice intent-check, finalize
+  and labkit-params share), never a second binding: `finalize` and
+  `report-check` block when it names another run or no run of the area, and
+  a table that does not read blocks where it stands (round 15, 2026-10-08:
+  a person named the fresh run, not the derived one that answers).
 - **Deviations after freeze:** "none", or what was changed after
   `frozen = true`. The registered plan (Intent) is not rewritten; a
   deviation stands here, in the Result block, and — where it touches the

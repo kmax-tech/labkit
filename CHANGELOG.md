@@ -5,6 +5,36 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Breaking
+
+- **The declaration that a number is reported is `[result] run` in the
+  TOML head, not a run id in the Answer line.** `protocol-fill --from-run`
+  writes a `[result]` table right after `[protocol]` naming the run
+  (`protocol_block.declared_run`), then the Answer and Runs lines as before;
+  `finalize`, `report-check`, the stop hook and the pre-commit read the
+  head: a protocol without the table is an exploration and owes nothing;
+  one whose table does not read — a typed `…_final`, a stray key — is a
+  blocker where it stands, not a citation the gates chase; one naming
+  another run than the one the checks hold blocks; none yet is a note with
+  the adopt command, so a clean `finalize` before adoption stays clear. The
+  template's `Answering run` line is gone (the head's comment says where the
+  declaration stands), and `protocol-check`'s warning now reads "Answer
+  written but the head declares no `[result] run`". Why: three cold
+  judge probes carried the declaration in a prose line the gates parsed
+  with 21 patterns, and a typed id there passed as a citation (labkit-paper
+  area 08, 2026-10-21); phase 3 of the 1.0 line (`TODO.md`, "Reihenfolge").
+  0.100.0 is the last version that reads the declaration from the prose.
+  A protocol adopted under 0.100.0 declares nothing to this version: adopt
+  it again with `protocol-fill <PROTOCOL> --from-run <run_id> --force`.
+  Gone: `protocol_check.answering_run_field`, `answering_run_open`,
+  `finalize.cited_runs`, `cited_run_gaps`, `cited_run_mismatch`,
+  `answering_run_field_mismatch`; new: `protocol_block.declared_run`,
+  `protocol_fill.fill_result_run`, `finalize.declared_run_gaps`,
+  `declared_run_mismatch`, `undeclared_hint`; `report_check.Checked.cited`
+  is `declared` and `declaration_gap`.
+
 ## 0.100.0 — 2026-10-21
 
 ### Breaking

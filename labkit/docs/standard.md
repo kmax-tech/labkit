@@ -233,12 +233,13 @@ evidence file under the same ID (top of this document).*
   are missing or come from a different labkit version. The stop hook
   (`claude-hook stop`) sends the agent through
   `report-check` before the end of its turn if it has written a number back or changed an area that holds one. The pre-commit hook also sends every protocol of an area a staged file touches whose
-  "Answer to the question" cites a run_id through `report-check
-  --if-reported` — a number that has been written back does not enter the
-  history unchecked: it cites the run the checks hold, that run is a full
-  run, its analysis audit is decided and the numbers recompute (at every
-  cost tier; `finalize` is one of its stations). An answer still open owes
-  nothing: an exploration ends with no reported result.
+  head declares a result (`[result] run`, written by `protocol-fill
+  --from-run`) through `report-check --if-reported` — a number that has
+  been written back does not enter the history unchecked: it declares the
+  run the checks hold, that run is a full run, its analysis audit is
+  decided and the numbers recompute (at every cost tier; `finalize` is one
+  of its stations). A protocol declaring no result owes nothing: an
+  exploration ends with no reported result.
   Deliberate exception: `--no-verify`.
 
   **What the agent forgets, a gate holds.** A full run (`run_kind="measurement"`) on a protocol
