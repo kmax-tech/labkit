@@ -49,12 +49,14 @@ LAB-017 The number of audits follows the cost tier.
    Which one follows from what C1's sentence claims — a threshold on
    these items, or a capability the fault leaves unshown — not from
    the grade. A BLOCKER accepted with `stands` then owes a decision
-   review — `labkit-audit <area> --review` — a second auditor who reads
-   the finding, your reason, the protocol's claim and the run and says
-   whether the claim stands within that limit; `report-check` blocks the
-   number until one upholds it, and a rejection means deciding again
-   (limit the Conclusion, change the effect, or fix the fault), not
-   drawing again. This is the one audit this lane owes
+   review — write the Conclusion first (`protocol-fill <PROTOCOL>
+   "Conclusion=…"`, the claim the review judges; a review made before it
+   goes stale when it is written), then `labkit-audit <area> --review`:
+   a second auditor reads the finding, your reason, the Conclusion, the
+   result as it will render and the run, and says whether the claim
+   stands within that limit; `report-check` blocks the number until one
+   upholds it, and a rejection means deciding again (limit the
+   Conclusion, change the effect, or fix the fault), not drawing again. This is the one audit this lane owes
    (LAB-017 The number of audits follows the cost tier). Until the number
    is written back it is a sketch, and nothing is owed for it.
 6. `protocol-fill PROTOCOL-<name>.md --from-run <run_id>` adopts the run

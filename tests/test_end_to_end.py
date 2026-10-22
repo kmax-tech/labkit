@@ -644,6 +644,15 @@ class Judge(unittest.TestCase):
         rc, out = lab.adopt_forced(self.protocol, self.run_id)
         self.assertEqual(rc, 1, out)
         self.assertIn("`stands` on an accepted BLOCKER not reviewed", out)
+        # the review judges the claim: the Conclusion comes first (judge-2
+        # on 86e38bc reviewed a placeholder and paid a second review)
+        rc, out = self._review(record)
+        self.assertEqual(rc, 2, out)
+        self.assertIn("the Conclusion is not written yet", out)
+        lab.fill(
+            self.protocol,
+            "Conclusion=C1 is met as one draw on twelve items; nothing more is claimed.",
+        )
         rc, out = self._review(record)
         self.assertEqual(rc, 0, out)
         rc, out = lab.adopt_forced(self.protocol, self.run_id)

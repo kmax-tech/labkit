@@ -49,7 +49,13 @@ pins (`requirements.txt` / `requirements.lock`).
   unless `--again` asks for one as a measurement (it never releases).
   After `rejected` the person decides again first (limits the claim,
   changes the effect, fixes the fault); a new audit does not by itself
-  settle it. Replayed on the fifth round (two passes, 1.77 USD) and every
+  settle it. `--review` refuses while the Conclusion is a placeholder
+  (the claim it judges; a review made before it goes stale when it is
+  written), and `--record` takes a record's bare file name for
+  `--review`, `--decide` and `--findings`, resolved under the area's
+  `audits/` — both from the fresh round on 86e38bc (judge-2 paid a
+  second review and was refused once on the name;
+  `docs/usability/2026-10-22-sandbox-86e38bc.md`). Replayed on the fifth round (two passes, 1.77 USD) and every
   decision assessed from its sources (`docs/usability/2026-10-22-decision-review-*.md`). `report-check` names every `stands` of
   the covering records that no review upholds, with the review's state:
   a **blocker** for an accepted BLOCKER (a severe finding is not settled

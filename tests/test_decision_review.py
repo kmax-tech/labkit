@@ -369,6 +369,45 @@ class TheCall(unittest.TestCase):
         self.assertEqual(sent, [])  # no call on a state the auditor did not read
         self.assertIn("the record's auditor read", err)
 
+    def test_record_by_bare_name_and_a_conclusion_still_owed(self):
+        """Round on 86e38bc (judge-2): `--record 2026-…-analysis.toml` as the
+        gate names it was refused with "No such file"; and a review made
+        while the Conclusion was a placeholder went stale when it was
+        written — a second opus call. The name resolves under audits/,
+        and the review asks for the Conclusion first."""
+        area, record = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
+        rc, _, _, sent = run_review(area, UPHELD, "--record", record.name)
+        self.assertEqual((rc, len(sent)), (0, 1))
+        proto = area / "PROTOCOL-x.md"
+        text = proto.read_text(encoding="utf-8")
+        proto.write_text(
+            text.replace(
+                "- **Conclusion:** the fit is in-sample; nothing more is claimed.",
+                "- **Conclusion:** <the answer to the question above, in at most two plain sentences…>",
+            ),
+            encoding="utf-8",
+        )
+        rc, _, err, sent = run_review(area, UPHELD, "--record", record.name)
+        self.assertEqual((rc, sent), (2, []))
+        self.assertIn("the Conclusion is not written yet", err)
+        # --decide takes the bare name too
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = audit.main(
+                [
+                    str(area),
+                    "--decide",
+                    "1",
+                    "accepted",
+                    "in-sample, said so",
+                    "--effect",
+                    "stands",
+                    "--record",
+                    record.name,
+                ]
+            )
+        self.assertEqual(rc, 0, out.getvalue())
+
     def test_nothing_to_review_is_a_refusal(self):
         area, _ = area_with([BLOCKER], {1: ("fixed", "fixed it", "")})
         rc, _, err, sent = run_review(area, UPHELD)

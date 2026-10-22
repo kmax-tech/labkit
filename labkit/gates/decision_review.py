@@ -61,6 +61,7 @@ from labkit.checks.audit_binding import AuditError, run_shown
 from labkit.checks.result_render import rendering
 from labkit.formats import console, findings, reviews
 from labkit.formats.findings import EFFECT_STANDS
+from labkit.formats.protocol_check import CONCLUSION_LABEL, field_name, fields
 from labkit.formats.repo import ProtocolChoiceError, layout_root, shown, the_protocol
 from labkit.formats.scope_sha import Snapshot, area_snapshot
 from labkit.gates import audit
@@ -112,6 +113,15 @@ def reviewable(record: findings.Record) -> list[tuple[int, findings.Finding]]:
     WARNING naming an effect) whose effect is `stands`. `not assessable`
     leaves the promise unjudged and claims nothing to review."""
     return [(n, f) for n, f in record.limits() if f.effect == EFFECT_STANDS]
+
+
+def conclusion_written(text: str) -> bool:
+    """Is the Conclusion written — present and no placeholder? The claim the
+    review binds to (`reviews.claim_digest`)."""
+    return any(
+        f.name == field_name(CONCLUSION_LABEL) and f.value.strip() and not f.placeholder
+        for f in fields(text)
+    )
 
 
 def named_files(
@@ -175,6 +185,13 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         )
     repo = layout_root(area)
     text = protocol.read_text(encoding="utf-8")
+    if not conclusion_written(text):
+        raise AuditError(
+            f"{protocol.name}: the Conclusion is not written yet — the review judges "
+            f"the claim, and a review made before it is written goes stale the moment "
+            f"it is (judge-2 on 86e38bc paid a second review for that); write the "
+            f"Conclusion, then review"
+        )
     snap: Snapshot = area_snapshot(area)
     if snap.sha != record.scope_sha:
         raise AuditError(
@@ -256,7 +273,7 @@ def _record(area: Path, record: Path | None) -> findings.Record:
     """RECORD read, or the area's newest analysis record; FindingsError when
     there is none."""
     if record is not None:
-        return findings.read(record)
+        return findings.read(audit.record_path(area, record))
     analysis = [r for r in findings.area_records(area) if r.mode == "analysis"]
     if not analysis:
         raise findings.FindingsError(f"{area}: no analysis record — nothing to review")

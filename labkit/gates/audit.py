@@ -806,6 +806,18 @@ def _without_audit(args: argparse.Namespace) -> int:
     return _findings(args.area, args.record)
 
 
+def record_path(area: Path, record: Path) -> Path:
+    """RECORD as given when it exists, else the file of that name under
+    AREA's audits/ — the gates name a record by its file name
+    (`Limit (audit <record> #N)`, report-check's `--record <name>`), and
+    judge-2 (round on 86e38bc, 2026-10-22) copied the name and was refused
+    with "No such file"."""
+    if record.exists():
+        return record
+    named = area / findings.DIR / record.name
+    return named if record.parent == Path(".") and named.exists() else record
+
+
 def _newest_record(area: Path) -> Path:
     """The area's newest findings record; FindingsError when it has none."""
     records = findings.area_records(area)
@@ -822,7 +834,9 @@ def _findings(area: Path, record: Path | None) -> int:
     record. The auditor's READ hints are not recorded, so none show here.
     Exit 2 when there is no record to read."""
     try:
-        rec = findings.read(record if record is not None else _newest_record(area))
+        rec = findings.read(
+            record_path(area, record) if record is not None else _newest_record(area)
+        )
     except findings.FindingsError as exc:
         console.refuse("labkit-audit", str(exc))
         return 2
@@ -849,8 +863,7 @@ def _decide(
             raise findings.FindingsError(f"N must be a finding number, not {n_text!r}")
         if effect:
             _registered(area, protocol, effect)
-        if record is None:
-            record = _newest_record(area)
+        record = _newest_record(area) if record is None else record_path(area, record)
         rec = findings.write_decision(record, int(n_text), status, reason, effect)
     except findings.FindingsError as exc:
         console.refuse("labkit-audit", str(exc))
