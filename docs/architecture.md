@@ -32,10 +32,10 @@ the dotfiles, below); doctrine ships in labkit to every lab.
 
 | Layer | Modules | Doctrine (the rest is core) |
 |---|---|---|
-| 1 · formats and places · `labkit/formats/` | `protocol_block`, `promises`, `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `rules`, `findings`, `console`, `gate`, `shell`, `files` | `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `rules`, `findings` |
+| 1 · formats and places · `labkit/formats/` | `protocol_block`, `promises`, `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `rules`, `findings`, `reviews`, `console`, `gate`, `shell`, `files` | `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `rules`, `findings`, `reviews` |
 | 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `start_check`, `runlog_command`, `batch`, `llm`, `llm_specs`, `llm_backends`, `endpoint_lease`, `lanes`, `profile` | `lanes`, `profile` |
 | 3 · checks · `labkit/checks/` | `intent_check`, `code_check`, `code_scan`, `gate_label_scan`, `import_check`, `prompt_check`, `run_record_check`, `readme_check`, `recheck`, `notes_check`, `audit_binding`, `result_render`, `report_blocks` | `readme_check`, `notes_check`, `audit_binding`, `result_render`, `report_blocks` |
-| 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `install_hooks` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `install_hooks` |
+| 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `decision_review`, `install_hooks` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `decision_review`, `install_hooks` |
 | tools · `labkit/tools/` | `protocol_fill`, `scaffold`, `protocol_cuts`, `repo_check`, `params`, `calltree` | `protocol_fill`, `scaffold`, `protocol_cuts`, `calltree` |
 | tools · probes · `labkit/probes/` | `usability`, `usability_score`, `usability_command`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` | `usability`, `usability_score`, `usability_command`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` |
 
@@ -58,7 +58,10 @@ the run that answers a protocol. `repo` locates the repository and its
 protocols and runs git. `scope_sha` computes scope hashes and audit stamps.
 `rules` holds the standard's rules and checks their references. `findings`
 reads and writes audit findings: the auditor records them, a person decides
-them, and the gates check those decisions.
+them, and the gates check those decisions. `reviews` reads and writes a
+second auditor's verdicts on those decisions (`labkit-audit --review`):
+which record, what it saw, and per decision upheld, rejected or
+insufficient — bound to the decision as it stood.
 
 The remaining helpers have narrow responsibilities. `files.write_atomic`
 writes one file whole or not at all. `shell.segments` reads a shell line as
@@ -132,8 +135,10 @@ the detail and report through `gate.Findings`. `report_check` checks release
 after the analysis audit and the note.
 
 `claude_hooks` calls the gates during an agent session. `audit` runs the
-agent review through `llm`. `install_hooks` installs the git hooks that run
-the gates; preflight checks that they are installed.
+agent review through `llm`; `decision_review` runs the second auditor on
+the `stands` decisions of one record (`labkit-audit --review`).
+`install_hooks` installs the git hooks that run the gates; preflight
+checks that they are installed.
 
 ### Tools
 
@@ -171,6 +176,7 @@ evidence** (warns), **agent audit** (semantic).
 | promise → code (gate labels) | the string comparisons in the evaluation code are extracted into the bundle; whether they match the prompt is the code-check agent's judgement — the extraction never judges | `gate_label_scan.gate_labels` | `code-check --bundle`, then the code-check agent | agent audit | before the run |
 | promise → code (meaning) | code does what the promise says | `audit` (experiment-preflight instructions + the area's files + the standard, one `llm` call); or the bundle (`code-check --bundle`) for the code-check agent | `labkit-audit --mode preflight` | agent audit | before the run |
 | run → report (meaning) | the evaluation means the frozen criterion | `audit` in MODE analysis | `labkit-audit --mode analysis` | agent audit | after the run |
+| run → report (the decisions) | an accepted finding whose effect is `stands` claims the verdicts hold within the limit; a second, cold auditor gets the finding, the reason, the protocol (registration and reported claim), the files the findings name as the auditor read them and what the auditor was shown of the run, and says per decision `upheld`, `rejected` or `insufficient`; only `upheld` releases, a changed decision makes the review stale; report-check names every `stands` no review upholds — a warning while the check is explored (the fifth round's decisions replayed first), a blocker afterwards | `decision_review.gather_review`, `decision_review.parse_review`, `reviews.upholding`, `report_check.review_findings` | `labkit-audit --review`, `report-check` | agent audit (the release condition: guaranteed) | after the analysis audit is decided |
 | promise → reader | a person who did not build the area can tell what it decides | `audit` in MODE clarity (code-clarity area rules + README, protocol, measure script) | `labkit-audit --mode clarity` | agent audit (static evidence: never a gate) | before freezing |
 | code → run | unfrozen full run, unbound run, dangling scope, control leakage: refused before the run dir exists | `runlog.Run` | (every run) | guaranteed | starting the run |
 | code → run | a full run's audit line names the stamp the code has now (`scope sha`) and a decided record; an `n/a` at minutes/hours is refused (nobody waives their own audit) | `runlog.Run`, `findings.audit_line_gap` | (every full run), `preflight` | guaranteed | starting the run |
@@ -226,6 +232,7 @@ evidence** (warns), **agent audit** (semantic).
 | Which analysis records cover the area now — code, promises, the answering run and what the audit was shown of it? | `audit_binding.covering_analysis` (`analysis_now` the state, `run_shown` the snapshot; report-check's station 3 and its Limit lines, `protocol-fill --from-run`) |
 | What does the result section say when it says what its sources say — and does it? | `result_render.rendering` (the Recorded results line from the declared run's metrics.json with its note, one Limit line per decided limit of the covering records), `result_render.render_gaps` (exact equality, each difference named; report-check's station 3, `protocol-fill --from-run` and `--render` write it) |
 | Does a report outside the protocol show a reported number as its sources render it? | `report_blocks.blocks`, `report_blocks.block_body`, `report_blocks.block_gaps` (a generated result block shows the run its protocol declares now and equals that protocol's Recorded results and Limit lines; `protocol-fill --into` writes it), `report_blocks.cited_gaps` (every token that reads as a run id names a run of the repo), `report_blocks.unsourced_numbers` (numbers outside every block — a hint); `report_check.if_reported` holds changed citing reports, the protocols their blocks name and the protocols declaring the runs they cite |
+| Does a review uphold a decision as it stands now? | `reviews.upholding` (a review of that record, its code and its run as shown, holding the decision's digest `findings.decision_digest`, saying `upheld`), `reviews.state` for the gate's sentence |
 | Which code did an audit see, and is it still that code? | `scope_sha.area_snapshot` (the bytes read once and the sha over them; `area_stamp` its sha), `scope_sha.audit_stamp_drift` (area stamp, not per promise) |
 | Which package does a requirements line name, and how is labkit pinned? | `repo.requirement_name`, `repo.requirement_lines`, the four `*_REQUIREMENT` grammars (stamp pin line, `labkit-check`, lock parser, probe) |
 | What is a run id, when did the run start? | `runs.RUN_ID`, `runs.RUN_ID_TIME`, `runs.run_started`; `runs.COMPLETED` is the one state word every consumer compares to |

@@ -104,11 +104,15 @@ from pathlib import Path
 
 from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
-from labkit.formats.scope_sha import AUDIT_SHA, audit_stamp_drift
+from labkit.formats.runs import as_stored
+from labkit.formats.scope_sha import AUDIT_SHA, audit_stamp_drift, digest
 
 DIR = "audits"
 #: the suffix of a failed attempt's file, never of a record of findings
 FAILED_SUFFIX = "-failed.toml"
+#: the suffix of a decision review (`reviews`), written beside the records
+#: and never read as one
+REVIEW_SUFFIX = "-review.toml"
 #: the seconds `labkit-audit` gives its one call by default, and the least a
 #: failed attempt must have been given to count as one (`audit_unavailable`):
 #: an attempt given less time than the audit takes is not an attempt
@@ -151,6 +155,16 @@ class Finding:
     def effect_allowed(self) -> bool:
         """An accepted BLOCKER or WARNING may name an effect; nothing else."""
         return self.grade in EFFECT_GRADES and self.status == "accepted"
+
+
+def decision_digest(f: Finding) -> str:
+    """The digest of F as decided — grade, text, status, reason, effect —
+    which a review binds to (`reviews.Decision.decision_sha`): a changed
+    reason or effect is another decision, and the review of the old one
+    says nothing about it."""
+    return digest(
+        as_stored([f.grade, f.text, f.status, f.reason, f.effect]).encode("utf-8")
+    )
 
 
 def effect_ids(effect: str) -> tuple[str, ...]:
@@ -322,7 +336,7 @@ def write(
     owed in mode analysis (RUN_ID NO_RUN when there was none), refused in
     mode preflight.
     Every finding starts `open`. Never overwrites: the name carries the minute,
-    and a second record of that minute takes the next number (`_create`).
+    and a second record of that minute takes the next number (`create_file`).
     Refuses (ValueError) a count that is not a non-negative integer
     (`count_problem`) and a verdict whose blockers and warnings are not
     exactly the BLOCKER and WARNING lines of FINDINGS (`verdict_disagrees`):
@@ -381,10 +395,10 @@ def write(
             'status = "open"',
             'reason = ""',
         ]
-    return _create(area / DIR, f"{stamp}-{mode}", ".toml", "\n".join(lines) + "\n")
+    return create_file(area / DIR, f"{stamp}-{mode}", ".toml", "\n".join(lines) + "\n")
 
 
-def _create(folder: Path, name: str, suffix: str, text: str) -> Path:
+def create_file(folder: Path, name: str, suffix: str, text: str) -> Path:
     """Write TEXT to `FOLDER/<name><suffix>`, else `<name>-2<suffix>`, … —
     the first name no file holds, taken by exclusive create, so two audits
     finishing in one minute get two files: a check for a free name before
@@ -666,16 +680,16 @@ def _head(r: Record) -> tuple:
     )  # fmt: skip
 
 
-#: the name `_create` gives a record or a failed attempt:
+#: the name `create_file` gives a record, a failed attempt or a review:
 #: `<minute>-<mode>[-<n>]` and its suffix, n counting the files of one minute
 _WRITTEN_NAME = re.compile(
-    rf"^(\d{{4}}-\d{{2}}-\d{{2}}T\d{{2}}-\d{{2}})-(?:{'|'.join(MODES)})(?:-(\d+))?"
+    rf"^(\d{{4}}-\d{{2}}-\d{{2}}T\d{{2}}-\d{{2}})-(?:{'|'.join(MODES)}|review)(?:-(\d+))?"
     rf"(?:{re.escape(FAILED_SUFFIX)}|\.toml)$"
 )
 
 
 def written_order(path: Path) -> tuple[str, int, str]:
-    """The sort key of a file `_create` wrote, oldest first: its minute, then
+    """The sort key of a file `create_file` wrote, oldest first: its minute, then
     its number within the minute as a number. By name, `-2` and `-3` sorted
     before the minute's first file, and the newest failed attempt read as
     the oldest (review 2026-10-20). Raises FindingsError for a name of
@@ -695,7 +709,11 @@ def area_records(area: Path) -> list[Record]:
     folder = area / DIR
     if not folder.is_dir():
         return []
-    paths = [p for p in folder.glob("*.toml") if not p.name.endswith(FAILED_SUFFIX)]
+    paths = [
+        p
+        for p in folder.glob("*.toml")
+        if not p.name.endswith((FAILED_SUFFIX, REVIEW_SUFFIX))
+    ]
     return [read(p) for p in sorted(paths, key=written_order)]
 
 
@@ -857,7 +875,7 @@ def write_failed(
         f"error = {_s(error)}",
         f"command = {_s(command)}",
     ]
-    return _create(
+    return create_file(
         area / DIR, f"{stamp}-{mode}", FAILED_SUFFIX, "\n".join(lines) + "\n"
     )
 

@@ -98,7 +98,7 @@ from pathlib import Path
 from labkit.formats.gate import BLOCKER, WARNING, Findings, GateFinding
 from labkit.formats.answering_run import first_measurement
 from labkit.formats.protocol_history import registration_in_commit
-from labkit.formats import console, findings, protocol_block
+from labkit.formats import console, findings, protocol_block, reviews
 from labkit.checks.audit_binding import (
     AuditError,
     analysis_now,
@@ -387,6 +387,41 @@ def limit_gaps(ctx: Checked) -> list[str]:
     return gaps + render_gaps(ctx.text, expected)
 
 
+def review_findings(ctx: Checked) -> list[GateFinding]:
+    """Station 3, the decisions: every `stands` among the limits of the
+    covering analysis records is upheld by a decision review
+    (`reviews.upholding`: a review of that record, its code and its run as
+    shown, of the decision as it stands now, saying `upheld`). A WARNING
+    per decision no review upholds, with its state — an exploration of the
+    check (TODO 2026-10-22: the fifth round's decisions are replayed
+    first; a blocker afterwards). Empty when no record covers the run
+    (`analysis_audit_gap` names that), and silent on whether the verdict is
+    right: that is the reviewer's judgement."""
+    if ctx.run is None:
+        return []
+    try:
+        records = covering_analysis(ctx.area, ctx.text, ctx.run)
+        found = reviews.area_reviews(ctx.area)
+    except (AuditError, FileNotFoundError, ValueError):
+        return []  # ValueError: FindingsError, ReviewError — station 3 names them
+    out: list[GateFinding] = []
+    for r in records:
+        for n, f in r.limits():
+            if f.effect != findings.EFFECT_STANDS or reviews.upholding(r, n, found):
+                continue
+            out.append(
+                GateFinding(
+                    WARNING,
+                    f"{findings.limit_label(r, n)}: `stands` {reviews.state(r, n, found)} "
+                    f"— no decision review upholds that the reported claim stands "
+                    f"within this limit: `labkit-audit <area> --review --record "
+                    f"{r.path.name}` asks a second auditor (a warning while the check "
+                    f"is explored)",
+                )
+            )
+    return out
+
+
 def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[str]:
     """Station 2, the run: why the answering run's number cannot be reported
     (`runs.unreportable`), each a blocker. Without an answering run there is
@@ -465,31 +500,38 @@ def report_check(
         f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
     )
     # what the release owes at this tier is the contract's answer: the freeze
-    # (station 1) and the audits follow the lane; finalize, the full run and
-    # the check are owed at every tier
+    # or the registration (station 1) and the audits follow the lane;
+    # finalize, the full run and the check are owed at every tier
     ln = lane(ctx.head.cost)
     findings = Findings()
     if ctx.declaration_gap:
         findings.block(f"{chosen.name}: {ctx.declaration_gap}")
-    if ln.freeze:
-        gaps = freeze_gaps(ctx)
-    else:
-        gaps = []
-        print(
-            f'  {chosen.name}: cost = "{ctx.head.cost}" — no freeze and no preflight audit '
-            f"owed (LAB-017 The number of audits follows the cost tier); the "
-            f"registration as committed at the first measurement, the full run, "
-            f"the analysis audit and the check are"
-        )
-    if ln.registration:
-        for finding in registration_gaps(ctx):
-            findings.take(finding)
-    for b in gaps + later_gaps(ctx, ln):
+    for finding in station_one(ctx, ln):
+        findings.take(finding)
+    for b in later_gaps(ctx, ln):
         findings.block(b)
+    if ANALYSIS_AUDIT in ln.audits:
+        for finding in review_findings(ctx):
+            findings.take(finding)
     if not findings.blocked:
         held = ("frozen, " if ln.freeze else "") + "finalized, audited, checked"
         print(f"  {chosen.name}: {held}")
     return findings.report("report-check", "reporting")
+
+
+def station_one(ctx: Checked, ln: Lane) -> list[GateFinding]:
+    """Station 1 as the lane LN owes it: the freeze (`freeze_gaps`, each a
+    blocker) where the lane freezes, else the registration as committed
+    at the first measurement (`registration_gaps`), said so on the way."""
+    if ln.freeze:
+        return [GateFinding(BLOCKER, g) for g in freeze_gaps(ctx)]
+    print(
+        f'  {ctx.protocol.name}: cost = "{ctx.head.cost}" — no freeze and no preflight '
+        f"audit owed (LAB-017 The number of audits follows the cost tier); the "
+        f"registration as committed at the first measurement, the full run, "
+        f"the analysis audit and the check are"
+    )
+    return registration_gaps(ctx) if ln.registration else []
 
 
 def affected_protocols(

@@ -25,6 +25,29 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **A decision review: `labkit-audit AREA --review [--record FILE]`.** A
+  second, cold auditor gets every accepted finding of one analysis record
+  whose effect is `stands`, with the person's reason, the protocol (the
+  registration and the reported claim — Conclusion, Recorded results,
+  Limit lines), the files the findings name as the record's auditor read
+  them (the area snapshot, held to the record's `scope_sha`) and what the
+  auditor was shown of the run (held to `shown_sha`), and answers per
+  decision `upheld`, `rejected` or `insufficient` with one sentence
+  (`decision-review.agent.md`, `gates/decision_review`). The verdicts are
+  written beside the records as `audits/<minute>-review.toml`
+  (`formats/reviews`), bound to the record, its code, its run as shown and
+  each decision as it stood (`findings.decision_digest`): only `upheld`
+  releases a `stands`; `rejected`, `insufficient` and a review of a
+  decision since changed do not. `report-check` names every `stands` of
+  the covering records that no review upholds, with the review's state —
+  a warning while the check is explored (the fifth round's decisions are
+  replayed first; a blocker afterwards). A report whose decision lines
+  and closing counts disagree, or that decides on a finding not asked
+  about, records nothing (exit 2); the review is refused when the code or
+  the run is no longer what the record's auditor saw. Why: labkit-paper
+  area 09, fifth haiku round — 28 findings, 15 accepted with no action,
+  six with the reason "Finding noted"; of four findings at decision
+  points, one was fixed.
 - **The seconds release holds the registration to the commit of the first
   measurement.** `report-check` (station 1, where the lane owes the
   registration instead of the freeze) reads the oldest full run bound to

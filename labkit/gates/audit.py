@@ -2,6 +2,9 @@
 
     labkit-audit <AREA> --mode preflight|analysis|clarity [--protocol FILE]
                  [--model ALIAS] [--timeout S] [--out FILE]
+    labkit-audit <AREA> --decide N STATUS REASON [--effect E] [--record FILE]
+    labkit-audit <AREA> --findings [--record FILE]
+    labkit-audit <AREA> --review [--record FILE]      (`gates/decision_review`)
 
 The agent audit of LAB-015 Preflight audit before freezing (preflight, before freezing) and LAB-050 Analysis audit before reporting
 (analysis, before a number leaves) as one command — the only runner since
@@ -101,6 +104,7 @@ from labkit.formats.scope_sha import (
 
 AGENT = PACKAGE_DIR / "agents" / "experiment-preflight.agent.md"
 CLARITY_AGENT = PACKAGE_DIR / "agents" / "code-clarity.agent.md"
+REVIEW_AGENT = PACKAGE_DIR / "agents" / "decision-review.agent.md"
 DEFAULT_MODEL = "opus"  # the agent's model; any alias of models.toml works
 REPORT_TOKENS = 4096  # room for a report of many findings, where a backend caps
 DEFAULT_TIMEOUT_S = (
@@ -139,8 +143,9 @@ INLINE_NOTE = (
 
 def instructions(mode: str = "preflight") -> str:
     """The agent's instructions as shipped, without the provenance comment —
-    the preflight agent for preflight and analysis, the clarity agent for clarity."""
-    agent = CLARITY_AGENT if mode == CLARITY else AGENT
+    the preflight agent for preflight and analysis, the clarity agent for
+    clarity, the decision-review agent for `--review` (`decision_review`)."""
+    agent = {CLARITY: CLARITY_AGENT, "review": REVIEW_AGENT}.get(mode, AGENT)
     return re.sub(
         r"^<!--.*?-->\n", "", agent.read_text(encoding="utf-8"), count=1, flags=re.S
     )
@@ -589,9 +594,16 @@ def main(argv: list[str]) -> int:
         help="show the newest record's findings with their --decide commands; no audit runs",
     )
     ap.add_argument(
+        "--review",
+        action="store_true",
+        help="a second auditor on the accepted findings with effect `stands` of the "
+        "newest analysis record (or --record): does the reported claim stand within "
+        "each limit? writes audits/<minute>-review.toml",
+    )
+    ap.add_argument(
         "--record",
         type=Path,
-        help="with --decide or --findings: this record, not the newest",
+        help="with --decide, --findings or --review: this record, not the newest",
     )
     ap.add_argument(
         "--protocol", type=Path, help="the protocol, in an area holding several"
@@ -741,24 +753,38 @@ def decision_lines(record: findings.Record, area: Path, report: str) -> list[str
 
 
 def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
-    """Exactly one of --mode (audit), --decide (store a decision) and
-    --findings (show what there is to decide); --record only with --decide
-    or --findings. A usage error exits 2 through argparse."""
-    chosen = [args.mode is not None, args.decide is not None, args.findings]
+    """Exactly one of --mode (audit), --decide (store a decision), --findings
+    (show what there is to decide) and --review (a second auditor on the
+    decisions); --record never with --mode. A usage error exits 2 through
+    argparse."""
+    chosen = [
+        args.mode is not None,
+        args.decide is not None,
+        args.findings,
+        args.review,
+    ]
     if sum(chosen) != 1:
         ap.error(
-            "give --mode to audit, --decide N STATUS REASON to decide, or --findings "
-            "to show what there is to decide — one of them"
+            "give --mode to audit, --decide N STATUS REASON to decide, --findings "
+            "to show what there is to decide, or --review to review the decisions — "
+            "one of them"
         )
     if args.record is not None and args.mode is not None:
-        ap.error("--record goes with --decide or --findings")
+        ap.error("--record goes with --decide, --findings or --review")
     if args.effect and args.decide is None:
         ap.error("--effect goes with --decide")
 
 
 def _without_audit(args: argparse.Namespace) -> int:
-    """`--decide` or `--findings`: the two calls that read or write a record
-    and run no audit."""
+    """`--decide`, `--findings` or `--review`: the calls that read or write a
+    record and run no audit of the area (the review is one model call on
+    the record's decisions, `decision_review.review`)."""
+    if args.review:
+        from labkit.gates.decision_review import review
+
+        return review(
+            args.area, args.protocol, args.record, args.model, args.timeout, args.out
+        )
     if args.decide is not None:
         return _decide(args.area, args.decide, args.record, args.effect, args.protocol)
     return _findings(args.area, args.record)
