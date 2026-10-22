@@ -133,6 +133,34 @@ class RenderGaps(unittest.TestCase):
         self.assertEqual(rendered, text)
         self.assertEqual(len(written), 2)
 
+    def test_a_generated_label_written_twice_is_a_gap(self):
+        """Review 2026-10-22: the check kept the fields in a dict, so a wrong
+        Limit line above the record's correct one — or a retyped Recorded
+        results below the generated one — passed. Every line of a label is
+        held."""
+        exp = result_render.Rendering(
+            "c1_pass = True (run r1)",
+            (
+                (
+                    "Limit (audit a #1)",
+                    "the verdicts stand, read within this limit — ok",
+                ),
+            ),
+        )
+        good = (
+            "- **Recorded results:** c1_pass = True (run r1)\n"
+            "- **Limit (audit a #1):** the verdicts stand, read within this limit — ok\n"
+        )
+        self.assertEqual(result_render.render_gaps(good, exp), [])
+        (gap,) = result_render.render_gaps(
+            "- **Limit (audit a #1):** no restriction applies\n" + good, exp
+        )
+        self.assertIn('"Limit (audit a #1)" is written 2 times', gap)
+        (gap,) = result_render.render_gaps(
+            good + "- **Recorded results:** c1_pass = False (run r1)\n", exp
+        )
+        self.assertIn('"Recorded results" is written 2 times', gap)
+
     def test_a_limit_line_no_record_decides_is_named_and_dropped(self):
         text = self.written()
         stray = text.replace(

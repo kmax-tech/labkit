@@ -23,7 +23,11 @@ from pathlib import Path
 from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.checks.recheck import LABKIT_KEYS
 from labkit.formats import findings, runs
-from labkit.formats.protocol_check import recorded_results_field, fields
+from labkit.formats.protocol_check import (
+    RECORDED_RESULTS_LABEL,
+    fields,
+    recorded_results_field,
+)
 
 
 @dataclass(frozen=True)
@@ -76,8 +80,10 @@ def rendering(area: Path, text: str, run: Path) -> Rendering:
 def render_gaps(text: str, expected: Rendering) -> list[str]:
     """Why TEXT's result section is not EXPECTED, one sentence each, or []:
     the Recorded results line missing or differing, a Limit line missing or differing,
-    a Limit line no covering record decides. Exact: the comparison is
-    equality of the rendered values, no reading of what they say."""
+    a Limit line no covering record decides, a generated label written more
+    than once (every line of a label is held, not the last one). Exact:
+    the comparison is equality of the rendered values, no reading of what
+    they say."""
     gaps: list[str] = []
     recorded_results = recorded_results_field(text)
     if recorded_results is None:
@@ -90,6 +96,23 @@ def render_gaps(text: str, expected: Rendering) -> list[str]:
             "the Recorded results line differs from its rendering (the run's metrics.json and "
             "the records' limits) — `protocol-fill <PROTOCOL> --render` writes it again"
         )
+    labels = [f.label.replace("†", "").strip() for f in fields(text)]
+    generated = [
+        label
+        for label in dict.fromkeys(labels)
+        if label == RECORDED_RESULTS_LABEL or label.startswith(findings.LIMIT_PREFIX)
+    ]
+    for label in generated:
+        n = labels.count(label)
+        if n > 1:
+            # a dict of the fields kept the last line only, and a first line
+            # saying anything passed beside a correct second one (review
+            # 2026-10-22: "no restriction applies" above the record's line)
+            gaps.append(
+                f'"{label}" is written {n} times — one generated line per label; '
+                f"remove the extra line(s) by hand (`--render` rewrites one and "
+                f"leaves the others)"
+            )
     have = {f.label.replace("†", "").strip(): f.value for f in fields(text)}
     for label, value in expected.limits:
         got = have.get(label)

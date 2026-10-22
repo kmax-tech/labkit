@@ -7,6 +7,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ## Unreleased
 
+### Fixed
+
+- **A generated result line written twice is a blocker.** `report-check`
+  held the Recorded results line and the Limit lines through a dict of
+  the protocol's fields, so of two lines with one label only the last
+  was compared: a wrong Limit line above the record's correct one, or a
+  retyped Recorded results below the generated one, passed
+  (`result_render.render_gaps`; review 2026-10-22). Every line of a
+  generated label is held now; a label written more than once is named,
+  and the extra line is removed by hand (`--render` rewrites one and
+  leaves the others).
+
 ### Changed
 
 - **A report that cites a declared result owes its generated block.**
