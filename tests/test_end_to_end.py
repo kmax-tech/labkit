@@ -194,6 +194,20 @@ class Lab:
         return rc, out.getvalue()
 
 
+def assert_draws(
+    test: unittest.TestCase, lab: "Lab", area: Path, run_id: str, key: str, other: str
+) -> None:
+    """`02_analyze.py --draws` on the kept run prints its criterion value
+    under the measure skeleton's key (`C1_VALUE_KEY`): the value metrics.json
+    holds, never the other skeleton's key. The analysis skeleton is shared;
+    it read the model's key for every skeleton and printed `c1_accuracy
+    None` for a fit (2026-10-22)."""
+    metrics = json.loads((area / "runs" / run_id / "metrics.json").read_text())
+    out = lab.script(area, "02_analyze.py", "--draws")
+    test.assertIn(f"draw 1  {run_id}  {key} {metrics[key]}  c1_pass True", out)
+    test.assertNotIn(other, out)
+
+
 class Count(unittest.TestCase):
     """The counting skeleton at seconds: lines per document, three documents."""
 
@@ -528,6 +542,7 @@ class Judge(unittest.TestCase):
         self.assertIn("finalized, audited, checked", out_text)
         text = self.protocol.read_text(encoding="utf-8")
         self.assertIn(f"c1_pass = True (run {run_id})", text)
+        assert_draws(self, lab, self.area, run_id, "c1_accuracy", "c1_score")
         yours = out_text.partition("still yours")[2]
         self.assertIn("output/", yours)  # the run's rows, where the pair is read
         self.assertIn("Raw output", yours)
@@ -902,10 +917,7 @@ class Estimator(unittest.TestCase):
         text = self.protocol.read_text(encoding="utf-8")
         self.assertIn(f"c1_pass = True (run {run_id})", text)
         self.assertEqual(protocol_block.declared_run(text), run_id)
-        # the shared analysis skeleton reads the estimator's criterion key
-        # (it read the model's `c1_accuracy` and printed None, 2026-10-22)
-        draws = lab.script(self.area, "02_analyze.py", "--draws")
-        self.assertRegex(draws, rf"draw 1  {run_id}  c1_score [0-9.]+  c1_pass True")
+        assert_draws(self, lab, self.area, run_id, "c1_score", "c1_accuracy")
         rc, err = lab.stop_hook()
         self.assertEqual(rc, 0, err)
         lab.git("add", "-A")
