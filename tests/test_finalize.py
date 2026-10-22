@@ -56,6 +56,41 @@ def _run_finalize(area, protocol=None):
     return code, buf.getvalue()
 
 
+class TestIntentStationReadsTheBlock(unittest.TestCase):
+    """Station 2 runs whenever the block declares promises, not only when
+    the prose brackets their ids: a fit probe wrote `C1:` beside three
+    [[promise]] tables, and finalize read "no intent ids registered"
+    (round on d549696, 2026-10-22)."""
+
+    def _finalize(self, proto: str, metrics: dict) -> tuple[int, str]:
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(proto)
+            completed_run(area, "r1", metrics=metrics)
+            return _run_finalize(area)
+
+    def test_bracketed_ids_and_every_key_pass(self):
+        code, out = self._finalize(CLEAN_PROTOCOL, CLEAN_METRICS)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("no intent ids registered", out)
+
+    def test_block_ids_unbracketed_in_prose_block(self):
+        proto = (
+            CLEAN_PROTOCOL.replace("[C1] ", "C1: ")
+            .replace("[A1] ", "A1: ")
+            .replace("[A2] ", "A2: ")
+        )
+        code, out = self._finalize(proto, CLEAN_METRICS)
+        self.assertEqual(code, 1, out)
+        self.assertNotIn("no intent ids registered", out)
+        self.assertIn("[C1] is in the promise block but never named in the text", out)
+
+    def test_a_block_key_missing_from_the_metrics_blocks(self):
+        code, out = self._finalize(CLEAN_PROTOCOL, {"c1_pass": True, "a1_pass": True})
+        self.assertEqual(code, 1, out)
+        self.assertIn("[A2] registered", out)
+
+
 class TestOneRunForEveryStation(unittest.TestCase):
     """A probe run after the measurement must not become the run finalize
     judges: intent-check skips it (no intent keys), so the other stations
@@ -188,8 +223,10 @@ class TestFinalize(unittest.TestCase):
         self.assertEqual(code, 2)
 
     def test_no_intent_ids_skips_check(self):
+        """Neither prose nor block registers an id: nothing to hold."""
         proto = (
-            CLEAN_PROTOCOL.replace("[C1] ", "")
+            _protocol(promises=None)
+            .replace("[C1] ", "")
             .replace("[A1] ", "")
             .replace("[A2] ", "")
         )

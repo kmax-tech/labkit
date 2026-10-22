@@ -316,6 +316,16 @@ def prose_mismatch(text: str, block: PromiseTables) -> tuple[list[str], list[str
     return sorted(prose - ids), sorted(ids - prose)
 
 
+def registered_ids(text: str) -> set[str]:
+    """Ids the protocol registers, lowercased: named in the prose (`[C1]`)
+    or declared as a [[promise]] table. A table the prose does not name
+    still registers its id — `prose_mismatch` reports that; it is no reason
+    to check nothing. Raises PromiseError on a malformed block."""
+    block = parse_block(text)
+    declared = {p.id.lower() for p in block.promises} if block is not None else set()
+    return ids_in_prose(text) | declared
+
+
 def load(protocol: Path) -> PromiseTables:
     """The promise block of `protocol`; raises if it has none.
 

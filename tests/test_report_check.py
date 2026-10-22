@@ -31,7 +31,15 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from protocol_fixture import completed_run, head, head_commit, scope_file, started_at
+from protocol_fixture import (
+    C1_BLOCK,
+    C1_PROSE,
+    completed_run,
+    head,
+    head_commit,
+    scope_file,
+    started_at,
+)
 
 from labkit.formats import findings, promises, scope_sha, standard_contract
 from labkit.gates import report_check
@@ -47,7 +55,13 @@ class ReportCheck(unittest.TestCase):
         )
         scope_file(area)
         (area / "PROTOCOL-x.md").write_text(
-            head(cost=cost, frozen=frozen, preflight_audit="n/a — test"),
+            head(
+                cost=cost,
+                frozen=frozen,
+                preflight_audit="n/a — test",
+                promises=C1_BLOCK,
+            )
+            + C1_PROSE,
             encoding="utf-8",
         )
         return area
@@ -442,8 +456,9 @@ class IfReported(unittest.TestCase):
         scope_file(area)
         proto = area / "PROTOCOL-x.md"
         proto.write_text(
-            head(cost="seconds", result=declared)
+            head(cost="seconds", result=declared, promises=C1_BLOCK)
             + "- **Question / hypothesis:** does it hold?\n"
+            + C1_PROSE
             + f"- **Recorded results:** {answer}\n",
             encoding="utf-8",
         )

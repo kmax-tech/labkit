@@ -23,8 +23,12 @@ BODY = """
 - **Question / hypothesis:** how many documents per case?
 - **Recorded results:** 3.5, run r1
 """
-SHORT = "# Experiment protocol: x\n\n" + head(cost="seconds") + BODY
-HOURS = "# Experiment protocol: x\n\n" + head(cost="hours", frozen=True) + BODY
+SHORT = "# Experiment protocol: x\n\n" + head(cost="seconds", promises=None) + BODY
+HOURS = (
+    "# Experiment protocol: x\n\n"
+    + head(cost="hours", frozen=True, promises=None)
+    + BODY
+)
 
 
 def _git(cwd, *args):

@@ -38,6 +38,11 @@ key = "a2_pass"
 sentence = "the null lane sits at chance"
 scope = ["scripts/01_measure.py"]
 """
+#: one criterion and the prose that names it — a protocol whose run
+#: reports `c1_pass` alone; a block id the prose does not name, or a
+#: metrics key a block id lacks, fails intent-check
+C1_BLOCK = DEFAULT_BLOCK.split("\n\n")[0] + "\n"
+C1_PROSE = "- **Success / failure criterion:** [C1] the criterion holds\n"
 
 
 def scope_file(area: Path) -> Path:

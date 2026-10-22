@@ -57,6 +57,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **finalize runs intent-check whenever the promise block declares an
+  id.** The station asked the prose alone (`[C1]`); a protocol with three
+  [[promise]] tables and `C1:` in the prose read "no intent ids
+  registered" and passed, so neither the prose/block match nor the
+  metrics keys were checked. Prose and block now register together
+  (`promises.registered_ids`), for the intent station, the choice of the
+  answering run and the declared-scopes station; the mismatch is the
+  blocker intent-check already names. Found by the cold fit probe on
+  `d549696`.
 - **A generated result line written twice is a blocker.** `report-check`
   held the Recorded results line and the Limit lines through a dict of
   the protocol's fields, so of two lines with one label only the last

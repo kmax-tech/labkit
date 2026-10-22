@@ -562,7 +562,14 @@ class Adopt(unittest.TestCase):
         import subprocess
 
         from labkit.formats import findings, promises, scope_sha
-        from protocol_fixture import completed_run, head_commit, scope_file, started_at
+        from protocol_fixture import (
+            C1_BLOCK,
+            C1_PROSE,
+            completed_run,
+            head_commit,
+            scope_file,
+            started_at,
+        )
 
         root = Path(tempfile.mkdtemp())
         area = root / "experiments" / "01-x"
@@ -575,10 +582,12 @@ class Adopt(unittest.TestCase):
         proto.write_text(
             self.BODY.replace(
                 "## Summary",
-                "- **Question / hypothesis:** does it hold?\n\n## Summary",
+                "- **Question / hypothesis:** does it hold?\n"
+                + C1_PROSE
+                + "\n## Summary",
                 1,
             )
-            + head(cost="seconds"),
+            + head(cost="seconds", promises=C1_BLOCK),
             encoding="utf-8",
         )
         src = area / "data.jsonl"

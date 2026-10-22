@@ -22,7 +22,8 @@ each step's condition):
                     it is a full run — `run_kind='measurement'`, not acknowledged unfrozen
                     (warning here, `runs.unreportable`; report-check blocks)
   2. intent-check   every registered promise has a metrics key (and vice
-                    versa); skipped when the protocol registers no id
+                    versa), and prose and promise block name the same ids;
+                    skipped only when neither registers an id
   3. declared scopes  every declared promise scope unchanged since the run
   4. open fields    protocol fields still holding a placeholder
   5. frozen source  at protocol `cost = "seconds"` only: the run froze its source
@@ -82,7 +83,7 @@ from labkit.formats.repo import (
     no_such_area,
     the_protocol,
 )
-from labkit.checks.intent_check import main as intent_check_main, ids_in_prose
+from labkit.checks.intent_check import main as intent_check_main
 from labkit.gates.preflight import area_tests
 from labkit.formats.protocol_check import (
     open_holes,
@@ -187,7 +188,7 @@ def check_completion(
     """Station 1: the run every later station holds the protocol to — chosen,
     shown, and held to the run the head declares (`[result] run`). Returns
     it, or None."""
-    measurement_run = answering_run(findings, area, pid, bool(ids_in_prose(text)))
+    measurement_run = answering_run(findings, area, pid, _registers(text))
     _hold_declaration(findings, area, protocol, text, measurement_run)
     if measurement_run is not None:
         for warning in (
@@ -260,13 +261,24 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
         )
 
 
+def _registers(text: str) -> bool:
+    """Does the protocol register a promise id, in its prose or its block
+    (`promises.registered_ids`)? A malformed block counts as registered:
+    intent-check then refuses it by name — a blocker — where this question
+    would otherwise read "nothing to check"."""
+    try:
+        return bool(promises.registered_ids(text))
+    except promises.PromiseError:
+        return True
+
+
 def check_intent_keys_in_metrics(
     findings: Findings, protocol: Path, text: str, measurement_run: Path | None
 ) -> None:
     """Station 2: every registered intent id reports as a key of the answering
     run's metrics.json (intent-check). Not code_check.check_intent_ids, which
     holds the promises to the code before any run."""
-    if not ids_in_prose(text):
+    if not _registers(text):
         findings.note("  no intent ids registered — nothing to check")
         return
     args = [str(protocol)] + (
@@ -294,7 +306,7 @@ def check_declared_scopes(
     or the block was added after the run."""
     cfg = read_run_config(measurement_run)
     recorded = cfg.promises if cfg else None
-    if recorded is None and text and not promises.registers_ids(text):
+    if recorded is None and text and not _registers(text):
         findings.note(
             "  n/a — the protocol registers no promise id (a count), nothing to hold"
         )
