@@ -95,7 +95,37 @@ silent).
    "Protokollprosa"); (c) a second cold reviewer on the same decisions
    would show the verdicts' spread; one draw per record here.
 
-Reports as the model wrote them: the review files in the copies
-(`experiments/*/audits/2026-10-22T13-4{3,4}-review.toml`) and the
-scratchpad's `review-t3.md`, `review-t5.md`, `review-t18a.md`,
-`review-t18b.md`.
+## Second cold pass (labkit with the claim bound, same copies, same model)
+
+After the review was bound to the judged claim (`claim_sha`: Conclusion,
+Recorded results, Limit lines — a strengthened Conclusion makes a review
+stale), the same four records were reviewed again, cold. 0.90 USD.
+
+| record | decision | pass 1 | pass 2 |
+|---|---|---|---|
+| t3 09-10 | #1 BLOCKER, CV RMSE as measurement | upheld | upheld |
+| t5 09-15 | #1–#9 | rejected ×9 | rejected ×9 |
+| t18 09-33 | #1 BLOCKER, winner's curse | rejected | rejected |
+| t18 09-33 | #2 WARNING, majority baseline | rejected | upheld |
+| t18 09-34 | #1 BLOCKER, winner's curse | rejected | rejected |
+| t18 09-34 | #2 WARNING, majority baseline | upheld | insufficient |
+| t18 09-34 | #3 WARNING, positional selection "verified" | insufficient | insufficient |
+
+13 of 15 verdicts agree. Both disagreements are the one decision at the
+margin — the hand-computed majority baseline, the same reason in two
+records — which over four draws came back rejected, upheld, upheld and
+insufficient: the reviewer is undecided whether a baseline restated from
+the finding's arithmetic, not computed in the run, lets the "~14%
+improvement" stand. No clear decision moved: no rejected BLOCKER became
+upheld, no upheld BLOCKER became rejected, the nine "Finding noted"
+rejections held, and the "verified" claim stayed `insufficient` twice.
+Reading: the spread sits where a person would hesitate too; a gate that
+blocks on `not upheld` would, on this material, block the right things
+and ask twice about the borderline one. What this is not: an independent
+judgement of the twelve rejections — that reading is still owed before
+the warning becomes a blocker.
+
+Reports as the model wrote them: the first pass's review files in the
+scratchpad's `pass1/` (written before `claim_sha`, no longer read), the
+second pass's in the copies (`experiments/*/audits/2026-10-22T13-5{6,7}-review*.toml`),
+the raw reports `review-*.md` (pass 1) and `review2-*.md` (pass 2).

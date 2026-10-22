@@ -522,6 +522,23 @@ def written_before_run(
 
 
 RECORDED_RESULTS_LABEL = "Recorded results"
+CONCLUSION_LABEL = "Conclusion"
+
+
+def reported_claim(text: str) -> list[tuple[str, str]]:
+    """(label, value) of what a reader takes away as the result — the
+    Conclusion, the Recorded results line and every Limit line
+    (`findings.LIMIT_PREFIX`) — as written, placeholders included: the
+    claim a decision review judged (`reviews.claim_digest`); a claim
+    rewritten afterwards is another claim."""
+    from labkit.formats.findings import LIMIT_PREFIX
+
+    wanted = {field_name(CONCLUSION_LABEL), field_name(RECORDED_RESULTS_LABEL)}
+    return [
+        (f.label, f.value.strip())
+        for f in fields(text)
+        if f.name in wanted or f.label.startswith(LIMIT_PREFIX)
+    ]
 
 
 def recorded_results_field(text: str) -> str | None:

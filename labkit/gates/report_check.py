@@ -391,7 +391,8 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     """Station 3, the decisions: every `stands` among the limits of the
     covering analysis records is upheld by a decision review
     (`reviews.upholding`: a review of that record, its code and its run as
-    shown, of the decision as it stands now, saying `upheld`). A WARNING
+    shown, under the claim the protocol makes now, of the decision as it
+    stands now, saying `upheld`). A WARNING
     per decision no review upholds, with its state — an exploration of the
     check (TODO 2026-10-22: the fifth round's decisions are replayed
     first; a blocker afterwards). Empty when no record covers the run
@@ -401,22 +402,27 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
         return []
     try:
         records = covering_analysis(ctx.area, ctx.text, ctx.run)
-        found = reviews.area_reviews(ctx.area)
     except (AuditError, FileNotFoundError, ValueError):
-        return []  # ValueError: FindingsError, ReviewError — station 3 names them
+        return []  # ValueError: FindingsError — station 3 names them
+    try:
+        found = reviews.area_reviews(ctx.area)
+    except reviews.ReviewError as exc:
+        return [GateFinding(WARNING, f"a review nobody can read: {exc}")]
     out: list[GateFinding] = []
     for r in records:
         for n, f in r.limits():
-            if f.effect != findings.EFFECT_STANDS or reviews.upholding(r, n, found):
+            if f.effect != findings.EFFECT_STANDS or reviews.upholding(
+                r, n, found, ctx.text
+            ):
                 continue
             out.append(
                 GateFinding(
                     WARNING,
-                    f"{findings.limit_label(r, n)}: `stands` {reviews.state(r, n, found)} "
-                    f"— no decision review upholds that the reported claim stands "
-                    f"within this limit: `labkit-audit <area> --review --record "
-                    f"{r.path.name}` asks a second auditor (a warning while the check "
-                    f"is explored)",
+                    f"{findings.limit_label(r, n)}: `stands` "
+                    f"{reviews.state(r, n, found, ctx.text)} — no decision review "
+                    f"upholds that the reported claim stands within this limit: "
+                    f"`labkit-audit <area> --review --record {r.path.name}` asks a "
+                    f"second auditor (a warning while the check is explored)",
                 )
             )
     return out

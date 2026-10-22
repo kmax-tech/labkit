@@ -18,9 +18,15 @@ Instructions: `decision-review.agent.md`.
 
 The verdicts are written beside the records (`formats/reviews`,
 `audits/<minute>-review.toml`), bound to the record, its code, its run as
-shown and each decision as it stood (`findings.decision_digest`). Only
-`upheld` releases a decision; `rejected` and `insufficient` do not, nor
-does a review of a decision since changed. The gate: report-check names
+shown, the claim as judged (`reviews.claim_digest`: Conclusion, Recorded
+results, Limit lines) and each decision as it stood
+(`findings.decision_digest`). Only `upheld` releases a decision;
+`rejected` and `insufficient` do not, nor does a review of a decision or
+a claim since changed. After `rejected` the person decides again first —
+limits the claim, changes the effect to `not assessable`, or fixes the
+fault; a new audit is due when its basis changes or the finding is
+disputed, and does not by itself settle the rejection. After
+`insufficient` the missing evidence is supplied and the review run again. The gate: report-check names
 every `stands` no review upholds — a warning while this check is an
 exploration (TODO 2026-10-22: replay the fifth round's decisions first),
 a blocker afterwards.
@@ -119,6 +125,7 @@ class Evidence(NamedTuple):
     prompt: str
     scope_sha: str
     shown_sha: str
+    claim_sha: str  # the claim the prompt carries (`reviews.claim_digest`)
     numbers: list[int]
 
 
@@ -175,7 +182,9 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         f"{audit.instructions(REVIEW)}\n\nMODE: {REVIEW} · AREA: {shown(area, repo)} · "
         f"RECORD: {record.path.name}\n\n{audit.INLINE_NOTE}\n\n{body}"
     )
-    return Evidence(prompt, snap.sha, seen.sha, [n for n, _ in decided])
+    return Evidence(
+        prompt, snap.sha, seen.sha, reviews.claim_digest(text), [n for n, _ in decided]
+    )
 
 
 def parse_review(report: str, numbers: list[int]) -> list[tuple[int, str, str]]:
@@ -268,14 +277,31 @@ def review(
         for n, verdict, why in lines
     ]
     written = reviews.write_review(
-        area, model, rec.path.name, evidence.scope_sha, evidence.shown_sha, decisions
+        area,
+        model,
+        rec.path.name,
+        evidence.scope_sha,
+        evidence.shown_sha,
+        evidence.claim_sha,
+        decisions,
     )
     u, r, i = reviews.counts_of(decisions)
     print()
     print(
         f"review: {shown(written, Path.cwd())} — {u} upheld, {r} rejected, "
-        f"{i} insufficient; only `upheld` releases a `stands`. A rejected or "
-        f"insufficient decision: decide the finding again (`--decide N accepted "
-        f'"REASON" --effect "<ID> not assessable"`, or fix it), or audit again'
+        f"{i} insufficient; only `upheld` releases a `stands`."
     )
+    if r:
+        print(
+            "  rejected: decide the finding again first — limit the claim (the "
+            'Conclusion), change the effect (`--decide N accepted "REASON" --effect '
+            '"<ID> not assessable"`) or fix the fault; a new audit only when its '
+            "basis changes or the finding itself is disputed — auditing again does "
+            "not settle a rejection"
+        )
+    if i:
+        print(
+            "  insufficient: supply the evidence the reviewer names (in the "
+            "protocol or the run's outputs) and review again"
+        )
     return 0 if r == 0 and i == 0 else 1

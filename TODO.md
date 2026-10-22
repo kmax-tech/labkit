@@ -164,11 +164,21 @@ Aufruf. Erst die nächste Runde auf einem Release mit diesem Stand.
    über der Mehrheitsbaseline), 12 verworfen (alle „Finding noted“, die
    drei t5-BLOCKER, der Winner's-curse-BLOCKER), 1 `insufficient` — das
    behauptete „verified“ der Sortierung ohne Beleg auf der Seite. Vier
-   Aufrufe, 0,87 USD. **Zu entscheiden:** die Warnung wird Blocker
-   (ein Wort in `report_check.review_findings`); davor (a) ob `rejected`
-   zur Neuentscheidung oder zum neuen Audit führt (heute beides erlaubt),
-   (b) die Prosa hat keinen Digest — eine nach der Prüfung umgeschriebene
-   Conclusion öffnet nichts (wie „Protokollprosa“ unten).
+   Aufrufe, 0,87 USD. Review dazu (2026-10-22): noch kein Blocker.
+   Daraus umgesetzt (unreleased): (a) die Prüfung ist an den geprüften
+   Anspruch gebunden (`claim_sha` über Conclusion, Recorded results,
+   Limit-Zeilen, `protocol_check.reported_claim`) — eine danach
+   verschärfte Conclusion macht sie ungültig; (b) `rejected` heißt zuerst
+   Neuentscheidung (Anspruch begrenzen, Wirkung auf `not assessable`,
+   Fehler beheben), ein neues Audit erst bei geänderter Grundlage oder
+   bestrittenem Befund und nie als Erledigung; `insufficient` heißt Beleg
+   ergänzen und erneut prüfen — beides steht in der Ausgabe. Zweiter
+   kalter Durchlauf (0,90 USD): 13 von 15 Urteilen gleich, die zwei
+   Abweichungen sind dieselbe Randentscheidung (von Hand gerechnete
+   Baseline), keine klare kippte. **Vor dem Blocker noch offen:** die
+   zwölf Ablehnungen unabhängig fachlich bewerten (Leseauftrag des
+   Autors, nicht der Maschine); dann ein Wort in
+   `report_check.review_findings`.
 3. **Registrierung bei `seconds` an den Commit der ersten Messung
    gehalten** (`report_check.registration_gaps`,
    `answering_run.first_measurement`, `protocol_history.registration_in_commit`,
@@ -179,7 +189,9 @@ Aufruf. Erst die nächste Runde auf einem Release mit diesem Stand.
    nur die Frage. t5 und t18 (RandomForest, kein `[model]`) hätten diese
    Prüfung bestanden; dass ein klassisches ML-Experiment Kriterium und
    Zulassung schuldet, ist die offene Instrument-Frage (`kind`, Tabelle
-   unten), nicht die Commit-Bindung. Der labkit-paper-Standard-Check
+   unten), nicht die Commit-Bindung — Review 2026-10-22: die Lücke ist
+   real, eine RandomForest-Messung verliert den Bedarf nicht dadurch,
+   dass kein LLM-Alias existiert; gesondert entscheiden. Der labkit-paper-Standard-Check
    verlangt die drei Felder auf jeder Stufe; labkit tut das erst nach
    dieser Entscheidung. An den Kopien nicht nachstellbar (ihre
    committeten Köpfe tragen Standard 0.20, den dieser Stand nicht liest;

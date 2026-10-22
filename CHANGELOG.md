@@ -35,10 +35,14 @@ pins (`requirements.txt` / `requirements.lock`).
   decision `upheld`, `rejected` or `insufficient` with one sentence
   (`decision-review.agent.md`, `gates/decision_review`). The verdicts are
   written beside the records as `audits/<minute>-review.toml`
-  (`formats/reviews`), bound to the record, its code, its run as shown and
-  each decision as it stood (`findings.decision_digest`): only `upheld`
-  releases a `stands`; `rejected`, `insufficient` and a review of a
-  decision since changed do not. `report-check` names every `stands` of
+  (`formats/reviews`), bound to the record, its code, its run as shown,
+  the claim as judged (`claim_sha`: the Conclusion, the Recorded results
+  line and the Limit lines, `protocol_check.reported_claim`) and each
+  decision as it stood (`findings.decision_digest`): only `upheld`
+  releases a `stands`; `rejected`, `insufficient`, a review of a decision
+  since changed and one of a claim since rewritten do not. After
+  `rejected` the person decides again first (limits the claim, changes the
+  effect, fixes the fault); a new audit does not by itself settle it. `report-check` names every `stands` of
   the covering records that no review upholds, with the review's state —
   a warning while the check is explored (the fifth round's decisions are
   replayed first; a blocker afterwards). A report whose decision lines

@@ -201,7 +201,9 @@ class TheCall(unittest.TestCase):
         self.assertEqual(
             (review.scope_sha, review.shown_sha), (rec.scope_sha, rec.shown_sha)
         )
-        self.assertTrue(reviews.upholding(rec, 1, [review]))
+        text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
+        self.assertEqual(review.claim_sha, reviews.claim_digest(text))
+        self.assertTrue(reviews.upholding(rec, 1, [review], text))
         code, out = gate(area)
         self.assertEqual(code, 0, out)
         self.assertNotIn("decision review", out)
@@ -212,6 +214,8 @@ class TheCall(unittest.TestCase):
         area, _ = area_with([BLOCKER], {1: ("accepted", "Finding noted", "stands")})
         rc, out, _, _ = run_review(area, REJECTED)
         self.assertEqual(rc, 1, out)
+        self.assertIn("rejected: decide the finding again first", out)
+        self.assertIn("auditing again does not settle a rejection", out)
         code, out = gate(area)
         self.assertEqual(code, 0, out)  # a warning while the check is explored
         self.assertIn("`stands` rejected: the reason restates the finding", out)
@@ -221,10 +225,57 @@ class TheCall(unittest.TestCase):
         run_review(area, UPHELD)
         findings.write_decision(record, 1, "accepted", "in-sample, and more", "stands")
         rec = findings.read(record)
-        self.assertFalse(reviews.upholding(rec, 1, reviews.area_reviews(area)))
+        text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
+        self.assertFalse(reviews.upholding(rec, 1, reviews.area_reviews(area), text))
         self.assertEqual(
-            reviews.state(rec, 1, reviews.area_reviews(area)), reviews.NOT_REVIEWED
+            reviews.state(rec, 1, reviews.area_reviews(area), text),
+            reviews.NOT_REVIEWED,
         )
+
+    def test_a_rewritten_claim_makes_the_review_stale(self):
+        """The wording of the claim separates upheld from rejected (replay
+        2026-10-22): a Conclusion strengthened after the review is another
+        claim, and the gate asks again."""
+        area, record = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
+        run_review(area, UPHELD)
+        code, out = gate(area)
+        self.assertNotIn("decision review", out)
+        proto = area / "PROTOCOL-x.md"
+        text = proto.read_text(encoding="utf-8")
+        proto.write_text(
+            text.replace(
+                "the fit is in-sample; nothing more is claimed.",
+                "the classifier generalises to unseen compounds.",
+            ),
+            encoding="utf-8",
+        )
+        rec = findings.read(record)
+        self.assertFalse(
+            reviews.upholding(
+                rec, 1, reviews.area_reviews(area), proto.read_text(encoding="utf-8")
+            )
+        )
+        code, out = gate(area)
+        self.assertEqual(code, 0, out)
+        self.assertIn("`stands` not reviewed — no decision review upholds", out)
+        # the claim's digest reads Conclusion, Recorded results and Limit lines
+        claim = dict(reviews.reported_claim(text))
+        self.assertIn("Conclusion", claim)
+        self.assertIn("Recorded results", claim)
+        self.assertTrue(any(k.startswith("Limit (audit ") for k in claim), claim)
+
+    def test_a_review_nobody_can_read_is_named_by_the_gate(self):
+        area, _ = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
+        run_review(area, UPHELD)
+        (review,) = (area / "audits").glob("*-review.toml")
+        review.write_text(
+            review.read_text(encoding="utf-8").replace("claim_sha", "claim_sh"),
+            encoding="utf-8",
+        )
+        code, out = gate(area)
+        self.assertEqual(code, 0, out)
+        self.assertIn("a review nobody can read", out)
+        self.assertIn("review again", out)
 
     def test_a_report_that_disagrees_with_itself_records_nothing(self):
         area, _ = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
@@ -259,7 +310,9 @@ class TheFile(unittest.TestCase):
     def test_counts_and_verdicts_are_held_on_read(self):
         area = Path(tempfile.mkdtemp())
         d = reviews.Decision(1, "a" * 12, "upheld", "fine")
-        path = reviews.write_review(area, "opus", "r.toml", "s" * 12, "h" * 12, [d])
+        path = reviews.write_review(
+            area, "opus", "r.toml", "s" * 12, "h" * 12, "c" * 12, [d]
+        )
         self.assertEqual(reviews.read_review(path).counts, (1, 0, 0))
         text = path.read_text(encoding="utf-8")
         path.write_text(text.replace("upheld = 1", "upheld = 2"), encoding="utf-8")
@@ -271,7 +324,7 @@ class TheFile(unittest.TestCase):
         with self.assertRaisesRegex(reviews.ReviewError, "verdict 'ok'"):
             reviews.read_review(path)
         with self.assertRaisesRegex(ValueError, "reviewed twice"):
-            reviews.write_review(area, "opus", "r.toml", "s", "h", [d, d])
+            reviews.write_review(area, "opus", "r.toml", "s", "h", "c", [d, d])
         self.assertEqual(
             findings.written_order(path),
             ("".join(path.name.split("-review")[:1]), 1, path.name),
