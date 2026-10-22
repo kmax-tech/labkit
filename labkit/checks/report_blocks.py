@@ -4,18 +4,22 @@ the runs it cites, the numbers it states without a source.
 A report (`REPORT.md`, a results note) carries a reported number in a
 generated block, written by `protocol-fill <PROTOCOL> --into <FILE>`:
 
-    <!-- labkit result: run 2026-10-22T09-13-08_0dc3 (protocol-fill --into; edit the protocol, not this block) -->
+    <!-- labkit result: experiments/01-x/PROTOCOL-x.md run 2026-10-22T09-13-08_0dc3 (protocol-fill --into; edit the protocol, not this block) -->
     auc = 0.69, n = 12 (run 2026-10-22T09-13-08_0dc3)
     <!-- /labkit result -->
 
-The body is what the protocol that declares that run as its result renders
+The opening line names the protocol the block belongs to — its path
+relative to the report, without spaces — and the run it shows. The body is
+what that protocol, declaring that run as its result, renders
 (`result_render.rendering`): its Answer line, limits note included, and one
 line per Limit (`block_body`) — the note's "Limit lines below" stand below
 in the report too. What each check
 here states, and no more:
 
-- `block_gaps` (guaranteed): a block says exactly what its declaring
-  protocol's rendering says. For the prose beside it nothing follows.
+- `block_gaps` (guaranteed): a block shows the run its protocol declares
+  now and says exactly what the protocol renders for it. For the prose
+  beside it nothing follows. A new run adopted by the protocol makes the
+  block stale, and `--into` replaces every block of that protocol.
 - `cited_gaps` (guaranteed): every token that reads as a run id
   (`runs.RUN_ID_LIKE`) names a run directory of the repo.
 - `unsourced_numbers` (static evidence, never blocks): numbers outside every
@@ -39,7 +43,9 @@ from labkit.checks.result_render import Rendering
 from labkit.formats import runs
 
 #: the block's opening and closing lines, each a line of its own
-OPEN = re.compile(r"^<!-- labkit result: run (?P<run>\S+) \(.*\) -->$")
+OPEN = re.compile(
+    r"^<!-- labkit result: (?P<protocol>\S+) run (?P<run>\S+) \(.*\) -->$"
+)
 CLOSE = "<!-- /labkit result -->"
 OPEN_NOTE = "protocol-fill --into; edit the protocol, not this block"
 
@@ -51,9 +57,11 @@ class ReportBlockError(ValueError):
 
 @dataclass(frozen=True)
 class Block:
-    """One generated result block: the run it renders, where it stands (the
-    opening and closing line, 1-based) and its body as written."""
+    """One generated result block: the protocol it belongs to (its path
+    relative to the report, as written), the run it shows, where it stands
+    (the opening and closing line, 1-based) and its body as written."""
 
+    protocol: str
     run_id: str
     first: int
     last: int
@@ -68,10 +76,10 @@ def block_body(r: Rendering) -> str:
     )
 
 
-def block_lines(run_id: str, body: str) -> list[str]:
-    """The block for RUN_ID with BODY, line by line."""
+def block_lines(protocol: str, run_id: str, body: str) -> list[str]:
+    """PROTOCOL's block showing RUN_ID with BODY, line by line."""
     return [
-        f"<!-- labkit result: run {run_id} ({OPEN_NOTE}) -->",
+        f"<!-- labkit result: {protocol} run {run_id} ({OPEN_NOTE}) -->",
         *body.split("\n"),
         CLOSE,
     ]
@@ -81,37 +89,39 @@ def blocks(text: str) -> list[Block]:
     """Every generated block of TEXT in order. Raises ReportBlockError on a
     block that does not read."""
     out: list[Block] = []
-    opened: tuple[str, int] | None = None
+    opened: tuple[str, str, int] | None = None
     body: list[str] = []
     for n, line in enumerate(text.split("\n"), 1):
         m = OPEN.match(line.strip())
         if m:
             if opened is not None:
                 raise ReportBlockError(
-                    f"line {n}: a result block opens inside the one opened at line {opened[1]}"
+                    f"line {n}: a result block opens inside the one opened at line {opened[2]}"
                 )
-            opened, body = (m.group("run"), n), []
+            opened, body = (m.group("protocol"), m.group("run"), n), []
         elif line.strip() == CLOSE:
             if opened is None:
                 raise ReportBlockError(f"line {n}: {CLOSE} closes no result block")
-            out.append(Block(opened[0], opened[1], n, "\n".join(body).strip()))
+            out.append(Block(*opened, n, "\n".join(body).strip()))
             opened = None
         elif opened is not None:
             body.append(line)
     if opened is not None:
         raise ReportBlockError(
-            f"line {opened[1]}: the result block for run {opened[0]} is never closed ({CLOSE})"
+            f"line {opened[2]}: the result block for run {opened[1]} is never closed ({CLOSE})"
         )
     return out
 
 
-def write_block(text: str, run_id: str, body: str) -> str:
-    """TEXT with RUN_ID's block holding BODY (`block_body`): every block of RUN_ID
-    replaced in place, or one appended at the end when there is none.
-    Raises ReportBlockError on a block that does not read."""
-    found = [b for b in blocks(text) if b.run_id == run_id]
+def write_block(text: str, protocol: str, run_id: str, body: str) -> str:
+    """TEXT with PROTOCOL's block showing RUN_ID with BODY (`block_body`):
+    every block of PROTOCOL replaced in place, whichever run it showed — a
+    newly adopted run replaces the old one —, or one appended at the end
+    when there is none. Raises ReportBlockError on a block that does not
+    read."""
+    found = [b for b in blocks(text) if b.protocol == protocol]
     lines = text.split("\n")
-    new = block_lines(run_id, body)
+    new = block_lines(protocol, run_id, body)
     if not found:
         while lines and lines[-1] == "":
             lines.pop()
@@ -121,25 +131,42 @@ def write_block(text: str, run_id: str, body: str) -> str:
     return "\n".join(lines)
 
 
-def block_gaps(
-    found: list[Block], expected: dict[str, str], why_not: dict[str, str]
-) -> list[str]:
-    """Why a block of FOUND does not say what its source says, one sentence
-    each, or []: EXPECTED maps a run id to the body its declaring protocol
-    renders (`block_body`), WHY_NOT a run id without one to the reason. Exact: equality,
-    no reading of what the body says."""
+@dataclass(frozen=True)
+class BlockSource:
+    """What a block's protocol says now: the run it declares (None: no
+    result declared, or no protocol there — WHY says which) and the body it
+    renders for that run (None when it cannot be rendered — WHY says why)."""
+
+    run_id: str | None
+    body: str | None
+    why: str = ""
+
+
+def block_gaps(found: list[Block], sources: dict[str, BlockSource]) -> list[str]:
+    """Why a block of FOUND does not show what its protocol says now, one
+    sentence each, or []: SOURCES maps each block's protocol (as written)
+    to its `BlockSource`. Exact: the declared run and equality of the body, no
+    reading of what the body says."""
     gaps: list[str] = []
     for b in found:
-        want = expected.get(b.run_id)
-        if want is None:
-            why = why_not.get(
-                b.run_id, f"no protocol of the repo declares run {b.run_id}"
-            )
-            gaps.append(f"line {b.first}: the result block for run {b.run_id}: {why}")
-        elif b.body != want:
+        s = sources[b.protocol]
+        at = f"line {b.first}: the result block of {b.protocol} (run {b.run_id})"
+        if s.run_id is None:
             gaps.append(
-                f"line {b.first}: the result block for run {b.run_id} differs from the "
-                f"protocol's rendering — `protocol-fill <PROTOCOL> --into <FILE>` writes it again"
+                f"{at}: {s.why} — a block shows a declared result only; remove it, "
+                f"or adopt a run in the protocol (`--from-run`) and write it again"
+            )
+        elif s.run_id != b.run_id:
+            gaps.append(
+                f"{at}: the protocol declares run {s.run_id} now — "
+                f"`protocol-fill {b.protocol} --into <FILE>` replaces the block"
+            )
+        elif s.body is None:
+            gaps.append(f"{at}: {s.why}")
+        elif b.body != s.body:
+            gaps.append(
+                f"{at} differs from the protocol's rendering — "
+                f"`protocol-fill {b.protocol} --into <FILE>` writes it again"
             )
     return gaps
 

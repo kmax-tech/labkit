@@ -75,7 +75,15 @@ LAB-017 The number of audits follows the cost tier.
    result reported; the stop hook and the pre-commit hold it to the same
    check. An exploration that reports nothing declares no result and may
    end; its number stays a
-   sketch in `runs/`. Commit `output/` and `runs/` with the protocol —
+   sketch in `runs/`. A report outside the protocol (`REPORT.md`, a
+   results note) shows the result as a generated block:
+   `protocol-fill <PROTOCOL> --into REPORT.md` writes the Answer and the
+   Limit lines there, and after a new run is adopted the same command
+   replaces the block. Every changed file that cites a run is held at the
+   stop and the commit — the block exactly, every cited run id a run of
+   the repo; any other number there is named as having no assigned
+   source: compute it in the run and report it from there, or say where
+   it comes from. Commit `output/` and `runs/` with the protocol —
    `finalize <area>` checks the provenance and wants both in git; the run
    index `runs.tsv` is a local view, git-ignored (`runlog reindex <area>`
    rebuilds it from `runs/`).
@@ -135,9 +143,9 @@ fields, no reading of labkit's source.
     protocol whose head declares a result (`[result] run`).
     A report outside the protocol (`REPORT.md`, a results note) shows the
     result as a generated block: `protocol-fill <PROTOCOL> --into
-    REPORT.md` writes the Answer and the Limit lines there, and every
-    changed file that cites a run is held to it at the stop and the
-    commit — the block exactly, every cited run id a run of the repo.
+    REPORT.md` writes the Answer and the Limit lines there (after a new
+    run is adopted it replaces the block), and every changed file that
+    cites a run is held to it at the stop and the commit — the block exactly, every cited run id a run of the repo.
     Any other number in that file is named as having no assigned source:
     compute it in the run and report it from there, or say where it
     comes from.

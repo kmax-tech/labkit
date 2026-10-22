@@ -246,7 +246,8 @@ evidence file under the same ID (top of this document).*
   exploration ends with no reported result. A changed or staged report
   outside the protocol that cites a run (`REPORT.md`, a results note) is
   held as well: its generated result blocks (`protocol-fill --into`)
-  equal what the declaring protocol renders, every cited run id names a
+  show the run the protocol they name declares now and equal what it
+  renders, every cited run id names a
   run of the repo, and the protocol declaring a cited run goes through
   `report-check`; a number outside every block is named as having no
   assigned source — a hint, since equal values elsewhere do not show

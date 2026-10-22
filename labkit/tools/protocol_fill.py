@@ -54,6 +54,7 @@ later-changed answer to the same. A provisional number stays a sketch in
 from __future__ import annotations
 
 import argparse
+import os
 import re
 from pathlib import Path
 
@@ -786,22 +787,38 @@ def _prompts_file(protocol: Path, text: str) -> int:
     return 0
 
 
-def into_report(text: str, area: Path, report: str) -> tuple[str, str]:
+def into_report(text: str, area: Path, report: str, protocol: str) -> tuple[str, str]:
     """`--into`: REPORT with the declared result as a generated block — the
     protocol's Answer and Limit lines as rendered (`report_blocks.block_body`),
     replaced in place or appended (`report_blocks.write_block`).
-    (report text, run id). Raises ValueError without a declared run or its
-    metrics.json, and on a block in REPORT that does not read."""
+    PROTOCOL is the protocol's path relative to the report, the block's
+    owner: its blocks are replaced whichever run they showed. (report text,
+    run id). Raises ValueError without a declared run or its metrics.json,
+    and on a block in REPORT that does not read."""
     run = declared_run_dir(text, area, "a report shows a declared result only")
     body = report_blocks.block_body(rendering(area, text, run))
-    return report_blocks.write_block(report, run.name, body), run.name
+    return report_blocks.write_block(report, protocol, run.name, body), run.name
+
+
+def path_from_report(protocol: Path, report: Path) -> str:
+    """PROTOCOL's path as REPORT names it: relative to the report's
+    directory, `/`-separated. Raises ValueError on a path with whitespace —
+    the block's opening line holds it as one word."""
+    rel = Path(os.path.relpath(protocol.resolve(), report.resolve().parent)).as_posix()
+    if any(c.isspace() for c in rel):
+        raise ValueError(
+            f"{rel}: a protocol path with whitespace cannot name a result block"
+        )
+    return rel
 
 
 def _into_file(protocol: Path, text: str, report: Path) -> int:
     """`--into` on PROTOCOL: write REPORT's block when it differs, say so."""
     before = report.read_text(encoding="utf-8") if report.is_file() else ""
     try:
-        new, run_id = into_report(text, protocol.resolve().parent, before)
+        new, run_id = into_report(
+            text, protocol.resolve().parent, before, path_from_report(protocol, report)
+        )
     except (ValueError, protocol_block.BlockError) as exc:
         print(f"protocol-fill: {exc}")
         return 1
@@ -889,7 +906,8 @@ def main(argv: list[str]) -> int:
         default=None,
         metavar="REPORT",
         help="write the declared result into REPORT (a report outside the protocol) "
-        "as a generated block: the Answer as rendered, replaced in place or appended",
+        "as a generated block: the Answer and Limit lines as rendered; the "
+        "protocol's block is replaced (also after a new run), else one is appended",
     )
     ap.add_argument(
         "--from-run",

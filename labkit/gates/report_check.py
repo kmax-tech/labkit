@@ -71,7 +71,8 @@ probes or not; a `[result]` that does not read is held and blocks.
 A report outside the protocol — a Markdown file among the paths that
 cites a run, not a protocol, not under `runs/` or `data/` (`report_files`)
 — is held too (`hold_report`): each generated result block equals what the
-protocol declaring its run renders (`report_blocks.block_gaps`, written by
+protocol it names declares now — the block's run — and renders for it
+(`report_blocks.block_gaps`, written by
 `protocol-fill --into`), each token that reads as a run id names a run of
 the repo (`report_blocks.cited_gaps`) — blockers; the protocol declaring a
 cited run joins the protocols the stations hold (`held_by_reports`); a
@@ -494,64 +495,80 @@ def report_files(
 @dataclass(frozen=True)
 class Sources:
     """What the repo holds for a report to cite: every run directory's id
-    (KNOWN) and, per declared run, the protocols declaring it with their
-    text as the state holds it (DECLARING)."""
+    (KNOWN), and per protocol its text as the state holds it (TEXTS) and
+    the run its head declares (DECLARED: None for none; a head that does
+    not read is in UNREADABLE with the reason instead)."""
 
     known: set[str]
-    declaring: dict[str, list[tuple[Path, str]]]
+    texts: dict[Path, str]
+    declared: dict[Path, str | None]
+    unreadable: dict[Path, str]
+
+    def declaring(self, run_id: str) -> list[Path]:
+        """The protocols declaring RUN_ID as their result."""
+        return [p for p, r in self.declared.items() if r == run_id]
 
 
 def repo_sources(repo: Path, *, staged: bool) -> Sources:
-    """The runs and declarations of every protocol of REPO — the index's
-    protocols and texts when STAGED. A protocol whose head does not read
-    declares nothing here; the stations name it where a path touches it."""
+    """The runs, texts and declarations of every protocol of REPO — the
+    index's protocols and texts when STAGED."""
     protocols = indexed_protocols(repo) if staged else repo_protocols(repo.resolve())
-    known: set[str] = set()
-    declaring: dict[str, list[tuple[Path, str]]] = {}
+    out = Sources(set(), {}, {}, {})
     for p in protocols:
         runs_dir = p.parent / "runs"
         if runs_dir.is_dir():
-            known |= {d.name for d in runs_dir.iterdir() if d.is_dir()}
+            out.known.update(d.name for d in runs_dir.iterdir() if d.is_dir())
         text = index_text(repo, p) if staged else p.read_text(encoding="utf-8")
         if text is None:
             continue
+        out.texts[p] = text
         try:
-            run_id = protocol_block.declared_run(text)
-        except protocol_block.BlockError:
-            continue
-        if run_id is not None:
-            declaring.setdefault(run_id, []).append((p, text))
-    return Sources(known, declaring)
+            out.declared[p] = protocol_block.declared_run(text)
+        except protocol_block.BlockError as exc:
+            out.unreadable[p] = str(exc)
+    return out
+
+
+def block_protocol(report: Path, block: report_blocks.Block) -> Path:
+    """The protocol BLOCK of REPORT names, resolved against the report's directory."""
+    return (report.parent / block.protocol).resolve()
 
 
 def block_sources(
-    found: list[report_blocks.Block], sources: Sources
-) -> tuple[dict[str, str], dict[str, str]]:
-    """For the runs FOUND renders: (the body the declaring protocol renders
-    per run, why there is none per run). The declaring protocol
-    is held by the stations as well (`held_by_reports`), so a block never
-    shows a number its protocol's chain does not hold."""
-    expected: dict[str, str] = {}
-    why_not: dict[str, str] = {}
-    for run_id in dict.fromkeys(b.run_id for b in found):
-        declared = sources.declaring.get(run_id, [])
-        if len(declared) != 1:
-            why_not[run_id] = (
-                f"no protocol of the repo declares it as its result — "
-                f"`protocol-fill <PROTOCOL> --from-run {run_id}` first"
-                if not declared
-                else f"declared by {len(declared)} protocols "
-                f"({', '.join(p.name for p, _ in declared)}) — one result, one protocol"
-            )
+    report: Path, found: list[report_blocks.Block], sources: Sources
+) -> dict[str, report_blocks.BlockSource]:
+    """What each protocol a block of FOUND (in REPORT) names says now: the
+    run it declares and the body it renders for it (`report_blocks.BlockSource`).
+    The protocol is held by the stations as well (`held_by_reports`), so a
+    block never shows a number its protocol's chain does not hold."""
+    out: dict[str, report_blocks.BlockSource] = {}
+    for b in found:
+        if b.protocol in out:
             continue
-        protocol, text = declared[0]
-        try:
-            expected[run_id] = report_blocks.block_body(
-                rendering(protocol.parent, text, protocol.parent / "runs" / run_id)
+        p = block_protocol(report, b)
+        if p not in sources.texts:
+            out[b.protocol] = report_blocks.BlockSource(
+                None, None, "no protocol of the repo there"
             )
-        except (OSError, ValueError) as exc:
-            why_not[run_id] = f"cannot be rendered from {protocol.name}: {exc}"
-    return expected, why_not
+        elif p in sources.unreadable:
+            out[b.protocol] = report_blocks.BlockSource(
+                None, None, f"its head does not read: {sources.unreadable[p]}"
+            )
+        elif (run_id := sources.declared[p]) is None:
+            out[b.protocol] = report_blocks.BlockSource(
+                None, None, "it declares no result"
+            )
+        else:
+            try:
+                body = report_blocks.block_body(
+                    rendering(p.parent, sources.texts[p], p.parent / "runs" / run_id)
+                )
+                out[b.protocol] = report_blocks.BlockSource(run_id, body)
+            except (OSError, ValueError) as exc:
+                out[b.protocol] = report_blocks.BlockSource(
+                    run_id, None, f"cannot be rendered from {p.name}: {exc}"
+                )
+    return out
 
 
 def hold_report(path: Path, text: str, repo: Path, sources: Sources) -> int:
@@ -567,8 +584,7 @@ def hold_report(path: Path, text: str, repo: Path, sources: Sources) -> int:
     except report_blocks.ReportBlockError as exc:
         out.block(f"{rel}: {exc}")
         return out.report("report-check", "reporting")
-    expected, why_not = block_sources(found, sources)
-    for gap in report_blocks.block_gaps(found, expected, why_not):
+    for gap in report_blocks.block_gaps(found, block_sources(path, found, sources)):
         out.block(f"{rel}: {gap}")
     cited = report_blocks.cited_run_ids(text)
     for gap in report_blocks.cited_gaps(cited, sources.known):
@@ -596,14 +612,16 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     (`report_files`): the gate at the stop and the commit. A result declared
     reported is held to the whole chain, a protocol declaring none is
     skipped (an exploration may end with no reported result). A report's
-    generated blocks are held to their declaring protocols, which the
+    generated blocks are held to the protocols they name, which the
     stations hold too, its cited run ids to the repo's runs; its other
     numbers are hints. STAGED (the pre-commit): declarations and reports are
     read from the index, and an area whose tree differs from the index is a
     blocker — the stations read the tree, the commit holds the index.
     Returns the worst exit code."""
     reports = report_files(paths, repo, staged=staged)
-    sources = repo_sources(repo, staged=staged) if reports else Sources(set(), {})
+    sources = (
+        repo_sources(repo, staged=staged) if reports else Sources(set(), {}, {}, {})
+    )
     protocols = reported_protocols(paths, repo, staged=staged)
     for p in held_by_reports(reports, sources):
         if p not in protocols:
@@ -617,14 +635,23 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
 
 
 def held_by_reports(reports: list[tuple[Path, str]], sources: Sources) -> list[Path]:
-    """The protocols declaring a run some report of REPORTS cites, in a
-    block or in its prose, each once: the result a changed report shows is
-    held to its chain like a changed protocol."""
+    """The protocols a report of REPORTS shows a result of, each once: the
+    protocol a block names, and every protocol declaring a run the report
+    cites in its prose — the result a changed report shows is held to its
+    chain like a changed protocol. A block that does not read names none
+    (`hold_report` names it)."""
     out: list[Path] = []
-    for _, text in reports:
-        for _, run_id in report_blocks.cited_run_ids(text):
-            declared = sources.declaring.get(run_id, [])
-            out += [p for p, _ in declared if p not in out]
+    for path, text in reports:
+        try:
+            named = [block_protocol(path, b) for b in report_blocks.blocks(text)]
+        except report_blocks.ReportBlockError:
+            named = []
+        named += [
+            p
+            for _, run_id in report_blocks.cited_run_ids(text)
+            for p in sources.declaring(run_id)
+        ]
+        out += [p for p in dict.fromkeys(named) if p in sources.texts and p not in out]
     return out
 
 

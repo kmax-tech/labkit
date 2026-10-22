@@ -14,8 +14,8 @@ pins (`requirements.txt` / `requirements.lock`).
   holds every changed or staged Markdown file among its paths that cites a
   run — `REPORT.md`, a results note; not a protocol, nothing under `runs/`
   or `data/`. Blockers: a generated result block that differs from what the
-  protocol declaring its run renders (Answer and Limit lines), a block of a
-  run no protocol declares, a token that reads as a run id and names no run
+  protocol it names renders (Answer and Limit lines), a block showing a run
+  its protocol no longer declares, a token that reads as a run id and names no run
   of the repo; the protocol declaring a cited run goes through the stations
   as well, so a report cannot show a result whose chain fails. A warning
   lists the numbers outside every block — no source is assigned to them;
@@ -24,7 +24,9 @@ pins (`requirements.txt` / `requirements.lock`).
   the prose beside it. Only the paths given are read: an old citation in
   a file nobody touched reopens nothing. New: `protocol-fill <PROTOCOL>
   --into <FILE>` writes the declared result into FILE as a generated block
-  (`checks/report_blocks`), replaced in place or appended, idempotent. A
+  (`checks/report_blocks`); the block names its protocol (the path
+  relative to the report), so after a new run is adopted the same command
+  replaces it instead of adding a second; idempotent. A
   commit that passed before can now be refused when a staged report cites
   a run id that names no run. Why: labkit-paper area 09, fifth haiku round
   (labkit 0.102.0) — the protocol's Answer was held exactly while
