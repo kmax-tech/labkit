@@ -119,11 +119,16 @@ the finding's arithmetic, not computed in the run, lets the "~14%
 improvement" stand. No clear decision moved: no rejected BLOCKER became
 upheld, no upheld BLOCKER became rejected, the nine "Finding noted"
 rejections held, and the "verified" claim stayed `insufficient` twice.
-Reading: the spread sits where a person would hesitate too; a gate that
-blocks on `not upheld` would, on this material, block the right things
-and ask twice about the borderline one. What this is not: an independent
-judgement of the twelve rejections — that reading is still owed before
-the warning becomes a blocker.
+What the agreement shows is repeatability, not correctness, and nine of
+the fifteen decisions come from one attempt. The borderline decision
+bundles two statements the reviewers weighed differently — whether the
+baseline's value is right, and whether the improvement claim built on it
+stands — and a verdict word cannot carry both. The independent reading of
+all fifteen decisions against their sources, upheld ones included, is the
+[assessment](2026-10-22-decision-review-assessment-v5.md). Since this
+pass, every draw on one state counts (`reviews.contested`): an unchanged
+`rejected` is not released by a later `upheld`, and the command refuses
+another draw on such a state unless asked for a measurement (`--again`).
 
 Reports as the model wrote them: the first pass's review files in the
 scratchpad's `pass1/` (written before `claim_sha`, no longer read), the

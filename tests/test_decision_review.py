@@ -277,6 +277,48 @@ class TheCall(unittest.TestCase):
         self.assertIn("a review nobody can read", out)
         self.assertIn("review again", out)
 
+    def test_a_rejected_decision_is_not_released_by_a_later_draw(self):
+        """Review 2026-10-22: the newest matching review won, so an unchanged
+        rejected could be re-reviewed until an upheld came. Now every draw
+        on one state counts, the command refuses another draw, and deciding
+        again is the way out."""
+        area, record = area_with(
+            [BLOCKER], {1: ("accepted", "Finding noted", "stands")}
+        )
+        rc, _, _, _ = run_review(area, REJECTED)
+        self.assertEqual(rc, 1)
+        rc, _, err, sent = run_review(area, UPHELD)
+        self.assertEqual((rc, sent), (2, []))
+        self.assertIn("another draw settles nothing", err)
+        self.assertIn("decide again", err)
+        rc, _, _, sent = run_review(area, UPHELD, "--again")
+        self.assertEqual((rc, len(sent)), (0, 1))  # the draw itself says upheld…
+        rec = findings.read(record)
+        text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
+        found = reviews.area_reviews(area)
+        self.assertEqual(len(found), 2)
+        self.assertFalse(
+            reviews.upholding(rec, 1, found, text)
+        )  # …and releases nothing
+        self.assertIn(
+            "contested over 2 draws (1 upheld, 1 rejected",
+            reviews.state(rec, 1, found, text),
+        )
+        code, out = gate(area)
+        self.assertIn("contested over 2 draws", out)
+        # deciding again is a new state: one upheld review on it releases
+        findings.write_decision(
+            record,
+            1,
+            "accepted",
+            "the Conclusion claims the in-sample fit only",
+            "stands",
+        )
+        rc, _, _, sent = run_review(area, UPHELD)
+        self.assertEqual((rc, len(sent)), (0, 1))
+        rec = findings.read(record)
+        self.assertTrue(reviews.upholding(rec, 1, reviews.area_reviews(area), text))
+
     def test_a_report_that_disagrees_with_itself_records_nothing(self):
         area, _ = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
         for bad in (
@@ -329,6 +371,13 @@ class TheFile(unittest.TestCase):
             findings.written_order(path),
             ("".join(path.name.split("-review")[:1]), 1, path.name),
         )
+        # a second review of the minute: numbered before the suffix, read as
+        # a review and never as a findings record
+        path.write_text(text, encoding="utf-8")
+        second = reviews.write_review(area, "opus", "r.toml", "s", "h", "c", [d])
+        self.assertTrue(second.name.endswith("-review-2.toml"), second.name)
+        self.assertEqual([r.path for r in reviews.area_reviews(area)], [path, second])
+        self.assertEqual(findings.area_records(area), [])
 
 
 if __name__ == "__main__":

@@ -42,7 +42,12 @@ claim — the wording of the claim is what separates upheld from rejected
 Conclusion said no more than what the number is). `rejected` and
 `insufficient` never release: the question is whether the reported
 claim stands within the limit, and "the context does not show" is not a
-yes. What is guaranteed
+yes. Every draw on one state counts: once a review of the decision as
+decided and claimed now said anything but `upheld`, no later draw
+releases it (`contested`) — the way out is deciding again, with the
+evidence in the reason, or limiting the claim; `labkit-audit --review`
+refuses another draw on such a state unless asked for one as a
+measurement (`--again`). What is guaranteed
 is the release condition; whether the verdict is right stays the
 reviewer's judgement, as with every agent audit. An exploration first
 (TODO, 2026-10-22): report-check warns on a `stands` nobody upheld, and
@@ -51,7 +56,7 @@ blocks only once the fifth-round replay has been read.
 Reading is loud: a file without its `[review]` table, a verdict outside
 VERDICTS, counts that are not the decisions' raise ReviewError naming the
 file and the field. `findings.area_records` skips these files by their
-suffix (REVIEW_SUFFIX).
+name (REVIEW_NAME).
 """
 
 from __future__ import annotations
@@ -62,7 +67,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import findings
-from labkit.formats.findings import REVIEW_SUFFIX, create_file, written_order
+from labkit.formats.findings import REVIEW_NAME, create_file, written_order
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_check import reported_claim
 from labkit.formats.runs import as_stored
@@ -241,7 +246,10 @@ def area_reviews(area: Path) -> list[Review]:
     folder = area / findings.DIR
     if not folder.is_dir():
         return []
-    paths = sorted(folder.glob(f"*{REVIEW_SUFFIX}"), key=written_order)
+    paths = sorted(
+        (p for p in folder.glob("*.toml") if REVIEW_NAME.search(p.name)),
+        key=written_order,
+    )
     return [read_review(p) for p in paths]
 
 
@@ -262,39 +270,69 @@ def reviews_of(
     ]
 
 
-def latest_verdict(
+def verdicts_on_state(
     record: findings.Record, n: int, reviews: list[Review], text: str
-) -> Decision | None:
-    """The newest review's decision on finding N of RECORD as it is decided
-    now, under the claim the protocol TEXT makes now — a decision whose
+) -> list[Decision]:
+    """Every review's decision on finding N of RECORD as it is decided now,
+    under the claim the protocol TEXT makes now — the decisions whose
     `decision_sha` is the digest of the finding as it stands
-    (`findings.decision_digest`) — or None: never reviewed, reviewed as a
-    different decision (a changed reason, effect or status), or reviewed
-    under another claim."""
+    (`findings.decision_digest`) — oldest first; [] when never reviewed,
+    reviewed as a different decision (a changed reason, effect or status)
+    or under another claim. Every draw on one state counts, not the
+    newest: a contested decision is settled by deciding again (the reason
+    names the evidence, the effect changes, the claim is limited), never
+    by another draw (review 2026-10-22: the newest matching review won,
+    so an unchanged `rejected` could be re-reviewed until an `upheld`
+    came — the borderline baseline decision came back rejected, upheld,
+    upheld and insufficient over four draws)."""
     now = findings.decision_digest(record.findings[n - 1])
-    for r in reversed(reviews_of(record, reviews, text)):
+    out: list[Decision] = []
+    for r in reviews_of(record, reviews, text):
         d = r.of(n)
         if d is not None and d.decision_sha == now:
-            return d
-    return None
+            out.append(d)
+    return out
 
 
 def upholding(
     record: findings.Record, n: int, reviews: list[Review], text: str
 ) -> bool:
-    """Does a review uphold finding N of RECORD as decided now, under the
-    claim TEXT makes now? Only `upheld` releases: `rejected` and
-    `insufficient` do not, nor does a review of a decision or a claim
-    since changed."""
-    d = latest_verdict(record, n, reviews, text)
-    return d is not None and d.verdict == UPHELD
+    """Does the review uphold finding N of RECORD as decided now, under the
+    claim TEXT makes now? Yes only when at least one review judged this
+    state and every one of them said `upheld`: `rejected` and
+    `insufficient` do not release, a later draw does not outvote them,
+    and a review of a decision or a claim since changed says nothing."""
+    verdicts = verdicts_on_state(record, n, reviews, text)
+    return bool(verdicts) and all(d.verdict == UPHELD for d in verdicts)
+
+
+def contested(
+    record: findings.Record, n: int, reviews: list[Review], text: str
+) -> bool:
+    """Has a review of finding N as decided and claimed now said anything
+    but `upheld`? Then another draw on this state settles nothing
+    (`decision_review` refuses one unless asked for a measurement)."""
+    return any(d.verdict != UPHELD for d in verdicts_on_state(record, n, reviews, text))
 
 
 def state(record: findings.Record, n: int, reviews: list[Review], text: str) -> str:
     """The review state of finding N of RECORD in words, for a gate's
-    sentence: `upheld`, `rejected: <why>`, `insufficient: <why>`, or
-    NOT_REVIEWED (never, or not as decided and claimed now)."""
-    d = latest_verdict(record, n, reviews, text)
-    if d is None:
+    sentence: `upheld`, `rejected: <why>`, `insufficient: <why>`,
+    `contested (<counts>): <the first sentence that did not uphold>` when
+    draws on this state disagree, or NOT_REVIEWED (never, or not as
+    decided and claimed now)."""
+    verdicts = verdicts_on_state(record, n, reviews, text)
+    if not verdicts:
         return NOT_REVIEWED
-    return d.verdict if d.verdict == UPHELD else f"{d.verdict}: {d.why}"
+    kinds = {d.verdict for d in verdicts}
+    if kinds == {UPHELD}:
+        return UPHELD
+    first = next(d for d in verdicts if d.verdict != UPHELD)
+    if len(kinds) == 1 and len(verdicts) == 1:
+        return f"{first.verdict}: {first.why}"
+    u, r, i = counts_of(verdicts)
+    return (
+        f"contested over {len(verdicts)} draws ({u} upheld, {r} rejected, "
+        f"{i} insufficient) — another draw settles nothing, deciding again does; "
+        f"{first.verdict}: {first.why}"
+    )

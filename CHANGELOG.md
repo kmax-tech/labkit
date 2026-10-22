@@ -40,9 +40,15 @@ pins (`requirements.txt` / `requirements.lock`).
   line and the Limit lines, `protocol_check.reported_claim`) and each
   decision as it stood (`findings.decision_digest`): only `upheld`
   releases a `stands`; `rejected`, `insufficient`, a review of a decision
-  since changed and one of a claim since rewritten do not. After
-  `rejected` the person decides again first (limits the claim, changes the
-  effect, fixes the fault); a new audit does not by itself settle it. `report-check` names every `stands` of
+  since changed and one of a claim since rewritten do not. Every draw on
+  one state counts (`reviews.contested`): once a review of the decision
+  as decided and claimed now said `rejected` or `insufficient`, no later
+  draw releases it, and `--review` refuses another draw on that state
+  unless `--again` asks for one as a measurement (it never releases).
+  After `rejected` the person decides again first (limits the claim,
+  changes the effect, fixes the fault); a new audit does not by itself
+  settle it. Replayed on the fifth round (two passes, 1.77 USD) and every
+  decision assessed from its sources (`docs/usability/2026-10-22-decision-review-*.md`). `report-check` names every `stands` of
   the covering records that no review upholds, with the review's state —
   a warning while the check is explored (the fifth round's decisions are
   replayed first; a blocker afterwards). A report whose decision lines

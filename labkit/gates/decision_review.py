@@ -34,8 +34,11 @@ a blocker afterwards.
 Exit codes: 0 every decision upheld, 1 at least one not upheld, 2 no
 review — no record, nothing to review in it, the code or the run not what
 the record's auditor saw (the decisions were made on that state; review
-them there or audit again), the backend did not answer, or a report whose
-lines and closing counts disagree (nothing is recorded).
+them there or audit again), a decision already reviewed as decided and
+claimed now and not upheld (another draw settles nothing; `--again` draws
+once more as a measurement, which never releases), the backend did not
+answer, or a report whose lines and closing counts disagree (nothing is
+recorded).
 
 Why (labkit-paper area 09, fifth haiku round, 2026-10-22): 28 audit
 findings, 15 accepted with no action; t5 accepted three BLOCKERs and six
@@ -230,6 +233,27 @@ def _record(area: Path, record: Path | None) -> findings.Record:
     return analysis[-1]
 
 
+def contested_gap(area: Path, protocol: Path, record: findings.Record) -> str | None:
+    """Why another draw on RECORD's decisions settles nothing, or None: a
+    review of a decision as decided and claimed now already said
+    `rejected` or `insufficient` (`reviews.contested`). The sentence names
+    the way out — deciding again — not another call."""
+    text = protocol.read_text(encoding="utf-8")
+    found = reviews.area_reviews(area)
+    held = [
+        n for n, _ in reviewable(record) if reviews.contested(record, n, found, text)
+    ]
+    if not held:
+        return None
+    return (
+        f"{record.path.name}: finding(s) {', '.join(map(str, held))} were reviewed as "
+        f"decided and claimed now and not upheld — another draw settles nothing; "
+        f"decide again (`--decide N …`, the reason naming the evidence, or the "
+        f"effect `not assessable`) or limit the claim, then review; `--again` "
+        f"draws once more as a measurement and never releases"
+    )
+
+
 def review(
     area: Path,
     protocol: Path | None,
@@ -237,12 +261,19 @@ def review(
     model: str,
     timeout: int,
     out: Path | None,
+    *,
+    again: bool = False,
 ) -> int:
     """The command: gather, one call, parse, write the review, print the
-    verdicts. Exit 0 every decision upheld, 1 not every one, 2 no review."""
+    verdicts. Exit 0 every decision upheld, 1 not every one, 2 no review —
+    among the refusals a contested state (`contested_gap`) unless AGAIN."""
     try:
         chosen = the_protocol(area, protocol)
         rec = _record(area, record)
+        if not again:
+            held = contested_gap(area, chosen, rec)
+            if held:
+                raise AuditError(held)
         evidence = gather_review(area, chosen, rec)
         print(
             f"labkit-audit: review · {rec.path.name} · {len(evidence.numbers)} "
@@ -261,6 +292,7 @@ def review(
         AuditError,
         ProtocolChoiceError,
         findings.FindingsError,
+        reviews.ReviewError,
         llm_backends.BackendError,
         llm_backends.PromptTruncated,
         KeyError,  # llm.resolve on an alias models.toml does not know

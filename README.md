@@ -208,7 +208,7 @@ finalize AREA                      # checks after the run
 labkit-audit AREA --mode preflight|analysis|clarity [--model ALIAS]
 labkit-audit AREA --decide N STATUS REASON [--effect E] [--record FILE] # store your decision on a finding (an accepted BLOCKER owes --effect)
 labkit-audit AREA --findings [--record FILE]               # show what there is to decide, no audit
-labkit-audit AREA --review [--record FILE]                 # a second auditor on the `stands` decisions: does the reported claim stand within each limit?
+labkit-audit AREA --review [--record FILE] [--again]       # a second auditor on the `stands` decisions: does the reported claim stand within each limit? (--again: one more draw as a measurement)
 report-check AREA                  # release check before reporting
 report-check --if-reported [--staged] PATH... # check affected reported areas and citing reports
 runlog [AREA] [--wait | --follow]    # inspect or monitor runs

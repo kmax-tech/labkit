@@ -110,9 +110,10 @@ from labkit.formats.scope_sha import AUDIT_SHA, audit_stamp_drift, digest
 DIR = "audits"
 #: the suffix of a failed attempt's file, never of a record of findings
 FAILED_SUFFIX = "-failed.toml"
-#: the suffix of a decision review (`reviews`), written beside the records
-#: and never read as one
-REVIEW_SUFFIX = "-review.toml"
+#: the name of a decision review (`reviews`), written beside the records
+#: and never read as one: `<minute>-review[-<n>].toml` (`create_file`
+#: numbers a second file of the minute before the suffix)
+REVIEW_NAME = re.compile(r"-review(?:-\d+)?\.toml$")
 #: the seconds `labkit-audit` gives its one call by default, and the least a
 #: failed attempt must have been given to count as one (`audit_unavailable`):
 #: an attempt given less time than the audit takes is not an attempt
@@ -712,7 +713,7 @@ def area_records(area: Path) -> list[Record]:
     paths = [
         p
         for p in folder.glob("*.toml")
-        if not p.name.endswith((FAILED_SUFFIX, REVIEW_SUFFIX))
+        if not p.name.endswith(FAILED_SUFFIX) and not REVIEW_NAME.search(p.name)
     ]
     return [read(p) for p in sorted(paths, key=written_order)]
 

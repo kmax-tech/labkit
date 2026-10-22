@@ -175,10 +175,23 @@ Aufruf. Erst die nächste Runde auf einem Release mit diesem Stand.
    ergänzen und erneut prüfen — beides steht in der Ausgabe. Zweiter
    kalter Durchlauf (0,90 USD): 13 von 15 Urteilen gleich, die zwei
    Abweichungen sind dieselbe Randentscheidung (von Hand gerechnete
-   Baseline), keine klare kippte. **Vor dem Blocker noch offen:** die
-   zwölf Ablehnungen unabhängig fachlich bewerten (Leseauftrag des
-   Autors, nicht der Maschine); dann ein Wort in
-   `report_check.review_findings`.
+   Baseline), keine klare kippte. Zweites Review (2026-10-22), umgesetzt:
+   jede Ziehung auf einem Stand zählt (`reviews.contested`) — ein
+   unverändertes `rejected` kommt durch ein späteres `upheld` nicht frei,
+   `--review` verweigert eine weitere Ziehung auf solchem Stand
+   (`--again` nur als Messung, gibt nie frei); der Weg ist die
+   Neuentscheidung mit dem Beleg in der Begründung. Alle 15 Entscheidungen
+   unabhängig an den Quellen bewertet, mit Nachrechnen
+   ([Bewertung](docs/usability/2026-10-22-decision-review-assessment-v5.md)):
+   zwei zu Recht bestätigt, zwölf zu Recht verworfen, das „verified“ der
+   Sortierung (t18) ist falsch — die Blöcke in train.csv sind um eine
+   Zeile verschoben (MC 1–174, Code und Setup sagen 1–173). Die
+   Randentscheidung bündelt zwei Aussagen: Baseline-Wert richtig
+   (nachgerechnet 0,584), Verbesserungsbehauptung „~14 %“ eine von Hand
+   geschriebene Zahl ohne Lauf — Abhilfe ist die Baseline im Lauf, kein
+   feineres Urteil. **Zu entscheiden:** Warnung → Blocker (ein Wort in
+   `report_check.review_findings`); Vorschlag: ja, auf diesem Material
+   hielt kein Urteil in der falschen Richtung.
 3. **Registrierung bei `seconds` an den Commit der ersten Messung
    gehalten** (`report_check.registration_gaps`,
    `answering_run.first_measurement`, `protocol_history.registration_in_commit`,
@@ -207,6 +220,12 @@ Aufruf. Erst die nächste Runde auf einem Release mit diesem Stand.
 Nicht gebaut: das Abschluss-Audit des fertigen Berichts (unten,
 zurückgestellt) und Limit-Zeilen für akzeptierte Preflight-BLOCKER
 (kam in den Runden nicht vor, alle wählten `seconds`).
+
+Für labkit-paper (Bereich 09, eigener Auftrag): t18s Protokoll-Setup
+„MC (1-173), LC (174-433), NC (434-660)“ und die Slices im Code sind um
+eine Zeile verschoben (train.csv: MC 1–174, LC 175–434, NC 435–661); der
+REPORT.md des Versuchs ruht darauf. Wirkung auf 0,7296 im Rauschen, die
+Behauptung „verified“ falsch.
 
 **Für die übrigen Punkte ist keine neue Umsetzungsreihenfolge beschlossen.**
 Die offenen Vertragsfragen und Korrektheitslücken unten sind sichtbar, aber dadurch

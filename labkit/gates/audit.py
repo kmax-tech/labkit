@@ -601,6 +601,12 @@ def main(argv: list[str]) -> int:
         "each limit? writes audits/<minute>-review.toml",
     )
     ap.add_argument(
+        "--again",
+        action="store_true",
+        help="with --review: draw once more on decisions already reviewed and not "
+        "upheld — a measurement of the reviewer's spread; it never releases",
+    )
+    ap.add_argument(
         "--record",
         type=Path,
         help="with --decide, --findings or --review: this record, not the newest",
@@ -773,6 +779,8 @@ def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
         ap.error("--record goes with --decide, --findings or --review")
     if args.effect and args.decide is None:
         ap.error("--effect goes with --decide")
+    if args.again and not args.review:
+        ap.error("--again goes with --review")
 
 
 def _without_audit(args: argparse.Namespace) -> int:
@@ -783,7 +791,13 @@ def _without_audit(args: argparse.Namespace) -> int:
         from labkit.gates.decision_review import review
 
         return review(
-            args.area, args.protocol, args.record, args.model, args.timeout, args.out
+            args.area,
+            args.protocol,
+            args.record,
+            args.model,
+            args.timeout,
+            args.out,
+            again=args.again,
         )
     if args.decide is not None:
         return _decide(args.area, args.decide, args.record, args.effect, args.protocol)
