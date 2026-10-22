@@ -115,7 +115,14 @@ Forschung und Benchmark-Fallliste liegen in
   Schätzer bei `seconds` sein Skelett, der Standard-Satz nennt den Count
   beim Namen; Breaking unter Unreleased. Branch
   `origin/claude/zealous-davinci-3hbhvk` (32 Commits, Basis 2026-10-17,
-  flaches Layout) ist Vorlage, nicht mergebar. Der labkit-paper-Check
+  flaches Layout) ist Vorlage, nicht mergebar. Beschluss 2026-10-22:
+  Option A bevorzugt, erst die Schreibprobe als Entscheidungstor —
+  gelaufen ([Notiz](docs/notes/2026-10-22-kind-writing-probe.md)): Count,
+  zwei Fits (DILI, DKPES) und der Judge sind ohne Sonderregel
+  registrierbar; `kind` bezeichnet, was die berichtete Zahl behauptet,
+  reine Inferenz ohne berichtete Zahl braucht keinen vierten Wert.
+  B und C dort verworfen. **Nächster Schritt: verbindliche
+  Schemaentscheidung des Autors, dann der Bau.** Der labkit-paper-Check
   verlangt die drei Felder bereits; Übernahme ist ein eigener Auftrag.
 - **Protokollprosa außerhalb des geprüften Anspruchs:** Die
   Entscheidungsprüfung bindet die Conclusion (Recorded results und
