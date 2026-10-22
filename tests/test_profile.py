@@ -188,6 +188,46 @@ class TheStampedPrepare(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn("causal 2/2 · not_causal 0/2", r.stdout)  # fmt: skip
 
+    def test_a_fits_audit_prints_the_yield_without_the_text_profile(self):
+        """The estimator's rows carry numeric features and no text: its
+        stamped `--audit` calls no profile (a fit probe on d549696 ended in
+        `item m0 has no 'text'`)."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "lab"
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                self.assertEqual(scaffold.main(["lab", str(root)]), 0)
+                argv = ["exp", "forest", "--repo", str(root), "--cost", "seconds"]
+                self.assertEqual(scaffold.main([*argv, "--kind", "fit"]), 0)
+            raw = root / "data" / "raw" / "points.jsonl"
+            raw.parent.mkdir(parents=True, exist_ok=True)
+            raw.write_text(
+                "".join(
+                    json.dumps({"id": f"m{n}", "features": [n % 2, 1], "gold": n % 2})
+                    + "\n"
+                    for n in range(4)
+                ),
+                encoding="utf-8",
+            )
+            script = root / "experiments" / "01-forest" / "scripts" / "00_prepare.py"
+            script.write_text(
+                script.read_text(encoding="utf-8").replace(
+                    'REPO / "data" / "TODO"', 'REPO / "data" / "raw" / "points.jsonl"'
+                ),
+                encoding="utf-8",
+            )
+            r = subprocess.run(
+                [sys.executable, str(script), "--audit"],
+                capture_output=True,
+                text=True,
+                cwd=root,
+            )
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("rows read                    4", r.stdout)
+            self.assertNotIn("profile", r.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

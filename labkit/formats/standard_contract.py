@@ -244,7 +244,7 @@ COUNT = Skeleton(
 ESTIMATOR = Skeleton(
     instrument="estimator",
     scripts=(
-        ("prepare-script.py.template", "00_prepare.py"),
+        ("prepare-estimator-script.py.template", "00_prepare.py"),
         ("measure-estimator-script.py.template", "01_measure.py"),
         ("analyze-script.py.template", "02_analyze.py"),
     ),

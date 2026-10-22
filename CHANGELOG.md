@@ -66,6 +66,14 @@ pins (`requirements.txt` / `requirements.lock`).
   answering run and the declared-scopes station; the mismatch is the
   blocker intent-check already names. Found by the cold fit probe on
   `d549696`.
+- **The estimator's `00_prepare.py --audit` prints the yields and no
+  text profile.** The estimator skeleton (a fit, or an apply without a
+  model) stamped the text prepare step, whose `--audit` calls
+  `labkit.run.profile`; on numeric features it ended in `item m0 has no
+  'text'`. The skeleton now stamps `prepare-estimator-script.py.template`:
+  fields `id`, `features`, `gold` (the names `01_measure.py` reads),
+  `--audit` the yield of every filter. The model skeleton keeps the
+  profile.
 - **A generated result line written twice is a blocker.** `report-check`
   held the Recorded results line and the Limit lines through a dict of
   the protocol's fields, so of two lines with one label only the last
