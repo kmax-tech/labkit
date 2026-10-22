@@ -409,7 +409,7 @@ def main() -> None:
         measure(cfg, items, OUT, prov={"run": run.run_id})
         evaluate(OUT, cfg, items, run)
         print(f"run: {run.run_id}  → {adopt_command(PROTOCOL, run.run_id)}  "
-              f"(writes the Answer, Result and Runs lines from metrics.json)")
+              f"(writes Recorded results, [result] run and the run entry from metrics.json)")
 
 
 if __name__ == "__main__":

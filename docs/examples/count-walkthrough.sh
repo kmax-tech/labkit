@@ -81,6 +81,7 @@ run "$V/protocol-fill" "$P" type=exploratory \
     "Exclusions / filters=hidden files and nested directories are not counted; no case is dropped" \
     "Unit=one document = one visible regular file directly in a case's directory"
 run "$V/protocol-check" "$P"
+echo "   (every commit below runs the probe's pre-commit hook: protocol-check on staged protocols, report-check on declared results)"
 run git add -A
 run git commit -q -m "Register docs-per-case: the question, scope and unit; the count filled"
 
@@ -112,9 +113,9 @@ path = findings.write(
 print(f"wrote {path} — code {scope_sha.area_stamp(area)[0]}, run {run.name}, no findings")
 EOF
 
-say "7. adoption — the number written back from metrics.json, never retyped; report-check runs on the written protocol"
-run "$V/protocol-fill" "$P" --from-run "$RUN"
+say "7. the Conclusion (the author's sentence, written first), then the adoption — the number written back from metrics.json, never retyped; report-check runs on the written protocol"
 run "$V/protocol-fill" "$P" "Conclusion=The twelve cases hold 3.5 documents each on average; no file was skipped by the visibility filter."
+run "$V/protocol-fill" "$P" --from-run "$RUN"
 grep -n "Recorded results\|Conclusion\|^run = " "$P"
 
 say "8. the report block — the declared result in a note outside the protocol"
@@ -128,13 +129,17 @@ run git add -A
 run git commit -q -m "Adopt $RUN as the result; the report block"
 
 say "10. a generated number retyped — which check refuses it"
+echo "   retyping 3.5 as 3.6 inside REPORT.md's result block"
 sed -i.bak 's/mean_docs_per_case = 3\.5/mean_docs_per_case = 3.6/' REPORT.md && rm REPORT.md.bak
+printf '$ %s\n' "$V/report-check --if-reported REPORT.md"
 if "$V/report-check" --if-reported REPORT.md; then
     echo "UNEXPECTED: the retyped block passed"; exit 1
 fi
 echo "   refused, as it must be: the block differs from what the protocol renders"
 run git checkout -q REPORT.md
+echo "   retyping 3.5 as 3.6 in the protocol's Recorded results line"
 sed -i.bak 's/mean_docs_per_case = 3\.5 (run/mean_docs_per_case = 3.6 (run/' "$P" && rm "$P.bak"
+printf '$ %s\n' "$V/report-check $AREA"
 if "$V/report-check" "$AREA"; then
     echo "UNEXPECTED: the retyped Recorded results passed"; exit 1
 fi

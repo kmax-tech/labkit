@@ -66,7 +66,12 @@ pins (`requirements.txt` / `requirements.lock`).
   finalize, the analysis record as a marked stand-in for the model call,
   adoption, report block, gate), then retypes a generated number in the
   report and in the protocol and shows the refusal each time;
-  `tests/test_workflow_example.py` runs it.
+  `tests/test_workflow_example.py` runs it. A cold reading probe answered
+  the page's four acceptance questions rightly
+  (`docs/usability/2026-10-22-workflow-reading-probe.md`); its stumbles are
+  worked in, and the skeletons' hint after a run names what `--from-run`
+  writes as the command does ("Recorded results, [result] run and the run
+  entry", not "Answer, Result and Runs").
 - **A decision review: `labkit-audit AREA --review [--record FILE]`.** A
   second, cold auditor gets every accepted finding of one analysis record
   whose effect is `stands`, with the person's reason, the protocol (the

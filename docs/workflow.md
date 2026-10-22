@@ -7,8 +7,17 @@ the chain of checks is in [architecture](architecture.md), the promise
 format in [promise-block](promise-block.md), which run answers in
 [protocol-run-binding](protocol-run-binding.md), the lab standard in
 `labkit/docs/standard.md` (`python -m labkit.formats.rules show LAB-nnn`).
-Terms are the README's glossary. The steps are the `seconds` lane's; where
-`minutes`/`hours` owe more, it stands at its place.
+Terms are the README's glossary. The steps are the `seconds` tier's; what
+`minutes`/`hours` owe on top is said inside the step it belongs to.
+
+Five words the page leans on: a **full run** is one started with
+`run_kind="measurement"` (not a probe, not a preparation); a **station** is
+one named check of a gate, told in the gate's output in its order; the
+**release** is the moment a number leaves the area as a reported result
+(the adoption, the stop, the commit); a **hint** is static evidence —
+named, never blocking; the **declared run** (`[result] run` in the head)
+and the **answering run** (the choice below) must be the same run, or
+`report-check` blocks.
 
 An executable walk of these steps on the stamped count task is
 [`examples/count-walkthrough.sh`](examples/count-walkthrough.sh) — run it
@@ -55,7 +64,10 @@ Reads and changes: the protocol's prose fields, by exact label
 (`protocol-fill --list` names what is still open). Which fields: the cut
 of the tier — at `seconds` the question, scope, exclusions and unit; with a
 model also criterion, admissibility condition and data profile
-(`standard_contract.registration_fields`). The commit matters: the release
+(`standard_contract.registration_fields`). `protocol-check` says "all must
+and should fields filled" once these stand; the Conclusion is not among
+them — it is owed after the run (step 7), and `--list` keeps it under
+"after the run — yours". The commit matters: the release
 holds the registration to the commit of the first measurement, not to the
 tree at the time of the run (`report-check` station 1). At `minutes`/`hours`
 the registration becomes a freeze instead: `preflight` clean, the
@@ -84,15 +96,18 @@ finalize experiments/NN-<name>
 ```
 
 Reads: the protocol, every run record of the area, the audit records, git.
-Changes: nothing. Its first station chooses the **answering run** — the
-newest completed run bound to this protocol id that reports an intent key
-(`answering_run.bound_answering_run`); every later station holds that run,
-and so does every other gate: nobody chooses twice. Then: the declared
-run names it (or none yet), its rows come from it, promises against
-metrics, declared scopes unchanged, open fields, the source frozen in the
-run and tracked in git (`seconds`), the area test, the denominators, the
-audit records — an audit record of a deleted run is a blocker. Clean
-means the run can carry a number; it does not release one.
+Changes: nothing. Its first station chooses the **answering run**
+(`answering_run.bound_answering_run`): the newest completed run bound to
+this protocol id that reports an intent key — a count registers no ids,
+so for a count it is simply the newest completed bound run. Every later
+station holds that run, and so does every other gate: nobody chooses
+twice. Then the stations: the head's declared run is the answering run
+(or no run is declared yet); the output rows were written by it; the
+promises against its metrics; the declared scopes unchanged since it
+ran; no field left open; at `seconds` the source frozen in the run and
+source and output tracked in git; the area test; the denominators; the
+audit records — one of a deleted run is a blocker. Clean means the run
+can carry a number; it does not release one.
 
 ## 5. The analysis audit and the decisions
 
@@ -138,16 +153,19 @@ with `stands` owes no review yet; `report-check` names it as a warning.
 protocol-fill PROTOCOL-<name>.md --from-run <run_id>
 ```
 
-Reads: the run's `metrics.json`, the covering audit records. Changes: **the
-protocol file only** — the head's `[result] run = "<run_id>"` (the one
-declaration that this protocol reports a number: the **declared run**),
-the `Recorded results` line (every metric key and value as recorded, the
-run id, a note on the limits), one `Limit (audit <record> #N)` line per
-decided limit, and the run's entry in the protocol run list. Before
-writing it runs `report-check` on the written text and restores the file
-on a blocker: a result adopted this way has passed every check. The
-`Conclusion` stays the author's sentence; `--render` writes the generated
-lines again after a change.
+Reads: the run's `metrics.json` and the covering audit records (the
+analysis records whose code, promise and run stamps are the area's now).
+Changes: **the protocol file only** — the head's `[result] run =
+"<run_id>"` (the one declaration that this protocol reports a number: the
+**declared run**), the `Recorded results` line (every metric key and value
+as recorded, the run id, a note on the limits), one `Limit (audit <record>
+#N)` line per decided limit, and the run's entry in the protocol run
+list; the command names them as "Recorded results, [result] run, Runs".
+Before writing it runs `report-check` on the written text and restores
+the file on a blocker: a result adopted this way has passed every check.
+The `Conclusion` is the author's sentence, written before this step (the
+walkthrough does so); `--render` writes the generated lines again after
+a change.
 
 ## 8. The report block — the number outside the protocol
 
@@ -164,7 +182,8 @@ render — the run's metrics, the records' decided limits — and the
 protocol's whole chain holds. What it does not: the prose beside it. A
 count or median the run never stored has no source; numbers outside the
 block are named as unsourced (a hint), and whether the prose reads the
-number rightly stays the audit's and the reader's judgement.
+number rightly, and whether a decided limit is enough, stay the audit's
+and the reader's judgement.
 
 ## 9. The gate — at the stop and the commit
 

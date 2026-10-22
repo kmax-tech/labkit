@@ -288,7 +288,7 @@ class Lanes:
             self.evaluate(out, cfg, jobs, run)
             if repeat is None:
                 print(f"run: {run.run_id}  → {adopt_command(self.protocol, run.run_id)}  "
-                      f"(writes the Answer, Result and Runs lines from metrics.json)")  # fmt: skip
+                      f"(writes Recorded results, [result] run and the run entry from metrics.json)")  # fmt: skip
             else:
                 print(
                     f"repeat of {repeat}: {run.run_id} → scripts/02_analyze.py --draws"
