@@ -212,6 +212,28 @@ class StampFlags(unittest.TestCase):
             usability.stamp_flags("count", "unset", False), (None, "count", False)
         )
 
+    def test_a_fit_is_staged_as_a_fit_without_a_model(self):
+        self.assertEqual(
+            usability.stamp_flags("fit", None, False), ("seconds", "fit", False)
+        )
+
+    def test_the_fit_data_are_planted_from_the_operators_file_or_refused(self):
+        root = Path(tempfile.mkdtemp())
+        with self.assertRaisesRegex(console.Refused, "--data <train.csv>"):
+            usability.plant_dili(root, None)
+        bad = root / "other.csv"
+        bad.write_text("smiles,label\nC,1\n", encoding="utf-8")
+        with self.assertRaisesRegex(console.Refused, "standardised_smiles"):
+            usability.plant_dili(root, bad)
+        good = root / "train.csv"
+        good.write_text(
+            ",PubChem_CID,Compound Name,standardised_smiles,vDILIConcern,cluster\n"
+            "0,1,x,CCO,vNo-DILI-Concern,0\n",
+            encoding="utf-8",
+        )
+        usability.plant_dili(root, good)
+        self.assertEqual((root / usability.FIT_DATA).read_bytes(), good.read_bytes())
+
     def test_a_count_with_a_model_is_staged_as_an_apply(self):
         """A model in the loop judges: `--model` on the count task stamps
         `kind = "apply"`, never a count with a `[model]` table."""
@@ -238,6 +260,7 @@ class TierSentence(unittest.TestCase):
         for name in (
             "usability-task-count.md.template",
             "usability-task-judge.md.template",
+            "usability-task-fit.md.template",
         ):
             with self.subTest(name):
                 self.assertIn("<tier>", (here / name).read_text(encoding="utf-8"))

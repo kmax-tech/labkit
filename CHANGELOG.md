@@ -94,6 +94,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **A fit probe for the usability harness.** `usability stage <dir> --task
+  fit --data <train.csv>` stamps a `kind = "fit"` area at seconds with the
+  estimator skeleton and plants the DILI molecules the operator hands in
+  (columns `standardised_smiles`, `vDILIConcern`; the package ships no
+  benchmark data) with a task sheet asking for the registered lane's
+  out-of-fold accuracy under `c1_score`; the score reads it as a model's
+  number (present, within [0, 1], the null lane reported). The first cold
+  probe of the fit lane after standard 0.22.
 - **`docs/workflow.md` and an executable count walkthrough.** The steps
   from a registered question to a kept number, one section each: the
   command, what it reads and changes, what must hold before it, what a

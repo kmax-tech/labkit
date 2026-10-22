@@ -165,6 +165,14 @@ TASKS = {
         "metric_key": "c1_accuracy",
         "template": "usability-task-judge.md.template",
     },
+    # a fit: the DILI molecules of labkit-paper area 09 (ScienceAgentBench
+    # task 18), handed in at `stage --data` — the operator's file, not the
+    # package's (2026-10-22, the first probe of the fit lane)
+    "fit": {
+        "area": "dili-forest",
+        "metric_key": "c1_score",
+        "template": "usability-task-fit.md.template",
+    },
 }
 #: (cost tier, kind, model in the loop) per task: what the house route
 #: stamps for it (`labkit-init exp --cost seconds --kind …`, plus `--model`
@@ -174,7 +182,11 @@ TASKS = {
 TASK_STAMP: dict[str, tuple[str, str, bool]] = {
     "count": ("seconds", "count", False),
     "judge": ("seconds", "apply", True),
+    "fit": ("seconds", "fit", False),
 }
+#: where the fit task's data land in the probe, and the columns the sheet names
+FIT_DATA = Path("data") / "raw" / "dili" / "train.csv"
+FIT_COLUMNS = ("standardised_smiles", "vDILIConcern")
 LOG_TAGS = ("read", "run", "edit", "unsure", "gate")
 LOG_LINE = re.compile(r"^(\d\d):(\d\d):(\d\d)\s*·\s*(\w+)\s*·\s*(.*)$")
 #: a `read` of these is the agent learning the contract from the wrong place
@@ -326,6 +338,41 @@ def plant_claims(root: Path) -> None:
     )
 
 
+def plant_dili(root: Path, data: Path | None) -> None:
+    """The fit task's molecules: DATA (the operator's `train.csv`) copied to
+    FIT_DATA. Refuses a missing file and one without the columns the task
+    sheet names — a probe staged on other data measures another task."""
+    if data is None:
+        raise console.Refused(
+            "usability",
+            f"--task fit needs --data <train.csv> (the DILI molecules: columns "
+            f"{', '.join(FIT_COLUMNS)}); the package ships no benchmark data",
+        )
+    if not data.is_file():
+        raise console.Refused("usability", f"--data {data}: no such file")
+    header = data.read_text(encoding="utf-8").splitlines()[:1]
+    missing = [c for c in FIT_COLUMNS if not header or c not in header[0].split(",")]
+    if missing:
+        raise console.Refused(
+            "usability",
+            f"--data {data}: column(s) {', '.join(missing)} not in the header",
+        )
+    dest = root / FIT_DATA
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(data.read_bytes())
+
+
+def plant_task(root: Path, task: str, data: Path | None) -> None:
+    """The fixture of TASK into the probe: the count's cases, the fit's
+    molecules (DATA, the operator's file), the judge's claims."""
+    if task == "count":
+        plant_fixture(root)
+    elif task == "fit":
+        plant_dili(root, data)
+    else:
+        plant_claims(root)
+
+
 def recount(root: Path) -> float:
     """The truth, from the planted files — not from a number on disk."""
     rows = [
@@ -462,10 +509,12 @@ def stage(
     cost: str | None = None,
     task: str = "count",
     model: bool = False,
+    data: Path | None = None,
 ) -> int:
     """Side effects: see module docstring. `task` picks the fixture, the task
     sheet and the default stamp (TASKS); `cost` overrides the stamped tier
-    ("unset" leaves it to the agent), `model` adds the model skeleton."""
+    ("unset" leaves it to the agent), `model` adds the model skeleton; the
+    fit task plants DATA (`plant_dili`)."""
     spec = TASKS[task]
     cost, kind, model = stamp_flags(task, cost, model)
     area_name, metric_key = spec["area"], spec["metric_key"]
@@ -503,10 +552,7 @@ def stage(
         raise console.Refused(
             "usability", f"expected one stamped area *-{area_name}, got {areas}"
         )
-    if task == "count":
-        plant_fixture(root)
-    else:
-        plant_claims(root)
+    plant_task(root, task, data)
     # the labkit of the staging interpreter, so a probe measures this checkout
     _probe_venv(root, venv, _labkit_spec(Path(sys.executable)))
     if venv is None:
@@ -690,7 +736,14 @@ def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
     with tempfile.TemporaryDirectory() as tmp:
         fresh = Path(tmp) / root.name  # the stamp names the repo after its dir
         with contextlib.redirect_stdout(sys.stderr):  # the stamp's log
-            stage(fresh, root / ".venv", cost=cost, task=probe.task, model=model)
+            stage(
+                fresh,
+                root / ".venv",
+                cost=cost,
+                task=probe.task,
+                model=model,
+                data=root / FIT_DATA if probe.task == "fit" else None,
+            )
         files = _sh(["git", "ls-files"], fresh).split("\n")
         done = restamp_files(fresh, root, [f for f in files if f], kept_paths)
         fresh_probe = read_probe(sidecar(fresh, "probe.json"))

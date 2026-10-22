@@ -77,8 +77,14 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     s.add_argument(
         "--task",
         choices=sorted(TASKS),
-        help="which task sheet and fixture: count (deterministic, the default) "
-        "or judge (a model)",
+        help="which task sheet and fixture: count (deterministic, the default), "
+        "judge (a model used unchanged) or fit (a model fitted here; --data)",
+    )
+    s.add_argument(
+        "--data",
+        metavar="PATH",
+        help="with --task fit: the DILI train.csv to plant (columns "
+        "standardised_smiles, vDILIConcern); the package ships no benchmark data",
     )
     lg = sub.add_parser(
         "log",
@@ -223,7 +229,12 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         if args.keep:
             ap.error("--keep belongs to --restamp")
         return stage(
-            root, venv, cost=args.cost, task=args.task or "count", model=args.model
+            root,
+            venv,
+            cost=args.cost,
+            task=args.task or "count",
+            model=args.model,
+            data=Path(args.data).resolve() if args.data else None,
         )
     if args.archive and not args.transcript:
         ap.error("--archive needs --transcript")
