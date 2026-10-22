@@ -134,10 +134,67 @@ zitierten Lauf deklariert, geht mit durch die Stationen, auch ohne
 Block. Am t5-Versuch (Kopie, Host-labkit) nennt der Hinweis alle
 erfundenen Zahlen (28, 25, 0.15/0.686, 0.449), aber auf 29 Zeilen
 zusammen mit den richtigen — als Hinweis brauchbar, als Signal laut.
-Offen: (a) ob ein Bericht, der ein deklariertes Ergebnis zitiert, einen
-Block *schulden* soll (heute Warnung); (b) der Stop-Hook zeigt Hinweise
+Offen: (a) erledigt, siehe unten; (b) der Stop-Hook zeigt Hinweise
 nur neben einem Blocker, sichtbar sind sie beim Commit und im direkten
 Aufruf. Erst die nächste Runde auf einem Release mit diesem Stand.
+
+**Zweiter Schritt aus der fünften Runde (entschieden und umgesetzt
+2026-10-22, unreleased; `0d17944`, `8e05e84`, `0026349`, `366d38c`):**
+
+1. **Block als Pflicht.** Ein geänderter Bericht, der einen Lauf zitiert,
+   den ein Protokoll als Ergebnis deklariert, ohne den Block dieses
+   Protokolls → Blocker mit fertigem `protocol-fill <P> --into <R>`
+   (`report_blocks.blocks_owed`). Zitiert er einen Lauf, den kein
+   Protokoll deklariert, bleibt es eine Warnung (nichts deklariert, nichts
+   zu schreiben). Am t5-Bericht geprüft: der Blocker nennt Zeile 38.
+2. **Entscheidungsprüfung** (`labkit-audit AREA --review [--record R]`,
+   `gates/decision_review`, `formats/reviews`, Agent
+   `decision-review.agent.md`): ein zweiter Auditor bekommt je Record alle
+   akzeptierten Befunde mit Wirkung `stands`, Begründung, Protokoll
+   (Registrierung und berichteter Anspruch), die in den Befunden genannten
+   Dateien aus dem Snapshot des Records und das dem Audit Gezeigte vom
+   Lauf (beides an `scope_sha`/`shown_sha` gehalten), und urteilt je
+   Entscheidung `upheld` / `rejected` / `insufficient`. Record
+   `audits/<minute>-review.toml`, gebunden an den Entscheidungsstand
+   (`findings.decision_digest`); nur `upheld` gibt frei. `report-check`
+   nennt jedes nicht bestätigte `stands` als **Warnung** (Erprobung).
+   Erprobung an t3, t5, t18 gelaufen
+   ([Bericht](docs/usability/2026-10-22-decision-review-replay-v5.md)):
+   15 Entscheidungen, 2 bestätigt (CV-RMSE als Messwert berichtet; Marge
+   über der Mehrheitsbaseline), 12 verworfen (alle „Finding noted“, die
+   drei t5-BLOCKER, der Winner's-curse-BLOCKER), 1 `insufficient` — das
+   behauptete „verified“ der Sortierung ohne Beleg auf der Seite. Vier
+   Aufrufe, 0,87 USD. **Zu entscheiden:** die Warnung wird Blocker
+   (ein Wort in `report_check.review_findings`); davor (a) ob `rejected`
+   zur Neuentscheidung oder zum neuen Audit führt (heute beides erlaubt),
+   (b) die Prosa hat keinen Digest — eine nach der Prüfung umgeschriebene
+   Conclusion öffnet nichts (wie „Protokollprosa“ unten).
+3. **Registrierung bei `seconds` an den Commit der ersten Messung
+   gehalten** (`report_check.registration_gaps`,
+   `answering_run.first_measurement`, `protocol_history.registration_in_commit`,
+   `runs.recorded_commit`): Protokoll nicht im Commit des ersten vollen
+   Laufs, oder die Felder der Lane dort nicht geschrieben → Blocker;
+   außerhalb eines Repos Warnung wie bei der Provenienz. Grenze, ausdrücklich:
+   die Felder sind die der Lane (`registration_fields`) — ohne `[model]`
+   nur die Frage. t5 und t18 (RandomForest, kein `[model]`) hätten diese
+   Prüfung bestanden; dass ein klassisches ML-Experiment Kriterium und
+   Zulassung schuldet, ist die offene Instrument-Frage (`kind`, Tabelle
+   unten), nicht die Commit-Bindung. Der labkit-paper-Standard-Check
+   verlangt die drei Felder auf jeder Stufe; labkit tut das erst nach
+   dieser Entscheidung. An den Kopien nicht nachstellbar (ihre
+   committeten Köpfe tragen Standard 0.20, den dieser Stand nicht liest;
+   die Meldung sagt das), Zwillinge in `tests/test_registration_committed.py`.
+4. **Gelöschte Läufe:** `finalize` blockt auf jedem Analyse-Record, dessen
+   `run_id` kein `runs/<id>/` mehr hat (`findings.records_of_gone_runs`).
+   Am t18-Versuch geprüft: drei Blocker für die drei Records der mit
+   `rm -rf runs/…` gelöschten Läufe; vorher stand dort „every finding
+   decided“. Nicht gebaut: ein Pre-Run-Hook, der `rm` unter `runs/`
+   verweigert — zweite Prüfung auf denselben Fehler, ohne Regel, die Läufe
+   für unlöschbar erklärt; erst bei Wiederholung.
+
+Nicht gebaut: das Abschluss-Audit des fertigen Berichts (unten,
+zurückgestellt) und Limit-Zeilen für akzeptierte Preflight-BLOCKER
+(kam in den Runden nicht vor, alle wählten `seconds`).
 
 **Für die übrigen Punkte ist keine neue Umsetzungsreihenfolge beschlossen.**
 Die offenen Vertragsfragen und Korrektheitslücken unten sind sichtbar, aber dadurch
@@ -169,9 +226,11 @@ Auftrag. Forschung und Benchmark-Fallliste liegen in
   als Zwilling testen. Eingetreten 2026-10-22 (labkit-paper Bereich 09,
   fünfte Haiku-Runde, `REPORT.md`): die begrenzte Form steht in der
   Reihenfolge oben (nur geänderte zitierende Dateien), das Verfolgen
-  aller Zitate bleibt zurückgestellt.
+  aller Zitate bleibt zurückgestellt. Seit `8e05e84` schuldet ein
+  zitierender Bericht den Block des deklarierenden Protokolls.
 - **`stands` auf einem akzeptierten BLOCKER — Entscheidungsprüfung
-  erproben (entschieden 2026-10-22).** Heute genügt eine Begründung
+  (entschieden 2026-10-22, gebaut und erprobt `366d38c`; Stand und
+  offene Entscheidung in der Reihenfolge oben, Punkt 2).** Heute genügt eine Begründung
   (`findings.Finding.effect_owed`); in Bereich 09 (fünfte Runde)
   akzeptierte t5 drei BLOCKER mit `stands`, bei zweien ohne jede
   Handlung (`audit_findings_attempts_pilot_haiku_v5.tsv`). `stands`
@@ -186,15 +245,19 @@ Auftrag. Forschung und Benchmark-Fallliste liegen in
   die Prüfung an genau den geprüften Entscheidungsstand (Befund,
   Begründung, Wirkung, Snapshot); eine geänderte Entscheidung macht sie
   wieder fällig. Garantiert ist die Freigabebedingung, die fachliche
-  Richtigkeit bleibt Audit-Urteil. Erst als Erprobung: an den
-  `stands`-Entscheidungen der fünften Runde nachspielen (t3, t5, t18),
-  bevor ein Gate darauf blockt.
+  Richtigkeit bleibt Audit-Urteil. Erprobung an den
+  `stands`-Entscheidungen der fünften Runde (t3, t5, t18) gelaufen, das
+  Gate warnt noch; Blocker nach Entscheidung.
 - **Abschluss-Audit des fertigen Berichts — zurückgestellt, offene
   Lücke.** Kein Audit sieht den fertigen Bericht; falsch abgeleitete
   Zahlen (t18: Baselines von Hand aus falschen Klassenzahlen) erfasst
   nur ein solches Audit (Kosten ×2 bei `seconds`). Auslöser: die
-  nächste Runde zeigt, dass erzeugte Blöcke und der Prosa-Hinweis
-  (Reihenfolge oben) solche Zahlen nicht abfangen.
+  nächste Runde zeigt, dass erzeugte Blöcke, Block-Pflicht, Prosa-Hinweis
+  und Entscheidungsprüfung (Reihenfolge oben) solche Zahlen nicht
+  abfangen. Beobachtet 2026-10-22: die Entscheidungsprüfung rechnete
+  t18s Baselines aus den Klassenzahlen der Zeilen nach und bestätigte
+  die Marge — ein Teil dessen, was das Abschluss-Audit leisten sollte,
+  ohne zweites Audit.
 
 ## Architektur und Lesbarkeit — notiert, nicht geplant
 
