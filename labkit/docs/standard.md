@@ -309,16 +309,16 @@ evidence file under the same ID (top of this document).*
   `Limit (audit <record> #N)` line and a note in the Answer, both held
   to the record by report-check;
   whether the limit is enough stays a reader's judgement. The raw report
-  stays in the scratchpad (LAB-012 Protocol is content), and the result
-  goes in ONE line in the head; the check value in it is the stamp
+  stays in the scratchpad (LAB-012 Protocol is content), and the head
+  names the decided record by its file name; the record carries the stamp
   (LAB-019 The stamp covers everything that determines the number):
 
   ```toml
-  preflight_audit = "2026-09-08 · scope sha 3f9a1c2b7e04 (scripts 4 · analysis 1 · lib/bt.py lib/stats.py · labkit==0.7.2) · 4 findings (2 blockers fixed, 1 warning accepted: <reason>, 1 dismissed: <reason>)"
+  preflight_audit = "2026-09-08T14-12-preflight.toml"
   ```
 
-  **The line is checked, not believed.** `runlog` refuses a full run
-  if its `scope sha` is not the stamp the code has
+  **The name is checked, not believed.** `runlog` refuses a full run
+  if the named record's `scope_sha` is not the stamp the code has
   now (LAB-019 The stamp covers everything that determines the number) — the code changed after the audit, or the
   line was written without an audit — and unless a preflight audit record
   (`audits/*-preflight.toml`, written by `labkit-audit`) carries that same
@@ -391,9 +391,9 @@ evidence file under the same ID (top of this document).*
   freezing, LAB-014 One fully rendered example pair per gold class), not a
   second audit.
 
-  **Refine by count, not by deadline:** the protocol lines carry
-  findings/accepted/dismissed and are greppable
-  (`rg -o 'preflight_audit = .*' experiments/*/PROTOCOL-*.md`). After ten audits
+  **Refine by count, not by deadline:** the records carry status and
+  reason per finding and are greppable
+  (`rg -h '^status' experiments/*/audits/*-preflight.toml`). After ten audits
   the table is refined based on that rate — a class that produces "dismissed"
   ten times is a false-alarm generator and is removed.
 

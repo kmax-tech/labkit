@@ -30,7 +30,7 @@ from labkit.formats import findings, promises, scope_sha  # noqa: E402
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
-AUDIT = "2026-10-05 · scope sha abc · 0 findings"
+AUDIT = "2026-10-05T10-00-preflight.toml"  # a record name; no such record is written
 FROZEN = head(cost="hours", frozen=True, preflight_audit=AUDIT, model="haiku")
 UNFROZEN = head(
     cost="hours",
@@ -96,13 +96,9 @@ class FreezeGate(unittest.TestCase):
         (self.tmp / "scripts" / "m.py").write_text("x = 1\n")
         scope_file(self.tmp)  # part of the stamped code, written before the stamp
         sha = scope_sha.area_stamp(self.tmp)[0]
-        text = head(
-            cost="hours",
-            frozen=True,
-            preflight_audit=f"2026-10-07 · scope sha {sha} · 0 findings",
-        )
+        text = head(cost="hours", frozen=True, preflight_audit=AUDIT)
         if record:
-            findings.write(
+            written = findings.write(
                 self.tmp,
                 "preflight",
                 "opus",
@@ -111,6 +107,7 @@ class FreezeGate(unittest.TestCase):
                 (0, 0, 0),
                 [],
             )
+            text = head(cost="hours", frozen=True, preflight_audit=written.name)
         return text
 
     def test_full_run_on_frozen_protocol_starts(self):
@@ -137,18 +134,19 @@ class FreezeGate(unittest.TestCase):
         """The line's sha is the code's now, but no preflight audit saw that
         code: after fixing the findings a cold agent stamped the new sha
         without a second audit (cloud judge probe, 2026-10-14)."""
-        area = self._area(self._audited(record=False))
-        with self.assertRaises(SystemExit) as cm:
-            with contextlib.redirect_stdout(io.StringIO()):
-                runlog.Run("t", {}, area, run_kind="measurement")
-        self.assertIn("no preflight audit saw the area as it is now", str(cm.exception))
-        findings.write(area, "preflight", "opus", "0123456789ab", "b", (0, 0, 0), [])
+        text = self._audited(record=False)
+        old = findings.write(
+            self.tmp, "preflight", "opus", "0123456789ab", "b", (0, 0, 0), []
+        )
+        area = self._area(head(cost="hours", frozen=True, preflight_audit=old.name))
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
                 runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn(
-            "audited: code 0123456789ab, promises b", str(cm.exception)
+            f"the record {old.name} saw scope sha 0123456789ab, the code now stamps",
+            str(cm.exception),
         )  # the old audit, named
+        del text
 
     def test_a_promise_rewritten_after_the_audit_is_refused(self):
         """The code is the audited code, the record is decided — and a
@@ -161,14 +159,13 @@ class FreezeGate(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
                 runlog.Run("t", {}, area, run_kind="measurement")
-        self.assertIn("no preflight audit saw the area as it is now", str(cm.exception))
-        self.assertIn("promises ", str(cm.exception))
+        self.assertIn("saw the promise block", str(cm.exception))
         self.assertFalse((area / "runs").exists())
 
     def test_an_open_finding_of_the_covering_audit_is_refused(self):
         text = self._audited(record=False)
         sha = scope_sha.area_stamp(self.tmp)[0]
-        findings.write(
+        open_ = findings.write(
             self.tmp,
             "preflight",
             "opus",
@@ -177,18 +174,35 @@ class FreezeGate(unittest.TestCase):
             (0, 1, 0),
             [("WARNING", "WARNING · x")],
         )
-        area = self._area(text)
+        area = self._area(head(cost="hours", frozen=True, preflight_audit=open_.name))
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
                 runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("still `open`", str(cm.exception))
 
-    def test_an_audit_line_without_a_stamp_is_refused(self):
-        area = self._area(FROZEN)  # "scope sha abc" is no stamp
+    def test_a_named_record_that_does_not_exist_is_refused(self):
+        area = self._area(FROZEN)  # AUDIT names a record nobody wrote
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
                 runlog.Run("t", {}, area, run_kind="measurement")
-        self.assertIn("names no `scope sha", str(cm.exception))
+        self.assertIn("there is no such record", str(cm.exception))
+
+    def test_a_line_of_the_old_form_names_no_record(self):
+        """Until 0.103.0 the field was `<date> · scope sha <12 hex> · N
+        findings`; it is read as naming no record, with the honest ways."""
+        sha = (
+            scope_sha.area_stamp(self.tmp)[0]
+            if (self.tmp / "scripts").is_dir()
+            else "0" * 12
+        )
+        text = head(
+            cost="hours",
+            frozen=True,
+            preflight_audit=f"2026-10-07 · scope sha {sha} · 0 findings",
+        )
+        with self.assertRaises(SystemExit) as cm:
+            self._start(text, run_kind="measurement")
+        self.assertIn("names no record", str(cm.exception))
 
     def test_a_waived_audit_is_refused_at_hours_and_names_the_honest_ways(self):
         """Until 0.99.0 `n/a — <reason>` passed as a visible decision; third
@@ -204,7 +218,7 @@ class FreezeGate(unittest.TestCase):
         msg = str(cm.exception)
         self.assertIn("nobody waives their own", msg)
         self.assertIn("labkit-audit <area> --mode preflight", msg)
-        self.assertIn("the cost tier is wrong, not the line", msg)
+        self.assertIn("the cost tier is wrong, not the field", msg)
         self.assertFalse((self.tmp / "runs").exists())
 
     def test_a_waived_audit_at_seconds_is_no_finding(self):

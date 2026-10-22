@@ -7,6 +7,26 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ## Unreleased
 
+### Breaking
+
+- **`preflight_audit` names the decided record, not a line.** The head
+  field is the file name of the decided preflight record under the area's
+  `audits/` (`preflight_audit = "2026-09-08T14-12-preflight.toml"`, as
+  `labkit-audit --mode preflight` prints it when it writes one); `""`
+  until then and at `seconds`. The gates read the record it names
+  (`findings.audit_record_gap`: no such record, another mode, other code
+  or another promise block than the area carries now, a finding still
+  open — each a refusal at the run and a blocker in `preflight` once
+  frozen; `n/a` or any other text names no record and is refused as
+  before). A line of the old form (`<date> · scope sha <12 hex> · N
+  findings`) is read as naming no record: 0.103.0 is the last version
+  that reads it; a frozen protocol moves by writing its record's name
+  into the field. `scope_sha.AUDIT_SHA`, `scope_sha.audit_stamp_drift`,
+  `findings.waived_audit_gap` and `findings.audit_line_gap` are gone. Why:
+  the last machine-read text inside a TOML value (review 2026-10-22) —
+  the record carries its stamp, its date and its decisions, so the head
+  copied a sha a regex had to find again.
+
 ### Fixed
 
 - **A generated result line written twice is a blocker.** `report-check`

@@ -865,15 +865,13 @@ class Estimator(unittest.TestCase):
         with contextlib.redirect_stdout(buf):
             rc = preflight.main([str(self.area)])
         self.assertEqual(rc, 0, buf.getvalue())
-        # the preflight audit, decided; its line into the head; the freeze
-        sha = lab.record(self.area, self.protocol, sc.PREFLIGHT_AUDIT)
+        # the preflight audit, decided; its record named in the head; the freeze
+        lab.record(self.area, self.protocol, sc.PREFLIGHT_AUDIT)
+        (record,) = (self.area / "audits").glob("*-preflight.toml")
         _replace(
             self.protocol,
             [
-                (
-                    'preflight_audit = ""',
-                    f'preflight_audit = "2026-10-19 · scope sha {sha[:12]} · 0 findings"',
-                ),
+                ('preflight_audit = ""', f'preflight_audit = "{record.name}"'),
                 ("frozen = false", "frozen = true"),
             ],
         )

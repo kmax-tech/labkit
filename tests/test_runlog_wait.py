@@ -242,13 +242,10 @@ class TestLongGate(unittest.TestCase):
             # different reason than the one this test is about.
             scope_file(Path(d))  # the frozen fixture's block names it
             sha = scope_sha.area_stamp(Path(d))[0]
-            text = head(
-                frozen=True,
-                preflight_audit=f"2026-10-05 · scope sha {sha} · 0 findings",
-            )
-            # a decided record of this code and these promises: since 0.99.0
-            # the line names an audit, `n/a` is refused at minutes/hours
-            findings.write(
+            text = head(frozen=True, preflight_audit="x")
+            # a decided record of this code and these promises, named in the
+            # head: since 0.99.0 the field names an audit, `n/a` is refused
+            record = findings.write(
                 Path(d),
                 "preflight",
                 "opus",
@@ -257,6 +254,7 @@ class TestLongGate(unittest.TestCase):
                 (0, 0, 0),
                 [],
             )
+            text = head(frozen=True, preflight_audit=record.name)
             Path(d, "PROTOCOL-gate.md").write_text(text, encoding="utf-8")
             return subprocess.run(
                 [sys.executable, "-c", code, str(Path(__file__).resolve().parents[1])],

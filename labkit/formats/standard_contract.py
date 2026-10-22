@@ -261,8 +261,8 @@ def describe(cost: str | None, model: bool) -> list[str]:
     before = (
         "the registration written: " + ", ".join(registration_fields(model))
         if ln.registration
-        else "`preflight` clean, the preflight audit decided and its `scope sha` "
-        "in the head, `frozen = true`"
+        else "`preflight` clean, the preflight audit decided and its record named "
+        "in the head (`preflight_audit`), `frozen = true`"
     )
     return [
         f"cost = {ln.tier!r}"

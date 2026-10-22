@@ -20,7 +20,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import findings, protocol_block, protocol_history, protocol_report  # noqa: E402
+from labkit.formats import (
+    scope_sha,
+    findings,
+    promises,
+    protocol_block,
+    protocol_history,
+    protocol_report,
+)  # noqa: E402
 from labkit.gates import preflight  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
@@ -147,26 +154,75 @@ class WaivedAudit(unittest.TestCase):
         return p
 
     def test_the_gap_names_the_honest_ways_and_offers_no_word(self):
-        gap = findings.waived_audit_gap(
-            "n/a — RF model training does not require external audit"
+        text = self._protocol("minutes", "n/a — x").read_text(encoding="utf-8")
+        gap = findings.audit_record_gap(
+            self.area, "n/a — RF model training does not require external audit", text
         )
         assert gap is not None
+        self.assertIn("names no record", gap)
         self.assertIn("nobody waives their own", gap)
         self.assertIn("labkit-audit <area> --mode preflight", gap)
         self.assertIn("records the failed attempt", gap)
-        self.assertIn("the cost tier is wrong, not the line", gap)
-        self.assertIsNone(
-            findings.waived_audit_gap("2026-10-07 · scope sha abc · 0 findings")
-        )
+        self.assertIn("the cost tier is wrong, not the field", gap)
 
-    def test_audit_line_gap_reads_waived_then_drift_then_coverage(self):
-        text = self._protocol("minutes", "n/a — x").read_text(encoding="utf-8")
-        gap = findings.audit_line_gap(self.area, "n/a — x", text)
-        self.assertIn("nobody waives", gap or "")
-        gap = findings.audit_line_gap(
+    def test_audit_record_gap_reads_name_existence_code_block_then_decisions(self):
+        """The record named in the head, held step by step: a name of
+        another form, a record nobody wrote, one of other code, one of
+        another promise block, one with an open finding, and the twin."""
+        text = self._protocol("minutes", "x").read_text(encoding="utf-8")
+        block = promises.block_stamp(text)
+        gap = findings.audit_record_gap(
             self.area, "2026 · scope sha 000000000000 · 0", text
         )
+        self.assertIn("names no record", gap or "")
+        gap = findings.audit_record_gap(
+            self.area, "2026-10-07T10-00-preflight.toml", text
+        )
+        self.assertIn("there is no such record", gap or "")
+        other = findings.write(
+            self.area, "preflight", "opus", "000000000000", block, (0, 0, 0), []
+        )
+        gap = findings.audit_record_gap(self.area, other.name, text)
         self.assertIn("the code now stamps", gap or "")
+        sha = scope_sha.area_stamp(self.area)[0]
+        stale = findings.write(
+            self.area, "preflight", "opus", sha, "otherblock00", (0, 0, 0), []
+        )
+        gap = findings.audit_record_gap(self.area, stale.name, text)
+        self.assertIn("saw the promise block otherblock00", gap or "")
+        open_ = findings.write(
+            self.area,
+            "preflight",
+            "opus",
+            sha,
+            block,
+            (1, 0, 0),
+            [
+                (
+                    "BLOCKER",
+                    "BLOCKER · scripts/01_measure.py:1 · x · y · LAB-015 Preflight audit before freezing · z",
+                )
+            ],
+        )
+        gap = findings.audit_record_gap(self.area, open_.name, text)
+        self.assertIn("still `open`", gap or "")
+        good = findings.write(self.area, "preflight", "opus", sha, block, (0, 0, 0), [])
+        self.assertIsNone(findings.audit_record_gap(self.area, good.name, text))
+        analysis = findings.write(
+            self.area,
+            "analysis",
+            "opus",
+            sha,
+            block,
+            (0, 0, 0),
+            [],
+            run_id=findings.NO_RUN,
+            shown_sha="0" * 12,
+        )
+        gap = findings.audit_record_gap(self.area, analysis.name, text)
+        self.assertIn(
+            "names no record", gap or ""
+        )  # an analysis record's name is not a preflight one
 
     def test_preflight_blocks_a_frozen_waiver_at_minutes_and_passes_seconds(self):
         self._protocol("minutes", "n/a — not needed")
@@ -175,13 +231,14 @@ class WaivedAudit(unittest.TestCase):
             rc = preflight.preflight_area(self.area)
         self.assertEqual(rc, 1)
         self.assertIn(
-            "BLOCKER: preflight_audit: `preflight_audit` says n/a", out.getvalue()
+            "BLOCKER: preflight_audit: `preflight_audit` names no record",
+            out.getvalue(),
         )
         self._protocol("seconds", "n/a — seconds")
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             preflight.preflight_area(self.area)
-        self.assertNotIn("says n/a", out.getvalue())
+        self.assertNotIn("names no record", out.getvalue())
 
     def test_protocol_check_warns_on_a_frozen_waiver_at_minutes(self):
         p = self._protocol("minutes", "n/a — not needed")

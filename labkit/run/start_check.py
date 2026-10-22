@@ -215,17 +215,17 @@ def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None
 
 
 def _audit_line_findings(base_dir: Path, path: Path, line: str, text: str) -> list[str]:
-    """Why the head's `preflight_audit` line does not cover a full run: empty,
-    or what `findings.audit_line_gap` says of it — it waives the audit (`n/a`,
-    refused since 0.99.0), its `scope sha` is not the code's now, or no
-    decided preflight record saw that code and the promise block TEXT
-    carries now (the block since 0.98.0)."""
+    """Why the head's `preflight_audit` does not cover a full run: empty, or
+    what `findings.audit_record_gap` says of the record it names — none
+    named (`n/a`, refused since 0.99.0), no such record, one of other code
+    or another promise block than the area carries now, a finding open."""
     if not line:
         return [
-            f"{path.name}: `preflight_audit` is empty — run `preflight`, "
-            f"then the experiment-preflight audit (LAB-015 Preflight audit before freezing), and stamp it"
+            f"{path.name}: `preflight_audit` is empty — run `preflight`, then the "
+            f"preflight audit (`labkit-audit <area> --mode preflight`), decide its "
+            f"findings and name its record here (LAB-015 Preflight audit before freezing)"
         ]
-    gap = findings.audit_line_gap(base_dir, line, text)
+    gap = findings.audit_record_gap(base_dir, line, text)
     return [f"{path.name}: preflight_audit: {gap}"] if gap else []
 
 

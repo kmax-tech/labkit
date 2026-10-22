@@ -187,6 +187,7 @@ id = "<protocol-id>"
 type = "<exploratory | confirmatory>"
 cost = "<seconds | minutes | hours>"
 frozen = false
+# minutes/hours: the decided preflight record's file name (audits/<minute>-preflight.toml); seconds: stays ""
 preflight_audit = ""
 # With a model: `[model] alias` (stamped by --model), `[model.arms.<arm>]` with
 # profile, fingerprint, alias (finalize holds them to the run); `[gate] labels = […]`.

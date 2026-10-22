@@ -10,7 +10,7 @@ holds the fields a machine reads — the head — and its optional
     type = "exploratory"            # exploratory | confirmatory
     cost = "seconds"                # seconds | minutes | hours
     frozen = false
-    preflight_audit = ""            # one line once the audit is decided
+    preflight_audit = ""            # minutes/hours: the decided preflight record, audits/<minute>-preflight.toml
 
 One parser (`tomllib`), exact keys, typed values: a typo is a loud error
 naming the field, never a silent "not found" — `Cost: second` used to read
@@ -63,7 +63,9 @@ class Head:
     type: str | None
     cost: str | None
     frozen: bool
-    preflight_audit: str  # "" until the audit is decided
+    preflight_audit: (
+        str  # "" until the decided preflight record is named (its file name)
+    )
 
     @property
     def placeholders(self) -> list[str]:

@@ -570,8 +570,8 @@ def next_steps(rel: Path, slug: str, nn: str, cost: str | None, model: bool) -> 
         if standard_contract.PREFLIGHT_AUDIT in ln.audits:
             steps.append(
                 f"`preflight {rel}`, then the preflight audit (`{audit} preflight`) "
-                "in the background; decide its findings, the `scope sha` line into "
-                "the head (LAB-015 Preflight audit before freezing)."
+                "in the background; decide its findings, its record's name into the "
+                "head (`preflight_audit`; LAB-015 Preflight audit before freezing)."
             )
         steps.append(
             f"reportable? `labkit-init exp {slug} --report` adds the report fields; "

@@ -26,6 +26,8 @@ TEMPLATE = REPO / "labkit" / "templates" / "experiment-protocol.md.template"
 
 sys.path.insert(0, str(REPO))
 from labkit.formats import (  # noqa: E402
+    findings,
+    promises,
     protocol_block,
     protocol_check,
     protocol_history,
@@ -119,7 +121,7 @@ def pilot(**head_kw) -> str:
     return "# x\n\n" + head(**head_kw) + "\n" + PILOT_FIELDS
 
 
-AUDIT_LINE = "2026-10-07 · scope sha 3f9a1c2b7e04 · 0 findings"
+AUDIT_LINE = "2026-10-07T10-00-preflight.toml"  # a record name; the field checks need none written
 
 
 def frozen(**head_kw) -> str:
@@ -204,10 +206,16 @@ class TestFixtures(unittest.TestCase):
             scope_file(area)
             sha = scope_sha.area_stamp(area)[0]
             p = area / "PROTOCOL-x.md"
-            p.write_text(
-                frozen(preflight_audit=f"2026-10-20 · scope sha {sha} · 0 findings"),
-                encoding="utf-8",
+            record = findings.write(
+                area,
+                "preflight",
+                "opus",
+                sha,
+                promises.block_stamp(frozen()),
+                (0, 0, 0),
+                [],
             )
+            p.write_text(frozen(preflight_audit=record.name), encoding="utf-8")
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 rc = protocol_report.main([str(p)])
@@ -839,7 +847,7 @@ class TestAuditFields(unittest.TestCase):
         )
 
     def test_the_preflight_audit_is_read_from_the_head(self):
-        line = "2026-09-08 · scope sha 3f9a1c2b7e04 · 4 findings (2 blockers fixed)"
+        line = "2026-09-08T14-12-preflight.toml"
         self.assertEqual(
             protocol_block.head(head(preflight_audit=line)).preflight_audit, line
         )

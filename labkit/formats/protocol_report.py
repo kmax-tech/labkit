@@ -25,8 +25,7 @@ from pathlib import Path
 from labkit import PACKAGE_DIR
 from labkit.formats import console, promises, protocol_block, standard_contract
 from labkit.formats.repo import adopt_command, git_root, repo_protocols
-from labkit.formats.findings import waived_audit_gap
-from labkit.formats.scope_sha import audit_stamp_drift
+from labkit.formats.findings import audit_record_gap
 from labkit.formats.gate import BLOCKER, GateFinding
 from labkit.formats.protocol_history import (
     check_protocol_id,
@@ -434,9 +433,7 @@ def check_protocol(
     if frozen and lane.freeze and head.preflight_audit:
         # a warning: after the run, analysis scripts change legitimately;
         # `n/a` at minutes/hours waives an audit nobody may waive (0.99.0)
-        audit_drift = waived_audit_gap(head.preflight_audit) or (
-            audit_stamp_drift(path.parent, head.preflight_audit) or None
-        )
+        audit_drift = audit_record_gap(path.parent, head.preflight_audit, text)
     field_lines = fields(text)
     missing_should = report.missing_should
     pilot_note = ""

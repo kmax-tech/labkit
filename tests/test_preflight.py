@@ -432,24 +432,24 @@ class TestAuditFindings(unittest.TestCase):
         from labkit.formats import scope_sha
 
         with _area_dir() as d:
-            area, _ = _area(
-                d, _protocol(frozen=True, preflight_audit="scope sha 000000000000")
-            )
+            area, _ = _area(d, _protocol(frozen=True, preflight_audit="x"))
             path = findings.write(
                 area, "preflight", "opus", "000000000000", _block(area), (0, 0, 0), []
             )
+            p = area / "PROTOCOL-x.md"
+            p.write_text(_protocol(frozen=True, preflight_audit=path.name))
             code, out = _run_preflight(area)
             self.assertEqual(code, 1, out)
             self.assertIn(
-                "BLOCKER: preflight_audit: the audit saw scope sha 000000000000", out
+                f"BLOCKER: preflight_audit: the record {path.name} saw scope sha 000000000000",
+                out,
             )
             sha = scope_sha.area_stamp(area)[0]
-            p = area / "PROTOCOL-x.md"
-            p.write_text(
-                p.read_text().replace("scope sha 000000000000", f"scope sha {sha}")
-            )
             path.unlink()
-            findings.write(area, "preflight", "opus", sha, _block(area), (0, 0, 0), [])
+            good = findings.write(
+                area, "preflight", "opus", sha, _block(area), (0, 0, 0), []
+            )
+            p.write_text(_protocol(frozen=True, preflight_audit=good.name))
             code, out = _run_preflight(area)
             self.assertNotIn("preflight_audit:", out)
             # the promises rewritten after the audit: the record named the
@@ -461,7 +461,7 @@ class TestAuditFindings(unittest.TestCase):
             )
             code, out = _run_preflight(area)
             self.assertEqual(code, 1, out)
-            self.assertIn("no preflight audit saw the area as it is now", out)
+            self.assertIn("saw the promise block", out)
 
     def test_deferred_in_another_area_is_a_reminder_not_a_count(self):
         with _area_dir() as d:

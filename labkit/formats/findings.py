@@ -52,8 +52,9 @@ and a failed attempt never share a name; `area_records` reads the records
 only.
 A record binds what the auditor read: the code (`scope_sha`), the promise
 block (`block_sha`) and, in mode analysis, the answering run (`run_id`).
-A full run at `minutes`/`hours` needs a preflight record of the code and
-the promises as they are now, every finding decided (`audit_coverage`,
+A full run at `minutes`/`hours` needs the preflight record the head names
+(`preflight_audit = "<minute>-preflight.toml"`) to be one of the code and
+the promises as they are now, every finding decided (`audit_record_gap`,
 held by runlog's freeze gate and by `preflight`); a reported number needs
 an analysis record of code, promises and the answering run as they are
 now (`report-check`). Until 0.97.1 a record named the code only, so a
@@ -105,7 +106,7 @@ from pathlib import Path
 from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.runs import as_stored
-from labkit.formats.scope_sha import AUDIT_SHA, audit_stamp_drift, digest
+from labkit.formats.scope_sha import area_stamp, digest
 
 DIR = "audits"
 #: the suffix of a failed attempt's file, never of a record of findings
@@ -684,8 +685,8 @@ def _head(r: Record) -> tuple:
 #: the name `create_file` gives a record, a failed attempt or a review:
 #: `<minute>-<mode>[-<n>]` and its suffix, n counting the files of one minute
 _WRITTEN_NAME = re.compile(
-    rf"^(\d{{4}}-\d{{2}}-\d{{2}}T\d{{2}}-\d{{2}})-(?:{'|'.join(MODES)}|review)(?:-(\d+))?"
-    rf"(?:{re.escape(FAILED_SUFFIX)}|\.toml)$"
+    rf"^(\d{{4}}-\d{{2}}-\d{{2}}T\d{{2}}-\d{{2}})-(?P<mode>{'|'.join(MODES)}|review)(?:-(?P<n>\d+))?"
+    rf"(?P<failed>{re.escape(FAILED_SUFFIX)})?(?(failed)|\.toml)$"
 )
 
 
@@ -701,7 +702,7 @@ def written_order(path: Path) -> tuple[str, int, str]:
             f"{path}: not a name labkit-audit writes (<minute>-<mode>[-<n>].toml) "
             f"— its place among the records cannot be told; rename or move it"
         )
-    return (m.group(1), int(m.group(2) or 1), path.name)
+    return (m.group(1), int(m.group("n") or 1), path.name)
 
 
 def area_records(area: Path) -> list[Record]:
@@ -773,7 +774,7 @@ def audit_coverage(
     — whose `run_id` is RUN_ID (the answering run) and whose `shown_sha` is
     SHOWN_SHA (what the prompt showed of that run, recomputed now: a
     metrics.json or output rows changed after the audit owe a new one),
-    every finding of it decided. The head's audit line is written by hand; this is what makes
+    every finding of it decided. The head names a record by hand; this is what makes
     "the frozen code was audited" a fact instead of a line (2026-10-14: after
     fixing the audit's findings a cold agent stamped the new sha, and no
     audit had seen that code). `preflight` for the freeze (runlog, preflight),
@@ -953,48 +954,83 @@ def audit_unavailable(
     return fitting[-1] if fitting else None
 
 
-def waived_audit_gap(line: str) -> str | None:
-    """Why an audit line reading `n/a — <reason>` does not cover a full run
-    at `minutes`/`hours`, or None when the line says something else. Until
-    0.99.0 `n/a` passed every gate as "a visible decision"; third haiku round
-    on 0.99.0 (labkit-paper area 09, t18): the agent wrote `frozen = true`
-    with `preflight_audit = "n/a — RF model training does not require
-    external audit"`, and runlog took it. Nobody waives their own audit;
-    the line names the honest ways and offers no word to write instead."""
-    if not line.strip().lower().startswith("n/a"):
-        return None
-    return (
-        "`preflight_audit` says n/a — at minutes/hours a full run owes the "
-        "preflight audit, and nobody waives their own: run `labkit-audit <area> "
-        "--mode preflight` and stamp the scope sha it prints; when the backend "
-        "does not answer, labkit-audit records the failed attempt and a full run "
-        "acknowledges it with LABKIT_UNFROZEN=1 (its number stays unreportable). "
-        "If no audit is owed at all, the cost tier is wrong, not the line — and "
-        "a tier lowered after the protocol's first commit is reported "
-        "(LAB-015 Preflight audit before freezing, LAB-017 The number of audits follows the cost tier)"
-    )
+def names_preflight_record(name: str) -> bool:
+    """Does NAME read as a preflight record's file name — the name
+    `create_file` gave it under audits/ (`<minute>-preflight[-n].toml`),
+    not a failed attempt's?"""
+    m = _WRITTEN_NAME.match(name)
+    return m is not None and m.group("mode") == "preflight" and not m.group("failed")
 
 
-def audit_line_gap(area: Path, line: str, text: str) -> str | None:
-    """Why the head's non-empty `preflight_audit` LINE does not cover a full
-    run of AREA under the protocol TEXT, or None: it waives the audit
-    (`waived_audit_gap`), its `scope sha` is not the code's stamp now
-    (`scope_sha.audit_stamp_drift`), or no decided preflight record saw that
-    code and the promise block TEXT carries now (`audit_coverage`). One
-    answer for runlog's freeze gate and `preflight` (they had two copies
-    until 0.99.0); the caller decides what an empty line and `seconds` mean."""
-    waived = waived_audit_gap(line)
-    if waived:
-        return waived
-    drift = audit_stamp_drift(area, line)
-    if drift:
-        return drift
-    m = AUDIT_SHA.search(line)
-    assert m is not None, "audit_stamp_drift passes a line only with a sha"
+def audit_record_gap(area: Path, name: str, text: str) -> str | None:
+    """Why the head's non-empty `preflight_audit` NAME does not cover a full
+    run of AREA under the protocol TEXT, or None: it names no record (an
+    `n/a`, a sentence, a path — the field is the file name of the decided
+    preflight record under audits/, and nobody waives their own audit),
+    there is no such record in the area, the record is of another mode,
+    it saw other code than the area stamps now (`scope_sha`) or another
+    promise block than TEXT carries (`block_sha`), or a finding of it is
+    still open. One answer for runlog's freeze gate, `preflight` and
+    `protocol-check`; the caller decides what an empty field and `seconds`
+    mean. Until 0.103.0 the field was a hand-written line (`<date> · scope
+    sha <12 hex> · N findings`) whose sha a regex read and whose record the
+    sha then had to find — the record names its sha itself, so the head
+    names the record (review 2026-10-22). `n/a` passed every gate until
+    0.99.0 (third haiku round, t18: "RF model training does not require
+    external audit"); the refusal names the honest ways and offers no
+    word to write instead."""
+    name = name.strip()
+    if not names_preflight_record(name):
+        return (
+            "`preflight_audit` names no record — the field is the file name of the "
+            "decided preflight record under audits/ (`<minute>-preflight.toml`, "
+            "printed by `labkit-audit <area> --mode preflight` when it writes one); "
+            "at minutes/hours a full run owes that audit, and nobody waives their "
+            "own: run it and name its record; when the backend does not answer, "
+            "labkit-audit records the failed attempt and a full run acknowledges "
+            "it with LABKIT_UNFROZEN=1 (its number stays unreportable). If no "
+            "audit is owed at all, the cost tier is wrong, not the field — and a "
+            "tier lowered after the protocol's first commit is reported "
+            "(LAB-015 Preflight audit before freezing, LAB-017 The number of audits follows the cost tier)"
+        )
+    path = area / DIR / name
+    if not path.is_file():
+        return (
+            f"`preflight_audit` names {DIR}/{name}, and there is no such record in "
+            f"this area — name the one `labkit-audit <area> --mode preflight` wrote"
+        )
     try:
-        return audit_coverage(area, m.group(1), "preflight", promises.block_stamp(text))
-    except (FindingsError, promises.PromiseError) as exc:
+        record = read(path)
+    except FindingsError as exc:
         return str(exc)
+    if record.mode != "preflight":
+        return f"{name} is a {record.mode} record — `preflight_audit` names the preflight audit"
+    try:
+        now = area_stamp(area)[0]
+    except (FileNotFoundError, ValueError) as exc:
+        return f"the area cannot be stamped now ({exc})"
+    if record.scope_sha != now:
+        return (
+            f"the record {name} saw scope sha {record.scope_sha}, the code now stamps "
+            f"{now} — it changed after the audit, so the change owes a new audit "
+            f"(`labkit-audit <area> --mode preflight`); naming another record "
+            f"without one is refused too"
+        )
+    try:
+        block = promises.block_stamp(text)
+    except promises.PromiseError as exc:
+        return str(exc)
+    if record.block_sha != block:
+        return (
+            f"the record {name} saw the promise block {record.block_sha}, the protocol "
+            f"carries {block} now — a promise rewritten after the audit owes a new one"
+        )
+    if record.open:
+        return (
+            f"{len(record.open)} finding(s) of {name} still `open` — decide each "
+            f"(fixed / accepted / deferred / dismissed)"
+        )
+    return None
 
 
 def repo_records(experiments: Path) -> list[tuple[Path, Record]]:

@@ -426,7 +426,7 @@ def check_fields(text: str) -> FieldReport:
         )
     elif head.frozen and not head.preflight_audit:
         missing_must.append(
-            "[protocol] preflight_audit (frozen = true without the audit line)"
+            "[protocol] preflight_audit (frozen = true without the decided preflight record named)"
         )
     # Whether the tables are owed is decided in ONE place,
     # promises.promise_tables_owed: frozen, or at seconds (every run there is

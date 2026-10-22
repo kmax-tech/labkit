@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import ast
 import hashlib
-import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -440,44 +439,8 @@ def area_stamp(
     return snap.sha, list(snap.files), snap.pin
 
 
-#: the stamp as an audit line carries it (`labkit-audit`, `scope-sha` print it so)
-AUDIT_SHA = re.compile(r"scope sha ([0-9a-f]{12})\b")
-
-
-def audit_stamp_drift(area: Path, audit_line: str) -> str | None:
-    """Why `audit_line` (the head's `preflight_audit`) does not cover the
-    area's code as it is now, or None when it does.
-
-    The line is written by hand, so nothing showed whether an audit ran or
-    saw this code (review 2026-10-07). Its `scope sha` is checkable: it must
-    equal the stamp the code has now. An explicit `n/a — <reason>` is a
-    visible decision, not a claim, and passes.
-    """
-    line = audit_line.strip()
-    if line.lower().startswith("n/a"):
-        return None
-    m = AUDIT_SHA.search(line)
-    if not m:
-        return (
-            "the audit line names no `scope sha <12 hex>` — copy the stamp "
-            "`labkit-audit` or `scope-sha` printed for the audited code"
-        )
-    try:
-        now = area_stamp(area)[0]
-    except (FileNotFoundError, ValueError) as exc:
-        return f"the area cannot be stamped now ({exc})"
-    if m.group(1) != now:
-        return (
-            f"the audit saw scope sha {m.group(1)}, the code now stamps {now} — "
-            f"it changed after the audit, so the change owes a new audit "
-            f"(`labkit-audit <area> --mode preflight`); a new sha written into "
-            f"the line without one is refused too"
-        )
-    return None
-
-
 def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
-    """Command line of `scope-sha`: the stamp over an area's code for an audit line."""
+    """Command line of `scope-sha`: the stamp over an area's code, as a record's `scope_sha` names it."""
     if argv and argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
         print(

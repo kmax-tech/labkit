@@ -449,8 +449,9 @@ class Stamp(NamedTuple):
 
 
 def stamp_facts(stamp: Stamp, verdict: tuple[int, int, int]) -> str:
-    """The facts of the protocol's audit field — the human adds the decisions.
-    The sha is `scope_sha.area_stamp`, the same a later `scope-sha` recomputes."""
+    """The stamp's facts, for the person reading the report beside the
+    record: the sha is `scope_sha.area_stamp`, the same a later `scope-sha`
+    recomputes and the record carries as `scope_sha`."""
     sha = stamp.sha
     b, w, n = verdict
     return (
@@ -680,15 +681,7 @@ def main(argv: list[str]) -> int:
     except ValueError as exc:  # verdict and finding lines disagree
         print(f"labkit-audit: {exc}", file=sys.stderr)
         return 2
-    print(f"\nstamp: {stamp_facts(stamp, result['verdict'])}", file=sys.stderr)
-    now = area_stamp(args.area)[0]
-    if now != stamp.sha:
-        print(
-            f"stamp NOTE: the code changed while the auditor read it — it saw scope "
-            f"sha {stamp.sha}, the code now stamps {now}; the record names {stamp.sha}, "
-            f"and the change owes its own audit",
-            file=sys.stderr,
-        )
+    _stamp_report(args.area, args.mode, stamp, result["verdict"], recorded)
     # the auditor lists what it read in full; the indexed modules are the
     # caller's to add before the list is held to the stamp (LAB-103 The audit reads by declared scope)
     listed_scope = result["scope"] + [str(p) for p in indexed]
@@ -701,6 +694,31 @@ def main(argv: list[str]) -> int:
     for line in decision_lines(findings.read(recorded), args.area, report):
         print(line)
     return 1 if b or w else 0
+
+
+def _stamp_report(
+    area: Path, mode: str, stamp: Stamp, verdict: tuple[int, int, int], recorded: Path
+) -> None:
+    """What the person copies and watches, on stderr after the report: the
+    stamp's facts; in mode preflight the head field that names the record
+    (`preflight_audit = "<record>"`, once every finding is decided); and a
+    NOTE when the code changed while the auditor read it."""
+    print(f"\nstamp: {stamp_facts(stamp, verdict)}", file=sys.stderr)
+    if mode == "preflight":
+        print(
+            f'head: preflight_audit = "{recorded.name}" — once every finding is '
+            f"decided, name this record in [protocol] and freeze "
+            f"(LAB-015 Preflight audit before freezing)",
+            file=sys.stderr,
+        )
+    now = area_stamp(area)[0]
+    if now != stamp.sha:
+        print(
+            f"stamp NOTE: the code changed while the auditor read it — it saw scope "
+            f"sha {stamp.sha}, the code now stamps {now}; the record names {stamp.sha}, "
+            f"and the change owes its own audit",
+            file=sys.stderr,
+        )
 
 
 #: a READ line of the auditor's report: a reading hint, printed and never

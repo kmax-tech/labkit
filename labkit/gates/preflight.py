@@ -29,10 +29,10 @@ What it runs, in order (`preflight_area` shows each station's condition):
                      `labkit.formats.findings`): a finding still `open` is a
                      warning, a blocker once frozen = true; an unreadable
                      record is a blocker. Where the lane owes the freeze and
-                     the head carries an audit line, that line must cover
-                     the code and the promise block as they are now
-                     (`findings.audit_line_gap`, the same answer runlog's
-                     freeze gate gives). A `deferred` finding in another
+                     the head names a preflight record, that record must be
+                     one of the code and the promise block as they are now,
+                     decided (`findings.audit_record_gap`, the same answer
+                     runlog's freeze gate gives). A `deferred` finding in another
                      area of the repo is told as a reminder, never counted
   4. code-check      its automated checks (`code_check.code_findings`):
                      intent ids against the code, parser fixtures, prompt
@@ -367,12 +367,12 @@ def check_audit_records(
 def check_audit_coverage(
     findings: Findings, area: Path, audit_line: str, text: str, *, frozen: bool
 ) -> None:
-    """Station 3, the line: why the head's AUDIT_LINE does not cover a full
-    run of this code and the promise block TEXT carries now
-    (`findings.audit_line_gap`, the same answer runlog's freeze gate gives
-    — preflight must not pass a state the run refuses). A gap warns, and
-    blocks once FROZEN."""
-    gap = audit_findings.audit_line_gap(area, audit_line, text)
+    """Station 3, the record: why the record the head's AUDIT_LINE names
+    does not cover a full run of this code and the promise block TEXT
+    carries now (`findings.audit_record_gap`, the same answer runlog's
+    freeze gate gives — preflight must not pass a state the run refuses).
+    A gap warns, and blocks once FROZEN."""
+    gap = audit_findings.audit_record_gap(area, audit_line, text)
     if gap:
         (findings.block if frozen else findings.warn)(
             f"preflight_audit: {gap} (LAB-015 Preflight audit before freezing)"

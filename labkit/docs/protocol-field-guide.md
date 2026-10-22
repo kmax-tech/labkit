@@ -154,9 +154,11 @@ The same block may hold the `[[promise]]` tables (labkit
   you a held-out number. Goes from `false` to `true` only after the
   instrument check; per (re-)freeze ONE sentence stays in the prose — the
   reasoning goes into the commit message.
-- **preflight_audit** — date · scope sha · N findings (each decided: fixed /
-  accepted / deferred / dismissed, with reason): the code-vs-intent audit
-  after the instrument check and before freezing. Empty until then.
+- **preflight_audit** — the file name of the decided preflight record
+  under `audits/` (`<minute>-preflight.toml`, written by `labkit-audit
+  --mode preflight`; every finding in it fixed / accepted / deferred /
+  dismissed, with reason): the code-vs-intent audit after the instrument
+  check and before freezing. Empty until then, and at `seconds`.
 
 **cost** — the price of a *repeat*, not whether a model is involved. A
 deterministic count, or a handful of model calls that finish in a minute
