@@ -38,6 +38,12 @@ before gave 0.8333 or 0.9167; this one gave 0.8333, 0.9167, 0.6667.
 | "…make a causal claim, i.e. state or imply that one thing caused another?" | 9, 9, 8, 9, 9 | 4 of 5 | c08, c10, c12 |
 | "Does this sentence claim that one thing caused another?" (the legend's words) | 11, 10, 11, 10, 11 | 5 of 5 | — |
 
+The effect is a shift, not a switch. The next series (4e07c9d, the 0.102.0
+release, 2026-10-22) drew fa6c6ae28466 once more — no "imply" — and got 9
+of 12, missing c08, c10 and c12, exactly at the threshold. c10 falls
+without "imply" too (9bc8d1c judge-1, 4e07c9d judge-3: 2 of 28 such
+probes), against 3 of 3 sandbox and 5 of 5 host draws with it.
+
 "Imply" asks wider than "claims": a sentence that sets two facts side by
 side suggests a link without asserting a cause, and the model says `Yes`
 where gold says `not_causal`. It moves the verdict to the threshold's
