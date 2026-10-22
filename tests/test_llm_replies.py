@@ -9,14 +9,13 @@ right shape is read as before.
 
 from __future__ import annotations
 
-import json
 import sys
 import unittest
 from pathlib import Path
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from llm_fixture import spec_of  # noqa: E402
+from llm_fixture import cli_reply, spec_of  # noqa: E402
 
 from labkit.run import llm_backends as B  # noqa: E402
 
@@ -83,9 +82,7 @@ class WrongShapes(unittest.TestCase):
 
     def test_claude_cli_counts_are_counts(self) -> None:
         with self.assertRaisesRegex(B.ReplyError, "`input_tokens` = 'many', not int"):
-            B._cli_result(
-                json.dumps({"result": "ok", "usage": {"input_tokens": "many"}})
-            )
+            B._cli_result(cli_reply(result="ok", usage={"input_tokens": "many"}), "m")
 
     def test_a_reply_error_is_retried_like_any_backend_error(self) -> None:
         self.assertTrue(issubclass(B.ReplyError, B.BackendError))
@@ -108,8 +105,46 @@ class RightShapes(unittest.TestCase):
             self.assertEqual(openai(), "no")
         self.assertEqual(B.CALL_STATE.usage.prompt_tokens, 4)
         self.assertEqual(
-            B._cli_result(json.dumps({"result": " r ", "total_cost_usd": 0.01})), "r"
+            B._cli_result(cli_reply(result=" r ", total_cost_usd=0.01), "m"), "r"
         )
+
+
+class ClaudeCliProvenance(unittest.TestCase):
+    """The reply names who wrote the answer; anything but the requested
+    model alone, whole, is no answer of it. The stop and the switch are the
+    shapes a safety classifier left in the fit probes' audits (round
+    de663ed, 2026-10-22): `claude-opus-5-5` stopped, `claude-opus-4-8`
+    continued, `result` held only the continuation."""
+
+    def test_the_requested_model_alone_in_one_turn_is_its_answer(self) -> None:
+        self.assertEqual(
+            B._cli_result(cli_reply("claude-opus-5-5"), "claude-opus-5-5"), "Yes"
+        )
+
+    def test_a_switched_model_is_refused_naming_both(self) -> None:
+        reply = cli_reply(modelUsage={"claude-opus-5-5": {}, "claude-opus-4-8": {}})
+        with self.assertRaisesRegex(
+            B.UnprovenAnswer, "requested claude-opus-5-5.*claude-opus-4-8"
+        ):
+            B._cli_result(reply, "claude-opus-5-5")
+        other = cli_reply(modelUsage={"claude-opus-4-8": {}})
+        with self.assertRaisesRegex(B.UnprovenAnswer, "written by claude-opus-4-8"):
+            B._cli_result(other, "claude-opus-5-5")
+
+    def test_a_safety_stop_is_refused_even_under_one_model(self) -> None:
+        reply = cli_reply("claude-opus-5-5", safety_stops=1)
+        with self.assertRaisesRegex(B.UnprovenAnswer, "1 safety stop"):
+            B._cli_result(reply, "claude-opus-5-5")
+
+    def test_more_than_one_turn_is_refused(self) -> None:
+        with self.assertRaisesRegex(B.UnprovenAnswer, "2 turns"):
+            B._cli_result(cli_reply(num_turns=2), "m")
+
+    def test_a_reply_without_the_proof_is_refused(self) -> None:
+        for key in ("num_turns", "safety_stops", "modelUsage"):
+            with self.subTest(key):
+                with self.assertRaisesRegex(B.ReplyError, f"no `{key}`"):
+                    B._cli_result(cli_reply(without=key), "m")
 
 
 if __name__ == "__main__":

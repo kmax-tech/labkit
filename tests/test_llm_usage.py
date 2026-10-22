@@ -106,6 +106,9 @@ CLI_REPLY = {
     "type": "result",
     "is_error": False,
     "result": "ok",
+    "num_turns": 1,
+    "safety_stops": 0,
+    "modelUsage": {"m": {"inputTokens": 10, "outputTokens": 43}},
     "total_cost_usd": 0.0125621,
     "usage": {
         "input_tokens": 10,
@@ -157,6 +160,17 @@ class ClaudeCli(unittest.TestCase):
             with self.assertRaises(llm_backends.BackendError) as cm:
                 llm.complete("a", "p", attempts=1)
         self.assertIn("boom", str(cm.exception))
+
+
+class UnprovenIsNotRetried(unittest.TestCase):
+    def test_a_switched_model_ends_the_call_at_once(self):
+        calls: list = []
+        reply = json.dumps({**CLI_REPLY, "modelUsage": {"m": {}, "other": {}}})
+        _, patches = _cli(reply)
+        with _stack(patches), mock.patch.object(llm.time, "sleep", calls.append):
+            with self.assertRaises(llm_backends.UnprovenAnswer):
+                llm.complete("a", "p", attempts=6)
+        self.assertEqual(calls, [])  # no backoff: no second try
 
 
 class Describe(unittest.TestCase):

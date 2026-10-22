@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from llm_fixture import typed  # noqa: E402
+from llm_fixture import cli_reply, typed  # noqa: E402
 
 from labkit.run import llm, llm_backends  # noqa: E402
 
@@ -37,9 +37,7 @@ class CliIsolation(unittest.TestCase):
 
         def fake_run(cmd, **kw):
             seen["cmd"] = cmd
-            return subprocess.CompletedProcess(
-                cmd, 0, stdout='{"result": "Yes"}\n', stderr=""
-            )
+            return subprocess.CompletedProcess(cmd, 0, stdout=cli_reply(), stderr="")
 
         with (
             mock.patch.object(
@@ -63,9 +61,7 @@ class CliIsolation(unittest.TestCase):
 
         def fake_run(cmd, **kw):
             seen["cmd"], seen["input"] = cmd, kw.get("input")
-            return subprocess.CompletedProcess(
-                cmd, 0, stdout='{"result": "Yes"}\n', stderr=""
-            )
+            return subprocess.CompletedProcess(cmd, 0, stdout=cli_reply(), stderr="")
 
         prompt = "x" * 200_000
         with (

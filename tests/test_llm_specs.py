@@ -14,6 +14,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from llm_fixture import cli_reply  # noqa: E402
 from labkit.run import llm  # noqa: E402
 from labkit.run.llm_specs import (  # noqa: E402
     ClaudeCliSpec,
@@ -300,9 +301,7 @@ class CallOptions(unittest.TestCase):
 
         def fake_run(cmd, **_):
             started.append(cmd)
-            return subprocess.CompletedProcess(
-                cmd, 0, stdout='{"result": "Yes"}\n', stderr=""
-            )
+            return subprocess.CompletedProcess(cmd, 0, stdout=cli_reply(), stderr="")
 
         with (
             mock.patch.object(llm, "spec", lambda alias: ClaudeCliSpec(alias, "m")),

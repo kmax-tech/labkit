@@ -647,7 +647,12 @@ evidence file under the same ID (top of this document).*
   (`--setting-sources ""` — no operator settings, no CLAUDE.md) and
   without tools (`--tools ""` — a judgement is an inference, not an
   agent session), and `llm.provenance()` stamps the CLI version and
-  isolation flags on every row.
+  isolation flags on every row. A harness may also change the model: a
+  safety classifier can stop the requested model mid-answer and let
+  another continue, and the reply's text is then the continuation alone.
+  labkit takes a claude-cli reply only when it shows the requested model
+  as its only writer, in one turn, without a safety stop; otherwise the
+  call fails and is not retried (`llm_backends.UnprovenAnswer`).
   Limit: the harness's own system prompt stays in and is not
   recorded; the harness does not control sampling (temperature, exact token budget) — whoever needs that uses the SDK.
 

@@ -104,6 +104,7 @@ from labkit.run.llm_specs import (
 )
 from labkit.run.llm_backends import (
     BackendError,
+    UnprovenAnswer,
     NO_USAGE,
     Usage,
     CLI_ISOLATION,
@@ -345,7 +346,8 @@ def complete(
     `attempts` counts total tries, not extra ones; backoff follows _BACKOFF
     (10 s … 300 s, ~13 min in all, so a short outage is survived). Errors
     that no retry can fix — an unknown alias, a temperature the backend cannot
-    honour — are raised immediately. Pass attempts=1 to disable.
+    honour, a claude-cli reply another model wrote (`UnprovenAnswer`) — are
+    raised immediately. Pass attempts=1 to disable.
     """
     for attempt in range(1, attempts + 1):
         CALL_STATE.thinking = ""  # never a previous call's trace
@@ -361,6 +363,8 @@ def complete(
                 stop=stop,
                 max_tokens=max_tokens,
             )
+        except UnprovenAnswer:
+            raise  # the request carries it: a retry repeats the cost, not the cure
         except _TRANSIENT as exc:
             if isinstance(exc, urllib.error.HTTPError) and exc.code < 500:
                 # the server answered, and the answer is about the request:

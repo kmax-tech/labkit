@@ -67,6 +67,14 @@ class BackendError(RuntimeError):
     """
 
 
+class UnprovenAnswer(BackendError):
+    """A reply that does not show the requested model as the whole answer's
+    writer — another model in it, a safety stop, more than one turn. Not
+    retried (`llm.complete`): the request carries it, and each try of an
+    audit costs minutes and a dollar; in two probe rounds the second try was
+    stopped again."""
+
+
 class ReplyError(BackendError):
     """A server's reply that is not the shape its API defines — not JSON, cut
     off mid-object, a field missing or of another type — named with the
@@ -317,18 +325,21 @@ def complete_claude_cli(
     if r.returncode != 0:
         detail = r.stderr.strip() or r.stdout.strip() or "no output on stderr or stdout"
         raise BackendError(f"claude-cli exit {r.returncode}: {detail[:300]}")
-    return _cli_result(r.stdout)
+    return _cli_result(r.stdout, spec.model)
 
 
-def _cli_result(stdout: str) -> str:
-    """The answer text of a `claude -p --output-format json` reply; its
-    `usage` and `total_cost_usd` go to `last_usage()`. Anything but that JSON
-    object is a backend failure, named with what came instead."""
+def _cli_result(stdout: str, model: str) -> str:
+    """The answer text of a `claude -p --output-format json` reply, written
+    whole by MODEL; its `usage` and `total_cost_usd` go to `last_usage()`.
+    Anything but that JSON object is a backend failure, named with what
+    came instead; so is a reply that does not show MODEL as its only writer
+    (`_cli_provenance`)."""
     where = "claude-cli --output-format json"
     body = json_reply(stdout, where)
     result = reply_field(body, "result", str, where, required=True)
     if reply_field(body, "is_error", bool, where):
         raise BackendError(f"claude-cli: is_error — {result[:300]}")
+    _cli_provenance(body, model, where)
     usage = reply_field(body, "usage", dict, where) or {}
     counted = [
         _count(usage, k, f"{where} usage")
@@ -347,6 +358,35 @@ def _cli_result(stdout: str) -> str:
         cost_usd=reply_field(body, "total_cost_usd", (int, float), where),
     )
     return result.strip()
+
+
+def _cli_provenance(body: JsonObject, model: str, where: str) -> None:
+    """Raises UnprovenAnswer unless the reply shows one turn, no safety stop
+    and MODEL as the only model used (`num_turns`, `safety_stops`,
+    `modelUsage`); a missing field is a ReplyError — no proof, no answer.
+    A safety classifier can stop the requested model mid-answer; the CLI
+    then lets another model continue and `result` holds only the
+    continuation — the requested model's id stays on the record for text
+    another model wrote, and a part reads as the whole."""
+    turns = reply_field(body, "num_turns", int, where, required=True)
+    stops = reply_field(body, "safety_stops", int, where, required=True)
+    used = sorted(reply_field(body, "modelUsage", dict, where, required=True))
+    if stops:
+        raise UnprovenAnswer(
+            f"claude-cli: {stops} safety stop(s) in the answer of {model} "
+            f"(models used: {', '.join(used) or 'none'}) — the text may be a "
+            f"continuation by another model, not {model}'s whole answer"
+        )
+    if used != [model]:
+        raise UnprovenAnswer(
+            f"claude-cli: requested {model}, the reply was written by "
+            f"{', '.join(used) or 'no model'} — not an answer of {model}"
+        )
+    if turns != 1:
+        raise UnprovenAnswer(
+            f"claude-cli: {turns} turns where one answer takes one (no tools) "
+            f"— `result` holds only the last"
+        )
 
 
 #: how long ollama keeps the model loaded after a call. Without it ollama

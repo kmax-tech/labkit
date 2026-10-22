@@ -57,6 +57,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A claude-cli reply another model wrote is no answer.** A safety
+  classifier stopped `claude-opus-5-5` mid-audit; the CLI let
+  `claude-opus-4-8` continue, `--output-format json` returned the
+  continuation alone as `result`, and the audit record named
+  `claude-opus-5-5` (fit probes on `3e9784c` and `de663ed`). The reply now
+  has to show the requested model alone in `modelUsage`, `safety_stops =
+  0` and `num_turns = 1` (fields of CLI 2.1.304; a missing one is a
+  `ReplyError`); otherwise `llm_backends.UnprovenAnswer`, raised at once,
+  not retried. An audit that meets it records a failed audit, no
+  findings. Standard: LAB-029.
 - **`02_analyze.py --draws` reads the estimator's criterion key.** The
   analysis skeleton is shared by the model and the estimator skeleton
   and read `c1_accuracy`, the model's key; the estimator reports
