@@ -1,8 +1,8 @@
-"""report_blocks — a report outside the protocol: its generated result blocks,
+"""report_blocks — a report outside the protocol: its report result blocks,
 the runs it cites, the numbers it states without a source.
 
-A report (`REPORT.md`, a results note) carries a reported number in a
-generated block, written by `protocol-fill <PROTOCOL> --into <FILE>`:
+A separate report (`REPORT.md`, a results note) carries a reported number
+in a report result block, written by `protocol-fill <PROTOCOL> --into <FILE>`:
 
     <!-- labkit result: experiments/01-x/PROTOCOL-x.md run 2026-10-22T09-13-08_0dc3 (protocol-fill --into; edit the protocol, not this block) -->
     auc = 0.69, n = 12 (run 2026-10-22T09-13-08_0dc3)
@@ -64,7 +64,7 @@ class ReportBlockError(ValueError):
 
 @dataclass(frozen=True)
 class Block:
-    """One generated result block: the protocol it belongs to (its path
+    """One report result block: the protocol it belongs to (its path
     relative to the report, as written), the run it shows, where it stands
     (the opening and closing line, 1-based) and its body as written."""
 

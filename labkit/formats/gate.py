@@ -25,7 +25,7 @@ grade back from a line's words.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
 BLOCKER = "BLOCKER"
@@ -148,6 +148,11 @@ class Findings:
         """Keep a finding and tell it."""
         self.found.append(finding)
         self.note(f"  {finding.line}")
+
+    def take_all(self, findings: Iterable[GateFinding]) -> None:
+        """Keep and tell findings in order through this collector's channel."""
+        for finding in findings:
+            self.take(finding)
 
     def block(self, msg: str) -> None:
         """A blocker: told as `BLOCKER: msg`, repeated in the summary, exit 1."""

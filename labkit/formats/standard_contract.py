@@ -172,7 +172,7 @@ def registration_fields(model: bool) -> tuple[str, ...]:
 #: script's `--check` pins the output to the run, recomputes the metrics
 #: and holds the note to them (`recheck.holds`; LAB-041 Generate numbers,
 #: don't retype them). Every skeleton stamps it (`Skeleton.scripts`), and
-#: station 4 of report-check runs it — the counting skeleton carried its
+#: report-check runs it for recomputation — the counting skeleton carried its
 #: check inside `01_measure.py` until 0.99.0 and the gate asked for a file
 #: the skeleton never wrote (audit 2026-10-19).
 CHECK_SCRIPT = Path("scripts") / "02_analyze.py"

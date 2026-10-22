@@ -85,10 +85,9 @@ SERIES_HEAD = re.compile(
 )
 
 
-# The documented runs are mandatory content (one line per run_id), not prose —
-# counting it against the length budget taught people not to document runs
-# (found 2026-09-06: 93 of a protocol's 409 lines were its run list).
-DOCUMENTED_RUNS_HEAD = re.compile(r"(?i)^##\s.*(runs|l[\u00e4a]ufe)")
+# The protocol run list is mandatory content (one entry per run_id), not
+# prose: a long list must not consume the registration's prose budget.
+PROTOCOL_RUN_LIST_HEAD = re.compile(r"(?i)^##\s.*(runs|l[\u00e4a]ufe)")
 
 
 # Change-history prose — the doc should carry the current rule, the commit the
@@ -275,8 +274,8 @@ def print_contract() -> None:
     for level, title in (
         ("must", "MUST (every pilot of the full form)"),
         ("should", "SHOULD (MUST once frozen = true)"),
-        ("after", "after the run (owed once a measure run is documented)"),
-        ("report", "report (owed once frozen = true and a measure run is documented)"),
+        ("after", "after the run (owed once a result is declared)"),
+        ("report", "report (owed once frozen = true and a result is declared)"),
     ):
         print(f"\n  {title}")
         for f in FIELDS:
@@ -476,11 +475,11 @@ def check_protocol(
         for f in field_lines
     )
     # A protocol is a registration, not a lab journal: only prose counts,
-    # and the Runs section (the documented runs) is not the registration.
+    # and the protocol run list is not the registration.
     n_lines = sum(
         1
         for section, _ in prose_lines(text)
-        if not (section and DOCUMENTED_RUNS_HEAD.match(section))
+        if not (section and PROTOCOL_RUN_LIST_HEAD.match(section))
     )
     numbered = list(enumerate((ln.strip() for ln in text.splitlines()), 1))
     # Post-run: a declared result makes an empty result field a MUST gap —

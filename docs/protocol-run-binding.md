@@ -2,7 +2,7 @@
 
 Which protocol does a run belong to, and which run answers for a protocol?
 The contract below answers both. Terms (`area`, `protocol`, `run`, `run
-index`, `metrics`, `documented runs`) are coined in the README and not
+index`, `metrics`, `protocol run list`) are coined in the README and not
 repeated here. How the contract was built: [history](notes/2026-10-20-protocol-run-binding-history.md).
 
 ## Identity
@@ -153,7 +153,7 @@ tools that search by protocol read the run directories, not the index; the
 ## Unbound runs
 
 A run without a bound id is `unbound`. Nothing is derived for it — not from
-the area, not from the documented runs, not from timestamps. Unbound runs
+the area, not from the protocol run list, not from timestamps. Unbound runs
 take part in no automatic choice; they are named explicitly or not at all.
 
 ## The answering run
@@ -192,7 +192,7 @@ abort — holding one protocol's promises against another protocol's run
 answers nothing. An unbound run is allowed as an explicit choice, with a
 warning that says so; a run that is not completed never.
 
-## Documented runs
+## The declared run
 
 The protocol declares the run it reports in its TOML head:
 
@@ -209,9 +209,15 @@ of it). It is a projection of the answering run, never a second binding:
 table naming another run blocks, one naming no run of the area blocks, one
 that does not read (a typed `…_final`, a stray key) blocks where it stands,
 and a protocol without the table is an exploration that reports nothing.
-The Recorded results line is generated from the declared run's `metrics.json`, and the
-other lines of the `## Runs` section are not checked against the runs bound
-to the protocol.
+The Recorded results line is generated from the declared run's `metrics.json`.
+
+## Protocol run list
+
+The protocol's `## Runs` section lists run entries: a run id and one
+sentence describing that run. `protocol-fill --from-run` adds the declared
+run's entry. Listing a run does not select it as the answering run or
+declare its result reported; selection and declaration are defined above.
+The other run entries are not checked against the runs bound to the protocol.
 
 `code-check` runs before any run exists and has nothing to bind to: it
 resolves by area, or takes `--protocol FILE` once the area holds several.

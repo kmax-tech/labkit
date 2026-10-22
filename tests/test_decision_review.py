@@ -115,7 +115,7 @@ def run_review(area: Path, answer: str, *extra: str) -> tuple[int, str, str, lis
 
 
 def gate(area: Path) -> tuple[int, str]:
-    """report-check with the stations beside station 3 stood in."""
+    """report-check with finalize and recomputation stood in."""
     buf = io.StringIO()
     no_gaps = SimpleNamespace(missing_must=[], must_holes=[])
     with (

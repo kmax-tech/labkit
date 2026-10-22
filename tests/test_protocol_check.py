@@ -584,7 +584,7 @@ class TestPromptAndExample(unittest.TestCase):
     That is the core of the protocol: seeing later what really went in and
     came out. A Prompt field without a code block is a must failure
     (paraphrased instead of recorded). Raw output is written after the run:
-    owed once a measure run is documented, never before (TODO 8).
+    owed once the head declares a result, never before.
     """
 
     PARAPHRASE = pilot().replace(
@@ -815,14 +815,14 @@ class TestSeriesDetector(unittest.TestCase):
         self.assertNotIn("PROTOCOL-s<N>", out)
 
 
-class TestDocumentedRunsNotCountedAsProse(unittest.TestCase):
-    """The documented runs are mandatory content, not prose (2026-09-06): 93 of
+class TestProtocolRunListNotCountedAsProse(unittest.TestCase):
+    """The protocol run list is mandatory content, not prose (2026-09-06): 93 of
     a protocol's 409 lines were its run list — the length budget must not teach
     people to stop documenting runs."""
 
     def test_a_huge_run_list_does_not_flag_the_protocol(self):
         run_list = (
-            "## Runs (documented runs)\n" + "- 2026-09-06T10-00-00_aa11 — x\n" * 400
+            "## Runs (protocol run list)\n" + "- 2026-09-06T10-00-00_aa11 — x\n" * 400
         )
         _, out = run_main(pilot() + run_list)
         self.assertNotIn("prose lines (tables/code excluded)", out)

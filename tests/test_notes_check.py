@@ -152,7 +152,7 @@ class TestCheckFile(unittest.TestCase):
         self.assertIn("no kind", must[0])
 
     def test_implemented_with_protocol_reference_passes(self):
-        # a synthesis note over documented runs names the protocol, not a script
+        # a synthesis note over runs listed in a protocol names that protocol
         text = (
             "# Instrument × Modellstärke\n\n"
             "*2026-08-24 · Instrument — implementiert · legt zwei Läufe "

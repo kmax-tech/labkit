@@ -19,43 +19,37 @@ before the analysis audit; report-check comes last and holds the whole
 chain, at every cost tier (why each station holds what it holds:
 docs/notes/2026-10-19-hooks-and-report-check.md):
 
-  0. protocol      the named PROTOCOL-*.md or the area's only one
-  1. frozen        at `minutes`/`hours`: `frozen = true`, and the freeze
-                   holds: no must gap `protocol-check` names
-                   (`check_fields`) — the [[promise]] tables written, not
-                   the stamp's `<…>` sentences. At `cost = "seconds"` no
-                   freeze and no preflight audit are owed
-                   (LAB-017 The number of audits follows the cost tier), so
-                   this station is skipped and says so
-  2. finalize      `finalize_area` clean — its blockers are named here —
-                   so the answering run is bound to this protocol and the
-                   head declares it; and that run is a full run: `run_kind='measurement'`,
-                   not acknowledged unfrozen (`runs.unreportable`) — a
-                   reported number owes a full run (frozen at
-                   minutes/hours); a probe's or an acknowledged run's number
-                   cannot be reported
-  3. analysis audit  a record `audits/*-analysis.toml` whose `scope_sha` is
-                   the area's stamp now, whose `block_sha` is the promise
-                   block now and whose `run_id` is the answering run, every
-                   finding decided (`findings.audit_coverage`) — code or
-                   promises changed after the analysis audit, or a later
-                   run, owe a new one (LAB-050 Analysis audit before
-                   reporting; at seconds the lane's one audit,
-                   LAB-017 The number of audits follows the cost tier)
-  4. the check     `scripts/02_analyze.py --check` exits 0 under the repo's
-                   interpreter: the rows recompute to the run's metrics and
-                   the note it names carries every number and the run_id
-                   (`recheck.holds`; LAB-041 Generate numbers, don't retype
-                   them). One command for every skeleton: the count stamps
-                   its own `02_analyze.py` too
+  0. protocol       choose the protocol; read its head, declaration and
+                    answering run into Checked. No protocol or unreadable
+                    context ends with exit 2.
+  1. declaration    report an unreadable `[result]` as a blocker.
+  2. registration   where the lane freezes: the flag, required fields and
+                    promise tables must hold. Otherwise, where the lane
+                    owes registration: check the commit of the first
+                    measurement. At seconds no freeze or preflight audit
+                    is owed (LAB-017 The number of audits follows the cost tier).
+  3. finalize       run finalize and name its blockers.
+  4. full run       with an answering run: require a measurement without
+                    an unfrozen acknowledgement (`runs.unreportable`).
+  5. analysis       where the lane owes an analysis audit: a decided record
+                    must cover the current code, promises, answering run
+                    and shown evidence. Check the generated Recorded results
+                    and Limit lines against that run and those records.
+  6. recomputation  always run `scripts/02_analyze.py --check` under the
+                    repo's interpreter: its outputs, metrics and cited
+                    result must agree (LAB-041 Generate numbers, don't retype them).
+  7. decisions      where the lane owes an analysis audit: check reviews
+                    of accepted `stands` decisions. An unconfirmed BLOCKER
+                    blocks; an unconfirmed WARNING warns.
+  8. summary        1 if any stage found a blocker, otherwise 0.
 
-Every station runs; the blockers are summed at the end. It reads and runs,
-never writes. The stations read one context (`Checked`, built once by
-`checked`): the protocol text as the named file state holds it, its head,
-the run the head declares, and the answering run chosen once
-(`audit_binding.audited_run`, through `answering_run.bound_answering_run`, the one choice
-every gate holds a protocol to) — no station reads the file or chooses the
-run for itself, and the output names the state that was held.
+`report_check` lists the stages and their conditions in this order. A
+blocker does not stop later applicable stages. It reads and runs checks;
+it does not itself write the protocol or run records. Checked supplies
+this gate's protocol text, head, declaration and selected answering run.
+The nested finalize gate and the analysis script read their own inputs;
+this is not a single file snapshot across all stages. The output names
+the file state whose declaration was checked.
 
 `--if-reported` is the gate the agent cannot choose: `claude-hook stop`
 runs it on every changed path, the stamped pre-commit on every staged one,
@@ -129,7 +123,6 @@ from labkit.formats.scope_sha import areas_touched
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
     CHECK_SCRIPT,
-    Lane,
     check_command,
     lane,
 )
@@ -149,8 +142,8 @@ PROPOSED = "proposed protocol"
 class Checked:
     """The context of one check, built once (`checked`) and read by every
     station: one protocol text, one head, one answering run, one named file
-    state — so the declaration, the audit record and the check are held to
-    the same run and the same text, and no station chooses for itself.
+    state. This gate's checks use the same declaration and run choice.
+    The nested finalize gate and analysis script read their own inputs.
 
     Attributes:
         area: The area, resolved.
@@ -251,7 +244,7 @@ def _declaration(text: str) -> tuple[str | None, str | None]:
 
 
 def freeze_gaps(ctx: Checked) -> list[str]:
-    """Station 1: why the freeze does not hold — the flag unset, or a must
+    """Why the freeze does not hold — the flag unset, or a must
     gap protocol-check names (the stamp's `<…>` promise sentences among them)."""
     gaps = (
         []
@@ -267,7 +260,7 @@ def freeze_gaps(ctx: Checked) -> list[str]:
 
 
 def registration_gaps(ctx: Checked) -> list[GateFinding]:
-    """Station 1 where the lane owes the registration instead of the freeze
+    """The committed registration where the lane owes it instead of the freeze
     (seconds): the registration stood in the protocol as committed at the
     first measurement — the oldest full run bound to this protocol
     (`answering_run.first_measurement`) and the commit its record names
@@ -334,7 +327,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
 
 
 def analysis_audit_gap(ctx: Checked) -> str | None:
-    """Station 3: why no decided analysis record covers the code, the promise
+    """Why no decided analysis record covers the code, the promise
     block, the answering run and what the audit was shown of it as they are
     now, or None. Without an answering run there is nothing the audit could
     be held to."""
@@ -354,7 +347,7 @@ def analysis_audit_gap(ctx: Checked) -> str | None:
 
 
 def limit_gaps(ctx: Checked) -> list[str]:
-    """Station 3, the limits: every accepted BLOCKER of the covering analysis
+    """The generated results and limits: every accepted BLOCKER of the covering analysis
     records has its effect decided, and the result section says exactly
     what those records and the run render (`result_render.render_gaps`):
     the Recorded results line with its note, one Limit line per decided limit, none
@@ -388,7 +381,7 @@ def limit_gaps(ctx: Checked) -> list[str]:
 
 
 def review_findings(ctx: Checked) -> list[GateFinding]:
-    """Station 3, the decisions: every `stands` among the limits of the
+    """The decision reviews: every `stands` among the limits of the
     covering analysis records is upheld by a decision review
     (`reviews.upholding`: a review of that record, its code and its run as
     shown, under the claim the protocol makes now, of the decision as it
@@ -407,7 +400,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     try:
         records = covering_analysis(ctx.area, ctx.text, ctx.run)
     except (AuditError, FileNotFoundError, ValueError):
-        return []  # ValueError: FindingsError — station 3 names them
+        return []  # ValueError: FindingsError — analysis_audit_gap names them
     out: list[GateFinding] = []
     try:
         found = reviews.area_reviews(ctx.area)
@@ -437,7 +430,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
 
 
 def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[str]:
-    """Station 2, the run: why the answering run's number cannot be reported
+    """Why the answering run's number cannot be reported
     (`runs.unreportable`), each a blocker. Without an answering run there is
     nothing to hold — finalize says so. FREEZE_OWED names the freeze in the
     sentence (minutes/hours); at seconds a full run is owed, no freeze."""
@@ -457,7 +450,7 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[str]:
 
 
 def finalize_gaps(area: Path, protocol: Path) -> list[str]:
-    """Station 2, the gate before: finalize's blockers, each named here with
+    """Finalize's blockers, each named here with
     its prefix — a hook that says "run it to see them" asks for a round
     trip the agent does not take. finalize runs on a silent collector
     (`Findings(tell=None)`): its findings arrive as data and nothing of its
@@ -471,22 +464,34 @@ def finalize_gaps(area: Path, protocol: Path) -> list[str]:
     return [f"finalize {area} exits {finalized} — run it to see why"]
 
 
-def later_gaps(ctx: Checked, ln: Lane) -> list[str]:
-    """Stations 2–4: finalize clean and its run a full run, the analysis
-    audit where the lane LN owes it (`Lane.audits`; every lane of the
-    standard does), the check. The freeze names itself in station 2's
-    sentence where the lane owes it."""
-    out = finalize_gaps(ctx.area, ctx.protocol)
-    out += unreportable_gaps(ctx, ln.freeze)
-    if ANALYSIS_AUDIT in ln.audits:
-        gap = analysis_audit_gap(ctx)
-        if gap:
-            out.append(f"analysis audit: {gap} ({ln.analysis_rule})")
-        out += [f"analysis audit: {g}" for g in limit_gaps(ctx)]
-    failed = check_analysis_script(ctx.area, ctx.repo)
-    if failed:
-        out.append(f"{failed} (LAB-041 Generate numbers, don't retype them)")
+def analysis_findings(ctx: Checked, rule: str) -> list[GateFinding]:
+    """Coverage and rendered-result blockers for an analysis stage already due.
+
+    RULE is the lane's analysis-audit rule; the entry point decides whether
+    this stage runs. Missing coverage and result differences are all kept.
+    """
+    out: list[GateFinding] = []
+    gap = analysis_audit_gap(ctx)
+    if gap:
+        out.append(GateFinding(BLOCKER, f"analysis audit: {gap} ({rule})"))
+    out.extend(
+        GateFinding(BLOCKER, f"analysis audit: {gap}") for gap in limit_gaps(ctx)
+    )
     return out
+
+
+def recomputation_findings(area: Path, repo: Path) -> list[GateFinding]:
+    """Run the analysis script's check and return its failure as a blocker."""
+    failed = check_analysis_script(area, repo)
+    return (
+        [
+            GateFinding(
+                BLOCKER, f"{failed} (LAB-041 Generate numbers, don't retype them)"
+            )
+        ]
+        if failed
+        else []
+    )
 
 
 def report_check(
@@ -496,10 +501,25 @@ def report_check(
     state: str = TREE,
     text: str | None = None,
 ) -> int:
-    """Run the stations on AREA; 0 clean, 1 a blocker, 2 no protocol to hold.
-    STATE and TEXT name the file state the declaration is read from
-    (`checked`): the tree by default, the index for the pre-commit, the
-    written proposal for the adoption."""
+    """Check AREA before reporting; 0 clean or warnings, 1 blocked, 2 no context.
+
+    0. Choose the protocol and read Checked; missing or unreadable ends with 2.
+    1. Declaration: an unreadable `[result]` blocks, later stages continue.
+    2. Registration: check the freeze where the lane owes it; otherwise check
+       the first measurement's committed registration where owed.
+    3. Finalize: always collect its blockers.
+    4. Full run: check reportability only when an answering run exists.
+    5. Analysis: coverage and rendered results only where the lane owes it.
+    6. Recomputation: always run the analysis script's `--check`.
+    7. Decisions: review accepted `stands` only where analysis is owed.
+    8. Summary: return 1 with any blocker, otherwise 0.
+
+    Every applicable stage runs despite earlier blockers. STATE and TEXT
+    name the declaration's file state: the tree by default, the index for
+    the pre-commit, the written proposal for adoption. The nested finalize
+    gate and analysis script read their own inputs.
+    """
+    # 0. protocol and context — the only early end
     chosen = choose_protocol(area, protocol, "report-check")
     if chosen is None:
         return 2
@@ -513,39 +533,53 @@ def report_check(
         f"{ctx.declared or 'no run'}; the answering run is "
         f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
     )
-    # what the release owes at this tier is the contract's answer: the freeze
-    # or the registration (station 1) and the audits follow the lane;
-    # finalize, the full run and the check are owed at every tier
     ln = lane(ctx.head.cost)
     findings = Findings()
+
+    # 1. declaration — a blocker does not stop the remaining stages
     if ctx.declaration_gap:
         findings.block(f"{chosen.name}: {ctx.declaration_gap}")
-    for finding in station_one(ctx, ln):
-        findings.take(finding)
-    for b in later_gaps(ctx, ln):
-        findings.block(b)
+
+    # 2. registration — freeze or committed registration, as the lane owes
+    if ln.freeze:
+        findings.take_all(GateFinding(BLOCKER, gap) for gap in freeze_gaps(ctx))
+    else:
+        print(
+            f'  {ctx.protocol.name}: cost = "{ctx.head.cost}" — no freeze and no preflight '
+            f"audit owed (LAB-017 The number of audits follows the cost tier); the "
+            f"registration as committed at the first measurement, the full run, "
+            f"the analysis audit and the check are"
+        )
+        if ln.registration:
+            findings.take_all(registration_gaps(ctx))
+
+    # 3. finalize — always, with its blockers named
+    findings.take_all(
+        GateFinding(BLOCKER, gap) for gap in finalize_gaps(ctx.area, ctx.protocol)
+    )
+
+    # 4. full run — only with an answering run; finalize names its absence
+    if ctx.run is not None:
+        findings.take_all(
+            GateFinding(BLOCKER, gap) for gap in unreportable_gaps(ctx, ln.freeze)
+        )
+
+    # 5. analysis — coverage and rendering where the lane owes the audit
     if ANALYSIS_AUDIT in ln.audits:
-        for finding in review_findings(ctx):
-            findings.take(finding)
+        findings.take_all(analysis_findings(ctx, ln.analysis_rule))
+
+    # 6. recomputation — always, including after a failed earlier stage
+    findings.take_all(recomputation_findings(ctx.area, ctx.repo))
+
+    # 7. decisions — reviews where the lane owes the analysis audit
+    if ANALYSIS_AUDIT in ln.audits:
+        findings.take_all(review_findings(ctx))
+
+    # 8. summary — 1 with a blocker, otherwise 0
     if not findings.blocked:
         held = ("frozen, " if ln.freeze else "") + "finalized, audited, checked"
         print(f"  {chosen.name}: {held}")
     return findings.report("report-check", "reporting")
-
-
-def station_one(ctx: Checked, ln: Lane) -> list[GateFinding]:
-    """Station 1 as the lane LN owes it: the freeze (`freeze_gaps`, each a
-    blocker) where the lane freezes, else the registration as committed
-    at the first measurement (`registration_gaps`), said so on the way."""
-    if ln.freeze:
-        return [GateFinding(BLOCKER, g) for g in freeze_gaps(ctx)]
-    print(
-        f'  {ctx.protocol.name}: cost = "{ctx.head.cost}" — no freeze and no preflight '
-        f"audit owed (LAB-017 The number of audits follows the cost tier); the "
-        f"registration as committed at the first measurement, the full run, "
-        f"the analysis audit and the check are"
-    )
-    return registration_gaps(ctx) if ln.registration else []
 
 
 def affected_protocols(

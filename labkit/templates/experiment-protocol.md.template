@@ -155,7 +155,7 @@
   "Deviations after freeze" under Result>
 - **Pilot:** <N items checked against hand analysis or anchors, before scaling>
 
-## Runs (documented runs — via `runlog`, cite run_ids instead of retyping numbers)
+## Runs (protocol run list — via `runlog`, cite run_ids instead of retyping numbers)
 
 - <run_id> — <one sentence: what this run was> <!-- s -->
 
@@ -174,7 +174,7 @@
 
 *How to fill each field, the cuts by tier and the intent ids:
 `protocol-field-guide.md` (`protocol-check --guide`); which fields this
-protocol's `cost` owes, and which fall due after a documented run:
+protocol's `cost` owes, and which fall due once a result is declared:
 `protocol-check --contract` — the one list, never retyped here; fill by
 label with `protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.*
 

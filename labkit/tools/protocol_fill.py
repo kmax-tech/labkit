@@ -382,9 +382,12 @@ WRITTEN_AFTER_RUN = tuple(
 
 
 def runs_line(text: str, run_id: str, sentence: str) -> tuple[str, bool]:
-    """The Runs section names `run_id`: the stamped `<run_id>` placeholder line
-    becomes the entry, else one is appended to the section; a section that
-    names the run already is left alone. (text, changed)."""
+    """Add a run entry to the protocol run list (`## Runs`).
+
+    The stamped `<run_id>` placeholder becomes the entry, else one is
+    appended. A list already naming `run_id` is left alone.
+    Returns (text, changed).
+    """
     lines = text.split("\n")
     heading = next((i for i, ln in enumerate(lines) if RUNS_HEADING.match(ln)), None)
     if heading is None:

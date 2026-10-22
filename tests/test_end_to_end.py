@@ -275,7 +275,7 @@ class Count(unittest.TestCase):
         lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
         rc, out = lab.adopt(self.protocol, run_id)
         self.assertEqual(rc, 0, out)
-        # finding (1): station 4 ran the count's own check script
+        # finding (1): recomputation ran the count's own check script
         self.assertIn("read from the proposed protocol", out)
         self.assertIn("finalized, audited, checked", out)
         text = self.protocol.read_text(encoding="utf-8")

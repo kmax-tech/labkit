@@ -999,8 +999,8 @@ The **analysis is the experiment** and stays in the script: criteria (success as
   TeX skeletons ("settled <date>", "previously undefined") — only the valid
   rule; the why
   of the change goes in the commit message (`protocol-check` warns).
-  Exception: load-bearing old→new tables, as long as the run index and documented
-  runs still use the old names.
+  Exception: load-bearing old→new tables, as long as the run index and protocol run
+  list still use the old names.
 
 - **LAB-076 · Restriction convention:** *(was §3.3)* Anyone who qualifies or refutes a note puts
   a blockquote in **the restricted note**, directly under the heading,

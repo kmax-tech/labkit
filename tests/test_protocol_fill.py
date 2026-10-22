@@ -397,7 +397,7 @@ class TestFromRun(unittest.TestCase):
 
 - **Recorded results:** <per registered id its verdict, and the run_id…>
 
-## Runs (documented runs — via `runlog`, cite run_ids instead of retyping numbers)
+## Runs (protocol run list — via `runlog`, cite run_ids instead of retyping numbers)
 
 - <run_id> — <one sentence: what this run was>
 
@@ -550,7 +550,7 @@ class Adopt(unittest.TestCase):
 
 - **Recorded results:** <per registered id its verdict, and the run_id…>
 
-## Runs (documented runs)
+## Runs (protocol run list)
 
 - <run_id> — <one sentence: what this run was>
 

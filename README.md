@@ -250,7 +250,8 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **run metadata** | Start and completion records: `config.json` and `completion.json`. |
 | **run index** | Searchable overview in `runs.tsv`. |
 | **metrics** | Measured values recorded in `metrics.json`. |
-| **documented runs** | Entries in a protocol's `## Runs` section. |
+| **protocol run list** | The protocol's `## Runs` section: references to runs; listing a run does not select or release its result. |
+| **run entry** | One reference in the protocol run list: a run id and a sentence describing the run. |
 | **intent id** | Identifier of a checked promise: `[C1]`, `[A1]`, `[B1]`, etc. |
 | **bundle** | Protocol, code and extracted facts packed for an audit agent. |
 | **frozen** | Protocol committed to its declared specification, with `frozen = true`. |
@@ -259,15 +260,20 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **admissibility** | Kind A promise: prerequisite for reading a criterion; failure withholds all C verdicts. |
 | **branch** | Kind B promise: the registered interpretation for an outcome, recorded as `b1_branch`, etc. |
 | **binding** | Run's record of the protocol id it ran under. |
-| **answering run** | Completed run selected to answer a particular protocol; repeat draws are excluded. Selection rules: [protocol/run binding](docs/protocol-run-binding.md). |
+| **answering run** | Completed run selected to answer a particular protocol; 233eat draws are excluded. Selection rules: [protocol/run binding](docs/protocol-run-binding.md). |
 | **declared run** | Run named by `[result].run` as the reported result; the gates require it to equal the answering run. |
-| **Conclusion** | Author's answer to the question in the Summary, in at most two plain sentences. |
-| **Recorded results** | Generated protocol field: the declared run's metrics, run id and note on recorded limits; checked against its sources. |
-| **result block** | Generated copy of Recorded results and Limit lines in a report, updated with `protocol-fill --into` and checked against its sources. |
+| **conclusion** | Author's interpretation answering the question, in at most two plain sentences in the Summary's `Conclusion` field. |
+| **recorded results** | Generated metrics, run id and limits note in the protocol's `Recorded results` field; checked against the declared run and covering audit records. |
+| **report result block** | Generated section in a separate report containing the recorded results and full Limit lines; written by `protocol-fill --into` and checked against the same sources. |
 | **derived run** | Re-evaluation of a completed non-repeat run's rows through `derived_from`, with no new model calls. |
 | **scope hash** | Per-promise hash of its declared code scope, recorded with the run and checked by finalize. |
 | **stamp** | Area audit fingerprint of selected source files, declared scopes and the package pin. |
 | **estimator** | Instrument fitted to data; the stamped estimator skeleton compares true-label and permuted-label lanes. |
+
+The protocol's recorded results and a report result block present the
+same bound sources. The report block includes the full Limit lines so its
+reader can see the restrictions alongside the numbers. The conclusion is
+the author's interpretation of those results within their limits.
 
 The run index and a protocol's `## Runs` section are views of the run
 records; they are not the source of truth. Python scripts import helpers

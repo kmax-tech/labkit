@@ -366,28 +366,31 @@ class ReportCheck(unittest.TestCase):
                 self.assertIn("no scripts/02_analyze.py —", failed)
                 self.assertIn("analyze-quick-script.py.template", failed)
 
-    def test_the_later_stations_read_the_lane(self):
-        """Station 3 is owed where the lane's `audits` name the analysis
+    def test_the_gate_reads_the_lanes_audit_and_freeze_obligations(self):
+        """Analysis is owed where the lane's `audits` name the analysis
         audit — every lane of the standard does; a lane without it (built
-        here, not in the contract) owes no record, and station 2 names the
+        here, not in the contract) owes no record, and reportability names the
         freeze only where the lane owes it (review 2026-10-19: the release
         read only `freeze` off the contract)."""
         area = self._area(cost="seconds", frozen=False)
         run = self._answered(area)
         completed_run(area, run.name, metrics={"c1_pass": True}, run_kind="probe")
-        ctx = report_check.checked(area, area / "PROTOCOL-x.md")
         seconds = standard_contract.lane("seconds")
-        with (
-            mock.patch.object(report_check, "finalize_area", return_value=0),
-            mock.patch.object(report_check, "check_analysis_script", return_value=None),
-        ):
-            gaps = report_check.later_gaps(ctx, seconds)
-            self.assertTrue(any("analysis audit:" in g for g in gaps), gaps)
-            self.assertFalse(any("on a frozen protocol" in g for g in gaps), gaps)
+        with mock.patch.object(report_check, "lane", return_value=seconds):
+            code, out = self._run(area)
+            self.assertEqual(code, 1, out)
+            self.assertIn("analysis audit:", out)
+            self.assertNotIn("on a frozen protocol", out)
             without = dataclasses.replace(seconds, audits=(), freeze=True)
-            gaps = report_check.later_gaps(ctx, without)
-            self.assertFalse(any("analysis audit:" in g for g in gaps), gaps)
-            self.assertTrue(any("on a frozen protocol" in g for g in gaps), gaps)
+        with (
+            mock.patch.object(report_check, "lane", return_value=without),
+            mock.patch.object(report_check, "review_findings") as decisions,
+        ):
+            code, out = self._run(area)
+            self.assertEqual(code, 1, out)
+            self.assertNotIn("analysis audit:", out)
+            self.assertIn("on a frozen protocol", out)
+            decisions.assert_not_called()
 
     def test_a_check_printing_bytes_no_codec_reads_is_a_named_gap(self):
         """`protocol-fill --from-run` ran this inside `adopt`; a

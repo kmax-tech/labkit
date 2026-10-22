@@ -45,14 +45,16 @@ class Findings(unittest.TestCase):
         field counts; the words are only told."""
         f = gate.Findings()
         with contextlib.redirect_stdout(io.StringIO()):
-            f.take(gate.coded("BLOCKER", "a.py:1", "x"))
-            f.take(gate.coded("WARNING", "PROTOCOL-BLOCKER.md:3", "z"))
-            f.take(
+            entries = (
+                gate.coded("BLOCKER", "a.py:1", "x"),
+                gate.coded("WARNING", "PROTOCOL-BLOCKER.md:3", "z"),
                 gate.GateFinding(
                     "BLOCKER", "PROTOCOL-WARNING.md: DUPLICATE id", gate.AS_WRITTEN
-                )
+                ),
             )
+            f.take_all(iter(entries))
         self.assertEqual((len(f.blocked), f.warnings), (2, 1))
+        self.assertEqual(f.found, list(entries))
 
     def test_a_coded_finding_is_told_with_the_parts_it_has(self):
         full = gate.coded(
@@ -85,7 +87,7 @@ class Silent(unittest.TestCase):
                 f.note("── station ──"),
                 f.block("x failed"),
                 f.warn("y"),
-                f.take(gate.coded("WARNING", "a.py:2", "z")),
+                f.take_all([gate.coded("WARNING", "a.py:2", "z")]),
                 f.report("t", "freezing"),
             )[-1]
         )
