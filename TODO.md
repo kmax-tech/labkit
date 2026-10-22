@@ -110,10 +110,21 @@ Forschung und Benchmark-Fallliste liegen in
   `protocol_check.kind_gap`, `labkit-init` ohne `--kind` stempelt nichts),
   kein stilles Zurückfallen auf `count`; Migration ausdrücklich und
   getestet — ein 0.21-Kopf wird mit dem Satz verweigert, der die zwei
-  Edits nennt (`protocol_block.MIGRATION`), kein Altformat-Leser. Offen:
-  die Count-/Judge-Regression und die kalte Fit-Probe mit den DILI-Daten
-  auf `d549696` (Runner `~/projects/labkit-probes-sandbox-d549696`), dann
-  der Bericht mit Fehlklassifikationen und Lücken. Vorgeschichte: die
+  Edits nennt (`protocol_block.MIGRATION`), kein Altformat-Leser. Runde
+  auf `d549696` gelaufen (Runner `~/projects/labkit-probes-sandbox-d549696`):
+  sieben von sieben richtig, keine Fehlklassifikation, kein Rückfall auf
+  `count`. Ihre zwei Befunde behoben: finalize übersprang `intent-check`,
+  wenn die Prosa `C1:` statt `[C1]` schrieb (`f1c5cdf`, sieben Fixtures
+  hingen an dem Loch); `00_prepare.py --audit` des Schätzers rief das
+  Textprofil (`15cc01b`). Dazu stempeln Fit und Apply `[C1]`/`[A1]`/`[A2]`
+  vor die Platzhalter (`ab37f65`). Offen: (1) ein Count bei `minutes` und
+  `hours` wird noch mit Kriterium, Zulassungs- und Nullbedingung und drei
+  Platzhalter-Promise-Tabellen gestempelt — gegen 0.22 („ein Count
+  schuldet die Frage“); seit `f1c5cdf` blockt finalize einen solchen Count,
+  wenn die Tabellen stehen bleiben und die Prosa sie nicht nennt. Den
+  Count-Schnitt auf allen Stufen wie bei `seconds` ziehen? (2) die
+  Fit-Probe auf dem neuen Stand wiederholen, mit Blick auf `[C1]` in der
+  Prosa. Vorgeschichte: die
   Pflichtfelder folgten
   `standard_contract.registration_fields`; ohne `[model]` schuldet ein
   Seconds-Experiment nur die Frage und bekommt das Zählskelett. t5 und
