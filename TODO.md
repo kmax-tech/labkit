@@ -107,9 +107,15 @@ Forschung und Benchmark-Fallliste liegen in
   (Felder an der echten CLI 2.1.304 geprüft); sonst `UnprovenAnswer`,
   ohne Wiederholung. Nicht belegt: dass die JSON-Antwort beim echten
   Abbruch genau diese Felder setzt — die Antworten der Probe-Audits sind
-  nicht gespeichert, der Check scheitert deshalb im Zweifel. Offen:
-  weitere Fit-Proben mit festem, dokumentiertem Prüfer; zeigt die erste,
-  wie die CLI einen Abbruch meldet, gehört das in die Notiz
+  nicht gespeichert, der Check scheitert deshalb im Zweifel. Fit-Probe auf
+  `4f4f238` (fester Prüfer `claude-opus-5-5`): alle acht Audit-Versuche
+  gestoppt und von `claude-opus-4-8` fortgesetzt, labkit hat trotzdem
+  wiederholt statt `UnprovenAnswer` zu werfen — vermutlich kam der
+  Abbruch als `is_error`, die Felder gingen verloren; keine Zahl
+  übernommen, fit-2 abgebrochen. Behoben in `1fc05e1`: Stopp und fremdes
+  Modell vor `is_error`, jede Meldung nennt die Felder. Offen: eine
+  Fit-Probe, die zeigt, welche Felder die CLI beim Abbruch setzt; Läufe
+  über Nacht mit `caffeinate -i`; die Notiz
   ([Notiz](docs/usability/2026-10-22-sandbox-de663ed.md)).
 
 - **Namenskandidat `compute` statt `count` (2026-10-22).** Prüfen, ob
