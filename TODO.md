@@ -78,6 +78,18 @@ Die Buchführung schrumpft mit: Unreleased (819 Zeilen) in das Release,
 diese Datei auf Reihenfolge und Auslösertabellen, Herleitungen in
 `docs/notes/`.
 
+**Releases bis 1.0 (entschieden 2026-10-22):** Brüche sammeln sich unter
+„Unreleased“; ein Release wird erst an der Messlatte geschnitten (beide
+Fragen grün), nicht je Phase oder Fix. Anlass: 0.100.0 bis 0.103.0 waren
+vier Breaking-Releases in zwei Tagen, gegen die Linie „nach außen ein
+zusammenhängender angekündigter Formatbruch“ — wer pinnt (Studi-Repos,
+labkit-paper Bereich 09), migriert sonst je Release. „Breaking“ bleibt
+die Markierung für „ein Protokoll oder Lauf, der mit der Vorversion las
+und bestand, liest jetzt nicht mehr“, mit der letzten lesenden Version;
+der Release-Commit trägt sie als Titel, weil `just release` die erste
+Unterüberschrift des Eintrags nimmt. 0.103.0 (`4be4ddd`, Tag lokal)
+bleibt wie geschnitten.
+
 **Nächste gemeinsame Arbeit (entschieden 2026-10-22, nach der fünften
 Haiku-Runde in labkit-paper Bereich 09):** Erzeugte Berichtsblöcke und
 die begrenzte Prüfung zitierender Berichte, zusammen ein Schritt. Beleg:
