@@ -526,18 +526,20 @@ CONCLUSION_LABEL = "Conclusion"
 
 
 def reported_claim(text: str) -> list[tuple[str, str]]:
-    """(label, value) of what a reader takes away as the result — the
-    Conclusion, the Recorded results line and every Limit line
-    (`findings.LIMIT_PREFIX`) — as written, placeholders included: the
-    claim a decision review judged (`reviews.claim_digest`); a claim
-    rewritten afterwards is another claim."""
-    from labkit.formats.findings import LIMIT_PREFIX
-
-    wanted = {field_name(CONCLUSION_LABEL), field_name(RECORDED_RESULTS_LABEL)}
+    """(label, value) of the claim the author makes of the result — the
+    Conclusion, as written, a placeholder included — what a decision
+    review judged (`reviews.claim_digest`); rewritten afterwards it is
+    another claim. The Recorded results line and the Limit lines are not
+    part of it: they are generated from the run and the records and held
+    exactly to them (`result_render.render_gaps`), so the record's
+    decision and the run's `shown_sha` bind them already — and
+    `protocol-fill --from-run` writes them after the decision, which
+    would make every review stale at the adoption (end-to-end test,
+    2026-10-22)."""
     return [
         (f.label, f.value.strip())
         for f in fields(text)
-        if f.name in wanted or f.label.startswith(LIMIT_PREFIX)
+        if f.name == field_name(CONCLUSION_LABEL)
     ]
 
 

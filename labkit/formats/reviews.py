@@ -19,7 +19,7 @@ next to the records:
     record = "2026-10-22T09-15-analysis.toml"   # whose decisions were reviewed
     scope_sha = "597fafd525d3"   # the code the reviewer read (= the record's)
     shown_sha = "15b62aeeac1f"   # what it was shown of the run (= the record's)
-    claim_sha = "0a9c3d7e5b21"   # the claim it judged: Conclusion, Recorded results, Limit lines (`claim_digest`)
+    claim_sha = "0a9c3d7e5b21"   # the claim it judged: the Conclusion (`claim_digest`)
     upheld = 1
     rejected = 2
     insufficient = 0
@@ -32,8 +32,9 @@ next to the records:
 
 A review upholds decision N of a record when it names that record, saw
 the code and the run the record saw (`scope_sha`, `shown_sha`), judged the
-claim the protocol makes now (`claim_sha`: the Conclusion, the Recorded
-results line and the Limit lines, `protocol_check.reported_claim`),
+claim the protocol makes now (`claim_sha`: the Conclusion,
+`protocol_check.reported_claim` — the Recorded results and Limit lines
+are generated from the record and the run and bound through them),
 carries a `[[decision]]` for N whose `decision_sha` is the digest of the
 finding as it stands now, and says `upheld` (`upholding`). A changed
 reason, effect or status makes the review stale, and so does a rewritten
@@ -49,9 +50,11 @@ evidence in the reason, or limiting the claim; `labkit-audit --review`
 refuses another draw on such a state unless asked for one as a
 measurement (`--again`). What is guaranteed
 is the release condition; whether the verdict is right stays the
-reviewer's judgement, as with every agent audit. An exploration first
-(TODO, 2026-10-22): report-check warns on a `stands` nobody upheld, and
-blocks only once the fifth-round replay has been read.
+reviewer's judgement, as with every agent audit. report-check blocks on
+an accepted BLOCKER's `stands` nobody upheld and warns on an accepted
+WARNING's (`report_check.review_findings`; decided 2026-10-22 after the
+fifth round's replay, two passes, and the assessment of its fifteen
+decisions from their sources, `docs/usability/2026-10-22-decision-review-*.md`).
 
 Reading is loud: a file without its `[review]` table, a verdict outside
 VERDICTS, counts that are not the decisions' raise ReviewError naming the
@@ -112,7 +115,7 @@ class Review:
     record: str  # the findings record's file name
     scope_sha: str
     shown_sha: str
-    claim_sha: str  # the claim judged (`claim_digest` of the protocol then)
+    claim_sha: str  # the claim judged (`claim_digest`: the Conclusion then)
     counts: tuple[int, int, int]  # upheld, rejected, insufficient
     decisions: tuple[Decision, ...]
 

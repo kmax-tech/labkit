@@ -576,6 +576,24 @@ class Judge(unittest.TestCase):
             rc = report_check.main([str(self.area)])
         return rc, out.getvalue()
 
+    def _review(self, record: Path, verdict: str = "upheld") -> tuple[int, str]:
+        """The decision review, its model faked to VERDICT the one decision."""
+        answer = (
+            f"DECISION #1 · {verdict} · the Conclusion claims no more\n"
+            f"verdict: {int(verdict == 'upheld')} upheld, "
+            f"{int(verdict == 'rejected')} rejected, "
+            f"{int(verdict == 'insufficient')} insufficient\n"
+        )
+        out = io.StringIO()
+        with (
+            mock.patch.object(audit.llm, "complete", lambda *a, **k: answer),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(out),
+        ):
+            rc = audit.main([str(self.area), "--review", "--record", str(record)])
+        return rc, out.getvalue()
+
     def test_04_an_accepted_blocker_reaches_the_protocol_as_its_limit(self):
         """Review 2026-10-21 (judge-2): an accepted BLOCKER may carry a
         number read within it, but an instrument unfit for C1 leaves C1
@@ -619,8 +637,14 @@ class Judge(unittest.TestCase):
         rc, out = self._report_check()
         self.assertEqual(rc, 1, out)
         self.assertIn(label, out)
-        # the twin: the verdicts stand, the limit named beside them
+        # the twin: the verdicts stand, the limit named beside them — and a
+        # BLOCKER's `stands` owes a decision review before the number leaves
         rc, out = self._decide(record, "accepted", reason, "--effect", "stands")
+        self.assertEqual(rc, 0, out)
+        rc, out = lab.adopt_forced(self.protocol, self.run_id)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("`stands` on an accepted BLOCKER not reviewed", out)
+        rc, out = self._review(record)
         self.assertEqual(rc, 0, out)
         rc, out = lab.adopt_forced(self.protocol, self.run_id)
         self.assertEqual(rc, 0, out)

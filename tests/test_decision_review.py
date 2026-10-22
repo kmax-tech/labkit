@@ -190,8 +190,12 @@ class TheCall(unittest.TestCase):
             [BLOCKER], {1: ("accepted", "in-sample, said so", "stands")}
         )
         code, out = gate(area)
-        self.assertEqual(code, 0, out)
-        self.assertIn("`stands` not reviewed — no decision review upholds", out)
+        self.assertEqual(code, 1, out)  # a BLOCKER's stands blocks until upheld
+        self.assertIn("BLOCKER: Limit (audit", out)
+        self.assertIn(
+            "`stands` on an accepted BLOCKER not reviewed — no decision review upholds",
+            out,
+        )
         self.assertIn(f"--review --record {record.name}", out)
         rc, _, _, _ = run_review(area, UPHELD)
         self.assertEqual(rc, 0)
@@ -217,8 +221,30 @@ class TheCall(unittest.TestCase):
         self.assertIn("rejected: decide the finding again first", out)
         self.assertIn("auditing again does not settle a rejection", out)
         code, out = gate(area)
-        self.assertEqual(code, 0, out)  # a warning while the check is explored
-        self.assertIn("`stands` rejected: the reason restates the finding", out)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            "`stands` on an accepted BLOCKER rejected: the reason restates", out
+        )
+
+    def test_the_twin_a_warnings_stands_without_a_review_only_warns(self):
+        """The scope, narrow at first: the release does not hang on every
+        lesser limit — an accepted WARNING's `stands` no review upholds is a
+        warning, a BLOCKER's a blocker."""
+        area, _ = area_with([WARNING], {1: ("accepted", "one seed, said so", "stands")})
+        code, out = gate(area)
+        self.assertEqual(code, 0, out)
+        self.assertIn("WARNING: Limit (audit", out)
+        self.assertIn("`stands` on an accepted WARNING not reviewed", out)
+        self.assertNotIn("BLOCKER:", out)
+
+    def test_the_reviewer_sees_the_result_as_it_renders(self):
+        area, record = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
+        _, _, _, sent = run_review(area, UPHELD)
+        self.assertIn(f"===== {decision_review.RESULT_LABEL} =====", sent[0])
+        self.assertIn(
+            f"- **Limit (audit {record.stem} #1):** the verdicts stand", sent[0]
+        )
+        self.assertIn(f"- **Recorded results:** c1_pass = True (run {RUN})", sent[0])
 
     def test_a_changed_decision_makes_the_review_stale(self):
         area, record = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
@@ -256,13 +282,15 @@ class TheCall(unittest.TestCase):
             )
         )
         code, out = gate(area)
-        self.assertEqual(code, 0, out)
-        self.assertIn("`stands` not reviewed — no decision review upholds", out)
-        # the claim's digest reads Conclusion, Recorded results and Limit lines
-        claim = dict(reviews.reported_claim(text))
-        self.assertIn("Conclusion", claim)
-        self.assertIn("Recorded results", claim)
-        self.assertTrue(any(k.startswith("Limit (audit ") for k in claim), claim)
+        self.assertEqual(code, 1, out)
+        self.assertIn("`stands` on an accepted BLOCKER not reviewed", out)
+        # the claim's digest reads the Conclusion and nothing generated: the
+        # lines --from-run writes after the decision must not stale a review
+        self.assertEqual([k for k, _ in reviews.reported_claim(text)], ["Conclusion"])
+        self.assertEqual(
+            reviews.claim_digest(text),
+            reviews.claim_digest(text.replace("c1_pass = True", "c1_pass = False")),
+        )
 
     def test_a_review_nobody_can_read_is_named_by_the_gate(self):
         area, _ = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
@@ -273,7 +301,7 @@ class TheCall(unittest.TestCase):
             encoding="utf-8",
         )
         code, out = gate(area)
-        self.assertEqual(code, 0, out)
+        self.assertEqual(code, 1, out)  # the BLOCKER's stands stays unupheld
         self.assertIn("a review nobody can read", out)
         self.assertIn("review again", out)
 

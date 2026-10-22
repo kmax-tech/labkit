@@ -18,15 +18,18 @@ Instructions: `decision-review.agent.md`.
 
 The verdicts are written beside the records (`formats/reviews`,
 `audits/<minute>-review.toml`), bound to the record, its code, its run as
-shown, the claim as judged (`reviews.claim_digest`: Conclusion, Recorded
-results, Limit lines) and each decision as it stood
+shown, the claim as judged (`reviews.claim_digest`: the Conclusion; the
+Recorded results and Limit lines are shown as they render and are bound
+through the record and the run) and each decision as it stood
 (`findings.decision_digest`). Only `upheld` releases a decision;
 `rejected` and `insufficient` do not, nor does a review of a decision or
 a claim since changed. After `rejected` the person decides again first —
 limits the claim, changes the effect to `not assessable`, or fixes the
 fault; a new audit is due when its basis changes or the finding is
 disputed, and does not by itself settle the rejection. After
-`insufficient` the missing evidence is supplied and the review run again. The gate: report-check names
+`insufficient` the missing evidence is supplied and the review run again.
+The gate: report-check blocks on an accepted BLOCKER's `stands` no review
+upholds, warns on an accepted WARNING's (`report_check.review_findings`). The gate: report-check names
 every `stands` no review upholds — a warning while this check is an
 exploration (TODO 2026-10-22: replay the fifth round's decisions first),
 a blocker afterwards.
@@ -55,6 +58,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from labkit.checks.audit_binding import AuditError, run_shown
+from labkit.checks.result_render import rendering
 from labkit.formats import console, findings, reviews
 from labkit.formats.findings import EFFECT_STANDS
 from labkit.formats.repo import ProtocolChoiceError, layout_root, shown, the_protocol
@@ -75,6 +79,31 @@ VERDICT = re.compile(
 DECISIONS_LABEL = (
     "DECISIONS — the accepted findings under review, each with the reason given"
 )
+RESULT_LABEL = (
+    "RESULT — the Recorded results line and the Limit lines as `protocol-fill "
+    "--from-run` renders them for this run and these decisions (the protocol "
+    "above may not carry them yet)"
+)
+
+
+def rendered_result(area: Path, text: str, run_dir: Path | None) -> str:
+    """The result section as it renders for RUN_DIR under the decisions as
+    they stand (`result_render.rendering`): what the reviewer judges the
+    Conclusion against, since `--from-run` writes these lines after the
+    decision. A sentence instead when nothing renders (no run, or no
+    metrics)."""
+    if run_dir is None:
+        return "no run: nothing renders"
+    try:
+        r = rendering(area, text, run_dir)
+    except (OSError, ValueError) as exc:
+        return f"nothing renders: {exc}"
+    return "\n".join(
+        [
+            f"- **Recorded results:** {r.recorded_results}",
+            *(f"- **{lbl}:** {value}" for lbl, value in r.limits),
+        ]
+    )
 
 
 def reviewable(record: findings.Record) -> list[tuple[int, findings.Finding]]:
@@ -174,6 +203,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
     pieces: list[tuple[str, str]] = [
         (DECISIONS_LABEL, decisions_text(decided)),
         (f"FILE: {shown(protocol, repo)}", text),
+        (RESULT_LABEL, rendered_result(area, text, run_dir)),
     ]
     for f in named_files(decided, repo, area):
         if f.resolve() in snap.contents:

@@ -392,10 +392,14 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     covering analysis records is upheld by a decision review
     (`reviews.upholding`: a review of that record, its code and its run as
     shown, under the claim the protocol makes now, of the decision as it
-    stands now, saying `upheld`). A WARNING
-    per decision no review upholds, with its state — an exploration of the
-    check (TODO 2026-10-22: the fifth round's decisions are replayed
-    first; a blocker afterwards). Empty when no record covers the run
+    stands now, every draw saying `upheld`). The grade follows the
+    finding's: an accepted BLOCKER's `stands` no review upholds — never
+    reviewed, rejected, insufficient, contested, or reviewed as another
+    decision or claim — is a BLOCKER (a severe finding is not settled by
+    a reason alone; decided 2026-10-22 after the fifth round's replay and
+    the assessment of its fifteen decisions from their sources), an
+    accepted WARNING's a WARNING for now (the release does not yet hang
+    on every lesser limit). Empty when no record covers the run
     (`analysis_audit_gap` names that), and silent on whether the verdict is
     right: that is the reviewer's judgement."""
     if ctx.run is None:
@@ -404,11 +408,14 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
         records = covering_analysis(ctx.area, ctx.text, ctx.run)
     except (AuditError, FileNotFoundError, ValueError):
         return []  # ValueError: FindingsError — station 3 names them
+    out: list[GateFinding] = []
     try:
         found = reviews.area_reviews(ctx.area)
     except reviews.ReviewError as exc:
-        return [GateFinding(WARNING, f"a review nobody can read: {exc}")]
-    out: list[GateFinding] = []
+        # named, and the decisions are judged as unreviewed: a file nobody
+        # can read must not hide a BLOCKER's unupheld `stands`
+        out.append(GateFinding(WARNING, f"a review nobody can read: {exc}"))
+        found = []
     for r in records:
         for n, f in r.limits():
             if f.effect != findings.EFFECT_STANDS or reviews.upholding(
@@ -417,12 +424,13 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                 continue
             out.append(
                 GateFinding(
-                    WARNING,
-                    f"{findings.limit_label(r, n)}: `stands` "
+                    BLOCKER if f.grade == "BLOCKER" else WARNING,
+                    f"{findings.limit_label(r, n)}: `stands` on an accepted {f.grade} "
                     f"{reviews.state(r, n, found, ctx.text)} — no decision review "
                     f"upholds that the reported claim stands within this limit: "
                     f"`labkit-audit <area> --review --record {r.path.name}` asks a "
-                    f"second auditor (a warning while the check is explored)",
+                    f"second auditor; after a rejection, decide again "
+                    f"(LAB-015 Preflight audit before freezing)",
                 )
             )
     return out

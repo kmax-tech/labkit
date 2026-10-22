@@ -20,8 +20,10 @@ and you do not soften a finding the auditor made.
    `stands`.
 2. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
    criterion, admissibility condition, the `[[promise]]` tables) and the
-   reported claim: the Summary's Conclusion, the Recorded results line
-   and the Limit lines. The claim is what a reader of this protocol takes
+   reported claim: the Summary's Conclusion. Then `===== RESULT … =====`:
+   the Recorded results line and the Limit lines as `protocol-fill
+   --from-run` renders them for this run and these decisions — the
+   protocol may not carry them yet. The claim is what a reader takes
    away; the Limit line is how the decision reaches them.
 3. The files the findings name, inlined in full, as the auditor read them.
 4. The answering run's rows and `metrics.json` under `===== ROWS … =====`

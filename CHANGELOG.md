@@ -36,8 +36,10 @@ pins (`requirements.txt` / `requirements.lock`).
   (`decision-review.agent.md`, `gates/decision_review`). The verdicts are
   written beside the records as `audits/<minute>-review.toml`
   (`formats/reviews`), bound to the record, its code, its run as shown,
-  the claim as judged (`claim_sha`: the Conclusion, the Recorded results
-  line and the Limit lines, `protocol_check.reported_claim`) and each
+  the claim as judged (`claim_sha`: the Conclusion,
+  `protocol_check.reported_claim`; the Recorded results and Limit lines
+  are shown to the reviewer as they render and are bound through the
+  record and the run) and each
   decision as it stood (`findings.decision_digest`): only `upheld`
   releases a `stands`; `rejected`, `insufficient`, a review of a decision
   since changed and one of a claim since rewritten do not. Every draw on
@@ -49,9 +51,12 @@ pins (`requirements.txt` / `requirements.lock`).
   changes the effect, fixes the fault); a new audit does not by itself
   settle it. Replayed on the fifth round (two passes, 1.77 USD) and every
   decision assessed from its sources (`docs/usability/2026-10-22-decision-review-*.md`). `report-check` names every `stands` of
-  the covering records that no review upholds, with the review's state —
-  a warning while the check is explored (the fifth round's decisions are
-  replayed first; a blocker afterwards). A report whose decision lines
+  the covering records that no review upholds, with the review's state:
+  a **blocker** for an accepted BLOCKER (a severe finding is not settled
+  by a reason alone; `protocol-fill --from-run` refuses the adoption the
+  same way), a warning for an accepted WARNING for now. A `--from-run`
+  that passed before is refused when an accepted BLOCKER with `stands` has
+  no upholding review. A report whose decision lines
   and closing counts disagree, or that decides on a finding not asked
   about, records nothing (exit 2); the review is refused when the code or
   the run is no longer what the record's auditor saw. Why: labkit-paper

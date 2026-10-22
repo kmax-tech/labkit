@@ -744,7 +744,9 @@ def decision_lines(record: findings.Record, area: Path, report: str) -> list[str
             if f.grade == "BLOCKER":
                 out.append(
                     "      accepted owes its effect: --effect stands (the verdicts "
-                    'hold, read within it) or --effect "<ID> not assessable"'
+                    "hold, read within it; a second auditor must uphold it before the "
+                    "number leaves: `labkit-audit <area> --review`) or "
+                    '--effect "<ID> not assessable"'
                 )
             elif f.grade == "WARNING":
                 out.append(

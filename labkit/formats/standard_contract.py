@@ -46,7 +46,7 @@ ANALYSIS_AUDIT = "analysis"
 
 #: the two forms of a protocol: the seconds cut (the fields marked in the
 #: template) and the full form (every must; every should once frozen; the
-#: report fields once a run is documented) — `protocol_check.owed` reads it
+#: report fields once a result is declared) — `protocol_check.owed` reads it
 SECONDS_CUT = "seconds"
 FULL_FORM = "full"
 
@@ -293,5 +293,7 @@ def describe(cost: str | None, model: bool) -> list[str]:
             "measurement, "
         )
         + "finalize clean, a full run (no probe, no acknowledged run), a decided "
-        + f"{ANALYSIS_AUDIT} audit of code, promises and that run, `{check}` passing",
+        + f"{ANALYSIS_AUDIT} audit of code, promises and that run (a BLOCKER accepted "
+        + "with `stands` upheld by a decision review, `labkit-audit --review`), "
+        + f"`{check}` passing",
     ]
