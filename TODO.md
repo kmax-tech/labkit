@@ -101,6 +101,20 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Offene Verträge und Korrektheitslücken
 
+- **Namenskandidat `compute` statt `count` (2026-10-22).** Prüfen, ob
+  `compute` die Kategorie besser bezeichnet: direkte Berechnungen wie
+  Zählen, Summen und Mittelwerte, deren berichtete Zahl keine
+  Modellvorhersage bewertet. „Modellunabhängig“ wäre zu streng: Die
+  Eingabedaten können zuvor von einem Modell erzeugt worden sein.
+  `kind` beschreibt den Anspruch der Zahl, `cost` den Aufwand des Laufs;
+  auch eine direkte Berechnung kann Sekunden, Minuten oder Stunden
+  kosten. Der breitere Name macht verständlicher, warum diese Kategorie
+  unterschiedliche Kostenstufen hat. Die vereinfachte Spur wurde
+  eingeführt, weil der Auditaufwand bei einfachen Experimenten die
+  eigentliche Messdauer übersteigen konnte. Eine Umbenennung ändert
+  diese Prüfpflichten nicht. Kandidat für bessere Namensgebung, noch
+  kein beschlossener Formatbruch und kein vorgezogener Bauauftrag.
+
 - **Registrierung für klassisches ML — entschieden und gebaut 2026-10-22
   (`e4157cb`, Standard 0.22; Fit-Probe `d549696`).** Beschluss des Autors:
   Schema `kind ∈ {count, fit, apply}` mit den Pflichten der Schreibprobe;
@@ -117,14 +131,12 @@ Forschung und Benchmark-Fallliste liegen in
   wenn die Prosa `C1:` statt `[C1]` schrieb (`f1c5cdf`, sieben Fixtures
   hingen an dem Loch); `00_prepare.py --audit` des Schätzers rief das
   Textprofil (`15cc01b`). Dazu stempeln Fit und Apply `[C1]`/`[A1]`/`[A2]`
-  vor die Platzhalter (`ab37f65`). Offen: (1) ein Count bei `minutes` und
-  `hours` wird noch mit Kriterium, Zulassungs- und Nullbedingung und drei
-  Platzhalter-Promise-Tabellen gestempelt — gegen 0.22 („ein Count
-  schuldet die Frage“); seit `f1c5cdf` blockt finalize einen solchen Count,
-  wenn die Tabellen stehen bleiben und die Prosa sie nicht nennt. Den
-  Count-Schnitt auf allen Stufen wie bei `seconds` ziehen? (2) die
-  Fit-Probe auf dem neuen Stand wiederholen, mit Blick auf `[C1]` in der
-  Prosa. Vorgeschichte: die
+  vor die Platzhalter (`ab37f65`). Ein Count schuldet auf keiner Stufe
+  eine Bar und wird ohne Bar-Felder und Promise-Tabellen gestempelt
+  (`3e9784c`; vorher blockte ihn seit `f1c5cdf` sein eigener Stempel).
+  Offen: die Fit-Probe auf `3e9784c` (Runner
+  `~/projects/labkit-probes-sandbox-3e9784c`) — übernimmt der kalte Agent
+  `[C1]`, läuft `--audit` durch? Vorgeschichte: die
   Pflichtfelder folgten
   `standard_contract.registration_fields`; ohne `[model]` schuldet ein
   Seconds-Experiment nur die Frage und bekommt das Zählskelett. t5 und
