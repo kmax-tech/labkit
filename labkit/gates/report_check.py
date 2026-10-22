@@ -474,8 +474,11 @@ def analysis_findings(ctx: Checked, rule: str) -> list[GateFinding]:
     gap = analysis_audit_gap(ctx)
     if gap:
         out.append(GateFinding(BLOCKER, f"analysis audit: {gap} ({rule})"))
+    # the rendered result section is held here too, named as what it is:
+    # a cold reader took "analysis audit:" on a retyped Recorded results
+    # line for a record problem (reading probe 2026-10-22)
     out.extend(
-        GateFinding(BLOCKER, f"analysis audit: {gap}") for gap in limit_gaps(ctx)
+        GateFinding(BLOCKER, f"result section: {gap}") for gap in limit_gaps(ctx)
     )
     return out
 
@@ -548,7 +551,7 @@ def report_check(
             f'  {ctx.protocol.name}: cost = "{ctx.head.cost}" — no freeze and no preflight '
             f"audit owed (LAB-017 The number of audits follows the cost tier); the "
             f"registration as committed at the first measurement, the full run, "
-            f"the analysis audit and the check are"
+            f"the analysis audit and the check are owed instead"
         )
         if ln.registration:
             findings.take_all(registration_gaps(ctx))

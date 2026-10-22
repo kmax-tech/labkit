@@ -25,14 +25,25 @@ Ergebnisrenderer. Aus der fünften Haiku-Runde zusätzlich: Berichtsblöcke
 mit Protokollzuordnung, Block-Pflicht für geänderte zitierende Berichte,
 Registrierung bei `seconds` gegen den Commit der ersten Messung,
 Analyse-Records gelöschter Läufe als Blocker und die Entscheidungsprüfung.
-Die Übernahme in andere Repos bleibt ein eigener Auftrag.
+Aus dem Review 2026-10-22: doppelte erzeugte Zeilen blocken (`8578d67`),
+`preflight_audit` nennt den entschiedenen Record statt einer Zeile mit
+`scope sha` (`965c0ee`, Breaking — der letzte maschinell gelesene Text in
+einem TOML-Wert). `docs/workflow.md` mit ausführbarem Zählbeispiel und
+kalter Leseprobe (`26513e9`, `eab6c68`). Die Übernahme in andere Repos
+bleibt ein eigener Auftrag.
 
-**Offene Entscheidung aus der fünften Runde: Entscheidungsprüfung als
-Blocker.** `report-check.review_findings` warnt weiterhin bei einem
-`stands`, das keine gültige Prüfung bestätigt. Umgesetzt und getestet:
+**Entscheidungsprüfung als Blocker (entschieden und umgesetzt 2026-10-22,
+`86e38bc`, eng gehalten):** ein akzeptierter BLOCKER mit `stands` blockt
+`report-check` und damit `--from-run`, bis eine gültige Prüfung ihn
+bestätigt; veraltet, `rejected`, `insufficient`, widersprüchlich oder
+unlesbar gibt nicht frei. Eine akzeptierte WARNING mit `stands` bleibt
+Warnung. Umgesetzt und getestet:
 
 - Bindung an Record, Entscheidungsstand, Code, gezeigten Lauf und Anspruch
-  (`claim_sha`: Conclusion, Recorded results und Limit-Zeilen).
+  (`claim_sha`: die Conclusion; Recorded results und Limit-Zeilen sind
+  erzeugt und über Record und Lauf gebunden — der Reviewer sieht sie, wie
+  `--from-run` sie rendern wird; eine Bindung an sie machte jede Prüfung
+  bei der Übernahme ungültig, End-to-End-Test 2026-10-22).
 - Alle Prüfungen desselben Stands zählen; ein `rejected` oder
   `insufficient` wird durch ein späteres `upheld` nicht aufgehoben.
   `--again` dient der Messung und gibt einen strittigen Stand nicht frei.
@@ -49,15 +60,22 @@ und eine daraus von Hand abgeleitete Verbesserungsbehauptung. Abhilfe:
 Baseline und Differenz im Lauf berechnen. Die Bewertung hat die Größe
 des Selektionsbias und die Auswirkung des t18-Off-by-one nicht gemessen;
 Aussagen über deren Größe sind dadurch nicht abgesichert.
-**Zu entscheiden:** Warnung → Blocker und dessen Umfang bei akzeptierten
-WARNINGs mit `stands`. Der dokumentierte Umsetzungsvorschlag lautet ja;
-die Umstellung ist noch nicht beschlossen.
+Frische Runde auf `86e38bc` ([Bericht](docs/usability/2026-10-22-sandbox-86e38bc.md)):
+sechs von sechs Zahlen richtig und gebunden, 4,22 USD; der einzige
+Judge mit BLOCKER-`stands` lief `--review` von selbst aus AGENTS.md.
+Seine zwei Verweigerungen waren der neue Schritt und sind behoben
+(`7f7cd6f`): `--review` verlangt die Conclusion zuerst, `--record` nimmt
+den bloßen Dateinamen. **Offen:** ob akzeptierte WARNINGs mit `stands`
+ebenfalls eine Prüfung schulden — erst nach Beleg, dass eine solche
+Warnung einen falschen Anspruch durchließ.
 
 **Abnahme des aktuellen Stands:** Die nächste Runde in labkit-paper
 Bereich 09 bewertet den fertigen Bericht am Entscheidungspunkt
 `number_from_code`; grüne Blöcke allein reichen nicht. Kalte Count- und
 Judge-Proben prüfen zusätzlich Bedienbarkeit, Fehlalarme, Zeit und
 Kosten. Die Replay-Kopien bekannter Fehler ersetzen diese Nutzung nicht.
+Die Count-/Judge-Proben auf `86e38bc` sind gelaufen (oben); die Runde in
+Bereich 09 steht aus.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
@@ -83,18 +101,26 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Offene Verträge und Korrektheitslücken
 
-- **Registrierung für klassisches ML:** Die Pflichtfelder folgen heute
+- **Registrierung für klassisches ML — nächster größerer Punkt, Ja des
+  Autors ausstehend.** Die Pflichtfelder folgen heute
   `standard_contract.registration_fields`; ohne `[model]` schuldet ein
-  Seconds-Experiment nur die Frage. t5 und t18 (RandomForest) hätten die
-  neue Commit-Bindung deshalb bestanden. Zu entscheiden ist, welche
-  Instrumente Kriterium und Zulassungsbedingungen schulden und wie das
-  strukturiert deklariert wird. `kind` (`apply`/`fit`/`count`) ist ein
-  Vorschlag, kein beschlossener Feldkatalog. Branch
-  `claude/zealous-davinci-3hbhvk` ist Material. Der labkit-paper-Check
+  Seconds-Experiment nur die Frage und bekommt das Zählskelett. t5 und
+  t18 (RandomForest) hätten die neue Commit-Bindung deshalb bestanden.
+  Der Standard nimmt ausdrücklich nur den „plain count whose prose names
+  no id“ aus (0.87.1), nicht den Schätzer. Vorschlag (2026-10-22): Kopffeld
+  `[protocol] kind = "count" | "fit" | "apply"`, klein auf `main` gebaut —
+  `labkit-init exp --kind …` statt des impliziten `--model`,
+  `registration_fields(kind)` (count: Frage; fit: dazu Kriterium und
+  Zulassung; apply: dazu Datenprofil), `skeleton(cost, kind)` gibt dem
+  Schätzer bei `seconds` sein Skelett, der Standard-Satz nennt den Count
+  beim Namen; Breaking unter Unreleased. Branch
+  `origin/claude/zealous-davinci-3hbhvk` (32 Commits, Basis 2026-10-17,
+  flaches Layout) ist Vorlage, nicht mergebar. Der labkit-paper-Check
   verlangt die drei Felder bereits; Übernahme ist ein eigener Auftrag.
 - **Protokollprosa außerhalb des geprüften Anspruchs:** Die
-  Entscheidungsprüfung bindet Conclusion, Recorded results und
-  Limit-Zeilen. Die übrige Prosa hat keinen eigenen Digest im
+  Entscheidungsprüfung bindet die Conclusion (Recorded results und
+  Limit-Zeilen sind erzeugt und über Record und Lauf gebunden). Die
+  übrige Prosa hat keinen eigenen Digest im
   Analyse-Record. Beschluss vom 2026-10-20: keine pauschale Bindung,
   weil jede Prosakorrektur ein bezahltes Audit fällig machte. Auslöser
   für eine Erweiterung bleibt ein belegter Fehler in diesen übrigen
@@ -228,8 +254,16 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
 
 ### Klarheit des Ablaufs
 
-Vorschlag vom 2026-10-22, zur späteren Umsetzung eingetragen; kein
-zusätzlicher Bauauftrag und keine Änderung der allgemeinen Reihenfolge:
+Vorschlag vom 2026-10-22, am selben Tag umgesetzt: 1 als
+`docs/workflow.md`, `docs/examples/count-walkthrough.sh` und
+`tests/test_workflow_example.py` (`26513e9`); 2 und 3 im bearbeiteten
+Ablauf (`e8698ab`: Stufen am Einstieg von `report-check`,
+`Findings.take_all`, Glossarbegriffe in Code und Ausgabe), nicht
+paketweit. Abnahme gelaufen: die kalte Leseprobe beantwortete alle vier
+Fragen richtig ([Protokoll](docs/usability/2026-10-22-workflow-reading-probe.md));
+ihre Stolperstellen sind eingearbeitet (`eab6c68`, Meldungen in
+`report_check` danach). Offen bleibt nur die Schreibprobe vor weiteren
+Protokolländerungen. Der Vorschlag im Wortlaut:
 
 1. **Workflow und Zählbeispiel gemeinsam.** `docs/workflow.md` erklärt
    auf Englisch Registrierung → Lauf → Finalize → Analyse-Audit →
