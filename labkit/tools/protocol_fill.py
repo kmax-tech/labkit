@@ -85,6 +85,8 @@ def fill(
     and placeholders; a second one here mis-read a wrapped label as
     `extremes)` (usability probe 2026-10-07). The label line and its
     continuation lines become one line; everything else stays byte-identical.
+    An id the stamp wrote before the placeholder (`[C1] <…>`) stays when
+    VALUE names no id; a VALUE with its own ids replaces it.
 
     Raises ValueError with a human-readable reason (unknown label, ambiguous
     label, already filled without force) — the CLI prints it verbatim.
@@ -117,6 +119,11 @@ def fill(
             f"line {f.line} ({f.label!r}) is already filled: "
             f"{f.value[:80]!r}. Overwrite with --force."
         )
+    # the id the stamp wrote before the placeholder stays when VALUE names
+    # none: a criterion filled without it is a promise the prose drops
+    stamped_id = promises.ID_PREFIX.match(f.value)
+    if stamped_id and not promises.ids_in_prose(value):
+        value = stamped_id.group(0).rstrip() + " " + value
     lines = text.splitlines()
     lead = _LEAD.match(lines[f.line - 1])
     assert lead is not None, "the pattern matches the empty prefix"

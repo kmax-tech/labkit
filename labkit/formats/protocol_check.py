@@ -227,12 +227,15 @@ class FieldLine:
         A value that merely starts with `<` (`<10% unparsed`) is content
         (review 2026-10-07: it read as a placeholder, while `TODO` read as
         filled and let a freeze through); a placeholder the author coins
-        (`<fill later>`) inside their own prose is not recognised."""
-        v = self.value
-        if not v:
+        (`<fill later>`) inside their own prose is not recognised. The id a
+        stamp writes before a placeholder (`[C1] <…>`) is not a value: the
+        field is read without it, and an id alone is still a hole."""
+        if not self.value:
             return not self.block
+        v = promises.ID_PREFIX.sub("", self.value)
         return (
-            v.startswith("TODO")
+            not v
+            or v.startswith("TODO")
             or "<why>" in v
             or (v.startswith("<") and v.endswith(">"))
             or holds_stamp_placeholder(v)

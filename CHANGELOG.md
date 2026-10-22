@@ -74,6 +74,16 @@ pins (`requirements.txt` / `requirements.lock`).
   fields `id`, `features`, `gold` (the names `01_measure.py` reads),
   `--audit` the yield of every filter. The model skeleton keeps the
   profile.
+- **A fit or an apply is stamped with its promise ids in the prose.**
+  The shortened placeholder of the criterion lost the template's `[C…]`
+  hint, and the cold fit probe wrote `C1:`. `labkit-init exp` now writes
+  `[C1]`, `[A1]`, `[A2]` before the placeholders of the criterion, the
+  admissibility condition and the null condition
+  (`protocol_cuts.name_promise_ids`) — only the ids the stamped block
+  declares, and only for a kind with a bar; a count's prose names none.
+  A field holding only the id and a placeholder (`[C1] <…>`) or the id
+  alone is still open (`FieldLine.placeholder`), and `protocol-fill`
+  keeps the stamped id when the value names none.
 - **A generated result line written twice is a blocker.** `report-check`
   held the Recorded results line and the Limit lines through a dict of
   the protocol's fields, so of two lines with one label only the last

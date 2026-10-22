@@ -55,6 +55,7 @@ from labkit.tools.protocol_cuts import (
     count_placeholders,
     estimator_placeholders,
     insert_report_fields,
+    name_promise_ids,
     new_protocol_id,
     pilot_and_report,
     quick_block,
@@ -442,6 +443,7 @@ def stamp_area(
         pre.rename(area / "explore" / pre.name)
         log.append(f"  moved          {pre} -> {area / 'explore' / pre.name}")
     stamped = blank_before_headings(short_placeholders(clean if report else pilot))
+    stamped = name_promise_ids(stamped, kind)
     check_stamped_head(stamped, cost, kind, bool(model))
     write_if_absent(area / f"PROTOCOL-{slug}.md", stamped, log)
     log += stamp_scripts(root, area, nn, slug, skeleton, model)

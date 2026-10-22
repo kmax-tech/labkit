@@ -14,7 +14,7 @@ import re
 
 import uuid
 from pathlib import Path
-from labkit.formats import protocol_block
+from labkit.formats import promises, protocol_block
 from labkit.formats.protocol_check import model_named
 from labkit.formats.repo import (
     repo_protocols,
@@ -360,7 +360,7 @@ ESTIMATOR_FIELDS = {
     "Model / tool": "n/a — no model call; the instrument is the estimator of `make_estimator()` in scripts/01_measure.py",
     "Prompt (verbatim, per variant)": "n/a — no prompt; the instrument is an estimator",
     "Model I/O": "<in · the feature fields per item · out · one prediction per item, scored out of fold>",
-    "Null condition / anchors (in the same run)": "<A2 · the same estimator on labels permuted inside each fitting fold, expected at chance_of() within null_band>",
+    "Null condition / anchors (in the same run)": "<the same estimator on labels permuted inside each fitting fold, expected at chance_of() within null_band>",
     "Raw output": "<one registered row and one test row as --probe prints them>",
     "Render check (ZERO calls, `--show N`)": "n/a — no prompt; `--show N` prints the config and N feature rows",
     "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · a reduced estimator on N labelled items, both lanes, throwaway · scores read, never reported>",
@@ -400,6 +400,45 @@ def _replace_field(lines: list[str], label: str, value: str) -> bool:
         lines[i:j] = [f"{head.match(line).group(1)} {value}"]  # type: ignore[union-attr]
         return True
     return False
+
+
+#: the prose field that states each stamped promise — its id is written
+#: before the placeholder, because the cut placeholder loses the template's
+#: `[C…]` hint and a cold agent then writes `C1:`, which no check reads
+PROMISE_FIELDS = {
+    "Success / failure criterion": "C1",
+    "Admissibility condition": "A1",
+    "Null condition / anchors (in the same run)": "A2",
+}
+
+
+def name_promise_ids(text: str, kind: str) -> str:
+    """The stamped promise ids written before the placeholders of the fields
+    that state them (PROMISE_FIELDS): `- **Success / failure criterion:**
+    [C1] <…>` — for a KIND with a bar; a count's text comes back unchanged
+    (an id in its prose would register a promise). Raises ValueError when a
+    field is not stamped or the stamped block does not declare its id: the
+    prose names only what the block already promises."""
+    from labkit.formats.standard_contract import has_bar
+
+    if not has_bar(kind):
+        return text
+    block = promises.parse_block(text)
+    declared = {p.id for p in block.promises} if block is not None else set()
+    lines = text.split("\n")
+    for label, pid in PROMISE_FIELDS.items():
+        if pid not in declared:
+            raise ValueError(f"name_promise_ids: the stamped block declares no {pid}")
+        head = re.compile(r"^(\s*-\s*\*\*" + re.escape(label) + r"\s*†?:\*\*\s*)<")
+        for i, line in enumerate(lines):
+            if m := head.match(line):
+                lines[i] = f"{m.group(1)}[{pid}] {line[m.end() - 1 :]}"
+                break
+        else:
+            raise ValueError(
+                f"name_promise_ids: the stamp has no `{label}` placeholder"
+            )
+    return "\n".join(lines)
 
 
 def estimator_placeholders(text: str, cut: bool = False) -> str:

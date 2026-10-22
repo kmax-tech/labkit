@@ -376,6 +376,25 @@ class OneCallFill(unittest.TestCase):
             self.assertIn("- **Data / scope:** 12 cases\n", f.read_text())
 
 
+class StampedId(unittest.TestCase):
+    TEXT = "- **Success / failure criterion:** [C1] <how do we recognise…>\n"
+
+    def test_a_value_without_an_id_keeps_the_stamped_one(self):
+        out = protocol_fill.fill(self.TEXT, "Success / failure criterion", "acc >= 0.8")
+        self.assertEqual(out, "- **Success / failure criterion:** [C1] acc >= 0.8\n")
+
+    def test_a_value_with_its_own_ids_replaces_it(self):
+        out = protocol_fill.fill(
+            self.TEXT,
+            "Success / failure criterion",
+            "[C1] acc >= 0.8 and [C2] f1 >= 0.5",
+        )
+        self.assertEqual(
+            out,
+            "- **Success / failure criterion:** [C1] acc >= 0.8 and [C2] f1 >= 0.5\n",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
 

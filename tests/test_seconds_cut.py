@@ -235,3 +235,31 @@ class CountPlaceholders(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PromiseIds(unittest.TestCase):
+    def test_an_id_the_block_does_not_declare_is_refused(self):
+        text = (
+            head(
+                promises='[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "s"\n'
+                'scope = ["scripts/01_measure.py"]\n'
+            )
+            + "- **Success / failure criterion:** <c>\n"
+            + "- **Admissibility condition:** <a>\n"
+            + "- **Null condition / anchors (in the same run):** <n>\n"
+        )
+        with self.assertRaisesRegex(ValueError, "declares no A1"):
+            protocol_cuts.name_promise_ids(text, "fit")
+
+    def test_a_stamped_id_before_a_placeholder_or_alone_is_still_a_hole(self):
+        for value, open_ in (
+            ("[C1] <how do we recognise whether it worked…>", True),
+            ("[C1]", True),
+            ("[C1] TODO", True),
+            ("[C1] accuracy >= 0.8", False),
+            ("<10% unparsed", False),
+        ):
+            with self.subTest(value):
+                text = f"- **Success / failure criterion:** {value}\n"
+                (f,) = protocol_check.fields(text)
+                self.assertIs(f.placeholder, open_)

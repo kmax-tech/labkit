@@ -68,6 +68,8 @@ CONSTANT_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 _LETTERS = "".join(KINDS)
 #: an id anywhere in protocol prose: `[C1]`, `[k2]`
 ID_IN_PROTOCOL = re.compile(rf"\[([{_LETTERS}]\d+)\]", re.I)
+#: an id the stamp writes before a field's placeholder: `[C1] <…>`
+ID_PREFIX = re.compile(rf"^\[[{_LETTERS}]\d+\]\s*", re.I)
 
 
 def registers_ids(text: str) -> bool:

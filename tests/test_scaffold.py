@@ -12,7 +12,7 @@ from pathlib import Path
 
 from labkit.checks import readme_check
 from labkit.tools import scaffold, protocol_cuts
-from labkit.formats import console, protocol_block, rules
+from labkit.formats import console, promises, protocol_block, protocol_check, rules
 from protocol_fixture import head  # noqa: E402
 
 
@@ -143,6 +143,42 @@ class Exp(unittest.TestCase):
     def area(self) -> Path:
         (area,) = (self.root / "experiments").glob("[0-9]*-foo-bar")
         return area
+
+    def test_a_bar_names_its_stamped_ids_and_a_count_names_none(self) -> None:
+        """A fit or an apply stamps `[C1]`, `[A1]`, `[A2]` before the fields
+        that state them — the ids its block declares, nothing added; the
+        fields stay open. A count's prose names no id (an id there would
+        register a promise)."""
+        cases = (
+            ("seconds", "fit", None),
+            ("minutes", "fit", None),
+            ("hours", "apply", "haiku"),
+            ("minutes", "count", None),
+            ("seconds", "count", None),
+        )
+        for cost, kind, model in cases:
+            with self.subTest(cost=cost, kind=kind):
+                tmp = tempfile.TemporaryDirectory()
+                self.addCleanup(tmp.cleanup)
+                root = Path(tmp.name) / "lab"
+                root.mkdir()
+                scaffold.stamp_lab(root, "lab")
+                quiet(scaffold.stamp_area, root, "x", cost=cost, kind=kind, model=model)
+                (proto,) = (root / "experiments").glob("*-x/PROTOCOL-x.md")
+                text = proto.read_text(encoding="utf-8")
+                if kind == "count":
+                    self.assertEqual(promises.ids_in_prose(text), set())
+                    continue
+                block = promises.parse_block(text)
+                assert block is not None
+                self.assertEqual(
+                    {i.upper() for i in promises.ids_in_prose(text)},
+                    {p.id for p in block.promises},
+                )
+                by_label = {f.label: f for f in protocol_check.fields(text)}
+                for label, pid in protocol_cuts.PROMISE_FIELDS.items():
+                    self.assertTrue(by_label[label].value.startswith(f"[{pid}] <"))
+                    self.assertTrue(by_label[label].placeholder, label)
 
     def test_an_area_with_protocol_scripts_readme_and_test(self) -> None:
         quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
