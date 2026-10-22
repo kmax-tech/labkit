@@ -101,8 +101,20 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Offene Verträge und Korrektheitslücken
 
-- **Registrierung für klassisches ML — nächster größerer Punkt, Ja des
-  Autors ausstehend.** Die Pflichtfelder folgen heute
+- **Registrierung für klassisches ML — entschieden und gebaut 2026-10-22
+  (`e4157cb`, Standard 0.22; Fit-Probe `d549696`).** Beschluss des Autors:
+  Schema `kind ∈ {count, fit, apply}` mit den Pflichten der Schreibprobe;
+  `kind` beschreibt den Qualitätsanspruch der berichteten Zahl, nicht alle
+  Operationen des Laufs. Bedingungen erfüllt: unbekannte oder
+  widersprüchliche Angaben scheitern laut (`protocol_block.head`,
+  `protocol_check.kind_gap`, `labkit-init` ohne `--kind` stempelt nichts),
+  kein stilles Zurückfallen auf `count`; Migration ausdrücklich und
+  getestet — ein 0.21-Kopf wird mit dem Satz verweigert, der die zwei
+  Edits nennt (`protocol_block.MIGRATION`), kein Altformat-Leser. Offen:
+  die Count-/Judge-Regression und die kalte Fit-Probe mit den DILI-Daten
+  auf `d549696` (Runner `~/projects/labkit-probes-sandbox-d549696`), dann
+  der Bericht mit Fehlklassifikationen und Lücken. Vorgeschichte: die
+  Pflichtfelder folgten
   `standard_contract.registration_fields`; ohne `[model]` schuldet ein
   Seconds-Experiment nur die Frage und bekommt das Zählskelett. t5 und
   t18 (RandomForest) hätten die neue Commit-Bindung deshalb bestanden.
