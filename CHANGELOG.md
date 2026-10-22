@@ -57,6 +57,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`02_analyze.py --draws` reads the estimator's criterion key.** The
+  analysis skeleton is shared by the model and the estimator skeleton
+  and read `c1_accuracy`, the model's key; the estimator reports
+  `c1_score`, so a fit's draws printed `c1_accuracy None`. Each measure
+  skeleton names its key (`C1_VALUE_KEY`), the analysis reads that name
+  and fails loud on a missing key. Found by the analysis audit of the
+  cold fit probe on `3e9784c`.
 - **finalize runs intent-check whenever the promise block declares an
   id.** The station asked the prose alone (`[C1]`); a protocol with three
   [[promise]] tables and `C1:` in the prose read "no intent ids

@@ -142,6 +142,8 @@ class MeasureConfig:
 # The registered execution: thresholds from the protocol, nothing copied;
 # `--seed` replaces one field.
 CONFIG = MeasureConfig(**promises.all_constants(promises.load(PROTOCOL)))
+#: the metrics key of the criterion's value — 02_analyze.py reads this name
+C1_VALUE_KEY = "c1_score"
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -322,10 +324,10 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
                      "a2_score": float(null_score), "a2_chance": float(chance),
                      "a2_pass": abs(null_score - chance) <= band}
     if not (metrics["a1_pass"] and metrics["a2_pass"]):
-        metrics.update({"c1_score": float(reg_score), "c1_threshold": None, "c1_pass": None})
+        metrics.update({C1_VALUE_KEY: float(reg_score), "c1_threshold": None, "c1_pass": None})
         return metrics
     bar = null_score + Fraction(str(cfg.margin))
-    metrics.update({"c1_score": float(reg_score), "c1_threshold": float(bar),
+    metrics.update({C1_VALUE_KEY: float(reg_score), "c1_threshold": float(bar),
                     "c1_pass": reg_score >= bar})
     return metrics
 

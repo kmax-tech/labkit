@@ -40,14 +40,15 @@ def draws() -> list[str]:
     stays draw 1; this is the spread around it (LAB-036 Validate)."""
     primary = recheck.run_dir(AREA, NOTE)
     seen: dict[str, dict[int, object]] = {}
+    key = measure.C1_VALUE_KEY
     lines, accs = [], []
     for n, d in answering_run.draws(AREA, primary.name):
         rows = [o.path for o in runs.read_outputs(d) or [] if o.path.suffix == ".jsonl"]
         if len(rows) != 1:
             raise SystemExit(f"draws: {d.name} registered {len(rows)} JSONL outputs, not one")
         m, _ = recheck.verified(d, AREA, rows[0], measure.evaluate_rows)
-        accs.append(m.get("c1_accuracy"))
-        lines.append(f"draw {n}  {d.name}  c1_accuracy {m.get('c1_accuracy')}  c1_pass {m.get('c1_pass')}")
+        accs.append(m[key])
+        lines.append(f"draw {n}  {d.name}  {key} {m[key]}  c1_pass {m.get('c1_pass')}")
         for r in measure.read_jsonl(rows[0]):
             seen.setdefault(r["id"], {})[n] = measure.answer_of(r)
     if len(accs) == 1:
@@ -56,7 +57,7 @@ def draws() -> list[str]:
         return lines
     known = [a for a in accs if isinstance(a, (int, float))]
     flipped = sorted(i for i, by_draw in seen.items() if len(set(by_draw.values())) > 1)
-    lines.append(f"c1_accuracy over {len(accs)} draws: {min(known)} … {max(known)}")
+    lines.append(f"{key} over {len(accs)} draws: {min(known)} … {max(known)}")
     lines.append(f"items whose answer flipped: {len(flipped)} {flipped}")
     return lines
 

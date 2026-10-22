@@ -902,6 +902,10 @@ class Estimator(unittest.TestCase):
         text = self.protocol.read_text(encoding="utf-8")
         self.assertIn(f"c1_pass = True (run {run_id})", text)
         self.assertEqual(protocol_block.declared_run(text), run_id)
+        # the shared analysis skeleton reads the estimator's criterion key
+        # (it read the model's `c1_accuracy` and printed None, 2026-10-22)
+        draws = lab.script(self.area, "02_analyze.py", "--draws")
+        self.assertRegex(draws, rf"draw 1  {run_id}  c1_score [0-9.]+  c1_pass True")
         rc, err = lab.stop_hook()
         self.assertEqual(rc, 0, err)
         lab.git("add", "-A")
