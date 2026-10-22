@@ -3,10 +3,12 @@
     report-check <AREA> [--protocol PROTOCOL-*.md]
     report-check --if-reported [--staged] PATH ...  every protocol of an area
                                                     a path touches whose head
-                                                    declares a result (the stop
-                                                    hook; with --staged the
-                                                    pre-commit: the head as the
-                                                    index holds it, and the
+                                                    declares a result, and every
+                                                    report among PATHS citing a
+                                                    run (the stop hook; with
+                                                    --staged the pre-commit: the
+                                                    head and the report as the
+                                                    index holds them, and the
                                                     area's tree must equal the
                                                     index)
 
@@ -66,6 +68,17 @@ analysis audit saw and what `--check` recomputes. A protocol declaring no
 result owes nothing here: an exploration ends with no reported result,
 probes or not; a `[result]` that does not read is held and blocks.
 
+A report outside the protocol — a Markdown file among the paths that
+cites a run, not a protocol, not under `runs/` or `data/` (`report_files`)
+— is held too (`hold_report`): each generated result block equals what the
+protocol declaring its run renders (`report_blocks.block_gaps`, written by
+`protocol-fill --into`), each token that reads as a run id names a run of
+the repo (`report_blocks.cited_gaps`) — blockers; the protocol declaring a
+cited run joins the protocols the stations hold (`held_by_reports`); a
+number outside every block is a warning, no source being assigned to it
+(`report_blocks.unsourced_numbers`, static evidence). Only the paths
+given: an old citation in a file nobody touched reopens nothing.
+
 `--staged` is the pre-commit's form. The commit holds the index, the
 stations read the working tree: so the declaration is read from the index
 (`index_text` — an answer only the tree carries is not in the commit), and
@@ -89,6 +102,7 @@ from labkit.checks.audit_binding import (
     audited_run,
     covering_analysis,
 )
+from labkit.checks import report_blocks
 from labkit.checks.result_render import render_gaps, rendering
 from labkit.gates.finalize import finalize_area
 from labkit.gates.preflight import area_test_python
@@ -102,6 +116,9 @@ from labkit.formats.repo import (
     indexed_protocols,
     layout_root,
     no_such_area,
+    PROTOCOL_NAME,
+    repo_protocols,
+    SKIP_DIRS,
     status_entries,
 )
 from labkit.formats.runs import read_run_config, unreportable
@@ -440,53 +457,211 @@ def tree_differs(repo: Path, area: Path) -> list[str]:
     return [path for xy, path in status_entries(repo, (rel,)) if xy[1] != " "]
 
 
+#: the files a report lives in; a protocol is held by the stations instead
+REPORT_SUFFIX = ".md"
+
+
+def report_files(
+    paths: list[Path], repo: Path, *, staged: bool
+) -> list[tuple[Path, str]]:
+    """(path, text) of every Markdown file among PATHS that cites a run
+    (`report_blocks.cited_run_ids`) — not a protocol, not under SKIP_DIRS —
+    with its text as the state holds it: the index when STAGED, else the
+    tree. A file the state does not hold (deleted, untracked at the commit)
+    reports nothing. Only these paths: an old citation in a file nobody
+    touched reopens nothing."""
+    root = repo.resolve()
+    out: list[tuple[Path, str]] = []
+    for path in paths:
+        full = (path if path.is_absolute() else root / path).resolve()
+        if full.suffix != REPORT_SUFFIX or PROTOCOL_NAME.match(full.name):
+            continue
+        try:
+            rel = full.relative_to(root)
+        except ValueError:
+            continue  # outside the repo: no commit and no stop holds it
+        if SKIP_DIRS & set(rel.parts):
+            continue
+        if staged:
+            text = index_text(repo, full)
+        else:
+            text = full.read_text(encoding="utf-8") if full.is_file() else None
+        if text is not None and report_blocks.cited_run_ids(text):
+            out.append((full, text))
+    return out
+
+
+@dataclass(frozen=True)
+class Sources:
+    """What the repo holds for a report to cite: every run directory's id
+    (KNOWN) and, per declared run, the protocols declaring it with their
+    text as the state holds it (DECLARING)."""
+
+    known: set[str]
+    declaring: dict[str, list[tuple[Path, str]]]
+
+
+def repo_sources(repo: Path, *, staged: bool) -> Sources:
+    """The runs and declarations of every protocol of REPO — the index's
+    protocols and texts when STAGED. A protocol whose head does not read
+    declares nothing here; the stations name it where a path touches it."""
+    protocols = indexed_protocols(repo) if staged else repo_protocols(repo.resolve())
+    known: set[str] = set()
+    declaring: dict[str, list[tuple[Path, str]]] = {}
+    for p in protocols:
+        runs_dir = p.parent / "runs"
+        if runs_dir.is_dir():
+            known |= {d.name for d in runs_dir.iterdir() if d.is_dir()}
+        text = index_text(repo, p) if staged else p.read_text(encoding="utf-8")
+        if text is None:
+            continue
+        try:
+            run_id = protocol_block.declared_run(text)
+        except protocol_block.BlockError:
+            continue
+        if run_id is not None:
+            declaring.setdefault(run_id, []).append((p, text))
+    return Sources(known, declaring)
+
+
+def block_sources(
+    found: list[report_blocks.Block], sources: Sources
+) -> tuple[dict[str, str], dict[str, str]]:
+    """For the runs FOUND renders: (the body the declaring protocol renders
+    per run, why there is none per run). The declaring protocol
+    is held by the stations as well (`held_by_reports`), so a block never
+    shows a number its protocol's chain does not hold."""
+    expected: dict[str, str] = {}
+    why_not: dict[str, str] = {}
+    for run_id in dict.fromkeys(b.run_id for b in found):
+        declared = sources.declaring.get(run_id, [])
+        if len(declared) != 1:
+            why_not[run_id] = (
+                f"no protocol of the repo declares it as its result — "
+                f"`protocol-fill <PROTOCOL> --from-run {run_id}` first"
+                if not declared
+                else f"declared by {len(declared)} protocols "
+                f"({', '.join(p.name for p, _ in declared)}) — one result, one protocol"
+            )
+            continue
+        protocol, text = declared[0]
+        try:
+            expected[run_id] = report_blocks.block_body(
+                rendering(protocol.parent, text, protocol.parent / "runs" / run_id)
+            )
+        except (OSError, ValueError) as exc:
+            why_not[run_id] = f"cannot be rendered from {protocol.name}: {exc}"
+    return expected, why_not
+
+
+def hold_report(path: Path, text: str, repo: Path, sources: Sources) -> int:
+    """Hold one report: its blocks equal their protocols' rendering, every
+    cited run id a run of the repo (blockers); every number outside a block
+    a hint (`report_blocks.unsourced_numbers`, static evidence). 0 clean or
+    hints only, 1 a blocker."""
+    rel = path.relative_to(repo.resolve()).as_posix()
+    print(f"═══ report-check {rel} (a report citing runs) ═══")
+    out = Findings()
+    try:
+        found = report_blocks.blocks(text)
+    except report_blocks.ReportBlockError as exc:
+        out.block(f"{rel}: {exc}")
+        return out.report("report-check", "reporting")
+    expected, why_not = block_sources(found, sources)
+    for gap in report_blocks.block_gaps(found, expected, why_not):
+        out.block(f"{rel}: {gap}")
+    cited = report_blocks.cited_run_ids(text)
+    for gap in report_blocks.cited_gaps(cited, sources.known):
+        out.block(f"{rel}: {gap}")
+    unsourced = report_blocks.unsourced_numbers(text)
+    if unsourced:
+        out.warn(
+            f"{rel}: no assigned source found for the numbers on "
+            f"{len(unsourced)} line(s) — they stand outside every generated "
+            f"result block (a hint, not a check of the numbers):"
+        )
+        for n, numbers in unsourced:
+            out.note(f"    {rel}:{n}: {', '.join(numbers)}")
+    if not found:
+        out.warn(
+            f"{rel}: no generated result block — `protocol-fill <PROTOCOL> --into "
+            f"{rel}` writes the declared result into it"
+        )
+    return out.report("report-check", "reporting")
+
+
 def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     """`report-check` for every protocol of an area one of PATHS touches
-    whose "Answer to the question" cites a run — the gate at the stop and
-    the commit: a result declared reported is held to the whole chain, a
-    protocol whose answer is still open is skipped (an exploration may end
-    with no reported result). STAGED (the pre-commit): the answer is read
-    from the index, and an area whose tree differs from the index is a
+    whose head declares a result, and for every report among PATHS
+    (`report_files`): the gate at the stop and the commit. A result declared
+    reported is held to the whole chain, a protocol declaring none is
+    skipped (an exploration may end with no reported result). A report's
+    generated blocks are held to their declaring protocols, which the
+    stations hold too, its cited run ids to the repo's runs; its other
+    numbers are hints. STAGED (the pre-commit): declarations and reports are
+    read from the index, and an area whose tree differs from the index is a
     blocker — the stations read the tree, the commit holds the index.
     Returns the worst exit code."""
+    reports = report_files(paths, repo, staged=staged)
+    sources = repo_sources(repo, staged=staged) if reports else Sources(set(), {})
+    protocols = reported_protocols(paths, repo, staged=staged)
+    for p in held_by_reports(reports, sources):
+        if p not in protocols:
+            protocols.append(p)
     worst = 0
-    for protocol in reported_protocols(paths, repo, staged=staged):
-        if staged:
-            text = index_text(repo, protocol)
-            if text is None:
-                continue  # not in the commit: nothing declared there
-        else:
-            try:
-                text = protocol.read_text(encoding="utf-8")
-            except OSError as exc:
-                print(f"report-check: {protocol}: {exc}")
-                worst = max(worst, 2)
-                continue
-        declared, gap = _declaration(text)
-        if declared is None and gap is None:
-            continue  # an exploration: nothing declared, nothing owed
-        print(
-            f"═══ report-check {protocol} (its head declares "
-            f"{declared or 'a result that does not read'}) ═══"
-        )
-        area = protocol.parent.resolve()
-        if staged:
-            differs = tree_differs(repo, area)
-            if differs:
-                print(
-                    f"  {area.relative_to(repo.resolve()).as_posix()}: the working "
-                    f"tree differs from the index ({', '.join(differs)}) — the "
-                    f"stations read the tree, the commit holds the index; stage "
-                    f"these too, or stash them, so the commit holds what the "
-                    f"check sees"
-                )
-                worst = max(worst, 1)
-                continue
-        worst = max(
-            worst,
-            report_check(area, protocol, state=INDEX if staged else TREE, text=text),
-        )
+    for protocol in protocols:
+        worst = max(worst, hold_declared(protocol, repo, staged=staged))
+    for path, text in reports:
+        worst = max(worst, hold_report(path, text, repo, sources))
     return worst
+
+
+def held_by_reports(reports: list[tuple[Path, str]], sources: Sources) -> list[Path]:
+    """The protocols declaring a run some report of REPORTS cites, in a
+    block or in its prose, each once: the result a changed report shows is
+    held to its chain like a changed protocol."""
+    out: list[Path] = []
+    for _, text in reports:
+        for _, run_id in report_blocks.cited_run_ids(text):
+            declared = sources.declaring.get(run_id, [])
+            out += [p for p, _ in declared if p not in out]
+    return out
+
+
+def hold_declared(protocol: Path, repo: Path, *, staged: bool) -> int:
+    """`report-check` on PROTOCOL when its head declares a result, as the
+    state holds it (the index when STAGED); 0 for an exploration or a
+    protocol the commit does not hold, 2 for one that cannot be read."""
+    if staged:
+        text = index_text(repo, protocol)
+        if text is None:
+            return 0  # not in the commit: nothing declared there
+    else:
+        try:
+            text = protocol.read_text(encoding="utf-8")
+        except OSError as exc:
+            console.refuse("report-check", f"{protocol}: {exc}")
+            return 2
+    declared, gap = _declaration(text)
+    if declared is None and gap is None:
+        return 0  # an exploration: nothing declared, nothing owed
+    print(
+        f"═══ report-check {protocol} (its head declares "
+        f"{declared or 'a result that does not read'}) ═══"
+    )
+    area = protocol.parent.resolve()
+    if staged:
+        differs = tree_differs(repo, area)
+        if differs:
+            print(
+                f"  {area.relative_to(repo.resolve()).as_posix()}: the working "
+                f"tree differs from the index ({', '.join(differs)}) — the "
+                f"stations read the tree, the commit holds the index; stage "
+                f"these too, or stash them, so the commit holds what the "
+                f"check sees"
+            )
+            return 1
+    return report_check(area, protocol, state=INDEX if staged else TREE, text=text)
 
 
 def main(argv: list[str]) -> int:

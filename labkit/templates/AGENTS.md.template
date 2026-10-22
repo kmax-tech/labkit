@@ -133,6 +133,14 @@ fields, no reading of labkit's source.
     after a changed decision write them again (`protocol-fill <PROTOCOL>
     --render`). The stop hook and the pre-commit run the same check on every
     protocol whose head declares a result (`[result] run`).
+    A report outside the protocol (`REPORT.md`, a results note) shows the
+    result as a generated block: `protocol-fill <PROTOCOL> --into
+    REPORT.md` writes the Answer and the Limit lines there, and every
+    changed file that cites a run is held to it at the stop and the
+    commit — the block exactly, every cited run id a run of the repo.
+    Any other number in that file is named as having no assigned source:
+    compute it in the run and report it from there, or say where it
+    comes from.
 
 ## Setup
 

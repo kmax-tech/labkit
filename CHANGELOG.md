@@ -5,6 +5,32 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Added
+
+- **A report outside the protocol is held at the stop and the commit.**
+  `report-check --if-reported` (the stop hook, the pre-commit) now also
+  holds every changed or staged Markdown file among its paths that cites a
+  run — `REPORT.md`, a results note; not a protocol, nothing under `runs/`
+  or `data/`. Blockers: a generated result block that differs from what the
+  protocol declaring its run renders (Answer and Limit lines), a block of a
+  run no protocol declares, a token that reads as a run id and names no run
+  of the repo; the protocol declaring a cited run goes through the stations
+  as well, so a report cannot show a result whose chain fails. A warning
+  lists the numbers outside every block — no source is assigned to them;
+  the check does not compare values, since an equal value elsewhere does
+  not show where a number came from. The guarantee covers the block, never
+  the prose beside it. Only the paths given are read: an old citation in
+  a file nobody touched reopens nothing. New: `protocol-fill <PROTOCOL>
+  --into <FILE>` writes the declared result into FILE as a generated block
+  (`checks/report_blocks`), replaced in place or appended, idempotent. A
+  commit that passed before can now be refused when a staged report cites
+  a run id that names no run. Why: labkit-paper area 09, fifth haiku round
+  (labkit 0.102.0) — the protocol's Answer was held exactly while
+  REPORT.md at the repository root stated counts and a median no run
+  produced, and no gate read the file.
+
 ## 0.102.0 — 2026-10-21
 
 ### Breaking

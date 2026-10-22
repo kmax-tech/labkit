@@ -15,6 +15,10 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
     protocol-fill PROTOCOL-x.md --render       the result section written again from its sources:
                                                Answer, Limit lines (stray ones dropped), Prompt block
+    protocol-fill PROTOCOL-x.md --into REPORT.md  the declared result as a generated block in a
+                                               report outside the protocol (replaced in place,
+                                               or appended); report-check holds the block to
+                                               the protocol's rendering
     protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: `[result] run`
                                                in the TOML head (the declaration), the Answer and
                                                Runs lines from its metrics.json (newest completed
@@ -56,7 +60,7 @@ from pathlib import Path
 from labkit.formats import console, files, findings, promises, protocol_block, runs
 from labkit.checks.result_render import ANSWER_LABEL, Rendering, rendering
 from labkit.formats.repo import shown
-from labkit.checks import recheck
+from labkit.checks import recheck, report_blocks
 from labkit.gates import report_check
 from labkit.checks.prompt_check import prompt_constants
 from labkit.formats.protocol_check import (
@@ -461,6 +465,24 @@ def drop_stray_limits(
     return "\n".join(lines), dropped
 
 
+def declared_run_dir(text: str, area: Path, why: str) -> Path:
+    """The run directory TEXT's head declares as its result, in AREA.
+    Raises ValueError without a declaration (WHY says what the caller
+    needs it for) or without the run's metrics.json."""
+    declared = protocol_block.declared_run(text)
+    if declared is None:
+        raise ValueError(
+            f"no [result] run declared — `--from-run <run_id>` declares the run "
+            f"and writes the result; {why}"
+        )
+    run = area / "runs" / declared
+    if not (run / "metrics.json").is_file():
+        raise ValueError(
+            f"[result] declares {declared}, but runs/{declared}/metrics.json is not there"
+        )
+    return run
+
+
 def render_result(text: str, area: Path) -> tuple[str, list[str]]:
     """`--render`: the result section written again from its sources for the
     declared run — the Answer line, the Limit lines (stray ones dropped) and,
@@ -468,17 +490,7 @@ def render_result(text: str, area: Path) -> tuple[str, list[str]]:
     Idempotent: a text that says what its sources say comes back unchanged.
     (text, what was written). Raises ValueError without a declared run or
     without `runs/<id>/` for it — `--from-run` declares first."""
-    declared = protocol_block.declared_run(text)
-    if declared is None:
-        raise ValueError(
-            "no [result] run declared — `--from-run <run_id>` declares the run and "
-            "writes the result; --render only writes it again"
-        )
-    run = area / "runs" / declared
-    if not (run / "metrics.json").is_file():
-        raise ValueError(
-            f"[result] declares {declared}, but runs/{declared}/metrics.json is not there"
-        )
+    run = declared_run_dir(text, area, "--render only writes the result again")
     r: Rendering = rendering(area, text, run)
     written: list[str] = []
     before = text
@@ -774,6 +786,34 @@ def _prompts_file(protocol: Path, text: str) -> int:
     return 0
 
 
+def into_report(text: str, area: Path, report: str) -> tuple[str, str]:
+    """`--into`: REPORT with the declared result as a generated block — the
+    protocol's Answer and Limit lines as rendered (`report_blocks.block_body`),
+    replaced in place or appended (`report_blocks.write_block`).
+    (report text, run id). Raises ValueError without a declared run or its
+    metrics.json, and on a block in REPORT that does not read."""
+    run = declared_run_dir(text, area, "a report shows a declared result only")
+    body = report_blocks.block_body(rendering(area, text, run))
+    return report_blocks.write_block(report, run.name, body), run.name
+
+
+def _into_file(protocol: Path, text: str, report: Path) -> int:
+    """`--into` on PROTOCOL: write REPORT's block when it differs, say so."""
+    before = report.read_text(encoding="utf-8") if report.is_file() else ""
+    try:
+        new, run_id = into_report(text, protocol.resolve().parent, before)
+    except (ValueError, protocol_block.BlockError) as exc:
+        print(f"protocol-fill: {exc}")
+        return 1
+    if new != before:
+        report.write_text(new, encoding="utf-8")
+    print(
+        f"{report}: the result block for run {run_id} "
+        + ("written" if new != before else "unchanged — it says what its sources say")
+    )
+    return 0
+
+
 def _render_file(protocol: Path, text: str) -> int:
     """`--render` on PROTOCOL: write the rendering when it differs, say what changed."""
     try:
@@ -791,6 +831,26 @@ def _render_file(protocol: Path, text: str) -> int:
         )
     )
     return 0
+
+
+def _run_mode(args: argparse.Namespace, text: str) -> int | None:
+    """The exit code of the mode ARGS name (--list, --prompts, --render,
+    --into, --from-run), or None when they name none: a field fill."""
+    if args.list:
+        try:
+            return _list_open(text)
+        except promises.PromiseError as exc:
+            print(f"protocol-fill: {exc}")
+            return 1
+    if args.prompts:
+        return _prompts_file(args.protocol, text)
+    if args.render:
+        return _render_file(args.protocol, text)
+    if args.into is not None:
+        return _into_file(args.protocol, text, args.into)
+    if args.from_run is not None:
+        return _write_back(args, text)
+    return None
 
 
 def main(argv: list[str]) -> int:
@@ -824,6 +884,14 @@ def main(argv: list[str]) -> int:
         "the Answer line, the Limit lines (stray ones dropped), the Prompt block",
     )
     ap.add_argument(
+        "--into",
+        type=Path,
+        default=None,
+        metavar="REPORT",
+        help="write the declared result into REPORT (a report outside the protocol) "
+        "as a generated block: the Answer as rendered, replaced in place or appended",
+    )
+    ap.add_argument(
         "--from-run",
         nargs="?",
         const="newest",
@@ -846,21 +914,14 @@ def main(argv: list[str]) -> int:
         console.refuse("protocol-fill", f"no such file: {args.protocol}")
         return 2
     text = args.protocol.read_text(encoding="utf-8")
-    if args.list:
-        try:
-            return _list_open(text)
-        except promises.PromiseError as exc:
-            print(f"protocol-fill: {exc}")
-            return 1
-    if args.prompts:
-        return _prompts_file(args.protocol, text)
-    if args.render:
-        return _render_file(args.protocol, text)
-    if args.from_run is not None:
-        return _write_back(args, text)
+    moded = _run_mode(args, text)
+    if moded is not None:
+        return moded
     assignments = assignments_of(args.field, args.value)
     if not assignments:
-        ap.error("need FIELD and VALUE, LABEL=VALUE..., --list, --render or --from-run")
+        ap.error(
+            "need FIELD and VALUE, LABEL=VALUE..., --list, --render, --into or --from-run"
+        )
     if args.line is not None and len(assignments) > 1:
         ap.error("--line goes with one FIELD, not with LABEL=VALUE")
     try:

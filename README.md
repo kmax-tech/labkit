@@ -198,7 +198,8 @@ labkit-init exp NAME [--cost T] [--model ALIAS] [--report] [--explore]
 protocol-check PROTOCOL             # check required fields and promise tables
 protocol-check --contract | --guide # field contract or field-guide path
 protocol-fill PROTOCOL "LABEL=VALUE" ... # fill fields
-protocol-fill PROTOCOL --list | --prompts | --from-run [RUN]
+protocol-fill PROTOCOL --list | --prompts | --render | --from-run [RUN]
+protocol-fill PROTOCOL --into REPORT.md # the declared result as a generated block in a report
 code-check AREA [--protocol FILE] [--bundle FILE] # code checks; audit bundle
 intent-check PROTOCOL [--metrics FILE] # promises against recorded metrics
 scope-sha AREA                     # code stamp used by an audit
@@ -208,7 +209,7 @@ labkit-audit AREA --mode preflight|analysis|clarity [--model ALIAS]
 labkit-audit AREA --decide N STATUS REASON [--effect E] [--record FILE] # store your decision on a finding (an accepted BLOCKER owes --effect)
 labkit-audit AREA --findings [--record FILE]               # show what there is to decide, no audit
 report-check AREA                  # release check before reporting
-report-check --if-reported [--staged] PATH... # check affected reported areas
+report-check --if-reported [--staged] PATH... # check affected reported areas and citing reports
 runlog [AREA] [--wait | --follow]    # inspect or monitor runs
 runlog start AREA -- COMMAND       # start a detached run
 runlog reindex AREA                # recover missing index rows
