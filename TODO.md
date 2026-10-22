@@ -101,6 +101,20 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Offene Verträge und Korrektheitslücken
 
+- **claude-cli: Modellwechsel nach Sicherheitsabbruch bleibt unbemerkt
+  (gefunden 2026-10-22, Runde `de663ed`,
+  [Notiz](docs/usability/2026-10-22-sandbox-de663ed.md)).** Bei den
+  DILI-Daten bricht ein Sicherheitsklassifikator `claude-opus-5-5` mitten
+  im Audit ab; die CLI lässt `claude-opus-4-8` weiterschreiben, und
+  `--output-format json` liefert in `result` nur den letzten Teil.
+  `llm_backends._cli_result` merkt beides nicht: eine Antwort über einen
+  Abbruch hinweg kommt gekürzt an, und der Record nennt das Modell des
+  Alias statt des antwortenden. Hier hat die Zählprüfung des Audits das
+  zufällig gefangen; ein Experiment über einen claude-cli-Alias würde den
+  Teil werten. Vorschlag: laut scheitern, wenn die Antwort mehr als einen
+  Zug oder ein anderes Modell enthält (Feld in der JSON-Antwort erst
+  prüfen). Entscheidung des Autors ausstehend.
+
 - **Namenskandidat `compute` statt `count` (2026-10-22).** Prüfen, ob
   `compute` die Kategorie besser bezeichnet: direkte Berechnungen wie
   Zählen, Summen und Mittelwerte, deren berichtete Zahl keine
@@ -145,7 +159,9 @@ Forschung und Benchmark-Fallliste liegen in
   Analyse-Audits 75 % der Zeit und 86 % der Kosten, alles bis finalize
   2m36s. Noch keine Änderung daraus; offen für den Autor: zählt das bei
   `seconds` geschuldete Audit zum 5-Minuten-Ziel, soll es gleich im
-  Hintergrund laufen? Vorgeschichte: die
+  Hintergrund laufen? Volle Runde auf `de663ed` (alle Fixes): sieben von
+  sieben richtig, Ids überall geprüft, keine Verweigerung
+  ([Notiz](docs/usability/2026-10-22-sandbox-de663ed.md)). Vorgeschichte: die
   Pflichtfelder folgten
   `standard_contract.registration_fields`; ohne `[model]` schuldet ein
   Seconds-Experiment nur die Frage und bekommt das Zählskelett. t5 und
