@@ -79,6 +79,10 @@ class Lane:
             the freeze — the question, with a model also the criterion and
             the admissibility condition (`registration_fields`), and the
             cost declared (LAB-003 No run without an intent paragraph).
+            runlog reads it off the tree at the start; the release holds
+            it to the commit of the first measurement
+            (`report_check.registration_gaps`): what stood before the
+            number is what that commit holds.
         audits: The agent audits the number owes, by mode: the analysis
             audit at every tier, when the number is written back
             (LAB-050 Analysis audit before reporting); the preflight audit
@@ -282,7 +286,12 @@ def describe(cost: str | None, model: bool) -> list[str]:
             ", the source frozen in the run and tracked in git" if ln.provenance else ""
         ),
         "at the release (`protocol-fill --from-run`, the stop, the commit): "
-        + ("frozen, " if ln.freeze else "no freeze owed, ")
+        + (
+            "frozen, "
+            if ln.freeze
+            else "no freeze owed, the registration as committed at the first "
+            "measurement, "
+        )
         + "finalize clean, a full run (no probe, no acknowledged run), a decided "
         + f"{ANALYSIS_AUDIT} audit of code, promises and that run, `{check}` passing",
     ]

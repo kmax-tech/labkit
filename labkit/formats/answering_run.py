@@ -261,6 +261,26 @@ def bound_runs(area: Path, pid: str) -> tuple[list[RunFacts], list[RunFacts]]:
     return taken, left
 
 
+def first_measurement(area: Path, pid: str) -> Path | None:
+    """The oldest run of AREA bound to PID that declared itself a
+    measurement (`run_kind="measurement"`, no repeat) — the first time the
+    registered question met the data under this protocol, finished or not
+    — or None. The registration is held to the commit this run recorded
+    (`report_check.registration_gaps`): what stood before the number is
+    what that commit holds, not what the tree says now."""
+    for rd in run_dirs(area):
+        cfg = rd.config
+        if cfg is None or rd.error is not None:
+            continue
+        if (
+            cfg.protocol.id == pid
+            and cfg.repeat_of is None
+            and cfg.run_kind == "measurement"
+        ):
+            return rd.dir
+    return None
+
+
 def newest_with_intent_keys(
     cands: list[RunFacts],
 ) -> tuple[Path | None, int, bool]:

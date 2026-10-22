@@ -25,6 +25,21 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **The seconds release holds the registration to the commit of the first
+  measurement.** `report-check` (station 1, where the lane owes the
+  registration instead of the freeze) reads the oldest full run bound to
+  the protocol (`answering_run.first_measurement`), the commit its record
+  names (`runs.recorded_commit`) and the protocol as that commit holds it
+  (`protocol_history.registration_in_commit`): the protocol not committed
+  there, or the fields the lane owes not written there, blocks; outside a
+  repository a warning, as the provenance station's. runlog's start gate
+  reads the tree, which a line written a minute before the run passes;
+  what stood before the number is what the commit holds. The fields are
+  the lane's (`standard_contract.registration_fields`): the question, with
+  a `[model]` table also criterion, admissibility condition and data
+  profile. Why: labkit-paper area 09, fifth haiku round — none of the
+  three labkit agents had committed criterion and admissibility condition
+  before the first measurement.
 - **finalize blocks on an audit record of a deleted run.** Station 8 now
   also holds every analysis record to the area's runs: a record naming a
   run that has no `runs/<id>/` any more is a blocker where the record

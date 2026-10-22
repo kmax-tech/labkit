@@ -441,6 +441,23 @@ def unreportable(cfg: RunConfig) -> list[str]:
     return marks
 
 
+#: what a run records as its `git` when it started outside a repository
+#: (`provenance.git_state` writes it; `recorded_commit` reads it)
+NO_GIT: Final = "no-git"
+#: the mark `git_state` appends when the tree differed from the commit
+DIRTY_MARK: Final = "+dirty"
+
+
+def recorded_commit(cfg: RunConfig) -> str | None:
+    """The commit CFG's run started at (HEAD's short sha as recorded, the
+    `+dirty` mark stripped), or None when it started outside a repository
+    (NO_GIT). Whether the tree was dirty is `cfg.git.endswith(DIRTY_MARK)`:
+    the commit says what stood committed, the mark that more stood in the
+    tree."""
+    commit = cfg.git.removesuffix(DIRTY_MARK)
+    return None if commit in ("", NO_GIT) else commit
+
+
 def completion_state(run_dir: Path) -> RunState:
     """`run_state` of a run directory read from disk, liveness not asked.
 

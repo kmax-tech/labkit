@@ -30,7 +30,7 @@ from labkit.tools import protocol_fill  # noqa: E402
 from labkit.checks import result_render  # noqa: E402
 from labkit.checks import audit_binding  # noqa: E402
 from labkit.formats import findings, promises, scope_sha, shell  # noqa: E402
-from protocol_fixture import run_record, DEFAULT_BLOCK, PID, head  # noqa: E402
+from protocol_fixture import run_record, DEFAULT_BLOCK, PID, head, head_commit  # noqa: E402
 
 BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary
@@ -443,6 +443,7 @@ class Stop(unittest.TestCase):
                         "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                         "promises": promises.snapshot(block, self.area),
                         "run_kind": run_kind,
+                        "git": head_commit(self.root),
                         "data": {
                             "cases": {"path": "data/cases.jsonl", "sha": "x", "rows": 1}
                         },

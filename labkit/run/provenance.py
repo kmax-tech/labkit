@@ -26,6 +26,8 @@ from labkit.formats.scope_sha import (
     tree_digest,
 )
 from labkit.formats.runs import (
+    DIRTY_MARK,
+    NO_GIT,
     RECORD_SHA_CHARS,
     recorded_path,
 )
@@ -83,10 +85,10 @@ def git_state(cwd: Path, untracked: bool = True) -> str:
     empty", 2026-10-13)."""
     rev = git_head(cwd, short=True)
     if not rev:
-        return "no-git"
+        return NO_GIT
     args = ["status", "--porcelain"] + ([] if untracked else ["--untracked-files=no"])
     dirty = repo.git(args, cwd)
-    return f"{rev}{'+dirty' if dirty else ''}"
+    return f"{rev}{DIRTY_MARK if dirty else ''}"
 
 
 def parse_lock(lock: Path) -> dict[str, str | None]:

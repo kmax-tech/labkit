@@ -2,16 +2,19 @@
 
 The ids every protocol of the repo claims (`repo_protocol_ids`, one scan
 per invocation), the id and the cost tier a protocol had in its first
-commit, and the checks built on them: a cost tier lowered since then
-(`cost_lowered`, static evidence — a lower tier owes less) and an id
-changed or taken twice (`check_protocol_id`). Read-only; git is asked
-through `repo.git_run`.
+commit, the registration as a given commit held it
+(`registration_in_commit` — report-check holds the seconds lane to the
+commit of the first measurement), and the checks built on them: a cost
+tier lowered since then (`cost_lowered`, static evidence — a lower tier
+owes less) and an id changed or taken twice (`check_protocol_id`).
+Read-only; git is asked through `repo.git_run`.
 """
 
 from pathlib import Path
 
 from labkit.formats import protocol_block
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
+from labkit.formats.protocol_check import seconds_registration_missing
 from labkit.formats.repo import git_root, git_run, repo_protocols
 
 
@@ -73,6 +76,30 @@ def cost_in_first_commit(path: Path) -> tuple[str, str | None] | None:
         return first, protocol_block.head(shown.stdout).cost
     except protocol_block.BlockError:
         return None
+
+
+def registration_in_commit(path: Path, commit: str) -> list[str] | None:
+    """What the seconds registration lacked in the protocol PATH as COMMIT
+    holds it (`protocol_check.seconds_registration_missing`: the fields the
+    lane owes written, the cost declared; a head this labkit cannot read
+    is named as such) — [] when it stood whole — or None when that commit
+    does not hold the file, or PATH lies outside a repository. The protocol is read as it was then (`git show`): the tree
+    now says nothing about what stood before the number."""
+    root = git_root(path)
+    if root is None:
+        return None
+    rel = path.resolve().relative_to(root).as_posix()
+    shown = git_run(["show", f"{commit}:{rel}"], root)
+    if shown.returncode != 0:
+        return None
+    try:
+        protocol_block.head(shown.stdout)
+    except protocol_block.BlockError as exc:
+        # `seconds_registration_missing` reads an unreadable head as "no
+        # cost"; here the committed text is older than the reader, and the
+        # sentence says so instead of naming a field
+        return [f"a head this labkit reads ({exc})"]
+    return seconds_registration_missing(shown.stdout)
 
 
 def cost_lowered(path: Path, head: protocol_block.Head) -> str | None:

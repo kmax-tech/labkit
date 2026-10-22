@@ -9,6 +9,7 @@ from __future__ import annotations
 from labkit.formats.runs import RunKind
 
 import json
+import subprocess
 from pathlib import Path
 
 from labkit.formats import promises, runs
@@ -196,3 +197,25 @@ def head(
     if promises:
         body += "\n" + promises.strip() + "\n"
     return body + "```\n"
+
+
+def head_commit(root: Path) -> str:
+    """HEAD's short sha of the repository at ROOT — what runlog records as a
+    run's `git` when the tree is clean (`provenance.git_state`)."""
+    return subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+
+
+def started_at(run: Path, commit: str) -> None:
+    """Record RUN as started at COMMIT (its config.json `git`), as a run in
+    a repository records it: report-check holds the seconds registration
+    to the commit of the first measurement."""
+    cfg = run / "config.json"
+    data = json.loads(cfg.read_text(encoding="utf-8"))
+    data["git"] = commit
+    cfg.write_text(json.dumps(data), encoding="utf-8")

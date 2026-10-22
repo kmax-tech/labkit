@@ -95,7 +95,9 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats.gate import Findings
+from labkit.formats.gate import BLOCKER, WARNING, Findings, GateFinding
+from labkit.formats.answering_run import first_measurement
+from labkit.formats.protocol_history import registration_in_commit
 from labkit.formats import console, findings, protocol_block
 from labkit.checks.audit_binding import (
     AuditError,
@@ -122,7 +124,7 @@ from labkit.formats.repo import (
     SKIP_DIRS,
     status_entries,
 )
-from labkit.formats.runs import read_run_config, unreportable
+from labkit.formats.runs import read_run_config, recorded_commit, unreportable
 from labkit.formats.scope_sha import areas_touched
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
@@ -262,6 +264,73 @@ def freeze_gaps(ctx: Checked) -> list[str]:
     # protocol-check and preflight refused it (audit 2026-10-15)
     gaps += [f"line {n}: {label} still a placeholder" for n, label in report.must_holes]
     return [f"{ctx.protocol.name}: {g}" for g in gaps]
+
+
+def registration_gaps(ctx: Checked) -> list[GateFinding]:
+    """Station 1 where the lane owes the registration instead of the freeze
+    (seconds): the registration stood in the protocol as committed at the
+    first measurement — the oldest full run bound to this protocol
+    (`answering_run.first_measurement`) and the commit its record names
+    (`runs.recorded_commit`). Blockers: the run recorded no commit, the
+    commit does not hold the protocol (nothing stood before the number),
+    the fields the lane owes were not written there
+    (`protocol_history.registration_in_commit`). runlog's start gate reads
+    the tree, which a line written a minute before the run passes; what
+    stood before the number is what the commit holds. Outside a repository
+    a warning, as the provenance station's (`run_record_check.provenance_findings`).
+    Empty without a first measurement (finalize names the missing run) and
+    without a stamped id. Why (labkit-paper area 09, fifth haiku round,
+    2026-10-22): none of the three labkit agents had committed criterion
+    and admissibility condition before the first measurement."""
+    if ctx.head.id is None:
+        return []
+    first = first_measurement(ctx.area, ctx.head.id)
+    if first is None:
+        return []
+    cfg = read_run_config(first)
+    if cfg is None:
+        return [GateFinding(BLOCKER, f"{first.name}: no config.json — not a run")]
+    at = f"the first measurement {first.name}"
+    if git_root(ctx.protocol) is None:
+        return [
+            GateFinding(
+                WARNING,
+                f"not a git repository — the registration cannot be held to the "
+                f"commit of {at}",
+            )
+        ]
+    commit = recorded_commit(cfg)
+    if commit is None:
+        return [
+            GateFinding(
+                BLOCKER,
+                f"{at} recorded no commit ({cfg.git!r}) — the registration cannot be "
+                f"held to what stood before the number (LAB-003 No run without an "
+                f"intent paragraph)",
+            )
+        ]
+    missing = registration_in_commit(ctx.protocol, commit)
+    if missing is None:
+        return [
+            GateFinding(
+                BLOCKER,
+                f"{ctx.protocol.name} was not committed at {at} ({commit}) — nothing "
+                f"stood before the number; the registration is what the commit of "
+                f"the first measurement holds (LAB-003 No run without an intent "
+                f"paragraph)",
+            )
+        ]
+    if missing:
+        return [
+            GateFinding(
+                BLOCKER,
+                f"the registration as committed at {at} ({commit}) lacks "
+                f"{', '.join(missing)} — the registration is what the commit of "
+                f"the first measurement holds, not what the tree says now "
+                f"(LAB-003 No run without an intent paragraph)",
+            )
+        ]
+    return []
 
 
 def analysis_audit_gap(ctx: Checked) -> str | None:
@@ -408,9 +477,13 @@ def report_check(
         gaps = []
         print(
             f'  {chosen.name}: cost = "{ctx.head.cost}" — no freeze and no preflight audit '
-            f"owed (LAB-017 The number of audits follows the cost tier); the full "
-            f"run, the analysis audit and the check are"
+            f"owed (LAB-017 The number of audits follows the cost tier); the "
+            f"registration as committed at the first measurement, the full run, "
+            f"the analysis audit and the check are"
         )
+    if ln.registration:
+        for finding in registration_gaps(ctx):
+            findings.take(finding)
     for b in gaps + later_gaps(ctx, ln):
         findings.block(b)
     if not findings.blocked:

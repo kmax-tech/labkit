@@ -559,22 +559,44 @@ class Adopt(unittest.TestCase):
 """
 
     def _area(self, *, run_kind: RunKind = "measurement", audited: bool = True) -> Path:
-        from labkit.formats import findings, promises, scope_sha
-        from protocol_fixture import completed_run, scope_file
+        import subprocess
 
-        area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+        from labkit.formats import findings, promises, scope_sha
+        from protocol_fixture import completed_run, head_commit, scope_file, started_at
+
+        root = Path(tempfile.mkdtemp())
+        area = root / "experiments" / "01-x"
         (area / "scripts").mkdir(parents=True)
         (area / "scripts" / "02_analyze.py").write_text(
             "print('ok')\n", encoding="utf-8"
         )
         scope_file(area)
         proto = area / "PROTOCOL-x.md"
-        proto.write_text(self.BODY + head(cost="seconds"), encoding="utf-8")
-        run = completed_run(
-            area, self.RUN, metrics={"c1_pass": True}, run_kind=run_kind
+        proto.write_text(
+            self.BODY.replace(
+                "## Summary",
+                "- **Question / hypothesis:** does it hold?\n\n## Summary",
+                1,
+            )
+            + head(cost="seconds"),
+            encoding="utf-8",
         )
         src = area / "data.jsonl"
         src.write_text('{"id": 1}\n', encoding="utf-8")
+        # a repository with the registration and the source committed before
+        # the run: the seconds release holds both to git
+        for args in (
+            ("init", "-q", "."),
+            ("config", "user.email", "t@t"),
+            ("config", "user.name", "t"),
+            ("add", "-A"),
+            ("commit", "-qm", "registration"),
+        ):
+            subprocess.run(["git", *args], cwd=root, capture_output=True, check=True)
+        run = completed_run(
+            area, self.RUN, metrics={"c1_pass": True}, run_kind=run_kind
+        )
+        started_at(run, head_commit(root))
         cfg = run / "config.json"
         data = json.loads(cfg.read_text(encoding="utf-8"))
         data["data"] = {"cases": {"path": str(src), "sha": "x", "rows": 1}}

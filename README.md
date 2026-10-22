@@ -69,7 +69,7 @@ cheaply you can repeat the measurement:
 
 | Tier | Before the full run | Before reporting a result |
 |---|---|---|
-| `seconds` | Write the registration and implement/test the measurement; no freeze or preflight audit. | Finalize, decide the analysis audit, adopt the result through `report-check`. |
+| `seconds` | Write and commit the registration, implement/test the measurement; no freeze or preflight audit. | Finalize, decide the analysis audit, adopt the result through `report-check` (which holds the registration to the commit of the first measurement). |
 | `minutes` / `hours` | Also probe the instrument, pass preflight, decide the preflight audit, complete the report fields and freeze the protocol. | Finalize, decide the analysis audit, adopt the result through `report-check`. |
 
 Without `--model`, seconds creates a counting skeleton; minutes/hours

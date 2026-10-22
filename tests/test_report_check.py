@@ -31,7 +31,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from protocol_fixture import completed_run, head, scope_file
+from protocol_fixture import completed_run, head, head_commit, scope_file, started_at
 
 from labkit.formats import findings, promises, scope_sha, standard_contract
 from labkit.gates import report_check
@@ -440,12 +440,19 @@ class IfReported(unittest.TestCase):
         proto = area / "PROTOCOL-x.md"
         proto.write_text(
             head(cost="seconds", result=declared)
+            + "- **Question / hypothesis:** does it hold?\n"
             + f"- **Recorded results:** {answer}\n",
             encoding="utf-8",
         )
+        if git:
+            # the registration committed before the run, as the lane owes it
+            self._git(area.parent.parent, "add", "-A")
+            self._git(area.parent.parent, "commit", "-qm", "registration")
         run = completed_run(
             area, self.RUN, metrics={"c1_pass": True}, run_kind=run_kind
         )
+        if git:
+            started_at(run, head_commit(area.parent.parent))
         # at seconds finalize holds the provenance: the source frozen in the run
         src = area / "data.jsonl"
         src.write_text('{"id": 1}\n', encoding="utf-8")
