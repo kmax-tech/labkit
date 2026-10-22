@@ -50,35 +50,51 @@ class Lanes(unittest.TestCase):
 
 
 class Registration(unittest.TestCase):
-    def test_a_count_registers_its_question_a_model_also_the_bar(self):
-        self.assertEqual(sc.registration_fields(False), ("Question / hypothesis",))
+    def test_a_count_registers_its_question_a_bar_its_criterion_and_reference(self):
+        """Standard 0.22: the registration follows what the number asserts
+        (`kind`), not the model technology — a RandomForest at seconds owed
+        nothing but its question (fifth haiku round, t5 and t18)."""
         self.assertEqual(
-            sc.registration_fields(True),
-            (
-                "Question / hypothesis",
-                "Success / failure criterion",
-                "Admissibility condition",
-                "Data profile",
-            ),
+            sc.registration_fields("count", False), ("Question / hypothesis",)
         )
+        bar = (
+            "Question / hypothesis",
+            "Success / failure criterion",
+            "Admissibility condition",
+            "Null condition / anchors",
+        )
+        self.assertEqual(sc.registration_fields("fit", False), bar)
+        self.assertEqual(sc.registration_fields("apply", False), bar)
+        self.assertEqual(sc.registration_fields("apply", True), bar + ("Data profile",))
+        self.assertEqual(sc.registration_fields("fit", True), bar + ("Data profile",))
+
+    def test_an_unknown_kind_is_refused_not_read_as_a_count(self):
+        for bad in ("Count", "estimator", "", "llm"):
+            with self.subTest(bad), self.assertRaises(ValueError):
+                sc.registration_fields(bad, False)
+            with self.subTest(bad), self.assertRaises(ValueError):
+                sc.skeleton("seconds", bad, False)
+        self.assertFalse(sc.has_bar("count"))
+        self.assertTrue(sc.has_bar("fit") and sc.has_bar("apply"))
 
     def test_the_labels_are_the_templates_must_fields_of_the_seconds_cut(self):
         by_label = {f.label: f for f in FIELDS}
-        for label in sc.registration_fields(True):
+        for label in sc.registration_fields("apply", True):
             with self.subTest(label):
                 self.assertIn(label, by_label)
                 self.assertEqual(by_label[label].level, "must")
-                self.assertIn(by_label[label].seconds, ("s", "sm"))
+                self.assertIn(by_label[label].seconds, ("s", "sb", "sm"))
 
 
 class TheRelease(unittest.TestCase):
     def test_the_description_names_a_probe_only_where_one_precedes_the_run(self):
         for cost in (None, "seconds", "minutes", "hours"):
-            for model in (True, False):
-                with self.subTest(cost=cost, model=model):
-                    first = sc.describe(cost, model)[0]
+            for kind, model in (("count", False), ("fit", False), ("apply", True)):
+                with self.subTest(cost=cost, kind=kind, model=model):
+                    first = sc.describe(cost, kind, model)[0]
                     owed = (
-                        sc.skeleton(cost, model).probe and sc.lane(cost).probe_allowed
+                        sc.skeleton(cost, kind, model).probe
+                        and sc.lane(cost).probe_allowed
                     )
                     self.assertEqual("--probe stage before the run" in first, owed)
                     if not owed:
@@ -93,11 +109,15 @@ class TheRelease(unittest.TestCase):
 
 class Skeletons(unittest.TestCase):
     def test_which_skeleton_an_area_gets(self):
-        self.assertIs(sc.skeleton("seconds", False), sc.COUNT)
-        self.assertIs(sc.skeleton("minutes", False), sc.ESTIMATOR)
-        self.assertIs(sc.skeleton(None, False), sc.ESTIMATOR)
+        """By the kind, at every tier: a fit at seconds got the count's
+        skeleton until 0.104 (fifth haiku round)."""
         for cost in ("seconds", "minutes", "hours", None):
-            self.assertIs(sc.skeleton(cost, True), sc.MODEL)
+            with self.subTest(cost=cost):
+                self.assertIs(sc.skeleton(cost, "count", False), sc.COUNT)
+                self.assertIs(sc.skeleton(cost, "fit", False), sc.ESTIMATOR)
+                self.assertIs(sc.skeleton(cost, "fit", True), sc.ESTIMATOR)
+                self.assertIs(sc.skeleton(cost, "apply", True), sc.MODEL)
+                self.assertIs(sc.skeleton(cost, "apply", False), sc.ESTIMATOR)
 
     def test_every_skeleton_stamps_the_check_from_a_shipped_template(self):
         for sk in sc.SKELETONS:
@@ -117,18 +137,29 @@ class Skeletons(unittest.TestCase):
 
 class Described(unittest.TestCase):
     def test_every_tier_names_its_check_and_what_comes_before_the_run(self):
-        for cost, model in ((None, False), ("seconds", False), ("seconds", True)):
-            with self.subTest(cost=cost, model=model):
-                text = "\n".join(sc.describe(cost, model))
+        for cost, kind, model in (
+            (None, "fit", False),
+            ("seconds", "count", False),
+            ("seconds", "apply", True),
+        ):
+            with self.subTest(cost=cost, kind=kind, model=model):
+                text = "\n".join(sc.describe(cost, kind, model))
                 self.assertIn("scripts/02_analyze.py --check", text)
                 self.assertIn(
                     "registration written" if cost == "seconds" else "frozen = true",
                     text,
                 )
         self.assertIn(
-            "Success / failure criterion", "\n".join(sc.describe("seconds", True))
+            "Success / failure criterion",
+            "\n".join(sc.describe("seconds", "apply", True)),
         )
-        self.assertNotIn("Success / failure", "\n".join(sc.describe("seconds", False)))
+        self.assertIn(
+            "Success / failure criterion",
+            "\n".join(sc.describe("seconds", "fit", False)),
+        )
+        self.assertNotIn(
+            "Success / failure", "\n".join(sc.describe("seconds", "count", False))
+        )
 
 
 if __name__ == "__main__":

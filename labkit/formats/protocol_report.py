@@ -59,11 +59,15 @@ def unreported(text: str, seconds: bool = False) -> list[str]:
     lines = fields(text)
     found = {f.name: f for f in lines}
     model = model_named(text)
+    try:
+        kind = protocol_block.head(text).kind
+    except protocol_block.BlockError:
+        kind = None  # the head check names it; here the most is owed
     owed = [
         f
         for f in FIELDS
         if f.level == "after"
-        and (in_cut(f, model) if seconds else f.seconds != "sm" or model)
+        and (in_cut(f, kind, model) if seconds else f.seconds != "sm" or model)
     ]
     return [
         f.label.casefold()
@@ -222,7 +226,8 @@ def print_contract() -> None:
             for f in FIELDS
             if f.seconds == "s" and f.level in ("must", "should")
         )
-        + "; with a model named in `Model / tool` also "
+        + "; with a bar (kind fit or apply) also the criterion, the admissibility "
+        "condition, the null condition and Model / tool; with a `[model]` table also "
         + ", ".join(f.label for f in FIELDS if f.seconds == "sm")
         + "; after the run: "
         + ", ".join(f.label for f in FIELDS if f.seconds == "s" and f.level == "after")
@@ -238,13 +243,14 @@ def print_contract() -> None:
         "what each tier owes, by occasion — the one table every gate reads "
         "(standard_contract; minutes owes what hours owes):"
     )
-    for cost, model in (
-        (standard_contract.SECONDS, False),
-        (standard_contract.SECONDS, True),
-        (standard_contract.HOURS, False),
-        (standard_contract.HOURS, True),
+    for cost, kind, model in (
+        (standard_contract.SECONDS, standard_contract.COUNT_KIND, False),
+        (standard_contract.SECONDS, standard_contract.FIT_KIND, False),
+        (standard_contract.SECONDS, standard_contract.APPLY_KIND, True),
+        (standard_contract.HOURS, standard_contract.FIT_KIND, False),
+        (standard_contract.HOURS, standard_contract.APPLY_KIND, True),
     ):
-        first, *rest = standard_contract.describe(cost, model)
+        first, *rest = standard_contract.describe(cost, kind, model)
         print(f"  {first}")
         for line in rest:
             print(f"    {line}")
@@ -256,7 +262,10 @@ def print_contract() -> None:
         + ", ".join(protocol_block.TYPES)
         + ", cost one of "
         + ", ".join(protocol_block.COST_TIERS)
-        + "."
+        + ", kind one of "
+        + ", ".join(protocol_block.KINDS)
+        + " (what the kept number asserts: a count judges no prediction, a fit "
+        "judges a model trained or adjusted here, an apply a model used unchanged)."
     )
     print(
         "\nprose-line budget per section (code blocks, table rows exempt; "

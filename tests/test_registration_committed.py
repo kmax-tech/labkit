@@ -150,7 +150,7 @@ class RegistrationAtTheFirstMeasurement(unittest.TestCase):
         sha = self._commit(REGISTRATION.replace("", ""))
         self.proto.write_text(
             self.proto.read_text(encoding="utf-8").replace(
-                'standard = "0.21"', 'standard = "0.20"'
+                'standard = "0.22"', 'standard = "0.21"'
             ),
             encoding="utf-8",
         )
@@ -160,7 +160,7 @@ class RegistrationAtTheFirstMeasurement(unittest.TestCase):
         self.assertNotEqual(old, sha)
         (lack,) = protocol_history.registration_in_commit(self.proto, old) or ["?"]
         self.assertIn("a head this labkit reads", lack)
-        self.assertIn("0.20", lack)
+        self.assertIn("0.21", lack)
 
     def test_a_run_outside_a_repository_recorded_no_commit(self):
         sha = self._commit(REGISTRATION)

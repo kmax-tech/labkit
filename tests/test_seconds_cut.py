@@ -114,10 +114,41 @@ class Cut(unittest.TestCase):
 
 class Registration(unittest.TestCase):
     QUESTION = (
-        "- **Model / tool:** haiku\n"  # with a model the gate owes criterion and admissibility
+        "- **Model / tool:** haiku\n"  # an apply: the gate owes the bar, its reference, admissibility
         "- **Question / hypothesis:** q\n- **Success / failure criterion:** c\n"
+        "- **Null condition / anchors:** n\n"
         "- **Data profile:** 6 and 6 items; 'because' in both classes\n"
     )
+
+    def test_a_fit_without_a_model_owes_the_bar_and_its_reference(self):
+        """Standard 0.22: a RandomForest at seconds owed its question only
+        (fifth haiku round); a fit owes criterion, admissibility and the
+        null condition, and a count with a [model] table is a contradiction."""
+        text = head(cost="seconds", kind="fit") + "- **Question / hypothesis:** q\n"
+        self.assertEqual(
+            protocol_check.seconds_registration_missing(text),
+            [
+                "Success / failure criterion",
+                "Admissibility condition",
+                "Null condition / anchors",
+            ],
+        )
+        contradiction = (
+            head(cost="seconds", kind="count", model="haiku") + self.QUESTION
+        )
+        missing = protocol_check.seconds_registration_missing(contradiction)
+        self.assertTrue(
+            any('kind = "count" with a [model] table' in m for m in missing), missing
+        )
+        placeholder = (
+            head(cost="seconds", kind="<count | fit | apply>")
+            + "- **Question / hypothesis:** q\n"
+        )
+        missing = protocol_check.seconds_registration_missing(placeholder)
+        self.assertIn("[protocol] kind", missing)
+        self.assertIn(
+            "Success / failure criterion", missing
+        )  # undecided: the most is owed
 
     def test_a_count_owes_only_its_question(self):
         """Without a model there is no bar to clear: the gate is the question (0.87.1)."""
@@ -187,7 +218,7 @@ class CountPlaceholders(unittest.TestCase):
 
     def test_the_count_cut_says_na_and_no_hypothesis(self):
         cut = protocol_cuts.seconds_cut(
-            scaffold.template(scaffold.PROTOCOL_TEMPLATE.name)
+            scaffold.template(scaffold.PROTOCOL_TEMPLATE.name), "count"
         )
         out = protocol_cuts.count_placeholders(cut)
         self.assertIn(

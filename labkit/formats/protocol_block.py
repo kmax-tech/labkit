@@ -9,6 +9,7 @@ holds the fields a machine reads — the head — and its optional
     id = "p-0123456789abcdef"       # stamped by `labkit-init exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
     cost = "seconds"                # seconds | minutes | hours
+    kind = "count"                  # count | fit | apply — what the kept number asserts
     frozen = false
     preflight_audit = ""            # minutes/hours: the decided preflight record, audits/<minute>-preflight.toml
 
@@ -35,9 +36,22 @@ from labkit.formats.runs import RUN_ID
 
 #: the head format this labkit reads; a protocol of another standard is
 #: read with the labkit release it was written for
-STANDARD = "0.21"
+STANDARD = "0.22"
+#: what a reader of the previous standard changes to read a protocol here —
+#: said in the refusal, so the migration is a sentence, not a legacy path
+MIGRATION = (
+    'from 0.21: set standard = "0.22" and add `kind = "count" | "fit" | "apply"` '
+    "below `cost` — what the kept number asserts (`protocol-fill <PROTOCOL> "
+    "kind=…`); a count measures and judges no prediction, a fit judges a model "
+    "trained or adjusted in this experiment, an apply judges a model used unchanged"
+)
 TYPES = ("exploratory", "confirmatory")
 COST_TIERS = ("seconds", "minutes", "hours")
+#: what the kept number asserts (standard 0.22): a count judges no
+#: prediction; a fit judges a model trained or adjusted in this experiment;
+#: an apply judges a model used unchanged — the obligations follow
+#: (`standard_contract.registration_fields`), never the model technology
+KINDS = ("count", "fit", "apply")
 #: `p-` plus 16 lowercase hex: not derived from name or path, so renaming
 #: and moving a protocol leave its identity intact
 ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
@@ -47,7 +61,15 @@ _TOP_LEVEL = {"protocol", "promise", "result", "model", "gate"}
 #: the settings every protocol carries in its ```toml head (the block at the
 #: end of the protocol), in the template's order — not the run's config.json,
 #: which runlog writes per run
-PROTOCOL_HEAD_KEYS = ("standard", "id", "type", "cost", "frozen", "preflight_audit")
+PROTOCOL_HEAD_KEYS = (
+    "standard",
+    "id",
+    "type",
+    "cost",
+    "kind",
+    "frozen",
+    "preflight_audit",
+)
 
 
 class BlockError(ValueError):
@@ -62,6 +84,7 @@ class Head:
     id: str | None
     type: str | None
     cost: str | None
+    kind: str | None  # one of KINDS; None while the stamp's placeholder stands
     frozen: bool
     preflight_audit: (
         str  # "" until the decided preflight record is named (its file name)
@@ -70,7 +93,7 @@ class Head:
     @property
     def placeholders(self) -> list[str]:
         """The head fields still holding a template placeholder."""
-        return [f for f in ("id", "type", "cost") if getattr(self, f) is None]
+        return [f for f in ("id", "type", "cost", "kind") if getattr(self, f) is None]
 
 
 #: a `[[promise]]` table header line, spaces and a comment allowed — where
@@ -404,18 +427,18 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
             f"[protocol]: unknown field(s) {sorted(unknown)}; "
             f"allowed: {', '.join(PROTOCOL_HEAD_KEYS)}"
         )
-    missing = [f for f in PROTOCOL_HEAD_KEYS if f not in table]
-    if missing:
-        raise BlockError(f"[protocol]: missing {', '.join(missing)}")
-    standard = table["standard"]
+    standard = table.get("standard")
     if not isinstance(standard, str):
         raise BlockError(f'[protocol] standard = {standard!r} — a string, "{STANDARD}"')
     if standard != STANDARD:
         raise BlockError(
             f"[protocol] standard = {standard!r}, this labkit reads "
             f"{STANDARD!r} — use the labkit release the protocol was "
-            f"written for, or update the protocol"
+            f"written for, or update the protocol ({MIGRATION})"
         )
+    missing = [f for f in PROTOCOL_HEAD_KEYS if f not in table]
+    if missing:
+        raise BlockError(f"[protocol]: missing {', '.join(missing)}")
     pid = table["id"]
     if not isinstance(pid, str):
         raise BlockError(f"[protocol] id = {pid!r} — a string")
@@ -439,6 +462,7 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
         id=pid,
         type=_choice(table, "type", TYPES),
         cost=_choice(table, "cost", COST_TIERS),
+        kind=_choice(table, "kind", KINDS),
         frozen=frozen,
         preflight_audit=audit.strip(),
     )

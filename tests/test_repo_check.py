@@ -110,10 +110,11 @@ class Source(unittest.TestCase):
 
 FROZEN_HEAD = """```toml
 [protocol]
-standard = "0.21"
+standard = "0.22"
 id = "p-0123456789abcdef"
 type = "exploratory"
 cost = "seconds"
+kind = "count"
 frozen = true
 preflight_audit = ""
 ```

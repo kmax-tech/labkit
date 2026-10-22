@@ -38,7 +38,11 @@ class StampedFences(unittest.TestCase):
                         root = Path(tmp) / "lab"
                         argv = ["exp", "foo", "--repo", str(root)]
                         argv += ["--cost", cost] if cost else []
-                        argv += ["--model", "haiku"] if model else []
+                        argv += (
+                            ["--kind", "apply", "--model", "haiku"]
+                            if model
+                            else ["--kind", "fit"]
+                        )
                         out = io.StringIO()
                         with (
                             contextlib.redirect_stdout(out),
@@ -93,11 +97,12 @@ class StampReadBack(unittest.TestCase):
     def test_a_head_without_the_asked_tier_is_refused(self):
         from labkit.tools import scaffold as sc
 
-        good = '```toml\n[protocol]\nstandard = "0.21"\nid = "p-0123456789abcdef"\ntype = "<exploratory | confirmatory>"\ncost = "seconds"\nfrozen = false\npreflight_audit = ""\n```\n'
-        sc.check_stamped_head(good, "seconds")
+        good = '```toml\n[protocol]\nstandard = "0.22"\nid = "p-0123456789abcdef"\ntype = "<exploratory | confirmatory>"\ncost = "seconds"\nkind = "count"\nfrozen = false\npreflight_audit = ""\n```\n'
+        sc.check_stamped_head(good, "seconds", "count")
         sc.check_stamped_head(
             good.replace('cost = "seconds"', 'cost = "<seconds | minutes | hours>"'),
             None,
+            "count",
         )
         with self.assertRaisesRegex(ValueError, "cost"):
             sc.check_stamped_head(
@@ -105,10 +110,17 @@ class StampReadBack(unittest.TestCase):
                     'cost = "seconds"', 'cost = "<seconds | minutes | hours>"'
                 ),
                 "seconds",
+                "count",
             )
         with self.assertRaisesRegex(ValueError, "id"):
             sc.check_stamped_head(
-                good.replace("p-0123456789abcdef", "<protocol-id>"), "seconds"
+                good.replace("p-0123456789abcdef", "<protocol-id>"), "seconds", "count"
+            )
+        with self.assertRaisesRegex(ValueError, "kind"):
+            sc.check_stamped_head(
+                good.replace('kind = "count"', 'kind = "<count | fit | apply>"'),
+                "seconds",
+                "count",
             )
 
 

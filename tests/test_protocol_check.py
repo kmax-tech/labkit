@@ -234,7 +234,8 @@ class TestCheckFields(unittest.TestCase):
     def test_template_owes_only_its_head(self):
         report = protocol_check.check_fields(TEMPLATE.read_text(encoding="utf-8"))
         self.assertEqual(
-            report.missing_must, ["[protocol] id", "[protocol] type", "[protocol] cost"]
+            report.missing_must,
+            ["[protocol] id", "[protocol] type", "[protocol] cost", "[protocol] kind"],
         )
         self.assertEqual(report.missing_should, [])
 
@@ -963,7 +964,7 @@ class TestHeadValues(unittest.TestCase):
         for std in ("0.99", "0.20", "0.17", "0.15"):
             with self.subTest(std):
                 rc, out = run_main(
-                    pilot().replace('standard = "0.21"', f'standard = "{std}"')
+                    pilot().replace('standard = "0.22"', f'standard = "{std}"')
                 )
                 self.assertEqual(rc, 1, out)
                 self.assertIn(f"HEAD (must): [protocol] standard = '{std}'", out)

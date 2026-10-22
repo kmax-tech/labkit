@@ -9,6 +9,34 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **Protocol standard 0.22: the head says what the kept number asserts
+  (`kind`).** `kind = "count" | "fit" | "apply"` below `cost`: a count
+  judges no prediction (a measurement that cannot pass trivially), a fit
+  judges a model trained or adjusted in the experiment, an apply a model
+  used unchanged. The registration and the skeleton follow the kind, not
+  the model technology (`standard_contract.registration_fields(kind,
+  model)`, `skeleton(cost, kind, model)`, `has_bar`): a count owes its
+  question; a fit or an apply also the success criterion, the
+  admissibility condition and the null condition / anchors, and carries
+  promise tables at every tier; a `[model]` table adds the data profile
+  and the prompt. `labkit-init exp` takes `--kind` and stamps nothing
+  without it; `--kind count --model` is refused; a fit at `seconds` gets
+  the estimator skeleton (until now the count's). The template marks the
+  fields a bar owes with `<!-- sb -->` (`protocol_cuts.SECONDS_BAR_TAG`),
+  and the seconds cut carries them for a fit without a model. Loud, never
+  a fallback: an unknown kind does not read (`protocol_block.head`), a
+  placeholder stands among the head's placeholders and refuses a full run,
+  `kind = "count"` with a `[model]` table is a must finding and a refusal
+  (`protocol_check.kind_gap`). Migration, said in the refusal of a 0.21
+  head (`protocol_block.MIGRATION`): set `standard = "0.22"` and add the
+  `kind` line (`protocol-fill PROTOCOL kind=…`); 0.103.0 is the last
+  version reading standard 0.21, and no code reads it here. Why: a
+  RandomForest at `seconds` had no `[model]` alias, got the count's
+  skeleton and owed no criterion — t5 and t18 of the fifth haiku round;
+  the writing probe (`docs/notes/2026-10-22-kind-writing-probe.md`)
+  registered a count, two fits and an apply under the schema without a
+  special rule.
+
 - **`preflight_audit` names the decided record, not a line.** The head
   field is the file name of the decided preflight record under the area's
   `audits/` (`preflight_audit = "2026-09-08T14-12-preflight.toml"`, as

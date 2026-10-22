@@ -151,11 +151,14 @@ evidence file under the same ID (top of this document).*
   The promises are also present as data in the head: the `[[promise]]` tables
   (key, sentence, code region, constants). Protocol standard 0.19
   (labkit 0.72) requires them when `frozen = true` and for every full run
-  — so with `cost = "seconds"` always, with one exception: a plain count
-  at `cost = "seconds"` whose prose names no `[C]`/`[A]`/`[B]` id registers
-  nothing, and owes neither tables nor a success criterion (labkit 0.87.1,
-  `promises.promise_tables_owed`); its question, data, exclusions and unit
-  are its registration. Its `[protocol]` head and the release of its number
+  — so with `cost = "seconds"` always, with one exception: a count
+  (`kind = "count"` in the head, standard 0.22: a number that judges no
+  prediction and so cannot pass trivially) registers nothing unless its
+  prose names a `[C]`/`[A]`/`[B]` id, and owes neither tables nor a
+  success criterion (labkit 0.87.1, `promises.promise_tables_owed`); its
+  question, data, exclusions and unit are its registration. A fit (a model
+  trained or adjusted in the experiment) and an apply (a model used
+  unchanged) have a bar and register it, whatever the tier. Its `[protocol]` head and the release of its number
   (the analysis audit, `report-check`) stay owed. A constant is named like the
   config key (`margin`, lowercase) and appears in exactly one table; the
   script reads it with `promises.all_constants()`, never as a copy, and

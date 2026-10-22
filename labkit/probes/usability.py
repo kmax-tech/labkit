@@ -166,14 +166,14 @@ TASKS = {
         "template": "usability-task-judge.md.template",
     },
 }
-#: (cost tier, model in the loop) per task: what the house route stamps for
-#: it (`labkit-init exp --cost seconds`, plus `--model` with a model in the loop).
-#: Staged without them, the count got the full form and the model skeleton
-#: and every agent spent its time deleting it (probe 2026-10-07) — a cost
-#: of the staging, not of the route.
-TASK_STAMP: dict[str, tuple[str, bool]] = {
-    "count": ("seconds", False),
-    "judge": ("seconds", True),
+#: (cost tier, kind, model in the loop) per task: what the house route
+#: stamps for it (`labkit-init exp --cost seconds --kind …`, plus `--model`
+#: with a model in the loop). Staged without them, the count got the full
+#: form and the model skeleton and every agent spent its time deleting it
+#: (probe 2026-10-07) — a cost of the staging, not of the route.
+TASK_STAMP: dict[str, tuple[str, str, bool]] = {
+    "count": ("seconds", "count", False),
+    "judge": ("seconds", "apply", True),
 }
 LOG_TAGS = ("read", "run", "edit", "unsure", "gate")
 LOG_LINE = re.compile(r"^(\d\d):(\d\d):(\d\d)\s*·\s*(\w+)\s*·\s*(.*)$")
@@ -345,13 +345,19 @@ def recount(root: Path) -> float:
     return sum(counts) / len(counts)
 
 
-def stamp_flags(task: str, cost: str | None, model: bool) -> tuple[str | None, bool]:
-    """(cost tier or None, model) the scaffolder gets: the task's route stamp
-    (TASK_STAMP) unless `cost` names a tier; "unset" stamps none."""
-    default_cost, default_model = TASK_STAMP[task]
+def stamp_flags(
+    task: str, cost: str | None, model: bool
+) -> tuple[str | None, str, bool]:
+    """(cost tier or None, kind, model) the scaffolder gets: the task's route
+    stamp (TASK_STAMP) unless `cost` names a tier; "unset" stamps no tier.
+    A count asked for with a model is an apply: a model in the loop judges."""
+    default_cost, kind, default_model = TASK_STAMP[task]
     if cost is None:
         cost = default_cost
-    return (None if cost == "unset" else cost), (model or default_model)
+    model = model or default_model
+    if model and kind == "count":
+        kind = "apply"
+    return (None if cost == "unset" else cost), kind, model
 
 
 def tier_sentence(cost: str | None) -> str:
@@ -461,7 +467,7 @@ def stage(
     sheet and the default stamp (TASKS); `cost` overrides the stamped tier
     ("unset" leaves it to the agent), `model` adds the model skeleton."""
     spec = TASKS[task]
-    cost, model = stamp_flags(task, cost, model)
+    cost, kind, model = stamp_flags(task, cost, model)
     area_name, metric_key = spec["area"], spec["metric_key"]
     if root.exists() and any(root.iterdir()):
         raise console.Refused(
@@ -487,7 +493,7 @@ def stage(
     _sh(["git", "add", "-A"], root)
     _commit(root, "Scaffold: a probe lab repo for the usability trace")
     _, stamp_report = scaffold.stamp_area(
-        root, area_name, cost=cost, model="haiku" if model else False
+        root, area_name, cost=cost, kind=kind, model="haiku" if model else False
     )
     print(
         stamp_report, file=sys.stderr
@@ -531,6 +537,8 @@ def stage(
             "exp",
             area_name,
             *(["--cost", cost] if cost else []),
+            "--kind",
+            kind,
             *(["--model", "haiku"] if model else []),
         ],
         target_minutes=TARGET_MINUTES,

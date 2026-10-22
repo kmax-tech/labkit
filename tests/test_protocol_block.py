@@ -17,8 +17,16 @@ class Head(unittest.TestCase):
             )
         )
         self.assertEqual(
-            (h.standard, h.id, h.type, h.cost, h.frozen, h.preflight_audit),
-            ("0.21", PID, "exploratory", "seconds", True, "2026-10-07 · 0 findings"),
+            (h.standard, h.id, h.type, h.cost, h.kind, h.frozen, h.preflight_audit),
+            (
+                "0.22",
+                PID,
+                "exploratory",
+                "seconds",
+                "count",
+                True,
+                "2026-10-07 · 0 findings",
+            ),
         )
         self.assertEqual(h.placeholders, [])
 
@@ -28,13 +36,15 @@ class Head(unittest.TestCase):
                 id="<protocol-id>",
                 type="<exploratory | confirmatory>",
                 cost="<seconds | minutes | hours>",
+                kind="<count | fit | apply>",
                 preflight_audit="<date · scope sha>",
             )
         )
         self.assertEqual(
-            (h.id, h.type, h.cost, h.preflight_audit), (None, None, None, "")
+            (h.id, h.type, h.cost, h.kind, h.preflight_audit),
+            (None, None, None, None, ""),
         )
-        self.assertEqual(h.placeholders, ["id", "type", "cost"])
+        self.assertEqual(h.placeholders, ["id", "type", "cost", "kind"])
 
     def assertRejects(self, text: str, fragment: str):
         with self.assertRaises(protocol_block.BlockError) as cm:
@@ -64,7 +74,7 @@ class Head(unittest.TestCase):
         )
 
     def test_other_standard_names_the_way_out(self):
-        self.assertRejects(head().replace('"0.21"', '"0.18"'), "use the labkit release")
+        self.assertRejects(head().replace('"0.22"', '"0.18"'), "use the labkit release")
 
     def test_no_block_or_no_table(self):
         self.assertRejects("# P\n- **Standard:** 0.16\n", "no [protocol] table")
@@ -207,7 +217,8 @@ class ModelTable(unittest.TestCase):
             },
         )
         self.assertEqual(
-            protocol_block.head(text), protocol_block.head(head(cost="seconds"))
+            protocol_block.head(text),
+            protocol_block.head(head(cost="seconds", kind="apply")),
         )
         self.assertEqual(
             promises.block_stamp(text), promises.block_stamp(head(cost="seconds"))

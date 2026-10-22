@@ -19,7 +19,7 @@ from pathlib import Path
 from labkit.formats.runs import RunKind, parse_run_kind
 
 from labkit.formats import findings, promises, protocol_block, repo
-from labkit.formats.standard_contract import PREFLIGHT_AUDIT, lane
+from labkit.formats.standard_contract import COUNT_KIND, PREFLIGHT_AUDIT, lane
 from labkit.formats.scope_sha import area_stamp
 from labkit.formats.runs import (
     COMPLETED,
@@ -131,11 +131,19 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
             return []
         return [
             f'{path.name}: `cost = "{head.cost}"`, but the registration is not '
-            f"written: {', '.join(missing)} still empty or a placeholder — at "
-            f"seconds the gate is the question (with a model also criterion · "
-            f"admissibility condition · data profile), not the freeze (LAB-003 No run without an intent paragraph, LAB-017 The number of audits follows the cost tier)"
+            f"written: {', '.join(missing)} — at seconds the gate is the "
+            f"registration the kind owes (a count its question; a fit or an apply "
+            f"also criterion · admissibility condition · null condition; with a "
+            f"model the data profile), not the freeze (LAB-003 No run without an "
+            f"intent paragraph, LAB-017 The number of audits follows the cost tier)"
         ]
     out = []
+    if head.kind is None:
+        # what the number asserts is decided before it exists (standard 0.22)
+        out.append(
+            f"{path.name}: [protocol] kind is still a placeholder — count, fit or "
+            f"apply (`protocol-fill {path.name} kind=…`)"
+        )
     if not head.frozen:
         out.append(f"{path.name}: not `frozen = true`")
     out += _audit_line_findings(base_dir, path, head.preflight_audit, text)
@@ -313,7 +321,9 @@ def registration_refusal(
         block,
         frozen=head.frozen,
         full_run=full_run,
-        registers=promises.registers_ids(bound.text),
+        # a count registers nothing unless its prose names an id; a fit or
+        # an apply registers by its kind (standard 0.22)
+        registers=head.kind != COUNT_KIND or promises.registers_ids(bound.text),
     )
     if owed:
         return f"{name}: {owed}"

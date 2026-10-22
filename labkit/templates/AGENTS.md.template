@@ -11,17 +11,23 @@ Applies when the protocol head says `cost = "seconds"`: a run that can be
 repeated at will (a count, a handful of model calls for a minute and a cent),
 LAB-017 The number of audits follows the cost tier.
 
-1. `labkit-init exp <name> --cost seconds` (`--model <alias>` when a model is
-   in the loop — it writes `[model] alias` into the TOML head, the one place
-   that says a model is in the loop) — stamps the seconds cut of the
-   protocol and the matching skeleton.
+1. `labkit-init exp <name> --cost seconds --kind count|fit|apply` — the kind
+   says what the kept number asserts: `count` judges no prediction, `fit`
+   judges a model trained or adjusted here (a RandomForest, a regression,
+   a fine-tune), `apply` judges a model used unchanged (an LLM as judge, a
+   trained classifier on labelled data); `--model <alias>` when the model
+   answers through `models.toml` (it writes `[model] alias` into the TOML
+   head). The command stamps the seconds cut of the protocol and the
+   skeleton the kind calls for; without `--kind` it stamps nothing.
 2. Write the registration: `protocol-fill <PROTOCOL> --list` names every
    open field, the TOML head's `type` and, with a model, each promise's
    `<id> sentence` first (`cost = "seconds"` is stamped); the fields
    written after the run stand apart at the end — leave them now.
-   A count owes question · data · exclusions · unit; with a model also the
-   success criterion, the admissibility condition, the prompt, the null
-   condition and the data profile (step 3; the full run waits for it). Every coinage of your own — a constant such as a margin, arms,
+   A count owes question · data · exclusions · unit; a fit or an apply also
+   the success criterion, the admissibility condition and the null
+   condition — the bar, what must hold before it is read, and the
+   reference computed in the same run; with a model also the prompt and
+   the data profile (step 3; the full run waits for it). Every coinage of your own — a constant such as a margin, arms,
    item ids, the model alias — gets half a sentence under "Terms of this
    protocol" — a count with no coinage writes "n/a — no coinage". Fill by
    label, all in one call: `protocol-fill <PROTOCOL> "type=exploratory"

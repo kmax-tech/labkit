@@ -143,6 +143,8 @@ class TheStampedPrepare(unittest.TestCase):
                     str(root),
                     "--cost",
                     "seconds",
+                    "--kind",
+                    "apply",
                     "--model",
                     "haiku",
                 ]

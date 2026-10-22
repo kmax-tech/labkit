@@ -120,10 +120,11 @@ HEAD_FIRST = """# Experiment protocol: x
 
 ```toml
 [protocol]
-standard = "0.21"
+standard = "0.22"
 id = "p-0000000000000000"
 type = "exploratory"
 cost = "seconds"
+kind = "count"
 frozen = false
 preflight_audit = ""
 ```

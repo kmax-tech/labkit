@@ -145,7 +145,7 @@ class Exp(unittest.TestCase):
         return area
 
     def test_an_area_with_protocol_scripts_readme_and_test(self) -> None:
-        quiet(scaffold.stamp_area, self.root, "foo-bar")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
         area = self.area()
         self.assertEqual(area.name, "01-foo-bar")
         for f in (
@@ -166,7 +166,7 @@ class Exp(unittest.TestCase):
         self.assertIn('"experiments/01-foo-bar"', test)
 
     def test_the_pilot_part_has_no_report_fields_and_report_adds_them(self) -> None:
-        quiet(scaffold.stamp_area, self.root, "foo-bar")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
         proto = self.area() / "PROTOCOL-foo-bar.md"
 
         def fields() -> list[str]:
@@ -175,24 +175,25 @@ class Exp(unittest.TestCase):
             )
 
         self.assertEqual(fields(), [])
-        quiet(scaffold.stamp_area, self.root, "foo-bar", report=True)
+        quiet(scaffold.stamp_area, self.root, "foo-bar", report=True, kind="fit")
         self.assertGreater(len(fields()), 3)
 
     def test_numbers_count_up_and_a_typed_number_is_dropped(self) -> None:
-        quiet(scaffold.stamp_area, self.root, "foo-bar")
-        quiet(scaffold.stamp_area, self.root, "07-other")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
+        quiet(scaffold.stamp_area, self.root, "07-other", kind="fit")
         self.assertTrue((self.root / "experiments" / "02-other").is_dir())
 
     def test_an_existing_area_refuses_without_report(self) -> None:
-        quiet(scaffold.stamp_area, self.root, "foo-bar")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
         with self.assertRaisesRegex(console.Refused, "already exists"):
-            quiet(scaffold.stamp_area, self.root, "foo-bar")
+            quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
 
     def test_seconds_stamps_the_cut_and_the_counting_skeleton(self) -> None:
-        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="seconds")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="seconds", kind="count")
         area = self.area()
         proto = (area / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
         self.assertIn('cost = "seconds"', proto)
+        self.assertIn('kind = "count"', proto)
         # a count has no bar to clear: no promise tables, no criterion, no admissibility
         self.assertNotIn("[[promise]]", proto)
         self.assertNotIn("Success / failure criterion", proto)
@@ -234,7 +235,14 @@ class Exp(unittest.TestCase):
     def test_seconds_with_a_model_keeps_criterion_promises_and_the_null_lane(
         self,
     ) -> None:
-        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="seconds", model="haiku")
+        quiet(
+            scaffold.stamp_area,
+            self.root,
+            "foo-bar",
+            cost="seconds",
+            model="haiku",
+            kind="apply",
+        )
         proto = (self.area() / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
         for needle in (
             'id = "C1"',
@@ -270,7 +278,7 @@ class Exp(unittest.TestCase):
         import subprocess
         import sys
 
-        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku", kind="apply")
         raw = self.root / "data" / "raw"
         raw.mkdir(parents=True, exist_ok=True)
         (raw / "claims.jsonl").write_text(
@@ -335,7 +343,7 @@ class Exp(unittest.TestCase):
         import importlib.util
         import sys
 
-        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku", kind="apply")
         path = self.area() / "scripts" / "01_measure.py"
         spec = importlib.util.spec_from_file_location("stamped_measure", path)
         assert spec is not None and spec.loader is not None
@@ -373,8 +381,8 @@ class Exp(unittest.TestCase):
         (review 2026-10-19). The steps read the contract: every gate the
         lane owes stands in order, numbered without a gap."""
         rel = Path("experiments/01-foo")
-        for cost, model in (("minutes", False), ("hours", True)):
-            text = scaffold.next_steps(rel, "foo", "01", cost, model)
+        for cost, kind, model in (("minutes", "fit", False), ("hours", "apply", True)):
+            text = scaffold.next_steps(rel, "foo", "01", cost, kind, model)
             order = [
                 "code-check experiments/01-foo",
                 "preflight experiments/01-foo",
@@ -390,7 +398,7 @@ class Exp(unittest.TestCase):
             self.assertEqual(positions, sorted(positions), text)
             numbers = [int(m) for m in re.findall(r"^  (\d+)\. ", text, re.M)]
             self.assertEqual(numbers, list(range(1, len(numbers) + 1)), text)
-        seconds = scaffold.next_steps(rel, "foo", "01", "seconds", False)
+        seconds = scaffold.next_steps(rel, "foo", "01", "seconds", "count", False)
         for not_owed in ("preflight", "frozen = true", "runlog start", "--probe"):
             self.assertNotIn(not_owed, seconds, seconds)
         for owed in ("code-check", "finalize", "--mode analysis", "--from-run"):
@@ -402,7 +410,7 @@ class Exp(unittest.TestCase):
         finds its repo."""
         import os
 
-        quiet(scaffold.stamp_area, self.root, "foo-bar")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
         area = self.area()
         self.assertEqual(scaffold.lab_root(area / "scripts"), self.root.resolve())
         cwd = os.getcwd()
@@ -422,7 +430,7 @@ class Exp(unittest.TestCase):
         without writing them is a must gap, not a registration."""
         from labkit.formats import protocol_check
 
-        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku", kind="apply")
         text = (self.area() / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
         frozen = text.replace("frozen = false", "frozen = true", 1)
         gaps = protocol_check.check_fields(frozen).missing_must
@@ -441,7 +449,7 @@ class Exp(unittest.TestCase):
 
         from labkit.run import batch
 
-        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku", kind="apply")
         path = self.area() / "scripts" / "01_measure.py"
         spec = importlib.util.spec_from_file_location("stamped_measure_2", path)
         assert spec is not None and spec.loader is not None
@@ -474,7 +482,7 @@ class Exp(unittest.TestCase):
         """The probe printed `tests/test_<NN>_<name>.py PARSER_CASES`: the
         placeholder unreplaced in the scripts, and a list the test computes
         rather than holds (cloud judge probe, 2026-10-14)."""
-        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku", kind="apply")
         script = (self.area() / "scripts" / "01_measure.py").read_text(encoding="utf-8")
         # the area names its test; `lanes` prints "paste into <it> PROBE_CASES"
         self.assertIn('probe_cases_in="tests/test_01_foo_bar.py"', script)
@@ -488,7 +496,7 @@ class Exp(unittest.TestCase):
             ("judge", {"cost": "seconds", "model": "haiku"}),
         )
         for name, kw in stamps:
-            quiet(scaffold.stamp_area, self.root, name, **kw)
+            quiet(scaffold.stamp_area, self.root, name, **kw, kind="fit")
         for proto in (self.root / "experiments").glob("*/PROTOCOL-*.md"):
             text = proto.read_text(encoding="utf-8")
             fence = False
@@ -523,7 +531,7 @@ class Exp(unittest.TestCase):
         promise constants in its words, and the model-shaped fields answered."""
         from labkit.formats import promises, protocol_check
 
-        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="minutes")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="minutes", kind="fit")
         area = self.area()
         script = (area / "scripts" / "01_measure.py").read_text(encoding="utf-8")
         self.assertIn("def make_estimator", script)
@@ -557,7 +565,7 @@ class Exp(unittest.TestCase):
         import importlib.util
         import sys
 
-        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="minutes")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="minutes", kind="fit")
         path = self.area() / "scripts" / "01_measure.py"
         spec = importlib.util.spec_from_file_location("stamped_estimator", path)
         assert spec is not None and spec.loader is not None
@@ -617,7 +625,7 @@ class Exp(unittest.TestCase):
         import subprocess
         import sys
 
-        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="minutes")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="minutes", kind="fit")
         r = subprocess.run(
             [
                 sys.executable,
@@ -641,31 +649,43 @@ class Exp(unittest.TestCase):
         `--model` its placeholder, no flag no table; the prose field asks for
         the instrument's sentence, not the alias."""
         quiet(
-            scaffold.stamp_area, self.root, "with-alias", cost="seconds", model="haiku"
+            scaffold.stamp_area,
+            self.root,
+            "with-alias",
+            cost="seconds",
+            kind="apply",
+            model="haiku",
         )
         text = next(self.root.glob("experiments/*with-alias/PROTOCOL-*.md")).read_text()
         m = protocol_block.model(text)
         assert m is not None
         self.assertEqual((m.alias, m.arms), ("haiku", {}))
         self.assertNotIn("Arm `before`", text)
-        quiet(scaffold.stamp_area, self.root, "bare-flag", cost="seconds", model=True)
+        quiet(
+            scaffold.stamp_area,
+            self.root,
+            "bare-flag",
+            cost="seconds",
+            model=True,
+            kind="apply",
+        )
         text = next(self.root.glob("experiments/*bare-flag/PROTOCOL-*.md")).read_text()
         m = protocol_block.model(text)
         assert m is not None
         self.assertIsNone(m.alias)
-        quiet(scaffold.stamp_area, self.root, "no-model", cost="seconds")
+        quiet(scaffold.stamp_area, self.root, "no-model", cost="seconds", kind="count")
         text = next(self.root.glob("experiments/*no-model/PROTOCOL-*.md")).read_text()
         self.assertIsNone(protocol_block.model(text))
 
     def test_a_bare_model_flag_keeps_the_prompt_skeleton(self) -> None:
         """`--model` without an alias still means a model in the loop."""
-        quiet(scaffold.stamp_area, self.root, "foo-bar", model=True)
+        quiet(scaffold.stamp_area, self.root, "foo-bar", model=True, kind="apply")
         script = (self.area() / "scripts" / "01_measure.py").read_text(encoding="utf-8")
         self.assertIn("PROMPT", script)
         self.assertIn('MODEL = "TODO-alias"', script)
 
     def test_a_model_alias_fills_the_skeleton(self) -> None:
-        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku", kind="apply")
         self.assertIn(
             "haiku",
             (self.area() / "scripts" / "01_measure.py").read_text(encoding="utf-8"),
@@ -675,7 +695,7 @@ class Exp(unittest.TestCase):
         scaffold.stamp_explore(self.root / "experiments", "foo-bar")
         f = self.root / "experiments" / "explore" / "foo-bar.py"
         ast.parse(f.read_text(encoding="utf-8"))
-        quiet(scaffold.stamp_area, self.root, "foo-bar")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
         self.assertTrue((self.area() / "explore" / "foo-bar.py").is_file())
         self.assertFalse(f.exists())
 
@@ -694,9 +714,9 @@ class Report(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             scaffold.stamp_lab(root, "lab")
-            quiet(scaffold.stamp_area, root, "foo-bar", model=model)
+            quiet(scaffold.stamp_area, root, "foo-bar", model=model, kind="apply")
             (proto,) = root.glob("experiments/*/PROTOCOL-foo-bar.md")
-            quiet(scaffold.stamp_area, root, "foo-bar", report=True)
+            quiet(scaffold.stamp_area, root, "foo-bar", report=True, kind="fit")
             return proto.read_text(encoding="utf-8")
 
     def test_no_model_fills_the_parser_field_and_leaves_randomness_owed(self) -> None:
@@ -725,7 +745,16 @@ class Cli(unittest.TestCase):
             self.assertEqual(
                 quiet(
                     scaffold.main,
-                    ["exp", "foo", "--repo", str(root), "--cost", "seconds"],
+                    [
+                        "exp",
+                        "foo",
+                        "--repo",
+                        str(root),
+                        "--cost",
+                        "seconds",
+                        "--kind",
+                        "count",
+                    ],
                 ),
                 0,
             )

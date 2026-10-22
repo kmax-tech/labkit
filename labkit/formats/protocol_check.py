@@ -63,9 +63,11 @@ class Field:
                 the report half of the result; at seconds never — the audit
                 comes at promotion there)
 
-    `seconds`: owed in the seconds cut — "s" always, "sm" when a `Model /
-    tool` is named; after/report fields carry the template's marker but are
-    owed by their level, not by the cut. The template's † marks exactly the
+    `seconds`: owed in the seconds cut — "s" always, "sb" when the number
+    judges a prediction (`kind` fit or apply: it has a bar), "sm" when a
+    model answers through `models.toml` (`[model]`); after/report fields
+    carry the template's marker but are owed by their level, not by the
+    cut. The template's † marks exactly the
     should and report fields it stamps with `--report` (a test holds this).
     """
 
@@ -87,17 +89,17 @@ FIELDS = (
     Field("Terms of this protocol", "must", "s"),
     Field("Question / hypothesis", "must", "s"),
     Field(
-        "Success / failure criterion", "must", "sm"
-    ),  # a count has no bar to clear (2026-10-12)
-    Field("Admissibility condition", "must", "sm"),
+        "Success / failure criterion", "must", "sb"
+    ),  # a count has no bar to clear (2026-10-12); a fit or an apply has (0.104)
+    Field("Admissibility condition", "must", "sb"),
     Field("Data / scope", "must", "s"),
     # read and judged before the measuring run, not just printed (review
     # 2026-10-21: a class-exclusive cue went unexamined in three judge probes)
     Field("Data profile", "must", "sm"),
-    Field("Model / tool", "must", "sm"),
+    Field("Model / tool", "must", "sb"),
     Field("Model I/O", "must"),
     Field("Prompt", "must", "sm"),
-    Field("Null condition / anchors", "must", "sm"),
+    Field("Null condition / anchors", "must", "sb"),
     Field("Exclusions / filters", "must", "s"),
     Field("Unit", "must", "s"),
     # A reportable run owes these on top (2026-08-18, "pilot light, report
@@ -352,9 +354,30 @@ def model_named(text: str) -> bool:
         return False
 
 
-def in_cut(f: Field, model: bool) -> bool:
-    """Is `f` part of the seconds cut — "s" always, "sm" with a model named?"""
-    return f.seconds == "s" or (f.seconds == "sm" and model)
+def in_cut(f: Field, kind: str | None, model: bool) -> bool:
+    """Is `f` part of the seconds cut — "s" always, "sb" when the number has
+    a bar (KIND fit or apply; an undecided kind owes the most, never the
+    least), "sm" with a model named?"""
+    if f.seconds == "s":
+        return True
+    if f.seconds == "sb":
+        return kind is None or standard_contract.has_bar(kind)
+    return f.seconds == "sm" and model
+
+
+def kind_gap(text: str, head: protocol_block.Head) -> str | None:
+    """Why the head's `kind` contradicts the rest of the head, or None: a
+    `count` with a `[model]` table — a model answering through models.toml
+    judges predictions, so the number has a bar (fit or apply). Loud, never
+    a fallback: an unknown kind is refused by `protocol_block.head`, a
+    placeholder stands among the head's placeholders."""
+    if head.kind == standard_contract.COUNT_KIND and model_named(text):
+        return (
+            '[protocol] kind = "count" with a [model] table — a model in the loop '
+            'judges predictions, so the number has a bar: kind = "apply" (the model '
+            'used unchanged) or kind = "fit" (trained or adjusted here)'
+        )
+    return None
 
 
 def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
@@ -374,7 +397,7 @@ def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
         lines = [f for f in lines if f.name not in after]
     if standard_contract.lane(head.cost).cut == standard_contract.SECONDS_CUT:
         model = model_named(text)
-        cut = {f.label.casefold() for f in FIELDS if in_cut(f, model)}
+        cut = {f.label.casefold() for f in FIELDS if in_cut(f, head.kind, model)}
         lines = [f for f in lines if f.name in cut]
     return [(f.line, f.label) for f in lines if f.placeholder]
 
@@ -390,7 +413,11 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     # the fields (`Field.seconds`) are this module's
     if standard_contract.lane(head.cost).cut == standard_contract.SECONDS_CUT:
         model = model_named(text)
-        must = [f for f in FIELDS if f.level in ("must", "should") and in_cut(f, model)]
+        must = [
+            f
+            for f in FIELDS
+            if f.level in ("must", "should") and in_cut(f, head.kind, model)
+        ]
         return must, []
     must = [f for f in FIELDS if f.level == "must"]
     should = [f for f in FIELDS if f.level == "should"]
@@ -411,6 +438,9 @@ def check_fields(text: str) -> FieldReport:
     missing_must = [f.label for f in must if f.label.casefold() not in present]
     missing_should = [f.label for f in should if f.label.casefold() not in present]
     missing_must += [f"[protocol] {name}" for name in head.placeholders]
+    contradiction = kind_gap(text, head)
+    if contradiction:
+        missing_must.append(contradiction)
     earlier = promises.earlier_ids(text)
     if earlier:
         missing_must.append(
@@ -436,7 +466,10 @@ def check_fields(text: str) -> FieldReport:
             promises.parse_block(text),
             frozen=head.frozen,
             full_run=lane.registration,
-            registers=promises.registers_ids(text),
+            # a count registers nothing unless its prose names an id; a fit
+            # or an apply registers by its kind (standard 0.22)
+            registers=head.kind != standard_contract.COUNT_KIND
+            or promises.registers_ids(text),
         )
     except promises.PromiseError as exc:
         tables_gap = f"[[promise]] tables: {exc}"
@@ -453,20 +486,32 @@ def check_fields(text: str) -> FieldReport:
 
 def seconds_registration_missing(text: str) -> list[str]:
     """The registration a run of seconds owes before its number counts:
-    the question written (not a placeholder), with a model named also
-    criterion, admissibility condition and the judged data profile, and
-    the cost declared.
-    Returns what is missing — empty means the gate is open (LAB-003 No run
-    without an intent paragraph; a count has no bar to clear, 0.87.1)."""
+    the question written (not a placeholder); for a number that judges a
+    prediction (kind fit or apply) also criterion, admissibility condition
+    and null condition; with a model named also the judged data profile;
+    the cost and the kind declared, and the kind not contradicting the
+    head (`kind_gap`). Returns what is missing — empty means the gate is
+    open (LAB-003 No run without an intent paragraph; a count has no bar to
+    clear, 0.87.1; the kind since standard 0.22). A head that does not read
+    is named as such: nothing falls back to a count."""
+    try:
+        head = protocol_block.head(text)
+    except protocol_block.BlockError as exc:
+        return [f"[protocol] head: {exc}"]
     lines = fields(text)
     written = {f.name for f in lines if f.value and not f.placeholder}
-    labels = standard_contract.registration_fields(model_named(text))
+    if head.kind is None:
+        # the most is owed while the kind is undecided — and the kind itself
+        labels = standard_contract.registration_fields(
+            standard_contract.APPLY_KIND, model_named(text)
+        )
+    else:
+        labels = standard_contract.registration_fields(head.kind, model_named(text))
     missing = [label for label in labels if label.casefold() not in written]
-    try:
-        cost = protocol_block.head(text).cost
-    except protocol_block.BlockError:
-        cost = None
-    return missing + ([] if cost else ["[protocol] cost"])
+    missing += [] if head.cost else ["[protocol] cost"]
+    missing += [] if head.kind else ["[protocol] kind"]
+    contradiction = kind_gap(text, head)
+    return missing + ([contradiction] if contradiction else [])
 
 
 #: the fields that describe a run that happened — written back after it,

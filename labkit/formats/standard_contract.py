@@ -36,9 +36,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats.protocol_block import COST_TIERS
+from labkit.formats.protocol_block import COST_TIERS, KINDS
 
 SECONDS, MINUTES, HOURS = COST_TIERS
+COUNT_KIND, FIT_KIND, APPLY_KIND = KINDS
 
 #: the agent audits, by the mode `labkit-audit` and `findings` name them
 PREFLIGHT_AUDIT = "preflight"
@@ -76,9 +77,11 @@ class Lane:
             (LAB-015 Preflight audit before freezing). At seconds nothing
             freezes: a rerun costs nothing, so the freeze protects nothing.
         registration: A full run owes the written registration instead of
-            the freeze — the question, with a model also the criterion and
-            the admissibility condition (`registration_fields`), and the
-            cost declared (LAB-003 No run without an intent paragraph).
+            the freeze — the question; for a number that judges a
+            prediction (`kind` fit or apply) also the criterion, the
+            admissibility condition and the null condition; with a model
+            also the data profile (`registration_fields`); and the cost
+            declared (LAB-003 No run without an intent paragraph).
             runlog reads it off the tree at the start; the release holds
             it to the commit of the first measurement
             (`report_check.registration_gaps`): what stood before the
@@ -149,23 +152,42 @@ def lane(cost: str | None) -> Lane:
 
 
 #: the fields a full run at seconds owes written (not a placeholder) before
-#: it starts: a count registers its question; a model in the loop also the
-#: bar to clear, what must hold before it is read, and the judged data
-#: profile — read before the model is asked, or a cue in the data answers
-#: in its place (LAB-003 No run without an intent paragraph; a count has no
-#: bar to clear, 0.87.1; review 2026-10-21). The labels are the template's,
-#: held to `protocol_check.FIELDS` by a test.
+#: it starts, by what the kept number asserts (`protocol_block.KINDS`): a
+#: count registers its question — it judges no prediction, so it has no bar
+#: to clear (0.87.1); a fit or an apply registers the bar (criterion), what
+#: must hold before it is read (admissibility) and what it is held against
+#: (the null condition or anchors, computed in the same run); with a model
+#: answering through `models.toml` also the judged data profile — read
+#: before the model is asked, or a cue in the data answers in its place
+#: (LAB-003 No run without an intent paragraph; review 2026-10-21; writing
+#: probe 2026-10-22, `docs/notes/2026-10-22-kind-writing-probe.md`). The
+#: labels are the template's, held to `protocol_check.FIELDS` by a test.
 REGISTRATION_FIELDS = ("Question / hypothesis",)
-REGISTRATION_FIELDS_WITH_MODEL = (
+REGISTRATION_FIELDS_WITH_BAR = (
     "Success / failure criterion",
     "Admissibility condition",
-    "Data profile",
+    "Null condition / anchors",
 )
+REGISTRATION_FIELDS_WITH_MODEL = ("Data profile",)
 
 
-def registration_fields(model: bool) -> tuple[str, ...]:
-    """The labels the registration owes written, with or without a model."""
-    return REGISTRATION_FIELDS + (REGISTRATION_FIELDS_WITH_MODEL if model else ())
+def has_bar(kind: str) -> bool:
+    """Does a number of KIND judge a prediction — so a trivial instrument
+    could pass, and a bar is owed? Raises ValueError for a kind the head
+    cannot carry: nothing falls back to a count."""
+    if kind not in KINDS:
+        raise ValueError(f"kind {kind!r} is not one of {', '.join(KINDS)}")
+    return kind != COUNT_KIND
+
+
+def registration_fields(kind: str, model: bool) -> tuple[str, ...]:
+    """The labels the registration owes written for a number of KIND, with
+    or without a model answering through `models.toml`."""
+    return (
+        REGISTRATION_FIELDS
+        + (REGISTRATION_FIELDS_WITH_BAR if has_bar(kind) else ())
+        + (REGISTRATION_FIELDS_WITH_MODEL if model else ())
+    )
 
 
 #: the one public recheck of every area, relative to the area: the analysis
@@ -242,24 +264,32 @@ MODEL = Skeleton(
 SKELETONS = (COUNT, ESTIMATOR, MODEL)
 
 
-def skeleton(cost: str | None, model: bool) -> Skeleton:
-    """The skeleton an area gets: with a model the prompt skeleton at every
-    tier; without one the count at seconds (a deterministic count has no
-    bar to clear) and the estimator at minutes/hours (nine of nine pilot
-    attempts were classical ML, labkit-paper area 09, 2026-10-16)."""
-    if model:
+def skeleton(cost: str | None, kind: str, model: bool) -> Skeleton:
+    """The skeleton an area gets, by what its number asserts: a count the
+    counting skeleton at every tier (it has no bar); a fit the estimator
+    (nine of nine pilot attempts were classical ML, labkit-paper area 09,
+    2026-10-16 — at seconds too since 0.104: a RandomForest at seconds got
+    the count's skeleton and no criterion, fifth haiku round); an apply the
+    prompt skeleton when a model answers through `models.toml`, else the
+    estimator's lanes (a trained instrument applied to labelled data).
+    COST decides nothing here any more; the lane still decides the cut and
+    whether a probe may precede the run. Raises ValueError for a kind the
+    head cannot carry."""
+    if not has_bar(kind):
+        return COUNT
+    if kind == APPLY_KIND and model:
         return MODEL
-    return COUNT if lane(cost).cut == SECONDS_CUT else ESTIMATOR
+    return ESTIMATOR
 
 
-def describe(cost: str | None, model: bool) -> list[str]:
-    """The contract of one tier in sentences, by occasion — what
+def describe(cost: str | None, kind: str, model: bool) -> list[str]:
+    """The contract of one tier and kind in sentences, by occasion — what
     `protocol-check --contract` prints, so an agent reads the obligations
     where it reads the fields, instead of learning them from a refusal."""
-    ln, sk = lane(cost), skeleton(cost, model)
+    ln, sk = lane(cost), skeleton(cost, kind, model)
     check = " ".join((CHECK_SCRIPT.as_posix(), CHECK_FLAG))
     before = (
-        "the registration written: " + ", ".join(registration_fields(model))
+        "the registration written: " + ", ".join(registration_fields(kind, model))
         if ln.registration
         else "`preflight` clean, the preflight audit decided and its record named "
         "in the head (`preflight_audit`), `frozen = true`"
@@ -267,7 +297,7 @@ def describe(cost: str | None, model: bool) -> list[str]:
     return [
         f"cost = {ln.tier!r}"
         + (" (an unfilled cost reads so)" if cost is None else "")
-        + f", {'a model named' if model else 'no model'}: the {sk.instrument} skeleton "
+        + f", kind = {kind!r}, {'a model named' if model else 'no model'}: the {sk.instrument} skeleton "
         + f"({', '.join(dest for _, dest in sk.scripts)}"
         + (
             ", a --probe stage before the run)"

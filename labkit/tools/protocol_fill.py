@@ -11,7 +11,7 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md "Meaning of the gold label" "positive = ..."
     protocol-fill PROTOCOL-x.md --line 27 Question "does Y move X?"
     protocol-fill PROTOCOL-x.md "C1 sentence=<the promise>"   a [[promise]]'s sentence, as a TOML string
-    protocol-fill PROTOCOL-x.md type=exploratory cost=seconds "model alias=haiku"   the TOML head's stamped placeholders
+    protocol-fill PROTOCOL-x.md type=exploratory cost=seconds kind=fit "model alias=haiku"   the TOML head's stamped placeholders
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
     protocol-fill PROTOCOL-x.md --render       the result section written again from its sources:
                                                Recorded results, Limit lines (stray ones dropped), Prompt block
@@ -129,6 +129,7 @@ def fill(
 HEAD_KEYS: dict[str, tuple[str, tuple[str, ...] | None]] = {
     "type": ("type", protocol_block.TYPES),
     "cost": ("cost", protocol_block.COST_TIERS),
+    "kind": ("kind", protocol_block.KINDS),
     "model alias": ("alias", None),  # [model] alias, stamped by --model without a name
 }
 #: TOML key → its allowed values (None: free), for `head_open` and `fill_head`

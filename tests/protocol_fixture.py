@@ -146,6 +146,7 @@ def head(
     id: str = PID,
     type: str = "exploratory",
     cost: str = "minutes",
+    kind: str | None = None,
     frozen: bool = False,
     preflight_audit: str = "",
     promises: str | None = "",
@@ -160,17 +161,23 @@ def head(
     RESULT is the run id a `[result]` table declares (phase 3, 2026-10-21);
     MODEL the alias of a `[model]` table, ARMS its `[model.arms.<arm>]`
     tables as {arm: (profile, fingerprint, alias)}, LABELS a `[gate]` table
-    (phase 4)."""
+    (phase 4). KIND is the head's `kind` (standard 0.22); None derives it as
+    the stamp would — `apply` with a model, else `count` — so a fixture
+    states only what it varies; a literal `kind="<count | fit | apply>"`
+    writes the placeholder."""
+    if kind is None:
+        kind = "apply" if model is not None else "count"
     if promises == "" and (frozen or cost == "seconds"):
         promises = DEFAULT_BLOCK  # frozen, or at seconds every run is the full run
     promises = promises or ""
     lines = [
         "```toml",
         "[protocol]",
-        'standard = "0.21"',
+        'standard = "0.22"',
         f'id = "{id}"',
         f'type = "{type}"',
         f'cost = "{cost}"',
+        f'kind = "{kind}"',
         f"frozen = {'true' if frozen else 'false'}",
         f'preflight_audit = "{preflight_audit}"',
     ]

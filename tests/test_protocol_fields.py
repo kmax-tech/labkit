@@ -18,11 +18,11 @@ TEMPLATE = (PACKAGE_DIR / "templates" / "experiment-protocol.md.template").read_
 
 
 def template_fields() -> dict[str, str]:
-    """field name -> cut marker ("s", "sm" or "") as the template stamps them."""
+    """field name -> cut marker ("s", "sb", "sm" or "") as the template stamps them."""
     out = {}
     for f in protocol_check.fields(TEMPLATE):
         line = TEMPLATE.splitlines()[f.line - 1]
-        m = re.search(r"<!--\s*(sm?)\s*-->", line)
+        m = re.search(r"<!--\s*(s[bm]?)\s*-->", line)
         out.setdefault(f.name, m.group(1) if m else "")
     return out
 
@@ -43,7 +43,7 @@ class Contract(unittest.TestCase):
         report = protocol_check.check_fields(stamped)
         self.assertIsNone(report.head_error)
         assert report.head is not None
-        self.assertEqual(report.head.placeholders, ["type", "cost"])
+        self.assertEqual(report.head.placeholders, ["type", "cost", "kind"])
 
 
 class Daggers(unittest.TestCase):

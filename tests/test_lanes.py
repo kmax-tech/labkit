@@ -203,6 +203,8 @@ class TheAuditStillSeesTheExperiment(unittest.TestCase):
                     str(root),
                     "--cost",
                     "seconds",
+                    "--kind",
+                    "apply",
                     "--model",
                     "haiku",
                 ]

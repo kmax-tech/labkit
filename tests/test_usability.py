@@ -196,17 +196,28 @@ class StampFlags(unittest.TestCase):
 
     def test_count_gets_the_seconds_cut_without_a_model(self):
         self.assertEqual(
-            usability.stamp_flags("count", None, False), ("seconds", False)
+            usability.stamp_flags("count", None, False), ("seconds", "count", False)
         )
 
     def test_judge_gets_the_seconds_cut_with_a_model(self):
-        self.assertEqual(usability.stamp_flags("judge", None, False), ("seconds", True))
+        self.assertEqual(
+            usability.stamp_flags("judge", None, False), ("seconds", "apply", True)
+        )
 
     def test_an_explicit_tier_wins_and_unset_stamps_none(self):
         self.assertEqual(
-            usability.stamp_flags("count", "hours", False), ("hours", False)
+            usability.stamp_flags("count", "hours", False), ("hours", "count", False)
         )
-        self.assertEqual(usability.stamp_flags("count", "unset", False), (None, False))
+        self.assertEqual(
+            usability.stamp_flags("count", "unset", False), (None, "count", False)
+        )
+
+    def test_a_count_with_a_model_is_staged_as_an_apply(self):
+        """A model in the loop judges: `--model` on the count task stamps
+        `kind = "apply"`, never a count with a `[model]` table."""
+        self.assertEqual(
+            usability.stamp_flags("count", None, True), ("seconds", "apply", True)
+        )
 
 
 class TierSentence(unittest.TestCase):

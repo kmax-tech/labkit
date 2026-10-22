@@ -1,7 +1,7 @@
 """labkit-init — stamp a lab repo and its experiment areas from the templates that ship with labkit.
 
     labkit-init lab [DIR] [--name NAME] [--labkit-ref REF]
-    labkit-init exp NAME [--repo DIR] [--cost seconds|minutes|hours] [--model [ALIAS]]
+    labkit-init exp NAME [--repo DIR] [--cost seconds|minutes|hours] --kind count|fit|apply [--model [ALIAS]]
                          [--report] [--explore]
 
 `lab` lays out a lab repo: `AGENTS.md` (and `CLAUDE.md` pointing at it),
@@ -369,12 +369,15 @@ def stamp_area(
     root: Path,
     name: str,
     cost: str | None = None,
+    kind: str | None = None,
     model: bool | str = False,
     report: bool = False,
 ) -> tuple[Path, str]:
     """Stamp `experiments/NN-<name>/` (or promote it with REPORT): the area
     and the report to print (what was written, then the next steps) — the
-    caller prints; `stamp_lab` returns its log the same way."""
+    caller prints; `stamp_lab` returns its log the same way. KIND is what
+    the kept number asserts (`protocol_block.KINDS`); a new area without it
+    is refused — nothing falls back to a count (standard 0.22)."""
     slug = area_slug(name)
     experiments = root / "experiments"
     if not (root / "models.toml").is_file() or not experiments.is_dir():
@@ -382,22 +385,35 @@ def stamp_area(
             "labkit-init",
             f"{root} is not a lab repo (no models.toml / experiments/) — run `labkit-init lab` first",
         )
+    existing = [
+        p
+        for p in experiments.iterdir()
+        if p.is_dir() and split_area_name(p.name)[1] == slug
+    ]
+    if existing and report:
+        _, blocks = pilot_and_report(
+            re.sub(r" ?<!-- s[bm]? -->", "", template(PROTOCOL_TEMPLATE.name))
+        )
+        return existing[0], "\n".join(promote(existing[0], blocks))
+    kind = asked_kind(kind, bool(model))
     # the cut and the skeleton are the contract's answers, not read off the
     # tier here (a tier compared by hand outside the contract is a copy)
     quick = standard_contract.lane(cost).cut == standard_contract.SECONDS_CUT
-    skeleton = standard_contract.skeleton(cost, bool(model))
-    tmpl = stamped_head(template(PROTOCOL_TEMPLATE.name), root, slug, cost, model)
+    skeleton = standard_contract.skeleton(cost, kind, bool(model))
+    tmpl = stamped_head(template(PROTOCOL_TEMPLATE.name), root, slug, cost, kind, model)
     clean = re.sub(
-        r" ?<!-- sm? -->", "", tmpl
+        r" ?<!-- s[bm]? -->", "", tmpl
     )  # every written protocol is free of the cut markers
     pilot, blocks = pilot_and_report(clean)
     if quick:
         pilot, blocks = (
-            seconds_cut(quick_block(tmpl, bool(model)), model=bool(model)),
+            seconds_cut(quick_block(tmpl, kind), kind, model=bool(model)),
             [],
         )
         if skeleton is standard_contract.COUNT:
             pilot = count_placeholders(pilot)
+        elif skeleton is standard_contract.ESTIMATOR:
+            pilot = estimator_placeholders(pilot, cut=True)
     elif skeleton is standard_contract.ESTIMATOR:
         pilot = estimator_placeholders(pilot)
     existing = [
@@ -406,12 +422,10 @@ def stamp_area(
         if p.is_dir() and split_area_name(p.name)[1] == slug
     ]
     if existing:
-        if not report:
-            raise console.Refused(
-                "labkit-init",
-                f"experiment already exists: {existing[0]} (add report fields: --report)",
-            )
-        return existing[0], "\n".join(promote(existing[0], blocks))
+        raise console.Refused(
+            "labkit-init",
+            f"experiment already exists: {existing[0]} (add report fields: --report)",
+        )
     nn = next_experiment_number(experiments)
     area = experiments / f"{nn}-{slug}"
     log: list[str] = []
@@ -428,7 +442,7 @@ def stamp_area(
         pre.rename(area / "explore" / pre.name)
         log.append(f"  moved          {pre} -> {area / 'explore' / pre.name}")
     stamped = blank_before_headings(short_placeholders(clean if report else pilot))
-    check_stamped_head(stamped, cost, bool(model))
+    check_stamped_head(stamped, cost, kind, bool(model))
     write_if_absent(area / f"PROTOCOL-{slug}.md", stamped, log)
     log += stamp_scripts(root, area, nn, slug, skeleton, model)
     _point_hooks_at(root)
@@ -436,8 +450,32 @@ def stamp_area(
         f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
         + "\n".join(log)
         + "\n"
-        + next_steps(area.relative_to(root), slug, nn, cost, bool(model))
+        + next_steps(area.relative_to(root), slug, nn, cost, kind, bool(model))
     )
+
+
+def asked_kind(kind: str | None, model: bool) -> str:
+    """The kind a new area is stamped with — the one asked, held to
+    `protocol_block.KINDS` and to the model flag; nothing falls back to a
+    count (standard 0.22). Raises `console.Refused` naming the choice."""
+    if kind is None:
+        raise console.Refused(
+            "labkit-init",
+            "--kind count|fit|apply: what the kept number asserts — a count judges "
+            "no prediction, a fit judges a model trained or adjusted here, an apply "
+            "a model used unchanged (standard 0.22; nothing is stamped without it)",
+        )
+    if kind not in protocol_block.KINDS:
+        raise console.Refused(
+            "labkit-init", f"--kind {kind!r}: one of {', '.join(protocol_block.KINDS)}"
+        )
+    if kind == standard_contract.COUNT_KIND and model:
+        raise console.Refused(
+            "labkit-init",
+            "--kind count with --model: a model in the loop judges predictions, so "
+            "the number has a bar — --kind apply (the model used unchanged) or fit",
+        )
+    return kind
 
 
 def _point_hooks_at(root: Path) -> None:
@@ -468,17 +506,18 @@ def blank_before_headings(text: str) -> str:
 
 
 def stamped_head(
-    tmpl: str, root: Path, slug: str, cost: str | None, model: bool | str
+    tmpl: str, root: Path, slug: str, cost: str | None, kind: str, model: bool | str
 ) -> str:
     """The template with its head tokens replaced: the name once, a fresh
-    protocol id, COST when asked, and with MODEL a `[model]` table after
-    `preflight_audit` — the alias when --model named one, else its
-    placeholder for `protocol-fill "model alias=…"` (phase 4, 2026-10-21)."""
+    protocol id, COST when asked, KIND always, and with MODEL a `[model]`
+    table after `preflight_audit` — the alias when --model named one, else
+    its placeholder for `protocol-fill "model alias=…"` (phase 4, 2026-10-21)."""
     out = tmpl.replace("<name>", slug, 1).replace(
         "<protocol-id>", new_protocol_id(root)
     )
     if cost:
         out = out.replace('cost = "<seconds | minutes | hours>"', f'cost = "{cost}"')
+    out = out.replace('kind = "<count | fit | apply>"', f'kind = "{kind}"')
     if model:
         alias = model if isinstance(model, str) else "<alias from models.toml>"
         out = out.replace(
@@ -489,15 +528,21 @@ def stamped_head(
     return out
 
 
-def check_stamped_head(text: str, cost: str | None, model: bool = False) -> None:
+def check_stamped_head(
+    text: str, cost: str | None, kind: str, model: bool = False
+) -> None:
     """Raise ValueError unless the stamped protocol's head carries a real
-    id, when COST was asked for that tier, and when MODEL was asked for a
-    `[model]` table. The stamp writes them by replacing template tokens; a
-    token the template no longer carried would leave the placeholder
-    without a word."""
+    id, the KIND asked, when COST was asked for that tier, and when MODEL was
+    asked for a `[model]` table. The stamp writes them by replacing template
+    tokens; a token the template no longer carried would leave the
+    placeholder without a word."""
     head = protocol_block.head(text)
     if head.id is None:
         raise ValueError("labkit-init: the stamped head has no protocol id")
+    if head.kind != kind:
+        raise ValueError(
+            f"labkit-init: the stamped head says kind = {head.kind!r}, asked {kind!r}"
+        )
     if cost is not None and head.cost != cost:
         raise ValueError(
             f"labkit-init: the stamped head says cost = {head.cost!r}, asked {cost!r}"
@@ -506,7 +551,9 @@ def check_stamped_head(text: str, cost: str | None, model: bool = False) -> None
         raise ValueError("labkit-init: --model asked, the stamped head has no [model]")
 
 
-def next_steps(rel: Path, slug: str, nn: str, cost: str | None, model: bool) -> str:
+def next_steps(
+    rel: Path, slug: str, nn: str, cost: str | None, kind: str, model: bool
+) -> str:
     """What to do after `exp`, in order — the lane of AGENTS.md for this
     area, read off the contract: the preflight and its audit stand where
     the lane owes the freeze, the analysis audit where the lane owes it,
@@ -515,7 +562,7 @@ def next_steps(rel: Path, slug: str, nn: str, cost: str | None, model: bool) -> 
     adoption while the stamped AGENTS.md named them; an agent following the
     console met the refusal at the run's start."""
     ln = standard_contract.lane(cost)
-    sk = standard_contract.skeleton(cost, model)
+    sk = standard_contract.skeleton(cost, kind, model)
     protocol = f"PROTOCOL-{slug}.md"
     audit = f"labkit-audit {rel} --mode"
     code_check = f"after every code change `code-check {rel}`"
@@ -524,16 +571,18 @@ def next_steps(rel: Path, slug: str, nn: str, cost: str | None, model: bool) -> 
             f'cost = "{ln.tier}" — no freeze, no audit before the run, '
             "the run is the instrument check"
         )
-        fields = (
-            "criterion, admissibility condition, prompt, null condition"
-            if model
-            else "data, exclusions — no criterion, no promise table: a count has no bar to clear"
-        )
-        fill = (
-            "PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run"
-            if model
-            else "expected_ids(), rows(), evaluate_rows()"
-        )
+        if sk is standard_contract.COUNT:
+            fields = "data, exclusions — no criterion, no promise table: a count has no bar to clear"
+            fill = "expected_ids(), rows(), evaluate_rows()"
+        elif sk is standard_contract.MODEL:
+            fields = "criterion, admissibility condition, prompt, null condition, data profile"
+            fill = "PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run"
+        else:
+            fields = (
+                f"criterion, admissibility condition, null condition — kind = {kind!r}: "
+                "the number judges a prediction, so it has a bar and its reference"
+            )
+            fill = "make_estimator(), SCORE, FEATURES_FIELD; --show 3, then the run"
         steps = [
             f"{protocol}: fill the seconds cut — `type` in the head, then question, unit,\n"
             f"     {fields}; `protocol-check --contract` names the labels.",
@@ -638,12 +687,20 @@ def main(argv: list[str]) -> int:
         help="stamp this tier into the head; seconds stamps the seconds cut",
     )
     exp.add_argument(
+        "--kind",
+        choices=protocol_block.KINDS,
+        help="what the kept number asserts: count (no prediction judged), fit (a "
+        "model trained or adjusted here), apply (a model used unchanged) — "
+        "required for a new area; the skeleton and the registration follow it",
+    )
+    exp.add_argument(
         "--model",
         nargs="?",
         const=True,
         default=False,
         metavar="ALIAS",
-        help="a model in the loop (without it, minutes/hours stamp the estimator skeleton)",
+        help="a model answering through models.toml: writes `[model] alias`; with "
+        "--kind apply the prompt skeleton (--kind count refuses it)",
     )
     exp.add_argument(
         "--report",
@@ -677,7 +734,9 @@ def main(argv: list[str]) -> int:
             f"\nNext: fill the cells, read the render, look at real output; when it holds, `labkit-init exp {area_slug(a.name)}`."
         )
         return 0
-    _, report = stamp_area(root, a.name, cost=a.cost, model=a.model, report=a.report)
+    _, report = stamp_area(
+        root, a.name, cost=a.cost, kind=a.kind, model=a.model, report=a.report
+    )
     print(report)
     return 0
 

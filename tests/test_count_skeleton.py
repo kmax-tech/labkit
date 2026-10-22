@@ -30,7 +30,16 @@ class InputDir(unittest.TestCase):
             self.assertEqual(scaffold.main(["lab", str(root)]), 0)
             self.assertEqual(
                 scaffold.main(
-                    ["exp", "docs", "--repo", str(root), "--cost", "seconds"]
+                    [
+                        "exp",
+                        "docs",
+                        "--repo",
+                        str(root),
+                        "--cost",
+                        "seconds",
+                        "--kind",
+                        "count",
+                    ]
                 ),
                 0,
             )

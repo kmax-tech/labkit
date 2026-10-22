@@ -34,7 +34,9 @@ from labkit.tools import scaffold
 
 def _stamped(root: Path, name: str, model: bool | str) -> ModuleType:
     """`01_measure.py` of a freshly stamped area at minutes, imported."""
-    area, _ = scaffold.stamp_area(root, name, cost="minutes", model=model)
+    area, _ = scaffold.stamp_area(
+        root, name, cost="minutes", kind="apply" if model else "fit", model=model
+    )
     spec = importlib.util.spec_from_file_location(
         f"measure_{name}", area / "scripts" / "01_measure.py"
     )

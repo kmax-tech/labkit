@@ -135,9 +135,10 @@ parser — exact keys, typed values; a typo is an error that names the field.
 The same block may hold the `[[promise]]` tables (labkit
 `docs/promise-block.md`).
 
-- **standard** — `"0.21"`; stamped, never edited. A protocol of another
-  version is refused; use the labkit release it was written for.
-  Standard 0.21 names the Summary's prose answer `Conclusion` and the
+- **standard** — `"0.22"`; stamped, never edited. A protocol of another
+  version is refused; use the labkit release it was written for, or
+  update it: the refusal says what changed. Standard 0.22 adds `kind`
+  (below). Standard 0.21 names the Summary's prose answer `Conclusion` and the
   generated metrics field `Recorded results`. 0.102.0 is the last release
   reading the old labels under standard 0.20. Standard
   0.19 (labkit 0.72): a frozen protocol and every full run — at `cost =
@@ -148,6 +149,16 @@ The same block may hold the `[[promise]]` tables (labkit
 - **type** — `"exploratory"` generates hypotheses, iterate freely, but
   nothing from it may be reported as a test. `"confirmatory"` tests a
   hypothesis fixed BEFORE the run, on data that influenced no choice.
+- **kind** — what the kept number asserts: `"count"` judges no prediction
+  (a measurement that cannot pass trivially: no criterion, no promise
+  tables); `"fit"` judges a model trained or adjusted in this experiment;
+  `"apply"` judges a model used unchanged. A fit or an apply registers the
+  bar (criterion), what must hold before it is read (admissibility) and
+  what it is held against (null condition / anchors, computed in the same
+  run), and carries promise tables; with a `[model]` table also the data
+  profile and the prompt. The kind describes the number, not every
+  operation of the run: a run that only produces predictions declares no
+  result and needs no kind. `count` with a `[model]` table is refused.
 - **cost** — see below.
 - **frozen** — `true` means hypothesis, prompts/rules, metrics, baselines
   and decision rule were all fixed beforehand; only `true` plus `test` gives

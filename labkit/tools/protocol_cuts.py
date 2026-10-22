@@ -32,6 +32,9 @@ SECONDS_TAG = "<!-- s -->"
 
 
 SECONDS_MODEL_TAG = "<!-- sm -->"  # owed at seconds only with a model in the loop
+SECONDS_BAR_TAG = (
+    "<!-- sb -->"  # owed at seconds when the number has a bar (kind fit or apply)
+)
 
 
 #: which template section a heading is about — a report field is placed by topic
@@ -90,15 +93,22 @@ def _label_of(item: list[str]) -> str:
 
 
 def _untag(line: str) -> str:
-    for tag in (SECONDS_TAG, SECONDS_MODEL_TAG):
+    for tag in (SECONDS_TAG, SECONDS_BAR_TAG, SECONDS_MODEL_TAG):
         line = line.replace(" " + tag, "").replace(tag, "")
     return line
 
 
-def seconds_cut(tmpl: str, model: bool = False) -> str:
-    """The `seconds` cut: the preamble, and of every section only the items tagged
-    `<!-- s -->` (with a model also `<!-- sm -->`), under their heading."""
-    tags = (SECONDS_TAG, SECONDS_MODEL_TAG) if model else (SECONDS_TAG,)
+def seconds_cut(tmpl: str, kind: str, model: bool = False) -> str:
+    """The `seconds` cut: the preamble, and of every section only the items
+    tagged `<!-- s -->` — with a bar (KIND fit or apply) also `<!-- sb -->`,
+    with a model also `<!-- sm -->` — under their heading."""
+    from labkit.formats.standard_contract import has_bar
+
+    tags = (SECONDS_TAG,)
+    if has_bar(kind):
+        tags += (SECONDS_BAR_TAG,)
+    if model:
+        tags += (SECONDS_MODEL_TAG,)
     out: list[str] = []
     for heading, body in _segments(tmpl):
         if not heading:
@@ -113,16 +123,17 @@ def seconds_cut(tmpl: str, model: bool = False) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
-def quick_block(tmpl: str, model: bool) -> str:
-    """The promise tables of the seconds cut. With a model the full measure
-    skeleton is stamped, and it reads `margin`, `max_empty` and
-    `null_band_items` from the block — so the tables keep their constants.
-    (Until 0.92 they became a commented hint here, a rule written for the
-    count; once the count lost its tables in 0.87.0 the hint hit only the
-    model case, and every judge area stamped at seconds failed its first run
-    with a TypeError — found by a seconds probe, 2026-10-15.) Without a model
-    the tables go: a deterministic count has no bar to clear."""
-    if model:
+def quick_block(tmpl: str, kind: str) -> str:
+    """The promise tables of the seconds cut. A number with a bar (KIND fit
+    or apply) keeps them: the measure skeletons read `margin`, `max_empty`
+    and the null band from the block. (Until 0.92 they became a commented
+    hint here, a rule written for the count; once the count lost its tables
+    in 0.87.0 the hint hit only the model case, and every judge area stamped
+    at seconds failed its first run with a TypeError — found by a seconds
+    probe, 2026-10-15.) For a count the tables go: it has no bar to clear."""
+    from labkit.formats.standard_contract import has_bar
+
+    if has_bar(kind):
         return tmpl
     # a deterministic count has no bar to clear: no promise tables, no
     # criterion — five cold agents each invented a tautological [C1]
@@ -194,7 +205,7 @@ def short_placeholders(text: str) -> str:
     while i < len(lines):
         line = lines[i]
         head = re.match(
-            r"^(- \*\*[^*]+\*\*:?\s*(?:<!-- sm? -->\s*)?|\s+(?:[^<*]*\*\*:?\s*)?)<(?!!--)(.*)$",
+            r"^(- \*\*[^*]+\*\*:?\s*(?:<!-- s[bm]? -->\s*)?|\s+(?:[^<*]*\*\*:?\s*)?)<(?!!--)(.*)$",
             line,
         )
         if i in fenced or head is None or line.rstrip().endswith(">"):
@@ -391,15 +402,17 @@ def _replace_field(lines: list[str], label: str, value: str) -> bool:
     return False
 
 
-def estimator_placeholders(text: str) -> str:
-    """The pilot protocol of an area without a model at minutes/hours: the
-    model-shaped fields answered (ESTIMATOR_FIELDS) and the promise sentences
-    and constants in the estimator's words (ESTIMATOR_PROMISES). Raises when
-    the stamp lacks a field or a table line — a silently unfilled field is
-    the leftover this exists to remove."""
+def estimator_placeholders(text: str, cut: bool = False) -> str:
+    """The pilot protocol of an estimator area (kind fit, or apply without a
+    model): the model-shaped fields answered (ESTIMATOR_FIELDS) and the
+    promise sentences and constants in the estimator's words
+    (ESTIMATOR_PROMISES). Raises when the stamp lacks a field or a table line
+    — a silently unfilled field is the leftover this exists to remove; in
+    the seconds CUT only the fields the cut carries are owed, the others
+    are not stamped at all."""
     lines = text.split("\n")
     for label, value in ESTIMATOR_FIELDS.items():
-        if not _replace_field(lines, label, value):
+        if not _replace_field(lines, label, value) and not cut:
             raise ValueError(
                 f"estimator_placeholders: the stamp has no `{label}` field"
             )

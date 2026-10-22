@@ -123,8 +123,8 @@ class HeadType(unittest.TestCase):
     HEAD = (
         "# Experiment protocol: x\n\n```toml\n[protocol]\n"
         f'standard = "{protocol_block.STANDARD}"\nid = "p-0123456789abcdef"\n'
-        'type = "<exploratory | confirmatory>"\ncost = "seconds"\nfrozen = false\n'
-        'preflight_audit = "none"\n```\n\n'
+        'type = "<exploratory | confirmatory>"\ncost = "seconds"\nkind = "count"\n'
+        'frozen = false\npreflight_audit = "none"\n```\n\n'
         "- **Unit:** <what one row is>\n"
     )
 
@@ -222,7 +222,7 @@ class HeadType(unittest.TestCase):
             'preflight_audit = "none"\n',
             'preflight_audit = "none"\n\n[model]\nalias = "<alias from models.toml>"\n',
         )
-        self.assertEqual(protocol_fill.head_open(text, "alias"), 13)
+        self.assertEqual(protocol_fill.head_open(text, "alias"), 14)
         out = io.StringIO()
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp) / "PROTOCOL-x.md"
@@ -235,7 +235,7 @@ class HeadType(unittest.TestCase):
             self.assertEqual(rc, 0)
             filled = p.read_text(encoding="utf-8")
         self.assertIn(
-            "  13  model alias  (TOML head: the alias from models.toml)", out.getvalue()
+            "  14  model alias  (TOML head: the alias from models.toml)", out.getvalue()
         )
         m = protocol_block.model(filled)
         assert m is not None

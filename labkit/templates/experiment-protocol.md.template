@@ -27,7 +27,7 @@
   `notes/theorie/terms.md`, then the lab standard's vocabulary table);
   "n/a — standard vocabulary" only if nothing is coined>
 - **Question / hypothesis:** <!-- s --> <the one question — what do we expect?>
-- **Success / failure criterion:** <!-- sm --> <how do we recognise whether it worked?
+- **Success / failure criterion:** <!-- sb --> <how do we recognise whether it worked?
   One id per conjunct, written `[C…]` with its number in the brackets
   (C1 → the key `c1_pass`), each reappearing as a lowercase key in the reportable
   run's metrics.json; where a number stands, name its constant from the
@@ -39,7 +39,7 @@
   `after`") — Terms below is the home of the definition, this line its
   first use (LAB-092 Term layering)
   (→ LAB-003 No run without an intent paragraph, LAB-004 Identifiers make the intent addressable)>
-- **Admissibility condition:** <!-- sm --> <what must hold in the same run before
+- **Admissibility condition:** <!-- sb --> <what must hold in the same run before
   any verdict is issued — yield, coverage, a control showing its expected
   value; one A per condition, each with WHY its failure makes the measurement
   uninterpretable (not merely less likely to succeed — a threshold the
@@ -93,7 +93,7 @@
 
 - **Data / scope:** <!-- s --> <source, N, producer script; pilot subset first>
 - **Data profile:** <!-- sm --> <your judgement of the data before the run: could a surface feature answer the question without the model? What you looked at (the `00_prepare.py --audit` profile, any cue words you counted) and what it cannot show>
-- **Model / tool:** <!-- sm --> <the instrument in one sentence: what the model
+- **Model / tool:** <!-- sb --> <the instrument in one sentence: what the model
   does here and what it sees — its alias stands in the head's `[model]`, never
   hardcode endpoint or ID; two arms (profiles) compared? say what `before` and
   `after` are — the profiles themselves stand in `[model.arms.<arm>]`, and the
@@ -106,7 +106,7 @@
 
 - **Model I/O:** <in: which fields · out as instructed: required format ·
   out in fact: what comes back + which function parses it>
-- **Null condition / anchors (in the same run):** <!-- sm --> <one A per anchor — what runs along in THIS
+- **Null condition / anchors (in the same run):** <!-- sb --> <one A per anchor — what runs along in THIS
   run and must show null — anchors of known rate, placebo (safest: one whose
   true answer is the same for every item), swap; not "was
   validated earlier". Per anchor its expected outcome WITH the derivation
@@ -182,12 +182,12 @@ label with `protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.*
 # `[result] run = "<run_id>"` below [protocol], written by `protocol-fill --from-run`
 # after a clean `finalize`: the one declaration that this protocol reports a number.
 [protocol]
-standard = "0.21"
+standard = "0.22"
 id = "<protocol-id>"
 type = "<exploratory | confirmatory>"
 cost = "<seconds | minutes | hours>"
+kind = "<count | fit | apply>"
 frozen = false
-# minutes/hours: the decided preflight record's file name (audits/<minute>-preflight.toml); seconds: stays ""
 preflight_audit = ""
 # With a model: `[model] alias` (stamped by --model), `[model.arms.<arm>]` with
 # profile, fingerprint, alias (finalize holds them to the run); `[gate] labels = […]`.
