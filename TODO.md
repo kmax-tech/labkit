@@ -139,10 +139,13 @@ Forschung und Benchmark-Fallliste liegen in
   finalize prüft drei Ids gegen metrics.json, report-check sauber, Zahl
   0,719 wie zuvor. Ihr Analyse-Audit fand, dass das geteilte
   `02_analyze.py --draws` beim Schätzer `c1_accuracy None` druckte —
-  behoben (`61fc6ee`). Beobachten: 13,5 statt 5 Minuten, der größte Teil
-  zwei Analyse-Audits (das erste lief über 120 s im Vordergrund, das
-  zweite war nach dem Fix fällig, weil das Audit an den Code gebunden
-  ist); Nested-Kosten 2,8 USD gegen 0,47 USD Agent. Vorgeschichte: die
+  behoben (`61fc6ee`), beide Skelette getestet (`ab22d9d`). Zeitziel
+  verfehlt (14m20s statt 5 min); die Anteile stehen in
+  [der Notiz](docs/usability/2026-10-22-sandbox-3e9784c.md): zwei
+  Analyse-Audits 75 % der Zeit und 86 % der Kosten, alles bis finalize
+  2m36s. Noch keine Änderung daraus; offen für den Autor: zählt das bei
+  `seconds` geschuldete Audit zum 5-Minuten-Ziel, soll es gleich im
+  Hintergrund laufen? Vorgeschichte: die
   Pflichtfelder folgten
   `standard_contract.registration_fields`; ohne `[model]` schuldet ein
   Seconds-Experiment nur die Frage und bekommt das Zählskelett. t5 und

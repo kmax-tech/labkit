@@ -1,0 +1,84 @@
+{
+ "probe": {
+  "staged": "2026-10-22T22:27:10",
+  "task": "fit",
+  "area": "01-dili-forest",
+  "metric_key": "c1_score",
+  "labkit_installed": "labkit @ file:///Users/max/projects/labkit-probes-sandbox-3e9784c/src",
+  "scaffold_sha": "cf9d5bb8793e",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "dili-forest",
+   "--cost",
+   "seconds",
+   "--kind",
+   "fit"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-22T20-30-07_4dd2",
+ "number": 0.7193932827735645,
+ "expected": null,
+ "number_ok": true,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-dili-forest.md",
+ "frozen": false,
+ "cost_tier": "seconds",
+ "log": {
+  "lines": 27,
+  "wall_seconds": 812,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 5,
+  "run": 17,
+  "edit": 3,
+  "unsure": 1,
+  "gate": 1,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 84,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 286,
+  "summary_codes": 0,
+  "answer_has_table": false
+ },
+ "transcript": {
+  "wall_seconds": 860,
+  "tool_seconds": 615,
+  "calls": 26,
+  "commands": {
+   "usability": 27
+  },
+  "refusals": 0,
+  "tokens": {
+   "calls": 40,
+   "input": 80,
+   "output": 15477,
+   "cache_read": 1397236,
+   "cache_creation": 67990,
+   "context_max": 48749
+  },
+  "files_read": [
+   "TASK.md",
+   "scripts/*",
+   "data/raw/dili/train.csv",
+   "experiments/01-dili-forest/PROTOCOL-dili-forest.md",
+   "experiments/01-dili-forest/README.md",
+   ".tmp/claude-1000/-work/*/tasks/bdpvumgxe.output",
+   ".tmp/audit2.out",
+   "/out/probe.log.md"
+  ],
+  "source_reads": [],
+  "outside_paths": [
+   "/out/probe.log.md",
+   "/tasks/bdpvumgxe.output"
+  ]
+ },
+ "agent": null
+}
