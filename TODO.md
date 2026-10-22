@@ -78,6 +78,42 @@ Die Buchführung schrumpft mit: Unreleased (819 Zeilen) in das Release,
 diese Datei auf Reihenfolge und Auslösertabellen, Herleitungen in
 `docs/notes/`.
 
+**Nächste gemeinsame Arbeit (entschieden 2026-10-22, nach der fünften
+Haiku-Runde in labkit-paper Bereich 09):** Erzeugte Berichtsblöcke und
+die begrenzte Prüfung zitierender Berichte, zusammen ein Schritt. Beleg:
+alle drei labkit-Versuche bei `seconds`, `[result] run` deklariert,
+report-check lief (0.102.0) — die erfundenen Zahlen standen in
+`REPORT.md` im Repo-Wurzelverzeichnis, außerhalb jedes Bereichs, und
+kein Gate liest diese Datei (t5: „28 training samples“, Datei hat 44;
+„median 0.449“, ist 0,284; t18: Klassenzahlen gegen die eigene Ausgabe;
+`judgments_attempts_pilot_haiku_v5.tsv`, Entscheidungspunkt
+`number_from_code`). `recheck.cited` prüft nur eine Richtung: jede
+Laufzahl steht in der Note, nicht jede Notenzahl stammt aus dem Lauf.
+
+1. **Erzeugte Blöcke in Berichten.** Ein Befehl schreibt einen
+   abgegrenzten Block (Zahlen und Run-ID aus `metrics.json`) in eine
+   Berichtsdatei; dieselbe Mechanik wie die Answer-Zeile
+   (`checks/result_render`). Garantie, ausdrücklich so begrenzt: *dieser
+   erzeugte Abschnitt entspricht seinen geprüften Quellen* — für
+   benachbarte Prosa folgt daraus nichts. Ein Datenfakt wie „28 training
+   samples“ oder ein Median ist erst gedeckt, wenn er berechnet und als
+   gebundenes Ergebnis gespeichert ist (in `metrics.json` des Laufs).
+2. **Zitierende Berichte, begrenzt.** Kein pauschaler Scan historischer
+   Zitate (Begründung unter „Berichte außerhalb des Protokolls“). Nur
+   geänderte bzw. gestagte Dateien mit Run-Zitat nehmen teil (Stop-Hook,
+   Pre-Commit); ihre erzeugten Blöcke werden exakt geprüft, beim Commit
+   aus dem Index; auffällige Zahlen in freier Prosa als Hinweis mit
+   Fundstelle (static evidence, blockt nie). Wortlaut des Hinweises:
+   „keine zugeordnete Quelle gefunden“ — nicht „kommt im Lauf vor“: ein
+   Zahlenvergleich übersieht eine falsche Zahl, die zufällig anderswo
+   steht, und ein Vorkommen in den Laufzeilen belegt keinen behaupteten
+   Median. Zwilling: ein altes, unberührtes Zitat öffnet nichts.
+
+Abnahme: die nächste Runde in Bereich 09 bewertet den fertigen Bericht
+von Hand (Entscheidungspunkt `number_from_code`); ausschließlich grüne
+erzeugte Blöcke sind keine ausreichende Abnahme — falsch abgeleitete
+oder falsch bezeichnete Zahlen erfassen 1 und 2 nur begrenzt.
+
 **Für die übrigen Punkte ist keine neue Umsetzungsreihenfolge beschlossen.**
 Die offenen Vertragsfragen und Korrektheitslücken unten sind sichtbar, aber dadurch
 nicht vorgezogen.
@@ -105,7 +141,35 @@ Auftrag. Forschung und Benchmark-Fallliste liegen in
   löst ein Gate aus. Automatisches Verfolgen bleibt zurückgestellt:
   alte Zitate würden unberührte Bereiche öffnen. Auslöser: zweiter echter
   Laborfall; zuerst auf Messnotizen begrenzen, altes unbetroffenes Zitat
-  als Zwilling testen.
+  als Zwilling testen. Eingetreten 2026-10-22 (labkit-paper Bereich 09,
+  fünfte Haiku-Runde, `REPORT.md`): die begrenzte Form steht in der
+  Reihenfolge oben (nur geänderte zitierende Dateien), das Verfolgen
+  aller Zitate bleibt zurückgestellt.
+- **`stands` auf einem akzeptierten BLOCKER — Entscheidungsprüfung
+  erproben (entschieden 2026-10-22).** Heute genügt eine Begründung
+  (`findings.Finding.effect_owed`); in Bereich 09 (fünfte Runde)
+  akzeptierte t5 drei BLOCKER mit `stands`, bei zweien ohne jede
+  Handlung (`audit_findings_attempts_pilot_haiku_v5.tsv`). `stands`
+  bleibt — eine begründet begrenzte Aussage darf bestehen; die Frage
+  ist, ob der Befund den tatsächlich berichteten Anspruch entkräftet.
+  Vertrag: ein zweiter, kalter Auditor bekommt den Befund, die
+  Begründung, das betroffene Versprechen, den berichteten Anspruch und
+  die relevante Evidenz aus dem vorhandenen Audit-Snapshot — Befund und
+  Begründung allein prüfen nur, ob die Begründung plausibel klingt.
+  Freigabe nur bei *zustimmender* Prüfung; „trägt nicht“ oder
+  „Kontext reicht nicht“ geben `stands` nicht frei. Der Record bindet
+  die Prüfung an genau den geprüften Entscheidungsstand (Befund,
+  Begründung, Wirkung, Snapshot); eine geänderte Entscheidung macht sie
+  wieder fällig. Garantiert ist die Freigabebedingung, die fachliche
+  Richtigkeit bleibt Audit-Urteil. Erst als Erprobung: an den
+  `stands`-Entscheidungen der fünften Runde nachspielen (t3, t5, t18),
+  bevor ein Gate darauf blockt.
+- **Abschluss-Audit des fertigen Berichts — zurückgestellt, offene
+  Lücke.** Kein Audit sieht den fertigen Bericht; falsch abgeleitete
+  Zahlen (t18: Baselines von Hand aus falschen Klassenzahlen) erfasst
+  nur ein solches Audit (Kosten ×2 bei `seconds`). Auslöser: die
+  nächste Runde zeigt, dass erzeugte Blöcke und der Prosa-Hinweis
+  (Reihenfolge oben) solche Zahlen nicht abfangen.
 
 ## Architektur und Lesbarkeit — notiert, nicht geplant
 
