@@ -114,6 +114,19 @@ von Hand (Entscheidungspunkt `number_from_code`); ausschließlich grüne
 erzeugte Blöcke sind keine ausreichende Abnahme — falsch abgeleitete
 oder falsch bezeichnete Zahlen erfassen 1 und 2 nur begrenzt.
 
+Umgesetzt 2026-10-22 (`f5cda7b`, unreleased): `checks/report_blocks`,
+`protocol-fill --into`, `report_check.hold_report`. Der Blockinhalt ist
+Answer- plus Limit-Zeilen (der Vermerk „Limit lines below“ stimmt so
+auch im Bericht). Über den Beschluss hinaus: das Protokoll, das einen
+zitierten Lauf deklariert, geht mit durch die Stationen, auch ohne
+Block. Am t5-Versuch (Kopie, Host-labkit) nennt der Hinweis alle
+erfundenen Zahlen (28, 25, 0.15/0.686, 0.449), aber auf 29 Zeilen
+zusammen mit den richtigen — als Hinweis brauchbar, als Signal laut.
+Offen: (a) ob ein Bericht, der ein deklariertes Ergebnis zitiert, einen
+Block *schulden* soll (heute Warnung); (b) der Stop-Hook zeigt Hinweise
+nur neben einem Blocker, sichtbar sind sie beim Commit und im direkten
+Aufruf. Erst die nächste Runde auf einem Release mit diesem Stand.
+
 **Für die übrigen Punkte ist keine neue Umsetzungsreihenfolge beschlossen.**
 Die offenen Vertragsfragen und Korrektheitslücken unten sind sichtbar, aber dadurch
 nicht vorgezogen.
