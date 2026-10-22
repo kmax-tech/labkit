@@ -24,7 +24,7 @@ from protocol_fixture import run_record, PID, head  # noqa: E402
 from test_protocol_check import PILOT_FIELDS  # noqa: E402
 
 DID = "- **Did †:** Ran the 81-point grid and labelled the 55 test molecules.\n"
-RESULT = "- **Result:** AUC 0.83 in every task.\n"
+RESULT = "- **Conclusion:** AUC 0.83 in every task.\n"
 
 
 def protocol(*lines: str, declared: str | None = None) -> str:
@@ -68,7 +68,7 @@ class WrittenBeforeRun(unittest.TestCase):
     def test_a_filled_report_field_without_a_run_is_named(self):
         with tempfile.TemporaryDirectory() as d:
             found = before_run(protocol(DID, RESULT), Path(d))
-            self.assertEqual([label for _, label in found], ["Did †", "Result"])
+            self.assertEqual([label for _, label in found], ["Did †", "Conclusion"])
 
     def test_a_completed_bound_run_silences_it(self):
         with tempfile.TemporaryDirectory() as d:

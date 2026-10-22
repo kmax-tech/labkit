@@ -124,7 +124,7 @@ class Repeats(unittest.TestCase):
         first = self._run()
         second = self._run(repeat_of=first)
         text = (self.area / "PROTOCOL-x.md").read_text(encoding="utf-8")
-        text += "\n## Result\n\n- **Answer to the question:** <the answer>\n\n## Runs\n\n- <run_id> — <one sentence>\n"
+        text += "\n## Result\n\n- **Recorded results:** <the answer>\n\n## Runs\n\n- <run_id> — <one sentence>\n"
         for force in (False, True):
             with self.subTest(force=force), self.assertRaises(SystemExit) as cm:
                 protocol_fill.from_run(text, self.area, second, force=force)

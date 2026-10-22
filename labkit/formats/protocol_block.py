@@ -5,7 +5,7 @@ holds the fields a machine reads — the head — and its optional
 `[[promise]]` tables hold the promises (`promises.py`):
 
     [protocol]
-    standard = "0.20"
+    standard = "0.21"
     id = "p-0123456789abcdef"       # stamped by `labkit-init exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
     cost = "seconds"                # seconds | minutes | hours
@@ -35,7 +35,7 @@ from labkit.formats.runs import RUN_ID
 
 #: the head format this labkit reads; a protocol of another standard is
 #: read with the labkit release it was written for
-STANDARD = "0.20"
+STANDARD = "0.21"
 TYPES = ("exploratory", "confirmatory")
 COST_TIERS = ("seconds", "minutes", "hours")
 #: `p-` plus 16 lowercase hex: not derived from name or path, so renaming
@@ -334,7 +334,7 @@ def declared_run(text: str) -> str | None:
     --from-run` and never typed; report-check holds the protocol to it at
     the stop and the commit. None without a `[result]` table: an
     exploration that reports nothing (until 0.100.0 the declaration was a
-    run id in the prose "Answer to the question" line, and a typed
+    run id in the former prose "Answer to the question" line, and a typed
     `…_final` there passed as a citation). Raises BlockError when the
     table is not a table, holds a key other than `run`, or `run` is not a
     string in the shape runlog writes (`runs.RUN_ID`)."""

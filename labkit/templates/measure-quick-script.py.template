@@ -80,7 +80,7 @@ def evaluate_rows(items: list[dict], ids: list[str]) -> dict:
     only if the protocol registers ids (a model in the loop), one key per id
     (`c1_pass`); a plain count registers none. Every key lands in
     metrics.json, and `02_analyze.py --check` demands each verbatim in the protocol's
-    "Answer to the question" line — keep the dict to what that line carries."""
+    "Recorded results" line — keep the dict to what that line carries."""
     if not ids:
         raise ValueError("evaluate_rows(): SOURCE lists no ids — refusing a number over nothing")
     if len(items) != len(ids):

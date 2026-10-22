@@ -476,8 +476,8 @@ class Stop(unittest.TestCase):
         p = self.area / "PROTOCOL-x.md"
         p.write_text(
             protocol_fill.fill_result_run(p.read_text(), run_id)
-            + "- **Answer to the question:** "
-            + result_render.answer_line(
+            + "- **Recorded results:** "
+            + result_render.recorded_results_line(
                 {"c1_pass": True, "a1_pass": True, "a2_pass": True}, run_id
             )
             + "\n"

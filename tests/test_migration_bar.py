@@ -41,8 +41,14 @@ class ProseValueReaders(unittest.TestCase):
 
     READERS = (
         (protocol_check, "fields"),  # the label parser every reader below rests on
-        (protocol_check, "answer_field"),  # the Answer line: a generated section
-        (protocol_check, "answer_without_run"),  # an Answer without a declaration
+        (
+            protocol_check,
+            "recorded_results_field",
+        ),  # the Recorded results line: a generated section
+        (
+            protocol_check,
+            "recorded_results_without_run",
+        ),  # an Answer without a declaration
         (prompt_check, "prompt_blocks"),  # the Prompt block held to the constants
     )
     #: left since phase 3 (2026-10-21): the declaration is `[result] run` in the
@@ -74,24 +80,24 @@ class ProseValueReaders(unittest.TestCase):
 class Declaration(unittest.TestCase):
     """What declares a result reported since phase 3: `[result] run` in the
     TOML head, written by `--from-run`. The four shapes it tells apart;
-    the Answer line is a generated section and declares nothing by itself."""
+    the Recorded results line is a generated section and declares nothing by itself."""
 
     def protocol(self, answer: str, declared: str | None = None) -> str:
         return (
             head(cost="seconds", result=declared)
             + "\n## Result\n\n"
-            + f"- **Answer to the question:** {answer}\n"
+            + f"- **Recorded results:** {answer}\n"
         )
 
     def test_no_table_declares_nothing(self):
         text = self.protocol("<per registered id its verdict, and the run_id…>")
         self.assertIsNone(protocol_block.declared_run(text))
-        self.assertIsNone(protocol_check.answer_without_run(text))
+        self.assertIsNone(protocol_check.recorded_results_without_run(text))
 
     def test_the_table_declares_the_run_and_the_answer_is_held_to_it(self):
         text = self.protocol(f"c1_pass = True (run {RUN})", declared=RUN)
         self.assertEqual(protocol_block.declared_run(text), RUN)
-        self.assertIsNone(protocol_check.answer_without_run(text))
+        self.assertIsNone(protocol_check.recorded_results_without_run(text))
         self.assertIsNone(finalize.declared_run_mismatch(text, Path("runs") / RUN))
 
     def test_a_typed_id_does_not_read_and_a_shaped_one_must_be_a_run(self):
@@ -114,7 +120,7 @@ class Declaration(unittest.TestCase):
     def test_an_answer_without_a_declaration_is_a_warning_not_a_declaration(self):
         text = self.protocol("c1_pass = True, see the run")
         self.assertIsNone(protocol_block.declared_run(text))
-        warning = protocol_check.answer_without_run(text)
+        warning = protocol_check.recorded_results_without_run(text)
         assert warning is not None
         self.assertTrue(warning.startswith("WARNING"))
 
@@ -224,14 +230,14 @@ class LaneDuties(unittest.TestCase):
 
 class WriteBack(unittest.TestCase):
     """What `--from-run` writes from the run and what stays the author's.
-    Phase 3 renders the Answer and the Limit lines from the run and the
+    Phase 3 renders Recorded results and the Limit lines from the run and the
     record instead; the Result stays the author's two sentences throughout."""
 
     def test_from_run_writes_the_answer_and_the_author_writes_the_rest(self):
-        self.assertEqual(protocol_fill.WRITTEN_BY_RUN, ("Answer to the question",))
-        self.assertIn("Result", protocol_fill.WRITTEN_AFTER_RUN)
+        self.assertEqual(protocol_fill.WRITTEN_BY_RUN, ("Recorded results",))
+        self.assertIn("Conclusion", protocol_fill.WRITTEN_AFTER_RUN)
         self.assertIn("Raw output", protocol_fill.WRITTEN_AFTER_RUN)
-        self.assertNotIn("Result", protocol_fill.WRITTEN_BY_RUN)
+        self.assertNotIn("Conclusion", protocol_fill.WRITTEN_BY_RUN)
 
 
 if __name__ == "__main__":

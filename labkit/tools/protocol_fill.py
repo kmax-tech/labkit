@@ -1,4 +1,4 @@
-"""protocol-fill — fill one stamped placeholder field, matched by its label.
+"""protocol-fill — fill protocol fields, adopt a run or render recorded results.
 
 Filling protocol fields by full-text replacement fails in rounds: the quoted
 placeholder block never matches exactly (2026-09-09, twice in one day on the
@@ -14,16 +14,16 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md type=exploratory cost=seconds "model alias=haiku"   the TOML head's stamped placeholders
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
     protocol-fill PROTOCOL-x.md --render       the result section written again from its sources:
-                                               Answer, Limit lines (stray ones dropped), Prompt block
+                                               Recorded results, Limit lines (stray ones dropped), Prompt block
     protocol-fill PROTOCOL-x.md --into REPORT.md  the declared result as a generated block in a
                                                report outside the protocol (replaced in place,
                                                or appended); report-check holds the block to
                                                the protocol's rendering
     protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: `[result] run`
-                                               in the TOML head (the declaration), the Answer and
+                                               in the TOML head (the declaration), Recorded results and
                                                Runs lines from its metrics.json (newest completed
                                                run by default), written only when report-check
-                                               passes on them; the Summary's Result — the
+                                               passes on them; the Summary's Conclusion — the
                                                question's answer in two sentences, within the
                                                Limits — stays yours
 
@@ -39,7 +39,7 @@ marker and case ignored; an ambiguous label (same label in Summary and a
 section) is refused with the line numbers, disambiguate with --line.
 
 `--from-run` is also the one path by which a number becomes the result
-(`adopt`, 2026-10-19): the run_id in the Answer declares it reported, and
+(`adopt`): `[result].run` in the TOML head declares it reported, and
 the declaration is not what makes it sound — the checks are. So the lines
 are written, `report-check` runs on the written protocol (finalize clean, a
 full run — no probe, no acknowledged run — a decided analysis audit of code,
@@ -48,7 +48,7 @@ frozen at minutes/hours), and a blocker puts the file back as it was. A
 result adopted this way has passed every check labkit prescribes; the stop
 hook and the pre-commit (`report-check --if-reported`) hold a hand-written or
 later-changed answer to the same. A provisional number stays a sketch in
-`runs/` and `output/`, never in the Answer.
+`runs/` and `output/`, never in Recorded results.
 """
 
 from __future__ import annotations
@@ -59,12 +59,13 @@ import re
 from pathlib import Path
 
 from labkit.formats import console, files, findings, promises, protocol_block, runs
-from labkit.checks.result_render import ANSWER_LABEL, Rendering, rendering
+from labkit.checks.result_render import Rendering, rendering
 from labkit.formats.repo import shown
 from labkit.checks import recheck, report_blocks
 from labkit.gates import report_check
 from labkit.checks.prompt_check import prompt_constants
 from labkit.formats.protocol_check import (
+    RECORDED_RESULTS_LABEL,
     BEFORE_RUN_CLAIMS,
     RUNS_PLACEHOLDER,
     field_name,
@@ -370,15 +371,12 @@ def _insert_result_table(lines: list[str], span: tuple[int, int], run_id: str) -
 
 #: the label `--from-run` writes from the run's metrics.json — `--list` sets
 #: it apart, since filling it before the run makes --from-run refuse
-WRITTEN_BY_RUN = ("Answer to the question",)
-#: the fields about the run that the author writes after it — Result: the
-#: question's answer in two plain sentences, read within the Limit lines
-#: (until 2026-10-21 `--from-run` wrote the Answer line there too, and in
-#: three of three judge protocols nobody replaced the key dump; the one field
-#: meant to say whether the question is answered held machine text); Raw
-#: output from the run's rows (which pair shows a finding is a choice no
-#: record makes) — `--list` sets them apart too, and `--from-run` names the
-#: open ones with the run's output files
+WRITTEN_BY_RUN = (RECORDED_RESULTS_LABEL,)
+#: the fields about the run that the author writes after it — Conclusion: the
+#: question's answer in two plain sentences, read within the Limit lines;
+#: Raw output from the run's rows (which pair shows a finding is a choice
+#: no record makes). `--list` sets them apart too, and `--from-run` names
+#: the open ones with the run's output files.
 WRITTEN_AFTER_RUN = tuple(
     label for label in BEFORE_RUN_CLAIMS if label not in WRITTEN_BY_RUN
 )
@@ -414,19 +412,19 @@ def from_run(
     text: str, area: Path, run_id: str | None = None, force: bool = False
 ) -> tuple[str, list[str], str]:
     """Write the run back: `[result] run` in the TOML head (the one
-    declaration that the number is reported, `fill_result_run`), the Answer
+    declaration that the number is reported, `fill_result_run`), the Recorded results
     line, the Limit lines and the Runs entry as `runs/<run_id>/metrics.json`
     and the covering records render them (`result_render.rendering`; newest
     completed run when RUN_ID is None), a Limit line of a record that covers
-    the run no longer dropped; the Summary's Result stays the author's
+    the run no longer dropped; the Summary's Conclusion stays the author's
     (`WRITTEN_AFTER_RUN`). Returns (text, what was filled, run_id). A filled
-    Answer, or a `[result]` naming another run, is refused without `force`."""
+    Recorded results, or a `[result]` naming another run, is refused without `force`."""
     run = recheck.chosen_run(area, text, run_id)
     r = rendering(area, text, run)
     filled: list[str] = []
     for label in WRITTEN_BY_RUN:
         try:
-            text = fill(text, label, r.answer, force=force)
+            text = fill(text, label, r.recorded_results, force=force)
             filled.append(label)
         except ValueError as exc:
             if "no field labelled" in str(exc):
@@ -486,7 +484,7 @@ def declared_run_dir(text: str, area: Path, why: str) -> Path:
 
 def render_result(text: str, area: Path) -> tuple[str, list[str]]:
     """`--render`: the result section written again from its sources for the
-    declared run — the Answer line, the Limit lines (stray ones dropped) and,
+    declared run — the Recorded results line, the Limit lines (stray ones dropped) and,
     where the scripts' PROMPT constants read statically, the Prompt block.
     Idempotent: a text that says what its sources say comes back unchanged.
     (text, what was written). Raises ValueError without a declared run or
@@ -495,9 +493,9 @@ def render_result(text: str, area: Path) -> tuple[str, list[str]]:
     r: Rendering = rendering(area, text, run)
     written: list[str] = []
     before = text
-    text = fill(text, ANSWER_LABEL, r.answer, force=True)
+    text = fill(text, RECORDED_RESULTS_LABEL, r.recorded_results, force=True)
     if text != before:
-        written.append(ANSWER_LABEL)
+        written.append(RECORDED_RESULTS_LABEL)
     text, limits_written = limit_lines(text, r.limits, force=True)
     written += limits_written
     text, dropped = drop_stray_limits(text, r.limits)
@@ -515,10 +513,10 @@ def limit_lines(
     text: str, limits: tuple[tuple[str, str], ...], force: bool = False
 ) -> tuple[str, list[str]]:
     """Each LIMITS entry (label, value — `result_render.Rendering.limits`) as
-    its `- **<label>:** <value>` line, below the Answer: added when missing,
+    its `- **<label>:** <value>` line, below Recorded results: added when missing,
     left when it says that already, replaced only with FORCE. (text, labels
     written). Raises ValueError on a differing line without FORCE, or with
-    no Answer line to stand under."""
+    no Recorded results line to stand under."""
     written: list[str] = []
     for label, value in limits:
         lines = text.split("\n")
@@ -536,12 +534,17 @@ def limit_lines(
             lines[have.line - 1 : have.last] = [line]
         else:
             answer = next(
-                (f for f in fields(text) if f.name == field_name(ANSWER_LABEL)), None
+                (
+                    f
+                    for f in fields(text)
+                    if f.name == field_name(RECORDED_RESULTS_LABEL)
+                ),
+                None,
             )
             if answer is None:
-                raise ValueError(f"no Answer line to write {label!r} under")
-            # below the Answer and the Limit lines already under it: in
-            # record order (inserted right below the Answer, three limits
+                raise ValueError(f"no Recorded results line to write {label!r} under")
+            # below Recorded results and the Limit lines already under it: in
+            # record order (inserted right below Recorded results, three limits
             # read #3, #2, #1 — the final audits, 2026-10-21)
             at = answer.last
             for f in fields(text):
@@ -608,7 +611,7 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     """Adopt the result AFTER writes into PROTOCOL: write it, run report-check
     on the written protocol, and on a blocker put BEFORE back and return 1.
     The one path by which a number becomes the result: whatever stands in
-    the Answer through here has passed every check (the write-back is the
+    Recorded results through here has passed every check (the write-back is the
     declaration, the check is what makes it hold; a declaration the check
     refuses is no weaker kind of result, it is none). The gates at the stop
     and the commit (`report-check --if-reported`) hold the same line to a
@@ -666,7 +669,7 @@ def _write_back(args: argparse.Namespace, text: str) -> int:
 
 def _name_yours(text: str, area: Path, run: Path) -> None:
     """After an adopted write-back: the after-run fields still open, which
-    the author writes (Result: the question's answer in two sentences within
+    the author writes (Conclusion: the question's answer in two sentences within
     the Limits; Raw output from the rows), and the run's output files — the
     post hook asked for Raw output only after the commit, and two of three
     cold agents filled it in a second round (sandbox, 2026-10-21)."""
@@ -789,7 +792,7 @@ def _prompts_file(protocol: Path, text: str) -> int:
 
 def into_report(text: str, area: Path, report: str, protocol: str) -> tuple[str, str]:
     """`--into`: REPORT with the declared result as a generated block — the
-    protocol's Answer and Limit lines as rendered (`report_blocks.block_body`),
+    protocol's Recorded results and Limit lines as rendered (`report_blocks.block_body`),
     replaced in place or appended (`report_blocks.write_block`).
     PROTOCOL is the protocol's path relative to the report, the block's
     owner: its blocks are replaced whichever run they showed. (report text,
@@ -871,12 +874,13 @@ def _run_mode(args: argparse.Namespace, text: str) -> int | None:
 
 
 def main(argv: list[str]) -> int:
-    """Command line of `protocol-fill`: fill placeholder fields by label (one, or several as LABEL=VALUE), or the Prompt block from the script."""
+    """Fill fields, adopt a run, render the protocol or write a report block."""
 
     ap = argparse.ArgumentParser(
         prog="protocol-fill",
-        description="Fill stamped placeholder fields in a PROTOCOL-*.md, "
-        "matched by label (never by quoting the placeholder text): "
+        description="Fill protocol fields, adopt a run or render recorded results "
+        "in a protocol or report. Fields in a PROTOCOL-*.md are matched "
+        "by label (never by quoting the placeholder text): "
         "`FIELD VALUE...` fills one, `LABEL=VALUE [LABEL=VALUE ...]` "
         "fills several in one call (all or nothing). --list shows what "
         "is still open.",
@@ -898,7 +902,7 @@ def main(argv: list[str]) -> int:
         "--render",
         action="store_true",
         help="write the result section again from its sources for the declared run: "
-        "the Answer line, the Limit lines (stray ones dropped), the Prompt block",
+        "the Recorded results line, the Limit lines (stray ones dropped), the Prompt block",
     )
     ap.add_argument(
         "--into",
@@ -906,7 +910,7 @@ def main(argv: list[str]) -> int:
         default=None,
         metavar="REPORT",
         help="write the declared result into REPORT (a report outside the protocol) "
-        "as a generated block: the Answer and Limit lines as rendered; the "
+        "as a generated block: Recorded results and Limit lines as rendered; the "
         "protocol's block is replaced (also after a new run), else one is appended",
     )
     ap.add_argument(
@@ -915,8 +919,8 @@ def main(argv: list[str]) -> int:
         const="newest",
         default=None,
         metavar="RUN_ID",
-        help="adopt the run as the result: declare it as `[result] run` in the TOML head and write the Answer and Runs lines from its metrics.json, kept only when report-check passes "
-        "(the area's newest completed run without RUN_ID); the Summary's Result stays yours — the question's answer in two sentences, within the Limits",
+        help="adopt the run as the result: declare it as `[result] run` in the TOML head and write Recorded results and Runs lines from its metrics.json, kept only when report-check passes "
+        "(the area's newest completed run without RUN_ID); the Summary's Conclusion stays yours — the question's answer in two sentences, within the Limits",
     )
     ap.add_argument(
         "--line",

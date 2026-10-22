@@ -52,21 +52,21 @@ LAB-017 The number of audits follows the cost tier.
    (LAB-017 The number of audits follows the cost tier). Until the number
    is written back it is a sketch, and nothing is owed for it.
 6. `protocol-fill PROTOCOL-<name>.md --from-run <run_id>` adopts the run
-   as the result: it writes the Answer line and the run line from
+   as the result: it writes the Recorded results line and the run line from
    metrics.json — never retype them — then runs `report-check` on the
    written protocol and puts the
    file back if it refuses: a full run (no probe), the decided analysis
    audit of code, promises and that run, `scripts/02_analyze.py --check`
    passing (stamped with every skeleton; the count's recomputes from the
-   kept rows). Each finding with an effect lands below the Answer as its
-   `Limit (audit <record> #N)` line, and the Answer counts them in one
+   kept rows). Each finding with an effect lands below Recorded results as its
+   `Limit (audit <record> #N)` line, and Recorded results counts them in one
    note ("subject to N recorded limitations") and names each promise
    left "not assessable with this run"; both are labkit's rendering, held
    exactly — a changed decision is written again with `--render`. It then names what is still
-   yours: the Summary's **Result** — the question's answer in at most two
+   yours: the Summary's **Conclusion** — the question's answer in at most two
    plain sentences, read within the Limit lines ("C1 met on these twelve
    items; whether the model recognises causal claims independent of
-   connectives stays open"), never the Answer line again (three of three
+   connectives stays open"), never the Recorded results line again (three of three
    judge protocols carried the key dump there, 2026-10-21) — and, with a
    model, Raw output: one real prompt+answer pair per finding, read from
    the run's output file it names. `protocol-check` holds both after a
@@ -77,7 +77,7 @@ LAB-017 The number of audits follows the cost tier.
    end; its number stays a
    sketch in `runs/`. A report outside the protocol (`REPORT.md`, a
    results note) shows the result as a generated block:
-   `protocol-fill <PROTOCOL> --into REPORT.md` writes the Answer and the
+   `protocol-fill <PROTOCOL> --into REPORT.md` writes Recorded results and the
    Limit lines there, and after a new run is adopted the same command
    replaces the block. Every changed file that cites a run is held at the
    stop and the commit — the block exactly, every cited run id a run of
@@ -136,14 +136,14 @@ fields, no reading of labkit's source.
     finalize clean, an analysis audit of the code as it is, the check
     (`scripts/02_analyze.py --check`) holding the note to the run — and
     keeps them only when it passes (LAB-041 Generate numbers, don't retype
-    them). The Answer and the Limit lines are labkit's rendering of the run
+    them). Recorded results and the Limit lines are labkit's rendering of the run
     and the records and are held to it exactly: never retype them, and
     after a changed decision write them again (`protocol-fill <PROTOCOL>
     --render`). The stop hook and the pre-commit run the same check on every
     protocol whose head declares a result (`[result] run`).
     A report outside the protocol (`REPORT.md`, a results note) shows the
     result as a generated block: `protocol-fill <PROTOCOL> --into
-    REPORT.md` writes the Answer and the Limit lines there (after a new
+    REPORT.md` writes Recorded results and the Limit lines there (after a new
     run is adopted it replaces the block), and every changed file that
     cites a run is held to it at the stop and the commit — the block exactly, every cited run id a run of the repo.
     Any other number in that file is named as having no assigned source:

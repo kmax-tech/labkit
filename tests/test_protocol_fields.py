@@ -139,9 +139,9 @@ class Fields(unittest.TestCase):
         self.assertEqual(protocol_check.fields(text), [])
 
     def test_after_run_fields_are_not_owed_before_the_run(self):
-        text = head() + "- **Answer to the question:** <number + run_id>\n"
+        text = head() + "- **Recorded results:** <number + run_id>\n"
         report = protocol_check.check_fields(text)
-        self.assertNotIn("Answer to the question", report.missing_must)
+        self.assertNotIn("Recorded results", report.missing_must)
         self.assertEqual(report.must_holes, [])
 
     def test_frozen_graduates_should_to_must(self):
@@ -213,21 +213,19 @@ class OpenHolesFollowTheCut(unittest.TestCase):
         self.assertEqual(self.labels("seconds"), ["Unit"])
 
     def test_fields_written_after_the_run_wait_for_a_run(self):
-        text = (
-            head(cost="seconds") + "- **Answer to the question:** <number + run_id>\n"
-        )
+        text = head(cost="seconds") + "- **Recorded results:** <number + run_id>\n"
         block = protocol_check.protocol_block.head(text)
         self.assertEqual(protocol_check.open_holes(text, block), [])
 
     def test_once_a_result_is_declared_they_are_owed(self):
         text = (
             head(cost="seconds", result="2026-10-07T16-50-37_a9db")
-            + "- **Answer to the question:** <number + run_id>\n"
+            + "- **Recorded results:** <number + run_id>\n"
             + "- Runs: 2026-10-07T16-50-37_a9db measure\n"
         )
         block = protocol_check.protocol_block.head(text)
         labels = [lbl for _, lbl in protocol_check.open_holes(text, block)]
-        self.assertEqual(labels, ["Answer to the question"])
+        self.assertEqual(labels, ["Recorded results"])
 
     def test_the_full_form_lists_every_placeholder(self):
         self.assertEqual(self.labels("minutes"), ["Unit", "Free knobs"])

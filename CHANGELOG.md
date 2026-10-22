@@ -7,6 +7,23 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ## Unreleased
 
+### Breaking
+
+- **Protocol standard 0.21 gives the two result fields distinct names.**
+  The Summary's prose answer is `Conclusion` (formerly `Result`); the
+  generated metrics, run id and limits note are `Recorded results`
+  (formerly `Answer to the question`). `[result].run` still declares the
+  reported result and must name the answering run. Templates, field checks,
+  rendering, CLI guidance and the field guide use the new labels. Standard
+  0.20 is refused rather than read through compatibility paths. labkit
+  0.102.0 is the last published version reading the old labels; reproduce
+  existing protocols with their original repo commit and package pin.
+  For new work, stamp a fresh area. Internal helpers follow the vocabulary:
+  `affected_protocols` replaces `reported_protocols` (selection includes
+  explorations), `recorded_results_field` and `recorded_results_without_run`
+  replace `answer_field` and `answer_without_run`; `Rendering.recorded_results`
+  and `recorded_results_line` replace `Rendering.answer` and `answer_line`.
+
 ### Added
 
 - **A report outside the protocol is held at the stop and the commit.**

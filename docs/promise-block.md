@@ -76,7 +76,7 @@ naming the run (`protocol_block.declared_run`, written by `protocol-fill
 
 ```toml
 [protocol]
-standard = "0.20"
+standard = "0.21"
 id = "p-9e2341c0390948dc"
 type = "confirmatory"
 cost = "minutes"

@@ -59,7 +59,7 @@ Each rule names where it was observed.
     defined only in Terms ninety lines later, or nowhere; a first use
     carries the everyday word once in parentheses (LAB-092 Term layering). (Round 15.)
 11. **The question and its answer are not next to each other.** The
-    Summary's Result must read as the answer to a question stated right
+    Summary's Conclusion must read as the answer to a question stated right
     above it. (Round 15, p1.)
 12. **The formula's first sentence omits a conjunct.** The docstring of
     `evaluate_rows` names every [C…], [A…] and [B…] it decides, with the

@@ -245,14 +245,14 @@ def _present(number: str, text: str) -> bool:
 
 
 ANSWER_OPEN = re.compile(
-    r"^\s*[-*]\s+\*\*Answer to the question:\*\*\s*(<!--[^>]*-->\s*)?<", re.M
+    r"^\s*[-*]\s+\*\*Recorded results:\*\*\s*(<!--[^>]*-->\s*)?<", re.M
 )
 
 
 def cited(note: Path, numbers: list[str], run_id: str) -> None:
     """Refuse unless the note contains every reported number and cites the run.
 
-    An Answer line still holding the stamp's placeholder is named as such —
+    A Recorded results line still holding the stamp's placeholder is named as such —
     "numbers not in PROTOCOL" before the write-back read as a failed check
     (Haiku 5.5, 2026-10-13); the cure is one command."""
     text = note.read_text(encoding="utf-8").replace("−", "-").replace(",", ".")

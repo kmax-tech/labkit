@@ -59,8 +59,8 @@ path to this file.
      in the data; a short form is defined once (Terms of this protocol).
    - **Every coined term or abbreviation is glossed on first use**, or
      listed under Terms of this protocol.
-   - **One job per field.** Summary: what was decided. Answer to the
-     question: which registered ids passed, with the run_id. Raw output: the
+   - **One job per field.** Conclusion: what was decided. Recorded results:
+     the measured values and registered verdicts, with the run_id. Raw output: the
      concrete output that carried the result. Interpretation: what the
      mechanism means and what follows. Outcome: one sentence. The audit
      field: what the audit found. A finding stated in one of them is
@@ -72,8 +72,8 @@ path to this file.
 
 - **One template, three cuts.** `labkit-init exp --cost seconds` stamps the
   `seconds` cut: head, terms, question, data, unit, exclusions, and after
-  the run the Answer line (`protocol-fill --from-run` writes it) and the
-  Result, your two sentences — with `--model` also criterion,
+  the run the Recorded results line (`protocol-fill --from-run` writes it) and the
+  Conclusion, your two sentences — with `--model` also criterion,
   admissibility condition, model, prompt, null condition and raw output. A
   count without a model registers no promise and no criterion (its number
   is held by `--check` and `finalize`). Every stamped placeholder is one line;
@@ -135,11 +135,11 @@ parser — exact keys, typed values; a typo is an error that names the field.
 The same block may hold the `[[promise]]` tables (labkit
 `docs/promise-block.md`).
 
-- **standard** — `"0.20"`; stamped, never edited. A protocol of another
-  version is refused with the release that reads it, never read half: a
-  0.19 protocol has no `[result]`, `[model]` or `[gate]` table and would
-  read as an exploration without a model (phase 4 review, 2026-10-21).
-  Standard 0.20 (labkit 0.101): the head carries those tables. Standard
+- **standard** — `"0.21"`; stamped, never edited. A protocol of another
+  version is refused; use the labkit release it was written for.
+  Standard 0.21 names the Summary's prose answer `Conclusion` and the
+  generated metrics field `Recorded results`. 0.102.0 is the last release
+  reading the old labels under standard 0.20. Standard
   0.19 (labkit 0.72): a frozen protocol and every full run — at `cost =
   "seconds"` every run — owe the `[[promise]]` tables; a run records every
   registered constant unchanged.
@@ -178,7 +178,7 @@ written back — on every tier, seconds included. Whoever reads it has read
 nothing else yet; everything below it is the evidence for a check. It
 derives from the detail below and carries no fact that isn't there.
 
-- **Result:** the answer to the Question line above it, in at most two
+- **Conclusion:** the answer to the Question line above it, in at most two
   plain sentences that say whether the bar set before the run was met —
   "The class descriptions kept the cable set out of the framework class in
   all five cases, as required", not "Both arms were run on 46 cases". A
@@ -190,8 +190,8 @@ derives from the detail below and carries no fact that isn't there.
   what was not tested.
 - **Next step:** what follows — a decision, the next experiment, or "none".
 - **Question †:** the first line of the Summary: the Intent's question in
-  plain words, so the Result is read as its answer (round 15, 2026-10-08:
-  a person restated the question and did not read the Result as the
+  plain words, so the Conclusion is read as its answer (round 15, 2026-10-08:
+  a person restated the question and did not read the Conclusion as the
   answer). Authority stays with Intent → Question / hypothesis; this line
   is its readable projection — one home means one source of truth, not
   that a sentence may appear once. Formerly: only where Result
@@ -293,24 +293,18 @@ Write this back into the protocol as soon as the run finishes — a protocol
 that ends before the result is only a plan, and the results then live
 scattered in output files nobody can interpret.
 
-- **Answer to the question:** every reported key and value of the declared
+- **Recorded results:** every reported key and value of the declared
   run as its `metrics.json` recorded them, the run_id, and one note on the
   recorded limits — written by `protocol-fill --from-run` and held exactly
   to that rendering by `report-check` (phase 5, 2026-10-21): never retyped,
   never reworded; after a changed decision `protocol-fill --render` writes
   it again. The Limit lines below it are rendered the same way from the
-  audit records. What the number means goes into the Summary's Result, in
+  audit records. What the number means goes into the Summary's Conclusion, in
   your words; long form → [[note]]. Example (the rendered form is one
   line):
 
   ```text
-  - **Answer to the question:** nein — [C2] verfehlt, [C1] [C3] [A1] [A2]
-    erfüllt; Lauf `2026-10-07T14-11-17_5b06`.
-
-    | Arm | richtig (21 Organisatoren-Fälle) | neue Fehlablehnungen |
-    |---|---|---|
-    | deterministisch | 18 | 0 |
-    | Modell | 21 | 1 |
+  - **Recorded results:** c1_pass = True, c1_accuracy = 0.83 (run 2026-10-22T09-13-08_0dc3)
   ```
 - **Raw output:** one real prompt+answer pair per finding.
 - **Interpretation / next step:** one sentence; keep instrument findings
@@ -327,7 +321,7 @@ scattered in output files nobody can interpret.
 - **`[result] run` (TOML head, not a prose field):** the run the protocol
   reports — its run_id, written by `protocol-fill --from-run` after a clean
   `finalize`, the one declaration that the number is reported (phase 3 of
-  the 1.0 line, 2026-10-21; before, a run id in the Answer line and an
+  the 1.0 line, 2026-10-21; before, a run id in the former Answer line and an
   `Answering run` field carried it). A projection of
   `answering_run.bound_answering_run` (the one choice intent-check, finalize
   and labkit-params share), never a second binding: `finalize` and

@@ -22,7 +22,7 @@ What lives here, each stated as its current rule:
   * **The registration before a number** (`seconds_registration_missing`,
     `written_before_run`): what a run of seconds owes first, and a report
     field filled while no run exists.
-  * **The result section** (`answer_field`, `answer_without_run`,
+  * **The result section** (`recorded_results_field`, `recorded_results_without_run`,
     `result_due`): the lines report-check and protocol-fill read; the
     declaration itself is the head's `[result] run`
     (`protocol_block.declared_run`), and it is what makes the result
@@ -121,11 +121,11 @@ FIELDS = (
     Field("Resolution check", "should"),
     Field("Prediction for the follow-up run", "should"),
     # Written after the run: before it they cannot exist.
-    Field("Answer to the question", "after", "s"),
+    Field("Recorded results", "after", "s"),
     Field("Raw output", "after", "sm"),  # a prompt+answer pair: only with a model
     # The Summary for a person, written after the run (2026-10-07)
-    Field("Result", "after", "s"),
-    Field("Limits", "after"),  # at seconds the Summary is the Result line (2026-10-12)
+    Field("Conclusion", "after", "s"),
+    Field("Limits", "after"),  # at seconds the Summary requires Conclusion (2026-10-12)
     Field("Next step", "after"),
     Field("Question", "report"),
     Field("Did", "report"),
@@ -475,9 +475,9 @@ def seconds_registration_missing(text: str) -> list[str]:
 #: v3, 2026-10-16: "Did: ran the 81-point grid and labelled the 55 test
 #: molecules", and runs/ held only the preparation)
 BEFORE_RUN_CLAIMS = (
-    "Answer to the question",
+    "Recorded results",
     "Raw output",
-    "Result",
+    "Conclusion",
     "Limits",
     "Next step",
     "Did",
@@ -521,29 +521,31 @@ def written_before_run(
     )
 
 
-ANSWER_LABEL = "answer to the question"
+RECORDED_RESULTS_LABEL = "Recorded results"
 
 
-def answer_field(text: str) -> str | None:
-    """The value of the protocol's `Answer to the question` field — the one
-    line that declares a result reported: written by `protocol-fill
-    --from-run` with the number and the run_id, held by finalize to the
-    answering run. None while the field is absent or still a placeholder."""
+def recorded_results_field(text: str) -> str | None:
+    """The generated metrics, run id and limits note in `Recorded results`.
+
+    `protocol-fill --from-run` writes the field and report-check compares
+    it with its sources. The head's `[result].run` declares the result
+    reported. None while the field is absent or still a placeholder.
+    """
     for f in fields(text):
-        if f.name == ANSWER_LABEL and not f.placeholder:
+        if f.name == field_name(RECORDED_RESULTS_LABEL) and not f.placeholder:
             return f.value.strip()
     return None
 
 
-def answer_without_run(text: str) -> str | None:
-    """A WARNING when the Answer is written while the head declares no
+def recorded_results_without_run(text: str) -> str | None:
+    """A WARNING when Recorded results is written while the head declares no
     `[result] run`, or None. A result is declared reported by that table
     (report-check holds it at the stop and the commit); an answer without
     it is neither a reported result nor the open field of an exploration —
     it says a number without declaring where it came from. Static evidence:
     the hint, not a gate (plan 2026-10-19, TODO 2). None for a head that
     does not read (the head check names that)."""
-    if answer_field(text) is None:
+    if recorded_results_field(text) is None:
         return None
     try:
         if protocol_block.declared_run(text) is not None:
@@ -551,9 +553,9 @@ def answer_without_run(text: str) -> str | None:
     except protocol_block.BlockError:
         return None
     return (
-        "WARNING: `Answer to the question` is written but the head declares no "
+        "WARNING: `Recorded results` is written but the head declares no "
         "`[result] run` — a reported result is declared by `protocol-fill <PROTOCOL> "
-        "--from-run <run_id>`, which writes the table and the Answer; report-check "
+        "--from-run <run_id>`, which writes the table and Recorded results; report-check "
         "then holds it at the stop and the commit; an exploration that reports no "
         "result leaves the field open (LAB-041 Generate numbers, don't retype them)"
     )

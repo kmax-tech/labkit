@@ -162,8 +162,7 @@ class TestResultAfterARun(unittest.TestCase):
 
     def test_placeholder_answer_after_a_declared_run_fails(self):
         text = (
-            pilot(result=self.RUN_ID)
-            + "\n- **Answer to the question:** <number + run_id>\n"
+            pilot(result=self.RUN_ID) + "\n- **Recorded results:** <number + run_id>\n"
             "- **Raw output:** see output/examples.md\n" + self.RUN
         )
         rc, out = run_main(text)
@@ -172,7 +171,7 @@ class TestResultAfterARun(unittest.TestCase):
 
     def test_a_run_in_the_list_alone_declares_nothing(self):
         text = (
-            pilot() + "\n- **Answer to the question:** <number + run_id>\n"
+            pilot() + "\n- **Recorded results:** <number + run_id>\n"
             "- **Raw output:** see output/examples.md\n" + self.RUN
         )
         rc, out = run_main(text)
@@ -274,7 +273,7 @@ class TestCheckFields(unittest.TestCase):
     def test_after_fields_are_not_owed_before_the_run(self):
         """Answer, Raw output and Analysis audit cannot exist before the run."""
         report = protocol_check.check_fields(frozen())
-        for label in ("Answer to the question", "Raw output", "Analysis audit"):
+        for label in ("Recorded results", "Raw output", "Analysis audit"):
             self.assertNotIn(label, report.missing_must)
             self.assertNotIn(label, report.missing_should)
 
@@ -621,9 +620,9 @@ class TestPromptAndExample(unittest.TestCase):
             pilot(cost="seconds", model=None).replace(
                 "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
             )
-            + "\n## Summary\n\n- **Result:** The mean is 3.5 documents per case.\n"
+            + "\n## Summary\n\n- **Conclusion:** The mean is 3.5 documents per case.\n"
             "- **Limits:** One count over 12 cases.\n- **Next step:** none\n"
-            + "\n## Result\n\n- **Answer to the question:** 3.5 (2026-09-06T10-00-00_aa11)\n"
+            + "\n## Result\n\n- **Recorded results:** 3.5 (2026-09-06T10-00-00_aa11)\n"
             "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
         )
         rc, out = run_main(text)
@@ -646,8 +645,8 @@ class TestPromptAndExample(unittest.TestCase):
         ]
         text = (
             "\n".join(lines)
-            + "\n## Summary\n\n- **Result:** The mean is 3.5 documents per case.\n"
-            + "\n## Result\n\n- **Answer to the question:** 3.5 (2026-09-06T10-00-00_aa11)\n"
+            + "\n## Summary\n\n- **Conclusion:** The mean is 3.5 documents per case.\n"
+            + "\n## Result\n\n- **Recorded results:** 3.5 (2026-09-06T10-00-00_aa11)\n"
             "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
         )
         rc, out = run_main(text)
@@ -680,10 +679,10 @@ class TestPromptAndExample(unittest.TestCase):
     def test_written_raw_output_after_a_declared_run_passes(self):
         text = (
             pilot(result="2026-09-06T10-00-00_aa11")
-            + "\n## Summary\n\n- **Result:** The classifier separates the two classes"
+            + "\n## Summary\n\n- **Conclusion:** The classifier separates the two classes"
             " well on the held-out set.\n- **Limits:** One run on one split.\n"
             "- **Next step:** none\n"
-            + "\n## Result\n\n- **Answer to the question:** AUC 0.91 "
+            + "\n## Result\n\n- **Recorded results:** AUC 0.91 "
             "(2026-09-06T10-00-00_aa11)\n- **Raw output:** see output/examples.md\n"
             "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
         )
@@ -694,9 +693,9 @@ class TestPromptAndExample(unittest.TestCase):
         # The twin above passes; the same protocol without Limits must not.
         text = (
             pilot(result="2026-09-06T10-00-00_aa11")
-            + "\n## Summary\n\n- **Result:** The classifier separates the two classes"
+            + "\n## Summary\n\n- **Conclusion:** The classifier separates the two classes"
             " well on the held-out set.\n- **Next step:** none\n"
-            + "\n## Result\n\n- **Answer to the question:** AUC 0.91 "
+            + "\n## Result\n\n- **Recorded results:** AUC 0.91 "
             "(2026-09-06T10-00-00_aa11)\n- **Raw output:** see output/examples.md\n"
             "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
         )
@@ -953,10 +952,10 @@ class TestHeadValues(unittest.TestCase):
         findings — a gate judging another template produces false positives
         (2026-09-14: a pre-0.15 checker flagged the 0.15 template's stamped
         preamble as "verbatim template text" for a whole session)."""
-        for std in ("0.99", "0.17", "0.15"):
+        for std in ("0.99", "0.20", "0.17", "0.15"):
             with self.subTest(std):
                 rc, out = run_main(
-                    pilot().replace('standard = "0.20"', f'standard = "{std}"')
+                    pilot().replace('standard = "0.21"', f'standard = "{std}"')
                 )
                 self.assertEqual(rc, 1, out)
                 self.assertIn(f"HEAD (must): [protocol] standard = '{std}'", out)

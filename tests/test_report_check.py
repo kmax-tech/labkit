@@ -405,7 +405,7 @@ class ReportCheck(unittest.TestCase):
 class IfReported(unittest.TestCase):
     """`report-check --if-reported`: the gate at the stop and the commit (it
     was `finalize --if-reported` until 0.99.0). A number written back into
-    "Answer to the question" is held to the whole chain; a protocol whose
+    "Recorded results" is held to the whole chain; a protocol whose
     answer is still open owes nothing — an exploration ends with no reported
     result, probes in `runs/` or not (TODO 2, 2026-10-19)."""
 
@@ -440,7 +440,7 @@ class IfReported(unittest.TestCase):
         proto = area / "PROTOCOL-x.md"
         proto.write_text(
             head(cost="seconds", result=declared)
-            + f"- **Answer to the question:** {answer}\n",
+            + f"- **Recorded results:** {answer}\n",
             encoding="utf-8",
         )
         run = completed_run(
@@ -573,12 +573,12 @@ class IfReported(unittest.TestCase):
         (other / "PROTOCOL-y.md").write_text(head(), encoding="utf-8")
         (other / "scripts" / "01_measure.py").write_text("x = 1\n")
         self.assertEqual(
-            report_check.reported_protocols([helper], root),
+            report_check.affected_protocols([helper], root),
             [area.resolve() / "PROTOCOL-x.md"],
         )
         helper.unlink()  # a deleted helper is still one the area rests on
         self.assertEqual(
-            report_check.reported_protocols([helper], root),
+            report_check.affected_protocols([helper], root),
             [area.resolve() / "PROTOCOL-x.md"],
         )
 

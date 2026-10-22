@@ -59,10 +59,10 @@ run for itself, and the output names the state that was held.
 
 `--if-reported` is the gate the agent cannot choose: `claude-hook stop`
 runs it on every changed path, the stamped pre-commit on every staged one,
-and it holds every protocol of every area one of those paths lies in
-(`reported_protocols`) whose head declares a result (`[result] run`,
-`protocol_block.declared_run`) — the one declaration that a result is
-reported, written by `protocol-fill --from-run`. The area, not the protocol
+and selects every protocol of every area one of those paths lies in
+(`affected_protocols`). It checks those whose head declares a result
+(`[result] run`, `protocol_block.declared_run`), written by
+`protocol-fill --from-run`. The area, not the protocol
 alone: a script edited after the answer was written back changes what the
 analysis audit saw and what `--check` recomputes. A protocol declaring no
 result owes nothing here: an exploration ends with no reported result,
@@ -288,7 +288,7 @@ def limit_gaps(ctx: Checked) -> list[str]:
     """Station 3, the limits: every accepted BLOCKER of the covering analysis
     records has its effect decided, and the result section says exactly
     what those records and the run render (`result_render.render_gaps`):
-    the Answer line with its note, one Limit line per decided limit, none
+    the Recorded results line with its note, one Limit line per decided limit, none
     that no record decides. Exact in what it holds — equality with the
     rendering — and silent on whether a limit is enough: that is the
     audit's question. Empty when no covering record exists
@@ -419,7 +419,7 @@ def report_check(
     return findings.report("report-check", "reporting")
 
 
-def reported_protocols(
+def affected_protocols(
     paths: list[Path], repo: Path, *, staged: bool = False
 ) -> list[Path]:
     """Every protocol of every area PATHS touch, each once, by area: a
@@ -622,7 +622,7 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     sources = (
         repo_sources(repo, staged=staged) if reports else Sources(set(), {}, {}, {})
     )
-    protocols = reported_protocols(paths, repo, staged=staged)
+    protocols = affected_protocols(paths, repo, staged=staged)
     for p in held_by_reports(reports, sources):
         if p not in protocols:
             protocols.append(p)

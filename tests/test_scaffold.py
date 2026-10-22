@@ -198,7 +198,7 @@ class Exp(unittest.TestCase):
         self.assertNotIn("Success / failure criterion", proto)
         self.assertNotIn("Admissibility condition", proto)
         # the Summary at seconds is the Result line
-        self.assertIn("- **Result:**", proto)
+        self.assertIn("- **Conclusion:**", proto)
         self.assertNotIn("- **Limits:**", proto)
         self.assertNotIn("- **Next step:**", proto)
         self.assertFalse((area / "scripts" / "00_prepare.py").exists())

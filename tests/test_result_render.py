@@ -1,6 +1,6 @@
 """result_render: the result section is held to equality with its rendering
 (phase 5 of the 1.0 line, 2026-10-21). The sources — the declared run's
-metrics.json and the covering analysis records — render the Answer line and
+metrics.json and the covering analysis records — render the Recorded results line and
 the Limit lines; `--from-run` writes them, `--render` writes them again, and
 a line that differs from the rendering is a blocker whatever it says.
 """
@@ -22,7 +22,7 @@ from labkit.tools import protocol_fill  # noqa: E402
 from protocol_fixture import completed_run, head, scope_file  # noqa: E402
 
 RUN = "2026-10-21T10-00-00_abcd"
-BODY = "\n## Result\n\n- **Answer to the question:** <per registered id its verdict…>\n- **Raw output:** r\n\n## Runs\n\n- <run_id> — <one sentence>\n"
+BODY = "\n## Result\n\n- **Recorded results:** <per registered id its verdict…>\n- **Raw output:** r\n\n## Runs\n\n- <run_id> — <one sentence>\n"
 
 
 def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]:
@@ -56,12 +56,25 @@ def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]
 
 
 class Rendering(unittest.TestCase):
+    def test_the_field_guide_example_matches_the_generated_field(self):
+        """The guide's example must stay usable by the exact renderer."""
+        guide = (
+            Path(__file__).resolve().parents[1] / "labkit/docs/protocol-field-guide.md"
+        ).read_text(encoding="utf-8")
+        section = guide.split("- **Recorded results:**", 1)[1]
+        example = section.split("```text\n", 1)[1].split("```", 1)[0].strip()
+        expected = result_render.recorded_results_line(
+            {"c1_pass": True, "c1_accuracy": 0.83},
+            "2026-10-22T09-13-08_0dc3",
+        )
+        self.assertEqual(example, f"- **Recorded results:** {expected}")
+
     def test_the_rendering_is_the_answer_line_with_its_note_and_the_limit_lines(self):
         area, protocol = area_with_record()
         text = protocol.read_text(encoding="utf-8")
         r = result_render.rendering(area, text, area / "runs" / RUN)
         self.assertEqual(
-            r.answer,
+            r.recorded_results,
             f"c1_pass = True, c1_accuracy = 0.83 (run {RUN}); subject to 1 recorded "
             "limitation (the Limit lines below)",
         )
@@ -73,7 +86,9 @@ class Rendering(unittest.TestCase):
         area, protocol = area_with_record(limit_reason=None)
         text = protocol.read_text(encoding="utf-8")
         r = result_render.rendering(area, text, area / "runs" / RUN)
-        self.assertEqual(r.answer, f"c1_pass = True, c1_accuracy = 0.83 (run {RUN})")
+        self.assertEqual(
+            r.recorded_results, f"c1_pass = True, c1_accuracy = 0.83 (run {RUN})"
+        )
         self.assertEqual(r.limits, ())
 
 
@@ -101,7 +116,7 @@ class RenderGaps(unittest.TestCase):
         (gap,) = [
             g
             for g in result_render.render_gaps(self.text, self.expected)
-            if "Answer" in g
+            if "Recorded results" in g
         ]
         self.assertIn("not written", gap)
 
@@ -112,7 +127,7 @@ class RenderGaps(unittest.TestCase):
         )
         gaps = result_render.render_gaps(edited, self.expected)
         self.assertEqual(len(gaps), 2, gaps)
-        self.assertIn("Answer line differs from its rendering", gaps[0])
+        self.assertIn("Recorded results line differs from its rendering", gaps[0])
         self.assertIn("differs from the record", gaps[1])
         rendered, written = protocol_fill.render_result(edited, self.area)
         self.assertEqual(rendered, text)

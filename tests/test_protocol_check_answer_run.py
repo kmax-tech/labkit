@@ -1,7 +1,7 @@
-"""protocol-check: an `Answer to the question` written while the head declares
+"""protocol-check: an `Recorded results` written while the head declares
 no `[result] run` is a WARNING — the hint where the declaration of a reported
 result is not unambiguous. The declaration is the head's table (`protocol-fill
---from-run` writes it with the Answer; `report-check --if-reported` holds it at
+--from-run` writes it with Recorded results; `report-check --if-reported` holds it at
 the stop and the commit). Twins: an answer under a declared run, and the open
 field of an exploration, are silent (TODO 2, 2026-10-19; phase 3, 2026-10-21).
 """
@@ -24,15 +24,12 @@ RUN = "2026-10-07T10-00-00_ab12"
 
 
 def _protocol(answer: str, declared: str | None = None) -> str:
-    return (
-        head(cost="seconds", result=declared)
-        + f"- **Answer to the question:** {answer}\n"
-    )
+    return head(cost="seconds", result=declared) + f"- **Recorded results:** {answer}\n"
 
 
 class AnswerWithoutRun(unittest.TestCase):
     def test_an_answer_naming_no_run_warns(self):
-        warning = protocol_check.answer_without_run(_protocol("AUC 0.91"))
+        warning = protocol_check.recorded_results_without_run(_protocol("AUC 0.91"))
         self.assertIsNotNone(warning)
         assert warning is not None
         self.assertTrue(warning.startswith("WARNING:"))
@@ -40,16 +37,18 @@ class AnswerWithoutRun(unittest.TestCase):
 
     def test_an_answer_with_its_run_is_silent(self):
         self.assertIsNone(
-            protocol_check.answer_without_run(
+            protocol_check.recorded_results_without_run(
                 _protocol(f"AUC 0.91 ({RUN})", declared=RUN)
             )
         )
 
     def test_the_open_field_of_an_exploration_is_silent(self):
         self.assertIsNone(
-            protocol_check.answer_without_run(_protocol("<number + run_id>"))
+            protocol_check.recorded_results_without_run(_protocol("<number + run_id>"))
         )
-        self.assertIsNone(protocol_check.answer_without_run(head(cost="seconds")))
+        self.assertIsNone(
+            protocol_check.recorded_results_without_run(head(cost="seconds"))
+        )
 
     def test_the_report_carries_it_as_a_warning_not_a_blocker(self):
         with tempfile.TemporaryDirectory() as d:
@@ -62,7 +61,7 @@ class AnswerWithoutRun(unittest.TestCase):
                 p, p.read_text(encoding="utf-8"), set(), {}
             )
         self.assertIn(
-            "WARNING: `Answer to the question` is written but the head declares no",
+            "WARNING: `Recorded results` is written but the head declares no",
             buf.getvalue(),
         )
         self.assertIsNotNone(report.answer_unbound)

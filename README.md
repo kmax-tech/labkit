@@ -259,6 +259,10 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **branch** | Kind B promise: the registered interpretation for an outcome, recorded as `b1_branch`, etc. |
 | **binding** | Run's record of the protocol id it ran under. |
 | **answering run** | Completed run selected to answer a particular protocol; repeat draws are excluded. Selection rules: [protocol/run binding](docs/protocol-run-binding.md). |
+| **declared run** | Run named by `[result].run` as the reported result; the gates require it to equal the answering run. |
+| **Conclusion** | Author's answer to the question in the Summary, in at most two plain sentences. |
+| **Recorded results** | Generated protocol field: the declared run's metrics, run id and note on recorded limits; checked against its sources. |
+| **result block** | Generated copy of Recorded results and Limit lines in a report, updated with `protocol-fill --into` and checked against its sources. |
 | **derived run** | Re-evaluation of a completed non-repeat run's rows through `derived_from`, with no new model calls. |
 | **scope hash** | Per-promise hash of its declared code scope, recorded with the run and checked by finalize. |
 | **stamp** | Area audit fingerprint of selected source files, declared scopes and the package pin. |

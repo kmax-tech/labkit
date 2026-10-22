@@ -44,7 +44,7 @@ from labkit.formats.protocol_check import (
     in_cut,
     field_label,
     model_named,
-    answer_without_run,
+    recorded_results_without_run,
     check_fields,
     fields,
     result_due,
@@ -56,7 +56,7 @@ def unreported(text: str, seconds: bool = False) -> list[str]:
     """The result fields still missing, a placeholder or only dashes. A
     model-only field (`sm`, Raw output) is owed only with a model named — a
     count has no prompt+answer pair to show; at SECONDS only the cut's fields
-    are owed (the Summary is the Result line, 2026-10-12)."""
+    are owed (the Summary requires Conclusion, 2026-10-12)."""
     lines = fields(text)
     found = {f.name: f for f in lines}
     model = model_named(text)
@@ -323,7 +323,7 @@ class FileReport:
     audit_drift: str | None = None
     id_findings: list[GateFinding] = field(default_factory=list)
     cost_lowered: str | None = None  # a WARNING: the tier sank since the first commit
-    answer_unbound: str | None = None  # a WARNING: an Answer without a run_id
+    answer_unbound: str | None = None  # a WARNING: an Recorded results without a run_id
     pilot_note: str = ""
     missing_must: list[str] = field(default_factory=list)
     #: owed should-fields; unfrozen they fold into the pilot note, frozen
@@ -496,7 +496,7 @@ def check_protocol(
         audit_drift=audit_drift,
         id_findings=check_protocol_id(path, head, ids),
         cost_lowered=cost_lowered(path, head),
-        answer_unbound=answer_without_run(text),
+        answer_unbound=recorded_results_without_run(text),
         pilot_note=pilot_note,
         missing_must=report.missing_must,
         missing_should=missing_should,
@@ -598,7 +598,7 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
             f"{f}: MISSING (must): the head declares run {r.declared} but "
             f"{', '.join(field_label(n) for n in r.run_unreported)} empty — write "
             f"the result in the SAME session: `protocol-fill --render` for the "
-            f"Answer; Result (the question's answer in two sentences, within the "
+            f"Recorded results; Conclusion (the question's answer in two sentences, within the "
             f"Limits) and Raw output are yours."
         )
     for n, ln in r.series:

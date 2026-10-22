@@ -31,7 +31,7 @@ SAMPLE = """# Experiment protocol: x
 ## Summary † (write last)
 
 - **Question †:** <the same sentence as in the Intent>
-- **Result †:** <number(s) + run_id>
+- **Conclusion †:** <number(s) + run_id>
 
 ## Intent
 
@@ -44,8 +44,8 @@ SAMPLE = """# Experiment protocol: x
 
 class TestFill(unittest.TestCase):
     def test_single_line_placeholder_is_replaced_by_label(self):
-        out = protocol_fill.fill(SAMPLE, "Result", "K2 PASS, run 2026-x")
-        self.assertIn("- **Result †:** K2 PASS, run 2026-x", out)
+        out = protocol_fill.fill(SAMPLE, "Conclusion", "K2 PASS, run 2026-x")
+        self.assertIn("- **Conclusion †:** K2 PASS, run 2026-x", out)
         self.assertNotIn("<number(s)", out)
         self.assertIn("does Y move X?", out)  # untouched neighbours
 
@@ -60,8 +60,8 @@ class TestFill(unittest.TestCase):
         self.assertNotIn("annotator's words", out)
 
     def test_label_match_ignores_dagger_and_case(self):
-        out = protocol_fill.fill(SAMPLE, "result †", "filled")
-        self.assertIn("- **Result †:** filled", out)
+        out = protocol_fill.fill(SAMPLE, "conclusion †", "filled")
+        self.assertIn("- **Conclusion †:** filled", out)
 
     def test_filled_field_is_refused_without_force(self):
         with self.assertRaises(ValueError) as ctx:
@@ -78,12 +78,12 @@ class TestFill(unittest.TestCase):
         self.assertIn("Meaning of the gold label", msg)
 
     def test_ambiguous_label_requires_line(self):
-        two = SAMPLE + "\n- **Result †:** <second stamp>\n"
+        two = SAMPLE + "\n- **Conclusion †:** <second stamp>\n"
         with self.assertRaises(ValueError) as ctx:
-            protocol_fill.fill(two, "Result", "x")
+            protocol_fill.fill(two, "Conclusion", "x")
         self.assertIn("--line", str(ctx.exception))
-        out = protocol_fill.fill(two, "Result", "x", line_no=6)
-        self.assertIn("- **Result †:** x", out)
+        out = protocol_fill.fill(two, "Conclusion", "x", line_no=6)
+        self.assertIn("- **Conclusion †:** x", out)
         self.assertIn("<second stamp>", out)
 
     def test_a_wrapped_label_is_read_whole(self):
@@ -387,7 +387,7 @@ class TestFromRun(unittest.TestCase):
 
 ## Summary (after the run, for a person)
 
-- **Result:** <the answer to the question above, in at most two plain sentences…>
+- **Conclusion:** <the answer to the question above, in at most two plain sentences…>
 
 ## Intent (before the run)
 
@@ -395,7 +395,7 @@ class TestFromRun(unittest.TestCase):
 
 ## Result (after the run — write back, don't go quiet)
 
-- **Answer to the question:** <per registered id its verdict, and the run_id…>
+- **Recorded results:** <per registered id its verdict, and the run_id…>
 
 ## Runs (documented runs — via `runlog`, cite run_ids instead of retyping numbers)
 
@@ -445,18 +445,18 @@ class TestFromRun(unittest.TestCase):
         text, filled, run_id = protocol_fill.from_run(self.PROTOCOL, area)
         self.assertEqual(run_id, self.RUN)
         self.assertEqual(
-            filled, ["Answer to the question", protocol_fill.RESULT_LABEL, "Runs"]
+            filled, ["Recorded results", protocol_fill.RESULT_LABEL, "Runs"]
         )
         line = (
             "mean_docs_per_case = 3.5, n_cases = 12, a1_pass = True (run "
             + self.RUN
             + ")"
         )
-        self.assertIn("- **Answer to the question:** " + line, text)
+        self.assertIn("- **Recorded results:** " + line, text)
         # the Result is the author's two sentences, not the key dump again
         # (three of three judge protocols carried it there, 2026-10-21)
-        self.assertIn("- **Result:** <the answer to the question above", text)
-        self.assertIn("Result", protocol_fill.WRITTEN_AFTER_RUN)
+        self.assertIn("- **Conclusion:** <the answer to the question above", text)
+        self.assertIn("Conclusion", protocol_fill.WRITTEN_AFTER_RUN)
         self.assertIn("- " + self.RUN + " — the kept run", text)
         self.assertNotIn("duration_s", text)  # labkit's own key is not the number
         self.assertNotIn("<run_id>", text)
@@ -544,11 +544,11 @@ class Adopt(unittest.TestCase):
 
 ## Summary (after the run, for a person)
 
-- **Result:** <the answer to the question above, in at most two plain sentences…>
+- **Conclusion:** <the answer to the question above, in at most two plain sentences…>
 
 ## Result (after the run — write back, don't go quiet)
 
-- **Answer to the question:** <per registered id its verdict, and the run_id…>
+- **Recorded results:** <per registered id its verdict, and the run_id…>
 
 ## Runs (documented runs)
 

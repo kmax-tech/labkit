@@ -2,10 +2,9 @@
 
 ## Summary (after the run, for a person)
 
-- **Question †:** <the Intent's question in plain words, first — the Result
-  below is its answer (a person reading only the Summary did not recognise
-  the Result as the answer, 2026-10-08)>
-- **Result:** <!-- s --> <the answer to the question above, in at most two
+- **Question †:** <the Intent's question in plain words — the Conclusion
+  below answers it for a reader who sees only the Summary>
+- **Conclusion:** <!-- s --> <the answer to the question above, in at most two
   plain sentences: whether the bar set before the run was met ("Yes — the
   class descriptions kept the cable set out of the framework class in all
   five cases, as required") — or that no verdict was possible because an
@@ -64,9 +63,9 @@
 
 ## Result (after the run — write back, don't go quiet)
 
-- **Answer to the question:** <!-- s --> <per registered id its verdict, and the
-  run_id; numbers as a small table below the label (one row per arm or
-  condition), produced by `scripts/02_analyze.py --check`, never retyped>
+- **Recorded results:** <!-- s --> <generated metrics, run_id and limits
+  note — `protocol-fill --from-run` writes this field from the run and
+  audit records; after a changed audit decision use `--render`; never retype>
 - **Deviations after freeze:** <"none", or what was changed after
   `frozen = true` — the registered plan is the Intent above and is not
   rewritten; a deviation that touches the verdict is named in Summary →
@@ -183,7 +182,7 @@ label with `protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.*
 # `[result] run = "<run_id>"` below [protocol], written by `protocol-fill --from-run`
 # after a clean `finalize`: the one declaration that this protocol reports a number.
 [protocol]
-standard = "0.20"
+standard = "0.21"
 id = "<protocol-id>"
 type = "<exploratory | confirmatory>"
 cost = "<seconds | minutes | hours>"

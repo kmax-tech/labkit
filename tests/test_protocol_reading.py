@@ -12,15 +12,15 @@ from protocol_fixture import head
 DENSE = (
     "# Experiment protocol: x\n\n*legend line one*\n- legend bullet\n\n"
     + head()
-    + "\n## Summary\n\n- **Result †:** [C1] met, c1_pass True, run "
+    + "\n## Summary\n\n- **Conclusion †:** [C1] met, c1_pass True, run "
     "`2026-10-07T14-11-17_5b06`\n\n## Result\n\n"
-    "- **Answer to the question:** c1_pass True · c2_pass False · a1_pass True\n"
+    "- **Recorded results:** c1_pass True · c2_pass False · a1_pass True\n"
 )
 CLEAR = (
     "# Experiment protocol: x\n\n"
     + head()
-    + "\n## Summary\n\n- **Result †:** The model arm missed the criterion on one wrongly "
-    "rejected case.\n\n## Result\n\n- **Answer to the question:** no — [C2] missed; run "
+    + "\n## Summary\n\n- **Conclusion †:** The model arm missed the criterion on one wrongly "
+    "rejected case.\n\n## Result\n\n- **Recorded results:** no — [C2] missed; run "
     "`2026-10-07T14-11-17_5b06`.\n\n  | arm | right |\n  |---|---|\n  | model | 21 |\n"
 )
 
@@ -105,7 +105,7 @@ SUMMARY_FIRST = """# Experiment protocol: x
 
 ## Summary (after the run, for a person)
 
-- **Result:** The model judged 11 of 12 sentences right, clearly above a placebo question.
+- **Conclusion:** The model judged 11 of 12 sentences right, clearly above a placebo question.
 - **Limits:** Twelve sentences, one run.
 - **Next step:** none
 
@@ -120,7 +120,7 @@ HEAD_FIRST = """# Experiment protocol: x
 
 ```toml
 [protocol]
-standard = "0.20"
+standard = "0.21"
 id = "p-0000000000000000"
 type = "exploratory"
 cost = "seconds"
@@ -130,7 +130,7 @@ preflight_audit = ""
 
 ## Summary (after the run, for a person)
 
-- **Result:** The model judged 11 of 12 sentences right.
+- **Conclusion:** The model judged 11 of 12 sentences right.
 - **Limits:** One run.
 - **Next step:** none
 """
@@ -139,7 +139,7 @@ preflight_audit = ""
 class Glance(unittest.TestCase):
     def test_a_summary_on_top_is_inside_the_first_lines(self):
         g = pr.glance(SUMMARY_FIRST)
-        self.assertEqual(g.summary_fields, ("result", "limits", "next step"))
+        self.assertEqual(g.summary_fields, ("conclusion", "limits", "next step"))
         self.assertEqual(g.lines, 10)
         self.assertEqual(g.chars, len(g.excerpt))
 
@@ -262,7 +262,7 @@ class AuditFixes(unittest.TestCase):
     """Findings of the 2026-10-07 code audit, each pinned."""
 
     TEXT = (
-        "## Summary\n\n- **Result:** The CI was wide, as the paragraph says.\n\n"
+        "## Summary\n\n- **Conclusion:** The CI was wide, as the paragraph says.\n\n"
         "## Context\n\n- **Terms of this protocol:** *CI* — confidence interval;"
         " *N* = sample size; see [g](g.md#calibration).\n"
     )

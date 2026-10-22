@@ -78,7 +78,7 @@ class Cut(unittest.TestCase):
 - **Prompt (verbatim, per variant):** see block
 - **Null condition / anchors (in the same run):** [A2] two anchors
 - **Exclusions / filters:** none
-- **Answer to the question:** pending
+- **Recorded results:** pending
 - **Raw output:** pending
 """
         )

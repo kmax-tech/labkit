@@ -11,7 +11,7 @@ generated block, written by `protocol-fill <PROTOCOL> --into <FILE>`:
 The opening line names the protocol the block belongs to — its path
 relative to the report, without spaces — and the run it shows. The body is
 what that protocol, declaring that run as its result, renders
-(`result_render.rendering`): its Answer line, limits note included, and one
+(`result_render.rendering`): its Recorded results line, limits note included, and one
 line per Limit (`block_body`) — the note's "Limit lines below" stand below
 in the report too. What each check
 here states, and no more:
@@ -69,10 +69,10 @@ class Block:
 
 
 def block_body(r: Rendering) -> str:
-    """A block's body as R renders it: the Answer line, then each Limit
+    """A block's body as R renders it: the Recorded results line, then each Limit
     line as the protocol carries it."""
     return "\n".join(
-        [r.answer, *(f"- **{label}:** {value}" for label, value in r.limits)]
+        [r.recorded_results, *(f"- **{label}:** {value}" for label, value in r.limits)]
     )
 
 

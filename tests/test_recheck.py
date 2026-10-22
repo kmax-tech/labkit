@@ -53,7 +53,8 @@ class Area(unittest.TestCase):
         self._record(evaluate(ROWS))
         self.note = self.area / "PROTOCOL-x.md"
         self.note.write_text(
-            "- **Result:** 3,5 über 2 Fälle, run 2026-10-05T19-00-00_ab12\n\n" + head(),
+            "- **Conclusion:** 3,5 über 2 Fälle, run 2026-10-05T19-00-00_ab12\n\n"
+            + head(),
             encoding="utf-8",
         )
 
@@ -108,19 +109,19 @@ class Area(unittest.TestCase):
 
     def test_note_missing_number_or_run(self):
         self.note.write_text(
-            "- **Result:** 3.5, run 2026-10-05T19-00-00_ab12\n" + "\n" + head()
+            "- **Conclusion:** 3.5, run 2026-10-05T19-00-00_ab12\n" + "\n" + head()
         )
         with self.assertRaises(SystemExit) as cm:
             recheck.holds(self.area, self.out, evaluate, self.note)
         self.assertIn("numbers not in", str(cm.exception))  # 2 (n_cases) is absent
-        self.note.write_text("- **Result:** 3.5 over 2 cases\n" + "\n" + head())
+        self.note.write_text("- **Conclusion:** 3.5 over 2 cases\n" + "\n" + head())
         with self.assertRaises(SystemExit) as cm:
             recheck.holds(self.area, self.out, evaluate, self.note)
         self.assertIn("does not cite run", str(cm.exception))
 
     def test_an_unwritten_answer_line_names_the_write_back(self):
         self.note.write_text(
-            "- **Answer to the question:** <!-- s --> <per registered id its verdict>\n"
+            "- **Recorded results:** <!-- s --> <per registered id its verdict>\n"
             + "\n"
             + head()
         )

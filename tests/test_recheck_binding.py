@@ -27,7 +27,7 @@ PID_B = "p-bbbbbbbbbbbbbbbb"
 RUN_A = "2026-10-15T10-00-00_aaaa"
 RUN_B = "2026-10-15T11-00-00_bbbb"
 BODY = (
-    "- **Answer to the question:** <the number (run <run_id>)>\n\n"
+    "- **Recorded results:** <the number (run <run_id>)>\n\n"
     "## Runs\n\n- <run_id> — <what>\n\n"
 )
 

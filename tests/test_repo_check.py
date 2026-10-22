@@ -110,7 +110,7 @@ class Source(unittest.TestCase):
 
 FROZEN_HEAD = """```toml
 [protocol]
-standard = "0.20"
+standard = "0.21"
 id = "p-0123456789abcdef"
 type = "exploratory"
 cost = "seconds"

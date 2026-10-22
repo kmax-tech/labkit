@@ -279,9 +279,7 @@ class Count(unittest.TestCase):
         self.assertIn("read from the proposed protocol", out)
         self.assertIn("finalized, audited, checked", out)
         text = self.protocol.read_text(encoding="utf-8")
-        self.assertIn(
-            f"- **Answer to the question:** lines_mean = 3.0 (run {run_id})", text
-        )
+        self.assertIn(f"- **Recorded results:** lines_mean = 3.0 (run {run_id})", text)
         self.assertIn(f"- {run_id} — the kept run", text)
 
     def test_03_the_stop_hook_and_the_commit_hold_the_adopted_number(self):
@@ -695,7 +693,7 @@ class Judge(unittest.TestCase):
 
     def test_06_a_declared_run_id_must_name_a_run_of_the_area(self):
         """labkit-paper area 08, 2026-10-21: an agent typed `(run
-        2026-10-21T12-48-00_final)` into the Answer; the gates read only the
+        2026-10-21T12-48-00_final)` into Recorded results; the gates read only the
         exact id shape, saw no citation and let the commit through. Since
         phase 3 the declaration is `[result] run`: a typed id there does not
         read and blocks where it stands, a shaped one must be a run."""

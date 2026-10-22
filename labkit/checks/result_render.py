@@ -1,17 +1,15 @@
 """result_render — the result section as its bound sources render it.
 
-The Answer line and the Limit lines are generated, never written by hand:
-the Answer from the declared run's `metrics.json` (every reported key and
-value as recorded, the run id, one note on the limits), each Limit line
+The Recorded results line and the Limit lines are generated. Recorded
+results comes from the declared run's `metrics.json`: every reported key
+and value as recorded, the run id and one note on the limits. Each Limit line comes
 from an accepted finding with an effect in the analysis records covering
 that run (`audit_binding.covering_analysis`). `protocol-fill --from-run`
 writes them, `--render` writes them again, and report-check holds the
 protocol to exactly this rendering (`render_gaps`): a generated line that
 differs from its sources is a blocker, whatever it says — exact, and
-silent on whether a limit is enough (the audit's question). The Result
-sentence and the rest of the prose stay the author's. Phase 5 of the 1.0
-line (2026-10-21); until 0.101.0 report-check read the Limit lines and the
-Answer's note with patterns, and the writers lived in the tool.
+silent on whether a limit is enough (the audit's question). The Summary's
+Conclusion and the rest of the prose stay the author's.
 
     r = result_render.rendering(area, text, run)     # what the text should say
     result_render.render_gaps(text, r)              # [] when it says exactly that
@@ -25,21 +23,18 @@ from pathlib import Path
 from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.checks.recheck import LABKIT_KEYS
 from labkit.formats import findings, runs
-from labkit.formats.protocol_check import answer_field, fields
-
-#: the Answer line's label, as the template writes it
-ANSWER_LABEL = "Answer to the question"
+from labkit.formats.protocol_check import recorded_results_field, fields
 
 
 @dataclass(frozen=True)
 class Rendering:
     """What the result section says when it says what its sources say."""
 
-    answer: str  # the Answer line's value
+    recorded_results: str  # the Recorded results line's value
     limits: tuple[tuple[str, str], ...]  # (label, value) per limit, in record order
 
 
-def answer_line(metrics: dict, run_id: str) -> str:
+def recorded_results_line(metrics: dict, run_id: str) -> str:
     """`key = value, … (run <id>)` — every reported key and value as the run
     recorded them, so `recheck.cited` finds each number and the run id."""
     kept = {k: v for k, v in metrics.items() if k not in LABKIT_KEYS}
@@ -70,27 +65,29 @@ def rendering(area: Path, text: str, run: Path) -> Rendering:
     without readable metrics."""
     metrics = runs.read_metrics(run / "metrics.json")
     limits = limits_of(area, text, run)
-    answer = answer_line(metrics, run.name) + findings.answer_note(
+    recorded_results = recorded_results_line(metrics, run.name) + findings.answer_note(
         [(label, effect) for label, _, effect in limits]
     )
-    return Rendering(answer, tuple((label, value) for label, value, _ in limits))
+    return Rendering(
+        recorded_results, tuple((label, value) for label, value, _ in limits)
+    )
 
 
 def render_gaps(text: str, expected: Rendering) -> list[str]:
     """Why TEXT's result section is not EXPECTED, one sentence each, or []:
-    the Answer line missing or differing, a Limit line missing or differing,
+    the Recorded results line missing or differing, a Limit line missing or differing,
     a Limit line no covering record decides. Exact: the comparison is
     equality of the rendered values, no reading of what they say."""
     gaps: list[str] = []
-    answer = answer_field(text)
-    if answer is None:
+    recorded_results = recorded_results_field(text)
+    if recorded_results is None:
         gaps.append(
-            "the Answer line is not written — `protocol-fill <PROTOCOL> --from-run` "
+            "the Recorded results line is not written — `protocol-fill <PROTOCOL> --from-run` "
             "writes it from the run"
         )
-    elif answer != expected.answer:
+    elif recorded_results != expected.recorded_results:
         gaps.append(
-            "the Answer line differs from its rendering (the run's metrics.json and "
+            "the Recorded results line differs from its rendering (the run's metrics.json and "
             "the records' limits) — `protocol-fill <PROTOCOL> --render` writes it again"
         )
     have = {f.label.replace("†", "").strip(): f.value for f in fields(text)}

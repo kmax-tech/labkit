@@ -21,7 +21,7 @@ from protocol_fixture import run_record, PID, head, scope_file  # noqa: E402
 
 BODY = """
 - **Question / hypothesis:** how many documents per case?
-- **Answer to the question:** 3.5, run r1
+- **Recorded results:** 3.5, run r1
 """
 SHORT = "# Experiment protocol: x\n\n" + head(cost="seconds") + BODY
 HOURS = "# Experiment protocol: x\n\n" + head(cost="hours", frozen=True) + BODY

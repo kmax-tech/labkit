@@ -12,7 +12,7 @@ block (the head, `labkit/formats/protocol_block.py`):
 
 ```toml
 [protocol]
-standard = "0.20"
+standard = "0.21"
 id = "p-9e2341c0390948dc"
 ```
 
@@ -203,13 +203,13 @@ run = "2026-10-21T13-40-06_ad5f"
 
 Written by `protocol-fill --from-run` after a clean `finalize`, never typed
 (`protocol_block.declared_run`; until 0.100.0 the declaration was a run id
-in the prose Answer line, and the `Answering run` field a second projection
+in the former prose Answer line, and the `Answering run` field a second projection
 of it). It is a projection of the answering run, never a second binding:
 `finalize` and `report-check` hold it to `bound_answering_run`'s choice — a
 table naming another run blocks, one naming no run of the area blocks, one
 that does not read (a typed `…_final`, a stray key) blocks where it stands,
 and a protocol without the table is an exploration that reports nothing.
-The Answer line is generated from the declared run's `metrics.json`, and the
+The Recorded results line is generated from the declared run's `metrics.json`, and the
 other lines of the `## Runs` section are not checked against the runs bound
 to the protocol.
 

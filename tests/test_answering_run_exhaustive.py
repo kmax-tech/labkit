@@ -213,7 +213,7 @@ class EveryArrangement(unittest.TestCase):
 
 
 #: a protocol that registers an id, so a probe-only area is no answer
-PROTOCOL_TEXT = "- **Answer to the question:** [C1] holds\n\n" + head(id=PID)
+PROTOCOL_TEXT = "- **Recorded results:** [C1] holds\n\n" + head(id=PID)
 BLOCKED = "<blocked>"
 
 

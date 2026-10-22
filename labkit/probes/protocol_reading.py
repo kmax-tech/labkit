@@ -45,7 +45,7 @@ from labkit.probes.cold_reader import (
     read_verdict,
     verdict_matches,
 )
-from labkit.formats.protocol_check import fields
+from labkit.formats.protocol_check import RECORDED_RESULTS_LABEL, field_name, fields
 
 #: what a reader of the Summary should not have to decode
 SUMMARY_CODES = re.compile(  # an id in prose, an intent key, a run id — from their homes
@@ -90,7 +90,9 @@ def form(text: str) -> Form:
             and not ln.strip().startswith("<!--")
         ):
             before += 1
-    answer = next((f for f in found if f.name == "answer to the question"), None)
+    answer = next(
+        (f for f in found if f.name == field_name(RECORDED_RESULTS_LABEL)), None
+    )
     answer_rows = lines[answer.line : answer.last + 6] if answer else []
     return Form(
         lines=len(lines),
@@ -252,7 +254,7 @@ def score_reader_answer(
 # field parser, no judgement).
 
 GLANCE_LINES = 10
-SUMMARY_FIELDS = ("result", "limits", "next step")
+SUMMARY_FIELDS = ("conclusion", "limits", "next step")
 #: the glance questions a reader answers in words — "answered" counts these
 GLANCE_CONTENT_KEYS = ("question", "result", "how_sure", "what_follows")
 
