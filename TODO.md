@@ -101,19 +101,16 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Offene Verträge und Korrektheitslücken
 
-- **claude-cli: Modellwechsel nach Sicherheitsabbruch bleibt unbemerkt
-  (gefunden 2026-10-22, Runde `de663ed`,
-  [Notiz](docs/usability/2026-10-22-sandbox-de663ed.md)).** Bei den
-  DILI-Daten bricht ein Sicherheitsklassifikator `claude-opus-5-5` mitten
-  im Audit ab; die CLI lässt `claude-opus-4-8` weiterschreiben, und
-  `--output-format json` liefert in `result` nur den letzten Teil.
-  `llm_backends._cli_result` merkt beides nicht: eine Antwort über einen
-  Abbruch hinweg kommt gekürzt an, und der Record nennt das Modell des
-  Alias statt des antwortenden. Hier hat die Zählprüfung des Audits das
-  zufällig gefangen; ein Experiment über einen claude-cli-Alias würde den
-  Teil werten. Vorschlag: laut scheitern, wenn die Antwort mehr als einen
-  Zug oder ein anderes Modell enthält (Feld in der JSON-Antwort erst
-  prüfen). Entscheidung des Autors ausstehend.
+- **claude-cli: Modellwechsel nach Sicherheitsabbruch — gebaut 2026-10-22
+  (`aad2c54`, LAB-029).** Eine Antwort gilt nur, wenn `modelUsage` allein
+  das angeforderte Modell zeigt, `safety_stops = 0` und `num_turns = 1`
+  (Felder an der echten CLI 2.1.304 geprüft); sonst `UnprovenAnswer`,
+  ohne Wiederholung. Nicht belegt: dass die JSON-Antwort beim echten
+  Abbruch genau diese Felder setzt — die Antworten der Probe-Audits sind
+  nicht gespeichert, der Check scheitert deshalb im Zweifel. Offen:
+  weitere Fit-Proben mit festem, dokumentiertem Prüfer; zeigt die erste,
+  wie die CLI einen Abbruch meldet, gehört das in die Notiz
+  ([Notiz](docs/usability/2026-10-22-sandbox-de663ed.md)).
 
 - **Namenskandidat `compute` statt `count` (2026-10-22).** Prüfen, ob
   `compute` die Kategorie besser bezeichnet: direkte Berechnungen wie
