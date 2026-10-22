@@ -52,6 +52,7 @@ from labkit.tools.repo_check import PYPROJECT_VERSION_RE
 from labkit.tools.protocol_cuts import (
     ProtocolBlocks,
     auto_fill_deterministic,
+    bar_cut,
     count_placeholders,
     estimator_placeholders,
     insert_report_fields,
@@ -403,7 +404,7 @@ def stamp_area(
     skeleton = standard_contract.skeleton(cost, kind, bool(model))
     tmpl = stamped_head(template(PROTOCOL_TEMPLATE.name), root, slug, cost, kind, model)
     clean = re.sub(
-        r" ?<!-- s[bm]? -->", "", tmpl
+        r" ?<!-- s[bm]? -->", "", bar_cut(tmpl, kind)
     )  # every written protocol is free of the cut markers
     pilot, blocks = pilot_and_report(clean)
     if quick:

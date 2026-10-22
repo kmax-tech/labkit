@@ -53,7 +53,7 @@ def _protocol(frozen: bool, cost: str = "minutes") -> str:
     # every area here answers from a full run, so it carries the tables (0.19)
     return (
         "# Experiment protocol: x\n\n"
-        + head(frozen=frozen, cost=cost, promises=DEFAULT_BLOCK)
+        + head(frozen=frozen, cost=cost, kind="fit", promises=DEFAULT_BLOCK)
         + "\n"
         + BODY
     )

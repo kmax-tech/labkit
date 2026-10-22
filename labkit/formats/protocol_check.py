@@ -357,14 +357,20 @@ def model_named(text: str) -> bool:
         return False
 
 
+def bar_owed(f: Field, kind: str | None) -> bool:
+    """Does a number of KIND owe `f` as far as its bar decides? Only the "sb"
+    fields depend on it, at every tier: a count owes no criterion (standard
+    0.22); an undecided kind owes the most, never the least."""
+    return f.seconds != "sb" or kind is None or standard_contract.has_bar(kind)
+
+
 def in_cut(f: Field, kind: str | None, model: bool) -> bool:
     """Is `f` part of the seconds cut — "s" always, "sb" when the number has
-    a bar (KIND fit or apply; an undecided kind owes the most, never the
-    least), "sm" with a model named?"""
+    a bar (`bar_owed`), "sm" with a model named?"""
     if f.seconds == "s":
         return True
     if f.seconds == "sb":
-        return kind is None or standard_contract.has_bar(kind)
+        return bar_owed(f, kind)
     return f.seconds == "sm" and model
 
 
@@ -409,7 +415,8 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     """(must, should) fields this protocol owes, by its cut, freeze and runs.
 
     The seconds cut owes its marked fields and nothing graduates — nothing
-    freezes (LAB-017 The number of audits follows the cost tier). The full form owes every must; `frozen = true` turns
+    freezes (LAB-017 The number of audits follows the cost tier). The full form owes every must
+    its kind owes (`bar_owed`: a count no bar field); `frozen = true` turns
     every should into a must (the graduation gate, in ONE place), and once a
     result is declared a frozen protocol owes its report fields too."""
     # which cut the protocol owes is the contract's answer; the marks on
@@ -422,11 +429,12 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
             if f.level in ("must", "should") and in_cut(f, head.kind, model)
         ]
         return must, []
-    must = [f for f in FIELDS if f.level == "must"]
-    should = [f for f in FIELDS if f.level == "should"]
+    full = [f for f in FIELDS if bar_owed(f, head.kind)]
+    must = [f for f in full if f.level == "must"]
+    should = [f for f in full if f.level == "should"]
     if not head.frozen:
         return must, should
-    report = [f for f in FIELDS if f.level == "report"] if result_due(text) else []
+    report = [f for f in full if f.level == "report"] if result_due(text) else []
     return must + should + report, []
 
 

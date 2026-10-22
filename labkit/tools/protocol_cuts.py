@@ -123,6 +123,26 @@ def seconds_cut(tmpl: str, kind: str, model: bool = False) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
+def bar_cut(tmpl: str, kind: str) -> str:
+    """TMPL as a KIND without a bar is stamped at every tier: the fields a
+    bar owes (tagged `<!-- sb -->`: criterion, admissibility condition,
+    Model / tool, null condition) and the promise tables go — a count owes
+    its question (standard 0.22). A fit or an apply comes back unchanged.
+    The seconds cut keeps fewer fields still (`seconds_cut`)."""
+    from labkit.formats.standard_contract import has_bar
+
+    if has_bar(kind):
+        return tmpl
+    out: list[str] = []
+    for heading, body in _segments(tmpl):
+        if heading:
+            out.append(heading)
+        for item in _items(body):
+            if SECONDS_BAR_TAG not in item[0]:
+                out.extend(item)
+    return without_promise_tables("\n".join(out).rstrip() + "\n")
+
+
 def quick_block(tmpl: str, kind: str) -> str:
     """The promise tables of the seconds cut. A number with a bar (KIND fit
     or apply) keeps them: the measure skeletons read `margin`, `max_empty`

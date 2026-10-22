@@ -147,8 +147,8 @@ class Exp(unittest.TestCase):
     def test_a_bar_names_its_stamped_ids_and_a_count_names_none(self) -> None:
         """A fit or an apply stamps `[C1]`, `[A1]`, `[A2]` before the fields
         that state them — the ids its block declares, nothing added; the
-        fields stay open. A count's prose names no id (an id there would
-        register a promise)."""
+        fields stay open. A count is stamped without those fields and without
+        promise tables at every tier, so its prose names no id."""
         cases = (
             ("seconds", "fit", None),
             ("minutes", "fit", None),
@@ -167,7 +167,11 @@ class Exp(unittest.TestCase):
                 (proto,) = (root / "experiments").glob("*-x/PROTOCOL-x.md")
                 text = proto.read_text(encoding="utf-8")
                 if kind == "count":
+                    # standard 0.22: no bar field and no promise table at any tier
                     self.assertEqual(promises.ids_in_prose(text), set())
+                    self.assertIsNone(promises.parse_block(text))
+                    labels = {f.label for f in protocol_check.fields(text)}
+                    self.assertFalse(labels & set(protocol_cuts.PROMISE_FIELDS), cost)
                     continue
                 block = promises.parse_block(text)
                 assert block is not None

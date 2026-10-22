@@ -248,7 +248,7 @@ class TestCheckFields(unittest.TestCase):
     def test_real_freeform_protocol_misses_every_must_field(self):
         """With a head, its bold labels (H1, Flip-Test) are no template field:
         it misses all of them, Terms and Model I/O among them."""
-        report = protocol_check.check_fields(head() + REAL_FREEFORM_PROTOCOL)
+        report = protocol_check.check_fields(head(kind="fit") + REAL_FREEFORM_PROTOCOL)
         self.assertEqual(report.missing_must, MUST)
         self.assertIn("Terms of this protocol", report.missing_must)
         self.assertIn("Model I/O", report.missing_must)
@@ -262,9 +262,23 @@ class TestCheckFields(unittest.TestCase):
         self.assertEqual(report.must_holes, [])
 
     def test_head_alone_misses_everything(self):
-        report = protocol_check.check_fields(head())
+        report = protocol_check.check_fields(head(kind="fit"))
         self.assertEqual(report.missing_must, MUST)
         self.assertEqual(report.missing_should, SHOULD)
+
+    def test_a_count_owes_no_bar_field_at_any_tier(self):
+        """Standard 0.22: a count owes neither a success criterion nor the
+        other fields of a bar (`<!-- sb -->`), in the full form too; a fit
+        owes them."""
+        bar = [f.label for f in protocol_check.FIELDS if f.seconds == "sb"]
+        self.assertIn("Success / failure criterion", bar)
+        for cost in ("minutes", "hours"):
+            with self.subTest(cost=cost):
+                count = protocol_check.check_fields(head(cost=cost, kind="count"))
+                fit = protocol_check.check_fields(head(cost=cost, kind="fit"))
+                for label in bar:
+                    self.assertNotIn(label, count.missing_must + count.missing_should)
+                    self.assertIn(label, fit.missing_must + fit.missing_should)
 
     def test_empty_text_is_a_head_error(self):
         report = protocol_check.check_fields("")
@@ -275,7 +289,8 @@ class TestCheckFields(unittest.TestCase):
         """A word anywhere used to satisfy a field (`prompt` in a sentence
         covered Model I/O). Only the label line counts."""
         text = (
-            head() + "We ask the model a prompt about terms, model I/O and anchors.\n"
+            head(kind="fit")
+            + "We ask the model a prompt about terms, model I/O and anchors.\n"
         )
         self.assertEqual(protocol_check.check_fields(text).missing_must, MUST)
 

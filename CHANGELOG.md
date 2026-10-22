@@ -96,6 +96,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A count owes no bar at any tier, and is stamped so.** At `minutes`
+  and `hours` a count was still stamped with the success criterion, the
+  admissibility condition, Model / tool, the null condition and three
+  placeholder promise tables, and `protocol-check` owed those fields —
+  against standard 0.22 (a count owes its question). Since `finalize`
+  holds the block to the prose, a count that left the stamped tables was
+  blocked by its own stamp. `protocol_cuts.bar_cut` now drops the fields a
+  bar owes (`<!-- sb -->`) and the tables for a count at every tier, and
+  `protocol_check.owed` asks them of a fit or an apply only
+  (`bar_owed`). A count stamped earlier keeps its fields; nothing reads
+  them as owed.
 - **The release-check flow is explicit at its entry point.** `report_check`
   lists the declaration, registration/freeze, finalize, full-run check,
   analysis and rendered results, recomputation and decision reviews with

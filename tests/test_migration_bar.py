@@ -209,17 +209,26 @@ class LaneDuties(unittest.TestCase):
 
     def test_the_full_form_graduates_its_shoulds_at_the_freeze(self):
         self.assertEqual(
-            self.owed(head(cost="minutes")), (self.FULL_MUST, self.FULL_SHOULD)
+            self.owed(head(cost="minutes", kind="fit")),
+            (self.FULL_MUST, self.FULL_SHOULD),
         )
-        frozen = head(cost="minutes", frozen=True, preflight_audit="2026-10-21 · x")
+        frozen = head(
+            cost="minutes", kind="fit", frozen=True, preflight_audit="2026-10-21 · x"
+        )
         self.assertEqual(self.owed(frozen), (self.FULL_MUST + self.FULL_SHOULD, []))
 
     def test_a_declared_result_makes_the_report_fields_due(self):
         """Since phase 5 the declaration makes the result due; a run id in the
         Runs list declares nothing (until 0.101.0 it did, minus "prepare")."""
-        frozen = head(cost="minutes", frozen=True, preflight_audit="2026-10-21 · x")
+        frozen = head(
+            cost="minutes", kind="fit", frozen=True, preflight_audit="2026-10-21 · x"
+        )
         declared = head(
-            cost="minutes", frozen=True, preflight_audit="2026-10-21 · x", result=RUN
+            cost="minutes",
+            kind="fit",
+            frozen=True,
+            preflight_audit="2026-10-21 · x",
+            result=RUN,
         )
         self.assertEqual(
             self.owed(declared), (self.FULL_MUST + self.FULL_SHOULD + self.REPORT, [])
