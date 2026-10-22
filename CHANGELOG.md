@@ -21,15 +21,6 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
-- **The release-check flow is explicit at its entry point.** `report_check`
-  lists the declaration, registration/freeze, finalize, full-run check,
-  analysis and rendered results, recomputation and decision reviews with
-  their conditions. The `station_one` and `later_gaps` wrappers are gone;
-  stages hand typed findings to the shared `Findings.take_all` collector.
-  Check order, diagnostics and exit codes are unchanged. Its context
-  documentation distinguishes the gate's shared inputs from the nested
-  finalize and analysis script, which read their own inputs.
-
 - **A report that cites a declared result owes its generated block.**
   `report-check --if-reported` (the stop, the pre-commit) now blocks a
   changed or staged citing report for every run it cites that a protocol
