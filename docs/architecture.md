@@ -296,8 +296,8 @@ experiments/NN-name/
 
 The record can also hold raw model output, a patch and untracked source
 snapshots. Consumers read records through `runs`; `answering_run` selects
-the completed run bound to the protocol. The run index and the protocol
-run list do not choose the answer. Selection and run
+the completed run bound to the protocol. The index and the protocol's
+manually documented runs do not choose the answer. Selection and run
 relationships are specified in [protocol-run-binding](protocol-run-binding.md).
 
 ## Run and hook enforcement
