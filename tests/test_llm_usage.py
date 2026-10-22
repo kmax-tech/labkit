@@ -8,6 +8,7 @@ audit or one probe had cost. The counts were in every reply.
 
 import contextlib
 import json
+import io
 import subprocess
 import sys
 import unittest
@@ -171,6 +172,21 @@ class UnprovenIsNotRetried(unittest.TestCase):
             with self.assertRaises(llm_backends.UnprovenAnswer):
                 llm.complete("a", "p", attempts=6)
         self.assertEqual(calls, [])  # no backoff: no second try
+
+
+class RetryLineNamesTheFields(unittest.TestCase):
+    def test_a_retried_error_shows_what_the_cli_reported(self):
+        reply = json.dumps({**CLI_REPLY, "is_error": True, "modelUsage": {}})
+        _, patches = _cli(reply)
+        err = io.StringIO()
+        with (
+            _stack(patches),
+            mock.patch.object(llm.time, "sleep", lambda s: None),
+            contextlib.redirect_stderr(err),
+        ):
+            with self.assertRaises(llm_backends.BackendError):
+                llm.complete("a", "p", attempts=2)
+        self.assertIn("safety_stops=0", err.getvalue())
 
 
 class Describe(unittest.TestCase):

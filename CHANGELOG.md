@@ -66,7 +66,13 @@ pins (`requirements.txt` / `requirements.lock`).
   0` and `num_turns = 1` (fields of CLI 2.1.304; a missing one is a
   `ReplyError`); otherwise `llm_backends.UnprovenAnswer`, raised at once,
   not retried. An audit that meets it records a failed audit, no
-  findings. Standard: LAB-029.
+  findings. Standard: LAB-029. The stop and a foreign model are checked
+  before `is_error`: in the fit probe on `4f4f238` every audit try was
+  stopped and continued and the call was retried — a stopped answer
+  flagged as an error took the retryable path. An error without a stop
+  or another model stays retryable. Every claude-cli failure names
+  `subtype`, `is_error`, `safety_stops`, `num_turns` and the models, and
+  the retry line keeps 300 characters of it (60 before).
 - **`02_analyze.py --draws` reads the estimator's criterion key.** The
   analysis skeleton is shared by the model and the estimator skeleton
   and read `c1_accuracy`, the model's key; the estimator reports

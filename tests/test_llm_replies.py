@@ -140,10 +140,34 @@ class ClaudeCliProvenance(unittest.TestCase):
         with self.assertRaisesRegex(B.UnprovenAnswer, "2 turns"):
             B._cli_result(cli_reply(num_turns=2), "m")
 
+    def test_a_stopped_answer_flagged_as_error_is_unproven_not_retried(self) -> None:
+        """fit-1 on 4f4f238: every audit try was stopped and continued, and
+        the call was retried — the stop must win over `is_error`."""
+        reply = cli_reply(
+            "claude-opus-5-5",
+            is_error=True,
+            subtype="error_during_execution",
+            safety_stops=1,
+            modelUsage={"claude-opus-5-5": {}, "claude-opus-4-8": {}},
+        )
+        with self.assertRaises(B.UnprovenAnswer) as cm:
+            B._cli_result(reply, "claude-opus-5-5")
+        self.assertIn("safety_stops=1", str(cm.exception))
+        self.assertIn(
+            "models=['claude-opus-4-8', 'claude-opus-5-5']", str(cm.exception)
+        )
+
+    def test_an_error_without_a_stop_stays_retryable_and_names_the_fields(self) -> None:
+        reply = cli_reply(is_error=True, result="overloaded", modelUsage={})
+        with self.assertRaises(B.BackendError) as cm:
+            B._cli_result(reply, "m")
+        self.assertNotIsInstance(cm.exception, B.UnprovenAnswer)
+        self.assertIn("is_error=True", str(cm.exception))
+
     def test_a_reply_without_the_proof_is_refused(self) -> None:
         for key in ("num_turns", "safety_stops", "modelUsage"):
             with self.subTest(key):
-                with self.assertRaisesRegex(B.ReplyError, f"no `{key}`"):
+                with self.assertRaisesRegex(B.ReplyError, f"no `{key}`.*subtype="):
                     B._cli_result(cli_reply(without=key), "m")
 
 

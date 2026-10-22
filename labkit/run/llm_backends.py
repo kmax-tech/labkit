@@ -333,13 +333,23 @@ def _cli_result(stdout: str, model: str) -> str:
     whole by MODEL; its `usage` and `total_cost_usd` go to `last_usage()`.
     Anything but that JSON object is a backend failure, named with what
     came instead; so is a reply that does not show MODEL as its only writer
-    (`_cli_provenance`)."""
+    (`_cli_provenance`). Every failure names the reply's evidence fields
+    (`_cli_evidence`)."""
     where = "claude-cli --output-format json"
     body = json_reply(stdout, where)
-    result = reply_field(body, "result", str, where, required=True)
-    if reply_field(body, "is_error", bool, where):
-        raise BackendError(f"claude-cli: is_error — {result[:300]}")
-    _cli_provenance(body, model, where)
+    seen = _cli_evidence(body)
+    try:
+        # the provenance before `is_error`: a stopped answer may come
+        # flagged as an error, and an error is retried, a switch is not
+        is_error = reply_field(body, "is_error", bool, where)
+        _cli_provenance(body, model, where, is_error=bool(is_error))
+        result = reply_field(body, "result", str, where, required=True)
+    except UnprovenAnswer as exc:
+        raise UnprovenAnswer(f"{exc} [{seen}]") from exc
+    except ReplyError as exc:
+        raise ReplyError(f"{exc} [{seen}]") from exc
+    if is_error:
+        raise BackendError(f"claude-cli: is_error — {result[:300]} [{seen}]")
     usage = reply_field(body, "usage", dict, where) or {}
     counted = [
         _count(usage, k, f"{where} usage")
@@ -360,15 +370,36 @@ def _cli_result(stdout: str, model: str) -> str:
     return result.strip()
 
 
-def _cli_provenance(body: JsonObject, model: str, where: str) -> None:
-    """Raises UnprovenAnswer unless the reply shows one turn, no safety stop
-    and MODEL as the only model used (`num_turns`, `safety_stops`,
-    `modelUsage`); a missing field is a ReplyError — no proof, no answer.
-    A safety classifier can stop the requested model mid-answer; the CLI
-    then lets another model continue and `result` holds only the
-    continuation — the requested model's id stays on the record for text
-    another model wrote, and a part reads as the whole."""
-    turns = reply_field(body, "num_turns", int, where, required=True)
+def _cli_evidence(body: JsonObject) -> str:
+    """The reply's fields that say who answered and how it ended, as they
+    came — for every claude-cli failure message, so a refusal shows what
+    the CLI reported."""
+    usage = body.get("modelUsage")
+    models = sorted(usage) if isinstance(usage, dict) else usage
+    return ", ".join(
+        f"{k}={v!r}"
+        for k, v in (
+            ("subtype", body.get("subtype")),
+            ("is_error", body.get("is_error")),
+            ("safety_stops", body.get("safety_stops")),
+            ("num_turns", body.get("num_turns")),
+            ("models", models),
+        )
+    )
+
+
+def _cli_provenance(
+    body: JsonObject, model: str, where: str, *, is_error: bool
+) -> None:
+    """Raises UnprovenAnswer unless the reply shows no safety stop, no model
+    but MODEL and — for an answer, not an error — MODEL used in one turn
+    (`safety_stops`, `modelUsage`, `num_turns`); a missing field is a
+    ReplyError — no proof, no answer. A safety classifier can stop the
+    requested model mid-answer; the CLI then lets another model continue
+    and `result` holds only the continuation — the requested model's id
+    stays on the record for text another model wrote, and a part reads as
+    the whole. An error (IS_ERROR) without a stop or another model is left
+    to the caller: an overloaded server is retried."""
     stops = reply_field(body, "safety_stops", int, where, required=True)
     used = sorted(reply_field(body, "modelUsage", dict, where, required=True))
     if stops:
@@ -377,11 +408,19 @@ def _cli_provenance(body: JsonObject, model: str, where: str) -> None:
             f"(models used: {', '.join(used) or 'none'}) — the text may be a "
             f"continuation by another model, not {model}'s whole answer"
         )
-    if used != [model]:
+    if set(used) - {model}:
         raise UnprovenAnswer(
             f"claude-cli: requested {model}, the reply was written by "
-            f"{', '.join(used) or 'no model'} — not an answer of {model}"
+            f"{', '.join(used)} — not an answer of {model}"
         )
+    if is_error:
+        return
+    if used != [model]:
+        raise UnprovenAnswer(
+            f"claude-cli: requested {model}, the reply names no model that "
+            f"wrote it — not an answer of {model}"
+        )
+    turns = reply_field(body, "num_turns", int, where, required=True)
     if turns != 1:
         raise UnprovenAnswer(
             f"claude-cli: {turns} turns where one answer takes one (no tools) "

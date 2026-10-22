@@ -401,7 +401,7 @@ def complete(
             wait = _BACKOFF[min(attempt - 1, len(_BACKOFF) - 1)]
             print(
                 f"llm: {type(exc).__name__} on attempt {attempt}/{attempts} "
-                f"({str(exc)[:60]}) — retrying in {wait}s",
+                f"({str(exc)[:300]}) — retrying in {wait}s",
                 file=sys.stderr,
             )
             time.sleep(wait)
