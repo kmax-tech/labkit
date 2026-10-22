@@ -23,6 +23,7 @@ of semantics. Contract and rationale: `docs/promise-block.md`.
 | File | For |
 |---|---|
 | `docs/architecture.md` | layers, the chain from promise to number (module, command, tier), one home per question |
+| `docs/workflow.md` | the steps from a registered question to a kept number — command, files, preconditions, what clean means; `docs/examples/count-walkthrough.sh` walks them |
 | `README.md` | console commands, the coined terms (one word, one thing) |
 | `TODO.md` | the work order and why (German); top section "Reihenfolge" decides what is next |
 | `docs/promise-block.md` | promise kinds C/A/B, the TOML block, what the declared-scope hash states |
