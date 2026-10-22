@@ -20,6 +20,11 @@ here states, and no more:
   now and says exactly what the protocol renders for it. For the prose
   beside it nothing follows. A new run adopted by the protocol makes the
   block stale, and `--into` replaces every block of that protocol.
+- `blocks_owed` (guaranteed): a report that cites a run some protocol
+  declares as its result carries that protocol's block — the number the
+  report shows of it is the generated one, not a retyped one. A cited run
+  no protocol declares owes no block (the gate warns: nothing is declared
+  there).
 - `cited_gaps` (guaranteed): every token that reads as a run id
   (`runs.RUN_ID_LIKE`) names a run directory of the repo.
 - `unsourced_numbers` (static evidence, never blocks): numbers outside every
@@ -36,8 +41,10 @@ no gate read the file.
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 from labkit.checks.result_render import Rendering
 from labkit.formats import runs
@@ -74,6 +81,19 @@ def block_body(r: Rendering) -> str:
     return "\n".join(
         [r.recorded_results, *(f"- **{label}:** {value}" for label, value in r.limits)]
     )
+
+
+def path_from_report(protocol: Path, report: Path) -> str:
+    """PROTOCOL's path as REPORT names it: relative to the report's
+    directory, `/`-separated — the block's owner as `--into` writes it and
+    as the gate names it when a block is owed. Raises ValueError on a path
+    with whitespace: the block's opening line holds it as one word."""
+    rel = Path(os.path.relpath(protocol.resolve(), report.resolve().parent)).as_posix()
+    if any(c.isspace() for c in rel):
+        raise ValueError(
+            f"{rel}: a protocol path with whitespace cannot name a result block"
+        )
+    return rel
 
 
 def block_lines(protocol: str, run_id: str, body: str) -> list[str]:
@@ -169,6 +189,29 @@ def block_gaps(found: list[Block], sources: dict[str, BlockSource]) -> list[str]
                 f"`protocol-fill {b.protocol} --into <FILE>` writes it again"
             )
     return gaps
+
+
+def blocks_owed(
+    cited: list[tuple[int, str]],
+    declaring: dict[str, list[str]],
+    present: set[str],
+) -> list[tuple[int, str, str]]:
+    """(line, run id, protocol) for every cited run (CITED: `cited_run_ids`)
+    that a protocol declares as its result (DECLARING: run id → the
+    protocols, each as the report names it) and whose block the report
+    does not carry (PRESENT: the protocols of its blocks, as written) —
+    each protocol once, at the first line citing one of its runs. Why
+    (fifth haiku round, 2026-10-22): all three labkit reports retyped the
+    declared number in prose, and 0.103.0 only warned."""
+    out: list[tuple[int, str, str]] = []
+    named: set[str] = set()
+    for n, run_id in cited:
+        for protocol in declaring.get(run_id, []):
+            if protocol in present or protocol in named:
+                continue
+            named.add(protocol)
+            out.append((n, run_id, protocol))
+    return out
 
 
 def cited_run_ids(text: str) -> list[tuple[int, str]]:

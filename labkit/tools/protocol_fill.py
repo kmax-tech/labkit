@@ -54,7 +54,6 @@ later-changed answer to the same. A provisional number stays a sketch in
 from __future__ import annotations
 
 import argparse
-import os
 import re
 from pathlib import Path
 
@@ -803,24 +802,15 @@ def into_report(text: str, area: Path, report: str, protocol: str) -> tuple[str,
     return report_blocks.write_block(report, protocol, run.name, body), run.name
 
 
-def path_from_report(protocol: Path, report: Path) -> str:
-    """PROTOCOL's path as REPORT names it: relative to the report's
-    directory, `/`-separated. Raises ValueError on a path with whitespace —
-    the block's opening line holds it as one word."""
-    rel = Path(os.path.relpath(protocol.resolve(), report.resolve().parent)).as_posix()
-    if any(c.isspace() for c in rel):
-        raise ValueError(
-            f"{rel}: a protocol path with whitespace cannot name a result block"
-        )
-    return rel
-
-
 def _into_file(protocol: Path, text: str, report: Path) -> int:
     """`--into` on PROTOCOL: write REPORT's block when it differs, say so."""
     before = report.read_text(encoding="utf-8") if report.is_file() else ""
     try:
         new, run_id = into_report(
-            text, protocol.resolve().parent, before, path_from_report(protocol, report)
+            text,
+            protocol.resolve().parent,
+            before,
+            report_blocks.path_from_report(protocol, report),
         )
     except (ValueError, protocol_block.BlockError) as exc:
         print(f"protocol-fill: {exc}")

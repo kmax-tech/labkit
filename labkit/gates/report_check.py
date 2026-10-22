@@ -494,11 +494,12 @@ def report_files(
 
 @dataclass(frozen=True)
 class Sources:
-    """What the repo holds for a report to cite: every run directory's id
-    (KNOWN), and per protocol its text as the state holds it (TEXTS) and
+    """What the repo holds for a report to cite: the repo's root (REPO,
+    resolved), every run directory's id (KNOWN), and per protocol its text as the state holds it (TEXTS) and
     the run its head declares (DECLARED: None for none; a head that does
     not read is in UNREADABLE with the reason instead)."""
 
+    repo: Path
     known: set[str]
     texts: dict[Path, str]
     declared: dict[Path, str | None]
@@ -513,7 +514,7 @@ def repo_sources(repo: Path, *, staged: bool) -> Sources:
     """The runs, texts and declarations of every protocol of REPO — the
     index's protocols and texts when STAGED."""
     protocols = indexed_protocols(repo) if staged else repo_protocols(repo.resolve())
-    out = Sources(set(), {}, {}, {})
+    out = Sources(repo.resolve(), set(), {}, {}, {})
     for p in protocols:
         runs_dir = p.parent / "runs"
         if runs_dir.is_dir():
@@ -571,11 +572,36 @@ def block_sources(
     return out
 
 
+def owed_blocks(
+    report: Path, text: str, found: list[report_blocks.Block], sources: Sources
+) -> list[str]:
+    """Why REPORT owes a block it does not carry, one sentence each: for
+    every run it cites that a protocol declares as its result, that
+    protocol's block (`report_blocks.blocks_owed`), named as the report
+    names it (`path_from_report`) so the sentence carries the command."""
+    cited = report_blocks.cited_run_ids(text)
+    declaring = {
+        run_id: [report_blocks.path_from_report(p, report) for p in protocols]
+        for run_id in {r for _, r in cited}
+        if (protocols := sources.declaring(run_id))
+    }
+    rel = report.relative_to(sources.repo).as_posix()
+    return [
+        f"line {n}: cites run {run_id}, the declared result of {protocol}, without "
+        f"its generated block — the number a report shows of a declared result is "
+        f"the generated one: `protocol-fill {protocol} --into {rel}` writes it"
+        for n, run_id, protocol in report_blocks.blocks_owed(
+            cited, declaring, {b.protocol for b in found}
+        )
+    ]
+
+
 def hold_report(path: Path, text: str, repo: Path, sources: Sources) -> int:
     """Hold one report: its blocks equal their protocols' rendering, every
-    cited run id a run of the repo (blockers); every number outside a block
-    a hint (`report_blocks.unsourced_numbers`, static evidence). 0 clean or
-    hints only, 1 a blocker."""
+    cited run id a run of the repo, every cited declared result shown in
+    its protocol's block (blockers); every number outside a block a hint,
+    a cited run no protocol declares a warning (static evidence). 0 clean
+    or hints only, 1 a blocker."""
     rel = path.relative_to(repo.resolve()).as_posix()
     print(f"═══ report-check {rel} (a report citing runs) ═══")
     out = Findings()
@@ -589,6 +615,8 @@ def hold_report(path: Path, text: str, repo: Path, sources: Sources) -> int:
     cited = report_blocks.cited_run_ids(text)
     for gap in report_blocks.cited_gaps(cited, sources.known):
         out.block(f"{rel}: {gap}")
+    for gap in owed_blocks(path, text, found, sources):
+        out.block(f"{rel}: {gap}")
     unsourced = report_blocks.unsourced_numbers(text)
     if unsourced:
         out.warn(
@@ -598,10 +626,15 @@ def hold_report(path: Path, text: str, repo: Path, sources: Sources) -> int:
         )
         for n, numbers in unsourced:
             out.note(f"    {rel}:{n}: {', '.join(numbers)}")
-    if not found:
+    undeclared = sorted(
+        {r for _, r in cited if r in sources.known and not sources.declaring(r)}
+    )
+    if undeclared:
         out.warn(
-            f"{rel}: no generated result block — `protocol-fill <PROTOCOL> --into "
-            f"{rel}` writes the declared result into it"
+            f"{rel}: cites {', '.join(undeclared)}, which no protocol declares as "
+            f"its result — a reported number is declared by `protocol-fill "
+            f"<PROTOCOL> --from-run`, and its block written by `--into {rel}`; "
+            f"an exploration's run is cited, not reported"
         )
     return out.report("report-check", "reporting")
 
@@ -620,7 +653,9 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     Returns the worst exit code."""
     reports = report_files(paths, repo, staged=staged)
     sources = (
-        repo_sources(repo, staged=staged) if reports else Sources(set(), {}, {}, {})
+        repo_sources(repo, staged=staged)
+        if reports
+        else Sources(repo.resolve(), set(), {}, {}, {})
     )
     protocols = affected_protocols(paths, repo, staged=staged)
     for p in held_by_reports(reports, sources):

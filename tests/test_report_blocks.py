@@ -194,7 +194,8 @@ class ReportFiles(unittest.TestCase):
 
     def test_a_cited_declared_run_holds_its_protocol_without_a_block(self):
         """A report that cites the declared run in prose shows that result:
-        its protocol's chain is held as for a block (here: a probe)."""
+        its protocol's chain is held as for a block (here: a probe), and the
+        block it owes is named."""
         area = self._area(
             f"c1_pass = True (run {self.RUN})", declared=self.RUN, run_kind="probe"
         )
@@ -204,7 +205,68 @@ class ReportFiles(unittest.TestCase):
         code, out = self._gate(root, report)
         self.assertEqual(code, 1, out)
         self.assertIn("its number cannot be reported", out)
-        self.assertIn("REPORT.md: no generated result block", out)
+        self.assertIn("without its generated block", out)
+
+    def test_a_cited_declared_result_without_its_block_blocks(self):
+        """Fifth haiku round (2026-10-22): all three labkit reports retyped
+        the declared number in prose; 0.103.0 warned. The chain is clean
+        here — the missing block alone blocks, and the sentence carries the
+        command with the paths as the report names them."""
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=self.RUN)
+        root = area.parent.parent
+        report = root / "notes" / "REPORT.md"
+        report.parent.mkdir()
+        report.write_text(f"c1_pass = True (run {self.RUN})\n", encoding="utf-8")
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            f"notes/REPORT.md: line 1: cites run {self.RUN}, the declared result of "
+            f"../experiments/01-x/PROTOCOL-x.md, without its generated block",
+            out,
+        )
+        self.assertIn(
+            "`protocol-fill ../experiments/01-x/PROTOCOL-x.md --into notes/REPORT.md` "
+            "writes it",
+            out,
+        )
+        text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
+        written, _ = protocol_fill.into_report(
+            text,
+            area,
+            report.read_text(encoding="utf-8"),
+            "../experiments/01-x/PROTOCOL-x.md",
+        )
+        report.write_text(written, encoding="utf-8")
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 0, out)  # the twin: the block written, the prose stays
+
+    def test_the_twin_a_cited_run_no_protocol_declares_owes_no_block(self):
+        """An exploration's run is cited, not reported: a warning says no
+        protocol declares it; nothing is owed, nothing blocks."""
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        report.write_text(f"a look at run {self.RUN}\n", encoding="utf-8")
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 0, out)
+        self.assertIn(
+            f"REPORT.md: cites {self.RUN}, which no protocol declares as its result",
+            out,
+        )
+        self.assertNotIn("without its generated block", out)
+
+    def test_blocks_owed_names_each_declaring_protocol_once(self):
+        other = "2026-10-08T10-00-00_cd34"
+        cited = [(3, RUN), (5, RUN), (7, other), (9, "2026-10-09T10-00-00_ef56")]
+        declaring = {RUN: [P], other: [P, "x/PROTOCOL-y.md"]}
+        self.assertEqual(
+            report_blocks.blocks_owed(cited, declaring, set()),
+            [(3, RUN, P), (7, other, "x/PROTOCOL-y.md")],
+        )
+        self.assertEqual(
+            report_blocks.blocks_owed(cited, declaring, {P}),
+            [(7, other, "x/PROTOCOL-y.md")],
+        )
 
     def test_a_run_change_names_the_new_run_and_into_replaces_the_block(self):
         """Review 2026-10-22: after a new run was adopted, `--into` appended
@@ -236,13 +298,13 @@ class ReportFiles(unittest.TestCase):
     def test_path_from_report_names_the_protocol_from_the_reports_directory(self):
         root = Path("/r")
         self.assertEqual(
-            protocol_fill.path_from_report(
+            report_blocks.path_from_report(
                 root / "experiments/01-x/PROTOCOL-x.md", root / "notes/R.md"
             ),
             "../experiments/01-x/PROTOCOL-x.md",
         )
         with self.assertRaisesRegex(ValueError, "whitespace"):
-            protocol_fill.path_from_report(root / "a b/PROTOCOL-x.md", root / "R.md")
+            report_blocks.path_from_report(root / "a b/PROTOCOL-x.md", root / "R.md")
 
     def test_an_untouched_report_reopens_nothing(self):
         root, report = self._reported()

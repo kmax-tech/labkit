@@ -7,6 +7,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ## Unreleased
 
+### Changed
+
+- **A report that cites a declared result owes its generated block.**
+  `report-check --if-reported` (the stop, the pre-commit) now blocks a
+  changed or staged citing report for every run it cites that a protocol
+  declares as its result and whose block the report does not carry
+  (`report_blocks.blocks_owed`); the sentence names the protocol as the
+  report names it and the `protocol-fill <PROTOCOL> --into <REPORT>` that
+  writes it. 0.103.0 warned once per report without a block. A cited run
+  no protocol declares owes no block: the warning now says that nothing
+  is declared there. `path_from_report` moved from `protocol_fill` to
+  `report_blocks` (the gate names the path the same way). Why: fifth
+  haiku round, all three labkit reports retyped the declared number in
+  prose beside invented ones; the block is the one number a report shows
+  that its sources hold.
+
 ### Added
 
 - **finalize blocks on an audit record of a deleted run.** Station 8 now
