@@ -5,6 +5,20 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Added
+
+- **finalize blocks on an audit record of a deleted run.** Station 8 now
+  also holds every analysis record to the area's runs: a record naming a
+  run that has no `runs/<id>/` any more is a blocker where the record
+  stands (`findings.records_of_gone_runs`). A run an audit read is a kept
+  run; the record is the evidence that it existed. Why: labkit-paper area
+  09, fifth haiku round (labkit 0.102.0), t18 removed two measured runs
+  with `rm -rf runs/…` after their analysis audits, `runs.tsv` still
+  listed them, and finalize read the three records left behind as "every
+  finding decided".
+
 ## 0.103.0 — 2026-10-22
 
 ### Breaking

@@ -43,7 +43,9 @@ each step's condition):
                     finding nobody decided is an ignored finding
                     (LAB-015 Preflight audit before freezing); the benchmark
                     rounds reported numbers past undecided BLOCKERs (plan
-                    2026-10-17, A3)
+                    2026-10-17, A3). And every analysis record names a run
+                    the area still holds: a deleted run directory behind a
+                    record is a blocker (fifth haiku round, `rm -rf runs/…`)
 
 Three grades, decided where each finding is made and summed at the end:
 `Findings.block` (exit 1), `Findings.warn` (counted, exit 0), a plain
@@ -64,6 +66,7 @@ from labkit.formats import console, findings as audit_findings, promises, protoc
 from labkit.formats.standard_contract import lane
 from labkit.formats.gate import Findings
 from labkit.formats.runs import (
+    run_dirs,
     unreportable,
     read_run_config,
 )
@@ -220,13 +223,25 @@ def unreportable_warnings(measurement_run: Path) -> list[str]:
 def check_open_audit_findings(findings: Findings, area: Path) -> None:
     """Station 8: every finding still `open` in the area's audit records, any
     mode — a BLOCKER blocks, a WARNING warns, a NOTE is printed — each with
-    its file. A record nobody can read is a blocker, not "no findings"."""
+    its file; and every analysis record names a run the area still holds
+    (`findings.records_of_gone_runs`): a run an audit read is a kept run,
+    and its deleted directory is a blocker where the record stands. A
+    record nobody can read is a blocker, not "no findings"."""
     try:
         records = audit_findings.area_records(area)
     except audit_findings.FindingsError as exc:
         findings.block(str(exc))
         return
-    seen = 0
+    known = {rd.dir.name for rd in run_dirs(area)}
+    gone = audit_findings.records_of_gone_runs(records, known)
+    for rec in gone:
+        findings.block(
+            f"{rec.path.name}: names {rec.run_id} as the run it read, and there is "
+            f"no runs/{rec.run_id}/ in this area — a run an audit read is a kept run, "
+            f"and nothing restores its rows; measure again under a new run and audit "
+            f"that (LAB-043 Runs go through `runlog`)"
+        )
+    seen = len(gone)
     for rec in records:
         for f in rec.open:
             seen += 1

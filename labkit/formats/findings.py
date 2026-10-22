@@ -726,6 +726,20 @@ def covering_records(
     ]
 
 
+def records_of_gone_runs(records: list[Record], known: set[str]) -> list[Record]:
+    """The analysis RECORDS whose run is not among KNOWN (the run ids the
+    area holds now). A record is evidence that the run existed and was
+    read; the directory it names is gone. A record of NO_RUN names none.
+    Why (labkit-paper area 09, fifth haiku round, 2026-10-22): t18 deleted
+    two measured runs with `rm -rf runs/…` after their audits, and finalize
+    read the three records left behind as "every finding decided"."""
+    return [
+        r
+        for r in records
+        if r.run_id is not None and r.run_id != NO_RUN and r.run_id not in known
+    ]
+
+
 def audit_coverage(
     area: Path,
     sha: str,

@@ -125,6 +125,35 @@ class OpenFindings(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("not TOML", out)
 
+    def test_a_record_of_a_deleted_run_is_a_blocker(self):
+        """Fifth haiku round (labkit-paper area 09, t18, 2026-10-22): two
+        measured runs removed with `rm -rf runs/…` after their audits; the
+        records stayed and finalize read "every finding decided"."""
+        path = self._record([], mode="analysis")
+        path.write_text(
+            path.read_text(encoding="utf-8").replace('run_id = "r1"', 'run_id = "r0"'),
+            encoding="utf-8",
+        )
+        code, out = _finalize(self.area)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            f"{path.name}: names r0 as the run it read, and there is no runs/r0/", out
+        )
+        self.assertIn("a run an audit read is a kept run", out)
+
+    def test_the_twin_a_record_of_a_kept_run_and_of_no_run_pass(self):
+        self._record([], mode="analysis")  # names r1, which stands
+        none = self._record([], mode="analysis")
+        none.write_text(
+            none.read_text(encoding="utf-8").replace(
+                'run_id = "r1"', f'run_id = "{findings.NO_RUN}"'
+            ),
+            encoding="utf-8",
+        )
+        code, out = _finalize(self.area)
+        self.assertEqual(code, 0, out)
+        self.assertIn("every finding decided (2 record(s))", out)
+
 
 class UnreportableRun(unittest.TestCase):
     def setUp(self):
