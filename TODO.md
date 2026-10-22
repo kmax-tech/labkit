@@ -134,9 +134,15 @@ Forschung und Benchmark-Fallliste liegen in
   vor die Platzhalter (`ab37f65`). Ein Count schuldet auf keiner Stufe
   eine Bar und wird ohne Bar-Felder und Promise-Tabellen gestempelt
   (`3e9784c`; vorher blockte ihn seit `f1c5cdf` sein eigener Stempel).
-  Offen: die Fit-Probe auf `3e9784c` (Runner
-  `~/projects/labkit-probes-sandbox-3e9784c`) — übernimmt der kalte Agent
-  `[C1]`, läuft `--audit` durch? Vorgeschichte: die
+  Fit-Probe auf `3e9784c` (Runner `~/projects/labkit-probes-sandbox-3e9784c`):
+  der kalte Agent übernimmt `[C1]`/`[A1]`/`[A2]`, `--audit` läuft durch,
+  finalize prüft drei Ids gegen metrics.json, report-check sauber, Zahl
+  0,719 wie zuvor. Ihr Analyse-Audit fand, dass das geteilte
+  `02_analyze.py --draws` beim Schätzer `c1_accuracy None` druckte —
+  behoben (`61fc6ee`). Beobachten: 13,5 statt 5 Minuten, der größte Teil
+  zwei Analyse-Audits (das erste lief über 120 s im Vordergrund, das
+  zweite war nach dem Fix fällig, weil das Audit an den Code gebunden
+  ist); Nested-Kosten 2,8 USD gegen 0,47 USD Agent. Vorgeschichte: die
   Pflichtfelder folgten
   `standard_contract.registration_fields`; ohne `[model]` schuldet ein
   Seconds-Experiment nur die Frage und bekommt das Zählskelett. t5 und
