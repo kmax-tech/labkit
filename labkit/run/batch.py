@@ -392,7 +392,7 @@ class Store:
                 f"(interrupted write) — it will be redone",
                 file=sys.stderr,
             )
-        return [o for o in objs if not (isinstance(o, dict) and "_meta" in o)]
+        return [o for o in objs if not jsonl.is_meta(o)]
 
     def done_ids(self) -> list:
         """The ids of the records already in the output file, each once (by

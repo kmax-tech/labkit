@@ -418,15 +418,12 @@ def session_log(repo: Path) -> Path | None:
 
 
 def read_sessions(log: Path) -> list[dict]:
-    """The log's records; a line that is not JSON names its number."""
-    out = []
-    for n, line in enumerate(jsonl.record_lines(log.read_text(encoding="utf-8")), 1):
-        if line.strip():
-            try:
-                out.append(json.loads(line))
-            except json.JSONDecodeError as exc:
-                raise SystemExit(f"{log}:{n}: not JSON — {exc.msg}") from exc
-    return out
+    """The log's records; a line that is not JSON names its number
+    (`jsonl.objects`) and ends the command."""
+    try:
+        return jsonl.data_rows(log.read_text(encoding="utf-8"), str(log))
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def _transcript_start(transcript: str | None) -> datetime | None:
@@ -436,6 +433,8 @@ def _transcript_start(transcript: str | None) -> datetime | None:
     with open(transcript, encoding="utf-8") as fh:
         for line in fh:
             if line.strip():
+                # the first record of a transcript that may be hundreds of
+                # megabytes, never the whole; home: jsonl.objects
                 stamp = json.loads(line).get("timestamp")
                 if isinstance(stamp, str):
                     utc = datetime.fromisoformat(stamp.replace("Z", "+00:00"))

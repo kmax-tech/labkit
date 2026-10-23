@@ -14,7 +14,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from labkit.run.batch import write_dataset
-from labkit.run.provenance import _data_rows, describe_data, _ids, _is_meta
+from labkit.formats.jsonl import is_meta as _is_meta
+from labkit.run.provenance import _data_rows, describe_data, _ids
 
 
 class TestIsMetaRecognition(unittest.TestCase):

@@ -175,6 +175,8 @@ def data_keys(area: Path) -> tuple[set[str], list[str]]:
                                 break
                             line = line.strip()
                             if line:
+                                # a peek at the first five lines of a data
+                                # file, never the whole; home: jsonl.objects
                                 _harvest(json.loads(line), keys)
             except (OSError, json.JSONDecodeError, RecursionError):
                 continue

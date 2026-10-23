@@ -350,11 +350,6 @@ def sha256_file(path: Path) -> str:
     return file_digest(path)
 
 
-def _is_meta(row: object) -> bool:
-    """True for the ``_meta`` header that write_dataset() puts first."""
-    return isinstance(row, dict) and "_meta" in row
-
-
 def _data_rows(path: Path) -> int:
     """Count non-empty lines, excluding the ``_meta`` header in .jsonl files;
     for a directory, its visible files.
@@ -371,7 +366,9 @@ def _data_rows(path: Path) -> int:
                 continue
             if path.suffix == ".jsonl":
                 try:
-                    if _is_meta(json.loads(line)):
+                    # streamed: a count that must not refuse a file the
+                    # leakage check (`_ids`) will name; home: jsonl.objects
+                    if jsonl.is_meta(json.loads(line)):
                         continue
                 except (json.JSONDecodeError, TypeError):
                     pass
@@ -392,18 +389,10 @@ def _ids(path: Path) -> set | None:
     if path.suffix != ".jsonl":
         return None
     ids = set()
-    for n, line in enumerate(jsonl.record_lines(path.read_text(encoding="utf-8")), 1):
-        if not line.strip():
-            continue
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError as exc:
-            # a bare JSONDecodeError named neither file nor line (audit 2026-10-15)
-            raise ValueError(
-                f"{path}:{n}: not JSON ({exc.msg}) — a data file the leakage "
-                f"check reads is one JSON object per line; repair the line"
-            ) from exc
-        if _is_meta(row):
+    # a line that is not JSON names file and line (audit 2026-10-15), through
+    # the one reader
+    for _, row in jsonl.objects(path.read_text(encoding="utf-8"), str(path)):
+        if jsonl.is_meta(row):
             continue
         if not isinstance(row, dict) or "id" not in row:
             return None

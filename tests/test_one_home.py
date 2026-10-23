@@ -6,8 +6,8 @@ a second answer is drift. Three audits (2026-10-06, 2026-10-13,
 `git` run outside `repo`, a `PROTOCOL-*.md` scan, the id letters, a fence
 regex — and they came back within two weeks each time. This test greps
 `labkit/*.py` for the shapes a copy takes; a match outside the home fails,
-naming file and line. A line that must stay says why with a `# home:`
-comment naming the home it is not.
+naming file and line. A line that must stay says why in a comment on it or
+directly above it that names the home it is not after `home:`.
 """
 
 from __future__ import annotations
@@ -82,6 +82,10 @@ RULES: list[tuple[str, str, set[str]]] = [
     # by hand (audit 2026-10-23); `runs.run_path`, `runs_path`, `metrics_path`
     ("a run directory spelled by hand", r"/ \"runs\"|\"runs\" /", {"runs"}),
     ("the metrics file spelled by hand", r"\"metrics\.json\"", {"runs"}),
+    # six readers turned JSONL lines into objects themselves, each with its
+    # own error sentence (audit 2026-10-23); `jsonl.objects` / `data_rows`,
+    # `batch` keeps the torn-last-line loop that is its own
+    ("a JSONL line parsed by hand", r"json\.loads\(line\)", {"jsonl", "batch"}),
 ]
 
 
@@ -96,7 +100,7 @@ def offenders(what: str, shape: str, homes: set[str]) -> list[str]:
             continue
         lines = path.read_text(encoding="utf-8").splitlines()
         for n, line in enumerate(lines, 1):
-            said = "# home:" in line or (n > 1 and "# home:" in lines[n - 2])
+            said = "home:" in line or (n > 1 and "home:" in lines[n - 2])
             if pattern.search(line) and not said:
                 out.append(f"{path.name}:{n}: {what} — {line.strip()[:80]}")
     return out
@@ -133,6 +137,7 @@ class OneHome(unittest.TestCase):
             "an open-finding walk": "for f in rec.open:",
             "a run directory spelled by hand": 'run_dir = area / "runs" / run_id',
             "the metrics file spelled by hand": 'metrics = run_dir / "metrics.json"',
+            "a JSONL line parsed by hand": "row = json.loads(line)",
         }
         for what, shape, _ in RULES:
             with self.subTest(what=what):

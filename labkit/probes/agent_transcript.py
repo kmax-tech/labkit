@@ -36,7 +36,6 @@ Two tiers, as everywhere in labkit:
 from __future__ import annotations
 
 import gzip
-import json
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -130,14 +129,12 @@ def records(path: Path) -> list[tuple[int, dict]]:
         if path.suffix == ".gz"
         else path.read_text(encoding="utf-8")
     )
+    try:
+        parsed = jsonl.objects(raw, path.name)
+    except ValueError as exc:
+        raise TranscriptError(str(exc)) from exc
     out: list[tuple[int, dict]] = []
-    for n, line in enumerate(jsonl.record_lines(raw), 1):
-        if not line.strip():
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError as exc:
-            raise TranscriptError(f"{path.name}:{n}: not JSON — {exc.msg}") from exc
+    for n, record in parsed:
         if not isinstance(record, dict):
             raise TranscriptError(f"{path.name}:{n}: a record is a JSON object")
         out.append((n, record))

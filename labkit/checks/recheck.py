@@ -178,13 +178,9 @@ def block_unchanged(run: Path, area: Path) -> None:
 
 
 def rows_of(out: Path) -> list[dict]:
-    """One JSON object per line; a leading `_meta` header line is skipped."""
-    rows = [
-        json.loads(line)
-        for line in jsonl.record_lines(out.read_text(encoding="utf-8"))
-        if line.strip()
-    ]
-    return [r for r in rows if "_meta" not in r]
+    """One JSON object per line; a leading `_meta` header line is skipped
+    (`jsonl.data_rows`)."""
+    return jsonl.data_rows(out.read_text(encoding="utf-8"), str(out))
 
 
 def agree(

@@ -375,12 +375,8 @@ def plant_task(root: Path, task: str, data: Path | None) -> None:
 
 def recount(root: Path) -> float:
     """The truth, from the planted files — not from a number on disk."""
-    rows = [
-        json.loads(line)
-        for line in jsonl.record_lines(
-            (root / "data" / "raw" / "cases.jsonl").read_text(encoding="utf-8")
-        )
-    ]
+    cases = root / "data" / "raw" / "cases.jsonl"
+    rows = jsonl.data_rows(cases.read_text(encoding="utf-8"), str(cases))
     counts = [
         sum(
             1

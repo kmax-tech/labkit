@@ -243,6 +243,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One reader turns JSONL lines into objects.** `jsonl.objects(text,
+  where)` gives (line number, object) and names file and line for a line
+  that is not JSON; `jsonl.data_rows` drops the `_meta` header
+  (`jsonl.is_meta`). The leakage check, `recheck.rows_of`, the session
+  log, the transcript reader and the usability recount parsed lines
+  themselves, each with its own error sentence (audit 2026-10-23);
+  `batch` keeps the one loop that is its own — a torn last line of an
+  interrupted write is cut, not refused. Two deliberate peeks (the first
+  record of a transcript, the first five lines of a data file) stay
+  streamed and say so.
+
 - **A run's directory and its metrics file have one spelling.**
   `runs.run_path(area, run_id)`, `runs.runs_path(area)` and
   `runs.metrics_path(run_dir)` replace about twenty hand-spelled
