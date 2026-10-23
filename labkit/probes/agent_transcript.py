@@ -42,7 +42,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from labkit.formats import console
+from labkit.formats import console, jsonl
 from labkit.formats.shell import pieces, segments
 
 #: Shell verbs whose file arguments are reads.
@@ -131,7 +131,7 @@ def records(path: Path) -> list[tuple[int, dict]]:
         else path.read_text(encoding="utf-8")
     )
     out: list[tuple[int, dict]] = []
-    for n, line in enumerate(raw.splitlines(), 1):
+    for n, line in enumerate(jsonl.record_lines(raw), 1):
         if not line.strip():
             continue
         try:

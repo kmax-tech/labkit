@@ -32,7 +32,7 @@ the dotfiles, below); doctrine ships in labkit to every lab.
 
 | Layer | Modules | Doctrine (the rest is core) |
 |---|---|---|
-| 1 · formats and places · `labkit/formats/` | `protocol_block`, `promises`, `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `rules`, `findings`, `reviews`, `console`, `gate`, `shell`, `files` | `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `rules`, `findings`, `reviews` |
+| 1 · formats and places · `labkit/formats/` | `protocol_block`, `promises`, `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `rules`, `findings`, `reviews`, `console`, `gate`, `shell`, `files`, `jsonl` | `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `rules`, `findings`, `reviews` |
 | 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `start_check`, `runlog_command`, `batch`, `llm`, `llm_specs`, `llm_backends`, `endpoint_lease`, `lanes`, `profile` | `lanes`, `profile` |
 | 3 · checks · `labkit/checks/` | `intent_check`, `code_check`, `code_scan`, `gate_label_scan`, `import_check`, `prompt_check`, `run_record_check`, `readme_check`, `recheck`, `notes_check`, `audit_binding`, `result_render`, `report_blocks` | `readme_check`, `notes_check`, `audit_binding`, `result_render`, `report_blocks` |
 | 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `decision_review`, `install_hooks` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `decision_review`, `install_hooks` |
@@ -220,6 +220,7 @@ evidence** (warns), **agent audit** (semantic).
 | Is this run finished? Which runs are? | `runs.completion_state`, `runs.completed_runs` |
 | Write a file whole or not at all | `files.write_atomic` (every record file of a run, the lease, a filled protocol; the run index is appended under its lock) |
 | The digest of a file, or of a set of named contents | `scope_sha.file_digest`, `scope_sha.tree_digest` (`DIGEST_CHARS` is the one recorded width of a stamp) |
+| How is a JSONL text split into its records? | `jsonl.record_lines` (at "\n" only — `str.splitlines` also breaks at U+2028, U+2029, U+0085 inside a record) |
 | What does a run's metadata say? | `runs.read_run_config` |
 | Does an output file account for its input, item by item? | `batch.Store.ledger` (missing, duplicate, stray, stale per expected field); `require_complete()` inside the run keeps it from completing |
 | Which runs wrote a JSONL file's rows? | `batch.row_runs` (per-row `_prov.run`); runlog names the runs a resumed file continues, finalize holds every row to the run |

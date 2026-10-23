@@ -29,7 +29,14 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats import promises, protocol_block, runs, scope_sha, answering_run
+from labkit.formats import (
+    jsonl,
+    promises,
+    protocol_block,
+    runs,
+    scope_sha,
+    answering_run,
+)
 from labkit.formats.repo import adopt_command
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
@@ -174,7 +181,7 @@ def rows_of(out: Path) -> list[dict]:
     """One JSON object per line; a leading `_meta` header line is skipped."""
     rows = [
         json.loads(line)
-        for line in out.read_text(encoding="utf-8").splitlines()
+        for line in jsonl.record_lines(out.read_text(encoding="utf-8"))
         if line.strip()
     ]
     return [r for r in rows if "_meta" not in r]

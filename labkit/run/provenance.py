@@ -18,7 +18,7 @@ import re
 import sys
 from pathlib import Path
 
-from labkit.formats import repo
+from labkit.formats import jsonl, repo
 from labkit.formats.scope_sha import (
     DIGEST_CHARS,
     digest,
@@ -391,7 +391,7 @@ def _ids(path: Path) -> set | None:
     if path.suffix != ".jsonl":
         return None
     ids = set()
-    for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+    for n, line in enumerate(jsonl.record_lines(path.read_text(encoding="utf-8")), 1):
         if not line.strip():
             continue
         try:

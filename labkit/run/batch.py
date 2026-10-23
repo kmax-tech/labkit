@@ -36,7 +36,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Iterator, Mapping
 
-from labkit.formats import runs, scope_sha
+from labkit.formats import jsonl, runs, scope_sha
 
 
 def _parse(text: str, path: Path) -> tuple[list[dict], int | None]:
@@ -46,7 +46,7 @@ def _parse(text: str, path: Path) -> tuple[list[dict], int | None]:
     would treat it as done: raises ValueError with file and line (review
     2026-10-07: a broken line mid-file was skipped and the rows after it
     kept)."""
-    lines = text.splitlines()
+    lines = jsonl.record_lines(text)
     last = max((i for i, ln in enumerate(lines) if ln.strip()), default=-1)
     out, torn = [], None
     for i, line in enumerate(lines):
@@ -349,7 +349,7 @@ class Store:
                 with self.path.open("a", encoding="utf-8") as fh:
                     fh.write("\n")
             return
-        kept = text.splitlines()[: torn - 1]
+        kept = jsonl.record_lines(text)[: torn - 1]
         self.path.write_text("".join(ln + "\n" for ln in kept), encoding="utf-8")
         print(
             f"batch: cut the torn last line {torn} of {self.path} (interrupted "

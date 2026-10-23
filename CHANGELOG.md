@@ -97,6 +97,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A JSONL record holding U+2028, U+2029 or U+0085 reads as one record.**
+  `json.dumps(..., ensure_ascii=False)` leaves these three raw inside a
+  string, and `str.splitlines()` broke there: `batch.Store` and
+  `write_dataset` wrote files their own reader called damaged
+  ("unparseable line before the end of the file"), and cutting a torn
+  last line could split a whole record. Every JSONL reader now splits at
+  "\n" only through `jsonl.record_lines` — the Store, `recheck.rows_of`,
+  the leakage check in `provenance`, the usability recount and the
+  Claude Code transcript readers (`JSON.stringify` leaves them raw too).
+  The writers are unchanged; their output was valid JSON Lines.
 - **A claude-cli reply another model wrote is no answer.** A safety
   classifier stopped `claude-opus-5-5` mid-audit; the CLI let
   `claude-opus-4-8` continue, `--output-format json` returned the

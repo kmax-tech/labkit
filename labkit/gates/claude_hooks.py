@@ -90,6 +90,7 @@ from pathlib import Path
 from labkit.formats import (
     console,
     findings,
+    jsonl,
     protocol_block,
     protocol_check,
     protocol_report,
@@ -418,7 +419,7 @@ def session_log(repo: Path) -> Path | None:
 def read_sessions(log: Path) -> list[dict]:
     """The log's records; a line that is not JSON names its number."""
     out = []
-    for n, line in enumerate(log.read_text(encoding="utf-8").splitlines(), 1):
+    for n, line in enumerate(jsonl.record_lines(log.read_text(encoding="utf-8")), 1):
         if line.strip():
             try:
                 out.append(json.loads(line))

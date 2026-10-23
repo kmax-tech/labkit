@@ -99,7 +99,7 @@ from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 from labkit.tools import scaffold
-from labkit.formats import console, repo, runs, scope_sha, standard_contract
+from labkit.formats import console, jsonl, repo, runs, scope_sha, standard_contract
 
 #: What the scaffold stamps into a repo and an area; their sha pins the measured
 #: condition. All of it ships with labkit — the probe needs no house machinery.
@@ -377,9 +377,9 @@ def recount(root: Path) -> float:
     """The truth, from the planted files — not from a number on disk."""
     rows = [
         json.loads(line)
-        for line in (root / "data" / "raw" / "cases.jsonl")
-        .read_text(encoding="utf-8")
-        .splitlines()
+        for line in jsonl.record_lines(
+            (root / "data" / "raw" / "cases.jsonl").read_text(encoding="utf-8")
+        )
     ]
     counts = [
         sum(
