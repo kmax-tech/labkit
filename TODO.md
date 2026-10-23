@@ -184,9 +184,9 @@ Forschung und Benchmark-Fallliste liegen in
        prüfen kann; heute steht dort nur die ID.
      Offene Grenze, nicht geplant: `fit`/`apply` auf Trainings- oder
      Testdaten, die ein Modell annotiert hat (silver standard als Gold).
-  3. Doku: Kurzdefinitionen + zwei Prüffragen in `labkit-init --help`;
-     Grenzfalltabelle (LLM-Prompt, BERT, Random Forest, Parser, Statistik,
-     Feature Importance = `compute`) in den Field Guide.
+  3. Umgesetzt (Commit „docs: choosing the kind“): zwei Prüffragen in
+     `labkit-init exp --help` und `AGENTS.md.template`; „Choosing the kind“
+     mit Grenzfalltabelle (13 Fälle) im Field Guide.
   4. Probe: Schreibprobe (`docs/notes/2026-10-22-kind-writing-probe.md`)
      mit kaltem Agenten auf den Grenzfällen wiederholen, v. a.
      LLM-Annotation → `compute` + `annotation_validity`.

@@ -160,7 +160,8 @@ The same block may hold the `[[promise]]` tables (labkit
   operation of the run: a run that only produces predictions declares no
   result and needs no kind. A `compute` with a `[model]` table — the model
   produced the values the number is computed from — says what the number
-  describes (`number_describes`, next entry).
+  describes (`number_describes`, next entry). Choose it with the two
+  questions below.
 - **[model] number_describes** — only with `kind = "compute"` and a
   `[model]` table: `"model_outputs"` when the number describes what the
   model marked ("the model marked 30 % as causal"), `"target_property"`
@@ -188,6 +189,32 @@ The same block may hold the `[[promise]]` tables (labkit
   --mode preflight`; every finding in it fixed / accepted / deferred /
   dismissed, with reason): the code-vs-intent audit after the instrument
   check and before freezing. Empty until then, and at `seconds`.
+
+**Choosing the kind** — the kind follows the reported number, not the
+tool: the same LLM or random forest can stand under any of the three.
+(1) Does the number judge how well a model or prediction procedure
+predicts, against gold labels or targets? No → `compute`, a descriptive or
+inferential statistic (ML lecture, ML:VII-1). (2) Was that model or
+procedure trained, adjusted or selected in this experiment — a threshold or
+a prompt chosen on performance data is model selection, the prompt a
+hyperparameter (ML:II-189)? Yes → `fit` ("Learning task: Fit D", ML:I);
+no → `apply`.
+
+| task | reported number | kind |
+|---|---|---|
+| LLM, prompt fixed in advance | accuracy vs gold | `apply` |
+| LLM, prompt chosen among variants on dev data | test accuracy | `fit` (model selection; prompt = hyperparameter) |
+| LLM outputs stored | share of empty answers | `compute` (`number_describes = "model_outputs"`) |
+| LLM annotates claims | share of causal claims in the texts | `compute` (`number_describes = "target_property"`, `annotation_validity` owed) |
+| BERT fine-tuned here | test F1 | `fit` |
+| BERT checkpoint used unchanged | test F1 | `apply` |
+| checkpoint fixed, decision threshold chosen on dev | test F1 | `fit` |
+| random forest trained, hyperparameters by cross-validation | CV / holdout error | `fit` (nested CV or a separate test set) |
+| fitted model | feature importance or coefficients as a finding | `compute` (the training stays traceable) |
+| regex / parser | number of matches | `compute` |
+| regex / parser, rules fixed | precision vs gold | `apply` |
+| regex / parser, rules repaired on the same data | precision | `fit` |
+| mean, correlation, t-test | the value | `compute` |
 
 **cost** — the price of a *repeat*, not whether a model is involved. A
 deterministic computation, or a handful of model calls that finish in a minute

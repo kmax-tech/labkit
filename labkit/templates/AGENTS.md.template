@@ -15,9 +15,11 @@ LAB-017 The number of audits follows the cost tier.
    says what the kept number asserts: `compute` judges no prediction, `fit`
    judges a model trained or adjusted here (a RandomForest, a regression,
    a fine-tune), `apply` judges a model used unchanged (an LLM as judge, a
-   trained classifier on labelled data); `--model <alias>` when the model
-   answers through `models.toml` (it writes `[model] alias` into the TOML
-   head). The command stamps the seconds cut of the protocol and the
+   trained classifier on labelled data). Two questions decide it: does
+   the number judge how well a model or procedure predicts? no → `compute`;
+   was it trained, adjusted or selected here? yes → `fit`, no → `apply`.
+   `--model <alias>` when the model answers through `models.toml` (it
+   writes `[model] alias` into the TOML head). The command stamps the seconds cut of the protocol and the
    skeleton the kind calls for; without `--kind` it stamps nothing.
 2. Write the registration: `protocol-fill <PROTOCOL> --list` names every
    open field, the TOML head's `type` and, with a model, each promise's

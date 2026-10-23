@@ -701,9 +701,13 @@ def main(argv: list[str]) -> int:
     exp.add_argument(
         "--kind",
         choices=protocol_block.KINDS,
-        help="what the kept number asserts: compute (no prediction judged), fit (a "
-        "model trained or adjusted here), apply (a model used unchanged) — "
-        "required for a new area; the skeleton and the registration follow it",
+        help="what the kept number asserts, required for a new area (the skeleton "
+        "and the registration follow it). (1) Does the number judge how well a "
+        "model or prediction procedure predicts, against gold labels or targets? "
+        "no: compute. (2) Was that model or procedure trained, adjusted or "
+        "selected here (a threshold or prompt chosen on performance data is model "
+        "selection)? yes: fit, no: apply. A compute with --model also says what "
+        "the number describes (number_describes; see the protocol field guide)",
     )
     exp.add_argument(
         "--model",
