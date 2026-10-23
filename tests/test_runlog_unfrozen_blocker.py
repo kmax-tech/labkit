@@ -126,7 +126,7 @@ class UnfrozenBlocker(unittest.TestCase):
         os.environ["LABKIT_UNFROZEN"] = "1"
         _, out = self._start(run_kind="measurement")
         self.assertIn("acknowledged", out)
-        self.assertIn("open WARNING(s) of the preflight audit", out)
+        self.assertIn("undecided WARNING(s) / NOTE(s) of the preflight audits", out)
         self.assertIn("the seed is not recorded", out)
 
     def test_a_probe_runs_over_an_open_blocker(self):

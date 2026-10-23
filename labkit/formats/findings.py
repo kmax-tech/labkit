@@ -283,9 +283,15 @@ def open_findings(
         preflight, unfrozen          every mode         a WARNING — the decision is owed at the freeze, not before
         preflight, frozen            every mode         a BLOCKER — frozen = true owes every decision
                                                         (LAB-015 Preflight audit before freezing)
-        runlog start, full run       preflight only     its grade: BLOCKER refuses the run, WARNING is told —
-                                                        the run rests on the preflight audit; an analysis
-                                                        record judges a run, and finalize holds it
+        runlog start, full run       preflight only     a BLOCKER refuses the run; a WARNING or NOTE is told
+                                                        only with the run acknowledged (LABKIT_UNFROZEN=1),
+                                                        a clean start says nothing of it — the run rests on
+                                                        the preflight audit; an analysis record judges a
+                                                        run, and finalize holds it
+        the record the head names    that record only   any grade is a gap (`audit_record_gap`): the freeze
+        (runlog, preflight,                             refuses, preflight warns unfrozen and blocks frozen,
+        protocol-check)                                 protocol-check reports — the named record stands
+                                                        for the frozen state, decided whole
         finalize                     every mode         its grade: BLOCKER blocks, WARNING warns, NOTE is told
         claude-hook stop / undecided every mode, the    a BLOCKER only — the hook says what the commit would be
                                      areas the session  refused for and nags for nothing less
@@ -293,7 +299,9 @@ def open_findings(
         audit_coverage (report-check) the covering record  any grade: the record is not decided
 
     The differences are intended. A change to one row is a change to that
-    gate's rule: say so in its docstring and in this table.
+    gate's rule: say so in its docstring and in this table. `audit_record_gap`
+    reads `Record.open` of the one named record itself; every walk over
+    records goes through here.
     """
     return [
         OpenFinding(r, f)

@@ -152,21 +152,25 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
 
 
 def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
-    """(blockers, warnings): every finding still `open` in a preflight audit
-    record of the area, each as `<file>: <text>`. A record of any stamp
-    counts — a finding nobody decided is an ignored finding, not an old one
-    (LAB-015 Preflight audit before freezing: every finding is decided).
-    Preflight records only, by intent (`findings.open_findings` has the table):
-    the run rests on the preflight audit; an analysis record judges a run
-    and is finalize's. Raises SystemExit on a record nobody can read."""
+    """(blockers, lesser): every finding still `open` in a preflight audit
+    record of the area, each as `<file>: <text>`, BLOCKERs apart from the
+    WARNINGs and NOTEs. A record of any stamp counts — a finding nobody
+    decided is an ignored finding, not an old one (LAB-015 Preflight audit
+    before freezing: every finding is decided). Preflight records only, by
+    intent (`findings.open_findings` has the table): the run rests on the
+    preflight audit; an analysis record judges a run and is finalize's.
+    The blockers refuse (`freeze_gate`); the lesser ones are told only with
+    the run acknowledged — on a clean start the named record is decided
+    whole (`audit_record_gap`), and an older record's open WARNING does not
+    hold a run. Raises SystemExit on a record nobody can read."""
     try:
         records = findings.area_records(base_dir)
     except findings.FindingsError as exc:
         raise SystemExit(f"runlog: {exc}") from exc
-    blockers, warnings = [], []
+    blockers, lesser = [], []
     for u in findings.open_findings(records, mode="preflight"):
-        (blockers if u.grade == "BLOCKER" else warnings).append(u.line)
-    return blockers, warnings
+        (blockers if u.grade == "BLOCKER" else lesser).append(u.line)
+    return blockers, lesser
 
 
 def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None":
@@ -488,7 +492,7 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
     "pilot" — agents take the way a message offers. Why each rule:
     docs/notes/2026-10-19-gates-and-run-start.md."""
     declares = "this run declares run_kind='measurement'"
-    blockers, open_warnings = _undecided_findings(base_dir)
+    blockers, open_lesser = _undecided_findings(base_dir)
     if blockers:
         raise SystemExit(
             f"runlog: {declares}, and a "
@@ -527,9 +531,9 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
             else ""
         )
         + (
-            "\n  open WARNING(s) of the preflight audit, undecided:\n  "
-            + "\n  ".join(open_warnings)
-            if open_warnings
+            "\n  undecided WARNING(s) / NOTE(s) of the preflight audits:\n  "
+            + "\n  ".join(open_lesser)
+            if open_lesser
             else ""
         )
     )
