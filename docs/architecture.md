@@ -218,7 +218,7 @@ evidence** (warns), **agent audit** (semantic).
 | Run git | `repo.git` (output, loud on failure), `repo.git_run` (exit code is the answer) |
 | Which directories does an area's `runs/` hold, and what does each say? | `runs.run_dirs` (one walk, metadata read once; an unreadable run is data — the caller refuses, reports or skips) |
 | Is this run finished? Which runs are? | `runs.completion_state`, `runs.completed_runs` |
-| Write a file whole or not at all | `files.write_atomic` (every record file of a run, the lease, a filled protocol; the run index is appended under its lock) |
+| Write a file whole or not at all | `files.write_atomic`, `files.write_atomic_bytes` (every file a run leaves — records, failure, patch, raw artefacts, source snapshots — the lease, a filled protocol; the run index is appended under its lock) |
 | The digest of a file, or of a set of named contents | `scope_sha.file_digest`, `scope_sha.tree_digest` (`DIGEST_CHARS` is the one recorded width of a stamp) |
 | How is a JSONL text split into its records? | `jsonl.record_lines` (at "\n" only — `str.splitlines` also breaks at U+2028, U+2029, U+0085 inside a record) |
 | What does a run's metadata say? | `runs.read_run_config` |

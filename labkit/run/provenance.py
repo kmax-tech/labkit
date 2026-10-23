@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 
 from labkit.formats import jsonl, repo
+from labkit.formats.files import write_atomic_bytes
 from labkit.formats.scope_sha import (
     DIGEST_CHARS,
     digest,
@@ -483,7 +484,7 @@ def snapshot_script(run_dir: Path) -> str:
         if not src.is_file():
             return "no-script"
         body = src.read_bytes()
-        (run_dir / f"script-source{src.suffix or '.txt'}").write_bytes(body)
+        write_atomic_bytes(run_dir / f"script-source{src.suffix or '.txt'}", body)
         # the hash of the bytes copied, not of a second read: a save in
         # between left a record whose hash matched no stored script
         return digest(body)
@@ -548,7 +549,7 @@ def snapshot_untracked_sources(run_dir: Path) -> list[str]:
                 continue
             dest = run_dir / "source-untracked" / relp
             dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(srcf.read_bytes())
+            write_atomic_bytes(dest, srcf.read_bytes())
             copied.append(rel)
         except OSError:
             continue

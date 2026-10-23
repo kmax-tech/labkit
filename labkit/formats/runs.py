@@ -20,6 +20,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Final, Literal, cast
 
+from labkit.formats.files import write_atomic
 from labkit.formats.repo import layout_root
 
 
@@ -175,12 +176,12 @@ def write_failure(
     """Write RUN_DIR/failure.json: the exception's type, its message and the
     time; return its path. Raises OSError when it cannot be written."""
     path = run_dir / FAILURE_FILE
-    path.write_text(
+    write_atomic(
+        path,
         json.dumps(
             {"error": exc_type.__name__, "message": str(exc or ""), "at": now_stamp()},
             indent=1,
         ),
-        encoding="utf-8",
     )
     return path
 

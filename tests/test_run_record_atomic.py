@@ -11,12 +11,15 @@ from __future__ import annotations
 
 import contextlib
 import io
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
+from labkit.formats import files, runs
 from labkit.run import provenance, runlog
+from labkit.tools import protocol_fill
 
 
 class NoHalfMadeRun(unittest.TestCase):
@@ -78,6 +81,67 @@ class NoHalfMadeRun(unittest.TestCase):
             )
             staged = [p.name for p in (area / "runs").rglob(".*tmp*")]
             self.assertEqual(staged, [])
+
+    def test_the_other_files_a_run_leaves_are_written_whole_too(self) -> None:
+        """failure.json, a raw artefact and the script snapshot took the plain
+        path while the architecture said every record file is atomic (audit
+        2026-10-23, B2): now they go through `files.write_atomic` /
+        `write_atomic_bytes` as well, and no staging file stays behind."""
+        written: list[str] = []
+
+        def spy_text(path: Path, text: str) -> None:
+            written.append(path.name)
+            files.write_atomic(path, text)
+
+        def spy_bytes(path: Path, data: bytes) -> None:
+            written.append(path.name)
+            files.write_atomic_bytes(path, data)
+
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "runs").mkdir()
+            script = area / "measure.py"  # the snapshot copies sys.argv[0]
+            script.write_text("print(1)\n", encoding="utf-8")
+            with (
+                mock.patch.object(sys, "argv", [str(script)]),
+                mock.patch.object(runlog, "write_atomic", spy_text),
+                mock.patch.object(runs, "write_atomic", spy_text),
+                mock.patch.object(provenance, "write_atomic_bytes", spy_bytes),
+                contextlib.redirect_stdout(io.StringIO()),
+                self.assertRaises(RuntimeError),
+                runlog.run("t", {}, area) as r,
+            ):
+                r.save_raw("reply.txt", "raw")
+                raise RuntimeError("the run fails")
+            self.assertIn("reply.txt", written)
+            self.assertIn("failure.json", written)
+            self.assertTrue(
+                any(name.startswith("script-source") for name in written), written
+            )
+            staged = [p.name for p in (area / "runs").rglob(".*tmp*")]
+            self.assertEqual(staged, [])
+
+    def test_a_filled_protocol_is_written_whole_or_not_at_all(self) -> None:
+        """protocol-fill's own writes (a field, --prompts, --render, the
+        report's result block) go through `files.write_atomic` like the
+        write-back of the result (audit 2026-10-23, B2)."""
+        written: list[str] = []
+        real = files.write_atomic
+
+        def spy(path: Path, text: str) -> None:
+            written.append(path.name)
+            real(path, text)
+
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "PROTOCOL-x.md"
+            p.write_text("- **Unit:** <what one row is>\n", encoding="utf-8")
+            with (
+                mock.patch.object(files, "write_atomic", spy),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                self.assertEqual(protocol_fill.main([str(p), "unit", "one row"]), 0)
+            self.assertEqual(written, ["PROTOCOL-x.md"])
+            self.assertIn("- **Unit:** one row", p.read_text(encoding="utf-8"))
 
     def test_a_refusal_in_the_start_check_leaves_no_directory(self) -> None:
         """Every refusal of the start check comes before mkdir: an unbound

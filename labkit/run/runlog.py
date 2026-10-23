@@ -449,8 +449,9 @@ class Run:
         )
         # A dirty tree makes the commit hash a lie: save what it doesn't cover.
         if git_head(self.base) and repo.git(["status", "--porcelain"], self.base):
-            (self.dir / "uncommitted.patch").write_text(
-                repo.git(["diff", "HEAD"], self.base) or "", encoding="utf-8"
+            write_atomic(
+                self.dir / "uncommitted.patch",
+                repo.git(["diff", "HEAD"], self.base) or "",
             )
 
     def output(self, *paths: str | Path) -> None:
@@ -476,7 +477,7 @@ class Run:
     def save_raw(self, name: str, content: str) -> Path:
         """Write a raw text artefact into the run's directory and return its path."""
         p = self.dir / name
-        p.write_text(content, encoding="utf-8")
+        write_atomic(p, content)
         return p
 
     def metrics(self, **kv: object) -> None:

@@ -795,7 +795,7 @@ def _prompts_file(protocol: Path, text: str) -> int:
     except ValueError as exc:
         print(f"protocol-fill: {exc}")
         return 1
-    protocol.write_text(new, encoding="utf-8")
+    files.write_atomic(protocol, new)
     print("filled: Prompt (from the scripts' PROMPT constants)")
     return 0
 
@@ -827,7 +827,7 @@ def _into_file(protocol: Path, text: str, report: Path) -> int:
         print(f"protocol-fill: {exc}")
         return 1
     if new != before:
-        report.write_text(new, encoding="utf-8")
+        files.write_atomic(report, new)
     print(
         f"{report}: the result block for run {run_id} "
         + ("written" if new != before else "unchanged — it says what its sources say")
@@ -843,7 +843,7 @@ def _render_file(protocol: Path, text: str) -> int:
         print(f"protocol-fill: {exc}")
         return 1
     if new != text:
-        protocol.write_text(new, encoding="utf-8")
+        files.write_atomic(protocol, new)
     print(
         "rendered: "
         + (
@@ -952,7 +952,7 @@ def main(argv: list[str]) -> int:
     except ValueError as exc:  # all or nothing: the file is untouched
         print(f"protocol-fill: {exc}")
         return 1
-    args.protocol.write_text(new, encoding="utf-8")
+    files.write_atomic(args.protocol, new)
     print("filled: " + ", ".join(label for label, _ in assignments))
     return 0
 

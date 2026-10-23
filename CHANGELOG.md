@@ -134,6 +134,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **Every file a run leaves is written whole or not at all.** `failure.json`,
+  `uncommitted.patch`, `Run.save_raw` artefacts, the script and source
+  snapshots, and four of protocol-fill's own writes (a field, `--prompts`,
+  `--render`, the report's result block) took the plain path while
+  `docs/architecture.md` said every record file and every filled protocol
+  goes through `files.write_atomic` (audit 2026-10-23, B2). They do now;
+  the snapshots through the new `files.write_atomic_bytes`.
+
 - **finalize's reasons reach report-check.** Inside report-check finalize
   runs on a silent collector, and three of its stations put the reason
   into a note beside the blocker: intent-check's lines ("intent-check
