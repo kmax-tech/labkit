@@ -57,11 +57,14 @@ read-only gate.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from dataclasses import dataclass
 import subprocess
 import sys
 from pathlib import Path
 
+from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.checks.code_check import code_findings
 from labkit.formats import (
     console,
@@ -300,11 +303,14 @@ def check_protocol_fields(
     for finding in id_findings:
         findings.take(finding)
     if lowered:
-        findings.warn(lowered)
+        findings.warn(lowered, evidence_kind=STATIC_EVIDENCE)
     for label in report.missing_should:
-        findings.warn(f"missing (should): {label}")
+        findings.warn(f"missing (should): {label}", evidence_kind=GUARANTEED)
     for n, label in report.soft_holes:
-        findings.warn(f"{protocol.name}:{n}: placeholder (should): {label}")
+        findings.warn(
+            f"{protocol.name}:{n}: placeholder (should): {label}",
+            evidence_kind=GUARANTEED,
+        )
     if not (
         report.missing_must
         or report.must_holes
@@ -341,6 +347,14 @@ def cost_tier_lines(cost: str | None, lane: "standard_contract.Lane") -> list[st
     ]
 
 
+def _owed(findings: Findings, frozen: bool) -> Callable[[str], None]:
+    """How a gap the freeze owes is told: a blocker once FROZEN, else a
+    warning — a mechanical fact either way (GUARANTEED)."""
+    if frozen:
+        return findings.block
+    return lambda msg: findings.warn(msg, evidence_kind=GUARANTEED)
+
+
 def check_audit_records(
     findings: Findings, area: Path, *, frozen: bool
 ) -> list[audit_findings.Record]:
@@ -357,7 +371,7 @@ def check_audit_records(
         return []
     undecided = audit_findings.open_findings(records)  # the table of the gates' rules
     for u in undecided:
-        (findings.block if frozen else findings.warn)(f"undecided in {u.line}")
+        _owed(findings, frozen)(f"undecided in {u.line}")
     if undecided:
         findings.note(
             f"  {len(undecided)} finding(s) still `open` — decide each (fixed / accepted / "
@@ -377,7 +391,7 @@ def check_audit_coverage(
     A gap warns, and blocks once FROZEN."""
     gap = audit_findings.audit_record_gap(area, audit_line, text)
     if gap:
-        (findings.block if frozen else findings.warn)(
+        _owed(findings, frozen)(
             f"preflight_audit: {gap} (LAB-015 Preflight audit before freezing)"
         )
 
@@ -394,7 +408,7 @@ def check_deferred_elsewhere(
     try:
         elsewhere = audit_findings.deferred_elsewhere(area, experiments)
     except audit_findings.FindingsError as exc:
-        findings.warn(str(exc))
+        findings.warn(str(exc), evidence_kind=GUARANTEED)
         elsewhere = []
     for other, r, f in elsewhere:
         findings.note(f"  deferred in {other.name} ({r.date}): {f.text} — {f.reason}")
@@ -438,7 +452,10 @@ def check_working_tree(findings: Findings, repo: Path) -> None:
     """Station 6: uncommitted changes under REPO warn — the number would
     rest on code no commit holds."""
     if _is_dirty(repo):
-        findings.warn(f"uncommitted changes in {repo} (commit or stash before the run)")
+        findings.warn(
+            f"uncommitted changes in {repo} (commit or stash before the run)",
+            evidence_kind=GUARANTEED,
+        )
     else:
         findings.note("  clean")
 
@@ -449,7 +466,7 @@ def check_hooks(findings: Findings, git_repo: Path) -> None:
     the hooks (or with an older labkit's) runs on good intentions only."""
     gaps = install_hooks.check(git_repo)
     for g in gaps:
-        findings.warn(g)
+        findings.warn(g, evidence_kind=GUARANTEED)
     if gaps:
         findings.note("  fix with  .venv/bin/labkit-hooks install")
     else:
@@ -466,7 +483,7 @@ def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> N
     lines told; a missing pytest warns."""
     names = ", ".join(f.name for f in tests.files)
     if not tests.files:
-        (findings.block if frozen else findings.warn)(
+        _owed(findings, frozen)(
             f"no {tests.pattern} — the resolution check has no "
             f"permanent form (LAB-016 Resolution check before freezing)"
             + (" and frozen = true owes it" if frozen else "")
@@ -474,7 +491,10 @@ def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> N
     elif tests.state == "ok":
         findings.note(f"  ok — {names}")
     elif tests.state == "no-pytest":
-        findings.warn("pytest is not installed in this interpreter — tests not run")
+        findings.warn(
+            "pytest is not installed in this interpreter — tests not run",
+            evidence_kind=GUARANTEED,
+        )
     else:
         for ln in tests.tail:
             findings.note(f"  {ln}")

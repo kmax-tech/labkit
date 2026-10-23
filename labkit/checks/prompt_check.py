@@ -15,6 +15,7 @@ import ast
 import re
 from pathlib import Path
 
+from labkit.formats.gate import GUARANTEED
 from labkit.formats.scope_sha import SCRIPT_GLOB, area_files
 from labkit.formats import protocol_block
 from labkit.formats.gate import BLOCKER, WARNING, GateFinding, coded
@@ -57,6 +58,7 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
                     t.name,
                     f"cannot be parsed ({exc}) · which parsers it calls cannot be told",
                     fix="fix the test file",
+                    evidence_kind=GUARANTEED,
                 )
             )
             continue
@@ -76,6 +78,7 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
                     f"fails silently into a wrong number",
                     rule="LAB-016 Resolution check before freezing",
                     fix="give it a fixture with real raw answers",
+                    evidence_kind=GUARANTEED,
                 )
             )
     return findings
@@ -229,6 +232,7 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:
             None,
             f"{name} is not statically readable (a call or a format spec this "
             f"check does not compute) · prompt drift unchecked for it",
+            evidence_kind=GUARANTEED,
         )
         for name in unreadable
     ]
@@ -254,6 +258,7 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:
                     f"{len(fixed)} fixed line(s) missing, e.g. {missing[0][:60]!r}",
                     rule="LAB-007 Render check before the instrument check",
                     fix="paste the rendered `--show` output, not a transcript",
+                    evidence_kind=GUARANTEED,
                 )
             )
     return warnings + findings

@@ -15,6 +15,7 @@ from pathlib import Path
 
 from protocol_fixture import run_record, PID, head
 
+from labkit.formats import gate
 from labkit.tools import params
 
 C1 = """[[promise]]
@@ -103,7 +104,9 @@ class Table(unittest.TestCase):
                 models_resolved=MODEL_A,
             )
             rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
-            self.assertEqual({r.tier for r in rows.values()}, {params.GUARANTEED})
+            self.assertEqual(
+                {r.evidence_kind for r in rows.values()}, {gate.GUARANTEED}
+            )
             self.assertEqual(rows["min_acc"].in_run, "0.7")
             self.assertEqual(rows["min_acc"].home, "PROTOCOL-x.md [C1] constants")
             self.assertEqual(rows["model m"].value, "m → A @ http://a")
@@ -126,7 +129,7 @@ class Table(unittest.TestCase):
                 },
             )
             rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
-            self.assertEqual(rows["judge"].tier, params.EVIDENCE)
+            self.assertEqual(rows["judge"].evidence_kind, gate.STATIC_EVIDENCE)
             self.assertIn("runlog does not read", rows["judge"].meaning)
             self.assertIn("not recorded in models_resolved", rows["model"].meaning)
 
@@ -142,8 +145,8 @@ class Table(unittest.TestCase):
             rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
             row = rows["SOME_CONSTANT"]
             self.assertEqual(
-                (row.tier, row.in_run, row.home),
-                (params.EVIDENCE, "—", "scripts/01_measure.py:7"),
+                (row.evidence_kind, row.in_run, row.home),
+                (gate.STATIC_EVIDENCE, "—", "scripts/01_measure.py:7"),
             )
             self.assertIn("not claimed", row.meaning)
 
@@ -161,8 +164,8 @@ class Table(unittest.TestCase):
                 rows["min_acc"].in_run,
                 "— (not recorded; scripts/01_measure.py:1 holds min_acc = 0.7)",
             )
-            self.assertIn("absent", rows["min_acc"].tier)
-            self.assertIn(params.EVIDENCE, rows["min_acc"].tier)
+            self.assertIn("absent", rows["min_acc"].evidence_kind)
+            self.assertIn(gate.STATIC_EVIDENCE, rows["min_acc"].evidence_kind)
 
     def test_an_upper_case_copy_stands_in_the_registered_row(self) -> None:
         """Cold reader 2026-10-09: the script copied `min_acc` as `MIN_ACC`;
@@ -194,7 +197,7 @@ class Table(unittest.TestCase):
             )
             rows = _by_name(params.params_table(area, area / "PROTOCOL-x.md", run))
             self.assertEqual(rows["min_acc"].in_run, "0.5  ≠ DIFFERS")
-            self.assertEqual(rows["min_acc"].tier, params.GUARANTEED)
+            self.assertEqual(rows["min_acc"].evidence_kind, gate.GUARANTEED)
 
     def test_a_derived_run_names_the_ancestor_that_recorded_the_model(self) -> None:
         with tempfile.TemporaryDirectory() as d:
@@ -242,7 +245,7 @@ class Table(unittest.TestCase):
                 "2026-10-02T10-00-00_bbbb → 2026-10-01T10-00-00_aaaa",
                 rows["model"].meaning,
             )
-            self.assertEqual(rows["model"].tier, params.GUARANTEED)
+            self.assertEqual(rows["model"].evidence_kind, gate.GUARANTEED)
 
 
 def _main(argv: list[str]) -> tuple[int, str]:

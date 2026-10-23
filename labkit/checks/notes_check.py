@@ -40,6 +40,7 @@ doctrine: extend, never move; regression = both lab repos exit 0 after the
 
 import re
 
+from labkit.formats.gate import GUARANTEED
 from labkit.formats import console
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import git_root
@@ -199,7 +200,7 @@ def main(argv: list[str]) -> int:
         for line in must:
             findings.block(line)
         for line in warn:
-            findings.warn(line)
+            findings.warn(line, evidence_kind=GUARANTEED)
         if not must and not warn:
             print(f"{f}: OK")
     return findings.report("notes-check", "the note counts")

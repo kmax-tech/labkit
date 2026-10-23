@@ -32,7 +32,7 @@ grade back from a line's words.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 BLOCKER = "BLOCKER"
 WARNING = "WARNING"
@@ -47,11 +47,32 @@ EXIT_CONTRACT = (
 #: text says its grade in its own words, or the code checks' ` · ` form
 PREFIXED, AS_WRITTEN, DOTTED = "prefixed", "as written", "dotted"
 
+#: what carries a gate finding's sentence (`GateFinding.evidence_kind`): an
+#: exact mechanical check, or an indication that warns and never blocks.
+#: The third kind AGENTS.md names, the agent audit, is no gate's sentence —
+#: it is the nature of `findings.Finding`, the record a person decides.
+GUARANTEED = "guaranteed"
+STATIC_EVIDENCE = "static evidence"
+EVIDENCE_KINDS = (GUARANTEED, STATIC_EVIDENCE)
+
 
 @dataclass(frozen=True)
 class GateFinding:
     """One finding of a gate. The grade field decides what counts, never the
-    words; FORM decides how it is told (`line`).
+    words; FORM decides how it is told (`line`); EVIDENCE_KIND says what
+    carries the sentence.
+
+    Two axes, two questions. `grade` answers "what follows" — a BLOCKER
+    stops, a WARNING is read. `evidence_kind` answers "what carries the
+    sentence in `text`" — GUARANTEED, an exact mechanical check that is
+    silent on a correct input, or STATIC_EVIDENCE, an indication that may
+    be wrong and so warns and never blocks (a static-evidence BLOCKER is
+    refused here). The kind classifies the sentence, not the thing it is
+    about: "record X holds an undecided BLOCKER" is a register fact and
+    GUARANTEED, although the finding it names is an agent audit's
+    judgement — that judgement keeps its own grade in the record
+    (`findings.Finding`). The kind is given at every site, never defaulted:
+    the author of a check says what the check is (audit 2026-10-23, C5).
 
     Attributes:
         grade: BLOCKER or WARNING.
@@ -62,6 +83,7 @@ class GateFinding:
         where: The file or `file:line` the finding points at, when it has one.
         rule: The standard's rule it cites (`LAB-nnn Name`), when it cites one.
         fix: What to do about it.
+        evidence_kind: GUARANTEED or STATIC_EVIDENCE, keyword, required.
     """
 
     grade: str
@@ -70,6 +92,7 @@ class GateFinding:
     where: str | None = None
     rule: str | None = None
     fix: str | None = None
+    evidence_kind: str = field(kw_only=True)
 
     def __post_init__(self) -> None:
         if self.grade not in (BLOCKER, WARNING):
@@ -78,14 +101,27 @@ class GateFinding:
             )
         if self.form not in (PREFIXED, AS_WRITTEN, DOTTED):
             raise ValueError(f"a gate finding's form is not {self.form!r}")
+        if self.evidence_kind not in EVIDENCE_KINDS:
+            raise ValueError(
+                f"a gate finding's evidence kind is one of {EVIDENCE_KINDS}, "
+                f"not {self.evidence_kind!r}"
+            )
+        if self.evidence_kind == STATIC_EVIDENCE and self.grade == BLOCKER:
+            raise ValueError(
+                f"static evidence warns, never blocks (AGENTS.md): {self.text!r}"
+            )
 
     @property
     def line(self) -> str:
-        """The finding as a gate tells it, without the indent."""
+        """The finding as a gate tells it, without the indent. The dotted
+        form names static evidence (`WARNING · static evidence · …`) so a
+        reader of a code check's line sees it is an indication; a prefixed
+        line stays `WARNING: …`, and the summary counts the kind."""
         if self.form == AS_WRITTEN:
             return self.text
         if self.form == DOTTED:
-            parts = (self.grade, self.where, self.text, self.rule, self.fix)
+            kind = STATIC_EVIDENCE if self.evidence_kind == STATIC_EVIDENCE else None
+            parts = (self.grade, kind, self.where, self.text, self.rule, self.fix)
             return " · ".join(p for p in parts if p)
         return f"{self.grade}: {self.text}"
 
@@ -101,13 +137,22 @@ def coded(
     where: str | None,
     text: str,
     *,
+    evidence_kind: str,
     rule: str | None = None,
     fix: str | None = None,
 ) -> GateFinding:
     """A code check's finding (code-check, preflight's code station, the
     audit's tier note), told as `<grade> · <where> · <text> · <rule> · <fix>`
-    with the parts it has."""
-    return GateFinding(grade, text, DOTTED, where=where, rule=rule, fix=fix)
+    with the parts it has (static evidence named after the grade)."""
+    return GateFinding(
+        grade,
+        text,
+        DOTTED,
+        where=where,
+        rule=rule,
+        fix=fix,
+        evidence_kind=evidence_kind,
+    )
 
 
 class Findings:
@@ -142,6 +187,12 @@ class Findings:
         return len(self.warned)
 
     @property
+    def static_evidence(self) -> int:
+        """How many of the warnings are static evidence — indications, not
+        proofs (a blocker never is)."""
+        return sum(1 for f in self.found if f.evidence_kind == STATIC_EVIDENCE)
+
+    @property
     def exit_code(self) -> int:
         """The exit contract: 1 with a blocker, 0 with warnings only or all clear."""
         return 1 if self.blocked else 0
@@ -167,25 +218,33 @@ class Findings:
             self.take(finding)
 
     def block(self, msg: str) -> None:
-        """A blocker: told as `BLOCKER: msg`, repeated in the summary, exit 1."""
-        self.take(GateFinding(BLOCKER, msg))
+        """A blocker: told as `BLOCKER: msg`, repeated in the summary, exit 1.
+        Always GUARANTEED — static evidence never blocks."""
+        self.take(GateFinding(BLOCKER, msg, evidence_kind=GUARANTEED))
 
-    def warn(self, msg: str) -> None:
-        """A warning: told as `WARNING: msg`, counted, exit 0 on its own."""
-        self.take(GateFinding(WARNING, msg))
+    def warn(self, msg: str, *, evidence_kind: str) -> None:
+        """A warning: told as `WARNING: msg`, counted, exit 0 on its own.
+        EVIDENCE_KIND says what carries it (`GateFinding`)."""
+        self.take(GateFinding(WARNING, msg, evidence_kind=evidence_kind))
+
+    def _kinds(self) -> str:
+        """` (K static evidence)` when K warnings are indications, else ``."""
+        k = self.static_evidence
+        return f" ({k} static evidence)" if k else ""
 
     def summary(self, tool: str, before: str) -> list[str]:
         """The summary lines: with a blocker the count and every blocker named
         again, with warnings only the count, else `all clear`."""
         if self.blocked:
             return [
-                f"{tool}: {len(self.blocked)} blocker(s), {self.warnings} warning(s) "
+                f"{tool}: {len(self.blocked)} blocker(s), {self.warnings} warning(s)"
+                f"{self._kinds()} "
                 f"— fix the blockers before {before}:",
                 *(f"  - {msg}" for msg in self.blocked),
             ]
         if self.warned:
             return [
-                f"{tool}: 0 blockers, {self.warnings} warning(s) — review the "
+                f"{tool}: 0 blockers, {self.warnings} warning(s){self._kinds()} — review the "
                 f"warnings above before {before}."
             ]
         return [f"{tool}: all clear."]

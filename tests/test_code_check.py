@@ -413,7 +413,10 @@ class TestStampCoverage(unittest.TestCase):
         self.assertEqual(len(found), 5, found)
         self.assertTrue(
             all(
-                f.startswith("WARNING · experiments/01-x/scripts/01_measure.py:")
+                # static evidence says so in the line (audit 2026-10-23, C5)
+                f.startswith(
+                    "WARNING · static evidence · experiments/01-x/scripts/01_measure.py:"
+                )
                 for f in found
             )
         )

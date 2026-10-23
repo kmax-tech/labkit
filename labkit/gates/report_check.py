@@ -89,6 +89,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import run_dirs, run_path
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, WARNING, Findings, GateFinding
 from labkit.formats.answering_run import first_measurement
@@ -283,7 +284,13 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
         return []
     cfg = read_run_config(first)
     if cfg is None:
-        return [GateFinding(BLOCKER, f"{first.name}: no config.json — not a run")]
+        return [
+            GateFinding(
+                BLOCKER,
+                f"{first.name}: no config.json — not a run",
+                evidence_kind=GUARANTEED,
+            )
+        ]
     at = f"the first measurement {first.name}"
     if git_root(ctx.protocol) is None:
         return [
@@ -291,6 +298,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
                 WARNING,
                 f"not a git repository — the registration cannot be held to the "
                 f"commit of {at}",
+                evidence_kind=GUARANTEED,
             )
         ]
     commit = recorded_commit(cfg)
@@ -301,6 +309,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
                 f"{at} recorded no commit ({cfg.git!r}) — the registration cannot be "
                 f"held to what stood before the number (LAB-003 No run without an "
                 f"intent paragraph)",
+                evidence_kind=GUARANTEED,
             )
         ]
     missing = registration_in_commit(ctx.protocol, commit)
@@ -312,6 +321,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
                 f"stood before the number; the registration is what the commit of "
                 f"the first measurement holds (LAB-003 No run without an intent "
                 f"paragraph)",
+                evidence_kind=GUARANTEED,
             )
         ]
     if missing:
@@ -322,6 +332,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
                 f"{', '.join(missing)} — the registration is what the commit of "
                 f"the first measurement holds, not what the tree says now "
                 f"(LAB-003 No run without an intent paragraph)",
+                evidence_kind=GUARANTEED,
             )
         ]
     return []
@@ -416,7 +427,11 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     except reviews.ReviewError as exc:
         # named, and the decisions are judged as unreviewed: a file nobody
         # can read must not hide a BLOCKER's unupheld `stands`
-        out.append(GateFinding(WARNING, f"a review nobody can read: {exc}"))
+        out.append(
+            GateFinding(
+                WARNING, f"a review nobody can read: {exc}", evidence_kind=GUARANTEED
+            )
+        )
         found = []
     for r in records:
         for n, f in r.limits():
@@ -433,6 +448,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                     f"`labkit-audit <area> --review --record {r.path.name}` asks a "
                     f"second auditor; after a rejection, decide again "
                     f"(LAB-015 Preflight audit before freezing)",
+                    evidence_kind=GUARANTEED,
                 )
             )
     return out
@@ -489,12 +505,17 @@ def analysis_findings(ctx: Checked, rule: str) -> list[GateFinding]:
     out: list[GateFinding] = []
     gap = analysis_audit_gap(ctx)
     if gap:
-        out.append(GateFinding(BLOCKER, f"analysis audit: {gap} ({rule})"))
+        out.append(
+            GateFinding(
+                BLOCKER, f"analysis audit: {gap} ({rule})", evidence_kind=GUARANTEED
+            )
+        )
     # the rendered result section is held here too, named as what it is:
     # a cold reader took "analysis audit:" on a retyped Recorded results
     # line for a record problem (reading probe 2026-10-22)
     out.extend(
-        GateFinding(BLOCKER, f"result section: {gap}") for gap in limit_gaps(ctx)
+        GateFinding(BLOCKER, f"result section: {gap}", evidence_kind=GUARANTEED)
+        for gap in limit_gaps(ctx)
     )
     return out
 
@@ -505,7 +526,9 @@ def recomputation_findings(area: Path, repo: Path) -> list[GateFinding]:
     return (
         [
             GateFinding(
-                BLOCKER, f"{failed} (LAB-041 Generate numbers, don't retype them)"
+                BLOCKER,
+                f"{failed} (LAB-041 Generate numbers, don't retype them)",
+                evidence_kind=GUARANTEED,
             )
         ]
         if failed
@@ -561,7 +584,10 @@ def report_check(
 
     # 2. registration — freeze or committed registration, as the lane owes
     if ln.freeze:
-        findings.take_all(GateFinding(BLOCKER, gap) for gap in freeze_gaps(ctx))
+        findings.take_all(
+            GateFinding(BLOCKER, gap, evidence_kind=GUARANTEED)
+            for gap in freeze_gaps(ctx)
+        )
     else:
         print(
             f'  {ctx.protocol.name}: cost = "{ctx.head.cost}" — no freeze and no preflight '
@@ -574,13 +600,15 @@ def report_check(
 
     # 3. finalize — always, with its blockers named
     findings.take_all(
-        GateFinding(BLOCKER, gap) for gap in finalize_gaps(ctx.area, ctx.protocol)
+        GateFinding(BLOCKER, gap, evidence_kind=GUARANTEED)
+        for gap in finalize_gaps(ctx.area, ctx.protocol)
     )
 
     # 4. full run — only with an answering run; finalize names its absence
     if ctx.run is not None:
         findings.take_all(
-            GateFinding(BLOCKER, gap) for gap in unreportable_gaps(ctx, ln.freeze)
+            GateFinding(BLOCKER, gap, evidence_kind=GUARANTEED)
+            for gap in unreportable_gaps(ctx, ln.freeze)
         )
 
     # 5. analysis — coverage and rendering where the lane owes the audit
@@ -803,7 +831,8 @@ def hold_report(path: Path, text: str, repo: Path, sources: Sources) -> int:
         out.warn(
             f"{rel}: no assigned source found for the numbers on "
             f"{len(unsourced)} line(s) — they stand outside every generated "
-            f"result block (a hint, not a check of the numbers):"
+            f"result block (a hint, not a check of the numbers):",
+            evidence_kind=STATIC_EVIDENCE,
         )
         for n, numbers in unsourced:
             out.note(f"    {rel}:{n}: {', '.join(numbers)}")
@@ -815,7 +844,8 @@ def hold_report(path: Path, text: str, repo: Path, sources: Sources) -> int:
             f"{rel}: cites {', '.join(undeclared)}, which no protocol declares as "
             f"its result — a reported number is declared by `protocol-fill "
             f"<PROTOCOL> --from-run`, and its block written by `--into {rel}`; "
-            f"an exploration's run is cited, not reported"
+            f"an exploration's run is cited, not reported",
+            evidence_kind=GUARANTEED,
         )
     return out.report("report-check", "reporting")
 

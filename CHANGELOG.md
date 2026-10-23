@@ -254,6 +254,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A gate finding says what carries it.** `GateFinding.evidence_kind`
+  (`gate.GUARANTEED` / `gate.STATIC_EVIDENCE`) is a required keyword at
+  every site — `coded(…, evidence_kind=…)`, `Findings.warn(msg,
+  evidence_kind=…)`; `Findings.block` is always guaranteed, and a
+  static-evidence BLOCKER is refused in the constructor. The kind
+  classifies the sentence, not the thing it is about: "record X holds an
+  undecided BLOCKER" is a register fact (guaranteed), the judgement it
+  names keeps its grade in the record. Of the gates' sentences nine are
+  static evidence: the never-read [A] key, a constant copied by hand, the
+  four stamp-coverage warnings, a lowered cost tier, numbers outside every
+  result block, and criterion-n input mismatches. The dotted line names
+  it (`WARNING · static evidence · a.py:3 · …`), prefixed lines stay as
+  they were, the summary counts it (`3 warning(s) (2 static evidence)`).
+  `labkit-params`' column `tier` is `evidence` and reads the same
+  constants (`ParamRow.evidence_kind`). Audit 2026-10-23, C5.
+
 - **One name per thing in the lane and in finalize.** `Lane.tier` is
   `Lane.cost_tier`, as the run record calls the field, and
   `standard_contract.tier(cost)` is `cost_tier(cost)`: "tier" named the

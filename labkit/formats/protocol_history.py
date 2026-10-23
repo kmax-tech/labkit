@@ -13,6 +13,7 @@ Read-only; git is asked through `repo.git_run`.
 from pathlib import Path
 from typing import NamedTuple
 
+from labkit.formats.gate import GUARANTEED
 from labkit.formats import protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
 from labkit.formats.protocol_check import seconds_registration_missing
@@ -124,6 +125,7 @@ def check_protocol_id(
                 + ", ".join(str(q) for q in others)
                 + ". An id binds runs to ONE protocol; re-stamp the copy.",
                 form=AS_WRITTEN,
+                evidence_kind=GUARANTEED,
             )
         )
     was = id_in_git_head(path)
@@ -135,6 +137,7 @@ def check_protocol_id(
                 f"({was} -> {head.id}) — runs bound to the old id stop "
                 f"resolving.",
                 form=AS_WRITTEN,
+                evidence_kind=GUARANTEED,
             )
         )
     return out
@@ -219,4 +222,8 @@ def check_annotation_validity(
     where = (
         f"{path}: [model] annotation_validity protocol = {m.annotation_validity.value}"
     )
-    return [GateFinding(BLOCKER, f"{where} — {bound}", form=AS_WRITTEN)]
+    return [
+        GateFinding(
+            BLOCKER, f"{where} — {bound}", form=AS_WRITTEN, evidence_kind=GUARANTEED
+        )
+    ]

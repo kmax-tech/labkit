@@ -63,6 +63,7 @@ import contextlib
 import io
 from pathlib import Path
 
+from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import metrics_path, run_path
 from labkit.formats import console, findings as audit_findings, promises, protocol_block
 from labkit.formats.standard_contract import lane
@@ -199,14 +200,14 @@ def check_answering_run(
             *unreportable_warnings(answering_run),
         ):
             if warning:
-                findings.warn(warning)
+                findings.warn(warning, evidence_kind=GUARANTEED)
         blockers, notes = row_provenance_findings(answering_run)
         for b in blockers:
             findings.block(b)
         for n in notes:
             findings.note(f"  {n}")
         for w in arm_findings(text, area, answering_run):
-            findings.warn(w)
+            findings.warn(w, evidence_kind=GUARANTEED)
     return answering_run
 
 
@@ -252,7 +253,7 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
         if u.grade == "BLOCKER":
             findings.block(line)
         elif u.grade == "WARNING":
-            findings.warn(line)
+            findings.warn(line, evidence_kind=GUARANTEED)
         else:
             findings.note(f"  {line}")
     if not seen:
@@ -347,13 +348,16 @@ def check_open_fields(
     the README's route block (CODE-016)."""
     holes = open_holes(text, head)
     for lineno, label in holes:
-        findings.warn(f"{protocol.name}:{lineno}: {label}")
+        findings.warn(f"{protocol.name}:{lineno}: {label}", evidence_kind=GUARANTEED)
     stale = readme_placeholders(protocol.parent)
     for line in stale:
-        findings.warn(f"{line} — a stamped placeholder, fill or delete the line")
+        findings.warn(
+            f"{line} — a stamped placeholder, fill or delete the line",
+            evidence_kind=GUARANTEED,
+        )
     route = readme_route(protocol.parent, protocol.name)
     for line in route:
-        findings.warn(line)
+        findings.warn(line, evidence_kind=GUARANTEED)
     if not holes and not stale and not route:
         findings.note("  all fields filled")
 
@@ -365,7 +369,7 @@ def check_provenance(findings: Findings, area: Path, answering_run: Path) -> Non
     for line in b:
         findings.block(line)
     for line in w:
-        findings.warn(line)
+        findings.warn(line, evidence_kind=GUARANTEED)
     if not b and not w:
         findings.note("  source frozen in the run; source and output tracked in git")
 
@@ -383,7 +387,10 @@ def check_area_tests(findings: Findings, area: Path) -> None:
     elif tests.state == "ok":
         findings.note(f"  ok — {', '.join(t.name for t in tests.files)}")
     elif tests.state == "no-pytest":
-        findings.warn("pytest is not installed in this interpreter — tests not run")
+        findings.warn(
+            "pytest is not installed in this interpreter — tests not run",
+            evidence_kind=GUARANTEED,
+        )
     else:
         for ln in tests.tail:
             findings.note(f"  {ln}")
@@ -400,7 +407,7 @@ def check_criterion_n(findings: Findings, answering_run: Path) -> None:
     """Station 7: a criterion's denominator that matches no recorded input count."""
     w = criterion_n_input_mismatches(answering_run)
     for line in w:
-        findings.warn(line)
+        findings.warn(line, evidence_kind=STATIC_EVIDENCE)
     if not w:
         findings.note("  every c<i>_n equals a recorded input count (or there is none)")
 

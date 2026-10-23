@@ -16,7 +16,10 @@ The chain is `intent → explicit promise → code → run → reported number`.
 Every check belongs to one of three tiers — **guaranteed** (exact,
 mechanical, silent on correct input), **static evidence** (warns, never
 blocks), **agent audit** (semantics). Never present a static check as proof
-of semantics. Contract and rationale: `docs/promise-block.md`.
+of semantics. A gate's finding carries its kind as data
+(`gate.GateFinding.evidence_kind`, guaranteed or static evidence — a
+static-evidence blocker is refused); the agent audit's findings are the
+records' (`findings.Finding`). Contract and rationale: `docs/promise-block.md`.
 
 ## Read first
 

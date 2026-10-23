@@ -182,7 +182,7 @@ class TestUniqueness(unittest.TestCase):
         above "OK — must fields filled". The twin: nothing found, OK."""
         from dataclasses import replace
 
-        from labkit.formats.gate import BLOCKER, GateFinding
+        from labkit.formats.gate import BLOCKER, GUARANTEED, GateFinding
 
         base = protocol_report.FileReport(path=Path("P.md"), head_error=None)
         self.assertTrue(base.clean)
@@ -190,7 +190,14 @@ class TestUniqueness(unittest.TestCase):
             ("audit_drift", replace(base, audit_drift="the code now stamps abc")),
             (
                 "id_findings",
-                replace(base, id_findings=[GateFinding(BLOCKER, "P.md: DUPLICATE")]),
+                replace(
+                    base,
+                    id_findings=[
+                        GateFinding(
+                            BLOCKER, "P.md: DUPLICATE", evidence_kind=GUARANTEED
+                        )
+                    ],
+                ),
             ),
             (
                 "cost_lowered",

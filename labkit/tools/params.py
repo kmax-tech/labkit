@@ -39,6 +39,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import run_path
 from labkit.formats import console, promises, protocol_block
 from labkit.checks.intent_check import protocol_id_of
@@ -55,8 +56,6 @@ from labkit.formats.answering_run import (
     model_provenance_run,
 )
 
-GUARANTEED = "guaranteed"
-EVIDENCE = "static evidence"
 MEASURE_SCRIPT = Path("scripts") / "01_measure.py"
 
 
@@ -72,7 +71,8 @@ class ParamRow:
         meaning: What the value is to the measurement (registered constant,
             recorded parameter, the answering model, an unrecorded constant).
         in_run: The value the run recorded under that name, or "—".
-        tier: `guaranteed` or `static evidence`.
+        evidence_kind: `gate.GUARANTEED` or `gate.STATIC_EVIDENCE` — what carries
+            the line (a composite cell when a value is absent).
     """
 
     name: str
@@ -80,7 +80,7 @@ class ParamRow:
     home: str
     meaning: str
     in_run: str
-    tier: str
+    evidence_kind: str
 
 
 def _shown(value: object, width: int = 38) -> str:
@@ -122,7 +122,7 @@ def recorded_rows(run_config: dict, run_name: str) -> list[ParamRow]:
                     else "recorded parameter of this run"
                 ),
                 in_run=_shown(value),
-                tier=EVIDENCE if spec else GUARANTEED,
+                evidence_kind=STATIC_EVIDENCE if spec else GUARANTEED,
             )
         )
     return rows
@@ -152,12 +152,12 @@ def constant_rows(
                 else ""
             )
             in_run = f"— (not recorded{held})"
-            tier = f"{GUARANTEED}: absent; as a fault {EVIDENCE}"
+            kind = f"{GUARANTEED}: absent; as a fault {STATIC_EVIDENCE}"
         else:
             in_run = _shown(rec.recorded) + (
                 "" if rec.state == "equal" else "  ≠ DIFFERS"
             )
-            tier = GUARANTEED
+            kind = GUARANTEED
         rows.append(
             ParamRow(
                 name=rec.name,
@@ -165,7 +165,7 @@ def constant_rows(
                 home=f"{protocol_name} [{rec.promise_id}] constants",
                 meaning="registered constant",
                 in_run=in_run,
-                tier=tier,
+                evidence_kind=kind,
             )
         )
     return rows
@@ -189,7 +189,7 @@ def model_rows(run_dir: Path) -> list[ParamRow]:
                 meaning="model provenance: not recorded in models_resolved along lineage "
                 + " → ".join(chain),
                 in_run="—",
-                tier=GUARANTEED,
+                evidence_kind=GUARANTEED,
             )
         ]
     found_cfg = read_run_config(found)
@@ -211,7 +211,7 @@ def model_rows(run_dir: Path) -> list[ParamRow]:
                 in_run="recorded"
                 if found == run_dir
                 else f"inherited from {found.name}",
-                tier=GUARANTEED,
+                evidence_kind=GUARANTEED,
             )
         )
     return rows
@@ -249,7 +249,7 @@ def script_constant_rows(
             home=f"{MEASURE_SCRIPT}:{line}",
             meaning="module constant not in the record — whether it moves the number is not claimed",
             in_run="—",
-            tier=EVIDENCE,
+            evidence_kind=STATIC_EVIDENCE,
         )
         for name, (value, line) in literals.items()
         if name.isupper()
@@ -288,8 +288,8 @@ def params_table(area: Path, protocol: Path, run_dir: Path) -> list[ParamRow]:
 
 def render_table(rows: list[ParamRow]) -> str:
     """The rows as one aligned table, a header line first."""
-    header = ParamRow("parameter", "value", "home", "meaning", "in run", "tier")
-    cols = ("name", "value", "home", "meaning", "in_run", "tier")
+    header = ParamRow("parameter", "value", "home", "meaning", "in run", "evidence")
+    cols = ("name", "value", "home", "meaning", "in_run", "evidence_kind")
     width = {c: max(len(getattr(r, c)) for r in (header, *rows)) for c in cols}
     lines = []
     for r in (header, *rows):

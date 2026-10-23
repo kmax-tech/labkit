@@ -75,6 +75,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats import console, promises, protocol_block, rules, standard_contract
 from labkit.formats.gate import (
     EXIT_CONTRACT,
@@ -167,6 +168,7 @@ def _intent_id_findings(area: Path, protocol: Path) -> list[GateFinding]:
                 f"and the metrics check fails after the tokens are spent",
                 rule=ID_RULE,
                 fix="implement the key or drop the id",
+                evidence_kind=GUARANTEED,
             )
         )
     for i in sorted(set(unmistakable) - registered):
@@ -179,6 +181,7 @@ def _intent_id_findings(area: Path, protocol: Path) -> list[GateFinding]:
                 f"nobody registered",
                 rule=ID_RULE,
                 fix="register it or rename the key",
+                evidence_kind=GUARANTEED,
             )
         )
     return findings
@@ -203,6 +206,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                 f"promise block: {exc}",
                 rule=ID_RULE,
                 fix="fix the block",
+                evidence_kind=GUARANTEED,
             )
         ]
     if block is None:
@@ -220,6 +224,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                     protocol.name,
                     f"[{p.id}] declared scope: {exc} · runlog refuses the run",
                     fix="fix the scope",
+                    evidence_kind=GUARANTEED,
                 )
             )
         out += constant_copies(area, protocol, p)
@@ -233,6 +238,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                     f"[{p.id}] declares key '{p.key}', which no script "
                     f"mentions{hint} · intent-check fails after the run",
                     fix="report the declared key or fix the block",
+                    evidence_kind=GUARANTEED,
                 )
             )
     return out
@@ -364,6 +370,7 @@ def admissibility_reads(
                 protocol.name,
                 f"[A] keys: read check not done — {exc}",
                 fix="fix the file",
+                evidence_kind=GUARANTEED,
             )
         ]
     return [
@@ -374,6 +381,7 @@ def admissibility_reads(
             f"the C verdict is reported whether [{p.id}] held or not",
             rule=ID_RULE,
             fix=f'withhold the verdict when it fails (`if not m["{p.key}"]: …`)',
+            evidence_kind=STATIC_EVIDENCE,
         )
         for p in owed
         if p.key not in reads
@@ -444,6 +452,7 @@ def constant_copies(
                         f"judges by an unregistered value once they drift",
                         fix=f'read it with promises.constants(PROTOCOL, "{p.id}")'
                         f'["{target.id}"]',
+                        evidence_kind=STATIC_EVIDENCE,
                     )
                 )
     return out

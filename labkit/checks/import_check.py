@@ -14,6 +14,7 @@ import ast
 import re
 from pathlib import Path
 
+from labkit.formats.gate import STATIC_EVIDENCE
 from labkit.formats.gate import WARNING, GateFinding, coded
 from labkit.formats.repo import shown
 from labkit.formats.scope_sha import (
@@ -136,6 +137,7 @@ def _import_findings(
                         f"there moves the number unseen",
                         rule=rule,
                         fix=fix,
+                        evidence_kind=STATIC_EVIDENCE,
                     ),
                 )
             )
@@ -210,6 +212,7 @@ def _coverage_in(
                         f"stamp does not follow",
                         rule=rule,
                         fix=fix,
+                        evidence_kind=STATIC_EVIDENCE,
                     ),
                 )
             )
@@ -227,6 +230,7 @@ def _coverage_in(
                         f"changes the number unseen",
                         rule=rule,
                         fix=fix,
+                        evidence_kind=STATIC_EVIDENCE,
                     ),
                 )
             )
@@ -246,6 +250,7 @@ def _coverage_in(
                             f"not cover it (uniagent 15–17: the script of 14)",
                             rule=rule,
                             fix=fix,
+                            evidence_kind=STATIC_EVIDENCE,
                         ),
                     )
                 )

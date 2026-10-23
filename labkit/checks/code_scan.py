@@ -16,6 +16,7 @@ import re
 from collections.abc import Iterable
 from pathlib import Path
 
+from labkit.formats.gate import GUARANTEED
 from labkit.formats.gate import BLOCKER, GateFinding, coded
 from labkit.formats.scope_sha import (
     ANALYSIS_GLOB,
@@ -208,4 +209,5 @@ def unreadable_source(exc: SourceError) -> GateFinding:
         None,
         f"{exc} · the code cannot be read, so no check over it holds",
         fix="fix or remove the file",
+        evidence_kind=GUARANTEED,
     )

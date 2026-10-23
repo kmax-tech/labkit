@@ -75,6 +75,7 @@ from collections.abc import Callable
 from typing import NamedTuple
 
 from labkit import PACKAGE_DIR
+from labkit.formats.gate import GUARANTEED
 from labkit.formats.runs import metrics_path, run_path
 from labkit.run import llm, llm_backends
 from labkit.run.llm import model_entry
@@ -562,6 +563,7 @@ def early_for_tier(area: Path, protocol: Path, mode: str) -> list[GateFinding]:
             "probe; one audit in --mode analysis after it covers the preflight rows too",
             rule="LAB-017 The number of audits follows the cost tier",
             fix="run first, audit once",
+            evidence_kind=GUARANTEED,
         )
     ]
 

@@ -320,9 +320,10 @@ der Kleinkram. Entschieden:
 - Keine Breaking-Pause vor 1.0: das Repo ist in der Entwicklung, die
   Lab-Repos ziehen über die Migrationssätze im CHANGELOG nach.
 
-**C5, zweiter Teil — `evidence_kind` am Gate-Finding (geplant, ein
-Commit).** Namen sind seit `ce7defc` eindeutig (`Lane.cost_tier`). Offen
-ist das Datenfeld. Durchgang über die echten Findings (2026-10-23):
+**C5, zweiter Teil — `evidence_kind` am Gate-Finding (umgesetzt
+2026-10-23, nach `ce7defc` für die Namen).** Grundlage war der Durchgang
+über die echten Findings; die drei Festlegungen darunter sind gebaut
+und in `gate.GateFinding` dokumentiert:
 
 | Finding (Text im Gate) | Gate | grade | evidence_kind |
 |---|---|---|---|
@@ -353,8 +354,8 @@ Drei Festlegungen daraus:
    und in der gepunkteten Form der Code-Checks (`WARNING · static evidence
    · a.py:12 · …`), weil dort schon Teile stehen. Prefixed-Zeilen bleiben
    `WARNING: …`; die Summary zählt: `2 blocker(s), 3 warning(s) (2 static
-   evidence)`. C5 schließt, wenn Feldbedeutung (Punkt 1) in `gate.py`
-   dokumentiert und getestet ist.
+   evidence)`. C5 ist damit geschlossen (Feldbedeutung in `gate.py`,
+   Tests in `tests/test_gate.py`, `EvidenceKind`).
 
 Notiert, nicht geplant: Audit-Records um die Protokoll-id ergänzen. Heute
 wird der Abgleich gegen die Registrierung aus dem Protokolltext berechnet;

@@ -84,7 +84,10 @@ class PromisePreflight(unittest.TestCase):
         label_only = SCRIPT.replace(' if m["a1_anchor_ok"] else None', "")
         findings = intent_id_lines(*area_with(label_only))
         self.assertEqual(len(findings), 1, findings)
-        self.assertTrue(findings[0].startswith("WARNING · 01_measure.py:"), findings)
+        self.assertTrue(
+            findings[0].startswith("WARNING · static evidence · 01_measure.py:"),
+            findings,
+        )
         self.assertIn(
             "[A1] key 'a1_anchor_ok' is written but nothing decides on it", findings[0]
         )
