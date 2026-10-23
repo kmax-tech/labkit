@@ -317,6 +317,86 @@ class ReportFiles(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no \\[result\\] run declared"):
             protocol_fill.into_report(text, area, "", P)
 
+    def test_the_two_step_commit_reaches_the_committed_report(self):
+        """Sixth haiku round (2026-10-23, t5, commits b47f915 and b629ddd):
+        REPORT.md citing the run was committed while the protocol with the
+        declaration stayed unstaged — the index's protocol declared nothing,
+        the hook warned of an exploration's citation and let it pass; the
+        next commit staged the protocol, and the untouched report was not
+        held again. Now a protocol whose declaration differs from HEAD's
+        reaches the committed reports citing that run."""
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None, git=True)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        report.write_text(f"c1_pass = True (run {self.RUN})\n", encoding="utf-8")
+        self._git(root, "add", "REPORT.md")
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 0, out)  # step one: an exploration's citation
+        self.assertIn("which no protocol declares as its result", out)
+        self._git(root, "commit", "-qm", "report")
+        # step two: the protocol declares the run; the report is untouched
+        proto = area / "PROTOCOL-x.md"
+        declaring = protocol_fill.fill_result_run(
+            proto.read_text(encoding="utf-8"), self.RUN
+        )
+        proto.write_text(declaring, encoding="utf-8")
+        code, out = self._gate(root, proto)  # the stop hears it first…
+        self.assertEqual(code, 1, out)
+        self._git(root, "add", str(proto))
+        code, out = self._gate(root, proto, staged=True)  # …the commit holds
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            "═══ report-check REPORT.md (a committed report citing a run "
+            "PROTOCOL-x.md newly declares as its result) ═══",
+            out,
+        )
+        self.assertIn(
+            f"REPORT.md: line 1: cites run {self.RUN}, the declared result of "
+            f"experiments/01-x/PROTOCOL-x.md, without its generated block",
+            out,
+        )
+        # the twin: the block written into the report and staged with the
+        # protocol — one consistent commit — passes, the report held once
+        written, _ = protocol_fill.into_report(
+            declaring, area, report.read_text(encoding="utf-8"), P
+        )
+        report.write_text(written, encoding="utf-8")
+        self._git(root, "add", "REPORT.md")
+        code, out = self._gate(root, proto, report, staged=True)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out.count("═══ report-check REPORT.md"), 1)
+        self.assertIn("(a report citing runs)", out)
+
+    def test_the_twin_a_committed_report_with_its_block_passes_the_declaring_commit(
+        self,
+    ):
+        """The consistent state reached the other way round: the committed
+        report already carries the generated block of the run the staged
+        protocol now declares — held, and clean. A protocol staged again
+        with the declaration HEAD already holds reaches nothing."""
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None, git=True)
+        root = area.parent.parent
+        proto = area / "PROTOCOL-x.md"
+        declaring = protocol_fill.fill_result_run(
+            proto.read_text(encoding="utf-8"), self.RUN
+        )
+        written, _ = protocol_fill.into_report(declaring, area, "# Report\n\n", P)
+        (root / "REPORT.md").write_text(written, encoding="utf-8")
+        self._git(root, "add", "REPORT.md")
+        self._git(root, "commit", "-qm", "report with its block")
+        proto.write_text(declaring, encoding="utf-8")
+        self._git(root, "add", str(proto))
+        code, out = self._gate(root, proto, staged=True)
+        self.assertEqual(code, 0, out)
+        self.assertIn("a committed report citing a run PROTOCOL-x.md newly", out)
+        self.assertNotIn("without its generated block", out)
+        self._git(root, "commit", "-qm", "declared")
+        proto.write_text(declaring + "\nmore prose\n", encoding="utf-8")
+        self._git(root, "add", str(proto))
+        code, out = self._gate(root, proto, staged=True)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("REPORT.md", out)  # the declaration is HEAD's: nothing reached
+
     def test_staged_reads_the_report_as_the_index_holds_it(self):
         root, report = self._reported(git=True)
         self._git(root, "add", "REPORT.md")

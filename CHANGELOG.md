@@ -134,6 +134,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A declaration committed after its citing report is held at that
+  commit.** `report-check --if-reported` held only the paths given: in
+  the sixth haiku round (2026-10-23, t5) REPORT.md citing the run was
+  committed while the protocol stayed unstaged — the commit's protocol
+  declared nothing, the hook warned of an exploration's citation — and
+  the next commit staged the declaration and held no report; the
+  delivered state carried the blocker neither commit saw. Now a protocol
+  among the paths whose `[result] run` differs from HEAD's
+  (`report_check.newly_declared`) reaches every committed report citing
+  that run (`report_check.committed_reports`): it is held like a changed
+  report, and owes its generated block. The heading says why it is held.
+  A report whose block is already committed passes; a declaration HEAD
+  already holds reaches nothing. At the stop the same.
 - **finalize no longer labels intent-check's notes as blockers.** On a red
   intent-check every stdout line became a BLOCKER, "using
   <run>/metrics.json (…)" and "WARNING — … Checking anyway" among them

@@ -74,8 +74,14 @@ protocol it names declares now — the block's run — and renders for it
 the repo (`report_blocks.cited_gaps`) — blockers; the protocol declaring a
 cited run joins the protocols the stations hold (`held_by_reports`); a
 number outside every block is a warning, no source being assigned to it
-(`report_blocks.unsourced_numbers`, static evidence). Only the paths
-given: an old citation in a file nobody touched reopens nothing.
+(`report_blocks.unsourced_numbers`, static evidence). The paths given,
+and what a changed declaration reaches: a protocol among them whose
+declaration differs from HEAD's (`newly_declared`) holds every committed
+report citing that run (`committed_reports`, `reached_reports`) — the
+number such a report shows became a declared result in this state, so it
+owes its block now (the two-step commit of the sixth haiku round, t5,
+2026-10-23). An old citation of a run whose declaration did not change
+reopens nothing.
 
 `--staged` is the pre-commit's form. The commit holds the index, the
 stations read the working tree: so the declaration is read from the index
@@ -114,7 +120,8 @@ from labkit.formats.repo import (
     area_protocols,
     choose_protocol,
     git_root,
-    git_run,
+    under_root,
+    indexed_files,
     indexed_protocols,
     layout_root,
     no_such_area,
@@ -122,6 +129,7 @@ from labkit.formats.repo import (
     repo_protocols,
     SKIP_DIRS,
     status_entries,
+    text_at,
 )
 from labkit.formats.runs import read_run_config, recorded_commit, unreportable
 from labkit.formats.scope_sha import areas_touched
@@ -657,10 +665,17 @@ def affected_protocols(
 def index_text(repo: Path, path: Path) -> str | None:
     """PATH's content as git's index holds it — what a commit now would
     carry — or None when the index does not hold it (untracked, or staged
-    as deleted). PATH must lie under REPO."""
-    rel = path.resolve().relative_to(repo.resolve()).as_posix()
-    r = git_run(["show", f":{rel}"], repo)
-    return r.stdout if r.returncode == 0 else None
+    as deleted). PATH must lie under REPO (`repo.text_at`)."""
+    return text_at(repo, path)
+
+
+def state_text(repo: Path, path: Path, *, staged: bool) -> str | None:
+    """PATH's content as the gate's state holds it: the index when STAGED
+    (`index_text`), else the working tree; None when that state does not
+    hold the file."""
+    if staged:
+        return index_text(repo, path)
+    return path.read_text(encoding="utf-8") if path.is_file() else None
 
 
 def tree_differs(repo: Path, area: Path) -> list[str]:
@@ -691,18 +706,75 @@ def report_files(
         full = (path if path.is_absolute() else root / path).resolve()
         if full.suffix != REPORT_SUFFIX or PROTOCOL_NAME.match(full.name):
             continue
-        try:
-            rel = full.relative_to(root)
-        except ValueError:
-            # a membership test, not a shown path; home: repo.shown
+        if not under_root(root, full):
             continue  # outside the repo: no commit and no stop holds it
-        if SKIP_DIRS & set(rel.parts):
+        if SKIP_DIRS & set(full.relative_to(root).parts):
             continue
-        if staged:
-            text = index_text(repo, full)
-        else:
-            text = full.read_text(encoding="utf-8") if full.is_file() else None
+        text = state_text(repo, full, staged=staged)
         if text is not None and report_blocks.cited_run_ids(text):
+            out.append((full, text))
+    return out
+
+
+def newly_declared(
+    protocols: list[Path], repo: Path, *, staged: bool
+) -> dict[str, list[Path]]:
+    """The runs PROTOCOLS declare as their result in the gate's state that
+    HEAD's version of the same protocol did not — run id → the protocols
+    newly declaring it. A protocol HEAD does not hold declares everything
+    newly; one whose head does not read in either state names nothing
+    here (`hold_declared` holds it). Empty outside a repository or before
+    the first commit: no committed state to differ from."""
+    out: dict[str, list[Path]] = {}
+    if git_root(repo) is None:
+        return out
+    for p in protocols:
+        if not under_root(repo, p):
+            continue  # outside the repo: no HEAD to differ from
+        text = state_text(repo, p, staged=staged)
+        if text is None:
+            continue
+        try:
+            now = protocol_block.declared_run(text)
+        except protocol_block.BlockError:
+            continue
+        if now is None:
+            continue
+        before = text_at(repo, p, "HEAD")
+        try:
+            was = None if before is None else protocol_block.declared_run(before)
+        except protocol_block.BlockError:
+            was = None
+        if now != was:
+            out.setdefault(now, []).append(p)
+    return out
+
+
+def committed_reports(
+    run_ids: set[str], repo: Path, *, staged: bool
+) -> list[tuple[Path, str]]:
+    """(path, text) of every report git's index holds (`repo.indexed_files`,
+    the Markdown files `report_files` would hold) citing a run of RUN_IDS,
+    with its text as the state holds it. The reports a changed declaration
+    reaches without being changed themselves: sixth haiku round
+    (2026-10-23, t5), REPORT.md citing the run was committed while the
+    protocol stayed unstaged — the commit's protocol declared nothing and
+    the hook warned of an exploration's citation; the next commit staged
+    the declaration and held no report. The delivered state carried the
+    blocker neither commit saw. Empty outside a repository."""
+    if not run_ids or git_root(repo) is None:
+        return []
+    candidates = [
+        p
+        for p in indexed_files(repo)
+        if p.suffix == REPORT_SUFFIX and not PROTOCOL_NAME.match(p.name)
+    ]
+    out: list[tuple[Path, str]] = []
+    for full in candidates:
+        text = state_text(repo, full, staged=staged)
+        if text is None:
+            continue
+        if any(r in run_ids for _, r in report_blocks.cited_run_ids(text)):
             out.append((full, text))
     return out
 
@@ -809,15 +881,23 @@ def owed_blocks(
     ]
 
 
-def hold_report(path: Path, text: str, repo: Path, sources: Sources) -> int:
+#: why a report is held, printed in its heading: it is among the paths, or
+#: a protocol among them newly declares a run it cites
+AMONG_PATHS = "a report citing runs"
+
+
+def hold_report(
+    path: Path, text: str, repo: Path, sources: Sources, *, held_as: str = AMONG_PATHS
+) -> int:
     """Hold one report: its blocks equal their protocols' rendering, every
     cited run id a run of the repo, every cited declared result shown in
     its protocol's block (blockers); a cited run no protocol declares a
     WARNING (guaranteed); the numbers outside every block a WARNING that
     is static evidence — a hint at where to look, not a check of them.
-    0 clean or warnings only, 1 a blocker."""
+    HELD_AS says in the heading why this report is held. 0 clean or
+    warnings only, 1 a blocker."""
     rel = path.relative_to(repo.resolve()).as_posix()
-    print(f"═══ report-check {rel} (a report citing runs) ═══")
+    print(f"═══ report-check {rel} ({held_as}) ═══")
     out = Findings()
     try:
         found = report_blocks.blocks(text)
@@ -866,15 +946,21 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     numbers are hints. STAGED (the pre-commit): declarations and reports are
     read from the index, and an area whose tree differs from the index is a
     blocker — the stations read the tree, the commit holds the index.
-    Returns the worst exit code."""
+    A protocol among them whose declaration differs from HEAD's
+    (`newly_declared`) reaches the committed reports citing that run
+    (`committed_reports`): they are held as if changed, since the number
+    they show became a declared result in this very state (the two-step
+    commit of the sixth haiku round, 2026-10-23). Returns the worst exit
+    code."""
+    protocols = affected_protocols(paths, repo, staged=staged)
     reports = report_files(paths, repo, staged=staged)
+    reached = reached_reports(protocols, reports, repo, staged=staged)
     sources = (
         repo_sources(repo, staged=staged)
-        if reports
+        if reports or reached
         else Sources(repo.resolve(), set(), {}, {}, {})
     )
-    protocols = affected_protocols(paths, repo, staged=staged)
-    for p in held_by_reports(reports, sources):
+    for p in held_by_reports(reports + [(p, t) for p, t, _ in reached], sources):
         if p not in protocols:
             protocols.append(p)
     worst = 0
@@ -882,7 +968,39 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
         worst = max(worst, hold_declared(protocol, repo, staged=staged))
     for path, text in reports:
         worst = max(worst, hold_report(path, text, repo, sources))
+    for path, text, held_as in reached:
+        worst = max(worst, hold_report(path, text, repo, sources, held_as=held_as))
     return worst
+
+
+def reached_reports(
+    protocols: list[Path],
+    reports: list[tuple[Path, str]],
+    repo: Path,
+    *,
+    staged: bool,
+) -> list[tuple[Path, str, str]]:
+    """(path, text, why held) of every committed report not among REPORTS
+    that cites a run one of PROTOCOLS newly declares in the gate's state
+    (`newly_declared`, `committed_reports`); the third element is the
+    heading `hold_report` prints, naming the declaring protocol(s)."""
+    declared = newly_declared(protocols, repo, staged=staged)
+    held = {p for p, _ in reports}
+    out: list[tuple[Path, str, str]] = []
+    for path, text in committed_reports(set(declared), repo, staged=staged):
+        if path in held:
+            continue
+        cited = {r for _, r in report_blocks.cited_run_ids(text)} & set(declared)
+        by = sorted({p.name for run_id in cited for p in declared[run_id]})
+        out.append(
+            (
+                path,
+                text,
+                f"a committed report citing a run {', '.join(by)} newly declares "
+                f"as its result",
+            )
+        )
+    return out
 
 
 def held_by_reports(reports: list[tuple[Path, str]], sources: Sources) -> list[Path]:

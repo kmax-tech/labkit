@@ -60,3 +60,12 @@ the analysis audit.
 - `--staged` reads the index: until 0.99.0 the hook read the tree, and a
   reported answer staged, then reopened in the tree, passed the commit
   (audit 2026-10-19).
+- A changed declaration reaches the committed reports citing its run
+  (`newly_declared`, `committed_reports`): sixth haiku round on c49e760
+  (2026-10-23, t5, commits b47f915 and b629ddd) — REPORT.md citing the run
+  was committed while the protocol with the declaration stayed unstaged
+  (the index's protocol declared nothing: a warning), the next commit
+  staged the protocol and held no report; the delivered state failed
+  `report-check --if-reported` with a blocker neither commit saw. Only
+  the paths given were held until then. The twin: a report whose block
+  is already committed passes the declaring commit.
