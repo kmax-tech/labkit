@@ -187,9 +187,13 @@ Forschung und Benchmark-Fallliste liegen in
   3. Umgesetzt (Commit „docs: choosing the kind“): zwei Prüffragen in
      `labkit-init exp --help` und `AGENTS.md.template`; „Choosing the kind“
      mit Grenzfalltabelle (13 Fälle) im Field Guide.
-  4. Probe: Schreibprobe (`docs/notes/2026-10-22-kind-writing-probe.md`)
-     mit kaltem Agenten auf den Grenzfällen wiederholen, v. a.
-     LLM-Annotation → `compute` + `annotation_validity`.
+  4. Probe: erledigt 2026-10-23. Kalter Haiku-Agent, nur `--help` und der
+     kind-Abschnitt des Field Guides, zehn neue Fälle (nicht aus der
+     Tabelle), Erwartung vorab festgelegt: 10/10 bei `kind` und
+     `number_describes`. Lücke: Auswahl auf demselben Set, auf dem berichtet
+     wird (Few-shot-Fall), war als `fit` richtig, aber die Doku sagte nicht,
+     dass die Zahl dann optimistisch ist — Satz im Field Guide ergänzt.
+     Clustering (Silhouette) ohne Tabellenzeile richtig als `compute`.
   Release 0.104.0 hängt an der Abnahme, nicht allein an diesem Umbau;
   Push und Tag beim Nutzer.
 

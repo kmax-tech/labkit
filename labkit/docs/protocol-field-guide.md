@@ -198,7 +198,10 @@ inferential statistic (ML lecture, ML:VII-1). (2) Was that model or
 procedure trained, adjusted or selected in this experiment — a threshold or
 a prompt chosen on performance data is model selection, the prompt a
 hyperparameter (ML:II-189)? Yes → `fit` ("Learning task: Fit D", ML:I);
-no → `apply`.
+no → `apply`. Selecting on the very data the number is reported from keeps
+the kind `fit` but makes the number optimistic, a training error rather than
+a holdout error (ML:II-175): report it on a separate test set or by nested
+cross-validation.
 
 | task | reported number | kind |
 |---|---|---|
