@@ -10,6 +10,7 @@ labkit holds the claim and the evidence to each other and binds a protocol
 reference; whether the evidence carries the annotation stays the audit's.
 """
 
+import json
 import sys
 import tempfile
 import unittest
@@ -26,11 +27,21 @@ from labkit.formats import (  # noqa: E402
 from labkit.formats.gate import BLOCKER  # noqa: E402
 from labkit.probes import usability  # noqa: E402
 from labkit.tools import scaffold  # noqa: E402
-from protocol_fixture import head  # noqa: E402
+from protocol_fixture import head, run_record  # noqa: E402
 
 VALIDATION_ID = "p-1111111111111111"
 RUN = "2026-10-23T10-00-00_ab12"
 DOI = "10.18653/v1/2023.acl-long.1"
+#: what the validation run recorded (`models_resolved`): another model than
+#: the fixture's models.toml names today
+RECORDED = {
+    "haiku": {
+        "backend": "claude-cli",
+        "model": "claude-haiku-4-5",
+        "alias": "haiku",
+        "controls_temperature": False,
+    }
+}
 
 
 def _compute(claim: str) -> str:
@@ -278,9 +289,17 @@ class Evidence(unittest.TestCase):
             (val / "runs" / RUN / "metrics.json").write_text(
                 '{"macro_f1": 0.87}\n', encoding="utf-8"
             )
+            # the validation ran with another model than models.toml names today
+            self._write_config(val, RECORDED)
         share = root / "experiments" / "02-share"
         share.mkdir(parents=True)
         return share, VALIDATION_ID
+
+    @staticmethod
+    def _write_config(val: Path, models_resolved: dict) -> None:
+        (val / "runs" / RUN / "config.json").write_text(
+            json.dumps(run_record(models_resolved=models_resolved)), encoding="utf-8"
+        )
 
     def _evidence(self, share: Path, claim: str) -> str:
         from labkit.gates import audit
@@ -306,8 +325,40 @@ class Evidence(unittest.TestCase):
         self.assertIn(f'id = "{VALIDATION_ID}"', shown)
         self.assertIn(f"runs/{RUN}/metrics.json =====", shown)
         self.assertIn('"macro_f1": 0.87', shown)
-        self.assertIn('model = "claude-haiku-5-5"', shown)
         self.assertIn("Is this claim causal?", shown)
+
+    def test_the_model_shown_is_the_one_the_validation_ran_with(self):
+        """The run record names the model that answered; today's models.toml
+        may name another, and is shown only as such (review 2026-10-23,
+        finding 4)."""
+        with tempfile.TemporaryDirectory() as d:
+            share, pid = self._lab(
+                d, head(id=VALIDATION_ID, kind="apply", model="haiku", result=RUN)
+            )
+            shown = self._evidence(
+                share,
+                'number_describes = "target_property"\n'
+                f'annotation_validity = {{ protocol = "{pid}" }}',
+            )
+        recorded, current = shown.split("===== EVIDENCE: current configuration")
+        self.assertIn(f"recorded by run {RUN}", recorded)
+        self.assertIn('"model": "claude-haiku-4-5"', recorded)
+        self.assertNotIn("claude-haiku-5-5", recorded)
+        self.assertIn("not necessarily what the validation ran with", current)
+        self.assertIn('model = "claude-haiku-5-5"', current)
+
+    def test_a_run_that_recorded_no_model_says_so(self):
+        with tempfile.TemporaryDirectory() as d:
+            share, pid = self._lab(
+                d, head(id=VALIDATION_ID, kind="apply", model="haiku", result=RUN)
+            )
+            self._write_config(Path(d) / "experiments" / "01-validation", {})
+            shown = self._evidence(
+                share,
+                'number_describes = "target_property"\n'
+                f'annotation_validity = {{ protocol = "{pid}" }}',
+            )
+        self.assertIn("recorded no model", shown)
 
     def test_an_unbound_reference_says_so_and_shows_nothing(self):
         with tempfile.TemporaryDirectory() as d:
@@ -400,9 +451,8 @@ class StaleEvidence(Evidence):
             "its prompt": lambda v, root: (v / "scripts" / "01_measure.py").write_text(
                 'PROMPT = "Is this claim causal? Say yes."\n', encoding="utf-8"
             ),
-            "its model entry": lambda v, root: (root / "models.toml").write_text(
-                '[models.haiku]\nbackend = "claude-cli"\nmodel = "claude-haiku-4"\n',
-                encoding="utf-8",
+            "its recorded model": lambda v, root: self._write_config(
+                v, {"haiku": dict(RECORDED["haiku"], model="claude-opus-5-5")}
             ),
         }
         for what, edit in edits.items():
@@ -417,12 +467,16 @@ class StaleEvidence(Evidence):
                     "experiments/01-validation/PROTOCOL-validation.md", gap or ""
                 )
 
-    def test_another_alias_in_models_toml_leaves_the_record_standing(self):
+    def test_todays_models_toml_leaves_the_record_standing(self):
+        """What the validation ran with is its run record; models.toml may
+        change after it without changing what was validated."""
         with tempfile.TemporaryDirectory() as d:
             share, text, _ = self._area(d)
             name = self._record(share, text)
-            with (Path(d) / "models.toml").open("a", encoding="utf-8") as f:
-                f.write('[models.opus]\nbackend = "claude-cli"\nmodel = "o"\n')
+            (Path(d) / "models.toml").write_text(
+                '[models.haiku]\nbackend = "claude-cli"\nmodel = "claude-haiku-6"\n',
+                encoding="utf-8",
+            )
             self.assertIsNone(self._gap(share, name, text))
 
     def test_a_doi_binds_its_string_only(self):
@@ -469,7 +523,7 @@ class AffectedByEvidence(StaleEvidence):
             "the bound protocol": val / "PROTOCOL-validation.md",
             "its result": val / "runs" / RUN / "metrics.json",
             "its prompt": val / "scripts" / "01_measure.py",
-            "its model entry": root / "models.toml",
+            "its recorded model": val / "runs" / RUN / "config.json",
         }
 
     def test_a_changed_validation_touches_the_area_that_rests_on_it(self):

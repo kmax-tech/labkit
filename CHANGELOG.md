@@ -68,8 +68,11 @@ pins (`requirements.txt` / `requirements.lock`).
   "10.…" }` (its form only); evidence with `model_outputs`, and either key
   with a fit or an apply, is a must finding (`protocol_check.kind_gap`).
   Neither form proves the annotator suits — that stays the audit's, which
-  is shown the bound protocol, its result, its model entry and its prompt;
-  the area stamp (`scope_sha.validation_basis`) covers that evidence, so
+  is shown the bound protocol, its result, the model its run recorded
+  (`answering_run.recorded_models`) and its prompt, today's models.toml
+  entry and prompt sources marked as today's; the area stamp
+  (`scope_sha.validation_basis`) covers the protocol, the result, the run
+  records and the scripts — not today's models.toml — so
   an audit record goes stale when the bound validation changes (a DOI by
   its string only — the cited content is bound by nothing). Areas without
   `annotation_validity` keep their stamp. An

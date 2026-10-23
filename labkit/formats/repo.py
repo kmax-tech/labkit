@@ -185,9 +185,8 @@ def lab_root(start: Path) -> Path | None:
 def model_entry(alias: str | None, start: Path) -> str:
     """`[models.<alias>]` of the lab's `models.toml` (`lab_root` of START) as
     TOML lines, or a sentence why not — what the audit is shown of a bound
-    validation's model and what the area stamp covers of it
-    (`scope_sha.validation_basis`), so a change to another alias moves
-    neither."""
+    validation's alias as today's setting (`audit.validity_evidence`; what
+    the validation ran with is its run record, `answering_run.recorded_models`)."""
     if alias is None:
         return "the bound protocol names no [model] alias"
     root = lab_root(start)

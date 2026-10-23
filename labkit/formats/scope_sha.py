@@ -46,9 +46,7 @@ from pathlib import Path
 from labkit.formats.repo import (
     area_protocols,
     areas_of,
-    lab_root,
     layout_root,
-    model_entry,
     no_such_area,
     repo_protocols,
     requirement_lines,
@@ -460,10 +458,12 @@ def validation_basis(
     changes. Per declaring protocol: the reference as written; for a
     protocol id that resolves to exactly one protocol of the repo
     (`protocol_block.repo_protocol_ids`), that protocol's bytes, its
-    declared run's `metrics.json` (a marker while it is missing), its
-    area's `scripts/*.py` (where its `PROMPT` constants live; its `Prompt`
-    blocks stand in the protocol) and the `models.toml` entry of its alias
-    (`repo.model_entry`). A DOI binds no document bytes: only its string
+    declared run's `metrics.json` (a marker while it is missing), the run
+    records that say which model answered (`config.json`,
+    `answering_run.recorded_runs`) and its area's `scripts/*.py` (where its
+    `PROMPT` constants live; its `Prompt` blocks stand in the protocol).
+    Today's models.toml is not stamped: it can change after the validation
+    without changing what was validated. A DOI binds no document bytes: only its string
     is stamped. Whether the reference is a valid binding (an apply with a
     result) is the gate's (`protocol_history.bound_validation`), not the
     stamp's. Never raises for a protocol it cannot read — the head check
@@ -483,7 +483,7 @@ def validation_basis(
         entries += _bound_entries(name, bound, root)
         told.append(
             f"{_key(p, root)} names {_key(bound, root)} (the protocol, its "
-            f"declared result, its scripts and its models.toml entry)"
+            f"declared result, the run record of its model and its scripts)"
         )
     return entries, tuple(told)
 
@@ -491,8 +491,8 @@ def validation_basis(
 def validation_sources(area: Path) -> list[Path]:
     """The files outside AREA's own code that its stamp covers through
     `[model] annotation_validity` (`validation_basis`): per bound protocol,
-    the protocol, its declared run's `metrics.json`, its area's
-    `scripts/*.py` and the lab's `models.toml`. A path may not exist (a
+    the protocol, its declared run's `metrics.json`, the run records of its
+    model (`config.json`) and its area's `scripts/*.py`. A path may not exist (a
     result not written yet). A DOI ties the area to no file. What
     `areas_touched` follows, so a change to the evidence reopens the area
     that rests on it."""
@@ -530,19 +530,24 @@ def _validation_refs(
 
 
 def _bound_files(bound: Path) -> list[Path]:
-    """The bound protocol, its declared run's `metrics.json` (a path even
-    while missing), its area's scripts and the lab's `models.toml` (a path
-    even while missing) — the files `_bound_entries` reads."""
+    """The bound protocol, its declared run's `metrics.json`, the
+    `config.json` of that run and of the run that recorded its model
+    (`answering_run.recorded_runs`: which model answered is a record, not
+    today's models.toml), and its area's scripts — paths even while missing,
+    the files `_bound_entries` reads."""
+    # layer 1 both; answering_run imports promises, which imports this module
+    from labkit.formats.answering_run import recorded_runs
+
     out = [bound]
     try:
         run = protocol_block.declared_run(bound.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, protocol_block.BlockError):
         run = None
     if run is not None:
-        out.append(bound.parent / "runs" / run / "metrics.json")
+        run_dir = bound.parent / "runs" / run
+        out.append(run_dir / "metrics.json")
+        out += [r / "config.json" for r in recorded_runs(run_dir)]
     out += sorted((bound.parent / "scripts").glob("*.py"))
-    lab = lab_root(bound.parent)
-    out.append((lab or layout_root(bound.parent)) / "models.toml")
     return out
 
 
@@ -565,32 +570,16 @@ def validation_note(area: Path) -> str:
 
 
 def _bound_entries(name: str, bound: Path, root: Path) -> list[tuple[str, bytes]]:
-    """The bound protocol's bytes, its result, its scripts and its model
-    entry as named stamp entries (`validation_basis`)."""
+    """The bytes of `_bound_files` as named stamp entries
+    (`validation_basis`); a missing file as a marker."""
     try:
         data = bound.read_bytes()
     except OSError as exc:
         return [(f"{name}: {_key(bound, root)}", f"unreadable: {exc}".encode())]
-    out = [(f"{name}: {_key(bound, root)}", data)]
-    text = data.decode("utf-8", errors="replace")
-    try:
-        bound_model = protocol_block.model(text)
-    except protocol_block.BlockError:
-        return out
-    # the result and the scripts as `_bound_files` lists them; the lab's
-    # models.toml only as the alias's entry, so another alias moves nothing
-    for f in _bound_files(bound)[1:-1]:
-        out.append(
-            (
-                f"{name}: {_key(f, root)}",
-                f.read_bytes() if f.is_file() else b"<missing>",
-            )
-        )
-    alias = bound_model.alias if bound_model is not None else None
-    out.append(
-        (f"{name}: models.toml", model_entry(alias, bound.parent).encode("utf-8"))
-    )
-    return out
+    return [(f"{name}: {_key(bound, root)}", data)] + [
+        (f"{name}: {_key(f, root)}", f.read_bytes() if f.is_file() else b"<missing>")
+        for f in _bound_files(bound)[1:]
+    ]
 
 
 def area_stamp(

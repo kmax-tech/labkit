@@ -100,6 +100,7 @@ from labkit.formats.protocol_history import (
     bound_validation,
 )
 from labkit.formats.protocol_block import repo_protocol_ids
+from labkit.formats.answering_run import recorded_models
 from labkit.checks.prompt_check import prompt_blocks, prompt_constants
 from labkit.checks.audit_binding import AuditError, RunShown, audited_run, run_shown
 from labkit.formats.scope_sha import (
@@ -293,6 +294,11 @@ DOI_ONLY = (
     "checked for its form only; what the publication shows is not in scope "
     "of this audit and was not read"
 )
+#: the head of a piece showing today's settings of a bound validation
+CURRENT_ONLY = (
+    "Today's setting, not necessarily what the validation ran with — the "
+    "run's record above says which model answered."
+)
 
 
 def validity_evidence(area: Path, text: str) -> tuple[tuple[str, str], ...]:
@@ -300,8 +306,9 @@ def validity_evidence(area: Path, text: str) -> tuple[tuple[str, str], ...]:
     computation whose number claims a property of the data
     (`number_describes = "target_property"`): the bound apply protocol in
     full, its declared run's `metrics.json` (the validation result), the
-    model entry of its alias from `models.toml` and its prompt (the protocol's
-    `Prompt` blocks and the area's `PROMPT*` constants, `prompt_check`) —
+    model its run recorded (`answering_run.recorded_models`), and today's
+    models.toml entry and prompt sources (the protocol's `Prompt` blocks and
+    the area's `PROMPT*` constants, `prompt_check`) marked as today's —
     a reference alone gives the audit nothing to judge. Not bound
     (`protocol_history.bound_validation`): one line saying why, never part
     of the evidence. A DOI: the DOI and that its content is not in scope.
@@ -339,8 +346,9 @@ def validity_evidence(area: Path, text: str) -> tuple[tuple[str, str], ...]:
 
 
 def _bound_pieces(bound: BoundValidation, repo: Path) -> tuple[tuple[str, str], ...]:
-    """The bound apply protocol, its result, its model entry and its prompt
-    as prompt pieces; what is missing is said, never skipped."""
+    """The bound apply protocol, its result, its recorded model, and today's
+    model entry and prompt as prompt pieces; what is missing is said, never
+    skipped."""
     area = bound.protocol.parent
     pieces = [(f"FILE: {shown(bound.protocol, repo)}", bound.text)]
     metrics = area / "runs" / bound.run / "metrics.json"
@@ -355,16 +363,30 @@ def _bound_pieces(bound: BoundValidation, repo: Path) -> tuple[tuple[str, str], 
                 f"run {bound.run} declared, but {shown(metrics, repo)} does not read",
             )
         )
+    pieces.append(
+        (
+            "EVIDENCE: validation model, as its run recorded it",
+            recorded_models(area / "runs" / bound.run),
+        )
+    )
+    # today's settings, for comparing with the computation's own model and
+    # prompt — labelled, since they may have changed after the validation
     bound_model = protocol_block.model(bound.text)
     alias = bound_model.alias if bound_model is not None else None
-    pieces.append(("EVIDENCE: validation model", model_entry(alias, area)))
+    pieces.append(
+        (
+            "EVIDENCE: current configuration of the validation's alias",
+            f"{CURRENT_ONLY}\n{model_entry(alias, area)}",
+        )
+    )
     prompts = prompt_blocks(bound.protocol) + [
         f"{name} = {value!r}" for name, value in sorted(prompt_constants(area).items())
     ]
     pieces.append(
         (
-            "EVIDENCE: validation prompt",
-            "\n\n".join(prompts) or "no Prompt block and no PROMPT constant found",
+            "EVIDENCE: current prompt sources of the validation",
+            f"{CURRENT_ONLY}\n"
+            + ("\n\n".join(prompts) or "no Prompt block and no PROMPT constant found"),
         )
     )
     return tuple(pieces)

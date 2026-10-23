@@ -518,3 +518,37 @@ def model_provenance_run(run_dir: Path) -> Path | None:
         if cfg is not None and cfg.models_resolved:
             return run
     return None
+
+
+def recorded_models(run_dir: Path) -> str:
+    """Which model answered RUN_DIR's rows, as the run records say
+    (`model_provenance_run`): its `models_resolved` as stored, keys sorted,
+    under the run that recorded it — or a sentence that no run in the chain
+    recorded one, or that the chain does not read. What an audit is shown
+    of a bound validation, never today's models.toml."""
+    try:
+        source = model_provenance_run(run_dir)
+        cfg = read_run_config(source) if source is not None else None
+    except ValueError as exc:  # RunConfigError too
+        return f"run {run_dir.name}: its record does not read ({exc}); which model answered is not known"
+    if source is None or cfg is None:
+        return (
+            f"run {run_dir.name} recorded no model (no models_resolved, nor any "
+            "run it derives from); which model answered is not recorded"
+        )
+    via = "" if source == run_dir else f", the run {run_dir.name} derives from"
+    return f"models_resolved recorded by run {source.name}{via}:\n" + json.dumps(
+        cfg.models_resolved, ensure_ascii=False, sort_keys=True, indent=2
+    )
+
+
+def recorded_runs(run_dir: Path) -> list[Path]:
+    """RUN_DIR and, when another run recorded its model
+    (`model_provenance_run`), that run — the records `recorded_models`
+    reads, so a stamp over their `config.json` moves with the recorded
+    model. RUN_DIR alone when the chain does not read."""
+    try:
+        source = model_provenance_run(run_dir)
+    except ValueError:
+        return [run_dir]
+    return [run_dir] if source in (None, run_dir) else [run_dir, source]

@@ -35,8 +35,9 @@ restate them from memory.
 5. For a computation whose number claims a property of the data through a
    model's annotations (`number_describes = "target_property"`): the
    evidence that the annotator suits, under `===== EVIDENCE: … =====` lines
-   — the bound apply protocol and its `metrics.json` as FILE lines, its
-   model entry and its prompt.
+   — the bound apply protocol and its `metrics.json` as FILE lines, the
+   model its run recorded, and today's model entry and prompt sources,
+   marked as today's.
 
 If `<AREA>` was not given, find it from the prompt or ask for it in one line —
 do not guess between areas.
@@ -94,7 +95,8 @@ Work the scar table of LAB-015 Preflight audit before freezing row by row, filte
 still a finding — say that it is a new class.
 
 **Judge whether the bound validation supports this annotation** (item 5,
-both modes). It does when the validation used the same model alias, the
+both modes). It does when the validation ran with the same model — as its
+run recorded it, not as today's configuration names it — the
 same prompt or a difference the protocol justifies, the same target concept,
 and a result that carries the claim; a mismatch is a finding with the two
 quoted sides as its trigger. `NOT BOUND` evidence supports nothing — the

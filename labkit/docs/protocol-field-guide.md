@@ -178,8 +178,11 @@ The same block may hold the `[[promise]]` tables (labkit
   validation, checked for its form only. Neither proves that the model
   suits this annotation (same model, prompt, target concept): that stays
   with the audit, which `labkit-audit` shows the bound protocol, its
-  result (`metrics.json`), its model entry and its prompt; the audit
-  record's stamp covers these, so a changed validation owes a new audit. A
+  result (`metrics.json`), the model its run recorded (`models_resolved`)
+  and its prompt; today's models.toml entry and prompt sources are shown
+  as such. The audit record's stamp covers the protocol, the result, the
+  run records and the scripts — not today's models.toml, which can change
+  after the validation — so a changed validation owes a new audit. A
   DOI binds no document bytes: only its string is stamped, and nothing
   notices when the cited publication changes. With `fit` or
   `apply` both keys are refused — there the model is what the number
