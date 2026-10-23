@@ -63,6 +63,7 @@ import contextlib
 import io
 from pathlib import Path
 
+from labkit.formats.runs import metrics_path, run_path
 from labkit.formats import console, findings as audit_findings, promises, protocol_block
 from labkit.formats.standard_contract import lane
 from labkit.formats.gate import EXIT_CONTRACT, Findings
@@ -283,7 +284,7 @@ def check_intent_keys_in_metrics(
         findings.note("  no intent ids registered — nothing to check")
         return
     args = [str(protocol)] + (
-        ["--metrics", str(measurement_run / "metrics.json")]
+        ["--metrics", str(metrics_path(measurement_run))]
         if measurement_run is not None
         else []
     )
@@ -528,7 +529,7 @@ def declared_run_gaps(area: Path, text: str) -> list[str]:
         declared = protocol_block.declared_run(text)
     except protocol_block.BlockError as exc:
         return [str(exc)]
-    if declared is None or (area / "runs" / declared).is_dir():
+    if declared is None or run_path(area, declared).is_dir():
         return []
     return [
         f"[result] declares {declared}, but there is no runs/{declared}/ in this "

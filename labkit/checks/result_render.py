@@ -67,7 +67,7 @@ def rendering(area: Path, text: str, run: Path) -> Rendering:
     """The result section of TEXT as RUN's `metrics.json` and the covering
     records render it. Raises what `runs.read_metrics` raises on a run
     without readable metrics."""
-    metrics = runs.read_metrics(run / "metrics.json")
+    metrics = runs.read_metrics(runs.metrics_path(run))
     limits = limits_of(area, text, run)
     recorded_results = recorded_results_line(metrics, run.name) + findings.answer_note(
         [(label, effect) for label, _, effect in limits]

@@ -40,6 +40,7 @@ from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
+from labkit.formats.runs import metrics_path, run_path
 from labkit.formats import console, protocol_block
 from pathlib import Path
 
@@ -544,8 +545,8 @@ def _bound_files(bound: Path) -> list[Path]:
     except (OSError, UnicodeDecodeError, protocol_block.BlockError):
         run = None
     if run is not None:
-        run_dir = bound.parent / "runs" / run
-        out.append(run_dir / "metrics.json")
+        run_dir = run_path(bound.parent, run)
+        out.append(metrics_path(run_dir))
         out += [r / "config.json" for r in recorded_runs(run_dir)]
     out += sorted((bound.parent / "scripts").glob("*.py"))
     return out

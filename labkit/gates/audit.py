@@ -75,6 +75,7 @@ from collections.abc import Callable
 from typing import NamedTuple
 
 from labkit import PACKAGE_DIR
+from labkit.formats.runs import metrics_path, run_path
 from labkit.run import llm, llm_backends
 from labkit.formats import (
     console,
@@ -359,7 +360,7 @@ def _bound_pieces(bound: BoundValidation, repo: Path) -> tuple[tuple[str, str], 
     skipped."""
     area = bound.protocol.parent
     pieces = [(f"FILE: {shown(bound.protocol, repo)}", bound.text)]
-    metrics = area / "runs" / bound.run / "metrics.json"
+    metrics = metrics_path(run_path(area, bound.run))
     try:
         pieces.append(
             (f"FILE: {shown(metrics, repo)}", metrics.read_text(encoding="utf-8"))
@@ -374,7 +375,7 @@ def _bound_pieces(bound: BoundValidation, repo: Path) -> tuple[tuple[str, str], 
     pieces.append(
         (
             "EVIDENCE: validation model, as its run recorded it",
-            recorded_models(area / "runs" / bound.run),
+            recorded_models(run_path(area, bound.run)),
         )
     )
     # today's settings, for comparing with the computation's own model and

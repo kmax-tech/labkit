@@ -30,9 +30,11 @@ class SessionLog(unittest.TestCase):
         self.event = {"session_id": "s-1", "transcript_path": str(self.transcript)}
 
     def run_dir(self, stamp: str) -> None:
-        (
-            self.repo / "experiments" / "01-x" / "runs" / f"2026-10-07T{stamp}_ab12"
-        ).mkdir(parents=True)
+        # an area is where a protocol is: the session's runs are found through
+        # the repo's protocols and the one run walk (`runs.run_dirs`)
+        area = self.repo / "experiments" / "01-x"
+        (area / "runs" / f"2026-10-07T{stamp}_ab12").mkdir(parents=True)
+        (area / "PROTOCOL-x.md").write_text("# x\n", encoding="utf-8")
 
     def test_runs_since_the_previous_stop_only(self):
         self.run_dir("09-59-00")  # before the session

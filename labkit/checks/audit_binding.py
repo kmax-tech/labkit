@@ -87,7 +87,7 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
             raise AuditError(f"{run_dir.name} registered {entry.path}, which is gone")
         name = shown(path, repo)
         out.append(rows_excerpt(path, name))
-    metrics = run_dir / "metrics.json"
+    metrics = runs.metrics_path(run_dir)
     if metrics.is_file():
         out.append(
             (f"FILE: {rel_run}/metrics.json", metrics.read_text(encoding="utf-8"))

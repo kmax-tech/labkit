@@ -15,6 +15,7 @@ import subprocess
 import time
 from pathlib import Path
 
+from labkit.formats.runs import metrics_path
 from labkit.formats import console, repo
 from labkit.formats.runs import (
     COMPLETED,
@@ -107,7 +108,7 @@ def _finished_line(area: Path) -> str:
         return f"last finished: cannot say — {exc}"
     if last is None:
         return "no finished runs"
-    m = read_metrics(last / "metrics.json")
+    m = read_metrics(metrics_path(last))
     keys = ", ".join(list(m)[:6])
     return f"last finished: {last.name} ({keys})"
 

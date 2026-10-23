@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from labkit.formats.runs import metrics_path
 from labkit.run import batch
 from labkit.formats import promises, protocol_block
 from labkit.formats.runs import (
@@ -47,7 +48,7 @@ def criterion_n_input_mismatches(measurement_run: Path) -> list[str]:  # noqa: C
     """Warnings: a criterion's denominator (`c<i>_n` in metrics.json) that
     matches no input count the run recorded — the size of what was counted,
     not a promised constant (that is `intent_check.promised_constant_mismatches`)."""
-    metrics_file = measurement_run / "metrics.json"
+    metrics_file = metrics_path(measurement_run)
     if not metrics_file.is_file():
         return []
     metrics = read_metrics(metrics_file)
@@ -140,7 +141,7 @@ def called_a_model(measurement_run: Path) -> bool:
     `model_calls` > 0)? Static evidence: a run without those keys may still
     have called a model. False when metrics.json cannot be read."""
     try:
-        metrics = read_metrics(measurement_run / "metrics.json")
+        metrics = read_metrics(metrics_path(measurement_run))
     except (OSError, ValueError):
         return False
     calls = metrics.get("model_calls")

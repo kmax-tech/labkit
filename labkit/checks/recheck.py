@@ -78,7 +78,7 @@ def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Pat
             "binds to it; `labkit-init exp` stamps it"
         )
     if run_id is not None:
-        return _named_run(area / "runs" / run_id, pid)
+        return _named_run(runs.run_path(area, run_id), pid)
     choice = answering_run.bound_answering_run(area, pid)
     blocker, lines = choice.explain(promises.registers_ids(protocol_text))
     if blocker or choice.run_dir is None:
@@ -291,7 +291,7 @@ def verified(
     pin(run, out)
     scopes_unchanged(run, area)
     block_unchanged(run, area)
-    metrics = runs.read_metrics(run / "metrics.json")
+    metrics = runs.read_metrics(runs.metrics_path(run))
     return metrics, agree(metrics, recompute(rows_of(out)), ignore)
 
 

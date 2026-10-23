@@ -103,6 +103,7 @@ from labkit.gates import preflight, report_check
 from labkit.formats.repo import (
     PROTOCOL_NAME,
     area_protocols,
+    repo_protocols,
     find_area,
     git_run,
     shown,
@@ -461,13 +462,13 @@ def record_session(repo: Path, event: dict, now: datetime | None = None) -> dict
         if earlier
         else _transcript_start(event.get("transcript_path"))
     )
+    # every area's runs through the one walk (`runs.run_dirs`); the areas
+    # are where the protocols are (`repo_protocols` skips .venv and data)
     session_runs = sorted(
-        str(d.relative_to(repo))
-        # where areas live (experiments/<area>, or flat at the root) — not a
-        # walk through .venv and data on every stop
-        for d in [*repo.glob("experiments/*/runs/*"), *repo.glob("*/runs/*")]
-        if d.is_dir()
-        and (started := runs.run_started(d.name)) is not None
+        str(rd.dir.relative_to(repo))
+        for area in {p.parent for p in repo_protocols(repo)}
+        for rd in runs.run_dirs(area)
+        if (started := runs.run_started(rd.dir.name)) is not None
         and (since is None or started >= since.replace(microsecond=0))
         and started <= now
     )

@@ -128,7 +128,7 @@ def run_state(run_dir: Path, alive: bool | None) -> RunState:
     a running run. `endpoint_lease` already treats None as conservatively
     alive; `run_state` uses the same contract.
     """
-    has_metrics = (run_dir / "metrics.json").is_file()
+    has_metrics = metrics_path(run_dir).is_file()
     has_completion = (run_dir / "completion.json").is_file()
     if has_metrics and has_completion:
         return COMPLETED
@@ -168,6 +168,28 @@ def now_stamp() -> str:
 #: it crashed (a claude-cli answer another model wrote ends a run loudly,
 #: and the reason stood on stderr alone, 2026-10-23)
 FAILURE_FILE = "failure.json"
+#: the folder under an area that holds its runs, and the file of the values
+#: reported through `run.metrics(...)` — the one spelling of each (audit
+#: 2026-10-23: about twenty call sites spelled `area / "runs" / id` and
+#: `run / "metrics.json"` by hand)
+RUNS_DIR = "runs"
+METRICS_FILE = "metrics.json"
+
+
+def runs_path(area: Path) -> Path:
+    """AREA's `runs/` — every run directory lies directly in it."""
+    return area / RUNS_DIR
+
+
+def run_path(area: Path, run_id: str) -> Path:
+    """`runs/<RUN_ID>/` of AREA: the run's directory (`run_dir` in every
+    signature that takes one)."""
+    return area / RUNS_DIR / run_id
+
+
+def metrics_path(run_dir: Path) -> Path:
+    """RUN_DIR's `metrics.json`."""
+    return run_dir / METRICS_FILE
 
 
 def write_failure(
@@ -864,7 +886,7 @@ def run_dirs(area: Path) -> list[RunDir]:
     used to walk `runs/` six times and each decided for itself what an
     unreadable run means (audit 2026-10-13). Here it is data — the caller
     says whether it refuses, reports or skips."""
-    runs = area / "runs"
+    runs = runs_path(area)
     if not runs.is_dir():
         return []
     return [read_run_dir(d) for d in sorted(runs.glob("*")) if d.is_dir()]

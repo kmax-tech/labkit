@@ -184,7 +184,7 @@ def load_probe_run(root: Path) -> ProbeRun:
     config = runs.read_run_config(run)
     if config is None:
         raise console.Refused("usability", f"{run} has no config.json — not a run")
-    metrics = runs.read_metrics(run / "metrics.json")
+    metrics = runs.read_metrics(runs.metrics_path(run))
     binding = config.protocol
     named = binding.path
     protocol = None

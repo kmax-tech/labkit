@@ -83,6 +83,7 @@ from pathlib import Path
 from types import TracebackType
 from collections.abc import Iterator
 
+from labkit.formats.runs import metrics_path, run_path
 from labkit.run import batch
 from labkit.formats import console, repo
 from labkit.formats.files import write_atomic
@@ -269,7 +270,7 @@ def _repeat_draw(
             "runlog: repeat_of and derived_from exclude each other — a repeat "
             "asks the model again, a derived run re-reads old rows"
         )
-    parent = base_dir / "runs" / repeat_of
+    parent = run_path(base_dir, repeat_of)
     try:
         state = completion_state(parent) if parent.is_dir() else "missing"
         pcfg = read_run_config(parent) if state == COMPLETED else None
@@ -374,7 +375,7 @@ class Run:
         self.experiment = experiment
         self.script = Path(sys.argv[0]).name if sys.argv[0] else "<interactive>"
         self.base = base_dir
-        self.dir = base_dir / "runs" / self.run_id
+        self.dir = run_path(base_dir, self.run_id)
         self._protocol = prepared.bound.binding
         self._cost_tier = prepared.cost_tier
         self._promises = prepared.promises
@@ -545,7 +546,7 @@ class Run:
                 json.dumps(rows, ensure_ascii=False, indent=2),
             )
         write_atomic(
-            self.dir / "metrics.json",
+            metrics_path(self.dir),
             json.dumps(self._metrics, ensure_ascii=False, indent=2),
         )
         # Order matters, and this is the reason for it: results first, then
@@ -748,7 +749,7 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
                 incomplete.append(d.name)
                 continue
             comp = read_completion(d)
-            metrics = read_metrics(d / "metrics.json")
+            metrics = read_metrics(metrics_path(d))
             _append_row(
                 index,
                 [

@@ -57,6 +57,7 @@ import sys
 from pathlib import Path
 from typing import NamedTuple
 
+from labkit.formats.runs import run_path
 from labkit.checks.audit_binding import AuditError, run_shown
 from labkit.checks.result_render import rendering
 from labkit.formats import console, findings, reviews
@@ -202,7 +203,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         )
     run_dir: Path | None = None
     if record.run_id is not None and record.run_id != findings.NO_RUN:
-        run_dir = area / "runs" / record.run_id
+        run_dir = run_path(area, record.run_id)
         if not run_dir.is_dir():
             raise AuditError(
                 f"{record.path.name} names run {record.run_id}, and there is no "

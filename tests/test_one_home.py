@@ -78,6 +78,10 @@ RULES: list[tuple[str, str, set[str]]] = [
     # grading differently (audit 2026-10-23, C1); `findings.open_findings` holds
     # the walk and the table of the gates' rules
     ("an open-finding walk", r"for \w+ in \w+\.open\b(?!\()", {"findings"}),
+    # about twenty call sites spelled a run's directory and its metrics file
+    # by hand (audit 2026-10-23); `runs.run_path`, `runs_path`, `metrics_path`
+    ("a run directory spelled by hand", r"/ \"runs\"|\"runs\" /", {"runs"}),
+    ("the metrics file spelled by hand", r"\"metrics\.json\"", {"runs"}),
 ]
 
 
@@ -127,6 +131,8 @@ class OneHome(unittest.TestCase):
             "a requirements pin spelled by hand": 'if ln.startswith("labkit"):',
             "a tier rule read off the head": 'if head.cost == "seconds":',
             "an open-finding walk": "for f in rec.open:",
+            "a run directory spelled by hand": 'run_dir = area / "runs" / run_id',
+            "the metrics file spelled by hand": 'metrics = run_dir / "metrics.json"',
         }
         for what, shape, _ in RULES:
             with self.subTest(what=what):

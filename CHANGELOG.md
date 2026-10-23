@@ -243,6 +243,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A run's directory and its metrics file have one spelling.**
+  `runs.run_path(area, run_id)`, `runs.runs_path(area)` and
+  `runs.metrics_path(run_dir)` replace about twenty hand-spelled
+  `area / "runs" / id` and `run / "metrics.json"` (audit 2026-10-23); the
+  one-home test refuses the next copy. The two remaining hand walks over
+  `runs/` — the session record's and report-check's — go through
+  `runs.run_dirs`; the session record finds an area's runs where its
+  protocol is (`repo.repo_protocols`), not by a glob on the folder name.
+
 - **The gates in order stand in one place, and every `--help` states the
   exit contract.** The order (protocol-check → code-check → preflight →
   preflight audit → runlog → finalize → analysis audit → review →

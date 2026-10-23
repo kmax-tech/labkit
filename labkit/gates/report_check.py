@@ -89,6 +89,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.runs import run_dirs, run_path
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, WARNING, Findings, GateFinding
 from labkit.formats.answering_run import first_measurement
 from labkit.formats.protocol_history import registration_in_commit
@@ -698,9 +699,7 @@ def repo_sources(repo: Path, *, staged: bool) -> Sources:
     protocols = indexed_protocols(repo) if staged else repo_protocols(repo.resolve())
     out = Sources(repo.resolve(), set(), {}, {}, {})
     for p in protocols:
-        runs_dir = p.parent / "runs"
-        if runs_dir.is_dir():
-            out.known.update(d.name for d in runs_dir.iterdir() if d.is_dir())
+        out.known.update(rd.dir.name for rd in run_dirs(p.parent))
         text = index_text(repo, p) if staged else p.read_text(encoding="utf-8")
         if text is None:
             continue
@@ -744,7 +743,7 @@ def block_sources(
         else:
             try:
                 body = report_blocks.block_body(
-                    rendering(p.parent, sources.texts[p], p.parent / "runs" / run_id)
+                    rendering(p.parent, sources.texts[p], run_path(p.parent, run_id))
                 )
                 out[b.protocol] = report_blocks.BlockSource(run_id, body)
             except (OSError, ValueError) as exc:

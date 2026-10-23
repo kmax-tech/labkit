@@ -16,6 +16,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 
+from labkit.formats.runs import run_path
 from labkit.formats.runs import RunKind, parse_run_kind
 
 from labkit.formats import findings, promises, protocol_block, repo
@@ -361,7 +362,7 @@ def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
             f"runlog: derived_from={derived_from!r} is not a run id — name a "
             f"run of {base_dir / 'runs'} by its id, never a path"
         )
-    parent = base_dir / "runs" / derived_from
+    parent = run_path(base_dir, derived_from)
     try:
         state = completion_state(parent) if parent.is_dir() else "missing"
         pcfg = read_run_config(parent) if state == COMPLETED else None

@@ -484,8 +484,8 @@ def declared_run_dir(text: str, area: Path, why: str) -> Path:
             f"no [result] run declared — `--from-run <run_id>` declares the run "
             f"and writes the result; {why}"
         )
-    run = area / "runs" / declared
-    if not (run / "metrics.json").is_file():
+    run = runs.run_path(area, declared)
+    if not runs.metrics_path(run).is_file():
         raise ValueError(
             f"[result] declares {declared}, but runs/{declared}/metrics.json is not there"
         )

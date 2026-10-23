@@ -48,6 +48,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from labkit.formats.runs import metrics_path
 from labkit.formats import console, promises, protocol_block
 from labkit.formats.gate import EXIT_CONTRACT
 from labkit.formats.runs import COMPLETED, read_metrics, read_run_config
@@ -333,7 +334,7 @@ def choose_bound(protocol: Path, pid: str, ids_registered: bool) -> Path:
     )
     for line in lines:
         print(f"intent-check: using {choice.run_dir.name}/metrics.json ({line}).")
-    return choice.run_dir / "metrics.json"
+    return metrics_path(choice.run_dir)
 
 
 def cli() -> None:

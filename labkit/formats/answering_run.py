@@ -18,6 +18,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import cast
 
+from labkit.formats.runs import metrics_path, run_path, runs_path
 from labkit.formats import promises
 from labkit.formats.runs import (
     as_stored,
@@ -65,7 +66,7 @@ class RunFacts:
     @property
     def metrics(self) -> Path:
         """The run's metrics.json (it may not exist)."""
-        return self.dir / "metrics.json"
+        return metrics_path(self.dir)
 
 
 def run_facts(run_dir: Path) -> RunFacts | None:
@@ -142,7 +143,7 @@ def next_draw(area: Path, run_id: str) -> int:
 def draws(area: Path, run_id: str) -> list[tuple[int, Path]]:
     """(draw, run dir) for RUN_ID and its completed repeats, draw 1 first —
     what an analysis reads to show the spread of the number."""
-    return [(1, area / "runs" / run_id), *_numbered_repeats(area, run_id)]
+    return [(1, run_path(area, run_id)), *_numbered_repeats(area, run_id)]
 
 
 def repeat_mismatch(parent_run: RunConfig, new: JsonObject) -> list[str]:
@@ -444,7 +445,7 @@ def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
     blocks the choice: it may be the one that answers — then run_dir is
     None and `blocker` says why. So does a rival started in the same
     second, whose order the run ids cannot tell."""
-    if not (area / "runs").is_dir():
+    if not runs_path(area).is_dir():
         return AnsweringRun(
             None,
             0,
