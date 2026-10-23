@@ -243,6 +243,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One cut of a protocol into `## ` sections.**
+  `protocol_block.section_starts` (outside every fence) and `section_end`
+  are read by the prose count and the template comparison, the Runs list
+  (`protocol-fill --from-run`), the seconds cut and the stamp's blank-line
+  pass; the Runs list and the seconds cut found headings inside fences
+  before (audit 2026-10-23). The one-home test holds it.
+
 - **One lookup of a models.toml alias.** `repo.model_entry`, what the
   audit is shown of a bound validation's alias, looked the alias up with
   its own error text and search start; it is `llm.model_entry` now and

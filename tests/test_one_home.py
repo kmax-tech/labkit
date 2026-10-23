@@ -93,6 +93,9 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"glob\(\"(scripts|analysis)/\*\.py\"\)|\"scripts\"\)\.glob\(",
         {"scope_sha"},
     ),
+    # four readers found a protocol's `## ` headings themselves, two inside
+    # fences too (audit 2026-10-23); `protocol_block.section_starts`
+    ("a section heading found by hand", r"startswith\(\"## \"\)", {"protocol_block"}),
 ]
 
 
@@ -146,6 +149,7 @@ class OneHome(unittest.TestCase):
             "the metrics file spelled by hand": 'metrics = run_dir / "metrics.json"',
             "a JSONL line parsed by hand": "row = json.loads(line)",
             "an area's code globbed by hand": 'scripts = sorted(area.glob("scripts/*.py"))',
+            "a section heading found by hand": 'if line.startswith("## "):',
         }
         for what, shape, _ in RULES:
             with self.subTest(what=what):

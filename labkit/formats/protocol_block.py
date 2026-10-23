@@ -162,6 +162,26 @@ def fence_spans(lines: list[str]) -> list[tuple[str, int, int]]:
     return out
 
 
+def section_starts(lines: list[str]) -> list[int]:
+    """The 0-based indexes of the `## ` headings of a protocol — outside
+    every fence (`fenced_lines`), in order. The one cut into sections: the
+    prose count, the Runs list, the seconds cut and the stamp's blank-line
+    pass each found the headings themselves, two of them inside fences too
+    (audit 2026-10-23)."""
+    fenced = fenced_lines(lines)
+    return [
+        i
+        for i, line in enumerate(lines)
+        if i not in fenced and line.lstrip().startswith("## ")
+    ]
+
+
+def section_end(lines: list[str], start: int) -> int:
+    """The index of the first line after the section opening at START: the
+    next heading's, or `len(lines)`."""
+    return next((i for i in section_starts(lines) if i > start), len(lines))
+
+
 def fenced_lines(lines: list[str]) -> set[int]:
     """The 0-based indexes of every line a fence takes — its markers and its
     body, by `fence_spans`. For a reader that walks lines and must skip the

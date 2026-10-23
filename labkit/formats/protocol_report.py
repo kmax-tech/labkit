@@ -136,11 +136,12 @@ def prose_lines(text: str) -> list[tuple[str | None, str]]:
     section: str | None = None
     lines = text.splitlines()
     fenced = protocol_block.fenced_lines(lines)
+    starts = set(protocol_block.section_starts(lines))
     for i, line in enumerate(lines):
         stripped = line.strip()
         if i in fenced or stripped.startswith("|"):
             continue
-        if stripped.startswith("## "):
+        if i in starts:
             section = stripped
         out.append((section, stripped))
     return out
@@ -152,7 +153,7 @@ def oversized_sections(text: str) -> list[tuple[str, int, int]]:
     budget_of: dict[str, str | None] = {}
     counts: dict[str, int] = {}
     for section, stripped in prose_lines(text):
-        if section is None or stripped.startswith("## "):
+        if section is None or stripped == section:  # the heading line itself
             continue
         if section not in budget_of:
             head = section[3:].lower()
@@ -184,12 +185,14 @@ def template_lines(path: Path | None) -> set[str]:
     keep = set()
     in_body = False
     in_head = False  # `## Head`: the pointer and the toml block stay by design
-    for line in path.read_text(encoding="utf-8").splitlines():
+    lines = path.read_text(encoding="utf-8").splitlines()
+    starts = set(protocol_block.section_starts(lines))
+    for i, line in enumerate(lines):
         # The written protocol carries no cut markers; compared with them,
         # the stamped Runs line `- <run_id> — <…> <!-- s -->` never matched
         # its leftover (uniagent area 08, 2026-10-07: frozen and reported).
         s = HTML_COMMENT.sub("", line).strip()
-        if s.startswith("## "):
+        if i in starts:
             in_body = True
             in_head = s.startswith("## Head")
         if in_head:

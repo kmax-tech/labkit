@@ -66,8 +66,10 @@ def section_key(heading: str) -> str | None:
 def _segments(text: str) -> list[tuple[str, list[str]]]:
     """[(heading line or '', body lines)] — the preamble comes as heading ''."""
     segs: list[tuple[str, list[str]]] = [("", [])]
-    for line in text.splitlines():
-        if line.startswith("## "):
+    lines = text.splitlines()
+    starts = set(protocol_block.section_starts(lines))
+    for i, line in enumerate(lines):
+        if i in starts:
             segs.append((line, []))
         else:
             segs[-1][1].append(line)

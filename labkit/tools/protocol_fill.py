@@ -397,12 +397,17 @@ def runs_line(text: str, run_id: str, sentence: str) -> tuple[str, bool]:
     Returns (text, changed).
     """
     lines = text.split("\n")
-    heading = next((i for i, ln in enumerate(lines) if RUNS_HEADING.match(ln)), None)
+    heading = next(
+        (
+            i
+            for i in protocol_block.section_starts(lines)
+            if RUNS_HEADING.match(lines[i])
+        ),
+        None,
+    )
     if heading is None:
         raise ValueError("no `## Runs` section to name the run in")
-    end = heading + 1
-    while end < len(lines) and not lines[end].startswith("## "):
-        end += 1
+    end = protocol_block.section_end(lines, heading)
     section = range(heading + 1, end)
     if any(run_id in lines[i] for i in section):
         return text, False

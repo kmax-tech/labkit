@@ -495,10 +495,10 @@ def blank_before_headings(text: str) -> str:
     back. Lines inside a fenced block are no headings and stay as they are
     (`protocol_block.fenced_lines`)."""
     lines = text.split("\n")
-    fenced = protocol_block.fenced_lines(lines)
+    starts = set(protocol_block.section_starts(lines))
     out: list[str] = []
     for i, line in enumerate(lines):
-        if line.startswith("## ") and i not in fenced and out and out[-1].strip():
+        if i in starts and out and out[-1].strip():
             out.append("")
         out.append(line)
     return "\n".join(out)
