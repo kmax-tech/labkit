@@ -331,7 +331,7 @@ class TestProtocolChoice(unittest.TestCase):
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
             rc, out = self._main([a.path])
         self.assertEqual(rc, 0, out)
-        self.assertIn("intent-ids:", out)
+        self.assertIn("code-check: all clear", out)  # the gate's summary line
 
     def test_flags_may_come_in_either_order(self):
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
@@ -355,22 +355,28 @@ class TestSummaryLine(unittest.TestCase):
     pre-commit then refused the open promise sentence (judge probe,
     2026-10-20). Only the agent's review is not owed there."""
 
-    def _line(self, cost: str) -> str:
+    def _out(self, cost: str) -> str:
         from protocol_fixture import head
 
         with AreaFixture(head(cost=cost) + PROTOCOL_TWO, {"m.py": CLEAN_CODE}) as a:
             _, out = a.run()
-        return out.strip().splitlines()[-1]
+        return out
 
     def test_at_seconds_the_open_fields_are_not_called_not_owed(self):
-        line = self._line("seconds")
-        self.assertNotIn("placeholders: not checked", line)
-        self.assertIn("schema, gate labels: not checked", line)
-        self.assertIn("protocol-fill <PROTOCOL> --list", line)
+        out = self._out("seconds")
+        self.assertNotIn("placeholders: not checked", out)
+        self.assertIn("schema, gate labels: not checked", out)
+        self.assertIn("protocol-fill <PROTOCOL> --list", out)
+        # the summary is the gate's, like every gate's, and comes after the
+        # note (audit 2026-10-23, C4); with blockers it ends on their list
+        note_at, summary_at = (
+            out.index("schema, gate labels"),
+            out.index("\ncode-check: "),
+        )
+        self.assertLess(note_at, summary_at, out)
 
     def test_above_seconds_the_bundle_is_named(self):
-        line = self._line("minutes")
-        self.assertIn("need --bundle for the code-check agent", line)
+        self.assertIn("need --bundle for the code-check agent", self._out("minutes"))
 
 
 if __name__ == "__main__":

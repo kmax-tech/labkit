@@ -254,6 +254,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **code-check names every check it runs, and its closing line is the
+  gate's.** The docstring said "five automated checks" and left out the
+  promise-block blockers and the constant copies (audit 2026-10-23, C4);
+  it lists the checks as `code_findings` runs them, each with its evidence
+  kind. The closing line `intent-ids: N blocker(s) …` was code-check's own;
+  it is `Findings.report`'s now (`code-check: all clear.` / `code-check: 1
+  blocker(s), …`), and what the command did not check (schema, gate
+  labels, placeholders) is a note before it.
+
 - **A gate finding says what carries it.** `GateFinding.evidence_kind`
   (`gate.GUARANTEED` / `gate.STATIC_EVIDENCE`) is a required keyword at
   every site — `coded(…, evidence_kind=…)`, `Findings.warn(msg,

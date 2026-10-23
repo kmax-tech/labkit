@@ -8,17 +8,28 @@ analysis reads and no producer writes, a protocol still full of placeholders
 are all decidable from the source. Deciding them here leaves the model the
 one question worth its cost: does the code MEAN what the registration says.
 
-Five automated checks; the rest are extracted as facts for the
-code-check agent (via ``--bundle``), not verified by this command:
+The automated checks, in the order `code_findings` runs them; each finding
+carries its evidence kind as data (`gate.GateFinding.evidence_kind`:
+GUARANTEED, or STATIC EVIDENCE — a warning, never a blocker). The rest is
+extracted as facts for the code-check agent (via ``--bundle``), not
+verified by this command:
 
-  1. **intent ids against the code** (LAB-004 Identifiers make the intent addressable, AUTOMATED). Every registered
-     [C1]/[A1]/[B1] must appear as a key literal in the area's scripts.
+  1. **the promise block against the code** (LAB-004 Identifiers make the
+     intent addressable, GUARANTEED), when the protocol has one: the block
+     parses (else one blocker), every declared scope resolves, every
+     declared key appears as a literal in a script. Then, block or not,
+     every id registered in the prose appears as a key literal, and every
+     key in the intent-id namespace has a registered id (a WARNING).
      Report time has `intent-check` for the metrics; before the run the same
      promise goes unchecked exactly when repairing it is still cheap.
-  1a. **[A] keys decide something** (STATIC EVIDENCE, 2026-10-14). An
-     admissibility key the code writes and never tests (`if`, `and`,
-     `all()`, …) permits nothing: the C verdict is reported either way. A
-     test is not proof of a branch, so each finding is a WARNING.
+  1a. **[A] keys decide something** (STATIC EVIDENCE, 2026-10-14; with a
+     promise block only). An admissibility key the code writes and never
+     tests (`if`, `and`, `all()`, …) permits nothing: the C verdict is
+     reported either way. A test is not proof of a branch, so each finding
+     is a WARNING. In the same pass, **constant copies** (STATIC EVIDENCE):
+     a script that sets a registered constant's value itself instead of
+     reading it from the protocol judges by an unregistered value once the
+     two drift.
   1b. **parser fixtures** (AUTOMATED, 2026-10-05). Every `parse_*` function in
      the area's scripts is called by a test file under the repo's tests/ (a
      call, not a mention; the assertion is not checked) — five
@@ -49,9 +60,11 @@ command — the code-check agent judges them:
   4. **protocol placeholders**. Delegated to `protocol-check`, which owns the
      template contract.
 
-Where each lives: 1 and 1a here; 1b and 1c in `prompt_check`; 1d in
-`import_check`; the facts 2 and 3 from `code_scan` and `gate_label_scan`.
-This module runs them all and writes the bundle.
+Where each lives: 1 and 1a here (`promise_block_findings`,
+`admissibility_reads`, `constant_copies`); 1b and 1c in `prompt_check`; 1d
+in `import_check`; the facts 2 and 3 from `code_scan` and
+`gate_label_scan`. This module runs them all (`code_findings`, which
+preflight's code station reads too) and writes the bundle.
 
 Reads and writes are told apart with `ast`, not with a regex: `row["x"]` in
 a Load context is a read, in a Store context it is a write, and no pattern
@@ -65,9 +78,11 @@ Usage:
                                          #  code-check agent to read in one go
 
 Exit code 1 with a blocker, 0 with warnings only or all clear — the gate
-contract (`gate.Findings.report`): a warning is static evidence to read,
-never a stop. Until 0.97.1 code-check exited 1 on a warning too, against
-its own contract (audit 2026-10-18). 2 on usage errors.
+contract, told by `gate.Findings.report` like every gate's (until the
+2026-10-23 audit the closing line was code-check's own and counted the
+kinds by hand): a warning is to read, never a stop. Until 0.97.1
+code-check exited 1 on a warning too, against its own contract (audit
+2026-10-18). 2 on usage errors.
 """
 
 from __future__ import annotations
@@ -138,10 +153,11 @@ def check_intent_ids(area: Path, protocol: Path) -> list[GateFinding]:
 
 
 def code_findings(area: Path, protocol: Path, repo: Path) -> list[GateFinding]:
-    """The automated checks 1–1d, in order, as finding lines: intent ids,
+    """The automated checks 1–1d, in order, as finding lines: the promise
+    block and the intent ids (with the [A]-key reads and constant copies),
     parser fixtures, prompt drift, stamp coverage. The one list both
     `code-check` and preflight's code station report, each finding with its
-    grade as data."""
+    grade and evidence kind as data."""
     return (
         check_intent_ids(area, protocol)
         + check_parser_fixtures(area, repo)
@@ -638,32 +654,29 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             f"({bundle_to.stat().st_size // 1024} KB)"
         )
 
-    parts = [
-        f"intent-ids: {len(findings.blocked)} blocker(s), {findings.warnings} warning(s) "
-        f"(incl. parser fixtures, prompt drift, stamp coverage)"
-    ]
+    # what this command did not check, told as a note before the gate's
+    # summary; the summary and the exit code are `Findings.report`'s, like
+    # every gate's (audit 2026-10-23, C4)
     if bundle_to is not None:
-        parts.append(
+        findings.note(
             "schema + gate labels + placeholders extracted into "
             "the bundle for the code-check agent"
         )
     elif standard_contract.lane(_cost_of(protocol)).registration:
         # only the agent's review is not owed here; the protocol's open
         # fields are, and the pre-commit holds them (judge probe, 2026-10-20)
-        parts.append(
+        findings.note(
             "schema, gate labels: not checked — the agent's review is not owed "
             "at cost seconds, the measurement checks the instrument (--bundle "
             "hands them to the code-check agent anyway); the protocol's open "
             "fields are owed: protocol-fill <PROTOCOL> --list"
         )
     else:
-        parts.append(
+        findings.note(
             "schema, gate labels, placeholders: not checked "
             "(need --bundle for the code-check agent)"
         )
-    print(" — ".join(parts))
-    # the gate contract: a warning is read, a blocker stops (gate.py)
-    return 1 if findings.blocked else 0
+    return findings.report("code-check", "the run")
 
 
 def cli() -> None:
