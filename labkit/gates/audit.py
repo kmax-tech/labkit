@@ -475,7 +475,23 @@ def _answer_or_record(
     LABKIT_UNFROZEN=1 rests on (second haiku round on 0.98.0:
     no agent started an audit, and the hatch asked for nothing). A usage
     error (an alias models.toml does not know) is not an unavailable audit
-    and propagates as it is, so none is written for it."""
+    and propagates as it is, so none is written for it.
+
+    An answer the model did not write whole (`llm_backends.UnprovenAnswer`)
+    is recorded with cause `unproven`, and from then on this state is not
+    sent to this model again (`findings.stopped_attempt`): the next try is
+    refused before any call."""
+    stopped = findings.stopped_attempt(
+        args.area, args.mode, args.model, stamp.sha, block_sha
+    )
+    if stopped is not None:
+        raise AuditError(
+            f"{stopped.path}: {args.model} did not write its {args.mode} audit of "
+            f"this state whole — {stopped.error}\nlabkit-audit: no further try on "
+            f"the same code, promises and model; each costs as much and was stopped "
+            f"again. Audit with another alias (--model), or leave the number "
+            f"unreported (report-check refuses it without an audit)."
+        )
     try:
         return llm.complete(
             args.model,
@@ -483,6 +499,24 @@ def _answer_or_record(
             timeout=args.timeout,
             max_tokens=_report_room(args.model),
         )
+    except llm_backends.UnprovenAnswer as exc:
+        tried = findings.write_failed(
+            args.area,
+            args.mode,
+            args.model,
+            stamp.sha,
+            block_sha,
+            args.timeout,
+            str(exc),
+            " ".join(["labkit-audit", *argv]),
+            cause="unproven",
+        )
+        raise AuditError(
+            f"{exc}\nlabkit-audit: no audit — {args.model} did not write the answer "
+            f"whole; recorded as {tried}. Do not run it again on this state: the "
+            f"next try with {args.model} is refused. Audit with another alias "
+            f"(--model), or leave the number unreported."
+        ) from exc
     except llm_backends.BackendError as exc:
         tried = findings.write_failed(
             args.area,
@@ -493,6 +527,7 @@ def _answer_or_record(
             args.timeout,
             str(exc),
             " ".join(["labkit-audit", *argv]),
+            cause="unavailable",
         )
         raise AuditError(
             f"{exc}\nlabkit-audit: no audit — the backend did not answer; recorded "

@@ -35,6 +35,7 @@ class WrittenOrder(unittest.TestCase):
                 findings.ATTEMPT_TIMEOUT_S,
                 f"attempt {n}",
                 "labkit-audit x",
+                cause="unavailable",
                 now=NOW,
             )
         self.assertEqual(

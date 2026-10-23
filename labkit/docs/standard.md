@@ -332,7 +332,13 @@ evidence file under the same ID (top of this document).*
   `n/a — <reason>` is refused for a full run (0.99.0: an agent waived its
   own audit); when the backend does not answer, `labkit-audit` records the
   failed attempt and a full run acknowledges it with `LABKIT_UNFROZEN=1`,
-  its number unreportable. Whoever owes no audit has the `seconds` tier,
+  its number unreportable. When the auditor answers but the requested model
+  did not write the answer whole (a safety stop, another model), see
+  LAB-029 A harness is not an inference API: its context is isolated and stamped;
+  the attempt is recorded as `unproven`, and the same code, promises and
+  model are not audited again: each try costs as much and was stopped
+  again. Another model may audit, or the number stays unreported.
+  Whoever owes no audit has the `seconds` tier,
   and a tier lowered after the protocol's first commit is reported.
 
   **The audit reads the filled-in protocol.** If the required intent fields

@@ -9,6 +9,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **A failed audit attempt names its cause, and an unproven one stops
+  the auditing of that state.** `audits/*-failed.toml` carries `cause =
+  "unavailable" | "unproven"`: the backend gave no answer, or the
+  requested model did not write it whole (`llm_backends.UnprovenAnswer`).
+  After an `unproven` attempt `labkit-audit` refuses another try on the
+  same code, promises and model before any call
+  (`findings.stopped_attempt`) — in the fit probes a safety classifier
+  stopped the auditor again on almost every try, and each try cost
+  minutes and about a dollar. Another alias (`--model`) may try. A failed
+  record without `cause` is not read; labkit 0.103.0 is the last that
+  reads one. Migration: add `cause = "unavailable"` to each
+  `audits/*-failed.toml` written before.
 - **Protocol standard 0.22: the head says what the kept number asserts
   (`kind`).** `kind = "count" | "fit" | "apply"` below `cost`: a count
   judges no prediction (a measurement that cannot pass trivially), a fit

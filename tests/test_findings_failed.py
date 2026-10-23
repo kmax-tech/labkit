@@ -20,6 +20,7 @@ def attempt(area: Path, **kw: Any) -> Path:
         timeout_s=findings.ATTEMPT_TIMEOUT_S,
         error='claude-cli exit 1: "quota"',
         command="labkit-audit experiments/01-x --mode preflight",
+        cause="unavailable",
     )
     args.update(kw)
     return findings.write_failed(area, **args)
@@ -57,6 +58,10 @@ class WriteRead(unittest.TestCase):
         with self.assertRaises(ValueError):
             attempt(self.area, mode="clarity")
 
+    def test_an_unknown_cause_refuses_to_write(self):
+        with self.assertRaises(ValueError):
+            attempt(self.area, cause="maybe")
+
     def test_a_damaged_file_is_loud(self):
         path = attempt(self.area)
         for broken, said in (
@@ -67,6 +72,11 @@ class WriteRead(unittest.TestCase):
                 "timeout_s",
             ),
             (path.read_text().replace('mode = "preflight"', 'mode = "x"'), "mode"),
+            (path.read_text().replace('cause = "unavailable"', 'cause = "x"'), "cause"),
+            (
+                path.read_text().replace('cause = "unavailable"\n', ""),
+                "cause is missing",
+            ),
         ):
             path.write_text(broken, encoding="utf-8")
             with self.assertRaises(findings.FindingsError) as cm:

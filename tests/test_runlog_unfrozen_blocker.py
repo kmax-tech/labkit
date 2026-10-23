@@ -81,6 +81,7 @@ class UnfrozenBlocker(unittest.TestCase):
             findings.ATTEMPT_TIMEOUT_S,
             "claude-cli exit 1: ",
             "labkit-audit x --mode preflight",
+            cause="unavailable",
         )
 
     def _start(self, run_kind: RunKind):

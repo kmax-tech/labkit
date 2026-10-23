@@ -119,6 +119,13 @@ REVIEW_NAME = re.compile(r"-review(?:-\d+)?\.toml$")
 #: failed attempt must have been given to count as one (`audit_unavailable`):
 #: an attempt given less time than the audit takes is not an attempt
 ATTEMPT_TIMEOUT_S = 900
+#: why an audit attempt failed: the backend gave no answer (`unavailable`),
+#: or an answer the requested model did not write whole (`unproven`,
+#: `llm_backends.UnprovenAnswer` — a safety stop, another model). An
+#: unproven attempt ends the auditing of that state with that model
+#: (`stopped_attempt`): each further try costs the same and was stopped
+#: again in the fit probes
+FAILED_CAUSES = ("unavailable", "unproven")
 STATUSES = ("open", "fixed", "accepted", "deferred", "dismissed")
 REASON_OWED = ("accepted", "deferred", "dismissed")
 #: an accepted BLOCKER's effect on the verdicts: they stand with the limit,
@@ -840,6 +847,7 @@ class Failed:
     timeout_s: int  # the seconds the one call was given
     error: str  # what the backend said
     command: str  # the command line that tried
+    cause: str  # one of FAILED_CAUSES
 
 
 def write_failed(
@@ -852,6 +860,7 @@ def write_failed(
     error: str,
     command: str,
     *,
+    cause: str,
     now: float | None = None,
 ) -> Path:
     """Write the evidence of an audit that could not run into AREA/audits/
@@ -859,9 +868,11 @@ def write_failed(
     SCOPE_SHA and BLOCK_SHA name what the auditor would have read, so the
     freeze gate can hold the acknowledgement to the code and promises as
     they are now; TIMEOUT_S what the call was given; ERROR the backend's
-    words; COMMAND the line that tried."""
+    words; COMMAND the line that tried; CAUSE one of FAILED_CAUSES."""
     if mode not in MODES:
         raise ValueError(f"mode {mode!r} — one of {', '.join(MODES)}")
+    if cause not in FAILED_CAUSES:
+        raise ValueError(f"cause {cause!r} — one of {', '.join(FAILED_CAUSES)}")
     when = time.localtime(now)
     stamp = time.strftime("%Y-%m-%dT%H-%M", when)
     lines = [
@@ -876,6 +887,7 @@ def write_failed(
         f"timeout_s = {int(timeout_s)}",
         f"error = {_s(error)}",
         f"command = {_s(command)}",
+        f"cause = {_s(cause)}",
     ]
     return create_file(
         area / DIR, f"{stamp}-{mode}", FAILED_SUFFIX, "\n".join(lines) + "\n"
@@ -892,7 +904,16 @@ def read_failed(path: Path) -> Failed:
     table = data.get("failed")
     if not isinstance(table, dict):
         raise FindingsError(f"{path}: no [failed] table")
-    for key in ("date", "mode", "model", "scope_sha", "block_sha", "error", "command"):
+    for key in (
+        "date",
+        "mode",
+        "model",
+        "scope_sha",
+        "block_sha",
+        "error",
+        "command",
+        "cause",
+    ):
         if not isinstance(table.get(key), str):
             raise FindingsError(f"{path}: [failed] {key} is missing or not a string")
     timeout = table.get("timeout_s")
@@ -901,6 +922,11 @@ def read_failed(path: Path) -> Failed:
     if table["mode"] not in MODES:
         raise FindingsError(
             f"{path}: [failed] mode {table['mode']!r} — one of {', '.join(MODES)}"
+        )
+    if table["cause"] not in FAILED_CAUSES:
+        raise FindingsError(
+            f"{path}: [failed] cause {table['cause']!r} — one of "
+            f"{', '.join(FAILED_CAUSES)}"
         )
     return Failed(
         path,
@@ -912,6 +938,7 @@ def read_failed(path: Path) -> Failed:
         timeout,
         table["error"],
         table["command"],
+        table["cause"],
     )
 
 
@@ -925,6 +952,28 @@ def failed_attempts(area: Path) -> list[Failed]:
         read_failed(p)
         for p in sorted(folder.glob(f"*{FAILED_SUFFIX}"), key=written_order)
     ]
+
+
+def stopped_attempt(
+    area: Path, mode: str, model: str, sha: str, block_sha: str
+) -> Failed | None:
+    """The newest `unproven` failed attempt of MODE with MODEL at the area as
+    it is now — code SHA and promises BLOCK_SHA; None when there is none.
+    `labkit-audit` refuses another try on that state with that model.
+
+    Raises:
+        FindingsError: A failed-attempt file of AREA cannot be read.
+    """
+    fitting = [
+        f
+        for f in failed_attempts(area)
+        if f.cause == "unproven"
+        and f.mode == mode
+        and f.model == model
+        and f.scope_sha == sha
+        and f.block_sha == block_sha
+    ]
+    return fitting[-1] if fitting else None
 
 
 def audit_unavailable(

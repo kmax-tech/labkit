@@ -377,6 +377,7 @@ class FreezeGate(unittest.TestCase):
             findings.ATTEMPT_TIMEOUT_S,
             "claude-cli exit 1: ",
             "labkit-audit x --mode preflight",
+            cause="unavailable",
         )
 
     def test_the_acknowledged_full_run_is_recorded(self):

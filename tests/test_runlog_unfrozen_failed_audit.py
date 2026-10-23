@@ -71,6 +71,7 @@ class FailedAudit(unittest.TestCase):
             timeout,
             "claude-cli exit 1: ",
             "labkit-audit x --mode preflight",
+            cause="unavailable",
             now=now,
         )
 

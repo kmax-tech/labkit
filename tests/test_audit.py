@@ -325,6 +325,71 @@ class Audit(unittest.TestCase):
         self.assertIn("--mode preflight --timeout 1200", tried.command)
         self.assertEqual(findings.area_records(area), [])  # no findings were made
 
+    def test_an_unproven_answer_ends_the_auditing_of_this_state_with_that_model(self):
+        """The fit probes: a safety classifier stopped the auditor on every
+        try, and each try cost minutes and a dollar. The first unproven
+        answer is recorded with cause `unproven`; the next try with the
+        same model on the same state is refused before any call; another
+        model, or a backend that merely did not answer, may try again."""
+        area = repo_with()
+        calls: list[str] = []
+
+        def stopped(alias, prompt, **kw):
+            calls.append(alias)
+            raise audit.llm_backends.UnprovenAnswer(
+                "claude-cli: requested claude-opus-5-5, the reply was written by "
+                "claude-opus-4-8, claude-opus-5-5"
+            )
+
+        def audit_once(*extra: str) -> tuple[int, str]:
+            err = io.StringIO()
+            with (
+                mock.patch.object(audit.llm, "complete", stopped),
+                mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(err),
+            ):
+                rc = audit.main([str(area), "--mode", "preflight", *extra])
+            return rc, err.getvalue()
+
+        rc, err = audit_once()
+        self.assertEqual(rc, 2)
+        self.assertIn("Do not run it again on this state", err)
+        (tried,) = findings.failed_attempts(area)
+        self.assertEqual(tried.cause, "unproven")
+        self.assertEqual(calls, ["opus"])
+
+        rc, err = audit_once()
+        self.assertEqual(rc, 2)
+        self.assertIn("no further try on the same code, promises and model", err)
+        self.assertEqual(calls, ["opus"])  # refused before any call
+        self.assertEqual(len(findings.failed_attempts(area)), 1)
+
+        rc, _ = audit_once("--model", "haiku")
+        self.assertEqual(calls, ["opus", "haiku"])  # another model may try
+
+    def test_an_unavailable_backend_does_not_stop_the_next_try(self):
+        area = repo_with()
+        calls: list[str] = []
+
+        def dead(alias, prompt, **kw):
+            calls.append(alias)
+            raise audit.llm_backends.BackendError("claude-cli exit 1: quota")
+
+        for _ in range(2):
+            with (
+                mock.patch.object(audit.llm, "complete", dead),
+                mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                audit.main([str(area), "--mode", "preflight"])
+        self.assertEqual(calls, ["opus", "opus"])
+        self.assertEqual(
+            [f.cause for f in findings.failed_attempts(area)],
+            ["unavailable", "unavailable"],
+        )
+
     def test_an_unknown_alias_is_a_usage_error_and_leaves_no_attempt(self):
         area = repo_with()
 
