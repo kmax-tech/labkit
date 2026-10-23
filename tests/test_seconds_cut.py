@@ -123,7 +123,8 @@ class Registration(unittest.TestCase):
     def test_a_fit_without_a_model_owes_the_bar_and_its_reference(self):
         """Standard 0.22: a RandomForest at seconds owed its question only
         (fifth haiku round); a fit owes criterion, admissibility and the
-        null condition, and a computation with a [model] table is a contradiction."""
+        null condition, and a computation with a [model] table that does not
+        say what its number describes is a gap (test_annotation_validity)."""
         text = head(cost="seconds", kind="fit") + "- **Question / hypothesis:** q\n"
         self.assertEqual(
             protocol_check.seconds_registration_missing(text),
@@ -138,7 +139,7 @@ class Registration(unittest.TestCase):
         )
         missing = protocol_check.seconds_registration_missing(contradiction)
         self.assertTrue(
-            any('kind = "compute" with a [model] table' in m for m in missing), missing
+            any(m.startswith("[model] number_describes") for m in missing), missing
         )
         placeholder = (
             head(cost="seconds", kind="<compute | fit | apply>")

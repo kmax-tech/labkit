@@ -247,9 +247,24 @@ def _placeholder(value: object) -> bool:
 #: the keys of the `[result]` table: the one declaration that a number is reported
 RESULT_KEYS = ("run",)
 #: the `[model]` table — a model is in the loop — and its arms, one table each
-MODEL_KEYS = ("alias", "arms")
+MODEL_KEYS = ("alias", "arms", "number_describes", "annotation_validity")
 ARM_KEYS = ("profile", "fingerprint", "alias")
 FINGERPRINT = re.compile(r"^[0-9a-f]{8,64}$")
+#: what a computed number over a model's outputs describes (`[model]
+#: number_describes`, only with kind = "compute"): the outputs themselves
+#: ("the model marked 30 % as causal") or a property of the data, the model
+#: as annotator ("30 % of the texts are causal") — the latter owes
+#: `annotation_validity`
+NUMBER_DESCRIBES = ("model_outputs", "target_property")
+MODEL_OUTPUTS, TARGET_PROPERTY = NUMBER_DESCRIBES
+#: the claim keys of `[model]`: they say what a computation over the model's
+#: outputs claims, so they belong to kind = "compute" alone
+CLAIM_KEYS = ("number_describes", "annotation_validity")
+#: the evidence that the model suits as annotator (`[model]
+#: annotation_validity`), one key: an apply protocol of this repo (bound by
+#: `protocol_history.check_annotation_validity`) or a DOI (its form only)
+VALIDITY_KEYS = ("protocol", "doi")
+DOI_SHAPE = re.compile(r"^10\.\d{4,9}/\S+$")
 #: the `[gate]` table: the labels the gate accepts, declared for the code check
 GATE_KEYS = ("labels",)
 
@@ -264,11 +279,22 @@ class Arm:
 
 
 @dataclass(frozen=True)
+class Validity:
+    """The evidence that the model suits as annotator (`[model] annotation_validity`)."""
+
+    key: str  # "protocol" or "doi" (VALIDITY_KEYS)
+    value: str  # a protocol id (ID_SHAPE) or a DOI (DOI_SHAPE)
+
+
+@dataclass(frozen=True)
 class Model:
     """The model in the loop, as the head declares it (`[model]`)."""
 
     alias: str | None  # None while the stamp's `"<…>"` stands
     arms: dict[str, Arm]  # {} when the protocol compares no arms
+    number_describes: str | None  # NUMBER_DESCRIBES; None while absent or `"<…>"`
+    annotation_validity: Validity | None  # None while absent
+    claim_keys: frozenset[str]  # the CLAIM_KEYS the table carries, stamped or filled
 
 
 def _table(data: dict, name: str) -> dict | None:
@@ -309,6 +335,27 @@ def _arm(name: str, raw: object) -> Arm:
     return Arm(profile, fingerprint, alias)
 
 
+def _validity(raw: object) -> Validity:
+    where = "[model] annotation_validity"
+    if not isinstance(raw, dict) or len(raw) != 1:
+        raise BlockError(
+            f'{where} = {raw!r} — one key: {{ protocol = "p-…" }} or {{ doi = "10.…" }}'
+        )
+    _only_keys(raw, where, VALIDITY_KEYS)
+    ((key, value),) = raw.items()
+    shape = ID_SHAPE if key == "protocol" else DOI_SHAPE
+    if not isinstance(value, str) or not shape.match(value):
+        raise BlockError(
+            f"{where} {key} = {value!r} — "
+            + (
+                "p- and 16 hex digits"
+                if key == "protocol"
+                else "a DOI, 10.<registrant>/<suffix>"
+            )
+        )
+    return Validity(key, value)
+
+
 def model(text: str) -> Model | None:
     """The model the protocol declares in its loop — `[model] alias = "<alias
     from models.toml>"`, stamped by `labkit-init exp --model`, with the
@@ -317,9 +364,12 @@ def model(text: str) -> Model | None:
     a computation or an estimator. The one answer to "is a model named" for the
     seconds cut, the registration and `--report` (until 0.100.0 the prose
     `Model / tool` line, read with a pattern for "n/a", "none" and dashes).
-    `alias` is None while it is still the stamp's placeholder. Raises
-    BlockError on a non-table, an unknown key, an alias that is no string,
-    or an arm without profile and hex fingerprint."""
+    `alias` is None while it is still the stamp's placeholder, so is
+    `number_describes`. Whether the claim keys fit the kind is
+    `protocol_check.kind_gap`'s answer. Raises BlockError on a non-table, an
+    unknown key, an alias that is no string, an arm without profile and hex
+    fingerprint, a `number_describes` outside NUMBER_DESCRIBES, or an
+    `annotation_validity` that is not one protocol id or one DOI."""
     table = _table(parse_toml_block(text), "model")
     if table is None:
         return None
@@ -333,7 +383,23 @@ def model(text: str) -> Model | None:
     if not isinstance(arms_raw, dict):
         raise BlockError("[model] arms — one table per arm: [model.arms.<arm>]")
     arms = {name: _arm(name, raw) for name, raw in arms_raw.items()}
-    return Model(None if _placeholder(alias) else alias, arms)
+    describes = table.get("number_describes")
+    if describes is not None and not _placeholder(describes):
+        if describes not in NUMBER_DESCRIBES:
+            raise BlockError(
+                f"[model] number_describes = {describes!r} — one of "
+                f"{', '.join(NUMBER_DESCRIBES)}"
+            )
+    else:
+        describes = None
+    validity = table.get("annotation_validity")
+    return Model(
+        None if _placeholder(alias) else alias,
+        arms,
+        describes,
+        None if validity is None else _validity(validity),
+        frozenset(k for k in CLAIM_KEYS if k in table),
+    )
 
 
 def declared_labels(text: str) -> tuple[str, ...] | None:

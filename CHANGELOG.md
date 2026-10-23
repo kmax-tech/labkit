@@ -36,14 +36,25 @@ pins (`requirements.txt` / `requirements.lock`).
   admissibility condition and the null condition / anchors, and carries
   promise tables at every tier; a `[model]` table adds the data profile
   and the prompt. `labkit-init exp` takes `--kind` and stamps nothing
-  without it; `--kind compute --model` is refused; a fit at `seconds` gets
+  without it; `--kind compute --model` stamps the claim keys below; a fit at `seconds` gets
   the estimator skeleton (until now the count's, now the compute skeleton). The template marks the
   fields a bar owes with `<!-- sb -->` (`protocol_cuts.SECONDS_BAR_TAG`),
   and the seconds cut carries them for a fit without a model. Loud, never
   a fallback: an unknown kind does not read (`protocol_block.head`), a
   placeholder stands among the head's placeholders and refuses a full run,
-  `kind = "compute"` with a `[model]` table is a must finding and a refusal
-  (`protocol_check.kind_gap`). Migration, said in the refusal of a 0.21
+  a `compute` with a `[model]` table says what its number describes,
+  `[model] number_describes = "model_outputs" | "target_property"`: the
+  model's outputs, or a property of the data with the model as annotator;
+  the latter owes `[model] annotation_validity = { protocol = "p-…" }` (an
+  apply of this repo with a declared result, bound by protocol-check and
+  preflight, `protocol_history.check_annotation_validity`) or `{ doi =
+  "10.…" }` (its form only); evidence with `model_outputs`, and either key
+  with a fit or an apply, is a must finding (`protocol_check.kind_gap`).
+  Neither form proves the annotator suits — that stays the audit's. An
+  intermediate commit refused `compute` with a `[model]` table outright
+  (and the usability staging rewrote it to `apply` in silence): a share
+  of model labels judges no prediction, but its claim about the data needs
+  the annotator's evidence. Migration, said in the refusal of a 0.21
   head (`protocol_block.MIGRATION`): set `standard = "0.22"` and add the
   `kind` line (`protocol-fill PROTOCOL kind=…`); 0.103.0 is the last
   version reading standard 0.21, and no code reads it here. Why: a

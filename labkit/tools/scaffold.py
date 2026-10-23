@@ -397,7 +397,7 @@ def stamp_area(
             re.sub(r" ?<!-- s[bm]? -->", "", template(PROTOCOL_TEMPLATE.name))
         )
         return existing[0], "\n".join(promote(existing[0], blocks))
-    kind = asked_kind(kind, bool(model))
+    kind = asked_kind(kind)
     # the cut and the skeleton are the contract's answers, not read off the
     # tier here (a tier compared by hand outside the contract is a copy)
     quick = standard_contract.lane(cost).cut == standard_contract.SECONDS_CUT
@@ -457,10 +457,12 @@ def stamp_area(
     )
 
 
-def asked_kind(kind: str | None, model: bool) -> str:
+def asked_kind(kind: str | None) -> str:
     """The kind a new area is stamped with — the one asked, held to
-    `protocol_block.KINDS` and to the model flag; nothing falls back to a
-    computation (standard 0.22). Raises `console.Refused` naming the choice."""
+    `protocol_block.KINDS`; nothing falls back to a computation (standard
+    0.22). A computation with `--model` is stamped, not refused: its head
+    says what the number describes (`COMPUTE_CLAIM`). Raises
+    `console.Refused` naming the choice."""
     if kind is None:
         raise console.Refused(
             "labkit-init",
@@ -471,12 +473,6 @@ def asked_kind(kind: str | None, model: bool) -> str:
     if kind not in protocol_block.KINDS:
         raise console.Refused(
             "labkit-init", f"--kind {kind!r}: one of {', '.join(protocol_block.KINDS)}"
-        )
-    if kind == standard_contract.COMPUTE_KIND and model:
-        raise console.Refused(
-            "labkit-init",
-            "--kind compute with --model: a model in the loop judges predictions, so "
-            "the number has a bar — --kind apply (the model used unchanged) or fit",
         )
     return kind
 
@@ -508,13 +504,24 @@ def blank_before_headings(text: str) -> str:
     return "\n".join(out)
 
 
+#: what a computation with a model in the loop stamps below the alias: what
+#: its number describes, and — with a property of the data — the evidence
+#: that the model suits as annotator (`protocol_check.kind_gap`)
+COMPUTE_CLAIM = (
+    'number_describes = "<model_outputs | target_property>"\n'
+    '# annotation_validity = { protocol = "p-…" }   # or { doi = "10.…" }; '
+    "with target_property only\n"
+)
+
+
 def stamped_head(
     tmpl: str, root: Path, slug: str, cost: str | None, kind: str, model: bool | str
 ) -> str:
     """The template with its head tokens replaced: the name once, a fresh
     protocol id, COST when asked, KIND always, and with MODEL a `[model]`
     table after `preflight_audit` — the alias when --model named one, else
-    its placeholder for `protocol-fill "model alias=…"` (phase 4, 2026-10-21)."""
+    its placeholder for `protocol-fill "model alias=…"` (phase 4, 2026-10-21),
+    and for a computation the claim keys (`COMPUTE_CLAIM`)."""
     out = tmpl.replace("<name>", slug, 1).replace(
         "<protocol-id>", new_protocol_id(root)
     )
@@ -523,9 +530,11 @@ def stamped_head(
     out = out.replace('kind = "<compute | fit | apply>"', f'kind = "{kind}"')
     if model:
         alias = model if isinstance(model, str) else "<alias from models.toml>"
+        claim = COMPUTE_CLAIM if kind == standard_contract.COMPUTE_KIND else ""
         out = out.replace(
             'preflight_audit = ""\n',
-            f'preflight_audit = ""\n\n[model]\nalias = {protocol_block.toml_string(alias)}\n',
+            f'preflight_audit = ""\n\n[model]\nalias = {protocol_block.toml_string(alias)}\n'
+            + claim,
             1,
         )
     return out
@@ -703,7 +712,8 @@ def main(argv: list[str]) -> int:
         default=False,
         metavar="ALIAS",
         help="a model answering through models.toml: writes `[model] alias`; with "
-        "--kind apply the prompt skeleton (--kind compute refuses it)",
+        "--kind apply the prompt skeleton; with --kind compute also "
+        "`number_describes` and the `annotation_validity` it may owe",
     )
     exp.add_argument(
         "--report",

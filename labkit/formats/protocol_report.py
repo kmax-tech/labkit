@@ -28,6 +28,7 @@ from labkit.formats.repo import adopt_command, git_root, repo_protocols
 from labkit.formats.findings import audit_record_gap
 from labkit.formats.gate import BLOCKER, GateFinding
 from labkit.formats.protocol_history import (
+    check_annotation_validity,
     check_protocol_id,
     cost_lowered,
     repo_protocol_ids,
@@ -499,7 +500,8 @@ def check_protocol(
         head_error=None,
         frozen=frozen,
         audit_drift=audit_drift,
-        id_findings=check_protocol_id(path, head, ids),
+        id_findings=check_protocol_id(path, head, ids)
+        + check_annotation_validity(path, text, ids),
         cost_lowered=cost_lowered(path, head),
         answer_unbound=recorded_results_without_run(text),
         pilot_note=pilot_note,

@@ -261,6 +261,8 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **bundle** | Protocol, code and extracted facts packed for an audit agent. |
 | **frozen** | Protocol committed to its declared specification, with `frozen = true`. |
 | **kind** | What the kept number asserts, in the head (`kind`): `compute` judges no prediction, `fit` judges a model trained or adjusted in the experiment, `apply` judges a model used unchanged. The registration and the skeleton follow it; a run that only produces predictions declares no result and needs none. |
+| **number_describes** | `[model]` key of a `compute` with a model in the loop: `model_outputs` (the number describes what the model marked) or `target_property` (a property of the data, the model as annotator). |
+| **annotation validity** | Evidence that a model suits as annotator, owed with `target_property` (`[model] annotation_validity`): an apply protocol of the repo with a declared result, bound by protocol-check and preflight, or a DOI, checked for its form only; whether it carries the annotation stays the audit's. |
 | **promise** | Checkable commitment: id, metrics key, sentence, code scope and constants in a `[[promise]]` table. |
 | **criterion** | Kind C promise: success or failure decided from the run. |
 | **admissibility** | Kind A promise: prerequisite for reading a criterion; failure withholds all C verdicts. |

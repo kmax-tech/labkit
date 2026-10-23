@@ -12,7 +12,7 @@ Read-only; git is asked through `repo.git_run`.
 
 from pathlib import Path
 
-from labkit.formats import protocol_block
+from labkit.formats import protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
 from labkit.formats.protocol_check import seconds_registration_missing
 from labkit.formats.repo import git_root, git_run, repo_protocols
@@ -161,3 +161,75 @@ def check_protocol_id(
             )
         )
     return out
+
+
+def check_annotation_validity(
+    path: Path, text: str, ids: dict[str, list[Path]]
+) -> list[GateFinding]:
+    """The binding of `[model] annotation_validity = { protocol = "p-…" }`
+    against IDS (`repo_protocol_ids` of the repo): the id names exactly one
+    protocol, an apply (`kind = "apply"`, the model judged as it is used
+    here) with a declared result (`[result] run`). A blocker each when not.
+    This makes the bound validation checkable; that it carries this
+    annotation — same model, prompt and target — stays the audit's. A DOI
+    is held to its form by the head parser and bound to nothing here."""
+    try:
+        m = protocol_block.model(text)
+        kind = protocol_block.head(text).kind
+    except protocol_block.BlockError:
+        return []  # the head check names it
+    if (
+        m is None
+        or kind != standard_contract.COMPUTE_KIND
+        or m.annotation_validity is None
+        or m.annotation_validity.key != "protocol"
+    ):
+        return []
+    pid = m.annotation_validity.value
+    where = f"{path}: [model] annotation_validity protocol = {pid}"
+    hits = ids.get(pid, [])
+    if len(hits) != 1:
+        return [
+            GateFinding(
+                BLOCKER,
+                f"{where} — names "
+                + (
+                    "no protocol of this repo"
+                    if not hits
+                    else f"{len(hits)} protocols ({', '.join(str(h) for h in hits)})"
+                )
+                + "; the evidence must be one apply protocol here, or a DOI",
+                form=AS_WRITTEN,
+            )
+        ]
+    bound = hits[0]
+    try:
+        bound_text = bound.read_text(encoding="utf-8")
+        bound_kind = protocol_block.head(bound_text).kind
+        bound_run = protocol_block.declared_run(bound_text)
+    except (OSError, protocol_block.BlockError) as exc:
+        return [
+            GateFinding(
+                BLOCKER, f"{where} — {bound} does not read: {exc}", form=AS_WRITTEN
+            )
+        ]
+    if bound_kind != standard_contract.APPLY_KIND:
+        return [
+            GateFinding(
+                BLOCKER,
+                f'{where} — {bound} has kind = "{bound_kind}"; the evidence that '
+                "an annotator suits is an apply: the model, used unchanged, judged "
+                "against gold labels",
+                form=AS_WRITTEN,
+            )
+        ]
+    if bound_run is None:
+        return [
+            GateFinding(
+                BLOCKER,
+                f"{where} — {bound} declares no result yet ([result] run); a "
+                "validation without its number is no evidence",
+                form=AS_WRITTEN,
+            )
+        ]
+    return []

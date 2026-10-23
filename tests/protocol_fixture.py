@@ -157,6 +157,7 @@ def head(
     promises: str | None = "",
     result: str | None = None,
     model: str | None = None,
+    claim: str = "",
     arms: dict[str, tuple[str, str, str | None]] | None = None,
     labels: tuple[str, ...] | None = None,
 ) -> str:
@@ -166,7 +167,8 @@ def head(
     RESULT is the run id a `[result]` table declares (phase 3, 2026-10-21);
     MODEL the alias of a `[model]` table, ARMS its `[model.arms.<arm>]`
     tables as {arm: (profile, fingerprint, alias)}, LABELS a `[gate]` table
-    (phase 4). KIND is the head's `kind` (standard 0.22); None derives it as
+    (phase 4). CLAIM is TOML written into `[model]` below the alias verbatim
+    (`number_describes`, `annotation_validity`). KIND is the head's `kind` (standard 0.22); None derives it as
     the stamp would — `apply` with a model, else `compute` — so a fixture
     states only what it varies; a literal `kind="<compute | fit | apply>"`
     writes the placeholder."""
@@ -190,6 +192,7 @@ def head(
         lines += ["", "[result]", f'run = "{result}"']
     if model is not None:
         lines += ["", "[model]", f'alias = "{model}"']
+        lines += claim.strip().splitlines()
         for arm, (profile, fingerprint, alias) in (arms or {}).items():
             lines += [
                 "",

@@ -85,6 +85,7 @@ from labkit.formats.repo import (
 )
 from labkit.formats.protocol_check import check_fields
 from labkit.formats.protocol_history import (
+    check_annotation_validity,
     check_protocol_id,
     cost_lowered,
     repo_protocol_ids,
@@ -282,11 +283,15 @@ def check_protocol_fields(
 ) -> None:
     """Station 1: the field report of protocol-check (REPORT: the owed
     fields by cut, the graduation at frozen = true), the stamped id against
-    the repo's others, a cost tier lowered since the first commit. A must
+    the repo's others and the bound annotation evidence
+    (`check_annotation_validity`), a cost tier lowered since the first commit. A must
     gap or a must placeholder blocks; a should gap, a should placeholder
     and a lowered tier warn; an id finding carries its grade (a changed id
     warns, a doubled one blocks)."""
-    id_findings = check_protocol_id(protocol, head, repo_protocol_ids(protocol))
+    ids = repo_protocol_ids(protocol)
+    id_findings = check_protocol_id(protocol, head, ids) + check_annotation_validity(
+        protocol, protocol.read_text(encoding="utf-8"), ids
+    )
     lowered = cost_lowered(protocol, head)
     for label in report.missing_must:
         findings.block(f"MISSING (must): {label}")

@@ -158,7 +158,7 @@ Forschung und Benchmark-Fallliste liegen in
   Statistik-Seite (descriptive / inferential, ML:VII-1), nicht „estimate“
   (dort Lernvokabular: „least square estimates from D“). Getrennte Fragen:
   Anspruch (`kind`), Herkunft (`[model]`), Eignung des Instruments (neu).
-  1. `count` → `compute` innerhalb des unveröffentlichten Standards 0.22
+  1. Umgesetzt (`a30e9bd`): `count` → `compute` innerhalb des unveröffentlichten Standards 0.22
      (CHANGELOG „Unreleased“: kein zusätzlicher Bruch für Releases, nur
      für dev-gepinnte Sandbox-Protokolle). Leser: `protocol_block.KINDS`,
      `standard_contract.COUNT_KIND`, `scaffold.py`, `protocol_check.py`,
@@ -169,23 +169,19 @@ Forschung und Benchmark-Fallliste liegen in
      global: das allgemeine Skelett (`standard_contract.COUNT`) heißt
      `compute`; die Usability-Aufgabe `count`, `usability-task-count` und
      `count-walkthrough.sh` zählen wirklich und bleiben.
-  2. Sperre `count` + `[model]` ersetzen (`scaffold.py:476`,
-     `protocol_check.kind_gap`, `usability.py:405` — dort zusätzlich ein
-     stilles Umschreiben auf `apply`, gegen Fail loud). Neu: `compute` mit
-     `[model]` muss sagen, worüber die Zahl spricht, und Aussageart und
-     Beleg getrennt speichern (Form vor dem Bau festlegen):
-     - Aussageart: `model_outputs` („das Modell markiert 30 % als kausal“,
-       kein Beleg nötig) oder `target_property` („30 % der Texte sind
-       kausal“, Eignungsbeleg des Annotators nötig).
-     - Beleg (nur bei `target_property`): Protokoll-ID eines
-       `apply`-Experiments oder eine Quelle — kein maschinell gelesener
-       Freitext.
-     Fachbegriff: annotation validity (NLP:III-167/173), Modellannotationen
-     = silver standard (NLP:III-125). Nicht `instrument check` (= Render-/
-     Vortest) und nicht `validation` (= Anchor gate, D_val). labkit prüft
-     Vorhandensein und Bindung des Belegs; ob er die Annotation fachlich
-     trägt, bleibt Agent-Audit. `bar_owed(f, kind)` mitprüfen: `compute`
-     schuldet keine Schwelle, nur den Eignungsbeleg.
+  2. Umgesetzt (Commit „kind: a computation with a model says what its
+     number describes“): `[model] number_describes = "model_outputs" |
+     "target_property"`, bei `target_property` `annotation_validity = {
+     protocol = "p-…" }` oder `{ doi = "10.…" }`; Bindung in
+     `protocol_history.check_annotation_validity` (protocol-check,
+     preflight). Fachbegriff annotation validity (NLP:III-167/173). Offen:
+     - Skelett für `compute` + `[model]`: `standard_contract.skeleton` gibt
+       das compute-Skelett ohne Modellaufruf; das Prompt-Skelett trägt
+       Gold/Kriterium. Entscheiden, ob ein eigenes oder ein Teil des
+       Prompt-Skeletts.
+     - Audit-Bündel: das gebundene apply-Protokoll (Modell, Prompt,
+       Zielbegriff) mit ins Bündel, damit das Audit die fachliche Eignung
+       prüfen kann; heute steht dort nur die ID.
      Offene Grenze, nicht geplant: `fit`/`apply` auf Trainings- oder
      Testdaten, die ein Modell annotiert hat (silver standard als Gold).
   3. Doku: Kurzdefinitionen + zwei Prüffragen in `labkit-init --help`;

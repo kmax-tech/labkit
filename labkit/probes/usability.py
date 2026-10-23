@@ -397,13 +397,12 @@ def stamp_flags(
 ) -> tuple[str | None, str, bool]:
     """(cost tier or None, kind, model) the scaffolder gets: the task's route
     stamp (TASK_STAMP) unless `cost` names a tier; "unset" stamps no tier.
-    A computation asked for with a model is an apply: a model in the loop judges."""
+    A computation asked for with a model stays one: it is stamped with the
+    claim keys (`scaffold.COMPUTE_CLAIM`), never rewritten to an apply."""
     default_cost, kind, default_model = TASK_STAMP[task]
     if cost is None:
         cost = default_cost
     model = model or default_model
-    if model and kind == "compute":
-        kind = "apply"
     return (None if cost == "unset" else cost), kind, model
 
 

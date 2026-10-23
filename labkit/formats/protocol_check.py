@@ -375,16 +375,61 @@ def in_cut(f: Field, kind: str | None, model: bool) -> bool:
 
 
 def kind_gap(text: str, head: protocol_block.Head) -> str | None:
-    """Why the head's `kind` contradicts the rest of the head, or None: a
-    `compute` with a `[model]` table — a model answering through models.toml
-    judges predictions, so the number has a bar (fit or apply). Loud, never
-    a fallback: an unknown kind is refused by `protocol_block.head`, a
-    placeholder stands among the head's placeholders."""
-    if head.kind == standard_contract.COMPUTE_KIND and model_named(text):
+    """Why the head's `kind` contradicts its `[model]` table, or None. A
+    computation over a model's outputs says what its number describes
+    (`[model] number_describes`): the outputs, or a property of the data
+    with the model as annotator — the latter names the evidence that the
+    annotator suits (`annotation_validity`), the former names none, or the
+    claim and the evidence disagree. A fit or an apply judges the model
+    itself, so the claim keys say nothing there. Until the 0.22 rename a
+    computation with a `[model]` table was refused outright: a model in the
+    loop was taken to judge, though a share of model labels judges no
+    prediction (TODO, `compute` plan item 2). Whether a bound protocol is an
+    apply with a result is `protocol_history.check_annotation_validity`'s,
+    which reads the repo; whether the evidence carries the annotation stays
+    the audit's. Loud, never a fallback: a malformed table is the head
+    check's."""
+    try:
+        m = protocol_block.model(text)
+    except protocol_block.BlockError:
+        return None
+    if m is None or head.kind is None:
+        return None
+    if head.kind != standard_contract.COMPUTE_KIND:
+        if m.claim_keys:
+            return (
+                f"[model] {', '.join(sorted(m.claim_keys))} with kind = "
+                f'"{head.kind}" — a fit or an apply judges the model itself, so '
+                "what a computation over its outputs claims has no place here; "
+                "drop the key(s)"
+            )
+        return None
+    if m.number_describes is None:
         return (
-            '[protocol] kind = "compute" with a [model] table — a model in the loop '
-            'judges predictions, so the number has a bar: kind = "apply" (the model '
-            'used unchanged) or kind = "fit" (trained or adjusted here)'
+            '[model] number_describes — kind = "compute" with a [model] table '
+            'says what the number describes: "model_outputs" (what the model '
+            'marked) or "target_property" (a property of the data, the model as '
+            "annotator)"
+        )
+    if (
+        m.number_describes == protocol_block.TARGET_PROPERTY
+        and m.annotation_validity is None
+    ):
+        return (
+            '[model] annotation_validity — number_describes = "target_property" '
+            "claims a property of the data through the model's annotations; name "
+            'the evidence the annotator suits: { protocol = "p-…" } (an apply '
+            'protocol of this repo with a declared result) or { doi = "10.…" }'
+        )
+    if (
+        m.number_describes == protocol_block.MODEL_OUTPUTS
+        and m.annotation_validity is not None
+    ):
+        return (
+            '[model] annotation_validity with number_describes = "model_outputs" '
+            "— the number describes the model's outputs, so evidence about the "
+            "data claims more than it; drop it or set number_describes = "
+            '"target_property"'
         )
     return None
 

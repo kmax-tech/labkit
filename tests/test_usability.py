@@ -258,11 +258,12 @@ class StampFlags(unittest.TestCase):
         usability.plant_dili(root, good)
         self.assertEqual((root / usability.FIT_DATA).read_bytes(), good.read_bytes())
 
-    def test_a_count_with_a_model_is_staged_as_an_apply(self):
-        """A model in the loop judges: `--model` on the count task stamps
-        `kind = "apply"`, never a count with a `[model]` table."""
+    def test_a_count_with_a_model_stays_a_computation(self):
+        """`--model` on the count task stamps `kind = "compute"` with the
+        claim keys; until the 0.22 rename it was rewritten to an apply in
+        silence (test_annotation_validity)."""
         self.assertEqual(
-            usability.stamp_flags("count", None, True), ("seconds", "apply", True)
+            usability.stamp_flags("count", None, True), ("seconds", "compute", True)
         )
 
 

@@ -158,7 +158,25 @@ The same block may hold the `[[promise]]` tables (labkit
   run), and carries promise tables; with a `[model]` table also the data
   profile and the prompt. The kind describes the number, not every
   operation of the run: a run that only produces predictions declares no
-  result and needs no kind. `compute` with a `[model]` table is refused.
+  result and needs no kind. A `compute` with a `[model]` table — the model
+  produced the values the number is computed from — says what the number
+  describes (`number_describes`, next entry).
+- **[model] number_describes** — only with `kind = "compute"` and a
+  `[model]` table: `"model_outputs"` when the number describes what the
+  model marked ("the model marked 30 % as causal"), `"target_property"`
+  when it describes the data, the model serving as annotator ("30 % of the
+  texts are causal"). The kind says what the number asserts; this says what
+  it is about; whether the annotator suits is a third question.
+- **[model] annotation_validity** — owed with `"target_property"`, refused
+  with `"model_outputs"`: the evidence that the annotator suits (annotation
+  validity; model annotations are a silver standard). Either `{ protocol =
+  "p-…" }`, an apply protocol of this repo with a declared result — labkit
+  checks that the id resolves to exactly one such protocol, so the bound
+  validation can be checked — or `{ doi = "10.…" }`, a published
+  validation, checked for its form only. Neither proves that the model
+  suits this annotation (same model, prompt, target concept): that stays
+  with the audit. With `fit` or `apply` both keys are refused — there the
+  model is what the number judges, not an instrument.
 - **cost** — see below.
 - **frozen** — `true` means hypothesis, prompts/rules, metrics, baselines
   and decision rule were all fixed beforehand; only `true` plus `test` gives
