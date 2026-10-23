@@ -391,17 +391,21 @@ def _cli_evidence(body: JsonObject) -> str:
 def _cli_provenance(
     body: JsonObject, model: str, where: str, *, is_error: bool
 ) -> None:
-    """Raises UnprovenAnswer unless the reply shows no safety stop, no model
-    but MODEL and — for an answer, not an error — MODEL used in one turn
-    (`safety_stops`, `modelUsage`, `num_turns`); a missing field is a
-    ReplyError — no proof, no answer. A safety classifier can stop the
-    requested model mid-answer; the CLI then lets another model continue
-    and `result` holds only the continuation — the requested model's id
-    stays on the record for text another model wrote, and a part reads as
-    the whole. An error (IS_ERROR) without a stop or another model is left
-    to the caller: an overloaded server is retried."""
-    stops = reply_field(body, "safety_stops", int, where, required=True)
+    """Raises UnprovenAnswer unless the reply shows no model but MODEL and —
+    for an answer, not an error — MODEL used in one turn (`modelUsage`,
+    `num_turns`, both required: a missing one is a ReplyError — no proof,
+    no answer), and no safety stop where the CLI counts them
+    (`safety_stops`, absent before CLI 2.1.304). A safety classifier can
+    stop the requested model mid-answer; the CLI then lets another model
+    continue and `result` holds only the continuation — the requested
+    model's id stays on the record for text another model wrote, and a part
+    reads as the whole. CLI 2.1.285 reported such a reply as
+    `subtype = "success"`, `is_error = false`, `num_turns = 2`, both models
+    in `modelUsage`, no `safety_stops` (fit probe on 97e6470). An error
+    (IS_ERROR) without a stop or another model is left to the caller: an
+    overloaded server is retried."""
     used = sorted(reply_field(body, "modelUsage", dict, where, required=True))
+    stops = reply_field(body, "safety_stops", int, where)
     if stops:
         raise UnprovenAnswer(
             f"claude-cli: {stops} safety stop(s) in the answer of {model} "

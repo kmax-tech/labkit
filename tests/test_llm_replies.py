@@ -164,8 +164,27 @@ class ClaudeCliProvenance(unittest.TestCase):
         self.assertNotIsInstance(cm.exception, B.UnprovenAnswer)
         self.assertIn("is_error=True", str(cm.exception))
 
+    def test_the_stop_as_cli_2_1_285_reported_it_is_unproven(self) -> None:
+        """The reply of a stopped audit in the fit probe on 97e6470, field
+        for field: a success, no error, no `safety_stops` at all."""
+        reply = cli_reply(
+            "claude-opus-5-5",
+            without="safety_stops",
+            subtype="success",
+            is_error=False,
+            num_turns=2,
+            modelUsage={"claude-opus-4-8": {}, "claude-opus-5-5": {}},
+        )
+        with self.assertRaisesRegex(B.UnprovenAnswer, "written by claude-opus-4-8"):
+            B._cli_result(reply, "claude-opus-5-5")
+
+    def test_a_cli_without_safety_stops_answers_when_one_model_wrote_it(self) -> None:
+        self.assertEqual(B._cli_result(cli_reply(without="safety_stops"), "m"), "Yes")
+        with self.assertRaisesRegex(B.UnprovenAnswer, "2 turns"):
+            B._cli_result(cli_reply(without="safety_stops", num_turns=2), "m")
+
     def test_a_reply_without_the_proof_is_refused(self) -> None:
-        for key in ("num_turns", "safety_stops", "modelUsage"):
+        for key in ("num_turns", "modelUsage"):
             with self.subTest(key):
                 with self.assertRaisesRegex(B.ReplyError, f"no `{key}`.*subtype="):
                     B._cli_result(cli_reply(without=key), "m")

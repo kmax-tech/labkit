@@ -62,10 +62,13 @@ pins (`requirements.txt` / `requirements.lock`).
   `claude-opus-4-8` continue, `--output-format json` returned the
   continuation alone as `result`, and the audit record named
   `claude-opus-5-5` (fit probes on `3e9784c` and `de663ed`). The reply now
-  has to show the requested model alone in `modelUsage`, `safety_stops =
-  0` and `num_turns = 1` (fields of CLI 2.1.304; a missing one is a
-  `ReplyError`); otherwise `llm_backends.UnprovenAnswer`, raised at once,
-  not retried. An audit that meets it records a failed audit, no
+  has to show the requested model alone in `modelUsage` and `num_turns =
+  1` (both required; a missing one is a `ReplyError`), and no safety stop
+  where the CLI counts them (`safety_stops`, absent in CLI 2.1.285, so
+  optional); otherwise `llm_backends.UnprovenAnswer`, raised at once, not
+  retried. Observed on CLI 2.1.285 (fit probe on `97e6470`): a stopped
+  reply is `subtype = "success"`, `is_error = false`, `num_turns = 2`,
+  both models in `modelUsage`, no `safety_stops`. An audit that meets it records a failed audit, no
   findings. Standard: LAB-029. The stop and a foreign model are checked
   before `is_error`: in the fit probe on `4f4f238` every audit try was
   stopped and continued and the call was retried — a stopped answer
