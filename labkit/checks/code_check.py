@@ -30,12 +30,12 @@ verified by this command:
      a script that sets a registered constant's value itself instead of
      reading it from the protocol judges by an unregistered value once the
      two drift.
-  1b. **parser fixtures** (AUTOMATED, 2026-10-05). Every `parse_*` function in
+  1b. **parser fixtures** (GUARANTEED, 2026-10-05). Every `parse_*` function in
      the area's scripts is called by a test file under the repo's tests/ (a
      call, not a mention; the assertion is not checked) — five
      audit findings in three repos were "this parser has no fixture test on
      real raw answers", and a parser fails silently into a wrong number.
-  1c. **prompt drift** (AUTOMATED, 2026-10-05). The protocol's prompt block
+  1c. **prompt drift** (GUARANTEED, 2026-10-05). The protocol's prompt block
      is the `PROMPT` constant, not a transcript of it: every line of the
      constant without a `{placeholder}` must appear in the block. The most
      frequent provenance blocker in the audit corpus.

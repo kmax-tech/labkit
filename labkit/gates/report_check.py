@@ -812,9 +812,10 @@ def owed_blocks(
 def hold_report(path: Path, text: str, repo: Path, sources: Sources) -> int:
     """Hold one report: its blocks equal their protocols' rendering, every
     cited run id a run of the repo, every cited declared result shown in
-    its protocol's block (blockers); every number outside a block a hint,
-    a cited run no protocol declares a warning (static evidence). 0 clean
-    or hints only, 1 a blocker."""
+    its protocol's block (blockers); a cited run no protocol declares a
+    WARNING (guaranteed); the numbers outside every block a WARNING that
+    is static evidence — a hint at where to look, not a check of them.
+    0 clean or warnings only, 1 a blocker."""
     rel = path.relative_to(repo.resolve()).as_posix()
     print(f"═══ report-check {rel} (a report citing runs) ═══")
     out = Findings()

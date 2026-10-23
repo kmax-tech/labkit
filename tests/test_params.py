@@ -164,8 +164,7 @@ class Table(unittest.TestCase):
                 rows["min_acc"].in_run,
                 "— (not recorded; scripts/01_measure.py:1 holds min_acc = 0.7)",
             )
-            self.assertIn("absent", rows["min_acc"].evidence_kind)
-            self.assertIn(gate.STATIC_EVIDENCE, rows["min_acc"].evidence_kind)
+            self.assertEqual(rows["min_acc"].evidence_kind, gate.STATIC_EVIDENCE)
 
     def test_an_upper_case_copy_stands_in_the_registered_row(self) -> None:
         """Cold reader 2026-10-09: the script copied `min_acc` as `MIN_ACC`;

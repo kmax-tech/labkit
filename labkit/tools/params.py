@@ -71,8 +71,10 @@ class ParamRow:
         meaning: What the value is to the measurement (registered constant,
             recorded parameter, the answering model, an unrecorded constant).
         in_run: The value the run recorded under that name, or "—".
-        evidence_kind: `gate.GUARANTEED` or `gate.STATIC_EVIDENCE` — what carries
-            the line (a composite cell when a value is absent).
+        evidence_kind: `gate.GUARANTEED` or `gate.STATIC_EVIDENCE`, nothing
+            else — what carries the line. A registered constant the record
+            lacks is static evidence: its absence is certain, the fault it
+            suggests is not; `in_run` says "not recorded".
     """
 
     name: str
@@ -152,7 +154,7 @@ def constant_rows(
                 else ""
             )
             in_run = f"— (not recorded{held})"
-            kind = f"{GUARANTEED}: absent; as a fault {STATIC_EVIDENCE}"
+            kind = STATIC_EVIDENCE
         else:
             in_run = _shown(rec.recorded) + (
                 "" if rec.state == "equal" else "  ≠ DIFFERS"
