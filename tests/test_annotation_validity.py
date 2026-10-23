@@ -217,7 +217,7 @@ class Binding(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            ids = protocol_history.repo_protocol_ids(share)
+            ids = protocol_block.repo_protocol_ids(share)
             self.assertIn(VALIDATION_ID, ids)
             found = protocol_history.check_annotation_validity(
                 share, share.read_text(encoding="utf-8"), ids
@@ -345,3 +345,113 @@ class Evidence(unittest.TestCase):
             ):
                 with self.subTest(text=text[-120:]):
                     self.assertEqual(audit.validity_evidence(share, text), ())
+
+
+class StaleEvidence(Evidence):
+    """The audit record's stamp covers the evidence the audit was shown
+    (`scope_sha.validation_basis`): when the bound validation changes, the
+    old record no longer covers the area, and the refusal says the stamp
+    covers the bound validation. A DOI binds only its string."""
+
+    REF = (
+        'number_describes = "target_property"\n'
+        f'annotation_validity = {{ protocol = "{VALIDATION_ID}" }}'
+    )
+
+    def _area(self, d: str, ref: str = REF) -> tuple[Path, str, Path]:
+        share, _ = self._lab(
+            d, head(id=VALIDATION_ID, kind="apply", model="haiku", result=RUN)
+        )
+        (share / "scripts").mkdir()
+        (share / "scripts" / "01_measure.py").write_text("N = 1\n", encoding="utf-8")
+        text = _compute(ref)
+        (share / "PROTOCOL-share.md").write_text(text, encoding="utf-8")
+        return share, text, Path(d) / "experiments" / "01-validation"
+
+    def _record(self, share: Path, text: str) -> str:
+        from labkit.formats import findings, promises, scope_sha
+
+        sha = scope_sha.area_stamp(share)[0]
+        return findings.write(
+            share, "preflight", "opus", sha, promises.block_stamp(text), (0, 0, 0), []
+        ).name
+
+    def _gap(self, share: Path, name: str, text: str) -> str | None:
+        from labkit.formats import findings
+
+        return findings.audit_record_gap(share, name, text)
+
+    def test_the_record_covers_the_area_while_nothing_changed(self):
+        with tempfile.TemporaryDirectory() as d:
+            share, text, _ = self._area(d)
+            name = self._record(share, text)
+            self.assertIsNone(self._gap(share, name, text))
+
+    def test_a_changed_validation_stales_the_record(self):
+        edits = {
+            "the bound protocol": lambda v, root: (
+                (v / "PROTOCOL-validation.md")
+                .open("a", encoding="utf-8")
+                .write("\nA line added after the audit.\n")
+            ),
+            "its result": lambda v, root: (
+                v / "runs" / RUN / "metrics.json"
+            ).write_text('{"macro_f1": 0.41}\n', encoding="utf-8"),
+            "its prompt": lambda v, root: (v / "scripts" / "01_measure.py").write_text(
+                'PROMPT = "Is this claim causal? Say yes."\n', encoding="utf-8"
+            ),
+            "its model entry": lambda v, root: (root / "models.toml").write_text(
+                '[models.haiku]\nbackend = "claude-cli"\nmodel = "claude-haiku-4"\n',
+                encoding="utf-8",
+            ),
+        }
+        for what, edit in edits.items():
+            with self.subTest(what=what), tempfile.TemporaryDirectory() as d:
+                share, text, val = self._area(d)
+                name = self._record(share, text)
+                edit(val, Path(d))
+                gap = self._gap(share, name, text)
+                self.assertIsNotNone(gap)
+                self.assertIn("covers the bound validation too", gap or "")
+                self.assertIn(
+                    "experiments/01-validation/PROTOCOL-validation.md", gap or ""
+                )
+
+    def test_another_alias_in_models_toml_leaves_the_record_standing(self):
+        with tempfile.TemporaryDirectory() as d:
+            share, text, _ = self._area(d)
+            name = self._record(share, text)
+            with (Path(d) / "models.toml").open("a", encoding="utf-8") as f:
+                f.write('[models.opus]\nbackend = "claude-cli"\nmodel = "o"\n')
+            self.assertIsNone(self._gap(share, name, text))
+
+    def test_a_doi_binds_its_string_only(self):
+        from labkit.formats import scope_sha
+
+        ref = f'number_describes = "target_property"\nannotation_validity = {{ doi = "{DOI}" }}'
+        with tempfile.TemporaryDirectory() as d:
+            share, text, val = self._area(d, ref)
+            before = scope_sha.area_stamp(share)[0]
+            # the bound protocol is nobody's evidence here: editing it moves nothing
+            (val / "PROTOCOL-validation.md").open("a", encoding="utf-8").write("\nx\n")
+            self.assertEqual(scope_sha.area_stamp(share)[0], before)
+            self.assertIn("its string only", scope_sha.validation_note(share))
+            other = text.replace(DOI, "10.18653/v1/2023.acl-long.2")
+            (share / "PROTOCOL-share.md").write_text(other, encoding="utf-8")
+            self.assertNotEqual(scope_sha.area_stamp(share)[0], before)
+
+    def test_an_area_without_the_evidence_keeps_its_stamp(self):
+        from labkit.formats import scope_sha
+
+        with tempfile.TemporaryDirectory() as d:
+            share, _, _ = self._area(d)
+            for text in (
+                _compute('number_describes = "model_outputs"'),
+                head(cost="minutes", kind="compute"),
+            ):
+                with self.subTest(text=text[-80:]):
+                    (share / "PROTOCOL-share.md").write_text(text, encoding="utf-8")
+                    snap = scope_sha.area_snapshot(share)
+                    self.assertEqual(scope_sha.validation_basis(share), ([], ()))
+                    self.assertEqual(snap.validation, ())
+                    self.assertEqual(scope_sha.validation_note(share), "")

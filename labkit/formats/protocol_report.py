@@ -31,8 +31,8 @@ from labkit.formats.protocol_history import (
     check_annotation_validity,
     check_protocol_id,
     cost_lowered,
-    repo_protocol_ids,
 )
+from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.protocol_check import (
     BARE_REFERENCE,
     PROTOCOL_TEMPLATE,

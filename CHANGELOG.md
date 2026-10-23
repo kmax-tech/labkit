@@ -50,7 +50,12 @@ pins (`requirements.txt` / `requirements.lock`).
   preflight, `protocol_history.check_annotation_validity`) or `{ doi =
   "10.…" }` (its form only); evidence with `model_outputs`, and either key
   with a fit or an apply, is a must finding (`protocol_check.kind_gap`).
-  Neither form proves the annotator suits — that stays the audit's. An
+  Neither form proves the annotator suits — that stays the audit's, which
+  is shown the bound protocol, its result, its model entry and its prompt;
+  the area stamp (`scope_sha.validation_basis`) covers that evidence, so
+  an audit record goes stale when the bound validation changes (a DOI by
+  its string only — the cited content is bound by nothing). Areas without
+  `annotation_validity` keep their stamp. An
   intermediate commit refused `compute` with a `[model]` table outright
   (and the usability staging rewrote it to `apply` in silence): a share
   of model labels judges no prediction, but its claim about the data needs

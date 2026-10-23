@@ -6,9 +6,13 @@ a stale audit look current. The scope covers exactly: `scripts/*.py` and
 `analysis/*.py` of the area, the files its protocols' promises declare as
 scope, the repo-local `lib/` and `src/` modules all of these import (shared
 anchors and thresholds live there), and the `labkit==` pin line when one is
-found — at least what `labkit-audit` reads in full. NOT covered: data files, prompt files, models.toml,
-the protocol — an unchanged stamp says the CODE is the same, not the
-inputs. Sibling: `promises.declared_scope_sha` is the same idea per
+found — at least what `labkit-audit` reads in full — and, where a protocol
+of the area names `[model] annotation_validity`, the evidence the audit is
+shown of it (`validation_basis`: the bound apply protocol, its result, its
+scripts and its `models.toml` entry; of a DOI only its string — the cited
+content is bound by nothing). NOT covered otherwise: data files, prompt
+files, models.toml, the protocol — an unchanged stamp says the CODE is the
+same, not the inputs. Sibling: `promises.declared_scope_sha` is the same idea per
 promise, over its declared scope.
 
 Why a command and not a shell one-liner: the one-liner in the first draft of
@@ -36,13 +40,14 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
-from labkit.formats import console
+from labkit.formats import console, protocol_block
 from pathlib import Path
 
 from labkit.formats.repo import (
     area_protocols,
     areas_of,
     layout_root,
+    model_entry,
     no_such_area,
     repo_protocols,
     requirement_lines,
@@ -360,16 +365,21 @@ class Snapshot:
     what `sha` names; reading the paths again may see other bytes.
 
     Attributes:
-        sha: The stamp (`DIGEST_CHARS` hex) over `contents` and the pin line.
+        sha: The stamp (`DIGEST_CHARS` hex) over `contents`, the pin line and
+            the `validation` evidence.
         files: The stamped files in the order the scope lists them, each once.
         contents: Resolved path → the bytes the sha covers.
         pin: (file, line) of the labkit pin, or None.
+        validation: One sentence per `annotation_validity` the area's
+            protocols declare, naming what of it the sha covers
+            (`validation_basis`); () when none does.
     """
 
     sha: str
     files: tuple[Path, ...]
     contents: Mapping[Path, bytes]
     pin: tuple[str, str] | None
+    validation: tuple[str, ...] = ()
 
     def text(self, path: Path) -> str:
         """The snapshot's text of PATH. Raises KeyError naming a path the
@@ -423,8 +433,112 @@ def area_snapshot(
             contents[f.resolve()] = f.read_bytes()
     pin = find_pin(area.resolve()) if use_pin else None
     entries = sorted((_key(f, root), contents[f]) for f in contents)
-    sha = tree_digest(entries, trailer=[pin[1]] if pin else [])
-    return Snapshot(sha, tuple(files), MappingProxyType(contents), pin)
+    basis, told = validation_basis(area)
+    # appended after the files and only when declared: an area without an
+    # `annotation_validity` keeps the stamp it had
+    sha = tree_digest([*entries, *basis], trailer=[pin[1]] if pin else [])
+    return Snapshot(sha, tuple(files), MappingProxyType(contents), pin, told)
+
+
+#: entry names of the validation basis start so, apart from every file key
+VALIDATION_KEY = "annotation_validity"
+
+
+def validation_basis(
+    area: Path,
+) -> tuple[list[tuple[str, bytes]], tuple[str, ...]]:
+    """(entries, sentences): what the area stamp covers of the evidence its
+    protocols name in `[model] annotation_validity`, so an audit that was
+    shown that evidence (`audit.validity_evidence`) goes stale when it
+    changes. Per declaring protocol: the reference as written; for a
+    protocol id that resolves to exactly one protocol of the repo
+    (`protocol_block.repo_protocol_ids`), that protocol's bytes, its
+    declared run's `metrics.json` (a marker while it is missing), its
+    area's `scripts/*.py` (where its `PROMPT` constants live; its `Prompt`
+    blocks stand in the protocol) and the `models.toml` entry of its alias
+    (`repo.model_entry`). A DOI binds no document bytes: only its string
+    is stamped. Whether the reference is a valid binding (an apply with a
+    result) is the gate's (`protocol_history.bound_validation`), not the
+    stamp's. Never raises for a protocol it cannot read — the head check
+    names that."""
+    root = layout_root(area)
+    entries: list[tuple[str, bytes]] = []
+    told: list[str] = []
+    ids: dict[str, list[Path]] | None = None
+    for p in area_protocols(area):
+        try:
+            m = protocol_block.model(p.read_text(encoding="utf-8"))
+        except (OSError, protocol_block.BlockError):
+            continue
+        if m is None or m.annotation_validity is None:
+            continue
+        ref = m.annotation_validity
+        name = f"{VALIDATION_KEY} of {_key(p, root)}"
+        entries.append((name, f"{ref.key} = {ref.value}".encode("utf-8")))
+        if ref.key != "protocol":
+            told.append(f"{_key(p, root)} names doi {ref.value} (its string only)")
+            continue
+        if ids is None:
+            ids = protocol_block.repo_protocol_ids(area)
+        hits = ids.get(ref.value, [])
+        if len(hits) != 1:
+            told.append(f"{_key(p, root)} names {ref.value}, bound to no one protocol")
+            continue
+        bound = hits[0]
+        entries += _bound_entries(name, bound, root)
+        told.append(
+            f"{_key(p, root)} names {_key(bound, root)} (the protocol, its "
+            f"declared result, its scripts and its models.toml entry)"
+        )
+    return entries, tuple(told)
+
+
+def validation_note(area: Path) -> str:
+    """For a refusal of a stale audit: "" when the area stamp covers no
+    `annotation_validity` evidence (or the area cannot be stamped — the
+    refusal names that), else a clause saying the stamp covers the bound
+    validation too, so a change there is why the audit no longer covers.
+    The stamp is one digest: it cannot tell the code from the evidence."""
+    try:
+        told = area_snapshot(area).validation
+    except (FileNotFoundError, ValueError):
+        return ""
+    if not told:
+        return ""
+    return (
+        " — the stamp covers the bound validation too, so a change to it "
+        "counts as well: " + "; ".join(told)
+    )
+
+
+def _bound_entries(name: str, bound: Path, root: Path) -> list[tuple[str, bytes]]:
+    """The bound protocol's bytes, its result, its scripts and its model
+    entry as named stamp entries (`validation_basis`)."""
+    try:
+        data = bound.read_bytes()
+    except OSError as exc:
+        return [(f"{name}: {_key(bound, root)}", f"unreadable: {exc}".encode())]
+    out = [(f"{name}: {_key(bound, root)}", data)]
+    text = data.decode("utf-8", errors="replace")
+    try:
+        run = protocol_block.declared_run(text)
+        bound_model = protocol_block.model(text)
+    except protocol_block.BlockError:
+        return out
+    area = bound.parent
+    if run is not None:
+        metrics = area / "runs" / run / "metrics.json"
+        out.append(
+            (
+                f"{name}: {_key(metrics, root)}",
+                metrics.read_bytes() if metrics.is_file() else b"<missing>",
+            )
+        )
+    for script in sorted((area / "scripts").glob("*.py")):
+        out.append((f"{name}: {_key(script, root)}", script.read_bytes()))
+    alias = bound_model.alias if bound_model is not None else None
+    out.append((f"{name}: models.toml", model_entry(alias, area).encode("utf-8")))
+    return out
 
 
 def area_stamp(

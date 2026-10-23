@@ -30,7 +30,6 @@ from labkit.formats import (  # noqa: E402
     promises,
     protocol_block,
     protocol_check,
-    protocol_history,
     protocol_report,
     scope_sha,
 )  # noqa: E402
@@ -312,7 +311,7 @@ class TestCheckFileAsData(unittest.TestCase):
         path.write_text(text, encoding="utf-8")
         tmpl = protocol_report.template_lines(TEMPLATE)
         return protocol_report.check_protocol(
-            path, text, tmpl, protocol_history.repo_protocol_ids(path)
+            path, text, tmpl, protocol_block.repo_protocol_ids(path)
         )
 
     def test_a_filled_pilot_is_clean_and_does_not_block(self):

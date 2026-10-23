@@ -17,8 +17,10 @@ Two git calls, by what a non-zero exit means:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
+import tomllib
 from pathlib import Path
 
 from labkit.formats import console
@@ -178,6 +180,29 @@ def lab_root(start: Path) -> Path | None:
         if (d / "models.toml").is_file():
             return d
     return None
+
+
+def model_entry(alias: str | None, start: Path) -> str:
+    """`[models.<alias>]` of the lab's `models.toml` (`lab_root` of START) as
+    TOML lines, or a sentence why not — what the audit is shown of a bound
+    validation's model and what the area stamp covers of it
+    (`scope_sha.validation_basis`), so a change to another alias moves
+    neither."""
+    if alias is None:
+        return "the bound protocol names no [model] alias"
+    root = lab_root(start)
+    if root is None:
+        return f"alias = {alias!r}; no models.toml above {start}"
+    try:
+        data = tomllib.loads((root / "models.toml").read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        return f"alias = {alias!r}; models.toml does not read: {exc}"
+    entry = data.get("models", {}).get(alias)
+    if not isinstance(entry, dict):
+        return f"alias = {alias!r}; models.toml has no [models.{alias}]"
+    return f"[models.{alias}]\n" + "\n".join(
+        f"{k} = {json.dumps(v)}" for k, v in entry.items()
+    )
 
 
 def area_protocols(area: Path) -> list[Path]:

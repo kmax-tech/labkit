@@ -177,7 +177,10 @@ The same block may hold the `[[promise]]` tables (labkit
   validation, checked for its form only. Neither proves that the model
   suits this annotation (same model, prompt, target concept): that stays
   with the audit, which `labkit-audit` shows the bound protocol, its
-  result (`metrics.json`), its model entry and its prompt. With `fit` or
+  result (`metrics.json`), its model entry and its prompt; the audit
+  record's stamp covers these, so a changed validation owes a new audit. A
+  DOI binds no document bytes: only its string is stamped, and nothing
+  notices when the cited publication changes. With `fit` or
   `apply` both keys are refused — there the model is what the number
   judges, not an instrument.
 - **cost** — see below.

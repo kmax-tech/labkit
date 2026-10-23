@@ -106,7 +106,7 @@ from pathlib import Path
 from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.runs import as_stored
-from labkit.formats.scope_sha import area_stamp, digest
+from labkit.formats.scope_sha import area_stamp, digest, validation_note
 
 DIR = "audits"
 #: the suffix of a failed attempt's file, never of a record of findings
@@ -832,6 +832,7 @@ def audit_coverage(
             f"no {mode} audit saw the area as it is now "
             f"({_bound(*now)}; audited: {seen}) — a change after "
             f"the audit owes a new one: `labkit-audit <area> --mode {mode}`"
+            f"{validation_note(area)}"
         )
     undecided = [f for r in covering for f in r.open]
     if undecided:
@@ -1084,7 +1085,7 @@ def audit_record_gap(area: Path, name: str, text: str) -> str | None:
             f"the record {name} saw scope sha {record.scope_sha}, the code now stamps "
             f"{now} — it changed after the audit, so the change owes a new audit "
             f"(`labkit-audit <area> --mode preflight`); naming another record "
-            f"without one is refused too"
+            f"without one is refused too{validation_note(area)}"
         )
     try:
         block = promises.block_stamp(text)

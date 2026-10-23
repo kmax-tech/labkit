@@ -1,7 +1,6 @@
 """protocol_history — what git knows about a protocol.
 
-The ids every protocol of the repo claims (`repo_protocol_ids`, one scan
-per invocation), the id and the cost tier a protocol had in its first
+The id and the cost tier a protocol had in its first
 commit, the registration as a given commit held it
 (`registration_in_commit` — report-check holds the seconds lane to the
 commit of the first measurement), and the checks built on them: a cost
@@ -17,31 +16,7 @@ from typing import NamedTuple
 from labkit.formats import protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
 from labkit.formats.protocol_check import seconds_registration_missing
-from labkit.formats.repo import git_root, git_run, repo_protocols
-
-
-def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
-    """Every protocol id in the repo, mapped to the files carrying it — read
-    now, never cached: the caller holds the index for as long as it may
-    trust it (`main`: one scan per repo per invocation). A module-level
-    cache kept a duplicate made later in the same process invisible.
-
-    Uniqueness cannot be settled at the stamp alone: copying a protocol or
-    editing the id by hand makes a duplicate long after `labkit-init exp` ran, and
-    two protocols with one id bind their runs to the same thing.
-    """
-    root = git_root(start)
-    if root is None:
-        return {}
-    index: dict[str, list[Path]] = {}
-    for f in repo_protocols(root):
-        try:
-            pid = protocol_block.id_of(f.read_text(encoding="utf-8"))
-        except OSError:
-            continue
-        if pid:
-            index.setdefault(pid, []).append(f)
-    return index
+from labkit.formats.repo import git_root, git_run
 
 
 def id_in_git_head(path: Path) -> str | None:
@@ -131,7 +106,7 @@ def cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
 def check_protocol_id(
     path: Path, head: protocol_block.Head, ids: dict[str, list[Path]]
 ) -> list[GateFinding]:
-    """Uniqueness against IDS (`repo_protocol_ids` of the repo) and
+    """Uniqueness against IDS (`protocol_block.repo_protocol_ids` of the repo) and
     working-tree divergence of the protocol id, each with its grade as data:
     a doubled id blocks, a changed one warns. The grade is never read back
     from the text, which carries the path (PROTOCOL-WARNING.md turned a
@@ -178,7 +153,7 @@ def bound_validation(
     text: str, ids: dict[str, list[Path]]
 ) -> BoundValidation | str | None:
     """The one binding of `[model] annotation_validity = { protocol = "p-…" }`
-    against IDS (`repo_protocol_ids` of the repo): the id names exactly one
+    against IDS (`protocol_block.repo_protocol_ids` of the repo): the id names exactly one
     protocol, an apply (`kind = "apply"`, the model judged as it is used
     here) with a declared result (`[result] run`). The bound validation, or
     why it is not bound (a sentence), or None when the protocol names no

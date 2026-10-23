@@ -64,13 +64,11 @@ from __future__ import annotations
 
 import argparse
 import ast
-import json
 import os
 import re
 import shlex
 import sys
 import time
-import tomllib
 from pathlib import Path
 from collections.abc import Callable
 from typing import NamedTuple
@@ -90,8 +88,8 @@ from labkit.formats.standard_contract import COMPUTE_KIND, lane
 from labkit.formats.repo import (
     ProtocolChoiceError,
     area_path,
-    lab_root,
     layout_root,
+    model_entry,
     no_such_area,
     shown,
     the_protocol,
@@ -100,8 +98,8 @@ from labkit.formats.runs import completed_runs
 from labkit.formats.protocol_history import (
     BoundValidation,
     bound_validation,
-    repo_protocol_ids,
 )
+from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.checks.prompt_check import prompt_blocks, prompt_constants
 from labkit.checks.audit_binding import AuditError, RunShown, audited_run, run_shown
 from labkit.formats.scope_sha import (
@@ -109,6 +107,7 @@ from labkit.formats.scope_sha import (
     area_snapshot,
     area_stamp,
     repo_imports,
+    validation_note,
 )
 
 AGENT = PACKAGE_DIR / "agents" / "experiment-preflight.agent.md"
@@ -280,8 +279,9 @@ class Source(NamedTuple):
     audit, so the prompt shows the bytes the record's sha names), in MODE
     analysis what it shows of the answering run (`run_shown`, the same
     pieces whose digest the record carries), and the evidence an annotator
-    suits (`validity_evidence`; read from outside the area, not in the
-    record's digest)."""
+    suits (`validity_evidence`; read from outside the area, covered by the
+    record's `scope_sha` through `scope_sha.validation_basis`, so a changed
+    validation stales the record — a DOI by its string only)."""
 
     protocol_text: str
     read: Callable[[Path], str]
@@ -357,7 +357,7 @@ def _bound_pieces(bound: BoundValidation, repo: Path) -> tuple[tuple[str, str], 
         )
     bound_model = protocol_block.model(bound.text)
     alias = bound_model.alias if bound_model is not None else None
-    pieces.append(("EVIDENCE: validation model", _model_entry(alias, area)))
+    pieces.append(("EVIDENCE: validation model", model_entry(alias, area)))
     prompts = prompt_blocks(bound.protocol) + [
         f"{name} = {value!r}" for name, value in sorted(prompt_constants(area).items())
     ]
@@ -368,25 +368,6 @@ def _bound_pieces(bound: BoundValidation, repo: Path) -> tuple[tuple[str, str], 
         )
     )
     return tuple(pieces)
-
-
-def _model_entry(alias: str | None, area: Path) -> str:
-    """`[models.<alias>]` of the repo's `models.toml` as TOML lines, or why not."""
-    if alias is None:
-        return "the bound protocol names no [model] alias"
-    root = lab_root(area)
-    if root is None:
-        return f"alias = {alias!r}; no models.toml above {area}"
-    try:
-        data = tomllib.loads((root / "models.toml").read_text(encoding="utf-8"))
-    except (OSError, tomllib.TOMLDecodeError) as exc:
-        return f"alias = {alias!r}; models.toml does not read: {exc}"
-    entry = data.get("models", {}).get(alias)
-    if not isinstance(entry, dict):
-        return f"alias = {alias!r}; models.toml has no [models.{alias}]"
-    return f"[models.{alias}]\n" + "\n".join(
-        f"{k} = {json.dumps(v)}" for k, v in entry.items()
-    )
 
 
 def render(
@@ -872,7 +853,7 @@ def _stamp_report(
         print(
             f"stamp NOTE: the code changed while the auditor read it — it saw scope "
             f"sha {stamp.sha}, the code now stamps {now}; the record names {stamp.sha}, "
-            f"and the change owes its own audit",
+            f"and the change owes its own audit{validation_note(area)}",
             file=sys.stderr,
         )
 

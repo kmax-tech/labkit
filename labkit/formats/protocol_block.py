@@ -32,6 +32,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.repo import git_root, repo_protocols
 from labkit.formats.runs import RUN_ID
 
 #: the head format this labkit reads; a protocol of another standard is
@@ -479,6 +480,32 @@ def id_of(text: str) -> str | None:
         return head(text).id
     except BlockError:
         return None
+
+
+def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
+    """Every protocol id in the repo, mapped to the files carrying it — read
+    now, never cached: the caller holds the index for as long as it may
+    trust it (`main`: one scan per repo per invocation). A module-level
+    cache kept a duplicate made later in the same process invisible.
+
+    Uniqueness cannot be settled at the stamp alone: copying a protocol or
+    editing the id by hand makes a duplicate long after `labkit-init exp` ran, and
+    two protocols with one id bind their runs to the same thing. Here, in the
+    core, because the area stamp resolves an `annotation_validity` reference
+    through it too (`scope_sha.validation_basis`).
+    """
+    root = git_root(start)
+    if root is None:
+        return {}
+    index: dict[str, list[Path]] = {}
+    for f in repo_protocols(root):
+        try:
+            pid = id_of(f.read_text(encoding="utf-8"))
+        except OSError:
+            continue
+        if pid:
+            index.setdefault(pid, []).append(f)
+    return index
 
 
 def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08

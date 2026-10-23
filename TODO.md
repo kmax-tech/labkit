@@ -190,9 +190,10 @@ Forschung und Benchmark-Fallliste liegen in
      - Audit-Bündel: erledigt 2026-10-23. `audit.validity_evidence` zeigt
        dem Preflight- und Analyse-Audit das gebundene apply-Protokoll, die
        `metrics.json` des erklärten Laufs, den `models.toml`-Eintrag und den
-       Prompt; ungebunden eine Zeile „NOT BOUND“, DOI „form only“. Offen:
-       diese Bytes stehen nicht im Digest des Audit-Records — ändert sich
-       die Validierung danach, merkt der Record es nicht.
+       Prompt; ungebunden eine Zeile „NOT BOUND“, DOI „form only“.
+       Digest erledigt 2026-10-23: der Area-Stempel (`scope_sha`) deckt den
+       Beleg mit (`validation_basis`), ohne Schemaänderung; eine geänderte
+       Validierung macht den Record stale, eine DOI bindet nur ihren String.
      Offene Grenze, nicht geplant: `fit`/`apply` auf Trainings- oder
      Testdaten, die ein Modell annotiert hat (silver standard als Gold).
   3. Umgesetzt (Commit „docs: choosing the kind“): zwei Prüffragen in

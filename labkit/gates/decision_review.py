@@ -63,7 +63,7 @@ from labkit.formats import console, findings, reviews
 from labkit.formats.findings import EFFECT_STANDS
 from labkit.formats.protocol_check import CONCLUSION_LABEL, field_name, fields
 from labkit.formats.repo import ProtocolChoiceError, layout_root, shown, the_protocol
-from labkit.formats.scope_sha import Snapshot, area_snapshot
+from labkit.formats.scope_sha import Snapshot, area_snapshot, validation_note
 from labkit.gates import audit
 from labkit.run import llm, llm_backends
 
@@ -198,6 +198,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
             f"the code stamps {snap.sha} now, the record's auditor read "
             f"{record.scope_sha} — the decisions were made on that code; review them "
             f"on it, or audit the code as it is now and decide again"
+            f"{validation_note(area)}"
         )
     run_dir: Path | None = None
     if record.run_id is not None and record.run_id != findings.NO_RUN:
