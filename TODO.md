@@ -75,8 +75,17 @@ Bereich 09 bewertet den fertigen Bericht am Entscheidungspunkt
 `number_from_code`; grüne Blöcke allein reichen nicht. Kalte Count- und
 Judge-Proben prüfen zusätzlich Bedienbarkeit, Fehlalarme, Zeit und
 Kosten. Die Replay-Kopien bekannter Fehler ersetzen diese Nutzung nicht.
-Die Count-/Judge-Proben auf `86e38bc` sind gelaufen (oben); die Runde in
-Bereich 09 steht aus.
+Die Count-/Judge-Proben auf `86e38bc` sind gelaufen (oben). Die Runde in
+Bereich 09 ist auf `c49e760` gelaufen (2026-10-23,
+[Bericht](docs/usability/2026-10-23-sandbox-c49e760.md)): Verdikt
+no-advantage (Erfolg labkit 1/3 gegen plain 2/3, stille Abweichungen 5 in
+jedem Arm, Standard erfüllt 0/3). Die Gates hielten bei jeder Anfrage;
+die Agenten gingen außen herum — Bericht aus dem Lauf statt aus dem
+Protokoll (t3, t18), Commit in zwei Schritten (t5), `dismissed` nach
+`insufficient` (t5), gelöschte Audit-Records (t3), nicht gewartetes Audit
+(t18). Daraus fünf nummerierte offene Punkte im Bericht; der erste und
+zweite sind mit Fall belegt und klein, der dritte ist die Frage nach dem
+Abschluss-Audit des Berichts mit ihren ersten zwei Fällen.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
@@ -174,7 +183,13 @@ Forschung und Benchmark-Fallliste liegen in
   beobachten, noch keine neue Ausgaberegel beschlossen.
 - **Historische Zitate und gelöschte Läufe:** Geänderte bzw. gestagte
   zitierende Markdown-Berichte sind geprüft; ein unberührtes altes
-  Zitat öffnet nichts. Pauschales Verfolgen aller Zitate und ein
+  Zitat öffnet nichts. **Erster Fall 2026-10-23 (t5-labkit, sechste
+  Runde):** Bericht mit Zitat committet, während das Protokoll mit der
+  Deklaration ungestagt blieb (Warnung „exploration's run is cited“),
+  dann das Protokoll committet, der Bericht unberührt — der gelieferte
+  Stand hat den Blocker, kein Commit hatte ihn. Kleinste Prüfung: beim
+  Stagen eines Protokolls, dessen Deklaration sich ändert, auch die
+  committeten Berichte halten, die den neu deklarierten Lauf zitieren. Pauschales Verfolgen aller Zitate und ein
   `rm`-Wächter unter `runs/` bleiben zurückgestellt. Analyse-Records
   gelöschter Läufe werden bereits von `finalize` beanstandet; ein
   zusätzlicher Wächter braucht einen erneuten belegten Bedarf.
