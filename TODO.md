@@ -113,9 +113,17 @@ Forschung und Benchmark-Fallliste liegen in
   wiederholt statt `UnprovenAnswer` zu werfen — vermutlich kam der
   Abbruch als `is_error`, die Felder gingen verloren; keine Zahl
   übernommen, fit-2 abgebrochen. Behoben in `1fc05e1`: Stopp und fremdes
-  Modell vor `is_error`, jede Meldung nennt die Felder. Offen: eine
-  Fit-Probe, die zeigt, welche Felder die CLI beim Abbruch setzt; Läufe
-  über Nacht mit `caffeinate -i`; die Notiz
+  Modell vor `is_error`, jede Meldung nennt die Felder. Fit-Probe auf
+  `97e6470` (unter `caffeinate -i`) hat den Nachweis gebracht: die CLI im
+  Container (2.1.285) meldet den Abbruch als `subtype = "success"`,
+  `is_error = false`, `num_turns = 2`, beide Modelle in `modelUsage`, ohne
+  `safety_stops` — das Feld gibt es erst ab 2.1.304. Die Vermutung
+  `is_error` war falsch; das Pflichtfeld `safety_stops` machte jede
+  Antwort der älteren CLI zum wiederholbaren `ReplyError`. Behoben in
+  `1fa93f6`: Pflicht sind `modelUsage` und `num_turns`, `safety_stops`
+  zählt, wo vorhanden. Offen: eine Fit-Probe, in der das Audit jetzt
+  sofort als `UnprovenAnswer` scheitert und als gescheitertes Audit
+  gespeichert wird; die Notiz
   ([Notiz](docs/usability/2026-10-22-sandbox-de663ed.md)).
 
 - **Namenskandidat `compute` statt `count` (2026-10-22).** Prüfen, ob
