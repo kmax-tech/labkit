@@ -668,8 +668,8 @@ def _write_back(args: argparse.Namespace, text: str) -> int:
             force=args.force,
         )
     except ValueError as exc:
-        print(f"protocol-fill: {exc}")
-        return 1
+        console.refuse("protocol-fill", str(exc))
+        return 2
     print(
         f"filled from run {run_id}: {', '.join(filled) or 'nothing (all written already)'}"
         f" — adopting as the result:"
@@ -798,8 +798,8 @@ def _prompts_file(protocol: Path, text: str) -> int:
     try:
         new = fill_prompts(text, prompt_constants(protocol.resolve().parent))
     except ValueError as exc:
-        print(f"protocol-fill: {exc}")
-        return 1
+        console.refuse("protocol-fill", str(exc))
+        return 2
     files.write_atomic(protocol, new)
     print("filled: Prompt (from the scripts' PROMPT constants)")
     return 0
@@ -829,8 +829,8 @@ def _into_file(protocol: Path, text: str, report: Path) -> int:
             report_blocks.path_from_report(protocol, report),
         )
     except (ValueError, protocol_block.BlockError) as exc:
-        print(f"protocol-fill: {exc}")
-        return 1
+        console.refuse("protocol-fill", str(exc))
+        return 2
     if new != before:
         files.write_atomic(report, new)
     print(
@@ -845,8 +845,8 @@ def _render_file(protocol: Path, text: str) -> int:
     try:
         new, written = render_result(text, protocol.resolve().parent)
     except (ValueError, protocol_block.BlockError) as exc:
-        print(f"protocol-fill: {exc}")
-        return 1
+        console.refuse("protocol-fill", str(exc))
+        return 2
     if new != text:
         files.write_atomic(protocol, new)
     print(
@@ -866,8 +866,8 @@ def _run_mode(args: argparse.Namespace, text: str) -> int | None:
         try:
             return _list_open(text)
         except promises.PromiseError as exc:
-            print(f"protocol-fill: {exc}")
-            return 1
+            console.refuse("protocol-fill", str(exc))
+            return 2
     if args.prompts:
         return _prompts_file(args.protocol, text)
     if args.render:
@@ -955,8 +955,8 @@ def main(argv: list[str]) -> int:
     try:
         new = fill_many(text, assignments, line_no=args.line, force=args.force)
     except ValueError as exc:  # all or nothing: the file is untouched
-        print(f"protocol-fill: {exc}")
-        return 1
+        console.refuse("protocol-fill", str(exc))
+        return 2
     files.write_atomic(args.protocol, new)
     print("filled: " + ", ".join(label for label, _ in assignments))
     return 0

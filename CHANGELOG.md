@@ -243,6 +243,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **protocol-fill refuses like every other command.** An unknown label, a
+  sentence that does not read back, a missing PROMPT constant, an
+  unreadable block: protocol-fill printed the reason on stdout and exited 1
+  — the gates' "a blocker" — where every other command refuses on stderr
+  with exit 2 (`console.refuse`; audit 2026-10-23). It refuses the same
+  way now; the file stays untouched as before.
+
 - **One cut of a protocol into `## ` sections.**
   `protocol_block.section_starts` (outside every fence) and `section_end`
   are read by the prose count and the template comparison, the Runs list

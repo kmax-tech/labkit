@@ -365,7 +365,7 @@ class OneCallFill(unittest.TestCase):
             f.write_text(head() + self.BODY)
             with contextlib.redirect_stdout(io.StringIO()):
                 rc = protocol_fill.main([str(f), "Unit=one case", "Nope=x"])
-            self.assertEqual(rc, 1)
+            self.assertEqual(rc, 2)  # a refusal: stderr, exit 2 (`console.refuse`)
             self.assertIn("<one thing>", f.read_text())
             with contextlib.redirect_stdout(io.StringIO()):
                 rc = protocol_fill.main(
@@ -796,7 +796,7 @@ class PromiseSentences(unittest.TestCase):
             p.write_text(text, encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
                 rc = protocol_fill.main([str(p), "Unit=one case", "B9 sentence=x"])
-            self.assertEqual(rc, 1)
+            self.assertEqual(rc, 2)
             self.assertEqual(p.read_text(encoding="utf-8"), text)
             with contextlib.redirect_stdout(io.StringIO()):
                 rc = protocol_fill.main([str(p), "Unit=one case", "C1 sentence=s"])
