@@ -46,7 +46,6 @@ History: docs/notes/2026-10-23-decision-review-history.md.
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 from typing import NamedTuple
 
@@ -200,7 +199,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         if not run_dir.is_dir():
             raise AuditError(
                 f"{record.path.name} names run {record.run_id}, and there is no "
-                f"runs/{record.run_id}/ in this area"
+                f"{run_dir.relative_to(area)}/ in this area"
             )
     seen = run_shown(
         area, run_dir, "no completed bound run when the record was written"
@@ -317,10 +316,10 @@ def review(
             if held:
                 raise AuditError(held)
         evidence = gather_review(area, chosen, rec)
-        print(
-            f"labkit-audit: review · {rec.path.name} · {len(evidence.numbers)} "
+        console.progress(
+            "labkit-audit",
+            f"review · {rec.path.name} · {len(evidence.numbers)} "
             f"decision(s) · {model} · {len(evidence.prompt) // 1000} kB",
-            file=sys.stderr,
         )
         report = llm.complete(
             model,

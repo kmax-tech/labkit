@@ -71,8 +71,14 @@ class Form:
 
 
 def _section(text: str, name: str) -> str:
-    m = re.search(rf"^## {name}\b.*?(?=^## |\Z)", text, re.M | re.S)
-    return m.group(0) if m else ""
+    """The `## NAME` section of TEXT, heading included, up to the next
+    heading (`protocol_block.section_starts`: fences are not headings); ""
+    without one."""
+    lines = text.splitlines()
+    for start in protocol_block.section_starts(lines):
+        if re.match(rf"## {name}\b", lines[start].lstrip()):
+            return "\n".join(lines[start : protocol_block.section_end(lines, start)])
+    return ""
 
 
 def form(text: str) -> Form:

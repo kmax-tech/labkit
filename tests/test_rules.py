@@ -297,10 +297,12 @@ class Cli(unittest.TestCase):
             (0, "rules: standard.md against rules.tsv: 0 problem(s)"),
         )
 
-    def test_show_an_unknown_id_exits_1(self) -> None:
+    def test_show_an_unknown_id_refuses(self) -> None:
+        """Nothing to show is a refusal — stderr, exit 2 — like every labkit
+        command's (`console.refuse`; until 2026-10-23 exit 1)."""
         code, out = self.run_main("show", "LAB-002")  # a number that left for LOCAL
         self.assertEqual(
-            (code, out.strip()), (1, "LAB-002: no such rule in the ledger")
+            (code, out.strip()), (2, "rules show: LAB-002: no such rule in the ledger")
         )
 
     def test_refs_exits_1_on_a_bare_id(self) -> None:

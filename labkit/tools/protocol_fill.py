@@ -696,7 +696,7 @@ def _name_yours(text: str, area: Path, run: Path) -> None:
     if not open_:
         return
     outputs = runs.read_outputs(run) or []
-    where = ", ".join(shown(o.path, area) for o in outputs) or f"runs/{run.name}/"
+    where = ", ".join(shown(o.path, area) for o in outputs) or f"{shown(run, area)}/"
     print(f"still yours, after the run (its rows: {where}):")
     for n, label in open_:
         print(f"{n:4d}  {label}")

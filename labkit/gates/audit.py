@@ -1116,10 +1116,10 @@ def _clarity(args: argparse.Namespace) -> int:
                 lambda p: p.read_text(encoding="utf-8"),
             ),
         )
-        print(
-            f"labkit-audit: clarity · {protocol.name} · README + {files[1].name} · "
+        console.progress(
+            "labkit-audit",
+            f"clarity · {protocol.name} · README + {files[1].name} · "
             f"{args.model} · {len(prompt) // 1000} kB",
-            file=sys.stderr,
         )
         report = llm.complete(
             args.model,

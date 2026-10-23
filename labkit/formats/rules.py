@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import sys
 
 from pathlib import Path
 from typing import NamedTuple
@@ -436,8 +435,8 @@ def main(argv: list[str]) -> int:
         try:
             print(rule_text(a.id), end="")
         except (KeyError, LookupError) as exc:
-            print(exc.args[0], file=sys.stderr)
-            return 1
+            console.refuse("rules show", exc.args[0])
+            return 2
         return 0
     if a.cmd == "check":
         problems = check_heads(

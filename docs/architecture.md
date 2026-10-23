@@ -237,6 +237,12 @@ evidence** (warns), **agent audit** (semantic).
 | Run git | `repo.git` (output, loud on failure), `repo.git_run` (exit code is the answer) |
 | Which directories does an area's `runs/` hold, and what does each say? | `runs.run_dirs` (one walk, metadata read once; an unreadable run is data — the caller refuses, reports or skips) |
 | Is this run finished? Which runs are? | `runs.completion_state`, `runs.completed_runs` |
+| Where is an area's `runs/`, a run's directory, its metrics file? | `runs.runs_path`, `runs.run_path`, `runs.metrics_path` (`RUNS_DIR`, `METRICS_FILE` are the spelling; a message names the path through them too) |
+| Which files are an area's code? | `scope_sha.area_files` (the scripts and analysis globs; the audit stamp, code-check, prompt-check, import-check and intent-check read the same set) |
+| How are a JSONL file's lines turned into objects? | `jsonl.objects` (every line, `_meta` skipped, an unreadable line named), `jsonl.data_rows`; `batch.Store` keeps the torn-last-line loop that is its own |
+| What answers under a models.toml alias today? | `llm.model_entry` (the same lookup as the spec loader, `llm_specs.alias_tables`; the audit's evidence of a bound validation's alias) |
+| Where do a protocol's `## ` sections begin and end? | `protocol_block.section_starts`, `protocol_block.section_end` (outside every fence; the prose count, the Runs list, the cuts, the reading probe) |
+| How does a command refuse, tell progress, or print its usage? | `console.refuse` (stderr, the caller exits 2), `console.Refused` (raised where the reason is known, `console.exit_with` prints it), `console.progress` (stderr, no exit code), `console.usage` (0 asked, 2 bare) |
 | Write a file whole or not at all | `files.write_atomic`, `files.write_atomic_bytes` (every file a run leaves — records, failure, patch, raw artefacts, source snapshots — the lease, a filled protocol; the run index is appended under its lock) |
 | The digest of a file, or of a set of named contents | `scope_sha.file_digest`, `scope_sha.tree_digest` (`DIGEST_CHARS` is the one recorded width of a stamp) |
 | How is a JSONL text split into its records? | `jsonl.record_lines` (at "\n" only — `str.splitlines` also breaks at U+2028, U+2029, U+0085 inside a record) |

@@ -83,7 +83,7 @@ from pathlib import Path
 from types import TracebackType
 from collections.abc import Iterator
 
-from labkit.formats.runs import metrics_path, run_path
+from labkit.formats.runs import metrics_path, run_path, runs_path
 from labkit.run import batch
 from labkit.formats import console, repo
 from labkit.formats.files import write_atomic
@@ -279,7 +279,7 @@ def _repeat_draw(
     if pcfg is None:
         raise SystemExit(
             f"runlog: repeat_of={repeat_of!r} names no completed run under "
-            f"{base_dir / 'runs'} ({state})"
+            f"{runs_path(base_dir)} ({state})"
         )
     if pcfg.repeat_of is not None:
         raise SystemExit(

@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 
-from labkit.formats.runs import run_path
+from labkit.formats.runs import run_path, runs_path
 from labkit.formats.runs import RunKind, parse_run_kind
 
 from labkit.formats import findings, promises, protocol_block, repo
@@ -364,7 +364,7 @@ def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
     if RUN_ID.fullmatch(derived_from) is None:
         raise SystemExit(
             f"runlog: derived_from={derived_from!r} is not a run id — name a "
-            f"run of {base_dir / 'runs'} by its id, never a path"
+            f"run of {runs_path(base_dir)} by its id, never a path"
         )
     parent = run_path(base_dir, derived_from)
     try:
@@ -376,7 +376,7 @@ def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
     if state != COMPLETED:
         raise SystemExit(
             f"runlog: derived_from={derived_from!r} names no completed "
-            f"run under {base_dir / 'runs'} ({state}) — a derived run "
+            f"run under {runs_path(base_dir)} ({state}) — a derived run "
             f"needs a finished parent"
         )
     # a derived run is no repeat and may answer: from a repeat, the

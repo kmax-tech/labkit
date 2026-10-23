@@ -40,7 +40,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
-from labkit.formats.runs import run_path
+from labkit.formats.runs import run_path, runs_path
 from labkit.formats import console, promises, protocol_block
 from labkit.checks.intent_check import protocol_id_of
 from labkit.formats.repo import (
@@ -338,7 +338,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     if run_arg is not None:
         run_dir = run_path(area, run_arg)
         if not run_dir.is_dir():
-            console.refuse("labkit-params", f"no run {run_arg} under {area / 'runs'}")
+            console.refuse("labkit-params", f"no run {run_arg} under {runs_path(area)}")
             return 2
         how = "named with --run"
     else:

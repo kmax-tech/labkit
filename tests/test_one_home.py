@@ -80,7 +80,11 @@ RULES: list[tuple[str, str, set[str]]] = [
     ("an open-finding walk", r"for \w+ in \w+\.open\b(?!\()", {"findings"}),
     # about twenty call sites spelled a run's directory and its metrics file
     # by hand (audit 2026-10-23); `runs.run_path`, `runs_path`, `metrics_path`
-    ("a run directory spelled by hand", r"/ \"runs\"|\"runs\" /", {"runs"}),
+    (
+        "a run directory spelled by hand",
+        r"/ [\"']runs[\"']|[\"']runs[\"'] /|f\"runs/",
+        {"runs"},
+    ),
     ("the metrics file spelled by hand", r"\"metrics\.json\"", {"runs"}),
     # six readers turned JSONL lines into objects themselves, each with its
     # own error sentence (audit 2026-10-23); `jsonl.objects` / `data_rows`,
@@ -95,7 +99,11 @@ RULES: list[tuple[str, str, set[str]]] = [
     ),
     # four readers found a protocol's `## ` headings themselves, two inside
     # fences too (audit 2026-10-23); `protocol_block.section_starts`
-    ("a section heading found by hand", r"startswith\(\"## \"\)", {"protocol_block"}),
+    (
+        "a section heading found by hand",
+        r"startswith\(\"## \"\)|\(\?=\^## ",
+        {"protocol_block"},
+    ),
     # labkit-audit printed three refusals and its progress lines itself
     # (audit 2026-10-18, half-finished move; 2026-10-23): `console.refuse`,
     # `console.progress`
@@ -116,6 +124,16 @@ BLOCK_RULES: list[tuple[str, str, set[str]]] = [
         "a path shown relative by hand (try/except form)",
         r"try:\n[^\n]*\.relative_to\([^\n]*\n\s*except ValueError:",
         {"repo", "runs", "scope_sha"},
+    ),
+    # the one-line form is held above; two progress lines of labkit-audit
+    # stood as a print over four lines beside `console.progress` (audit
+    # follow-up 2026-10-23). A `labkit-*` command's own line only: what
+    # `batch`, `llm` and `runlog` tell the operator from inside a run is
+    # not a command's progress
+    (
+        "a labkit command's line printed by hand (multi-line form)",
+        r"print\(\n\s*f\"labkit-[a-z]+: [^\n]*\n(?:[^\n]*\n){0,3}?\s*file=sys\.stderr",
+        {"console"},
     ),
 ]
 
@@ -162,12 +180,22 @@ class OneHome(unittest.TestCase):
         self.assertEqual(found, [], "\n" + "\n".join(found))
 
     def test_the_block_rules_bite(self):
-        sample = (
-            "try:\n    rel = p.relative_to(root)\nexcept ValueError:\n    rel = p\n"
-        )
+        samples = {
+            "a path shown relative by hand (try/except form)": (
+                "try:\n    rel = p.relative_to(root)\nexcept ValueError:\n    rel = p\n"
+            ),
+            "a labkit command's line printed by hand (multi-line form)": (
+                "        print(\n"
+                '            f"labkit-audit: clarity · {protocol.name} · "\n'
+                '            f"{args.model} · {len(prompt) // 1000} kB",\n'
+                "            file=sys.stderr,\n"
+                "        )\n"
+            ),
+        }
+        self.assertEqual(set(samples), {what for what, _, _ in BLOCK_RULES})
         for what, shape, _ in BLOCK_RULES:
             with self.subTest(what=what):
-                self.assertIsNotNone(re.compile(shape).search(sample), shape)
+                self.assertIsNotNone(re.compile(shape).search(samples[what]), shape)
 
     def test_the_rules_bite(self):
         """Each shape matches what it is written for (a rule that matches
