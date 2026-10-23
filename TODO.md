@@ -121,9 +121,11 @@ Forschung und Benchmark-Fallliste liegen in
   `is_error` war falsch; das Pflichtfeld `safety_stops` machte jede
   Antwort der älteren CLI zum wiederholbaren `ReplyError`. Behoben in
   `1fa93f6`: Pflicht sind `modelUsage` und `num_turns`, `safety_stops`
-  zählt, wo vorhanden. Offen: eine Fit-Probe, in der das Audit jetzt
-  sofort als `UnprovenAnswer` scheitert und als gescheitertes Audit
-  gespeichert wird; die Notiz
+  zählt, wo vorhanden. Am echten System belegt auf `927159d`: zwei
+  gestoppte Versuche sofort verweigert und als gescheiterte Audits
+  gespeichert (einer davon setzte `claude-opus-5-5` selbst fort — nur die
+  Zugzahl fing ihn), der dritte ein reines 5.5-Audit, Zahl übernommen.
+  Erledigt; die Notiz
   ([Notiz](docs/usability/2026-10-22-sandbox-de663ed.md)).
 
 - **Namenskandidat `compute` statt `count` (2026-10-22).** Prüfen, ob
