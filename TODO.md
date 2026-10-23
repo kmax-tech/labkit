@@ -125,6 +125,13 @@ Forschung und Benchmark-Fallliste liegen in
   gestoppte Versuche sofort verweigert und als gescheiterte Audits
   gespeichert (einer davon setzte `claude-opus-5-5` selbst fort — nur die
   Zugzahl fing ihn), der dritte ein reines 5.5-Audit, Zahl übernommen.
+  Regression Count/Judge auf `4c2c098` (Runner
+  `~/projects/labkit-probes-sandbox-4c2c098`): 6 von 6 richtig, report-check
+  sauber bis auf die gewollten Warnungen; jeder Haiku- und Opus-Aufruf der
+  CLI 2.1.285 bestand den Herkunftscheck (ein Modell, kein Abbruch). Danach
+  gebaut: Abbruch beim ersten `unproven` (`1014ad0`), Grund in report-check
+  und Score (`02ec772`), `stop_reason = refusal` als Absicherung ohne
+  Beleg (`fde9e11`), `failure.json` für abgebrochene Läufe (`e640614`).
   Erledigt; die Notiz
   ([Notiz](docs/usability/2026-10-22-sandbox-de663ed.md)).
 
