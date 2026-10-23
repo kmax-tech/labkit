@@ -369,21 +369,6 @@ in einem Bereich mit mehreren Protokollen wählt das Gate das Protokoll
 vorher (`repo.the_protocol`). Bauauftrag erst, wenn ein Fall zeigt, dass
 ein Record dem falschen Protokoll zugeordnet wurde.
 
-### Core und Doktrin auffindbar erklären
-
-Lesebefund vom 2026-10-22: Die Definition in
-[`docs/architecture.md`](docs/architecture.md) steht unter dem Fettwort
-„Core or doctrine.“ mitten im Abschnitt; beim Sprung zur Modultabelle
-wurde sie überlesen. Das README führt den Begriff Doktrin nicht ein,
-und die Tabelle verweist nicht zur Definition zurück. Die Unterscheidung
-soll einen eigenen, verlinkbaren Abschnitt bekommen: Core beantwortet
-die laborübergreifenden Fragen der Rückverfolgbarkeit; Doktrin bezeichnet
-Entscheidungen, die ein anderes Labor anders treffen könnte. Streich-Test,
-Importregel und Abgrenzung zum Haus dort zusammen erklären. An der Tabelle
-ausdrücklich sagen: Die dritte Spalte nennt die Doktrinmodule; alle übrigen
-Module der zweiten Spalte sind Core. Vom README und von der Tabelle auf
-diese Erklärung verweisen.
-
 ### Typisierte Grenzen vervollständigen
 
 | Bereich | Noch offen | Bedingung / Vertrag |

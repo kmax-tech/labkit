@@ -9,26 +9,14 @@ coined in the README; the promise block in `docs/promise-block.md`.
 Each layer is a package — a folder under `labkit/` — and a module sits in
 the folder of its row. Imports point downward only; no module imports a
 layer above it, and no layer imports a tool. Tools may import any layer.
-The table maps modules to layers and marks doctrine; the sections below
+The table maps modules to layers and marks doctrine ([Core and
+doctrine](#core-and-doctrine) says what that means); the sections below
 explain each layer. Every module stands in the table exactly once.
 `tests/test_architecture.py` reads this table and holds the imports and
 the folders to it — a new module, an upward import or
 a module in another row's folder fails the suite. The shipped assets sit
 beside the packages: `templates/`, `agents/`, `docs/`, read relative to
 `labkit.PACKAGE_DIR`.
-
-**Core or doctrine.** The core answers what every lab must answer the same way,
-whatever its rules: which run made this number, from which code, data and
-model, under which protocol, and does the cited number match the run. The
-doctrine is what another lab could decide differently without being less
-scientific: the standard, the protocol's field catalogue, the templates, the
-order of the gates, the agent layer, the note conventions. The test: strike
-it — does a number become less traceable (core), or does the lab only work
-differently (doctrine)? A core module imports no doctrine module;
-`tests/test_architecture.py` holds that, with the crossings that stand today
-listed by name until they are moved (2026-10-15). Doctrine is not the
-house: the house is what holds only for this author's lab (`LOCAL` rules,
-the dotfiles, below); doctrine ships in labkit to every lab.
 
 | Layer | Modules | Doctrine (the rest is core) |
 |---|---|---|
@@ -38,6 +26,41 @@ the dotfiles, below); doctrine ships in labkit to every lab.
 | 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `decision_review`, `install_hooks` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `decision_review`, `install_hooks` |
 | tools · `labkit/tools/` | `protocol_fill`, `scaffold`, `protocol_cuts`, `repo_check`, `params`, `calltree` | `protocol_fill`, `scaffold`, `protocol_cuts`, `calltree` |
 | tools · probes · `labkit/probes/` | `usability`, `usability_score`, `usability_command`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` | `usability`, `usability_score`, `usability_command`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` |
+
+The third column names the doctrine modules of each row; every other
+module in the second column is core.
+
+## Core and doctrine
+
+Two kinds of module ship in labkit, and the difference decides what another
+lab may change.
+
+**Core** answers what every lab must answer the same way, whatever its
+rules: which run made this number, from which code, data and model, under
+which protocol, and does the cited number match the run. Traceability —
+`runs`, `scope_sha`, `promises`, `answering_run`, `repo`, the run writer.
+
+**Doctrine** is what another lab could decide differently without being
+less scientific: the standard and its rules, the protocol's field
+catalogue, the templates and skeletons, the order of the gates, the agent
+layer, the note conventions, the usability probes.
+
+**The strike test.** Strike the module. Does a number become less
+traceable? Core. Does the lab only work differently? Doctrine.
+
+**The import rule.** A core module imports no doctrine module;
+`tests/test_architecture.py` holds that against the table above, with the
+crossings that stand today listed by name (`KNOWN_CROSSINGS`) until they
+are moved (2026-10-15). The list is not extended in passing.
+
+**Not the house.** Doctrine ships in labkit to every lab. The house is what
+holds only for this author's lab — the `LOCAL` rules, the dotfiles, the
+German notes — and lives outside the package ([Where what
+lives](#where-what-lives)).
+
+Why the section exists: the definition stood as a bold phrase inside the
+Layers section and was read past on the way to the table (reading
+2026-10-22); the README names the term and points here.
 
 ### 1 · Formats and places
 

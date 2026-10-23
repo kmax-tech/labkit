@@ -246,6 +246,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | Term | Meaning |
 |---|---|
 | **area** | Directory grouping an experiment's protocols, scripts and runs. |
+| **core / doctrine** | Core: what every lab must answer the same way — which run made a number, from which code, data and model. Doctrine: what another lab could decide differently — the standard, the templates, the gates' order. Definition and strike test: [architecture](docs/architecture.md#core-and-doctrine). |
 | **protocol** | Experiment specification in `PROTOCOL-*.md`. |
 | **protocol id** | Stable, path-independent identity: `p-` followed by 16 hex characters. |
 | **run** | One execution recorded under a protocol. |
@@ -308,7 +309,7 @@ python3 -m venv .venv
 
 `just check` runs lint, formatting, type checking and the suite.
 [AGENTS.md](AGENTS.md) holds the contribution rules;
-[architecture](docs/architecture.md) explains layers, records and enforcement;
+[architecture](docs/architecture.md) explains layers, [core and doctrine](docs/architecture.md#core-and-doctrine), records and enforcement;
 [TODO](TODO.md) holds open work. Historical audits and usability measurements
 live under `docs/` and `docs/usability/`.
 

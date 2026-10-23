@@ -261,6 +261,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Core and doctrine have a section of their own.** The definition stood
+  as a bold phrase inside "Layers" in `docs/architecture.md` and was read
+  past on the way to the module table (reading 2026-10-22). It is
+  `## Core and doctrine` now — definition, strike test, import rule, the
+  house — the table says its third column names the doctrine modules, and
+  the README's terms carry the pair with a link.
+
 - **The end-to-end tests run alone and in any order.** `Count` and `Judge`
   in `tests/test_end_to_end.py` built test_03–06 on what test_02 left
   behind (the kept run, the adopted number, its commit), and only `--dist
