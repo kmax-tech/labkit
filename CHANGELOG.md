@@ -243,6 +243,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One lookup of a models.toml alias.** `repo.model_entry`, what the
+  audit is shown of a bound validation's alias, looked the alias up with
+  its own error text and search start; it is `llm.model_entry` now and
+  reads the table as `llm` loads a spec (`llm_specs.alias_tables`), so a
+  file shape refused for a run is refused with the same sentence here
+  (audit 2026-10-23).
+
 - **Where an area's code is has one spelling.** `scope_sha.area_files`
   (with `SCRIPT_GLOB`, `ANALYSIS_GLOB`) is read by the audit bundle, the
   producer/consumer split and the prompt check, which globbed

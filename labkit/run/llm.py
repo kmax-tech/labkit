@@ -187,6 +187,32 @@ def _answering_model(used: BackendSpec) -> str:
     return used.model
 
 
+def model_entry(alias: str | None, start: Path) -> str:
+    """`[models.<alias>]` of the lab's `models.toml` (`lab_root` of START) as
+    TOML lines, or a sentence why not — what the audit is shown of a bound
+    validation's alias as today's setting (`audit.validity_evidence`; what
+    the validation ran with is its run record, `answering_run.recorded_models`).
+    The alias is looked up as `_load_spec` looks it up (`alias_tables`) — a
+    second lookup with its own error text stood in `repo` (audit 2026-10-23)."""
+    if alias is None:
+        return "the bound protocol names no [model] alias"
+    root = lab_root(start)
+    if root is None:
+        return f"alias = {alias!r}; no models.toml above {start}"
+    path = root / "models.toml"
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        return f"alias = {alias!r}; {path} does not read: {exc}"
+    try:
+        table, _ = alias_tables(str(path), data, alias)
+    except (KeyError, ValueError) as exc:
+        return f"alias = {alias!r}; {exc.args[0]}"
+    return f"[models.{alias}]\n" + "\n".join(
+        f"{k} = {json.dumps(v)}" for k, v in table.items()
+    )
+
+
 def _load_spec(alias: str) -> BackendSpec:
     """The spec of ALIAS as `models.toml` states it now — what `spec`
     freezes. For ollama the weights' digest is probed on every endpoint."""

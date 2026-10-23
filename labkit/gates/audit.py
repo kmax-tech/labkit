@@ -77,6 +77,7 @@ from typing import NamedTuple
 from labkit import PACKAGE_DIR
 from labkit.formats.runs import metrics_path, run_path
 from labkit.run import llm, llm_backends
+from labkit.run.llm import model_entry
 from labkit.formats import (
     console,
     findings,
@@ -92,7 +93,6 @@ from labkit.formats.repo import (
     ProtocolChoiceError,
     area_path,
     layout_root,
-    model_entry,
     no_such_area,
     shown,
     the_protocol,
