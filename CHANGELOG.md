@@ -254,6 +254,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **"The gate the agent cannot choose" says which gate holds.** The stop
+  hook sends the agent back once per stop (`stop_hook_active`; a hook that
+  never let a session end would trap it), the pre-commit holds; report-
+  check's docstring and the architecture table say so instead of claiming
+  both hold (audit 2026-10-23, C8). No behaviour changed.
+
 - **code-check names every check it runs, and its closing line is the
   gate's.** The docstring said "five automated checks" and left out the
   promise-block blockers and the constant copies (audit 2026-10-23, C4);

@@ -51,9 +51,12 @@ The nested finalize gate and the analysis script read their own inputs;
 this is not a single file snapshot across all stages. The output names
 the file state whose declaration was checked.
 
-`--if-reported` is the gate the agent cannot choose: `claude-hook stop`
-runs it on every changed path, the stamped pre-commit on every staged one,
-and selects every protocol of every area one of those paths lies in
+`--if-reported` is the gate that runs unasked: `claude-hook stop` runs it
+on every changed path and sends the agent back once per stop (a hook that
+never let a session end would trap it — `stop_hook_active`), the stamped
+pre-commit runs it on every staged path and holds. So the commit is the
+gate the agent cannot pass; the stop is the one it hears first. Both
+select every protocol of every area one of those paths lies in
 (`affected_protocols`). It checks those whose head declares a result
 (`[result] run`, `protocol_block.declared_run`), written by
 `protocol-fill --from-run`. The area, not the protocol
