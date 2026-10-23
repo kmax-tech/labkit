@@ -217,31 +217,21 @@ ein Record dem falschen Protokoll zugeordnet wurde.
 ### Audit 2026-10-23, Nachkontrolle
 
 Befunde mit Belegen: [Nachkontrolle](docs/audit-2026-10-23-followup.md)
-(Stand `e5f0438`). Das Register vom Vormittag ist abgearbeitet; übrig ist
-Prosa, die den neuen Heimaten nicht folgt. Offen, je ein Entscheid:
-
-1. Flatternder Test `test_a_taken_run_id_is_drawn_again`: die Uhr im Test
-   festhalten (im Hook einmal rot, allein fünfmal grün) (B1).
-2. Gate-Tabelle in `findings.open_findings`: Zeile runlog an den Code
-   anpassen (Warnungen nur im `LABKIT_UNFROZEN`-Pfad, NOTE wie WARNING)
-   und `audit_record_gap` als Zeile aufnehmen — oder runlog die Warnungen
-   auf jedem Pfad ausgeben lassen (F1, F2).
-3. `claude-hook`: Exit-Vertrag im Docstring und `--help` an die Returns
-   angleichen (Usage 2 statt 1, drei Bedeutungen von Exit 2) (F3).
-4. finalize übernimmt intent-checks Befunde als Daten statt jede
-   stdout-Zeile als BLOCKER (F4).
-5. Drei Evidenz-Beschriftungen berichtigen: `hold_report`-Docstring,
-   „AUTOMATED" in code-check 1b/1c, `ParamRow.evidence_kind` als freier
-   Text (F5, F6, Heimaten-Tabelle).
-6. Heimaten nachziehen: sechs `'runs'`-Reste in Meldungen, zwei
-   Fortschrittszeilen neben `console.progress`, `protocol_reading._section`,
-   drei Hand-Refusals; Guards auf Einfach-Anführung, mehrzeiliges `print`
-   und Regex ausweiten; sechs neue Heimaten in die Tabelle von
-   `docs/architecture.md`.
-7. Kleinkram: CHANGELOG „station 1" (F7), verwaiste Note
-   `2026-10-23-documentation-navigation.md`, `answers.read_jsonl`,
-   pyproject-Kommentar, `audit --help` ohne Review-Vertrag, `limit_line`-
-   Parameter, `scope-sha --globs` ohne Wirkung auf den Import-Abschluss.
+(Stand `e5f0438`). Das Register vom Vormittag war abgearbeitet; übrig war
+Prosa, die den neuen Heimaten nicht folgte, ein flatternder Test und ein
+Blocker-Text, der Hinweiszeilen als Befunde auswies. Alle sieben Punkte
+sind am 2026-10-23 abgearbeitet (`88b875d`…`7d1a2ed`, CHANGELOG
+Unreleased): Uhr im Redraw-Test, Gate-Tabelle mit runlog-Zeile und
+`audit_record_gap`, claude-hook-Exit-Vertrag, `intent_check.hold` als
+Datenschnittstelle für finalize, drei Evidenz-Beschriftungen, die
+übrigen Heimaten samt erweiterten Wächtern und Architektur-Tabelle, der
+Kleinkram. Entschieden dabei: runlog meldet offene WARNINGs/NOTEs älterer
+Preflight-Records weiterhin nur beim quittierten Start — der benannte
+Record ist beim sauberen Start ganz entschieden (`audit_record_gap`),
+ein älterer hält keinen Lauf. Aus der Nachkontrolle ist nichts mehr
+offen; die Guards in `tests/test_one_home.py` halten weiterhin keinen
+Grep für `runs.run_dirs` und `llm.model_entry` (bewusst: je ein Aufrufer
+bzw. ein Test-gehaltener Walk).
 
 ### Typisierte Grenzen vervollständigen
 

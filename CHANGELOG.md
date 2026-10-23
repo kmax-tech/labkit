@@ -134,6 +134,35 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **finalize no longer labels intent-check's notes as blockers.** On a red
+  intent-check every stdout line became a BLOCKER, "using
+  <run>/metrics.json (…)" and "WARNING — … Checking anyway" among them
+  (audit follow-up 2026-10-23, F4). `intent_check.hold(protocol,
+  metrics)` returns `Held`: the notes of the choice, the findings, the
+  clean summary — `main` prints them, finalize collects them as data.
+  `choose_explicit` and `choose_bound` return `(path, notes)` instead of
+  printing.
+- **The redraw test holds the clock.** `test_a_taken_run_id_is_drawn_again`
+  faked the uuid draws but not the second; two starts across a second
+  boundary collided on nothing and the hook refused a commit at random.
+- **`scope-sha --globs` narrows the import closure too.** The listed
+  files followed the globs, the closure started from the default ones.
+- **Prose that trailed the 2026-10-23 merges.** The gate table in
+  `findings.open_findings` says what runlog does with a lesser open
+  finding (told only on an acknowledged start) and names
+  `audit_record_gap` as the reader of the one named record; the
+  `claude-hook` docstring and `--help` state the exit contract the code
+  has (usage errors 2, as every labkit command; 2 means block, keep
+  working or usage by subcommand); `hold_report`'s docstring puts static
+  evidence on the unsourced numbers, not the undeclared run; code-check's
+  1b and 1c are GUARANTEED, not "AUTOMATED"; `labkit-params` writes one
+  vocabulary into `evidence_kind` (an absent registered constant is
+  static evidence, `in run` says "not recorded"); `audit --help` names
+  the `--review` contract; `limit_line` takes the finding only;
+  `batch` and the standard name `lanes.read_jsonl`; CHANGELOG says stage
+  2 for report-check's registration; the architecture's home table
+  names `runs.run_path`, `scope_sha.area_files`, `jsonl.objects`,
+  `llm.model_entry`, `protocol_block.section_starts` and `console`.
 - **A taken run id is drawn again.** Two runs started in the same second
   drew the same four-hex suffix once and the second `mkdir` failed with
   `FileExistsError` (test_repeats, 2026-10-21). `runlog._make_run_dir`
@@ -261,6 +290,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The homes the merges left.** Seven messages spelled `runs/` by hand
+  (`runs.runs_path`); two `labkit-audit` progress lines stood as
+  four-line prints beside `console.progress`; the reading probe cut a
+  protocol's sections with its own fence-blind regex
+  (`protocol_block.section_starts`); `rules show` on an unknown id and
+  `claude-hook sessions` without a session log refuse through
+  `console.refuse` — stderr, exit 2 (until now 1), `claude-hook`'s bare
+  call and `--help` go through `console.usage`. The one-home guards see
+  single-quoted `runs/`, the lookahead section cut and a labkit command's
+  multi-line print, each with a sample that bites.
 - **The one-home test also catches the try/except copy of a shown path.**
   It held the conditional form (`is_relative_to`) only; `BLOCK_RULES` holds
   shapes over several lines, the first the `try: … .relative_to(…) except
