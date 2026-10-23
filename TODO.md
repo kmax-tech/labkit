@@ -183,7 +183,10 @@ Forschung und Benchmark-Fallliste liegen in
        verlangen. Befund: die Mittel gibt es (`labkit/run/llm.py:164`
        `resolve` in die Run-Config, `labkit/run/batch.py:222` `Store` mit
        `_instrument`/`_prov` je Zeile), das compute-Skelett
-       (`measure-quick-script.py.template`) bindet sie nicht ein.
+       (`measure-quick-script.py.template`) bindet sie nicht ein — und
+       bekommt auch keine auskommentierte Variante. Steht ein echter
+       Annotierungslauf an, an ihm den Ablauf entwickeln, danach
+       entscheiden, ob ein Beispiel oder eine eigene Vorlage lohnt.
      - Audit-Bündel: erledigt 2026-10-23. `audit.validity_evidence` zeigt
        dem Preflight- und Analyse-Audit das gebundene apply-Protokoll, die
        `metrics.json` des erklärten Laufs, den `models.toml`-Eintrag und den
