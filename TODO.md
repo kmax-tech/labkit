@@ -175,10 +175,15 @@ Forschung und Benchmark-Fallliste liegen in
      protocol = "p-…" }` oder `{ doi = "10.…" }`; Bindung in
      `protocol_history.check_annotation_validity` (protocol-check,
      preflight). Fachbegriff annotation validity (NLP:III-167/173). Offen:
-     - Skelett für `compute` + `[model]`: `standard_contract.skeleton` gibt
-       das compute-Skelett ohne Modellaufruf; das Prompt-Skelett trägt
-       Gold/Kriterium. Entscheiden, ob ein eigenes oder ein Teil des
-       Prompt-Skeletts.
+     - Skelett für `compute` + `[model]`: entschieden 2026-10-23, kein
+       eigenes, bis ein konkreter Bedarf da ist. `[model]` heißt nicht, dass
+       der Lauf ein Modell aufruft; er kann gespeicherte Annotationen
+       auswerten. Annotiert der Lauf selbst, wird der Modellaufruf mit
+       Herkunft und Ausgaben erfasst, ohne Gold oder Leistungskriterium zu
+       verlangen. Befund: die Mittel gibt es (`labkit/run/llm.py:164`
+       `resolve` in die Run-Config, `labkit/run/batch.py:222` `Store` mit
+       `_instrument`/`_prov` je Zeile), das compute-Skelett
+       (`measure-quick-script.py.template`) bindet sie nicht ein.
      - Audit-Bündel: das gebundene apply-Protokoll (Modell, Prompt,
        Zielbegriff) mit ins Bündel, damit das Audit die fachliche Eignung
        prüfen kann; heute steht dort nur die ID.
