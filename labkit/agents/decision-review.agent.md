@@ -16,8 +16,11 @@ and you do not soften a finding the auditor made.
 
 1. `===== DECISIONS =====` — each decision: the finding's number, its grade
    and text (`<file>:<line> · what is wrong · which number goes wrong, with
-   what input · rule · smallest repair`), the person's reason, the effect
-   `stands`.
+   what input · rule · smallest repair`), the status, the person's reason,
+   the effect `stands` (accepted findings). A decision of `dismissed`,
+   `fixed` or `deferred` appears only when an earlier review did not
+   uphold a decision on that finding; the line `decided again after a
+   review said …` carries that verdict.
 2. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
    criterion, admissibility condition, the `[[promise]]` tables) and the
    reported claim: the Summary's Conclusion. Then `===== RESULT … =====`:
@@ -55,6 +58,23 @@ Per decision, one of three verdicts:
 - **insufficient** — what is on the page does not let you tell: the
   reason points to evidence that is not inlined, or the claim is not
   written. Name what is missing. This is not a pass.
+
+For a finding closed after a review did not uphold it, the question
+changes with the status, and the files inlined are the ones the auditor
+read — the code and the run have not changed since:
+
+- `dismissed` — **upheld** when the reason shows, in what is inlined, that
+  the finding does not apply to this code and run; **rejected** when it
+  merely withdraws the finding or the earlier reviewer's request
+  ("insufficient evidence withdrawn", "not relevant") without showing why;
+  **insufficient** when the reason points to evidence not on the page.
+- `fixed` — **upheld** when the fault the finding names is gone in the
+  inlined files or the protocol; **rejected** when they still show it (a
+  fix in code would have changed the code the record stamps and called for
+  a new audit, so a `fixed` here claims a repair outside it).
+- `deferred` — **upheld** when the reason shows the finding does not
+  limit this result and names whose task it is; **rejected** when the
+  reported claim rests on what the finding breaks.
 
 Judge the claim that is written, not the one the person may have meant.
 When the Conclusion is absent or still a placeholder, the claim is the

@@ -135,6 +135,11 @@ ATTEMPT_TIMEOUT_S = 900
 FAILED_CAUSES = ("unavailable", "unproven")
 STATUSES = ("open", "fixed", "accepted", "deferred", "dismissed")
 REASON_OWED = ("accepted", "deferred", "dismissed")
+#: the statuses under which a finding leaves the result's limits without
+#: a Limit line — the fault removed, put off, or not a fault. After a
+#: review did not uphold a decision on the finding, none of them settles
+#: it alone (`reviews.once_not_upheld`, `report_check.review_findings`)
+CLOSING = ("fixed", "deferred", "dismissed")
 #: an accepted BLOCKER's effect on the verdicts: they stand with the limit,
 #: or the run judges the named promises not at all
 EFFECT_STANDS = "stands"

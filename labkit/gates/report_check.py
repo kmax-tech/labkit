@@ -423,7 +423,11 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     a reason alone; decided 2026-10-22 after the fifth round's replay and
     the assessment of its fifteen decisions from their sources), an
     accepted WARNING's a WARNING for now (the release does not yet hang
-    on every lesser limit). Empty when no record covers the run
+    on every lesser limit). A finding a review of the record once did not
+    uphold (`reviews.once_not_upheld`) and that is now `dismissed`, `fixed`
+    or `deferred` (`findings.CLOSING`) is held the same way until a review
+    upholds the new decision: closing it is not settling it (sixth haiku
+    round, 2026-10-23, t5). Empty when no record covers the run
     (`analysis_audit_gap` names that), and silent on whether the verdict is
     right: that is the reviewer's judgement."""
     if ctx.run is None:
@@ -462,7 +466,35 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                     evidence_kind=GUARANTEED,
                 )
             )
+        for n, f in enumerate(r.findings, 1):
+            if f.status not in findings.CLOSING:
+                continue
+            was = reviews.once_not_upheld(r, n, found)
+            if was is None or reviews.upholding(r, n, found, ctx.text):
+                continue
+            out.append(
+                GateFinding(
+                    BLOCKER if f.grade == "BLOCKER" else WARNING,
+                    f"audit {r.path.stem} #{n}: `{f.status}` on a {f.grade} a "
+                    f"review said {was.verdict} on ({was.why}) — closing a finding "
+                    f"a reviewer did not uphold settles nothing by itself; the new "
+                    f"decision is {reviews.state(r, n, found, ctx.text)}: "
+                    f"`labkit-audit <area> --review --record {r.path.name}` asks a "
+                    f"second auditor whether the reason shows it {_closing_question(f.status)} "
+                    f"(LAB-015 Preflight audit before freezing)",
+                    evidence_kind=GUARANTEED,
+                )
+            )
     return out
+
+
+def _closing_question(status: str) -> str:
+    """What the reviewer is asked of a closed contested finding, by status."""
+    return {
+        "dismissed": "does not apply to the code and run as audited",
+        "fixed": "gone in the files as audited",
+        "deferred": "somebody else's task, not this result's limit",
+    }[status]
 
 
 def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[str]:

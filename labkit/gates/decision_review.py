@@ -28,11 +28,19 @@ limits the claim, changes the effect to `not assessable`, or fixes the
 fault; a new audit is due when its basis changes or the finding is
 disputed, and does not by itself settle the rejection. After
 `insufficient` the missing evidence is supplied and the review run again.
-The gate: report-check blocks on an accepted BLOCKER's `stands` no review
-upholds, and warns on an accepted WARNING's (`report_check.review_findings`).
+Closing the finding instead — `dismissed`, `fixed`, `deferred`
+(`findings.CLOSING`) — is a decision like any other once a review did
+not uphold one on that finding: it is under review too
+(`reviews.once_not_upheld`), and the reviewer is asked whether the
+reason shows the finding inapplicable, the fault gone in the files as
+audited, or the task somebody else's; a reason alone releases nothing
+(sixth haiku round, 2026-10-23, t5). The gate: report-check blocks on an
+accepted BLOCKER's `stands` no review upholds, and on a closed contested
+BLOCKER, and warns on a WARNING's (`report_check.review_findings`).
 
 Exit codes: 0 every decision upheld, 1 at least one not upheld, 2 no
-review — no record, nothing to review in it, the code or the run not what
+review — no record, nothing to review in it (no `stands`, no closed
+contested finding), the code or the run not what
 the record's auditor saw (the decisions were made on that state; review
 them there or audit again), a decision already reviewed as decided and
 claimed now and not upheld (another draw settles nothing; `--again` draws
@@ -71,7 +79,9 @@ VERDICT = re.compile(
     r"verdict:\s*(\d+)\s*upheld,\s*(\d+)\s*rejected,\s*(\d+)\s*insufficient", re.I
 )
 DECISIONS_LABEL = (
-    "DECISIONS — the accepted findings under review, each with the reason given"
+    "DECISIONS — the decisions under review, each with the reason given: an "
+    "accepted finding with effect `stands`, or a finding closed after a review "
+    "did not uphold a decision on it"
 )
 RESULT_LABEL = (
     "RESULT — the Recorded results line and the Limit lines as `protocol-fill "
@@ -100,12 +110,26 @@ def rendered_result(area: Path, text: str, run_dir: Path | None) -> str:
     )
 
 
-def reviewable(record: findings.Record) -> list[tuple[int, findings.Finding]]:
-    """(number, finding) of every decision of RECORD a review asks about: a
-    limit of the result (`Record.limits`: an accepted BLOCKER, an accepted
-    WARNING naming an effect) whose effect is `stands`. `not assessable`
-    leaves the promise unjudged and claims nothing to review."""
-    return [(n, f) for n, f in record.limits() if f.effect == EFFECT_STANDS]
+def reviewable(
+    record: findings.Record, found: list[reviews.Review]
+) -> list[tuple[int, findings.Finding]]:
+    """(number, finding) of every decision of RECORD a review asks about,
+    in the record's order: a limit of the result (`Record.limits`: an
+    accepted BLOCKER, an accepted WARNING naming an effect) whose effect is
+    `stands`, and a finding closed (`findings.CLOSING`: dismissed, fixed,
+    deferred) after a review among FOUND did not uphold a decision on it
+    (`reviews.once_not_upheld`). `not assessable` leaves the promise
+    unjudged and claims nothing to review."""
+    stands = {n for n, f in record.limits() if f.effect == EFFECT_STANDS}
+    return [
+        (n, f)
+        for n, f in enumerate(record.findings, 1)
+        if n in stands
+        or (
+            f.status in findings.CLOSING
+            and reviews.once_not_upheld(record, n, found) is not None
+        )
+    ]
 
 
 def conclusion_written(text: str) -> bool:
@@ -142,13 +166,32 @@ def named_files(
     return out
 
 
-def decisions_text(decided: list[tuple[int, findings.Finding]]) -> str:
-    """The decisions as the reviewer reads them: number, grade, finding
-    text, the reason, the effect."""
-    blocks = [
-        f"#{n} · {f.grade} · {f.text}\n   reason: {f.reason}\n   effect: {f.effect}"
-        for n, f in decided
-    ]
+def decisions_text(
+    record: findings.Record,
+    decided: list[tuple[int, findings.Finding]],
+    found: list[reviews.Review],
+) -> str:
+    """The decisions of RECORD under review, as the reviewer reads them:
+    number, grade, finding text, the status, the reason, the effect
+    (accepted only) — and, for a finding closed after a review did not
+    uphold a decision on it, that earlier verdict with its sentence
+    (`reviews.once_not_upheld`), so the reviewer knows what the new
+    decision answers to."""
+    blocks: list[str] = []
+    for n, f in decided:
+        lines = [
+            f"#{n} · {f.grade} · {f.text}",
+            f"   status: {f.status}",
+            f"   reason: {f.reason}",
+        ]
+        if f.effect:
+            lines.append(f"   effect: {f.effect}")
+        was = reviews.once_not_upheld(record, n, found)
+        if f.status in findings.CLOSING and was is not None:
+            lines.append(
+                f"   decided again after a review said {was.verdict}: {was.why}"
+            )
+        blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
 
 
@@ -170,11 +213,12 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
     what the record's auditor saw, else AuditError — the decisions were
     made on that state. AuditError too when the record holds nothing to
     review, or names a run that is gone."""
-    decided = reviewable(record)
+    found = reviews.area_reviews(area)
+    decided = reviewable(record, found)
     if not decided:
         raise AuditError(
-            f"{record.path.name}: no accepted finding with effect `stands` — nothing "
-            f"to review"
+            f"{record.path.name}: no accepted finding with effect `stands` and no "
+            f"finding closed after a review did not uphold it — nothing to review"
         )
     repo = layout_root(area)
     text = protocol.read_text(encoding="utf-8")
@@ -212,7 +256,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         )
     label, rules_text = audit.standard_excerpt(REVIEW)
     pieces: list[tuple[str, str]] = [
-        (DECISIONS_LABEL, decisions_text(decided)),
+        (DECISIONS_LABEL, decisions_text(record, decided, found)),
         (f"FILE: {shown(protocol, repo)}", text),
         (RESULT_LABEL, rendered_result(area, text, run_dir)),
     ]
@@ -282,7 +326,9 @@ def contested_gap(area: Path, protocol: Path, record: findings.Record) -> str | 
     text = protocol.read_text(encoding="utf-8")
     found = reviews.area_reviews(area)
     held = [
-        n for n, _ in reviewable(record) if reviews.contested(record, n, found, text)
+        n
+        for n, _ in reviewable(record, found)
+        if reviews.contested(record, n, found, text)
     ]
     if not held:
         return None

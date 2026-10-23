@@ -48,11 +48,19 @@ decided and claimed now said anything but `upheld`, no later draw
 releases it (`contested`) — the way out is deciding again, with the
 evidence in the reason, or limiting the claim; `labkit-audit --review`
 refuses another draw on such a state unless asked for one as a
-measurement (`--again`). What is guaranteed
-is the release condition; whether the verdict is right stays the
-reviewer's judgement, as with every agent audit. report-check blocks on
-an accepted BLOCKER's `stands` nobody upheld and warns on an accepted
-WARNING's (`report_check.review_findings`; decided 2026-10-22 after the
+measurement (`--again`). Deciding again does not mean closing: once a
+review of this record did not uphold a decision on a finding
+(`once_not_upheld`), a `dismissed`, `fixed` or `deferred` on it owes an
+upholding review of the new decision as well — the reviewer is asked
+whether the reason shows the finding inapplicable, the fault gone in the
+files as audited, or the task truly somebody else's (sixth haiku round,
+2026-10-23, t5: `dismissed` with "insufficient evidence withdrawn" after
+`insufficient` released the state; a filled-in reason is not evidence).
+What is guaranteed is the release condition; whether the verdict is
+right stays the reviewer's judgement, as with every agent audit.
+report-check blocks on an accepted BLOCKER's `stands` nobody upheld and
+warns on an accepted WARNING's, and grades a closed contested finding the
+same way (`report_check.review_findings`; decided 2026-10-22 after the
 fifth round's replay, two passes, and the assessment of its fifteen
 decisions from their sources, `docs/usability/2026-10-22-decision-review-*.md`).
 
@@ -256,21 +264,44 @@ def area_reviews(area: Path) -> list[Review]:
     return [read_review(p) for p in paths]
 
 
-def reviews_of(
-    record: findings.Record, reviews: list[Review], text: str
-) -> list[Review]:
+def drawn_on(record: findings.Record, reviews: list[Review]) -> list[Review]:
     """The REVIEWS of RECORD that saw what its auditor saw — its name, its
-    code and its run as shown — and judged the claim the protocol TEXT
-    makes now, oldest first."""
-    claim = claim_digest(text)
+    code and its run as shown — under whatever claim, oldest first."""
     return [
         r
         for r in reviews
         if r.record == record.path.name
         and r.scope_sha == record.scope_sha
         and r.shown_sha == record.shown_sha
-        and r.claim_sha == claim
     ]
+
+
+def reviews_of(
+    record: findings.Record, reviews: list[Review], text: str
+) -> list[Review]:
+    """The REVIEWS of RECORD that saw what its auditor saw (`drawn_on`)
+    and judged the claim the protocol TEXT makes now, oldest first."""
+    claim = claim_digest(text)
+    return [r for r in drawn_on(record, reviews) if r.claim_sha == claim]
+
+
+def once_not_upheld(
+    record: findings.Record, n: int, reviews: list[Review]
+) -> Decision | None:
+    """The oldest verdict on finding N of RECORD that was not `upheld` —
+    from any review that saw the record's code and run (`drawn_on`), at
+    whatever decision and under whatever claim it was drawn — or None.
+    Such a finding is contested: a decision made on it since owes an
+    upholding review of its own (`upholding`), whatever its status —
+    `dismissed`, `fixed` or `deferred` close nothing by themselves
+    (sixth haiku round, 2026-10-23, t5: after `insufficient` the finding
+    was dismissed with "insufficient evidence withdrawn" and the state
+    released; `report_check.review_findings` holds it now)."""
+    for r in drawn_on(record, reviews):
+        d = r.of(n)
+        if d is not None and d.verdict != UPHELD:
+            return d
+    return None
 
 
 def verdicts_on_state(

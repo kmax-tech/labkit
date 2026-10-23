@@ -43,6 +43,11 @@ REJECTED = (
     "DECISION #1 · rejected · the reason restates the finding; c1_pass as reported "
     "rests on the in-sample fit\nverdict: 0 upheld, 1 rejected, 0 insufficient\n"
 )
+INSUFFICIENT = (
+    "DECISION #1 · insufficient · the reason names no diff and no sha; whether "
+    "the rows are stale is not on the page\nverdict: 0 upheld, 0 rejected, "
+    "1 insufficient\n"
+)
 
 
 def area_with(
@@ -96,6 +101,17 @@ def area_with(
     return area, record
 
 
+def decide(record: Path, n: int, status: str, reason: str, effect: str = "") -> None:
+    """Decide finding N and write the result section again, as the person
+    does after `--decide` (`protocol-fill --render`): a Limit line of a
+    closed finding would otherwise stand stale."""
+    findings.write_decision(record, n, status, reason, effect)
+    area = record.parent.parent
+    proto = area / "PROTOCOL-x.md"
+    rendered, _ = protocol_fill.render_result(proto.read_text(encoding="utf-8"), area)
+    proto.write_text(rendered, encoding="utf-8")
+
+
 def run_review(area: Path, answer: str, *extra: str) -> tuple[int, str, str, list[str]]:
     sent: list[str] = []
 
@@ -141,13 +157,13 @@ class Reviewable(unittest.TestCase):
             },
         )
         rec = findings.read(record)
-        self.assertEqual([n for n, _ in decision_review.reviewable(rec)], [1, 3])
+        self.assertEqual([n for n, _ in decision_review.reviewable(rec, [])], [1, 3])
 
     def test_named_files_resolve_against_the_repo_then_the_area(self):
         area, record = area_with([BLOCKER], {1: ("accepted", "r", "stands")})
         rec = findings.read(record)
         files = decision_review.named_files(
-            decision_review.reviewable(rec), area.parent.parent, area
+            decision_review.reviewable(rec, []), area.parent.parent, area
         )
         self.assertEqual(files, [(area / "scripts" / "01_measure.py").resolve()])
 
@@ -346,6 +362,74 @@ class TheCall(unittest.TestCase):
         self.assertEqual((rc, len(sent)), (0, 1))
         rec = findings.read(record)
         self.assertTrue(reviews.upholding(rec, 1, reviews.area_reviews(area), text))
+
+    def test_dismissed_after_insufficient_owes_a_review_of_its_own(self):
+        """Sixth haiku round (2026-10-23, t5, steps 104–105): the reviewer
+        found the evidence for a `stands` insufficient; the agent dismissed
+        the finding with "insufficient evidence withdrawn" and the state
+        was released — a dismissal needed no review. Now a finding a review
+        did not uphold is held under `dismissed`, `fixed` or `deferred`
+        until a review upholds the new decision; a filled-in reason alone
+        releases nothing."""
+        area, record = area_with(
+            [BLOCKER], {1: ("accepted", "rows are stale, see the diff", "stands")}
+        )
+        rc, _, _, _ = run_review(area, INSUFFICIENT)
+        self.assertEqual(rc, 1)
+        for status in ("dismissed", "fixed", "deferred"):
+            with self.subTest(status=status):
+                decide(record, 1, status, "insufficient evidence withdrawn")
+                code, out = gate(area)
+                self.assertEqual(code, 1, out)
+                self.assertIn(
+                    f"`{status}` on a BLOCKER a review said insufficient on", out
+                )
+                self.assertIn("closing a finding a reviewer did not uphold", out)
+                self.assertIn(f"--review --record {record.name}", out)
+                self.assertNotIn("Limit (audit", out)  # no limit: closed
+        # the reviewer is asked about the new decision, and sees what it answers to
+        rc, _, _, sent = run_review(area, UPHELD)
+        self.assertEqual((rc, len(sent)), (0, 1))
+        self.assertIn("   status: deferred", sent[0])
+        self.assertIn("   reason: insufficient evidence withdrawn", sent[0])
+        self.assertIn(
+            "   decided again after a review said insufficient: the reason names "
+            "no diff",
+            sent[0],
+        )
+        self.assertNotIn("   effect:", sent[0])
+        # the twin: the upholding review of the new decision releases
+        code, out = gate(area)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("decision review", out)
+
+    def test_the_twin_a_dismissal_nobody_contested_owes_no_review(self):
+        """A finding dismissed without any review on it was never contested:
+        it is decided, not under review, and the gate is silent."""
+        area, record = area_with(
+            [BLOCKER], {1: ("dismissed", "the threshold is read from the config", "")}
+        )
+        code, out = gate(area)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("decision review", out)
+        rec = findings.read(record)
+        self.assertEqual(decision_review.reviewable(rec, []), [])
+        rc, _, err, sent = run_review(area, UPHELD)
+        self.assertEqual((rc, sent), (2, []))
+        self.assertIn("nothing to review", err)
+
+    def test_a_closed_warning_after_a_rejection_only_warns(self):
+        """The grade rule holds for a closed contested finding as for a
+        `stands`: a WARNING's is a warning, a BLOCKER's a blocker."""
+        area, record = area_with(
+            [WARNING], {1: ("accepted", "Finding noted", "stands")}
+        )
+        run_review(area, REJECTED)
+        decide(record, 1, "dismissed", "one seed is enough here")
+        code, out = gate(area)
+        self.assertEqual(code, 0, out)
+        self.assertIn("WARNING: audit", out)
+        self.assertIn("`dismissed` on a WARNING a review said rejected on", out)
 
     def test_a_report_that_disagrees_with_itself_records_nothing(self):
         area, _ = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})

@@ -147,6 +147,19 @@ pins (`requirements.txt` / `requirements.lock`).
   report, and owes its generated block. The heading says why it is held.
   A report whose block is already committed passes; a declaration HEAD
   already holds reaches nothing. At the stop the same.
+- **Closing a finding a reviewer did not uphold no longer releases the
+  state.** After `rejected` or `insufficient`, a `dismissed`, `fixed` or
+  `deferred` on the same finding (`findings.CLOSING`) left the limits
+  and nothing asked again (sixth round, t5: "insufficient evidence
+  withdrawn"). Now such a finding owes an upholding review of the new
+  decision (`reviews.once_not_upheld`): `report-check` holds it by the
+  finding's grade (a BLOCKER's blocks, a WARNING's warns, as for an
+  unreviewed `stands`), `labkit-audit --review` puts it before the
+  reviewer with its status, reason and the earlier verdict, and the
+  reviewer's instructions say what `dismissed`, `fixed` and `deferred`
+  each have to show. A filled-in reason alone releases nothing;
+  re-deciding to `not assessable` remains the path that needs no new
+  draw. A dismissal nobody contested is not under review.
 - **finalize no longer labels intent-check's notes as blockers.** On a red
   intent-check every stdout line became a BLOCKER, "using
   <run>/metrics.json (…)" and "WARNING — … Checking anyway" among them
