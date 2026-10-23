@@ -290,6 +290,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A file at a git state has one reading.** `repo.text_at(repo, path,
+  rev)` reads the index (the default) or a revision (`HEAD`); None where
+  that state does not hold the file. `report_check.index_text` and
+  `protocol_history.id_in_git_head` go through it; `repo.indexed_files`
+  lists what the next commit carries (`indexed_protocols` filters it);
+  `repo.under_root` is the membership test a gate given paths from
+  anywhere needs (`report_files` carried its own try/except).
 - **The homes the merges left.** Seven messages spelled `runs/` by hand
   (`runs.runs_path`); two `labkit-audit` progress lines stood as
   four-line prints beside `console.progress`; the reading probe cut a

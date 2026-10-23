@@ -17,7 +17,7 @@ from labkit.formats.gate import GUARANTEED
 from labkit.formats import protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
 from labkit.formats.protocol_check import seconds_registration_missing
-from labkit.formats.repo import git_root, git_run
+from labkit.formats.repo import git_root, git_run, text_at
 
 
 def id_in_git_head(path: Path) -> str | None:
@@ -29,9 +29,8 @@ def id_in_git_head(path: Path) -> str | None:
     root = git_root(path)
     if root is None:
         return None
-    rel = path.resolve().relative_to(root)
-    r = git_run(["show", f"HEAD:{rel}"], root)
-    return protocol_block.id_of(r.stdout) if r.returncode == 0 else None
+    text = text_at(root, path, "HEAD")
+    return protocol_block.id_of(text) if text is not None else None
 
 
 def cost_in_first_commit(path: Path) -> tuple[str, str | None] | None:

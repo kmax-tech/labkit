@@ -194,11 +194,11 @@ def area_protocols(area: Path) -> list[Path]:
     return sorted(area.glob(PROTOCOL_GLOB))
 
 
-def indexed_protocols(repo: Path) -> list[Path]:
-    """Every protocol git's index holds under REPO, outside SKIP_DIRS,
-    sorted, as resolved paths — the commit's form of `repo_protocols`: a
-    protocol deleted only in the working tree is still here, one only in
-    the tree is not. Raises RuntimeError when git fails."""
+def indexed_files(repo: Path) -> list[Path]:
+    """Every file git's index holds under REPO, outside SKIP_DIRS, sorted,
+    as resolved paths — what the next commit carries (`git ls-files
+    --cached`): a file deleted only in the working tree is still here, one
+    only in the tree is not. Raises RuntimeError when git fails."""
     r = git_run(["ls-files", "-z", "--cached"], repo)
     if r.returncode != 0:
         raise RuntimeError(f"git ls-files failed in {repo}: {r.stderr.strip()}")
@@ -206,10 +206,39 @@ def indexed_protocols(repo: Path) -> list[Path]:
     return sorted(
         root / rel
         for rel in r.stdout.split("\0")
-        if rel
-        and PROTOCOL_NAME.match(Path(rel).name)
-        and not SKIP_DIRS & set(Path(rel).parts)
+        if rel and not SKIP_DIRS & set(Path(rel).parts)
     )
+
+
+def indexed_protocols(repo: Path) -> list[Path]:
+    """Every protocol git's index holds under REPO (`indexed_files`),
+    sorted, as resolved paths — the commit's form of `repo_protocols`."""
+    return [p for p in indexed_files(repo) if PROTOCOL_NAME.match(p.name)]
+
+
+def under_root(root: Path, path: Path) -> bool:
+    """Does ROOT hold PATH (both resolved)? A membership test for a gate
+    that is given paths from anywhere — the stop hook's changed paths, a
+    test's temporary area — and reads only those of its repo."""
+    return path.resolve().is_relative_to(root.resolve())
+
+
+#: the revision `text_at` reads the index as
+INDEX_REV = ""
+
+
+def text_at(repo: Path, path: Path, rev: str = INDEX_REV) -> str | None:
+    """PATH's content as git holds it at REV under REPO — the index when
+    REV is INDEX_REV (`git show :path`, what a commit now would carry),
+    else that revision's (`HEAD:path`: the last commit's). None when that
+    state does not hold the file (untracked, staged as deleted, new since
+    HEAD) or there is no such revision (an unborn branch). PATH must lie
+    under REPO. The one reading of a file at a git state: the pre-commit's
+    declaration, the citing report as the index holds it, the protocol as
+    HEAD last committed it."""
+    rel = path.resolve().relative_to(repo.resolve()).as_posix()
+    r = git_run(["show", f"{rev}:{rel}"], repo)
+    return r.stdout if r.returncode == 0 else None
 
 
 def find_area(
