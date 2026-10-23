@@ -24,7 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
 from labkit.formats import findings, promises, runs, scope_sha  # noqa: E402
-from labkit.run import runlog_command  # noqa: E402
+from labkit.run import runlog, runlog_command  # noqa: E402
 from protocol_fixture import run_record, head, scope_file  # noqa: E402
 
 
@@ -85,6 +85,36 @@ class TestWait(unittest.TestCase):
             self.assertEqual(code, 2)
             self.assertIn("CRASHED", out)
             self.assertIn("2026-09-09T10-00-00_dead", out)
+
+    def test_a_crashed_run_names_why_it_broke_off(self):
+        """2026-10-23: a claude-cli answer another model wrote ends a run
+        loudly, and the reason stood on stderr alone; runlog keeps it with
+        the run, and --wait names it."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(
+                head(cost="seconds", promises=None)
+                + "\n- **Question / hypothesis:** how many?\n",
+                encoding="utf-8",
+            )
+            with contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaises(RuntimeError):
+                    with runlog.run("x", {"n": 1}, area, run_kind="measurement"):
+                        raise RuntimeError("claude-cli: requested m, written by o, m")
+                with runlog.run("x", {"n": 2}, area, run_kind="measurement") as ok:
+                    ok.metrics(count=2)
+            dead, clean = sorted((area / "runs").iterdir())
+            self.assertEqual(
+                runs.read_failure(dead),
+                "RuntimeError: claude-cli: requested m, written by o, m",
+            )
+            self.assertIsNone(runs.read_failure(clean))  # a clean exit leaves none
+            config = json.loads((dead / "config.json").read_text(encoding="utf-8"))
+            config["pid"] = 999_999_99  # the process is gone: crashed, not running
+            (dead / "config.json").write_text(json.dumps(config), encoding="utf-8")
+            code, out = _run_main([d, "--wait", "--max-seconds", "1"])
+        self.assertEqual(code, 2, out)
+        self.assertIn("broke off with RuntimeError: claude-cli: requested m", out)
 
     def test_running_run_exits_3_at_max_seconds(self):
         with tempfile.TemporaryDirectory() as d:

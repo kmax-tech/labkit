@@ -177,6 +177,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **A crashed run keeps why it broke off.** When the block of
+  `runlog.run` raises, the run directory gets `failure.json` — the
+  exception's type, message and time (`runs.write_failure`,
+  `runs.read_failure`) — and `runlog --wait` names it beside CRASHED.
+  Until now the reason stood on stderr alone; a claude-cli answer another
+  model wrote ends a run this way. A failure to write the file is said on
+  stderr and never masks the exception.
 - **A fit probe for the usability harness.** `usability stage <dir> --task
   fit --data <train.csv>` stamps a `kind = "fit"` area at seconds with the
   estimator skeleton and plants the DILI molecules the operator hands in

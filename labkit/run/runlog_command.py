@@ -21,6 +21,7 @@ from labkit.formats.runs import (
     FAILED_STATES,
     RUN_ID_TIME,
     RunConfigError,
+    read_failure,
     read_metrics,
     run_dirs,
     summarize,
@@ -143,6 +144,9 @@ def _wait(
             for r in failed:
                 state = r.state
                 why = r.error or f"{r.dir}: {WHY.get(state, '')}"
+                failure = read_failure(r.dir)
+                if failure:
+                    why += f" — broke off with {failure}"
                 print(
                     f"{r.run_id}  {state.upper()}  pid={r.config.pid if r.config else None}  "
                     f"{r.config.script if r.config else None}  ({why})"

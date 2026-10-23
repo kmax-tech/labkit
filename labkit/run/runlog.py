@@ -101,6 +101,7 @@ from labkit.formats.runs import (
     is_alive,
     now_stamp,
     read_completion,
+    write_failure,
     read_metrics,
     read_run_config,
     recorded_path,
@@ -673,11 +674,19 @@ class run:
     def __exit__(
         self,
         exc_type: type[BaseException] | None,
-        _exc: BaseException | None,
+        exc: BaseException | None,
         _tb: TracebackType | None,
     ) -> bool:
         if exc_type is None:
             self._run._finalize()  # crash -> dir stays without metrics.json (visible)
+            return False
+        try:
+            write_failure(self._run.dir, exc_type, exc)  # the reason stays with the run
+        except OSError as err:  # never mask the exception that ended the run
+            print(
+                f"runlog: could not record why {self._run.run_id} broke off: {err}",
+                file=sys.stderr,
+            )
         return False
 
 

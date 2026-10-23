@@ -162,6 +162,42 @@ def now_stamp() -> str:
     return time.strftime(RECORD_TIME)
 
 
+#: why a run broke off, written by `runlog.run` when the block raises — the
+#: exception's type and message; without it a crashed run showed only that
+#: it crashed (a claude-cli answer another model wrote ends a run loudly,
+#: and the reason stood on stderr alone, 2026-10-23)
+FAILURE_FILE = "failure.json"
+
+
+def write_failure(
+    run_dir: Path, exc_type: type[BaseException], exc: BaseException | None
+) -> Path:
+    """Write RUN_DIR/failure.json: the exception's type, its message and the
+    time; return its path. Raises OSError when it cannot be written."""
+    path = run_dir / FAILURE_FILE
+    path.write_text(
+        json.dumps(
+            {"error": exc_type.__name__, "message": str(exc or ""), "at": now_stamp()},
+            indent=1,
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def read_failure(run_dir: Path) -> str | None:
+    """`<Type>: <message>` from RUN_DIR/failure.json, None when the run left
+    none; RunConfigError when it is there and cannot be read."""
+    path = run_dir / FAILURE_FILE
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return f"{data['error']}: {data['message']}"
+    except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
+        raise RunConfigError(f"{path}: unreadable ({exc})") from exc
+
+
 RUN_ID = re.compile(
     r"\b(?P<date>\d{4}-\d{2}-\d{2})T(?P<h>\d{2})-(?P<m>\d{2})-(?P<s>\d{2})_[0-9a-f]{2,12}\b"
 )
