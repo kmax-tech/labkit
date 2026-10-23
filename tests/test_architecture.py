@@ -79,7 +79,7 @@ KNOWN_CROSSINGS = {
     ("code_check", "rules"),  # rules.paragraph
     ("code_check", "standard_contract"),  # standard_contract.lane (was a copied rule)
     # the pin check is core; checking rule references and hooks is doctrine
-    ("repo_check", "rules"),  # rules.check_refs, rules.load_registry
+    ("repo_check", "rules"),  # rules.check_refs, rules.load_ledger
     ("repo_check", "install_hooks"),  # install_hooks.check, .labkit_version
 }
 

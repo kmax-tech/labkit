@@ -6,11 +6,12 @@ paragraph `**LAB-nnn · Title**`). `docs/rules.tsv` is the ledger: one row per
 identifier ever given — `id alias title status`. Three families, never mixed:
 labkit assigns every `LAB` number (the shipped lab standard); a lab's own rules
 carry `LOCAL` numbers in the lab's own ledger; the coding style carries `CODE`.
-All three are checked with the same code (`check --standard … --registry …`).
+All three are checked with the same code (`check --standard … --registry …`;
+the flag names the ledger file, `docs/rules.tsv`).
 
 What holds, as in the standard's identifier rules 1–8:
 
-- `check_registry`: ids and aliases unique, every active id stated by exactly one
+- `check_heads`: ids and aliases unique, every active id stated by exactly one
   head with the ledger's title and alias, no head the ledger does not hold as active;
 - `check_ledger`: the ledger only grows — no row removed, no alias rewritten, no
   id revived or reused, a new id above the highest ever given;
@@ -43,7 +44,7 @@ from labkit import PACKAGE_DIR
 from labkit.formats import console, protocol_block
 
 STANDARD = PACKAGE_DIR / "docs" / "standard.md"
-REGISTRY = PACKAGE_DIR / "docs" / "rules.tsv"
+LEDGER = PACKAGE_DIR / "docs" / "rules.tsv"
 REGISTRY_HEADER = ("id", "alias", "title", "status")
 PREFIXES = ("LAB", "LOCAL", "CODE")
 STATUSES = ("active", "retired")  # plus moved:<where>
@@ -82,7 +83,7 @@ class RuleHead(NamedTuple):
     line: int  # 1-based
 
 
-def load_registry(path: Path) -> list[RuleRow]:
+def load_ledger(path: Path) -> list[RuleRow]:
     """The ledger rows of PATH; a malformed line raises — the ledger is never guessed at."""
     lines = path.read_text(encoding="utf-8").splitlines()
     if not lines or tuple(lines[0].split("\t")) != REGISTRY_HEADER:
@@ -194,7 +195,7 @@ def _head_problems(h: RuleHead, row: RuleRow | None) -> list[str]:
     return problems
 
 
-def check_registry(
+def check_heads(
     rows: list[RuleRow], heads: list[RuleHead], prefixes: tuple[str, ...]
 ) -> list[str]:
     """Invariants between a ledger and one document's rule heads; [] when they hold.
@@ -328,7 +329,7 @@ def check_refs(
     """Reference problems in TEXT: an unknown id, an id whose status is not ALLOWED,
     an id without its name, an old §-id outside its alias mark.
 
-    Head lines, fenced code and a generated register are skipped (check_registry
+    Head lines, fenced code and a generated register are skipped (check_heads
     holds the heads), so a standard is checked like any other file. Ids of a
     prefix the ledger does not keep (CODE in labkit's), and ids the ledger marks
     `moved:<where>`, are left to the ledger that holds them now.
@@ -356,7 +357,7 @@ def rule_text(
     Raises for an unknown id and says the status of one that is not active:
     an empty answer would look like a rule without text.
     """
-    rows = load_registry(REGISTRY) if rows is None else rows
+    rows = load_ledger(LEDGER) if rows is None else rows
     row = {r.id: r for r in rows}.get(rule_id)
     if row is None:
         raise KeyError(f"{rule_id}: no such rule in the ledger")
@@ -404,7 +405,7 @@ def main(argv: list[str]) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("check", help="a standard's rule heads against its ledger")
     c.add_argument("--standard", type=Path, default=STANDARD)
-    c.add_argument("--registry", type=Path, default=REGISTRY)
+    c.add_argument("--registry", type=Path, default=LEDGER)
     c.add_argument(
         "--prefix",
         action="append",
@@ -420,7 +421,7 @@ def main(argv: list[str]) -> int:
     r = sub.add_parser(
         "refs", help="every rule reference in PATHS resolves and carries its name"
     )
-    r.add_argument("--registry", type=Path, default=REGISTRY)
+    r.add_argument("--registry", type=Path, default=LEDGER)
     r.add_argument(
         "--status",
         action="append",
@@ -439,17 +440,17 @@ def main(argv: list[str]) -> int:
             return 1
         return 0
     if a.cmd == "check":
-        problems = check_registry(
-            load_registry(a.registry),
+        problems = check_heads(
+            load_ledger(a.registry),
             rule_heads(a.standard.read_text(encoding="utf-8")),
             tuple(a.prefix or ["LAB"]),
         )
         label = f"rules: {a.standard.name} against {a.registry.name}"
     elif a.cmd == "ledger":
-        problems = check_ledger(load_registry(a.before), load_registry(a.after))
+        problems = check_ledger(load_ledger(a.before), load_ledger(a.after))
         label = "rules: ledger"
     else:
-        rows = load_registry(a.registry)
+        rows = load_ledger(a.registry)
         files = [
             f
             for p in a.paths

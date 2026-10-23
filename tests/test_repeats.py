@@ -305,7 +305,7 @@ class Repeats(unittest.TestCase):
                 [
                     {
                         "path": runs.recorded_path(out, run),
-                        "sha256": provenance.sha256_file(out)[:16],
+                        "sha256": provenance.source_digest(out)[:16],
                         "lines": 1,
                     }
                 ]

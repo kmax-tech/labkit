@@ -118,7 +118,7 @@ class Lab(unittest.TestCase):
         self.assertFalse(any(line.startswith("  created") for line in log), log)
 
     def test_shipped_texts_name_their_rules_and_carry_no_house_path(self) -> None:
-        rows = rules.load_registry(rules.REGISTRY)
+        rows = rules.load_ledger(rules.LEDGER)
         for path in sorted(scaffold.TEMPLATES.iterdir()):
             text = path.read_text(encoding="utf-8")
             self.assertEqual(rules.check_refs(path.name, text, rows), [], path.name)

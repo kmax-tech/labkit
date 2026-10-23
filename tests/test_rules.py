@@ -44,12 +44,12 @@ class ShippedStandard(unittest.TestCase):
     def test_every_head_matches_the_ledger(self) -> None:
         heads = rules.rule_heads(rules.STANDARD.read_text(encoding="utf-8"))
         self.assertEqual(
-            rules.check_registry(rules.load_registry(rules.REGISTRY), heads, ("LAB",)),
+            rules.check_heads(rules.load_ledger(rules.LEDGER), heads, ("LAB",)),
             [],
         )
 
     def test_ledger_holds_every_number_once_in_order(self) -> None:
-        numbers = [int(r.id.split("-")[1]) for r in rules.load_registry(rules.REGISTRY)]
+        numbers = [int(r.id.split("-")[1]) for r in rules.load_ledger(rules.LEDGER)]
         self.assertEqual(numbers, sorted(set(numbers)))
         # the seven numbers that left for the authoring lab's LOCAL ledger (0.82.0)
         self.assertEqual(
@@ -58,7 +58,7 @@ class ShippedStandard(unittest.TestCase):
         )
 
     def test_every_living_reference_resolves_and_names_its_rule(self) -> None:
-        rows = rules.load_registry(rules.REGISTRY)
+        rows = rules.load_ledger(rules.LEDGER)
         problems = []
         for path in LIVING:
             problems += rules.check_refs(
@@ -109,37 +109,33 @@ class Heads(unittest.TestCase):
 
 class Registry(unittest.TestCase):
     def test_matching_document_passes(self) -> None:
-        self.assertEqual(
-            rules.check_registry(ROWS, rules.rule_heads(DOC), ("LAB",)), []
-        )
+        self.assertEqual(rules.check_heads(ROWS, rules.rule_heads(DOC), ("LAB",)), [])
 
     def test_title_drift_is_caught(self) -> None:
         heads = rules.rule_heads(
             DOC.replace("A negative finding is a claim", "A negative finding")
         )
         self.assertTrue(
-            any("head says" in p for p in rules.check_registry(ROWS, heads, ("LAB",)))
+            any("head says" in p for p in rules.check_heads(ROWS, heads, ("LAB",)))
         )
 
     def test_active_rule_without_head_is_caught(self) -> None:
         heads = [h for h in rules.rule_heads(DOC) if h.id != "LAB-003"]
         self.assertEqual(
-            rules.check_registry(ROWS, heads, ("LAB",)),
+            rules.check_heads(ROWS, heads, ("LAB",)),
             ["LAB-003: active in the ledger but no rule head states it"],
         )
 
     def test_a_retired_rule_stated_in_the_document_is_caught(self) -> None:
         heads = [*rules.rule_heads(DOC), RuleHead("LAB-002", "Own example", "§1.B", 40)]
         self.assertEqual(
-            rules.check_registry(ROWS, heads, ("LAB",)),
+            rules.check_heads(ROWS, heads, ("LAB",)),
             ["line 40: LAB-002 is retired in the ledger, yet stated here"],
         )
 
     def test_ids_of_another_prefix_are_not_held_to_this_document(self) -> None:
         rows = [*ROWS, RuleRow("LOCAL-001", "", "A house rule", "active")]
-        self.assertEqual(
-            rules.check_registry(rows, rules.rule_heads(DOC), ("LAB",)), []
-        )
+        self.assertEqual(rules.check_heads(rows, rules.rule_heads(DOC), ("LAB",)), [])
 
     def test_bad_status_and_duplicate_id(self) -> None:
         rows = [
@@ -147,7 +143,7 @@ class Registry(unittest.TestCase):
             RuleRow("LAB-003", "", "Twice", "active"),
             RuleRow("LAB-005", "", "x", "gone"),
         ]
-        problems = rules.check_registry(rows, rules.rule_heads(DOC), ("LAB",))
+        problems = rules.check_heads(rows, rules.rule_heads(DOC), ("LAB",))
         self.assertIn("LAB-003: id given twice in the ledger", problems)
         self.assertTrue(any("LAB-005: status 'gone'" in p for p in problems))
 
@@ -282,7 +278,7 @@ class Show(unittest.TestCase):
             rules.rule_text("LAB-777", DOC, ROWS)
 
     def test_the_shipped_standard_answers_every_active_id(self) -> None:
-        for row in rules.load_registry(rules.REGISTRY):
+        for row in rules.load_ledger(rules.LEDGER):
             if row.status == "active":
                 self.assertIn(f"{row.id} · ", rules.rule_text(row.id))
 

@@ -380,8 +380,11 @@ ein Record dem falschen Protokoll zugeordnet wurde.
 Kandidaten aus [Code-Audit](docs/audit-2026-10-18.md); vor Umsetzung am
 aktuellen Code prüfen, keine alten Zeilennummern als offenen Befund übernehmen:
 
-- Namen prüfen: `area: Path`, Wurzelpfade, Digest-Begriffe,
-  `trace`/`timeline`, `registry`/`ledger`. Keine pauschale Umbenennung.
+- Namen geprüft (2026-10-23): `registry`→`ledger` in `rules.py`,
+  `trace`-Hilfetext, `sha256_file`→`source_digest` umgesetzt. Bleibt:
+  `base_dir` in `runlog.run` ist das öffentliche Keyword der Vorlagen
+  und Labs — nur mit Breaking-Release zu `area`; `--registry` als Flag
+  ruft der Haus-Hook (`dotfiles/.githooks/pre-commit`) — Rollout.
 - Verbleibende `noqa: C901` entlang fachlicher Abläufe abbauen, wenn dort
   gearbeitet wird; nicht allein nach Dateilänge teilen.
 - Der Wächter für `repo.shown` in `tests/test_one_home.py` erkennt nur die

@@ -117,7 +117,7 @@ from labkit.run.provenance import (
     git_head,
     record_provenance,
     script_sha,
-    sha256_file,
+    source_digest,
     snapshot_script,
     snapshot_untracked_sources,
 )
@@ -528,7 +528,7 @@ class Run:
                         text_lines = sum(1 for _ in fh)
                     entry: dict = {
                         "path": recorded_path(p, self.dir),
-                        "sha256": sha256_file(p)[:RECORD_SHA_CHARS],
+                        "sha256": source_digest(p)[:RECORD_SHA_CHARS],
                         "lines": text_lines,
                     }
                     # A resumed file holds rows of the run that broke off:

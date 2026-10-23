@@ -334,8 +334,10 @@ def _visible_files(directory: Path) -> list[Path]:
     )
 
 
-def sha256_file(path: Path) -> str:
-    """Content digest of a file; of a directory, over each visible file's
+def source_digest(path: Path) -> str:
+    """The digest of a frozen source (`scope_sha.file_digest` for a file;
+    until 2026-10-23 `sha256_file`, the one name in the digest family that
+    said the algorithm, not the thing). Of a directory, over each visible file's
     relative path and content — so adding, removing, renaming or editing a
     file below it moves it (a directory source used to be unfreezable, and
     `finalize` then refused every run of the stamped compute skeleton)."""
@@ -410,7 +412,7 @@ def describe_data(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity
             raise FileNotFoundError(f"data[{key!r}] does not exist: {p}")
         out[key] = {
             "path": recorded_path(p, base_dir),
-            "sha256": sha256_file(p)[:RECORD_SHA_CHARS],
+            "sha256": source_digest(p)[:RECORD_SHA_CHARS],
             "rows": _data_rows(p),
         }
 

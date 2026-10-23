@@ -210,7 +210,7 @@ def ref_problems(repo: Path) -> tuple[int, int, list[str]]:
     """Every `.md` and `.py` of REPO outside SKIP_DIRS and the record areas,
     held to the packaged ledger: (files read, record areas skipped,
     problems) — see `rules.check_refs`."""
-    rows = rules.load_registry(rules.REGISTRY)
+    rows = rules.load_ledger(rules.LEDGER)
     records = record_areas(repo)
     files = sorted(
         f

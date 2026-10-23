@@ -119,7 +119,11 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         metavar="DIR",
         help="with --transcript: keep transcript (gzip), timeline and score in DIR",
     )
-    tr = sub.add_parser("trace", help="the timeline of one agent transcript")
+    tr = sub.add_parser(
+        "trace",
+        help="the trace of one agent transcript: what it read, when (not the "
+        "call-tree timeline of `just timeline`)",
+    )
     tr.add_argument("transcript")
     rd = sub.add_parser(
         "reader", help="write the cold-reader prompt for the probe's protocol"

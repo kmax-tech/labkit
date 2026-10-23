@@ -261,6 +261,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Three names, where they were unclear.** `rules.load_registry`,
+  `check_registry` and `REGISTRY` called `docs/rules.tsv` the registry
+  while every sentence about it says ledger: `load_ledger`, `LEDGER`, and
+  `check_heads` for what it checks (the `--registry` flag stays — the house
+  hook calls it). `usability trace` described itself as a timeline; the
+  timeline is `just timeline`, the call-tree viewer. `provenance.sha256_file`
+  — the one digest named after its algorithm — is `source_digest`. Checked
+  and kept: `base_dir` in `runlog.run` is the public keyword the templates
+  and labs pass; it would be a Breaking rename.
+
 - **code-check's and intent-check's command lines are below the complexity
   bar.** Both carried `noqa: C901` since the 2026-10-08 baseline and were
   touched by this release: code-check reads its arguments in `_arguments`
