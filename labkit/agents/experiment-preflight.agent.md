@@ -137,8 +137,8 @@ worst first; they carry no failure scenario and do not enter the verdict:
   Terms of this protocol);
 - one case, file or term spelled two ways;
 - a finding retold in several fields instead of stated once and referenced
-  (Summary: what was decided · Answer: which ids passed · Raw output: the
-  output that carried it · Interpretation: the mechanism · Outcome: one
+  (Conclusion: the answer in words · Recorded results: the metrics and
+  which ids passed · Raw output: the output that carried it · Interpretation: the mechanism · Outcome: one
   sentence);
 - a field that holds the wrong kind of content — a prediction written after
   the outcome, a result in a registration field;

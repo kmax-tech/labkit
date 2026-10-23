@@ -15,8 +15,9 @@ Linie für 1.0. Die fünf Umbauphasen sind umgesetzt; Verträge stehen in
 [Architektur](docs/architecture.md), [README](README.md) und
 [Laborstandard](labkit/docs/standard.md), die Formatbrüche im CHANGELOG.
 `protocol-fill` behält seinen Namen; Setzen, Rendern und Freigeben sind
-getrennte Funktionen. Aktuell: Standard `0.21`, `Conclusion` für die
-fachliche Antwort und `Recorded results` für die erzeugten Werte.
+getrennte Funktionen. Aktuell: Standard `0.22`, `kind` im Kopf
+(`compute | fit | apply`), `Conclusion` für die fachliche Antwort und
+`Recorded results` für die erzeugten Werte.
 
 **Umgesetzt, kein offener Bauauftrag:** Audit-Snapshot, typisierte
 Run-Records und Backend-Konfigurationen, Paketstruktur und Modulteilungen,
@@ -437,7 +438,7 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
 |---|---|---|
 | Workflow mit ausführbarem Zählbeispiel | Nächster Vorschlag zur Klarheit nach den expliziten Stufen in `report-check`; Arbeitsablauf unabhängig vom Haus-Skill zugänglich machen. | `docs/workflow.md` mit einem kleinen Beispiel und Leseprobe; Umfang und Abnahme unter „Klarheit des Ablaufs“. Einzelverträge verlinken. |
 | `promote <area>` | Erste echte Beförderung, bei der vorhandene Kommandos nicht reichen. | Dünne Hülle um Analyse-Audit und Entscheidungen, synchron mit Zeitlimit. `report-check` prüft die Freigabe bereits. |
-| Weitere Protokollvereinfachung | Schreibprobe und externe Usability-Probe zeigen einen verbleibenden Bedarf. | Feldnamen, Frage in der Summary und Ergebnisdeklaration sind umgesetzt. Weichenwerte als Daten und eine kürzere Vorlage bleiben Kandidaten ohne Bauauftrag; Standard `0.21` ist kein offener Versionsplan. |
+| Weitere Protokollvereinfachung | Schreibprobe und externe Usability-Probe zeigen einen verbleibenden Bedarf. | Feldnamen, Frage in der Summary und Ergebnisdeklaration sind umgesetzt. Weichenwerte als Daten und eine kürzere Vorlage bleiben Kandidaten ohne Bauauftrag; Standard `0.22` ist kein offener Versionsplan. |
 | Bereichsstand als Faktenzeile | Andere Person zeigt, dass die Zeile gebraucht und gelesen wird. | Bestehende Fakten projizieren: Registrierung, Probe, Freeze, Lauf, Tests, Zitat. Keine zweite Statusquelle. |
 | Weiter vereinfachte Zählvorlage | Aktuelle Schreibprobe zeigt trotz der vier Konstanten und `input_dir()` einen konkreten Umweg. | `SOURCE`, `INPUTS`, `COUNT_FIELD` und `METRIC_KEY` sind umgesetzt; nur einen belegten verbleibenden Umweg vereinfachen. |
 | Rückschrift am Laufende / weniger Kommandos | Gemessener Umweg trotz `protocol-fill --from-run`. | Bewusste Prüfung erzeugter Zeilen klären. `finalize` bleibt lesend; kein `finalize --write-back`. |

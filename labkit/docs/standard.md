@@ -1,14 +1,16 @@
 # The labkit lab standard
 
-*Version 0.21 — the version a protocol names in its head (`standard =
-"0.21"`, read by `protocol_block`). A change to a rule or a field is the
+*Version 0.22 — the version a protocol names in its head (`standard =
+"0.22"`, read by `protocol_block`). A change to a rule or a field is the
 next version; a dated change that alters no rule is listed under "Changes"
-at the end. 0.21 (2026-10-22): the Summary's `Conclusion` gives the answer
+at the end. 0.22 (2026-10-23): the head names what the kept number asserts,
+`kind = "compute" | "fit" | "apply"` — a compute judges no prediction and
+owes no bar. 0.21 (2026-10-22): the Summary's `Conclusion` gives the answer
 in words; `Recorded results` carries the generated metrics, run id and
 limits note. These replace the fields `Result` and `Answer to the question`
 of 0.20. `[result].run` remains the declaration that a result is reported.
 A protocol of another version is refused; reproduce it with its pinned
-labkit release. 0.102.0 is the last release reading standard 0.20.*
+labkit release. 0.103.0 is the last release reading standard 0.21.*
 
 These are the rules an experiment area is held to — before a run, during it,
 and before a number leaves the lab. labkit's checks enforce what can be
@@ -309,7 +311,7 @@ evidence file under the same ID (top of this document).*
   severe a finding is and what the result still allows are two
   questions: the effect follows from what the promise claims, not from
   the grade. The reported protocol carries each named effect as a
-  `Limit (audit <record> #N)` line and a note in the Answer, both held
+  `Limit (audit <record> #N)` line and a note in the Conclusion, both held
   to the record by report-check;
   whether the limit is enough stays a reader's judgement. The raw report
   stays in the scratchpad (LAB-012 Protocol is content), and the head
@@ -326,9 +328,9 @@ evidence file under the same ID (top of this document).*
   line was written without an audit — and unless a preflight audit record
   (`audits/*-preflight.toml`, written by `labkit-audit`) carries that same
   `scope sha` with every finding decided. Fixing the findings changes the
-  stamp, so the fixed code owes a second audit; writing the new sha into the
-  line alone is refused (2026-10-14: a cold agent did, and no audit had seen
-  the frozen code). At `minutes`/`hours` the line names an audit — a
+  stamp, so the fixed code owes a second audit; naming a record whose
+  `scope_sha` is not the frozen code's stamp is refused (2026-10-14: a cold
+  agent wrote the new sha by hand, and no audit had seen the frozen code). At `minutes`/`hours` the line names an audit — a
   `n/a — <reason>` is refused for a full run (0.99.0: an agent waived its
   own audit); when the backend does not answer, `labkit-audit` records the
   failed attempt and a full run acknowledges it with `LABKIT_UNFROZEN=1`,

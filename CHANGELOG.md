@@ -71,7 +71,7 @@ pins (`requirements.txt` / `requirements.lock`).
   promise tables at every tier; a `[model]` table adds the data profile
   and the prompt. `labkit-init exp` takes `--kind` and stamps nothing
   without it; `--kind compute --model` stamps the claim keys below; a fit at `seconds` gets
-  the estimator skeleton (until now the count's, now the compute skeleton). The template marks the
+  the estimator skeleton (until now the compute's, now the fit skeleton). The template marks the
   fields a bar owes with `<!-- sb -->` (`protocol_cuts.SECONDS_BAR_TAG`),
   and the seconds cut carries them for a fit without a model. Loud, never
   a fallback: an unknown kind does not read (`protocol_block.head`), a
@@ -206,7 +206,7 @@ pins (`requirements.txt` / `requirements.lock`).
   `[C1]`, `[A1]`, `[A2]` before the placeholders of the criterion, the
   admissibility condition and the null condition
   (`protocol_cuts.name_promise_ids`) — only the ids the stamped block
-  declares, and only for a kind with a bar; a count's prose names none.
+  declares, and only for a kind with a bar; a compute's prose names none.
   A field holding only the id and a placeholder (`[C1] <…>`) or the id
   alone is still open (`FieldLine.placeholder`), and `protocol-fill`
   keeps the stamped id when the value names none.
@@ -222,16 +222,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
-- **A count owes no bar at any tier, and is stamped so.** At `minutes`
-  and `hours` a count was still stamped with the success criterion, the
+- **A compute owes no bar at any tier, and is stamped so.** At `minutes`
+  and `hours` a compute was still stamped with the success criterion, the
   admissibility condition, Model / tool, the null condition and three
   placeholder promise tables, and `protocol-check` owed those fields —
-  against standard 0.22 (a count owes its question). Since `finalize`
-  holds the block to the prose, a count that left the stamped tables was
+  against standard 0.22 (a compute owes its question). Since `finalize`
+  holds the block to the prose, a compute that left the stamped tables was
   blocked by its own stamp. `protocol_cuts.bar_cut` now drops the fields a
-  bar owes (`<!-- sb -->`) and the tables for a count at every tier, and
+  bar owes (`<!-- sb -->`) and the tables for a compute at every tier, and
   `protocol_check.owed` asks them of a fit or an apply only
-  (`bar_owed`). A count stamped earlier keeps its fields; nothing reads
+  (`bar_owed`). A compute stamped earlier keeps its fields; nothing reads
   them as owed.
 - **The release-check flow is explicit at its entry point.** `report_check`
   lists the declaration, registration/freeze, finalize, full-run check,

@@ -112,8 +112,10 @@ fields, no reading of labkit's source.
 
 ## Lane `minutes` / `hours`
 
-1. `labkit-init exp <name>` — never `mkdir`. Stamps the protocol and the
-   script skeletons (`scripts/00_prepare.py · 01_measure.py · 02_analyze.py`).
+1. `labkit-init exp <name> --cost minutes|hours --kind compute|fit|apply` —
+   never `mkdir`; the kind is decided as on the seconds lane, and without
+   `--kind` the command stamps nothing. Stamps the protocol and the script
+   skeletons (`scripts/00_prepare.py · 01_measure.py · 02_analyze.py`).
 2. Read `protocol-check --contract`, then fill the TOML head (`type`, `cost`)
    and the Intent before the first call: hypothesis · success criterion ·
    admissibility condition, the prompt verbatim; an id `[C]/[A]/[B]` on every
@@ -129,10 +131,11 @@ fields, no reading of labkit's source.
 6. Resolution check as a test: fill `tests/test_<NN>_<name>.py`
    (LAB-016 Resolution check before freezing).
 7. `preflight <area>`, then the preflight audit (`labkit-audit <area> --mode
-   preflight`); decide the findings, the line with `scope sha` into the head
-   (LAB-015 Preflight audit before freezing). A fix changes the stamp: audit
-   the fixed code again before freezing — the head's `scope sha` must be one
-   an audit record saw. An audit takes minutes, longer
+   preflight`); decide the findings, the record's file name into the head
+   (`preflight_audit = "<minute>-preflight.toml"`, LAB-015 Preflight audit
+   before freezing). A fix changes the stamp: audit the fixed code again
+   before freezing — the named record's `scope_sha` must be the stamp of the
+   code that is frozen. An audit takes minutes, longer
    than many harnesses let a foreground command run: start it with your
    harness's background mechanism and wait for that task to end — not a
    `pgrep` loop, which finds its own command line and never ends.

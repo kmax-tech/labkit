@@ -5,7 +5,7 @@ holds the fields a machine reads — the head — and its optional
 `[[promise]]` tables hold the promises (`promises.py`):
 
     [protocol]
-    standard = "0.21"
+    standard = "0.22"
     id = "p-0123456789abcdef"       # stamped by `labkit-init exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
     cost = "seconds"                # seconds | minutes | hours
