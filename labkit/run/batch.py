@@ -244,7 +244,8 @@ class Store:
     An explicit `_prov` already present in a record is never overwritten.
 
     `instrument`: what makes two answers comparable — the prompt's digest,
-    the model alias. Every appended record carries it as `_instrument`, and
+    the model alias and the model it resolves to (`lanes.Lanes.instrument`,
+    `llm.identity`). Every appended record carries it as `_instrument`, and
     `pending()` refuses to resume a file holding a row measured with another
     (or none): a changed prompt is a new measurement, not a continuation.
     Instruments compare as the file stores them (`runs.as_stored`): `1` is

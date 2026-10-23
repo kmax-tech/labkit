@@ -168,6 +168,25 @@ def resolve(alias: str) -> JsonObject:
     return record(spec(alias))
 
 
+def identity(alias: str) -> JsonObject:
+    """Which model answers under ALIAS: backend and model (`name@digest`
+    for ollama), from the frozen spec. What a resumed output must share
+    with the rows it continues (`lanes.Lanes.instrument`) — the alias alone
+    let an edited models.toml put model-b's answers next to model-a's in
+    one file (review 2026-10-23). Endpoints are not in it: a cluster host
+    changes with every allocation and serves the same weights."""
+    used = spec(alias)
+    return {"backend": used.backend, "model": _answering_model(used)}
+
+
+def _answering_model(used: BackendSpec) -> str:
+    """The model name, with the weights' digest for ollama — one spelling
+    for the row stamp (`provenance`) and the resume check (`identity`)."""
+    if isinstance(used, OllamaSpec):
+        return used.model + "@" + used.model_digest
+    return used.model
+
+
 def _load_spec(alias: str) -> BackendSpec:
     """The spec of ALIAS as `models.toml` states it now — what `spec`
     freezes. For ollama the weights' digest is probed on every endpoint."""
@@ -300,10 +319,7 @@ def provenance(alias: str) -> dict:
     what else went into it.
     """
     used = spec(alias)
-    model = used.model
-    if isinstance(used, OllamaSpec):
-        model += "@" + used.model_digest
-    prov: dict[str, Any] = {"model": model, "endpoint": last_endpoint}
+    prov: dict[str, Any] = {"model": _answering_model(used), "endpoint": last_endpoint}
     if isinstance(used, ClaudeCliSpec):
         prov["cli_version"] = cli_version()
         prov["cli_flags"] = shlex.join(CLI_ISOLATION)

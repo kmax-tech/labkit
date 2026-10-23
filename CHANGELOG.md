@@ -9,6 +9,23 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **A resume refuses another model behind the same alias.** The judge's
+  instrument (`lanes.Lanes.instrument`) held the prompts' digest and the
+  alias only: models.toml edited between two processes put another model
+  behind the alias, the resume kept the old model's answers and added the
+  new one's, and the balance passed (review 2026-10-23). The instrument
+  now also carries `model_identity` — backend and model, `name@digest`
+  for ollama (`llm.identity`, the spelling `llm.provenance` stamps) — and
+  `batch.Store` refuses rows of another (`InstrumentError`, naming both).
+  Endpoints are not part of it: a cluster host changes with every
+  allocation. An ollama digest that read `unavailable` in one process and
+  a digest in the next is refused too — the weights cannot be shown to
+  match. `lanes.balance` also refuses a file whose rows carry more than
+  one instrument, whichever they are (rows merged by hand, or resumed
+  before this). Migration: an output file written before holds rows without
+  `model_identity` and is refused on resume; finish it with labkit
+  0.103.0, or measure again into a new output file. Kept results are not
+  touched: `--eval-only` and the analysis read the rows as they stand.
 - **A failed audit attempt names its cause, and an unproven one stops
   the auditing of that state.** `audits/*-failed.toml` carries `cause =
   "unavailable" | "unproven"`: the backend gave no answer, or the

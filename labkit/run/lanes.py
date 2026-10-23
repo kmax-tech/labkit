@@ -33,7 +33,7 @@ from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from labkit.formats import protocol_block, standard_contract
+from labkit.formats import protocol_block, runs, standard_contract
 from labkit.formats.repo import adopt_command
 from labkit.run import batch, llm, runlog
 
@@ -132,9 +132,15 @@ class Lanes:
         return self.prompts[job["lane"]].format(text=job[self.text_field])
 
     def instrument(self, cfg: Any) -> dict:
-        """What makes two answers comparable — both prompts' digest and the
-        model alias. Every row carries it; a resume refuses rows of another."""
-        return {"prompt_sha": cfg.prompt_sha, "model": cfg.model}
+        """What makes two answers comparable — both prompts' digest, the
+        model alias and the model it resolves to now (`llm.identity`).
+        Every row carries it; a resume refuses rows of another, so an
+        edited models.toml cannot mix two models into one file."""
+        return {
+            "prompt_sha": cfg.prompt_sha,
+            "model": cfg.model,
+            "model_identity": llm.identity(cfg.model),
+        }
 
     def measure(
         self, cfg: Any, jobs: list[dict], out: Path, prov: dict | None = None
@@ -185,10 +191,20 @@ class Lanes:
         """Every job on exactly one row, no row without a job, every row made
         from its item as it is now — or SystemExit naming each gap, before
         any number. An item edited since its row was written stays stale
-        here: write a new output file."""
+        here: write a new output file. The rows share one instrument —
+        whichever it was, so `--eval-only` still reads rows an edited
+        models.toml no longer resolves to; two in one file are two
+        measurements (a mixed file balanced, review 2026-10-23)."""
         batch.Store(out).ledger(
             jobs, expect={"item_sha": lambda j: j["item_sha"]}
         ).require_complete()
+        seen = {runs.as_stored(r.get("_instrument")) for r in read_jsonl(out)}
+        if len(seen) > 1:
+            raise SystemExit(
+                f"{out}: rows of {len(seen)} instruments — "
+                + " · ".join(sorted(seen))
+                + " — one file holds one measurement: write a new output file"
+            )
 
     def evaluate(self, out: Path, cfg: Any, jobs: list[dict], run: Any = None) -> dict:
         """Balance the kept rows against JOBS, then the area's

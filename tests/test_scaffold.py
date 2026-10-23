@@ -489,6 +489,11 @@ class Exp(unittest.TestCase):
 
         from labkit.run import batch
 
+        import models_fixture
+
+        models_fixture.serve(
+            self, (self.root / "models.toml").read_text(encoding="utf-8")
+        )
         quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku", kind="apply")
         path = self.area() / "scripts" / "01_measure.py"
         spec = importlib.util.spec_from_file_location("stamped_measure_2", path)

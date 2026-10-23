@@ -29,6 +29,7 @@ from pathlib import Path
 from types import ModuleType
 from unittest import mock
 
+import models_fixture
 from labkit.tools import scaffold
 
 
@@ -63,6 +64,7 @@ class Pairing(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.estimator, cls.judge = _lab()
+        models_fixture.serve(cls, models_fixture.toml("haiku", "claude-haiku-test"))
 
     def setUp(self) -> None:
         self.out = Path(tempfile.mkdtemp()) / "rows.jsonl"
@@ -137,6 +139,7 @@ class Balance(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.estimator, cls.judge = _lab()
+        models_fixture.serve(cls, models_fixture.toml("haiku", "claude-haiku-test"))
 
     def setUp(self) -> None:
         self.out = Path(tempfile.mkdtemp()) / "rows.jsonl"

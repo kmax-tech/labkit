@@ -21,8 +21,23 @@ from dataclasses import dataclass
 from pathlib import Path
 from unittest import mock
 
-from labkit.run import lanes, llm
+import models_fixture
+from labkit.run import batch, lanes, llm
 from protocol_fixture import head
+
+
+class Case(unittest.TestCase):
+    """Every test here measures with the alias `fake`; its models.toml names
+    the model behind it, as a lab's does (`llm.identity`)."""
+
+    def setUp(self) -> None:
+        self.models = models_fixture.serve(self, models_fixture.toml("fake", "model-a"))
+
+    def serve(self, model: str) -> None:
+        """`fake` answers with MODEL from now on — what a new process reads
+        after models.toml was edited (the frozen spec is per process)."""
+        self.models.write_text(models_fixture.toml("fake", model), encoding="utf-8")
+        llm._FROZEN.clear()
 
 
 @dataclass(frozen=True)
@@ -62,7 +77,7 @@ def lanes_in(d: Path, n: int = 6) -> tuple[lanes.Lanes, list[dict]]:
     return run, items
 
 
-class AnswersStayWithTheirJobs(unittest.TestCase):
+class AnswersStayWithTheirJobs(Case):
     def test_complete_many_returns_in_input_order_when_calls_finish_out_of_order(self):
         finished: list[str] = []
         lock = threading.Lock()
@@ -106,7 +121,7 @@ class Broken(RuntimeError):
     """A backend that went away mid-run."""
 
 
-class ResumeAfterABreak(unittest.TestCase):
+class ResumeAfterABreak(Case):
     def test_a_break_mid_run_resumes_to_every_job_once(self):
         with tempfile.TemporaryDirectory() as d:
             run, items = lanes_in(Path(d))
@@ -141,7 +156,102 @@ class ResumeAfterABreak(unittest.TestCase):
             run.balance(run.out, jobs)  # complete, no doubles, no strays
 
 
-class EvaluateKeptRows(unittest.TestCase):
+class ResumeKeepsOneModel(Case):
+    """2026-10-23 review: the instrument held the alias and the prompts'
+    digest only; models.toml edited between two processes put another
+    model behind the alias, the resume kept model-a's answers and added
+    model-b's, and the balance passed."""
+
+    def _first_half(self, d: Path) -> tuple[lanes.Lanes, list[dict]]:
+        run, items = lanes_in(d)
+        jobs = run.plan(items)
+        calls: list[int] = []
+
+        def breaks_after_one_batch(alias, prompts, **kw):
+            calls.append(1)
+            if len(calls) == 2:
+                raise Broken("the backend went away")
+            return ["Yes"] * len(prompts)
+
+        with (
+            mock.patch.object(lanes, "CHUNK", 5),
+            mock.patch.object(llm, "complete_many", breaks_after_one_batch),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            with self.assertRaises(Broken):
+                run.measure(Cfg(), jobs, run.out)
+        return run, jobs
+
+    def test_another_model_behind_the_alias_is_refused_on_resume(self):
+        with tempfile.TemporaryDirectory() as d:
+            run, jobs = self._first_half(Path(d))
+            self.serve("model-b")
+            answer = lambda alias, prompts, **kw: ["No"] * len(prompts)  # noqa: E731
+            with (
+                mock.patch.object(llm, "complete_many", answer),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                with self.assertRaisesRegex(batch.InstrumentError, "model-a.*model-b"):
+                    run.measure(Cfg(), jobs, run.out)
+            rows = lanes.read_jsonl(run.out)
+            self.assertEqual(len(rows), 5)  # model-a's batch, nothing added
+            self.assertEqual({r["answer"] for r in rows}, {"Yes"})
+
+    def test_the_same_model_resumes(self):
+        with tempfile.TemporaryDirectory() as d:
+            run, jobs = self._first_half(Path(d))
+            llm._FROZEN.clear()  # a new process, models.toml unchanged
+            answer = lambda alias, prompts, **kw: ["Yes"] * len(prompts)  # noqa: E731
+            with (
+                mock.patch.object(llm, "complete_many", answer),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                run.measure(Cfg(), jobs, run.out)
+            self.assertEqual(len(lanes.read_jsonl(run.out)), len(jobs))
+
+    def test_a_file_of_two_instruments_does_not_balance(self):
+        """Rows merged by hand, or written before the resume check: the
+        balance names both instruments before any number."""
+        with tempfile.TemporaryDirectory() as d:
+            run, items = lanes_in(Path(d))
+            jobs = run.plan(items)
+            answer = lambda alias, prompts, **kw: ["Yes"] * len(prompts)  # noqa: E731
+            with (
+                mock.patch.object(llm, "complete_many", answer),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                run.measure(Cfg(), jobs, run.out)
+            run.balance(run.out, jobs)  # one instrument: balances
+            rows = lanes.read_jsonl(run.out)
+            other = {**rows[-1]["_instrument"], "model_identity": {"model": "model-b"}}
+            rows[-1] = {**rows[-1], "_instrument": other}
+            run.out.write_text(
+                "".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(SystemExit, "2 instruments.*model-a.*model-b"):
+                run.balance(run.out, jobs)
+
+    def test_rows_without_the_model_identity_are_refused(self):
+        """Rows a labkit before 0.104.0 wrote name the alias only: they
+        cannot show which model answered, so they never resume."""
+        with tempfile.TemporaryDirectory() as d:
+            run, items = lanes_in(Path(d))
+            jobs = run.plan(items)
+            old = {"prompt_sha": Cfg().prompt_sha, "model": Cfg().model}
+            run.out.write_text(
+                json.dumps({**jobs[0], "answer": "Yes", "_instrument": old}) + "\n",
+                encoding="utf-8",
+            )
+            with (
+                mock.patch.object(llm, "complete_many") as asked,
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                with self.assertRaises(batch.InstrumentError):
+                    run.measure(Cfg(), jobs, run.out)
+            asked.assert_not_called()
+
+
+class EvaluateKeptRows(Case):
     def test_eval_only_gives_the_numbers_of_the_rows_as_they_stand(self):
         with tempfile.TemporaryDirectory() as d:
             run, items = lanes_in(Path(d))
