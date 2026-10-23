@@ -322,7 +322,7 @@ def cost_tier_lines(cost: str | None, lane: "standard_contract.Lane") -> list[st
     cold reader always. Told by the caller, counted by nobody."""
     if not lane.freeze:
         audit = (
-            f"  {lane.tier} — rerunnable at will: the agent audit is OPTIONAL before "
+            f"  {lane.cost_tier} — rerunnable at will: the agent audit is OPTIONAL before "
             "freezing; one audit after the first run, on real output, "
             "suffices (LAB-017 The number of audits follows the cost tier)"
         )

@@ -44,11 +44,11 @@ def _tracked(repo: Path, path: Path) -> bool:
 CRITERION_N = promises.CRITERION_N_KEY
 
 
-def criterion_n_input_mismatches(measurement_run: Path) -> list[str]:  # noqa: C901 complexity baseline 2026-10-08
+def criterion_n_input_mismatches(answering_run: Path) -> list[str]:  # noqa: C901 complexity baseline 2026-10-08
     """Warnings: a criterion's denominator (`c<i>_n` in metrics.json) that
     matches no input count the run recorded — the size of what was counted,
     not a promised constant (that is `intent_check.promised_constant_mismatches`)."""
-    metrics_file = metrics_path(measurement_run)
+    metrics_file = metrics_path(answering_run)
     if not metrics_file.is_file():
         return []
     metrics = read_metrics(metrics_file)
@@ -59,12 +59,12 @@ def criterion_n_input_mismatches(measurement_run: Path) -> list[str]:  # noqa: C
     }
     if not ns:
         return []
-    cfg = read_run_config(measurement_run)
+    cfg = read_run_config(answering_run)
     counts: dict[str, int] = {}
     for key, d in (cfg.data if cfg else {}).items():
         if isinstance(d, dict) and isinstance(d.get("rows"), int):
             counts[f"data[{key}].rows"] = d["rows"]
-    for o in read_outputs(measurement_run) or []:
+    for o in read_outputs(answering_run) or []:
         if o.lines is not None:
             counts[f"{o.path.name} lines"] = o.lines
     if not counts:
@@ -84,13 +84,11 @@ def criterion_n_input_mismatches(measurement_run: Path) -> list[str]:  # noqa: C
     return out
 
 
-def provenance_findings(
-    area: Path, measurement_run: Path
-) -> tuple[list[str], list[str]]:
+def provenance_findings(area: Path, answering_run: Path) -> tuple[list[str], list[str]]:
     """(blockers, warnings) for a run of seconds: source frozen, files tracked."""
     blockers: list[str] = []
     warnings: list[str] = []
-    cfg = read_run_config(measurement_run)
+    cfg = read_run_config(answering_run)
     data = cfg.data if cfg else {}
     if not data:
         blockers.append(
@@ -98,11 +96,11 @@ def provenance_findings(
             "data={name: path} to runlog.run so sha and rows are recorded"
         )
     sources = [
-        resolve_recorded(v["path"], measurement_run)
+        resolve_recorded(v["path"], answering_run)
         for v in data.values()
         if isinstance(v, dict) and v.get("path")
     ]
-    registered = read_outputs(measurement_run)
+    registered = read_outputs(answering_run)
     outputs: list[Path] = [o.path for o in registered or []]
     if registered is None:
         warnings.append(
@@ -136,19 +134,19 @@ def provenance_findings(
     return blockers, warnings
 
 
-def called_a_model(measurement_run: Path) -> bool:
+def called_a_model(answering_run: Path) -> bool:
     """Do the run's metrics show model calls (`llm_retries` recorded, or
     `model_calls` > 0)? Static evidence: a run without those keys may still
     have called a model. False when metrics.json cannot be read."""
     try:
-        metrics = read_metrics(metrics_path(measurement_run))
+        metrics = read_metrics(metrics_path(answering_run))
     except (OSError, ValueError):
         return False
     calls = metrics.get("model_calls")
     return "llm_retries" in metrics or (isinstance(calls, int) and calls > 0)
 
 
-def single_draw(area: Path, measurement_run: Path) -> str | None:
+def single_draw(area: Path, answering_run: Path) -> str | None:
     """Why the number shows no spread, or None: the run asked a model and
     has no repeat (`runlog` repeat_of). One draw per item cannot show how
     far the number moves — in the cloud judge probe it moved 10/12 ↔ 11/12
@@ -156,44 +154,44 @@ def single_draw(area: Path, measurement_run: Path) -> str | None:
     warning, never a blocker: whether a spread is owed is the protocol's.
     A run in the area that cannot say whether it is a draw (unreadable, a
     broken or doubled draw number) is said here, not raised past."""
-    if not called_a_model(measurement_run):
+    if not called_a_model(answering_run):
         return None
     try:
-        if repeats_of(area, measurement_run.name):
+        if repeats_of(area, answering_run.name):
             return None
     except RunConfigError as exc:
-        return f"the draws of {measurement_run.name} cannot be counted: {exc}"
+        return f"the draws of {answering_run.name} cannot be counted: {exc}"
     return (
-        f"{measurement_run.name} is one draw — no spread: `scripts/01_measure.py "
-        f"--repeat-of {measurement_run.name}` draws it again, `02_analyze.py "
+        f"{answering_run.name} is one draw — no spread: `scripts/01_measure.py "
+        f"--repeat-of {answering_run.name}` draws it again, `02_analyze.py "
         f"--draws` shows how far the number moves"
     )
 
 
-def model_provenance_gap(measurement_run: Path) -> str | None:
+def model_provenance_gap(answering_run: Path) -> str | None:
     """Why the run's model cannot be named from its record, or None: its
     metrics show model calls (`llm_retries` recorded, or `model_calls` > 0)
     while no run in its lineage recorded `models_resolved` — the alias was
     not under `model`/`*_model`, the keys runlog resolves (uniagent areas
     14–17 recorded it as `judge`; round 15, 2026-10-08). Static evidence:
     a run without those keys may still have called a model."""
-    if not called_a_model(measurement_run):
+    if not called_a_model(answering_run):
         return None
     try:
-        if model_provenance_run(measurement_run) is not None:
+        if model_provenance_run(answering_run) is not None:
             return None
     except ValueError as exc:
         return (
-            f"model provenance: the lineage of {measurement_run.name} is broken — {exc}"
+            f"model provenance: the lineage of {answering_run.name} is broken — {exc}"
         )
     return (
-        f"{measurement_run.name} called a model, but no run in its lineage recorded "
+        f"{answering_run.name} called a model, but no run in its lineage recorded "
         f"models_resolved — record the alias under `model` (runlog resolves it); "
         f"a spec under another key is not provenance labkit can hold"
     )
 
 
-def row_provenance_findings(measurement_run: Path) -> tuple[list[str], list[str]]:
+def row_provenance_findings(answering_run: Path) -> tuple[list[str], list[str]]:
     """(blockers, notes): every JSONL output of the run is held to the runs
     its rows name (`_prov.run`): rows may come from this run, from the runs
     it continues (a resumed file, named in outputs.json), or — for a
@@ -204,12 +202,12 @@ def row_provenance_findings(measurement_run: Path) -> tuple[list[str], list[str]
     it no row can be held to a run."""
     blockers, notes = [], []
     try:
-        allowed = {run.name for run in lineage(measurement_run)}
+        allowed = {run.name for run in lineage(answering_run)}
     except ValueError as exc:
         return [
-            f"row provenance: the lineage of {measurement_run.name} is broken — {exc}"
+            f"row provenance: the lineage of {answering_run.name} is broken — {exc}"
         ], []
-    for entry in read_outputs(measurement_run) or []:
+    for entry in read_outputs(answering_run) or []:
         if entry.path.suffix != ".jsonl" or not entry.path.is_file():
             continue
         try:
@@ -238,7 +236,7 @@ def row_provenance_findings(measurement_run: Path) -> tuple[list[str], list[str]
     return blockers, notes
 
 
-def arm_findings(text: str, area: Path, measurement_run: Path) -> list[str]:
+def arm_findings(text: str, area: Path, answering_run: Path) -> list[str]:
     """Warnings: every arm the head declares (`[model.arms.<arm>]`: profile,
     fingerprint, alias — `protocol_block.model`) is held to the answering
     run — the profile file exists in the repo, and fingerprint and alias
@@ -255,7 +253,7 @@ def arm_findings(text: str, area: Path, measurement_run: Path) -> list[str]:
         return out
     if declared is None or not declared.arms:
         return out
-    cfg = read_run_config(measurement_run)
+    cfg = read_run_config(answering_run)
     if cfg is None:
         return out
     recorded = json.dumps(cfg.as_record(), ensure_ascii=False)

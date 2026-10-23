@@ -52,7 +52,7 @@ SECONDS_CUT = "seconds"
 FULL_FORM = "full"
 
 
-def tier(cost: str | None) -> str:
+def cost_tier(cost: str | None) -> str:
     """The cost tier a head's `cost` stands for: itself, or `hours` while
     it is unfilled — an undeclared tier owes the most, never the least
     (preflight read it so since 2026-10-05)."""
@@ -71,7 +71,7 @@ class Lane:
     their own; a consumer reads the field it needs and copies no rule.
 
     Attributes:
-        tier: `seconds`, `minutes` or `hours` (an unfilled cost reads as hours).
+        cost_tier: `seconds`, `minutes` or `hours` (an unfilled cost reads as hours) — the record's `cost_tier`.
         freeze: A full run owes `frozen = true` and the preflight audit line
             in the head — the preflight audit comes with the freeze
             (LAB-015 Preflight audit before freezing). At seconds nothing
@@ -108,7 +108,7 @@ class Lane:
             (LAB-017 The number of audits follows the cost tier).
     """
 
-    tier: str
+    cost_tier: str
     freeze: bool
     registration: bool
     audits: tuple[str, ...]
@@ -120,7 +120,7 @@ class Lane:
 
 
 SECONDS_LANE = Lane(
-    tier=SECONDS,
+    cost_tier=SECONDS,
     freeze=False,
     registration=True,
     audits=(ANALYSIS_AUDIT,),
@@ -135,11 +135,11 @@ SECONDS_LANE = Lane(
 def lane(cost: str | None) -> Lane:
     """The lane of a head's `cost` — the one answer to "what does this tier
     owe", where every consumer read `cost == "seconds"` for itself."""
-    t = tier(cost)
+    t = cost_tier(cost)
     if t == SECONDS:
         return SECONDS_LANE
     return Lane(
-        tier=t,
+        cost_tier=t,
         freeze=True,
         registration=False,
         audits=(PREFLIGHT_AUDIT, ANALYSIS_AUDIT),
@@ -295,7 +295,7 @@ def describe(cost: str | None, kind: str, model: bool) -> list[str]:
         "in the head (`preflight_audit`), `frozen = true`"
     )
     return [
-        f"cost = {ln.tier!r}"
+        f"cost = {ln.cost_tier!r}"
         + (" (an unfilled cost reads so)" if cost is None else "")
         + f", kind = {kind!r}, {'a model named' if model else 'no model'}: the {sk.instrument} skeleton "
         + f"({', '.join(dest for _, dest in sk.scripts)}"

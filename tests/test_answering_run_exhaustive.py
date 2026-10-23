@@ -232,7 +232,7 @@ def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
 
     found = Findings()
     with quiet:
-        got = finalize.answering_run(found, area, PID, True)
+        got = finalize.choose_answering_run(found, area, PID, True)
     out["finalize"] = BLOCKED if found.blocked or got is None else got.name
 
     try:

@@ -26,7 +26,7 @@ each step's condition):
                     skipped only when neither registers an id
   3. declared scopes  every declared promise scope unchanged since the run
   4. open fields    protocol fields still holding a placeholder
-  5. frozen source  at protocol `cost = "seconds"` only: the run froze its source
+  5. provenance     at protocol `cost = "seconds"` only: the run froze its source
                     (`data=` in config.json) and every source and output file
                     is tracked in git — the two of the three questions the
                     agent audit kept asking that a machine can answer (LAB-017 The number of audits follows the cost tier, 2026-10-05);
@@ -100,7 +100,7 @@ from labkit.checks.run_record_check import (
 from labkit.checks.readme_check import readme_placeholders, readme_route
 
 
-def answering_run(
+def choose_answering_run(
     findings: Findings, area: Path, pid: str | None, ids_registered: bool
 ) -> Path | None:
     """The run every station holds the protocol to — `answering_run.bound_answering_run`,
@@ -128,23 +128,23 @@ def answering_run(
     return choice.run_dir
 
 
-def declared_run_mismatch(text: str, measurement_run: Path) -> str | None:
+def declared_run_mismatch(text: str, answering_run: Path) -> str | None:
     """A blocker when the head's `[result] run` names another run than the
     one the checks hold; None when it names that run or the protocol
     declares none (an exploration). The declaration is a projection of
     `answering_run.bound_answering_run`, never a second binding — held to the
     choice, not consulted for it."""
     declared = protocol_block.declared_run(text)
-    if declared is None or declared == measurement_run.name:
+    if declared is None or declared == answering_run.name:
         return None
     return (
         f"[result] declares {declared}, but the run that answers is "
-        f"{measurement_run.name} — `protocol-fill --from-run {measurement_run.name} "
+        f"{answering_run.name} — `protocol-fill --from-run {answering_run.name} "
         f"--force` declares the run the checks hold, or rerun"
     )
 
 
-def undeclared_hint(text: str, measurement_run: Path, protocol: Path) -> str | None:
+def undeclared_hint(text: str, answering_run: Path, protocol: Path) -> str | None:
     """A note while the protocol declares no result yet — the normal state
     before adoption, so no warning: the command that declares
     MEASUREMENT_RUN and writes its number (`repo.adopt_command`, naming
@@ -153,7 +153,7 @@ def undeclared_hint(text: str, measurement_run: Path, protocol: Path) -> str | N
     if protocol_block.declared_run(text) is not None:
         return None
     return (
-        f"no [result] declared yet — `{adopt_command(protocol, measurement_run.name)}` "
+        f"no [result] declared yet — `{adopt_command(protocol, answering_run.name)}` "
         f"declares the run and writes the number once this finalize is clean"
     )
 
@@ -184,40 +184,40 @@ def _hold_declaration(
         )  # the normal state before adoption: a note, finalize stays clear
 
 
-def check_completion(
+def check_answering_run(
     findings: Findings, area: Path, protocol: Path, text: str, pid: str | None
 ) -> Path | None:
     """Station 1: the run every later station holds the protocol to — chosen,
     shown, and held to the run the head declares (`[result] run`). Returns
     it, or None."""
-    measurement_run = answering_run(findings, area, pid, _registers(text))
-    _hold_declaration(findings, area, protocol, text, measurement_run)
-    if measurement_run is not None:
+    answering_run = choose_answering_run(findings, area, pid, _registers(text))
+    _hold_declaration(findings, area, protocol, text, answering_run)
+    if answering_run is not None:
         for warning in (
-            model_provenance_gap(measurement_run),
-            single_draw(area, measurement_run),
-            *unreportable_warnings(measurement_run),
+            model_provenance_gap(answering_run),
+            single_draw(area, answering_run),
+            *unreportable_warnings(answering_run),
         ):
             if warning:
                 findings.warn(warning)
-        blockers, notes = row_provenance_findings(measurement_run)
+        blockers, notes = row_provenance_findings(answering_run)
         for b in blockers:
             findings.block(b)
         for n in notes:
             findings.note(f"  {n}")
-        for w in arm_findings(text, area, measurement_run):
+        for w in arm_findings(text, area, answering_run):
             findings.warn(w)
-    return measurement_run
+    return answering_run
 
 
-def unreportable_warnings(measurement_run: Path) -> list[str]:
+def unreportable_warnings(answering_run: Path) -> list[str]:
     """Why the answering run's number cannot be reported (`runs.unreportable`),
     each a warning here: finalize holds the run, report-check refuses the report."""
-    cfg = read_run_config(measurement_run)
+    cfg = read_run_config(answering_run)
     if cfg is None:
         return []
     return [
-        f"the answering run {measurement_run.name}: {mark} — its number cannot "
+        f"the answering run {answering_run.name}: {mark} — its number cannot "
         f"be reported (report-check refuses it)"
         for mark in unreportable(cfg)
     ]
@@ -275,7 +275,7 @@ def _registers(text: str) -> bool:
 
 
 def check_intent_keys_in_metrics(
-    findings: Findings, protocol: Path, text: str, measurement_run: Path | None
+    findings: Findings, protocol: Path, text: str, answering_run: Path | None
 ) -> None:
     """Station 2: every registered intent id reports as a key of the answering
     run's metrics.json (intent-check). Not code_check.check_intent_ids, which
@@ -284,8 +284,8 @@ def check_intent_keys_in_metrics(
         findings.note("  no intent ids registered — nothing to check")
         return
     args = [str(protocol)] + (
-        ["--metrics", str(metrics_path(measurement_run))]
-        if measurement_run is not None
+        ["--metrics", str(metrics_path(answering_run))]
+        if answering_run is not None
         else []
     )
     buf = io.StringIO()
@@ -306,7 +306,7 @@ def check_intent_keys_in_metrics(
 
 
 def check_declared_scopes(
-    findings: Findings, area: Path, measurement_run: Path, text: str = ""
+    findings: Findings, area: Path, answering_run: Path, text: str = ""
 ) -> None:
     """Station 3: a promise's declared scope edited after the run: today's code is not
     the code that produced the number; until 2026-10-06 only recheck saw it
@@ -314,7 +314,7 @@ def check_declared_scopes(
     (standard 0.19, `promises.promise_tables_owed`: every reportable run is held to
     a registration that is data) — it came from a labkit that let it pass,
     or the block was added after the run."""
-    cfg = read_run_config(measurement_run)
+    cfg = read_run_config(answering_run)
     recorded = cfg.promises if cfg else None
     if recorded is None and text and not _registers(text):
         findings.note(
@@ -324,7 +324,7 @@ def check_declared_scopes(
     if recorded is None:
         owed = promises.promise_tables_owed(None, frozen=False, full_run=True)
         findings.block(
-            f"{measurement_run.name} recorded no promise block: {owed} — a run "
+            f"{answering_run.name} recorded no promise block: {owed} — a run "
             f"under labkit 0.70.0 or earlier is checked and reproduced with "
             f"its pinned version; a block added after the run is a new registration"
         )
@@ -332,11 +332,11 @@ def check_declared_scopes(
     drift = promises.scope_drift(recorded, area)
     for d in drift:
         findings.block(
-            f"declared scope changed since {measurement_run.name}: {d} — rerun before reporting"
+            f"declared scope changed since {answering_run.name}: {d} — rerun before reporting"
         )
     if not drift:
         findings.note(
-            f"  {len(recorded['ids'])} declared scope(s) unchanged since {measurement_run.name}"
+            f"  {len(recorded['ids'])} declared scope(s) unchanged since {answering_run.name}"
         )
 
 
@@ -358,10 +358,10 @@ def check_open_fields(
         findings.note("  all fields filled")
 
 
-def check_provenance(findings: Findings, area: Path, measurement_run: Path) -> None:
+def check_provenance(findings: Findings, area: Path, answering_run: Path) -> None:
     """Station 5: the run's source frozen in the run, source and output
     tracked in git."""
-    b, w = provenance_findings(area, measurement_run)
+    b, w = provenance_findings(area, answering_run)
     for line in b:
         findings.block(line)
     for line in w:
@@ -396,9 +396,9 @@ def check_area_tests(findings: Findings, area: Path) -> None:
         )
 
 
-def check_criterion_n(findings: Findings, measurement_run: Path) -> None:
+def check_criterion_n(findings: Findings, answering_run: Path) -> None:
     """Station 7: a criterion's denominator that matches no recorded input count."""
-    w = criterion_n_input_mismatches(measurement_run)
+    w = criterion_n_input_mismatches(answering_run)
     for line in w:
         findings.warn(line)
     if not w:
@@ -425,7 +425,7 @@ def finalize_area(
 
     The flow — every condition that decides whether a step runs is in this
     function; one level down is how a step works, not whether it runs. A
-    measurement run is one execution of the experiment's script, a folder
+    run is one execution of the experiment's script, a folder
     under `runs/` bound to this protocol — not this function, and not the
     protocol itself.
 
@@ -434,10 +434,10 @@ def finalize_area(
        and none is named, or the settings block cannot be read. On the
        console the reason is a refusal; in a passed collector it is kept as
        a blocker, so the caller (report-check) can name it.
-    1. completion — choose the measurement run the later steps examine
-       (`measurement_run`); none bound is a blocker, and steps 3, 5 and 7
+    1. answering run — choose the run the later steps examine
+       (`answering_run`); none bound is a blocker, and steps 3, 5 and 7
        then skip.
-    2. intent-check — always; with a measurement run it reads its metrics.
+    2. intent-check — always; with an answering run it reads its metrics.
     3. declared scopes — only with a run.
     4. open fields — always; warnings only: protocol placeholders and
        stamped `<…>` placeholders left in the area's README.
@@ -470,35 +470,35 @@ def finalize_area(
             findings.block(f"{chosen.name}: {exc}")
         return 2
 
-    # 1. completion — the run every later step examines
-    findings.header(f"completion: {chosen.name}")
-    measurement_run = check_completion(findings, area, chosen, text, head.id)
+    # 1. answering run — the run every later step examines
+    findings.header(f"answering run: {chosen.name}")
+    answering_run = check_answering_run(findings, area, chosen, text, head.id)
 
     # 2. intent-check — always
     findings.header("intent-check")
-    check_intent_keys_in_metrics(findings, chosen, text, measurement_run)
+    check_intent_keys_in_metrics(findings, chosen, text, answering_run)
 
     # 3. declared scopes — only with a run
     findings.header("declared scopes")
-    if measurement_run is None:
+    if answering_run is None:
         findings.note(NO_RUN)
     else:
-        check_declared_scopes(findings, area, measurement_run, text)
+        check_declared_scopes(findings, area, answering_run, text)
 
     # 4. open fields — always
     findings.header(f"open fields: {chosen.name}")
     check_open_fields(findings, chosen, text, head)
 
     # 5. provenance — where the lane owes it (seconds), and only with a run
-    findings.header("frozen source and tracked files")
+    findings.header("provenance")
     if not lane(head.cost).provenance:
         findings.note(
             f"  n/a — protocol cost is {head.cost!r} (the agent audit covers provenance there)"
         )
-    elif measurement_run is None:
+    elif answering_run is None:
         findings.note(NO_RUN)
     else:
-        check_provenance(findings, area, measurement_run)
+        check_provenance(findings, area, answering_run)
 
     # 6. area tests — always
     findings.header("area tests")
@@ -506,10 +506,10 @@ def finalize_area(
 
     # 7. criterion n — only with a run
     findings.header("criterion n")
-    if measurement_run is None:
+    if answering_run is None:
         findings.note(NO_RUN)
     else:
-        check_criterion_n(findings, measurement_run)
+        check_criterion_n(findings, answering_run)
 
     # 8. audit findings — always
     findings.header("audit findings")

@@ -254,6 +254,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One name per thing in the lane and in finalize.** `Lane.tier` is
+  `Lane.cost_tier`, as the run record calls the field, and
+  `standard_contract.tier(cost)` is `cost_tier(cost)`: "tier" named the
+  cost axis and the evidence axis (guaranteed / static evidence / agent
+  audit) alike (audit 2026-10-23, C5, first half). finalize's station 1 is
+  "answering run" in docstring, header and code (`check_answering_run`,
+  `choose_answering_run`, the variable `answering_run` — a run that answers
+  need not be of kind `measurement`), and station 5 is "provenance" like
+  its function (C7). No behaviour changed.
+
 - **protocol-fill refuses like every other command.** An unknown label, a
   sentence that does not read back, a missing PROMPT constant, an
   unreadable block: protocol-fill printed the reason on stdout and exited 1

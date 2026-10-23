@@ -29,7 +29,7 @@ class Lanes(unittest.TestCase):
             with self.subTest(cost):
                 ln = sc.lane(cost)
                 self.assertEqual(
-                    (ln.tier, ln.freeze, ln.registration, ln.audits, ln.cut),
+                    (ln.cost_tier, ln.freeze, ln.registration, ln.audits, ln.cut),
                     (cost, True, False, ("preflight", "analysis"), "full"),
                 )
                 self.assertEqual(
@@ -39,7 +39,7 @@ class Lanes(unittest.TestCase):
 
     def test_an_unfilled_cost_reads_as_hours(self):
         self.assertEqual(sc.lane(None), sc.lane("hours"))
-        self.assertEqual(sc.tier(None), "hours")
+        self.assertEqual(sc.cost_tier(None), "hours")
 
     def test_a_tier_the_head_cannot_carry_is_refused(self):
         with self.assertRaises(ValueError):

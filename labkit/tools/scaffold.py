@@ -309,7 +309,7 @@ def promote(area: Path, blocks: ProtocolBlocks) -> list[str]:
         lane = standard_contract.lane(protocol_block.head(text).cost)
         if not lane.freeze:
             log.append(
-                f"  skip (cost {lane.tier}: nothing freezes, no report fields)  {proto}"
+                f"  skip (cost {lane.cost_tier}: nothing freezes, no report fields)  {proto}"
             )
             continue
         new, added = insert_report_fields(text, blocks)
@@ -580,7 +580,7 @@ def next_steps(
     code_check = f"after every code change `code-check {rel}`"
     if ln.cut == standard_contract.SECONDS_CUT:
         title = (
-            f'cost = "{ln.tier}" — no freeze, no audit before the run, '
+            f'cost = "{ln.cost_tier}" — no freeze, no audit before the run, '
             "the run is the instrument check"
         )
         if sk is standard_contract.COMPUTE:
@@ -603,7 +603,7 @@ def next_steps(
     else:
         test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
         estimator = sk is standard_contract.ESTIMATOR
-        title = f"lane {ln.tier}: light pilot, heavy report" + (
+        title = f"lane {ln.cost_tier}: light pilot, heavy report" + (
             " — the instrument is an estimator, no model call" if estimator else ""
         )
         steps = [
