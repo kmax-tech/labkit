@@ -76,7 +76,14 @@ import ast
 from pathlib import Path
 
 from labkit.formats import console, promises, protocol_block, rules, standard_contract
-from labkit.formats.gate import BLOCKER, WARNING, Findings, GateFinding, coded
+from labkit.formats.gate import (
+    EXIT_CONTRACT,
+    BLOCKER,
+    WARNING,
+    Findings,
+    GateFinding,
+    coded,
+)
 from labkit.checks.intent_check import ID_IN_PROTOCOL, code_ids, code_keys
 from labkit.formats.repo import (
     AmbiguousArea,
@@ -579,6 +586,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             "(required once the area holds more than one)",
             "  --bundle FILE    pack sources + schema facts + gate labels "
             "for the audit agent",
+            EXIT_CONTRACT,
         ]
         return console.usage("code-check", "\n".join(lines), asked=bool(argv))
 

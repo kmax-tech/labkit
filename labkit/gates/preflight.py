@@ -72,7 +72,7 @@ from labkit.formats import (
 )
 from labkit.gates import install_hooks
 from labkit.formats import findings as audit_findings
-from labkit.formats.gate import Findings
+from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import (
     AmbiguousArea,
     area_path,
@@ -489,6 +489,7 @@ def main(argv: list[str]) -> int:
         lines = [
             (__doc__ or "").strip().splitlines()[0],
             "usage: preflight <AREA> [--protocol PROTOCOL-*.md]",
+            EXIT_CONTRACT,
         ]
         return console.usage("preflight", "\n".join(lines), asked=bool(argv))
 

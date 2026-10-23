@@ -41,7 +41,7 @@ doctrine: extend, never move; regression = both lab repos exit 0 after the
 import re
 
 from labkit.formats import console
-from labkit.formats.gate import Findings
+from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import git_root
 from pathlib import Path
 
@@ -182,6 +182,7 @@ def main(argv: list[str]) -> int:
         lines = [
             (__doc__ or "").strip().splitlines()[0],
             "usage: notes-check <repo-root | notes-dir | note.md> ...",
+            EXIT_CONTRACT,
         ]
         return console.usage("notes-check", "\n".join(lines), asked=bool(argv))
     files = collect_notes(argv)

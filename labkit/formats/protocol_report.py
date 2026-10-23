@@ -26,7 +26,7 @@ from labkit import PACKAGE_DIR
 from labkit.formats import console, promises, protocol_block, standard_contract
 from labkit.formats.repo import adopt_command, git_root, repo_protocols
 from labkit.formats.findings import audit_record_gap
-from labkit.formats.gate import BLOCKER, GateFinding
+from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, GateFinding
 from labkit.formats.protocol_history import (
     check_annotation_validity,
     check_protocol_id,
@@ -677,8 +677,9 @@ def main(argv: list[str]) -> int:
         print(
             "  --contract       print what the checker holds a protocol to: the "
             "prose-line budget per section and the exact label of each field "
-            "recognised by — read it BEFORE writing, not from the pre-commit hook"
+            "it recognises — read it BEFORE writing, not from the pre-commit hook"
         )
+        print(EXIT_CONTRACT)
         return 0
     # `protocol-check PROTOCOL --contract` read the flag as a file name
     # ("not readable: '--contract'", 2026-10-13): a flag is a flag anywhere.

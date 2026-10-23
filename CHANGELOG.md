@@ -243,6 +243,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The gates in order stand in one place, and every `--help` states the
+  exit contract.** The order (protocol-check → code-check → preflight →
+  preflight audit → runlog → finalize → analysis audit → review →
+  report-check → undecided), what each holds, where the area tests run
+  with which missing-test rule, and which hook runs it unasked is a table
+  in `docs/architecture.md`, "The gates in order" (audit 2026-10-23, C3).
+  `gate.EXIT_CONTRACT` is the one line every mechanical gate's `--help`
+  ends with; report-check's `--help` names `--if-reported [--staged]`, the
+  hooks' form parsed before argparse (C2). `labkit-audit` keeps exiting 1
+  on a warning, by intent — its findings are a person's to decide — and
+  says so (`audit.AUDIT_EXIT_CONTRACT`, C6). protocol-check's `--contract`
+  help no longer breaks off mid-sentence.
+
 - **"Is an audit finding still undecided" has one home.** Four gates
   walked the records for `open` findings themselves — preflight blocking
   any grade once frozen, finalize by grade, the hooks BLOCKERs only,

@@ -307,6 +307,34 @@ the completed run bound to the protocol. The run index and the protocol
 run list do not choose the answer. Selection and run
 relationships are specified in [protocol-run-binding](protocol-run-binding.md).
 
+## The gates in order
+
+The one place the order stands (audit 2026-10-23, C3); `docs/workflow.md`
+walks the same steps with the person's commands between them. Every
+mechanical gate shares one exit contract (`gate.EXIT_CONTRACT`: 0 clean,
+warnings may stand; 1 a blocker; 2 no check) and states it in its
+`--help`; `labkit-audit` alone exits 1 on a warning too, by intent
+(`audit.AUDIT_EXIT_CONTRACT`: its findings are a person's to decide, not a
+hook's to pass — the benchmark of 2026-10-06 found a fault only as a
+WARNING). What an undecided audit finding is to each gate:
+`findings.open_findings`.
+
+| Gate | When | Holds | Area tests | Where it runs unasked |
+|---|---|---|---|---|
+| `protocol-check` | after every protocol edit | fields, placeholders, the head, the prose budget | — | `claude-hook post-change`, the pre-commit on staged protocols |
+| `code-check` | after every code change | the promises against the code, the prompt constants, static evidence | — | — (`labkit-audit --mode preflight` reads its bundle) |
+| `preflight` | before `frozen = true` (minutes/hours) | protocol-check, the lane's duties, the audit record and its coverage, the promises, the tests | no test file: a warning, a blocker once frozen; a failing test: a blocker | `claude-hook pre-run` before a recognised measurement command |
+| `labkit-audit --mode preflight` | before the freeze (minutes/hours) | the agent audit of the registration and the code; every finding decided by a person | — | — |
+| `runlog` (the run's start) | at every full run | the registration, the binding, leakage, the freeze and the audit coverage the lane owes; undecided preflight findings by grade | — | the run itself |
+| `finalize` | after the run, before the number is written back | the answering run, intent-check, declared scopes, open fields, provenance (seconds), the tests, criterion n, undecided findings of any mode by grade | no test file: a note; a failing test: a blocker | `report-check` runs it as one station |
+| `labkit-audit --mode analysis` | after the run, at every cost tier | the agent audit of the answering run; every finding decided, an accepted BLOCKER with its effect | — | — |
+| `labkit-audit --review` | when a BLOCKER was accepted with `stands` | a second auditor on the decision | — | — |
+| `report-check` | before the number leaves the area, at every cost tier | the whole chain: declaration, registration, finalize, the analysis record's coverage, the rendered result, `02_analyze.py --check` | through finalize | `claude-hook stop` (`--if-reported`), the pre-commit (`--if-reported --staged`) |
+| `claude-hook undecided` | at the stop and the commit | undecided audit BLOCKERs in the areas the session touched | — | `claude-hook stop`, the pre-commit |
+
+`notes-check` holds the measurement notes (`claude-hook post-change`) and
+stands beside the chain, not in it.
+
 ## Run and hook enforcement
 
 `standard_contract.lane` supplies the obligations for a protocol's cost

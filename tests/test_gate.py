@@ -18,6 +18,50 @@ def run(fn) -> tuple[int, str]:
     return code, buf.getvalue()
 
 
+class HelpStatesTheExitContract(unittest.TestCase):
+    """Every gate's --help ends with the exit contract — one line, one home
+    (`gate.EXIT_CONTRACT`; labkit-audit its own, `audit.AUDIT_EXIT_CONTRACT`)
+    — and report-check's names the hooks' form, which is parsed before
+    argparse (audit 2026-10-23, C2)."""
+
+    def _help(self, main) -> str:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.suppress(SystemExit):
+            main(["--help"])
+        return out.getvalue()
+
+    def test_every_mechanical_gate(self):
+        from labkit.checks import code_check, intent_check, notes_check
+        from labkit.formats import protocol_report
+        from labkit.gates import finalize, preflight, report_check
+
+        for mod in (
+            code_check,
+            intent_check,
+            notes_check,
+            protocol_report,
+            finalize,
+            preflight,
+            report_check,
+        ):
+            with self.subTest(gate=mod.__name__):
+                text = self._help(mod.main)
+                self.assertIn("exit codes: 0 clean", text)
+                self.assertIn("1 at least one blocker", text)
+
+    def test_report_check_names_the_hooks_form(self):
+        from labkit.gates import report_check
+
+        self.assertIn("--if-reported [--staged] PATH", self._help(report_check.main))
+
+    def test_labkit_audit_states_its_own(self):
+        from labkit.gates import audit
+
+        text = self._help(audit.main)  # argparse re-wraps the epilog's lines
+        self.assertIn("exit codes: 0 no blocker and no warning", text)
+        self.assertIn("2 no audit", text)
+
+
 class Findings(unittest.TestCase):
     def test_a_blocker_is_exit_1_and_named_again(self):
         f = gate.Findings()

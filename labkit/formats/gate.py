@@ -4,7 +4,12 @@ summary and the exit code.
 Every gate that blocks (preflight, finalize, report-check, code-check,
 notes-check) collects its findings here and ends with `report`: one
 spelling of the grade (`BLOCKER:` / `WARNING:`), one summary line, one exit
-contract — 1 with a blocker, 0 otherwise.
+contract — 1 with a blocker, 0 otherwise (`EXIT_CONTRACT`, the line every
+gate's `--help` ends with). The one exception is `labkit-audit`, by intent:
+it exits 1 on a warning too, because its findings are for a person to
+decide, not for a hook to pass (its docstring has the evidence). The order
+of the gates and what each holds: docs/architecture.md, "The gates in
+order".
 
 A finding is data first (`GateFinding`: its grade and its text — not
 `findings.Finding`, an audit's finding the person decides) and a line on
@@ -30,6 +35,12 @@ from dataclasses import dataclass
 
 BLOCKER = "BLOCKER"
 WARNING = "WARNING"
+
+#: the exit contract of every mechanical gate, as its `--help` states it
+EXIT_CONTRACT = (
+    "exit codes: 0 clean (warnings may stand), 1 at least one blocker, "
+    "2 no check (usage error, nothing to hold)"
+)
 
 #: how a finding is told: the gate prefixes the grade (`BLOCKER: …`), the
 #: text says its grade in its own words, or the code checks' ` · ` form

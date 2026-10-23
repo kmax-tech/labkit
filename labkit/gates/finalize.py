@@ -65,7 +65,7 @@ from pathlib import Path
 
 from labkit.formats import console, findings as audit_findings, promises, protocol_block
 from labkit.formats.standard_contract import lane
-from labkit.formats.gate import Findings
+from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.runs import (
     run_dirs,
     unreportable,
@@ -544,6 +544,7 @@ def main(argv: list[str]) -> int:
             "usage: finalize <AREA> [--protocol PROTOCOL-*.md]",
             "       (the gate at the stop and the commit is `report-check --if-reported`, "
             "which runs finalize as one station)",
+            EXIT_CONTRACT,
         ]
         return console.usage("finalize", "\n".join(lines), asked=bool(argv))
 

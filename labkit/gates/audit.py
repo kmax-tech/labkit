@@ -27,7 +27,8 @@ the lab's `models.toml` names (`opus` by default, stamped as `claude-cli`).
 Synchronous, with a timeout: on expiry the command fails, it never waits on
 in the background.
 
-Exit codes are the contract, made from one audit result: the LAST verdict
+Exit codes (`AUDIT_EXIT_CONTRACT`, the line --help ends with) are the
+contract, made from one audit result: the LAST verdict
 line and the finding lines above it must count the same blockers and
 warnings, else nothing is recorded and the exit is 2 — a finding withdrawn
 in prose below its line left an open blocker in the record behind exit 0
@@ -121,6 +122,12 @@ DEFAULT_TIMEOUT_S = (
     findings.ATTEMPT_TIMEOUT_S
 )  # one call reads the area, the rules, the rows
 MODES = ("preflight", "analysis", "clarity")
+#: the audit's exit contract — not `gate.EXIT_CONTRACT`: a warning is a
+#: finding to decide here, so it exits 1 too (the module docstring says why)
+AUDIT_EXIT_CONTRACT = (
+    "exit codes: 0 no blocker and no warning, 1 findings to decide (a blocker "
+    "OR a warning), 2 no audit (missing file, unreadable report, backend failure)"
+)
 CLARITY = "clarity"
 ANALYSIS = "analysis"
 STANDARD_LABEL = (
@@ -737,7 +744,9 @@ def main(argv: list[str]) -> int:
     decision the person gives on one of its findings (`--decide`), or show
     what there is to decide (`--findings`)."""
     ap = argparse.ArgumentParser(
-        prog="labkit-audit", description=(__doc__ or "").splitlines()[0]
+        prog="labkit-audit",
+        description=(__doc__ or "").splitlines()[0],
+        epilog=AUDIT_EXIT_CONTRACT,
     )
     ap.add_argument("area", type=area_path)
     ap.add_argument("--mode", choices=MODES)

@@ -49,6 +49,7 @@ import ast
 from pathlib import Path
 
 from labkit.formats import console, promises, protocol_block
+from labkit.formats.gate import EXIT_CONTRACT
 from labkit.formats.runs import COMPLETED, read_metrics, read_run_config
 from labkit.formats.answering_run import bound_answering_run, run_facts
 from labkit.formats.repo import layout_root, shown
@@ -92,6 +93,7 @@ def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             "the newest COMPLETED run bound to this protocol's id that "
             "reports intent keys; required while the protocol's id is "
             "unstamped.",
+            EXIT_CONTRACT,
         ]
         return console.usage("intent-check", "\n".join(lines), asked=bool(argv))
 

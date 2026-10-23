@@ -89,7 +89,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats.gate import BLOCKER, WARNING, Findings, GateFinding
+from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, WARNING, Findings, GateFinding
 from labkit.formats.answering_run import first_measurement
 from labkit.formats.protocol_history import registration_in_commit
 from labkit.formats import console, findings, protocol_block, reviews
@@ -917,7 +917,19 @@ def main(argv: list[str]) -> int:
         paths = [Path(a) for a in (rest[1:] if staged else rest)]
         return if_reported(paths, git_root(cwd) or cwd, staged=staged)
     ap = argparse.ArgumentParser(
-        prog="report-check", description=(__doc__ or "").split("\n\n")[0]
+        prog="report-check",
+        description=(__doc__ or "").split("\n\n")[0],
+        # the hooks' form is parsed above, before argparse; it is still part
+        # of this command's contract and stands in its --help (audit 2026-10-23, C2)
+        epilog=(
+            "report-check --if-reported [--staged] PATH ...\n"
+            "    every protocol of an area a path touches whose head declares a\n"
+            "    result, and every report among PATHS citing a run (the stop\n"
+            "    hook; with --staged the pre-commit: the head and the report as\n"
+            "    the index holds them, and the area's tree must equal the index)\n"
+            f"{EXIT_CONTRACT}"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     ap.add_argument("area", type=area_path)
     ap.add_argument("--protocol", type=Path, default=None)
