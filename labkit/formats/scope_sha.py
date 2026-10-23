@@ -63,12 +63,17 @@ class SourceError(ValueError):
     pre-run hook (audit 2026-10-15)."""
 
 
-AREA_GLOBS = ("scripts/*.py", "analysis/*.py")
+SCRIPT_GLOB = "scripts/*.py"
+ANALYSIS_GLOB = "analysis/*.py"
+AREA_GLOBS = (SCRIPT_GLOB, ANALYSIS_GLOB)
 
 
 def area_files(area: Path, globs: tuple[str, ...] = AREA_GLOBS) -> list[Path]:
     """The area's own code: scripts, then analysis, each sorted by name
-    (the order every check and the audit prompt list them in)."""
+    (the order every check and the audit prompt list them in). The one
+    spelling of where an area's code is — code-check, the stage split and
+    the prompt check globbed it by hand (audit 2026-10-23); a check that
+    wants the scripts alone passes `(SCRIPT_GLOB,)`."""
     out: list[Path] = []
     for pat in globs:
         out.extend(sorted(area.glob(pat)))

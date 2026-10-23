@@ -551,7 +551,7 @@ def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
         "\n",
     ]
     files = [protocol]
-    files += sorted(area.glob("scripts/*.py")) + sorted(area.glob("analysis/*.py"))
+    files += area_files(area)
     files += imported_repo_helpers(area, repo)
     for f in files:
         try:

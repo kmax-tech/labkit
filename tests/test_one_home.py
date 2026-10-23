@@ -86,6 +86,13 @@ RULES: list[tuple[str, str, set[str]]] = [
     # own error sentence (audit 2026-10-23); `jsonl.objects` / `data_rows`,
     # `batch` keeps the torn-last-line loop that is its own
     ("a JSONL line parsed by hand", r"json\.loads\(line\)", {"jsonl", "batch"}),
+    # four checks globbed an area's scripts by hand (audit 2026-10-23);
+    # `scope_sha.area_files` is where an area's code is
+    (
+        "an area's code globbed by hand",
+        r"glob\(\"(scripts|analysis)/\*\.py\"\)|\"scripts\"\)\.glob\(",
+        {"scope_sha"},
+    ),
 ]
 
 
@@ -138,6 +145,7 @@ class OneHome(unittest.TestCase):
             "a run directory spelled by hand": 'run_dir = area / "runs" / run_id',
             "the metrics file spelled by hand": 'metrics = run_dir / "metrics.json"',
             "a JSONL line parsed by hand": "row = json.loads(line)",
+            "an area's code globbed by hand": 'scripts = sorted(area.glob("scripts/*.py"))',
         }
         for what, shape, _ in RULES:
             with self.subTest(what=what):

@@ -243,6 +243,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Where an area's code is has one spelling.** `scope_sha.area_files`
+  (with `SCRIPT_GLOB`, `ANALYSIS_GLOB`) is read by the audit bundle, the
+  producer/consumer split and the prompt check, which globbed
+  `scripts/*.py` by hand (audit 2026-10-23); the one-home test holds it.
+
 - **One reader turns JSONL lines into objects.** `jsonl.objects(text,
   where)` gives (line number, object) and names file and line for a line
   that is not JSON; `jsonl.data_rows` drops the `_meta` header

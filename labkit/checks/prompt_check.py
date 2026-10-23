@@ -15,6 +15,7 @@ import ast
 import re
 from pathlib import Path
 
+from labkit.formats.scope_sha import SCRIPT_GLOB, area_files
 from labkit.formats import protocol_block
 from labkit.formats.gate import BLOCKER, WARNING, GateFinding, coded
 from labkit.formats.protocol_check import fields
@@ -35,9 +36,7 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
     comment, a string or an import passed until 2026-10-20 and is no call.
     Whether the test asserts on the result is not checked. A test file that
     cannot be parsed is a finding of its own: what it calls cannot be told."""
-    scripts = (
-        sorted((area / "scripts").glob("*.py")) if (area / "scripts").is_dir() else []
-    )
+    scripts = area_files(area, (SCRIPT_GLOB,))
     parsers: dict[str, Path] = {}
     for sp in scripts:
         for m in PARSE_DEF.finditer(sp.read_text(encoding="utf-8")):
@@ -171,10 +170,7 @@ def prompt_constants(area: Path) -> dict[str, str]:
 def _prompts(area: Path) -> tuple[dict[str, str], list[str]]:
     out: dict[str, str] = {}
     unreadable: list[str] = []
-    scripts = (
-        sorted((area / "scripts").glob("*.py")) if (area / "scripts").is_dir() else []
-    )
-    for sp in scripts:
+    for sp in area_files(area, (SCRIPT_GLOB,)):
         try:
             found, bad = _script_prompts(sp.read_text(encoding="utf-8"))
         except SyntaxError:

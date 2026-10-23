@@ -18,6 +18,9 @@ from pathlib import Path
 
 from labkit.formats.gate import BLOCKER, GateFinding, coded
 from labkit.formats.scope_sha import (
+    ANALYSIS_GLOB,
+    SCRIPT_GLOB,
+    area_files,
     SourceError,
 )
 
@@ -190,8 +193,8 @@ CONSUMER = re.compile(r"^(0[23]_|analysis)")
 
 def split_stages(area: Path) -> tuple[list[Path], list[Path]]:
     """(producers, consumers) — the numbering IS the pipeline order."""
-    scripts = sorted(area.glob("scripts/*.py"))
-    analysis = sorted(area.glob("analysis/*.py"))
+    scripts = area_files(area, (SCRIPT_GLOB,))
+    analysis = area_files(area, (ANALYSIS_GLOB,))
     consumers = [p for p in scripts if CONSUMER.match(p.name)] + analysis
     producers = [p for p in scripts if p not in consumers]
     return producers, consumers
