@@ -320,6 +320,42 @@ der Kleinkram. Entschieden:
 - Keine Breaking-Pause vor 1.0: das Repo ist in der Entwicklung, die
   Lab-Repos ziehen über die Migrationssätze im CHANGELOG nach.
 
+**C5, zweiter Teil — `evidence_kind` am Gate-Finding (geplant, ein
+Commit).** Namen sind seit `ce7defc` eindeutig (`Lane.cost_tier`). Offen
+ist das Datenfeld. Durchgang über die echten Findings (2026-10-23):
+
+| Finding (Text im Gate) | Gate | grade | evidence_kind |
+|---|---|---|---|
+| `[C1] registered, no key literal in the scripts` | code-check | BLOCKER | guaranteed |
+| `[A1] key written, never read` | code-check | WARNING | static evidence |
+| `stamp coverage: sys.path edit at scripts/01_measure.py:12` | code-check | WARNING | static evidence |
+| `cost tier lowered since the first commit` | protocol-check, preflight | WARNING | static evidence |
+| `no completed run bound to p-…; r1: …` | finalize | BLOCKER | guaranteed |
+| `intent-check: [A2] registered, but metrics.json has no 'a2'` | finalize | BLOCKER | guaranteed |
+| `test_01_x.py failed (1 failed)` | finalize, preflight | BLOCKER | guaranteed |
+| `pytest is not installed — tests not run` | finalize, preflight | WARNING | guaranteed |
+| `<record>: … — undecided (LAB-015)` | finalize, preflight, runlog, Hooks | nach Grad des Records | guaranteed |
+| `no analysis audit saw the area as it is now` | report-check | BLOCKER | guaranteed |
+
+Drei Festlegungen daraus:
+
+1. **Das Feld klassifiziert den Satz in `text`, nicht die Sache.** „Record
+   X hält einen unentschiedenen BLOCKER" ist eine Registerabfrage,
+   guaranteed; das Agentenurteil steht im Record mit eigenem Grad.
+   Darum hat `GateFinding.evidence_kind` zwei Werte, `guaranteed` und
+   `static evidence`; `agent audit` ist keine Gate-Aussage, sondern die
+   Natur von `findings.Finding`. AGENTS.md nennt drei Stufen, das bleibt
+   richtig: die dritte lebt in den Records, nicht im Gate.
+2. **Pflichtangabe ohne Default; `static evidence` + BLOCKER ist ein
+   `ValueError` in `__post_init__`**, mit Twin-Test. `ParamRow.tier` wird
+   `evidence_kind` und liest dieselben Konstanten aus `gate`.
+3. **Anzeige nur, wo sie trägt**: in der `labkit-params`-Spalte wie heute
+   und in der gepunkteten Form der Code-Checks (`WARNING · static evidence
+   · a.py:12 · …`), weil dort schon Teile stehen. Prefixed-Zeilen bleiben
+   `WARNING: …`; die Summary zählt: `2 blocker(s), 3 warning(s) (2 static
+   evidence)`. C5 schließt, wenn Feldbedeutung (Punkt 1) in `gate.py`
+   dokumentiert und getestet ist.
+
 Notiert, nicht geplant: Audit-Records um die Protokoll-id ergänzen. Heute
 wird der Abgleich gegen die Registrierung aus dem Protokolltext berechnet;
 in einem Bereich mit mehreren Protokollen wählt das Gate das Protokoll
