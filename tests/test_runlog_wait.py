@@ -103,7 +103,16 @@ class TestWait(unittest.TestCase):
                         raise RuntimeError("claude-cli: requested m, written by o, m")
                 with runlog.run("x", {"n": 2}, area, run_kind="measurement") as ok:
                     ok.metrics(count=2)
-            dead, clean = sorted((area / "runs").iterdir())
+
+            # both runs start in the same second; the run id's random suffix
+            # orders them, so tell them apart by their config, not their name
+            def n_of(run_dir: Path) -> int:
+                config = json.loads(
+                    (run_dir / "config.json").read_text(encoding="utf-8")
+                )
+                return config["config"]["n"]
+
+            dead, clean = sorted((area / "runs").iterdir(), key=n_of)
             self.assertEqual(
                 runs.read_failure(dead),
                 "RuntimeError: claude-cli: requested m, written by o, m",
