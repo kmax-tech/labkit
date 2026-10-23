@@ -29,7 +29,7 @@ from labkit.formats import (
     protocol_report,
 )  # noqa: E402
 from labkit.gates import preflight  # noqa: E402
-from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
+from protocol_fixture import registration_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 BODY = """
 - **Model / tool:** haiku
@@ -180,13 +180,27 @@ class WaivedAudit(unittest.TestCase):
         )
         self.assertIn("there is no such record", gap or "")
         other = findings.write(
-            self.area, "preflight", "opus", "000000000000", block, (0, 0, 0), []
+            self.area,
+            "preflight",
+            "opus",
+            "000000000000",
+            block,
+            (0, 0, 0),
+            [],
+            registration=registration_of(self.area),
         )
         gap = findings.audit_record_gap(self.area, other.name, text)
         self.assertIn("the code now stamps", gap or "")
         sha = scope_sha.area_stamp(self.area)[0]
         stale = findings.write(
-            self.area, "preflight", "opus", sha, "otherblock00", (0, 0, 0), []
+            self.area,
+            "preflight",
+            "opus",
+            sha,
+            "otherblock00",
+            (0, 0, 0),
+            [],
+            registration=registration_of(self.area),
         )
         gap = findings.audit_record_gap(self.area, stale.name, text)
         self.assertIn("saw the promise block otherblock00", gap or "")
@@ -203,10 +217,20 @@ class WaivedAudit(unittest.TestCase):
                     "BLOCKER · scripts/01_measure.py:1 · x · y · LAB-015 Preflight audit before freezing · z",
                 )
             ],
+            registration=registration_of(self.area),
         )
         gap = findings.audit_record_gap(self.area, open_.name, text)
         self.assertIn("still `open`", gap or "")
-        good = findings.write(self.area, "preflight", "opus", sha, block, (0, 0, 0), [])
+        good = findings.write(
+            self.area,
+            "preflight",
+            "opus",
+            sha,
+            block,
+            (0, 0, 0),
+            [],
+            registration=registration_of(self.area),
+        )
         self.assertIsNone(findings.audit_record_gap(self.area, good.name, text))
         analysis = findings.write(
             self.area,
@@ -218,6 +242,7 @@ class WaivedAudit(unittest.TestCase):
             [],
             run_id=findings.NO_RUN,
             shown_sha="0" * 12,
+            registration=registration_of(self.area),
         )
         gap = findings.audit_record_gap(self.area, analysis.name, text)
         self.assertIn(

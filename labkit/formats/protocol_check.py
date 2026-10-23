@@ -36,6 +36,7 @@ the id against the repo — and the `protocol-check` command are
 
 import functools
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -43,6 +44,7 @@ from labkit import PACKAGE_DIR
 from labkit.formats import (
     promises,
     protocol_block,
+    scope_sha,
     standard_contract,
     answering_run,
 )
@@ -568,6 +570,51 @@ def seconds_registration_missing(text: str) -> list[str]:
     missing += [] if head.kind else ["[protocol] kind"]
     contradiction = kind_gap(text, head)
     return missing + ([contradiction] if contradiction else [])
+
+
+#: the key of the kind in a registration stamp, beside the field labels
+REGISTRATION_KIND = "kind"
+#: a registration field the protocol does not carry, as its stamp names it
+REGISTRATION_ABSENT = "<absent>"
+
+
+def registration_stamp(text: str) -> dict[str, str]:
+    """The scientific basis an audit judged, as its record binds it: the
+    head's `kind` (REGISTRATION_KIND), and per registration field the kind
+    owes (`standard_contract.registration_fields`, the most while the kind
+    is unset) the digest of its value, whitespace collapsed so a reflowed
+    line moves nothing; a field the text lacks is REGISTRATION_ABSENT. The
+    report fields written after a run (Conclusion, Recorded results, the
+    run list) are not in it: writing them leaves an audit standing. A head
+    that does not read counts as an unset kind — the head check names it."""
+    try:
+        kind = protocol_block.head(text).kind
+    except protocol_block.BlockError:
+        kind = None
+    labels = standard_contract.registration_fields(
+        kind or standard_contract.APPLY_KIND, model_named(text)
+    )
+    values: dict[str, str] = {}
+    for f in fields(text):
+        values.setdefault(f.name, f.value)
+    out = {REGISTRATION_KIND: kind or REGISTRATION_ABSENT}
+    for label in labels:
+        value = values.get(field_name(label))
+        out[label] = (
+            REGISTRATION_ABSENT
+            if value is None
+            else scope_sha.digest(" ".join(value.split()).encode("utf-8"))
+        )
+    return out
+
+
+def registration_drift(audited: Mapping[str, str], now: Mapping[str, str]) -> list[str]:
+    """The registration entries (`registration_stamp`) that differ between
+    what an audit judged and the protocol now — the kind or a field label —
+    in the order now names them, then those only the audit had. Empty when
+    the audit judged this registration."""
+    changed = [k for k in now if audited.get(k) != now[k]]
+    return changed + [k for k in audited if k not in now]
 
 
 #: the fields that describe a run that happened — written back after it,

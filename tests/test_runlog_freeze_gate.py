@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import findings, promises, scope_sha  # noqa: E402
+from labkit.formats import findings, promises, protocol_check, scope_sha  # noqa: E402
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
@@ -107,6 +107,7 @@ class FreezeGate(unittest.TestCase):
                 promises.block_stamp(text),
                 (0, 0, 0),
                 [],
+                registration=protocol_check.registration_stamp(text),
             )
             text = head(cost="hours", frozen=True, preflight_audit=written.name)
         return text
@@ -137,7 +138,14 @@ class FreezeGate(unittest.TestCase):
         without a second audit (cloud judge probe, 2026-10-14)."""
         text = self._audited(record=False)
         old = findings.write(
-            self.tmp, "preflight", "opus", "0123456789ab", "b", (0, 0, 0), []
+            self.tmp,
+            "preflight",
+            "opus",
+            "0123456789ab",
+            "b",
+            (0, 0, 0),
+            [],
+            registration=protocol_check.registration_stamp(text),
         )
         area = self._area(head(cost="hours", frozen=True, preflight_audit=old.name))
         with self.assertRaises(SystemExit) as cm:
@@ -174,6 +182,7 @@ class FreezeGate(unittest.TestCase):
             promises.block_stamp(text),
             (0, 1, 0),
             [("WARNING", "WARNING · x")],
+            registration=protocol_check.registration_stamp(text),
         )
         area = self._area(head(cost="hours", frozen=True, preflight_audit=open_.name))
         with self.assertRaises(SystemExit) as cm:

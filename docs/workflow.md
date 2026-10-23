@@ -122,8 +122,10 @@ Reads: the protocol, the scripts and the repo-local modules they import,
 the answering run's rows and `metrics.json`, the cited rules of the
 standard — one model call. Writes: `audits/<minute>-analysis.toml`, one
 `[[finding]]` per line, each `open`, bound to the code (`scope_sha`), the
-promise block (`block_sha`), the run and what the auditor was shown of it
-(`shown_sha`). The person decides every finding; labkit stores the
+promise block (`block_sha`), the registration it judged — the kind and the
+question with the other fields the kind owes (`registration`; the report
+fields written later do not move it) — the run and what the auditor was
+shown of it (`shown_sha`). The person decides every finding; labkit stores the
 decision and never makes one. An accepted BLOCKER says its effect: the
 verdicts stand within the limit (`stands`), or the run cannot judge the
 named promise (`not assessable`). At `seconds` this is the lane's one

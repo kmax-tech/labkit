@@ -20,7 +20,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import protocol_fixture as fixture  # noqa: E402
-from protocol_fixture import run_record  # noqa: E402
+from protocol_fixture import registration_of, run_record  # noqa: E402
 from labkit.gates import audit  # noqa: E402
 from labkit.checks import audit_binding  # noqa: E402
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
@@ -475,11 +475,17 @@ class Audit(unittest.TestCase):
         self.assertNotIn("run_id", record)  # a preflight audit reads no run
         self.assertIn(
             "still `open`",
-            findings.audit_coverage(area, before, "preflight", block) or "",
+            findings.audit_coverage(
+                area, before, "preflight", block, registration=registration_of(area)
+            )
+            or "",
         )
         self.assertIn(
             "no preflight audit saw",
-            findings.audit_coverage(area, after, "preflight", block) or "",
+            findings.audit_coverage(
+                area, after, "preflight", block, registration=registration_of(area)
+            )
+            or "",
         )
 
     def test_a_finding_written_with_a_dash_or_colon_is_read(self):

@@ -26,6 +26,23 @@ pins (`requirements.txt` / `requirements.lock`).
   `model_identity` and is refused on resume; finish it with labkit
   0.103.0, or measure again into a new output file. Kept results are not
   touched: `--eval-only` and the analysis read the rows as they stand.
+- **An audit record binds the registration it judged.** `[audit]` carries
+  `registration = { kind = "…", "Question / hypothesis" = "<digest>", … }`:
+  the head's kind and, per field the kind owes
+  (`standard_contract.registration_fields`), the digest of its value,
+  whitespace collapsed (`protocol_check.registration_stamp`). A record
+  covers the protocol only while they are what the audit judged; the
+  refusal names what changed — `the registration changed after the audit
+  (Question / hypothesis)` — in the freeze gate, preflight, protocol-check
+  and report-check. The report fields written after the run (Conclusion,
+  Recorded results, Limits, the run list) are not in it. Why (review
+  2026-10-23): the question was rewritten from the mean line count to the
+  mean number of causal claims after the number was adopted, and the old
+  analysis audit still covered it — report-check exited 0. A record
+  without `registration` is no longer read; labkit 0.103.0 is the last
+  that reads one. Migration: run the audits again (`labkit-audit <area>
+  --mode preflight|analysis`) — a digest of what an old audit saw cannot
+  be written by hand.
 - **A failed audit attempt names its cause, and an unproven one stops
   the auditing of that state.** `audits/*-failed.toml` carries `cause =
   "unavailable" | "unproven"`: the backend gave no answer, or the

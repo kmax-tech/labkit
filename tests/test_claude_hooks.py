@@ -30,7 +30,14 @@ from labkit.tools import protocol_fill  # noqa: E402
 from labkit.checks import result_render  # noqa: E402
 from labkit.checks import audit_binding  # noqa: E402
 from labkit.formats import findings, promises, scope_sha, shell  # noqa: E402
-from protocol_fixture import run_record, DEFAULT_BLOCK, PID, head, head_commit  # noqa: E402
+from protocol_fixture import (
+    registration_of,
+    run_record,
+    DEFAULT_BLOCK,
+    PID,
+    head,
+    head_commit,
+)  # noqa: E402
 
 BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary
@@ -470,6 +477,7 @@ class Stop(unittest.TestCase):
                 shown_sha=audit_binding.run_shown(
                     self.area, self.area / "runs" / self.RUN, ""
                 ).sha,
+                registration=registration_of(self.area),
             )
 
     def _answer(self, run_id: str) -> None:

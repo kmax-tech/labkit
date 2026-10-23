@@ -213,6 +213,7 @@ class TestFixtures(unittest.TestCase):
                 promises.block_stamp(frozen()),
                 (0, 0, 0),
                 [],
+                registration=protocol_check.registration_stamp(frozen()),
             )
             p.write_text(frozen(preflight_audit=record.name), encoding="utf-8")
             buf = io.StringIO()

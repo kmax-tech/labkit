@@ -334,9 +334,17 @@ def analysis_audit_gap(ctx: Checked) -> str | None:
     if ctx.run is None:
         return f"no answering run to hold it to — {ctx.why}"
     try:
-        sha, block_sha, run_id, shown_sha = analysis_now(ctx.area, ctx.text, ctx.run)
+        sha, block_sha, run_id, shown_sha, registration = analysis_now(
+            ctx.area, ctx.text, ctx.run
+        )
         return findings.audit_coverage(
-            ctx.area, sha, ANALYSIS_AUDIT, block_sha, run_id, shown_sha
+            ctx.area,
+            sha,
+            ANALYSIS_AUDIT,
+            block_sha,
+            run_id,
+            shown_sha,
+            registration=registration,
         )
     except AuditError as exc:  # a registered output is gone
         return f"the analysis audit cannot be held to the run: {exc}"

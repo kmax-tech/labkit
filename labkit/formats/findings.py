@@ -11,6 +11,8 @@ area, one file per audit:
     model = "opus"
     scope_sha = "fa45c7618423"   # the code the auditor read (scope_sha.area_stamp)
     block_sha = "0c1d2e3f4a5b"   # the promises it read (promises.block_stamp)
+    registration = { "kind" = "compute", "Question / hypothesis" = "9a8b7c6d5e4f" }
+                                 # what it judged (protocol_check.registration_stamp)
     # run_id = "2026-10-12T15-01-07_a1b2"  — mode analysis only: the run whose rows it read
     blockers = 1
     warnings = 2
@@ -51,7 +53,10 @@ stamped) is not an unavailable audit and leaves none. A record of findings
 and a failed attempt never share a name; `area_records` reads the records
 only.
 A record binds what the auditor read: the code (`scope_sha`), the promise
-block (`block_sha`) and, in mode analysis, the answering run (`run_id`).
+block (`block_sha`), the registration it judged — the kind and the
+question with the other fields the kind owes (`registration`), not the
+report fields written after the run — and, in mode analysis, the
+answering run (`run_id`).
 A full run at `minutes`/`hours` needs the preflight record the head names
 (`preflight_audit = "<minute>-preflight.toml"`) to be one of the code and
 the promises as they are now, every finding decided (`audit_record_gap`,
@@ -100,11 +105,13 @@ from __future__ import annotations
 import re
 import time
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
+from labkit.formats.protocol_check import registration_drift, registration_stamp
 from labkit.formats.runs import as_stored
 from labkit.formats.scope_sha import area_stamp, digest, validation_note
 
@@ -207,6 +214,9 @@ class Record:
     model: str
     scope_sha: str  # the code the auditor read
     block_sha: str  # the promise block it read (promises.NO_BLOCK: none declared)
+    # the registration it judged: the kind and a digest per owed field
+    # (`protocol_check.registration_stamp`), in the order written
+    registration: tuple[tuple[str, str], ...]
     run_id: (
         str | None
     )  # mode analysis: the run whose rows it read (NO_RUN: none); preflight: None
@@ -334,13 +344,15 @@ def write(
     verdict: tuple[int, int, int],
     findings: list[tuple[str, str]],
     *,
+    registration: Mapping[str, str],
     run_id: str | None = None,
     shown_sha: str | None = None,
     now: float | None = None,
 ) -> Path:
     """Write the audit's findings file into AREA/audits/ and return its path.
     SCOPE_SHA is the code the auditor read, BLOCK_SHA the promise block
-    (`promises.block_stamp`), RUN_ID the run whose rows it read and SHOWN_SHA
+    (`promises.block_stamp`), REGISTRATION the registration it judged
+    (`protocol_check.registration_stamp`), RUN_ID the run whose rows it read and SHOWN_SHA
     the digest of what the prompt showed of it (`audit_binding.run_shown`) — both
     owed in mode analysis (RUN_ID NO_RUN when there was none), refused in
     mode preflight.
@@ -387,6 +399,9 @@ def write(
         f"model = {_s(model)}",
         f"scope_sha = {_s(scope_sha)}",
         f"block_sha = {_s(block_sha)}",
+        "registration = { "
+        + ", ".join(f"{_s(k)} = {_s(v)}" for k, v in registration.items())
+        + " }",
         *([f"run_id = {_s(run_id)}"] if run_id is not None else []),
         *([f"shown_sha = {_s(shown_sha)}"] if shown_sha is not None else []),
         f"blockers = {b}",
@@ -445,6 +460,16 @@ def _audit_table(path: Path, data: dict) -> dict:
     problem = _run_fields_problem(audit)
     if problem:
         raise FindingsError(f"{path}: [audit] {problem}")
+    reg = audit.get("registration")
+    if not (
+        isinstance(reg, dict) and reg and all(isinstance(v, str) for v in reg.values())
+    ):
+        raise FindingsError(
+            f"{path}: [audit] registration is missing or not a table of strings — "
+            f"a record names the registration it judged (the question and the "
+            f"other fields the kind owes); a record written before labkit bound "
+            f"it is no longer read: run the audit again"
+        )
     return audit
 
 
@@ -541,6 +566,7 @@ def _record_of(path: Path, text: str) -> Record:
         audit["model"],
         audit["scope_sha"],
         audit["block_sha"],
+        tuple(audit["registration"].items()),
         audit.get("run_id"),
         audit.get("shown_sha"),
         (audit["blockers"], audit["warnings"], audit["notes"]),
@@ -685,7 +711,8 @@ def _decided_text(path: Path, n: int, decided: Finding) -> str:
 def _head(r: Record) -> tuple:
     """What a decision must leave as it was besides the findings."""
     return (
-        r.date, r.mode, r.model, r.scope_sha, r.block_sha, r.run_id, r.shown_sha, r.verdict,
+        r.date, r.mode, r.model, r.scope_sha, r.block_sha, r.registration, r.run_id,
+        r.shown_sha, r.verdict,
     )  # fmt: skip
 
 
@@ -744,13 +771,34 @@ def covering_records(
     block_sha: str,
     run_id: str | None,
     shown_sha: str | None,
+    registration: Mapping[str, str],
 ) -> list[Record]:
     """The RECORDS that saw the area as it is now: that code, that promise
-    block and — mode analysis — that run and what was shown of it."""
+    block, that registration (`protocol_check.registration_stamp`) and —
+    mode analysis — that run and what was shown of it."""
     now = (sha, block_sha, run_id, shown_sha)
     return [
-        r for r in records if (r.scope_sha, r.block_sha, r.run_id, r.shown_sha) == now
+        r
+        for r in records
+        if (r.scope_sha, r.block_sha, r.run_id, r.shown_sha) == now
+        and dict(r.registration) == dict(registration)
     ]
+
+
+def registration_note(records: list[Record], registration: Mapping[str, str]) -> str:
+    """For a refusal: "" unless the newest of RECORDS judged another
+    registration than REGISTRATION, else a clause naming what changed
+    (`protocol_check.registration_drift`) — the question or another field
+    the kind owes, rewritten after the audit, owes a new one."""
+    if not records:
+        return ""
+    changed = registration_drift(dict(records[-1].registration), registration)
+    if not changed:
+        return ""
+    return (
+        f" — the registration changed after the audit ({', '.join(changed)}): "
+        f"the audit judged another question than the protocol asks now"
+    )
 
 
 def records_of_gone_runs(records: list[Record], known: set[str]) -> list[Record]:
@@ -774,10 +822,13 @@ def audit_coverage(
     block_sha: str,
     run_id: str | None = None,
     shown_sha: str | None = None,
+    *,
+    registration: Mapping[str, str],
 ) -> str | None:
     """Why no audit of MODE covers the area as it is now, or None: a record
     with that `mode` whose `scope_sha` is SHA (the code), whose `block_sha`
-    is BLOCK_SHA (the promises, `promises.block_stamp`) and — mode analysis
+    is BLOCK_SHA (the promises, `promises.block_stamp`), whose
+    `registration` is REGISTRATION (`protocol_check.registration_stamp`) and — mode analysis
     — whose `run_id` is RUN_ID (the answering run) and whose `shown_sha` is
     SHOWN_SHA (what the prompt showed of that run, recomputed now: a
     metrics.json or output rows changed after the audit owe a new one),
@@ -805,8 +856,20 @@ def audit_coverage(
         )
     records = [r for r in area_records(area) if r.mode == mode]
     now = (sha, block_sha, run_id, shown_sha)
-    covering = covering_records(records, *now)
+    covering = covering_records(records, *now, registration)
     if not covering:
+        # the code, promises and run as audited, the registration rewritten
+        same_state = [
+            r
+            for r in records
+            if (r.scope_sha, r.block_sha, r.run_id, r.shown_sha) == now
+        ]
+        if same_state:
+            return (
+                f"no {mode} audit saw the area as it is now"
+                f"{registration_note(same_state, registration)} — "
+                f"`labkit-audit <area> --mode {mode}`"
+            )
         seen = (
             "; ".join(
                 sorted(
@@ -1087,6 +1150,21 @@ def audit_record_gap(area: Path, name: str, text: str) -> str | None:
             f"(`labkit-audit <area> --mode preflight`); naming another record "
             f"without one is refused too{validation_note(area)}"
         )
+    judged = _protocol_gap(record, name, text)
+    if judged:
+        return judged
+    if record.open:
+        return (
+            f"{len(record.open)} finding(s) of {name} still `open` — decide each "
+            f"(fixed / accepted / deferred / dismissed)"
+        )
+    return None
+
+
+def _protocol_gap(record: Record, name: str, text: str) -> str | None:
+    """Why RECORD (named NAME) judged another protocol than TEXT, or None:
+    another promise block (`block_sha`) or another registration — the kind,
+    the question or another field the kind owes (`registration`)."""
     try:
         block = promises.block_stamp(text)
     except promises.PromiseError as exc:
@@ -1096,12 +1174,10 @@ def audit_record_gap(area: Path, name: str, text: str) -> str | None:
             f"the record {name} saw the promise block {record.block_sha}, the protocol "
             f"carries {block} now — a promise rewritten after the audit owes a new one"
         )
-    if record.open:
-        return (
-            f"{len(record.open)} finding(s) of {name} still `open` — decide each "
-            f"(fixed / accepted / deferred / dismissed)"
-        )
-    return None
+    changed = registration_note([record], registration_stamp(text))
+    return (
+        f"the record {name} no longer covers the protocol{changed}" if changed else None
+    )
 
 
 def repo_records(experiments: Path) -> list[tuple[Path, Record]]:

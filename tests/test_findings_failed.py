@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from labkit.formats import findings
+from protocol_fixture import registration_of  # noqa: E402
 
 SHA, BLOCK = "abc123def456", "b10c0000000a"
 
@@ -50,7 +51,16 @@ class WriteRead(unittest.TestCase):
 
     def test_records_and_attempts_are_read_apart(self):
         attempt(self.area)
-        findings.write(self.area, "preflight", "opus", SHA, BLOCK, (0, 0, 0), [])
+        findings.write(
+            self.area,
+            "preflight",
+            "opus",
+            SHA,
+            BLOCK,
+            (0, 0, 0),
+            [],
+            registration=registration_of(self.area),
+        )
         self.assertEqual(len(findings.area_records(self.area)), 1)
         self.assertEqual(len(findings.failed_attempts(self.area)), 1)
 
@@ -128,7 +138,9 @@ class CoverageNamesTheStop(unittest.TestCase):
 
     def test_an_unproven_attempt_at_this_state_is_named(self):
         attempt(self.area, cause="unproven", model="opus")
-        why = findings.audit_coverage(self.area, SHA, "preflight", BLOCK)
+        why = findings.audit_coverage(
+            self.area, SHA, "preflight", BLOCK, registration=registration_of(self.area)
+        )
         assert why is not None
         self.assertIn(
             "1 attempt(s) unproven — opus did not write the answer whole", why
@@ -138,7 +150,9 @@ class CoverageNamesTheStop(unittest.TestCase):
     def test_an_unavailable_or_other_state_keeps_the_plain_refusal(self):
         attempt(self.area, cause="unavailable")
         attempt(self.area, cause="unproven", scope_sha="other" * 3)
-        why = findings.audit_coverage(self.area, SHA, "preflight", BLOCK)
+        why = findings.audit_coverage(
+            self.area, SHA, "preflight", BLOCK, registration=registration_of(self.area)
+        )
         assert why is not None
         self.assertNotIn("unproven", why)
         self.assertIn("no preflight audit saw the area as it is now", why)

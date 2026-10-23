@@ -17,7 +17,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import NamedTuple
 
-from labkit.formats import findings, promises, protocol_block, runs, scope_sha
+from labkit.formats import (
+    findings,
+    promises,
+    protocol_block,
+    protocol_check,
+    runs,
+    scope_sha,
+)
 from labkit.formats.answering_run import bound_answering_run
 from labkit.formats.repo import layout_root, shown
 from labkit.formats.runs import read_outputs
@@ -130,17 +137,20 @@ def rows_excerpt(path: Path, name: str) -> tuple[str, str]:
     return label, "\n".join(body)
 
 
-def analysis_now(area: Path, text: str, run: Path) -> tuple[str, str, str, str]:
-    """(code stamp, promise block stamp, run id, shown sha) of AREA, the
-    promises of TEXT and RUN as they are now — what an analysis record must
-    carry to cover them. Raises AuditError (a registered output is gone),
-    FileNotFoundError or ValueError (nothing to stamp, a promise block
-    unreadable)."""
+def analysis_now(
+    area: Path, text: str, run: Path
+) -> tuple[str, str, str, str, dict[str, str]]:
+    """(code stamp, promise block stamp, run id, shown sha, registration) of
+    AREA, the promises and the registration of TEXT and RUN as they are now
+    — what an analysis record must carry to cover them. Raises AuditError (a
+    registered output is gone), FileNotFoundError or ValueError (nothing to
+    stamp, a promise block or a head unreadable)."""
     return (
         area_stamp(area)[0],
         promises.block_stamp(text),
         run.name,
         run_shown(area, run, "").sha,
+        protocol_check.registration_stamp(text),
     )
 
 

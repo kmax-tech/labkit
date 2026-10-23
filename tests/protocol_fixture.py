@@ -45,6 +45,27 @@ C1_BLOCK = DEFAULT_BLOCK.split("\n\n")[0] + "\n"
 C1_PROSE = "- **Success / failure criterion:** [C1] the criterion holds\n"
 
 
+def registration_of(area: Path) -> dict[str, str]:
+    """The registration a record a test writes judged: that of AREA's
+    `PROTOCOL-x.md` (else its one protocol) as it stands now
+    (`protocol_check.registration_stamp`) — a record written right after the
+    protocol covers it, as one `labkit-audit` writes would. With no protocol
+    in AREA, or a head that does not read, the kind alone, unset: the record
+    covers no protocol."""
+    from labkit.formats import protocol_block, protocol_check
+
+    named = area / "PROTOCOL-x.md"
+    found = [named] if named.is_file() else sorted(area.glob("PROTOCOL-*.md"))
+    if len(found) == 1:
+        try:
+            return protocol_check.registration_stamp(
+                found[0].read_text(encoding="utf-8")
+            )
+        except protocol_block.BlockError:
+            pass
+    return {protocol_check.REGISTRATION_KIND: protocol_check.REGISTRATION_ABSENT}
+
+
 def scope_file(area: Path) -> Path:
     """The script the default block's scopes name, written if absent."""
     script = area / "scripts" / "01_measure.py"

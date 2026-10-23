@@ -27,7 +27,7 @@ from labkit.formats import (  # noqa: E402
 from labkit.formats.gate import BLOCKER  # noqa: E402
 from labkit.probes import usability  # noqa: E402
 from labkit.tools import scaffold  # noqa: E402
-from protocol_fixture import head, run_record  # noqa: E402
+from protocol_fixture import registration_of, head, run_record  # noqa: E402
 
 VALIDATION_ID = "p-1111111111111111"
 RUN = "2026-10-23T10-00-00_ab12"
@@ -424,7 +424,14 @@ class StaleEvidence(Evidence):
 
         sha = scope_sha.area_stamp(share)[0]
         return findings.write(
-            share, "preflight", "opus", sha, promises.block_stamp(text), (0, 0, 0), []
+            share,
+            "preflight",
+            "opus",
+            sha,
+            promises.block_stamp(text),
+            (0, 0, 0),
+            [],
+            registration=registration_of(share),
         ).name
 
     def _gap(self, share: Path, name: str, text: str) -> str | None:

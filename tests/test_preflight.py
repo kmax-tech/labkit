@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, promises  # noqa: E402
 from labkit.gates import preflight  # noqa: E402
-from protocol_fixture import head  # noqa: E402
+from protocol_fixture import registration_of, head  # noqa: E402
 
 BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary
@@ -389,7 +389,14 @@ class TestAuditFindings(unittest.TestCase):
         text = _protocol(frozen=True) if frozen else CLEAN_PROTOCOL
         area, _ = _area(d, text)
         path = findings.write(
-            area, "preflight", "opus", "abc", _block(area), (0, 1, 0), self.ROW
+            area,
+            "preflight",
+            "opus",
+            "abc",
+            _block(area),
+            (0, 1, 0),
+            self.ROW,
+            registration=registration_of(area),
         )
         return area, path
 
@@ -434,7 +441,14 @@ class TestAuditFindings(unittest.TestCase):
         with _area_dir() as d:
             area, _ = _area(d, _protocol(frozen=True, preflight_audit="x"))
             path = findings.write(
-                area, "preflight", "opus", "000000000000", _block(area), (0, 0, 0), []
+                area,
+                "preflight",
+                "opus",
+                "000000000000",
+                _block(area),
+                (0, 0, 0),
+                [],
+                registration=registration_of(area),
             )
             p = area / "PROTOCOL-x.md"
             p.write_text(_protocol(frozen=True, preflight_audit=path.name))
@@ -447,7 +461,14 @@ class TestAuditFindings(unittest.TestCase):
             sha = scope_sha.area_stamp(area)[0]
             path.unlink()
             good = findings.write(
-                area, "preflight", "opus", sha, _block(area), (0, 0, 0), []
+                area,
+                "preflight",
+                "opus",
+                sha,
+                _block(area),
+                (0, 0, 0),
+                [],
+                registration=registration_of(area),
             )
             p.write_text(_protocol(frozen=True, preflight_audit=good.name))
             code, out = _run_preflight(area)
@@ -471,7 +492,14 @@ class TestAuditFindings(unittest.TestCase):
             other = root / "16-there"
             other.mkdir()
             path = findings.write(
-                other, "preflight", "opus", "abc", "b", (0, 1, 0), self.ROW
+                other,
+                "preflight",
+                "opus",
+                "abc",
+                "b",
+                (0, 1, 0),
+                self.ROW,
+                registration=registration_of(other),
             )
             path.write_text(
                 path.read_text()

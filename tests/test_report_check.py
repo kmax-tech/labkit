@@ -32,6 +32,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from protocol_fixture import (
+    registration_of,
     C1_BLOCK,
     C1_PROSE,
     completed_run,
@@ -88,6 +89,7 @@ class ReportCheck(unittest.TestCase):
             [],
             run_id=run.name,
             shown_sha=audit_binding.run_shown(area, run, "").sha,
+            registration=registration_of(area),
         )
 
     def _run(
@@ -120,6 +122,51 @@ class ReportCheck(unittest.TestCase):
         code, out = self._run(area)
         self.assertEqual(code, 0, out)
         self.assertIn("all clear", out)
+
+    def _asked(self, area: Path, question: str) -> Path:
+        proto = area / "PROTOCOL-x.md"
+        text = proto.read_text(encoding="utf-8")
+        proto.write_text(
+            text + f"- **Question / hypothesis:** {question}\n", encoding="utf-8"
+        )
+        return proto
+
+    def test_a_question_rewritten_after_the_audit_is_refused(self):
+        """The analysis audit judged one question; the protocol now asks
+        another, and report-check passed it with the old audit (review
+        2026-10-23, finding 1). The refusal names the field."""
+        area = self._area()
+        proto = self._asked(area, "what is the mean line count per case?")
+        self._audited(area)
+        self.assertEqual(self._run(area)[0], 0)
+        proto.write_text(
+            proto.read_text(encoding="utf-8").replace(
+                "the mean line count", "the mean number of causal claims"
+            ),
+            encoding="utf-8",
+        )
+        code, out = self._run(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            "the registration changed after the audit (Question / hypothesis)", out
+        )
+
+    def test_report_fields_written_after_the_audit_leave_it_standing(self):
+        """The twin: the conclusion, the limits and a reflowed question are
+        no new registration — writing the report owes no new audit."""
+        area = self._area()
+        proto = self._asked(area, "what is the mean line count per case?")
+        self._audited(area)
+        proto.write_text(
+            proto.read_text(encoding="utf-8").replace(
+                "mean line count per", "mean line count\n  per"
+            )
+            + "- **Conclusion:** the cases hold eleven lines on average.\n"
+            + "- **Limits:** one corpus only.\n",
+            encoding="utf-8",
+        )
+        code, out = self._run(area)
+        self.assertEqual(code, 0, out)
 
     def test_the_context_is_built_once_and_names_what_it_holds(self):
         """One text, one head, one answering run, one named file state for
@@ -489,6 +536,7 @@ class IfReported(unittest.TestCase):
                 [],
                 run_id=run.name,
                 shown_sha=audit_binding.run_shown(area, run, "").sha,
+                registration=registration_of(area),
             )
         if git:
             self._git(area.parent.parent, "add", "-A")

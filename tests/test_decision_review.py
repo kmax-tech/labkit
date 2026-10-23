@@ -20,7 +20,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from protocol_fixture import completed_run, head, scope_file
+from protocol_fixture import registration_of, completed_run, head, scope_file
 
 from labkit.checks import audit_binding
 from labkit.formats import findings, promises, reviews, scope_sha
@@ -86,6 +86,7 @@ def area_with(
         rows,
         run_id=RUN,
         shown_sha=audit_binding.run_shown(area, run, "").sha,
+        registration=registration_of(area),
     )
     for n, (status, reason, effect) in decide.items():
         findings.write_decision(record, n, status, reason, effect)

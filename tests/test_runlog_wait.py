@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
 
-from labkit.formats import findings, promises, runs, scope_sha  # noqa: E402
+from labkit.formats import findings, promises, protocol_check, runs, scope_sha  # noqa: E402
 from labkit.run import runlog, runlog_command  # noqa: E402
 from protocol_fixture import run_record, head, scope_file  # noqa: E402
 
@@ -292,6 +292,7 @@ class TestLongGate(unittest.TestCase):
                 promises.block_stamp(text),
                 (0, 0, 0),
                 [],
+                registration=protocol_check.registration_stamp(text),
             )
             text = head(frozen=True, preflight_audit=record.name)
             Path(d, "PROTOCOL-gate.md").write_text(text, encoding="utf-8")

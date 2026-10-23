@@ -80,6 +80,7 @@ from labkit.formats import (
     findings,
     promises,
     protocol_block,
+    protocol_check,
     rules,
     scope_sha,
 )
@@ -665,14 +666,15 @@ def _report_room(alias: str) -> int | None:
 
 def bound_prompt(
     mode: str, area: Path, reading: Reading
-) -> tuple[str, Stamp, str, str | None, str | None, list[Path]]:
-    """(prompt, stamp, block sha, run id, shown sha, indexed files) from ONE
-    reading:
+) -> tuple[str, Stamp, str, str | None, str | None, list[Path], dict[str, str]]:
+    """(prompt, stamp, block sha, run id, shown sha, indexed files,
+    registration) from ONE reading:
     the record binds what the prompt shows. The code is one snapshot: its
     bytes render the prompt, its sha goes in the record, and every stamped
     file the reading does not take in full is indexed — so the prompt shows
-    each file the stamp covers, no more and no fewer. The promise block
-    comes from the one protocol text the prompt carries; in MODE analysis
+    each file the stamp covers, no more and no fewer. The promise block and
+    the registration (`protocol_check.registration_stamp`) come from the one
+    protocol text the prompt carries; in MODE analysis
     the run is chosen once, and what the prompt shows of it is one snapshot
     whose digest goes in the record (NO_RUN when none answers).
 
@@ -719,7 +721,15 @@ def bound_prompt(
         raise AuditError(f"{area}: {changed}")
     stamp = Stamp(snap.sha, list(snap.files))
     shown_sha = shown.sha if shown else None
-    return prompt, stamp, promises.block_stamp(text), run_id, shown_sha, indexed
+    return (
+        prompt,
+        stamp,
+        promises.block_stamp(text),
+        run_id,
+        shown_sha,
+        indexed,
+        protocol_check.registration_stamp(text),
+    )
 
 
 def main(argv: list[str]) -> int:
@@ -797,8 +807,8 @@ def main(argv: list[str]) -> int:
         protocol, code = reading.protocol, reading.code
         for finding in early_for_tier(args.area, protocol, args.mode):
             print(f"labkit-audit: {finding.line}", file=sys.stderr)
-        prompt, stamp, block_sha, run_id, shown_sha, indexed = bound_prompt(
-            args.mode, args.area, reading
+        prompt, stamp, block_sha, run_id, shown_sha, indexed, registration = (
+            bound_prompt(args.mode, args.area, reading)
         )
         print(
             f"labkit-audit: {args.mode} · {protocol.name} · {len(code)} code file(s) "
@@ -834,6 +844,7 @@ def main(argv: list[str]) -> int:
             block_sha,
             result["verdict"],
             result["findings"],
+            registration=registration,
             run_id=run_id,
             shown_sha=shown_sha,
         )

@@ -14,6 +14,7 @@ import unittest
 from pathlib import Path
 
 from labkit.formats import findings
+from protocol_fixture import registration_of  # noqa: E402
 
 NOW = time.mktime((2026, 10, 20, 14, 3, 0, 0, 0, -1))
 
@@ -57,6 +58,7 @@ class WrittenOrder(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 now=NOW,
+                registration=registration_of(self.area),
             )
         self.assertEqual(
             [r.scope_sha for r in findings.area_records(self.area)],
@@ -91,11 +93,20 @@ class Counts(unittest.TestCase):
                         verdict,
                         [],
                         now=NOW,
+                        registration=registration_of(self.area),
                     )
 
     def test_a_negative_count_is_refused_on_read(self) -> None:
         path = findings.write(
-            self.area, "preflight", "opus", "s" * 12, "b" * 12, (0, 0, 0), [], now=NOW
+            self.area,
+            "preflight",
+            "opus",
+            "s" * 12,
+            "b" * 12,
+            (0, 0, 0),
+            [],
+            now=NOW,
+            registration=registration_of(self.area),
         )
         path.write_text(path.read_text().replace("blockers = 0", "blockers = -1"))
         with self.assertRaisesRegex(findings.FindingsError, "non-negative"):
@@ -103,7 +114,15 @@ class Counts(unittest.TestCase):
 
     def test_twin_zero_counts_write_and_read(self) -> None:
         findings.write(
-            self.area, "preflight", "opus", "s" * 12, "b" * 12, (0, 0, 2), [], now=NOW
+            self.area,
+            "preflight",
+            "opus",
+            "s" * 12,
+            "b" * 12,
+            (0, 0, 2),
+            [],
+            now=NOW,
+            registration=registration_of(self.area),
         )
         self.assertEqual(len(findings.area_records(self.area)), 1)
 

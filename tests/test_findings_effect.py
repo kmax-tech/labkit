@@ -12,6 +12,7 @@ import unittest
 from pathlib import Path
 
 from labkit.formats import findings
+from protocol_fixture import registration_of  # noqa: E402
 
 
 def record(area: Path) -> Path:
@@ -25,6 +26,7 @@ def record(area: Path) -> Path:
         [("BLOCKER", "BLOCKER · x.py:1 · a"), ("WARNING", "WARNING · x.py:2 · b")],
         run_id="2026-10-21T10-00-00_aa11",
         shown_sha="cccccccccccc",
+        registration=registration_of(area),
     )
 
 

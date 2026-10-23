@@ -24,7 +24,7 @@ from labkit.tools import protocol_fill  # noqa: E402
 from labkit.checks import audit_binding  # noqa: E402
 from labkit.checks import prompt_check  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
-from protocol_fixture import run_record, PID, head  # noqa: E402
+from protocol_fixture import registration_of, run_record, PID, head  # noqa: E402
 
 SAMPLE = """# Experiment protocol: x
 
@@ -642,6 +642,7 @@ class Adopt(unittest.TestCase):
                 shown_sha=audit_binding.run_shown(
                     area, area / "runs" / self.RUN, ""
                 ).sha,
+                registration=registration_of(area),
             )
         return area
 

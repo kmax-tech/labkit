@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
 from labkit.run import runlog, start_check  # noqa: E402
-from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
+from protocol_fixture import registration_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 UNFROZEN = head(
     cost="hours",
@@ -68,6 +68,7 @@ class UnfrozenBlocker(unittest.TestCase):
                 0,
             ),
             rows,
+            registration=registration_of(self.tmp),
         )
 
     def _audit_failed(self) -> Path:

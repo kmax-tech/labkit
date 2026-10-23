@@ -100,7 +100,7 @@ echo "   STAND-IN here: the record a clean audit writes, so the walk needs no mo
 "$V/python" - <<'EOF'
 from pathlib import Path
 from labkit.checks import audit_binding
-from labkit.formats import findings, promises, scope_sha
+from labkit.formats import findings, promises, protocol_check, scope_sha
 
 area = Path("experiments/01-docs-per-case")
 run = sorted((area / "runs").iterdir())[-1]
@@ -108,6 +108,7 @@ text = (area / "PROTOCOL-docs-per-case.md").read_text(encoding="utf-8")
 path = findings.write(
     area, "analysis", "walkthrough-stand-in",
     scope_sha.area_stamp(area)[0], promises.block_stamp(text), (0, 0, 0), [],
+    registration=protocol_check.registration_stamp(text),
     run_id=run.name, shown_sha=audit_binding.run_shown(area, run, "").sha,
 )
 print(f"wrote {path} — code {scope_sha.area_stamp(area)[0]}, run {run.name}, no findings")
