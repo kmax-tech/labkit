@@ -149,6 +149,52 @@ Forschung und Benchmark-Fallliste liegen in
   diese Prüfpflichten nicht. Kandidat für bessere Namensgebung, noch
   kein beschlossener Formatbruch und kein vorgezogener Bauauftrag.
 
+  **Plan (entworfen 2026-10-23, wartet auf Entscheidung).** Einteilung
+  nach dem Anspruch der Zahl, zwei Prüffragen: (1) Bewertet die Zahl die
+  Vorhersagegüte eines Modells oder Vorhersageverfahrens? nein → `compute`;
+  (2) im Experiment trainiert, angepasst oder ausgewählt? ja → `fit`,
+  nein → `apply`. Fachanschluss: `fit` wörtlich aus der ML-Vorlesung
+  („Learning task: Fit D“, model selection ML:II-189); `compute` = die
+  Statistik-Seite (descriptive / inferential, ML:VII-1), nicht „estimate“
+  (dort Lernvokabular: „least square estimates from D“). Getrennte Fragen:
+  Anspruch (`kind`), Herkunft (`[model]`), Eignung des Instruments (neu).
+  1. `count` → `compute` innerhalb des unveröffentlichten Standards 0.22
+     (CHANGELOG „Unreleased“: kein zusätzlicher Bruch für Releases, nur
+     für dev-gepinnte Sandbox-Protokolle). Leser: `protocol_block.KINDS`,
+     `standard_contract.COUNT_KIND`, `scaffold.py`, `protocol_check.py`,
+     `start_check.py`, `protocol_report.py`, `probes/usability*.py`,
+     Templates, README-Zeile `kind`, Standard, Field Guide, ~15 Testdateien.
+     Migrationshinweis im CHANGELOG für auf Zwischencommits gepinnte Repos
+     (`kind = "count"` → `"compute"`). Nach Bedeutung umbenennen, nicht
+     global: das allgemeine Skelett (`standard_contract.COUNT`) heißt
+     `compute`; die Usability-Aufgabe `count`, `usability-task-count` und
+     `count-walkthrough.sh` zählen wirklich und bleiben.
+  2. Sperre `count` + `[model]` ersetzen (`scaffold.py:476`,
+     `protocol_check.kind_gap`, `usability.py:405` — dort zusätzlich ein
+     stilles Umschreiben auf `apply`, gegen Fail loud). Neu: `compute` mit
+     `[model]` muss sagen, worüber die Zahl spricht, und Aussageart und
+     Beleg getrennt speichern (Form vor dem Bau festlegen):
+     - Aussageart: `model_outputs` („das Modell markiert 30 % als kausal“,
+       kein Beleg nötig) oder `target_property` („30 % der Texte sind
+       kausal“, Eignungsbeleg des Annotators nötig).
+     - Beleg (nur bei `target_property`): Protokoll-ID eines
+       `apply`-Experiments oder eine Quelle — kein maschinell gelesener
+       Freitext.
+     Fachbegriff: annotation validity (NLP:III-167/173), Modellannotationen
+     = silver standard (NLP:III-125). Nicht `instrument check` (= Render-/
+     Vortest) und nicht `validation` (= Anchor gate, D_val). labkit prüft
+     Vorhandensein und Bindung des Belegs; ob er die Annotation fachlich
+     trägt, bleibt Agent-Audit. `bar_owed(f, kind)` mitprüfen: `compute`
+     schuldet keine Schwelle, nur den Eignungsbeleg.
+  3. Doku: Kurzdefinitionen + zwei Prüffragen in `labkit-init --help`;
+     Grenzfalltabelle (LLM-Prompt, BERT, Random Forest, Parser, Statistik,
+     Feature Importance = `compute`) in den Field Guide.
+  4. Probe: Schreibprobe (`docs/notes/2026-10-22-kind-writing-probe.md`)
+     mit kaltem Agenten auf den Grenzfällen wiederholen, v. a.
+     LLM-Annotation → `compute` + `annotation_validity`.
+  Release 0.104.0 hängt an der Abnahme, nicht allein an diesem Umbau;
+  Push und Tag beim Nutzer.
+
 - **Registrierung für klassisches ML — entschieden und gebaut 2026-10-22
   (`e4157cb`, Standard 0.22; Fit-Probe `d549696`).** Beschluss des Autors:
   Schema `kind ∈ {count, fit, apply}` mit den Pflichten der Schreibprobe;
