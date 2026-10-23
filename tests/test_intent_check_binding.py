@@ -227,6 +227,18 @@ class TestExplicitMetrics(unittest.TestCase):
         self.assertIn("WARNING", out)
         self.assertIn("unbound", out)
 
+    def test_the_warning_is_a_note_not_a_finding(self):
+        """`hold` keeps the choice's lines apart from the findings: finalize
+        made every printed line a blocker, the unbound warning among them
+        (audit follow-up 2026-10-23, F4)."""
+        d = _run(self.area, "r1", pid=None, metrics={"c1_pass": True})
+        held = intent_check.hold(self.a, d / "metrics.json")
+        self.assertEqual(len(held.notes), 1, held)
+        self.assertIn("unbound", held.notes[0])
+        self.assertTrue(held.findings, held)
+        self.assertTrue(all("registered" in f for f in held.findings), held)
+        self.assertEqual(held.summary, "")
+
     def test_pre_schema_run_is_rejected(self):
         """A run without `schema_version >= 2` is read with labkit 0.47;
         here its metadata is unreadable, so naming it explicitly is no loophole."""

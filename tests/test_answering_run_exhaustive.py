@@ -237,9 +237,9 @@ def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
 
     try:
         with contextlib.redirect_stdout(io.StringIO()):
-            out["intent-check"] = intent_check.choose_bound(
-                protocol, PID, True
-            ).parent.name
+            out["intent-check"] = intent_check.choose_bound(protocol, PID, True)[
+                0
+            ].parent.name
     except console.Refused:
         out["intent-check"] = BLOCKED
 

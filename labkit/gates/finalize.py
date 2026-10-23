@@ -59,8 +59,6 @@ read-only gate that reports findings.
 
 from __future__ import annotations
 
-import contextlib
-import io
 from pathlib import Path
 
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
@@ -85,7 +83,7 @@ from labkit.formats.repo import (
     no_such_area,
     the_protocol,
 )
-from labkit.checks.intent_check import main as intent_check_main
+from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests
 from labkit.formats.protocol_check import (
     open_holes,
@@ -284,26 +282,21 @@ def check_intent_keys_in_metrics(
     if not _registers(text):
         findings.note("  no intent ids registered — nothing to check")
         return
-    args = [str(protocol)] + (
-        ["--metrics", str(metrics_path(answering_run))]
-        if answering_run is not None
-        else []
-    )
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-        rc = intent_check_main(args)
-    lines = [line for line in buf.getvalue().splitlines() if line.strip()]
-    if rc == 0:
-        for line in lines:
-            findings.note(f"  {line}")
+    try:
+        held = intent_hold(
+            protocol, metrics_path(answering_run) if answering_run is not None else None
+        )
+    except console.Refused as exc:  # nothing to hold: a blocker, as its exit 2
+        findings.block(f"intent-check: {exc.why}")
         return
-    # Each line intent-check prints on 1 (and the refusal it writes on 2)
-    # is a finding: as blockers they reach a caller that collects the
-    # findings as data, where a note does not (audit 2026-10-23, B1).
-    for line in lines:
+    # Its findings as data, each a blocker (audit 2026-10-23, B1); its
+    # notes — which run, on what proof — stay notes (follow-up F4).
+    for line in held.notes:
+        findings.note(f"  {line}")
+    for line in held.findings:
         findings.block(f"intent-check: {line}")
-    if not lines:
-        findings.block(f"intent-check exits {rc} without a line")
+    if not held.findings:
+        findings.note(f"  {held.summary}")
 
 
 def check_declared_scopes(
@@ -326,7 +319,7 @@ def check_declared_scopes(
         owed = promises.promise_tables_owed(None, frozen=False, full_run=True)
         findings.block(
             f"{answering_run.name} recorded no promise block: {owed} — a run "
-            f"under labkit 0.70.0 or earlier is checked and reproduced with "
+            f"under labkit 0.70.0 or earlier is held and reproduced with "
             f"its pinned version; a block added after the run is a new registration"
         )
         return

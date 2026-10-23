@@ -46,6 +46,7 @@ run is named with --metrics.
 from __future__ import annotations
 
 import ast
+from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats.runs import metrics_path
@@ -70,17 +71,29 @@ def protocol_id_of(text: str) -> str | None:
     return protocol_block.head(text).id
 
 
+@dataclass(frozen=True)
+class Held:
+    """What intent-check found for one protocol. NOTES say which run was
+    chosen and on what proof — told, held against nobody; FINDINGS are the
+    guaranteed-tier mismatches, each one a blocker; SUMMARY is the one line
+    of a clean check (empty beside findings). `hold` builds it, `main`
+    prints it, `finalize` collects it as data (audit follow-up 2026-10-23,
+    F4: parsed from stdout, every note became a blocker)."""
+
+    notes: list[str]
+    findings: list[str]
+    summary: str
+
+
 def main(argv: list[str]) -> int:
     """intent-check: every registered promise id reports as a key of the
     answering run's metrics.json. Exit 0 all keys present, 1 findings (a key
     missing or extra), 2 no check (no bound run, unreadable artefact, no
-    stamped id). `finalize` treats 1 and 2 alike as a blocker."""
+    stamped id). `finalize` calls `hold` and holds 2 and 1 alike as a
+    blocker."""
     try:
         return _main(argv)
-    except ValueError as exc:  # read_metrics / RunConfigError
-        console.refuse("intent-check", str(exc))
-        return 2
-    except console.Refused as exc:  # main also runs as finalize's station
+    except console.Refused as exc:
         console.refuse(exc.tool, exc.why)
         return 2
 
@@ -95,7 +108,7 @@ def _prose_block_mismatch(
     only_prose, only_block = promises.prose_mismatch(text, block)
     return [
         f"{protocol}: [{i}] appears in the text but not in the "
-        f"promise block — a promise must be data to be checked."
+        f"promise block — a promise must be data to be held."
         for i in only_prose
     ] + [
         f"{protocol}: [{i}] is in the promise block but never "
@@ -107,10 +120,10 @@ def _prose_block_mismatch(
 
 def _metrics_file(
     protocol: Path, text: str, pid: str | None, metrics_arg: Path | None
-) -> Path:
-    """The metrics.json to hold the protocol to: the named one, else the
-    answering run's; raises `console.Refused` while the id is unstamped
-    and nothing is named."""
+) -> tuple[Path, list[str]]:
+    """The metrics.json to hold the protocol to, and the notes of its
+    choice: the named one, else the answering run's; raises
+    `console.Refused` while the id is unstamped and nothing is named."""
     if metrics_arg is not None:
         return choose_explicit(protocol, metrics_arg, pid)
     if pid is not None:
@@ -185,12 +198,28 @@ def _main(argv: list[str]) -> int:
         return console.usage("intent-check", "\n".join(lines), asked=bool(argv))
 
     protocol, metrics_arg = _named(argv)
+    held = hold(protocol, metrics_arg)
+    for line in held.notes + held.findings:
+        print(line)
+    if held.findings:
+        return 1
+    print(held.summary)
+    return 0
+
+
+def hold(protocol: Path, metrics_arg: Path | None) -> Held:
+    """Hold PROTOCOL's registered ids to a metrics.json: METRICS_ARG when
+    named, else the newest completed run bound to the stamped id. Reads
+    only. The prose and the promise block disagreeing is the first finding
+    and the last; an unregistered protocol is a clean check with its reason
+    as summary. Raises `console.Refused` when nothing can be held: no
+    protocol or head or block that reads, earlier-form ids, no stamped id
+    and no file named, no run that may answer, an unreadable metrics.json
+    or run record."""
     text, pid, block = _read(protocol)
     mismatch = _prose_block_mismatch(protocol, text, block)
-    for line in mismatch:
-        print(line)
     if mismatch:
-        return 1
+        return Held([], mismatch, "")
 
     earlier = promises.earlier_ids(text)
     if earlier:
@@ -200,31 +229,32 @@ def _main(argv: list[str]) -> int:
         )
     reg = ids_in_prose(text)
     if not reg:
-        print(
+        return Held(
+            [],
+            [],
             "intent-check: no intent ids registered ([C1]/[A1]/[B1] — "
-            "LAB-004 Identifiers make the intent addressable); nothing to hold the metrics against."
+            "LAB-004 Identifiers make the intent addressable); nothing to hold the metrics against.",
         )
-        return 0
 
-    mpath = _metrics_file(protocol, text, pid, metrics_arg)
-    metrics = read_metrics(mpath)  # MetricsError is a ValueError: main refuses it
-    findings = _key_mismatch(protocol, mpath, reg, metrics) + (
+    try:
+        mpath, notes = _metrics_file(protocol, text, pid, metrics_arg)
+        metrics = read_metrics(mpath)
+    except ValueError as exc:  # MetricsError, RunConfigError
+        raise console.Refused("intent-check", str(exc)) from exc
+    found = _key_mismatch(protocol, mpath, reg, metrics) + (
         check_block_against_run(block, mpath, metrics) if block is not None else []
     )
-    for f in findings:
-        print(f)
-    if findings:
-        return 1
-    print(
-        f"intent-check: {len(reg)} id(s) registered, all report in "
-        f"{mpath.name}."
+    if found:
+        return Held(notes, found, "")
+    summary = (
+        f"intent-check: {len(reg)} id(s) registered, all report in {mpath.name}."
         + (
             f" Promise block {block.sha} is the one the run recorded."
             if block is not None
             else ""
         )
     )
-    return 0
+    return Held(notes, [], summary)
 
 
 def check_block_against_run(
@@ -283,7 +313,7 @@ def promised_constant_mismatches(
                 f"{run_name}: [{r.promise_id}] declares {r.name} = {r.promised!r}, "
                 f"the run recorded no constant of that name — a run under "
                 f"labkit 0.71 or later cannot start without it; an older run is "
-                f"checked and reproduced with its pinned version (0.70.0 was the "
+                f"held and reproduced with its pinned version (0.70.0 was the "
                 f"last that let it pass)."
             )
     return out
@@ -295,15 +325,18 @@ def promised_constant_mismatches(
 # reason. `_main` only dispatches, then checks.
 
 
-def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path:
-    """`--metrics FILE`: the named file, if it may answer for this protocol.
-    Raises console.Refused when it may not."""
+def choose_explicit(
+    protocol: Path, metrics_arg: Path, pid: str | None
+) -> tuple[Path, list[str]]:
+    """`--metrics FILE`: the named file, if it may answer for this protocol,
+    and the warning told when nothing proves it belongs here. Raises
+    console.Refused when it may not."""
     if not metrics_arg.is_file():
         raise console.Refused("intent-check", f"no such metrics file: {metrics_arg}")
     # An explicit file still has to be a file that MAY answer for this
     # protocol. Naming one was always a seatbelt, never a proof of
     # belonging — where the run records a binding, that proof now
-    # exists and is checked (2026-09-26).
+    # exists and is held (2026-09-26).
     facts = run_facts(metrics_arg.parent)
     # A run that did not complete has numbers on disk and no finish —
     # "nothing may report it" (protocol-run-binding.md); naming the file
@@ -318,6 +351,7 @@ def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path:
             f"{metrics_arg.parent.name} is not completed ({state}) — {why}.",
         )
     bound_to = facts.binding.id
+    notes: list[str] = []
     if bound_to:
         if pid and bound_to != pid:
             raise console.Refused(
@@ -328,23 +362,25 @@ def choose_explicit(protocol: Path, metrics_arg: Path, pid: str | None) -> Path:
                 f"protocol's run answers nothing.",
             )
         if pid is None:
-            print(
+            notes.append(
                 f"intent-check: WARNING — {metrics_arg} is bound to "
                 f"{bound_to}, but {protocol.name} carries no "
                 f"stamped id to hold it against. Checking anyway, unverified."
             )
     else:
-        print(
+        notes.append(
             f"intent-check: WARNING — {metrics_arg} records no binding "
             f"(unbound run); nothing proves it belongs to {protocol.name}. "
             f"Checking anyway, unverified."
         )
-    return metrics_arg
+    return metrics_arg, notes
 
 
-def choose_bound(protocol: Path, pid: str, ids_registered: bool) -> Path:
-    """The newest completed run bound to `pid` — `answering_run.bound_answering_run`,
-    its outcome told the operator (`AnsweringRun.explain`). Raises
+def choose_bound(
+    protocol: Path, pid: str, ids_registered: bool
+) -> tuple[Path, list[str]]:
+    """The newest completed run bound to `pid` — `answering_run.bound_answering_run` —
+    and the lines of its choice to tell the operator (`AnsweringRun.explain`). Raises
     console.Refused when no choice stands, a probe or producer run among
     them when the protocol registers ids (until 0.96.0 a warning, and every
     promise then read as unimplemented)."""
@@ -364,9 +400,10 @@ def choose_bound(protocol: Path, pid: str, ids_registered: bool) -> Path:
     assert choice.run_dir is not None, (
         "explain() names a blocker whenever no run stands"
     )
-    for line in lines:
-        print(f"intent-check: using {choice.run_dir.name}/metrics.json ({line}).")
-    return metrics_path(choice.run_dir)
+    return metrics_path(choice.run_dir), [
+        f"intent-check: using {choice.run_dir.name}/metrics.json ({line})."
+        for line in lines
+    ]
 
 
 def cli() -> None:
@@ -444,7 +481,7 @@ def code_keys(area: Path) -> dict[str, list[str]]:
     # (CODE-016 The experiment area reconstructs itself) now wants every id
     # literal in the area script, because an id in shared code is counted
     # for every importing area; the scan stays transitive so a repo that
-    # has not moved yet is checked, not waved through.
+    # has not moved yet is held, not waved through.
     root = layout_root(area)
     own = area_files(area)
     for path in own + imported_repo_helpers(area, root):
