@@ -301,6 +301,32 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Architektur und Lesbarkeit — notiert, nicht geplant
 
+### Audit 2026-10-23
+
+Befunde mit Belegen: [Repo-Audit](docs/audit-2026-10-23.md) (Stand
+`b4cd032`). Offene Entscheidungen:
+
+1. Drift D1–D5 nachziehen (Standard 0.22 in `standard.md`/TODO,
+   AGENTS-Template `preflight_audit`-Record und `--kind`, Preflight-Agent
+   `Answer`, CHANGELOG `count`) — ein Commit.
+2. B1: finalize-Notizen in report-check als Teil des Blockers mitgeben.
+3. B2: atomare Schreibzugriffe nachziehen oder `architecture.md:221`
+   einschränken.
+4. C1: „offener Audit-Befund“ eine Heimat in `findings` mit Tabelle
+   Gate × Grad × frozen — Unterschiede bewusst machen oder angleichen.
+5. C2/C3/C6: Reihenfolge der Gates an einer Stelle; Exit-Vertrag und
+   `--if-reported` in jedes `--help`; `labkit-audit`-Exit 1 bei Warnung
+   angleichen oder dokumentieren.
+6. Gate-Urteile bleiben unprotokolliert (neu berechnet) — so festschreiben,
+   oder ein Urteils-Log je Lauf/Protokoll? Audit-Records um Protokoll-id
+   ergänzen?
+7. Doppelte Heimaten: `runs.run_dir`, JSONL-Leser, Area-Globs,
+   Alias-Lookup, Abschnitts-Schnitt, protocol-fill-Refusals.
+8. Kleinkram (README-Tippfehler, `--contract`-Hilfe, `runlog active`,
+   `audit_stamp_drift`, workflow-Station, launch.json) — ein Commit.
+9. Formattempo: vor 1.0 eine Breaking-Pause, bis die Lab-Repos
+   nachgezogen sind?
+
 ### Core und Doktrin auffindbar erklären
 
 Lesebefund vom 2026-10-22: Die Definition in
