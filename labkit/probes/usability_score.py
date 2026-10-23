@@ -17,7 +17,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from labkit.probes import agent_transcript, code_navigation, protocol_reading
-from labkit.formats import answering_run, console, promises, runs
+from labkit.formats import answering_run, console, findings, promises, runs
 from labkit.probes.usability import (
     LOG_LINE,
     LOG_TAGS,
@@ -118,6 +118,8 @@ class Score:
     agent: str | None = (
         None  # the model that drew, as the operator names it (`--agent`)
     )
+    audit_failed: int = 0  # failed audit attempts in the area, any cause
+    audit_unproven: int = 0  # of them `unproven`: the auditor did not write it whole
 
 
 def archive(root: Path, transcript: Path, dest: Path) -> list[Path]:
@@ -510,6 +512,7 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         )
     except (agent_transcript.TranscriptError, OSError) as exc:
         raise console.Refused("usability", f"transcript: {exc}") from exc
+    failed = findings.failed_attempts(pr.area)
     sc = Score(
         probe=probe,
         run_id=run.name if run else None,
@@ -526,6 +529,8 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         form=form,
         transcript=measured,
         agent=agent,
+        audit_failed=len(failed),
+        audit_unproven=sum(f.cause == "unproven" for f in failed),
     )
     sidecar(root, "score.json").write_text(
         json.dumps(asdict(sc), indent=1), encoding="utf-8"
@@ -551,6 +556,11 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         ("bound to", bound_to or "NOTHING"),
         ("frozen", {True: "yes", False: "no", None: "n/a"}[frozen]),
         ("cost tier", tier or "undeclared"),
+        (
+            "audit attempts failed",
+            f"{sc.audit_failed} ({sc.audit_unproven} unproven)"
+            + (" — the auditor did not write it whole" if sc.audit_unproven else ""),
+        ),
     ]
     if trace is None:
         rows.append(("log", "missing — no trace, no measurement"))

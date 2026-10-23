@@ -818,6 +818,16 @@ def audit_coverage(
             )
             or "none"
         )
+        stopped = unproven_attempts(area, mode, sha, block_sha)
+        if stopped:
+            models = ", ".join(sorted({f.model for f in stopped}))
+            return (
+                f"no {mode} audit saw the area as it is now ({_bound(*now)}): "
+                f"{len(stopped)} attempt(s) unproven — {models} did not write the "
+                f"answer whole (a safety stop or another model; "
+                f"{stopped[-1].path.name}); the same model is not tried again on "
+                f"this state: `labkit-audit <area> --mode {mode} --model <alias>`"
+            )
         return (
             f"no {mode} audit saw the area as it is now "
             f"({_bound(*now)}; audited: {seen}) — a change after "
@@ -954,24 +964,35 @@ def failed_attempts(area: Path) -> list[Failed]:
     ]
 
 
+def unproven_attempts(area: Path, mode: str, sha: str, block_sha: str) -> list[Failed]:
+    """The `unproven` failed attempts of MODE at the area as it is now —
+    code SHA and promises BLOCK_SHA — with any model, oldest first.
+
+    Raises:
+        FindingsError: A failed-attempt file of AREA cannot be read.
+    """
+    return [
+        f
+        for f in failed_attempts(area)
+        if f.cause == "unproven"
+        and f.mode == mode
+        and f.scope_sha == sha
+        and f.block_sha == block_sha
+    ]
+
+
 def stopped_attempt(
     area: Path, mode: str, model: str, sha: str, block_sha: str
 ) -> Failed | None:
-    """The newest `unproven` failed attempt of MODE with MODEL at the area as
-    it is now — code SHA and promises BLOCK_SHA; None when there is none.
-    `labkit-audit` refuses another try on that state with that model.
+    """The newest `unproven` attempt of MODE with MODEL at the area as it is
+    now (`unproven_attempts`); None when there is none. `labkit-audit`
+    refuses another try on that state with that model.
 
     Raises:
         FindingsError: A failed-attempt file of AREA cannot be read.
     """
     fitting = [
-        f
-        for f in failed_attempts(area)
-        if f.cause == "unproven"
-        and f.mode == mode
-        and f.model == model
-        and f.scope_sha == sha
-        and f.block_sha == block_sha
+        f for f in unproven_attempts(area, mode, sha, block_sha) if f.model == model
     ]
     return fitting[-1] if fitting else None
 

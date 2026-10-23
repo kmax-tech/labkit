@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import PACKAGE_DIR  # noqa: E402
-from labkit.formats import console  # noqa: E402
+from labkit.formats import findings, console  # noqa: E402
 from labkit.probes import usability, usability_score  # noqa: E402
 from protocol_fixture import run_record, head  # noqa: E402
 
@@ -188,6 +188,30 @@ class ScoreVerdict(unittest.TestCase):
         rc, sc = self._score({"mean_docs_per_case": 3.3333})
         self.assertEqual(rc, 1)
         self.assertFalse(sc["number_ok"])
+
+    def test_the_score_counts_failed_and_unproven_audit_attempts(self):
+        """A round's scores show the probes whose auditor did not write its
+        answer whole, without a search through audits/ (2026-10-23)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "probe"
+            root.mkdir()
+            usability.plant_fixture(root)
+            _probe(root, {"mean_docs_per_case": 3.5})
+            area = root / "experiments" / "01-docs-per-case"
+            for cause in ("unavailable", "unproven"):
+                findings.write_failed(
+                    area, "analysis", "opus", "s" * 12, "b" * 12, 900,
+                    "claude-cli: …", "labkit-audit x", cause=cause,
+                )  # fmt: skip
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                usability_score.score(root)
+            sc = json.loads(usability.sidecar(root, "score.json").read_text())
+        self.assertEqual((sc["audit_failed"], sc["audit_unproven"]), (2, 1))
+        self.assertIn("audit attempts failed", out.getvalue())
+        self.assertIn(
+            "2 (1 unproven) — the auditor did not write it whole", out.getvalue()
+        )
 
 
 class StampFlags(unittest.TestCase):

@@ -117,5 +117,32 @@ class Unavailable(unittest.TestCase):
             findings.audit_unavailable(self.area, SHA, "clarity", BLOCK)
 
 
+class CoverageNamesTheStop(unittest.TestCase):
+    """report-check and the freeze read `audit_coverage`: where the auditor
+    did not write its answer whole, the refusal says so instead of only
+    "no audit"."""
+
+    def setUp(self):
+        self.area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+        self.area.mkdir(parents=True)
+
+    def test_an_unproven_attempt_at_this_state_is_named(self):
+        attempt(self.area, cause="unproven", model="opus")
+        why = findings.audit_coverage(self.area, SHA, "preflight", BLOCK)
+        assert why is not None
+        self.assertIn(
+            "1 attempt(s) unproven — opus did not write the answer whole", why
+        )
+        self.assertIn("--model <alias>", why)
+
+    def test_an_unavailable_or_other_state_keeps_the_plain_refusal(self):
+        attempt(self.area, cause="unavailable")
+        attempt(self.area, cause="unproven", scope_sha="other" * 3)
+        why = findings.audit_coverage(self.area, SHA, "preflight", BLOCK)
+        assert why is not None
+        self.assertNotIn("unproven", why)
+        self.assertIn("no preflight audit saw the area as it is now", why)
+
+
 if __name__ == "__main__":
     unittest.main()

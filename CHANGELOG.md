@@ -20,7 +20,11 @@ pins (`requirements.txt` / `requirements.lock`).
   minutes and about a dollar. Another alias (`--model`) may try. A failed
   record without `cause` is not read; labkit 0.103.0 is the last that
   reads one. Migration: add `cause = "unavailable"` to each
-  `audits/*-failed.toml` written before.
+  `audits/*-failed.toml` written before. Where no audit covers the state
+  and an unproven attempt exists, the refusal of `report-check` and the
+  freeze says so — the model, the count, the record — instead of only "no
+  audit" (`findings.audit_coverage`); `usability score` shows `audit
+  attempts failed · N (K unproven)`.
 - **Protocol standard 0.22: the head says what the kept number asserts
   (`kind`).** `kind = "count" | "fit" | "apply"` below `cost`: a count
   judges no prediction (a measurement that cannot pass trivially), a fit
