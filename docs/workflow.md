@@ -28,7 +28,7 @@ this page; `tests/test_workflow_example.py` keeps it true.
 
 ```
 labkit-init lab <dir>                       # once per lab repo
-labkit-init exp <name> --cost seconds       # one area per question; --model ALIAS with a model in the loop
+labkit-init exp <name> --cost seconds --kind compute   # one area per question; --kind fit|apply when the number judges predictions; --model ALIAS with a model in the loop
 ```
 
 Reads: the templates shipped with labkit. Writes: `experiments/NN-<name>/`
@@ -61,10 +61,12 @@ git add -A && git commit
 ```
 
 Reads and changes: the protocol's prose fields, by exact label
-(`protocol-fill --list` names what is still open). Which fields: the cut
-of the tier — at `seconds` the question, scope, exclusions and unit; with a
-model also criterion, admissibility condition and data profile
-(`standard_contract.registration_fields`). `protocol-check` says "all must
+(`protocol-fill --list` names what is still open). Which fields follow the
+kind, not the tier (`standard_contract.registration_fields(kind, model)`):
+every kind the question; a fit or an apply also the success criterion, the
+admissibility condition and the null condition / anchors; a `[model]` table
+adds the data profile, and a computation with one says in the head what its
+number describes (`number_describes`). `protocol-check` says "all must
 and should fields filled" once these stand; the Conclusion is not among
 them — it is owed after the run (step 7), and `--list` keeps it under
 "after the run — yours". The commit matters: the release

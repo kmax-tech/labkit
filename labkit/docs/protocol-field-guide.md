@@ -73,10 +73,11 @@ path to this file.
 - **One template, three cuts.** `labkit-init exp --cost seconds` stamps the
   `seconds` cut: head, terms, question, data, unit, exclusions, and after
   the run the Recorded results line (`protocol-fill --from-run` writes it) and the
-  Conclusion, your two sentences — with `--model` also criterion,
-  admissibility condition, model, prompt, null condition and raw output. A
-  computation without a model registers no promise and no criterion (its number
-  is held by `--check` and `finalize`). Every stamped placeholder is one line;
+  Conclusion, your two sentences — with `--kind fit` or `apply` also
+  criterion, admissibility condition, model / tool and null condition; with
+  `--model` also data profile, prompt and raw output. A computation registers
+  no criterion, and unfrozen with no promise id in its prose no promise
+  either (its number is held by `--check` and `finalize`). Every stamped placeholder is one line;
   this guide is the long form. The full form adds the rest; `labkit-init exp
   <name> --report` appends the † fields. A field the cut left out is not owed.
 - **Labels English, values in the protocol's language.** The labels are
