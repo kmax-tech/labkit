@@ -13,6 +13,7 @@ import contextlib
 import io
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -128,11 +129,22 @@ class NoHalfMadeRun(unittest.TestCase):
         and a free one is kept as drawn — the first draw, no needless redraw."""
         draws = iter(["aaaa0000", "aaaa0000", "bbbb0000"])  # the 2nd collides
         fake = lambda: SimpleNamespace(hex=next(draws))  # noqa: E731
+        # The id's time part is held too: two starts that straddle a second
+        # boundary collide on nothing, and the second draw is rightly kept
+        # (the hook refused a commit on that once, 2026-10-23).
+        real_strftime = time.strftime
+
+        def one_second(fmt: str, *args: object) -> str:
+            if fmt == runlog.RUN_ID_TIME:
+                return "2026-10-23T16-30-03"
+            return real_strftime(fmt, *args)  # type: ignore[arg-type]
+
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "runs").mkdir()
             with (
                 mock.patch.object(runlog.uuid, "uuid4", fake),
+                mock.patch.object(runlog.time, "strftime", one_second),
                 contextlib.redirect_stdout(io.StringIO()),
             ):
                 with runlog.run("t", {}, area) as first:
