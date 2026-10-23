@@ -9,7 +9,8 @@ gate's `--help` ends with). The one exception is `labkit-audit`, by intent:
 it exits 1 on a warning too, because its findings are for a person to
 decide, not for a hook to pass (its docstring has the evidence). The order
 of the gates and what each holds: docs/architecture.md, "The gates in
-order".
+order". A gate's verdict is recomputed at every call and logged nowhere,
+by design — "Where verdicts are recorded" there says why.
 
 A finding is data first (`GateFinding`: its grade and its text — not
 `findings.Finding`, an audit's finding the person decides) and a line on

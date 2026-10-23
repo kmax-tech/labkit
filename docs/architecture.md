@@ -335,6 +335,32 @@ WARNING). What an undecided audit finding is to each gate:
 `notes-check` holds the measurement notes (`claude-hook post-change`) and
 stands beside the chain, not in it.
 
+## Where verdicts are recorded
+
+Audits, reviews, runs and sessions leave records; the mechanical gates
+leave stdout and an exit code — by design, written down here (audit
+2026-10-23). A gate's verdict follows from the records and the files as
+they are now, and is recomputed at every call: a logged verdict would be a
+second truth that drifts from the state it judged (the code moved on, the
+record was decided later), and nothing could tell the two apart. "What did
+every gate say about run X" is answered by running the gates on X's area
+now, which costs seconds; what a person decided, and what a run or an
+audit saw, cannot be recomputed and is what the records hold.
+
+| Record | Writer | Carries |
+|---|---|---|
+| `audits/<minute>-<mode>.toml`, decisions in place | `findings.write`, `findings.write_decision` | the code stamp, the promise block, the registration, the run and what was shown of it, every finding and its decision |
+| `audits/<minute>-<mode>-failed.toml` | `findings.write_failed` | the attempt an acknowledged run rests on |
+| `audits/<minute>-review(-N).toml` | `reviews.write_review` | a second auditor's reading of a decision |
+| `runs/<id>/*.json`, `runs.tsv` | `runlog`, `runs.write_failure` | the run: config, outputs, metrics, completion or failure |
+| `.git/labkit-sessions.jsonl` | `claude_hooks.record_session` | which runs a session started (no verdict) |
+
+An audit record names the run it read, not the protocol: the match
+against the registration is computed from the protocol as it reads now
+(`registration`), and in an area with several protocols the gate
+chooses the protocol first (`repo.the_protocol`). Carrying a protocol
+id in the record is noted in `TODO.md`, not planned.
+
 ## Run and hook enforcement
 
 `standard_contract.lane` supplies the obligations for a protocol's cost

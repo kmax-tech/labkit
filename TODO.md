@@ -305,28 +305,26 @@ Forschung und Benchmark-Fallliste liegen in
 ### Audit 2026-10-23
 
 Befunde mit Belegen: [Repo-Audit](docs/audit-2026-10-23.md) (Stand
-`b4cd032`). Offene Entscheidungen:
+`b4cd032`). Abgearbeitet am 2026-10-23 (Commits `b8c0ed2`…, CHANGELOG
+Unreleased): Drift D1–D6, B1 (finalize-Gründe im Blocker), B2 (atomare
+Schreibzugriffe überall), C1 (`findings.open_findings` mit der Tabelle der
+Gate-Regeln — die Unterschiede sind Absicht), C2/C3/C6 (Gate-Reihenfolge
+in `docs/architecture.md`, Exit-Vertrag in jedem `--help`, `labkit-audit`
+behält Exit 1 bei Warnung und sagt es), die sechs doppelten Heimaten,
+der Kleinkram. Entschieden:
 
-1. Drift D1–D5 nachziehen (Standard 0.22 in `standard.md`/TODO,
-   AGENTS-Template `preflight_audit`-Record und `--kind`, Preflight-Agent
-   `Answer`, CHANGELOG `count`) — ein Commit.
-2. B1: finalize-Notizen in report-check als Teil des Blockers mitgeben.
-3. B2: atomare Schreibzugriffe nachziehen oder `architecture.md:221`
-   einschränken.
-4. C1: „offener Audit-Befund“ eine Heimat in `findings` mit Tabelle
-   Gate × Grad × frozen — Unterschiede bewusst machen oder angleichen.
-5. C2/C3/C6: Reihenfolge der Gates an einer Stelle; Exit-Vertrag und
-   `--if-reported` in jedes `--help`; `labkit-audit`-Exit 1 bei Warnung
-   angleichen oder dokumentieren.
-6. Gate-Urteile bleiben unprotokolliert (neu berechnet) — so festschreiben,
-   oder ein Urteils-Log je Lauf/Protokoll? Audit-Records um Protokoll-id
-   ergänzen?
-7. Doppelte Heimaten: `runs.run_dir`, JSONL-Leser, Area-Globs,
-   Alias-Lookup, Abschnitts-Schnitt, protocol-fill-Refusals.
-8. Kleinkram (README-Tippfehler, `--contract`-Hilfe, `runlog active`,
-   `audit_stamp_drift`, workflow-Station, launch.json) — ein Commit.
-9. Formattempo: vor 1.0 eine Breaking-Pause, bis die Lab-Repos
-   nachgezogen sind?
+- Gate-Urteile werden neu berechnet, nie protokolliert — festgeschrieben
+  in `docs/architecture.md`, „Where verdicts are recorded“. Ein
+  Urteils-Log wäre eine zweite Wahrheit, die vom beurteilten Stand
+  wegdriftet.
+- Keine Breaking-Pause vor 1.0: das Repo ist in der Entwicklung, die
+  Lab-Repos ziehen über die Migrationssätze im CHANGELOG nach.
+
+Notiert, nicht geplant: Audit-Records um die Protokoll-id ergänzen. Heute
+wird der Abgleich gegen die Registrierung aus dem Protokolltext berechnet;
+in einem Bereich mit mehreren Protokollen wählt das Gate das Protokoll
+vorher (`repo.the_protocol`). Bauauftrag erst, wenn ein Fall zeigt, dass
+ein Record dem falschen Protokoll zugeordnet wurde.
 
 ### Core und Doktrin auffindbar erklären
 
