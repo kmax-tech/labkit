@@ -261,6 +261,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **code-check's and intent-check's command lines are below the complexity
+  bar.** Both carried `noqa: C901` since the 2026-10-08 baseline and were
+  touched by this release: code-check reads its arguments in `_arguments`
+  (a `console.Refused` for a bad line) and tells what it did not check in
+  `_not_checked`; intent-check reads the line in `_named`, the protocol in
+  `_read`, and answers its three questions apart (`_prose_block_mismatch`,
+  `_metrics_file`, `_key_mismatch`). Same output, same exit codes; sixteen
+  baseline markers remain, to go when their flows are worked on.
+
 - **Core and doctrine have a section of their own.** The definition stood
   as a bold phrase inside "Layers" in `docs/architecture.md` and was read
   past on the way to the module table (reading 2026-10-22). It is

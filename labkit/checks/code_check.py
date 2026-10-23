@@ -601,25 +601,13 @@ def _cost_of(protocol: Path) -> str | None:
         return None
 
 
-def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
-    """Command line of `code-check`: check an area's code against its protocol, optionally write the bundle."""
-    if not argv or argv[0] in ("-h", "--help"):
-        lines = [
-            (__doc__ or "").strip().splitlines()[0],
-            "usage: code-check <AREA> [--protocol FILE] [--bundle FILE]",
-            "  --protocol FILE  the PROTOCOL-*.md to check against "
-            "(required once the area holds more than one)",
-            "  --bundle FILE    pack sources + schema facts + gate labels "
-            "for the audit agent",
-            EXIT_CONTRACT,
-        ]
-        return console.usage("code-check", "\n".join(lines), asked=bool(argv))
-
+def _arguments(argv: list[str]) -> tuple[Path, Path | None, Path | None]:
+    """(area, --protocol, --bundle) of ARGV; raises `console.Refused` for an
+    ambiguous or missing area and for anything else on the line."""
     try:
         area = area_path(argv[0])
     except AmbiguousArea as exc:
-        console.refuse("code-check", str(exc))
-        return 2
+        raise console.Refused("code-check", str(exc)) from exc
     bundle_to = None
     protocol_arg = None
     rest = argv[1:]
@@ -631,32 +619,16 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
                 protocol_arg = Path(rest[1])
             rest = rest[2:]
             continue
-        console.refuse("code-check", f"unexpected argument {rest[0]!r}")
-        return 2
-
+        raise console.Refused("code-check", f"unexpected argument {rest[0]!r}")
     if not area.is_dir():
-        console.refuse("code-check", no_such_area(area))
-        return 2
+        raise console.Refused("code-check", no_such_area(area))
+    return area, protocol_arg, bundle_to
 
-    protocol = choose_protocol(area, protocol_arg, "code-check")
-    if protocol is None:
-        return 2
 
-    repo = layout_root(area)
-    findings = Findings()
-    for finding in code_findings(area, protocol, repo):
-        findings.take(finding)
-
-    if bundle_to is not None:
-        n = write_bundle(area, layout_root(area), protocol, bundle_to)
-        print(
-            f"bundle: {n} file(s) -> {bundle_to} "
-            f"({bundle_to.stat().st_size // 1024} KB)"
-        )
-
-    # what this command did not check, told as a note before the gate's
-    # summary; the summary and the exit code are `Findings.report`'s, like
-    # every gate's (audit 2026-10-23, C4)
+def _not_checked(findings: Findings, protocol: Path, bundle_to: Path | None) -> None:
+    """What this command did not check, told as a note before the gate's
+    summary (the summary and the exit code are `Findings.report`'s, like
+    every gate's — audit 2026-10-23, C4)."""
     if bundle_to is not None:
         findings.note(
             "schema + gate labels + placeholders extracted into "
@@ -676,6 +648,41 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             "schema, gate labels, placeholders: not checked "
             "(need --bundle for the code-check agent)"
         )
+
+
+def main(argv: list[str]) -> int:
+    """Command line of `code-check`: check an area's code against its protocol, optionally write the bundle."""
+    if not argv or argv[0] in ("-h", "--help"):
+        lines = [
+            (__doc__ or "").strip().splitlines()[0],
+            "usage: code-check <AREA> [--protocol FILE] [--bundle FILE]",
+            "  --protocol FILE  the PROTOCOL-*.md to check against "
+            "(required once the area holds more than one)",
+            "  --bundle FILE    pack sources + schema facts + gate labels "
+            "for the audit agent",
+            EXIT_CONTRACT,
+        ]
+        return console.usage("code-check", "\n".join(lines), asked=bool(argv))
+    try:
+        area, protocol_arg, bundle_to = _arguments(argv)
+    except console.Refused as exc:
+        console.refuse(exc.tool, exc.why)
+        return 2
+    protocol = choose_protocol(area, protocol_arg, "code-check")
+    if protocol is None:
+        return 2
+
+    repo = layout_root(area)
+    findings = Findings()
+    for finding in code_findings(area, protocol, repo):
+        findings.take(finding)
+    if bundle_to is not None:
+        n = write_bundle(area, repo, protocol, bundle_to)
+        print(
+            f"bundle: {n} file(s) -> {bundle_to} "
+            f"({bundle_to.stat().st_size // 1024} KB)"
+        )
+    _not_checked(findings, protocol, bundle_to)
     return findings.report("code-check", "the run")
 
 

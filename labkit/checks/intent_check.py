@@ -85,7 +85,93 @@ def main(argv: list[str]) -> int:
         return 2
 
 
-def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
+def _prose_block_mismatch(
+    protocol: Path, text: str, block: promises.PromiseTables | None
+) -> list[str]:
+    """The ids the prose and the promise block do not share, one sentence
+    each (`promises.prose_mismatch`); [] when they agree or there is no block."""
+    if block is None:
+        return []
+    only_prose, only_block = promises.prose_mismatch(text, block)
+    return [
+        f"{protocol}: [{i}] appears in the text but not in the "
+        f"promise block — a promise must be data to be checked."
+        for i in only_prose
+    ] + [
+        f"{protocol}: [{i}] is in the promise block but never "
+        f"named in the text — say what it promises where the "
+        f"reader looks."
+        for i in only_block
+    ]
+
+
+def _metrics_file(
+    protocol: Path, text: str, pid: str | None, metrics_arg: Path | None
+) -> Path:
+    """The metrics.json to hold the protocol to: the named one, else the
+    answering run's; raises `console.Refused` while the id is unstamped
+    and nothing is named."""
+    if metrics_arg is not None:
+        return choose_explicit(protocol, metrics_arg, pid)
+    if pid is not None:
+        return choose_bound(protocol, pid, promises.registers_ids(text))
+    raise console.Refused(
+        "intent-check",
+        f"{protocol.name} has no stamped id ([protocol] "
+        f"id) — no run is bound to it; name the run with --metrics FILE.",
+    )
+
+
+def _key_mismatch(
+    protocol: Path, mpath: Path, reg: set[str], metrics: dict
+) -> list[str]:
+    """Registered ids without a key, keys without a registered id."""
+    led = reported_intent_ids(metrics)
+    return [
+        f"{protocol}: [{i.upper()}] registered, but {mpath.name} has no "
+        f"'{i}'/'{i}_*' key — the promise has no implementation "
+        f"evidence in the metrics."
+        for i in sorted(reg - led)
+    ] + [
+        f"{mpath}: key '{i}'/'{i}_*' is in the intent-id namespace, but "
+        f"the protocol registers no [{i.upper()}] — built without a "
+        f"registration."
+        for i in sorted(led - reg)
+    ]
+
+
+def _named(argv: list[str]) -> tuple[Path, Path | None]:
+    """(protocol, --metrics FILE or None) of ARGV; raises `console.Refused`
+    for anything else on the line and for a protocol that is not a file."""
+    protocol = Path(argv[0])
+    metrics_arg = None
+    if len(argv) >= 3 and argv[1] == "--metrics":
+        metrics_arg = Path(argv[2])
+    elif len(argv) > 1:
+        raise console.Refused("intent-check", f"unexpected argument {argv[1]!r}")
+    if not protocol.is_file():
+        raise console.Refused("intent-check", f"no such protocol: {protocol}")
+    return protocol, metrics_arg
+
+
+def _read(protocol: Path) -> tuple[str, str | None, promises.PromiseTables | None]:
+    """(text, stamped id or None, promise block or None) of PROTOCOL; a head
+    or a block that does not read is a `console.Refused`."""
+    text = protocol.read_text(encoding="utf-8")
+    try:
+        pid = protocol_id_of(text)
+    except protocol_block.BlockError as exc:
+        raise console.Refused("intent-check", f"{protocol}: {exc}") from exc
+    try:
+        block = promises.parse_block(text)
+    except promises.PromiseError as exc:
+        raise console.Refused(
+            "intent-check", f"{protocol}: promise block: {exc}"
+        ) from exc
+    return text, pid, block
+
+
+def _main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         lines = [
             (__doc__ or "").strip().splitlines()[0],
@@ -98,42 +184,13 @@ def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         ]
         return console.usage("intent-check", "\n".join(lines), asked=bool(argv))
 
-    protocol = Path(argv[0])
-    metrics_arg = None
-    if len(argv) >= 3 and argv[1] == "--metrics":
-        metrics_arg = Path(argv[2])
-    elif len(argv) > 1:
-        console.refuse("intent-check", f"unexpected argument {argv[1]!r}")
-        return 2
-
-    if not protocol.is_file():
-        raise console.Refused("intent-check", f"no such protocol: {protocol}")
-    text = protocol.read_text(encoding="utf-8")
-    try:
-        pid = protocol_id_of(text)
-    except protocol_block.BlockError as exc:
-        raise console.Refused("intent-check", f"{protocol}: {exc}") from exc
-    try:
-        block = promises.parse_block(text)
-    except promises.PromiseError as exc:
-        raise console.Refused(
-            "intent-check", f"{protocol}: promise block: {exc}"
-        ) from exc
-    if block is not None:
-        only_prose, only_block = promises.prose_mismatch(text, block)
-        for i in only_prose:
-            print(
-                f"{protocol}: [{i}] appears in the text but not in the "
-                f"promise block — a promise must be data to be checked."
-            )
-        for i in only_block:
-            print(
-                f"{protocol}: [{i}] is in the promise block but never "
-                f"named in the text — say what it promises where the "
-                f"reader looks."
-            )
-        if only_prose or only_block:
-            return 1
+    protocol, metrics_arg = _named(argv)
+    text, pid, block = _read(protocol)
+    mismatch = _prose_block_mismatch(protocol, text, block)
+    for line in mismatch:
+        print(line)
+    if mismatch:
+        return 1
 
     earlier = promises.earlier_ids(text)
     if earlier:
@@ -149,39 +206,14 @@ def _main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         )
         return 0
 
-    if metrics_arg is not None:
-        mpath = choose_explicit(protocol, metrics_arg, pid)
-    elif pid is not None:
-        mpath = choose_bound(protocol, pid, promises.registers_ids(text))
-    else:
-        raise console.Refused(
-            "intent-check",
-            f"{protocol.name} has no stamped id ([protocol] "
-            f"id) — no run is bound to it; name the run with --metrics FILE.",
-        )
+    mpath = _metrics_file(protocol, text, pid, metrics_arg)
     metrics = read_metrics(mpath)  # MetricsError is a ValueError: main refuses it
-    led = reported_intent_ids(metrics)
-
-    missing = sorted(reg - led)
-    unregistered = sorted(led - reg)
-    for i in missing:
-        print(
-            f"{protocol}: [{i.upper()}] registered, but {mpath.name} has no "
-            f"'{i}'/'{i}_*' key — the promise has no implementation "
-            f"evidence in the metrics."
-        )
-    for i in unregistered:
-        print(
-            f"{mpath}: key '{i}'/'{i}_*' is in the intent-id namespace, but "
-            f"the protocol registers no [{i.upper()}] — built without a "
-            f"registration."
-        )
-    block_findings = (
+    findings = _key_mismatch(protocol, mpath, reg, metrics) + (
         check_block_against_run(block, mpath, metrics) if block is not None else []
     )
-    for f in block_findings:
+    for f in findings:
         print(f)
-    if missing or unregistered or block_findings:
+    if findings:
         return 1
     print(
         f"intent-check: {len(reg)} id(s) registered, all report in "
