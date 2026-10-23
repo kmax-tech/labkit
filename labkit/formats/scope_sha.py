@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
@@ -46,6 +46,7 @@ from pathlib import Path
 from labkit.formats.repo import (
     area_protocols,
     areas_of,
+    lab_root,
     layout_root,
     model_entry,
     no_such_area,
@@ -241,7 +242,10 @@ def areas_touched(
     """The areas PATHS touch: the area each path lies in (`repo.areas_of`),
     every area whose promises declare a path in their scope
     (`declared_scope_files`) — a rubric or a label file read at run time
-    determines the number though no code imports it — and for a path under
+    determines the number though no code imports it — every area whose
+    stamp covers the path as bound validation evidence
+    (`validation_sources`: a changed validation stales the audit of the
+    computation resting on it), and for a path under
     a LOCAL_ROOT every area whose code imports it (`import_reach`): a
     shared helper changed or deleted reopens the numbers that rest on it as
     a script in the area does. PROTOCOLS as in `repo.find_area` (the
@@ -265,6 +269,9 @@ def areas_touched(
             out.append(area)
             continue
         if changed.intersection(declared):
+            out.append(area)
+            continue
+        if changed.intersection(f.resolve() for f in validation_sources(area)):
             out.append(area)
             continue
         if not shared:
@@ -464,6 +471,46 @@ def validation_basis(
     root = layout_root(area)
     entries: list[tuple[str, bytes]] = []
     told: list[str] = []
+    for p, ref, bound in _validation_refs(area):
+        name = f"{VALIDATION_KEY} of {_key(p, root)}"
+        entries.append((name, f"{ref.key} = {ref.value}".encode("utf-8")))
+        if ref.key != "protocol":
+            told.append(f"{_key(p, root)} names doi {ref.value} (its string only)")
+            continue
+        if bound is None:
+            told.append(f"{_key(p, root)} names {ref.value}, bound to no one protocol")
+            continue
+        entries += _bound_entries(name, bound, root)
+        told.append(
+            f"{_key(p, root)} names {_key(bound, root)} (the protocol, its "
+            f"declared result, its scripts and its models.toml entry)"
+        )
+    return entries, tuple(told)
+
+
+def validation_sources(area: Path) -> list[Path]:
+    """The files outside AREA's own code that its stamp covers through
+    `[model] annotation_validity` (`validation_basis`): per bound protocol,
+    the protocol, its declared run's `metrics.json`, its area's
+    `scripts/*.py` and the lab's `models.toml`. A path may not exist (a
+    result not written yet). A DOI ties the area to no file. What
+    `areas_touched` follows, so a change to the evidence reopens the area
+    that rests on it."""
+    out: list[Path] = []
+    for _, _, bound in _validation_refs(area):
+        if bound is not None:
+            out += _bound_files(bound)
+    return out
+
+
+def _validation_refs(
+    area: Path,
+) -> Iterator[tuple[Path, protocol_block.Validity, Path | None]]:
+    """(protocol, reference, bound protocol or None) per protocol of AREA
+    that declares `[model] annotation_validity`; the bound protocol only for
+    a protocol id naming exactly one protocol of the repo
+    (`protocol_block.repo_protocol_ids`). A protocol that does not read is
+    skipped — the head check names it."""
     ids: dict[str, list[Path]] | None = None
     for p in area_protocols(area):
         try:
@@ -473,24 +520,30 @@ def validation_basis(
         if m is None or m.annotation_validity is None:
             continue
         ref = m.annotation_validity
-        name = f"{VALIDATION_KEY} of {_key(p, root)}"
-        entries.append((name, f"{ref.key} = {ref.value}".encode("utf-8")))
         if ref.key != "protocol":
-            told.append(f"{_key(p, root)} names doi {ref.value} (its string only)")
+            yield p, ref, None
             continue
         if ids is None:
             ids = protocol_block.repo_protocol_ids(area)
         hits = ids.get(ref.value, [])
-        if len(hits) != 1:
-            told.append(f"{_key(p, root)} names {ref.value}, bound to no one protocol")
-            continue
-        bound = hits[0]
-        entries += _bound_entries(name, bound, root)
-        told.append(
-            f"{_key(p, root)} names {_key(bound, root)} (the protocol, its "
-            f"declared result, its scripts and its models.toml entry)"
-        )
-    return entries, tuple(told)
+        yield p, ref, hits[0] if len(hits) == 1 else None
+
+
+def _bound_files(bound: Path) -> list[Path]:
+    """The bound protocol, its declared run's `metrics.json` (a path even
+    while missing), its area's scripts and the lab's `models.toml` (a path
+    even while missing) — the files `_bound_entries` reads."""
+    out = [bound]
+    try:
+        run = protocol_block.declared_run(bound.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, protocol_block.BlockError):
+        run = None
+    if run is not None:
+        out.append(bound.parent / "runs" / run / "metrics.json")
+    out += sorted((bound.parent / "scripts").glob("*.py"))
+    lab = lab_root(bound.parent)
+    out.append((lab or layout_root(bound.parent)) / "models.toml")
+    return out
 
 
 def validation_note(area: Path) -> str:
@@ -521,23 +574,22 @@ def _bound_entries(name: str, bound: Path, root: Path) -> list[tuple[str, bytes]
     out = [(f"{name}: {_key(bound, root)}", data)]
     text = data.decode("utf-8", errors="replace")
     try:
-        run = protocol_block.declared_run(text)
         bound_model = protocol_block.model(text)
     except protocol_block.BlockError:
         return out
-    area = bound.parent
-    if run is not None:
-        metrics = area / "runs" / run / "metrics.json"
+    # the result and the scripts as `_bound_files` lists them; the lab's
+    # models.toml only as the alias's entry, so another alias moves nothing
+    for f in _bound_files(bound)[1:-1]:
         out.append(
             (
-                f"{name}: {_key(metrics, root)}",
-                metrics.read_bytes() if metrics.is_file() else b"<missing>",
+                f"{name}: {_key(f, root)}",
+                f.read_bytes() if f.is_file() else b"<missing>",
             )
         )
-    for script in sorted((area / "scripts").glob("*.py")):
-        out.append((f"{name}: {_key(script, root)}", script.read_bytes()))
     alias = bound_model.alias if bound_model is not None else None
-    out.append((f"{name}: models.toml", model_entry(alias, area).encode("utf-8")))
+    out.append(
+        (f"{name}: models.toml", model_entry(alias, bound.parent).encode("utf-8"))
+    )
     return out
 
 

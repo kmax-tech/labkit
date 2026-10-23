@@ -455,3 +455,65 @@ class StaleEvidence(Evidence):
                     self.assertEqual(scope_sha.validation_basis(share), ([], ()))
                     self.assertEqual(snap.validation, ())
                     self.assertEqual(scope_sha.validation_note(share), "")
+
+
+class AffectedByEvidence(StaleEvidence):
+    """A change to the bound validation stales the computation's audit
+    (`StaleEvidence`), so the automatic choice of what to recheck — the
+    stop, the commit's gate, report-check (`scope_sha.areas_touched`) —
+    picks the computation's area too, not only the validation's (review
+    2026-10-23, finding 3)."""
+
+    def _changed(self, val: Path, root: Path) -> dict[str, Path]:
+        return {
+            "the bound protocol": val / "PROTOCOL-validation.md",
+            "its result": val / "runs" / RUN / "metrics.json",
+            "its prompt": val / "scripts" / "01_measure.py",
+            "its model entry": root / "models.toml",
+        }
+
+    def test_a_changed_validation_touches_the_area_that_rests_on_it(self):
+        from labkit.formats import scope_sha
+
+        with tempfile.TemporaryDirectory() as d:
+            share, _, val = self._area(d)
+            root = Path(d)
+            for what, path in self._changed(val, root).items():
+                with self.subTest(what=what):
+                    touched = scope_sha.areas_touched([path], root)
+                    self.assertIn(share.resolve(), [a.resolve() for a in touched])
+
+    def test_a_doi_ties_the_area_to_no_file(self):
+        from labkit.formats import scope_sha
+
+        ref = f'number_describes = "target_property"\nannotation_validity = {{ doi = "{DOI}" }}'
+        with tempfile.TemporaryDirectory() as d:
+            share, _, val = self._area(d, ref)
+            root = Path(d)
+            for what, path in self._changed(val, root).items():
+                with self.subTest(what=what):
+                    touched = scope_sha.areas_touched([path], root)
+                    self.assertNotIn(share.resolve(), [a.resolve() for a in touched])
+
+    def test_the_staged_gate_reopens_the_computation(self):
+        import subprocess
+
+        from labkit.gates import report_check
+
+        def git(root: Path, *args: str) -> None:
+            subprocess.run(["git", *args], cwd=root, capture_output=True, check=True)
+
+        with tempfile.TemporaryDirectory() as d:
+            share, _, val = self._area(d)
+            root = Path(d)
+            (root / ".git").rmdir()
+            git(root, "init", "-q")
+            git(root, "add", ".")
+            git(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "i")
+            metrics = val / "runs" / RUN / "metrics.json"
+            metrics.write_text('{"macro_f1": 0.41}\n', encoding="utf-8")
+            git(root, "add", ".")
+            picked = report_check.affected_protocols([metrics], root, staged=True)
+            self.assertIn(
+                (share / "PROTOCOL-share.md").resolve(), [p.resolve() for p in picked]
+            )

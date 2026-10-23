@@ -114,6 +114,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A changed validation reopens the computation that rests on it.** The
+  area stamp of a `compute` with `annotation_validity = { protocol = … }`
+  covers the bound validation, but the choice of what to recheck — the
+  stop, the commit's `report-check --if-reported --staged`, report-check
+  (`scope_sha.areas_touched`) — picked only the validation's own area, so
+  a changed validation metric never reached the stale audit of the
+  computation (review 2026-10-23). `areas_touched` now follows
+  `scope_sha.validation_sources`: the bound protocol, its declared
+  `metrics.json`, its scripts and the lab's `models.toml`. A DOI ties the
+  area to no file.
 - **A JSONL record holding U+2028, U+2029 or U+0085 reads as one record.**
   `json.dumps(..., ensure_ascii=False)` leaves these three raw inside a
   string, and `str.splitlines()` broke there: `batch.Store` and
