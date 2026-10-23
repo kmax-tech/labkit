@@ -335,12 +335,15 @@ def _visible_files(directory: Path) -> list[Path]:
 
 
 def source_digest(path: Path) -> str:
-    """The digest of a frozen source (`scope_sha.file_digest` for a file;
-    until 2026-10-23 `sha256_file`, the one name in the digest family that
-    said the algorithm, not the thing). Of a directory, over each visible file's
-    relative path and content — so adding, removing, renaming or editing a
-    file below it moves it (a directory source used to be unfreezable, and
-    `finalize` then refused every run of the stamped compute skeleton)."""
+    """Read PATH and return its source digest without changing any files.
+
+    A file uses `scope_sha.file_digest`. A directory uses a full tree digest
+    of each visible file's relative path and content; hidden path components
+    are excluded. Adding, removing, renaming or editing a visible file changes
+    the digest. Filesystem errors propagate to the caller.
+
+    History: docs/notes/2026-10-23-source-digest-history.md.
+    """
     if path.is_dir():
         return tree_digest(
             (

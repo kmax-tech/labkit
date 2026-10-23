@@ -1,12 +1,11 @@
 """console — the one exit of every labkit command line, and its one refusal.
 
-`exit_with(main)` calls `main(sys.argv[1:])` and exits with its code. A reader
-that closes the pipe early (`protocol-check --contract P | head`) raises
-BrokenPipeError inside print or at the interpreter's final flush; Python
-then prints a traceback and exits 120, which a cloud agent read as a crash
-of the command (Haiku 5.5, 2026-10-13). A closed pipe is the reader's
-choice, not an error of ours: stdout is pointed at /dev/null so the final
-flush cannot raise, and the exit code is 0.
+`exit_with(main)` calls `main(sys.argv[1:])` and exits with its code.
+When a reader closes the pipe early, stdout is redirected to /dev/null
+and the command exits 0; this also prevents a broken pipe on final flush.
+Usage errors and progress go to stderr; findings and results go to stdout.
+
+History: docs/notes/2026-10-23-console-history.md.
 """
 
 from __future__ import annotations
@@ -19,11 +18,14 @@ from importlib.metadata import distribution
 
 
 def refuse(tool: str, why: str) -> None:
-    """A command that could not run — a bad argument, no such area, no
-    protocol to choose, no such file — says so on STDERR; what a gate FOUND
-    goes to stdout. The two were mixed (44 refusals on stdout, 25 on stderr,
-    audit 2026-10-15), so a caller reading stdout for findings read a usage
-    error as one."""
+    """Print `TOOL: WHY` to stderr for a command that could not run.
+
+    Returns None; does not exit or choose an exit code. The caller supplies
+    the reason, such as an invalid argument, missing file or ambiguous
+    protocol. Findings go to stdout through the gate's collector.
+
+    History: docs/notes/2026-10-23-console-history.md.
+    """
     print(f"{tool}: {why}", file=sys.stderr)
 
 

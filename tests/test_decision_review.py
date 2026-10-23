@@ -1,12 +1,11 @@
 """`labkit-audit --review`: a second auditor on the `stands` decisions of one
 analysis record (`gates/decision_review`), the review file it writes
-(`formats/reviews`), and the warning report-check gives a `stands` no
-review upholds. The model call is faked; what is tested is what the
-reviewer gets to read, what is recorded from its answer, and what releases.
+(`formats/reviews`), and report-check's blocker or warning for a `stands`
+no review upholds, according to the finding's grade. The model call is
+faked; the tests cover what the reviewer gets to read, what is recorded
+from its answer, and what releases.
 
-Why (labkit-paper area 09, fifth haiku round, 2026-10-22): 15 of 28 audit
-findings accepted with no action, six of them with the reason "Finding
-noted"; nothing asked whether the reported claim stood within the limit.
+History: docs/notes/2026-10-23-decision-review-history.md.
 """
 
 from __future__ import annotations

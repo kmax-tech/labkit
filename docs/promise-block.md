@@ -12,7 +12,7 @@ intent across implementation, execution and reporting.** The chain:
 
     scientific intent → explicit promise → code realization → execution → reported result
 
-Every check belongs to exactly one tier and its message says which:
+The three evidence kinds describe what supports a check's statement:
 
 | Tier | Claims | Examples |
 |---|---|---|
@@ -22,6 +22,15 @@ Every check belongs to exactly one tier and its message says which:
 
 A static check is never presented as proof of semantics. Everything in
 `promises.py` is the guaranteed tier.
+
+A mechanical gate finding carries `evidence_kind` as required data
+(`gate.GateFinding`): `guaranteed` or `static evidence`. It classifies the
+statement in `text`, not its subject: checking that an audit record holds
+an undecided BLOCKER is a guaranteed register check; the agent's judgement
+remains in the audit record (`findings.Finding`). Static evidence cannot
+have grade BLOCKER. The dotted code-check output labels static evidence;
+prefixed lines stay `WARNING: …`, and the summary counts static evidence
+among the warnings. Individual messages do not always print the kind.
 
 ## Three kinds of promise
 

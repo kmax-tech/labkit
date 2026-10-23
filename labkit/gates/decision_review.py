@@ -29,10 +29,7 @@ fault; a new audit is due when its basis changes or the finding is
 disputed, and does not by itself settle the rejection. After
 `insufficient` the missing evidence is supplied and the review run again.
 The gate: report-check blocks on an accepted BLOCKER's `stands` no review
-upholds, warns on an accepted WARNING's (`report_check.review_findings`). The gate: report-check names
-every `stands` no review upholds — a warning while this check is an
-exploration (TODO 2026-10-22: replay the fifth round's decisions first),
-a blocker afterwards.
+upholds, and warns on an accepted WARNING's (`report_check.review_findings`).
 
 Exit codes: 0 every decision upheld, 1 at least one not upheld, 2 no
 review — no record, nothing to review in it, the code or the run not what
@@ -43,11 +40,7 @@ once more as a measurement, which never releases), the backend did not
 answer, or a report whose lines and closing counts disagree (nothing is
 recorded).
 
-Why (labkit-paper area 09, fifth haiku round, 2026-10-22): 28 audit
-findings, 15 accepted with no action; t5 accepted three BLOCKERs and six
-WARNINGs with `stands`, six of them with the reason "Finding noted"; t18
-closed a BLOCKER on group selection with a false "verified". Of four
-findings at decision points, one was fixed.
+History: docs/notes/2026-10-23-decision-review-history.md.
 """
 
 from __future__ import annotations

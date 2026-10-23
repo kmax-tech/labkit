@@ -58,10 +58,6 @@ holds only for this author's lab — the `LOCAL` rules, the dotfiles, the
 German notes — and lives outside the package ([Where what
 lives](#where-what-lives)).
 
-Why the section exists: the definition stood as a bold phrase inside the
-Layers section and was read past on the way to the table (reading
-2026-10-22); the README names the term and points here.
-
 ### 1 · Formats and places
 
 `labkit/formats/` holds the file formats, their contracts, repository

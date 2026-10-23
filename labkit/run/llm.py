@@ -171,10 +171,13 @@ def resolve(alias: str) -> JsonObject:
 def identity(alias: str) -> JsonObject:
     """Which model answers under ALIAS: backend and model (`name@digest`
     for ollama), from the frozen spec. What a resumed output must share
-    with the rows it continues (`lanes.Lanes.instrument`) — the alias alone
-    let an edited models.toml put model-b's answers next to model-a's in
-    one file (review 2026-10-23). Endpoints are not in it: a cluster host
-    changes with every allocation and serves the same weights."""
+    with the rows it continues (`lanes.Lanes.instrument`). The alias alone
+    does not identify the model because its configuration can change.
+    Endpoints are excluded: a cluster host can change while serving the
+    same weights.
+
+    History: docs/notes/2026-10-23-model-configuration-history.md.
+    """
     used = spec(alias)
     return {"backend": used.backend, "model": _answering_model(used)}
 
@@ -192,8 +195,12 @@ def model_entry(alias: str | None, start: Path) -> str:
     TOML lines, or a sentence why not — what the audit is shown of a bound
     validation's alias as today's setting (`audit.validity_evidence`; what
     the validation ran with is its run record, `answering_run.recorded_models`).
-    The alias is looked up as `_load_spec` looks it up (`alias_tables`) — a
-    second lookup with its own error text stood in `repo` (audit 2026-10-23)."""
+    Reads the file using the same alias lookup as `_load_spec`
+    (`alias_tables`); changes no files. Missing aliases, unreadable files
+    and invalid TOML return an explanatory sentence.
+
+    History: docs/notes/2026-10-23-model-configuration-history.md.
+    """
     if alias is None:
         return "the bound protocol names no [model] alias"
     root = lab_root(start)
