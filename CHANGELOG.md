@@ -84,7 +84,10 @@ pins (`requirements.txt` / `requirements.lock`).
   optional); otherwise `llm_backends.UnprovenAnswer`, raised at once, not
   retried. Observed on CLI 2.1.285 (fit probe on `97e6470`): a stopped
   reply is `subtype = "success"`, `is_error = false`, `num_turns = 2`,
-  both models in `modelUsage`, no `safety_stops`. An audit that meets it records a failed audit, no
+  both models in `modelUsage`, no `safety_stops`. A reply whose
+  `stop_reason` is `refusal` is unproven too — a stop nothing continued
+  would show one turn and one model; not yet observed, so a guard, and
+  `stop_reason` is named in every failure message. An audit that meets it records a failed audit, no
   findings. Standard: LAB-029. The stop and a foreign model are checked
   before `is_error`: in the fit probe on `4f4f238` every audit try was
   stopped and continued and the call was retried — a stopped answer

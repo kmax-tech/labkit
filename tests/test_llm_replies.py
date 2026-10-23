@@ -183,6 +183,15 @@ class ClaudeCliProvenance(unittest.TestCase):
         with self.assertRaisesRegex(B.UnprovenAnswer, "2 turns"):
             B._cli_result(cli_reply(without="safety_stops", num_turns=2), "m")
 
+    def test_a_refusal_nothing_continued_is_unproven(self) -> None:
+        """Not yet observed: a stop with no continuation would show one turn
+        and one model; `stop_reason` is the only field that could say it."""
+        reply = cli_reply("claude-opus-5-5", stop_reason="refusal", result="")
+        with self.assertRaisesRegex(B.UnprovenAnswer, "ended in a refusal"):
+            B._cli_result(reply, "claude-opus-5-5")
+        normal = cli_reply("claude-opus-5-5", stop_reason="end_turn")
+        self.assertEqual(B._cli_result(normal, "claude-opus-5-5"), "Yes")
+
     def test_a_reply_without_the_proof_is_refused(self) -> None:
         for key in ("num_turns", "modelUsage"):
             with self.subTest(key):

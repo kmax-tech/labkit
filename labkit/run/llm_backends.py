@@ -380,6 +380,7 @@ def _cli_evidence(body: JsonObject) -> str:
         f"{k}={v!r}"
         for k, v in (
             ("subtype", body.get("subtype")),
+            ("stop_reason", body.get("stop_reason")),
             ("is_error", body.get("is_error")),
             ("safety_stops", body.get("safety_stops")),
             ("num_turns", body.get("num_turns")),
@@ -395,7 +396,8 @@ def _cli_provenance(
     for an answer, not an error — MODEL used in one turn (`modelUsage`,
     `num_turns`, both required: a missing one is a ReplyError — no proof,
     no answer), and no safety stop where the CLI counts them
-    (`safety_stops`, absent before CLI 2.1.304). A safety classifier can
+    (`safety_stops`, absent before CLI 2.1.304), and no reply that ended in a
+    refusal (`stop_reason`). A safety classifier can
     stop the requested model mid-answer; the CLI then lets another model
     continue and `result` holds only the continuation — the requested
     model's id stays on the record for text another model wrote, and a part
@@ -405,6 +407,13 @@ def _cli_provenance(
     (IS_ERROR) without a stop or another model is left to the caller: an
     overloaded server is retried."""
     used = sorted(reply_field(body, "modelUsage", dict, where, required=True))
+    if reply_field(body, "stop_reason", str, where) == "refusal":
+        # a stop nothing continued: one turn, one model, and no answer —
+        # not yet seen; a guard, the field's value there is unverified
+        raise UnprovenAnswer(
+            f"claude-cli: {model}'s answer ended in a refusal (`stop_reason`) "
+            f"— no answer of {model}"
+        )
     stops = reply_field(body, "safety_stops", int, where)
     if stops:
         raise UnprovenAnswer(
