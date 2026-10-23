@@ -22,7 +22,7 @@ P=$AREA/PROTOCOL-docs-per-case.md
 say() { printf '\n== %s\n' "$*"; }
 run() { printf '$ %s\n' "$*"; "$@"; }
 
-say "1. a lab repo with the count task stamped (what labkit-init lab + labkit-init exp --cost seconds leave)"
+say "1. a lab repo with the count task stamped (what labkit-init lab + labkit-init exp --cost seconds --kind compute leave)"
 mkdir -p "$DIR"
 run "$VENV/bin/usability" stage "$LAB" --task count --venv "$VENV" >/dev/null
 cd "$LAB"

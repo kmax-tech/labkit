@@ -186,6 +186,8 @@ Forschung und Benchmark-Fallliste liegen in
      Vorhandensein und Bindung des Belegs; ob er die Annotation fachlich
      trägt, bleibt Agent-Audit. `bar_owed(f, kind)` mitprüfen: `compute`
      schuldet keine Schwelle, nur den Eignungsbeleg.
+     Offene Grenze, nicht geplant: `fit`/`apply` auf Trainings- oder
+     Testdaten, die ein Modell annotiert hat (silver standard als Gold).
   3. Doku: Kurzdefinitionen + zwei Prüffragen in `labkit-init --help`;
      Grenzfalltabelle (LLM-Prompt, BERT, Random Forest, Parser, Statistik,
      Feature Importance = `compute`) in den Field Guide.
@@ -313,6 +315,10 @@ diese Erklärung verweisen.
 Kandidaten aus [Code-Audit](docs/audit-2026-10-18.md); vor Umsetzung am
 aktuellen Code prüfen, keine alten Zeilennummern als offenen Befund übernehmen:
 
+- Voneinander abhängige Tests: `tests/test_end_to_end.py` (Klasse `Judge`,
+  `test_04`–`test_06` brauchen `run_id` aus früheren Schritten) läuft nur
+  mit `--dist loadscope` grün (2026-10-23, fünf Fehler unter `-n auto`
+  allein). Der Hook setzt es; unabhängig sind die Tests damit nicht.
 - Namen prüfen: `area: Path`, Wurzelpfade, Digest-Begriffe,
   `trace`/`timeline`, `registry`/`ledger`. Keine pauschale Umbenennung.
 - Verbleibende `noqa: C901` entlang fachlicher Abläufe abbauen, wenn dort

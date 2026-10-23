@@ -337,8 +337,8 @@ def stamp_scripts(
     model: bool | str,
 ) -> list[str]:
     """The script skeletons and the area's test under tests/ — which ones
-    is the contract's answer (`standard_contract.skeleton`: the compute, the
-    estimator or the prompt skeleton, every one with the check)."""
+    is the contract's answer (`standard_contract.skeleton`: the compute,
+    estimator or prompt skeleton, every one with the check)."""
     log: list[str] = []
     (area / "scripts").mkdir(exist_ok=True)
     alias = model if isinstance(model, str) else "TODO-alias"
