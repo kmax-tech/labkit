@@ -385,11 +385,9 @@ aktuellen Code prüfen, keine alten Zeilennummern als offenen Befund übernehmen
   `base_dir` in `runlog.run` ist das öffentliche Keyword der Vorlagen
   und Labs — nur mit Breaking-Release zu `area`; `--registry` als Flag
   ruft der Haus-Hook (`dotfiles/.githooks/pre-commit`) — Rollout.
-- Verbleibende `noqa: C901` entlang fachlicher Abläufe abbauen, wenn dort
-  gearbeitet wird; nicht allein nach Dateilänge teilen.
-- Der Wächter für `repo.shown` in `tests/test_one_home.py` erkennt nur die
-  Bedingungsform (`is_relative_to`), keine neue `try`/`except
-  ValueError`-Kopie.
+- Verbleibende `noqa: C901` (16 nach dem 2026-10-23, code-check und
+  intent-check sind abgebaut) entlang fachlicher Abläufe abbauen, wenn
+  dort gearbeitet wird; nicht allein nach Dateilänge teilen.
 
 ### Kern, Doktrin und Formatbrüche
 

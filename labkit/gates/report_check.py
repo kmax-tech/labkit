@@ -694,6 +694,7 @@ def report_files(
         try:
             rel = full.relative_to(root)
         except ValueError:
+            # a membership test, not a shown path; home: repo.shown
             continue  # outside the repo: no commit and no stop holds it
         if SKIP_DIRS & set(rel.parts):
             continue

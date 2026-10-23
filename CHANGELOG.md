@@ -261,6 +261,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The one-home test also catches the try/except copy of a shown path.**
+  It held the conditional form (`is_relative_to`) only; `BLOCK_RULES` holds
+  shapes over several lines, the first the `try: … .relative_to(…) except
+  ValueError:` form. `scope_sha._key` (a stamp's key) is a home of its own;
+  report-check's membership test says why it stays.
+
 - **Three names, where they were unclear.** `rules.load_registry`,
   `check_registry` and `REGISTRY` called `docs/rules.tsv` the registry
   while every sentence about it says ledger: `load_ledger`, `LEDGER`, and

@@ -107,6 +107,37 @@ RULES: list[tuple[str, str, set[str]]] = [
 ]
 
 
+#: shapes over several lines — (what, regex over the file, the module(s) where it belongs)
+BLOCK_RULES: list[tuple[str, str, set[str]]] = [
+    # the conditional form is held above; the try/except copy was not
+    # (TODO, 2026-10-23): `repo.shown` for a shown path, `scope_sha._key`
+    # for a stamp's key, else the question is answered elsewhere
+    (
+        "a path shown relative by hand (try/except form)",
+        r"try:\n[^\n]*\.relative_to\([^\n]*\n\s*except ValueError:",
+        {"repo", "runs", "scope_sha"},
+    ),
+]
+
+
+def block_offenders(what: str, shape: str, homes: set[str]) -> list[str]:
+    """Like `offenders`, for a shape that spans lines; a copy that must stay
+    says why with a `home:` note on the line after the `except`."""
+    out = []
+    pattern = re.compile(shape)
+    for path in sorted(PACKAGE.rglob("*.py")):
+        if path.stem in homes:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for m in pattern.finditer(text):
+            after = text[m.end() : m.end() + 200].split("\n")[1]
+            if "home:" in after:
+                continue
+            line = text.count("\n", 0, m.start()) + 1
+            out.append(f"{path.name}:{line}: {what}")
+    return out
+
+
 def offenders(what: str, shape: str, homes: set[str]) -> list[str]:
     out = []
     pattern = re.compile(shape)
@@ -127,7 +158,16 @@ def offenders(what: str, shape: str, homes: set[str]) -> list[str]:
 class OneHome(unittest.TestCase):
     def test_no_copy_outside_its_home(self):
         found = [o for rule in RULES for o in offenders(*rule)]
+        found += [o for rule in BLOCK_RULES for o in block_offenders(*rule)]
         self.assertEqual(found, [], "\n" + "\n".join(found))
+
+    def test_the_block_rules_bite(self):
+        sample = (
+            "try:\n    rel = p.relative_to(root)\nexcept ValueError:\n    rel = p\n"
+        )
+        for what, shape, _ in BLOCK_RULES:
+            with self.subTest(what=what):
+                self.assertIsNotNone(re.compile(shape).search(sample), shape)
 
     def test_the_rules_bite(self):
         """Each shape matches what it is written for (a rule that matches
