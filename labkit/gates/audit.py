@@ -64,11 +64,13 @@ from __future__ import annotations
 
 import argparse
 import ast
+import json
 import os
 import re
 import shlex
 import sys
 import time
+import tomllib
 from pathlib import Path
 from collections.abc import Callable
 from typing import NamedTuple
@@ -84,16 +86,23 @@ from labkit.formats import (
     scope_sha,
 )
 from labkit.formats.gate import WARNING, GateFinding, coded
-from labkit.formats.standard_contract import lane
+from labkit.formats.standard_contract import COMPUTE_KIND, lane
 from labkit.formats.repo import (
     ProtocolChoiceError,
     area_path,
+    lab_root,
     layout_root,
     no_such_area,
     shown,
     the_protocol,
 )
 from labkit.formats.runs import completed_runs
+from labkit.formats.protocol_history import (
+    BoundValidation,
+    bound_validation,
+    repo_protocol_ids,
+)
+from labkit.checks.prompt_check import prompt_blocks, prompt_constants
 from labkit.checks.audit_binding import AuditError, RunShown, audited_run, run_shown
 from labkit.formats.scope_sha import (
     area_files,
@@ -137,7 +146,10 @@ INLINE_NOTE = (
     "as signatures under one `===== INDEX: … =====` line (not read — name one "
     "in an assignment to have it supplied), and in MODE analysis the answering "
     "run's output rows under `===== ROWS <path> … =====` lines, each row as "
-    "`<line>: <row>`. Nothing else is in scope."
+    "`<line>: <row>`, and for a computation over a model's annotations the "
+    "evidence that the annotator suits under `===== EVIDENCE: … =====` lines "
+    "(the bound apply protocol and its result as FILE lines). Nothing else is "
+    "in scope."
 )
 
 
@@ -265,13 +277,116 @@ INDEX_LABEL = (
 class Source(NamedTuple):
     """What a prompt is rendered from, each read once by the caller: the
     protocol's text, a reader for every other file (`Snapshot.text` for an
-    audit, so the prompt shows the bytes the record's sha names), and in
-    MODE analysis what it shows of the answering run (`run_shown`, the same
-    pieces whose digest the record carries)."""
+    audit, so the prompt shows the bytes the record's sha names), in MODE
+    analysis what it shows of the answering run (`run_shown`, the same
+    pieces whose digest the record carries), and the evidence an annotator
+    suits (`validity_evidence`; read from outside the area, not in the
+    record's digest)."""
 
     protocol_text: str
     read: Callable[[Path], str]
     run: tuple[tuple[str, str], ...] = ()
+    evidence: tuple[tuple[str, str], ...] = ()  # `validity_evidence`
+
+
+DOI_ONLY = (
+    "checked for its form only; what the publication shows is not in scope "
+    "of this audit and was not read"
+)
+
+
+def validity_evidence(area: Path, text: str) -> tuple[tuple[str, str], ...]:
+    """What the audit is shown of `[model] annotation_validity` for a
+    computation whose number claims a property of the data
+    (`number_describes = "target_property"`): the bound apply protocol in
+    full, its declared run's `metrics.json` (the validation result), the
+    model entry of its alias from `models.toml` and its prompt (the protocol's
+    `Prompt` blocks and the area's `PROMPT*` constants, `prompt_check`) —
+    a reference alone gives the audit nothing to judge. Not bound
+    (`protocol_history.bound_validation`): one line saying why, never part
+    of the evidence. A DOI: the DOI and that its content is not in scope.
+    () for every other protocol."""
+    try:
+        m = protocol_block.model(text)
+        kind = protocol_block.head(text).kind
+    except protocol_block.BlockError:
+        return ()
+    if (
+        m is None
+        or kind != COMPUTE_KIND
+        or m.number_describes != protocol_block.TARGET_PROPERTY
+        or m.annotation_validity is None
+    ):
+        return ()
+    if m.annotation_validity.key == "doi":
+        return (
+            (
+                "EVIDENCE: annotation_validity",
+                f"doi = {m.annotation_validity.value} — {DOI_ONLY}",
+            ),
+        )
+    repo = layout_root(area)
+    bound = bound_validation(text, repo_protocol_ids(area))
+    if not isinstance(bound, BoundValidation):
+        return (
+            (
+                "EVIDENCE: annotation_validity",
+                f"protocol = {m.annotation_validity.value} — NOT BOUND: {bound}. "
+                "No validation is shown; nothing here supports the annotator.",
+            ),
+        )
+    return _bound_pieces(bound, repo)
+
+
+def _bound_pieces(bound: BoundValidation, repo: Path) -> tuple[tuple[str, str], ...]:
+    """The bound apply protocol, its result, its model entry and its prompt
+    as prompt pieces; what is missing is said, never skipped."""
+    area = bound.protocol.parent
+    pieces = [(f"FILE: {shown(bound.protocol, repo)}", bound.text)]
+    metrics = area / "runs" / bound.run / "metrics.json"
+    try:
+        pieces.append(
+            (f"FILE: {shown(metrics, repo)}", metrics.read_text(encoding="utf-8"))
+        )
+    except OSError:
+        pieces.append(
+            (
+                "EVIDENCE: validation result",
+                f"run {bound.run} declared, but {shown(metrics, repo)} does not read",
+            )
+        )
+    bound_model = protocol_block.model(bound.text)
+    alias = bound_model.alias if bound_model is not None else None
+    pieces.append(("EVIDENCE: validation model", _model_entry(alias, area)))
+    prompts = prompt_blocks(bound.protocol) + [
+        f"{name} = {value!r}" for name, value in sorted(prompt_constants(area).items())
+    ]
+    pieces.append(
+        (
+            "EVIDENCE: validation prompt",
+            "\n\n".join(prompts) or "no Prompt block and no PROMPT constant found",
+        )
+    )
+    return tuple(pieces)
+
+
+def _model_entry(alias: str | None, area: Path) -> str:
+    """`[models.<alias>]` of the repo's `models.toml` as TOML lines, or why not."""
+    if alias is None:
+        return "the bound protocol names no [model] alias"
+    root = lab_root(area)
+    if root is None:
+        return f"alias = {alias!r}; no models.toml above {area}"
+    try:
+        data = tomllib.loads((root / "models.toml").read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        return f"alias = {alias!r}; models.toml does not read: {exc}"
+    entry = data.get("models", {}).get(alias)
+    if not isinstance(entry, dict):
+        return f"alias = {alias!r}; models.toml has no [models.{alias}]"
+    return f"[models.{alias}]\n" + "\n".join(
+        f"{k} = {json.dumps(v)}" for k, v in entry.items()
+    )
 
 
 def render(
@@ -308,6 +423,7 @@ def render(
             pieces.append((f"FILE: {label}", text))
         if indexed:
             pieces.append((INDEX_LABEL, module_index(indexed, repo, source.read)))
+        pieces += source.evidence
         if mode == ANALYSIS:
             pieces += source.run
     body = "".join(f"===== {label} =====\n{text}\n" for label, text in pieces)
@@ -582,7 +698,12 @@ def bound_prompt(
             reading.code,
             reading.standard,
             indexed,
-            source=Source(text, snap.text, shown.pieces if shown else ()),
+            source=Source(
+                text,
+                snap.text,
+                shown.pieces if shown else (),
+                validity_evidence(area, text),
+            ),
         )
     except KeyError as exc:
         raise AuditError(f"{exc.args[0]} — {changed}") from exc

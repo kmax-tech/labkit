@@ -176,8 +176,10 @@ The same block may hold the `[[promise]]` tables (labkit
   validation can be checked — or `{ doi = "10.…" }`, a published
   validation, checked for its form only. Neither proves that the model
   suits this annotation (same model, prompt, target concept): that stays
-  with the audit. With `fit` or `apply` both keys are refused — there the
-  model is what the number judges, not an instrument.
+  with the audit, which `labkit-audit` shows the bound protocol, its
+  result (`metrics.json`), its model entry and its prompt. With `fit` or
+  `apply` both keys are refused — there the model is what the number
+  judges, not an instrument.
 - **cost** — see below.
 - **frozen** — `true` means hypothesis, prompts/rules, metrics, baselines
   and decision rule were all fixed beforehand; only `true` plus `test` gives

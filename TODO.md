@@ -184,9 +184,12 @@ Forschung und Benchmark-Fallliste liegen in
        `resolve` in die Run-Config, `labkit/run/batch.py:222` `Store` mit
        `_instrument`/`_prov` je Zeile), das compute-Skelett
        (`measure-quick-script.py.template`) bindet sie nicht ein.
-     - Audit-Bündel: das gebundene apply-Protokoll (Modell, Prompt,
-       Zielbegriff) mit ins Bündel, damit das Audit die fachliche Eignung
-       prüfen kann; heute steht dort nur die ID.
+     - Audit-Bündel: erledigt 2026-10-23. `audit.validity_evidence` zeigt
+       dem Preflight- und Analyse-Audit das gebundene apply-Protokoll, die
+       `metrics.json` des erklärten Laufs, den `models.toml`-Eintrag und den
+       Prompt; ungebunden eine Zeile „NOT BOUND“, DOI „form only“. Offen:
+       diese Bytes stehen nicht im Digest des Audit-Records — ändert sich
+       die Validierung danach, merkt der Record es nicht.
      Offene Grenze, nicht geplant: `fit`/`apply` auf Trainings- oder
      Testdaten, die ein Modell annotiert hat (silver standard als Gold).
   3. Umgesetzt (Commit „docs: choosing the kind“): zwei Prüffragen in

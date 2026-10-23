@@ -253,3 +253,95 @@ class Stamp(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Evidence(unittest.TestCase):
+    """The preflight audit is shown the bound validation itself — the apply
+    protocol, its result, its model entry and its prompt — since a reference
+    alone gives it nothing to judge (`audit.validity_evidence`)."""
+
+    def _lab(self, d: str, validation: str | None) -> tuple[Path, str]:
+        root = Path(d)
+        (root / ".git").mkdir()
+        (root / "models.toml").write_text(
+            '[models.haiku]\nbackend = "claude-cli"\nmodel = "claude-haiku-5-5"\n',
+            encoding="utf-8",
+        )
+        if validation is not None:
+            val = root / "experiments" / "01-validation"
+            (val / "scripts").mkdir(parents=True)
+            (val / "PROTOCOL-validation.md").write_text(validation, encoding="utf-8")
+            (val / "scripts" / "01_measure.py").write_text(
+                'PROMPT = "Is this claim causal? Answer yes or no."\n', encoding="utf-8"
+            )
+            (val / "runs" / RUN).mkdir(parents=True)
+            (val / "runs" / RUN / "metrics.json").write_text(
+                '{"macro_f1": 0.87}\n', encoding="utf-8"
+            )
+        share = root / "experiments" / "02-share"
+        share.mkdir(parents=True)
+        return share, VALIDATION_ID
+
+    def _evidence(self, share: Path, claim: str) -> str:
+        from labkit.gates import audit
+
+        text = _compute(claim)
+        (share / "PROTOCOL-share.md").write_text(text, encoding="utf-8")
+        return "\n".join(
+            f"===== {label} =====\n{body}"
+            for label, body in audit.validity_evidence(share, text)
+        )
+
+    def test_a_bound_apply_is_shown_with_result_model_and_prompt(self):
+        with tempfile.TemporaryDirectory() as d:
+            share, pid = self._lab(
+                d, head(id=VALIDATION_ID, kind="apply", model="haiku", result=RUN)
+            )
+            shown = self._evidence(
+                share,
+                'number_describes = "target_property"\n'
+                f'annotation_validity = {{ protocol = "{pid}" }}',
+            )
+        self.assertIn("PROTOCOL-validation.md =====", shown)
+        self.assertIn(f'id = "{VALIDATION_ID}"', shown)
+        self.assertIn(f"runs/{RUN}/metrics.json =====", shown)
+        self.assertIn('"macro_f1": 0.87', shown)
+        self.assertIn('model = "claude-haiku-5-5"', shown)
+        self.assertIn("Is this claim causal?", shown)
+
+    def test_an_unbound_reference_says_so_and_shows_nothing(self):
+        with tempfile.TemporaryDirectory() as d:
+            share, pid = self._lab(
+                d, head(id=VALIDATION_ID, kind="compute", result=RUN)
+            )
+            shown = self._evidence(
+                share,
+                'number_describes = "target_property"\n'
+                f'annotation_validity = {{ protocol = "{pid}" }}',
+            )
+        self.assertIn("NOT BOUND", shown)
+        self.assertIn('kind = "compute"', shown)
+        self.assertNotIn("FILE:", shown)
+
+    def test_a_doi_is_shown_as_checked_for_form_only(self):
+        with tempfile.TemporaryDirectory() as d:
+            share, _ = self._lab(d, None)
+            shown = self._evidence(
+                share,
+                f'number_describes = "target_property"\nannotation_validity = {{ doi = "{DOI}" }}',
+            )
+        self.assertIn(DOI, shown)
+        self.assertIn("form only", shown)
+
+    def test_other_protocols_get_no_evidence_piece(self):
+        from labkit.gates import audit
+
+        with tempfile.TemporaryDirectory() as d:
+            share, _ = self._lab(d, None)
+            for text in (
+                _compute('number_describes = "model_outputs"'),
+                head(cost="minutes", kind="compute"),
+                head(cost="minutes", kind="apply", model="haiku"),
+            ):
+                with self.subTest(text=text[-120:]):
+                    self.assertEqual(audit.validity_evidence(share, text), ())

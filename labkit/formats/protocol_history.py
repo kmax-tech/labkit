@@ -6,11 +6,13 @@ commit, the registration as a given commit held it
 (`registration_in_commit` — report-check holds the seconds lane to the
 commit of the first measurement), and the checks built on them: a cost
 tier lowered since then (`cost_lowered`, static evidence — a lower tier
-owes less) and an id changed or taken twice (`check_protocol_id`).
+owes less), an id changed or taken twice (`check_protocol_id`) and the
+apply protocol an annotation validity names (`bound_validation`).
 Read-only; git is asked through `repo.git_run`.
 """
 
 from pathlib import Path
+from typing import NamedTuple
 
 from labkit.formats import protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
@@ -163,73 +165,83 @@ def check_protocol_id(
     return out
 
 
-def check_annotation_validity(
-    path: Path, text: str, ids: dict[str, list[Path]]
-) -> list[GateFinding]:
-    """The binding of `[model] annotation_validity = { protocol = "p-…" }`
+class BoundValidation(NamedTuple):
+    """The apply protocol `[model] annotation_validity = { protocol = … }`
+    names, bound: its path, its text as read, the run it declares."""
+
+    protocol: Path
+    text: str
+    run: str
+
+
+def bound_validation(
+    text: str, ids: dict[str, list[Path]]
+) -> BoundValidation | str | None:
+    """The one binding of `[model] annotation_validity = { protocol = "p-…" }`
     against IDS (`repo_protocol_ids` of the repo): the id names exactly one
     protocol, an apply (`kind = "apply"`, the model judged as it is used
-    here) with a declared result (`[result] run`). A blocker each when not.
-    This makes the bound validation checkable; that it carries this
-    annotation — same model, prompt and target — stays the audit's. A DOI
-    is held to its form by the head parser and bound to nothing here."""
+    here) with a declared result (`[result] run`). The bound validation, or
+    why it is not bound (a sentence), or None when the protocol names no
+    such evidence (not a computation, no `[model]`, a DOI, an unreadable
+    head — the head check names that). The gate (`check_annotation_validity`)
+    and the audit's evidence pieces (`audit.validity_evidence`) read this."""
     try:
         m = protocol_block.model(text)
         kind = protocol_block.head(text).kind
     except protocol_block.BlockError:
-        return []  # the head check names it
+        return None
     if (
         m is None
         or kind != standard_contract.COMPUTE_KIND
         or m.annotation_validity is None
         or m.annotation_validity.key != "protocol"
     ):
-        return []
-    pid = m.annotation_validity.value
-    where = f"{path}: [model] annotation_validity protocol = {pid}"
-    hits = ids.get(pid, [])
+        return None
+    hits = ids.get(m.annotation_validity.value, [])
     if len(hits) != 1:
-        return [
-            GateFinding(
-                BLOCKER,
-                f"{where} — names "
-                + (
-                    "no protocol of this repo"
-                    if not hits
-                    else f"{len(hits)} protocols ({', '.join(str(h) for h in hits)})"
-                )
-                + "; the evidence must be one apply protocol here, or a DOI",
-                form=AS_WRITTEN,
+        return (
+            "names "
+            + (
+                "no protocol of this repo"
+                if not hits
+                else f"{len(hits)} protocols ({', '.join(str(h) for h in hits)})"
             )
-        ]
+            + "; the evidence must be one apply protocol here, or a DOI"
+        )
     bound = hits[0]
     try:
         bound_text = bound.read_text(encoding="utf-8")
         bound_kind = protocol_block.head(bound_text).kind
         bound_run = protocol_block.declared_run(bound_text)
     except (OSError, protocol_block.BlockError) as exc:
-        return [
-            GateFinding(
-                BLOCKER, f"{where} — {bound} does not read: {exc}", form=AS_WRITTEN
-            )
-        ]
+        return f"{bound} does not read: {exc}"
     if bound_kind != standard_contract.APPLY_KIND:
-        return [
-            GateFinding(
-                BLOCKER,
-                f'{where} — {bound} has kind = "{bound_kind}"; the evidence that '
-                "an annotator suits is an apply: the model, used unchanged, judged "
-                "against gold labels",
-                form=AS_WRITTEN,
-            )
-        ]
+        return (
+            f'{bound} has kind = "{bound_kind}"; the evidence that an annotator '
+            "suits is an apply: the model, used unchanged, judged against gold labels"
+        )
     if bound_run is None:
-        return [
-            GateFinding(
-                BLOCKER,
-                f"{where} — {bound} declares no result yet ([result] run); a "
-                "validation without its number is no evidence",
-                form=AS_WRITTEN,
-            )
-        ]
-    return []
+        return (
+            f"{bound} declares no result yet ([result] run); a validation "
+            "without its number is no evidence"
+        )
+    return BoundValidation(bound, bound_text, bound_run)
+
+
+def check_annotation_validity(
+    path: Path, text: str, ids: dict[str, list[Path]]
+) -> list[GateFinding]:
+    """A blocker when `[model] annotation_validity = { protocol = … }` is not
+    bound (`bound_validation`). This makes the bound validation checkable;
+    that it carries this annotation — same model, prompt and target — stays
+    the audit's. A DOI is held to its form by the head parser and bound to
+    nothing here."""
+    bound = bound_validation(text, ids)
+    if not isinstance(bound, str):
+        return []
+    m = protocol_block.model(text)
+    assert m is not None and m.annotation_validity is not None  # bound said so
+    where = (
+        f"{path}: [model] annotation_validity protocol = {m.annotation_validity.value}"
+    )
+    return [GateFinding(BLOCKER, f"{where} — {bound}", form=AS_WRITTEN)]

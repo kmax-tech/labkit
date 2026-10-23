@@ -32,6 +32,11 @@ restate them from memory.
    LAB-050 Analysis audit before reporting. They are all of the standard you get.
    Every finding cites the rule it violates as code + name (LAB-nnn <title>);
    a defect none of them names is a finding of a new class, say so.
+5. For a computation whose number claims a property of the data through a
+   model's annotations (`number_describes = "target_property"`): the
+   evidence that the annotator suits, under `===== EVIDENCE: … =====` lines
+   — the bound apply protocol and its `metrics.json` as FILE lines, its
+   model entry and its prompt.
 
 If `<AREA>` was not given, find it from the prompt or ask for it in one line —
 do not guess between areas.
@@ -87,6 +92,14 @@ Work the scar table of LAB-015 Preflight audit before freezing row by row, filte
 `preflight` rows in MODE preflight, `analysis` rows in MODE analysis,
 `beide` rows in both. The table is the floor, not the ceiling: a defect that fits no row is
 still a finding — say that it is a new class.
+
+**Judge whether the bound validation supports this annotation** (item 5,
+both modes). It does when the validation used the same model alias, the
+same prompt or a difference the protocol justifies, the same target concept,
+and a result that carries the claim; a mismatch is a finding with the two
+quoted sides as its trigger. `NOT BOUND` evidence supports nothing — the
+gates refuse it already; say so in one line. A DOI alone gets at most a
+NOTE that its content was not checked, unless the prompt tells you more.
 
 **In MODE analysis, read real output rows before you judge the metric.**
 The answering run's rows are inlined below under `===== ROWS <file> … =====`
