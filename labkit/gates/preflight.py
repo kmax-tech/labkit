@@ -355,11 +355,9 @@ def check_audit_records(
     except audit_findings.FindingsError as exc:
         findings.block(str(exc))
         return []
-    undecided = [(r, f) for r in records for f in r.open]
-    for r, f in undecided:
-        (findings.block if frozen else findings.warn)(
-            f"undecided in {r.path.name}: {f.text}"
-        )
+    undecided = audit_findings.open_findings(records)  # the table of the gates' rules
+    for u in undecided:
+        (findings.block if frozen else findings.warn)(f"undecided in {u.line}")
     if undecided:
         findings.note(
             f"  {len(undecided)} finding(s) still `open` — decide each (fixed / accepted / "
@@ -405,7 +403,7 @@ def check_deferred_elsewhere(
             f"  {len(elsewhere)} deferred finding(s) elsewhere in the repo — a reminder, "
             f"not counted"
         )
-    undecided = any(r.open for r in records)
+    undecided = bool(audit_findings.open_findings(records))
     if not records and not elsewhere:
         findings.note("  none recorded")
     elif not undecided and not elsewhere:

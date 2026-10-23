@@ -57,6 +57,39 @@ def set_status(path: Path, n: int, status: str, reason: str = "") -> None:
     path.write_text("[[finding]]".join(parts), encoding="utf-8")
 
 
+class UndecidedFindings(unittest.TestCase):
+    """`findings.open_findings` is the one walk over the records for `open`
+    findings; the gates grade what it returns (audit 2026-10-23, C1)."""
+
+    def test_every_open_finding_of_every_record_in_order(self):
+        area = area_with([("preflight", TWO), ("analysis", [("NOTE", "n")])])
+        records = findings.area_records(area)
+        found = findings.open_findings(records)
+        self.assertEqual([u.grade for u in found], ["BLOCKER", "WARNING", "NOTE"])
+        self.assertEqual(found[0].line, f"{records[0].path.name}: {TWO[0][1]}")
+
+    def test_a_mode_narrows_to_its_records(self):
+        area = area_with([("preflight", TWO), ("analysis", [("NOTE", "n")])])
+        records = findings.area_records(area)
+        self.assertEqual(
+            [u.grade for u in findings.open_findings(records, mode="preflight")],
+            ["BLOCKER", "WARNING"],
+        )
+        self.assertEqual(
+            [u.grade for u in findings.open_findings(records, mode="analysis")],
+            ["NOTE"],
+        )
+
+    def test_a_decided_finding_is_not_undecided(self):
+        area = area_with([("preflight", TWO)])
+        (rec,) = findings.area_records(area)
+        findings.write_decision(rec.path, 1, "fixed", "done")
+        (rec,) = findings.area_records(area)
+        self.assertEqual(
+            [u.finding.text for u in findings.open_findings([rec])], [TWO[1][1]]
+        )
+
+
 class WriteRead(unittest.TestCase):
     def test_roundtrip_every_finding_starts_open(self):
         area = area_with([("preflight", TWO)])

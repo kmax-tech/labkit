@@ -551,7 +551,8 @@ def stop(event: dict) -> int:
 def undecided_blockers(repo: Path, paths: list[Path]) -> list[str]:
     """Every audit BLOCKER still `open` in an area one of PATHS lies in — as
     `<area>: <file>: <text>`, each area once — or the sentence of a record
-    nobody can read. The area is the nearest directory above the path with a
+    nobody can read. BLOCKERs only, by intent (`findings.open_findings` has the
+    table): the hook says what the commit would be refused for. The area is the nearest directory above the path with a
     PROTOCOL-*.md, inside REPO, and every area whose promises declare a
     changed path in their scope or whose code imports a changed shared
     helper (`scope_sha.areas_touched`, the stop's answer too). A
@@ -566,12 +567,11 @@ def undecided_blockers(repo: Path, paths: list[Path]) -> list[str]:
         except findings.FindingsError as exc:
             out.append(f"{shown}: {exc}")
             continue
-        for rec in records:
-            out += [
-                f"{shown}: {rec.path.name}: {f.text}"
-                for f in rec.open
-                if f.grade == "BLOCKER"
-            ]
+        out += [
+            f"{shown}: {u.line}"
+            for u in findings.open_findings(records)
+            if u.grade == "BLOCKER"
+        ]
     return out
 
 

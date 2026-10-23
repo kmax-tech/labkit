@@ -243,6 +243,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **"Is an audit finding still undecided" has one home.** Four gates
+  walked the records for `open` findings themselves — preflight blocking
+  any grade once frozen, finalize by grade, the hooks BLOCKERs only,
+  runlog's start check preflight records only — and nothing said whether
+  the four readings were meant (audit 2026-10-23, C1). They are:
+  `findings.open_findings(records, mode=…)` is the walk, its docstring the
+  table of the gates' rules side by side, and the gates grade what it
+  returns; a change to one row is a change to that gate's rule. The
+  one-home test holds the walk (`for … in ….open`).
+
 - **A compute owes no bar at any tier, and is stamped so.** At `minutes`
   and `hours` a compute was still stamped with the success criterion, the
   admissibility condition, Model / tool, the null condition and three

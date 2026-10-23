@@ -224,7 +224,8 @@ def unreportable_warnings(measurement_run: Path) -> list[str]:
 
 def check_open_audit_findings(findings: Findings, area: Path) -> None:
     """Station 8: every finding still `open` in the area's audit records, any
-    mode — a BLOCKER blocks, a WARNING warns, a NOTE is printed — each with
+    mode (`findings.open_findings`, with the table of the gates' rules) — a
+    BLOCKER blocks, a WARNING warns, a NOTE is printed — each with
     its file; and every analysis record names a run the area still holds
     (`findings.records_of_gone_runs`): a run an audit read is a kept run,
     and its deleted directory is a blocker where the record stands. A
@@ -244,16 +245,15 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
             f"that (LAB-043 Runs go through `runlog`)"
         )
     seen = len(gone)
-    for rec in records:
-        for f in rec.open:
-            seen += 1
-            line = f"{rec.path.name}: {f.text} — undecided (LAB-015 Preflight audit before freezing)"
-            if f.grade == "BLOCKER":
-                findings.block(line)
-            elif f.grade == "WARNING":
-                findings.warn(line)
-            else:
-                findings.note(f"  {line}")
+    for u in audit_findings.open_findings(records):
+        seen += 1
+        line = f"{u.line} — undecided (LAB-015 Preflight audit before freezing)"
+        if u.grade == "BLOCKER":
+            findings.block(line)
+        elif u.grade == "WARNING":
+            findings.warn(line)
+        else:
+            findings.note(f"  {line}")
     if not seen:
         findings.note(
             f"  every finding decided ({len(records)} record(s))"

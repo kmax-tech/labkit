@@ -105,7 +105,7 @@ from __future__ import annotations
 import re
 import time
 import tomllib
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -249,6 +249,58 @@ class Record:
 
 #: how every Limit line's label opens
 LIMIT_PREFIX = "Limit (audit "
+
+
+@dataclass(frozen=True)
+class OpenFinding:
+    """One finding still `open`, with the record it stands in."""
+
+    record: Record
+    finding: Finding
+
+    @property
+    def grade(self) -> str:
+        """The finding's grade — BLOCKER, WARNING or NOTE."""
+        return self.finding.grade
+
+    @property
+    def line(self) -> str:
+        """`<record file>: <text>` — how every gate names it."""
+        return f"{self.record.path.name}: {self.finding.text}"
+
+
+def open_findings(
+    records: Iterable[Record], *, mode: str | None = None
+) -> list[OpenFinding]:
+    """Every finding still `open` in RECORDS, in record order — of MODE's
+    records only when MODE is given. The one home of the question "is an
+    audit finding still undecided" (audit 2026-10-23, C1: four gates
+    walked the records themselves, each grading differently, and nothing
+    said whether that was meant). What a gate makes of an undecided
+    finding is that gate's rule; the rules stand side by side here:
+
+        gate                         records            an undecided finding is
+        preflight, unfrozen          every mode         a WARNING — the decision is owed at the freeze, not before
+        preflight, frozen            every mode         a BLOCKER — frozen = true owes every decision
+                                                        (LAB-015 Preflight audit before freezing)
+        runlog start, full run       preflight only     its grade: BLOCKER refuses the run, WARNING is told —
+                                                        the run rests on the preflight audit; an analysis
+                                                        record judges a run, and finalize holds it
+        finalize                     every mode         its grade: BLOCKER blocks, WARNING warns, NOTE is told
+        claude-hook stop / undecided every mode, the    a BLOCKER only — the hook says what the commit would be
+                                     areas the session  refused for and nags for nothing less
+                                     touched
+        audit_coverage (report-check) the covering record  any grade: the record is not decided
+
+    The differences are intended. A change to one row is a change to that
+    gate's rule: say so in its docstring and in this table.
+    """
+    return [
+        OpenFinding(r, f)
+        for r in records
+        if mode is None or r.mode == mode
+        for f in r.open
+    ]
 
 
 def limit_label(record: Record, n: int) -> str:
@@ -897,10 +949,10 @@ def audit_coverage(
             f"the audit owes a new one: `labkit-audit <area> --mode {mode}`"
             f"{validation_note(area)}"
         )
-    undecided = [f for r in covering for f in r.open]
-    if undecided:
+    still_open = open_findings(covering)
+    if still_open:
         return (
-            f"{len(undecided)} finding(s) of the {mode} audit of {sha} still "
+            f"{len(still_open)} finding(s) of the {mode} audit of {sha} still "
             f"`open` — decide each (fixed / accepted / deferred / dismissed)"
         )
     return None

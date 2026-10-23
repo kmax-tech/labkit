@@ -74,6 +74,10 @@ RULES: list[tuple[str, str, set[str]]] = [
     # head's word: seven modules compared it by hand and the gate and the
     # skeleton disagreed (audit 2026-10-19)
     ("a tier rule read off the head", r"[=!]=\s*\{?\"seconds\"", {"standard_contract"}),
+    # four gates walked the records for `open` findings themselves, each
+    # grading differently (audit 2026-10-23, C1); `findings.open_findings` holds
+    # the walk and the table of the gates' rules
+    ("an open-finding walk", r"for \w+ in \w+\.open\b(?!\()", {"findings"}),
 ]
 
 
@@ -122,6 +126,7 @@ class OneHome(unittest.TestCase):
             "a run id's start second compared by hand": "if answering_run.start_second(a) == answering_run.start_second(b):",
             "a requirements pin spelled by hand": 'if ln.startswith("labkit"):',
             "a tier rule read off the head": 'if head.cost == "seconds":',
+            "an open-finding walk": "for f in rec.open:",
         }
         for what, shape, _ in RULES:
             with self.subTest(what=what):

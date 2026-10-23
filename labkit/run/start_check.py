@@ -155,19 +155,16 @@ def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
     record of the area, each as `<file>: <text>`. A record of any stamp
     counts — a finding nobody decided is an ignored finding, not an old one
     (LAB-015 Preflight audit before freezing: every finding is decided).
-    Raises SystemExit on a record nobody can read."""
+    Preflight records only, by intent (`findings.open_findings` has the table):
+    the run rests on the preflight audit; an analysis record judges a run
+    and is finalize's. Raises SystemExit on a record nobody can read."""
     try:
         records = findings.area_records(base_dir)
     except findings.FindingsError as exc:
         raise SystemExit(f"runlog: {exc}") from exc
     blockers, warnings = [], []
-    for rec in records:
-        if rec.mode != "preflight":
-            continue
-        for f in rec.open:
-            (blockers if f.grade == "BLOCKER" else warnings).append(
-                f"{rec.path.name}: {f.text}"
-            )
+    for u in findings.open_findings(records, mode="preflight"):
+        (blockers if u.grade == "BLOCKER" else warnings).append(u.line)
     return blockers, warnings
 
 
