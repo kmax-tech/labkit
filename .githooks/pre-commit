@@ -24,9 +24,10 @@ run() {
 run "ruff check" "$venv/ruff" check .
 run "ruff format --check" "$venv/ruff" format --check .
 run "pyright" "$venv/pyright"
-# On every core; loadscope keeps a class on one worker, because some classes
-# build test_02 on what test_01 left behind (tests/test_end_to_end.py).
-run "pytest" "$venv/python" -m pytest -q -p no:warnings -n auto --dist loadscope
+# On every core. Until 2026-10-23 `--dist loadscope` kept each class on one
+# worker because the end-to-end classes built test_04 on what test_02 left
+# behind; every test builds its own state now (`_adopted`, `_committed`).
+run "pytest" "$venv/python" -m pytest -q -p no:warnings -n auto
 if [ "$fail" -ne 0 ]; then
     echo "pre-commit: commit refused — fix the above (or --no-verify for a deliberate exception)" >&2
     exit 1

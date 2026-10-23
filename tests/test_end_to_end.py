@@ -213,7 +213,8 @@ def assert_draws(
 class Count(unittest.TestCase):
     """The counting skeleton at seconds: lines per document, three documents."""
 
-    run_id = ""  # the kept run, from the step that runs it
+    run_id = ""  # the kept run, from `_adopted`
+    committed = False  # `_committed`: the adopted number is in HEAD
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -272,11 +273,18 @@ class Count(unittest.TestCase):
         )
         self.assertTrue((self.area / sc.CHECK_SCRIPT).is_file())
 
-    def test_02_run_finalize_audit_adopt(self):
-        lab = type(self).lab
+    def _adopted(self) -> str:
+        """Run, finalize, record, adopt — once per class. Every later test
+        rests on this state and calls it first, so each test runs alone and
+        in any order (audit 2026-10-18: test_04–06 read what test_02 left
+        behind, and only `--dist loadscope` kept the suite green)."""
+        cls = type(self)
+        if cls.run_id:
+            return cls.run_id
+        lab = cls.lab
         out = lab.script(self.area, "01_measure.py")
         run_id = lab.run_id_of(out)
-        type(self).run_id = run_id
+        cls.run_id = run_id
         self.assertIn('"lines_mean": 3.0', out)
         rc, out = lab.finalize(self.area)
         self.assertEqual(rc, 0, out)
@@ -297,9 +305,16 @@ class Count(unittest.TestCase):
         text = self.protocol.read_text(encoding="utf-8")
         self.assertIn(f"- **Recorded results:** lines_mean = 3.0 (run {run_id})", text)
         self.assertIn(f"- {run_id} — the kept run", text)
+        return run_id
 
-    def test_03_the_stop_hook_and_the_commit_hold_the_adopted_number(self):
-        lab = type(self).lab
+    def _committed(self) -> str:
+        """The adopted number committed through the hooks — once per class,
+        on `_adopted`; the stop hook and the pre-commit are held on the way."""
+        run_id = self._adopted()
+        cls = type(self)
+        if cls.committed:
+            return run_id
+        lab = cls.lab
         rc, err = lab.stop_hook()
         self.assertEqual(rc, 0, err)
         # nothing staged: the commit would carry no declaration, nothing is owed
@@ -316,10 +331,19 @@ class Count(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertIn("read from the index", out)
         lab.commit("the number, adopted")
+        cls.committed = True
+        return run_id
+
+    def test_02_run_finalize_audit_adopt(self):
+        self._adopted()
+
+    def test_03_the_stop_hook_and_the_commit_hold_the_adopted_number(self):
+        self._committed()
 
     def test_04_a_script_changed_under_the_reported_number_reopens_it(self):
         """Finding (2): the protocol untouched, the formula changed — the
         stop hook holds the area, not the protocol alone."""
+        self._committed()
         lab = type(self).lab
         _replace(
             self.measure,
@@ -344,6 +368,7 @@ class Count(unittest.TestCase):
         """Finding (3): the answer reopened in the tree, the index still
         citing the run — the commit would carry the declaration, so the
         pre-commit holds it; staged, the open answer owes nothing."""
+        run_id = self._committed()
         lab = type(self).lab
         text = self.protocol.read_text(encoding="utf-8")
         reopened = re.sub(r'\n\[result\]\nrun = "[^"]+"\n', "", text)
@@ -352,7 +377,7 @@ class Count(unittest.TestCase):
         rc, out = lab.pre_commit(self.protocol)
         self.assertEqual(rc, 1, out)
         self.assertIn("the working tree differs from the index", out)
-        self.assertIn(f"its head declares {self.run_id}", out)
+        self.assertIn(f"its head declares {run_id}", out)
         lab.git("add", "-A")
         rc, out = lab.pre_commit(self.protocol)
         self.assertEqual(rc, 0, out)
@@ -362,6 +387,7 @@ class Count(unittest.TestCase):
     def test_06_without_the_check_script_the_gap_names_the_template(self):
         """Finding (1), the other way round: an area stamped before the count
         had its own check script is told which template to stamp."""
+        self._committed()
         lab = type(self).lab
         check = self.area / sc.CHECK_SCRIPT
         check.unlink()
@@ -398,7 +424,7 @@ class Judge(unittest.TestCase):
     """The prompt skeleton at seconds, the model faked: twelve texts, a
     registered question the text answers, a placebo for the null lane."""
 
-    run_id: str  # the kept run of test_02
+    run_id = ""  # the kept run, adopted and committed by `_adopted`
 
     GOLD = {
         "causal": "Rain causes the street to be wet.",
@@ -510,8 +536,14 @@ class Judge(unittest.TestCase):
             sorted(dest for _, dest in sc.MODEL.scripts),
         )
 
-    def test_02_run_finalize_audit_adopt(self):
-        lab = type(self).lab
+    def _adopted(self) -> str:
+        """Run, finalize, record, adopt, commit — once per class; every later
+        test calls it first and so runs alone and in any order (audit
+        2026-10-18)."""
+        cls = type(self)
+        if cls.run_id:
+            return cls.run_id
+        lab = cls.lab
         from labkit.run import llm
 
         listed = io.StringIO()
@@ -534,7 +566,7 @@ class Judge(unittest.TestCase):
         ):
             _load(self.measure, "e2e_judge_measure").main()
         run_id = lab.run_id_of(out.getvalue())
-        type(self).run_id = run_id  # test_04 reads the same kept run
+        cls.run_id = run_id
         self.assertIn("c1_pass       True", out.getvalue())
         rc, out_text = lab.finalize(self.area)
         self.assertEqual(rc, 0, out_text)
@@ -555,6 +587,10 @@ class Judge(unittest.TestCase):
         rc, out_text = lab.pre_commit(self.protocol, self.measure)
         self.assertEqual(rc, 0, out_text)
         lab.commit("the verdict, adopted")
+        return run_id
+
+    def test_02_run_finalize_audit_adopt(self):
+        self._adopted()
 
     def test_03_seconds_refuses_the_templates_separate_probe(self):
         result = subprocess.run(
@@ -569,6 +605,7 @@ class Judge(unittest.TestCase):
 
     def _blocker(self) -> Path:
         """A second analysis record of the kept run, holding one BLOCKER."""
+        self._adopted()
         return findings.write(
             self.area,
             sc.ANALYSIS_AUDIT,
@@ -617,6 +654,7 @@ class Judge(unittest.TestCase):
         number read within it, but an instrument unfit for C1 leaves C1
         unjudged — the decision says which, the protocol carries it as a
         Limit line, report-check holds the two together."""
+        self._adopted()
         lab = type(self).lab
         record = self._blocker()
         label = f"Limit (audit {record.stem} #1)"
@@ -694,6 +732,7 @@ class Judge(unittest.TestCase):
         """Review 2026-10-21 (judge-2/3): the cue that limits how the number
         reads was a WARNING, accepted, and the Answer said `c1_pass = True`
         alone. A WARNING may name its effect; named, it reaches the result."""
+        self._adopted()
         lab = type(self).lab
         record = findings.write(
             self.area,
@@ -747,6 +786,7 @@ class Judge(unittest.TestCase):
         exact id shape, saw no citation and let the commit through. Since
         phase 3 the declaration is `[result] run`: a typed id there does not
         read and blocks where it stands, a shaped one must be a run."""
+        self._adopted()
         lab = type(self).lab
         text = self.protocol.read_text(encoding="utf-8")
         self.addCleanup(self.protocol.write_text, text, encoding="utf-8")

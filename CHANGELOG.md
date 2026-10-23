@@ -261,6 +261,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The end-to-end tests run alone and in any order.** `Count` and `Judge`
+  in `tests/test_end_to_end.py` built test_03–06 on what test_02 left
+  behind (the kept run, the adopted number, its commit), and only `--dist
+  loadscope` kept the suite green under xdist (audit 2026-10-18). Each test
+  now calls `_adopted()` / `_committed()` first, which build that state
+  once per class and worker; the pre-commit runs `-n auto` without
+  `loadscope`.
+
 - **labkit-audit refuses and reports progress through `console`.** Three
   refusals (an unstampable area, an unknown alias, verdict and finding
   lines that disagree) and the progress lines (what the audit reads, the
