@@ -407,14 +407,6 @@ aktuellen Code prüfen, keine alten Zeilennummern als offenen Befund übernehmen
   Bedingungsform (`is_relative_to`), keine neue `try`/`except
   ValueError`-Kopie.
 
-### Run-ID-Kollision
-
-2026-10-21 kollidierten in `test_repeats` zwei zufällige 4-Hex-Suffixe
-bei Starts in derselben Sekunde; `mkdir` brach mit `FileExistsError` ab.
-Ein neues Suffix bei dieser Kollision wäre die enge Korrektur, ohne
-Formatbruch. Vor Umsetzung am aktuellen `Run.__init__` prüfen;
-keine beschlossene Priorität.
-
 ### Kern, Doktrin und Formatbrüche
 
 Die aktuellen Kopplungen stehen in `tests/test_architecture.py`

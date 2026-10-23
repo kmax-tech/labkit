@@ -312,6 +312,30 @@ def _repeat_draw(
         ) from exc
 
 
+#: how often a run id is drawn when the drawn one is taken — 16^4 suffixes
+#: per second make a third collision in a row a sign of something else
+RUN_ID_DRAWS = 8
+
+
+def _make_run_dir(base_dir: Path) -> tuple[str, Path]:
+    """A new run's id and its directory, created: `<second>_<4 hex>`
+    (`RUN_ID_TIME`). The suffix is drawn again when the directory exists —
+    two starts in the same second drew the same four hex digits once and
+    `mkdir` failed the second run (test_repeats, 2026-10-21). More than
+    `RUN_ID_DRAWS` taken in a row is an error, not a loop."""
+    for _ in range(RUN_ID_DRAWS):
+        run_id = time.strftime(RUN_ID_TIME) + "_" + uuid.uuid4().hex[:4]
+        run_dir = run_path(base_dir, run_id)
+        try:
+            run_dir.mkdir(parents=True, exist_ok=False)
+        except FileExistsError:
+            continue
+        return run_id, run_dir
+    raise RuntimeError(
+        f"{base_dir}: {RUN_ID_DRAWS} run ids drawn this second and every one taken"
+    )
+
+
 class Run:
     """One measure run: its directory, its frozen config, the outputs it
     registers and the metrics it reports.
@@ -370,12 +394,11 @@ class Run:
         unfrozen_ack, audit_failed = False, None
         if prepared.run_kind == "measurement":
             unfrozen_ack, audit_failed = freeze_gate(base_dir, prepared)
-        # 3. creation — the record, whole or not at all
-        self.run_id = time.strftime(RUN_ID_TIME) + "_" + uuid.uuid4().hex[:4]
+        # 3. creation — the record, whole or not at all; the id and the
+        # directory are drawn together under the guard below
         self.experiment = experiment
         self.script = Path(sys.argv[0]).name if sys.argv[0] else "<interactive>"
         self.base = base_dir
-        self.dir = run_path(base_dir, self.run_id)
         self._protocol = prepared.bound.binding
         self._cost_tier = prepared.cost_tier
         self._promises = prepared.promises
@@ -405,7 +428,7 @@ class Run:
             self._repeat_of, self.draw = _repeat_draw(
                 base_dir, repeat_of, prepared, described, provenance.models
             )
-            self.dir.mkdir(parents=True, exist_ok=False)
+            self.run_id, self.dir = _make_run_dir(base_dir)
             try:
                 self._write_record(provenance)
             except BaseException:

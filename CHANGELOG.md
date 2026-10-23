@@ -134,6 +134,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A taken run id is drawn again.** Two runs started in the same second
+  drew the same four-hex suffix once and the second `mkdir` failed with
+  `FileExistsError` (test_repeats, 2026-10-21). `runlog._make_run_dir`
+  draws id and directory together and redraws the suffix while the
+  directory exists, up to `RUN_ID_DRAWS` (8); more is an error, not a
+  loop. The id format is unchanged.
+
 - **Small drift of the 2026-10-23 audit.** README: "repeat draws" (a typo
   from `e8698ab`); `docs/architecture.md` names `scope_sha.areas_touched`
   where the gates call it and drops the gone `audit_stamp_drift`;

@@ -15,6 +15,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from labkit.formats import files, runs
@@ -120,6 +121,42 @@ class NoHalfMadeRun(unittest.TestCase):
             )
             staged = [p.name for p in (area / "runs").rglob(".*tmp*")]
             self.assertEqual(staged, [])
+
+    def test_a_taken_run_id_is_drawn_again(self) -> None:
+        """Two starts in one second drew the same suffix and the second
+        `mkdir` failed (test_repeats, 2026-10-21): a taken id is redrawn,
+        and a free one is kept as drawn — the first draw, no needless redraw."""
+        draws = iter(["aaaa0000", "aaaa0000", "bbbb0000"])  # the 2nd collides
+        fake = lambda: SimpleNamespace(hex=next(draws))  # noqa: E731
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "runs").mkdir()
+            with (
+                mock.patch.object(runlog.uuid, "uuid4", fake),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                with runlog.run("t", {}, area) as first:
+                    pass
+                with runlog.run("t", {}, area) as second:
+                    pass
+            self.assertTrue(first.run_id.endswith("_aaaa"), first.run_id)
+            self.assertTrue(second.run_id.endswith("_bbbb"), second.run_id)
+            self.assertEqual(len(list((area / "runs").iterdir())), 2)
+
+    def test_every_draw_taken_is_an_error_not_a_loop(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "runs").mkdir()
+            fake = lambda: SimpleNamespace(hex="cccc0000")  # noqa: E731
+            with (
+                mock.patch.object(runlog.uuid, "uuid4", fake),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                with runlog.run("t", {}, area):
+                    pass
+                with self.assertRaises(RuntimeError) as caught:
+                    runlog.Run("t", {}, area)
+            self.assertIn("every one taken", str(caught.exception))
 
     def test_a_filled_protocol_is_written_whole_or_not_at_all(self) -> None:
         """protocol-fill's own writes (a field, --prompts, --render, the
