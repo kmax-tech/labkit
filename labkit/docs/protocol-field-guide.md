@@ -75,7 +75,7 @@ path to this file.
   the run the Recorded results line (`protocol-fill --from-run` writes it) and the
   Conclusion, your two sentences — with `--model` also criterion,
   admissibility condition, model, prompt, null condition and raw output. A
-  count without a model registers no promise and no criterion (its number
+  computation without a model registers no promise and no criterion (its number
   is held by `--check` and `finalize`). Every stamped placeholder is one line;
   this guide is the long form. The full form adds the rest; `labkit-init exp
   <name> --report` appends the † fields. A field the cut left out is not owed.
@@ -149,7 +149,7 @@ The same block may hold the `[[promise]]` tables (labkit
 - **type** — `"exploratory"` generates hypotheses, iterate freely, but
   nothing from it may be reported as a test. `"confirmatory"` tests a
   hypothesis fixed BEFORE the run, on data that influenced no choice.
-- **kind** — what the kept number asserts: `"count"` judges no prediction
+- **kind** — what the kept number asserts: `"compute"` judges no prediction
   (a measurement that cannot pass trivially: no criterion, no promise
   tables); `"fit"` judges a model trained or adjusted in this experiment;
   `"apply"` judges a model used unchanged. A fit or an apply registers the
@@ -158,7 +158,7 @@ The same block may hold the `[[promise]]` tables (labkit
   run), and carries promise tables; with a `[model]` table also the data
   profile and the prompt. The kind describes the number, not every
   operation of the run: a run that only produces predictions declares no
-  result and needs no kind. `count` with a `[model]` table is refused.
+  result and needs no kind. `compute` with a `[model]` table is refused.
 - **cost** — see below.
 - **frozen** — `true` means hypothesis, prompts/rules, metrics, baselines
   and decision rule were all fixed beforehand; only `true` plus `test` gives
@@ -172,7 +172,7 @@ The same block may hold the `[[promise]]` tables (labkit
   check and before freezing. Empty until then, and at `seconds`.
 
 **cost** — the price of a *repeat*, not whether a model is involved. A
-deterministic count, or a handful of model calls that finish in a minute
+deterministic computation, or a handful of model calls that finish in a minute
 for cents, is `seconds`: rerunnable at will, so no agent audit per run;
 `finalize` checks provenance, the independent audit comes when the number
 is promoted into a note or paper or steers a decision. `minutes` is a model

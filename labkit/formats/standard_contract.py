@@ -39,7 +39,7 @@ from pathlib import Path
 from labkit.formats.protocol_block import COST_TIERS, KINDS
 
 SECONDS, MINUTES, HOURS = COST_TIERS
-COUNT_KIND, FIT_KIND, APPLY_KIND = KINDS
+COMPUTE_KIND, FIT_KIND, APPLY_KIND = KINDS
 
 #: the agent audits, by the mode `labkit-audit` and `findings` name them
 PREFLIGHT_AUDIT = "preflight"
@@ -153,7 +153,7 @@ def lane(cost: str | None) -> Lane:
 
 #: the fields a full run at seconds owes written (not a placeholder) before
 #: it starts, by what the kept number asserts (`protocol_block.KINDS`): a
-#: count registers its question — it judges no prediction, so it has no bar
+#: computation registers its question — it judges no prediction, so it has no bar
 #: to clear (0.87.1); a fit or an apply registers the bar (criterion), what
 #: must hold before it is read (admissibility) and what it is held against
 #: (the null condition or anchors, computed in the same run); with a model
@@ -174,10 +174,10 @@ REGISTRATION_FIELDS_WITH_MODEL = ("Data profile",)
 def has_bar(kind: str) -> bool:
     """Does a number of KIND judge a prediction — so a trivial instrument
     could pass, and a bar is owed? Raises ValueError for a kind the head
-    cannot carry: nothing falls back to a count."""
+    cannot carry: nothing falls back to a computation."""
     if kind not in KINDS:
         raise ValueError(f"kind {kind!r} is not one of {', '.join(KINDS)}")
-    return kind != COUNT_KIND
+    return kind != COMPUTE_KIND
 
 
 def registration_fields(kind: str, model: bool) -> tuple[str, ...]:
@@ -216,12 +216,12 @@ class Skeleton:
     release's check (`check_command`) is one command for every area.
 
     Attributes:
-        instrument: `count`, `estimator` or `model` — the three instruments
+        instrument: `compute`, `estimator` or `model` — the three instruments
             (README, Terms).
         scripts: (template name, destination under scripts/), in order.
         test: The template of `tests/test_<NN>_<name>.py`.
         probe: The skeleton has a throwaway instrument check (`--probe`).
-            The count has none: its run is the instrument check. Whether
+            The compute skeleton has none: its run is the instrument check. Whether
             the probe precedes a run is the lane's answer too — at seconds
             a separate probe is not allowed (`Lane.probe_allowed`).
     """
@@ -232,8 +232,8 @@ class Skeleton:
     probe: bool
 
 
-COUNT = Skeleton(
-    instrument="count",
+COMPUTE = Skeleton(
+    instrument="compute",
     scripts=(
         ("measure-quick-script.py.template", "01_measure.py"),
         ("analyze-quick-script.py.template", "02_analyze.py"),
@@ -261,12 +261,12 @@ MODEL = Skeleton(
     test="test-area.py.template",
     probe=True,
 )
-SKELETONS = (COUNT, ESTIMATOR, MODEL)
+SKELETONS = (COMPUTE, ESTIMATOR, MODEL)
 
 
 def skeleton(cost: str | None, kind: str, model: bool) -> Skeleton:
-    """The skeleton an area gets, by what its number asserts: a count the
-    counting skeleton at every tier (it has no bar); a fit the estimator
+    """The skeleton an area gets, by what its number asserts: a computation
+    the compute skeleton at every tier (it has no bar); a fit the estimator
     (nine of nine pilot attempts were classical ML, labkit-paper area 09,
     2026-10-16 — at seconds too since 0.104: a RandomForest at seconds got
     the count's skeleton and no criterion, fifth haiku round); an apply the
@@ -276,7 +276,7 @@ def skeleton(cost: str | None, kind: str, model: bool) -> Skeleton:
     whether a probe may precede the run. Raises ValueError for a kind the
     head cannot carry."""
     if not has_bar(kind):
-        return COUNT
+        return COMPUTE
     if kind == APPLY_KIND and model:
         return MODEL
     return ESTIMATOR

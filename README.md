@@ -60,7 +60,7 @@ An **area** is a directory for one question, its protocol, scripts, outputs
 and runs. Create one from the repo root:
 
 ```bash
-.venv/bin/labkit-init exp document-count --cost seconds --kind count
+.venv/bin/labkit-init exp document-count --cost seconds --kind compute
 ```
 
 In a fresh repo this creates `experiments/01-document-count/` and its test
@@ -73,7 +73,7 @@ cheaply you can repeat the measurement:
 | `minutes` / `hours` | Also probe the instrument, pass preflight, decide the preflight audit, complete the report fields and freeze the protocol. | Finalize, decide the analysis audit, adopt the result through `report-check`. |
 
 `--kind` says what the kept number asserts, and the skeleton and the
-registration follow it: `count` judges no prediction (the counting
+registration follow it: `compute` judges no prediction (the compute
 skeleton; question, scope, exclusions, unit); `fit` judges a model trained
 or adjusted in the experiment (the estimator skeleton; also criterion,
 admissibility condition, null condition); `apply` judges a model used
@@ -88,7 +88,7 @@ configure that alias there. Audits also use an alias; the default
 The following paths assume the fresh area above. All commands run from the
 repo root.
 
-1. **Register the question.** Fill the protocol's open fields. For a count,
+1. **Register the question.** Fill the protocol's open fields. For a computation,
    describe the data, unit and exclusions; the stamped form lists what is
    owed. A model measurement also needs its criterion, admissibility
    condition, prompt, null condition and the judged data profile
@@ -199,7 +199,7 @@ The **console commands** are installed with the package. Use
 
 ```bash
 labkit-init lab [DIR]               # create a lab repo
-labkit-init exp NAME [--cost T] --kind count|fit|apply [--model ALIAS] [--report] [--explore]
+labkit-init exp NAME [--cost T] --kind compute|fit|apply [--model ALIAS] [--report] [--explore]
 protocol-check PROTOCOL             # check required fields and promise tables
 protocol-check --contract | --guide # field contract or field-guide path
 protocol-fill PROTOCOL "LABEL=VALUE" ... # fill fields
@@ -260,7 +260,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **intent id** | Identifier of a checked promise: `[C1]`, `[A1]`, `[B1]`, etc. |
 | **bundle** | Protocol, code and extracted facts packed for an audit agent. |
 | **frozen** | Protocol committed to its declared specification, with `frozen = true`. |
-| **kind** | What the kept number asserts, in the head (`kind`): `count` judges no prediction, `fit` judges a model trained or adjusted in the experiment, `apply` judges a model used unchanged. The registration and the skeleton follow it; a run that only produces predictions declares no result and needs none. |
+| **kind** | What the kept number asserts, in the head (`kind`): `compute` judges no prediction, `fit` judges a model trained or adjusted in the experiment, `apply` judges a model used unchanged. The registration and the skeleton follow it; a run that only produces predictions declares no result and needs none. |
 | **promise** | Checkable commitment: id, metrics key, sentence, code scope and constants in a `[[promise]]` table. |
 | **criterion** | Kind C promise: success or failure decided from the run. |
 | **admissibility** | Kind A promise: prerequisite for reading a criterion; failure withholds all C verdicts. |

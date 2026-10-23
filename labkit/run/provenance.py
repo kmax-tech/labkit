@@ -337,7 +337,7 @@ def sha256_file(path: Path) -> str:
     """Content digest of a file; of a directory, over each visible file's
     relative path and content — so adding, removing, renaming or editing a
     file below it moves it (a directory source used to be unfreezable, and
-    `finalize` then refused every run of the stamped count skeleton)."""
+    `finalize` then refused every run of the stamped compute skeleton)."""
     if path.is_dir():
         return tree_digest(
             (

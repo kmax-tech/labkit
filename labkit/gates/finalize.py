@@ -308,7 +308,7 @@ def check_declared_scopes(
     recorded = cfg.promises if cfg else None
     if recorded is None and text and not _registers(text):
         findings.note(
-            "  n/a — the protocol registers no promise id (a count), nothing to hold"
+            "  n/a — the protocol registers no promise id (a computation), nothing to hold"
         )
         return
     if recorded is None:

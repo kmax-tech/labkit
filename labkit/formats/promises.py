@@ -73,7 +73,7 @@ ID_PREFIX = re.compile(rf"^\[[{_LETTERS}]\d+\]\s*", re.I)
 
 
 def registers_ids(text: str) -> bool:
-    """Does the protocol's prose name any promise id? A count at seconds
+    """Does the protocol's prose name any promise id? A computation at seconds
     names none and owes no [[promise]] table (0.87.1)."""
     return ID_IN_PROTOCOL.search(text) is not None
 
@@ -99,7 +99,7 @@ _ALLOWED_FIELDS = {"id", "key", "sentence", "scope", "constants"}
 #: earlier format is told apart instead of reported as changed promises
 DIGEST_FORMAT = "promises-normalized-json"
 #: what an audit record names as the promise block of a protocol that
-#: declares no [[promise]] tables (a count at seconds)
+#: declares no [[promise]] tables (a computation at seconds)
 NO_BLOCK = "none"
 
 
@@ -380,7 +380,7 @@ def promise_tables_owed(
 
         frozen = true            → owed (the freeze is the registration)
         registers = False and not frozen (the prose names no [C]/[A]/[B]
-            id — a plain count at seconds, 0.87.1) → not owed: nothing to hold
+            id — a plain computation at seconds, 0.87.1) → not owed: nothing to hold
         full_run (runlog run_kind='measurement') → owed
         otherwise (an unfrozen pilot) → not owed
 
@@ -408,7 +408,7 @@ def promise_tables_owed(
             f"sentence in its table"
         )
     if not registers and not frozen:
-        return None  # a full run of a count: nothing registered, nothing to hold
+        return None  # a full run of a computation: nothing registered, nothing to hold
     because = "frozen = true" if frozen else "a full run is held to the registration"
     return (
         f"{because}, but the protocol declares no [[promise]] table — the "

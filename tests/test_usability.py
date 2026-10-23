@@ -220,7 +220,7 @@ class StampFlags(unittest.TestCase):
 
     def test_count_gets_the_seconds_cut_without_a_model(self):
         self.assertEqual(
-            usability.stamp_flags("count", None, False), ("seconds", "count", False)
+            usability.stamp_flags("count", None, False), ("seconds", "compute", False)
         )
 
     def test_judge_gets_the_seconds_cut_with_a_model(self):
@@ -230,10 +230,10 @@ class StampFlags(unittest.TestCase):
 
     def test_an_explicit_tier_wins_and_unset_stamps_none(self):
         self.assertEqual(
-            usability.stamp_flags("count", "hours", False), ("hours", "count", False)
+            usability.stamp_flags("count", "hours", False), ("hours", "compute", False)
         )
         self.assertEqual(
-            usability.stamp_flags("count", "unset", False), (None, "count", False)
+            usability.stamp_flags("count", "unset", False), (None, "compute", False)
         )
 
     def test_a_fit_is_staged_as_a_fit_without_a_model(self):

@@ -55,7 +55,7 @@ class Registration(unittest.TestCase):
         (`kind`), not the model technology — a RandomForest at seconds owed
         nothing but its question (fifth haiku round, t5 and t18)."""
         self.assertEqual(
-            sc.registration_fields("count", False), ("Question / hypothesis",)
+            sc.registration_fields("compute", False), ("Question / hypothesis",)
         )
         bar = (
             "Question / hypothesis",
@@ -74,7 +74,7 @@ class Registration(unittest.TestCase):
                 sc.registration_fields(bad, False)
             with self.subTest(bad), self.assertRaises(ValueError):
                 sc.skeleton("seconds", bad, False)
-        self.assertFalse(sc.has_bar("count"))
+        self.assertFalse(sc.has_bar("compute"))
         self.assertTrue(sc.has_bar("fit") and sc.has_bar("apply"))
 
     def test_the_labels_are_the_templates_must_fields_of_the_seconds_cut(self):
@@ -89,7 +89,7 @@ class Registration(unittest.TestCase):
 class TheRelease(unittest.TestCase):
     def test_the_description_names_a_probe_only_where_one_precedes_the_run(self):
         for cost in (None, "seconds", "minutes", "hours"):
-            for kind, model in (("count", False), ("fit", False), ("apply", True)):
+            for kind, model in (("compute", False), ("fit", False), ("apply", True)):
                 with self.subTest(cost=cost, kind=kind, model=model):
                     first = sc.describe(cost, kind, model)[0]
                     owed = (
@@ -113,7 +113,7 @@ class Skeletons(unittest.TestCase):
         skeleton until 0.104 (fifth haiku round)."""
         for cost in ("seconds", "minutes", "hours", None):
             with self.subTest(cost=cost):
-                self.assertIs(sc.skeleton(cost, "count", False), sc.COUNT)
+                self.assertIs(sc.skeleton(cost, "compute", False), sc.COMPUTE)
                 self.assertIs(sc.skeleton(cost, "fit", False), sc.ESTIMATOR)
                 self.assertIs(sc.skeleton(cost, "fit", True), sc.ESTIMATOR)
                 self.assertIs(sc.skeleton(cost, "apply", True), sc.MODEL)
@@ -131,7 +131,7 @@ class Skeletons(unittest.TestCase):
 
     def test_only_the_count_has_no_probe_stage(self):
         self.assertEqual(
-            [sk.instrument for sk in sc.SKELETONS if not sk.probe], ["count"]
+            [sk.instrument for sk in sc.SKELETONS if not sk.probe], ["compute"]
         )
 
 
@@ -139,7 +139,7 @@ class Described(unittest.TestCase):
     def test_every_tier_names_its_check_and_what_comes_before_the_run(self):
         for cost, kind, model in (
             (None, "fit", False),
-            ("seconds", "count", False),
+            ("seconds", "compute", False),
             ("seconds", "apply", True),
         ):
             with self.subTest(cost=cost, kind=kind, model=model):
@@ -158,7 +158,7 @@ class Described(unittest.TestCase):
             "\n".join(sc.describe("seconds", "fit", False)),
         )
         self.assertNotIn(
-            "Success / failure", "\n".join(sc.describe("seconds", "count", False))
+            "Success / failure", "\n".join(sc.describe("seconds", "compute", False))
         )
 
 

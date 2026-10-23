@@ -126,7 +126,7 @@ def seconds_cut(tmpl: str, kind: str, model: bool = False) -> str:
 def bar_cut(tmpl: str, kind: str) -> str:
     """TMPL as a KIND without a bar is stamped at every tier: the fields a
     bar owes (tagged `<!-- sb -->`: criterion, admissibility condition,
-    Model / tool, null condition) and the promise tables go — a count owes
+    Model / tool, null condition) and the promise tables go — a computation owes
     its question (standard 0.22). A fit or an apply comes back unchanged.
     The seconds cut keeps fewer fields still (`seconds_cut`)."""
     from labkit.formats.standard_contract import has_bar
@@ -150,12 +150,12 @@ def quick_block(tmpl: str, kind: str) -> str:
     hint here, a rule written for the count; once the count lost its tables
     in 0.87.0 the hint hit only the model case, and every judge area stamped
     at seconds failed its first run with a TypeError — found by a seconds
-    probe, 2026-10-15.) For a count the tables go: it has no bar to clear."""
+    probe, 2026-10-15.) For a computation the tables go: it has no bar to clear."""
     from labkit.formats.standard_contract import has_bar
 
     if has_bar(kind):
         return tmpl
-    # a deterministic count has no bar to clear: no promise tables, no
+    # a deterministic computation has no bar to clear: no promise tables, no
     # criterion — five cold agents each invented a tautological [C1]
     # (cloud probes 2026-10-12); the number is held by --check and finalize
     return without_promise_tables(tmpl)
@@ -357,14 +357,14 @@ def auto_fill_deterministic(text: str) -> tuple[str, int]:
     return "\n".join(lines), filled
 
 
-#: What a count's registration owes, said in the placeholder: three cold
+#: What a computation's registration owes, said in the placeholder: three cold
 #: agents (Haiku, 2026-10-13) wrote a Terms sentence for a plain count — "n/a"
 #: was allowed by the check but unsaid by the stamp — and one read
 #: "hypothesis" as an expectation to invent, then reworded it with --force.
-COUNT_PLACEHOLDERS = {
+COMPUTE_PLACEHOLDERS = {
     "Terms of this protocol": '<one line per coined house word — or "n/a — no coinage">',
     "Question / hypothesis": (
-        "<the one question: what is counted, over which items — a count tests no hypothesis>"
+        "<the one question: what is computed, over which items — a computation tests no hypothesis>"
     ),
 }
 
@@ -435,7 +435,7 @@ PROMISE_FIELDS = {
 def name_promise_ids(text: str, kind: str) -> str:
     """The stamped promise ids written before the placeholders of the fields
     that state them (PROMISE_FIELDS): `- **Success / failure criterion:**
-    [C1] <…>` — for a KIND with a bar; a count's text comes back unchanged
+    [C1] <…>` — for a KIND with a bar; a computation's text comes back unchanged
     (an id in its prose would register a promise). Raises ValueError when a
     field is not stamped or the stamped block does not declare its id: the
     prose names only what the block already promises."""
@@ -487,9 +487,9 @@ def estimator_placeholders(text: str, cut: bool = False) -> str:
 
 def count_placeholders(text: str) -> str:
     """The seconds cut without a model, its Terms and Question placeholders
-    replaced by COUNT_PLACEHOLDERS. Raises when the cut lacks one of them."""
+    replaced by COMPUTE_PLACEHOLDERS. Raises when the cut lacks one of them."""
     lines = text.split("\n")
-    for label, value in COUNT_PLACEHOLDERS.items():
+    for label, value in COMPUTE_PLACEHOLDERS.items():
         if not _replace_placeholder(lines, label, value):
             raise ValueError(
                 f"count_placeholders: the cut has no stamped `{label}` field"

@@ -147,14 +147,14 @@ class Exp(unittest.TestCase):
     def test_a_bar_names_its_stamped_ids_and_a_count_names_none(self) -> None:
         """A fit or an apply stamps `[C1]`, `[A1]`, `[A2]` before the fields
         that state them — the ids its block declares, nothing added; the
-        fields stay open. A count is stamped without those fields and without
+        fields stay open. A computation is stamped without those fields and without
         promise tables at every tier, so its prose names no id."""
         cases = (
             ("seconds", "fit", None),
             ("minutes", "fit", None),
             ("hours", "apply", "haiku"),
-            ("minutes", "count", None),
-            ("seconds", "count", None),
+            ("minutes", "compute", None),
+            ("seconds", "compute", None),
         )
         for cost, kind, model in cases:
             with self.subTest(cost=cost, kind=kind):
@@ -166,7 +166,7 @@ class Exp(unittest.TestCase):
                 quiet(scaffold.stamp_area, root, "x", cost=cost, kind=kind, model=model)
                 (proto,) = (root / "experiments").glob("*-x/PROTOCOL-x.md")
                 text = proto.read_text(encoding="utf-8")
-                if kind == "count":
+                if kind == "compute":
                     # standard 0.22: no bar field and no promise table at any tier
                     self.assertEqual(promises.ids_in_prose(text), set())
                     self.assertIsNone(promises.parse_block(text))
@@ -229,12 +229,12 @@ class Exp(unittest.TestCase):
             quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
 
     def test_seconds_stamps_the_cut_and_the_counting_skeleton(self) -> None:
-        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="seconds", kind="count")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="seconds", kind="compute")
         area = self.area()
         proto = (area / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
         self.assertIn('cost = "seconds"', proto)
-        self.assertIn('kind = "count"', proto)
-        # a count has no bar to clear: no promise tables, no criterion, no admissibility
+        self.assertIn('kind = "compute"', proto)
+        # a computation has no bar to clear: no promise tables, no criterion, no admissibility
         self.assertNotIn("[[promise]]", proto)
         self.assertNotIn("Success / failure criterion", proto)
         self.assertNotIn("Admissibility condition", proto)
@@ -243,7 +243,7 @@ class Exp(unittest.TestCase):
         self.assertNotIn("- **Limits:**", proto)
         self.assertNotIn("- **Next step:**", proto)
         self.assertFalse((area / "scripts" / "00_prepare.py").exists())
-        # the one public recheck of every skeleton: the count's 02_analyze.py
+        # the one public recheck of every skeleton: the compute skeleton's 02_analyze.py
         # imports evaluate_rows from 01_measure.py and carries the --check
         # (until 0.99.0 the check sat inside 01_measure.py, and report-check
         # asked for a file the skeleton never stamped, audit 2026-10-19)
@@ -252,7 +252,7 @@ class Exp(unittest.TestCase):
         self.assertIn("measure.evaluate_rows(rows, ids)", analyze)
         self.assertIn('AREA / "scripts" / "01_measure.py"', analyze)
         script = (area / "scripts" / "01_measure.py").read_text(encoding="utf-8")
-        # one home for the check: the count's 01_measure.py only measures
+        # one home for the check: the compute skeleton's 01_measure.py only measures
         self.assertNotIn('add_argument("--check"', script)
         self.assertNotIn("recheck.holds", script)
         self.assertIn(
@@ -262,7 +262,7 @@ class Exp(unittest.TestCase):
         readme = (area / "README.md").read_text(encoding="utf-8")
         self.assertIn("evaluate_rows", readme)
         self.assertNotIn("--probe", readme)  # the counting skeleton has no probe
-        # a count's README carries no blank: question and contract live in the
+        # a computation's README carries no blank: question and contract live in the
         # protocol (cloud draw 11: the placeholder was the one gate line left)
         self.assertEqual(readme_check.readme_placeholders(area), [])
         self.assertIn("PROTOCOL-foo-bar.md", readme)
@@ -438,7 +438,7 @@ class Exp(unittest.TestCase):
             self.assertEqual(positions, sorted(positions), text)
             numbers = [int(m) for m in re.findall(r"^  (\d+)\. ", text, re.M)]
             self.assertEqual(numbers, list(range(1, len(numbers) + 1)), text)
-        seconds = scaffold.next_steps(rel, "foo", "01", "seconds", "count", False)
+        seconds = scaffold.next_steps(rel, "foo", "01", "seconds", "compute", False)
         for not_owed in ("preflight", "frozen = true", "runlog start", "--probe"):
             self.assertNotIn(not_owed, seconds, seconds)
         for owed in ("code-check", "finalize", "--mode analysis", "--from-run"):
@@ -713,7 +713,9 @@ class Exp(unittest.TestCase):
         m = protocol_block.model(text)
         assert m is not None
         self.assertIsNone(m.alias)
-        quiet(scaffold.stamp_area, self.root, "no-model", cost="seconds", kind="count")
+        quiet(
+            scaffold.stamp_area, self.root, "no-model", cost="seconds", kind="compute"
+        )
         text = next(self.root.glob("experiments/*no-model/PROTOCOL-*.md")).read_text()
         self.assertIsNone(protocol_block.model(text))
 
@@ -793,7 +795,7 @@ class Cli(unittest.TestCase):
                         "--cost",
                         "seconds",
                         "--kind",
-                        "count",
+                        "compute",
                     ],
                 ),
                 0,

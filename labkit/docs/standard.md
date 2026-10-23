@@ -151,8 +151,8 @@ evidence file under the same ID (top of this document).*
   The promises are also present as data in the head: the `[[promise]]` tables
   (key, sentence, code region, constants). Protocol standard 0.19
   (labkit 0.72) requires them when `frozen = true` and for every full run
-  — so with `cost = "seconds"` always, with one exception: a count
-  (`kind = "count"` in the head, standard 0.22: a number that judges no
+  — so with `cost = "seconds"` always, with one exception: a computation
+  (`kind = "compute"` in the head, standard 0.22: a number that judges no
   prediction and so cannot pass trivially) registers nothing unless its
   prose names a `[C]`/`[A]`/`[B]` id, and owes neither tables nor a
   success criterion (labkit 0.87.1, `promises.promise_tables_owed`); its
@@ -452,7 +452,7 @@ evidence file under the same ID (top of this document).*
 
   **At `seconds`, the criterion freezes once, the instrument never.** The
   criterion is fixed before the number exists and does not move afterwards
-  (a plain count registers none — see the `[[promise]]` tables above). The
+  (a plain computation registers none — see the `[[promise]]` tables above). The
   instrument may change after the first run — one more role, a
   check per computation, a different aggregation. Every change is a commit
   with a test and a new run of the same command: no second

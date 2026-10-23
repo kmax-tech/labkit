@@ -8,11 +8,11 @@ a gate message names the rule it enforces by id and name.
 ## Lane `seconds` — one number in minutes
 
 Applies when the protocol head says `cost = "seconds"`: a run that can be
-repeated at will (a count, a handful of model calls for a minute and a cent),
+repeated at will (a computation, a handful of model calls for a minute and a cent),
 LAB-017 The number of audits follows the cost tier.
 
-1. `labkit-init exp <name> --cost seconds --kind count|fit|apply` — the kind
-   says what the kept number asserts: `count` judges no prediction, `fit`
+1. `labkit-init exp <name> --cost seconds --kind compute|fit|apply` — the kind
+   says what the kept number asserts: `compute` judges no prediction, `fit`
    judges a model trained or adjusted here (a RandomForest, a regression,
    a fine-tune), `apply` judges a model used unchanged (an LLM as judge, a
    trained classifier on labelled data); `--model <alias>` when the model
@@ -23,13 +23,13 @@ LAB-017 The number of audits follows the cost tier.
    open field, the TOML head's `type` and, with a model, each promise's
    `<id> sentence` first (`cost = "seconds"` is stamped); the fields
    written after the run stand apart at the end — leave them now.
-   A count owes question · data · exclusions · unit; a fit or an apply also
+   A computation owes question · data · exclusions · unit; a fit or an apply also
    the success criterion, the admissibility condition and the null
    condition — the bar, what must hold before it is read, and the
    reference computed in the same run; with a model also the prompt and
    the data profile (step 3; the full run waits for it). Every coinage of your own — a constant such as a margin, arms,
    item ids, the model alias — gets half a sentence under "Terms of this
-   protocol" — a count with no coinage writes "n/a — no coinage". Fill by
+   protocol" — a computation with no coinage writes "n/a — no coinage". Fill by
    label, all in one call: `protocol-fill <PROTOCOL> "type=exploratory"
    "C1 sentence=<value>" "<Label>=<value>" ...` (one quoted word per
    field); the prompt block from
@@ -71,7 +71,7 @@ LAB-017 The number of audits follows the cost tier.
    written protocol and puts the
    file back if it refuses: a full run (no probe), the decided analysis
    audit of code, promises and that run, `scripts/02_analyze.py --check`
-   passing (stamped with every skeleton; the count's recomputes from the
+   passing (stamped with every skeleton; the compute skeleton's recomputes from the
    kept rows). Each finding with an effect lands below Recorded results as its
    `Limit (audit <record> #N)` line, and Recorded results counts them in one
    note ("subject to N recorded limitations") and names each promise

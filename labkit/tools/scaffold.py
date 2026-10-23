@@ -1,7 +1,7 @@
 """labkit-init — stamp a lab repo and its experiment areas from the templates that ship with labkit.
 
     labkit-init lab [DIR] [--name NAME] [--labkit-ref REF]
-    labkit-init exp NAME [--repo DIR] [--cost seconds|minutes|hours] --kind count|fit|apply [--model [ALIAS]]
+    labkit-init exp NAME [--repo DIR] [--cost seconds|minutes|hours] --kind compute|fit|apply [--model [ALIAS]]
                          [--report] [--explore]
 
 `lab` lays out a lab repo: `AGENTS.md` (and `CLAUDE.md` pointing at it),
@@ -232,7 +232,7 @@ def area_slug(name: str) -> str:
 def area_readme(nn: str, slug: str, skeleton: bool) -> str:
     """The area README: the one question, the route through the area, the contract on one page.
 
-    A count (`skeleton=False`: cost seconds without a model) carries no blank:
+    A computation (`skeleton=False`: cost seconds without a model) carries no blank:
     its question and contract live in the protocol, and a README placeholder
     was the one gate line left in the cloud probe (draw 11, 2026-10-13)."""
     question = (
@@ -240,7 +240,7 @@ def area_readme(nn: str, slug: str, skeleton: bool) -> str:
         'Intent; if it needs an "and", it is two experiments>'
         if skeleton
         else f"**The one question** is the protocol's Question field (`PROTOCOL-{slug}.md`);\n"
-        "a count asks one and reports one number."
+        "a computation asks one and reports one number."
     )
     returns = (
         "**What `evaluate_rows()` returns.** <per registered promise its key, in the order\n"
@@ -251,7 +251,7 @@ def area_readme(nn: str, slug: str, skeleton: bool) -> str:
         "test call it there, and `intent-check` holds the protocol's ids to these keys."
         if skeleton
         else "**What `evaluate_rows()` returns.** The number under `METRIC_KEY` of\n"
-        "`scripts/01_measure.py`; a count registers no ids. The formula lives once, there;\n"
+        "`scripts/01_measure.py`; a computation registers no ids. The formula lives once, there;\n"
         "`02_analyze.py --check` and the test call it, and `finalize` holds the protocol's\n"
         "Answer line to the run's `metrics.json`."
     )
@@ -337,7 +337,7 @@ def stamp_scripts(
     model: bool | str,
 ) -> list[str]:
     """The script skeletons and the area's test under tests/ — which ones
-    is the contract's answer (`standard_contract.skeleton`: the count, the
+    is the contract's answer (`standard_contract.skeleton`: the compute, the
     estimator or the prompt skeleton, every one with the check)."""
     log: list[str] = []
     (area / "scripts").mkdir(exist_ok=True)
@@ -379,7 +379,7 @@ def stamp_area(
     and the report to print (what was written, then the next steps) — the
     caller prints; `stamp_lab` returns its log the same way. KIND is what
     the kept number asserts (`protocol_block.KINDS`); a new area without it
-    is refused — nothing falls back to a count (standard 0.22)."""
+    is refused — nothing falls back to a computation (standard 0.22)."""
     slug = area_slug(name)
     experiments = root / "experiments"
     if not (root / "models.toml").is_file() or not experiments.is_dir():
@@ -412,7 +412,7 @@ def stamp_area(
             seconds_cut(quick_block(tmpl, kind), kind, model=bool(model)),
             [],
         )
-        if skeleton is standard_contract.COUNT:
+        if skeleton is standard_contract.COMPUTE:
             pilot = count_placeholders(pilot)
         elif skeleton is standard_contract.ESTIMATOR:
             pilot = estimator_placeholders(pilot, cut=True)
@@ -435,7 +435,7 @@ def stamp_area(
         write_if_absent(area / d / ".gitkeep", "", log)
     write_if_absent(
         area / "README.md",
-        area_readme(nn, slug, skeleton=skeleton is not standard_contract.COUNT),
+        area_readme(nn, slug, skeleton=skeleton is not standard_contract.COMPUTE),
         log,
     )
     pre = experiments / "explore" / f"{slug}.py"
@@ -460,11 +460,11 @@ def stamp_area(
 def asked_kind(kind: str | None, model: bool) -> str:
     """The kind a new area is stamped with — the one asked, held to
     `protocol_block.KINDS` and to the model flag; nothing falls back to a
-    count (standard 0.22). Raises `console.Refused` naming the choice."""
+    computation (standard 0.22). Raises `console.Refused` naming the choice."""
     if kind is None:
         raise console.Refused(
             "labkit-init",
-            "--kind count|fit|apply: what the kept number asserts — a count judges "
+            "--kind compute|fit|apply: what the kept number asserts — a computation judges "
             "no prediction, a fit judges a model trained or adjusted here, an apply "
             "a model used unchanged (standard 0.22; nothing is stamped without it)",
         )
@@ -472,10 +472,10 @@ def asked_kind(kind: str | None, model: bool) -> str:
         raise console.Refused(
             "labkit-init", f"--kind {kind!r}: one of {', '.join(protocol_block.KINDS)}"
         )
-    if kind == standard_contract.COUNT_KIND and model:
+    if kind == standard_contract.COMPUTE_KIND and model:
         raise console.Refused(
             "labkit-init",
-            "--kind count with --model: a model in the loop judges predictions, so "
+            "--kind compute with --model: a model in the loop judges predictions, so "
             "the number has a bar — --kind apply (the model used unchanged) or fit",
         )
     return kind
@@ -520,7 +520,7 @@ def stamped_head(
     )
     if cost:
         out = out.replace('cost = "<seconds | minutes | hours>"', f'cost = "{cost}"')
-    out = out.replace('kind = "<count | fit | apply>"', f'kind = "{kind}"')
+    out = out.replace('kind = "<compute | fit | apply>"', f'kind = "{kind}"')
     if model:
         alias = model if isinstance(model, str) else "<alias from models.toml>"
         out = out.replace(
@@ -574,8 +574,8 @@ def next_steps(
             f'cost = "{ln.tier}" — no freeze, no audit before the run, '
             "the run is the instrument check"
         )
-        if sk is standard_contract.COUNT:
-            fields = "data, exclusions — no criterion, no promise table: a count has no bar to clear"
+        if sk is standard_contract.COMPUTE:
+            fields = "data, exclusions — no criterion, no promise table: a computation has no bar to clear"
             fill = "expected_ids(), rows(), evaluate_rows()"
         elif sk is standard_contract.MODEL:
             fields = "criterion, admissibility condition, prompt, null condition, data profile"
@@ -692,7 +692,7 @@ def main(argv: list[str]) -> int:
     exp.add_argument(
         "--kind",
         choices=protocol_block.KINDS,
-        help="what the kept number asserts: count (no prediction judged), fit (a "
+        help="what the kept number asserts: compute (no prediction judged), fit (a "
         "model trained or adjusted here), apply (a model used unchanged) — "
         "required for a new area; the skeleton and the registration follow it",
     )
@@ -703,7 +703,7 @@ def main(argv: list[str]) -> int:
         default=False,
         metavar="ALIAS",
         help="a model answering through models.toml: writes `[model] alias`; with "
-        "--kind apply the prompt skeleton (--kind count refuses it)",
+        "--kind apply the prompt skeleton (--kind compute refuses it)",
     )
     exp.add_argument(
         "--report",

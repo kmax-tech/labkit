@@ -180,7 +180,7 @@ TASKS = {
 #: form and the model skeleton and every agent spent its time deleting it
 #: (probe 2026-10-07) — a cost of the staging, not of the route.
 TASK_STAMP: dict[str, tuple[str, str, bool]] = {
-    "count": ("seconds", "count", False),
+    "count": ("seconds", "compute", False),
     "judge": ("seconds", "apply", True),
     "fit": ("seconds", "fit", False),
 }
@@ -397,12 +397,12 @@ def stamp_flags(
 ) -> tuple[str | None, str, bool]:
     """(cost tier or None, kind, model) the scaffolder gets: the task's route
     stamp (TASK_STAMP) unless `cost` names a tier; "unset" stamps no tier.
-    A count asked for with a model is an apply: a model in the loop judges."""
+    A computation asked for with a model is an apply: a model in the loop judges."""
     default_cost, kind, default_model = TASK_STAMP[task]
     if cost is None:
         cost = default_cost
     model = model or default_model
-    if model and kind == "count":
+    if model and kind == "compute":
         kind = "apply"
     return (None if cost == "unset" else cost), kind, model
 

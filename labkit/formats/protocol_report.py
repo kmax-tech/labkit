@@ -54,7 +54,7 @@ from labkit.formats.protocol_check import (
 def unreported(text: str, seconds: bool = False) -> list[str]:
     """The result fields still missing, a placeholder or only dashes. A
     model-only field (`sm`, Raw output) is owed only with a model named — a
-    count has no prompt+answer pair to show; at SECONDS only the cut's fields
+    computation has no prompt+answer pair to show; at SECONDS only the cut's fields
     are owed (the Summary requires Conclusion, 2026-10-12)."""
     lines = fields(text)
     found = {f.name: f for f in lines}
@@ -244,7 +244,7 @@ def print_contract() -> None:
         "(standard_contract; minutes owes what hours owes):"
     )
     for cost, kind, model in (
-        (standard_contract.SECONDS, standard_contract.COUNT_KIND, False),
+        (standard_contract.SECONDS, standard_contract.COMPUTE_KIND, False),
         (standard_contract.SECONDS, standard_contract.FIT_KIND, False),
         (standard_contract.SECONDS, standard_contract.APPLY_KIND, True),
         (standard_contract.HOURS, standard_contract.FIT_KIND, False),
@@ -264,7 +264,7 @@ def print_contract() -> None:
         + ", ".join(protocol_block.COST_TIERS)
         + ", kind one of "
         + ", ".join(protocol_block.KINDS)
-        + " (what the kept number asserts: a count judges no prediction, a fit "
+        + " (what the kept number asserts: a computation judges no prediction, a fit "
         "judges a model trained or adjusted here, an apply a model used unchanged)."
     )
     print(

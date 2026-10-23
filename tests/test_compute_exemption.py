@@ -1,7 +1,7 @@
-"""The count's exemption stands where the code makes it and where the
+"""The computation's exemption stands where the code makes it and where the
 auditor reads.
 
-A plain count at `seconds` (no `[C]/[A]/[B]` id in its prose) owes no
+A plain computation (`kind = "compute"`) at `seconds` (no `[C]/[A]/[B]` id in its prose) owes no
 promise table and no criterion — `promises.promise_tables_owed` since
 0.87.1. The standard the analysis audit reads said tables are owed "with
 cost = seconds always", and an audit asked a count for a criterion (sandbox
@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CountExemption(unittest.TestCase):
-    def test_the_code_owes_a_plain_count_no_tables(self):
+    def test_the_code_owes_a_plain_computation_no_tables(self):
         self.assertIsNone(
             promises.promise_tables_owed(
                 None, frozen=False, full_run=True, registers=False
@@ -34,7 +34,7 @@ class CountExemption(unittest.TestCase):
         for mode in ("preflight", "analysis"):
             with self.subTest(mode=mode):
                 _, text = audit.standard_excerpt(mode)
-                self.assertIn('a count\n  (`kind = "count"`', text)
+                self.assertIn('a computation\n  (`kind = "compute"`', text)
                 self.assertIn("owes neither tables nor a\n  success criterion", text)
 
     def test_the_contract_states_it_too(self):

@@ -1,4 +1,4 @@
-"""The count skeleton reads its inputs from the frozen INPUTS.
+"""The compute skeleton reads its inputs from the frozen INPUTS.
 
 The usability fixture gives every case its own `inputs` path; the skeleton
 froze only the constant INPUTS, so every cold agent read the record's path
@@ -38,7 +38,7 @@ class InputDir(unittest.TestCase):
                         "--cost",
                         "seconds",
                         "--kind",
-                        "count",
+                        "compute",
                     ]
                 ),
                 0,

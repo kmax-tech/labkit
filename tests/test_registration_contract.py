@@ -159,7 +159,7 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
             any("declares no [[promise]]" in m for m in report.missing_must),
             report.missing_must,
         )
-        # the twin: a count names no id and owes no table (0.87.1)
+        # the twin: a computation names no id and owes no table (0.87.1)
         report = protocol_check.check_fields(head(cost="seconds", promises=None))
         self.assertFalse(
             any("declares no [[promise]]" in m for m in report.missing_must),

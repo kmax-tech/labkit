@@ -167,11 +167,11 @@ def head(
     MODEL the alias of a `[model]` table, ARMS its `[model.arms.<arm>]`
     tables as {arm: (profile, fingerprint, alias)}, LABELS a `[gate]` table
     (phase 4). KIND is the head's `kind` (standard 0.22); None derives it as
-    the stamp would — `apply` with a model, else `count` — so a fixture
-    states only what it varies; a literal `kind="<count | fit | apply>"`
+    the stamp would — `apply` with a model, else `compute` — so a fixture
+    states only what it varies; a literal `kind="<compute | fit | apply>"`
     writes the placeholder."""
     if kind is None:
-        kind = "apply" if model is not None else "count"
+        kind = "apply" if model is not None else "compute"
     if promises == "" and (frozen or cost == "seconds"):
         promises = DEFAULT_BLOCK  # frozen, or at seconds every run is the full run
     promises = promises or ""

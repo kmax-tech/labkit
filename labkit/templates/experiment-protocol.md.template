@@ -186,7 +186,7 @@ standard = "0.22"
 id = "<protocol-id>"
 type = "<exploratory | confirmatory>"
 cost = "<seconds | minutes | hours>"
-kind = "<count | fit | apply>"
+kind = "<compute | fit | apply>"
 frozen = false
 preflight_audit = ""
 # With a model: `[model] alias` (stamped by --model), `[model.arms.<arm>]` with

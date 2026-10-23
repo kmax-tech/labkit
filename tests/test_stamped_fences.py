@@ -97,12 +97,12 @@ class StampReadBack(unittest.TestCase):
     def test_a_head_without_the_asked_tier_is_refused(self):
         from labkit.tools import scaffold as sc
 
-        good = '```toml\n[protocol]\nstandard = "0.22"\nid = "p-0123456789abcdef"\ntype = "<exploratory | confirmatory>"\ncost = "seconds"\nkind = "count"\nfrozen = false\npreflight_audit = ""\n```\n'
-        sc.check_stamped_head(good, "seconds", "count")
+        good = '```toml\n[protocol]\nstandard = "0.22"\nid = "p-0123456789abcdef"\ntype = "<exploratory | confirmatory>"\ncost = "seconds"\nkind = "compute"\nfrozen = false\npreflight_audit = ""\n```\n'
+        sc.check_stamped_head(good, "seconds", "compute")
         sc.check_stamped_head(
             good.replace('cost = "seconds"', 'cost = "<seconds | minutes | hours>"'),
             None,
-            "count",
+            "compute",
         )
         with self.assertRaisesRegex(ValueError, "cost"):
             sc.check_stamped_head(
@@ -110,17 +110,19 @@ class StampReadBack(unittest.TestCase):
                     'cost = "seconds"', 'cost = "<seconds | minutes | hours>"'
                 ),
                 "seconds",
-                "count",
+                "compute",
             )
         with self.assertRaisesRegex(ValueError, "id"):
             sc.check_stamped_head(
-                good.replace("p-0123456789abcdef", "<protocol-id>"), "seconds", "count"
+                good.replace("p-0123456789abcdef", "<protocol-id>"),
+                "seconds",
+                "compute",
             )
         with self.assertRaisesRegex(ValueError, "kind"):
             sc.check_stamped_head(
-                good.replace('kind = "count"', 'kind = "<count | fit | apply>"'),
+                good.replace('kind = "compute"', 'kind = "<compute | fit | apply>"'),
                 "seconds",
-                "count",
+                "compute",
             )
 
 

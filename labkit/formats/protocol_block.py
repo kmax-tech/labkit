@@ -9,7 +9,7 @@ holds the fields a machine reads — the head — and its optional
     id = "p-0123456789abcdef"       # stamped by `labkit-init exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
     cost = "seconds"                # seconds | minutes | hours
-    kind = "count"                  # count | fit | apply — what the kept number asserts
+    kind = "compute"                # compute | fit | apply — what the kept number asserts
     frozen = false
     preflight_audit = ""            # minutes/hours: the decided preflight record, audits/<minute>-preflight.toml
 
@@ -40,18 +40,26 @@ STANDARD = "0.22"
 #: what a reader of the previous standard changes to read a protocol here —
 #: said in the refusal, so the migration is a sentence, not a legacy path
 MIGRATION = (
-    'from 0.21: set standard = "0.22" and add `kind = "count" | "fit" | "apply"` '
+    'from 0.21: set standard = "0.22" and add `kind = "compute" | "fit" | "apply"` '
     "below `cost` — what the kept number asserts (`protocol-fill <PROTOCOL> "
-    "kind=…`); a count measures and judges no prediction, a fit judges a model "
+    "kind=…`); a computation measures and judges no prediction, a fit judges a model "
     "trained or adjusted in this experiment, an apply judges a model used unchanged"
+)
+#: what a head stamped on an intermediate 0.22 commit changes: the kind
+#: `count` was renamed before 0.104.0 was released — said in the refusal,
+#: never read as `compute`
+COUNT_RENAMED = (
+    '[protocol] kind = "count" was renamed kind = "compute" before labkit '
+    '0.104.0 was released — set kind = "compute" (`protocol-fill <PROTOCOL> '
+    "kind=compute`)"
 )
 TYPES = ("exploratory", "confirmatory")
 COST_TIERS = ("seconds", "minutes", "hours")
-#: what the kept number asserts (standard 0.22): a count judges no
+#: what the kept number asserts (standard 0.22): a computation judges no
 #: prediction; a fit judges a model trained or adjusted in this experiment;
 #: an apply judges a model used unchanged — the obligations follow
 #: (`standard_contract.registration_fields`), never the model technology
-KINDS = ("count", "fit", "apply")
+KINDS = ("compute", "fit", "apply")
 #: `p-` plus 16 lowercase hex: not derived from name or path, so renaming
 #: and moving a protocol leave its identity intact
 ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
@@ -306,7 +314,7 @@ def model(text: str) -> Model | None:
     from models.toml>"`, stamped by `labkit-init exp --model`, with the
     compared arms as `[model.arms.<arm>]` tables (profile, fingerprint,
     alias) finalize holds to the run — or None without the table: no model,
-    a count or an estimator. The one answer to "is a model named" for the
+    a computation or an estimator. The one answer to "is a model named" for the
     seconds cut, the registration and `--report` (until 0.100.0 the prose
     `Model / tool` line, read with a pattern for "n/a", "none" and dashes).
     `alias` is None while it is still the stamp's placeholder. Raises
@@ -457,6 +465,8 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
         raise BlockError(f"[protocol] preflight_audit = {audit!r} — a string")
     if _placeholder(audit):
         audit = ""
+    if table["kind"] == "count":
+        raise BlockError(COUNT_RENAMED)
     return Head(
         standard=standard,
         id=pid,

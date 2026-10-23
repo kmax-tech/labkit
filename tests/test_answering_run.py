@@ -250,7 +250,9 @@ class Explain(unittest.TestCase):
         )
         blocker, lines = choice.explain(True)
         self.assertIn("probe or producer run", blocker or "")
-        self.assertEqual(choice.explain(False), (None, []))  # a count registers no id
+        self.assertEqual(
+            choice.explain(False), (None, [])
+        )  # a computation registers no id
 
     def test_skipped_runs_are_said(self):
         choice = answering_run.AnsweringRun(Path("r/x"), 2, (), None)

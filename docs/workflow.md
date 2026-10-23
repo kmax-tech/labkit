@@ -34,7 +34,7 @@ labkit-init exp <name> --cost seconds       # one area per question; --model ALI
 Reads: the templates shipped with labkit. Writes: `experiments/NN-<name>/`
 with `PROTOCOL-<name>.md` (its TOML head stamped with a protocol id, the
 cost tier, `frozen = false`), `scripts/01_measure.py` and `02_analyze.py`
-(the skeleton for the instrument: count, estimator or model), the area
+(the skeleton for the instrument: compute, estimator or model), the area
 test, the README card. Nothing is owed yet; `protocol-check --contract`
 prints what the tier will owe and when.
 
@@ -98,8 +98,8 @@ finalize experiments/NN-<name>
 Reads: the protocol, every run record of the area, the audit records, git.
 Changes: nothing. Its first station chooses the **answering run**
 (`answering_run.bound_answering_run`): the newest completed run bound to
-this protocol id that reports an intent key — a count registers no ids,
-so for a count it is simply the newest completed bound run. Every later
+this protocol id that reports an intent key — a computation registers no ids,
+so for a computation it is simply the newest completed bound run. Every later
 station holds that run, and so does every other gate: nobody chooses
 twice. Then the stations: the head's declared run is the answering run
 (or no run is declared yet); the output rows were written by it; the

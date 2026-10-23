@@ -90,7 +90,7 @@ FIELDS = (
     Field("Question / hypothesis", "must", "s"),
     Field(
         "Success / failure criterion", "must", "sb"
-    ),  # a count has no bar to clear (2026-10-12); a fit or an apply has (0.104)
+    ),  # a computation has no bar to clear (2026-10-12); a fit or an apply has (0.104)
     Field("Admissibility condition", "must", "sb"),
     Field("Data / scope", "must", "s"),
     # read and judged before the measuring run, not just printed (review
@@ -359,7 +359,7 @@ def model_named(text: str) -> bool:
 
 def bar_owed(f: Field, kind: str | None) -> bool:
     """Does a number of KIND owe `f` as far as its bar decides? Only the "sb"
-    fields depend on it, at every tier: a count owes no criterion (standard
+    fields depend on it, at every tier: a computation owes no criterion (standard
     0.22); an undecided kind owes the most, never the least."""
     return f.seconds != "sb" or kind is None or standard_contract.has_bar(kind)
 
@@ -376,13 +376,13 @@ def in_cut(f: Field, kind: str | None, model: bool) -> bool:
 
 def kind_gap(text: str, head: protocol_block.Head) -> str | None:
     """Why the head's `kind` contradicts the rest of the head, or None: a
-    `count` with a `[model]` table — a model answering through models.toml
+    `compute` with a `[model]` table — a model answering through models.toml
     judges predictions, so the number has a bar (fit or apply). Loud, never
     a fallback: an unknown kind is refused by `protocol_block.head`, a
     placeholder stands among the head's placeholders."""
-    if head.kind == standard_contract.COUNT_KIND and model_named(text):
+    if head.kind == standard_contract.COMPUTE_KIND and model_named(text):
         return (
-            '[protocol] kind = "count" with a [model] table — a model in the loop '
+            '[protocol] kind = "compute" with a [model] table — a model in the loop '
             'judges predictions, so the number has a bar: kind = "apply" (the model '
             'used unchanged) or kind = "fit" (trained or adjusted here)'
         )
@@ -416,7 +416,7 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
 
     The seconds cut owes its marked fields and nothing graduates — nothing
     freezes (LAB-017 The number of audits follows the cost tier). The full form owes every must
-    its kind owes (`bar_owed`: a count no bar field); `frozen = true` turns
+    its kind owes (`bar_owed`: a computation no bar field); `frozen = true` turns
     every should into a must (the graduation gate, in ONE place), and once a
     result is declared a frozen protocol owes its report fields too."""
     # which cut the protocol owes is the contract's answer; the marks on
@@ -477,9 +477,9 @@ def check_fields(text: str) -> FieldReport:
             promises.parse_block(text),
             frozen=head.frozen,
             full_run=lane.registration,
-            # a count registers nothing unless its prose names an id; a fit
+            # a computation registers nothing unless its prose names an id; a fit
             # or an apply registers by its kind (standard 0.22)
-            registers=head.kind != standard_contract.COUNT_KIND
+            registers=head.kind != standard_contract.COMPUTE_KIND
             or promises.registers_ids(text),
         )
     except promises.PromiseError as exc:
@@ -502,9 +502,9 @@ def seconds_registration_missing(text: str) -> list[str]:
     and null condition; with a model named also the judged data profile;
     the cost and the kind declared, and the kind not contradicting the
     head (`kind_gap`). Returns what is missing — empty means the gate is
-    open (LAB-003 No run without an intent paragraph; a count has no bar to
+    open (LAB-003 No run without an intent paragraph; a computation has no bar to
     clear, 0.87.1; the kind since standard 0.22). A head that does not read
-    is named as such: nothing falls back to a count."""
+    is named as such: nothing falls back to a computation."""
     try:
         head = protocol_block.head(text)
     except protocol_block.BlockError as exc:

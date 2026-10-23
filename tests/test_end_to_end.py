@@ -221,7 +221,7 @@ class Count(unittest.TestCase):
         docs.mkdir(parents=True)
         for name, lines in (("a.txt", 1), ("b.txt", 2), ("c.txt", 6)):
             (docs / name).write_text("x\n" * lines, encoding="utf-8")
-        cls.area, cls.protocol = cls.lab.exp("lines", cost="seconds", kind="count")
+        cls.area, cls.protocol = cls.lab.exp("lines", cost="seconds", kind="compute")
         cls.measure = cls.area / "scripts" / "01_measure.py"
         _replace(
             cls.measure,
@@ -262,8 +262,8 @@ class Count(unittest.TestCase):
         cls.lab.close()
 
     def test_01_the_stamp_is_the_contracts_skeleton(self):
-        sk = sc.skeleton("seconds", "count", False)
-        self.assertIs(sk, sc.COUNT)
+        sk = sc.skeleton("seconds", "compute", False)
+        self.assertIs(sk, sc.COMPUTE)
         self.assertEqual(
             sorted(p.name for p in (self.area / "scripts").iterdir()),
             sorted(dest for _, dest in sk.scripts),

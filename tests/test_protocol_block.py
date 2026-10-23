@@ -23,7 +23,7 @@ class Head(unittest.TestCase):
                 PID,
                 "exploratory",
                 "seconds",
-                "count",
+                "compute",
                 True,
                 "2026-10-07 · 0 findings",
             ),
@@ -36,7 +36,7 @@ class Head(unittest.TestCase):
                 id="<protocol-id>",
                 type="<exploratory | confirmatory>",
                 cost="<seconds | minutes | hours>",
-                kind="<count | fit | apply>",
+                kind="<compute | fit | apply>",
                 preflight_audit="<date · scope sha>",
             )
         )
@@ -57,6 +57,13 @@ class Head(unittest.TestCase):
             head(cost="second"), "cost = 'second' — one of seconds, minutes, hours"
         )
         self.assertRejects(head(type="measurement"), "type = 'measurement'")
+
+    def test_the_renamed_kind_count_names_its_migration(self):
+        # `count` was renamed `compute` before 0.104.0 shipped: refused with
+        # the new name, never read as `compute`
+        self.assertRejects(
+            head(kind="count"), 'kind = "count" was renamed kind = "compute"'
+        )
 
     def test_frozen_must_be_a_boolean(self):
         self.assertRejects(
@@ -184,7 +191,7 @@ class DeclaredRun(unittest.TestCase):
 class ModelTable(unittest.TestCase):
     """`[model]` says a model is in the loop (phase 4 of the 1.0 line,
     2026-10-21): the alias, the compared arms finalize holds to the run;
-    absent is a count or an estimator. Exact or unreadable, like the head."""
+    absent is a computation or an estimator. Exact or unreadable, like the head."""
 
     def test_no_table_is_no_model(self):
         self.assertIsNone(protocol_block.model(head(cost="seconds")))

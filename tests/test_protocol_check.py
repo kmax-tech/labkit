@@ -267,14 +267,14 @@ class TestCheckFields(unittest.TestCase):
         self.assertEqual(report.missing_should, SHOULD)
 
     def test_a_count_owes_no_bar_field_at_any_tier(self):
-        """Standard 0.22: a count owes neither a success criterion nor the
+        """Standard 0.22: a computation owes neither a success criterion nor the
         other fields of a bar (`<!-- sb -->`), in the full form too; a fit
         owes them."""
         bar = [f.label for f in protocol_check.FIELDS if f.seconds == "sb"]
         self.assertIn("Success / failure criterion", bar)
         for cost in ("minutes", "hours"):
             with self.subTest(cost=cost):
-                count = protocol_check.check_fields(head(cost=cost, kind="count"))
+                count = protocol_check.check_fields(head(cost=cost, kind="compute"))
                 fit = protocol_check.check_fields(head(cost=cost, kind="fit"))
                 for label in bar:
                     self.assertNotIn(label, count.missing_must + count.missing_should)

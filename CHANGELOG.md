@@ -26,23 +26,23 @@ pins (`requirements.txt` / `requirements.lock`).
   audit" (`findings.audit_coverage`); `usability score` shows `audit
   attempts failed · N (K unproven)`.
 - **Protocol standard 0.22: the head says what the kept number asserts
-  (`kind`).** `kind = "count" | "fit" | "apply"` below `cost`: a count
-  judges no prediction (a measurement that cannot pass trivially), a fit
+  (`kind`).** `kind = "compute" | "fit" | "apply"` below `cost`: a
+  computation judges no prediction (a measurement that cannot pass trivially), a fit
   judges a model trained or adjusted in the experiment, an apply a model
   used unchanged. The registration and the skeleton follow the kind, not
   the model technology (`standard_contract.registration_fields(kind,
-  model)`, `skeleton(cost, kind, model)`, `has_bar`): a count owes its
+  model)`, `skeleton(cost, kind, model)`, `has_bar`): a computation owes its
   question; a fit or an apply also the success criterion, the
   admissibility condition and the null condition / anchors, and carries
   promise tables at every tier; a `[model]` table adds the data profile
   and the prompt. `labkit-init exp` takes `--kind` and stamps nothing
-  without it; `--kind count --model` is refused; a fit at `seconds` gets
-  the estimator skeleton (until now the count's). The template marks the
+  without it; `--kind compute --model` is refused; a fit at `seconds` gets
+  the estimator skeleton (until now the count's, now the compute skeleton). The template marks the
   fields a bar owes with `<!-- sb -->` (`protocol_cuts.SECONDS_BAR_TAG`),
   and the seconds cut carries them for a fit without a model. Loud, never
   a fallback: an unknown kind does not read (`protocol_block.head`), a
   placeholder stands among the head's placeholders and refuses a full run,
-  `kind = "count"` with a `[model]` table is a must finding and a refusal
+  `kind = "compute"` with a `[model]` table is a must finding and a refusal
   (`protocol_check.kind_gap`). Migration, said in the refusal of a 0.21
   head (`protocol_block.MIGRATION`): set `standard = "0.22"` and add the
   `kind` line (`protocol-fill PROTOCOL kind=…`); 0.103.0 is the last
@@ -51,7 +51,15 @@ pins (`requirements.txt` / `requirements.lock`).
   skeleton and owed no criterion — t5 and t18 of the fifth haiku round;
   the writing probe (`docs/notes/2026-10-22-kind-writing-probe.md`)
   registered a count, two fits and an apply under the schema without a
-  special rule.
+  special rule. The kind was first stamped `count` and renamed `compute`
+  before this release: it names what the number asserts — a descriptive
+  or inferential statistic of fixed data, no prediction judged (ML
+  lecture, ML:VII-1) — and not the one operation of counting. Migration
+  for repos pinned to an intermediate commit: `kind = "count"` →
+  `kind = "compute"` in the head (the refusal says so,
+  `protocol_block.COUNT_RENAMED`), `labkit-init exp --kind count` →
+  `--kind compute`; the skeleton `standard_contract.COUNT` is
+  `COMPUTE`.
 
 - **`preflight_audit` names the decided record, not a line.** The head
   field is the file name of the decided preflight record under the area's

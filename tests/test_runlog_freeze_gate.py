@@ -54,8 +54,8 @@ REGISTRATION = """
 - **Null condition / anchors:** [A2] the shuffled-label lane stays at chance
 - **Data profile:** 6 and 6 cases, mean words alike; no marker only in one class
 """
-# a count: no model, no id, the question only — the gate owes nothing more (0.87.1)
-SECONDS_COUNT = (
+# a computation: no model, no id, the question only — the gate owes nothing more (0.87.1)
+SECONDS_COMPUTE = (
     head(cost="seconds", promises=None)
     + "\n- **Question / hypothesis:** how many documents per case?\n"
 )
@@ -295,7 +295,7 @@ class FreezeGate(unittest.TestCase):
         self.assertFalse((area / "runs").exists())
 
     def test_a_count_at_seconds_starts_without_criterion_or_tables(self):
-        r, _ = self._start(SECONDS_COUNT, run_kind="measurement")
+        r, _ = self._start(SECONDS_COMPUTE, run_kind="measurement")
         cfg = json.loads((r.dir / "config.json").read_text())
         self.assertEqual(cfg["cost_tier"], "seconds")
         self.assertIsNone(cfg.get("promises"))  # nothing registered, nothing recorded

@@ -123,7 +123,7 @@ class Registration(unittest.TestCase):
     def test_a_fit_without_a_model_owes_the_bar_and_its_reference(self):
         """Standard 0.22: a RandomForest at seconds owed its question only
         (fifth haiku round); a fit owes criterion, admissibility and the
-        null condition, and a count with a [model] table is a contradiction."""
+        null condition, and a computation with a [model] table is a contradiction."""
         text = head(cost="seconds", kind="fit") + "- **Question / hypothesis:** q\n"
         self.assertEqual(
             protocol_check.seconds_registration_missing(text),
@@ -134,14 +134,14 @@ class Registration(unittest.TestCase):
             ],
         )
         contradiction = (
-            head(cost="seconds", kind="count", model="haiku") + self.QUESTION
+            head(cost="seconds", kind="compute", model="haiku") + self.QUESTION
         )
         missing = protocol_check.seconds_registration_missing(contradiction)
         self.assertTrue(
-            any('kind = "count" with a [model] table' in m for m in missing), missing
+            any('kind = "compute" with a [model] table' in m for m in missing), missing
         )
         placeholder = (
-            head(cost="seconds", kind="<count | fit | apply>")
+            head(cost="seconds", kind="<compute | fit | apply>")
             + "- **Question / hypothesis:** q\n"
         )
         missing = protocol_check.seconds_registration_missing(placeholder)
@@ -212,20 +212,20 @@ class Registration(unittest.TestCase):
 
 
 class CountPlaceholders(unittest.TestCase):
-    """Without a model the Terms and Question placeholders say what a count
+    """Without a model the Terms and Question placeholders say what a computation
     owes: three cold agents wrote a Terms sentence for a plain count, one read
     'hypothesis' as an expectation to invent (Haiku H5–H7, 2026-10-13)."""
 
     def test_the_count_cut_says_na_and_no_hypothesis(self):
         cut = protocol_cuts.seconds_cut(
-            scaffold.template(scaffold.PROTOCOL_TEMPLATE.name), "count"
+            scaffold.template(scaffold.PROTOCOL_TEMPLATE.name), "compute"
         )
         out = protocol_cuts.count_placeholders(cut)
         self.assertIn(
             '**Terms of this protocol:** <one line per coined house word — or "n/a — no coinage">',
             out,
         )
-        self.assertIn("a count tests no hypothesis>", out)
+        self.assertIn("a computation tests no hypothesis>", out)
         self.assertNotIn("what do we expect?", out)
 
     def test_a_cut_without_the_field_is_refused(self):
