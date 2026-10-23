@@ -214,6 +214,35 @@ in einem Bereich mit mehreren Protokollen wählt das Gate das Protokoll
 vorher (`repo.the_protocol`). Bauauftrag erst, wenn ein Fall zeigt, dass
 ein Record dem falschen Protokoll zugeordnet wurde.
 
+### Audit 2026-10-23, Nachkontrolle
+
+Befunde mit Belegen: [Nachkontrolle](docs/audit-2026-10-23-followup.md)
+(Stand `e5f0438`). Das Register vom Vormittag ist abgearbeitet; übrig ist
+Prosa, die den neuen Heimaten nicht folgt. Offen, je ein Entscheid:
+
+1. Flatternder Test `test_a_taken_run_id_is_drawn_again`: die Uhr im Test
+   festhalten (im Hook einmal rot, allein fünfmal grün) (B1).
+2. Gate-Tabelle in `findings.open_findings`: Zeile runlog an den Code
+   anpassen (Warnungen nur im `LABKIT_UNFROZEN`-Pfad, NOTE wie WARNING)
+   und `audit_record_gap` als Zeile aufnehmen — oder runlog die Warnungen
+   auf jedem Pfad ausgeben lassen (F1, F2).
+3. `claude-hook`: Exit-Vertrag im Docstring und `--help` an die Returns
+   angleichen (Usage 2 statt 1, drei Bedeutungen von Exit 2) (F3).
+4. finalize übernimmt intent-checks Befunde als Daten statt jede
+   stdout-Zeile als BLOCKER (F4).
+5. Drei Evidenz-Beschriftungen berichtigen: `hold_report`-Docstring,
+   „AUTOMATED" in code-check 1b/1c, `ParamRow.evidence_kind` als freier
+   Text (F5, F6, Heimaten-Tabelle).
+6. Heimaten nachziehen: sechs `'runs'`-Reste in Meldungen, zwei
+   Fortschrittszeilen neben `console.progress`, `protocol_reading._section`,
+   drei Hand-Refusals; Guards auf Einfach-Anführung, mehrzeiliges `print`
+   und Regex ausweiten; sechs neue Heimaten in die Tabelle von
+   `docs/architecture.md`.
+7. Kleinkram: CHANGELOG „station 1" (F7), verwaiste Note
+   `2026-10-23-documentation-navigation.md`, `answers.read_jsonl`,
+   pyproject-Kommentar, `audit --help` ohne Review-Vertrag, `limit_line`-
+   Parameter, `scope-sha --globs` ohne Wirkung auf den Import-Abschluss.
+
 ### Typisierte Grenzen vervollständigen
 
 | Bereich | Noch offen | Bedingung / Vertrag |
