@@ -335,7 +335,7 @@ def review(
             timeout=timeout,
             max_tokens=audit._report_room(model),
         )
-        print(f"labkit-audit: tokens · {llm.last_usage().describe()}", file=sys.stderr)
+        console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
         lines = parse_review(report, evidence.numbers)
     except (
         AuditError,

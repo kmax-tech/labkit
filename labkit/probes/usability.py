@@ -528,7 +528,7 @@ def stage(
     if problem and problem[0] == "refuse":
         raise console.Refused("usability", problem[1])
     if problem:
-        print(f"usability: WARNING: {problem[1]}", file=sys.stderr)
+        console.progress("usability", f"WARNING: {problem[1]}")
     sha = scaffold_sha()
     root.mkdir(parents=True, exist_ok=True)
     scaffold.stamp_lab(root, root.name)

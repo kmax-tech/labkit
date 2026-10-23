@@ -357,6 +357,12 @@ Drei Festlegungen daraus:
    evidence)`. C5 ist damit geschlossen (Feldbedeutung in `gate.py`,
    Tests in `tests/test_gate.py`, `EvidenceKind`).
 
+Nachgezogen am 2026-10-23, nach dem C5-Feld: C4 (code-check-Docstring
+und Summary über `Findings.report`), C8 (Stop-Hook schickt einmal zurück,
+der Commit hält — so gesagt), die manuellen Refusals in `labkit-audit`
+(`console.refuse`, neu `console.progress` für Fortschrittszeilen). Aus
+dem Audit vom 23. ist damit nichts mehr offen.
+
 Notiert, nicht geplant: Audit-Records um die Protokoll-id ergänzen. Heute
 wird der Abgleich gegen die Registrierung aus dem Protokolltext berechnet;
 in einem Bereich mit mehreren Protokollen wählt das Gate das Protokoll

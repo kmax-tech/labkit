@@ -620,8 +620,8 @@ def main(argv: list[str]) -> int:
         return post_change(event)
     if argv[0] == "stop":
         return stop(event)
-    print(f"claude-hook: unknown event {argv[0]!r}", file=sys.stderr)
-    return 1
+    console.refuse("claude-hook", f"unknown event {argv[0]!r}")
+    return 2
 
 
 def cli() -> None:

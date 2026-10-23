@@ -96,6 +96,14 @@ RULES: list[tuple[str, str, set[str]]] = [
     # four readers found a protocol's `## ` headings themselves, two inside
     # fences too (audit 2026-10-23); `protocol_block.section_starts`
     ("a section heading found by hand", r"startswith\(\"## \"\)", {"protocol_block"}),
+    # labkit-audit printed three refusals and its progress lines itself
+    # (audit 2026-10-18, half-finished move; 2026-10-23): `console.refuse`,
+    # `console.progress`
+    (
+        "a refusal or progress line printed by hand",
+        r"print\(f\"[a-z-]+: .*file=sys\.stderr",
+        {"console"},
+    ),
 ]
 
 
@@ -150,6 +158,7 @@ class OneHome(unittest.TestCase):
             "a JSONL line parsed by hand": "row = json.loads(line)",
             "an area's code globbed by hand": 'scripts = sorted(area.glob("scripts/*.py"))',
             "a section heading found by hand": 'if line.startswith("## "):',
+            "a refusal or progress line printed by hand": 'print(f"labkit-audit: {exc}", file=sys.stderr)',
         }
         for what, shape, _ in RULES:
             with self.subTest(what=what):

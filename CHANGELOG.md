@@ -254,6 +254,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **labkit-audit refuses and reports progress through `console`.** Three
+  refusals (an unstampable area, an unknown alias, verdict and finding
+  lines that disagree) and the progress lines (what the audit reads, the
+  tokens a call cost) were printed by hand on stderr; `console.refuse`
+  takes the refusals and the new `console.progress` the lines about the
+  command's own doing, the decision review and `usability` too.
+  `claude-hook <unknown event>` is a refusal with exit 2 (was 1). The
+  one-home test refuses the next `print(f"<tool>: …", file=sys.stderr)`
+  (audit 2026-10-18, half-finished move; 2026-10-23).
+
 - **"The gate the agent cannot choose" says which gate holds.** The stop
   hook sends the agent back once per stop (`stop_hook_active`; a hook that
   never let a session end would trap it), the pre-commit holds; report-

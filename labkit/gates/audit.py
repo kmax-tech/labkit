@@ -818,18 +818,18 @@ def main(argv: list[str]) -> int:
         reading = gather(args.area, args.protocol)
         protocol, code = reading.protocol, reading.code
         for finding in early_for_tier(args.area, protocol, args.mode):
-            print(f"labkit-audit: {finding.line}", file=sys.stderr)
+            console.progress("labkit-audit", finding.line)
         prompt, stamp, block_sha, run_id, shown_sha, indexed, registration = (
             bound_prompt(args.mode, args.area, reading)
         )
-        print(
-            f"labkit-audit: {args.mode} · {protocol.name} · {len(code)} code file(s) "
+        console.progress(
+            "labkit-audit",
+            f"{args.mode} · {protocol.name} · {len(code)} code file(s) "
             f"in full, {len(indexed)} indexed · "
             f"{args.model} · {len(prompt) // 1000} kB",
-            file=sys.stderr,
         )
         report = _answer_or_record(args, argv, prompt, stamp, block_sha)
-        print(f"labkit-audit: tokens · {llm.last_usage().describe()}", file=sys.stderr)
+        console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
         result = parse(report)
     except (
         AuditError,
@@ -841,7 +841,7 @@ def main(argv: list[str]) -> int:
         # KeyError: llm.resolve on an alias models.toml does not know;
         # FileNotFoundError, ValueError: the area cannot be stamped;
         # ValueError also: the promise block cannot be read (PromiseError)
-        print(f"labkit-audit: {str(exc).strip(chr(39))}", file=sys.stderr)
+        console.refuse("labkit-audit", str(exc).strip(chr(39)))
         return 2
     print(report)
     if args.out:
@@ -861,7 +861,7 @@ def main(argv: list[str]) -> int:
             shown_sha=shown_sha,
         )
     except ValueError as exc:  # verdict and finding lines disagree
-        print(f"labkit-audit: {exc}", file=sys.stderr)
+        console.refuse("labkit-audit", str(exc))
         return 2
     _stamp_report(args.area, args.mode, stamp, result["verdict"], recorded)
     # the auditor lists what it read in full; the indexed modules are the
@@ -1127,7 +1127,7 @@ def _clarity(args: argparse.Namespace) -> int:
             timeout=args.timeout,
             max_tokens=_report_room(args.model),
         )
-        print(f"labkit-audit: tokens · {llm.last_usage().describe()}", file=sys.stderr)
+        console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
         result = parse_clarity(report)
     except (
         AuditError,
@@ -1136,7 +1136,7 @@ def _clarity(args: argparse.Namespace) -> int:
         KeyError,
     ) as exc:
         # KeyError: llm.resolve on an alias models.toml does not know
-        print(f"labkit-audit: {str(exc).strip(chr(39))}", file=sys.stderr)
+        console.refuse("labkit-audit", str(exc).strip(chr(39)))
         return 2
     print(report)
     if args.out:

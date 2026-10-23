@@ -27,6 +27,14 @@ def refuse(tool: str, why: str) -> None:
     print(f"{tool}: {why}", file=sys.stderr)
 
 
+def progress(tool: str, text: str) -> None:
+    """A line about the command's own doing — what it reads, the tokens a
+    call cost, an early note — on STDERR like a refusal, so stdout stays
+    the result (labkit-audit's report). Neither a finding nor a refusal:
+    exit codes do not change because of it."""
+    print(f"{tool}: {text}", file=sys.stderr)
+
+
 def usage(tool: str, text: str, asked: bool) -> int:
     """TEXT, the command's usage: on stdout with exit 0 when ASKED (`-h`,
     `--help`); else the command ran with nothing to work on, a refusal on
