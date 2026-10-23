@@ -133,9 +133,12 @@ class TestFinalize(unittest.TestCase):
                         self.assertEqual(
                             (code, out.getvalue(), err.getvalue()), (2, "", "")
                         )
-                        self.assertEqual(len(lines), 0 if silent else 1)
-                        if lines:
-                            self.assertIn("finalize:", lines[0])
+                        # the reason is kept as a blocker — report-check reads
+                        # the collector, not the console (audit 2026-10-23, B1)
+                        (blocker,) = findings.blocked
+                        self.assertEqual(
+                            lines, [] if silent else [f"  BLOCKER: {blocker}"]
+                        )
 
     def test_protocol_choice_errors_still_use_stderr_on_the_console(self):
         with tempfile.TemporaryDirectory() as d:
@@ -166,6 +169,43 @@ class TestFinalize(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("no completed run bound to", out)
         self.assertIn("blocker", out)
+
+    def test_the_blocker_carries_what_was_looked_at(self):
+        """The runs excluded and why travel in the blocker itself: as notes
+        they reached no caller that collects the findings as data —
+        report-check said "no completed run" and nothing more (audit
+        2026-10-23, B1)."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
+            completed_run(area, "r1", metrics={"c1_pass": True}, completion=False)
+            collected = gate.Findings(tell=None)
+            finalize.finalize_area(area, None, collected)
+        (blocker,) = [
+            b for b in collected.blocked if b.startswith("no completed run bound to")
+        ]
+        self.assertIn("; r1: ", blocker)
+
+    def test_intent_check_lines_are_the_blockers(self):
+        """Each line intent-check prints is a blocker of its own, not a
+        note beside one "intent-check failed (see its lines above)" — in a
+        silent collector there was nothing above (audit 2026-10-23, B1)."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
+            completed_run(area, "r1", metrics={"c1_pass": True, "a1_pass": True})
+            collected = gate.Findings(tell=None)
+            code = finalize.finalize_area(area, None, collected)
+        self.assertEqual(code, 1)
+        intent = [b for b in collected.blocked if b.startswith("intent-check: ")]
+        self.assertEqual(
+            len(intent), 2, collected.blocked
+        )  # the prose's line, the block's
+        self.assertIn("[A2] registered, but metrics.json has no 'a2'", intent[0])
+        self.assertIn(
+            "[A2] declares key 'a2_pass', which the run does not report", intent[1]
+        )
+        self.assertNotIn("see its lines above", "\n".join(collected.blocked))
 
     def test_the_summary_repeats_each_blocker_last(self):
         """Inside a commit hook the blocker sat among 20 lines (probe 2026-10-07)."""

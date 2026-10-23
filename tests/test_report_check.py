@@ -103,11 +103,17 @@ class ReportCheck(unittest.TestCase):
         protocol is a bare head, so its field gaps count only with FIELDS."""
         out = io.StringIO()
         no_gaps = SimpleNamespace(missing_must=[], must_holes=[])
+
+        def fake_finalize(area_: Path, protocol: Path | None, collected) -> int:
+            if finalize:  # finalize keeps every reason it has as a blocker
+                collected.block(f"stub blocker (finalize exit {finalize})")
+            return finalize
+
         with (
             contextlib.nullcontext()
             if fields
             else mock.patch.object(report_check, "check_fields", return_value=no_gaps),
-            mock.patch.object(report_check, "finalize_area", return_value=finalize),
+            mock.patch.object(report_check, "finalize_area", fake_finalize),
             mock.patch.object(
                 report_check, "check_analysis_script", return_value=check
             ),
@@ -293,6 +299,18 @@ class ReportCheck(unittest.TestCase):
         self.assertEqual(code, 1, out.getvalue())
         self.assertIn("BLOCKER: finalize: no completed run bound to", out.getvalue())
         self.assertNotIn("run it to see", out.getvalue())
+
+    def test_finalize_exiting_without_a_blocker_is_a_bug_not_a_hint(self):
+        """Until the 2026-10-23 audit a non-zero finalize without a blocker
+        became "run it to see why" — the round trip again. finalize keeps
+        every reason as a blocker now; a bare exit is a bug and says so."""
+        area = self._area(cost="seconds", frozen=False)
+        with (
+            mock.patch.object(report_check, "finalize_area", return_value=2),
+            self.assertRaises(RuntimeError) as caught,
+        ):
+            report_check.finalize_gaps(area, area / "PROTOCOL-x.md")
+        self.assertIn("kept no blocker", str(caught.exception))
 
     def test_finalize_findings_arrive_as_data_not_through_stdout(self):
         """finalize runs on a silent collector: its blockers reach this gate

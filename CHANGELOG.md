@@ -134,6 +134,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **finalize's reasons reach report-check.** Inside report-check finalize
+  runs on a silent collector, and three of its stations put the reason
+  into a note beside the blocker: intent-check's lines ("intent-check
+  failed (see its lines above)" — nothing was above), the runs excluded
+  from the answering-run choice, and the exit-2 reason (no protocol to
+  hold), which report-check turned into "run it to see why" (audit
+  2026-10-23, B1). Now each line intent-check prints is a blocker of its
+  own, the excluded runs travel in the completion blocker, the test
+  station's blocker carries pytest's count line, and a protocol finalize
+  cannot choose or read is a blocker in a passed collector (a refusal on
+  the console, as before). A non-zero finalize without a blocker is a
+  `RuntimeError` in `report_check.finalize_gaps`, not a hint.
+
 - **A changed validation reopens the computation that rests on it.** The
   area stamp of a `compute` with `annotation_validity = { protocol = … }`
   covers the bound validation, but the choice of what to recheck — the

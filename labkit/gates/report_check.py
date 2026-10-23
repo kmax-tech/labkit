@@ -462,14 +462,21 @@ def finalize_gaps(area: Path, protocol: Path) -> list[str]:
     its prefix — a hook that says "run it to see them" asks for a round
     trip the agent does not take. finalize runs on a silent collector
     (`Findings(tell=None)`): its findings arrive as data and nothing of its
-    output reaches this gate's. Exit 2 (no protocol to hold) is one blocker."""
+    output reaches this gate's, so finalize puts every reason into the
+    blocker itself (the runs it looked at, intent-check's lines, the test
+    counts) and keeps its exit-2 reason (no protocol to hold) as a blocker
+    too. A non-zero exit without a blocker is a bug in finalize, not a
+    state to report around."""
     collected = Findings(tell=None)  # the data, not the console
     finalized = finalize_area(area, protocol, collected)
     if finalized == 0:
         return []
-    if collected.blocked:
-        return [f"finalize: {b}" for b in collected.blocked]
-    return [f"finalize {area} exits {finalized} — run it to see why"]
+    if not collected.blocked:
+        raise RuntimeError(
+            f"finalize {area} exits {finalized} and kept no blocker — every "
+            f"reason finalize has must be a finding"
+        )
+    return [f"finalize: {b}" for b in collected.blocked]
 
 
 def analysis_findings(ctx: Checked, rule: str) -> list[GateFinding]:

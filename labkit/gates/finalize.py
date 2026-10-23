@@ -106,17 +106,18 @@ def answering_run(
     ONE choice for every station: intent-check skips newer runs without
     intent keys (a probe), so checking scopes or provenance on the newest
     run judged the probe while the numbers came from the measurement
-    (review 2026-10-07). A blocker here is the finding; the exclusions are
-    printed for the operator."""
+    (review 2026-10-07). A blocker here is the finding, and it carries the
+    runs that were looked at and why none answers: a note beside it
+    reaches no caller that collects the findings as data (audit
+    2026-10-23, B1)."""
     if pid is None:
         findings.block("no stamped protocol id ([protocol] id) — no run is bound to it")
         return None
     choice = bound_answering_run(area, pid)
     blocker, lines = choice.explain(ids_registered)
     if choice.run_dir is None:
-        findings.block(blocker or f"no completed run bound to {pid}")
-        for line in lines:
-            findings.note(f"    {line}")
+        looked_at = "".join(f"; {line}" for line in lines)
+        findings.block((blocker or f"no completed run bound to {pid}") + looked_at)
         return None
     if blocker:
         findings.block(blocker)
@@ -287,12 +288,20 @@ def check_intent_keys_in_metrics(
         else []
     )
     buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
+    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
         rc = intent_check_main(args)
-    for line in buf.getvalue().splitlines():
-        findings.note(f"  {line}")
-    if rc != 0:
-        findings.block("intent-check failed (see its lines above)")
+    lines = [line for line in buf.getvalue().splitlines() if line.strip()]
+    if rc == 0:
+        for line in lines:
+            findings.note(f"  {line}")
+        return
+    # Each line intent-check prints on 1 (and the refusal it writes on 2)
+    # is a finding: as blockers they reach a caller that collects the
+    # findings as data, where a note does not (audit 2026-10-23, B1).
+    for line in lines:
+        findings.block(f"intent-check: {line}")
+    if not lines:
+        findings.block(f"intent-check exits {rc} without a line")
 
 
 def check_declared_scopes(
@@ -377,8 +386,12 @@ def check_area_tests(findings: Findings, area: Path) -> None:
     else:
         for ln in tests.tail:
             findings.note(f"  {ln}")
+        # pytest's last line (the counts) travels with the blocker; the tail
+        # above is a note and reaches no collecting caller (audit 2026-10-23, B1)
+        last = f" ({tests.tail[-1].strip()})" if tests.tail else ""
         findings.block(
-            f"{', '.join(t.name for t in tests.files)} failed — evaluate() no longer holds its resolution check"
+            f"{', '.join(t.name for t in tests.files)} failed{last} — evaluate() "
+            f"no longer holds its resolution check"
         )
 
 
@@ -417,7 +430,9 @@ def finalize_area(
 
     0. Choose the protocol and read its settings block. Ends at once with 2
        when the named file is missing, the folder holds several protocols
-       and none is named, or the settings block cannot be read.
+       and none is named, or the settings block cannot be read. On the
+       console the reason is a refusal; in a passed collector it is kept as
+       a blocker, so the caller (report-check) can name it.
     1. completion — choose the measurement run the later steps examine
        (`measurement_run`); none bound is a blocker, and steps 3, 5 and 7
        then skip.
@@ -442,13 +457,16 @@ def finalize_area(
         if console_output:
             console.refuse("finalize", str(exc))
         else:
-            findings.note(f"finalize: {exc}")
+            findings.block(str(exc))
         return 2
     text = chosen.read_text(encoding="utf-8")
     try:
         head = protocol_block.head(text)
     except protocol_block.BlockError as exc:
-        findings.note(f"finalize: {chosen.name}: {exc}")
+        if console_output:
+            console.refuse("finalize", f"{chosen.name}: {exc}")
+        else:
+            findings.block(f"{chosen.name}: {exc}")
         return 2
 
     # 1. completion — the run every later step examines
