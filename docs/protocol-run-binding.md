@@ -117,7 +117,7 @@ step it hit:
 
 ## How the tools read the markers
 
-- **`runlog active`** lists every run that is not complete by its own
+- **`runlog [AREA]`** lists every run that is not complete by its own
   marker, each with its `state`: `running` · `unknown` · `crashed` ·
   `unfinalized` · `corrupt` · `unreadable`. The recorded pid decides between
   `running` and the dead states. `completed` runs are not listed.

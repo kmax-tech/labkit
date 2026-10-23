@@ -71,7 +71,7 @@ and should fields filled" once these stand; the Conclusion is not among
 them — it is owed after the run (step 7), and `--list` keeps it under
 "after the run — yours". The commit matters: the release
 holds the registration to the commit of the first measurement, not to the
-tree at the time of the run (`report-check` station 1). At `minutes`/`hours`
+tree at the time of the run (`report-check` stage 2, the registration). At `minutes`/`hours`
 the registration becomes a freeze instead: `preflight` clean, the
 preflight audit run and decided, `frozen = true`.
 

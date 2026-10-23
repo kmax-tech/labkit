@@ -1,8 +1,9 @@
 """runlog_command — the `runlog` console command.
 
 `runlog start AREA -- CMD` starts a run detached and returns once its
-directory exists; `runlog status`, `wait` and `finished` show what an
-area's runs are doing and how they ended; `runlog reindex` rebuilds
+directory exists; `runlog [AREA]` shows what an area's runs are doing and
+how they ended, `--wait` and `--follow` block until it is idle; `runlog
+reindex` rebuilds
 runs.tsv from the run directories (`runlog.reindex`). The run itself is
 written by `runlog.Run`; this module only reads it and starts processes.
 """

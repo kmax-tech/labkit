@@ -134,6 +134,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **Small drift of the 2026-10-23 audit.** README: "repeat draws" (a typo
+  from `e8698ab`); `docs/architecture.md` names `scope_sha.areas_touched`
+  where the gates call it and drops the gone `audit_stamp_drift`;
+  `docs/workflow.md` says "stage 2" for report-check's registration;
+  `docs/promise-block.md` marks the scope-call check planned in its table
+  too; `docs/protocol-run-binding.md` and the `runlog` docstring name the
+  forms that exist (`runlog [AREA]`, `--wait`, `--follow`), not `active`,
+  `status`, `finished`; `usability stage --cost` reads its choices off
+  `COST_TIERS`; `.vscode/launch.json` lists every command module, and the
+  test now holds the list both ways.
+
 - **Every file a run leaves is written whole or not at all.** `failure.json`,
   `uncommitted.patch`, `Run.save_raw` artefacts, the script and source
   snapshots, and four of protocol-fill's own writes (a field, `--prompts`,

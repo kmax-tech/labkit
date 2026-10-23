@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from labkit.formats.protocol_block import COST_TIERS
 from labkit.probes import agent_transcript
 from labkit.formats import console
 from labkit.probes.usability import LOG_TAGS, TASKS, log_step, restamp, stage
@@ -62,7 +63,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     )
     s.add_argument(
         "--cost",
-        choices=("seconds", "minutes", "hours", "unset"),
+        choices=(*COST_TIERS, "unset"),
         metavar="TIER",
         help="the cost tier stamped into the protocol (default: the task's, "
         "seconds); unset = the agent declares it, the full form is stamped",
