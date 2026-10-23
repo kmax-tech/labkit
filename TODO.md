@@ -52,6 +52,18 @@ Warnung. Umgesetzt und getestet:
   ändern oder Fehler beheben. Neues Audit nur bei geänderter Grundlage
   oder bestrittenem Befund, nicht als Erledigung der Ablehnung.
   Nach `insufficient` Beleg ergänzen und erneut prüfen.
+- Schließen ist kein Entscheiden (2026-10-23, sechste Runde t5:
+  `dismissed` mit „insufficient evidence withdrawn“ nach `insufficient`
+  gab frei): ein Befund, den eine Prüfung desselben Records nicht
+  bestätigt hat, bleibt unter `dismissed`, `fixed` oder `deferred`
+  gehalten, bis eine Prüfung die neue Entscheidung bestätigt
+  (`reviews.once_not_upheld`, `findings.CLOSING`). Note nach Grad wie
+  beim `stands`: BLOCKER blockt, WARNING warnt. `--review` legt dem
+  Prüfer Status, Begründung und das frühere Urteil vor; die
+  Prüferanweisung sagt je Status, was die Begründung zeigen muss.
+  `deferred` ist mit aufgenommen, weil es den Befund genauso still aus
+  den Limits nimmt — Entscheidung des Autors, ob das bleibt. Ein
+  Wechsel auf `not assessable` bleibt der Weg ohne neue Ziehung.
 
 Belege: [Replay mit zwei Durchläufen](docs/usability/2026-10-22-decision-review-replay-v5.md)
 (13 von 15 Urteilen gleich) und
@@ -83,9 +95,19 @@ jedem Arm, Standard erfüllt 0/3). Die Gates hielten bei jeder Anfrage;
 die Agenten gingen außen herum — Bericht aus dem Lauf statt aus dem
 Protokoll (t3, t18), Commit in zwei Schritten (t5), `dismissed` nach
 `insufficient` (t5), gelöschte Audit-Records (t3), nicht gewartetes Audit
-(t18). Daraus fünf nummerierte offene Punkte im Bericht; der erste und
-zweite sind mit Fall belegt und klein, der dritte ist die Frage nach dem
-Abschluss-Audit des Berichts mit ihren ersten zwei Fällen.
+(t18). Daraus fünf nummerierte offene Punkte im Bericht. Der erste und
+zweite sind am 2026-10-23 umgesetzt (CHANGELOG Unreleased, „Fixed“):
+eine gestagte Deklaration, die von HEAD abweicht, hält die committeten
+Berichte, die den Lauf zitieren; ein Befund, den eine Prüfung nicht
+bestätigt hat, bleibt unter `dismissed`, `fixed` oder `deferred`
+gehalten, bis eine Prüfung die neue Entscheidung bestätigt. Der dritte
+ist die Frage nach dem Abschluss-Audit des Berichts mit ihren ersten
+zwei Fällen; Vorschlag in drei Stufen (mechanische Bedingung, statischer
+Hinweis, bedingtes Audit) in
+[Bericht ohne Übernahme](docs/notes/2026-10-23-report-without-adoption.md),
+Entscheidung beim Autor. Der vierte (gelöschte Audit-Records) und der
+fünfte (Auditdauer gegen das Kommando-Timeout) stehen unten bei den
+offenen Verträgen.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
@@ -117,6 +139,11 @@ Forschung und Benchmark-Fallliste liegen in
   Zählt das geschuldete Audit zum Ziel, soll es gleich im Hintergrund
   laufen? Noch keine Ablaufänderung beschlossen.
   Beleg: [Fit-Probe](docs/usability/2026-10-22-sandbox-3e9784c.md).
+  Sechste Runde (t18): das Analyse-Audit lief über das 120-s-Timeout des
+  Agenten-Kommandos, wurde in den Hintergrund geschoben, der Container
+  endete vor dem Record. Kandidaten ohne Bauauftrag: die AGENTS.md des
+  Gerüsts nennt die Dauer und ein langes Timeout; das Audit druckt seine
+  Fortschrittszeile vor dem Modellaufruf.
 - **Compute mit Modellannotation:** Kein eigenes Skelett beschlossen,
   solange kein konkreter Bedarf besteht (Entscheidung 2026-10-23).
   `[model]` kann gespeicherte Annotationen beschreiben. Annotiert der
@@ -166,11 +193,22 @@ Forschung und Benchmark-Fallliste liegen in
   Berichtsblöcke decken ihre erzeugten Werte; die Entscheidungsprüfung
   prüft vorhandene `stands`-Entscheidungen gegen den Protokollanspruch.
   Neue Überansprüche oder falsch bezeichnete Zahlen in freier
-  Berichtsprosa können beiden entgehen. Auslöser bleibt ein solcher
-  Fehler in der nächsten Runde trotz der neuen Prüfungen. Ein Versuch
-  ohne Sperrwirkung ist ein Vorschlag, noch kein Bauauftrag. Ein
-  vollständiges zusätzliches Analyse-Audit erhöht den Auditaufwand;
-  die Kosten einer begrenzten Berichtsprüfung sind nicht gemessen.
+  Berichtsprosa können beiden entgehen. **Erste zwei Fälle 2026-10-23
+  (sechste Runde, t3 und t18):** `--from-run` verweigert, REPORT.md aus
+  der metrics.json des Laufs geschrieben, der Hook warnte „exploration's
+  run is cited“ und ließ durch — bei `seconds` ist der Bericht die
+  Beförderung. Vorschlag in
+  [Bericht ohne Übernahme](docs/notes/2026-10-23-report-without-adoption.md):
+  (1) guaranteed — das Zitat des antwortenden Laufs eines Protokolls
+  ohne Deklaration blockt am Commit, mit den Verweigerungsgründen der
+  Übernahme im Satz; Ausweg für echte Exploration: das Zitat im Bericht
+  als nicht berichtet kennzeichnen (Schreibweise offen, Namensprüfung
+  zuerst); (2) static evidence — Zahlen neben einem so gekennzeichneten
+  Zitat als Hinweis; (3) Agent-Audit — ein kleines Berichts-Audit
+  (Bericht, Protokoll, metrics.json; kein Code, keine Rows) nur bei
+  gekennzeichnetem Zitat oder Zahlen daneben, Kosten vor Sperrwirkung
+  messen. Keine pauschale Sperre für Laufzitate. Entscheidung beim
+  Autor; vier offene Punkte stehen in der Notiz.
 - **Limit-Zeilen aus Preflight-Records:** Der Renderer übernimmt Limits
   aus abdeckenden Analyse-Records. Akzeptierte Preflight-BLOCKER
   (`minutes`/`hours`) sind noch nicht einbezogen. In der fünften Runde
@@ -187,12 +225,21 @@ Forschung und Benchmark-Fallliste liegen in
   Runde):** Bericht mit Zitat committet, während das Protokoll mit der
   Deklaration ungestagt blieb (Warnung „exploration's run is cited“),
   dann das Protokoll committet, der Bericht unberührt — der gelieferte
-  Stand hat den Blocker, kein Commit hatte ihn. Kleinste Prüfung: beim
-  Stagen eines Protokolls, dessen Deklaration sich ändert, auch die
-  committeten Berichte halten, die den neu deklarierten Lauf zitieren. Pauschales Verfolgen aller Zitate und ein
-  `rm`-Wächter unter `runs/` bleiben zurückgestellt. Analyse-Records
-  gelöschter Läufe werden bereits von `finalize` beanstandet; ein
-  zusätzlicher Wächter braucht einen erneuten belegten Bedarf.
+  Stand hat den Blocker, kein Commit hatte ihn. **Umgesetzt 2026-10-23:**
+  ein Protokoll unter den geprüften Pfaden, dessen `[result] run` von
+  HEAD abweicht, hält jeden committeten Bericht, der diesen Lauf zitiert
+  (`report_check.newly_declared`, `committed_reports`), am Stop und am
+  Commit; der Zwilling mit bereits committetem Block besteht. Pauschales
+  Verfolgen aller Zitate bleibt zurückgestellt: ein Zitat eines Laufs,
+  dessen Deklaration sich nicht ändert, öffnet nichts.
+  **Gelöschte Audit-Records (sechste Runde, t3):** der Agent löschte
+  nach dem dritten Audit die zwei älteren Records (`rm audits/*.toml`),
+  nichts bemerkte es. Erster Fall unter `audits/`; der `rm`-Wächter
+  unter `runs/` bleibt zurückgestellt, für `audits/` ist noch keine
+  kleinste Prüfung beschlossen (Kandidat: die Records, die HEAD unter
+  `audits/` hält, fehlen im Stand — am Commit mechanisch prüfbar).
+  Analyse-Records gelöschter Läufe werden bereits von `finalize`
+  beanstandet.
 
 ## Architektur und Lesbarkeit — notiert, nicht geplant
 

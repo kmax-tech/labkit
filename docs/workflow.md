@@ -148,7 +148,13 @@ and the run as shown, and says per decision `upheld`, `rejected` or
 it is bound to the decision and the Conclusion as reviewed — change
 either and the review is stale. `rejected` means deciding again (limit the
 Conclusion, change the effect, fix the fault), not drawing again; the
-command refuses a second draw on an unchanged state. An accepted WARNING
+command refuses a second draw on an unchanged state. Deciding again is
+not closing: once a review did not uphold a decision on a finding, a
+`dismissed`, `fixed` or `deferred` on it is under review as well — the
+reviewer is asked whether the reason shows the finding inapplicable, the
+fault gone in the files as audited, or the task somebody else's — and
+`report-check` holds it by the finding's grade until a review upholds
+the new decision. A reason alone releases nothing. An accepted WARNING
 with `stands` owes no review yet; `report-check` names it as a warning.
 
 ## 7. The adoption
@@ -204,9 +210,12 @@ first measurement (`seconds`); finalize clean and the answering run a
 full run; a decided analysis record covering code, promises, run and what
 was shown; every generated line equal to its rendering, written once;
 every BLOCKER's `stands` upheld by a review; `02_analyze.py --check`
-passing. A report that cites a declared run owes that protocol's block.
-A protocol that declares no result owes nothing: an exploration ends
-without a reported number.
+passing. A report that cites a declared run owes that protocol's block —
+also a committed, untouched report, when the protocol among the paths
+declares that run newly against HEAD (a report committed before the
+declaration, then the declaration committed alone, left the delivered
+state with a blocker no commit saw). A protocol that declares no result
+owes nothing: an exploration ends without a reported number.
 
 ## The questions a reader should be able to answer
 
@@ -214,8 +223,10 @@ without a reported number.
   `answering_run.bound_answering_run`, called by finalize's first station;
   every other gate reads that choice (`audit_binding.audited_run`).
 - *When is a decision review needed?* When an accepted BLOCKER carries
-  `stands`; `report-check` blocks until one upholds it. Not for `not
-  assessable`, not (yet) for a WARNING.
+  `stands`; `report-check` blocks until one upholds it. And when a
+  finding a review did not uphold is closed instead (`dismissed`,
+  `fixed`, `deferred`): the new decision owes its own review. Not for
+  `not assessable`, not (yet) for a WARNING.
 - *Which file does `--from-run` change?* The protocol, and only it.
 - *What does the report block guarantee, and what remains judgement?* The
   block equals its bound sources and its protocol's chain holds; the
