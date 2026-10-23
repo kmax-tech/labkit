@@ -70,8 +70,13 @@ session log
     sessions --run RUN_ID` finds the session — and so the transcript — a run
     came from: what the agent read and decided before it, for debugging.
 
-Exit codes: pre-run 0 or 2 (block); stop 0 or 2 (keep working); post-change 0; usage errors and
-unexpected failures 1, loud on stderr, never swallowed.
+Exit codes, per subcommand — 2 is what Claude Code reads as "block", so
+it means three things here: pre-run 0, or 2 to block the command; stop 0,
+or 2 to keep the agent working; post-change 0; undecided 0, or 1 with
+findings on stdout; sessions 0, or 1 when no session made the run; a usage
+error (no event, no RUN_ID, no paths) 2 on stderr, as every labkit command
+(`console.refuse`). An unexpected failure is a traceback, exit 1, never
+swallowed.
 """
 
 from __future__ import annotations
@@ -491,10 +496,11 @@ def sessions(argv: list[str]) -> int:
     repo = Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
     log = session_log(repo)
     if log is None or not log.is_file():
-        print(
-            f"claude-hook: no session log in {repo} — no session has stopped here yet"
+        console.refuse(
+            "claude-hook sessions",
+            f"no session log in {repo} — no session has stopped here yet",
         )
-        return 1
+        return 2
     hits = [
         r
         for r in read_sessions(log)
@@ -579,9 +585,7 @@ def undecided(argv: list[str]) -> int:
     """`claude-hook undecided <paths…>`: the pre-commit's gate — exit 1 and the
     findings on stdout when an area a path touches holds an undecided BLOCKER."""
     if not argv:
-        print(
-            "claude-hook undecided: name the paths (the staged files)", file=sys.stderr
-        )
+        console.refuse("claude-hook undecided", "name the paths (the staged files)")
         return 2
     repo = Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()).resolve()
     lines = undecided_blockers(repo, [repo / p for p in argv])
@@ -602,13 +606,16 @@ def undecided(argv: list[str]) -> int:
 def main(argv: list[str]) -> int:
     """Command line of `claude-hook`: dispatch the hook named in argv, the event JSON on stdin."""
     if not argv or argv[0] in ("-h", "--help"):
-        print((__doc__ or "").strip().splitlines()[0])
-        print(
+        text = (
+            (__doc__ or "").strip().splitlines()[0] + "\n"
             "usage: claude-hook pre-run | post-change | stop   (hook event JSON on stdin)\n"
             "       claude-hook undecided <paths…>\n"
-            "       claude-hook sessions [--run RUN_ID]"
+            "       claude-hook sessions [--run RUN_ID]\n"
+            "exit codes: pre-run 0 or 2 (block); stop 0 or 2 (keep working); "
+            "post-change 0; undecided 0 or 1 (findings); sessions 0 or 1 (none "
+            "made the run); usage error 2"
         )
-        return 0 if argv else 1
+        return console.usage("claude-hook", text, asked=bool(argv))
     if argv[0] == "sessions":
         return sessions(argv[1:])
     if argv[0] == "undecided":
