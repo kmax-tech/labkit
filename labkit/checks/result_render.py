@@ -56,7 +56,7 @@ def limits_of(area: Path, text: str, run: Path) -> list[tuple[str, str, str]]:
     except (AuditError, FileNotFoundError, ValueError):
         return []
     return [
-        (findings.limit_label(r, n), findings.limit_line(r, n, f), f.effect)
+        (findings.limit_label(r, n), findings.limit_line(f), f.effect)
         for r in records
         for n, f in r.limits()
         if f.effect

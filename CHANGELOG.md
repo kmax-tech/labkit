@@ -291,7 +291,8 @@ pins (`requirements.txt` / `requirements.lock`).
   past on the way to the module table (reading 2026-10-22). It is
   `## Core and doctrine` now — definition, strike test, import rule, the
   house — the table says its third column names the doctrine modules, and
-  the README's terms carry the pair with a link.
+  the README's terms carry the pair with a link (the editorial history:
+  `docs/notes/2026-10-23-documentation-navigation.md`).
 
 - **The end-to-end tests run alone and in any order.** `Count` and `Judge`
   in `tests/test_end_to_end.py` built test_03–06 on what test_02 left
@@ -532,8 +533,8 @@ pins (`requirements.txt` / `requirements.lock`).
   six with the reason "Finding noted"; of four findings at decision
   points, one was fixed.
 - **The seconds release holds the registration to the commit of the first
-  measurement.** `report-check` (station 1, where the lane owes the
-  registration instead of the freeze) reads the oldest full run bound to
+  measurement.** `report-check` (stage 2, the registration, where the lane owes it
+  instead of the freeze) reads the oldest full run bound to
   the protocol (`answering_run.first_measurement`), the commit its record
   names (`runs.recorded_commit`) and the protocol as that commit holds it
   (`protocol_history.registration_in_commit`): the protocol not committed

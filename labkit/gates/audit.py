@@ -128,7 +128,8 @@ MODES = ("preflight", "analysis", "clarity")
 #: finding to decide here, so it exits 1 too (the module docstring says why)
 AUDIT_EXIT_CONTRACT = (
     "exit codes: 0 no blocker and no warning, 1 findings to decide (a blocker "
-    "OR a warning), 2 no audit (missing file, unreadable report, backend failure)"
+    "OR a warning), 2 no audit (missing file, unreadable report, backend failure); "
+    "--review: 0 every decision upheld, 1 at least one not upheld, 2 no review"
 )
 CLARITY = "clarity"
 ANALYSIS = "analysis"

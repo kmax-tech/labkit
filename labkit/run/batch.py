@@ -535,7 +535,7 @@ def write_dataset(
     header (about, field legend, producer), then one record per line.
 
     Store.records() — and everything reading through it, e.g.
-    answers.read_jsonl — skips the header, so consumers see data only; a
+    lanes.read_jsonl — skips the header, so consumers see data only; a
     human opening the file sees FIRST what it is. Every row is validated
     against the legend: field drift (a renamed or forgotten column) fails
     loudly at write time, not silently at analysis time. So does the stamp's

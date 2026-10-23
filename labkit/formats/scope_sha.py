@@ -425,7 +425,7 @@ def area_snapshot(
         area_files(area, globs)
         + declared
         + _import_closure(
-            [*area_files(area), *(f for f in declared if f.is_file())], root
+            [*area_files(area, globs), *(f for f in declared if f.is_file())], root
         )
         + list(extra)
     )

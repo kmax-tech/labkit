@@ -582,7 +582,7 @@ evidence file under the same ID (top of this document).*
      `_meta` header line IN the file — `batch.write_dataset` does this
      and checks every row against the legend (field drift is caught
      at write time, not at analysis time). Reading helpers
-     (`Store.records`, `answers.read_jsonl`) skip the header line;
+     (`Store.records`, `lanes.read_jsonl`) skip the header line;
      whoever opens the file reads first what it is.
 
 - **LAB-023 · No silent loss:** *(was §2.B4)* every stage that turns model output into data

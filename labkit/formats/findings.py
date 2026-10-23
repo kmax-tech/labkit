@@ -316,8 +316,9 @@ def limit_label(record: Record, n: int) -> str:
     return f"{LIMIT_PREFIX}{record.path.stem} #{n})"
 
 
-def limit_line(record: Record, n: int, finding: Finding) -> str:
-    """The value of that line: the effect, then the person's reason."""
+def limit_line(finding: Finding) -> str:
+    """The value of a Limit line: FINDING's effect, then the person's reason
+    (`limit_label` is the label beside it)."""
     reason = " ".join(finding.reason.split())
     return f"{effect_sentence(finding.effect)} — {reason}"
 
