@@ -61,9 +61,12 @@ Warnung. Umgesetzt und getestet:
   beim `stands`: BLOCKER blockt, WARNING warnt. `--review` legt dem
   Prüfer Status, Begründung und das frühere Urteil vor; die
   Prüferanweisung sagt je Status, was die Begründung zeigen muss.
-  `deferred` ist mit aufgenommen, weil es den Befund genauso still aus
-  den Limits nimmt — Entscheidung des Autors, ob das bleibt. Ein
-  Wechsel auf `not assessable` bleibt der Weg ohne neue Ziehung.
+  `deferred` gehört dazu (entschieden 2026-10-24): es nimmt den Befund
+  genauso still aus den Limits wie `dismissed`, und ein Prüfer, der
+  zweimal Belege verlangt hat, wäre sonst durch Umbenennen der
+  Entscheidung umgangen. Die Haltung trifft nur Befunde, die eine
+  Prüfung schon einmal nicht bestätigt hat, nie ein erstes `deferred`.
+  Ein Wechsel auf `not assessable` bleibt der Weg ohne neue Ziehung.
 
 Belege: [Replay mit zwei Durchläufen](docs/usability/2026-10-22-decision-review-replay-v5.md)
 (13 von 15 Urteilen gleich) und
