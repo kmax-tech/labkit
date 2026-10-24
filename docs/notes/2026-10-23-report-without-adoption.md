@@ -1,7 +1,13 @@
 # Note 2026-10-23 — a report from the run, not from the protocol: the proposal
 
-**Status: proposal, not a build order.** Decided by the author; the
-TODO ("Abschluss-Audit des fertigen Berichts") carries the decision.
+> **Status 2026-10-24: tiers 1 and 2 are built** (`report_check.promotions`,
+> `report_check.undeclared_findings`, `report_blocks.not_reported`; CHANGELOG
+> Unreleased, "Fixed"); tier 3 is not, its first measurement decides. Of the
+> points open below, 1 to 3 are decided as marked; 4 stays. The blocker
+> names the adoption command, not the adoption's refusals: the writer of
+> the declaration (`protocol_fill.fill_result_run`) lives above the gate,
+> and the agent reads the refusals from the command itself. The TODO
+> ("Abschluss-Audit des fertigen Berichts") carries the rest.
 
 ## The case
 
@@ -114,11 +120,14 @@ a warning.
 
 ## Open to decide
 
-1. The marker's spelling (naming, not mechanics).
-2. Whether tier 1 blocks at the stop as at the commit (today both run
-   `--if-reported`; the stop is heard first).
-3. Whether a report inside the area (`experiments/NN/notes/`) is held
-   like one at the root — the proposal says yes: the location is not a
-   claim.
+1. ~~The marker's spelling~~ — decided 2026-10-24: `run <id> (not
+   reported: <what refused the adoption, what you found>)`, the why owed
+   like the reason of `accepted`, `deferred` and `dismissed` (`lib term`:
+   no coinage in the field; "not reported" was the README's phrase for a
+   probe's number already).
+2. ~~Whether tier 1 blocks at the stop as at the commit~~ — both: one
+   `hold_report`, the stop hears it first.
+3. ~~Whether a report inside the area is held like one at the root~~ —
+   yes: `report_files` names every changed Markdown file citing a run.
 4. Whether the finishing audit (tier 3) is worth its measured cost before
    it warns; the first measurement decides.

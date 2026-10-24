@@ -101,11 +101,14 @@ eine gestagte Deklaration, die von HEAD abweicht, hält die committeten
 Berichte, die den Lauf zitieren; ein Befund, den eine Prüfung nicht
 bestätigt hat, bleibt unter `dismissed`, `fixed` oder `deferred`
 gehalten, bis eine Prüfung die neue Entscheidung bestätigt. Der dritte
-ist die Frage nach dem Abschluss-Audit des Berichts mit ihren ersten
-zwei Fällen; Vorschlag in drei Stufen (mechanische Bedingung, statischer
-Hinweis, bedingtes Audit) in
-[Bericht ohne Übernahme](docs/notes/2026-10-23-report-without-adoption.md),
-Entscheidung beim Autor. Der vierte (gelöschte Audit-Records) und der
+ist am 2026-10-24 in seinen ersten zwei Stufen umgesetzt (CHANGELOG
+Unreleased, „Fixed“): das Zitat des antwortenden Laufs eines Protokolls
+ohne Deklaration blockt am Stop und am Commit; ein nur angeschauter Lauf
+wird als solcher zitiert, `run <id> (not reported: <was die Übernahme
+verweigerte, was gefunden wurde>)`, die Begründung ist Pflicht, Zahlen
+daneben sind ein Hinweis. Die dritte Stufe, das kleine Abschluss-Audit
+des Berichts, steht unten bei den zurückgestellten Erweiterungen
+([Bericht ohne Übernahme](docs/notes/2026-10-23-report-without-adoption.md)). Der vierte (gelöschte Audit-Records) und der
 fünfte (Auditdauer gegen das Kommando-Timeout) stehen unten bei den
 offenen Verträgen.
 
@@ -197,18 +200,28 @@ Forschung und Benchmark-Fallliste liegen in
   (sechste Runde, t3 und t18):** `--from-run` verweigert, REPORT.md aus
   der metrics.json des Laufs geschrieben, der Hook warnte „exploration's
   run is cited“ und ließ durch — bei `seconds` ist der Bericht die
-  Beförderung. Vorschlag in
-  [Bericht ohne Übernahme](docs/notes/2026-10-23-report-without-adoption.md):
-  (1) guaranteed — das Zitat des antwortenden Laufs eines Protokolls
-  ohne Deklaration blockt am Commit, mit den Verweigerungsgründen der
-  Übernahme im Satz; Ausweg für echte Exploration: das Zitat im Bericht
-  als nicht berichtet kennzeichnen (Schreibweise offen, Namensprüfung
-  zuerst); (2) static evidence — Zahlen neben einem so gekennzeichneten
-  Zitat als Hinweis; (3) Agent-Audit — ein kleines Berichts-Audit
-  (Bericht, Protokoll, metrics.json; kein Code, keine Rows) nur bei
-  gekennzeichnetem Zitat oder Zahlen daneben, Kosten vor Sperrwirkung
-  messen. Keine pauschale Sperre für Laufzitate. Entscheidung beim
-  Autor; vier offene Punkte stehen in der Notiz.
+  Beförderung. Vorschlag in drei Stufen in
+  [Bericht ohne Übernahme](docs/notes/2026-10-23-report-without-adoption.md).
+  **Umgesetzt 2026-10-24, Stufe 1 und 2:** das Zitat des antwortenden
+  Laufs eines Protokolls ohne Deklaration blockt am Stop und am Commit
+  (`report_check.promotions`); Probe, quittierter Lauf und älterer Lauf
+  bleiben die Warnung. Ausweg für einen nur angeschauten Lauf: die
+  Markierung `run <id> (not reported: <was die Übernahme verweigerte,
+  was gefunden wurde>)` — Begründung Pflicht wie bei `accepted`,
+  `deferred`, `dismissed`; ohne sie oder auf einem deklarierten Lauf
+  blockt sie. Zahlen im Absatz einer Markierung sind static evidence.
+  Verweigerung der Übernahme und AGENTS.md des Gerüsts sagen dasselbe:
+  eine Verweigerung ist ein Befund für den Bericht, kein Hindernis zum
+  Umgehen. Entschieden dabei: Schreibweise (`lib term`: keine
+  Fachprägung; „not reported“ stand im README schon für die Probe),
+  Block am Stop wie am Commit, Bericht unter `notes/` wie an der
+  Wurzel. **Offen:** Stufe 3, das kleine Berichts-Audit (Bericht,
+  Protokoll, metrics.json; nur bei Markierung oder Zahlen daneben) —
+  Kosten am ersten Fall messen, bevor es warnt. Und: der Blocker-Satz
+  nennt das Übernahmekommando, nicht dessen Verweigerungsgründe; dafür
+  müsste der Schreiber der Deklaration (`protocol_fill.fill_result_run`)
+  unter das Gate ziehen. Erst, wenn ein Agent den Satz liest und die
+  Übernahme trotzdem nicht aufruft.
 - **Limit-Zeilen aus Preflight-Records:** Der Renderer übernimmt Limits
   aus abdeckenden Analyse-Records. Akzeptierte Preflight-BLOCKER
   (`minutes`/`hours`) sind noch nicht einbezogen. In der fünften Runde
@@ -495,3 +508,6 @@ bleiben mit damaligem Commit und Pin reproduzierbar.
   die Frage in den Worten der Gold-Legende stellen. Neue Vorgabe — erst
   nach dem Stabilisierungsfenster und nur, wenn es wieder vorkommt; das
   Audit fängt es heute (2026-10-21).
+
+
+
