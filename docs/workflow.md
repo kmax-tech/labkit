@@ -195,6 +195,19 @@ block are named as unsourced (a hint), and whether the prose reads the
 number rightly, and whether a decided limit is enough, stay the audit's
 and the reader's judgement.
 
+A report that cites a protocol's **answering run** while that protocol
+declares no result is blocked: at `seconds` the report is the promotion,
+and this is its shape without the adoption (`report_check.promotions`;
+sixth haiku round, t3 and t18: `--from-run` refused, REPORT.md written
+from `metrics.json` by hand). The sentence names the adoption
+(`protocol-fill <PROTOCOL> --from-run <run_id>`, which says what it still
+owes) and the way out for a run only looked at: cite it as such, the why
+beside the id — `run <run_id> (not reported: <what refused the adoption,
+what you found>)`. The marker without its why blocks; the marker on a run
+some protocol does declare blocks (the block shows the number); numbers in
+the marked citation's paragraph are named as a hint. A probe's or an older
+run's citation stays the warning it was: an exploration's run is looked at.
+
 ## 9. The gate — at the stop and the commit
 
 ```

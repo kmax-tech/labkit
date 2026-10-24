@@ -151,7 +151,12 @@ to check or correct the instrument.
 
 An exploration may leave the answer open and end without a reported result.
 A probe (`run_kind="probe"`) or an acknowledged unfrozen run cannot supply a
-reportable number.
+reportable number. A report (`REPORT.md`, a results note) that cites the
+area's answering run while its protocol declares no result is held at the
+stop and the commit: that is the number leaving the area without the
+adoption. A run the report looks at without reporting it is cited as such,
+with the why beside the id — `run <run_id> (not reported: <what refused
+the adoption, what you found>)`.
 
 ### Longer measurements
 

@@ -99,7 +99,13 @@ LAB-017 The number of audits follows the cost tier.
    stop and the commit — the block exactly, every cited run id a run of
    the repo; any other number there is named as having no assigned
    source: compute it in the run and report it from there, or say where
-   it comes from. Commit `output/` and `runs/` with the protocol —
+   it comes from. When the adoption is refused and you cannot clear
+   it, do not write the run's numbers into a report as the result — the
+   gate holds a report citing the area's answering run while the
+   protocol declares none. A refusal is a finding to report, not an
+   obstacle to route around: cite the run as `run <run_id> (not
+   reported: <what refused the adoption, what you found>)`, say that the
+   question stays open, and end there. Commit `output/` and `runs/` with the protocol —
    `finalize <area>` checks the provenance and wants both in git; the run
    index `runs.tsv` is a local view, git-ignored (`runlog reindex <area>`
    rebuilds it from `runs/`).
@@ -167,7 +173,13 @@ fields, no reading of labkit's source.
     cites a run is held to it at the stop and the commit — the block exactly, every cited run id a run of the repo.
     Any other number in that file is named as having no assigned source:
     compute it in the run and report it from there, or say where it
-    comes from.
+    comes from. When the adoption is refused and you cannot clear it, do
+    not write the run's numbers into a report as the result — the gate
+    holds a report citing the area's answering run while the protocol
+    declares none. A refusal is a finding to report, not an obstacle to
+    route around: cite the run as `run <run_id> (not reported: <what
+    refused the adoption, what you found>)`, say that the question stays
+    open, and end there.
 
 ## Setup
 

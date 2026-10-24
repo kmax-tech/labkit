@@ -651,7 +651,11 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     print(
         f"protocol-fill: not adopted — report-check refuses the written result "
         f"(above); {protocol.name} is as it was. Pass the checks first, or leave "
-        f"the number a sketch in runs/ (an exploration reports no result)."
+        f"the number a sketch in runs/ (an exploration reports no result). A "
+        f"refusal is a finding to report, not an obstacle to route around: a "
+        f"report that mentions this run without adopting it says so beside the "
+        f"id — `{report_blocks.NOT_REPORTED_FORM.format(run_id='<run_id>')}` — "
+        f"and leaves the question open; the run's numbers are not the result."
     )
     return 1
 

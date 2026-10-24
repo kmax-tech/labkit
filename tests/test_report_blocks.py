@@ -240,10 +240,13 @@ class ReportFiles(unittest.TestCase):
         code, out = self._gate(root, report)
         self.assertEqual(code, 0, out)  # the twin: the block written, the prose stays
 
-    def test_the_twin_a_cited_run_no_protocol_declares_owes_no_block(self):
+    def test_the_twin_a_cited_probe_no_protocol_declares_owes_no_block(self):
         """An exploration's run is cited, not reported: a warning says no
-        protocol declares it; nothing is owed, nothing blocks."""
-        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None)
+        protocol declares it; nothing is owed, nothing blocks. A probe's
+        number could not be reported, so its citation is no promotion."""
+        area = self._area(
+            f"c1_pass = True (run {self.RUN})", declared=None, run_kind="probe"
+        )
         root = area.parent.parent
         report = root / "REPORT.md"
         report.write_text(f"a look at run {self.RUN}\n", encoding="utf-8")
@@ -254,6 +257,150 @@ class ReportFiles(unittest.TestCase):
             out,
         )
         self.assertNotIn("without its generated block", out)
+        self.assertNotIn("the answering run of", out)
+
+    def test_the_twin_an_older_run_cited_beside_the_answering_one_is_looked_at(self):
+        """A run that is not the one every gate holds the protocol to — here
+        an older full run — is an exploration's run: the warning, no block."""
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None)
+        older = "2026-10-06T10-00-00_aa11"
+        completed_run(area, older, metrics={"c1_pass": False})
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        report.write_text(
+            f"the first try, run {older}, was dropped\n", encoding="utf-8"
+        )
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 0, out)
+        self.assertIn(f"REPORT.md: cites {older}, which no protocol declares", out)
+
+    def test_the_answering_run_cited_unadopted_blocks_and_names_both_ways_out(self):
+        """Sixth haiku round (2026-10-23, t3 and t18): `--from-run` refused,
+        REPORT.md written from the run's metrics.json by hand, the hook
+        warned of an exploration's citation and let the commit pass — at
+        seconds the report is the promotion. The citation of a protocol's
+        answering run that declares no result blocks, wherever the report
+        lies; the sentence names the adoption and the marker."""
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None)
+        root = area.parent.parent
+        report = root / "notes" / "REPORT.md"
+        report.parent.mkdir()
+        report.write_text(
+            f"# Report\n\nC1 passed: c1_pass = True (run {self.RUN})\n",
+            encoding="utf-8",
+        )
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            f"notes/REPORT.md: cites {self.RUN}, the answering run of "
+            f"../experiments/01-x/PROTOCOL-x.md, which declares no result",
+            out,
+        )
+        self.assertIn(f"PROTOCOL-x.md --from-run {self.RUN}` (it names what the", out)
+        self.assertIn(
+            f"`run {self.RUN} (not reported: <what refused the adoption, "
+            f"what you found>)`",
+            out,
+        )
+        self.assertNotIn("which no protocol declares as its result", out)
+
+    def test_the_twin_the_answering_run_cited_as_not_reported_with_its_why_passes(
+        self,
+    ):
+        """The way out for a looked-at run: the marker with the why beside
+        the id. No blocker, no exploration warning — the report says so."""
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        report.write_text(
+            f"Run {self.RUN} (not reported: adoption refused — target leakage "
+            f"through G_VRH, two accepted blockers unreviewed); the question "
+            f"stays open.\n",
+            encoding="utf-8",
+        )
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("BLOCKER", out)
+        self.assertNotIn("which no protocol declares", out)
+        self.assertNotIn("beside a run cited as not reported", out)
+
+    def test_a_marker_without_its_why_blocks(self):
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        report.write_text(f"run {self.RUN} (not reported)\n", encoding="utf-8")
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            f"REPORT.md: line 1: run {self.RUN} is cited as not reported without "
+            f"the why",
+            out,
+        )
+
+    def test_numbers_beside_a_run_cited_as_not_reported_are_a_hint(self):
+        """Static evidence: the paragraph of a marked citation is named when
+        it states numbers; a number in another paragraph is only among the
+        unsourced ones. Nothing blocks."""
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        report.write_text(
+            f"# Report\n\nRun {self.RUN} (not reported: adoption refused — leakage).\n"
+            f"Its AUC was 0.80 all the same.\n\nElsewhere 0.99 is stated.\n",
+            encoding="utf-8",
+        )
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 0, out)
+        self.assertIn(
+            "REPORT.md: numbers on 1 line(s) beside a run cited as not reported", out
+        )
+        self.assertIn("    REPORT.md:4: 0.80\n", out)
+        self.assertIn("no assigned source found for the numbers on 2 line(s)", out)
+
+    def test_a_marker_on_a_declared_run_blocks(self):
+        """`not reported` beside a run a protocol declares as its result is
+        a false claim the gate can read: the block shows the number."""
+        root, report = self._reported()
+        with report.open("a", encoding="utf-8") as f:
+            f.write(f"\nrun {self.RUN} (not reported: just a look)\n")
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            f"run {self.RUN} is cited as not reported, but "
+            f"experiments/01-x/PROTOCOL-x.md declares it as its result",
+            out,
+        )
+
+    def test_a_marker_reads_its_why_and_owes_one(self):
+        text = (
+            f"a look at run {RUN} (not reported: adoption refused — leakage)\n"
+            f"and run {RUN} (not reported)\n"
+            f"and run {RUN} plain\n"
+        )
+        marked = report_blocks.not_reported(text)
+        self.assertEqual(
+            [(m.line, m.why) for m in marked],
+            [(1, "adoption refused — leakage"), (2, "")],
+        )
+        self.assertEqual(
+            report_blocks.marker_gaps(marked),
+            [
+                f"line 2: run {RUN} is cited as not reported without the why — write "
+                f"`run {RUN} (not reported: <what refused the adoption, what you found>)`"
+            ],
+        )
+
+    def test_numbers_beside_a_marker_stop_at_a_blank_line_and_a_block(self):
+        block = report_blocks.write_block("", P, RUN, "auc = 0.69")
+        text = (
+            f"# Report\n\nstated 12 before\nrun {RUN} (not reported: a look)\n"
+            f"AUC 0.80 after\n{block}\n0.99 far away\n"
+        )
+        marked = report_blocks.not_reported(text)
+        self.assertEqual(
+            report_blocks.numbers_beside_not_reported(text, marked),
+            [(3, ["12"]), (5, ["0.80"])],
+        )
 
     def test_blocks_owed_names_each_declaring_protocol_once(self):
         other = "2026-10-08T10-00-00_cd34"
@@ -331,8 +478,18 @@ class ReportFiles(unittest.TestCase):
         report.write_text(f"c1_pass = True (run {self.RUN})\n", encoding="utf-8")
         self._git(root, "add", "REPORT.md")
         code, out = self._gate(root, report, staged=True)
-        self.assertEqual(code, 0, out)  # step one: an exploration's citation
-        self.assertIn("which no protocol declares as its result", out)
+        # step one, as t5 wrote it: the answering run's number without the
+        # adoption — held at this commit already (the t3/t18 case)
+        self.assertEqual(code, 1, out)
+        self.assertIn("the answering run of experiments/01-x/PROTOCOL-x.md", out)
+        # step one as an exploration would write it passes
+        report.write_text(
+            f"c1_pass = True (run {self.RUN} (not reported: adoption pending))\n",
+            encoding="utf-8",
+        )
+        self._git(root, "add", "REPORT.md")
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 0, out)
         self._git(root, "commit", "-qm", "report")
         # step two: the protocol declares the run; the report is untouched
         proto = area / "PROTOCOL-x.md"
@@ -355,10 +512,16 @@ class ReportFiles(unittest.TestCase):
             f"experiments/01-x/PROTOCOL-x.md, without its generated block",
             out,
         )
-        # the twin: the block written into the report and staged with the
-        # protocol — one consistent commit — passes, the report held once
+        self.assertIn(
+            "is cited as not reported, but experiments/01-x/PROTOCOL-x.md "
+            "declares it as its result",
+            out,
+        )
+        # the twin: the block written into the report, the marker dropped,
+        # staged with the protocol — one consistent commit — passes, the
+        # report held once
         written, _ = protocol_fill.into_report(
-            declaring, area, report.read_text(encoding="utf-8"), P
+            declaring, area, f"c1_pass = True (run {self.RUN})\n", P
         )
         report.write_text(written, encoding="utf-8")
         self._git(root, "add", "REPORT.md")

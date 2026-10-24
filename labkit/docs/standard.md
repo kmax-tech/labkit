@@ -255,7 +255,11 @@ evidence file under the same ID (top of this document).*
   show the run the protocol they name declares now and equal what it
   renders, every cited run id names a
   run of the repo, and the protocol declaring a cited run goes through
-  `report-check`; a number outside every block is named as having no
+  `report-check`; the answering run of a protocol that declares no result
+  is not cited unmarked — that is the number leaving the area without the
+  adoption — and a run only looked at is cited as such, the why beside
+  the id (`run <id> (not reported: <what refused the adoption, what was
+  found>)`); a number outside every block is named as having no
   assigned source — a hint, since equal values elsewhere do not show
   where a number came from.
   Deliberate exception: `--no-verify`.

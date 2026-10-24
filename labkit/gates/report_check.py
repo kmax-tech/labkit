@@ -116,6 +116,7 @@ from labkit.gates.finalize import finalize_area
 from labkit.gates.preflight import area_test_python
 from labkit.formats.protocol_check import check_fields
 from labkit.formats.repo import (
+    adopt_command,
     area_path,
     area_protocols,
     choose_protocol,
@@ -918,16 +919,47 @@ def owed_blocks(
 AMONG_PATHS = "a report citing runs"
 
 
+def promotions(run_ids: list[str], sources: Sources) -> list[tuple[str, Path]]:
+    """(run id, protocol) for every run of RUN_IDS that is the answering run
+    of a protocol declaring no result — the run every gate would hold that
+    protocol to (`audit_binding.audited_run`) — and could be reported
+    (`runs.unreportable` empty). Cited in a report, that is the shape of the
+    promotion without the adoption: a full run's number leaving the area
+    with no chain held. A probe's or an acknowledged unfrozen run's
+    citation is not one — nothing could be reported of it — nor is an older
+    run's, or a run of a protocol that answers with another. Raises
+    AuditError on a head whose id does not read."""
+    out: list[tuple[str, Path]] = []
+    for protocol, declared in sources.declared.items():
+        if declared is not None:
+            continue
+        area = protocol.parent.resolve()
+        mine = [r for r in run_ids if run_path(area, r).is_dir()]
+        if not mine:
+            continue
+        run, _ = audited_run(area, protocol, sources.texts[protocol])
+        if run is None or run.name not in mine:
+            continue
+        cfg = read_run_config(run)
+        if cfg is None or unreportable(cfg):
+            continue
+        out.append((run.name, protocol))
+    return out
+
+
 def hold_report(
     path: Path, text: str, repo: Path, sources: Sources, *, held_as: str = AMONG_PATHS
 ) -> int:
     """Hold one report: its blocks equal their protocols' rendering, every
     cited run id a run of the repo, every cited declared result shown in
-    its protocol's block (blockers); a cited run no protocol declares a
-    WARNING (guaranteed); the numbers outside every block a WARNING that
-    is static evidence — a hint at where to look, not a check of them.
-    HELD_AS says in the heading why this report is held. 0 clean or
-    warnings only, 1 a blocker."""
+    its protocol's block, a run cited as not reported says why, and the
+    answering run of a protocol that declares no result is not cited
+    unmarked (`promotions` — the number of a full run presented without
+    the adoption; blockers); any other cited run no protocol declares a
+    WARNING (guaranteed); the numbers outside every block, and those beside
+    a run cited as not reported, a WARNING that is static evidence — a
+    hint at where to look, not a check of them. HELD_AS says in the heading
+    why this report is held. 0 clean or warnings only, 1 a blocker."""
     rel = path.relative_to(repo.resolve()).as_posix()
     print(f"═══ report-check {rel} ({held_as}) ═══")
     out = Findings()
@@ -943,6 +975,9 @@ def hold_report(
         out.block(f"{rel}: {gap}")
     for gap in owed_blocks(path, text, found, sources):
         out.block(f"{rel}: {gap}")
+    marked = report_blocks.not_reported(text)
+    for gap in report_blocks.marker_gaps(marked):
+        out.block(f"{rel}: {gap}")
     unsourced = report_blocks.unsourced_numbers(text)
     if unsourced:
         out.warn(
@@ -953,18 +988,94 @@ def hold_report(
         )
         for n, numbers in unsourced:
             out.note(f"    {rel}:{n}: {', '.join(numbers)}")
-    undeclared = sorted(
-        {r for _, r in cited if r in sources.known and not sources.declaring(r)}
-    )
-    if undeclared:
+    beside = report_blocks.numbers_beside_not_reported(text, marked)
+    if beside:
         out.warn(
-            f"{rel}: cites {', '.join(undeclared)}, which no protocol declares as "
-            f"its result — a reported number is declared by `protocol-fill "
-            f"<PROTOCOL> --from-run`, and its block written by `--into {rel}`; "
-            f"an exploration's run is cited, not reported",
-            evidence_kind=GUARANTEED,
+            f"{rel}: numbers on {len(beside)} line(s) beside a run cited as not "
+            f"reported — a looked-at run's number in a report is a reported "
+            f"number unless the sentence says what it is (a hint, not a check):",
+            evidence_kind=STATIC_EVIDENCE,
         )
+        for n, numbers in beside:
+            out.note(f"    {rel}:{n}: {', '.join(numbers)}")
+    out.take_all(undeclared_findings(path, rel, cited, marked, sources))
     return out.report("report-check", "reporting")
+
+
+def undeclared_findings(
+    path: Path,
+    rel: str,
+    cited: list[tuple[int, str]],
+    marked: list[report_blocks.NotReported],
+    sources: Sources,
+) -> list[GateFinding]:
+    """The findings on the runs the report at PATH (REL to the repo) cites
+    that no protocol declares as its result (CITED: line and id; MARKED:
+    the citations carrying the not-reported marker). Blockers: a marked run
+    some protocol does declare — the marker is a false claim beside a
+    shown result; the unmarked citation of a protocol's answering run that
+    declares none (`promotions`), the sentence naming the adoption and the
+    marker as the two ways out. A warning: any other undeclared run cited
+    unmarked — an exploration's run is looked at. A marked run says so and
+    gets no warning."""
+    out: list[GateFinding] = []
+    for m in marked:
+        for protocol in sources.declaring(m.run_id):
+            named = report_blocks.path_from_report(protocol, path)
+            out.append(
+                GateFinding(
+                    BLOCKER,
+                    f"{rel}: line {m.line}: run {m.run_id} is cited as not reported, "
+                    f"but {named} declares it as its result — drop the marker; the "
+                    f"generated block shows the number",
+                    evidence_kind=GUARANTEED,
+                )
+            )
+    said_so = {m.run_id for m in marked}
+    undeclared = sorted(
+        {
+            r
+            for _, r in cited
+            if r in sources.known and r not in said_so and not sources.declaring(r)
+        }
+    )
+    try:
+        promoted = promotions(undeclared, sources)
+    except AuditError as exc:
+        return out + [
+            GateFinding(
+                BLOCKER,
+                f"{rel}: cites a run of a protocol whose head does not read — {exc}",
+                evidence_kind=GUARANTEED,
+            )
+        ]
+    for run_id, protocol in promoted:
+        named = report_blocks.path_from_report(protocol, path)
+        out.append(
+            GateFinding(
+                BLOCKER,
+                f"{rel}: cites {run_id}, the answering run of {named}, which declares "
+                f"no result — a full run's number leaves the area through "
+                f"`{adopt_command(protocol, run_id)}` (it names what the "
+                f"adoption still owes), then `--into {rel}` writes its block; a run "
+                f"this report looks at without reporting it is cited as such: "
+                f"`{report_blocks.NOT_REPORTED_FORM.format(run_id=run_id)}`",
+                evidence_kind=GUARANTEED,
+            )
+        )
+    looked_at = [r for r in undeclared if r not in {r for r, _ in promoted}]
+    if looked_at:
+        out.append(
+            GateFinding(
+                WARNING,
+                f"{rel}: cites {', '.join(looked_at)}, which no protocol declares as "
+                f"its result — a reported number is declared by `protocol-fill "
+                f"<PROTOCOL> --from-run`, and its block written by `--into {rel}`; "
+                f"an exploration's run is cited, not reported",
+                evidence_kind=GUARANTEED,
+            )
+        )
+    return out
 
 
 def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:

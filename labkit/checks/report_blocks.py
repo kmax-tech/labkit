@@ -27,6 +27,18 @@ here states, and no more:
   there).
 - `cited_gaps` (guaranteed): every token that reads as a run id
   (`runs.RUN_ID_LIKE`) names a run directory of the repo.
+- `not_reported`, `marker_gaps` (guaranteed): a run the report looks at
+  without reporting it is cited as such, the why beside the id —
+  `run <id> (not reported: <what refused the adoption, what was found>)`.
+  The marker is a written claim the reader sees beside the number; one
+  without its why is a blocker. The gate (`report_check.promotions`) holds
+  the unmarked citation of a protocol's answering run that declares no
+  result: at `seconds` such a report is the promotion without the adoption
+  (sixth haiku round, 2026-10-23, t3 and t18: `--from-run` refused, REPORT.md
+  written from metrics.json by hand, the hook warned and let it pass).
+- `numbers_beside_not_reported` (static evidence, never blocks): the
+  numbers in the paragraph of a marked citation — a looked-at run's number
+  in a report is a reported number unless the sentence says what it is.
 - `unsourced_numbers` (static evidence, never blocks): numbers outside every
   block — no source is assigned to them. A number that happens to equal a
   value of the run is named too: equal values do not show where a number
@@ -235,6 +247,79 @@ def cited_gaps(cited: list[tuple[int, str]], known: set[str]) -> list[str]:
         elif token not in known:
             gaps.append(f"line {n}: cites run {token} — no runs/{token}/ in the repo")
     return gaps
+
+
+#: a run cited as looked at, not reported: the marker right after the id,
+#: the why inside the parentheses (owed — `marker_gaps`), e.g.
+#: `run 2026-10-23T17-03-33_7254 (not reported: adoption refused — target
+#: leakage through G_VRH, two stands unreviewed)`. The why is the report of
+#: what stopped the number, on the page beside it: a false one ("not
+#: reported" beside a number read as the result) is a sentence an auditor
+#: reads and a reviewer catches — the gate's blind spot moved onto the page.
+NOT_REPORTED = "not reported"
+_NOT_REPORTED = re.compile(
+    rf"(?P<run>{runs.RUN_ID_LIKE.pattern})\s*\({NOT_REPORTED}(?::(?P<why>[^)]*))?\)"
+)
+#: the form the gate asks for, with the id filled in
+NOT_REPORTED_FORM = (
+    "run {run_id} (" + NOT_REPORTED + ": <what refused the adoption, what you found>)"
+)
+
+
+@dataclass(frozen=True)
+class NotReported:
+    """A citation carrying the marker: its LINE, the RUN_ID, the WHY as
+    written ('' for a marker without one — `marker_gaps` names it)."""
+
+    line: int
+    run_id: str
+    why: str
+
+
+def not_reported(text: str) -> list[NotReported]:
+    """Every citation of TEXT marked as not reported, in order of the lines."""
+    return [
+        NotReported(n, m.group("run"), (m.group("why") or "").strip())
+        for n, line in enumerate(text.split("\n"), 1)
+        for m in _NOT_REPORTED.finditer(line)
+    ]
+
+
+def marker_gaps(marked: list[NotReported]) -> list[str]:
+    """Why a marker of MARKED carries no report, one sentence each: the why
+    is empty — the marker is the place where what refused the adoption and
+    what was found is written."""
+    return [
+        f"line {m.line}: run {m.run_id} is cited as not reported without the why — "
+        f"write `{NOT_REPORTED_FORM.format(run_id=m.run_id)}`"
+        for m in marked
+        if not m.why
+    ]
+
+
+def numbers_beside_not_reported(
+    text: str, marked: list[NotReported]
+) -> list[tuple[int, list[str]]]:
+    """(line, numbers) of every line in the paragraph of a citation of MARKED
+    — the non-blank lines around it, up to a blank line or a generated block
+    — that states a number (`unsourced_numbers`). Static evidence: a hint at
+    a looked-at run's number presented in a report, never a blocker."""
+    lines = text.split("\n")
+    inside = {n for b in blocks(text) for n in range(b.first, b.last + 1)}
+
+    def in_paragraph(n: int) -> bool:
+        return 1 <= n <= len(lines) and bool(lines[n - 1].strip()) and n not in inside
+
+    wanted: set[int] = set()
+    for m in marked:
+        lo = m.line
+        while in_paragraph(lo - 1):
+            lo -= 1
+        hi = m.line
+        while in_paragraph(hi + 1):
+            hi += 1
+        wanted.update(range(lo, hi + 1))
+    return [(n, found) for n, found in unsourced_numbers(text) if n in wanted]
 
 
 #: what is not a stated number before the scan: comments (a block's own

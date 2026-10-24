@@ -134,6 +134,30 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A report that promotes a run without the adoption is held.** In the
+  sixth haiku round (2026-10-23, t3 and t18) `protocol-fill --from-run`
+  was refused — untracked data, stale audits, unreviewed `stands` — and
+  both agents wrote REPORT.md from the run's `metrics.json` by hand; the
+  gate saw a run no protocol declares, warned of an exploration's
+  citation and let the commit pass. At `seconds` that report is the
+  promotion. Now a report citing the **answering run** of a protocol that
+  declares no result (`audit_binding.audited_run`: the run every gate
+  holds that protocol to; a probe or an acknowledged unfrozen run is not
+  one, nor an older run) blocks at the stop and the commit
+  (`report_check.promotions`, `report_check.undeclared_findings`), the
+  sentence naming the adoption, which says what it still owes, and the
+  way out for a run only looked at: cite it as such, the why beside the
+  id — `run <run_id> (not reported: <what refused the adoption, what you
+  found>)` (`report_blocks.not_reported`). The marker without its why
+  blocks (`report_blocks.marker_gaps`), as does the marker on a run some
+  protocol declares (the block shows the number); numbers in a marked
+  citation's paragraph are named as static evidence
+  (`report_blocks.numbers_beside_not_reported`). Any other undeclared run
+  cited stays the warning it was. The adoption's refusal and the
+  scaffold's AGENTS.md say the same: a refusal is a finding to report,
+  not an obstacle to route around. The finishing audit of the report
+  (the third tier of `docs/notes/2026-10-23-report-without-adoption.md`)
+  is not built; its first measurement decides.
 - **A declaration committed after its citing report is held at that
   commit.** `report-check --if-reported` held only the paths given: in
   the sixth haiku round (2026-10-23, t5) REPORT.md citing the run was
