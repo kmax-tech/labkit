@@ -65,7 +65,7 @@ class Field:
                 the report half of the result; at low repeat cost never — the audit
                 comes at promotion there)
 
-    `low`: owed in the low cut — "s" always, "lb" when the number
+    `low_cut`: owed in the low cut — "l" always, "lb" when the number
     judges a prediction (`kind` fit or apply: it has a bar), "lm" when a
     model answers through `models.toml` (`[model]`); after/report fields
     carry the template's marker but are owed by their level, not by the
@@ -369,7 +369,7 @@ def bar_owed(f: Field, kind: str | None) -> bool:
 
 
 def in_cut(f: Field, kind: str | None, model: bool) -> bool:
-    """Is `f` part of the low cut — "s" always, "lb" when the number has
+    """Is `f` part of the low cut — "l" always, "lb" when the number has
     a bar (`bar_owed`), "lm" with a model named?"""
     if f.low_cut == "l":
         return True

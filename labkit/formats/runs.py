@@ -111,7 +111,7 @@ RunState = Literal[
 def run_state(run_dir: Path, alive: bool | None) -> RunState:
     """One of: completed · running · unknown · crashed · unfinalized · corrupt
     (a run whose config.json cannot be read — damaged, or written before
-    schema 3 — is `unreadable`: `run_facts`, `runlog.active`; this function
+    schema 4 — is `unreadable`: `run_facts`, `runlog.active`; this function
     never sees one, its caller has read the config).
 
     metrics.json without completion.json is decided by liveness: alive →

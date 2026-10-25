@@ -77,8 +77,9 @@ after the audit and the recomputation).
 
 A run directory says for itself whether it finished: complete when
 `metrics.json` AND `completion.json` exist. A run whose `config.json` is not
-schema 3 or lacks a valid `run_kind` is `unreadable`: listed with a reason,
-never chosen or indexed. Schema 2 records are read with labkit 0.99.0;
+schema 4 or lacks a valid `run_kind` is `unreadable`: listed with a reason,
+never chosen or indexed. Schema 2 records are read with labkit 0.99.0,
+schema 3 (`cost_tier` instead of `repeat_cost`) with 0.103.0;
 reproduce them with their original repo commit and pinned package.
 
 `schema_version` is stamped into `config.json` at run START: when a reader
@@ -89,7 +90,7 @@ missing.
 
 ```json
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "finished": "2026-09-26T21:14:02",
   "git": "a1b2c3d+dirty",
   "git_full": "a1b2c3d4e5f6...",

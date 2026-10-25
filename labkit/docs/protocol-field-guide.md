@@ -188,7 +188,7 @@ The same block may hold the `[[promise]]` tables (labkit
   notices when the cited publication changes. With `fit` or
   `apply` both keys are refused — there the model is what the number
   judges, not an instrument.
-- **cost** — see below.
+- **repeat_cost** — see below.
 - **frozen** — `true` means hypothesis, prompts/rules, metrics, baselines
   and decision rule were all fixed beforehand; only `true` plus `test` gives
   you a held-out number. Goes from `false` to `true` only after the

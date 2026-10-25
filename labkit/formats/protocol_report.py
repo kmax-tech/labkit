@@ -54,7 +54,7 @@ from labkit.formats.protocol_check import (
 
 def unreported(text: str, low_cut: bool = False) -> list[str]:
     """The result fields still missing, a placeholder or only dashes. A
-    model-only field (`sm`, Raw output) is owed only with a model named — a
+    model-only field (`lm`, Raw output) is owed only with a model named — a
     computation has no prompt+answer pair to show; at LOW only the cut's fields
     are owed (the Summary requires Conclusion, 2026-10-12)."""
     lines = fields(text)

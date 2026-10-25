@@ -64,7 +64,7 @@ the directory). An incomplete run leaves its dir with config.json but
 without the required completion markers — visible, not silent. The run-index row is written on
 clean exit only. States: completed · running · unknown · crashed ·
 unfinalized · corrupt · unreadable (config.json damaged, or written before
-schema 3 — read with its pinned labkit).
+schema 4 — read with its pinned labkit).
 """
 
 from __future__ import annotations
@@ -731,7 +731,7 @@ def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
 
     A row that exists stays untouched. Only runs with both completion
     markers are indexed; a run whose metadata cannot be read (damaged, or
-    written before schema 3) is reported, never indexed — exit 2.
+    written before schema 4) is reported, never indexed — exit 2.
     """
     index = base_dir / "runs.tsv"
     with _index_lock(base_dir):
