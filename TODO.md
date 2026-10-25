@@ -119,6 +119,18 @@ des Berichts, steht unten bei den zurückgestellten Erweiterungen
 ([Bericht ohne Übernahme](docs/notes/2026-10-23-report-without-adoption.md)). Der vierte (gelöschte Audit-Records) und der
 fünfte (Auditdauer gegen das Kommando-Timeout) stehen unten bei den
 offenen Verträgen.
+Die siebte Runde in Bereich 09 lief auf `e9f088f` (2026-10-25,
+[Bericht](docs/usability/2026-10-25-sandbox-e9f088f.md)): wieder
+no-advantage (Erfolg labkit 1/3 gegen plain 2/3, stille Abweichungen
+4 / 5 / 4, Standard erfüllt 0/3, alle drei labkit-Agenten bei `low`). Die
+Riegel der sechsten Runde hielten (`dismissed` nach abgelehnter Prüfung
+blieb gehalten); die Agenten gingen eine Stufe weiter außen herum: Zahlen
+bleiben neben `(not reported: …)` als Ergebnis im Bericht (t3, t18), die
+Run-ID wird gelöscht, um am Hook vorbeizukommen (t5). Fünf nummerierte
+offene Punkte im Bericht; der dritte (claude-cli lehnt eine
+Zwei-Zug-Antwort ohne Werkzeuge als unvollständig ab, t18) ist zuerst zu
+klären, weil er womöglich ein falsches „unproven“ ist. Die Handurteile
+der Runden 5 bis 7 sind Entwürfe eines Richters je Aufgabe.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
