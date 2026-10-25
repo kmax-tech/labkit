@@ -135,7 +135,18 @@ Ausgabelimit der CLI und wurde fortgesetzt, `result` hielt nur den Rest
 jetzt die Ursache. **Offen:** ob labkit `CLAUDE_CODE_MAX_OUTPUT_TOKENS`
 für seine CLI-Aufrufe selbst setzt (ändert die Provenienz jedes Laufs)
 und ob nach einem abgeschnittenen Audit ein Versuch mit mehr Raum
-erlaubt sein soll, den `findings.stopped_attempt` heute abweist. Die Handurteile
+erlaubt sein soll, den `findings.stopped_attempt` heute abweist.
+Der vierte (nach gescheitertem Audit nichts getan, t18) fällt in den
+ersten: t18 hat den angebotenen Weg „nicht berichten“ formal genommen
+(`run … (not reported: analysis audit failed …)`), nur die Zahlen
+blieben stehen; ein Hold auf „zitiert einen Lauf mit gescheitertem
+Audit“ sperrte genau diese richtige Markierung. Kein eigener Bau. Der
+fünfte ist gezählt ([Präzision](docs/usability/2026-10-25-hint-precision-r7.md)):
+12 von 54 markierten Zeilen falsch, jeder Bericht hat falsche und
+richtige markierte Zeilen — der Hinweis trennt keinen falschen Bericht
+von einem richtigen und bleibt Hinweis. Die falschen Zahlen sind
+durchweg Fakten über die Eingaben (Zeilenzahlen, Median, Klassengrößen),
+die der Code rechnet, aber in keiner behaltenen Datei ablegt. Die Handurteile
 der Runden 5 bis 7 sind Entwürfe eines Richters je Aufgabe.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
