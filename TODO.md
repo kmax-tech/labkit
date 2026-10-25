@@ -151,6 +151,22 @@ von einem richtigen und bleibt Hinweis. Die falschen Zahlen sind
 durchweg Fakten über die Eingaben (Zeilenzahlen, Median, Klassengrößen),
 die der Code rechnet, aber in keiner behaltenen Datei ablegt. Die Handurteile
 der Runden 5 bis 7 sind Entwürfe eines Richters je Aufgabe.
+**Achte Runde angehalten (2026-10-25, Stand für die nächste Sitzung):**
+labkit-paper Bereich 09 auf labkit `48cd001` (Berichtsprüfung und ihr
+Hinweis), Worktree `~/projects/labkit-paper-r7`, Branch `round7-haiku`,
+Commit `95883b7` (Pin, Changed-Zeile); Image labkit-sandbox:fa9d3504b7de,
+Gates M1 und M2/M3 grün. Store `output/attempts_pilot_haiku_v8/`: 2 von
+9 Versuchen fertig (t18-plain, t3-plain); t18-instructions_only beim
+Anhalten abgebrochen, Container gestoppt, sein Verzeichnis liegt noch —
+vor dem Fortsetzen prüfen, ob `--attempts` es neu startet. Fortsetzen mit
+`../../.venv/bin/python scripts/01_measure.py --attempts` im Bereich (der
+Store ist fortsetzbar); `scripts/01_measure.py` (Store-Zeile v8) bleibt
+uncommittet bis zum Auswertungslauf. Danach wie Runde 7: `--score`, drei
+Richter, `02_analyze.py`, zusätzlich je labkit-Versuch aus dem Trace:
+Hinweis erschienen, `--report-review` ausgeführt, was am Bericht geändert.
+Noch offen aus Runde 7: Branch `round7-haiku` nach labkit-paper `main`
+mergen (dort hat eine andere Sitzung weiter committet, also kein
+Fast-Forward), dann Worktree entfernen.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
