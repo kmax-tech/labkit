@@ -134,8 +134,11 @@ zeigt einen Sicherheitsstopp, nach dem dasselbe Modell weiterschrieb
 (CLI 2.1.285 zählte ihn nicht); `result` hielt nur den Rest
 ([Notiz](docs/notes/2026-10-25-cli-two-turns.md)). Das Ausgabelimit war
 es nicht: die CLI schickte für opus 5.5 schon `max_tokens = 128000`, die
-Obergrenze des Modells. Die Meldung nennt jetzt die Ursache, soweit die
-Antwort sie zeigt.
+Obergrenze des Modells. Die Meldung sagt jetzt: Antwort nicht als
+ganze belegt, Ursache aus der Antwort nicht erkennbar. Beschlossen: kein
+eigenes Limit, kein neuer Versuch wegen einer geänderten Variable — die
+CLI nimmt jeden Wert stumm an, ein gesetzter Wert wäre nicht das
+wirksame Limit.
 Der vierte (nach gescheitertem Audit nichts getan, t18) fällt in den
 ersten: t18 hat den angebotenen Weg „nicht berichten“ formal genommen
 (`run … (not reported: analysis audit failed …)`), nur die Zahlen

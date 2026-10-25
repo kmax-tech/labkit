@@ -173,8 +173,8 @@ pins (`requirements.txt` / `requirements.lock`).
   holds only the part after the cut
   (`docs/notes/2026-10-25-cli-two-turns.md`). The refusal stands; its
   message said only "2 turns", and at t18 it read like a false
-  "unproven". It now names the output limit where `safety_stops = 0`,
-  and both causes where the CLI does not count safety stops.
+  "unproven". It now says the answer is not shown whole and that the
+  reply does not tell why — `safety_stops = 0` proves no cause.
 
 - **A report that promotes a run without the adoption is held.** In the
   sixth haiku round (2026-10-23, t3 and t18) `protocol-fill --from-run`

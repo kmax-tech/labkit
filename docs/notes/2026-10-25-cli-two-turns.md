@@ -41,9 +41,15 @@ limit was not near: the CLI already sends the model's own cap.
 ## Verdict
 
 Two turns without tools are a cut answer either way; `result` holds only
-the part after the last cut, and labkit refuses it. Since this note the
-message names the cause where the reply tells it: `safety_stops = 0` → the
-output token limit; no `safety_stops` field → a safety stop or the limit
-(`llm_backends._cli_provenance`). Raising the limit would not have helped
-t18: for opus 5.5 the CLI already sent 128000, the models' own cap; for
-haiku 5.5 its default lies above 72 k (measured above, not read).
+the part after the last cut, and labkit refuses it. The reply does not
+tell the cause: `safety_stops = 0` would name the output limit only on a
+CLI shown to count every safety stop, and none is (2.1.285 counted none,
+t18's stop included). The message says so — the answer not shown whole,
+the cause not read from the reply (`llm_backends._cli_provenance`). The
+proxy log is what names t18's cause.
+
+Raising the limit would not have helped t18: for opus 5.5 the CLI already
+sent 128000, the models' own cap; for haiku 5.5 its default lies above
+72 k (measured above, not read). Decided 2026-10-25: labkit sets no limit
+and allows no retry on a changed variable — the CLI takes any value
+without a word, so a value labkit set would not be the limit in force.

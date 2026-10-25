@@ -140,17 +140,19 @@ class ClaudeCliProvenance(unittest.TestCase):
         with self.assertRaisesRegex(B.UnprovenAnswer, "2 turns"):
             B._cli_result(cli_reply(num_turns=2), "m")
 
-    def test_two_turns_without_a_safety_stop_name_the_output_limit(self) -> None:
-        """CLI 2.1.308 probe: `safety_stops = 0`, two turns — the CLI resumed
-        an answer at its output token limit."""
-        with self.assertRaisesRegex(B.UnprovenAnswer, "output token limit and was"):
-            B._cli_result(cli_reply(num_turns=2), "m")
-
-    def test_two_turns_on_a_cli_without_the_count_name_both_causes(self) -> None:
-        """t18 on e9f088f, CLI 2.1.285: a safety stop, then the same model
-        went on — no `safety_stops` field to tell it from the output limit."""
-        with self.assertRaisesRegex(B.UnprovenAnswer, "by a safety stop or"):
-            B._cli_result(cli_reply(without="safety_stops", num_turns=2), "m")
+    def test_two_turns_name_no_cause_the_reply_does_not_show(self) -> None:
+        """t18 on e9f088f was a safety stop the CLI did not count; a probe on
+        2.1.308 cut at the output limit with `safety_stops = 0`. Neither
+        field value proves a cause: the message names both, with or without
+        the count."""
+        for reply in (
+            cli_reply(num_turns=2),
+            cli_reply(without="safety_stops", num_turns=2),
+        ):
+            with self.assertRaisesRegex(
+                B.UnprovenAnswer, "not shown whole, and the reply does not tell why"
+            ):
+                B._cli_result(reply, "m")
 
     def test_a_stopped_answer_flagged_as_error_is_unproven_not_retried(self) -> None:
         """fit-1 on 4f4f238: every audit try was stopped and continued, and
