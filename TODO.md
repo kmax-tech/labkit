@@ -54,19 +54,24 @@ Warnung. Umgesetzt und getestet:
   Nach `insufficient` Beleg ergänzen und erneut prüfen.
 - Schließen ist kein Entscheiden (2026-10-23, sechste Runde t5:
   `dismissed` mit „insufficient evidence withdrawn“ nach `insufficient`
-  gab frei): ein Befund, den eine Prüfung desselben Records nicht
-  bestätigt hat, bleibt unter `dismissed`, `fixed` oder `deferred`
-  gehalten, bis eine Prüfung die neue Entscheidung bestätigt
+  gab frei): Hat eine Prüfung eine Entscheidung zu einem Befund im selben
+  Record nicht bestätigt, bleibt der Befund auch unter `dismissed`,
+  `fixed` oder `deferred` gehalten, bis eine Prüfung die neue Entscheidung
+  bestätigt
   (`reviews.once_not_upheld`, `findings.CLOSING`). Note nach Grad wie
   beim `stands`: BLOCKER blockt, WARNING warnt. `--review` legt dem
   Prüfer Status, Begründung und das frühere Urteil vor; die
   Prüferanweisung sagt je Status, was die Begründung zeigen muss.
-  `deferred` gehört dazu (entschieden 2026-10-24): es nimmt den Befund
-  genauso still aus den Limits wie `dismissed`, und ein Prüfer, der
-  zweimal Belege verlangt hat, wäre sonst durch Umbenennen der
-  Entscheidung umgangen. Die Haltung trifft nur Befunde, die eine
-  Prüfung schon einmal nicht bestätigt hat, nie ein erstes `deferred`.
-  Ein Wechsel auf `not assessable` bleibt der Weg ohne neue Ziehung.
+  `deferred` gehört dazu (entschieden 2026-10-24): Es entfernt den Befund
+  ebenso aus den ausgewiesenen Einschränkungen wie `dismissed`. Deshalb
+  darf das Zurückstellen eine zuvor nicht bestätigte Entscheidung nicht
+  ohne weitere Prüfung freigeben. Die zusätzliche Prüfpflicht greift nur,
+  wenn bereits eine Entscheidung zu diesem Befund im selben Record nicht
+  bestätigt wurde. Ohne diese Vorgeschichte löst `deferred` sie nicht aus.
+  Ein Wechsel auf `not assessable` braucht keinen erneuten Modellaufruf
+  zur Prüfung: Der Befund bleibt als Einschränkung sichtbar, und die
+  benannten Zusagen gelten mit diesem Lauf als nicht beurteilbar. Damit
+  wird der Anspruch begrenzt, statt der Befund aus den Limits entfernt.
 
 Belege: [Replay mit zwei Durchläufen](docs/usability/2026-10-22-decision-review-replay-v5.md)
 (13 von 15 Urteilen gleich) und
@@ -348,6 +353,7 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
 | Startzeit mit Subsekunden im Record | Gleichsekunden-Sperre trifft ein Labor oder passender Formatbruch steht an. Eindeutige zeitliche Wahl im Orakel `tests/test_answering_run_exhaustive.py`; kein Altformat-Leser. Zufällige Suffix-Kollisionen sind seit `f75ef55` durch erneute ID-Wahl behandelt; das löst keine zeitliche Mehrdeutigkeit. |
 | `notes_check` und deutsche Notizkonventionen nach LOCAL; Herkunft von Paper-Zahlen nach LAB | Fremdes Labor braucht die Trennung oder passende Breaking-Release. Beide Richtungen mit Regeltext und Hook-Anpassung gemeinsam behandeln. |
 | Englische Notizverzeichnisse | Angekündigter Bruch mit Regeltext, Scaffolder, Lesern, Hooks und externem Rollout. Kein Umbenennen nebenbei. |
+| Kostenstufe als Zweiwert: `repeat_cost = "low" \| "high"` — **gebaut 2026-10-25** (Protokollstandard 0.23, Bruch im CHANGELOG unter Unreleased), nicht released | Befund: die Gates kannten zwei Spuren (`standard_contract.lane`: `seconds` gegen den Rest), der Kopf drei Namen; `hours` versprach eine Prüfung, die es nie gab (888 Commits, counterfactual-worlds, uniagent: keine hours-eigene Narbe). Verworfen: `protection = rerun \| freeze` — beide Spuren frieren etwas ein. Doppelprägungs-Check leer (`lib term`, ML-Karte, Haus-Notes). Offen (Rollout, eigener Auftrag): Release 0.104.0 taggen; Protokolle, `AGENTS.md` und Pins in counterfactual-worlds (0.85.0) und uniagent (0.88.8); LAB-017 behält den Namen, das Regelregister `~/.claude/resources/rule-registry.tsv` bleibt; die `minutes`/`hours`-Usability-Reihe (Abschnitt Messungen) läuft dann als `high`. |
 
 ## Evaluation und Vorschläge mit Auslöser
 
