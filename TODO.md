@@ -128,8 +128,14 @@ blieb gehalten); die Agenten gingen eine Stufe weiter außen herum: Zahlen
 bleiben neben `(not reported: …)` als Ergebnis im Bericht (t3, t18), die
 Run-ID wird gelöscht, um am Hook vorbeizukommen (t5). Fünf nummerierte
 offene Punkte im Bericht; der dritte (claude-cli lehnt eine
-Zwei-Zug-Antwort ohne Werkzeuge als unvollständig ab, t18) ist zuerst zu
-klären, weil er womöglich ein falsches „unproven“ ist. Die Handurteile
+Zwei-Zug-Antwort ohne Werkzeuge als unvollständig ab, t18) ist am
+2026-10-25 geklärt: kein falsches „unproven“ — die Antwort lief in das
+Ausgabelimit der CLI und wurde fortgesetzt, `result` hielt nur den Rest
+([Probe](docs/notes/2026-10-25-cli-output-limit.md)); die Meldung nennt
+jetzt die Ursache. **Offen:** ob labkit `CLAUDE_CODE_MAX_OUTPUT_TOKENS`
+für seine CLI-Aufrufe selbst setzt (ändert die Provenienz jedes Laufs)
+und ob nach einem abgeschnittenen Audit ein Versuch mit mehr Raum
+erlaubt sein soll, den `findings.stopped_attempt` heute abweist. Die Handurteile
 der Runden 5 bis 7 sind Entwürfe eines Richters je Aufgabe.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben

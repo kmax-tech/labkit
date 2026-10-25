@@ -403,7 +403,9 @@ def _cli_provenance(
     model's id stays on the record for text another model wrote, and a part
     reads as the whole. CLI 2.1.285 reported such a reply as
     `subtype = "success"`, `is_error = false`, `num_turns = 2`, both models
-    in `modelUsage`, no `safety_stops` (fit probe on 97e6470). An error
+    in `modelUsage`, no `safety_stops` (fit probe on 97e6470). One model in
+    two turns is an answer cut at the CLI's output token limit and resumed
+    (`result` holds the continuation, CLI 2.1.308). An error
     (IS_ERROR) without a stop or another model is left to the caller: an
     overloaded server is retried."""
     used = sorted(reply_field(body, "modelUsage", dict, where, required=True))
@@ -435,9 +437,14 @@ def _cli_provenance(
         )
     turns = reply_field(body, "num_turns", int, where, required=True)
     if turns != 1:
+        # without tools, the CLI adds a turn when the answer hits its output
+        # token limit: it sends "Output token limit hit. Resume directly" and
+        # `result` starts mid-word (docs/notes/2026-10-25-cli-output-limit.md)
         raise UnprovenAnswer(
-            f"claude-cli: {turns} turns where one answer takes one (no tools) "
-            f"— `result` holds only the last"
+            f"claude-cli: {turns} turns where one answer takes one (no tools) — "
+            f"{model}'s answer hit the CLI's output token limit "
+            f"(CLAUDE_CODE_MAX_OUTPUT_TOKENS) and was resumed; `result` holds "
+            f"only the part after the last cut"
         )
 
 

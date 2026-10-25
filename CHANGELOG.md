@@ -166,6 +166,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A two-turn claude-cli answer names its cause.** One model in two
+  turns without tools is an answer cut at the CLI's output token limit
+  and resumed; `result` holds only the part after the cut (probe on CLI
+  2.1.308, `docs/notes/2026-10-25-cli-output-limit.md`). The refusal
+  stands; its message said only "2 turns", and at t18 of the seventh
+  haiku round it read like a false "unproven". It now names
+  `CLAUDE_CODE_MAX_OUTPUT_TOKENS`.
+
 - **A report that promotes a run without the adoption is held.** In the
   sixth haiku round (2026-10-23, t3 and t18) `protocol-fill --from-run`
   was refused — untracked data, stale audits, unreviewed `stands` — and

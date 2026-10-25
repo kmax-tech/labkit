@@ -140,6 +140,12 @@ class ClaudeCliProvenance(unittest.TestCase):
         with self.assertRaisesRegex(B.UnprovenAnswer, "2 turns"):
             B._cli_result(cli_reply(num_turns=2), "m")
 
+    def test_more_than_one_turn_names_the_output_limit(self) -> None:
+        """t18 on e9f088f: one model, two turns, `end_turn` — an answer cut at
+        the CLI's output limit; the message must say so, not only "2 turns"."""
+        with self.assertRaisesRegex(B.UnprovenAnswer, "CLAUDE_CODE_MAX_OUTPUT_TOKENS"):
+            B._cli_result(cli_reply(num_turns=2), "m")
+
     def test_a_stopped_answer_flagged_as_error_is_unproven_not_retried(self) -> None:
         """fit-1 on 4f4f238: every audit try was stopped and continued, and
         the call was retried — the stop must win over `is_error`."""

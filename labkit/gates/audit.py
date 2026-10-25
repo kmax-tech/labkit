@@ -670,8 +670,9 @@ def _answer_or_record(
 
 def _report_room(alias: str) -> int | None:
     """The token cap an audit report is given: REPORT_TOKENS where the
-    backend takes a cap, none where it has none (claude-cli, whose own limit
-    is far above a report)."""
+    backend takes a cap, none where it has none (claude-cli: its output
+    token limit counts thinking too, and an answer past it comes back cut
+    and resumed — `llm_backends.UnprovenAnswer`)."""
     return REPORT_TOKENS if llm.takes_max_tokens(alias) else None
 
 
