@@ -290,6 +290,17 @@ Forschung und Benchmark-Fallliste liegen in
   `audits/` hält, fehlen im Stand — am Commit mechanisch prüfbar).
   Analyse-Records gelöschter Läufe werden bereits von `finalize`
   beanstandet.
+- **Kennzahlen der Eingaben ohne Ablage (siebte Runde, beschlossen
+  2026-10-25 als offene Aufgabe):** Alle 17 falschen Zahlen der drei
+  labkit-Berichte waren Fakten über die Eingaben — Zeilenzahlen (t5: 29
+  statt 44; t3: Dateizeilen statt Datensätze), Median (t5: 0,465 statt
+  0,284), Klassengrößen (t18: 209/191 statt 174/226). Der Code rechnet
+  sie, legt sie aber in keiner behaltenen Datei ab; kein Bericht und
+  keine Berichtsprüfung hat eine Quelle, gegen die sie zu halten wären
+  ([Präzision](docs/usability/2026-10-25-hint-precision-r7.md)). Sie
+  gehören dorthin, wo der Code sie berechnet, in den Lauf (Form offen:
+  `metrics.json` oder ein eigener Abschnitt des Lauf-Records). Erst
+  danach kann eine Berichtsprüfung sie vergleichen.
 
 ## Architektur und Lesbarkeit — notiert, nicht geplant
 
