@@ -18,11 +18,11 @@ TEMPLATE = (PACKAGE_DIR / "templates" / "experiment-protocol.md.template").read_
 
 
 def template_fields() -> dict[str, str]:
-    """field name -> cut marker ("s", "sb", "sm" or "") as the template stamps them."""
+    """field name -> cut marker ("s", "lb", "lm" or "") as the template stamps them."""
     out = {}
     for f in protocol_check.fields(TEMPLATE):
         line = TEMPLATE.splitlines()[f.line - 1]
-        m = re.search(r"<!--\s*(s[bm]?)\s*-->", line)
+        m = re.search(r"<!--\s*(l[bm]?)\s*-->", line)
         out.setdefault(f.name, m.group(1) if m else "")
     return out
 
@@ -33,17 +33,17 @@ class Contract(unittest.TestCase):
         for f in protocol_check.FIELDS:
             self.assertIn(f.label.casefold(), stamped, f.label)
 
-    def test_seconds_cut_is_the_template_markers(self):
+    def test_low_cut_is_the_template_markers(self):
         stamped = template_fields()
         for f in protocol_check.FIELDS:
-            self.assertEqual(f.seconds, stamped[f.label.casefold()], f.label)
+            self.assertEqual(f.low_cut, stamped[f.label.casefold()], f.label)
 
     def test_the_template_head_is_well_formed(self):
         stamped = TEMPLATE.replace("<protocol-id>", "p-0123456789abcdef")
         report = protocol_check.check_fields(stamped)
         self.assertIsNone(report.head_error)
         assert report.head is not None
-        self.assertEqual(report.head.placeholders, ["type", "cost", "kind"])
+        self.assertEqual(report.head.placeholders, ["type", "repeat_cost", "kind"])
 
 
 class Daggers(unittest.TestCase):
@@ -119,18 +119,18 @@ class Fields(unittest.TestCase):
         self.assertTrue(f.placeholder)
 
     def test_a_value_on_the_next_line_is_written(self):
-        """Twin of the seconds gate: written below the label passes, a
+        """Twin of the registration gate: written below the label passes, a
         multi-line placeholder stays a placeholder (review 2026-10-07)."""
         written = (
-            head(cost="seconds") + "- **Question / hypothesis:**\n  Does X beat Y?\n"
+            head(repeat_cost="low") + "- **Question / hypothesis:**\n  Does X beat Y?\n"
             "- **Success / failure criterion:** [C1] x\n- **Admissibility condition:** [A1] y\n"
         )
-        self.assertEqual(protocol_check.seconds_registration_missing(written), [])
+        self.assertEqual(protocol_check.low_registration_missing(written), [])
         unwritten = written.replace(
             "  Does X beat Y?", "  <the one question —\n  what do we expect?>"
         )
         self.assertEqual(
-            protocol_check.seconds_registration_missing(unwritten),
+            protocol_check.low_registration_missing(unwritten),
             ["Question / hypothesis"],
         )
 
@@ -151,13 +151,15 @@ class Fields(unittest.TestCase):
         self.assertIn("Free knobs", frozen.missing_must)
         self.assertEqual(frozen.missing_should, [])
 
-    def test_seconds_owes_its_cut_and_nothing_graduates(self):
-        report = protocol_check.check_fields(head(cost="seconds", frozen=True))
+    def test_low_owes_its_cut_and_nothing_graduates(self):
+        report = protocol_check.check_fields(head(repeat_cost="low", frozen=True))
         self.assertIn("Unit", report.missing_must)
         self.assertNotIn("Model I/O", report.missing_must)
         self.assertNotIn("Prompt", report.missing_must)
         self.assertEqual(report.missing_should, [])
-        with_model = head(cost="seconds", model="haiku") + "- **Model / tool:** haiku\n"
+        with_model = (
+            head(repeat_cost="low", model="haiku") + "- **Model / tool:** haiku\n"
+        )
         self.assertIn("Prompt", protocol_check.check_fields(with_model).missing_must)
 
     def test_report_fields_fall_due_with_a_declared_result_once_frozen(self):
@@ -179,18 +181,21 @@ class Fields(unittest.TestCase):
         )  # pilot
         self.assertNotIn(
             "Analysis audit",
-            protocol_check.check_fields(head(cost="seconds", result=run)).missing_must,
+            protocol_check.check_fields(
+                head(repeat_cost="low", result=run)
+            ).missing_must,
         )
 
     def test_none_names_no_model(self):
         text = (
-            head(cost="seconds") + "- **Model / tool:** none — a deterministic count\n"
+            head(repeat_cost="low")
+            + "- **Model / tool:** none — a deterministic count\n"
         )
         self.assertNotIn("Prompt", protocol_check.check_fields(text).missing_must)
 
     def test_a_head_placeholder_is_a_must_gap(self):
-        report = protocol_check.check_fields(head(cost="<seconds | minutes | hours>"))
-        self.assertIn("[protocol] cost", report.missing_must)
+        report = protocol_check.check_fields(head(repeat_cost="<low | high>"))
+        self.assertIn("[protocol] repeat_cost", report.missing_must)
 
     def test_a_malformed_head_is_one_finding(self):
         report = protocol_check.check_fields("- **Cost:** seconds\n")
@@ -199,27 +204,27 @@ class Fields(unittest.TestCase):
 
 
 class OpenHolesFollowTheCut(unittest.TestCase):
-    """At seconds a placeholder outside the cut is not owed, so it is not
+    """At low repeat cost a placeholder outside the cut is not owed, so it is not
     listed; inside the cut it is (usability probe 2026-10-07)."""
 
     BODY = "- **Unit:** <one file>\n- **Free knobs:** <which>\n"
 
     def labels(self, cost: str) -> list[str]:
-        text = head(cost=cost) + self.BODY
+        text = head(repeat_cost=cost) + self.BODY
         block = protocol_check.protocol_block.head(text)
         return [lbl for _, lbl in protocol_check.open_holes(text, block)]
 
-    def test_seconds_lists_only_the_cut(self):
-        self.assertEqual(self.labels("seconds"), ["Unit"])
+    def test_low_lists_only_the_cut(self):
+        self.assertEqual(self.labels("low"), ["Unit"])
 
     def test_fields_written_after_the_run_wait_for_a_run(self):
-        text = head(cost="seconds") + "- **Recorded results:** <number + run_id>\n"
+        text = head(repeat_cost="low") + "- **Recorded results:** <number + run_id>\n"
         block = protocol_check.protocol_block.head(text)
         self.assertEqual(protocol_check.open_holes(text, block), [])
 
     def test_once_a_result_is_declared_they_are_owed(self):
         text = (
-            head(cost="seconds", result="2026-10-07T16-50-37_a9db")
+            head(repeat_cost="low", result="2026-10-07T16-50-37_a9db")
             + "- **Recorded results:** <number + run_id>\n"
             + "- Runs: 2026-10-07T16-50-37_a9db measure\n"
         )
@@ -228,12 +233,12 @@ class OpenHolesFollowTheCut(unittest.TestCase):
         self.assertEqual(labels, ["Recorded results"])
 
     def test_the_full_form_lists_every_placeholder(self):
-        self.assertEqual(self.labels("minutes"), ["Unit", "Free knobs"])
+        self.assertEqual(self.labels("high"), ["Unit", "Free knobs"])
 
     def test_the_last_line_names_the_must_finding(self):
         with tempfile.TemporaryDirectory() as d:
             f = Path(d) / "PROTOCOL-x.md"
-            f.write_text(head(cost="seconds") + self.BODY)
+            f.write_text(head(repeat_cost="low") + self.BODY)
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 rc = protocol_report.main([str(f)])
@@ -241,7 +246,7 @@ class OpenHolesFollowTheCut(unittest.TestCase):
         self.assertIn("Unit (line", buf.getvalue().rstrip().splitlines()[-1])
 
     def test_protocol_check_stays_quiet_about_fields_not_owed(self):
-        report = protocol_check.check_fields(head(cost="seconds") + self.BODY)
+        report = protocol_check.check_fields(head(repeat_cost="low") + self.BODY)
         self.assertEqual([lbl for _, lbl in report.must_holes], ["Unit"])
         self.assertEqual(report.soft_holes, [])
 
@@ -255,7 +260,7 @@ class StampedLeftovers(unittest.TestCase):
     def leftovers(self, body: str, frozen: bool = False) -> str:
         with tempfile.TemporaryDirectory() as d:
             f = Path(d) / "PROTOCOL-x.md"
-            f.write_text(head(cost="minutes", frozen=frozen) + body)
+            f.write_text(head(repeat_cost="high", frozen=frozen) + body)
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 protocol_report.main([str(f)])
@@ -294,7 +299,7 @@ class BareReferences(unittest.TestCase):
     def out(self, value: str) -> str:
         with tempfile.TemporaryDirectory() as d:
             f = Path(d) / "PROTOCOL-x.md"
-            f.write_text(head(cost="minutes") + f"- **Free knobs †:** {value}\n")
+            f.write_text(head(repeat_cost="high") + f"- **Free knobs †:** {value}\n")
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 protocol_report.main([str(f)])

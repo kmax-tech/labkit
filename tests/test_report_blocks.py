@@ -278,7 +278,7 @@ class ReportFiles(unittest.TestCase):
         """Sixth haiku round (2026-10-23, t3 and t18): `--from-run` refused,
         REPORT.md written from the run's metrics.json by hand, the hook
         warned of an exploration's citation and let the commit pass — at
-        seconds the report is the promotion. The citation of a protocol's
+        low repeat cost the report is the promotion. The citation of a protocol's
         answering run that declares no result blocks, wherever the report
         lies; the sentence names the adoption and the marker."""
         area = self._area(f"c1_pass = True (run {self.RUN})", declared=None)

@@ -53,7 +53,7 @@ INSUFFICIENT = (
 def area_with(
     rows: list[tuple[str, str]], decide: dict[int, tuple[str, str, str]]
 ) -> tuple[Path, Path]:
-    """(area, record) — a seconds area whose one run is audited with ROWS,
+    """(area, record) — a low-lane area whose one run is audited with ROWS,
     each finding N decided as DECIDE[N] = (status, reason, effect)."""
     root = Path(tempfile.mkdtemp())
     (root / ".git").mkdir()  # the layout root, so paths show repo-relative
@@ -63,7 +63,7 @@ def area_with(
     scope_file(area)
     proto = area / "PROTOCOL-x.md"
     proto.write_text(
-        head(cost="seconds", result=RUN)
+        head(repeat_cost="low", result=RUN)
         + "- **Question / hypothesis:** does it hold?\n"
         + "- **Conclusion:** the fit is in-sample; nothing more is claimed.\n"
         + f"- **Recorded results:** c1_pass = True (run {RUN})\n",

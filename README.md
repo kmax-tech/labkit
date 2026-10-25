@@ -60,17 +60,17 @@ An **area** is a directory for one question, its protocol, scripts, outputs
 and runs. Create one from the repo root:
 
 ```bash
-.venv/bin/labkit-init exp document-count --cost seconds --kind compute
+.venv/bin/labkit-init exp document-count --repeat-cost low --kind compute
 ```
 
 In a fresh repo this creates `experiments/01-document-count/` and its test
-under `tests/`. The command prints the paths. Choose the cost tier by how
+under `tests/`. The command prints the paths. Choose the repeat cost by how
 cheaply you can repeat the measurement:
 
 | Tier | Before the full run | Before reporting a result |
 |---|---|---|
-| `seconds` | Write and commit the registration, implement/test the measurement; no freeze or preflight audit. | Finalize, decide the analysis audit, adopt the result through `report-check` (which holds the registration to the commit of the first measurement). |
-| `minutes` / `hours` | Also probe the instrument, pass preflight, decide the preflight audit, complete the report fields and freeze the protocol. | Finalize, decide the analysis audit, adopt the result through `report-check`. |
+| `low` | Write and commit the registration, implement/test the measurement; no freeze or preflight audit. | Finalize, decide the analysis audit, adopt the result through `report-check` (which holds the registration to the commit of the first measurement). |
+| `high` | Also probe the instrument, pass preflight, decide the preflight audit, complete the report fields and freeze the protocol. | Finalize, decide the analysis audit, adopt the result through `report-check`. |
 
 `--kind` says what the kept number asserts, and the skeleton and the
 registration follow it: `compute` judges no prediction (the compute
@@ -145,8 +145,8 @@ repo root.
    `report-check experiments/01-document-count` to check the reported result.
 
 Scripts declare `run_kind="measurement"`; a separate `run_kind="probe"`
-is only allowed at minutes/hours. Data preparation uses
-`run_kind="preparation"` and keeps its own provenance record. At seconds, repeat the full measurement
+is only allowed at high repeat cost. Data preparation uses
+`run_kind="preparation"` and keeps its own provenance record. At low repeat cost, repeat the full measurement
 to check or correct the instrument.
 
 An exploration may leave the answer open and end without a reported result.
@@ -160,7 +160,7 @@ the adoption, what you found>)`.
 
 ### Longer measurements
 
-At `minutes`/`hours`, follow the longer lane in the repo's `AGENTS.md`:
+At `high`, follow the longer lane in the repo's `AGENTS.md`:
 render real prompts where applicable, run the instrument probe, complete
 the area tests, run `preflight`, then `labkit-audit --mode preflight`.
 Decide the findings and fill the protocol's audit field with the matching
@@ -188,7 +188,7 @@ configuration are described in [architecture](docs/architecture.md#run-and-hook-
 | **Agent audit** | A model reviews the implementation or analysis against the scientific intent. Findings need a decision; this is semantic review, not a guarantee. |
 
 `preflight` checks readiness before freezing; `finalize` checks the completed
-run. **`report-check` checks release of the result at every cost tier**,
+run. **`report-check` checks release of the result at every repeat cost**,
 including a decided analysis audit and the area's recomputation check.
 `labkit-audit` performs the model review; running `preflight` alone does not
 perform that review.
@@ -204,7 +204,7 @@ The **console commands** are installed with the package. Use
 
 ```bash
 labkit-init lab [DIR]               # create a lab repo
-labkit-init exp NAME [--cost T] --kind compute|fit|apply [--model ALIAS] [--report] [--explore]
+labkit-init exp NAME [--repeat-cost T] --kind compute|fit|apply [--model ALIAS] [--report] [--explore]
 protocol-check PROTOCOL             # check required fields and promise tables
 protocol-check --contract | --guide # field contract or field-guide path
 protocol-fill PROTOCOL "LABEL=VALUE" ... # fill fields
@@ -256,7 +256,8 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **protocol id** | Stable, path-independent identity: `p-` followed by 16 hex characters. |
 | **run** | One execution recorded under a protocol. |
 | **preparation** | Recorded data preparation, before the measurement; cannot supply a reported result. |
-| **probe** | Instrument check before a measurement at minutes/hours; its number is not reported. |
+| **repeat cost** | `repeat_cost` in the protocol head, `low` or `high`: the price of repeating the run. It selects the lane — what the area owes before and after the run (the table above, `standard_contract.lane`). |
+| **probe** | Instrument check before a measurement at high repeat cost; its number is not reported. |
 | **measurement** | Run of the registered question, eligible for result release after the required checks. |
 | **run metadata** | Start and completion records: `config.json` and `completion.json`. |
 | **run index** | Searchable overview in `runs.tsv`. |

@@ -60,7 +60,7 @@ def evaluate_rows(rows: list[dict], cfg: Cfg) -> dict:
 
 
 def lanes_in(d: Path, n: int = 6) -> tuple[lanes.Lanes, list[dict]]:
-    (d / "PROTOCOL-x.md").write_text(head(cost="minutes"), encoding="utf-8")
+    (d / "PROTOCOL-x.md").write_text(head(repeat_cost="high"), encoding="utf-8")
     items = [
         {"id": f"x{i}", "text": f"item {i}", "gold": "Yes" if i % 2 else "No"}
         for i in range(n)
@@ -311,8 +311,8 @@ class TheAuditStillSeesTheExperiment(unittest.TestCase):
                     "judge",
                     "--repo",
                     str(root),
-                    "--cost",
-                    "seconds",
+                    "--repeat-cost",
+                    "low",
                     "--kind",
                     "apply",
                     "--model",

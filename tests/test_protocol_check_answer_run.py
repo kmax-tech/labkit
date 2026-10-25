@@ -24,7 +24,9 @@ RUN = "2026-10-07T10-00-00_ab12"
 
 
 def _protocol(answer: str, declared: str | None = None) -> str:
-    return head(cost="seconds", result=declared) + f"- **Recorded results:** {answer}\n"
+    return (
+        head(repeat_cost="low", result=declared) + f"- **Recorded results:** {answer}\n"
+    )
 
 
 class AnswerWithoutRun(unittest.TestCase):
@@ -47,7 +49,7 @@ class AnswerWithoutRun(unittest.TestCase):
             protocol_check.recorded_results_without_run(_protocol("<number + run_id>"))
         )
         self.assertIsNone(
-            protocol_check.recorded_results_without_run(head(cost="seconds"))
+            protocol_check.recorded_results_without_run(head(repeat_cost="low"))
         )
 
     def test_the_report_carries_it_as_a_warning_not_a_blocker(self):

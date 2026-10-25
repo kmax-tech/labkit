@@ -9,7 +9,7 @@ note them in your report.
 **The number.** The mean number of input documents per case over the
 cases in `data/raw/cases.jsonl`. A case's documents are the files under
 `<inputs>/<case_id>/` (`inputs` is the field in that file, relative to the
-repo root). Deterministic, seconds, no model calls — and it must be KEPT
+repo root). Deterministic, low repeat cost, no model calls — and it must be KEPT
 the way this repo keeps numbers, so it can be cited later: the run's
 `metrics.json` carries it under the key `<metric_key>`. The area
 `experiments/<area>/` is already stamped for it. <tier>

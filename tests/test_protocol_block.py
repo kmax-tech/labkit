@@ -13,16 +13,26 @@ class Head(unittest.TestCase):
         h = protocol_block.head(
             "# P\n"
             + head(
-                cost="seconds", frozen=True, preflight_audit="2026-10-07 · 0 findings"
+                repeat_cost="low",
+                frozen=True,
+                preflight_audit="2026-10-07 · 0 findings",
             )
         )
         self.assertEqual(
-            (h.standard, h.id, h.type, h.cost, h.kind, h.frozen, h.preflight_audit),
             (
-                "0.22",
+                h.standard,
+                h.id,
+                h.type,
+                h.repeat_cost,
+                h.kind,
+                h.frozen,
+                h.preflight_audit,
+            ),
+            (
+                "0.23",
                 PID,
                 "exploratory",
-                "seconds",
+                "low",
                 "compute",
                 True,
                 "2026-10-07 · 0 findings",
@@ -35,16 +45,16 @@ class Head(unittest.TestCase):
             head(
                 id="<protocol-id>",
                 type="<exploratory | confirmatory>",
-                cost="<seconds | minutes | hours>",
+                repeat_cost="<low | high>",
                 kind="<compute | fit | apply>",
                 preflight_audit="<date · scope sha>",
             )
         )
         self.assertEqual(
-            (h.id, h.type, h.cost, h.kind, h.preflight_audit),
+            (h.id, h.type, h.repeat_cost, h.kind, h.preflight_audit),
             (None, None, None, None, ""),
         )
-        self.assertEqual(h.placeholders, ["id", "type", "cost", "kind"])
+        self.assertEqual(h.placeholders, ["id", "type", "repeat_cost", "kind"])
 
     def assertRejects(self, text: str, fragment: str):
         with self.assertRaises(protocol_block.BlockError) as cm:
@@ -52,18 +62,12 @@ class Head(unittest.TestCase):
         self.assertIn(fragment, str(cm.exception))
 
     def test_a_typo_in_a_choice_is_loud(self):
-        # `Cost: second` used to read as undeclared, i.e. as `hours`
+        # `Cost: second` used to read as undeclared, i.e. as `high`
         self.assertRejects(
-            head(cost="second"), "cost = 'second' — one of seconds, minutes, hours"
+            head(repeat_cost="second"),
+            "repeat_cost = 'second' — one of low, high",
         )
         self.assertRejects(head(type="measurement"), "type = 'measurement'")
-
-    def test_the_renamed_kind_count_names_its_migration(self):
-        # `count` was renamed `compute` before 0.104.0 shipped: refused with
-        # the new name, never read as `compute`
-        self.assertRejects(
-            head(kind="count"), 'kind = "count" was renamed kind = "compute"'
-        )
 
     def test_frozen_must_be_a_boolean(self):
         self.assertRejects(
@@ -74,14 +78,16 @@ class Head(unittest.TestCase):
         self.assertRejects(head(id="p-XYZ"), "16 lowercase hex")
 
     def test_missing_and_unknown_fields(self):
-        self.assertRejects(head().replace('cost = "minutes"\n', ""), "missing cost")
+        self.assertRejects(
+            head().replace('repeat_cost = "high"\n', ""), "missing repeat_cost"
+        )
         self.assertRejects(
             head().replace("frozen = false", "frozen = false\nowner = 'x'"),
             "unknown field(s) ['owner']",
         )
 
     def test_other_standard_names_the_way_out(self):
-        self.assertRejects(head().replace('"0.22"', '"0.18"'), "use the labkit release")
+        self.assertRejects(head().replace('"0.23"', '"0.18"'), "use the labkit release")
 
     def test_no_block_or_no_table(self):
         self.assertRejects("# P\n- **Standard:** 0.16\n", "no [protocol] table")
@@ -155,10 +161,10 @@ class DeclaredRun(unittest.TestCase):
     a citation the gates then chase."""
 
     def test_no_table_is_no_declaration(self):
-        self.assertIsNone(protocol_block.declared_run(head(cost="seconds")))
+        self.assertIsNone(protocol_block.declared_run(head(repeat_cost="low")))
 
     def test_the_declared_run_reads_back_and_leaves_head_and_promises_alone(self):
-        plain = head(cost="seconds")
+        plain = head(repeat_cost="low")
         text = with_result(plain, f'\n[result]\nrun = "{RUN}"\n')
         self.assertEqual(protocol_block.declared_run(text), RUN)
         self.assertEqual(protocol_block.head(text), protocol_block.head(plain))
@@ -179,9 +185,11 @@ class DeclaredRun(unittest.TestCase):
         for body, said in cases:
             with self.subTest(body=body):
                 with self.assertRaisesRegex(protocol_block.BlockError, said):
-                    protocol_block.declared_run(with_result(head(cost="seconds"), body))
+                    protocol_block.declared_run(
+                        with_result(head(repeat_cost="low"), body)
+                    )
         # a scalar `result = …` standing before the tables is no table
-        scalar = head(cost="seconds").replace(
+        scalar = head(repeat_cost="low").replace(
             "```toml\n", f'```toml\nresult = "{RUN}"\n', 1
         )
         with self.assertRaisesRegex(protocol_block.BlockError, "must be a table"):
@@ -194,11 +202,11 @@ class ModelTable(unittest.TestCase):
     absent is a computation or an estimator. Exact or unreadable, like the head."""
 
     def test_no_table_is_no_model(self):
-        self.assertIsNone(protocol_block.model(head(cost="seconds")))
+        self.assertIsNone(protocol_block.model(head(repeat_cost="low")))
 
     def test_the_alias_and_the_arms_read_back(self):
         text = head(
-            cost="seconds",
+            repeat_cost="low",
             model="haiku",
             arms={
                 "before": ("register/profiles/b.toml", "bcec0c37236d", None),
@@ -225,14 +233,16 @@ class ModelTable(unittest.TestCase):
         )
         self.assertEqual(
             protocol_block.head(text),
-            protocol_block.head(head(cost="seconds", kind="apply")),
+            protocol_block.head(head(repeat_cost="low", kind="apply")),
         )
         self.assertEqual(
-            promises.block_stamp(text), promises.block_stamp(head(cost="seconds"))
+            promises.block_stamp(text), promises.block_stamp(head(repeat_cost="low"))
         )
 
     def test_the_stamps_placeholder_alias_is_a_model_without_a_name(self):
-        m = protocol_block.model(head(cost="seconds", model="<alias from models.toml>"))
+        m = protocol_block.model(
+            head(repeat_cost="low", model="<alias from models.toml>")
+        )
         assert m is not None
         self.assertIsNone(m.alias)
         self.assertEqual(m.arms, {})
@@ -260,11 +270,11 @@ class ModelTable(unittest.TestCase):
         for body, said in cases:
             with self.subTest(body=body):
                 with self.assertRaisesRegex(protocol_block.BlockError, said):
-                    text = with_result(head(cost="seconds"), body)
+                    text = with_result(head(repeat_cost="low"), body)
                     protocol_block.model(text)
                     protocol_block.declared_labels(text)
 
     def test_gate_labels_read_back_and_absent_is_none(self):
-        self.assertIsNone(protocol_block.declared_labels(head(cost="seconds")))
-        text = head(cost="seconds", labels=("causal", "not_causal"))
+        self.assertIsNone(protocol_block.declared_labels(head(repeat_cost="low")))
+        text = head(repeat_cost="low", labels=("causal", "not_causal"))
         self.assertEqual(protocol_block.declared_labels(text), ("causal", "not_causal"))

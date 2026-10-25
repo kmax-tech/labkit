@@ -9,7 +9,7 @@ Usage:
         both lanes, into a throwaway file; prints the scores (not reported)
         and one row per lane for the protocol's raw-output field.
     ../../.venv/bin/python scripts/01_measure.py
-        The full run, recorded by runlog (minutes or hours: `runlog start
+        The full run, recorded by runlog (at high repeat cost: `runlog start
         <area> -- …`, after the freeze and the preflight audit).
     ../../.venv/bin/python scripts/01_measure.py --eval-only
         Re-evaluate the kept rows; no fit.
@@ -365,8 +365,8 @@ def main() -> None:
     mode.add_argument("--eval-only", action="store_true")
     args = ap.parse_args()
     head = protocol_block.head(PROTOCOL.read_text(encoding="utf-8"))
-    if args.probe is not None and not standard_contract.lane(head.cost).probe_allowed:
-        ap.error("--probe is not available at cost='seconds'; run the full measurement")
+    if args.probe is not None and not standard_contract.lane(head.repeat_cost).probe_allowed:
+        ap.error("--probe is not available at repeat_cost='low'; run the full measurement")
     cfg = replace(CONFIG, seed=args.seed)   # the one field the command line may set
     items = read_jsonl(ITEMS)
 
@@ -402,7 +402,7 @@ def main() -> None:
         return
 
     # The whole config, never a hand-picked subset. run_kind="measurement" declares the
-    # full run: at minutes/hours the protocol must be frozen with the
+    # full run: at high repeat cost the protocol must be frozen with the
     # preflight audit stamped and the run detached (`runlog start <area> -- …`).
     # `data=` freezes the items in the run.
     with runlog.run("<name>", config=asdict(cfg), base_dir=AREA, data={"prepared": ITEMS},

@@ -105,9 +105,9 @@ written with. The following applies:
 - **Promise** — a registration that the code must honor:
   a criterion, an admissibility condition or a branch (LAB-004 Identifiers make the intent addressable).
 - **Head** — the TOML block of the protocol (`[protocol]`: `standard`,
-  `id`, `type`, `cost`, `frozen`, `preflight_audit`): the fields that a
+  `id`, `type`, `repeat_cost`, `frozen`, `preflight_audit`): the fields that a
   machine reads, as data instead of prose; plus the `[[promise]]` tables.
-- **Cost tier** — `cost` in the head (`seconds` · `minutes` · `hours`): what
+- **Repeat cost** — `repeat_cost` in the head (`low` · `high`): what
   a repetition of the run costs; it determines how many audits an
   area gets (LAB-017 The number of audits follows the cost tier).
 - **Gate** — a check that a tool enforces (it refuses the run or the commit), as opposed to a rule that exists only in the text.
@@ -153,7 +153,7 @@ evidence file under the same ID (top of this document).*
   The promises are also present as data in the head: the `[[promise]]` tables
   (key, sentence, code region, constants). Protocol standard 0.19
   (labkit 0.72) requires them when `frozen = true` and for every full run
-  — so with `cost = "seconds"` always, with one exception: a computation
+  — so with `repeat_cost = "low"` always, with one exception: a computation
   (`kind = "compute"` in the head, standard 0.22: a number that judges no
   prediction and so cannot pass trivially) registers nothing unless its
   prose names a `[C]`/`[A]`/`[B]` id, and owes neither tables nor a
@@ -247,7 +247,7 @@ evidence file under the same ID (top of this document).*
   --from-run`) through `report-check --if-reported` — a number that has
   been written back does not enter the history unchecked: it declares the
   run the checks hold, that run is a full run, its analysis audit is
-  decided and the numbers recompute (at every cost tier; `finalize` is one
+  decided and the numbers recompute (at every repeat cost; `finalize` is one
   of its stations). A protocol declaring no result owes nothing: an
   exploration ends with no reported result. A changed or staged report
   outside the protocol that cites a run (`REPORT.md`, a results note) is
@@ -273,8 +273,8 @@ evidence file under the same ID (top of this document).*
   frozen + blocker → command blocked; not frozen → only
   reported. `--show`/`--probe`/`--eval-only` pass through unhindered;
   `LABKIT_PREFLIGHT=skip` in the command is the visible exception. Both
-  gates follow the cost tier (LAB-017 The number of audits follows the cost tier), which
-  lands as `cost_tier` in `config.json`.
+  gates follow the repeat cost (LAB-017 The number of audits follows the cost tier), which
+  lands as `repeat_cost` in `config.json`.
 
 - **LAB-012 · Protocol is content.** *(was §2.A9)* A protocol carries decisions with reasons —
   no review drafts, no repetition of this standard's rules, no address to a person.
@@ -334,7 +334,7 @@ evidence file under the same ID (top of this document).*
   `scope sha` with every finding decided. Fixing the findings changes the
   stamp, so the fixed code owes a second audit; naming a record whose
   `scope_sha` is not the frozen code's stamp is refused (2026-10-14: a cold
-  agent wrote the new sha by hand, and no audit had seen the frozen code). At `minutes`/`hours` the line names an audit — a
+  agent wrote the new sha by hand, and no audit had seen the frozen code). At `high` the line names an audit — a
   `n/a — <reason>` is refused for a full run (0.99.0: an agent waived its
   own audit); when the backend does not answer, `labkit-audit` records the
   failed attempt and a full run acknowledges it with `LABKIT_UNFROZEN=1`,
@@ -344,7 +344,7 @@ evidence file under the same ID (top of this document).*
   the attempt is recorded as `unproven`, and the same code, promises and
   model are not audited again: each try costs as much and was stopped
   again. Another model may audit, or the number stays unreported.
-  Whoever owes no audit has the `seconds` tier,
+  Whoever owes no audit has the `low` tier,
   and a tier lowered after the protocol's first commit is reported.
 
   **The audit reads the filled-in protocol.** If the required intent fields
@@ -444,19 +444,19 @@ evidence file under the same ID (top of this document).*
   beside them, with a different question: not "is it right?", but "can
   someone read it who did not write it?".
 
-- **LAB-017 · The number of audits follows the cost tier.** *(was §2.A14)* `cost` in the head
+- **LAB-017 · The number of audits follows the cost tier.** *(was §2.A14)* `repeat_cost` in the head
   measures the price of a **repetition**, not whether a model is involved:
-  a handful of calls lasting a minute and costing a few cents is `seconds`. The
+  a handful of calls lasting a minute and costing a few cents is `low`. The
   audit before freezing protects what cannot be repeated —
-  calls, money, annotation time. A run of seconds can be repeated at any time
+  calls, money, annotation time. A run at low repeat cost can be repeated at any time
   and does not need this protection.
 
   | Tier               | before the run                                                                                                                                             | after the run                                                                                                                                                                                                                                                                                                   |
   |--------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-  | `seconds`          | `code-check` (LAB-018 Routine check after every implementation); no agent audit, `preflight_audit` stays empty; the first run replaces the instrument check | **one** audit in `analysis` mode, which also covers the `preflight` rows of the scar table; it comes at the promotion of the number or immediately if it steers a decision (a branch `[B]`, a lab notebook item) — until then the number is *sketch*; blockers and warnings are reported, notes only as a count |
-  | `minutes`, `hours` | `code-check`, then preflight audit (LAB-015 Preflight audit before freezing)                                                                                | Analysis audit (LAB-050 Analysis audit before reporting), before a number is reported                                                                                                                                                                                                                            |
+  | `low`          | `code-check` (LAB-018 Routine check after every implementation); no agent audit, `preflight_audit` stays empty; the first run replaces the instrument check | **one** audit in `analysis` mode, which also covers the `preflight` rows of the scar table; it comes at the promotion of the number or immediately if it steers a decision (a branch `[B]`, a lab notebook item) — until then the number is *sketch*; blockers and warnings are reported, notes only as a count |
+  | `high`         | `code-check`, then preflight audit (LAB-015 Preflight audit before freezing)                                                                                | Analysis audit (LAB-050 Analysis audit before reporting), before a number is reported                                                                                                                                                                                                                            |
 
-  **At `seconds`, the criterion freezes once, the instrument never.** The
+  **At `low`, the criterion freezes once, the instrument never.** The
   criterion is fixed before the number exists and does not move afterwards
   (a plain computation registers none — see the `[[promise]]` tables above). The
   instrument may change after the first run — one more role, a
@@ -465,12 +465,12 @@ evidence file under the same ID (top of this document).*
   `frozen = true`, no second audit, no freeze paragraph in the protocol; what
   changed is recorded by the series of commits between the run_ids. If the
   criterion changes, it is a new experiment at any tier (LAB-003 No run without an intent paragraph). The gates
-  read the cost tier: `runlog` demands at `seconds` only the written
+  read the repeat cost: `runlog` demands at `low` only the written
   criterion instead of the freeze, and the hook `claude-hook pre-run` does not run
   preflight; it only reports whether the criterion is present.
 
-  **At `seconds`, the machine checks the provenance.** Audits of runs
-  that take seconds repeatedly found one family of problems: counted unit and denominator. A
+  **At `low`, the machine checks the provenance.** Audits of runs
+  at low repeat cost repeatedly found one family of problems: counted unit and denominator. A
   weakness that an agent has to find anew every time is a missing
   invariant; therefore the following applies there:
 
@@ -479,7 +479,7 @@ evidence file under the same ID (top of this document).*
   - the skeleton reads directories only via `visible()` (no hidden
     entries, no subfolders), takes the denominator from the source instead of from
     the generated rows, and refuses on a missing entry;
-  - the seconds cut carries the required field `Unit`, because no check
+  - the low cut carries the required field `Unit`, because no check
     knows whether "document" is the right unit.
 
 - **LAB-018 · Routine check after every implementation.** *(was §2.A15)* A full audit is too
@@ -842,7 +842,7 @@ evidence file under the same ID (top of this document).*
     (1 blocker fixed: r² now leave-one-anchor-out, 1 dismissed: <reason>)
   ```
 
-  With `cost = "seconds"` this is the **one** audit of the
+  With `repeat_cost = "low"` this is the **one** audit of the
   experiment; when it comes and what it also covers is governed by LAB-017 The number of audits follows the cost tier.
 
 ### 2E · The LLM Judge as a Measuring Instrument
@@ -1315,9 +1315,18 @@ pitfalls, *Patterns* 5:101046 (pages).
 Dated changes that alter no rule; a change to a rule or a field is the next
 version of the standard.
 
+- 2026-10-25 — Protocol standard 0.23: the head's `cost = "seconds" |
+  "minutes" | "hours"` becomes `repeat_cost = "low" | "high"`. The gates
+  knew two lanes under three names (LAB-017 The number of audits follows
+  the cost tier: `seconds` against the rest); `minutes` and `hours` never
+  owed different checks, and the time words misled — two cold agents
+  declared `minutes` for sixteen calls (2026-10-05). `seconds` is `low`,
+  `minutes` and `hours` are `high`; an unfilled value still reads as
+  `high`. The rule keeps its name: the two values are its tiers.
+
 - 2026-10-19 — LAB-015 Preflight audit before freezing, the paragraph "The
   line is checked, not believed": `n/a — <reason>` no longer waives the
-  audit at `minutes`/`hours` (labkit 0.99.0 refuses it for a full run);
+  audit at `high` (labkit 0.99.0 refuses it for a full run);
   the failed attempt `labkit-audit` writes is the one acknowledged
   exception. This alters what the rule demands and belongs to the next
   version, 0.20, whose stamp (`standard = "0.20"` in every head) is the

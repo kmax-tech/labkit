@@ -36,11 +36,11 @@ class RunKind(unittest.TestCase):
                 runlog.Run("x", {}, area, long=True)  # type: ignore[call-arg]
             self.assertFalse((area / "runs").exists())
 
-    def test_seconds_refuses_probe_even_with_an_acknowledgement(self):
+    def test_low_refuses_probe_even_with_an_acknowledgement(self):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(
-                head(cost="seconds", promises=None)
+                head(repeat_cost="low", promises=None)
                 + "\n- **Question / hypothesis:** how many?\n",
                 encoding="utf-8",
             )
@@ -63,7 +63,7 @@ class RunKind(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(
-                head(cost="seconds", promises=None), encoding="utf-8"
+                head(repeat_cost="low", promises=None), encoding="utf-8"
             )
             with contextlib.redirect_stdout(io.StringIO()):
                 with runlog.run("prepare", {}, area, run_kind="preparation") as run:

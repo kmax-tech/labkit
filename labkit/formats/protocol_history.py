@@ -1,10 +1,10 @@
 """protocol_history — what git knows about a protocol.
 
-The id and the cost tier a protocol had in its first
+The id and the repeat cost a protocol had in its first
 commit, the registration as a given commit held it
-(`registration_in_commit` — report-check holds the seconds lane to the
-commit of the first measurement), and the checks built on them: a cost
-tier lowered since then (`cost_lowered`, static evidence — a lower tier
+(`registration_in_commit` — report-check holds the low lane to the
+commit of the first measurement), and the checks built on them: a repeat cost
+lowered since then (`repeat_cost_lowered`, static evidence — a lower tier
 owes less), an id changed or taken twice (`check_protocol_id`) and the
 apply protocol an annotation validity names (`bound_validation`).
 Read-only; git is asked through `repo.git_run`.
@@ -16,7 +16,7 @@ from typing import NamedTuple
 from labkit.formats.gate import GUARANTEED
 from labkit.formats import protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
-from labkit.formats.protocol_check import seconds_registration_missing
+from labkit.formats.protocol_check import low_registration_missing
 from labkit.formats.repo import git_root, git_run, text_at
 
 
@@ -34,7 +34,7 @@ def id_in_git_head(path: Path) -> str | None:
 
 
 def cost_in_first_commit(path: Path) -> tuple[str, str | None] | None:
-    """(commit, cost) of the protocol as its first commit added it — the cost
+    """(commit, repeat_cost) of the protocol as its first commit added it — the repeat_cost
     tier it was registered at — or None when the file is new to git, outside
     a repo, or that version has no readable head. `git log --diff-filter=A`
     names the adding commit; `git show` reads the file as it was then."""
@@ -50,15 +50,15 @@ def cost_in_first_commit(path: Path) -> tuple[str, str | None] | None:
     if shown.returncode != 0:
         return None
     try:
-        return first, protocol_block.head(shown.stdout).cost
+        return first, protocol_block.head(shown.stdout).repeat_cost
     except protocol_block.BlockError:
         return None
 
 
 def registration_in_commit(path: Path, commit: str) -> list[str] | None:
-    """What the seconds registration lacked in the protocol PATH as COMMIT
-    holds it (`protocol_check.seconds_registration_missing`: the fields the
-    lane owes written, the cost declared; a head this labkit cannot read
+    """What the low registration lacked in the protocol PATH as COMMIT
+    holds it (`protocol_check.low_registration_missing`: the fields the
+    lane owes written, the repeat_cost declared; a head this labkit cannot read
     is named as such) — [] when it stood whole — or None when that commit
     does not hold the file, or PATH lies outside a repository. The protocol is read as it was then (`git show`): the tree
     now says nothing about what stood before the number."""
@@ -72,32 +72,32 @@ def registration_in_commit(path: Path, commit: str) -> list[str] | None:
     try:
         protocol_block.head(shown.stdout)
     except protocol_block.BlockError as exc:
-        # `seconds_registration_missing` reads an unreadable head as "no
-        # cost"; here the committed text is older than the reader, and the
+        # `low_registration_missing` reads an unreadable head as "no
+        # repeat_cost"; here the committed text is older than the reader, and the
         # sentence says so instead of naming a field
         return [f"a head this labkit reads ({exc})"]
-    return seconds_registration_missing(shown.stdout)
+    return low_registration_missing(shown.stdout)
 
 
-def cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
-    """A WARNING when the protocol's cost tier is lower now than in the
-    commit that added it, or None. A lower tier owes less (`seconds`: no
+def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
+    """A WARNING when the protocol's repeat cost is lower now than in the
+    commit that added it, or None. A lower tier owes less (`low`: no
     audit before the run, no freeze; LAB-017 The number of audits follows
-    the cost tier), so lowering it is the next way round a gate once `n/a`
+    the repeat cost), so lowering it is the next way round a gate once `n/a`
     is refused — the same move as rewriting the promises until no check is
     due (third haiku round on 0.99.0, t5). Exact over git: the head as it
     was first committed against the head now; a legitimate correction says
     why in the protocol. Static evidence, never a blocker."""
     was = cost_in_first_commit(path)
-    if was is None or head.cost is None:
+    if was is None or head.repeat_cost is None:
         return None
     commit, first = was
-    tiers = protocol_block.COST_TIERS
-    if first not in tiers or tiers.index(head.cost) >= tiers.index(first):
+    tiers = protocol_block.REPEAT_COSTS
+    if first not in tiers or tiers.index(head.repeat_cost) >= tiers.index(first):
         return None
     return (
-        f"{path}: WARNING: cost tier lowered since the protocol's first commit "
-        f"({commit[:7]}: {first} -> {head.cost}) — a lower tier owes less "
+        f"{path}: WARNING: repeat cost lowered since the protocol's first commit "
+        f"({commit[:7]}: {first} -> {head.repeat_cost}) — a lower tier owes less "
         f"(LAB-017 The number of audits follows the cost tier); say why in the "
         f"protocol, or restore it"
     )

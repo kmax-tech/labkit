@@ -121,7 +121,7 @@ class Area(unittest.TestCase):
 
     def test_an_unwritten_answer_line_names_the_write_back(self):
         self.note.write_text(
-            "- **Recorded results:** <!-- s --> <per registered id its verdict>\n"
+            "- **Recorded results:** <!-- l --> <per registered id its verdict>\n"
             + "\n"
             + head()
         )

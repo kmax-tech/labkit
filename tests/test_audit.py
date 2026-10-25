@@ -261,20 +261,20 @@ class Audit(unittest.TestCase):
     def test_a_preflight_audit_at_cost_seconds_without_a_run_says_it_is_early(self):
         area = repo_with()
         (area / "PROTOCOL-x0.md").write_text(
-            fixture.head(id="p-0123456789abcdef", cost="seconds") + PROTOCOL,
+            fixture.head(id="p-0123456789abcdef", repeat_cost="low") + PROTOCOL,
             encoding="utf-8",
         )
         rc, _, err, _ = run(area, CLEAN)
         self.assertEqual(rc, 0, err)
         self.assertIn("LAB-017 The number of audits follows the cost tier", err)
-        self.assertIn('cost = "seconds" and no completed run', err)
+        self.assertIn('repeat_cost = "low" and no completed run', err)
         # the twins: a completed run, or a dearer tier, and the line is gone
         completed_run(area, "p-0123456789abcdef", "data/out.jsonl")
         _, _, err, _ = run(area, CLEAN)
         self.assertNotIn("LAB-017", err)
         area2 = repo_with()
         (area2 / "PROTOCOL-x0.md").write_text(
-            fixture.head(id="p-0123456789abcdef", cost="minutes") + PROTOCOL,
+            fixture.head(id="p-0123456789abcdef", repeat_cost="high") + PROTOCOL,
             encoding="utf-8",
         )
         _, _, err, _ = run(area2, CLEAN)

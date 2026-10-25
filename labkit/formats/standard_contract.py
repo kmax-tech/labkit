@@ -6,7 +6,7 @@ finalize checks after it, what the release demands when the number is
 written back — and which artefacts the skeleton stamps so those checks have
 something to hold. Every consumer asks here; none decides for itself.
 Until this module existed each component spelled the rule it needed
-(`head.cost == "seconds"` in seven modules, the registration's labels in
+(`head.repeat_cost == "low"` in seven modules, the registration's labels in
 one, the check's script name in two), and the audit of 2026-10-19 found
 them disagreeing: the gate demanded a script the skeleton never stamped.
 
@@ -14,7 +14,7 @@ What stands here is doctrine (docs/architecture.md, "Core or doctrine"):
 another lab could set the tiers differently without being less scientific.
 It belongs to the pinned labkit, not to a configuration file per experiment:
 the standard is versioned with the package, and the experiment supplies its
-facts — the head's cost tier, whether a model is named, whether the run
+facts — the head's repeat cost, whether a model is named, whether the run
 declared itself a full run.
 
 This module reads no file, runs nothing and writes nothing. It takes facts
@@ -36,51 +36,53 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats.protocol_block import COST_TIERS, KINDS
+from labkit.formats.protocol_block import REPEAT_COSTS, KINDS
 
-SECONDS, MINUTES, HOURS = COST_TIERS
+LOW, HIGH = REPEAT_COSTS
 COMPUTE_KIND, FIT_KIND, APPLY_KIND = KINDS
 
 #: the agent audits, by the mode `labkit-audit` and `findings` name them
 PREFLIGHT_AUDIT = "preflight"
 ANALYSIS_AUDIT = "analysis"
 
-#: the two forms of a protocol: the seconds cut (the fields marked in the
+#: the two forms of a protocol: the low cut (the fields marked in the
 #: template) and the full form (every must; every should once frozen; the
 #: report fields once a result is declared) — `protocol_check.owed` reads it
-SECONDS_CUT = "seconds"
+LOW_CUT = "low"
 FULL_FORM = "full"
 
 
-def cost_tier(cost: str | None) -> str:
-    """The cost tier a head's `cost` stands for: itself, or `hours` while
+def effective_repeat_cost(declared: str | None) -> str:
+    """The repeat cost a head's `repeat_cost` stands for: DECLARED itself, or `high` while
     it is unfilled — an undeclared tier owes the most, never the least
     (preflight read it so since 2026-10-05)."""
-    if cost is None:
-        return HOURS
-    if cost not in COST_TIERS:
-        raise ValueError(f"cost tier {cost!r} is not one of {', '.join(COST_TIERS)}")
-    return cost
+    if declared is None:
+        return HIGH
+    if declared not in REPEAT_COSTS:
+        raise ValueError(
+            f"repeat_cost {declared!r} is not one of {', '.join(REPEAT_COSTS)}"
+        )
+    return declared
 
 
 @dataclass(frozen=True)
 class Lane:
-    """What one cost tier owes, as the standard's table states it
+    """What one repeat cost owes, as the standard's table states it
     (LAB-017 The number of audits follows the cost tier): the lane
     `AGENTS.md` walks an agent along. One row per decision the components used to make on
     their own; a consumer reads the field it needs and copies no rule.
 
     Attributes:
-        cost_tier: `seconds`, `minutes` or `hours` (an unfilled cost reads as hours) — the record's `cost_tier`.
+        repeat_cost: `low` or `high` (an unfilled repeat cost reads as high) — the record's `repeat_cost`.
         freeze: A full run owes `frozen = true` and the preflight audit line
             in the head — the preflight audit comes with the freeze
-            (LAB-015 Preflight audit before freezing). At seconds nothing
+            (LAB-015 Preflight audit before freezing). At low repeat cost nothing
             freezes: a rerun costs nothing, so the freeze protects nothing.
         registration: A full run owes the written registration instead of
             the freeze — the question; for a number that judges a
             prediction (`kind` fit or apply) also the criterion, the
             admissibility condition and the null condition; with a model
-            also the data profile (`registration_fields`); and the cost
+            also the data profile (`registration_fields`); and the repeat_cost
             declared (LAB-003 No run without an intent paragraph).
             runlog reads it off the tree at the start; the release holds
             it to the commit of the first measurement
@@ -91,24 +93,24 @@ class Lane:
             (LAB-050 Analysis audit before reporting); the preflight audit
             only where the freeze is owed.
         analysis_rule: The rule a gate cites when the analysis audit is
-            missing: at seconds the one audit of the lane, owed at the
+            missing: at low repeat cost the one audit of the lane, owed at the
             promotion of the number (LAB-017 The number of audits follows
-            the cost tier); elsewhere LAB-050 Analysis audit before
+            the repeat cost); elsewhere LAB-050 Analysis audit before
             reporting.
-        cut: Which fields the protocol owes — the seconds cut or the full
+        cut: Which fields the protocol owes — the low cut or the full
             form (`protocol_check.FIELDS` carries the marks).
         probe_allowed: A separate instrument probe may precede the measurement.
-            False at seconds: repeat the full measurement to check the instrument.
+            False at low repeat cost: repeat the full measurement to check the instrument.
         foreground: A full run may start in an agent's foreground shell:
             it ends within the harness's limit. Elsewhere the detach gate
             refuses it (`runlog.Run`, scar 2026-08-13).
         provenance: `finalize` holds the run's source frozen in the record
-            and source and output tracked in git — at seconds the machine
+            and source and output tracked in git — at low repeat cost the machine
             checks what the audit would otherwise ask every time
             (LAB-017 The number of audits follows the cost tier).
     """
 
-    cost_tier: str
+    repeat_cost: str
     freeze: bool
     registration: bool
     audits: tuple[str, ...]
@@ -119,27 +121,27 @@ class Lane:
     provenance: bool
 
 
-SECONDS_LANE = Lane(
-    cost_tier=SECONDS,
+LOW_LANE = Lane(
+    repeat_cost=LOW,
     freeze=False,
     registration=True,
     audits=(ANALYSIS_AUDIT,),
     analysis_rule="LAB-017 The number of audits follows the cost tier",
-    cut=SECONDS_CUT,
+    cut=LOW_CUT,
     probe_allowed=False,
     foreground=True,
     provenance=True,
 )
 
 
-def lane(cost: str | None) -> Lane:
-    """The lane of a head's `cost` — the one answer to "what does this tier
-    owe", where every consumer read `cost == "seconds"` for itself."""
-    t = cost_tier(cost)
-    if t == SECONDS:
-        return SECONDS_LANE
+def lane(repeat_cost: str | None) -> Lane:
+    """The lane of a head's `repeat_cost` — the one answer to "what does this tier
+    owe", where every consumer read `repeat_cost == "low"` for itself."""
+    t = effective_repeat_cost(repeat_cost)
+    if t == LOW:
+        return LOW_LANE
     return Lane(
-        cost_tier=t,
+        repeat_cost=t,
         freeze=True,
         registration=False,
         audits=(PREFLIGHT_AUDIT, ANALYSIS_AUDIT),
@@ -151,7 +153,7 @@ def lane(cost: str | None) -> Lane:
     )
 
 
-#: the fields a full run at seconds owes written (not a placeholder) before
+#: the fields a full run at low repeat cost owes written (not a placeholder) before
 #: it starts, by what the kept number asserts (`protocol_block.KINDS`): a
 #: computation registers its question — it judges no prediction, so it has no bar
 #: to clear (0.87.1); a fit or an apply registers the bar (criterion), what
@@ -222,7 +224,7 @@ class Skeleton:
         test: The template of `tests/test_<NN>_<name>.py`.
         probe: The skeleton has a throwaway instrument check (`--probe`).
             The compute skeleton has none: its run is the instrument check. Whether
-            the probe precedes a run is the lane's answer too — at seconds
+            the probe precedes a run is the lane's answer too — at low repeat cost
             a separate probe is not allowed (`Lane.probe_allowed`).
     """
 
@@ -264,11 +266,11 @@ MODEL = Skeleton(
 SKELETONS = (COMPUTE, ESTIMATOR, MODEL)
 
 
-def skeleton(cost: str | None, kind: str, model: bool) -> Skeleton:
+def skeleton(repeat_cost: str | None, kind: str, model: bool) -> Skeleton:
     """The skeleton an area gets, by what its number asserts: a computation
     the compute skeleton at every tier (it has no bar); a fit the estimator
     (nine of nine pilot attempts were classical ML, labkit-paper area 09,
-    2026-10-16 — at seconds too since 0.104: a RandomForest at seconds got
+    2026-10-16 — at low repeat cost too since 0.104: a RandomForest at low repeat cost got
     the count's skeleton and no criterion, fifth haiku round); an apply the
     prompt skeleton when a model answers through `models.toml`, else the
     estimator's lanes (a trained instrument applied to labelled data).
@@ -282,11 +284,11 @@ def skeleton(cost: str | None, kind: str, model: bool) -> Skeleton:
     return ESTIMATOR
 
 
-def describe(cost: str | None, kind: str, model: bool) -> list[str]:
+def describe(repeat_cost: str | None, kind: str, model: bool) -> list[str]:
     """The contract of one tier and kind in sentences, by occasion — what
     `protocol-check --contract` prints, so an agent reads the obligations
     where it reads the fields, instead of learning them from a refusal."""
-    ln, sk = lane(cost), skeleton(cost, kind, model)
+    ln, sk = lane(repeat_cost), skeleton(repeat_cost, kind, model)
     check = " ".join((CHECK_SCRIPT.as_posix(), CHECK_FLAG))
     before = (
         "the registration written: " + ", ".join(registration_fields(kind, model))
@@ -295,8 +297,8 @@ def describe(cost: str | None, kind: str, model: bool) -> list[str]:
         "in the head (`preflight_audit`), `frozen = true`"
     )
     return [
-        f"cost = {ln.cost_tier!r}"
-        + (" (an unfilled cost reads so)" if cost is None else "")
+        f"repeat_cost = {ln.repeat_cost!r}"
+        + (" (an unfilled repeat cost reads so)" if repeat_cost is None else "")
         + f", kind = {kind!r}, {'a model named' if model else 'no model'}: the {sk.instrument} skeleton "
         + f"({', '.join(dest for _, dest in sk.scripts)}"
         + (

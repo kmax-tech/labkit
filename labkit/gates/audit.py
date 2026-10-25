@@ -541,11 +541,11 @@ def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str
 
 
 def early_for_tier(area: Path, protocol: Path, mode: str) -> list[GateFinding]:
-    """One WARNING line when a preflight audit comes before the cost tier
-    asks for it: at `cost = "seconds"` the first run is the cheaper probe
+    """One WARNING line when a preflight audit comes before the repeat cost
+    asks for it: at `repeat_cost = "low"` the first run is the cheaper probe
     and ONE audit in mode analysis after it covers the preflight rows
     (LAB-017 The number of audits follows the cost tier). uniagent area 01,
-    2026-10-05: two preflight audits and an analysis audit at seconds, and
+    2026-10-05: two preflight audits and an analysis audit at low repeat cost, and
     the protocol itself says one after the first run would have done. A
     head this labkit cannot read says nothing here — protocol-check does."""
     if mode != "preflight":
@@ -554,13 +554,13 @@ def early_for_tier(area: Path, protocol: Path, mode: str) -> list[GateFinding]:
         head = protocol_block.head(protocol.read_text(encoding="utf-8"))
     except protocol_block.BlockError:
         return []
-    if mode in lane(head.cost).audits or completed_runs(area, with_repeats=True):
+    if mode in lane(head.repeat_cost).audits or completed_runs(area, with_repeats=True):
         return []
     return [
         coded(
             WARNING,
             None,
-            'cost = "seconds" and no completed run · the first run is the cheaper '
+            'repeat_cost = "low" and no completed run · the first run is the cheaper '
             "probe; one audit in --mode analysis after it covers the preflight rows too",
             rule="LAB-017 The number of audits follows the cost tier",
             fix="run first, audit once",
@@ -662,7 +662,7 @@ def _answer_or_record(
         )
         raise AuditError(
             f"{exc}\nlabkit-audit: no audit — the backend did not answer; recorded "
-            f"as {tried}. A full run at minutes/hours may acknowledge it with "
+            f"as {tried}. A full run at high repeat cost may acknowledge it with "
             f"LABKIT_UNFROZEN=1; its number cannot be reported (report-check "
             f"refuses it). Run the audit again when the backend answers."
         ) from exc

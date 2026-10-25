@@ -14,7 +14,7 @@ from labkit.formats import repo
 class Steps(unittest.TestCase):
     def test_a_declared_run_that_is_not_the_answering_one_blocks(self):
         run = Path("/x/runs/2026-10-07T10-00-00_aa11")
-        text = head(cost="seconds", result="2026-10-07T09-00-00_bb22")
+        text = head(repeat_cost="low", result="2026-10-07T09-00-00_bb22")
         mismatch = finalize.declared_run_mismatch(text, run)
         assert mismatch is not None
         self.assertIn("[result] declares 2026-10-07T09-00-00_bb22", mismatch)
@@ -22,9 +22,9 @@ class Steps(unittest.TestCase):
 
     def test_declaring_the_answering_run_or_none_passes(self):
         run = Path("/x/runs/2026-10-07T10-00-00_aa11")
-        declares_it = head(cost="seconds", result="2026-10-07T10-00-00_aa11")
+        declares_it = head(repeat_cost="low", result="2026-10-07T10-00-00_aa11")
         self.assertIsNone(finalize.declared_run_mismatch(declares_it, run))
-        self.assertIsNone(finalize.declared_run_mismatch(head(cost="seconds"), run))
+        self.assertIsNone(finalize.declared_run_mismatch(head(repeat_cost="low"), run))
 
     def test_two_protocols_and_none_named_refuses(self):
         with tempfile.TemporaryDirectory() as d:
@@ -49,7 +49,9 @@ class DeclaredRunHint(unittest.TestCase):
     PROTOCOL = Path("/x/PROTOCOL-a.md")
 
     def test_no_declaration_is_a_hint_with_the_command(self):
-        hint = finalize.undeclared_hint(head(cost="seconds"), self.RUN, self.PROTOCOL)
+        hint = finalize.undeclared_hint(
+            head(repeat_cost="low"), self.RUN, self.PROTOCOL
+        )
         assert hint is not None
         self.assertIn("no [result] declared yet", hint)
         self.assertIn(
@@ -57,17 +59,17 @@ class DeclaredRunHint(unittest.TestCase):
         )
 
     def test_a_declared_run_is_quiet(self):
-        text = head(cost="seconds", result="2026-10-07T10-00-00_aa11")
+        text = head(repeat_cost="low", result="2026-10-07T10-00-00_aa11")
         self.assertIsNone(finalize.undeclared_hint(text, self.RUN, self.PROTOCOL))
 
     def test_a_declared_run_with_no_directory_or_a_typed_id_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (gap,) = finalize.declared_run_gaps(
-                area, head(cost="seconds", result="2026-10-07T10-00-00_aa11")
+                area, head(repeat_cost="low", result="2026-10-07T10-00-00_aa11")
             )
             self.assertIn("no runs/2026-10-07T10-00-00_aa11/", gap)
-            typed = head(cost="seconds").replace(
+            typed = head(repeat_cost="low").replace(
                 'preflight_audit = ""\n',
                 'preflight_audit = ""\n\n[result]\nrun = "2026-10-07T10-00-00_final"\n',
             )
@@ -76,7 +78,7 @@ class DeclaredRunHint(unittest.TestCase):
             (area / "runs" / "2026-10-07T10-00-00_aa11").mkdir(parents=True)
             self.assertEqual(
                 finalize.declared_run_gaps(
-                    area, head(cost="seconds", result="2026-10-07T10-00-00_aa11")
+                    area, head(repeat_cost="low", result="2026-10-07T10-00-00_aa11")
                 ),
                 [],
             )

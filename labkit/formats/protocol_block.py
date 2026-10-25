@@ -5,21 +5,21 @@ holds the fields a machine reads — the head — and its optional
 `[[promise]]` tables hold the promises (`promises.py`):
 
     [protocol]
-    standard = "0.22"
+    standard = "0.23"
     id = "p-0123456789abcdef"       # stamped by `labkit-init exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
-    cost = "seconds"                # seconds | minutes | hours
+    repeat_cost = "low"         # low | high — the price of a repeat
     kind = "compute"                # compute | fit | apply — what the kept number asserts
     frozen = false
-    preflight_audit = ""            # minutes/hours: the decided preflight record, audits/<minute>-preflight.toml
+    preflight_audit = ""            # high repeat cost: the decided preflight record, audits/<minute>-preflight.toml
 
 One parser (`tomllib`), exact keys, typed values: a typo is a loud error
 naming the field, never a silent "not found" — `Cost: second` used to read
-as an undeclared tier and so as `hours` (TODO 8). The prose fields a human
+as an undeclared tier and so as `high` (TODO 8). The prose fields a human
 writes and reads stay Markdown; `protocol_check` holds them by their exact
 template label.
 
-A value still in angle brackets (`"<seconds | minutes | hours>"`) is a
+A value still in angle brackets (`"<low | high>"`) is a
 placeholder: the head reads it as None, and the checker reports it as an
 unfilled field instead of a malformed one.
 """
@@ -37,25 +37,17 @@ from labkit.formats.runs import RUN_ID
 
 #: the head format this labkit reads; a protocol of another standard is
 #: read with the labkit release it was written for
-STANDARD = "0.22"
+STANDARD = "0.23"
 #: what a reader of the previous standard changes to read a protocol here —
 #: said in the refusal, so the migration is a sentence, not a legacy path
 MIGRATION = (
-    'from 0.21: set standard = "0.22" and add `kind = "compute" | "fit" | "apply"` '
-    "below `cost` — what the kept number asserts (`protocol-fill <PROTOCOL> "
-    "kind=…`); a computation measures and judges no prediction, a fit judges a model "
-    "trained or adjusted in this experiment, an apply judges a model used unchanged"
-)
-#: what a head stamped on an intermediate 0.22 commit changes: the kind
-#: `count` was renamed before 0.104.0 was released — said in the refusal,
-#: never read as `compute`
-COUNT_RENAMED = (
-    '[protocol] kind = "count" was renamed kind = "compute" before labkit '
-    '0.104.0 was released — set kind = "compute" (`protocol-fill <PROTOCOL> '
-    "kind=compute`)"
+    'from 0.22: set standard = "0.23" and replace `cost = "seconds" | "minutes" | '
+    '"hours"` with `repeat_cost = "low" | "high"` — the price of a repeat, as the '
+    "gates read it: seconds is low, minutes and hours are high (`protocol-fill "
+    "<PROTOCOL> repeat_cost=…` after renaming the key)"
 )
 TYPES = ("exploratory", "confirmatory")
-COST_TIERS = ("seconds", "minutes", "hours")
+REPEAT_COSTS = ("low", "high")
 #: what the kept number asserts (standard 0.22): a computation judges no
 #: prediction; a fit judges a model trained or adjusted in this experiment;
 #: an apply judges a model used unchanged — the obligations follow
@@ -74,7 +66,7 @@ PROTOCOL_HEAD_KEYS = (
     "standard",
     "id",
     "type",
-    "cost",
+    "repeat_cost",
     "kind",
     "frozen",
     "preflight_audit",
@@ -92,7 +84,7 @@ class Head:
     standard: str
     id: str | None
     type: str | None
-    cost: str | None
+    repeat_cost: str | None
     kind: str | None  # one of KINDS; None while the stamp's placeholder stands
     frozen: bool
     preflight_audit: (
@@ -102,7 +94,9 @@ class Head:
     @property
     def placeholders(self) -> list[str]:
         """The head fields still holding a template placeholder."""
-        return [f for f in ("id", "type", "cost", "kind") if getattr(self, f) is None]
+        return [
+            f for f in ("id", "type", "repeat_cost", "kind") if getattr(self, f) is None
+        ]
 
 
 #: a `[[promise]]` table header line, spaces and a comment allowed — where
@@ -165,7 +159,7 @@ def fence_spans(lines: list[str]) -> list[tuple[str, int, int]]:
 def section_starts(lines: list[str]) -> list[int]:
     """The 0-based indexes of the `## ` headings of a protocol — outside
     every fence (`fenced_lines`), in order. The one cut into sections: the
-    prose count, the Runs list, the seconds cut and the stamp's blank-line
+    prose count, the Runs list, the low cut and the stamp's blank-line
     pass each found the headings themselves, two of them inside fences too
     (audit 2026-10-23)."""
     fenced = fenced_lines(lines)
@@ -383,7 +377,7 @@ def model(text: str) -> Model | None:
     compared arms as `[model.arms.<arm>]` tables (profile, fingerprint,
     alias) finalize holds to the run — or None without the table: no model,
     a computation or an estimator. The one answer to "is a model named" for the
-    seconds cut, the registration and `--report` (until 0.100.0 the prose
+    low cut, the registration and `--report` (until 0.100.0 the prose
     `Model / tool` line, read with a pattern for "n/a", "none" and dashes).
     `alias` is None while it is still the stamp's placeholder, so is
     `number_describes`. Whether the claim keys fit the kind is
@@ -578,13 +572,11 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
         raise BlockError(f"[protocol] preflight_audit = {audit!r} — a string")
     if _placeholder(audit):
         audit = ""
-    if table["kind"] == "count":
-        raise BlockError(COUNT_RENAMED)
     return Head(
         standard=standard,
         id=pid,
         type=_choice(table, "type", TYPES),
-        cost=_choice(table, "cost", COST_TIERS),
+        repeat_cost=_choice(table, "repeat_cost", REPEAT_COSTS),
         kind=_choice(table, "kind", KINDS),
         frozen=frozen,
         preflight_audit=audit.strip(),

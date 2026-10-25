@@ -33,7 +33,7 @@ here states, and no more:
   The marker is a written claim the reader sees beside the number; one
   without its why is a blocker. The gate (`report_check.promotions`) holds
   the unmarked citation of a protocol's answering run that declares no
-  result: at `seconds` such a report is the promotion without the adoption
+  result: at `low` such a report is the promotion without the adoption
   (sixth haiku round, 2026-10-23, t3 and t18: `--from-run` refused, REPORT.md
   written from metrics.json by hand, the hook warned and let it pass).
 - `numbers_beside_not_reported` (static evidence, never blocks): the

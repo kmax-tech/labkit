@@ -123,7 +123,7 @@ def main() -> None:
         sys.exit(f"{OUT.name} exists — data/prepared/ is read-only, variant = new name")
     # TODO: every knob. The registered constants ride along: runlog refuses
     # any run under the promise block whose config lacks one, this step too
-    # (cold Sonnet, judge at minutes, 2026-10-14: the first 00_prepare refused).
+    # (cold Sonnet, judge at high, 2026-10-14: the first 00_prepare refused).
     config = {"source": str(SOURCE), "n_items": len(items),
               **promises.all_constants(promises.load(PROTOCOL))}
     # data= records SOURCE's path, sha256 and row count in the run — the raw

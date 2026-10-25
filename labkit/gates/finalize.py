@@ -26,7 +26,7 @@ each step's condition):
                     skipped only when neither registers an id
   3. declared scopes  every declared promise scope unchanged since the run
   4. open fields    protocol fields still holding a placeholder
-  5. provenance     at protocol `cost = "seconds"` only: the run froze its source
+  5. provenance     at protocol `repeat_cost = "low"` only: the run froze its source
                     (`data=` in config.json) and every source and output file
                     is tracked in git — the two of the three questions the
                     agent audit kept asking that a machine can answer (LAB-017 The number of audits follows the cost tier, 2026-10-05);
@@ -370,7 +370,7 @@ def check_provenance(findings: Findings, area: Path, answering_run: Path) -> Non
 def check_area_tests(findings: Findings, area: Path) -> None:
     """Station 6: the area's own tests. The resolution check runs again before a number leaves: a later edit
     of evaluate() that mutes the criterion is caught here too — on every
-    tier, seconds included, where preflight is not owed (2026-10-07). A
+    tier, low included, where preflight is not owed (2026-10-07). A
     missing test is no finding here; preflight owes it at the freeze."""
     # the same place preflight looks: a stamped tree before `git init` has
     # tests/ under its layout root, and git_root found "none" (audit 2026-10-15)
@@ -441,7 +441,7 @@ def finalize_area(
     3. declared scopes — only with a run.
     4. open fields — always; warnings only: protocol placeholders and
        stamped `<…>` placeholders left in the area's README.
-    5. provenance — only for cost = seconds, and only with a run.
+    5. provenance — only for repeat_cost = low, and only with a run.
     6. area tests — always.
     7. criterion n — only with a run; warnings only.
     8. audit findings — always: an `open` BLOCKER in `audits/` blocks.
@@ -491,9 +491,9 @@ def finalize_area(
 
     # 5. provenance — where the lane owes it (seconds), and only with a run
     findings.header("provenance")
-    if not lane(head.cost).provenance:
+    if not lane(head.repeat_cost).provenance:
         findings.note(
-            f"  n/a — protocol cost is {head.cost!r} (the agent audit covers provenance there)"
+            f"  n/a — protocol repeat cost is {head.repeat_cost!r} (the agent audit covers provenance there)"
         )
     elif answering_run is None:
         findings.note(NO_RUN)

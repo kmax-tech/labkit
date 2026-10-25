@@ -257,7 +257,7 @@ class Lanes:
 
     def main(self, config: Any, argv: list[str] | None = None) -> None:
         """The area's command line: `--show N` renders, `--probe [N]` checks
-        the instrument (refused at cost = seconds), `--eval-only`
+        the instrument (refused at repeat_cost = low), `--eval-only`
         re-evaluates the kept rows, `--repeat-of RUN_ID` draws a kept run
         again, no flag runs the full measurement through `runlog`. CONFIG is
         the registered execution; `--model` replaces its one field."""
@@ -266,10 +266,10 @@ class Lanes:
         head = protocol_block.head(self.protocol.read_text(encoding="utf-8"))
         if (
             args.probe is not None
-            and not standard_contract.lane(head.cost).probe_allowed
+            and not standard_contract.lane(head.repeat_cost).probe_allowed
         ):
             ap.error(
-                "--probe is not available at cost='seconds'; run the full measurement"
+                "--probe is not available at repeat_cost='low'; run the full measurement"
             )
         cfg = replace(config, model=args.model)
         items = read_jsonl(self.items)

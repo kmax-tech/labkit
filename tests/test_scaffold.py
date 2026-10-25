@@ -150,20 +150,27 @@ class Exp(unittest.TestCase):
         fields stay open. A computation is stamped without those fields and without
         promise tables at every tier, so its prose names no id."""
         cases = (
-            ("seconds", "fit", None),
-            ("minutes", "fit", None),
-            ("hours", "apply", "haiku"),
-            ("minutes", "compute", None),
-            ("seconds", "compute", None),
+            ("low", "fit", None),
+            ("high", "fit", None),
+            ("high", "apply", "haiku"),
+            ("high", "compute", None),
+            ("low", "compute", None),
         )
         for cost, kind, model in cases:
-            with self.subTest(cost=cost, kind=kind):
+            with self.subTest(repeat_cost=cost, kind=kind):
                 tmp = tempfile.TemporaryDirectory()
                 self.addCleanup(tmp.cleanup)
                 root = Path(tmp.name) / "lab"
                 root.mkdir()
                 scaffold.stamp_lab(root, "lab")
-                quiet(scaffold.stamp_area, root, "x", cost=cost, kind=kind, model=model)
+                quiet(
+                    scaffold.stamp_area,
+                    root,
+                    "x",
+                    repeat_cost=cost,
+                    kind=kind,
+                    model=model,
+                )
                 (proto,) = (root / "experiments").glob("*-x/PROTOCOL-x.md")
                 text = proto.read_text(encoding="utf-8")
                 if kind == "compute":
@@ -200,7 +207,7 @@ class Exp(unittest.TestCase):
             self.assertTrue((area / f).is_file(), f)
         proto = (area / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
         self.assertRegex(proto, r'(?m)^id = "p-[0-9a-f]{16}"$')
-        self.assertNotIn("<!-- s -->", proto)
+        self.assertNotIn("<!-- l -->", proto)
         test = (self.root / "tests" / "test_01_foo_bar.py").read_text(encoding="utf-8")
         ast.parse(test)
         self.assertIn('"experiments/01-foo-bar"', test)
@@ -228,17 +235,19 @@ class Exp(unittest.TestCase):
         with self.assertRaisesRegex(console.Refused, "already exists"):
             quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
 
-    def test_seconds_stamps_the_cut_and_the_counting_skeleton(self) -> None:
-        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="seconds", kind="compute")
+    def test_low_stamps_the_cut_and_the_counting_skeleton(self) -> None:
+        quiet(
+            scaffold.stamp_area, self.root, "foo-bar", repeat_cost="low", kind="compute"
+        )
         area = self.area()
         proto = (area / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
-        self.assertIn('cost = "seconds"', proto)
+        self.assertIn('repeat_cost = "low"', proto)
         self.assertIn('kind = "compute"', proto)
         # a computation has no bar to clear: no promise tables, no criterion, no admissibility
         self.assertNotIn("[[promise]]", proto)
         self.assertNotIn("Success / failure criterion", proto)
         self.assertNotIn("Admissibility condition", proto)
-        # the Summary at seconds is the Result line
+        # the Summary at low repeat cost is the Result line
         self.assertIn("- **Conclusion:**", proto)
         self.assertNotIn("- **Limits:**", proto)
         self.assertNotIn("- **Next step:**", proto)
@@ -272,14 +281,14 @@ class Exp(unittest.TestCase):
         self.assertIn('"_prov": {"run": run.run_id}', script)  # rows name their run
         self.assertLess(len(proto.splitlines()), 50)  # was 102 lines of guide prose
 
-    def test_seconds_with_a_model_keeps_criterion_promises_and_the_null_lane(
+    def test_low_with_a_model_keeps_criterion_promises_and_the_null_lane(
         self,
     ) -> None:
         quiet(
             scaffold.stamp_area,
             self.root,
             "foo-bar",
-            cost="seconds",
+            repeat_cost="low",
             model="haiku",
             kind="apply",
         )
@@ -314,7 +323,7 @@ class Exp(unittest.TestCase):
         """runlog refuses any run under the block whose config lacks a
         registered constant, the prepare step too; the stamped 00_prepare.py
         passed none, so the first step of every area with a model refused
-        (cold Sonnet, judge at minutes, 2026-10-14)."""
+        (cold Sonnet, judge at high, 2026-10-14)."""
         import subprocess
         import sys
 
@@ -415,13 +424,13 @@ class Exp(unittest.TestCase):
         )
 
     def test_the_next_steps_are_the_lane_with_its_gates(self) -> None:
-        """The printed steps at minutes/hours skipped the preflight, both
+        """The printed steps at high repeat cost skipped the preflight, both
         audits and the adoption while the stamped AGENTS.md named them; an
         agent following the console met the refusal at the run's start
         (review 2026-10-19). The steps read the contract: every gate the
         lane owes stands in order, numbered without a gap."""
         rel = Path("experiments/01-foo")
-        for cost, kind, model in (("minutes", "fit", False), ("hours", "apply", True)):
+        for cost, kind, model in (("high", "fit", False), ("high", "apply", True)):
             text = scaffold.next_steps(rel, "foo", "01", cost, kind, model)
             order = [
                 "code-check experiments/01-foo",
@@ -438,11 +447,11 @@ class Exp(unittest.TestCase):
             self.assertEqual(positions, sorted(positions), text)
             numbers = [int(m) for m in re.findall(r"^  (\d+)\. ", text, re.M)]
             self.assertEqual(numbers, list(range(1, len(numbers) + 1)), text)
-        seconds = scaffold.next_steps(rel, "foo", "01", "seconds", "compute", False)
+        low = scaffold.next_steps(rel, "foo", "01", "low", "compute", False)
         for not_owed in ("preflight", "frozen = true", "runlog start", "--probe"):
-            self.assertNotIn(not_owed, seconds, seconds)
+            self.assertNotIn(not_owed, low, low)
         for owed in ("code-check", "finalize", "--mode analysis", "--from-run"):
-            self.assertIn(owed, seconds, seconds)
+            self.assertIn(owed, low, low)
 
     def test_init_exp_from_inside_the_area_finds_the_lab(self) -> None:
         """Run from an area directory, labkit-init called the area "not a lab
@@ -537,8 +546,8 @@ class Exp(unittest.TestCase):
     def test_every_stamped_placeholder_is_one_line(self) -> None:
         stamps = (
             ("full", {}),
-            ("quick", {"cost": "seconds"}),
-            ("judge", {"cost": "seconds", "model": "haiku"}),
+            ("quick", {"repeat_cost": "low"}),
+            ("judge", {"repeat_cost": "low", "model": "haiku"}),
         )
         for name, kw in stamps:
             quiet(scaffold.stamp_area, self.root, name, **kw, kind="fit")
@@ -571,12 +580,12 @@ class Exp(unittest.TestCase):
 
     def test_minutes_without_a_model_stamps_the_estimator_skeleton(self) -> None:
         """2026-10-17: nine of nine pilot attempts were classical ML and got the
-        prompt skeleton. Without `--model` at minutes/hours the instrument is
+        prompt skeleton. Without `--model` at high repeat cost the instrument is
         an estimator: no prompt, no parser, a permuted-label null lane, the
         promise constants in its words, and the model-shaped fields answered."""
         from labkit.formats import promises, protocol_check
 
-        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="minutes", kind="fit")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", repeat_cost="high", kind="fit")
         area = self.area()
         script = (area / "scripts" / "01_measure.py").read_text(encoding="utf-8")
         self.assertIn("def make_estimator", script)
@@ -610,7 +619,7 @@ class Exp(unittest.TestCase):
         import importlib.util
         import sys
 
-        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="minutes", kind="fit")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", repeat_cost="high", kind="fit")
         path = self.area() / "scripts" / "01_measure.py"
         spec = importlib.util.spec_from_file_location("stamped_estimator", path)
         assert spec is not None and spec.loader is not None
@@ -670,7 +679,7 @@ class Exp(unittest.TestCase):
         import subprocess
         import sys
 
-        quiet(scaffold.stamp_area, self.root, "foo-bar", cost="minutes", kind="fit")
+        quiet(scaffold.stamp_area, self.root, "foo-bar", repeat_cost="high", kind="fit")
         r = subprocess.run(
             [
                 sys.executable,
@@ -697,7 +706,7 @@ class Exp(unittest.TestCase):
             scaffold.stamp_area,
             self.root,
             "with-alias",
-            cost="seconds",
+            repeat_cost="low",
             kind="apply",
             model="haiku",
         )
@@ -710,7 +719,7 @@ class Exp(unittest.TestCase):
             scaffold.stamp_area,
             self.root,
             "bare-flag",
-            cost="seconds",
+            repeat_cost="low",
             model=True,
             kind="apply",
         )
@@ -719,7 +728,11 @@ class Exp(unittest.TestCase):
         assert m is not None
         self.assertIsNone(m.alias)
         quiet(
-            scaffold.stamp_area, self.root, "no-model", cost="seconds", kind="compute"
+            scaffold.stamp_area,
+            self.root,
+            "no-model",
+            repeat_cost="low",
+            kind="compute",
         )
         text = next(self.root.glob("experiments/*no-model/PROTOCOL-*.md")).read_text()
         self.assertIsNone(protocol_block.model(text))
@@ -797,8 +810,8 @@ class Cli(unittest.TestCase):
                         "foo",
                         "--repo",
                         str(root),
-                        "--cost",
-                        "seconds",
+                        "--repeat-cost",
+                        "low",
                         "--kind",
                         "compute",
                     ],
@@ -825,7 +838,9 @@ class ModelNamed(unittest.TestCase):
     def test_without_a_model_table_the_parser_field_is_filled(self):
         for value in ("—", "none", "gpt-oss"):
             text = (
-                head(cost="minutes") + f"- **Model / tool †:** {value}\n" + self.PARSER
+                head(repeat_cost="high")
+                + f"- **Model / tool †:** {value}\n"
+                + self.PARSER
             )
             filled, n = protocol_cuts.auto_fill_deterministic(text)
             self.assertEqual(n, 1, value)
@@ -833,7 +848,7 @@ class ModelNamed(unittest.TestCase):
 
     def test_a_model_table_leaves_it_open(self):
         text = (
-            head(cost="minutes", model="gpt-oss")
+            head(repeat_cost="high", model="gpt-oss")
             + "- **Model / tool:** none\n"
             + self.PARSER
         )

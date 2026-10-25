@@ -26,14 +26,14 @@ BODY = "\n## Result\n\n- **Recorded results:** <per registered id its verdict…
 
 
 def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]:
-    """A seconds area, its protocol declaring RUN, a completed run, and an
+    """A low-lane area, its protocol declaring RUN, a completed run, and an
     analysis record covering it with one accepted WARNING carrying an effect
     (none when LIMIT_REASON is None)."""
     area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
     (area / "scripts").mkdir(parents=True)
     scope_file(area)
     protocol = area / "PROTOCOL-x.md"
-    protocol.write_text(head(cost="seconds", result=RUN) + BODY, encoding="utf-8")
+    protocol.write_text(head(repeat_cost="low", result=RUN) + BODY, encoding="utf-8")
     run = completed_run(area, RUN, metrics={"c1_pass": True, "c1_accuracy": 0.83})
     text = protocol.read_text(encoding="utf-8")
     items = [
@@ -178,7 +178,7 @@ class RenderGaps(unittest.TestCase):
         )
 
     def test_render_refuses_without_a_declaration(self):
-        undeclared = head(cost="seconds") + BODY
+        undeclared = head(repeat_cost="low") + BODY
         with self.assertRaisesRegex(ValueError, "no \\[result\\] run declared"):
             protocol_fill.render_result(undeclared, self.area)
 

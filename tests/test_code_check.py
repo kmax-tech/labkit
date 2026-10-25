@@ -349,7 +349,7 @@ class TestProtocolChoice(unittest.TestCase):
 
 
 class TestSummaryLine(unittest.TestCase):
-    """What the closing line says is not checked. At seconds it read
+    """What the closing line says is not checked. At low repeat cost it read
     "schema, gate labels, placeholders: not checked — not owed at cost
     seconds", and an agent took the protocol's open fields for not owed; the
     pre-commit then refused the open promise sentence (judge probe,
@@ -358,12 +358,14 @@ class TestSummaryLine(unittest.TestCase):
     def _out(self, cost: str) -> str:
         from protocol_fixture import head
 
-        with AreaFixture(head(cost=cost) + PROTOCOL_TWO, {"m.py": CLEAN_CODE}) as a:
+        with AreaFixture(
+            head(repeat_cost=cost) + PROTOCOL_TWO, {"m.py": CLEAN_CODE}
+        ) as a:
             _, out = a.run()
         return out
 
-    def test_at_seconds_the_open_fields_are_not_called_not_owed(self):
-        out = self._out("seconds")
+    def test_at_low_the_open_fields_are_not_called_not_owed(self):
+        out = self._out("low")
         self.assertNotIn("placeholders: not checked", out)
         self.assertIn("schema, gate labels: not checked", out)
         self.assertIn("protocol-fill <PROTOCOL> --list", out)
@@ -376,7 +378,7 @@ class TestSummaryLine(unittest.TestCase):
         self.assertLess(note_at, summary_at, out)
 
     def test_above_seconds_the_bundle_is_named(self):
-        self.assertIn("need --bundle for the code-check agent", self._out("minutes"))
+        self.assertIn("need --bundle for the code-check agent", self._out("high"))
 
 
 if __name__ == "__main__":

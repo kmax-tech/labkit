@@ -70,8 +70,8 @@ path to this file.
 
 ## The form: cuts, languages, rule references
 
-- **One template, three cuts.** `labkit-init exp --cost seconds` stamps the
-  `seconds` cut: head, terms, question, data, unit, exclusions, and after
+- **One template, three cuts.** `labkit-init exp --repeat-cost low` stamps the
+  `low` cut: head, terms, question, data, unit, exclusions, and after
   the run the Recorded results line (`protocol-fill --from-run` writes it) and the
   Conclusion, your two sentences — with `--kind fit` or `apply` also
   criterion, admissibility condition, model / tool and null condition; with
@@ -142,8 +142,8 @@ The same block may hold the `[[promise]]` tables (labkit
   (below). Standard 0.21 names the Summary's prose answer `Conclusion` and the
   generated metrics field `Recorded results`. 0.102.0 is the last release
   reading the old labels under standard 0.20. Standard
-  0.19 (labkit 0.72): a frozen protocol and every full run — at `cost =
-  "seconds"` every run — owe the `[[promise]]` tables; a run records every
+  0.19 (labkit 0.72): a frozen protocol and every full run — at `repeat_cost =
+  "low"` every run — owe the `[[promise]]` tables; a run records every
   registered constant unchanged.
 - **id** — `p-` plus 16 hex digits, stamped by `labkit-init exp`, never typed: the
   run binds to it, so renaming or moving the file keeps the binding.
@@ -197,7 +197,7 @@ The same block may hold the `[[promise]]` tables (labkit
   under `audits/` (`<minute>-preflight.toml`, written by `labkit-audit
   --mode preflight`; every finding in it fixed / accepted / deferred /
   dismissed, with reason): the code-vs-intent audit after the instrument
-  check and before freezing. Empty until then, and at `seconds`.
+  check and before freezing. Empty until then, and at `low`.
 
 **Choosing the kind** — the kind follows the reported number, not the
 tool: the same LLM or random forest can stand under any of the three.
@@ -228,14 +228,16 @@ cross-validation.
 | regex / parser, rules repaired on the same data | precision | `fit` |
 | mean, correlation, t-test | the value | `compute` |
 
-**cost** — the price of a *repeat*, not whether a model is involved. A
-deterministic computation, or a handful of model calls that finish in a minute
-for cents, is `seconds`: rerunnable at will, so no agent audit per run;
-`finalize` checks provenance, the independent audit comes when the number
-is promoted into a note or paper or steers a decision. `minutes` is a model
-pass you would not casually redo; `hours` is expensive or irreversible —
-both keep the preflight audit before freezing and the analysis audit after.
-Two cold agents declared `minutes` for sixteen calls and paid fifteen
+**repeat_cost** — the price of a *repeat*, not whether a model is involved,
+and the gates know two values and nothing in between. `low`: a deterministic
+computation, or a handful of model calls that finish in a minute for cents —
+rerunnable at will, so no agent audit per run; `finalize` checks provenance,
+the independent audit comes when the number is promoted into a note or paper
+or steers a decision. `high`: a model pass you would not casually redo, and
+anything expensive or irreversible — the preflight audit before freezing and
+the analysis audit after. Until labkit 0.103.0 the head said `seconds |
+minutes | hours`; `minutes` and `hours` owed the same, and the time words
+misled: two cold agents declared `minutes` for sixteen calls and paid fifteen
 minutes of audit waiting for a 64-second run (2026-10-05).
 
 
@@ -244,7 +246,7 @@ minutes of audit waiting for a 64-second run (2026-10-05).
 Two texts for a person, at two times: before the run a reader reads the
 **Intent** (question, expectation, criterion); after the run the
 **Summary**, which opens the protocol. Write the Summary once the result is
-written back — on every tier, seconds included. Whoever reads it has read
+written back — on every tier, low included. Whoever reads it has read
 nothing else yet; everything below it is the evidence for a check. It
 derives from the detail below and carries no fact that isn't there.
 
@@ -384,7 +386,7 @@ scattered in output files nobody can interpret.
 - **Caps/drops †:** what was omitted or limited.
 - **Analysis audit †:** date · scope sha · N findings — the audit of the
   EVALUATION against the frozen criterion, before the number leaves. Not
-  stamped at `cost = "seconds"`: there the audit comes when the number is
+  stamped at `repeat_cost = "low"`: there the audit comes when the number is
   promoted or steers a decision, and the field is added then — an open
   placeholder was what readers stumbled over (2026-10-07).
 
@@ -432,7 +434,7 @@ scattered in output files nobody can interpret.
   alias = "<alias from models.toml>"`, stamped by `labkit-init exp --model
   <alias>` (a bare `--model` leaves the placeholder, `protocol-fill "model
   alias=…"` fills it); never hardcode endpoint or ID. The table is the one
-  answer to "is a model in the loop" — for the seconds cut, the
+  answer to "is a model in the loop" — for the low cut, the
   registration and `--report` — since phase 4 of the 1.0 line (2026-10-21;
   until 0.100.0 this prose line decided it, read with a pattern for "n/a",
   "none" and dashes). No `[model]`? Then the instrument is an estimator:

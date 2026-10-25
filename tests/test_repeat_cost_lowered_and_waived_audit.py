@@ -1,9 +1,9 @@
-"""Two ways round the audit at minutes/hours, both reported (third haiku round
+"""Two ways round the audit at high repeat cost, both reported (third haiku round
 on 0.99.0, labkit-paper area 09): t18 wrote `preflight_audit = "n/a — …"`
 and runlog took it (now refused: `findings.waived_audit_gap`, in preflight
-and protocol-check too); the next move is lowering `cost` to seconds, where
+and protocol-check too); the next move is lowering `repeat_cost` to seconds, where
 nothing is owed before the run — exact over git, the head as first committed
-against the head now (`protocol_history.cost_lowered`, a WARNING in
+against the head now (`protocol_history.repeat_cost_lowered`, a WARNING in
 protocol-check and preflight). Twins: a raised or unchanged tier, a file git
 does not know, a line with a real stamp.
 """
@@ -54,7 +54,7 @@ def _repo(cost: str) -> tuple[Path, Path]:
     scope_file(area)
     protocol = area / "PROTOCOL-x.md"
     protocol.write_text(
-        head(cost=cost, promises=DEFAULT_BLOCK) + BODY, encoding="utf-8"
+        head(repeat_cost=cost, promises=DEFAULT_BLOCK) + BODY, encoding="utf-8"
     )
     _git(root, "init", "-q", ".")
     _git(root, "config", "user.email", "t@t")
@@ -66,73 +66,75 @@ def _repo(cost: str) -> tuple[Path, Path]:
 
 def _set_cost(protocol: Path, cost: str) -> protocol_block.Head:
     text = protocol.read_text(encoding="utf-8")
-    old = next(ln for ln in text.splitlines() if ln.startswith("cost = "))
-    text = text.replace(old, f'cost = "{cost}"', 1)
+    old = next(ln for ln in text.splitlines() if ln.startswith("repeat_cost = "))
+    text = text.replace(old, f'repeat_cost = "{cost}"', 1)
     protocol.write_text(text, encoding="utf-8")
     return protocol_block.head(text)
 
 
-class CostLowered(unittest.TestCase):
+class RepeatCostLowered(unittest.TestCase):
     def test_lowered_since_the_first_commit_warns_and_names_both_tiers(self):
-        root, protocol = _repo("minutes")
+        root, protocol = _repo("high")
         first = _git(root, "rev-parse", "HEAD")
-        warning = protocol_history.cost_lowered(
-            protocol, _set_cost(protocol, "seconds")
+        warning = protocol_history.repeat_cost_lowered(
+            protocol, _set_cost(protocol, "low")
         )
         assert warning is not None
-        self.assertIn("WARNING: cost tier lowered", warning)
-        self.assertIn(f"{first[:7]}: minutes -> seconds", warning)
+        self.assertIn("WARNING: repeat cost lowered", warning)
+        self.assertIn(f"{first[:7]}: high -> low", warning)
         self.assertIn("LAB-017", warning)
 
     def test_a_later_commit_does_not_launder_the_tier(self):
         """The first commit is the registration; a committed lowering still warns."""
-        root, protocol = _repo("hours")
-        _set_cost(protocol, "seconds")
+        root, protocol = _repo("high")
+        _set_cost(protocol, "low")
         _git(root, "add", "-A")
         _git(root, "commit", "-qm", "lower")
         self.assertIsNotNone(
-            protocol_history.cost_lowered(
+            protocol_history.repeat_cost_lowered(
                 protocol, protocol_block.head(protocol.read_text())
             )
         )
 
     def test_raised_unchanged_or_unknown_to_git_is_silent(self):
-        root, protocol = _repo("minutes")
+        root, protocol = _repo("high")
         self.assertIsNone(
-            protocol_history.cost_lowered(protocol, _set_cost(protocol, "hours"))
+            protocol_history.repeat_cost_lowered(protocol, _set_cost(protocol, "high"))
         )
         self.assertIsNone(
-            protocol_history.cost_lowered(protocol, _set_cost(protocol, "minutes"))
+            protocol_history.repeat_cost_lowered(protocol, _set_cost(protocol, "high"))
         )
         fresh = protocol.with_name("PROTOCOL-y.md")
-        fresh.write_text(head(cost="seconds") + BODY, encoding="utf-8")
+        fresh.write_text(head(repeat_cost="low") + BODY, encoding="utf-8")
         self.assertIsNone(
-            protocol_history.cost_lowered(fresh, protocol_block.head(fresh.read_text()))
+            protocol_history.repeat_cost_lowered(
+                fresh, protocol_block.head(fresh.read_text())
+            )
         )
         outside = Path(tempfile.mkdtemp()) / "PROTOCOL-z.md"
-        outside.write_text(head(cost="seconds") + BODY, encoding="utf-8")
+        outside.write_text(head(repeat_cost="low") + BODY, encoding="utf-8")
         self.assertIsNone(
-            protocol_history.cost_lowered(
+            protocol_history.repeat_cost_lowered(
                 outside, protocol_block.head(outside.read_text())
             )
         )
 
     def test_protocol_check_and_preflight_carry_the_warning(self):
-        root, protocol = _repo("minutes")
-        _set_cost(protocol, "seconds")
+        root, protocol = _repo("high")
+        _set_cost(protocol, "low")
         report = protocol_report.check_protocol(
             protocol, protocol.read_text(encoding="utf-8"), set(), {}
         )
-        self.assertIn("cost tier lowered", report.cost_lowered or "")
+        self.assertIn("repeat cost lowered", report.repeat_cost_lowered or "")
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             protocol_report.print_report(report)
-        self.assertIn("WARNING: cost tier lowered", out.getvalue())
+        self.assertIn("WARNING: repeat cost lowered", out.getvalue())
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             preflight.preflight_area(protocol.parent)
         self.assertIn("WARNING: ", out.getvalue())
-        self.assertIn("cost tier lowered", out.getvalue())
+        self.assertIn("repeat cost lowered", out.getvalue())
 
 
 class WaivedAudit(unittest.TestCase):
@@ -146,7 +148,12 @@ class WaivedAudit(unittest.TestCase):
     def _protocol(self, cost: str, line: str, frozen: bool = True) -> Path:
         p = self.area / "PROTOCOL-x.md"
         p.write_text(
-            head(cost=cost, frozen=frozen, preflight_audit=line, promises=DEFAULT_BLOCK)
+            head(
+                repeat_cost=cost,
+                frozen=frozen,
+                preflight_audit=line,
+                promises=DEFAULT_BLOCK,
+            )
             + BODY
             + "\n```text\nprompt\n```\n",
             encoding="utf-8",
@@ -154,7 +161,7 @@ class WaivedAudit(unittest.TestCase):
         return p
 
     def test_the_gap_names_the_honest_ways_and_offers_no_word(self):
-        text = self._protocol("minutes", "n/a — x").read_text(encoding="utf-8")
+        text = self._protocol("high", "n/a — x").read_text(encoding="utf-8")
         gap = findings.audit_record_gap(
             self.area, "n/a — RF model training does not require external audit", text
         )
@@ -163,13 +170,13 @@ class WaivedAudit(unittest.TestCase):
         self.assertIn("nobody waives their own", gap)
         self.assertIn("labkit-audit <area> --mode preflight", gap)
         self.assertIn("records the failed attempt", gap)
-        self.assertIn("the cost tier is wrong, not the field", gap)
+        self.assertIn("the repeat cost is wrong, not the field", gap)
 
     def test_audit_record_gap_reads_name_existence_code_block_then_decisions(self):
         """The record named in the head, held step by step: a name of
         another form, a record nobody wrote, one of other code, one of
         another promise block, one with an open finding, and the twin."""
-        text = self._protocol("minutes", "x").read_text(encoding="utf-8")
+        text = self._protocol("high", "x").read_text(encoding="utf-8")
         block = promises.block_stamp(text)
         gap = findings.audit_record_gap(
             self.area, "2026 · scope sha 000000000000 · 0", text
@@ -250,7 +257,7 @@ class WaivedAudit(unittest.TestCase):
         )  # an analysis record's name is not a preflight one
 
     def test_preflight_blocks_a_frozen_waiver_at_minutes_and_passes_seconds(self):
-        self._protocol("minutes", "n/a — not needed")
+        self._protocol("high", "n/a — not needed")
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             rc = preflight.preflight_area(self.area)
@@ -259,19 +266,19 @@ class WaivedAudit(unittest.TestCase):
             "BLOCKER: preflight_audit: `preflight_audit` names no record",
             out.getvalue(),
         )
-        self._protocol("seconds", "n/a — seconds")
+        self._protocol("low", "n/a — low")
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             preflight.preflight_area(self.area)
         self.assertNotIn("names no record", out.getvalue())
 
     def test_protocol_check_warns_on_a_frozen_waiver_at_minutes(self):
-        p = self._protocol("minutes", "n/a — not needed")
+        p = self._protocol("high", "n/a — not needed")
         report = protocol_report.check_protocol(
             p, p.read_text(encoding="utf-8"), set(), {}
         )
         self.assertIn("nobody waives", report.audit_drift or "")
-        p = self._protocol("minutes", "n/a — not needed", frozen=False)
+        p = self._protocol("high", "n/a — not needed", frozen=False)
         report = protocol_report.check_protocol(
             p, p.read_text(encoding="utf-8"), set(), {}
         )

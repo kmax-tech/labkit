@@ -14,15 +14,15 @@ the later stations run; the summary names every blocker again.
 
 What it runs, in order (`preflight_area` shows each station's condition):
   0. protocol        the named PROTOCOL-*.md or the area's only one
-  1. protocol-check  mandatory fields, placeholders, the stamped id, a cost
+  1. protocol-check  mandatory fields, placeholders, the stamped id, a repeat_cost
                      tier lowered since the first commit; an unparseable
                      head ends here
-  2. cost tier       what the lane (`standard_contract.lane`) owes before the
-                     freeze: at `seconds` the agent audit is OPTIONAL (one
+  2. repeat cost       what the lane (`standard_contract.lane`) owes before the
+                     freeze: at `low` the agent audit is OPTIONAL (one
                      audit after the first run suffices,
                      LAB-017 The number of audits follows the cost tier);
-                     `minutes`/`hours` ask for it here; an unfilled cost
-                     counts as `hours`. Told, never counted — "audit due" is
+                     `high` ask for it here; an unfilled repeat cost
+                     counts as `high`. Told, never counted — "audit due" is
                      a reminder, not a blocker; so is the cold-reader line
                      (LAB-102 Cold reader before freezing)
   3. audit findings  the records `labkit-audit` wrote (`audits/*.toml`,
@@ -90,7 +90,7 @@ from labkit.formats.protocol_check import check_fields
 from labkit.formats.protocol_history import (
     check_annotation_validity,
     check_protocol_id,
-    cost_lowered,
+    repeat_cost_lowered,
 )
 from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.scope_sha import AREA_GLOBS, area_stamp
@@ -194,11 +194,11 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:
     0. Choose the protocol and read it. Ends at once with 2 when the named
        file is missing or the folder holds several protocols and none is
        named.
-    1. protocol-check — fields, placeholders, id, cost. A head that does
+    1. protocol-check — fields, placeholders, id, repeat_cost. A head that does
        not parse is the one early end: the blocker is told, the summary
        follows, exit 1 — the later stations would read a head that is not
        there.
-    2. cost tier — what the lane owes before the freeze; told, never
+    2. repeat cost — what the lane owes before the freeze; told, never
        counted.
     3. audit findings — every record of the area, always; the audit
        line's coverage only where the lane owes the freeze and the head
@@ -233,14 +233,14 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:
     check_protocol_fields(findings, protocol, report, head)
 
     # the facts every later station reads, read once
-    lane = standard_contract.lane(head.cost)
+    lane = standard_contract.lane(head.repeat_cost)
     frozen = head.frozen
     repo = layout_root(area)
     git_repo = git_root(area)
 
-    # 2. cost tier — told, never counted
-    findings.header("cost tier")
-    for line in cost_tier_lines(head.cost, lane):
+    # 2. repeat cost — told, never counted
+    findings.header("repeat cost")
+    for line in repeat_cost_lines(head.repeat_cost, lane):
         findings.note(line)
 
     # 3. audit findings — the records always; the line's coverage where the
@@ -287,7 +287,7 @@ def check_protocol_fields(
     """Station 1: the field report of protocol-check (REPORT: the owed
     fields by cut, the graduation at frozen = true), the stamped id against
     the repo's others and the bound annotation evidence
-    (`check_annotation_validity`), a cost tier lowered since the first commit. A must
+    (`check_annotation_validity`), a repeat cost lowered since the first commit. A must
     gap or a must placeholder blocks; a should gap, a should placeholder
     and a lowered tier warn; an id finding carries its grade (a changed id
     warns, a doubled one blocks)."""
@@ -295,7 +295,7 @@ def check_protocol_fields(
     id_findings = check_protocol_id(protocol, head, ids) + check_annotation_validity(
         protocol, protocol.read_text(encoding="utf-8"), ids
     )
-    lowered = cost_lowered(protocol, head)
+    lowered = repeat_cost_lowered(protocol, head)
     for label in report.missing_must:
         findings.block(f"MISSING (must): {label}")
     for n, label in report.must_holes:
@@ -322,24 +322,26 @@ def check_protocol_fields(
         findings.note("  ok")
 
 
-def cost_tier_lines(cost: str | None, lane: "standard_contract.Lane") -> list[str]:
+def repeat_cost_lines(
+    repeat_cost: str | None, lane: "standard_contract.Lane"
+) -> list[str]:
     """Station 2: what the lane owes before the freeze, in sentences — the
-    audit where LANE owes the freeze (an unfilled COST reads as hours), the
+    audit where LANE owes the freeze (an unfilled COST reads as high), the
     cold reader always. Told by the caller, counted by nobody."""
     if not lane.freeze:
         audit = (
-            f"  {lane.cost_tier} — rerunnable at will: the agent audit is OPTIONAL before "
+            f"  {lane.repeat_cost} — rerunnable at will: the agent audit is OPTIONAL before "
             "freezing; one audit after the first run, on real output, "
             "suffices (LAB-017 The number of audits follows the cost tier)"
         )
-    elif cost is None:
+    elif repeat_cost is None:
         audit = (
-            "  not filled — treated as `hours`: the experiment-preflight "
-            "audit is due before freezing (LAB-015 Preflight audit before freezing); set `cost` in the head "
+            "  not filled — treated as `high`: the experiment-preflight "
+            "audit is due before freezing (LAB-015 Preflight audit before freezing); set `repeat_cost` in the head "
             "to say otherwise"
         )
     else:
-        audit = f"  {cost} — the experiment-preflight audit is due before freezing (LAB-015 Preflight audit before freezing)"
+        audit = f"  {repeat_cost} — the experiment-preflight audit is due before freezing (LAB-015 Preflight audit before freezing)"
     return [
         audit,
         "  a cold reader is due while the prose can still change (LAB-102 Cold reader before freezing): `labkit-audit <AREA> --mode clarity` — static "

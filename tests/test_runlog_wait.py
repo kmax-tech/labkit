@@ -93,7 +93,7 @@ class TestWait(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(
-                head(cost="seconds", promises=None)
+                head(repeat_cost="low", promises=None)
                 + "\n- **Question / hypothesis:** how many?\n",
                 encoding="utf-8",
             )

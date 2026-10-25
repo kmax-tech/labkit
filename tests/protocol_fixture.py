@@ -1,7 +1,7 @@
 """A protocol head for test fixtures: the ```toml block with its [protocol] table.
 
 One home for the shape, so a fixture states only what it varies:
-`head(cost="seconds", frozen=True)`.
+`head(repeat_cost="low", frozen=True)`.
 """
 
 from __future__ import annotations
@@ -100,7 +100,7 @@ def run_record(
         "run_kind": "measurement",
         "unfrozen_ack": False,
         "audit_failed": None,
-        "cost_tier": None,
+        "repeat_cost": None,
         "promises": None,
         "script_sha": "no-script",
         "untracked_sources": [],
@@ -171,7 +171,7 @@ def head(
     *,
     id: str = PID,
     type: str = "exploratory",
-    cost: str = "minutes",
+    repeat_cost: str = "high",
     kind: str | None = None,
     frozen: bool = False,
     preflight_audit: str = "",
@@ -183,7 +183,7 @@ def head(
     labels: tuple[str, ...] | None = None,
 ) -> str:
     """The fenced TOML block; `promises` is appended inside it verbatim. A
-    frozen or seconds head without an explicit block carries `DEFAULT_BLOCK`;
+    frozen or low head without an explicit block carries `DEFAULT_BLOCK`;
     `None` means no block even then (the mutant of standard 0.19's rule).
     RESULT is the run id a `[result]` table declares (phase 3, 2026-10-21);
     MODEL the alias of a `[model]` table, ARMS its `[model.arms.<arm>]`
@@ -195,16 +195,18 @@ def head(
     writes the placeholder."""
     if kind is None:
         kind = "apply" if model is not None else "compute"
-    if promises == "" and (frozen or cost == "seconds"):
-        promises = DEFAULT_BLOCK  # frozen, or at seconds every run is the full run
+    if promises == "" and (frozen or repeat_cost == "low"):
+        promises = (
+            DEFAULT_BLOCK  # frozen, or at low repeat cost every run is the full run
+        )
     promises = promises or ""
     lines = [
         "```toml",
         "[protocol]",
-        'standard = "0.22"',
+        'standard = "0.23"',
         f'id = "{id}"',
         f'type = "{type}"',
-        f'cost = "{cost}"',
+        f'repeat_cost = "{repeat_cost}"',
         f'kind = "{kind}"',
         f"frozen = {'true' if frozen else 'false'}",
         f'preflight_audit = "{preflight_audit}"',
@@ -249,7 +251,7 @@ def head_commit(root: Path) -> str:
 
 def started_at(run: Path, commit: str) -> None:
     """Record RUN as started at COMMIT (its config.json `git`), as a run in
-    a repository records it: report-check holds the seconds registration
+    a repository records it: report-check holds the low registration
     to the commit of the first measurement."""
     cfg = run / "config.json"
     data = json.loads(cfg.read_text(encoding="utf-8"))

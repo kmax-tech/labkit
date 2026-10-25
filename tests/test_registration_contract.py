@@ -106,21 +106,21 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
             self.assertTrue((r.dir / "config.json").is_file())
 
     def test_a_full_run_at_seconds_without_a_block_is_refused(self) -> None:
-        """At cost = seconds nothing freezes, but every run is the full run:
+        """At repeat_cost = low nothing freezes, but every run is the full run:
         the registration it is held to is data (standard 0.19)."""
         with tempfile.TemporaryDirectory() as d:
-            area = _area(d, head(cost="seconds", promises=None) + BODY)
+            area = _area(d, head(repeat_cost="low", promises=None) + BODY)
             with self.assertRaises(SystemExit) as cm:
                 _start(area, {}, run_kind="measurement")
             self.assertIn("a full run is held to the registration", str(cm.exception))
             self.assertFalse((area / "runs").exists())
 
-    def test_seconds_refuses_a_probe_even_when_no_ids_are_registered(self) -> None:
+    def test_low_refuses_a_probe_even_when_no_ids_are_registered(self) -> None:
         """Seconds has no probe stage; the complete count is its instrument check."""
         with tempfile.TemporaryDirectory() as d:
             area = _area(
                 d,
-                head(cost="seconds", promises=None)
+                head(repeat_cost="low", promises=None)
                 + "- **Question / hypothesis:** how many?\n",
             )
             with self.assertRaisesRegex(SystemExit, "no separate probe stage"):
@@ -147,11 +147,11 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
             any("[[promise]]" in m for m in report.missing_must), report.missing_must
         )
 
-    def test_seconds_without_a_block_is_a_must_finding_once_an_id_is_registered(
+    def test_low_without_a_block_is_a_must_finding_once_an_id_is_registered(
         self,
     ) -> None:
         registered = (
-            head(cost="seconds", promises=None)
+            head(repeat_cost="low", promises=None)
             + "- **Success / failure criterion:** [C1] x\n"
         )
         report = protocol_check.check_fields(registered)
@@ -160,7 +160,7 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
             report.missing_must,
         )
         # the twin: a computation names no id and owes no table (0.87.1)
-        report = protocol_check.check_fields(head(cost="seconds", promises=None))
+        report = protocol_check.check_fields(head(repeat_cost="low", promises=None))
         self.assertFalse(
             any("declares no [[promise]]" in m for m in report.missing_must),
             report.missing_must,

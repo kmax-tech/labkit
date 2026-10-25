@@ -84,7 +84,7 @@ class Declaration(unittest.TestCase):
 
     def protocol(self, answer: str, declared: str | None = None) -> str:
         return (
-            head(cost="seconds", result=declared)
+            head(repeat_cost="low", result=declared)
             + "\n## Result\n\n"
             + f"- **Recorded results:** {answer}\n"
         )
@@ -132,7 +132,7 @@ class LaneDuties(unittest.TestCase):
     phase 5 may change how a field is recognised, not whether it is owed —
     a change to a list here is a change of the standard."""
 
-    SECONDS = [
+    LOW = [
         "Terms of this protocol",
         "Question / hypothesis",
         "Data / scope",
@@ -198,22 +198,23 @@ class LaneDuties(unittest.TestCase):
         must, should = protocol_check.owed(text, protocol_block.head(text))
         return [f.label for f in must], [f.label for f in should]
 
-    def test_seconds_owes_the_cut_and_nothing_graduates(self):
-        self.assertEqual(self.owed(head(cost="seconds")), (self.SECONDS, []))
-        with_model = head(cost="seconds", model="haiku")
+    def test_low_owes_the_cut_and_nothing_graduates(self):
+        self.assertEqual(self.owed(head(repeat_cost="low")), (self.LOW, []))
+        with_model = head(repeat_cost="low", model="haiku")
         self.assertEqual(self.owed(with_model), (self.SECONDS_MODEL, []))
-        prose_only = head(cost="seconds") + "- **Model / tool:** haiku\n"
-        self.assertEqual(
-            self.owed(prose_only), (self.SECONDS, [])
-        )  # prose decides nothing
+        prose_only = head(repeat_cost="low") + "- **Model / tool:** haiku\n"
+        self.assertEqual(self.owed(prose_only), (self.LOW, []))  # prose decides nothing
 
     def test_the_full_form_graduates_its_shoulds_at_the_freeze(self):
         self.assertEqual(
-            self.owed(head(cost="minutes", kind="fit")),
+            self.owed(head(repeat_cost="high", kind="fit")),
             (self.FULL_MUST, self.FULL_SHOULD),
         )
         frozen = head(
-            cost="minutes", kind="fit", frozen=True, preflight_audit="2026-10-21 · x"
+            repeat_cost="high",
+            kind="fit",
+            frozen=True,
+            preflight_audit="2026-10-21 · x",
         )
         self.assertEqual(self.owed(frozen), (self.FULL_MUST + self.FULL_SHOULD, []))
 
@@ -221,10 +222,13 @@ class LaneDuties(unittest.TestCase):
         """Since phase 5 the declaration makes the result due; a run id in the
         Runs list declares nothing (until 0.101.0 it did, minus "prepare")."""
         frozen = head(
-            cost="minutes", kind="fit", frozen=True, preflight_audit="2026-10-21 · x"
+            repeat_cost="high",
+            kind="fit",
+            frozen=True,
+            preflight_audit="2026-10-21 · x",
         )
         declared = head(
-            cost="minutes",
+            repeat_cost="high",
             kind="fit",
             frozen=True,
             preflight_audit="2026-10-21 · x",

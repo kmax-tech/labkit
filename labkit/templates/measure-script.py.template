@@ -8,8 +8,8 @@ Usage:
         Instrument check: twelve items through the real pipeline into a
         throwaway file; prints parser cases to paste into the test.
     ../../.venv/bin/python scripts/01_measure.py
-        The full run, recorded by runlog (cost = "seconds": in the
-        foreground; minutes or hours: `runlog start <area> -- …`).
+        The full run, recorded by runlog (repeat_cost = "low": in the
+        foreground; at high repeat cost: `runlog start <area> -- …`).
     ../../.venv/bin/python scripts/01_measure.py --eval-only
         Re-evaluate the kept rows; no model call.
 

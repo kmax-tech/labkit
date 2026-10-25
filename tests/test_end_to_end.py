@@ -1,6 +1,6 @@
 """Every supported skeleton, end to end on the real chain: stamp, fill, run,
-check, adopt — the count at seconds, the prompt skeleton at seconds with the
-model faked, the estimator at minutes through the freeze. Each step is the
+check, adopt — the count at low repeat cost, the prompt skeleton at low repeat cost with the
+model faked, the estimator at high repeat cost through the freeze. Each step is the
 command an agent runs (`labkit-init exp`, `protocol-fill`, the area's own
 scripts under the interpreter, `finalize`, `protocol-fill --from-run`, the
 stop hook, the pre-commit's `report-check --if-reported --staged`), and
@@ -65,7 +65,7 @@ class Lab:
         self.env = {
             **os.environ,
             "CLAUDE_PROJECT_DIR": str(self.root),
-            "LABKIT_DETACHED": "1",  # a full run at minutes starts detached
+            "LABKIT_DETACHED": "1",  # a full run at high repeat cost starts detached
         }
 
     def close(self) -> None:
@@ -211,7 +211,7 @@ def assert_draws(
 
 
 class Count(unittest.TestCase):
-    """The counting skeleton at seconds: lines per document, three documents."""
+    """The counting skeleton at low repeat cost: lines per document, three documents."""
 
     run_id = ""  # the kept run, from `_adopted`
     committed = False  # `_committed`: the adopted number is in HEAD
@@ -224,7 +224,7 @@ class Count(unittest.TestCase):
         docs.mkdir(parents=True)
         for name, lines in (("a.txt", 1), ("b.txt", 2), ("c.txt", 6)):
             (docs / name).write_text("x\n" * lines, encoding="utf-8")
-        cls.area, cls.protocol = cls.lab.exp("lines", cost="seconds", kind="compute")
+        cls.area, cls.protocol = cls.lab.exp("lines", repeat_cost="low", kind="compute")
         cls.measure = cls.area / "scripts" / "01_measure.py"
         _replace(
             cls.measure,
@@ -265,7 +265,7 @@ class Count(unittest.TestCase):
         cls.lab.close()
 
     def test_01_the_stamp_is_the_contracts_skeleton(self):
-        sk = sc.skeleton("seconds", "compute", False)
+        sk = sc.skeleton("low", "compute", False)
         self.assertIs(sk, sc.COMPUTE)
         self.assertEqual(
             sorted(p.name for p in (self.area / "scripts").iterdir()),
@@ -421,7 +421,7 @@ def _load(measure: Path, name: str):
 
 
 class Judge(unittest.TestCase):
-    """The prompt skeleton at seconds, the model faked: twelve texts, a
+    """The prompt skeleton at low repeat cost, the model faked: twelve texts, a
     registered question the text answers, a placebo for the null lane."""
 
     run_id = ""  # the kept run, adopted and committed by `_adopted`
@@ -448,7 +448,7 @@ class Judge(unittest.TestCase):
             encoding="utf-8",
         )
         cls.area, cls.protocol = cls.lab.exp(
-            "judge", cost="seconds", kind="apply", model="haiku"
+            "judge", repeat_cost="low", kind="apply", model="haiku"
         )
         scripts = cls.area / "scripts"
         _replace(
@@ -530,7 +530,7 @@ class Judge(unittest.TestCase):
         return out
 
     def test_01_the_stamp_is_the_contracts_skeleton(self):
-        self.assertIs(sc.skeleton("seconds", "apply", True), sc.MODEL)
+        self.assertIs(sc.skeleton("low", "apply", True), sc.MODEL)
         self.assertEqual(
             sorted(p.name for p in (self.area / "scripts").iterdir()),
             sorted(dest for _, dest in sc.MODEL.scripts),
@@ -601,7 +601,7 @@ class Judge(unittest.TestCase):
             env=type(self).lab.env,
         )
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-        self.assertIn("--probe is not available at cost='seconds'", result.stderr)
+        self.assertIn("--probe is not available at repeat_cost='low'", result.stderr)
 
     def _blocker(self) -> Path:
         """A second analysis record of the kept run, holding one BLOCKER."""
@@ -809,7 +809,7 @@ class Judge(unittest.TestCase):
 
 
 class Estimator(unittest.TestCase):
-    """The estimator skeleton at minutes, through the freeze: a threshold on
+    """The estimator skeleton at high repeat cost, through the freeze: a threshold on
     one feature, which the gold follows; the null lane permuted."""
 
     @classmethod
@@ -831,7 +831,9 @@ class Estimator(unittest.TestCase):
                 }
             )
         raw.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
-        cls.area, cls.protocol = cls.lab.exp("threshold", cost="minutes", kind="fit")
+        cls.area, cls.protocol = cls.lab.exp(
+            "threshold", repeat_cost="high", kind="fit"
+        )
         scripts = cls.area / "scripts"
         _replace(
             scripts / "00_prepare.py",
@@ -907,7 +909,7 @@ class Estimator(unittest.TestCase):
         cls.lab.close()
 
     def test_01_the_stamp_is_the_contracts_skeleton(self):
-        self.assertIs(sc.skeleton("minutes", "fit", False), sc.ESTIMATOR)
+        self.assertIs(sc.skeleton("high", "fit", False), sc.ESTIMATOR)
         self.assertEqual(
             sorted(p.name for p in (self.area / "scripts").iterdir()),
             sorted(dest for _, dest in sc.ESTIMATOR.scripts),
@@ -933,7 +935,7 @@ class Estimator(unittest.TestCase):
             ],
         )
         # `labkit-init exp threshold --report`: the † fields, filled now
-        lab.exp("threshold", cost="minutes", report=True)
+        lab.exp("threshold", repeat_cost="high", report=True)
         lab.fill_open(self.protocol)
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):

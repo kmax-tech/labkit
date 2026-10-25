@@ -3,7 +3,7 @@
 Two phases of `runlog.Run`'s start live here: the preparation
 (`prepare`: the protocol binding, the promise snapshot, the config
 frozen; it refuses what cannot be read) and the checks the constructor
-sequences — the seconds registration (`registration_refusal`), the
+sequences — the low registration (`registration_refusal`), the
 detach gate (`foreground_refusal`, with `foreground_timeout`), and for a
 full run the freeze gate (`freeze_gate`: undecided blockers, the freeze
 or the registration, the acknowledgement over a failed audit). Each
@@ -109,7 +109,7 @@ def protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
 
 def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
     """Why a FULL run may not start on this protocol — empty means it may."""
-    from labkit.formats.protocol_check import seconds_registration_missing
+    from labkit.formats.protocol_check import low_registration_missing
 
     text, head = bound.text, bound.head
     if text is None or head is None:
@@ -126,13 +126,13 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
             f"needs a bound protocol (`labkit-init exp` stamps it)"
         ]
     # the freeze or the registration: the lane's answer (`standard_contract`)
-    if lane(head.cost).registration:
-        missing = seconds_registration_missing(text)
+    if lane(head.repeat_cost).registration:
+        missing = low_registration_missing(text)
         if not missing:
             return []
         return [
-            f'{path.name}: `cost = "{head.cost}"`, but the registration is not '
-            f"written: {', '.join(missing)} — at seconds the gate is the "
+            f'{path.name}: `repeat_cost = "{head.repeat_cost}"`, but the registration is not '
+            f"written: {', '.join(missing)} — at low repeat cost the gate is the "
             f"registration the kind owes (a computation its question; a fit or an apply "
             f"also criterion · admissibility condition · null condition; with a "
             f"model the data profile), not the freeze (LAB-003 No run without an "
@@ -175,12 +175,15 @@ def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
 
 def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None":
     """The failed audit attempt an acknowledged full run rests on, or
-    None at `cost = "seconds"`, where no audit is owed before the run. Raises
+    None at `repeat_cost = "low"`, where no audit is owed before the run. Raises
     SystemExit when none fits: the hatch is for an audit the backend refused,
     not for one nobody started. The attempt must name the code as it stamps
     now and, under a protocol, the promise block as it reads now, and its
     call must have had the default timeout at least (`findings.ATTEMPT_TIMEOUT_S`)."""
-    if bound.head is not None and PREFLIGHT_AUDIT not in lane(bound.head.cost).audits:
+    if (
+        bound.head is not None
+        and PREFLIGHT_AUDIT not in lane(bound.head.repeat_cost).audits
+    ):
         return None
     try:
         sha = area_stamp(base_dir)[0]
@@ -401,7 +404,7 @@ class Prepared:
     Attributes:
         derived_from: The completed parent run, as config.json records it.
         bound: The protocol binding (`protocol_binding`).
-        cost_tier: The head's cost, None when unbound or unfilled.
+        repeat_cost: The head's repeat cost, None when unbound or unfilled.
         block: The parsed promise block, None without tables.
         promises: The snapshot of the block the record carries (`promises.snapshot`).
         config: The run's config, frozen now — what the checks hold is what
@@ -411,7 +414,7 @@ class Prepared:
 
     derived_from: str | None
     bound: _Bound
-    cost_tier: str | None
+    repeat_cost: str | None
     block: "promises.PromiseTables | None"
     promises: dict | None
     config: dict
@@ -435,20 +438,20 @@ def prepare(
     run_kind = parse_run_kind(run_kind)
     derived = _derived_parent(base_dir, derived_from)
     bound = protocol_binding(base_dir, protocol)
-    cost = bound.head.cost if bound.head is not None else None
+    repeat_cost = bound.head.repeat_cost if bound.head is not None else None
     # Seconds uses the complete measurement as its instrument check.
     # Rationale: docs/notes/2026-10-20-run-kinds.md.
-    if run_kind == "probe" and not lane(cost).probe_allowed:
+    if run_kind == "probe" and not lane(repeat_cost).probe_allowed:
         raise SystemExit(
-            "runlog: run_kind='probe' is not allowed at cost='seconds'; "
+            "runlog: run_kind='probe' is not allowed at repeat_cost='low'; "
             "run the full measurement with run_kind='measurement' — "
-            "this cost tier has no separate probe stage"
+            "this repeat cost has no separate probe stage"
         )
     block, snapshot = _promise_snapshot(base_dir, bound.text)
     return Prepared(
         derived_from=derived,
         bound=bound,
-        cost_tier=cost,
+        repeat_cost=repeat_cost,
         block=block,
         promises=snapshot,
         config=dict(config),
@@ -483,9 +486,9 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
     In order: an undecided BLOCKER of a preflight audit refuses, with or
     without the acknowledgement — a finding nobody read is not an unfrozen
     protocol. Then the gaps (`_freeze_findings`: the freeze at
-    minutes/hours, the registration at seconds): none, and the run starts
+    high repeat cost, the registration at low repeat cost): none, and the run starts
     plain; gaps and `LABKIT_UNFROZEN=1`, and the run starts acknowledged —
-    at minutes/hours only over an audit that could NOT run
+    at high repeat cost only over an audit that could NOT run
     (`_audit_unavailable`, SystemExit without one), recorded and told, its
     number unreportable; gaps alone refuse. The refusals name the
     consequence and offer no way round, and they say "probe", never
@@ -511,10 +514,10 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
             + "\n  ".join(gaps)
             + "\nFreeze first: `preflight <AREA>` clean, audit stamped, "
             "`frozen = true` "
-            '(at cost = "seconds": the question written suffices, with a model also criterion, admissibility condition and data profile). '
+            '(at repeat_cost = "low": the question written suffices, with a model also criterion, admissibility condition and data profile). '
             "No other run yields a reported number: a probe (run_kind='probe') "
             "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
-            "minutes/hours only over an audit the backend refused, "
+            "high repeat cost only over an audit the backend refused, "
             f"audits/*{findings.FAILED_SUFFIX} written by labkit-audit) are "
             "recorded as such, and report-check refuses their numbers."
         )

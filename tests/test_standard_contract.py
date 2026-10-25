@@ -14,22 +14,22 @@ from labkit.formats.protocol_check import FIELDS
 
 
 class Lanes(unittest.TestCase):
-    def test_seconds_owes_the_registration_not_the_freeze(self):
-        ln = sc.lane("seconds")
+    def test_low_owes_the_registration_not_the_freeze(self):
+        ln = sc.lane("low")
         self.assertEqual(
             (ln.freeze, ln.registration, ln.audits, ln.cut),
-            (False, True, ("analysis",), "seconds"),
+            (False, True, ("analysis",), "low"),
         )
         self.assertEqual(
             (ln.probe_allowed, ln.foreground, ln.provenance), (False, True, True)
         )
 
     def test_minutes_and_hours_owe_the_freeze_with_its_audit(self):
-        for cost in ("minutes", "hours"):
+        for cost in ("high",):
             with self.subTest(cost):
                 ln = sc.lane(cost)
                 self.assertEqual(
-                    (ln.cost_tier, ln.freeze, ln.registration, ln.audits, ln.cut),
+                    (ln.repeat_cost, ln.freeze, ln.registration, ln.audits, ln.cut),
                     (cost, True, False, ("preflight", "analysis"), "full"),
                 )
                 self.assertEqual(
@@ -38,21 +38,21 @@ class Lanes(unittest.TestCase):
                 )
 
     def test_an_unfilled_cost_reads_as_hours(self):
-        self.assertEqual(sc.lane(None), sc.lane("hours"))
-        self.assertEqual(sc.cost_tier(None), "hours")
+        self.assertEqual(sc.lane(None), sc.lane("high"))
+        self.assertEqual(sc.effective_repeat_cost(None), "high")
 
     def test_a_tier_the_head_cannot_carry_is_refused(self):
         with self.assertRaises(ValueError):
             sc.lane("days")
 
     def test_the_tiers_are_the_heads(self):
-        self.assertEqual((sc.SECONDS, sc.MINUTES, sc.HOURS), protocol_block.COST_TIERS)
+        self.assertEqual((sc.LOW, sc.HIGH), protocol_block.REPEAT_COSTS)
 
 
 class Registration(unittest.TestCase):
     def test_a_count_registers_its_question_a_bar_its_criterion_and_reference(self):
         """Standard 0.22: the registration follows what the number asserts
-        (`kind`), not the model technology — a RandomForest at seconds owed
+        (`kind`), not the model technology — a RandomForest at low repeat cost owed
         nothing but its question (fifth haiku round, t5 and t18)."""
         self.assertEqual(
             sc.registration_fields("compute", False), ("Question / hypothesis",)
@@ -73,24 +73,24 @@ class Registration(unittest.TestCase):
             with self.subTest(bad), self.assertRaises(ValueError):
                 sc.registration_fields(bad, False)
             with self.subTest(bad), self.assertRaises(ValueError):
-                sc.skeleton("seconds", bad, False)
+                sc.skeleton("low", bad, False)
         self.assertFalse(sc.has_bar("compute"))
         self.assertTrue(sc.has_bar("fit") and sc.has_bar("apply"))
 
-    def test_the_labels_are_the_templates_must_fields_of_the_seconds_cut(self):
+    def test_the_labels_are_the_templates_must_fields_of_the_low_cut(self):
         by_label = {f.label: f for f in FIELDS}
         for label in sc.registration_fields("apply", True):
             with self.subTest(label):
                 self.assertIn(label, by_label)
                 self.assertEqual(by_label[label].level, "must")
-                self.assertIn(by_label[label].seconds, ("s", "sb", "sm"))
+                self.assertIn(by_label[label].low_cut, ("l", "lb", "lm"))
 
 
 class TheRelease(unittest.TestCase):
     def test_the_description_names_a_probe_only_where_one_precedes_the_run(self):
-        for cost in (None, "seconds", "minutes", "hours"):
+        for cost in (None, "low", "high"):
             for kind, model in (("compute", False), ("fit", False), ("apply", True)):
-                with self.subTest(cost=cost, kind=kind, model=model):
+                with self.subTest(repeat_cost=cost, kind=kind, model=model):
                     first = sc.describe(cost, kind, model)[0]
                     owed = (
                         sc.skeleton(cost, kind, model).probe
@@ -109,10 +109,10 @@ class TheRelease(unittest.TestCase):
 
 class Skeletons(unittest.TestCase):
     def test_which_skeleton_an_area_gets(self):
-        """By the kind, at every tier: a fit at seconds got the count's
+        """By the kind, at every tier: a fit at low repeat cost got the count's
         skeleton until 0.104 (fifth haiku round)."""
-        for cost in ("seconds", "minutes", "hours", None):
-            with self.subTest(cost=cost):
+        for cost in ("low", "high", None):
+            with self.subTest(repeat_cost=cost):
                 self.assertIs(sc.skeleton(cost, "compute", False), sc.COMPUTE)
                 self.assertIs(sc.skeleton(cost, "fit", False), sc.ESTIMATOR)
                 self.assertIs(sc.skeleton(cost, "fit", True), sc.ESTIMATOR)
@@ -139,26 +139,26 @@ class Described(unittest.TestCase):
     def test_every_tier_names_its_check_and_what_comes_before_the_run(self):
         for cost, kind, model in (
             (None, "fit", False),
-            ("seconds", "compute", False),
-            ("seconds", "apply", True),
+            ("low", "compute", False),
+            ("low", "apply", True),
         ):
-            with self.subTest(cost=cost, kind=kind, model=model):
+            with self.subTest(repeat_cost=cost, kind=kind, model=model):
                 text = "\n".join(sc.describe(cost, kind, model))
                 self.assertIn("scripts/02_analyze.py --check", text)
                 self.assertIn(
-                    "registration written" if cost == "seconds" else "frozen = true",
+                    "registration written" if cost == "low" else "frozen = true",
                     text,
                 )
         self.assertIn(
             "Success / failure criterion",
-            "\n".join(sc.describe("seconds", "apply", True)),
+            "\n".join(sc.describe("low", "apply", True)),
         )
         self.assertIn(
             "Success / failure criterion",
-            "\n".join(sc.describe("seconds", "fit", False)),
+            "\n".join(sc.describe("low", "fit", False)),
         )
         self.assertNotIn(
-            "Success / failure", "\n".join(sc.describe("seconds", "compute", False))
+            "Success / failure", "\n".join(sc.describe("low", "compute", False))
         )
 
 

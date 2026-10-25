@@ -593,10 +593,10 @@ def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
 
 
 def _cost_of(protocol: Path) -> str | None:
-    """The protocol head's cost tier, None when the head does not parse (the
+    """The protocol head's repeat cost, None when the head does not parse (the
     checker reports that; this is only for the summary's wording)."""
     try:
-        return protocol_block.head(protocol.read_text(encoding="utf-8")).cost
+        return protocol_block.head(protocol.read_text(encoding="utf-8")).repeat_cost
     except protocol_block.BlockError:
         return None
 
@@ -639,7 +639,7 @@ def _not_checked(findings: Findings, protocol: Path, bundle_to: Path | None) -> 
         # fields are, and the pre-commit holds them (judge probe, 2026-10-20)
         findings.note(
             "schema, gate labels: not checked — the agent's review is not owed "
-            "at cost seconds, the measurement checks the instrument (--bundle "
+            "at repeat cost low, the measurement checks the instrument (--bundle "
             "hands them to the code-check agent anyway); the protocol's open "
             "fields are owed: protocol-fill <PROTOCOL> --list"
         )

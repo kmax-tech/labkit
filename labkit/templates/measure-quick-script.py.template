@@ -4,7 +4,7 @@
     ../../.venv/bin/python scripts/01_measure.py            # count, keep, print the number + run_id
     ../../.venv/bin/python scripts/02_analyze.py --check    # recompute from the kept rows; hold metrics.json and the protocol to it
 
-cost = "seconds" (the protocol head says so) — no freeze, no audit before the run,
+repeat_cost = "low" (the protocol head says so) — no freeze, no audit before the run,
 the run itself is the instrument check; the one analysis audit comes when
 the number is promoted or steers a decision (LAB-017 The number of audits follows the cost tier). The number is produced here, never
 retyped (LAB-041 Generate numbers, don't retype them): the protocol's Result line cites it with the run_id, and
@@ -94,7 +94,7 @@ def main() -> None:
     items = rows(ids)
     OUT.parent.mkdir(exist_ok=True)
     # data= freezes every input the number reads (sha and rows; a directory:
-    # sha over each file) in the run; `finalize` refuses a run of seconds
+    # sha over each file) in the run; `finalize` refuses a run at low repeat cost
     # without it, and one whose source or OUT is not in git.
     frozen = {"source": SOURCE, **({"inputs": INPUTS} if INPUTS else {})}
     with runlog.run("<name>", config={k: str(p.relative_to(REPO)) for k, p in frozen.items()},

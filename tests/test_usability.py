@@ -75,14 +75,12 @@ class LogParser(unittest.TestCase):
         self.assertEqual(got.wall_seconds, 3600)
 
 
-def _probe(
-    root: Path, metrics: dict, frozen: bool = False, tier: str = "seconds"
-) -> None:
+def _probe(root: Path, metrics: dict, frozen: bool = False, tier: str = "low") -> None:
     area = root / "experiments" / "01-docs-per-case"
     run = area / "runs" / "2026-10-05T18-00-00_ab12"
     run.mkdir(parents=True)
     (area / "PROTOCOL-docs-per-case.md").write_text(
-        head(cost=tier, frozen=frozen), encoding="utf-8"
+        head(repeat_cost=tier, frozen=frozen), encoding="utf-8"
     )
     (run / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
     (run / "config.json").write_text(
@@ -95,7 +93,7 @@ def _probe(
                         "id": "p-0123456789abcdef",
                         "path": "PROTOCOL-docs-per-case.md",
                     },
-                    "cost_tier": tier,
+                    "repeat_cost": tier,
                 }
             )
         ),
@@ -127,12 +125,12 @@ class LoadProbeRun(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "probe"
             root.mkdir()
-            _probe(root, {"mean_docs_per_case": 3.5}, tier="minutes")
+            _probe(root, {"mean_docs_per_case": 3.5}, tier="high")
             pr = usability_score.load_probe_run(root)
             self.assertTrue(pr.bound)
             self.assertEqual(pr.protocol, pr.area / "PROTOCOL-docs-per-case.md")
             self.assertEqual(pr.protocol_as_recorded, "PROTOCOL-docs-per-case.md")
-            self.assertEqual(pr.cost_tier, "minutes")
+            self.assertEqual(pr.repeat_cost, "high")
 
     def test_a_path_without_an_id_is_not_bound(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -176,7 +174,7 @@ class ScoreVerdict(unittest.TestCase):
         self.assertTrue(sc["number_ok"])
         self.assertEqual(sc["bound_to"], "PROTOCOL-docs-per-case.md")
         self.assertFalse(sc["frozen"])
-        self.assertEqual(sc["cost_tier"], "seconds")
+        self.assertEqual(sc["repeat_cost"], "low")
         self.assertEqual(sc["log"]["wall_seconds"], 150)
 
     def test_right_number_under_another_key_does_not_count(self):
@@ -216,21 +214,21 @@ class ScoreVerdict(unittest.TestCase):
 
 class StampFlags(unittest.TestCase):
     """The probe stamps each task as the house route does (probe 2026-10-07:
-    staged without --cost the count got the model skeleton)."""
+    staged without --repeat-cost the count got the model skeleton)."""
 
-    def test_count_gets_the_seconds_cut_without_a_model(self):
+    def test_count_gets_the_low_cut_without_a_model(self):
         self.assertEqual(
-            usability.stamp_flags("count", None, False), ("seconds", "compute", False)
+            usability.stamp_flags("count", None, False), ("low", "compute", False)
         )
 
-    def test_judge_gets_the_seconds_cut_with_a_model(self):
+    def test_judge_gets_the_low_cut_with_a_model(self):
         self.assertEqual(
-            usability.stamp_flags("judge", None, False), ("seconds", "apply", True)
+            usability.stamp_flags("judge", None, False), ("low", "apply", True)
         )
 
     def test_an_explicit_tier_wins_and_unset_stamps_none(self):
         self.assertEqual(
-            usability.stamp_flags("count", "hours", False), ("hours", "compute", False)
+            usability.stamp_flags("count", "high", False), ("high", "compute", False)
         )
         self.assertEqual(
             usability.stamp_flags("count", "unset", False), (None, "compute", False)
@@ -238,7 +236,7 @@ class StampFlags(unittest.TestCase):
 
     def test_a_fit_is_staged_as_a_fit_without_a_model(self):
         self.assertEqual(
-            usability.stamp_flags("fit", None, False), ("seconds", "fit", False)
+            usability.stamp_flags("fit", None, False), ("low", "fit", False)
         )
 
     def test_the_fit_data_are_planted_from_the_operators_file_or_refused(self):
@@ -263,18 +261,18 @@ class StampFlags(unittest.TestCase):
         claim keys; until the 0.22 rename it was rewritten to an apply in
         silence (test_annotation_validity)."""
         self.assertEqual(
-            usability.stamp_flags("count", None, True), ("seconds", "compute", True)
+            usability.stamp_flags("count", None, True), ("low", "compute", True)
         )
 
 
 class TierSentence(unittest.TestCase):
-    """The task sheet names the stamped tier: staged at `minutes`, a cold
-    Sonnet agent set the head to `seconds` and took the short lane
+    """The task sheet names the stamped tier: staged at `high`, a cold
+    Sonnet agent set the head to `low` and took the short lane
     (2026-10-14)."""
 
     def test_a_stamped_tier_is_named_and_kept(self):
-        line = usability.tier_sentence("minutes")
-        self.assertIn('`cost = "minutes"`', line)
+        line = usability.tier_sentence("high")
+        self.assertIn('`repeat_cost = "high"`', line)
         self.assertIn("keep it", line)
 
     def test_no_tier_leaves_it_to_the_agent(self):

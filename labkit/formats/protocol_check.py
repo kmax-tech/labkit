@@ -1,6 +1,6 @@
 """protocol_check — the field contract of a protocol and its reading.
 
-The head — standard, id, type, cost, frozen, preflight audit — is the
+The head — standard, id, type, repeat_cost, frozen, preflight audit — is the
 `[protocol]` table of the protocol's ```toml block, read by
 `protocol_block` (typed, exact; a malformed head is one MUST failure that
 names the field). The prose fields a human writes are held by their exact
@@ -16,11 +16,11 @@ What lives here, each stated as its current rule:
   * **What a protocol owes** (`owed`, `check_fields`): two tiers, one
     template. MUST is the pilot minimum; SHOULD is what a REPORTABLE run
     owes on top. `frozen = true` escalates every SHOULD field to MUST and
-    needs the preflight audit line and the promise tables; `cost =
-    "seconds"` owes its own marked cut and nothing graduates, because
+    needs the preflight audit line and the promise tables; `repeat_cost =
+    "low"` owes its own marked cut and nothing graduates, because
     nothing freezes (LAB-017 The number of audits follows the cost tier).
-  * **The registration before a number** (`seconds_registration_missing`,
-    `written_before_run`): what a run of seconds owes first, and a report
+  * **The registration before a number** (`low_registration_missing`,
+    `written_before_run`): what a run at low repeat cost owes first, and a report
     field filled while no run exists.
   * **The result section** (`recorded_results_field`, `recorded_results_without_run`,
     `result_due`): the lines report-check and protocol-fill read; the
@@ -62,11 +62,11 @@ class Field:
         should  by a reportable run: a must once `frozen = true`
         after   once the head declares a result (`[result] run`, the write-back)
         report  once frozen AND a result is declared (the summary and
-                the report half of the result; at seconds never — the audit
+                the report half of the result; at low repeat cost never — the audit
                 comes at promotion there)
 
-    `seconds`: owed in the seconds cut — "s" always, "sb" when the number
-    judges a prediction (`kind` fit or apply: it has a bar), "sm" when a
+    `low`: owed in the low cut — "s" always, "lb" when the number
+    judges a prediction (`kind` fit or apply: it has a bar), "lm" when a
     model answers through `models.toml` (`[model]`); after/report fields
     carry the template's marker but are owed by their level, not by the
     cut. The template's † marks exactly the
@@ -75,35 +75,35 @@ class Field:
 
     label: str
     level: str
-    seconds: str = ""
+    low_cut: str = ""
 
 
 LEVELS = ("must", "should", "after", "report")
 
 # The one home of what a protocol owes, by the template's exact labels — a
-# test holds every label to the template, the seconds cut to its
-# `<!-- s -->` markers and the † marks to the should/report levels. Keyword
+# test holds every label to the template, the low cut to its
+# `<!-- l -->` markers and the † marks to the should/report levels. Keyword
 # search over the whole file is gone: a word anywhere satisfied a field
 # (`prompt` in a sentence covered "Model I/O"), and a narrow word failed a
 # filled one (`**Terms:**` against `terms of`).
 FIELDS = (
     # Terms first: they precede the question they are asked in (LAB-087 Term before use).
-    Field("Terms of this protocol", "must", "s"),
-    Field("Question / hypothesis", "must", "s"),
+    Field("Terms of this protocol", "must", "l"),
+    Field("Question / hypothesis", "must", "l"),
     Field(
-        "Success / failure criterion", "must", "sb"
+        "Success / failure criterion", "must", "lb"
     ),  # a computation has no bar to clear (2026-10-12); a fit or an apply has (0.104)
-    Field("Admissibility condition", "must", "sb"),
-    Field("Data / scope", "must", "s"),
+    Field("Admissibility condition", "must", "lb"),
+    Field("Data / scope", "must", "l"),
     # read and judged before the measuring run, not just printed (review
     # 2026-10-21: a class-exclusive cue went unexamined in three judge probes)
-    Field("Data profile", "must", "sm"),
-    Field("Model / tool", "must", "sb"),
+    Field("Data profile", "must", "lm"),
+    Field("Model / tool", "must", "lb"),
     Field("Model I/O", "must"),
-    Field("Prompt", "must", "sm"),
-    Field("Null condition / anchors", "must", "sb"),
-    Field("Exclusions / filters", "must", "s"),
-    Field("Unit", "must", "s"),
+    Field("Prompt", "must", "lm"),
+    Field("Null condition / anchors", "must", "lb"),
+    Field("Exclusions / filters", "must", "l"),
+    Field("Unit", "must", "l"),
     # A reportable run owes these on top (2026-08-18, "pilot light, report
     # heavy"): missing in all five freely written protocols of Aug 2026.
     Field("Problem in one sentence", "should"),
@@ -125,11 +125,13 @@ FIELDS = (
     Field("Resolution check", "should"),
     Field("Prediction for the follow-up run", "should"),
     # Written after the run: before it they cannot exist.
-    Field("Recorded results", "after", "s"),
-    Field("Raw output", "after", "sm"),  # a prompt+answer pair: only with a model
+    Field("Recorded results", "after", "l"),
+    Field("Raw output", "after", "lm"),  # a prompt+answer pair: only with a model
     # The Summary for a person, written after the run (2026-10-07)
-    Field("Conclusion", "after", "s"),
-    Field("Limits", "after"),  # at seconds the Summary requires Conclusion (2026-10-12)
+    Field("Conclusion", "after", "l"),
+    Field(
+        "Limits", "after"
+    ),  # at low repeat cost the Summary requires Conclusion (2026-10-12)
     Field("Next step", "after"),
     Field("Question", "report"),
     Field("Did", "report"),
@@ -290,7 +292,7 @@ def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity
         # The value runs on over indented continuation lines: a bare
         # `- **Label:**` with the text below is written, not empty (the 25er
         # protocol writes them that way; reading the first line only made
-        # the seconds gate refuse a written registration, review 2026-10-07).
+        # the registration gate refuse a written registration, review 2026-10-07).
         parts = [m.group("value")]
         while (
             nxt < len(lines)
@@ -348,7 +350,7 @@ class FieldReport:
 def model_named(text: str) -> bool:
     """Does the protocol declare a model in the loop — a `[model]` table in
     the head (`protocol_block.model`)? The one answer for the cut, the
-    seconds registration and `labkit-init --report`. Until 0.100.0 the
+    low registration and `labkit-init --report`. Until 0.100.0 the
     prose `Model / tool` line decided it, read with a pattern for "n/a",
     "none" and dashes (audit 2026-10-15: `—` was model-free here and a
     model there). False for a head that does not read: the head check
@@ -360,20 +362,20 @@ def model_named(text: str) -> bool:
 
 
 def bar_owed(f: Field, kind: str | None) -> bool:
-    """Does a number of KIND owe `f` as far as its bar decides? Only the "sb"
+    """Does a number of KIND owe `f` as far as its bar decides? Only the "lb"
     fields depend on it, at every tier: a computation owes no criterion (standard
     0.22); an undecided kind owes the most, never the least."""
-    return f.seconds != "sb" or kind is None or standard_contract.has_bar(kind)
+    return f.low_cut != "lb" or kind is None or standard_contract.has_bar(kind)
 
 
 def in_cut(f: Field, kind: str | None, model: bool) -> bool:
-    """Is `f` part of the seconds cut — "s" always, "sb" when the number has
-    a bar (`bar_owed`), "sm" with a model named?"""
-    if f.seconds == "s":
+    """Is `f` part of the low cut — "s" always, "lb" when the number has
+    a bar (`bar_owed`), "lm" with a model named?"""
+    if f.low_cut == "l":
         return True
-    if f.seconds == "sb":
+    if f.low_cut == "lb":
         return bar_owed(f, kind)
-    return f.seconds == "sm" and model
+    return f.low_cut == "lm" and model
 
 
 def kind_gap(text: str, head: protocol_block.Head) -> str | None:
@@ -439,9 +441,9 @@ def kind_gap(text: str, head: protocol_block.Head) -> str | None:
 def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
     """(line, label) of every placeholder still to fill.
 
-    At `cost = "seconds"` only the cut's fields count: the rest of the full
+    At `repeat_cost = "low"` only the cut's fields count: the rest of the full
     form is not owed there, and listing it buried the one real blocker
-    under 10 to 20 warnings in every correct seconds protocol (usability
+    under 10 to 20 warnings in every correct protocol at low repeat cost (usability
     probe 2026-10-07, 6 of 6 runs). Fields written after the run count only
     once the head declares a result — before it they cannot be filled, and
     every second agent read them as errors in the commit hook (re-measure
@@ -451,7 +453,7 @@ def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
     if result_due(text) is None:
         after = {f.label.casefold() for f in FIELDS if f.level == "after"}
         lines = [f for f in lines if f.name not in after]
-    if standard_contract.lane(head.cost).cut == standard_contract.SECONDS_CUT:
+    if standard_contract.lane(head.repeat_cost).cut == standard_contract.LOW_CUT:
         model = model_named(text)
         cut = {f.label.casefold() for f in FIELDS if in_cut(f, head.kind, model)}
         lines = [f for f in lines if f.name in cut]
@@ -461,14 +463,14 @@ def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
 def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]]:
     """(must, should) fields this protocol owes, by its cut, freeze and runs.
 
-    The seconds cut owes its marked fields and nothing graduates — nothing
+    The low cut owes its marked fields and nothing graduates — nothing
     freezes (LAB-017 The number of audits follows the cost tier). The full form owes every must
     its kind owes (`bar_owed`: a computation no bar field); `frozen = true` turns
     every should into a must (the graduation gate, in ONE place), and once a
     result is declared a frozen protocol owes its report fields too."""
     # which cut the protocol owes is the contract's answer; the marks on
-    # the fields (`Field.seconds`) are this module's
-    if standard_contract.lane(head.cost).cut == standard_contract.SECONDS_CUT:
+    # the fields (`Field.low_cut`) are this module's
+    if standard_contract.lane(head.repeat_cost).cut == standard_contract.LOW_CUT:
         model = model_named(text)
         must = [
             f
@@ -504,20 +506,20 @@ def check_fields(text: str) -> FieldReport:
         missing_must.append(
             f"intent ids {', '.join(earlier)}: {promises.EARLIER_IDS_HELP}"
         )
-    # Frozen means audited first (LAB-015 Preflight audit before freezing); at seconds nothing freezes, so a
+    # Frozen means audited first (LAB-015 Preflight audit before freezing); at low repeat cost nothing freezes, so a
     # frozen flag there would claim a freeze no gate held (review 2026-10-07).
-    lane = standard_contract.lane(head.cost)
+    lane = standard_contract.lane(head.repeat_cost)
     if head.frozen and not lane.freeze:
         missing_must.append(
-            f'[protocol] frozen = true at cost = "{head.cost}" — nothing '
-            "freezes there; set frozen = false or choose minutes/hours"
+            f'[protocol] frozen = true at repeat_cost = "{head.repeat_cost}" — nothing '
+            "freezes there; set frozen = false or choose high repeat cost"
         )
     elif head.frozen and not head.preflight_audit:
         missing_must.append(
             "[protocol] preflight_audit (frozen = true without the decided preflight record named)"
         )
     # Whether the tables are owed is decided in ONE place,
-    # promises.promise_tables_owed: frozen, or at seconds (every run there is
+    # promises.promise_tables_owed: frozen, or at low repeat cost (every run there is
     # the full run). No condition repeated here (cold reading 2026-10-09).
     try:
         tables_gap = promises.promise_tables_owed(
@@ -542,12 +544,12 @@ def check_fields(text: str) -> FieldReport:
     return FieldReport(head, None, missing_must, missing_should, must_holes, soft_holes)
 
 
-def seconds_registration_missing(text: str) -> list[str]:
-    """The registration a run of seconds owes before its number counts:
+def low_registration_missing(text: str) -> list[str]:
+    """The registration a run at low repeat cost owes before its number counts:
     the question written (not a placeholder); for a number that judges a
     prediction (kind fit or apply) also criterion, admissibility condition
     and null condition; with a model named also the judged data profile;
-    the cost and the kind declared, and the kind not contradicting the
+    the repeat_cost and the kind declared, and the kind not contradicting the
     head (`kind_gap`). Returns what is missing — empty means the gate is
     open (LAB-003 No run without an intent paragraph; a computation has no bar to
     clear, 0.87.1; the kind since standard 0.22). A head that does not read
@@ -566,7 +568,7 @@ def seconds_registration_missing(text: str) -> list[str]:
     else:
         labels = standard_contract.registration_fields(head.kind, model_named(text))
     missing = [label for label in labels if label.casefold() not in written]
-    missing += [] if head.cost else ["[protocol] cost"]
+    missing += [] if head.repeat_cost else ["[protocol] repeat_cost"]
     missing += [] if head.kind else ["[protocol] kind"]
     contradiction = kind_gap(text, head)
     return missing + ([contradiction] if contradiction else [])

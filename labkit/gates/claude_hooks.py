@@ -26,10 +26,10 @@ pre-run
       · clean                                                   → one line
     `LABKIT_PREFLIGHT=skip` in the command string skips the gate; it is
     visible in the transcript, like `--no-verify` on a commit.
-    The gate follows the cost tier (LAB-017 The number of audits follows the cost tier): at `cost = "seconds"` preflight
-    does not run before a command — a rerun of seconds is the probe — and
+    The gate follows the cost tier (LAB-017 The number of audits follows the cost tier): at `repeat_cost = "low"` preflight
+    does not run before a command — a rerun at low repeat cost is the probe — and
     the hook only says whether the success criterion is written, which is
-    what `runlog` will demand of a full run there. A `minutes`/`hours`/
+    what `runlog` will demand of a full run there. A `high`/
     undeclared protocol keeps the gate above.
 
 post-change
@@ -282,23 +282,19 @@ def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
             notes.append(f"{head}: protocol head unreadable — {exc}")
             continue
         # which gate stands before a full run is the lane's answer: the
-        # registration (seconds) or preflight (`standard_contract.lane`)
-        if all(standard_contract.lane(h.cost).registration for h in heads):
+        # registration (low) or preflight (`standard_contract.lane`)
+        if all(standard_contract.lane(h.repeat_cost).registration for h in heads):
             missing = sorted(
-                {
-                    m
-                    for t in texts
-                    for m in protocol_check.seconds_registration_missing(t)
-                }
+                {m for t in texts for m in protocol_check.low_registration_missing(t)}
             )
             if not missing:
                 notes.append(
-                    f"{head}: cost seconds — gate not run, the rerun is "
+                    f"{head}: repeat cost low — gate not run, the rerun is "
                     f"the probe; registration written (LAB-017 The number of audits follows the cost tier)."
                 )
             else:
                 notes.append(
-                    f"{head}: cost seconds, but {', '.join(missing)} still "
+                    f"{head}: repeat cost low, but {', '.join(missing)} still "
                     f"empty or a placeholder — runlog refuses a full run "
                     f"until the registration is written (LAB-003 No run without an intent paragraph, LAB-017 The number of audits follows the cost tier)."
                 )

@@ -638,7 +638,7 @@ _FIELDS: dict[str, tuple[type, bool]] = {
     "run_kind": (str, False),
     "unfrozen_ack": (bool, False),
     "audit_failed": (str, True),
-    "cost_tier": (str, True),
+    "repeat_cost": (str, True),
     "promises": (dict, True),
     "script_sha": (str, False),
     "untracked_sources": (list, False),
@@ -700,7 +700,7 @@ class RunConfig:
     experiment: str
     script: str
     audit_failed: str | None
-    cost_tier: str | None
+    repeat_cost: str | None
     script_sha: str
     pid: int
     git: str
@@ -836,7 +836,7 @@ def parse_run_config(obj: object) -> RunConfig:
         experiment=cfg["experiment"],
         script=cfg["script"],
         audit_failed=cfg["audit_failed"],
-        cost_tier=cfg["cost_tier"],
+        repeat_cost=cfg["repeat_cost"],
         script_sha=cfg["script_sha"],
         pid=cfg["pid"],
         git=cfg["git"],

@@ -7,8 +7,8 @@ the chain of checks is in [architecture](architecture.md), the promise
 format in [promise-block](promise-block.md), which run answers in
 [protocol-run-binding](protocol-run-binding.md), the lab standard in
 `labkit/docs/standard.md` (`python -m labkit.formats.rules show LAB-nnn`).
-Terms are the README's glossary. The steps are the `seconds` tier's; what
-`minutes`/`hours` owe on top is said inside the step it belongs to.
+Terms are the README's glossary. The steps are the `low` tier's; what
+`high` owes on top is said inside the step it belongs to.
 
 Five words the page leans on: a **full run** is one started with
 `run_kind="measurement"` (not a probe, not a preparation); a **station** is
@@ -28,12 +28,12 @@ this page; `tests/test_workflow_example.py` keeps it true.
 
 ```
 labkit-init lab <dir>                       # once per lab repo
-labkit-init exp <name> --cost seconds --kind compute   # one area per question; --kind fit|apply when the number judges predictions; --model ALIAS with a model in the loop
+labkit-init exp <name> --repeat-cost low --kind compute   # one area per question; --kind fit|apply when the number judges predictions; --model ALIAS with a model in the loop
 ```
 
 Reads: the templates shipped with labkit. Writes: `experiments/NN-<name>/`
 with `PROTOCOL-<name>.md` (its TOML head stamped with a protocol id, the
-cost tier, `frozen = false`), `scripts/01_measure.py` and `02_analyze.py`
+repeat cost, `frozen = false`), `scripts/01_measure.py` and `02_analyze.py`
 (the skeleton for the instrument: compute, estimator or model), the area
 test, the README card. Nothing is owed yet; `protocol-check --contract`
 prints what the tier will owe and when.
@@ -49,7 +49,7 @@ Reads: the scripts, the protocol's promise tables. Changes: nothing.
 Clean means: every declared key appears in the code, every `PROMPT`
 constant stands in the protocol, the parsers have fixtures — the static
 part of the promise → code link. It proves nothing about meaning; that is
-the audit's question. At `minutes`/`hours` the model skeleton's `--probe`
+the audit's question. At `high` the model skeleton's `--probe`
 checks the instrument on a few items before anything is frozen.
 
 ## 2. The registration
@@ -71,7 +71,7 @@ and should fields filled" once these stand; the Conclusion is not among
 them — it is owed after the run (step 7), and `--list` keeps it under
 "after the run — yours". The commit matters: the release
 holds the registration to the commit of the first measurement, not to the
-tree at the time of the run (`report-check` stage 2, the registration). At `minutes`/`hours`
+tree at the time of the run (`report-check` stage 2, the registration). At `high`
 the registration becomes a freeze instead: `preflight` clean, the
 preflight audit run and decided, `frozen = true`.
 
@@ -87,8 +87,8 @@ Reads: the data the script names (`SOURCE`, `INPUTS`). Writes:
 the frozen inputs and the git state; `metrics.json`; `outputs.json`;
 `completion.json`), the output file, a row in `runs.tsv`. Before the
 directory exists `runlog` refuses: a run without the registration, an
-unbound run, a full run under an unfrozen protocol at `minutes`/`hours`
-(`labkit/run/start_check.py`). At `seconds` this run is the instrument check
+unbound run, a full run under an unfrozen protocol at `high`
+(`labkit/run/start_check.py`). At `low` this run is the instrument check
 too; rerun it at will. The run id is `runlog`'s, never typed.
 
 ## 4. finalize
@@ -106,7 +106,7 @@ station holds that run, and so does every other gate: nobody chooses
 twice. Then the stations: the head's declared run is the answering run
 (or no run is declared yet); the output rows were written by it; the
 promises against its metrics; the declared scopes unchanged since it
-ran; no field left open; at `seconds` the source frozen in the run and
+ran; no field left open; at `low` the source frozen in the run and
 source and output tracked in git; the area test; the denominators; the
 audit records — one of a deleted run is a blocker. Clean means the run
 can carry a number; it does not release one.
@@ -128,9 +128,9 @@ fields written later do not move it) — the run and what the auditor was
 shown of it (`shown_sha`). The person decides every finding; labkit stores the
 decision and never makes one. An accepted BLOCKER says its effect: the
 verdicts stand within the limit (`stands`), or the run cannot judge the
-named promise (`not assessable`). At `seconds` this is the lane's one
+named promise (`not assessable`). At `low` this is the lane's one
 audit (LAB-017 The number of audits follows the cost tier); at
-`minutes`/`hours` the preflight audit came before the freeze and this one
+`high` the preflight audit came before the freeze and this one
 comes before the number leaves (LAB-050 Analysis audit before reporting).
 
 ## 6. The decision review — when a BLOCKER was accepted with `stands`
@@ -196,7 +196,7 @@ number rightly, and whether a decided limit is enough, stay the audit's
 and the reader's judgement.
 
 A report that cites a protocol's **answering run** while that protocol
-declares no result is blocked: at `seconds` the report is the promotion,
+declares no result is blocked: at `low` the report is the promotion,
 and this is its shape without the adoption (`report_check.promotions`;
 sixth haiku round, t3 and t18: `--from-run` refused, REPORT.md written
 from `metrics.json` by hand). The sentence names the adoption
@@ -218,8 +218,8 @@ report-check --if-reported [--staged] <paths>            # what the stop hook an
 Reads: the protocol as the named state holds it (the tree at the stop,
 the index at the commit), the runs, the records, the reviews, the citing
 reports. Changes: nothing. The stations, every one named in its output:
-the freeze (`minutes`/`hours`) or the registration as committed at the
-first measurement (`seconds`); finalize clean and the answering run a
+the freeze (`high`) or the registration as committed at the
+first measurement (`low`); finalize clean and the answering run a
 full run; a decided analysis record covering code, promises, run and what
 was shown; every generated line equal to its rendering, written once;
 every BLOCKER's `stands` upheld by a review; `02_analyze.py --check`

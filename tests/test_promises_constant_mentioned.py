@@ -103,7 +103,7 @@ class UnmentionedConstants(unittest.TestCase):
         area = area_with()
         p = area / "PROTOCOL-x.md"
         p.write_text(
-            "# x\n\n" + head(cost="minutes", promises=BLOCK) + "\n" + PILOT_FIELDS,
+            "# x\n\n" + head(repeat_cost="high", promises=BLOCK) + "\n" + PILOT_FIELDS,
             encoding="utf-8",
         )
         buf = io.StringIO()

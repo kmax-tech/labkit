@@ -227,7 +227,7 @@ class TestPreflight(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("BLOCKER: HEAD (must)", out)
         for station in (
-            "── cost tier ──",
+            "── repeat cost ──",
             "── audit findings ──",
             "── code-check",
             "── tests ──",
@@ -244,7 +244,7 @@ class TestPreflight(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("BLOCKER: MISSING (must): [protocol] id", out)
         for station in (
-            "── cost tier ──",
+            "── repeat cost ──",
             "── audit findings ──",
             "── code-check",
             "── scope-sha ──",
@@ -327,7 +327,7 @@ class GraduationGate(unittest.TestCase):
             self.assertIn("missing (should): Problem in one sentence", buf.getvalue())
 
 
-class TestCostTier(unittest.TestCase):
+class TestRepeatCost(unittest.TestCase):
     """The tier names how much audit the run gets; preflight says it out loud."""
 
     def _out(self, protocol_text):
@@ -338,17 +338,17 @@ class TestCostTier(unittest.TestCase):
                 preflight.preflight_area(area)
             return buf.getvalue()
 
-    def test_seconds_makes_the_agent_audit_optional(self):
-        out = self._out(_protocol(cost="seconds"))
+    def test_low_makes_the_agent_audit_optional(self):
+        out = self._out(_protocol(repeat_cost="low"))
         self.assertIn("OPTIONAL", out)
 
     def test_hours_asks_for_the_audit(self):
-        out = self._out(_protocol(cost="hours"))
-        self.assertIn("hours — the experiment-preflight audit is due", out)
+        out = self._out(_protocol(repeat_cost="high"))
+        self.assertIn("high — the experiment-preflight audit is due", out)
 
     def test_an_unfilled_tier_counts_as_hours(self):
-        out = self._out(_protocol(cost="<seconds | minutes | hours>"))
-        self.assertIn("not filled — treated as `hours`", out)
+        out = self._out(_protocol(repeat_cost="<low | high>"))
+        self.assertIn("not filled — treated as `high`", out)
 
 
 class AreaTestPython(unittest.TestCase):

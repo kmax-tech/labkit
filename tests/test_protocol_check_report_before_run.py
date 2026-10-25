@@ -32,7 +32,7 @@ def protocol(*lines: str, declared: str | None = None) -> str:
     is the run the head's `[result]` names (None: none yet)."""
     return (
         "# x\n\n"
-        + head(cost="minutes", result=declared)
+        + head(repeat_cost="high", result=declared)
         + "\n"
         + PILOT_FIELDS
         + "".join(lines)

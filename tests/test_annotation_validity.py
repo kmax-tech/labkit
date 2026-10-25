@@ -45,7 +45,7 @@ RECORDED = {
 
 
 def _compute(claim: str) -> str:
-    return head(cost="minutes", kind="compute", model="haiku", claim=claim)
+    return head(repeat_cost="high", kind="compute", model="haiku", claim=claim)
 
 
 def _gap(text: str) -> str | None:
@@ -147,10 +147,12 @@ class KindGap(unittest.TestCase):
             ("fit", f'annotation_validity = {{ doi = "{DOI}" }}'),
         ):
             with self.subTest(kind=kind):
-                gap = _gap(head(cost="minutes", kind=kind, model="haiku", claim=claim))
+                gap = _gap(
+                    head(repeat_cost="high", kind=kind, model="haiku", claim=claim)
+                )
                 assert gap is not None
                 self.assertIn(f'kind = "{kind}"', gap)
-        self.assertIsNone(_gap(head(cost="minutes", kind="apply", model="haiku")))
+        self.assertIsNone(_gap(head(repeat_cost="high", kind="apply", model="haiku")))
 
     def test_a_computation_with_a_model_owes_no_bar(self):
         """compute judges no prediction, with or without a model: the
@@ -159,7 +161,7 @@ class KindGap(unittest.TestCase):
             standard_contract.registration_fields("compute", True),
             ("Question / hypothesis", "Data profile"),
         )
-        bar = [f for f in protocol_check.FIELDS if f.seconds == "sb"]
+        bar = [f for f in protocol_check.FIELDS if f.low_cut == "lb"]
         self.assertTrue(bar)
         self.assertFalse(any(protocol_check.bar_owed(f, "compute") for f in bar))
 
@@ -243,22 +245,22 @@ class Stamp(unittest.TestCase):
     def test_a_computation_with_a_model_is_stamped_with_its_claim(self):
         tmpl = scaffold.template(scaffold.PROTOCOL_TEMPLATE.name)
         with tempfile.TemporaryDirectory() as d:
-            text = scaffold.stamped_head(tmpl, Path(d), "x", "seconds", "compute", True)
+            text = scaffold.stamped_head(tmpl, Path(d), "x", "low", "compute", True)
         self.assertEqual(scaffold.asked_kind("compute"), "compute")
         self.assertIn(scaffold.COMPUTE_CLAIM, text)
-        scaffold.check_stamped_head(text, "seconds", "compute", True)
+        scaffold.check_stamped_head(text, "low", "compute", True)
 
     def test_an_apply_is_stamped_without_it(self):
         tmpl = scaffold.template(scaffold.PROTOCOL_TEMPLATE.name)
         with tempfile.TemporaryDirectory() as d:
-            text = scaffold.stamped_head(tmpl, Path(d), "x", "seconds", "apply", True)
+            text = scaffold.stamped_head(tmpl, Path(d), "x", "low", "apply", True)
         m = protocol_block.model(text)
         assert m is not None
         self.assertEqual(m.claim_keys, frozenset())
 
     def test_the_staging_keeps_the_computation(self):
         self.assertEqual(
-            usability.stamp_flags("count", None, True), ("seconds", "compute", True)
+            usability.stamp_flags("count", None, True), ("low", "compute", True)
         )
 
 
@@ -391,8 +393,8 @@ class Evidence(unittest.TestCase):
             share, _ = self._lab(d, None)
             for text in (
                 _compute('number_describes = "model_outputs"'),
-                head(cost="minutes", kind="compute"),
-                head(cost="minutes", kind="apply", model="haiku"),
+                head(repeat_cost="high", kind="compute"),
+                head(repeat_cost="high", kind="apply", model="haiku"),
             ):
                 with self.subTest(text=text[-120:]):
                     self.assertEqual(audit.validity_evidence(share, text), ())
@@ -508,7 +510,7 @@ class StaleEvidence(Evidence):
             share, _, _ = self._area(d)
             for text in (
                 _compute('number_describes = "model_outputs"'),
-                head(cost="minutes", kind="compute"),
+                head(repeat_cost="high", kind="compute"),
             ):
                 with self.subTest(text=text[-80:]):
                     (share / "PROTOCOL-share.md").write_text(text, encoding="utf-8")

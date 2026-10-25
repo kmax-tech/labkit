@@ -109,7 +109,7 @@ class Score:
     )  # judge: an a<i>_* key (admissibility, the null lane) in metrics.json
     bound_to: str | None  # config["protocol"]["path"]
     frozen: bool | None
-    cost_tier: str | None
+    repeat_cost: str | None
     log: LogTrace | None
     form: protocol_reading.Form | None = None  # how the bound protocol reads
     transcript: agent_transcript.TranscriptTrace | None = (
@@ -165,7 +165,7 @@ class ProbeRun:
     protocol: Path | None  # the protocol the run names, resolved; None: none named
     protocol_as_recorded: str | None  # the path as config.json holds it
     bound: bool  # the run recorded the protocol's id — a path alone goes stale
-    cost_tier: str | None
+    repeat_cost: str | None
 
 
 def load_probe_run(root: Path) -> ProbeRun:
@@ -190,7 +190,7 @@ def load_probe_run(root: Path) -> ProbeRun:
     protocol = None
     if named:
         protocol = Path(named) if Path(named).is_absolute() else area / named
-    tier = config.cost_tier
+    tier = config.repeat_cost
     return ProbeRun(
         probe,
         area,
@@ -480,7 +480,7 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
     if run is not None:
         number = protocol_reading.metric_number(metrics, probe.metric_key)
         bound_to = pr.protocol_as_recorded if pr.bound else None
-        tier = pr.cost_tier
+        tier = pr.repeat_cost
         if probe.task != "count":
             null_reported = any(
                 promises.key_kind(k) == "admissibility" for k in metrics
@@ -524,7 +524,7 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         null_reported=null_reported,
         bound_to=bound_to,
         frozen=frozen,
-        cost_tier=tier,
+        repeat_cost=tier,
         log=trace,
         form=form,
         transcript=measured,
@@ -555,7 +555,7 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         ),
         ("bound to", bound_to or "NOTHING"),
         ("frozen", {True: "yes", False: "no", None: "n/a"}[frozen]),
-        ("cost tier", tier or "undeclared"),
+        ("repeat cost", tier or "undeclared"),
         (
             "audit attempts failed",
             f"{sc.audit_failed} ({sc.audit_unproven} unproven)"

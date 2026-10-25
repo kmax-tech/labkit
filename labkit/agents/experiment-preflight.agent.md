@@ -28,7 +28,7 @@ restate them from memory.
 4. The rules of the lab standard inlined below, from `labkit/docs/standard.md`
    as shipped with labkit — LAB-015 Preflight audit before freezing with the
    scar table and the severity legend, LAB-017 The number of audits follows
-   the cost tier, LAB-004 Identifiers make the intent addressable, and
+   the repeat cost, LAB-004 Identifiers make the intent addressable, and
    LAB-050 Analysis audit before reporting. They are all of the standard you get.
    Every finding cites the rule it violates as code + name (LAB-nnn <title>);
    a defect none of them names is a finding of a new class, say so.
@@ -55,16 +55,16 @@ refused: protocol not filled — the audit reads the FILLED protocol (LAB-015 Pr
 and stop. An audit of the empty template criticises an intent nobody wrote
 (2026-09-08: eight minutes of audit, the top finding void).
 
-## Cost tier — how many audits this area gets (LAB-017 The number of audits follows the cost tier)
+## Repeat cost — how many audits this area gets (LAB-017 The number of audits follows the cost tier)
 
-Read `cost` in the protocol head (its ```toml block) first. `seconds` (deterministic, rerunnable
+Read `repeat_cost` in the protocol head (its ```toml block) first. `low` (deterministic, rerunnable
 at will) means you are the ONE audit of this area: the caller invokes you
 in MODE `analysis` after the first run, and you cover the `preflight` rows of
 the scar table in the same pass — instrument, data path, operation, now
 against real output. Report BLOCKER and WARNING lines only; NOTE-grade
-findings go into one closing line `notes: K (not listed — cost tier
+findings go into one closing line `notes: K (not listed — repeat cost
 seconds)`, because on a cheap run every listed note costs a fix cycle and
-a re-run. `minutes`, `hours` or an unfilled `cost`: both modes as described
+a re-run. `high` or an unfilled `repeat_cost`: both modes as described
 below, all grades listed.
 
 ## What to audit

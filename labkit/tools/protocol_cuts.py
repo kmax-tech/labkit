@@ -1,6 +1,6 @@
-"""protocol_cuts — the protocol template cut to what a cost tier and a lane owe.
+"""protocol_cuts — the protocol template cut to what a repeat cost and a lane owe.
 
-The template's sections by key (`ProtocolBlocks`), the `seconds` cut and
+The template's sections by key (`ProtocolBlocks`), the `low` cut and
 the quick block, short placeholders, the pilot part and the report fields
 inserted later (`pilot_and_report`, `insert_report_fields`), the fields a
 deterministic area fills itself, the placeholders of the counting and the
@@ -28,13 +28,11 @@ from labkit.formats.repo import (
 DAGGER = "†"
 
 
-SECONDS_TAG = "<!-- s -->"
+LOW_TAG = "<!-- l -->"
 
 
-SECONDS_MODEL_TAG = "<!-- sm -->"  # owed at seconds only with a model in the loop
-SECONDS_BAR_TAG = (
-    "<!-- sb -->"  # owed at seconds when the number has a bar (kind fit or apply)
-)
+LOW_MODEL_TAG = "<!-- lm -->"  # owed at low repeat cost only with a model in the loop
+LOW_BAR_TAG = "<!-- lb -->"  # owed at low repeat cost when the number has a bar (kind fit or apply)
 
 
 #: which template section a heading is about — a report field is placed by topic
@@ -95,22 +93,22 @@ def _label_of(item: list[str]) -> str:
 
 
 def _untag(line: str) -> str:
-    for tag in (SECONDS_TAG, SECONDS_BAR_TAG, SECONDS_MODEL_TAG):
+    for tag in (LOW_TAG, LOW_BAR_TAG, LOW_MODEL_TAG):
         line = line.replace(" " + tag, "").replace(tag, "")
     return line
 
 
-def seconds_cut(tmpl: str, kind: str, model: bool = False) -> str:
-    """The `seconds` cut: the preamble, and of every section only the items
-    tagged `<!-- s -->` — with a bar (KIND fit or apply) also `<!-- sb -->`,
-    with a model also `<!-- sm -->` — under their heading."""
+def low_cut(tmpl: str, kind: str, model: bool = False) -> str:
+    """The `low` cut: the preamble, and of every section only the items
+    tagged `<!-- l -->` — with a bar (KIND fit or apply) also `<!-- lb -->`,
+    with a model also `<!-- lm -->` — under their heading."""
     from labkit.formats.standard_contract import has_bar
 
-    tags = (SECONDS_TAG,)
+    tags = (LOW_TAG,)
     if has_bar(kind):
-        tags += (SECONDS_BAR_TAG,)
+        tags += (LOW_BAR_TAG,)
     if model:
-        tags += (SECONDS_MODEL_TAG,)
+        tags += (LOW_MODEL_TAG,)
     out: list[str] = []
     for heading, body in _segments(tmpl):
         if not heading:
@@ -127,10 +125,10 @@ def seconds_cut(tmpl: str, kind: str, model: bool = False) -> str:
 
 def bar_cut(tmpl: str, kind: str) -> str:
     """TMPL as a KIND without a bar is stamped at every tier: the fields a
-    bar owes (tagged `<!-- sb -->`: criterion, admissibility condition,
+    bar owes (tagged `<!-- lb -->`: criterion, admissibility condition,
     Model / tool, null condition) and the promise tables go — a computation owes
     its question (standard 0.22). A fit or an apply comes back unchanged.
-    The seconds cut keeps fewer fields still (`seconds_cut`)."""
+    The low cut keeps fewer fields still (`low_cut`)."""
     from labkit.formats.standard_contract import has_bar
 
     if has_bar(kind):
@@ -140,18 +138,18 @@ def bar_cut(tmpl: str, kind: str) -> str:
         if heading:
             out.append(heading)
         for item in _items(body):
-            if SECONDS_BAR_TAG not in item[0]:
+            if LOW_BAR_TAG not in item[0]:
                 out.extend(item)
     return without_promise_tables("\n".join(out).rstrip() + "\n")
 
 
 def quick_block(tmpl: str, kind: str) -> str:
-    """The promise tables of the seconds cut. A number with a bar (KIND fit
+    """The promise tables of the low cut. A number with a bar (KIND fit
     or apply) keeps them: the measure skeletons read `margin`, `max_empty`
     and the null band from the block. (Until 0.92 they became a commented
     hint here, a rule written for the count; once the count lost its tables
     in 0.87.0 the hint hit only the model case, and every judge area stamped
-    at seconds failed its first run with a TypeError — found by a seconds
+    at low repeat cost failed its first run with a TypeError — found by a low-lane
     probe, 2026-10-15.) For a computation the tables go: it has no bar to clear."""
     from labkit.formats.standard_contract import has_bar
 
@@ -169,7 +167,7 @@ def without_promise_tables(text: str) -> str:
     The tables are found by the block's own structure (the fence walker,
     then table headers), not by a pattern over the text: a pattern took the
     block's closing fence with the last table, and every count stamped at
-    seconds ended inside its TOML block (count probes, 2026-10-20). Reads
+    low repeat cost ended inside its TOML block (count probes, 2026-10-20). Reads
     the block back and raises ValueError unless `[protocol]` is unchanged,
     no promise is left and the block is still closed."""
     span = protocol_block.toml_block_span(text)
@@ -469,7 +467,7 @@ def estimator_placeholders(text: str, cut: bool = False) -> str:
     promise sentences and constants in the estimator's words
     (ESTIMATOR_PROMISES). Raises when the stamp lacks a field or a table line
     — a silently unfilled field is the leftover this exists to remove; in
-    the seconds CUT only the fields the cut carries are owed, the others
+    the low CUT only the fields the cut carries are owed, the others
     are not stamped at all."""
     lines = text.split("\n")
     for label, value in ESTIMATOR_FIELDS.items():
@@ -488,7 +486,7 @@ def estimator_placeholders(text: str, cut: bool = False) -> str:
 
 
 def count_placeholders(text: str) -> str:
-    """The seconds cut without a model, its Terms and Question placeholders
+    """The low cut without a model, its Terms and Question placeholders
     replaced by COMPUTE_PLACEHOLDERS. Raises when the cut lacks one of them."""
     lines = text.split("\n")
     for label, value in COMPUTE_PLACEHOLDERS.items():

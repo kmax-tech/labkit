@@ -85,10 +85,10 @@ naming the run (`protocol_block.declared_run`, written by `protocol-fill
 
 ```toml
 [protocol]
-standard = "0.22"
+standard = "0.23"
 id = "p-9e2341c0390948dc"
 type = "confirmatory"
-cost = "minutes"
+repeat_cost = "high"
 kind = "apply"
 frozen = true
 preflight_audit = "2026-10-07T09-12-preflight.toml"
@@ -128,18 +128,18 @@ that lacks a registered constant or carries it with another value
 the record is therefore: *a run under a block recorded every registered
 constant unchanged*. Whether `evaluate_rows` uses the value right is the
 agent audit's question, not a mechanical one. A frozen protocol, and
-every measurement, including at `cost = "seconds"`, owes the block
+every measurement, including at `repeat_cost = "low"`, owes the block
 (`promises.promise_tables_owed`, standard 0.19): without tables, `protocol-check`
 reports a MUST failure (frozen or seconds), `preflight` and `finalize`
 block, and no measurement starts under it. The one exception: a
 computation (`kind = "compute"`) that is not frozen and whose prose names no
 `[C]`/`[A]`/`[B]` id registers nothing and owes no tables (0.87.1) — in
-practice one at `seconds`, since `minutes` and `hours` freeze before the
+practice one at `low`, since `high` freezes before the
 measurement and a frozen protocol owes them. A computation owes no success
 criterion at any tier (`standard_contract.has_bar`); its
 `[protocol]` head and the release of its number (the analysis audit,
 `report-check`) stay owed. Unfrozen preparation and
-probe runs can start without tables; seconds permits no separate probe. The seconds cut IS the registration — in
+probe runs can start without tables; low permits no separate probe. The low cut IS the registration — in
 prose and in tables, so the machine chain (block digest, scope hashes,
 constants) holds for every reportable run, not only for frozen ones. Mechanically guaranteed is the one home of a
 *name*; that two differently named constants mean the same threshold no

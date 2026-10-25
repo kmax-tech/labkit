@@ -11,7 +11,7 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md "Meaning of the gold label" "positive = ..."
     protocol-fill PROTOCOL-x.md --line 27 Question "does Y move X?"
     protocol-fill PROTOCOL-x.md "C1 sentence=<the promise>"   a [[promise]]'s sentence, as a TOML string
-    protocol-fill PROTOCOL-x.md type=exploratory cost=seconds kind=fit "model alias=haiku"   the TOML head's stamped placeholders
+    protocol-fill PROTOCOL-x.md type=exploratory repeat_cost=low kind=fit "model alias=haiku"   the TOML head's stamped placeholders
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
     protocol-fill PROTOCOL-x.md --render       the result section written again from its sources:
                                                Recorded results, Limit lines (stray ones dropped), Prompt block
@@ -44,7 +44,7 @@ the declaration is not what makes it sound — the checks are. So the lines
 are written, `report-check` runs on the written protocol (finalize clean, a
 full run — no probe, no acknowledged run — a decided analysis audit of code,
 promises and that run, `02_analyze.py --check` holding the written numbers;
-frozen at minutes/hours), and a blocker puts the file back as it was. A
+frozen at high repeat cost), and a blocker puts the file back as it was. A
 result adopted this way has passed every check labkit prescribes; the stop
 hook and the pre-commit (`report-check --if-reported`) hold a hand-written or
 later-changed answer to the same. A provisional number stays a sketch in
@@ -135,7 +135,7 @@ def fill(
 #: names: (the TOML key, its allowed values — None for a free string)
 HEAD_KEYS: dict[str, tuple[str, tuple[str, ...] | None]] = {
     "type": ("type", protocol_block.TYPES),
-    "cost": ("cost", protocol_block.COST_TIERS),
+    "repeat_cost": ("repeat_cost", protocol_block.REPEAT_COSTS),
     "kind": ("kind", protocol_block.KINDS),
     "model alias": ("alias", None),  # [model] alias, stamped by --model without a name
 }
@@ -154,8 +154,8 @@ def head_open(text: str, key: str) -> int | None:
     """Line number of the TOML head's `KEY = "<…>"` placeholder, KEY one of
     `HEAD_CHOICES`, or None once set; ValueError on another key.
 
-    The stamp leaves `type` — and `cost`, when `labkit-init exp` got no
-    `--cost` — as a placeholder in the head; `--list` named only the prose
+    The stamp leaves `type` — and `repeat_cost`, when `labkit-init exp` got no
+    `--repeat-cost` — as a placeholder in the head; `--list` named only the prose
     fields, so an agent filled those, hit the hook's "MISSING (must):
     [protocol] type" and edited the head by hand (cloud probe, Haiku 5.5,
     2026-10-13). Read inside the TOML block only (`protocol_block.toml_block_span`):
@@ -773,7 +773,7 @@ def fill_many(
     line_no: int | None = None,
     force: bool = False,
 ) -> str:
-    """`fill` applied in order — `fill_head` for the head's `type`, `cost`
+    """`fill` applied in order — `fill_head` for the head's `type`, `repeat_cost`
     and `model alias` (`HEAD_KEYS`), `fill_sentence` for `<id> sentence`;
     the first ValueError leaves the caller's file untouched — all or
     nothing."""

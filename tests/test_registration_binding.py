@@ -28,7 +28,9 @@ BODY = """
 
 
 def _protocol(kind: str = "fit") -> str:
-    return head(cost="minutes", kind=kind, frozen=True, promises=DEFAULT_BLOCK) + BODY
+    return (
+        head(repeat_cost="high", kind=kind, frozen=True, promises=DEFAULT_BLOCK) + BODY
+    )
 
 
 class Stamp(unittest.TestCase):

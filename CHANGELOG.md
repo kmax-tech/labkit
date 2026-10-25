@@ -9,6 +9,33 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **Protocol standard 0.23: `repeat_cost = "low" | "high"` replaces
+  `cost = "seconds" | "minutes" | "hours"`.** The gates read two lanes
+  (`standard_contract.lane`: `seconds` against the rest) under three
+  names: `minutes` and `hours` never owed different checks (888 commits,
+  no hours-only scar in any lab), and the time words misled — two cold
+  agents declared `minutes` for sixteen calls and waited fifteen minutes
+  of audit for a 64-second run (2026-10-05). The field now names the
+  dimension the field guide had to add in prose, the price of a repeat;
+  `seconds` is `low`, `minutes` and `hours` are `high`, an unfilled value
+  still reads as `high`. Renamed with it: `protocol_block.REPEAT_COSTS`,
+  `Head.repeat_cost`, `standard_contract.LOW | HIGH`, `LOW_LANE`,
+  `LOW_CUT`, `effective_repeat_cost` (was `cost_tier`), `Lane.repeat_cost`,
+  `protocol_cuts.low_cut` and its template marks `<!-- l -->`, `<!-- lb -->`,
+  `<!-- lm -->` (were `s`, `sb`, `sm`), `protocol_check.Field.low_cut`,
+  `low_registration_missing`, `protocol_history.repeat_cost_lowered`
+  (`high -> low` warns as before), `labkit-init exp --repeat-cost low|high`,
+  `usability stage --repeat-cost`, `protocol-fill PROTOCOL repeat_cost=…`,
+  and the run record's `repeat_cost` (was `cost_tier` in `config.json`).
+  Migration, said in the refusal of a 0.22 head (`protocol_block.MIGRATION`):
+  set `standard = "0.23"` and rename the key with its value. 0.103.0 is
+  the last version reading standard 0.22 and the three time words; the
+  refusal of the intermediate `kind = "count"` (`COUNT_RENAMED`) goes with
+  it, a 0.22 head is refused before its kind is read. The lab rule LAB-017
+  keeps its name, "The number of audits follows the cost tier": the two
+  values are its tiers. Rollout to the labs' protocols, `AGENTS.md` and
+  pins is a separate task.
+
 - **A resume refuses another model behind the same alias.** The judge's
   instrument (`lanes.Lanes.instrument`) held the prompts' digest and the
   alias only: models.toml edited between two processes put another model

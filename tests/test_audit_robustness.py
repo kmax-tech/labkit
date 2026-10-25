@@ -119,7 +119,7 @@ class EnvFlags(unittest.TestCase):
     def test_zero_is_no_acknowledgement(self):
         with tempfile.TemporaryDirectory() as d:
             tmp = Path(d)
-            (tmp / "PROTOCOL-x.md").write_text(head(cost="hours") + "\n")
+            (tmp / "PROTOCOL-x.md").write_text(head(repeat_cost="high") + "\n")
             os.environ["LABKIT_UNFROZEN"] = "0"
             try:
                 with self.assertRaises(SystemExit):

@@ -3,12 +3,12 @@
 Second haiku round on labkit 0.98.0 (labkit-paper area 09, 2026-10-18): no
 labkit agent started an audit, so the refusal over an open BLOCKER never
 fired; t5 measured with run_kind='measurement' and LABKIT_UNFROZEN=1, and the hatch asked
-for nothing. Since 0.99.0 the hatch at `minutes`/`hours` rests on the failed
+for nothing. Since 0.99.0 the hatch at `high` rests on the failed
 attempt `labkit-audit` writes when the backend does not answer
 (`audits/<date>-preflight-failed.toml`): at the code as it stamps now, the
 promises as they read now, with the default timeout at least. An attempt at
 other code, other promises, in another mode, or with a short timeout is not
-one; a file nobody can read is loud. At `cost = "seconds"` no audit is owed
+one; a file nobody can read is loud. At `repeat_cost = "low"` no audit is owed
 before the run, so the hatch there is unchanged.
 """
 
@@ -29,14 +29,14 @@ from labkit.formats import findings, promises, scope_sha  # noqa: E402
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
-UNFROZEN = head(cost="minutes", frozen=False, promises=DEFAULT_BLOCK, model="haiku")
+UNFROZEN = head(repeat_cost="high", frozen=False, promises=DEFAULT_BLOCK, model="haiku")
 REGISTRATION = """
 - **Model / tool:** haiku
 - **Question / hypothesis:** does the register beat the trivial decider?
 - **Success / failure criterion:** [C1] accuracy above the trivial decider
 - **Admissibility condition:** [A1] every case parsed
 """
-SECONDS_NO_CRITERION = (head(cost="seconds", model="haiku") + REGISTRATION).replace(
+LOW_NO_CRITERION = (head(repeat_cost="low", model="haiku") + REGISTRATION).replace(
     "[C1] accuracy above the trivial decider", "<the criterion>"
 )
 
@@ -145,8 +145,8 @@ class FailedAudit(unittest.TestCase):
         self.assertEqual(findings.area_records(self.tmp), [])
         self.assertEqual(len(findings.failed_attempts(self.tmp)), 1)
 
-    def test_at_seconds_the_hatch_owes_no_attempt(self):
-        (self.tmp / "PROTOCOL-x.md").write_text(SECONDS_NO_CRITERION, encoding="utf-8")
+    def test_at_low_the_hatch_owes_no_attempt(self):
+        (self.tmp / "PROTOCOL-x.md").write_text(LOW_NO_CRITERION, encoding="utf-8")
         r, out = self._start()
         self.assertIn("acknowledged", out)
         cfg = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))

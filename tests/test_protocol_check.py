@@ -148,8 +148,8 @@ class TestFrozenNeedsTheAudit(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("[protocol] preflight_audit", out)
 
-    def test_seconds_needs_no_audit_line(self):
-        report = protocol_check.check_fields(head(cost="seconds", frozen=True))
+    def test_low_needs_no_audit_line(self):
+        report = protocol_check.check_fields(head(repeat_cost="low", frozen=True))
         self.assertFalse(any("preflight_audit" in m for m in report.missing_must))
 
 
@@ -235,7 +235,12 @@ class TestCheckFields(unittest.TestCase):
         report = protocol_check.check_fields(TEMPLATE.read_text(encoding="utf-8"))
         self.assertEqual(
             report.missing_must,
-            ["[protocol] id", "[protocol] type", "[protocol] cost", "[protocol] kind"],
+            [
+                "[protocol] id",
+                "[protocol] type",
+                "[protocol] repeat_cost",
+                "[protocol] kind",
+            ],
         )
         self.assertEqual(report.missing_should, [])
 
@@ -268,14 +273,16 @@ class TestCheckFields(unittest.TestCase):
 
     def test_a_count_owes_no_bar_field_at_any_tier(self):
         """Standard 0.22: a computation owes neither a success criterion nor the
-        other fields of a bar (`<!-- sb -->`), in the full form too; a fit
+        other fields of a bar (`<!-- lb -->`), in the full form too; a fit
         owes them."""
-        bar = [f.label for f in protocol_check.FIELDS if f.seconds == "sb"]
+        bar = [f.label for f in protocol_check.FIELDS if f.low_cut == "lb"]
         self.assertIn("Success / failure criterion", bar)
-        for cost in ("minutes", "hours"):
-            with self.subTest(cost=cost):
-                count = protocol_check.check_fields(head(cost=cost, kind="compute"))
-                fit = protocol_check.check_fields(head(cost=cost, kind="fit"))
+        for cost in ("high",):
+            with self.subTest(repeat_cost=cost):
+                count = protocol_check.check_fields(
+                    head(repeat_cost=cost, kind="compute")
+                )
+                fit = protocol_check.check_fields(head(repeat_cost=cost, kind="fit"))
                 for label in bar:
                     self.assertNotIn(label, count.missing_must + count.missing_should)
                     self.assertIn(label, fit.missing_must + fit.missing_should)
@@ -641,7 +648,7 @@ class TestPromptAndExample(unittest.TestCase):
         """A count has no prompt+answer pair to show: the field is `sm`, owed
         only with a model named (cloud probe 2026-10-12 filled it with n/a)."""
         text = (
-            pilot(cost="seconds", model=None).replace(
+            pilot(repeat_cost="low", model=None).replace(
                 "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
             )
             + "\n## Summary\n\n- **Conclusion:** The mean is 3.5 documents per case.\n"
@@ -654,10 +661,10 @@ class TestPromptAndExample(unittest.TestCase):
         self.assertEqual(rc, 0, out)
 
     def test_a_count_at_seconds_owes_neither_criterion_nor_limits(self):
-        """Without a model the seconds cut has no criterion, no admissibility
+        """Without a model the low cut has no criterion, no admissibility
         condition, and after the run only the Result line of the Summary
         (decisions 2026-10-12, five cloud probes)."""
-        base = pilot(cost="seconds", model=None).replace(
+        base = pilot(repeat_cost="low", model=None).replace(
             "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
         )
         lines = [
@@ -686,7 +693,9 @@ class TestPromptAndExample(unittest.TestCase):
         # the twin: a model declared in the head brings the criterion back
         # (prose alone decides nothing since phase 4)
         rc, out = run_main(
-            text.replace(head(cost="seconds"), head(cost="seconds", model="haiku"), 1)
+            text.replace(
+                head(repeat_cost="low"), head(repeat_cost="low", model="haiku"), 1
+            )
         )
         self.assertEqual(rc, 1)
         self.assertIn("Success / failure criterion", out)
@@ -979,7 +988,7 @@ class TestHeadValues(unittest.TestCase):
         for std in ("0.99", "0.20", "0.17", "0.15"):
             with self.subTest(std):
                 rc, out = run_main(
-                    pilot().replace('standard = "0.22"', f'standard = "{std}"')
+                    pilot().replace('standard = "0.23"', f'standard = "{std}"')
                 )
                 self.assertEqual(rc, 1, out)
                 self.assertIn(f"HEAD (must): [protocol] standard = '{std}'", out)
@@ -1071,33 +1080,35 @@ class TestStampedLegendIsNotTemplateText(unittest.TestCase):
         self.assertTrue([s for s in lines if "error direction" in s], lines)
 
 
-class TestCostTier(unittest.TestCase):
-    """The cost tier (2026-10-05) is a head value: `cost` in [protocol]."""
+class TestRepeatCost(unittest.TestCase):
+    """The repeat cost (2026-10-05) is a head value: `repeat_cost` in [protocol]."""
 
     def test_template_stamps_cost_as_placeholder(self):
         self.assertIsNone(
-            protocol_block.head(TEMPLATE.read_text(encoding="utf-8")).cost
+            protocol_block.head(TEMPLATE.read_text(encoding="utf-8")).repeat_cost
         )
 
     def test_the_tier_is_read_from_the_head(self):
-        for tier in protocol_block.COST_TIERS:
-            self.assertEqual(protocol_block.head(head(cost=tier)).cost, tier)
+        for tier in protocol_block.REPEAT_COSTS:
+            self.assertEqual(
+                protocol_block.head(head(repeat_cost=tier)).repeat_cost, tier
+            )
 
     def test_a_typo_is_a_loud_error(self):
-        """`Cost: second` used to read as undeclared and so as `hours`."""
+        """`Cost: second` used to read as undeclared and so as `high`."""
         with self.assertRaisesRegex(
-            protocol_block.BlockError, r"\[protocol\] cost = 'second'"
+            protocol_block.BlockError, r"\[protocol\] repeat_cost = 'second'"
         ):
-            protocol_block.head(head(cost="second"))
+            protocol_block.head(head(repeat_cost="second"))
 
     def test_a_placeholder_is_a_must_gap(self):
-        report = protocol_check.check_fields(pilot(cost="<seconds | minutes | hours>"))
-        self.assertEqual(report.missing_must, ["[protocol] cost"])
+        report = protocol_check.check_fields(pilot(repeat_cost="<low | high>"))
+        self.assertEqual(report.missing_must, ["[protocol] repeat_cost"])
 
     def test_a_prose_cost_line_is_not_the_tier(self):
-        text = pilot(cost="<seconds | minutes | hours>") + "- **Cost:** seconds\n"
+        text = pilot(repeat_cost="<low | high>") + "- **Cost:** seconds\n"
         self.assertEqual(
-            protocol_check.check_fields(text).missing_must, ["[protocol] cost"]
+            protocol_check.check_fields(text).missing_must, ["[protocol] repeat_cost"]
         )
 
 

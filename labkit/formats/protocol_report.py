@@ -30,7 +30,7 @@ from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, GateFinding
 from labkit.formats.protocol_history import (
     check_annotation_validity,
     check_protocol_id,
-    cost_lowered,
+    repeat_cost_lowered,
 )
 from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.protocol_check import (
@@ -52,10 +52,10 @@ from labkit.formats.protocol_check import (
 )
 
 
-def unreported(text: str, seconds: bool = False) -> list[str]:
+def unreported(text: str, low_cut: bool = False) -> list[str]:
     """The result fields still missing, a placeholder or only dashes. A
     model-only field (`sm`, Raw output) is owed only with a model named — a
-    computation has no prompt+answer pair to show; at SECONDS only the cut's fields
+    computation has no prompt+answer pair to show; at LOW only the cut's fields
     are owed (the Summary requires Conclusion, 2026-10-12)."""
     lines = fields(text)
     found = {f.name: f for f in lines}
@@ -68,7 +68,7 @@ def unreported(text: str, seconds: bool = False) -> list[str]:
         f
         for f in FIELDS
         if f.level == "after"
-        and (in_cut(f, kind, model) if seconds else f.seconds != "sm" or model)
+        and (in_cut(f, kind, model) if low_cut else f.low_cut != "lm" or model)
     ]
     return [
         f.label.casefold()
@@ -189,7 +189,7 @@ def template_lines(path: Path | None) -> set[str]:
     starts = set(protocol_block.section_starts(lines))
     for i, line in enumerate(lines):
         # The written protocol carries no cut markers; compared with them,
-        # the stamped Runs line `- <run_id> — <…> <!-- s -->` never matched
+        # the stamped Runs line `- <run_id> — <…> <!-- l -->` never matched
         # its leftover (uniagent area 08, 2026-10-07: frozen and reported).
         s = HTML_COMMENT.sub("", line).strip()
         if i in starts:
@@ -220,21 +220,21 @@ def find_field_guide() -> Path | None:
 def print_contract() -> None:
     """The checker's contract in one screen (2026-10-05: two cold agents
     learnt the budgets from the pre-commit hook and the field words from
-    the checker's source, four rewrite rounds each). The seconds cut and the
+    the checker's source, four rewrite rounds each). The low cut and the
     fill command come first: last, five of six agents found them only after
     reading the whole list, and none found protocol-fill (2026-10-07)."""
     print(
-        'at cost = "seconds" (nothing freezes, no SHOULD) the protocol owes: '
+        'at repeat_cost = "low" (nothing freezes, no SHOULD) the protocol owes: '
         + ", ".join(
             f.label
             for f in FIELDS
-            if f.seconds == "s" and f.level in ("must", "should")
+            if f.low_cut == "l" and f.level in ("must", "should")
         )
         + "; with a bar (kind fit or apply) also the criterion, the admissibility "
         "condition, the null condition and Model / tool; with a `[model]` table also "
-        + ", ".join(f.label for f in FIELDS if f.seconds == "sm")
+        + ", ".join(f.label for f in FIELDS if f.low_cut == "lm")
         + "; after the run: "
-        + ", ".join(f.label for f in FIELDS if f.seconds == "s" and f.level == "after")
+        + ", ".join(f.label for f in FIELDS if f.low_cut == "l" and f.level == "after")
         + "."
     )
     print(
@@ -245,16 +245,16 @@ def print_contract() -> None:
     )
     print(
         "what each tier owes, by occasion — the one table every gate reads "
-        "(standard_contract; minutes owes what hours owes):"
+        "(standard_contract):"
     )
-    for cost, kind, model in (
-        (standard_contract.SECONDS, standard_contract.COMPUTE_KIND, False),
-        (standard_contract.SECONDS, standard_contract.FIT_KIND, False),
-        (standard_contract.SECONDS, standard_contract.APPLY_KIND, True),
-        (standard_contract.HOURS, standard_contract.FIT_KIND, False),
-        (standard_contract.HOURS, standard_contract.APPLY_KIND, True),
+    for repeat_cost, kind, model in (
+        (standard_contract.LOW, standard_contract.COMPUTE_KIND, False),
+        (standard_contract.LOW, standard_contract.FIT_KIND, False),
+        (standard_contract.LOW, standard_contract.APPLY_KIND, True),
+        (standard_contract.HIGH, standard_contract.FIT_KIND, False),
+        (standard_contract.HIGH, standard_contract.APPLY_KIND, True),
     ):
-        first, *rest = standard_contract.describe(cost, kind, model)
+        first, *rest = standard_contract.describe(repeat_cost, kind, model)
         print(f"  {first}")
         for line in rest:
             print(f"    {line}")
@@ -264,8 +264,8 @@ def print_contract() -> None:
         + ", ".join(protocol_block.PROTOCOL_HEAD_KEYS)
         + f"; standard = {protocol_block.STANDARD!r}, type one of "
         + ", ".join(protocol_block.TYPES)
-        + ", cost one of "
-        + ", ".join(protocol_block.COST_TIERS)
+        + ", repeat_cost one of "
+        + ", ".join(protocol_block.REPEAT_COSTS)
         + ", kind one of "
         + ", ".join(protocol_block.KINDS)
         + " (what the kept number asserts: a computation judges no prediction, a fit "
@@ -281,8 +281,8 @@ def print_contract() -> None:
         "\nfields, by their exact template label (`- **<label>:** <value>`; a "
         "parenthesised gloss and † may follow the label; `n/a — <the reason>` "
         "counts as filled, `<…>`, `TODO`, an empty label and a bare `n/a — <why>` do not)."
-        ' The lists below are the FULL form (cost = "minutes" | "hours"); at '
-        'cost = "seconds" only the first line of this output counts:'
+        ' The lists below are the FULL form (repeat_cost = "high"); at '
+        'repeat_cost = "low" only the first line of this output counts:'
     )
     for level, title in (
         ("must", "MUST (every pilot of the full form)"),
@@ -333,12 +333,14 @@ class FileReport:
     frozen: bool = False
     audit_drift: str | None = None
     id_findings: list[GateFinding] = field(default_factory=list)
-    cost_lowered: str | None = None  # a WARNING: the tier sank since the first commit
+    repeat_cost_lowered: str | None = (
+        None  # a WARNING: the tier sank since the first commit
+    )
     answer_unbound: str | None = None  # a WARNING: an Recorded results without a run_id
     pilot_note: str = ""
     missing_must: list[str] = field(default_factory=list)
     #: owed should-fields; unfrozen they fold into the pilot note, frozen
-    #: or at seconds `owed()` has made them must — kept as data, never printed
+    #: or at low repeat cost `owed()` has made them must — kept as data, never printed
     missing_should: list[str] = field(default_factory=list)
     must_holes: list[tuple[int, str]] = field(default_factory=list)
     soft_holes: list[tuple[int, str]] = field(default_factory=list)
@@ -372,7 +374,7 @@ class FileReport:
         return not (
             self.audit_drift
             or self.id_findings
-            or self.cost_lowered
+            or self.repeat_cost_lowered
             or self.answer_unbound
             or self.bare_refs
             or self.missing_must
@@ -440,11 +442,11 @@ def check_protocol(
     if report.head is None:
         return FileReport(path, report.head_error)
     head, frozen = report.head, report.frozen
-    lane = standard_contract.lane(head.cost)
+    lane = standard_contract.lane(head.repeat_cost)
     audit_drift = None
     if frozen and lane.freeze and head.preflight_audit:
         # a warning: after the run, analysis scripts change legitimately;
-        # `n/a` at minutes/hours waives an audit nobody may waive (0.99.0)
+        # `n/a` at high repeat cost waives an audit nobody may waive (0.99.0)
         audit_drift = audit_record_gap(path.parent, head.preflight_audit, text)
     field_lines = fields(text)
     missing_should = report.missing_should
@@ -458,7 +460,7 @@ def check_protocol(
         missing_should = []
     # A placeholder is reported as one already, and a comment can never
     # be "filled" — neither is left-over template text (review 2026-10-07:
-    # a correctly filled seconds protocol was never clean).
+    # a correctly filled protocol at low repeat cost was never clean).
     in_placeholder = {
         n for f in field_lines if f.placeholder for n in range(f.line, f.last + 1)
     }
@@ -505,7 +507,7 @@ def check_protocol(
         audit_drift=audit_drift,
         id_findings=check_protocol_id(path, head, ids)
         + check_annotation_validity(path, text, ids),
-        cost_lowered=cost_lowered(path, head),
+        repeat_cost_lowered=repeat_cost_lowered(path, head),
         answer_unbound=recorded_results_without_run(text),
         pilot_note=pilot_note,
         missing_must=report.missing_must,
@@ -521,7 +523,7 @@ def check_protocol(
         series=[(n, s) for n, s in numbered if SERIES_HEAD.match(s)],
         declared=declared,
         run_unreported=(
-            unreported(text, seconds=lane.cut == standard_contract.SECONDS_CUT)
+            unreported(text, low_cut=lane.cut == standard_contract.LOW_CUT)
             if declared
             else []
         ),
@@ -547,8 +549,8 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
         print(f"{f}: WARNING: preflight_audit: {r.audit_drift}")
     for finding in r.id_findings:
         print(finding.line)
-    if r.cost_lowered:
-        print(r.cost_lowered)
+    if r.repeat_cost_lowered:
+        print(r.repeat_cost_lowered)
     if r.answer_unbound:
         print(f"{f}: {r.answer_unbound}")
     if r.runs_stamped:
@@ -567,7 +569,7 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
     for label in r.missing_must:
         print(f"{f}: MISSING (must): {label}")
     # no `missing (should)` lines: unfrozen they are named in the pilot
-    # note above, frozen or at seconds `owed()` makes them MUST (2026-10-09)
+    # note above, frozen or at low repeat cost `owed()` makes them MUST (2026-10-09)
     for n, label in r.must_holes:
         print(f"{f}:{n}: PLACEHOLDER ONLY (must): {label}")
     for n, label in r.soft_holes:

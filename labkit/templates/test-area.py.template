@@ -8,7 +8,7 @@ resolution check runs `evaluate_rows()` on synthetic rows in the run's real
 shape — perfect effect fires [C1], a null-like registered lane stays silent,
 too many empty answers fail [A1] and withhold the verdict. The parser cases
 are the canonical answer forms plus the forms `--probe` prints (pasteable);
-until those are pasted the probe test is a TODO, except at cost = seconds.
+until those are pasted the probe test is a TODO, except at repeat_cost = low.
 """
 from __future__ import annotations
 
@@ -103,7 +103,7 @@ def test_null_out_of_band_withholds_the_verdict():
 
 # The forms the answer line asks for — the parser must read them before any
 # call. The forms the model really writes come on top: `--probe` prints them
-# pasteable (at cost = seconds the first run is the probe, 2026-10-07).
+# pasteable (at repeat_cost = low the first run is the probe, 2026-10-07).
 CANONICAL_CASES: list[tuple[str, str | None]] = [
     (YES, POS),
     (YES + ".", POS),
@@ -137,13 +137,13 @@ def test_every_case_class_follows_from_its_facts():
 
 
 def test_probe_cases_are_pasted():
-    """Owed before a minutes/hours run (LAB-014 One fully rendered example pair per gold class). At cost = seconds no probe
+    """Owed before a high repeat cost run (LAB-014 One fully rendered example pair per gold class). At repeat_cost = low no probe
     precedes the run, so the canonical forms carry the test until then."""
     from labkit.formats import protocol_block, standard_contract
 
     head = protocol_block.head(measure.PROTOCOL.read_text(encoding="utf-8"))
-    if not standard_contract.lane(head.cost).probe_allowed:
-        pytest.skip("cost = seconds: no probe before the run; canonical forms only")
+    if not standard_contract.lane(head.repeat_cost).probe_allowed:
+        pytest.skip("repeat_cost = low: no probe before the run; canonical forms only")
     assert PROBE_CASES, "TODO: paste the parser cases that `--probe` prints into PROBE_CASES"
 
 

@@ -5,13 +5,13 @@ symlink to it). The rules behind every step are the lab standard that ships
 with the pinned labkit: `python -m labkit.formats.rules show LAB-nnn` prints one;
 a gate message names the rule it enforces by id and name.
 
-## Lane `seconds` — one number in minutes
+## Lane `low` — one number in minutes
 
-Applies when the protocol head says `cost = "seconds"`: a run that can be
+Applies when the protocol head says `repeat_cost = "low"`: a run that can be
 repeated at will (a computation, a handful of model calls for a minute and a cent),
 LAB-017 The number of audits follows the cost tier.
 
-1. `labkit-init exp <name> --cost seconds --kind compute|fit|apply` — the kind
+1. `labkit-init exp <name> --repeat-cost low --kind compute|fit|apply` — the kind
    says what the kept number asserts: `compute` judges no prediction, `fit`
    judges a model trained or adjusted here (a RandomForest, a regression,
    a fine-tune), `apply` judges a model used unchanged (an LLM as judge, a
@@ -19,11 +19,11 @@ LAB-017 The number of audits follows the cost tier.
    the number judge how well a model or procedure predicts? no → `compute`;
    was it trained, adjusted or selected here? yes → `fit`, no → `apply`.
    `--model <alias>` when the model answers through `models.toml` (it
-   writes `[model] alias` into the TOML head). The command stamps the seconds cut of the protocol and the
+   writes `[model] alias` into the TOML head). The command stamps the low cut of the protocol and the
    skeleton the kind calls for; without `--kind` it stamps nothing.
 2. Write the registration: `protocol-fill <PROTOCOL> --list` names every
    open field, the TOML head's `type` and, with a model, each promise's
-   `<id> sentence` first (`cost = "seconds"` is stamped); the fields
+   `<id> sentence` first (`repeat_cost = "low"` is stamped); the fields
    written after the run stand apart at the end — leave them now.
    A computation owes question · data · exclusions · unit; a fit or an apply also
    the success criterion, the admissibility condition and the null
@@ -113,16 +113,16 @@ LAB-017 The number of audits follows the cost tier.
 Nothing more is owed on this lane: no freeze, no probe before the run, no †
 fields, no reading of labkit's source.
 
-> **End of lane `seconds`.** For a number at `cost = "seconds"` stop here;
+> **End of lane `low`.** For a number at `repeat_cost = "low"` stop here;
 > read the area's `README.md` and nothing else of this file.
 
-## Lane `minutes` / `hours`
+## Lane `high`
 
-1. `labkit-init exp <name> --cost minutes|hours --kind compute|fit|apply` —
-   never `mkdir`; the kind is decided as on the seconds lane, and without
+1. `labkit-init exp <name> --repeat-cost high --kind compute|fit|apply` —
+   never `mkdir`; the kind is decided as on the low lane, and without
    `--kind` the command stamps nothing. Stamps the protocol and the script
    skeletons (`scripts/00_prepare.py · 01_measure.py · 02_analyze.py`).
-2. Read `protocol-check --contract`, then fill the TOML head (`type`, `cost`)
+2. Read `protocol-check --contract`, then fill the TOML head (`type`, `repeat_cost`)
    and the Intent before the first call: hypothesis · success criterion ·
    admissibility condition, the prompt verbatim; an id `[C]/[A]/[B]` on every
    promise to the code (LAB-003 No run without an intent paragraph,

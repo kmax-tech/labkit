@@ -1,7 +1,7 @@
 """labkit-init — stamp a lab repo and its experiment areas from the templates that ship with labkit.
 
     labkit-init lab [DIR] [--name NAME] [--labkit-ref REF]
-    labkit-init exp NAME [--repo DIR] [--cost seconds|minutes|hours] --kind compute|fit|apply [--model [ALIAS]]
+    labkit-init exp NAME [--repo DIR] [--repeat-cost low|high] --kind compute|fit|apply [--model [ALIAS]]
                          [--report] [--explore]
 
 `lab` lays out a lab repo: `AGENTS.md` (and `CLAUDE.md` pointing at it),
@@ -15,9 +15,9 @@ copied: it comes with the pin (`python -m labkit.formats.rules show LAB-nnn`).
 
 `exp` stamps one self-contained area `experiments/NN-<name>/`: the protocol
 (the pilot part by default; `--report` adds the † fields, now or when the run
-graduates; `--cost seconds` stamps the seconds cut instead), the script
+graduates; `--repeat-cost low` stamps the low cut instead), the script
 skeletons (`00_prepare`, `01_measure`, `02_analyze` — with `--model` the
-prompt skeleton, without it the estimator skeleton; at seconds without a
+prompt skeleton, without it the estimator skeleton; at low repeat cost without a
 model the counting skeleton), the area README and the area's test under
 `tests/`. `--explore` stamps only `experiments/explore/<name>.py`, the entry
 before an area exists; the plain command later moves it into the area.
@@ -60,7 +60,7 @@ from labkit.tools.protocol_cuts import (
     new_protocol_id,
     pilot_and_report,
     quick_block,
-    seconds_cut,
+    low_cut,
     short_placeholders,
 )
 
@@ -232,7 +232,7 @@ def area_slug(name: str) -> str:
 def area_readme(nn: str, slug: str, skeleton: bool) -> str:
     """The area README: the one question, the route through the area, the contract on one page.
 
-    A computation (`skeleton=False`: cost seconds without a model) carries no blank:
+    A computation (`skeleton=False`: repeat cost low without a model) carries no blank:
     its question and contract live in the protocol, and a README placeholder
     was the one gate line left in the cloud probe (draw 11, 2026-10-13)."""
     question = (
@@ -276,7 +276,7 @@ def area_readme(nn: str, slug: str, skeleton: bool) -> str:
 {returns}
 
 **The gates, in order.** `code-check` after every code change · at
-`minutes`/`hours`: `preflight` + the preflight audit, then freeze · the run
+`high`: `preflight` + the preflight audit, then freeze · the run
 through `runlog` · `finalize` · `protocol-fill --from-run` writes the number back · {recheck}.
 
 ## State
@@ -306,10 +306,10 @@ def promote(area: Path, blocks: ProtocolBlocks) -> list[str]:
     log = []
     for proto in protos:
         text = proto.read_text(encoding="utf-8")
-        lane = standard_contract.lane(protocol_block.head(text).cost)
+        lane = standard_contract.lane(protocol_block.head(text).repeat_cost)
         if not lane.freeze:
             log.append(
-                f"  skip (cost {lane.cost_tier}: nothing freezes, no report fields)  {proto}"
+                f"  skip (repeat_cost {lane.repeat_cost}: nothing freezes, no report fields)  {proto}"
             )
             continue
         new, added = insert_report_fields(text, blocks)
@@ -370,7 +370,7 @@ def stamp_scripts(
 def stamp_area(
     root: Path,
     name: str,
-    cost: str | None = None,
+    repeat_cost: str | None = None,
     kind: str | None = None,
     model: bool | str = False,
     report: bool = False,
@@ -400,16 +400,18 @@ def stamp_area(
     kind = asked_kind(kind)
     # the cut and the skeleton are the contract's answers, not read off the
     # tier here (a tier compared by hand outside the contract is a copy)
-    quick = standard_contract.lane(cost).cut == standard_contract.SECONDS_CUT
-    skeleton = standard_contract.skeleton(cost, kind, bool(model))
-    tmpl = stamped_head(template(PROTOCOL_TEMPLATE.name), root, slug, cost, kind, model)
+    quick = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
+    skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
+    tmpl = stamped_head(
+        template(PROTOCOL_TEMPLATE.name), root, slug, repeat_cost, kind, model
+    )
     clean = re.sub(
         r" ?<!-- s[bm]? -->", "", bar_cut(tmpl, kind)
     )  # every written protocol is free of the cut markers
     pilot, blocks = pilot_and_report(clean)
     if quick:
         pilot, blocks = (
-            seconds_cut(quick_block(tmpl, kind), kind, model=bool(model)),
+            low_cut(quick_block(tmpl, kind), kind, model=bool(model)),
             [],
         )
         if skeleton is standard_contract.COMPUTE:
@@ -445,7 +447,7 @@ def stamp_area(
         log.append(f"  moved          {pre} -> {area / 'explore' / pre.name}")
     stamped = blank_before_headings(short_placeholders(clean if report else pilot))
     stamped = name_promise_ids(stamped, kind)
-    check_stamped_head(stamped, cost, kind, bool(model))
+    check_stamped_head(stamped, repeat_cost, kind, bool(model))
     write_if_absent(area / f"PROTOCOL-{slug}.md", stamped, log)
     log += stamp_scripts(root, area, nn, slug, skeleton, model)
     _point_hooks_at(root)
@@ -453,7 +455,7 @@ def stamp_area(
         f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
         + "\n".join(log)
         + "\n"
-        + next_steps(area.relative_to(root), slug, nn, cost, kind, bool(model))
+        + next_steps(area.relative_to(root), slug, nn, repeat_cost, kind, bool(model))
     )
 
 
@@ -515,7 +517,12 @@ COMPUTE_CLAIM = (
 
 
 def stamped_head(
-    tmpl: str, root: Path, slug: str, cost: str | None, kind: str, model: bool | str
+    tmpl: str,
+    root: Path,
+    slug: str,
+    repeat_cost: str | None,
+    kind: str,
+    model: bool | str,
 ) -> str:
     """The template with its head tokens replaced: the name once, a fresh
     protocol id, COST when asked, KIND always, and with MODEL a `[model]`
@@ -525,8 +532,10 @@ def stamped_head(
     out = tmpl.replace("<name>", slug, 1).replace(
         "<protocol-id>", new_protocol_id(root)
     )
-    if cost:
-        out = out.replace('cost = "<seconds | minutes | hours>"', f'cost = "{cost}"')
+    if repeat_cost:
+        out = out.replace(
+            'repeat_cost = "<low | high>"', f'repeat_cost = "{repeat_cost}"'
+        )
     out = out.replace('kind = "<compute | fit | apply>"', f'kind = "{kind}"')
     if model:
         alias = model if isinstance(model, str) else "<alias from models.toml>"
@@ -541,7 +550,7 @@ def stamped_head(
 
 
 def check_stamped_head(
-    text: str, cost: str | None, kind: str, model: bool = False
+    text: str, repeat_cost: str | None, kind: str, model: bool = False
 ) -> None:
     """Raise ValueError unless the stamped protocol's head carries a real
     id, the KIND asked, when COST was asked for that tier, and when MODEL was
@@ -555,32 +564,32 @@ def check_stamped_head(
         raise ValueError(
             f"labkit-init: the stamped head says kind = {head.kind!r}, asked {kind!r}"
         )
-    if cost is not None and head.cost != cost:
+    if repeat_cost is not None and head.repeat_cost != repeat_cost:
         raise ValueError(
-            f"labkit-init: the stamped head says cost = {head.cost!r}, asked {cost!r}"
+            f"labkit-init: the stamped head says repeat_cost = {head.repeat_cost!r}, asked {repeat_cost!r}"
         )
     if model and protocol_block.model(text) is None:
         raise ValueError("labkit-init: --model asked, the stamped head has no [model]")
 
 
 def next_steps(
-    rel: Path, slug: str, nn: str, cost: str | None, kind: str, model: bool
+    rel: Path, slug: str, nn: str, repeat_cost: str | None, kind: str, model: bool
 ) -> str:
     """What to do after `exp`, in order — the lane of AGENTS.md for this
     area, read off the contract: the preflight and its audit stand where
     the lane owes the freeze, the analysis audit where the lane owes it,
     the adoption at the end of every lane. Until 2026-10-19 the printed
-    steps at minutes/hours skipped the preflight, both audits and the
+    steps at high repeat cost skipped the preflight, both audits and the
     adoption while the stamped AGENTS.md named them; an agent following the
     console met the refusal at the run's start."""
-    ln = standard_contract.lane(cost)
-    sk = standard_contract.skeleton(cost, kind, model)
+    ln = standard_contract.lane(repeat_cost)
+    sk = standard_contract.skeleton(repeat_cost, kind, model)
     protocol = f"PROTOCOL-{slug}.md"
     audit = f"labkit-audit {rel} --mode"
     code_check = f"after every code change `code-check {rel}`"
-    if ln.cut == standard_contract.SECONDS_CUT:
+    if ln.cut == standard_contract.LOW_CUT:
         title = (
-            f'cost = "{ln.cost_tier}" — no freeze, no audit before the run, '
+            f'repeat_cost = "{ln.repeat_cost}" — no freeze, no audit before the run, '
             "the run is the instrument check"
         )
         if sk is standard_contract.COMPUTE:
@@ -596,18 +605,18 @@ def next_steps(
             )
             fill = "make_estimator(), SCORE, FEATURES_FIELD; --show 3, then the run"
         steps = [
-            f"{protocol}: fill the seconds cut — `type` in the head, then question, unit,\n"
+            f"{protocol}: fill the low cut — `type` in the head, then question, unit,\n"
             f"     {fields}; `protocol-check --contract` names the labels.",
             f"scripts/01_measure.py: {fill}; {code_check}.",
         ]
     else:
         test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
         estimator = sk is standard_contract.ESTIMATOR
-        title = f"lane {ln.cost_tier}: light pilot, heavy report" + (
+        title = f"lane {ln.repeat_cost}: light pilot, heavy report" + (
             " — the instrument is an estimator, no model call" if estimator else ""
         )
         steps = [
-            f"{protocol}: fill the pilot part (head: type, cost; question, success, "
+            f"{protocol}: fill the pilot part (head: type, repeat_cost; question, success, "
             f"admissibility, {'the estimator in Model / tool' if estimator else 'prompt'}, "
             "the null condition).",
             "scripts/00_prepare.py: raw -> prepared"
@@ -694,9 +703,9 @@ def main(argv: list[str]) -> int:
         "holding models.toml and experiments/)",
     )
     exp.add_argument(
-        "--cost",
-        choices=protocol_block.COST_TIERS,
-        help="stamp this tier into the head; seconds stamps the seconds cut",
+        "--repeat-cost",
+        choices=protocol_block.REPEAT_COSTS,
+        help="stamp this repeat cost into the head; low stamps the low cut",
     )
     exp.add_argument(
         "--kind",
@@ -752,7 +761,12 @@ def main(argv: list[str]) -> int:
         )
         return 0
     _, report = stamp_area(
-        root, a.name, cost=a.cost, kind=a.kind, model=a.model, report=a.report
+        root,
+        a.name,
+        repeat_cost=a.repeat_cost,
+        kind=a.kind,
+        model=a.model,
+        report=a.report,
     )
     print(report)
     return 0

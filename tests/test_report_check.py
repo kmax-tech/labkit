@@ -1,4 +1,4 @@
-"""report-check: the last gate at every cost tier — frozen (minutes/hours
+"""report-check: the last gate at every repeat cost — frozen (high repeat cost
 only), finalize clean and named, the answering run a full run, an analysis
 audit of code, promises and that run as they are now, `02_analyze.py
 --check` passing.
@@ -6,7 +6,7 @@ audit of code, promises and that run as they are now, `02_analyze.py
 The cloud judge probe (2026-10-14, draw 3) skipped the analysis audit, the
 check and the note, and finalize was green; finalize cannot ask for what
 follows the analysis audit, so the end has its own gate. Until 0.99.0 the
-gate exited 0 at `cost = "seconds"`, so a probe's number passed there as a
+gate exited 0 at `repeat_cost = "low"`, so a probe's number passed there as a
 reported one (TODO 1, 2026-10-19). Each station is tested where it lives
 (findings.audit_coverage, recheck.holds, finalize); here: what is owed when,
 that every station blocks on its own, and `--if-reported` — the gate the
@@ -48,7 +48,7 @@ from labkit.checks import audit_binding  # noqa: E402
 
 
 class ReportCheck(unittest.TestCase):
-    def _area(self, cost: str = "minutes", frozen: bool = True) -> Path:
+    def _area(self, repeat_cost: str = "high", frozen: bool = True) -> Path:
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         (area / "scripts").mkdir(parents=True)
         (area / "scripts" / "02_analyze.py").write_text(
@@ -57,7 +57,7 @@ class ReportCheck(unittest.TestCase):
         scope_file(area)
         (area / "PROTOCOL-x.md").write_text(
             head(
-                cost=cost,
+                repeat_cost=repeat_cost,
                 frozen=frozen,
                 preflight_audit="n/a — test",
                 promises=C1_BLOCK,
@@ -179,7 +179,7 @@ class ReportCheck(unittest.TestCase):
         every station (`checked`): the declaration is read from the text
         the caller hands over, the run is chosen once through
         `audit_binding.audited_run`, and the output says which state was held."""
-        area = self._area(cost="seconds", frozen=False)
+        area = self._area(repeat_cost="low", frozen=False)
         run = self._answered(area)
         proto = area / "PROTOCOL-x.md"
         ctx = report_check.checked(area, proto)
@@ -191,7 +191,7 @@ class ReportCheck(unittest.TestCase):
         staged = protocol_fill.fill_result_run(ctx.text, run.name)
         ctx = report_check.checked(area, proto, state=report_check.INDEX, text=staged)
         self.assertEqual((ctx.state, ctx.declared), (report_check.INDEX, run.name))
-        self.assertEqual(ctx.head.cost, "seconds")
+        self.assertEqual(ctx.head.repeat_cost, "low")
         self._audited(area, run)
         code, out = self._run(area)
         self.assertEqual(code, 0, out)
@@ -242,10 +242,10 @@ class ReportCheck(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("Unit still a placeholder", out)
 
-    def test_seconds_owes_no_freeze_and_everything_after_it(self):
-        """The twin at seconds: unfrozen, no preflight audit, and clean — a
+    def test_low_owes_no_freeze_and_everything_after_it(self):
+        """The twin at low repeat cost: unfrozen, no preflight audit, and clean — a
         full run, the analysis record of it, the check."""
-        area = self._area(cost="seconds", frozen=False)
+        area = self._area(repeat_cost="low", frozen=False)
         self._audited(area)
         code, out = self._run(area)
         self.assertEqual(code, 0, out)
@@ -253,10 +253,10 @@ class ReportCheck(unittest.TestCase):
         self.assertIn("finalized, audited, checked", out)
         self.assertNotIn("frozen,", out)
 
-    def test_at_seconds_a_probes_number_is_refused(self):
-        """Third haiku round: t3 and t5 reported a probe's number; at seconds
+    def test_at_low_a_probes_number_is_refused(self):
+        """Third haiku round: t3 and t5 reported a probe's number; at low repeat cost
         the gate said "nothing owed here"."""
-        area = self._area(cost="seconds", frozen=False)
+        area = self._area(repeat_cost="low", frozen=False)
         run = self._answered(area)
         completed_run(area, run.name, metrics={"c1_pass": True}, run_kind="probe")
         self._audited(area, run)
@@ -264,10 +264,10 @@ class ReportCheck(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("a probe (run_kind='probe'), not a measurement", out)
         self.assertIn("owes a full run (run_kind='measurement')", out)
-        self.assertNotIn("on a frozen protocol", out)  # none is owed at seconds
+        self.assertNotIn("on a frozen protocol", out)  # none is owed at low repeat cost
 
-    def test_at_seconds_an_acknowledged_run_is_refused(self):
-        area = self._area(cost="seconds", frozen=False)
+    def test_at_low_an_acknowledged_run_is_refused(self):
+        area = self._area(repeat_cost="low", frozen=False)
         run = self._answered(area)
         completed_run(area, run.name, metrics={"c1_pass": True}, unfrozen_ack=True)
         self._audited(area, run)
@@ -275,8 +275,8 @@ class ReportCheck(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("acknowledged over an unfrozen protocol", out)
 
-    def test_at_seconds_the_analysis_audit_and_finalize_are_owed(self):
-        area = self._area(cost="seconds", frozen=False)
+    def test_at_low_the_analysis_audit_and_finalize_are_owed(self):
+        area = self._area(repeat_cost="low", frozen=False)
         self._answered(area)
         code, out = self._run(area, finalize=1)
         self.assertEqual(code, 1, out)
@@ -289,7 +289,7 @@ class ReportCheck(unittest.TestCase):
     def test_finalize_blockers_are_named_not_pointed_at(self):
         """Inside the stop hook "run it to see them" was a round trip the
         agent did not take: finalize's blockers stand in report-check's list."""
-        area = self._area(cost="seconds", frozen=False)  # no run at all
+        area = self._area(repeat_cost="low", frozen=False)  # no run at all
         out = io.StringIO()
         with (
             mock.patch.object(report_check, "check_analysis_script", return_value=None),
@@ -304,7 +304,7 @@ class ReportCheck(unittest.TestCase):
         """Until the 2026-10-23 audit a non-zero finalize without a blocker
         became "run it to see why" — the round trip again. finalize keeps
         every reason as a blocker now; a bare exit is a bug and says so."""
-        area = self._area(cost="seconds", frozen=False)
+        area = self._area(repeat_cost="low", frozen=False)
         with (
             mock.patch.object(report_check, "finalize_area", return_value=2),
             self.assertRaises(RuntimeError) as caught,
@@ -317,7 +317,7 @@ class ReportCheck(unittest.TestCase):
         as findings, its headers and notes reach nothing, and stdout is never
         redirected for it (until 0.100.0 it was, and the blockers were read
         back from the collector while the output was thrown away)."""
-        area = self._area(cost="seconds", frozen=False)
+        area = self._area(repeat_cost="low", frozen=False)
         out = io.StringIO()
         seen: dict[str, object] = {}
 
@@ -431,10 +431,10 @@ class ReportCheck(unittest.TestCase):
         stamped no analysis script; station 4 asked for `02_analyze.py` and
         refused every correct count (audit 2026-10-19). Now every skeleton
         stamps `02_analyze.py` (`standard_contract.CHECK_SCRIPT`), and the
-        station names the one it is missing — at seconds as at minutes."""
-        for cost in ("seconds", "minutes"):
+        station names the one it is missing — at low repeat cost as at high."""
+        for cost in ("low", "high"):
             with self.subTest(cost):
-                area = self._area(cost=cost, frozen=cost != "seconds")
+                area = self._area(repeat_cost=cost, frozen=cost != "low")
                 repo = area.parent.parent
                 self.assertIsNone(report_check.check_analysis_script(area, repo))
                 (area / "scripts" / "02_analyze.py").unlink()
@@ -451,16 +451,16 @@ class ReportCheck(unittest.TestCase):
         here, not in the contract) owes no record, and reportability names the
         freeze only where the lane owes it (review 2026-10-19: the release
         read only `freeze` off the contract)."""
-        area = self._area(cost="seconds", frozen=False)
+        area = self._area(repeat_cost="low", frozen=False)
         run = self._answered(area)
         completed_run(area, run.name, metrics={"c1_pass": True}, run_kind="probe")
-        seconds = standard_contract.lane("seconds")
-        with mock.patch.object(report_check, "lane", return_value=seconds):
+        low = standard_contract.lane("low")
+        with mock.patch.object(report_check, "lane", return_value=low):
             code, out = self._run(area)
             self.assertEqual(code, 1, out)
             self.assertIn("analysis audit:", out)
             self.assertNotIn("on a frozen protocol", out)
-            without = dataclasses.replace(seconds, audits=(), freeze=True)
+            without = dataclasses.replace(low, audits=(), freeze=True)
         with (
             mock.patch.object(report_check, "lane", return_value=without),
             mock.patch.object(report_check, "review_findings") as decisions,
@@ -502,7 +502,7 @@ class IfReported(unittest.TestCase):
         audited: bool = True,
         git: bool = False,
     ) -> Path:
-        """A seconds area (no freeze owed, so the bare fixture head passes
+        """A low-lane area (no freeze owed, so the bare fixture head passes
         station 1) whose protocol says ANSWER and declares DECLARED as its
         result (the head's `[result] run`; None: an exploration); its one
         run a full run unless LONG says a probe; an analysis record of it
@@ -521,7 +521,7 @@ class IfReported(unittest.TestCase):
         scope_file(area)
         proto = area / "PROTOCOL-x.md"
         proto.write_text(
-            head(cost="seconds", result=declared, promises=C1_BLOCK)
+            head(repeat_cost="low", result=declared, promises=C1_BLOCK)
             + "- **Question / hypothesis:** does it hold?\n"
             + C1_PROSE
             + f"- **Recorded results:** {answer}\n",
@@ -536,7 +536,7 @@ class IfReported(unittest.TestCase):
         )
         if git:
             started_at(run, head_commit(area.parent.parent))
-        # at seconds finalize holds the provenance: the source frozen in the run
+        # at low repeat cost finalize holds the provenance: the source frozen in the run
         src = area / "data.jsonl"
         src.write_text('{"id": 1}\n', encoding="utf-8")
         cfg = run / "config.json"

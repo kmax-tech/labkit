@@ -639,7 +639,7 @@ class Repo(unittest.TestCase):
 
 
 class AuditCoverage(unittest.TestCase):
-    """A full run at minutes/hours owes a preflight record of the code as it
+    """A full run at high repeat cost owes a preflight record of the code as it
     is now, every finding decided (2026-10-14: a stamp no audit had seen)."""
 
     SHA = "abc123def456"

@@ -2,7 +2,7 @@
 
 pre-run: a command that starts a run script in an area triggers preflight;
 frozen + blockers blocks (exit 2), unfrozen + blockers only reports,
-throwaway stages and non-run scripts pass untouched; at `cost = "seconds"`
+throwaway stages and non-run scripts pass untouched; at `repeat_cost = "low"`
 preflight does not run and the hook only reports whether the criterion
 is written (LAB-015 Preflight audit before freezing).
 post-change: changed protocols and messung notes are checked whatever
@@ -56,11 +56,13 @@ BODY = """\
 """
 
 
-def _protocol(frozen: bool, cost: str = "minutes") -> str:
+def _protocol(frozen: bool, repeat_cost: str = "high") -> str:
     # every area here answers from a full run, so it carries the tables (0.19)
     return (
         "# Experiment protocol: x\n\n"
-        + head(frozen=frozen, cost=cost, kind="fit", promises=DEFAULT_BLOCK)
+        + head(
+            frozen=frozen, repeat_cost=repeat_cost, kind="fit", promises=DEFAULT_BLOCK
+        )
         + "\n"
         + BODY
     )
@@ -77,11 +79,13 @@ def _git(cwd, *args):
     subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True)
 
 
-def _repo(frozen: bool, script: str = RUN_SCRIPT, cost: str = "minutes") -> Path:
+def _repo(frozen: bool, script: str = RUN_SCRIPT, repeat_cost: str = "high") -> Path:
     root = Path(tempfile.mkdtemp())
     area = root / "experiments" / "01-x"
     (area / "scripts").mkdir(parents=True)
-    (area / "PROTOCOL-x.md").write_text(_protocol(frozen, cost), encoding="utf-8")
+    (area / "PROTOCOL-x.md").write_text(
+        _protocol(frozen, repeat_cost), encoding="utf-8"
+    )
     (area / "scripts" / "01_measure.py").write_text(script, encoding="utf-8")
     (root / "notes" / "messung").mkdir(parents=True)
     _git(root, "init", "-q", ".")
@@ -194,8 +198,8 @@ class PreRun(unittest.TestCase):
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("pilot", ctx)
 
-    def test_seconds_skips_preflight_even_with_blockers(self):
-        root = _repo(True, cost="seconds")
+    def test_low_skips_preflight_even_with_blockers(self):
+        root = _repo(True, repeat_cost="low")
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
             'from labkit.run import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
             encoding="utf-8",
@@ -206,12 +210,12 @@ class PreRun(unittest.TestCase):
         )
         self.assertEqual(rc, 0)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("cost seconds", ctx)
+        self.assertIn("repeat cost low", ctx)
         self.assertIn("registration written", ctx)
         self.assertNotIn("BLOCKED", err)
 
-    def test_seconds_without_question_is_reported_not_blocked(self):
-        root = _repo(False, cost="seconds")
+    def test_low_without_question_is_reported_not_blocked(self):
+        root = _repo(False, repeat_cost="low")
         proto = root / "experiments/01-x/PROTOCOL-x.md"
         proto.write_text(
             proto.read_text(encoding="utf-8").replace(
@@ -416,18 +420,18 @@ class Stop(unittest.TestCase):
     report-check before the agent ends its turn (finalize until 0.99.0; the
     whole release check since — third haiku round: t3 and t5 reported a
     probe's number and no agent ever called report-check). The area is at
-    seconds, where the hook's rule is the same and no freeze is owed."""
+    low, where the hook's rule is the same and no freeze is owed."""
 
     RUN = "2026-10-07T10-00-00_ab12"
 
     def setUp(self):
         os.environ.pop("CLAUDE_PROJECT_DIR", None)
-        self.root = _repo(False, cost="seconds")
+        self.root = _repo(False, repeat_cost="low")
         self.area = self.root / "experiments" / "01-x"
         (self.area / "scripts" / "02_analyze.py").write_text(
             "print('ok')\n", encoding="utf-8"
         )
-        # at seconds finalize holds the provenance: the source tracked in git
+        # at low repeat cost finalize holds the provenance: the source tracked in git
         (self.root / "data").mkdir()
         (self.root / "data" / "cases.jsonl").write_text('{"id": 1}\n', encoding="utf-8")
         _git(self.root, "add", "-A")

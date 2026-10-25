@@ -4,7 +4,7 @@
 
 - **Question †:** <the Intent's question in plain words — the Conclusion
   below answers it for a reader who sees only the Summary>
-- **Conclusion:** <!-- s --> <the answer to the question above, in at most two
+- **Conclusion:** <!-- l --> <the answer to the question above, in at most two
   plain sentences: whether the bar set before the run was met ("Yes — the
   class descriptions kept the cable set out of the framework class in all
   five cases, as required") — or that no verdict was possible because an
@@ -20,14 +20,14 @@
 
 ## Intent (before the run)
 
-- **Terms of this protocol:** <!-- s --> <first, because the question uses
+- **Terms of this protocol:** <!-- l --> <first, because the question uses
   them: one line per house word — *everyday word · house term · code word*
   ("gap case (a case only an uncovered rule can reject) · Lückenfall ·
   `GAP_CASES`"); look up before coining (the field's established term, then
   `notes/theorie/terms.md`, then the lab standard's vocabulary table);
   "n/a — standard vocabulary" only if nothing is coined>
-- **Question / hypothesis:** <!-- s --> <the one question — what do we expect?>
-- **Success / failure criterion:** <!-- sb --> <how do we recognise whether it worked?
+- **Question / hypothesis:** <!-- l --> <the one question — what do we expect?>
+- **Success / failure criterion:** <!-- lb --> <how do we recognise whether it worked?
   One id per conjunct, written `[C…]` with its number in the brackets
   (C1 → the key `c1_pass`), each reappearing as a lowercase key in the reportable
   run's metrics.json; where a number stands, name its constant from the
@@ -39,7 +39,7 @@
   `after`") — Terms below is the home of the definition, this line its
   first use (LAB-092 Term layering)
   (→ LAB-003 No run without an intent paragraph, LAB-004 Identifiers make the intent addressable)>
-- **Admissibility condition:** <!-- sb --> <what must hold in the same run before
+- **Admissibility condition:** <!-- lb --> <what must hold in the same run before
   any verdict is issued — yield, coverage, a control showing its expected
   value; one A per condition, each with WHY its failure makes the measurement
   uninterpretable (not merely less likely to succeed — a threshold the
@@ -63,14 +63,14 @@
 
 ## Result (after the run — write back, don't go quiet)
 
-- **Recorded results:** <!-- s --> <generated metrics, run_id and limits
+- **Recorded results:** <!-- l --> <generated metrics, run_id and limits
   note — `protocol-fill --from-run` writes this field from the run and
   audit records; after a changed audit decision use `--render`; never retype>
 - **Deviations after freeze:** <"none", or what was changed after
   `frozen = true` — the registered plan is the Intent above and is not
   rewritten; a deviation that touches the verdict is named in Summary →
   Limits as well>
-- **Raw output:** <!-- sm --> <one real prompt+answer pair per finding>
+- **Raw output:** <!-- lm --> <one real prompt+answer pair per finding>
 - **Interpretation / next step:** <one sentence; keep instrument findings
   apart from findings about the subject>
 - **Outcome †:** <expected or surprising — failures belong here>
@@ -78,7 +78,7 @@
 - **Caps/drops †:** <what was omitted or limited>
 - **Analysis audit †:** <date · scope sha · N findings — the audit of the
   EVALUATION against the frozen criterion, before the number leaves; at
-  cost seconds due at promotion or when the number steers a decision
+  repeat cost low due at promotion or when the number steers a decision
   (→ LAB-050 Analysis audit before reporting, LAB-017 The number of audits follows the cost tier)>
 
 <!-- APPARATUS — this part gets LOOKED UP, not read. -->
@@ -91,14 +91,14 @@
 
 ## Setup
 
-- **Data / scope:** <!-- s --> <source, N, producer script; pilot subset first>
-- **Data profile:** <!-- sm --> <your judgement of the data before the run: could a surface feature answer the question without the model? What you looked at (the `00_prepare.py --audit` profile, any cue words you counted) and what it cannot show>
-- **Model / tool:** <!-- sb --> <the instrument in one sentence: what the model
+- **Data / scope:** <!-- l --> <source, N, producer script; pilot subset first>
+- **Data profile:** <!-- lm --> <your judgement of the data before the run: could a surface feature answer the question without the model? What you looked at (the `00_prepare.py --audit` profile, any cue words you counted) and what it cannot show>
+- **Model / tool:** <!-- lb --> <the instrument in one sentence: what the model
   does here and what it sees — its alias stands in the head's `[model]`, never
   hardcode endpoint or ID; two arms (profiles) compared? say what `before` and
   `after` are — the profiles themselves stand in `[model.arms.<arm>]`, and the
   diff between them verbatim under Prompt>
-- **Prompt (verbatim, per variant):** <!-- sm -->
+- **Prompt (verbatim, per variant):** <!-- lm -->
 
   ```text
   <the real prompt — `protocol-fill PROTOCOL-<name>.md --prompts` writes it from the script's PROMPT constants>
@@ -106,14 +106,14 @@
 
 - **Model I/O:** <in: which fields · out as instructed: required format ·
   out in fact: what comes back + which function parses it>
-- **Null condition / anchors (in the same run):** <!-- sb --> <one A per anchor — what runs along in THIS
+- **Null condition / anchors (in the same run):** <!-- lb --> <one A per anchor — what runs along in THIS
   run and must show null — anchors of known rate, placebo (safest: one whose
   true answer is the same for every item), swap; not "was
   validated earlier". Per anchor its expected outcome WITH the derivation
   in half a sentence (→ LAB-037 Every anchor carries its target and rationale)>
-- **Exclusions / filters:** <!-- s --> <what is dropped from the data or output and why;
+- **Exclusions / filters:** <!-- l --> <what is dropped from the data or output and why;
   which outputs get no gate label — "none" if nothing is excluded>
-- **Unit:** <!-- s --> <what one counted or judged thing is — and what is not:
+- **Unit:** <!-- l --> <what one counted or judged thing is — and what is not:
   hidden files, nested directories, empty cases, a second answer line>
 - **Data preparation †:** <raw → prepared: which script wrote which file;
   the experiment reads prepared only>
@@ -157,7 +157,7 @@
 
 ## Runs (protocol run list — via `runlog`, cite run_ids instead of retyping numbers)
 
-- <run_id> — <one sentence: what this run was> <!-- s -->
+- <run_id> — <one sentence: what this run was> <!-- l -->
 
 ## Follow-up
 
@@ -170,11 +170,11 @@
 - <…>
 
 ## Head (read by the checks)
-<!-- s -->
+<!-- l -->
 
 *How to fill each field, the cuts by tier and the intent ids:
 `protocol-field-guide.md` (`protocol-check --guide`); which fields this
-protocol's `cost` owes, and which fall due once a result is declared:
+protocol's `repeat_cost` owes, and which fall due once a result is declared:
 `protocol-check --contract` — the one list, never retyped here; fill by
 label with `protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.*
 
@@ -182,10 +182,10 @@ label with `protocol-fill PROTOCOL-<name>.md "<label>" "<value>"`.*
 # `[result] run = "<run_id>"` below [protocol], written by `protocol-fill --from-run`
 # after a clean `finalize`: the one declaration that this protocol reports a number.
 [protocol]
-standard = "0.22"
+standard = "0.23"
 id = "<protocol-id>"
 type = "<exploratory | confirmatory>"
-cost = "<seconds | minutes | hours>"
+repeat_cost = "<low | high>"
 kind = "<compute | fit | apply>"
 frozen = false
 preflight_audit = ""

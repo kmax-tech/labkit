@@ -19,7 +19,7 @@ from labkit.checks import run_record_check
 SHA_B, SHA_A = "bcec0c37236d", "1d4c79af596a"
 ALIAS = "gpt-oss-20b-leguin"
 TEXT = head(
-    cost="seconds",
+    repeat_cost="low",
     model=ALIAS,
     arms={
         "before": ("register/profiles/b.toml", SHA_B, ALIAS),
@@ -108,7 +108,7 @@ class ArmLines(unittest.TestCase):
             area, run = _repo(d, profiles=(), fingerprints={})
             self.assertEqual(
                 run_record_check.arm_findings(
-                    head(cost="seconds", model="haiku"), area, run
+                    head(repeat_cost="low", model="haiku"), area, run
                 ),
                 [],
             )

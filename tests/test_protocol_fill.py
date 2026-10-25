@@ -123,7 +123,7 @@ class HeadType(unittest.TestCase):
     HEAD = (
         "# Experiment protocol: x\n\n```toml\n[protocol]\n"
         f'standard = "{protocol_block.STANDARD}"\nid = "p-0123456789abcdef"\n'
-        'type = "<exploratory | confirmatory>"\ncost = "seconds"\nkind = "compute"\n'
+        'type = "<exploratory | confirmatory>"\nrepeat_cost = "low"\nkind = "compute"\n'
         'frozen = false\npreflight_audit = "none"\n```\n\n'
         "- **Unit:** <what one row is>\n"
     )
@@ -189,28 +189,28 @@ class HeadType(unittest.TestCase):
         self.assertIn('type = "confirmatory"', filled)
 
     def test_the_head_cost_left_by_the_stamp_is_listed_and_set(self):
-        """`labkit-init exp` without --cost leaves `cost = "<…>"`; --list named
+        """`labkit-init exp` without --repeat-cost leaves `cost = "<…>"`; --list named
         only type, and the agent edited the head by hand (2026-10-21)."""
-        text = self.HEAD.replace(
-            'cost = "seconds"', 'cost = "<seconds | minutes | hours>"'
-        )
-        self.assertEqual(protocol_fill.head_open(text, "cost"), 8)
+        text = self.HEAD.replace('repeat_cost = "low"', 'repeat_cost = "<low | high>"')
+        self.assertEqual(protocol_fill.head_open(text, "repeat_cost"), 8)
         out = io.StringIO()
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp) / "PROTOCOL-x.md"
             p.write_text(text, encoding="utf-8")
             with contextlib.redirect_stdout(out):
                 self.assertEqual(protocol_fill.main([str(p), "--list"]), 0)
-                rc = protocol_fill.main([str(p), "type=exploratory", "cost=minutes"])
+                rc = protocol_fill.main(
+                    [str(p), "type=exploratory", "repeat_cost=high"]
+                )
             self.assertEqual(rc, 0)
             filled = p.read_text(encoding="utf-8")
         listed = [ln.split()[:2] for ln in out.getvalue().splitlines()[:2]]
-        self.assertEqual(listed, [["7", "type"], ["8", "cost"]])
-        self.assertIn("seconds | minutes | hours", out.getvalue())
-        self.assertEqual(protocol_block.head(filled).cost, "minutes")
-        self.assertIsNone(protocol_fill.head_open(filled, "cost"))
-        with self.assertRaisesRegex(ValueError, "cost must be one of seconds"):
-            protocol_fill.fill_head(text, "cost", "days")
+        self.assertEqual(listed, [["7", "type"], ["8", "repeat_cost"]])
+        self.assertIn("low | high", out.getvalue())
+        self.assertEqual(protocol_block.head(filled).repeat_cost, "high")
+        self.assertIsNone(protocol_fill.head_open(filled, "repeat_cost"))
+        with self.assertRaisesRegex(ValueError, "repeat_cost must be one of low"):
+            protocol_fill.fill_head(text, "repeat_cost", "days")
         with self.assertRaisesRegex(ValueError, "not a choice protocol-fill sets"):
             protocol_fill.head_open(text, "frozen")
 
@@ -606,13 +606,13 @@ class Adopt(unittest.TestCase):
                 + "\n## Summary",
                 1,
             )
-            + head(cost="seconds", promises=C1_BLOCK),
+            + head(repeat_cost="low", promises=C1_BLOCK),
             encoding="utf-8",
         )
         src = area / "data.jsonl"
         src.write_text('{"id": 1}\n', encoding="utf-8")
         # a repository with the registration and the source committed before
-        # the run: the seconds release holds both to git
+        # the run: the low lane's release holds both to git
         for args in (
             ("init", "-q", "."),
             ("config", "user.email", "t@t"),
@@ -750,7 +750,7 @@ class PromiseSentences(unittest.TestCase):
     )
 
     def text(self) -> str:
-        return "# P\n\n" + head(cost="seconds", promises=self.BLOCK)
+        return "# P\n\n" + head(repeat_cost="low", promises=self.BLOCK)
 
     def test_list_names_the_open_sentence_and_not_the_written_one(self):
         out = io.StringIO()
@@ -819,7 +819,7 @@ class PromiseSentencesReview(unittest.TestCase):
             'sentence = "<the criterion>"\n'
             'scope = ["scripts/01_measure.py"]\n'
         )
-        return "# P\n" + prose + "\n" + head(cost="seconds", promises=block)
+        return "# P\n" + prose + "\n" + head(repeat_cost="low", promises=block)
 
     def listed(self, text: str) -> str:
         out = io.StringIO()

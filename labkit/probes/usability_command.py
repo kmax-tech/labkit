@@ -13,7 +13,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from labkit.formats.protocol_block import COST_TIERS
+from labkit.formats.protocol_block import REPEAT_COSTS
 from labkit.probes import agent_transcript
 from labkit.formats import console
 from labkit.probes.usability import LOG_TAGS, TASKS, log_step, restamp, stage
@@ -62,17 +62,17 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         "(repeatable; default: the paths kept last time)",
     )
     s.add_argument(
-        "--cost",
-        choices=(*COST_TIERS, "unset"),
+        "--repeat-cost",
+        choices=(*REPEAT_COSTS, "unset"),
         metavar="TIER",
-        help="the cost tier stamped into the protocol (default: the task's, "
+        help="the repeat cost stamped into the protocol (default: the task's, "
         "seconds); unset = the agent declares it, the full form is stamped",
     )
     s.add_argument(
         "--model",
         action="store_true",
         help="a model in the loop: the full measure skeleton (prompt, parser, "
-        "probe) and, at seconds, the three model fields in the cut "
+        "probe) and, at low repeat cost, the three model fields in the cut "
         "(default for --task judge)",
     )
     s.add_argument(
@@ -228,7 +228,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
     if args.cmd == "stage":
         venv = Path(args.venv).resolve() if args.venv else None
         if args.restamp:
-            if args.cost or args.task or args.model:
+            if args.repeat_cost or args.task or args.model:
                 ap.error("--restamp takes task, tier and model from <dir>.probe.json")
             return restamp(root, args.keep, venv)
         if args.keep:
@@ -236,7 +236,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         return stage(
             root,
             venv,
-            cost=args.cost,
+            repeat_cost=args.repeat_cost,
             task=args.task or "count",
             model=args.model,
             data=Path(args.data).resolve() if args.data else None,

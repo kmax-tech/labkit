@@ -85,7 +85,7 @@ def criterion_n_input_mismatches(answering_run: Path) -> list[str]:  # noqa: C90
 
 
 def provenance_findings(area: Path, answering_run: Path) -> tuple[list[str], list[str]]:
-    """(blockers, warnings) for a run of seconds: source frozen, files tracked."""
+    """(blockers, warnings) for a run at low repeat cost: source frozen, files tracked."""
     blockers: list[str] = []
     warnings: list[str] = []
     cfg = read_run_config(answering_run)

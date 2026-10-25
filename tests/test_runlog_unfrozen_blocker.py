@@ -30,7 +30,7 @@ from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import registration_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 UNFROZEN = head(
-    cost="hours",
+    repeat_cost="high",
     frozen=False,
     preflight_audit="2026-10-05 · scope sha abc · 0 findings",
     promises=DEFAULT_BLOCK,

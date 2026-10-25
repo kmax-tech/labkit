@@ -22,7 +22,7 @@ P=$AREA/PROTOCOL-docs-per-case.md
 say() { printf '\n== %s\n' "$*"; }
 run() { printf '$ %s\n' "$*"; "$@"; }
 
-say "1. a lab repo with the count task stamped (what labkit-init lab + labkit-init exp --cost seconds --kind compute leave)"
+say "1. a lab repo with the count task stamped (what labkit-init lab + labkit-init exp --repeat-cost low --kind compute leave)"
 mkdir -p "$DIR"
 run "$VENV/bin/usability" stage "$LAB" --task count --venv "$VENV" >/dev/null
 cd "$LAB"
@@ -73,7 +73,7 @@ print("filled: SOURCE, INPUTS, COUNT_FIELD, METRIC_KEY, expected_ids(), rows(), 
 EOF
 run "$V/code-check" "$AREA"
 
-say "3. the registration, written before the run (the fields the seconds cut owes: protocol-check --contract)"
+say "3. the registration, written before the run (the fields the low cut owes: protocol-check --contract)"
 run "$V/protocol-fill" "$P" type=exploratory \
     "Terms of this protocol=n/a — no coinage" \
     "Question / hypothesis=What is the mean number of input documents per case over the cases in data/raw/cases.jsonl?" \
@@ -85,7 +85,7 @@ echo "   (every commit below runs the probe's pre-commit hook: protocol-check on
 run git add -A
 run git commit -q -m "Register docs-per-case: the question, scope and unit; the count filled"
 
-say "4. the run — runlog refuses it unless the registration is written; at seconds it is the instrument check too"
+say "4. the run — runlog refuses it unless the registration is written; at low repeat cost it is the instrument check too"
 run "$V/python" "$AREA/scripts/01_measure.py"
 RUN=$(ls "$AREA/runs" | tail -1)
 run git add -A

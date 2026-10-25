@@ -35,8 +35,8 @@ class InputDir(unittest.TestCase):
                         "docs",
                         "--repo",
                         str(root),
-                        "--cost",
-                        "seconds",
+                        "--repeat-cost",
+                        "low",
                         "--kind",
                         "compute",
                     ]

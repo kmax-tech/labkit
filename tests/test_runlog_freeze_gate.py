@@ -6,9 +6,9 @@ directory exists. Probes (`run_kind='probe'`) pass; a full run acknowledges
 with LABKIT_UNFROZEN=1 over an audit the backend refused (the failed
 attempt `labkit-audit` wrote, 0.99.0) and the acknowledgement lands in
 config.json with that attempt; `run_kind` is recorded for every run. At
-`cost = "seconds"` the gate is the written registration (question,
+`repeat_cost = "low"` the gate is the written registration (question,
 criterion, admissibility condition), not the freeze (LAB-017 The number of audits follows the cost tier); the tier
-lands in config.json as `cost_tier`.
+lands in config.json as `repeat_cost`.
 """
 
 from __future__ import annotations
@@ -31,16 +31,16 @@ from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 AUDIT = "2026-10-05T10-00-preflight.toml"  # a record name; no such record is written
-FROZEN = head(cost="hours", frozen=True, preflight_audit=AUDIT, model="haiku")
+FROZEN = head(repeat_cost="high", frozen=True, preflight_audit=AUDIT, model="haiku")
 UNFROZEN = head(
-    cost="hours",
+    repeat_cost="high",
     frozen=False,
     preflight_audit=AUDIT,
     promises=DEFAULT_BLOCK,
     model="haiku",
 )
 PLACEHOLDER = head(
-    cost="hours",
+    repeat_cost="high",
     frozen=True,
     preflight_audit="<date · scope sha · N findings>",
     model="haiku",
@@ -56,14 +56,14 @@ REGISTRATION = """
 """
 # a computation: no model, no id, the question only — the gate owes nothing more (0.87.1)
 SECONDS_COMPUTE = (
-    head(cost="seconds", promises=None)
+    head(repeat_cost="low", promises=None)
     + "\n- **Question / hypothesis:** how many documents per case?\n"
 )
-SECONDS = head(cost="seconds", model="haiku") + REGISTRATION
-SECONDS_NO_CRITERION = SECONDS.replace(
+LOW = head(repeat_cost="low", model="haiku") + REGISTRATION
+LOW_NO_CRITERION = LOW.replace(
     "[C1] accuracy above the trivial decider", "<the criterion>"
 )
-HOURS_UNFROZEN = head(cost="hours", promises=DEFAULT_BLOCK) + REGISTRATION
+HOURS_UNFROZEN = head(repeat_cost="high", promises=DEFAULT_BLOCK) + REGISTRATION
 PROSE_HEAD = """\
 - **Protocol id:** p-0123456789abcdef
 - **Type:** measurement
@@ -97,7 +97,7 @@ class FreezeGate(unittest.TestCase):
         (self.tmp / "scripts" / "m.py").write_text("x = 1\n")
         scope_file(self.tmp)  # part of the stamped code, written before the stamp
         sha = scope_sha.area_stamp(self.tmp)[0]
-        text = head(cost="hours", frozen=True, preflight_audit=AUDIT)
+        text = head(repeat_cost="high", frozen=True, preflight_audit=AUDIT)
         if record:
             written = findings.write(
                 self.tmp,
@@ -109,7 +109,7 @@ class FreezeGate(unittest.TestCase):
                 [],
                 registration=protocol_check.registration_stamp(text),
             )
-            text = head(cost="hours", frozen=True, preflight_audit=written.name)
+            text = head(repeat_cost="high", frozen=True, preflight_audit=written.name)
         return text
 
     def test_full_run_on_frozen_protocol_starts(self):
@@ -147,7 +147,9 @@ class FreezeGate(unittest.TestCase):
             [],
             registration=protocol_check.registration_stamp(text),
         )
-        area = self._area(head(cost="hours", frozen=True, preflight_audit=old.name))
+        area = self._area(
+            head(repeat_cost="high", frozen=True, preflight_audit=old.name)
+        )
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
                 runlog.Run("t", {}, area, run_kind="measurement")
@@ -184,7 +186,9 @@ class FreezeGate(unittest.TestCase):
             [("WARNING", "WARNING · x")],
             registration=protocol_check.registration_stamp(text),
         )
-        area = self._area(head(cost="hours", frozen=True, preflight_audit=open_.name))
+        area = self._area(
+            head(repeat_cost="high", frozen=True, preflight_audit=open_.name)
+        )
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
                 runlog.Run("t", {}, area, run_kind="measurement")
@@ -206,7 +210,7 @@ class FreezeGate(unittest.TestCase):
             else "0" * 12
         )
         text = head(
-            cost="hours",
+            repeat_cost="high",
             frozen=True,
             preflight_audit=f"2026-10-07 · scope sha {sha} · 0 findings",
         )
@@ -219,7 +223,7 @@ class FreezeGate(unittest.TestCase):
         haiku round, t18: the agent waived its own audit. The refusal names
         labkit-audit and the failed attempt, and offers no word to write."""
         text = head(
-            cost="hours",
+            repeat_cost="high",
             frozen=True,
             preflight_audit="n/a — decided with the supervisor",
         )
@@ -228,12 +232,12 @@ class FreezeGate(unittest.TestCase):
         msg = str(cm.exception)
         self.assertIn("nobody waives their own", msg)
         self.assertIn("labkit-audit <area> --mode preflight", msg)
-        self.assertIn("the cost tier is wrong, not the field", msg)
+        self.assertIn("the repeat cost is wrong, not the field", msg)
         self.assertFalse((self.tmp / "runs").exists())
 
     def test_a_waived_audit_at_seconds_is_no_finding(self):
-        """Twin: at seconds no audit is owed before the run; the line is not read."""
-        text = head(cost="seconds", preflight_audit="n/a — seconds") + REGISTRATION
+        """Twin: at low repeat cost no audit is owed before the run; the line is not read."""
+        text = head(repeat_cost="low", preflight_audit="n/a — low") + REGISTRATION
         r, _ = self._start(text, run_kind="measurement")
         self.assertTrue((r.dir / "config.json").is_file())
 
@@ -241,8 +245,13 @@ class FreezeGate(unittest.TestCase):
         """Twin of the frozen start above: same protocol, id not stamped — the
         number would be bound to nothing (review 2026-10-07), at every tier."""
         for text in (
-            head(id="<protocol-id>", cost="hours", frozen=True, preflight_audit=AUDIT),
-            head(id="<protocol-id>", cost="seconds") + REGISTRATION,
+            head(
+                id="<protocol-id>",
+                repeat_cost="high",
+                frozen=True,
+                preflight_audit=AUDIT,
+            ),
+            head(id="<protocol-id>", repeat_cost="low") + REGISTRATION,
         ):
             area = self._area(text)
             with self.assertRaises(SystemExit) as cm:
@@ -284,20 +293,20 @@ class FreezeGate(unittest.TestCase):
                 runlog.Run("t", {}, self.tmp, run_kind="measurement")
         self.assertIn("unbound", str(cm.exception))
 
-    def test_seconds_with_criterion_starts_unfrozen(self):
-        r, _ = self._start(SECONDS, run_kind="measurement")
+    def test_low_with_criterion_starts_unfrozen(self):
+        r, _ = self._start(LOW, run_kind="measurement")
         cfg = json.loads((r.dir / "config.json").read_text())
-        self.assertEqual(cfg["cost_tier"], "seconds")
+        self.assertEqual(cfg["repeat_cost"], "low")
         self.assertFalse(cfg["unfrozen_ack"])
 
-    def test_seconds_without_criterion_is_refused(self):
-        area = self._area(SECONDS_NO_CRITERION)
+    def test_low_without_criterion_is_refused(self):
+        area = self._area(LOW_NO_CRITERION)
         with self.assertRaises(SystemExit) as cm:
             runlog.Run("t", {}, area, run_kind="measurement")
         self.assertIn("Success / failure criterion", str(cm.exception))
-        self.assertIn('cost = "seconds"', str(cm.exception))
+        self.assertIn('repeat_cost = "low"', str(cm.exception))
         self.assertFalse((area / "runs").exists())
-        # A seconds probe is refused before checking its registration.
+        # A low-lane probe is refused before checking its registration.
         with self.assertRaises(SystemExit) as cm:
             runlog.Run("t", {}, area, run_kind="probe")
         self.assertIn("no separate probe stage", str(cm.exception))
@@ -306,7 +315,7 @@ class FreezeGate(unittest.TestCase):
     def test_a_count_at_seconds_starts_without_criterion_or_tables(self):
         r, _ = self._start(SECONDS_COMPUTE, run_kind="measurement")
         cfg = json.loads((r.dir / "config.json").read_text())
-        self.assertEqual(cfg["cost_tier"], "seconds")
+        self.assertEqual(cfg["repeat_cost"], "low")
         self.assertIsNone(cfg.get("promises"))  # nothing registered, nothing recorded
 
     def test_hours_keeps_the_freeze(self):
@@ -324,10 +333,10 @@ class FreezeGate(unittest.TestCase):
         self.assertIn("no [protocol] table", str(cm.exception))
         self.assertFalse((area / "runs").exists())
 
-    def test_seconds_runs_in_a_claude_foreground_shell(self):
+    def test_low_runs_in_a_claude_foreground_shell(self):
         os.environ["CLAUDECODE"] = "1"
         try:
-            r, _ = self._start(SECONDS, run_kind="measurement")
+            r, _ = self._start(LOW, run_kind="measurement")
             self.assertTrue((r.dir / "config.json").is_file())
             with self.assertRaises(SystemExit) as cm:
                 self._start(FROZEN, run_kind="measurement")
@@ -362,13 +371,15 @@ class FreezeGate(unittest.TestCase):
     def test_tier_is_recorded_for_pilots_too(self):
         r, _ = self._start(FROZEN, run_kind="probe")
         self.assertEqual(
-            json.loads((r.dir / "config.json").read_text())["cost_tier"], "hours"
+            json.loads((r.dir / "config.json").read_text())["repeat_cost"], "high"
         )
 
     def test_unfilled_tier_is_recorded_as_none_and_keeps_the_freeze(self):
-        text = head(cost="<seconds | minutes | hours>", promises=DEFAULT_BLOCK)
+        text = head(repeat_cost="<low | high>", promises=DEFAULT_BLOCK)
         r, _ = self._start(text, run_kind="probe")
-        self.assertIsNone(json.loads((r.dir / "config.json").read_text())["cost_tier"])
+        self.assertIsNone(
+            json.loads((r.dir / "config.json").read_text())["repeat_cost"]
+        )
         with self.assertRaises(SystemExit) as cm:
             self._start(text, run_kind="measurement")
         self.assertIn("not `frozen = true`", str(cm.exception))

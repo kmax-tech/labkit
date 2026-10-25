@@ -1,4 +1,4 @@
-"""report-check at the seconds lane holds the registration to the commit of
+"""report-check at the low lane holds the registration to the commit of
 the first measurement: the oldest full run bound to the protocol
 (`answering_run.first_measurement`) and the commit its record names
 (`runs.recorded_commit`). What stood before the number is what that commit
@@ -68,7 +68,9 @@ class RegistrationAtTheFirstMeasurement(unittest.TestCase):
 
     def _commit(self, body: str) -> str:
         """The protocol with BODY committed; HEAD's short sha."""
-        self.proto.write_text(head(cost="seconds", result=RUN) + body, encoding="utf-8")
+        self.proto.write_text(
+            head(repeat_cost="low", result=RUN) + body, encoding="utf-8"
+        )
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "protocol")
         return _git(self.root, "rev-parse", "--short", "HEAD")
@@ -150,7 +152,7 @@ class RegistrationAtTheFirstMeasurement(unittest.TestCase):
         sha = self._commit(REGISTRATION.replace("", ""))
         self.proto.write_text(
             self.proto.read_text(encoding="utf-8").replace(
-                'standard = "0.22"', 'standard = "0.21"'
+                'standard = "0.23"', 'standard = "0.21"'
             ),
             encoding="utf-8",
         )
@@ -190,7 +192,7 @@ class OutsideARepository(unittest.TestCase):
         area.mkdir(parents=True)
         scope_file(area)
         (area / "PROTOCOL-x.md").write_text(
-            head(cost="seconds", result=RUN) + REGISTRATION, encoding="utf-8"
+            head(repeat_cost="low", result=RUN) + REGISTRATION, encoding="utf-8"
         )
         completed_run(area, RUN, metrics={"c1_pass": True})
         code, out = _report_check(area)

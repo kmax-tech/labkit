@@ -16,7 +16,7 @@ Exit codes: 0 clean, 1 a blocker, 2 usage error.
 
 `finalize` holds the run before the number is written back and comes
 before the analysis audit; report-check comes last and holds the whole
-chain, at every cost tier (why each station holds what it holds:
+chain, at every repeat cost (why each station holds what it holds:
 docs/notes/2026-10-19-hooks-and-report-check.md):
 
   0. protocol       choose the protocol; read its head, declaration and
@@ -26,7 +26,7 @@ docs/notes/2026-10-19-hooks-and-report-check.md):
   2. registration   where the lane freezes: the flag, required fields and
                     promise tables must hold. Otherwise, where the lane
                     owes registration: check the commit of the first
-                    measurement. At seconds no freeze or preflight audit
+                    measurement. At low repeat cost no freeze or preflight audit
                     is owed (LAB-017 The number of audits follows the cost tier).
   3. finalize       run finalize and name its blockers.
   4. full run       with an answering run: require a measurement without
@@ -227,7 +227,7 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
     if not (area / script).is_file():
         return (
             f"no {script} — the check that holds the note to the run is owed; "
-            f"every skeleton stamps it (an area stamped at seconds before 0.100.0 "
+            f"every skeleton stamps it (an area stamped at low repeat cost before 0.100.0 "
             f"carried the check inside 01_measure.py: stamp "
             f"labkit/templates/analyze-quick-script.py.template beside it)"
         )
@@ -502,7 +502,7 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[str]:
     """Why the answering run's number cannot be reported
     (`runs.unreportable`), each a blocker. Without an answering run there is
     nothing to hold — finalize says so. FREEZE_OWED names the freeze in the
-    sentence (minutes/hours); at seconds a full run is owed, no freeze."""
+    sentence (high repeat cost); at low repeat cost a full run is owed, no freeze."""
     if ctx.run is None:
         return []
     cfg = read_run_config(ctx.run)
@@ -619,7 +619,7 @@ def report_check(
         f"{ctx.declared or 'no run'}; the answering run is "
         f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
     )
-    ln = lane(ctx.head.cost)
+    ln = lane(ctx.head.repeat_cost)
     findings = Findings()
 
     # 1. declaration — a blocker does not stop the remaining stages
@@ -634,7 +634,7 @@ def report_check(
         )
     else:
         print(
-            f'  {ctx.protocol.name}: cost = "{ctx.head.cost}" — no freeze and no preflight '
+            f'  {ctx.protocol.name}: cost = "{ctx.head.repeat_cost}" — no freeze and no preflight '
             f"audit owed (LAB-017 The number of audits follows the cost tier); the "
             f"registration as committed at the first measurement, the full run, "
             f"the analysis audit and the check are owed instead"

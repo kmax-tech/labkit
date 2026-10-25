@@ -1,4 +1,4 @@
-"""finalize station 4 (2026-10-05): at cost = "seconds" the run must have frozen
+"""finalize station 4 (2026-10-05): at repeat_cost = "low" the run must have frozen
 its source and every source/output file must be tracked in git; elsewhere
 the station is n/a."""
 
@@ -23,10 +23,10 @@ BODY = """
 - **Question / hypothesis:** how many documents per case?
 - **Recorded results:** 3.5, run r1
 """
-SHORT = "# Experiment protocol: x\n\n" + head(cost="seconds", promises=None) + BODY
-HOURS = (
+SHORT = "# Experiment protocol: x\n\n" + head(repeat_cost="low", promises=None) + BODY
+HIGH = (
     "# Experiment protocol: x\n\n"
-    + head(cost="hours", frozen=True, promises=None)
+    + head(repeat_cost="high", frozen=True, promises=None)
     + BODY
 )
 
@@ -147,10 +147,10 @@ class Provenance(unittest.TestCase):
         self.assertIn("git add", out)
 
     def test_hours_is_not_the_stations_business(self):
-        self._run(HOURS, None, commit=True)
+        self._run(HIGH, None, commit=True)
         rc, out = self._finalize()
         self.assertEqual(rc, 0, out)
-        self.assertIn("n/a — protocol cost is 'hours'", out)
+        self.assertIn("n/a — protocol repeat cost is 'high'", out)
 
 
 if __name__ == "__main__":

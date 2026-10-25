@@ -62,7 +62,7 @@ def doctrine_modules() -> set[str]:
 #: the core, listed by name until it moves (2026-10-15). The test asks for
 #: exactly this set: a new crossing fails, and so does a removed one left
 #: standing here — the list only shrinks, with one kind of exception: a
-#: rule the core had copied (`cost == "seconds"`) becoming a visible import
+#: rule the core had copied (`cost == "low"`) becoming a visible import
 #: of `standard_contract` is the same crossing made explicit, not a new one.
 KNOWN_CROSSINGS = {
     # the freeze gate at a run's start: audit coverage (LAB-015), the seconds
@@ -70,7 +70,7 @@ KNOWN_CROSSINGS = {
     # — doctrine that refuses a run, sitting in the run writer's start check
     # (moved with it out of runlog; the same crossings, not new ones)
     ("start_check", "findings"),  # findings.audit_coverage
-    ("start_check", "protocol_check"),  # protocol_check.seconds_registration_missing
+    ("start_check", "protocol_check"),  # protocol_check.low_registration_missing
     ("start_check", "standard_contract"),  # standard_contract.lane
     ("runlog", "standard_contract"),  # standard_contract.lane (was a copied rule)
     # the field catalogue and a rule's text in the code check — the boundary

@@ -45,7 +45,7 @@ but the evidence that it tried, next to them:
     error = "claude-cli exit 1: …"
     command = "labkit-audit experiments/09-x --mode preflight"
 
-That file is what `LABKIT_UNFROZEN=1` acknowledges at `minutes`/`hours`:
+That file is what `LABKIT_UNFROZEN=1` acknowledges at `high`:
 an audit that could not run, not one nobody ran (`audit_unavailable`, held
 by runlog's freeze gate since 0.99.0). labkit writes it, with the error the
 backend gave; a usage error (an unknown alias, an area that cannot be
@@ -57,7 +57,7 @@ block (`block_sha`), the registration it judged — the kind and the
 question with the other fields the kind owes (`registration`), not the
 report fields written after the run — and, in mode analysis, the
 answering run (`run_id`).
-A full run at `minutes`/`hours` needs the preflight record the head names
+A full run at `high` needs the preflight record the head names
 (`preflight_audit = "<minute>-preflight.toml"`) to be one of the code and
 the promises as they are now, every finding decided (`audit_record_gap`,
 held by runlog's freeze gate and by `preflight`); a reported number needs
@@ -122,7 +122,7 @@ FAILED_SUFFIX = "-failed.toml"
 #: and never read as one: `<minute>-review[-<n>].toml` (`create_file`
 #: numbers a second file of the minute before the suffix)
 REVIEW_NAME = re.compile(r"-review(?:-\d+)?\.toml$")
-#: the seconds `labkit-audit` gives its one call by default, and the least a
+#: the low lane's `labkit-audit` gives its one call by default, and the least a
 #: failed attempt must have been given to count as one (`audit_unavailable`):
 #: an attempt given less time than the audit takes is not an attempt
 ATTEMPT_TIMEOUT_S = 900
@@ -1171,7 +1171,7 @@ def audit_record_gap(area: Path, name: str, text: str) -> str | None:
     it saw other code than the area stamps now (`scope_sha`) or another
     promise block than TEXT carries (`block_sha`), or a finding of it is
     still open. One answer for runlog's freeze gate, `preflight` and
-    `protocol-check`; the caller decides what an empty field and `seconds`
+    `protocol-check`; the caller decides what an empty field and `low`
     mean. Until 0.103.0 the field was a hand-written line (`<date> · scope
     sha <12 hex> · N findings`) whose sha a regex read and whose record the
     sha then had to find — the record names its sha itself, so the head
@@ -1185,11 +1185,11 @@ def audit_record_gap(area: Path, name: str, text: str) -> str | None:
             "`preflight_audit` names no record — the field is the file name of the "
             "decided preflight record under audits/ (`<minute>-preflight.toml`, "
             "printed by `labkit-audit <area> --mode preflight` when it writes one); "
-            "at minutes/hours a full run owes that audit, and nobody waives their "
+            "at high repeat cost a full run owes that audit, and nobody waives their "
             "own: run it and name its record; when the backend does not answer, "
             "labkit-audit records the failed attempt and a full run acknowledges "
             "it with LABKIT_UNFROZEN=1 (its number stays unreportable). If no "
-            "audit is owed at all, the cost tier is wrong, not the field — and a "
+            "audit is owed at all, the repeat cost is wrong, not the field — and a "
             "tier lowered after the protocol's first commit is reported "
             "(LAB-015 Preflight audit before freezing, LAB-017 The number of audits follows the cost tier)"
         )

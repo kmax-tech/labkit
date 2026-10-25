@@ -75,7 +75,7 @@ stage --restamp
 score
     Reads the latest run of the stamped area — the number under the named
     key, the protocol the run is bound to (and whether it is frozen), the
-    cost tier — and the agent's log (`<dir>.log.md`, one line per step:
+    repeat cost — and the agent's log (`<dir>.log.md`, one line per step:
     `HH:MM:SS · <tag> · text`, tag in read/run/edit/unsure/gate). Prints
     wall-clock (first to last stamp; the agent's time outside the log is
     not seen), counts per tag and whether the kept number equals the truth.
@@ -174,15 +174,15 @@ TASKS = {
         "template": "usability-task-fit.md.template",
     },
 }
-#: (cost tier, kind, model in the loop) per task: what the house route
-#: stamps for it (`labkit-init exp --cost seconds --kind …`, plus `--model`
+#: (repeat cost, kind, model in the loop) per task: what the house route
+#: stamps for it (`labkit-init exp --repeat-cost low --kind …`, plus `--model`
 #: with a model in the loop). Staged without them, the count got the full
 #: form and the model skeleton and every agent spent its time deleting it
 #: (probe 2026-10-07) — a cost of the staging, not of the route.
 TASK_STAMP: dict[str, tuple[str, str, bool]] = {
-    "count": ("seconds", "compute", False),
-    "judge": ("seconds", "apply", True),
-    "fit": ("seconds", "fit", False),
+    "count": ("low", "compute", False),
+    "judge": ("low", "apply", True),
+    "fit": ("low", "fit", False),
 }
 #: where the fit task's data land in the probe, and the columns the sheet names
 FIT_DATA = Path("data") / "raw" / "dili" / "train.csv"
@@ -389,28 +389,30 @@ def recount(root: Path) -> float:
 
 
 def stamp_flags(
-    task: str, cost: str | None, model: bool
+    task: str, repeat_cost: str | None, model: bool
 ) -> tuple[str | None, str, bool]:
-    """(cost tier or None, kind, model) the scaffolder gets: the task's route
-    stamp (TASK_STAMP) unless `cost` names a tier; "unset" stamps no tier.
+    """(repeat cost or None, kind, model) the scaffolder gets: the task's route
+    stamp (TASK_STAMP) unless `repeat_cost` names a tier; "unset" stamps no tier.
     A computation asked for with a model stays one: it is stamped with the
     claim keys (`scaffold.COMPUTE_CLAIM`), never rewritten to an apply."""
     default_cost, kind, default_model = TASK_STAMP[task]
-    if cost is None:
-        cost = default_cost
+    if repeat_cost is None:
+        repeat_cost = default_cost
     model = model or default_model
-    return (None if cost == "unset" else cost), kind, model
+    return (None if repeat_cost == "unset" else repeat_cost), kind, model
 
 
-def tier_sentence(cost: str | None) -> str:
-    """The task sheet's sentence on the stamped cost tier. Without it a cold
-    Sonnet agent, staged at `minutes`, read "twelve calls take about a
-    minute", set the head to `seconds` and took the short lane — the probe
+def tier_sentence(repeat_cost: str | None) -> str:
+    """The task sheet's sentence on the stamped repeat cost. Without it a cold
+    Sonnet agent, staged at `high`, read "twelve calls take about a
+    minute", set the head to `low` and took the short lane — the probe
     measured a lane it was not staged for (2026-10-14)."""
-    if cost is None:
-        return "Its protocol head names no cost tier: declaring it is part of the task."
+    if repeat_cost is None:
+        return (
+            "Its protocol head names no repeat cost: declaring it is part of the task."
+        )
     return (
-        f'Its protocol head says `cost = "{cost}"`: the number is owed at that '
+        f'Its protocol head says `repeat_cost = "{repeat_cost}"`: the number is owed at that '
         f"tier — keep it, and follow the lane AGENTS.md gives for it."
     )
 
@@ -501,17 +503,17 @@ def sidecar(root: Path, suffix: str) -> Path:
 def stage(
     root: Path,
     venv: Path | None,
-    cost: str | None = None,
+    repeat_cost: str | None = None,
     task: str = "count",
     model: bool = False,
     data: Path | None = None,
 ) -> int:
     """Side effects: see module docstring. `task` picks the fixture, the task
-    sheet and the default stamp (TASKS); `cost` overrides the stamped tier
+    sheet and the default stamp (TASKS); `repeat_cost` overrides the stamped tier
     ("unset" leaves it to the agent), `model` adds the model skeleton; the
     fit task plants DATA (`plant_dili`)."""
     spec = TASKS[task]
-    cost, kind, model = stamp_flags(task, cost, model)
+    repeat_cost, kind, model = stamp_flags(task, repeat_cost, model)
     area_name, metric_key = spec["area"], spec["metric_key"]
     if root.exists() and any(root.iterdir()):
         raise console.Refused(
@@ -537,7 +539,11 @@ def stage(
     _sh(["git", "add", "-A"], root)
     _commit(root, "Scaffold: a probe lab repo for the usability trace")
     _, stamp_report = scaffold.stamp_area(
-        root, area_name, cost=cost, kind=kind, model="haiku" if model else False
+        root,
+        area_name,
+        repeat_cost=repeat_cost,
+        kind=kind,
+        model="haiku" if model else False,
     )
     print(
         stamp_report, file=sys.stderr
@@ -577,7 +583,7 @@ def stage(
             "lab",
             "exp",
             area_name,
-            *(["--cost", cost] if cost else []),
+            *(["--repeat-cost", repeat_cost] if repeat_cost else []),
             "--kind",
             kind,
             *(["--model", "haiku"] if model else []),
@@ -592,7 +598,7 @@ def stage(
         ("<area>", areas[0]),
         ("<log>", str(log)),
         ("<target>", str(TARGET_MINUTES)),
-        ("<tier>", tier_sentence(cost)),
+        ("<tier>", tier_sentence(repeat_cost)),
     ):
         sheet = sheet.replace(key, val)
     (root / "TASK.md").write_text(sheet, encoding="utf-8")
@@ -725,7 +731,9 @@ def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
     probe = read_probe(probe_file)
     kept_paths = probe.kept if keep is None else keep
     flags = probe.scaffold_flags
-    cost = flags[flags.index("--cost") + 1] if "--cost" in flags else "unset"
+    repeat_cost = (
+        flags[flags.index("--repeat-cost") + 1] if "--repeat-cost" in flags else "unset"
+    )
     model = "--model" in flags
     _probe_venv(root, venv, scaffold.labkit_pin())
     with tempfile.TemporaryDirectory() as tmp:
@@ -734,7 +742,7 @@ def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
             stage(
                 fresh,
                 root / ".venv",
-                cost=cost,
+                repeat_cost=repeat_cost,
                 task=probe.task,
                 model=model,
                 data=root / FIT_DATA if probe.task == "fit" else None,

@@ -1,4 +1,4 @@
-"""The seconds cut (2026-10-05): one template, tagged `<!-- s -->`; the
+"""The low cut (2026-10-05): one template, tagged `<!-- l -->`; the
 checker's FIELDS name exactly the tagged fields as the cut; the registration
 gate asks for question, criterion, admissibility condition and cost."""
 
@@ -31,16 +31,16 @@ def _tagged(marker: str) -> set[str]:
 
 class Cut(unittest.TestCase):
     def test_the_cut_is_exactly_the_tagged_template_fields(self):
-        cut = {f.label.casefold() for f in protocol_check.FIELDS if f.seconds == "s"}
+        cut = {f.label.casefold() for f in protocol_check.FIELDS if f.low_cut == "l"}
         cut_model = {
-            f.label.casefold() for f in protocol_check.FIELDS if f.seconds == "sm"
+            f.label.casefold() for f in protocol_check.FIELDS if f.low_cut == "lm"
         }
-        self.assertEqual(cut, _tagged("<!-- s -->"))
-        self.assertEqual(cut_model, _tagged("<!-- sm -->"))
+        self.assertEqual(cut, _tagged("<!-- l -->"))
+        self.assertEqual(cut_model, _tagged("<!-- lm -->"))
 
     def test_count_without_model_owes_no_prompt(self):
         text = (
-            head(cost="seconds")
+            head(repeat_cost="low")
             + """
 - **Question / hypothesis:** how many?
 - **Success / failure criterion:** the mean is reported
@@ -53,8 +53,8 @@ class Cut(unittest.TestCase):
         )
         self.assertEqual(protocol_check.check_fields(text).missing_must, [])
         with_model = (
-            head(cost="seconds", model="haiku")
-            + text[len(head(cost="seconds")) :]
+            head(repeat_cost="low", model="haiku")
+            + text[len(head(repeat_cost="low")) :]
             + "- **Model / tool:** haiku\n"
         )
         missing = protocol_check.check_fields(with_model).missing_must
@@ -62,10 +62,10 @@ class Cut(unittest.TestCase):
             missing, ["Data profile", "Prompt", "Null condition / anchors"]
         )
 
-    def test_seconds_protocol_is_checked_against_the_cut_only(self):
+    def test_low_protocol_is_checked_against_the_cut_only(self):
         text = (
             "# Experiment protocol: x\n"
-            + head(type="confirmatory", cost="seconds", model="haiku")
+            + head(type="confirmatory", repeat_cost="low", model="haiku")
             + """
 - **Question / hypothesis:** does it hold?
 - **Success / failure criterion:** [C1] accuracy > 0.5
@@ -89,11 +89,11 @@ class Cut(unittest.TestCase):
         self.assertEqual(protocol_check.check_fields(gap).missing_must, ["Unit"])
 
     def test_frozen_at_seconds_is_refused_not_graduated(self):
-        """Nothing freezes at seconds (LAB-017 The number of audits follows the cost tier): `frozen = true` there owes no
+        """Nothing freezes at low repeat cost (LAB-017 The number of audits follows the cost tier): `frozen = true` there owes no
         should field, but claims a freeze no gate held — one must finding
         (review 2026-10-07: it used to pass silently)."""
         text = (
-            head(cost="seconds", frozen=True)
+            head(repeat_cost="low", frozen=True)
             + """
 - **Question / hypothesis:** q
 - **Success / failure criterion:** c
@@ -107,7 +107,7 @@ class Cut(unittest.TestCase):
         )
         report = protocol_check.check_fields(text)
         self.assertEqual(len(report.missing_must), 1, report.missing_must)
-        self.assertIn('frozen = true at cost = "seconds"', report.missing_must[0])
+        self.assertIn('frozen = true at repeat_cost = "low"', report.missing_must[0])
         self.assertEqual(report.missing_should, [])
         self.assertEqual(report.missing_should, [])
 
@@ -121,13 +121,13 @@ class Registration(unittest.TestCase):
     )
 
     def test_a_fit_without_a_model_owes_the_bar_and_its_reference(self):
-        """Standard 0.22: a RandomForest at seconds owed its question only
+        """Standard 0.22: a RandomForest at low repeat cost owed its question only
         (fifth haiku round); a fit owes criterion, admissibility and the
         null condition, and a computation with a [model] table that does not
         say what its number describes is a gap (test_annotation_validity)."""
-        text = head(cost="seconds", kind="fit") + "- **Question / hypothesis:** q\n"
+        text = head(repeat_cost="low", kind="fit") + "- **Question / hypothesis:** q\n"
         self.assertEqual(
-            protocol_check.seconds_registration_missing(text),
+            protocol_check.low_registration_missing(text),
             [
                 "Success / failure criterion",
                 "Admissibility condition",
@@ -135,17 +135,17 @@ class Registration(unittest.TestCase):
             ],
         )
         contradiction = (
-            head(cost="seconds", kind="compute", model="haiku") + self.QUESTION
+            head(repeat_cost="low", kind="compute", model="haiku") + self.QUESTION
         )
-        missing = protocol_check.seconds_registration_missing(contradiction)
+        missing = protocol_check.low_registration_missing(contradiction)
         self.assertTrue(
             any(m.startswith("[model] number_describes") for m in missing), missing
         )
         placeholder = (
-            head(cost="seconds", kind="<compute | fit | apply>")
+            head(repeat_cost="low", kind="<compute | fit | apply>")
             + "- **Question / hypothesis:** q\n"
         )
-        missing = protocol_check.seconds_registration_missing(placeholder)
+        missing = protocol_check.low_registration_missing(placeholder)
         self.assertIn("[protocol] kind", missing)
         self.assertIn(
             "Success / failure criterion", missing
@@ -153,29 +153,29 @@ class Registration(unittest.TestCase):
 
     def test_a_count_owes_only_its_question(self):
         """Without a model there is no bar to clear: the gate is the question (0.87.1)."""
-        text = head(cost="seconds") + "- **Question / hypothesis:** how many?\n"
-        self.assertEqual(protocol_check.seconds_registration_missing(text), [])
-        text = head(cost="seconds") + "- **Question / hypothesis:** <the question>\n"
+        text = head(repeat_cost="low") + "- **Question / hypothesis:** how many?\n"
+        self.assertEqual(protocol_check.low_registration_missing(text), [])
+        text = head(repeat_cost="low") + "- **Question / hypothesis:** <the question>\n"
         self.assertEqual(
-            protocol_check.seconds_registration_missing(text), ["Question / hypothesis"]
+            protocol_check.low_registration_missing(text), ["Question / hypothesis"]
         )
 
     def test_all_four_written(self):
         text = (
-            head(cost="seconds", model="haiku")
+            head(repeat_cost="low", model="haiku")
             + self.QUESTION
             + "- **Admissibility condition:** a\n"
         )
-        self.assertEqual(protocol_check.seconds_registration_missing(text), [])
+        self.assertEqual(protocol_check.low_registration_missing(text), [])
 
     def test_placeholder_counts_as_missing(self):
         text = (
-            head(cost="seconds", model="haiku")
+            head(repeat_cost="low", model="haiku")
             + self.QUESTION
             + "- **Admissibility condition:** <what must hold…>\n"
         )
         self.assertEqual(
-            protocol_check.seconds_registration_missing(text),
+            protocol_check.low_registration_missing(text),
             ["Admissibility condition"],
         )
 
@@ -183,32 +183,34 @@ class Registration(unittest.TestCase):
         """Review 2026-10-21: printing the profile is not judging it; the run
         waits for the judgement in the protocol."""
         text = (
-            head(cost="seconds", model="haiku")
+            head(repeat_cost="low", model="haiku")
             + self.QUESTION.replace("- **Data profile:** 6 and 6 items; 'because' in both classes\n", "")
             + "- **Admissibility condition:** a\n"
             + "- **Data profile:** <what `00_prepare.py --audit` shows>\n"
         )  # fmt: skip
         self.assertEqual(
-            protocol_check.seconds_registration_missing(text), ["Data profile"]
+            protocol_check.low_registration_missing(text), ["Data profile"]
         )
 
     def test_the_old_stop_rule_label_does_not_register(self):
         text = (
-            head(cost="seconds", model="haiku") + self.QUESTION + "- **Stop rule:** s\n"
+            head(repeat_cost="low", model="haiku")
+            + self.QUESTION
+            + "- **Stop rule:** s\n"
         )
         self.assertEqual(
-            protocol_check.seconds_registration_missing(text),
+            protocol_check.low_registration_missing(text),
             ["Admissibility condition"],
         )
 
     def test_cost_is_read_from_the_head(self):
         text = (
-            head(cost="<seconds | minutes | hours>")
+            head(repeat_cost="<low | high>")
             + self.QUESTION
             + "- **Admissibility condition:** a\n- **Cost:** seconds\n"
         )
         self.assertEqual(
-            protocol_check.seconds_registration_missing(text), ["[protocol] cost"]
+            protocol_check.low_registration_missing(text), ["[protocol] repeat_cost"]
         )
 
 
@@ -218,7 +220,7 @@ class CountPlaceholders(unittest.TestCase):
     'hypothesis' as an expectation to invent (Haiku H5–H7, 2026-10-13)."""
 
     def test_the_count_cut_says_na_and_no_hypothesis(self):
-        cut = protocol_cuts.seconds_cut(
+        cut = protocol_cuts.low_cut(
             scaffold.template(scaffold.PROTOCOL_TEMPLATE.name), "compute"
         )
         out = protocol_cuts.count_placeholders(cut)

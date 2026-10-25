@@ -384,7 +384,7 @@ class Run:
         )
         if refusal:
             raise SystemExit(f"runlog: {refusal}")
-        obligations = lane(prepared.cost_tier)
+        obligations = lane(prepared.repeat_cost)
         if prepared.run_kind == "measurement" and not obligations.foreground:
             limit = foreground_timeout()
             if limit is not None and os.environ.get("LABKIT_DETACHED") != "1":
@@ -400,7 +400,7 @@ class Run:
         self.script = Path(sys.argv[0]).name if sys.argv[0] else "<interactive>"
         self.base = base_dir
         self._protocol = prepared.bound.binding
-        self._cost_tier = prepared.cost_tier
+        self._repeat_cost = prepared.repeat_cost
         self._promises = prepared.promises
         self._config = prepared.config
         self._derived_from = prepared.derived_from
@@ -451,7 +451,7 @@ class Run:
             "run_kind": self._run_kind,
             "unfrozen_ack": self._unfrozen_ack,
             "audit_failed": self._audit_failed,
-            "cost_tier": self._cost_tier,
+            "repeat_cost": self._repeat_cost,
             "promises": self._promises,
             "script_sha": snapshot_script(self.dir),
             "untracked_sources": snapshot_untracked_sources(self.dir),

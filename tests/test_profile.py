@@ -141,8 +141,8 @@ class TheStampedPrepare(unittest.TestCase):
                     "judge",
                     "--repo",
                     str(root),
-                    "--cost",
-                    "seconds",
+                    "--repeat-cost",
+                    "low",
                     "--kind",
                     "apply",
                     "--model",
@@ -199,7 +199,7 @@ class TheStampedPrepare(unittest.TestCase):
                 contextlib.redirect_stderr(io.StringIO()),
             ):
                 self.assertEqual(scaffold.main(["lab", str(root)]), 0)
-                argv = ["exp", "forest", "--repo", str(root), "--cost", "seconds"]
+                argv = ["exp", "forest", "--repo", str(root), "--repeat-cost", "low"]
                 self.assertEqual(scaffold.main([*argv, "--kind", "fit"]), 0)
             raw = root / "data" / "raw" / "points.jsonl"
             raw.parent.mkdir(parents=True, exist_ok=True)

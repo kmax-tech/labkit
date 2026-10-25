@@ -200,8 +200,8 @@ class TestUniqueness(unittest.TestCase):
                 ),
             ),
             (
-                "cost_lowered",
-                replace(base, cost_lowered="P.md: WARNING: cost tier lowered"),
+                "repeat_cost_lowered",
+                replace(base, repeat_cost_lowered="P.md: WARNING: repeat cost lowered"),
             ),
             (
                 "answer_unbound",

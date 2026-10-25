@@ -1,6 +1,6 @@
 """Every fenced block in every Markdown file labkit stamps is closed.
 
-The seconds cut of a count dropped the closing fence of its ```toml block
+The low cut of a count dropped the closing fence of its ```toml block
 with the promise tables it removes; every count probe of 2026-10-20 got a
 protocol ending inside the block — the fence walker read it to the end, so
 no check failed, and the audit raised it in each run."""
@@ -31,13 +31,13 @@ class StampedFences(unittest.TestCase):
         self.assertEqual(open_fences("a\n```toml\nx = 1\n```\n"), [])
 
     def test_every_stamped_markdown_file_closes_its_fences(self):
-        for cost in (None, "seconds", "minutes", "hours"):
+        for cost in (None, "low", "high"):
             for model in (False, True):
-                with self.subTest(cost=cost, model=model):
+                with self.subTest(repeat_cost=cost, model=model):
                     with tempfile.TemporaryDirectory() as tmp:
                         root = Path(tmp) / "lab"
                         argv = ["exp", "foo", "--repo", str(root)]
-                        argv += ["--cost", cost] if cost else []
+                        argv += ["--repeat-cost", cost] if cost else []
                         argv += (
                             ["--kind", "apply", "--model", "haiku"]
                             if model
@@ -97,31 +97,29 @@ class StampReadBack(unittest.TestCase):
     def test_a_head_without_the_asked_tier_is_refused(self):
         from labkit.tools import scaffold as sc
 
-        good = '```toml\n[protocol]\nstandard = "0.22"\nid = "p-0123456789abcdef"\ntype = "<exploratory | confirmatory>"\ncost = "seconds"\nkind = "compute"\nfrozen = false\npreflight_audit = ""\n```\n'
-        sc.check_stamped_head(good, "seconds", "compute")
+        good = '```toml\n[protocol]\nstandard = "0.23"\nid = "p-0123456789abcdef"\ntype = "<exploratory | confirmatory>"\nrepeat_cost = "low"\nkind = "compute"\nfrozen = false\npreflight_audit = ""\n```\n'
+        sc.check_stamped_head(good, "low", "compute")
         sc.check_stamped_head(
-            good.replace('cost = "seconds"', 'cost = "<seconds | minutes | hours>"'),
+            good.replace('repeat_cost = "low"', 'repeat_cost = "<low | high>"'),
             None,
             "compute",
         )
-        with self.assertRaisesRegex(ValueError, "cost"):
+        with self.assertRaisesRegex(ValueError, "repeat_cost"):
             sc.check_stamped_head(
-                good.replace(
-                    'cost = "seconds"', 'cost = "<seconds | minutes | hours>"'
-                ),
-                "seconds",
+                good.replace('repeat_cost = "low"', 'repeat_cost = "<low | high>"'),
+                "low",
                 "compute",
             )
         with self.assertRaisesRegex(ValueError, "id"):
             sc.check_stamped_head(
                 good.replace("p-0123456789abcdef", "<protocol-id>"),
-                "seconds",
+                "low",
                 "compute",
             )
         with self.assertRaisesRegex(ValueError, "kind"):
             sc.check_stamped_head(
                 good.replace('kind = "compute"', 'kind = "<compute | fit | apply>"'),
-                "seconds",
+                "low",
                 "compute",
             )
 

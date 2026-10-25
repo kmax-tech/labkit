@@ -12,7 +12,7 @@ block (the head, `labkit/formats/protocol_block.py`):
 
 ```toml
 [protocol]
-standard = "0.22"
+standard = "0.23"
 id = "p-9e2341c0390948dc"
 ```
 
@@ -64,7 +64,7 @@ rewritten:
 `run_kind` states the run's purpose, one of three strings: `"probe"` checks
 the instrument, `"measurement"` measures the registered question,
 `"preparation"` records data preparation before measurement. The API
-default is `"probe"`; measurement scripts declare their kind. At seconds a
+default is `"probe"`; measurement scripts declare their kind. At low repeat cost a
 separate probe is refused before a run directory exists; at minutes and
 hours a probe may run before the freeze, and a measurement owes the full
 start checks. A missing or unknown `run_kind` makes the record unreadable.
