@@ -5,6 +5,7 @@
     labkit-audit <AREA> --decide N STATUS REASON [--effect E] [--record FILE]
     labkit-audit <AREA> --findings [--record FILE]
     labkit-audit <AREA> --review [--record FILE]      (`gates/decision_review`)
+    labkit-audit <AREA> --report-review REPORT        (`gates/report_review`)
 
 The agent audit of LAB-015 Preflight audit before freezing (preflight, before freezing) and LAB-050 Analysis audit before reporting
 (analysis, before a number leaves) as one command — the only runner since
@@ -118,6 +119,7 @@ from labkit.formats.scope_sha import (
 AGENT = PACKAGE_DIR / "agents" / "experiment-preflight.agent.md"
 CLARITY_AGENT = PACKAGE_DIR / "agents" / "code-clarity.agent.md"
 REVIEW_AGENT = PACKAGE_DIR / "agents" / "decision-review.agent.md"
+REPORT_AGENT = PACKAGE_DIR / "agents" / "report-review.agent.md"
 DEFAULT_MODEL = "opus"  # the agent's model; any alias of models.toml works
 REPORT_TOKENS = 4096  # room for a report of many findings, where a backend caps
 DEFAULT_TIMEOUT_S = (
@@ -129,7 +131,8 @@ MODES = ("preflight", "analysis", "clarity")
 AUDIT_EXIT_CONTRACT = (
     "exit codes: 0 no blocker and no warning, 1 findings to decide (a blocker "
     "OR a warning), 2 no audit (missing file, unreadable report, backend failure); "
-    "--review: 0 every decision upheld, 1 at least one not upheld, 2 no review"
+    "--review: 0 every decision upheld, 1 at least one not upheld, 2 no review; "
+    "--report-review: 0 no claim, 1 a claim (a warning), 2 no review"
 )
 CLARITY = "clarity"
 ANALYSIS = "analysis"
@@ -167,8 +170,13 @@ INLINE_NOTE = (
 def instructions(mode: str = "preflight") -> str:
     """The agent's instructions as shipped, without the provenance comment —
     the preflight agent for preflight and analysis, the clarity agent for
-    clarity, the decision-review agent for `--review` (`decision_review`)."""
-    agent = {CLARITY: CLARITY_AGENT, "review": REVIEW_AGENT}.get(mode, AGENT)
+    clarity, the decision-review agent for `--review` (`decision_review`),
+    the report-review agent for `--report-review` (`report_review`)."""
+    agent = {
+        CLARITY: CLARITY_AGENT,
+        "review": REVIEW_AGENT,
+        "report": REPORT_AGENT,
+    }.get(mode, AGENT)
     return re.sub(
         r"^<!--.*?-->\n", "", agent.read_text(encoding="utf-8"), count=1, flags=re.S
     )
@@ -785,6 +793,14 @@ def main(argv: list[str]) -> int:
         "each limit? writes audits/<minute>-review.toml",
     )
     ap.add_argument(
+        "--report-review",
+        type=Path,
+        metavar="REPORT",
+        help="a cold reader on REPORT, which cites a run of the area as `(not "
+        "reported: …)`: does it state such a run's numbers as results, or what "
+        "the audits contradict? prints warnings, records nothing",
+    )
+    ap.add_argument(
         "--again",
         action="store_true",
         help="with --review: draw once more on decisions already reviewed and not "
@@ -972,14 +988,17 @@ def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
         args.decide is not None,
         args.findings,
         args.review,
+        args.report_review is not None,
     ]
     if sum(chosen) != 1:
         ap.error(
             "give --mode to audit, --decide N STATUS REASON to decide, --findings "
-            "to show what there is to decide, or --review to review the decisions — "
-            "one of them"
+            "to show what there is to decide, --review to review the decisions, or "
+            "--report-review REPORT to read a finished report — one of them"
         )
-    if args.record is not None and args.mode is not None:
+    if args.record is not None and (
+        args.mode is not None or args.report_review is not None
+    ):
         ap.error("--record goes with --decide, --findings or --review")
     if args.effect and args.decide is None:
         ap.error("--effect goes with --decide")
@@ -988,9 +1007,21 @@ def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
 
 
 def _without_audit(args: argparse.Namespace) -> int:
-    """`--decide`, `--findings` or `--review`: the calls that read or write a
-    record and run no audit of the area (the review is one model call on
-    the record's decisions, `decision_review.review`)."""
+    """`--decide`, `--findings`, `--review` or `--report-review`: the calls
+    that run no audit of the area (the reviews are one model call each: on a
+    record's decisions, `decision_review.review`; on a finished report,
+    `report_review.review_report`)."""
+    if args.report_review is not None:
+        from labkit.gates.report_review import review_report
+
+        return review_report(
+            args.area,
+            args.report_review,
+            args.protocol,
+            args.model,
+            args.timeout,
+            args.out,
+        )
     if args.review:
         from labkit.gates.decision_review import review
 

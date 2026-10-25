@@ -596,6 +596,21 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **`labkit-audit AREA --report-review REPORT`: a cold reader on a report
+  that cites a run as `(not reported: …)`.** In the seventh haiku round
+  both agents that took the mark (t3, t18) left the run's numbers in the
+  report as results — at t18 "C1 … PASS" under an accepted decision that
+  makes C1 not assessable. One model call gets the report with line
+  numbers, the protocol, each marked run's `metrics.json` and every audit
+  record with its decisions and failed attempts, and names lines as
+  `result` or `contradiction` (`report-review.agent.md`,
+  `gates/report_review`). Agent audit, warning only: printed, recorded
+  nowhere, read by no gate; exit 1 on a claim. Pilot: both delivered
+  reports caught in 4 of 4 draws, clean counterexamples clean in 10 of
+  10, 0.08–0.16 USD a call
+  (`docs/usability/2026-10-25-report-review-pilot.md`). A report that
+  cites no run is out of its reach.
+
 - **A crashed run keeps why it broke off.** When the block of
   `runlog.run` raises, the run directory gets `failure.json` — the
   exception's type, message and time (`runs.write_failure`,

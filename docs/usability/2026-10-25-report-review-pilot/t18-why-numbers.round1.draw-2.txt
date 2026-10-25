@@ -1,0 +1,3 @@
+CLAIM #1 · line 78 · result · The Key Findings call it a result that the larger, deeper Random Forests (n_estimators=200, max_depth=30) "performed better", but that comparison rests only on the GridSearchCV scores from the same measurement. Line 74 and audit #3 both say those scores are selection-biased and not recorded, and the run that produced them is cited as not reported.
+CLAIM #2 · line 80 · result · The Key Findings state the A1 test-sample check as passed: predictions are complete for all 55 test samples in all three configurations. But line 57 reports no verdict on A1, audit #4 says no metric checks the CSV deliverable against 55/55, and the analysis audit that would have looked at this run failed.
+verdict: 2 claim(s)

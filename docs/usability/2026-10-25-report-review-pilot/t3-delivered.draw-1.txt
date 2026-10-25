@@ -1,0 +1,9 @@
+CLAIM #1 · line 12 · result · States the out-of-fold R² of -0.064 as the model's performance, but run 2026-10-25T20-18-03_3b26 is marked not reported on line 7.
+CLAIM #2 · line 13 · result · States the null baseline R² of -0.281 as a performance figure from run 2026-10-25T20-18-03_3b26, which is marked not reported.
+CLAIM #3 · line 20 · result · Presents R² = -0.064 as a key finding (the model explains less variance than the mean), but it comes from the not-reported run.
+CLAIM #4 · line 21 · result · Compares the model with the shuffled-label baseline (-0.064 vs -0.281, "marginally outperforms") as a finding, but the run is not reported and analysis audit #1 and #3 make C1, the model-vs-null comparison, not assessable.
+CLAIM #5 · line 28 · result · States as a finding that the feature set cannot predict bulk modulus accurately, which rests on the performance of the not-reported run.
+CLAIM #6 · line 43 · contradiction · Lists "feature provenance issues" as one of the 3 blockers in the 2026-10-25T20-24 analysis audit, but that audit grades feature provenance as WARNING #6, and its blockers are the double [C1], the double [A2] and the trivial solution.
+CLAIM #7 · line 52 · result · Compares the not-reported run's R² with a constant mean predictor (≈0 exceeds the model) as a fact, but the audit only assigned that check (blocker #3) and records no result for it.
+CLAIM #8 · line 62 · result · Concludes that the attempt "was unsuccessful" because of poor model performance, which is a verdict drawn from the not-reported run.
+verdict: 8 claim(s)

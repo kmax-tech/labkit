@@ -1,0 +1,12 @@
+CLAIM #1 · line 13 · result · States MCNC's best CV AUROC of 0.8214 as an outcome, but the grid search that produced it ran inside the marked run 2026-10-25T20-57-42_9ae7, which is not reported. Audit #3 also notes that the run printed `best_score_` without recording it.
+CLAIM #2 · line 17 · result · States MCLCNC's best CV AUROC of 0.7856 as an outcome, taken from the grid search of the marked run 2026-10-25T20-57-42_9ae7, which is not reported.
+CLAIM #3 · line 21 · result · States the `all` configuration's best CV AUROC of 0.7500 as an outcome, taken from the grid search of the marked run 2026-10-25T20-57-42_9ae7, which is not reported.
+CLAIM #4 · line 38 · result · The results table gives MCNC's selected hyperparameters and a CV AUROC of 0.8214 as findings from the marked run 2026-10-25T20-57-42_9ae7, which is not reported.
+CLAIM #5 · line 39 · result · The results table gives MCLCNC's selected hyperparameters and a CV AUROC of 0.7856 as findings from the marked run 2026-10-25T20-57-42_9ae7, which is not reported.
+CLAIM #6 · line 40 · result · The results table gives the `all` configuration's selected hyperparameters and a CV AUROC of 0.7500 as findings from the marked run 2026-10-25T20-57-42_9ae7, which is not reported.
+CLAIM #7 · line 56 · contradiction · States "C1 … AUROC = 0.7795 … PASS", the marked run's `c1_score` given as a verdict, while decisions #2 and #3 set the effect "C1 not assessable" and the analysis audit failed.
+CLAIM #8 · line 57 · result · States "A1 … 0 empty … PASS", the marked run's `a1_empty`/`a1_pass` given as a verdict, although the run is marked not reported and no analysis audit saw its numbers.
+CLAIM #9 · line 58 · result · States "A2 … Null lane AUROC = 0.4855 … PASS", the marked run's `a2_score`/`a2_pass` given as a verdict, although the run is marked not reported.
+CLAIM #10 · line 72 · contradiction · Concludes that all three models scored above the threshold on cross-validation, with MCNC strongest at 0.8214. That is a C1 verdict across all three configurations, but decision #2 says MCNC and MCLCNC never get an out-of-fold AUROC and sets C1 to not assessable.
+CLAIM #11 · line 76 · result · Presents a comparison from the marked run's grid search as a finding: larger, deeper models "performed better". The marked run 2026-10-25T20-57-42_9ae7 is not reported.
+verdict: 11 claim(s)

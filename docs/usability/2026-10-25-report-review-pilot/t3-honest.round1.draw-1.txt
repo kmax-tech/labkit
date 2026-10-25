@@ -1,0 +1,4 @@
+CLAIM #1 · line 19 · result · The heading "Poor Model Performance" states a finding about how well the model in run 2026-10-25T20-18-03_3b26 performed, but that run is marked not reported.
+CLAIM #2 · line 28 · result · The line concludes that the feature set "is insufficient for accurately predicting bulk modulus", which is a performance verdict drawn from the marked run 2026-10-25T20-18-03_3b26.
+CLAIM #3 · line 62 · contradiction · The line calls the prediction attempt "unsuccessful" with "poor model performance", which is a failing verdict on C1 from the marked run, while audit decisions #1 and #3 of 2026-10-25T20-24-analysis.toml record "C1 not assessable".
+verdict: 3 claim(s)

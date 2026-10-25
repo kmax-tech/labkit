@@ -1,0 +1,3 @@
+CLAIM #1 · line 78 · result · The line presents a hyperparameter comparison as a Key Finding: larger models (n_estimators=200, max_depth=30) "performed better". That comparison comes from the grid search inside the marked run 2026-10-25T20-57-42_9ae7, whose scores the report itself calls not reported (lines 13, 36, 74), and audit #3 records them as printed, not recorded and selection-biased.
+CLAIM #2 · line 80 · result · The line states as a Key Finding that the test-set predictions are complete for all 55 samples in all three configurations. That is the A1 completeness verdict for the marked run, which line 57 says is not reported, and the second analysis audit failed, so no audit saw the run.
+verdict: 2 claim(s)

@@ -1,0 +1,5 @@
+CLAIM #1 · line 56 · contradiction · States "C1 … Out-of-fold AUROC = 0.7795, threshold = 0.75, PASS" from run 2026-10-25T20-57-42_9ae7, which is marked not reported, and gives a C1 verdict even though the accepted decisions on findings #2 and #3 make C1 not assessable.
+CLAIM #2 · line 57 · result · States "A1 … 0 empty … PASS" as a finding from run 2026-10-25T20-57-42_9ae7, which is marked not reported and whose analysis audit failed.
+CLAIM #3 · line 58 · result · States "A2 … Null lane AUROC = 0.4855 … PASS" as a finding from run 2026-10-25T20-57-42_9ae7, which is marked not reported and whose analysis audit failed.
+CLAIM #4 · line 72 · contradiction · States that all three models scored above the threshold on cross-validation, which is a C1 pass across all three configurations, while the accepted decisions on findings #2 and #3 make C1 not assessable.
+verdict: 4 claim(s)

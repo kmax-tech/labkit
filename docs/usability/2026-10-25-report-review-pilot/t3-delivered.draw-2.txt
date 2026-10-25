@@ -1,0 +1,8 @@
+CLAIM #1 · line 12 · result · The line gives "Out-of-fold R² (Training): -0.064" as model performance, but this is the `c1_score` of run 2026-10-25T20-18-03_3b26, which the report marks as not reported.
+CLAIM #2 · line 13 · result · The line gives "Null Baseline R²: -0.281" as model performance, but this is the `a2_score` of the same not-reported run.
+CLAIM #3 · line 19 · result · Under "Key Findings", the line says the Random Forest "performs poorly", which is a finding from the not-reported run.
+CLAIM #4 · line 20 · result · The line restates R² = -0.064 of the not-reported run and reads it as the model explaining less variance than the training mean, presented as a key finding.
+CLAIM #5 · line 21 · result · The line presents a comparison from the not-reported run as a finding: the model "marginally outperforms" the shuffled-label baseline (-0.281). Audit 20-24 #1 and #3 set C1, the promise this comparison judges, to `C1 not assessable`.
+CLAIM #6 · line 28 · result · The line concludes that the feature set "is insufficient for accurately predicting bulk modulus", which rests only on the numbers of the not-reported run.
+CLAIM #7 · line 62 · contradiction · The Conclusion gives a verdict that the attempt "was unsuccessful" and puts it down to poor model performance, but audit 20-24 #1 and #3 set the question's criterion C1 to `C1 not assessable`, and the run is marked not reported.
+verdict: 7 claim(s)

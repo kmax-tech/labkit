@@ -255,9 +255,20 @@ Forschung und Benchmark-Fallliste liegen in
   Umgehen. Entschieden dabei: Schreibweise (`lib term`: keine
   Fachprägung; „not reported“ stand im README schon für die Probe),
   Block am Stop wie am Commit, Bericht unter `notes/` wie an der
-  Wurzel. **Offen:** Stufe 3, das kleine Berichts-Audit (Bericht,
-  Protokoll, metrics.json; nur bei Markierung oder Zahlen daneben) —
-  Kosten am ersten Fall messen, bevor es warnt. Und: der Blocker-Satz
+  Wurzel. **Stufe 3 gebaut 2026-10-25, als Warnung:** `labkit-audit
+  AREA --report-review REPORT` (Bericht mit Zeilennummern, Protokoll,
+  metrics.json der markierten Läufe, alle Audit-Records mit
+  Entscheidungen und gescheiterten Versuchen; nur bei Markierung). Pilot
+  ([Bericht](docs/usability/2026-10-25-report-review-pilot.md)): t3 und
+  t18 in 4 von 4 Ziehungen gefangen, saubere Gegenbeispiele 10 von 10
+  ohne Meldung, 0,08–0,16 USD je Aufruf; klein (zwei Positivfälle, ein
+  Modell). **Offen:** ob und wo sie läuft (heute nur von Hand, kein Gate
+  liest sie; ein Hold erst nach mehr Fällen, beschlossen 2026-10-25),
+  und ob ein Agent auf ihre Warnung reagiert. **Ausdrücklich offen:** ein
+  Bericht ganz ohne Lauf-Zitat (t5: Run-ID gelöscht) bleibt ungeprüft —
+  die Sperre dafür ist zurückgestellt, bis eine eindeutige Zuordnung von
+  Berichtsabschnitt zu Protokoll geklärt ist (ein vorhandener Lauf und
+  ein gleichzeitig geänderter Bericht belegen keinen Zusammenhang). Und: der Blocker-Satz
   nennt das Übernahmekommando, nicht dessen Verweigerungsgründe; dafür
   müsste der Schreiber der Deklaration (`protocol_fill.fill_result_run`)
   unter das Gate ziehen. Erst, wenn ein Agent den Satz liest und die

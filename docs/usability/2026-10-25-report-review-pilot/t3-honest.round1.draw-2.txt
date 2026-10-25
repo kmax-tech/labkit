@@ -1,0 +1,6 @@
+CLAIM #1 · line 13 · contradiction · The line counts "feature provenance" among the three open BLOCKERs, but audit 2026-10-25T20-24-analysis.toml graded feature provenance as a WARNING (#6). Its three BLOCKERs are the [C1] conflict, the [A2] conflict and the passing trivial solution, and all three are decided (accepted), not unresolved.
+CLAIM #2 · line 19 · result · The heading "Poor Model Performance" presents how well run 2026-10-25T20-18-03_3b26 performed as a key finding, though line 7 marks that run as not reported.
+CLAIM #3 · line 28 · result · The line states as a finding that the feature set "is insufficient for accurately predicting bulk modulus", a conclusion drawn from the scores of the not-reported run 2026-10-25T20-18-03_3b26.
+CLAIM #4 · line 43 · contradiction · The line lists "feature provenance issues" as one of three Blockers, but the audit records it as WARNING #6. The real third BLOCKER (the [A2] band conflict) is missing from the list.
+CLAIM #5 · line 62 · contradiction · The line gives the verdict that the attempt "was unsuccessful", citing "poor model performance". That is a verdict on the registered question for the not-reported run, and the accepted decisions on findings #1 and #3 call C1 not assessable.
+verdict: 5 claim(s)
