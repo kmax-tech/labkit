@@ -41,21 +41,27 @@ class FirstRepeatCost:
 
     Attributes:
         commit: That commit's hash.
-        repeat_cost: The head's value there, None when it was a placeholder.
+        repeat_cost: The head's value there — declared, never the placeholder.
         earlier_unreadable: Commits before it that touched the file but whose
             head this labkit does not read (another standard): the history
             before a migration, which no reader compares.
+        earlier_undeclared: Commits before it whose head still held the
+            placeholder — a stamp committed before the registration; they
+            declare nothing, so they are no base to compare against.
     """
 
     commit: str
-    repeat_cost: str | None
+    repeat_cost: str
     earlier_unreadable: int
+    earlier_undeclared: int
 
 
 def first_repeat_cost(path: Path) -> FirstRepeatCost | None:
     """The protocol's `repeat_cost` in the oldest commit whose head this
-    standard reads, or None when the file is new to git, outside a repo, or
-    no committed version has a readable head. Walks the file's commits
+    standard reads AND declares one, or None when the file is new to git,
+    outside a repo, or no committed version declares it (a placeholder
+    committed with the stamp is skipped: lowering from it is a first
+    declaration, not a lowering — review 2026-10-25). Walks the file's commits
     oldest first (`git log --reverse`, `git show` at each) and counts the
     unreadable ones it passes — a protocol migrated from 0.22 is compared
     from its migration commit on, and the count says so."""
@@ -67,6 +73,7 @@ def first_repeat_cost(path: Path) -> FirstRepeatCost | None:
     if log.returncode != 0 or not log.stdout.strip():
         return None
     unreadable = 0
+    undeclared = 0
     for commit in log.stdout.split():
         shown = git_run(["show", f"{commit}:{rel}"], root)
         if shown.returncode != 0:  # the commit deleted the file
@@ -76,7 +83,10 @@ def first_repeat_cost(path: Path) -> FirstRepeatCost | None:
         except protocol_block.BlockError:
             unreadable += 1
             continue
-        return FirstRepeatCost(commit, value, unreadable)
+        if value is None:
+            undeclared += 1
+            continue
+        return FirstRepeatCost(commit, value, unreadable, undeclared)
     return None
 
 

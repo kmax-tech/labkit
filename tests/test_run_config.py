@@ -90,6 +90,24 @@ class Fields(unittest.TestCase):
         with self.assertRaisesRegex(runs.RunConfigError, "0.103.0"):
             runs.parse_run_config({"schema_version": 3, "cost_tier": "hours"})
 
+    def test_the_records_repeat_cost_holds_the_heads_two_values_or_null(self) -> None:
+        """A retired or mistyped value is corrupt metadata, not a readable run
+        (review 2026-10-25: schema 4 read "hours" as a string and went on)."""
+        for value in ("hours", "seconds", "unexpected"):
+            with self.subTest(value):
+                with self.assertRaisesRegex(
+                    runs.RunConfigError, f"repeat_cost = {value!r}"
+                ):
+                    runs.parse_run_config(run_record({"repeat_cost": value}))
+        for value in ("low", "high", None):
+            with self.subTest(value):
+                self.assertEqual(
+                    runs.parse_run_config(
+                        run_record({"repeat_cost": value})
+                    ).repeat_cost,
+                    value,
+                )
+
 
 class WriterReaderParity(unittest.TestCase):
     def test_the_writer_writes_exactly_the_fields_the_reader_knows(self) -> None:

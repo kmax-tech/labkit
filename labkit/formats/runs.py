@@ -824,6 +824,15 @@ def parse_run_config(obj: object) -> RunConfig:
         raise RunConfigError(problem)
     try:
         kind = parse_run_kind(cfg["run_kind"])
+        # the head's alphabet lives in protocol_block, which imports RUN_ID from
+        # here: imported at the call, not at the module (no cycle, one home)
+        from labkit.formats.protocol_block import REPEAT_COSTS
+
+        if cfg["repeat_cost"] is not None and cfg["repeat_cost"] not in REPEAT_COSTS:
+            raise RunConfigError(
+                f"repeat_cost = {cfg['repeat_cost']!r}; expected "
+                f"{' | '.join(repr(c) for c in REPEAT_COSTS)} or null (unbound or unfilled head)"
+            )
     except ValueError as exc:
         raise RunConfigError(str(exc)) from exc
     binding = binding_of(cfg)

@@ -125,6 +125,28 @@ class RepeatCostLowered(unittest.TestCase):
         self.assertIn(f"{migration[:7]}: high -> low", warning)
         self.assertIn("1 earlier at another standard, not compared", warning)
 
+    def test_a_placeholder_committed_first_is_no_base_to_compare_against(self):
+        """Stamp committed with `repeat_cost = "<low | high>"`, then declared
+        `high`, then lowered: the warning compares against the first
+        declaration, not the placeholder (review 2026-10-25)."""
+        root, protocol = _repo("high")
+        text = protocol.read_text(encoding="utf-8")
+        protocol.write_text(
+            text.replace('repeat_cost = "high"', 'repeat_cost = "<low | high>"'),
+            encoding="utf-8",
+        )
+        _git(root, "add", "-A")
+        _git(root, "commit", "-q", "--amend", "-m", "stamped")
+        protocol.write_text(text, encoding="utf-8")
+        _git(root, "add", "-A")
+        _git(root, "commit", "-qm", "declared high")
+        declared = _git(root, "rev-parse", "HEAD")
+        warning = protocol_history.repeat_cost_lowered(
+            protocol, _set_cost(protocol, "low")
+        )
+        assert warning is not None
+        self.assertIn(f"{declared[:7]}: high -> low", warning)
+
     def test_raised_unchanged_or_unknown_to_git_is_silent(self):
         root, protocol = _repo("high")
         self.assertIsNone(
