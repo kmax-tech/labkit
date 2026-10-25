@@ -167,12 +167,14 @@ pins (`requirements.txt` / `requirements.lock`).
 ### Fixed
 
 - **A two-turn claude-cli answer names its cause.** One model in two
-  turns without tools is an answer cut at the CLI's output token limit
-  and resumed; `result` holds only the part after the cut (probe on CLI
-  2.1.308, `docs/notes/2026-10-25-cli-output-limit.md`). The refusal
-  stands; its message said only "2 turns", and at t18 of the seventh
-  haiku round it read like a false "unproven". It now names
-  `CLAUDE_CODE_MAX_OUTPUT_TOKENS`.
+  turns without tools is an answer cut and resumed — after a safety stop
+  (t18 of the seventh haiku round, CLI 2.1.285, which did not count it)
+  or at the CLI's output token limit (probe on CLI 2.1.308); `result`
+  holds only the part after the cut
+  (`docs/notes/2026-10-25-cli-two-turns.md`). The refusal stands; its
+  message said only "2 turns", and at t18 it read like a false
+  "unproven". It now names the output limit where `safety_stops = 0`,
+  and both causes where the CLI does not count safety stops.
 
 - **A report that promotes a run without the adoption is held.** In the
   sixth haiku round (2026-10-23, t3 and t18) `protocol-fill --from-run`
