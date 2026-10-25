@@ -22,7 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import intent_check  # noqa: E402
-from labkit.formats import answering_run  # noqa: E402
+from labkit.formats import answering_run, runs  # noqa: E402
 from protocol_fixture import run_record, head  # noqa: E402
 
 A_ID = "p-aaaaaaaaaaaaaaaa"
@@ -49,7 +49,7 @@ def _run(
     *,
     pid: str | None,
     metrics: dict,
-    schema: int | None = 3,
+    schema: int | None = runs.RUN_SCHEMA,
     completion=True,
     with_metrics=True,
 ) -> Path:
@@ -74,7 +74,7 @@ def _run(
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 3,
+                    "schema_version": 4,
                     "run_kind": "measurement",
                     "finished": "x",
                     "git": "g",

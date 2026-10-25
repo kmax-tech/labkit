@@ -709,6 +709,28 @@ def _probe_venv(root: Path, venv: Path | None, labkit_spec: str) -> None:
     _sh([str(old / "bin" / "pip"), "install", "-q", labkit_spec], root)
 
 
+def stamped_repeat_cost(flags: list[str]) -> str:
+    """The repeat cost a probe's recorded scaffold flags stamped, "unset" when
+    none was named. A probe staged before 0.104.0 recorded `--cost <tier>`;
+    that is refused with the mapping, never read as unset — the comparison
+    would silently lose its lane."""
+    if "--cost" in flags:
+        old = (
+            flags[flags.index("--cost") + 1]
+            if flags.index("--cost") + 1 < len(flags)
+            else "?"
+        )
+        raise console.Refused(
+            "usability",
+            f"the probe was staged with `--cost {old}` (labkit before 0.104.0); "
+            "stage it again with --repeat-cost low|high (seconds is low, minutes "
+            "and hours are high) — a restamp does not translate the old flag",
+        )
+    if "--repeat-cost" in flags:
+        return flags[flags.index("--repeat-cost") + 1]
+    return "unset"
+
+
 def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
     """`stage --restamp`: see the module docstring. KEEP None means the
     paths `<dir>.probe.json` recorded last time."""
@@ -731,9 +753,7 @@ def restamp(root: Path, keep: list[str] | None, venv: Path | None) -> int:
     probe = read_probe(probe_file)
     kept_paths = probe.kept if keep is None else keep
     flags = probe.scaffold_flags
-    repeat_cost = (
-        flags[flags.index("--repeat-cost") + 1] if "--repeat-cost" in flags else "unset"
-    )
+    repeat_cost = stamped_repeat_cost(flags)
     model = "--model" in flags
     _probe_venv(root, venv, scaffold.labkit_pin())
     with tempfile.TemporaryDirectory() as tmp:

@@ -35,7 +35,7 @@ def completed_run(area: Path, pid: str, output: str) -> Path:
     d = area / "runs" / "2026-01-01T00-00-00_0001"
     d.mkdir(parents=True)
     cfg = {
-        "schema_version": 3,
+        "schema_version": 4,
         "run_kind": "measurement",
         "script": "01_measure.py",
         "pid": 1,
@@ -52,7 +52,7 @@ def completed_run(area: Path, pid: str, output: str) -> Path:
     (d / "completion.json").write_text(
         json.dumps(
             {
-                "schema_version": 3,
+                "schema_version": 4,
                 "run_kind": "measurement",
                 "finished": "x",
                 "git": "g",

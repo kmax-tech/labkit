@@ -187,7 +187,7 @@ class FinalizeBlocksAnUnrecordedBlock(unittest.TestCase):
         d = area / "runs" / "2026-10-08T10-00-00_aaaa"
         d.mkdir(parents=True)
         cfg = {
-            "schema_version": 3,
+            "schema_version": 4,
             "run_kind": "measurement",
             "script": "01_measure.py",
             "pid": 1,

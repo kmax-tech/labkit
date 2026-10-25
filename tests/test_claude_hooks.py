@@ -450,7 +450,7 @@ class Stop(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": 3,
+                        "schema_version": 4,
                         "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                         "promises": promises.snapshot(block, self.area),
                         "run_kind": run_kind,
@@ -466,7 +466,7 @@ class Stop(unittest.TestCase):
             json.dumps({"c1_pass": True, "a1_pass": True, "a2_pass": True})
         )
         (d / "completion.json").write_text(
-            json.dumps({"schema_version": 3, "run_kind": "measurement"})
+            json.dumps({"schema_version": 4, "run_kind": "measurement"})
         )
         if not (self.area / "audits").is_dir():
             findings.write(

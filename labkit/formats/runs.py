@@ -82,7 +82,7 @@ def runs_script(cmd: str, script: str) -> bool:
 JsonObject = dict[str, Any]
 
 #: Current run-record format; the writer and reader use the same version.
-RUN_SCHEMA = 3
+RUN_SCHEMA = 4
 
 RunKind = Literal["preparation", "probe", "measurement"]
 
@@ -444,8 +444,13 @@ def _schema_problem(sv: object) -> str | None:
         return f"schema_version = {sv!r}, not an integer"
     if sv < 2:
         return f"schema_version = {sv}, below 2: {before_schema}"
-    if sv < RUN_SCHEMA:
+    if sv == 2:
         return "schema_version = 2; read this record with labkit 0.99.0"
+    if sv == 3:
+        return (
+            "schema_version = 3; read this record with labkit 0.103.0 "
+            "(`cost_tier` became `repeat_cost` in 0.104.0)"
+        )
     if sv != RUN_SCHEMA:
         return f"schema_version = {sv}; expected {RUN_SCHEMA}"
     return None

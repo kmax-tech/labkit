@@ -83,7 +83,7 @@ def _write(area: Path, name: str, kind: Kind) -> Path:
         (d / "config.json").write_text("{not json", encoding="utf-8")
         return d
     cfg: dict = {
-        "schema_version": 3,
+        "schema_version": 4,
         "run_kind": "measurement",
         "script": "01_measure.py",
         "pid": 1,
@@ -102,7 +102,7 @@ def _write(area: Path, name: str, kind: Kind) -> Path:
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 3,
+                    "schema_version": 4,
                     "run_kind": "measurement",
                     "finished": "x",
                     "git": "g",

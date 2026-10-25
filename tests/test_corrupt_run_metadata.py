@@ -34,7 +34,7 @@ def make_run(area: Path, name: str) -> Path:
         json.dumps(
             run_record(
                 {
-                    "schema_version": 3,
+                    "schema_version": 4,
                     "run_kind": "measurement",
                     "script": "01_measure.py",
                     "pid": 1,
@@ -48,7 +48,7 @@ def make_run(area: Path, name: str) -> Path:
     (d / "completion.json").write_text(
         json.dumps(
             {
-                "schema_version": 3,
+                "schema_version": 4,
                 "run_kind": "measurement",
                 "finished": "x",
                 "git": "g",
@@ -146,4 +146,4 @@ class Shape(unittest.TestCase):
             (Path(d) / "config.json").write_text(json.dumps(run_record()))
             cfg = runs.read_run_config(Path(d))
             assert cfg is not None
-            self.assertEqual(cfg.schema_version, 3)
+            self.assertEqual(cfg.schema_version, 4)

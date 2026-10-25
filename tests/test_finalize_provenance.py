@@ -71,7 +71,7 @@ class Provenance(unittest.TestCase):
         cfg = {
             "script": "01_measure.py",
             "pid": 1,
-            "schema_version": 3,
+            "schema_version": 4,
             "run_kind": "measurement",
             "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
             "data": data or {},
@@ -83,7 +83,7 @@ class Provenance(unittest.TestCase):
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 3,
+                    "schema_version": 4,
                     "run_kind": "measurement",
                     "finished": "x",
                     "git": "g",

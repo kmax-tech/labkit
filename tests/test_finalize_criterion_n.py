@@ -24,7 +24,7 @@ class CriterionN(unittest.TestCase):
             json.dumps(
                 run_record(
                     {
-                        "schema_version": 3,
+                        "schema_version": 4,
                         "run_kind": "measurement",
                         "data": {
                             "items": {

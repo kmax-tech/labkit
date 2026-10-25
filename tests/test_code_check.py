@@ -351,7 +351,7 @@ class TestProtocolChoice(unittest.TestCase):
 class TestSummaryLine(unittest.TestCase):
     """What the closing line says is not checked. At low repeat cost it read
     "schema, gate labels, placeholders: not checked — not owed at cost
-    seconds", and an agent took the protocol's open fields for not owed; the
+    seconds" (the tier then called seconds), and an agent took the protocol's open fields for not owed; the
     pre-commit then refused the open promise sentence (judge probe,
     2026-10-20). Only the agent's review is not owed there."""
 

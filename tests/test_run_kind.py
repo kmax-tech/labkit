@@ -54,7 +54,7 @@ class RunKind(unittest.TestCase):
             cfg = runs.read_run_config(run.dir)
             self.assertIsNotNone(cfg)
             assert cfg is not None
-            self.assertEqual(cfg.schema_version, 3)
+            self.assertEqual(cfg.schema_version, 4)
             self.assertEqual(cfg.run_kind, "measurement")
             self.assertNotIn("long", cfg.as_record())
             self.assertEqual(runs.unreportable(cfg), [])

@@ -87,6 +87,8 @@ class Fields(unittest.TestCase):
     def test_an_older_record_names_its_version_not_its_keys(self) -> None:
         with self.assertRaisesRegex(runs.RunConfigError, "0.99.0"):
             runs.parse_run_config({"schema_version": 2, "long": True})
+        with self.assertRaisesRegex(runs.RunConfigError, "0.103.0"):
+            runs.parse_run_config({"schema_version": 3, "cost_tier": "hours"})
 
 
 class WriterReaderParity(unittest.TestCase):

@@ -81,7 +81,7 @@ def scope_file(area: Path) -> Path:
 def run_record(
     fields: dict | None = None, /, *, drop: tuple[str, ...] = (), **more: object
 ) -> dict:
-    """A complete config.json as runlog writes it — schema 3, every field of
+    """A complete config.json as runlog writes it — schema 4, every field of
     `runs.RUN_CONFIG_KEYS`: a measurement, unbound, no parent, no repeat, no
     data, an empty config. FIELDS and MORE replace what a test varies; a
     test of a damaged record breaks a field explicitly: DROP leaves fields
@@ -90,7 +90,7 @@ def run_record(
     the tests: a fixture that wrote a part of it read, until 2026-10-20, as
     a record with defaults."""
     record: dict = {
-        "schema_version": 3,
+        "schema_version": 4,
         "experiment": "x",
         "script": "01_measure.py",
         "protocol": {"id": None, "path": None},
@@ -155,7 +155,7 @@ def completed_run(
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 3,
+                    "schema_version": 4,
                     "finished": "x",
                     "git": "g",
                     "git_full": "g",

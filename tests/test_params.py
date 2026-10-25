@@ -54,7 +54,7 @@ def _run(
         json.dumps(
             run_record(
                 {
-                    "schema_version": 3,
+                    "schema_version": 4,
                     "run_kind": "measurement",
                     "script": "01_measure.py",
                     "pid": 1,
@@ -71,7 +71,7 @@ def _run(
     (d / "completion.json").write_text(
         json.dumps(
             {
-                "schema_version": 3,
+                "schema_version": 4,
                 "run_kind": "measurement",
                 "finished": "x",
                 "git": "g",

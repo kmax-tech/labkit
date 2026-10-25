@@ -30,7 +30,7 @@ def _run(
     d = area / "runs" / name
     d.mkdir(parents=True)
     cfg = {
-        "schema_version": 3,
+        "schema_version": 4,
         "run_kind": "measurement",
         "script": "01_measure.py",
         "protocol": {"id": "p-0001", "path": "x.md"},

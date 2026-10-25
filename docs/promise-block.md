@@ -130,7 +130,7 @@ constant unchanged*. Whether `evaluate_rows` uses the value right is the
 agent audit's question, not a mechanical one. A frozen protocol, and
 every measurement, including at `repeat_cost = "low"`, owes the block
 (`promises.promise_tables_owed`, standard 0.19): without tables, `protocol-check`
-reports a MUST failure (frozen or seconds), `preflight` and `finalize`
+reports a MUST failure (frozen or low), `preflight` and `finalize`
 block, and no measurement starts under it. The one exception: a
 computation (`kind = "compute"`) that is not frozen and whose prose names no
 `[C]`/`[A]`/`[B]` id registers nothing and owes no tables (0.87.1) — in

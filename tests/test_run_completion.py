@@ -56,7 +56,7 @@ def _run_dir(
     area: Path,
     name: str,
     *,
-    schema: int | None = 3,
+    schema: int | None = runs.RUN_SCHEMA,
     metrics=True,
     completion=True,
     pid=DEAD_PID,
@@ -78,7 +78,7 @@ def _run_dir(
         (d / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 3,
+                    "schema_version": 4,
                     "run_kind": "measurement",
                     "finished": "2026-09-26T21:00:00",
                     "git": "abc1234",

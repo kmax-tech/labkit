@@ -72,7 +72,7 @@ class TestWait(unittest.TestCase):
                 json.dumps(
                     run_record(
                         {
-                            "schema_version": 3,
+                            "schema_version": 4,
                             "run_kind": "measurement",
                             "pid": 999_999_99,
                             "script": "01_measure.py",
@@ -135,7 +135,7 @@ class TestWait(unittest.TestCase):
                 json.dumps(
                     run_record(
                         {
-                            "schema_version": 3,
+                            "schema_version": 4,
                             "run_kind": "measurement",
                             "pid": os.getpid(),
                             "script": me.split()[0],

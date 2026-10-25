@@ -33,8 +33,13 @@ pins (`requirements.txt` / `requirements.lock`).
   refusal of the intermediate `kind = "count"` (`COUNT_RENAMED`) goes with
   it, a 0.22 head is refused before its kind is read. The lab rule LAB-017
   keeps its name, "The number of audits follows the cost tier": the two
-  values are its tiers. Rollout to the labs' protocols, `AGENTS.md` and
-  pins is a separate task.
+  values are its tiers. The run record is schema 4 (`runs.RUN_SCHEMA`): a
+  schema-3 record is refused naming 0.103.0, not its keys. The lowered-tier
+  warning compares from the first commit this standard reads and counts
+  the earlier ones it cannot (`protocol_history.first_repeat_cost`); a
+  usability probe staged with `--cost` is refused at restamp with the
+  mapping (`usability.stamped_repeat_cost`), never read as unset. Rollout
+  to the labs' protocols, `AGENTS.md` and pins is a separate task.
 
 - **A resume refuses another model behind the same alias.** The judge's
   instrument (`lanes.Lanes.instrument`) held the prompts' digest and the

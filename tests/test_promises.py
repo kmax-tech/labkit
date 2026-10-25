@@ -266,7 +266,7 @@ class Chain(unittest.TestCase):
         (run.dir / "completion.json").write_text(
             json.dumps(
                 {
-                    "schema_version": 3,
+                    "schema_version": 4,
                     "run_kind": "measurement",
                     "finished": "x",
                     "git": "g",

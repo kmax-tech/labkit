@@ -1,7 +1,7 @@
 """Two ways round the audit at high repeat cost, both reported (third haiku round
 on 0.99.0, labkit-paper area 09): t18 wrote `preflight_audit = "n/a — …"`
 and runlog took it (now refused: `findings.waived_audit_gap`, in preflight
-and protocol-check too); the next move is lowering `repeat_cost` to seconds, where
+and protocol-check too); the next move is lowering `repeat_cost` to `low`, where
 nothing is owed before the run — exact over git, the head as first committed
 against the head now (`protocol_history.repeat_cost_lowered`, a WARNING in
 protocol-check and preflight). Twins: a raised or unchanged tier, a file git
@@ -95,6 +95,35 @@ class RepeatCostLowered(unittest.TestCase):
                 protocol, protocol_block.head(protocol.read_text())
             )
         )
+
+    def test_lowered_after_a_migration_warns_from_the_migration_commit(self):
+        """A protocol first committed under standard 0.22 (`cost = "hours"`)
+        is compared from the first commit this standard reads; the warning
+        counts the earlier commits it could not compare."""
+        root, protocol = _repo("high")
+        old = (
+            protocol.read_text(encoding="utf-8")
+            .replace('standard = "0.23"', 'standard = "0.22"')
+            .replace('repeat_cost = "high"', 'cost = "hours"')
+        )
+        protocol.write_text(old, encoding="utf-8")
+        _git(root, "add", "-A")
+        _git(root, "commit", "-q", "--amend", "-m", "registered at 0.22")
+        protocol.write_text(
+            old.replace('standard = "0.22"', 'standard = "0.23"').replace(
+                'cost = "hours"', 'repeat_cost = "high"'
+            ),
+            encoding="utf-8",
+        )
+        _git(root, "add", "-A")
+        _git(root, "commit", "-qm", "migrated to 0.23")
+        migration = _git(root, "rev-parse", "HEAD")
+        warning = protocol_history.repeat_cost_lowered(
+            protocol, _set_cost(protocol, "low")
+        )
+        assert warning is not None
+        self.assertIn(f"{migration[:7]}: high -> low", warning)
+        self.assertIn("1 earlier at another standard, not compared", warning)
 
     def test_raised_unchanged_or_unknown_to_git_is_silent(self):
         root, protocol = _repo("high")

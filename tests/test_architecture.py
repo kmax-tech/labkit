@@ -65,7 +65,7 @@ def doctrine_modules() -> set[str]:
 #: rule the core had copied (`cost == "low"`) becoming a visible import
 #: of `standard_contract` is the same crossing made explicit, not a new one.
 KNOWN_CROSSINGS = {
-    # the freeze gate at a run's start: audit coverage (LAB-015), the seconds
+    # the freeze gate at a run's start: audit coverage (LAB-015), the low lane's
     # registration and which lane owes the freeze, the audit or the foreground
     # — doctrine that refuses a run, sitting in the run writer's start check
     # (moved with it out of runlog; the same crossings, not new ones)

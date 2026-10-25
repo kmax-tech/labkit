@@ -87,7 +87,7 @@ def _probe(root: Path, metrics: dict, frozen: bool = False, tier: str = "low") -
         json.dumps(
             run_record(
                 {
-                    "schema_version": 3,
+                    "schema_version": 4,
                     "run_kind": "measurement",
                     "protocol": {
                         "id": "p-0123456789abcdef",
@@ -116,6 +116,16 @@ def _probe(root: Path, metrics: dict, frozen: bool = False, tier: str = "low") -
         encoding="utf-8",
     )
     usability.sidecar(root, "log.md").write_text(LOG, encoding="utf-8")
+
+
+class RestampFlags(unittest.TestCase):
+    def test_the_recorded_repeat_cost_is_read_and_the_old_flag_refused(self):
+        self.assertEqual(
+            usability.stamped_repeat_cost(["--repeat-cost", "high"]), "high"
+        )
+        self.assertEqual(usability.stamped_repeat_cost(["--kind", "fit"]), "unset")
+        with self.assertRaisesRegex(console.Refused, "--cost hours"):
+            usability.stamped_repeat_cost(["--cost", "hours", "--kind", "fit"])
 
 
 class LoadProbeRun(unittest.TestCase):

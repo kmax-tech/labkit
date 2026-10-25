@@ -43,7 +43,7 @@ def _repo(
         json.dumps(
             run_record(
                 {
-                    "schema_version": 3,
+                    "schema_version": 4,
                     "run_kind": "measurement",
                     "config": {
                         "judge": {

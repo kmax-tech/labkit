@@ -10,6 +10,7 @@ apply protocol an annotation validity names (`bound_validation`).
 Read-only; git is asked through `repo.git_run`.
 """
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
 
@@ -33,26 +34,50 @@ def id_in_git_head(path: Path) -> str | None:
     return protocol_block.id_of(text) if text is not None else None
 
 
-def cost_in_first_commit(path: Path) -> tuple[str, str | None] | None:
-    """(commit, repeat_cost) of the protocol as its first commit added it — the repeat_cost
-    tier it was registered at — or None when the file is new to git, outside
-    a repo, or that version has no readable head. `git log --diff-filter=A`
-    names the adding commit; `git show` reads the file as it was then."""
+@dataclass(frozen=True)
+class FirstRepeatCost:
+    """The protocol's `repeat_cost` as the oldest commit this standard reads
+    committed it — the tier it was registered at.
+
+    Attributes:
+        commit: That commit's hash.
+        repeat_cost: The head's value there, None when it was a placeholder.
+        earlier_unreadable: Commits before it that touched the file but whose
+            head this labkit does not read (another standard): the history
+            before a migration, which no reader compares.
+    """
+
+    commit: str
+    repeat_cost: str | None
+    earlier_unreadable: int
+
+
+def first_repeat_cost(path: Path) -> FirstRepeatCost | None:
+    """The protocol's `repeat_cost` in the oldest commit whose head this
+    standard reads, or None when the file is new to git, outside a repo, or
+    no committed version has a readable head. Walks the file's commits
+    oldest first (`git log --reverse`, `git show` at each) and counts the
+    unreadable ones it passes — a protocol migrated from 0.22 is compared
+    from its migration commit on, and the count says so."""
     root = git_root(path)
     if root is None:
         return None
     rel = path.resolve().relative_to(root).as_posix()
-    log = git_run(["log", "--diff-filter=A", "--format=%H", "--", rel], root)
+    log = git_run(["log", "--reverse", "--format=%H", "--", rel], root)
     if log.returncode != 0 or not log.stdout.strip():
         return None
-    first = log.stdout.split()[-1]  # the oldest adding commit, if several
-    shown = git_run(["show", f"{first}:{rel}"], root)
-    if shown.returncode != 0:
-        return None
-    try:
-        return first, protocol_block.head(shown.stdout).repeat_cost
-    except protocol_block.BlockError:
-        return None
+    unreadable = 0
+    for commit in log.stdout.split():
+        shown = git_run(["show", f"{commit}:{rel}"], root)
+        if shown.returncode != 0:  # the commit deleted the file
+            continue
+        try:
+            value = protocol_block.head(shown.stdout).repeat_cost
+        except protocol_block.BlockError:
+            unreadable += 1
+            continue
+        return FirstRepeatCost(commit, value, unreadable)
+    return None
 
 
 def registration_in_commit(path: Path, commit: str) -> list[str] | None:
@@ -88,15 +113,21 @@ def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
     due (third haiku round on 0.99.0, t5). Exact over git: the head as it
     was first committed against the head now; a legitimate correction says
     why in the protocol. Static evidence, never a blocker."""
-    was = cost_in_first_commit(path)
+    was = first_repeat_cost(path)
     if was is None or head.repeat_cost is None:
         return None
-    commit, first = was
+    commit, first = was.commit, was.repeat_cost
     tiers = protocol_block.REPEAT_COSTS
     if first not in tiers or tiers.index(head.repeat_cost) >= tiers.index(first):
         return None
+    since = (
+        "the first commit this standard reads "
+        f"({was.earlier_unreadable} earlier at another standard, not compared)"
+        if was.earlier_unreadable
+        else "the protocol's first commit"
+    )
     return (
-        f"{path}: WARNING: repeat cost lowered since the protocol's first commit "
+        f"{path}: WARNING: repeat cost lowered since {since} "
         f"({commit[:7]}: {first} -> {head.repeat_cost}) — a lower tier owes less "
         f"(LAB-017 The number of audits follows the cost tier); say why in the "
         f"protocol, or restore it"
