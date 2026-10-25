@@ -14,7 +14,8 @@ record of the area with its decisions and every failed attempt.
 Instructions: `report-review.agent.md`.
 
 Agent audit, warning only: the claims it names are printed as WARNINGs
-and recorded nowhere, and no gate reads them. Whether it ever holds a
+and recorded nowhere, and no gate reads them. The hooks name the command
+when a changed report marks a run (`review_hint`); nothing starts it. Whether it ever holds a
 report is decided after its catch rate, false alarms and cost are
 measured (pilot: docs/usability/2026-10-25-report-review-pilot.md). A
 report that marks no run is not reviewed — a report that
@@ -34,7 +35,13 @@ from typing import NamedTuple
 from labkit.checks.audit_binding import AuditError
 from labkit.checks.report_blocks import NotReported, not_reported
 from labkit.formats import console, findings
-from labkit.formats.repo import ProtocolChoiceError, layout_root, shown, the_protocol
+from labkit.formats.repo import (
+    ProtocolChoiceError,
+    layout_root,
+    repo_protocols,
+    shown,
+    the_protocol,
+)
 from labkit.formats.runs import metrics_path, run_path
 from labkit.gates import audit
 from labkit.run import llm, llm_backends
@@ -52,6 +59,39 @@ INLINE_NOTE = (
     "Everything you are told to read is inlined below; each part starts with "
     "a `===== <label> =====` line. Nothing else is in scope."
 )
+
+
+def review_hint(text: str, report: Path, repo: Path) -> str | None:
+    """The sentence that names the review for REPORT (its TEXT), or None when
+    it marks no run: per area of REPO holding a marked run (`runs/<id>/`
+    beside a protocol), the command to run, paths as `shown` from REPO. The
+    hint the hooks give (`claude_hooks.post_change`, `report_check.hold_report`);
+    it runs nothing — a model call is the agent's to start. A marked run no
+    area holds names no command (report-check holds it as a cited run the
+    repo lacks)."""
+    runs = list(dict.fromkeys(m.run_id for m in not_reported(text)))
+    if not runs:
+        return None
+    root = repo.resolve()
+    areas = list(
+        dict.fromkeys(
+            p.parent
+            for p in repo_protocols(root)
+            for r in runs
+            if run_path(p.parent, r).is_dir()
+        )
+    )
+    if not areas:
+        return None
+    commands = [
+        f"`labkit-audit {shown(a, root)} --report-review {shown(report, root)}`"
+        for a in areas
+    ]
+    return (
+        f"{shown(report, root)} cites {', '.join(runs)} as not reported — check "
+        f"that it states none of its numbers as results: {'; '.join(commands)} "
+        f"(one model call, a warning, blocks nothing)"
+    )
 
 
 class Claim(NamedTuple):

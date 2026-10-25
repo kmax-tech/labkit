@@ -118,6 +118,32 @@ class Gather(unittest.TestCase):
                 )
 
 
+class Hint(unittest.TestCase):
+    def test_a_marked_run_names_its_area_and_the_report(self):
+        with tempfile.TemporaryDirectory() as d:
+            a = Area(d)
+            repo = a.area.parent.parent
+            hint = report_review.review_hint(MARKED, a.report(MARKED), repo)
+        self.assertIsNotNone(hint)
+        self.assertIn(
+            "`labkit-audit experiments/01-x --report-review REPORT.md`", hint or ""
+        )
+
+    def test_no_mark_names_nothing(self):
+        with tempfile.TemporaryDirectory() as d:
+            a = Area(d)
+            text = f"cites run {RUN}\n"
+            repo = a.area.parent.parent
+            self.assertIsNone(report_review.review_hint(text, a.report(text), repo))
+
+    def test_a_marked_run_no_area_holds_names_nothing(self):
+        text = "run 2026-10-25T20-00-00_abcd (not reported: looked at)\n"
+        with tempfile.TemporaryDirectory() as d:
+            a = Area(d)
+            repo = a.area.parent.parent
+            self.assertIsNone(report_review.review_hint(text, a.report(text), repo))
+
+
 class Parse(unittest.TestCase):
     def test_no_claim(self):
         self.assertEqual(report_review.parse_claims("verdict: 0 claim(s)", 5), [])

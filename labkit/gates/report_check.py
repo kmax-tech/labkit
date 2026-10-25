@@ -114,6 +114,7 @@ from labkit.checks import report_blocks
 from labkit.checks.result_render import render_gaps, rendering
 from labkit.gates.finalize import finalize_area
 from labkit.gates.preflight import area_test_python
+from labkit.gates.report_review import review_hint
 from labkit.formats.protocol_check import check_fields
 from labkit.formats.repo import (
     adopt_command,
@@ -958,7 +959,9 @@ def hold_report(
     the adoption; blockers); any other cited run no protocol declares a
     WARNING (guaranteed); the numbers outside every block, and those beside
     a run cited as not reported, a WARNING that is static evidence — a
-    hint at where to look, not a check of them. HELD_AS says in the heading
+    hint at where to look, not a check of them; a report marking a run is
+    told the review's command (`report_review.review_hint`), a note. HELD_AS
+    says in the heading
     why this report is held. 0 clean or warnings only, 1 a blocker."""
     rel = path.relative_to(repo.resolve()).as_posix()
     print(f"═══ report-check {rel} ({held_as}) ═══")
@@ -978,6 +981,24 @@ def hold_report(
     marked = report_blocks.not_reported(text)
     for gap in report_blocks.marker_gaps(marked):
         out.block(f"{rel}: {gap}")
+    report_hints(out, rel, path, text, marked, repo)
+    out.take_all(undeclared_findings(path, rel, cited, marked, sources))
+    return out.report("report-check", "reporting")
+
+
+def report_hints(
+    out: Findings,
+    rel: str,
+    path: Path,
+    text: str,
+    marked: list[report_blocks.NotReported],
+    repo: Path,
+) -> None:
+    """Tell OUT the hints on the report at PATH (REL to REPO, its TEXT, its
+    MARKED citations): the numbers outside every block and those beside a
+    marked citation — WARNINGs that are static evidence, a place to look,
+    not a check — and, when it marks a run, the report review's command
+    (`report_review.review_hint`), a note."""
     unsourced = report_blocks.unsourced_numbers(text)
     if unsourced:
         out.warn(
@@ -998,8 +1019,9 @@ def hold_report(
         )
         for n, numbers in beside:
             out.note(f"    {rel}:{n}: {', '.join(numbers)}")
-    out.take_all(undeclared_findings(path, rel, cited, marked, sources))
-    return out.report("report-check", "reporting")
+    hint = review_hint(text, path, repo)
+    if hint:
+        out.note(f"  hint: {hint}")
 
 
 def undeclared_findings(

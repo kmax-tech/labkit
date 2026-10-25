@@ -609,7 +609,10 @@ pins (`requirements.txt` / `requirements.lock`).
   reports caught in 4 of 4 draws, clean counterexamples clean in 10 of
   10, 0.08–0.16 USD a call
   (`docs/usability/2026-10-25-report-review-pilot.md`). A report that
-  cites no run is out of its reach.
+  cites no run is out of its reach. `claude-hook post-change` names the
+  command for a changed report that marks a run (once per text), and
+  `report-check` names it beside its findings (`report_review.review_hint`);
+  neither starts it.
 
 - **A crashed run keeps why it broke off.** When the block of
   `runlog.run` raises, the run directory gets `failure.json` — the

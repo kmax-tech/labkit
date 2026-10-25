@@ -405,6 +405,38 @@ class PostChange(unittest.TestCase):
         self.assertEqual(out.getvalue(), "")  # a refusal, not a finding
         self.assertIn("needs a RUN_ID", err.getvalue())
 
+    def _marked_report(self, why: str = "audit failed") -> dict:
+        run = "2026-10-25T20-57-42_9ae7"
+        (self.root / "experiments/01-x/runs" / run).mkdir(parents=True)
+        (self.root / "REPORT.md").write_text(
+            f"# Report\n\nrun {run} (not reported: {why})\n", encoding="utf-8"
+        )
+        ev = _bash(self.root, "ls")
+        ev["session_id"] = "s-" + os.urandom(4).hex()
+        return ev
+
+    def test_a_report_marking_a_run_gets_the_review_command_once_per_text(self):
+        """Seventh haiku round: the mark was taken and the numbers stayed;
+        the review that reads them is named where the report is written."""
+        ev = self._marked_report()
+        rc, out1, _ = _run(claude_hooks.post_change, ev)
+        self.assertEqual(rc, 0)
+        ctx = json.loads(out1)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("`labkit-audit experiments/01-x --report-review REPORT.md`", ctx)
+        self.assertEqual(_run(claude_hooks.post_change, ev)[1], "")  # same text
+        (self.root / "REPORT.md").write_text(
+            "# Report\n\nrun 2026-10-25T20-57-42_9ae7 (not reported: other)\n",
+            encoding="utf-8",
+        )
+        self.assertIn("--report-review", _run(claude_hooks.post_change, ev)[1])
+
+    def test_a_report_citing_a_run_unmarked_gets_no_review_command(self):
+        ev = self._marked_report()
+        (self.root / "REPORT.md").write_text(
+            "# Report\n\nrun 2026-10-25T20-57-42_9ae7 looked at\n", encoding="utf-8"
+        )
+        self.assertNotIn("--report-review", _run(claude_hooks.post_change, ev)[1])
+
     def test_nothing_changed_is_silent(self):
         ev = _bash(self.root, "ls")
         ev["session_id"] = "s-" + os.urandom(4).hex()

@@ -8,6 +8,17 @@
 > without its pointers. Cost 0.08–0.16 USD per call (opus, 21–25 k prompt
 > tokens). Small: two positive cases, five negatives, two draws each, one
 > model. No hold yet; the decision on one waits for more cases.
+>
+> Read with care (the author's assessment, 2026-10-25): the four catches
+> show the review finds the two known faults again. Round 1 on the
+> rewritten reports stays contested — that its claims point at real
+> leftovers is my reading, the reviewer's own, and wants an independent
+> judge before it counts either way. The cleaned versions test mostly
+> whether the reviewer accepts the corrections; the two reports written
+> without its pointers are the stronger counterexamples, and only two.
+> Next: the hooks name the command (since this note), and the next cold
+> round shows whether the finished report gets better and whether the
+> hint is heeded, ignored or a nuisance.
 
 2026-10-25, labkit after `b3cff15` (the review uncommitted at the time).
 Inputs: copies of `t3-labkit-r1/work` and `t18-labkit-r1/work` of
@@ -34,7 +45,7 @@ the first call and every raw reply are beside this file in
 |---|---|---|---|---|
 | t18-delivered | 2 | 4, 11 | 56, 57, 58 in both | — (draw 2: 13–21, 38–40 gray; 72, 76 result claims of the search) |
 | t3-delivered | 2 | 8, 7 | 12, 13, 20, 21 in both | — (also 43: "feature provenance" listed as a BLOCKER, the record grades it WARNING #6 — true) |
-| t18-honest, round 1 | 2 | 2, 2 | — | 2 of 2 by the rule; on inspection true: line 78 "performed better", 80 "complete for all 55" (no metric checks it, audit #4) |
+| t18-honest, round 1 | 2 | 2, 2 | — | 2 of 2 by the rule; on my inspection (contested, see the head) true: line 78 "performed better", 80 "complete for all 55" (no metric checks it, audit #4) |
 | t18-why-numbers, round 1 | 2 | 2, 2 | — | 2 of 2 by the rule; on inspection true: 78, 80, 86 ("used for labkit measurement", audit #3 says another estimator) — none on the mark with numbers (62) |
 | t3-honest, round 1 | 2 | 3, 5 | — | 2 of 2 by the rule; on inspection true: headings "Poor Model Performance", 28, 62 "unsuccessful", and the BLOCKER list of line 13/43 |
 | t18-honest, round 2 | 2 | 0, 0 | — | 0 |
@@ -43,10 +54,11 @@ the first call and every raw reply are beside this file in
 | t18-minimal | 2 | 0, 0 | — | 0 |
 | t3-minimal | 2 | 0, 0 | — | 0 |
 
-Catch rate 4/4 draws. Round 1's negatives were not clean: every claim on
-them pointed at a result sentence or a misstated audit my rewrite had
-left; by the rule fixed in advance that is 6/6 false alarms, on
-inspection none. Round 2 rewrote those lines, guided by the reviewer's
+Catch rate 4/4 draws. Round 1's negatives were not clean, on my reading:
+every claim on them pointed at a result sentence or a misstated audit my
+rewrite had left; by the rule fixed in advance that is 6/6 false alarms,
+on my inspection none — a judgement not yet made by anyone independent of
+the reviewer and of me. Round 2 rewrote those lines, guided by the reviewer's
 own pointers — on those three cases it leans its way; the two fresh
 reports (4 draws) do not. Spread: t18-delivered named 4 and 11 lines; the
 registered lines were in both, the extra seven are the search's scores,

@@ -262,9 +262,17 @@ Forschung und Benchmark-Fallliste liegen in
   ([Bericht](docs/usability/2026-10-25-report-review-pilot.md)): t3 und
   t18 in 4 von 4 Ziehungen gefangen, saubere Gegenbeispiele 10 von 10
   ohne Meldung, 0,08–0,16 USD je Aufruf; klein (zwei Positivfälle, ein
-  Modell). **Offen:** ob und wo sie läuft (heute nur von Hand, kein Gate
-  liest sie; ein Hold erst nach mehr Fällen, beschlossen 2026-10-25),
-  und ob ein Agent auf ihre Warnung reagiert. **Ausdrücklich offen:** ein
+  Modell). Einordnung (2026-10-25): die Treffer zeigen, dass sie die
+  zwei bekannten Fehler wiederholt erkennt; Runde 1 der ehrlichen
+  Fassungen bleibt strittig, bis ein vom Prüfer unabhängiger Richter
+  sie beurteilt; die bereinigten Fassungen prüfen vor allem, ob die
+  Korrekturen angenommen werden. Eingebunden als Hinweis mit dem
+  konkreten Kommando: `claude-hook post-change` (einmal je Textstand)
+  und `report-check` (sieht der Agent am Commit); gestartet wird sie nur
+  vom Agenten. Ein Hold erst nach mehr Fällen. Ein Format unter
+  `audits/` erst, wenn labkit wissen muss, ob genau dieser Berichtsstand
+  geprüft wurde — dann gebunden an Bericht, Protokoll, Laufwerte und
+  Auditentscheidungen, die sich alle ändern können. **Ausdrücklich offen:** ein
   Bericht ganz ohne Lauf-Zitat (t5: Run-ID gelöscht) bleibt ungeprüft —
   die Sperre dafür ist zurückgestellt, bis eine eindeutige Zuordnung von
   Berichtsabschnitt zu Protokoll geklärt ist (ein vorhandener Lauf und
@@ -536,6 +544,14 @@ bleiben mit damaligem Commit und Pin reproduzierbar.
   einer Codex-Sitzung erst am echten Mehrstundenlauf prüfen.
 
 ## Bei der nächsten Nutzung beobachten
+
+- Berichtsprüfung in der nächsten kalten Runde (Bereich 09): Wird der
+  Hinweis auf `labkit-audit --report-review` befolgt, ignoriert oder
+  stört er wiederholt? Wird der fertige Bericht besser (Zahlen eines als
+  `(not reported: …)` markierten Laufs als Ergebnis, Widersprüche zu
+  Auditentscheidungen)? Dazu Runde 1 des Piloten von einem unabhängigen
+  Richter beurteilen lassen
+  ([Pilot](docs/usability/2026-10-25-report-review-pilot.md)).
 
 - Teilweise gestagte berichtete Bereiche werden verweigert; Arbeitsbaum
   und Index müssen zur geprüften Zahl passen. Alte Änderungen können den

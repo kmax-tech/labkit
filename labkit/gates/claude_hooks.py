@@ -36,9 +36,12 @@ post-change
     Every file the repo now reports as changed (git status, untracked
     included) plus the tool's own file_path, filtered to PROTOCOL-*.md and
     notes/messung/*.md (not 00-*), is checked with protocol-check or
-    notes-check. A per-session cache of content hashes keeps a file that was
-    already checked at this content from being reported after every later
-    command.
+    notes-check. A changed Markdown report that cites a run as `(not
+    reported: …)` gets the report review's command
+    (`report_review.review_hint`) — a hint; the review is one model call
+    and the agent's to start. A per-session cache of content hashes keeps a
+    file that was already checked or hinted at this content from being
+    reported after every later command.
 
 stop
     Before the agent ends its turn: every protocol of an area a changed
@@ -105,6 +108,7 @@ from labkit.formats import (
 from labkit.formats.shell import segments
 from labkit.checks import notes_check
 from labkit.gates import preflight, report_check
+from labkit.gates.report_review import review_hint
 from labkit.formats.repo import (
     PROTOCOL_NAME,
     area_protocols,
@@ -364,7 +368,7 @@ def _load_cache(p: Path | None) -> dict:
 
 
 def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
-    """PostToolUse hook: a protocol or a measurement note just written gets its checker; the findings go back as context."""
+    """PostToolUse hook: a protocol or a measurement note just written gets its checker; a changed report that cites a run as not reported gets the report review's command (`report_review.review_hint`), once per text; the findings go back as context."""
     project = os.environ.get("CLAUDE_PROJECT_DIR")
     repo = Path(project) if project else Path(event.get("cwd") or os.getcwd())
     candidates: list[Path] = []
@@ -383,12 +387,24 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
         kind = wants_check(c)
         if kind:
             targets.append((kind, c))
-    if not targets:
+    marked = [
+        (path, hint)
+        for path, text in report_check.report_files(sorted(seen), repo, staged=False)
+        if (hint := review_hint(text, path, repo))
+    ]
+    if not targets and not marked:
         return 0
 
     cache_file = _cache_path(event.get("session_id"))
     cache = _load_cache(cache_file)
     reports = []
+    # once per report text: a hint repeated on every edit of the same state
+    # is noise; a changed text is told again
+    for path, hint in marked:
+        key, digest = f"report-review:{path}", file_digest(path)
+        if cache.get(key) != digest:
+            cache[key] = digest
+            reports.append(hint)
     for kind, path in targets:
         digest = file_digest(path)
         if cache.get(str(path)) == digest:

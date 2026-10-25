@@ -323,6 +323,8 @@ class ReportFiles(unittest.TestCase):
         self.assertNotIn("BLOCKER", out)
         self.assertNotIn("which no protocol declares", out)
         self.assertNotIn("beside a run cited as not reported", out)
+        # the commit is where the agent reads the gate: the review is named
+        self.assertIn("--report-review REPORT.md`", out)
 
     def test_a_marker_without_its_why_blocks(self):
         area = self._area(f"c1_pass = True (run {self.RUN})", declared=None)
