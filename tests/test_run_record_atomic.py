@@ -24,6 +24,19 @@ from labkit.run import provenance, runlog
 from labkit.tools import protocol_fill
 
 
+_real_strftime = time.strftime
+
+
+def one_second(fmt: str, *args: object) -> str:
+    """`time.strftime` with the run id's time part held to one second: two
+    starts that straddle a second boundary collide on nothing, and a test
+    of the collision passes or fails with the clock (the hook refused a
+    commit on that, 2026-10-23 and 2026-10-25)."""
+    if fmt == runlog.RUN_ID_TIME:
+        return "2026-10-23T16-30-03"
+    return _real_strftime(fmt, *args)  # type: ignore[arg-type]
+
+
 class NoHalfMadeRun(unittest.TestCase):
     def test_a_failure_before_the_record_leaves_no_directory(self) -> None:
         with tempfile.TemporaryDirectory() as d:
@@ -129,16 +142,6 @@ class NoHalfMadeRun(unittest.TestCase):
         and a free one is kept as drawn — the first draw, no needless redraw."""
         draws = iter(["aaaa0000", "aaaa0000", "bbbb0000"])  # the 2nd collides
         fake = lambda: SimpleNamespace(hex=next(draws))  # noqa: E731
-        # The id's time part is held too: two starts that straddle a second
-        # boundary collide on nothing, and the second draw is rightly kept
-        # (the hook refused a commit on that once, 2026-10-23).
-        real_strftime = time.strftime
-
-        def one_second(fmt: str, *args: object) -> str:
-            if fmt == runlog.RUN_ID_TIME:
-                return "2026-10-23T16-30-03"
-            return real_strftime(fmt, *args)  # type: ignore[arg-type]
-
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "runs").mkdir()
@@ -162,6 +165,7 @@ class NoHalfMadeRun(unittest.TestCase):
             fake = lambda: SimpleNamespace(hex="cccc0000")  # noqa: E731
             with (
                 mock.patch.object(runlog.uuid, "uuid4", fake),
+                mock.patch.object(runlog.time, "strftime", one_second),
                 contextlib.redirect_stdout(io.StringIO()),
             ):
                 with runlog.run("t", {}, area):
