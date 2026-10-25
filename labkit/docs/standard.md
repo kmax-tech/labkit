@@ -1,9 +1,11 @@
 # The labkit lab standard
 
-*Version 0.22 — the version a protocol names in its head (`standard =
-"0.22"`, read by `protocol_block`). A change to a rule or a field is the
+*Version 0.23 — the version a protocol names in its head (`standard =
+"0.23"`, read by `protocol_block`). A change to a rule or a field is the
 next version; a dated change that alters no rule is listed under "Changes"
-at the end. 0.22 (2026-10-23): the head names what the kept number asserts,
+at the end. 0.23 (2026-10-25): `repeat_cost = "low" | "high"` replaces
+`cost = "seconds" | "minutes" | "hours"` — the gates knew two lanes, the
+head three names. 0.22 (2026-10-23): the head names what the kept number asserts,
 `kind = "compute" | "fit" | "apply"` — a compute judges no prediction and
 owes no bar. 0.21 (2026-10-22): the Summary's `Conclusion` gives the answer
 in words; `Recorded results` carries the generated metrics, run id and

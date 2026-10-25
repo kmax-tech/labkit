@@ -63,7 +63,7 @@ in MODE `analysis` after the first run, and you cover the `preflight` rows of
 the scar table in the same pass — instrument, data path, operation, now
 against real output. Report BLOCKER and WARNING lines only; NOTE-grade
 findings go into one closing line `notes: K (not listed — repeat cost
-seconds)`, because on a cheap run every listed note costs a fix cycle and
+low)`, because on a cheap run every listed note costs a fix cycle and
 a re-run. `high` or an unfilled `repeat_cost`: both modes as described
 below, all grades listed.
 

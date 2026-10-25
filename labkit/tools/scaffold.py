@@ -50,6 +50,7 @@ from labkit.formats.repo import (
 )
 from labkit.tools.repo_check import PYPROJECT_VERSION_RE
 from labkit.tools.protocol_cuts import (
+    CUT_MARK,
     ProtocolBlocks,
     auto_fill_deterministic,
     bar_cut,
@@ -393,9 +394,7 @@ def stamp_area(
         if p.is_dir() and split_area_name(p.name)[1] == slug
     ]
     if existing and report:
-        _, blocks = pilot_and_report(
-            re.sub(r" ?<!-- s[bm]? -->", "", template(PROTOCOL_TEMPLATE.name))
-        )
+        _, blocks = pilot_and_report(CUT_MARK.sub("", template(PROTOCOL_TEMPLATE.name)))
         return existing[0], "\n".join(promote(existing[0], blocks))
     kind = asked_kind(kind)
     # the cut and the skeleton are the contract's answers, not read off the
@@ -405,8 +404,8 @@ def stamp_area(
     tmpl = stamped_head(
         template(PROTOCOL_TEMPLATE.name), root, slug, repeat_cost, kind, model
     )
-    clean = re.sub(
-        r" ?<!-- s[bm]? -->", "", bar_cut(tmpl, kind)
+    clean = CUT_MARK.sub(
+        "", bar_cut(tmpl, kind)
     )  # every written protocol is free of the cut markers
     pilot, blocks = pilot_and_report(clean)
     if quick:

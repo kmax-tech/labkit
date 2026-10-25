@@ -634,7 +634,7 @@ def report_check(
         )
     else:
         print(
-            f'  {ctx.protocol.name}: cost = "{ctx.head.repeat_cost}" — no freeze and no preflight '
+            f'  {ctx.protocol.name}: repeat_cost = "{ctx.head.repeat_cost}" — no freeze and no preflight '
             f"audit owed (LAB-017 The number of audits follows the cost tier); the "
             f"registration as committed at the first measurement, the full run, "
             f"the analysis audit and the check are owed instead"

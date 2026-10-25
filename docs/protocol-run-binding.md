@@ -65,8 +65,8 @@ rewritten:
 the instrument, `"measurement"` measures the registered question,
 `"preparation"` records data preparation before measurement. The API
 default is `"probe"`; measurement scripts declare their kind. At low repeat cost a
-separate probe is refused before a run directory exists; at minutes and
-hours a probe may run before the freeze, and a measurement owes the full
+separate probe is refused before a run directory exists; at high repeat cost
+a probe may run before the freeze, and a measurement owes the full
 start checks. A missing or unknown `run_kind` makes the record unreadable.
 The kind does not enter the choice of the answering run (below); whether
 its number may be reported is report-check's question (`runs.unreportable`:

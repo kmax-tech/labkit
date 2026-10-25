@@ -33,6 +33,8 @@ LOW_TAG = "<!-- l -->"
 
 LOW_MODEL_TAG = "<!-- lm -->"  # owed at low repeat cost only with a model in the loop
 LOW_BAR_TAG = "<!-- lb -->"  # owed at low repeat cost when the number has a bar (kind fit or apply)
+#: any cut mark with its leading blank — the one pattern every writer strips
+CUT_MARK = re.compile(r" ?<!-- l[bm]? -->")
 
 
 #: which template section a heading is about — a report field is placed by topic
@@ -93,9 +95,7 @@ def _label_of(item: list[str]) -> str:
 
 
 def _untag(line: str) -> str:
-    for tag in (LOW_TAG, LOW_BAR_TAG, LOW_MODEL_TAG):
-        line = line.replace(" " + tag, "").replace(tag, "")
-    return line
+    return CUT_MARK.sub("", line)
 
 
 def low_cut(tmpl: str, kind: str, model: bool = False) -> str:
@@ -225,7 +225,7 @@ def short_placeholders(text: str) -> str:
     while i < len(lines):
         line = lines[i]
         head = re.match(
-            r"^(- \*\*[^*]+\*\*:?\s*(?:<!-- s[bm]? -->\s*)?|\s+(?:[^<*]*\*\*:?\s*)?)<(?!!--)(.*)$",
+            r"^(- \*\*[^*]+\*\*:?\s*(?:<!-- l[bm]? -->\s*)?|\s+(?:[^<*]*\*\*:?\s*)?)<(?!!--)(.*)$",
             line,
         )
         if i in fenced or head is None or line.rstrip().endswith(">"):

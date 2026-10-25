@@ -136,9 +136,10 @@ parser — exact keys, typed values; a typo is an error that names the field.
 The same block may hold the `[[promise]]` tables (labkit
 `docs/promise-block.md`).
 
-- **standard** — `"0.22"`; stamped, never edited. A protocol of another
+- **standard** — `"0.23"`; stamped, never edited. A protocol of another
   version is refused; use the labkit release it was written for, or
-  update it: the refusal says what changed. Standard 0.22 adds `kind`
+  update it: the refusal says what changed. Standard 0.23 renames `cost` to
+  `repeat_cost` with the two values the gates read. Standard 0.22 adds `kind`
   (below). Standard 0.21 names the Summary's prose answer `Conclusion` and the
   generated metrics field `Recorded results`. 0.102.0 is the last release
   reading the old labels under standard 0.20. Standard
