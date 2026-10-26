@@ -683,7 +683,9 @@ def stop(event: dict) -> int:
     return 2
 
 
-def undecided_blockers(repo: Path, paths: list[Path]) -> list[str]:
+def undecided_blockers(
+    repo: Path, paths: list[Path], *, staged: bool = False
+) -> list[str]:
     """Every audit BLOCKER still `open` in an area one of PATHS lies in — as
     `<area>: <file>: <text>`, each area once —, every audit record gone
     that the area's attempt journal or HEAD names (`attempts.area_gaps`),
@@ -694,12 +696,17 @@ def undecided_blockers(repo: Path, paths: list[Path]) -> list[str]:
     helper (`scope_sha.areas_touched`, the stop's answer too). A
     path outside every area, and an area without audits/, contribute
     nothing: this holds the areas the session worked in, not the whole repo
-    (A4, 2026-10-17: a repo's old areas must not block every stop)."""
+    (A4, 2026-10-17: a repo's old areas must not block every stop).
+    STAGED (the pre-commit): the attempt journal and its records as the
+    index holds them (`attempts.area_gaps`)."""
     out = []
     for area in areas_touched(paths, repo):
         shown = area.relative_to(repo.resolve()).as_posix()
         try:
-            out += [f"{shown}: {gap}" for gap in attempts.area_gaps(area).blockers]
+            out += [
+                f"{shown}: {gap}"
+                for gap in attempts.area_gaps(area, staged=staged).blockers
+            ]
         except attempts.AttemptError as exc:
             out.append(f"{shown}: {exc}")
         try:
@@ -722,7 +729,7 @@ def undecided(argv: list[str]) -> int:
         console.refuse("claude-hook undecided", "name the paths (the staged files)")
         return 2
     repo = Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()).resolve()
-    lines = undecided_blockers(repo, [repo / p for p in argv])
+    lines = undecided_blockers(repo, [repo / p for p in argv], staged=True)
     if not lines:
         return 0
     print(

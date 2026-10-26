@@ -520,13 +520,62 @@ class ReportFiles(unittest.TestCase):
         report.write_text(honest, encoding="utf-8")
         self._reviewed(report, area)  # reviewed the tree, not what is staged
         code, out = self._gate(root, report, staged=True)
-        self.assertEqual(code, 1, out)
-        self.assertIn("has no clean report review of this state", out)
-        self._git(root, "add", "REPORT.md")  # the reviewed text staged…
-        code, out = self._gate(root, report, staged=True)
-        self.assertEqual(code, 1, out)  # …its record not: the commit lacks it
+        self.assertEqual(code, 1, out)  # its record not staged: the area differs
+        self.assertIn("whose working tree differs from the index", out)
         self._git(root, "add", str(area / "audits"))
         code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 1, out)  # the record staged, the report not
+        self.assertIn("has no clean report review of this state", out)
+        self._git(root, "add", "REPORT.md")
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 0, out)
+
+    def test_a_review_of_unstaged_sources_releases_no_commit(self):
+        """Review 2026-10-26: the review read a run's metrics from the tree
+        while the commit carried others — the gate released a state the
+        commit did not hold. At the commit the area's tree must be the
+        index's."""
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None, git=True)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        self._discussed(report, area, "audit failed", "# Report\n\nNo result.\n")
+        self._reviewed(report, area)
+        self._git(root, "add", "-A")
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 0, out)
+        metrics = area / "runs" / self.RUN / "metrics.json"
+        metrics.write_text('{"c1_pass": false}', encoding="utf-8")
+        self._reviewed(report, area)  # a review of the unstaged metrics
+        self._git(root, "add", str(area / "audits"))
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 1, out)
+        self.assertIn("whose working tree differs from the index", out)
+        self.assertIn("metrics.json", out)
+
+    def test_a_source_change_reaches_the_untouched_discussing_report(self):
+        """Review 2026-10-26: only a source of the review changed — the
+        report untouched — and the commit passed with a stale review."""
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None, git=True)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        self._discussed(report, area, "audit failed", "# Report\n\nNo result.\n")
+        self._reviewed(report, area)
+        self._git(root, "add", "-A")
+        self._git(root, "commit", "-qm", "report and its review")
+        metrics = area / "runs" / self.RUN / "metrics.json"
+        metrics.write_text('{"c1_pass": false}', encoding="utf-8")
+        self._git(root, "add", str(metrics))
+        code, out = self._gate(root, metrics, staged=True)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            f"═══ report-check REPORT.md ({report_check.DISCUSSES_TOUCHED}) ═══", out
+        )
+        self.assertIn("has no clean report review of this state", out)
+        self.assertRegex(out, r"changed since: FILE: \S*metrics\.json")
+        # the twin: a review of the new state, staged with it, passes
+        self._reviewed(report, area)
+        self._git(root, "add", str(area / "audits"))
+        code, out = self._gate(root, metrics, staged=True)
         self.assertEqual(code, 0, out)
 
     def test_a_discussion_without_its_why_or_edited_by_hand_blocks(self):

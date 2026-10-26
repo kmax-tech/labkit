@@ -26,6 +26,14 @@ from labkit.formats import attempts, findings  # noqa: E402
 from labkit.formats.attempts import Attempt  # noqa: E402
 
 A = Attempt("a1", "analysis", "opus", "s", "2026-10-26T09:16:02", "here")
+START = json.dumps(
+    {"event": "started", "id": "a1", "mode": "analysis", "model": "opus",
+     "scope_sha": "s", "started": "t", "host": "h"}
+)  # fmt: skip
+START2 = START.replace('"a1"', '"a2"')
+END_R = json.dumps(
+    {"event": "ended", "id": "a1", "outcome": "record", "file": "r.toml"}
+)
 
 
 def git(cwd: Path, *args: str) -> None:
@@ -94,9 +102,18 @@ class Gaps(unittest.TestCase):
 
     def test_the_twin_a_journal_and_its_files_agree(self):
         ended = Attempt(**{**A.__dict__, "outcome": "record", "file": "r.toml"})
+        head = START + "\n" + END_R + "\n"
         found = self._gaps([ended], present={"r.toml", "attempts.jsonl"},
-                           at_head={"r.toml"}, now="ab", head="a")  # fmt: skip
+                           at_head={"r.toml"}, now=head + START2 + "\n",
+                           head=head)  # fmt: skip
         self.assertEqual((found.blockers, found.notes), ([], []))
+
+    def test_a_record_heads_journal_names_and_head_lacks_blocks(self):
+        """`git rm --cached` and a commit: the file stays on disk, the
+        delivered state lost it while its journal still names it."""
+        head = START + "\n" + END_R + "\n"
+        (gap,) = self._gaps([], present={"r.toml"}, now=head, head=head).blockers
+        self.assertIn("HEAD's journal names it while HEAD lacks the file", gap)
 
     def test_a_file_an_ended_attempt_names_that_is_gone_blocks(self):
         ended = Attempt(**{**A.__dict__, "outcome": "failed", "file": "f-failed.toml"})
@@ -109,7 +126,7 @@ class Gaps(unittest.TestCase):
         self.assertIn("audits/old.toml is committed and gone from the tree", gap)
 
     def test_a_journal_cut_against_head_blocks(self):
-        (gap,) = self._gaps([], now="line2\n", head="line1\n").blockers
+        (gap,) = self._gaps([], now=START2 + "\n", head=START + "\n").blockers
         self.assertIn("no longer starts with the lines HEAD holds", gap)
 
     def test_running_interrupted_and_undecidable_are_named_not_held(self):
@@ -237,7 +254,17 @@ class Hook(unittest.TestCase):
         self.assertEqual(claude_hooks.undecided_blockers(root, [failed]), [])
         failed.unlink()
         (line,) = claude_hooks.undecided_blockers(root, [failed])
-        self.assertIn(f"audits/{failed.name} is committed and gone", line)
+        self.assertIn(f"audits/{failed.name} is committed and gone from the tree", line)
+        # the commit: deleted on disk only, the index still carries it — fine;
+        # removed from the index while it stays on disk — gone from the commit
+        git(root, "checkout", "HEAD", "--", str(failed.relative_to(root)))
+        self.assertEqual(
+            claude_hooks.undecided_blockers(root, [failed], staged=True), []
+        )
+        git(root, "rm", "-q", "--cached", str(failed.relative_to(root)))
+        self.assertTrue(failed.is_file())
+        (line,) = claude_hooks.undecided_blockers(root, [failed], staged=True)
+        self.assertIn("is committed and gone from the index", line)
         out = io.StringIO()
         with (
             contextlib.redirect_stdout(out),

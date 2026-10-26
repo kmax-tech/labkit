@@ -54,7 +54,7 @@ from typing import IO
 
 from labkit.formats import jsonl
 from labkit.formats.findings import DIR
-from labkit.formats.repo import git_root, git_run, text_at
+from labkit.formats.repo import INDEX_REV, git_root, git_run, text_at
 from labkit.formats.runs import now_stamp
 from labkit.formats.scope_sha import digest
 
@@ -175,29 +175,69 @@ def gaps(
     journal_now: str,
     journal_at_head: str | None,
     alive: dict[str, bool | None],
+    state: str = "tree",
 ) -> Gaps:
     """What the journal and the files say together. ATTEMPTS: the journal
-    now; PRESENT, AT_HEAD: the paths under `audits/` (relative to it) in
-    the tree and in HEAD; JOURNAL_NOW, JOURNAL_AT_HEAD: the journal's text
-    in the tree and in HEAD (None: HEAD holds none); ALIVE: per attempt
-    without an end, True running, False its lock is free, None
-    undecidable (another host). Pure."""
-    blockers: list[str] = []
+    in the STATE checked (`tree`, or `index` at the commit); PRESENT,
+    AT_HEAD: the paths under `audits/` (relative to it) in that state and
+    in HEAD; JOURNAL_NOW, JOURNAL_AT_HEAD: the journal's text in that
+    state and in HEAD (None: HEAD holds none); ALIVE: per attempt without
+    an end, True running, False its lock is free, None undecidable
+    (another host). Each journal is held to its own state: what the
+    journal now names to PRESENT, what HEAD's journal names to HEAD's
+    files — a record dropped from a commit while it stays on disk is gone
+    from what was delivered. Raises AttemptError on a HEAD journal that
+    does not read. Pure."""
+    blockers = [
+        f"attempt {a.id} ({a.mode}, {a.model}) ended as {a.outcome} in "
+        f"{DIR}/{a.file}, and the file is gone from the {state} — a record of an "
+        f"attempt is evidence; restore it (`git checkout HEAD -- {DIR}/{a.file}` "
+        f"when committed, `git add` when only unstaged)"
+        for a in _ended_without(attempts, present)
+    ]
+    if journal_at_head is not None:
+        head = parse_journal(journal_at_head, f"HEAD:{DIR}/{JOURNAL}")
+        blockers += [
+            f"attempt {a.id} ({a.mode}, {a.model}) ended as {a.outcome} in "
+            f"{DIR}/{a.file}, and HEAD's journal names it while HEAD lacks the "
+            f"file — the delivered state lost its evidence; restore and commit it"
+            for a in _ended_without(head, at_head)
+        ]
+    notes = _open_notes(attempts, alive)
+    for rel in sorted(at_head - present):
+        if rel == JOURNAL:
+            continue
+        blockers.append(
+            f"{DIR}/{rel} is committed and gone from the {state} — a record of an "
+            f"audit is evidence; restore it (`git checkout HEAD -- {DIR}/{rel}`)"
+        )
+    if journal_at_head is not None and not journal_now.startswith(journal_at_head):
+        blockers.append(
+            f"{DIR}/{JOURNAL} no longer starts with the lines HEAD holds — the "
+            f"journal is appended to, never cut; restore it "
+            f"(`git checkout -- {DIR}/{JOURNAL}`)"
+        )
+    return Gaps(blockers, notes)
+
+
+def _ended_without(attempts: list[Attempt], files: set[str]) -> list[Attempt]:
+    """The ATTEMPTS that ended with a file (`record`, `failed`) not among FILES."""
+    return [
+        a for a in attempts if a.outcome in ("record", "failed") and a.file not in files
+    ]
+
+
+def _open_notes(attempts: list[Attempt], alive: dict[str, bool | None]) -> list[str]:
+    """A sentence per attempt of ATTEMPTS without an end: running,
+    interrupted (its lock free) or undecidable (another host), by ALIVE."""
     notes: list[str] = []
     for a in attempts:
-        if a.outcome in ("record", "failed") and a.file not in present:
-            blockers.append(
-                f"attempt {a.id} ({a.mode}, {a.model}) ended as {a.outcome} in "
-                f"{DIR}/{a.file}, and the file is gone — a record of an attempt is "
-                f"evidence; restore it (`git checkout -- {DIR}/{a.file}` when "
-                f"committed)"
-            )
         if a.outcome or a.interrupted:
             continue
-        state = alive.get(a.id)
-        if state is True:
+        running = alive.get(a.id)
+        if running is True:
             notes.append(f"attempt {a.id} ({a.mode}) is running")
-        elif state is False:
+        elif running is False:
             notes.append(
                 f"attempt {a.id} ({a.mode}, started {a.started}) ended without a "
                 f"record — interrupted"
@@ -207,20 +247,7 @@ def gaps(
                 f"attempt {a.id} ({a.mode}) started on {a.host} and has no end — "
                 f"whether it runs is not known here"
             )
-    for rel in sorted(at_head - present):
-        if rel == JOURNAL:
-            continue
-        blockers.append(
-            f"{DIR}/{rel} is committed and gone from the tree — a record of an "
-            f"audit is evidence; restore it (`git checkout -- {DIR}/{rel}`)"
-        )
-    if journal_at_head is not None and not journal_now.startswith(journal_at_head):
-        blockers.append(
-            f"{DIR}/{JOURNAL} no longer starts with the lines HEAD holds — the "
-            f"journal is appended to, never cut; restore it "
-            f"(`git checkout -- {DIR}/{JOURNAL}`)"
-        )
-    return Gaps(blockers, notes)
+    return notes
 
 
 # ------------------------------------------------------------- the edges
@@ -282,16 +309,22 @@ def _paths_under(folder: Path) -> set[str]:
     return {p.relative_to(folder).as_posix() for p in folder.rglob("*") if p.is_file()}
 
 
-def _head_paths(area: Path) -> tuple[set[str], str | None]:
-    """(paths under AREA/audits/ that HEAD holds, relative to it; the
-    journal's text at HEAD or None) — ({}, None) outside git or before
-    the first commit. Raises RuntimeError when git fails."""
+def _git_paths(area: Path, rev: str) -> tuple[set[str], str | None]:
+    """(paths under AREA/audits/ that REV holds — "HEAD", or INDEX_REV for
+    the index —, relative to it; the journal's text there or None) —
+    ({}, None) outside git or before the first commit. Raises RuntimeError
+    when git fails."""
     root = git_root(area)
     if root is None:
         return set(), None
     folder = (area / DIR).resolve()
     rel = folder.relative_to(root.resolve()).as_posix()
-    r = git_run(["ls-tree", "-r", "-z", "--name-only", "HEAD", "--", rel], root)
+    args = (
+        ["ls-files", "-z", "--cached", "--", rel]
+        if rev == INDEX_REV
+        else ["ls-tree", "-r", "-z", "--name-only", rev, "--", rel]
+    )
+    r = git_run(args, root)
     if r.returncode != 0:
         # no HEAD yet, or a `.git` git does not take for a repository: no
         # committed state to compare against
@@ -302,7 +335,7 @@ def _head_paths(area: Path) -> tuple[set[str], str | None]:
             return set(), None
         raise RuntimeError(f"git ls-tree failed in {root}: {r.stderr.strip()}")
     held = {p[len(rel) + 1 :] for p in r.stdout.split("\0") if p.startswith(rel + "/")}
-    return held, text_at(root, journal_path(area), "HEAD")
+    return held, text_at(root, journal_path(area), rev)
 
 
 def read_journal(area: Path) -> list[Attempt]:
@@ -314,21 +347,30 @@ def read_journal(area: Path) -> list[Attempt]:
     return parse_journal(path.read_text(encoding="utf-8"), f"{DIR}/{JOURNAL}")
 
 
-def area_gaps(area: Path) -> Gaps:
-    """`gaps` for AREA as it is now: its journal, its files, HEAD. Raises
-    AttemptError on a journal that does not read, RuntimeError when git
-    fails."""
-    attempts = read_journal(area)
-    path = journal_path(area)
-    now = path.read_text(encoding="utf-8") if path.is_file() else ""
-    at_head, journal_at_head = _head_paths(area)
+def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
+    """`gaps` for AREA: its journal and files in the tree — or, STAGED (the
+    pre-commit), as the index holds them: a record removed from the index
+    (`git rm --cached`) is gone from the commit though it stays on disk —
+    and HEAD. Raises AttemptError on a journal that does not read,
+    RuntimeError when git fails."""
+    if staged:
+        present, in_index = _git_paths(area, INDEX_REV)
+        now = in_index or ""
+        attempts = parse_journal(now, f":{DIR}/{JOURNAL}")
+    else:
+        path = journal_path(area)
+        now = path.read_text(encoding="utf-8") if path.is_file() else ""
+        attempts = read_journal(area)
+        present = _paths_under(area / DIR)
+    at_head, journal_at_head = _git_paths(area, "HEAD")
     return gaps(
         attempts,
-        _paths_under(area / DIR),
+        present,
         at_head,
         now,
         journal_at_head,
         alive_of(area, attempts),
+        "index" if staged else "tree",
     )
 
 

@@ -166,6 +166,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The new gates read the state the commit carries, and a source change
+  reaches its report.** A review of the three steps above (2026-10-26)
+  reproduced three passes on states that broke the contract. (1) At the
+  commit the report review's inputs came partly from the tree: a review of
+  unstaged metrics released another commit. Now the area a review reads
+  must equal the index at the commit, else a blocker naming the files
+  (`report_check.report_review_owed`). (2) A record removed from the index
+  (`git rm --cached`) stayed on disk, and the journal check, reading the
+  tree, passed. Now the pre-commit holds the journal and its records as the
+  index holds them, and every state holds HEAD's journal to HEAD's files
+  (`attempts.area_gaps(staged=…)`, `attempts.gaps`). (3) A change to a
+  review's source alone (a run's metrics, the protocol, an audit decision)
+  passed with the untouched report's review stale. Now a committed report
+  discussing a run of an area the change touches is held as well
+  (`report_check.discussing_reports`).
+
 - **The scaffold's low-lane instructions follow the current release path.**
   The Conclusion comes before adoption; a correction to measurement code
   returns to a new measurement and covering analysis audit. The obsolete

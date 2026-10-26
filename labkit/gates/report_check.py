@@ -1069,8 +1069,11 @@ def report_review_owed(
     records, their binding and their claim count are read exactly; whether
     a claim is right stays the reviewer's judgement. A discussion whose
     protocol or run is missing owes none here (`discussion_sources` names
-    it). STAGED (the pre-commit): a review counts only when the index holds
-    its record — a release the commit does not carry is none."""
+    it). STAGED (the pre-commit): every input comes from the state the
+    commit carries — the report and protocol from the index, and the
+    area's tree must equal the index (its runs' metrics, audit records and
+    review records are read from the tree), else a blocker; a review
+    counts only when the index holds its record."""
     out: list[GateFinding] = []
     by_protocol: dict[Path, list[report_blocks.Discussion]] = {}
     for d in discussed:
@@ -1092,6 +1095,24 @@ def report_review_owed(
             )
             + "`"
         )
+        if staged:
+            # the review reads the area's files (runs' metrics, audit records,
+            # its own records) from the tree; the commit carries the index —
+            # a release on bytes the commit does not hold is none
+            differs = tree_differs(sources.repo, area)
+            if differs:
+                out.append(
+                    GateFinding(
+                        BLOCKER,
+                        f"{rel}: its report review reads "
+                        f"{shown(area, sources.repo)}, whose working tree differs "
+                        f"from the index ({', '.join(differs)}) — the commit would "
+                        f"not hold what the review saw; stage these too, or stash "
+                        f"them",
+                        evidence_kind=GUARANTEED,
+                    )
+                )
+                continue
         try:
             pieces = report_review.review_pieces(
                 area, path, text, protocol, protocol_text, mine
@@ -1248,11 +1269,15 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     (`newly_declared`) reaches the committed reports citing that run
     (`committed_reports`): they are held as if changed, since the number
     they show became a declared result in this very state (the two-step
-    commit of the sixth haiku round, 2026-10-23). Returns the worst exit
-    code."""
+    commit of the sixth haiku round, 2026-10-23). A committed report that
+    discusses a run of an area PATHS touch is held too
+    (`discussing_reports`): its review read that area. Returns the worst
+    exit code."""
     protocols = affected_protocols(paths, repo, staged=staged)
     reports = report_files(paths, repo, staged=staged)
     reached = reached_reports(protocols, reports, repo, staged=staged)
+    held = {p for p, _ in reports} | {p for p, _, _ in reached}
+    reached += discussing_reports(paths, held, repo, staged=staged)
     sources = (
         repo_sources(repo, staged=staged)
         if reports or reached
@@ -1272,6 +1297,47 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
             hold_report(path, text, repo, sources, held_as=held_as, staged=staged),
         )
     return worst
+
+
+#: why a report is held though no path names it: it discusses a run of an
+#: area the change touches, whose sources its review read
+DISCUSSES_TOUCHED = "a report discussing a run of an area this change touches"
+
+
+def discussing_reports(
+    paths: list[Path], held: set[Path], repo: Path, *, staged: bool
+) -> list[tuple[Path, str, str]]:
+    """(path, text, why held) of every report git's index holds, not in
+    HELD, with a discussion block whose protocol lies in an area PATHS
+    touch (`areas_touched`): the review of such a report read that area's
+    protocol, runs and audits, so a change there makes it stale though the
+    report is untouched. Text as the state holds it (the index when
+    STAGED). A report whose blocks do not read is held too — the gate names
+    the block. Empty outside a repository."""
+    if git_root(repo) is None:
+        return []
+    areas = {a.resolve() for a in areas_touched(paths, repo)}
+    if not areas:
+        return []
+    out: list[tuple[Path, str, str]] = []
+    for full in indexed_files(repo):
+        if (
+            full in held
+            or full.suffix != REPORT_SUFFIX
+            or PROTOCOL_NAME.match(full.name)
+        ):
+            continue
+        text = state_text(repo, full, staged=staged)
+        if text is None or report_blocks.DISCUSS_OPEN not in text:
+            continue
+        try:
+            found = report_blocks.discussions(text)
+        except report_blocks.ReportBlockError:
+            out.append((full, text, DISCUSSES_TOUCHED))
+            continue
+        if any((full.parent / d.protocol).resolve().parent in areas for d in found):
+            out.append((full, text, DISCUSSES_TOUCHED))
+    return out
 
 
 def reached_reports(
