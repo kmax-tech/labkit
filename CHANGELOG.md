@@ -175,8 +175,11 @@ pins (`requirements.txt` / `requirements.lock`).
   (`report_check.report_review_owed`). (2) A record removed from the index
   (`git rm --cached`) stayed on disk, and the journal check, reading the
   tree, passed. Now the pre-commit holds the journal and its records as the
-  index holds them, and every state holds HEAD's journal to HEAD's files
-  (`attempts.area_gaps(staged=…)`, `attempts.gaps`). (3) A change to a
+  index holds them, and the stop holds HEAD's journal to HEAD's files
+  (`attempts.area_gaps(staged=…)`, `attempts.gaps`). At the commit the
+  index is what will be delivered: a commit that restores a record HEAD
+  lost passes (`gaps(hold_head=False)`), so the repair needs no
+  `--no-verify`. (3) A change to a
   review's source alone (a run's metrics, the protocol, an audit decision)
   passed with the untouched report's review stale. Now a committed report
   discussing a run of an area the change touches is held as well

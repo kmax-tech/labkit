@@ -242,18 +242,20 @@ class Begin(unittest.TestCase):
 
 
 class Hook(unittest.TestCase):
-    def test_the_stop_and_the_commit_name_a_record_gone(self):
+    def test_the_stop_and_the_commit_name_a_record_gone_and_release_its_repair(self):
         from labkit.gates import claude_hooks
 
         area = area_in_repo()
         root = area.parent.parent
+        running = attempts.begin(area, "analysis", "opus", "s")
         failed = findings.write_failed(area, "analysis", "opus", "s", "b", 60, "e",
                                        "c", cause="unavailable")  # fmt: skip
+        running.end("failed", file=failed.name)  # as labkit-audit journals it
         git(root, "add", "-A")
         git(root, "commit", "-qm", "failed attempt")
         self.assertEqual(claude_hooks.undecided_blockers(root, [failed]), [])
         failed.unlink()
-        (line,) = claude_hooks.undecided_blockers(root, [failed])
+        line = "\n".join(claude_hooks.undecided_blockers(root, [failed]))
         self.assertIn(f"audits/{failed.name} is committed and gone from the tree", line)
         # the commit: deleted on disk only, the index still carries it — fine;
         # removed from the index while it stays on disk — gone from the commit
@@ -263,7 +265,7 @@ class Hook(unittest.TestCase):
         )
         git(root, "rm", "-q", "--cached", str(failed.relative_to(root)))
         self.assertTrue(failed.is_file())
-        (line,) = claude_hooks.undecided_blockers(root, [failed], staged=True)
+        line = "\n".join(claude_hooks.undecided_blockers(root, [failed], staged=True))
         self.assertIn("is committed and gone from the index", line)
         out = io.StringIO()
         with (
@@ -273,6 +275,19 @@ class Hook(unittest.TestCase):
             rc = claude_hooks.undecided([str(failed.relative_to(root))])
         self.assertEqual(rc, 1)
         self.assertIn("an audit record is gone", out.getvalue())
+        # the deletion committed past the pre-commit: HEAD's journal names a
+        # record HEAD lacks — the stop holds it; the repair staged releases
+        # the repair commit, and after it the stop is clean again
+        git(root, "commit", "-qm", "drop the record", "--no-verify")
+        self.assertTrue(failed.is_file())
+        line = "\n".join(claude_hooks.undecided_blockers(root, [failed]))
+        self.assertIn("HEAD's journal names it while HEAD lacks the file", line)
+        git(root, "add", str(failed.relative_to(root)))
+        self.assertEqual(
+            claude_hooks.undecided_blockers(root, [failed], staged=True), []
+        )
+        git(root, "commit", "-qm", "restore the record")
+        self.assertEqual(claude_hooks.undecided_blockers(root, [failed]), [])
 
 
 if __name__ == "__main__":

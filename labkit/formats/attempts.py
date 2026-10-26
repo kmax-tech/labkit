@@ -176,6 +176,8 @@ def gaps(
     journal_at_head: str | None,
     alive: dict[str, bool | None],
     state: str = "tree",
+    *,
+    hold_head: bool = True,
 ) -> Gaps:
     """What the journal and the files say together. ATTEMPTS: the journal
     in the STATE checked (`tree`, or `index` at the commit); PRESENT,
@@ -184,10 +186,13 @@ def gaps(
     state and in HEAD (None: HEAD holds none); ALIVE: per attempt without
     an end, True running, False its lock is free, None undecidable
     (another host). Each journal is held to its own state: what the
-    journal now names to PRESENT, what HEAD's journal names to HEAD's
-    files — a record dropped from a commit while it stays on disk is gone
-    from what was delivered. Raises AttemptError on a HEAD journal that
-    does not read. Pure."""
+    journal now names to PRESENT, and with HOLD_HEAD what HEAD's journal
+    names to HEAD's files — a record dropped from a commit while it stays
+    on disk is gone from what was delivered. Without HOLD_HEAD (the
+    commit) the state checked is what will be delivered: its journal,
+    which must start with HEAD's, is held to its files, so a commit that
+    restores a record HEAD lost passes. Raises AttemptError on a HEAD
+    journal that does not read. Pure."""
     blockers = [
         f"attempt {a.id} ({a.mode}, {a.model}) ended as {a.outcome} in "
         f"{DIR}/{a.file}, and the file is gone from the {state} — a record of an "
@@ -195,7 +200,7 @@ def gaps(
         f"when committed, `git add` when only unstaged)"
         for a in _ended_without(attempts, present)
     ]
-    if journal_at_head is not None:
+    if hold_head and journal_at_head is not None:
         head = parse_journal(journal_at_head, f"HEAD:{DIR}/{JOURNAL}")
         blockers += [
             f"attempt {a.id} ({a.mode}, {a.model}) ended as {a.outcome} in "
@@ -350,7 +355,8 @@ def read_journal(area: Path) -> list[Attempt]:
 def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
     """`gaps` for AREA: its journal and files in the tree — or, STAGED (the
     pre-commit), as the index holds them: a record removed from the index
-    (`git rm --cached`) is gone from the commit though it stays on disk —
+    (`git rm --cached`) is gone from the commit though it stays on disk,
+    and a record HEAD lost but the index restores is delivered again —
     and HEAD. Raises AttemptError on a journal that does not read,
     RuntimeError when git fails."""
     if staged:
@@ -371,6 +377,7 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
         journal_at_head,
         alive_of(area, attempts),
         "index" if staged else "tree",
+        hold_head=not staged,
     )
 
 
