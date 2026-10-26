@@ -151,22 +151,21 @@ von einem richtigen und bleibt Hinweis. Die falschen Zahlen sind
 durchweg Fakten über die Eingaben (Zeilenzahlen, Median, Klassengrößen),
 die der Code rechnet, aber in keiner behaltenen Datei ablegt. Die Handurteile
 der Runden 5 bis 7 sind Entwürfe eines Richters je Aufgabe.
-**Achte Runde angehalten (2026-10-25, Stand für die nächste Sitzung):**
-labkit-paper Bereich 09 auf labkit `48cd001` (Berichtsprüfung und ihr
-Hinweis), Worktree `~/projects/labkit-paper-r7`, Branch `round7-haiku`,
-Commit `95883b7` (Pin, Changed-Zeile); Image labkit-sandbox:fa9d3504b7de,
-Gates M1 und M2/M3 grün. Store `output/attempts_pilot_haiku_v8/`: 2 von
-9 Versuchen fertig (t18-plain, t3-plain); t18-instructions_only beim
-Anhalten abgebrochen, Container gestoppt, sein Verzeichnis liegt noch —
-vor dem Fortsetzen prüfen, ob `--attempts` es neu startet. Fortsetzen mit
-`../../.venv/bin/python scripts/01_measure.py --attempts` im Bereich (der
-Store ist fortsetzbar); `scripts/01_measure.py` (Store-Zeile v8) bleibt
-uncommittet bis zum Auswertungslauf. Danach wie Runde 7: `--score`, drei
-Richter, `02_analyze.py`, zusätzlich je labkit-Versuch aus dem Trace:
-Hinweis erschienen, `--report-review` ausgeführt, was am Bericht geändert.
-Noch offen aus Runde 7: Branch `round7-haiku` nach labkit-paper `main`
-mergen (dort hat eine andere Sitzung weiter committet, also kein
-Fast-Forward), dann Worktree entfernen.
+**Achte Runde (2026-10-26, labkit `48cd001`):** wieder no-advantage
+(Erfolg labkit 0/3, plain und instructions_only je 2/3; still 6 / 4 / 5),
+Standard erstmals 1/3 erfüllt (t5: nach abgelehnter Entscheidung neu
+entschieden, `--from-run` übernommen, Block per `--into`). Die
+Berichtsprüfung lief in keinem Versuch: bei t18 erschien der Hinweis beim
+Commit und wurde übergangen, die Zahlen des markierten Laufs stehen als
+Ergebnis im Bericht; bei t3 erkannte labkit die Markierung mit Backticks
+um die Run-ID nicht (`report_blocks._NOT_REPORTED`), report-check hielt
+zweimal fest, der Agent committete mit `--no-verify`. Bericht mit sechs
+offenen Punkten: `docs/usability/2026-10-26-sandbox-48cd001.md`;
+Laborstand labkit-paper Branch `round7-haiku`, Commit 9d2c0f9. Noch offen:
+Branch `round7-haiku` nach labkit-paper `main` mergen (kein Fast-Forward,
+dort hat eine andere Sitzung weiter committet; vorher die drei
+Vorbereitungsdateien im Hauptbaum zurücksetzen), dann Worktree
+`~/projects/labkit-paper-r7` entfernen (zuerst den `.venv`-Symlink).
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
