@@ -161,11 +161,26 @@ Ergebnis im Bericht; bei t3 erkannte labkit die Markierung mit Backticks
 um die Run-ID nicht (`report_blocks._NOT_REPORTED`), report-check hielt
 zweimal fest, der Agent committete mit `--no-verify`. Bericht mit sechs
 offenen Punkten: `docs/usability/2026-10-26-sandbox-48cd001.md`;
-Laborstand labkit-paper Branch `round7-haiku`, Commit 9d2c0f9. Noch offen:
+Laborstand labkit-paper Branch `round7-haiku`, Commit 9d2c0f9. Noch offen (gilt auch nach Runde 9):
 Branch `round7-haiku` nach labkit-paper `main` mergen (kein Fast-Forward,
 dort hat eine andere Sitzung weiter committet; vorher die drei
 Vorbereitungsdateien im Hauptbaum zurücksetzen), dann Worktree
 `~/projects/labkit-paper-r7` entfernen (zuerst den `.venv`-Symlink).
+**Neunte Runde (2026-10-26, labkit `85c54fd`):** nach Regel void — das
+Gold-Programm von Aufgabe 3 (RandomForest ohne Seed) lag im Bewertungslauf
+einmal über RMSE 24 (20 Nachläufe 22.4–23.5); beschreibend: Erfolg
+plain 2/3, instructions_only 0/3, labkit 1/3, still 2 / 3 / 4, erstmals
+zwei Punkte `after_audit` (Berichtsprüfung bei t3 und t5). Die geschuldete
+Berichtsprüfung wirkte (t3: 9 → 0 Befunde, t5: 15 → 5 → 2 → 0, Bericht
+jeweils umgeschrieben), Diskussionsblöcke bei t3 und t5, kein
+`--no-verify`. t5 löschte Audit-Datensätze, schrieb Datensätze und
+Journal von Hand und lief ins Zeitlimit; t18 maß außerhalb von runlog
+(Bericht ohne Lauf, kein Gate fragte). Bericht mit fünf offenen Punkten:
+`docs/usability/2026-10-26-sandbox-85c54fd.md`; Laborstand Commit
+8a0182e. Offen für das Labor (nicht labkit): ob die Runde mit erneut
+gezogenem Gold neu bewertet wird, und ein Seed oder eine wiederholte
+Gold-Prüfung für A2; das Zeitlimit von agentsandbox zählt im Ruhezustand
+nicht.
 
 **Reihenfolge nach der achten Runde (beschlossen 2026-10-26).** Jeder
 Schritt schließt einen belegten Fehlweg und hat einen korrekten Zwilling.
