@@ -1292,8 +1292,12 @@ BLOCKER_ROUTES = (
     "result — report the miss (LAB-042 Log the outcome — failures too); a bar "
     "moved after the number is seen fixes nothing",
     "    the registration cannot be answered as written (an invalid "
-    "registration): change it before a new run and say so in the report (after "
-    "a freeze under Deviations after freeze); the old run keeps its verdict",
+    "registration): it is not repaired in place — what stood before the first "
+    "measurement stays what it was (report-check holds a registration changed "
+    "after it). Register anew: a new protocol (`labkit-init exp <new-name> "
+    "--kind …`) committed before its own first run, whose Context names the "
+    "earlier protocol and why it was replaced; the earlier protocol, its runs "
+    "and their verdict stay, and the report names both",
 )
 #: how long a finding's text stands in the decision list
 DECISION_TEXT_WIDTH = 160

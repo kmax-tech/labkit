@@ -544,7 +544,7 @@ def check_fields(text: str) -> FieldReport:
     return FieldReport(head, None, missing_must, missing_should, must_holes, soft_holes)
 
 
-def low_registration_missing(text: str) -> list[str]:
+def low_registration_missing(text: str, kind_now: str | None = None) -> list[str]:
     """The registration a run at low repeat cost owes before its number counts:
     the question written (not a placeholder); for a number that judges a
     prediction (kind fit or apply) also criterion, admissibility condition
@@ -553,21 +553,30 @@ def low_registration_missing(text: str) -> list[str]:
     head (`kind_gap`). Returns what is missing — empty means the gate is
     open (LAB-003 No run without an intent paragraph; a computation has no bar to
     clear, 0.87.1; the kind since standard 0.22). A head that does not read
-    is named as such: nothing falls back to a computation."""
+    is named as such: nothing falls back to a computation.
+
+    KIND_NOW, when TEXT is an earlier version of the protocol: the kind it
+    declares today. The fields are then owed by that kind, and a TEXT that
+    declared another kind misses the kind itself — a fit's criterion added
+    after a computation measured was not registered before that number
+    (review 2026-10-26)."""
     try:
         head = protocol_block.head(text)
     except protocol_block.BlockError as exc:
         return [f"[protocol] head: {exc}"]
     lines = fields(text)
     written = {f.name for f in lines if f.value and not f.placeholder}
-    if head.kind is None:
-        # the most is owed while the kind is undecided — and the kind itself
-        labels = standard_contract.registration_fields(
-            standard_contract.APPLY_KIND, model_named(text)
-        )
-    else:
-        labels = standard_contract.registration_fields(head.kind, model_named(text))
-    missing = [label for label in labels if label.casefold() not in written]
+    kind = kind_now or head.kind
+    # the most is owed while the kind is undecided — and the kind itself
+    labels = standard_contract.registration_fields(
+        kind or standard_contract.APPLY_KIND, model_named(text)
+    )
+    missing = (
+        [f"[protocol] kind = {kind_now!r} (it said {head.kind!r} then)"]
+        if kind_now is not None and head.kind is not None and head.kind != kind_now
+        else []
+    )
+    missing += [label for label in labels if label.casefold() not in written]
     missing += [] if head.repeat_cost else ["[protocol] repeat_cost"]
     missing += [] if head.kind else ["[protocol] kind"]
     contradiction = kind_gap(text, head)

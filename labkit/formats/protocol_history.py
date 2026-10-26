@@ -90,13 +90,18 @@ def first_repeat_cost(path: Path) -> FirstRepeatCost | None:
     return None
 
 
-def registration_in_commit(path: Path, commit: str) -> list[str] | None:
+def registration_in_commit(
+    path: Path, commit: str, kind_now: str | None = None
+) -> list[str] | None:
     """What the low registration lacked in the protocol PATH as COMMIT
     holds it (`protocol_check.low_registration_missing`: the fields the
     lane owes written, the repeat_cost declared; a head this labkit cannot read
     is named as such) — [] when it stood whole — or None when that commit
     does not hold the file, or PATH lies outside a repository. The protocol is read as it was then (`git show`): the tree
-    now says nothing about what stood before the number."""
+    now says nothing about what stood before the number. KIND_NOW, the
+    kind the protocol declares today: the fields are owed by it, and a
+    commit that declared another kind lacks the kind — a kind changed after
+    the measurement is not registered before it."""
     root = git_root(path)
     if root is None:
         return None
@@ -111,7 +116,7 @@ def registration_in_commit(path: Path, commit: str) -> list[str] | None:
         # repeat_cost"; here the committed text is older than the reader, and the
         # sentence says so instead of naming a field
         return [f"a head this labkit reads ({exc})"]
-    return low_registration_missing(shown.stdout)
+    return low_registration_missing(shown.stdout, kind_now)
 
 
 def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:

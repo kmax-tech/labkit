@@ -30,6 +30,11 @@ from labkit.gates import report_check
 
 RUN = "2026-10-07T10-00-00_ab12"
 REGISTRATION = "- **Question / hypothesis:** does it hold?\n"
+BAR = (
+    "- **Success / failure criterion:** [C1] accuracy >= 0.8\n"
+    "- **Admissibility condition:** [A1] no empty answer\n"
+    "- **Null condition / anchors:** [A2] shuffled labels near chance\n"
+)
 
 
 def _git(cwd: Path, *args: str) -> str:
@@ -66,10 +71,11 @@ class RegistrationAtTheFirstMeasurement(unittest.TestCase):
         self.proto = self.area / "PROTOCOL-x.md"
         self.root = root
 
-    def _commit(self, body: str) -> str:
-        """The protocol with BODY committed; HEAD's short sha."""
+    def _commit(self, body: str, kind: str | None = None) -> str:
+        """The protocol with BODY, of KIND (the fixture's default when None),
+        committed; HEAD's short sha."""
         self.proto.write_text(
-            head(repeat_cost="low", result=RUN) + body, encoding="utf-8"
+            head(repeat_cost="low", result=RUN, kind=kind) + body, encoding="utf-8"
         )
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "protocol")
@@ -122,6 +128,32 @@ class RegistrationAtTheFirstMeasurement(unittest.TestCase):
             f"the registration as committed at the first measurement {RUN} ({sha}) "
             f"lacks Question / hypothesis",
             out,
+        )
+
+    def test_a_kind_changed_after_the_first_measurement_blocks(self):
+        """Registered and measured as a computation, then turned into a fit
+        with its bar written: the bar did not stand before the number. The
+        commit is judged by today's kind, and the change is named (review
+        2026-10-26: the check read the kind of the commit and was silent)."""
+        sha = self._commit(REGISTRATION, kind="compute")
+        self._run(sha)
+        self._commit(REGISTRATION + BAR, kind="fit")
+        code, out = _report_check(self.area)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            f"the registration as committed at the first measurement {RUN} ({sha}) "
+            f"lacks [protocol] kind = 'fit' (it said 'compute' then), Success / "
+            f"failure criterion, Admissibility condition, Null condition / anchors",
+            out,
+        )
+
+    def test_the_twin_a_fit_registered_before_its_first_measurement_passes(self):
+        sha = self._commit(REGISTRATION + BAR, kind="fit")
+        self._run(sha)
+        code, out = _report_check(self.area)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(
+            protocol_history.registration_in_commit(self.proto, sha, "fit"), []
         )
 
     def test_the_first_measurement_is_the_oldest_full_run_not_the_answering_one(self):

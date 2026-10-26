@@ -177,10 +177,10 @@ jeweils umgeschrieben), Diskussionsblöcke bei t3 und t5, kein
 Journal von Hand und lief ins Zeitlimit; t18 maß außerhalb von runlog
 (Bericht ohne Lauf, kein Gate fragte). Bericht mit fünf offenen Punkten:
 `docs/usability/2026-10-26-sandbox-85c54fd.md`; Laborstand Commit
-8a0182e. Offen für das Labor (nicht labkit): ob die Runde mit erneut
-gezogenem Gold neu bewertet wird, und ein Seed oder eine wiederholte
-Gold-Prüfung für A2; das Zeitlimit von agentsandbox zählt im Ruhezustand
-nicht.
+8a0182e. Für das Labor (nicht labkit): keine Neubewertung mit erneut
+gezogenem Gold (entschieden, siehe den nächsten Absatz); offen bleibt eine
+feste Seed-Regel für Gold-Programme (A2); das Zeitlimit von agentsandbox
+zählt im Ruhezustand nicht.
 
 **Reihenfolge nach der neunten Runde (Befund 2026-10-26).** Die Runde
 bleibt void. Keine Neubewertung mit neu gezogenem Gold: Wer nach Kenntnis

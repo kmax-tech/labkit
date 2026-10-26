@@ -589,6 +589,8 @@ class DecisionList(unittest.TestCase):
         self.assertIn("the criterion is missed: that is the result", text)
         self.assertIn("LAB-042 Log the outcome — failures too", text)
         self.assertIn("an invalid registration", text)
+        self.assertIn("it is not repaired in place", text)
+        self.assertIn("names the earlier protocol and why it was replaced", text)
         commands = [ln.strip() for ln in lines if "--decide" in ln and "--record" in ln]
         self.assertEqual(len(commands), 2, text)
         for cmd, status in zip(commands, ("fixed", "dismissed")):

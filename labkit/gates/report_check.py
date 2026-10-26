@@ -334,7 +334,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
                 evidence_kind=GUARANTEED,
             )
         ]
-    missing = registration_in_commit(ctx.protocol, commit)
+    missing = registration_in_commit(ctx.protocol, commit, ctx.head.kind)
     if missing is None:
         return [
             GateFinding(

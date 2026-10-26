@@ -187,6 +187,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A kind changed after the first measurement holds the report.** The
+  registration check read the commit of the first measurement against the
+  kind that commit declared: a protocol registered and measured as a
+  computation, then turned into a fit with its bar written, passed — as if
+  the bar had stood before the number (review 2026-10-26). The commit is
+  now judged by the kind the protocol declares today, and the change is
+  named (`[protocol] kind = 'fit' (it said 'compute' then)`;
+  `protocol_check.low_registration_missing(kind_now=…)`,
+  `protocol_history.registration_in_commit`). The decision list's
+  invalid-registration route says how: not repaired in place, a new
+  protocol registered before its own first run, naming the earlier one and
+  why; the earlier protocol, its runs and their verdict stay.
 - **A refusal names the cause, the admissible close and the next step.**
   Ninth haiku round: t5's clean `--again` draw printed "this state is
   released" while the commit stayed refused; t3 never ran the decision
