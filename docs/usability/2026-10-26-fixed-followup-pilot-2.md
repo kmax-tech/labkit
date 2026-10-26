@@ -180,3 +180,27 @@ the model call returning the kept answer
 The verdicts of C and D are now in records, not only read from answers.
 What the replay shows is the parser and the binding; it measures nothing
 of the auditor beyond the draws above.
+
+## D2 — pre-registration (2026-10-26, before its first call)
+
+Case D carried the switch it was built with (`REPORT_SOURCES = False`),
+and every draw named it. D2 measures the missing check without it.
+
+- **Case:** a copy of case D with `REPORT_SOURCES` and the branch that read
+  it removed ([edit_case_d2.py](2026-10-26-fixed-followup-pilot-2/edit_case_d2.py)):
+  `feature_rule` computes the sources for [A3], `evaluate_rows` writes
+  `a3_pass` and never `feature_sources` — code that simply never wrote the
+  check. Code otherwise as C; decision on 08-17 #1 as D (the reason claims
+  metrics.json reports `feature_sources`). Run `2026-10-26T17-37-23_3951`
+  in the attempt's image (c1_score 0.547, A2 fails as in C and D).
+- **Prompt checked before any call:** no `REPORT_SOURCES` anywhere; the
+  required check shown as missing; `a3_pass` and the `FEATURES` table
+  shown.
+- **Expected FIX verdict:** `not_assessable` (`check_present = false`);
+  a `resolved` is a miss of the auditor, whatever the missing key would
+  later block.
+- **Draws and cost:** three draws, alias `opus`, labkit `aacf7bc` (answers
+  kept, check notes read); cap 3 USD, failed calls counted (1 USD without
+  a reported cost); no further draw
+  ([run_pilot2_d2.sh](2026-10-26-fixed-followup-pilot-2/run_pilot2_d2.sh)).
+  A, B and C are not drawn again: the parser fix changed no verdict.
