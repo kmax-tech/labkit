@@ -1,0 +1,47 @@
+# written by labkit-audit — decide each finding: `labkit-audit <area> --decide N STATUS REASON`, or set status and reason here
+# a reason is a TOML string: "double quotes" escape a quote as \" and a backslash as \\; 'single quotes' take one line of text without a ' or a control character
+[audit]
+date = "2026-10-26T18:19"
+mode = "analysis"
+model = "opus"
+scope_sha = "c7a6f9b8b761"
+block_sha = "44012d989478"
+registration = { "kind" = "fit", "Question / hypothesis" = "d053920b9bef", "Success / failure criterion" = "124dfc31cd23", "Admissibility condition" = "bf5a0af0405e", "Null condition / anchors" = "9de3199f1fd6" }
+run_id = "2026-10-26T16-56-24_ec63"
+shown_sha = "e6a0a9d06dde"
+blockers = 2
+warnings = 2
+notes = 3
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The Conclusion reports a result the answering run never produced. It says \"out-of-fold R² = 0.726\" from a forest trained on \"elastic_anisotropy, G_VRH, and space_group\", and that \"c1_pass reflects passing the margin-relative threshold\". Run 2026-10-26T16-56-24_ec63 recorded `c1_score` 0.9792, `a3_pass` false and `c1_pass` null (no verdict), and its `feature_sources` lists four features, including poisson_ratio. · The reported R² (0.726) and the claimed C1 pass are wrong for the run on record; the actual run withholds C1 because A3 failed. The three-feature set in the Summary also fails A3, because G_VRH and elastic_anisotropy are excluded columns. Assignment: find which run_id, if any, recorded `c1_score` 0.726 in runs/*/metrics.json; if none did, the number was typed in by hand · new class (reported number not taken from the answering run), against LAB-050 Analysis audit before reporting · Rewrite the Summary from the answering run's metrics.json via the write-back: state that A3 failed and C1 has no verdict, and remove 0.726 and the \"c1_pass … passing\" claim"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:11 · The criterion does not decide the question. The question (:10) asks for \"R² ≥ 0.80\", but [C1] is \"null lane's R² plus 0.25\". With this run's null at −0.084, that bar is about 0.166 (01_measure.py:~345, `bar = null_score + margin`). A forest's negative null R² lowers the bar further. · `c1_pass` comes out true for any leak-free R² between about 0.17 and 0.80, while the hypothesis (R² ≥ 0.80) is false. The Summary's own 0.726 is exactly that case. The frozen criterion therefore cannot carry a yes/no answer to the registered question · new class (criterion ≠ question), against LAB-004 Identifiers make the intent addressable (\"which value of which metric supports the hypothesis\") · Make the question and [C1] name the same bar. Under LAB-017 a changed criterion is a new registration, not an edit of this one"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/01_measure.py:122 · `null_band` = 0.15 has no derivation. The config comment says \"derive it from the spread of the null lane over seeds on the probe\", but `--probe` is refused at repeat_cost low, and the run has one seed. `chance_of` (:~272) itself says a fitted forest on noise \"sits slightly below\" 0, and this run's null is already at −0.084, halfway to the band edge. · `a2_pass`, and with it whether C1 gets a verdict at all, can flip on seed noise alone. Assignment: run `01_measure.py --seed 1..k` and compare the range of `a2_score` across the runs with −0.15 · LAB-015 Preflight audit before freezing, scar rows \"Spread unknown\" / \"Gate without anchor/resolution\" · Measure the null-lane spread over seeds and record it next to the band (or centre the band on the measured null expectation)"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/00_prepare.py:49 · The instrument does not implement the feature space the question registers. The question (:10) asks for \"features from the material's composition and crystal structure\". FEATURES has no composition feature at all, and once A3's excluded columns are removed, the only feature left is `space_group`, read as a float. · After the repair the earlier finding asks for, `c1_score` would measure a forest on one space-group number, not on composition and structure features. The number would then answer a different question than the one registered · new class (instrument ≠ registered feature space) · Build composition and structure features in FEATURES, each with its source columns, so A3 can pass on a feature set that matches the question"
+status = "open"
+reason = ""
+
+[[fix_verdict]]
+record = "2026-10-26T08-17-analysis.toml"
+n = 1
+decision_sha = "3f4532d85e91"
+verdict = "unresolved"
+why = "The fault is still in the code and in the run. experiments/01-bulk-modulus/scripts/00_prepare.py:53 still lists `(\"poisson_ratio\", (\"poisson_ratio\",), …)`, and :50–51 keep elastic_anisotropy and G_VRH, which also derive from the same elastic tensor as K_VRH.\nThe required check `feature_sources` in runs/2026-10-26T16-56-24_ec63/metrics.json still contains \"poisson_ratio\": [\"poisson_ratio\"], so the stated reason (\"removing poisson_ratio\") is contradicted by the check's own value.\n`c1_score` is 0.9792186258959389, the same 0.979 the finding called leakage, and `a3_pass` is false.\nRows still fit the gold almost exactly, e.g. output/bulk-modulus.jsonl:1 (pred 210.70, gold 214.21) and :4 (pred 248.28, gold 248.87)."
+check = "feature_sources"
+check_present = true

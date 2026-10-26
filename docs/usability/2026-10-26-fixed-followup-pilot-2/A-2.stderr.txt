@@ -1,0 +1,5 @@
+labkit-audit: analysis · PROTOCOL-bulk-modulus.md · 3 code file(s) in full, 0 indexed · opus · 98 kB
+labkit-audit: tokens · prompt 41,869 (2,274 cached) · output 9,362 · 0.50 USD
+
+stamp: 2026-10-26 · scope sha dc469aa445ad · 8 findings (3 blockers, 2 warnings, 3 notes — decide each: fixed / accepted / deferred / dismissed)
+scope WARNING: the auditor read experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md as part of the number, the stamp does not cover it

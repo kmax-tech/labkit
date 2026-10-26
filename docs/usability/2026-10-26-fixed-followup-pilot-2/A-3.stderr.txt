@@ -1,0 +1,4 @@
+labkit-audit: analysis · PROTOCOL-bulk-modulus.md · 3 code file(s) in full, 0 indexed · opus · 98 kB
+labkit-audit: tokens · prompt 45,626 (4,887 cached) · output 8,267 · 0.49 USD
+
+stamp: 2026-10-26 · scope sha dc469aa445ad · 4 findings (1 blockers, 2 warnings, 1 notes — decide each: fixed / accepted / deferred / dismissed)

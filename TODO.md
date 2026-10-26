@@ -290,9 +290,14 @@ Offen mit Auslöser, ohne Bauauftrag:
    gezeigten Snapshot). (a) als neuer Versuchsstand vorbereitet und
    vorab festgelegt ([Pilot 2](docs/usability/2026-10-26-fixed-followup-pilot-2.md)):
    `[A3]` mit Aufgabenzitat, eine `FEATURES`-Tabelle, `check =
-   "feature_sources"` vorab auf 08-17 #1. **Offen:** die zwölf bezahlten
-   Aufrufe als eigener Schritt (`run_pilot2.sh`, Deckel 10 USD), dann
-   Auswertung; FIX-Urteil getrennt von `a3_pass` werten. Bisher:
+   "feature_sources"` vorab auf 08-17 #1. **Gelaufen** (5,72 USD): FIX-
+   Urteile 12/12 wie vorab festgelegt (A 3/3 `unresolved`, im ersten
+   Pilot 0/3), kein `resolved` in A, B, D. Aber C und D schrieben keinen
+   Record: Der Prüfer setzte auf einem neuen BLOCKER `· check: <key>
+   (<Erklärung>)`, der strenge Leser verweigerte den ganzen Record; die
+   Urteile sind aus den Rohantworten gelesen. Offen vor jedem Gate
+   (Bericht): Form des check-Felds, Rohantwort bei verweigertem Record
+   aufbewahren, D ohne sichtbaren Schalter. Bisher:
    **Gebaut 2026-10-26:** Das Analyse-Audit urteilt je
    früherem `fixed`-BLOCKER `resolved | unresolved | not_assessable`,
    gespeichert als `[[fix_verdict]]`, gebunden an `decision_digest`;

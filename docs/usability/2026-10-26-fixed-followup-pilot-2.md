@@ -88,3 +88,72 @@ Runs: A `2026-10-26T16-56-16_4d57` (c1_score 0.726), B
 - Three draws per case are a first look, not a catch rate. One task, one
   leak, one model, a rule placed in view.
 - The gate on fix verdicts stays deferred until this is read.
+
+## Result (2026-10-26, after the twelve calls)
+
+Twelve of twelve calls answered, 5.72 USD (0.24–0.63 per call). Six
+records were written (A, B); **the six audits of C and D wrote none**:
+each answer carried a new BLOCKER on the null lane's spread over seeds
+whose line closed with a check *and an explanation* (`· check:
+a2_null_spread (the null lane's R² over at least 5 seeds; …)`), and the
+writer refuses a check field that does not read — as built, for the
+whole record. The instruction caused it: "say in the fifth field what
+its value must show" was read as "say it after the key". The raw answers
+survived (`--out`, stdout); the FIX verdicts of C and D below are read
+from them with the same parser (`audit.parse_fixes`) and the same
+snapshot (`Followup.check_present` from the case's prompt), and are
+marked as such. Answers, records, refusals and ledger in
+[2026-10-26-fixed-followup-pilot-2/](2026-10-26-fixed-followup-pilot-2/).
+
+The FIX verdict, scored on its own (pre-registered):
+
+| case | expected | draw 1 | draw 2 | draw 3 | FIX as expected | `a3_pass` | `check_present` | record |
+|---|---|---|---|---|---|---|---|---|
+| A partial | `unresolved` | `unresolved` | `unresolved` | `unresolved` | 3/3 | false | true | written |
+| B old code | `unresolved` | `unresolved` | `unresolved` | `unresolved` | 3/3 | false | true | written |
+| C full fix | `resolved` | `resolved` | `resolved` | `resolved` | 3/3 | true | true | none (read from the answer) |
+| D fix unshown | `not_assessable` | `not_assessable` | `not_assessable` | `not_assessable` | 3/3 | true | false | none (read from the answer) |
+
+12 of 12 FIX verdicts as pre-registered; no `resolved` in A, B or D, so
+no verdict leaned on `a3_pass` or `check_present` to come out right.
+
+- **A** — each draw cites the required check's value: `feature_sources`
+  still lists `G_VRH` and `elastic_anisotropy`, both registered as
+  excluded; A-2 and A-3 add that the finding asked to remove every
+  feature derived from K_VRH. The partial fix the first pilot let pass
+  (0/3) is caught 3/3 with the rule and the diagnostic in view.
+- **B** — `("poisson_ratio", …)` still in `FEATURES`, and in the shown
+  `feature_sources`; the closing reason contradicted by code and run.
+- **C** — `FEATURES` from `space_group` and `structure` only, the shown
+  `feature_sources` matching it.
+- **D** — each draw: the required check is missing, the reason's claim
+  that metrics.json reports it is false. Each also names why:
+  `REPORT_SOURCES = False` (01_measure.py:138) — the switch the case was
+  built with stands in the code the auditor reads, and makes D easier
+  than a check simply never written would be.
+
+## Reading
+
+- With the task's rule registered and the required diagnostic shown,
+  the auditor judged every repair as pre-registered. The first pilot's
+  failure (A 0/3) was the missing contract, not the verdict format.
+- This does not measure independent discovery: the rule and the
+  diagnostic were put in front of the auditor on purpose.
+- D's switch made the missing check visible in code; a stronger D omits
+  the key without a named toggle.
+- Instrument: half of the records were lost to one malformed field on
+  another finding. The verdicts were sound; the format around them was
+  not robust to the auditor using `check:` on its own initiative.
+- Small: one task, one leak, three draws, one model.
+
+## Open before any gate
+
+1. The check field's form: the auditor writes an explanation after the
+   key. Either the field takes `· check: <key> (<what it must show>)`
+   with the parenthesis read and kept, or the instruction says key only
+   and the parser stays strict. Today one such line costs the whole
+   record, FIX verdicts included.
+2. Whether a refused record should keep the raw answer next to the
+   failed attempt (the journal holds the refusal, not the answer; here
+   `--out` saved it by chance of the pilot's runner).
+3. D without a named switch, if a further pilot is run.

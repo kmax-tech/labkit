@@ -1,0 +1,42 @@
+# written by labkit-audit — decide each finding: `labkit-audit <area> --decide N STATUS REASON`, or set status and reason here
+# a reason is a TOML string: "double quotes" escape a quote as \" and a backslash as \\; 'single quotes' take one line of text without a ' or a control character
+[audit]
+date = "2026-10-26T18:03"
+mode = "analysis"
+model = "opus"
+scope_sha = "c7a6f9b8b761"
+block_sha = "44012d989478"
+registration = { "kind" = "fit", "Question / hypothesis" = "d053920b9bef", "Success / failure criterion" = "124dfc31cd23", "Admissibility condition" = "bf5a0af0405e", "Null condition / anchors" = "9de3199f1fd6" }
+run_id = "2026-10-26T16-56-24_ec63"
+shown_sha = "e6a0a9d06dde"
+blockers = 1
+warnings = 2
+notes = 0
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The Conclusion reports a result that the run did not produce. It names features (\"elastic_anisotropy, G_VRH, and space_group\"), gives an R² (\"0.726\") and says the forest passes (\"exceeds the registered criterion … c1_pass reflects passing\"). The only shown run is runs/2026-10-26T16-56-24_ec63/metrics.json. It records `feature_sources` with four features including poisson_ratio, `c1_score` 0.9792, `a3_pass` false, `c1_threshold` null and `c1_pass` null. No run_id in the Runs field carries 0.726. · A reader takes R² 0.726 and a passed [C1] from the Summary. The run of record has a 0.979 score and no [C1] verdict, because [A3] failed. Assignment: find the run that wrote 0.726, if any, by searching every runs/*/metrics.json for c1_score ≈ 0.726 and reporting its run_id and feature_sources. · new class (a number written into the protocol by hand instead of generated from the run it cites; LAB-050 Analysis audit before reporting: the number reached the note before this audit) · Replace the Conclusion with the adopted run's metrics through the `--from-run` write-back. While `a3_pass` is false, state that [C1] has no verdict. · check: c1_pass"
+check = "c1_pass"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:11 · [C1] does not hold the bar the question asks about. The question asks for \"R² ≥ 0.80\". The criterion only asks for the null lane's R² plus 0.25. That bar is a single-seed number, 0.166 = −0.0838 + 0.25 with today's `a2_score`. · Once [A3] is repaired, a registered lane at R² 0.20 against a null of −0.084 gives `c1_pass` true while the question's 0.80 bar fails. `c1_pass` then reads as \"yes\" to a question it does not test. · new class (the criterion does not encode the question's threshold). The scar row \"Criterion ≠ code\" covers code, not this. · Two ways out: register the 0.80 bar in a new experiment (LAB-017: a changed criterion is a new experiment), or have the Conclusion say that [C1] is only a margin over the null lane and does not answer the question."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:22 · [A2] `null_band` = 0.15 is a guess, and the null lane was drawn once, from seed 0. The script's docstring says to derive the band from the null lane's spread over seeds. At `low` there is no probe to do that with, and no `--seed` run was made. · `a2_pass` true rests on one draw, `a2_score` −0.0838, which uses 56% of the band. The [C1] bar moves one-for-one with that draw. Assignment: run `01_measure.py --seed 1…4`. Report the min and max of `a2_score` against ±0.15, and the resulting range of `c1_threshold`. · Scar rows \"Spread unknown\" and \"Gate without anchor/resolution\" (LAB-015 Preflight audit before freezing) · Report the null-lane spread over seeds next to `a2_pass`. If the spread reaches the band, the band has to come from the spread."
+status = "open"
+reason = ""
+
+[[fix_verdict]]
+record = "2026-10-26T08-17-analysis.toml"
+n = 1
+decision_sha = "3f4532d85e91"
+verdict = "unresolved"
+why = "experiments/01-bulk-modulus/scripts/00_prepare.py:54 still lists `(\"poisson_ratio\", (\"poisson_ratio\",), …)`. The finding's own required check `feature_sources` in runs/2026-10-26T16-56-24_ec63/metrics.json still shows `\"poisson_ratio\": [\"poisson_ratio\"]`, so the closing reason (\"removed poisson_ratio\") is contradicted by the data.\nThe leak is still visible. `c1_score` is 0.9792186 in the new run, against 0.979 in the leaking run 08-10-41_ad0d, and rows such as output/bulk-modulus.jsonl:1 (gold 214.21, pred 210.70) and :4 (248.87 / 248.28) are still near-exact.\nRemoving poisson_ratio alone would also not clear the fault. Lines 51–52 keep elastic_anisotropy and G_VRH, and [A3] excludes both, so `a3_pass` stays false.\ndata/prepared/compounds_v1.jsonl is read-only, and 00_prepare.py refuses to overwrite it (`OUT.exists()` → exit). `feature_rule` checks the FEATURES table in the code, not the materialized rows. A repair that edits FEATURES without regenerating the data under a new name would therefore report `a3_pass` true on the old leaking features. The unchanged `items_sha` ff2877e70495 would show that this happened."
+check = "feature_sources"
+check_present = true

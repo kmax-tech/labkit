@@ -1,0 +1,3 @@
+labkit-audit: analysis · PROTOCOL-bulk-modulus.md · 3 code file(s) in full, 0 indexed · opus · 100 kB
+labkit-audit: tokens · prompt 52,593 (52,591 cached) · output 11,673 · 0.24 USD
+labkit-audit: a check field that does not read: "ne · check: a2_null_seed_scores (the null lane's score per seed, whose mean and spread the registered band must contain)" — the form is a closing `· check: <metrics key>` (lowercase snake_case)

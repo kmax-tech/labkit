@@ -1,0 +1,32 @@
+BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The Conclusion reports a result the answering run never produced. It says "out-of-fold R² = 0.726" from a forest trained on "elastic_anisotropy, G_VRH, and space_group", and that "c1_pass reflects passing the margin-relative threshold". Run 2026-10-26T16-56-24_ec63 recorded `c1_score` 0.9792, `a3_pass` false and `c1_pass` null (no verdict), and its `feature_sources` lists four features, including poisson_ratio. · The reported R² (0.726) and the claimed C1 pass are wrong for the run on record; the actual run withholds C1 because A3 failed. The three-feature set in the Summary also fails A3, because G_VRH and elastic_anisotropy are excluded columns. Assignment: find which run_id, if any, recorded `c1_score` 0.726 in runs/*/metrics.json; if none did, the number was typed in by hand · new class (reported number not taken from the answering run), against LAB-050 Analysis audit before reporting · Rewrite the Summary from the answering run's metrics.json via the write-back: state that A3 failed and C1 has no verdict, and remove 0.726 and the "c1_pass … passing" claim
+
+BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:11 · The criterion does not decide the question. The question (:10) asks for "R² ≥ 0.80", but [C1] is "null lane's R² plus 0.25". With this run's null at −0.084, that bar is about 0.166 (01_measure.py:~345, `bar = null_score + margin`). A forest's negative null R² lowers the bar further. · `c1_pass` comes out true for any leak-free R² between about 0.17 and 0.80, while the hypothesis (R² ≥ 0.80) is false. The Summary's own 0.726 is exactly that case. The frozen criterion therefore cannot carry a yes/no answer to the registered question · new class (criterion ≠ question), against LAB-004 Identifiers make the intent addressable ("which value of which metric supports the hypothesis") · Make the question and [C1] name the same bar. Under LAB-017 a changed criterion is a new registration, not an edit of this one
+
+WARNING · experiments/01-bulk-modulus/scripts/01_measure.py:122 · `null_band` = 0.15 has no derivation. The config comment says "derive it from the spread of the null lane over seeds on the probe", but `--probe` is refused at repeat_cost low, and the run has one seed. `chance_of` (:~272) itself says a fitted forest on noise "sits slightly below" 0, and this run's null is already at −0.084, halfway to the band edge. · `a2_pass`, and with it whether C1 gets a verdict at all, can flip on seed noise alone. Assignment: run `01_measure.py --seed 1..k` and compare the range of `a2_score` across the runs with −0.15 · LAB-015 Preflight audit before freezing, scar rows "Spread unknown" / "Gate without anchor/resolution" · Measure the null-lane spread over seeds and record it next to the band (or centre the band on the measured null expectation)
+
+WARNING · experiments/01-bulk-modulus/scripts/00_prepare.py:49 · The instrument does not implement the feature space the question registers. The question (:10) asks for "features from the material's composition and crystal structure". FEATURES has no composition feature at all, and once A3's excluded columns are removed, the only feature left is `space_group`, read as a float. · After the repair the earlier finding asks for, `c1_score` would measure a forest on one space-group number, not on composition and structure features. The number would then answer a different question than the one registered · new class (instrument ≠ registered feature space) · Build composition and structure features in FEATURES, each with its source columns, so A3 can pass on a feature set that matches the question
+
+FIX · 2026-10-26T08-17-analysis.toml#1 · unresolved · The fault is still in the code and in the run. experiments/01-bulk-modulus/scripts/00_prepare.py:53 still lists `("poisson_ratio", ("poisson_ratio",), …)`, and :50–51 keep elastic_anisotropy and G_VRH, which also derive from the same elastic tensor as K_VRH.
+The required check `feature_sources` in runs/2026-10-26T16-56-24_ec63/metrics.json still contains "poisson_ratio": ["poisson_ratio"], so the stated reason ("removing poisson_ratio") is contradicted by the check's own value.
+`c1_score` is 0.9792186258959389, the same 0.979 the finding called leakage, and `a3_pass` is false.
+Rows still fit the gold almost exactly, e.g. output/bulk-modulus.jsonl:1 (pred 210.70, gold 214.21) and :4 (pred 248.28, gold 248.87).
+
+READ · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:16 · "Recorded results" still holds the stamped placeholder `<generated metrics, run_id and limits note…>`, while the Summary already states a number · Fill it with `protocol-fill --from-run 2026-10-26T16-56-24_ec63` and let the Summary cite it
+
+READ · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:28 · The Runs list holds the placeholder `<run_id> — <one sentence…>`, so a reader cannot tell which run the Summary describes · Add the 2026-10-26T16-56-24_ec63 entry (and the 08-10-41_ad0d one) with one sentence each
+
+READ · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The person-facing Conclusion uses the metric key `c1_pass` and the bare id "A2" without saying what they are · Say it in words ("the margin criterion", "the shuffled-label control") and leave keys to Recorded results
+
+READ · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:10 · "Test" means two things. The question's "out-of-fold test data" is the cross-validated train split, but Terms (:9) uses "232 held-out test compounds" for the split that is never scored · Say "out-of-fold predictions on the 944 labelled compounds" in the question
+
+READ · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:20 · The prepared file is written two ways: "prepared/compounds_v1.jsonl" here, and data/prepared/compounds_v1.jsonl in the scripts · Use the path `data/prepared/compounds_v1.jsonl`
+
+READ · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:9 · The Terms field mixes a glossary with setup counts (944/232) that belong under Data/scope · Move the counts to Data/scope and keep Terms to definitions
+
+notes: 3 (not listed — repeat cost low)
+verdict: 2 blockers, 2 warnings, 3 notes
+scope:
+experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md
+experiments/01-bulk-modulus/scripts/00_prepare.py
+experiments/01-bulk-modulus/scripts/01_measure.py
+experiments/01-bulk-modulus/scripts/02_analyze.py

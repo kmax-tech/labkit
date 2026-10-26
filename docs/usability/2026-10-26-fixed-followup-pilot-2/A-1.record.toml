@@ -1,0 +1,41 @@
+# written by labkit-audit — decide each finding: `labkit-audit <area> --decide N STATUS REASON`, or set status and reason here
+# a reason is a TOML string: "double quotes" escape a quote as \" and a backslash as \\; 'single quotes' take one line of text without a ' or a control character
+[audit]
+date = "2026-10-26T18:02"
+mode = "analysis"
+model = "opus"
+scope_sha = "dc469aa445ad"
+block_sha = "44012d989478"
+registration = { "kind" = "fit", "Question / hypothesis" = "d053920b9bef", "Success / failure criterion" = "124dfc31cd23", "Admissibility condition" = "bf5a0af0405e", "Null condition / anchors" = "9de3199f1fd6" }
+run_id = "2026-10-26T16-56-16_4d57"
+shown_sha = "6129970583d1"
+blockers = 1
+warnings = 2
+notes = 1
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The Summary says the run \"exceeds the registered criterion\" and that \"the reported c1_pass reflects passing the margin-relative threshold\". The run issued no C1 verdict: A3 failed, so `evaluate_rows()` withheld it (01_measure.py, the `not (a1_pass and a2_pass and a3_pass)` branch). · The reported C1 verdict is wrong. runs/2026-10-26T16-56-16_4d57/metrics.json has `\"a3_pass\": false`, `\"c1_threshold\": null` and `\"c1_pass\": null`, but the Conclusion reports a pass against a bar that was never computed. · LAB-015 Preflight audit before freezing (an inadmissible run carries no verdict, LAB-004 Identifiers make the intent addressable: A permits the verdict) · Rewrite the Conclusion from metrics.json: C1 has no verdict because A3 failed. Report 0.726 only as an inadmissible R² that comes from leaked features."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:77 · `null_band = 0.15` was set without a derivation. The code comment at MeasureConfig.null_band asks for the null lane's spread over seeds on the probe, and the protocol says that spread is \"untested\". Only one draw exists. · `a2_pass` true depends on `a2_score` −0.107, which is 0.043 inside the band. A seed whose null lane lands below −0.15 flips A2 and voids any C1 verdict. Assignment: run `01_measure.py --seed 1…4`, read `a2_score` from each metrics.json and compare the spread with the 0.043 headroom. · Scar row \"Spread unknown\" (LAB-036 Validate) and \"Gate without anchor/resolution\" · Record the null lane's spread over seeds (`02_analyze.py --draws`) and state in a Limit line whether A2 holds across those seeds."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:11 · The question asks for an absolute R² ≥ 0.80, but [C1] tests R² ≥ null + 0.25. With this run's null of −0.107 the bar is 0.143, so C1 cannot answer the registered question. · Any `c1_score` in [0.143, 0.80) yields `c1_pass` true while the question's answer is \"no\". The current 0.726 is such a value, and the Summary already reads it as a criterion pass. · new class (the criterion does not operationalise the question's bar) · State in the Conclusion that C1 does not test the 0.80 bar. A test against 0.80 is a new experiment (LAB-003); the frozen criterion stays as it is."
+status = "open"
+reason = ""
+
+[[fix_verdict]]
+record = "2026-10-26T08-17-analysis.toml"
+n = 1
+decision_sha = "3f4532d85e91"
+verdict = "unresolved"
+why = "The repair removed `poisson_ratio` but left other features derived from the target's elastic tensor. The required check `feature_sources` in runs/2026-10-26T16-56-16_4d57/metrics.json still lists `G_VRH` and `elastic_anisotropy`, and the same file shows `\"a3_pass\": false`.\nexperiments/01-bulk-modulus/scripts/00_prepare.py:51-52 still builds features from `elastic_anisotropy` and `G_VRH`. Both are in the registered `excluded_columns`.\nThe universal anisotropy index is A^U = 5·G_V/G_R + K_V/K_R − 6, so it contains the Voigt and Reuss bulk moduli whose average is the target K_VRH. G_VRH comes from the same computed tensor.\nThe finding asked to \"remove every feature derived from K_VRH\". One cause is gone and two remain, so `c1_score` 0.726 still measures leaked features."
+check = "feature_sources"
+check_present = true

@@ -1,0 +1,3 @@
+labkit-audit: analysis · PROTOCOL-bulk-modulus.md · 3 code file(s) in full, 0 indexed · opus · 100 kB
+labkit-audit: tokens · prompt 52,593 (11,596 cached) · output 14,961 · 0.63 USD
+labkit-audit: a check field that does not read: 'null_spread (the a2_score spread over at least 10 seeds; the registered band must cover it around the registered target)' — the form is a closing `· check: <metrics key>` (lowercase snake_case)
