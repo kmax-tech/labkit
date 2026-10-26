@@ -33,9 +33,24 @@ place. The fix moves the decision ahead of the cost.
   model, and say that predictions on unlabelled rows are still a fit whose
   kept number is the held-out score. Help, the refusal without `--kind` and
   a computation's next steps print one text.
-- A computation's next steps open with that check and the restamp command.
+- A computation's next steps open with that check and the command that
+  changes the kind, `labkit-init exp NAME --kind fit --change-kind`.
 - The lane text no longer uses "computation" for the cost, and says that
   the cost does not decide the kind.
 
 Whether this is enough is open until a cold agent meets it (the repair case
 after the ninth round).
+
+## The restamp (review 2026-10-26)
+
+The first version told the agent to `rm -r` the area and stamp it anew. A
+review ran it: an explore file the stamp had moved into the area was
+deleted with it; the computation's test under `tests/` survived, and the
+new stamp skipped it (`write_if_absent`) — a fit script beside a test
+expecting `COUNT_FIELD`. `--change-kind` replaces it: before the first
+measurement only; the old kind's stamp files are replaced only where they
+are unchanged; written fields, the id, `type` and model alias move into
+the new protocol; whatever would be lost holds the change, and nothing is
+written then. After a measurement the kind is part of what stood before
+the number, so the way is a new registration (a new protocol), not a
+restamp.

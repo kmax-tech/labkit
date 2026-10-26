@@ -3,6 +3,7 @@
     labkit-init lab [DIR] [--name NAME] [--labkit-ref REF]
     labkit-init exp NAME [--repo DIR] [--repeat-cost low|high] --kind compute|fit|apply [--model [ALIAS]]
                          [--report] [--explore]
+    labkit-init exp NAME --kind compute|fit|apply --change-kind
 
 `lab` lays out a lab repo: `AGENTS.md` (and `CLAUDE.md` pointing at it),
 `requirements.txt` pinning this labkit at its release tag on GitHub,
@@ -21,6 +22,8 @@ prompt skeleton, without it the estimator skeleton; at low repeat cost without a
 model the counting skeleton), the area README and the area's test under
 `tests/`. `--explore` stamps only `experiments/explore/<name>.py`, the entry
 before an area exists; the plain command later moves it into the area.
+`--change-kind` restamps an area under another kind before its first
+measurement (`change_kind`).
 
 Every file is written only if absent: rerunning never overwrites. The pin
 names the release tag `v<version>` of the installed labkit; until that tag is
@@ -31,6 +34,7 @@ commit) for development and tests.
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import importlib.metadata
 import os
 import re
@@ -39,7 +43,9 @@ from labkit.formats import console
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
-from labkit.formats import protocol_block, protocol_check, standard_contract
+from labkit.formats import promises, protocol_block, protocol_check, standard_contract
+from labkit.formats.runs import runs_path
+from labkit.tools.protocol_fill import fill, fill_head
 from labkit.formats.repo import (
     adopt_command,
     AREA_NAME,
@@ -337,35 +343,47 @@ def stamp_scripts(
     skeleton: standard_contract.Skeleton,
     model: bool | str,
 ) -> list[str]:
-    """The script skeletons and the area's test under tests/ — which ones
-    is the contract's answer (`standard_contract.skeleton`: the compute,
-    estimator or prompt skeleton, every one with the check)."""
+    """Write the script skeletons and the area's test (`script_stamps`)
+    where absent; a script written is made executable."""
     log: list[str] = []
-    (area / "scripts").mkdir(exist_ok=True)
+    for path, text in script_stamps(root, area, nn, slug, skeleton, model).items():
+        if write_if_absent(path, text, log) and path.parent == area / "scripts":
+            path.chmod(0o755)  # a shebang nobody can run is a lint finding
+    return log
+
+
+def script_stamps(
+    root: Path,
+    area: Path,
+    nn: str,
+    slug: str,
+    skeleton: standard_contract.Skeleton,
+    model: bool | str,
+) -> dict[Path, str]:
+    """{path: text} of the script skeletons and the area's test under
+    tests/ — which ones is the contract's answer (`standard_contract.skeleton`:
+    the compute, estimator or prompt skeleton, every one with the check).
+    Reads the templates, writes nothing."""
+    out: dict[Path, str] = {}
     alias = model if isinstance(model, str) else "TODO-alias"
     tname = (f"test_{nn}_{slug}" if nn else f"test_{slug}").replace("-", "_") + ".py"
     for tmpl, dest in skeleton.scripts:
         # `<NN>_<name>` first: the scripts name the area's test file too (the
         # probe's "paste into tests/test_<NN>_<name>.py" stayed unreplaced,
         # cloud judge probe 2026-10-14)
-        text = (
+        out[area / "scripts" / dest] = (
             template(tmpl)
             .replace("<NN>_<name>", tname[len("test_") : -3])
             .replace("<name>", slug)
             .replace("<model>", alias)
         )
-        if write_if_absent(area / "scripts" / dest, text, log):
-            (area / "scripts" / dest).chmod(
-                0o755
-            )  # a shebang nobody can run is a lint finding
-    text = (
+    out[root / "tests" / tname] = (
         template(skeleton.test)
         .replace("<area>", str(area.relative_to(root)))
         .replace("<NN>_<name>", tname[len("test_") : -3])
         .replace("<name>", slug)
     )
-    write_if_absent(root / "tests" / tname, text, log)
-    return log
+    return out
 
 
 def stamp_area(
@@ -397,28 +415,9 @@ def stamp_area(
         _, blocks = pilot_and_report(CUT_MARK.sub("", template(PROTOCOL_TEMPLATE.name)))
         return existing[0], "\n".join(promote(existing[0], blocks))
     kind = asked_kind(kind)
-    # the cut and the skeleton are the contract's answers, not read off the
-    # tier here (a tier compared by hand outside the contract is a copy)
     quick = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
     skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
-    tmpl = stamped_head(
-        template(PROTOCOL_TEMPLATE.name), root, slug, repeat_cost, kind, model
-    )
-    clean = CUT_MARK.sub(
-        "", bar_cut(tmpl, kind)
-    )  # every written protocol is free of the cut markers
-    pilot, blocks = pilot_and_report(clean)
-    if quick:
-        pilot, blocks = (
-            low_cut(quick_block(tmpl, kind), kind, model=bool(model)),
-            [],
-        )
-        if skeleton is standard_contract.COMPUTE:
-            pilot = count_placeholders(pilot)
-        elif skeleton is standard_contract.ESTIMATOR:
-            pilot = estimator_placeholders(pilot, cut=True)
-    elif skeleton is standard_contract.ESTIMATOR:
-        pilot = estimator_placeholders(pilot)
+    stamped = protocol_stamp(root, slug, repeat_cost, kind, model, report)
     existing = [
         p
         for p in experiments.iterdir()
@@ -444,9 +443,6 @@ def stamp_area(
         (area / "explore").mkdir(exist_ok=True)
         pre.rename(area / "explore" / pre.name)
         log.append(f"  moved          {pre} -> {area / 'explore' / pre.name}")
-    stamped = blank_before_headings(short_placeholders(clean if report else pilot))
-    stamped = name_promise_ids(stamped, kind)
-    check_stamped_head(stamped, repeat_cost, kind, bool(model))
     write_if_absent(area / f"PROTOCOL-{slug}.md", stamped, log)
     log += stamp_scripts(root, area, nn, slug, skeleton, model)
     _point_hooks_at(root)
@@ -456,6 +452,272 @@ def stamp_area(
         + "\n"
         + next_steps(area.relative_to(root), slug, nn, repeat_cost, kind, bool(model))
     )
+
+
+def protocol_stamp(
+    root: Path,
+    slug: str,
+    repeat_cost: str | None,
+    kind: str,
+    model: bool | str,
+    report: bool,
+    pid: str | None = None,
+) -> str:
+    """The protocol `exp` stamps for these answers: the low cut, or the
+    pilot part — with REPORT the whole — under a fresh id, or PID. Reads
+    the template (and, without PID, the ids taken under ROOT); writes
+    nothing. The cut and the skeleton are the contract's answers, not read
+    off the tier here (a tier compared by hand outside the contract is a
+    copy)."""
+    quick = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
+    skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
+    tmpl = stamped_head(
+        template(PROTOCOL_TEMPLATE.name), root, slug, repeat_cost, kind, model, pid
+    )
+    clean = CUT_MARK.sub(
+        "", bar_cut(tmpl, kind)
+    )  # every written protocol is free of the cut markers
+    pilot, _ = pilot_and_report(clean)
+    if quick:
+        pilot = low_cut(quick_block(tmpl, kind), kind, model=bool(model))
+        if skeleton is standard_contract.COMPUTE:
+            pilot = count_placeholders(pilot)
+        elif skeleton is standard_contract.ESTIMATOR:
+            pilot = estimator_placeholders(pilot, cut=True)
+    elif skeleton is standard_contract.ESTIMATOR:
+        pilot = estimator_placeholders(pilot)
+    stamped = blank_before_headings(short_placeholders(clean if report else pilot))
+    stamped = name_promise_ids(stamped, kind)
+    check_stamped_head(stamped, repeat_cost, kind, bool(model))
+    return stamped
+
+
+#: the field `--report` adds; its presence says the protocol carries the
+#: report fields, and a restamp keeps them
+REPORT_FIELD = "Deviations after freeze"
+
+
+@dataclass(frozen=True)
+class KindChange:
+    """What `--change-kind` would do to one area, computed before anything
+    is written (`plan_kind_change`).
+
+    Attributes:
+        old_kind: The kind the protocol declares now.
+        before: The old kind's stamp files, path to stamped text.
+        after: The new kind's stamp files, path to text to write.
+        protocol: The protocol file; `text` is its restamped content.
+        text: The new protocol: same id, the written fields carried.
+        held: Why the change would lose work — empty when it may go ahead.
+        next_steps: The new kind's next steps, to print after the change.
+    """
+
+    old_kind: str
+    before: dict[Path, str]
+    after: dict[Path, str]
+    protocol: Path
+    text: str
+    held: list[str]
+    next_steps: str
+
+
+def change_kind(root: Path, name: str, kind: str | None) -> tuple[Path, str]:
+    """`exp NAME --kind KIND --change-kind`: restamp the area NAME, stamped
+    under another kind, before its first measurement (`plan_kind_change`
+    says what changes and what holds it, `write_kind_change` writes it).
+    Raises `console.Refused`, with nothing changed, when the plan holds.
+    Returns (area, report to print)."""
+    kind = asked_kind(kind)
+    slug = area_slug(name)
+    area = restampable_area(root, slug, kind)
+    plan = plan_kind_change(root, area, slug, kind)
+    if plan.held:
+        raise console.Refused(
+            "labkit-init",
+            f"--change-kind {plan.old_kind} -> {kind} would lose work, nothing "
+            f"changed — move it out (e.g. into {area / 'explore'}/) or change the "
+            f"kind by hand:\n  " + "\n  ".join(plan.held),
+        )
+    log = write_kind_change(area, plan)
+    return area, (
+        f"Kind {plan.old_kind} -> {kind} in {area}\n"
+        + "\n".join(log)
+        + "\n"
+        + plan.next_steps
+    )
+
+
+def restampable_area(root: Path, slug: str, kind: str) -> Path:
+    """The area of SLUG under ROOT that `--change-kind` may restamp: it
+    exists, holds its one stamped protocol and has not measured. Raises
+    `console.Refused` otherwise — after a run the kind is part of the
+    registration the first measurement stood on
+    (`report_check.registration_gaps`), so the way is a new registration."""
+    experiments = root / "experiments"
+    found = (
+        [
+            p
+            for p in experiments.iterdir()
+            if p.is_dir() and split_area_name(p.name)[1] == slug
+        ]
+        if experiments.is_dir()
+        else []
+    )
+    if not found:
+        raise console.Refused(
+            "labkit-init",
+            f"--change-kind: no area {slug!r} under {experiments} — "
+            f"`labkit-init exp {slug} --kind {kind}` stamps a new one",
+        )
+    area = found[0]
+    protocol = area / f"PROTOCOL-{slug}.md"
+    if area_protocols(area) != [protocol]:
+        raise console.Refused(
+            "labkit-init",
+            f"--change-kind: {area} holds {len(area_protocols(area))} protocol(s), "
+            f"the stamp holds one ({protocol.name}) — change the kind by hand",
+        )
+    runs_dir = runs_path(area)
+    if runs_dir.is_dir() and any(runs_dir.iterdir()):
+        raise console.Refused(
+            "labkit-init",
+            f"--change-kind: {area} has measured ({runs_dir} is not empty) — the "
+            f"kind is part of the registration that stood before the first "
+            f"measurement, and changing it now does not change what stood then. "
+            f"A model trained here is a new registration: `labkit-init exp "
+            f"<new-name> --kind {kind}`, committed before its first run; this "
+            f"area keeps its runs and their verdict, and the new protocol's "
+            f"Context names it and why it was replaced",
+        )
+    return area
+
+
+def plan_kind_change(root: Path, area: Path, slug: str, kind: str) -> KindChange:
+    """The change of AREA's protocol and stamp files to KIND, and what
+    holds it (`KindChange.held`): a stamped script, README or test edited
+    since the old kind's stamp; a file of the author's where the new kind
+    stamps; a promise block that differs from the old stamp's; a written
+    `[model]` claim a non-compute kind does not carry; a written field the
+    new protocol has no place for, or one over several lines. The protocol
+    keeps its id, `type`, model alias and report fields; a written field is
+    carried when it differs from the old stamp's own value. Reads files,
+    writes nothing. Raises `console.Refused` for a protocol without kind
+    or id, or already of KIND."""
+    nn = split_area_name(area.name)[0] or ""
+    protocol = area / f"PROTOCOL-{slug}.md"
+    old = protocol.read_text(encoding="utf-8")
+    head = protocol_block.head(old)
+    if head.kind is None or head.id is None:
+        raise console.Refused(
+            "labkit-init",
+            f"--change-kind: {protocol.name} declares no kind or no id — fill the "
+            f"head (`protocol-fill … kind=…`) instead",
+        )
+    if head.kind == kind:
+        raise console.Refused(
+            "labkit-init",
+            f"--change-kind: {protocol.name} already says kind = {kind!r}",
+        )
+    declared = protocol_block.model(old)
+    model: bool | str = (declared.alias or True) if declared is not None else False
+    report = any(
+        f.name == protocol_check.field_name(REPORT_FIELD)
+        for f in protocol_check.fields(old)
+    )
+    rc = head.repeat_cost
+    before = stamp_files(root, area, nn, slug, rc, head.kind, model)
+    after = stamp_files(root, area, nn, slug, rc, kind, model)
+    held = [
+        f"{path}: edited since the {head.kind} stamp"
+        for path, stamped in before.items()
+        if path.is_file() and path.read_text(encoding="utf-8") != stamped
+    ] + [
+        f"{path}: a file of yours where the {kind} stamp writes"
+        for path in after
+        if path not in before and path.exists()
+    ]
+    fresh_old = protocol_stamp(root, slug, rc, head.kind, model, report, head.id)
+    if promises.block_stamp(old) != promises.block_stamp(fresh_old):
+        held.append(
+            f"{protocol.name}: the promise block differs from the {head.kind} stamp "
+            f"— the {kind} stamp would replace it"
+        )
+    if (
+        declared is not None
+        and kind != standard_contract.COMPUTE_KIND
+        and (declared.number_describes or declared.annotation_validity)
+    ):
+        held.append(
+            f"{protocol.name}: [model] number_describes / annotation_validity are "
+            f"written — a {kind} has no place for them"
+        )
+    text, unplaced = carried_fields(
+        old, fresh_old, protocol_stamp(root, slug, rc, kind, model, report, head.id)
+    )
+    held += [f"{protocol.name}:{why}" for why in unplaced]
+    if head.type is not None:
+        text = fill_head(text, "type", head.type)
+    steps = next_steps(area.relative_to(root), slug, nn, rc, kind, bool(model))
+    return KindChange(head.kind, before, after, protocol, text, held, steps)
+
+
+def stamp_files(
+    root: Path,
+    area: Path,
+    nn: str,
+    slug: str,
+    repeat_cost: str | None,
+    kind: str,
+    model: bool | str,
+) -> dict[Path, str]:
+    """The stamp files of KIND besides the protocol: scripts, the area's
+    test and README, path to text (`script_stamps`, `area_readme`)."""
+    skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
+    out = script_stamps(root, area, nn, slug, skeleton, model)
+    out[area / "README.md"] = area_readme(
+        nn, slug, skeleton=skeleton is not standard_contract.COMPUTE
+    )
+    return out
+
+
+def carried_fields(old: str, old_stamp: str, new: str) -> tuple[str, list[str]]:
+    """NEW with every field OLD has written — not a placeholder and not the
+    value OLD_STAMP already carried — set by its label, and the fields that
+    found no place (`<line> <label>: why`). Pure."""
+    stamped = {f.name: f.value for f in protocol_check.fields(old_stamp)}
+    unplaced: list[str] = []
+    for f in protocol_check.fields(old):
+        if not f.value or f.placeholder or stamped.get(f.name) == f.value:
+            continue
+        if f.block:
+            unplaced.append(f"{f.line} {f.label}: a value over several lines")
+            continue
+        try:
+            new = fill(new, f.label, f.value, force=True)
+        except ValueError as exc:
+            unplaced.append(f"{f.line} {f.label}: no place in the new stamp ({exc})")
+    return new, unplaced
+
+
+def write_kind_change(area: Path, plan: KindChange) -> list[str]:
+    """Write PLAN: remove the old kind's stamp files the new kind does not
+    stamp, write the new kind's (scripts executable), write the protocol.
+    Returns the log lines."""
+    log: list[str] = []
+    for path in plan.before:
+        if path.is_file() and path not in plan.after:
+            path.unlink()
+            log.append(f"  removed        {path} (the {plan.old_kind} stamp)")
+    for path, text in plan.after.items():
+        replaced = path.exists()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        if path.parent == area / "scripts":
+            path.chmod(0o755)  # a shebang nobody can run is a lint finding
+        log.append(f"  {'replaced' if replaced else 'created':<14} {path}")
+    plan.protocol.write_text(plan.text, encoding="utf-8")
+    log.append(f"  restamped      {plan.protocol} (same id, written fields kept)")
+    return log
 
 
 def asked_kind(kind: str | None) -> str:
@@ -537,14 +799,15 @@ def stamped_head(
     repeat_cost: str | None,
     kind: str,
     model: bool | str,
+    pid: str | None = None,
 ) -> str:
     """The template with its head tokens replaced: the name once, a fresh
-    protocol id, COST when asked, KIND always, and with MODEL a `[model]`
+    protocol id (PID when given), COST when asked, KIND always, and with MODEL a `[model]`
     table after `preflight_audit` — the alias when --model named one, else
     its placeholder for `protocol-fill "model alias=…"` (phase 4, 2026-10-21),
     and for a computation the claim keys (`COMPUTE_CLAIM`)."""
     out = tmpl.replace("<name>", slug, 1).replace(
-        "<protocol-id>", new_protocol_id(root)
+        "<protocol-id>", pid or new_protocol_id(root)
     )
     if repeat_cost:
         out = out.replace(
@@ -681,9 +944,9 @@ def next_steps(
         steps.insert(
             0,
             f"Check the kind before anything else. {KIND_QUESTIONS}. If (1) "
-            f"is yes: remove the area just stamped (`rm -r {rel}`, nothing in "
-            f"it is committed) and run "
-            f"`labkit-init exp {slug} --repeat-cost {ln.repeat_cost} --kind fit`.",
+            f"is yes: `labkit-init exp {slug} --kind fit --change-kind` — before "
+            f"the first measurement; it keeps what you wrote and refuses to "
+            f"replace a file you changed.",
         )
     after = f"`finalize {rel}`" + (
         " checks the provenance (source frozen in the run, tracked in git)"
@@ -760,6 +1023,14 @@ def main(argv: list[str]) -> int:
     exp.add_argument(
         "--explore", action="store_true", help="only experiments/explore/<name>.py"
     )
+    exp.add_argument(
+        "--change-kind",
+        action="store_true",
+        help="restamp the existing area NAME under --kind before its first "
+        "measurement: the stamped scripts, README and test follow the new kind, "
+        "the protocol keeps its id and every written field; refused when a run "
+        "exists or when it would replace a file you changed",
+    )
     a = ap.parse_args(argv)
     if a.cmd == "lab":
         root = a.dir.resolve()
@@ -783,6 +1054,15 @@ def main(argv: list[str]) -> int:
         print(
             f"\nNext: fill the cells, read the render, look at real output; when it holds, `labkit-init exp {area_slug(a.name)}`."
         )
+        return 0
+    if a.change_kind:
+        if a.repeat_cost or a.model or a.report or a.explore:
+            ap.error(
+                "--change-kind takes only --kind: the repeat cost, the model and "
+                "the report fields come from the protocol"
+            )
+        _, report = change_kind(root, a.name, a.kind)
+        print(report)
         return 0
     _, report = stamp_area(
         root,

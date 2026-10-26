@@ -743,6 +743,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **`labkit-init exp NAME --kind KIND --change-kind`** restamps an area
+  under another kind before its first measurement: the old kind's stamped
+  scripts, README and area test are replaced where unchanged, the protocol
+  keeps its id, every written field, `type`, model alias and report fields;
+  explore files and data stay. It refuses, changing nothing, after a run
+  (the kind is part of the registration — a new protocol then), or when a
+  stamp was edited, a promise block changed, or a written field has no
+  place under the new kind (`scaffold.change_kind`, `plan_kind_change`).
+  A computation's next steps name it; until now they said to `rm -r` the
+  area, which deleted the moved explore file and left the computation's
+  test behind for the fit (review 2026-10-26).
+
 - **The follow-up judges every earlier decided BLOCKER, and carries what it
   does not find resolved.** The analysis prompt's piece is now `EARLIER
   DECIDED BLOCKERS`: every BLOCKER decided `fixed`, `accepted`, `dismissed`

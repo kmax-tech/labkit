@@ -12,7 +12,14 @@ from pathlib import Path
 
 from labkit.checks import readme_check
 from labkit.tools import scaffold, protocol_cuts
-from labkit.formats import console, promises, protocol_block, protocol_check, rules
+from labkit.formats import (
+    console,
+    promises,
+    protocol_block,
+    protocol_check,
+    rules,
+    standard_contract,
+)
 from protocol_fixture import head  # noqa: E402
 
 
@@ -468,9 +475,8 @@ class Exp(unittest.TestCase):
             first = re.search(r"^  1\. (.*)$", compute, re.M)
             assert first is not None, compute
             self.assertIn("Check the kind", first.group(1))
-            self.assertIn(
-                f"labkit-init exp foo --repeat-cost {cost} --kind fit", compute
-            )
+            self.assertIn("labkit-init exp foo --kind fit --change-kind", compute)
+            self.assertNotIn("rm -r", compute)
             self.assertIn("also when the deliverable is predictions", compute)
             fit = scaffold.next_steps(rel, "foo", "01", cost, "fit", False)
             self.assertNotIn("Check the kind", fit)
@@ -483,6 +489,111 @@ class Exp(unittest.TestCase):
         quiet(scaffold.stamp_area, self.root, "count-docs", "low", kind="compute")
         proto = next(self.root.glob("experiments/*-count-docs/PROTOCOL-*.md"))
         self.assertEqual(protocol_block.head(proto.read_text()).kind, "compute")
+
+    def _compute_area_with_work(self) -> tuple[Path, Path, str]:
+        """(area, protocol, its id): `foo-bar` stamped as a computation at
+        low cost after an explore file, its Question written."""
+        from labkit.tools import protocol_fill
+
+        quiet(scaffold.main, ["exp", "foo-bar", "--explore", "--repo", str(self.root)])
+        quiet(scaffold.stamp_area, self.root, "foo-bar", "low", kind="compute")
+        area = self.area()
+        proto = area / "PROTOCOL-foo-bar.md"
+        text = proto.read_text(encoding="utf-8")
+        label = next(
+            f.label
+            for f in protocol_check.fields(text)
+            if f.name.startswith("question")
+        )
+        proto.write_text(
+            protocol_fill.fill(text, label, "how well does a forest predict K?"),
+            encoding="utf-8",
+        )
+        pid = protocol_block.head(text).id
+        assert pid is not None
+        return area, proto, pid
+
+    def test_a_kind_changed_before_the_run_keeps_the_work(self) -> None:
+        """The next steps once said `rm -r` the area and stamp it anew: the
+        explore file moved into the area went with it, and the computation's
+        test under tests/ survived and was skipped by the new stamp — a fit
+        script beside a test expecting COUNT_FIELD (review 2026-10-26).
+        `--change-kind` keeps the explore file and the written Question,
+        keeps the id, and stamps the fit's scripts and test whole."""
+        area, proto, pid = self._compute_area_with_work()
+        explore = area / "explore" / "foo-bar.py"
+        self.assertTrue(explore.is_file())
+        kept = explore.read_text(encoding="utf-8")
+        rc = quiet(
+            scaffold.main,
+            [
+                "exp",
+                "foo-bar",
+                "--kind",
+                "fit",
+                "--change-kind",
+                "--repo",
+                str(self.root),
+            ],
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(explore.read_text(encoding="utf-8"), kept)
+        text = proto.read_text(encoding="utf-8")
+        head = protocol_block.head(text)
+        self.assertEqual((head.kind, head.id, head.repeat_cost), ("fit", pid, "low"))
+        self.assertIn("how well does a forest predict K?", text)
+        nn = area.name.split("-")[0]
+        fit = scaffold.script_stamps(
+            self.root,
+            area,
+            nn,
+            "foo-bar",
+            standard_contract.skeleton("low", "fit", False),
+            False,
+        )
+        for path, stamped in fit.items():
+            self.assertEqual(path.read_text(encoding="utf-8"), stamped, path)
+        (test,) = (self.root / "tests").glob("test_*foo_bar*.py")
+        self.assertNotIn("COUNT_FIELD", test.read_text(encoding="utf-8"))
+        compute = scaffold.script_stamps(
+            self.root,
+            area,
+            nn,
+            "foo-bar",
+            standard_contract.skeleton("low", "compute", False),
+            False,
+        )
+        for gone in set(compute) - set(fit):
+            self.assertFalse(gone.exists(), gone)
+
+    def test_a_kind_change_refuses_to_lose_work_and_changes_nothing(self) -> None:
+        """An edited stamp, or a run, holds the change; the area stays
+        byte for byte as it was."""
+        area, _, _ = self._compute_area_with_work()
+        script = area / "scripts" / "01_measure.py"
+        script.write_text(script.read_text(encoding="utf-8") + "# mine\n")
+
+        def snapshot() -> dict[Path, bytes]:
+            return {
+                p: p.read_bytes()
+                for p in sorted(self.root.rglob("*"))
+                if p.is_file() and ".git" not in p.parts
+            }
+
+        before = snapshot()
+        with self.assertRaises(console.Refused) as caught:
+            scaffold.change_kind(self.root, "foo-bar", "fit")
+        self.assertIn(
+            "01_measure.py: edited since the compute stamp", str(caught.exception)
+        )
+        self.assertEqual(snapshot(), before)
+        (area / "runs" / "2026-10-26T10-00-00_abcd").mkdir(parents=True)
+        before = snapshot()
+        with self.assertRaises(console.Refused) as caught:
+            scaffold.change_kind(self.root, "foo-bar", "fit")
+        self.assertIn("has measured", str(caught.exception))
+        self.assertIn("a new registration", str(caught.exception))
+        self.assertEqual(snapshot(), before)
 
     def test_the_kind_refusal_asks_the_questions(self) -> None:
         """Without `--kind` the refusal prints the same questions as the

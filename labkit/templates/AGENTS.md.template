@@ -42,7 +42,11 @@ seconds is a fit.
    `apply`, no → `compute`.
    `--model <alias>` when the model answers through `models.toml` (it
    writes `[model] alias` into the TOML head). The command stamps the low cut of the protocol and the
-   skeleton the kind calls for; without `--kind` it stamps nothing.
+   skeleton the kind calls for; without `--kind` it stamps nothing. A kind
+   chosen wrong is corrected before the first measurement with
+   `labkit-init exp <name> --kind <kind> --change-kind` (never by deleting
+   the area); after it, the measured protocol stays and a new one registers
+   the other kind.
 2. Write the registration: `protocol-fill <PROTOCOL> --list` names every
    open field, the TOML head's `type` and, with a model, each promise's
    `<id> sentence` first (`repeat_cost = "low"` is stamped); the fields
