@@ -543,6 +543,17 @@ Notiert, nicht geplant:
    11. Labor, nicht labkit: venv-Integrität im Standard-Check (A8: `--check`
        mit dem labkit des Images) und die abweichende Regel der ersten
        Messung (F).
+6. **Standardweg aus Problemen (Vorschlag 2026-10-27, nicht entschieden):**
+   [Note](docs/notes/2026-10-27-standard-way-out.md) mit Entwurfstext für
+   die gestempelte AGENTS.md: Belege werden nie entfernt oder
+   überschrieben; Ursache benennen, dann ihr Ausweg (korrigieren und neu
+   messen · Verfehlen berichten · `not assessable` · neu registrieren ·
+   anhalten und übergeben); Stolperdrähte, bei denen der Agent stattdessen
+   übergibt. Braucht einen Übergabebefehl mit erzeugtem Block (schließt
+   auch t18: jeder Bericht trägt Ergebnis, besprochenen Lauf oder
+   Übergabe), den Neuansatz (Punkt 3) und eine Auswertung in Bereich 09,
+   die ehrliche Übergabe von Ausweichen trennt. Eine Änderung der
+   Vorlage ist eine Intervention im labkit-Arm.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
