@@ -226,6 +226,24 @@ korrigieren, neu messen, Audit bestehen, verlangtes Ausgabeformat liefern.
 Erst wenn dieser Weg funktioniert, lohnt die nächste Runde mehr als
 weitere Sperren.
 
+Stand 2026-10-26 nachts: Punkt 1 umgesetzt (`e063a13`, Diagnose: t3 hatte
+die Typfragen im Kontext und nannte das Training eine „low-cost
+computation“ — das Wort stand in der Beschreibung der Spur `low`), Punkt
+2 umgesetzt (`d5c160c`: `--report-review` meldet nach jedem Zug den
+wirklichen Stand, ein sauberes `--again` hieß bisher fälschlich
+„released“; Prüfbefehle mit echtem Bereichspfad und der Conclusion als
+Voraussetzung; Entscheidungsliste trennt Implementierungsfehler,
+verfehltes Kriterium, ungültige Registrierung; Hooks verweisen auf
+`--findings`/`--decide` statt auf das Editieren des Records). Keine neuen
+Gates. Der Reparaturfall wartet auf zwei Dinge: (a) `git push` von labkit
+`main`, weil das Sandbox-Image labkit nur von GitHub installiert
+(labkit-paper `sandbox/labkit.pin`); (b) die Wahl des Startzustands —
+Vorschlag: Pilot-2-Fall A (t3, `G_VRH` noch in `FEATURES`, 08-17 #1
+`fixed`), aufgeräumt, damit nur die Folgeprüfung hält; der committete
+Pilotstand meldet heute zwölf Blocker. Danach Vorab-Festlegung schreiben,
+ein Versuch, Kostendeckel. Punkt 3 (Laufzuordnung t18) bleibt der nächste
+eigene Schritt.
+
 **Reihenfolge nach der achten Runde (beschlossen 2026-10-26).** Jeder
 Schritt schließt einen belegten Fehlweg und hat einen korrekten Zwilling.
 Die Abnahme ist eine neue Runde in Bereich 09 als eigener Auftrag. Sie misst
