@@ -32,7 +32,7 @@ grade back from a line's words.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 BLOCKER = "BLOCKER"
 WARNING = "WARNING"
@@ -155,6 +155,12 @@ def coded(
     )
 
 
+#: the slot a check that does not know the working directory leaves for the
+#: area in a command it names (`labkit-audit <area> --mode analysis`); the
+#: gate that knows the area fills it (`Findings(area=…)`)
+AREA_SLOT = "<area>"
+
+
 class Findings:
     """What the stations found, as data, and the channel they are told through.
 
@@ -165,11 +171,18 @@ class Findings:
         tell: Where each line goes as it is found — `print` by default;
             `None` collects silently, for a gate run inside another gate
             (report-check's finalize station).
+        area: The area as the reader types it; every `AREA_SLOT` in a
+            finding taken is replaced by it, so a named command runs as
+            printed (ninth haiku round: a step naming `<area>` was not
+            taken).
     """
 
-    def __init__(self, tell: Callable[[str], None] | None = print) -> None:
+    def __init__(
+        self, tell: Callable[[str], None] | None = print, *, area: str | None = None
+    ) -> None:
         self.found: list[GateFinding] = []
         self._tell = tell
+        self._area = area
 
     @property
     def blocked(self) -> list[str]:
@@ -208,7 +221,14 @@ class Findings:
         self.note(f"── {title} ──")
 
     def take(self, finding: GateFinding) -> None:
-        """Keep a finding and tell it."""
+        """Keep a finding, its area slot filled, and tell it."""
+        if self._area is not None and AREA_SLOT in finding.line:
+            area = self._area
+            finding = replace(
+                finding,
+                text=finding.text.replace(AREA_SLOT, area),
+                fix=finding.fix.replace(AREA_SLOT, area) if finding.fix else None,
+            )
         self.found.append(finding)
         self.note(f"  {finding.line}")
 

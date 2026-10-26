@@ -118,6 +118,26 @@ class EvidenceKind(unittest.TestCase):
 
 
 class Findings(unittest.TestCase):
+    def test_the_area_slot_is_filled_where_the_area_is_known(self):
+        """A check that does not know the working directory names
+        `labkit-audit <area> …`; the gate that does fills it, in the line
+        and in the summary. Without an area the slot stays."""
+        step = f"`labkit-audit {gate.AREA_SLOT} --mode analysis` follows it up"
+        f = gate.Findings(tell=None, area="experiments/01-x")
+        f.block(step)
+        f.take(
+            gate.coded(
+                gate.WARNING, "a.py:1", "x", evidence_kind=gate.GUARANTEED, fix=step
+            )
+        )
+        self.assertEqual(
+            f.blocked, ["`labkit-audit experiments/01-x --mode analysis` follows it up"]
+        )
+        self.assertIn("labkit-audit experiments/01-x --mode", f.warned[0])
+        bare = gate.Findings(tell=None)
+        bare.block(step)
+        self.assertEqual(bare.blocked, [step])
+
     def test_a_blocker_is_exit_1_and_named_again(self):
         f = gate.Findings()
         code, out = run(

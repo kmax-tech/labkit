@@ -187,6 +187,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **report-check prints the area in every command it names.** A check
+  that does not know the working directory leaves `<area>` in a step
+  (`labkit-audit <area> --mode analysis` follows a decided BLOCKER up);
+  report-check now fills it with the area as typed (`gate.AREA_SLOT`,
+  `Findings(area=…)`), so the step runs as printed.
 - **A kind changed after the first measurement holds the report.** The
   registration check read the commit of the first measurement against the
   kind that commit declared: a protocol registered and measured as a

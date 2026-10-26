@@ -716,7 +716,7 @@ def report_check(
         f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
     )
     ln = lane(ctx.head.repeat_cost)
-    findings = Findings()
+    findings = Findings(area=shown(ctx.area, Path.cwd()))
 
     # 1. declaration — a blocker does not stop the remaining stages
     if ctx.declaration_gap:
