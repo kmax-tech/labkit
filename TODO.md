@@ -220,14 +220,33 @@ Verträge:
   Conclusion oder Entscheidung nennt der Zustand das frühere
   Nicht-Bestätigen. Die Freigaberegel bleibt unverändert.
 
-Schritte, je ein Commit:
+Schritte, je ein Commit — **alle umgesetzt 2026-10-26** (CHANGELOG
+Unreleased):
 
-1. Strukturierte Laufangabe im Bericht (V1, Breaking). Zuerst eine
-   Entwurfsnote zu Feldform und Ort; der t3-Text wird Regressionstest.
-2. Stop prüft, was in der Sitzung committet wurde (V4).
-3. Frühere Ablehnung im Review-Zustand (V6).
-4. Journal der Auditversuche (V5).
-5. Berichtsreview als Record, Commit hält (V2, V3).
+1. Strukturierte Laufangabe im Bericht (V1): Besprechungsblock mit
+   TOML-Kopf, `protocol-fill --discuss` (`e123d01`,
+   [Note](docs/notes/2026-10-26-report-run-citations.md)). Der Prosamarker
+   war nie released; kein Breaking-Eintrag nötig.
+2. Stop prüft, was in der Sitzung committet wurde (V4) (`4126400`).
+3. Frühere Ablehnung im Review-Zustand (V6) (`202f7be`).
+4. Journal der Auditversuche (V5) (`bb0024f`).
+5. Berichtsreview als Record, Commit hält (V2, V3) (`1171eb0`).
+
+Replay ohne Modellaufruf auf den gelieferten Ständen der achten Runde:
+[Replay](docs/usability/2026-10-26-replay-round8-gates.md). t3 und t18
+werden jetzt gehalten, der Blocker nennt `--discuss`, danach das
+geschuldete Review. Bei t5 nennt der Zustand die frühere Ablehnung von
+08-48 #2; die Vermutung des Richters ist damit bestätigt.
+
+**Als Nächstes (Auftrag beim Autor):**
+
+1. Das bezahlte Review auf den t3- und t18-Berichten mit Besprechungsblock
+   und auf ehrlichen Gegenstücken: Werden die Ergebnisbehauptungen als
+   Claim gefangen, bleiben die ehrlichen Fassungen ohne Claim?
+2. Neue Runde in Bereich 09 als Abnahme. Neu zu beobachten: die Kosten des
+   Pflicht-Reviews je Bericht und ob Agenten die Blocker-Kette
+   (`--discuss` → Review → Bericht ändern) durchlaufen oder an ihr
+   abbrechen.
 
 Offen mit Auslöser, ohne Bauauftrag:
 

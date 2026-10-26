@@ -470,8 +470,8 @@ class ReportFiles(unittest.TestCase):
         code, out = self._gate(root, report)
         self.assertEqual(code, 1, out)
         self.assertIn(
-            f"REPORT.md: discusses {self.RUN} as not reported, and no report "
-            f"review of this state names no claim",
+            f"REPORT.md: discusses {self.RUN} as not reported and has no clean "
+            f"report review of this state (one naming no claim)",
             out,
         )
         self.assertRegex(out, r"--report-review \S*REPORT\.md` \(one model call\)")
@@ -521,7 +521,7 @@ class ReportFiles(unittest.TestCase):
         self._reviewed(report, area)  # reviewed the tree, not what is staged
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)
-        self.assertIn("no report review of this state names no claim", out)
+        self.assertIn("has no clean report review of this state", out)
         self._git(root, "add", "REPORT.md")  # the reviewed text staged…
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)  # …its record not: the commit lacks it

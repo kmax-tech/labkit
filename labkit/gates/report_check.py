@@ -1146,8 +1146,8 @@ def report_review_owed(
         out.append(
             GateFinding(
                 BLOCKER,
-                f"{rel}: discusses {runs_named} as not reported, and no report "
-                f"review of this state names no claim{since} — a cold reader checks "
+                f"{rel}: discusses {runs_named} as not reported and has no clean "
+                f"report review of this state (one naming no claim){since} — a cold reader checks "
                 f"that the report states none of their numbers as results: "
                 f"{command} (one model call)",
                 evidence_kind=GUARANTEED,
