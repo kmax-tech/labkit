@@ -85,6 +85,7 @@ from labkit.formats import (
     attempts,
     console,
     findings,
+    followup,
     promises,
     protocol_block,
     protocol_check,
@@ -96,6 +97,7 @@ from labkit.formats.standard_contract import COMPUTE_KIND, lane
 from labkit.formats.repo import (
     ProtocolChoiceError,
     area_path,
+    area_protocols,
     layout_root,
     no_such_area,
     shown,
@@ -165,7 +167,7 @@ INLINE_NOTE = (
     "`<line>: <row>`, and for a computation over a model's annotations the "
     "evidence that the annotator suits under `===== EVIDENCE: … =====` lines "
     "(the bound apply protocol and its result as FILE lines), and the area's "
-    "earlier `fixed` BLOCKERs under one `===== EARLIER FIXED BLOCKERS =====` "
+    "earlier decided BLOCKERs under one `===== EARLIER DECIDED BLOCKERS =====` "
     "line. Nothing else is in scope."
 )
 
@@ -460,8 +462,14 @@ def render(
     )
 
 
-#: the label of the piece that shows the earlier `fixed` BLOCKERs
-FIXED_LABEL = "EARLIER FIXED BLOCKERS"
+#: the label of the piece that shows the earlier decided BLOCKERs
+EARLIER_LABEL = "EARLIER DECIDED BLOCKERS"
+#: operating limits of that piece, not thresholds of meaning: past either
+#: the audit refuses, loudly, rather than show a cut list (decided
+#: 2026-10-26 after the follow-up pilots, whose pieces held one entry of
+#: under 2 kB; revisit with the sizes records keep under `followup`)
+EARLIER_MAX_ENTRIES = 40
+EARLIER_MAX_BYTES = 60_000
 #: a line that opens as a fix verdict — read whole or refused, never skipped
 FIX_OPEN = re.compile(r"^[\s>*`-]*\**FIX\**\s*(?:·|—|–|:)", re.M)
 #: a fix verdict line: `FIX · <record>#<n> · <verdict> · <why>`
@@ -472,14 +480,17 @@ FIX = re.compile(
 
 
 class Followup(NamedTuple):
-    """What an analysis audit is shown to judge earlier repairs, taken once:
-    the area's `fixed` BLOCKERs and the answering run's metrics.json as the
-    prompt shows it (`RunShown.metrics`; None when it shows none)."""
+    """What an analysis audit is shown to judge earlier decisions, taken
+    once: the area's earlier decided BLOCKERs (`followup.earlier_blockers`),
+    the answering run's metrics.json as the prompt shows it
+    (`RunShown.metrics`; None when it shows none), and the origin of each
+    shown finding's chain (its ref → the origin's finding)."""
 
-    blockers: list[findings.FixedBlocker]
+    blockers: list[followup.Member]
     metrics: dict | None
+    origins: dict[str, findings.Finding]
 
-    def check_present(self, e: findings.FixedBlocker) -> bool | None:
+    def check_present(self, e: followup.Member) -> bool | None:
         """Whether E's required check key stands in the metrics shown —
         None when E requires no check. From the snapshot the prompt
         renders, never from the file read again."""
@@ -488,37 +499,48 @@ class Followup(NamedTuple):
         return self.metrics is not None and e.finding.check in self.metrics
 
 
-def fixed_piece(followup: Followup) -> tuple[tuple[str, str], ...]:
-    """What MODE analysis shows of the earlier repairs: one `(label, text)`
-    piece with every `fixed` BLOCKER as `<record>#<n>`, its text, the reason
-    it was closed with and, when the finding requires a check, that
-    metrics.json key with its whole value as shown, or that it is missing —
-    or one piece saying there is none."""
-    if not followup.blockers:
-        return ((FIXED_LABEL, "none: no BLOCKER of this area is decided `fixed`"),)
+def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
+    """What MODE analysis shows of the earlier decisions: one `(label,
+    text)` piece with every earlier decided BLOCKER as `<record>#<n>`, its
+    text, its decision (status, reason, effect) and, when the finding
+    requires a check, that metrics.json key with its note and its whole
+    value as shown, or that it is missing — or one piece saying there is
+    none."""
+    if not shown.blockers:
+        return ((EARLIER_LABEL, "none: no earlier decided BLOCKER in this area"),)
     entries = []
-    for e in followup.blockers:
+    for e in shown.blockers:
+        f = e.finding
+        effect = f" (effect: {f.effect})" if f.effect else ""
         entry = (
-            f"{e.ref}\n  finding: {e.finding.text}\n  closed as fixed: "
-            f"{e.finding.reason or '(no reason given)'}"
+            f"{e.ref}\n  finding: {f.text}\n  decided: {f.status}{effect} — "
+            f"{f.reason or '(no reason given)'}"
         )
-        present = followup.check_present(e)
+        present = shown.check_present(e)
         if present is True:
-            value = json.dumps(
-                (followup.metrics or {})[e.finding.check], ensure_ascii=False
-            )
-            note = f" ({e.finding.check_note})" if e.finding.check_note else ""
-            entry += f"\n  required check `{e.finding.check}`{note} = {value}"
+            value = json.dumps((shown.metrics or {})[f.check], ensure_ascii=False)
+            note = f" ({f.check_note})" if f.check_note else ""
+            entry += f"\n  required check `{f.check}`{note} = {value}"
         elif present is False:
             entry += (
-                f"\n  required check `{e.finding.check}`: missing in the answering "
+                f"\n  required check `{f.check}`: missing in the answering "
                 f"run's metrics.json"
             )
         entries.append(entry)
-    return ((FIXED_LABEL, "\n".join(entries)),)
+    text = "\n".join(entries)
+    size = len(text.encode("utf-8"))
+    if len(entries) > EARLIER_MAX_ENTRIES or size > EARLIER_MAX_BYTES:
+        raise AuditError(
+            f"{len(entries)} earlier decided BLOCKERs, {size} bytes — past the "
+            f"follow-up's operating limit ({EARLIER_MAX_ENTRIES} entries, "
+            f"{EARLIER_MAX_BYTES} bytes); none is cut from what the auditor must "
+            f"judge, so the audit does not run. Settle earlier findings, or raise "
+            f"the limit in labkit with the measured sizes"
+        )
+    return ((EARLIER_LABEL, text),)
 
 
-def parse_fixes(text: str, followup: Followup) -> list[findings.FixVerdict]:
+def parse_fixes(text: str, shown_now: Followup) -> list[findings.FixVerdict]:
     """The report's `FIX · <record>#<n> · <verdict> · <why>` entries before
     the last verdict line, each bound to the decision EARLIER showed for
     that finding (`findings.decision_digest`) — labkit attaches the digest,
@@ -536,7 +558,7 @@ def parse_fixes(text: str, followup: Followup) -> list[findings.FixVerdict]:
     a `resolved` on a missing key is kept as the auditor wrote it."""
     m = list(VERDICT.finditer(text or ""))
     lines = ((text or "")[: m[-1].start()] if m else (text or "")).splitlines()
-    shown = {e.ref: e for e in followup.blockers}
+    shown = {e.ref: e for e in shown_now.blockers}
     out: list[findings.FixVerdict] = []
     for i, line in enumerate(lines):
         if not FIX_OPEN.match(line):
@@ -570,7 +592,7 @@ def parse_fixes(text: str, followup: Followup) -> list[findings.FixVerdict]:
                 f["verdict"],
                 "\n".join([f["why"].strip(), *(x.strip() for x in more)]),
                 e.finding.check,
-                followup.check_present(e),
+                shown_now.check_present(e),
             )
         )
     problem = findings.fix_verdict_problem(out)
@@ -600,19 +622,64 @@ def fix_block(lines: list[str], at: int) -> list[str]:
     return out
 
 
-def decisions_moved(earlier: list[findings.FixedBlocker], area: Path) -> list[str]:
+def decisions_moved(earlier: list[followup.Member], area: Path) -> list[str]:
     """The refs in EARLIER whose decision is no longer the one the prompt
     showed — the record re-read now, gone or another digest. A verdict on a
     decision that changed while the auditor read it judges neither."""
-    now = {e.ref: findings.decision_digest(e.finding) for e in earlier_now(area)}
+    now = {
+        ref: findings.decision_digest(m.finding)
+        for ref, m in followup.chain(findings.area_records(area)).members.items()
+    }
     return [
         e.ref for e in earlier if now.get(e.ref) != findings.decision_digest(e.finding)
     ]
 
 
-def earlier_now(area: Path) -> list[findings.FixedBlocker]:
-    """The area's `fixed` BLOCKERs as its records hold them now."""
-    return findings.fixed_blockers(findings.area_records(area))
+def followup_size(shown: Followup) -> tuple[int, int]:
+    """(entries, bytes) of the follow-up piece SHOWN renders — what the
+    record keeps to revisit the operating limits."""
+    ((_, text),) = earlier_piece(shown)
+    return len(shown.blockers), len(text.encode("utf-8")) if shown.blockers else 0
+
+
+def carried_of(
+    shown: Followup, fixes: list[findings.FixVerdict]
+) -> list[findings.Finding]:
+    """The findings the new record carries: one per shown BLOCKER whose
+    verdict is not `resolved` (`followup.carried_finding`). A shown one
+    without a verdict is not carried — unchecked, it stays where it is."""
+    by_ref = {e.ref: e for e in shown.blockers}
+    return [
+        followup.carried_finding(by_ref[v.ref], v, shown.origins[v.ref])
+        for v in fixes
+        if v.verdict != "resolved"
+    ]
+
+
+def earlier_of(
+    area: Path, current: Callable[[findings.Record], bool], metrics: dict | None
+) -> Followup:
+    """The follow-up of AREA: its earlier decided BLOCKERs — those of a
+    record that CURRENT does not tell as the state now audited — with the
+    origin of each, and METRICS as shown. Raises AuditError when there are
+    earlier BLOCKERs and the area holds more than one protocol: the records
+    carry no protocol id, so whose question an earlier finding judged is
+    not certain."""
+    records = findings.area_records(area)
+    try:
+        c = followup.chain(records)
+        shown = followup.earlier_blockers(records, current)
+    except findings.FindingsError as exc:
+        raise AuditError(str(exc)) from exc
+    if shown and len(area_protocols(area)) > 1:
+        raise AuditError(
+            f"{len(shown)} earlier decided BLOCKER(s) and {len(area_protocols(area))} "
+            f"protocols in {area.name}: the records name no protocol, so which "
+            f"question an earlier finding judged is not certain — the follow-up "
+            f"does not guess; one protocol per area, or settle the earlier findings"
+        )
+    origins = {e.ref: c.members[c.origin[e.ref]].finding for e in shown}
+    return Followup(shown, metrics, origins)
 
 
 def parse_clarity(text: str) -> dict:
@@ -900,9 +967,24 @@ def bound_prompt(
         run_dir, why = audited_run(area, protocol, text)
         run_id = run_dir.name if run_dir is not None else findings.NO_RUN
         shown = run_shown(area, run_dir, why)
-    followup = Followup(
-        earlier_now(area) if mode == ANALYSIS else [],
-        shown.metrics() if shown else None,
+    block = promises.block_stamp(text)
+    registration = protocol_check.registration_stamp(text)
+
+    def current(r: findings.Record) -> bool:
+        """Is R a record of the state this prompt shows?"""
+        return (
+            r.mode == ANALYSIS
+            and r.scope_sha == snap.sha
+            and r.block_sha == block
+            and r.run_id == run_id
+            and r.shown_sha == (shown.sha if shown else None)
+            and dict(r.registration) == registration
+        )
+
+    shown_now = (
+        earlier_of(area, current, shown.metrics() if shown else None)
+        if mode == ANALYSIS
+        else Followup([], None, {})
     )
     changed = "the area changed while it was read; run the audit again"
     try:
@@ -918,7 +1000,7 @@ def bound_prompt(
                 snap.text,
                 shown.pieces if shown else (),
                 validity_evidence(area, text),
-                fixed_piece(followup) if mode == ANALYSIS else (),
+                earlier_piece(shown_now) if mode == ANALYSIS else (),
             ),
         )
     except KeyError as exc:
@@ -940,7 +1022,7 @@ def bound_prompt(
         shown_sha,
         indexed,
         protocol_check.registration_stamp(text),
-        followup,
+        shown_now,
     )
 
 
@@ -1039,7 +1121,7 @@ def main(argv: list[str]) -> int:
             shown_sha,
             indexed,
             registration,
-            followup,
+            shown_now,
         ) = bound_prompt(args.mode, args.area, reading)
         console.progress(
             "labkit-audit",
@@ -1073,7 +1155,7 @@ def main(argv: list[str]) -> int:
             shown_sha,
             indexed,
             registration,
-            followup,
+            shown_now,
         )
     finally:
         if not running.ended:
@@ -1090,7 +1172,7 @@ def _record(
     shown_sha: str | None,
     indexed: list[Path],
     registration: dict[str, str],
-    followup: Followup,
+    shown_now: Followup,
 ) -> int:
     """Read REPORT, write its record and end RUNNING with it; print what the
     person decides. Exit 1 on a blocker or a warning, 0 on none, 2 when the
@@ -1100,8 +1182,8 @@ def _record(
     console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
     try:
         result = parse(report)
-        fixes = parse_fixes(report, followup)
-        moved = decisions_moved(followup.blockers, args.area)
+        fixes = parse_fixes(report, shown_now)
+        moved = decisions_moved(shown_now.blockers, args.area)
         if moved:
             raise AuditError(
                 f"the decision on {', '.join(moved)} changed while the auditor read "
@@ -1129,6 +1211,8 @@ def _record(
             run_id=run_id,
             shown_sha=shown_sha,
             fix_verdicts=fixes,
+            carried=carried_of(shown_now, fixes),
+            followup_size=followup_size(shown_now) if args.mode == ANALYSIS else None,
         )
     except ValueError as exc:  # verdict and finding lines disagree
         running.end("none", error=str(exc))
@@ -1147,13 +1231,13 @@ def _record(
     print()
     for line in decision_lines(findings.read(recorded), args.area, report):
         print(line)
-    for line in fix_lines(followup.blockers, fixes):
+    for line in fix_lines(shown_now.blockers, fixes):
         print(line)
-    return 1 if b or w else 0
+    return 1 if b or w or carried_of(shown_now, fixes) else 0
 
 
 def fix_lines(
-    earlier: list[findings.FixedBlocker], fixes: list[findings.FixVerdict]
+    earlier: list[followup.Member], fixes: list[findings.FixVerdict]
 ) -> list[str]:
     """One line per earlier `fixed` BLOCKER the audit was shown: its
     verdict, or that it has none and its repair stays unchecked."""

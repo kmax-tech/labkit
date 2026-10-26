@@ -693,6 +693,31 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **The follow-up judges every earlier decided BLOCKER, and carries what it
+  does not find resolved.** The analysis prompt's piece is now `EARLIER
+  DECIDED BLOCKERS`: every BLOCKER decided `fixed`, `accepted`, `dismissed`
+  or `deferred` in a record that is not of the state now audited, with its
+  decision (status, effect, reason). `resolved` means the fault named is
+  not in the state shown — repaired, or the finding did not apply; the why
+  says which. On `unresolved` or `not_assessable` labkit writes the finding
+  into the new record as a *carried* finding: open, the origin's text under
+  `carried from <record>#<n> (<verdict>): `, the check and note kept,
+  `carries = "<record>#<n>"` (bound in the decision digest). The record's
+  `blockers` counts it, `carried_blockers` says how many; a reader refuses
+  a record whose carried findings and counts disagree. `followup.chain`
+  follows `carries` to the origin and refuses a reference to no finding,
+  to the same or a later record, to no BLOCKER, a loop, and two carried
+  findings of one origin in one record; only the head of each origin is
+  shown again, so a limit does not multiply. Operating limits of the
+  piece: 40 entries, 60 kB — past either the audit refuses, the record
+  keeps the measured size as `followup`. An area with more than one
+  protocol refuses a follow-up while earlier decided BLOCKERs exist (the
+  records name no protocol). Why: an `accepted` limit in an older record
+  left the result without trace — the renderer reads covering records
+  only (decided 2026-10-26 after the fixed-followup pilots).
+  `findings.FixedBlocker` and `fixed_blockers` moved to
+  `followup.Member` and `followup.earlier_blockers`.
+
 - **The analysis audit judges every earlier `fixed` BLOCKER.** The prompt
   shows each BLOCKER of the area decided `fixed`, as `<record>#<n>` with
   the reason it was closed with; the auditor writes one `FIX · <record>#<n>

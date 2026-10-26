@@ -173,6 +173,11 @@ class Finding:
     # what the check's value must show, as the auditor wrote it after the
     # key ("" when it wrote none); bound with the check
     check_note: str = ""
+    # a carried finding: the earlier finding it continues, `<record file>#<n>`
+    # — written by labkit-audit when a follow-up did not find it resolved,
+    # never by a person ("" for the auditor's own findings); its origin is
+    # found by following the chain (`followup.origin_of`)
+    carries: str = ""
 
     @property
     def effect_owed(self) -> bool:
@@ -228,6 +233,8 @@ _CHECK = re.compile(
     r"(?:\s*\((?P<paren>.*\S.*)\)|\s+[—–]\s+(?P<dash>\S.*))?\s*$"
 )
 CHECK_KEY = re.compile(r"^[a-z][a-z0-9_]*$")
+#: how a carried finding names the one it continues: `<record file>#<n>`
+CARRIES_REF = re.compile(r"^[^\s#/]+\.toml#[1-9]\d*$")
 CHECK_FORM = (
     "a closing `· check: <metrics key>` (lowercase snake_case), optionally "
     "followed by ` (<what its value must show>)` or ` — <what its value must "
@@ -262,7 +269,8 @@ def check_of(text: str) -> tuple[str, str]:
 
 def decision_digest(f: Finding) -> str:
     """The digest of F as decided — grade, text, status, reason, effect, and
-    the required check and its note when there is one — which a review and a fix verdict
+    the required check and its note and the finding a carried one continues
+    when there are — which a review and a fix verdict
     bind to (`reviews.Decision.decision_sha`, `FixVerdict.decision_sha`): a
     changed reason, effect or check is another decision, and a verdict on
     the old one says nothing about it. A finding without a check has the
@@ -270,6 +278,8 @@ def decision_digest(f: Finding) -> str:
     fields = [f.grade, f.text, f.status, f.reason, f.effect]
     if f.check:
         fields += [f.check] + ([f.check_note] if f.check_note else [])
+    if f.carries:
+        fields += ["carries", f.carries]
     return digest(as_stored(fields).encode("utf-8"))
 
 
@@ -404,34 +414,6 @@ def open_findings(
     ]
 
 
-@dataclass(frozen=True)
-class FixedBlocker:
-    """A BLOCKER decided `fixed`, with the record it stands in and its number."""
-
-    record: Record
-    n: int
-    finding: Finding
-
-    @property
-    def ref(self) -> str:
-        """`<record>#<n>` — how the analysis audit's prompt names it."""
-        return f"{self.record.path.name}#{self.n}"
-
-
-def fixed_blockers(records: Iterable[Record]) -> list[FixedBlocker]:
-    """Every BLOCKER decided `fixed` in RECORDS, in record order — what the
-    next analysis audit is shown to judge whether the repair holds. A
-    `fixed` names a repair; whether it holds is not the decider's word
-    (eighth haiku round, t3: a leak `fixed` by dropping one of two leaking
-    features, the check the finding asked for never run)."""
-    return [
-        FixedBlocker(r, n, f)
-        for r in records
-        for n, f in enumerate(r.findings, 1)
-        if f.grade == "BLOCKER" and f.status == "fixed"
-    ]
-
-
 def limit_label(record: Record, n: int) -> str:
     """The protocol label that carries finding N of RECORD as a limit."""
     return f"{LIMIT_PREFIX}{record.path.stem} #{n})"
@@ -530,6 +512,8 @@ def write(
     run_id: str | None = None,
     shown_sha: str | None = None,
     fix_verdicts: Iterable[FixVerdict] = (),
+    carried: Iterable[Finding] = (),
+    followup_size: tuple[int, int] | None = None,
     now: float | None = None,
 ) -> Path:
     """Write the audit's findings file into AREA/audits/ and return its path.
@@ -548,8 +532,14 @@ def write(
     FIX_VERDICTS are written as `[[fix_verdict]]` tables after the
     findings, in mode analysis only; a verdict outside FIX_VERDICTS, one
     without its why and a second one on the same finding are refused
-    (`fix_verdict_problem`).
+    (`fix_verdict_problem`). CARRIED are the earlier findings a follow-up
+    did not find resolved, as `followup.carried_finding` built them: each
+    is written open after the auditor's findings, counted in `blockers`
+    and in `carried_blockers` — the counts are the record's whole, the
+    auditor's own verdict is FINDINGS'. FOLLOWUP_SIZE (entries, bytes) is
+    what the follow-up piece measured, written as `followup`.
     """
+    carried = tuple(carried)
     if mode not in MODES:
         raise ValueError(f"mode {mode!r} — one of {', '.join(MODES)}")
     if (mode == "analysis") != (run_id is not None):
@@ -567,6 +557,7 @@ def write(
         if problem:
             raise ValueError(f"verdict: {problem}")
     fix_lines = _fix_verdict_lines(mode, fix_verdicts)
+    carried_lines = _carried_lines(mode, carried)
     disagree = verdict_disagrees(verdict, [grade for grade, _ in findings])
     if disagree:
         raise ValueError(
@@ -592,9 +583,17 @@ def write(
         + " }",
         *([f"run_id = {_s(run_id)}"] if run_id is not None else []),
         *([f"shown_sha = {_s(shown_sha)}"] if shown_sha is not None else []),
-        f"blockers = {b}",
+        f"blockers = {b + len(carried)}",
         f"warnings = {w}",
         f"notes = {k}",
+        *([f"carried_blockers = {len(carried)}"] if carried else []),
+        *(
+            [
+                f"followup = {{ entries = {followup_size[0]}, bytes = {followup_size[1]} }}"
+            ]
+            if followup_size is not None
+            else []
+        ),
     ]
     for grade, text in findings:
         check, note = check_of(text)
@@ -610,8 +609,36 @@ def write(
             'status = "open"',
             'reason = ""',
         ]
-    lines += fix_lines
+    lines += carried_lines + fix_lines
     return create_file(area / DIR, f"{stamp}-{mode}", ".toml", "\n".join(lines) + "\n")
+
+
+def _carried_lines(mode: str, carried: tuple[Finding, ...]) -> list[str]:
+    """CARRIED as open `[[finding]]` tables. Raises ValueError outside mode
+    analysis and on one that is no BLOCKER or names no finding it carries."""
+    if carried and mode != "analysis":
+        raise ValueError(
+            f"mode {mode!r} with carried findings: only a follow-up carries"
+        )
+    lines: list[str] = []
+    for f in carried:
+        if f.grade != "BLOCKER" or not CARRIES_REF.match(f.carries):
+            raise ValueError(
+                f"a carried finding is a BLOCKER naming `<record>#<n>`: "
+                f"{f.grade} carries {f.carries!r}"
+            )
+        lines += [
+            "",
+            "[[finding]]",
+            f"grade = {_s(f.grade)}",
+            f"text = {_s(f.text)}",
+            *([f"check = {_s(f.check)}"] if f.check else []),
+            *([f"check_note = {_s(f.check_note)}"] if f.check_note else []),
+            f"carries = {_s(f.carries)}",
+            'status = "open"',
+            'reason = ""',
+        ]
+    return lines
 
 
 def _fix_verdict_lines(mode: str, verdicts: Iterable[FixVerdict]) -> list[str]:
@@ -775,6 +802,11 @@ def _finding(path: Path, i: int, row: object) -> Finding:
     if not isinstance(effect, str):
         raise FindingsError(f"{path}: finding {i}: effect is not a string")
     check, note = _check_fields(path, i, row)
+    carries = row.get("carries", "")
+    if not isinstance(carries, str) or (carries and not CARRIES_REF.match(carries)):
+        raise FindingsError(
+            f"{path}: finding {i}: carries {carries!r} — `<record file>#<n>` or absent"
+        )
     found = Finding(
         row["grade"],
         row["text"],
@@ -783,6 +815,7 @@ def _finding(path: Path, i: int, row: object) -> Finding:
         effect.strip(),
         check,
         note,
+        carries,
     )
     problem = _effect_problem(found)
     if problem:
@@ -792,7 +825,8 @@ def _finding(path: Path, i: int, row: object) -> Finding:
 
 def _check_fields(path: Path, i: int, row: dict) -> tuple[str, str]:
     """(check, check_note) of the i-th `[[finding]]` table: a metrics key or
-    "", and a note only beside a check. Raises FindingsError otherwise."""
+    "", and a note only beside a check. Raises FindingsError otherwise
+    (`carries` is read beside it, `_carries_field`)."""
     check = row.get("check", "")
     if not isinstance(check, str) or (check and not CHECK_KEY.match(check)):
         raise FindingsError(
@@ -832,6 +866,19 @@ def _record_of(path: Path, text: str) -> Record:
         raise FindingsError(
             f"{path}: fix_verdict in a {audit['mode']} audit — only an analysis "
             f"audit judges earlier repairs"
+        )
+    carried_n = audit.get("carried_blockers", 0)
+    problem = count_problem("carried_blockers", carried_n)
+    if (
+        problem
+        or carried_n != sum(1 for f in parsed if f.carries)
+        or carried_n > audit["blockers"]
+    ):
+        raise FindingsError(
+            f"{path}: [audit] carried_blockers = {carried_n!r}, the record carries "
+            f"{sum(1 for f in parsed if f.carries)} finding(s) with `carries` and "
+            f"counts blockers = {audit['blockers']} — the counts hold every carried "
+            f"BLOCKER; a carried finding was lost, added or uncounted by hand"
         )
     outrun = counts_outrun(
         (audit["blockers"], audit["warnings"], audit["notes"]),
@@ -977,6 +1024,7 @@ def write_decision(
         effect.strip(),
         old.check,
         old.check_note,
+        old.carries,
     )
     _hold_effect(decided)
     text = _decided_text(path, n, decided)
