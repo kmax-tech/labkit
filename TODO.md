@@ -511,6 +511,38 @@ Notiert, nicht geplant:
    Punkt 3 (f).
    (c) Ein nie gestagter, gelöschter Record lässt keinen Ausweg außer
    `git checkout`/`git add`; der Ausweg ist Punkt 3 (e).
+5. **Audit 2026-10-27** ([Register](docs/audit-2026-10-27.md), HEAD
+   `27a33b5`, mit Red-Team in Wegwerf-Repos). Offene Entscheidungen, je
+   ein Paar aus Prüfung und Fortsetzungsweg:
+   1. Lauf an Code binden (A1): runlog hält den Bereichsstempel fest,
+      finalize vergleicht ihn bei jeder Art; Ausweg „neu messen, dann
+      auditieren“. Wahrscheinlichster Haiku-Weg.
+   2. Laufrecords und Audit-Dateien nach dem ersten Commit unveränderlich
+      und getrackt (`git check-ignore` leer), Reflog als Zeuge (A4, A5,
+      A6, A7, A9); Ausweg: wiederherstellen oder Neuansatz.
+   3. Lauf vor dem Registrierungs-Commit (A4) und gelöschter auditierter
+      Lauf (A5) brauchen den Neuansatz als Ausweg — in Punkt 3 aufnehmen.
+      Dabei kein zweites Protokoll im selben Bereich, solange Records
+      keine Protokoll-id tragen (B1: die Folgeprüfung verweigert dort).
+   4. `dismissed`/`deferred` auf einem BLOCKER schuldet die
+      Entscheidungsprüfung wie `stands` (A2)? Kostet Prüfaufrufe.
+   5. Umformulierte Begründung: die nächste Prüfung sieht frühere Urteile
+      (A3).
+   6. Fit-Vorlage: `--seed`-Läufe als Wiederholung (`repeat_of`) und
+      `--repeat-of` im Schätzerskript, oder Text korrigieren (C1, A13) —
+      vor dem Reparaturfall, der eine Fit-Aufgabe ist.
+   7. Hooks schweigen ohne `.git` im Projektordner und ohne Stop-Basis
+      (C8, A12): laut scheitern.
+   8. Symlink-Bericht (A10), `--again` mit Claim (C6), Stop-Semantik nach
+      `--no-verify` (C7): klein, je ein Commit.
+   9. Drift-Paket nur Text (C2–C5, C10–C13, C16, C17, E) und der
+      Fresh-Home-Test (C14).
+   10. Doppelte Heimaten, oberste Zeilen von D (Befehlsbauer mit
+       `--protocol`, TOML-Schreiber, Bereichsauflösung, Antwortgrammatik,
+       Statusliste).
+   11. Labor, nicht labkit: venv-Integrität im Standard-Check (A8: `--check`
+       mit dem labkit des Images) und die abweichende Regel der ersten
+       Messung (F).
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
