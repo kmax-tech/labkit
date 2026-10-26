@@ -1,0 +1,61 @@
+# written by labkit-audit — decide each finding: `labkit-audit <area> --decide N STATUS REASON`, or set status and reason here
+# a reason is a TOML string: "double quotes" escape a quote as \" and a backslash as \\; 'single quotes' take one line of text without a ' or a control character
+[audit]
+date = "2026-10-26T19:08"
+mode = "analysis"
+model = "opus"
+scope_sha = "4a77da2014da"
+block_sha = "44012d989478"
+registration = { "kind" = "fit", "Question / hypothesis" = "d053920b9bef", "Success / failure criterion" = "124dfc31cd23", "Admissibility condition" = "bf5a0af0405e", "Null condition / anchors" = "9de3199f1fd6" }
+run_id = "2026-10-26T17-37-23_3951"
+shown_sha = "6eafb88fd514"
+blockers = 3
+warnings = 3
+notes = 3
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The Conclusion reports a number and a feature set that no shown run produced. It gives R² = 0.726 for a forest \"trained on elastic_anisotropy, G_VRH, and space_group\" and says the criterion passed. The answering run's metrics.json has c1_score 0.5465, a2_pass false and c1_pass null. FEATURES (scripts/00_prepare.py:67) has space_group, n_sites, volume_per_atom and n_elements, and two of the named features are ones [A3] excludes · The reported R² (0.726 against 0.5465) and the reported C1 verdict (\"passing\" against null) are both wrong for run 2026-10-26T17-37-23_3951 (runs/…/metrics.json: \"c1_score\": 0.5465261679590219, \"c1_pass\": null) · new class (a hand-typed number and feature list that contradict the run's metrics.json); LAB-050 Analysis audit before reporting · regenerate the Summary from this run's metrics.json, stating C1 has no verdict because A2 failed"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/scripts/01_measure.py:277 · A2's target of 0.0 is not what the null lane can reach. The code's own docstring (01_measure.py:269) says a fitted forest \"sits slightly below\" 0.0. A forest fit on permuted labels and scored out of fold has a negative expected R², because its predictions vary around the mean without tracking gold. The ±0.15 band was meant to be derived \"from the spread of the null lane over seeds on the probe\" (01_measure.py:123), but --probe is barred at repeat_cost low (main), so the band was never derived. The gate therefore fails an instrument that works and withholds the C1 verdict · a2_score −0.174 lies outside 0 ± 0.15, so a2_pass is false and c1_pass is null on this run. Whether −0.174 is the null lane's normal level or noise is unknown. Assignment: a2_score of the null lane over seeds 1–5 (`01_measure.py --seed k`), compared with 0.0 ± 0.15 · Scar row \"Gate without anchor/resolution\" and \"Trivial solution passes / null probe without a target\", target half (LAB-015 Preflight audit before freezing) · derive the null lane's expected R² and band from null-lane draws over seeds. Where that departs from the registered 0.0, that is a new registration, and this run's C1 stays without a verdict · check: a2_null_seed_range (the null lane's min and max a2_score over the seeds; it must contain the target the band is held to)"
+check = "a2_null_seed_range"
+check_note = "the null lane's min and max a2_score over the seeds; it must contain the target the band is held to"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:11 · The hypothesis asks for \"R² ≥ 0.80 on out-of-fold test data\", but [C1] tests the R² against the null lane's R² plus 0.25, not against 0.80. The code implements C1 as registered (01_measure.py:340), so C1 cannot answer the registered question · On this run the bar would be −0.174 + 0.25 = 0.076. If A2 passed, c1_pass would be true at c1_score 0.5465, which is 0.25 below the question's 0.80, and a \"yes\" would be read for a question whose answer is \"no\" · LAB-004 Identifiers make the intent addressable ([C] fixes which value of which metric supports the hypothesis) · the Conclusion states that the 0.80 bar is not tested by C1 and reports c1_score against it descriptively only; a 0.80 criterion is a new experiment (LAB-017 The number of audits follows the cost tier)"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/01_measure.py:336 · a3_pass checks the source columns in today's 00_prepare.FEATURES (feature_table re-imports the script at evaluation time), not the feature arrays in the frozen data/prepared/compounds_v1.jsonl the run read. The file kept its name \"_v1\" across at least one change of what its features mean (the earlier run's features included G_VRH and poisson_ratio), and the Summary names a third feature set · If compounds_v1.jsonl still carries an older feature array, a3_pass true is reported while c1_score is computed on leaked features. The drop of c1_score from 0.979 to 0.547 suggests the data was regenerated, but this is not shown. Assignment: the length and source of `features` in data/prepared/compounds_v1.jsonl (it must be 4, matching FEATURES), and the prepare run's record behind items_sha 2fe9afab91dc · Scar row \"Provenance incomplete\" (LAB-015 Preflight audit before freezing); a reused dataset name after a change of meaning is a new class · hold [A3] to the feature table recorded with the prepared data the run froze, and rename the dataset when its features change meaning"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/00_prepare.py:96 · The protocol excludes items with K_VRH = 0 (\"Test set items (K_VRH=0 in source) are excluded from scoring\"). The producer counts zero and NaN labels in the train CSV (train_zero_labels) but writes every train row with `gold: float(row['K_VRH'])` and refuses nothing · A train row with K_VRH 0 would be scored as gold 0.0 in both lanes, which shifts SST and c1_score, and a NaN row would crash or poison _r2. Assignment: train_zero_labels and train_nan_labels from the prepare run's metrics.json; both must be 0 · new class (an exclusion that is registered and counted but not enforced) · make the producer refuse, or filter and count, zero and NaN train labels before writing"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/01_measure.py:91 · c1_score comes from one seed (seed 0) and one fold split. 02_analyze.py --draws reports \"one draw — no spread\", and the Conclusion makes a claim of its own about the margin · c1_score 0.5465, and any verdict against the bar, has no noise floor. Assignment: c1_score range over seeds 1–5 via `--seed`, read with `02_analyze.py --draws` · Scar row \"Spread unknown\" (LAB-015 Preflight audit before freezing) · repeat the registered command over a few seeds and report the range next to the kept number"
+status = "open"
+reason = ""
+
+[[fix_verdict]]
+record = "2026-10-26T08-17-analysis.toml"
+n = 1
+decision_sha = "99a2ac927718"
+verdict = "not_assessable"
+why = "The code changed: FEATURES (00_prepare.py:67) no longer names G_VRH, poisson_ratio or elastic_anisotropy, and a3_pass is true. But the required check `feature_sources` is missing from the answering run's metrics.json. evaluate_rows writes only rule[\"a3_pass\"] (01_measure.py:336) and drops rule[\"feature_sources\"], so the closing reason's statement that \"the run's metrics.json reports feature_sources\" is false.\nThe rows do not show which features the frozen data actually carries (see the WARNING on 01_measure.py:336)."
+check = "feature_sources"
+check_present = false

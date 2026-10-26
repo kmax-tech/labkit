@@ -300,9 +300,9 @@ Offen mit Auslöser, ohne Bauauftrag:
    gespeichert und gebunden; jede Antwort liegt vor dem Lesen unter
    `audits/answers/<Versuch>.txt`, das Journal nennt sie. Replay ohne
    Modellaufruf (`aacf7bc`): 12/12 Records, gleiche Urteile. **Offen:**
-   D2 ohne sichtbaren Schalter, vorab festgelegt (`adc1d71`, drei
-   Ziehungen, Deckel 3 USD, `run_pilot2_d2.sh`) — bezahlter Schritt
-   wartet auf Freigabe; danach Gate anhand der gespeicherten Records
+   D2 ohne sichtbaren Schalter (`adc1d71`) gelaufen: 3/3
+   `not_assessable`, drei Records, 1,46 USD; Pilot 2 damit 15/15 FIX-
+   Urteile wie vorab festgelegt. Als Nächstes: Gate anhand der gespeicherten Records
    prüfen (ein neuer unabhängiger Befund wie die Nullspur-Streuung bleibt
    eigenständig wirksam: `resolved` für den alten Leak gibt den Lauf
    nicht frei). Bisher:

@@ -204,3 +204,29 @@ and every draw named it. D2 measures the missing check without it.
   a reported cost); no further draw
   ([run_pilot2_d2.sh](2026-10-26-fixed-followup-pilot-2/run_pilot2_d2.sh)).
   A, B and C are not drawn again: the parser fix changed no verdict.
+
+## D2 — result (2026-10-26, after its three calls)
+
+Three of three calls answered and wrote a record, each answer kept under
+`audits/answers/`; 1.46 USD (0.27–0.60).
+
+| draw | FIX verdict | `check_present` | as expected |
+|---|---|---|---|
+| D2-1 | `not_assessable` | false | yes |
+| D2-2 | `not_assessable` | false | yes |
+| D2-3 | `not_assessable` | false | yes |
+
+Each draw finds the gap in the code itself, without a switch to point
+at: `evaluate_rows` copies only `rule["a3_pass"]` into the metrics and
+drops `rule["feature_sources"]` (01_measure.py:336–338), so the reason's
+claim that metrics.json reports it is false. Each also grants the code
+change (FEATURES without the tensor columns, `c1_score` 0.979 → 0.547)
+and still does not call it resolved: "the check the finding asked for
+never ran" (D2-1). Each added a new check on the null lane's spread over
+seeds, stored with its note — the field form that cost six records
+before.
+
+With D2 the second pilot stands at 15 of 15 FIX verdicts as
+pre-registered (A, B, C, D from the replayed records, D2 from its own).
+Still a first look: one task, one leak, one model, three draws per case,
+the rule and the diagnostic placed in view.

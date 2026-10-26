@@ -1,0 +1,49 @@
+# written by labkit-audit — decide each finding: `labkit-audit <area> --decide N STATUS REASON`, or set status and reason here
+# a reason is a TOML string: "double quotes" escape a quote as \" and a backslash as \\; 'single quotes' take one line of text without a ' or a control character
+[audit]
+date = "2026-10-26T19:06"
+mode = "analysis"
+model = "opus"
+scope_sha = "4a77da2014da"
+block_sha = "44012d989478"
+registration = { "kind" = "fit", "Question / hypothesis" = "d053920b9bef", "Success / failure criterion" = "124dfc31cd23", "Admissibility condition" = "bf5a0af0405e", "Null condition / anchors" = "9de3199f1fd6" }
+run_id = "2026-10-26T17-37-23_3951"
+shown_sha = "6eafb88fd514"
+blockers = 3
+warnings = 1
+notes = 0
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/scripts/01_measure.py:278 · The A2 anchor uses 0.0 as the null lane's expected score. That is the score of the gold mean, not of a fitted forest. The code says so itself at `01_measure.py:269` (\"a fitted forest sits slightly below\"). A 500-tree forest fitted to permuted labels makes predictions that vary, and that variance alone pushes its out-of-fold R² below 0. `MeasureConfig` (`01_measure.py:123`) says `null_band` is derived \"from the spread of the null lane over seeds on the probe\", but `--probe` is refused at `repeat_cost = \"low\"`. So the 0.15 band was never derived · `a2_pass` is false (metrics.json `a2_score` −0.174 against band 0.15), so `c1_pass` = None and the run gives no verdict. The cause may be a property of the estimator rather than an instrument fault. Assignment for the caller: from the null-lane rows of output/bulk-modulus.jsonl, compute var(pred)/var(gold) and compare it with 0.174. If they are about equal, the shortfall is the forest's prediction variance, not a broken null · LAB-015 Preflight audit before freezing (scar row \"Trivial solution passes / null probe without a target\" (b) and \"Gate without anchor/resolution\") · Measure the null lane's expected out-of-fold R² and its spread over permutation seeds and report it next to `a2_score`. Report C1 for this run as not assessable. Whether the A2 target moves is the registrant's decision, not the code's · check: a2_null_spread — the null lane's mean and spread over permutation seeds, showing whether −0.174 lies inside it"
+check = "a2_null_spread"
+check_note = "the null lane's mean and spread over permutation seeds, showing whether −0.174 lies inside it"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The Summary reports a different run from the answering one. It names the features as \"elastic_anisotropy, G_VRH, and space_group\", two of which A3 forbids and which are no longer in FEATURES (`00_prepare.py` FEATURES: space_group, n_sites, volume_per_atom, n_elements). It also states \"R² = 0.726\" and that the \"registered criterion … exceeds\" · A reader gets R² 0.726 and a C1 pass. The answering run (runs/2026-10-26T17-37-23_3951/metrics.json) has `c1_score` 0.5465, `a2_pass` false and `c1_pass` null. Line 16 \"Recorded results\" and line 28 \"Runs\" still hold placeholders, so no run_id ties the 0.726 to anything · new class: a retyped result contradicts its run (closest rule: LAB-050 Analysis audit before reporting) · Rewrite the Summary from this run's metrics.json via the run write-back (Recorded results, Runs entry, `[result] run`), stating that C1 has no verdict because A2 failed"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:11 · [C1] (registered R² ≥ null R² + 0.25) cannot decide the registered question (R² ≥ 0.80). The bar moves with the null lane, and a negative null lowers it · With this run's null score of −0.174 the C1 bar is 0.076. A registered R² of 0.10 would report `c1_pass` true while the question asks for ≥ 0.80. The c1_score of 0.5465 fails the question but would pass C1 once A2 admits it · new class: criterion does not decide the question (closest row: \"Criterion ≠ code\", LAB-015 Preflight audit before freezing) · Report C1 only as \"beats the permuted-label null by 0.25\". Mark the 0.80 question as not answered by this registration; deciding it is a new experiment, not an edit to the frozen criterion"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/02_analyze.py:55 · The spread cannot be produced. `--draws` sends the user to `01_measure.py --repeat-of`, a flag 01_measure.py does not define. The only alternative, `--seed N` (`01_measure.py:16`), writes to the fixed `OUT` file `output/bulk-modulus.jsonl`, which the kept run registered · `a2_score` −0.174 against band 0.15 and `c1_score` 0.5465 have no noise floor, so whether A2's failure is beyond seed noise is unknown. A `--seed 7` run either overwrites the kept run's rows or is refused there. Assignment: the caller supplies `labkit.run.batch.Store`'s behaviour on a mismatched `_instrument` · LAB-015 Preflight audit before freezing (scar rows \"Spread unknown\" and \"One output file = one run\") · Give seed repeats their own output file and a working repeat command, so `--draws` can report the spread"
+status = "open"
+reason = ""
+
+[[fix_verdict]]
+record = "2026-10-26T08-17-analysis.toml"
+n = 1
+decision_sha = "99a2ac927718"
+verdict = "not_assessable"
+why = "The required check `feature_sources` is missing from runs/2026-10-26T17-37-23_3951/metrics.json.\n`01_measure.py:337` copies only `rule[\"a3_pass\"]` into the metrics and drops `rule[\"feature_sources\"]`, so the closing reason's claim that \"the run's metrics.json reports feature_sources\" is false. The code no longer lists G_VRH, poisson_ratio or elastic_anisotropy in FEATURES, and `c1_score` fell from 0.979 to 0.5465, which fits removing the leak. Still, the check the finding asked for never ran."
+check = "feature_sources"
+check_present = false
