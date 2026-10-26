@@ -1281,6 +1281,20 @@ def _stamp_report(
 #: a READ line of the auditor's report: a reading hint, printed and never
 #: recorded (the record keeps what FINDING matches)
 READ_HINT = re.compile(r"^[\s>*`-]*\**READ\**\s*(?:·|—|–|:)")
+#: what a BLOCKER is and what closes it, printed above the decisions: an
+#: agent whose code missed the registered bar moved the bar to the score
+#: (ninth haiku round, t5: 0.75 registered, 0.65 written after the audit)
+BLOCKER_ROUTES = (
+    "  before deciding a BLOCKER, name which of these it is:",
+    "    the code does not do what the registration says (an implementation "
+    "error): fix the code, run again, audit the new run; `fixed` names the change",
+    "    the code does what it says and the criterion is missed: that is the "
+    "result — report the miss (LAB-042 Log the outcome — failures too); a bar "
+    "moved after the number is seen fixes nothing",
+    "    the registration cannot be answered as written (an invalid "
+    "registration): change it before a new run and say so in the report (after "
+    "a freeze under Deviations after freeze); the old run keeps its verdict",
+)
 #: how long a finding's text stands in the decision list
 DECISION_TEXT_WIDTH = 160
 
@@ -1305,6 +1319,8 @@ def decision_lines(record: findings.Record, area: Path, report: str) -> list[str
             f"({' / '.join(s for s in findings.STATUSES if s != 'open')}; a reason "
             f"owed for {owed}):"
         )
+        if any(f.grade == "BLOCKER" for f in record.findings):
+            out.extend(BLOCKER_ROUTES)
         for n, f in enumerate(record.findings, 1):
             text = (
                 f.text
@@ -1320,7 +1336,8 @@ def decision_lines(record: findings.Record, area: Path, report: str) -> list[str
                 out.append(
                     "      accepted owes its effect: --effect stands (the verdicts "
                     "hold, read within it; a second auditor must uphold it before the "
-                    "number leaves: `labkit-audit <area> --review`) or "
+                    f"number leaves: `labkit-audit {shlex.quote(shown(area, here))} "
+                    f"--review --record {shlex.quote(record.path.name)}`) or "
                     '--effect "<ID> not assessable"'
                 )
             elif f.grade == "WARNING":

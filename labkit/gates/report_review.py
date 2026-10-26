@@ -45,6 +45,7 @@ from labkit.formats import console, findings, report_reviews
 from labkit.formats.report_reviews import ReportClaim
 from labkit.formats.repo import (
     ProtocolChoiceError,
+    area_protocols,
     layout_root,
     repo_protocols,
     shown,
@@ -287,11 +288,11 @@ def review_report(
         )
         if not again and stands.claims:
             raise AuditError(
-                f"{report_key}: a review of this state named "
-                f"{len(stands.claims)} claim(s) ({stands.claims[0][0].path.name}) — "
-                f"another draw settles nothing; change the report, or a source the "
-                f"reviewer read, and review that state (`--again` draws as a "
-                f"measurement and releases nothing)"
+                f"{report_key}: this state is held by {held_by(stands)} — another "
+                f"draw settles nothing; change the report, or a source the reviewer "
+                f"read, so that the claim no longer holds, then run this command "
+                f"again on that state (`--again` draws as a measurement and "
+                f"releases nothing)"
             )
         if not again and stands.released:
             print(
@@ -340,16 +341,59 @@ def review_report(
     where = shown(report, Path.cwd())
     for c in claims:
         print(f"CLAIM: {where}:{c.line}: {c.kind} — {c.why}")
-    held = (
-        "the commit holds until the report, or a source the reviewer read, "
-        "changes and a review of that state names no claim"
-        if claims
-        else "this state is released"
-    )
     print(
         f"report review: {len(claims)} claim(s), recorded in "
         f"{shown(written, Path.cwd())}"
         + (" (--again: a measurement, it releases nothing)" if again else "")
-        + f" — {held}"
+        + f" — {after_draw(area, report_key, protocol_key, whole, report, chosen)}"
     )
     return 1 if claims else 0
+
+
+def held_by(stands: report_reviews.Standing) -> str:
+    """The claims that hold a state, each with its record, line, kind and
+    why — what a refusal names so the next step can answer it."""
+    return "; ".join(
+        f"CLAIM in {r.path.name}, line {c.line} ({c.kind}): {c.why}"
+        for r, c in stands.claims
+    )
+
+
+def after_draw(
+    area: Path,
+    report_key: str,
+    protocol_key: str,
+    whole: str,
+    report: Path,
+    protocol: Path,
+) -> str:
+    """What the state is after the review just written, read back from
+    every record of the area (`report_reviews.standing`): released, held by
+    a claim — this draw's or an earlier one's on the same state — or owed
+    a review that is no `--again` draw. A clean `--again` draw on a held
+    state was printed as "released" while the commit stayed refused (ninth
+    haiku round, t5)."""
+    stands = report_reviews.standing(
+        report_reviews.area_report_reviews(area), report_key, protocol_key, whole
+    )
+    if stands.released:
+        return "this state is released"
+    if stands.claims:
+        return (
+            f"the commit holds this state: {held_by(stands)}; change the report, "
+            f"or a source the reviewer read, so that no claim holds, then review "
+            f"that state"
+        )
+    return (
+        f"the commit holds this state: only a review that is no `--again` draw "
+        f"releases it — `{review_command(area, report, protocol)}`"
+    )
+
+
+def review_command(area: Path, report: Path, protocol: Path) -> str:
+    """The command that reviews REPORT on AREA, paths as seen from the
+    working directory; `--protocol` only when the area has more than one."""
+    here = Path.cwd()
+    return f"labkit-audit {shown(area, here)} --report-review {shown(report, here)}" + (
+        f" --protocol {shown(protocol, here)}" if len(area_protocols(area)) > 1 else ""
+    )

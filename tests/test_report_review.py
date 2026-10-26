@@ -232,7 +232,7 @@ class Command(unittest.TestCase):
         self.assertEqual((rc, calls), (1, 1))
         self.assertIn("CLAIM: ", out)
         self.assertIn("REPORT.md:5: contradiction", out)
-        self.assertIn("the commit holds until the report", out)
+        self.assertIn("the commit holds this state: CLAIM in ", out)
         (r,) = self.reviews()
         self.assertEqual((r.report, r.protocol), ("REPORT.md", P))
         self.assertEqual([(c.line, c.kind) for c in r.claims], [(5, "contradiction")])
@@ -242,10 +242,15 @@ class Command(unittest.TestCase):
         rc, _, err, calls = self.review(MARKED, self.CLEAN)
         self.assertEqual((rc, calls), (2, 0))
         self.assertIn("another draw settles nothing", err)
-        # --again draws, records the draw as a measurement, releases nothing
+        self.assertIn("line 5 (contradiction): C1 PASS against C1 not assessable", err)
+        # --again draws, records the draw as a measurement, releases nothing —
+        # and says so: a clean draw on a held state printed "released" while
+        # the commit stayed refused (ninth haiku round, t5)
         rc, out, _, calls = self.review(MARKED, self.CLEAN, again=True)
         self.assertEqual((rc, calls), (0, 1))
         self.assertIn("a measurement, it releases nothing", out)
+        self.assertNotIn("released", out.replace("releases nothing", ""))
+        self.assertIn("the commit holds this state: CLAIM in ", out)
         first, second = self.reviews()
         self.assertTrue(second.again)
         self.assertEqual(first.fingerprint, second.fingerprint)
@@ -253,6 +258,15 @@ class Command(unittest.TestCase):
             self.reviews(), "REPORT.md", P, second.fingerprint
         )
         self.assertFalse(stands.released)
+
+    def test_a_clean_draw_alone_names_the_review_that_releases(self):
+        """A state seen only by an `--again` draw is not released; the line
+        names the command without `--again` that releases it."""
+        rc, out, _, calls = self.review(HONEST, self.CLEAN, again=True)
+        self.assertEqual((rc, calls), (0, 1))
+        self.assertIn("only a review that is no `--again` draw releases it", out)
+        self.assertIn("--report-review", out.split("releases it")[-1])
+        self.assertNotIn("--again`", out.split("releases it")[-1])
 
     def test_a_changed_source_may_be_reviewed_again(self):
         """A corrected source settles a claim without a text change: the

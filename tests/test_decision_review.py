@@ -213,6 +213,8 @@ class TheCall(unittest.TestCase):
             out,
         )
         self.assertIn(f"--review --record {record.name}", out)
+        self.assertNotIn("<area>", out)  # the whole command, ready to run
+        self.assertNotIn("write the Conclusion", out)  # it is written
         rc, _, _, _ = run_review(area, UPHELD)
         self.assertEqual(rc, 0)
         (review,) = reviews.area_reviews(area)
@@ -480,6 +482,28 @@ class TheCall(unittest.TestCase):
         self.assertEqual(rc, 2)
         self.assertEqual(sent, [])  # no call on a state the auditor did not read
         self.assertIn("the record's auditor read", err)
+
+    def test_the_gate_names_the_conclusion_before_the_review(self):
+        """The refusal names what `--review` needs first: with the
+        Conclusion a placeholder, the step is to write it, then the review
+        (ninth haiku round, t3, never ran the review the gate named)."""
+        area, record = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
+        proto = area / "PROTOCOL-x.md"
+        proto.write_text(
+            proto.read_text(encoding="utf-8").replace(
+                "- **Conclusion:** the fit is in-sample; nothing more is claimed.",
+                "- **Conclusion:** <the answer to the question above, in at most two plain sentences…>",
+            ),
+            encoding="utf-8",
+        )
+        code, out = gate(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            "write the Conclusion in PROTOCOL-x.md first (the review judges that claim",
+            out,
+        )
+        self.assertIn("then `labkit-audit ", out)
+        self.assertIn(f"--review --record {record.name}`", out)
 
     def test_record_by_bare_name_and_a_conclusion_still_owed(self):
         """Round on 86e38bc (judge-2): `--record 2026-…-analysis.toml` as the

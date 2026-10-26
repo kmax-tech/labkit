@@ -105,7 +105,7 @@ if [ -n "$staged" ] && [ -x .venv/bin/claude-hook ]; then
     # shellcheck disable=SC2086
     if ! .venv/bin/claude-hook undecided $staged; then
         echo ""
-        echo "pre-commit: an audit BLOCKER nobody decided (see above) — decide each in its audits/ file."
+        echo "pre-commit: an audit BLOCKER nobody decided (see above) — decide each with labkit-audit <AREA> --findings, then its --decide command."
         fail=1
     fi
 fi

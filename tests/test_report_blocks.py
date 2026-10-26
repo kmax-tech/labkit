@@ -491,13 +491,13 @@ class ReportFiles(unittest.TestCase):
         self._reviewed(report, area, (claim,))
         code, out = self._gate(root, report)
         self.assertEqual(code, 1, out)
-        self.assertIn("names 1 claim(s) on the discussion of", out)
+        self.assertIn("the report review holds this state on the discussion of", out)
         self.assertIn("line 3 (result): C1 PASS of the discussed run", out)
         self._reviewed(report, area)  # a clean draw on the same state
         self._reviewed(report, area, again=True)
         code, out = self._gate(root, report)
         self.assertEqual(code, 1, out)
-        self.assertIn("names 1 claim(s)", out)
+        self.assertIn("CLAIM in ", out)
         # the way out: the report changes, and a review of that state is clean
         report.write_text(
             report.read_text(encoding="utf-8").replace("C1 PASS", "No result."),

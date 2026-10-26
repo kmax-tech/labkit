@@ -187,6 +187,25 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A refusal names the cause, the admissible close and the next step.**
+  Ninth haiku round: t5's clean `--again` draw printed "this state is
+  released" while the commit stayed refused; t3 never ran the decision
+  review the gate named with `<area>`; t5 lowered its registered bar to
+  the score after the audit and rewrote audit records by hand. Now:
+  `--report-review` reads the state back after every draw and says what
+  holds it — each claim with its record, line, kind and why, or that only
+  a review without `--again` releases it, with that command
+  (`report_review.after_draw`, `held_by`, `review_command`, the one home
+  of the command report-check also prints). The decision-review blockers
+  print the whole `labkit-audit AREA --review --record FILE` and, while
+  the Conclusion is a placeholder, to write it first
+  (`report_check._review_step`). The decision list after an audit names
+  three kinds of BLOCKER with what closes each — an implementation error
+  (fix, rerun, audit), a missed criterion (that is the result, LAB-042;
+  a bar moved after the number fixes nothing), an invalid registration
+  (change it before a new run, say so) (`audit.BLOCKER_ROUTES`). The
+  hooks send an undecided BLOCKER to `labkit-audit AREA --findings` and
+  its `--decide` commands, never to an edit of the record.
 - **`labkit-init` asks about training before anything else.** An agent
   told to train a random forest stamped `--kind compute` and read "no
   criterion" (ninth haiku round, t3). The kind questions now ask first

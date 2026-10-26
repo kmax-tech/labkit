@@ -582,6 +582,13 @@ class DecisionList(unittest.TestCase):
         self.assertNotRegex(text, r"\n  3 · ")
         self.assertIn("reading hints — not recorded, nothing to decide", text)
         self.assertIn("READ · PROTOCOL-x.md:5", text)
+        # a BLOCKER is named as one of three, each with what closes it
+        # (ninth haiku round, t5: the bar moved to the score after the audit)
+        self.assertIn("before deciding a BLOCKER, name which of these it is", text)
+        self.assertIn("an implementation error", text)
+        self.assertIn("the criterion is missed: that is the result", text)
+        self.assertIn("LAB-042 Log the outcome — failures too", text)
+        self.assertIn("an invalid registration", text)
         commands = [ln.strip() for ln in lines if "--decide" in ln and "--record" in ln]
         self.assertEqual(len(commands), 2, text)
         for cmd, status in zip(commands, ("fixed", "dismissed")):
@@ -618,6 +625,7 @@ class DecisionList(unittest.TestCase):
         text = "\n".join(audit.decision_lines(findings.read(path), area, report))
         self.assertIn("no findings to decide", text)
         self.assertNotIn("--decide", text)
+        self.assertNotIn("before deciding a BLOCKER", text)  # no BLOCKER, no routes
         self.assertIn("READ · README.md:3", text)
 
 

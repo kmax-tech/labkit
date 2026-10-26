@@ -122,7 +122,7 @@ from labkit.checks import report_blocks
 from labkit.checks.result_render import render_gaps, rendering
 from labkit.gates.finalize import finalize_area
 from labkit.gates.preflight import area_test_python
-from labkit.gates import report_review
+from labkit.gates import decision_review, report_review
 from labkit.formats.protocol_check import check_fields
 from labkit.formats.repo import (
     adopt_command,
@@ -410,7 +410,7 @@ def limit_gaps(ctx: Checked) -> list[str]:
             if not f.effect:
                 gaps.append(
                     f"{findings.limit_label(r, n)}: an accepted BLOCKER owes its effect "
-                    f'on the verdicts — `labkit-audit <area> --decide {n} accepted "REASON" '
+                    f'on the verdicts — `labkit-audit {shown(ctx.area, Path.cwd())} --decide {n} accepted "REASON" '
                     f'--effect stands|"<ID> not assessable" --record {r.path.name}`'
                 )
     if ctx.declared is None:
@@ -471,8 +471,8 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                     f"{findings.limit_label(r, n)}: `stands` on an accepted {f.grade} "
                     f"{reviews.state(r, n, found, ctx.text)} — no decision review "
                     f"upholds that the reported claim stands within this limit: "
-                    f"`labkit-audit <area> --review --record {r.path.name}` asks a "
-                    f"second auditor; after a rejection, decide again "
+                    f"{_review_step(ctx, r)} asks a second auditor; after a "
+                    f"rejection, decide again "
                     f"(LAB-015 Preflight audit before freezing)",
                     evidence_kind=GUARANTEED,
                 )
@@ -490,8 +490,8 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                     f"review said {was.verdict} on ({was.why}) — closing a finding "
                     f"a reviewer did not uphold settles nothing by itself; the new "
                     f"decision is {reviews.state(r, n, found, ctx.text)}: "
-                    f"`labkit-audit <area> --review --record {r.path.name}` asks a "
-                    f"second auditor whether the reason shows it {_closing_question(f.status)} "
+                    f"{_review_step(ctx, r)} asks a second auditor whether the "
+                    f"reason shows it {_closing_question(f.status)} "
                     f"(LAB-015 Preflight audit before freezing)",
                     evidence_kind=GUARANTEED,
                 )
@@ -557,14 +557,32 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
                         BLOCKER,
                         f"audit {r.path.stem} #{n}: a carried finding (from {f.carries}) "
                         f"`{f.status}` — the follow-up did not find the fault gone, so "
-                        f"closing it settles nothing by itself: `labkit-audit <area> "
-                        f"--review --record {r.path.name}` asks a second auditor whether "
-                        f"the reason shows it {_closing_question(f.status)} "
+                        f"closing it settles nothing by itself: {_review_step(ctx, r)} "
+                        f"asks a second auditor whether the reason shows it "
+                        f"{_closing_question(f.status)} "
                         f"(LAB-015 Preflight audit before freezing)",
                         evidence_kind=GUARANTEED,
                     )
                 )
     return out
+
+
+def _review_step(ctx: Checked, record: findings.Record) -> str:
+    """The decision review of RECORD as the next step: the whole command
+    with the area as seen from here, and — while the protocol's Conclusion
+    is unwritten — the step `--review` refuses without (it judges the
+    claim). A refusal naming `<area>` and no precondition was not followed
+    (ninth haiku round, t3)."""
+    command = (
+        f"`labkit-audit {shown(ctx.area, Path.cwd())} --review "
+        f"--record {record.path.name}`"
+    )
+    if decision_review.conclusion_written(ctx.text):
+        return command
+    return (
+        f"write the Conclusion in {ctx.protocol.name} first (the review judges "
+        f"that claim, and refuses without it), then {command}"
+    )
 
 
 def _closing_question(status: str) -> str:
@@ -1162,16 +1180,7 @@ def report_review_owed(
             run_path(area, d.run_id).is_dir() for d in mine
         ):
             continue
-        command = (
-            f"`labkit-audit {shown(area, Path.cwd())} --report-review "
-            f"{shown(path, Path.cwd())}"
-            + (
-                f" --protocol {shown(protocol, Path.cwd())}"
-                if len(area_protocols(area)) > 1
-                else ""
-            )
-            + "`"
-        )
+        command = f"`{report_review.review_command(area, path, protocol)}`"
         if staged:
             # the review reads the area's files (runs' metrics, audit records,
             # its own records) from the tree; the commit carries the index —
@@ -1219,18 +1228,14 @@ def report_review_owed(
             continue
         runs_named = ", ".join(dict.fromkeys(d.run_id for d in mine))
         if stands.claims:
-            listed = "; ".join(
-                f"line {c.line} ({c.kind}): {c.why}" for _, c in stands.claims
-            )
             out.append(
                 GateFinding(
                     BLOCKER,
-                    f"{rel}: the report review of this state "
-                    f"({stands.claims[0][0].path.name}) names "
-                    f"{len(stands.claims)} claim(s) on the discussion of "
-                    f"{runs_named} — {listed}; change the report, or a source the "
-                    f"reviewer read, then review that state: {command} "
-                    f"(another draw on this state releases nothing)",
+                    f"{rel}: the report review holds this state on the discussion "
+                    f"of {runs_named} — {report_review.held_by(stands)}; change the "
+                    f"report, or a source the reviewer read, so that no claim holds, "
+                    f"then review that state: {command} (another draw on this state, "
+                    f"`--again` included, releases nothing)",
                     evidence_kind=GUARANTEED,
                 )
             )

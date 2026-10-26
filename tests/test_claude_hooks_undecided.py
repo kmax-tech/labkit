@@ -83,6 +83,10 @@ class Undecided(unittest.TestCase):
             f"experiments/01-x: {path.name}: BLOCKER · scripts/01_measure.py:3", err
         )
         self.assertIn("cannot be reported", err)
+        # the way to decide is the command, not an edit of the record
+        # (ninth haiku round, t5 rewrote records field by field)
+        self.assertIn("`labkit-audit <AREA> --findings`", err)
+        self.assertIn("never by rewriting the record", err)
 
     def test_the_committed_record_blocks_once_the_area_is_touched_again(self):
         self._record(self.area, [BLOCKER])
