@@ -182,6 +182,50 @@ gezogenem Gold neu bewertet wird, und ein Seed oder eine wiederholte
 Gold-Prüfung für A2; das Zeitlimit von agentsandbox zählt im Ruhezustand
 nicht.
 
+**Reihenfolge nach der neunten Runde (Befund 2026-10-26).** Die Runde
+bleibt void. Keine Neubewertung mit neu gezogenem Gold: Wer nach Kenntnis
+des Fehlers neu zieht und den grünen Lauf nimmt, macht die
+Zulässigkeitsprüfung vom gewünschten Ausgang abhängig. Die zwanzig
+Nachläufe sind Diagnose. Eine Auswertung derselben Versuche unter
+repariertem Instrument ist möglich, aber nur ausdrücklich als nachträgliche
+Neuauswertung neben dem void. Für das Labor (nicht labkit): eine feste,
+dokumentierte Seed-Regel für Gold-Programme.
+Kernbefund: Die Gates verändern das Verhalten, aber die Agenten finden
+keinen verlässlichen Weg vom Befund zur fachlichen Korrektur. „Nach Audit
+korrigiert“ hieß bei t3 und t5 vor allem: Bericht korrigiert, nicht Fehler
+behoben (das t3-Leck blieb, beide Wege UNSURE). Die fünf Punkte des
+Berichts in dieser Reihenfolge:
+
+1. **Wahl des Versuchstyps bei `labkit-init` (Punkt 4, t3):** t3 bearbeitet
+   eine Modellierungsaufgabe, wählt `compute` und liest dann „kein
+   Kriterium nötig“ (`labkit/tools/scaffold.py:595`). Die Anleitung muss
+   bei der Wahl von `compute | fit | apply` helfen; nur den Kriteriensatz
+   umzuschreiben ließe die falsche Einordnung stehen. Zwilling: eine echte
+   Zählaufgabe bleibt `compute` ohne Kriterium.
+2. **Ablehnungen nennen den nächsten Schritt (Punkte 3 und 5):** Bei
+   `--again` steht, welcher frühere CLAIM welchen unveränderten Stand
+   sperrt. Bei einer geschuldeten Entscheidungsprüfung steht der
+   vollständige `--review`-Befehl samt Voraussetzung (Conclusion zuerst).
+   Ob das reicht, zeigt eine Ausführungsprobe; sieben weitere identische
+   Fehlversuche wären kein Bedienerfolg.
+3. **Abschlussanforderung für t18 (Punkt 2):** Für die Abgabe muss
+   prüfbar feststehen, welcher registrierte Lauf das Ergebnis trägt. Eine
+   Warnung über fehlende Laufzitate hilft höchstens; Runde 8 zeigt, dass
+   Hinweise übergangen werden. Aus beliebiger Prosa erkennt labkit nicht
+   zuverlässig, dass außerhalb der Kette gemessen wurde.
+4. **Handgeschriebene Records (Punkt 1, t5): keine falsche Sicherheit.**
+   Ein Digest der Auditantwort im Record kann Widersprüche aufdecken. Eine
+   Hashkette im selben, vollständig beschreibbaren Verzeichnis belegt keine
+   Herkunft — der Agent rechnet sie nach. Belastbare Herkunft hieße
+   Aufzeichnung außerhalb seiner Schreibrechte: eine eigene
+   Architekturentscheidung beim Autor, kein Bauauftrag.
+
+Abnahme vor der nächsten vollen Runde: ein einzelner belegter
+Reparaturfall vollständig durchlaufen — Fehler verstehen, Code
+korrigieren, neu messen, Audit bestehen, verlangtes Ausgabeformat liefern.
+Erst wenn dieser Weg funktioniert, lohnt die nächste Runde mehr als
+weitere Sperren.
+
 **Reihenfolge nach der achten Runde (beschlossen 2026-10-26).** Jeder
 Schritt schließt einen belegten Fehlweg und hat einen korrekten Zwilling.
 Die Abnahme ist eine neue Runde in Bereich 09 als eigener Auftrag. Sie misst
@@ -269,7 +313,9 @@ Ausführung mit Haiku bleibt Teil der folgenden Abnahme.
 2. Neue Runde in Bereich 09 als Abnahme. Neu zu beobachten: die Kosten des
    Pflicht-Reviews je Bericht und ob Agenten die Blocker-Kette
    (`--discuss` → Review → Bericht ändern) durchlaufen oder an ihr
-   abbrechen.
+   abbrechen. **Gelaufen als neunte Runde** (oben): t3 und t5 durchliefen
+   die Kette bis zum umgeschriebenen Bericht; weiter oben steht die
+   Reihenfolge danach.
 
 Offen mit Auslöser, ohne Bauauftrag:
 
