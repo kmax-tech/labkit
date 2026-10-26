@@ -166,6 +166,10 @@ class Finding:
     status: str
     reason: str
     effect: str = ""  # accepted: EFFECT_STANDS or "<ids> not assessable"
+    # the diagnostic the auditor requires to show a repair: a metrics.json
+    # key, set from the finding line when the record is written, never by
+    # a decision ("" when none is required)
+    check: str = ""
 
     @property
     def effect_owed(self) -> bool:
@@ -197,6 +201,13 @@ class FixVerdict:
     decision_sha: str
     verdict: str  # one of FIX_VERDICTS
     why: str
+    # the check the finding required ("" for none) and whether its key stood
+    # in the metrics.json the prompt showed — computed by labkit from that
+    # snapshot, never by the model; None when no check was required. A
+    # `resolved` with check_present False is kept as written: the verdict
+    # is the measure, the missing key the gap.
+    check: str = ""
+    check_present: bool | None = None
 
     @property
     def ref(self) -> str:
@@ -204,14 +215,38 @@ class FixVerdict:
         return f"{self.record}#{self.n}"
 
 
+#: a finding line's closing field naming the diagnostic a repair must show:
+#: `· check: <metrics key>` — the auditor's, fixed when the finding is written
+CHECK_FIELD = re.compile(r"·\s*check\s*:")
+_CHECK = re.compile(r"·\s*check\s*:\s*`?([a-z][a-z0-9_]*)`?\s*$")
+CHECK_KEY = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+def check_of(text: str) -> str:
+    """The metrics key a finding line requires as its repair's diagnostic
+    (its closing `· check: <key>` field), or "" when it requires none.
+    Raises ValueError on a check field that does not read — a requirement
+    half-read would be one nobody can be held to."""
+    if not CHECK_FIELD.search(text):
+        return ""
+    m = _CHECK.search(text.rstrip())
+    if m is None:
+        raise ValueError(
+            f"a check field that does not read: {text.strip()[-120:]!r} — the form "
+            f"is a closing `· check: <metrics key>` (lowercase snake_case)"
+        )
+    return m.group(1)
+
+
 def decision_digest(f: Finding) -> str:
-    """The digest of F as decided — grade, text, status, reason, effect —
-    which a review binds to (`reviews.Decision.decision_sha`): a changed
-    reason or effect is another decision, and the review of the old one
-    says nothing about it."""
-    return digest(
-        as_stored([f.grade, f.text, f.status, f.reason, f.effect]).encode("utf-8")
-    )
+    """The digest of F as decided — grade, text, status, reason, effect, and
+    the required check when there is one — which a review and a fix verdict
+    bind to (`reviews.Decision.decision_sha`, `FixVerdict.decision_sha`): a
+    changed reason, effect or check is another decision, and a verdict on
+    the old one says nothing about it. A finding without a check has the
+    digest it had before checks existed."""
+    fields = [f.grade, f.text, f.status, f.reason, f.effect]
+    return digest(as_stored(fields + ([f.check] if f.check else [])).encode("utf-8"))
 
 
 def effect_ids(effect: str) -> tuple[str, ...]:
@@ -538,6 +573,7 @@ def write(
         f"notes = {k}",
     ]
     for grade, text in findings:
+        check = check_of(text)
         if grade not in GRADES:
             raise ValueError(f"grade {grade!r} — one of {', '.join(GRADES)}")
         lines += [
@@ -545,6 +581,7 @@ def write(
             "[[finding]]",
             f"grade = {_s(grade)}",
             f"text = {_s(text)}",
+            *([f"check = {_s(check)}"] if check else []),
             'status = "open"',
             'reason = ""',
         ]
@@ -575,6 +612,14 @@ def _fix_verdict_lines(mode: str, verdicts: Iterable[FixVerdict]) -> list[str]:
             f"decision_sha = {_s(v.decision_sha)}",
             f"verdict = {_s(v.verdict)}",
             f"why = {_s(v.why)}",
+            *(
+                [
+                    f"check = {_s(v.check)}",
+                    f"check_present = {str(v.check_present).lower()}",
+                ]
+                if v.check
+                else []
+            ),
         ]
     return lines
 
@@ -594,6 +639,11 @@ def fix_verdict_problem(verdicts: Iterable[FixVerdict]) -> str | None:
             return f"fix verdict on {v.ref}: finding numbers start at 1"
         if v.ref in seen:
             return f"fix verdict on {v.ref}: a second verdict on the same finding"
+        if bool(v.check) != (v.check_present is not None):
+            return (
+                f"fix verdict on {v.ref}: check {v.check!r} with check_present "
+                f"{v.check_present!r} — a required check names whether its key was shown"
+            )
         seen.add(v.ref)
     return None
 
@@ -699,8 +749,18 @@ def _finding(path: Path, i: int, row: object) -> Finding:
     effect = row.get("effect", "")
     if not isinstance(effect, str):
         raise FindingsError(f"{path}: finding {i}: effect is not a string")
+    check = row.get("check", "")
+    if not isinstance(check, str) or (check and not CHECK_KEY.match(check)):
+        raise FindingsError(
+            f"{path}: finding {i}: check {check!r} is no metrics key (lowercase snake_case)"
+        )
     found = Finding(
-        row["grade"], row["text"], row["status"], row["reason"].strip(), effect.strip()
+        row["grade"],
+        row["text"],
+        row["status"],
+        row["reason"].strip(),
+        effect.strip(),
+        check,
     )
     problem = _effect_problem(found)
     if problem:
@@ -758,6 +818,7 @@ def _record_of(path: Path, text: str) -> Record:
 
 
 _FIX_VERDICT_KEYS = {"record", "n", "decision_sha", "verdict", "why"}
+_FIX_CHECK_KEYS = {"check", "check_present"}
 
 
 def _fix_verdicts(path: Path, rows: object) -> tuple[FixVerdict, ...]:
@@ -767,10 +828,21 @@ def _fix_verdicts(path: Path, rows: object) -> tuple[FixVerdict, ...]:
         raise FindingsError(f"{path}: `fix_verdict` must be [[fix_verdict]] tables")
     out: list[FixVerdict] = []
     for i, row in enumerate(rows, start=1):
-        if not isinstance(row, dict) or set(row) != _FIX_VERDICT_KEYS:
+        if not isinstance(row, dict) or set(row) not in (
+            _FIX_VERDICT_KEYS,
+            _FIX_VERDICT_KEYS | _FIX_CHECK_KEYS,
+        ):
             raise FindingsError(
                 f"{path}: fix_verdict {i}: the fields are exactly "
-                f"{', '.join(sorted(_FIX_VERDICT_KEYS))}"
+                f"{', '.join(sorted(_FIX_VERDICT_KEYS))}, and with a required "
+                f"check also {', '.join(sorted(_FIX_CHECK_KEYS))}"
+            )
+        check, present = row.get("check", ""), row.get("check_present")
+        if not isinstance(check, str) or not (
+            present is None or isinstance(present, bool)
+        ):
+            raise FindingsError(
+                f"{path}: fix_verdict {i}: check is a string, check_present true or false"
             )
         n = row["n"]
         if not isinstance(n, int) or isinstance(n, bool):
@@ -780,7 +852,13 @@ def _fix_verdicts(path: Path, rows: object) -> tuple[FixVerdict, ...]:
                 raise FindingsError(f"{path}: fix_verdict {i}: {key} is not a string")
         out.append(
             FixVerdict(
-                row["record"], n, row["decision_sha"], row["verdict"], row["why"]
+                row["record"],
+                n,
+                row["decision_sha"],
+                row["verdict"],
+                row["why"],
+                check,
+                present,
             )
         )
     problem = fix_verdict_problem(out)
@@ -852,7 +930,10 @@ def write_decision(
     if status in REASON_OWED and not reason.strip():
         raise FindingsError(f"status {status!r} owes a reason — why it is {status}")
     old = before.findings[n - 1]
-    decided = Finding(old.grade, old.text, status, reason.strip(), effect.strip())
+    # the check stays the auditor's: a decision never sets or drops it
+    decided = Finding(
+        old.grade, old.text, status, reason.strip(), effect.strip(), old.check
+    )
     _hold_effect(decided)
     text = _decided_text(path, n, decided)
     after = _record_of(path, text)

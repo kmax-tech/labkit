@@ -709,6 +709,17 @@ pins (`requirements.txt` / `requirements.lock`).
   are the pilot's data (eighth haiku round, t3: a leak closed `fixed` by
   dropping one of two leaking features, the check the finding asked for
   never run). A record without fix verdicts reads as before.
+  A finding may require the diagnostic its repair must show: the auditor
+  closes its line with `· check: <metrics key>`, stored as `check` in the
+  `[[finding]]` table when the record is written; `--decide` never sets or
+  drops it, and it is part of `findings.decision_digest` (a finding
+  without one keeps its earlier digest, so standing reviews stay valid).
+  The follow-up prompt shows that key's whole value from the metrics.json
+  it renders, or that it is missing; each fix verdict records `check` and
+  `check_present`, computed from that same snapshot, never by the model
+  and never by reading the file again. No check required (no field) and a
+  required key missing (`check_present = false`) are two states; a
+  `resolved` on a missing key is kept as written.
 
 - **`labkit-audit AREA --report-review REPORT`: a cold reader on a report
   that discusses a run (a discussion block).** In the seventh haiku round

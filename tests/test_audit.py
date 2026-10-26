@@ -798,9 +798,9 @@ class FixVerdicts(unittest.TestCase):
 
     LEAK = "BLOCKER · scripts/01_measure.py:9 · G_VRH and poisson_ratio give K · c1 · new class · drop both"
 
-    def area(self) -> tuple[Path, Path]:
+    def area(self, line: str | None = None) -> tuple[Path, Path]:
         """An area with an answering run and an earlier analysis record
-        whose BLOCKER #1 is decided `fixed`."""
+        whose BLOCKER #1 (LINE, LEAK by default) is decided `fixed`."""
         area = OneSnapshot.area(OneSnapshot())
         earlier = findings.write(
             area,
@@ -809,7 +809,7 @@ class FixVerdicts(unittest.TestCase):
             "0" * 12,
             "1" * 12,
             (1, 0, 0),
-            [("BLOCKER", self.LEAK)],
+            [("BLOCKER", line or self.LEAK)],
             registration={"kind": "compute"},
             run_id="2026-01-01T00-00-00_0001",
             shown_sha="2" * 12,
@@ -1054,3 +1054,136 @@ class FixVerdicts(unittest.TestCase):
                 path.write_text(text.replace(edit, problem), encoding="utf-8")
                 with self.assertRaises(findings.FindingsError):
                     findings.read(path)
+
+
+class RequiredCheck(unittest.TestCase):
+    """A finding may require the diagnostic its repair must show: the
+    auditor's closing `· check: <metrics key>`, fixed when the finding is
+    written and bound in its decision digest. The follow-up audit is shown
+    that key's whole value from the metrics.json the prompt renders, and
+    each verdict records whether the key stood there — computed by labkit,
+    never by the model. No check required and a required key missing are
+    two states."""
+
+    CHECKED = FixVerdicts.LEAK + " · check: feature_sources"
+
+    def setUp(self) -> None:
+        self.fv = FixVerdicts()
+
+    def with_metrics(self, area: Path, metrics: dict) -> None:
+        run = area / "runs" / "2026-01-01T00-00-00_0001"
+        (run / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
+
+    def verdict(self, area: Path, earlier: Path, word: str = "resolved"):
+        answer = f"FIX · {earlier.name}#1 · {word} · 00_prepare.py:44\n\n{CLEAN}"
+        rc, out, err, sent = self.fv.audit(area, answer)
+        self.assertEqual(rc, 0, err)
+        (record,) = self.fv.new_records(area, earlier)
+        return record.fix_verdicts[0], sent[0], out
+
+    def test_the_check_is_written_from_the_finding_line_and_kept_by_decisions(self):
+        area, earlier = self.fv.area(self.CHECKED)
+        self.assertIn('check = "feature_sources"', earlier.read_text(encoding="utf-8"))
+        (f,) = findings.read(earlier).findings
+        self.assertEqual((f.status, f.check), ("fixed", "feature_sources"))
+
+    def test_the_value_shown_is_the_snapshots_and_the_key_is_recorded_present(self):
+        area, earlier = self.fv.area(self.CHECKED)
+        sources = {"space_group": "column space_group", "n_sites": "structure text"}
+        self.with_metrics(area, {"c1_pass": True, "feature_sources": sources})
+        v, prompt, _ = self.verdict(area, earlier)
+        self.assertIn(
+            f"  required check `feature_sources` = {json.dumps(sources)}", prompt
+        )
+        self.assertEqual((v.check, v.check_present), ("feature_sources", True))
+
+    def test_a_missing_key_is_shown_missing_and_a_resolved_is_kept_as_written(self):
+        area, earlier = self.fv.area(self.CHECKED)
+        v, prompt, _ = self.verdict(area, earlier)
+        self.assertIn(
+            "required check `feature_sources`: missing in the answering run's metrics.json",
+            prompt,
+        )
+        self.assertEqual(
+            (v.verdict, v.check, v.check_present),
+            ("resolved", "feature_sources", False),
+        )
+
+    def test_no_check_required_is_not_a_missing_check(self):
+        area, earlier = self.fv.area()
+        v, prompt, _ = self.verdict(area, earlier)
+        piece = prompt.split("===== EARLIER FIXED BLOCKERS =====\n")[1].split("=====")[
+            0
+        ]
+        self.assertNotIn("required check", piece)
+        self.assertEqual((v.check, v.check_present), ("", None))
+        (record,) = self.fv.new_records(area, earlier)
+        self.assertNotIn("check_present", record.path.read_text(encoding="utf-8"))
+
+    def test_the_check_is_part_of_the_decision_digest(self):
+        """A changed or removed check is another decision; a finding without
+        one keeps the digest it had before checks existed."""
+        base = findings.Finding("BLOCKER", "x", "fixed", "r")
+        legacy = scope_sha.digest(
+            findings.as_stored(["BLOCKER", "x", "fixed", "r", ""]).encode("utf-8")
+        )
+        self.assertEqual(findings.decision_digest(base), legacy)
+        with_check = findings.Finding("BLOCKER", "x", "fixed", "r", "", "a_key")
+        other = findings.Finding("BLOCKER", "x", "fixed", "r", "", "b_key")
+        digests = {findings.decision_digest(f) for f in (base, with_check, other)}
+        self.assertEqual(len(digests), 3)
+
+    def test_a_check_changed_or_removed_later_stales_the_verdict(self):
+        """The verdict binds the decision as shown, check included: the same
+        record with the check removed or renamed no longer has the verdict's
+        digest; untouched, it still has it."""
+        area, earlier = self.fv.area(self.CHECKED)
+        v, _, _ = self.verdict(area, earlier)
+        text = earlier.read_text(encoding="utf-8")
+
+        def digest_now() -> str:
+            return findings.decision_digest(findings.read(earlier).findings[0])
+
+        self.assertEqual(digest_now(), v.decision_sha)
+        for edited in (
+            text.replace('check = "feature_sources"\n', ""),
+            text.replace('check = "feature_sources"', 'check = "identity_r2"'),
+        ):
+            earlier.write_text(edited, encoding="utf-8")
+            self.assertNotEqual(digest_now(), v.decision_sha)
+        earlier.write_text(text, encoding="utf-8")
+        self.assertEqual(digest_now(), v.decision_sha)
+
+    def test_a_check_edited_while_the_auditor_read_refuses_the_record(self):
+        area, earlier = self.fv.area(self.CHECKED)
+        answer = f"FIX · {earlier.name}#1 · resolved · gone\n\n{CLEAN}"
+        text = earlier.read_text(encoding="utf-8")
+
+        def drop_check():
+            earlier.write_text(
+                text.replace('check = "feature_sources"\n', ""), encoding="utf-8"
+            )
+
+        rc, _, err, _ = self.fv.audit(area, answer, during=drop_check)
+        self.assertEqual(rc, 2)
+        self.assertIn("changed while the auditor read it", err)
+
+    def test_a_check_field_that_does_not_read_records_nothing(self):
+        area = OneSnapshot.area(OneSnapshot())
+        answer = f"{FixVerdicts.LEAK} · check: Feature Sources\nverdict: 1 blockers, 0 warnings, 0 notes"
+        rc, _, err, _ = self.fv.audit(area, answer)
+        self.assertEqual(rc, 2, err)
+        self.assertIn("check field that does not read", err)
+        self.assertEqual(list((area / "audits").glob("*-analysis.toml")), [])
+
+    def test_the_record_holds_check_and_presence_together(self):
+        area, earlier = self.fv.area(self.CHECKED)
+        v, _, _ = self.verdict(area, earlier)
+        (record,) = self.fv.new_records(area, earlier)
+        text = record.path.read_text(encoding="utf-8")
+        self.assertIn('check = "feature_sources"\ncheck_present = false', text)
+        record.path.write_text(
+            text.replace("check_present = false\n", ""), encoding="utf-8"
+        )
+        with self.assertRaises(findings.FindingsError):
+            findings.read(record.path)

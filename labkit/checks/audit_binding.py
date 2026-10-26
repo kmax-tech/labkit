@@ -14,6 +14,8 @@ Reads only; the records themselves are `findings`'.
 
 from __future__ import annotations
 
+import json
+
 from pathlib import Path
 from typing import NamedTuple
 
@@ -104,6 +106,22 @@ class RunShown(NamedTuple):
 
     pieces: tuple[tuple[str, str], ...]
     sha: str
+
+    def metrics(self) -> dict | None:
+        """The run's metrics.json as this snapshot shows it — the very text
+        the prompt renders, never the file read again — or None when the
+        run showed none. Raises AuditError on a shown text that is no JSON
+        object."""
+        for label, text in self.pieces:
+            if label.startswith("FILE: ") and label.endswith("/metrics.json"):
+                try:
+                    data = json.loads(text)
+                except json.JSONDecodeError as exc:
+                    raise AuditError(f"{label[6:]}: not JSON ({exc})") from exc
+                if not isinstance(data, dict):
+                    raise AuditError(f"{label[6:]}: not a JSON object")
+                return data
+        return None
 
 
 def run_shown(area: Path, run_dir: Path | None, why: str) -> RunShown:

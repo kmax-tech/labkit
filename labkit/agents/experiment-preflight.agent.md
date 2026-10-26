@@ -141,6 +141,10 @@ FIX · <record>#<n> · resolved|unresolved|not_assessable · <why, citing file:l
   is in no file you were given, or it belongs to an older run. A diagnostic
   the reason only describes is not shown.
 
+When the entry shows a `required check`, it is the diagnostic the finding
+fixed for its repair: judge its value as shown. A check marked missing
+leaves the repair `not_assessable`, whatever the code shows.
+
 The why may go on below the line, as a few lines of evidence; a blank line
 ends the entry, and an entry names no other finding.
 
@@ -205,6 +209,13 @@ modules, one per line; the INDEX modules are the caller's to add>
 The `scope` list is held by the caller against the audit stamp, so it must
 be complete for what you read and path-exact. The severity comes from the legend in LAB-015 Preflight audit before freezing — read
 it there.
+
+**A repair that only a diagnostic can show names it.** When a BLOCKER's
+repair cannot be seen in the code alone — a leak, a contamination, a
+denominator — end its line with ` · check: <metrics key>`: the key the
+measuring code must write to metrics.json so that a later audit can see the
+repair hold (lowercase snake_case; say in the fifth field what its value
+must show). It is fixed with the finding; nobody chooses it when closing.
 
 **No finding without a failure scenario** (LAB-015 Preflight audit before freezing). The fourth field must name
 the number that goes wrong and the input that triggers it. If you cannot write
