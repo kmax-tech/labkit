@@ -1,0 +1,39 @@
+# written by labkit-audit — decide each finding: `labkit-audit <area> --decide N STATUS REASON`, or set status and reason here
+# a reason is a TOML string: "double quotes" escape a quote as \" and a backslash as \\; 'single quotes' take one line of text without a ' or a control character
+[audit]
+date = "2026-10-26T17:28"
+mode = "analysis"
+model = "opus"
+scope_sha = "b48a694a738a"
+block_sha = "2ded6e190a47"
+registration = { "kind" = "fit", "Question / hypothesis" = "ac905b5b1cdd", "Success / failure criterion" = "124dfc31cd23", "Admissibility condition" = "9c0b44f6b0e7", "Null condition / anchors" = "9de3199f1fd6" }
+run_id = "2026-10-26T08-18-33_7392"
+shown_sha = "238fdb463c98"
+blockers = 1
+warnings = 2
+notes = 3
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:11 · The registered [C1] is relative: out-of-fold R² ≥ null R² + 0.25. The code implements it correctly (01_measure.py:318). The trouble is the question at :10, which sets an absolute bar of R² ≥ 0.80, and [C1] does not test that bar. Because the null lane sits below chance, the bar drops to 0.143, so `c1_pass` comes out true even though the question's own bar fails · `c1_pass` = true with `c1_score` 0.7258 < 0.80 and `c1_threshold` 0.1432 (runs/2026-10-26T08-18-33_7392/metrics.json). Any reader or gate that takes `c1_pass` as \"hypothesis supported\" turns a \"no\" on the question into a \"yes\" · Scar row \"Criterion ≠ code\" (LAB-015 Preflight audit before freezing); new class: the criterion does not decide the question it was registered for · Keep the frozen criterion. Report `c1_pass` only as \"registered margin over null met\". State in Conclusion/Outcome that the question's R² ≥ 0.80 was never registered as a criterion and is not met at 0.726. An absolute 0.80 test would be a new experiment."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/01_measure.py:121 · `null_band` = 0.15 was never derived from the spread of the null lane. The comment says to derive it on the probe, but `--probe` is refused at `repeat_cost = \"low\"`. The run has a single seed, and its null lane sits 0.043 inside the band. Whether [A2], and with it any [C1] verdict, holds is therefore unknown · `a2_score` −0.1068 vs the band edge −0.15 (metrics.json). If another seed puts the null lane below −0.15, `a2_pass` flips to false and `c1_pass` becomes None. Assignment: run `01_measure.py --seed 1` … `--seed 4` and compare each run's `a2_score` with −0.15 · Scar rows \"Spread unknown\" and \"Gate without anchor/resolution\" (LAB-015 Preflight audit before freezing) · Measure the null lane's spread over seeds and record it next to [A2]. Report the band as unvalidated until then."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/00_prepare.py:70 · Training labels go into `gold` without any filter. `main` counts `train_zero_labels` and `train_nan_labels` but never rejects on them. The protocol says this source stores withheld labels as 0 (:23), so a train row with K_VRH = 0 would be scored as a real gold of 0 · `c1_score`, `a2_score`, `n_items` (944). Each zero-label train row adds a fake low gold to the SST and SSE of both lanes. Assignment: read `train_zero_labels` and `train_nan_labels` from the prepare run's metrics.json; anything nonzero means that many placeholder rows were scored · Scar row \"Trivial solution passes / null probe without a target\" does not fit; new class: placeholder labels inside the scored split (the 01_measure.py contract \"a withheld label is no label\") · In prepare, treat zero/NaN train labels as `gold: null`, or refuse them, and report the count as a yield."
+status = "open"
+reason = ""
+
+[[fix_verdict]]
+record = "2026-10-26T08-17-analysis.toml"
+n = 1
+decision_sha = "bc13ec2878d7"
+verdict = "resolved"
+why = "The feature list is now [elastic_anisotropy, G_VRH, space_group] (00_prepare.py:62-66), with no poisson_ratio. The kept run's rows show a refit: output/bulk-modulus.jsonl:1 now predicts 176.75 against gold 214.21, where the leaky run predicted 210.70. `c1_score` fell from 0.979 to 0.7258 (metrics.json). None of the remaining features is a closed form of K_VRH: anisotropy carries only K_V/K_R, not K's scale."

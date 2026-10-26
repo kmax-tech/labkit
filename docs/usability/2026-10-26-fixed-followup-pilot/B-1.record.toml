@@ -1,0 +1,39 @@
+# written by labkit-audit — decide each finding: `labkit-audit <area> --decide N STATUS REASON`, or set status and reason here
+# a reason is a TOML string: "double quotes" escape a quote as \" and a backslash as \\; 'single quotes' take one line of text without a ' or a control character
+[audit]
+date = "2026-10-26T17:13"
+mode = "analysis"
+model = "opus"
+scope_sha = "ddb3395ff87f"
+block_sha = "2ded6e190a47"
+registration = { "kind" = "fit", "Question / hypothesis" = "ac905b5b1cdd", "Success / failure criterion" = "124dfc31cd23", "Admissibility condition" = "9c0b44f6b0e7", "Null condition / anchors" = "9de3199f1fd6" }
+run_id = "2026-10-26T16-08-49_7574"
+shown_sha = "6efcb0b9b43f"
+blockers = 1
+warnings = 2
+notes = 2
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The Summary reports out-of-fold R² = 0.726 from a forest \"trained on elastic_anisotropy, G_VRH, and space_group\". Terms (line 9) also says poisson_ratio is excluded. The answering run's metrics.json carries `c1_score` 0.9792186258959389, and its producer still feeds poisson_ratio (00_prepare.py:66). The 0.726 belongs to no run in scope, and the leakage-free claim is false for the run that answers. · The reported R² (0.726 against the run's 0.979) and the reader's belief that it is leakage-free are both wrong for runs/2026-10-26T16-08-49_7574. Assignment: find the run_id, if any, whose metrics.json carries `c1_score` ≈ 0.726, and check whether its items carried 3 or 4 features. · new class: a hand-typed result that contradicts the answering run's metrics.json · Write the Summary and Recorded results from the answering run's metrics.json (`protocol-fill --from-run`), and describe the feature set the producer actually wrote."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:11 · The question asks for \"R² ≥ 0.80\". [C1] passes at null + 0.25, which is 0.166 in this run (metrics.json `c1_threshold`). No registered id decides the question's 0.80 bar, and the Summary has to explain the difference in prose. · Any registered-lane R² between 0.166 and 0.80, e.g. 0.50, reports `c1_pass` true while the answer to the question is no. The current 0.979 passes both bars, so there is no demonstrated influence yet. · LAB-004 Identifiers make the intent addressable (C fixes which value supports the hypothesis) · Keep the frozen criterion. The report must state that `c1_pass` decides only the margin over the null lane and that the 0.80 bar stays unanswered by any registered id."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:22 · [A2] `null_band` = 0.15 has no derivation. The run is one seed: `a2_score` is −0.0838, which leaves 0.066 of headroom. `--probe` is refused at low repeat cost, so the band could not have been calibrated as the script asks (01_measure.py `null_band` comment). The `--repeat-of` that 02_analyze.py `--draws` points to does not exist in 01_measure.py. · Another seed whose null lane lands below −0.15 flips `a2_pass` to false, and `c1_pass` becomes None. Assignment: run `01_measure.py --seed 1..k` and compare the spread of `a2_score` against the 0.066 headroom. · LAB-015 Preflight audit before freezing, scar row \"Spread unknown\" (LAB-036 Validate) · Measure the null lane's spread over seeds and report it next to `a2_pass`."
+status = "open"
+reason = ""
+
+[[fix_verdict]]
+record = "2026-10-26T08-17-analysis.toml"
+n = 1
+decision_sha = "bc13ec2878d7"
+verdict = "unresolved"
+why = "The feature lists still contain `float(row['poisson_ratio'])` in both splits (experiments/01-bulk-modulus/scripts/00_prepare.py:66, :83), and `FIELDS` still declares it (:44). Only a comment (:60–61) claims the exclusion. The answering run's `c1_score` is 0.9792186258959389, unchanged from the 0.979 that triggered the finding. The closed-form probe assignment shows no result here, and no closed-form anchor is registered. Even with the code fixed, `main()` refuses to overwrite data/prepared/compounds_v1.jsonl, and 01_measure.py:84 still reads that file. The repair needs a new prepared file name, the ITEMS change, and a fresh run."

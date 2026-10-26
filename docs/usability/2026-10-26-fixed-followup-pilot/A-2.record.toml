@@ -1,0 +1,51 @@
+# written by labkit-audit — decide each finding: `labkit-audit <area> --decide N STATUS REASON`, or set status and reason here
+# a reason is a TOML string: "double quotes" escape a quote as \" and a backslash as \\; 'single quotes' take one line of text without a ' or a control character
+[audit]
+date = "2026-10-26T17:20"
+mode = "analysis"
+model = "opus"
+scope_sha = "b48a694a738a"
+block_sha = "2ded6e190a47"
+registration = { "kind" = "fit", "Question / hypothesis" = "ac905b5b1cdd", "Success / failure criterion" = "124dfc31cd23", "Admissibility condition" = "9c0b44f6b0e7", "Null condition / anchors" = "9de3199f1fd6" }
+run_id = "2026-10-26T08-18-33_7392"
+shown_sha = "238fdb463c98"
+blockers = 1
+warnings = 4
+notes = 1
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:11 · [C1] does not test the question it registers. The question at line 10 asks for \"R² ≥ 0.80 on out-of-fold test data\". The criterion asks for \"null lane's R² plus 0.25\". The null lane scores below zero, so the effective bar falls to 0.143. The code implements the criterion correctly (`bar = null_score + margin`, `reg_score >= bar`), so the fault is in what the criterion means. · `c1_pass` = true at `c1_score` 0.726 against `c1_threshold` 0.143 (runs/2026-10-26T08-18-33_7392/metrics.json). Against the question's own bar the hypothesis fails (0.726 < 0.80). Any reader or gate that takes `c1_pass` as the answer to [C1]'s hypothesis gets the opposite verdict. · LAB-004 Identifiers make the intent addressable ([C1] fixes \"which value of which metric supports the hypothesis\"); new class: question ≠ criterion · Report `c1_pass` only as the margin-over-null verdict, with the absolute 0.80 question stated as not answered by any registered id. A criterion holding the 0.80 bar is a new experiment (LAB-003), not an edit to this one."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:22 · The null band `null_band = 0.15` has no derivation. The script's own contract (`MeasureConfig.null_band` comment) says to derive it from the null lane's spread over seeds, and no spread was measured. The observed null score sits at 71 % of the band. · `a2_score` −0.107 is 0.043 inside the −0.15 edge. On another seed `a2_pass` may turn false and `c1_pass` would become None, so the kept verdict may hold for seed 0 only. Assignment: run `01_measure.py --seed k` for k = 1…4 and compare the minimum `a2_score` across the runs' metrics.json against −0.15. · Scar row \"Gate without anchor/resolution\" and \"Spread unknown\" (LAB-036 Validate), under LAB-015 Preflight audit before freezing · Calibrate the null band on the null lane over seeds and record the spread next to the band."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/00_prepare.py:70 · Train labels are taken as `float(row['K_VRH'])` with no filter. `main()` counts `train_zero_labels` and `train_nan_labels` into config and metrics but never refuses or excludes those rows. A K_VRH = 0 placeholder in the train CSV therefore enters both scored lanes as real gold 0. This breaks the measurement contract's own rule: \"a test file storing 0 … is a placeholder\". · If the count is above 0, `c1_score` and `a2_score` (and so `c1_threshold`) include placeholder targets. Assignment: read `train_zero_labels` and `train_nan_labels` from the prepare run's metrics.json, and compare each against 0. · new class: placeholder check recorded but not enforced · Make the prepare step refuse, or explicitly exclude and count, train rows with zero or NaN gold."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/00_prepare.py:39 · The fix for audit #1 changed what a row means: `features` went from four entries (with poisson_ratio) to three. The output name stayed `compounds_v1.jsonl`. The producer's own rule says \"a change in what a row MEANS … is a NEW name\". Run 2026-10-26T08-10-41_ad0d (`c1_score` 0.979) and run 2026-10-26T08-18-33_7392 (0.726) now both cite the same path for different data. · A recheck or `--draws` that holds the earlier run against its frozen source reads 3-feature items under a 4-feature run, or the reverse, and refuses or mismatches. Which run the current file belongs to cannot be told from the name. Assignment: compare `_instrument.items_sha` of the two runs' output rows and the `data=` sha each run recorded for `compounds_v1.jsonl`. · Scar row \"Provenance incomplete\" (LAB-043 Runs go through `runlog`), under LAB-015 Preflight audit before freezing · Give the three-feature materialisation a new filename and point `01_measure.ITEMS` at it."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/02_analyze.py:57 · `draws()` tells the user to repeat the kept run with `01_measure.py --repeat-of <run>`. `01_measure.py` has no such flag, only `--seed`, which starts an independent run that `answering_run.draws` does not list as a draw of the kept run. · `--draws` always reports \"one draw — no spread\". The seed spread of `c1_score` and `a2_score`, which the Summary declares untested, cannot be produced through the area's own analysis path. · Scar row \"Spread unknown\" (LAB-036 Validate), under LAB-015 Preflight audit before freezing · Either add a repeat-of path to the measurement script, or point `--draws` at the seed runs."
+status = "open"
+reason = ""
+
+[[fix_verdict]]
+record = "2026-10-26T08-17-analysis.toml"
+n = 1
+decision_sha = "bc13ec2878d7"
+verdict = "not_assessable"
+why = "The code no longer reads poisson_ratio (00_prepare.py:62-66 and :80-84 list three features), and `c1_score` fell from 0.979 to 0.726 (runs/2026-10-26T08-18-33_7392/metrics.json). Still, `data/prepared/compounds_v1.jsonl` is not inlined, the output rows carry no features, and nothing shown proves the run read regenerated 3-feature items rather than an earlier file under the same name (see the WARNING at 00_prepare.py:39). The drop in score is indirect evidence, not the check."

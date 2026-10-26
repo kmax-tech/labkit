@@ -261,7 +261,16 @@ Offen mit Auslöser, ohne Bauauftrag:
 1. **Pilot zur Prüfung von `fixed`-Entscheidungen (t3):** Ein BLOCKER wurde
    `fixed` geschlossen, ohne dass die verlangte Prüfung lief. Die Frage ist,
    ob der benannte Fehler im neuen Code und Lauf tatsächlich beseitigt ist.
-   **Gebaut 2026-10-26, Messung offen:** Das Analyse-Audit urteilt je
+   **Pilot gelaufen 2026-10-26** ([Bericht](docs/usability/2026-10-26-fixed-followup-pilot.md),
+   5,79 USD): 8 von 12 wie vorab festgelegt — alter Code 3/3 `unresolved`,
+   volle Korrektur mit Diagnose 3/3 `resolved`, Diagnose nur behauptet 2/3
+   `not_assessable`; die gelieferte Teilkorrektur (t3) aber 0/3
+   `unresolved` (2× `resolved`): Der Prüfer urteilt über den Befund, wie
+   er geschrieben ist (die Identität des Paars), nicht über die
+   Fehlerklasse aus der Aufgabe, die er nicht sieht. Drei offene Punkte
+   für die Gate-Entscheidung im Bericht (behauptete Prüfung, Befund vs.
+   Fehlerklasse, mehrzeiliges Warum). Bisher:
+   **Gebaut 2026-10-26:** Das Analyse-Audit urteilt je
    früherem `fixed`-BLOCKER `resolved | unresolved | not_assessable`,
    gespeichert als `[[fix_verdict]]`, gebunden an `decision_digest`;
    Parser streng, ein fehlendes Urteil bleibt ungeprüft. Noch kein Gate.

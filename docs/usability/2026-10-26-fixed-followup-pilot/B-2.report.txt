@@ -1,0 +1,25 @@
+BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The Conclusion reports out-of-fold R² = 0.726 and says the forest was trained without poisson_ratio. No shown run produced either claim. The answering run 2026-10-26T16-08-49_7574 records `c1_score` 0.9792 and `c1_threshold` 0.1662, and its rows still carry the leaked feature (see the FIX line) · A reader of the Summary gets R² 0.726 and "below the 0.80 bar", while metrics.json says 0.979, which is above it. The number and the feature set in the Conclusion contradict the run they claim to describe · new class (a reported number no shown run produced) · Fill Recorded results and the Conclusion from the answering run's metrics.json (`protocol-fill --from-run`) after the leakage rerun. Do not retype the number.
+
+BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:11 · [C1] judges against "null + 0.25", but the question it is meant to decide (line 10) asks for R² ≥ 0.80. The code implements C1 exactly as registered (`bar = null_score + margin` in `evaluate_rows`), so `c1_pass` does not answer the registered question. With the current null of −0.084 the bar is 0.166 · Any `c1_score` in [0.166, 0.80), such as the 0.726 the Summary reports, yields `c1_pass` true while the answer to the question is no. The Summary already has to explain this gap in prose · LAB-004 Identifiers make the intent addressable (a C fixes "which value of which metric supports the hypothesis") · Report `c1_pass` only as the margin-over-null verdict and mark the 0.80 question as not assessed by this run. A criterion matching the question is a new experiment (LAB-017), not an edit here.
+
+WARNING · experiments/01-bulk-modulus/scripts/00_prepare.py:71 · Training rows take `gold = float(row['K_VRH'])` with no filter. `train_zero_labels` and `train_nan_labels` are counted (:123–124) but never refused, even though the protocol (line 23) treats K_VRH = 0 as a placeholder. A zero placeholder in the train CSV would be scored as a real gold of 0 GPa in both lanes · Assignment: read `train_zero_labels` and `train_nan_labels` from the preparation run's metrics.json. If either is > 0, those rows enter `c1_score`, `a2_score` and `n_items` (944) as false golds. No zero gold appears in rows 1–50 · new class (a placeholder label the producer counts but keeps in the scored split) · Treat train rows with K_VRH = 0 or NaN as `gold: null` (or refuse them) in the producer, with the count reported as a yield.
+
+FIX · 2026-10-26T08-17-analysis.toml#1 · unresolved · The leaked feature is still produced:
+- 00_prepare.py:66 and :83 still append `float(row['poisson_ratio'])` to train and test features, directly below the comment claiming it is excluded (:60–61). FIELDS (:44) still lists four features including poisson_ratio.
+- 00_prepare.py:118 refuses to overwrite compounds_v1.jsonl, and 01_measure.py:84 `ITEMS` still reads compounds_v1.jsonl. So even a corrected producer would not reach the measurement under that name.
+- The new run's `c1_score` 0.9792 (runs/2026-10-26T16-08-49_7574/metrics.json) equals the 0.979 of the flagged run. Its row 1 is identical to the row the finding quoted (output/bulk-modulus.jsonl:1, gold 214.211, pred 210.705).
+- The closed-form probe R² the finding assigned is in no shown file.
+
+READ · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:16 · Recorded results still holds the stamped placeholder `<generated metrics, run_id and limits note…>`. · Write it back from the run's metrics.json.
+READ · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:28 · The Runs list still holds the placeholder `<run_id> — <one sentence…>`, so no run_id ties the Summary to a run. · Add one line per run_id with one sentence each.
+READ · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The person-facing Conclusion speaks in `c1_pass`, "A2" and "low repeat cost" instead of words. · State the answer in words and leave keys and ids to Recorded results.
+READ · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:9 · Terms packs estimator, feature list with the leakage rationale, target and split sizes into one semicolon chain. · Make it a short list, one term per item.
+READ · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:9 · "232 held-out test compounds" reads as though R² were scored on them. Line 23 says they are unlabelled and never scored. · Call them "unlabelled test compounds (predicted, never scored)" in both places.
+READ · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:20 · The prepared file is named `prepared/compounds_v1.jsonl`, but the scripts write and read `data/prepared/compounds_v1.jsonl`. · Use the one path.
+
+notes: 1 (not listed — repeat cost low)
+verdict: 2 blockers, 1 warnings, 0 notes
+scope:
+experiments/01-bulk-modulus/scripts/00_prepare.py
+experiments/01-bulk-modulus/scripts/01_measure.py
+experiments/01-bulk-modulus/scripts/02_analyze.py

@@ -1,0 +1,45 @@
+# written by labkit-audit — decide each finding: `labkit-audit <area> --decide N STATUS REASON`, or set status and reason here
+# a reason is a TOML string: "double quotes" escape a quote as \" and a backslash as \\; 'single quotes' take one line of text without a ' or a control character
+[audit]
+date = "2026-10-26T17:24"
+mode = "analysis"
+model = "opus"
+scope_sha = "c0d42ea7b90f"
+block_sha = "2ded6e190a47"
+registration = { "kind" = "fit", "Question / hypothesis" = "ac905b5b1cdd", "Success / failure criterion" = "124dfc31cd23", "Admissibility condition" = "9c0b44f6b0e7", "Null condition / anchors" = "9de3199f1fd6" }
+run_id = "2026-10-26T16-08-59_8a07"
+shown_sha = "39c94f34c3f6"
+blockers = 2
+warnings = 2
+notes = 7
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The Summary reports a result that no shown run produced. It gives out-of-fold R² = 0.726, says the run \"exceeds the registered criterion (null + 0.25 margin)\" and that \"c1_pass reflects passing\", and names the features elastic_anisotropy, G_VRH, space_group. The answering run's metrics.json has `c1_score` 0.5465, `a2_pass` false and `c1_pass` null, and its features are space_group, n_sites, volume_per_atom, n_elements. Recorded results (line 16) and Runs (line 28) are still placeholders, so no `[result] run` backs the sentence · A reader takes away R² 0.726 and C1 passed. The run (runs/2026-10-26T16-08-59_8a07/metrics.json) shows 0.5465 with no C1 verdict, and 0.726 matches neither this run nor the earlier leaking run (0.979) · new class: a hand-typed result that contradicts its run (01_measure.py cites LAB-041 Generate numbers, don't retype them, which is not inlined here) · Write Recorded results, Runs and Summary back from this run's metrics.json with the adopt command, stating that C1 has no verdict because A2 failed"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/scripts/01_measure.py:277 · [A2] holds the null lane to chance = 0.0 within ±0.15. But the null lane is a 500-tree forest fitted to permuted labels, and that model predicts noise with real variance, so its expected out-of-fold R² is below 0. The function's own docstring says \"a fitted forest sits slightly below\" (01_measure.py:268). The band was never derived: the MeasureConfig comment (01_measure.py:122) says to derive it from the null lane's spread over seeds, `--probe` is refused at repeat_cost low, and no seed spread exists. The protocol also gives no reason why an A2 failure makes the instrument unfit (PROTOCOL:22) · `a2_score` −0.174 sets `a2_pass` false, and that alone sets `c1_pass` null: the verdict is withheld by a gate whose target describes a different comparator. Assignment: run `01_measure.py --seed 1..9` and take `a2_score` from each run's metrics.json. Compare the spread and the mean with the 0.0 target and the 0.15 band, and check whether −0.174 is typical for this null lane or an outlier · Scar rows \"Gate without anchor/resolution\" and \"Trivial solution passes / null probe without a target\" (LAB-015 Preflight audit before freezing); \"Spread unknown\" (n = 1 seed) · Derive the null lane's expected value and band from its spread over seeds and record that derivation as A2's target and rationale. Until then, report C1 for this run as not assessable"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:10 · The question asks whether a forest \"trained on composition and elastic properties\" reaches \"R² ≥ 0.80\". [C1] (line 11 and 01_measure.py:318–320) judges `c1_score ≥ null + 0.25` instead. With this run's null the bar is 0.076, and the code reads no elastic property at all. A C1 pass therefore does not decide the stated hypothesis · If A2 passed with these numbers, `c1_pass` would be true at `c1_score` 0.5465 (bar −0.174 + 0.25 = 0.076). It would then be read as answering \"R² ≥ 0.80\", which is what the Summary at line 5 already does with \"exceeds the registered criterion\" · LAB-004 Identifiers make the intent addressable ([C] fixes which value of which metric supports the hypothesis) · Report c1 only against its own sentence and mark the 0.80 question as not judged by C1. A criterion that matches the question needs a new experiment, not an edit to this one"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:9 · The Terms register \"features are elastic_anisotropy, G_VRH, space_group\". The producer writes space_group, n_sites, volume_per_atom, n_elements (00_prepare.py:44, 91) and explicitly excludes G_VRH and elastic_anisotropy (00_prepare.py:51) · A reader of the registration attributes `c1_score` 0.5465 to a feature set that the identity probe shows to be near-leaking (`identity_r2_excluded_pair` 0.9999998), i.e. to the wrong instrument · new class: the registration describes an instrument the code no longer runs · Rewrite Terms (and the Question's \"elastic properties\") to describe the feature set the producer actually writes"
+status = "open"
+reason = ""
+
+[[fix_verdict]]
+record = "2026-10-26T08-17-analysis.toml"
+n = 1
+decision_sha = "e7657e7388b9"
+verdict = "resolved"
+why = "`build()` fills `features` only from `structure_features()` (00_prepare.py:91, 68), which reads space_group and the structure text. G_VRH, poisson_ratio and elastic_anisotropy are never read (00_prepare.py:51). The data the run read did change: output/bulk-modulus.jsonl:1 has pred 185.38 for mp-30836, where the finding quoted 210.70 under the same seed and folds, and `c1_score` dropped from 0.979 to 0.5465. One caution: metrics.json `feature_columns` is the code constant from leak_diagnostic, not read from the data, so it is not itself evidence of what the run fitted."

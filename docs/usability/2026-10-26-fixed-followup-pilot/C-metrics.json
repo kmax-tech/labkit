@@ -1,0 +1,33 @@
+{
+  "n_items": 944,
+  "n_rows": 2120,
+  "n_test": 232,
+  "a1_empty": 0,
+  "a1_pass": true,
+  "a2_score": -0.17397082156990518,
+  "a2_chance": 0.0,
+  "a2_pass": false,
+  "c1_score": 0.5465261679590219,
+  "c1_threshold": null,
+  "c1_pass": null,
+  "feature_columns": [
+    "space_group",
+    "n_sites",
+    "volume_per_atom",
+    "n_elements"
+  ],
+  "feature_sources": {
+    "space_group": "column space_group",
+    "n_sites": "structure text: the N of `Sites (N)`",
+    "volume_per_atom": "structure text: cell volume from `abc` and `angles`, over n_sites",
+    "n_elements": "structure text: elements in `Reduced Formula`"
+  },
+  "excluded_columns": [
+    "G_VRH",
+    "poisson_ratio",
+    "elastic_anisotropy"
+  ],
+  "identity_r2_excluded_pair": 0.9999998,
+  "identity_rows": 944,
+  "duration_s": 7.6
+}

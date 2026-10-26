@@ -1,0 +1,51 @@
+# written by labkit-audit — decide each finding: `labkit-audit <area> --decide N STATUS REASON`, or set status and reason here
+# a reason is a TOML string: "double quotes" escape a quote as \" and a backslash as \\; 'single quotes' take one line of text without a ' or a control character
+[audit]
+date = "2026-10-26T17:26"
+mode = "analysis"
+model = "opus"
+scope_sha = "5754a7ebdeff"
+block_sha = "2ded6e190a47"
+registration = { "kind" = "fit", "Question / hypothesis" = "ac905b5b1cdd", "Success / failure criterion" = "124dfc31cd23", "Admissibility condition" = "9c0b44f6b0e7", "Null condition / anchors" = "9de3199f1fd6" }
+run_id = "2026-10-26T16-09-07_e338"
+shown_sha = "2b54f3e1b5e3"
+blockers = 3
+warnings = 2
+notes = 5
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The Summary reports a number that no registered run produced. It claims \"out-of-fold R² = 0.726\" from a forest on \"elastic_anisotropy, G_VRH, and space_group\", and says \"the reported c1_pass reflects passing the margin-relative threshold\". The only run shown, 2026-10-26T16-09-07_e338, records `c1_score` 0.5465, `a2_pass` false and `c1_pass` null, so no C1 verdict exists. Recorded results, Runs and `[result] run` are still placeholders, so the 0.726 is hand-typed and has no source · A reader takes R² = 0.726 and a C1 pass from the protocol. The run's metrics.json says R² 0.5465 with the verdict withheld because A2 failed (`a2_score` −0.174 against band 0.15) · new class (reported number not generated from the answering run; the write-back LAB-050 Analysis audit before reporting guards) · Replace the Summary and Recorded results with the run's metrics via `protocol-fill --from-run 2026-10-26T16-09-07_e338`, state that A2 failed and that C1 has no verdict, and delete the 0.726 claim"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/scripts/01_measure.py:277 · [A2]'s anchor is not the expected value of the null lane this code generates. `chance_of(\"r2\")` returns 0.0. Its own docstring (:268) says \"a fitted forest sits slightly below\". A 500-tree forest fitted on fold-permuted labels and scored out of fold has R² below 0, by roughly the variance of its own predictions over var(y). The band 0.15 was never derived from a measured spread: MeasureConfig :122 says to derive it from the probe, and the probe is refused at `repeat_cost = \"low\"`. So A2 can fail on a sound instrument, and on one draw that decides whether C1 gets a verdict · `a2_pass` false (`a2_score` −0.17397, 0.024 outside the band, one seed) sets `c1_pass` = None (:315–317). Whether this is an instrument fault or a mis-set anchor is unknown. Assignment: run `01_measure.py --seed s` for s = 1…5, collect `a2_score` from each run's metrics.json, and report its mean and spread against −0.15 · Scar rows \"Trivial solution passes / null probe without a target\" (b) and \"Spread unknown\" (LAB-015 Preflight audit before freezing); LAB-004 Identifiers make the intent addressable (an A must fail on the instrument, not on its own target) · Measure the null lane's distribution over seeds. If its mean sits below −0.15, then A2 as registered cannot be met by this estimator: report C1 as not assessable for this run, and treat a derived anchor as a new registration"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:11 · [C1] does not fix the value that supports the hypothesis. The question (:10) asks for \"R² ≥ 0.80\". C1 passes at null + 0.25, which in this run is about 0.076 (−0.174 + 0.25). The code implements C1 exactly as registered (01_measure.py:318–320), so a `c1_pass` true would answer \"yes\" to a question whose own bar the score misses · With A2 passing on another seed, `c1_score` 0.5465 ≥ ~0.08 would give `c1_pass` true while R² is 0.25 below the question's 0.80. The protocol's Summary already reads it that way (\"c1_pass reflects passing the margin-relative threshold, not answering the hypothesis\") · LAB-004 Identifiers make the intent addressable (C fixes which value of which metric supports the hypothesis) · The frozen criterion stays. Report C1 strictly as \"beats the null by 0.25\", never as an answer to the 0.80 question; testing the 0.80 bar is a new experiment (LAB-017 The number of audits follows the cost tier)"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:9 · The registration describes a different instrument than the code. Terms names the features \"elastic_anisotropy, G_VRH, space_group\", and the question (:10) says \"composition and elastic properties\". 00_prepare.py:44 `FEATURE_COLUMNS` reads only space_group, n_sites, volume_per_atom and n_elements, and excludes every elastic column (:51). The stale comment at 00_prepare.py:88 repeats the old set · A reader of the protocol reads `c1_score` 0.5465 as the score of an elastic-feature forest. It is the score of a structure-only forest, which is a different question about predicting K_VRH · new class (intent field contradicts the instrument after an allowed low-tier instrument change) · Bring Terms and the question's feature wording in line with `FEATURE_COLUMNS`/`FEATURE_SOURCES`, and correct the 00_prepare.py:88 comment"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/00_prepare.py:142 · The prepare step counts `train_zero_labels` and `train_nan_labels` but holds them to nothing. Every train row enters scoring with `gold = float(K_VRH)` (:95), so a zero placeholder or NaN in the train CSV is scored as a real modulus. The protocol's own exclusion (:23) treats K_VRH = 0 as a placeholder · A train row with K_VRH = 0 enters SST/SSE of `c1_score` and `a2_score` as gold 0; a NaN makes both NaN. Assignment: read `train_zero_labels` and `train_nan_labels` from the prepare run's metrics.json, and count rows in output/bulk-modulus.jsonl with lane ≠ test and gold ≤ 0 · new class (a computed data check held to no gate) · Make the prepare step refuse, or exclude and count, train rows whose K_VRH is 0 or NaN, applying the protocol's placeholder rule to both splits"
+status = "open"
+reason = ""
+
+[[fix_verdict]]
+record = "2026-10-26T08-17-analysis.toml"
+n = 1
+decision_sha = "e7657e7388b9"
+verdict = "not_assessable"
+why = "The code change is real: 00_prepare.py:44–68 builds features only from `space_group` and the structure text, and :51 excludes G_VRH, poisson_ratio and elastic_anisotropy. The diagnostic the closing reason cites is shown nowhere. runs/2026-10-26T16-09-07_e338/metrics.json carries no feature columns, sources, excluded columns or identity-probe R² (its keys are n_items … duration_s). The protocol still names G_VRH/elastic_anisotropy as features (PROTOCOL:5, :9), so what the reason says was run cannot be checked here"

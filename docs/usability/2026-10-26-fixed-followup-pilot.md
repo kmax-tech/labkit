@@ -64,3 +64,75 @@ the probe explains why the excluded pair was a leak.
   why, the record's other findings in one line, cost.
 - Three draws per case are a first look, not a catch rate. One model, one
   task, one leak.
+
+## Result (2026-10-26, after the twelve calls)
+
+Twelve of twelve draws ran, no failure, 5.79 USD (0.18–0.63 per call;
+ledger and every report and record in
+[2026-10-26-fixed-followup-pilot/](2026-10-26-fixed-followup-pilot/)).
+Every draw wrote exactly one FIX line on 08-17 #1; no line was refused,
+none was missing.
+
+| case | expected | draw 1 | draw 2 | draw 3 | as expected |
+|---|---|---|---|---|---|
+| A partial | `unresolved` | `resolved` | `not_assessable` | `resolved` | 0/3 |
+| B old code | `unresolved` | `unresolved` | `unresolved` | `unresolved` | 3/3 |
+| C full fix | `resolved` | `resolved` | `resolved` | `resolved` | 3/3 |
+| D fix unshown | `not_assessable` | `not_assessable` | `not_assessable` | `resolved` | 2/3 |
+
+8 of 12 as pre-registered.
+
+- **B** — each draw quotes `float(row['poisson_ratio'])` at
+  00_prepare.py:66 and :83 under the comment that claims it gone, and
+  `c1_score` 0.979 equal to the flagged run. The reason "removed" did not
+  carry against the code.
+- **C** — each draw names `FEATURE_COLUMNS` / `structure_features` and the
+  shown `identity_r2_excluded_pair` 0.9999998. C-2 adds that
+  `feature_columns` is a code constant, not read from the data.
+- **D** — D-1 and D-2: the code change is real, the diagnostic the reason
+  cites is in no shown file. D-3 judged `resolved` from the code and the
+  changed rows, and says in the same line that the claimed evidence does
+  not exist — the instruction (a check the finding asked for must be shown)
+  was not held.
+- **A** — no draw judged `unresolved`. A-1 and A-3: poisson_ratio gone,
+  `c1_score` 0.979 → 0.726, "elastic_anisotropy carries only K_V/K_R, not
+  K's scale" — no remaining closed form. A-2: `not_assessable`, the
+  prepared data is not shown. No draw named G_VRH's provenance. The miss
+  sits in the pre-registration as much as in the auditor: the finding text
+  named the identity of the pair, and the protocol the auditor reads
+  registers "composition and elastic properties" (PROTOCOL:10). The
+  provenance definition of this pilot came from the task text, which the
+  audit is not shown. With the finding as written, removing ν does break
+  the identity; "resolved" there is a defensible reading of a narrower
+  finding.
+
+Other findings did not crowd the FIX line out: 1–4 BLOCKERs per draw
+(the C1 bar against the question's 0.80 in every A and B draw; in C and D
+the protocol still naming the old features, the Summary quoting 0.726).
+
+Format: B-2 wrote its why over five lines; the record holds only the
+first ("The leaked feature is still produced:"), the evidence below it
+is lost. `parse_fixes` reads one line by design; either the parser takes
+the continuation or a multi-line FIX is refused.
+
+## Reading
+
+- What the pilot shows: the auditor reads the reason against the code
+  (B 3/3), credits a shown diagnostic (C 3/3), and mostly refuses a claimed
+  one (D 2/3). Every verdict was bound and read; one why lost its
+  continuation lines (B-2).
+- What it does not show: that the audit finds a leak the finding did not
+  name. Case A tested a definition the auditor was never given. A gate
+  that releases on `resolved` would have released A in two of three
+  draws — exactly t3's delivered state.
+- Small: one task, one leak, three draws, one model.
+
+## Open for the gate decision (step 3)
+
+1. D-3: one `resolved` against a missing check. Hold `resolved` to a
+   check the finding assigned (its `Assignment:` named in the finding) —
+   or accept that the verdict is the auditor's and the gate counts it.
+2. A: whether a fix verdict judges the finding as written or the fault
+   class. If the class, the prompt must show what defines it (here the
+   task's feature rule); today nothing in the area carries it.
+3. B-2: multi-line why — read the continuation, or refuse it.

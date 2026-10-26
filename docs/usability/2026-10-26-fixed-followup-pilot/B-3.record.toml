@@ -1,0 +1,45 @@
+# written by labkit-audit — decide each finding: `labkit-audit <area> --decide N STATUS REASON`, or set status and reason here
+# a reason is a TOML string: "double quotes" escape a quote as \" and a backslash as \\; 'single quotes' take one line of text without a ' or a control character
+[audit]
+date = "2026-10-26T17:30"
+mode = "analysis"
+model = "opus"
+scope_sha = "ddb3395ff87f"
+block_sha = "2ded6e190a47"
+registration = { "kind" = "fit", "Question / hypothesis" = "ac905b5b1cdd", "Success / failure criterion" = "124dfc31cd23", "Admissibility condition" = "9c0b44f6b0e7", "Null condition / anchors" = "9de3199f1fd6" }
+run_id = "2026-10-26T16-08-49_7574"
+shown_sha = "6efcb0b9b43f"
+blockers = 1
+warnings = 3
+notes = 2
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The Summary reports \"out-of-fold R² = 0.726\", but no recorded run produced that number. The answering run's metrics.json has `c1_score` 0.9792186258959389 and `c1_threshold` 0.1661941598519554. The Summary also says the result \"falls below the question's absolute 0.80 bar\", which only holds for the 0.726 number. · The R² a reader takes from this protocol is 0.726, while runs/2026-10-26T16-08-49_7574/metrics.json says 0.979. The conclusion about the 0.80 bar flips with it. · new class (reported number not traceable to a recorded run) · Rewrite the Summary from the metrics.json of the run the protocol names, through the adopt/`--from-run` write-back. A 0.726 run exists only if it is recorded and named."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/01_measure.py:318 · [C1] is implemented as registered: registered R² ≥ null R² + 0.25. The registered question asks for R² ≥ 0.80. With `a2_score` −0.084 the bar is 0.166, so `c1_pass` is true for any R² between 0.166 and 0.80, where the answer to the question is no. · `c1_pass` true does not mean \"R² ≥ 0.80\". In this run both bars pass (0.979). Once the leakage is removed, the number the Summary claims (0.726) would pass C1 and fail the question. · LAB-004 Identifiers make the intent addressable (C fixes \"which value of which metric supports the hypothesis\") · In the report, state that `c1_pass` judges only the margin over the null lane and that the 0.80 question remains unjudged by any registered id. An absolute 0.80 bar would be a new experiment (LAB-003)."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/01_measure.py:121 · `null_band` = 0.15 is centred on `chance_of(\"r2\")` = 0.0 (01_measure.py:276). The code's own docstring says a fitted forest on noise sits below 0. The band was never derived from the null lane's spread over seeds, as MeasureConfig:122 asks, and `--probe` is barred at low repeat cost. This run's null lane is already at −0.084. · Any seed where the permuted-label lane scores below −0.15 sets `a2_pass` false and `c1_pass` None, with no fault in the instrument. Assignment: run `01_measure.py --seed 1..4`, read `a2_score` from each run's metrics.json, compare against −0.15, and report how many fall outside. · LAB-015 Preflight audit before freezing (scar rows \"Gate without anchor/resolution\" and \"Spread unknown\") · Calibrate the band on the null lane's spread over seeds, or report A2 as assessed for seed 0 only."
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/00_prepare.py:71 · Every training row's `K_VRH` becomes `gold` without a check. `train_zero_labels` and `train_nan_labels` are counted and logged (00_prepare.py `main`) but never refused or excluded. 01_measure.py's own contract says a stored 0 is a placeholder, not a label. · If either count is greater than 0, those rows enter both scored lanes as real gold 0.0 (or NaN), which shifts `c1_score`, `a2_score` and `n_items` (944). Assignment: read `train_zero_labels` and `train_nan_labels` from the prepare run's metrics.json. If either is non-zero, recompute `c1_score` without those items and compare against 0.979. · LAB-015 Preflight audit before freezing (new class within it: an unrefused placeholder label in the scored split) · In 00_prepare, exclude train rows with K_VRH ≤ 0 or NaN and record that filter's yield."
+status = "open"
+reason = ""
+
+[[fix_verdict]]
+record = "2026-10-26T08-17-analysis.toml"
+n = 1
+decision_sha = "bc13ec2878d7"
+verdict = "unresolved"
+why = "The closing reason says poisson_ratio was removed, but the code still adds it: 00_prepare.py:66 (train) and 00_prepare.py:83 (test) append `float(row['poisson_ratio'])` as the fourth feature, right under the comment at :60–61 that claims it is excluded. FIELDS at :44 still lists it. The answering run 2026-10-26T16-08-49_7574 still reports `c1_score` 0.9792186258959389, the same leaked value the finding quoted. Separately, 00_prepare.py `main` refuses to rewrite an existing compounds_v1.jsonl, so even a code fix would not reach the data without a new dataset name. Assignment: (a) confirm 4-element `features` in data/prepared/compounds_v1.jsonl; (b) compute the closed-form R² the finding asked for."
