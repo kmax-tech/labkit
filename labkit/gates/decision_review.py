@@ -23,7 +23,10 @@ Recorded results and Limit lines are shown as they render and are bound
 through the record and the run) and each decision as it stood
 (`findings.decision_digest`). Only `upheld` releases a decision;
 `rejected` and `insufficient` do not, nor does a review of a decision or
-a claim since changed. After `rejected` the person decides again first —
+a claim since changed. The call is an attempt in the area's journal
+(`attempts.attempt`, mode `review`): the answer kept before it is read,
+the end naming the review file or why there is none — so a review
+deleted before the commit is named. After `rejected` the person decides again first —
 limits the claim, changes the effect to `not assessable`, or fixes the
 fault; a new audit is due when its basis changes or the finding is
 disputed, and does not by itself settle the rejection. After
@@ -60,7 +63,7 @@ from typing import NamedTuple
 from labkit.formats.runs import run_path
 from labkit.checks.audit_binding import AuditError, run_shown
 from labkit.checks.result_render import rendering
-from labkit.formats import console, findings, reviews
+from labkit.formats import attempts, console, findings, reviews
 from labkit.formats.findings import EFFECT_STANDS
 from labkit.formats.protocol_check import CONCLUSION_LABEL, field_name, fields
 from labkit.formats.repo import ProtocolChoiceError, layout_root, shown, the_protocol
@@ -68,6 +71,8 @@ from labkit.formats.scope_sha import Snapshot, area_snapshot, validation_note
 from labkit.gates import audit
 from labkit.run import llm, llm_backends
 
+#: the review's mode: its instructions, the prompt's MODE line and its
+#: attempts in the area's journal (`attempts`)
 REVIEW = "review"
 #: a decision line of the reviewer's report
 DECISION = re.compile(
@@ -371,14 +376,39 @@ def review(
             f"review · {rec.path.name} · {len(evidence.numbers)} "
             f"decision(s) · {model} · {len(evidence.prompt) // 1000} kB",
         )
-        report = llm.complete(
-            model,
-            evidence.prompt,
-            timeout=timeout,
-            max_tokens=audit._report_room(model),
-        )
-        console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
-        lines = parse_review(report, evidence.numbers)
+        # journaled like an audit: a review deleted before the commit is
+        # noticed by the attempt that names it (ninth haiku round, t5)
+        with attempts.attempt(area, REVIEW, model, evidence.scope_sha) as running:
+            for note in running.notes:
+                console.progress("labkit-audit", note)
+            report = llm.complete(
+                model,
+                evidence.prompt,
+                timeout=timeout,
+                max_tokens=audit._report_room(model),
+            )
+            running.keep_answer(report)
+            console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
+            lines = parse_review(report, evidence.numbers)
+            print(report)
+            if out:
+                out.write_text(report, encoding="utf-8")
+            decisions = [
+                reviews.Decision(
+                    n, findings.decision_digest(rec.findings[n - 1]), verdict, why
+                )
+                for n, verdict, why in lines
+            ]
+            written = reviews.write_review(
+                area,
+                model,
+                rec.path.name,
+                evidence.scope_sha,
+                evidence.shown_sha,
+                evidence.claim_sha,
+                decisions,
+            )
+            running.end("record", file=attempts.under_audits(area, written))
     except (
         AuditError,
         ProtocolChoiceError,
@@ -388,26 +418,11 @@ def review(
         llm_backends.PromptTruncated,
         KeyError,  # llm.resolve on an alias models.toml does not know
         FileNotFoundError,
-        ValueError,  # nothing to stamp
+        ValueError,  # nothing to stamp; an attempt refused (AttemptError)
+        RuntimeError,  # git failed while the attempt was checked
     ) as exc:
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
         return 2
-    print(report)
-    if out:
-        out.write_text(report, encoding="utf-8")
-    decisions = [
-        reviews.Decision(n, findings.decision_digest(rec.findings[n - 1]), verdict, why)
-        for n, verdict, why in lines
-    ]
-    written = reviews.write_review(
-        area,
-        model,
-        rec.path.name,
-        evidence.scope_sha,
-        evidence.shown_sha,
-        evidence.claim_sha,
-        decisions,
-    )
     u, r, i = reviews.counts_of(decisions)
     print()
     print(

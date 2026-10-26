@@ -158,7 +158,9 @@ class Begin(unittest.TestCase):
     def test_a_running_attempt_refuses_a_second_and_an_ended_one_does_not(self):
         area = area_in_repo()
         first = attempts.begin(area, "analysis", "opus", "s")
-        with self.assertRaisesRegex(attempts.AttemptError, "is running"):
+        with self.assertRaisesRegex(
+            attempts.AttemptError, "is running — wait for it to end, then run this"
+        ):
             attempts.begin(area, "analysis", "opus", "s")
         first.end("none", error="no answer")
         attempts.begin(area, "analysis", "opus", "s").end("none", error="again")
@@ -288,6 +290,56 @@ class Hook(unittest.TestCase):
         )
         git(root, "commit", "-qm", "restore the record")
         self.assertEqual(claude_hooks.undecided_blockers(root, [failed]), [])
+
+
+class OneBlock(unittest.TestCase):
+    """`attempt`: a call that starts and ends in one block — the reviews —
+    always leaves an end in the journal."""
+
+    def test_the_block_ends_it_with_its_record(self):
+        area = area_in_repo()
+        with attempts.attempt(area, "review", "opus", "s") as running:
+            (path := area / "audits" / "r-review.toml").write_text(
+                "x", encoding="utf-8"
+            )
+            running.end("record", file=attempts.under_audits(area, path))
+        (a,) = attempts.read_journal(area)
+        self.assertEqual((a.mode, a.outcome, a.file), ("review", "record", path.name))
+
+    def test_a_block_that_raises_ends_it_none_with_the_words(self):
+        area = area_in_repo()
+        with self.assertRaisesRegex(RuntimeError, "the CLI died"):
+            with attempts.attempt(area, "review", "opus", "s"):
+                raise RuntimeError("the CLI died")
+        (a,) = attempts.read_journal(area)
+        self.assertEqual((a.outcome, a.error), ("none", "RuntimeError: the CLI died"))
+
+    def test_a_block_that_returns_unended_ends_it_none(self):
+        area = area_in_repo()
+        with attempts.attempt(area, "report-review", "opus", "f"):
+            pass
+        (a,) = attempts.read_journal(area)
+        self.assertEqual(
+            (a.outcome, a.error), ("none", "the command ended before the record")
+        )
+
+    def test_a_refused_start_makes_no_attempt(self):
+        area = area_in_repo()
+        first = attempts.begin(area, "analysis", "opus", "s")
+        with self.assertRaisesRegex(attempts.AttemptError, "is running"):
+            with attempts.attempt(area, "review", "opus", "s"):
+                self.fail("the block must not run")
+        first.end("none", error="done")
+        self.assertEqual([a.mode for a in attempts.read_journal(area)], ["analysis"])
+
+    def test_under_audits_names_a_file_in_a_subfolder(self):
+        area = area_in_repo()
+        sub = area / "audits" / "report-reviews" / "m-review.toml"
+        self.assertEqual(
+            attempts.under_audits(area, sub), "report-reviews/m-review.toml"
+        )
+        with self.assertRaises(ValueError):
+            attempts.under_audits(area, area / "PROTOCOL-x.md")
 
 
 if __name__ == "__main__":

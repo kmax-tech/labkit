@@ -1,9 +1,11 @@
 """attempts — the journal of an area's audit attempts, so a record that
 went missing is noticed.
 
-`labkit-audit` (MODE preflight or analysis) appends to
-`experiments/<NN>-<name>/audits/attempts.jsonl`, one JSON object per line,
-never rewriting one:
+Every model call of `labkit-audit` is an attempt: an audit (`--mode
+preflight` or `analysis`), a decision review (`--review`, mode `review`)
+and a report review (`--report-review`, mode `report-review`). Each
+appends to `experiments/<NN>-<name>/audits/attempts.jsonl`, one JSON
+object per line, never rewriting one:
 
     {"event": "started", "id": "2026-10-26T09-16-analysis-3f2a", "mode": "analysis",
      "model": "opus", "scope_sha": "fa45c7618423", "started": "2026-10-26T09:16:02",
@@ -38,7 +40,19 @@ blockers, each naming the attempt or the file. A running, interrupted or
 undecidable attempt (started on another host) is named, not held: a
 timeout must not lock the area. Why (sixth haiku round, t3; eighth, t18):
 agents ran `rm audits/*.toml` before a new attempt, and nothing noticed
-that a failed or an earlier record was gone.
+that a failed or an earlier record was gone; the reviews joined the
+journal after the ninth (t5 deleted a report review that named two
+claims, and only HEAD would have noticed).
+
+`scope_sha` in a start is the digest of what the attempt was given to
+read: the area's stamp for an audit and a decision review, the
+fingerprint of its inputs for a report review (`report_reviews.fingerprint`
+— an area without scripts has no stamp, and the inputs are what the
+reader saw). It is evidence, and no gate reads it.
+
+The journal starts with the attempts made since it was introduced; a
+record older than its journal is named by none, and none is added for it
+afterwards — an entry written later would claim a start nobody saw.
 
 Limit: an attempt never committed whose journal line was removed with it
 cannot be told from one that never happened — a local check has no
@@ -105,6 +119,13 @@ class Attempt:
 def journal_path(area: Path) -> Path:
     """`AREA/audits/attempts.jsonl`."""
     return area / DIR / JOURNAL
+
+
+def under_audits(area: Path, path: Path) -> str:
+    """PATH as an end names it: relative to `AREA/audits/`, `/`-separated
+    (`report-reviews/<minute>-review.toml` for a report review). Raises
+    ValueError when PATH lies outside that folder."""
+    return path.resolve().relative_to((area / DIR).resolve()).as_posix()
 
 
 def parse_journal(text: str, where: str) -> list[Attempt]:
@@ -494,7 +515,11 @@ def begin(area: Path, mode: str, model: str, scope_sha: str) -> Running:
         if running or found.blockers:
             raise AttemptError(
                 "; ".join(
-                    [f"attempt {aid} of this area is running" for aid in running]
+                    [
+                        f"attempt {aid} of this area is running — wait for it to "
+                        f"end, then run this again"
+                        for aid in running
+                    ]
                     + found.blockers
                 )
             )
@@ -518,3 +543,23 @@ def begin(area: Path, mode: str, model: str, scope_sha: str) -> Running:
             },
         )
         return Running(area, aid, lock, found.notes)
+
+
+@contextlib.contextmanager
+def attempt(area: Path, mode: str, model: str, scope_sha: str) -> Generator[Running]:
+    """`begin` an attempt of MODE on AREA for a call that starts and ends in
+    one block, and make sure it ends: the block ends it with its record
+    (`Running.end`); a block that raises ends it `none` with the
+    exception's words, one that returns without an end with "the command
+    ended before the record". The decision and the report review use it;
+    the analysis audit ends its attempt across two steps itself
+    (`gates.audit`). Raises what `begin` raises, before any call."""
+    running = begin(area, mode, model, scope_sha)
+    try:
+        yield running
+    except BaseException as exc:
+        if not running.ended:
+            running.end("none", error=f"{type(exc).__name__}: {exc}")
+        raise
+    if not running.ended:
+        running.end("none", error="the command ended before the record")

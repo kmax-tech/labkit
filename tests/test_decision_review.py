@@ -22,8 +22,9 @@ from unittest import mock
 from protocol_fixture import registration_of, completed_run, head, scope_file
 
 from labkit.checks import audit_binding
-from labkit.formats import findings, promises, reviews, scope_sha
+from labkit.formats import attempts, findings, promises, reviews, scope_sha
 from labkit.gates import audit, decision_review, report_check
+from labkit.run import llm_backends
 from labkit.tools import protocol_fill
 
 RUN = "2026-10-07T10-00-00_ab12"
@@ -581,6 +582,84 @@ class TheFile(unittest.TestCase):
         self.assertTrue(second.name.endswith("-review-2.toml"), second.name)
         self.assertEqual([r.path for r in reviews.area_reviews(area)], [path, second])
         self.assertEqual(findings.area_records(area), [])
+
+
+class Journal(unittest.TestCase):
+    """A review is an attempt in the area's journal, as an audit is: the
+    start before the call, the answer kept before it is read, the end with
+    the record or why there is none. A review deleted before the commit is
+    named by the attempt that wrote it (ninth haiku round, t5 deleted a
+    report review that named two claims)."""
+
+    def test_a_review_is_journaled_with_its_answer_and_its_record(self):
+        area, _ = area_with(
+            [BLOCKER], {1: ("accepted", "in-sample, said so", "stands")}
+        )
+        rc, _, _, _ = run_review(area, UPHELD)
+        self.assertEqual(rc, 0)
+        (a,) = attempts.read_journal(area)
+        (review,) = reviews.area_reviews(area)
+        self.assertEqual(
+            (a.mode, a.outcome, a.file), ("review", "record", review.path.name)
+        )
+        self.assertEqual(
+            (area / "audits" / a.answer).read_text(encoding="utf-8"), UPHELD
+        )
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
+
+    def test_a_deleted_review_is_named_and_refuses_the_next_call(self):
+        area, _ = area_with([BLOCKER], {1: ("accepted", "Finding noted", "stands")})
+        run_review(area, REJECTED)
+        (review,) = reviews.area_reviews(area)
+        review.path.unlink()
+        (gap,) = attempts.area_gaps(area).blockers
+        self.assertIn(f"audits/{review.path.name}", gap)
+        self.assertIn("restore it", gap)
+        # with the rejection gone nothing else holds the draw; the journal does
+        rc, _, err, sent = run_review(area, UPHELD)
+        self.assertEqual((rc, sent), (2, []))
+        self.assertIn(review.path.name, err)
+
+    def test_a_backend_that_does_not_answer_ends_the_attempt_with_its_cause(self):
+        area, _ = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
+
+        def down(alias, prompt, **kw):
+            raise llm_backends.BackendError("claude-cli: exit 1, empty stderr")
+
+        with (
+            mock.patch.object(audit.llm, "complete", down),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            rc = audit.main([str(area), "--review"])
+        self.assertEqual(rc, 2)
+        (a,) = attempts.read_journal(area)
+        self.assertEqual((a.outcome, a.file, a.answer), ("none", "", ""))
+        self.assertIn("exit 1, empty stderr", a.error)
+        self.assertEqual(reviews.area_reviews(area), [])
+
+    def test_an_answer_that_does_not_read_is_kept_and_named(self):
+        area, _ = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
+        rc, _, _, _ = run_review(area, "looks fine to me")
+        self.assertEqual(rc, 2)
+        (a,) = attempts.read_journal(area)
+        self.assertEqual(a.outcome, "none")
+        self.assertTrue(a.error)
+        self.assertEqual(
+            (area / "audits" / a.answer).read_text(encoding="utf-8"),
+            "looks fine to me",
+        )
+        self.assertEqual(reviews.area_reviews(area), [])
+
+    def test_the_twin_a_review_older_than_the_journal_is_not_held(self):
+        """No entry is written afterwards for a review made before the
+        journal: one that no attempt names stands as it is."""
+        area, record = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
+        d = reviews.Decision(1, "a" * 12, "upheld", "fine")
+        reviews.write_review(area, "opus", record.name, "s", "h", "c", [d])
+        self.assertEqual(attempts.read_journal(area), [])
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
 
 
 if __name__ == "__main__":

@@ -16,7 +16,12 @@ Instructions: `report-review.agent.md`.
 
 Agent audit; its record is a gate's input. The review writes
 `audits/report-reviews/<minute>-review.toml` with the claims and the
-fingerprint of the inputs it read (`report_reviews`). report-check holds
+fingerprint of the inputs it read (`report_reviews`). The call is an
+attempt in the area's journal (`attempts.attempt`, mode `report-review`,
+started on that fingerprint): the answer kept before it is read, the end
+naming the record or why there is none — a review with a claim deleted
+before the commit is named, where before nothing held the state once it
+was gone (ninth haiku round, t5). report-check holds
 a report with a discussion block until a review of exactly that state
 names no claim (`report_check.report_review_owed`); a claim holds the
 state, and a later clean draw does not release it. On a state a review
@@ -41,7 +46,7 @@ from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError
 from labkit.checks.report_blocks import Discussion, ReportBlockError, discussions
-from labkit.formats import console, findings, report_reviews
+from labkit.formats import attempts, console, findings, report_reviews
 from labkit.formats.report_reviews import ReportClaim
 from labkit.formats.repo import (
     ProtocolChoiceError,
@@ -56,6 +61,8 @@ from labkit.gates import audit
 from labkit.run import llm, llm_backends
 
 REPORT_REVIEW = "report"
+#: the mode of its attempts in the area's journal (`attempts`)
+ATTEMPT_MODE = "report-review"
 #: a claim line of the reviewer's report
 CLAIM = re.compile(
     r"^[\s>*`-]*\**CLAIM\s*#(\d+)\**\s*(?:·|—|–|:)\s*line\s*(\d+)\s*(?:·|—|–|:)\s*"
@@ -305,23 +312,31 @@ def review_report(
             f"report review · {report.name} · {len(discussed)} discussed run(s) · "
             f"{model} · {len(prompt) // 1000} kB",
         )
-        reply = llm.complete(
-            model, prompt, timeout=timeout, max_tokens=audit._report_room(model)
-        )
-        console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
-        claims = parse_claims(
-            reply, len(report.read_text(encoding="utf-8").split("\n"))
-        )
-        written = report_reviews.write_report_review(
-            area,
-            model=model,
-            report=report_key,
-            protocol=protocol_key,
-            whole=whole,
-            parts=parts,
-            claims=claims,
-            again=again,
-        )
+        # journaled like an audit, started on the inputs' fingerprint: a
+        # review with claims deleted before the commit is noticed by the
+        # attempt that names it (ninth haiku round, t5)
+        with attempts.attempt(area, ATTEMPT_MODE, model, whole) as running:
+            for note in running.notes:
+                console.progress("labkit-audit", note)
+            reply = llm.complete(
+                model, prompt, timeout=timeout, max_tokens=audit._report_room(model)
+            )
+            running.keep_answer(reply)
+            console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
+            claims = parse_claims(
+                reply, len(report.read_text(encoding="utf-8").split("\n"))
+            )
+            written = report_reviews.write_report_review(
+                area,
+                model=model,
+                report=report_key,
+                protocol=protocol_key,
+                whole=whole,
+                parts=parts,
+                claims=claims,
+                again=again,
+            )
+            running.end("record", file=attempts.under_audits(area, written))
     except (
         AuditError,
         ProtocolChoiceError,
@@ -329,6 +344,8 @@ def review_report(
         report_reviews.ReportReviewError,
         llm_backends.BackendError,
         llm_backends.PromptTruncated,
+        attempts.AttemptError,  # another attempt runs, or a record is gone
+        RuntimeError,  # git failed while the attempt was checked
         KeyError,  # llm.resolve on an alias models.toml does not know
         FileNotFoundError,
     ) as exc:

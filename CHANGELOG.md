@@ -187,6 +187,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The decision and the report review are attempts in the journal.**
+  `labkit-audit --review` and `--report-review` begin an attempt before
+  their model call (`attempts.attempt`, modes `review` and
+  `report-review`), keep the answer under `audits/answers/` before
+  reading it, and end with the review file or why there is none (no
+  answer, a reply that does not read). A review file the journal names
+  and the tree lacks blocks the next call, the stop and the commit, as an
+  audit record does. Why: the ninth haiku round's t5 deleted a report
+  review that named two claims; with it gone nothing held the state. A
+  review made before this version is named by no attempt, and none is
+  written for it afterwards. A review now refuses to start while another
+  attempt of the area runs, or while a record the journal or HEAD names
+  is gone — like an audit; the refusal of a running attempt says to wait
+  for its end.
 - **The invalid-registration route promises only what is checked.** The
   decision list said "report-check holds a registration changed after
   it"; it holds a field the kind owes that was not written at the first

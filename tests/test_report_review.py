@@ -18,8 +18,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.checks.audit_binding import AuditError  # noqa: E402
 from labkit.checks.report_blocks import discussion_lines  # noqa: E402
-from labkit.formats import findings, report_reviews  # noqa: E402
+from labkit.formats import attempts, findings, report_reviews  # noqa: E402
 from labkit.gates import audit, report_review  # noqa: E402
+from labkit.run import llm_backends  # noqa: E402
 
 RUN = "2026-10-25T20-57-42_9ae7"
 PROTOCOL = "# Protocol\n\n**Question:** does C1 hold?\n"
@@ -305,6 +306,67 @@ class Command(unittest.TestCase):
         rc, _, _, _ = self.review(MARKED, "looks fine to me")
         self.assertEqual(rc, 2)
         self.assertEqual(self.reviews(), [])
+        # the attempt ends without a record, said why, the answer kept
+        (a,) = attempts.read_journal(self.a.area)
+        self.assertEqual(a.outcome, "none")
+        self.assertTrue(a.error)
+        self.assertEqual(
+            (self.a.area / "audits" / a.answer).read_text(encoding="utf-8"),
+            "looks fine to me",
+        )
+
+    def test_a_review_is_journaled_with_its_answer_and_its_record(self):
+        self.review(MARKED, self.CLAIMED)
+        (a,) = attempts.read_journal(self.a.area)
+        (r,) = self.reviews()
+        self.assertEqual(
+            (a.mode, a.outcome, a.file),
+            ("report-review", "record", f"report-reviews/{r.path.name}"),
+        )
+        self.assertEqual(a.scope_sha, r.fingerprint)  # the inputs it was given
+        self.assertEqual(
+            (self.a.area / "audits" / a.answer).read_text(encoding="utf-8"),
+            self.CLAIMED,
+        )
+        self.assertEqual(attempts.area_gaps(self.a.area).blockers, [])
+
+    def test_a_deleted_review_with_a_claim_is_named_and_refuses_the_next_call(self):
+        """Ninth haiku round, t5: a report review naming two claims was
+        deleted; without it nothing held the state, and a clean draw would
+        have released it."""
+        self.review(MARKED, self.CLAIMED)
+        (r,) = self.reviews()
+        r.path.unlink()
+        (gap,) = attempts.area_gaps(self.a.area).blockers
+        self.assertIn(f"audits/report-reviews/{r.path.name}", gap)
+        rc, _, err, calls = self.review(MARKED, self.CLEAN)
+        self.assertEqual((rc, calls), (2, 0))
+        self.assertIn(r.path.name, err)
+        self.assertEqual(self.reviews(), [])
+
+    def test_a_backend_that_does_not_answer_ends_the_attempt_with_its_cause(self):
+        report = self.a.report(MARKED)
+
+        def down(*args, **kw):
+            raise llm_backends.BackendError("claude-cli: exit 1, empty stderr")
+
+        with (
+            mock.patch.object(report_review.llm, "complete", down),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            rc = report_review.review_report(self.a.area, report, None, "m", 60, None)
+        self.assertEqual(rc, 2)
+        (a,) = attempts.read_journal(self.a.area)
+        self.assertEqual((a.outcome, a.file, a.answer), ("none", "", ""))
+        self.assertIn("exit 1, empty stderr", a.error)
+
+    def test_no_call_no_attempt(self):
+        """A state already judged makes no call, and so no attempt."""
+        self.review(HONEST, self.CLEAN)
+        self.review(HONEST, self.CLEAN)  # nothing to do
+        self.assertEqual(len(attempts.read_journal(self.a.area)), 1)
 
 
 class Records(unittest.TestCase):
