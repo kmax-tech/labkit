@@ -284,7 +284,15 @@ Offen mit Auslöser, ohne Bauauftrag:
    Existenz und Bindung; fachlich: der Prüfer), nie aus der
    „Assignment“-Prosa per Regex erraten. Ohne das bleibt D-3 eine
    belegte Schwäche des Modellurteils.
-   (c) Erst danach über das Gate entscheiden. Bisher:
+   (c) Erst danach über das Gate entscheiden.
+   Stand 2026-10-26 abends: (b) gebaut (`80fcb2e`: `check` am Befund,
+   vom Prüfer gesetzt, im Digest; `check_present` je Urteil aus dem
+   gezeigten Snapshot). (a) als neuer Versuchsstand vorbereitet und
+   vorab festgelegt ([Pilot 2](docs/usability/2026-10-26-fixed-followup-pilot-2.md)):
+   `[A3]` mit Aufgabenzitat, eine `FEATURES`-Tabelle, `check =
+   "feature_sources"` vorab auf 08-17 #1. **Offen:** die zwölf bezahlten
+   Aufrufe als eigener Schritt (`run_pilot2.sh`, Deckel 10 USD), dann
+   Auswertung; FIX-Urteil getrennt von `a3_pass` werten. Bisher:
    **Gebaut 2026-10-26:** Das Analyse-Audit urteilt je
    früherem `fixed`-BLOCKER `resolved | unresolved | not_assessable`,
    gespeichert als `[[fix_verdict]]`, gebunden an `decision_digest`;
