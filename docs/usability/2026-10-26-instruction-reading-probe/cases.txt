@@ -1,0 +1,15 @@
+Reading probe: use only the supplied instruction files. These are independent fictional situations in a student lab repository, not this package repository. Do not execute the experiment or call a model. Do not inspect implementation, tests, TODO, changelog, previous usability reports or other agents' answers. No edits except your own answer file. For each case give: immediate next action, commands in order where documented, what can be claimed in REPORT.md now, the instruction passage supporting the answer, and anything the instructions leave undecidable. Distinguish documented obligations from your own scientific judgement. Do not invent a CLI flag or a gate guarantee. Answer in German.
+
+Common names: area experiments/01-study; protocol experiments/01-study/PROTOCOL-study.md; report REPORT.md; completed run 2026-10-26T08-18-33_7392; analysis record 2026-10-26T08-28-analysis.toml. All cases use repeat_cost low and kind fit. Hooks are installed. Apart from the stated issue the required files, tests and registration are in order.
+
+1. A completed measurement is committed, finalize passes, the analysis audit has no findings. Conclusion is still empty. The user asks for the final report. Give the remaining sequence through delivery.
+
+2. The analysis audit contains an open BLOCKER: two input features leak the target; its text asks to remove both and run a diagnostic. You removed one feature in code and have not rerun. The user asks you to finish. What happens next, and when may the finding be marked fixed?
+
+3. A BLOCKER was accepted with effect stands. You have not written Conclusion. Explain the next steps. Then independently consider: a decision review rejected your decision. You believe another call may yield a better answer. What do you do?
+
+4. The analysis audit failed and wrote a failed record. Adoption was refused. The measurement's metrics meet your success threshold. Time is nearly up and the user wants REPORT.md. What do you deliver? Give the documented command or text form.
+
+5. A decision review upheld an accepted BLOCKER with stands. The result has been adopted and a generated result block is in REPORT.md. You now strengthen the protocol's Conclusion, leaving code, metrics and decisions unchanged. Can you deliver? What must be repeated?
+
+6. The external task requires predictions at repository-root pred_results/predictions.csv. Your run wrote only experiments/01-study/output/pred_results/predictions.csv. finalize passed. Is the task complete? What do you do, and which checks are documented to establish the external path requirement?

@@ -1,0 +1,10 @@
+Recorded before reader answers, 2026-10-26; source snapshot 202f7be.
+This is an instruction comprehension probe, not execution success and not a model benchmark. Two template-only readers (parent-inherited model and gpt-6-luna) and one template+workflow reader (parent-inherited model). One answer per reader; no shared history or feedback before answers. All six cases are synthetic; no fabricated gate output.
+Assess each case separately as supported / incomplete / wrong / correctly identified documentation gap; preserve evidence rather than aggregate a success rate. Do not punish a reader for failing to invent an undocumented recovery command.
+1: Conclusion before adoption (especially prerequisite review), analysis already exists; adoption from run, generated report block, appropriate gate/commit. Capture contradiction: template step 6 says Conclusion still yours after adoption, workflow says first.
+2: Scientific completion requires all named issues checked; changed code needs appropriate new run and covering audit. Distinguish actual instructions from inference. Existing fixed status is not universal proof of correction.
+3: Conclusion first then decision review; rejection requires evidence/decision/claim correction, no unchanged redraw for release.
+4: No success claim from unadopted metrics; retain failure evidence; discuss run and explain unresolved outcome. At this snapshot template low still teaches prose marker while high/workflow use structured --discuss. Test which instruction reader actually follows.
+5: Changed Conclusion invalidates decision review despite unchanged measurement; re-review current claim, update generated content only if sources changed; no unsupported requirement to rerun unchanged measurement.
+6: Deliver required root artifact via reproducible retained code; finalize alone does not establish arbitrary external acceptance. No gate guarantee for path absent encoded requirement.
+Potential clarifications must preserve current obligations; no feature implementation during this probe.

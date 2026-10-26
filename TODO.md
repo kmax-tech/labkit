@@ -240,6 +240,14 @@ geschuldete Review. Bei t5 nennt der Zustand die frühere Ablehnung von
 
 **Als Nächstes (Auftrag beim Autor):**
 
+Die Einstiegsanleitung ist nach fünf unabhängigen Leseproben, davon zwei
+mit `gpt-6-luna`, abgeglichen: Conclusion vor Übernahme, nach Korrektur des
+Messcodes neuer Lauf und Analyse-Audit, `--discuss` statt Prosamarker und
+Berichtsreview für beide Spuren. Befunde und Antworten:
+[Leseprobe](docs/usability/2026-10-26-instruction-reading-probe.md).
+Die Probe misst Verständnis an sechs Situationen; eine vollständige
+Ausführung mit Haiku bleibt Teil der folgenden Abnahme.
+
 1. Das bezahlte Review auf den t3- und t18-Berichten mit Besprechungsblock
    und auf ehrlichen Gegenstücken: Werden die Ergebnisbehauptungen als
    Claim gefangen, bleiben die ehrlichen Fassungen ohne Claim?

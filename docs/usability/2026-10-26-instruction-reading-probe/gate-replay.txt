@@ -1,0 +1,14 @@
+Synthetic fixture; real report-check path at 202f7be. No model audit.
+
+OLD MARKER: exit 1
+═══ report-check REPORT.md (a report citing runs) ═══
+  BLOCKER: REPORT.md: cites 2026-10-07T10-00-00_ab12, the answering run of experiments/01-x/PROTOCOL-x.md, which declares no result — a full run's number leaves the area through `protocol-fill probe/synthetic-repo/experiments/01-x/PROTOCOL-x.md --from-run 2026-10-07T10-00-00_ab12` (it names what the adoption still owes), then `--into REPORT.md` writes its block; a run this report looks at without reporting it stands in a discussion block: `protocol-fill probe/synthetic-repo/experiments/01-x/PROTOCOL-x.md --discuss 2026-10-07T10-00-00_ab12 --why "<what refused the adoption, what you found>" --into REPORT.md`
+
+report-check: 1 blocker(s), 0 warning(s) — fix the blockers before reporting:
+  - REPORT.md: cites 2026-10-07T10-00-00_ab12, the answering run of experiments/01-x/PROTOCOL-x.md, which declares no result — a full run's number leaves the area through `protocol-fill probe/synthetic-repo/experiments/01-x/PROTOCOL-x.md --from-run 2026-10-07T10-00-00_ab12` (it names what the adoption still owes), then `--into REPORT.md` writes its block; a run this report looks at without reporting it stands in a discussion block: `protocol-fill probe/synthetic-repo/experiments/01-x/PROTOCOL-x.md --discuss 2026-10-07T10-00-00_ab12 --why "<what refused the adoption, what you found>" --into REPORT.md`
+
+STRUCTURED BLOCK: exit 0
+═══ report-check REPORT.md (a report citing runs) ═══
+  hint: REPORT.md discusses 2026-10-07T10-00-00_ab12 as not reported — check that it states none of its numbers as results: `labkit-audit experiments/01-x --report-review REPORT.md` (one model call, a warning, blocks nothing)
+
+report-check: all clear.

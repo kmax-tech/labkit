@@ -5,6 +5,23 @@ symlink to it). The rules behind every step are the lab standard that ships
 with the pinned labkit: `python -m labkit.formats.rules show LAB-nnn` prints one;
 a gate message names the rule it enforces by id and name.
 
+## Before delivery — both lanes
+
+The external task still defines the required deliverables: check their paths,
+file formats and contents before delivery. A clean labkit gate establishes
+its documented checks; it does not establish an external requirement that
+was never encoded in those checks.
+
+A report with a discussion block needs a review of its finished state:
+`labkit-audit <area> --report-review REPORT.md` (one model call, started
+explicitly). It writes `audits/report-reviews/<minute>-review.toml`. A claim
+holds the report until you correct the report or a source the reviewer read
+and review that new state. A later clean draw on the unchanged state does
+not overrule a claim. Stage the report, its protocol and the audit records,
+including `audits/attempts.jsonl` and report-review records, together:
+the commit requires the review record in the index, bound to the staged
+report and sources.
+
 ## Lane `low` — one number in minutes
 
 Applies when the protocol head says `repeat_cost = "low"`: a run that can be
@@ -36,7 +53,8 @@ LAB-017 The number of audits follows the cost tier.
    "C1 sentence=<value>" "<Label>=<value>" ...` (one quoted word per
    field); the prompt block from
    the script's `PROMPT` constants with `protocol-fill <PROTOCOL> --prompts`.
-3. Fill the skeleton (with a model: read `--show 2`), run `code-check <area>`.
+3. Fill the skeleton (with a model: read `--show 2`), run `code-check <area>`
+   after every code change.
    With a model, before the run: judge the data — could a surface
    feature answer the question without the model? — and write the
    judgement into the protocol's Data profile field. `00_prepare.py
@@ -49,24 +67,40 @@ LAB-017 The number of audits follows the cost tier.
    its number and the `labkit-audit … --decide N STATUS "REASON" --record …`
    that decides it, last in its output; `labkit-audit <area> --findings`
    shows that list again without a new audit. READ lines are hints,
-   nothing to decide. An accepted BLOCKER also owes its effect, and an
+   nothing to decide. A finding is `fixed` only after the named fault has
+   been fully corrected and the requested diagnostic has been run and
+   assessed; a status and reason record your decision, not proof of a fix.
+   If measurement code changes, repeat steps 3–5: commit the corrected code,
+   measure again, finalize and audit the new code and run. The old run is
+   not repaired by editing its script. Keep earlier audit and failed-attempt
+   records; an unsuccessful audit supplies no analysis coverage.
+   An accepted BLOCKER also owes its effect, and an
    accepted WARNING that limits what the result allows names one too:
    `--effect stands` when the verdicts still hold, read within it, or
    `--effect "C1 not assessable"` when the fault leaves the run unable
    to judge C1 — the number may still be reported, the verdict not.
    Which one follows from what C1's sentence claims — a threshold on
    these items, or a capability the fault leaves unshown — not from
-   the grade. A BLOCKER accepted with `stands` then owes a decision
-   review — write the Conclusion first (`protocol-fill <PROTOCOL>
-   "Conclusion=…"`, the claim the review judges; a review made before it
-   goes stale when it is written), then `labkit-audit <area> --review`:
+   the grade. Before adoption, write the Summary's **Conclusion** with
+   `protocol-fill <PROTOCOL> "Conclusion=…"`: answer the question in at most
+   two plain sentences within the limits, rather than repeat the metric
+   keys. A BLOCKER accepted with `stands` then owes a decision review —
+   `labkit-audit <area> --review`:
    a second auditor reads the finding, your reason, the Conclusion, the
    result as it will render and the run, and says whether the claim
    stands within that limit; `report-check` blocks the number until one
    upholds it, and a rejection means deciding again (limit the
-   Conclusion, change the effect, or fix the fault), not drawing again. This is the one audit this lane owes
-   (LAB-017 The number of audits follows the cost tier). Until the number
-   is written back it is a sketch, and nothing is owed for it.
+   Conclusion, change the effect, or fix the fault), not drawing again.
+   Changing the Conclusion or decision makes its review stale. If the
+   current decision requires a review for release, obtain one for the changed
+   claim or decision before reporting. An accepted `not assessable` effect limits
+   the claim and does not itself require a decision review. A Conclusion-only
+   change does not by itself require a new measurement. A BLOCKER closed as
+   `fixed`, `dismissed` or `deferred` after a review did not uphold it needs an
+   upholding review of that new decision before release; a WARNING remains
+   a warning. The analysis audit is due before
+   reporting a result, including in REPORT.md; an exploration may end
+   without adopting or reporting a result.
 6. `protocol-fill PROTOCOL-<name>.md --from-run <run_id>` adopts the run
    as the result: it writes the Recorded results line and the run line from
    metrics.json — never retype them — then runs `report-check` on the
@@ -78,15 +112,11 @@ LAB-017 The number of audits follows the cost tier.
    `Limit (audit <record> #N)` line, and Recorded results counts them in one
    note ("subject to N recorded limitations") and names each promise
    left "not assessable with this run"; both are labkit's rendering, held
-   exactly — a changed decision is written again with `--render`. It then names what is still
-   yours: the Summary's **Conclusion** — the question's answer in at most two
-   plain sentences, read within the Limit lines ("C1 met on these twelve
-   items; whether the model recognises causal claims independent of
-   connectives stays open"), never the Recorded results line again (three of three
-   judge protocols carried the key dump there, 2026-10-21) — and, with a
-   model, Raw output: one real prompt+answer pair per finding, read from
-   the run's output file it names. `protocol-check` holds both after a
-   measure run.
+   exactly — a changed decision is written again with `--render`.
+   The Conclusion is yours and must already be written (step 5); with a
+   model, also fill Raw output: one real prompt+answer pair per finding,
+   read from the run's output file it names. `protocol-check` holds the
+   after-run fields after a measure run.
    `[result] run` in the TOML head, written by `--from-run`, declares the
    result reported; the stop hook and the pre-commit hold it to the same
    check. An exploration that reports nothing declares no result and may
@@ -95,7 +125,9 @@ LAB-017 The number of audits follows the cost tier.
    results note) shows the result as a generated block:
    `protocol-fill <PROTOCOL> --into REPORT.md` writes Recorded results and the
    Limit lines there, and after a new run is adopted the same command
-   replaces the block. Every changed file that cites a run is held at the
+   replaces the block. Write the report's explanation yourself, consistent
+   with the Conclusion: the generated block contains only Recorded results
+   and Limit lines. Every changed file that cites a run is held at the
    stop and the commit — the block exactly, every cited run id a run of
    the repo; any other number there is named as having no assigned
    source: compute it in the run and report it from there, or say where
@@ -103,9 +135,11 @@ LAB-017 The number of audits follows the cost tier.
    it, do not write the run's numbers into a report as the result — the
    gate holds a report citing the area's answering run while the
    protocol declares none. A refusal is a finding to report, not an
-   obstacle to route around: cite the run as `run <run_id> (not
-   reported: <what refused the adoption, what you found>)`, say that the
-   question stays open, and end there. Commit `output/` and `runs/` with the protocol —
+   obstacle to route around: `protocol-fill <PROTOCOL> --discuss <run_id>
+   --why "<what refused the adoption, what you found>" --into REPORT.md`
+   writes the discussion block. Say that the question stays open; a
+   discussion is not a success claim. Run the report review described
+   above before delivery. Commit `output/` and `runs/` with the protocol —
    `finalize <area>` checks the provenance and wants both in git; the run
    index `runs.tsv` is a local view, git-ignored (`runlog reindex <area>`
    rebuilds it from `runs/`).
@@ -179,12 +213,9 @@ fields, no reading of labkit's source.
     declares none. A refusal is a finding to report, not an obstacle to
     route around: discuss the run — `protocol-fill <PROTOCOL> --discuss
     <run_id> --why "<what refused the adoption, what you found>" --into
-    REPORT.md` writes the block —, say that the question stays open, and
-    end there. A report that discusses a run owes a report review of its
-    state: `labkit-audit <AREA> --report-review REPORT.md` (one model call)
-    writes its record under `audits/report-reviews/`; commit it with the
-    report. A claim it names holds the commit until you change the report
-    (or a source it read) and review that state.
+    REPORT.md` writes the block — and say that the question stays open.
+    Run the report review and stage its records as described under
+    "Before delivery — both lanes".
 
 ## Setup
 

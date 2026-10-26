@@ -166,6 +166,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The scaffold's low-lane instructions follow the current release path.**
+  The Conclusion comes before adoption; a correction to measurement code
+  returns to a new measurement and covering analysis audit. The obsolete
+  prose marker is replaced by `protocol-fill --discuss`. Both lanes reach
+  the mandatory report-review instructions and stage its records with the
+  report. Five independent reading probes, including two with `gpt-6-luna`,
+  exposed contradictory instructions and checked a clarification; the
+  responses and their limits are preserved in
+  `docs/usability/2026-10-26-instruction-reading-probe.md`.
+
 - **A deleted audit record is noticed.** In the sixth haiku round (t3)
   and the eighth (2026-10-26, t18) agents ran `rm audits/*.toml` before a
   new attempt; nothing noticed that an earlier or a failed record was
