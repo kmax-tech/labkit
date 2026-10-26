@@ -167,6 +167,85 @@ dort hat eine andere Sitzung weiter committet; vorher die drei
 Vorbereitungsdateien im Hauptbaum zurücksetzen), dann Worktree
 `~/projects/labkit-paper-r7` entfernen (zuerst den `.venv`-Symlink).
 
+**Reihenfolge nach der achten Runde (beschlossen 2026-10-26).** Jeder
+Schritt schließt einen belegten Fehlweg und hat einen korrekten Zwilling.
+Die Abnahme ist eine neue Runde in Bereich 09 als eigener Auftrag. Sie misst
+richtige Vorhersagen, fachlich richtige Berichte, Fehlalarme, Zeit und
+Kosten; „Standard erfüllt“ allein reicht nicht.
+
+Verträge:
+
+- **V1 – Laufbezug strukturiert (t3):** Ob ein Bericht einen Lauf nur
+  bespricht, steht in einer strukturierten Angabe, nicht in einem
+  Prosamuster.
+  - labkit erzeugt daraus die sichtbare Zitierzeile und prüft, dass beide
+    gleich sind.
+  - Der Prosamarker `run <id> (not reported: …)` wird nicht mehr gelesen
+    (Breaking). Auslöser: Die Backticks um die ID fielen aus dem Muster, und
+    die Verweigerung wurde zu `--no-verify`.
+- **V2 – Berichtsreview Pflicht (t18):** Ein Bericht, der einen Lauf als
+  besprochen angibt, braucht ein Review genau dieses Stands.
+  - Der Commit hält fest, und labkit startet nie versteckt einen
+    Modellaufruf.
+  - Ein CLAIM blockt. Gelöst wird er nur durch ein neues Review auf einer
+    geänderten geprüften Grundlage: Bericht, Protokoll, Laufwerte oder
+    Auditentscheidungen. Ein unveränderter Gesamtstand bleibt gesperrt, und
+    es gibt keinen Status zum Wegerklären.
+  - Ein späteres Review mit 0 Claims überstimmt keinen CLAIM desselben
+    Stands.
+  - Am Commit gilt der gestagte Stand.
+  - Auslöser: Der Hinweis auf das Review erschien am Commit und wurde
+    übergangen.
+- **V3 – Fingerabdruck:** Der Fingerabdruck eines Reviews umfasst genau die
+  Eingaben, die der Prüfer gesehen hat. Der eigene Record und das
+  Versuchsjournal verändern ihn nicht.
+- **V4 – Stop prüft Committetes (t3):** Der Stop prüft auch Änderungen, die
+  in der Sitzung committet wurden.
+  - Die Prüfbasis ist ein gespeicherter Git-Stand, kein Zeitstempel.
+  - Ein Stop mit Blocker verschiebt die Basis nicht.
+  - Innerhalb eines Zugs bleibt der Schutz vor Endlosschleifen
+    (`stop_hook_active`: Exit 0, Blocker auf stderr). Der Stop des nächsten
+    Zugs blockt wieder.
+  - `--no-verify` bleibt die bewusste Ausnahme des Standards. V4 macht den
+    Fall sichtbar und verbietet ihn nicht.
+- **V5 – Auditversuche (t18, sechste Runde t3):** Ein Journal hält jeden
+  Auditversuch als läuft, unterbrochen oder abgeschlossen fest.
+  - Prüfen und Eintragen eines Starts stehen unter einer Sperre.
+  - Ob ein Versuch noch läuft, zeigt eine Sperre, die der Prozess hält,
+    nicht eine PID.
+  - Fehlt ein Record, den das Journal oder HEAD nennt, blockt das mit
+    Versuchs-ID.
+  - Ein unterbrochener Versuch bleibt erhalten und wird genannt.
+- **V6 – Frühere Ablehnung sichtbar (t5):** Nach einer Änderung von
+  Conclusion oder Entscheidung nennt der Zustand das frühere
+  Nicht-Bestätigen. Die Freigaberegel bleibt unverändert.
+
+Schritte, je ein Commit:
+
+1. Strukturierte Laufangabe im Bericht (V1, Breaking). Zuerst eine
+   Entwurfsnote zu Feldform und Ort; der t3-Text wird Regressionstest.
+2. Stop prüft, was in der Sitzung committet wurde (V4).
+3. Frühere Ablehnung im Review-Zustand (V6).
+4. Journal der Auditversuche (V5).
+5. Berichtsreview als Record, Commit hält (V2, V3).
+
+Offen mit Auslöser, ohne Bauauftrag:
+
+1. **Pilot zur Prüfung von `fixed`-Entscheidungen (t3):** Ein BLOCKER wurde
+   `fixed` geschlossen, ohne dass die verlangte Prüfung lief. Die Frage ist,
+   ob der benannte Fehler im neuen Code und Lauf tatsächlich beseitigt ist.
+2. **Zwei-Modell-Antwort der claude-cli (t18, dreimal):** Am
+   Proxy-Mitschnitt prüfen, ob opus-4-8 neben opus-5-5 in `modelUsage` ein
+   interner Hilfsaufruf ist. Bis dahin bleibt die Herkunftsprüfung
+   bestehen.
+3. Die beschlossene Aufgabe „Kennzahlen der Eingaben ohne Ablage“ (unten
+   bei den zurückgestellten Erweiterungen) bleibt beschlossen und offen.
+
+Notiert, nicht geplant:
+
+1. Abgegebene Vorhersagen aus behaltenen Skripten statt aus Heredocs (t3, t5).
+2. Kein Verbot von `--no-verify`: Das wäre eine Regeländerung am Standard.
+
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
 kommen kalte Agenten mit labkit zurecht? Gleiche Trefferquoten frischer
@@ -284,10 +363,10 @@ Forschung und Benchmark-Fallliste liegen in
   Korrekturen angenommen werden. Eingebunden als Hinweis mit dem
   konkreten Kommando: `claude-hook post-change` (einmal je Textstand)
   und `report-check` (sieht der Agent am Commit); gestartet wird sie nur
-  vom Agenten. Ein Hold erst nach mehr Fällen. Ein Format unter
-  `audits/` erst, wenn labkit wissen muss, ob genau dieser Berichtsstand
-  geprüft wurde — dann gebunden an Bericht, Protokoll, Laufwerte und
-  Auditentscheidungen, die sich alle ändern können. **Ausdrücklich offen:** ein
+  vom Agenten. Nach der achten Runde (t18: Hinweis übergangen) ersetzt
+  durch V2/V3 oben: Das Review wird Pflicht, sein Record liegt unter
+  `audits/report-reviews/`, gebunden an Bericht, Protokoll, Laufwerte und
+  Auditentscheidungen. **Ausdrücklich offen:** ein
   Bericht ganz ohne Lauf-Zitat (t5: Run-ID gelöscht) bleibt ungeprüft —
   die Sperre dafür ist zurückgestellt, bis eine eindeutige Zuordnung von
   Berichtsabschnitt zu Protokoll geklärt ist (ein vorhandener Lauf und
