@@ -465,6 +465,20 @@ Notiert, nicht geplant:
    Ausweichen trennt — heute sind beide „Standard nicht erfüllt“.
    Auslöser für den Bau: Reparaturfall oder nächste Runde zeigen erneut
    Löschen vor einem neuen Versuch.
+4. **Prüfmatrix der Ausweichaktionen, Runden 1–9 (2026-10-26):**
+   [Note](docs/notes/2026-10-26-escape-routes-checks-and-exits.md), je
+   Ausweg ein Check und ein genannter nächster Schritt. Neu gefunden, ohne
+   Bauauftrag:
+   (a) Entscheidungs- und Berichtsreviews stehen nicht im Journal — ein
+   nie gestagtes Review mit Claims kann gelöscht werden (neunte Runde t5
+   tat es).
+   (b) Eine nach der ersten Messung gesenkte Latte mit neuem Lauf hält
+   kein Gate (Wegwerftest: 0.8 → 0.6, Registrierungsstation Exit 0).
+   `audit.BLOCKER_ROUTES` sagt „report-check holds a registration changed
+   after it“ — stimmt für fehlende Felder und den Typ, nicht für den
+   Wert. Entweder Text einschränken oder Prüfung bauen.
+   (c) Ein nie gestagter, gelöschter Record lässt keinen Ausweg außer
+   `git checkout`/`git add`; der Ausweg wäre Punkt 3.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
