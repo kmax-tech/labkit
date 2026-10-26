@@ -157,3 +157,26 @@ no verdict leaned on `a3_pass` or `check_present` to come out right.
    failed attempt (the journal holds the refusal, not the answer; here
    `--out` saved it by chance of the pilot's runner).
 3. D without a named switch, if a further pilot is run.
+
+## Replay on the corrected parser (labkit `34e90d7`, no model call)
+
+After the check field took a note (`· check: <key> (<note>)` or
+`— <note>`, the note kept whole and bound) and every answer is kept
+before it is read, the twelve kept answers went through `labkit-audit`
+again, each on a fresh copy of its case as it stood before the draw,
+the model call returning the kept answer
+([replay_pilot2.py](2026-10-26-fixed-followup-pilot-2/replay_pilot2.py)).
+
+- 12 of 12 wrote a record (before: 6), each with its answer kept under
+  `audits/answers/`, unchanged.
+- Same FIX verdicts as above: A and B `unresolved`, C `resolved`, D
+  `not_assessable`; `check = feature_sources` in every one,
+  `check_present` true in A, B, C and false in D.
+- A and B: verdict, why, check, presence and decision digest identical
+  to the records the draws wrote.
+- The six new checks of C and D (`a2_null_spread` and kin) are stored
+  with their notes (86–120 characters).
+
+The verdicts of C and D are now in records, not only read from answers.
+What the replay shows is the parser and the binding; it measures nothing
+of the auditor beyond the draws above.
