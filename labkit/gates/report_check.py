@@ -103,7 +103,15 @@ from labkit.formats.runs import run_dirs, run_path
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, WARNING, Findings, GateFinding
 from labkit.formats.answering_run import first_measurement
 from labkit.formats.protocol_history import registration_in_commit
-from labkit.formats import console, findings, protocol_block, report_reviews, reviews
+from labkit.formats import (
+    console,
+    findings,
+    followup,
+    protocol_block,
+    report_reviews,
+    reviews,
+    runs,
+)
 from labkit.checks.audit_binding import (
     AuditError,
     analysis_now,
@@ -491,6 +499,74 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     return out
 
 
+def followup_findings(ctx: Checked) -> list[GateFinding]:
+    """The follow-up of earlier decided BLOCKERs (`followup.release_holds`): each
+    one not released by a valid `resolved` of the state reported now, and a
+    BLOCKER `fixed` in that state itself, is a BLOCKER naming the missing
+    step. A carried finding (`carries`) closed in a covering record as
+    `dismissed` or `deferred` is held until a decision review of that
+    record upholds the new decision — the follow-up did not find the fault
+    gone, so closing it is not settling it (the rule of
+    `reviews.once_not_upheld`, for a verdict of the follow-up). A chain
+    that does not read is a BLOCKER. Empty when no record covers the run
+    (`analysis_audit_gap` names that); silent on whether a verdict is
+    right: that is the auditor's judgement. Why: the fixed-followup
+    pilots, 2026-10-26."""
+    if ctx.run is None:
+        return []
+    try:
+        covering = covering_analysis(ctx.area, ctx.text, ctx.run)
+        records = findings.area_records(ctx.area)
+    except (AuditError, FileNotFoundError, ValueError):
+        return []  # analysis_audit_gap names them
+    try:
+        metrics: dict | None = runs.read_metrics(runs.metrics_path(ctx.run))
+    except (OSError, ValueError):
+        metrics = None
+    try:
+        held = followup.release_holds(records, covering, metrics)
+    except findings.FindingsError as exc:
+        return [
+            GateFinding(
+                BLOCKER,
+                f"the carried findings of {ctx.area.name} do not form a chain: {exc}",
+                evidence_kind=GUARANTEED,
+            )
+        ]
+    out = [
+        GateFinding(
+            BLOCKER,
+            f"audit {h.ref}: {h.why} — {h.step} (LAB-015 Preflight audit before freezing)",
+            evidence_kind=GUARANTEED,
+        )
+        for h in held
+    ]
+    try:
+        found = reviews.area_reviews(ctx.area)
+    except reviews.ReviewError:
+        found = []  # review_findings names the file; unreviewed holds here
+    for r in covering:
+        for n, f in enumerate(r.findings, 1):
+            if (
+                f.carries
+                and f.status in ("dismissed", "deferred")
+                and not reviews.upholding(r, n, found, ctx.text)
+            ):
+                out.append(
+                    GateFinding(
+                        BLOCKER,
+                        f"audit {r.path.stem} #{n}: a carried finding (from {f.carries}) "
+                        f"`{f.status}` — the follow-up did not find the fault gone, so "
+                        f"closing it settles nothing by itself: `labkit-audit <area> "
+                        f"--review --record {r.path.name}` asks a second auditor whether "
+                        f"the reason shows it {_closing_question(f.status)} "
+                        f"(LAB-015 Preflight audit before freezing)",
+                        evidence_kind=GUARANTEED,
+                    )
+                )
+    return out
+
+
 def _closing_question(status: str) -> str:
     """What the reviewer is asked of a closed contested finding, by status."""
     return {
@@ -664,9 +740,10 @@ def report_check(
     # 6. recomputation — always, including after a failed earlier stage
     findings.take_all(recomputation_findings(ctx.area, ctx.repo))
 
-    # 7. decisions — reviews where the lane owes the analysis audit
+    # 7. decisions — reviews and follow-ups where the lane owes the analysis audit
     if ANALYSIS_AUDIT in ln.audits:
         findings.take_all(review_findings(ctx))
+        findings.take_all(followup_findings(ctx))
 
     # 8. summary — 1 with a blocker, otherwise 0
     if not findings.blocked:

@@ -9,6 +9,27 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **report-check holds an earlier decided BLOCKER until a follow-up
+  releases it.** Every BLOCKER decided `fixed`, `accepted`, `dismissed` or
+  `deferred` in a record not of the state reported is held
+  (`report_check.followup_findings`, `followup.release_holds`) until a
+  covering analysis record finds it `resolved` — on its decision as it
+  stands (`decision_digest`), with a required check shown
+  (`check_present`) — and no covering record holds another verdict on its
+  origin (a later draw on the same state does not outvote it); or until a
+  covering record carries it, where it is decided like any finding (an
+  accepted one renders as a Limit line). A carried finding `dismissed` or
+  `deferred` is held until a decision review of its record upholds that
+  (`--review` now asks about it). A BLOCKER `fixed` in the state reported
+  is held: no follow-up has seen the repair. Each sentence names the
+  missing step: a run that writes the required check, or the analysis
+  audit. Areas with decided BLOCKERs in older records owe one analysis
+  audit of the current state before reporting again; 0.103.0 is the last
+  version that releases without it. Why: the fixed-followup pilots
+  (`docs/usability/2026-10-26-fixed-followup-pilot*.md`) — a partial fix
+  closed `fixed` released t3's leak, and an older `accepted` limit fell out
+  of the result.
+
 - **Protocol standard 0.23: `repeat_cost = "low" | "high"` replaces
   `cost = "seconds" | "minutes" | "hours"`.** The gates read two lanes
   (`standard_contract.lane`: `seconds` against the rest) under three

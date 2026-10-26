@@ -21,8 +21,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import protocol_fixture as fixture  # noqa: E402
 from protocol_fixture import registration_of, run_record  # noqa: E402
-from labkit.gates import audit  # noqa: E402
-from labkit.checks import audit_binding  # noqa: E402
+from labkit.gates import audit, decision_review, report_check  # noqa: E402
+from labkit.checks import audit_binding, result_render  # noqa: E402
 from labkit.formats import attempts, findings, followup, promises, scope_sha  # noqa: E402
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"
@@ -1539,3 +1539,221 @@ class Carried(unittest.TestCase):
         self.fv.audit(area, CLEAN)
         text = findings.area_records(area)[-1].path.read_text(encoding="utf-8")
         self.assertRegex(text, r"followup = \{ entries = 1, bytes = \d+ \}")
+
+
+class FollowupGate(unittest.TestCase):
+    """report-check holds an earlier decided BLOCKER until a follow-up of
+    the state reported now finds it resolved — on its decision as it stands,
+    with a required check shown — or carries it into that state, where it is
+    decided like any finding. Each rule with its correct twin."""
+
+    def setUp(self) -> None:
+        self.fv = FixVerdicts()
+        self.cr = Carried()
+        self.cr.fv = self.fv
+
+    def gate(self, area: Path) -> list[str]:
+        ctx = report_check.checked(area, area / "PROTOCOL-x0.md")
+        return [g.line for g in report_check.followup_findings(ctx)]
+
+    def follow_up(self, area: Path, lines: str) -> findings.Record:
+        return self.cr.audit_with(area, lines)
+
+    def test_no_earlier_decided_blocker_holds_nothing(self):
+        area = OneSnapshot.area(OneSnapshot())
+        self.fv.audit(area, CLEAN)
+        self.assertEqual(self.gate(area), [])
+
+    def test_never_followed_up_holds_and_a_resolved_follow_up_releases(self):
+        area, r1 = self.fv.area()
+        self.fv.audit(area, CLEAN)  # an audit that judged nothing
+        (line,) = self.gate(area)
+        self.assertIn(f"{r1.name}#1: decided `fixed`, never followed up", line)
+        self.assertIn("--mode analysis` follows it up", line)
+        self.follow_up(
+            area, f"FIX · {r1.name}#1 · resolved · the column is gone (repaired)"
+        )
+        self.assertEqual(self.gate(area), [])
+
+    def test_a_missing_check_asks_for_a_run_and_a_shown_one_releases(self):
+        area, r1 = self.fv.area(RequiredCheck.CHECKED)
+        self.follow_up(area, f"FIX · {r1.name}#1 · resolved · gone")
+        (line,) = self.gate(area)
+        self.assertIn(
+            "the required check `feature_sources` was not in the run shown", line
+        )
+        self.assertIn("a run that writes `feature_sources`", line)
+        RequiredCheck().with_metrics(
+            area, {"c1_pass": True, "feature_sources": {"a": ["b"]}}
+        )
+        self.follow_up(area, f"FIX · {r1.name}#1 · resolved · gone")
+        self.assertEqual(self.gate(area), [])
+
+    def test_a_decision_changed_after_the_follow_up_holds(self):
+        area, r1 = self.fv.area()
+        self.follow_up(area, f"FIX · {r1.name}#1 · resolved · gone")
+        findings.write_decision(r1, 1, "fixed", "dropped both columns")
+        (line,) = self.gate(area)
+        self.assertIn("judged another decision", line)
+
+    def test_a_negative_verdict_is_not_outvoted_on_the_same_state(self):
+        """Two follow-ups of one state: not_assessable, then resolved. The
+        first carried the finding; the head is now in the state reported,
+        open — its own gate. A hand-made covering record that judged the
+        old head negative without carrying is held here."""
+        area, r1 = self.fv.area()
+        records = findings.area_records(area)
+        v = findings.FixVerdict(
+            r1.name,
+            1,
+            findings.decision_digest(records[0].findings[0]),
+            "not_assessable",
+            "no check",
+        )
+        w = findings.FixVerdict(
+            r1.name,
+            1,
+            findings.decision_digest(records[0].findings[0]),
+            "resolved",
+            "gone",
+        )
+
+        def record(verdict: findings.FixVerdict, minute: int) -> findings.Record:
+            path = findings.write(
+                area,
+                "analysis",
+                "opus",
+                "a" * 12,
+                "b" * 12,
+                (0, 0, 0),
+                [],
+                registration={"kind": "compute"},
+                run_id="r",
+                shown_sha="s" * 12,
+                fix_verdicts=[verdict],
+                now=minute * 60,
+            )
+            return findings.read(path)
+
+        cover = [record(v, 5), record(w, 6)]
+        (h,) = followup.release_holds(findings.area_records(area), cover, None)
+        self.assertIn("said not_assessable", h.why)
+        (h2,) = followup.release_holds(findings.area_records(area), cover[:1], None)
+        self.assertEqual(
+            followup.release_holds(findings.area_records(area), cover[1:], None), []
+        )
+
+    def test_fixed_in_the_state_reported_holds(self):
+        area = OneSnapshot.area(OneSnapshot())
+        self.fv.audit(area, BLOCK)
+        rec = findings.area_records(area)[-1]
+        findings.write_decision(rec.path, 1, "fixed", "repaired")
+        (line,) = self.gate(area)
+        self.assertIn("decided `fixed` in the state audited", line)
+        findings.write_decision(rec.path, 1, "accepted", "kept", "stands")
+        self.assertEqual(self.gate(area), [])  # the twin: the review gate's now
+
+    def test_an_old_accepted_limit_is_carried_and_renders_in_the_current_result(self):
+        area, r1 = self.fv.area()
+        findings.write_decision(r1, 1, "accepted", "kept", "C1 not assessable")
+        self.assertEqual(len(self.gate(area)), 1)  # never followed up
+        self.cr.new_state(area, 1)
+        r2 = self.follow_up(area, f"FIX · {r1.name}#1 · unresolved · still read")
+        ((n, _),) = [(n, f) for n, f in enumerate(r2.findings, 1) if f.carries]
+        findings.write_decision(
+            r2.path, n, "accepted", "kept as a limit", "C1 not assessable"
+        )
+        self.assertEqual(self.gate(area), [])
+        text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
+        run = area / "runs" / "2026-01-01T00-00-00_0001"
+        labels = [label for label, _, _ in result_render.limits_of(area, text, run)]
+        self.assertEqual(labels, [findings.limit_label(findings.read(r2.path), n)])
+        # stands instead: the decision review is owed for it
+        findings.write_decision(r2.path, n, "accepted", "kept as a limit", "stands")
+        reviewed = decision_review.reviewable(findings.read(r2.path), [])
+        self.assertIn(n, [k for k, _ in reviewed])
+
+    def test_a_carried_finding_closed_holds_until_a_review_upholds_it(self):
+        area, r1 = self.fv.area()
+        self.cr.new_state(area, 1)
+        r2 = self.follow_up(area, f"FIX · {r1.name}#1 · unresolved · still read")
+        ((n, _),) = [(n, f) for n, f in enumerate(r2.findings, 1) if f.carries]
+        findings.write_decision(
+            r2.path, n, "dismissed", "the column is no leak: never read"
+        )
+        (line,) = self.gate(area)
+        self.assertIn("a carried finding", line)
+        self.assertIn(f"--review --record {r2.path.name}", line)
+        self.assertIn(
+            n, [k for k, _ in decision_review.reviewable(findings.read(r2.path), [])]
+        )
+        with mock.patch.object(report_check.reviews, "upholding", lambda *a: True):
+            self.assertEqual(self.gate(area), [])
+
+    def test_a_wrong_finding_is_closed_by_a_resolved_follow_up(self):
+        """The finding never applied: the follow-up says so with `resolved`
+        and releases; a bare status change does not."""
+        area, r1 = self.fv.area()
+        findings.write_decision(r1, 1, "dismissed", "the column is not read")
+        self.fv.audit(area, CLEAN)
+        self.assertEqual(len(self.gate(area)), 1)
+        self.follow_up(
+            area,
+            f"FIX · {r1.name}#1 · resolved · never applied: the column is not read",
+        )
+        self.assertEqual(self.gate(area), [])
+
+    def test_three_audits_keep_one_limit(self):
+        """Carried, accepted, then a new run and audit: the limit is carried
+        again and renders once; the twin, a confirmed repair, renders none."""
+        area, r1 = self.fv.area()
+        self.cr.new_state(area, 1)
+        r2 = self.follow_up(area, f"FIX · {r1.name}#1 · unresolved · still read")
+        ((n2, _),) = [(n, f) for n, f in enumerate(r2.findings, 1) if f.carries]
+        findings.write_decision(r2.path, n2, "accepted", "kept", "C1 not assessable")
+        for verdict, limits in (("unresolved", 1), ("resolved", 0)):
+            with self.subTest(verdict):
+                for p in (area / "audits").glob("*-analysis*.toml"):
+                    if p not in (r1, r2.path):
+                        p.unlink()  # back to the state after r2
+                (area / "audits" / "attempts.jsonl").unlink(missing_ok=True)
+                self.cr.new_state(area, 2)
+                r3 = self.follow_up(area, f"FIX · {r2.path.name}#{n2} · {verdict} · x")
+                carried = [(n, f) for n, f in enumerate(r3.findings, 1) if f.carries]
+                for n, _ in carried:
+                    findings.write_decision(
+                        r3.path, n, "accepted", "kept", "C1 not assessable"
+                    )
+                text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
+                run = area / "runs" / "2026-01-01T00-00-00_0001"
+                self.assertEqual(len(result_render.limits_of(area, text, run)), limits)
+                self.assertEqual(len(carried), limits)
+                self.assertEqual(self.gate(area), [])
+
+
+#: the follow-up records of the pilots and the earlier records they judged
+GATE = PILOT2 / "gate"
+
+
+class PilotRecords(unittest.TestCase):
+    """The release rule on the records the second pilot kept: the partial
+    fix (A-1, unresolved) and the unshown check (D2-1) hold, the full fix
+    with its check shown (C-1) releases. The pilot's records predate
+    carrying, so A-1's negative verdict holds the earlier head itself."""
+
+    def holds(self, case: str, record: Path) -> list[followup.Hold]:
+        area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+        (area / "audits").mkdir(parents=True)
+        earlier = area / "audits" / "2026-10-26T08-17-analysis.toml"
+        earlier.write_bytes((GATE / f"earlier-{case}.toml").read_bytes())
+        later = area / "audits" / "2026-10-26T18-00-analysis.toml"
+        later.write_bytes(record.read_bytes())
+        records = findings.area_records(area)
+        return followup.release_holds(records, [findings.read(later)], None)
+
+    def test_the_pilot_cases(self):
+        (a,) = self.holds("A", PILOT2 / "A-1.record.toml")
+        self.assertIn("said unresolved", a.why)
+        (d,) = self.holds("D2", PILOT2 / "D2-1.record.toml")
+        self.assertIn("said not_assessable", d.why)
+        self.assertEqual(self.holds("C", GATE / "C-1.replay.toml"), [])

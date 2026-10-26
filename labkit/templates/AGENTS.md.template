@@ -70,6 +70,10 @@ LAB-017 The number of audits follows the cost tier.
    nothing to decide. A finding is `fixed` only after the named fault has
    been fully corrected and the requested diagnostic has been run and
    assessed; a status and reason record your decision, not proof of a fix.
+   The next analysis audit, of a new run, judges every earlier decided
+   BLOCKER; until it finds one `resolved`, `report-check` holds it, and one
+   it does not find resolved comes back as an open carried finding in the
+   new record, to decide there (a limit you keep is decided there too).
    If measurement code changes, repeat steps 3–5: commit the corrected code,
    measure again, finalize and audit the new code and run. The old run is
    not repaired by editing its script. Keep earlier audit and failed-attempt

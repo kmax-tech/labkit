@@ -118,13 +118,17 @@ def reviewable(
     accepted BLOCKER, an accepted WARNING naming an effect) whose effect is
     `stands`, and a finding closed (`findings.CLOSING`: dismissed, fixed,
     deferred) after a review among FOUND did not uphold a decision on it
-    (`reviews.once_not_upheld`). `not assessable` leaves the promise
+    (`reviews.once_not_upheld`), and a carried finding (`carries`: a
+    follow-up did not find it resolved) now `dismissed` or `deferred` —
+    report-check holds it until a review upholds that
+    (`report_check.followup_findings`). `not assessable` leaves the promise
     unjudged and claims nothing to review."""
     stands = {n for n, f in record.limits() if f.effect == EFFECT_STANDS}
     return [
         (n, f)
         for n, f in enumerate(record.findings, 1)
         if n in stands
+        or (f.carries and f.status in ("dismissed", "deferred"))
         or (
             f.status in findings.CLOSING
             and reviews.once_not_upheld(record, n, found) is not None

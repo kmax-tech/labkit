@@ -302,7 +302,16 @@ Offen mit Auslöser, ohne Bauauftrag:
    Modellaufruf (`aacf7bc`): 12/12 Records, gleiche Urteile. **Offen:**
    D2 ohne sichtbaren Schalter (`adc1d71`) gelaufen: 3/3
    `not_assessable`, drei Records, 1,46 USD; Pilot 2 damit 15/15 FIX-
-   Urteile wie vorab festgelegt. Als Nächstes: Gate anhand der gespeicherten Records
+   Urteile wie vorab festgelegt. **Gate gebaut 2026-10-26** (`3fc3315`
+   Folgeaudit aller früher entschiedenen BLOCKER mit Übertragung und
+   Ursprungskette; danach das Gate in `report_check.followup_findings`,
+   CHANGELOG „Breaking“). Mechanisch getestet, auch auf den Pilot-Records
+   (A-1 und D2-1 halten, C-1 gibt frei) und über drei Audits (die
+   Einschränkung bleibt einmal erhalten). **Bei der Abnahme ausdrücklich
+   mitprüfen:** `resolved` für einen ursprünglich unzutreffenden Befund
+   ist nicht gemessen (die Piloten maßen nur Behebungen); ebenso die
+   Betriebsgrenzen 40 Einträge / 60 kB an echten Größen (`followup` im
+   Record). Ursprünglich geplant: Gate anhand der gespeicherten Records
    prüfen (ein neuer unabhängiger Befund wie die Nullspur-Streuung bleibt
    eigenständig wirksam: `resolved` für den alten Leak gibt den Lauf
    nicht frei). Bisher:

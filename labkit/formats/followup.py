@@ -35,7 +35,13 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
-from labkit.formats.findings import Finding, FindingsError, FixVerdict, Record
+from labkit.formats.findings import (
+    Finding,
+    FindingsError,
+    FixVerdict,
+    Record,
+    decision_digest,
+)
 
 #: the statuses under which a BLOCKER is earlier evidence to follow up
 DECIDED = ("fixed", "accepted", "dismissed", "deferred")
@@ -175,3 +181,106 @@ def origins_of(members: Iterable[Member], c: Chain) -> list[str]:
         if o not in out:
             out.append(o)
     return out
+
+
+@dataclass(frozen=True)
+class Hold:
+    """Why an earlier decided BLOCKER (or a finding of the state audited)
+    does not release the result: the finding's REF, WHY in words, and the
+    STEP that is missing."""
+
+    ref: str
+    why: str
+    step: str
+
+
+#: the step when a follow-up audit is all that is missing
+STEP_AUDIT = "`labkit-audit <area> --mode analysis` follows it up"
+
+
+def release_holds(
+    records: list[Record], covering: list[Record], metrics: dict | None
+) -> list[Hold]:
+    """The release rule of earlier decided BLOCKERs, over RECORDS (the
+    area's, oldest first), COVERING (the analysis records of the state
+    reported now, `audit_binding.covering_analysis`) and METRICS (the
+    answering run's metrics.json). Pure.
+
+    An origin whose head is a decided BLOCKER outside COVERING is released
+    by a valid `resolved` in a covering record — on that head, on its
+    decision as it stands now (`decision_digest`), with the required check
+    shown (`check_present`) — and only while no covering record holds a
+    verdict other than `resolved` on any finding of that origin: the state
+    is the same, so a later favourable draw does not outvote it. A head in
+    a covering record is decided there and held by that record's gates;
+    of those, one rule is this module's: a BLOCKER `fixed` in a covering
+    record is held, since no follow-up has seen the repair. Raises what
+    `chain` raises."""
+    c = chain(records)
+    in_cover = {r.path.name for r in covering}
+    verdicts = [v for r in covering for v in r.fix_verdicts]
+    out: list[Hold] = []
+    for m in c.heads():
+        f = m.finding
+        if f.grade != "BLOCKER":
+            continue
+        if m.record.path.name in in_cover:
+            if f.status == "fixed":
+                out.append(
+                    Hold(
+                        m.ref,
+                        "decided `fixed` in the state audited — no follow-up has seen "
+                        "the repair",
+                        "change what the finding names, then a new run and "
+                        "`labkit-audit <area> --mode analysis`",
+                    )
+                )
+            continue
+        if f.status not in DECIDED:
+            continue
+        hold = _earlier_hold(m, c, verdicts, metrics)
+        if hold is not None:
+            out.append(hold)
+    return out
+
+
+def _earlier_hold(
+    m: Member, c: Chain, verdicts: list[FixVerdict], metrics: dict | None
+) -> Hold | None:
+    """Why the earlier head M is not released by VERDICTS (the covering
+    records'), or None."""
+    f = m.finding
+    of_origin = {x.ref for x in c.of_origin(c.origin[m.ref])}
+    against = [v for v in verdicts if v.ref in of_origin and v.verdict != "resolved"]
+    if against:
+        v = against[0]
+        return Hold(
+            m.ref,
+            f"the follow-up of this state said {v.verdict}: {v.why.splitlines()[0]}",
+            "a later draw on the same state settles nothing: change the code or the "
+            "run, or decide the finding the follow-up carried",
+        )
+    on_head = [v for v in verdicts if v.ref == m.ref]
+    now = decision_digest(f)
+    valid = [v for v in on_head if v.decision_sha == now]
+    if not on_head:
+        if f.check and (metrics is None or f.check not in metrics):
+            return Hold(
+                m.ref,
+                f"no follow-up, and the run lacks the required check `{f.check}`",
+                f"a run that writes `{f.check}` to metrics.json, then {STEP_AUDIT}",
+            )
+        return Hold(m.ref, f"decided `{f.status}`, never followed up", STEP_AUDIT)
+    if not valid:
+        return Hold(
+            m.ref,
+            "the follow-up judged another decision — it changed since",
+            STEP_AUDIT,
+        )
+    if f.check and not all(v.check == f.check and v.check_present for v in valid):
+        return Hold(
+            m.ref,
+            f"`resolved`, but the required check `{f.check}` was not in the run shown",
+            f"a run that writes `{f.check}` to metrics.json, then {STEP_AUDIT}",
+        )
+    return None

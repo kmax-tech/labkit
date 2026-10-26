@@ -1,0 +1,55 @@
+# written by labkit-audit — decide each finding: `labkit-audit <area> --decide N STATUS REASON`, or set status and reason here
+# a reason is a TOML string: "double quotes" escape a quote as \" and a backslash as \\; 'single quotes' take one line of text without a ' or a control character
+[audit]
+date = "2026-10-26T18:35"
+mode = "analysis"
+model = "opus"
+scope_sha = "fd4c68a7b6f9"
+block_sha = "44012d989478"
+registration = { "kind" = "fit", "Question / hypothesis" = "d053920b9bef", "Success / failure criterion" = "124dfc31cd23", "Admissibility condition" = "bf5a0af0405e", "Null condition / anchors" = "9de3199f1fd6" }
+run_id = "2026-10-26T16-56-32_a13d"
+shown_sha = "3bf283631b46"
+blockers = 2
+warnings = 3
+notes = 3
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:5 · The Conclusion reports a result that no shown run produced. It says the forest was \"trained on elastic_anisotropy, G_VRH, and space_group\", which are two columns [A3] excludes and none of today's FEATURES. It reports \"out-of-fold R² = 0.726\" and says this \"exceeds the registered criterion\". The run 2026-10-26T16-56-32_a13d records `c1_score` 0.5465, `a2_pass` false and `c1_pass` null · A reader of the Summary takes R² 0.726 and a passed [C1]. runs/2026-10-26T16-56-32_a13d/metrics.json gives c1_score 0.5465261679590219 and c1_pass null, with features space_group, n_sites, volume_per_atom and n_elements. The Conclusion's claim that A2 is \"assessable only for this one seed\" is also wrong: A2 was assessed and failed (a2_score −0.174) · new class: the Summary is not generated from the run it reports (the rule is named only in 01_measure.py's header, LAB-041 Generate numbers, don't retype them); LAB-050 Analysis audit before reporting · rewrite the Conclusion from run 2026-10-26T16-56-32_a13d's metrics.json through the `--from-run` write-back, and state that [C1] has no verdict because [A2] failed"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-bulk-modulus/scripts/01_measure.py:280 · The [A2] anchor's expected value is 0.0 for R². That fits a mean predictor, not this instrument. A 500-tree forest fit on permuted labels predicts noise around the mean, so its expected out-of-fold R² is about −var(pred)/var(gold), below 0. The code's own docstring says so (01_measure.py:271, \"a fitted forest sits slightly below\"), yet it compares against 0.0 with the registered band 0.15. The band was never derived either: MeasureConfig says to derive it from the null lane's spread over seeds (01_measure.py:123), and at repeat_cost low the probe is disabled. So the gate cannot tell a working null lane from a broken one · `a2_pass` false (a2_score −0.17397 against band 0.15, a miss of 0.024) withholds the verdict on `c1_score` 0.5465: `c1_threshold` and `c1_pass` are null in metrics.json. Assignment: run the null lane over seeds 1–5 (`--seed`), collect a2_score per seed, and report whether −0.174 sits inside that spread. Also assign the mean of those scores as the null lane's empirical expectation, compared against 0.0 ± 0.15 · Scar row \"Trivial solution passes / null probe without a target\" (LAB-034 Null condition in the same run, LAB-037 Every anchor carries its target and rationale) and \"Gate without anchor/resolution\" · The frozen [A2] cannot move, and that is the finding. This run's [C1] stays without a verdict. An anchor whose target is the forest's own null expectation, with a band derived from the seed spread, needs a new registration (LAB-017: a changed criterion is a new experiment) · check: a2_seed_scores — the null-lane score per seed, which must show the registered band holding the null lane's own spread around its target"
+check = "a2_seed_scores"
+check_note = "the null-lane score per seed, which must show the registered band holding the null lane's own spread around its target"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/PROTOCOL-bulk-modulus.md:11 · [C1] tests something weaker than the question. The question asks for \"R² ≥ 0.80 on out-of-fold test data\". [C1] passes at null + 0.25, and with this run's null lane that bar is 0.076. A `c1_pass` true would therefore not answer the hypothesis · Today it has no effect, because c1_pass is null. If A2 passed, a run with c1_score 0.5465 (or anything ≥ 0.076) would report c1_pass true while the registered question's answer is no · LAB-004 Identifiers make the intent addressable (\"which value of which metric supports the hypothesis\") · Treat a C1 that does not decide the question as a registration fault for the next experiment. In this protocol, state in the Conclusion that c1_pass does not answer the question's 0.80 bar"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/00_prepare.py:96 · Training gold is taken as `float(row['K_VRH'])` with no gate. A K_VRH of 0 (the source's placeholder value, which 00_prepare's own config counts as `train_zero_labels`) enters both scored lanes as a real label. The count is recorded but held to nothing · If any train row carries K_VRH = 0, `c1_score`, `a2_score` and `n_items` (944) include a placeholder as gold. NaN gold is ruled out because c1_score is finite. Assignment: read `train_zero_labels` from the prepare run's metrics.json and compare it against 0 · Scar row \"Gate without anchor/resolution\"; LAB-023 No silent loss as named in 01_measure.py's header · make prepare refuse (or write `gold: null` and count) every train row whose K_VRH is 0"
+status = "open"
+reason = ""
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-bulk-modulus/scripts/01_measure.py:306 · `a3_pass` and `feature_sources` read FEATURES from the current 00_prepare.py when evaluation runs, not from the materialized file the forest was fit on. compounds_v1.jsonl stores only an unnamed number array (00_prepare.py:77). This filename has carried at least three feature sets: the one in the Summary, the one in the 08-17 finding, and today's. 00_prepare refuses to overwrite and asks for a new name, which never happened · If compounds_v1.jsonl was built under an earlier FEATURES, `a3_pass` true and the feature_sources check describe a table the fit never saw, and c1_score would carry the leakage. The drop from 0.979 to 0.547 suggests that did not happen, but nothing pins it. Assignment: from data/prepared/compounds_v1.jsonl, confirm that every row's `features` has length 4, and that the prepare run that wrote it is newer than the commit that set today's FEATURES · new class: an admissibility check reads the declaration, not the materialized data · store feature names in the prepared dataset and hold a3/feature_sources to those names; give a changed feature set a new dataset name"
+status = "open"
+reason = ""
+
+[[fix_verdict]]
+record = "2026-10-26T08-17-analysis.toml"
+n = 1
+decision_sha = "99a2ac927718"
+verdict = "resolved"
+why = "00_prepare.py:67-72 holds only space_group and three features computed from `structure`. G_VRH, poisson_ratio and elastic_anisotropy are gone, so the closed-form K(G, ν) probe has no inputs left. The required check `feature_sources` in runs/2026-10-26T16-56-32_a13d/metrics.json equals the required value exactly, and `a3_pass` is true.\nc1_score fell from 0.979 (run 08-10-41_ad0d) to 0.5465, which fits removing a near-identity feature. The leaked-row example (output row 1, mp-30836) now reads pred 185.38 against gold 214.21 instead of 210.70."
+check = "feature_sources"
+check_present = true

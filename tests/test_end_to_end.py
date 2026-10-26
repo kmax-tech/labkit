@@ -727,6 +727,17 @@ class Judge(unittest.TestCase):
         rc, out = self._decide(record, "fixed", "")
         self.assertEqual(rc, 0, out)
         self.assertNotIn("effect", record.read_text(encoding="utf-8"))
+        # but `fixed` in the state audited: no follow-up has seen a repair, the
+        # code is the audited code — report-check holds it (fixed-followup
+        # pilots, 2026-10-26); the twin, the finding dismissed as not applying
+        # to this state, passes
+        rc, out = self._report_check()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("decided `fixed` in the state audited", out)
+        rc, out = self._decide(
+            record, "dismissed", "the gold codes the prompt's three cases after all"
+        )
+        self.assertEqual(rc, 0, out)
 
     def test_05_an_accepted_warning_that_names_its_effect_reaches_the_result(self):
         """Review 2026-10-21 (judge-2/3): the cue that limits how the number
