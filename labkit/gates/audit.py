@@ -81,6 +81,7 @@ from labkit.formats.runs import metrics_path, run_path
 from labkit.run import llm, llm_backends
 from labkit.run.llm import model_entry
 from labkit.formats import (
+    attempts,
     console,
     findings,
     promises,
@@ -605,8 +606,12 @@ def _answer_or_record(
     prompt: str,
     stamp: Stamp,
     block_sha: str,
-) -> str:
-    """The auditor's report. When the backend does not answer (the CLI died,
+) -> tuple[str, attempts.Running]:
+    """(the auditor's report, its attempt in the area's journal — the
+    caller ends it with the record). The attempt is begun right before the
+    call (`attempts.begin`: refused while another audit of the area runs
+    or a record the journal or HEAD names is gone; an earlier attempt
+    without an end is marked interrupted and named). When the backend does not answer (the CLI died,
     the server was down, the retries ran out) there is no audit, and the
     evidence that one was tried — on this code, these promises, with this
     much time — goes next to the records (`findings.write_failed`) before
@@ -631,12 +636,16 @@ def _answer_or_record(
             f"again. Audit with another alias (--model), or leave the number "
             f"unreported (report-check refuses it without an audit)."
         )
+    # the alias is resolved before the attempt begins: an alias models.toml
+    # does not know is a usage error (KeyError), not an attempt
+    room = _report_room(args.model)
+    running = attempts.begin(args.area, args.mode, args.model, stamp.sha)
+    for note in running.notes:
+        console.progress("labkit-audit", note)
     try:
-        return llm.complete(
-            args.model,
-            prompt,
-            timeout=args.timeout,
-            max_tokens=_report_room(args.model),
+        return (
+            llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=room),
+            running,
         )
     except llm_backends.UnprovenAnswer as exc:
         tried = findings.write_failed(
@@ -650,6 +659,7 @@ def _answer_or_record(
             " ".join(["labkit-audit", *argv]),
             cause="unproven",
         )
+        running.end("failed", file=tried.name)
         raise AuditError(
             f"{exc}\nlabkit-audit: no audit — {args.model} did not write the answer "
             f"whole; recorded as {tried}. Do not run it again on this state: the "
@@ -668,12 +678,16 @@ def _answer_or_record(
             " ".join(["labkit-audit", *argv]),
             cause="unavailable",
         )
+        running.end("failed", file=tried.name)
         raise AuditError(
             f"{exc}\nlabkit-audit: no audit — the backend did not answer; recorded "
             f"as {tried}. A full run at high repeat cost may acknowledge it with "
             f"LABKIT_UNFROZEN=1; its number cannot be reported (report-check "
             f"refuses it). Run the audit again when the backend answers."
         ) from exc
+    except BaseException as exc:
+        running.end("none", error=f"{type(exc).__name__}: {exc}")
+        raise
 
 
 def _report_room(alias: str) -> int | None:
@@ -846,19 +860,57 @@ def main(argv: list[str]) -> int:
             f"in full, {len(indexed)} indexed · "
             f"{args.model} · {len(prompt) // 1000} kB",
         )
-        report = _answer_or_record(args, argv, prompt, stamp, block_sha)
-        console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
-        result = parse(report)
+        report, running = _answer_or_record(args, argv, prompt, stamp, block_sha)
     except (
         AuditError,
         llm_backends.PromptTruncated,
         KeyError,
         FileNotFoundError,
         ValueError,
+        RuntimeError,
     ) as exc:
         # KeyError: llm.resolve on an alias models.toml does not know;
         # FileNotFoundError, ValueError: the area cannot be stamped;
-        # ValueError also: the promise block cannot be read (PromiseError)
+        # ValueError also: the promise block cannot be read (PromiseError),
+        # an attempt refused (AttemptError); RuntimeError: git failed
+        console.refuse("labkit-audit", str(exc).strip(chr(39)))
+        return 2
+    try:
+        return _record(
+            args,
+            report,
+            running,
+            stamp,
+            block_sha,
+            run_id,
+            shown_sha,
+            indexed,
+            registration,
+        )
+    finally:
+        if not running.ended:
+            running.end("none", error="the command ended before the record")
+
+
+def _record(
+    args: argparse.Namespace,
+    report: str,
+    running: attempts.Running,
+    stamp: Stamp,
+    block_sha: str,
+    run_id: str | None,
+    shown_sha: str | None,
+    indexed: list[Path],
+    registration: dict[str, str],
+) -> int:
+    """Read REPORT, write its record and end RUNNING with it; print what the
+    person decides. Exit 1 on a blocker or a warning, 0 on none, 2 when the
+    report does not read (the attempt ends without a record, said why)."""
+    console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
+    try:
+        result = parse(report)
+    except (AuditError, ValueError) as exc:
+        running.end("none", error=str(exc))
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
         return 2
     print(report)
@@ -879,8 +931,10 @@ def main(argv: list[str]) -> int:
             shown_sha=shown_sha,
         )
     except ValueError as exc:  # verdict and finding lines disagree
+        running.end("none", error=str(exc))
         console.refuse("labkit-audit", str(exc))
         return 2
+    running.end("record", file=recorded.name)
     _stamp_report(args.area, args.mode, stamp, result["verdict"], recorded)
     # the auditor lists what it read in full; the indexed modules are the
     # caller's to add before the list is held to the stamp (LAB-103 The audit reads by declared scope)

@@ -166,6 +166,25 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A deleted audit record is noticed.** In the sixth haiku round (t3)
+  and the eighth (2026-10-26, t18) agents ran `rm audits/*.toml` before a
+  new attempt; nothing noticed that an earlier or a failed record was
+  gone. `labkit-audit` (preflight, analysis) now journals every attempt in
+  `audits/attempts.jsonl` (`formats/attempts.py`): started before the
+  call, ended with the record, the failed-attempt file, or why none was
+  written. A file an ended attempt names, a file under `audits/` HEAD
+  holds, or a journal no longer starting with HEAD's lines blocks the next
+  audit, the stop and the commit (`attempts.gaps`, through
+  `claude_hooks.undecided_blockers`), each naming the attempt or the file
+  to restore. Whether an attempt still runs is told by a lock its process
+  holds (released by the kernel when it ends), not by a pid; a running
+  attempt refuses a second, one without an end and a free lock is marked
+  interrupted and named by the next, one from another host is named. The
+  check and the start stand under one lock on the area. An alias
+  models.toml does not know is refused before the attempt begins. Limit: an
+  uncommitted attempt whose journal line was removed with it leaves no
+  trace a local check can read.
+
 - **A review's rejection stays in sight after the claim changes.** In the
   eighth haiku round (2026-10-26, t5) the decision review rejected
   decision 08-48 #2, the agent edited the Conclusion, and report-check

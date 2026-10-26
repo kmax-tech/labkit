@@ -23,7 +23,7 @@ import protocol_fixture as fixture  # noqa: E402
 from protocol_fixture import registration_of, run_record  # noqa: E402
 from labkit.gates import audit  # noqa: E402
 from labkit.checks import audit_binding  # noqa: E402
-from labkit.formats import findings, promises, scope_sha  # noqa: E402
+from labkit.formats import attempts, findings, promises, scope_sha  # noqa: E402
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"
 SCRIPT = "import scoring\nfrom labkit.run import runlog\nprint(scoring.X)\n"
@@ -324,6 +324,26 @@ class Audit(unittest.TestCase):
         self.assertEqual(tried.scope_sha, scope_sha.area_stamp(area)[0])
         self.assertIn("--mode preflight --timeout 1200", tried.command)
         self.assertEqual(findings.area_records(area), [])  # no findings were made
+        (attempt,) = attempts.read_journal(area)
+        self.assertEqual((attempt.outcome, attempt.file), ("failed", files[0].name))
+        # eighth haiku round (t18): `rm audits/*.toml` before a new attempt —
+        # the next audit names the attempt whose evidence is gone and
+        # refuses before any call
+        files[0].unlink()
+        err = io.StringIO()
+        with (
+            mock.patch.object(audit.llm, "complete", dead),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(err),
+        ):
+            rc = audit.main([str(area), "--mode", "preflight", "--timeout", "1200"])
+        self.assertEqual(rc, 2)
+        self.assertIn(
+            f"attempt {attempt.id} (preflight, opus) ended as failed", err.getvalue()
+        )
+        self.assertIn("the file is gone", err.getvalue())
+        self.assertEqual(len(attempts.read_journal(area)), 1)  # no new attempt
 
     def test_an_unproven_answer_ends_the_auditing_of_this_state_with_that_model(self):
         """The fit probes: a safety classifier stopped the auditor on every
@@ -393,12 +413,14 @@ class Audit(unittest.TestCase):
     def test_an_unknown_alias_is_a_usage_error_and_leaves_no_attempt(self):
         area = repo_with()
 
-        def unknown(alias, prompt, **kw):
+        def unknown(alias, *a, **kw):
             raise KeyError("no such alias")
 
+        # the alias is looked up before the call, where models.toml says
+        # whether the backend takes a cap
         with (
             mock.patch.object(audit.llm, "complete", unknown),
-            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+            mock.patch.object(audit.llm, "takes_max_tokens", unknown),
             contextlib.redirect_stdout(io.StringIO()),
             contextlib.redirect_stderr(io.StringIO()),
         ):
@@ -508,7 +530,11 @@ class Audit(unittest.TestCase):
         rc, _, err, _ = run(area, "BLOCKER a.py:1 x\nverdict: 1 blockers, 0 warnings")
         self.assertEqual(rc, 2)
         self.assertIn("counts 1 blocker(s)", err)
-        self.assertEqual(list(area.glob("audits/*")), [])
+        self.assertEqual(list(area.glob("audits/*.toml")), [])
+        # the attempt is in the journal, ended without a record and why
+        (attempt,) = attempts.read_journal(area)
+        self.assertEqual(attempt.outcome, "none")
+        self.assertIn("counts 1 blocker(s)", attempt.error)
 
     def test_the_stamp_facts_are_printed(self):
         _, _, err, _ = run(repo_with(), WARN)

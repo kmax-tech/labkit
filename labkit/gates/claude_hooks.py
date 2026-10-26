@@ -103,6 +103,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from labkit.formats import (
+    attempts,
     console,
     files,
     findings,
@@ -639,9 +640,10 @@ def stop(event: dict) -> int:
     if undecided:
         print(
             "an audit of an area this session worked in found BLOCKER(s) nobody "
-            "decided — decide each (fixed / accepted / deferred / dismissed, with "
-            "reason) in its audits/ file before you stop; a number measured past "
-            "them cannot be reported, and a commit would be refused the same way "
+            "decided, or an audit record is gone — decide each (fixed / accepted / "
+            "deferred / dismissed, with reason) in its audits/ file and restore a "
+            "record that is gone before you stop; a number measured past them "
+            "cannot be reported, and a commit would be refused the same way "
             "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(undecided),
             file=sys.stderr,
         )
@@ -683,8 +685,9 @@ def stop(event: dict) -> int:
 
 def undecided_blockers(repo: Path, paths: list[Path]) -> list[str]:
     """Every audit BLOCKER still `open` in an area one of PATHS lies in — as
-    `<area>: <file>: <text>`, each area once — or the sentence of a record
-    nobody can read. BLOCKERs only, by intent (`findings.open_findings` has the
+    `<area>: <file>: <text>`, each area once —, every audit record gone
+    that the area's attempt journal or HEAD names (`attempts.area_gaps`),
+    or the sentence of a record or journal nobody can read. BLOCKERs only, by intent (`findings.open_findings` has the
     table): the hook says what the commit would be refused for. The area is the nearest directory above the path with a
     PROTOCOL-*.md, inside REPO, and every area whose promises declare a
     changed path in their scope or whose code imports a changed shared
@@ -695,6 +698,10 @@ def undecided_blockers(repo: Path, paths: list[Path]) -> list[str]:
     out = []
     for area in areas_touched(paths, repo):
         shown = area.relative_to(repo.resolve()).as_posix()
+        try:
+            out += [f"{shown}: {gap}" for gap in attempts.area_gaps(area).blockers]
+        except attempts.AttemptError as exc:
+            out.append(f"{shown}: {exc}")
         try:
             records = findings.area_records(area)
         except findings.FindingsError as exc:
@@ -719,10 +726,10 @@ def undecided(argv: list[str]) -> int:
     if not lines:
         return 0
     print(
-        "claude-hook: an audit of a staged area found BLOCKER(s) nobody decided — "
-        "decide each (fixed / accepted / deferred / dismissed, with reason) in its "
-        "audits/ file (LAB-015 Preflight audit before freezing):\n  "
-        + "\n  ".join(lines)
+        "claude-hook: an audit of a staged area found BLOCKER(s) nobody decided, "
+        "or an audit record is gone — decide each (fixed / accepted / deferred / "
+        "dismissed, with reason) in its audits/ file and restore a record that is "
+        "gone (LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(lines)
     )
     return 1
 
