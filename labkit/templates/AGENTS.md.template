@@ -177,9 +177,10 @@ fields, no reading of labkit's source.
     not write the run's numbers into a report as the result — the gate
     holds a report citing the area's answering run while the protocol
     declares none. A refusal is a finding to report, not an obstacle to
-    route around: cite the run as `run <run_id> (not reported: <what
-    refused the adoption, what you found>)`, say that the question stays
-    open, and end there.
+    route around: discuss the run — `protocol-fill <PROTOCOL> --discuss
+    <run_id> --why "<what refused the adoption, what you found>" --into
+    REPORT.md` writes the block —, say that the question stays open, and
+    end there.
 
 ## Setup
 

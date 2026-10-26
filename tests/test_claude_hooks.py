@@ -25,6 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.checks import report_blocks  # noqa: E402
 from labkit.gates import claude_hooks  # noqa: E402
 from labkit.tools import protocol_fill  # noqa: E402
 from labkit.checks import result_render  # noqa: E402
@@ -408,9 +409,10 @@ class PostChange(unittest.TestCase):
     def _marked_report(self, why: str = "audit failed") -> dict:
         run = "2026-10-25T20-57-42_9ae7"
         (self.root / "experiments/01-x/runs" / run).mkdir(parents=True)
-        (self.root / "REPORT.md").write_text(
-            f"# Report\n\nrun {run} (not reported: {why})\n", encoding="utf-8"
+        block = "\n".join(
+            report_blocks.discussion_lines("experiments/01-x/PROTOCOL-x.md", run, why)
         )
+        (self.root / "REPORT.md").write_text(f"# Report\n\n{block}\n", encoding="utf-8")
         ev = _bash(self.root, "ls")
         ev["session_id"] = "s-" + os.urandom(4).hex()
         return ev
@@ -424,10 +426,12 @@ class PostChange(unittest.TestCase):
         ctx = json.loads(out1)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("`labkit-audit experiments/01-x --report-review REPORT.md`", ctx)
         self.assertEqual(_run(claude_hooks.post_change, ev)[1], "")  # same text
-        (self.root / "REPORT.md").write_text(
-            "# Report\n\nrun 2026-10-25T20-57-42_9ae7 (not reported: other)\n",
-            encoding="utf-8",
+        block = "\n".join(
+            report_blocks.discussion_lines(
+                "experiments/01-x/PROTOCOL-x.md", "2026-10-25T20-57-42_9ae7", "other"
+            )
         )
+        (self.root / "REPORT.md").write_text(f"# Report\n\n{block}\n", encoding="utf-8")
         self.assertIn("--report-review", _run(claude_hooks.post_change, ev)[1])
 
     def test_a_report_citing_a_run_unmarked_gets_no_review_command(self):

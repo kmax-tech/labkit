@@ -1,4 +1,4 @@
-"""report_review: the cold reader on a report that marks a run as not
+"""report_review: the cold reader on a report that discusses a run as not
 reported — what its prompt carries, how its reply is read, what it prints.
 The model is faked; whether it catches t18 is measured, not tested
 (docs/usability/2026-10-25-report-review-pilot.md)."""
@@ -17,19 +17,26 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.checks.audit_binding import AuditError  # noqa: E402
+from labkit.checks.report_blocks import discussion_lines  # noqa: E402
 from labkit.formats import findings  # noqa: E402
 from labkit.gates import audit, report_review  # noqa: E402
 
 RUN = "2026-10-25T20-57-42_9ae7"
 PROTOCOL = "# Protocol\n\n**Question:** does C1 hold?\n"
+P = "experiments/01-x/PROTOCOL-x.md"
+
+
+def discussed(run: str, why: str) -> str:
+    """The discussion block of RUN with WHY, as `--discuss` writes it."""
+    return "\n".join(discussion_lines(P, run, why))
+
+
 MARKED = (
-    "# Report\n\n"
-    f"run {RUN} (not reported: analysis audit failed)\n\n"
-    "C1 PASS, AUROC 0.7795\n"
+    f"# Report\n\n{discussed(RUN, 'analysis audit failed')}\n\nC1 PASS, AUROC 0.7795\n"
 )
 HONEST = (
     "# Report\n\n"
-    f"run {RUN} (not reported: analysis audit failed — no audit saw its numbers)\n\n"
+    f"{discussed(RUN, 'analysis audit failed — no audit saw its numbers')}\n\n"
     "No result is reported.\n"
 )
 
@@ -92,7 +99,8 @@ class Gather(unittest.TestCase):
                 a.area, a.report(MARKED), a.area / "PROTOCOL-x.md"
             )
         self.assertEqual([m.run_id for m in marked], [RUN])
-        self.assertIn("5: C1 PASS, AUROC 0.7795", prompt)  # numbered lines
+        self.assertIn("11: C1 PASS, AUROC 0.7795", prompt)  # numbered lines
+        self.assertIn(f"line 3: run {RUN} — why: analysis audit failed", prompt)
         self.assertIn('"c1_pass": true', prompt)
         self.assertIn("effect: C1 not assessable", prompt)
         self.assertIn("reason: the leak stays", prompt)
@@ -111,7 +119,7 @@ class Gather(unittest.TestCase):
         other = "2026-10-25T20-00-00_abcd"
         with tempfile.TemporaryDirectory() as d:
             a = Area(d)
-            text = f"run {other} (not reported: looked at)\n"
+            text = discussed(other, "looked at") + "\n"
             with self.assertRaisesRegex(AuditError, f"no runs/{other}/"):
                 report_review.gather_report(
                     a.area, a.report(text), a.area / "PROTOCOL-x.md"
@@ -137,7 +145,7 @@ class Hint(unittest.TestCase):
             self.assertIsNone(report_review.review_hint(text, a.report(text), repo))
 
     def test_a_marked_run_no_area_holds_names_nothing(self):
-        text = "run 2026-10-25T20-00-00_abcd (not reported: looked at)\n"
+        text = discussed("2026-10-25T20-00-00_abcd", "looked at") + "\n"
         with tempfile.TemporaryDirectory() as d:
             a = Area(d)
             repo = a.area.parent.parent

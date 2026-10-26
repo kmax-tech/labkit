@@ -258,10 +258,11 @@ evidence file under the same ID (top of this document).*
   renders, every cited run id names a
   run of the repo, and the protocol declaring a cited run goes through
   `report-check`; the answering run of a protocol that declares no result
-  is not cited unmarked — that is the number leaving the area without the
-  adoption — and a run only looked at is cited as such, the why beside
-  the id (`run <id> (not reported: <what refused the adoption, what was
-  found>)`); a number outside every block is named as having no
+  is not cited undiscussed — that is the number leaving the area without
+  the adoption — and a run only looked at stands in a discussion block
+  (`protocol-fill … --discuss <id> --why "<what refused the adoption, what
+  was found>" --into <report>`: protocol, run and why in its head, its
+  line written from them); a number outside every block is named as having no
   assigned source — a hint, since equal values elsewhere do not show
   where a number came from.
   Deliberate exception: `--no-verify`.

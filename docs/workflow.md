@@ -201,11 +201,14 @@ and this is its shape without the adoption (`report_check.promotions`;
 sixth haiku round, t3 and t18: `--from-run` refused, REPORT.md written
 from `metrics.json` by hand). The sentence names the adoption
 (`protocol-fill <PROTOCOL> --from-run <run_id>`, which says what it still
-owes) and the way out for a run only looked at: cite it as such, the why
-beside the id — `run <run_id> (not reported: <what refused the adoption,
-what you found>)`. The marker without its why blocks; the marker on a run
-some protocol does declare blocks (the block shows the number); numbers in
-the marked citation's paragraph are named as a hint. A probe's or an older
+owes) and the way out for a run only looked at: a discussion block,
+`protocol-fill <PROTOCOL> --discuss <run_id> --why "<what refused the
+adoption, what you found>" --into REPORT.md` — its head holds the
+protocol, the run and the why as TOML, its line is written from them. A
+block without its why, one whose line differs from its head, a second
+block of the same protocol and run, and a discussion of a run some
+protocol does declare block (the result block shows that number); numbers
+in and beside a discussion are named as a hint. A probe's or an older
 run's citation stays the warning it was: an exploration's run is looked at.
 
 ## 9. The gate — at the stop and the commit

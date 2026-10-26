@@ -154,9 +154,11 @@ A probe (`run_kind="probe"`) or an acknowledged unfrozen run cannot supply a
 reportable number. A report (`REPORT.md`, a results note) that cites the
 area's answering run while its protocol declares no result is held at the
 stop and the commit: that is the number leaving the area without the
-adoption. A run the report looks at without reporting it is cited as such,
-with the why beside the id — `run <run_id> (not reported: <what refused
-the adoption, what you found>)`.
+adoption. A run the report looks at without reporting it stands in a
+discussion block, `protocol-fill <PROTOCOL> --discuss <run_id> --why "<what
+refused the adoption, what you found>" --into REPORT.md`: its head holds
+the protocol, the run and the why as TOML, its line
+(`Run <run_id> — discussed, not reported: <why>`) is written from them.
 
 ### Longer measurements
 
@@ -210,6 +212,7 @@ protocol-check --contract | --guide # field contract or field-guide path
 protocol-fill PROTOCOL "LABEL=VALUE" ... # fill fields
 protocol-fill PROTOCOL --list | --prompts | --render | --from-run [RUN]
 protocol-fill PROTOCOL --into REPORT.md # the declared result as a generated block in a report
+protocol-fill PROTOCOL --discuss RUN_ID --why "…" --into REPORT.md # a run the report looks at without reporting it, as a discussion block
 code-check AREA [--protocol FILE] [--bundle FILE] # code checks; audit bundle
 intent-check PROTOCOL [--metrics FILE] # promises against recorded metrics
 scope-sha AREA                     # code stamp used by an audit
@@ -219,7 +222,7 @@ labkit-audit AREA --mode preflight|analysis|clarity [--model ALIAS]
 labkit-audit AREA --decide N STATUS REASON [--effect E] [--record FILE] # store your decision on a finding (an accepted BLOCKER owes --effect)
 labkit-audit AREA --findings [--record FILE]               # show what there is to decide, no audit
 labkit-audit AREA --review [--record FILE] [--again]       # a second auditor on the `stands` decisions, and on a finding closed after a review did not uphold it: does the reported claim stand within each limit? (--again: one more draw as a measurement)
-labkit-audit AREA --report-review REPORT                   # a cold reader on a report that cites a run as `(not reported: …)`: does it state that run's numbers as results, or what the audits contradict? warnings only, recorded nowhere
+labkit-audit AREA --report-review REPORT                   # a cold reader on a report that discusses a run (a discussion block): does it state that run's numbers as results, or what the audits contradict? warnings only, recorded nowhere
 report-check AREA                  # release check before reporting
 report-check --if-reported [--staged] PATH... # check affected reported areas and citing reports
 runlog [AREA] [--wait | --follow]    # inspect or monitor runs
@@ -281,6 +284,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **conclusion** | Author's interpretation answering the question, in at most two plain sentences in the Summary's `Conclusion` field. |
 | **recorded results** | Generated metrics, run id and limits note in the protocol's `Recorded results` field; checked against the declared run and covering audit records. |
 | **report result block** | Generated section in a separate report containing the recorded results and full Limit lines; written by `protocol-fill --into` and checked against the same sources. |
+| **discussion block** | Generated section in a separate report for a run it looks at without reporting it: protocol, run and why as TOML in the head, the line `Run <id> — discussed, not reported: <why>` written from them; written by `protocol-fill --discuss … --into`. |
 | **derived run** | Re-evaluation of a completed non-repeat run's rows through `derived_from`, with no new model calls. |
 | **scope hash** | Per-promise hash of its declared code scope, recorded with the run and checked by finalize. |
 | **stamp** | Area audit fingerprint of selected source files, declared scopes and the package pin. |

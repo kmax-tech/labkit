@@ -36,8 +36,8 @@ post-change
     Every file the repo now reports as changed (git status, untracked
     included) plus the tool's own file_path, filtered to PROTOCOL-*.md and
     notes/messung/*.md (not 00-*), is checked with protocol-check or
-    notes-check. A changed Markdown report that cites a run as `(not
-    reported: …)` gets the report review's command
+    notes-check. A changed Markdown report that discusses a run (a
+    discussion block, `report_blocks.discussions`) gets the report review's command
     (`report_review.review_hint`) — a hint; the review is one model call
     and the agent's to start. A per-session cache of content hashes keeps a
     file that was already checked or hinted at this content from being
@@ -107,6 +107,7 @@ from labkit.formats import (
 )
 from labkit.formats.shell import segments
 from labkit.checks import notes_check
+from labkit.checks.report_blocks import ReportBlockError
 from labkit.gates import preflight, report_check
 from labkit.gates.report_review import review_hint
 from labkit.formats.repo import (
@@ -367,8 +368,18 @@ def _load_cache(p: Path | None) -> dict:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
+def _report_hint(text: str, path: Path, repo: Path) -> str | None:
+    """The review's hint for the report at PATH (`review_hint`), or the
+    sentence of a block in it that does not read — report-check blocks on
+    it at the stop and the commit; the hook says it now."""
+    try:
+        return review_hint(text, path, repo)
+    except ReportBlockError as exc:
+        return f"{shown(path, repo)}: {exc}"
+
+
 def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
-    """PostToolUse hook: a protocol or a measurement note just written gets its checker; a changed report that cites a run as not reported gets the report review's command (`report_review.review_hint`), once per text; the findings go back as context."""
+    """PostToolUse hook: a protocol or a measurement note just written gets its checker; a changed report that discusses a run gets the report review's command (`report_review.review_hint`), once per text; the findings go back as context."""
     project = os.environ.get("CLAUDE_PROJECT_DIR")
     repo = Path(project) if project else Path(event.get("cwd") or os.getcwd())
     candidates: list[Path] = []
@@ -390,7 +401,7 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
     marked = [
         (path, hint)
         for path, text in report_check.report_files(sorted(seen), repo, staged=False)
-        if (hint := review_hint(text, path, repo))
+        if (hint := _report_hint(text, path, repo))
     ]
     if not targets and not marked:
         return 0

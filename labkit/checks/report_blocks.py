@@ -1,5 +1,6 @@
 """report_blocks — a report outside the protocol: its report result blocks,
-the runs it cites, the numbers it states without a source.
+its discussion blocks, the runs it cites, the numbers it states without a
+source.
 
 A separate report (`REPORT.md`, a results note) carries a reported number
 in a report result block, written by `protocol-fill <PROTOCOL> --into <FILE>`:
@@ -27,18 +28,22 @@ here states, and no more:
   there).
 - `cited_gaps` (guaranteed): every token that reads as a run id
   (`runs.RUN_ID_LIKE`) names a run directory of the repo.
-- `not_reported`, `marker_gaps` (guaranteed): a run the report looks at
-  without reporting it is cited as such, the why beside the id —
-  `run <id> (not reported: <what refused the adoption, what was found>)`.
-  The marker is a written claim the reader sees beside the number; one
-  without its why is a blocker. The gate (`report_check.promotions`) holds
-  the unmarked citation of a protocol's answering run that declares no
-  result: at `low` such a report is the promotion without the adoption
-  (sixth haiku round, 2026-10-23, t3 and t18: `--from-run` refused, REPORT.md
-  written from metrics.json by hand, the hook warned and let it pass).
-- `numbers_beside_not_reported` (static evidence, never blocks): the
-  numbers in the paragraph of a marked citation — a looked-at run's number
-  in a report is a reported number unless the sentence says what it is.
+- `discussions`, `discussion_gaps` (guaranteed): a run the report looks
+  at without reporting it stands in a discussion block, written by
+  `protocol-fill <PROTOCOL> --discuss RUN --why "…" --into <FILE>` — its
+  head holds the protocol, the run and the why as TOML, its line says
+  `Run <id> — discussed, not reported: <why>`. A block without its why,
+  one whose line differs from its head, and a second block of the same
+  protocol and run are blockers. The gate (`report_check.promotions`)
+  holds the undiscussed citation of a protocol's answering run that
+  declares no result: at `low` such a report is the promotion without the
+  adoption (sixth haiku round, 2026-10-23, t3 and t18: `--from-run`
+  refused, REPORT.md written from metrics.json by hand, the hook warned and
+  let it pass).
+- `numbers_beside_discussed` (static evidence, never blocks): the numbers
+  in a discussion block and the paragraphs around it — a discussed run's
+  number in a report is a reported number unless the sentence says what
+  it is.
 - `unsourced_numbers` (static evidence, never blocks): numbers outside every
   block — no source is assigned to them. A number that happens to equal a
   value of the run is named too: equal values do not show where a number
@@ -53,8 +58,10 @@ no gate read the file.
 
 from __future__ import annotations
 
+import json
 import os
 import re
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -249,77 +256,270 @@ def cited_gaps(cited: list[tuple[int, str]], known: set[str]) -> list[str]:
     return gaps
 
 
-#: a run cited as looked at, not reported: the marker right after the id,
-#: the why inside the parentheses (owed — `marker_gaps`), e.g.
-#: `run 2026-10-23T17-03-33_7254 (not reported: adoption refused — target
-#: leakage through G_VRH, two stands unreviewed)`. The why is the report of
-#: what stopped the number, on the page beside it: a false one ("not
-#: reported" beside a number read as the result) is a sentence an auditor
-#: reads and a reviewer catches — the gate's blind spot moved onto the page.
-NOT_REPORTED = "not reported"
-_NOT_REPORTED = re.compile(
-    rf"(?P<run>{runs.RUN_ID_LIKE.pattern})\s*\({NOT_REPORTED}(?::(?P<why>[^)]*))?\)"
-)
-#: the form the gate asks for, with the id filled in
-NOT_REPORTED_FORM = (
-    "run {run_id} (" + NOT_REPORTED + ": <what refused the adoption, what you found>)"
-)
+#: a run the report discusses without reporting it: a generated block whose
+#: head is TOML inside the opening comment — the one place the protocol,
+#: the run and the why are kept — and whose body is the line the reader
+#: sees, written from the head (`discussion_body`):
+#:
+#:     <!-- labkit discussed
+#:     protocol = "experiments/01-x/PROTOCOL-x.md"
+#:     run = "2026-10-26T08-18-33_7392"
+#:     why = "adoption refused — target leakage through G_VRH"
+#:     -->
+#:     Run 2026-10-26T08-18-33_7392 — discussed, not reported: adoption refused — target leakage through G_VRH
+#:     <!-- /labkit discussed -->
+#:
+#: The why is the report of what stopped the number, on the page beside it.
+#: A false one ("not reported" beside a number read as the result) is a
+#: sentence the report review reads — the gate's blind spot moved onto the
+#: page. Not a prose pattern: a marker the gate reads out of prose fell
+#: apart on the first backtick around the id (eighth haiku round, t3;
+#: docs/notes/2026-10-26-report-run-citations.md).
+DISCUSSED = "discussed"
+DISCUSS_OPEN = "<!-- labkit discussed"
+DISCUSS_HEAD_END = "-->"
+DISCUSS_CLOSE = "<!-- /labkit discussed -->"
+DISCUSS_KEYS = ("protocol", "run", "why")
+
+
+def discuss_command(protocol: str, run_id: str, report: str) -> str:
+    """The `protocol-fill … --discuss` line that writes the block
+    discussing RUN_ID of PROTOCOL into REPORT, each path as the caller
+    names it."""
+    return (
+        f'protocol-fill {protocol} --discuss {run_id} --why "<what refused the '
+        f'adoption, what you found>" --into {report}'
+    )
 
 
 @dataclass(frozen=True)
-class NotReported:
-    """A citation carrying the marker: its LINE, the RUN_ID, the WHY as
-    written ('' for a marker without one — `marker_gaps` names it)."""
+class Discussion:
+    """One discussion block: the PROTOCOL (its path relative to the report,
+    as written), the RUN_ID, the WHY as written, where it stands (FIRST the
+    opening line, LAST the closing one, 1-based), its BODY as written."""
 
-    line: int
+    protocol: str
     run_id: str
     why: str
+    first: int
+    last: int
+    body: str
 
 
-def not_reported(text: str) -> list[NotReported]:
-    """Every citation of TEXT marked as not reported, in order of the lines."""
+def discussion_body(run_id: str, why: str) -> str:
+    """The line a discussion block of RUN_ID with WHY shows."""
+    return f"Run {run_id} — {DISCUSSED}, not reported: {why}"
+
+
+def _toml_string(value: str) -> str:
+    """VALUE as a TOML basic string."""
+    return json.dumps(value, ensure_ascii=False)
+
+
+def discussion_lines(protocol: str, run_id: str, why: str) -> list[str]:
+    """The block discussing RUN_ID of PROTOCOL with WHY, line by line.
+    Raises ValueError on a why that cannot stand in the block: empty, more
+    than one line, or holding `-->` (it would close the comment)."""
+    why = why.strip()
+    if not why:
+        raise ValueError(
+            "--why is empty — say what refused the adoption and what was found"
+        )
+    if "\n" in why or DISCUSS_HEAD_END in why:
+        raise ValueError(
+            f"--why {why!r}: one line, without {DISCUSS_HEAD_END!r} (it closes the "
+            f"block's head)"
+        )
     return [
-        NotReported(n, m.group("run"), (m.group("why") or "").strip())
-        for n, line in enumerate(text.split("\n"), 1)
-        for m in _NOT_REPORTED.finditer(line)
+        DISCUSS_OPEN,
+        f"protocol = {_toml_string(protocol)}",
+        f"run = {_toml_string(run_id)}",
+        f"why = {_toml_string(why)}",
+        DISCUSS_HEAD_END,
+        discussion_body(run_id, why),
+        DISCUSS_CLOSE,
     ]
 
 
-def marker_gaps(marked: list[NotReported]) -> list[str]:
-    """Why a marker of MARKED carries no report, one sentence each: the why
-    is empty — the marker is the place where what refused the adoption and
-    what was found is written."""
-    return [
-        f"line {m.line}: run {m.run_id} is cited as not reported without the why — "
-        f"write `{NOT_REPORTED_FORM.format(run_id=m.run_id)}`"
-        for m in marked
-        if not m.why
-    ]
+def _discussion_head(head: list[str], at: int) -> tuple[str, str, str]:
+    """(protocol, run, why) of the TOML HEAD of the block opened at line AT.
+    Raises ReportBlockError on TOML that does not read, a missing or
+    unknown key, or a value that is not a string."""
+    try:
+        data = tomllib.loads("\n".join(head))
+    except tomllib.TOMLDecodeError as exc:
+        raise ReportBlockError(
+            f"line {at}: the discussion block's head is not TOML: {exc}"
+        ) from exc
+    missing = [k for k in DISCUSS_KEYS if k not in data]
+    unknown = sorted(set(data) - set(DISCUSS_KEYS))
+    if missing or unknown:
+        raise ReportBlockError(
+            f"line {at}: the discussion block's head holds "
+            f"{', '.join(DISCUSS_KEYS)}"
+            + (f" — missing {', '.join(missing)}" if missing else "")
+            + (f" — unknown {', '.join(unknown)}" if unknown else "")
+        )
+    bad = [k for k in DISCUSS_KEYS if not isinstance(data[k], str)]
+    if bad:
+        raise ReportBlockError(
+            f"line {at}: the discussion block's {', '.join(bad)} must be a string"
+        )
+    return data["protocol"], data["run"], data["why"]
 
 
-def numbers_beside_not_reported(
-    text: str, marked: list[NotReported]
-) -> list[tuple[int, list[str]]]:
-    """(line, numbers) of every line in the paragraph of a citation of MARKED
-    — the non-blank lines around it, up to a blank line or a generated block
-    — that states a number (`unsourced_numbers`). Static evidence: a hint at
-    a looked-at run's number presented in a report, never a blocker."""
+def discussions(text: str) -> list[Discussion]:
+    """Every discussion block of TEXT in order. Raises ReportBlockError on
+    a block that does not read: never closed, closed without opening,
+    nested, or a head that is not the three keys."""
+    out: list[Discussion] = []
     lines = text.split("\n")
-    inside = {n for b in blocks(text) for n in range(b.first, b.last + 1)}
+    n = 0
+    while n < len(lines):
+        line = lines[n].strip()
+        n += 1
+        if line == DISCUSS_CLOSE:
+            raise ReportBlockError(
+                f"line {n}: {DISCUSS_CLOSE} closes no discussion block"
+            )
+        if line != DISCUSS_OPEN:
+            continue
+        first = n
+        head: list[str] = []
+        while n < len(lines) and lines[n].strip() != DISCUSS_HEAD_END:
+            if lines[n].strip() in (DISCUSS_OPEN, DISCUSS_CLOSE):
+                break
+            head.append(lines[n])
+            n += 1
+        if n >= len(lines) or lines[n].strip() != DISCUSS_HEAD_END:
+            raise ReportBlockError(
+                f"line {first}: the discussion block's head is never closed "
+                f"({DISCUSS_HEAD_END} on a line of its own)"
+            )
+        n += 1
+        protocol, run_id, why = _discussion_head(head, first)
+        body: list[str] = []
+        while n < len(lines) and lines[n].strip() != DISCUSS_CLOSE:
+            if lines[n].strip() == DISCUSS_OPEN:
+                raise ReportBlockError(
+                    f"line {n + 1}: a discussion block opens inside the one "
+                    f"opened at line {first}"
+                )
+            body.append(lines[n])
+            n += 1
+        if n >= len(lines):
+            raise ReportBlockError(
+                f"line {first}: the discussion block of run {run_id} is never "
+                f"closed ({DISCUSS_CLOSE})"
+            )
+        n += 1
+        out.append(Discussion(protocol, run_id, why, first, n, "\n".join(body).strip()))
+    return out
+
+
+def write_discussion(text: str, protocol: str, run_id: str, why: str) -> str:
+    """TEXT with the block discussing RUN_ID of PROTOCOL with WHY: the one
+    block of that protocol and run replaced in place, or one appended at
+    the end; other discussions stay. Raises ReportBlockError on a block
+    that does not read or on two blocks of the same protocol and run (the
+    gate names that too), ValueError on a why that cannot stand
+    (`discussion_lines`)."""
+    new = discussion_lines(protocol, run_id, why)
+    same = [
+        d for d in discussions(text) if (d.protocol, d.run_id) == (protocol, run_id)
+    ]
+    if len(same) > 1:
+        raise ReportBlockError(
+            f"run {run_id} of {protocol} is discussed in "
+            f"{len(same)} blocks (lines {', '.join(str(d.first) for d in same)}) — "
+            f"remove all but one, then write it again"
+        )
+    lines = text.split("\n")
+    if not same:
+        while lines and lines[-1] == "":
+            lines.pop()
+        return "\n".join([*lines, "", *new, ""])
+    (d,) = same
+    lines[d.first - 1 : d.last] = new
+    return "\n".join(lines)
+
+
+def discussion_gaps(found: list[Discussion]) -> list[str]:
+    """Why a block of FOUND does not say what it holds, one sentence each:
+    an empty why (it is the report of what stopped the number), a body
+    that differs from the line its head writes, two blocks of the same
+    protocol and run. Exact, on the text alone."""
+    gaps: list[str] = []
+    seen: dict[tuple[str, str], int] = {}
+    for d in found:
+        at = f"line {d.first}: the discussion of run {d.run_id} ({d.protocol})"
+        key = (d.protocol, d.run_id)
+        if key in seen:
+            gaps.append(
+                f"{at} repeats the block at line {seen[key]} — one block per "
+                f"protocol and run; remove one"
+            )
+        else:
+            seen[key] = d.first
+        if not d.why.strip():
+            gaps.append(
+                f"{at} has no why — say what refused the adoption and what was "
+                f"found: `{discuss_command('<PROTOCOL>', d.run_id, '<FILE>')}`"
+            )
+        elif d.body != discussion_body(d.run_id, d.why.strip()):
+            gaps.append(
+                f"{at}: its line differs from its head — edit the head with "
+                f"`protocol-fill … --discuss {d.run_id} --why … --into <FILE>`, "
+                f"not the line"
+            )
+    return gaps
+
+
+def numbers_beside_discussed(
+    text: str, found: list[Discussion]
+) -> list[tuple[int, list[str]]]:
+    """(line, numbers) of every line that states a number in a discussion
+    block of FOUND (its line, the why included) or in the paragraph right
+    above or below it — the non-blank lines up to a blank line or another
+    generated block. Static evidence: a hint at a discussed run's number
+    presented in a report, never a blocker."""
+    lines = text.split("\n")
+    inside = generated_lines(text)
 
     def in_paragraph(n: int) -> bool:
         return 1 <= n <= len(lines) and bool(lines[n - 1].strip()) and n not in inside
 
     wanted: set[int] = set()
-    for m in marked:
-        lo = m.line
+    for d in found:
+        wanted.update(range(d.first, d.last + 1))
+        lo = d.first
         while in_paragraph(lo - 1):
             lo -= 1
-        hi = m.line
+        hi = d.last
         while in_paragraph(hi + 1):
             hi += 1
         wanted.update(range(lo, hi + 1))
-    return [(n, found) for n, found in unsourced_numbers(text) if n in wanted]
+    out: list[tuple[int, list[str]]] = []
+    for n in sorted(wanted):
+        numbers = _numbers_in(lines[n - 1])
+        if numbers and not _discussion_head_line(lines[n - 1]):
+            out.append((n, numbers))
+    return out
+
+
+def generated_lines(text: str) -> set[int]:
+    """The line numbers of TEXT inside a result block or a discussion block,
+    the opening and closing lines included. Raises ReportBlockError on a
+    block that does not read."""
+    spans = [(b.first, b.last) for b in blocks(text)]
+    spans += [(d.first, d.last) for d in discussions(text)]
+    return {n for first, last in spans for n in range(first, last + 1)}
+
+
+def _discussion_head_line(line: str) -> bool:
+    """Is LINE a key of a discussion block's head (its numbers are the
+    block's data, shown again on its line)?"""
+    return line.split("=", 1)[0].strip() in DISCUSS_KEYS and "=" in line
 
 
 #: what is not a stated number before the scan: comments (a block's own
@@ -341,16 +541,22 @@ _NOT_A_NUMBER = re.compile(
 _NUMBER = re.compile(r"(?<![\w.])-?(?:\d+[.,]\d+|\d{2,})(?![\w])")
 
 
+def _numbers_in(line: str) -> list[str]:
+    """The stated numbers of LINE (`_NUMBER` after `_NOT_A_NUMBER`)."""
+    return _NUMBER.findall(_NOT_A_NUMBER.sub(" ", line))
+
+
 def unsourced_numbers(text: str) -> list[tuple[int, list[str]]]:
     """(line, numbers) of every line of TEXT outside the generated blocks
-    that states a number. Static evidence: a hint, never a blocker. Raises
-    ReportBlockError on a block that does not read."""
-    inside = {n for b in blocks(text) for n in range(b.first, b.last + 1)}
+    (result and discussion blocks) that states a number. Static evidence: a
+    hint, never a blocker. Raises ReportBlockError on a block that does not
+    read."""
+    inside = generated_lines(text)
     out: list[tuple[int, list[str]]] = []
     for n, line in enumerate(text.split("\n"), 1):
         if n in inside:
             continue
-        found = _NUMBER.findall(_NOT_A_NUMBER.sub(" ", line))
+        found = _numbers_in(line)
         if found:
             out.append((n, found))
     return out

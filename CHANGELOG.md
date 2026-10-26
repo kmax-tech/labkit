@@ -188,13 +188,23 @@ pins (`requirements.txt` / `requirements.lock`).
   one, nor an older run) blocks at the stop and the commit
   (`report_check.promotions`, `report_check.undeclared_findings`), the
   sentence naming the adoption, which says what it still owes, and the
-  way out for a run only looked at: cite it as such, the why beside the
-  id — `run <run_id> (not reported: <what refused the adoption, what you
-  found>)` (`report_blocks.not_reported`). The marker without its why
-  blocks (`report_blocks.marker_gaps`), as does the marker on a run some
-  protocol declares (the block shows the number); numbers in a marked
-  citation's paragraph are named as static evidence
-  (`report_blocks.numbers_beside_not_reported`). Any other undeclared run
+  way out for a run only looked at: a discussion block, `protocol-fill
+  <PROTOCOL> --discuss <run_id> --why "<what refused the adoption, what you
+  found>" --into REPORT.md` (`report_blocks.discussions`,
+  `protocol_fill.discuss_into`). Its head holds the protocol, the run and
+  the why as TOML inside the opening comment; its line, `Run <id> —
+  discussed, not reported: <why>`, is written from them. A block without
+  its why, with a line that differs from its head, repeated for one
+  protocol and run (`report_blocks.discussion_gaps`), naming a run its
+  protocol's area lacks (`report_check.discussion_sources`), or
+  discussing a run some protocol declares (the result block shows the
+  number) blocks; numbers in and beside a discussion are named as static
+  evidence (`report_blocks.numbers_beside_discussed`). An earlier
+  unreleased state read a prose marker, `run <id> (not reported: <why>)`;
+  in the eighth haiku round (2026-10-26, t3) backticks around the id fell
+  outside its pattern, the gate held twice and the agent committed with
+  `--no-verify`. No release read that marker; it is not read any more
+  (`docs/notes/2026-10-26-report-run-citations.md`). Any other undeclared run
   cited stays the warning it was. The adoption's refusal and the
   scaffold's AGENTS.md say the same: a refusal is a finding to report,
   not an obstacle to route around. The finishing audit of the report
@@ -597,11 +607,11 @@ pins (`requirements.txt` / `requirements.lock`).
 ### Added
 
 - **`labkit-audit AREA --report-review REPORT`: a cold reader on a report
-  that cites a run as `(not reported: …)`.** In the seventh haiku round
+  that discusses a run (a discussion block).** In the seventh haiku round
   both agents that took the mark (t3, t18) left the run's numbers in the
   report as results — at t18 "C1 … PASS" under an accepted decision that
   makes C1 not assessable. One model call gets the report with line
-  numbers, the protocol, each marked run's `metrics.json` and every audit
+  numbers, the protocol, each discussed run's `metrics.json` and every audit
   record with its decisions and failed attempts, and names lines as
   `result` or `contradiction` (`report-review.agent.md`,
   `gates/report_review`). Agent audit, warning only: printed, recorded
@@ -610,7 +620,7 @@ pins (`requirements.txt` / `requirements.lock`).
   10, 0.08–0.16 USD a call
   (`docs/usability/2026-10-25-report-review-pilot.md`). A report that
   cites no run is out of its reach. `claude-hook post-change` names the
-  command for a changed report that marks a run (once per text), and
+  command for a changed report that discusses a run (once per text), and
   `report-check` names it beside its findings (`report_review.review_hint`);
   neither starts it.
 

@@ -19,6 +19,11 @@ placeholders included) and leaves everything else byte-identical.
                                                report outside the protocol (replaced in place,
                                                or appended); report-check holds the block to
                                                the protocol's rendering
+    protocol-fill PROTOCOL-x.md --discuss RUN_ID --why "…" --into REPORT.md
+                                               a run the report looks at without
+                                               reporting it, as a discussion block
+                                               (head: protocol, run, why; its line
+                                               written from them)
     protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: `[result] run`
                                                in the TOML head (the declaration), Recorded results and
                                                Runs lines from its metrics.json (newest completed
@@ -653,9 +658,9 @@ def adopt(protocol: Path, before: str, after: str) -> int:
         f"(above); {protocol.name} is as it was. Pass the checks first, or leave "
         f"the number a sketch in runs/ (an exploration reports no result). A "
         f"refusal is a finding to report, not an obstacle to route around: a "
-        f"report that mentions this run without adopting it says so beside the "
-        f"id — `{report_blocks.NOT_REPORTED_FORM.format(run_id='<run_id>')}` — "
-        f"and leaves the question open; the run's numbers are not the result."
+        f"report that mentions this run without adopting it discusses it — "
+        f"`{report_blocks.discuss_command(shown(protocol, Path.cwd()), '<run_id>', '<REPORT>')}` "
+        f"— and leaves the question open; the run's numbers are not the result."
     )
     return 1
 
@@ -844,6 +849,60 @@ def _into_file(protocol: Path, text: str, report: Path) -> int:
     return 0
 
 
+def discuss_into(
+    text: str, area: Path, report: str, protocol: str, run_id: str, why: str
+) -> str:
+    """`--discuss RUN_ID --why WHY --into`: REPORT with the block discussing
+    RUN_ID of the protocol whose TEXT is given — its head holding PROTOCOL
+    (the protocol's path relative to the report), the run and WHY, its
+    line written from them (`report_blocks.write_discussion`): the block of
+    that protocol and run replaced in place, or one appended; other
+    discussions stay. Raises ValueError when the protocol declares RUN_ID
+    as its result (the result block shows it: `--into` without
+    `--discuss`), when AREA holds no `runs/<RUN_ID>/`, on an empty or
+    multi-line why, and on a block in REPORT that does not read or is
+    there twice."""
+    if protocol_block.declared_run(text) == run_id:
+        raise ValueError(
+            f"run {run_id} is the protocol's declared result — a declared result "
+            f"is reported, not discussed: `--into` without `--discuss` writes its "
+            f"result block"
+        )
+    if not runs.run_path(area, run_id).is_dir():
+        raise ValueError(
+            f"no runs/{run_id}/ in {area.name} — a discussion names a run of the "
+            f"protocol's area"
+        )
+    return report_blocks.write_discussion(report, protocol, run_id, why)
+
+
+def _discuss_file(
+    protocol: Path, text: str, report: Path, run_id: str, why: str
+) -> int:
+    """`--discuss … --into` on PROTOCOL: write REPORT's discussion block of
+    RUN_ID when it differs, say so."""
+    before = report.read_text(encoding="utf-8") if report.is_file() else ""
+    try:
+        new = discuss_into(
+            text,
+            protocol.resolve().parent,
+            before,
+            report_blocks.path_from_report(protocol, report),
+            run_id,
+            why,
+        )
+    except (ValueError, protocol_block.BlockError) as exc:
+        console.refuse("protocol-fill", str(exc))
+        return 2
+    if new != before:
+        files.write_atomic(report, new)
+    print(
+        f"{report}: the discussion block of run {run_id} "
+        + ("written" if new != before else "unchanged")
+    )
+    return 0
+
+
 def _render_file(protocol: Path, text: str) -> int:
     """`--render` on PROTOCOL: write the rendering when it differs, say what changed."""
     try:
@@ -876,6 +935,8 @@ def _run_mode(args: argparse.Namespace, text: str) -> int | None:
         return _prompts_file(args.protocol, text)
     if args.render:
         return _render_file(args.protocol, text)
+    if args.discuss is not None:
+        return _discuss_file(args.protocol, text, args.into, args.discuss, args.why)
     if args.into is not None:
         return _into_file(args.protocol, text, args.into)
     if args.from_run is not None:
@@ -924,6 +985,20 @@ def main(argv: list[str]) -> int:
         "protocol's block is replaced (also after a new run), else one is appended",
     )
     ap.add_argument(
+        "--discuss",
+        default=None,
+        metavar="RUN_ID",
+        help="with --why and --into: write a discussion block of RUN_ID into REPORT — "
+        "a run the report looks at without reporting it; the block's head holds the "
+        "protocol, the run and the why, its line is written from them (replaced in "
+        "place for the same protocol and run, else appended)",
+    )
+    ap.add_argument(
+        "--why",
+        default=None,
+        help="with --discuss: what refused the adoption, what was found — one line",
+    )
+    ap.add_argument(
         "--from-run",
         nargs="?",
         const="newest",
@@ -942,6 +1017,10 @@ def main(argv: list[str]) -> int:
         "--force", action="store_true", help="overwrite a field that is already filled"
     )
     args = ap.parse_args(argv)
+    if (args.discuss is None) != (args.why is None) or (
+        args.discuss is not None and args.into is None
+    ):
+        ap.error("--discuss RUN_ID goes with --why TEXT and --into REPORT")
     if not args.protocol.is_file():
         console.refuse("protocol-fill", f"no such file: {args.protocol}")
         return 2

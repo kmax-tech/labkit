@@ -1,7 +1,11 @@
 # Note 2026-10-23 — a report from the run, not from the protocol: the proposal
 
+> **Status 2026-10-26:** the prose marker `run <id> (not reported: …)` this
+> note proposes is replaced by a discussion block
+> ([2026-10-26-report-run-citations.md](2026-10-26-report-run-citations.md)).
+>
 > **Status 2026-10-24: tiers 1 and 2 are built** (`report_check.promotions`,
-> `report_check.undeclared_findings`, `report_blocks.not_reported`; CHANGELOG
+> `report_check.undeclared_findings`, the prose marker; CHANGELOG
 > Unreleased, "Fixed"); tier 3 is not, its first measurement decides. Of the
 > points open below, 1 to 3 are decided as marked; 4 stays. The blocker
 > names the adoption command, not the adoption's refusals: the writer of

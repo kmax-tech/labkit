@@ -130,6 +130,7 @@ from labkit.formats.repo import (
     PROTOCOL_NAME,
     repo_protocols,
     SKIP_DIRS,
+    shown,
     status_entries,
     text_at,
 )
@@ -951,16 +952,18 @@ def promotions(run_ids: list[str], sources: Sources) -> list[tuple[str, Path]]:
 def hold_report(
     path: Path, text: str, repo: Path, sources: Sources, *, held_as: str = AMONG_PATHS
 ) -> int:
-    """Hold one report: its blocks equal their protocols' rendering, every
-    cited run id a run of the repo, every cited declared result shown in
-    its protocol's block, a run cited as not reported says why, and the
-    answering run of a protocol that declares no result is not cited
-    unmarked (`promotions` — the number of a full run presented without
-    the adoption; blockers); any other cited run no protocol declares a
-    WARNING (guaranteed); the numbers outside every block, and those beside
-    a run cited as not reported, a WARNING that is static evidence — a
-    hint at where to look, not a check of them; a report marking a run is
-    told the review's command (`report_review.review_hint`), a note. HELD_AS
+    """Hold one report: its result blocks equal their protocols' rendering,
+    every cited run id a run of the repo, every cited declared result shown
+    in its protocol's block, every discussion block says why, says it on
+    its line as its head holds it, once per protocol and run, and names a
+    run of its protocol's area (`discussion_sources`), and the answering
+    run of a protocol that declares no result is not cited undiscussed
+    (`promotions` — the number of a full run presented without the
+    adoption; blockers); any other cited run no protocol declares a
+    WARNING (guaranteed); the numbers outside every block, and those in and
+    beside a discussion, a WARNING that is static evidence — a hint at
+    where to look, not a check of them; a report discussing a run is told
+    the review's command (`report_review.review_hint`), a note. HELD_AS
     says in the heading
     why this report is held. 0 clean or warnings only, 1 a blocker."""
     rel = path.relative_to(repo.resolve()).as_posix()
@@ -968,6 +971,7 @@ def hold_report(
     out = Findings()
     try:
         found = report_blocks.blocks(text)
+        discussed = report_blocks.discussions(text)
     except report_blocks.ReportBlockError as exc:
         out.block(f"{rel}: {exc}")
         return out.report("report-check", "reporting")
@@ -978,12 +982,32 @@ def hold_report(
         out.block(f"{rel}: {gap}")
     for gap in owed_blocks(path, text, found, sources):
         out.block(f"{rel}: {gap}")
-    marked = report_blocks.not_reported(text)
-    for gap in report_blocks.marker_gaps(marked):
+    for gap in report_blocks.discussion_gaps(discussed):
         out.block(f"{rel}: {gap}")
-    report_hints(out, rel, path, text, marked, repo)
-    out.take_all(undeclared_findings(path, rel, cited, marked, sources))
+    for gap in discussion_sources(path, discussed):
+        out.block(f"{rel}: {gap}")
+    report_hints(out, rel, path, text, discussed, repo)
+    out.take_all(undeclared_findings(path, rel, cited, discussed, sources))
     return out.report("report-check", "reporting")
+
+
+def discussion_sources(path: Path, found: list[report_blocks.Discussion]) -> list[str]:
+    """Why a discussion block of FOUND, in the report at PATH, names no run
+    it can discuss, one sentence each: its protocol (relative to the
+    report) is no file, or the run is no `runs/<id>/` of that protocol's
+    area. Exact."""
+    gaps: list[str] = []
+    for d in found:
+        protocol = (path.parent / d.protocol).resolve()
+        at = f"line {d.first}: the discussion of run {d.run_id}"
+        if not protocol.is_file():
+            gaps.append(f"{at} names {d.protocol}, and there is no such protocol")
+        elif not run_path(protocol.parent, d.run_id).is_dir():
+            gaps.append(
+                f"{at}: {d.protocol}'s area has no runs/{d.run_id}/ — a "
+                f"discussion names a run of its protocol's area"
+            )
+    return gaps
 
 
 def report_hints(
@@ -991,14 +1015,14 @@ def report_hints(
     rel: str,
     path: Path,
     text: str,
-    marked: list[report_blocks.NotReported],
+    discussed: list[report_blocks.Discussion],
     repo: Path,
 ) -> None:
     """Tell OUT the hints on the report at PATH (REL to REPO, its TEXT, its
-    MARKED citations): the numbers outside every block and those beside a
-    marked citation — WARNINGs that are static evidence, a place to look,
-    not a check — and, when it marks a run, the report review's command
-    (`report_review.review_hint`), a note."""
+    DISCUSSED runs): the numbers outside every block and those in and
+    beside a discussion — WARNINGs that are static evidence, a place to
+    look, not a check — and, when it discusses a run, the report review's
+    command (`report_review.review_hint`), a note."""
     unsourced = report_blocks.unsourced_numbers(text)
     if unsourced:
         out.warn(
@@ -1009,12 +1033,12 @@ def report_hints(
         )
         for n, numbers in unsourced:
             out.note(f"    {rel}:{n}: {', '.join(numbers)}")
-    beside = report_blocks.numbers_beside_not_reported(text, marked)
+    beside = report_blocks.numbers_beside_discussed(text, discussed)
     if beside:
         out.warn(
-            f"{rel}: numbers on {len(beside)} line(s) beside a run cited as not "
-            f"reported — a looked-at run's number in a report is a reported "
-            f"number unless the sentence says what it is (a hint, not a check):",
+            f"{rel}: numbers on {len(beside)} line(s) in or beside a discussed "
+            f"run — a discussed run's number in a report is a reported number "
+            f"unless the sentence says what it is (a hint, not a check):",
             evidence_kind=STATIC_EVIDENCE,
         )
         for n, numbers in beside:
@@ -1028,32 +1052,33 @@ def undeclared_findings(
     path: Path,
     rel: str,
     cited: list[tuple[int, str]],
-    marked: list[report_blocks.NotReported],
+    discussed: list[report_blocks.Discussion],
     sources: Sources,
 ) -> list[GateFinding]:
     """The findings on the runs the report at PATH (REL to the repo) cites
-    that no protocol declares as its result (CITED: line and id; MARKED:
-    the citations carrying the not-reported marker). Blockers: a marked run
-    some protocol does declare — the marker is a false claim beside a
-    shown result; the unmarked citation of a protocol's answering run that
-    declares none (`promotions`), the sentence naming the adoption and the
-    marker as the two ways out. A warning: any other undeclared run cited
-    unmarked — an exploration's run is looked at. A marked run says so and
-    gets no warning."""
+    that no protocol declares as its result (CITED: line and id; DISCUSSED:
+    the discussion blocks). Blockers: a discussed run some protocol does
+    declare — "not reported" is a false claim beside a shown result; the
+    undiscussed citation of a protocol's answering run that declares none
+    (`promotions`), the sentence naming the adoption and the discussion
+    block as the two ways out. A warning: any other undeclared run cited
+    undiscussed — an exploration's run is looked at. A discussed run says
+    so and gets no warning."""
     out: list[GateFinding] = []
-    for m in marked:
-        for protocol in sources.declaring(m.run_id):
+    for d in discussed:
+        for protocol in sources.declaring(d.run_id):
             named = report_blocks.path_from_report(protocol, path)
             out.append(
                 GateFinding(
                     BLOCKER,
-                    f"{rel}: line {m.line}: run {m.run_id} is cited as not reported, "
-                    f"but {named} declares it as its result — drop the marker; the "
-                    f"generated block shows the number",
+                    f"{rel}: line {d.first}: run {d.run_id} is discussed as not "
+                    f"reported, but {named} declares it as its result — remove "
+                    f"the discussion block; the generated result block shows the "
+                    f"number",
                     evidence_kind=GUARANTEED,
                 )
             )
-    said_so = {m.run_id for m in marked}
+    said_so = {d.run_id for d in discussed}
     undeclared = sorted(
         {
             r
@@ -1080,8 +1105,8 @@ def undeclared_findings(
                 f"no result — a full run's number leaves the area through "
                 f"`{adopt_command(protocol, run_id)}` (it names what the "
                 f"adoption still owes), then `--into {rel}` writes its block; a run "
-                f"this report looks at without reporting it is cited as such: "
-                f"`{report_blocks.NOT_REPORTED_FORM.format(run_id=run_id)}`",
+                f"this report looks at without reporting it stands in a discussion "
+                f"block: `{report_blocks.discuss_command(shown(protocol, Path.cwd()), run_id, rel)}`",
                 evidence_kind=GUARANTEED,
             )
         )

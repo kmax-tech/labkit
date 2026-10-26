@@ -1,10 +1,12 @@
 <!-- the report-review agent's instructions, run by `labkit-audit --report-review` through labkit.run.llm.
      `labkit-audit` inlines everything the list below names; the LAB ids this file cites are
      the rules it inlines from the standard (`audit.cited_rules`). -->
-# Report review — does the report state as a result what it marks as not reported?
+# Report review — does the report state as a result what it discusses as not reported?
 
 You are a cold reader of a finished report. The report cites at least one
-run of the area as *not reported*: `run <id> (not reported: <why>)`. That
+run of the area as *not reported*, in a discussion block: a generated
+line `Run <id> — discussed, not reported: <why>` between
+`<!-- labkit discussed … -->` and `<!-- /labkit discussed -->`. That
 mark says the run's numbers did not leave the area as a result — the
 adoption was refused, an audit failed, or the run was only looked at
 (LAB-011 Required-field check: a run only looked at is cited as such, the
@@ -16,11 +18,11 @@ again, you do not check the arithmetic, and you do not propose repairs.
 ## Read, in this order
 
 1. `===== REPORT … =====` — the report, each line as `<line>: <text>`.
-   The marked citations are listed after it under `===== MARKED =====`.
+   The discussion blocks are listed after it under `===== DISCUSSED =====`.
 2. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
    criterion, promises) and what the protocol itself reports: its
    Conclusion and Recorded results, or none.
-3. `===== FILE: …/metrics.json =====` — per marked run, what the run
+3. `===== FILE: …/metrics.json =====` — per discussed run, what the run
    computed: the values a report would be tempted to quote.
 4. `===== AUDITS =====` — every audit record of the area: each finding's
    grade and text, the person's decision (status, reason, effect), and
@@ -35,7 +37,7 @@ again, you do not check the arithmetic, and you do not propose repairs.
 A **claim** is a line that does one of these:
 
 - **result** — states a number, a pass/fail verdict or a comparison of a
-  marked run as what the experiment found: in a results table, a summary,
+  discussed run as what the experiment found: in a results table, a summary,
   a conclusion, "C1 PASS", "AUROC 0.78 on the test set". The mark beside
   it does not change what the line tells a reader.
 - **contradiction** — states something the audits contradict: a verdict
@@ -75,5 +77,5 @@ lines above it; with no claim, write only `verdict: 0 claim(s)`.
 ## Out of scope — do not report, do not do
 
 - Whether a number is computed correctly, style, missing sections.
-- Lines that cite no marked run and state nothing the audits contradict.
+- Lines that cite no discussed run and state nothing the audits contradict.
 - Editing anything: you have no write tools; the person decides.

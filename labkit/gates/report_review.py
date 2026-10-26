@@ -1,28 +1,29 @@
 """report_review — `labkit-audit AREA --report-review REPORT`: a cold reader
-on a finished report that cites a run of AREA as not reported.
+on a finished report that discusses a run of AREA (not reported).
 
     labkit-audit <AREA> --report-review REPORT [--protocol FILE]
                  [--model ALIAS] [--timeout S] [--out FILE]
 
-A mark `run <id> (not reported: <why>)` says the run's numbers did not
-leave the area (`report_blocks.not_reported`). Whether the report keeps
-them out is semantics: a number beside the mark may be the why or a
-result, and a verdict may contradict an audit decision. The reviewer gets,
-in one call: the report with its line numbers, the marked citations, the
-protocol as it is now, each marked run's `metrics.json`, and every audit
-record of the area with its decisions and every failed attempt.
+A discussion block (`report_blocks.discussions`, written by `protocol-fill
+… --discuss RUN --why … --into REPORT`) says the run's numbers did not
+leave the area. Whether the report keeps them out is semantics: a number
+beside the block may be the why or a result, and a verdict may contradict
+an audit decision. The reviewer gets, in one call: the report with its
+line numbers, the discussion blocks, the protocol as it is now, each
+discussed run's `metrics.json`, and every audit record of the area with
+its decisions and every failed attempt.
 Instructions: `report-review.agent.md`.
 
 Agent audit, warning only: the claims it names are printed as WARNINGs
 and recorded nowhere, and no gate reads them. The hooks name the command
-when a changed report marks a run (`review_hint`); nothing starts it. Whether it ever holds a
+when a changed report discusses a run (`review_hint`); nothing starts it. Whether it ever holds a
 report is decided after its catch rate, false alarms and cost are
 measured (pilot: docs/usability/2026-10-25-report-review-pilot.md). A
-report that marks no run is not reviewed — a report that
+report that discusses no run is not reviewed — a report that
 cites no run at all is left out of reach of this review.
 
-Exit codes: 0 no claim, 1 at least one claim, 2 no review — no marked
-run in the report, a marked run with no `runs/<id>/`, the backend did
+Exit codes: 0 no claim, 1 at least one claim, 2 no review — no discussed
+run in the report, a discussed run with no `runs/<id>/`, the backend did
 not answer, or a report whose lines and closing count disagree.
 """
 
@@ -33,7 +34,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from labkit.checks.audit_binding import AuditError
-from labkit.checks.report_blocks import NotReported, not_reported
+from labkit.checks.report_blocks import Discussion, ReportBlockError, discussions
 from labkit.formats import console, findings
 from labkit.formats.repo import (
     ProtocolChoiceError,
@@ -63,13 +64,14 @@ INLINE_NOTE = (
 
 def review_hint(text: str, report: Path, repo: Path) -> str | None:
     """The sentence that names the review for REPORT (its TEXT), or None when
-    it marks no run: per area of REPO holding a marked run (`runs/<id>/`
-    beside a protocol), the command to run, paths as `shown` from REPO. The
-    hint the hooks give (`claude_hooks.post_change`, `report_check.hold_report`);
-    it runs nothing — a model call is the agent's to start. A marked run no
-    area holds names no command (report-check holds it as a cited run the
-    repo lacks)."""
-    runs = list(dict.fromkeys(m.run_id for m in not_reported(text)))
+    it discusses no run: per area of REPO holding a discussed run
+    (`runs/<id>/` beside a protocol), the command to run, paths as `shown`
+    from REPO. The hint the hooks give (`claude_hooks.post_change`,
+    `report_check.hold_report`); it runs nothing — a model call is the
+    agent's to start. A discussed run no area holds names no command
+    (report-check holds it as a cited run the repo lacks). Raises
+    ReportBlockError on a block that does not read."""
+    runs = list(dict.fromkeys(d.run_id for d in discussions(text)))
     if not runs:
         return None
     root = repo.resolve()
@@ -88,7 +90,7 @@ def review_hint(text: str, report: Path, repo: Path) -> str | None:
         for a in areas
     ]
     return (
-        f"{shown(report, root)} cites {', '.join(runs)} as not reported — check "
+        f"{shown(report, root)} discusses {', '.join(runs)} as not reported — check "
         f"that it states none of its numbers as results: {'; '.join(commands)} "
         f"(one model call, a warning, blocks nothing)"
     )
@@ -137,31 +139,38 @@ def audits_text(area: Path) -> str:
 
 def gather_report(
     area: Path, report: Path, protocol: Path
-) -> tuple[str, list[NotReported]]:
-    """(prompt, marked citations) for REPORT. Raises AuditError when the
-    report marks no run (nothing to review) or a marked run has no
-    `runs/<id>/` in AREA; FindingsError on an unreadable audit file."""
+) -> tuple[str, list[Discussion]]:
+    """(prompt, discussion blocks) for REPORT. Raises AuditError when the
+    report discusses no run (nothing to review), a discussed run has no
+    `runs/<id>/` in AREA, or a block does not read; FindingsError on an
+    unreadable audit file."""
     text = report.read_text(encoding="utf-8")
-    marked = not_reported(text)
-    if not marked:
+    try:
+        discussed = discussions(text)
+    except ReportBlockError as exc:
+        raise AuditError(f"{report.name}: {exc}") from exc
+    if not discussed:
         raise AuditError(
-            f"{report.name}: no run cited as `(not reported: …)` — the report "
-            f"review reads reports that mark a run; nothing to review"
+            f"{report.name}: no discussion block (`protocol-fill … --discuss "
+            f"RUN --why … --into {report.name}`) — the report review reads "
+            f"reports that discuss a run; nothing to review"
         )
     repo = layout_root(area)
     pieces: list[tuple[str, str]] = [
         (f"REPORT {shown(report, repo)}", numbered(text)),
         (
-            "MARKED",
-            "\n".join(f"line {m.line}: run {m.run_id} — why: {m.why}" for m in marked),
+            "DISCUSSED",
+            "\n".join(
+                f"line {m.first}: run {m.run_id} — why: {m.why}" for m in discussed
+            ),
         ),
         (f"FILE: {shown(protocol, repo)}", protocol.read_text(encoding="utf-8")),
     ]
-    for run_id in dict.fromkeys(m.run_id for m in marked):
+    for run_id in dict.fromkeys(m.run_id for m in discussed):
         run_dir = run_path(area, run_id)
         if not run_dir.is_dir():
             raise AuditError(
-                f"{report.name} marks run {run_id}, and there is no "
+                f"{report.name} discusses run {run_id}, and there is no "
                 f"{run_dir.relative_to(area)}/ in {shown(area, repo)}"
             )
         metrics = metrics_path(run_dir)
@@ -181,7 +190,7 @@ def gather_report(
         f"{audit.instructions(REPORT_REVIEW)}\n\nMODE: report review · AREA: "
         f"{shown(area, repo)} · REPORT: {shown(report, repo)}\n\n{INLINE_NOTE}\n\n{body}"
     )
-    return prompt, marked
+    return prompt, discussed
 
 
 def parse_claims(report: str, n_lines: int) -> list[Claim]:
@@ -227,10 +236,10 @@ def review_report(
     the call's cost. Exit 0 no claim, 1 a claim, 2 no review."""
     try:
         chosen = the_protocol(area, protocol)
-        prompt, marked = gather_report(area, report, chosen)
+        prompt, discussed = gather_report(area, report, chosen)
         console.progress(
             "labkit-audit",
-            f"report review · {report.name} · {len(marked)} marked citation(s) · "
+            f"report review · {report.name} · {len(discussed)} discussed run(s) · "
             f"{model} · {len(prompt) // 1000} kB",
         )
         reply = llm.complete(
