@@ -235,14 +235,30 @@ wirklichen Stand, ein sauberes `--again` hieß bisher fälschlich
 Voraussetzung; Entscheidungsliste trennt Implementierungsfehler,
 verfehltes Kriterium, ungültige Registrierung; Hooks verweisen auf
 `--findings`/`--decide` statt auf das Editieren des Records). Keine neuen
-Gates. Der Reparaturfall wartet auf zwei Dinge: (a) `git push` von labkit
+Gates. Nach einem Review derselben Nacht zusätzlich: Typwechsel vor der
+ersten Messung über `labkit-init exp NAME --kind KIND --change-kind`
+statt `rm -r` (`b5fc683`; `rm -r` löschte die verschobene Explore-Datei
+und ließ den Compute-Test für das Fit-Skript stehen); die
+Registrierungsprüfung misst den Commit der ersten Messung am heutigen Typ
+und nennt den Wechsel (`f8239cc`, Doku `a8181f7`); „ungültige
+Registrierung“ heißt jetzt: neues Protokoll, das alte mit Läufen und
+Verdikt bleibt; report-check setzt den Bereich in jeden genannten Befehl
+(`564211c`).
+
+Der Reparaturfall wartet auf zwei Dinge: (a) `git push` von labkit
 `main`, weil das Sandbox-Image labkit nur von GitHub installiert
-(labkit-paper `sandbox/labkit.pin`); (b) die Wahl des Startzustands —
-Vorschlag: Pilot-2-Fall A (t3, `G_VRH` noch in `FEATURES`, 08-17 #1
-`fixed`), aufgeräumt, damit nur die Folgeprüfung hält; der committete
-Pilotstand meldet heute zwölf Blocker. Danach Vorab-Festlegung schreiben,
-ein Versuch, Kostendeckel. Punkt 3 (Laufzuordnung t18) bleibt der nächste
-eigene Schritt.
+(labkit-paper `sandbox/labkit.pin`); (b) die Wahl des Startzustands.
+Kandidat Pilot-2-Fall A (t3, `G_VRH` noch in `FEATURES`, 08-17 #1
+`fixed`). Mit labkit HEAD meldet der Stand samt den nicht committeten
+Pilotdateien acht Blocker: vorbereitete Daten nicht getrackt; der
+Bereichstest scheitert dreimal (Pilot-Artefakt: `[A3]` hält `[C1]` zurück,
+die synthetischen Testzeilen tragen keine Merkmalsquellen); kein
+Analyse-Audit des Stands; keine Antwort im Protokoll; vier früher
+entschiedene BLOCKER ohne Folgeprüfung (08-17 #1, 08-21 #1 und #2, 08-28
+#1). Nichts davon wird stillschweigend entfernt: Jede Änderung am Start
+wird als eigener Commit im Startzustand festgehalten und in der
+Vorab-Festlegung genannt. Danach ein Versuch mit Kostendeckel. Punkt 3
+(Laufzuordnung t18) bleibt der nächste eigene Schritt.
 
 **Reihenfolge nach der achten Runde (beschlossen 2026-10-26).** Jeder
 Schritt schließt einen belegten Fehlweg und hat einen korrekten Zwilling.
