@@ -25,16 +25,21 @@ report and sources.
 ## Lane `low` — one number in minutes
 
 Applies when the protocol head says `repeat_cost = "low"`: a run that can be
-repeated at will (a computation, a handful of model calls for a minute and a cent),
-LAB-017 The number of audits follows the cost tier.
+repeated at will (a script over local data, a model fitted in seconds, a handful
+of model calls for a minute and a cent), LAB-017 The number of audits follows
+the cost tier. The repeat cost does not decide the kind: a fit that takes
+seconds is a fit.
 
 1. `labkit-init exp <name> --repeat-cost low --kind compute|fit|apply` — the kind
    says what the kept number asserts: `compute` judges no prediction, `fit`
    judges a model trained or adjusted here (a RandomForest, a regression,
    a fine-tune), `apply` judges a model used unchanged (an LLM as judge, a
-   trained classifier on labelled data). Two questions decide it: does
-   the number judge how well a model or procedure predicts? no → `compute`;
-   was it trained, adjusted or selected here? yes → `fit`, no → `apply`.
+   trained classifier on labelled data). Two questions decide it, in this
+   order: does this area train, adjust or select a model or procedure? yes →
+   `fit`, also when the deliverable is predictions on unlabelled rows (the
+   kept number is then the model's score on held-out labelled rows);
+   otherwise, does the number judge how well a model predicts? yes →
+   `apply`, no → `compute`.
    `--model <alias>` when the model answers through `models.toml` (it
    writes `[model] alias` into the TOML head). The command stamps the low cut of the protocol and the
    skeleton the kind calls for; without `--kind` it stamps nothing.

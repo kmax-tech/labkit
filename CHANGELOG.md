@@ -187,6 +187,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`labkit-init` asks about training before anything else.** An agent
+  told to train a random forest stamped `--kind compute` and read "no
+  criterion" (ninth haiku round, t3). The kind questions now ask first
+  whether the area trains, adjusts or selects a model — a fit also when the
+  deliverable is predictions on unlabelled rows — and the help, the refusal
+  without `--kind` and a computation's next steps print that one text
+  (`scaffold.KIND_QUESTIONS`). A computation's next steps open with the
+  check and the restamp as a fit. The stamped AGENTS.md no longer calls the
+  low lane "a computation" and says the cost does not decide the kind
+  ([note](docs/notes/2026-10-26-kind-choice.md)).
 - **The new gates read the state the commit carries, and a source change
   reaches its report.** A review of the three steps above (2026-10-26)
   reproduced three passes on states that broke the contract. (1) At the

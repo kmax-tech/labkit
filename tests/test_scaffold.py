@@ -456,6 +456,41 @@ class Exp(unittest.TestCase):
         for owed in ("code-check", "finalize", "--mode analysis", "--from-run"):
             self.assertIn(owed, low, low)
 
+    def test_a_computation_is_told_to_check_its_kind_first(self) -> None:
+        """An agent told to train a random forest stamped `--kind compute` and
+        read "no criterion" (docs/notes/2026-10-26-kind-choice.md). A
+        computation's steps open with the kind questions and the restamp as
+        a fit; a counting area keeps its cut without a criterion. A fit's
+        steps carry no such detour and name its bar."""
+        rel = Path("experiments/01-foo")
+        for cost in ("low", "high"):
+            compute = scaffold.next_steps(rel, "foo", "01", cost, "compute", False)
+            first = re.search(r"^  1\. (.*)$", compute, re.M)
+            assert first is not None, compute
+            self.assertIn("Check the kind", first.group(1))
+            self.assertIn(
+                f"labkit-init exp foo --repeat-cost {cost} --kind fit", compute
+            )
+            self.assertIn("also when the deliverable is predictions", compute)
+            fit = scaffold.next_steps(rel, "foo", "01", cost, "fit", False)
+            self.assertNotIn("Check the kind", fit)
+            self.assertNotIn("--kind fit", fit)
+        low = scaffold.next_steps(rel, "foo", "01", "low", "compute", False)
+        self.assertIn("no criterion", low)
+        self.assertIn(
+            "criterion", scaffold.next_steps(rel, "foo", "01", "low", "fit", False)
+        )
+        quiet(scaffold.stamp_area, self.root, "count-docs", "low", kind="compute")
+        proto = next(self.root.glob("experiments/*-count-docs/PROTOCOL-*.md"))
+        self.assertEqual(protocol_block.head(proto.read_text()).kind, "compute")
+
+    def test_the_kind_refusal_asks_the_questions(self) -> None:
+        """Without `--kind` the refusal prints the same questions as the
+        help, training first."""
+        with self.assertRaises(console.Refused) as caught:
+            scaffold.asked_kind(None)
+        self.assertIn(scaffold.KIND_QUESTIONS, str(caught.exception))
+
     def test_init_exp_from_inside_the_area_finds_the_lab(self) -> None:
         """Run from an area directory, labkit-init called the area "not a lab
         repo" (cloud judge probe, 2026-10-14); it finds the lab above, as git

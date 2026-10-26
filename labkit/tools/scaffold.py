@@ -467,9 +467,8 @@ def asked_kind(kind: str | None) -> str:
     if kind is None:
         raise console.Refused(
             "labkit-init",
-            "--kind compute|fit|apply: what the kept number asserts — a computation judges "
-            "no prediction, a fit judges a model trained or adjusted here, an apply "
-            "a model used unchanged (standard 0.22; nothing is stamped without it)",
+            "--kind compute|fit|apply: what the kept number asserts; nothing is "
+            f"stamped without it. {KIND_QUESTIONS}.",
         )
     if kind not in protocol_block.KINDS:
         raise console.Refused(
@@ -503,6 +502,22 @@ def blank_before_headings(text: str) -> str:
             out.append("")
         out.append(line)
     return "\n".join(out)
+
+
+#: the questions that decide `--kind`, asked in this order; the help, the
+#: refusal without `--kind` and a computation's next steps print this one
+#: text. Training comes first and covers a deliverable of predictions:
+#: an agent told to "train a random forest" called it a cheap computation
+#: (docs/notes/2026-10-26-kind-choice.md)
+KIND_QUESTIONS = (
+    "(1) Does this area train, adjust or select a model or prediction procedure "
+    "(a threshold or prompt chosen on performance data counts)? yes: fit — also "
+    "when the deliverable is predictions on unlabelled rows; the kept number is "
+    "then the model's score on held-out labelled rows. (2) Otherwise: does the "
+    "number judge how well a model used unchanged predicts, against gold labels "
+    "or targets? yes: apply, no: compute. Repeat cost does not decide the kind: "
+    "a fit that takes seconds is a fit"
+)
 
 
 #: what a computation with a model in the loop stamps below the alias: what
@@ -592,7 +607,10 @@ def next_steps(
             "the run is the instrument check"
         )
         if sk is standard_contract.COMPUTE:
-            fields = "data, exclusions — no criterion, no promise table: a computation has no bar to clear"
+            fields = (
+                "data, exclusions — no criterion, no promise table: a computation "
+                "judges no prediction, so it has no bar to clear"
+            )
             fill = "expected_ids(), rows(), evaluate_rows()"
         elif sk is standard_contract.MODEL:
             fields = "criterion, admissibility condition, prompt, null condition, data profile"
@@ -657,6 +675,16 @@ def next_steps(
             f"`runlog start {rel} -- .venv/bin/python scripts/01_measure.py` "
             f"(untracked code is in no diff); running processes: .venv/bin/runlog {rel}."
         )
+    if kind == standard_contract.COMPUTE_KIND:
+        # first, before any field is filled: a model fitted under compute
+        # owes a criterion its protocol has no place for
+        steps.insert(
+            0,
+            f"Check the kind before anything else. {KIND_QUESTIONS}. If (1) "
+            f"is yes: remove the area just stamped (`rm -r {rel}`, nothing in "
+            f"it is committed) and run "
+            f"`labkit-init exp {slug} --repeat-cost {ln.repeat_cost} --kind fit`.",
+        )
     after = f"`finalize {rel}`" + (
         " checks the provenance (source frozen in the run, tracked in git)"
         if ln.provenance
@@ -710,12 +738,9 @@ def main(argv: list[str]) -> int:
         "--kind",
         choices=protocol_block.KINDS,
         help="what the kept number asserts, required for a new area (the skeleton "
-        "and the registration follow it). (1) Does the number judge how well a "
-        "model or prediction procedure predicts, against gold labels or targets? "
-        "no: compute. (2) Was that model or procedure trained, adjusted or "
-        "selected here (a threshold or prompt chosen on performance data is model "
-        "selection)? yes: fit, no: apply. A compute with --model also says what "
-        "the number describes (number_describes; see the protocol field guide)",
+        f"and the registration follow it). {KIND_QUESTIONS}. A compute with "
+        "--model also says what the number describes (number_describes; see the "
+        "protocol field guide)",
     )
     exp.add_argument(
         "--model",
