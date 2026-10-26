@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.checks.audit_binding import AuditError  # noqa: E402
 from labkit.checks.report_blocks import discussion_lines  # noqa: E402
-from labkit.formats import findings  # noqa: E402
+from labkit.formats import findings, report_reviews  # noqa: E402
 from labkit.gates import audit, report_review  # noqa: E402
 
 RUN = "2026-10-25T20-57-42_9ae7"
@@ -49,6 +49,8 @@ class Area:
     def __init__(self, d: str) -> None:
         self.area = Path(d) / "experiments" / "01-x"
         (self.area / "runs" / RUN).mkdir(parents=True)
+        # the repo's root as layout_root finds it before `git init`
+        (Path(d) / "CLAUDE.md").write_text("# repo\n", encoding="utf-8")
         (self.area / "PROTOCOL-x.md").write_text(PROTOCOL, encoding="utf-8")
         (self.area / "runs" / RUN / "metrics.json").write_text(
             json.dumps({"c1_score": 0.7795, "c1_pass": True}), encoding="utf-8"
@@ -95,7 +97,7 @@ class Gather(unittest.TestCase):
     def test_the_prompt_carries_report_metrics_decisions_and_failed_attempts(self):
         with tempfile.TemporaryDirectory() as d:
             a = Area(d)
-            prompt, marked = report_review.gather_report(
+            prompt, marked, _ = report_review.gather_report(
                 a.area, a.report(MARKED), a.area / "PROTOCOL-x.md"
             )
         self.assertEqual([m.run_id for m in marked], [RUN])
@@ -188,39 +190,163 @@ class Parse(unittest.TestCase):
 
 
 class Command(unittest.TestCase):
-    def run_with(self, text: str, reply: str) -> tuple[int, str]:
-        with tempfile.TemporaryDirectory() as d:
-            a = Area(d)
-            report = a.report(text)
-            out = io.StringIO()
-            with (
-                mock.patch.object(report_review.llm, "complete", lambda *a, **k: reply),
-                mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
-                contextlib.redirect_stdout(out),
-                contextlib.redirect_stderr(io.StringIO()),
-            ):
-                rc = report_review.review_report(a.area, report, None, "m", 60, None)
-        return rc, out.getvalue()
+    """The review writes its record; a state it judged is not drawn on
+    again; a claim holds until an input changes (eighth haiku round, t18:
+    the review as a hint was passed over)."""
 
-    def test_a_claim_is_a_warning_with_the_report_line(self):
-        rc, out = self.run_with(
-            MARKED,
-            "CLAIM #1 · line 5 · contradiction · C1 PASS against C1 not assessable\n"
-            "verdict: 1 claim(s)\n",
-        )
-        self.assertEqual(rc, 1)
-        self.assertIn("WARNING: ", out)
+    CLAIMED = (
+        "CLAIM #1 · line 5 · contradiction · C1 PASS against C1 not assessable\n"
+        "verdict: 1 claim(s)\n"
+    )
+    CLEAN = "verdict: 0 claim(s)\n"
+
+    def setUp(self):
+        self.a = Area(tempfile.mkdtemp())
+
+    def review(self, text: str, reply: str, *, again: bool = False):
+        """(exit, stdout, stderr, model calls) of one review of TEXT."""
+        report = self.a.report(text)
+        calls: list[str] = []
+
+        def fake(*args, **kw):
+            calls.append(args[1])
+            return reply
+
+        out, err = io.StringIO(), io.StringIO()
+        with (
+            mock.patch.object(report_review.llm, "complete", fake),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(err),
+        ):
+            rc = report_review.review_report(
+                self.a.area, report, None, "m", 60, None, again=again
+            )
+        return rc, out.getvalue(), err.getvalue(), len(calls)
+
+    def reviews(self) -> list[report_reviews.ReportReview]:
+        return report_reviews.area_report_reviews(self.a.area)
+
+    def test_a_claim_is_recorded_and_holds(self):
+        rc, out, _, calls = self.review(MARKED, self.CLAIMED)
+        self.assertEqual((rc, calls), (1, 1))
+        self.assertIn("CLAIM: ", out)
         self.assertIn("REPORT.md:5: contradiction", out)
-        self.assertIn("blocks nothing", out)
+        self.assertIn("the commit holds until the report", out)
+        (r,) = self.reviews()
+        self.assertEqual((r.report, r.protocol), ("REPORT.md", P))
+        self.assertEqual([(c.line, c.kind) for c in r.claims], [(5, "contradiction")])
 
-    def test_an_honest_report_without_claims_exits_0(self):
-        rc, out = self.run_with(HONEST, "verdict: 0 claim(s)\n")
-        self.assertEqual(rc, 0)
-        self.assertNotIn("WARNING", out)
+    def test_a_state_with_a_claim_is_not_drawn_on_again(self):
+        self.review(MARKED, self.CLAIMED)
+        rc, _, err, calls = self.review(MARKED, self.CLEAN)
+        self.assertEqual((rc, calls), (2, 0))
+        self.assertIn("another draw settles nothing", err)
+        # --again draws, records the draw as a measurement, releases nothing
+        rc, out, _, calls = self.review(MARKED, self.CLEAN, again=True)
+        self.assertEqual((rc, calls), (0, 1))
+        self.assertIn("a measurement, it releases nothing", out)
+        first, second = self.reviews()
+        self.assertTrue(second.again)
+        self.assertEqual(first.fingerprint, second.fingerprint)
+        stands = report_reviews.standing(
+            self.reviews(), "REPORT.md", P, second.fingerprint
+        )
+        self.assertFalse(stands.released)
+
+    def test_a_changed_source_may_be_reviewed_again(self):
+        """A corrected source settles a claim without a text change: the
+        protocol is an input the reviewer read."""
+        self.review(MARKED, self.CLAIMED)
+        proto = self.a.area / "PROTOCOL-x.md"
+        proto.write_text(PROTOCOL + "\n**Conclusion:** C1 is not assessable.\n")
+        rc, _, _, calls = self.review(MARKED, self.CLEAN)
+        self.assertEqual((rc, calls), (0, 1))
+        stands = report_reviews.standing(
+            self.reviews(), "REPORT.md", P, self.reviews()[-1].fingerprint
+        )
+        self.assertTrue(stands.released)
+
+    def test_the_twin_an_honest_report_is_released_once(self):
+        rc, out, _, calls = self.review(HONEST, self.CLEAN)
+        self.assertEqual((rc, calls), (0, 1))
+        self.assertIn("this state is released", out)
+        rc, out, _, calls = self.review(HONEST, self.CLEAN)
+        self.assertEqual((rc, calls), (0, 0))  # no second call on a judged state
+        self.assertIn("nothing to do", out)
+
+    def test_its_own_record_leaves_the_fingerprint_as_it_was(self):
+        report = self.a.report(HONEST)
+        proto = self.a.area / "PROTOCOL-x.md"
+        _, _, before = report_review.gather_report(self.a.area, report, proto)
+        self.review(HONEST, self.CLEAN)
+        _, _, after = report_review.gather_report(self.a.area, report, proto)
+        self.assertEqual(
+            report_reviews.fingerprint(before), report_reviews.fingerprint(after)
+        )
+        # the folder is no record and no decision review to their readers
+        self.assertEqual(len(findings.area_records(self.a.area)), 1)
 
     def test_an_unreadable_reply_is_no_review(self):
-        rc, _ = self.run_with(MARKED, "looks fine to me")
+        rc, _, _, _ = self.review(MARKED, "looks fine to me")
         self.assertEqual(rc, 2)
+        self.assertEqual(self.reviews(), [])
+
+
+class Records(unittest.TestCase):
+    """`report_reviews`: the record reads loud; the release rule is pure."""
+
+    def _write(self, claims=(), again=False, whole="f1") -> Path:
+        area = Path(tempfile.mkdtemp())
+        return report_reviews.write_report_review(
+            area,
+            model="m",
+            report="REPORT.md",
+            protocol=P,
+            whole=whole,
+            parts={"REPORT REPORT.md": "d1"},
+            claims=list(claims),
+            again=again,
+        )
+
+    def test_a_written_record_reads_back(self):
+        claim = report_reviews.ReportClaim(5, "result", "AUROC of the run")
+        r = report_reviews.read_report_review(self._write([claim]))
+        self.assertEqual((r.report, r.protocol, r.fingerprint), ("REPORT.md", P, "f1"))
+        self.assertEqual(r.claims, (claim,))
+        self.assertEqual(r.parts, {"REPORT REPORT.md": "d1"})
+
+    def test_a_record_that_does_not_hold_raises_naming_the_field(self):
+        path = self._write([report_reviews.ReportClaim(5, "result", "x")])
+        text = path.read_text(encoding="utf-8")
+        for bad, said in (
+            (text.replace("claims = 1", "claims = 2"), "claims = 2"),
+            (text.replace('kind = "result"', 'kind = "maybe"'), "kind 'maybe'"),
+            (text.replace("again = false", 'again = "no"'), "again is not true"),
+            (text.replace("fingerprint = ", "print = "), "fingerprint is missing"),
+        ):
+            path.write_text(bad, encoding="utf-8")
+            with self.assertRaisesRegex(report_reviews.ReportReviewError, said):
+                report_reviews.read_report_review(path)
+
+    def test_standing_releases_only_a_clean_state_no_claim_holds(self):
+        def rr(fp, claims=(), again=False):
+            return report_reviews.ReportReview(
+                Path("x"), "d", "m", "REPORT.md", P, fp, {}, again, tuple(claims)
+            )
+
+        claim = report_reviews.ReportClaim(1, "result", "x")
+        standing = report_reviews.standing
+        self.assertFalse(standing([], "REPORT.md", P, "f").released)
+        self.assertTrue(standing([rr("f")], "REPORT.md", P, "f").released)
+        self.assertFalse(standing([rr("f", again=True)], "REPORT.md", P, "f").released)
+        held = standing([rr("f", [claim]), rr("f")], "REPORT.md", P, "f")
+        self.assertFalse(held.released)
+        self.assertEqual(len(held.claims), 1)
+        other = standing([rr("old")], "REPORT.md", P, "f")
+        self.assertFalse(other.released)
+        self.assertEqual(other.earlier.fingerprint if other.earlier else "", "old")
+        self.assertFalse(standing([rr("f")], "OTHER.md", P, "f").released)
 
 
 class Cli(unittest.TestCase):

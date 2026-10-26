@@ -222,7 +222,7 @@ labkit-audit AREA --mode preflight|analysis|clarity [--model ALIAS]
 labkit-audit AREA --decide N STATUS REASON [--effect E] [--record FILE] # store your decision on a finding (an accepted BLOCKER owes --effect)
 labkit-audit AREA --findings [--record FILE]               # show what there is to decide, no audit
 labkit-audit AREA --review [--record FILE] [--again]       # a second auditor on the `stands` decisions, and on a finding closed after a review did not uphold it: does the reported claim stand within each limit? (--again: one more draw as a measurement)
-labkit-audit AREA --report-review REPORT                   # a cold reader on a report that discusses a run (a discussion block): does it state that run's numbers as results, or what the audits contradict? warnings only, recorded nowhere
+labkit-audit AREA --report-review REPORT                   # a cold reader on a report that discusses a run (a discussion block): does it state that run's numbers as results, or what the audits contradict? recorded in audits/report-reviews/; report-check holds the report until a review of its state names no claim [--again: a measurement draw]
 report-check AREA                  # release check before reporting
 report-check --if-reported [--staged] PATH... # check affected reported areas and citing reports
 runlog [AREA] [--wait | --follow]    # inspect or monitor runs

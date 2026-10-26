@@ -133,7 +133,7 @@ AUDIT_EXIT_CONTRACT = (
     "exit codes: 0 no blocker and no warning, 1 findings to decide (a blocker "
     "OR a warning), 2 no audit (missing file, unreadable report, backend failure); "
     "--review: 0 every decision upheld, 1 at least one not upheld, 2 no review; "
-    "--report-review: 0 no claim, 1 a claim (a warning), 2 no review"
+    "--report-review: 0 no claim (or this state reviewed clean), 1 a claim (the commit holds), 2 no review"
 )
 CLARITY = "clarity"
 ANALYSIS = "analysis"
@@ -810,15 +810,17 @@ def main(argv: list[str]) -> int:
         "--report-review",
         type=Path,
         metavar="REPORT",
-        help="a cold reader on REPORT, which cites a run of the area as `(not "
-        "reported: …)`: does it state such a run's numbers as results, or what "
-        "the audits contradict? prints warnings, records nothing",
+        help="a cold reader on REPORT, which discusses a run of the area (a "
+        "discussion block): does it state such a run's numbers as results, or what "
+        "the audits contradict? writes audits/report-reviews/<minute>-review.toml, "
+        "bound to the inputs it read; report-check holds the report until a review "
+        "of its state names no claim",
     )
     ap.add_argument(
         "--again",
         action="store_true",
-        help="with --review: draw once more on decisions already reviewed and not "
-        "upheld — a measurement of the reviewer's spread; it never releases",
+        help="with --review or --report-review: draw once more on a state already "
+        "reviewed — a measurement of the reviewer's spread; it never releases",
     )
     ap.add_argument(
         "--record",
@@ -1056,8 +1058,8 @@ def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
         ap.error("--record goes with --decide, --findings or --review")
     if args.effect and args.decide is None:
         ap.error("--effect goes with --decide")
-    if args.again and not args.review:
-        ap.error("--again goes with --review")
+    if args.again and not (args.review or args.report_review is not None):
+        ap.error("--again goes with --review or --report-review")
 
 
 def _without_audit(args: argparse.Namespace) -> int:
@@ -1075,6 +1077,7 @@ def _without_audit(args: argparse.Namespace) -> int:
             args.model,
             args.timeout,
             args.out,
+            again=args.again,
         )
     if args.review:
         from labkit.gates.decision_review import review

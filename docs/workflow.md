@@ -208,7 +208,12 @@ protocol, the run and the why as TOML, its line is written from them. A
 block without its why, one whose line differs from its head, a second
 block of the same protocol and run, and a discussion of a run some
 protocol does declare block (the result block shows that number); numbers
-in and beside a discussion are named as a hint. A probe's or an older
+in and beside a discussion are named as a hint. A report with a
+discussion block owes a report review of its state: `labkit-audit <AREA>
+--report-review REPORT.md` writes `audits/report-reviews/<minute>-review.toml`
+with the fingerprint of the inputs it read, and the gate holds the report
+until a review of the state it reads names no claim; a claim holds that
+state, and only a changed report or source and a review of it release it. A probe's or an older
 run's citation stays the warning it was: an exploration's run is looked at.
 
 ## 9. The gate — at the stop and the commit

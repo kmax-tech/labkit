@@ -180,7 +180,11 @@ fields, no reading of labkit's source.
     route around: discuss the run — `protocol-fill <PROTOCOL> --discuss
     <run_id> --why "<what refused the adoption, what you found>" --into
     REPORT.md` writes the block —, say that the question stays open, and
-    end there.
+    end there. A report that discusses a run owes a report review of its
+    state: `labkit-audit <AREA> --report-review REPORT.md` (one model call)
+    writes its record under `audits/report-reviews/`; commit it with the
+    report. A claim it names holds the commit until you change the report
+    (or a source it read) and review that state.
 
 ## Setup
 

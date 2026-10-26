@@ -659,15 +659,26 @@ pins (`requirements.txt` / `requirements.lock`).
   numbers, the protocol, each discussed run's `metrics.json` and every audit
   record with its decisions and failed attempts, and names lines as
   `result` or `contradiction` (`report-review.agent.md`,
-  `gates/report_review`). Agent audit, warning only: printed, recorded
-  nowhere, read by no gate; exit 1 on a claim. Pilot: both delivered
-  reports caught in 4 of 4 draws, clean counterexamples clean in 10 of
-  10, 0.08–0.16 USD a call
-  (`docs/usability/2026-10-25-report-review-pilot.md`). A report that
-  cites no run is out of its reach. `claude-hook post-change` names the
-  command for a changed report that discusses a run (once per text), and
-  `report-check` names it beside its findings (`report_review.review_hint`);
-  neither starts it.
+  `gates/report_review`). It writes its claims to
+  `audits/report-reviews/<minute>-review.toml` with the fingerprint of
+  exactly the inputs it read (`formats/report_reviews`; its own folder and
+  the attempt journal are not among them, so writing the record leaves the
+  state as it was), and report-check holds a report with a discussion
+  block until a review of its state names no claim
+  (`report_check.report_review_owed`, at the stop and the commit; at the
+  commit the report and protocol as the index holds them, and only records
+  the index holds). A claim holds the state: a later clean draw does not
+  release it, and the command refuses another draw on it (`--again` draws
+  as a measurement and releases nothing); a changed input — the report,
+  the protocol, a run's metrics, an audit decision — owes a review of the
+  new state. Decided after the eighth haiku round (2026-10-26, t18): as a
+  hint at the commit the review was passed over, and the discussed run's
+  numbers stayed in the report as results. Pilot: both delivered reports
+  caught in 4 of 4 draws, clean counterexamples clean in 10 of 10,
+  0.08–0.16 USD a call (`docs/usability/2026-10-25-report-review-pilot.md`).
+  A report that cites no run is out of its reach. `claude-hook
+  post-change` names the command for a changed report that discusses a
+  run (once per text); nothing starts it but the agent.
 
 - **A crashed run keeps why it broke off.** When the block of
   `runlog.run` raises, the run directory gets `failure.json` — the

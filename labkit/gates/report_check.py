@@ -103,7 +103,7 @@ from labkit.formats.runs import run_dirs, run_path
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, WARNING, Findings, GateFinding
 from labkit.formats.answering_run import first_measurement
 from labkit.formats.protocol_history import registration_in_commit
-from labkit.formats import console, findings, protocol_block, reviews
+from labkit.formats import console, findings, protocol_block, report_reviews, reviews
 from labkit.checks.audit_binding import (
     AuditError,
     analysis_now,
@@ -114,7 +114,7 @@ from labkit.checks import report_blocks
 from labkit.checks.result_render import render_gaps, rendering
 from labkit.gates.finalize import finalize_area
 from labkit.gates.preflight import area_test_python
-from labkit.gates.report_review import review_hint
+from labkit.gates import report_review
 from labkit.formats.protocol_check import check_fields
 from labkit.formats.repo import (
     adopt_command,
@@ -950,7 +950,13 @@ def promotions(run_ids: list[str], sources: Sources) -> list[tuple[str, Path]]:
 
 
 def hold_report(
-    path: Path, text: str, repo: Path, sources: Sources, *, held_as: str = AMONG_PATHS
+    path: Path,
+    text: str,
+    repo: Path,
+    sources: Sources,
+    *,
+    held_as: str = AMONG_PATHS,
+    staged: bool = False,
 ) -> int:
     """Hold one report: its result blocks equal their protocols' rendering,
     every cited run id a run of the repo, every cited declared result shown
@@ -962,8 +968,10 @@ def hold_report(
     adoption; blockers); any other cited run no protocol declares a
     WARNING (guaranteed); the numbers outside every block, and those in and
     beside a discussion, a WARNING that is static evidence — a hint at
-    where to look, not a check of them; a report discussing a run is told
-    the review's command (`report_review.review_hint`), a note. HELD_AS
+    where to look, not a check of them; a report discussing a run owes a
+    report review of its state that names no claim (`report_review_owed`,
+    a blocker; STAGED: only the review records the index holds count —
+    the commit carries its evidence). HELD_AS
     says in the heading
     why this report is held. 0 clean or warnings only, 1 a blocker."""
     rel = path.relative_to(repo.resolve()).as_posix()
@@ -986,7 +994,8 @@ def hold_report(
         out.block(f"{rel}: {gap}")
     for gap in discussion_sources(path, discussed):
         out.block(f"{rel}: {gap}")
-    report_hints(out, rel, path, text, discussed, repo)
+    out.take_all(report_review_owed(path, rel, text, discussed, sources, staged=staged))
+    report_hints(out, rel, text, discussed)
     out.take_all(undeclared_findings(path, rel, cited, discussed, sources))
     return out.report("report-check", "reporting")
 
@@ -1013,16 +1022,12 @@ def discussion_sources(path: Path, found: list[report_blocks.Discussion]) -> lis
 def report_hints(
     out: Findings,
     rel: str,
-    path: Path,
     text: str,
     discussed: list[report_blocks.Discussion],
-    repo: Path,
 ) -> None:
-    """Tell OUT the hints on the report at PATH (REL to REPO, its TEXT, its
-    DISCUSSED runs): the numbers outside every block and those in and
-    beside a discussion — WARNINGs that are static evidence, a place to
-    look, not a check — and, when it discusses a run, the report review's
-    command (`report_review.review_hint`), a note."""
+    """Tell OUT the hints on the report REL (its TEXT, its DISCUSSED runs):
+    the numbers outside every block and those in and beside a discussion —
+    WARNINGs that are static evidence, a place to look, not a check."""
     unsourced = report_blocks.unsourced_numbers(text)
     if unsourced:
         out.warn(
@@ -1043,9 +1048,112 @@ def report_hints(
         )
         for n, numbers in beside:
             out.note(f"    {rel}:{n}: {', '.join(numbers)}")
-    hint = review_hint(text, path, repo)
-    if hint:
-        out.note(f"  hint: {hint}")
+
+
+def report_review_owed(
+    path: Path,
+    rel: str,
+    text: str,
+    discussed: list[report_blocks.Discussion],
+    sources: Sources,
+    *,
+    staged: bool = False,
+) -> list[GateFinding]:
+    """The report review the report at PATH (REL to the repo, TEXT as the
+    gate's state holds it) owes: per protocol its discussion blocks name,
+    a review of exactly this state — the inputs the reviewer reads
+    (`report_review.review_pieces`), the report and the protocol as the
+    state holds them — that names no claim (`report_reviews.standing`).
+    A BLOCKER per protocol without one, naming the command, the claims of
+    this state, or what changed since the last review. Guaranteed: the
+    records, their binding and their claim count are read exactly; whether
+    a claim is right stays the reviewer's judgement. A discussion whose
+    protocol or run is missing owes none here (`discussion_sources` names
+    it). STAGED (the pre-commit): a review counts only when the index holds
+    its record — a release the commit does not carry is none."""
+    out: list[GateFinding] = []
+    by_protocol: dict[Path, list[report_blocks.Discussion]] = {}
+    for d in discussed:
+        by_protocol.setdefault((path.parent / d.protocol).resolve(), []).append(d)
+    for protocol, mine in by_protocol.items():
+        area = protocol.parent
+        protocol_text = sources.texts.get(protocol)
+        if protocol_text is None or not all(
+            run_path(area, d.run_id).is_dir() for d in mine
+        ):
+            continue
+        command = (
+            f"`labkit-audit {shown(area, Path.cwd())} --report-review "
+            f"{shown(path, Path.cwd())}"
+            + (
+                f" --protocol {shown(protocol, Path.cwd())}"
+                if len(area_protocols(area)) > 1
+                else ""
+            )
+            + "`"
+        )
+        try:
+            pieces = report_review.review_pieces(
+                area, path, text, protocol, protocol_text, mine
+            )
+            whole, parts = report_reviews.fingerprint(pieces)
+            report_key, protocol_key = report_review.review_keys(area, path, protocol)
+            found = report_reviews.area_report_reviews(area)
+            if staged:
+                carried = set(indexed_files(sources.repo))
+                found = [r for r in found if r.path.resolve() in carried]
+            stands = report_reviews.standing(found, report_key, protocol_key, whole)
+        except (
+            AuditError,
+            findings.FindingsError,
+            report_reviews.ReportReviewError,
+            RuntimeError,
+        ) as exc:
+            out.append(
+                GateFinding(
+                    BLOCKER,
+                    f"{rel}: its report review cannot be told — {exc}",
+                    evidence_kind=GUARANTEED,
+                )
+            )
+            continue
+        if stands.released:
+            continue
+        runs_named = ", ".join(dict.fromkeys(d.run_id for d in mine))
+        if stands.claims:
+            listed = "; ".join(
+                f"line {c.line} ({c.kind}): {c.why}" for _, c in stands.claims
+            )
+            out.append(
+                GateFinding(
+                    BLOCKER,
+                    f"{rel}: the report review of this state "
+                    f"({stands.claims[0][0].path.name}) names "
+                    f"{len(stands.claims)} claim(s) on the discussion of "
+                    f"{runs_named} — {listed}; change the report, or a source the "
+                    f"reviewer read, then review that state: {command} "
+                    f"(another draw on this state releases nothing)",
+                    evidence_kind=GUARANTEED,
+                )
+            )
+            continue
+        since = (
+            f"; the last review ({stands.earlier.path.name}) read another state — "
+            f"changed since: {', '.join(report_reviews.changed_parts(stands.earlier, parts))}"
+            if stands.earlier is not None
+            else ""
+        )
+        out.append(
+            GateFinding(
+                BLOCKER,
+                f"{rel}: discusses {runs_named} as not reported, and no report "
+                f"review of this state names no claim{since} — a cold reader checks "
+                f"that the report states none of their numbers as results: "
+                f"{command} (one model call)",
+                evidence_kind=GUARANTEED,
+            )
+        )
+    return out
 
 
 def undeclared_findings(
@@ -1157,9 +1265,12 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     for protocol in protocols:
         worst = max(worst, hold_declared(protocol, repo, staged=staged))
     for path, text in reports:
-        worst = max(worst, hold_report(path, text, repo, sources))
+        worst = max(worst, hold_report(path, text, repo, sources, staged=staged))
     for path, text, held_as in reached:
-        worst = max(worst, hold_report(path, text, repo, sources, held_as=held_as))
+        worst = max(
+            worst,
+            hold_report(path, text, repo, sources, held_as=held_as, staged=staged),
+        )
     return worst
 
 

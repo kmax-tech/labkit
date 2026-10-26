@@ -1,7 +1,7 @@
 """report_review — `labkit-audit AREA --report-review REPORT`: a cold reader
 on a finished report that discusses a run of AREA (not reported).
 
-    labkit-audit <AREA> --report-review REPORT [--protocol FILE]
+    labkit-audit <AREA> --report-review REPORT [--protocol FILE] [--again]
                  [--model ALIAS] [--timeout S] [--out FILE]
 
 A discussion block (`report_blocks.discussions`, written by `protocol-fill
@@ -9,33 +9,40 @@ A discussion block (`report_blocks.discussions`, written by `protocol-fill
 leave the area. Whether the report keeps them out is semantics: a number
 beside the block may be the why or a result, and a verdict may contradict
 an audit decision. The reviewer gets, in one call: the report with its
-line numbers, the discussion blocks, the protocol as it is now, each
-discussed run's `metrics.json`, and every audit record of the area with
-its decisions and every failed attempt.
+line numbers, the discussion blocks of the protocol, the protocol as it
+is now, each discussed run's `metrics.json`, and every audit record of
+the area with its decisions and every failed attempt (`review_pieces`).
 Instructions: `report-review.agent.md`.
 
-Agent audit, warning only: the claims it names are printed as WARNINGs
-and recorded nowhere, and no gate reads them. The hooks name the command
-when a changed report discusses a run (`review_hint`); nothing starts it. Whether it ever holds a
-report is decided after its catch rate, false alarms and cost are
-measured (pilot: docs/usability/2026-10-25-report-review-pilot.md). A
-report that discusses no run is not reviewed — a report that
-cites no run at all is left out of reach of this review.
+Agent audit; its record is a gate's input. The review writes
+`audits/report-reviews/<minute>-review.toml` with the claims and the
+fingerprint of the inputs it read (`report_reviews`). report-check holds
+a report with a discussion block until a review of exactly that state
+names no claim (`report_check.report_review_owed`); a claim holds the
+state, and a later clean draw does not release it. On a state a review
+already judged the command makes no new call: after a claim, change the
+report or a source the reviewer read; after a clean review there is
+nothing to do. `--again` draws once more as a measurement and releases
+nothing. Nothing starts the review but this command: the hooks name it.
+A report that discusses no run is not reviewed — one that cites no run
+at all is left out of reach of this review.
 
-Exit codes: 0 no claim, 1 at least one claim, 2 no review — no discussed
-run in the report, a discussed run with no `runs/<id>/`, the backend did
-not answer, or a report whose lines and closing count disagree.
+Exit codes: 0 no claim (or this state already reviewed clean), 1 at least
+one claim, 2 no review — no discussed run of the protocol in the report,
+a discussed run with no `runs/<id>/`, a state with a claim and no
+`--again`, the backend did not answer, or a reply whose lines and closing
+count disagree.
 """
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import NamedTuple
 
 from labkit.checks.audit_binding import AuditError
 from labkit.checks.report_blocks import Discussion, ReportBlockError, discussions
-from labkit.formats import console, findings
+from labkit.formats import console, findings, report_reviews
+from labkit.formats.report_reviews import ReportClaim
 from labkit.formats.repo import (
     ProtocolChoiceError,
     layout_root,
@@ -48,7 +55,6 @@ from labkit.gates import audit
 from labkit.run import llm, llm_backends
 
 REPORT_REVIEW = "report"
-KINDS = ("result", "contradiction")
 #: a claim line of the reviewer's report
 CLAIM = re.compile(
     r"^[\s>*`-]*\**CLAIM\s*#(\d+)\**\s*(?:·|—|–|:)\s*line\s*(\d+)\s*(?:·|—|–|:)\s*"
@@ -66,11 +72,12 @@ def review_hint(text: str, report: Path, repo: Path) -> str | None:
     """The sentence that names the review for REPORT (its TEXT), or None when
     it discusses no run: per area of REPO holding a discussed run
     (`runs/<id>/` beside a protocol), the command to run, paths as `shown`
-    from REPO. The hint the hooks give (`claude_hooks.post_change`,
-    `report_check.hold_report`); it runs nothing — a model call is the
-    agent's to start. A discussed run no area holds names no command
-    (report-check holds it as a cited run the repo lacks). Raises
-    ReportBlockError on a block that does not read."""
+    from REPO. The hint the post-change hook gives (`claude_hooks.post_change`);
+    it runs nothing — a model call is the agent's to start; report-check
+    holds the report until the review is done (`report_check.report_review_owed`).
+    A discussed run no area holds names no command (report-check holds it
+    as a cited run the repo lacks). Raises ReportBlockError on a block that
+    does not read."""
     runs = list(dict.fromkeys(d.run_id for d in discussions(text)))
     if not runs:
         return None
@@ -90,19 +97,27 @@ def review_hint(text: str, report: Path, repo: Path) -> str | None:
         for a in areas
     ]
     return (
-        f"{shown(report, root)} discusses {', '.join(runs)} as not reported — check "
-        f"that it states none of its numbers as results: {'; '.join(commands)} "
-        f"(one model call, a warning, blocks nothing)"
+        f"{shown(report, root)} discusses {', '.join(runs)} as not reported — "
+        f"check that it states none of its numbers as results: "
+        f"{'; '.join(commands)} (one model call; the commit holds until a "
+        f"review of this state names no claim)"
     )
 
 
-class Claim(NamedTuple):
-    """One line the reviewer names: the report's LINE, the KIND (`KINDS`),
-    WHY in its sentence."""
+def review_keys(area: Path, report: Path, protocol: Path) -> tuple[str, str]:
+    """(report, protocol) as a review record names them: relative to the
+    repo AREA lies in (`layout_root`)."""
+    root = layout_root(area)
+    return shown(report, root), shown(protocol, root)
 
-    line: int
-    kind: str
-    why: str
+
+def discussed_under(report: Path, text: str, protocol: Path) -> list[Discussion]:
+    """The discussion blocks of REPORT (its TEXT) that name PROTOCOL.
+    Raises ReportBlockError on a block that does not read."""
+    target = protocol.resolve()
+    return [
+        d for d in discussions(text) if (report.parent / d.protocol).resolve() == target
+    ]
 
 
 def numbered(text: str) -> str:
@@ -137,36 +152,34 @@ def audits_text(area: Path) -> str:
     return "\n\n".join(blocks) or "no audit records and no failed attempts"
 
 
-def gather_report(
-    area: Path, report: Path, protocol: Path
-) -> tuple[str, list[Discussion]]:
-    """(prompt, discussion blocks) for REPORT. Raises AuditError when the
-    report discusses no run (nothing to review), a discussed run has no
-    `runs/<id>/` in AREA, or a block does not read; FindingsError on an
-    unreadable audit file."""
-    text = report.read_text(encoding="utf-8")
-    try:
-        discussed = discussions(text)
-    except ReportBlockError as exc:
-        raise AuditError(f"{report.name}: {exc}") from exc
-    if not discussed:
-        raise AuditError(
-            f"{report.name}: no discussion block (`protocol-fill … --discuss "
-            f"RUN --why … --into {report.name}`) — the report review reads "
-            f"reports that discuss a run; nothing to review"
-        )
+def review_pieces(
+    area: Path,
+    report: Path,
+    text: str,
+    protocol: Path,
+    protocol_text: str,
+    discussed: list[Discussion],
+) -> list[tuple[str, str]]:
+    """The (label, text) the reviewer reads of REPORT (its TEXT) under
+    PROTOCOL (its PROTOCOL_TEXT) in AREA, in order: the report numbered,
+    its DISCUSSED blocks, the protocol, each discussed run's
+    `metrics.json`, the audits (`audits_text`). The one home of what a
+    review saw: the prompt is rendered from it, the record's fingerprint
+    is taken over it, and the gate takes it again to tell whether a review
+    saw the state it holds. Raises AuditError when a discussed run has no
+    `runs/<id>/` in AREA; FindingsError on an unreadable audit file."""
     repo = layout_root(area)
     pieces: list[tuple[str, str]] = [
         (f"REPORT {shown(report, repo)}", numbered(text)),
         (
             "DISCUSSED",
             "\n".join(
-                f"line {m.first}: run {m.run_id} — why: {m.why}" for m in discussed
+                f"line {d.first}: run {d.run_id} — why: {d.why}" for d in discussed
             ),
         ),
-        (f"FILE: {shown(protocol, repo)}", protocol.read_text(encoding="utf-8")),
+        (f"FILE: {shown(protocol, repo)}", protocol_text),
     ]
-    for run_id in dict.fromkeys(m.run_id for m in discussed):
+    for run_id in dict.fromkeys(d.run_id for d in discussed):
         run_dir = run_path(area, run_id)
         if not run_dir.is_dir():
             raise AuditError(
@@ -183,17 +196,43 @@ def gather_report(
             )
         )
     pieces.append(("AUDITS", audits_text(area)))
+    return pieces
+
+
+def gather_report(
+    area: Path, report: Path, protocol: Path
+) -> tuple[str, list[Discussion], list[tuple[str, str]]]:
+    """(prompt, the discussion blocks under PROTOCOL, the pieces the
+    prompt shows — `review_pieces`) for REPORT. Raises AuditError when the
+    report discusses no run of PROTOCOL (nothing to review), a discussed
+    run has no `runs/<id>/` in AREA, or a block does not read;
+    FindingsError on an unreadable audit file."""
+    text = report.read_text(encoding="utf-8")
+    try:
+        discussed = discussed_under(report, text, protocol)
+    except ReportBlockError as exc:
+        raise AuditError(f"{report.name}: {exc}") from exc
+    if not discussed:
+        raise AuditError(
+            f"{report.name}: no discussion block of a run of {protocol.name} "
+            f"(`protocol-fill … --discuss RUN --why … --into {report.name}`) — "
+            f"the report review reads reports that discuss a run; nothing to review"
+        )
+    pieces = review_pieces(
+        area, report, text, protocol, protocol.read_text(encoding="utf-8"), discussed
+    )
+    repo = layout_root(area)
     label, rules_text = audit.standard_excerpt(REPORT_REVIEW)
-    pieces.append((f"FILE: {label}", rules_text))
-    body = "".join(f"===== {lbl} =====\n{txt}\n" for lbl, txt in pieces)
+    shown_pieces = [*pieces, (f"FILE: {label}", rules_text)]
+    body = "".join(f"===== {lbl} =====\n{txt}\n" for lbl, txt in shown_pieces)
     prompt = (
         f"{audit.instructions(REPORT_REVIEW)}\n\nMODE: report review · AREA: "
         f"{shown(area, repo)} · REPORT: {shown(report, repo)}\n\n{INLINE_NOTE}\n\n{body}"
     )
-    return prompt, discussed
+    return prompt, discussed, pieces
 
 
-def parse_claims(report: str, n_lines: int) -> list[Claim]:
+def parse_claims(report: str, n_lines: int) -> list[ReportClaim]:
     """The claims before the LAST closing line, each citing a line of a
     report of N_LINES, numbered 1, 2, … in order, and as many as the
     closing count says. Raises AuditError otherwise — a reply that
@@ -214,7 +253,7 @@ def parse_claims(report: str, n_lines: int) -> list[Claim]:
             f"the closing line counts {said} claim(s), the lines above number "
             f"{len(found)} — nothing is named; run the review again"
         )
-    claims = [Claim(int(m.group(2)), m.group(3), m.group(4)) for m in found]
+    claims = [ReportClaim(int(m.group(2)), m.group(3), m.group(4)) for m in found]
     outside = [c.line for c in claims if not 1 <= c.line <= n_lines]
     if outside:
         raise AuditError(
@@ -231,12 +270,35 @@ def review_report(
     model: str,
     timeout: int,
     out: Path | None,
+    *,
+    again: bool = False,
 ) -> int:
-    """The command: gather, one call, parse, print the claims as WARNINGs and
-    the call's cost. Exit 0 no claim, 1 a claim, 2 no review."""
+    """The command: gather, refuse a state already judged (unless AGAIN),
+    one call, parse, write the record, print the claims and the call's
+    cost. Exit 0 no claim (or this state already reviewed clean), 1 a
+    claim, 2 no review."""
     try:
         chosen = the_protocol(area, protocol)
-        prompt, discussed = gather_report(area, report, chosen)
+        prompt, discussed, pieces = gather_report(area, report, chosen)
+        whole, parts = report_reviews.fingerprint(pieces)
+        report_key, protocol_key = review_keys(area, report, chosen)
+        stands = report_reviews.standing(
+            report_reviews.area_report_reviews(area), report_key, protocol_key, whole
+        )
+        if not again and stands.claims:
+            raise AuditError(
+                f"{report_key}: a review of this state named "
+                f"{len(stands.claims)} claim(s) ({stands.claims[0][0].path.name}) — "
+                f"another draw settles nothing; change the report, or a source the "
+                f"reviewer read, and review that state (`--again` draws as a "
+                f"measurement and releases nothing)"
+            )
+        if not again and stands.released:
+            print(
+                f"report review: {report_key} in this state is reviewed, no claim "
+                f"({stands.on_state[-1].path.name}) — nothing to do"
+            )
+            return 0
         console.progress(
             "labkit-audit",
             f"report review · {report.name} · {len(discussed)} discussed run(s) · "
@@ -249,10 +311,21 @@ def review_report(
         claims = parse_claims(
             reply, len(report.read_text(encoding="utf-8").split("\n"))
         )
+        written = report_reviews.write_report_review(
+            area,
+            model=model,
+            report=report_key,
+            protocol=protocol_key,
+            whole=whole,
+            parts=parts,
+            claims=claims,
+            again=again,
+        )
     except (
         AuditError,
         ProtocolChoiceError,
         findings.FindingsError,
+        report_reviews.ReportReviewError,
         llm_backends.BackendError,
         llm_backends.PromptTruncated,
         KeyError,  # llm.resolve on an alias models.toml does not know
@@ -266,9 +339,17 @@ def review_report(
     print()
     where = shown(report, Path.cwd())
     for c in claims:
-        print(f"WARNING: {where}:{c.line}: {c.kind} — {c.why}")
+        print(f"CLAIM: {where}:{c.line}: {c.kind} — {c.why}")
+    held = (
+        "the commit holds until the report, or a source the reviewer read, "
+        "changes and a review of that state names no claim"
+        if claims
+        else "this state is released"
+    )
     print(
-        f"report review: {len(claims)} claim(s) — agent audit, a warning: it "
-        f"blocks nothing and is recorded nowhere"
+        f"report review: {len(claims)} claim(s), recorded in "
+        f"{shown(written, Path.cwd())}"
+        + (" (--again: a measurement, it releases nothing)" if again else "")
+        + f" — {held}"
     )
     return 1 if claims else 0

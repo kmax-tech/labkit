@@ -19,7 +19,8 @@ import test_report_check
 from protocol_fixture import completed_run
 
 from labkit.checks import report_blocks
-from labkit.gates import report_check
+from labkit.formats import report_reviews
+from labkit.gates import report_check, report_review
 from labkit.tools import protocol_fill
 
 RUN = "2026-10-07T10-00-00_ab12"
@@ -368,6 +369,36 @@ class ReportFiles(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def _reviewed(
+        self,
+        report: Path,
+        area: Path,
+        claims: tuple[report_reviews.ReportClaim, ...] = (),
+        *,
+        again: bool = False,
+        text: str | None = None,
+    ) -> None:
+        """A report review of REPORT (TEXT, else as the tree holds it) in its
+        state now, naming CLAIMS — what `--report-review` writes."""
+        proto = area / "PROTOCOL-x.md"
+        text = text if text is not None else report.read_text(encoding="utf-8")
+        discussed = report_review.discussed_under(report, text, proto)
+        pieces = report_review.review_pieces(
+            area, report, text, proto, proto.read_text(encoding="utf-8"), discussed
+        )
+        whole, parts = report_reviews.fingerprint(pieces)
+        rkey, pkey = report_review.review_keys(area, report, proto)
+        report_reviews.write_report_review(
+            area,
+            model="m",
+            report=rkey,
+            protocol=pkey,
+            whole=whole,
+            parts=parts,
+            claims=list(claims),
+            again=again,
+        )
+
     def test_the_answering_run_cited_unadopted_blocks_and_names_both_ways_out(self):
         """Sixth haiku round (2026-10-23, t3 and t18): `--from-run` refused,
         REPORT.md written from the run's metrics.json by hand, the hook
@@ -434,13 +465,69 @@ class ReportFiles(unittest.TestCase):
             "blockers unreviewed",
             "# Report\n\nThe question stays open.\n",
         )
+        # eighth haiku round (t18): the review was a hint and was passed
+        # over — now the report is held until a review of its state is done
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            f"REPORT.md: discusses {self.RUN} as not reported, and no report "
+            f"review of this state names no claim",
+            out,
+        )
+        self.assertRegex(out, r"--report-review \S*REPORT\.md` \(one model call\)")
+        self._reviewed(report, area)
         code, out = self._gate(root, report)
         self.assertEqual(code, 0, out)
         self.assertNotIn("BLOCKER", out)
         self.assertNotIn("which no protocol declares", out)
         self.assertNotIn("in or beside a discussed run", out)
-        # the commit is where the agent reads the gate: the review is named
-        self.assertIn("--report-review REPORT.md`", out)
+
+    def test_a_claim_holds_and_a_later_clean_draw_does_not_release(self):
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        self._discussed(report, area, "audit failed", "# Report\n\nC1 PASS\n")
+        claim = report_reviews.ReportClaim(3, "result", "C1 PASS of the discussed run")
+        self._reviewed(report, area, (claim,))
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn("names 1 claim(s) on the discussion of", out)
+        self.assertIn("line 3 (result): C1 PASS of the discussed run", out)
+        self._reviewed(report, area)  # a clean draw on the same state
+        self._reviewed(report, area, again=True)
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn("names 1 claim(s)", out)
+        # the way out: the report changes, and a review of that state is clean
+        report.write_text(
+            report.read_text(encoding="utf-8").replace("C1 PASS", "No result."),
+            encoding="utf-8",
+        )
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertRegex(out, r"changed since: REPORT \S*REPORT\.md —")
+        self._reviewed(report, area)
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 0, out)
+
+    def test_a_clean_review_of_the_tree_does_not_release_another_staged_report(self):
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None, git=True)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        self._discussed(report, area, "audit failed", "# Report\n\nC1 PASS\n")
+        self._git(root, "add", "REPORT.md")
+        honest = report.read_text(encoding="utf-8").replace("C1 PASS", "No result.")
+        report.write_text(honest, encoding="utf-8")
+        self._reviewed(report, area)  # reviewed the tree, not what is staged
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 1, out)
+        self.assertIn("no report review of this state names no claim", out)
+        self._git(root, "add", "REPORT.md")  # the reviewed text staged…
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 1, out)  # …its record not: the commit lacks it
+        self._git(root, "add", str(area / "audits"))
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 0, out)
 
     def test_a_discussion_without_its_why_or_edited_by_hand_blocks(self):
         area = self._area(f"c1_pass = True (run {self.RUN})", declared=None)
@@ -492,6 +579,7 @@ class ReportFiles(unittest.TestCase):
         self._discussed(report, area, "adoption refused — leakage", "# Report\n")
         with report.open("a", encoding="utf-8") as f:
             f.write("Its AUC was 0.80 all the same.\n\nElsewhere 0.99 is stated.\n")
+        self._reviewed(report, area)
         code, out = self._gate(root, report)
         self.assertEqual(code, 0, out)
         self.assertIn(
@@ -659,7 +747,9 @@ class ReportFiles(unittest.TestCase):
         self.assertIn("the answering run of experiments/01-x/PROTOCOL-x.md", out)
         # step one as an exploration would write it passes
         self._discussed(report, area, "adoption pending")
-        self._git(root, "add", "REPORT.md")
+        self._reviewed(report, area)
+        # the review's record is evidence the commit carries with the report
+        self._git(root, "add", "REPORT.md", str(area / "audits"))
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 0, out)
         self._git(root, "commit", "-qm", "report")
