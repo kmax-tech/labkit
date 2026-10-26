@@ -214,8 +214,11 @@ it there.
 repair cannot be seen in the code alone — a leak, a contamination, a
 denominator — end its line with ` · check: <metrics key>`: the key the
 measuring code must write to metrics.json so that a later audit can see the
-repair hold (lowercase snake_case; say in the fifth field what its value
-must show). It is fixed with the finding; nobody chooses it when closing.
+repair hold (lowercase snake_case). Say what its value must show in the
+finding's own fields, before the check; if you add it after the key, write
+it as ` (<what it must show>)` or ` — <what it must show>` to the end of
+the line, nothing else. One check per finding. It is fixed with the
+finding; nobody chooses it when closing.
 
 **No finding without a failure scenario** (LAB-015 Preflight audit before freezing). The fourth field must name
 the number that goes wrong and the input that triggers it. If you cannot write

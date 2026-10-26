@@ -326,6 +326,9 @@ class Audit(unittest.TestCase):
         self.assertEqual(findings.area_records(area), [])  # no findings were made
         (attempt,) = attempts.read_journal(area)
         self.assertEqual((attempt.outcome, attempt.file), ("failed", files[0].name))
+        # no answer came, so none is kept
+        self.assertEqual(attempt.answer, "")
+        self.assertFalse((area / "audits" / attempts.ANSWERS).exists())
         # eighth haiku round (t18): `rm audits/*.toml` before a new attempt —
         # the next audit names the attempt whose evidence is gone and
         # refuses before any call
@@ -1187,3 +1190,143 @@ class RequiredCheck(unittest.TestCase):
         )
         with self.assertRaises(findings.FindingsError):
             findings.read(record.path)
+
+
+#: the answers of the second fixed-followup pilot, kept in the repo
+PILOT2 = (
+    Path(__file__).resolve().parents[1]
+    / "docs"
+    / "usability"
+    / "2026-10-26-fixed-followup-pilot-2"
+)
+
+
+class CheckNote(unittest.TestCase):
+    """The check field may carry what its value must show, after the key,
+    in one of two forms to the end of the line; only the key is
+    machine-read, the note is kept whole and bound. Six answers of the
+    second pilot wrote it so, and their records were refused."""
+
+    def test_the_six_refused_answers_now_write_whole_records(self):
+        for name in ("C-1", "C-2", "C-3", "D-1", "D-2", "D-3"):
+            with self.subTest(name):
+                answer = (PILOT2 / f"{name}.report.txt").read_text(encoding="utf-8")
+                result = audit.parse(answer)
+                area = repo_with()
+                path = findings.write(
+                    area,
+                    "analysis",
+                    "opus",
+                    "0" * 12,
+                    "1" * 12,
+                    result["verdict"],
+                    result["findings"],
+                    registration={"kind": "fit"},
+                    run_id="r",
+                    shown_sha="s" * 12,
+                )
+                checked = [f for f in findings.read(path).findings if f.check]
+                self.assertEqual(len(checked), 1)
+                (f,) = checked
+                self.assertTrue(f.check.startswith("a2_"), f.check)
+                self.assertTrue(f.check_note, f.text[-200:])
+                # the note is the line's text after the key, whole
+                self.assertTrue(f.text.rstrip(" )").endswith(f.check_note.rstrip(")")))
+
+    def test_the_forms_that_read(self):
+        cases = {
+            "x · check: a2_spread": ("a2_spread", ""),
+            "x · check: `a2_spread`": ("a2_spread", ""),
+            "x · check: a2_spread (per seed; the band (0.15) must hold)": (
+                "a2_spread",
+                "per seed; the band (0.15) must hold",
+            ),
+            "x · check: a2_spread — the score per seed": (
+                "a2_spread",
+                "the score per seed",
+            ),
+            "x · no check here": ("", ""),
+        }
+        for line, want in cases.items():
+            with self.subTest(line):
+                self.assertEqual(findings.check_of(line), want)
+
+    def test_the_forms_that_do_not_read(self):
+        for line in (
+            "x · check: a2 spread",
+            "x · check: a2_spread (per seed) and more",
+            "x · check: a2_spread ()",
+            "x · check: a2_spread: per seed",
+            "x · check: a2_spread · check: a2_mean",
+            "x · check: A2_Spread",
+        ):
+            with self.subTest(line):
+                with self.assertRaises(ValueError):
+                    findings.check_of(line)
+
+    def test_the_note_is_bound_with_the_check(self):
+        def f(note: str) -> findings.Finding:
+            return findings.Finding("BLOCKER", "x", "fixed", "r", "", "a2_spread", note)
+
+        self.assertNotEqual(
+            findings.decision_digest(f("per seed")), findings.decision_digest(f("mean"))
+        )
+        self.assertNotEqual(
+            findings.decision_digest(f("per seed")), findings.decision_digest(f(""))
+        )
+
+    def test_a_decision_keeps_the_note(self):
+        fv = FixVerdicts()
+        area, earlier = fv.area(
+            FixVerdicts.LEAK + " · check: feature_sources (every column named)"
+        )
+        (f,) = findings.read(earlier).findings
+        self.assertEqual(
+            (f.status, f.check, f.check_note),
+            ("fixed", "feature_sources", "every column named"),
+        )
+        self.assertIn(
+            'check_note = "every column named"', earlier.read_text(encoding="utf-8")
+        )
+
+
+class KeptAnswer(unittest.TestCase):
+    """The model's answer is kept before anything reads it, and the
+    attempt's end names it — a record or not (second fixed-followup pilot:
+    six answers that did not read survived only through the runner's
+    `--out`). A kept answer releases nothing; a lost one is a gap."""
+
+    def kept(self, area: Path) -> tuple[attempts.Attempt, Path]:
+        (attempt,) = attempts.read_journal(area)
+        return attempt, area / "audits" / attempt.answer
+
+    def test_an_answer_that_does_not_read_is_kept_with_the_refusal(self):
+        area = repo_with()
+        answer = f"{BLOCK.splitlines()[0]} · check: a2 spread\nverdict: 1 blockers, 0 warnings, 0 notes"
+        rc, _, err, _ = run(area, answer)
+        self.assertEqual(rc, 2, err)
+        self.assertEqual(findings.area_records(area), [])
+        attempt, path = self.kept(area)
+        self.assertEqual(attempt.outcome, "none")
+        self.assertIn("check field that does not read", attempt.error)
+        self.assertEqual(attempt.answer, f"{attempts.ANSWERS}/{attempt.id}.txt")
+        self.assertEqual(path.read_text(encoding="utf-8"), answer)
+
+    def test_a_recorded_answer_is_kept_too(self):
+        area = repo_with()
+        rc, _, err, _ = run(area, WARN)
+        self.assertEqual(rc, 1, err)
+        attempt, path = self.kept(area)
+        self.assertEqual(attempt.outcome, "record")
+        self.assertEqual(path.read_text(encoding="utf-8"), WARN)
+
+    def test_a_kept_answer_that_is_gone_is_a_gap(self):
+        area = repo_with()
+        run(area, WARN)
+        attempt, path = self.kept(area)
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
+        path.unlink()
+        (gap,) = attempts.area_gaps(area).blockers
+        self.assertIn(
+            f"ended as record with its answer kept in audits/{attempt.answer}", gap
+        )

@@ -719,7 +719,21 @@ pins (`requirements.txt` / `requirements.lock`).
   `check_present`, computed from that same snapshot, never by the model
   and never by reading the file again. No check required (no field) and a
   required key missing (`check_present = false`) are two states; a
-  `resolved` on a missing key is kept as written.
+  `resolved` on a missing key is kept as written. After the key the
+  auditor may say what its value must show, as ` (<note>)` or
+  ` — <note>` to the end of the line: only the key is machine-read, the
+  note is stored whole as `check_note` and bound in the digest with the
+  check; any other text after the key, and two check fields in one
+  finding, refuse the record (second fixed-followup pilot: six of twelve
+  records lost to `check: <key> (<note>)` while only the bare key read).
+- **Every audit answer is kept before it is read.** `labkit-audit`
+  (preflight, analysis) writes the model's answer unchanged to
+  `audits/answers/<attempt id>.txt` right after the call, and the
+  attempt's end in `attempts.jsonl` names it (`"answer"`), also when the
+  answer does not read and no record is written. A kept answer that is
+  gone is a gap like a missing record (`attempts.gaps`). It releases
+  nothing. Why: the six refused answers of the second pilot survived only
+  because the pilot's runner passed `--out`.
 
 - **`labkit-audit AREA --report-review REPORT`: a cold reader on a report
   that discusses a run (a discussion block).** In the seventh haiku round

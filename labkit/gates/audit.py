@@ -507,7 +507,8 @@ def fixed_piece(followup: Followup) -> tuple[tuple[str, str], ...]:
             value = json.dumps(
                 (followup.metrics or {})[e.finding.check], ensure_ascii=False
             )
-            entry += f"\n  required check `{e.finding.check}` = {value}"
+            note = f" ({e.finding.check_note})" if e.finding.check_note else ""
+            entry += f"\n  required check `{e.finding.check}`{note} = {value}"
         elif present is False:
             entry += (
                 f"\n  required check `{e.finding.check}`: missing in the answering "
@@ -801,10 +802,11 @@ def _answer_or_record(
     for note in running.notes:
         console.progress("labkit-audit", note)
     try:
-        return (
-            llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=room),
-            running,
-        )
+        answer = llm.complete(args.model, prompt, timeout=args.timeout, max_tokens=room)
+        # kept before anything reads it: an answer that does not read is
+        # evidence of what the auditor said, and the end names it
+        running.keep_answer(answer)
+        return answer, running
     except llm_backends.UnprovenAnswer as exc:
         tried = findings.write_failed(
             args.area,

@@ -12,18 +12,27 @@ never rewriting one:
      "file": "2026-10-26T09-16-analysis-failed.toml"}
     {"event": "interrupted", "id": "…", "found_by": "<the id of the next attempt>"}
 
+The model's answer is kept before anything reads it, as
+`audits/answers/<attempt id>.txt`, and the end names it (`"answer":
+"answers/<id>.txt"`) — also when the answer does not read and no record is
+written (second fixed-followup pilot: six answers refused on one field,
+kept only because the pilot's runner passed `--out`). A kept answer
+releases nothing; it is evidence of what the auditor said.
+
 An attempt is *running* while its process holds the attempt's lock,
 *interrupted* when it started and holds no lock any more without an end
 (killed, timed out in the agent's shell), *ended* with an outcome:
 `record` and `failed` name the file under `audits/` that holds it, `none`
-says why no file was written (an answer that did not read). Whether a
+says why no file was written (an answer that did not read); an end after
+an answer names the kept answer too. Whether a
 process still runs is told by a lock it holds (`fcntl.flock`, released by
 the kernel when the process ends), never by a pid, which the system
 reuses. A start is checked and written under one lock on the area: two
 audits of one area cannot both see "none running" (`begin`).
 
 What the journal gives the gates (`gaps`, a pure function): a file an
-ended attempt names that is missing, a file under `audits/` HEAD holds
+ended attempt names that is missing (its record, failed attempt or kept
+answer), a file under `audits/` HEAD holds
 that is missing, and a journal that is no longer HEAD's plus new lines —
 blockers, each naming the attempt or the file. A running, interrupted or
 undecidable attempt (started on another host) is named, not held: a
@@ -53,12 +62,15 @@ from pathlib import Path
 from typing import IO
 
 from labkit.formats import jsonl
+from labkit.formats.files import write_atomic
 from labkit.formats.findings import DIR
 from labkit.formats.repo import INDEX_REV, git_root, git_run, text_at
 from labkit.formats.runs import now_stamp
 from labkit.formats.scope_sha import digest
 
 JOURNAL = "attempts.jsonl"
+#: the folder under audits/ that keeps each answer, named by its attempt
+ANSWERS = "answers"
 EVENTS = ("started", "ended", "interrupted")
 #: how an attempt ended: the record, the evidence of a failed call, or no file
 OUTCOMES = ("record", "failed", "none")
@@ -74,7 +86,8 @@ class Attempt:
     """One attempt as the journal holds it: its ID, MODE, MODEL, the
     SCOPE_SHA it was started on, when (STARTED) and on which HOST; its
     OUTCOME and FILE (or ERROR) once ended — OUTCOME "" while it has no
-    end —, INTERRUPTED once a later attempt found it without one."""
+    end —, the kept ANSWER when the model answered, INTERRUPTED once a
+    later attempt found it without one."""
 
     id: str
     mode: str
@@ -86,6 +99,7 @@ class Attempt:
     file: str = ""
     error: str = ""
     interrupted: bool = False
+    answer: str = ""  # the kept answer under audits/, once ended after one
 
 
 def journal_path(area: Path) -> Path:
@@ -155,6 +169,7 @@ def _after(was: Attempt, event: str, row: dict, at: str) -> Attempt:
         outcome=outcome,
         file=str(row.get("file") or ""),
         error=str(row.get("error") or ""),
+        answer=str(row.get("answer") or ""),
     )
 
 
@@ -194,19 +209,19 @@ def gaps(
     restores a record HEAD lost passes. Raises AttemptError on a HEAD
     journal that does not read. Pure."""
     blockers = [
-        f"attempt {a.id} ({a.mode}, {a.model}) ended as {a.outcome} in "
-        f"{DIR}/{a.file}, and the file is gone from the {state} — a record of an "
-        f"attempt is evidence; restore it (`git checkout HEAD -- {DIR}/{a.file}` "
+        f"attempt {a.id} ({a.mode}, {a.model}) ended as {a.outcome} {how} "
+        f"{DIR}/{rel}, and the file is gone from the {state} — a record of an "
+        f"attempt is evidence; restore it (`git checkout HEAD -- {DIR}/{rel}` "
         f"when committed, `git add` when only unstaged)"
-        for a in _ended_without(attempts, present)
+        for a, rel, how in _ended_without(attempts, present)
     ]
     if hold_head and journal_at_head is not None:
         head = parse_journal(journal_at_head, f"HEAD:{DIR}/{JOURNAL}")
         blockers += [
-            f"attempt {a.id} ({a.mode}, {a.model}) ended as {a.outcome} in "
-            f"{DIR}/{a.file}, and HEAD's journal names it while HEAD lacks the "
+            f"attempt {a.id} ({a.mode}, {a.model}) ended as {a.outcome} {how} "
+            f"{DIR}/{rel}, and HEAD's journal names it while HEAD lacks the "
             f"file — the delivered state lost its evidence; restore and commit it"
-            for a in _ended_without(head, at_head)
+            for a, rel, how in _ended_without(head, at_head)
         ]
     notes = _open_notes(attempts, alive)
     for rel in sorted(at_head - present):
@@ -225,11 +240,18 @@ def gaps(
     return Gaps(blockers, notes)
 
 
-def _ended_without(attempts: list[Attempt], files: set[str]) -> list[Attempt]:
-    """The ATTEMPTS that ended with a file (`record`, `failed`) not among FILES."""
-    return [
-        a for a in attempts if a.outcome in ("record", "failed") and a.file not in files
-    ]
+def _ended_without(
+    attempts: list[Attempt], files: set[str]
+) -> list[tuple[Attempt, str, str]]:
+    """(attempt, path, how the end names it) for every file an ended attempt
+    of ATTEMPTS names — its record or failed attempt (`record`, `failed`),
+    its kept answer — that is not among FILES."""
+    out: list[tuple[Attempt, str, str]] = []
+    for a in attempts:
+        named = [(a.file, "in")] if a.outcome in ("record", "failed") else []
+        named += [(a.answer, "with its answer kept in")] if a.answer else []
+        out += [(a, rel, how) for rel, how in named if rel not in files]
+    return out
 
 
 def _open_notes(attempts: list[Attempt], alive: dict[str, bool | None]) -> list[str]:
@@ -411,6 +433,21 @@ class Running:
     def __init__(self, area: Path, aid: str, lock: IO[str], notes: list[str]) -> None:
         self.area, self.id, self._lock, self.notes = area, aid, lock, notes
         self.ended = False
+        self.answer = ""  # the kept answer under audits/, once `keep_answer` ran
+
+    def keep_answer(self, text: str) -> Path:
+        """Keep the model's answer TEXT, unchanged, as
+        `audits/answers/<attempt id>.txt` before anything reads it, and
+        remember it for the end. Returns the path. Side effect: the file;
+        a second answer for one attempt raises AttemptError."""
+        if self.answer:
+            raise AttemptError(f"attempt {self.id}: its answer is kept already")
+        folder = self.area / DIR / ANSWERS
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / f"{self.id}.txt"
+        write_atomic(path, text)
+        self.answer = f"{ANSWERS}/{path.name}"
+        return path
 
     def end(self, outcome: str, *, file: str = "", error: str = "") -> None:
         """Write the attempt's end — OUTCOME with the FILE under audits/
@@ -427,6 +464,8 @@ class Running:
             event["file"] = file
         if error:
             event["error"] = error
+        if self.answer:
+            event["answer"] = self.answer
         with _area_lock(self.area):
             _append(self.area, event)
         self.ended = True

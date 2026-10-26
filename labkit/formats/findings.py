@@ -170,6 +170,9 @@ class Finding:
     # key, set from the finding line when the record is written, never by
     # a decision ("" when none is required)
     check: str = ""
+    # what the check's value must show, as the auditor wrote it after the
+    # key ("" when it wrote none); bound with the check
+    check_note: str = ""
 
     @property
     def effect_owed(self) -> bool:
@@ -218,35 +221,56 @@ class FixVerdict:
 #: a finding line's closing field naming the diagnostic a repair must show:
 #: `· check: <metrics key>` — the auditor's, fixed when the finding is written
 CHECK_FIELD = re.compile(r"·\s*check\s*:")
-_CHECK = re.compile(r"·\s*check\s*:\s*`?([a-z][a-z0-9_]*)`?\s*$")
+#: the whole field: the key, then nothing, or a note in one of two forms
+#: running to the end of the line — `(<note>)` or `— <note>`
+_CHECK = re.compile(
+    r"·\s*check\s*:\s*`?(?P<key>[a-z][a-z0-9_]*)`?"
+    r"(?:\s*\((?P<paren>.*\S.*)\)|\s+[—–]\s+(?P<dash>\S.*))?\s*$"
+)
 CHECK_KEY = re.compile(r"^[a-z][a-z0-9_]*$")
+CHECK_FORM = (
+    "a closing `· check: <metrics key>` (lowercase snake_case), optionally "
+    "followed by ` (<what its value must show>)` or ` — <what its value must "
+    "show>` to the end of the line"
+)
 
 
-def check_of(text: str) -> str:
-    """The metrics key a finding line requires as its repair's diagnostic
-    (its closing `· check: <key>` field), or "" when it requires none.
-    Raises ValueError on a check field that does not read — a requirement
-    half-read would be one nobody can be held to."""
+def check_of(text: str) -> tuple[str, str]:
+    """(key, note) of the diagnostic a finding line requires for its repair
+    — its closing `· check: <key>` field, the note what the auditor wrote
+    after the key in one of the two forms of CHECK_FORM — or ("", "") when
+    it requires none. Only the key is machine-read; the note is kept whole.
+    Raises ValueError on a field that does not read and on two check
+    fields in one line: a requirement half-read, or one of two, would be
+    one nobody can be held to (second fixed-followup pilot: six records
+    lost to `check: <key> (<note>)` while only the bare key was read)."""
     if not CHECK_FIELD.search(text):
-        return ""
+        return "", ""
+    if len(CHECK_FIELD.findall(text)) > 1:
+        raise ValueError(
+            f"two check fields in one finding: {text.strip()[-160:]!r} — one "
+            f"finding requires one diagnostic; {CHECK_FORM}"
+        )
     m = _CHECK.search(text.rstrip())
     if m is None:
         raise ValueError(
-            f"a check field that does not read: {text.strip()[-120:]!r} — the form "
-            f"is a closing `· check: <metrics key>` (lowercase snake_case)"
+            f"a check field that does not read: {text.strip()[-160:]!r} — the form "
+            f"is {CHECK_FORM}"
         )
-    return m.group(1)
+    return m["key"], (m["paren"] or m["dash"] or "").strip()
 
 
 def decision_digest(f: Finding) -> str:
     """The digest of F as decided — grade, text, status, reason, effect, and
-    the required check when there is one — which a review and a fix verdict
+    the required check and its note when there is one — which a review and a fix verdict
     bind to (`reviews.Decision.decision_sha`, `FixVerdict.decision_sha`): a
     changed reason, effect or check is another decision, and a verdict on
     the old one says nothing about it. A finding without a check has the
     digest it had before checks existed."""
     fields = [f.grade, f.text, f.status, f.reason, f.effect]
-    return digest(as_stored(fields + ([f.check] if f.check else [])).encode("utf-8"))
+    if f.check:
+        fields += [f.check] + ([f.check_note] if f.check_note else [])
+    return digest(as_stored(fields).encode("utf-8"))
 
 
 def effect_ids(effect: str) -> tuple[str, ...]:
@@ -573,7 +597,7 @@ def write(
         f"notes = {k}",
     ]
     for grade, text in findings:
-        check = check_of(text)
+        check, note = check_of(text)
         if grade not in GRADES:
             raise ValueError(f"grade {grade!r} — one of {', '.join(GRADES)}")
         lines += [
@@ -582,6 +606,7 @@ def write(
             f"grade = {_s(grade)}",
             f"text = {_s(text)}",
             *([f"check = {_s(check)}"] if check else []),
+            *([f"check_note = {_s(note)}"] if note else []),
             'status = "open"',
             'reason = ""',
         ]
@@ -749,11 +774,7 @@ def _finding(path: Path, i: int, row: object) -> Finding:
     effect = row.get("effect", "")
     if not isinstance(effect, str):
         raise FindingsError(f"{path}: finding {i}: effect is not a string")
-    check = row.get("check", "")
-    if not isinstance(check, str) or (check and not CHECK_KEY.match(check)):
-        raise FindingsError(
-            f"{path}: finding {i}: check {check!r} is no metrics key (lowercase snake_case)"
-        )
+    check, note = _check_fields(path, i, row)
     found = Finding(
         row["grade"],
         row["text"],
@@ -761,11 +782,28 @@ def _finding(path: Path, i: int, row: object) -> Finding:
         row["reason"].strip(),
         effect.strip(),
         check,
+        note,
     )
     problem = _effect_problem(found)
     if problem:
         raise FindingsError(f"{path}: finding {i}: {problem}")
     return found
+
+
+def _check_fields(path: Path, i: int, row: dict) -> tuple[str, str]:
+    """(check, check_note) of the i-th `[[finding]]` table: a metrics key or
+    "", and a note only beside a check. Raises FindingsError otherwise."""
+    check = row.get("check", "")
+    if not isinstance(check, str) or (check and not CHECK_KEY.match(check)):
+        raise FindingsError(
+            f"{path}: finding {i}: check {check!r} is no metrics key (lowercase snake_case)"
+        )
+    note = row.get("check_note", "")
+    if not isinstance(note, str) or (note and not check):
+        raise FindingsError(
+            f"{path}: finding {i}: check_note {note!r} — a string, and only with a check"
+        )
+    return check, note
 
 
 def read(path: Path) -> Record:
@@ -932,7 +970,13 @@ def write_decision(
     old = before.findings[n - 1]
     # the check stays the auditor's: a decision never sets or drops it
     decided = Finding(
-        old.grade, old.text, status, reason.strip(), effect.strip(), old.check
+        old.grade,
+        old.text,
+        status,
+        reason.strip(),
+        effect.strip(),
+        old.check,
+        old.check_note,
     )
     _hold_effect(decided)
     text = _decided_text(path, n, decided)
