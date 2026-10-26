@@ -5,6 +5,11 @@
 `Changed` line in labkit-paper (rounds 1–5), the code as cited. Each cell
 was read in the code; the one probe is named.*
 
+> Since this note: row 13 is journaled (`9493acd`); row 10's route text
+> no longer promises a check (`f5f68bc`), and the check comes together
+> with the fresh attempt that keeps its predecessor (TODO, decided
+> 2026-10-26).
+
 ## The question
 
 Across nine Haiku rounds in labkit-paper area 09 the agents found a way
@@ -45,8 +50,13 @@ kind, not for a lowered bar.
 
 ## Reading
 
-- Where a check and an exit both exist (rows 3–7), the way past did not
-  recur, and round 9 showed the first corrections after an audit.
+- Where a check and an exit both exist (rows 3–7), the way past was not
+  seen again. That is an observation, not a measured effect: each fix
+  came at a different round, the later rounds offered each way a
+  different number of occasions, and every round changed more than one
+  gate. The stronger concrete evidence is round 9's visible report
+  corrections — t3 and t5 rewrote REPORT.md until the owed review named
+  no claim.
 - Where a check holds without a usable exit (row 11 after an unstaged
   delete), the agent fought the record: round 9 t5 rewrote records field
   by field against each refusal, about 25 refused commits, then the

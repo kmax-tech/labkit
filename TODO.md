@@ -260,6 +260,35 @@ wird als eigener Commit im Startzustand festgehalten und in der
 Vorab-Festlegung genannt. Danach ein Versuch mit Kostendeckel. Punkt 3
 (Laufzuordnung t18) bleibt der nächste eigene Schritt.
 
+**Entschieden 2026-10-26 spät, nach der Prüfmatrix der Ausweichwege**
+([Note](docs/notes/2026-10-26-escape-routes-checks-and-exits.md)):
+Jede Lücke bekommt ein Paar aus Prüfung und brauchbarem Fortsetzungsweg;
+eine Sperre ohne Weg weiter wird nicht gebaut.
+
+1. Vor dem Reparaturfall — **umgesetzt:** Der Text zur ungültigen
+   Registrierung verspricht nur noch, was report-check hält (fehlendes
+   Feld, geänderter Typ; ein geänderter Wert wird nicht verglichen)
+   (`f5f68bc`). Entscheidungs- und Berichtsreviews stehen im Journal wie
+   die Audits: Versuch, aufbewahrte Antwort, geschriebener Record oder
+   ausdrücklicher Fehlschlag (`9493acd`). Für ältere Reviews werden keine
+   Einträge nachträglich erfunden.
+2. Vor der zehnten vollen Runde, zusammen gebaut: **Neuansatz** und
+   **Kriterienvergleich** (Latte bei der ersten Messung gegen heute). Der
+   Vergleich allein wäre eine weitere Sperre ohne Weg weiter. Der
+   Neuansatz ist mehr als ein leeres Verzeichnis: Vorgänger,
+   Änderungsgrund und bereits vorliegende Ergebnisse bleiben sichtbar.
+   Ein unwiederbringlich verlorener Record bleibt als Evidenzverlust
+   dokumentiert; der neue Versuch macht den alten nicht rückwirkend
+   gültig. Ausgestaltung: „Notiert, nicht geplant“ Punkt 3.
+3. Proxy-Abgleich der Records: eigener Auftrag in labkit-paper (dort in
+   der TODO), nicht in labkit.
+
+Für die Auswertung: „Der Ausweichweg trat nicht wieder auf“ ist ein
+Beobachtungsbefund, kein Wirksamkeitsnachweis — Zeitpunkt der Korrektur,
+Zahl späterer Gelegenheiten und andere Änderungen derselben Runde zählen
+mit. Der stärkere konkrete Beleg sind die sichtbaren Berichtskorrekturen
+der neunten Runde (t3, t5).
+
 **Reihenfolge nach der achten Runde (beschlossen 2026-10-26).** Jeder
 Schritt schließt einen belegten Fehlweg und hat einen korrekten Zwilling.
 Die Abnahme ist eine neue Runde in Bereich 09 als eigener Auftrag. Sie misst
@@ -434,7 +463,9 @@ Notiert, nicht geplant:
 
 1. Abgegebene Vorhersagen aus behaltenen Skripten statt aus Heredocs (t3, t5).
 2. Kein Verbot von `--no-verify`: Das wäre eine Regeländerung am Standard.
-3. **Neuansatz ohne Löschen (Vorschlag 2026-10-26, nicht entschieden).**
+3. **Neuansatz ohne Löschen (entschieden 2026-10-26: vor der zehnten
+   vollen Runde, zusammen mit dem Kriterienvergleich; hier die
+   Ausgestaltung).**
    Drei Runden zeigen dasselbe Muster: Vor einem neuen Versuch löscht der
    Agent die alten Audit-Records (sechste Runde t3; achte t18, `rm
    audits/*.toml`; neunte t5, `rm -rf audits/`, Journal geleert, Records
@@ -450,35 +481,36 @@ Notiert, nicht geplant:
    aufgegebenen Versuch“ (gelesen, nicht ausprobiert).
    Vorschlag, ein Schritt:
    (a) der alte Versuch bleibt unverändert und wird als aufgegeben
-   markiert, mit Begründung und den Digests seiner Records;
+   markiert, mit Änderungsgrund und den Digests seiner Records; seine
+   bereits vorliegenden Ergebnisse bleiben sichtbar;
    (b) eine neue Registrierung nennt ihren Vorgänger;
    (c) die offenen Befunde des alten Versuchs gehen ins erste Audit des
    neuen (nach dem Muster der Folgeprüfung, `3fc3315`) — der Neuansatz ist
    kein Ausweg aus Befunden;
    (d) der Bericht trägt einen erzeugten Block „frühere Versuche“: Zahl,
-   Grund und Urteil je Versuch (LAB-042 Log the outcome — failures too).
+   Grund und Urteil je Versuch (LAB-042 Log the outcome — failures too);
+   (e) ein unwiederbringlich verlorener Record (nie gestagt, gelöscht)
+   bleibt als Evidenzverlust dokumentiert — im Journal und im Block —, und
+   der neue Versuch macht den alten nicht rückwirkend gültig;
+   (f) der Kriterienvergleich (Latte bei der ersten Messung gegen heute)
+   hält im selben Bau, und sein Fortsetzungsweg ist dieser Neuansatz.
    Ohne (d) wird Behalten zu Ablegen und der Neuansatz zum Probieren bis
    grün. Offen: Name und Ort (vorher `/naming`); ob ein verfehltes
    Kriterium einen Neuansatz zulässt (sein Urteil bleibt dann im Block)
    oder nur Implementierungsfehler und ungültige Registrierung; für das
    Labor, ob Bereich 09 einen ehrlich gemeldeten Abbruch von einem
    Ausweichen trennt — heute sind beide „Standard nicht erfüllt“.
-   Auslöser für den Bau: Reparaturfall oder nächste Runde zeigen erneut
-   Löschen vor einem neuen Versuch.
 4. **Prüfmatrix der Ausweichaktionen, Runden 1–9 (2026-10-26):**
    [Note](docs/notes/2026-10-26-escape-routes-checks-and-exits.md), je
-   Ausweg ein Check und ein genannter nächster Schritt. Neu gefunden, ohne
-   Bauauftrag:
-   (a) Entscheidungs- und Berichtsreviews stehen nicht im Journal — ein
-   nie gestagtes Review mit Claims kann gelöscht werden (neunte Runde t5
-   tat es).
+   Ausweg ein Check und ein genannter nächster Schritt. Neu gefunden:
+   (a) Entscheidungs- und Berichtsreviews standen nicht im Journal —
+   umgesetzt (`9493acd`).
    (b) Eine nach der ersten Messung gesenkte Latte mit neuem Lauf hält
-   kein Gate (Wegwerftest: 0.8 → 0.6, Registrierungsstation Exit 0).
-   `audit.BLOCKER_ROUTES` sagt „report-check holds a registration changed
-   after it“ — stimmt für fehlende Felder und den Typ, nicht für den
-   Wert. Entweder Text einschränken oder Prüfung bauen.
+   kein Gate (Wegwerftest: 0.8 → 0.6, Registrierungsstation Exit 0). Der
+   Text verspricht es nicht mehr (`f5f68bc`); die Prüfung kommt mit
+   Punkt 3 (f).
    (c) Ein nie gestagter, gelöschter Record lässt keinen Ausweg außer
-   `git checkout`/`git add`; der Ausweg wäre Punkt 3.
+   `git checkout`/`git add`; der Ausweg ist Punkt 3 (e).
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
