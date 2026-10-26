@@ -354,10 +354,22 @@ def state(record: findings.Record, n: int, reviews: list[Review], text: str) -> 
     sentence: `upheld`, `rejected: <why>`, `insufficient: <why>`,
     `contested (<counts>): <the first sentence that did not uphold>` when
     draws on this state disagree, or NOT_REVIEWED (never, or not as
-    decided and claimed now)."""
+    decided and claimed now) — followed, when a review of the record once
+    did not uphold the finding at another decision or claim
+    (`once_not_upheld`), by that verdict: a changed Conclusion or decision
+    asks for a new review, and the reader still sees what the last one
+    said (eighth haiku round, t5: after a Conclusion edit a rejected
+    decision showed as plain "not reviewed"). The grade a gate gives it
+    does not change."""
     verdicts = verdicts_on_state(record, n, reviews, text)
     if not verdicts:
-        return NOT_REVIEWED
+        was = once_not_upheld(record, n, reviews)
+        if was is None:
+            return NOT_REVIEWED
+        return (
+            f"{NOT_REVIEWED} as decided and claimed now; earlier "
+            f"{was.verdict}: {was.why}"
+        )
     kinds = {d.verdict for d in verdicts}
     if kinds == {UPHELD}:
         return UPHELD

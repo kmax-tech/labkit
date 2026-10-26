@@ -308,6 +308,34 @@ class TheCall(unittest.TestCase):
             reviews.claim_digest(text.replace("c1_pass = True", "c1_pass = False")),
         )
 
+    def test_a_rejection_before_a_claim_edit_stays_in_the_sentence(self):
+        """Eighth haiku round (t5, decision 08-48 #2): the review rejected a
+        decision, the agent edited the Conclusion, and report-check named
+        the decision only "not reviewed" — the rejection was out of sight.
+        Now the state says not reviewed as claimed now and what the earlier
+        review said; the grade is unchanged (a WARNING stays a warning)."""
+        for grade, code_now in ((WARNING, 0), (BLOCKER, 1)):
+            area, record = area_with([grade], {1: ("accepted", "noted", "stands")})
+            run_review(area, REJECTED)
+            proto = area / "PROTOCOL-x.md"
+            text = proto.read_text(encoding="utf-8").replace(
+                "the fit is in-sample; nothing more is claimed.",
+                "the fit is in-sample; C1 is not assessable with this run.",
+            )
+            proto.write_text(text, encoding="utf-8")
+            state = reviews.state(
+                findings.read(record), 1, reviews.area_reviews(area), text
+            )
+            self.assertTrue(
+                state.startswith(
+                    "not reviewed as decided and claimed now; earlier rejected: "
+                ),
+                state,
+            )
+            code, out = gate(area)
+            self.assertEqual(code, code_now, out)
+            self.assertIn("earlier rejected: the reason restates", out)
+
     def test_a_review_nobody_can_read_is_named_by_the_gate(self):
         area, _ = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
         run_review(area, UPHELD)

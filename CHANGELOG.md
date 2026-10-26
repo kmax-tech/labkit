@@ -166,6 +166,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A review's rejection stays in sight after the claim changes.** In the
+  eighth haiku round (2026-10-26, t5) the decision review rejected
+  decision 08-48 #2, the agent edited the Conclusion, and report-check
+  named the decision only "not reviewed": the review binds the claim, so
+  the edit made it stale, and the rejection vanished from the sentence.
+  `reviews.state` now says "not reviewed as decided and claimed now;
+  earlier rejected: <why>" when a review of the record once did not
+  uphold the finding (`reviews.once_not_upheld`). The release rule is
+  unchanged: an accepted WARNING's `stands` stays a warning.
+
 - **The stop holds what the session committed, not only what git status
   shows.** In the eighth haiku round (2026-10-26, t3) the agent committed
   REPORT.md with `git commit --no-verify`; the tree was clean, and the stop
