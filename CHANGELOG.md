@@ -187,6 +187,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The invalid-registration route promises only what is checked.** The
+  decision list said "report-check holds a registration changed after
+  it"; it holds a field the kind owes that was not written at the first
+  measurement's commit, and a kind changed since — not a value: a bar
+  lowered after the first measurement and measured again passes the
+  registration check (probe, `docs/notes/2026-10-26-escape-routes-checks-and-exits.md`).
+  The text now says what is held; `docs/workflow.md` and the architecture
+  table say that a value is not compared yet.
 - **report-check prints the area in every command it names.** A check
   that does not know the working directory leaves `<area>` in a step
   (`labkit-audit <area> --mode analysis` follows a decided BLOCKER up);

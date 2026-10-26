@@ -71,9 +71,11 @@ and should fields filled" once these stand; the Conclusion is not among
 them — it is owed after the run (step 7), and `--list` keeps it under
 "after the run — yours". The commit matters: the release
 holds the registration to the commit of the first measurement, not to the
-tree at the time of the run (`report-check` stage 2, the registration) — the
-kind included: that commit is judged by the kind the protocol declares today,
-so a kind changed after the measurement holds the report. A kind chosen wrong
+tree at the time of the run (`report-check` stage 2, the registration): the
+fields the kind owes must stand in that commit — the kind included: that
+commit is judged by the kind the protocol declares today, so a kind changed
+after the measurement holds the report. A field's value changed after that
+commit (a bar lowered) is not compared yet. A kind chosen wrong
 is corrected before the first measurement (`labkit-init exp NAME --kind KIND
 --change-kind`); after it, a new protocol registers the other kind. At `high`
 the registration becomes a freeze instead: `preflight` clean, the

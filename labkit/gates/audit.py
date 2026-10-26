@@ -1283,7 +1283,12 @@ def _stamp_report(
 READ_HINT = re.compile(r"^[\s>*`-]*\**READ\**\s*(?:·|—|–|:)")
 #: what a BLOCKER is and what closes it, printed above the decisions: an
 #: agent whose code missed the registered bar moved the bar to the score
-#: (ninth haiku round, t5: 0.75 registered, 0.65 written after the audit)
+#: (ninth haiku round, t5: 0.75 registered, 0.65 written after the audit).
+#: A route promises only what a gate checks: report-check holds the fields
+#: the kind owes and the kind to the first measurement's commit
+#: (`report_check.registration_gaps`), not their values — a bar lowered
+#: after it and measured again is not held yet (TODO, with the fresh
+#: attempt that keeps its predecessor)
 BLOCKER_ROUTES = (
     "  before deciding a BLOCKER, name which of these it is:",
     "    the code does not do what the registration says (an implementation "
@@ -1293,8 +1298,9 @@ BLOCKER_ROUTES = (
     "moved after the number is seen fixes nothing",
     "    the registration cannot be answered as written (an invalid "
     "registration): it is not repaired in place — what stood before the first "
-    "measurement stays what it was (report-check holds a registration changed "
-    "after it). Register anew: a new protocol (`labkit-init exp <new-name> "
+    "measurement stays what it was (report-check holds a field the kind owes "
+    "that was not written by then, and a kind changed since). Register anew: a "
+    "new protocol (`labkit-init exp <new-name> "
     "--kind …`) committed before its own first run, whose Context names the "
     "earlier protocol and why it was replaced; the earlier protocol, its runs "
     "and their verdict stay, and the report names both",
