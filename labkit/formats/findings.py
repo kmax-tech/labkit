@@ -178,6 +178,32 @@ class Finding:
         return self.grade in EFFECT_GRADES and self.status == "accepted"
 
 
+#: an analysis audit's verdict on the repair of an earlier `fixed` BLOCKER:
+#: the fault is gone in the files and rows it was shown, still there, or
+#: not to be judged from them (no diagnostic shown that could tell)
+FIX_VERDICTS = ("resolved", "unresolved", "not_assessable")
+
+
+@dataclass(frozen=True)
+class FixVerdict:
+    """An analysis audit's verdict on one earlier `fixed` BLOCKER: the
+    record and number it stands in, the decision as it was shown
+    (`decision_digest`), the verdict and its why. Bound to that decision:
+    a changed status or reason is another decision, which this verdict
+    says nothing about."""
+
+    record: str  # the earlier record's file name
+    n: int  # the finding's number in it, as `--decide` takes it
+    decision_sha: str
+    verdict: str  # one of FIX_VERDICTS
+    why: str
+
+    @property
+    def ref(self) -> str:
+        """`<record>#<n>` — how the auditor names the finding."""
+        return f"{self.record}#{self.n}"
+
+
 def decision_digest(f: Finding) -> str:
     """The digest of F as decided — grade, text, status, reason, effect —
     which a review binds to (`reviews.Decision.decision_sha`): a changed
@@ -230,6 +256,9 @@ class Record:
     shown_sha: str | None
     verdict: tuple[int, int, int]
     findings: tuple[Finding, ...]
+    # mode analysis: its verdicts on earlier `fixed` BLOCKERs, one per
+    # finding at most; a finding shown without one is unchecked
+    fix_verdicts: tuple[FixVerdict, ...] = ()
 
     @property
     def open(self) -> list[Finding]:
@@ -313,6 +342,34 @@ def open_findings(
         for r in records
         if mode is None or r.mode == mode
         for f in r.open
+    ]
+
+
+@dataclass(frozen=True)
+class FixedBlocker:
+    """A BLOCKER decided `fixed`, with the record it stands in and its number."""
+
+    record: Record
+    n: int
+    finding: Finding
+
+    @property
+    def ref(self) -> str:
+        """`<record>#<n>` — how the analysis audit's prompt names it."""
+        return f"{self.record.path.name}#{self.n}"
+
+
+def fixed_blockers(records: Iterable[Record]) -> list[FixedBlocker]:
+    """Every BLOCKER decided `fixed` in RECORDS, in record order — what the
+    next analysis audit is shown to judge whether the repair holds. A
+    `fixed` names a repair; whether it holds is not the decider's word
+    (eighth haiku round, t3: a leak `fixed` by dropping one of two leaking
+    features, the check the finding asked for never run)."""
+    return [
+        FixedBlocker(r, n, f)
+        for r in records
+        for n, f in enumerate(r.findings, 1)
+        if f.grade == "BLOCKER" and f.status == "fixed"
     ]
 
 
@@ -413,6 +470,7 @@ def write(
     registration: Mapping[str, str],
     run_id: str | None = None,
     shown_sha: str | None = None,
+    fix_verdicts: Iterable[FixVerdict] = (),
     now: float | None = None,
 ) -> Path:
     """Write the audit's findings file into AREA/audits/ and return its path.
@@ -428,6 +486,10 @@ def write(
     (`count_problem`) and a verdict whose blockers and warnings are not
     exactly the BLOCKER and WARNING lines of FINDINGS (`verdict_disagrees`):
     a finding line is never withdrawn by prose below it.
+    FIX_VERDICTS are written as `[[fix_verdict]]` tables after the
+    findings, in mode analysis only; a verdict outside FIX_VERDICTS, one
+    without its why and a second one on the same finding are refused
+    (`fix_verdict_problem`).
     """
     if mode not in MODES:
         raise ValueError(f"mode {mode!r} — one of {', '.join(MODES)}")
@@ -445,6 +507,7 @@ def write(
         problem = count_problem(key, value)
         if problem:
             raise ValueError(f"verdict: {problem}")
+    fix_lines = _fix_verdict_lines(mode, fix_verdicts)
     disagree = verdict_disagrees(verdict, [grade for grade, _ in findings])
     if disagree:
         raise ValueError(
@@ -485,7 +548,54 @@ def write(
             'status = "open"',
             'reason = ""',
         ]
+    lines += fix_lines
     return create_file(area / DIR, f"{stamp}-{mode}", ".toml", "\n".join(lines) + "\n")
+
+
+def _fix_verdict_lines(mode: str, verdicts: Iterable[FixVerdict]) -> list[str]:
+    """VERDICTS as the `[[fix_verdict]]` tables a record ends with. Raises
+    ValueError on verdicts outside mode analysis and on what
+    `fix_verdict_problem` refuses."""
+    verdicts = tuple(verdicts)
+    if verdicts and mode != "analysis":
+        raise ValueError(
+            f"mode {mode!r} with fix verdicts: only an analysis audit judges "
+            f"earlier repairs"
+        )
+    problem = fix_verdict_problem(verdicts)
+    if problem:
+        raise ValueError(problem)
+    lines: list[str] = []
+    for v in verdicts:
+        lines += [
+            "",
+            "[[fix_verdict]]",
+            f"record = {_s(v.record)}",
+            f"n = {v.n}",
+            f"decision_sha = {_s(v.decision_sha)}",
+            f"verdict = {_s(v.verdict)}",
+            f"why = {_s(v.why)}",
+        ]
+    return lines
+
+
+def fix_verdict_problem(verdicts: Iterable[FixVerdict]) -> str | None:
+    """Why VERDICTS cannot stand in one record, or None: a verdict outside
+    FIX_VERDICTS, an empty why, a number below 1, or two verdicts on one
+    finding — which of two would count is no question a gate should answer.
+    One rule for the writer and the reader."""
+    seen: set[str] = set()
+    for v in verdicts:
+        if v.verdict not in FIX_VERDICTS:
+            return f"fix verdict on {v.ref}: {v.verdict!r} — one of {', '.join(FIX_VERDICTS)}"
+        if not v.why.strip():
+            return f"fix verdict on {v.ref}: no why"
+        if v.n < 1:
+            return f"fix verdict on {v.ref}: finding numbers start at 1"
+        if v.ref in seen:
+            return f"fix verdict on {v.ref}: a second verdict on the same finding"
+        seen.add(v.ref)
+    return None
 
 
 def create_file(folder: Path, name: str, suffix: str, text: str) -> Path:
@@ -619,6 +729,12 @@ def _record_of(path: Path, text: str) -> Record:
     if not isinstance(rows, list):
         raise FindingsError(f"{path}: `finding` must be [[finding]] tables")
     parsed = tuple(_finding(path, i, row) for i, row in enumerate(rows, start=1))
+    verdicts = _fix_verdicts(path, data.get("fix_verdict", []))
+    if verdicts and audit["mode"] != "analysis":
+        raise FindingsError(
+            f"{path}: fix_verdict in a {audit['mode']} audit — only an analysis "
+            f"audit judges earlier repairs"
+        )
     outrun = counts_outrun(
         (audit["blockers"], audit["warnings"], audit["notes"]),
         [f.grade for f in parsed],
@@ -637,7 +753,40 @@ def _record_of(path: Path, text: str) -> Record:
         audit.get("shown_sha"),
         (audit["blockers"], audit["warnings"], audit["notes"]),
         parsed,
+        verdicts,
     )
+
+
+_FIX_VERDICT_KEYS = {"record", "n", "decision_sha", "verdict", "why"}
+
+
+def _fix_verdicts(path: Path, rows: object) -> tuple[FixVerdict, ...]:
+    """The `[[fix_verdict]]` tables, each held to its five fields and their
+    types, together to `fix_verdict_problem`."""
+    if not isinstance(rows, list):
+        raise FindingsError(f"{path}: `fix_verdict` must be [[fix_verdict]] tables")
+    out: list[FixVerdict] = []
+    for i, row in enumerate(rows, start=1):
+        if not isinstance(row, dict) or set(row) != _FIX_VERDICT_KEYS:
+            raise FindingsError(
+                f"{path}: fix_verdict {i}: the fields are exactly "
+                f"{', '.join(sorted(_FIX_VERDICT_KEYS))}"
+            )
+        n = row["n"]
+        if not isinstance(n, int) or isinstance(n, bool):
+            raise FindingsError(f"{path}: fix_verdict {i}: n = {n!r} is not an integer")
+        for key in ("record", "decision_sha", "verdict", "why"):
+            if not isinstance(row[key], str):
+                raise FindingsError(f"{path}: fix_verdict {i}: {key} is not a string")
+        out.append(
+            FixVerdict(
+                row["record"], n, row["decision_sha"], row["verdict"], row["why"]
+            )
+        )
+    problem = fix_verdict_problem(out)
+    if problem:
+        raise FindingsError(f"{path}: {problem}")
+    return tuple(out)
 
 
 _FINDING_HEADER = re.compile(r"^\s*\[\[\s*finding\s*\]\]\s*(?:#.*)?$")

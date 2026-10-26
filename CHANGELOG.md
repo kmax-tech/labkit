@@ -693,6 +693,21 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **The analysis audit judges every earlier `fixed` BLOCKER.** The prompt
+  shows each BLOCKER of the area decided `fixed`, as `<record>#<n>` with
+  the reason it was closed with; the auditor writes one `FIX · <record>#<n>
+  · resolved|unresolved|not_assessable · <why>` line per finding, from the
+  files and rows shown only. The record stores them as `[[fix_verdict]]`
+  tables, each bound to the decision as shown (`findings.decision_digest`):
+  a changed status or reason is another decision. A FIX line that does not
+  read, one on a finding the prompt did not show, a second one on the
+  same finding, a word outside the three, and a shown decision changed
+  during the call record nothing (exit 2); a shown finding without a line
+  has no verdict and stays unchecked. No gate reads the verdicts yet: they
+  are the pilot's data (eighth haiku round, t3: a leak closed `fixed` by
+  dropping one of two leaking features, the check the finding asked for
+  never run). A record without fix verdicts reads as before.
+
 - **`labkit-audit AREA --report-review REPORT`: a cold reader on a report
   that discusses a run (a discussion block).** In the seventh haiku round
   both agents that took the mark (t3, t18) left the run's numbers in the

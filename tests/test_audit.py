@@ -787,3 +787,159 @@ class DecisionListReachesThePerson(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FixVerdicts(unittest.TestCase):
+    """The analysis audit judges every earlier `fixed` BLOCKER (eighth haiku
+    round, t3: a leak `fixed` by dropping one of two leaking features, the
+    check the finding asked for never run). One verdict per shown finding,
+    bound to the decision shown; what does not read refuses the record,
+    what is left out stays unchecked — never resolved."""
+
+    LEAK = "BLOCKER · scripts/01_measure.py:9 · G_VRH and poisson_ratio give K · c1 · new class · drop both"
+
+    def area(self) -> tuple[Path, Path]:
+        """An area with an answering run and an earlier analysis record
+        whose BLOCKER #1 is decided `fixed`."""
+        area = OneSnapshot.area(OneSnapshot())
+        earlier = findings.write(
+            area,
+            "analysis",
+            "opus",
+            "0" * 12,
+            "1" * 12,
+            (1, 0, 0),
+            [("BLOCKER", self.LEAK)],
+            registration={"kind": "compute"},
+            run_id="2026-01-01T00-00-00_0001",
+            shown_sha="2" * 12,
+            now=0,
+        )
+        findings.write_decision(earlier, 1, "fixed", "dropped poisson_ratio")
+        return area, earlier
+
+    def audit(
+        self, area: Path, answer: str, during=None
+    ) -> tuple[int, str, str, list[str]]:
+        sent: list[str] = []
+
+        def fake(alias, prompt, **kw):
+            sent.append(prompt)
+            if during is not None:
+                during()
+            return answer
+
+        out, err = io.StringIO(), io.StringIO()
+        with (
+            mock.patch.object(audit.llm, "complete", fake),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(err),
+        ):
+            rc = audit.main([str(area), "--mode", "analysis"])
+        return rc, out.getvalue(), err.getvalue(), sent
+
+    def new_records(self, area: Path, earlier: Path) -> list[findings.Record]:
+        return [r for r in findings.area_records(area) if r.path != earlier]
+
+    def test_the_prompt_shows_each_fixed_blocker_and_the_verdict_is_bound(self):
+        area, earlier = self.area()
+        ref = f"{earlier.name}#1"
+        answer = f"FIX · {ref} · unresolved · scripts/01_measure.py:9 still reads G_VRH\n{CLEAN}"
+        rc, out, err, sent = self.audit(area, answer)
+        self.assertEqual(rc, 0, err)
+        self.assertIn(
+            f"===== EARLIER FIXED BLOCKERS =====\n{ref}\n  finding: {self.LEAK}\n"
+            f"  closed as fixed: dropped poisson_ratio\n",
+            sent[0],
+        )
+        (record,) = self.new_records(area, earlier)
+        (v,) = record.fix_verdicts
+        decided = findings.read(earlier).findings[0]
+        self.assertEqual(
+            (v.record, v.n, v.verdict, v.decision_sha),
+            (earlier.name, 1, "unresolved", findings.decision_digest(decided)),
+        )
+        self.assertIn(f"fix {ref}: unresolved — scripts/01_measure.py:9", out)
+
+    def test_a_shown_finding_without_a_line_stays_unchecked(self):
+        area, earlier = self.area()
+        rc, out, err, _ = self.audit(area, CLEAN)
+        self.assertEqual(rc, 0, err)
+        (record,) = self.new_records(area, earlier)
+        self.assertEqual(record.fix_verdicts, ())
+        self.assertIn(
+            f"fix {earlier.name}#1: no verdict — its repair stays unchecked", out
+        )
+
+    def test_what_does_not_read_records_nothing(self):
+        """A twin each for the parser: an unknown finding, a second verdict,
+        a word outside the three, a FIX line in another form — no record."""
+        cases = {
+            "unknown": "FIX · 1970-01-01T01-00-analysis.toml#2 · resolved · gone\n",
+            "second": "FIX · {ref} · resolved · gone\nFIX · {ref} · unresolved · not gone\n",
+            "word": "FIX · {ref} · fixed · gone\n",
+            "form": "FIX · {ref} resolved\n",
+        }
+        for name, lines in cases.items():
+            with self.subTest(name):
+                area, earlier = self.area()
+                answer = lines.format(ref=f"{earlier.name}#1") + CLEAN
+                rc, _, err, sent = self.audit(area, answer)
+                self.assertEqual((rc, len(sent)), (2, 1), err)
+                self.assertEqual(self.new_records(area, earlier), [])
+
+    def test_a_decision_changed_while_the_auditor_read_refuses_the_record(self):
+        area, earlier = self.area()
+        answer = f"FIX · {earlier.name}#1 · resolved · gone\n{CLEAN}"
+
+        def redecide():
+            findings.write_decision(earlier, 1, "fixed", "dropped both features")
+
+        rc, _, err, _ = self.audit(area, answer, during=redecide)
+        self.assertEqual(rc, 2)
+        self.assertIn("changed while the auditor read it", err)
+        self.assertEqual(self.new_records(area, earlier), [])
+
+    def test_only_blockers_decided_fixed_are_shown(self):
+        area, earlier = self.area()
+        findings.write_decision(earlier, 1, "accepted", "kept", "stands")
+        _, _, _, sent = self.audit(area, CLEAN)
+        self.assertIn("===== EARLIER FIXED BLOCKERS =====\nnone:", sent[0])
+
+    def test_the_record_holds_its_fix_verdicts_to_their_form(self):
+        area, _ = self.area()
+        v = findings.FixVerdict("a.toml", 1, "3" * 12, "resolved", "gone")
+
+        def write(mode: str, verdicts: list[findings.FixVerdict]) -> Path:
+            analysis = mode == "analysis"
+            return findings.write(
+                area,
+                mode,
+                "opus",
+                "0" * 12,
+                "1" * 12,
+                (0, 0, 0),
+                [],
+                registration={"kind": "compute"},
+                run_id="r" if analysis else None,
+                shown_sha="s" * 12 if analysis else None,
+                fix_verdicts=verdicts,
+            )
+
+        with self.assertRaisesRegex(ValueError, "only an analysis audit"):
+            write("preflight", [v])
+        with self.assertRaisesRegex(ValueError, "second verdict"):
+            write("analysis", [v, v])
+        path = write("analysis", [v])
+        self.assertEqual(findings.read(path).fix_verdicts, (v,))
+        text = path.read_text(encoding="utf-8")
+        for edit, problem in (
+            ('verdict = "resolved"', 'verdict = "fixed"'),
+            ('why = "gone"', 'why = "gone"\nextra = 1'),
+            ("n = 1", 'n = "1"'),
+        ):
+            with self.subTest(problem):
+                path.write_text(text.replace(edit, problem), encoding="utf-8")
+                with self.assertRaises(findings.FindingsError):
+                    findings.read(path)

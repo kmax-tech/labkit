@@ -163,8 +163,9 @@ INLINE_NOTE = (
     "run's output rows under `===== ROWS <path> … =====` lines, each row as "
     "`<line>: <row>`, and for a computation over a model's annotations the "
     "evidence that the annotator suits under `===== EVIDENCE: … =====` lines "
-    "(the bound apply protocol and its result as FILE lines). Nothing else is "
-    "in scope."
+    "(the bound apply protocol and its result as FILE lines), and the area's "
+    "earlier `fixed` BLOCKERs under one `===== EARLIER FIXED BLOCKERS =====` "
+    "line. Nothing else is in scope."
 )
 
 
@@ -308,6 +309,7 @@ class Source(NamedTuple):
     read: Callable[[Path], str]
     run: tuple[tuple[str, str], ...] = ()
     evidence: tuple[tuple[str, str], ...] = ()  # `validity_evidence`
+    fixes: tuple[tuple[str, str], ...] = ()  # `fixed_piece`, MODE analysis
 
 
 DOI_ONLY = (
@@ -449,11 +451,99 @@ def render(
         pieces += source.evidence
         if mode == ANALYSIS:
             pieces += source.run
+            pieces += source.fixes
     body = "".join(f"===== {label} =====\n{text}\n" for label, text in pieces)
     return (
         f"{instructions(mode)}\n\nMODE: {mode} · AREA: {rel(area)}\n\n"
         f"{INLINE_NOTE}\n\n{body}"
     )
+
+
+#: the label of the piece that shows the earlier `fixed` BLOCKERs
+FIXED_LABEL = "EARLIER FIXED BLOCKERS"
+#: a line that opens as a fix verdict — read whole or refused, never skipped
+FIX_OPEN = re.compile(r"^[\s>*`-]*\**FIX\**\s*(?:·|—|–|:)", re.M)
+#: a fix verdict line: `FIX · <record>#<n> · <verdict> · <why>`
+FIX = re.compile(
+    r"^[\s>*`-]*\**FIX\**\s*(?:·|—|–|:)\s*`?(?P<record>[^\s`#]+)#(?P<n>\d+)`?\s*"
+    r"(?:·|—|–|:)\s*`?(?P<verdict>[a-z_]+)`?\s*(?:·|—|–|:)\s*(?P<why>\S.*)$"
+)
+
+
+def fixed_piece(earlier: list[findings.FixedBlocker]) -> tuple[tuple[str, str], ...]:
+    """What MODE analysis shows of EARLIER: one `(label, text)` piece with
+    every `fixed` BLOCKER as `<record>#<n>`, its text and the reason it was
+    closed with — or one saying there is none."""
+    if not earlier:
+        return ((FIXED_LABEL, "none: no BLOCKER of this area is decided `fixed`"),)
+    entries = [
+        f"{e.ref}\n  finding: {e.finding.text}\n  closed as fixed: "
+        f"{e.finding.reason or '(no reason given)'}"
+        for e in earlier
+    ]
+    return ((FIXED_LABEL, "\n".join(entries)),)
+
+
+def parse_fixes(
+    text: str, earlier: list[findings.FixedBlocker]
+) -> list[findings.FixVerdict]:
+    """The report's `FIX · <record>#<n> · <verdict> · <why>` lines before the
+    last verdict line, each bound to the decision EARLIER showed for that
+    finding (`findings.decision_digest`) — labkit attaches the digest, the
+    auditor names the finding. Raises AuditError on a FIX line that does not
+    read whole, a finding the prompt did not show, a verdict outside
+    `findings.FIX_VERDICTS`, and a second verdict on one finding: none of
+    them may release a repair, and a guess at what was meant would. A
+    shown finding without a line gets no verdict — unchecked, never
+    resolved."""
+    m = list(VERDICT.finditer(text or ""))
+    body = (text or "")[: m[-1].start()] if m else (text or "")
+    shown = {e.ref: e for e in earlier}
+    out: list[findings.FixVerdict] = []
+    for line in body.splitlines():
+        if not FIX_OPEN.match(line):
+            continue
+        f = FIX.match(line.strip())
+        if f is None:
+            raise AuditError(
+                f"a FIX line that does not read: {line.strip()[:160]!r} — the form "
+                f"is `FIX · <record>#<n> · resolved|unresolved|not_assessable · <why>`"
+            )
+        ref = f"{f['record']}#{f['n']}"
+        e = shown.get(ref)
+        if e is None:
+            raise AuditError(
+                f"a FIX verdict on {ref}, which the prompt did not show — the shown "
+                f"ones: {', '.join(shown) or 'none'}"
+            )
+        out.append(
+            findings.FixVerdict(
+                e.record.path.name,
+                e.n,
+                findings.decision_digest(e.finding),
+                f["verdict"],
+                f["why"].strip(),
+            )
+        )
+    problem = findings.fix_verdict_problem(out)
+    if problem:
+        raise AuditError(problem)
+    return out
+
+
+def decisions_moved(earlier: list[findings.FixedBlocker], area: Path) -> list[str]:
+    """The refs in EARLIER whose decision is no longer the one the prompt
+    showed — the record re-read now, gone or another digest. A verdict on a
+    decision that changed while the auditor read it judges neither."""
+    now = {e.ref: findings.decision_digest(e.finding) for e in earlier_now(area)}
+    return [
+        e.ref for e in earlier if now.get(e.ref) != findings.decision_digest(e.finding)
+    ]
+
+
+def earlier_now(area: Path) -> list[findings.FixedBlocker]:
+    """The area's `fixed` BLOCKERs as its records hold them now."""
+    return findings.fixed_blockers(findings.area_records(area))
 
 
 def parse_clarity(text: str) -> dict:
@@ -700,9 +790,18 @@ def _report_room(alias: str) -> int | None:
 
 def bound_prompt(
     mode: str, area: Path, reading: Reading
-) -> tuple[str, Stamp, str, str | None, str | None, list[Path], dict[str, str]]:
+) -> tuple[
+    str,
+    Stamp,
+    str,
+    str | None,
+    str | None,
+    list[Path],
+    dict[str, str],
+    list[findings.FixedBlocker],
+]:
     """(prompt, stamp, block sha, run id, shown sha, indexed files,
-    registration) from ONE reading:
+    registration, the earlier `fixed` BLOCKERs shown) from ONE reading:
     the record binds what the prompt shows. The code is one snapshot: its
     bytes render the prompt, its sha goes in the record, and every stamped
     file the reading does not take in full is indexed — so the prompt shows
@@ -710,7 +809,9 @@ def bound_prompt(
     the registration (`protocol_check.registration_stamp`) come from the one
     protocol text the prompt carries; in MODE analysis
     the run is chosen once, and what the prompt shows of it is one snapshot
-    whose digest goes in the record (NO_RUN when none answers).
+    whose digest goes in the record (NO_RUN when none answers), and the
+    area's `fixed` BLOCKERs are read once: the prompt shows them, and each
+    verdict on one is bound to the decision shown (`parse_fixes`).
 
     The reading's file list was taken before the snapshot. After rendering,
     the list, the snapshot and the protocol are taken again; any change
@@ -728,6 +829,7 @@ def bound_prompt(
         run_dir, why = audited_run(area, protocol, text)
         run_id = run_dir.name if run_dir is not None else findings.NO_RUN
         shown = run_shown(area, run_dir, why)
+    earlier = earlier_now(area) if mode == ANALYSIS else []
     changed = "the area changed while it was read; run the audit again"
     try:
         prompt = render(
@@ -742,6 +844,7 @@ def bound_prompt(
                 snap.text,
                 shown.pieces if shown else (),
                 validity_evidence(area, text),
+                fixed_piece(earlier) if mode == ANALYSIS else (),
             ),
         )
     except KeyError as exc:
@@ -763,6 +866,7 @@ def bound_prompt(
         shown_sha,
         indexed,
         protocol_check.registration_stamp(text),
+        earlier,
     )
 
 
@@ -853,9 +957,16 @@ def main(argv: list[str]) -> int:
         protocol, code = reading.protocol, reading.code
         for finding in early_for_tier(args.area, protocol, args.mode):
             console.progress("labkit-audit", finding.line)
-        prompt, stamp, block_sha, run_id, shown_sha, indexed, registration = (
-            bound_prompt(args.mode, args.area, reading)
-        )
+        (
+            prompt,
+            stamp,
+            block_sha,
+            run_id,
+            shown_sha,
+            indexed,
+            registration,
+            earlier,
+        ) = bound_prompt(args.mode, args.area, reading)
         console.progress(
             "labkit-audit",
             f"{args.mode} · {protocol.name} · {len(code)} code file(s) "
@@ -888,6 +999,7 @@ def main(argv: list[str]) -> int:
             shown_sha,
             indexed,
             registration,
+            earlier,
         )
     finally:
         if not running.ended:
@@ -904,13 +1016,24 @@ def _record(
     shown_sha: str | None,
     indexed: list[Path],
     registration: dict[str, str],
+    earlier: list[findings.FixedBlocker],
 ) -> int:
     """Read REPORT, write its record and end RUNNING with it; print what the
     person decides. Exit 1 on a blocker or a warning, 0 on none, 2 when the
-    report does not read (the attempt ends without a record, said why)."""
+    report does not read, its FIX lines do not (`parse_fixes`), or a shown
+    decision changed while the auditor read it (`decisions_moved`) — the
+    attempt ends without a record, said why."""
     console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
     try:
         result = parse(report)
+        fixes = parse_fixes(report, earlier)
+        moved = decisions_moved(earlier, args.area)
+        if moved:
+            raise AuditError(
+                f"the decision on {', '.join(moved)} changed while the auditor read "
+                f"it — its verdict would judge a decision that no longer stands; "
+                f"run the audit again"
+            )
     except (AuditError, ValueError) as exc:
         running.end("none", error=str(exc))
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
@@ -931,6 +1054,7 @@ def _record(
             registration=registration,
             run_id=run_id,
             shown_sha=shown_sha,
+            fix_verdicts=fixes,
         )
     except ValueError as exc:  # verdict and finding lines disagree
         running.end("none", error=str(exc))
@@ -949,7 +1073,26 @@ def _record(
     print()
     for line in decision_lines(findings.read(recorded), args.area, report):
         print(line)
+    for line in fix_lines(earlier, fixes):
+        print(line)
     return 1 if b or w else 0
+
+
+def fix_lines(
+    earlier: list[findings.FixedBlocker], fixes: list[findings.FixVerdict]
+) -> list[str]:
+    """One line per earlier `fixed` BLOCKER the audit was shown: its
+    verdict, or that it has none and its repair stays unchecked."""
+    given = {v.ref: v for v in fixes}
+    out = []
+    for e in earlier:
+        v = given.get(e.ref)
+        out.append(
+            f"  fix {e.ref}: {v.verdict} — {v.why}"
+            if v
+            else f"  fix {e.ref}: no verdict — its repair stays unchecked"
+        )
+    return out
 
 
 def _stamp_report(

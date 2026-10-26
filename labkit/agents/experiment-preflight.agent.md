@@ -119,6 +119,32 @@ you cannot take from the sample becomes an assignment, as below. When the
 `ROWS` line says there are none (no completed bound run, no registered
 output), say so in one line and audit the code alone.
 
+**In MODE analysis, judge every earlier `fixed` BLOCKER.** Under
+`===== EARLIER FIXED BLOCKERS =====` stand the area's BLOCKERs a person
+closed as `fixed`, each as `<record>#<n>` with the finding and the reason
+it was closed with. The reason is a claim, not evidence. For each one,
+write exactly one line:
+
+```
+FIX · <record>#<n> · resolved|unresolved|not_assessable · <why, citing file:line or the row or metric that shows it>
+```
+
+- `resolved` — the files and rows shown here show the fault gone: the
+  code no longer does what the finding names, and where the finding asked
+  for a check or diagnostic, its result is shown here (in the run's rows
+  or metrics.json) and says the fault is gone.
+- `unresolved` — the fault, or part of it, is still in the code or the
+  rows shown: a repair that removed one cause and left another is
+  unresolved.
+- `not_assessable` — the code changed, but what would show the fault gone
+  is not shown here: the check the finding asked for never ran, its result
+  is in no file you were given, or it belongs to an older run. A diagnostic
+  the reason only describes is not shown.
+
+Judge only from what is inlined. Leave no shown finding without its line;
+a finding you do not judge stays unchecked. A still-present fault needs no
+second BLOCKER line of its own — the `unresolved` line carries it.
+
 In MODE analysis the frozen criterion is fixed. If the code would need a
 different criterion to be correct, that IS the finding — never a
 recommendation to change the registration.
@@ -158,7 +184,7 @@ goes wrong, with what input> · <LAB-nnn rule name, or "new class"> · <smallest
 would remove the failure>
 ```
 
-In MODE analysis the `READ` lines follow the findings:
+In MODE analysis the `FIX` lines follow the findings, then the `READ` lines:
 
 ```
 READ · <file>:<line> · <what a reader stumbles on> · <the smallest rewrite>

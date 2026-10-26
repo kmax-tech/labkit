@@ -261,6 +261,19 @@ Offen mit Auslöser, ohne Bauauftrag:
 1. **Pilot zur Prüfung von `fixed`-Entscheidungen (t3):** Ein BLOCKER wurde
    `fixed` geschlossen, ohne dass die verlangte Prüfung lief. Die Frage ist,
    ob der benannte Fehler im neuen Code und Lauf tatsächlich beseitigt ist.
+   **Gebaut 2026-10-26, Messung offen:** Das Analyse-Audit urteilt je
+   früherem `fixed`-BLOCKER `resolved | unresolved | not_assessable`,
+   gespeichert als `[[fix_verdict]]`, gebunden an `decision_digest`;
+   Parser streng, ein fehlendes Urteil bleibt ungeprüft. Noch kein Gate.
+   Vor den bezahlten Aufrufen: Fälle, Merkmale, Diagnose und erwartete
+   Aussage in einer Pilotnotiz festhalten (vier Fälle, je drei Ziehungen).
+   Das Gate (Plan Schritt 3) wird erst nach dem Pilot festgelegt; dazu
+   gehören die Verbindung `unresolved` → `dismissed`/`deferred` zur
+   Entscheidungsprüfung, kein Freigeben durch erneutes Ziehen auf
+   unveränderter Grundlage und der Test, dass eine nach dem Audit
+   geänderte Diagnosedatei das Urteil veralten lässt (heute über
+   `shown_sha` des antwortenden Laufs; weitere Diagnoseläufe zeigt das
+   Audit nicht).
 2. **Zwei-Modell-Antwort der claude-cli (t18, dreimal):** Am
    Proxy-Mitschnitt prüfen, ob opus-4-8 neben opus-5-5 in `modelUsage` ein
    interner Hilfsaufruf ist. Bis dahin bleibt die Herkunftsprüfung
