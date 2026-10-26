@@ -862,6 +862,33 @@ class FixVerdicts(unittest.TestCase):
         )
         self.assertIn(f"fix {ref}: unresolved — scripts/01_measure.py:9", out)
 
+    def test_a_diagnostic_changed_after_the_audit_stales_the_verdict(self):
+        """The verdict rests on what the prompt showed of the run: a
+        metrics.json diagnostic changed afterwards leaves the record (and its
+        verdict) no longer covering the area (`shown_sha`); the twin, the
+        run untouched, still covers."""
+        area, earlier = self.area()
+        run = area / "runs" / "2026-01-01T00-00-00_0001"
+        (run / "metrics.json").write_text(
+            json.dumps({"c1_pass": True, "identity_r2_kept": 0.31}), encoding="utf-8"
+        )
+        answer = f"FIX · {earlier.name}#1 · resolved · metrics.json identity_r2_kept 0.31\n{CLEAN}"
+        rc, _, err, sent = self.audit(area, answer)
+        self.assertEqual(rc, 0, err)
+        self.assertIn('"identity_r2_kept": 0.31', sent[0])
+        (record,) = self.new_records(area, earlier)
+        self.assertEqual(record.fix_verdicts[0].verdict, "resolved")
+        text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
+
+        def covering() -> list[Path]:
+            return [r.path for r in audit_binding.covering_analysis(area, text, run)]
+
+        self.assertIn(record.path, covering())
+        (run / "metrics.json").write_text(
+            json.dumps({"c1_pass": True, "identity_r2_kept": 0.99}), encoding="utf-8"
+        )
+        self.assertNotIn(record.path, covering())
+
     def test_a_shown_finding_without_a_line_stays_unchecked(self):
         area, earlier = self.area()
         rc, out, err, _ = self.audit(area, CLEAN)

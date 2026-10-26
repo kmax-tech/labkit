@@ -967,6 +967,35 @@ class Estimator(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertIn("read from the index", out)
         lab.commit("the verdict, adopted")
+        self._the_class_counts_reach_the_report_block_and_are_held()
+
+    def _the_class_counts_reach_the_report_block_and_are_held(self) -> None:
+        """The input numbers come from the run: the scored rows' class counts
+        stand in Recorded results and in the report's block, and a block
+        whose count is typed over is held at the commit (twin: as written,
+        it passes). The audit record is the artificial one of `Lab.record`."""
+        lab = type(self).lab
+        text = self.protocol.read_text(encoding="utf-8")
+        self.assertIn("scored_class_counts = {'neg': 6, 'pos': 6}", text)
+        report = lab.root / "REPORT.md"
+        report.write_text("# Threshold\n\nThe result:\n\n", encoding="utf-8")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = protocol_fill.main([str(self.protocol), "--into", str(report)])
+        self.assertEqual(rc, 0, out.getvalue())
+        written = report.read_text(encoding="utf-8")
+        self.assertIn("scored_class_counts = {'neg': 6, 'pos': 6}", written)
+        lab.git("add", "REPORT.md")
+        rc, out = lab.pre_commit(report)
+        self.assertEqual(rc, 0, out)
+        report.write_text(written.replace("'neg': 6", "'neg': 7"), encoding="utf-8")
+        lab.git("add", "REPORT.md")
+        rc, out = lab.pre_commit(report)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("REPORT.md: line 5: the result block of", out)
+        self.assertIn("differs from the protocol's rendering", out)
+        report.write_text(written, encoding="utf-8")
+        lab.git("add", "REPORT.md")
 
 
 if __name__ == "__main__":
