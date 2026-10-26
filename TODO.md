@@ -418,6 +418,37 @@ Notiert, nicht geplant:
 
 1. Abgegebene Vorhersagen aus behaltenen Skripten statt aus Heredocs (t3, t5).
 2. Kein Verbot von `--no-verify`: Das wäre eine Regeländerung am Standard.
+3. **Neuansatz ohne Löschen (Vorschlag 2026-10-26, nicht entschieden).**
+   Drei Runden zeigen dasselbe Muster: Vor einem neuen Versuch löscht der
+   Agent die alten Audit-Records (sechste Runde t3; achte t18, `rm
+   audits/*.toml`; neunte t5, `rm -rf audits/`, Journal geleert, Records
+   von Hand). labkit sperrt das Löschen (Journal, fehlender Record blockt).
+   Die zulässige Form der Absicht „neu ansetzen“ steht seit `f8239cc` nur
+   als Text im Weg „ungültige Registrierung“ (`audit.BLOCKER_ROUTES`: neues
+   Protokoll, dessen Context das alte nennt; Altes bleibt; der Bericht
+   nennt beide) — kein Gate prüft Verweis oder Bericht, und `labkit-init
+   exp` legt einen neuen Bereich an, in den kein offener Befund mitgeht.
+   Die offenen BLOCKER des alten Bereichs halten den Stop weiter, solange
+   die Sitzung ihn berührt hat (`claude_hooks.undecided_blockers` →
+   `findings.open_findings`, alle Modi); kein Status sagt „gehört zu einem
+   aufgegebenen Versuch“ (gelesen, nicht ausprobiert).
+   Vorschlag, ein Schritt:
+   (a) der alte Versuch bleibt unverändert und wird als aufgegeben
+   markiert, mit Begründung und den Digests seiner Records;
+   (b) eine neue Registrierung nennt ihren Vorgänger;
+   (c) die offenen Befunde des alten Versuchs gehen ins erste Audit des
+   neuen (nach dem Muster der Folgeprüfung, `3fc3315`) — der Neuansatz ist
+   kein Ausweg aus Befunden;
+   (d) der Bericht trägt einen erzeugten Block „frühere Versuche“: Zahl,
+   Grund und Urteil je Versuch (LAB-042 Log the outcome — failures too).
+   Ohne (d) wird Behalten zu Ablegen und der Neuansatz zum Probieren bis
+   grün. Offen: Name und Ort (vorher `/naming`); ob ein verfehltes
+   Kriterium einen Neuansatz zulässt (sein Urteil bleibt dann im Block)
+   oder nur Implementierungsfehler und ungültige Registrierung; für das
+   Labor, ob Bereich 09 einen ehrlich gemeldeten Abbruch von einem
+   Ausweichen trennt — heute sind beide „Standard nicht erfüllt“.
+   Auslöser für den Bau: Reparaturfall oder nächste Runde zeigen erneut
+   Löschen vor einem neuen Versuch.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
