@@ -295,9 +295,17 @@ Offen mit Auslöser, ohne Bauauftrag:
    Pilot 0/3), kein `resolved` in A, B, D. Aber C und D schrieben keinen
    Record: Der Prüfer setzte auf einem neuen BLOCKER `· check: <key>
    (<Erklärung>)`, der strenge Leser verweigerte den ganzen Record; die
-   Urteile sind aus den Rohantworten gelesen. Offen vor jedem Gate
-   (Bericht): Form des check-Felds, Rohantwort bei verweigertem Record
-   aufbewahren, D ohne sichtbaren Schalter. Bisher:
+   Urteile sind aus den Rohantworten gelesen. **Behoben** (`34e90d7`):
+   `check` nimmt eine Notiz `(…)` oder `— …` bis Zeilenende, ganz
+   gespeichert und gebunden; jede Antwort liegt vor dem Lesen unter
+   `audits/answers/<Versuch>.txt`, das Journal nennt sie. Replay ohne
+   Modellaufruf (`aacf7bc`): 12/12 Records, gleiche Urteile. **Offen:**
+   D2 ohne sichtbaren Schalter, vorab festgelegt (`adc1d71`, drei
+   Ziehungen, Deckel 3 USD, `run_pilot2_d2.sh`) — bezahlter Schritt
+   wartet auf Freigabe; danach Gate anhand der gespeicherten Records
+   prüfen (ein neuer unabhängiger Befund wie die Nullspur-Streuung bleibt
+   eigenständig wirksam: `resolved` für den alten Leak gibt den Lauf
+   nicht frei). Bisher:
    **Gebaut 2026-10-26:** Das Analyse-Audit urteilt je
    früherem `fixed`-BLOCKER `resolved | unresolved | not_assessable`,
    gespeichert als `[[fix_verdict]]`, gebunden an `decision_digest`;
