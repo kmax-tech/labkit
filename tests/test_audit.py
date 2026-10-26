@@ -899,6 +899,90 @@ class FixVerdicts(unittest.TestCase):
             f"fix {earlier.name}#1: no verdict — its repair stays unchecked", out
         )
 
+    #: the FIX entry of pilot draw B-2 (2026-10-26) as the auditor wrote it,
+    #: its record name replaced by the fixture's
+    B2 = (
+        "FIX · {ref} · unresolved · The leaked feature is still produced:\n"
+        "- 00_prepare.py:66 and :83 still append `float(row['poisson_ratio'])` to train and test features.\n"
+        "- 00_prepare.py:118 refuses to overwrite compounds_v1.jsonl.\n"
+        "- The new run's `c1_score` 0.9792 equals the 0.979 of the flagged run.\n"
+        "- The closed-form probe R² the finding assigned is in no shown file.\n"
+        "\n"
+        "READ · PROTOCOL-bulk-modulus.md:16 · Recorded results still holds the stamp · fill it\n"
+    )
+
+    def test_a_why_over_several_lines_is_kept_whole(self):
+        """Pilot B-2: the evidence below the FIX line is the verdict's ground;
+        the record held only the first line. The blank line ends the entry,
+        the READ line after it is not part of the why."""
+        area, earlier = self.area()
+        rc, _, err, _ = self.audit(
+            area, self.B2.format(ref=f"{earlier.name}#1") + CLEAN
+        )
+        self.assertEqual(rc, 0, err)
+        (record,) = self.new_records(area, earlier)
+        why = record.fix_verdicts[0].why.splitlines()
+        self.assertEqual(len(why), 5, why)
+        self.assertEqual(why[0], "The leaked feature is still produced:")
+        self.assertIn("no shown file", why[-1])
+        self.assertNotIn("READ", record.fix_verdicts[0].why)
+
+    def test_a_one_line_why_stays_one_line(self):
+        """The twin: a FIX line followed by a blank line and a finding."""
+        area, earlier = self.area()
+        answer = (
+            f"FIX · {earlier.name}#1 · unresolved · scripts/01_measure.py:9 still reads G_VRH\n"
+            f"\n{WARN}\n"
+        )
+        rc, _, err, _ = self.audit(area, answer)
+        self.assertEqual(rc, 1, err)
+        (record,) = self.new_records(area, earlier)
+        self.assertEqual(
+            record.fix_verdicts[0].why, "scripts/01_measure.py:9 still reads G_VRH"
+        )
+
+    def test_an_entry_ends_at_the_next_entry_without_a_blank_line(self):
+        area, earlier = self.area()
+        answer = (
+            f"FIX · {earlier.name}#1 · resolved · gone:\n"
+            f"- 00_prepare.py:44 reads no elastic column\n{WARN}\n"
+        )
+        rc, _, err, _ = self.audit(area, answer)
+        self.assertEqual(rc, 1, err)
+        (record,) = self.new_records(area, earlier)
+        self.assertEqual(
+            record.fix_verdicts[0].why,
+            "gone:\n- 00_prepare.py:44 reads no elastic column",
+        )
+
+    def test_an_entry_that_names_another_shown_finding_is_refused(self):
+        """Two fixed BLOCKERs shown; a continuation line naming the second
+        leaves open which finding the verdict judges: no record."""
+        area = OneSnapshot.area(OneSnapshot())
+        two = findings.write(
+            area,
+            "analysis",
+            "opus",
+            "0" * 12,
+            "1" * 12,
+            (2, 0, 0),
+            [("BLOCKER", self.LEAK), ("BLOCKER", self.LEAK + " (test split)")],
+            registration={"kind": "compute"},
+            run_id="2026-01-01T00-00-00_0001",
+            shown_sha="2" * 12,
+            now=0,
+        )
+        for n in (1, 2):
+            findings.write_decision(two, n, "fixed", "dropped poisson_ratio")
+        answer = (
+            f"FIX · {two.name}#1 · resolved · gone\n"
+            f"- and {two.name}#2 is gone too\n\n{CLEAN}"
+        )
+        rc, _, err, _ = self.audit(area, answer)
+        self.assertEqual(rc, 2)
+        self.assertIn(f"also names {two.name}#2", err)
+        self.assertEqual(self.new_records(area, two), [])
+
     def test_what_does_not_read_records_nothing(self):
         """A twin each for the parser: an unknown finding, a second verdict,
         a word outside the three, a FIX line in another form — no record."""

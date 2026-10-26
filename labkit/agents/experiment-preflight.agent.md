@@ -141,6 +141,9 @@ FIX · <record>#<n> · resolved|unresolved|not_assessable · <why, citing file:l
   is in no file you were given, or it belongs to an older run. A diagnostic
   the reason only describes is not shown.
 
+The why may go on below the line, as a few lines of evidence; a blank line
+ends the entry, and an entry names no other finding.
+
 Judge only from what is inlined. Leave no shown finding without its line;
 a finding you do not judge stays unchecked. A still-present fault needs no
 second BLOCKER line of its own — the `unresolved` line carries it.

@@ -135,4 +135,18 @@ the continuation or a multi-line FIX is refused.
 2. A: whether a fix verdict judges the finding as written or the fault
    class. If the class, the prompt must show what defines it (here the
    task's feature rule); today nothing in the area carries it.
-3. B-2: multi-line why — read the continuation, or refuse it.
+3. B-2: multi-line why — read the continuation, or refuse it. Decided
+   and done after the pilot: the why runs to the first blank line or the
+   next entry and is kept whole; an entry that also names another shown
+   finding is refused. Re-read with the new parser, the twelve reports give
+   the same verdicts, B-2's why now holds its five lines.
+
+Decided after the pilot (2026-10-26): no gate on these verdicts yet — a
+release on `resolved` would have released t3's delivered state twice. A
+required diagnostic is named in structured form, shown and bound before
+`resolved` can count (existence and binding mechanical, sufficiency the
+auditor's); never guessed from the finding's "Assignment" prose. The
+follow-up judges the finding as written; a stricter rule must be in what
+the auditor is shown. The chain that broke here: task → registered
+feature rule → finding → repair check — the protocol registers "elastic
+properties", the task asks for composition and structure.

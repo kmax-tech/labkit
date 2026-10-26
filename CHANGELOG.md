@@ -697,7 +697,9 @@ pins (`requirements.txt` / `requirements.lock`).
   shows each BLOCKER of the area decided `fixed`, as `<record>#<n>` with
   the reason it was closed with; the auditor writes one `FIX · <record>#<n>
   · resolved|unresolved|not_assessable · <why>` line per finding, from the
-  files and rows shown only. The record stores them as `[[fix_verdict]]`
+  files and rows shown only; the why may go on in the lines right below,
+  up to a blank line or the next entry, and is kept whole (an entry that
+  also names another shown finding is refused). The record stores them as `[[fix_verdict]]`
   tables, each bound to the decision as shown (`findings.decision_digest`):
   a changed status or reason is another decision. A FIX line that does not
   read, one on a finding the prompt did not show, a second one on the

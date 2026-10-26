@@ -487,20 +487,24 @@ def fixed_piece(earlier: list[findings.FixedBlocker]) -> tuple[tuple[str, str], 
 def parse_fixes(
     text: str, earlier: list[findings.FixedBlocker]
 ) -> list[findings.FixVerdict]:
-    """The report's `FIX · <record>#<n> · <verdict> · <why>` lines before the
-    last verdict line, each bound to the decision EARLIER showed for that
-    finding (`findings.decision_digest`) — labkit attaches the digest, the
-    auditor names the finding. Raises AuditError on a FIX line that does not
-    read whole, a finding the prompt did not show, a verdict outside
+    """The report's `FIX · <record>#<n> · <verdict> · <why>` entries before
+    the last verdict line, each bound to the decision EARLIER showed for
+    that finding (`findings.decision_digest`) — labkit attaches the digest,
+    the auditor names the finding. The why is the FIX line's text and the
+    lines right below it (`fix_block`), kept whole: the evidence an auditor
+    lists under the line is the verdict's ground (pilot B-2, 2026-10-26:
+    five lines, the record held the first). Raises AuditError on a FIX line
+    that does not read whole, a block that also names another shown
+    finding, a finding the prompt did not show, a verdict outside
     `findings.FIX_VERDICTS`, and a second verdict on one finding: none of
     them may release a repair, and a guess at what was meant would. A
     shown finding without a line gets no verdict — unchecked, never
     resolved."""
     m = list(VERDICT.finditer(text or ""))
-    body = (text or "")[: m[-1].start()] if m else (text or "")
+    lines = ((text or "")[: m[-1].start()] if m else (text or "")).splitlines()
     shown = {e.ref: e for e in earlier}
     out: list[findings.FixVerdict] = []
-    for line in body.splitlines():
+    for i, line in enumerate(lines):
         if not FIX_OPEN.match(line):
             continue
         f = FIX.match(line.strip())
@@ -516,18 +520,47 @@ def parse_fixes(
                 f"a FIX verdict on {ref}, which the prompt did not show — the shown "
                 f"ones: {', '.join(shown) or 'none'}"
             )
+        more = fix_block(lines, i)
+        others = sorted({r for r in shown if r != ref and any(r in x for x in more)})
+        if others:
+            raise AuditError(
+                f"the FIX entry on {ref} also names {', '.join(others)} below its "
+                f"line — which finding its verdict judges is not clear; one entry "
+                f"per finding, separated by a blank line"
+            )
         out.append(
             findings.FixVerdict(
                 e.record.path.name,
                 e.n,
                 findings.decision_digest(e.finding),
                 f["verdict"],
-                f["why"].strip(),
+                "\n".join([f["why"].strip(), *(x.strip() for x in more)]),
             )
         )
     problem = findings.fix_verdict_problem(out)
     if problem:
         raise AuditError(problem)
+    return out
+
+
+def fix_block(lines: list[str], at: int) -> list[str]:
+    """The lines that continue the FIX entry at LINES[AT]: every line right
+    below it up to the first blank line or the first line that opens
+    another entry — a FIX, a finding, a READ, the verdict or scope line, a
+    code fence."""
+    out: list[str] = []
+    for line in lines[at + 1 :]:
+        if (
+            not line.strip()
+            or FIX_OPEN.match(line)
+            or FINDING.match(line)
+            or READ_HINT.match(line)
+            or VERDICT.search(line)
+            or line.strip().startswith("scope:")
+            or protocol_block.FENCE.match(line)
+        ):
+            break
+        out.append(line)
     return out
 
 

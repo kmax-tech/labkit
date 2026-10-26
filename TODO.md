@@ -269,7 +269,22 @@ Offen mit Auslöser, ohne Bauauftrag:
    er geschrieben ist (die Identität des Paars), nicht über die
    Fehlerklasse aus der Aufgabe, die er nicht sieht. Drei offene Punkte
    für die Gate-Entscheidung im Bericht (behauptete Prüfung, Befund vs.
-   Fehlerklasse, mehrzeiliges Warum). Bisher:
+   Fehlerklasse, mehrzeiliges Warum). **Entschieden 2026-10-26:** Gate
+   zurückgestellt. Das mehrzeilige Warum ist behoben (Blockgrenze:
+   Leerzeile oder nächster Eintrag; mehrdeutig → verweigert). Nächste
+   Schritte, in dieser Reihenfolge:
+   (a) Aufgabenanforderung und Protokollwiderspruch sichtbar machen —
+   die Kette Aufgabe → registrierte Merkmalsregel → Befund →
+   Behebungsprüfung; im t3-Fall registriert das Protokoll „elastic
+   properties“, die Aufgabe verlangt Zusammensetzung und Struktur. Ein
+   neuer Versuchsstand, die bisherigen Ergebnisse bleiben.
+   (b) Pilot wiederholen mit sichtbarem Vertrag und strukturierter
+   Diagnosereferenz: Verlangt ein Befund einen Behebungsnachweis, ist die
+   Diagnose strukturiert benannt, gezeigt und gebunden (mechanisch:
+   Existenz und Bindung; fachlich: der Prüfer), nie aus der
+   „Assignment“-Prosa per Regex erraten. Ohne das bleibt D-3 eine
+   belegte Schwäche des Modellurteils.
+   (c) Erst danach über das Gate entscheiden. Bisher:
    **Gebaut 2026-10-26:** Das Analyse-Audit urteilt je
    früherem `fixed`-BLOCKER `resolved | unresolved | not_assessable`,
    gespeichert als `[[fix_verdict]]`, gebunden an `decision_digest`;
