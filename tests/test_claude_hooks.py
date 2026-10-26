@@ -30,7 +30,7 @@ from labkit.gates import claude_hooks  # noqa: E402
 from labkit.tools import protocol_fill  # noqa: E402
 from labkit.checks import result_render  # noqa: E402
 from labkit.checks import audit_binding  # noqa: E402
-from labkit.formats import findings, promises, scope_sha, shell  # noqa: E402
+from labkit.formats import findings, promises, repo, scope_sha, shell  # noqa: E402
 from protocol_fixture import (
     registration_of,
     run_record,
@@ -593,3 +593,62 @@ class Stop(unittest.TestCase):
     def test_nothing_written_back_is_silent(self):
         rc, out, err = self._stop()
         self.assertEqual((rc, out, err), (0, "", ""))
+
+    def _base(self) -> str:
+        path = claude_hooks.stop_base_file(self.root, "s1")
+        assert path is not None
+        return path.read_text(encoding="utf-8").strip()
+
+    def test_a_commit_past_the_pre_commit_is_held_at_every_stop(self):
+        """Eighth haiku round (t3): `git commit --no-verify` left the tree
+        clean, and the stop, reading git status only, held nothing. The
+        session's commits since its stop base are held; a stop sent back
+        once in the turn may end, the base stays, the next turn's stop
+        holds again."""
+        _run(claude_hooks.pre_run, _bash(self.root, "ls"))  # keeps the base
+        base = self._base()
+        self._answer("2026-10-01T09-00-00_ffff")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the answer", "--no-verify")
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 2, err)
+        self.assertIn("committed in this session", err)
+        self.assertIn("but the run that answers is", err)
+        rc, _, err = self._stop(active=True)
+        self.assertEqual(rc, 0)
+        self.assertIn("but the run that answers is", err)  # said, not dropped
+        self.assertIn("sent back once in this turn", err)
+        self.assertEqual(self._base(), base)
+        rc, _, _ = self._stop()  # the next turn
+        self.assertEqual(rc, 2)
+
+    def test_the_twin_a_correct_commit_stops_and_moves_the_base(self):
+        _run(claude_hooks.pre_run, _bash(self.root, "ls"))
+        self._answer(self.RUN)
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the answer")
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(self._base(), repo.head_sha(self.root))
+
+    def test_a_commit_before_the_session_opens_nothing(self):
+        self._answer("2026-10-01T09-00-00_ffff")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "an older answer")
+        _run(claude_hooks.pre_run, _bash(self.root, "ls"))  # the session begins
+        _run(claude_hooks.pre_run, _bash(self.root, "ls"))  # kept once, not moved
+        self.assertEqual(self._base(), repo.head_sha(self.root))
+        rc, out, err = self._stop()
+        self.assertEqual((rc, out, err), (0, "", ""))
+
+    def test_a_base_that_left_the_history_is_said(self):
+        _run(claude_hooks.pre_run, _bash(self.root, "ls"))
+        path = claude_hooks.stop_base_file(self.root, "s1")
+        assert path is not None
+        path.write_text("0" * 40 + "\n", encoding="utf-8")
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 0, err)
+        self.assertIn("is no ancestor of HEAD and shares no commit with it", err)
+
+    def test_a_session_id_that_is_no_file_name_keeps_no_base(self):
+        self.assertIsNone(claude_hooks.stop_base_file(self.root, "../x"))

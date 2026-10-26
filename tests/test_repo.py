@@ -226,6 +226,47 @@ class Git(unittest.TestCase):
         self.assertIn("g.txt", repo.git(["status", "--porcelain"], r) or "")
 
 
+class CommittedSince(unittest.TestCase):
+    """`paths_committed_since`: what the commits after a base touched — the
+    stop's second source beside git status (eighth haiku round, t3)."""
+
+    def _commit(self, d: Path, msg: str) -> None:
+        subprocess.run(["git", "add", "-A"], cwd=d, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", msg],
+            cwd=d,
+            check=True,
+        )
+
+    def test_added_deleted_and_both_sides_of_a_rename(self):
+        d = make_repo()
+        (d / "g.txt").write_text("y")
+        self._commit(d, "g")
+        base = repo.head_sha(d)
+        (d / "f.txt").rename(d / "moved.txt")
+        (d / "g.txt").unlink()
+        (d / "new.txt").write_text("z")
+        self._commit(d, "move, delete, add")
+        self.assertEqual(
+            sorted(p.name for p in repo.paths_committed_since(d, base)),
+            ["f.txt", "g.txt", "moved.txt", "new.txt"],
+        )
+        self.assertEqual(repo.paths_committed_since(d, repo.head_sha(d)), [])
+        self.assertEqual(repo.fork_point(d, base), base)
+
+    def test_an_empty_base_is_every_path_head_holds(self):
+        d = make_repo()
+        self.assertEqual([p.name for p in repo.paths_committed_since(d, "")], ["f.txt"])
+
+    def test_an_unborn_head_is_nothing_yet(self):
+        d = make_repo(commit=False)
+        self.assertEqual(repo.head_sha(d), "")
+        self.assertEqual(repo.paths_committed_since(d, ""), [])
+
+    def test_a_base_git_does_not_know_has_no_fork_point(self):
+        self.assertIsNone(repo.fork_point(make_repo(), "0" * 40))
+
+
 class RunlogGitState(unittest.TestCase):
     def test_unborn_head_is_a_state_not_an_error(self):
         self.assertEqual(provenance.git_state(make_repo(commit=False)), "no-git")

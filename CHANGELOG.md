@@ -166,6 +166,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The stop holds what the session committed, not only what git status
+  shows.** In the eighth haiku round (2026-10-26, t3) the agent committed
+  REPORT.md with `git commit --no-verify`; the tree was clean, and the stop
+  hook, reading git status only, held nothing. `claude-hook pre-run` now
+  keeps HEAD as the session's stop base before its first Bash command
+  (`claude_hooks.keep_stop_base`, `<git dir>/labkit-stop-base/<session>`),
+  and the stop checks the paths of every commit since then beside the
+  changed ones (`repo.paths_committed_since`,
+  `claude_hooks.committed_in_session`). The base moves to HEAD only after a
+  stop without a blocker. A stop sent back once in the turn
+  (`stop_hook_active`) still runs and prints the checks and ends without a
+  loop; the next turn's stop holds again. A base that is no ancestor of
+  HEAD (a rebase or a reset) is said, and the commits since the newest
+  shared one count. `--no-verify` stays the standard's deliberate
+  exception; it is no longer silent.
+
 - **A two-turn claude-cli answer names its cause.** One model in two
   turns without tools is an answer cut and resumed — after a safety stop
   (t18 of the seventh haiku round, CLI 2.1.285, which did not count it)

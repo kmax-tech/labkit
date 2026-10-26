@@ -333,6 +333,43 @@ def touched_paths(repo: Path) -> list[Path]:
     return out
 
 
+def head_sha(repo: Path) -> str:
+    """HEAD's commit under REPO, "" before the first commit (an unborn HEAD
+    is a state). The caller has made sure REPO is a repository."""
+    r = git_run(["rev-parse", "--verify", "-q", "HEAD"], repo)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def fork_point(repo: Path, base: str) -> str | None:
+    """The newest commit BASE and HEAD share — BASE itself when HEAD grew
+    from it — or None when git knows no common one (BASE unknown, or
+    unrelated histories)."""
+    r = git_run(["merge-base", base, "HEAD"], repo)
+    if r.returncode != 0:
+        return None
+    return r.stdout.strip() or None
+
+
+def paths_committed_since(repo: Path, base: str) -> list[Path]:
+    """Every path a commit after BASE up to HEAD touched, under REPO:
+    added, modified, deleted, and both sides of a rename (`--no-renames`
+    names a rename as its deletion and its addition) — `touched_paths` for
+    the commits, not the tree. BASE "" (begun before the first commit):
+    every path HEAD holds. [] while HEAD is unborn. Raises RuntimeError
+    when git fails."""
+    if not head_sha(repo):
+        return []
+    args = (
+        ["diff", "--name-only", "-z", "--no-renames", base, "HEAD"]
+        if base
+        else ["ls-tree", "-r", "-z", "--name-only", "HEAD"]
+    )
+    r = git_run(args, repo)
+    if r.returncode != 0:
+        raise RuntimeError(f"git {' '.join(args)} failed in {repo}: {r.stderr.strip()}")
+    return [repo / p for p in r.stdout.split("\0") if p]
+
+
 def _status_records(
     repo: Path, pathspec: tuple[str, ...]
 ) -> list[tuple[str, str, str | None]]:

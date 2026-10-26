@@ -244,7 +244,7 @@ evidence file under the same ID (top of this document).*
   run again after every bump of the pin; `preflight` warns if they
   are missing or come from a different labkit version. The stop hook
   (`claude-hook stop`) sends the agent through
-  `report-check` before the end of its turn if it has written a number back or changed an area that holds one. The pre-commit hook also sends every protocol of an area a staged file touches whose
+  `report-check` before the end of its turn if it has written a number back or changed an area that holds one — changed in the tree or in a commit of the session, so a commit made with `--no-verify` is held at every stop until it is fixed. The pre-commit hook also sends every protocol of an area a staged file touches whose
   head declares a result (`[result] run`, written by `protocol-fill
   --from-run`) through `report-check --if-reported` — a number that has
   been written back does not enter the history unchecked: it declares the

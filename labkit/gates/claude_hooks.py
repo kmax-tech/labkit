@@ -45,7 +45,8 @@ post-change
 
 stop
     Before the agent ends its turn: every protocol of an area a changed
-    path (git status) lies in whose head declares a result (`[result] run`)
+    path lies in — changed in the tree (git status) or in a commit since
+    the session's stop base — whose head declares a result (`[result] run`)
     goes through `report-check --if-reported` — a script edited under a
     reported number reopens it — the whole release check at every cost
     tier: the run bound to the protocol and declared, a full run (no probe, no
@@ -55,9 +56,15 @@ stop
     agent, which keeps working. The head's `[result] run` is the one
     declaration that a result is reported (`protocol_block.declared_run`); a
     protocol declaring none owes nothing — an exploration ends
-    with "no reported result", probes in `runs/` or not. Once per stop:
-    when the agent was already sent back by this hook
-    (`stop_hook_active`), it may stop; the commit gate still holds.
+    with "no reported result", probes in `runs/` or not. The stop base is
+    the HEAD `pre-run` kept before the session's first Bash command
+    (`keep_stop_base`, `<git dir>/labkit-stop-base/<session>`); it moves to
+    HEAD only after a stop without a blocker, so a commit past the
+    pre-commit (`--no-verify`) is held at every stop until it is fixed
+    (eighth haiku round, t3). Once per turn: when the agent was already
+    sent back in this turn (`stop_hook_active`), the checks still run and
+    print, the base stays, and it may stop — no loop; the next turn's stop
+    holds again.
     The same stop holds every area the session touched (a changed file
     under it, git status) to its audit records: a BLOCKER nobody decided →
     exit 2, naming file and finding (`undecided_blockers`). The pre-commit
@@ -97,6 +104,7 @@ from pathlib import Path
 
 from labkit.formats import (
     console,
+    files,
     findings,
     jsonl,
     protocol_block,
@@ -115,7 +123,10 @@ from labkit.formats.repo import (
     area_protocols,
     repo_protocols,
     find_area,
+    fork_point,
     git_run,
+    head_sha,
+    paths_committed_since,
     shown,
     status_entries,
     touched_paths,
@@ -243,9 +254,11 @@ def protocol_named_in(script: Path, area: Path) -> Path | None:
 
 
 def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
-    """PreToolUse hook on Bash: a full measure run gets its area's preflight first; blockers refuse the command (exit 2)."""
+    """PreToolUse hook on Bash: the session's stop base is kept before its first command (`keep_stop_base`); a full measure run gets its area's preflight first; blockers refuse the command (exit 2)."""
     if event.get("tool_name", "Bash") != "Bash":
         return 0
+    project = os.environ.get("CLAUDE_PROJECT_DIR")
+    keep_stop_base(Path(project or event.get("cwd") or os.getcwd()), event)
     command = (event.get("tool_input") or {}).get("command") or ""
     if not command:
         return 0
@@ -539,18 +552,89 @@ def sessions(argv: list[str]) -> int:
     return 0
 
 
+#: a session id as a file name: what Claude Code writes (a UUID), nothing
+#: that could leave the directory
+_SESSION_FILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def stop_base_file(repo: Path, session: str) -> Path | None:
+    """`<git dir>/labkit-stop-base/<SESSION>` — this worktree's git dir, as
+    each worktree has its own HEAD — holding the commit the session's
+    stop compares against; None outside git or for a session id that is
+    no file name."""
+    if not _SESSION_FILE.match(session):
+        return None
+    r = git_run(["rev-parse", "--git-dir"], repo)
+    if r.returncode != 0:
+        return None
+    gitdir = Path(r.stdout.strip())
+    return (
+        (gitdir if gitdir.is_absolute() else repo / gitdir)
+        / "labkit-stop-base"
+        / session
+    )
+
+
+def keep_stop_base(repo: Path, event: dict) -> None:
+    """Keep HEAD as the session's stop base when the session has none yet:
+    called before every Bash command (`pre_run`), so before any commit the
+    session makes. Nothing outside git or without a session id. "" stands
+    for a HEAD not yet born: every commit counts."""
+    session = event.get("session_id")
+    if not session:
+        return
+    path = stop_base_file(repo, session)
+    if path is None or path.exists():
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    files.write_atomic(path, head_sha(repo) + "\n")
+
+
+def committed_in_session(repo: Path, event: dict) -> tuple[list[Path], str]:
+    """(paths, note): every path a commit since the session's stop base
+    touched (`paths_committed_since`), and a sentence when that base no
+    longer leads to HEAD — a rebase or a reset: then the commits since the
+    newest shared one count, or none when git knows no shared one; said,
+    never skipped in silence. ([], "") without a kept base."""
+    session = event.get("session_id")
+    path = stop_base_file(repo, session) if session else None
+    if path is None or not path.is_file():
+        return [], ""
+    base = path.read_text(encoding="utf-8").strip()
+    if not base:
+        return paths_committed_since(repo, ""), ""
+    start = fork_point(repo, base)
+    if start == base:
+        return paths_committed_since(repo, base), ""
+    if start is None:
+        return [], (
+            f"the session's stop base {base[:12]} is no ancestor of HEAD and "
+            f"shares no commit with it — the commits of this session are not "
+            f"checked here; the commit gate still holds"
+        )
+    return paths_committed_since(repo, start), (
+        f"the session's stop base {base[:12]} is no ancestor of HEAD (rebase "
+        f"or reset) — the commits since {start[:12]}, the newest shared one, "
+        f"are checked"
+    )
+
+
 def stop(event: dict) -> int:
-    """Stop hook: a number written back in this session gets report-check; blockers send the agent back once (exit 2)."""
+    """Stop hook: a number written back or committed in this session gets report-check; blockers send the agent back (exit 2), once per turn."""
     project = os.environ.get("CLAUDE_PROJECT_DIR")
     repo = Path(project) if project else Path(event.get("cwd") or os.getcwd())
     if not (repo / ".git").exists():
         return 0
     record_session(repo, event)
-    if event.get("stop_hook_active"):
-        return 0  # sent back once already; no loop
     # deletions and rename sources too: a script or result removed under a
-    # reported number reopens it as an edit does
-    changed = touched_paths(repo)
+    # reported number reopens it as an edit does; and what the session
+    # committed — a commit, even past the pre-commit with --no-verify,
+    # leaves the tree clean and the delivered state with the blocker
+    # (eighth haiku round, t3)
+    committed, note = committed_in_session(repo, event)
+    changed = list(dict.fromkeys(touched_paths(repo) + committed))
+    if note:
+        print(f"claude-hook stop: {note}", file=sys.stderr)
     undecided = undecided_blockers(repo, changed)
     if undecided:
         print(
@@ -561,20 +645,40 @@ def stop(event: dict) -> int:
             "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(undecided),
             file=sys.stderr,
         )
-    if not changed:
-        return 2 if undecided else 0
-    # every changed path, not only a protocol: a script edited after the
-    # answer was written back reopens the area's reported numbers
-    rc, out = _capture(lambda: report_check.if_reported(changed, repo, staged=False))
-    if rc != 0:
+    rc = 0
+    if changed:
+        # every changed path, not only a protocol: a script edited after the
+        # answer was written back reopens the area's reported numbers
+        rc, out = _capture(
+            lambda: report_check.if_reported(changed, repo, staged=False)
+        )
+        if rc != 0:
+            print(
+                "report-check reports blockers for a number written back or "
+                "committed in this session — fix them before you stop (a commit "
+                "would be refused the same way); a result not meant to be "
+                "reported leaves the answer open:\n" + out,
+                file=sys.stderr,
+            )
+    held = rc != 0 or bool(undecided)
+    if not held:
+        # the base moves only past a clean stop: a held commit is checked
+        # again at the next turn's stop, never forgotten with the turn
+        session = event.get("session_id")
+        path = stop_base_file(repo, session) if session else None
+        if path is not None and path.is_file():
+            files.write_atomic(path, head_sha(repo) + "\n")
+        return 0
+    if event.get("stop_hook_active"):
+        # sent back once in this turn already: no loop — the findings stand
+        # on stderr, the base stays, the next turn's stop holds again
         print(
-            "report-check reports blockers for a number written back in this "
-            "session — fix them before you stop (a commit would be refused the "
-            "same way); a result not meant to be reported leaves the answer "
-            "open:\n" + out,
+            "claude-hook stop: sent back once in this turn — stopping; the "
+            "blockers above stand and the next stop holds them again",
             file=sys.stderr,
         )
-    return 2 if (rc != 0 or undecided) else 0
+        return 0
+    return 2
 
 
 def undecided_blockers(repo: Path, paths: list[Path]) -> list[str]:

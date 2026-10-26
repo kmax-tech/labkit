@@ -220,7 +220,7 @@ evidence** (warns), **agent audit** (semantic).
 | run → report (the adoption) | the one path that writes the declaration: the lines from the run's metrics.json are written, report-check runs on the written protocol, a blocker puts the file back — a result adopted this way has passed every check | `protocol_fill.adopt`, `report_check.report_check` | `protocol-fill --from-run` | guaranteed | writing the number back |
 | run → report (undecided findings) | every finding still `open` in `audits/`, any mode: a BLOCKER blocks, a WARNING warns, each with its file | `finalize.check_open_audit_findings`, `findings.area_records` | `finalize` | guaranteed | after the run |
 | run → report (a deleted run) | every analysis record of the area names a run it still holds: a record of a run whose directory is gone is a blocker where the record stands — the record is the evidence that the run existed | `findings.records_of_gone_runs`, `finalize.check_open_audit_findings` | `finalize` | guaranteed | after the run |
-| run → report (the gates that run unasked: the stop sends back once, the commit holds) | an area the session touched, or a staged file lies in, holds an audit BLOCKER nobody decided: the stop sends the agent back, the commit is refused | `claude_hooks.undecided_blockers` | `claude-hook stop`, `.githooks/pre-commit` (`claude-hook undecided`) | guaranteed | ending the turn, committing |
+| run → report (the gates that run unasked: the stop sends back once, the commit holds) | an area the session touched, or a staged file lies in, holds an audit BLOCKER nobody decided: the stop sends the agent back, the commit is refused | `claude_hooks.undecided_blockers`, `claude_hooks.committed_in_session` | `claude-hook stop`, `.githooks/pre-commit` (`claude-hook undecided`) | guaranteed | ending the turn, committing |
 | run → report (denominator) | denominator `c<i>_n` matches a recorded input count | `run_record_check.criterion_n_input_mismatches` | `finalize` | static evidence | after the run |
 | report → number | output pinned to the run, recomputation agrees, note cites every number and the run id, block unchanged | `recheck.holds` | (an area's `--check`) | guaranteed | keeping a number |
 
@@ -431,7 +431,7 @@ An exploration declares no result and releases none.
 | git pre-commit | Checks staged protocols, affected reported results and unresolved audit blockers. Report checks use the staged answer and require the area's working tree to agree with the index; a staged declaration that differs from HEAD's reaches the committed reports citing that run. |
 | Claude `pre-run` | Runs preflight for recognized measurement commands; blocks a frozen area's command on blockers. |
 | Claude `post-change` | Reports protocol and note checks after changes, and names `labkit-audit --report-review` for a changed report that discusses a run; tracks content per session to avoid repeating unchanged files. |
-| Claude `stop` | Sends the session back for a failed release check or an unresolved audit blocker in an affected area, once per stop cycle. |
+| Claude `stop` | Sends the session back for a failed release check or an unresolved audit blocker in an affected area — changed in the tree or committed since the session's stop base (kept by `pre-run` before the first command, moved only past a clean stop) — once per turn; the next turn's stop holds again. |
 
 `labkit-hooks install` installs the pinned package's git and Claude hooks;
 `preflight` checks their installation. The run writer and git hooks work
