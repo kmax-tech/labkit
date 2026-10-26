@@ -82,6 +82,17 @@ def test_the_test_lane_is_counted_never_scored():
     assert m["n_test"] == 5 and m["n_items"] == 12 and m["c1_pass"] is True
 
 
+def test_class_counts_are_the_scored_items_per_gold():
+    """Checked by hand: seven pos and five neg in the scored lane, three test
+    items without gold — the counts are 7 and 5; the test lane is no class.
+    TODO when the score is r2: drop this test, r2 stores no class counts."""
+    golds = [POS] * 7 + [NEG] * 5
+    reg = [(g, g) for g in golds]
+    m = measure.evaluate_rows(rows(reg, [(POS, g) for g in golds], test=3))
+    assert m["scored_class_counts"] == {NEG: 5, POS: 7}
+    assert m["n_items"] == 12 and m["n_test"] == 3
+
+
 def test_a_scored_lane_without_gold_is_refused():
     """A withheld label stored as 0 or -999 is no label: the prepare step writes
     null, and a scored lane carrying one is a refusal, never a number."""

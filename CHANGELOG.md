@@ -466,6 +466,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Numbers about the inputs come from the run.** The estimator skeleton's
+  `evaluate_rows` stores `scored_class_counts` for accuracy and auc: the
+  items per gold value in the scored rows (not the class distribution of
+  the input file, which also holds the unlabelled split); `02_analyze.py
+  --check` recomputes it, and the Recorded results line and the report
+  block show it. The skeletons' docstrings and the stamped `AGENTS.md` say
+  that a count, median or derived threshold a report states is computed
+  into metrics.json from kept rows, never counted by hand. Why: all 17
+  wrong numbers of the seventh round's labkit reports were facts about the
+  inputs that the code computed and kept nowhere
+  (`docs/usability/2026-10-25-hint-precision-r7.md`). No format change; a
+  stamped area adds the key by hand if it wants it.
+
 - **A file at a git state has one reading.** `repo.text_at(repo, path,
   rev)` reads the index (the default) or a revision (`HEAD`); None where
   that state does not hold the file. `report_check.index_text` and

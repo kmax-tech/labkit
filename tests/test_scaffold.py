@@ -621,6 +621,7 @@ class Exp(unittest.TestCase):
         lane without gold is refused, the test lane is counted, never scored."""
         import importlib.util
         import sys
+        from dataclasses import replace
 
         quiet(scaffold.stamp_area, self.root, "foo-bar", repeat_cost="high", kind="fit")
         path = self.area() / "scripts" / "01_measure.py"
@@ -664,8 +665,16 @@ class Exp(unittest.TestCase):
             (m["c1_pass"], m["a2_pass"], m["n_test"], m["a2_chance"]),
             (True, True, 1, 0.5),
         )
-        from dataclasses import replace
-
+        # the scored items per gold; the test lane's item has none and is no class
+        self.assertEqual(m["scored_class_counts"], {"neg": 6, "pos": 6})
+        regression = replace(measure.CONFIG, score="r2")
+        numeric = [
+            {**r, "pred": 1.0, "gold": float(i % 3)}
+            for i, r in enumerate(lane("registered", 12) + lane("null", 6))
+        ]
+        self.assertNotIn(
+            "scored_class_counts", measure.evaluate_rows(numeric, regression)
+        )
         wide = replace(measure.CONFIG, null_band=0.25)
         at_bar = measure.evaluate_rows(lane("registered", 8) + lane("null", 5), wide)
         self.assertIs(at_bar["c1_pass"], True)  # 8/12 >= 5/12 + 1/4 exactly
@@ -699,7 +708,7 @@ class Exp(unittest.TestCase):
             timeout=120,
         )
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("9 passed", r.stdout)
+        self.assertIn("10 passed", r.stdout)
 
     def test_the_stamp_declares_the_model_in_the_head(self) -> None:
         """Phase 4 (2026-10-21): `--model <alias>` writes `[model] alias`, a bare

@@ -195,6 +195,17 @@ block are named as unsourced (a hint), and whether the prose reads the
 number rightly, and whether a decided limit is enough, stay the audit's
 and the reader's judgement.
 
+A number about the inputs — records per split, class sizes, a median or
+threshold the code derives — therefore belongs in `metrics.json`: the
+measuring code's `evaluate_rows` computes it from the kept rows, and the
+block shows it. If the rows cannot give it, the rows must keep what it
+needs; writing it by hand into the report is no way out. The estimator
+skeleton stores `scored_class_counts` (accuracy and auc): the items per
+gold value in the scored rows — not the class distribution of the input
+file, which also holds the unlabelled split. `02_analyze.py --check`
+holds a stored key that vanished from the recomputation; it does not
+notice a number left out of the dict and written in prose.
+
 A report that cites a protocol's **answering run** while that protocol
 declares no result is blocked: at `low` the report is the promotion,
 and this is its shape without the adoption (`report_check.promotions`;

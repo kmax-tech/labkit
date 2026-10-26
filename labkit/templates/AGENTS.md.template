@@ -131,7 +131,11 @@ LAB-017 The number of audits follows the cost tier.
    stop and the commit — the block exactly, every cited run id a run of
    the repo; any other number there is named as having no assigned
    source: compute it in the run and report it from there, or say where
-   it comes from. When the adoption is refused and you cannot clear
+   it comes from. A number about the inputs — records per split, class
+   sizes, a median or threshold the code derives — has one source: the
+   measuring code computes it into metrics.json (`evaluate_rows`, kept
+   rows that hold what it needs), and the report shows it in the block;
+   never a count by hand, in a heredoc, or from a file read once. When the adoption is refused and you cannot clear
    it, do not write the run's numbers into a report as the result — the
    gate holds a report citing the area's answering run while the
    protocol declares none. A refusal is a finding to report, not an
@@ -207,7 +211,11 @@ fields, no reading of labkit's source.
     cites a run is held to it at the stop and the commit — the block exactly, every cited run id a run of the repo.
     Any other number in that file is named as having no assigned source:
     compute it in the run and report it from there, or say where it
-    comes from. When the adoption is refused and you cannot clear it, do
+    comes from. A number about the inputs — records per split, class
+    sizes, a median or threshold the code derives — has one source: the
+    measuring code computes it into metrics.json (`evaluate_rows`, kept
+    rows that hold what it needs), and the report shows it in the block;
+    never a count by hand, in a heredoc, or from a file read once. When the adoption is refused and you cannot clear it, do
     not write the run's numbers into a report as the result — the gate
     holds a report citing the area's answering run while the protocol
     declares none. A refusal is a finding to report, not an obstacle to

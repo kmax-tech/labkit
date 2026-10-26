@@ -265,8 +265,8 @@ Offen mit Auslöser, ohne Bauauftrag:
    Proxy-Mitschnitt prüfen, ob opus-4-8 neben opus-5-5 in `modelUsage` ein
    interner Hilfsaufruf ist. Bis dahin bleibt die Herkunftsprüfung
    bestehen.
-3. Die beschlossene Aufgabe „Kennzahlen der Eingaben ohne Ablage“ (unten
-   bei den zurückgestellten Erweiterungen) bleibt beschlossen und offen.
+3. „Kennzahlen der Eingaben ohne Ablage“: erster Schritt umgesetzt
+   2026-10-26 (unten bei den zurückgestellten Erweiterungen).
 
 Notiert, nicht geplant:
 
@@ -441,9 +441,17 @@ Forschung und Benchmark-Fallliste liegen in
   sie, legt sie aber in keiner behaltenen Datei ab; kein Bericht und
   keine Berichtsprüfung hat eine Quelle, gegen die sie zu halten wären
   ([Präzision](docs/usability/2026-10-25-hint-precision-r7.md)). Sie
-  gehören dorthin, wo der Code sie berechnet, in den Lauf (Form offen:
-  `metrics.json` oder ein eigener Abschnitt des Lauf-Records). Erst
-  danach kann eine Berichtsprüfung sie vergleichen.
+  gehören dorthin, wo der Code sie berechnet, in den Lauf. **Umgesetzt
+  2026-10-26:** kein neues Format. `metrics.json` und der Berichtsblock
+  sind die eine Heimat; der Block rendert jeden Schlüssel und blockt bei
+  Abweichung. Die Estimator-Vorlage speichert `scored_class_counts`
+  (accuracy/auc). Vorlagen, gestempelte AGENTS.md und `docs/workflow.md`
+  sagen: Eine Eingabekennzahl im Bericht kommt aus `evaluate_rows` über
+  behaltene Zeilen, nie von Hand. Ausdrückliche Grenzen: Die
+  Klassengrößen der bewerteten Zeilen sind nicht die Klassenverteilung der
+  Eingabedatei; `--check` hält einen verschwundenen gespeicherten
+  Schlüssel, aber keine Zahl, die nur in der Prosa steht. Offen bis
+  Runde 9: Stehen die Eingabekennzahlen dann im Block statt in der Prosa?
 
 ## Architektur und Lesbarkeit — notiert, nicht geplant
 
