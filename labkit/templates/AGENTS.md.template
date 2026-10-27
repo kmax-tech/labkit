@@ -249,7 +249,8 @@ prints these same recovery choices with each decision list:
   REPORT.md; the report names the protocol, not its runs. That protocol's
   result blocks in the chosen report are withdrawn; other text and other
   protocols' blocks stay. Citations in prose or other reports still need
-  removal or explicit discussion. Use no run ids in the reason or attempted steps. Stage
+  removal or explicit discussion; the handover names each such report
+  with its `--discuss` command. Use no run ids in the reason or attempted steps. Stage
   the report, protocol, new handover record and remaining audit evidence
   together. New evidence or a changed block requires a new handover.
   This permits only the unresolved stop/commit, never a number or audit

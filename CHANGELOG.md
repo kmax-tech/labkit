@@ -327,7 +327,9 @@ pins (`requirements.txt` / `requirements.lock`).
   adopted protocol's old block survived withdrawal of `[result]`, so a
   successful handover then failed the commit. Other protocols' blocks
   and prose stay; citations in prose and other reports still need removal
-  or explicit discussion, as the command now says.
+  or explicit discussion: the command names each report that still cites
+  the withdrawn run, with its `--discuss` command
+  (`report_check.reports_citing`, tracked and new reports).
 - **The area README includes the analysis audit before adoption.** Its
   short route now includes decisions, the Conclusion and required reviews;
   its state list places finalize before adoption.

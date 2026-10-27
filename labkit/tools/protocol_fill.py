@@ -1017,6 +1017,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
                 "prints each --decide command; decide it deferred, with why it "
                 "stays unresolved, when it does"
             )
+        withdrawn = protocol_block.declared_run(text)
         new = without_result(text)
         others = [p for p in handovers.declared_results(area, root) if p != protocol]
         if others:
@@ -1057,11 +1058,29 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
         "stage the report, protocol, handover record and all remaining audit "
         "evidence together; this releases no number and approves no audit"
     )
-    print(
-        "this report no longer carries this protocol's result blocks; citations "
-        "in prose or other reports still require removal or an explicit discussion"
-    )
+    if withdrawn is not None:
+        _print_still_citing(protocol, withdrawn, root)
     return 0
+
+
+def _print_still_citing(protocol: Path, run_id: str, root: Path) -> None:
+    """After a handover withdrew RUN_ID: every report that still cites it
+    (`report_check.reports_citing`), each with the `--discuss` command that
+    keeps the citation honestly — or remove it; each holds the stop and the
+    commit until then. Silent when none does."""
+    held = report_check.reports_citing(run_id, root)
+    if not held:
+        return
+    here = Path.cwd()
+    print(
+        f"{len(held)} report(s) still cite the withdrawn run {run_id} and hold "
+        "the commit until the citation is removed or discussed:"
+    )
+    for path in held:
+        command = report_blocks.discuss_command(
+            shown(protocol, here), run_id, shown(path, here)
+        )
+        print(f"  {shown(path, here)}: {command}")
 
 
 def _check_report_mode_args(

@@ -276,7 +276,11 @@ class HandoverRecovery(cases._Chain):
         before = other_report.read_bytes()
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)
-        self.assertIn("other reports", out)
+        # each report still citing the withdrawn run is named with the
+        # command that discusses it (workflow review 2026-10-27, TODO 8 (2))
+        self.assertIn("1 report(s) still cite the withdrawn run", out)
+        self.assertIn("OTHER.md: protocol-fill", out)
+        self.assertIn(f"--discuss {self.run_id}", out)
         self.assertEqual(other_report.read_bytes(), before)
         self.lab.git("add", "-A")
         rc, out = self.lab.pre_commit(self.report, self.protocol, other_report)

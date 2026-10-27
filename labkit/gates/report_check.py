@@ -146,6 +146,7 @@ from labkit.formats.repo import (
     git_root,
     under_root,
     indexed_files,
+    touched_paths,
     indexed_links,
     indexed_protocols,
     own_path,
@@ -1335,6 +1336,22 @@ def committed_reports(
         if any(r in run_ids for _, r in report_blocks.cited_run_ids(text)):
             out.append((full, text))
     return out
+
+
+def reports_citing(run_id: str, repo: Path) -> list[Path]:
+    """Every report in REPO's working tree, tracked (`indexed_files`) or
+    new (`touched_paths`), that cites RUN_ID — under `report_files`' rules
+    on protocols, SKIP_DIRS and links. The reports a withdrawn result leaves
+    held at the stop and the commit until each citation is removed or
+    discussed. Raises RuntimeError when git fails."""
+    candidates = sorted({*indexed_files(repo), *touched_paths(repo)})
+    return list(
+        dict.fromkeys(
+            path
+            for path, text in report_files(candidates, repo, staged=False)
+            if any(r == run_id for _, r in report_blocks.cited_run_ids(text))
+        )
+    )
 
 
 @dataclass(frozen=True)

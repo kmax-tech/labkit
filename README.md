@@ -185,7 +185,8 @@ findings left open or deferred, and writes the record's handover block
 into the report — one block per protocol, replaced in place. It withdraws
 that protocol's result blocks in the chosen report and keeps other text
 and other protocols' blocks. Citations in prose and other reports still
-need to be removed or explicitly discussed. It permits no result or audit approval. Stage the
+need to be removed or explicitly discussed; the handover names each such
+report with its `--discuss` command. It permits no result or audit approval. Stage the
 protocol, report, handover record and remaining evidence together.
 
 ### Longer measurements
