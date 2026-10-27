@@ -326,6 +326,16 @@ class CommitOrder(unittest.TestCase):
         amended = repo.head_sha(d)
         self.assertEqual(repo.earliest_commits(d, [first, amended]), [first, amended])
 
+    def test_a_ref_names_its_commit_or_none(self):
+        # one "ref → commit" for the lab-pin check, a lock's ref and a pin's
+        # tag (audit 2026-10-27, third, S8)
+        d = make_repo()
+        head = repo.head_sha(d)
+        subprocess.run(["git", "tag", "v1.0.0"], cwd=d, check=True)
+        self.assertEqual(repo.commit_of(d, "v1.0.0"), head)
+        self.assertEqual(repo.commit_of(d, "HEAD"), head)
+        self.assertIsNone(repo.commit_of(d, "v9.9.9"))  # not echoed back
+
     def test_only_a_full_sha_the_repository_holds_is_known(self):
         d = make_repo()
         head = repo.head_sha(d)

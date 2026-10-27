@@ -44,6 +44,8 @@ from labkit.formats import console, protocol_block, rules
 from labkit.gates import install_hooks
 from labkit.formats.repo import (
     SKIP_DIRS,
+    commit_of,
+    text_at,
     VCS_REQUIREMENT,
     VERSION_REQUIREMENT,
     git_run,
@@ -121,12 +123,13 @@ def pinned_version(pin: Pin, cwd: Path) -> str | None:
     path = pin.local_path
     if path is None:
         return None
-    r = git_run(["-C", str(path), "show", f"{pin.ref}:pyproject.toml"], cwd)
-    if r.returncode != 0:
+    text = text_at(path, path / "pyproject.toml", pin.ref)
+    if text is None:
         raise RuntimeError(
-            f"{path}: cannot read pyproject.toml at {pin.ref}: {r.stderr.strip()}"
+            f"{path}: cannot read pyproject.toml at {pin.ref} (no such ref, or "
+            f"no git checkout)"
         )
-    m = PYPROJECT_VERSION_RE.search(r.stdout)
+    m = PYPROJECT_VERSION_RE.search(text)
     if m is None:
         raise RuntimeError(f"{path}: pyproject.toml at {pin.ref} has no version line")
     return m.group(1)
@@ -167,26 +170,22 @@ def tag_commit(pin: Pin, cwd: Path, timeout: float = REMOTE_TIMEOUT_S) -> str:
     """
     path = pin.local_path
     if path is not None:
-        r = git_run(["-C", str(path), "rev-parse", f"{pin.ref}^{{commit}}"], cwd)
-        where = str(path)
-    else:
-        ref = f"refs/tags/{pin.ref}"
-        r = git_run(
-            ["ls-remote", pin.source.removeprefix("git+"), ref, ref + "^{}"],
-            cwd,
-            timeout,
-        )
-        where = pin.source
+        commit = commit_of(path, pin.ref)
+        if commit is None:
+            raise RuntimeError(f"{path}: no tag {pin.ref}")
+        return commit
+    ref = f"refs/tags/{pin.ref}"
+    r = git_run(
+        ["ls-remote", pin.source.removeprefix("git+"), ref, ref + "^{}"], cwd, timeout
+    )
     if r.returncode != 0:
-        raise RuntimeError(f"{where}: {r.stderr.strip() or 'git failed'}")
-    if path is not None:
-        return r.stdout.strip()
+        raise RuntimeError(f"{pin.source}: {r.stderr.strip() or 'git failed'}")
     found = {
         ref: sha for sha, ref in (line.split("\t") for line in r.stdout.splitlines())
     }
     commit = found.get(f"refs/tags/{pin.ref}^{{}}") or found.get(f"refs/tags/{pin.ref}")
     if commit is None:
-        raise RuntimeError(f"{where}: no tag {pin.ref}")
+        raise RuntimeError(f"{pin.source}: no tag {pin.ref}")
     return commit
 
 

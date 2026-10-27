@@ -149,12 +149,7 @@ def resolve_ref(url: str, ref: str) -> str | None:
     if _HEX_REF.match(ref.lower()):
         return ref.lower()
     if url.startswith("file://"):
-        # --verify: without it, rev-parse ECHOES an unknown ref back on
-        # stdout instead of failing empty.
-        r = repo.git_run(
-            ["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], Path(url[7:])
-        )
-        return r.stdout.strip().lower() if r.returncode == 0 else ""
+        return (repo.commit_of(Path(url[7:]), ref) or "").lower()
     return None
 
 

@@ -1093,6 +1093,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One "ref → commit" in `repo`.** The lab-pin check (`scaffold`), a
+  lock's ref (`provenance`) and a pin's tag (`repo_check`) each asked git
+  for a ref's commit, one without `--verify`; `repo.commit_of` does, and a
+  pin's `pyproject.toml` at its ref reads through `repo.text_at`. Audit
+  2026-10-27 (third), S8.
 - **One reading of a parent run.** `repeat_of` (runlog) and
   `derived_from` (start check) each read their parent's completion state
   and config and refused in their own words; `start_check.completed_parent`

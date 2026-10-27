@@ -788,6 +788,17 @@ def fork_point(repo: Path, base: str) -> str | None:
 FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
 
+def commit_of(repo: Path, ref: str) -> str | None:
+    """The commit REF (a tag, a branch, a sha) names under REPO, as its full
+    sha; None when it names none. `--verify --quiet`: without them
+    rev-parse echoes an unknown ref back on stdout instead of failing
+    empty. The one "ref → commit" for the lab-pin check, a lock's ref and a
+    pin's tag (audit 2026-10-27, third, S8). Raises GitError when git cannot
+    run (REPO missing among them)."""
+    r = git_run(["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], repo)
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
 def commit_known(repo: Path, commit: str) -> bool:
     """Does REPO hold COMMIT, a full sha, as a commit (`rev-parse --verify
     -q COMMIT^{commit}`)? False for a sha this clone never fetched or has

@@ -54,6 +54,7 @@ from labkit.formats.runs import runs_path
 from labkit.formats.files import write_all, write_atomic
 from labkit.tools.protocol_fill import fill, fill_head
 from labkit.formats.repo import (
+    commit_of,
     files_at,
     first_added,
     adopt_command,
@@ -61,7 +62,6 @@ from labkit.formats.repo import (
     area_protocols,
     areas_named,
     git_root,
-    git_run,
     lab_root,
     requirement_lines,
     split_area_name,
@@ -213,10 +213,9 @@ def lab_templates_off_ref(checkout: Path, ref: str) -> list[str]:
     (a tag not fetched): then nothing shows that the two agree."""
     if git_root(checkout) is None:
         raise RuntimeError(f"{checkout} is no git checkout")
-    r = git_run(["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], checkout)
-    if r.returncode != 0:
+    commit = commit_of(checkout, ref)
+    if commit is None:
         raise RuntimeError(f"{ref} is no commit in {checkout}")
-    commit = r.stdout.strip()
     templates = checkout / "labkit" / "templates"
     return [
         name
