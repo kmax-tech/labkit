@@ -32,7 +32,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.checks import report_blocks  # noqa: E402
 from labkit.gates import claude_hooks  # noqa: E402
 from labkit.tools import protocol_fill  # noqa: E402
-from labkit.checks import result_render  # noqa: E402
 from labkit.checks import audit_binding  # noqa: E402
 from labkit.formats import findings, promises, repo, scope_sha, shell  # noqa: E402
 from protocol_fixture import (
@@ -684,13 +683,12 @@ class Stop(unittest.TestCase):
     def _answer(self, run_id: str) -> None:
         """Declare RUN_ID in the head and write the Answer, as --from-run does."""
         p = self.area / "PROTOCOL-x.md"
+        # the line --from-run renders for the fixture's metrics (every promise
+        # true, no limit); written as text, since some tests declare a run
+        # that does not exist
         p.write_text(
             protocol_fill.fill_result_run(p.read_text(), run_id)
-            + "- **Recorded results:** "
-            + result_render.recorded_results_line(
-                {"c1_pass": True, "a1_pass": True, "a2_pass": True}, run_id
-            )
-            + "\n"
+            + f"- **Recorded results:** C1 met; A1 met; A2 met · recorded: (run {run_id})\n"
         )
 
     def _stop(self, active: bool = False) -> tuple[int, str, str]:

@@ -366,9 +366,12 @@ Write this back into the protocol as soon as the run finishes — a protocol
 that ends before the result is only a plan, and the results then live
 scattered in output files nobody can interpret.
 
-- **Recorded results:** every reported key and value of the declared
-  run as its `metrics.json` recorded them, the run_id, and one note on the
-  recorded limits — written by `protocol-fill --from-run` and held exactly
+- **Recorded results:** the reportable verdict of every registered
+  promise — an admissibility condition not assessable or not met leaves
+  each criterion not assessable, never a bare pass —, then every other
+  reported key and value of the declared run as its `metrics.json`
+  recorded them, the run_id, and one note on the recorded limits — written
+  by `protocol-fill --from-run` and held exactly
   to that rendering by `report-check` (phase 5, 2026-10-21): never retyped,
   never reworded; after a changed decision `protocol-fill --render` writes
   it again. The Limit lines below it are rendered the same way from the
@@ -377,7 +380,7 @@ scattered in output files nobody can interpret.
   line):
 
   ```text
-  - **Recorded results:** c1_pass = True, c1_accuracy = 0.83 (run 2026-10-22T09-13-08_0dc3)
+  - **Recorded results:** C1 met · recorded: c1_accuracy = 0.83 (run 2026-10-22T09-13-08_0dc3)
   ```
 - **Raw output:** one real prompt+answer pair per finding.
 - **Interpretation / next step:** one sentence; keep instrument findings

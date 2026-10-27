@@ -439,20 +439,15 @@ def limit_line(finding: Finding) -> str:
 
 
 def answer_note(limits: list[tuple[str, str]]) -> str:
-    """What the Answer says of LIMITS, (label, effect) each — appended to
-    the metric line: every promise one leaves not assessable, by name (it
-    changes the verdict), then one note counting them all; the Limit lines
-    below carry each one whole. Empty for no limits. One note per limit
-    grew the Answer to three "read within" tails (sandbox, 2026-10-21)."""
+    """What the Recorded results line says of LIMITS, (label, effect) each:
+    one note counting them; the Limit lines below carry each one whole, and
+    which promise one leaves not assessable stands in the line's verdicts
+    (`result_render.verdicts`). Empty for no limits. One note per limit
+    grew the line to three "read within" tails (sandbox, 2026-10-21)."""
     if not limits:
         return ""
-    unjudged = "".join(
-        f"; {pid} not assessable with this run ({label})"
-        for label, effect in limits
-        for pid in effect_ids(effect)
-    )
     n = len(limits)
-    return f"{unjudged}; subject to {n} recorded limitation{'s' if n > 1 else ''} (the Limit lines below)"
+    return f"; subject to {n} recorded limitation{'s' if n > 1 else ''} (the Limit lines below)"
 
 
 def counts_outrun(verdict: tuple[int, int, int], grades: list[str]) -> str | None:

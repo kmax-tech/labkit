@@ -84,9 +84,10 @@ class Decide(unittest.TestCase):
         ):
             findings.write_decision(self.path, 2, "deferred", "later", "stands")
 
-    def test_the_answer_note_counts_the_limits_and_names_each_unjudged_promise(self):
+    def test_the_answer_note_counts_the_limits(self):
         """One note however many limits; three "read within" tails grew the
-        Answer (sandbox, 2026-10-21). An unjudged promise stays named."""
+        Answer (sandbox, 2026-10-21). Which promise a limit leaves unjudged
+        stands in the line's verdicts (`result_render.verdicts`)."""
         a, b = "Limit (audit x #1)", "Limit (audit x #2)"
         self.assertEqual(findings.answer_note([]), "")
         self.assertEqual(
@@ -95,7 +96,6 @@ class Decide(unittest.TestCase):
         )
         self.assertEqual(
             findings.answer_note([(a, "stands"), (b, "C1, A2 not assessable")]),
-            f"; C1 not assessable with this run ({b}); A2 not assessable with this run ({b})"
             "; subject to 2 recorded limitations (the Limit lines below)",
         )
 

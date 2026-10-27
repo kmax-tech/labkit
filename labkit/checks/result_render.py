@@ -1,8 +1,14 @@
 """result_render — the result section as its bound sources render it.
 
 The Recorded results line and the Limit lines are generated. Recorded
-results comes from the declared run's `metrics.json`: every reported key
-and value as recorded, the run id and one note on the limits. Each Limit line comes
+results opens with the reportable verdict of every registered promise
+(`verdicts`, one derivation for every reader): an admissibility condition
+not assessable — an accepted limit names it — or not met leaves every
+criterion not assessable, so a criterion's own `True` never reads as a
+pass beside it (the repair case, 2026-10-27, K2). The declared run's other
+reported keys follow as recorded values — descriptive; the registered
+promises' keys stay in `metrics.json`, unchanged, and are not repeated as
+values —, then the run id and one note on the limits. Each Limit line comes
 from an accepted finding with an effect in the analysis records covering
 that run (`audit_binding.covering_analysis`). `protocol-fill --from-run`
 writes them, `--render` writes them again, and report-check holds the
@@ -22,7 +28,7 @@ from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.checks.recheck import LABKIT_KEYS
-from labkit.formats import findings, runs
+from labkit.formats import findings, promises, runs
 from labkit.formats.protocol_check import (
     RECORDED_RESULTS_LABEL,
     fields,
@@ -38,12 +44,61 @@ class Rendering:
     limits: tuple[tuple[str, str], ...]  # (label, value) per limit, in record order
 
 
-def recorded_results_line(metrics: dict, run_id: str) -> str:
+def recorded_results_line(
+    metrics: dict, run_id: str, verdict_keys: frozenset[str] = frozenset()
+) -> str:
     """`key = value, … (run <id>)` — every reported key and value as the run
-    recorded them, so `recheck.cited` finds each number and the run id."""
-    kept = {k: v for k, v in metrics.items() if k not in LABKIT_KEYS}
+    recorded them but the registered promises' keys (VERDICT_KEYS, read as
+    `verdicts`), so `recheck.cited` finds each number and the run id."""
+    kept = {
+        k: v
+        for k, v in metrics.items()
+        if k not in LABKIT_KEYS and k not in verdict_keys
+    }
     body = ", ".join(f"{k} = {v}" for k, v in kept.items())
-    return f"{body} (run {run_id})"
+    return f"{body} (run {run_id})" if body else f"(run {run_id})"
+
+
+def verdicts(
+    block: promises.PromiseTables, metrics: dict, unjudged: dict[str, str]
+) -> list[str]:
+    """The reportable verdict of every promise of BLOCK, in its order, one
+    phrase each, from the run's METRICS read through each promise's key and
+    UNJUDGED (an id an accepted limit leaves not assessable → that limit's
+    label). Every admissibility condition conditions every criterion (each
+    `[A…]` says why its failure voids the verdict): one not assessable or
+    not met makes each criterion `not assessable`, with why; a criterion
+    otherwise `met` or `missed` as recorded, `not assessable` when a limit
+    names it. A key not recorded as true or false gives no verdict and says
+    so — intent-check holds that run. A branch reads as recorded. Pure; the
+    run's metrics are never changed."""
+    blocked = [
+        f"{p.id} not assessable ({unjudged[p.id]})"
+        if p.id in unjudged
+        else f"{p.id} not met"
+        for p in block.promises
+        if p.kind == "admissibility"
+        and (p.id in unjudged or metrics.get(p.key) is False)
+    ]
+    return [_verdict(p, metrics.get(p.key), unjudged, blocked) for p in block.promises]
+
+
+def _verdict(
+    p: promises.Promise, value: object, unjudged: dict[str, str], blocked: list[str]
+) -> str:
+    """`verdicts` for one promise P, its recorded VALUE; BLOCKED the
+    admissibility conditions that leave a criterion unjudged."""
+    if p.kind == "branch":
+        return f"{p.id} {value}"
+    if p.id in unjudged:
+        return f"{p.id} not assessable ({unjudged[p.id]})"
+    if p.kind == "criterion" and blocked:
+        return f"{p.id} not assessable — {', '.join(blocked)}"
+    if value is True:
+        return f"{p.id} met"
+    if value is False:
+        return f"{p.id} {'missed' if p.kind == 'criterion' else 'not met'}"
+    return f"{p.id}: no verdict — `{p.key}` not recorded as true or false"
 
 
 def limits_of(area: Path, text: str, run: Path) -> list[tuple[str, str, str]]:
@@ -69,9 +124,23 @@ def rendering(area: Path, text: str, run: Path) -> Rendering:
     without readable metrics."""
     metrics = runs.read_metrics(runs.metrics_path(run))
     limits = limits_of(area, text, run)
-    recorded_results = recorded_results_line(metrics, run.name) + findings.answer_note(
-        [(label, effect) for label, _, effect in limits]
-    )
+    note = findings.answer_note([(label, effect) for label, _, effect in limits])
+    try:
+        block = promises.parse_block(text)
+    except promises.PromiseError:
+        block = None  # the head station names an unreadable block
+    if block is None:
+        recorded_results = recorded_results_line(metrics, run.name) + note
+    else:
+        unjudged: dict[str, str] = {}
+        for label, _, effect in limits:
+            for pid in findings.effect_ids(effect):
+                unjudged.setdefault(pid, label)
+        said = "; ".join(verdicts(block, metrics, unjudged))
+        keys = frozenset(p.key for p in block.promises)
+        recorded_results = (
+            f"{said} · recorded: {recorded_results_line(metrics, run.name, keys)}{note}"
+        )
     return Rendering(
         recorded_results, tuple((label, value) for label, value, _ in limits)
     )

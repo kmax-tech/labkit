@@ -125,9 +125,12 @@ seconds is a fit.
    passing (stamped with every skeleton; the compute skeleton's recomputes from the
    kept rows). Each finding with an effect lands below Recorded results as its
    `Limit (audit <record> #N)` line, and Recorded results counts them in one
-   note ("subject to N recorded limitations") and names each promise
-   left "not assessable with this run"; both are labkit's rendering, held
-   exactly — a changed decision is written again with `--render`.
+   note ("subject to N recorded limitations"). It opens with each promise's
+   verdict: an admissibility condition not assessable or not met leaves
+   every criterion "not assessable" — a criterion then never reads as met,
+   whatever its own key says; the measured values stand after it as
+   description. Both are labkit's rendering, held exactly — a changed
+   decision is written again with `--render`.
    The Conclusion is yours and must already be written (step 5); with a
    model, also fill Raw output: one real prompt+answer pair per finding,
    read from the run's output file it names. `protocol-check` holds the

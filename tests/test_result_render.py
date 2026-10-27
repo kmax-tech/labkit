@@ -34,7 +34,16 @@ def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]
     scope_file(area)
     protocol = area / "PROTOCOL-x.md"
     protocol.write_text(head(repeat_cost="low", result=RUN) + BODY, encoding="utf-8")
-    run = completed_run(area, RUN, metrics={"c1_pass": True, "c1_accuracy": 0.83})
+    run = completed_run(
+        area,
+        RUN,
+        metrics={
+            "c1_pass": True,
+            "a1_pass": True,
+            "a2_pass": True,
+            "c1_accuracy": 0.83,
+        },
+    )
     text = protocol.read_text(encoding="utf-8")
     items = [
         ("WARNING", "WARNING · scripts/01_measure.py:1 · one draw · x · LAB-019 r · z")
@@ -67,8 +76,11 @@ class Rendering(unittest.TestCase):
         expected = result_render.recorded_results_line(
             {"c1_pass": True, "c1_accuracy": 0.83},
             "2026-10-22T09-13-08_0dc3",
+            frozenset({"c1_pass"}),
         )
-        self.assertEqual(example, f"- **Recorded results:** {expected}")
+        self.assertEqual(
+            example, f"- **Recorded results:** C1 met · recorded: {expected}"
+        )
 
     def test_the_rendering_is_the_answer_line_with_its_note_and_the_limit_lines(self):
         area, protocol = area_with_record()
@@ -76,8 +88,8 @@ class Rendering(unittest.TestCase):
         r = result_render.rendering(area, text, area / "runs" / RUN)
         self.assertEqual(
             r.recorded_results,
-            f"c1_pass = True, c1_accuracy = 0.83 (run {RUN}); subject to 1 recorded "
-            "limitation (the Limit lines below)",
+            f"C1 met; A1 met; A2 met · recorded: c1_accuracy = 0.83 (run {RUN}); "
+            "subject to 1 recorded limitation (the Limit lines below)",
         )
         ((label, value),) = r.limits
         self.assertTrue(label.startswith("Limit (audit ") and label.endswith(" #1)"))
@@ -88,9 +100,82 @@ class Rendering(unittest.TestCase):
         text = protocol.read_text(encoding="utf-8")
         r = result_render.rendering(area, text, area / "runs" / RUN)
         self.assertEqual(
-            r.recorded_results, f"c1_pass = True, c1_accuracy = 0.83 (run {RUN})"
+            r.recorded_results,
+            f"C1 met; A1 met; A2 met · recorded: c1_accuracy = 0.83 (run {RUN})",
         )
         self.assertEqual(r.limits, ())
+
+
+class ReportableVerdicts(unittest.TestCase):
+    """K2 (docs/notes/2026-10-27-new-registration-contracts.md): every
+    admissibility condition conditions every criterion. The repair case
+    (2026-10-27) rendered `c1_pass = True` beside "A3 not assessable"; the
+    primary verdict is now the derived one, the run's metrics unchanged."""
+
+    def block(self) -> promises.PromiseTables:
+        block = promises.parse_block(head(repeat_cost="low"))
+        assert block is not None
+        return block
+
+    def test_an_admissibility_not_assessable_leaves_the_criterion_unjudged(self):
+        said = result_render.verdicts(
+            self.block(),
+            {"c1_pass": True, "a1_pass": True, "a2_pass": True},
+            {"A2": "Limit (audit x #1)"},
+        )
+        self.assertEqual(
+            said,
+            [
+                "C1 not assessable — A2 not assessable (Limit (audit x #1))",
+                "A1 met",
+                "A2 not assessable (Limit (audit x #1))",
+            ],
+        )
+
+    def test_an_admissibility_not_met_leaves_the_criterion_unjudged(self):
+        said = result_render.verdicts(
+            self.block(), {"c1_pass": True, "a1_pass": True, "a2_pass": False}, {}
+        )
+        self.assertEqual(said[0], "C1 not assessable — A2 not met")
+        self.assertEqual(said[2], "A2 not met")
+
+    def test_the_twins_a_miss_stays_a_miss_and_a_pass_a_pass(self):
+        """A failed criterion under satisfied admissibility conditions is a
+        result, not unjudged; without a limit a pass renders as met."""
+        missed = {"c1_pass": False, "a1_pass": True, "a2_pass": True}
+        self.assertEqual(
+            result_render.verdicts(self.block(), missed, {})[0], "C1 missed"
+        )
+        met = {"c1_pass": True, "a1_pass": True, "a2_pass": True}
+        self.assertEqual(result_render.verdicts(self.block(), met, {})[0], "C1 met")
+
+    def test_a_key_not_recorded_gives_no_verdict_and_says_so(self):
+        """A missing required key is an input error intent-check holds, never
+        a benign not assessable."""
+        said = result_render.verdicts(
+            self.block(), {"c1_pass": True, "a2_pass": True}, {}
+        )
+        self.assertEqual(
+            said[1], "A1: no verdict — `a1_pass` not recorded as true or false"
+        )
+
+    def test_the_rendering_leaves_the_runs_metrics_as_recorded(self):
+        area, protocol = area_with_record(limit_reason=None)
+        rec = findings.area_records(area)[0]
+        findings.write_decision(
+            rec.path, 1, "accepted", "one draw", "A2 not assessable"
+        )
+        text = protocol.read_text(encoding="utf-8")
+        r = result_render.rendering(area, text, area / "runs" / RUN)
+        self.assertTrue(
+            r.recorded_results.startswith(
+                "C1 not assessable — A2 not assessable (Limit"
+            )
+        )
+        self.assertNotIn("c1_pass", r.recorded_results)
+        self.assertIn("c1_accuracy = 0.83", r.recorded_results)
+        metrics = (area / "runs" / RUN / "metrics.json").read_text(encoding="utf-8")
+        self.assertIn('"c1_pass": true', metrics)
 
 
 class RenderGaps(unittest.TestCase):

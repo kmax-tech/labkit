@@ -288,7 +288,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **answering run** | Completed run selected to answer a particular protocol; repeat draws are excluded. Selection rules: [protocol/run binding](docs/protocol-run-binding.md). |
 | **declared run** | Run named by `[result].run` as the reported result; the gates require it to equal the answering run. |
 | **conclusion** | Author's interpretation answering the question, in at most two plain sentences in the Summary's `Conclusion` field. |
-| **recorded results** | Generated metrics, run id and limits note in the protocol's `Recorded results` field; checked against the declared run and covering audit records. |
+| **recorded results** | Generated verdicts of the registered promises (an admissibility condition not assessable or not met leaves each criterion not assessable), the other metrics, run id and limits note in the protocol's `Recorded results` field; checked against the declared run and covering audit records. |
 | **report result block** | Generated section in a separate report containing the recorded results and full Limit lines; written by `protocol-fill --into` and checked against the same sources. |
 | **discussion block** | Generated section in a separate report for a run it looks at without reporting it: protocol, run and why as TOML in the head, the line `Run <id> — discussed, not reported: <why>` written from them; written by `protocol-fill --discuss … --into`. |
 | **derived run** | Re-evaluation of a completed non-repeat run's rows through `derived_from`, with no new model calls. |

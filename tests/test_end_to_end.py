@@ -594,7 +594,10 @@ class Judge(unittest.TestCase):
         self.assertEqual(rc, 0, out_text)
         self.assertIn("finalized, audited, checked", out_text)
         text = self.protocol.read_text(encoding="utf-8")
-        self.assertIn(f"c1_pass = True (run {run_id})", text)
+        self.assertIn(
+            "- **Recorded results:** C1 met; A1 met; A2 met · recorded: ", text
+        )
+        self.assertIn(f"(run {run_id})", text)
         assert_draws(self, lab, self.area, run_id, "c1_accuracy", "c1_score")
         yours = out_text.partition("still yours")[2]
         self.assertIn("output/", yours)  # the run's rows, where the pair is read
@@ -700,8 +703,9 @@ class Judge(unittest.TestCase):
         self.assertIn(
             f"- **{label}:** C1 not assessable with this run — {reason}", text
         )
-        self.assertIn(f"C1 not assessable with this run ({label})", text)  # the Answer
-        self.assertIn("c1_pass = True", text)  # the number stays reported
+        # the verdict the Recorded results state: the criterion unjudged, no pass
+        self.assertIn(f"- **Recorded results:** C1 not assessable ({label})", text)
+        self.assertIn("c1_accuracy = 1.0", text)  # the measurement stays reported
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)
         # a limit line taken out by hand is missed
@@ -789,7 +793,7 @@ class Judge(unittest.TestCase):
             text,
         )
         self.assertIn(
-            f"c1_pass = True (run {self.run_id}); subject to 1 recorded limitation",
+            f"(run {self.run_id}); subject to 1 recorded limitation",
             text,
         )
         rc, out = self._report_check()
@@ -987,7 +991,10 @@ class Estimator(unittest.TestCase):
         self.assertIn("frozen, finalized, audited, checked", out)
         self.assertNotIn("Raw output", out)  # filled already: not named again
         text = self.protocol.read_text(encoding="utf-8")
-        self.assertIn(f"c1_pass = True (run {run_id})", text)
+        self.assertIn(
+            "- **Recorded results:** C1 met; A1 met; A2 met · recorded: ", text
+        )
+        self.assertIn(f"(run {run_id})", text)
         self.assertEqual(protocol_block.declared_run(text), run_id)
         assert_draws(self, lab, self.area, run_id, "c1_score", "c1_accuracy")
         self._a_repeat_draws_a_derived_seed_and_never_answers(run_id)

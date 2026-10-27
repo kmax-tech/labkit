@@ -95,7 +95,7 @@ class Declaration(unittest.TestCase):
         self.assertIsNone(protocol_check.recorded_results_without_run(text))
 
     def test_the_table_declares_the_run_and_the_answer_is_held_to_it(self):
-        text = self.protocol(f"c1_pass = True (run {RUN})", declared=RUN)
+        text = self.protocol(f"C1 met · recorded: (run {RUN})", declared=RUN)
         self.assertEqual(protocol_block.declared_run(text), RUN)
         self.assertIsNone(protocol_check.recorded_results_without_run(text))
         self.assertIsNone(finalize.declared_run_mismatch(text, Path("runs") / RUN))
@@ -113,7 +113,7 @@ class Declaration(unittest.TestCase):
                 protocol_block.declared_run(typed)
             (gap,) = finalize.declared_run_gaps(area, typed)
             self.assertIn("no run id runlog writes", gap)
-            shaped = self.protocol(f"c1_pass = True (run {RUN})", declared=RUN)
+            shaped = self.protocol(f"C1 met · recorded: (run {RUN})", declared=RUN)
             (gap,) = finalize.declared_run_gaps(area, shaped)
             self.assertIn(f"no runs/{RUN}/", gap)
 

@@ -656,7 +656,7 @@ class Adopt(unittest.TestCase):
         rc, out, text = self._adopt(self._area())
         self.assertEqual(rc, 0, out)
         self.assertIn("report-check: all clear", out)
-        self.assertIn(f"c1_pass = True (run {self.RUN})", text)
+        self.assertIn(f"C1 met · recorded: (run {self.RUN})", text)
         self.assertEqual(protocol_block.declared_run(text), self.RUN)
 
     def test_a_probe_is_refused_and_the_file_is_as_it_was(self):
@@ -720,7 +720,7 @@ class Adopt(unittest.TestCase):
             rc = protocol_fill.main([str(proto), "--from-run"])
         self.assertEqual(rc, 0)
         self.assertEqual(seen["state"], protocol_fill.report_check.PROPOSED)
-        self.assertIn(f"c1_pass = True (run {self.RUN})", seen["text"])
+        self.assertIn(f"C1 met · recorded: (run {self.RUN})", seen["text"])
         self.assertEqual(atomic.call_count, 1)
         self.assertEqual(proto.read_text(encoding="utf-8"), seen["text"])
         self.assertEqual([p.name for p in area.glob(".PROTOCOL-*")], [])

@@ -9,6 +9,24 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **Not assessable limits the verdict: Recorded results opens with the
+  reportable verdicts.** The generated line listed every metric as
+  recorded and appended "A3 not assessable with this run": in the repair
+  case (2026-10-27) it read `c1_pass = True … ; A3 not assessable` and the
+  report claimed "C1 PASS". The line now opens with one verdict per
+  registered promise, derived in one place (`result_render.verdicts`) for
+  protocol-fill, report-check, the report blocks and the decision review:
+  an admissibility condition not assessable — an accepted limit names it —
+  or not met leaves every criterion `not assessable`, with why; otherwise a
+  criterion is `met` or `missed`; a key not recorded as true or false gives
+  no verdict and says so (intent-check holds the run). The other metrics
+  follow as recorded values; the promises' own keys stay in `metrics.json`,
+  unchanged, and are no longer repeated in the line.
+  `findings.answer_note` now only counts the limits. Every protocol and
+  report block rendered before is held as differing until `protocol-fill
+  --render` (and `--into`) writes it again; 0.103.0 is the last version
+  that renders the old line. Contract: K2 in
+  `docs/notes/2026-10-27-new-registration-contracts.md`.
 - **report-check holds a run whose registration changed after the first
   measurement.** Nothing compared the promise block a protocol's first
   measurement recorded with the answering run's: in the repair case

@@ -67,10 +67,12 @@ def area_with(
         head(repeat_cost="low", result=RUN)
         + "- **Question / hypothesis:** does it hold?\n"
         + "- **Conclusion:** the fit is in-sample; nothing more is claimed.\n"
-        + f"- **Recorded results:** c1_pass = True (run {RUN})\n",
+        + f"- **Recorded results:** C1 met; A1 met; A2 met · recorded: (run {RUN})\n",
         encoding="utf-8",
     )
-    run = completed_run(area, RUN, metrics={"c1_pass": True})
+    run = completed_run(
+        area, RUN, metrics={"c1_pass": True, "a1_pass": True, "a2_pass": True}
+    )
     src = area / "data.jsonl"
     src.write_text('{"id": 1}\n', encoding="utf-8")
     cfg = run / "config.json"
@@ -263,7 +265,10 @@ class TheCall(unittest.TestCase):
         self.assertIn(
             f"- **Limit (audit {record.stem} #1):** the verdicts stand", sent[0]
         )
-        self.assertIn(f"- **Recorded results:** c1_pass = True (run {RUN})", sent[0])
+        self.assertIn(
+            f"- **Recorded results:** C1 met; A1 met; A2 met · recorded: (run {RUN})",
+            sent[0],
+        )
 
     def test_a_changed_decision_makes_the_review_stale(self):
         area, record = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
@@ -308,7 +313,7 @@ class TheCall(unittest.TestCase):
         self.assertEqual([k for k, _ in reviews.reported_claim(text)], ["Conclusion"])
         self.assertEqual(
             reviews.claim_digest(text),
-            reviews.claim_digest(text.replace("c1_pass = True", "c1_pass = False")),
+            reviews.claim_digest(text.replace("C1 met", "C1 missed")),
         )
 
     def test_a_rejection_before_a_claim_edit_stays_in_the_sentence(self):

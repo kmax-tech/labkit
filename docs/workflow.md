@@ -188,8 +188,10 @@ Reads: the run's `metrics.json` and the covering audit records (the
 analysis records whose code, promise and run stamps are the area's now).
 Changes: **the protocol file only** — the head's `[result] run =
 "<run_id>"` (the one declaration that this protocol reports a number: the
-**declared run**), the `Recorded results` line (every metric key and value
-as recorded, the run id, a note on the limits), one `Limit (audit <record>
+**declared run**), the `Recorded results` line (the reportable verdict of
+every registered promise — an admissibility condition not assessable or
+not met leaves each criterion not assessable —, then the other metric keys
+and values as recorded, the run id, a note on the limits), one `Limit (audit <record>
 #N)` line per decided limit, and the run's entry in the protocol run
 list; the command names them as "Recorded results, [result] run, Runs".
 Before writing it runs `report-check` on the written text and restores
