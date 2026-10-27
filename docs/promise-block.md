@@ -18,7 +18,7 @@ The three evidence kinds describe what supports a check's statement:
 |---|---|---|
 | **guaranteed** | exact and mechanical; silent on a correct input | block parses, prose and block name the same ids, the declared key is reported exactly, the run recorded this block, the declared scope is unchanged |
 | **static evidence** | an indication; warns, never blocks | a key is written but never read; planned, not built: a scope function calls repo code outside the declared scope (the table below) |
-| **agent audit** | semantic agreement of intent and code | `labkit-audit` (the experiment-preflight instructions, one model call), the `code-check` agent on a `code-check --bundle` |
+| **agent audit** | semantic agreement of intent and code | `labkit-audit` (the experiment-preflight instructions, one model call); outside labkit, an agent the lab runs on a `code-check --bundle` |
 
 A static check is never presented as proof of semantics. Everything in
 `promises.py` is the guaranteed tier.

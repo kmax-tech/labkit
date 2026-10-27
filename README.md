@@ -70,7 +70,7 @@ cheaply you can repeat the measurement:
 | Tier | Before the full run | Before reporting a result |
 |---|---|---|
 | `low` | Write and commit the registration, implement/test the measurement; no freeze or preflight audit. | Finalize, decide the analysis audit, adopt the result through `report-check` (which holds the registration to the commit of the first measurement). |
-| `high` | Also probe the instrument, pass preflight, decide the preflight audit, complete the report fields and freeze the protocol. | Finalize, decide the analysis audit, adopt the result through `report-check`. |
+| `high` | Also probe the instrument where the skeleton has a probe (a computation's run is its own instrument check), pass preflight, decide the preflight audit, complete the report fields and freeze the protocol. | Finalize, decide the analysis audit, adopt the result through `report-check`. |
 
 `--kind` says what the kept number asserts, and the skeleton and the
 registration follow it: `compute` judges no prediction (the compute
@@ -90,9 +90,10 @@ repo root.
 
 1. **Register the question.** Fill the protocol's open fields. For a computation,
    describe the data, unit and exclusions; the stamped form lists what is
-   owed. A model measurement also needs its criterion, admissibility
-   condition, prompt, null condition and the judged data profile
-   (`00_prepare.py --audit`, read before the run).
+   owed. A fit or an apply also registers its criterion, admissibility
+   condition and null condition; with a model named, the prompt and the
+   judged data profile follow (the prompt skeleton's `00_prepare.py --audit`
+   prints an aid; read before the run).
 
    ```bash
    .venv/bin/protocol-fill experiments/01-document-count/PROTOCOL-document-count.md --list
@@ -163,8 +164,9 @@ the protocol, the run and the why as TOML, its line
 ### Longer measurements
 
 At `high`, follow the longer lane in the repo's `AGENTS.md`:
-render real prompts where applicable, run the instrument probe, complete
-the area tests, run `preflight`, then `labkit-audit --mode preflight`.
+where the skeleton has them, render real prompts and run the instrument
+probe (a computation has neither), complete the area tests, run
+`preflight`, then `labkit-audit --mode preflight`.
 Decide the findings and fill the protocol's audit field with the matching
 stamp. Add report fields with `labkit-init exp <name> --report`, complete
 them, set `frozen = true`, and commit before the full run.
@@ -270,7 +272,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **protocol run list** | The protocol's `## Runs` section: references to runs; listing a run does not select or release its result. |
 | **run entry** | One reference in the protocol run list: a run id and a sentence describing the run. |
 | **intent id** | Identifier of a checked promise: `[C1]`, `[A1]`, `[B1]`, etc. |
-| **bundle** | Protocol, code and extracted facts packed for an audit agent. |
+| **bundle** | Protocol, code and extracted facts packed by `code-check --bundle` for an agent the lab runs on it; labkit ships none. |
 | **frozen** | Protocol committed to its declared specification, with `frozen = true`. |
 | **kind** | What the kept number asserts, in the head (`kind`): `compute` judges no prediction, `fit` judges a model trained or adjusted in the experiment, `apply` judges a model used unchanged. The registration and the skeleton follow it; a run that only produces predictions declares no result and needs none. |
 | **number_describes** | `[model]` key of a `compute` with a model in the loop: `model_outputs` (the number describes what the model marked) or `target_property` (a property of the data, the model as annotator). |

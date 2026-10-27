@@ -60,10 +60,13 @@ The suite is self-contained: it passes in a fresh clone with an empty home
 directory (a shallow clone without tags skips the tag test; `git fetch
 --tags origin` brings them). One test skips everywhere for want of
 a `requirements.lock` (`tests/test_runlog_env.py`). `usability stage` stamps
-its probe from the package's own templates (since 0.78.0) and pins labkit at
-the release tag of the installed version on GitHub — until that tag is
-pushed the probe's `pip install` fails (`--venv` links an existing venv
-instead).
+its probe from the package's own templates (since 0.78.0) and builds the
+probe venv with the staging interpreter's labkit, as its `pip freeze` line
+names it: an editable install is refused (stage from a non-editable
+install of a `git archive` of the commit), and `--venv` links an existing
+venv instead (an editable one warned). The stamped `requirements.txt`
+still pins the release tag on GitHub, which `stage --restamp` installs —
+until that tag is pushed, that `pip install` fails.
 
 ## Rules
 

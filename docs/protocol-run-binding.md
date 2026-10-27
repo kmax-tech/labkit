@@ -121,7 +121,9 @@ step it hit:
 - **`runlog [AREA]`** lists every run that is not complete by its own
   marker, each with its `state`: `running` · `unknown` · `crashed` ·
   `unfinalized` · `corrupt` · `unreadable`. The recorded pid decides between
-  `running` and the dead states. `completed` runs are not listed.
+  `running` and the dead states. Then the `completed` runs, oldest first,
+  each with what it is (a fresh run, or derived from which), whether its
+  code was committed and the command that started it.
 - **`runlog <area> --wait`** exits 0 when nothing is open, 2 when a run failed
   (`unfinalized` and `corrupt` count as failed, each with its own message),
   3 when a run is still running at `--max-seconds`.
@@ -160,10 +162,13 @@ take part in no automatic choice; they are named explicitly or not at all.
 ## The answering run
 
 Every reader that holds a protocol to a run — `intent-check`, `finalize`,
-`report-check`, `recheck`, `labkit-params`, `labkit-audit` in analysis mode,
-the usability scorer — asks one function for the run
+`report-check`, `recheck`, `labkit-params`, `labkit-audit` in analysis mode
+— asks one function for the run
 (`answering_run.bound_answering_run`). It resolves by the id and nothing
-else; `protocol.path` never selects.
+else; `protocol.path` never selects. The usability scorer holds no
+protocol to a run: it reads the newest completed run, bound or not
+(`usability_score.latest_run`), since an unbound run is a finding of the
+probe.
 
 1. **Eligible** are the COMPLETED runs that record this id. Left out, each
    with its reason for the operator: unbound runs, runs bound to another

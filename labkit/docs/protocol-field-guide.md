@@ -420,7 +420,9 @@ scattered in output files nobody can interpret.
   failure look identical.
 - **Data profile:** your judgement of the data, written before the
   measuring run: could a surface feature answer the question without the
-  model? `00_prepare.py --audit` prints an aid — items and mean words per
+  model? Owed whenever a model is named, at every kind. The prompt
+  skeleton's `00_prepare.py --audit` prints an aid (the compute and
+  estimator skeletons stamp none) — items and mean words per
   class always; cue words (hedges, modal words, connectives, boilerplate)
   and numeric confounds only if you list them in `MARKERS` and
   `CONFOUNDS` (`None` prints "none counted", `()` "none applies", a
