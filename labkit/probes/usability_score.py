@@ -18,11 +18,13 @@ from pathlib import Path
 
 from labkit.probes import agent_transcript, code_navigation, protocol_reading
 from labkit.formats import answering_run, console, findings, promises, runs
+from labkit.probes import sab_cases
 from labkit.probes.usability import (
     LOG_LINE,
     LOG_TAGS,
     Probe,
     SOURCE_READ,
+    TASK_STAMP,
     TOL,
     read_answer,
     read_probe,
@@ -102,8 +104,10 @@ class Score:
     probe: Probe
     run_id: str | None
     number: float | None  # metrics[metric_key], or None when absent
-    expected: float | None  # the recounted truth (count), None for a model's number
-    number_ok: bool  # equals the truth, or (judge) present and within [0, 1]
+    expected: (
+        float | None
+    )  # the recounted truth (count, a SAB-like case's), None for a model's number
+    number_ok: bool  # equals the truth (a SAB-like case: within its tolerance), or present and within [0, 1]
     null_reported: (
         bool | None
     )  # judge: an a<i>_* key (admissibility, the null lane) in metrics.json
@@ -120,6 +124,12 @@ class Score:
     )
     audit_failed: int = 0  # failed audit attempts in the area, any cause
     audit_unproven: int = 0  # of them `unproven`: the auditor did not write it whole
+    evaluation: int | None = (
+        None  # a SAB-like case: the hidden evaluation of pred_results/ (1 pass, 0 fail)
+    )
+    evaluation_detail: str | None = (
+        None  # what the evaluation measured, or why it could not read the output
+    )
 
 
 def archive(root: Path, transcript: Path, dest: Path) -> list[Path]:
@@ -473,7 +483,13 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
     (2026-10-13)."""
     pr = load_probe_run(root)
     probe, run, metrics = pr.probe, pr.run, pr.metrics
-    expected = recount(root) if probe.task == "count" else None
+    sab = probe.task in sab_cases.CASES
+    expected = (
+        recount(root)
+        if probe.task == "count"
+        else (sab_cases.truth(root, probe.task) if sab else None)
+    )
+    verdict, detail = sab_cases.evaluate(root, probe.task) if sab else (None, None)
     number = bound_to = frozen = tier = None
     form: protocol_reading.Form | None = None
     null_reported = None
@@ -481,7 +497,7 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         number = protocol_reading.metric_number(metrics, probe.metric_key)
         bound_to = pr.protocol_as_recorded if pr.bound else None
         tier = pr.repeat_cost
-        if probe.task != "count":
+        if TASK_STAMP[probe.task][1] != "compute":  # a computation owes no null
             null_reported = any(
                 promises.key_kind(k) == "admissibility" for k in metrics
             )
@@ -518,9 +534,13 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         run_id=run.name if run else None,
         number=number,
         expected=expected,
-        number_ok=(number is not None and abs(number - expected) <= TOL)
-        if expected is not None
-        else (number is not None and 0.0 <= number <= 1.0),
+        number_ok=sab_cases.number_ok(probe.task, number, expected)
+        if sab
+        else (
+            (number is not None and abs(number - expected) <= TOL)
+            if expected is not None
+            else (number is not None and 0.0 <= number <= 1.0)
+        ),
         null_reported=null_reported,
         bound_to=bound_to,
         frozen=frozen,
@@ -531,6 +551,8 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         agent=agent,
         audit_failed=len(failed),
         audit_unproven=sum(f.cause == "unproven" for f in failed),
+        evaluation=verdict,
+        evaluation_detail=detail,
     )
     sidecar(root, "score.json").write_text(
         json.dumps(asdict(sc), indent=1), encoding="utf-8"
@@ -550,7 +572,17 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         ),
         *(
             [("null condition reported", "yes" if null_reported else "NO")]
-            if probe.task != "count"
+            if TASK_STAMP[probe.task][1] != "compute"
+            else []
+        ),
+        *(
+            [
+                (
+                    "hidden evaluation (pred_results/)",
+                    f"{'pass' if verdict else 'FAIL'} — {detail}",
+                )
+            ]
+            if sab
             else []
         ),
         ("bound to", bound_to or "NOTHING"),
