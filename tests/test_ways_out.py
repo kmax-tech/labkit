@@ -72,9 +72,21 @@ class WaysOut(unittest.TestCase):
         self.assertTrue(
             {"--kind", "--change-kind"} <= init and {"--decide", "--effect"} <= decide
         )
-        for flag in re.findall(r"`(--[a-z-]+)", both):
-            if flag != "--no-verify":  # git's, named as what never to use
-                self.assertIn(flag, decide | report)
+        # every flag of every code span, held to the command the span starts
+        # with; it read only a flag right after a backtick, so --handover,
+        # --why, --tried, --into and --findings went unchecked (audit
+        # 2026-10-27, table C)
+        known = {"labkit-init": init, "labkit-audit": decide, "protocol-fill": report}
+        seen = set()
+        for span in re.findall(r"`([^`]*)`", both):
+            for flag in re.findall(r"(?<![\w-])--[a-z][a-z-]*", span):
+                if flag == "--no-verify":  # git's, named as what never to use
+                    continue
+                command = span.split()[0]
+                with self.subTest(span=span, flag=flag):
+                    self.assertIn(flag, known.get(command, decide | report))
+                seen.add(flag)
+        self.assertTrue({"--handover", "--tried", "--findings"} <= seen, seen)
 
     def test_the_replaces_table_described_is_one_the_head_reads(self):
         text = head(
