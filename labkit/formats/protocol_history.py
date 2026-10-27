@@ -122,7 +122,7 @@ def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
     """A WARNING when the protocol's repeat cost is lower now than in the
     commit that added it, or None. A lower tier owes less (`low`: no
     audit before the run, no freeze; LAB-017 The number of audits follows
-    the repeat cost), so lowering it is the next way round a gate once `n/a`
+    the cost tier), so lowering it is the next way round a gate once `n/a`
     is refused — the same move as rewriting the promises until no check is
     due (third haiku round on 0.99.0, t5). Exact over git: the head as it
     was first committed against the head now; a legitimate correction says

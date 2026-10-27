@@ -155,7 +155,7 @@ class Packaging(unittest.TestCase):
 class CoreAndDoctrine(unittest.TestCase):
     """The core (which run made this number, from what) imports nothing of
     the doctrine (how a lab chooses to work): docs/architecture.md, "Core
-    or doctrine"."""
+    and doctrine"."""
 
     def test_the_doctrine_column_marks_known_modules(self):
         self.assertLessEqual(doctrine_modules(), set(modules()))

@@ -899,8 +899,8 @@ Related, but so far supported only one judge deep (caveat, not a rule): The vote
 Goal is **fast evaluation before scaling**, i.e. as little ceremony
 as possible. The rules from LAB-057 One area per idea to LAB-060 Look it up
 instead of asking cover the only truly shared resources; those from
-LAB-061 Sub-experiment series carry their number to LAB-065 No worktree per
-experiment govern how a growing area stays readable.
+LAB-061 Sub-experiment series carry their number in the name to
+LAB-065 No worktree per experiment govern how a growing area stays readable.
 
 - **LAB-057 · One area per idea** *(was §2.F1)*, self-contained; never share outputs. An
   `--out` file belongs to exactly ONE run: the script places `<out>.lock`

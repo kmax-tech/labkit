@@ -1,7 +1,7 @@
 <!-- the code-clarity agent's area mode, run by `labkit-audit --mode clarity` through labkit.run.llm.
      The package is the home of this mode; ~/.claude/agents/code-clarity.md is a copy with
      the Claude frontmatter on top and two more modes (review, questions) for a diff. Keep
-     the threshold, the evidence standard and rules 9–15 identical in both (2026-10-09). -->
+     the threshold, the evidence standard and rules 9–16 identical in both (2026-10-09). -->
 # code-clarity — an experiment area read by a newcomer
 
 You read an experiment area the way a person who did not build it opens

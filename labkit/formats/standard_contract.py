@@ -10,7 +10,7 @@ Until this module existed each component spelled the rule it needed
 one, the check's script name in two), and the audit of 2026-10-19 found
 them disagreeing: the gate demanded a script the skeleton never stamped.
 
-What stands here is doctrine (docs/architecture.md, "Core or doctrine"):
+What stands here is doctrine (docs/architecture.md, "Core and doctrine"):
 another lab could set the tiers differently without being less scientific.
 It belongs to the pinned labkit, not to a configuration file per experiment:
 the standard is versioned with the package, and the experiment supplies its
@@ -95,7 +95,7 @@ class Lane:
         analysis_rule: The rule a gate cites when the analysis audit is
             missing: at low repeat cost the one audit of the lane, owed at the
             promotion of the number (LAB-017 The number of audits follows
-            the repeat cost); elsewhere LAB-050 Analysis audit before
+            the cost tier); elsewhere LAB-050 Analysis audit before
             reporting.
         cut: Which fields the protocol owes — the low cut or the full
             form (`protocol_check.FIELDS` carries the marks).

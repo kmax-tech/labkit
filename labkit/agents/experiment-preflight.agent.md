@@ -26,9 +26,10 @@ restate them from memory.
    caller supplies it. Never judge an indexed module's behaviour from its
    signature.
 4. The rules of the lab standard inlined below, from `labkit/docs/standard.md`
-   as shipped with labkit — LAB-015 Preflight audit before freezing with the
+   as shipped with labkit — LAB-103 The audit reads by declared scope, not
+   by import graph (item 3), LAB-015 Preflight audit before freezing with the
    scar table and the severity legend, LAB-017 The number of audits follows
-   the repeat cost, LAB-004 Identifiers make the intent addressable, and
+   the cost tier, LAB-004 Identifiers make the intent addressable, and
    LAB-050 Analysis audit before reporting. They are all of the standard you get.
    Every finding cites the rule it violates as code + name (LAB-nnn <title>);
    a defect none of them names is a finding of a new class, say so.

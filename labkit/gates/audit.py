@@ -15,6 +15,7 @@ files they tell the auditor to read are gathered here and inlined — the
 area's protocol, `scripts/*.py`, `analysis/*.py`, the repo-local `lib/`
 modules they import, and from the lab standard that ships with labkit
 exactly the rules the instructions cite (`cited_rules`):
+LAB-103 The audit reads by declared scope, not by import graph,
 LAB-015 Preflight audit before freezing (the scar table, the severity legend),
 LAB-017 The number of audits follows the cost tier,
 LAB-004 Identifiers make the intent addressable,
@@ -317,7 +318,7 @@ class Source(NamedTuple):
     read: Callable[[Path], str]
     run: tuple[tuple[str, str], ...] = ()
     evidence: tuple[tuple[str, str], ...] = ()  # `validity_evidence`
-    fixes: tuple[tuple[str, str], ...] = ()  # `fixed_piece`, MODE analysis
+    fixes: tuple[tuple[str, str], ...] = ()  # `earlier_piece`, MODE analysis
 
 
 DOI_ONLY = (
