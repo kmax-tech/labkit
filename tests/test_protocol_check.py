@@ -274,7 +274,9 @@ class TestCheckFields(unittest.TestCase):
     def test_real_freeform_protocol_misses_every_must_field(self):
         """With a head, its bold labels (H1, Flip-Test) are no template field:
         it misses all of them, Terms and Model I/O among them."""
-        report = protocol_check.check_fields(head(kind="fit") + REAL_FREEFORM_PROTOCOL)
+        report = protocol_check.check_fields(
+            head(kind="fit", model="haiku") + REAL_FREEFORM_PROTOCOL
+        )
         self.assertEqual(report.missing_must, MUST)
         self.assertIn("Terms of this protocol", report.missing_must)
         self.assertIn("Model I/O", report.missing_must)
@@ -288,7 +290,7 @@ class TestCheckFields(unittest.TestCase):
         self.assertEqual(report.must_holes, [])
 
     def test_head_alone_misses_everything(self):
-        report = protocol_check.check_fields(head(kind="fit"))
+        report = protocol_check.check_fields(head(kind="fit", model="haiku"))
         self.assertEqual(report.missing_must, MUST)
         self.assertEqual(report.missing_should, SHOULD)
 
@@ -317,7 +319,7 @@ class TestCheckFields(unittest.TestCase):
         """A word anywhere used to satisfy a field (`prompt` in a sentence
         covered Model I/O). Only the label line counts."""
         text = (
-            head(kind="fit")
+            head(kind="fit", model="haiku")
             + "We ask the model a prompt about terms, model I/O and anchors.\n"
         )
         self.assertEqual(protocol_check.check_fields(text).missing_must, MUST)
@@ -408,7 +410,7 @@ class TestMain(unittest.TestCase):
     def test_missing_must_exits_one(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "PROTOCOL-frozen-real.md"
-            p.write_text(head() + REAL_FREEFORM_PROTOCOL, encoding="utf-8")
+            p.write_text(head(model="haiku") + REAL_FREEFORM_PROTOCOL, encoding="utf-8")
             code, out = self._run([d])
             self.assertEqual(code, 1)
             self.assertIn("MISSING (must): Terms of this protocol", out)
@@ -471,7 +473,8 @@ class TestPlaceholders(unittest.TestCase):
 
     def test_placeholder_in_a_must_field_weighs_more(self):
         text = (
-            head() + "- **Prompt (verbatim, per variant):** <the real prompt>\n"
+            head(model="haiku")
+            + "- **Prompt (verbatim, per variant):** <the real prompt>\n"
             "- **Model I/O:** <in · out>\n"
             "- **Yield per stage:** <expected vs. obtained>\n"
             "- **Next step:** <…>\n"

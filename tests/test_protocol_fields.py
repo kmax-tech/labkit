@@ -101,7 +101,8 @@ class Fields(unittest.TestCase):
     def test_a_word_elsewhere_does_not_fill_a_field(self):
         # the keyword check let "prompt" in any sentence cover Model I/O
         text = (
-            head() + "We will write a prompt later.\n- **Question / hypothesis:** q\n"
+            head(model="haiku")
+            + "We will write a prompt later.\n- **Question / hypothesis:** q\n"
         )
         missing = protocol_check.check_fields(text).missing_must
         self.assertIn("Model I/O", missing)

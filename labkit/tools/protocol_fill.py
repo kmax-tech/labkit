@@ -89,6 +89,7 @@ from labkit.formats.protocol_check import (
     RUNS_PLACEHOLDER,
     field_name,
     fields,
+    not_owed,
     placeholder_fields,
 )
 
@@ -753,7 +754,13 @@ def _list_open(text: str) -> int:
         for label, (key, choices) in HEAD_KEYS.items()
         if (n := head_open(text, key)) is not None
     ]
-    holes = head + sentences + list(placeholder_fields(text))
+    spared = not_owed(text)
+    holes = (
+        head
+        + sentences
+        + [(n, label) for n, label in placeholder_fields(text) if label not in spared]
+    )
+    spare = [(n, label) for n, label in placeholder_fields(text) if label in spared]
     if not holes:
         print("no placeholder fields left")
     after = WRITTEN_BY_RUN + WRITTEN_AFTER_RUN
@@ -766,6 +773,10 @@ def _list_open(text: str) -> int:
         (
             "after the run — yours, once its rows exist (`--from-run` names them); leave them now:",
             [(n, label) for n, label in holes if label in WRITTEN_AFTER_RUN],
+        ),
+        (
+            "not owed by this protocol (its kind and model) — leave or delete them:",
+            spare,
         ),
     )
     for title, group in groups:

@@ -1080,6 +1080,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The full form owes model and criterion fields only with a model and
+  a criterion.** A high computation without a model was refused at the
+  freeze for its Data profile, Model I/O, Prompt, Instrument check,
+  Resolution check and Noise ceiling — fields AGENTS.md and the field
+  guide owe only with `[model]` or a bar. `protocol_check.full_owed` owes
+  a model field ("lm") only with a model and a field that `needs` a bar
+  or an instrument only with one; a fit without a model keeps its
+  instrument and criterion fields. `protocol-fill --list` lists the
+  placeholders a protocol does not owe apart (`protocol_check.not_owed`).
+  The stamp still carries them; cutting the full template by model is
+  open. Audit 2026-10-27 (third), I9 (C2 of the first register, in the
+  checker).
 - **`protocol-fill` sets `number_describes`; the freeze says it is set by
   hand.** A computation with a model owes `[model] number_describes`, but
   no tool could set it and `--list` never named it; `frozen` and

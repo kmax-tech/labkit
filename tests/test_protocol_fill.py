@@ -271,6 +271,26 @@ class HeadType(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "set by hand in the TOML head"):
                     protocol_fill.fill_many(text, [(key, "true")])
 
+    def test_list_sets_apart_the_fields_this_protocol_does_not_owe(self):
+        # a high computation without a model was told to fill its data
+        # profile and prompt (audit 2026-10-27, third, I9)
+        text = head(repeat_cost="high", kind="compute") + (
+            "- **Data profile:** <your judgement of the data>\n"
+            "- **Question / hypothesis:** <the one question>\n"
+        )
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "PROTOCOL-x.md"
+            p.write_text(text, encoding="utf-8")
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(protocol_fill.main([str(p), "--list"]), 0)
+        listed = out.getvalue()
+        spare = listed.split("not owed by this protocol", 1)
+        self.assertEqual(len(spare), 2, listed)
+        self.assertIn("Data profile", spare[1])
+        self.assertNotIn("Data profile", spare[0])
+        self.assertIn("Question / hypothesis", spare[0])
+
     def test_a_wrong_type_and_a_set_type_are_refused(self):
         with self.assertRaises(ValueError):
             protocol_fill.fill_head(self.HEAD, "type", "descriptive")

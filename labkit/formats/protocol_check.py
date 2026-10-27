@@ -71,11 +71,17 @@ class Field:
     carry the template's marker but are owed by their level, not by the
     cut. The template's † marks exactly the
     should and report fields it stamps with `--report` (a test holds this).
+
+    `needs`: what the full form owes the field for — "" always, "bar" a
+    criterion (`kind` fit or apply), "instrument" a model or a bar (the
+    computation's run is its own instrument check); "lm" fields are owed
+    only with a model at every tier (`full_owed`).
     """
 
     label: str
     level: str
     low_cut: str = ""
+    needs: str = ""
 
 
 LEVELS = ("must", "should", "after", "report")
@@ -99,7 +105,7 @@ FIELDS = (
     # 2026-10-21: a class-exclusive cue went unexamined in three judge probes)
     Field("Data profile", "must", "lm"),
     Field("Model / tool", "must", "lb"),
-    Field("Model I/O", "must"),
+    Field("Model I/O", "must", needs="instrument"),
     Field("Prompt", "must", "lm"),
     Field("Null condition / anchors", "must", "lb"),
     Field("Exclusions / filters", "must", "l"),
@@ -112,17 +118,17 @@ FIELDS = (
     Field("Out of scope", "should"),
     Field("Data preparation", "should"),
     Field("Meaning of the gold label", "should"),
-    Field("Answer form + resolution", "should"),
+    Field("Answer form + resolution", "should", needs="instrument"),
     Field("How measured", "should"),
     Field("Validation", "should"),
-    Field("Noise ceiling → threshold", "should"),
+    Field("Noise ceiling → threshold", "should", needs="bar"),
     Field("Free knobs", "should"),
     Field("Randomness controls", "should"),
-    Field("Instrument check", "should"),
+    Field("Instrument check", "should", needs="instrument"),
     Field("Yield per stage", "should"),
     # The resolution check (LAB-016 Resolution check before freezing): the criterion over synthetic extremes
     # by the REAL evaluate(), before freezing.
-    Field("Resolution check", "should"),
+    Field("Resolution check", "should", needs="bar"),
     Field("Prediction for the follow-up run", "should"),
     # Written after the run: before it they cannot exist.
     Field("Recorded results", "after", "l"),
@@ -368,6 +374,40 @@ def bar_owed(f: Field, kind: str | None) -> bool:
     return f.low_cut != "lb" or kind is None or standard_contract.has_bar(kind)
 
 
+def full_owed(f: Field, kind: str | None, model: bool) -> bool:
+    """Does the full form owe `f` for a number of KIND, a model named or
+    not (MODEL)? A bar field only with a bar (`bar_owed`), a model field
+    ("lm") only with a model, a field that `needs` a bar or an instrument
+    only with one — a high computation without a model was asked for its
+    data profile, prompt, instrument and resolution checks (audit
+    2026-10-27, third, I9). An undecided kind owes the most."""
+    if not bar_owed(f, kind):
+        return False
+    if f.low_cut == "lm" and not model:
+        return False
+    if kind is None or not f.needs:
+        return True
+    has_bar = standard_contract.has_bar(kind)
+    return has_bar if f.needs == "bar" else has_bar or model
+
+
+def not_owed(text: str) -> set[str]:
+    """The labels of the must and should fields this protocol's full form
+    does not owe (`full_owed`, by its kind and model) — a stamp may still
+    carry their placeholders, and `protocol-fill --list` sets them apart.
+    Empty when the head does not read."""
+    try:
+        head = protocol_block.head(text)
+    except protocol_block.BlockError:
+        return set()
+    model = model_named(text)
+    return {
+        f.label
+        for f in FIELDS
+        if f.level in ("must", "should") and not full_owed(f, head.kind, model)
+    }
+
+
 def in_cut(f: Field, kind: str | None, model: bool) -> bool:
     """Is `f` part of the low cut — "l" always, "lb" when the number has
     a bar (`bar_owed`), "lm" with a model named?"""
@@ -478,7 +518,8 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
             if f.level in ("must", "should") and in_cut(f, head.kind, model)
         ]
         return must, []
-    full = [f for f in FIELDS if bar_owed(f, head.kind)]
+    model = model_named(text)
+    full = [f for f in FIELDS if full_owed(f, head.kind, model)]
     must = [f for f in full if f.level == "must"]
     should = [f for f in full if f.level == "should"]
     if not head.frozen:

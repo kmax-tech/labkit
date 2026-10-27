@@ -211,16 +211,42 @@ class LaneDuties(unittest.TestCase):
 
     def test_the_full_form_graduates_its_shoulds_at_the_freeze(self):
         self.assertEqual(
-            self.owed(head(repeat_cost="high", kind="fit")),
+            self.owed(head(repeat_cost="high", kind="fit", model="haiku")),
             (self.FULL_MUST, self.FULL_SHOULD),
         )
         frozen = head(
             repeat_cost="high",
             kind="fit",
+            model="haiku",
             frozen=True,
             preflight_audit="2026-10-21 · x",
         )
         self.assertEqual(self.owed(frozen), (self.FULL_MUST + self.FULL_SHOULD, []))
+
+    def test_the_full_form_owes_model_and_criterion_fields_only_with_them(self):
+        # a high computation without a model was asked for its data profile,
+        # prompt, instrument and resolution checks (audit 2026-10-27, third,
+        # I9); a fit without a model keeps its instrument and criterion fields
+        def must(kind: str, model: str | None = None) -> list[str]:
+            text = head(
+                repeat_cost="high",
+                kind=kind,
+                model=model,
+                frozen=True,
+                preflight_audit="2026-10-21 · x",
+            )
+            return self.owed(text)[0]
+
+        compute, fit, apply_model = must("compute"), must("fit"), must("apply", "haiku")
+        for label in ("Data profile", "Prompt", "Model I/O", "Instrument check",
+                      "Resolution check", "Noise ceiling → threshold"):  # fmt: skip
+            with self.subTest(label=label):
+                self.assertNotIn(label, compute)
+                self.assertIn(label, apply_model)
+        for label in ("Model I/O", "Instrument check", "Resolution check"):
+            self.assertIn(label, fit)
+        for label in ("Data profile", "Prompt"):
+            self.assertNotIn(label, fit)
 
     def test_a_declared_result_makes_the_report_fields_due(self):
         """Since phase 5 the declaration makes the result due; a run id in the
@@ -228,12 +254,14 @@ class LaneDuties(unittest.TestCase):
         frozen = head(
             repeat_cost="high",
             kind="fit",
+            model="haiku",
             frozen=True,
             preflight_audit="2026-10-21 · x",
         )
         declared = head(
             repeat_cost="high",
             kind="fit",
+            model="haiku",
             frozen=True,
             preflight_audit="2026-10-21 · x",
             result=RUN,
