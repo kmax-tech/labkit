@@ -1079,32 +1079,27 @@ Forschung und Benchmark-Fallliste liegen in
 
 ### Phase-1-Reste (2026-10-27)
 
-Gefunden beim Umsetzen von Phase 1, nicht gemacht:
+Gefunden beim Umsetzen von Phase 1; abgearbeitet am selben Tag:
 
-1. `labkit-init exp --explore` verwirft `--kind`, `--repeat-cost`,
-   `--model` und `--report` ohne Wort; nur `--change-kind` wird verweigert.
-   Gleiche Fail-loud-Korrektur.
-2. `--change-kind`: `carried_fields` misst „geschrieben“ noch am Stempel
-   des installierten labkit — eine Vorgabe, die sich zwischen Versionen
-   änderte, kann als geschrieben mitwandern (Upgrade-als-Edit auf
-   Feldebene, nicht nachgestellt). Eine ungetrackte abweichende Datei
-   heißt nach einem Upgrade weiter „edited since the stamp“ (ohne Commit
-   kein Beleg).
-3. `--change-kind` ist als Ganzes nicht atomar: stirbt das Schreiben des
-   Protokolls, sind die Skripte schon von der neuen Art, und ein zweites
-   `--change-kind` wird verweigert. Abhilfe: alles stagen, dann umbenennen.
-4. `files.write_atomic` lässt bei einem Fehlschlag `.<name>.tmp<pid>`
-   liegen und übernimmt den Dateimodus der alten Datei nicht;
-   `scaffold.write_if_absent` schreibt nicht atomar (eine halbe neue Datei
-   gilt beim nächsten Lauf als „exists“).
-5. ~~Standard, Bezeichnerregel 5: ein verkürzter Titelanfang endet an
-   einem Satzzeichen~~ — erledigt 2026-10-27 (Wortlaut vom Autor).
-6. `docs/workflow.md:52` nennt `--probe` nur beim Modellskelett, der
-   Schätzer hat auch eines; der launch.json-Eintrag `--probe` sagt „a few
-   real calls“.
-7. `scaffold.next_steps` baut `labkit-audit {rel} --mode …` selbst statt
-   über `repo.audit_command` (Bereichsnamen sind dort sicher; eine Heimat
-   wäre trotzdem sauberer).
+1. `--explore` verweigert `--kind`, `--repeat-cost`, `--model`,
+   `--report` (`e5cd984`).
+2. `--change-kind`: eine nie committete abweichende Stempeldatei heißt so,
+   nicht „edited“ (`0317d65`). **Bleibt:** `carried_fields` misst
+   „geschrieben“ am Stempel des installierten labkit — eine Vorgabe einer
+   früheren Version wandert als geschrieben mit oder hält als „no place“;
+   beides verliert nichts (sichere Seite), nicht nachgestellt.
+3. `--change-kind` stagt alle Dateien vor dem ersten Ersetzen
+   (`files.write_all`, `bc58200`).
+4. `write_atomic` räumt die Staging-Datei, behält den Modus, verweigert
+   eine schreibgeschützte Datei; `write_if_absent` schreibt atomar
+   (`f24d07a`).
+5. Bezeichnerregel 5 im Standard (`7498e04`).
+6. `--probe` in workflow.md und launch.json (dieser Stand).
+7. **Bleibt:** `scaffold.next_steps` druckt alle Schritte für einen
+   Bereich mit einem Protokoll vom Repo-Root aus; ein Serienbereich
+   bräuchte `--protocol` in jedem Schritt (preflight, code-check,
+   finalize, report-check, Audit), nicht nur im Audit — eigener Schritt,
+   wenn ein Serienbereich `--report` oder `--change-kind` braucht.
 
 ### Audit 2026-10-23
 
