@@ -995,6 +995,25 @@ Notiert, nicht geplant:
    als Daten (3.2) und gestempelte Anleitung (3.3). Stolperdrähte nur als
    Warnung (3.4). Eine Änderung der Vorlage ist eine Intervention im
    labkit-Arm.
+7. **Audit 2026-10-27, Fehlerweg und Übergabe**
+   ([Register](docs/audit-2026-10-27-handover.md), auf die nicht
+   committete Übergabe-Arbeit über `c7b1f8d`). Offene Entscheidungen:
+   (1) `--findings` druckt den Übergabebefehl nur bei Fehlern oder
+   offenem BLOCKER, die Verweigerung ohne Record vorher (H1);
+   (2) eine nicht mehr passende Übergabe nennt ihren Grund im Stop/Commit,
+   die Hook-Texte nennen den Übergabeweg (H2);
+   (3) Ort und Form des Übergabeberichts: eigener Pfad je Protokoll statt
+   `REPORT.md`, offene Befunde mit Record und Nummer im erzeugten Text
+   (H3);
+   (4) Dekodieren in einem Zustandsleser in `repo` (behebt H4, ersetzt
+   die Kopien in Tabelle C);
+   (5) `finalize.py:142` mit Protokoll über `repo.adopt_command` (H5);
+   (6) README Schritt 4 auf `--decide`, report-check-Halte auf den
+   Übergabebefehl, `--contract`-Satz der Vorlage, `--again`-Exit (H6–H9);
+   (7) `deferred`-Befehl mit Platzhalter statt fertigem Grund; Übergabe
+   im README-Begriffsregister mit einem Namen, `--discuss`/`--handover`
+   als „wann welches“ (B);
+   (8) Kleinkram E und Konfiguration D in einem Aufräum-Commit.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
