@@ -481,6 +481,10 @@ class PostChange(unittest.TestCase):
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("experiments/01-x/PROTOCOL-x.md", ctx)
         self.assertIn("MISSING (must): Null condition / anchors", ctx)
+        # the checker ran from the repo root on the relative path: no line
+        # names the file absolutely (audit 2026-10-27, third, M4)
+        self.assertNotIn(str(self.root.resolve()), ctx)
+        self.assertNotIn(str(self.root), ctx)
 
     def test_same_content_is_reported_once_per_session(self):
         p = self.root / "experiments/01-x/PROTOCOL-x.md"

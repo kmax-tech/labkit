@@ -1113,6 +1113,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The post-change hook no longer rewrites a checker's printed text.**
+  It ran `protocol-check` and `notes-check` on the absolute path and
+  replaced that path in their output with the repo-relative one; it now
+  runs them from the repo root on the relative path, so every line names
+  the file as `pfad:zeile` itself. Audit 2026-10-27 (third), M4.
 - **Raw output has one job: one real output per finding, from the run's
   kept rows, and only with a model.** The estimator stamp asked for rows
   "as --probe prints them" (thrown away, before the run) in a field written

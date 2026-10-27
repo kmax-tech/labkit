@@ -526,10 +526,12 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
             continue
         cache[str(path)] = digest
         fn = protocol_report.main if kind == "protocol" else notes_check.main
-        _, out = _capture(fn, [str(path)])
-        # The checker gets the absolute path (the hook's cwd is wherever the
-        # agent stood); the report shows it repo-relative, as pfad:zeile.
-        out = out.replace(str(path), shown(path, repo))
+        # from the repo root with the repo-relative path (the hook's cwd is
+        # wherever the agent stood): every line the checker writes names
+        # the file as pfad:zeile itself — the hook rewrote the absolute
+        # path in the printed text before (audit 2026-10-27, third, M4)
+        with contextlib.chdir(repo):
+            _, out = _capture(fn, [shown(path, repo)])
         if out:
             reports.append(out)
     if cache_file is not None:
