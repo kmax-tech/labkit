@@ -1367,6 +1367,41 @@ class KeptAnswer(unittest.TestCase):
         )
 
 
+class AuditorRefusal(unittest.TestCase):
+    """The preflight auditor answers an unfilled protocol with one line,
+    `refused: protocol not filled …` (`experiment-preflight.agent.md`);
+    `parse` found no verdict line and the person read only "no readable
+    `verdict:` line", the auditor's reason kept but never shown (audit
+    2026-10-27, C16)."""
+
+    LINE = (
+        "refused: protocol not filled — the audit reads the FILLED protocol "
+        "(LAB-015 Preflight audit before freezing)"
+    )
+
+    def test_the_auditors_refusal_is_shown(self):
+        area = repo_with()
+        for answer in (self.LINE, f"```\n{self.LINE}\n```\n"):
+            with self.subTest(answer=answer):
+                rc, out, err, sent = run(area, answer)
+                self.assertEqual(rc, 2, err)
+                self.assertIn(self.LINE.removeprefix("refused: "), err)
+                self.assertNotIn("no readable `verdict:` line", err)
+                self.assertEqual(len(sent), 1)  # no second call for the message
+                self.assertEqual(findings.area_records(area), [])
+        attempt = attempts.read_journal(area)[-1]
+        self.assertEqual(attempt.outcome, "none")
+        self.assertIn("protocol not filled", attempt.error)
+
+    def test_a_malformed_answer_that_is_no_refusal_reads_as_before(self):
+        area = repo_with()
+        rc, _, err, _ = run(area, "I read the protocol; it looks fine to me.")
+        self.assertEqual(rc, 2, err)
+        self.assertIn("no readable `verdict:` line — not an audit", err)
+        self.assertNotIn("refused", err)
+        self.assertEqual(findings.area_records(area), [])
+
+
 class Carried(unittest.TestCase):
     """An earlier decided BLOCKER a follow-up does not find resolved is
     carried into the new record — open, with the origin's text, check and
