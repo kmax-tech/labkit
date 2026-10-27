@@ -306,6 +306,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A broken handover record or a strange index entry is a sentence and
+  hides nothing.** A handover record that did not read replaced every
+  journal gap of its area with its one error (`attempts.area_gaps`); a
+  link or unmerged entry under `audits/` at the commit ended the
+  pre-commit in a `GitError` traceback (`handovers.evidence`,
+  `record_paths`); `preflight` told the deferred findings of an area whose
+  handover record did not read as "set aside for later work". Now the
+  record's error stands beside the other gaps, git's refusal is a
+  sentence naming the folder, and preflight says it cannot tell. Audit
+  2026-10-27 (third), K1, K3, K5.
 - **The printed `--into` command runs.** report-check named the protocol
   relative to the report and the report relative to the repo, so
   `protocol-fill ../experiments/… --into notes/REPORT.md` ran from

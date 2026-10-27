@@ -37,6 +37,7 @@ from pathlib import Path, PurePosixPath
 
 from labkit.formats import files, findings, protocol_block, runs, scope_sha
 from labkit.formats.repo import (
+    GitError,
     area_protocols,
     blobs_now,
     git_root,
@@ -91,23 +92,29 @@ def evidence(
     """Audit paths and blob ids in tree/index, including malformed bytes.
 
     Omit only the handover being validated to avoid self-reference.
-    Raise HandoverError outside git or for symbolic-link evidence.
+    Raise HandoverError outside git, for symbolic-link evidence and when
+    git cannot list it (an unmerged or link entry in the index).
     """
     area = area.resolve()
     root = git_root(area)
     if root is None:
         raise HandoverError(f"{area}: handover evidence requires a git repository")
     folder = area / findings.DIR
-    if staged:
-        held = indexed_blobs(root, folder)
-    else:
-        all_paths = list(folder.rglob("*"))
-        paths = [p for p in all_paths if p.is_file()]
-        if any(p.is_symlink() for p in [folder, *all_paths]):
-            raise HandoverError(
-                f"{folder}: handover evidence must not be symbolic links"
-            )
-        held = blobs_now(root, paths)
+    try:
+        if staged:
+            held = indexed_blobs(root, folder)
+        else:
+            all_paths = list(folder.rglob("*"))
+            paths = [p for p in all_paths if p.is_file()]
+            if any(p.is_symlink() for p in [folder, *all_paths]):
+                raise HandoverError(
+                    f"{folder}: handover evidence must not be symbolic links"
+                )
+            held = blobs_now(root, paths)
+    except GitError as exc:
+        # an unmerged or link entry in the index: a sentence, not a
+        # traceback at the commit (audit 2026-10-27, third, K3)
+        raise HandoverError(f"{folder}: {exc}") from exc
     return {
         p.relative_to(folder).as_posix(): sha
         for p, sha in sorted(held.items())
@@ -454,14 +461,19 @@ def new_path(area: Path) -> Path:
 
 
 def record_paths(area: Path, *, staged: bool = False) -> list[Path]:
-    """Handover records in tree/index; no file content is parsed or changed."""
+    """Handover records in tree/index; no file content is parsed or changed.
+    Raises HandoverError when git cannot list the index."""
     area = area.resolve()
     folder = area / findings.DIR / DIRECTORY
     if staged:
         root = git_root(area)
         if root is None:
             return []
-        return sorted(p for p in indexed_blobs(root, folder) if p.suffix == ".json")
+        try:
+            held = indexed_blobs(root, folder)
+        except GitError as exc:
+            raise HandoverError(f"{folder}: {exc}") from exc
+        return sorted(p for p in held if p.suffix == ".json")
     return sorted(folder.glob("*.json"))
 
 
@@ -574,7 +586,13 @@ def mismatch(area: Path, root: Path, path: Path, *, staged: bool) -> str | None:
                 "audits/ changed since the handover (a file added, changed or "
                 "removed) — a new handover binds the new state"
             )
-    except (HandoverError, OSError, UnicodeError, protocol_block.BlockError) as exc:
+    except (
+        HandoverError,
+        GitError,
+        OSError,
+        UnicodeError,
+        protocol_block.BlockError,
+    ) as exc:
         return str(exc)
     return None
 
@@ -598,7 +616,11 @@ def acknowledgement(area: Path, *, staged: bool = False) -> Acknowledgement:
     if root is None:
         return Acknowledgement(False, {})
     refused: dict[str, str] = {}
-    for path in record_paths(area, staged=staged):
+    try:
+        paths = record_paths(area, staged=staged)
+    except HandoverError as exc:
+        return Acknowledgement(False, {DIRECTORY: str(exc)})
+    for path in paths:
         why = mismatch(area, root, path, staged=staged)
         if why is None:
             return Acknowledgement(True, {})

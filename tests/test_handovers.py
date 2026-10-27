@@ -362,6 +362,35 @@ class HandoverRecovery(cases._Chain):
                 )
                 self.assertTrue(any(broken.name in line for line in lines), lines)
 
+    def test_an_unreadable_handover_record_hides_no_other_gap(self):
+        # its HandoverError replaced every gap already found (audit
+        # 2026-10-27, third, K1)
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        (record,) = findings.area_records(self.area)
+        self.lab.commit("audited")
+        record.path.unlink()
+        broken = self.area / "audits" / "handovers" / "handover-broken.json"
+        broken.parent.mkdir(parents=True)
+        broken.write_text("{}", encoding="utf-8")
+        problems = attempts.area_integrity(self.area).problems
+        self.assertTrue(any(record.path.name in p for p in problems), problems)
+        self.assertTrue(any(broken.name in p for p in problems), problems)
+
+    def test_a_link_staged_in_audits_is_a_sentence_at_the_commit(self):
+        # git listed it as no regular file and the pre-commit ended in a
+        # traceback (audit 2026-10-27, third, K3)
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        link = self.area / "audits" / "handovers" / "handover-link.json"
+        link.parent.mkdir(parents=True)
+        link.symlink_to(self.protocol)
+        self.lab.git("add", "-A")
+        lines = claude_hooks.undecided_blockers(
+            self.lab.root, [self.protocol], staged=True
+        )
+        self.assertTrue(any("regular, merged index file" in ln for ln in lines), lines)
+
     def test_a_staged_record_that_is_not_utf8_names_its_file(self):
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)

@@ -428,8 +428,11 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
     pre-commit), as the index holds them: a record removed from the index
     (`git rm --cached`) is gone from the commit though it stays on disk,
     and a record HEAD lost but the index restores is delivered again —
-    and HEAD. Raises AttemptError on a journal that does not read,
-    RuntimeError when git fails."""
+    and HEAD; then the paths a handover record keeps owed
+    (`handovers.missing_evidence`). A handover record that does not read
+    is one more blocker beside the others, never in their place. Raises
+    AttemptError on a journal that does not read, RuntimeError when git
+    fails."""
     if staged:
         present, in_index = _git_paths(area, INDEX_REV)
         now = in_index or ""
@@ -452,7 +455,9 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
     try:
         lost = handovers.missing_evidence(area, present, staged=staged)
     except handovers.HandoverError as exc:
-        raise AttemptError(str(exc)) from exc
+        # raised as AttemptError it replaced every gap found above (audit
+        # 2026-10-27, third, K1)
+        lost = [str(exc)]
     return Gaps([*found.blockers, *lost], found.notes)
 
 

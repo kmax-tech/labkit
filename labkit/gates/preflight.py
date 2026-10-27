@@ -410,7 +410,7 @@ def check_deferred_elsewhere(
     except audit_findings.FindingsError as exc:
         findings.warn(str(exc), evidence_kind=GUARANTEED)
         elsewhere = []
-    handed: dict[Path, set[str]] = {}
+    handed: dict[Path, set[str] | None] = {}
     over = 0
     for other, r, f in elsewhere:
         if other not in handed:
@@ -418,9 +418,12 @@ def check_deferred_elsewhere(
                 handed[other] = handovers.handed_over(other)
             except handovers.HandoverError as exc:
                 findings.warn(str(exc), evidence_kind=GUARANTEED)
-                handed[other] = set()
+                handed[other] = None  # cannot tell; "set aside" would claim it
         n = r.findings.index(f) + 1
-        if handovers.entry(r, n) in handed[other]:
+        names = handed[other]
+        if names is None:
+            how = "handed over or set aside cannot be told — its handover record does not read"
+        elif handovers.entry(r, n) in names:
             over += 1
             how = "handed over unresolved — no result released"
         else:

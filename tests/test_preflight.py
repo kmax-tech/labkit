@@ -536,6 +536,12 @@ class TestAuditFindings(unittest.TestCase):
             self.assertIn("handed over unresolved — no result released", over)
             self.assertNotIn("set aside for later work:", over)
             self.assertIn("(0 set aside for later, 1 handed over unresolved)", over)
+            # a handover record that does not read cannot tell either way: it
+            # was told "set aside" (audit 2026-10-27, third, K5)
+            (other / "audits" / "handovers" / "handover-broken.json").write_text("{}")
+            _, unread = _run_preflight(area)
+            self.assertIn("handed over or set aside cannot be told", unread)
+            self.assertNotIn("set aside for later work:", unread)
             # a reminder, not a count: the summary line is the same without it
             shutil.rmtree(other / "audits")
             _, alone = _run_preflight(area)
