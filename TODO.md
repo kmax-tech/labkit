@@ -289,6 +289,353 @@ Zahl späterer Gelegenheiten und andere Änderungen derselben Runde zählen
 mit. Der stärkere konkrete Beleg sind die sichtbaren Berichtskorrekturen
 der neunten Runde (t3, t5).
 
+**Konsolidierter Plan nach dem Audit 2026-10-27 (Vorschlag): sauberer
+Code → Härtung mit brauchbaren Auswegen → genaue Anleitung.** Dieser
+Abschnitt ersetzt den ersten Planentwurf und bündelt die Befunde der
+anderen Leser aus dem [Audit-Register](docs/audit-2026-10-27.md), dem
+[Standardweg](docs/notes/2026-10-27-standard-way-out.md) und der
+[Prüfmatrix](docs/notes/2026-10-26-escape-routes-checks-and-exits.md).
+Die beschlossenen Regeln vom 26.10. bleiben in Kraft; die Detailvorschläge
+unter „Notiert, nicht geplant“ sind Begründung, keine parallele Reihenfolge.
+Dies ist ein Arbeitsplan, keine Behauptung bereits gebauter Garantien.
+
+Bewertung des ersten Entwurfs: Die Richtung stimmt. Zu korrigieren sind
+seine Grenzen: C5, C13 und C16 sind Verhaltensfehler, kein Textdrift;
+Belegschutz braucht einen genauen Vertrag statt „alles unveränderlich“;
+ein heuristischer Stolperdraht darf nicht blockieren; neue Sperren dürfen
+ihre Auswege nicht erst in der nächsten Phase bekommen. B4, die
+40-Einträge-Sackgasse aus B1 und atomare Protokollschreiber aus D gehören
+explizit in die Arbeit. `--again` gibt laut bestehender Entscheidung
+nichts frei; diese Entscheidung wird nicht erneut geöffnet.
+Eingearbeitet 2026-10-27: die kalte Prüfung dieses Plans (zwölf Punkte)
+und die Entscheidungen zu Fit-Wiederholungen und Schreibweg.
+
+Arbeitsregeln für jeden Umsetzungsschritt:
+
+- Vor dem Ändern Befund am aktuellen Stand nachstellen. Audit-Kennung,
+  verletzte Invariante, betroffene Leser/Schreiber und zulässigen Ausweg
+  benennen. Ein nicht mehr zutreffender Befund wird mit Beleg geschlossen.
+- Erst die vorhandene Heimat suchen; Prüfung rein, Dateizugriff beim
+  Format, Ablauf am Gate, Ausgabe über `gate`/`console`. Keine neue
+  Sammelabstraktion und keine zweite Heimat für dieselbe Entscheidung.
+- Pro Verhaltensfehler ein Regressionstest und der korrekte Zwilling.
+  Neue Sperren müssen sowohl den Fehler erkennen als auch den genannten
+  Fortsetzungsweg bis zum zulässigen Ende durchlassen. Reine
+  Textkorrekturen brauchen keinen künstlichen Zwillingstest.
+- Ein fachlich zusammenhängender Schritt pro Commit vorbereiten.
+  Belegschutz und sein Ausweg werden gemeinsam abgenommen; nötige
+  Teilcommits aktivieren vorher keine neue Sackgasse.
+- Vor Abschluss eines Codeschritts: gezielte Tests, reale CLI-Gegenprobe,
+  dann `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
+  `.venv/bin/pyright` und `.venv/bin/pytest -q`; unabhängiger kalter
+  Code-Leser gemäß Coding-Standard. Keine neuen Laufzeitabhängigkeiten.
+- Formatbrüche unter Unreleased mit letzter lesender Version und allen
+  betroffenen Lesern, Schreibern und Vorlagen benennen; keine Altleser.
+  Nicht pushen, taggen oder releasen. Externe Laborarbeit bleibt separat.
+
+Phase 0 — belastbare Gegenprobe vorbereiten, vor neuen Sperren:
+
+1. **Fit-Wiederholungen (C1, A13):** `--repeat-of RUN_ID` an die bestehende
+   Repeat-Mechanik anschließen; Beispiele für andere Seeds nennen den
+   Ausgangslauf ausdrücklich. `--seed` allein ist kein zuverlässiges
+   Kennzeichen einer Wiederholung: Auch die erste registrierte Messung
+   darf einen expliziten Seed haben. Abnahme: normaler Lauf antwortet,
+   Wiederholung bleibt unterstützender Lauf, `02_analyze.py --draws`
+   kann den gedruckten Befehl ausführen. Das verhindert nicht beliebiges
+   Seed-Shopping; diese Grenze bleibt benannt.
+   **Entschieden 2026-10-27: (a).** Seed-Streuung bleibt, der
+   Repeat-Seed wird deterministisch aus Elternlauf und reservierter
+   Draw-Nummer abgeleitet. Die bestehende Repeat-Prüfung vergleicht jeden Config-Key;
+   bloß `--repeat-of` durchzureichen würde einen anderen Seed verweigern.
+   Nur für diesen expliziten Fit-Repeat-Vertrag den genau benannten
+   Seed-Key aus dem Gleichheitsvergleich nehmen und stattdessen seinen
+   abgeleiteten Wert prüfen. Keine frei wählbaren Ausnahme-Keys; alle
+   übrigen Config-Felder bleiben gleich. Draw unter bestehender Sperre
+   reservieren, Seed vor der Messung festlegen und im Runrecord speichern.
+   Zwilling: willkürlicher Seed oder geändertes anderes Config-Feld wird
+   verweigert; konkurrierende Repeats erhalten unterschiedliche Draws.
+   Verworfen (b), die Seed-Streuung aus den Fit-Vorlagen zu streichen:
+   Sie ist eine Stabilitätsprüfung, nach der die Audits der achten Runde
+   (t3) ausdrücklich fragten.
+2. **Unabhängige Probe (C14):** Die von `usability` selbst erzeugten
+   Probe-Commits bekommen eine lokale feste Git-Identität. Abnahme in
+   echter temporärer Git-Kopie mit leerem Home und isolierter Git-Config;
+   kein Eingriff in die globale Identität, Tagtest nicht mit einem
+   taglosen Archiv verwechseln.
+3. **Reparaturfall:** Startzustand und erwartete Reparatur vorab festlegen,
+   vorhandene Belege behalten, Startkorrekturen einzeln festhalten.
+   Nach Veröffentlichung des benötigten Stands durch den Autor ein
+   begrenzter Versuch im Labor. Vorher lokale Gegenprobe ohne Modell.
+   Gemessen wird fachliche Reparatur samt neuer Messung und Bericht;
+   reine Berichtskorrektur zählt separat. Der Befund steuert die spätere
+   Anleitung, blockiert aber unabhängige Codebereinigung nicht.
+   Der Startzustand (Pilot-2-Fall A, Runde 8 t3) trägt noch den alten
+   Vorlagentext `--seed 7`: 0.1 erreicht ihn nur als einzeln
+   festgehaltene Startkorrektur am Schätzerskript, nicht durch
+   Neustempeln — das ersetzte das Skript, das den zu reparierenden Fehler
+   trägt.
+
+Phase 1 — Code bereinigen, danach die Verhaltenskorrekturen getrennt:
+
+1. **Git-Zugriffe (D):** Tatsächlich doppelte Fragen nach Git-Verzeichnis,
+   Dateien an einer Revision, Dateiinhalten, HEAD und Änderungen nach
+   `formats/repo.py` bewegen. Außerhalb eines Repos und Git-Fehler bleiben
+   unterscheidbar; Index und Arbeitsbaum bleiben explizite Eingaben.
+2. **Befehle (D, B1):** Ein Bauer je Audit-/Review-Befehl, mit Bereich,
+   bei Bedarf `--protocol`, korrekter Shell-Quotierung und vorhandenen
+   Voraussetzungen. Abnahme vom Repo-Root und Unterordner, mit Leerzeichen
+   im Pfad und mehreren Protokollen. Kein gedruckter nicht ausführbarer
+   Fortsetzungsbefehl. In einem Bereich mit mehreren Protokollen und früher
+   entschiedenen BLOCKERn verweigert das Folgeaudit (`audit.py:674-680`);
+   dort liefert der Bauer bis 2.4 nachweislich „kein ausführbarer Befehl“
+   samt Diagnose, den ausführbaren Weg bringt 2.4.
+3. **Entscheidungen (D, C17, E):** Statuslisten aus `findings.STATUSES`,
+   ein gemeinsames Prädikat für die Prüfpflicht geschlossener übertragener
+   Befunde. Zuerst Verhalten erhalten; eine Erweiterung auf alle
+   `dismissed`/`deferred`-BLOCKER ist separat Phase 2. Namen und Docs nennen
+   schon heute alle tatsächlich betroffenen Status.
+   **Entschieden 2026-10-27:** Der unterstützte Schreibweg für
+   Entscheidungen ist nur `--decide`. Docstrings (`findings`),
+   Record-Hinweise, Fehlertexte und Anleitung ändern sich gemeinsam.
+   Vorher muss `--decide` jede erlaubte Entscheidung schreiben können:
+   Heute verweist es bei Status oder Grund über mehrere Zeilen auf das
+   Editieren von Hand (`findings._decided_text`, „edit it by hand“) — ohne
+   diese Erweiterung entstünde eine Sackgasse. Die Integritätsprüfung (2.5)
+   validiert erlaubte Felder und Werte; dass `--decide` der Schreiber war,
+   kann sie aus Dateibytes nicht beweisen.
+4. **Schreiber und Orte (D, C15):** TOML nur über
+   `protocol_block.toml_string`, Protokollschreiben über
+   `files.write_atomic`, Bereichsauflösung über `repo.area_path`.
+   Abnahme: Steuerzeichen roundtrip-fähig, mehrdeutige Namen verweigert,
+   vorhandene Protokolle nach fehlgeschlagenem Schreiben erhalten.
+   Wo sich Verhalten ändert, eigener Bugfix statt Refactor-Etikett.
+5. **Belegte Verhaltensfehler (B4, C5, C13, C16):** Explore nennt einen
+   vollständigen nächsten Befehl; widersprüchliche Flags werden vor dem
+   frühen Return geprüft; Vorlagenupgrade gilt nicht ohne Beleg als
+   Benutzeränderung; erkannte LLM-Messungen erreichen den vorgesehenen
+   Hook-Pfad; die aufbewahrte Audit-Ablehnung wird trotz Parsefehler
+   angezeigt. Je Fehler ein Schritt mit Gegenprobe; kein neuer Auditaufruf
+   allein für eine Fehlermeldung.
+6. **Textabgleich (C2–C4, C10–C12, E):** Hilfen und Beispiele am
+   wirklichen Vertrag prüfen: Typ × Kostenstufe × Modell, vorhandene
+   Flags/Dateien, cwd des Detached-Befehls, Datenprofil, antwortender Lauf,
+   ausgelieferte Agenten. Gedruckte Befehle im gestempelten Bereich prüfen.
+   Ein dabei entdeckter Funktionsmangel bekommt einen eigenen Bugfix.
+   Übrige D-Zeilen nur bearbeiten, wenn dieser Ablauf sie konkret braucht.
+
+Phase 2 — Härtung; jeder Vertrag mit Ausweg und expliziter Grenze:
+
+1. **Codebindung des Laufs (A1), ohne Schemabruch:** In finalize
+   Station 3 (`finalize.py:302-338`) für jeden Typ den aufgezeichneten
+   `script_sha` des antwortenden Laufs mit dem heutigen Messskript
+   vergleichen; das fängt das Red-Team-Szenario g1. Der Bereichsstempel
+   (`area_stamp`) ist dafür zu breit: Er deckt `02_analyze.py`,
+   `analysis/*.py`, alle deklarierten Scopes und die Pin-Zeile ab — eine
+   reine Analysekorrektur oder ein Pin-Upgrade verlangte „neu messen“,
+   und bei `low` scheiterte runlog neu an jedem Syntaxfehler im
+   Analysecode. Werden Helfer gebraucht: eine benannte Teilmenge aus
+   `scope_sha` (Messskript und seine Import-Hülle), ohne Analysecode und
+   Pin, eine Heimat. Ausweg: „Skript wie gelaufen wiederherstellen
+   (`runs/<id>/script-source.py`) oder neu messen und den neuen Lauf
+   auditieren“. Zwillinge: Analysefix besteht, Pin-Upgrade besteht,
+   Änderung am Messskript oder an `lib/` hält. Garantiert ist die
+   Gleichheit des erfassten Umfangs; Ändern und Zurücksetzen dazwischen
+   und dynamische Abhängigkeiten erfasst der Vergleich nicht.
+2. **Reihenfolge der ersten Messung (A11), ohne neues Zeitfeld:** Wo der
+   Registrierungsvergleich (2.4) die erste Messung bestimmt, zuerst die
+   Git-Abstammung der aufgezeichneten Commits (`git_full`) nehmen, die
+   Lauf-id nur bei gleichem Commit; Gleichstand ausdrücklich behandeln,
+   Gegenprobe mit verschiedenen `TZ`-Werten. Gelingt das nicht ohne
+   Schemabruch, wandert A11 unter „Notiert“: Es setzt Absicht voraus.
+3. **Übergabe als funktionierender Ausweg, gebaut mit dem
+   Abschlussvertrag 3.1 (t18, B3):** Vor neuen
+   Integritätssperren einen expliziten `protocol-fill`-Schritt für einen
+   erzeugten ungelösten Bericht bereitstellen. Name und Format vorher
+   klären; keine nicht vorhandenen Skills als Voraussetzung.
+   Kopf: Protokoll, Ursache, versuchte Schritte, bekannte Läufe/Records und
+   offener Evidenzverlust. Muss ohne Lauf und bei fehlendem Record
+   funktionieren. Übergabe bestätigt keine Zahl und heilt keinen
+   beschädigten Beleg. Eine ausdrücklich ungelöste Abgabe muss den
+   Abschlussweg erreichen, während Ergebnisfreigabe weiter verweigert
+   wird; keine globale Unterdrückung offener BLOCKER. Der Ort des
+   geschuldeten Berichts (3.1) wird hier mitgebaut: Stop und Pre-commit
+   müssen den Übergabeblock finden.
+   Zwei Fälle: (i) Ein lesbarer offener BLOCKER bekommt über `--decide`
+   eine Entscheidung, ungelöst `deferred` mit Grund. Stop und Pre-commit
+   halten heute nur `open`; am Hook ist dafür nichts zu bauen. Der
+   Übergabeblock nennt die Befunde strukturiert (Record und Nummer); kein
+   Gate liest den Grundtext als Marker — ein Prosamuster scheiterte schon
+   an Backticks (V1). (ii) Ein fehlender Record oder ein unlesbares
+   Journal gibt nur frei, wenn der TOML-Kopf der Übergabe genau diese
+   Lücke nennt (Recordname bzw. Journal-Id): exakt und garantiert; die
+   Prosa über noch vorhandene Belege ist es nicht. Den Verlust schreibt
+   ein benannter Befehl mit Format-Heimat `attempts` (Name per
+   `/naming`), keine erfundene Entscheidung; Gates drucken ihn nur als
+   `fix`. Nur diese benannten Lücken enden; fremde oder neue offene
+   Befunde bleiben gehalten, und keine Variante bestätigt eine Zahl.
+   Eine ausstehende Entscheidungsprüfung hält die Ergebnisfreigabe,
+   nicht die ausdrücklich ungelöste Übergabe. Diesen Unterschied auch
+   mit 2.6 und dem Rückfall ohne Stop-Basis aus 2.7 gegenprüfen.
+   Abnahme: offener lesbarer BLOCKER, zuvor abgelehnte Entscheidung,
+   nie gestagter verlorener Record, unlesbares Journal und „Ergebnis
+   deklariert, dann übergeben“ (der Schreiber zieht `[result] run`
+   zurück); jeweils Übergabe samt Stop und Commit möglich,
+   Ergebnisübernahme verweigert.
+4. **Neuansatz plus Registrierungsvergleich (A4, A5, B1, B3):** Ein neuer
+   Bereich mit neuer Protokoll-id nennt seinen Vorgänger in einem
+   Kopffeld — die eine Heimat; „abgelöst“ wird daraus abgeleitet, in den
+   alten Bereich wird nichts geschrieben (ein Schreiben dort berührte
+   ihn: Stop und Pre-commit hielten seine offenen BLOCKER, und ein Beleg
+   würde umgeschrieben). Offene BLOCKER des Vorgängers werden zuerst
+   entschieden (`deferred`, der Grund nennt den Nachfolger); die
+   Folgeprüfung zeigt nur entschiedene. Ein Übertrag über Bereichsgrenzen
+   braucht eine bereichsqualifizierte Referenz in `carries` und im
+   `decision_digest` — Breaking, mit letzter lesender Version.
+   `audit.BLOCKER_ROUTES` nennt den Vorgänger dann über dieses Feld,
+   nicht im Context. Frühere Ergebnisse, Gründe und Urteile erscheinen im
+   erzeugten Vorgängerblock des Berichts. Ein dokumentierter Verlust
+   (2.3) macht den alten Versuch nicht gültig. Gemeinsam den
+   Registrierungskern der ersten Messung gegen heute vergleichen:
+   erforderliche Felder, Typ, Versprechen und Kriterienwerte nach genau
+   benanntem Umfang; keine nachträglichen Ergebnisfelder. Abnahme aller
+   drei Sackgassen A4/A5/B3 bis Übergabe oder neuem prüfbarem Versuch;
+   bloßes Anlegen eines leeren Bereichs reicht nicht. Bestehende Bereiche
+   mit mehreren Protokollen bekommen eine ehrliche Diagnose, keinen
+   unmöglichen Folgeaudit. Auch die 40-Einträge-Sackgasse aus B1 braucht
+   einen belegten Fortsetzungsweg, kein „settle“ auf einer wachsenden Liste.
+5. **Belegintegrität (A4, A5–A7, A9):** Gegen die noch verfügbare
+   Git-Historie prüfen. Abgeschlossene Laufbelege, Antworten und Reviews
+   dürfen nicht still ersetzt oder entfernt werden; das Journal wird
+   erweitert. Auditinhalt und seine Bindungen bleiben fest, ausdrücklich
+   erlaubte Entscheidungsfelder bleiben änderbar. Vergleich erfolgt auf
+   diesen Formatregeln, nicht blind über den ganzen Auditrecord.
+   Bei Freigabe stehen die geschuldeten Belege im Index bzw. Commit;
+   Ignore-Regeln einschließlich `.git/info/exclude` werden berücksichtigt.
+   Ausweg: konkrete Wiederherstellung aus einem benannten Stand; sonst
+   dokumentierter Verlust mit 2.3/2.4. Testfälle: Reset hinter Belege,
+   Index-Löschung, Journal-Kürzung, zulässige Entscheidung, laufender Run,
+   saubere neue Belege und verzweigte Historie. Reflog ist nur lokaler
+   Zusatzzeuge. Gelöschte Historie oder nie bezeugte Dateien sind damit
+   nicht beweisbar; auch ein lokales Siegel belegt keine Modellherkunft.
+   Der Vergleich der Auditrecords folgt der Regel von `write_decision`:
+   Zwischen zwei Fassungen ändern sich nur die Entscheidungszeilen eines
+   Befunds, der Kopf bleibt gleich. Den Verlust schreibt der Befehl aus
+   2.3; die prüfenden Gates schreiben nichts.
+6. **Entscheidungen (A2, A3):** Vorschlag zur Entscheidung:
+   `dismissed`/`deferred` auf einem BLOCKER schuldet auch ohne frühere
+   Ablehnung eine Prüfung. `not assessable` bleibt die ehrliche
+   Anspruchsbegrenzung; `fixed` folgt der bestehenden Folgeprüfung.
+   Frühere Urteile und Gründe desselben Befunds dem nächsten Prüfer
+   zeigen, auch nach Umformulierung. Abnahme: bloßes Rewording löscht
+   Vorgeschichte nicht; tatsächlich ergänzte Belege bleiben prüfbar.
+   Semantische Gleichwertigkeit zweier Gründe wird nicht als garantiert
+   behauptet. Zusätzliche Modellkosten gesondert messen. Die Prüfpflicht
+   gilt der Ergebnisfreigabe; eine ungelöste Übergabe nach 2.3 braucht
+   kein bestätigendes Modellurteil über die ungelöste Entscheidung.
+   Vorhandene Heimaten erweitern, kein zweiter Historienmechanismus:
+   `decision_review.decisions_text` zeigt frühere Urteile heute nur für
+   schließende Status (`CLOSING`), künftig auch für ein umformuliertes
+   `accepted`/`stands` nach `rejected`; das Berichtsreview bindet über den
+   Rohtext (`report_reviews.standing`), künftig gehen die Claims derselben
+   Bericht-/Protokollpaarung in die nächste Prüfung mit.
+7. **Hooks und geprüfter Stand (C8, C9, C7, A12):** Git-Root auch vom
+   Unterordner finden; ohne Stop-Basis laut melden und die Commits seit
+   Transkriptbeginn (`_transcript_start`) prüfen, nie alle Protokolle des
+   Repos — alte Bereiche blockieren nicht jeden Stop (2026-10-17), und der
+   Stop läuft im 120-s-Limit (`install_hooks.py:147`); das Zeitbudget
+   testen. Am Commit Entscheidungen samt Journal aus dem Index lesen.
+   Ein fehlerhafter Commit plus uncommitteter Fix darf die Stop-Basis
+   nicht freigeben. Schleifenschutz pro Zug bleibt wie beschlossen.
+   `--no-verify` wird nicht beiläufig verboten; Standardtext beschreibt
+   genau die nachfolgende Kontrolle und ihre Grenzen.
+8. **Berichtspfade und Exit-Vertrag (A10, C6):** Symlink-Berichte am
+   ursprünglichen Pfad erkennen und mit konkretem Ausweg verweigern.
+   Bei `--again` Messergebnis und gehaltenen Gesamtstand ausdrücklich
+   trennen; Exit-Code samt allen Aufrufern am dokumentierten Vertrag
+   ausrichten. Ein sauberer zusätzlicher Draw gibt einen CLAIM desselben
+   Stands weiterhin nicht frei.
+
+Phase 3 — genaue Anleitung auf den geprüften Befehlen aufbauen:
+
+1. **Abschlussvertrag (gebaut mit 2.3):** Geschuldete Abgabeberichte ausdrücklich bestimmen,
+   einschließlich `REPORT.md` im Repo-Root; kein pauschaler Blockzwang für
+   jede README oder Notiz. Pro zugeordnetem Protokoll Ergebnis, Diskussion
+   oder Übergabe eindeutig ausweisen; mehrere Protokolle und besprochene
+   Zusatzläufe bleiben möglich. Fehlende Laufzitate umgehen die Formpflicht
+   nicht. Ergebnis und Diskussion behalten ihre bisherigen Prüfketten.
+   Die Form einer Übergabe beweist nicht, dass ihre Prosa keine
+   Ergebnisbehauptung enthält: diese Inhaltsgrenze benennen und testen.
+2. **Auswege als Daten:** Gate-eigene BLOCKER tragen ein nichtleeres `fix`;
+   bestehende Aufrufstellen und alle Ausgabeformen gemeinsam umstellen
+   (`PREFIXED`/`AS_WRITTEN` zeigen `fix` heute nicht automatisch).
+   Gemeinsame Befehlsbauer liefern den passenden Schritt und, wo möglich,
+   die konkrete Übergabealternative. Ursache und Voraussetzungen bleiben
+   bei der zuständigen Prüfung; keine zentrale Tabelle kopiert Gate-Logik.
+   Abnahme: jeder BLOCKER hat einen passenden, ausführbaren Ausweg, auch
+   bei verschachtelten Gates; eine generische Pflichtzeichenkette reicht
+   nicht. Auditbefunde (`findings.Finding`) bleiben ein eigener Vertrag.
+   Die Abnahme umfasst auch Verweigerungen außerhalb von `GateFinding`:
+   `AuditError` über `console.refuse`, `AttemptError`, die
+   `SystemExit`-Verweigerungen in runlog und start_check und die
+   Hook-Meldungen; was ausgenommen bleibt, steht als Liste im Test.
+3. **Gestempelte Anleitung:** „When you are stuck“ mit fünf kurzen Wegen:
+   reparieren und neu messen; Kriteriumsverfehlen berichten; Anspruch
+   begrenzen; mit Vorgänger neu registrieren; ungelöst übergeben. Echte
+   Befehle und Voraussetzungen, beide Kostenstufen und alle Typen.
+   Erlaubte Entscheidungen ändern den Record über `--decide`; die Anleitung
+   darf deshalb nicht pauschal jede Änderung unter `audits/` verbieten.
+   Die Wege der Vorlage und `audit.BLOCKER_ROUTES` hält ein Test gleich.
+4. **Stolperdrähte:** Heuristische Erkennung von Shell-/Edit-/Write-Aktionen
+   ist statische Evidenz und warnt, niemals BLOCKER. Keine Sperre auf
+   Schlüsselwörter wie `reset`, `--amend` oder `audits/`; sie träfe auch
+   legitime Operationen. Exakte Integritätsverstöße hält 2.5. Neue
+   Heuristiken nur nach belegtem Bedarf und mit Fehlalarm-Gegenproben.
+5. **Leseprobe vor Ausführung:** Situationen aus der
+   [bisherigen Leseprobe](docs/usability/2026-10-26-instruction-reading-probe.md)
+   plus Reparatur, fehlende Belege und unregistrierte Messung. Leser nennt
+   jeweils nächsten Befehl, Voraussetzung und erlaubtes Endergebnis.
+   Fehlgelesene Anleitung vor bezahlten Ausführungsproben korrigieren.
+
+Phase 4 — gemeinsame Abnahme, ohne Garantien und Nutzen zu vermischen:
+
+1. Ohne Modellaufruf alle A/B-Szenarien als Fehler/Gegenfall nachstellen;
+   gespeicherte Antworten und gelieferte Stände der Runden 8/9 benutzen.
+   Erwartete Übergabe nicht als Ergebnisfreigabe zählen. Der void-Status
+   der neunten Runde bleibt unverändert; Replay ist keine neue Nutzungsprobe.
+2. Im Labor vorab Startzustand, Erfolgskriterien und Kostendeckel für je
+   einen Reparatur- und Feststeckfall festhalten. Messen: fachliche
+   Reparatur, neue Messung, wahrer Bericht, erhaltene Belege, brauchbarer
+   Ausweg, Fehlalarme, Zeit und Kosten. Ehrliche Übergabe separat zählen.
+3. Erst danach zehnte Runde in Bereich 09 als eigener Laborauftrag;
+   Vorlagenänderung als Intervention registrieren. Proxy-Abgleich gegen
+   handgeschriebene Audit-Records (Prüfmatrix Zeile 12), `--check` mit
+   labkit aus dem Image (A8), Regel der ersten Messung (F) und
+   Kategorie „ehrliche Übergabe“ sind Voraussetzungen der dortigen
+   Auswertung, keine in labkit erledigten Aufgaben.
+
+Noch zu entscheiden, jeweils vor dem betroffenen Bau: (a) Erweiterung
+der Entscheidungsprüfung in 2.6; (c) Abschluss-/Neuansatzformat,
+zugeordnete Abgabeberichte und Behandlung bereits verfehlter Kriterien
+beim Neuansatz. Empfehlung für (c): Ein Verfehlen bleibt sichtbares
+Ergebnis, ein nachträglicher neuer Ansatz wird ausdrücklich als solcher
+registriert. Der Reparaturfall liefert Eingabe für (a) und (c); diese
+danach und vor ihrem Bau treffen. Keine erneute Entscheidung über die
+bereits beschlossene Nichtfreigabe durch `--again`.
+(b) Schemabruch: für A1 und A11 nicht nötig (2.1, 2.2); ein Bruch nur,
+wenn der Reparaturfall ihn belegt. labkit liest nur die aktuelle
+Schema-Version (`runs.py:452`), die Stände der Runden 8 und 9 und der
+Startzustand des Reparaturfalls sind Schema 4 — ein Bruch hielte dann in
+4.1 fest, ob Replays auf neu erzeugten Ständen oder mit der gepinnten
+Version laufen und welche Gates nicht nachgespielt werden.
+Entschieden 2026-10-27: Fit-Wiederholungen Variante (a) (0.1);
+Entscheidungen nur über `--decide` (1.3). Phase 0 und unabhängige
+Bereinigungen aus Phase 1 brauchen die offenen Entscheidungen nicht.
+Umordnung gegenüber „Punkt 3 (Laufzuordnung t18) bleibt der nächste
+eigene Schritt“: Der Abschluss von t18 (3.1) wird mit der Übergabe
+(2.3) gebaut — die Übergabe braucht den Ort des geschuldeten Berichts,
+und eine Sperre ohne Ausweg wird nicht gebaut; davor Phase 0, Phase 1,
+2.1 und 2.2.
+
 **Reihenfolge nach der achten Runde (beschlossen 2026-10-26).** Jeder
 Schritt schließt einen belegten Fehlweg und hat einen korrekten Zwilling.
 Die Abnahme ist eine neue Runde in Bereich 09 als eigener Auftrag. Sie misst
@@ -480,17 +827,20 @@ Notiert, nicht geplant:
    `findings.open_findings`, alle Modi); kein Status sagt „gehört zu einem
    aufgegebenen Versuch“ (gelesen, nicht ausprobiert).
    Vorschlag, ein Schritt:
-   (a) der alte Versuch bleibt unverändert und wird als aufgegeben
-   markiert, mit Änderungsgrund und den Digests seiner Records; seine
-   bereits vorliegenden Ergebnisse bleiben sichtbar;
+   (a) der alte Versuch bleibt unverändert; „abgelöst“ folgt aus dem
+   Vorgängerfeld des neuen Kopfs (Plan 2.4), in den alten Bereich wird
+   nichts geschrieben; seine bereits vorliegenden Ergebnisse bleiben
+   sichtbar;
    (b) eine neue Registrierung nennt ihren Vorgänger;
-   (c) die offenen Befunde des alten Versuchs gehen ins erste Audit des
-   neuen (nach dem Muster der Folgeprüfung, `3fc3315`) — der Neuansatz ist
-   kein Ausweg aus Befunden;
+   (c) die offenen Befunde des alten Versuchs gehen, nachdem sie
+   entschieden sind (Plan 2.4), ins erste Audit des neuen (nach dem Muster
+   der Folgeprüfung, `3fc3315`) — der Neuansatz ist kein Ausweg aus
+   Befunden;
    (d) der Bericht trägt einen erzeugten Block „frühere Versuche“: Zahl,
    Grund und Urteil je Versuch (LAB-042 Log the outcome — failures too);
    (e) ein unwiederbringlich verlorener Record (nie gestagt, gelöscht)
-   bleibt als Evidenzverlust dokumentiert — im Journal und im Block —, und
+   bleibt als Evidenzverlust dokumentiert — über den Verlustschreiber
+   (Plan 2.3) und im Block —, und
    der neue Versuch macht den alten nicht rückwirkend gültig;
    (f) der Kriterienvergleich (Latte bei der ersten Messung gegen heute)
    hält im selben Bau, und sein Fortsetzungsweg ist dieser Neuansatz.
@@ -512,48 +862,16 @@ Notiert, nicht geplant:
    (c) Ein nie gestagter, gelöschter Record lässt keinen Ausweg außer
    `git checkout`/`git add`; der Ausweg ist Punkt 3 (e).
 5. **Audit 2026-10-27** ([Register](docs/audit-2026-10-27.md), HEAD
-   `27a33b5`, mit Red-Team in Wegwerf-Repos). Offene Entscheidungen, je
-   ein Paar aus Prüfung und Fortsetzungsweg:
-   1. Lauf an Code binden (A1): runlog hält den Bereichsstempel fest,
-      finalize vergleicht ihn bei jeder Art; Ausweg „neu messen, dann
-      auditieren“. Wahrscheinlichster Haiku-Weg.
-   2. Laufrecords und Audit-Dateien nach dem ersten Commit unveränderlich
-      und getrackt (`git check-ignore` leer), Reflog als Zeuge (A4, A5,
-      A6, A7, A9); Ausweg: wiederherstellen oder Neuansatz.
-   3. Lauf vor dem Registrierungs-Commit (A4) und gelöschter auditierter
-      Lauf (A5) brauchen den Neuansatz als Ausweg — in Punkt 3 aufnehmen.
-      Dabei kein zweites Protokoll im selben Bereich, solange Records
-      keine Protokoll-id tragen (B1: die Folgeprüfung verweigert dort).
-   4. `dismissed`/`deferred` auf einem BLOCKER schuldet die
-      Entscheidungsprüfung wie `stands` (A2)? Kostet Prüfaufrufe.
-   5. Umformulierte Begründung: die nächste Prüfung sieht frühere Urteile
-      (A3).
-   6. Fit-Vorlage: `--seed`-Läufe als Wiederholung (`repeat_of`) und
-      `--repeat-of` im Schätzerskript, oder Text korrigieren (C1, A13) —
-      vor dem Reparaturfall, der eine Fit-Aufgabe ist.
-   7. Hooks schweigen ohne `.git` im Projektordner und ohne Stop-Basis
-      (C8, A12): laut scheitern.
-   8. Symlink-Bericht (A10), `--again` mit Claim (C6), Stop-Semantik nach
-      `--no-verify` (C7): klein, je ein Commit.
-   9. Drift-Paket nur Text (C2–C5, C10–C13, C16, C17, E) und der
-      Fresh-Home-Test (C14).
-   10. Doppelte Heimaten, oberste Zeilen von D (Befehlsbauer mit
-       `--protocol`, TOML-Schreiber, Bereichsauflösung, Antwortgrammatik,
-       Statusliste).
-   11. Labor, nicht labkit: venv-Integrität im Standard-Check (A8: `--check`
-       mit dem labkit des Images) und die abweichende Regel der ersten
-       Messung (F).
-6. **Standardweg aus Problemen (Vorschlag 2026-10-27, nicht entschieden):**
+   `27a33b5`, mit Red-Team in Wegwerf-Repos): Jede Kennung ist im
+   konsolidierten Plan oben einem Schritt zugeordnet oder dort als
+   notiert geführt; die frühere Liste an dieser Stelle ist darin
+   aufgegangen.
+6. **Standardweg aus Problemen:**
    [Note](docs/notes/2026-10-27-standard-way-out.md) mit Entwurfstext für
-   die gestempelte AGENTS.md: Belege werden nie entfernt oder
-   überschrieben; Ursache benennen, dann ihr Ausweg (korrigieren und neu
-   messen · Verfehlen berichten · `not assessable` · neu registrieren ·
-   anhalten und übergeben); Stolperdrähte, bei denen der Agent stattdessen
-   übergibt. Braucht einen Übergabebefehl mit erzeugtem Block (schließt
-   auch t18: jeder Bericht trägt Ergebnis, besprochenen Lauf oder
-   Übergabe), den Neuansatz (Punkt 3) und eine Auswertung in Bereich 09,
-   die ehrliche Übergabe von Ausweichen trennt. Eine Änderung der
-   Vorlage ist eine Intervention im labkit-Arm.
+   die gestempelte AGENTS.md; eingeplant als Übergabe (Plan 2.3), Auswege
+   als Daten (3.2) und gestempelte Anleitung (3.3). Stolperdrähte nur als
+   Warnung (3.4). Eine Änderung der Vorlage ist eine Intervention im
+   labkit-Arm.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und

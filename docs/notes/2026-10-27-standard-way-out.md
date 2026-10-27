@@ -5,6 +5,13 @@
 (`2026-10-26-escape-routes-checks-and-exits.md`), the audit register
 (`docs/audit-2026-10-27.md`), `labkit/templates/AGENTS.md.template`.*
 
+> Superseded in two points by the plan in `TODO.md` (2026-10-27,
+> "Konsolidierter Plan"): tripwires warn and never hold — a heuristic on
+> commands is static evidence (plan 3.4); and a decision changes a record
+> under `audits/` through `--decide`, the one supported way (plan 1.3), so
+> the draft's "edit a file under `audits/`" means editing or deleting a
+> record other than through `--decide`.
+
 ## Why
 
 The ways past the gates in nine rounds came where a well-meaning agent
