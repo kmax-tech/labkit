@@ -23,7 +23,7 @@ naming the record or why there is none — a review with a claim deleted
 before the commit is named, where before nothing held the state once it
 was gone (ninth haiku round, t5). report-check holds
 a report with a discussion block until a review of exactly that state
-names no claim (`report_check.report_review_owed`); a claim holds the
+names no claim (`report_hold.report_review_owed`); a claim holds the
 state, and a later clean draw does not release it. On a state a review
 already judged the command makes no new call: after a claim, change the
 report or a source the reviewer read; after a clean review there is
@@ -96,7 +96,7 @@ def review_hint(text: str, report: Path, repo: Path) -> str | None:
     (`repo.audit_command`, `--protocol` where the area holds several),
     paths as `shown` from REPO. The hint the post-change hook gives (`claude_hooks.post_change`);
     it runs nothing — a model call is the agent's to start; report-check
-    holds the report until the review is done (`report_check.report_review_owed`).
+    holds the report until the review is done (`report_hold.report_review_owed`).
     A discussed run no area holds names no command (report-check holds it
     as a cited run the repo lacks). Raises ReportBlockError on a block that
     does not read."""

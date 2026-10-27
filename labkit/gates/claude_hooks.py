@@ -53,7 +53,7 @@ post-change
     and the agent's to start. A report is read at its own path
     (`repo.own_path`), as the stop and the commit read it: one that is a
     symbolic link is told their refusal and its way out
-    (`report_check.link_gap`). A per-session cache of content hashes keeps a
+    (`report_hold.link_gap`). A per-session cache of content hashes keeps a
     file that was already checked or hinted at this content from being
     reported after every later command.
 
@@ -154,7 +154,7 @@ from labkit.formats.shell import segments
 from labkit.formats import handovers
 from labkit.checks import notes_check, protocol_report
 from labkit.checks.report_blocks import ReportBlockError
-from labkit.gates import preflight, report_check
+from labkit.gates import preflight, report_check, report_hold
 from labkit.gates.install_hooks import STOP_TIMEOUT_S
 from labkit.gates.report_review import review_hint
 from labkit.formats.repo import (
@@ -457,13 +457,13 @@ def _report_hint(text: str, path: Path, repo: Path) -> str | None:
     """The review's hint for the report at PATH, its own path
     (`repo.own_path`) — `review_hint` —, or what report-check refuses at
     the stop and the commit, said now: a report that is a symbolic link
-    (`report_check.link_gap`, with its way out), a block in it that does
+    (`report_hold.link_gap`, with its way out), a block in it that does
     not read."""
-    link_target = report_check.refused_link(repo, path, staged=False)
+    link_target = report_hold.refused_link(repo, path, staged=False)
     if link_target is not None:
         # named where it lies: `shown` resolves, which follows the link
         rel = path.relative_to(repo.resolve()).as_posix()
-        return report_check.link_gap(rel, path, link_target, repo, staged=False)
+        return report_hold.link_gap(rel, path, link_target, repo, staged=False)
     try:
         return review_hint(text, path, repo)
     except ReportBlockError as exc:
@@ -501,7 +501,7 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
             targets.append((kind, c))
     marked = [
         (path, hint)
-        for path, text in report_check.report_files(named, repo, staged=False)
+        for path, text in report_hold.report_files(named, repo, staged=False)
         if (hint := _report_hint(text, path, repo))
     ]
     if not targets and not marked:

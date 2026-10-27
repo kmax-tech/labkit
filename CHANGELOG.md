@@ -1081,6 +1081,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **`report_check` split at its seam.** Its 2000 lines held two
+  responsibilities that shared only format imports: the protocol's
+  release stations, and finding the reports a change reaches and what
+  holds each. The second (report files through links and states,
+  discovery, the repo's sources, `hold_report`) is `gates/report_hold`;
+  `report_check` keeps the stations and the entry points — `if_reported`
+  states the order (protocols first, then reports) and calls into it.
+  Audit 2026-10-27 (third), M3.
 - **`protocol_report` is a check, in `labkit/checks/`.** The
   `protocol-check` command (47 prints, `main`, `cli`, doctrine imports)
   stood in layer 1 among the formats. It moved to layer 3; the console

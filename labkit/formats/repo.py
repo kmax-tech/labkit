@@ -358,7 +358,7 @@ def own_path(path: Path) -> Path:
     """PATH with its directory resolved and its own name kept: a symbolic
     link stays the link, where `resolve()` would give the file it names.
     The path git keeps an entry under, and the one a gate tests before it
-    reads through a link (`report_check.report_files`)."""
+    reads through a link (`report_hold.report_files`)."""
     return path.parent.resolve() / path.name
 
 

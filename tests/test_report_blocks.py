@@ -21,7 +21,7 @@ from protocol_fixture import completed_run
 
 from labkit.checks import report_blocks
 from labkit.formats import report_reviews
-from labkit.gates import report_check, report_review
+from labkit.gates import report_check, report_hold, report_review
 from labkit.tools import protocol_fill
 
 RUN = "2026-10-07T10-00-00_ab12"
@@ -652,7 +652,7 @@ class ReportFiles(unittest.TestCase):
         code, out = self._gate(root, metrics, staged=True)
         self.assertEqual(code, 1, out)
         self.assertIn(
-            f"═══ report-check REPORT.md ({report_check.DISCUSSES_TOUCHED}) ═══", out
+            f"═══ report-check REPORT.md ({report_hold.DISCUSSES_TOUCHED}) ═══", out
         )
         self.assertIn("has no clean report review of this state", out)
         self.assertRegex(out, r"changed since: FILE: \S*metrics\.json")
@@ -1061,7 +1061,7 @@ class ReportFiles(unittest.TestCase):
         own = root.resolve() / "REPORT.md"
         circle = {own: "B.md", root.resolve() / "B.md": "REPORT.md"}
         self.assertEqual(
-            report_check.report_entry(root, own, staged=True, index_links=circle),
+            report_hold.report_entry(root, own, staged=True, index_links=circle),
             ("B.md", None),
         )
 

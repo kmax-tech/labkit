@@ -81,7 +81,7 @@ from labkit.formats import (
 from labkit.checks.result_render import Rendering, rendering
 from labkit.formats.repo import GitError, audit_command, git_root, shown, state_text
 from labkit.checks import recheck, report_blocks
-from labkit.gates import report_check
+from labkit.gates import report_check, report_hold
 from labkit.checks.prompt_check import prompt_constants
 from labkit.formats.protocol_check import (
     RECORDED_RESULTS_LABEL,
@@ -1105,10 +1105,10 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
 
 def _print_still_citing(protocol: Path, run_id: str, root: Path) -> None:
     """After a handover withdrew RUN_ID: every report that still cites it
-    (`report_check.reports_citing`), each with the `--discuss` command that
+    (`report_hold.reports_citing`), each with the `--discuss` command that
     keeps the citation honestly — or remove it; each holds the stop and the
     commit until then. Silent when none does."""
-    held = report_check.reports_citing(run_id, root)
+    held = report_hold.reports_citing(run_id, root)
     if not held:
         return
     here = Path.cwd()

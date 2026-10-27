@@ -2,7 +2,7 @@
 
 The stop read a symbolic link's target in the tree and the commit read
 the link's stored name in the index, so the two judged different text
-(`report_check.repo_sources` followed it, `repo.state_text` does not).
+(`report_hold.repo_sources` followed it, `repo.state_text` does not).
 labkit refuses a protocol link with a sentence naming it, valid or
 broken, in each state by that state alone; a regular protocol reads in
 both. Audit 2026-10-27 (second), left open, settled the same day.
@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from labkit.formats import repo  # noqa: E402
 from labkit.checks.protocol_report import check_files, template_lines  # noqa: E402
 from labkit.checks.protocol_report import find_template  # noqa: E402
-from labkit.gates import report_check  # noqa: E402
+from labkit.gates import report_check, report_hold  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 REFUSED = "a protocol must be a regular file, not a symbolic link"
@@ -61,7 +61,7 @@ class ProtocolLinks(unittest.TestCase):
 
     def held(self, *, staged: bool) -> tuple[bool, int, str]:
         """(refused by repo_sources, hold_declared's exit, its output)."""
-        sources = report_check.repo_sources(self.root, staged=staged)
+        sources = report_hold.repo_sources(self.root, staged=staged)
         refused = REFUSED in sources.unreadable.get(self.protocol, "")
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
@@ -73,7 +73,7 @@ class ProtocolLinks(unittest.TestCase):
         self.git("add", "-A")
         for staged in (False, True):
             with self.subTest(staged=staged):
-                sources = report_check.repo_sources(self.root, staged=staged)
+                sources = report_hold.repo_sources(self.root, staged=staged)
                 self.assertIn(self.protocol, sources.texts)
                 self.assertNotIn(self.protocol, sources.unreadable)
                 self.assertEqual(self.held(staged=staged)[1], 0)

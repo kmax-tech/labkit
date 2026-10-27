@@ -34,7 +34,7 @@ here states, and no more:
   head holds the protocol, the run and the why as TOML, its line says
   `Run <id> — discussed, not reported: <why>`. A block without its why,
   one whose line differs from its head, and a second block of the same
-  protocol and run are blockers. The gate (`report_check.promotions`)
+  protocol and run are blockers. The gate (`report_hold.promotions`)
   holds the undiscussed citation of a protocol's answering run that
   declares no result: at `low` such a report is the promotion without the
   adoption (sixth haiku round, 2026-10-23, t3 and t18: `--from-run`

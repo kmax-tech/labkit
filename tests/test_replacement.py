@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import result_render  # noqa: E402
 from labkit.formats import findings, protocol_block, protocol_history  # noqa: E402
-from labkit.gates import report_check  # noqa: E402
+from labkit.gates import report_check, report_hold  # noqa: E402
 from protocol_fixture import completed_run, head, registration_of, started_at  # noqa: E402
 
 A_ID, B_ID = "p-aaaaaaaaaaaaaaaa", "p-bbbbbbbbbbbbbbbb"
@@ -388,8 +388,8 @@ class Hint(_Areas):
         return report
 
     def hints(self, report: Path) -> list[str]:
-        sources = report_check.repo_sources(self.root, staged=False)
-        return report_check.replacement_hints(
+        sources = report_hold.repo_sources(self.root, staged=False)
+        return report_hold.replacement_hints(
             report,
             "REPORT.md",
             report.read_text(encoding="utf-8"),
