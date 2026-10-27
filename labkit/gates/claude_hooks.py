@@ -148,6 +148,7 @@ from labkit.formats import (
     standard_contract,
 )
 from labkit.formats.shell import segments
+from labkit.formats import handovers
 from labkit.checks import notes_check
 from labkit.checks.report_blocks import ReportBlockError
 from labkit.gates import preflight, report_check
@@ -935,25 +936,31 @@ def undecided_blockers(
     (A4, 2026-10-17: a repo's old areas must not block every stop).
     STAGED (the pre-commit): the audit records with their decisions
     (`findings.area_records`) and the attempt journal (`attempts.area_gaps`)
-    as the index holds them — what the commit carries, not the tree."""
+    as the index holds them — what the commit carries, not the tree.
+    An exact unresolved handover may acknowledge integrity gaps for this
+    stop/commit alone; it never dismisses readable open BLOCKERs. At commit,
+    its audit evidence must also match the working tree, so new unstaged
+    evidence cannot borrow an earlier acknowledgement."""
     out = []
     for area in areas_touched(paths, repo):
         shown = area.relative_to(repo.resolve()).as_posix()
+        # Only an exact unresolved handover can acknowledge integrity gaps.
+        # Open readable BLOCKERs remain owed independently below.
+        handed_over = handovers.valid(area, staged=staged)
         try:
-            out += [
+            gaps = [
                 f"{shown}: {gap}"
                 for gap in attempts.area_gaps(area, staged=staged).blockers
             ]
         except attempts.AttemptError as exc:
-            out.append(f"{shown}: {exc}")
-        try:
-            records = findings.area_records(area, staged=staged)
-        except findings.FindingsError as exc:
-            out.append(f"{shown}: {exc}")
-            continue
+            gaps = [f"{shown}: {exc}"]
+        status = findings.record_status(area, staged=staged)
+        if not handed_over:
+            out += gaps
+            out += [f"{shown}: {error}" for error in status.errors]
         out += [
             f"{shown}: {u.line}"
-            for u in findings.open_findings(records)
+            for u in findings.open_findings(status.records)
             if u.grade == "BLOCKER"
         ]
     return out

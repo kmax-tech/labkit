@@ -117,6 +117,14 @@ def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
     return f"protocol-fill {shown(protocol, Path.cwd())} --from-run {run_id}"
 
 
+def handover_command(protocol: Path, report: str = "REPORT.md") -> str:
+    """The explicit unresolved-handover command; it runs no model."""
+    return (
+        f"protocol-fill {shlex.quote(shown(protocol, Path.cwd()))} --handover "
+        f'--why "<what blocks>" --tried "<what you tried>" --into {shlex.quote(report)}'
+    )
+
+
 def audit_command(
     area: Path, *step: str, protocol: Path | None = None, base: Path | None = None
 ) -> str:
@@ -311,6 +319,28 @@ def indexed_links(repo: Path) -> dict[Path, str]:
         if not rel or meta.split(" ")[0] != LINK_MODE:
             continue
         out[root / rel] = blob_text(repo, meta.split(" ")[1])
+    return out
+
+
+def indexed_blobs(repo: Path, folder: Path) -> dict[Path, str]:
+    """Index files below FOLDER and their blob ids, without decoding bytes.
+
+    Raise GitError for an unmerged entry or a failed listing. Binary or
+    malformed evidence can therefore be fingerprinted without parsing it.
+    """
+    rel = own_path(folder).relative_to(repo.resolve()).as_posix()
+    result = git_run(["ls-files", "--stage", "-z", "--", rel], repo)
+    if result.returncode:
+        raise GitError(f"git ls-files in {repo}: {result.stderr.strip()}")
+    out: dict[Path, str] = {}
+    for entry in result.stdout.split("\0"):
+        if not entry:
+            continue
+        meta, name = entry.split("\t", 1)
+        mode, sha, stage = meta.split()
+        if stage != "0" or mode == LINK_MODE:
+            raise GitError(f"{name}: evidence must be a regular, merged index file")
+        out[repo.resolve() / name] = sha
     return out
 
 

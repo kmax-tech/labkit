@@ -76,6 +76,7 @@ from pathlib import Path
 from typing import IO
 
 from labkit.formats import jsonl
+from labkit.formats import handovers
 from labkit.formats.files import write_atomic
 from labkit.formats.findings import DIR
 from labkit.formats.repo import INDEX_REV, files_at, git_dir_path, git_root, text_at
@@ -362,7 +363,13 @@ def _git_paths(area: Path, rev: str) -> tuple[set[str], str | None]:
         # no repository git takes, or no HEAD yet: no committed state to
         # compare against
         return set(), None
-    return held, text_at(root, journal_path(area), rev)
+    try:
+        text = text_at(root, journal_path(area), rev)
+    except UnicodeError as exc:
+        raise AttemptError(
+            f"{rev}:{DIR}/{JOURNAL}: journal is not UTF-8: {exc}"
+        ) from exc
+    return held, text
 
 
 def read_journal(area: Path) -> list[Attempt]:
@@ -371,7 +378,44 @@ def read_journal(area: Path) -> list[Attempt]:
     path = journal_path(area)
     if not path.is_file():
         return []
-    return parse_journal(path.read_text(encoding="utf-8"), f"{DIR}/{JOURNAL}")
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeError as exc:
+        raise AttemptError(f"{DIR}/{JOURNAL}: journal is not UTF-8: {exc}") from exc
+    return parse_journal(text, f"{DIR}/{JOURNAL}")
+
+
+def expected_evidence(area: Path) -> tuple[set[str], list[str]]:
+    """Known audit paths and explicit unreadable-journal errors for a handover.
+
+    Take the available tree, HEAD and parseable journals; retain errors
+    instead of pretending an unreadable journal names no evidence.
+    """
+    root = git_root(area)
+    expected = _paths_under(area / DIR)
+    if root is not None:
+        expected |= files_at(root, area / DIR, "HEAD") or set()
+    errors: list[str] = []
+    for revision in (None, "HEAD"):
+        try:
+            if revision is None:
+                known = read_journal(area)
+            else:
+                text = text_at(root, journal_path(area), revision) if root else None
+                known = parse_journal(text or "", f"{revision}:{DIR}/{JOURNAL}")
+            for attempt in known:
+                if attempt.file:
+                    expected.add(attempt.file)
+                if attempt.answer:
+                    expected.add(attempt.answer)
+        except (AttemptError, UnicodeError) as exc:
+            errors.append(str(exc))
+    for path in handovers.record_paths(area):
+        try:
+            expected.update(handovers.read_handover(path).expected)
+        except handovers.HandoverError as exc:
+            errors.append(str(exc))
+    return expected, errors
 
 
 def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
@@ -387,11 +431,14 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
         attempts = parse_journal(now, f":{DIR}/{JOURNAL}")
     else:
         path = journal_path(area)
-        now = path.read_text(encoding="utf-8") if path.is_file() else ""
+        try:
+            now = path.read_text(encoding="utf-8") if path.is_file() else ""
+        except UnicodeError as exc:
+            raise AttemptError(f"{DIR}/{JOURNAL}: journal is not UTF-8: {exc}") from exc
         attempts = read_journal(area)
         present = _paths_under(area / DIR)
     at_head, journal_at_head = _git_paths(area, "HEAD")
-    return gaps(
+    found = gaps(
         attempts,
         present,
         at_head,
@@ -401,6 +448,11 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
         "index" if staged else "tree",
         hold_head=not staged,
     )
+    try:
+        lost = handovers.missing_evidence(area, present, staged=staged)
+    except handovers.HandoverError as exc:
+        raise AttemptError(str(exc)) from exc
+    return Gaps([*found.blockers, *lost], found.notes)
 
 
 def _append(area: Path, event: dict[str, str]) -> None:

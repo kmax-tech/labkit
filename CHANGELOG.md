@@ -1175,6 +1175,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **Ask for recovery steps instead of memorizing them.**
+  `labkit-audit AREA --findings` makes no model call and lists readable open
+  BLOCKERs even behind a damaged journal or an invalid record name, explicit
+  evidence errors, decision commands and each protocol's handover command.
+  Readable unresolved BLOCKERs require an explicit `deferred` decision.
+  `protocol-fill PROTOCOL --handover --why TEXT --tried TEXT --into REPORT`
+  then withdraws `[result]`, generates an unresolved report and preserves a
+  schema-1 JSON handover under `audits/handovers/`. An existing report needs
+  `--force`; protocols and evidence cannot be overwritten. Only an exact
+  current handover lets stop/commit acknowledge damaged evidence, with all
+  audit evidence staged together. Normal audit and result release still
+  refuse the loss, including after the handover is committed. Guide:
+  `docs/notes/2026-10-27-handover-recovery.md`.
 - **A new registration names what it replaces, and the declaration binds
   it (K1).** In the repair case (2026-10-27) the agent took the "register
   anew" route into a second area and lowered the criterion's margin 0.25 →

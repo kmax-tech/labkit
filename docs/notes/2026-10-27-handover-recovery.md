@@ -1,0 +1,76 @@
+# Recovery guidance and a terminal handover with damaged evidence
+
+*2026-10-27. Sources: the instruction review, `tests/test_counter_cases.py`,
+and the recovery cases in `tests/test_handovers.py`.*
+
+The plain unresolved-report route worked for a conflicting registration
+with no open finding. It did not work with an open BLOCKER or a missing
+audit record: the stop/commit checks still held. Replacing more guidance
+with prose alone would preserve that dead end.
+
+## Current contract
+
+Read the experiment choices once and use the common workflow as a
+reference. On a gate refusal, `labkit-audit AREA --findings` is the
+read-only, no-model recovery entry: readable open BLOCKERs, explicit
+journal/record errors, complete decision commands and the protocol-specific
+handover command. It does not choose a scientific interpretation for the
+author. With no audit yet, it directs the caller to the area workflow and
+`protocol-check --contract`; it is not a second workflow engine.
+
+An unresolved readable BLOCKER is explicitly decided `deferred`, with the
+reason, before handover. No command automatically decides or resolves a
+finding. Even a readable record with an invalid filename retains its
+findings in recovery inspection; naming errors are additional data.
+
+`protocol-fill PROTOCOL --handover --why TEXT --tried TEXT --into REPORT`
+creates an immutable schema-1 JSON record in `audits/handovers/`, withdraws
+the protocol's result declaration and generates a whole unresolved report.
+An existing report needs `--force` after reviewing what will be replaced.
+Reports cannot overwrite protocols or evidence. Reasons and attempted
+steps name the protocol, not run ids: a run cited in a report remains
+subject to the result/discussion contract.
+
+The handover record binds the protocol projection, generated report,
+available audit paths and blob ids, known expected paths and explicit
+evidence errors. Raw evidence, including a malformed journal, is kept;
+the handover does not append invented events to that journal. The format
+has one home in `formats/handovers.py`. `attempts` keeps its normal loss
+checks and also retains expected lost paths from handover records, so a
+loss does not disappear when the handover commit becomes HEAD.
+
+Only the stop/undecided commit check can acknowledge those exact integrity
+gaps. It still checks every readable open BLOCKER. All protocols in the
+area must declare no result, and the report and evidence must match the
+handover in the state checked: tree at stop, index at commit. Missing
+staging, a changed report or additional evidence invalidates the
+acknowledgement. A new handover can document the new state; older records
+remain. Interrupted publication grants nothing before all files match.
+
+Normal audits and result release use the original integrity checks, never
+the terminal acknowledgement. Acknowledged loss is not restoration, an
+upheld audit or provenance proof. Restoring evidence actually repairs the
+gap; a handover does not. Free prose is still not mechanically proven true.
+
+## Verification scope
+
+The recovery tests use the real judge skeleton, simulated model answers
+through the audit parser, the report writer and the stop/commit checks.
+They cover missing never-staged records, malformed and non-UTF-8 journals,
+open older findings behind a newer record, invalid record names, stale and
+partially staged acknowledgements, protected report destinations, result
+withdrawal and continuing refusal of normal audit/adoption.
+
+A separate temporary-repository check invokes the actual CLI, installs
+the generated hooks, stages the handover and commits through the installed
+pre-commit hook. It succeeds with a missing audit record and a simulated
+audit answer. Independent review also supplied the protected-destination,
+renamed-record and unstaged-new-evidence counter-cases above.
+
+Final verification: 2068 tests passed, one existing lock-file test skipped,
+6429 subtests passed; Ruff checks/format and Pyright clean. Independent
+review reported no remaining concrete findings.
+
+These are mechanical recovery counter-cases, not a new live agent run or
+evidence that an agent diagnoses scientific errors correctly. Historical
+experiment instructions and pins remain as used in those experiments.

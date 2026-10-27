@@ -161,9 +161,21 @@ refused the adoption, what you found>" --into REPORT.md`: its head holds
 the protocol, the run and the why as TOML, its line
 (`Run <run_id> — discussed, not reported: <why>`) is written from them.
 
+### When a check stops you
+
+When a check stops you, `labkit-audit <area> --findings` shows readable
+open findings, evidence problems and complete recovery commands without a
+model call. Decide unresolved readable BLOCKERs explicitly before using
+the printed `protocol-fill ... --handover --why ... --tried ... --into
+REPORT.md` command. This generates an unresolved report and records
+remaining evidence and loss; it permits no result or audit approval.
+Review an existing report before adding `--force` to replace it. Stage
+the protocol, report, handover record and remaining evidence together.
+
 ### Longer measurements
 
-At `high`, follow the longer lane in the repo's `AGENTS.md`:
+At `high`, follow the additional before-run steps in the common workflow
+in the repo's `AGENTS.md`:
 where the skeleton has them, render real prompts and run the instrument
 probe (a computation has neither), complete the area tests, run
 `preflight`, then `labkit-audit --mode preflight`.

@@ -492,40 +492,32 @@ Befunde, behoben in `cd2e8a4`); jeder Befund mit Test, rot am Elternstand. 2.3, 
    Lauf-id nur bei gleichem Commit; Gleichstand ausdrücklich behandeln,
    Gegenprobe mit verschiedenen `TZ`-Werten. Gelingt das nicht ohne
    Schemabruch, wandert A11 unter „Notiert“: Es setzt Absicht voraus.
-3. **Übergabe als funktionierender Ausweg, gebaut mit dem
-   Abschlussvertrag 3.1 (t18, B3):** Vor neuen
-   Integritätssperren einen expliziten `protocol-fill`-Schritt für einen
-   erzeugten ungelösten Bericht bereitstellen. Name und Format vorher
-   klären; keine nicht vorhandenen Skills als Voraussetzung.
-   Kopf: Protokoll, Ursache, versuchte Schritte, bekannte Läufe/Records und
-   offener Evidenzverlust. Muss ohne Lauf und bei fehlendem Record
-   funktionieren. Übergabe bestätigt keine Zahl und heilt keinen
-   beschädigten Beleg. Eine ausdrücklich ungelöste Abgabe muss den
-   Abschlussweg erreichen, während Ergebnisfreigabe weiter verweigert
-   wird; keine globale Unterdrückung offener BLOCKER. Der Ort des
-   geschuldeten Berichts (3.1) wird hier mitgebaut: Stop und Pre-commit
-   müssen den Übergabeblock finden.
-   Zwei Fälle: (i) Ein lesbarer offener BLOCKER bekommt über `--decide`
-   eine Entscheidung, ungelöst `deferred` mit Grund. Stop und Pre-commit
-   halten heute nur `open`; am Hook ist dafür nichts zu bauen. Der
-   Übergabeblock nennt die Befunde strukturiert (Record und Nummer); kein
-   Gate liest den Grundtext als Marker — ein Prosamuster scheiterte schon
-   an Backticks (V1). (ii) Ein fehlender Record oder ein unlesbares
-   Journal gibt nur frei, wenn der TOML-Kopf der Übergabe genau diese
-   Lücke nennt (Recordname bzw. Journal-Id): exakt und garantiert; die
-   Prosa über noch vorhandene Belege ist es nicht. Den Verlust schreibt
-   ein benannter Befehl mit Format-Heimat `attempts` (Name per
-   `/naming`), keine erfundene Entscheidung; Gates drucken ihn nur als
-   `fix`. Nur diese benannten Lücken enden; fremde oder neue offene
-   Befunde bleiben gehalten, und keine Variante bestätigt eine Zahl.
-   Eine ausstehende Entscheidungsprüfung hält die Ergebnisfreigabe,
-   nicht die ausdrücklich ungelöste Übergabe. Diesen Unterschied auch
-   mit 2.6 und dem Rückfall ohne Stop-Basis aus 2.7 gegenprüfen.
-   Abnahme: offener lesbarer BLOCKER, zuvor abgelehnte Entscheidung,
-   nie gestagter verlorener Record, unlesbares Journal und „Ergebnis
-   deklariert, dann übergeben“ (der Schreiber zieht `[result] run`
-   zurück); jeweils Übergabe samt Stop und Commit möglich,
-   Ergebnisübernahme verweigert.
+3. **Übergabe als funktionierender Ausweg (t18, B3) — gebaut
+   2026-10-27, erneute Prüfung:** `protocol-fill PROTOCOL --handover --why
+   TEXT --tried TEXT --into REPORT` erzeugt den ungelösten Bericht und
+   einen unveränderlichen JSON-Record unter `audits/handovers/`.
+   Vorher müssen lesbare offene BLOCKER ausdrücklich entschieden sein,
+   ungelöst als `deferred` mit Grund. `labkit-audit AREA --findings` liest
+   ohne Modell alle lesbaren offenen BLOCKER, nennt Belegfehler und gibt
+   vollständige Entscheidungs- und Übergabebefehle aus. Eine defekte Datei
+   oder ein ungültiger Dateiname darf andere lesbare Befunde nicht
+   verstecken. Kein automatisches Entscheiden.
+   Die Übergabe zieht `[result] run` zurück und schreibt einen Bericht
+   ohne Ergebnis und Run-Zitat. Ein vorhandener Bericht wird nur mit
+   ausdrücklichem `--force` ersetzt. Gründe und versuchte Schritte sowie
+   vorhandene Belege und bekannte Verluste stehen im Übergabe-Record;
+   das beschädigte Journal und frühere Belege werden nicht umgeschrieben.
+   Nur Stop und Commit quittieren den genau gebundenen Verlust, im Baum
+   bzw. im Index; neue Belege oder ein geänderter Bericht brauchen eine
+   neue Übergabe. Alle Protokolle des Bereichs bleiben ohne deklariertes
+   Ergebnis, lesbare offene BLOCKER halten weiter. Normaler Audit und
+   Ergebnisübernahme bleiben bei Belegverlust gesperrt, auch nach dem
+   Übergabe-Commit; dokumentierter Verlust ist keine Wiederherstellung.
+   Vertrag und Gegenfälle: [Note](docs/notes/2026-10-27-handover-recovery.md),
+   `tests/test_handovers.py`. Die weitergehende Formpflicht für alle
+   Abgabeberichte (3.1) ist damit noch nicht gebaut. Der Agent liest die
+   Grundentscheidungen einmal und fragt danach mit `--findings` nach
+   konkreten nächsten Schritten; fachliches Urteil bleibt bei ihm.
 4. **Neuansatz plus Registrierungsvergleich (A4, A5, B1, B3) — präzisiert
    2026-10-27 nach dem Reparaturfall als K1 (Vorgänger `replaces`,
    `[[change]]`-Liste, erzwungen `exploratory`, Vorgänger-Urteil im
@@ -621,7 +613,7 @@ Befunde, behoben in `cd2e8a4`); jeder Befund mit Test, rot am Elternstand. 2.3, 
 
 Phase 3 — genaue Anleitung auf den geprüften Befehlen aufbauen:
 
-1. **Abschlussvertrag (gebaut mit 2.3):** Geschuldete Abgabeberichte ausdrücklich bestimmen,
+1. **Abschlussvertrag über die gebaute Übergabe hinaus:** Geschuldete Abgabeberichte ausdrücklich bestimmen,
    einschließlich `REPORT.md` im Repo-Root; kein pauschaler Blockzwang für
    jede README oder Notiz. Pro zugeordnetem Protokoll Ergebnis, Diskussion
    oder Übergabe eindeutig ausweisen; mehrere Protokolle und besprochene

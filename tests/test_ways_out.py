@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.formats import protocol_block  # noqa: E402
 from labkit.gates import audit  # noqa: E402
-from labkit.tools import scaffold  # noqa: E402
+from labkit.tools import protocol_fill, scaffold  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 TEMPLATE = (
@@ -67,13 +67,14 @@ class WaysOut(unittest.TestCase):
         for flag in re.findall(r"labkit-init exp <new-name> (--[a-z-]+)", both):
             self.assertIn(flag, init)
         decide = flags_of(audit.main, ["--help"])
+        report = flags_of(protocol_fill.main, ["--help"])
         # the reading works: flags known to exist are found
         self.assertTrue(
             {"--kind", "--change-kind"} <= init and {"--decide", "--effect"} <= decide
         )
         for flag in re.findall(r"`(--[a-z-]+)", both):
             if flag != "--no-verify":  # git's, named as what never to use
-                self.assertIn(flag, decide)
+                self.assertIn(flag, decide | report)
 
     def test_the_replaces_table_described_is_one_the_head_reads(self):
         text = head(

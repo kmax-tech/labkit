@@ -100,6 +100,7 @@ from labkit.formats.repo import (
     area_path,
     area_protocols,
     audit_command,
+    handover_command,
     layout_root,
     no_such_area,
     shown,
@@ -1380,8 +1381,11 @@ WAYS_OUT = (
     ),
     (
         "none of these",
-        f"stop and {HANDOVER} — never delete or rewrite `runs/` or `audits/`, "
-        "never `--no-verify`",
+        f"stop and {HANDOVER} — decide readable open BLOCKERs explicitly first "
+        "(deferred with an unresolved-handover reason when unresolved); use "
+        "protocol-fill --handover for a report bound to the remaining evidence. "
+        "Never hand-edit audit or run evidence; decisions use --decide, "
+        "generated reports use protocol-fill; never --no-verify",
     ),
 )
 BLOCKER_ROUTES = (
@@ -1532,21 +1536,74 @@ def _newest_record(area: Path) -> Path:
     return records[-1].path
 
 
-def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> int:
-    """`--findings`: RECORD's (the newest's) findings numbered with their
-    `--decide` commands, read from the record — no model call, no new
-    record. The auditor's READ hints are not recorded, so none show here.
-    Exit 2 when there is no record to read."""
+def _recovery_records(area: Path, record: Path | None) -> findings.RecordStatus:
+    """Readable records needing decisions, plus explicit evidence/read errors."""
+    status = findings.record_status(area)
+    errors = list(status.errors)
     try:
-        rec = findings.read(
-            record_path(area, record) if record is not None else _newest_record(area)
+        errors += attempts.area_gaps(area).blockers
+    except (attempts.AttemptError, UnicodeError) as exc:
+        errors.append(str(exc))
+    if record is not None:
+        try:
+            records = [findings.read(record_path(area, record))]
+        except findings.FindingsError as exc:
+            records = []
+            errors.append(str(exc))
+    else:
+        opened = {
+            f.record.path
+            for f in findings.open_findings(status.records)
+            if f.grade == "BLOCKER"
+        }
+        records = [r for r in status.records if r.path in opened]
+        if status.records and status.records[-1] not in records:
+            records.append(status.records[-1])
+    return findings.RecordStatus(records, errors)
+
+
+def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> int:
+    """Show decisions and recovery commands without a model call or writes.
+
+    With RECORD show it; otherwise show every readable record with open
+    BLOCKERs and the newest record. Keep journal/read errors visible and
+    return 2 on any evidence error or no record, 0 otherwise. Partial
+    failure never hides other readable findings. READ hints are not stored.
+    """
+    status = _recovery_records(area, record)
+    records, errors = status.records, status.errors
+    for error in dict.fromkeys(errors):
+        print(f"audit evidence incomplete: {error}")
+    for rec in records:
+        for line in decision_lines(rec, area, "", protocol):
+            print(line)
+        for n, finding in enumerate(rec.findings, 1):
+            if finding.grade == "BLOCKER" and finding.status == "open":
+                cmd = audit_command(
+                    area,
+                    "--decide",
+                    str(n),
+                    "deferred",
+                    "unresolved; handed over without a result",
+                    "--record",
+                    rec.path.name,
+                    protocol=protocol,
+                )
+                print(f"  if handing this unresolved finding over: {cmd}")
+    selected = [protocol.resolve()] if protocol is not None else area_protocols(area)
+    for chosen in selected:
+        print(f"  unresolved exit (no model call): {handover_command(chosen)}")
+    if selected:
+        print(
+            "  decide readable open BLOCKERs first; handover records damaged evidence but approves no result. An existing report needs --force after review."
         )
-    except findings.FindingsError as exc:
-        console.refuse("labkit-audit", str(exc))
+    if not records and not errors:
+        console.refuse(
+            "labkit-audit",
+            f"{area}: no findings record — follow protocol-check --contract and the area's printed steps before requesting an audit",
+        )
         return 2
-    for line in decision_lines(rec, area, "", protocol):
-        print(line)
-    return 0
+    return 2 if errors else 0
 
 
 def _decide(

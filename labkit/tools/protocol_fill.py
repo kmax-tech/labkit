@@ -61,11 +61,21 @@ from __future__ import annotations
 
 import argparse
 import re
+import shlex
 from pathlib import Path
 
-from labkit.formats import console, files, findings, promises, protocol_block, runs
+from labkit.formats import (
+    attempts,
+    console,
+    files,
+    findings,
+    handovers,
+    promises,
+    protocol_block,
+    runs,
+)
 from labkit.checks.result_render import Rendering, rendering
-from labkit.formats.repo import shown
+from labkit.formats.repo import area_protocols, git_root, shown
 from labkit.checks import recheck, report_blocks
 from labkit.gates import report_check
 from labkit.checks.prompt_check import prompt_constants
@@ -926,6 +936,8 @@ def _render_file(protocol: Path, text: str) -> int:
 def _run_mode(args: argparse.Namespace, text: str) -> int | None:
     """The exit code of the mode ARGS name (--list, --prompts, --render,
     --into, --from-run), or None when they name none: a field fill."""
+    if args.handover:
+        return _handover_file(args, text)
     if args.list:
         try:
             return _list_open(text)
@@ -943,6 +955,128 @@ def _run_mode(args: argparse.Namespace, text: str) -> int | None:
     if args.from_run is not None:
         return _write_back(args, text)
     return None
+
+
+def without_result(text: str) -> str:
+    """Withdraw only the result declaration; preserve registration and run evidence."""
+    if protocol_block.declared_run(text) is None:
+        return text
+    span = protocol_block.toml_block_span(text)
+    assert span is not None
+    lines = text.split("\n")
+    start = next(i for i in range(*span) if _RESULT_HEADER.match(lines[i]))
+    end = next(
+        (
+            i
+            for i in range(start + 1, span[1])
+            if protocol_block.TABLE_HEADER.match(lines[i])
+        ),
+        span[1],
+    )
+    del lines[start:end]
+    result = "\n".join(lines)
+    if protocol_block.declared_run(result) is not None:
+        raise ValueError("[result] declaration could not be withdrawn")
+    return result
+
+
+def _handover_file(args: argparse.Namespace, text: str) -> int:
+    """Write a terminal handover without changing any audit or run evidence.
+
+    Refuse open readable BLOCKERs before writing. Bind the available audit
+    bytes, known losses, protocol and generated report. Write the immutable
+    record first, protocol projection second, report last: interruption
+    cannot grant permission before all three agree. Existing reports need
+    --force. No model is called and no decision is made for the author.
+    """
+    protocol = args.protocol.resolve()
+    area = protocol.parent
+    root = git_root(area)
+    try:
+        if root is None:
+            raise ValueError("handover requires a git repository")
+        report = handovers.report_destination(root, args.into)
+        if report.exists() and not args.force:
+            raise ValueError(
+                f"{report}: already exists — review its contents, then add --force to replace it with an unresolved report"
+            )
+        status = findings.record_status(area)
+        opened = [
+            u for u in findings.open_findings(status.records) if u.grade == "BLOCKER"
+        ]
+        if opened:
+            raise ValueError(
+                "open BLOCKERs must be decided explicitly first: "
+                + "; ".join(u.line for u in opened)
+                + f" — labkit-audit {shlex.quote(str(area))} --findings prints each --decide command; use deferred with an unresolved-handover reason when it remains unresolved"
+            )
+        new = without_result(text)
+        for other in area_protocols(area):
+            if (
+                other != protocol
+                and protocol_block.declared_run(other.read_text(encoding="utf-8"))
+                is not None
+            ):
+                raise ValueError(
+                    f"{other}: declares a result; an area with lost audit evidence cannot also release another protocol's result"
+                )
+        expected, errors = attempts.expected_evidence(area)
+        try:
+            gaps = attempts.area_gaps(area).blockers
+        except (attempts.AttemptError, UnicodeError) as exc:
+            gaps = [str(exc)]
+        path = handovers.new_path(area)
+        record = handovers.Handover(
+            handovers.SCHEMA,
+            protocol.relative_to(root).as_posix(),
+            handovers.protocol_fingerprint(new),
+            report.relative_to(root).as_posix(),
+            args.why.strip(),
+            args.tried.strip(),
+            handovers.evidence(area, omit=path),
+            sorted(expected),
+            list(dict.fromkeys([*status.errors, *errors, *gaps])),
+        )
+        rendered = handovers.report_text(record, root, path)
+        handovers.write_record(path, record)
+        if new != text:
+            files.write_atomic(protocol, new)
+        report.parent.mkdir(parents=True, exist_ok=True)
+        files.write_atomic(report, rendered)
+    except (ValueError, OSError) as exc:
+        console.refuse("protocol-fill", str(exc))
+        return 2
+    print(
+        f"unresolved handover: {shown(report, Path.cwd())}; evidence: {shown(path, Path.cwd())}"
+    )
+    print(
+        "stage the report, protocol, handover record and all remaining audit evidence together; this releases no number and approves no audit"
+    )
+    return 0
+
+
+def _check_report_mode_args(
+    ap: argparse.ArgumentParser, args: argparse.Namespace
+) -> None:
+    """Refuse incomplete or conflicting report operations before file access."""
+    if args.handover:
+        if not args.why or not args.tried or args.into is None:
+            ap.error("--handover requires --why TEXT, --tried TEXT and --into REPORT")
+        if (
+            args.discuss is not None
+            or args.from_run is not None
+            or args.list
+            or args.prompts
+            or args.render
+            or args.field is not None
+        ):
+            ap.error("--handover cannot be combined with another operation")
+    elif args.tried is not None:
+        ap.error("--tried goes with --handover")
+    elif (args.discuss is None) != (args.why is None) or (
+        args.discuss is not None and args.into is None
+    ):
+        ap.error("--discuss RUN_ID goes with --why TEXT and --into REPORT")
 
 
 def main(argv: list[str]) -> int:
@@ -997,7 +1131,15 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--why",
         default=None,
-        help="with --discuss: what refused the adoption, what was found — one line",
+        help="with --discuss or --handover: what blocks — one line",
+    )
+    ap.add_argument(
+        "--handover",
+        action="store_true",
+        help="with --why, --tried and --into: write an unresolved report and bind its remaining evidence; no result is released",
+    )
+    ap.add_argument(
+        "--tried", help="with --handover: what was tried — one line, no run ids"
     )
     ap.add_argument(
         "--from-run",
@@ -1018,10 +1160,7 @@ def main(argv: list[str]) -> int:
         "--force", action="store_true", help="overwrite a field that is already filled"
     )
     args = ap.parse_args(argv)
-    if (args.discuss is None) != (args.why is None) or (
-        args.discuss is not None and args.into is None
-    ):
-        ap.error("--discuss RUN_ID goes with --why TEXT and --into REPORT")
+    _check_report_mode_args(ap, args)
     if not args.protocol.is_file():
         console.refuse("protocol-fill", f"no such file: {args.protocol}")
         return 2

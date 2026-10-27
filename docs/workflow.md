@@ -80,8 +80,11 @@ amend the first of each branch is held, and so is a run whose commit the
 clone does not hold. The
 fields the kind owes must stand in that commit — the kind included: that
 commit is judged by the kind the protocol declares today, so a kind changed
-after the measurement holds the report. A field's value changed after that
-commit (a bar lowered) is not compared yet. A kind chosen wrong
+after the measurement holds the report. The answering run's promise block
+is also held to the first measurements' recorded registration: changing a
+registered constant after seeing a run does not release its result.
+Changing implementation bytes under unchanged promises still allows a
+repair, new measurement and audit. A kind chosen wrong
 is corrected before the first measurement (`labkit-init exp NAME --kind KIND
 --change-kind`); after it, a new protocol registers the other kind. At `high`
 the registration becomes a freeze instead: `preflight` clean, the
@@ -262,6 +265,18 @@ exit 2. A probe's or an older run's citation stays the warning it was:
 an exploration's run is looked at.
 
 ## 9. The gate — at the stop and the commit
+
+For an unresolved terminal handover, use `labkit-audit <AREA> --findings`
+first: it reads all open BLOCKER records and evidence errors without a
+model call and prints complete commands. Explicitly decide readable
+unresolved BLOCKERs as deferred, then use its `protocol-fill <PROTOCOL>
+--handover --why "<what blocks>" --tried "<what you tried>" --into
+REPORT.md` command. It withdraws the result declaration and writes the
+report plus an immutable evidence-state record in `audits/handovers/`.
+Only the exact unresolved report and state can finish despite documented
+integrity loss; a changed report or evidence needs a new handover. The
+commit requires the same files staged together. Normal audit/adoption
+still holds missing evidence. See [recovery contract](notes/2026-10-27-handover-recovery.md).
 
 ```
 report-check experiments/NN-<name>                       # by hand

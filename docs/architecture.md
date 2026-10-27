@@ -20,7 +20,7 @@ beside the packages: `templates/`, `agents/`, `docs/`, read relative to
 
 | Layer | Modules | Doctrine (the rest is core) |
 |---|---|---|
-| 1 · formats and places · `labkit/formats/` | `protocol_block`, `promises`, `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `rules`, `findings`, `followup`, `reviews`, `report_reviews`, `attempts`, `console`, `gate`, `shell`, `files`, `jsonl` | `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `rules`, `findings`, `followup`, `reviews`, `report_reviews`, `attempts` |
+| 1 · formats and places · `labkit/formats/` | `protocol_block`, `promises`, `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `rules`, `findings`, `followup`, `reviews`, `report_reviews`, `attempts`, `handovers`, `console`, `gate`, `shell`, `files`, `jsonl` | `protocol_check`, `protocol_history`, `protocol_report`, `standard_contract`, `rules`, `findings`, `followup`, `reviews`, `report_reviews`, `attempts`, `handovers` |
 | 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `start_check`, `runlog_command`, `batch`, `llm`, `llm_specs`, `llm_backends`, `endpoint_lease`, `lanes`, `profile` | `lanes`, `profile` |
 | 3 · checks · `labkit/checks/` | `intent_check`, `code_check`, `code_scan`, `gate_label_scan`, `import_check`, `prompt_check`, `run_record_check`, `readme_check`, `recheck`, `notes_check`, `audit_binding`, `result_render`, `report_blocks` | `readme_check`, `notes_check`, `audit_binding`, `result_render`, `report_blocks` |
 | 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `decision_review`, `report_review`, `install_hooks` | `preflight`, `finalize`, `report_check`, `claude_hooks`, `audit`, `decision_review`, `report_review`, `install_hooks` |
@@ -81,6 +81,13 @@ them, and the gates check those decisions. `reviews` reads and writes a
 second auditor's verdicts on those decisions (`labkit-audit --review`):
 which record, what it saw, and per decision upheld, rejected or
 insufficient — bound to the decision as it stood.
+
+`handovers` holds immutable unresolved-handover records and their generated
+reports. Only stop/commit may acknowledge the bound evidence loss, with no
+result declared and no readable BLOCKER left open. Normal audit and result
+release keep the integrity refusal. `attempts` retains expected lost paths
+from those records across commits. Contract and limits:
+[handover recovery](notes/2026-10-27-handover-recovery.md).
 
 The remaining helpers have narrow responsibilities. `files.write_atomic`
 writes one file whole or not at all. `shell.segments` reads a shell line as

@@ -1207,55 +1207,89 @@ def _is_record_name(name: str) -> bool:
     )
 
 
-def area_records(area: Path, *, staged: bool = False) -> list[Record]:
-    """Every findings file of AREA, oldest first (`written_order`), as the
-    working tree holds it — or, STAGED (the commit), as git's index holds
-    it: the files the index carries, each with its decisions as staged; a
-    decision written in the tree and not staged is not in the commit. A
-    file that cannot be read raises FindingsError, and so, STAGED, does a
-    record in the tree the index does not carry (the commit would leave it
-    behind) and a repository git does not take (there is no index to read)."""
+@dataclass(frozen=True)
+class RecordStatus:
+    """Readable records and explicit errors; a broken file hides no other finding."""
+
+    records: list[Record]
+    errors: list[str]
+
+
+def record_status(area: Path, *, staged: bool = False) -> RecordStatus:
+    """Read every findings record of AREA in the requested state.
+
+    Return readable records and errors separately for recovery guidance.
+    Normal gates use `area_records`, which refuses any error. At the index,
+    an unstaged record is an error too; decisions are never read from the
+    tree in place of the index. No writes or console output.
+    """
     folder = area / DIR
-    if not staged:
-        if not folder.is_dir():
-            return []
-        paths = [p for p in folder.glob("*.toml") if _is_record_name(p.name)]
-        return [read(p) for p in sorted(paths, key=written_order)]
-    root = git_root(area)
-    held = None if root is None else files_at(root, folder, INDEX_REV)
-    if root is None or held is None:
-        raise FindingsError(
-            f"{folder}: no git repository holds it — the records as the index "
-            f"holds them cannot be read"
-        )
-    paths = [folder / rel for rel in held if "/" not in rel and _is_record_name(rel)]
-    staged_names = {p.name for p in paths}
-    left = (
-        sorted(
+    root = git_root(area) if staged else None
+    errors: list[str] = []
+    if staged:
+        held = None if root is None else files_at(root, folder, INDEX_REV)
+        if root is None or held is None:
+            return RecordStatus([], [f"{folder}: no git repository holds its index"])
+        paths = [
+            folder / rel for rel in held if "/" not in rel and _is_record_name(rel)
+        ]
+        names = {p.name for p in paths}
+        left = sorted(
             p
             for p in folder.glob("*.toml")
-            if _is_record_name(p.name) and p.name not in staged_names
+            if _is_record_name(p.name) and p.name not in names
         )
-        if folder.is_dir()
-        else []
-    )
-    if left:
-        here = Path.cwd()
-        raise FindingsError(
-            f"{', '.join(shown(p, here) for p in left)}: in the tree, not in the "
-            f"index — the commit would leave the audit record behind; stage it "
-            f"(`git add {' '.join(shlex.quote(shown(p, here)) for p in left)}`)"
-        )
-    out = []
-    for p in sorted(paths, key=written_order):
-        text = text_at(root, p, INDEX_REV)
-        if text is None:
-            raise FindingsError(f"{p}: listed in git's index, but not readable there")
+        if left:
+            errors.append(
+                f"{', '.join(shown(p, Path.cwd()) for p in left)}: in the tree, not in the "
+                f"index — the commit would leave the audit record behind; stage it "
+                f"(`git add {' '.join(shlex.quote(shown(p, Path.cwd())) for p in left)}`)"
+            )
+    else:
+        paths = [p for p in folder.glob("*.toml") if _is_record_name(p.name)]
+    records: list[Record] = []
+    order: dict[Path, tuple[str, int, str]] = {}
+    for path in sorted(paths):
+        order[path], problem = _recovery_record_order(path)
+        if problem:
+            errors.append(problem)
         try:
-            out.append(_record_of(p, text))
-        except FindingsError as exc:
-            raise FindingsError(f"{exc} (as git's index holds it)") from exc
-    return out
+            if staged:
+                assert root is not None
+                text = text_at(root, path, INDEX_REV)
+                if text is None:
+                    raise FindingsError(
+                        f"{path}: listed in git's index, but not readable there"
+                    )
+                record = _record_of(path, text)
+            else:
+                record = read(path)
+        except (FindingsError, UnicodeError) as exc:
+            errors.append(str(exc) + (" (as git's index holds it)" if staged else ""))
+        else:
+            records.append(record)
+    return RecordStatus(sorted(records, key=lambda r: order[r.path]), errors)
+
+
+def _recovery_record_order(path: Path) -> tuple[tuple[str, int, str], str | None]:
+    """Order a record while retaining a naming error separately from its findings."""
+    try:
+        return written_order(path), None
+    except FindingsError as exc:
+        return ("9999", 0, path.name), str(exc)
+
+
+def area_records(area: Path, *, staged: bool = False) -> list[Record]:
+    """Every findings record, oldest first, from tree or index.
+
+    Raise FindingsError on a malformed or unreadable record, or a record
+    the working tree holds but the index omits. Recovery readers use
+    `record_status` to retain the errors and the other readable records.
+    """
+    status = record_status(area, staged=staged)
+    if status.errors:
+        raise FindingsError(status.errors[0])
+    return status.records
 
 
 def _bound(
