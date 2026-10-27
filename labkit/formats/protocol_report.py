@@ -236,9 +236,15 @@ def print_contract(protocol: Path | None = None) -> None:
         )
         + "; with a bar (kind fit or apply) also the criterion, the admissibility "
         "condition, the null condition and Model / tool; with a `[model]` table also "
-        + ", ".join(f.label for f in FIELDS if f.low_cut == "lm")
+        + ", ".join(
+            f.label
+            for f in FIELDS
+            if f.low_cut == "lm" and f.level in ("must", "should")
+        )
         + "; after the run: "
         + ", ".join(f.label for f in FIELDS if f.low_cut == "l" and f.level == "after")
+        + "; with a model also "
+        + ", ".join(f.label for f in FIELDS if f.low_cut == "lm" and f.level == "after")
         + "."
     )
     print(

@@ -273,7 +273,9 @@ def skeleton(repeat_cost: str | None, kind: str, model: bool) -> Skeleton:
     2026-10-16 — at low repeat cost too since 0.104: a RandomForest at low repeat cost got
     the count's skeleton and no criterion, fifth haiku round); an apply the
     prompt skeleton when a model answers through `models.toml`, else the
-    estimator's lanes (a trained instrument applied to labelled data).
+    estimator template's apply path (unchanged primary and independently
+    registered fixed null predictors, neither fitted). The fit path alone
+    trains estimators, with a permuted-label null lane.
     COST decides nothing here any more; the lane still decides the cut and
     whether a probe may precede the run. Raises ValueError for a kind the
     head cannot carry."""
@@ -305,6 +307,15 @@ def describe(repeat_cost: str | None, kind: str, model: bool) -> list[str]:
             ", a --probe stage before the run)"
             if sk.probe and ln.probe_allowed
             else "; the run is the instrument check)"
+        ),
+        *(
+            [
+                "instrument: unchanged primary and independently registered fixed null "
+                "predictors, both exposing predict(X); no training; define both "
+                "loaders before measuring"
+            ]
+            if kind == APPLY_KIND and not model
+            else []
         ),
         f"before a full run: {before}"
         + (

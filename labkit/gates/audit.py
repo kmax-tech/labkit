@@ -1082,8 +1082,9 @@ def main(argv: list[str]) -> int:
         action="store_true",
         help="show what there is to decide: every record with an open BLOCKER and "
         "the newest, the evidence problems, and where a BLOCKER or a problem "
-        "stands the --decide and handover commands; no audit runs; exit 2 "
-        "when evidence does not read or no record exists",
+        "stands the --decide and handover commands; a failed first audit names "
+        "its errors and the handover; no audit runs; exit 2 when evidence does "
+        "not read or no completed audit record exists",
     )
     ap.add_argument(
         "--review",
@@ -1546,18 +1547,23 @@ def _newest_record(area: Path) -> Path:
 
 @dataclass(frozen=True)
 class _Listing:
-    """What `--findings` shows: the RECORDS, the evidence ERRORS, and how
-    many readable records it leaves out (HIDDEN)."""
+    """The shown RECORDS, evidence ERRORS, HIDDEN record count and FAILED
+    calls without a completed audit of their mode, code and promises."""
 
     records: list[findings.Record]
     errors: list[str]
     hidden: int
+    failed: tuple[findings.Failed, ...] = ()
 
 
 def _recovery_records(area: Path, record: Path | None) -> _Listing:
     """RECORD alone; else every readable record with an open BLOCKER and
     the newest one, the others counted. Evidence and read errors of the
-    area are kept beside them (`attempts.area_integrity`)."""
+    area are kept beside them (`attempts.area_integrity`). Failed calls
+    remain recovery guidance unless a completed audit of the same mode,
+    code and promises exists; a preflight never covers analysis failure.
+    This does not establish whether that audit covers the current run.
+    """
     state = attempts.area_integrity(area)
     errors = list(state.problems)
     if record is not None:
@@ -1565,26 +1571,39 @@ def _recovery_records(area: Path, record: Path | None) -> _Listing:
             return _Listing([findings.read(record_path(area, record))], errors, 0)
         except findings.FindingsError as exc:
             return _Listing([], [*errors, str(exc)], 0)
+    failed: tuple[findings.Failed, ...] = ()
+    try:
+        completed = {(r.mode, r.scope_sha, r.block_sha) for r in state.records}
+        failed = tuple(
+            f
+            for f in findings.failed_attempts(area)
+            if (f.mode, f.scope_sha, f.block_sha) not in completed
+        )
+    except (findings.FindingsError, OSError) as exc:
+        errors.append(str(exc))
     opened = {u.record.path for u in findings.open_blockers(state.records)}
     records = [r for r in state.records if r.path in opened]
     if state.records and state.records[-1] not in records:
         records.append(state.records[-1])
-    return _Listing(records, errors, len(state.records) - len(records))
+    return _Listing(records, errors, len(state.records) - len(records), failed)
 
 
 def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> int:
     """`--findings`: what there is to decide, without a model call or a
     write. With no record and no evidence error there is nothing to decide:
-    refused (exit 2), the next step is the area's. Otherwise the evidence
+    refused (exit 2), the next step is the area's. Failed calls without a
+    completed audit of their mode, code and promises are named with their
+    backend errors and the no-model handover, exit 2. Otherwise the evidence
     errors, then each shown record's decisions (`decision_lines`), the
     readable records left out counted. Only where an open BLOCKER or an
-    evidence error stands, the way to end the area unresolved: decide each
+    evidence error or uncovered failed call stands, the way to end the area unresolved: decide each
     open BLOCKER `deferred` with why (step 1), then the handover command
     per protocol (step 2). Exit 2 on an evidence error, else 0; a partial
     failure hides no readable finding. READ hints are not stored."""
     listing = _recovery_records(area, record)
     records, errors = listing.records, listing.errors
-    if not records and not errors:
+    failed = listing.failed
+    if not records and not errors and not failed:
         console.refuse(
             "labkit-audit",
             f"{area}: no audit record yet — nothing to decide; the area's "
@@ -1593,6 +1612,12 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
         return 2
     for error in dict.fromkeys(errors):
         print(f"audit evidence incomplete: {error}")
+    for attempt in failed:
+        print(
+            f"audit did not complete: {attempt.path.name} ({attempt.mode}, "
+            f"{attempt.model}): {attempt.error} — no findings to decide; "
+            "the failed call approves no result"
+        )
     blockers: list[findings.OpenFinding] = []
     for rec in records:
         for line in decision_lines(rec, area, "", protocol):
@@ -1603,7 +1628,7 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
             f"  {listing.hidden} earlier record(s) without an open BLOCKER not "
             "shown — `--record FILE` shows one"
         )
-    if not blockers and not errors:
+    if not blockers and not errors and not failed:
         return 0
     print(
         "if the area cannot be finished, hand it over unresolved (no model call; "
@@ -1623,7 +1648,7 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
     step = "2. " if blockers else ""
     for chosen in selected:
         print(f"  {step}hand over: {handover_command(chosen)}")
-    return 2 if errors else 0
+    return 2 if errors or failed else 0
 
 
 def _decide(

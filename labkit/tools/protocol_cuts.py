@@ -406,6 +406,15 @@ ESTIMATOR_PROMISES = (
 )
 
 
+APPLY_FIELDS = {
+    "Model / tool": "n/a — no model call; the unchanged predictor is loaded by `make_estimator()` and the independent fixed null by `make_null_predictor()` in scripts/01_measure.py",
+    "Model I/O": "<in · the feature fields per item · out · one prediction from each unchanged instrument without fitting>",
+    "Null condition / anchors (in the same run)": "<the independently registered fixed predictor of make_null_predictor() and why it targets chance_of() within null_band>",
+    "Raw output": "<one registered row and one null row as --probe prints them>",
+    "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · the unchanged primary and null predictors on N labelled items · scores read, never reported>",
+}
+
+
 def _replace_field(lines: list[str], label: str, value: str) -> bool:
     """In place: the stamped field LABEL becomes VALUE on its label line, and
     the stamped continuation below it (indented placeholder lines, a fenced
@@ -461,22 +470,36 @@ def name_promise_ids(text: str, kind: str) -> str:
     return "\n".join(lines)
 
 
-def estimator_placeholders(text: str, cut: bool = False) -> str:
+def estimator_placeholders(text: str, cut: bool = False, *, kind: str = "fit") -> str:
     """The pilot protocol of an estimator area (kind fit, or apply without a
-    model): the model-shaped fields answered (ESTIMATOR_FIELDS) and the
-    promise sentences and constants in the estimator's words
-    (ESTIMATOR_PROMISES). Raises when the stamp lacks a field or a table line
+    model): fields and promise sentences describe fitting at KIND fit, or
+    unchanged primary/independent null predictors at KIND apply. The
+    constants and score formulas are shared. Raises when KIND is neither
+    fit nor apply or the stamp lacks a field or a table line
     — a silently unfilled field is the leftover this exists to remove; in
     the low CUT only the fields the cut carries are owed, the others
     are not stamped at all."""
+    if kind not in ("fit", "apply"):
+        raise ValueError(
+            f"estimator_placeholders: kind must be fit or apply, got {kind!r}"
+        )
+    values = ESTIMATOR_FIELDS | (APPLY_FIELDS if kind == "apply" else {})
     lines = text.split("\n")
-    for label, value in ESTIMATOR_FIELDS.items():
+    for label, value in values.items():
         if not _replace_field(lines, label, value) and not cut:
             raise ValueError(
                 f"estimator_placeholders: the stamp has no `{label}` field"
             )
     out = "\n".join(lines)
     for pattern, replacement in ESTIMATOR_PROMISES:
+        if kind == "apply":
+            replacement = replacement.replace("out-of-fold SCORE", "SCORE")
+            replacement = replacement.replace(
+                "an out-of-fold prediction", "a prediction"
+            )
+            replacement = replacement.replace(
+                "permuted-label lane", "independent fixed null lane"
+            )
         out, n = re.subn(pattern, lambda _m, r=replacement: r, out, count=1, flags=re.M)
         if n != 1:
             raise ValueError(

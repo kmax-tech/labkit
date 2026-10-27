@@ -14,6 +14,7 @@ import unittest
 import test_counter_cases as cases
 import test_end_to_end as e2e
 from labkit.formats import attempts, findings, handovers, protocol_block
+from labkit.checks import report_blocks
 from labkit.gates import audit, claude_hooks
 from labkit.tools import protocol_fill
 
@@ -239,6 +240,49 @@ class HandoverRecovery(cases._Chain):
         self.assertEqual(rc, 0, out)
         self.assertEqual(len(handovers.handover_blocks(self.report.read_text())), 1)
         self.assertTrue(handovers.valid(self.area))
+
+    def test_a_handover_withdraws_the_earlier_report_result_block(self):
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.lab.adopt(self.protocol, self.run_id)
+        self.assertEqual(rc, 0, out)
+        prefix = "# Earlier report\n\nAn explanation we keep.\n"
+        self.report.write_text(prefix)
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = protocol_fill.main([str(self.protocol), "--into", str(self.report)])
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(report_blocks.blocks(self.report.read_text())), 1)
+        self.report.write_text(self.report.read_text() + "\nA closing observation.\n")
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        text = self.report.read_text()
+        self.assertEqual(report_blocks.blocks(text), [])
+        self.assertTrue(text.startswith(prefix), text)
+        self.assertIn("A closing observation.", text)
+        self.assertNotIn(self.run_id, text)
+        self.assertTrue(handovers.valid(self.area))
+        self.staged_release()
+
+    def test_other_reports_still_hold_a_withdrawn_result(self):
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.lab.adopt(self.protocol, self.run_id)
+        self.assertEqual(rc, 0, out)
+        other_report = self.lab.root / "OTHER.md"
+        for report in (self.report, other_report):
+            with contextlib.redirect_stdout(io.StringIO()):
+                rc = protocol_fill.main([str(self.protocol), "--into", str(report)])
+            self.assertEqual(rc, 0)
+        before = other_report.read_bytes()
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        self.assertIn("other reports", out)
+        self.assertEqual(other_report.read_bytes(), before)
+        self.lab.git("add", "-A")
+        rc, out = self.lab.pre_commit(self.report, self.protocol, other_report)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("OTHER.md", out)
+        self.assertIn("it declares no result", out)
 
     def test_malformed_record_never_grants_permission(self):
         rc, out = self.handover()

@@ -5,7 +5,8 @@ Usage:
     ../../.venv/bin/python scripts/01_measure.py --show 3
         The config and three feature rows per split; no fit.
     ../../.venv/bin/python scripts/01_measure.py --probe
-        Instrument check: a reduced estimator on twelve labelled items,
+        Instrument check: twelve labelled items, reduced estimator at fit
+        or unchanged primary/null predictors at apply,
         both lanes, into a throwaway file; prints the scores (not reported)
         and one row per lane for the protocol's raw-output field.
     ../../.venv/bin/python scripts/01_measure.py
@@ -24,18 +25,22 @@ Usage:
         which answers the protocol when it is the newest — the spread is
         `--repeat-of`, not this.
 
-Terms: the *estimator* is the instrument — anything with fit(X, y) and
-predict(X); it stands in `make_estimator()` and nowhere else. A *lane* is one
-way of fitting it: the *registered lane* fits the true labels; the *null
-lane* fits labels permuted inside each fitting fold — the noise floor of
-THIS run (LAB-034 Null condition in the same run); the *test lane* fits every
-labelled item and predicts the unlabelled split — the deliverable, whose
-gold is unknown and which is therefore never scored. *Out of fold*: every
-labelled item is predicted by an estimator that did not see it.
+The protocol's kind chooses the instrument. At `fit`, `make_estimator()`
+creates an estimator with fit(X, y) and predict(X): the registered lane
+fits true labels, the null lane fits labels permuted inside each fitting
+fold, and the test lane fits every labelled item before predicting the
+unlabelled split. Every scored prediction is out of fold.
+At `apply`, `make_estimator()` loads the unchanged predictor, and
+`make_null_predictor()` supplies the independently registered fixed null
+predictor. Both expose predict(X); neither is fitted, nor receives gold.
+Define both instruments explicitly before measuring. The null must target
+`chance_of()` within the registered `null_band`; the script invents no null
+predictor. All lanes are recorded in the same run (LAB-034 Null condition
+in the same run). Unlabelled predictions are never scored.
 
 Measurement contract:
-  - Every labelled item is predicted once per scored lane, out of fold, in
-    the same run; folds, permutation and estimator read `seed`.
+  - Every labelled item is predicted once per scored lane in the same run;
+    `fit` uses out-of-fold fitting, `apply` uses unchanged predictors.
   - The score (`SCORE`: accuracy · r2 · auc) is over EVERY labelled item of
     the lane: an item without a prediction scores as wrong (accuracy, auc)
     or as the mean (r2) and is counted on its own as `a1_empty`.
@@ -75,7 +80,7 @@ import json
 import random
 import sys
 from collections import Counter
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from fractions import Fraction
 from pathlib import Path
 
@@ -85,13 +90,21 @@ AREA = HERE.parent
 PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
-from labkit.run import batch, runlog
+from labkit.run import batch, provenance, runlog
 from labkit.formats import promises, protocol_block, standard_contract
 from labkit.formats.repo import adopt_command
+
+KIND = protocol_block.head(PROTOCOL.read_text(encoding="utf-8")).kind
 
 # written by 00_prepare.py: id · features (a list of numbers) · gold (null for
 # the unlabelled split) · split ("train" | "test")
 ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"
+# TODO: declare EVERY file or directory loaded by the primary and null
+# predictors, e.g. {"primary": AREA / "data" / "model.joblib"}. Include
+# weights, preprocessing state and reference files; code-only predictors
+# need none. These bytes bind the config, resumed rows and run provenance.
+# Fit hashes no model files unless they are explicitly declared here.
+PREDICTOR_FILES: dict[str, Path] = {}
 # One run, one output file; a new measurement — other estimator, other
 # features, other items — gets a new file name, never two measurements in one.
 OUT = AREA / "output" / "<name>.jsonl"
@@ -107,18 +120,53 @@ ESTIMATOR = "TODO: e.g. RandomForestClassifier(n_estimators=500, random_state=se
 LANES = ("registered", "null", "test")
 
 
+def predictor_digests() -> dict[str, str]:
+    """Read every declared predictor dependency and return its source digest.
+    Empty for self-contained predictors. Missing or unreadable paths raise
+    their filesystem error; directories use provenance's source-tree digest.
+    """
+    return {name: provenance.source_digest(path) for name, path in PREDICTOR_FILES.items()}
+
+
+def data_files() -> dict[str, Path | provenance.BinaryInput]:
+    """Inputs runlog records: prepared rows and every declared primary/null
+    dependency. Predictor names are prefixed to keep the prepared input.
+    Returns paths without reading or changing any file.
+    """
+    return {"prepared": ITEMS, **{f"predictor_{name}": provenance.BinaryInput(path) for name, path in PREDICTOR_FILES.items()}}
+
+
 def make_estimator(seed: int, probe: bool = False):
-    """TODO: return the instrument — anything with fit(X, y) and predict(X)
+    """TODO: return the instrument: at fit, fit(X, y) and predict(X); at
+    apply, load the already fixed predictor with predict(X), never train it.
     (for `auc`, predict must return a score per item; use predict_proba's
-    positive column). PROBE asks for a reduced one (fewer trees, fewer
-    iterations) for the instrument check. Keep the library import HERE, so
+    positive column). At fit, PROBE asks for a reduced one (fewer trees,
+    fewer iterations); at apply the instrument stays unchanged. Keep the library import HERE, so
     the area's test — which needs only `evaluate_rows` — imports this file
-    without it. Example:
+    without it. Fit-only example:
 
         from sklearn.ensemble import RandomForestClassifier
         return RandomForestClassifier(n_estimators=50 if probe else 500, random_state=seed)
+
+    Apply-only example (declare the loaded path in PREDICTOR_FILES):
+
+        from joblib import load
+        return load(PREDICTOR_FILES["primary"])
     """
     raise NotImplementedError(f"make_estimator(): {ESTIMATOR}")
+
+
+def make_null_predictor(seed: int, probe: bool = False):
+    """TODO for apply: return the independently registered fixed null
+    predictor with predict(X). It receives features only, never gold;
+    neither this loader nor prediction may train or adjust it. State its
+    construction and expected chance_of() score in the protocol before
+    measuring. PROBE changes only the items, not the fixed instrument.
+    Declare every loaded dependency in PREDICTOR_FILES, just as for the
+    primary predictor, e.g. load(PREDICTOR_FILES["null"]).
+    Fit uses its permuted-label lane instead and never calls this loader.
+    """
+    raise NotImplementedError("make_null_predictor(): define the registered fixed null predictor")
 
 
 @dataclass(frozen=True)
@@ -136,7 +184,7 @@ class MeasureConfig:
     """
 
     margin: float               # [C1]: registered score ≥ null score + margin, in score units
-    max_empty: int              # [A1]: at most this many labelled items without an out-of-fold prediction
+    max_empty: int              # [A1]: at most this many labelled items without a prediction
     null_band: float            # [A2]: the null lane scores within this of chance, in score units;
                                 # derive it from the spread of the null lane over seeds on the probe
     seed: int = SEED            # folds, permutation, estimator
@@ -145,6 +193,7 @@ class MeasureConfig:
     # the instrument's version: the estimator line, so a changed parameter is
     # a different config even when every threshold stays
     estimator_sha: str = hashlib.sha256(ESTIMATOR.encode()).hexdigest()[:12]
+    predictor_sha: dict[str, str] = field(default_factory=predictor_digests)
 
 
 # The registered execution: thresholds from the protocol, nothing copied;
@@ -197,10 +246,11 @@ def fit_predict(cfg: MeasureConfig, fit: list[dict], predict: list[dict],
 
 def instrument(cfg: MeasureConfig, items: list[dict]) -> dict:
     """What makes two predictions comparable: the estimator line, the score,
-    the seed, the folds and the items. Every row carries it; a resume refuses
+    declared predictor dependencies as they read now, the seed, folds and
+    items. Filesystem errors from reading dependencies propagate. Every row carries it; a resume refuses
     rows of another (batch.Store `instrument`). The items as one fingerprint,
     not one per item: an edited item changes the fit, so every prediction."""
-    return {"estimator_sha": cfg.estimator_sha, "score": cfg.score,
+    return {"estimator_sha": cfg.estimator_sha, "predictor_sha": predictor_digests(), "score": cfg.score,
             "seed": cfg.seed, "n_folds": cfg.n_folds, "items_sha": batch.content_sha(items)}
 
 
@@ -213,9 +263,54 @@ def expected(items: list[dict]) -> list[dict]:
 
 def measure(cfg: MeasureConfig, items: list[dict], out: Path,
             prov: dict | None = None, probe: bool = False) -> list[dict]:
-    """Out-of-fold predictions of the registered and the null lane over the
-    labelled items, the test lane over the unlabelled ones; one row per item
-    and lane, written to OUT. `prov` stamps every row with _prov (run id)."""
+    """Predict every item in its lanes and write OUT, with PROV on every row.
+
+    Apply uses fixed primary/null predictors without training; fit uses
+    out-of-fold registered/permuted-label training and fits all labelled
+    items for the unlabelled test lane. A short prediction list raises
+    ValueError rather than dropping items. No other kind is accepted.
+    """
+    if KIND not in ("fit", "apply"):
+        raise ValueError(f"measure(): kind must be fit or apply, got {KIND!r}")
+    identity = instrument(cfg, items)
+    if identity["predictor_sha"] != cfg.predictor_sha:
+        raise ValueError("measure(): predictor dependencies changed since the config snapshot")
+    rows = (apply_rows(cfg, items, probe) if KIND == "apply"
+            else fit_rows(cfg, items, probe))
+    if predictor_digests() != cfg.predictor_sha:
+        raise ValueError("measure(): predictor dependencies changed during prediction")
+    with batch.Store(out, prov=prov, instrument=identity) as store:
+        for r in store.pending(rows):
+            store.append(r)
+    print(f"rows: {len(rows)} — {len(labelled(items))} labelled items in two lanes, {len(unlabelled(items))} test items")
+    return rows
+
+
+def apply_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]:
+    """Rows from unchanged primary and independently registered null
+    predictors, neither fitted nor given gold. Each scored lane covers all
+    labelled items; the primary alone predicts unlabelled items. Raises
+    ValueError for a predictor returning the wrong number of answers.
+    """
+    primary = make_estimator(cfg.seed, probe)
+    null = make_null_predictor(cfg.seed, probe)
+    rows: list[dict] = []
+    for lane, part, predictor in (("registered", labelled(items), primary),
+                                  ("null", labelled(items), null),
+                                  ("test", unlabelled(items), primary)):
+        if not part:
+            continue
+        predictions = predictor.predict([it[FEATURES_FIELD] for it in part])
+        rows += [{"id": f"{lane}:{it['id']}", "lane": lane, "item": it["id"],
+                  "fold": None, "pred": _plain(pred), "gold": it[GOLD_FIELD]}
+                 for it, pred in zip(part, predictions, strict=True)]
+    return rows
+
+
+def fit_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]:
+    """Out-of-fold registered/permuted-label rows and unlabelled test rows;
+    every lane fits a fresh estimator. Returns rows without writing them.
+    """
     train, test = labelled(items), unlabelled(items)
     rows: list[dict] = []
     for k, held in enumerate(folds(len(train), cfg.n_folds, cfg.seed)):
@@ -233,10 +328,6 @@ def measure(cfg: MeasureConfig, items: list[dict], out: Path,
         preds = fit_predict(cfg, train, test, None, probe)
         rows += [{"id": f"test:{it['id']}", "lane": "test", "item": it["id"], "fold": None,
                   "pred": p, "gold": None} for it, p in zip(test, preds, strict=True)]
-    with batch.Store(out, prov=prov, instrument=instrument(cfg, items)) as store:
-        for r in store.pending(rows):
-            store.append(r)
-    print(f"rows: {len(rows)} — {len(train)} labelled items in two lanes, {len(test)} test items")
     return rows
 
 
@@ -385,7 +476,8 @@ def main() -> None:
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--show", type=int, metavar="N", help="the config and N feature rows per split, no fit")
     mode.add_argument("--probe", type=int, nargs="?", const=12, metavar="N",
-                      help="instrument check: a reduced estimator on N labelled items, both lanes, "
+                      help="instrument check: N labelled items, both lanes; fit uses a reduced "
+                           "estimator, apply its unchanged predictors; "
                            "throwaway output; prints the scores (not reported) and one row per lane")
     mode.add_argument("--eval-only", action="store_true")
     mode.add_argument("--repeat-of", metavar="RUN_ID",
@@ -398,7 +490,9 @@ def main() -> None:
     if args.probe is not None and not standard_contract.lane(head.repeat_cost).probe_allowed:
         ap.error("--probe is not available at repeat_cost='low'; run the full measurement")
     # the one field the command line may set
-    cfg = CONFIG if args.seed is None else replace(CONFIG, seed=args.seed)
+    cfg = replace(CONFIG, predictor_sha=predictor_digests())
+    if args.seed is not None:
+        cfg = replace(cfg, seed=args.seed)
     items = read_jsonl(ITEMS)
 
     if args.show is not None:          # `is not None`: `--show 0` must not start a run
@@ -413,7 +507,7 @@ def main() -> None:
 
     if args.probe is not None:
         # Throwaway: own output file, NO runlog (LAB-008 Instrument check before freezing) — the moment a
-        # number is kept, it is a run. A reduced estimator on a few items: the
+        # number is kept, it is a run. Few items, reduced fit or unchanged apply: the
         # pipeline is checked, the registered number is not seen.
         out = OUT.with_name(OUT.stem + "_probe.jsonl")
         out.unlink(missing_ok=True)  # a fresh file each probe: its items may have changed
@@ -439,7 +533,7 @@ def main() -> None:
     # A repeat (`--repeat-of`): runlog holds every key but the seed to the
     # kept run's, derives the seed from that run and the draw and records it
     # (`reseed`) — the seed passed here is not used.
-    with runlog.run("<name>", config=asdict(cfg), base_dir=AREA, data={"prepared": ITEMS},
+    with runlog.run("<name>", config=asdict(cfg), base_dir=AREA, data=data_files(),
                     run_kind="measurement", protocol=PROTOCOL.name,
                     repeat_of=args.repeat_of, reseed=args.repeat_of is not None) as run:
         cfg = MeasureConfig(**run.config)   # measure with what is recorded

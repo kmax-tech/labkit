@@ -306,6 +306,29 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **Local apply predicts without fitting.** An `apply` without a model
+  alias used the estimator's training path. The shared script now loads
+  unchanged primary and explicitly supplied null predictors; only `fit`
+  trains on true and permuted labels. No null method is invented for the
+  author. Declared `PREDICTOR_FILES` are hashed into the config, output
+  fingerprint and run provenance, and a changed artifact refuses resume
+  or an unchanged repeat. `provenance.BinaryInput(path)` explicitly records
+  binary dependencies without decoding them as text datasets; ordinary
+  dataset decoding and leakage checks remain required.
+- **Handover withdraws its result blocks in the chosen report.** An
+  adopted protocol's old block survived withdrawal of `[result]`, so a
+  successful handover then failed the commit. Other protocols' blocks
+  and prose stay; citations in prose and other reports still need removal
+  or explicit discussion, as the command now says.
+- **The area README includes the analysis audit before adoption.** Its
+  short route now includes decisions, the Conclusion and required reviews;
+  its state list places finalize before adoption.
+- **Failed audit calls remain visible in recovery.** `--findings` names
+  their errors and the no-model handover, with exit 2, unless a completed
+  audit of the same mode, code and promises exists. A preflight record
+  does not hide a failed analysis call. No finding or approval is invented.
+- **The field contract puts model raw output after the run.** Its summary
+  now agrees with `protocol-fill --list` on when those examples exist.
 - **A frozen computation starts without promise tables.** The stamp of a
   computation removes the `[[promise]]` tables (`protocol_cuts.bar_cut`);
   at `high` the freeze asked for them again, so a filled, audited and

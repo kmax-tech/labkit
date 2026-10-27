@@ -174,6 +174,23 @@ def write_block(text: str, protocol: str, run_id: str, body: str) -> str:
     return "\n".join(lines)
 
 
+def withdraw_result_blocks(text: str, protocol: Path, report: Path) -> str:
+    """TEXT without the result blocks belonging to PROTOCOL in REPORT.
+
+    Resolve each block's owner relative to REPORT, so equivalent path
+    spellings name the same protocol. Preserve every line outside those
+    blocks, including other protocols' blocks and prose. This transforms
+    text only; it reads and writes no report. Raises ReportBlockError when
+    any result block does not read.
+    """
+    owner = protocol.resolve()
+    found = [b for b in blocks(text) if (report.parent / b.protocol).resolve() == owner]
+    lines = text.split("\n")
+    for b in reversed(found):
+        del lines[b.first - 1 : b.last]
+    return "\n".join(lines)
+
+
 @dataclass(frozen=True)
 class BlockSource:
     """What a block's protocol says now: the run it declares (None: no

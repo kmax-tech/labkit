@@ -370,13 +370,19 @@ def area_readme(nn: str, slug: str, sk: standard_contract.Skeleton, probe: bool)
 
 **The gates, in order.** `code-check` after every code change · at
 `high`: `preflight` + the preflight audit, then freeze · the run
-through `runlog` · `finalize` · `protocol-fill --from-run` writes the number back · {recheck}.
+through `runlog` · `finalize` · `labkit-audit <area> --mode analysis` ·
+decide its findings (`labkit-audit <area> --findings` prints the commands) ·
+write the Conclusion and obtain any required decision review ·
+`protocol-fill --from-run` writes the number back and runs {recheck} through
+`report-check`. `AGENTS.md` explains each step and the recovery choices.
 
 ## State
 
 - [ ] Registration written in the protocol (**before** the first run)
 - [ ] {state}
-- [ ] Run, `protocol-fill --from-run`, `finalize` green
+- [ ] Run and `finalize` green
+- [ ] Analysis audit decided; Conclusion written; required reviews upheld
+- [ ] `protocol-fill --from-run` and `report-check` green
 """
 
 
@@ -586,9 +592,11 @@ def protocol_stamp(
         if skeleton is standard_contract.COMPUTE:
             pilot = count_placeholders(pilot)
         elif skeleton is standard_contract.ESTIMATOR:
-            pilot = estimator_placeholders(pilot, cut=True)
+            pilot = estimator_placeholders(pilot, cut=True, kind=kind)
     elif skeleton is standard_contract.ESTIMATOR:
-        pilot = estimator_placeholders(pilot)
+        pilot = estimator_placeholders(pilot, kind=kind)
+    if report and skeleton is standard_contract.ESTIMATOR and kind == "apply":
+        clean = estimator_placeholders(clean, kind=kind)
     stamped = blank_before_headings(short_placeholders(clean if report else pilot))
     stamped = name_promise_ids(stamped, kind)
     check_stamped_head(stamped, repeat_cost, kind, bool(model))
@@ -1179,7 +1187,12 @@ def next_steps(
         elif sk is standard_contract.MODEL:
             fill = "PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run"
         else:
-            fill = "make_estimator(), SCORE, FEATURES_FIELD; --show 3, then the run"
+            fill = (
+                "make_estimator() loads the unchanged predictor, make_null_predictor() "
+                "the independently registered fixed null; SCORE, FEATURES_FIELD; --show 3, then the run"
+                if kind == "apply"
+                else "make_estimator(), SCORE, FEATURES_FIELD; --show 3, then the run"
+            )
         steps = [
             f"{protocol}: fill the low cut — `type` in the head, then question, unit,\n"
             f"     {fields}; `protocol-check --contract` names the labels.",
@@ -1214,13 +1227,22 @@ def next_steps(
             "scripts/00_prepare.py: raw -> prepared"
             + (", gold null for the unlabelled split" if estimator else "")
             + f"   ({rel}/scripts)",
-            "scripts/01_measure.py: make_estimator(), SCORE, FEATURES_FIELD; --show 3 "
-            "reads the config and feature rows"
+            (
+                "scripts/01_measure.py: make_estimator() loads the unchanged predictor; "
+                "make_null_predictor() the independently registered fixed null; SCORE, FEATURES_FIELD; --show 3 "
+                if kind == "apply"
+                else "scripts/01_measure.py: make_estimator(), SCORE, FEATURES_FIELD; --show 3 "
+            )
+            + "reads the config and feature rows"
             if estimator
             else "scripts/01_measure.py --show 3    read the prompts, no call",
             (
-                "scripts/01_measure.py --probe 12  instrument check: a reduced estimator, "
-                "both lanes, throwaway; the rows into the protocol's raw output"
+                (
+                    "scripts/01_measure.py --probe 12  instrument check: unchanged primary/null predictors, "
+                    if kind == "apply"
+                    else "scripts/01_measure.py --probe 12  instrument check: a reduced estimator, "
+                )
+                + "both lanes, throwaway; the rows into the protocol's raw output"
                 if estimator
                 else "scripts/01_measure.py --probe 4   instrument check in the real "
                 f"pipeline; raw answers into {test}"

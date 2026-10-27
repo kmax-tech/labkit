@@ -29,6 +29,25 @@ P = "experiments/01-x/PROTOCOL-x.md"
 
 
 class Blocks(unittest.TestCase):
+    def test_withdrawal_keeps_other_protocols_and_prose(self):
+        report = Path("/lab/reports/REPORT.md")
+        owner = Path("/lab/experiments/01-x/PROTOCOL-x.md")
+        mine = "../experiments/01-x/PROTOCOL-x.md"
+        alias = "../experiments/01-x/../01-x/PROTOCOL-x.md"
+        other = "../experiments/02-y/PROTOCOL-y.md"
+        text = report_blocks.write_block("# Report\n\nProse.\n", mine, RUN, "a = 1")
+        text = report_blocks.write_block(text, alias, RUN, "a = 2")
+        text = report_blocks.write_block(text, other, RUN, "b = 1")
+        kept = report_blocks.withdraw_result_blocks(text, owner, report)
+        self.assertTrue(kept.startswith("# Report\n\nProse.\n"), kept)
+        self.assertEqual(
+            [(b.protocol, b.body) for b in report_blocks.blocks(kept)],
+            [(other, "b = 1")],
+        )
+        self.assertEqual(
+            report_blocks.withdraw_result_blocks(kept, owner, report), kept
+        )
+
     def test_write_appends_then_replaces_in_place(self):
         text = "# Report\n\nprose\n"
         once = report_blocks.write_block(text, P, RUN, "a = 1 (run x)")

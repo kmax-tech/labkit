@@ -1,0 +1,79 @@
+# Workflow stages, orientation and unresolved handover
+
+*2026-10-27. Functional review of the low/high and compute/fit/apply routes.*
+
+## Decisions
+
+A computation whose prose registers no promise has no promise tables at
+either repeat cost. Freezing it still requires its registration and a
+covering preflight audit. Requiring invented tables contradicted the
+compute stamp and prevented its high-cost measurement from starting.
+
+A local apply uses unchanged primary and independently specified null
+predictors. The shared estimator template keeps the evaluation in one
+place, but only its fit path trains. The author supplies the null; the
+fix must not choose a new scientific comparison implicitly. Every loaded
+predictor dependency belongs in `PREDICTOR_FILES`: source digests bind
+it to the config, run inputs and output fingerprint. That detects changed
+declared artifacts, not omitted dependencies or hidden training in a loader;
+those remain audit questions.
+
+Predictor dependencies use the explicit `provenance.BinaryInput` wrapper
+when passed as run inputs. They record path, digest and `rows=None` without
+text decoding or row-id checks. Ordinary dataset paths retain both checks;
+trying to infer binary inputs from decoding failure would silently excuse
+corrupt text datasets.
+
+Withdrawing a result also withdraws its generated result blocks in the
+chosen handover report. Other protocols' blocks and prose remain. Result
+citations in other reports still need removal or explicit discussion; the
+handover cannot silently rewrite unrelated reports.
+
+Failed backend calls are evidence, not findings. Recovery lists failures
+without a completed audit of the same mode, code and promises and offers
+the no-model handover. A preflight record cannot hide an analysis failure.
+A matching completed audit makes that failure history, not an outstanding
+recovery step; whether the audit covers the current run remains the release
+gate's question. With no attempt yet, recovery still names the area's
+workflow rather than inventing a decision.
+
+The area README names the analysis audit before adoption. The field
+contract places raw examples after the run, as the open-field listing does.
+These helpers explain mechanical obligations; none chooses a scientific
+interpretation or proves the model's judgement correct.
+
+## Verification
+
+`tests/test_high_compute_workflow.py` exercises the real stamped high-cost
+compute route through detached measurement, both audits, adoption, report,
+stop and staged release checks. Audit answers are simulated. The test was
+red against the parent snapshot and green with the compute fix.
+
+`tests/test_apply_skeleton.py` checks prediction without fitting, the fit
+twin, explicit null construction, prediction counts and changed artifacts.
+A separate real generated apply subprocess loaded two JSON-backed fixed
+predictors; its config and run inputs retained both artifact identities.
+`tests/test_binary_inputs.py` also runs a measurement with actual pickle
+bytes and checks that corrupt UTF-8 datasets and text split leakage still
+raise beside a declared binary artifact.
+
+`tests/test_handovers.py` covers adoption, a result block, handover and
+staged release together. A report elsewhere retaining the withdrawn result
+still blocks. `tests/test_workflow_orientation.py` covers the route, model
+raw output and failed analysis recovery after preflight.
+
+Final checks: Ruff, formatting and Pyright clean. The suite passed 2106
+tests and 6466 subtests, with two skips; the two process-budget tests passed
+separately outside the sandbox because their `ps` call is forbidden inside
+it. The actual failed-audit recovery path also passed through the listing,
+handover, stop and staged checks without a model call. Independent review
+of the final changed paths reported zero findings; this is static evidence,
+not proof of scientific correctness.
+
+## Separate observation
+
+`runlog start` returns after launching its child. An immediate `runlog
+--wait` can observe no run before the child creates its directory and
+return success too early. The high-compute test waits for the actual child
+process before checking its recorded completion; it does not establish
+that this launch/wait race is repaired.

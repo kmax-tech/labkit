@@ -49,10 +49,14 @@ Reads: the scripts, the protocol's promise tables. Changes: nothing.
 Clean means: every declared key appears in the code, every `PROMPT`
 constant stands in the protocol, the parsers have fixtures — the static
 part of the promise → code link. It proves nothing about meaning; that is
-the audit's question. At `high` the `--probe` of the model and the
-estimator skeletons checks the instrument on a few items before anything
-is frozen (a few real calls; a reduced estimator on twelve labelled
-items); a computation has none.
+the audit's question. A local `apply` loads fixed primary and independently
+specified null predictors; neither receives labels or trains. The author
+declares their artifacts in `PREDICTOR_FILES`, whose digests are recorded
+in the config, run inputs and output fingerprint. A changed artifact cannot
+resume old rows or count as an unchanged repeat.
+At `high` the `--probe` checks the instrument on a few items before anything
+is frozen (real model calls, a reduced fitted estimator, or unchanged local
+apply predictors); a computation has none.
 
 ## 2. The registration
 
@@ -268,13 +272,17 @@ an exploration's run is looked at.
 
 To end a protocol without a result (a handover), use `labkit-audit <AREA> --findings`
 first: it reads all open BLOCKER records and evidence errors without a
-model call and prints complete commands. Explicitly decide readable
+model call and prints complete commands. When the first audit failed, it
+names the failed calls and their errors and offers the handover, exit 2;
+there are no findings to decide. Explicitly decide readable
 unresolved BLOCKERs as deferred, then use its `protocol-fill <PROTOCOL>
 --handover --why "<what blocks>" --tried "<what you tried>" --into
 REPORT.md` command. It withdraws the result declaration, keeps an
 immutable handover record in `audits/handovers/` and writes its handover
-block into the report (one per protocol, replaced in place; the rest of
-the report stays). Only an unchanged block, protocol and audit state can
+block into the report (one per protocol, replaced in place). The selected
+protocol's result blocks in that report are withdrawn; other text and
+other protocols' blocks stay. Citations in prose or other reports must
+still be removed or explicitly discussed. Only an unchanged block, protocol and audit state can
 finish despite documented integrity loss; a changed block or new evidence
 needs a new handover, prose beside the block does not. The commit
 requires the same files staged together. Normal audit/adoption

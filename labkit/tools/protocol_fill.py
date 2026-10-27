@@ -992,8 +992,10 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
     declares a result before writing. Bind the available audit bytes, the
     findings left open or deferred, known losses and the protocol
     (`handovers.build`); the report gets the record's handover block, the
-    one of this protocol replaced in place, everything else kept
-    (`handovers.write_block`). Write the immutable record first, protocol
+    one of this protocol replaced in place, its result blocks in that
+    report withdrawn, everything else kept (`handovers.write_handover_block`,
+    `report_blocks.withdraw_result_blocks`). Other reports are not written.
+    Write the immutable record first, protocol
     projection second, report last: interruption cannot grant permission
     before all three agree. No model is called and no decision is made for
     the author.
@@ -1037,6 +1039,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
             problems=[*state.problems, *errors],
         )
         before = state_text(root, report, staged=False) or ""
+        before = report_blocks.withdraw_result_blocks(before, protocol, report)
         written = handovers.write_handover_block(before, record, root, path)
         handovers.write_record(path, record)
         if new != text:
@@ -1053,6 +1056,10 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
     print(
         "stage the report, protocol, handover record and all remaining audit "
         "evidence together; this releases no number and approves no audit"
+    )
+    print(
+        "this report no longer carries this protocol's result blocks; citations "
+        "in prose or other reports still require removal or an explicit discussion"
     )
     return 0
 
@@ -1145,7 +1152,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--handover",
         action="store_true",
-        help="with --why, --tried and --into: withdraw the result, keep a handover record of the remaining evidence and write its handover block into REPORT (in place, the rest kept); no result is released",
+        help="with --why, --tried and --into: withdraw the result and its result blocks in REPORT, keep a handover record of the remaining evidence and write its handover block into REPORT (in place, other text kept); other reports are unchanged; no result is released",
     )
     ap.add_argument(
         "--tried", help="with --handover: what was tried — one line, no run ids"

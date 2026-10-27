@@ -396,24 +396,48 @@ def _ids(path: Path) -> set | None:
     return ids
 
 
+@dataclass(frozen=True)
+class BinaryInput:
+    """A declared binary artifact whose bytes carry provenance, not dataset rows.
+
+    Pass this wrapper as a value of runlog's ``data`` mapping for model
+    weights or other binary dependencies. PATH may also be a directory;
+    its digest covers the visible files under it, as ``source_digest``
+    specifies. Metadata records path and digest with ``rows=None``. The
+    artifact is excluded from text decoding and row-id leakage checks;
+    ordinary dataset paths keep both checks.
+    """
+
+    path: Path
+
+
 def describe_data(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity baseline 2026-10-08
     """path (as `runs.recorded_path` writes it, against BASE_DIR's repo) +
-    sha256 + rows per split, and the leakage verdict across splits."""
+    sha256 + rows per split, and the leakage verdict across splits.
+
+    BinaryInput values record bytes only, with rows None; ordinary path
+    values remain text datasets and are checked for row-id overlap.
+    Missing inputs and text decoding failures propagate before a run starts.
+    """
     out: dict = {}
-    for key, p in paths.items():
-        p = Path(p)
+    text_paths = {}
+    for key, value in paths.items():
+        binary = isinstance(value, BinaryInput)
+        p = Path(value.path if binary else value)
         if not p.exists():
             raise FileNotFoundError(f"data[{key!r}] does not exist: {p}")
         out[key] = {
             "path": recorded_path(p, base_dir),
             "sha256": source_digest(p)[:RECORD_SHA_CHARS],
-            "rows": _data_rows(p),
+            "rows": None if binary else _data_rows(p),
         }
+        if not binary:
+            text_paths[key] = p
 
     def role(key: str) -> str:
         return re.split(r"[_-]", key, maxsplit=1)[0].lower()
 
-    known = {k: _ids(Path(p)) for k, p in paths.items() if k in SPLIT_KEYS}
+    known = {k: _ids(p) for k, p in text_paths.items() if k in SPLIT_KEYS}
     checkable = {k: v for k, v in known.items() if v is not None}
     verdicts: list[str] = []
     if len(checkable) >= 2:
@@ -425,8 +449,8 @@ def describe_data(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity
                     f"e.g. {sorted(shared)[:5]}. Fix the split before running."
                 )
         verdicts.append(f"no shared ids across {sorted(checkable)}")
-    controls = {k: _ids(Path(p)) for k, p in paths.items() if role(k) in CONTROL_ROLES}
-    measured = {k: _ids(Path(p)) for k, p in paths.items() if role(k) in MEASURED_ROLES}
+    controls = {k: _ids(p) for k, p in text_paths.items() if role(k) in CONTROL_ROLES}
+    measured = {k: _ids(p) for k, p in text_paths.items() if role(k) in MEASURED_ROLES}
     controls = {k: v for k, v in controls.items() if v is not None}
     measured = {k: v for k, v in measured.items() if v is not None}
     for c, cids in controls.items():

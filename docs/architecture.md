@@ -117,6 +117,11 @@ and conditions visible in `Run.__init__`:
    under the index lock before its record is written.
 
 `provenance` gathers git state, environment, models, data and snapshots.
+`provenance.BinaryInput(path)` explicitly marks a binary dependency in a
+run's `data` mapping: its bytes are hashed, `rows` is null, and dataset
+decoding and row-id leakage checks do not apply to that input. Ordinary
+dataset paths retain those checks. The local apply template marks its
+declared predictor artifacts this way.
 `runlog` writes the run and index; `runlog_command` implements the console
 command. `batch` manages resumable output. `lanes` is the run mechanics of
 the stamped two-lane judge — jobs per item and lane, batches, resume, the
@@ -183,7 +188,11 @@ checks that they are installed.
 `labkit/tools/` provides commands that may use any layer. `protocol_fill`
 fills protocol fields. `scaffold` stamps a lab repo and its areas from the
 shipped templates; `protocol_cuts` selects the protocol template for a cost
-tier. `repo_check`, behind `labkit-check`, compares the installation with
+tier. The estimator script fits models only for `kind = "fit"`; a local
+`apply` uses unchanged primary and independently registered null predictors.
+Declared predictor artifacts are run inputs, hashed in the config and
+output fingerprint so resume and repeats cannot silently change them.
+`repo_check`, behind `labkit-check`, compares the installation with
 the repo's pin and checks whether that pin is current. `params` displays a
 run's values and provenance; `calltree` shows what a command actually called.
 

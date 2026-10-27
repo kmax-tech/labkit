@@ -132,10 +132,10 @@ every measurement, including at `repeat_cost = "low"`, owes the block
 (`promises.promise_tables_owed`, standard 0.19): without tables, `protocol-check`
 reports a MUST failure (frozen or low), `preflight` and `finalize`
 block, and no measurement starts under it. The one exception: a
-computation (`kind = "compute"`) that is not frozen and whose prose names no
-`[C]`/`[A]`/`[B]` id registers nothing and owes no tables (0.87.1) — in
-practice one at `low`, since `high` freezes before the
-measurement and a frozen protocol owes them. A computation owes no success
+computation (`kind = "compute"`) whose prose names no `[C]`/`[A]`/`[B]` id
+registers nothing and owes no tables, including when frozen at `high`.
+Its freeze still requires the completed registration and covering preflight
+audit. A computation owes no success
 criterion at any tier (`standard_contract.has_bar`); its
 `[protocol]` head and the release of its number (the analysis audit,
 `report-check`) stay owed. Unfrozen preparation and
@@ -184,7 +184,7 @@ outside a declared function are not covered — read them from the block.
 | Link | Who | Refuses or reports |
 |---|---|---|
 | promise | `intent-check` | block malformed; prose and block name different ids |
-| execution | `runlog` | malformed block, dangling scope, frozen without tables, or a config missing or contradicting a registered constant → refused before the run dir exists; otherwise `config.json` records `promises`: the digest of the promises as read (normalized JSON — neither the head nor the spelling of a table moves it) and its format, and per id key, constants, scope, `declared_scope_sha` |
+| execution | `runlog` | malformed block, dangling scope, a missing table where promises are owed, or a config missing or contradicting a registered constant → refused before the run dir exists; otherwise `config.json` records `promises`: the digest of the promises as read (normalized JSON — neither the head nor the spelling of a table moves it) and its format, and per id key, constants, scope, `declared_scope_sha` |
 | report | `intent-check` | declared key not reported exactly; run recorded no block, or a different one ("the promises changed after the run"); a run from labkit 0.46/0.47 is told apart by its digest format, not reported as changed |
 | recomputation | `recheck.holds` | a declared scope changed since the run, per promise |
 

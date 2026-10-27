@@ -1,0 +1,134 @@
+"""The callable workflow guidance agrees on stages and offers failed-audit recovery."""
+
+import contextlib
+import io
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from labkit.formats import findings, protocol_check, protocol_report, standard_contract
+from labkit.gates import audit
+from labkit.tools import scaffold
+
+
+class WorkflowOrientation(unittest.TestCase):
+    def test_the_area_route_includes_analysis_before_adoption(self):
+        for sk in standard_contract.SKELETONS:
+            with self.subTest(instrument=sk.instrument):
+                text = scaffold.area_readme("01", "example", sk, True)
+                route = text.split("**The gates, in order.**", 1)[1].split(
+                    "## State", 1
+                )[0]
+                stages = (
+                    "`finalize`",
+                    "--mode analysis",
+                    "decide",
+                    "Conclusion",
+                    "--from-run",
+                )
+                positions = [route.index(stage) for stage in stages]
+                self.assertEqual(positions, sorted(positions), route)
+
+    def test_model_raw_output_is_listed_after_the_run_in_the_contract(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            protocol_report.print_contract()
+        summary = out.getvalue().splitlines()[0]
+        before, after = summary.split("; after the run: ", 1)
+        self.assertNotIn("Raw output", before)
+        self.assertIn("Raw output", after)
+        self.assertIn("with a model", after)
+
+    def test_a_failed_first_audit_names_the_no_model_handover(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scaffold.stamp_lab(root, "orientation")
+            area, _ = scaffold.stamp_area(
+                root, "example", repeat_cost="low", kind="compute"
+            )
+            failed = findings.write_failed(
+                area,
+                "analysis",
+                "auditor",
+                "abc",
+                "none",
+                60,
+                "service unavailable",
+                "labkit-audit example --mode analysis",
+                cause="unavailable",
+            )
+            out = io.StringIO()
+            with (
+                mock.patch.object(
+                    audit.llm, "complete", side_effect=AssertionError("no model call")
+                ),
+                contextlib.redirect_stdout(out),
+                contextlib.redirect_stderr(out),
+            ):
+                rc = audit.main([str(area), "--findings"])
+            self.assertEqual(rc, 2, out.getvalue())
+            self.assertIn(failed.name, out.getvalue())
+            self.assertIn("service unavailable", out.getvalue())
+            self.assertIn("--handover", out.getvalue())
+            self.assertNotIn("--decide", out.getvalue())
+
+    def test_a_preflight_record_does_not_hide_a_failed_analysis_call(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scaffold.stamp_lab(root, "orientation")
+            area, _ = scaffold.stamp_area(
+                root, "example", repeat_cost="high", kind="compute"
+            )
+            registration = protocol_check.registration_stamp(
+                (area / "PROTOCOL-example.md").read_text(encoding="utf-8")
+            )
+            findings.write(
+                area,
+                "preflight",
+                "auditor",
+                "abc",
+                "none",
+                (0, 0, 0),
+                [],
+                registration=registration,
+            )
+            failed = findings.write_failed(
+                area,
+                "analysis",
+                "auditor",
+                "abc",
+                "none",
+                60,
+                "service unavailable",
+                "labkit-audit example --mode analysis",
+                cause="unavailable",
+            )
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+                rc = audit.main([str(area), "--findings"])
+            self.assertEqual(rc, 2, out.getvalue())
+            self.assertIn(failed.name, out.getvalue())
+            self.assertIn("--handover", out.getvalue())
+            findings.write(
+                area,
+                "analysis",
+                "auditor",
+                "abc",
+                "none",
+                (0, 0, 0),
+                [],
+                registration=registration,
+                run_id=findings.NO_RUN,
+                shown_sha="none",
+            )
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+                rc = audit.main([str(area), "--findings"])
+            self.assertEqual(rc, 0, out.getvalue())
+            self.assertNotIn(failed.name, out.getvalue())
+            self.assertNotIn("--handover", out.getvalue())
+
+
+if __name__ == "__main__":
+    unittest.main()
