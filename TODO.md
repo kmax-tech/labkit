@@ -1389,6 +1389,7 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
 | Rückschrift am Laufende / weniger Kommandos | Gemessener Umweg trotz `protocol-fill --from-run`. | Bewusste Prüfung erzeugter Zeilen klären. `finalize` bleibt lesend; kein `finalize --write-back`. |
 | Eigene Meldung für laufenden/abgebrochenen Audit | Realer Fall braucht mehr als bestehende Verweigerung ohne gültigen Record. | Keine zweite Heimat für „Audit ohne Ergebnis“. Frühere `.running`-/`unavailable`-Skizze ist kein offener Implementierungsplan. |
 | `labkit-rules` | Modulpfad behindert Nutzung nachweisbar. | Kürzerer Einstieg, keine neue Regellogik. |
+| `repo-check`: passt `AGENTS.md` zum Pin? | Nächste Pin-Anhebung in einem Labor: `labkit-init lab` schreibt eine vorhandene `AGENTS.md` nicht neu (`write_if_absent`), der Agent folgt dann Flags, die das gepinnte labkit nicht kennt (2026-10-27: `--cost` gegen `--repeat-cost`/`--kind`). | Vergleich mit der Vorlage des installierten labkit, Projektname für `<project>` eingesetzt; kein Git nötig, das installierte Paket ist der Pin. Statische Evidenz: warnt, blockt nie — eine von Hand ergänzte `AGENTS.md` ist zulässig, der Befund nennt die Abweichung. Herkunft bei Bedarf rückrechnen: die Vorlage an jedem Commit, der sie änderte, gegen die Datei (2026-10-27 von Hand: argsme-mining = `42f0ec8`/v0.102.0, labkit-probe = `52eade3`/v0.88.7, beide passen zum Pin). Neue Labore hält seit `ec3026e` schon `check_lab_pin`. |
 
 ### Klarheit des Ablaufs
 
