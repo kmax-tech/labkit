@@ -16,7 +16,9 @@ What holds, as in the standard's identifier rules 1–8:
 - `check_ledger`: the ledger only grows — no row removed, no alias rewritten, no
   id revived or reused, a new id above the highest ever given;
 - `check_refs`: every reference to a rule exists, is not retired, and carries
-  the rule's name (its first clause or at least two words of it); an old §-id
+  the rule's name (the whole title, its first clause, or a start of at least
+  two words that punctuation or the text's end breaks off — never a start
+  running on into other words, read across a wrapped line); an old §-id
   appears only inside its alias mark.
 
 A number the shipped ledger skips (2, 70, 73, 78, 80, 81, 99) belonged to a
@@ -59,6 +61,17 @@ CODE_RE = re.compile(r"\b((?:LAB|LOCAL|CODE)-\d{3})\b")
 LEGACY_ID_RE = re.compile(r"§\d+\.[A-Z]?\d+[a-z]?|§\d+\.[A-Z]\b")
 ALIAS_IN_TEXT_RE = re.compile(r"\((?:was|war) §[^)]+\)")
 CLAUSE_CUT_RE = re.compile(r"[:,;—]| – | \(")
+#: what a reference's words are read from: markup and quotes go first
+MARKUP_RE = re.compile(r"[`*_„“”\"']")
+#: a word of a title or of the text after an id: what stands between
+#: whitespace and punctuation (a hyphen inside a word stays: `read-only`)
+WORD_RE = re.compile(r"[^\s.,:;!?()\[\]{}<>|\\/—–·…=+→#]+")
+#: what opens a line that continues the sentence above: indentation, a
+#: comment leader, a string literal's opening quote with its prefix
+CONTINUATION_RE = re.compile(r"""^\s*(?:(?:#+|//|>)\s+)?(?:[rRbBfFuU]{0,2}["'])?""")
+#: a line that opens a new block instead: a list item, a table row, an
+#: HTML comment (a fence is `protocol_block.fenced_lines`')
+NEW_BLOCK_RE = re.compile(r"^\s*(?:[-*+]\s|\d+\.\s|\||<!--)")
 LEGACY_EXAMPLE_MARK = (
     "rule-ref: legacy-example"  # a line that shows an old §-id as an example
 )
@@ -258,11 +271,24 @@ def check_ledger(before: list[RuleRow], after: list[RuleRow]) -> list[str]:
     return problems
 
 
+def _tokens(text: str) -> list[tuple[str, bool]]:
+    """TEXT as comparable words — no markup, case-folded — each with whether
+    punctuation stands between it and the word before."""
+    clean = MARKUP_RE.sub("", text)
+    out: list[tuple[str, bool]] = []
+    end = 0
+    for m in WORD_RE.finditer(clean):
+        word = m.group().strip("-").casefold()
+        if not word:
+            continue  # a bare dash stays in the gap to the next word
+        out.append((word, bool(clean[end : m.start()].strip())))
+        end = m.end()
+    return out
+
+
 def _words(text: str) -> list[str]:
-    """TEXT as comparable words: no markup, no edge punctuation, case-folded."""
-    text = re.sub(r"[`*_„“”\"']", "", text)
-    edge = ".,:;!?()[]—–-·"
-    return [w.strip(edge).casefold() for w in text.split() if w.strip(edge)]
+    """TEXT as comparable words: no markup, no punctuation, case-folded."""
+    return [w for w, _ in _tokens(text)]
 
 
 def first_clause(title: str) -> str:
@@ -270,19 +296,52 @@ def first_clause(title: str) -> str:
     return CLAUSE_CUT_RE.split(title, maxsplit=1)[0].strip()
 
 
-def names_rule(after: str, title: str) -> bool:
-    """True when AFTER starts with TITLE's first clause, or with at least two of its words."""
-    want, have = _words(title), _words(after)
+def _given(after: str, title: str) -> tuple[int, bool]:
+    """(how many of TITLE's words AFTER gives from its start, whether a
+    break follows them: punctuation, or the end of AFTER)."""
+    want, have = _words(title), _tokens(after)
     n = 0
-    while n < len(want) and n < len(have) and have[n] == want[n]:
+    while n < len(want) and n < len(have) and have[n][0] == want[n]:
         n += 1
-    return n >= min(2, len(want)) or n >= len(_words(first_clause(title)))
+    return n, n == len(have) or have[n][1]
+
+
+def names_rule(after: str, title: str) -> bool:
+    """True when AFTER, the text after a rule id, names the rule TITLE: it
+    gives the whole title, its first clause, or a start of at least two of
+    its words that a break ends (standard, identifier rule 5). A start that
+    runs on into other words names another title, as
+    `LAB-017 The number of audits follows the repeat cost` does for
+    "… follows the cost tier"."""
+    n, broken_off = _given(after, title)
+    whole = len(_words(title))
+    if n == whole or n >= len(_words(first_clause(title))):
+        return True
+    return n >= min(2, whole) and broken_off
+
+
+def _continuation(lines: list[str], i: int, fenced: set[int]) -> str:
+    """Line I of LINES as the continuation of the sentence above it, its
+    indentation, comment leader and string quote cut off — or "" when no
+    line I continues it (the end, a blank or fenced line, a new block, a
+    rule head)."""
+    if i >= len(lines) or i in fenced:
+        return ""
+    line = lines[i]
+    if not line.strip() or NEW_BLOCK_RE.match(line) or RULE_HEAD_RE.match(line):
+        return ""
+    return CONTINUATION_RE.sub("", line, count=1)
 
 
 def _line_refs(
-    where: str, line: str, rows: list[RuleRow], allowed: tuple[str, ...]
+    where: str,
+    line: str,
+    rows: list[RuleRow],
+    allowed: tuple[str, ...],
+    following: str = "",
 ) -> list[str]:
-    """Reference problems on one line (see check_refs)."""
+    """Reference problems on one line (see check_refs); FOLLOWING, the next
+    line as its continuation, ends a name the line's end broke."""
     by_id = {r.id: r for r in rows}
     by_alias = {r.alias: r for r in rows if r.alias}
     held = {
@@ -313,12 +372,19 @@ def _line_refs(
             problems.append(
                 f"{where}: {row.id} is {row.status}, not {'/'.join(allowed)}"
             )
-        elif (
-            row is not None and row.title and not names_rule(line[m.end() :], row.title)
-        ):
-            problems.append(
-                f"{where}: {row.id} without its name — write '{row.id} {' '.join(row.title.split()[:4])}…'"
-            )
+        elif row is not None and row.title:
+            after = line[m.end() :] + " " + following
+            if names_rule(after, row.title):
+                continue
+            if _given(after, row.title)[0] >= 2:
+                problems.append(
+                    f"{where}: {row.id} runs on past the start of its name — "
+                    f"write '{row.id} {row.title}', or end the start with punctuation"
+                )
+            else:
+                problems.append(
+                    f"{where}: {row.id} without its name — write '{row.id} {' '.join(row.title.split()[:4])}…'"
+                )
     return problems
 
 
@@ -326,12 +392,15 @@ def check_refs(
     where: str, text: str, rows: list[RuleRow], allowed: tuple[str, ...] = ("active",)
 ) -> list[str]:
     """Reference problems in TEXT: an unknown id, an id whose status is not ALLOWED,
-    an id without its name, an old §-id outside its alias mark.
+    an id without its name or whose name runs on past its start
+    (`names_rule`), an old §-id outside its alias mark.
 
     Head lines, fenced code and a generated register are skipped (check_heads
     holds the heads), so a standard is checked like any other file. Ids of a
     prefix the ledger does not keep (CODE in labkit's), and ids the ledger marks
-    `moved:<where>`, are left to the ledger that holds them now.
+    `moved:<where>`, are left to the ledger that holds them now. A name the
+    line's end breaks is read on into the next line (`_continuation`): a
+    citation wrapped mid-name is held like one on a single line.
     """
     lines = text.splitlines()
     fenced = protocol_block.fenced_lines(lines)
@@ -344,7 +413,9 @@ def check_refs(
         elif line.startswith(REGISTER_END):
             register = False
         elif not (register or RULE_HEAD_RE.match(line)):
-            problems += _line_refs(f"{where}:{n}", line, rows, allowed)
+            problems += _line_refs(
+                f"{where}:{n}", line, rows, allowed, _continuation(lines, n, fenced)
+            )
     return problems
 
 

@@ -191,6 +191,34 @@ class Refs(unittest.TestCase):
     def test_first_two_words_are_enough(self) -> None:
         self.assertEqual(rules.check_refs("f", "(LAB-001 A negative)", ROWS), [])
 
+    def test_a_start_running_on_into_other_words_is_caught(self) -> None:
+        """LAB-017 was cited as "… follows the repeat cost" for "… follows the
+        cost tier" in three files, each wrapped after a right start, and the
+        check passed them on two words read from one line (audit
+        2026-10-27). A start must break off; a wrapped name is read on."""
+        wrapped = "the gate (LAB-003 No run without an\n    intent statement) holds\n"
+        same_line = "as LAB-001 A negative finding is a fact says\n"
+        for text in (wrapped, same_line):
+            (problem,) = rules.check_refs("f", text, ROWS)
+            self.assertIn("runs on past the start of its name", problem)
+        self.assertIn(
+            "write 'LAB-003 No run without an intent paragraph'",
+            rules.check_refs("f", wrapped, ROWS)[0],
+        )
+
+    def test_a_whole_name_or_a_start_that_breaks_off_passes(self) -> None:
+        # twin: the right name wrapped in prose, a comment, a string literal
+        for text in (
+            "the gate (LAB-003 No run without an\n    intent paragraph) holds\n",
+            "# held (LAB-003 No run without an\n# intent paragraph)\n",
+            'msg = ("held (LAB-003 No run without an "\n       f"intent paragraph)")\n',
+            # an accepted shortened form: two words, then punctuation or the end
+            "LAB-001 A negative, as said\n",
+            "as said in LAB-001 A negative\n\nNext paragraph.\n",
+            "see LAB-001 A negative\n- a new list item\n",
+        ):
+            self.assertEqual(rules.check_refs("f", text, ROWS), [], text)
+
     def test_a_bare_id_is_caught(self) -> None:
         self.assertEqual(
             rules.check_refs("f", "see LAB-003.", ROWS),
