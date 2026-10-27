@@ -2,9 +2,10 @@
 
 Every comparison against a string — a resolved literal or a named
 constant — in the area's evaluation scripts, with its line, minus the
-infrastructure variables and noise literals that are no gate label. The
-code-check agent holds them against the prompt (LAB-038 What the prompt
-demands); this module extracts and never judges.
+infrastructure variables and noise literals that are no gate label. An
+agent reading `code-check --bundle` holds them against the prompt
+(LAB-038 What the prompt demands; labkit ships no such agent); this module
+extracts and never judges.
 """
 
 from __future__ import annotations

@@ -548,7 +548,8 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
             + "\n  ".join(gaps)
             + "\nFreeze first: `preflight <AREA>` clean, audit stamped, "
             "`frozen = true` "
-            '(at repeat_cost = "low": the question written suffices, with a model also criterion, admissibility condition and data profile). '
+            '(at repeat_cost = "low": the registration the kind owes suffices — '
+            "`protocol-check --contract` names it). "
             "No other run yields a reported number: a probe (run_kind='probe') "
             "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
             "high repeat cost only over an audit the backend refused, "

@@ -11,8 +11,10 @@ one question worth its cost: does the code MEAN what the registration says.
 The automated checks, in the order `code_findings` runs them; each finding
 carries its evidence kind as data (`gate.GateFinding.evidence_kind`:
 GUARANTEED, or STATIC EVIDENCE — a warning, never a blocker). The rest is
-extracted as facts for the code-check agent (via ``--bundle``), not
-verified by this command:
+extracted as facts into the bundle (``--bundle``) for an agent the lab
+runs on it — labkit ships no agent for the bundle; its agent audit of the
+code is `labkit-audit <AREA> --mode preflight` — not verified by this
+command:
 
   1. **the promise block against the code** (LAB-004 Identifiers make the
      intent addressable, GUARANTEED), when the protocol has one: the block
@@ -50,15 +52,16 @@ verified by this command:
      not have to.
 
 The following are extracted into the audit bundle but NOT checked by this
-command — the code-check agent judges them:
+command — an agent reading the bundle judges them:
 
   2. **schema contract** (LAB-015 Preflight audit before freezing, preflight scope). Every field the analysis
      READS must be written somewhere — in the materialized data if it exists,
      otherwise as a write site in the producer's source.
   3. **gate labels** (LAB-038 What the prompt demands). String comparisons in evaluation code — both
      resolved literals and named constants — extracted as facts for the agent.
-  4. **protocol placeholders**. Delegated to `protocol-check`, which owns the
-     template contract.
+
+Protocol placeholders are neither checked nor extracted here: `protocol-check`
+owns the template contract, and the bundle carries the protocol whole.
 
 Where each lives: 1 and 1a here (`promise_block_findings`,
 `admissibility_reads`, `constant_copies`); 1b and 1c in `prompt_check`; 1d
@@ -74,8 +77,8 @@ Usage:
     code-check <AREA>                    # run the mechanical checks
     code-check <AREA> --bundle FILE      # additionally write the audit bundle
                                          # (protocol + scripts + imported
-                                         #  repo-local lib modules) for the
-                                         #  code-check agent to read in one go
+                                         #  repo-local lib modules) for an
+                                         #  agent to read in one go
 
 Exit code 1 with a blocker, 0 with warnings only or all clear — the gate
 contract, told by `gate.Findings.report` like every gate's (until the
@@ -537,8 +540,9 @@ def schema_facts(area: Path) -> str:
 
 def severity_legend() -> str:
     """The severity legend of LAB-015 Preflight audit before freezing, quoted from the
-    lab standard for the bundle: the code-check agent reads only the bundle and
-    cannot look the legend up, and both audit agents must grade by the same words."""
+    lab standard for the bundle: an agent reading the bundle reads only the bundle
+    and cannot look the legend up, and it must grade by the same words as the
+    preflight audit."""
     return (
         "## Severity legend (LAB-015 Preflight audit before freezing, labkit standard)\n\n"
         + rules.paragraph("LAB-015", "**Severity levels**")
@@ -563,7 +567,10 @@ def declared_labels_section(protocol: Path) -> str:
 
 
 def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
-    """Write the audit bundle for the code-check agent: schema facts, gate labels, intent ids, protocol and code in one file."""
+    """Write the audit bundle to OUT, for an agent the lab runs on it (labkit
+    ships none): the severity legend, schema facts, gate labels, the labels
+    the head declares, then the protocol, the area's files and the repo
+    helpers they import, in one file. Returns the number of files listed."""
     parts = [
         f"# AUDIT BUNDLE · area {area.name}\n\n",
         severity_legend(),
@@ -631,8 +638,8 @@ def _not_checked(findings: Findings, protocol: Path, bundle_to: Path | None) -> 
     every gate's — audit 2026-10-23, C4)."""
     if bundle_to is not None:
         findings.note(
-            "schema + gate labels + placeholders extracted into "
-            "the bundle for the code-check agent"
+            "schema facts + gate labels extracted into the bundle, for an agent "
+            "you run on it (labkit ships none)"
         )
     elif standard_contract.lane(_cost_of(protocol)).registration:
         # only the agent's review is not owed here; the protocol's open
@@ -640,13 +647,15 @@ def _not_checked(findings: Findings, protocol: Path, bundle_to: Path | None) -> 
         findings.note(
             "schema, gate labels: not checked — the agent's review is not owed "
             "at repeat cost low, the measurement checks the instrument (--bundle "
-            "hands them to the code-check agent anyway); the protocol's open "
-            "fields are owed: protocol-fill <PROTOCOL> --list"
+            "extracts them anyway, for an agent you run; labkit ships none); the "
+            "protocol's open fields are owed: protocol-fill <PROTOCOL> --list"
         )
     else:
         findings.note(
-            "schema, gate labels, placeholders: not checked "
-            "(need --bundle for the code-check agent)"
+            "schema, gate labels: not checked — the preflight audit "
+            "(labkit-audit <AREA> --mode preflight) reads the code before the "
+            "freeze; --bundle extracts them for an agent you run (labkit ships "
+            "none); the protocol's open fields: protocol-check"
         )
 
 
@@ -659,7 +668,7 @@ def main(argv: list[str]) -> int:
             "  --protocol FILE  the PROTOCOL-*.md to check against "
             "(required once the area holds more than one)",
             "  --bundle FILE    pack sources + schema facts + gate labels "
-            "for the audit agent",
+            "for an agent you run on them (labkit ships none)",
             EXIT_CONTRACT,
         ]
         return console.usage("code-check", "\n".join(lines), asked=bool(argv))

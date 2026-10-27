@@ -420,9 +420,9 @@ def model(text: str) -> Model | None:
 
 def declared_labels(text: str) -> tuple[str, ...] | None:
     """The labels the gate accepts, declared as `[gate] labels = ["…", …]` —
-    the registered set the code-check agent holds the code's string
-    comparisons against (LAB-038 What the prompt demands); the judgement
-    stays the agent's, no gate compares them. None without the table.
+    the registered set an agent reading `code-check --bundle` holds the
+    code's string comparisons against (LAB-038 What the prompt demands); the
+    judgement stays the agent's, no gate compares them. None without the table.
     Raises BlockError on a non-table, an unknown key, or labels that are
     not a non-empty list of non-empty strings."""
     table = _table(parse_toml_block(text), "gate")

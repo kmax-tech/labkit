@@ -26,8 +26,9 @@ placeholders included) and leaves everything else byte-identical.
                                                written from them)
     protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: `[result] run`
                                                in the TOML head (the declaration), Recorded results and
-                                               Runs lines from its metrics.json (newest completed
-                                               run by default), written only when report-check
+                                               Runs lines from its metrics.json (by default the
+                                               protocol's answering run, the one every gate
+                                               holds it to), written only when report-check
                                                passes on them; the Summary's Conclusion — the
                                                question's answer in two sentences, within the
                                                Limits — stays yours
@@ -434,8 +435,8 @@ def from_run(
     """Write the run back: `[result] run` in the TOML head (the one
     declaration that the number is reported, `fill_result_run`), the Recorded results
     line, the Limit lines and the Runs entry as `runs/<run_id>/metrics.json`
-    and the covering records render them (`result_render.rendering`; newest
-    completed run when RUN_ID is None), a Limit line of a record that covers
+    and the covering records render them (`result_render.rendering`; the
+    protocol's answering run, `recheck.chosen_run`, when RUN_ID is None), a Limit line of a record that covers
     the run no longer dropped; the Summary's Conclusion stays the author's
     (`WRITTEN_AFTER_RUN`). Returns (text, what was filled, run_id). A filled
     Recorded results, or a `[result]` naming another run, is refused without `force`."""
@@ -1005,7 +1006,7 @@ def main(argv: list[str]) -> int:
         default=None,
         metavar="RUN_ID",
         help="adopt the run as the result: declare it as `[result] run` in the TOML head and write Recorded results and Runs lines from its metrics.json, kept only when report-check passes "
-        "(the area's newest completed run without RUN_ID); the Summary's Conclusion stays yours — the question's answer in two sentences, within the Limits",
+        "(without RUN_ID the protocol's answering run — the one finalize and report-check hold it to: completed, bound to its id, never a repeat); the Summary's Conclusion stays yours — the question's answer in two sentences, within the Limits",
     )
     ap.add_argument(
         "--line",

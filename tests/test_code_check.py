@@ -276,9 +276,10 @@ class TestBundle(unittest.TestCase):
         self.assertIn("'yes'", text)
 
     def test_bundle_opens_with_severity_legend(self):
-        """Both audit agents must grade by the SAME definitions; the
-        code-check agent reads only the bundle, so the legend of LAB-015 Preflight
-        audit before freezing is quoted from the lab standard — before the facts."""
+        """An agent reading the bundle must grade by the SAME definitions as
+        the preflight audit; it reads only the bundle, so the legend of LAB-015
+        Preflight audit before freezing is quoted from the lab standard — before
+        the facts."""
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
             out = a.path / "bundle.md"
             code_check.write_bundle(a.path, a.path, a.path / "PROTOCOL-fixture.md", out)
@@ -377,8 +378,14 @@ class TestSummaryLine(unittest.TestCase):
         )
         self.assertLess(note_at, summary_at, out)
 
-    def test_above_seconds_the_bundle_is_named(self):
-        self.assertIn("need --bundle for the code-check agent", self._out("high"))
+    def test_above_seconds_the_shipped_audit_is_named(self):
+        """labkit ships no agent for the bundle (audit 2026-10-27, C12): the
+        note names the preflight audit it does ship, and the bundle as one
+        for an agent of the lab's own."""
+        out = self._out("high")
+        self.assertIn("labkit-audit <AREA> --mode preflight", out)
+        self.assertIn("labkit ships none", out)
+        self.assertNotIn("code-check agent", out)
 
 
 if __name__ == "__main__":
