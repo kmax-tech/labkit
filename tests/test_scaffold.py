@@ -866,7 +866,9 @@ class Exp(unittest.TestCase):
     def test_a_write_that_dies_midway_leaves_the_protocol_whole(self) -> None:
         """`--report` and `--change-kind` rewrote the protocol in place
         (`Path.write_text`): a write that died midway left it truncated
-        (audit 2026-10-27, D8). Both write through `files.write_atomic`."""
+        (audit 2026-10-27, doubled homes: protocols written non-atomically).
+        Both write through `files.write_atomic`; the replacement takes the
+        default file mode, the old file's mode is not kept."""
         for flag, (protocol, call) in self._rewrites().items():
             with self.subTest(flag=flag):
                 before = protocol.read_text(encoding="utf-8")

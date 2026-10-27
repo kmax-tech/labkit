@@ -16,9 +16,9 @@ def write_atomic(path: Path, text: str) -> None:
     rename — a reader sees the old file or the new one, never half of
     either. Every file a run leaves (config, outputs, metrics, completion,
     failure, the patch of uncommitted changes, raw artefacts, the source
-    snapshots through `write_atomic_bytes`), the lease, a filled protocol
-    and one `labkit-init` promotes or restamps (with the stamp files it
-    replaces) write through it; the run index is appended under its lock
+    snapshots through `write_atomic_bytes`), the lease, a filled protocol,
+    a protocol `labkit-init` promotes or restamps and the stamp files a
+    restamp replaces write through it; the run index is appended under its lock
     instead. Staged beside the target, not outside its directory
     (CODE-013): the same filesystem is certain there, and every reader asks
     for a record by name or lists directories — a `.config.json.tmp<pid>`

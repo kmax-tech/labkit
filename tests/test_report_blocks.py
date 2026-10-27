@@ -171,10 +171,19 @@ class Discussions(unittest.TestCase):
                 self.assertEqual(report_blocks.discussion_gaps(found), [])
 
     def test_a_lone_surrogate_in_the_why_is_refused_naming_it(self):
-        """An argument not decoded as UTF-8 reaches `--why` as a lone
-        surrogate; writing the report then ended in a traceback."""
-        with self.assertRaisesRegex(ValueError, "--why: a lone surrogate U\\+DCFF"):
-            report_blocks.discussion_lines(P, RUN, "bad \udcff byte")
+        """An argument not decoded as UTF-8 reaches `--why` — or the
+        protocol's path, or the run id — as a lone surrogate; writing the
+        report then ended in a traceback. The refusal names the field."""
+        for args, field in (
+            ((P, RUN, "bad \udcff byte"), "--why"),
+            (("experiments/01-\udcff/PROTOCOL-x.md", RUN, "a look"), "protocol path"),
+            ((P, "2026-10-07T10-00-00_\udcff", "a look"), "run id"),
+        ):
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(
+                    ValueError, f"{field}: a lone surrogate U\\+DCFF"
+                ):
+                    report_blocks.discussion_lines(*args)
 
     def test_two_blocks_of_one_protocol_and_run_are_a_gap_and_refuse_a_write(self):
         one = "\n".join(report_blocks.discussion_lines(P, RUN, "a"))

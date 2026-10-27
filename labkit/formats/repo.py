@@ -166,11 +166,12 @@ def split_area_name(name: str) -> tuple[str | None, str]:
 def areas_named(experiments: Path, name: str) -> list[Path]:
     """Every area directory under EXPERIMENTS that the bare NAME names,
     sorted: the one called NAME and every `NN-<NAME>` (`AREA_NAME`) — the
-    one rule of a bare area name, for a command's argument (`area_path`)
-    and for the area `labkit-init exp` stamps, promotes or restamps. []
-    when EXPERIMENTS is no directory. Read by the grammar, not a glob:
-    `[0-9]*-<name>` also took `02-count-docs` for `docs` (audit
-    2026-10-27)."""
+    one rule of which areas a name matches, for a command's argument
+    (`area_path`, NAME as given) and for the area `labkit-init exp` stamps,
+    promotes or restamps (`scaffold.existing_area`, NAME spelled as its
+    slug first). [] when EXPERIMENTS is no directory. Read by the grammar,
+    not a glob: `[0-9]*-<name>` also took `02-count-docs` for `docs`
+    (audit 2026-10-27)."""
     if not experiments.is_dir():
         return []
     return sorted(

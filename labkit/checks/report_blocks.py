@@ -314,9 +314,10 @@ def discussion_body(run_id: str, why: str) -> str:
 def discussion_lines(protocol: str, run_id: str, why: str) -> list[str]:
     """The block discussing RUN_ID of PROTOCOL with WHY, line by line; the
     head's strings written by `protocol_block.toml_string`. Raises
-    ValueError on a why that cannot stand in the block: empty, more than
-    one line (`\\n` or `\\r`), holding `-->` (it would close the comment),
-    or a lone surrogate (no TOML string holds one)."""
+    ValueError on a why that cannot stand in the block — empty, more than
+    one line (`\\n` or `\\r`), holding `-->` (it would close the comment) —
+    and on a lone surrogate in any of the three (no TOML string holds one),
+    the message naming the field."""
     why = why.strip()
     if not why:
         raise ValueError(
@@ -329,19 +330,17 @@ def discussion_lines(protocol: str, run_id: str, why: str) -> list[str]:
             f"--why {why!r}: one line, without {DISCUSS_HEAD_END!r} (it closes the "
             f"block's head)"
         )
-    try:
-        why_string = toml_string(why)
-    except ValueError as exc:
-        raise ValueError(f"--why: {exc}") from exc
-    return [
-        DISCUSS_OPEN,
-        f"protocol = {toml_string(protocol)}",
-        f"run = {toml_string(run_id)}",
-        f"why = {why_string}",
-        DISCUSS_HEAD_END,
-        discussion_body(run_id, why),
-        DISCUSS_CLOSE,
-    ]
+    head = [DISCUSS_OPEN]
+    for key, value, field in (
+        ("protocol", protocol, "the protocol path"),
+        ("run", run_id, "the run id"),
+        ("why", why, "--why"),
+    ):
+        try:
+            head.append(f"{key} = {toml_string(value)}")
+        except ValueError as exc:
+            raise ValueError(f"{field}: {exc}") from exc
+    return [*head, DISCUSS_HEAD_END, discussion_body(run_id, why), DISCUSS_CLOSE]
 
 
 def _discussion_head(head: list[str], at: int) -> tuple[str, str, str]:

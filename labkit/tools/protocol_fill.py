@@ -859,9 +859,9 @@ def discuss_into(
     that protocol and run replaced in place, or one appended; other
     discussions stay. Raises ValueError when the protocol declares RUN_ID
     as its result (the result block shows it: `--into` without
-    `--discuss`), when AREA holds no `runs/<RUN_ID>/`, on an empty or
-    multi-line why, and on a block in REPORT that does not read or is
-    there twice."""
+    `--discuss`), when AREA holds no `runs/<RUN_ID>/`, on a why or a head
+    string the block cannot hold (`report_blocks.discussion_lines`), and on
+    a block in REPORT that does not read or is there twice."""
     if protocol_block.declared_run(text) == run_id:
         raise ValueError(
             f"run {run_id} is the protocol's declared result — a declared result "
