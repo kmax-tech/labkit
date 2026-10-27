@@ -109,6 +109,23 @@ class HandoverRecovery(cases._Chain):
         self.assertIn("2. hand over: protocol-fill", out)
         self.assertIn("1 earlier record(s) without an open BLOCKER not shown", out)
 
+    def test_a_stop_the_handover_lets_pass_names_the_loss(self):
+        # it passed in silence: "nothing wrong" instead of "loss acknowledged"
+        # (audit 2026-10-27, third, K9)
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        (record,) = findings.area_records(self.area)
+        record.path.unlink()
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        rc, out = self.lab.stop_hook()
+        self.assertEqual(rc, 0, out)
+        self.assertIn("a handover acknowledges this loss", out)
+        self.assertIn(record.path.name, out)
+        state = claude_hooks.undecided_state(self.lab.root, [self.protocol])
+        self.assertEqual(state.blockers, [])
+        self.assertEqual(len(state.acknowledged), 1)
+
     def test_a_handover_that_no_longer_matches_says_why(self):
         # The stop held with the original loss and named no handover, so the
         # agent wrote another (audit 2026-10-27, H2).

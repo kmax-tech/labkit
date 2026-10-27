@@ -124,6 +124,7 @@ swallowed.
 from __future__ import annotations
 
 import contextlib
+from dataclasses import dataclass
 import io
 import json
 import os
@@ -892,7 +893,10 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
     changed = list(dict.fromkeys(in_tree + session.paths))
     if session.note:
         print(f"claude-hook stop: {session.note}", file=sys.stderr)
-    undecided = undecided_blockers(repo, changed)
+    state = undecided_state(repo, changed)
+    for line in state.acknowledged:
+        print(f"claude-hook stop: {line}", file=sys.stderr)
+    undecided = state.blockers
     if undecided:
         print(
             "an audit of an area this session worked in found BLOCKER(s) nobody "
@@ -938,9 +942,27 @@ UNDECIDED_WAY = (
 )
 
 
+@dataclass(frozen=True)
+class Undecided:
+    """What the stop and the commit hold (BLOCKERS) and what a current
+    handover let pass (ACKNOWLEDGED: one line per area, the losses it
+    acknowledges) — a pass that names no loss read as "nothing wrong"
+    (audit 2026-10-27, third, K9)."""
+
+    blockers: list[str]
+    acknowledged: list[str]
+
+
 def undecided_blockers(
     repo: Path, paths: list[Path], *, staged: bool = False
 ) -> list[str]:
+    """The blockers of `undecided_state`."""
+    return undecided_state(repo, paths, staged=staged).blockers
+
+
+def undecided_state(
+    repo: Path, paths: list[Path], *, staged: bool = False
+) -> Undecided:
     """Every audit BLOCKER still `open` in an area one of PATHS lies in — as
     `<area>: <file>: <text>`, each area once —, every audit record gone
     that the area's attempt journal or HEAD names (`attempts.area_gaps`),
@@ -963,13 +985,19 @@ def undecided_blockers(
     tree, so new unstaged evidence cannot borrow an earlier
     acknowledgement. Where the gaps stand and a handover record of the area
     does not count, a line per record says why (`handovers.mismatch`)."""
-    out = []
+    out: list[str] = []
+    acknowledged: list[str] = []
     for area in areas_touched(paths, repo):
         shown = area.relative_to(repo.resolve()).as_posix()
         # Only a current handover can acknowledge integrity gaps.
         # Open readable BLOCKERs remain owed independently below.
         handed_over = handovers.acknowledgement(area, staged=staged)
         state = attempts.area_integrity(area, staged=staged)
+        if handed_over.valid and state.problems:
+            acknowledged.append(
+                f"{shown}: a handover acknowledges this loss — not restored, and "
+                f"no audit or adoption passes on it: " + "; ".join(state.problems)
+            )
         if not handed_over.valid and state.problems:
             out += [f"{shown}: {problem}" for problem in state.problems]
             # a handover written for this area that no longer counts says why
@@ -978,7 +1006,7 @@ def undecided_blockers(
                 for name, why in handed_over.refused.items()
             ]
         out += [f"{shown}: {u.line}" for u in findings.open_blockers(state.records)]
-    return out
+    return Undecided(out, acknowledged)
 
 
 def undecided(argv: list[str]) -> int:
@@ -998,7 +1026,10 @@ def undecided(argv: list[str]) -> int:
             "index is committed, as the pre-commit does",
         )
         return 2
-    lines = undecided_blockers(repo, [repo / p for p in argv], staged=True)
+    state = undecided_state(repo, [repo / p for p in argv], staged=True)
+    for line in state.acknowledged:
+        print(f"claude-hook undecided: {line}")
+    lines = state.blockers
     if not lines:
         return 0
     print(

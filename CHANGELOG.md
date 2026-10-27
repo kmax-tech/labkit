@@ -1081,6 +1081,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A stop or commit a handover lets pass names the loss.** It passed in
+  silence, so the pass read as "nothing wrong". `claude_hooks.undecided_state`
+  returns the blockers and, per area, the losses a current handover
+  acknowledges; the stop and the pre-commit print each as one line (not
+  restored; no audit or adoption passes on it). `undecided_blockers` stays
+  the blockers' view. Audit 2026-10-27 (third), K9.
 - **The full-form stamp carries only what the protocol owes.** The
   checker stopped asking a high computation without a model for a data
   profile, prompt, instrument and resolution checks (`5e47136`), but the
