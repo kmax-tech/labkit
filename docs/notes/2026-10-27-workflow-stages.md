@@ -76,4 +76,8 @@ not proof of scientific correctness.
 --wait` can observe no run before the child creates its directory and
 return success too early. The high-compute test waits for the actual child
 process before checking its recorded completion; it does not establish
-that this launch/wait race is repaired.
+that this launch/wait race is repaired. Repaired the same day: `runlog
+start` returns once the run's directory holds its record, reports a
+command that ended first (exit 0 without a run, 2 on failure, with the
+log's tail) and gives up after `--max-seconds` with exit 3
+(`tests/test_runlog_wait.py`, `TestStartWaitsForTheRun`).

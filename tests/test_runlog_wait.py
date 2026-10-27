@@ -219,6 +219,63 @@ class TestStartDetaches(unittest.TestCase):
             self.assertEqual(probe.read_text(), "1")
 
 
+class TestStartWaitsForTheRun(unittest.TestCase):
+    """`runlog start` returned at once, so `runlog AREA --wait` right after it
+    saw no open run and exited 0 before the child made its directory
+    (review 2026-10-27). It returns once the run exists, says when the
+    command ended first, and gives up with exit 3."""
+
+    def _start(self, d: str, script: str, *more: str) -> tuple[int, str]:
+        """`runlog start D … -- python -c SCRIPT` from D; stdout and stderr."""
+        cwd = os.getcwd()
+        err = io.StringIO()
+        argv = ["start", d, "--log", str(Path(d) / "l.log"), *more, "--"]
+        try:
+            os.chdir(d)
+            with contextlib.redirect_stderr(err):
+                code, out = _run_main([*argv, sys.executable, "-c", script])
+        finally:
+            os.chdir(cwd)
+        return code, out + err.getvalue()
+
+    def test_it_returns_once_the_run_directory_exists(self):
+        with tempfile.TemporaryDirectory() as d:
+            record = Path(d) / "record.json"
+            record.write_text(json.dumps(run_record()), encoding="utf-8")
+            run = Path(d) / "runs" / "2026-10-27T20-00-00_late"
+            script = (
+                "import time, shutil, pathlib; time.sleep(0.6); "
+                f"d = pathlib.Path({str(run)!r}); d.mkdir(parents=True); "
+                "time.sleep(0.3); "
+                f"shutil.copy({str(record)!r}, d / 'config.json'); time.sleep(0.3)"
+            )
+            code, out = self._start(d, script)
+            self.assertEqual(code, 0, out)
+            self.assertTrue((run / "config.json").is_file(), out)
+            self.assertIn(f"run: {run.name}", out)
+
+    def test_a_command_that_fails_first_is_named_with_its_log(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out = self._start(d, "import sys; print('boom'); sys.exit(3)")
+            self.assertEqual(code, 2, out)
+            self.assertIn("ended with exit 3 before its run existed", out)
+            self.assertIn("boom", out)
+
+    def test_a_command_without_a_run_ends_cleanly(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out = self._start(d, "print('no run')")
+            self.assertEqual(code, 0, out)
+            self.assertIn("without a run", out)
+
+    def test_still_starting_after_max_seconds_is_exit_3(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out = self._start(
+                d, "import time; time.sleep(5)", "--max-seconds", "0.5"
+            )
+            self.assertEqual(code, 3, out)
+            self.assertIn("still starting", out)
+
+
 class TestStartNamesTheArea(unittest.TestCase):
     """The area is named, not guessed: the default log lands in its output/,
     and the printed wait command names it. Before, the log went to output/

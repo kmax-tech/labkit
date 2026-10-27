@@ -1,7 +1,7 @@
 """runlog_command — the `runlog` console command.
 
 `runlog start AREA -- CMD` starts a run detached and returns once its
-directory exists; `runlog [AREA]` shows what an area's runs are doing and
+directory exists (or the command ended first, said so); `runlog [AREA]` shows what an area's runs are doing and
 how they ended, `--wait` and `--follow` block until it is idle; `runlog
 reindex` rebuilds
 runs.tsv from the run directories (`runlog.reindex`). The run itself is
@@ -181,8 +181,67 @@ def _wait(
         time.sleep(interval)
 
 
+#: how long `runlog start` waits for the run's directory by default: the
+#: script's gates and provenance (hashing its data) come before it
+START_WAIT_S = 60.0
+
+
+def _await_run(
+    area: Path,
+    before: set[str],
+    proc: subprocess.Popen[bytes],
+    log: Path,
+    max_seconds: float,
+    interval: float = 0.2,
+) -> int:
+    """Block until the started command's run directory exists in AREA (a
+    directory not in BEFORE): exit 0, the run named. The command ending
+    first: exit 0 when it ended cleanly without a run (nothing to wait for),
+    2 when it failed, with the log's last lines. Still alive after
+    MAX_SECONDS without one: exit 3. Until then `runlog AREA --wait` right
+    after the start saw no open run and returned 0 (review 2026-10-27)."""
+    t0 = time.monotonic()
+    while True:
+        code = proc.poll()  # before the look, so a run made just before exit is seen
+        new = [rd for rd in run_dirs(area) if rd.dir.name not in before]
+        if new:
+            rd = new[-1]
+            if rd.error is not None:
+                console.refuse(
+                    "runlog start",
+                    f"run {rd.dir.name}: its record does not read — {rd.error}",
+                )
+                return 2
+            if rd.config is not None:
+                print(f"run: {rd.dir.name}")
+                return 0
+        if code is not None:
+            if code == 0:
+                print(
+                    f"the command ended (exit 0) without a run in {area} — nothing to wait for"
+                )
+                return 0
+            tail = log.read_text(encoding="utf-8", errors="replace").splitlines()[-15:]
+            console.refuse(
+                "runlog start",
+                f"the command ended with exit {code} before its run existed — "
+                f"log {log}:\n  " + "\n  ".join(tail),
+            )
+            return 2
+        if time.monotonic() - t0 >= max_seconds:
+            print(
+                f"no run in {area} after {int(max_seconds)}s; pid {proc.pid} is still "
+                f"starting — `runlog {area}` shows the run once it exists"
+            )
+            return 3
+        time.sleep(interval)
+
+
 def _start(argv: list[str]) -> int:
-    """runlog start AREA [--log FILE] -- <cmd ...>: detach a run and return.
+    """runlog start AREA [--log FILE] [--max-seconds S] -- <cmd ...>: detach
+    a run and return once its directory exists (`_await_run`: exit 0 the
+    run named or the command ended cleanly without one, 2 it failed first,
+    3 still starting after S seconds).
 
     AREA is named, not guessed from the command: the default log goes to
     AREA/output/ and the printed wait command names AREA. Until 0.90.0 the
@@ -199,13 +258,22 @@ def _start(argv: list[str]) -> int:
 
     ap = argparse.ArgumentParser(
         prog="runlog start",
-        usage="runlog start AREA [--log FILE] -- <cmd ...>",
+        usage="runlog start AREA [--log FILE] [--max-seconds S] -- <cmd ...>",
         description="Start a command detached (own session via setsid), "
-        "output to a log file, return immediately.",
+        "output to a log file, return once its run directory exists: exit 0 "
+        "(the run named, or the command ended cleanly without a run), 2 the "
+        "command failed before its run existed (the log's tail shown), 3 "
+        "still starting after --max-seconds.",
     )
     ap.add_argument("area", type=Path, help="the experiment area the run belongs to")
     ap.add_argument(
         "--log", default=None, help="log file (default: AREA/output/start-<ts>.log)"
+    )
+    ap.add_argument(
+        "--max-seconds",
+        type=float,
+        default=START_WAIT_S,
+        help=f"wait this long for the run's directory (default {int(START_WAIT_S)})",
     )
     words, cmd = console.split_command(argv)
     if cmd is None:
@@ -231,6 +299,7 @@ def _start(argv: list[str]) -> int:
     )
     log.parent.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "LABKIT_DETACHED": "1"}
+    before = {rd.dir.name for rd in run_dirs(area)}
     with log.open("ab") as fh:
         proc = subprocess.Popen(
             cmd,
@@ -240,9 +309,9 @@ def _start(argv: list[str]) -> int:
             start_new_session=True,
             env=env,
         )
-    print(f"started detached: pid={proc.pid}  log={log}")
-    print(f"status:  runlog {area}        wait:  runlog {area} --wait")
-    return 0
+    print(f"started detached: pid={proc.pid}  log={log}", flush=True)
+    print(f"status:  runlog {area}        wait:  runlog {area} --wait", flush=True)
+    return _await_run(area, before, proc, log, args.max_seconds)
 
 
 def main(argv: list[str]) -> int:

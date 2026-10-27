@@ -260,7 +260,7 @@ labkit-audit AREA --report-review REPORT                   # a cold reader on a 
 report-check AREA                  # release check before reporting
 report-check --if-reported [--staged] PATH... # check affected reported areas and citing reports
 runlog [AREA] [--wait | --follow]    # inspect or monitor runs
-runlog start AREA -- COMMAND       # start a detached run
+runlog start AREA -- COMMAND       # start a detached run; returns once its run directory exists (2: the command failed first, 3: still starting)
 runlog reindex AREA                # recover missing index rows
 labkit-params AREA [--run ID]       # values and provenance of a run
 labkit-hooks install|check [REPO]   # install or check hooks

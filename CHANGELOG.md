@@ -306,6 +306,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`runlog start` returns once the run exists.** It returned right after
+  launching the command, so `runlog AREA --wait` straight after it could
+  see no open run and exit 0 before the child made its directory — a
+  success for a run that had not begun. It now waits until a new run
+  directory holds its record (exit 0, the run named); a command that ends
+  first exits 0 without a run, or 2 on failure with the log's last lines;
+  still starting after `--max-seconds` (default 60) is exit 3, as for
+  `--wait`. Workflow review 2026-10-27.
 - **Local apply predicts without fitting.** An `apply` without a model
   alias used the estimator's training path. The shared script now loads
   unchanged primary and explicitly supplied null predictors; only `fit`
