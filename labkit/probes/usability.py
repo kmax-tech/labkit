@@ -545,7 +545,7 @@ def stage(
     _sh(["git", "init", "-q", "."], root)
     _sh(["git", "add", "-A"], root)
     _commit(root, "Scaffold: a probe lab repo for the usability trace")
-    _, stamp_report = scaffold.stamp_area(
+    area, stamp_report = scaffold.stamp_area(
         root,
         area_name,
         repeat_cost=repeat_cost,
@@ -555,11 +555,6 @@ def stage(
     print(
         stamp_report, file=sys.stderr
     )  # the stamp's log is for the operator, not the probe
-    areas = sorted(p.name for p in (root / "experiments").glob(f"*-{area_name}"))
-    if len(areas) != 1:
-        raise console.Refused(
-            "usability", f"expected one stamped area *-{area_name}, got {areas}"
-        )
     plant_task(root, task, data)
     # the labkit of the staging interpreter, so a probe measures this checkout
     _probe_venv(root, venv, _labkit_spec(Path(sys.executable)))
@@ -582,7 +577,7 @@ def stage(
     probe = Probe(
         staged=runs.now_stamp(),
         task=task,
-        area=areas[0],
+        area=area.name,
         metric_key=metric_key,
         labkit_installed=_labkit_spec(root / ".venv" / "bin" / "python"),
         scaffold_sha=sha,
@@ -602,7 +597,7 @@ def stage(
     sheet = (scaffold.TEMPLATES / spec["template"]).read_text(encoding="utf-8")
     for key, val in (
         ("<metric_key>", metric_key),
-        ("<area>", areas[0]),
+        ("<area>", area.name),
         ("<log>", str(log)),
         ("<target>", str(TARGET_MINUTES)),
         ("<tier>", tier_sentence(repeat_cost)),
