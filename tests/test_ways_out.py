@@ -1,5 +1,5 @@
 """The ways out of a BLOCKER are one set of decisions in two places: the
-list `labkit-audit` prints with every decision list (`audit.WAYS_OUT`) and
+list `labkit-audit` prints with every decision list (`ways_out.WAYS_OUT`) and
 the stamped AGENTS.md ("When you are stuck"). Held by meaning and command,
 not by copied strings: the same causes in both, every command they name a
 real one, every flag a flag of it, and the `[replaces]` table they describe
@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.formats import protocol_block  # noqa: E402
-from labkit.gates import audit  # noqa: E402
+from labkit.gates import audit, ways_out  # noqa: E402
 from labkit.tools import protocol_fill, scaffold  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
@@ -33,18 +33,21 @@ def stuck_section() -> str:
 class WaysOut(unittest.TestCase):
     def test_the_template_names_the_same_causes_as_the_printed_list(self):
         named = re.findall(r"^- \*\*([^*]+)\*\* — ", stuck_section(), re.M)
-        self.assertEqual(named, [name for name, _ in audit.WAYS_OUT])
-        printed = "\n".join(audit.BLOCKER_ROUTES)
-        for name, _ in audit.WAYS_OUT:
+        self.assertEqual(named, [name for name, _ in ways_out.WAYS_OUT])
+        printed = "\n".join(ways_out.BLOCKER_ROUTES)
+        for name, _ in ways_out.WAYS_OUT:
             self.assertIn(f"    {name}: ", printed)
 
     def test_a_miss_comes_before_a_new_registration_and_never_becomes_a_pass(self):
         """The repair case read a missed criterion as an invalid registration."""
-        names = [name for name, _ in audit.WAYS_OUT]
+        names = [name for name, _ in ways_out.WAYS_OUT]
         self.assertLess(
             names.index("a missed criterion"), names.index("an invalid registration")
         )
-        for text in (dict(audit.WAYS_OUT)["an invalid registration"], stuck_section()):
+        for text in (
+            dict(ways_out.WAYS_OUT)["an invalid registration"],
+            stuck_section(),
+        ):
             text = " ".join(text.split())  # the template wraps its lines
             self.assertIn("never turns an earlier miss into a pass", text)
             self.assertIn('type = "exploratory"', text)
@@ -52,7 +55,7 @@ class WaysOut(unittest.TestCase):
     def test_a_handover_names_the_protocol_not_its_runs(self):
         """A run id in a report reads as its number: the counter-case's
         handover that named the answering run was held."""
-        for text in (dict(audit.WAYS_OUT)["none of these"], stuck_section()):
+        for text in (dict(ways_out.WAYS_OUT)["none of these"], stuck_section()):
             text = " ".join(text.split())
             self.assertIn("the report names the protocol, not its runs", text)
             self.assertIn(
@@ -61,7 +64,7 @@ class WaysOut(unittest.TestCase):
             )
 
     def test_every_command_named_is_a_real_command_and_flag(self):
-        both = " ".join(("\n".join(audit.BLOCKER_ROUTES) + stuck_section()).split())
+        both = " ".join(("\n".join(ways_out.BLOCKER_ROUTES) + stuck_section()).split())
         self.assertIn("labkit-init exp <new-name> --kind", both)
         init = flags_of(scaffold.main, ["exp", "--help"])
         for flag in re.findall(r"labkit-init exp <new-name> (--[a-z-]+)", both):
@@ -97,7 +100,7 @@ class WaysOut(unittest.TestCase):
         assert rep is not None
         self.assertEqual([c.what for c in rep.changes], ["C1 margin"])
         for field in protocol_block.CHANGE_KEYS:
-            self.assertIn(field, dict(audit.WAYS_OUT)["an invalid registration"])
+            self.assertIn(field, dict(ways_out.WAYS_OUT)["an invalid registration"])
 
 
 def flags_of(main, argv: list[str]) -> set[str]:

@@ -279,3 +279,12 @@ def changed_parts(earlier: ReportReview, now: dict[str, str]) -> list[str]:
     NOW's — added, removed or changed — in NOW's order, then the removed."""
     out = [k for k, v in now.items() if earlier.parts.get(k) != v]
     return out + [k for k in earlier.parts if k not in now]
+
+
+def held_by(standing: Standing) -> str:
+    """The claims that hold a state, each with its record, line, kind and
+    why — what a refusal names so the next step can answer it."""
+    return "; ".join(
+        f"CLAIM in {r.path.name}, line {c.line} ({c.kind}): {c.why}"
+        for r, c in standing.claims
+    )

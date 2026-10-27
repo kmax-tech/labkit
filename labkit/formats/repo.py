@@ -133,6 +133,14 @@ def next_after_run(protocol: Path, run_id: str) -> str:
     )
 
 
+def report_review_command(area: Path, report: Path, protocol: Path) -> str:
+    """The command that reviews REPORT on AREA, paths as seen from the
+    working directory; `--protocol` only when the area has more than one."""
+    return audit_command(
+        area, "--report-review", shown(report, Path.cwd()), protocol=protocol
+    )
+
+
 def into_command(protocol: Path, report: Path) -> str:
     """The `protocol-fill PROTOCOL --into REPORT` line that writes PROTOCOL's
     result block into REPORT, both as the working directory reaches them

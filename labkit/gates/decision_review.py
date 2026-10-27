@@ -65,7 +65,7 @@ from labkit.checks.audit_binding import AuditError, run_shown
 from labkit.checks.result_render import rendering
 from labkit.formats import attempts, console, findings, reviews
 from labkit.formats.findings import EFFECT_STANDS
-from labkit.formats.protocol_check import CONCLUSION_LABEL, field_name, fields
+from labkit.formats.protocol_check import conclusion_written
 from labkit.formats.repo import ProtocolChoiceError, layout_root, shown, the_protocol
 from labkit.formats.scope_sha import Snapshot, area_snapshot, validation_note
 from labkit.gates import audit
@@ -139,15 +139,6 @@ def reviewable(
             and reviews.once_not_upheld(record, n, found) is not None
         )
     ]
-
-
-def conclusion_written(text: str) -> bool:
-    """Is the Conclusion written — present and no placeholder? The claim the
-    review binds to (`reviews.claim_digest`)."""
-    return any(
-        f.name == field_name(CONCLUSION_LABEL) and f.value.strip() and not f.placeholder
-        for f in fields(text)
-    )
 
 
 def named_files(

@@ -178,6 +178,25 @@ class CoreAndDoctrine(unittest.TestCase):
         self.assertEqual(crossings, KNOWN_CROSSINGS)
 
 
+class TheReleaseGateCallsNoModel(unittest.TestCase):
+    def test_importing_report_check_loads_no_model_backend(self):
+        # the pre-commit and the stop import it; through audit, the reviewers
+        # and their texts it loaded llm and llm_backends (audit 2026-10-27,
+        # third, M1). A fresh process: this one has them loaded already.
+        import subprocess
+        import sys
+
+        code = (
+            "import sys, labkit.gates.report_check; "
+            "print(sorted(m for m in ('labkit.run.llm', 'labkit.run.llm_backends') "
+            "if m in sys.modules))"
+        )
+        out = subprocess.run(
+            [sys.executable, "-c", code], capture_output=True, text=True, check=True
+        )
+        self.assertEqual(out.stdout.strip(), "[]", out.stderr)
+
+
 class OneNameOneThing(unittest.TestCase):
     def test_no_public_name_in_two_modules(self):
         where: dict[str, list[str]] = defaultdict(list)

@@ -133,8 +133,10 @@ from labkit.checks import report_blocks
 from labkit.checks.result_render import render_gaps, rendering
 from labkit.gates.finalize import finalize_area
 from labkit.gates.preflight import area_test_python
-from labkit.gates import audit, decision_review, report_review
-from labkit.formats.protocol_check import check_fields
+from labkit.gates import ways_out
+from labkit.checks.report_review_inputs import review_keys, review_pieces
+from labkit.formats.report_reviews import held_by
+from labkit.formats.protocol_check import check_fields, conclusion_written
 from labkit.formats.repo import (
     adopt_command,
     audit_command,
@@ -152,6 +154,7 @@ from labkit.formats.repo import (
     indexed_protocols,
     own_path,
     protocol_links,
+    report_review_command,
     layout_root,
     no_such_area,
     PROTOCOL_NAME,
@@ -338,12 +341,12 @@ def registration_changes(ctx: Checked) -> list[GateFinding]:
                 f"the first measurements recorded different registrations: {named} — "
                 f"which one stood before the number cannot be told, so no run of "
                 f"this protocol answers a registered question. Either "
-                + audit.register_anew(
+                + ways_out.register_anew(
                     str(ctx.head.id),
                     "per change against each of these registrations (report-check "
                     "of the new protocol lists them)",
                 )
-                + f"; or {audit.HANDOVER}",
+                + f"; or {ways_out.HANDOVER}",
                 evidence_kind=GUARANTEED,
             )
         ]
@@ -376,7 +379,7 @@ def registration_changes(ctx: Checked) -> list[GateFinding]:
             f"registered them ({'; '.join(_restored(c) for c in changes)}){shown_then}, "
             f"and measure again, then audit that run (the earlier runs stay); or, "
             f"when the registration cannot be answered as written, "
-            + audit.register_anew(str(ctx.head.id))
+            + ways_out.register_anew(str(ctx.head.id))
             + " — the earlier protocol, its runs and their verdict stay",
             evidence_kind=GUARANTEED,
         )
@@ -485,7 +488,7 @@ def _undeclared_changes(
     if gaps:
         return [
             f"the registrations cannot be compared — {'; '.join(gaps)}; until "
-            f"they can, {audit.HANDOVER}"
+            f"they can, {ways_out.HANDOVER}"
         ]
     ((new, new_where),) = news
     computed: dict[tuple[str, str, str], str] = {}
@@ -884,7 +887,7 @@ def _review_step(ctx: Checked, record: findings.Record) -> str:
     claim). A refusal naming `<area>` and no precondition was not followed
     (ninth haiku round, t3)."""
     command = f"`{audit_command(ctx.area, '--review', '--record', record.path.name, protocol=ctx.protocol)}`"
-    if decision_review.conclusion_written(ctx.text):
+    if conclusion_written(ctx.text):
         return command
     return (
         f"write the Conclusion in {ctx.protocol.name} first (the review judges "
@@ -1682,7 +1685,7 @@ def report_review_owed(
     """The report review the report at PATH (REL to the repo, TEXT as the
     gate's state holds it) owes: per protocol its discussion blocks name,
     a review of exactly this state — the inputs the reviewer reads
-    (`report_review.review_pieces`), the report and the protocol as the
+    (`report_review_inputs.review_pieces`), the report and the protocol as the
     state holds them — that names no claim (`report_reviews.standing`).
     A BLOCKER per protocol without one, naming the command, the claims of
     this state, or what changed since the last review. Guaranteed: the
@@ -1705,7 +1708,7 @@ def report_review_owed(
             run_path(area, d.run_id).is_dir() for d in mine
         ):
             continue
-        command = f"`{report_review.review_command(area, path, protocol)}`"
+        command = f"`{report_review_command(area, path, protocol)}`"
         if staged:
             # the review reads the area's files (runs' metrics, audit records,
             # its own records) from the tree; the commit carries the index —
@@ -1725,11 +1728,9 @@ def report_review_owed(
                 )
                 continue
         try:
-            pieces = report_review.review_pieces(
-                area, path, text, protocol, protocol_text, mine
-            )
+            pieces = review_pieces(area, path, text, protocol, protocol_text, mine)
             whole, parts = report_reviews.fingerprint(pieces)
-            report_key, protocol_key = report_review.review_keys(area, path, protocol)
+            report_key, protocol_key = review_keys(area, path, protocol)
             found = report_reviews.area_report_reviews(area)
             if staged:
                 carried = set(indexed_files(sources.repo))
@@ -1757,7 +1758,7 @@ def report_review_owed(
                 GateFinding(
                     BLOCKER,
                     f"{rel}: the report review holds this state on the discussion "
-                    f"of {runs_named} — {report_review.held_by(stands)}; change the "
+                    f"of {runs_named} — {held_by(stands)}; change the "
                     f"report, or a source the reviewer read, so that no claim holds, "
                     f"then review that state: {command} (another draw on this state, "
                     f"`--again` included, releases nothing)",

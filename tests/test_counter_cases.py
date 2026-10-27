@@ -199,7 +199,7 @@ class HonestMiss(_Chain):
 
 class ConflictHandedOver(_Chain):
     """No run answers a registered question; the agent hands over
-    (`audit.HANDOVER`): no [result] table, a report that names the protocol
+    (`ways_out.HANDOVER`): no [result] table, a report that names the protocol
     and says what stands in the way, no number. The stop and the commit let
     it through; a report that cites the answering run is held, and the
     adoption of a run as the result is refused."""

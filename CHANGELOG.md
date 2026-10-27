@@ -1081,6 +1081,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The release gate loads no model backend.** `report_check`, which the
+  pre-commit and the stop import, pulled in `llm` and `llm_backends`
+  through `audit`, `decision_review` and `report_review` for eight
+  model-free names. They moved where they belong: the ways out and the
+  handover sentence into `gates/ways_out`, what a report review reads
+  (`review_pieces`, `review_keys`) into `checks/report_review_inputs`,
+  `held_by` into `report_reviews`, `conclusion_written` into
+  `protocol_check`, the review command into `repo.report_review_command`.
+  A test imports `report_check` in a fresh process and finds neither
+  backend loaded. Audit 2026-10-27 (third), M1.
 - **Dead code and dead parameters gone.** `followup.origins_of`,
   `lanes.ids_of` and `protocol_reading.terms_judge_prompt` had no caller;
   `report_check.index_text` only forwarded to `repo.text_at`;

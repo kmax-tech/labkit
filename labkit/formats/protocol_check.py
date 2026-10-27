@@ -806,3 +806,12 @@ def result_due(text: str) -> str | None:
         return protocol_block.declared_run(text)
     except protocol_block.BlockError:
         return None
+
+
+def conclusion_written(text: str) -> bool:
+    """Is the Conclusion written — present and no placeholder? The claim the
+    review binds to (`reviews.claim_digest`)."""
+    return any(
+        f.name == field_name(CONCLUSION_LABEL) and f.value.strip() and not f.placeholder
+        for f in fields(text)
+    )

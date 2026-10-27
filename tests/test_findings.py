@@ -691,7 +691,7 @@ class DecisionList(unittest.TestCase):
         self.assertNotRegex(text, r"\n  3 · ")
         self.assertIn("reading hints — not recorded, nothing to decide", text)
         self.assertIn("READ · PROTOCOL-x.md:5", text)
-        # a BLOCKER is named by its cause (`audit.WAYS_OUT`), each with what closes it
+        # a BLOCKER is named by its cause (`ways_out.WAYS_OUT`), each with what closes it
         # (ninth haiku round, t5: the bar moved to the score after the audit)
         self.assertIn("before deciding a BLOCKER, name which of these it is", text)
         self.assertIn("an implementation error", text)
