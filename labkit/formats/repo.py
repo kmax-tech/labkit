@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -113,6 +114,23 @@ def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
     file name failed from the repo root, where agents run the scripts
     (count probe, 2026-10-20)."""
     return f"protocol-fill {shown(protocol, Path.cwd())} --from-run {run_id}"
+
+
+def audit_command(
+    area: Path, *step: str, protocol: Path | None = None, base: Path | None = None
+) -> str:
+    """The `labkit-audit` line for STEP on AREA, paths as BASE (the working
+    directory by default) reaches them, every word shell-quoted, and
+    `--protocol PROTOCOL` when the area holds more than one protocol — the
+    command refuses to choose there (`the_protocol`). The one builder of
+    every printed audit step; STEP's words are given as BASE reaches them.
+    Without PROTOCOL in such an area the line names none, and the command
+    as printed refuses with the choice it needs."""
+    here = base or Path.cwd()
+    words = ["labkit-audit", shown(area, here), *step]
+    if protocol is not None and len(area_protocols(area)) > 1:
+        words += ["--protocol", shown(protocol, here)]
+    return shlex.join(words)
 
 
 def shown(path: Path, base: Path) -> str:

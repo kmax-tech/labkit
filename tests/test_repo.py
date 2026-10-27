@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -343,6 +344,45 @@ class GitHomes(unittest.TestCase):
         self.assertIsNone(repo.files_at(bare, bare / "audits"))
         d = make_repo()
         self.assertIsNone(repo.files_at(d, d / "audits", "no-such-rev"))
+
+
+class AuditCommand(unittest.TestCase):
+    """`repo.audit_command`: the one builder of a printed audit step — paths
+    as the working directory reaches them, quoted, `--protocol` where the
+    area holds several (audit 2026-10-27, D)."""
+
+    def test_quoted_from_here_and_the_protocol_where_several(self):
+        root = Path(tempfile.mkdtemp()) / "my lab"
+        area = root / "experiments" / "01-x"
+        area.mkdir(parents=True)
+        (area / "PROTOCOL-a.md").write_text("# a\n")
+        one = repo.audit_command(
+            area,
+            "--review",
+            "--record",
+            "r 1.toml",
+            protocol=area / "PROTOCOL-a.md",
+            base=root,
+        )
+        self.assertEqual(
+            one, "labkit-audit experiments/01-x --review --record 'r 1.toml'"
+        )
+        (area / "PROTOCOL-b.md").write_text("# b\n")
+        two = repo.audit_command(
+            area, "--mode", "analysis", protocol=area / "PROTOCOL-b.md", base=root
+        )
+        self.assertEqual(
+            two,
+            "labkit-audit experiments/01-x --mode analysis "
+            "--protocol experiments/01-x/PROTOCOL-b.md",
+        )
+        self.assertEqual(
+            repo.audit_command(area, base=root.parent),
+            "labkit-audit 'my lab/experiments/01-x'",
+        )
+        # runs as printed: the words read back to the area and the protocol from there
+        words = shlex.split(two)
+        self.assertTrue((root / words[1]).is_dir() and (root / words[-1]).is_file())
 
 
 class RunlogGitState(unittest.TestCase):

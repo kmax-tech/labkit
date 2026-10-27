@@ -50,9 +50,8 @@ from labkit.formats import attempts, console, findings, report_reviews
 from labkit.formats.report_reviews import ReportClaim
 from labkit.formats.repo import (
     ProtocolChoiceError,
-    area_protocols,
+    audit_command,
     layout_root,
-    repo_protocols,
     shown,
     the_protocol,
 )
@@ -78,31 +77,33 @@ INLINE_NOTE = (
 
 def review_hint(text: str, report: Path, repo: Path) -> str | None:
     """The sentence that names the review for REPORT (its TEXT), or None when
-    it discusses no run: per area of REPO holding a discussed run
-    (`runs/<id>/` beside a protocol), the command to run, paths as `shown`
-    from REPO. The hint the post-change hook gives (`claude_hooks.post_change`);
+    it discusses no run: per protocol a discussion block names whose area
+    holds the discussed run (`runs/<id>/`), the command to run
+    (`repo.audit_command`, `--protocol` where the area holds several),
+    paths as `shown` from REPO. The hint the post-change hook gives (`claude_hooks.post_change`);
     it runs nothing — a model call is the agent's to start; report-check
     holds the report until the review is done (`report_check.report_review_owed`).
     A discussed run no area holds names no command (report-check holds it
     as a cited run the repo lacks). Raises ReportBlockError on a block that
     does not read."""
-    runs = list(dict.fromkeys(d.run_id for d in discussions(text)))
+    found = discussions(text)
+    runs = list(dict.fromkeys(d.run_id for d in found))
     if not runs:
         return None
     root = repo.resolve()
-    areas = list(
+    protocols = list(
         dict.fromkeys(
-            p.parent
-            for p in repo_protocols(root)
-            for r in runs
-            if run_path(p.parent, r).is_dir()
+            p
+            for d in found
+            if (p := (report.parent / d.protocol).resolve()).is_file()
+            and run_path(p.parent, d.run_id).is_dir()
         )
     )
-    if not areas:
+    if not protocols:
         return None
     commands = [
-        f"`labkit-audit {shown(a, root)} --report-review {shown(report, root)}`"
-        for a in areas
+        f"`{audit_command(p.parent, '--report-review', shown(report, root), protocol=p, base=root)}`"
+        for p in protocols
     ]
     return (
         f"{shown(report, root)} discusses {', '.join(runs)} as not reported — "
@@ -410,7 +411,6 @@ def after_draw(
 def review_command(area: Path, report: Path, protocol: Path) -> str:
     """The command that reviews REPORT on AREA, paths as seen from the
     working directory; `--protocol` only when the area has more than one."""
-    here = Path.cwd()
-    return f"labkit-audit {shown(area, here)} --report-review {shown(report, here)}" + (
-        f" --protocol {shown(protocol, here)}" if len(area_protocols(area)) > 1 else ""
+    return audit_command(
+        area, "--report-review", shown(report, Path.cwd()), protocol=protocol
     )

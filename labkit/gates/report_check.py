@@ -126,6 +126,7 @@ from labkit.gates import decision_review, report_review
 from labkit.formats.protocol_check import check_fields
 from labkit.formats.repo import (
     adopt_command,
+    audit_command,
     area_path,
     area_protocols,
     choose_protocol,
@@ -410,7 +411,7 @@ def limit_gaps(ctx: Checked) -> list[str]:
             if not f.effect:
                 gaps.append(
                     f"{findings.limit_label(r, n)}: an accepted BLOCKER owes its effect "
-                    f'on the verdicts — `labkit-audit {shown(ctx.area, Path.cwd())} --decide {n} accepted "REASON" '
+                    f'on the verdicts — `{audit_command(ctx.area)} --decide {n} accepted "REASON" '
                     f'--effect stands|"<ID> not assessable" --record {r.path.name}`'
                 )
     if ctx.declared is None:
@@ -533,10 +534,15 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
                 evidence_kind=GUARANTEED,
             )
         ]
+    # the follow-up refuses an area with several protocols (`audit.earlier_of`):
+    # no step there may name it
+    several = len(area_protocols(ctx.area)) > 1
     out = [
         GateFinding(
             BLOCKER,
-            f"audit {h.ref}: {h.why} — {h.step} (LAB-015 Preflight audit before freezing)",
+            f"audit {h.ref}: {h.why} — "
+            f"{followup.STEP_NONE_SEVERAL if several and h.step == followup.STEP_AUDIT else h.step} "
+            f"(LAB-015 Preflight audit before freezing)",
             evidence_kind=GUARANTEED,
         )
         for h in held
@@ -573,10 +579,7 @@ def _review_step(ctx: Checked, record: findings.Record) -> str:
     is unwritten — the step `--review` refuses without (it judges the
     claim). A refusal naming `<area>` and no precondition was not followed
     (ninth haiku round, t3)."""
-    command = (
-        f"`labkit-audit {shown(ctx.area, Path.cwd())} --review "
-        f"--record {record.path.name}`"
-    )
+    command = f"`{audit_command(ctx.area, '--review', '--record', record.path.name, protocol=ctx.protocol)}`"
     if decision_review.conclusion_written(ctx.text):
         return command
     return (
@@ -716,7 +719,10 @@ def report_check(
         f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
     )
     ln = lane(ctx.head.repeat_cost)
-    findings = Findings(area=shown(ctx.area, Path.cwd()))
+    findings = Findings(
+        area=shown(ctx.area, Path.cwd()),
+        audit=audit_command(ctx.area, protocol=ctx.protocol),
+    )
 
     # 1. declaration — a blocker does not stop the remaining stages
     if ctx.declaration_gap:

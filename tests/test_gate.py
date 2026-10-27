@@ -276,5 +276,42 @@ class Silent(unittest.TestCase):
         )
 
 
+class AreaSlot(unittest.TestCase):
+    """A step a check names with `<area>` runs as printed: an audit command
+    takes the gate's audit head (`--protocol` where the area holds several),
+    any other the area quoted (audit 2026-10-27, D)."""
+
+    def test_the_audit_slot_takes_the_head_and_the_area_is_quoted(self):
+        f = gate.Findings(
+            tell=None,
+            area="my lab/x",
+            audit="labkit-audit 'my lab/x' --protocol 'my lab/x/PROTOCOL-b.md'",
+        )
+        f.take(
+            gate.GateFinding(
+                "BLOCKER",
+                "`labkit-audit <area> --mode analysis` follows it up; then `finalize <area>`",
+                evidence_kind=gate.GUARANTEED,
+            )
+        )
+        (line,) = f.blocked
+        self.assertIn(
+            "`labkit-audit 'my lab/x' --protocol 'my lab/x/PROTOCOL-b.md' --mode analysis`",
+            line,
+        )
+        self.assertIn("`finalize 'my lab/x'`", line)
+
+    def test_the_twin_without_an_audit_head_the_area_alone_stands(self):
+        f = gate.Findings(tell=None, area="experiments/01-x")
+        f.take(
+            gate.GateFinding(
+                "BLOCKER",
+                "`labkit-audit <area> --mode analysis`",
+                evidence_kind=gate.GUARANTEED,
+            )
+        )
+        self.assertIn("`labkit-audit experiments/01-x --mode analysis`", f.blocked[0])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -140,6 +140,18 @@ class Hint(unittest.TestCase):
             "`labkit-audit experiments/01-x --report-review REPORT.md`", hint or ""
         )
 
+    def test_in_an_area_of_several_protocols_it_names_the_one_discussed(self):
+        with tempfile.TemporaryDirectory() as d:
+            a = Area(d)
+            (a.area / "PROTOCOL-y.md").write_text(PROTOCOL, encoding="utf-8")
+            repo = a.area.parent.parent
+            hint = report_review.review_hint(MARKED, a.report(MARKED), repo)
+        self.assertIn(
+            "`labkit-audit experiments/01-x --report-review REPORT.md "
+            "--protocol experiments/01-x/PROTOCOL-x.md`",
+            hint or "",
+        )
+
     def test_no_mark_names_nothing(self):
         with tempfile.TemporaryDirectory() as d:
             a = Area(d)

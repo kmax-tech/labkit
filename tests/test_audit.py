@@ -1575,6 +1575,29 @@ class FollowupGate(unittest.TestCase):
         )
         self.assertEqual(self.gate(area), [])
 
+    def test_in_an_area_of_several_protocols_no_step_names_the_refused_audit(self):
+        """The follow-up audit refuses an area holding several protocols
+        (`audit.earlier_of`); the hold says so instead of naming the command
+        it would refuse (audit 2026-10-27, B1). The twin: one protocol names it."""
+        area, _ = self.fv.area()
+        self.fv.audit(area, CLEAN)
+        (line,) = self.gate(area)
+        self.assertIn("--mode analysis` follows it up", line)
+        text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
+        (area / "PROTOCOL-x1.md").write_text(
+            re.sub(
+                r'^id = "p-[0-9a-f]+"',
+                'id = "p-ffffffffffffffff"',
+                text,
+                count=1,
+                flags=re.M,
+            ),
+            encoding="utf-8",
+        )
+        (line,) = self.gate(area)
+        self.assertIn(followup.STEP_NONE_SEVERAL, line)
+        self.assertNotIn("labkit-audit", line)
+
     def test_a_missing_check_asks_for_a_run_and_a_shown_one_releases(self):
         area, r1 = self.fv.area(RequiredCheck.CHECKED)
         self.follow_up(area, f"FIX · {r1.name}#1 · resolved · gone")

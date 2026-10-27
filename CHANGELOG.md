@@ -187,6 +187,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A printed `labkit-audit` step runs as printed.** The next steps report-check,
+  the decision list and the report review's hint print were built in four
+  places; three left out `--protocol`, which the command needs in an area
+  holding several protocols, and one did not quote the area. They come from
+  one builder now (`repo.audit_command`: paths as the working directory
+  reaches them, quoted, `--protocol` where the area holds several); a check
+  that names `labkit-audit <area>` gets the same head from report-check
+  (`gate.Findings(audit=…)`), any other `<area>` the area quoted. Where the
+  follow-up audit refuses — an area holding several protocols with earlier
+  decided BLOCKERs — the hold no longer names that audit and says that no
+  step labkit offers clears it there yet (`followup.STEP_NONE_SEVERAL`); the
+  audit's own refusal no longer advises settling the earlier findings, which
+  removes none of them (audit 2026-10-27, B1 and D).
 - **`usability stage` commits without a global git identity.** labkit's
   own commits in a probe repo carry a fixed committer
   (`usability.PROBE_IDENTITY`, given per commit with `git -c`); no git

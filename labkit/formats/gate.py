@@ -31,6 +31,7 @@ grade back from a line's words.
 
 from __future__ import annotations
 
+import shlex
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field, replace
 
@@ -159,6 +160,9 @@ def coded(
 #: area in a command it names (`labkit-audit <area> --mode analysis`); the
 #: gate that knows the area fills it (`Findings(area=…)`)
 AREA_SLOT = "<area>"
+#: the slot as it opens an audit command — filled with the gate's audit head,
+#: which names `--protocol` where the area holds several (`repo.audit_command`)
+AUDIT_SLOT = f"labkit-audit {AREA_SLOT}"
 
 
 class Findings:
@@ -172,17 +176,26 @@ class Findings:
             `None` collects silently, for a gate run inside another gate
             (report-check's finalize station).
         area: The area as the reader types it; every `AREA_SLOT` in a
-            finding taken is replaced by it, so a named command runs as
-            printed (ninth haiku round: a step naming `<area>` was not
-            taken).
+            finding taken is replaced by it, shell-quoted, so a named
+            command runs as printed (ninth haiku round: a step naming
+            `<area>` was not taken).
+        audit: The audit command's head for that area (`repo.audit_command`
+            with no step: the area quoted, `--protocol` where the area holds
+            several); every `AUDIT_SLOT` is replaced by it before the plain
+            slot is filled. Without it the plain area stands there.
     """
 
     def __init__(
-        self, tell: Callable[[str], None] | None = print, *, area: str | None = None
+        self,
+        tell: Callable[[str], None] | None = print,
+        *,
+        area: str | None = None,
+        audit: str | None = None,
     ) -> None:
         self.found: list[GateFinding] = []
         self._tell = tell
         self._area = area
+        self._audit = audit
 
     @property
     def blocked(self) -> list[str]:
@@ -223,11 +236,16 @@ class Findings:
     def take(self, finding: GateFinding) -> None:
         """Keep a finding, its area slot filled, and tell it."""
         if self._area is not None and AREA_SLOT in finding.line:
-            area = self._area
+            area, audit = shlex.quote(self._area), self._audit
+
+            def filled(s: str) -> str:
+                s = s.replace(AUDIT_SLOT, audit) if audit is not None else s
+                return s.replace(AREA_SLOT, area)
+
             finding = replace(
                 finding,
-                text=finding.text.replace(AREA_SLOT, area),
-                fix=finding.fix.replace(AREA_SLOT, area) if finding.fix else None,
+                text=filled(finding.text),
+                fix=filled(finding.fix) if finding.fix else None,
             )
         self.found.append(finding)
         self.note(f"  {finding.line}")

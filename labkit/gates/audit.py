@@ -98,6 +98,7 @@ from labkit.formats.repo import (
     ProtocolChoiceError,
     area_path,
     area_protocols,
+    audit_command,
     layout_root,
     no_such_area,
     shown,
@@ -676,7 +677,8 @@ def earlier_of(
             f"{len(shown)} earlier decided BLOCKER(s) and {len(area_protocols(area))} "
             f"protocols in {area.name}: the records name no protocol, so which "
             f"question an earlier finding judged is not certain — the follow-up "
-            f"does not guess; one protocol per area, or settle the earlier findings"
+            f"does not guess, and deciding an earlier finding again does not remove "
+            f"it from what is followed up; no step labkit offers clears this here yet"
         )
     origins = {e.ref: c.members[c.origin[e.ref]].finding for e in shown}
     return Followup(shown, metrics, origins)
@@ -1229,7 +1231,9 @@ def _record(
     # it came out before the buffered report in a pipe, and `| tail` cut it
     # off (sandbox judge probes, 2026-10-21)
     print()
-    for line in decision_lines(findings.read(recorded), args.area, report):
+    for line in decision_lines(
+        findings.read(recorded), args.area, report, args.protocol
+    ):
         print(line)
     for line in fix_lines(shown_now.blockers, fixes):
         print(line)
@@ -1309,7 +1313,9 @@ BLOCKER_ROUTES = (
 DECISION_TEXT_WIDTH = 160
 
 
-def decision_lines(record: findings.Record, area: Path, report: str) -> list[str]:
+def decision_lines(
+    record: findings.Record, area: Path, report: str, protocol: Path | None = None
+) -> list[str]:
     """What the person decides, as printed after an audit is recorded: the
     record's path, its findings numbered as `--decide` takes them — from
     the stored record, never counted in the model's text — each with the
@@ -1339,15 +1345,16 @@ def decision_lines(record: findings.Record, area: Path, report: str) -> list[str
             )
             out.append(f"  {n} · {text}")
             out.append(
-                f"      labkit-audit {shlex.quote(shown(area, here))} --decide {n} "
+                f"      {audit_command(area, base=here)} --decide {n} "
                 f'STATUS "REASON" --record {shlex.quote(where)}'
             )
             if f.grade == "BLOCKER":
                 out.append(
                     "      accepted owes its effect: --effect stands (the verdicts "
                     "hold, read within it; a second auditor must uphold it before the "
-                    f"number leaves: `labkit-audit {shlex.quote(shown(area, here))} "
-                    f"--review --record {shlex.quote(record.path.name)}`) or "
+                    f"number leaves: `"
+                    f"{audit_command(area, '--review', '--record', record.path.name, protocol=protocol, base=here)}"
+                    f"`) or "
                     '--effect "<ID> not assessable"'
                 )
             elif f.grade == "WARNING":
@@ -1421,7 +1428,7 @@ def _without_audit(args: argparse.Namespace) -> int:
         )
     if args.decide is not None:
         return _decide(args.area, args.decide, args.record, args.effect, args.protocol)
-    return _findings(args.area, args.record)
+    return _findings(args.area, args.record, args.protocol)
 
 
 def record_path(area: Path, record: Path) -> Path:
@@ -1446,7 +1453,7 @@ def _newest_record(area: Path) -> Path:
     return records[-1].path
 
 
-def _findings(area: Path, record: Path | None) -> int:
+def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> int:
     """`--findings`: RECORD's (the newest's) findings numbered with their
     `--decide` commands, read from the record — no model call, no new
     record. The auditor's READ hints are not recorded, so none show here.
@@ -1458,7 +1465,7 @@ def _findings(area: Path, record: Path | None) -> int:
     except findings.FindingsError as exc:
         console.refuse("labkit-audit", str(exc))
         return 2
-    for line in decision_lines(rec, area, ""):
+    for line in decision_lines(rec, area, "", protocol):
         print(line)
     return 0
 

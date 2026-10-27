@@ -196,6 +196,15 @@ class Hold:
 
 #: the step when a follow-up audit is all that is missing
 STEP_AUDIT = "`labkit-audit <area> --mode analysis` follows it up"
+#: what stands instead of STEP_AUDIT where the follow-up cannot run: an
+#: area holding several protocols (`audit.earlier_of` refuses there)
+STEP_NONE_SEVERAL = (
+    "no step labkit offers clears this here yet: the follow-up audit refuses an "
+    "area holding several protocols (its records name no protocol, so it would "
+    "guess whose question an earlier finding judged), and deciding the finding "
+    "again does not remove it from what is followed up — the number stays "
+    "unreported from this area"
+)
 
 
 def release_holds(
