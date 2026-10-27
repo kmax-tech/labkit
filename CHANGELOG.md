@@ -1081,6 +1081,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Small messages that misled.** A handover that fails after writing its
+  record (and protocol) names them and says they grant nothing until the
+  report matches; `runlog start` takes the run whose record names its
+  process, else the newest new one; the estimator skeleton says "set
+  [protocol] kind" for an undecided kind and tells a missing predictor
+  snapshot from a changed file; "no analysis audit saw the area" says
+  "none has run yet" before any audit; a failed area test names "the
+  area's own checks of evaluate()" (a computation has no resolution
+  check); `labkit-init lab` names the `requirements.lock` step. Audit
+  2026-10-27 (third), K4, K6, K7, K8, I12.
 - **Drift after the day's changes.** The architecture names
   `handovers.acknowledgement` (not `valid`), eight links (not six) and
   the evidence the commit gate holds beside BLOCKERs; the README lists

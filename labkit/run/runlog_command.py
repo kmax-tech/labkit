@@ -204,8 +204,11 @@ def _await_run(
     while True:
         code = proc.poll()  # before the look, so a run made just before exit is seen
         new = [rd for rd in run_dirs(area) if rd.dir.name not in before]
+        # this command's run, where its record names its pid; else the newest
+        # new one (a wrapper shell records another pid)
+        own = [rd for rd in new if rd.config is not None and rd.config.pid == proc.pid]
         if new:
-            rd = new[-1]
+            rd = (own or new)[-1]
             if rd.error is not None:
                 console.refuse(
                     "runlog start",

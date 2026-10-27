@@ -1447,10 +1447,15 @@ def audit_coverage(
                 f"{stopped[-1].path.name}); the same model is not tried again on "
                 f"this state: `labkit-audit <area> --mode {mode} --model <alias>`"
             )
+        # before any audit "a change after the audit" spoke of one that
+        # never ran (audit 2026-10-27, third, I12)
+        why = (
+            "a change after the audit owes a new one" if records else "none has run yet"
+        )
         return (
             f"no {mode} audit saw the area as it is now "
-            f"({_bound(*now)}; audited: {seen}) — a change after "
-            f"the audit owes a new one: `labkit-audit <area> --mode {mode}`"
+            f"({_bound(*now)}; audited: {seen}) — {why}: "
+            f"`labkit-audit <area> --mode {mode}`"
             f"{validation_note(area)}"
         )
     still_open = open_findings(covering)

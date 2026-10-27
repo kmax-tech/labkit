@@ -323,7 +323,7 @@ class AreaTestsBeforeReporting(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             code, out = _run_finalize(self.area(d, "def test_r():\n    assert False\n"))
         self.assertEqual(code, 1, out)
-        self.assertIn("evaluate() no longer holds its resolution check", out)
+        self.assertIn("the area's own checks of evaluate()", out)
 
     def test_a_passing_area_test_is_quiet(self):
         with tempfile.TemporaryDirectory() as d:

@@ -79,7 +79,7 @@ from labkit.formats import (
     runs,
 )
 from labkit.checks.result_render import Rendering, rendering
-from labkit.formats.repo import audit_command, git_root, shown, state_text
+from labkit.formats.repo import GitError, audit_command, git_root, shown, state_text
 from labkit.checks import recheck, report_blocks
 from labkit.gates import report_check
 from labkit.checks.prompt_check import prompt_constants
@@ -1031,6 +1031,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
     protocol = args.protocol.resolve()
     area = protocol.parent
     root = git_root(area)
+    done: list[str] = []
     try:
         if root is None:
             raise ValueError("handover requires a git repository")
@@ -1071,12 +1072,23 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
         before = report_blocks.withdraw_result_blocks(before, protocol, report)
         written = handovers.write_handover_block(before, record, root, path)
         handovers.write_record(path, record)
+        done.append(shown(path, Path.cwd()))
         if new != text:
             files.write_atomic(protocol, new)
+            done.append(shown(protocol, Path.cwd()))
         report.parent.mkdir(parents=True, exist_ok=True)
         files.write_atomic(report, written)
-    except (ValueError, OSError) as exc:
-        console.refuse("protocol-fill", str(exc))
+    except (ValueError, OSError, GitError) as exc:
+        # what was written before the failure stays and grants nothing until
+        # all three agree; said, so a rerun is not a surprise (audit
+        # 2026-10-27, third, K8)
+        partly = (
+            f" — written before it: {', '.join(done)}; they grant nothing until "
+            "the report matches, and a rerun writes a new record beside them"
+            if done
+            else ""
+        )
+        console.refuse("protocol-fill", f"{exc}{partly}")
         return 2
     print(
         f"handover: its block in {shown(report, Path.cwd())}; "

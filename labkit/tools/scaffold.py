@@ -1388,6 +1388,7 @@ def main(argv: list[str]) -> int:
         print(f"Lab repo -> {root}\n" + "\n".join(log))
         print(
             "\nnext: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/labkit-hooks install"
+            " && .venv/bin/pip freeze > requirements.lock  (the lock pins the environment every run records)"
         )
         return 0
     # the nearest lab repo above the working directory, as git finds its

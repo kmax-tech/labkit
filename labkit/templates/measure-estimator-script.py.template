@@ -275,9 +275,12 @@ def measure(cfg: MeasureConfig, items: list[dict], out: Path,
     ValueError rather than dropping items. No other kind is accepted.
     """
     if KIND not in ("fit", "apply"):
-        raise ValueError(f"measure(): kind must be fit or apply, got {KIND!r}")
+        raise ValueError(f"measure(): kind must be fit or apply, got {KIND!r} — set [protocol] kind in the head")
     identity = instrument(cfg, items)
     if identity["predictor_sha"] != cfg.predictor_sha:
+        if not cfg.predictor_sha:   # CONFIG as imported: no snapshot was taken
+            raise ValueError("measure(): cfg carries no predictor snapshot — main() takes it; "
+                             "a caller passes replace(CONFIG, predictor_sha=predictor_digests())")
         raise ValueError("measure(): predictor dependencies changed since the config snapshot")
     rows = (apply_rows(cfg, items, probe) if KIND == "apply"
             else fit_rows(cfg, items, probe))

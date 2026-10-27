@@ -414,8 +414,9 @@ def check_area_tests(findings: Findings, area: Path) -> None:
         # above is a note and reaches no collecting caller (audit 2026-10-23, B1)
         last = f" ({tests.tail[-1].strip()})" if tests.tail else ""
         findings.block(
-            f"{', '.join(t.name for t in tests.files)} failed{last} — evaluate() "
-            f"no longer holds its resolution check"
+            f"{', '.join(t.name for t in tests.files)} failed{last} — the area's "
+            f"own checks of evaluate() (its resolution check, where it has a "
+            f"criterion) no longer hold"
         )
 
 

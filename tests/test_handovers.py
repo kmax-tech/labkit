@@ -391,6 +391,17 @@ class HandoverRecovery(cases._Chain):
         )
         self.assertTrue(any("regular, merged index file" in ln for ln in lines), lines)
 
+    def test_a_handover_that_fails_at_the_report_names_what_it_wrote(self):
+        # record and protocol were written, the report not, and the refusal
+        # said nothing of them (audit 2026-10-27, third, K8)
+        self.report.mkdir()  # a directory where the report goes: the write fails
+        rc, out = self.handover()
+        self.assertEqual(rc, 2, out)
+        (path,) = handovers.record_paths(self.area)
+        self.assertIn("written before it", out)
+        self.assertIn(path.name, out)
+        self.assertFalse(handovers.valid(self.area))
+
     def test_a_staged_record_that_is_not_utf8_names_its_file(self):
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
