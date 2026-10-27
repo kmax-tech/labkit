@@ -1385,8 +1385,8 @@ def repo_sources(repo: Path, *, staged: bool) -> Sources:
             continue  # a link: no text to read, the refusal stands
         try:
             text = state_text(repo, p, staged=staged)
-        except UnicodeError as exc:
-            out.unreadable[p] = str(exc)
+        except (OSError, UnicodeError) as exc:
+            out.unreadable[p] = f"{p}: {exc}"
             continue
         if text is None:
             continue
@@ -2025,8 +2025,8 @@ def hold_declared(protocol: Path, repo: Path, *, staged: bool) -> int:
         return 2
     try:
         text = state_text(repo, protocol, staged=staged)
-    except UnicodeError as exc:
-        console.refuse("report-check", str(exc))
+    except (OSError, UnicodeError) as exc:  # a refusal, never a traceback
+        console.refuse("report-check", f"{protocol}: {exc}")
         return 2
     if text is None:
         if staged:

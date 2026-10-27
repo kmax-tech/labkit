@@ -306,6 +306,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **An unreadable protocol is a refusal at the stop and the commit.**
+  Since the release gate read protocols through `repo.state_text`, a
+  protocol it could not open (a permission error) ended `report-check`
+  in a traceback; `hold_declared` and `repo_sources` refuse it with a
+  sentence naming the file, exit 2. Audit 2026-10-27 (third), K2.
 - **A broken handover record or a strange index entry is a sentence and
   hides nothing.** A handover record that did not read replaced every
   journal gap of its area with its one error (`attempts.area_gaps`); a

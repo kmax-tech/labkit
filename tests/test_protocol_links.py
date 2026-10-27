@@ -100,6 +100,18 @@ class ProtocolLinks(unittest.TestCase):
                 self.assertTrue(check_files([self.protocol], tmpl))
             self.assertIn(REFUSED, out.getvalue())
 
+    def test_an_unreadable_protocol_is_a_refusal_not_a_traceback(self):
+        # the tree read caught OSError before it moved to repo.state_text
+        # (audit 2026-10-27, third, K2)
+        self.regular()
+        self.protocol.chmod(0)
+        try:
+            _, rc, out = self.held(staged=False)
+        finally:
+            self.protocol.chmod(0o644)
+        self.assertEqual(rc, 2, out)
+        self.assertIn(str(self.protocol), out)
+
     def test_each_state_is_judged_by_itself(self):
         # a link staged, a regular file in the tree: the commit refuses
         self.link(self.target)
